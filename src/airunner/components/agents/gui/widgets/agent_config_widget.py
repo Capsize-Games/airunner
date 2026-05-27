@@ -16,7 +16,8 @@ from PySide6.QtWidgets import (
     QSplitter,
 )
 from PySide6.QtCore import Signal, Qt
-from airunner.models.agent_config import AgentConfig
+
+from airunner.daemon_client.resource_store import get_resource_store
 from airunner.components.agents.templates import (
     list_templates,
     get_template,
@@ -37,6 +38,7 @@ class AgentConfigWidget(QWidget):
             parent: Parent widget
         """
         super().__init__(parent)
+        self.resource_store = get_resource_store()
         self.current_agent_id: Optional[int] = None
         self.setup_ui()
         self.load_agents()
@@ -149,9 +151,12 @@ class AgentConfigWidget(QWidget):
 
         agents = [
             agent
-            for agent in AgentConfig.objects.order_by(
-                AgentConfig.created_at.desc()
-            ).all()
+            for agent in self.resource_store.query(
+                "AgentConfig",
+                order_by=[
+                    {"field": "created_at", "direction": "desc"}
+                ],
+            )
             if getattr(agent, "is_active", True)
         ]
 
@@ -186,7 +191,7 @@ class AgentConfigWidget(QWidget):
         item = self.agent_list.item(row)
         agent_id = item.data(Qt.ItemDataRole.UserRole)
 
-        agent = AgentConfig.objects.get(agent_id)
+        agent = self.resource_store.get("AgentConfig", agent_id)
         if agent:
             self.current_agent_id = agent.id
             self.name_edit.setText(agent.name)
@@ -265,14 +270,22 @@ class AgentConfigWidget(QWidget):
 
         try:
             if self.current_agent_id:
-                agent = AgentConfig.objects.get(self.current_agent_id)
+                agent = self.resource_store.get(
+                    "AgentConfig",
+                    self.current_agent_id,
+                )
                 if agent:
-                    agent.name = name
-                    agent.description = description
-                    agent.system_prompt = system_prompt
-                    agent.tool_list = tools
-                    agent.template = template
-                    agent.save()
+                    agent = self.resource_store.update(
+                        "AgentConfig",
+                        agent.id,
+                        {
+                            "name": name,
+                            "description": description,
+                            "system_prompt": system_prompt,
+                            "tool_list": tools,
+                            "template": template,
+                        },
+                    )
                     self.agent_updated.emit(agent.id)
                     QMessageBox.information(
                         self,
@@ -280,7 +293,10 @@ class AgentConfigWidget(QWidget):
                         f"Agent '{name}' updated successfully",
                     )
             else:
-                existing = AgentConfig.objects.filter_by_first(name=name)
+                existing = self.resource_store.first(
+                    "AgentConfig",
+                    filters={"name": name},
+                )
                 if existing:
                     QMessageBox.warning(
                         self,
@@ -289,14 +305,16 @@ class AgentConfigWidget(QWidget):
                     )
                     return
 
-                agent = AgentConfig(
-                    name=name,
-                    description=description,
-                    system_prompt=system_prompt,
-                    template=template,
+                agent = self.resource_store.create(
+                    "AgentConfig",
+                    {
+                        "name": name,
+                        "description": description,
+                        "system_prompt": system_prompt,
+                        "template": template,
+                        "tool_list": tools,
+                    },
                 )
-                agent.tool_list = tools
-                agent.save()
                 self.agent_created.emit(agent.id)
                 QMessageBox.information(
                     self,
@@ -326,10 +344,16 @@ class AgentConfigWidget(QWidget):
 
         if reply == QMessageBox.StandardButton.Yes:
             try:
-                agent = AgentConfig.objects.get(self.current_agent_id)
+                agent = self.resource_store.get(
+                    "AgentConfig",
+                    self.current_agent_id,
+                )
                 if agent:
                     agent_name = agent.name
-                    AgentConfig.objects.delete(self.current_agent_id)
+                    self.resource_store.delete(
+                        "AgentConfig",
+                        self.current_agent_id,
+                    )
                     self.agent_deleted.emit(self.current_agent_id)
                     QMessageBox.information(
                         self,

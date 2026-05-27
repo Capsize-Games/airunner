@@ -15,20 +15,17 @@ from PySide6.QtGui import QKeySequence, QShortcut
 from airunner.gui.cursors.circle_brush import circle_cursor
 from airunner.enums import SignalCode, CanvasToolName
 from airunner.components.application.gui.widgets.base_widget import BaseWidget
+from airunner.components.art.data.canvas_layer_records import (
+    create_canvas_layer,
+    delete_layer_bundle,
+    ensure_layer_setting,
+    find_canvas_layer_by_name,
+    first_layer_setting,
+    ordered_canvas_layers,
+)
 from airunner.components.art.gui.widgets.canvas.templates.canvas_ui import (
     Ui_canvas,
 )
-from airunner.models.canvas_layer import CanvasLayer
-from airunner.models.drawingpad_settings import (
-    DrawingPadSettings,
-)
-from airunner.models.controlnet_settings import (
-    ControlnetSettings,
-)
-from airunner.models.image_to_image_settings import (
-    ImageToImageSettings,
-)
-from airunner.models.outpaint_settings import OutpaintSettings
 from airunner.components.art.gui.dialogs.new_document_dialog import (
     NewDocumentConfig,
     NewDocumentDialog,
@@ -356,9 +353,10 @@ class CanvasWidget(BaseWidget):
         if layer_id is None:
             return None
 
-        settings = self._get_layer_specific_settings(
-            DrawingPadSettings,
+        settings = first_layer_setting(
+            "DrawingPadSettings",
             layer_id=layer_id,
+            store=self.resource_store,
         )
         if settings is None:
             return None
@@ -408,7 +406,7 @@ class CanvasWidget(BaseWidget):
 
     def _selected_layer_size(
         self,
-        settings: DrawingPadSettings,
+        settings: Any,
         item: Optional[Any],
     ) -> tuple[float, float]:
         """Return the selected layer size for alignment math."""
@@ -971,7 +969,7 @@ class CanvasWidget(BaseWidget):
     def _delete_all_layers(self) -> bool:
         """Delete every canvas layer and its associated records."""
 
-        layers = CanvasLayer.objects.order_by("order").all() or []
+        layers = ordered_canvas_layers(store=self.resource_store)
         layer_ids = [layer.id for layer in layers]
 
         if not layer_ids:
@@ -999,7 +997,7 @@ class CanvasWidget(BaseWidget):
     def _serialize_canvas_document(self) -> Dict[str, Any]:
         """Create a serializable snapshot of all layers on the canvas."""
 
-        layers = CanvasLayer.objects.order_by("order").all() or []
+        layers = ordered_canvas_layers(store=self.resource_store)
         document_layers: List[Dict[str, Any]] = []
 
         indexed_layers = list(enumerate(layers))
@@ -1062,8 +1060,10 @@ class CanvasWidget(BaseWidget):
     def _serialize_drawing_pad_settings(self, layer_id: int) -> Dict[str, Any]:
         """Serialize drawing pad settings for persistence."""
 
-        settings = DrawingPadSettings.objects.filter_by_first(
-            layer_id=layer_id
+        settings = first_layer_setting(
+            "DrawingPadSettings",
+            layer_id,
+            store=self.resource_store,
         )
         if not settings:
             return {}
@@ -1078,10 +1078,13 @@ class CanvasWidget(BaseWidget):
     def _clear_canvas(self):
         self._clear_canvas_state()
         self._delete_all_layers()
-        DrawingPadSettings.objects.delete_all()
-        ControlnetSettings.objects.delete_all()
-        ImageToImageSettings.objects.delete_all()
-        OutpaintSettings.objects.delete_all()
+        for resource_name in (
+            "DrawingPadSettings",
+            "ControlnetSettings",
+            "ImageToImageSettings",
+            "OutpaintSettings",
+        ):
+            self.resource_store.delete_many(resource_name)
         self.api.art.canvas.clear_history()
 
     def _reset_canvas_document(
@@ -1296,7 +1299,7 @@ class CanvasWidget(BaseWidget):
 
     def _create_layer_from_snapshot(
         self, snapshot: Dict[str, Any], fallback_order: int
-    ) -> Optional[CanvasLayer]:
+    ) -> Optional[Any]:
         """Create a new layer using serialized snapshot data."""
 
         layer_kwargs = {
@@ -1308,7 +1311,10 @@ class CanvasWidget(BaseWidget):
             "blend_mode": snapshot.get("blend_mode", "normal"),
         }
 
-        layer = CanvasLayer.objects.create(**layer_kwargs)
+        layer = create_canvas_layer(
+            layer_kwargs,
+            store=self.resource_store,
+        )
         if layer is None:
             return None
 
@@ -1368,27 +1374,32 @@ class CanvasWidget(BaseWidget):
             self.logger.error(f"{title}: {message}")
 
     def _delete_layer_records(self, layer_id: int) -> None:
-        DrawingPadSettings.objects.delete_by(layer_id=layer_id)
-        ControlnetSettings.objects.delete_by(layer_id=layer_id)
-        ImageToImageSettings.objects.delete_by(layer_id=layer_id)
-        OutpaintSettings.objects.delete_by(layer_id=layer_id)
-        CanvasLayer.objects.delete(layer_id)
+        delete_layer_bundle(
+            layer_id,
+            store=self.resource_store,
+        )
 
-    def _create_default_canvas_layer(self) -> Optional[CanvasLayer]:
+    def _create_default_canvas_layer(self) -> Optional[Any]:
         # Pick a non-conflicting default name (Layer 1, Layer 2, ...)
         base = "Layer"
         index = 1
         name = f"{base} {index}"
         # Loop until we find an unused name
-        while CanvasLayer.objects.filter_by(name=name):
+        while find_canvas_layer_by_name(
+            name,
+            store=self.resource_store,
+        ):
             index += 1
             name = f"{base} {index}"
 
-        layer = CanvasLayer.objects.create(
-            order=0,
-            name=name,
-            visible=True,
-            opacity=100,
+        layer = create_canvas_layer(
+            {
+                "order": 0,
+                "name": name,
+                "visible": True,
+                "opacity": 100,
+            },
+            store=self.resource_store,
         )
 
         if layer is None:
@@ -1415,7 +1426,11 @@ class CanvasWidget(BaseWidget):
         return convert_image_to_binary(image)
 
     def _ensure_drawing_pad_defaults(self, layer_id: int) -> None:
-        settings = DrawingPadSettings.objects.filter_by_first(layer_id=layer_id)
+        settings = first_layer_setting(
+            "DrawingPadSettings",
+            layer_id,
+            store=self.resource_store,
+        )
         x_pos, y_pos = self._document_origin()
         image = self._create_blank_document_binary()
         if settings is not None and settings.image:
@@ -1437,14 +1452,23 @@ class CanvasWidget(BaseWidget):
         try:
             self._ensure_drawing_pad_defaults(layer_id)
 
-            if not ControlnetSettings.objects.filter_by(layer_id=layer_id):
-                ControlnetSettings.objects.create(layer_id=layer_id)
+            ensure_layer_setting(
+                "ControlnetSettings",
+                layer_id,
+                store=self.resource_store,
+            )
 
-            if not ImageToImageSettings.objects.filter_by(layer_id=layer_id):
-                ImageToImageSettings.objects.create(layer_id=layer_id)
+            ensure_layer_setting(
+                "ImageToImageSettings",
+                layer_id,
+                store=self.resource_store,
+            )
 
-            if not OutpaintSettings.objects.filter_by(layer_id=layer_id):
-                OutpaintSettings.objects.create(layer_id=layer_id)
+            ensure_layer_setting(
+                "OutpaintSettings",
+                layer_id,
+                store=self.resource_store,
+            )
         except Exception:  # pragma: no cover - defensive fallback
             # Logging occurs at manager level; no additional handling required
             pass

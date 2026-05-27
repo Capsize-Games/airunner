@@ -1,5 +1,5 @@
 
-from airunner.models.image_filter import ImageFilter
+from airunner.daemon_client.resource_store import get_resource_store
 from airunner.components.art.utils.image_filter_utils import (
     get_filter_values,
     build_filter_instance,
@@ -30,10 +30,13 @@ class FilterWindow(BaseWindow):
         :param image_filter_id: The ID of the filter to load.
         """
         super().__init__(exec=False)
+        self.resource_store = get_resource_store()
 
         # Load the filter definition
-        self.image_filter = ImageFilter.objects.get(
-            image_filter_id, eager_load=["image_filter_values"]
+        self.image_filter = self.resource_store.get(
+            "ImageFilter",
+            image_filter_id,
+            eager_load=["image_filter_values"],
         )
         self.image_filter_model_name = self.image_filter.name
         self.window_title = self.image_filter.display_name

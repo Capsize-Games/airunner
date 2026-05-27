@@ -14,7 +14,12 @@ from airunner.components.art.utils.canvas_position_manager import (
     ViewState,
 )
 from airunner.components.art.managers.stablediffusion.rect import Rect
-from airunner.models.canvas_layer import CanvasLayer
+from airunner.components.art.data.canvas_layer_records import (
+    create_canvas_layer,
+    ensure_layer_setting,
+    find_canvas_layer_by_name,
+    update_layer_setting,
+)
 import time
 
 
@@ -301,23 +306,22 @@ class CanvasSceneManagementMixin(MediatorMixin, SettingsMixin):
         have been created for the drawing pad canvas yet.  This
         mirrors the logic in CanvasWidget._create_default_canvas_layer.
         """
-        from airunner.models.drawingpad_settings import (
-            DrawingPadSettings,
-        )
-
         # Pick a non-conflicting default name
         base = "Layer"
         index = 1
         name = f"{base} {index}"
-        while CanvasLayer.objects.filter_by(name=name):
+        while find_canvas_layer_by_name(name, store=self.resource_store):
             index += 1
             name = f"{base} {index}"
 
-        layer = CanvasLayer.objects.create(
-            order=0,
-            name=name,
-            visible=True,
-            opacity=100,
+        layer = create_canvas_layer(
+            {
+                "order": 0,
+                "name": name,
+                "visible": True,
+                "opacity": 100,
+            },
+            store=self.resource_store,
         )
         if layer is None:
             return
@@ -325,10 +329,19 @@ class CanvasSceneManagementMixin(MediatorMixin, SettingsMixin):
         # Initialize default drawing pad settings for the new layer
         try:
             origin = self._get_default_image_position()
-            DrawingPadSettings.objects.create(
-                layer_id=layer.id,
-                x_pos=int(origin.x()),
-                y_pos=int(origin.y()),
+            ensure_layer_setting(
+                "DrawingPadSettings",
+                layer.id,
+                store=self.resource_store,
+            )
+            update_layer_setting(
+                "DrawingPadSettings",
+                layer.id,
+                {
+                    "x_pos": int(origin.x()),
+                    "y_pos": int(origin.y()),
+                },
+                store=self.resource_store,
             )
         except Exception:
             pass

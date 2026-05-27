@@ -14,9 +14,8 @@ Example:
 import os
 from dataclasses import dataclass
 from pathlib import Path
-from typing import List, Optional
+from typing import Any, List, Optional
 
-from airunner.models.ai_models import AIModels
 from airunner.enums import SignalCode, ImageGenerator, StableDiffusionVersion
 from airunner.components.application.gui.windows.main.pipeline_mixin import (
     PipelineMixin,
@@ -295,34 +294,37 @@ class ModelScannerWorker(Worker, PipelineMixin):
         except OSError as e:
             self.logger.error(f"Error scanning {path}: {e}")
 
-    def _create_ai_model(self, scanned: ScannedModel) -> AIModels:
+    def _create_ai_model(self, scanned: ScannedModel) -> Any:
         """Create an AIModels instance from a ScannedModel.
 
         Args:
             scanned: The scanned model data
 
         Returns:
-            AIModels instance ready for database insertion.
+            Resource record ready for update/create persistence.
         """
-        model = AIModels()
-        model.name = scanned.name
-        model.path = scanned.path
-        model.branch = "main"
-        model.version = scanned.version
-        model.category = scanned.category
-        model.pipeline_action = scanned.pipeline_action
-        model.enabled = True
-        model.model_type = "art"
-        model.is_default = False
-        return model
+        return self.resource_store.new_record(
+            "AIModels",
+            {
+                "name": scanned.name,
+                "path": scanned.path,
+                "branch": "main",
+                "version": scanned.version,
+                "category": scanned.category,
+                "pipeline_action": scanned.pipeline_action,
+                "enabled": True,
+                "model_type": "art",
+                "is_default": False,
+            },
+        )
 
     def remove_missing_models(self) -> None:
         """Remove database entries for models that no longer exist on disk."""
-        existing_models = AIModels.objects.all()
+        existing_models = self.resource_store.query("AIModels")
 
         for model in existing_models:
             if not self.running:
                 break
             if not Path(model.path).exists():
                 self.logger.debug(f"Removing missing model: {model.name} (id={model.id})")
-                AIModels.objects.delete(model.id)
+                self.resource_store.delete("AIModels", model.id)

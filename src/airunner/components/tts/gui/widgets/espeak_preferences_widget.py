@@ -8,7 +8,6 @@ from airunner.bootstrap.espeak_settings_data import (
 )
 from airunner.components.application.gui.widgets.base_widget import BaseWidget
 import pycountry
-from airunner.models.espeak_settings import EspeakSettings
 
 
 class EspeakPreferencesWidget(BaseWidget):
@@ -16,12 +15,16 @@ class EspeakPreferencesWidget(BaseWidget):
 
     def __init__(self, id: int, *args, **kwargs):
         self._id: int = id
-        self._item: EspeakSettings = EspeakSettings.objects.get(self._id)
+        self._item = self.resource_store.get("EspeakSettings", self._id)
         if not self._item:
-            self._item = EspeakSettings.objects.create()
+            self._item = self.resource_store.create("EspeakSettings", {})
+            self._id = self._item.id
         super().__init__(*args, **kwargs)
         if self.espeak_settings is None:
-            EspeakSettings.objects.create()
+            self.resource_store.get_singleton(
+                "EspeakSettings",
+                create_if_missing=True,
+            )
 
     def initialize_ui(self):
         self.ui.pitch.setProperty("table_item", self._item)
@@ -33,7 +36,7 @@ class EspeakPreferencesWidget(BaseWidget):
         self.load_settings()
 
     def initialize_form(self):
-        settings = EspeakSettings.objects.get(self._id)
+        settings = self.resource_store.get("EspeakSettings", self._id)
         if settings is None:
             print(f"Settings not found for ID: {self._id}")
             return
@@ -85,7 +88,12 @@ class EspeakPreferencesWidget(BaseWidget):
         )
 
     def callback(self, attr_name, value, _widget=None):
-        EspeakSettings.objects.update(**{attr_name: value})
+        self.resource_store.update(
+            "EspeakSettings",
+            self._item.id,
+            {attr_name: value},
+        )
+        setattr(self._item, attr_name, value)
 
     def voice_changed(self, text):
         self.update_espeak_settings(voice=text)

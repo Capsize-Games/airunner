@@ -1,6 +1,5 @@
 from PySide6.QtCore import Slot
 
-from airunner.models.prompt_template import PromptTemplate
 from airunner.settings import (
     AIRUNNER_DEFAULT_IMAGE_SYSTEM_PROMPT,
     AIRUNNER_DEFAULT_APPLICATION_COMMAND_SYSTEM_PROMPT,
@@ -22,7 +21,7 @@ class PromptTemplatesWidget(BaseWidget):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._prompt_templates = PromptTemplate.objects.all()
+        self._prompt_templates = self.resource_store.query("PromptTemplate")
         self.ui.template_name.clear()
         self.current_template_index = 0
         for template in self._prompt_templates:
@@ -52,28 +51,44 @@ class PromptTemplatesWidget(BaseWidget):
     def system_prompt_changed(self):
         template = self._prompt_templates[self.current_template_index]
         template.system = self.ui.system_prompt.toPlainText()
-        template.save()
+        self.resource_store.update(
+            "PromptTemplate",
+            template.id,
+            {"system": template.system},
+        )
         self._prompt_templates[self.current_template_index] = template
 
     @Slot()
     def guardrails_prompt_changed(self):
         template = self._prompt_templates[self.current_template_index]
         template.guardrails = self.ui.guardrails_prompt.toPlainText()
-        template.save()
+        self.resource_store.update(
+            "PromptTemplate",
+            template.id,
+            {"guardrails": template.guardrails},
+        )
         self._prompt_templates[self.current_template_index] = template
 
     @Slot(bool)
     def toggle_use_guardrails(self, val: bool):
         template = self._prompt_templates[self.current_template_index]
         template.use_guardrails = val
-        template.save()
+        self.resource_store.update(
+            "PromptTemplate",
+            template.id,
+            {"use_guardrails": val},
+        )
         self._prompt_templates[self.current_template_index] = template
 
     @Slot(bool)
     def toggle_use_datetime(self, val: bool):
         template = self._prompt_templates[self.current_template_index]
         template.use_system_datetime_in_system_prompt = val
-        template.save()
+        self.resource_store.update(
+            "PromptTemplate",
+            template.id,
+            {"use_system_datetime_in_system_prompt": val},
+        )
         self._prompt_templates[self.current_template_index] = template
 
     @Slot()
@@ -96,7 +111,11 @@ class PromptTemplatesWidget(BaseWidget):
             default = ""
 
         template.system = default
-        template.save()
+        self.resource_store.update(
+            "PromptTemplate",
+            template.id,
+            {"system": default},
+        )
         self.ui.system_prompt.setPlainText(default)
         self._prompt_templates[self.current_template_index] = template
 
@@ -112,6 +131,10 @@ class PromptTemplatesWidget(BaseWidget):
             default = ""
 
         template.guardrails = default
-        template.save()
+        self.resource_store.update(
+            "PromptTemplate",
+            template.id,
+            {"guardrails": default},
+        )
         self.ui.guardrails_prompt.setPlainText(default)
         self._prompt_templates[self.current_template_index] = template

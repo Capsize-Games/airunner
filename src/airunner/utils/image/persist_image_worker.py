@@ -1,16 +1,15 @@
 from typing import Optional, Dict, Any, Tuple
 from PIL import Image
-from airunner.models.controlnet_settings import ControlnetSettings
-from airunner.models.drawingpad_settings import DrawingPadSettings
-from airunner.models.image_to_image_settings import ImageToImageSettings
-from airunner.models.outpaint_settings import OutpaintSettings
+
+from airunner.components.application.data import resource_to_table
+from airunner.daemon_client.resource_store import get_resource_store
 
 
-SETTINGS_PERSISTENCE_MAP: Dict[str, Tuple[type, bool]] = {
-    "drawing_pad_settings": (DrawingPadSettings, True),
-    "controlnet_settings": (ControlnetSettings, True),
-    "image_to_image_settings": (ImageToImageSettings, True),
-    "outpaint_settings": (OutpaintSettings, True),
+SETTINGS_PERSISTENCE_MAP: Dict[str, Tuple[str, bool]] = {
+    "drawing_pad_settings": ("DrawingPadSettings", True),
+    "controlnet_settings": ("ControlnetSettings", True),
+    "image_to_image_settings": ("ImageToImageSettings", True),
+    "outpaint_settings": ("OutpaintSettings", True),
 }
 
 
@@ -30,7 +29,8 @@ def persist_image_worker(
             "generation": generation,
         }
 
-    model_class, layer_scoped = model_entry
+    resource_name, layer_scoped = model_entry
+    resource_store = get_resource_store()
     image_binary = binary_data
 
     if image_binary is None and pil_image is not None:
@@ -67,26 +67,33 @@ def persist_image_worker(
     try:
         if layer_scoped:
             filters = {"layer_id": layer_id}
-            setting = model_class.objects.filter_by_first(**filters)
+            setting = resource_store.first(
+                resource_name,
+                filters=filters,
+            )
             if setting is None:
-                setting = model_class.objects.create(**filters)
+                setting = resource_store.create(resource_name, filters)
         else:
-            records = model_class.objects.all()
+            records = resource_store.query(resource_name)
             setting = max(
                 records,
                 key=lambda record: getattr(record, "id", 0) or 0,
                 default=None,
             )
             if setting is None:
-                setting = model_class.objects.create()
+                setting = resource_store.create(resource_name, {})
 
-        model_class.objects.update(setting.id, **{column_name: image_binary})
+        resource_store.update(
+            resource_name,
+            setting.id,
+            {column_name: image_binary},
+        )
     except Exception as exc:
         return {"error": f"db_error:{exc}", "generation": generation}
 
     return {
         "generation": generation,
-        "table_name": model_class.__tablename__,
+        "table_name": resource_to_table[resource_name],
         "column_name": column_name,
         "binary": image_binary,
         "settings_key": settings_key,

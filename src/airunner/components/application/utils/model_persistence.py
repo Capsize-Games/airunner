@@ -3,10 +3,12 @@
 import os
 from typing import Any, Dict
 
+from airunner.daemon_client.resource_store import get_resource_store
 from airunner.settings import AIRUNNER_LOG_LEVEL
 from airunner.utils.application import get_logger
 
 logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
+resource_store = get_resource_store()
 
 
 def _extract_base_model_from_path(file_path: str) -> str:
@@ -103,15 +105,16 @@ def _persist_lora_trigger_words(
     file_path: str, trigger_words: str, version_data: Dict[str, Any]
 ) -> None:
     """Persist trigger words for a LoRA model."""
-    from airunner.models.lora import Lora
-
     file_name = os.path.basename(file_path)
     name_without_ext = os.path.splitext(file_name)[0]
 
     # Try to find existing LoRA by path or name
-    existing_lora = Lora.objects.filter_by_first(path=file_path)
+    existing_lora = resource_store.first("Lora", filters={"path": file_path})
     if existing_lora is None:
-        existing_lora = Lora.objects.filter_by_first(name=name_without_ext)
+        existing_lora = resource_store.first(
+            "Lora",
+            filters={"name": name_without_ext},
+        )
 
     version_str = _extract_base_model_from_path(file_path) or str(
         version_data.get("id", "")
@@ -119,21 +122,27 @@ def _persist_lora_trigger_words(
 
     if existing_lora:
         logger.debug(f"Updating existing LoRA: {existing_lora.name}")
-        Lora.objects.update(
+        resource_store.update(
+            "Lora",
             existing_lora.id,
-            trigger_word=trigger_words,
-            path=file_path,
-            version=version_str,
+            {
+                "trigger_word": trigger_words,
+                "path": file_path,
+                "version": version_str,
+            },
         )
     else:
         logger.debug(f"Creating new LoRA: {name_without_ext}")
-        Lora.objects.create(
-            name=name_without_ext,
-            path=file_path,
-            trigger_word=trigger_words,
-            version=version_str,
-            enabled=False,  # User can enable manually
-            scale=0,
+        resource_store.create(
+            "Lora",
+            {
+                "name": name_without_ext,
+                "path": file_path,
+                "trigger_word": trigger_words,
+                "version": version_str,
+                "enabled": False,
+                "scale": 0,
+            },
         )
 
 
@@ -141,16 +150,18 @@ def _persist_embedding_trigger_words(
     file_path: str, trigger_words: str, version_data: Dict[str, Any]
 ) -> None:
     """Persist trigger words for an embedding."""
-    from airunner.models.embedding import Embedding
-
     file_name = os.path.basename(file_path)
     name_without_ext = os.path.splitext(file_name)[0]
 
     # Try to find existing embedding by path or name
-    existing_embedding = Embedding.objects.filter_by_first(path=file_path)
+    existing_embedding = resource_store.first(
+        "Embedding",
+        filters={"path": file_path},
+    )
     if existing_embedding is None:
-        existing_embedding = Embedding.objects.filter_by_first(
-            name=name_without_ext
+        existing_embedding = resource_store.first(
+            "Embedding",
+            filters={"name": name_without_ext},
         )
 
     version_str = _extract_base_model_from_path(file_path) or str(
@@ -159,20 +170,26 @@ def _persist_embedding_trigger_words(
 
     if existing_embedding:
         logger.debug(f"Updating existing embedding: {existing_embedding.name}")
-        Embedding.objects.update(
+        resource_store.update(
+            "Embedding",
             existing_embedding.id,
-            trigger_word=trigger_words,
-            path=file_path,
-            version=version_str,
+            {
+                "trigger_word": trigger_words,
+                "path": file_path,
+                "version": version_str,
+            },
         )
     else:
         logger.debug(f"Creating new embedding: {name_without_ext}")
-        Embedding.objects.create(
-            name=name_without_ext,
-            path=file_path,
-            trigger_word=trigger_words,
-            version=version_str,
-            active=False,  # User can activate manually
+        resource_store.create(
+            "Embedding",
+            {
+                "name": name_without_ext,
+                "path": file_path,
+                "trigger_word": trigger_words,
+                "version": version_str,
+                "active": False,
+            },
         )
 
 
@@ -180,21 +197,15 @@ def _persist_model_trigger_words(
     file_path: str, trigger_words: str, version_data: Dict[str, Any]
 ) -> None:
     """Persist trigger words for a checkpoint/model."""
-    # Ensure both ends of the relationship are registered before using AIModels
-    # to avoid SQLAlchemy registry resolution errors.
-    from airunner.models.generator_settings import (
-        GeneratorSettings,  # noqa: F401 - imported for side-effect
-    )
-    from airunner.models.ai_models import AIModels
-
     file_name = os.path.basename(file_path)
     name_without_ext = os.path.splitext(file_name)[0]
 
     # Try to find existing model by path or name
-    existing_model = AIModels.objects.filter_by_first(path=file_path)
+    existing_model = resource_store.first("AIModels", filters={"path": file_path})
     if existing_model is None:
-        existing_model = AIModels.objects.filter_by_first(
-            name=name_without_ext
+        existing_model = resource_store.first(
+            "AIModels",
+            filters={"name": name_without_ext},
         )
 
     version_str = _extract_base_model_from_path(file_path) or str(
@@ -203,22 +214,28 @@ def _persist_model_trigger_words(
 
     if existing_model:
         logger.debug(f"Updating existing model: {existing_model.name}")
-        AIModels.objects.update(
+        resource_store.update(
+            "AIModels",
             existing_model.id,
-            trigger_words=trigger_words,
-            path=file_path,
-            version=version_str,
+            {
+                "trigger_words": trigger_words,
+                "path": file_path,
+                "version": version_str,
+            },
         )
     else:
         logger.debug(f"Creating new model: {name_without_ext}")
-        AIModels.objects.create(
-            name=name_without_ext,
-            path=file_path,
-            trigger_words=trigger_words,
-            version=version_str,
-            branch="main",  # Default branch
-            category="downloaded",  # Mark as downloaded
-            pipeline_action="txt2img",  # Default pipeline
-            model_type="checkpoint",  # Default type
-            enabled=False,  # User can enable manually
+        resource_store.create(
+            "AIModels",
+            {
+                "name": name_without_ext,
+                "path": file_path,
+                "trigger_words": trigger_words,
+                "version": version_str,
+                "branch": "main",
+                "category": "downloaded",
+                "pipeline_action": "txt2img",
+                "model_type": "checkpoint",
+                "enabled": False,
+            },
         )

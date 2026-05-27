@@ -1,7 +1,7 @@
 """RAG document indexing operations."""
 
 import os
-from typing import List, Optional
+from typing import Any, List, Optional
 
 from langchain_core.documents import Document
 
@@ -12,8 +12,11 @@ from airunner.components.llm.managers.agent.document_loader import (
 from airunner.components.llm.managers.agent.vector_index import (
     DocumentVectorIndex,
 )
-from airunner.models.document import (
-    Document as DBDocument,
+from airunner.components.documents.data.document_records import (
+    ensure_document_record,
+    find_document_by_path,
+    list_documents,
+    update_document,
 )
 from airunner.enums import SignalCode
 
@@ -72,7 +75,7 @@ class RAGIndexingMixin:
             self.logger.error(f"Error loading documents: {e}")
             return []
 
-    def _index_single_document(self, db_doc: DBDocument) -> bool:
+    def _index_single_document(self, db_doc: Any) -> bool:
         """Index a single document into its own per-document index.
 
         Args:
@@ -215,14 +218,12 @@ class RAGIndexingMixin:
                     resolved_path,
                 )
                 return False, False, False, resolved_path
-            refreshed_docs = DBDocument.objects.filter_by(
-                path=resolved_path
-            )
+            refreshed_docs = list_documents(filters={"path": resolved_path})
             if refreshed_docs:
                 db_doc = refreshed_docs[0]
 
         if not was_active:
-            DBDocument.objects.update(pk=db_doc.id, active=True)
+            update_document(db_doc.id, {"active": True})
 
         changed = created or not was_indexed or not was_active
         return True, not was_indexed, changed, db_doc.path
@@ -246,13 +247,13 @@ class RAGIndexingMixin:
 
     def _find_existing_request_document(self, path: str):
         """Find one existing document row for a missing request path."""
-        db_docs = DBDocument.objects.filter_by(path=path)
-        if db_docs and len(db_docs) > 0:
-            return db_docs[0]
+        db_doc = find_document_by_path(path)
+        if db_doc is not None:
+            return db_doc
 
         file_name = os.path.basename(path)
         try:
-            for db_doc in DBDocument.objects.all():
+            for db_doc in list_documents():
                 doc_path = getattr(db_doc, "path", "")
                 if not doc_path:
                     continue
@@ -270,13 +271,13 @@ class RAGIndexingMixin:
 
     def _get_or_create_request_document(self, path: str):
         """Return one document row for request-attached indexing."""
-        db_docs = DBDocument.objects.filter_by(path=path)
-        if db_docs and len(db_docs) > 0:
-            return db_docs[0], False
+        db_doc = find_document_by_path(path)
+        if db_doc is not None:
+            return db_doc, False
 
         try:
-            db_doc = DBDocument.objects.create(
-                path=path,
+            db_doc = ensure_document_record(
+                path,
                 active=False,
                 indexed=False,
             )

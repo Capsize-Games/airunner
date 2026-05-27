@@ -1,16 +1,14 @@
 """Mixin providing AI model, LoRA, and embedding management operations."""
 
-from typing import List, Optional
-from airunner.models.ai_models import AIModels
-from airunner.models.lora import Lora
-from airunner.models.embedding import Embedding
-from airunner.components.application.data import table_to_class
+from typing import Any, List, Optional
+
+from airunner.components.application.data import table_to_resource
 
 
 class ModelManagementMixin:
     """Mixin for managing AI models, LoRAs, and embeddings."""
 
-    def update_ai_models(self, models: List[AIModels]) -> None:
+    def update_ai_models(self, models: List[Any]) -> None:
         """Update multiple AI models.
 
         Args:
@@ -20,7 +18,7 @@ class ModelManagementMixin:
             self.update_ai_model(model)
         self._notify_setting_updated(None, None, None)
 
-    def update_ai_model(self, model: AIModels) -> None:
+    def update_ai_model(self, model: Any) -> None:
         """Update or create a single AI model.
 
         Args:
@@ -60,19 +58,19 @@ class ModelManagementMixin:
             layer_tables[lower_table](**{column_name: val})
             return
 
-        model_class_ = table_to_class.get(table_name)
-        if model_class_ is None:
-            self.logger.error(f"Model class for {table_name} not found")
+        resource_name = table_to_resource.get(table_name)
+        if resource_name is None:
+            self.logger.error(f"Resource for {table_name} not found")
             return
 
-        setting = self._get_latest_setting(model_class_)
+        setting = self._get_latest_setting(resource_name)
         if setting:
-            model_class_.objects.update(setting.id, **{column_name: val})
-            self._notify_setting_updated(table_name, column_name, val)
+            self.resource_store.update(setting.resource_name, setting.id, {column_name: val})
+            self._notify_setting_updated(resource_name, column_name, val)
         else:
             self.logger.error("Failed to update settings: No setting found")
 
-    def update_lora(self, lora: Lora) -> None:
+    def update_lora(self, lora: Any) -> None:
         """Update or create a LoRA.
 
         Args:
@@ -87,7 +85,7 @@ class ModelManagementMixin:
 
         self._notify_setting_updated(None, None, None)
 
-    def update_loras(self, loras: List[Lora]) -> None:
+    def update_loras(self, loras: List[Any]) -> None:
         """Update multiple LoRAs.
 
         Args:
@@ -103,7 +101,7 @@ class ModelManagementMixin:
 
         self._notify_setting_updated(None, None, None)
 
-    def update_embeddings(self, embeddings: List[Embedding]) -> None:
+    def update_embeddings(self, embeddings: List[Any]) -> None:
         """Update multiple embeddings.
 
         Args:
@@ -113,59 +111,52 @@ class ModelManagementMixin:
             existing = self._find_existing_embedding(embedding)
 
             if existing:
-                Embedding.objects.update(
+                self.resource_store.update(
+                    "Embedding",
                     existing.id,
-                    **self._record_values(embedding),
+                    self._record_values(embedding),
                 )
             else:
                 self._create_new_embedding(embedding)
 
         self._notify_setting_updated(None, None, None)
 
-    @staticmethod
-    def delete_lora(lora: Lora) -> None:
+    def delete_lora(self, lora: Any) -> None:
         """Delete a LoRA by name.
 
         Args:
             lora: Lora instance to delete.
         """
-        loras = Lora.objects.filter_by(name=lora.name)
+        loras = self.resource_store.query("Lora", filters={"name": lora.name})
         for lora_instance in loras:
-            lora_instance.delete()
+            self.resource_store.delete("Lora", lora_instance.id)
 
-    @staticmethod
-    def delete_lora_by_name(lora_name: str, version: str) -> None:
+    def delete_lora_by_name(self, lora_name: str, version: str) -> None:
         """Delete LoRA by name and version.
 
         Args:
             lora_name: Name of the LoRA.
             version: Version of the LoRA.
         """
-        loras = Lora.objects.filter_by(name=lora_name, version=version)
+        loras = self.resource_store.query(
+            "Lora",
+            filters={"name": lora_name, "version": version},
+        )
         for lora in loras:
-            lora.delete()
+            self.resource_store.delete("Lora", lora.id)
 
-    @staticmethod
-    def delete_embedding(embedding: Embedding) -> None:
+    def delete_embedding(self, embedding: Any) -> None:
         """Delete an embedding.
 
         Args:
             embedding: Embedding instance to delete.
         """
-        Embedding.objects.delete_by(
-            name=embedding.name,
-            path=embedding.path,
-            branch=embedding.branch,
-            version=embedding.version,
-            category=embedding.category,
-            pipeline_action=embedding.pipeline_action,
-            enabled=embedding.enabled,
-            model_type=embedding.model_type,
-            is_default=embedding.is_default,
+        self.resource_store.delete_many(
+            "Embedding",
+            filters=self._record_values(embedding),
         )
 
-    @staticmethod
-    def get_lora_by_name(name: str) -> Optional[Lora]:
+    def get_lora_by_name(self, name: str) -> Optional[Any]:
         """Get LoRA by name.
 
         Args:
@@ -174,28 +165,25 @@ class ModelManagementMixin:
         Returns:
             Lora instance or None.
         """
-        return Lora.objects.filter_by_first(name=name)
+        return self.resource_store.first("Lora", filters={"name": name})
 
-    @staticmethod
-    def add_lora(lora: Lora) -> None:
+    def add_lora(self, lora: Any) -> None:
         """Add a new LoRA.
 
         Args:
             lora: Lora instance to add.
         """
-        lora.save()
+        self.resource_store.create("Lora", self._record_values(lora))
 
-    @staticmethod
-    def create_lora(lora: Lora) -> None:
+    def create_lora(self, lora: Any) -> None:
         """Create a new LoRA.
 
         Args:
             lora: Lora instance to create.
         """
-        lora.save()
+        self.resource_store.create("Lora", self._record_values(lora))
 
-    @staticmethod
-    def get_embedding_by_name(name: str) -> Optional[Embedding]:
+    def get_embedding_by_name(self, name: str) -> Optional[Any]:
         """Get embedding by name.
 
         Args:
@@ -204,18 +192,17 @@ class ModelManagementMixin:
         Returns:
             Embedding instance or None.
         """
-        return Embedding.objects.filter_by_first(name=name)
+        return self.resource_store.first("Embedding", filters={"name": name})
 
-    @staticmethod
-    def add_embedding(embedding: Embedding) -> None:
+    def add_embedding(self, embedding: Any) -> None:
         """Add a new embedding.
 
         Args:
             embedding: Embedding instance to add.
         """
-        embedding.save()
+        self.resource_store.create("Embedding", self._record_values(embedding))
 
-    def _find_existing_ai_model(self, model: AIModels) -> Optional[AIModels]:
+    def _find_existing_ai_model(self, model: Any) -> Optional[Any]:
         """Find existing AI model by attributes.
 
         Args:
@@ -224,20 +211,13 @@ class ModelManagementMixin:
         Returns:
             Existing model or None.
         """
-        return AIModels.objects.filter_by_first(
-            name=model.name,
-            path=model.path,
-            branch=model.branch,
-            version=model.version,
-            category=model.category,
-            pipeline_action=model.pipeline_action,
-            enabled=model.enabled,
-            model_type=model.model_type,
-            is_default=model.is_default,
+        return self.resource_store.first(
+            "AIModels",
+            filters=self._record_values(model),
         )
 
     def _update_existing_ai_model(
-        self, existing: AIModels, model: AIModels
+        self, existing: Any, model: Any
     ) -> None:
         """Update one existing AI model through the daemon manager.
 
@@ -245,41 +225,21 @@ class ModelManagementMixin:
             existing: Existing model dataclass.
             model: New model data.
         """
-        AIModels.objects.update(existing.id, **self._record_values(model))
+        self.resource_store.update(
+            "AIModels",
+            existing.id,
+            self._record_values(model),
+        )
 
-    def _create_new_ai_model(self, model: AIModels) -> None:
+    def _create_new_ai_model(self, model: Any) -> None:
         """Create new AI model.
 
         Args:
             model: AIModels instance to create.
         """
-        new_model = AIModels(
-            name=model.name,
-            path=model.path,
-            branch=model.branch,
-            version=model.version,
-            category=model.category,
-            pipeline_action=model.pipeline_action,
-            enabled=model.enabled,
-            model_type=model.model_type,
-            is_default=model.is_default,
-        )
-        new_model.save()
+        self.resource_store.create("AIModels", self._record_values(model))
 
-    def _copy_model_attributes(
-        self, target: AIModels, source: AIModels
-    ) -> None:
-        """Copy attributes from source to target model.
-
-        Args:
-            target: Target model to update.
-            source: Source model with new values.
-        """
-        for key in source.__dict__.keys():
-            if key not in ("_sa_instance_state", "id"):
-                setattr(target, key, getattr(source, key))
-
-    def _find_lora_by_name(self, name: str) -> Optional[Lora]:
+    def _find_lora_by_name(self, name: str) -> Optional[Any]:
         """Find LoRA by name.
 
         Args:
@@ -288,50 +248,32 @@ class ModelManagementMixin:
         Returns:
             Lora instance or None.
         """
-        return Lora.objects.filter_by_first(name=name)
+        return self.resource_store.first("Lora", filters={"name": name})
 
-    def _update_existing_lora(self, existing: Lora, lora: Lora) -> None:
+    def _update_existing_lora(self, existing: Any, lora: Any) -> None:
         """Update existing LoRA.
 
         Args:
             existing: Existing LoRA.
             lora: New LoRA data.
         """
-        Lora.objects.update(existing.id, **self._record_values(lora))
+        self.resource_store.update(
+            "Lora",
+            existing.id,
+            self._record_values(lora),
+        )
 
-    def _create_new_lora(self, lora: Lora) -> None:
+    def _create_new_lora(self, lora: Any) -> None:
         """Create new LoRA instance.
 
         Args:
             lora: LoRA data.
         """
-        new_lora = Lora(
-            name=lora.name,
-            path=getattr(lora, "path", ""),
-            branch=getattr(lora, "branch", ""),
-            version=getattr(lora, "version", ""),
-            category=getattr(lora, "category", ""),
-            pipeline_action=getattr(lora, "pipeline_action", ""),
-            enabled=getattr(lora, "enabled", True),
-            model_type=getattr(lora, "model_type", ""),
-            is_default=getattr(lora, "is_default", False),
-        )
-        new_lora.save()
-
-    def _copy_lora_attributes(self, target: Lora, source: Lora) -> None:
-        """Copy LoRA attributes.
-
-        Args:
-            target: Target LoRA.
-            source: Source LoRA.
-        """
-        for key in source.__dict__.keys():
-            if key != "_sa_instance_state":
-                setattr(target, key, getattr(source, key))
+        self.resource_store.create("Lora", self._record_values(lora))
 
     def _find_existing_embedding(
-        self, embedding: Embedding
-    ) -> Optional[Embedding]:
+        self, embedding: Any
+    ) -> Optional[Any]:
         """Find existing embedding.
 
         Args:
@@ -340,49 +282,18 @@ class ModelManagementMixin:
         Returns:
             Existing embedding or None.
         """
-        return Embedding.objects.filter_by_first(
-            name=embedding.name,
-            path=embedding.path,
-            branch=embedding.branch,
-            version=embedding.version,
-            category=embedding.category,
-            pipeline_action=embedding.pipeline_action,
-            enabled=embedding.enabled,
-            model_type=embedding.model_type,
-            is_default=embedding.is_default,
+        return self.resource_store.first(
+            "Embedding",
+            filters=self._record_values(embedding),
         )
 
-    def _create_new_embedding(self, embedding: Embedding) -> None:
+    def _create_new_embedding(self, embedding: Any) -> None:
         """Create new embedding.
 
         Args:
             embedding: Embedding data.
         """
-        new_embedding = Embedding(
-            name=embedding.name,
-            path=embedding.path,
-            branch=embedding.branch,
-            version=embedding.version,
-            category=embedding.category,
-            pipeline_action=embedding.pipeline_action,
-            enabled=embedding.enabled,
-            model_type=embedding.model_type,
-            is_default=embedding.is_default,
-        )
-        new_embedding.save()
-
-    def _copy_embedding_attributes(
-        self, target: Embedding, source: Embedding
-    ) -> None:
-        """Copy embedding attributes.
-
-        Args:
-            target: Target embedding.
-            source: Source embedding.
-        """
-        for key in source.__dict__.keys():
-            if key != "_sa_instance_state":
-                setattr(target, key, getattr(source, key))
+        self.resource_store.create("Embedding", self._record_values(embedding))
 
     @staticmethod
     def _record_values(record) -> dict:
@@ -392,16 +303,21 @@ class ModelManagementMixin:
         values.pop("_sa_instance_state", None)
         return values
 
-    def _get_latest_setting(self, model_class_):
+    def _get_latest_setting(self, resource_name: str):
         """Get latest setting for model class.
 
         Args:
-            model_class_: Model class.
+            resource_name: Resource name.
 
         Returns:
             Latest setting or None.
         """
-        return model_class_.objects.order_by(model_class_.id.desc()).first()
+        if self.resource_store.is_singleton(resource_name):
+            return self.resource_store.get_singleton(resource_name)
+        return self.resource_store.first(
+            resource_name,
+            order_by=[{"field": "id", "direction": "desc"}],
+        )
 
     def _notify_setting_updated(self, table_name, column_name, val) -> None:
         """Notify that a setting was updated.

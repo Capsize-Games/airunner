@@ -12,7 +12,8 @@ from typing import Optional, Any, Dict
 
 import pandas as pd
 
-from airunner.models.path_settings import PathSettings
+from airunner.daemon_client.resource_store import get_resource_store
+from airunner.settings import AIRUNNER_BASE_PATH
 from airunner.settings import AIRUNNER_LOG_LEVEL
 from airunner.utils.application import get_logger
 
@@ -32,9 +33,18 @@ def get_lat_lon(
         dict: Dictionary with keys 'lat', 'lon', and 'row'. Values are float or None.
     """
     del country_code
-    path_settings = PathSettings.objects.first()
+    try:
+        path_settings = get_resource_store().get_singleton(
+            "PathSettings",
+            create_if_missing=True,
+        )
+        base_path = path_settings.base_path
+    except Exception:
+        base_path = AIRUNNER_BASE_PATH
     path = os.path.join(
-        path_settings.base_path, "map", "2024_Gaz_zcta_national.txt"
+        base_path,
+        "map",
+        "2024_Gaz_zcta_national.txt",
     )
     res: Dict[str, Optional[Any]] = {"lat": None, "lon": None, "row": None}
     if not os.path.exists(path):

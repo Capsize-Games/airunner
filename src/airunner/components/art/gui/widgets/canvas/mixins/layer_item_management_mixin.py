@@ -6,8 +6,11 @@ This mixin handles layer-specific image items, including removal and recentering
 from typing import Dict
 from PySide6.QtCore import QPointF
 
-from airunner.models.canvas_layer import CanvasLayer
-from airunner.models.drawingpad_settings import DrawingPadSettings
+from airunner.components.art.data.canvas_layer_records import (
+    first_layer_setting,
+    ordered_canvas_layers,
+    update_layer_setting,
+)
 from airunner.components.art.gui.widgets.canvas.draggables.layer_image_item import (
     LayerImageItem,
 )
@@ -81,10 +84,9 @@ class LayerItemManagementMixin:
 
                         # Verify it was cleared
                         try:
-                            settings = (
-                                DrawingPadSettings.objects.filter_by_first(
-                                    layer_id=layer_id
-                                )
+                            settings = first_layer_setting(
+                                "DrawingPadSettings",
+                                layer_id,
                             )
                             if settings:
                                 has_image = settings.image is not None
@@ -133,22 +135,27 @@ class LayerItemManagementMixin:
         Returns:
             Dict mapping scene items to their new QPointF positions.
         """
-        layers = CanvasLayer.objects.order_by("order").all()
+        layers = ordered_canvas_layers(store=self.resource_store)
         self.logger.info(f"[RECENTER] Found {len(layers)} layers in database")
         new_positions = {}
         for layer in layers:
             self.logger.info(f"[RECENTER] Processing layer {layer.id}")
-            results = DrawingPadSettings.objects.filter_by(layer_id=layer.id)
-            self.logger.info(
-                f"[RECENTER] Layer {layer.id}: found {len(results)} DrawingPadSettings"
+            drawingpad_settings = first_layer_setting(
+                "DrawingPadSettings",
+                layer.id,
+                store=self.resource_store,
             )
-            if len(results) == 0:
+            self.logger.info(
+                "[RECENTER] Layer %s: settings found=%s",
+                layer.id,
+                drawingpad_settings is not None,
+            )
+            if drawingpad_settings is None:
                 self.logger.warning(
                     f"[RECENTER] No DrawingPadSettings for layer {layer.id}"
                 )
                 continue
 
-            drawingpad_settings = results[0]
             if not self.scene:
                 self.logger.warning(f"[RECENTER] No scene!")
                 continue
@@ -171,10 +178,11 @@ class LayerItemManagementMixin:
             )
 
             # Save the new position to database
-            DrawingPadSettings.objects.update(
-                drawingpad_settings.id,
-                x_pos=pos_x,
-                y_pos=pos_y,
+            update_layer_setting(
+                "DrawingPadSettings",
+                layer.id,
+                {"x_pos": pos_x, "y_pos": pos_y},
+                store=self.resource_store,
             )
 
             # Invalidate cache so next read gets fresh value from DB

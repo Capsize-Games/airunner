@@ -6,8 +6,8 @@ import shutil
 from typing import Optional, Dict, Any
 from datetime import datetime
 
-from airunner.models.document import (
-    Document as DBDocument,
+from airunner.components.documents.data.document_records import (
+    list_documents,
 )
 from airunner.components.llm.managers.agent.vector_index import (
     DocumentVectorIndex,
@@ -241,7 +241,7 @@ class RAGIndexManagementMixin:
 
         try:
             migrated = 0
-            for document in DBDocument.objects.all():
+            for document in list_documents():
                 if not os.path.exists(document.path):
                     continue
                 if self._index_single_document(document):

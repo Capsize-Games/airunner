@@ -32,9 +32,6 @@ from airunner.utils.image import convert_image_to_binary
 from airunner.components.art.managers.stablediffusion.image_response import (
     ImageResponse,
 )
-from airunner.models.application_settings import (
-    ApplicationSettings,
-)
 from airunner.components.llm.config.provider_config import LLMProviderConfig
 from airunner.components.llm.managers.download_huggingface import (
     DownloadHuggingFaceModel,
@@ -66,12 +63,6 @@ from airunner.components.art.workers.image_export_worker import (
 )
 from airunner.components.application.workers.model_scanner_worker import (
     ModelScannerWorker,
-)
-from airunner.models.drawingpad_settings import (
-    DrawingPadSettings,
-)
-from airunner.models.canvas_layer import (
-    CanvasLayer,
 )
 
 _OPTIONAL_LOAD_REQUEST_TIMEOUT_SECONDS = 5.0
@@ -161,7 +152,10 @@ class WorkerManager(Worker):
         layer_id = self._get_current_selected_layer_id()
         if layer_id is None:
             try:
-                layers = CanvasLayer.objects.order_by("order").all() or []
+                layers = self.resource_store.query(
+                    "CanvasLayer",
+                    order_by=[{"field": "order", "direction": "asc"}],
+                )
                 if layers:
                     layer_id = getattr(layers[0], "id", None)
             except Exception:
@@ -170,8 +164,9 @@ class WorkerManager(Worker):
         image_binary = None
         try:
             if layer_id is not None:
-                drawing_pad = DrawingPadSettings.objects.filter_by_first(
-                    layer_id=layer_id
+                drawing_pad = self.resource_store.get_layer(
+                    "DrawingPadSettings",
+                    layer_id,
                 )
                 image_binary = getattr(drawing_pad, "image", None)
             else:
@@ -565,11 +560,6 @@ class WorkerManager(Worker):
             if app is not None:
                 candidates.append(getattr(app, "api", None))
                 candidates.append(getattr(app, "main_window", None))
-        except Exception:
-            pass
-
-        try:
-            candidates.append(get_api(create_if_missing=False))
         except Exception:
             pass
 
@@ -1305,7 +1295,10 @@ class WorkerManager(Worker):
         not have bootstrap rows yet. Image generation expects ApplicationSettings
         to exist; without it, requests crash and art jobs stay RUNNING forever.
         """
-        app_settings = ApplicationSettings.objects.first()
+        app_settings = self.resource_store.get_singleton(
+            "ApplicationSettings",
+            create_if_missing=True,
+        )
         if app_settings is not None:
             return app_settings
 
@@ -1314,16 +1307,22 @@ class WorkerManager(Worker):
         # - Default NSFW filter off in headless mode to avoid blocking generation
         #   on a safety-checker bootstrap step.
         try:
-            ApplicationSettings(
-                sd_enabled=os.environ.get("AIRUNNER_SD_ON") == "1",
-                llm_enabled=True,
-                nsfw_filter=False,
-            ).save()
+            self.resource_store.update_singleton(
+                "ApplicationSettings",
+                {
+                    "sd_enabled": os.environ.get("AIRUNNER_SD_ON") == "1",
+                    "llm_enabled": True,
+                    "nsfw_filter": False,
+                },
+            )
         except Exception:
             # Best-effort; if creation fails, subsequent code will raise a clearer error.
             pass
 
-        app_settings = ApplicationSettings.objects.first()
+        app_settings = self.resource_store.get_singleton(
+            "ApplicationSettings",
+            create_if_missing=True,
+        )
         if app_settings is None:
             raise RuntimeError(
                 "ApplicationSettings row is missing and could not be created"

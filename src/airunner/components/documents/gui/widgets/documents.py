@@ -30,8 +30,14 @@ from PySide6.QtWidgets import (
 from airunner.enums import SignalCode
 from airunner.utils.settings import get_qsettings
 from airunner.components.application.gui.widgets.base_widget import BaseWidget
-from airunner.models.document import Document
-from airunner.models.zimfile import ZimFile
+from airunner.components.documents.data.document_records import (
+    delete_document,
+    delete_documents_by_path,
+    ensure_document_record,
+    find_zim_file_by_path,
+    list_documents,
+    update_document,
+)
 from airunner.components.documents.gui.widgets.templates.documents_ui import (
     Ui_documents,
 )
@@ -242,9 +248,8 @@ class DocumentsWidget(BaseWidget):
             self._index_next_document()
 
         if activate_after_index is False and document_path:
-            docs = Document.objects.filter_by(path=document_path)
-            if docs and len(docs) > 0:
-                Document.objects.update(pk=docs[0].id, active=False)
+            for document in list_documents(filters={"path": document_path}):
+                update_document(document.id, {"active": False})
         if document_path:
             self._document_index_failures.pop(document_path, None)
 
@@ -481,12 +486,12 @@ class DocumentsWidget(BaseWidget):
         if not validated_path:
             return False
 
-        docs = Document.objects.filter_by(path=validated_path)
+        docs = list_documents(filters={"path": validated_path})
         if docs and docs[0].indexed:
             return False
         if not docs:
-            Document.objects.create(
-                path=validated_path,
+            ensure_document_record(
+                validated_path,
                 active=False,
                 indexed=False,
             )
@@ -568,7 +573,7 @@ class DocumentsWidget(BaseWidget):
         current_files = self._document_library_files()
         known_documents = {
             doc.path: doc
-            for doc in Document.objects.all()
+            for doc in list_documents()
             if getattr(doc, "path", None)
         }
         changed = False
@@ -576,8 +581,8 @@ class DocumentsWidget(BaseWidget):
         for file_path in sorted(current_files):
             if file_path in known_documents:
                 continue
-            Document.objects.create(
-                path=file_path,
+            ensure_document_record(
+                file_path,
                 active=False,
                 indexed=False,
             )
@@ -588,7 +593,7 @@ class DocumentsWidget(BaseWidget):
                 continue
             if not self._is_managed_document_path(file_path):
                 continue
-            Document.objects.delete(pk=document.id)
+            delete_document(document.id)
             changed = True
 
         return changed
@@ -661,9 +666,8 @@ class DocumentsWidget(BaseWidget):
         # Check if this is a ZIM file
         if filename.lower().endswith(".zim"):
             # Look up ZIM metadata from database
-            zim_records = ZimFile.objects.filter_by(path=file_path)
-            if zim_records and len(zim_records) > 0:
-                zim = zim_records[0]
+            zim = find_zim_file_by_path(file_path)
+            if zim is not None:
                 # Return title if available, otherwise filename
                 if zim.title:
                     return zim.title
@@ -678,7 +682,7 @@ class DocumentsWidget(BaseWidget):
         file_path = validated_path
 
         # Check if indexed
-        docs = Document.objects.filter_by(path=file_path)
+        docs = list_documents(filters={"path": file_path})
         if not docs or not docs[0].indexed:
             self._document_index_failures.pop(file_path, None)
             self._request_document_index(
@@ -697,9 +701,13 @@ class DocumentsWidget(BaseWidget):
 
         # Update database
         if docs:
-            Document.objects.update(pk=docs[0].id, active=True)
+            update_document(docs[0].id, {"active": True})
         else:
-            Document.objects.create(path=file_path, active=True, indexed=True)
+            ensure_document_record(
+                file_path,
+                active=True,
+                indexed=True,
+            )
 
         self.logger.info(f"Added to active documents: {display_name}")
         self.refresh_active_documents_list()
@@ -748,9 +756,8 @@ class DocumentsWidget(BaseWidget):
             return
 
         # Update database
-        docs = Document.objects.filter_by(path=file_path)
-        if docs and len(docs) > 0:
-            Document.objects.update(pk=docs[0].id, active=False)
+        for document in list_documents(filters={"path": file_path}):
+            update_document(document.id, {"active": False})
 
         display_name = self._get_display_name(file_path)
         self.logger.info(f"Removed from active documents: {display_name}")
@@ -834,7 +841,7 @@ class DocumentsWidget(BaseWidget):
             return
 
         documents = [
-            doc for doc in Document.objects.all() if os.path.exists(doc.path)
+            doc for doc in list_documents() if os.path.exists(doc.path)
         ]
         documents.sort(key=lambda doc: self._get_display_name(doc.path).lower())
         self._document_index_failures = {
@@ -873,7 +880,7 @@ class DocumentsWidget(BaseWidget):
 
         docs_by_path = {}
         for path in selected_paths:
-            matches = Document.objects.filter_by(path=path)
+            matches = list_documents(filters={"path": path})
             docs_by_path[path] = matches[0] if matches else None
 
         menu = QMenu(self)
@@ -920,9 +927,7 @@ class DocumentsWidget(BaseWidget):
         def delete_selected():
             for file_path in selected_paths:
                 self._document_index_failures.pop(file_path, None)
-                docs = Document.objects.filter_by(path=file_path)
-                if docs and len(docs) > 0:
-                    Document.objects.delete(pk=docs[0].id)
+                delete_documents_by_path(file_path)
                 try:
                     if os.path.exists(file_path):
                         os.remove(file_path)
@@ -1035,10 +1040,7 @@ class DocumentsWidget(BaseWidget):
         def delete_selected():
             for file_path in selected_files:
                 self._document_index_failures.pop(file_path, None)
-                # Delete from database
-                docs = Document.objects.filter_by(path=file_path)
-                if docs and len(docs) > 0:
-                    Document.objects.delete(pk=docs[0].id)
+                delete_documents_by_path(file_path)
 
                 # Delete the actual file from disk
                 try:
@@ -1066,11 +1068,7 @@ class DocumentsWidget(BaseWidget):
                                     file_path,
                                     None,
                                 )
-                                docs = Document.objects.filter_by(
-                                    path=file_path
-                                )
-                                if docs and len(docs) > 0:
-                                    Document.objects.delete(pk=docs[0].id)
+                                delete_documents_by_path(file_path)
 
                         # Then delete the folder from disk
                         shutil.rmtree(folder_path)
@@ -1144,10 +1142,7 @@ class DocumentsWidget(BaseWidget):
                         file_paths.append(file_path)
 
             for file_path in file_paths:
-                # Delete from database
-                docs = Document.objects.filter_by(path=file_path)
-                if docs and len(docs) > 0:
-                    Document.objects.delete(pk=docs[0].id)
+                delete_documents_by_path(file_path)
 
                 # Delete the actual file from disk
                 try:
@@ -1233,10 +1228,7 @@ class DocumentsWidget(BaseWidget):
                         file_paths.append(file_path)
 
             for file_path in file_paths:
-                # Delete from database
-                docs = Document.objects.filter_by(path=file_path)
-                if docs and len(docs) > 0:
-                    Document.objects.delete(pk=docs[0].id)
+                delete_documents_by_path(file_path)
 
                 # Delete the actual file from disk
                 try:
@@ -1278,7 +1270,7 @@ class DocumentsWidget(BaseWidget):
         # Query all documents that are not indexed
         self._unindexed_docs = [
             doc.path
-            for doc in Document.objects.filter(Document.indexed == False)
+            for doc in list_documents(filters={"indexed": False})
             if hasattr(doc, "path") and doc.path
         ]
         self._total_to_index = len(self._unindexed_docs)

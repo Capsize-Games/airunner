@@ -3,10 +3,7 @@ from typing import Optional, Dict, List, Any
 
 from llama_cloud import MessageRole
 
-from airunner.models.chatbot import Chatbot
-from airunner.models.llm_generator_settings import (
-    LLMGeneratorSettings,
-)
+from airunner.daemon_client.resource_store import get_resource_store
 from airunner.components.llm.config.generation_presets import (
     get_action_generation_preset,
 )
@@ -298,10 +295,14 @@ class LLMRequest:
         Returns:
             LLMRequest: A new instance with parameters from the specified chatbot.
         """
+        resource_store = get_resource_store()
         if chatbot_id:
-            chatbot = Chatbot.objects.get(chatbot_id)
+            chatbot = resource_store.get("Chatbot", chatbot_id)
         else:
-            chatbot = Chatbot.objects.first()
+            chatbot = get_chatbot()
+
+        if chatbot is None:
+            return cls()
 
         return cls.from_values(
             do_sample=chatbot.do_sample,
@@ -334,10 +335,20 @@ class LLMRequest:
             LLMRequest: A new instance with parameters from the specified settings or from
                         the associated chatbot if settings don't override parameters.
         """
+        resource_store = get_resource_store()
         if llm_settings_id:
-            llm_settings = LLMGeneratorSettings.objects.get(llm_settings_id)
+            llm_settings = resource_store.get(
+                "LLMGeneratorSettings",
+                llm_settings_id,
+            )
         else:
-            llm_settings = LLMGeneratorSettings.objects.first()
+            llm_settings = resource_store.get_singleton(
+                "LLMGeneratorSettings",
+                create_if_missing=True,
+            )
+
+        if llm_settings is None:
+            return cls()
 
         if llm_settings.override_parameters:
             request = cls.from_values(

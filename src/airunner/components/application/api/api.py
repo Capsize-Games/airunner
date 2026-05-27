@@ -106,7 +106,7 @@ class API(App):
         if self._llm_service is None:
             from airunner.components.llm.api.llm_services import LLMAPIService
 
-            self._llm_service = LLMAPIService()
+            self._llm_service = LLMAPIService(api=self)
         return self._llm_service
 
     @llm.setter
@@ -119,7 +119,7 @@ class API(App):
         if self._art_service is None:
             from airunner.components.art.api.art_services import ARTAPIService
 
-            self._art_service = ARTAPIService()
+            self._art_service = ARTAPIService(api=self)
         return self._art_service
 
     @art.setter
@@ -132,7 +132,7 @@ class API(App):
         if self._tts_service is None:
             from airunner.components.tts.api.tts_services import TTSAPIService
 
-            self._tts_service = TTSAPIService()
+            self._tts_service = TTSAPIService(api=self)
         return self._tts_service
 
     @tts.setter
@@ -145,7 +145,7 @@ class API(App):
         if self._stt_service is None:
             from airunner.components.stt.api.stt_services import STTAPIService
 
-            self._stt_service = STTAPIService()
+            self._stt_service = STTAPIService(api=self)
         return self._stt_service
 
     @stt.setter

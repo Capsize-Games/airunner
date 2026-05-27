@@ -25,10 +25,7 @@ from airunner.utils.application.signal_mediator import SignalMediator
 from airunner.components.llm.config.provider_config import (
     LLMProviderConfig,
 )
-from airunner.models.llm_generator_settings import (
-    LLMGeneratorSettings,
-)
-from airunner.components.server.api.server import get_api
+from airunner.daemon_client.resource_store import get_resource_store
 
 
 _UNLOAD_SIGNALS = {
@@ -260,7 +257,10 @@ class ModelStatusWidget(QWidget):
         """Resolve one configured LLM display name for the status row."""
         settings = None
         try:
-            settings = LLMGeneratorSettings.objects.first()
+            settings = get_resource_store().get_singleton(
+                "LLMGeneratorSettings",
+                create_if_missing=True,
+            )
         except Exception:
             settings = None
 
@@ -393,10 +393,7 @@ class ModelStatusWidget(QWidget):
         except Exception:
             pass
 
-        try:
-            return get_api(create_if_missing=False)
-        except Exception:
-            return None
+        return None
 
     @staticmethod
     def _unload_llm_via_api(widget, payload: dict) -> bool:

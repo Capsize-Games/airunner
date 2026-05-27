@@ -8,11 +8,17 @@ the active grid area) for AI generation operations like img2img, inpaint, and ou
 from typing import List, Optional, Tuple, Any
 from PIL import Image
 
-from airunner.models.canvas_layer import CanvasLayer
-from airunner.models.drawingpad_settings import DrawingPadSettings
+from airunner.components.art.data.canvas_layer_records import (
+    create_canvas_layer,
+    ensure_layer_setting,
+    first_layer_setting,
+    ordered_canvas_layers,
+    update_layer_setting,
+)
+from airunner.daemon_client.resource_store import get_resource_store
 from airunner.settings import AIRUNNER_LOG_LEVEL
 from airunner.utils.application import get_logger
-from airunner.utils.image import convert_binary_to_image
+from airunner.utils.image import convert_binary_to_image, convert_image_to_binary
 
 
 logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
@@ -31,7 +37,7 @@ class LayerCompositor:
             List of visible CanvasLayer objects, ordered from bottom to top.
         """
         try:
-            layers = CanvasLayer.objects.order_by("order").all()
+            layers = ordered_canvas_layers()
             return [layer for layer in layers if layer.visible]
         except Exception as e:
             self.logger.error(f"Error getting visible layers: {e}")
@@ -47,22 +53,24 @@ class LayerCompositor:
             Tuple of (x, y, width, height) or None if layer has no image.
         """
         try:
-            results = DrawingPadSettings.objects.filter_by(layer_id=layer_id)
-            if not results:
+            drawing_pad = first_layer_setting(
+                "DrawingPadSettings",
+                layer_id,
+            )
+            if drawing_pad is None:
                 return None
-            
-            drawing_pad = results[0]
+
             if not drawing_pad.image:
                 return None
-            
+
             layer_image = convert_binary_to_image(drawing_pad.image)
             if layer_image is None:
                 return None
-            
+
             x = drawing_pad.x_pos or 0
             y = drawing_pad.y_pos or 0
             width, height = layer_image.size
-            
+
             return (x, y, width, height)
         except Exception as e:
             self.logger.error(f"Error getting layer bounds for layer {layer_id}: {e}")
@@ -106,14 +114,16 @@ class LayerCompositor:
         for layer in visible_layers:
             try:
                 # Get layer's drawing pad settings for position and image
-                results = DrawingPadSettings.objects.filter_by(layer_id=layer.id)
-                if not results:
+                drawing_pad = first_layer_setting(
+                    "DrawingPadSettings",
+                    layer.id,
+                )
+                if drawing_pad is None:
                     continue
-                
-                drawing_pad = results[0]
+
                 if not drawing_pad.image:
                     continue
-                
+
                 layer_image = convert_binary_to_image(drawing_pad.image)
                 if layer_image is None:
                     continue
@@ -208,22 +218,27 @@ class LayerCompositor:
         # Try to use region-based composition with active grid area
         if use_active_grid_region:
             try:
-                from airunner.models.active_grid_settings import (
-                    ActiveGridSettings,
+                resource_store = get_resource_store()
+                grid_settings = resource_store.get_singleton(
+                    "ActiveGridSettings"
                 )
-                from airunner.models.application_settings import (
-                    ApplicationSettings,
+                app_settings = resource_store.get_singleton(
+                    "ApplicationSettings"
                 )
 
-                # Get active grid position
-                grid_settings = ActiveGridSettings.objects.first()
-                app_settings = ApplicationSettings.objects.first()
-                
                 if grid_settings and app_settings:
                     region_x = grid_settings.pos_x or 0
                     region_y = grid_settings.pos_y or 0
-                    region_width = target_size[0] if target_size else (app_settings.working_width or 1024)
-                    region_height = target_size[1] if target_size else (app_settings.working_height or 1024)
+                    region_width = (
+                        target_size[0]
+                        if target_size
+                        else (app_settings.working_width or 1024)
+                    )
+                    region_height = (
+                        target_size[1]
+                        if target_size
+                        else (app_settings.working_height or 1024)
+                    )
 
                     result = self.compose_layers_in_region(
                         region_x=region_x,
@@ -253,9 +268,12 @@ class LayerCompositor:
         if composite_size is None:
             # Find the first layer with an image to determine size
             for layer in visible_layers:
-                results = DrawingPadSettings.objects.filter_by(layer_id=layer.id)
-                if results and results[0].image:
-                    layer_image = convert_binary_to_image(results[0].image)
+                drawing_pad = first_layer_setting(
+                    "DrawingPadSettings",
+                    layer.id,
+                )
+                if drawing_pad and drawing_pad.image:
+                    layer_image = convert_binary_to_image(drawing_pad.image)
                     if layer_image:
                         composite_size = layer_image.size
                         break
@@ -276,11 +294,14 @@ class LayerCompositor:
         for layer in visible_layers:
             try:
                 # Get layer image from DrawingPadSettings
-                results = DrawingPadSettings.objects.filter_by(layer_id=layer.id)
-                if not results or not results[0].image:
+                drawing_pad = first_layer_setting(
+                    "DrawingPadSettings",
+                    layer.id,
+                )
+                if drawing_pad is None or not drawing_pad.image:
                     continue
-                
-                layer_image = convert_binary_to_image(results[0].image)
+
+                layer_image = convert_binary_to_image(drawing_pad.image)
                 if layer_image:
                     # Convert to RGB if necessary
                     if layer_image.mode != "RGB":
@@ -347,11 +368,9 @@ class LayerCompositor:
             Layer ID if successful, None otherwise.
         """
         try:
-            from airunner.utils.image import convert_image_to_binary
-
             # Generate layer name if not provided
             if name is None:
-                existing_layers = CanvasLayer.objects.all()
+                existing_layers = ordered_canvas_layers()
                 layer_count = len(existing_layers) if existing_layers else 0
                 name = f"Generated Layer {layer_count + 1}"
 
@@ -359,24 +378,31 @@ class LayerCompositor:
             image_binary = convert_image_to_binary(image)
 
             # Determine layer order (place on top)
-            existing_layers = CanvasLayer.objects.order_by("order").all()
+            existing_layers = ordered_canvas_layers()
             max_order = max(
                 [layer.order for layer in existing_layers], default=-1
             )
 
             # Create the new layer
-            layer_id = CanvasLayer.objects.create(
-                order=max_order + 1,
-                name=name,
-                visible=visible,
-                image=image_binary,
+            layer = create_canvas_layer(
+                {
+                    "order": max_order + 1,
+                    "name": name,
+                    "visible": visible,
+                    "opacity": 100,
+                }
             )
-
-            if layer_id:
-                self.logger.info(
-                    f"Created new layer '{name}' with ID {layer_id}"
+            if layer:
+                ensure_layer_setting("DrawingPadSettings", layer.id)
+                update_layer_setting(
+                    "DrawingPadSettings",
+                    layer.id,
+                    {"image": image_binary},
                 )
-                return layer_id
+                self.logger.info(
+                    f"Created new layer '{name}' with ID {layer.id}"
+                )
+                return layer.id
             else:
                 return None
 

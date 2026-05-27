@@ -4,6 +4,7 @@ import os
 import sys
 from typing import Optional
 
+from airunner.settings import AIRUNNER_BASE_PATH
 from airunner.settings import AIRUNNER_LOG_LEVEL
 from airunner.utils.application import get_logger
 from airunner.utils.application.log_hygiene import LogHygieneFilter
@@ -62,18 +63,9 @@ def _get_log_level_from_env() -> int:
 def _get_log_file_path(root_logger: logging.Logger) -> Optional[str]:
     """Determine the log file path."""
     try:
-        # Import locally to avoid circular dependency
-        from airunner.models.path_settings import (
-            PathSettings,
-        )
-
-        settings = PathSettings.objects.first()
-        base_path = (
-            settings.base_path if settings else "~/.local/share/airunner"
-        )
-    except (ImportError, Exception):
-        # Fallback if PathSettings not available yet
-        base_path = "~/.local/share/airunner"
+        base_path = AIRUNNER_BASE_PATH
+    except Exception:
+        base_path = AIRUNNER_BASE_PATH
 
     try:
         log_file = os.environ.get(

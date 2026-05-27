@@ -12,7 +12,9 @@ from airunner.components.application.gui.windows.main.settings_mixin import (
     SettingsMixin,
 )
 from airunner.utils.settings import get_qsettings
-from airunner.models.drawingpad_settings import DrawingPadSettings
+from airunner.components.art.data.canvas_layer_records import (
+    ensure_layer_setting,
+)
 
 
 class DraggablePixmap(
@@ -93,11 +95,13 @@ class DraggablePixmap(
         self._layer_id_override = layer_id
 
     @property
-    def drawing_pad_settings(self) -> DrawingPadSettings:  # type: ignore[override]
+    def drawing_pad_settings(self):  # type: ignore[override]
         layer_id = self._resolve_layer_id()
         if layer_id is not None:
-            return self._get_layer_specific_settings(
-                DrawingPadSettings, layer_id=layer_id
+            return ensure_layer_setting(
+                "DrawingPadSettings",
+                layer_id,
+                store=self.resource_store,
             )
         return super().drawing_pad_settings
 

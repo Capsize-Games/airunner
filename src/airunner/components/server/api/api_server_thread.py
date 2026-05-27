@@ -11,13 +11,13 @@ import threading
 import os
 
 import uvicorn
+from PySide6.QtCore import QCoreApplication
 
 from airunner.api.server import (
     access_logs_enabled,
     create_app,
     is_loopback_host,
 )
-from airunner.components.server.api.server import get_api
 from airunner.settings import AIRUNNER_LOG_LEVEL
 from airunner.utils.application import get_logger
 from airunner.settings import (
@@ -41,14 +41,25 @@ class APIServerThread(threading.Thread):
 
     def __init__(
         self,
+        app_instance=None,
         host: str = AIRUNNER_HEADLESS_SERVER_HOST,
         port: int = AIRUNNER_HEADLESS_SERVER_PORT,
     ):
         super().__init__(daemon=True)
+        self.app_instance = app_instance
         self.host = host
         self.port = port
         self.server: uvicorn.Server | None = None
         self._stop_event = threading.Event()
+
+    def _resolve_app_instance(self):
+        """Return the app instance bound to the FastAPI server thread."""
+        if self.app_instance is not None:
+            return self.app_instance
+        app = QCoreApplication.instance()
+        if app is None:
+            return None
+        return getattr(app, "api", None)
 
     def run(self):
         """Start uvicorn and serve requests."""
@@ -62,7 +73,10 @@ class APIServerThread(threading.Thread):
                 )
                 return
 
-            api = get_api()
+            api = self._resolve_app_instance()
+            if api is None:
+                logger.error("Cannot start API server without an app instance")
+                return
             app = create_app(app_instance=api)
 
             logger.info(f"FastAPI server listening on http://{self.host}:{self.port}")

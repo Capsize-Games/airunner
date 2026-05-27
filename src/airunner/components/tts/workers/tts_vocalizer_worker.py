@@ -188,13 +188,7 @@ class TTSVocalizerWorker(Worker):
                 return getattr(app, "api", None)
         except Exception:
             pass
-
-        try:
-            from airunner.components.server.api.server import get_api
-
-            return get_api(create_if_missing=False)
-        except Exception:
-            return None
+        return None
 
     @staticmethod
     def _main_window_api():

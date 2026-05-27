@@ -5,8 +5,7 @@ from typing import Any, Dict, Optional
 
 from diffusers import SchedulerMixin
 
-from airunner.models.lora import Lora
-from airunner.models.schedulers import Schedulers
+from airunner.components.art.data.catalog_records import find_scheduler
 from airunner.settings import AIRUNNER_LOCAL_FILES_ONLY, AIRUNNER_LOG_LEVEL
 from airunner.utils.application import get_logger
 
@@ -70,7 +69,7 @@ def load_scheduler(
             "scheduler_config.json",
         )
     )
-    scheduler = Schedulers.objects.filter_by_first(display_name=scheduler_name)
+    scheduler = find_scheduler(scheduler_name)
     if not scheduler:
         logger.error(f"Failed to find scheduler {scheduler_name}")
         return None
@@ -129,7 +128,7 @@ def load_controlnet_model(
 
 
 def load_lora_weights(
-    pipe, lora: Lora, lora_base_path: str, logger: Any
+    pipe, lora: Any, lora_base_path: str, logger: Any
 ) -> bool:
     filename = os.path.basename(lora.path)
     adapter_name = os.path.splitext(filename)[0].replace(".", "_")

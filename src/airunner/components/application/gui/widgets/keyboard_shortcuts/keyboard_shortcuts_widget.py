@@ -1,8 +1,8 @@
 from PySide6.QtCore import Qt
 from PySide6 import QtCore, QtGui
 from PySide6.QtWidgets import QSpacerItem, QSizePolicy, QWidget
+from typing import Any
 
-from airunner.models.shortcut_keys import ShortcutKeys
 from airunner.components.application.gui.widgets.base_widget import BaseWidget
 from airunner.components.application.gui.widgets.keyboard_shortcuts.templates.keyboard_shortcut_widget_ui import (
     Ui_keyboard_shortcut_widget,
@@ -30,7 +30,7 @@ class KeyboardShortcutsWidget(BaseWidget):
             self.add_widget(index, shortcut_key)
         self.ui.scrollAreaWidgetContents.layout().addItem(self.spacer)
 
-    def add_widget(self, index: int, shortcut_key: ShortcutKeys):
+    def add_widget(self, index: int, shortcut_key: Any):
         widget = QWidget()
         ui = Ui_keyboard_shortcut_widget()
         ui.setupUi(widget)
@@ -51,7 +51,7 @@ class KeyboardShortcutsWidget(BaseWidget):
         line_edit.setText("Press any key to set shortcut (esc to cancel)")
 
     def get_shortcut(
-        self, shortcut_key: ShortcutKeys, line_edit, event, index
+        self, shortcut_key: Any, line_edit, event, index
     ):
         if event.isAutoRepeat():
             return
@@ -78,18 +78,36 @@ class KeyboardShortcutsWidget(BaseWidget):
             shortcut_key.key = event.key()
             shortcut_key.modifiers = event.modifiers().value
 
-            shortcut_key.save()
+            self.resource_store.update(
+                "ShortcutKeys",
+                shortcut_key.id,
+                {
+                    "text": shortcut_key.text,
+                    "key": shortcut_key.key,
+                    "modifiers": shortcut_key.modifiers,
+                },
+            )
 
             # clear existing key if it exists
-            existing_keys = ShortcutKeys.objects.filter(
-                ShortcutKeys.text == shortcut_key.text,
-                ShortcutKeys.id != shortcut_key.id,
+            existing_keys = self.resource_store.query(
+                "ShortcutKeys",
+                filters={"text": shortcut_key.text},
             )
             for existing_key in existing_keys:
+                if existing_key.id == shortcut_key.id:
+                    continue
                 existing_key.text = ""
                 existing_key.key = 0
                 existing_key.modifiers = 0
-                existing_key.save()
+                self.resource_store.update(
+                    "ShortcutKeys",
+                    existing_key.id,
+                    {
+                        "text": "",
+                        "key": 0,
+                        "modifiers": 0,
+                    },
+                )
 
             for i, widget in enumerate(self.shortcut_key_widgets):
                 if i == index:
@@ -117,7 +135,8 @@ class KeyboardShortcutsWidget(BaseWidget):
             # Ensure v.modifiers is a list
             if not isinstance(v.modifiers, list):
                 v.modifiers = []
-            ShortcutKeys.objects.update(
+            self.resource_store.update(
+                "ShortcutKeys",
                 v.id,
                 {
                     "text": v.text,

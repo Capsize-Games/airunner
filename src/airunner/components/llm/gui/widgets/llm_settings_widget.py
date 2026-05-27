@@ -10,8 +10,6 @@ from PySide6.QtWidgets import (
     QComboBox,
 )
 
-from airunner.models.chatbot import Chatbot
-from airunner.models.fine_tuned_model import FineTunedModel
 from airunner.components.application.gui.widgets.base_widget import BaseWidget
 from airunner.components.llm.gui.widgets.templates.llm_settings_ui import (
     Ui_llm_settings_widget,
@@ -869,7 +867,11 @@ class LLMSettingsWidget(BaseWidget, AIModelMixin):
         except TypeError:
             self.logger.error(f"Attribute {key} does not exist in Chatbot")
             return
-        Chatbot.objects.update(pk=chatbot.id, **{key: val})
+        self.resource_store.update(
+            "Chatbot",
+            chatbot.id,
+            {key: val},
+        )
 
     def _setup_adapters_table(self):
         """Configure the adapters table columns and behavior."""
@@ -895,7 +897,7 @@ class LLMSettingsWidget(BaseWidget, AIModelMixin):
         table.setRowCount(0)
 
         try:
-            adapters = FineTunedModel.objects.all()
+            adapters = self.resource_store.query("FineTunedModel")
             enabled_adapters = self._get_enabled_adapters()
 
             for adapter in adapters:

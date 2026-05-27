@@ -2,8 +2,13 @@ import os
 from PySide6.QtCore import Slot, Qt, Signal
 from PySide6.QtWidgets import QMessageBox
 
-from airunner.models.document import Document
 from airunner.components.application.gui.widgets.base_widget import BaseWidget
+from airunner.components.documents.data.document_records import (
+    delete_documents_by_path,
+    ensure_document_record,
+    find_document_by_path,
+    update_document,
+)
 from airunner.components.documents.gui.widgets.templates.document_ui import (
     Ui_document_widget,
 )
@@ -30,13 +35,12 @@ class DocumentWidget(BaseWidget):
         self.setMinimumHeight(60)
         self.setMinimumWidth(200)
 
-        documents = Document.objects.filter_by(path=document.path)
-        if not documents or len(documents) == 0:
-            Document.objects.create(
-                path=document.path, active=False, indexed=False
-            )
-        else:
-            doc = documents[0]
+        doc = ensure_document_record(
+            document.path,
+            active=False,
+            indexed=False,
+        )
+        if doc is not None:
             self.ui.checkBox.setChecked(doc.active)
 
             # Show indexed status in tooltip
@@ -50,10 +54,9 @@ class DocumentWidget(BaseWidget):
     @Slot(bool)
     def on_checkBox_toggled(self, val: bool):
         """Toggle active status (for display/organization purposes)."""
-        documents = Document.objects.filter_by(path=self.document.path)
-        if len(documents) > 0:
-            document = documents[0]
-            Document.objects.update(pk=document.id, active=val)
+        document = find_document_by_path(self.document.path)
+        if document is not None:
+            update_document(document.id, {"active": val})
 
     @Slot()
     def on_delete_button_clicked(self):
@@ -87,9 +90,7 @@ class DocumentWidget(BaseWidget):
                     )
                     return
 
-            docs = Document.objects.filter_by(path=self.document.path)
-            for doc in docs:
-                Document.objects.delete(doc.id)
+            delete_documents_by_path(self.document.path)
 
     def sizeHint(self):
         return self.minimumSizeHint()

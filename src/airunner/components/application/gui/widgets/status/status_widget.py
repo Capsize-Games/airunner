@@ -7,7 +7,6 @@ from airunner.components.application.gui.widgets.status.templates.status_ui impo
     Ui_status_widget,
 )
 from airunner.settings import AIRUNNER_ART_ENABLED
-from airunner.models.voice_settings import VoiceSettings
 
 
 class StatusWidget(BaseWidget):
@@ -209,7 +208,7 @@ class StatusWidget(BaseWidget):
         """Render the active TTS model name in the status bar."""
         label = "TTS"
         if self.chatbot and self.chatbot.voice_id:
-            voice = VoiceSettings.objects.get(pk=self.chatbot.voice_id)
+            voice = self.resource_store.get("VoiceSettings", self.chatbot.voice_id)
             if voice and getattr(voice, "model_type", None):
                 model_type = str(voice.model_type or "").strip()
                 normalized = model_type.lower()

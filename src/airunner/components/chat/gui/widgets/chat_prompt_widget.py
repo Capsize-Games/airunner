@@ -30,7 +30,11 @@ from airunner.components.chat.gui.widgets.templates.chat_prompt_ui import (
 from airunner.components.chat.gui.widgets.chat_attachment_pill_widget import (
     ChatAttachmentPillWidget,
 )
-from airunner.models.document import Document
+from airunner.components.documents.data.document_records import (
+    ensure_document_record,
+    list_documents,
+    update_document,
+)
 from airunner.components.documents.document_import import (
     chat_image_suffixes,
     import_document_to_library,
@@ -2435,7 +2439,7 @@ class ChatPromptWidget(BaseWidget):
         """Return active knowledge-base documents for prompt pills."""
         active_paths: List[str] = []
         seen: set[str] = set()
-        for document in Document.objects.all():
+        for document in list_documents():
             file_path = getattr(document, "path", None)
             if not getattr(document, "active", False) or not file_path:
                 continue
@@ -2561,15 +2565,13 @@ class ChatPromptWidget(BaseWidget):
         if not validated_path:
             return
 
-        docs = Document.objects.filter_by(path=validated_path)
-        if docs:
-            Document.objects.update(pk=docs[0].id, active=True)
-        else:
-            Document.objects.create(
-                path=validated_path,
-                active=True,
-                indexed=False,
-            )
+        document = ensure_document_record(
+            validated_path,
+            active=True,
+            indexed=False,
+        )
+        if document is not None:
+            update_document(document.id, {"active": True})
 
         self._add_document_attachment(validated_path)
         self.emit_signal(
@@ -2589,9 +2591,8 @@ class ChatPromptWidget(BaseWidget):
             self._document_attachment_widgets.remove(widget)
         self._remove_attachment_widget(widget)
 
-        docs = Document.objects.filter_by(path=file_path)
-        if docs:
-            Document.objects.update(pk=docs[0].id, active=False)
+        for document in list_documents(filters={"path": file_path}):
+            update_document(document.id, {"active": False})
 
         self.emit_signal(
             SignalCode.DOCUMENT_COLLECTION_CHANGED,

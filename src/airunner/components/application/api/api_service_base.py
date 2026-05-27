@@ -18,24 +18,17 @@ if not _HEADLESS:
         settings/image helper access to the live API singleton.
         """
 
-        def __init__(self):
+        def __init__(self, api: Optional[Any] = None):
             super().__init__()
             self.logger = get_logger(self.__class__.__module__)
-            self.api = self._resolve_api_reference()
+            self.api = api or self._resolve_api_reference()
 
         @staticmethod
         def _resolve_api_reference() -> Optional[Any]:
             qt_app = QCoreApplication.instance()
             if qt_app is not None:
-                api = getattr(qt_app, "api", None)
-                if api is not None:
-                    return api
-            try:
-                from airunner.components.server.api.server import get_api
-
-                return get_api(create_if_missing=False)
-            except Exception:
-                return None
+                return getattr(qt_app, "api", None)
+            return None
 
         def __getattr__(self, name: str) -> Any:
             api = self._resolve_api_reference()
@@ -54,19 +47,14 @@ else:
         settings/image helper access to the live API singleton.
         """
 
-        def __init__(self):
+        def __init__(self, api: Optional[Any] = None):
             super().__init__()
             self.logger = get_logger(self.__class__.__module__)
-            self.api = self._resolve_api_reference()
+            self.api = api or self._resolve_api_reference()
 
         @staticmethod
         def _resolve_api_reference() -> Optional[Any]:
-            try:
-                from airunner.components.server.api.server import get_api
-
-                return get_api(create_if_missing=False)
-            except Exception:
-                return None
+            return None
 
         def __getattr__(self, name: str) -> Any:
             api = self._resolve_api_reference()

@@ -1034,13 +1034,7 @@ class LLMAPIService(APIServiceBase):
                 return getattr(app, "api", None)
         except Exception:
             pass
-
-        try:
-            from airunner.components.server.api.server import get_api
-
-            return get_api()
-        except Exception:
-            return None
+        return None
 
     @staticmethod
     def _response_from_daemon_chunk(

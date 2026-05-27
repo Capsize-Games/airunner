@@ -1,8 +1,7 @@
 import os
 import threading
 
-from airunner.models.embedding import Embedding
-from airunner.models.lora import Lora
+from airunner.daemon_client.resource_store import get_resource_store
 
 
 # Thread locks to prevent concurrent scanning
@@ -13,6 +12,9 @@ _embedding_scan_lock = threading.Lock()
 # Dummy mixin for test patching
 class SettingsMixin:
     pass
+
+
+resource_store = get_resource_store()
 
 
 def scan_path_for_lora(base_path) -> bool:
@@ -34,10 +36,10 @@ def scan_path_for_lora(base_path) -> bool:
             if not os.path.exists(lora_path):
                 continue
 
-            existing_lora = Lora.objects.all()
+            existing_lora = resource_store.query("Lora")
             for lora in existing_lora:
                 if not os.path.exists(lora.path):
-                    Lora.objects.delete(lora.id)
+                    resource_store.delete("Lora", lora.id)
                     lora_deleted = True
             for dirpath, dirnames, filenames in os.walk(lora_path):
                 for file in filenames:
@@ -52,21 +54,32 @@ def scan_path_for_lora(base_path) -> bool:
                             .replace(".pt", "")
                         )
                         path = os.path.join(dirpath, file)
-                        item = Lora.objects.filter_first(Lora.name == name)
+                        item = resource_store.first(
+                            "Lora",
+                            filters={"name": name},
+                        )
                         if (
                             not item
                             or item.path != path
                             or item.version != version
                         ):
-                            item = Lora.objects.create(
-                                name=name,
-                                path=path,
-                                scale=1,
-                                enabled=False,
-                                loaded=False,
-                                trigger_word="",
-                                version=version,
-                            )
+                            values = {
+                                "name": name,
+                                "path": path,
+                                "scale": 1,
+                                "enabled": False,
+                                "loaded": False,
+                                "trigger_word": "",
+                                "version": version,
+                            }
+                            if item is None:
+                                resource_store.create("Lora", values)
+                            else:
+                                resource_store.update(
+                                    "Lora",
+                                    item.id,
+                                    values,
+                                )
                             lora_added = True
         return lora_deleted or lora_added
     finally:
@@ -90,10 +103,10 @@ def scan_path_for_embeddings(base_path) -> bool:
             )
             if not os.path.exists(embedding_path):
                 continue
-            existing_embeddings = Embedding.objects.all()
+            existing_embeddings = resource_store.query("Embedding")
             for embedding in existing_embeddings:
                 if not os.path.exists(embedding.path):
-                    Embedding.objects.delete(embedding.id)
+                    resource_store.delete("Embedding", embedding.id)
                     embedding_deleted = True
             for dirpath, dirnames, filenames in os.walk(embedding_path):
                 for file in filenames:
@@ -108,22 +121,34 @@ def scan_path_for_embeddings(base_path) -> bool:
                             .replace(".pt", "")
                         )
                         path = os.path.join(dirpath, file)
-                        item = Embedding.objects.filter_first(
-                            Embedding.name == name
+                        item = resource_store.first(
+                            "Embedding",
+                            filters={"name": name},
                         )
                         if (
                             not item
                             or item.path != path
                             or item.version != version
                         ):
-                            item = Embedding.objects.create(
-                                name=name,
-                                path=path,
-                                version=version,
-                                tags="",
-                                active=False,
-                                trigger_word="",
-                            )
+                            values = {
+                                "name": name,
+                                "path": path,
+                                "version": version,
+                                "tags": "",
+                                "active": False,
+                                "trigger_word": "",
+                            }
+                            if item is None:
+                                resource_store.create(
+                                    "Embedding",
+                                    values,
+                                )
+                            else:
+                                resource_store.update(
+                                    "Embedding",
+                                    item.id,
+                                    values,
+                                )
                             embedding_added = True
         return embedding_deleted or embedding_added
     finally:

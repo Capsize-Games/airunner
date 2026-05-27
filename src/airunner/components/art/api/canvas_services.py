@@ -1,12 +1,10 @@
 from typing import Any, Dict, List
 from airunner.components.application.api.api_service_base import APIServiceBase
-from airunner.models.canvas_layer import CanvasLayer
-from airunner.models.controlnet_settings import ControlnetSettings
-from airunner.models.drawingpad_settings import DrawingPadSettings
-from airunner.models.image_to_image_settings import (
-    ImageToImageSettings,
+from airunner.components.art.data.canvas_layer_records import (
+    create_canvas_layer,
+    ensure_layer_setting,
 )
-from airunner.models.outpaint_settings import OutpaintSettings
+from airunner.components.art.data.catalog_records import get_ai_model
 from airunner.components.art.managers.stablediffusion.image_request import (
     ImageRequest,
 )
@@ -16,7 +14,6 @@ from PySide6.QtCore import QPoint
 from airunner.components.art.managers.stablediffusion.image_response import (
     ImageResponse,
 )
-from airunner.models.ai_models import AIModels
 from airunner.enums import SignalCode
 from airunner.utils.image.convert_binary_to_image import (
     convert_binary_to_image,
@@ -235,15 +232,15 @@ class CanvasAPIService(APIServiceBase):
         model_path = ""
         model_id = generator_settings.model
         if model_id is not None:
-            aimodel = AIModels.objects.get(model_id)
+            aimodel = get_ai_model(model_id)
             if aimodel is not None:
                 model_path = aimodel.path
 
         if model_path == "":
             if generator_settings.model is not None:
-                aimodel = AIModels.objects.get(generator_settings.model)
+                aimodel = get_ai_model(generator_settings.model)
             else:
-                aimodel = AIModels.objects.first()
+                aimodel = self.resource_store.first("AIModels")
 
             if aimodel is not None:
                 model_path = aimodel.path
@@ -340,17 +337,19 @@ class CanvasAPIService(APIServiceBase):
     def update_image_positions(self):
         self.emit_signal(SignalCode.CANVAS_UPDATE_IMAGE_POSITIONS)
 
-    def create_new_layer(self, **kwargs) -> CanvasLayer:
+    def create_new_layer(self, **kwargs) -> Any:
         self.begin_layer_operation("create")
-        layer = CanvasLayer.objects.create(**kwargs)
-        data = {"layer_id": layer.id}
-        DrawingPadSettings.objects.create(**data)
-        ControlnetSettings.objects.create(**data)
-        ImageToImageSettings.objects.create(**data)
-        OutpaintSettings.objects.create(**data)
+        layer = create_canvas_layer(kwargs)
         if not layer:
             self.cancel_layer_operation("create")
             return
+        for resource_name in (
+            "DrawingPadSettings",
+            "ControlnetSettings",
+            "ImageToImageSettings",
+            "OutpaintSettings",
+        ):
+            ensure_layer_setting(resource_name, layer.id)
         self.commit_layer_operation("create", [layer.id])
         return layer
 

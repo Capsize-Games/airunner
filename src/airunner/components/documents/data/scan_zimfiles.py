@@ -1,6 +1,13 @@
 import os
 import json
-from airunner.models.zimfile import ZimFile
+
+from airunner.components.documents.data.document_records import (
+    create_zim_file,
+    delete_zim_file,
+    find_zim_file_by_path,
+    list_zim_files,
+    update_zim_file,
+)
 
 
 def scan_zimfiles(zim_dir: str) -> bool:
@@ -24,35 +31,35 @@ def scan_zimfiles(zim_dir: str) -> bool:
                     meta = json.load(mf)
             except Exception:
                 meta = {}
-        item = ZimFile.objects.filter_first(ZimFile.path == fpath)
+        item = find_zim_file_by_path(fpath)
         if not item:
-            item = ZimFile.objects.create(
-                path=fpath,
-                name=fname,
-                title=meta.get("title"),
-                summary=meta.get("summary"),
-                updated=meta.get("updated"),
-                size=os.path.getsize(fpath),
+            create_zim_file(
+                {
+                    "path": fpath,
+                    "name": fname,
+                    "title": meta.get("title"),
+                    "summary": meta.get("summary"),
+                    "updated": meta.get("updated"),
+                    "size": os.path.getsize(fpath),
+                }
             )
             changed = True
         else:
             # Update metadata if changed
-            updated = False
+            updates = {}
             for field in ["title", "summary", "updated"]:
                 val = meta.get(field)
                 if getattr(item, field) != val:
-                    setattr(item, field, val)
-                    updated = True
+                    updates[field] = val
             size = os.path.getsize(fpath)
             if item.size != size:
-                item.size = size
-                updated = True
-            if updated:
-                item.save()
+                updates["size"] = size
+            if updates:
+                update_zim_file(item.id, updates)
                 changed = True
     # Remove missing
-    for item in ZimFile.objects.all():
+    for item in list_zim_files():
         if item.path not in found:
-            ZimFile.objects.delete(item.id)
+            delete_zim_file(item.id)
             changed = True
     return changed

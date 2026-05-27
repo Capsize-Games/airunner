@@ -2,7 +2,6 @@ from PySide6.QtCore import QTimer, Slot
 from PySide6.QtWidgets import QMessageBox
 
 from airunner.components.application.gui.widgets.base_widget import BaseWidget
-from airunner.models.lora import Lora
 from airunner.components.art.gui.widgets.lora.lora_trigger_word_widget import (
     LoraTriggerWordWidget,
 )
@@ -22,7 +21,7 @@ class LoraWidget(BaseWidget):
         self.icons = [
             ("trash-2", "delete_button"),
         ]
-        self.current_lora: Lora = kwargs.pop("lora")
+        self.current_lora = kwargs.pop("lora")
         super().__init__(*args, **kwargs)
         name = self.current_lora.name
         enabled = self.current_lora.enabled

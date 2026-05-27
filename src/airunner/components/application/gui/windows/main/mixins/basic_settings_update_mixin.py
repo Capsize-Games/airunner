@@ -1,30 +1,6 @@
 """Mixin providing basic settings update operations."""
 
-from typing import Any, Dict, Type, Optional
-from airunner.models.application_settings import (
-    ApplicationSettings,
-)
-from airunner.models.espeak_settings import EspeakSettings
-from airunner.models.grid_settings import GridSettings
-from airunner.models.active_grid_settings import (
-    ActiveGridSettings,
-)
-from airunner.models.path_settings import PathSettings
-from airunner.models.memory_settings import MemorySettings
-from airunner.models.llm_generator_settings import (
-    LLMGeneratorSettings,
-)
-from airunner.models.whisper_settings import (
-    WhisperSettings,
-)
-from airunner.models.generator_settings import (
-    GeneratorSettings,
-)
-from airunner.models.controlnet_settings import (
-    ControlnetSettings,
-)
-from airunner.models.saved_prompt import SavedPrompt
-from airunner.models.font_setting import FontSetting
+from typing import Any, Dict, Optional
 
 
 class BasicSettingsUpdateMixin:
@@ -36,7 +12,7 @@ class BasicSettingsUpdateMixin:
         Args:
             **settings_dict: Settings to update as keyword arguments.
         """
-        self.update_settings(ApplicationSettings, settings_dict)
+        self.update_settings("ApplicationSettings", settings_dict)
 
     def update_espeak_settings(self, **settings_dict):
         """Update eSpeak TTS settings.
@@ -44,7 +20,7 @@ class BasicSettingsUpdateMixin:
         Args:
             **settings_dict: Settings to update as keyword arguments.
         """
-        self.update_settings(EspeakSettings, settings_dict)
+        self.update_settings("EspeakSettings", settings_dict)
 
     def update_grid_settings(self, **settings_dict):
         """Update grid settings.
@@ -52,7 +28,7 @@ class BasicSettingsUpdateMixin:
         Args:
             **settings_dict: Settings to update as keyword arguments.
         """
-        self.update_settings(GridSettings, settings_dict)
+        self.update_settings("GridSettings", settings_dict)
 
     def update_active_grid_settings(self, **settings_dict):
         """Update active grid settings.
@@ -60,7 +36,7 @@ class BasicSettingsUpdateMixin:
         Args:
             **settings_dict: Settings to update as keyword arguments.
         """
-        self.update_settings(ActiveGridSettings, settings_dict)
+        self.update_settings("ActiveGridSettings", settings_dict)
 
     def update_path_settings(self, **settings_dict):
         """Update path settings.
@@ -68,7 +44,7 @@ class BasicSettingsUpdateMixin:
         Args:
             **settings_dict: Settings to update as keyword arguments.
         """
-        self.update_settings(PathSettings, settings_dict)
+        self.update_settings("PathSettings", settings_dict)
 
     def update_memory_settings(self, **settings_dict):
         """Update memory settings.
@@ -76,7 +52,7 @@ class BasicSettingsUpdateMixin:
         Args:
             **settings_dict: Settings to update as keyword arguments.
         """
-        self.update_settings(MemorySettings, settings_dict)
+        self.update_settings("MemorySettings", settings_dict)
 
     def update_llm_generator_settings(self, **settings_dict):
         """Update LLM generator settings.
@@ -106,7 +82,7 @@ class BasicSettingsUpdateMixin:
                         del settings_dict["model_path"]
                         break
         
-        self.update_settings(LLMGeneratorSettings, settings_dict)
+        self.update_settings("LLMGeneratorSettings", settings_dict)
 
     def update_whisper_settings(self, **settings_dict):
         """Update Whisper STT settings.
@@ -114,7 +90,7 @@ class BasicSettingsUpdateMixin:
         Args:
             **settings_dict: Settings to update as keyword arguments.
         """
-        self.update_settings(WhisperSettings, settings_dict)
+        self.update_settings("WhisperSettings", settings_dict)
 
     def update_generator_settings(self, **settings_dict):
         """Update generator settings.
@@ -122,7 +98,7 @@ class BasicSettingsUpdateMixin:
         Args:
             **settings_dict: Settings to update as keyword arguments.
         """
-        self.update_settings(GeneratorSettings, settings_dict)
+        self.update_settings("GeneratorSettings", settings_dict)
 
     def update_controlnet_image_settings(self, **settings_dict):
         """Update ControlNet image settings.
@@ -130,87 +106,106 @@ class BasicSettingsUpdateMixin:
         Args:
             **settings_dict: Settings to update as keyword arguments.
         """
-        self.update_settings(ControlnetSettings, settings_dict)
+        self.update_controlnet_settings(**settings_dict)
 
     def update_settings(
-        self, model_class_: Type, updates: Dict[str, Any]
+        self, resource_name: str, updates: Dict[str, Any]
     ) -> None:
         """Update settings for a given model class.
 
         Args:
-            model_class_: SQLAlchemy model class to update.
+            resource_name: Resource name to update.
             updates: Dictionary of field names to new values.
         """
-        setting = self._get_or_create_setting(model_class_)
+        setting = self._get_or_create_setting(resource_name)
         if setting:
-            self._apply_updates(model_class_, setting, updates)
+            self._apply_updates(resource_name, setting, updates)
         else:
             self.logger.error("Failed to update settings: No setting found")
 
-    def update_saved_prompt(self, saved_prompt: SavedPrompt) -> None:
+    def update_saved_prompt(self, saved_prompt: Any) -> None:
         """Update saved prompt in database.
 
         Args:
             saved_prompt: SavedPrompt instance to update.
         """
-        existing = SavedPrompt.objects.filter_by_first(id=saved_prompt.id)
+        existing = self.resource_store.first(
+            "SavedPrompt",
+            filters={"id": getattr(saved_prompt, "id", None)},
+        )
         if existing:
             self._update_prompt_attributes(existing, saved_prompt)
-            existing.save()
+            self.resource_store.update(
+                "SavedPrompt",
+                existing.id,
+                self._record_values(existing),
+            )
         else:
-            saved_prompt.save()
+            self.resource_store.create(
+                "SavedPrompt",
+                self._record_values(saved_prompt),
+            )
         self._notify_setting_updated(None, None, None)
 
-    def update_font_setting(self, font_setting: FontSetting) -> None:
+    def update_font_setting(self, font_setting: Any) -> None:
         """Update font setting in database.
 
         Args:
             font_setting: FontSetting instance to update.
         """
-        existing = FontSetting.objects.filter_by_first(name=font_setting.name)
+        existing = self.resource_store.first(
+            "FontSetting",
+            filters={"name": getattr(font_setting, "name", None)},
+        )
         if existing:
             self._update_font_attributes(existing, font_setting)
-            existing.save()
+            self.resource_store.update(
+                "FontSetting",
+                existing.id,
+                self._record_values(existing),
+            )
         else:
-            font_setting.save()
+            self.resource_store.create(
+                "FontSetting",
+                self._record_values(font_setting),
+            )
         self._notify_setting_updated(None, None, None)
 
-    def _get_or_create_setting(self, model_class_: Type):
+    def _get_or_create_setting(self, resource_name: str):
         """Get or create setting instance for model class.
 
         Args:
-            model_class_: SQLAlchemy model class.
+            resource_name: Resource name.
 
         Returns:
             Setting instance or None.
         """
-        if model_class_.objects.first() is None:
-            model_class_.objects.create()
-        return model_class_.objects.order_by(model_class_.id.desc()).first()
+        return self.resource_store.get_singleton(resource_name)
 
     def _apply_updates(
-        self, model_class_: Type, setting, updates: Dict[str, Any]
+        self, resource_name: str, setting: Any, updates: Dict[str, Any]
     ) -> None:
         """Apply updates to setting and notify listeners.
 
         Args:
-            model_class_: SQLAlchemy model class.
+            resource_name: Resource name.
             setting: Setting instance to update.
             updates: Dictionary of updates.
         """
-        model_class_.objects.update(setting.id, **updates)
+        if getattr(setting, "id", None) is not None:
+            self.resource_store.update(resource_name, setting.id, updates)
+        else:
+            self.resource_store.update_singleton(resource_name, updates)
 
-        # CRITICAL: Invalidate the settings cache for this model class
-        # to ensure subsequent reads get the updated values from DB
-        self._invalidate_setting_cache(model_class_)
+        self._invalidate_setting_cache(resource_name)
 
         for name, value in updates.items():
             self._notify_setting_updated(
-                model_class_.__tablename__, name, value
+                resource_name, name, value
             )
 
     def _update_prompt_attributes(
-        self, target: SavedPrompt, source: SavedPrompt
+        self, target: Any, source: Any
     ) -> None:
         """Copy attributes from source to target prompt.
 
@@ -222,9 +217,7 @@ class BasicSettingsUpdateMixin:
             if key != "_sa_instance_state":
                 setattr(target, key, getattr(source, key))
 
-    def _update_font_attributes(
-        self, target: FontSetting, source: FontSetting
-    ) -> None:
+    def _update_font_attributes(self, target: Any, source: Any) -> None:
         """Copy attributes from source to target font.
 
         Args:
@@ -247,3 +240,10 @@ class BasicSettingsUpdateMixin:
         """
         # Placeholder for actual notification implementation
         # This would be __settings_updated in the original class
+
+    @staticmethod
+    def _record_values(record: Any) -> Dict[str, Any]:
+        values = getattr(record, "to_dict", lambda: dict(record.__dict__))()
+        values.pop("id", None)
+        values.pop("_sa_instance_state", None)
+        return values

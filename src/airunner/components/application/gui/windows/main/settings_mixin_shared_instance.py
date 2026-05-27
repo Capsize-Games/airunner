@@ -1,8 +1,5 @@
-from typing import List, Type, Optional, Dict, Any
+from typing import Any, Dict, List, Optional
 
-
-from airunner.components.application.data import table_to_class
-from airunner.models.chatbot import Chatbot
 from airunner.utils.application.get_logger import get_logger
 from airunner.settings import AIRUNNER_LOG_LEVEL
 
@@ -25,9 +22,9 @@ class SettingsMixinSharedInstance:
         self.logger = get_logger("AI Runner", AIRUNNER_LOG_LEVEL)
 
         self._initialized = True
-        self.chatbot: Optional[Chatbot] = None
-        # Cache for settings instances keyed by model class to avoid repeated DB reads
-        self._settings_cache: Dict[Type[Any], Any] = {}
+        self.chatbot: Optional[Any] = None
+        self.resource_store: Optional[Any] = None
+        self._settings_cache: Dict[str, Any] = {}
         # Cache for layer-specific settings instances keyed by string keys
         self._settings_cache_by_key: Dict[str, Any] = {}
         self._cached_send_image_to_canvas: List[Dict] = []
@@ -40,15 +37,21 @@ class SettingsMixinSharedInstance:
     def cached_send_image_to_canvas(self, value: List[Dict]) -> None:
         self._cached_send_image_to_canvas = value
 
-    def get_cached_setting(self, model_class: Type[Any]) -> Optional[Any]:
+    @staticmethod
+    def _cache_key(model_class_or_name: Any) -> str:
+        if isinstance(model_class_or_name, str):
+            return model_class_or_name
+        return getattr(model_class_or_name, "__name__", str(model_class_or_name))
+
+    def get_cached_setting(self, model_class_or_name: Any) -> Optional[Any]:
         """Return a cached settings instance if present."""
-        return self._settings_cache.get(model_class)
+        return self._settings_cache.get(self._cache_key(model_class_or_name))
 
     def set_cached_setting(
-        self, model_class: Type[Any], instance: Any
+        self, model_class_or_name: Any, instance: Any
     ) -> None:
         """Store a settings instance in cache."""
-        self._settings_cache[model_class] = instance
+        self._settings_cache[self._cache_key(model_class_or_name)] = instance
 
     def get_cached_setting_by_key(self, key: str) -> Optional[Any]:
         """Return a cached settings instance by string key if present."""
@@ -58,9 +61,9 @@ class SettingsMixinSharedInstance:
         """Store a settings instance in cache by string key."""
         self._settings_cache_by_key[key] = instance
 
-    def invalidate_cached_setting(self, model_class: Type[Any]) -> None:
+    def invalidate_cached_setting(self, model_class_or_name: Any) -> None:
         """Remove a settings instance from cache."""
-        self._settings_cache.pop(model_class, None)
+        self._settings_cache.pop(self._cache_key(model_class_or_name), None)
 
     def invalidate_cached_setting_by_key(self, key: str) -> None:
         """Remove a settings instance from cache by string key."""
@@ -79,20 +82,7 @@ class SettingsMixinSharedInstance:
         if not setting_name:
             return
 
-        model_class = table_to_class.get(setting_name)
-        if not model_class:
-            # Fallback: attempt to find matching class by __tablename__ within cached classes
-            for cls in list(self._settings_cache.keys()):
-                try:
-                    if getattr(cls, "__tablename__", None) == setting_name:
-                        model_class = cls
-                        break
-                except Exception:
-                    continue
-            if not model_class:
-                return
-
-        cached = self.get_cached_setting(model_class)
+        cached = self.get_cached_setting(setting_name)
         if cached is None:
             return
 
@@ -100,8 +90,6 @@ class SettingsMixinSharedInstance:
             try:
                 setattr(cached, column_name, val)
             except Exception:
-                # If direct assignment fails for any reason, drop cache
-                self.invalidate_cached_setting(model_class)
+                self.invalidate_cached_setting(setting_name)
         else:
-            # Unknown change scope; safest is to drop cache to force reload on next access
-            self.invalidate_cached_setting(model_class)
+            self.invalidate_cached_setting(setting_name)

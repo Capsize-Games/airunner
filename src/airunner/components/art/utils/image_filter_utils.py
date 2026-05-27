@@ -3,18 +3,18 @@
 import importlib
 from typing import Any, Dict, List, Optional
 
-from airunner.models.image_filter import ImageFilter
-from airunner.models.image_filter_value import ImageFilterValue
+from airunner.daemon_client.resource_store import get_resource_store
 from airunner.settings import AIRUNNER_LOG_LEVEL
 from airunner.utils.application import get_logger
 
 LOG = get_logger(__name__, AIRUNNER_LOG_LEVEL)
+RESOURCE_STORE = get_resource_store()
 
 
 class FilterValueData:
     """Data class to hold filter value information without ORM attachment issues."""
 
-    def __init__(self, filter_value: ImageFilterValue):
+    def __init__(self, filter_value: Any):
         self.id = filter_value.id
         self.name = filter_value.name
         self.value = filter_value.value
@@ -25,7 +25,11 @@ class FilterValueData:
 
     def save(self):
         """Save the current value back to the database."""
-        ImageFilterValue.objects.update(self.id, value=self.value)
+        RESOURCE_STORE.update(
+            "ImageFilterValue",
+            self.id,
+            {"value": self.value},
+        )
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert to a dictionary."""
@@ -51,8 +55,9 @@ def get_filter_values(image_filter_id: int) -> List[FilterValueData]:
         List of FilterValueData objects
     """
     try:
-        filter_values = ImageFilterValue.objects.filter_by(
-            image_filter_id=image_filter_id
+        filter_values = RESOURCE_STORE.query(
+            "ImageFilterValue",
+            filters={"image_filter_id": image_filter_id},
         )
         return [FilterValueData(fv) for fv in filter_values]
     except Exception:
@@ -62,7 +67,7 @@ def get_filter_values(image_filter_id: int) -> List[FilterValueData]:
         return []
 
 
-def get_filter_by_name(filter_name: str) -> Optional[ImageFilter]:
+def get_filter_by_name(filter_name: str) -> Optional[Any]:
     """
     Get an ImageFilter by name.
 
@@ -74,7 +79,10 @@ def get_filter_by_name(filter_name: str) -> Optional[ImageFilter]:
     """
     try:
         print(f"[get_filter_by_name] Querying for filter: '{filter_name}'")
-        results = ImageFilter.objects.filter_by(name=filter_name)
+        results = RESOURCE_STORE.query(
+            "ImageFilter",
+            filters={"name": filter_name},
+        )
         print(f"[get_filter_by_name] Query results type: {type(results)}")
         print(
             f"[get_filter_by_name] Query results length: {len(results) if results else 0}"
@@ -89,7 +97,7 @@ def get_filter_by_name(filter_name: str) -> Optional[ImageFilter]:
             )
         else:
             # Debug: Let's see what filters are actually in the database
-            all_filters = ImageFilter.objects.all()
+            all_filters = RESOURCE_STORE.query("ImageFilter")
             print(f"[get_filter_by_name] No filter found. All filters in DB:")
             for f in all_filters:
                 print(
@@ -192,14 +200,14 @@ def get_all_filter_names() -> List[str]:
         List of filter names
     """
     try:
-        filters = ImageFilter.objects.all() or []
+        filters = RESOURCE_STORE.query("ImageFilter") or []
         return [f.name for f in filters]
     except Exception:
         LOG.exception("Failed to get filter names")
         return []
 
 
-def build_filter_object_from_model(image_filter: ImageFilter) -> Any:
+def build_filter_object_from_model(image_filter: Any) -> Any:
     """Construct and return a filter instance from an ImageFilter model.
 
     This mirrors the logic currently in FilterWindow.filter_object but is
@@ -214,8 +222,9 @@ def build_filter_object_from_model(image_filter: ImageFilter) -> Any:
     class_ = getattr(module, image_filter.filter_class)
     kwargs = {}
 
-    filter_values = ImageFilterValue.objects.filter_by(
-        image_filter_id=image_filter.id
+    filter_values = RESOURCE_STORE.query(
+        "ImageFilterValue",
+        filters={"image_filter_id": image_filter.id},
     )
 
     for image_filter_value in filter_values:

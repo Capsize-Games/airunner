@@ -8,16 +8,16 @@ from typing import List, Dict, Any, Iterable, Optional
 
 from PySide6.QtCore import QPointF
 
-
-from airunner.models.canvas_layer import CanvasLayer
-from airunner.models.drawingpad_settings import (
-    DrawingPadSettings,
+from airunner.components.art.data.canvas_layer_records import (
+    apply_layer_orders,
+    capture_layer_snapshot,
+    delete_layer_bundle,
+    get_canvas_layer,
+    invalidate_layer_caches,
+    ordered_canvas_layers,
+    restore_layer_snapshot,
+    first_layer_setting,
 )
-from airunner.models.controlnet_settings import ControlnetSettings
-from airunner.models.image_to_image_settings import (
-    ImageToImageSettings,
-)
-from airunner.models.outpaint_settings import OutpaintSettings
 from airunner.components.model_management import (
     ModelResourceManager,
 )
@@ -181,7 +181,7 @@ class CanvasLayerMixin:
         if getattr(self, "_in_paint_cycle", False):
             return
 
-        layers = CanvasLayer.objects.order_by("order").all()
+        layers = ordered_canvas_layers(store=self.resource_store)
         layer_data = self._extract_layer_data(layers)
 
         self._remove_legacy_item(layer_data)
@@ -275,8 +275,10 @@ class CanvasLayerMixin:
         if image is not None:
             return image
 
-        drawing_pad = DrawingPadSettings.objects.filter_by_first(
-            layer_id=layer_id
+        drawing_pad = first_layer_setting(
+            "DrawingPadSettings",
+            layer_id,
+            store=self.resource_store,
         )
         if not drawing_pad or not drawing_pad.image:
             return None
@@ -322,7 +324,10 @@ class CanvasLayerMixin:
             layer_id: ID of the layer.
             data: Dict with layer properties.
         """
-        layer_record = CanvasLayer.objects.get(layer_id)
+        layer_record = get_canvas_layer(
+            layer_id,
+            store=self.resource_store,
+        )
         if not layer_record:
             return
 
@@ -358,8 +363,10 @@ class CanvasLayerMixin:
 
     def _get_saved_layer_position(self, layer_id: int) -> QPointF:
         """Return the saved absolute position for one layer."""
-        drawing_pad = DrawingPadSettings.objects.filter_by_first(
-            layer_id=layer_id
+        drawing_pad = first_layer_setting(
+            "DrawingPadSettings",
+            layer_id,
+            store=self.resource_store,
         )
         if drawing_pad is None:
             return QPointF(0, 0)
@@ -578,14 +585,11 @@ class CanvasLayerMixin:
         Returns:
             List of dicts with layer_id and order.
         """
-        layers = CanvasLayer.objects.all()
+        layers = ordered_canvas_layers(store=self.resource_store)
         if not layers:
             return []
-        sorted_layers = sorted(
-            layers, key=lambda layer: getattr(layer, "order", 0)
-        )
         orders: List[Dict[str, int]] = []
-        for index, layer in enumerate(sorted_layers):
+        for index, layer in enumerate(layers):
             layer_id = getattr(layer, "id", None)
             if layer_id is None:
                 continue
@@ -606,24 +610,12 @@ class CanvasLayerMixin:
         """
         snapshots: List[Dict[str, Any]] = []
         for layer_id in layer_ids:
-            layer_record = self._serialize_record(
-                CanvasLayer.objects.get(layer_id)
+            snapshot = capture_layer_snapshot(
+                layer_id,
+                store=self.resource_store,
             )
-            if layer_record is None:
+            if snapshot is None:
                 continue
-            snapshot: Dict[str, Any] = {"layer": layer_record}
-            snapshot["drawing_pad"] = self._serialize_record(
-                DrawingPadSettings.objects.filter_by_first(layer_id=layer_id)
-            )
-            snapshot["controlnet"] = self._serialize_record(
-                ControlnetSettings.objects.filter_by_first(layer_id=layer_id)
-            )
-            snapshot["image_to_image"] = self._serialize_record(
-                ImageToImageSettings.objects.filter_by_first(layer_id=layer_id)
-            )
-            snapshot["outpaint"] = self._serialize_record(
-                OutpaintSettings.objects.filter_by_first(layer_id=layer_id)
-            )
             snapshots.append(snapshot)
         return snapshots
 
@@ -636,39 +628,9 @@ class CanvasLayerMixin:
             snapshots: List of snapshot dicts with layer data.
         """
         for snapshot in snapshots:
-            layer_data = snapshot.get("layer")
-            if layer_data:
-                self._merge_model_from_dict(CanvasLayer, layer_data)
-            self._merge_model_from_dict(
-                DrawingPadSettings, snapshot.get("drawing_pad") or {}
-            )
-            self._merge_model_from_dict(
-                ControlnetSettings, snapshot.get("controlnet") or {}
-            )
-            self._merge_model_from_dict(
-                ImageToImageSettings, snapshot.get("image_to_image") or {}
-            )
-            self._merge_model_from_dict(
-                OutpaintSettings, snapshot.get("outpaint") or {}
-            )
-
-    def _merge_model_from_dict(self, model_cls, data: Dict[str, Any]) -> None:
-        """Merge model instance from dict data.
-
-        Args:
-            model_cls: Model class to instantiate.
-            data: Dict with model field data.
-        """
-        if not data:
-            return
-        try:
-            model_instance = model_cls(**data)
-            model_cls.objects.merge(model_instance)
-        except Exception as exc:
-            self.logger.error(
-                "Failed to merge %s for layer operation: %s",
-                model_cls.__name__,
-                exc,
+            restore_layer_snapshot(
+                snapshot,
+                store=self.resource_store,
             )
 
     def _remove_layers(self, layer_ids: Iterable[int]) -> None:
@@ -689,22 +651,14 @@ class CanvasLayerMixin:
             }
 
             # Clear layer-specific cache entries
-            cache_by_key = (
-                self.settings_mixin_shared_instance._settings_cache_by_key
+            invalidate_layer_caches(
+                self.settings_mixin_shared_instance,
+                layer_id,
             )
-            for model_class in [
-                DrawingPadSettings,
-                ControlnetSettings,
-                ImageToImageSettings,
-                OutpaintSettings,
-            ]:
-                cache_key = f"{model_class.__name__}_layer_{layer_id}"
-                cache_by_key.pop(cache_key, None)
-
-            DrawingPadSettings.objects.delete(layer_id=layer_id)
-            ControlnetSettings.objects.delete(layer_id=layer_id)
-            ImageToImageSettings.objects.delete(layer_id=layer_id)
-            OutpaintSettings.objects.delete(layer_id=layer_id)
+            delete_layer_bundle(
+                layer_id,
+                store=self.resource_store,
+            )
 
     def _apply_layer_orders(self, orders: List[Dict[str, int]]) -> None:
         """Apply layer order changes to database.
@@ -712,9 +666,4 @@ class CanvasLayerMixin:
         Args:
             orders: List of dicts with layer_id and order.
         """
-        for entry in orders:
-            layer_id = entry.get("layer_id")
-            order_value = entry.get("order")
-            if layer_id is None or order_value is None:
-                continue
-            CanvasLayer.objects.update(layer_id, order=order_value)
+        apply_layer_orders(orders, store=self.resource_store)

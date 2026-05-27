@@ -4,12 +4,6 @@ from PIL import ImageQt
 from PySide6.QtCore import QPoint
 from PySide6.QtGui import QImage
 
-from airunner.models.controlnet_settings import ControlnetSettings
-from airunner.models.drawingpad_settings import DrawingPadSettings
-from airunner.models.image_to_image_settings import (
-    ImageToImageSettings,
-)
-from airunner.models.outpaint_settings import OutpaintSettings
 from airunner.utils.image import (
     convert_binary_to_image,
     convert_image_to_binary,
@@ -156,29 +150,15 @@ class InputImageScene(BrushScene):
             if self._is_mask:
                 # For mask image
                 self.update_drawing_pad_settings(mask=base_64_image)
-                # Also update the database model
-                model = self.drawing_pad_settings.__class__.objects.first()
-                DrawingPadSettings.objects.update(model.id, mask=base_64_image)
             elif self.settings_key == "controlnet_settings":
                 # For controlnet generated image
                 self.update_controlnet_settings(generated_image=base_64_image)
-                model = self.controlnet_settings.__class__.objects.first()
-                ControlnetSettings.objects.update(
-                    model.id,
-                    generated_image=base_64_image,
-                )
             elif self.settings_key == "outpaint_settings":
                 # For outpaint image
                 self.update_outpaint_settings(image=base_64_image)
-                model = self.outpaint_settings.__class__.objects.first()
-                OutpaintSettings.objects.update(model.id, image=base_64_image)
             elif self.settings_key == "image_to_image_settings":
                 # For image-to-image
                 self.update_image_to_image_settings(image=base_64_image)
-                model = self.image_to_image_settings.__class__.objects.first()
-                ImageToImageSettings.objects.update(
-                    model.id, image=base_64_image
-                )
 
             if self.drawing_pad_settings.enable_automatic_drawing:
                 self.api.art.send_request()

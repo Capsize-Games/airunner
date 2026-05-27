@@ -8,7 +8,6 @@ from airunner.components.application.gui.widgets.base_widget import BaseWidget
 from airunner.components.tts.gui.widgets.templates.open_voice_preferences_ui import (
     Ui_open_voice_preferences,
 )
-from airunner.models.openvoice_settings import OpenVoiceSettings
 from airunner.runtimes.file_policy import (
     PathPolicyError,
     normalize_local_path,
@@ -25,9 +24,13 @@ class OpenVoicePreferencesWidget(BaseWidget):
 
     def __init__(self, id: int, *args, **kwargs):
         self._id: int = id
-        self._item: OpenVoiceSettings = OpenVoiceSettings.objects.get(self._id)
+        self._item = self.resource_store.get("OpenVoiceSettings", self._id)
         if not self._item:
-            self._item = OpenVoiceSettings.objects.create()
+            self._item = self.resource_store.create(
+                "OpenVoiceSettings",
+                {},
+            )
+            self._id = self._item.id
         super().__init__(*args, **kwargs)
         self.ui.voice_sample_path.setText(self._item.reference_speaker_path)
 
@@ -76,12 +79,17 @@ class OpenVoicePreferencesWidget(BaseWidget):
             self.logger.error("Rejected reference speaker path: %s", error)
             return
 
-        open_voice_settings = OpenVoiceSettings.objects.get(self._id)
+        open_voice_settings = self.resource_store.get(
+            "OpenVoiceSettings",
+            self._id,
+        )
         if not open_voice_settings:
             return
         if open_voice_settings.reference_speaker_path != validated_path:
-            OpenVoiceSettings.objects.update(
-                self._id, reference_speaker_path=validated_path
+            self.resource_store.update(
+                "OpenVoiceSettings",
+                self._id,
+                {"reference_speaker_path": validated_path},
             )
             self._item.reference_speaker_path = validated_path
             self._notify_api_or_app(
@@ -145,15 +153,23 @@ class OpenVoicePreferencesWidget(BaseWidget):
 
     def load_settings(self):
         """Load the OpenVoice settings into the widget."""
-        settings = OpenVoiceSettings.objects.get(self._id)
+        settings = self.resource_store.get("OpenVoiceSettings", self._id)
         if not settings:
             return
         self.ui.language_combobox.setCurrentText(settings.language)
 
     @Slot(str)
     def language_changed(self, text):
-        OpenVoiceSettings.objects.update(self._id, language=text)
+        self.resource_store.update(
+            "OpenVoiceSettings",
+            self._id,
+            {"language": text},
+        )
 
     @Slot(int)
     def speed_changed(self, value):
-        OpenVoiceSettings.objects.update(self._id, speed=value)
+        self.resource_store.update(
+            "OpenVoiceSettings",
+            self._id,
+            {"speed": value},
+        )

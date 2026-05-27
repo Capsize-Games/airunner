@@ -247,12 +247,6 @@ class UIRuntimeMixin:
             if self.app is None:
                 self.app = QApplication([])
         self.app.api = self
-        try:
-            from airunner.components.server.api.server import set_api
-
-            set_api(self)
-        except Exception:
-            pass
         set_global_tooltip_style()
 
     def run(self) -> None:

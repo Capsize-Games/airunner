@@ -1,42 +1,8 @@
 """Mixin providing utility and chatbot management operations."""
 
 import os
-from typing import Optional
-from airunner.models.chatbot import Chatbot
-from airunner.models.target_files import TargetFiles
-from airunner.models.path_settings import PathSettings
-from airunner.models.application_settings import (
-    ApplicationSettings,
-)
-from airunner.models.active_grid_settings import (
-    ActiveGridSettings,
-)
-from airunner.models.controlnet_settings import (
-    ControlnetSettings,
-)
-from airunner.models.image_to_image_settings import (
-    ImageToImageSettings,
-)
-from airunner.models.outpaint_settings import (
-    OutpaintSettings,
-)
-from airunner.models.drawingpad_settings import (
-    DrawingPadSettings,
-)
-from airunner.models.metadata_settings import (
-    MetadataSettings,
-)
-from airunner.models.generator_settings import (
-    GeneratorSettings,
-)
-from airunner.models.llm_generator_settings import (
-    LLMGeneratorSettings,
-)
-from airunner.models.espeak_settings import EspeakSettings
-from airunner.models.stt_settings import STTSettings
-from airunner.models.brush_settings import BrushSettings
-from airunner.models.grid_settings import GridSettings
-from airunner.models.memory_settings import MemorySettings
+from typing import Any, Optional
+
 from airunner.components.application.gui.windows.main.settings_mixin_shared_instance import (
     SettingsMixinSharedInstance,
 )
@@ -56,8 +22,7 @@ class UtilityAndChatbotMixin:
             os.path.expanduser(self.path_settings.base_path), "code"
         )
 
-    @staticmethod
-    def create_chatbot(chatbot_name: str) -> Chatbot:
+    def create_chatbot(self, chatbot_name: str) -> Any:
         """Create a new chatbot or return existing one.
 
         Args:
@@ -66,31 +31,42 @@ class UtilityAndChatbotMixin:
         Returns:
             Chatbot instance.
         """
-        existing = Chatbot.objects.filter_by_first(name=chatbot_name)
+        existing = self.resource_store.first(
+            "Chatbot",
+            filters={"name": chatbot_name},
+        )
         if existing:
             return existing
 
         try:
-            new_chatbot = Chatbot(name=chatbot_name)
-            new_chatbot.save()
-            return new_chatbot
+            return self.resource_store.create(
+                "Chatbot",
+                {"name": chatbot_name, "botname": "Computer"},
+            )
         except Exception:
             return (
-                Chatbot.objects.filter_by_first(name=chatbot_name)
-                or Chatbot.objects.first()
-                or Chatbot(name=chatbot_name, botname="Fallback")
+                self.resource_store.first("Chatbot", filters={"name": chatbot_name})
+                or self.resource_store.first("Chatbot")
+                or self.resource_store.new_record(
+                    "Chatbot",
+                    {"name": chatbot_name, "botname": "Fallback"},
+                )
             )
 
-    @staticmethod
-    def delete_chatbot_by_name(chatbot_name: str) -> None:
+    def delete_chatbot_by_name(self, chatbot_name: str) -> None:
         """Delete chatbot by name.
 
         Args:
             chatbot_name: Name of the chatbot to delete.
         """
-        Chatbot.objects.delete_by(name=chatbot_name)
+        chatbots = self.resource_store.query(
+            "Chatbot",
+            filters={"name": chatbot_name},
+        )
+        for chatbot in chatbots:
+            self.resource_store.delete("Chatbot", chatbot.id)
 
-    def get_chatbot_by_id(self, chatbot_id: int) -> Chatbot:
+    def get_chatbot_by_id(self, chatbot_id: int) -> Any:
         """Get chatbot by ID with eager loading.
 
         Args:
@@ -107,9 +83,10 @@ class UtilityAndChatbotMixin:
 
         return self.settings_mixin_shared_instance.chatbot
 
-    @staticmethod
     def add_chatbot_document_to_chatbot(
-        chatbot: Chatbot, file_path: str
+        self,
+        chatbot: Any,
+        file_path: str,
     ) -> None:
         """Add a document file to a chatbot.
 
@@ -117,40 +94,47 @@ class UtilityAndChatbotMixin:
             chatbot: Chatbot instance.
             file_path: Path to the document file.
         """
-        document = TargetFiles.objects.filter_by_first(
-            chatbot_id=chatbot.id, file_path=file_path
+        document = self.resource_store.first(
+            "TargetFiles",
+            filters={"chatbot_id": chatbot.id, "file_path": file_path},
         )
         if document is None:
-            document = TargetFiles(file_path=file_path, chatbot_id=chatbot.id)
-        TargetFiles.objects.merge(document)
+            self.resource_store.create(
+                "TargetFiles",
+                {"file_path": file_path, "chatbot_id": chatbot.id},
+            )
 
-    @staticmethod
-    def reset_settings() -> None:
+    def reset_settings(self) -> None:
         """Reset all settings to default values.
 
         Deletes all settings from database. They will be recreated
         with default values when accessed again.
         """
-        settings_models = [
-            ApplicationSettings,
-            ActiveGridSettings,
-            ControlnetSettings,
-            ImageToImageSettings,
-            OutpaintSettings,
-            DrawingPadSettings,
-            MetadataSettings,
-            GeneratorSettings,
-            LLMGeneratorSettings,
-            EspeakSettings,
-            STTSettings,
-            BrushSettings,
-            GridSettings,
-            PathSettings,
-            MemorySettings,
+        settings_resources = [
+            "ApplicationSettings",
+            "ActiveGridSettings",
+            "ControlnetSettings",
+            "ImageToImageSettings",
+            "OutpaintSettings",
+            "DrawingPadSettings",
+            "MetadataSettings",
+            "GeneratorSettings",
+            "LLMGeneratorSettings",
+            "EspeakSettings",
+            "STTSettings",
+            "BrushSettings",
+            "GridSettings",
+            "PathSettings",
+            "MemorySettings",
         ]
 
-        for cls in settings_models:
-            cls.objects.delete_all()
+        for resource_name in settings_resources:
+            if self.resource_store.is_singleton(resource_name):
+                record = self.resource_store.get_singleton(resource_name)
+                if getattr(record, "id", None) is not None:
+                    self.resource_store.delete(resource_name, record.id)
+                continue
+            self.resource_store.delete_many(resource_name)
 
         # Clear cache
         try:
@@ -160,21 +144,23 @@ class UtilityAndChatbotMixin:
 
     def reset_path_settings(self) -> None:
         """Reset path settings to defaults."""
-        PathSettings.objects.delete_all()
-        self.set_default_values(PathSettings)
+        self.resource_store.delete_many("PathSettings")
+        self.set_default_values("PathSettings")
 
-    @staticmethod
-    def set_default_values(model_name_) -> None:
+    def set_default_values(self, resource_name: str) -> None:
         """Set default values for a model.
 
         Args:
-            model_name_: Model class to set defaults for.
+            resource_name: Resource name to set defaults for.
         """
-        model_name_.objects.create()
+        if self.resource_store.is_singleton(resource_name):
+            self.resource_store.get_singleton(resource_name, create_if_missing=True)
+            return
+        self.resource_store.create(resource_name, {})
 
     def _load_chatbot_with_relationships(
         self, chatbot_id: int
-    ) -> Optional[Chatbot]:
+    ) -> Optional[Any]:
         """Load chatbot with relationships.
 
         Args:
@@ -184,8 +170,9 @@ class UtilityAndChatbotMixin:
             Chatbot instance or None.
         """
         try:
-            chatbot = Chatbot.objects.get(
-                pk=chatbot_id,
+            chatbot = self.resource_store.first(
+                "Chatbot",
+                filters={"id": chatbot_id},
                 eager_load=["target_files", "target_directories"],
             )
             return chatbot

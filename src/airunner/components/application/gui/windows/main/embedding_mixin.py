@@ -1,15 +1,14 @@
-from typing import List, Type
+from typing import Any, List
 import os
 
-from airunner.models.embedding import Embedding
 from airunner.components.art.utils.embeddings import get_embeddings_by_version
 from airunner.utils.models import scan_path_for_embeddings
 
 
 class EmbeddingMixin:
     @property
-    def embeddings(self) -> List[Type[Embedding]]:
-        return Embedding.objects.all()
+    def embeddings(self) -> List[Any]:
+        return self.resource_store.query("Embedding")
 
     @property
     def __embeddings(self):

@@ -6,13 +6,16 @@ from airunner.components.application.gui.widgets.base_widget import BaseWidget
 from airunner.components.application.gui.windows.main.pipeline_mixin import (
     PipelineMixin,
 )
-from airunner.models.canvas_layer import CanvasLayer
-from airunner.models.controlnet_settings import ControlnetSettings
-from airunner.models.drawingpad_settings import DrawingPadSettings
-from airunner.models.image_to_image_settings import (
-    ImageToImageSettings,
+from airunner.components.art.data.canvas_layer_records import (
+    delete_layer_bundle,
+    ensure_layer_setting,
+    first_canvas_layer,
+    first_layer_setting,
+    get_canvas_layer,
+    invalidate_layer_caches,
+    ordered_canvas_layers,
+    update_canvas_layer,
 )
-from airunner.models.outpaint_settings import OutpaintSettings
 from airunner.components.art.gui.widgets.canvas.layer_item_widget import (
     LayerItemWidget,
 )
@@ -58,7 +61,7 @@ class CanvasLayerContainerWidget(BaseWidget, PipelineMixin):
                 if type(widget) is LayerItemWidget:
                     self.ui.layer_list_layout.layout().removeWidget(widget)
                     widget.deleteLater()
-        self.layers = CanvasLayer.objects.order_by("order").all()
+        self.layers = ordered_canvas_layers(store=self.resource_store)
         if not self.layers or len(self.layers) == 0:
             layer = self.create_layer(order=0, name="Layer 1")
             # Initialize default settings for the first layer if created successfully
@@ -109,7 +112,9 @@ class CanvasLayerContainerWidget(BaseWidget, PipelineMixin):
         if not layer:
             return None
 
-        layer = CanvasLayer.objects.get(layer.id)
+        layer = get_canvas_layer(layer.id, store=self.resource_store)
+        if layer is None:
+            return None
 
         # Initialize default settings for the new layer
         self._initialize_layer_default_settings(layer.id)
@@ -182,9 +187,15 @@ class CanvasLayerContainerWidget(BaseWidget, PipelineMixin):
                         layer.order,
                         layer_above.order,
                     )
-                    CanvasLayer.objects.update(layer.id, order=layer.order)
-                    CanvasLayer.objects.update(
-                        layer_above.id, order=layer_above.order
+                    update_canvas_layer(
+                        layer.id,
+                        {"order": layer.order},
+                        store=self.resource_store,
+                    )
+                    update_canvas_layer(
+                        layer_above.id,
+                        {"order": layer_above.order},
+                        store=self.resource_store,
                     )
                     changed = True
         except Exception:
@@ -237,9 +248,15 @@ class CanvasLayerContainerWidget(BaseWidget, PipelineMixin):
                         layer.order,
                         layer_below.order,
                     )
-                    CanvasLayer.objects.update(layer.id, order=layer.order)
-                    CanvasLayer.objects.update(
-                        layer_below.id, order=layer_below.order
+                    update_canvas_layer(
+                        layer.id,
+                        {"order": layer.order},
+                        store=self.resource_store,
+                    )
+                    update_canvas_layer(
+                        layer_below.id,
+                        {"order": layer_below.order},
+                        store=self.resource_store,
                     )
                     changed = True
         except Exception:
@@ -315,34 +332,31 @@ class CanvasLayerContainerWidget(BaseWidget, PipelineMixin):
                 self.selected_layers.discard(layer_id)
 
             # Clear layer-specific cache entries to prevent stale data
-            cache_by_key = (
-                self.settings_mixin_shared_instance._settings_cache_by_key
+            invalidate_layer_caches(
+                self.settings_mixin_shared_instance,
+                layer_id,
+                resource_names=(
+                    "BrushSettings",
+                    "MetadataSettings",
+                ),
             )
-            for model_class in [
-                DrawingPadSettings,
-                ControlnetSettings,
-                ImageToImageSettings,
-                OutpaintSettings,
-                BrushSettings,
-                MetadataSettings,
-            ]:
-                cache_key = f"{model_class.__name__}_layer_{layer_id}"
-                cache_by_key.pop(cache_key, None)
-
-            CanvasLayer.objects.delete(layer_id)
-            DrawingPadSettings.objects.delete_by(layer_id=layer_id)
-            ControlnetSettings.objects.delete_by(layer_id=layer_id)
-            ImageToImageSettings.objects.delete_by(layer_id=layer_id)
-            OutpaintSettings.objects.delete_by(layer_id=layer_id)
+            delete_layer_bundle(
+                layer_id,
+                store=self.resource_store,
+            )
 
         # Reorder remaining layers
         for i, layer in enumerate(self.layers):
             layer.order = i
-            CanvasLayer.objects.update(layer.id, order=i)
+            update_canvas_layer(
+                layer.id,
+                {"order": i},
+                store=self.resource_store,
+            )
 
-        if len(CanvasLayer.objects.all()) == 0:
+        if not ordered_canvas_layers(store=self.resource_store):
             self.create_layer(order=0, name="Layer 1")
-            self.layers = CanvasLayer.objects.order_by("order").all()
+            self.layers = ordered_canvas_layers(store=self.resource_store)
 
         self.select_first_layer()
 
@@ -421,7 +435,7 @@ class CanvasLayerContainerWidget(BaseWidget, PipelineMixin):
             )
 
     def select_first_layer(self):
-        layer = CanvasLayer.objects.first()
+        layer = first_canvas_layer(store=self.resource_store)
         if layer:
             self.select_layer(layer.id, self.layer_widgets.get(layer.id))
 
@@ -493,8 +507,7 @@ class CanvasLayerContainerWidget(BaseWidget, PipelineMixin):
         )
 
     def _sync_layers_from_database(self) -> None:
-        db_layers = CanvasLayer.objects.all() or []
-        db_layers.sort(key=lambda layer: getattr(layer, "order", 0))
+        db_layers = ordered_canvas_layers(store=self.resource_store)
         db_layer_ids = {layer.id for layer in db_layers}
 
         # Remove widgets for layers that no longer exist
@@ -523,7 +536,11 @@ class CanvasLayerContainerWidget(BaseWidget, PipelineMixin):
     def on_visibility_toggled(self, data: dict):
         layer_id = data.get("layer_id")
         visible = data.get("visible")
-        CanvasLayer.objects.update(layer_id, visible=visible)
+        update_canvas_layer(
+            layer_id,
+            {"visible": visible},
+            store=self.resource_store,
+        )
 
         for cached_layer in self.layers:
             if cached_layer.id == layer_id:
@@ -616,7 +633,11 @@ class CanvasLayerContainerWidget(BaseWidget, PipelineMixin):
 
                 # Update order values in database
                 for i, layer in enumerate(self.layers):
-                    CanvasLayer.objects.update(layer.id, order=i)
+                    update_canvas_layer(
+                        layer.id,
+                        {"order": i},
+                        store=self.resource_store,
+                    )
                     layer.order = i
 
                 # Emit signal to update canvas display
@@ -698,16 +719,25 @@ class CanvasLayerContainerWidget(BaseWidget, PipelineMixin):
             self._ensure_drawing_pad_defaults(layer_id)
 
             # Create default ControlnetSettings
-            if not ControlnetSettings.objects.filter_by(layer_id=layer_id):
-                ControlnetSettings.objects.create(layer_id=layer_id)
+            ensure_layer_setting(
+                "ControlnetSettings",
+                layer_id,
+                store=self.resource_store,
+            )
 
             # Create default ImageToImageSettings
-            if not ImageToImageSettings.objects.filter_by(layer_id=layer_id):
-                ImageToImageSettings.objects.create(layer_id=layer_id)
+            ensure_layer_setting(
+                "ImageToImageSettings",
+                layer_id,
+                store=self.resource_store,
+            )
 
             # Create default OutpaintSettings
-            if not OutpaintSettings.objects.filter_by(layer_id=layer_id):
-                OutpaintSettings.objects.create(layer_id=layer_id)
+            ensure_layer_setting(
+                "OutpaintSettings",
+                layer_id,
+                store=self.resource_store,
+            )
 
         except Exception as e:
             print(
@@ -738,7 +768,11 @@ class CanvasLayerContainerWidget(BaseWidget, PipelineMixin):
         return convert_image_to_binary(image)
 
     def _ensure_drawing_pad_defaults(self, layer_id: int) -> None:
-        settings = DrawingPadSettings.objects.filter_by_first(layer_id=layer_id)
+        settings = first_layer_setting(
+            "DrawingPadSettings",
+            layer_id,
+            store=self.resource_store,
+        )
         x_pos, y_pos = self._document_origin()
         image = self._create_blank_document_binary()
         if settings is not None and settings.image:

@@ -2,8 +2,13 @@
 
 from typing import Optional, Dict
 from PySide6.QtCore import QPointF
-from airunner.models.drawingpad_settings import DrawingPadSettings
-from airunner.components.art.utils.canvas_position_manager import CanvasPositionManager, ViewState
+from airunner.components.art.data.canvas_layer_records import (
+    ensure_layer_setting,
+)
+from airunner.components.art.utils.canvas_position_manager import (
+    CanvasPositionManager,
+    ViewState,
+)
 from airunner.utils.application.mediator_mixin import MediatorMixin
 from airunner.components.application.gui.windows.main.settings_mixin import (
     SettingsMixin,
@@ -167,8 +172,10 @@ class CanvasPositionUpdateMixin(MediatorMixin, SettingsMixin):
                 f"NOT in original_item_positions, reading from settings"
             )
             try:
-                drawing_pad_settings = self._get_layer_specific_settings(
-                    DrawingPadSettings, layer_id=layer_id
+                drawing_pad_settings = ensure_layer_setting(
+                    "DrawingPadSettings",
+                    layer_id,
+                    store=self.resource_store,
                 )
                 if drawing_pad_settings:
                     abs_x = drawing_pad_settings.x_pos or 0

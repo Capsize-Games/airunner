@@ -1,9 +1,6 @@
 from PySide6.QtCore import Slot
 from PySide6.QtWidgets import QInputDialog, QMessageBox
 
-from airunner.models.chatbot import Chatbot
-from airunner.models.target_files import TargetFiles
-from airunner.models.voice_settings import VoiceSettings
 from airunner.enums import Gender
 from airunner.utils.os.open_file_path import open_file_path
 from airunner.components.application.gui.widgets.base_widget import BaseWidget
@@ -113,7 +110,7 @@ class BotPreferencesWidget(BaseWidget):
 
     @Slot(str)
     def saved_chatbots_changed(self, val: str):
-        chatbot = Chatbot.objects.filter_first(Chatbot.name == val)
+        chatbot = self.resource_store.first("Chatbot", filters={"name": val})
         chatbot_id = chatbot.id
         self.update_llm_generator_settings(current_chatbot=chatbot_id)
         self.load_form_elements()
@@ -226,8 +223,8 @@ class BotPreferencesWidget(BaseWidget):
             widget = DocumentWidget(target_file, self.delete_document)
             layout.addWidget(widget)
 
-    def delete_document(self, target_file: TargetFiles):
-        TargetFiles.objects.delete(target_file.id)
+    def delete_document(self, target_file):
+        self.resource_store.delete("TargetFiles", target_file.id)
 
         self.load_documents()
         self.api.llm.reload_rag()
@@ -239,13 +236,14 @@ class BotPreferencesWidget(BaseWidget):
         except TypeError:
             self.logger.error(f"Attribute {key} does not exist in Chatbot")
             return
-        Chatbot.objects.update(
+        self.resource_store.update(
+            "Chatbot",
             chatbot.id,
-            **{key: val},
+            {key: val},
         )
 
     def load_voices(self):
-        voices = VoiceSettings.objects.all()
+        voices = self.resource_store.query("VoiceSettings")
         self.ui.voice_combobox.blockSignals(True)
         self.ui.voice_combobox.clear()
 
@@ -271,7 +269,7 @@ class BotPreferencesWidget(BaseWidget):
         if voice_id is None:
             return
         self.update_chatbot("voice_id", voice_id)
-        voice = VoiceSettings.objects.get(pk=voice_id)
+        voice = self.resource_store.get("VoiceSettings", voice_id)
         if voice is not None:
             self.emit_signal(
                 SignalCode.TTS_MODEL_CHANGED,

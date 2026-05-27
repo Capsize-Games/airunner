@@ -12,9 +12,7 @@ from typing import TYPE_CHECKING, Dict, Optional
 from PySide6.QtCore import QCoreApplication
 
 from airunner.components.knowledge import get_knowledge_base
-from airunner.models.application_settings import (
-    ApplicationSettings,
-)
+from airunner.daemon_client.resource_store import get_resource_store
 # CoreLifecycleService moved to services package; headless mode removed from GUI
 from airunner.settings import AIRUNNER_HEADLESS_SERVER_HOST
 from airunner.settings import AIRUNNER_HEADLESS_SERVER_PORT
@@ -52,6 +50,10 @@ def _get_headless_api_service_classes():
 
 class HeadlessRuntimeMixin:
     """Provide headless bootstrapping and knowledge migration helpers."""
+
+    @property
+    def _resource_store(self):
+        return get_resource_store()
 
     def _init_headless_mode(self) -> None:
         """Initialize headless mode."""
@@ -158,12 +160,8 @@ class HeadlessRuntimeMixin:
             self.app = QCoreApplication([])
         self.app.api = self
         self.logger.info("Qt Core event loop initialized (headless mode)")
-
-        from airunner.components.server.api.server import set_api
-
-        set_api(self)
         self._ensure_headless_api_services()
-        self.logger.info("API instance registered globally")
+        self.logger.info("API instance attached to Qt application")
 
         if self._initialize_headless_lifecycle:
             self.initialize_headless_lifecycle()
@@ -182,7 +180,11 @@ class HeadlessRuntimeMixin:
             self._kill_process_on_port(port)
 
             self.logger.info("Starting API server on %s:%s", host, port)
-            self.api_server_thread = APIServerThread(host=host, port=port)
+            self.api_server_thread = APIServerThread(
+                app_instance=self,
+                host=host,
+                port=port,
+            )
             self.api_server_thread.start()
             self.logger.info(
                 "API server started - /health, /llm, /art endpoints "
@@ -201,9 +203,9 @@ class HeadlessRuntimeMixin:
         )
 
         if getattr(self, "llm", None) is None:
-            self.llm = llm_service_class()
+            self.llm = llm_service_class(api=self)
         if getattr(self, "art", None) is None:
-            self.art = art_service_class()
+            self.art = art_service_class(api=self)
 
     def ensure_lifecycle_service(self):
         """Lifecycle service now managed by daemon."""
@@ -285,13 +287,10 @@ class HeadlessRuntimeMixin:
     def _run_knowledge_migration_if_needed(self):
         """Run one-time migration from JSON to markdown if needed."""
         try:
-            settings = ApplicationSettings.objects.filter_by_first(id=1)
-            if not settings:
-                self.logger.info("Creating default application settings")
-                settings = ApplicationSettings.objects.create(
-                    id=1,
-                    knowledge_migrated=False,
-                )
+            settings = self._resource_store.get_singleton(
+                "ApplicationSettings",
+                create_if_missing=True,
+            )
 
             if settings.knowledge_migrated:
                 self.logger.debug(
@@ -305,9 +304,9 @@ class HeadlessRuntimeMixin:
                 self.logger.info(
                     "No legacy knowledge data found, skipping migration"
                 )
-                ApplicationSettings.objects.update(
-                    settings.id,
-                    knowledge_migrated=True,
+                self._resource_store.update_singleton(
+                    "ApplicationSettings",
+                    {"knowledge_migrated": True},
                 )
                 return
 
@@ -389,16 +388,9 @@ class HeadlessRuntimeMixin:
     def _mark_migration_complete(self):
         """Mark knowledge migration as complete in settings."""
         try:
-            settings = ApplicationSettings.objects.filter_by_first(id=1)
-            if settings is None:
-                ApplicationSettings.objects.create(
-                    id=1,
-                    knowledge_migrated=True,
-                )
-                return
-            ApplicationSettings.objects.update(
-                settings.id,
-                knowledge_migrated=True,
+            self._resource_store.update_singleton(
+                "ApplicationSettings",
+                {"knowledge_migrated": True},
             )
         except Exception as exc:
             self.logger.error(

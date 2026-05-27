@@ -21,6 +21,7 @@ from airunner_services.api.routes import (
     art,
     conversations,
     daemon,
+    domain_resources,
     downloads,
     health,
     llm,
@@ -264,6 +265,26 @@ def create_app(
         persistence.router,
         prefix="/api/v1/state",
         tags=["state"],
+    )
+    app.include_router(
+        domain_resources.settings_router,
+        prefix="/api/v1/settings",
+        tags=["settings"],
+    )
+    app.include_router(
+        domain_resources.catalog_router,
+        prefix="/api/v1/catalog",
+        tags=["catalog"],
+    )
+    app.include_router(
+        domain_resources.library_router,
+        prefix="/api/v1/library",
+        tags=["library"],
+    )
+    app.include_router(
+        domain_resources.workspace_router,
+        prefix="/api/v1/workspace",
+        tags=["workspace"],
     )
     app.include_router(art.router, prefix="/api/v1/art", tags=["art"])
     app.include_router(

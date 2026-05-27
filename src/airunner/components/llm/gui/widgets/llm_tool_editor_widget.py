@@ -5,7 +5,7 @@ Dialog for creating and editing LLM tools.
 Provides form fields for tool properties and code editor with validation.
 """
 
-from typing import Optional
+from typing import Any, Optional
 
 from PySide6.QtCore import Slot
 from PySide6.QtWidgets import QDialog, QMessageBox
@@ -14,7 +14,7 @@ from PySide6.QtGui import QFont
 from airunner.components.llm.gui.widgets.templates.llm_tool_editor_ui import (
     Ui_llm_tool_editor,
 )
-from airunner.models.llm_tool import LLMTool
+from airunner.daemon_client.resource_store import get_resource_store
 from airunner.enums import SignalCode
 from airunner.settings import AIRUNNER_LOG_LEVEL
 from airunner.utils.application import get_logger
@@ -25,16 +25,40 @@ from airunner.utils.settings.get_qsettings import get_qsettings
 logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 
 
+def _validate_tool_code_safety(code: str) -> tuple[bool, str]:
+    dangerous_imports = [
+        "os.system",
+        "subprocess",
+        "eval(",
+        "exec(",
+        "__import__",
+        "open(",
+        "rm ",
+        "shutil",
+    ]
+
+    code_lower = code.lower()
+    for dangerous in dangerous_imports:
+        if dangerous.lower() in code_lower:
+            return False, f"Dangerous operation detected: {dangerous}"
+
+    if "@tool" not in code:
+        return False, "Code must use @tool decorator"
+
+    return True, "Code appears safe"
+
+
 class LLMToolEditorWidget(QDialog, MediatorMixin):
     """
     Dialog for creating/editing LLM tools.
     Provides form with validation and code editor.
     """
 
-    def __init__(self, tool: Optional[LLMTool] = None, parent=None):
+    def __init__(self, tool: Optional[Any] = None, parent=None):
         super().__init__(parent)
         self.settings = get_qsettings()
         self.tool = tool
+        self.resource_store = get_resource_store()
         self.ui = Ui_llm_tool_editor()
         self.ui.setupUi(self)
 
@@ -93,8 +117,7 @@ class LLMToolEditorWidget(QDialog, MediatorMixin):
             )
             return
 
-        temp_tool = LLMTool(code=code)
-        is_safe, message = temp_tool.validate_code_safety()
+        is_safe, message = _validate_tool_code_safety(code)
 
         if is_safe:
             QMessageBox.information(
@@ -129,8 +152,7 @@ class LLMToolEditorWidget(QDialog, MediatorMixin):
             return
 
         # Validate code safety before saving
-        temp_tool = LLMTool(code=code)
-        is_safe, message = temp_tool.validate_code_safety()
+        is_safe, message = _validate_tool_code_safety(code)
         if not is_safe:
             reply = QMessageBox.question(
                 self,
@@ -166,8 +188,12 @@ class LLMToolEditorWidget(QDialog, MediatorMixin):
             }
             if self.tool:
                 values["version"] = int(getattr(self.tool, "version", 0) or 0) + 1
-                if LLMTool.objects.update(self.tool.id, **values):
-                    updated_tool = LLMTool.objects.get(self.tool.id) or self.tool
+                updated_tool = self.resource_store.update(
+                    "LLMTool",
+                    self.tool.id,
+                    values,
+                )
+                if updated_tool is not None:
                     logger.info(
                         f"Updated tool: {updated_tool.name} (v{updated_tool.version})"
                     )
@@ -175,12 +201,14 @@ class LLMToolEditorWidget(QDialog, MediatorMixin):
                         SignalCode.LLM_TOOL_UPDATED, {"tool": updated_tool}
                     )
             else:
-                new_tool = LLMTool(
-                    created_by="user",
-                    version=1,
-                    **values,
+                new_tool = self.resource_store.create(
+                    "LLMTool",
+                    {
+                        "created_by": "user",
+                        "version": 1,
+                        **values,
+                    },
                 )
-                new_tool.save()
                 logger.info(f"Created tool: {new_tool.name}")
                 self.emit_signal(
                     SignalCode.LLM_TOOL_CREATED, {"tool": new_tool}

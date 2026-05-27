@@ -72,8 +72,6 @@ from airunner.utils.application.gui_probe import (
 )
 from airunner.utils.application.log_hygiene import summarize_mapping_keys
 from airunner.utils.settings import get_qsettings
-from airunner.models.shortcut_keys import ShortcutKeys
-from airunner.models.image_filter import ImageFilter
 from airunner.app_installer import AppInstaller
 from airunner.enums import (
     SignalCode,
@@ -2036,24 +2034,17 @@ class MainWindow(
         This is invoked by SD_SAVE_PROMPT_SIGNAL. Previously this method was
         referenced but not implemented, causing an AttributeError.
         """
-
-        try:
-            from airunner.models.saved_prompt import SavedPrompt
-        except Exception as e:
-            self.logger.error(f"Failed to import SavedPrompt: {e}")
-            return
-
-        saved_prompt = SavedPrompt(
-            prompt=data.get("prompt"),
-            negative_prompt=data.get("negative_prompt"),
-            secondary_prompt=data.get("secondary_prompt"),
-            secondary_negative_prompt=data.get("secondary_negative_prompt"),
+        self.resource_store.create(
+            "SavedPrompt",
+            {
+                "prompt": data.get("prompt"),
+                "negative_prompt": data.get("negative_prompt"),
+                "secondary_prompt": data.get("secondary_prompt"),
+                "secondary_negative_prompt": data.get(
+                    "secondary_negative_prompt"
+                ),
+            },
         )
-
-        saved_prompt.save()
-        # NOTE: SavedPrompt instances are session-scoped and may be detached
-        # after save(); avoid touching ORM attributes here (e.g. saved_prompt.id)
-        # to prevent DetachedInstanceError.
         self.logger.info("Saved Stable Diffusion prompt")
 
     def set_path_settings(self, key, val):
@@ -2482,7 +2473,10 @@ class MainWindow(
         self._set_keyboard_shortcuts()
 
     def _set_keyboard_shortcuts(self):
-        quit_key = ShortcutKeys.objects.filter_by_first(display_name="Quit")
+        quit_key = self.resource_store.first(
+            "ShortcutKeys",
+            filters={"display_name": "Quit"},
+        )
         if quit_key is not None:
             key_sequence = QKeySequence(quit_key.key | quit_key.modifiers)
             self.ui.actionQuit.setShortcut(key_sequence)
@@ -2492,7 +2486,7 @@ class MainWindow(
 
     def _initialize_filter_actions(self):
         self.ui.menuFilters.clear()
-        image_filters = ImageFilter.objects.all()
+        image_filters = self.resource_store.query("ImageFilter")
         try:
             for image_filter in image_filters:
                 action = self.ui.menuFilters.addAction(

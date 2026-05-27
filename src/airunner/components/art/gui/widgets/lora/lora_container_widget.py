@@ -1,9 +1,8 @@
 import os
-from typing import List, Type
+from typing import Any, List
 from PySide6.QtCore import Slot, QSize, QThread, QTimer, Qt
 from PySide6.QtWidgets import QWidget, QSizePolicy, QApplication
 
-from airunner.models.lora import Lora
 from airunner.enums import SignalCode, ModelType, ModelStatus
 from airunner.utils.models import scan_path_for_lora
 from airunner.components.application.gui.widgets.base_widget import BaseWidget
@@ -105,7 +104,7 @@ class LoraContainerWidget(BaseWidget):
         super().closeEvent(event)
 
     @property
-    def lora(self) -> List[Type[Lora]]:
+    def lora(self) -> List[Any]:
         return self.load_lora()
 
     def _scan_path_for_lora(self, path) -> bool:
@@ -197,7 +196,10 @@ class LoraContainerWidget(BaseWidget):
         if self._version is None or self._version != version or force_reload:
             self._version = version
             self.clear_lora_widgets()
-            loras = Lora.objects.filter_by(version=version)
+            loras = self.resource_store.query(
+                "Lora",
+                filters={"version": version},
+            )
             if loras:
                 filtered_loras = [
                     lora
@@ -268,7 +270,7 @@ class LoraContainerWidget(BaseWidget):
 
         # Remove lora from database
 
-        Lora.objects.delete(lora_widget.current_lora.id)
+        self.resource_store.delete("Lora", lora_widget.current_lora.id)
 
         self._apply_button_enabled = True
         self.ui.apply_lora_button.setEnabled(self._apply_button_enabled)

@@ -12,15 +12,17 @@ from typing import List, Dict, Any, Optional
 import hashlib
 from datetime import datetime
 
-from airunner.models.document import (
-    Document as DBDocument,
+from airunner.components.documents.data.document_records import (
+    find_document_by_path,
+    list_documents,
+    update_document,
 )
 
 
 class RAGDocumentMixin:
     """Mixin for RAG document database operations."""
 
-    def _get_unindexed_documents(self) -> List[DBDocument]:
+    def _get_unindexed_documents(self) -> List[Any]:
         """Get list of documents that need to be indexed.
 
         Checks both indexed flag and file hash to detect changes.
@@ -29,7 +31,7 @@ class RAGDocumentMixin:
             List of DBDocument instances that need indexing
         """
         try:
-            all_docs = DBDocument.objects.all()
+            all_docs = list_documents()
             unindexed = []
 
             for doc in all_docs:
@@ -50,7 +52,7 @@ class RAGDocumentMixin:
                     self.logger.info(
                         f"File changed, needs re-indexing: {doc.path}"
                     )
-                    DBDocument.objects.update(pk=doc.id, indexed=False)
+                    update_document(doc.id, {"indexed": False})
                     unindexed.append(doc)
 
             return unindexed
@@ -68,8 +70,8 @@ class RAGDocumentMixin:
             List of document IDs (generated from file paths)
         """
         try:
-            active_docs = DBDocument.objects.filter(
-                DBDocument.active == True, DBDocument.indexed == True
+            active_docs = list_documents(
+                filters={"active": True, "indexed": True}
             )
             doc_ids = []
             for doc in active_docs:
@@ -88,8 +90,8 @@ class RAGDocumentMixin:
             List of document filenames (basenames, not full paths)
         """
         try:
-            active_docs = DBDocument.objects.filter(
-                DBDocument.active == True, DBDocument.indexed == True
+            active_docs = list_documents(
+                filters={"active": True, "indexed": True}
             )
             names = []
             for doc in active_docs:
@@ -104,8 +106,8 @@ class RAGDocumentMixin:
     def _get_active_document_paths(self) -> List[str]:
         """Get list of file paths for active indexed documents."""
         try:
-            active_docs = DBDocument.objects.filter(
-                DBDocument.active == True, DBDocument.indexed == True
+            active_docs = list_documents(
+                filters={"active": True, "indexed": True}
             )
             return [
                 doc.path for doc in active_docs if os.path.exists(doc.path)
@@ -123,9 +125,8 @@ class RAGDocumentMixin:
             file_path: Path to the document file
         """
         try:
-            docs = DBDocument.objects.filter_by(path=file_path)
-            if docs and len(docs) > 0:
-                doc = docs[0]
+            doc = find_document_by_path(file_path)
+            if doc is not None:
                 file_hash = self._calculate_file_hash(file_path)
                 file_size = (
                     os.path.getsize(file_path)
@@ -133,12 +134,14 @@ class RAGDocumentMixin:
                     else None
                 )
 
-                DBDocument.objects.update(
-                    pk=doc.id,
-                    indexed=True,
-                    file_hash=file_hash,
-                    indexed_at=datetime.utcnow(),
-                    file_size=file_size,
+                update_document(
+                    doc.id,
+                    {
+                        "indexed": True,
+                        "file_hash": file_hash,
+                        "indexed_at": datetime.utcnow(),
+                        "file_size": file_size,
+                    },
                 )
                 self.logger.debug(f"Marked as indexed: {file_path}")
         except Exception as e:
@@ -170,9 +173,8 @@ class RAGDocumentMixin:
         }
 
         # Add DB metadata if available
-        db_docs = DBDocument.objects.filter_by(path=file_path)
-        if db_docs and len(db_docs) > 0:
-            db_doc = db_docs[0]
+        db_doc = find_document_by_path(file_path)
+        if db_doc is not None:
             if hasattr(db_doc, "index_uuid") and db_doc.index_uuid:
                 metadata["index_uuid"] = db_doc.index_uuid
             if hasattr(db_doc, "indexed_at") and db_doc.indexed_at:

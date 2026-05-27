@@ -7,11 +7,8 @@ from typing import Dict, Optional
 
 from PySide6.QtCore import QLocale, QTranslator
 
+from airunner.daemon_client.resource_store import get_resource_store
 from airunner.app_installer import AppInstaller
-from airunner.models.application_settings import (
-    ApplicationSettings,
-)
-from airunner.models.path_settings import PathSettings
 from airunner.enums import AVAILABLE_LANGUAGES
 from airunner.enums import LANGUAGE_TO_LOCALE_MAP
 from airunner.enums import LOCALE_TO_LANGUAGE_MAP
@@ -79,14 +76,15 @@ class LocalizationMixin:
         if AIRUNNER_DISABLE_SETUP_WIZARD:
             return
 
-        application_settings = ApplicationSettings.objects.first()
-        path_settings = PathSettings.objects.first()
-        if path_settings is None:
-            PathSettings.objects.create()
-            path_settings = PathSettings.objects.first()
-        if application_settings is None:
-            ApplicationSettings.objects.create()
-            application_settings = ApplicationSettings.objects.first()
+        resource_store = get_resource_store()
+        application_settings = resource_store.get_singleton(
+            "ApplicationSettings",
+            create_if_missing=True,
+        )
+        path_settings = resource_store.get_singleton(
+            "PathSettings",
+            create_if_missing=True,
+        )
 
         base_path = path_settings.base_path
         if (

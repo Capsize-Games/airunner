@@ -13,7 +13,6 @@ from PySide6.QtCore import (
 )
 from PySide6.QtWidgets import QApplication, QWidget
 
-from airunner.components.application.data import ShortcutKeys
 from airunner.components.model_management import ModelResourceManager
 from airunner.components.model_management.types import ModelState
 from airunner.enums import (
@@ -875,11 +874,13 @@ class StableDiffusionGeneratorForm(BaseWidget):
             progressbar.setFormat("Complete")
 
     def _set_keyboard_shortcuts(self):
-        generate_image_key = ShortcutKeys.objects.filter_by_first(
-            display_name="Generate Image"
+        generate_image_key = self.resource_store.first(
+            "ShortcutKeys",
+            filters={"display_name": "Generate Image"},
         )
-        interrupt_key = ShortcutKeys.objects.filter_by_first(
-            display_name="Interrupt"
+        interrupt_key = self.resource_store.first(
+            "ShortcutKeys",
+            filters={"display_name": "Interrupt"},
         )
         if generate_image_key:
             self.ui.generate_button.setShortcut(generate_image_key.key)

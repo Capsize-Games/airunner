@@ -4,14 +4,15 @@ from __future__ import annotations
 
 from typing import Any
 
+from airunner.daemon_client.resource_store import get_resource_store
+
 
 def get_db_settings() -> Any:
     """Return persisted LLM generator settings when available."""
-    from airunner.models.llm_generator_settings import (
-        LLMGeneratorSettings,
+    return get_resource_store().get_singleton(
+        "LLMGeneratorSettings",
+        create_if_missing=True,
     )
-
-    return LLMGeneratorSettings.objects.first()
 
 
 def get_quantization_bits(db_settings: Any) -> int:

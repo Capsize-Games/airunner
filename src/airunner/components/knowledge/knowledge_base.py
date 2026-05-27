@@ -638,18 +638,20 @@ class KnowledgeBase:
             files: List of absolute file paths
         """
         try:
-            from airunner.models.document import Document
+            from airunner.components.documents.data.document_records import (
+                ensure_document_record,
+            )
 
             for file_path in files:
-                existing = Document.objects.filter_by_first(path=file_path)
-                if existing is not None:
-                    continue
-                Document.objects.create(
-                    path=file_path,
+                existing = ensure_document_record(
+                    file_path,
                     active=True,
                     indexed=False,
                 )
-                self.logger.debug(f"Registered knowledge doc: {file_path}")
+                if existing is not None:
+                    self.logger.debug(
+                        f"Registered knowledge doc: {file_path}"
+                    )
         except Exception as e:
             self.logger.error(f"Failed to register knowledge documents: {e}")
     

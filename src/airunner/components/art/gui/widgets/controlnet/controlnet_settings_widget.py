@@ -1,4 +1,3 @@
-from airunner.models.controlnet_model import ControlnetModel
 from airunner.enums import SignalCode
 from airunner.components.application.gui.widgets.base_widget import BaseWidget
 from airunner.components.art.gui.widgets.controlnet.templates.controlnet_settings_widget_ui import (
@@ -32,8 +31,9 @@ class ControlnetSettingsWidget(BaseWidget):
         ):
             current_index = 0
             self._version = self.generator_settings.version
-            controlnet_models = ControlnetModel.objects.filter_by(
-                version=self._version
+            controlnet_models = self.resource_store.query(
+                "ControlnetModel",
+                filters={"version": self._version},
             )
             self.ui.controlnet.blockSignals(True)
             self.ui.controlnet.clear()

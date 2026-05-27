@@ -2,7 +2,6 @@ from PySide6.QtCore import Slot
 from PySide6.QtWidgets import QMessageBox
 
 from airunner.components.application.gui.widgets.base_widget import BaseWidget
-from airunner.models.embedding import Embedding
 from airunner.components.art.gui.widgets.embeddings.embedding_trigger_word_widget import (
     EmbeddingTriggerWordWidget,
 )
@@ -22,7 +21,7 @@ class EmbeddingWidget(BaseWidget):
     icons = (("trash-2", "delete_button"),)
 
     def __init__(self, *args, **kwargs):
-        self.embedding: Embedding = kwargs.pop("embedding")
+        self.embedding = kwargs.pop("embedding")
         super().__init__(*args, **kwargs)
         name = self.embedding.name
         enabled = self.embedding.active
@@ -53,14 +52,15 @@ class EmbeddingWidget(BaseWidget):
         if reply == QMessageBox.Yes:
             self.api.art.embeddings.delete(self)
 
-    def update_embedding(self, embedding: Embedding):
-        Embedding.objects.update(
-            **{
-                "pk": embedding.id,
+    def update_embedding(self, embedding):
+        self.resource_store.update(
+            "Embedding",
+            embedding.id,
+            {
                 "name": embedding.name,
                 "trigger_word": embedding.trigger_word,
                 "active": embedding.active,
-            }
+            },
         )
 
     @Slot(bool)
@@ -72,7 +72,7 @@ class EmbeddingWidget(BaseWidget):
         self.update_embedding(self.embedding)
         self.api.art.embeddings.status_changed()
 
-    def create_trigger_word_widgets(self, embedding: Embedding):
+    def create_trigger_word_widgets(self, embedding):
         for i in reversed(range(self.ui.trigger_word_container.count())):
             widget = self.ui.trigger_word_container.itemAt(i).widget()
             if isinstance(widget, EmbeddingTriggerWordWidget):

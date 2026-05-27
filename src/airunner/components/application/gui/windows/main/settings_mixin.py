@@ -9,6 +9,7 @@ from typing import List, Dict, Optional, Any
 from PySide6.QtCore import QCoreApplication
 from PySide6.QtWidgets import QApplication
 from airunner.enums import SignalCode
+from airunner.daemon_client.resource_store import GuiResourceStore
 from airunner.utils.application.get_logger import get_logger
 from airunner.settings import AIRUNNER_LOG_LEVEL
 from airunner.components.application.gui.windows.main.settings_mixin_shared_instance import (
@@ -62,6 +63,7 @@ class SettingsMixin(
         super().__init__(*args, **kwargs)
 
         self._selected_layer_ids = set()
+        self._resource_store = None
         self._register_layer_selection_handler()
         self.api = self._resolve_api_reference()
 
@@ -124,13 +126,8 @@ class SettingsMixin(
 
     @staticmethod
     def _peek_global_api() -> Any:
-        """Return the registered API instance without creating a GUI app."""
-        try:
-            from airunner.components.server.api.server import get_api
-
-            return get_api(create_if_missing=False)
-        except Exception:
-            return None
+        """Return None now that API lookup is app-scoped only."""
+        return None
 
     @property
     def settings_mixin_shared_instance(self) -> SettingsMixinSharedInstance:
@@ -140,6 +137,15 @@ class SettingsMixin(
             SettingsMixinSharedInstance singleton.
         """
         return SettingsMixinSharedInstance()
+
+    @property
+    def resource_store(self) -> GuiResourceStore:
+        """Return the shared daemon-backed resource store."""
+        shared = self.settings_mixin_shared_instance
+        if shared.resource_store is None:
+            daemon_client = getattr(self, "daemon_client", None)
+            shared.resource_store = GuiResourceStore(daemon_client)
+        return shared.resource_store
 
     @property
     def cached_send_image_to_canvas(self) -> List[Dict]:

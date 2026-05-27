@@ -10,16 +10,21 @@ import subprocess
 from typing import Any, Dict, List, Optional
 
 from airunner.components.llm.long_running.data.project_state import (
+    create_workspace_record,
+    delete_workspace_record,
     DecisionMemory,
     DecisionOutcome,
     FeatureCategory,
     FeatureStatus,
+    first_workspace_record,
+    get_workspace_record,
     ProgressEntry,
     ProjectFeature,
     ProjectState,
     ProjectStatus,
+    query_workspace_records,
     SessionState,
-    DecisionOutcome,
+    update_workspace_record,
 )
 from airunner.settings import AIRUNNER_LOG_LEVEL
 from airunner.utils.application import get_logger
@@ -124,7 +129,10 @@ class ProjectManager:
         Raises:
             ValueError: If project with name already exists
         """
-        existing = ProjectState.objects.filter_by_first(name=name)
+        existing = first_workspace_record(
+            "ProjectState",
+            filters={"name": name},
+        )
         if existing is not None:
             raise ValueError(f"Project '{name}' already exists")
 
@@ -135,14 +143,19 @@ class ProjectManager:
             if init_git:
                 git_path = self._init_git_repo(work_dir)
 
-        project = ProjectState.objects.create(
-            name=name,
-            description=description,
-            working_directory=working_directory,
-            git_repo_path=git_path if working_directory and init_git else None,
-            status=ProjectStatus.INITIALIZING,
-            system_prompt=system_prompt,
-            project_metadata=metadata or {},
+        project = create_workspace_record(
+            "ProjectState",
+            {
+                "name": name,
+                "description": description,
+                "working_directory": working_directory,
+                "git_repo_path": (
+                    git_path if working_directory and init_git else None
+                ),
+                "status": ProjectStatus.INITIALIZING,
+                "system_prompt": system_prompt,
+                "project_metadata": metadata or {},
+            },
         )
         self._logger.info(f"Created project '{name}' (ID: {project.id})")
         return project
@@ -156,7 +169,7 @@ class ProjectManager:
         Returns:
             ProjectState or None if not found
         """
-        return ProjectState.objects.get(project_id)
+        return get_workspace_record("ProjectState", project_id)
 
     def get_project_by_name(self, name: str) -> Optional[ProjectState]:
         """Get project by name.
@@ -167,7 +180,10 @@ class ProjectManager:
         Returns:
             ProjectState or None if not found
         """
-        return ProjectState.objects.filter_by_first(name=name)
+        return first_workspace_record(
+            "ProjectState",
+            filters={"name": name},
+        )
 
     def list_projects(
         self, status: Optional[ProjectStatus] = None
@@ -180,7 +196,7 @@ class ProjectManager:
         Returns:
             List of ProjectState instances
         """
-        projects = ProjectState.objects.all()
+        projects = query_workspace_records("ProjectState")
         if status is not None:
             projects = [
                 project
@@ -207,7 +223,11 @@ class ProjectManager:
         project = self.get_project(project_id)
         if project is None:
             return
-        if ProjectState.objects.update(project_id, status=status):
+        if update_workspace_record(
+            "ProjectState",
+            project_id,
+            {"status": status},
+        ):
             self._logger.info(
                 f"Project {project_id} status updated to {status.value}"
             )
@@ -221,7 +241,7 @@ class ProjectManager:
         Returns:
             True if deleted, False if not found
         """
-        if not ProjectState.objects.delete(project_id):
+        if not delete_workspace_record("ProjectState", project_id):
             return False
             self._logger.info(f"Deleted project {project_id}")
             return True
@@ -254,22 +274,26 @@ class ProjectManager:
         Returns:
             Created ProjectFeature instance
         """
-        feature = ProjectFeature.objects.create(
-            project_id=project_id,
-            name=name,
-            description=description,
-            category=category,
-            verification_steps=verification_steps or [],
-            priority=priority,
-            depends_on=depends_on or [],
-            status=FeatureStatus.NOT_STARTED,
+        feature = create_workspace_record(
+            "ProjectFeature",
+            {
+                "project_id": project_id,
+                "name": name,
+                "description": description,
+                "category": category,
+                "verification_steps": verification_steps or [],
+                "priority": priority,
+                "depends_on": depends_on or [],
+                "status": FeatureStatus.NOT_STARTED,
+            },
         )
 
         project = self.get_project(project_id)
         if project is not None:
-            ProjectState.objects.update(
+            update_workspace_record(
+                "ProjectState",
                 project_id,
-                total_features=(project.total_features or 0) + 1,
+                {"total_features": (project.total_features or 0) + 1},
             )
 
         self._logger.info(f"Added feature '{name}' to project {project_id}")
@@ -296,27 +320,42 @@ class ProjectManager:
         created = []
         for feature_data in features:
             created.append(
-                ProjectFeature.objects.create(
-                    project_id=project_id,
-                    name=feature_data["name"],
-                    description=feature_data.get("description", ""),
-                    category=FeatureCategory(
-                        feature_data.get("category", "functional")
-                    ),
-                    verification_steps=feature_data.get(
-                        "verification_steps", []
-                    ),
-                    priority=feature_data.get("priority", 5),
-                    depends_on=feature_data.get("depends_on", []),
-                    status=FeatureStatus.NOT_STARTED,
+                create_workspace_record(
+                    "ProjectFeature",
+                    {
+                        "project_id": project_id,
+                        "name": feature_data["name"],
+                        "description": feature_data.get(
+                            "description",
+                            "",
+                        ),
+                        "category": FeatureCategory(
+                            feature_data.get("category", "functional")
+                        ),
+                        "verification_steps": feature_data.get(
+                            "verification_steps",
+                            [],
+                        ),
+                        "priority": feature_data.get("priority", 5),
+                        "depends_on": feature_data.get(
+                            "depends_on",
+                            [],
+                        ),
+                        "status": FeatureStatus.NOT_STARTED,
+                    },
                 )
             )
 
         project = self.get_project(project_id)
         if project is not None:
-            ProjectState.objects.update(
+            update_workspace_record(
+                "ProjectState",
                 project_id,
-                total_features=(project.total_features or 0) + len(features),
+                {
+                    "total_features": (
+                        project.total_features or 0
+                    ) + len(features)
+                },
             )
 
         self._logger.info(
@@ -333,7 +372,7 @@ class ProjectManager:
         Returns:
             ProjectFeature or None
         """
-        return ProjectFeature.objects.get(feature_id)
+        return get_workspace_record("ProjectFeature", feature_id)
 
     def get_project_features(
         self,
@@ -351,7 +390,10 @@ class ProjectManager:
         Returns:
             List of features
         """
-        features = ProjectFeature.objects.filter_by(project_id=project_id)
+        features = query_workspace_records(
+            "ProjectFeature",
+            filters={"project_id": project_id},
+        )
         if status is not None:
             features = [
                 feature
@@ -442,7 +484,7 @@ class ProjectManager:
         elif self._matches(status, FeatureStatus.PASSING):
             updates["last_error"] = None
 
-        if not ProjectFeature.objects.update(feature_id, **updates):
+        if not update_workspace_record("ProjectFeature", feature_id, updates):
             return
 
         project = self.get_project(feature.project_id)
@@ -470,7 +512,11 @@ class ProjectManager:
                 self._logger.info(
                     f"Project {project.id} completed! All features passing."
                 )
-            ProjectState.objects.update(project.id, **project_updates)
+            update_workspace_record(
+                "ProjectState",
+                project.id,
+                project_updates,
+            )
 
         self._logger.info(f"Feature {feature_id} status: {status.value}")
 
@@ -499,22 +545,27 @@ class ProjectManager:
             feature_id = feature.id if feature else None
 
         if feature_id is not None:
-            ProjectFeature.objects.update(
+            update_workspace_record(
+                "ProjectFeature",
                 feature_id,
-                status=FeatureStatus.IN_PROGRESS,
+                {"status": FeatureStatus.IN_PROGRESS},
             )
 
-        session = SessionState.objects.create(
-            project_id=project_id,
-            feature_id=feature_id,
-            context_snapshot=context_snapshot or {},
+        session = create_workspace_record(
+            "SessionState",
+            {
+                "project_id": project_id,
+                "feature_id": feature_id,
+                "context_snapshot": context_snapshot or {},
+            },
         )
 
         project = self.get_project(project_id)
         if project is not None:
-            ProjectState.objects.update(
+            update_workspace_record(
+                "ProjectState",
                 project_id,
-                current_feature_id=feature_id,
+                {"current_feature_id": feature_id},
             )
 
         self._logger.info(
@@ -540,17 +591,20 @@ class ProjectManager:
             error: Error that caused session to end
             tokens_consumed: Total tokens used
         """
-        session = SessionState.objects.get(session_id)
+        session = get_workspace_record("SessionState", session_id)
         if session is None:
             return
 
-        SessionState.objects.update(
+        update_workspace_record(
+            "SessionState",
             session_id,
-            ended_at=datetime.utcnow().isoformat(),
-            working_memory=working_memory or {},
-            next_recommended_action=next_action,
-            error_state=error,
-            tokens_consumed=tokens_consumed,
+            {
+                "ended_at": datetime.utcnow().isoformat(),
+                "working_memory": working_memory or {},
+                "next_recommended_action": next_action,
+                "error_state": error,
+                "tokens_consumed": tokens_consumed,
+            },
         )
         self._logger.info(f"Ended session {session_id}")
 
@@ -563,7 +617,10 @@ class ProjectManager:
         Returns:
             Most recent SessionState or None
         """
-        sessions = SessionState.objects.filter_by(project_id=project_id)
+        sessions = query_workspace_records(
+            "SessionState",
+            filters={"project_id": project_id},
+        )
         if not sessions:
             return None
         return max(
@@ -613,15 +670,18 @@ class ProjectManager:
                     files_changed or [],
                 )
 
-        entry = ProgressEntry.objects.create(
-            project_id=project_id,
-            session_id=session_id,
-            feature_id=feature_id,
-            action=action,
-            outcome=outcome,
-            files_changed=files_changed or [],
-            git_commit_hash=commit_hash,
-            tokens_used=tokens_used,
+        entry = create_workspace_record(
+            "ProgressEntry",
+            {
+                "project_id": project_id,
+                "session_id": session_id,
+                "feature_id": feature_id,
+                "action": action,
+                "outcome": outcome,
+                "files_changed": files_changed or [],
+                "git_commit_hash": commit_hash,
+                "tokens_used": tokens_used,
+            },
         )
 
         self._logger.info(f"Logged progress: {action}")
@@ -639,7 +699,10 @@ class ProjectManager:
         Returns:
             List of ProgressEntry instances
         """
-        entries = ProgressEntry.objects.filter_by(project_id=project_id)
+        entries = query_workspace_records(
+            "ProgressEntry",
+            filters={"project_id": project_id},
+        )
         entries = sorted(
             entries,
             key=lambda entry: self._timestamp_key(
@@ -696,13 +759,16 @@ class ProjectManager:
         Returns:
             Created DecisionMemory
         """
-        memory = DecisionMemory.objects.create(
-            project_id=project_id,
-            feature_id=feature_id,
-            decision_context=context,
-            decision_made=decision,
-            reasoning=reasoning,
-            tags=tags or [],
+        memory = create_workspace_record(
+            "DecisionMemory",
+            {
+                "project_id": project_id,
+                "feature_id": feature_id,
+                "decision_context": context,
+                "decision_made": decision,
+                "reasoning": reasoning,
+                "tags": tags or [],
+            },
         )
 
         self._logger.info(
@@ -726,13 +792,16 @@ class ProjectManager:
             score: -1.0 to 1.0 success score
             lesson: What was learned
         """
-        if DecisionMemory.objects.get(decision_id) is None:
+        if get_workspace_record("DecisionMemory", decision_id) is None:
             return
-        DecisionMemory.objects.update(
+        update_workspace_record(
+            "DecisionMemory",
             decision_id,
-            outcome=outcome,
-            outcome_score=max(-1.0, min(1.0, score)),
-            lesson_learned=lesson,
+            {
+                "outcome": outcome,
+                "outcome_score": max(-1.0, min(1.0, score)),
+                "lesson_learned": lesson,
+            },
         )
 
     def get_relevant_decisions(
@@ -751,7 +820,10 @@ class ProjectManager:
         Returns:
             List of relevant decisions
         """
-        decisions = DecisionMemory.objects.filter_by(project_id=project_id)
+        decisions = query_workspace_records(
+            "DecisionMemory",
+            filters={"project_id": project_id},
+        )
         if tags:
             tag_set = set(tags)
             decisions = [

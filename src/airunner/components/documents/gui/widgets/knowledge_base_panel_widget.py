@@ -5,8 +5,8 @@ from PySide6.QtCore import QTimer, Qt, Slot
 from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QFileDialog, QMessageBox, QPushButton
 
-from airunner.models.document import Document
 from airunner.daemon_client.gui_daemon_client import GuiDaemonClient
+from airunner.components.documents.data.document_records import list_documents
 from airunner.components.documents.document_import import (
     import_documents_to_library,
     is_rag_document_path,
@@ -112,7 +112,7 @@ class KnowledgeBasePanelWidget(BaseWidget):
         """Refresh the displayed document counts from the document table."""
         total = 0
         indexed = 0
-        for document in Document.objects.all():
+        for document in list_documents():
             file_path = getattr(document, "path", None)
             if not file_path or not os.path.exists(file_path):
                 continue
