@@ -18,7 +18,7 @@ def __getattr__(name):
 
         return DocumentVectorIndex
     if name == "RAGMixin":
-        from .rag_mixin import RAGMixin
+        from airunner_services.llm.rag_mixin import RAGMixin
 
         return RAGMixin
     if name == "WeatherMixin":

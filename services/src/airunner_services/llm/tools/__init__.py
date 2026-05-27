@@ -10,7 +10,6 @@ from airunner_services.llm.tools import (
     conversation_tools,
     math_tools,
     reasoning_tools,
-    web_tools,
     rag_tools,
     knowledge_tools,
     user_data_tools,
@@ -22,6 +21,7 @@ from airunner_services.llm.tools import (
     research_rag_tools,  # RAG-based research tools (search, summaries)
     qa_tools,
 )
+from airunner_services.tools import web_tools
 
 # Long-running project management tools
 from airunner_services.llm.long_running import tools as project_tools
