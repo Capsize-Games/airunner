@@ -71,7 +71,7 @@ class ValidationMixin:
         """Check if the current model supports GGUF format.
         
         This checks the provider config to see if GGUF repo/filename is configured.
-        Models without GGUF config (like Ministral 3) will use transformers instead.
+        Models without GGUF config will use transformers instead.
         
         Returns:
             True if the model has GGUF support configured.

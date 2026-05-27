@@ -27,7 +27,6 @@ _GUI_TEST_SUFFIXES = (
 _MANUAL_TEST_SUFFIXES = (
     "src/airunner/components/application/tests/test_minimal_server.py",
     "src/airunner/components/llm/tests/test_download_manager.py",
-    "src/airunner/components/llm/tests/test_ministral3_loading.py",
     "src/airunner/components/llm/tests/test_model_download.py",
 )
 _EVAL_TEST_PREFIXES = (

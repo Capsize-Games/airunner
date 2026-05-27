@@ -136,19 +136,6 @@ MODEL_REGISTRY: Dict[str, ModelSpec] = {
         gpu_memory_gb=4.0,
         priority=75,
     ),
-    # Fallback models
-    "mistralai/Ministral-3-8B-Instruct-2512": ModelSpec(
-        model_path="mistralai/Ministral-3-8B-Instruct-2512",
-        capabilities=[
-            ModelCapability.SUMMARIZATION,
-            ModelCapability.TRANSLATION,
-        ],
-        max_context=262144,  # 256K context
-        supports_function_calling=True,  # Ministral 3 has native function calling
-        quantization="4bit",
-        gpu_memory_gb=8.0,
-        priority=50,
-    ),
 }
 
 

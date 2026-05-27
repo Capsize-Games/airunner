@@ -88,11 +88,11 @@ class Ui_install_success_page(object):
 
         self.gridLayout.addWidget(self.whisper_checkbox, 7, 0, 1, 1)
 
-        self.ministral_checkbox = QCheckBox(install_success_page)
-        self.ministral_checkbox.setObjectName(u"ministral_checkbox")
-        self.ministral_checkbox.setChecked(True)
+        self.llm_checkbox = QCheckBox(install_success_page)
+        self.llm_checkbox.setObjectName(u"llm_checkbox")
+        self.llm_checkbox.setChecked(True)
 
-        self.gridLayout.addWidget(self.ministral_checkbox, 3, 0, 1, 1)
+        self.gridLayout.addWidget(self.llm_checkbox, 3, 0, 1, 1)
 
         self.openvoice_model = QCheckBox(install_success_page)
         self.openvoice_model.setObjectName(u"openvoice_model")
@@ -102,7 +102,7 @@ class Ui_install_success_page(object):
 
 
         self.retranslateUi(install_success_page)
-        self.ministral_checkbox.toggled.connect(install_success_page.ministral_toggled)
+        self.llm_checkbox.toggled.connect(install_success_page.llm_toggled)
         self.whisper_checkbox.toggled.connect(install_success_page.whisper_toggled)
         self.groupBox.toggled.connect(install_success_page.stable_diffusion_toggled)
         self.checkBox.toggled.connect(install_success_page.embedding_model_toggled)
@@ -118,7 +118,7 @@ class Ui_install_success_page(object):
         self.groupBox.setTitle(QCoreApplication.translate("install_success_page", u"Stable Diffusion Controlnet", None))
         self.checkBox.setText(QCoreApplication.translate("install_success_page", u"e5 Large: Embedding model (RAG search)", None))
         self.whisper_checkbox.setText(QCoreApplication.translate("install_success_page", u"Whisper: Speech-to-Text (voice conversations)", None))
-        self.ministral_checkbox.setText(QCoreApplication.translate("install_success_page", u"Ministral 8B Instruct 4bit: Large Language Model (LLM)", None))
+        self.llm_checkbox.setText(QCoreApplication.translate("install_success_page", u"Local language models: conversation and coding", None))
         self.openvoice_model.setText(QCoreApplication.translate("install_success_page", u"OpenVoice: Text-to-Speech", None))
     # retranslateUi
 

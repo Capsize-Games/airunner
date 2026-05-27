@@ -35,6 +35,10 @@ from airunner_services.runtimes.contracts import (
 )
 from airunner_services.runtimes.registry import RuntimeRegistry
 from airunner_services.settings import AIRUNNER_BASE_PATH, AIRUNNER_LOG_LEVEL
+from airunner_services.contract_enums import SignalCode
+from airunner_services.utils.application.signal_mediator import (
+    SignalMediator,
+)
 from airunner_services.utils.application import get_logger
 
 logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
@@ -97,6 +101,12 @@ class ModelLoadRequest(BaseModel):
     """Model load request."""
 
     model_id: str
+
+
+class RagIndexRequest(BaseModel):
+    """Document indexing request."""
+
+    file_paths: Optional[List[str]] = None
 
 
 def get_runtime_registry(request: Request) -> Optional[RuntimeRegistry]:
@@ -385,6 +395,40 @@ async def unload_model(req: Request):
     client = resolve_llm_client(require_runtime_registry(req))
     await _run_runtime_action(client, RuntimeAction.UNLOAD_MODEL)
     return {"status": "success"}
+
+
+@router.post("/rag/index")
+async def start_rag_index(request: RagIndexRequest):
+    """Trigger service-owned document indexing through the signal mediator."""
+    mediator = SignalMediator()
+    if request.file_paths is None:
+        mediator.emit_signal(SignalCode.RAG_INDEX_ALL_DOCUMENTS, {})
+        return {"status": "accepted", "scope": "all"}
+
+    file_paths = [
+        str(path).strip()
+        for path in request.file_paths
+        if str(path).strip()
+    ]
+    if not file_paths:
+        raise HTTPException(status_code=400, detail="No document paths provided")
+
+    mediator.emit_signal(
+        SignalCode.RAG_INDEX_SELECTED_DOCUMENTS,
+        {"file_paths": file_paths},
+    )
+    return {
+        "status": "accepted",
+        "scope": "selected",
+        "count": len(file_paths),
+    }
+
+
+@router.post("/rag/index/cancel")
+async def cancel_rag_index():
+    """Request cancellation for the active service-owned indexing flow."""
+    SignalMediator().emit_signal(SignalCode.RAG_INDEX_CANCEL, {})
+    return {"status": "accepted"}
 
 
 @router.websocket("/stream")

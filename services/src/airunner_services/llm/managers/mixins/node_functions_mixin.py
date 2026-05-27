@@ -1342,7 +1342,7 @@ Based on the search results above, provide a clear, conversational answer to the
         if not self._tools or len(self._tools) == 0:
             return system_prompt
 
-        # NOTE: Vision models (e.g., Ministral-3) previously skipped tool instructions,
+        # NOTE: Vision models previously skipped tool instructions,
         # but this prevented them from calling tools at all. Now all models get tool
         # instructions via the ReAct pattern below.
 
@@ -1728,7 +1728,7 @@ Based on the search results above, provide a clear, conversational answer to the
         last_chunk_message: Optional[BaseMessage] = None
         collected_tool_calls: List = []  # Collect tool_calls from ALL chunks
         
-        # Track thinking state for <think>...</think> (Qwen3) or [THINK]...[/THINK] (Ministral3) blocks
+        # Track thinking state for angle-bracket or bracket reasoning blocks.
         in_thinking_block = False
         thinking_started = False  # Track if we've already seen an opening tag
         thinking_tag_format = ""  # "angle" or "brackets" - set when opening tag detected

@@ -8,7 +8,7 @@ from typing import Any, Optional
 from airunner_services.llm.provider_config import LLMProviderConfig
 from airunner_services.settings import AIRUNNER_BASE_PATH
 
-_LLM_DOWNLOAD_TYPES = {"gguf", "llm", "ministral3"}
+_LLM_DOWNLOAD_TYPES = {"gguf", "llm"}
 
 
 @dataclass(frozen=True)

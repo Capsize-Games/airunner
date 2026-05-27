@@ -119,10 +119,10 @@
      </property>
     </widget>
    </item>
-   <item row="3" column="0">
-    <widget class="QCheckBox" name="ministral_checkbox">
+    <item row="3" column="0">
+     <widget class="QCheckBox" name="llm_checkbox">
      <property name="text">
-      <string>Ministral 8B Instruct 4bit: Large Language Model (LLM)</string>
+        <string>Local language models: conversation and coding</string>
      </property>
      <property name="checked">
       <bool>true</bool>
@@ -143,11 +143,11 @@
  </widget>
  <resources/>
  <connections>
-  <connection>
-   <sender>ministral_checkbox</sender>
+    <connection>
+     <sender>llm_checkbox</sender>
    <signal>toggled(bool)</signal>
    <receiver>install_success_page</receiver>
-   <slot>ministral_toggled(bool)</slot>
+     <slot>llm_toggled(bool)</slot>
    <hints>
     <hint type="sourcelabel">
      <x>186</x>
@@ -227,7 +227,7 @@
  <slots>
   <slot>yes_toggled(bool)</slot>
   <slot>no_toggled(bool)</slot>
-  <slot>ministral_toggled(bool)</slot>
+    <slot>llm_toggled(bool)</slot>
   <slot>whisper_toggled(bool)</slot>
   <slot>stable_diffusion_toggled(bool)</slot>
   <slot>embedding_model_toggled(bool)</slot>

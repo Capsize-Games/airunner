@@ -32,6 +32,13 @@ SignalCode = signal_code_proxy(
 		"LLM_CLEAR_HISTORY_SIGNAL": (
 			"llm_clear_history_signal"
 		),
+		"RAG_INDEX_ALL_DOCUMENTS": (
+			"rag_index_all_documents_signal"
+		),
+		"RAG_INDEX_SELECTED_DOCUMENTS": (
+			"rag_index_selected_documents_signal"
+		),
+		"RAG_INDEX_CANCEL": "rag_index_cancel_signal",
 	}
 )
 
@@ -52,6 +59,15 @@ class LLMGenerateWorker(
 			),
 			SignalCode.LLM_CLEAR_HISTORY_SIGNAL: (
 				self.on_llm_clear_history_signal
+			),
+			SignalCode.RAG_INDEX_ALL_DOCUMENTS: (
+				self.on_rag_index_all_documents_signal
+			),
+			SignalCode.RAG_INDEX_SELECTED_DOCUMENTS: (
+				self.on_rag_index_selected_documents_signal
+			),
+			SignalCode.RAG_INDEX_CANCEL: (
+				self.on_rag_index_cancel_signal
 			),
 		}
 		self._model_manager: Optional[LLMModelManager] = None

@@ -2,7 +2,6 @@
 
 This mixin handles:
 - GPU memory logging and management
-- Mistral3 model detection
 - Model configuration preparation
 - Quantization application
 - Model loading from pretrained weights
@@ -24,20 +23,10 @@ from transformers import (
 from airunner_services.settings import AIRUNNER_LOCAL_FILES_ONLY
 from airunner_services.utils.memory.clear_memory import clear_memory
 from airunner_services.utils.memory.gpu_memory_stats import gpu_memory_stats
-from airunner_services.llm.utils.ministral3_config_patcher import (
-    needs_patching,
-    patch_ministral3_config,
-)
 from airunner_services.llm.config.provider_config import LLMProviderConfig
 
 if TYPE_CHECKING:
     pass
-
-# Optional import for Mistral3 support
-try:
-    from transformers import Mistral3ForConditionalGeneration
-except ImportError:
-    Mistral3ForConditionalGeneration = None
 
 
 class ModelLoaderMixin:
@@ -57,23 +46,6 @@ class ModelLoaderMixin:
             f"GPU memory before loading: {stats['free']:.2f}GB free / "
             f"{stats['total']:.2f}GB total"
         )
-
-    def _detect_mistral3_model(self, config: AutoConfig) -> bool:
-        """Check if model configuration indicates Mistral3 architecture.
-
-        Args:
-            config: Model configuration from AutoConfig
-
-        Returns:
-            True if Mistral3 model, False otherwise
-        """
-        is_mistral3_type = (
-            hasattr(config, "model_type") and config.model_type == "mistral3"
-        )
-        is_mistral3_arch = hasattr(config, "architectures") and any(
-            "Mistral3" in arch for arch in (config.architectures or [])
-        )
-        return is_mistral3_type or is_mistral3_arch
 
     def _get_model_info_for_context(self) -> Dict[str, Any]:
         """Lookup model metadata used for context sizing.
@@ -144,24 +116,14 @@ class ModelLoaderMixin:
             "use_yarn": bool(should_scale),
         }
 
-    def _prepare_base_model_kwargs(self, is_mistral3: bool) -> Dict[str, Any]:
-        """Prepare base kwargs for model loading.
-
-        Args:
-            is_mistral3: Whether loading a Mistral3 model
-
-        Returns:
-            Dictionary with base model loading parameters
-        """
+    def _prepare_base_model_kwargs(self) -> Dict[str, Any]:
+        """Prepare base kwargs for model loading."""
         model_kwargs = {
             "local_files_only": AIRUNNER_LOCAL_FILES_ONLY,
             "trust_remote_code": True,
             "attn_implementation": self.attn_implementation,
+            "use_cache": self.use_cache,
         }
-
-        if not is_mistral3:
-            model_kwargs["use_cache"] = self.use_cache
-
         return model_kwargs
 
     def _apply_quantization_to_kwargs(
@@ -223,7 +185,6 @@ class ModelLoaderMixin:
     def _load_model_from_pretrained(
         self,
         model_path: str,
-        is_mistral3: bool,
         model_kwargs: Dict[str, Any],
         config: Optional[AutoConfig] = None,
     ) -> None:
@@ -231,51 +192,12 @@ class ModelLoaderMixin:
 
         Args:
             model_path: Path to model directory
-            is_mistral3: Whether to use Mistral3 loader
             model_kwargs: Model loading parameters
         """
-        if is_mistral3:
-            if config is None:
-                self._load_mistral3_model(model_path, model_kwargs)
-            else:
-                self._load_mistral3_model(model_path, model_kwargs, config)
+        if config is None:
+            self._load_standard_model(model_path, model_kwargs)
         else:
-            if config is None:
-                self._load_standard_model(model_path, model_kwargs)
-            else:
-                self._load_standard_model(model_path, model_kwargs, config)
-
-    def _load_mistral3_model(
-        self,
-        model_path: str,
-        model_kwargs: Dict[str, Any],
-        config: Optional[AutoConfig] = None,
-    ) -> None:
-        """Load Mistral3 model.
-
-        Args:
-            model_path: Path to model directory
-            model_kwargs: Model loading parameters
-
-        Raises:
-            ImportError: If Mistral3ForConditionalGeneration not available
-        """
-        self.logger.info(
-            "Loading Mistral3 model with Mistral3ForConditionalGeneration"
-        )
-        if Mistral3ForConditionalGeneration is None:
-            raise ImportError(
-                "Mistral3ForConditionalGeneration not available. "
-                "Ensure transformers supports Mistral3 models."
-            )
-        load_kwargs = dict(model_kwargs)
-        if config is not None:
-            load_kwargs["config"] = config
-        self._model = Mistral3ForConditionalGeneration.from_pretrained(
-            model_path,
-            **load_kwargs,
-        )
-        self.logger.info("✓ Mistral3 model loaded successfully")
+            self._load_standard_model(model_path, model_kwargs, config)
 
     def _load_standard_model(
         self,
@@ -422,12 +344,9 @@ class ModelLoaderMixin:
         )
 
         config = self._load_quantized_model_config(quantized_path)
-        is_mistral3 = self._detect_mistral3_model(config)
-        model_kwargs = self._prepare_pre_quantized_kwargs(is_mistral3)
+        model_kwargs = self._prepare_pre_quantized_kwargs()
 
-        self._load_model_from_pretrained(
-            quantized_path, is_mistral3, model_kwargs, config
-        )
+        self._load_model_from_pretrained(quantized_path, model_kwargs, config)
 
         self.logger.info(
             f"✓ Pre-quantized {dtype} model loaded successfully from disk"
@@ -442,9 +361,6 @@ class ModelLoaderMixin:
         Returns:
             Model configuration
         """
-        # Patch Ministral 3 config files if needed (fixes transformers compatibility issues)
-        self._patch_ministral3_if_needed(quantized_path)
-
         config = AutoConfig.from_pretrained(
             quantized_path,
             local_files_only=AIRUNNER_LOCAL_FILES_ONLY,
@@ -453,18 +369,9 @@ class ModelLoaderMixin:
         self._apply_context_settings(config)
         return config
 
-    def _prepare_pre_quantized_kwargs(
-        self, is_mistral3: bool
-    ) -> Dict[str, Any]:
-        """Prepare kwargs for loading pre-quantized model.
-
-        Args:
-            is_mistral3: Whether loading Mistral3 model
-
-        Returns:
-            Model loading kwargs without quantization_config
-        """
-        model_kwargs = self._prepare_base_model_kwargs(is_mistral3)
+    def _prepare_pre_quantized_kwargs(self) -> Dict[str, Any]:
+        """Prepare kwargs for loading one pre-quantized model."""
+        model_kwargs = self._prepare_base_model_kwargs()
         # Don't pass quantization_config - it's already in saved config.json
         model_kwargs["device_map"] = "auto"
         model_kwargs["torch_dtype"] = self.torch_dtype
@@ -481,14 +388,11 @@ class ModelLoaderMixin:
         quantization_config = self._create_bitsandbytes_config(dtype)
 
         config = self._load_model_config_for_runtime_quantization()
-        is_mistral3 = self._detect_mistral3_model(config)
         model_kwargs = self._prepare_runtime_quantization_kwargs(
-            is_mistral3, quantization_config, dtype
+            quantization_config, dtype
         )
 
-        self._load_model_from_pretrained(
-            self.model_path, is_mistral3, model_kwargs, config
-        )
+        self._load_model_from_pretrained(self.model_path, model_kwargs, config)
 
         self._save_quantized_if_applicable(dtype, quantization_config)
 
@@ -498,9 +402,6 @@ class ModelLoaderMixin:
         Returns:
             Model configuration
         """
-        # Patch Ministral 3 config files if needed (fixes transformers compatibility issues)
-        self._patch_ministral3_if_needed(self.model_path)
-
         config = AutoConfig.from_pretrained(
             self.model_path,
             local_files_only=AIRUNNER_LOCAL_FILES_ONLY,
@@ -509,44 +410,21 @@ class ModelLoaderMixin:
         self._apply_context_settings(config)
         return config
 
-    def _patch_ministral3_if_needed(self, model_path: str) -> None:
-        """Patch Ministral 3 config files if needed for transformers compatibility.
-
-        Ministral 3 models have config bugs that prevent loading:
-        - config.json: text_config.model_type "ministral3" -> "mistral"
-        - tokenizer_config.json: tokenizer_class and extra_special_tokens fixes
-
-        Args:
-            model_path: Path to model directory
-        """
-        if needs_patching(model_path):
-            self.logger.info(
-                f"Patching Ministral 3 config files for transformers compatibility: {model_path}"
-            )
-            if patch_ministral3_config(model_path):
-                self.logger.info("✓ Ministral 3 config patched successfully")
-            else:
-                self.logger.warning(
-                    "⚠ Failed to patch Ministral 3 config - loading may fail"
-                )
-
     def _prepare_runtime_quantization_kwargs(
         self,
-        is_mistral3: bool,
         quantization_config: Optional[BitsAndBytesConfig],
         dtype: str,
     ) -> Dict[str, Any]:
         """Prepare kwargs for runtime quantization.
 
         Args:
-            is_mistral3: Whether loading Mistral3 model
             quantization_config: Quantization configuration
             dtype: Quantization dtype
 
         Returns:
             Model loading kwargs with quantization settings
         """
-        model_kwargs = self._prepare_base_model_kwargs(is_mistral3)
+        model_kwargs = self._prepare_base_model_kwargs()
         self._apply_quantization_to_kwargs(
             model_kwargs, quantization_config, dtype
         )

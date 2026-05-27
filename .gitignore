@@ -93,3 +93,4 @@ reports/*
 !scripts/package_windows_nsis.ps1
 !scripts/security_audit.sh
 plans
+facehuggershield

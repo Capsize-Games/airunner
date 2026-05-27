@@ -504,11 +504,12 @@ class DocumentsWidget(BaseWidget):
         self._pending_document_index_requests[validated_path] = (
             activate_after_index
         )
-        self.emit_signal(
-            SignalCode.RAG_INDEX_SELECTED_DOCUMENTS,
-            {"file_paths": [validated_path]},
-        )
-        return True
+        if self.knowledgeBasePanelWidget.request_index_selected_documents(
+            [validated_path]
+        ):
+            return True
+        self._pending_document_index_requests.pop(validated_path, None)
+        return False
 
     def _refresh_document_watch_paths(self) -> None:
         """Refresh watcher paths without blocking the GUI thread."""
@@ -1214,13 +1215,11 @@ class DocumentsWidget(BaseWidget):
                 return
 
             # Emit signal to knowledge base panel to handle indexing
-            # This uses the same threaded approach as "Index All" which doesn't freeze
             self.logger.info(
                 f"Requesting reindex for {len(file_paths)} documents"
             )
-            self.emit_signal(
-                SignalCode.RAG_INDEX_SELECTED_DOCUMENTS,
-                {"file_paths": file_paths},
+            self.knowledgeBasePanelWidget.request_index_selected_documents(
+                file_paths
             )
 
         # Delete selected documents from database AND disk

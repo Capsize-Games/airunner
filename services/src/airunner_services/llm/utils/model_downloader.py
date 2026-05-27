@@ -37,28 +37,6 @@ class HuggingFaceDownloader:
             "special_tokens_map.json",
             "chat_template.jinja",  # Used by many modern models
         ],
-        "mistral": [
-            # Keep a minimal core set for Mistral models; some Mistral
-            # repos do not include optional or engine-specific files.
-            "config.json",
-            "generation_config.json",
-            "tokenizer_config.json",
-            "tokenizer.json",
-            "special_tokens_map.json",
-            "chat_template.jinja",
-        ],
-        "ministral3": [
-            # Ministral 3 models (vision-language) require tekken tokenizer
-            "config.json",
-            "generation_config.json",
-            "tokenizer_config.json",
-            "tokenizer.json",
-            "tekken.json",  # Mistral-specific tokenizer
-            "chat_template.jinja",
-            "processor_config.json",  # For vision capabilities
-            "params.json",
-            "special_tokens_map.json",  # BF16 version has this
-        ],
         "art": [
             # Generic art model files
             "model_index.json",
@@ -92,7 +70,7 @@ class HuggingFaceDownloader:
         Get list of files in a HuggingFace repository.
 
         Args:
-            repo_id: Repository ID (e.g., "mistralai/Ministral-3-8B-Instruct-2512")
+            repo_id: Repository ID (e.g., "Qwen/Qwen3.5-9B")
             revision: Git revision/branch (default: "main")
             recursive: If True, recursively fetch files from subdirectories
 
@@ -150,7 +128,7 @@ class HuggingFaceDownloader:
         Download a single file from HuggingFace.
 
         Args:
-            repo_id: Repository ID (e.g., "mistralai/Ministral-3-8B-Instruct-2512")
+            repo_id: Repository ID (e.g., "Qwen/Qwen3.5-9B")
             filename: File to download (e.g., "model-00001-of-00003.safetensors")
             local_dir: Local directory to save file
             revision: Git revision/branch
@@ -234,9 +212,9 @@ class HuggingFaceDownloader:
         Download a complete model from HuggingFace.
 
         Args:
-            repo_id: Repository ID (e.g., "mistralai/Ministral-3-8B-Instruct-2512")
+            repo_id: Repository ID (e.g., "Qwen/Qwen3.5-9B")
             local_dir: Local directory (default: cache_dir/repo_name)
-            model_type: "llm" or "ministral3" (determines required files)
+            model_type: "llm" or "art" (determines required files)
             include_patterns: File patterns to include (e.g., ["*.safetensors", "*.json"])
             exclude_patterns: File patterns to exclude (e.g., ["*.bin"])
             revision: Git revision/branch
@@ -376,12 +354,11 @@ class HuggingFaceDownloader:
 if __name__ == "__main__":
     downloader = HuggingFaceDownloader()
 
-    # Download Ministral-3-8B-Instruct-2512 (separate safetensors only)
+    # Download a local LLM manifest directly from HuggingFace.
     model_path = downloader.download_model(
-        repo_id="mistralai/Ministral-3-8B-Instruct-2512",
-        model_type="ministral3",
-        include_patterns=["*.safetensors", "*.json"],
-        exclude_patterns=["*.bin", "*consolidated*"],
+        repo_id="Qwen/Qwen3.5-9B",
+        model_type="llm",
+        include_patterns=["*.json"],
         progress_callback=lambda f, d, t: print(f"{f}: {d}/{t} bytes"),
     )
     print(f"Model ready at: {model_path}")

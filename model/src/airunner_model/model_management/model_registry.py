@@ -162,7 +162,7 @@ class ModelRegistry:
 	def _llm_provider(model_id: str, repo_id: str) -> ModelProvider:
 		"""Return the provider enum that best matches one local LLM."""
 		owner = str(repo_id).split("/", 1)[0].strip().lower()
-		if owner == "mistralai" or "ministral" in model_id:
+		if owner == "mistralai":
 			return ModelProvider.MISTRAL
 		if owner == "openai" or "gpt-oss" in model_id:
 			return ModelProvider.OPENAI

@@ -109,7 +109,8 @@ class MessageFormattingMixin:
             return self._messages_to_mistral_tokens(messages)
         else:
             raise ValueError(
-                "No tokenizer available for Mistral3 model. "
+                "No tokenizer available for the current "
+                "mistral_common-backed model. "
                 "Ensure mistral_common is installed and tekken.json exists."
             )
 

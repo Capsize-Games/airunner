@@ -144,8 +144,6 @@ def _guess_architecture_from_path(model_path: str) -> Optional[str]:
     filename = os.path.basename(str(model_path)).lower()
     if "qwen3.5" in filename or "qwen35" in filename:
         return "qwen35"
-    if "ministral" in filename or "mistral3" in filename:
-        return "mistral3"
     if "qwen3" in filename:
         return "qwen3"
     if "gpt-oss" in filename:
@@ -313,7 +311,7 @@ def _detect_chat_format(model_path: str) -> Optional[str]:
         return "llama-3"
     
     # Mistral
-    if any(x in path_lower for x in ["mistral", "ministral", "magistral"]):
+    if any(x in path_lower for x in ["mistral", "magistral"]):
         return "mistral-instruct"
     
     return None

@@ -31,10 +31,101 @@ daemon_running() {
     return 1
 }
 
+current_dev_build_token() {
+    PYTHONPATH="${ROOT_DIR}/services/src:${ROOT_DIR}/api/src:${ROOT_DIR}/model/src:${ROOT_DIR}/src:${ROOT_DIR}/native/src${PYTHONPATH:+:${PYTHONPATH}}" \
+    DEV_ENV=1 \
+    "${DEV_VENV_BIN}/python" - <<'PY'
+from airunner_services.dev_build_token import current_dev_build_token
+
+print(current_dev_build_token() or "")
+PY
+}
+
+running_dev_build_token() {
+    local health_payload
+    health_payload="$(curl -s --max-time 2 "http://localhost:${DAEMON_PORT}/api/v1/health" 2>/dev/null || true)"
+    if [[ -z "${health_payload}" ]]; then
+        return
+    fi
+    printf '%s' "${health_payload}" | "${DEV_VENV_BIN}/python" - <<'PY'
+import json
+import sys
+
+try:
+    payload = json.load(sys.stdin)
+except Exception:
+    print("")
+else:
+    print(str(payload.get("dev_build_token") or ""))
+PY
+}
+
+stop_running_daemon() {
+    if [[ ! -f "${PID_FILE}" ]]; then
+        return
+    fi
+
+    local pid
+    pid="$(head -n1 "${PID_FILE}")"
+    curl -s --max-time 2 -X POST \
+        "http://localhost:${DAEMON_PORT}/admin/shutdown" \
+        >/dev/null 2>&1 || true
+
+    local deadline=$((SECONDS + 10))
+    while (( SECONDS < deadline )); do
+        if ! kill -0 "${pid}" 2>/dev/null; then
+            rm -f "${PID_FILE}"
+            return
+        fi
+        sleep 0.5
+    done
+
+    kill "${pid}" 2>/dev/null || true
+    deadline=$((SECONDS + 5))
+    while (( SECONDS < deadline )); do
+        if ! kill -0 "${pid}" 2>/dev/null; then
+            rm -f "${PID_FILE}"
+            return
+        fi
+        sleep 0.5
+    done
+
+    rm -f "${PID_FILE}"
+}
+
+running_daemon_is_stale() {
+    local expected_token
+    local running_token
+
+    expected_token="$(current_dev_build_token)"
+    running_token="$(running_dev_build_token)"
+
+    if [[ -z "${running_token}" ]]; then
+        echo "Daemon is missing a dev build token or health payload; restarting."
+        return 0
+    fi
+
+    if [[ -n "${expected_token}" && "${running_token}" != "${expected_token}" ]]; then
+        echo "Daemon build token mismatch detected; restarting."
+        return 0
+    fi
+
+    return 1
+}
+
 # --------------------------------------------------
 # Launch daemon
 # --------------------------------------------------
 start_services() {
+    if daemon_running; then
+        if running_daemon_is_stale; then
+            stop_running_daemon
+        else
+            echo "Daemon already running (PID $(head -n1 "${PID_FILE}"))"
+            return
+        fi
+    fi
+
     if daemon_running; then
         echo "Daemon already running (PID $(head -n1 "${PID_FILE}"))"
         return

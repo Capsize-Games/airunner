@@ -25,10 +25,6 @@ from airunner_services.downloads.base_download_worker import (
 from airunner_services.llm.utils.model_downloader import (
     HuggingFaceDownloader,
 )
-from airunner_services.llm.utils.ministral3_config_patcher import (
-    patch_ministral3_config,
-    is_ministral3_model,
-)
 from airunner_services.utils.zip_utils import safe_extract_zip
 
 
@@ -52,27 +48,8 @@ class HuggingFaceDownloadWorker(BaseDownloadWorker):
         return SignalCode.HUGGINGFACE_DOWNLOAD_FAILED
 
     def _apply_post_download_patches(self, model_path: Path) -> None:
-        """Apply post-download patches for models requiring config fixes.
-
-        Some models like Ministral3 have config files that need patching
-        for transformers compatibility. This method applies necessary patches
-        after download completes.
-
-        Args:
-            model_path: Path to the downloaded model directory.
-        """
-        try:
-            if is_ministral3_model(model_path):
-                self.logger.info(f"Applying Ministral3 config patches to {model_path}")
-                if patch_ministral3_config(model_path):
-                    self.emit_signal(
-                        SignalCode.UPDATE_DOWNLOAD_LOG,
-                        {"message": "Applied Ministral3 config patches for transformers compatibility."},
-                    )
-                else:
-                    self.logger.debug(f"Ministral3 configs already patched at {model_path}")
-        except Exception as e:
-            self.logger.warning(f"Failed to apply post-download patches: {e}")
+        """Run any post-download housekeeping required by one model."""
+        del model_path
 
     @staticmethod
     def _resolve_art_download_context(
@@ -235,7 +212,7 @@ class HuggingFaceDownloadWorker(BaseDownloadWorker):
         is_art_model = model_type == "art"
         is_stt_tts_model = model_type in ("stt", "tts_openvoice")
         is_rmbg_model = model_type == "rmbg"
-        is_llm_model = model_type in ("llm", "ministral3", "gguf")
+        is_llm_model = model_type in ("llm", "gguf")
 
         # For art/stt/tts/rmbg models, use bootstrap data directly.
         # For LLM models, we still need API to discover model shards
@@ -481,7 +458,7 @@ class HuggingFaceDownloadWorker(BaseDownloadWorker):
                 SignalCode.UPDATE_DOWNLOAD_LOG,
                 {"message": "All files already downloaded!"},
             )
-            # Apply post-download patches even if files exist (may not be patched yet)
+            # Run post-download housekeeping even when files already exist.
             self._apply_post_download_patches(model_path)
             self.emit_signal(
                 self._complete_signal,
@@ -543,7 +520,7 @@ class HuggingFaceDownloadWorker(BaseDownloadWorker):
 
         self._cleanup_temp_files()
         
-        # Apply post-download patches (e.g., Ministral3 config fixes)
+        # Run post-download housekeeping after a successful transfer.
         self._apply_post_download_patches(model_path)
         
         self.emit_signal(
@@ -725,9 +702,9 @@ class HuggingFaceDownloadWorker(BaseDownloadWorker):
         We just download the single .gguf file directly.
 
         Args:
-            repo_id: HuggingFace repository ID (e.g., "bartowski/Ministral-3-8B-Instruct-2512-GGUF")
+            repo_id: HuggingFace repository ID (e.g., "Qwen/Qwen3.5-9B-GGUF")
             output_dir: Directory to save the model
-            gguf_filename: The .gguf file to download (e.g., "Ministral-3-8B-Instruct-2512-Q4_K_M.gguf")
+            gguf_filename: The .gguf file to download (e.g., "Qwen3.5-9B-Q4_K_M.gguf")
         """
         api_key = get_setting("huggingface/api_key", "")
 

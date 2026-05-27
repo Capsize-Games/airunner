@@ -30,7 +30,7 @@ class ChooseModelsPage(BaseWizard):
         self.models_enabled = {
             "stable_diffusion": True,
             "whisper": True,
-            "mistral": True,
+            "llm": True,
             "embedding_model": True,
             "openvoice_model": True,
         }
@@ -340,13 +340,40 @@ class ChooseModelsPage(BaseWizard):
         except Exception:
             pass
 
-                # Do not reparent the top-level generated checkboxes; leave them in the main grid layout.\n        # The UI template places ministral, e5 (embedding), openvoice, and whisper at top-level\n        # and they should remain there so their grid positions are preserved.
+                # Do not reparent the top-level generated checkboxes; leave them in the main grid layout.\n        # The UI template places the local-LLM, e5, openvoice, and whisper\n        # checkboxes at top-level and they should remain there so their grid\n        # positions are preserved.
 
         self.update_total_size_label()
 
+    def _llm_size_estimate(self) -> int:
+        """Return the total size for enabled local LLM bootstrap files."""
+        if not self.models_enabled.get("llm", False):
+            return 0
+
+        from airunner.components.llm.config.provider_config import (
+            LLMProviderConfig,
+        )
+        from airunner_model.bootstrap.llm_file_bootstrap_data import (
+            LLM_FILE_BOOTSTRAP_DATA,
+        )
+
+        total = 0
+        for model in model_bootstrap_data:
+            if model.get("category") != "llm":
+                continue
+            if model.get("pipeline_action") == "embedding":
+                continue
+            download_info = LLMProviderConfig.resolve_download_target(
+                "local",
+                repo_id=model["path"],
+                prefer_pre_quantized=True,
+            )
+            repo_id = download_info["repo_id"] if download_info else model["path"]
+            total += sum(LLM_FILE_BOOTSTRAP_DATA[repo_id]["files"].values())
+        return total
+
     def update_total_size_label(self):
         # Sizes are tracked in bytes
-        mistral_size = 5.8 * 1024 * 1024
+        llm_size = self._llm_size_estimate()
         whisper_size = 144.5 * 1024
         embedding_model_size = 1.3 * 1024 * 1024
         zimage_core_sizes = {}
@@ -399,8 +426,8 @@ class ChooseModelsPage(BaseWizard):
                         total_bytes += 722600
 
         # Add other model categories
-        if self.models_enabled.get("mistral", False):
-            total_bytes += mistral_size
+        if self.models_enabled.get("llm", False):
+            total_bytes += llm_size
         if self.models_enabled.get("whisper", False):
             total_bytes += whisper_size
         if self.models_enabled.get("embedding_model", False):
@@ -434,8 +461,8 @@ class ChooseModelsPage(BaseWizard):
         self.update_total_size_label()
 
     @Slot(bool)
-    def ministral_toggled(self, val: bool):
-        self.models_enabled["mistral"] = val
+    def llm_toggled(self, val: bool):
+        self.models_enabled["llm"] = val
         self.update_total_size_label()
 
     @Slot(bool)

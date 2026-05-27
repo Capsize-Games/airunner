@@ -102,6 +102,27 @@ class GuiDaemonClient:
         )
         return response.json()
 
+    def start_rag_document_index(
+        self,
+        *,
+        file_paths: Optional[list[str]] = None,
+    ) -> Dict[str, Any]:
+        """Trigger daemon-backed document indexing."""
+        response = self._request(
+            "POST",
+            "/api/v1/llm/rag/index",
+            json_payload={"file_paths": file_paths},
+        )
+        return response.json()
+
+    def cancel_rag_document_index(self) -> Dict[str, Any]:
+        """Request cancellation for the daemon-backed indexing flow."""
+        response = self._request(
+            "POST",
+            "/api/v1/llm/rag/index/cancel",
+        )
+        return response.json()
+
     def stream_llm_request(
         self,
         prompt: str,

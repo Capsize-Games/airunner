@@ -23,7 +23,7 @@ class LLMGeneratorSettings(BaseModel):
     message_type = Column(String, default="chat")
     override_parameters = Column(Boolean, default=True)
     prompt_template = Column(
-        String, default="Ministral 8B Instruct: Default Chatbot"
+        String, default="Qwen3.5 9B: Default Chatbot"
     )
     batch_size = Column(Integer, default=1)
     use_api = Column(Boolean, default=False)

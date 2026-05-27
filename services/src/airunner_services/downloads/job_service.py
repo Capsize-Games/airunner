@@ -737,7 +737,7 @@ class DownloadJobService:
 def _default_hf_output_dir(repo_id: str, model_type: str) -> str:
     """Return the shared local output directory for one HF model type."""
     model_name = repo_id.split("/")[-1]
-    if model_type in {"llm", "ministral3", "gguf"}:
+    if model_type in {"llm", "gguf"}:
         return os.path.join(MODELS_DIR, "text/models/llm/causallm", model_name)
     if model_type == "art":
         return os.path.join(MODELS_DIR, "art/models", model_name)

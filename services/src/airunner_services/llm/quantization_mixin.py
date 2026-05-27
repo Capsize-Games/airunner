@@ -4,7 +4,7 @@ import os
 from typing import Optional, Union
 
 import torch
-from transformers import AutoConfig, AutoModelForCausalLM
+from transformers import AutoModelForCausalLM
 from transformers.utils.quantization_config import (
     BitsAndBytesConfig,
     GPTQConfig,
@@ -103,26 +103,6 @@ class QuantizationMixin:
             self.logger.warning(
                 f"Error checking quantized model: {error}"
             )
-            return False
-
-    def _is_mistral3_model(self) -> bool:
-        """Return whether the current model is a Mistral3 model."""
-        try:
-            config = AutoConfig.from_pretrained(
-                self.model_path,
-                local_files_only=AIRUNNER_LOCAL_FILES_ONLY,
-                trust_remote_code=True,
-            )
-            is_mistral3_type = (
-                hasattr(config, "model_type")
-                and config.model_type == "mistral3"
-            )
-            is_mistral3_arch = hasattr(config, "architectures") and any(
-                "Mistral3" in arch
-                for arch in (config.architectures or [])
-            )
-            return is_mistral3_type or is_mistral3_arch
-        except Exception:
             return False
 
     def _save_quantized_model(self, dtype: str, original_path: str) -> None:
@@ -297,16 +277,6 @@ class QuantizationMixin:
             "device_map": "auto",
         }
 
-        if self._is_mistral3_model():
-            from transformers.models.mistral3 import (
-                Mistral3ForConditionalGeneration,
-            )
-
-            return Mistral3ForConditionalGeneration.from_pretrained(
-                base_path,
-                **model_kwargs,
-            )
-
         return AutoModelForCausalLM.from_pretrained(
             base_path,
             **model_kwargs,
@@ -328,8 +298,6 @@ class QuantizationMixin:
             "generation_config.json",
             "tokenizer_config.json",
         ]
-        if self._is_mistral3_model():
-            config_files.append("tekken.json")
 
         for file_name in config_files:
             source = os.path.join(base_path, file_name)

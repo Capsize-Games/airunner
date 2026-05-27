@@ -54,8 +54,8 @@ class DownloadHuggingFaceModel(Worker):
         Download a HuggingFace model.
 
         Args:
-            repo_id: HuggingFace repo ID (e.g., "mistralai/Ministral-3-8B-Instruct-2512")
-            model_type: "ministral3", "llm", or "gguf" (determines required files)
+            repo_id: HuggingFace repo ID (e.g., "Qwen/Qwen3.5-9B")
+            model_type: "llm" or "gguf" (determines required files)
             output_dir: Optional output directory (default: ~/.local/share/airunner/text/models/llm/causallm)
             setup_quantization: Ignored - quantization handled separately
             quantization_bits: Ignored - quantization handled separately
@@ -90,13 +90,13 @@ class DownloadHuggingFaceModel(Worker):
 # Example usage
 if __name__ == "__main__":
     """
-    Download Ministral-3-8B.
+    Download Qwen3.5-9B.
 
     from airunner_services.llm.managers.download_huggingface import DownloadHuggingFaceModel
 
     downloader = create_worker(DownloadHuggingFaceModel)
     downloader.download(
-        repo_id="mistralai/Ministral-3-8B-Instruct-2512",
-        model_type="ministral3",
+        repo_id="Qwen/Qwen3.5-9B",
+        model_type="llm",
     )
     """

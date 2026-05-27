@@ -136,8 +136,8 @@ class GenerationMixin:
                 self.logger.warning("Skipping unusable image source for vision prompt")
                 continue
 
-            # Resize large images to prevent garbage output from quantized models
-            # 4-bit quantized Mistral3/Pixtral produces corrupted output for oversized images
+            # Resize large images to prevent garbage output from quantized models.
+            # Some 4-bit quantized vision models degrade on oversized images.
             if quantized:
                 image = self._resize_image_for_quantized_model(image, max_size=768)
             pil_images.append(image)
@@ -201,7 +201,7 @@ class GenerationMixin:
     def _resize_image_for_quantized_model(self, image, max_size: int = 768):
         """Resize image to prevent garbage output from quantized vision models.
         
-        4-bit quantized Mistral3/Pixtral models produce corrupted output when
+        Some 4-bit quantized vision models produce corrupted output when
         processing images larger than approximately 640x640 pixels. This method
         resizes images to stay within safe bounds while preserving aspect ratio.
         
@@ -315,7 +315,7 @@ class GenerationMixin:
     def _is_quantized_model(self) -> bool:
         """Check if the model is quantized (4-bit or 8-bit).
         
-        Quantized vision models like Mistral3/Pixtral have issues processing
+        Some quantized vision models have issues processing
         large images, producing garbage output above ~640px.
         
         Returns:
@@ -408,7 +408,7 @@ class GenerationMixin:
         else:
             raise ValueError(
                 "No tokenizer available for decoding. "
-                "Ensure mistral_common is initialized for Mistral3 models."
+                "Ensure mistral_common is initialized for the current model."
             )
 
         return response_text

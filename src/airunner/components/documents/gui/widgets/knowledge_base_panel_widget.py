@@ -3,9 +3,10 @@ from typing import Dict, List
 
 from PySide6.QtCore import Qt, Slot
 from PySide6.QtGui import QIcon
-from PySide6.QtWidgets import QFileDialog, QPushButton
+from PySide6.QtWidgets import QFileDialog, QMessageBox, QPushButton
 
 from airunner_model.models.document import Document
+from airunner.daemon_client.gui_daemon_client import GuiDaemonClient
 from airunner.components.documents.document_import import (
     import_documents_to_library,
     is_rag_document_path,
@@ -39,6 +40,7 @@ class KnowledgeBasePanelWidget(BaseWidget):
         self._total = 0
         self._current = 0
         self._document_name = ""
+        self._daemon_client = GuiDaemonClient()
         self.signal_handlers = {
             SignalCode.DOCUMENT_COLLECTION_CHANGED: self.on_document_collection_changed,
             SignalCode.RAG_INDEXING_PROGRESS: self.on_indexing_progress,
@@ -120,28 +122,70 @@ class KnowledgeBasePanelWidget(BaseWidget):
 
     @Slot()
     def on_index_button_clicked(self):
-        """Emit a RAG index-all signal.
-
-        The existing worker/agent mixins expect SignalCode.RAG_INDEX_ALL_DOCUMENTS
-        in order to begin the indexed flow. Provide a simple payload for
-        compatibility.
-        """
-        self.logger.info(
-            "KnowledgeBasePanel::Index All clicked - emitting RAG_INDEX_ALL_DOCUMENTS"
-        )
-        # show infinite progress bar
-        self.ui.progress_bar.setRange(0, 0)
-        self.ui.cancel_button.setEnabled(True)
-        self.emit_signal(SignalCode.RAG_INDEX_ALL_DOCUMENTS, {})
+        """Request service-owned indexing for all known documents."""
+        self.request_index_all_documents()
 
     @Slot()
     def on_cancel_button_clicked(self):
-        """Emit a cancel signal for in-progress indexing flows."""
+        """Request cancellation for one in-progress indexing flow."""
         self.logger.info(
-            "KnowledgeBasePanel::Cancel clicked - emitting RAG_INDEX_CANCEL"
+            "KnowledgeBasePanel::Cancel clicked - requesting daemon cancellation"
         )
-        self.ui.cancel_button.setEnabled(False)
-        self.emit_signal(SignalCode.RAG_INDEX_CANCEL, {})
+        try:
+            self._daemon_client.cancel_rag_document_index()
+        except Exception as exc:  # noqa: BLE001
+            self.logger.error("Failed to cancel indexing: %s", exc)
+            QMessageBox.critical(
+                self,
+                "Knowledge Base Indexing",
+                f"Failed to cancel indexing:\n{exc}",
+            )
+        finally:
+            self.ui.cancel_button.setEnabled(False)
+
+    def request_index_all_documents(self) -> bool:
+        """Request daemon-backed indexing for all documents."""
+        return self._request_index_documents(file_paths=None)
+
+    def request_index_selected_documents(
+        self,
+        file_paths: list[str],
+    ) -> bool:
+        """Request daemon-backed indexing for one explicit document list."""
+        normalized = [path for path in file_paths if path]
+        if not normalized:
+            return False
+        return self._request_index_documents(file_paths=normalized)
+
+    def _request_index_documents(
+        self,
+        *,
+        file_paths: list[str] | None,
+    ) -> bool:
+        """Send one indexing request to the daemon API."""
+        scope = "all" if file_paths is None else f"{len(file_paths)} selected"
+        self.logger.info(
+            "KnowledgeBasePanel::request_index_documents - requesting %s documents via daemon API",
+            scope,
+        )
+        self.ui.progress_bar.setRange(0, 0)
+        self.ui.cancel_button.setEnabled(True)
+        try:
+            self._daemon_client.start_rag_document_index(
+                file_paths=file_paths,
+            )
+            return True
+        except Exception as exc:  # noqa: BLE001
+            self.logger.error("Failed to start indexing: %s", exc)
+            self.ui.progress_bar.setRange(0, 100)
+            self.ui.progress_bar.setValue(0)
+            self.ui.cancel_button.setEnabled(False)
+            QMessageBox.critical(
+                self,
+                "Knowledge Base Indexing",
+                f"Failed to start indexing:\n{exc}",
+            )
+            return False
 
     def on_indexing_progress(self, data: Dict):
         try:

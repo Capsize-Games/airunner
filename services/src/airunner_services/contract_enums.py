@@ -102,8 +102,13 @@ class SignalCode(Enum):
         "queue_load_conversation_signal"
     )
     RAG_DOCUMENT_ADDED = "rag_document_added_signal"
+    RAG_INDEX_ALL_DOCUMENTS = "rag_index_all_documents_signal"
+    RAG_INDEX_CANCEL = "rag_index_cancel_signal"
     RAG_INDEXING_COMPLETE = "rag_indexing_complete_signal"
     RAG_INDEXING_PROGRESS = "rag_indexing_progress_signal"
+    RAG_INDEX_SELECTED_DOCUMENTS = (
+        "rag_index_selected_documents_signal"
+    )
     RAG_RELOAD_INDEX_SIGNAL = "rag_reload_index_signal"
     SAFETY_CHECKER_FILTER_COMPLETE = (
         "safety_checker_filter_complete"

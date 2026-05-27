@@ -72,6 +72,33 @@ controlnet_processor_files = [
 ]
 
 
+def _enabled_llm_download_repo_ids(
+    models_enabled: Dict[str, bool],
+) -> list[str]:
+    """Return the enabled local-LLM download repo ids for the installer."""
+    if not models_enabled.get("llm", False):
+        return []
+
+    repo_ids = []
+    for model in model_bootstrap_data:
+        if model.get("category") != "llm":
+            continue
+        if (
+            model.get("pipeline_action") == "embedding"
+            and not models_enabled.get("embedding_model", False)
+        ):
+            continue
+        download_info = LLMProviderConfig.resolve_download_target(
+            "local",
+            repo_id=model["path"],
+            prefer_pre_quantized=True,
+        )
+        repo_ids.append(
+            download_info["repo_id"] if download_info else model["path"]
+        )
+    return repo_ids
+
+
 class InstallWorker(
     MediatorMixin,
     SettingsMixin,
@@ -452,7 +479,7 @@ class InstallWorker(
                 print(f"Error downloading {filename}: {e}")
 
     def download_llms(self):
-        if not self.models_enabled["mistral"]:
+        if not self.models_enabled["llm"]:
             self.set_page()
             return
 
@@ -1273,12 +1300,8 @@ class InstallPage(BaseWizard):
                     continue
 
         # Increase total number of LLMs downloaded
-        if self.models_enabled["mistral"]:
-            self.total_steps += len(
-                LLM_FILE_BOOTSTRAP_DATA[
-                    "mistralai/Ministral-3-8B-Instruct-2512"
-                ]["files"]
-            )
+        for repo_id in _enabled_llm_download_repo_ids(self.models_enabled):
+            self.total_steps += len(LLM_FILE_BOOTSTRAP_DATA[repo_id]["files"])
 
         if self.models_enabled["whisper"]:
             self.total_steps += len(WHISPER_FILES["openai/whisper-tiny"])
@@ -1440,7 +1463,7 @@ class InstallPage(BaseWizard):
                     )
                 except Exception:
                     pass
-        if self.models_enabled["mistral"]:
+        if self.models_enabled["llm"]:
             models = []
             for model in model_bootstrap_data:
                 if model["category"] == "llm":
@@ -1448,7 +1471,7 @@ class InstallPage(BaseWizard):
                         if not self.models_enabled["embedding_model"]:
                             continue
                     else:
-                        if not self.models_enabled["mistral"]:
+                        if not self.models_enabled["llm"]:
                             continue
                     models.append(model)
                     download_info = LLMProviderConfig.resolve_download_target(
