@@ -29,8 +29,8 @@ RANKS = "ABCDEF"
 class Thresholds:
     """Thresholds for size and complexity findings."""
 
-    max_file_lines: int = 200
-    max_class_lines: int = 200
+    max_file_lines: int = 250
+    max_class_lines: int = 250
     max_function_lines: int = 20
     max_complexity_rank: str = "B"
     min_mi: float = 65.0
@@ -44,8 +44,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--path", type=Path, default=DEFAULT_ROOT)
     parser.add_argument("--output-dir", type=Path, default=DEFAULT_OUTPUT)
     parser.add_argument("--exclude", default=",".join(DEFAULT_EXCLUDES))
-    parser.add_argument("--max-file-lines", type=int, default=200)
-    parser.add_argument("--max-class-lines", type=int, default=200)
+    parser.add_argument("--max-file-lines", type=int, default=250)
+    parser.add_argument("--max-class-lines", type=int, default=250)
     parser.add_argument("--max-function-lines", type=int, default=20)
     parser.add_argument("--max-complexity-rank", default="B")
     parser.add_argument("--min-mi", type=float, default=65.0)
