@@ -7,6 +7,9 @@ import re
 from datetime import datetime
 from typing import Optional, TYPE_CHECKING
 
+from airunner_services.llm.managers.forced_tool_execution_policy import (
+    ForcedToolExecutionPolicy,
+)
 from airunner_services.settings import AIRUNNER_LOG_LEVEL
 from airunner_services.utils.application import get_logger
 from airunner_services.utils.application.log_hygiene import summarize_text
@@ -30,6 +33,14 @@ class ToolExecutionMixin:
             []
         )  # Track tools called in current invocation
 
+    def _get_forced_tool_policy(self) -> ForcedToolExecutionPolicy:
+        """Return the cached forced-tool execution helper."""
+        helper = getattr(self, "_forced_tool_policy", None)
+        if helper is None:
+            helper = ForcedToolExecutionPolicy(self)
+            self._forced_tool_policy = helper
+        return helper
+
     def _execute_tools_with_status(
         self, state: "WorkflowState"
     ) -> "WorkflowState":
@@ -47,9 +58,7 @@ class ToolExecutionMixin:
         Returns:
             Updated workflow state with tool results
         """
-        from langchain_core.messages import AIMessage, ToolMessage
         from langgraph.prebuilt import ToolNode
-        import uuid
 
         # Get the last AIMessage which contains tool_calls
         messages = state["messages"]
@@ -63,53 +72,10 @@ class ToolExecutionMixin:
         if not tool_calls:
             return state
 
-        # CRITICAL: When _force_tool is set, ONLY execute that specific tool
-        # If model called wrong tool, inject error and force correct tool
-        force_tool = getattr(self, "_force_tool", None)
-        if force_tool:
-            first_tool = tool_calls[0].get("name") if tool_calls else None
-            
-            if first_tool != force_tool:
-                # Model called the WRONG tool - inject error message
-                self.logger.error(
-                    f"Force tool violation: model called '{first_tool}' "
-                    f"but must call '{force_tool}' first"
-                )
-                
-                # Create a fake tool result with error message
-                error_msg = (
-                    f"ERROR: You must call '{force_tool}' first.\n\n"
-                    f"You tried to call '{first_tool}', but the workflow requires "
-                    f"calling '{force_tool}' before any other tool.\n\n"
-                    f"Call {force_tool}('coding', 'your task description') NOW."
-                )
-                
-                # Create ToolMessage with error
-                tool_call_id = tool_calls[0].get("id", str(uuid.uuid4()))
-                error_result = ToolMessage(
-                    content=error_msg,
-                    tool_call_id=tool_call_id,
-                    name=first_tool,
-                )
-                
-                # Return state with error message instead of executing wrong tool
-                return {"messages": [error_result]}
-            
-            # Model called correct forced tool - filter out any parallel calls
-            if len(tool_calls) > 1:
-                discarded = [tc.get("name") for tc in tool_calls[1:]]
-                self.logger.warning(
-                    f"Force tool active: executing only '{force_tool}', "
-                    f"discarding parallel calls: {discarded}"
-                )
-                tool_calls = [tool_calls[0]]
-                messages = list(state["messages"])
-                new_ai_message = AIMessage(
-                    content=last_message.content,
-                    tool_calls=tool_calls,
-                )
-                messages[-1] = new_ai_message
-                state = {**state, "messages": messages}
+        policy = self._get_forced_tool_policy()
+        state, tool_calls, blocked_state = policy.prepare(state, tool_calls)
+        if blocked_state is not None:
+            return blocked_state
 
         # Emit "starting" status for each tool
         self._emit_starting_status(tool_calls)
@@ -124,34 +90,7 @@ class ToolExecutionMixin:
         # Extract tool results and emit "completed" status
         self._emit_completed_status(result_state, tool_calls)
 
-        # Handle force_tool after successful execution
-        # For workflow tools, set next required tool. Otherwise clear.
-        if hasattr(self, "_force_tool") and self._force_tool:
-            executed_tool = tool_calls[0].get("name") if tool_calls else None
-            if executed_tool == self._force_tool:
-                # Determine next required tool based on workflow sequence
-                next_tool = self._get_next_workflow_tool(executed_tool)
-                if next_tool:
-                    self.logger.info(
-                        f"Workflow sequence: '{executed_tool}' done, "
-                        f"now enforcing '{next_tool}'"
-                    )
-                    self._force_tool = next_tool
-                    self._tool_choice = {
-                        "type": "function",
-                        "function": {"name": next_tool},
-                    }
-                else:
-                    self.logger.info(
-                        f"Clearing force_tool '{self._force_tool}' after successful execution"
-                    )
-                    self._force_tool = None
-                    self._tool_choice = None
-                if next_tool:
-                    if hasattr(self, "_bind_tools_to_model"):
-                        self._bind_tools_to_model()
-                elif hasattr(self, "_unbind_tools_from_model"):
-                    self._unbind_tools_from_model()
+        policy.complete(tool_calls)
 
         return result_state
 

@@ -31,6 +31,12 @@ class StreamingMixin:
         self._current_emoji = "😐"
         self._assistant_turn_index = 0
 
+    def _prepare_workflow_run(self) -> tuple[Dict[str, Any], Any]:
+        """Reset request-scoped state and return config plus math context."""
+        self._executed_tools = []
+        self._assistant_turn_index = 0
+        return self._create_config(), self._get_math_context()
+
     def _auto_learn_from_message(self, user_input: str) -> None:
         """Previously auto-extracted facts - now handled via LLM tools.
         
@@ -53,14 +59,8 @@ class StreamingMixin:
         Returns:
             Workflow result dictionary with 'messages' and 'tools' (list of executed tool names)
         """
-        # Reset executed tools list for this invocation
-        self._executed_tools = []
-        self._assistant_turn_index = 0
-
         input_messages = [HumanMessage(user_input)]
-        config = self._create_config()
-
-        math_context = self._get_math_context()
+        config, math_context = self._prepare_workflow_run()
 
         with math_context:
             result = self._compiled_workflow.invoke(
@@ -86,9 +86,7 @@ class StreamingMixin:
         Yields:
             AIMessage instances as they are generated
         """
-        # Reset executed tools list for this invocation
-        self._executed_tools = []
-        self._assistant_turn_index = 0
+        config, math_context = self._prepare_workflow_run()
 
         # Automatically learn facts from user message (non-blocking)
         self._auto_learn_from_message(user_input)
@@ -100,9 +98,6 @@ class StreamingMixin:
         initial_state = self._create_initial_state(
             user_input, generation_kwargs, images=images
         )
-        config = self._create_config()
-
-        math_context = self._get_math_context()
         last_yielded_count = 0  # Track how many messages we've yielded
 
         with math_context:
