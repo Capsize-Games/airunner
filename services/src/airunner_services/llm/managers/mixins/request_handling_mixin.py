@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
 from airunner_services.database.models.llm_generator_settings import (
@@ -19,9 +18,6 @@ from airunner_services.llm.managers.request_rag_preparation import (
     ensure_request_rag_files,
     load_rag_document_payload,
     prepare_request_rag,
-)
-from airunner_services.llm_workflow_events import (
-    resolve_llm_workflow_event_sink,
 )
 
 
@@ -271,32 +267,28 @@ class RequestHandlingMixin:
         prompt = data["request_data"]["prompt"]
         action = data["request_data"].get("action")
 
-        if llm_request and llm_request.tool_categories is None:
-            selected_categories = self._auto_select_tool_categories(
-                llm_request,
-                prompt,
-            )
-            self._apply_tool_filter(
-                selected_categories,
+        if llm_request:
+            selected_categories = getattr(llm_request, "tool_categories", None)
+            allow_thinking = getattr(llm_request, "enable_thinking", None)
+            if allow_thinking is None:
+                allow_thinking = True
+            plan = self._build_tool_selection_plan(
+                prompt=prompt,
+                tool_categories=selected_categories,
                 action=action,
                 force_tool=getattr(llm_request, "force_tool", None),
+                allow_thinking=bool(allow_thinking),
+                request_id=getattr(self, "_current_request_id", None),
+                auto_select=selected_categories is None,
             )
-            tools_filtered = True
-        elif llm_request and llm_request.tool_categories is not None:
+            llm_request.tool_categories = plan.selected_categories
+            llm_request.force_tool = plan.force_tool
             self.logger.info(
-                "[LLM MANAGER DEBUG] APPLYING TOOL FILTER with %s",
-                llm_request.tool_categories,
+                "[LLM MANAGER DEBUG] APPLYING TOOL PLAN with %s",
+                plan.selected_categories,
             )
-            self.logger.info(
-                "Applying tool filter with categories: %s",
-                llm_request.tool_categories,
-            )
-            self._apply_tool_filter(
-                llm_request.tool_categories,
-                action=action,
-                force_tool=getattr(llm_request, "force_tool", None),
-            )
-            selected_categories = list(llm_request.tool_categories)
+            self._apply_tool_selection_plan(plan)
+            selected_categories = list(plan.selected_categories or [])
             tools_filtered = True
         else:
             self.logger.info(
@@ -306,86 +298,6 @@ class RequestHandlingMixin:
             self.logger.info("No tool filtering - using all tools")
 
         return tools_filtered, selected_categories, system_prompt
-
-    def _auto_select_tool_categories(
-        self,
-        llm_request: Any,
-        prompt: str,
-    ) -> List[str]:
-        """Classify tool categories and emit UI status updates."""
-        request_id = getattr(self, "_current_request_id", None)
-        tool_status_id = (
-            f"tool_classification_{request_id}"
-            if request_id
-            else "tool_classification"
-        )
-        self.logger.info(
-            "Auto mode: Analyzing prompt to select relevant tool categories"
-        )
-        event_sink = resolve_llm_workflow_event_sink(self)
-        force_tool = getattr(llm_request, "force_tool", None)
-        direct_categories, direct_force_tool = self._detect_simple_tool_route(
-            prompt
-        )
-        if force_tool is None and direct_force_tool:
-            force_tool = direct_force_tool
-
-        event_sink.emit_tool_status(
-            {
-                "tool_id": tool_status_id,
-                "tool_name": "tool_analyzer",
-                "query": prompt[:100],
-                "status": "starting",
-                "details": "Analyzing prompt to select tools...",
-                "conversation_id": getattr(self, "_conversation_id", None),
-                "request_id": request_id,
-                "timestamp": datetime.now(timezone.utc).isoformat(),
-            }
-        )
-
-        if direct_categories is not None:
-            selected_categories = direct_categories
-            self.logger.info(
-                "Auto mode: matched direct system tool route %s for prompt %r",
-                force_tool,
-                prompt[:100],
-            )
-        else:
-            allow_thinking = getattr(llm_request, "enable_thinking", None)
-            if allow_thinking is None:
-                allow_thinking = True
-            selected_categories = self._classify_prompt_for_tools(
-                prompt,
-                allow_thinking=allow_thinking,
-            )
-
-        llm_request.tool_categories = selected_categories
-        llm_request.force_tool = force_tool
-
-        details = (
-            "Selected: "
-            f"{', '.join(selected_categories) if selected_categories else 'none'}"
-        )
-        if force_tool:
-            details += f" | forced tool: {force_tool}"
-        event_sink.emit_tool_status(
-            {
-                "tool_id": tool_status_id,
-                "tool_name": "tool_analyzer",
-                "query": prompt[:100],
-                "status": "completed",
-                "details": details,
-                "conversation_id": getattr(self, "_conversation_id", None),
-                "request_id": request_id,
-                "timestamp": datetime.now(timezone.utc).isoformat(),
-            }
-        )
-        self.logger.info(
-            "Auto mode selected categories: %s",
-            selected_categories,
-        )
-        return selected_categories
-
     def _prepare_request_rag(
         self,
         data: Dict[str, Any],

@@ -7,6 +7,7 @@ from typing import Any, List, Optional, Tuple
 
 from langchain_core.messages import HumanMessage
 
+from airunner_services.llm.core.tool_registry import ToolCategory
 from airunner_services.llm.utils.thinking_parser import (
     detect_thinking_close_tag,
     detect_thinking_open_tag,
@@ -72,6 +73,21 @@ class ToolClassificationMixin:
         r"(?:fun\s+fact|quote)\b.*$",
         r"^\s*(?:make\s+me\s+laugh|be\s+funny)[!.?,\s]*$",
     )
+    SEARCH_TRIGGER_WORDS: Tuple[str, ...] = (
+        "search",
+        "look up",
+        "lookup",
+        "find",
+        "google",
+        "bing",
+        "duckduckgo",
+        "ddg",
+        "web",
+        "internet",
+        "news",
+        "latest",
+        "recent",
+    )
 
     @classmethod
     def _detect_simple_tool_route(
@@ -111,6 +127,14 @@ class ToolClassificationMixin:
         return any(
             re.match(pattern, prompt_lc)
             for pattern in cls.SIMPLE_NO_TOOL_PATTERNS
+        )
+
+    @classmethod
+    def _has_search_trigger_prompt(cls, prompt: str) -> bool:
+        """Return True when a prompt clearly requests search tools."""
+        prompt_lc = (prompt or "").strip().lower()
+        return any(
+            trigger in prompt_lc for trigger in cls.SEARCH_TRIGGER_WORDS
         )
 
     @classmethod
@@ -312,52 +336,7 @@ class ToolClassificationMixin:
         prompt: str,
         allow_thinking: bool = True,
     ) -> list:
-        """Use direct heuristics or the active model to classify tool needs."""
-        direct_categories, _ = self._detect_simple_tool_route(prompt)
-        if direct_categories is not None:
-            self.logger.info(
-                "Auto mode: direct tool route detected, forcing system "
-                "category"
-            )
-            return direct_categories
-
-        prompt_lc = (prompt or "").strip().lower()
-        if self._is_simple_greeting_prompt(prompt):
-            self.logger.info(
-                "Auto mode: greeting detected, disabling tools"
-            )
-            return []
-
-        if self._is_simple_no_tool_prompt(prompt):
-            self.logger.info(
-                "Auto mode: simple conversational prompt detected, "
-                "disabling tools"
-            )
-            return []
-
-        search_triggers = [
-            "search",
-            "look up",
-            "lookup",
-            "find",
-            "google",
-            "bing",
-            "duckduckgo",
-            "ddg",
-            "web",
-            "internet",
-            "news",
-            "latest",
-            "recent",
-        ]
-        if any(trigger in prompt_lc for trigger in search_triggers):
-            self.logger.info(
-                "Auto mode: search intent detected, forcing search category"
-            )
-            return ["search"]
-
-        from airunner_services.llm.core.tool_registry import ToolCategory
-
+        """Use the active model to classify tool needs."""
         available_categories = [cat.value for cat in ToolCategory]
         prompt_directive = "" if allow_thinking else "/no_think\n"
         classification_prompt = f"""{prompt_directive}
