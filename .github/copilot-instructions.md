@@ -25,7 +25,7 @@
 
 ## Testing
 
-- Only create functional automated tests. Avoid granular unit tests that require extensive mocking. Focus on testing the overall behavior and functionality of application features rather than isolated units of code.
+- Only create functional automated tests. Avoid granular unit tests that require extensive mocking. Focus on testing the overall behavior and functionality of application features rather than isolated units of code unless the user authorizes you to create unit tests for a given session.
 - Do not create tests for edge cases that are unlikely to occur in real-world usage. Instead, prioritize testing common use cases and scenarios that users are likely to encounter.
 - Avoid writing tests for src/airunner gui code unless the user explicitly requests it.
 
