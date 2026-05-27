@@ -5,11 +5,21 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
-from airunner_model.models.document import Document
 from airunner_model.models.llm_generator_settings import (
     LLMGeneratorSettings,
 )
-from airunner_model.session import session_scope
+from airunner_services.llm.managers.request_preparation import (
+    capture_request_settings_snapshot,
+    extract_request_tool_defaults,
+    normalize_requested_dtype,
+    normalize_requested_service,
+    restore_request_settings_snapshot,
+)
+from airunner_services.llm.managers.request_rag_preparation import (
+    ensure_request_rag_files,
+    load_rag_document_payload,
+    prepare_request_rag,
+)
 from airunner_services.llm_workflow_events import (
     resolve_llm_workflow_event_sink,
 )
@@ -60,54 +70,20 @@ class RequestHandlingMixin:
             except Exception:
                 pass
 
-        desired_dtype = getattr(llm_request, "dtype", None)
-        if isinstance(desired_dtype, str):
-            desired_dtype = desired_dtype.strip().lower() or None
-        if desired_dtype in ("4-bit", "4bit"):
-            desired_dtype = "4bit"
-        elif desired_dtype in ("8-bit", "8bit"):
-            desired_dtype = "8bit"
-        elif desired_dtype in ("32-bit", "32bit"):
-            desired_dtype = "32bit"
-        elif desired_dtype != "auto":
-            desired_dtype = None
-
-        if desired_dtype:
-            current_dtype = getattr(self.llm_generator_settings, "dtype", None)
-            if isinstance(current_dtype, str):
-                current_dtype = current_dtype.strip().lower() or None
-            if current_dtype != desired_dtype:
-                self.logger.info(
-                    "[LLM] Switching dtype %s -> %s; unloading",
-                    current_dtype,
-                    desired_dtype,
-                )
-                self.unload()
-                self.llm_generator_settings.dtype = desired_dtype
-
-        desired_service = self._requested_service(llm_request)
-        if desired_service:
-            self._apply_requested_service(desired_service, llm_request)
+        settings_snapshot = capture_request_settings_snapshot(self)
+        request_settings_changed = self._apply_request_overrides(
+            llm_request
+        )
+        if request_settings_changed:
+            self.unload()
 
         self._do_set_seed()
         self.load()
 
         request_tool_defaults = self._request_tool_defaults(data)
 
-        if llm_request and not llm_request.use_memory:
-            self.logger.info(
-                "use_memory=False - clearing conversation history for this "
-                "request"
-            )
-            if self._workflow_manager:
-                self._workflow_manager.clear_memory()
-
-        conversation = self._get_or_create_conversation(data)
-        if conversation and self._workflow_manager:
-            self._workflow_manager.set_conversation_id(
-                conversation.id,
-                ephemeral=llm_request.ephemeral_conversation,
-            )
+        self._prepare_request_memory(llm_request)
+        self._prepare_request_conversation(data, llm_request)
 
         tools_filtered, selected_categories, system_prompt = (
             self._prepare_request_tooling(data, llm_request)
@@ -135,15 +111,90 @@ class RequestHandlingMixin:
             self._restore_reasoning_effort_patches(reasoning_patches)
             if request_tool_defaults and self._tool_manager:
                 self._tool_manager.clear_request_tool_defaults()
+            if request_settings_changed:
+                restore_request_settings_snapshot(
+                    self,
+                    settings_snapshot,
+                )
+                self.unload()
 
     def _requested_service(self, llm_request: Any) -> Optional[str]:
         """Return the requested service override, if any."""
-        desired_service = getattr(llm_request, "model_service", None)
-        if isinstance(desired_service, str):
-            desired_service = desired_service.strip().lower() or None
-        if desired_service not in ("local", "openrouter", "ollama"):
-            return None
-        return desired_service
+        return normalize_requested_service(
+            getattr(llm_request, "model_service", None)
+        )
+
+    def _apply_request_overrides(self, llm_request: Any) -> bool:
+        """Apply request-scoped settings overrides and report changes."""
+        settings_changed = False
+        desired_dtype = normalize_requested_dtype(
+            getattr(llm_request, "dtype", None)
+        )
+        if desired_dtype:
+            settings_changed = self._apply_requested_dtype(desired_dtype)
+
+        desired_service = self._requested_service(llm_request)
+        if desired_service:
+            settings_changed = (
+                self._apply_requested_service(desired_service, llm_request)
+                or settings_changed
+            )
+
+        return settings_changed
+
+    def _apply_requested_dtype(self, desired_dtype: str) -> bool:
+        """Apply one request-scoped dtype override when it changes."""
+        current_dtype = normalize_requested_dtype(
+            getattr(self.llm_generator_settings, "dtype", None)
+        )
+        if current_dtype == desired_dtype:
+            return False
+
+        self.logger.info(
+            "[LLM] Switching dtype %s -> %s for request",
+            current_dtype,
+            desired_dtype,
+        )
+        self.llm_generator_settings.dtype = desired_dtype
+        return True
+
+    def _prepare_request_memory(self, llm_request: Any) -> None:
+        """Reset workflow memory when the request disables memory usage."""
+        if not llm_request or getattr(llm_request, "use_memory", True):
+            return
+
+        self.logger.info(
+            "use_memory=False - clearing conversation history for this "
+            "request"
+        )
+        if self._workflow_manager:
+            self._workflow_manager.clear_memory()
+
+    def _prepare_request_conversation(
+        self,
+        data: Dict[str, Any],
+        llm_request: Any,
+    ) -> None:
+        """Attach the request to the active conversation workflow state."""
+        conversation = self._get_or_create_conversation(data)
+        if not conversation:
+            return
+
+        ephemeral = bool(
+            getattr(llm_request, "ephemeral_conversation", False)
+        )
+        if hasattr(self, "_update_workflow_with_conversation"):
+            self._update_workflow_with_conversation(
+                conversation,
+                ephemeral=ephemeral,
+            )
+            return
+
+        if self._workflow_manager:
+            self._workflow_manager.set_conversation_id(
+                conversation.id,
+                ephemeral=ephemeral,
+            )
 
     def _current_service(self) -> str:
         """Return the currently active LLM provider kind."""
@@ -157,16 +208,16 @@ class RequestHandlingMixin:
         self,
         desired_service: str,
         llm_request: Any,
-    ) -> None:
+    ) -> bool:
         """Apply provider flags and request-level model overrides."""
         current_service = self._current_service()
+        settings_changed = current_service != desired_service
         if current_service != desired_service:
             self.logger.info(
-                "[LLM] Switching model_service %s -> %s; unloading",
+                "[LLM] Switching model_service %s -> %s for request",
                 current_service,
                 desired_service,
             )
-            self.unload()
 
         self.llm_settings.use_openrouter = desired_service == "openrouter"
         self.llm_settings.use_ollama = desired_service == "ollama"
@@ -176,28 +227,25 @@ class RequestHandlingMixin:
         if isinstance(api_model, str) and api_model.strip():
             api_model = api_model.strip()
             if desired_service == "openrouter":
-                self.llm_settings.model = api_model
+                if getattr(self.llm_settings, "model", None) != api_model:
+                    self.llm_settings.model = api_model
+                    settings_changed = True
             elif desired_service == "ollama":
-                self.llm_settings.ollama_model = api_model
+                if (
+                    getattr(self.llm_settings, "ollama_model", None)
+                    != api_model
+                ):
+                    self.llm_settings.ollama_model = api_model
+                    settings_changed = True
+
+        return settings_changed
 
     def _request_tool_defaults(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """Build default tool arguments from request search hints."""
-        defaults: Dict[str, Any] = {}
-        search_hints = data.get("request_data", {}).get("search_hints")
-        if not isinstance(search_hints, dict):
-            return defaults
-
-        locale = search_hints.get("locale")
-        if not isinstance(locale, dict):
-            return defaults
-
-        country = locale.get("country")
-        if isinstance(country, str) and country.strip():
-            defaults["country"] = country.strip()
-        language = locale.get("language")
-        if isinstance(language, str) and language.strip():
-            defaults["language"] = language.strip()
-        return defaults
+        request_data = data.get("request_data", {})
+        if not isinstance(request_data, dict):
+            return {}
+        return extract_request_tool_defaults(request_data)
 
     def _prepare_request_tooling(
         self,
@@ -345,77 +393,16 @@ class RequestHandlingMixin:
         selected_categories: List[str],
     ) -> None:
         """Ensure request-provided or inferred RAG files are indexed."""
-        if llm_request and getattr(llm_request, "rag_files", None):
-            self._ensure_request_rag_files(llm_request.rag_files)
-
-        try:
-            if llm_request and not getattr(llm_request, "rag_files", None):
-                if "search" in (selected_categories or []) and hasattr(
-                    self,
-                    "ensure_indexed_files",
-                ):
-                    with session_scope() as session:
-                        docs = (
-                            session.query(Document)
-                            .filter_by(active=True, indexed=True)
-                            .all()
-                        )
-                    if docs:
-                        candidates = [doc.path for doc in docs[:3]]
-                        llm_request.rag_files = candidates
-                        self.logger.info(
-                            "Auto-attached %s indexed document(s) to rag_files "
-                            "for search: %s",
-                            len(candidates),
-                            candidates,
-                        )
-                        self.ensure_indexed_files(candidates)
-        except Exception:
-            self.logger.debug(
-                "Auto attachment of RAG files failed, continuing without "
-                "local RAG."
-            )
+        del data
+        prepare_request_rag(self, llm_request, selected_categories)
 
     def _ensure_request_rag_files(self, rag_files: Any) -> None:
         """Load and index request-provided RAG files."""
-        try:
-            if hasattr(self, "ensure_indexed_files"):
-                self.ensure_indexed_files(rag_files)
-                return
-
-            for doc in rag_files:
-                if isinstance(doc, str):
-                    self.load_file_into_rag(doc)
-                elif isinstance(doc, (bytes, bytearray)):
-                    self.load_bytes_into_rag(doc, source_name="upload")
-                elif isinstance(doc, dict) and doc.get("content"):
-                    self._load_rag_document_payload(doc)
-        except Exception as exc:
-            self.logger.warning(
-                "Error ensuring rag files are indexed: %s",
-                exc,
-            )
+        ensure_request_rag_files(self, rag_files)
 
     def _load_rag_document_payload(self, doc: Dict[str, Any]) -> None:
         """Load one request-provided document payload into RAG."""
-        file_type = str(doc.get("file_type", "")).lower()
-        content = doc.get("content")
-        source_name = doc.get("source_name", "web_content")
-        if file_type in [".epub", ".mobi", ".pdf"]:
-            payload = content
-            if not isinstance(payload, (bytes, bytearray)):
-                payload = str(payload).encode("utf-8")
-            self.load_bytes_into_rag(
-                payload,
-                source_name=doc.get("source_name", "upload"),
-                file_ext=file_type,
-            )
-            return
-
-        self.load_html_into_rag(
-            str(content),
-            source_name=source_name,
-        )
+        load_rag_document_payload(self, doc)
 
     def _apply_request_thinking_override(
         self,

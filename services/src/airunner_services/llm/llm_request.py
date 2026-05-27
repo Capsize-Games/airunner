@@ -1,12 +1,14 @@
 """Service-owned request model for LLM generation."""
 
-from dataclasses import asdict, dataclass, field
+from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
 
-from llama_cloud import MessageRole
+from llama_cloud import MessageRole  # type: ignore[import-untyped]
 
-from airunner_model.models.chatbot import Chatbot
-from airunner_model.models.llm_generator_settings import (
+from airunner_model.models.chatbot import (  # type: ignore[import-untyped]
+    Chatbot,
+)
+from airunner_model.models.llm_generator_settings import (  # type: ignore[import-untyped]
     LLMGeneratorSettings,
 )
 from airunner_services.llm.get_chatbot import get_chatbot
@@ -14,6 +16,12 @@ from airunner_services.utils.application.enum_resolver import llm_action_type
 
 
 LLMActionType = llm_action_type()
+_MIN_GENERATION_VALUE = 0.0001
+
+
+def _clamp_generation_value(value: float) -> float:
+    """Keep generation values above zero for downstream backends."""
+    return max(value, _MIN_GENERATION_VALUE)
 
 
 @dataclass
@@ -59,45 +67,41 @@ class LLMRequest:
     force_tool: Optional[str] = None
     images: Optional[List[Any]] = field(default_factory=list)
 
-    def to_dict(self) -> Dict:
+    def to_generation_kwargs(self) -> Dict[str, Any]:
         """Convert one request into model-generation kwargs."""
-        min_val = 0.0001
-        length_penalty = max(self.length_penalty, min_val)
-        repetition_penalty = max(self.repetition_penalty, min_val)
-        top_p = max(self.top_p, min_val)
-        temperature = max(self.temperature, min_val)
+        generation_kwargs: Dict[str, Any] = {
+            "do_sample": self.do_sample,
+            "eta_cutoff": self.eta_cutoff,
+            "max_new_tokens": self.max_new_tokens,
+            "min_length": self.min_length,
+            "no_repeat_ngram_size": self.no_repeat_ngram_size,
+            "num_beams": self.num_beams,
+            "num_return_sequences": self.num_return_sequences,
+            "repetition_penalty": _clamp_generation_value(
+                self.repetition_penalty
+            ),
+            "temperature": _clamp_generation_value(self.temperature),
+            "top_k": self.top_k,
+            "top_p": _clamp_generation_value(self.top_p),
+            "use_cache": self.use_cache,
+        }
 
-        data = asdict(self)
-        data.update(
-            {
-                "length_penalty": length_penalty,
-                "repetition_penalty": repetition_penalty,
-                "top_p": top_p,
-                "temperature": temperature,
-            }
-        )
+        if self.num_beams != 1:
+            generation_kwargs["early_stopping"] = self.early_stopping
+            generation_kwargs["length_penalty"] = _clamp_generation_value(
+                self.length_penalty
+            )
 
-        if self.num_beams == 1 and length_penalty != 0.0:
-            del data["length_penalty"]
-        if self.num_beams == 1:
-            del data["early_stopping"]
+        if self.enable_thinking is not None:
+            generation_kwargs["enable_thinking"] = self.enable_thinking
+        if self.reasoning_effort:
+            generation_kwargs["reasoning_effort"] = self.reasoning_effort
 
-        data.pop("node_id")
-        data.pop("use_memory")
-        data.pop("role")
-        data.pop("model_service", None)
-        data.pop("api_model", None)
-        data.pop("gguf_runtime_profile", None)
-        data.pop("dtype", None)
-        data.pop("reasoning_effort", None)
-        data.pop("include_mood", None)
-        data.pop("include_datetime", None)
-        data.pop("include_style", None)
-        data.pop("include_memory", None)
-        data.pop("include_ui_context", None)
-        data.pop("images", None)
+        return generation_kwargs
 
-        return data
+    def to_dict(self) -> Dict[str, Any]:
+        """Return one explicit generation payload for compatibility."""
+        return self.to_generation_kwargs()
 
     @classmethod
     def from_values(
@@ -136,7 +140,10 @@ class LLMRequest:
         )
 
     @classmethod
-    def from_chatbot(cls, chatbot_id: int = None) -> "LLMRequest":
+    def from_chatbot(
+        cls,
+        chatbot_id: Optional[int] = None,
+    ) -> "LLMRequest":
         """Create one request from one chatbot row."""
         if chatbot_id:
             chatbot = Chatbot.objects.get(chatbot_id)
@@ -209,7 +216,7 @@ class LLMRequest:
         return cls.from_llm_settings()
 
     @classmethod
-    def for_action(cls, action: "LLMActionType") -> "LLMRequest":
+    def for_action(cls, action: Any) -> "LLMRequest":
         """Create one request optimized for one action type."""
         if action in (LLMActionType.CHAT, LLMActionType.UPDATE_MOOD):
             return cls(
@@ -328,26 +335,29 @@ class OpenrouterMistralRequest(LLMRequest):
     min_p: float = 0
     top_a: int = 0
 
-    def to_dict(self) -> Dict:
+    def to_generation_kwargs(self) -> Dict[str, Any]:
         """Convert one OpenRouter request into API kwargs."""
-        min_val = 0.0001
-        frequency_penalty = max(self.frequency_penalty, min_val)
-        presence_penalty = max(self.presence_penalty, min_val)
-        repetition_penalty = max(self.repetition_penalty, min_val)
-        top_p = max(self.top_p, min_val)
-        temperature = max(self.temperature, min_val)
-
         return {
             "max_tokens": self.max_tokens,
-            "temperature": temperature,
+            "temperature": _clamp_generation_value(self.temperature),
             "seed": self.seed,
-            "top_p": top_p,
+            "top_p": _clamp_generation_value(self.top_p),
             "top_k": self.top_k,
-            "frequency_penalty": frequency_penalty,
-            "presence_penalty": presence_penalty,
-            "repetition_penalty": repetition_penalty,
+            "frequency_penalty": _clamp_generation_value(
+                self.frequency_penalty
+            ),
+            "presence_penalty": _clamp_generation_value(
+                self.presence_penalty
+            ),
+            "repetition_penalty": _clamp_generation_value(
+                self.repetition_penalty
+            ),
             "logit_bias": self.logit_bias,
             "top_logprobs": self.top_logprobs,
             "min_p": self.min_p,
             "top_a": self.top_a,
         }
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Return one explicit generation payload for compatibility."""
+        return self.to_generation_kwargs()

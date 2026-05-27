@@ -19,6 +19,11 @@ from langchain_core.messages import AIMessage
 from langgraph.errors import GraphRecursionError
 
 from airunner_services.llm.managers.llm_request import LLMRequest
+from airunner_services.llm.managers.request_preparation import (
+    WorkflowRequestSetup,
+    build_workflow_request_setup,
+    extract_request_images,
+)
 from airunner_services.llm.managers.llm_response import LLMResponse
 from airunner_services.llm.utils.gpt_oss_parser import (
     has_gpt_oss_markup,
@@ -216,95 +221,91 @@ class GenerationMixin:
         Returns:
             The action-specific system prompt
         """
-        # Extract force_tool from request if present (needed for both branches)
-        force_tool = (
-            llm_request.force_tool
-            if llm_request and hasattr(llm_request, "force_tool")
-            else None
-        )
-
-        # Optional prompt augmentation flags (used when caller supplies system_prompt)
-        include_mood = (
-            llm_request.include_mood
-            if llm_request and hasattr(llm_request, "include_mood")
-            else None
-        )
-        include_datetime = (
-            llm_request.include_datetime
-            if llm_request and hasattr(llm_request, "include_datetime")
-            else None
-        )
-        include_style = (
-            llm_request.include_style
-            if llm_request and hasattr(llm_request, "include_style")
-            else None
-        )
-        include_memory = (
-            llm_request.include_memory
-            if llm_request and hasattr(llm_request, "include_memory")
-            else None
-        )
-        include_ui_context = (
-            llm_request.include_ui_context
-            if llm_request and hasattr(llm_request, "include_ui_context")
-            else None
-        )
+        request_setup = build_workflow_request_setup(llm_request)
         
         if system_prompt:
             action_system_prompt = self._augment_custom_system_prompt(
                 base_prompt=system_prompt,
                 action=action,
-                include_mood=include_mood,
-                include_datetime=include_datetime,
-                include_style=include_style,
-                include_memory=include_memory,
-                include_ui_context=include_ui_context,
+                include_mood=request_setup.include_mood,
+                include_datetime=request_setup.include_datetime,
+                include_style=request_setup.include_style,
+                include_memory=request_setup.include_memory,
+                include_ui_context=request_setup.include_ui_context,
             )
         else:
-            # Use context-aware system prompt based on tool categories
-            tool_categories = (
-                llm_request.tool_categories if llm_request else None
-            )
             action_system_prompt = self.get_system_prompt_with_context(
-                action, tool_categories, force_tool
+                action,
+                request_setup.tool_categories,
+                request_setup.force_tool,
             )
 
-        if self._workflow_manager:
-            self._workflow_manager.update_system_prompt(action_system_prompt)
-
-            # Set force_tool for agentic research mode
-            if force_tool and hasattr(self._workflow_manager, "set_force_tool"):
-                self._workflow_manager.set_force_tool(force_tool)
-                self.logger.info(f"Set workflow force_tool to: {force_tool}")
-            elif hasattr(self._workflow_manager, "set_force_tool"):
-                # Clear force_tool if not set in request
-                self._workflow_manager.set_force_tool(None)
-
-            # Set response format if provided in request
-            response_format = (
-                llm_request.response_format
-                if llm_request and hasattr(llm_request, "response_format")
-                else None
-            )
-            if response_format and hasattr(
-                self._workflow_manager, "set_response_format"
-            ):
-                self._workflow_manager.set_response_format(response_format)
-                self.logger.info(
-                    f"Set workflow response format to: {response_format}"
-                )
-
-            # Only setup tools if not already filtered
-            if not skip_tool_setup and self._tool_manager:
-                action_tools = self._tool_manager.get_tools_for_action(action)
-                self._workflow_manager.update_tools(action_tools)
-            elif skip_tool_setup:
-                # Tools were already filtered, don't override
-                self.logger.info(
-                    "Skipping tool setup - tools already filtered by tool_categories"
-                )
+        self._apply_workflow_request_setup(
+            action=action,
+            action_system_prompt=action_system_prompt,
+            skip_tool_setup=skip_tool_setup,
+            request_setup=request_setup,
+        )
 
         return action_system_prompt
+
+    def _apply_workflow_request_setup(
+        self,
+        action: LLMActionType,
+        action_system_prompt: str,
+        skip_tool_setup: bool,
+        request_setup: WorkflowRequestSetup,
+    ) -> None:
+        """Apply one request's workflow settings to the active manager."""
+        if not self._workflow_manager:
+            return
+
+        self._workflow_manager.update_system_prompt(action_system_prompt)
+        self._set_workflow_force_tool(request_setup.force_tool)
+        self._set_workflow_response_format(request_setup.response_format)
+        self._update_workflow_tools_for_action(action, skip_tool_setup)
+
+    def _set_workflow_force_tool(self, force_tool: Optional[str]) -> None:
+        """Synchronize the request force-tool state into the workflow."""
+        if not hasattr(self._workflow_manager, "set_force_tool"):
+            return
+
+        self._workflow_manager.set_force_tool(force_tool)
+        self.logger.info("Set workflow force_tool to: %s", force_tool)
+
+    def _set_workflow_response_format(
+        self,
+        response_format: Optional[str],
+    ) -> None:
+        """Apply one request response-format override when present."""
+        if not response_format:
+            return
+        if not hasattr(self._workflow_manager, "set_response_format"):
+            return
+
+        self._workflow_manager.set_response_format(response_format)
+        self.logger.info(
+            "Set workflow response format to: %s",
+            response_format,
+        )
+
+    def _update_workflow_tools_for_action(
+        self,
+        action: LLMActionType,
+        skip_tool_setup: bool,
+    ) -> None:
+        """Refresh action tools unless request-time filtering already ran."""
+        if skip_tool_setup:
+            self.logger.info(
+                "Skipping tool setup - tools already filtered by "
+                "tool_categories"
+            )
+            return
+        if not self._tool_manager:
+            return
+
+        action_tools = self._tool_manager.get_tools_for_action(action)
+        self._workflow_manager.update_tools(action_tools)
 
     def _create_streaming_callback(
         self,
@@ -730,7 +731,9 @@ class GenerationMixin:
             # stream() checks interrupt flag on each token
 
             # Prepare generation kwargs from LLMRequest
-            generation_kwargs = llm_request.to_dict() if llm_request else {}
+            generation_kwargs = (
+                llm_request.to_generation_kwargs() if llm_request else {}
+            )
 
             # Map max_tokens to max_new_tokens for HuggingFace compatibility
             if "max_tokens" in generation_kwargs:
@@ -752,25 +755,8 @@ class GenerationMixin:
                 "generation_kwargs.get('max_new_tokens')=%s",
                 generation_kwargs.get("max_new_tokens", "NOT SET"),
             )
-            # Remove non-generation parameters
-            for key in [
-                "do_tts_reply",
-                "use_cache",
-                "node_id",
-                "use_memory",
-                "role",
-            ]:
-                generation_kwargs.pop(key, None)
-
-            self.logger.debug(
-                "After cleanup, generation_kwargs.get('max_new_tokens')=%s",
-                generation_kwargs.get("max_new_tokens", "NOT SET"),
-            )
-
-            # Extract images from llm_request for vision models
-            images = None
-            if llm_request and hasattr(llm_request, "images") and llm_request.images:
-                images = llm_request.images
+            images = extract_request_images(llm_request)
+            if images:
                 self.logger.info(
                     f"Passing {len(images)} image(s) to workflow stream"
                 )

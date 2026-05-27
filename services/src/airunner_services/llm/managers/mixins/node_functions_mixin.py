@@ -6,7 +6,6 @@ These are broken into focused helper methods for maintainability.
 
 import os
 import re
-from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Tuple, TYPE_CHECKING
 
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
@@ -22,6 +21,12 @@ from airunner_services.llm.utils.thinking_parser import (
     strip_thinking_tags,
     detect_thinking_open_tag,
     detect_thinking_close_tag,
+)
+from airunner_services.llm.managers.workflow_response_prompts import (
+    build_tool_result_response_prompt,
+    build_workflow_continuation_prompt,
+    build_workflow_correction_prompt,
+    extract_next_workflow_action,
 )
 from airunner_services.llm.utils.stream_debug import print_stream_debug
 from airunner_services.llm.utils.stream_text import combine_stream_chunks
@@ -275,34 +280,12 @@ class NodeFunctionsMixin:
         self.logger.info(
             f"Creating workflow continuation message for duplicate '{tool_name}' call"
         )
-        
-        # Parse the tool result to extract the next action
-        next_action = ""
-        if "YOUR NEXT TOOL CALL:" in tool_content:
-            lines = tool_content.split("\n")
-            for line in lines:
-                if "YOUR NEXT TOOL CALL:" in line:
-                    next_action = line.split("YOUR NEXT TOOL CALL:")[-1].strip()
-                    break
-        elif "IMMEDIATE NEXT ACTION" in tool_content:
-            lines = tool_content.split("\n")
-            for i, line in enumerate(lines):
-                if "Call this tool NOW:" in line and i + 1 < len(lines):
-                    next_action = lines[i + 1].strip()
-                    break
-        
-        # Build a strong prompt that forces the model to call the NEXT tool
-        prompt_text = f"""[SYSTEM CORRECTION] You called {tool_name} twice. The workflow is ALREADY ACTIVE.
-
-DO NOT output any text response. DO NOT explain what you will do.
-You MUST call a workflow tool NOW.
-
-{f"REQUIRED: Call {next_action}" if next_action else "Call transition_phase('planning', 'Simple task, moving to planning')"}
-
-Your task: {user_question}
-
-CALL THE TOOL NOW. NO TEXT RESPONSE."""
-
+        next_action = extract_next_workflow_action(tool_content)
+        prompt_text = build_workflow_correction_prompt(
+            tool_name=tool_name,
+            user_question=user_question,
+            next_action=next_action,
+        )
         return HumanMessage(content=prompt_text)
 
     def _generate_workflow_continuation_response(
@@ -330,49 +313,13 @@ CALL THE TOOL NOW. NO TEXT RESPONSE."""
         self.logger.info(
             f"Generating workflow continuation for duplicate '{tool_name}' call"
         )
-        
-        # Parse the tool result to extract the next action
-        # The workflow tools output instructions like "YOUR NEXT TOOL CALL: transition_phase('planning', 'reason')"
-        next_action = ""
-        if "YOUR NEXT TOOL CALL:" in tool_content:
-            lines = tool_content.split("\n")
-            for line in lines:
-                if "YOUR NEXT TOOL CALL:" in line:
-                    next_action = line.split("YOUR NEXT TOOL CALL:")[-1].strip()
-                    break
-        elif "IMMEDIATE NEXT ACTION" in tool_content:
-            # Extract the tool call from the instructions
-            lines = tool_content.split("\n")
-            for i, line in enumerate(lines):
-                if "Call this tool NOW:" in line and i + 1 < len(lines):
-                    next_action = lines[i + 1].strip()
-                    break
-        
-        # Build a strong prompt that forces the model to continue the workflow
-        prompt_text = f"""You already started the workflow. The workflow has given you specific instructions.
-
-WORKFLOW STATUS:
-{tool_content[:1500]}
-
-CRITICAL: You called {tool_name} twice. The workflow is already active!
-
-{"The next step is: " + next_action if next_action else "Follow the instructions in the workflow status above."}
-
-DO NOT call {tool_name} again. Instead, call the NEXT tool in the sequence.
-
-For a structured workflow, the typical sequence is:
-1. start_workflow (DONE - you already did this)
-2. transition_phase('planning', 'reason') 
-3. add_todo_item('title', 'description')
-4. transition_phase('execution', 'reason')
-5. start_todo_item('todo_id')
-6. use the task tools needed for that TODO
-7. complete_todo_item('todo_id')
-8. transition_phase('complete', 'All done')
-
-User's original request: {user_question}
-
-Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
+        next_action = extract_next_workflow_action(tool_content)
+        prompt_text = build_workflow_continuation_prompt(
+            tool_name=tool_name,
+            user_question=user_question,
+            tool_content=tool_content,
+            next_action=next_action,
+        )
 
         try:
             # Stream response with the continuation prompt
@@ -418,13 +365,6 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
             Response text
         """
         try:
-            # Use RAG-specific logic for rag_search
-            if tool_name == "rag_search":
-                return self._generate_response_from_results(
-                    tool_content, tool_name, user_question, generation_kwargs
-                )
-
-            # For other tools, use generic response generation
             return self._generate_response_from_results(
                 tool_content, tool_name, user_question, generation_kwargs
             )
@@ -458,22 +398,14 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
         )
 
         try:
-            # Build prompt with explicit user question and strong no-tool instructions
-            question_context = (
-                f"User's question: {user_question}\n\n"
-                if user_question
-                else ""
-            )
-
-            simple_prompt_text = f"""You are answering a question based on search results. Respond naturally and conversationally.
-
-{question_context}Search results:
-{all_tool_content}
-
-Based on the search results above, provide a clear, conversational answer to the user's question. Use ONLY the information from the search results. Do not call any tools, do not use JSON, just write a natural response. Avoid repetition and be concise."""
-
-            # Convert to message format
-            simple_prompt = [HumanMessage(content=simple_prompt_text)]
+            simple_prompt = [
+                HumanMessage(
+                    content=build_tool_result_response_prompt(
+                        all_tool_content=all_tool_content,
+                        user_question=user_question,
+                    )
+                )
+            ]
 
             # Stream response - returns full AIMessage with thinking_content
             response_message = self._stream_model_response(
@@ -517,22 +449,14 @@ Based on the search results above, provide a clear, conversational answer to the
         )
 
         try:
-            # Build prompt with explicit user question and strong no-tool instructions
-            question_context = (
-                f"User's question: {user_question}\n\n"
-                if user_question
-                else ""
-            )
-
-            simple_prompt_text = f"""You are answering a question based on search results. Respond naturally and conversationally.
-
-{question_context}Search results:
-{all_tool_content}
-
-Based on the search results above, provide a clear, conversational answer to the user's question. Use ONLY the information from the search results. Do not call any tools, do not use JSON, just write a natural response. Avoid repetition and be concise."""
-
-            # Convert to message format
-            simple_prompt = [HumanMessage(content=simple_prompt_text)]
+            simple_prompt = [
+                HumanMessage(
+                    content=build_tool_result_response_prompt(
+                        all_tool_content=all_tool_content,
+                        user_question=user_question,
+                    )
+                )
+            ]
 
             # Stream response with generation kwargs for token-by-token streaming
             response_message = self._stream_model_response(
