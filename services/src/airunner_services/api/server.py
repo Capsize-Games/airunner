@@ -267,6 +267,11 @@ def create_app(
         tags=["state"],
     )
     app.include_router(
+        persistence.router,
+        prefix="/api/v1/persistence",
+        tags=["persistence"],
+    )
+    app.include_router(
         domain_resources.settings_router,
         prefix="/api/v1/settings",
         tags=["settings"],

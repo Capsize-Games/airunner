@@ -139,47 +139,67 @@ def build_provider_runtime_config(
 ) -> ProviderRuntimeConfig:
     """Return the request-scoped provider selection for model creation."""
     provider_params = get_provider_runtime_params(chatbot)
-
     if getattr(llm_settings, "use_local_llm", True):
-        return ProviderRuntimeConfig(
-            provider="local",
-            **provider_params,
-        )
-
+        return _local_provider_runtime(provider_params)
     if getattr(llm_settings, "use_openrouter", False):
-        return ProviderRuntimeConfig(
-            provider="openrouter",
-            model_name=getattr(
-                llm_settings,
-                "model",
-                "mistralai/mistral-7b-instruct",
-            ),
-            api_key=os.getenv("OPENROUTER_API_KEY"),
-            **provider_params,
-        )
-
+        return _openrouter_provider_runtime(llm_settings, provider_params)
     if getattr(llm_settings, "use_ollama", False):
-        return ProviderRuntimeConfig(
-            provider="ollama",
-            model_name=getattr(llm_settings, "ollama_model", "llama2"),
-            base_url=getattr(
-                llm_settings,
-                "ollama_base_url",
-                "http://localhost:11434",
-            ),
-            **provider_params,
-        )
-
+        return _ollama_provider_runtime(llm_settings, provider_params)
     if getattr(llm_settings, "use_openai", False):
-        return ProviderRuntimeConfig(
-            provider="openai",
-            model_name=getattr(llm_settings, "openai_model", "gpt-4"),
-            api_key=os.getenv("OPENAI_API_KEY"),
-            **provider_params,
-        )
+        return _openai_provider_runtime(llm_settings, provider_params)
+    return _local_provider_runtime(provider_params)
 
+
+def _local_provider_runtime(
+    provider_params: dict[str, Any],
+) -> ProviderRuntimeConfig:
+    """Build the local provider runtime configuration."""
+    return ProviderRuntimeConfig(provider="local", **provider_params)
+
+
+def _openrouter_provider_runtime(
+    llm_settings: Any,
+    provider_params: dict[str, Any],
+) -> ProviderRuntimeConfig:
+    """Build the OpenRouter provider runtime configuration."""
     return ProviderRuntimeConfig(
-        provider="local",
+        provider="openrouter",
+        model_name=getattr(
+            llm_settings,
+            "model",
+            "mistralai/mistral-7b-instruct",
+        ),
+        api_key=os.getenv("OPENROUTER_API_KEY"),
+        **provider_params,
+    )
+
+
+def _ollama_provider_runtime(
+    llm_settings: Any,
+    provider_params: dict[str, Any],
+) -> ProviderRuntimeConfig:
+    """Build the Ollama provider runtime configuration."""
+    return ProviderRuntimeConfig(
+        provider="ollama",
+        model_name=getattr(llm_settings, "ollama_model", "llama2"),
+        base_url=getattr(
+            llm_settings,
+            "ollama_base_url",
+            "http://localhost:11434",
+        ),
+        **provider_params,
+    )
+
+
+def _openai_provider_runtime(
+    llm_settings: Any,
+    provider_params: dict[str, Any],
+) -> ProviderRuntimeConfig:
+    """Build the OpenAI provider runtime configuration."""
+    return ProviderRuntimeConfig(
+        provider="openai",
+        model_name=getattr(llm_settings, "openai_model", "gpt-4"),
+        api_key=os.getenv("OPENAI_API_KEY"),
         **provider_params,
     )
 

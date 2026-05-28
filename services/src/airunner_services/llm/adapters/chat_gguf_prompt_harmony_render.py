@@ -3,7 +3,12 @@
 import json
 from typing import Any, Dict, List, Optional, Sequence
 
-from langchain_core.messages import AIMessage, BaseMessage, SystemMessage, ToolMessage
+from langchain_core.messages import (
+    AIMessage,
+    BaseMessage,
+    SystemMessage,
+    ToolMessage,
+)
 
 from airunner_services.llm.adapters.chat_gguf_prompt_instructions import (
     inject_gpt_oss_tool_instructions,
@@ -52,30 +57,73 @@ def stringify_harmony_content(content: Any) -> str:
         return str(content)
 
 
+def _developer_message_contents(messages: List[BaseMessage]) -> List[str]:
+    """Collect system-message content for the Harmony developer layer."""
+    return [
+        stringify_harmony_content(message.content)
+        for message in messages
+        if isinstance(message, SystemMessage)
+    ]
+
+
+def _join_developer_content(contents: List[str]) -> str:
+    """Join non-empty developer message content blocks."""
+    return "\n\n".join(content for content in contents if content.strip())
+
+
+def _inject_developer_tool_instructions(
+    adapter: Any,
+    developer_content: str,
+) -> str:
+    """Inject tool instructions into the developer layer when needed."""
+    if adapter.tools and "namespace functions" not in developer_content:
+        return inject_gpt_oss_tool_instructions(adapter, developer_content)
+    return developer_content
+
+
 def render_gpt_oss_developer_message(
     adapter: Any,
     messages: List[BaseMessage],
 ) -> str:
     """Render the developer instruction layer for raw Harmony prompts."""
-    contents = [
-        stringify_harmony_content(message.content)
-        for message in messages
-        if isinstance(message, SystemMessage)
-    ]
+    contents = _developer_message_contents(messages)
     if not contents:
         return ""
 
-    developer_content = "\n\n".join(
-        content for content in contents if content.strip()
+    developer_content = _join_developer_content(contents)
+    developer_content = _inject_developer_tool_instructions(
+        adapter,
+        developer_content,
     )
-    if adapter.tools and "namespace functions" not in developer_content:
-        developer_content = inject_gpt_oss_tool_instructions(
-            adapter,
-            developer_content,
-        )
     if not developer_content.strip():
         return ""
     return render_harmony_message("developer", developer_content)
+
+
+def _thinking_message(message: AIMessage) -> Optional[str]:
+    """Render one assistant analysis channel message when present."""
+    thinking = str(
+        message.additional_kwargs.get("thinking_content") or ""
+    ).strip()
+    if not thinking:
+        return None
+    return render_harmony_message(
+        "assistant",
+        thinking,
+        channel="analysis",
+    )
+
+
+def _final_ai_message(message: AIMessage) -> Optional[str]:
+    """Render one assistant final channel message when present."""
+    content = str(message.content or "").strip()
+    if not content:
+        return None
+    return render_harmony_message(
+        "assistant",
+        content,
+        channel="final",
+    )
 
 
 def render_gpt_oss_ai_message(
@@ -84,31 +132,17 @@ def render_gpt_oss_ai_message(
 ) -> List[str]:
     """Render one historical AI message into Harmony messages."""
     rendered: List[str] = []
-    thinking = str(
-        message.additional_kwargs.get("thinking_content") or ""
-    ).strip()
+    thinking = _thinking_message(message)
     if thinking:
-        rendered.append(
-            render_harmony_message(
-                "assistant",
-                thinking,
-                channel="analysis",
-            )
-        )
+        rendered.append(thinking)
 
     tool_calls = getattr(message, "tool_calls", None) or []
     if tool_calls:
         return _render_gpt_oss_tool_calls(tool_calls)
 
-    content = str(message.content or "").strip()
+    content = _final_ai_message(message)
     if content:
-        rendered.append(
-            render_harmony_message(
-                "assistant",
-                content,
-                channel="final",
-            )
-        )
+        rendered.append(content)
     return rendered
 
 

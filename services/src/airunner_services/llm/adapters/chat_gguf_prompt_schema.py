@@ -72,34 +72,70 @@ def format_gpt_oss_type(
     """Convert a JSON schema fragment to a Harmony-style type."""
     if not isinstance(schema, dict):
         return "any"
-    if "$ref" in schema:
-        return str(schema["$ref"]).rsplit("/", 1)[-1]
-
-    variants = schema.get("anyOf") or schema.get("oneOf")
-    if variants:
-        return " | ".join(
-            format_gpt_oss_type(variant, indent_level)
-            for variant in variants
-        )
+    ref_type = _referenced_type(schema)
+    if ref_type is not None:
+        return ref_type
+    union_type = _union_type(schema, indent_level)
+    if union_type is not None:
+        return union_type
     if "enum" in schema:
-        return " | ".join(
-            json.dumps(value) for value in schema.get("enum", [])
-        )
+        return _enum_type(schema)
+    return _primitive_schema_type(schema, indent_level)
 
+
+def _referenced_type(schema: Dict[str, Any]) -> str | None:
+    """Return one referenced type name when the schema uses $ref."""
+    ref = schema.get("$ref")
+    if ref is None:
+        return None
+    return str(ref).rsplit("/", 1)[-1]
+
+
+def _union_type(
+    schema: Dict[str, Any],
+    indent_level: int,
+) -> str | None:
+    """Return one union type for anyOf/oneOf schemas."""
+    variants = schema.get("anyOf") or schema.get("oneOf")
+    if not variants:
+        return None
+    return " | ".join(
+        format_gpt_oss_type(variant, indent_level)
+        for variant in variants
+    )
+
+
+def _enum_type(schema: Dict[str, Any]) -> str:
+    """Return one enum type representation."""
+    return " | ".join(
+        json.dumps(value) for value in schema.get("enum", [])
+    )
+
+
+def _primitive_schema_type(
+    schema: Dict[str, Any],
+    indent_level: int,
+) -> str:
+    """Return one primitive, array, or object type representation."""
     schema_type = schema.get("type")
     if isinstance(schema_type, list):
         return " | ".join(str(item) for item in schema_type)
     if schema_type == "array":
-        item_type = format_gpt_oss_type(
-            schema.get("items", {}),
-            indent_level + 1,
-        )
-        return f"Array<{item_type}>"
+        return _array_item_type(schema, indent_level)
     if schema_type == "object":
         return format_gpt_oss_object_type(schema, indent_level + 1)
     if isinstance(schema_type, str):
         return schema_type
     return "any"
+
+
+def _array_item_type(schema: Dict[str, Any], indent_level: int) -> str:
+    """Return one array item type representation."""
+    item_type = format_gpt_oss_type(
+        schema.get("items", {}),
+        indent_level + 1,
+    )
+    return f"Array<{item_type}>"
 
 
 def format_gpt_oss_object_type(

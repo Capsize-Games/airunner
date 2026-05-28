@@ -115,25 +115,43 @@ def load_llama_with_context_fallback(
     attempted_n_ctx = adapter.n_ctx
     for n_ctx in context_retry_sequence(adapter):
         try:
-            llama_kwargs = llama_kwargs_for_context(adapter, base_kwargs, n_ctx)
-            adapter._llama = llama_cls(**llama_kwargs)
-            adapter.n_ctx = n_ctx
+            _load_llama_for_context(adapter, llama_cls, base_kwargs, n_ctx)
             return
         except Exception as exc:
-            if not should_retry_context(exc, n_ctx):
-                raise
-            next_n_ctx = next_retry_context(n_ctx)
-            if next_n_ctx is None:
-                raise
-            adapter.logger.warning(
-                "Failed to create llama_context at n_ctx=%s; retrying "
-                "with n_ctx=%s",
-                n_ctx,
-                next_n_ctx,
-            )
-            attempted_n_ctx = next_n_ctx
+            attempted_n_ctx = _retry_n_ctx_or_raise(adapter, exc, n_ctx)
 
     adapter.n_ctx = attempted_n_ctx
+
+
+def _load_llama_for_context(
+    adapter: Any,
+    llama_cls: Any,
+    base_kwargs: dict[str, Any],
+    n_ctx: int,
+) -> None:
+    """Load llama.cpp for one specific context size."""
+    llama_kwargs = llama_kwargs_for_context(adapter, base_kwargs, n_ctx)
+    adapter._llama = llama_cls(**llama_kwargs)
+    adapter.n_ctx = n_ctx
+
+
+def _retry_n_ctx_or_raise(
+    adapter: Any,
+    exc: Exception,
+    n_ctx: int,
+) -> int:
+    """Return the next retry context or re-raise the current exception."""
+    if not should_retry_context(exc, n_ctx):
+        raise
+    next_n_ctx = next_retry_context(n_ctx)
+    if next_n_ctx is None:
+        raise
+    adapter.logger.warning(
+        "Failed to create llama_context at n_ctx=%s; retrying with n_ctx=%s",
+        n_ctx,
+        next_n_ctx,
+    )
+    return next_n_ctx
 
 
 def llama_kwargs_for_context(
@@ -146,7 +164,16 @@ def llama_kwargs_for_context(
     llama_kwargs["n_ctx"] = n_ctx
     if not adapter.use_yarn or n_ctx <= adapter.yarn_orig_ctx:
         return llama_kwargs
+    _apply_yarn_context_scaling(adapter, llama_kwargs, n_ctx)
+    return llama_kwargs
 
+
+def _apply_yarn_context_scaling(
+    adapter: Any,
+    llama_kwargs: dict[str, Any],
+    n_ctx: int,
+) -> None:
+    """Apply YaRN-specific context scaling parameters."""
     adapter.logger.info(
         "Enabling YaRN for extended context: %s -> %s",
         adapter.yarn_orig_ctx,
@@ -154,12 +181,10 @@ def llama_kwargs_for_context(
     )
     llama_kwargs["rope_scaling_type"] = 2
     llama_kwargs["yarn_orig_ctx"] = adapter.yarn_orig_ctx
-    factor = n_ctx / adapter.yarn_orig_ctx
-    llama_kwargs["yarn_ext_factor"] = factor
+    llama_kwargs["yarn_ext_factor"] = n_ctx / adapter.yarn_orig_ctx
     llama_kwargs["yarn_attn_factor"] = 1.0
     llama_kwargs["yarn_beta_fast"] = 32.0
     llama_kwargs["yarn_beta_slow"] = 1.0
-    return llama_kwargs
 
 
 def context_retry_sequence(adapter: Any) -> tuple[int, ...]:

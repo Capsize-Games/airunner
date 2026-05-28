@@ -4,10 +4,6 @@ from __future__ import annotations
 
 from typing import Any, Optional
 
-from langchain_core.callbacks import CallbackManagerForLLMRun
-from langchain_core.messages import AIMessageChunk
-from langchain_core.outputs import ChatGenerationChunk
-
 from airunner_services.llm.utils.stream_debug import print_stream_debug
 
 
@@ -33,30 +29,8 @@ def merge_native_tool_call_deltas(
 ) -> None:
     """Merge streamed native tool call deltas into one buffer map."""
     for raw_call in raw_tool_calls or []:
-        index = raw_call.get("index", len(tool_call_buffers))
-        buffer = tool_call_buffers.setdefault(
-            index,
-            {
-                "id": None,
-                "type": "function",
-                "function": {"name": "", "arguments": ""},
-            },
-        )
-        if raw_call.get("id"):
-            buffer["id"] = raw_call["id"]
-        if raw_call.get("type"):
-            buffer["type"] = raw_call["type"]
-        function = raw_call.get("function") or {}
-        if function.get("name"):
-            buffer["function"]["name"] = merge_streamed_text(
-                buffer["function"]["name"],
-                function["name"],
-            )
-        if function.get("arguments"):
-            buffer["function"]["arguments"] = merge_streamed_text(
-                buffer["function"]["arguments"],
-                function["arguments"],
-            )
+        buffer = _tool_call_buffer(tool_call_buffers, raw_call)
+        _merge_native_tool_call(buffer, raw_call)
 
 
 def finalize_native_tool_call_deltas(
@@ -72,32 +46,49 @@ def finalize_native_tool_call_deltas(
     return adapter._parse_native_tool_calls(ordered_calls)
 
 
-def _stream_chat_kwargs(
-    adapter: Any,
-    converted_messages: list[dict[str, Any]],
-    max_tokens: int,
-    stop: Optional[list[str]],
+def _tool_call_buffer(
+    tool_call_buffers: dict[int, dict[str, Any]],
+    raw_call: dict[str, Any],
 ) -> dict[str, Any]:
-    """Build one llama.cpp streaming chat kwargs payload."""
-    chat_kwargs = {
-        "messages": converted_messages,
-        "max_tokens": max_tokens,
-        "temperature": adapter.temperature,
-        "top_p": adapter.top_p,
-        "top_k": adapter.top_k,
-        "min_p": adapter.min_p,
-        "repeat_penalty": adapter.repeat_penalty,
-        "stream": True,
-    }
-    if stop:
-        chat_kwargs["stop"] = stop
-    if adapter._use_native_tool_calling():
-        chat_kwargs["tools"] = adapter.tools
-        if adapter.tool_choice is not None:
-            chat_kwargs["tool_choice"] = adapter.tool_choice
-    return chat_kwargs
+    """Return the mutable buffer used for one streamed tool call."""
+    index = raw_call.get("index", len(tool_call_buffers))
+    return tool_call_buffers.setdefault(
+        index,
+        {
+            "id": None,
+            "type": "function",
+            "function": {"name": "", "arguments": ""},
+        },
+    )
 
 
+def _merge_native_tool_call(
+    buffer: dict[str, Any],
+    raw_call: dict[str, Any],
+) -> None:
+    """Merge one streamed tool-call delta into its buffer."""
+    if raw_call.get("id"):
+        buffer["id"] = raw_call["id"]
+    if raw_call.get("type"):
+        buffer["type"] = raw_call["type"]
+    function = raw_call.get("function") or {}
+    _merge_function_delta(buffer, function, "name")
+    _merge_function_delta(buffer, function, "arguments")
+
+
+def _merge_function_delta(
+    buffer: dict[str, Any],
+    function: dict[str, Any],
+    key: str,
+) -> None:
+    """Merge one streamed function field into the active tool buffer."""
+    fragment = function.get(key)
+    if not fragment:
+        return
+    buffer["function"][key] = merge_streamed_text(
+        buffer["function"][key],
+        fragment,
+    )
 def _log_stream_start(adapter: Any, max_tokens: int) -> None:
     """Log the start of one streaming llama.cpp request."""
     adapter.logger.info(
@@ -124,30 +115,3 @@ def _log_stream_delta(chunk_index: int, delta: dict[str, Any]) -> None:
         reasoning_content=delta.get("reasoning_content"),
         tool_calls=delta.get("tool_calls"),
     )
-
-
-def _text_chunk(
-    text: str,
-    reasoning_text: Optional[str],
-    run_manager: Optional[CallbackManagerForLLMRun],
-    chunk_index: int,
-) -> ChatGenerationChunk:
-    """Return one text chunk and notify the run manager when needed."""
-    additional_kwargs = {}
-    if reasoning_text:
-        additional_kwargs["reasoning_content"] = reasoning_text
-    chunk = ChatGenerationChunk(
-        message=AIMessageChunk(
-            content=text,
-            additional_kwargs=additional_kwargs,
-        )
-    )
-    print_stream_debug(
-        "chat_gguf.yield",
-        chunk_index=chunk_index,
-        content=text,
-        reasoning_content=reasoning_text,
-    )
-    if run_manager:
-        run_manager.on_llm_new_token(text, chunk=chunk)
-    return chunk

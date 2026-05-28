@@ -27,44 +27,92 @@ def _react_tool_calls(
     """Build parsed tool-call payloads from ReAct matches."""
     tool_calls: List[Dict[str, Any]] = []
     for tool_name, raw_input in react_matches:
-        normalized = _normalize_react_json(raw_input)
-        if not normalized:
-            continue
-        try:
-            args = json.loads(normalized)
-        except json.JSONDecodeError as error:
-            snippet = normalized[:200].replace("\n", " ")
-            adapter.logger.error(
-                "Failed to parse ReAct JSON for %s: %s | snippet=%s",
-                tool_name,
-                error,
-                snippet,
-            )
-            continue
-        tool_calls.append(
-            {
-                "name": tool_name,
-                "args": args,
-                "id": f"call_{len(tool_calls)}",
-                "type": "tool_call",
-            }
-        )
+        tool_call = _react_tool_call(adapter, tool_name, raw_input, len(tool_calls))
+        if tool_call is not None:
+            tool_calls.append(tool_call)
     return tool_calls
+
+
+def _react_tool_call(
+    adapter: Any,
+    tool_name: str,
+    raw_input: str,
+    index: int,
+) -> Dict[str, Any] | None:
+    """Return one parsed ReAct tool-call payload when JSON is valid."""
+    args = _react_tool_args(adapter, tool_name, raw_input)
+    if args is None:
+        return None
+    return {
+        "name": tool_name,
+        "args": args,
+        "id": f"call_{index}",
+        "type": "tool_call",
+    }
+
+
+def _react_tool_args(
+    adapter: Any,
+    tool_name: str,
+    raw_input: str,
+) -> Any | None:
+    """Parse one ReAct action input into tool-call arguments."""
+    normalized = _normalize_react_json(raw_input)
+    if not normalized:
+        return None
+    try:
+        return json.loads(normalized)
+    except json.JSONDecodeError as error:
+        snippet = normalized[:200].replace("\n", " ")
+        adapter.logger.error(
+            "Failed to parse ReAct JSON for %s: %s | snippet=%s",
+            tool_name,
+            error,
+            snippet,
+        )
+        return None
 
 
 def _normalize_react_json(raw_input: str) -> str:
     """Normalize a ReAct Action Input payload into one JSON object."""
-    normalized = raw_input.strip().rstrip("</s> ")
-    while normalized.startswith("{{") and normalized.endswith("}}"):
-        if len(normalized) <= 4:
-            break
-        normalized = normalized[1:-1]
-    while normalized.startswith("{") and normalized.endswith("}}"):
-        normalized = normalized[:-1]
-    while normalized.startswith("{{") and normalized.endswith("}"):
-        normalized = normalized[1:]
-    if normalized.startswith("{") and normalized.endswith("}"):
+    normalized = _trim_react_payload(raw_input)
+    normalized = _unwrap_double_braces(normalized)
+    normalized = _balance_react_braces(normalized)
+    if _is_json_object(normalized):
         return normalized
+    return _embedded_json_object(normalized)
+
+
+def _trim_react_payload(raw_input: str) -> str:
+    """Trim trailing stop markers from one ReAct action payload."""
+    return raw_input.strip().rstrip("</s> ")
+
+
+def _unwrap_double_braces(normalized: str) -> str:
+    """Remove repeated outer brace pairs from one payload."""
+    while len(normalized) > 4:
+        if not normalized.startswith("{{") or not normalized.endswith("}}"):
+            return normalized
+        normalized = normalized[1:-1]
+    return normalized
+
+
+def _balance_react_braces(normalized: str) -> str:
+    """Fix one-sided doubled braces around a JSON payload."""
+    if normalized.startswith("{") and normalized.endswith("}}"):
+        return normalized[:-1]
+    if normalized.startswith("{{") and normalized.endswith("}"):
+        return normalized[1:]
+    return normalized
+
+
+def _is_json_object(normalized: str) -> bool:
+    """Return True when the payload is already a JSON object string."""
+    return normalized.startswith("{") and normalized.endswith("}")
+
+
+def _embedded_json_object(normalized: str) -> str:
+    """Extract one embedded JSON object from a larger payload."""
     brace_match = re.search(r"\{.*\}", normalized, re.DOTALL)
     if brace_match:
         return brace_match.group(0).strip()

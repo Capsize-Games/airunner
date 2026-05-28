@@ -4,14 +4,16 @@ from __future__ import annotations
 
 import json
 import re
-import uuid
 from typing import Any, Dict, List, Optional
 
 from langchain_core.messages import AIMessage
 
 from airunner_services.llm.adapters.chat_gguf_tool_parsing_common import (
-    _tool_call,
     normalize_tool_payload,
+)
+from airunner_services.llm.adapters.chat_gguf_tool_parsing_gpt_oss_commentary import (
+    extract_gpt_oss_recipient,
+    parse_gpt_oss_commentary_tool_calls,
 )
 from airunner_services.llm.gpt_oss_parser import (
     CALL_TOKEN,
@@ -61,24 +63,11 @@ def build_gpt_oss_message_from_raw(
 ) -> AIMessage:
     """Normalize one raw Harmony completion into an AIMessage."""
     parsed = parse_gpt_oss_response(raw_text)
-    content = parsed.content
-    tool_calls = parse_gpt_oss_commentary_tool_calls(adapter, raw_text)
-    suppressed_prefilled_payload = False
-    if not tool_calls:
-        tool_calls = parse_prefilled_gpt_oss_tool_call(adapter, raw_text)
-        if not tool_calls:
-            suppressed_prefilled_payload = bool(
-                forced_gpt_oss_tool_name(adapter)
-            ) and looks_like_tool_argument_payload(raw_text)
-    if tool_calls:
-        content = ""
-    else:
-        tool_calls, content = adapter._extract_tool_calls(content or raw_text)
-        if suppressed_prefilled_payload and not tool_calls:
-            adapter.logger.warning(
-                "Suppressing malformed prefilled GPT-OSS tool payload"
-            )
-            content = ""
+    tool_calls, content, suppressed_prefilled_payload = _resolved_raw_tool_calls(
+        adapter,
+        raw_text,
+        parsed.content,
+    )
     additional_kwargs = _message_additional_kwargs(
         parsed.thinking_content,
         suppressed_prefilled_payload,
@@ -88,6 +77,38 @@ def build_gpt_oss_message_from_raw(
         tool_calls=tool_calls,
         additional_kwargs=additional_kwargs,
     )
+
+
+def _resolved_raw_tool_calls(
+    adapter: Any,
+    raw_text: str,
+    parsed_content: str,
+) -> tuple[list[dict[str, Any]], str, bool]:
+    """Return raw Harmony tool calls, fallback text, and suppression state."""
+    tool_calls = parse_gpt_oss_commentary_tool_calls(adapter, raw_text)
+    if tool_calls:
+        return tool_calls, "", False
+    tool_calls = parse_prefilled_gpt_oss_tool_call(adapter, raw_text)
+    if tool_calls:
+        return tool_calls, "", False
+    suppressed = _suppressed_prefilled_payload(adapter, raw_text)
+    tool_calls, content = adapter._extract_tool_calls(parsed_content or raw_text)
+    if suppressed and not tool_calls:
+        _log_suppressed_prefilled_payload(adapter)
+        return tool_calls, "", True
+    return tool_calls, content, suppressed
+
+
+def _suppressed_prefilled_payload(adapter: Any, raw_text: str) -> bool:
+    """Return whether a malformed forced tool payload should be suppressed."""
+    return bool(forced_gpt_oss_tool_name(adapter)) and (
+        looks_like_tool_argument_payload(raw_text)
+    )
+
+
+def _log_suppressed_prefilled_payload(adapter: Any) -> None:
+    """Log when a malformed forced Harmony payload is suppressed."""
+    adapter.logger.warning("Suppressing malformed prefilled GPT-OSS tool payload")
 
 
 def _message_additional_kwargs(
@@ -101,71 +122,6 @@ def _message_additional_kwargs(
     if suppressed_prefilled_payload:
         additional_kwargs["suppressed_malformed_tool_payload"] = True
     return additional_kwargs
-
-
-def parse_gpt_oss_commentary_tool_calls(
-    adapter: Any,
-    content: str,
-) -> List[Dict[str, Any]]:
-    """Parse GPT-OSS Harmony commentary tool calls from raw output."""
-    tool_calls: List[Dict[str, Any]] = []
-    pattern = re.compile(
-        r"(?:<\|start\|>assistant(?P<role_header>[^<]*))?"
-        r"<\|channel\|>(?P<channel_header>[^<]*)"
-        r"(?:<\|constrain\|>(?P<constraint>[^<]*))?"
-        r"<\|message\|>(?P<body>.*?)(?P<terminator><\|call\|>|"
-        r"<\|end\|>|<\|return\|>|$)",
-        re.DOTALL,
-    )
-    for match in pattern.finditer(content or ""):
-        channel_header = (match.group("channel_header") or "").strip()
-        channel_name = channel_header.split()[0] if channel_header else ""
-        if channel_name != "commentary":
-            continue
-        terminator = match.group("terminator") or ""
-        if terminator not in {"<|call|>", ""}:
-            continue
-        recipient = extract_gpt_oss_recipient(
-            match.group("role_header"),
-            channel_header,
-        )
-        if not recipient or not recipient.startswith("functions."):
-            continue
-        body = (match.group("body") or "").strip()
-        if not body:
-            continue
-        arguments = _load_tool_arguments(adapter, recipient, body)
-        if arguments is None:
-            continue
-        tool_calls.append(
-            {
-                "id": str(uuid.uuid4()),
-                "name": recipient.removeprefix("functions."),
-                "args": arguments,
-                "type": "tool_call",
-            }
-        )
-    return tool_calls
-
-
-def _load_tool_arguments(
-    adapter: Any,
-    recipient: str,
-    body: str,
-) -> Optional[Dict[str, Any]]:
-    """Load one commentary tool-call argument body as JSON."""
-    try:
-        arguments = json.loads(body)
-    except json.JSONDecodeError as exc:
-        adapter.logger.warning(
-            "Failed to parse GPT-OSS Harmony tool call JSON for %s: %s",
-            recipient,
-            exc,
-        )
-        return None
-    if isinstance(arguments, dict):
-        return arguments
-    return {}
 
 
 def extract_prefilled_gpt_oss_tool_json(content: str) -> str:
@@ -219,15 +175,3 @@ def parse_prefilled_gpt_oss_tool_call(
     if not isinstance(arguments, dict):
         return []
     return [_tool_call(tool_name, arguments)]
-
-
-def extract_gpt_oss_recipient(
-    role_header: Optional[str],
-    channel_header: str,
-) -> Optional[str]:
-    """Return the Harmony tool recipient from role or channel header."""
-    for header in (role_header or "", channel_header or ""):
-        match = re.search(r"\bto=([^\s<]+)", header)
-        if match:
-            return match.group(1).strip()
-    return None

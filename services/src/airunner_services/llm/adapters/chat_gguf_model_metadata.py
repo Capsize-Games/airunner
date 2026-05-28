@@ -2,7 +2,6 @@
 
 import importlib.metadata as importlib_metadata
 import os
-from functools import lru_cache
 from typing import Any, Optional
 
 from packaging.version import InvalidVersion, Version
@@ -42,6 +41,8 @@ _KNOWN_UNSUPPORTED_ARCHITECTURES = {
     "mistral3": Version("0.3.16"),
     "qwen35": Version("0.3.16"),
 }
+
+_KNOWN_KV_CACHE_SHAPES: dict[str, tuple[int, int, int, int]] = {}
 
 
 def _current_llama_cpp_version() -> Optional[Version]:
@@ -108,45 +109,30 @@ def _estimate_known_kv_cache_gb(
 ) -> Optional[float]:
     """Estimate KV-cache size for known shipped GGUF models."""
     filename = os.path.basename(str(model_path)).lower()
-    known_shapes: dict[str, tuple[int, int, int, int]] = {}
+    shape = _known_kv_cache_shape(filename)
+    if shape is None:
+        return None
+    return _kv_cache_gb_from_shape(
+        n_ctx,
+        shape,
+        type_k_bytes=type_k_bytes,
+        type_v_bytes=type_v_bytes,
+    )
 
-    for marker, shape in known_shapes.items():
-        if marker not in filename:
-            continue
-        block_count, head_count_kv, key_length, value_length = shape
-        kv_bytes = (
-            int(n_ctx)
-            * block_count
-            * head_count_kv
-            * (
-                key_length * int(type_k_bytes)
-                + value_length * int(type_v_bytes)
-            )
-        )
-        return kv_bytes / float(1024 ** 3)
 
+def _known_kv_cache_shape(
+    filename: str,
+) -> Optional[tuple[int, int, int, int]]:
+    """Return one known KV-cache shape for a shipped GGUF filename."""
+    for marker, shape in _KNOWN_KV_CACHE_SHAPES.items():
+        if marker in filename:
+            return shape
     return None
 
 
 def read_gguf_architecture(model_path: str) -> Optional[str]:
     """Return the GGUF general.architecture metadata value."""
     return _read_gguf_string_field(model_path, "general.architecture")
-
-
-def _estimate_known_or_missing_kv_cache(
-    model_path: str,
-    n_ctx: int,
-    *,
-    type_k_bytes: int,
-    type_v_bytes: int,
-) -> Optional[float]:
-    """Return a known-shape estimate when metadata is missing."""
-    return _estimate_known_kv_cache_gb(
-        model_path,
-        n_ctx,
-        type_k_bytes=type_k_bytes,
-        type_v_bytes=type_v_bytes,
-    )
 
 
 def estimate_gguf_kv_cache_gb(
@@ -159,31 +145,64 @@ def estimate_gguf_kv_cache_gb(
 ) -> Optional[float]:
     """Estimate the GGUF KV-cache footprint for one configured context."""
     metadata_values = metadata or {}
-    architecture = str(
-        metadata_values.get("general.architecture", "")
-    ).strip()
+    architecture = str(metadata_values.get("general.architecture", "")).strip()
     if not architecture:
-        return _estimate_known_or_missing_kv_cache(
+        return _estimate_known_kv_cache_gb(
             model_path,
             n_ctx,
             type_k_bytes=type_k_bytes,
             type_v_bytes=type_v_bytes,
         )
 
-    prefix = f"{architecture}.attention"
-    block_count = _metadata_int(metadata_values, f"{architecture}.block_count")
-    head_count_kv = _metadata_int(
-        metadata_values,
-        f"{prefix}.head_count_kv",
-    )
-    key_length = _metadata_int(metadata_values, f"{prefix}.key_length")
-    value_length = _metadata_int(metadata_values, f"{prefix}.value_length")
-    if not all(
-        value is not None
-        for value in (block_count, head_count_kv, key_length, value_length)
-    ):
-        return None
+    return _metadata_kv_cache_estimate(metadata_values, architecture, n_ctx, type_k_bytes=type_k_bytes, type_v_bytes=type_v_bytes)
 
+
+def _metadata_kv_cache_estimate(
+    metadata: dict[str, Any],
+    architecture: str,
+    n_ctx: int,
+    *,
+    type_k_bytes: int,
+    type_v_bytes: int,
+) -> Optional[float]:
+    """Estimate KV-cache size directly from parsed GGUF metadata."""
+    shape = _metadata_kv_cache_shape(metadata, architecture)
+    if shape is None:
+        return None
+    return _kv_cache_gb_from_shape(
+        n_ctx,
+        shape,
+        type_k_bytes=type_k_bytes,
+        type_v_bytes=type_v_bytes,
+    )
+
+
+def _metadata_kv_cache_shape(
+    metadata: dict[str, Any],
+    architecture: str,
+) -> Optional[tuple[int, int, int, int]]:
+    """Return KV-cache shape fields parsed from GGUF metadata."""
+    prefix = f"{architecture}.attention"
+    shape = (
+        _metadata_int(metadata, f"{architecture}.block_count"),
+        _metadata_int(metadata, f"{prefix}.head_count_kv"),
+        _metadata_int(metadata, f"{prefix}.key_length"),
+        _metadata_int(metadata, f"{prefix}.value_length"),
+    )
+    if any(value is None for value in shape):
+        return None
+    return shape
+
+
+def _kv_cache_gb_from_shape(
+    n_ctx: int,
+    shape: tuple[int, int, int, int],
+    *,
+    type_k_bytes: int,
+    type_v_bytes: int,
+) -> float:
+    """Return one KV-cache size estimate in gigabytes for a model shape."""
+    block_count, head_count_kv, key_length, value_length = shape
     kv_bytes = (
         int(n_ctx)
         * int(block_count)
@@ -212,34 +231,4 @@ def detect_known_unsupported_architecture(
         return None
     if runtime_version <= max_supported_version:
         return architecture
-    return None
-
-
-@lru_cache(maxsize=16)
-def _llama_chat_format_supported(name: str) -> bool:
-    """Return True when the runtime supports a chat format."""
-    if not name:
-        return False
-    try:
-        from llama_cpp import llama_chat_format
-
-        llama_chat_format.get_chat_completion_handler(name)
-    except Exception:
-        return False
-    return True
-
-
-def _detect_chat_format(model_path: str) -> Optional[str]:
-    """Detect the appropriate chat format based on model filename."""
-    path_lower = model_path.lower()
-    if "gpt-oss" in path_lower:
-        if _llama_chat_format_supported("gpt-oss"):
-            return "gpt-oss"
-        return None
-    if "qwen" in path_lower:
-        return "chatml"
-    if any(name in path_lower for name in ["llama-3", "llama3", "meta-llama-3"]):
-        return "llama-3"
-    if any(name in path_lower for name in ["mistral", "magistral"]):
-        return "mistral-instruct"
     return None

@@ -101,7 +101,12 @@ def inject_gpt_oss_tool_instructions(
 ) -> str:
     """Inject Harmony-style tool instructions for GPT-OSS."""
     tools_text = format_gpt_oss_namespace(adapter)
-    instructions = (
+    return system_content + _gpt_oss_tool_instructions_text(tools_text)
+
+
+def _gpt_oss_tool_instructions_text(tools_text: str) -> str:
+    """Build the GPT-OSS tool-instruction block."""
+    return (
         "\n\n# Valid channels: analysis, commentary, final. "
         "Channel must be included for every message.\n"
         "For coding and editor tasks, avoid analysis-only replies. "
@@ -116,7 +121,6 @@ def inject_gpt_oss_tool_instructions(
         "with JSON arguments. After tool results arrive, continue "
         "and answer the user on the final channel."
     )
-    return system_content + instructions
 
 
 def gpt_oss_harmony_system_message(adapter: Any) -> str:

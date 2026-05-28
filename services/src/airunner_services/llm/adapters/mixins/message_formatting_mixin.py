@@ -1,12 +1,17 @@
 """Message formatting operations for HuggingFace chat models."""
 
-import os
 from typing import List
 from langchain_core.messages import (
     BaseMessage,
     AIMessage,
     HumanMessage,
     SystemMessage,
+)
+from airunner_services.llm.adapters.mixins.chat_template_application import (
+    apply_chat_template,
+)
+from airunner_services.llm.adapters.mixins.chat_template_message_builder import (
+    build_chat_template_payload,
 )
 
 # Mistral native function calling support
@@ -126,183 +131,8 @@ class MessageFormattingMixin:
         Returns:
             Formatted prompt string
         """
-        from langchain_core.messages import ToolMessage
-        
-        chat_messages = []
-        extracted_images = []  # Store image payloads for vision models
-        image_placeholders = 0  # Count of image placeholders in content
-        
-        for msg in messages:
-            if isinstance(msg, SystemMessage):
-                chat_messages.append(
-                    {"role": "system", "content": msg.content}
-                )
-            elif isinstance(msg, HumanMessage):
-                # Only keep images from the most recent human turn to avoid
-                # re-sending stale or missing binaries from older turns.
-                extracted_images = []
-                image_placeholders = 0
-                # Handle multimodal content (list with text and images)
-                if isinstance(msg.content, list):
-                    content_parts = []
-                    for part in msg.content:
-                        if isinstance(part, dict):
-                            if part.get("type") == "text":
-                                content_parts.append(part)
-                            elif part.get("type") == "image_url":
-                                content_parts.append({"type": "image"})
-                                image_url = part.get("image_url", {}).get("url", "")
-                                if image_url:
-                                    extracted_images.append(image_url)
-                                image_placeholders += 1
-                            elif part.get("type") == "image":
-                                content_parts.append({"type": "image"})
-                                image_payload = (
-                                    part.get("data")
-                                    or part.get("image")
-                                    or part.get("path")
-                                    or part.get("url")
-                                    or part
-                                )
-                                extracted_images.append(image_payload)
-                                image_placeholders += 1
-                        else:
-                            if self._is_pil_image(part):
-                                content_parts.append({"type": "image"})
-                                extracted_images.append(part)
-                                image_placeholders += 1
-                            else:
-                                content_parts.append({"type": "text", "text": str(part)})
-                    chat_messages.append({"role": "user", "content": content_parts})
-                else:
-                    chat_messages.append({"role": "user", "content": msg.content})
-            elif isinstance(msg, AIMessage):
-                # Include tool_calls if present (for models that support function calling)
-                msg_dict = {"role": "assistant", "content": msg.content or ""}
-                if hasattr(msg, "tool_calls") and msg.tool_calls:
-                    msg_dict["tool_calls"] = msg.tool_calls
-                chat_messages.append(msg_dict)
-            elif isinstance(msg, ToolMessage):
-                # Tool results - critical for the model to see search/tool outputs
-                chat_messages.append({
-                    "role": "tool",
-                    "content": msg.content,
-                    "tool_call_id": getattr(msg, "tool_call_id", ""),
-                })
-
-        # Avoid logging raw prompt/message content by default.
-        # If you really need to debug templating, opt-in explicitly.
-        if os.environ.get("AIRUNNER_LOG_SENSITIVE_PROMPTS") == "1":
-            try:
-                preview = []
-                for m in chat_messages[:5]:
-                    role = m.get("role")
-                    content = m.get("content", "")
-                    if isinstance(content, list):
-                        content_len = sum(
-                            len(str(p.get("text", ""))) if isinstance(p, dict) else len(str(p))
-                            for p in content
-                        )
-                    else:
-                        content_len = len(str(content))
-                    preview.append({"role": role, "content_len": content_len})
-                self.logger.debug("Chat template input message preview (redacted): %s", preview)
-            except Exception:
-                pass
-
-        # Check if we have tools to pass to the template
-        template_kwargs = {
-            "tokenize": False,
-            "add_generation_prompt": True,
-        }
-
-        # If placeholders exist but no images were extracted, replace placeholders
-        # with a text marker to avoid corrupting the prompt for vision models.
-        if image_placeholders > 0 and not extracted_images:
-            try:
-                for message in chat_messages:
-                    content = message.get("content", [])
-                    if isinstance(content, list):
-                        for idx, part in enumerate(content):
-                            if isinstance(part, dict) and part.get("type") == "image":
-                                content[idx] = {
-                                    "type": "text",
-                                    "text": "[image unavailable]",
-                                }
-                self.logger.warning(
-                    "Image placeholders found but no images extracted; replaced with text fallback"
-                )
-            except Exception:
-                pass
-
-        # Pass tools ONLY if available, non-empty, AND we're in a tool-supporting mode
-        # For JSON mode (Qwen), tools should be passed to the template
-        # BUT only if tools are actually bound to the model
-        if (
-            hasattr(self, "tools")
-            and self.tools
-            and len(self.tools) > 0
-            and hasattr(self, "tool_calling_mode")
-            and self.tool_calling_mode == "json"
-        ):
-            template_kwargs["tools"] = self.tools
-
-        # Enable thinking mode ONLY for models that support it (Qwen3)
-        # This enables <think>...</think> reasoning blocks
-        # Only pass enable_thinking if the model actually uses it to avoid template warnings
-        model_supports_thinking = self._check_model_supports_thinking()
-        if model_supports_thinking:
-            # First check if enable_thinking was set directly on the instance (for fast calls)
-            instance_thinking = getattr(self, 'enable_thinking', None)
-            if instance_thinking is not None:
-                user_wants_thinking = instance_thinking
-                self.logger.debug(f"[THINKING] enable_thinking={user_wants_thinking} (from instance attr)")
-            else:
-                # Read from database for real-time toggle support
-                from airunner_services.database.models.llm_generator_settings import LLMGeneratorSettings
-                db_settings = LLMGeneratorSettings.objects.first()
-                user_wants_thinking = True  # Default to enabled
-                if db_settings is not None:
-                    user_val = getattr(db_settings, "enable_thinking", None)
-                    if user_val is not None:
-                        user_wants_thinking = user_val
-                self.logger.debug(f"[THINKING] enable_thinking={user_wants_thinking} (from DB setting)")
-            
-            # Use the determined preference for thinking mode
-            template_kwargs["enable_thinking"] = user_wants_thinking
-
-        # Store extracted images for vision model processing
-        if extracted_images:
-            self._pending_images = extracted_images
-            self.logger.info(f"Stored {len(extracted_images)} images for vision processing")
-        else:
-            self._pending_images = []
-
-        # Prefer processor chat template for vision models so multimodal tokenization
-        # matches the image processor expectations (reduces garbled outputs).
-        template_target = None
-        if (
-            getattr(self, "is_vision_model", False)
-            and getattr(self, "processor", None) is not None
-            and hasattr(self.processor, "apply_chat_template")
-        ):
-            template_target = self.processor
-        elif self.tokenizer and hasattr(self.tokenizer, "apply_chat_template"):
-            template_target = self.tokenizer
-
-        if template_target is None:
-            return self._fallback_format(messages)
-
-        try:
-            return template_target.apply_chat_template(chat_messages, **template_kwargs)
-        except Exception:
-            # If processor chat templating fails, fall back to tokenizer, then fallback format.
-            if template_target is not self.tokenizer and self.tokenizer and hasattr(self.tokenizer, "apply_chat_template"):
-                try:
-                    return self.tokenizer.apply_chat_template(chat_messages, **template_kwargs)
-                except Exception:
-                    pass
-            return self._fallback_format(messages)
+        payload = build_chat_template_payload(self, messages)
+        return apply_chat_template(self, messages, payload)
 
     def _fallback_format(self, messages: List[BaseMessage]) -> str:
         """Simple fallback formatting when no chat template available.

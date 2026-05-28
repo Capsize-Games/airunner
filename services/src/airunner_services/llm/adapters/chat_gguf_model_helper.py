@@ -7,9 +7,11 @@ from airunner_services.llm.adapters.chat_gguf_model_discovery import (
 from airunner_services.llm.adapters.chat_gguf_model_loading import (
     load_model,
 )
+from airunner_services.llm.adapters.chat_gguf_chat_format_detection import (
+    _detect_chat_format,
+)
 from airunner_services.llm.adapters.chat_gguf_model_metadata import (
     _current_llama_cpp_version,
-    _detect_chat_format,
     detect_known_unsupported_architecture,
     estimate_gguf_kv_cache_gb,
     read_gguf_architecture,

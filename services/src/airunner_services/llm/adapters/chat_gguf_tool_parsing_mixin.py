@@ -117,26 +117,37 @@ class ChatGGUFToolParsingMixin:
         pattern = r'<tool_call>\s*(.*?)\s*</tool_call>'
         matches = re.findall(pattern, content, re.DOTALL)
         for match in matches:
-            try:
-                call_data = json.loads(match.strip())
-            except json.JSONDecodeError as error:
-                self.logger.warning("Failed to parse tool call JSON: %s", error)
-                continue
-            tool_calls.append(
-                {
-                    "id": str(uuid.uuid4()),
-                    "name": call_data.get("name"),
-                    "args": call_data.get("arguments", {}),
-                    "type": "tool_call",
-                }
-            )
-        cleaned = re.sub(
+            tool_call = self._parse_xml_tool_call_match(match)
+            if tool_call is not None:
+                tool_calls.append(tool_call)
+        cleaned = self._strip_xml_tool_calls(content)
+        return tool_calls, cleaned
+
+    def _parse_xml_tool_call_match(
+        self,
+        match: str,
+    ) -> Optional[Dict[str, Any]]:
+        """Parse one XML-tagged tool-call payload."""
+        try:
+            call_data = json.loads(match.strip())
+        except json.JSONDecodeError as error:
+            self.logger.warning("Failed to parse tool call JSON: %s", error)
+            return None
+        return {
+            "id": str(uuid.uuid4()),
+            "name": call_data.get("name"),
+            "args": call_data.get("arguments", {}),
+            "type": "tool_call",
+        }
+
+    def _strip_xml_tool_calls(self, content: str) -> str:
+        """Remove XML tool-call tags from response text."""
+        return re.sub(
             r'<tool_call>\s*.*?\s*</tool_call>',
             "",
             content,
             flags=re.DOTALL,
         ).strip()
-        return tool_calls, cleaned
 
     def _parse_react_tool_calls(
         self,
@@ -152,23 +163,31 @@ class ChatGGUFToolParsingMixin:
         """Parse OpenAI-style native tool calls from llama.cpp responses."""
         tool_calls: List[Dict[str, Any]] = []
         for raw_call in raw_tool_calls or []:
-            function = raw_call.get("function", {}) if isinstance(raw_call, dict) else {}
-            arguments = function.get("arguments", {})
-            if isinstance(arguments, str):
-                try:
-                    arguments = json.loads(arguments) if arguments.strip() else {}
-                except json.JSONDecodeError:
-                    self.logger.warning(
-                        "Failed to parse native tool arguments for %s",
-                        function.get("name", "unknown"),
-                    )
-                    arguments = {}
-            tool_calls.append(
-                {
-                    "id": raw_call.get("id") or str(uuid.uuid4()),
-                    "name": function.get("name"),
-                    "args": arguments if isinstance(arguments, dict) else {},
-                    "type": "tool_call",
-                }
-            )
+            tool_calls.append(self._build_native_tool_call(raw_call))
         return tool_calls
+
+    def _build_native_tool_call(self, raw_call: Dict[str, Any]) -> Dict[str, Any]:
+        """Build one normalized native tool-call payload."""
+        function = raw_call.get("function", {}) if isinstance(raw_call, dict) else {}
+        arguments = self._parse_native_tool_arguments(function)
+        return {
+            "id": raw_call.get("id") or str(uuid.uuid4()),
+            "name": function.get("name"),
+            "args": arguments,
+            "type": "tool_call",
+        }
+
+    def _parse_native_tool_arguments(self, function: Dict[str, Any]) -> Dict[str, Any]:
+        """Parse native tool-call arguments into a dictionary."""
+        arguments = function.get("arguments", {})
+        if not isinstance(arguments, str):
+            return arguments if isinstance(arguments, dict) else {}
+        try:
+            parsed = json.loads(arguments) if arguments.strip() else {}
+        except json.JSONDecodeError:
+            self.logger.warning(
+                "Failed to parse native tool arguments for %s",
+                function.get("name", "unknown"),
+            )
+            return {}
+        return parsed if isinstance(parsed, dict) else {}

@@ -1,7 +1,5 @@
 """Message-conversion helpers for the GGUF chat adapter."""
 
-import json
-import uuid
 from typing import Any, Dict, List, Optional, Sequence
 
 from langchain_core.messages import (
@@ -17,17 +15,20 @@ from airunner_services.llm.adapters.chat_gguf_prompt_instructions import (
     apply_thinking_directive,
     inject_tool_instructions,
 )
+from airunner_services.llm.adapters.chat_gguf_tool_call_conversion import (
+    convert_langchain_tool_call,
+    convert_langchain_tool_calls,
+)
 
 
-def convert_messages(
+def _convert_message_history(
     adapter: Any,
     messages: List[BaseMessage],
-) -> List[Dict[str, Any]]:
-    """Convert LangChain messages to llama-cpp message payloads."""
+    use_native_tool_calling: bool,
+) -> tuple[List[Dict[str, Any]], bool]:
+    """Convert one full history and track whether tool help was injected."""
     converted: List[Dict[str, Any]] = []
     tool_instructions_added = False
-    use_native_tool_calling = adapter._use_native_tool_calling()
-
     for message in messages:
         tool_instructions_added = _append_converted_message(
             adapter,
@@ -36,23 +37,74 @@ def convert_messages(
             use_native_tool_calling,
             tool_instructions_added,
         )
+    return converted, tool_instructions_added
 
-    if _needs_tool_system_message(
+
+def convert_messages(
+    adapter: Any,
+    messages: List[BaseMessage],
+) -> List[Dict[str, Any]]:
+    """Convert LangChain messages to llama-cpp message payloads."""
+    use_native_tool_calling = adapter._use_native_tool_calling()
+    converted, tool_instructions_added = _convert_message_history(
+        adapter,
+        messages,
+        use_native_tool_calling,
+    )
+    _prepend_tool_system_message(
+        adapter,
+        converted,
+        use_native_tool_calling,
+        tool_instructions_added,
+    )
+    _finalize_converted_messages(adapter, converted)
+    return converted
+
+
+def _prepend_tool_system_message(
+    adapter: Any,
+    converted: List[Dict[str, Any]],
+    use_native_tool_calling: bool,
+    tool_instructions_added: bool,
+) -> None:
+    """Insert a synthetic system message when tool guidance is still needed."""
+    if not _needs_tool_system_message(
         adapter,
         use_native_tool_calling,
         tool_instructions_added,
     ):
-        converted.insert(
-            0,
-            {
-                "role": "system",
-                "content": inject_tool_instructions(adapter, ""),
-            },
-        )
+        return
+    converted.insert(
+        0,
+        {
+            "role": "system",
+            "content": inject_tool_instructions(adapter, ""),
+        },
+    )
 
+
+def _finalize_converted_messages(
+    adapter: Any,
+    converted: List[Dict[str, Any]],
+) -> None:
+    """Apply post-processing directives to converted messages."""
     apply_gpt_oss_reasoning_effort(adapter, converted)
     apply_thinking_directive(adapter, converted)
-    return converted
+
+
+def _convert_non_system_message(
+    adapter: Any,
+    message: BaseMessage,
+    use_native_tool_calling: bool,
+) -> Optional[Dict[str, Any]]:
+    """Convert one non-system LangChain message when supported."""
+    if isinstance(message, HumanMessage):
+        return {"role": "user", "content": message.content}
+    if isinstance(message, AIMessage):
+        return _convert_ai_message(adapter, message)
+    if isinstance(message, ToolMessage):
+        return _convert_tool_message(adapter, message, use_native_tool_calling)
+    return None
 
 
 def _append_converted_message(
@@ -63,25 +115,34 @@ def _append_converted_message(
     tool_instructions_added: bool,
 ) -> bool:
     """Append one converted message and return tool-instruction state."""
-    if isinstance(message, SystemMessage):
-        return _append_system_message(
-            adapter,
-            converted,
-            message,
-            use_native_tool_calling,
-            tool_instructions_added,
+    if not isinstance(message, SystemMessage):
+        _append_non_system_message(
+            adapter, converted, message, use_native_tool_calling
         )
-    if isinstance(message, HumanMessage):
-        converted.append({"role": "user", "content": message.content})
         return tool_instructions_added
-    if isinstance(message, AIMessage):
-        converted.append(_convert_ai_message(adapter, message))
-        return tool_instructions_added
-    if isinstance(message, ToolMessage):
-        converted.append(
-            _convert_tool_message(adapter, message, use_native_tool_calling)
-        )
-    return tool_instructions_added
+    return _append_system_message(
+        adapter,
+        converted,
+        message,
+        use_native_tool_calling,
+        tool_instructions_added,
+    )
+
+
+def _append_non_system_message(
+    adapter: Any,
+    converted: List[Dict[str, Any]],
+    message: BaseMessage,
+    use_native_tool_calling: bool,
+) -> None:
+    """Append one converted non-system message when supported."""
+    converted_message = _convert_non_system_message(
+        adapter,
+        message,
+        use_native_tool_calling,
+    )
+    if converted_message is not None:
+        converted.append(converted_message)
 
 
 def _append_system_message(
@@ -165,44 +226,3 @@ def _should_inject_tool_instructions(
         and not use_native_tool_calling
         and not tool_instructions_added
     )
-
-
-def convert_langchain_tool_calls(
-    tool_calls: Sequence[Dict[str, Any]],
-) -> List[Dict[str, Any]]:
-    """Convert LangChain tool call records to OpenAI chat format."""
-    converted: List[Dict[str, Any]] = []
-    for tool_call in tool_calls or []:
-        openai_call = convert_langchain_tool_call(tool_call)
-        if openai_call is not None:
-            converted.append(openai_call)
-    return converted
-
-
-def convert_langchain_tool_call(
-    tool_call: Dict[str, Any],
-) -> Optional[Dict[str, Any]]:
-    """Convert one LangChain tool call to OpenAI chat format."""
-    if not isinstance(tool_call, dict):
-        return None
-
-    function = tool_call.get("function") or {}
-    name = tool_call.get("name") or function.get("name")
-    if not name:
-        return None
-
-    arguments = tool_call.get("args", function.get("arguments", {}))
-    if not isinstance(arguments, str):
-        try:
-            arguments = json.dumps(arguments or {}, sort_keys=True)
-        except TypeError:
-            arguments = "{}"
-
-    return {
-        "id": tool_call.get("id") or str(uuid.uuid4()),
-        "type": "function",
-        "function": {
-            "name": name,
-            "arguments": arguments,
-        },
-    }
