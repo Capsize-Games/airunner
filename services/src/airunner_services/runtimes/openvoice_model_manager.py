@@ -91,7 +91,26 @@ class OpenVoiceModelManager(TTSModelManager, metaclass=ABCMeta):
         """
         Return the appropriate device based on CUDA availability.
         """
+        if self._should_use_cpu_with_local_llm():
+            return "cpu"
         return default_openvoice_device()
+
+    def _should_use_cpu_with_local_llm(self) -> bool:
+        """Keep OpenVoice off CUDA while a local LLM is resident."""
+        if not torch.cuda.is_available():
+            return False
+        api = getattr(self, "api", None) or self.refresh_api_reference()
+        worker_manager = getattr(api, "_worker_manager", None)
+        llm_worker = getattr(worker_manager, "_llm_generate_worker", None)
+        if llm_worker is None:
+            return False
+        status_getter = getattr(llm_worker, "current_model_status", None)
+        if callable(status_getter):
+            status = status_getter()
+            if status in (ModelStatus.LOADED, ModelStatus.READY):
+                return True
+        model_manager = getattr(llm_worker, "_model_manager", None)
+        return getattr(model_manager, "_chat_model", None) is not None
 
     @property
     def tone_color_converter(self) -> StreamingToneColorConverter:
@@ -250,7 +269,10 @@ class OpenVoiceModelManager(TTSModelManager, metaclass=ABCMeta):
             initialize_elapsed = perf_counter() - initialize_start
 
             model_start = perf_counter()
-            self.model = TTS(language=self.language)
+            self.model = TTS(
+                language=self.language,
+                device=self.device,
+            )
             model_elapsed = perf_counter() - model_start
 
             self.logger.info(

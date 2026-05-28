@@ -11,6 +11,8 @@ from airunner.daemon_client.gui_daemon_client import GuiDaemonClient
 class ConversationDaemonClient:
     """Typed client for daemon-backed conversation endpoints."""
 
+    _BASE_PATH = "/api/v1/llm/conversations"
+
     def __init__(self, daemon_client: GuiDaemonClient) -> None:
         """Store the shared GUI daemon client."""
         self._client = daemon_client
@@ -19,7 +21,7 @@ class ConversationDaemonClient:
         """Return the serialized conversation list payload."""
         response = self._client._request(
             "GET",
-            f"/api/v1/conversations?{urlencode({'limit': limit})}",
+            f"{self._BASE_PATH}?{urlencode({'limit': limit})}",
         )
         return response.json().get("conversations", [])
 
@@ -35,7 +37,7 @@ class ConversationDaemonClient:
             query["conversation_id"] = conversation_id
         response = self._client._request(
             "GET",
-            f"/api/v1/conversations/session?{urlencode(query)}",
+            f"{self._BASE_PATH}/session?{urlencode(query)}",
         )
         return response.json()
 
@@ -48,7 +50,7 @@ class ConversationDaemonClient:
         """Mark one conversation current and return its session payload."""
         response = self._client._request(
             "POST",
-            "/api/v1/conversations/select",
+            f"{self._BASE_PATH}/select",
             json_payload={
                 "conversation_id": conversation_id,
                 "max_messages": max_messages,
@@ -64,7 +66,7 @@ class ConversationDaemonClient:
         """Create one new current conversation through the daemon."""
         response = self._client._request(
             "POST",
-            "/api/v1/conversations",
+            self._BASE_PATH,
             json_payload={"max_messages": max_messages},
         )
         return response.json()
@@ -73,7 +75,7 @@ class ConversationDaemonClient:
         """Delete one conversation through the daemon."""
         response = self._client._request(
             "DELETE",
-            f"/api/v1/conversations/{conversation_id}",
+            f"{self._BASE_PATH}/{conversation_id}",
         )
         return response.json()
 
@@ -81,7 +83,7 @@ class ConversationDaemonClient:
         """Delete all conversations through the daemon in tests only."""
         response = self._client._request(
             "DELETE",
-            "/api/v1/conversations",
+            self._BASE_PATH,
         )
         return response.json()
 
@@ -93,7 +95,7 @@ class ConversationDaemonClient:
         """Replace one conversation's stored messages through the daemon."""
         response = self._client._request(
             "PUT",
-            f"/api/v1/conversations/{conversation_id}/messages",
+            f"{self._BASE_PATH}/{conversation_id}/messages",
             json_payload={"messages": list(messages)},
         )
         return response.json()
@@ -106,7 +108,7 @@ class ConversationDaemonClient:
         """Replace one conversation's stored user-data through the daemon."""
         response = self._client._request(
             "PUT",
-            f"/api/v1/conversations/{conversation_id}/user-data",
+            f"{self._BASE_PATH}/{conversation_id}/user-data",
             json_payload={"user_data": dict(user_data or {})},
         )
         return response.json()

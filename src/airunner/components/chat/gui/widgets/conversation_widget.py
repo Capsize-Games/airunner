@@ -57,6 +57,13 @@ class ConversationWidget(BaseWidget):
 
     widget_class_ = Ui_conversation
 
+    @staticmethod
+    def _use_placeholder_conversation_view() -> bool:
+        """Return whether one lightweight placeholder should replace QWebEngine."""
+        return os.environ.get("AIRUNNER_TEST_NO_GUI_LAUNCH", "0") == "1" or (
+            os.environ.get("QT_QPA_PLATFORM", "").lower() == "offscreen"
+        )
+
     def __init__(self, *args, **kwargs):
         self.registered: bool = False
         self.signal_handlers = {
@@ -108,7 +115,7 @@ class ConversationWidget(BaseWidget):
         # Track which message index is currently being streamed to avoid overwriting
         self._active_stream_message_index = None
         self._rendered_request_ids = set()
-        self._js_ready = False
+        self._js_ready = self._use_placeholder_conversation_view()
         self._chat_bridge_flush_pending = False
         self._pending_chat_bridge_calls = []
         self._web_channel: Optional[QWebChannel] = None
@@ -159,6 +166,9 @@ class ConversationWidget(BaseWidget):
 
     def _ensure_web_engine_view(self) -> Optional[QWebEngineView]:
         """Create the conversation web view only when interactive HTML is needed."""
+        if self._use_placeholder_conversation_view():
+            return None
+
         view = self._get_view()
         if view is not None:
             self._initialize_web_engine_view(view)
@@ -279,6 +289,8 @@ class ConversationWidget(BaseWidget):
     def _ensure_interactive_template(self) -> None:
         """Load the full conversation webview only when chat content is needed."""
         if self._interactive_template_loaded:
+            return
+        if self._use_placeholder_conversation_view():
             return
         view = self._ensure_web_engine_view()
         if view is None:
@@ -495,6 +507,10 @@ class ConversationWidget(BaseWidget):
             callback: Function to call when JS is ready
             max_attempts: Maximum number of retry attempts (default 50 = ~2.5 seconds)
         """
+        if self._use_placeholder_conversation_view():
+            callback()
+            return
+
         self._ensure_interactive_template()
         attempt_count = 0
 
@@ -593,6 +609,10 @@ class ConversationWidget(BaseWidget):
             callback: Function to call when DOM is ready
             max_attempts: Maximum number of retry attempts (default 50 = ~2.5 seconds)
         """
+        if self._use_placeholder_conversation_view():
+            callback()
+            return
+
         self._ensure_interactive_template()
         attempt_count = 0
 

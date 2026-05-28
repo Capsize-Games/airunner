@@ -505,15 +505,10 @@ class ChatPromptWidget(BaseWidget):
         if conversation_id is None:
             conversation_id = self._ensure_conversation_context()
         if conversation_id is None:
-            self.logger.error(
-                "Aborting chat request - unable to determine conversation ID"
+            self.logger.warning(
+                "Proceeding without conversation ID - conversation "
+                "persistence is unavailable"
             )
-            self.ui.prompt.setPlainText(actual_prompt)
-            self.prompt = actual_prompt
-            self.generating = False
-            self._set_generation_button_visibility(False)
-            self.enable_send_button()
-            return
 
         model_load_balancer = getattr(self.api, "model_load_balancer", None)
         loaded_models = set(

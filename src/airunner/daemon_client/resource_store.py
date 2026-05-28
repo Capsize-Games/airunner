@@ -429,6 +429,7 @@ class GuiResourceStore:
             )
 
             shared_client = GuiDaemonClient()
+        self._daemon_client = shared_client
         self._clients = {
             "settings": DomainResourceClient(shared_client, "settings"),
             "catalog": DomainResourceClient(shared_client, "catalog"),
@@ -709,8 +710,25 @@ class GuiResourceStore:
 def get_resource_store() -> GuiResourceStore:
     """Return a shared process-local GUI resource store instance."""
     global _shared_resource_store
+
+    active_client = None
+    try:
+        from PySide6.QtWidgets import QApplication
+
+        app = QApplication.instance()
+        if app is not None:
+            api = getattr(app, "api", None)
+            active_client = getattr(api, "daemon_client", None)
+    except Exception:
+        active_client = None
+
     if _shared_resource_store is None:
-        _shared_resource_store = GuiResourceStore()
+        _shared_resource_store = GuiResourceStore(active_client)
+    elif (
+        active_client is not None
+        and _shared_resource_store._daemon_client is not active_client
+    ):
+        _shared_resource_store = GuiResourceStore(active_client)
     return _shared_resource_store
 
 

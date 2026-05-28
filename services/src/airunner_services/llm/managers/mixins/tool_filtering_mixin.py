@@ -151,6 +151,12 @@ class ToolFilteringMixin:
                 "disabling tools"
             )
             selected_categories = []
+        elif self._is_constrained_reply_prompt(prompt):
+            self.logger.info(
+                "Auto mode: constrained reply prompt detected, "
+                "disabling tools"
+            )
+            selected_categories = []
         elif self._has_search_trigger_prompt(prompt):
             self.logger.info(
                 "Auto mode: search intent detected, forcing search category"

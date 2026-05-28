@@ -73,6 +73,16 @@ class ToolClassificationMixin:
         r"(?:fun\s+fact|quote)\b.*$",
         r"^\s*(?:make\s+me\s+laugh|be\s+funny)[!.?,\s]*$",
     )
+    CONSTRAINED_REPLY_HINTS: Tuple[str, ...] = (
+        "single digit",
+        "one digit",
+        "single character",
+        "one character",
+        "single letter",
+        "one letter",
+        "single word",
+        "one word",
+    )
     SEARCH_TRIGGER_WORDS: Tuple[str, ...] = (
         "search",
         "look up",
@@ -130,6 +140,20 @@ class ToolClassificationMixin:
         )
 
     @classmethod
+    def _is_constrained_reply_prompt(cls, prompt: str) -> bool:
+        """Return True for strict reply-shape prompts needing no tools."""
+        prompt_lc = re.sub(r"^\s*/no_think\s*", "", (prompt or "").lower())
+        prompt_lc = prompt_lc.strip()
+        if not prompt_lc or len(prompt_lc) > 160:
+            return False
+        if not re.match(r"^(?:reply|respond)\s+with\b", prompt_lc):
+            return False
+        return any(
+            hint in prompt_lc
+            for hint in cls.CONSTRAINED_REPLY_HINTS
+        )
+
+    @classmethod
     def _has_search_trigger_prompt(cls, prompt: str) -> bool:
         """Return True when a prompt clearly requests search tools."""
         prompt_lc = (prompt or "").strip().lower()
@@ -169,6 +193,50 @@ class ToolClassificationMixin:
             reasoning_text = tagged_thinking
         cleaned_thinking = reasoning_text.strip() or None
         return cleaned_thinking, visible_text
+
+    @staticmethod
+    def _classification_candidates(response_text: str) -> list[str]:
+        """Return normalized classifier candidates without assistant labels."""
+        normalized = re.sub(
+            r"categories:\s*[a-z,\s]+",
+            "",
+            (response_text or "").strip().lower(),
+            flags=re.IGNORECASE,
+        )
+        candidates = []
+        for line in normalized.splitlines():
+            candidate = line.strip()
+            if candidate in {"", "assistant", "assistant:"}:
+                continue
+            if candidate.startswith("assistant:"):
+                candidate = candidate[len("assistant:") :].strip()
+            elif candidate.startswith("assistant "):
+                candidate = candidate[len("assistant ") :].strip()
+            if candidate:
+                candidates.append(candidate)
+        return candidates or ([normalized] if normalized else [])
+
+    @staticmethod
+    def _parse_selected_categories(
+        candidate_text: str,
+        available_categories: list[str],
+    ) -> list[str]:
+        """Parse one normalized classifier response into tool categories."""
+        selected_categories = []
+        for cat in candidate_text.split(","):
+            token = cat.strip()
+            if token in available_categories and token not in selected_categories:
+                selected_categories.append(token)
+        if selected_categories:
+            return selected_categories[:5]
+        for token in candidate_text.replace(",", " ").split():
+            token_clean = token.strip().strip(".;:")
+            if (
+                token_clean in available_categories
+                and token_clean not in selected_categories
+            ):
+                selected_categories.append(token_clean)
+        return selected_categories[:5]
 
     def _emit_classification_thinking_event(
         self,
@@ -331,6 +399,20 @@ class ToolClassificationMixin:
             return thinking_text, response_text
         return self._split_classification_response(response_text)
 
+    def _invoke_classification_response(
+        self,
+        chat_model: Any,
+        classification_prompt: str,
+    ) -> Tuple[Optional[str], str]:
+        """Return one non-streamed classification response."""
+        response = chat_model.invoke(
+            [HumanMessage(content=classification_prompt)]
+        )
+        return self._split_classification_response(
+            getattr(response, "content", "") or "",
+            getattr(response, "additional_kwargs", {}) or {},
+        )
+
     def _classify_prompt_for_tools(
         self,
         prompt: str,
@@ -376,13 +458,21 @@ Reply with ONLY category names (comma-separated) or \"none\":"""
                         chat_model.tool_choice = "none"
 
                     try:
-                        thinking_text, response_text = (
-                            self._stream_classification_response(
-                                chat_model,
-                                classification_prompt,
-                                allow_thinking,
+                        if allow_thinking:
+                            thinking_text, response_text = (
+                                self._stream_classification_response(
+                                    chat_model,
+                                    classification_prompt,
+                                    allow_thinking,
+                                )
                             )
-                        )
+                        else:
+                            thinking_text, response_text = (
+                                self._invoke_classification_response(
+                                    chat_model,
+                                    classification_prompt,
+                                )
+                            )
                     finally:
                         if hasattr(chat_model, "enable_thinking"):
                             chat_model.enable_thinking = original_thinking
@@ -400,21 +490,10 @@ Reply with ONLY category names (comma-separated) or \"none\":"""
                         reasoning_content=thinking_text,
                     )
 
-                    response_text = response_text.strip().lower()
-                    response_text = re.sub(
-                        r"categories:\s*[a-z,\s]+",
-                        "",
-                        response_text,
-                        flags=re.IGNORECASE,
+                    candidate_texts = self._classification_candidates(
+                        response_text
                     )
-                    cleaned_lines = [
-                        line.strip()
-                        for line in response_text.splitlines()
-                        if line.strip()
-                    ]
-                    candidate_text = (
-                        cleaned_lines[0] if cleaned_lines else response_text
-                    )
+                    candidate_text = candidate_texts[0] if candidate_texts else ""
                     self.logger.info(
                         "LLM classification response: %s",
                         candidate_text,
@@ -426,25 +505,20 @@ Reply with ONLY category names (comma-separated) or \"none\":"""
                         return []
 
                     selected_categories = []
-                    for cat in candidate_text.split(","):
-                        token = cat.strip()
-                        if (
-                            token in available_categories
-                            and token not in selected_categories
-                        ):
-                            selected_categories.append(token)
+                    for candidate in candidate_texts:
+                        selected_categories = self._parse_selected_categories(
+                            candidate,
+                            available_categories,
+                        )
+                        if selected_categories:
+                            break
 
-                    if not selected_categories:
-                        for token in candidate_text.replace(",", " ").split():
-                            token_clean = token.strip().strip(".;:")
-                            if (
-                                token_clean in available_categories
-                                and token_clean not in selected_categories
-                            ):
-                                selected_categories.append(token_clean)
+                    if not selected_categories and len(candidate_texts) > 1:
+                        selected_categories = self._parse_selected_categories(
+                            " ".join(candidate_texts),
+                            available_categories,
+                        )
 
-                    if len(selected_categories) > 5:
-                        selected_categories = selected_categories[:5]
                     if not selected_categories:
                         self.logger.info(
                             "Auto mode: No valid categories parsed, defaulting "

@@ -353,9 +353,13 @@ class TTSGeneratorWorker(Worker):
 		return ModelStatus.UNLOADED
 
 	def on_llm_text_streamed_signal(self, data):
+		response = data.get("response", None)
+		if data.get("_skip_worker_manager_tts"):
+			return
+		if response is not None and getattr(response, "skip_tts_stream", False):
+			return
 		if not self.tts_enabled:
 			return
-		response = data.get("response", None)
 
 		if not response:
 			raise ValueError("No LLMResponse object found in data")
@@ -398,9 +402,15 @@ class TTSGeneratorWorker(Worker):
 				TTSGeneratorWorker._reset_llm_stream_state(self)
 			return
 
-		queued_message = TTSGeneratorWorker._visible_tts_delta(self)
-		has_speakable_text = bool(queued_message.strip())
-		if not has_speakable_text and not response.is_end_of_message:
+		if not response.is_end_of_message:
+			return
+
+		queued_message = (
+			getattr(response, "final_visible_message", None)
+			or TTSGeneratorWorker._current_visible_tts_text(self).strip()
+		)
+		if not queued_message:
+			TTSGeneratorWorker._reset_llm_stream_state(self)
 			return
 
 		active_model = self._active_tts_model()
@@ -422,19 +432,17 @@ class TTSGeneratorWorker(Worker):
 			self.logger.debug("Unblocking TTS due to new message")
 			self.on_unblock_tts_generator_signal(None)
 
-		if queued_message and response.is_end_of_message:
-			if queued_message[-1] not in ".!?":
-				queued_message += "."
+		if queued_message[-1] not in ".!?":
+			queued_message += "."
 
 		self.add_to_queue(
 			{
 				"message": queued_message,
-				"is_end_of_message": response.is_end_of_message,
+				"is_end_of_message": True,
 			}
 		)
 
-		if response.is_end_of_message:
-			TTSGeneratorWorker._reset_llm_stream_state(self)
+		TTSGeneratorWorker._reset_llm_stream_state(self)
 
 	def on_interrupt_process_signal(self, data: dict = None):
 		client = self._daemon_client()

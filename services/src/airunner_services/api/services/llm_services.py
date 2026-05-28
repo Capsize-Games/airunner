@@ -82,6 +82,9 @@ class LLMAPIService(
 			data["_skip_worker_manager_tts"] = True
 		elif self._forward_headless_tts_final_response(response):
 			data["_skip_worker_manager_tts"] = True
+		elif self._should_skip_headless_tts_stream(response):
+			response.skip_tts_stream = True
+			data["_skip_worker_manager_tts"] = True
 		self.emit_signal(SignalCode.LLM_TEXT_STREAMED_SIGNAL, data)
 
 	def send_llm_thinking_signal(
@@ -122,6 +125,30 @@ class LLMAPIService(
 		del data
 		return False
 
+	def _should_skip_headless_tts_stream(
+		self,
+		response: LLMResponse,
+	) -> bool:
+		"""Return True when headless TTS should ignore raw stream chunks."""
+		request_id = getattr(response, "request_id", None)
+		if not request_id or not self._is_headless_tts_assistant_response(
+			response,
+		):
+			return False
+		if getattr(response, "is_end_of_message", False):
+			return False
+		return self._headless_tts_request_enabled.get(request_id, True)
+
+	def _is_headless_tts_assistant_response(
+		self,
+		response: LLMResponse,
+	) -> bool:
+		"""Return True for assistant-visible chunks that headless TTS may speak."""
+		if getattr(response, "is_system_message", False):
+			return False
+		message_type = getattr(response, "message_type", None)
+		return message_type in (None, "", "assistant")
+
 	def _forward_headless_tts_final_response(
 		self,
 		response: LLMResponse,
@@ -129,6 +156,8 @@ class LLMAPIService(
 		"""Forward one completed visible reply to headless TTS."""
 		request_id = getattr(response, "request_id", None)
 		message = getattr(response, "message", "") or ""
+		if not self._is_headless_tts_assistant_response(response):
+			return False
 		if request_id and not self._headless_tts_request_enabled.get(
 			request_id,
 			True,
@@ -151,12 +180,26 @@ class LLMAPIService(
 		if not request_id or not getattr(response, "is_end_of_message", False):
 			return False
 
-		full_message = self._headless_tts_response_buffer.pop(request_id, "")
+		full_message = (
+			getattr(response, "final_visible_message", None)
+			or self._headless_tts_response_buffer.pop(request_id, "")
+		)
+		self._headless_tts_response_buffer.pop(request_id, None)
 		self._headless_tts_request_enabled.pop(request_id, None)
 		if not full_message or getattr(response, "is_system_message", False):
 			return False
 
 		worker = self._tts_stream_worker()
+		enqueue = getattr(worker, "add_to_queue", None)
+		if callable(enqueue):
+			enqueue(
+				{
+					"message": full_message,
+					"is_end_of_message": True,
+				}
+			)
+			return True
+
 		handler = getattr(worker, "on_llm_text_streamed_signal", None)
 		if not callable(handler):
 			return False

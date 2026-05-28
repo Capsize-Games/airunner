@@ -4,9 +4,19 @@ from abc import ABC, ABCMeta
 from abc import abstractmethod
 import os
 
+from airunner.qt_runtime_env import configure_early_qt_environment
+
+configure_early_qt_environment()
+
 from PySide6 import QtGui
-from PySide6.QtWidgets import QWidget
-from PySide6.QtCore import QTimer
+from PySide6.QtWidgets import QApplication, QWidget
+from PySide6.QtCore import QCoreApplication, QTimer, Qt
+
+if QCoreApplication.instance() is None:
+    QApplication.setAttribute(
+        Qt.ApplicationAttribute.AA_UseSoftwareOpenGL
+    )
+
 from airunner.enums import CanvasToolName, TemplateName
 from airunner.gui.styles.styles_mixin import StylesMixin
 from airunner.components.application.gui.windows.main.settings_mixin import (

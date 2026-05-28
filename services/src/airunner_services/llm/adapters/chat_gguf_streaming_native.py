@@ -17,6 +17,9 @@ from airunner_services.llm.adapters.chat_gguf_streaming_common import (
     finalize_native_tool_call_deltas,
     merge_native_tool_call_deltas,
 )
+from airunner_services.llm.adapters.chat_gguf_generation_helper import (
+    effective_max_tokens,
+)
 from airunner_services.llm.adapters.chat_gguf_streaming_gpt_oss import (
     _yield_gpt_oss_stream_tail,
 )
@@ -44,6 +47,7 @@ def _stream_native_completion(
     max_tokens = kwargs.get("max_new_tokens")
     if max_tokens is None:
         max_tokens = kwargs.get("max_tokens", adapter.max_tokens)
+    max_tokens = effective_max_tokens(adapter, max_tokens)
     chat_kwargs = _stream_chat_kwargs(adapter, converted_messages, max_tokens, stop)
     adapter._interrupted = False
     full_content: list[str] = []

@@ -55,6 +55,7 @@ DEFAULT_TTS_MODEL_PATH = (
     / "models"
     / "tts"
 )
+FUNCTIONAL_TEST_LOG_ROOT = _PROJECT_ROOT / "logs" / "functional-tests"
 
 
 @dataclass(frozen=True)
@@ -215,39 +216,49 @@ def stop_process(process: subprocess.Popen) -> None:
         process.wait(timeout=10)
 
 
+def _functional_test_run_dir() -> Path:
+    """Return one repo-local directory for daemon test artifacts."""
+    FUNCTIONAL_TEST_LOG_ROOT.mkdir(parents=True, exist_ok=True)
+    return Path(
+        tempfile.mkdtemp(
+            prefix="daemon-",
+            dir=str(FUNCTIONAL_TEST_LOG_ROOT),
+        )
+    )
+
+
 @contextmanager
 def started_daemon(env: dict[str, str]) -> Iterator[DaemonHandle]:
     """Start one real daemon subprocess and yield its connection details."""
     port = _free_tcp_port()
-    with tempfile.TemporaryDirectory() as temp_dir:
-        temp_path = Path(temp_dir)
-        config_path = temp_path / "daemon.yaml"
-        log_path = temp_path / "daemon.log"
-        config_path.write_text(
-            yaml.safe_dump(_daemon_config(port, temp_path / "daemon.heartbeat")),
-            encoding="utf-8",
+    temp_path = _functional_test_run_dir()
+    config_path = temp_path / "daemon.yaml"
+    log_path = temp_path / "daemon.log"
+    config_path.write_text(
+        yaml.safe_dump(_daemon_config(port, temp_path / "daemon.heartbeat")),
+        encoding="utf-8",
+    )
+
+    with open(log_path, "w", encoding="utf-8") as log_handle:
+        process = subprocess.Popen(
+            [
+                sys.executable,
+                "-m",
+                "airunner_services.daemon",
+                "--config",
+                str(config_path),
+            ],
+            cwd=str(_PROJECT_ROOT),
+            env=env,
+            stdout=log_handle,
+            stderr=subprocess.STDOUT,
         )
 
-        with open(log_path, "w", encoding="utf-8") as log_handle:
-            process = subprocess.Popen(
-                [
-                    sys.executable,
-                    "-m",
-                    "airunner_services.daemon",
-                    "--config",
-                    str(config_path),
-                ],
-                cwd=str(_PROJECT_ROOT),
-                env=env,
-                stdout=log_handle,
-                stderr=subprocess.STDOUT,
-            )
-
-        try:
-            _wait_for_health(port, process, log_path)
-            yield DaemonHandle(port=port, log_path=log_path, process=process)
-        finally:
-            stop_process(process)
+    try:
+        _wait_for_health(port, process, log_path)
+        yield DaemonHandle(port=port, log_path=log_path, process=process)
+    finally:
+        stop_process(process)
 
 
 def visible_llm_message(message: str) -> str:

@@ -11,6 +11,10 @@ CUDA_MALLOC_ASYNC_ALLOCATOR = "backend:cudaMallocAsync"
 def configure_early_torch_allocator_environment() -> None:
     """Set PyTorch allocator env vars before any torch import occurs."""
     os.environ.setdefault(
+        "TOKENIZERS_PARALLELISM",
+        "false",
+    )
+    os.environ.setdefault(
         "PYTORCH_ALLOC_CONF",
         CUDA_MALLOC_ASYNC_ALLOCATOR,
     )

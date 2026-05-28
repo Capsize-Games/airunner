@@ -95,6 +95,15 @@ def apply_runtime_env_overrides(adapter: Any) -> None:
     n_gpu_layers_override = _get_int_env("AIRUNNER_GGUF_N_GPU_LAYERS")
     if n_gpu_layers_override is not None:
         adapter.n_gpu_layers = n_gpu_layers_override
+        return
+    if _needs_safe_gpt_oss_cpu_default(adapter):
+        adapter.n_gpu_layers = 0
+
+
+def _needs_safe_gpt_oss_cpu_default(adapter: Any) -> bool:
+    """Return True when GPT-OSS should avoid full offload by default."""
+    model_path = str(getattr(adapter, "model_path", "")).lower()
+    return "gpt-oss" in model_path and getattr(adapter, "n_gpu_layers", -1) < 0
 
 
 def load_llama_with_context_fallback(

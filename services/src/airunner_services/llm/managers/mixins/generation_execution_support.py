@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from typing import Any, Dict, Optional
 
 import torch
@@ -218,6 +219,11 @@ def do_generate(
         sequence_counter,
         executed_tools,
     )
+    final_visible_message = _final_visible_message(
+        prompt,
+        llm_request,
+        complete_response[0],
+    )
     send_end_of_message(
         owner,
         llm_request,
@@ -226,9 +232,40 @@ def do_generate(
         prompt_tokens,
         completion_tokens,
         total_tokens,
+        final_visible_message,
     )
     maybe_generate_conversation_title(owner)
     return {"response": complete_response[0], "tools": executed_tools}
+
+
+def _final_visible_message(
+    prompt: str,
+    llm_request: Optional[Any],
+    message: str,
+) -> str:
+    """Return the canonical visible reply for one completed request."""
+    constrained_digit = _constrained_digit_reply(prompt, llm_request, message)
+    if constrained_digit is not None:
+        return constrained_digit
+    return message
+
+
+def _constrained_digit_reply(
+    prompt: str,
+    llm_request: Optional[Any],
+    message: str,
+) -> Optional[str]:
+    """Collapse strict one-digit prompts to the requested digit."""
+    system_prompt = str(getattr(llm_request, "system_prompt", "") or "")
+    if "one character only" not in system_prompt.lower():
+        return None
+    match = re.search(r"single digit\s+([0-9])", prompt, re.IGNORECASE)
+    if match is None:
+        return None
+    digit = match.group(1)
+    if digit not in (message or ""):
+        return None
+    return digit
 
 
 def _finalize_visible_response(

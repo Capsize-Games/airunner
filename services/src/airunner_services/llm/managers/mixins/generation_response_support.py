@@ -192,14 +192,14 @@ def extract_final_response(owner, result: Dict[str, Any]) -> str:
             saw_gpt_oss_markup = True
             parsed = parse_gpt_oss_response(final_content)
             if parsed.content:
-                return parsed.content
+                return _normalize_final_content(parsed.content)
             continue
         if "\nAction:" in final_content:
             response_part = final_content.split("\nAction:")[0].strip()
             if response_part:
-                return response_part
+                return _normalize_final_content(response_part)
             continue
-        return final_content
+        return _normalize_final_content(final_content)
     if saw_gpt_oss_markup:
         owner.logger.info("GPT-OSS response had no visible final content")
         return ""
@@ -213,6 +213,16 @@ def _final_ai_messages(result: Dict[str, Any]) -> list[AIMessage]:
     return [
         message for message in result["messages"] if isinstance(message, AIMessage)
     ]
+
+
+def _normalize_final_content(content: str) -> str:
+    """Strip one leading assistant label from a final model reply."""
+    normalized = (content or "").lstrip()
+    lowered = normalized.lower()
+    for prefix in ("assistant\n", "assistant:"):
+        if lowered.startswith(prefix):
+            return normalized[len(prefix):].lstrip()
+    return normalized
 
 def extract_usage_tokens(
     result: Dict[str, Any],

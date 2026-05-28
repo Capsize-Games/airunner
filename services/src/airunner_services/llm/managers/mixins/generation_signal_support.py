@@ -15,6 +15,25 @@ def current_assistant_turn_index(owner) -> int:
     return int(turn_index or 0)
 
 
+def _is_assistant_preamble_only(text: str) -> bool:
+    """Return True when streamed visible text is only an assistant label."""
+    return (text or "").strip().lower() in {"assistant", "assistant:"}
+
+
+def _strip_leading_assistant_preamble(existing: str, text: str) -> str:
+    """Drop one leading assistant label from the first streamed chunk."""
+    if existing or not text:
+        return text
+    normalized = text.lstrip()
+    lowered = normalized.lower()
+    for prefix in ("assistant\n", "assistant:", "assistant "):
+        if lowered.startswith(prefix):
+            return normalized[len(prefix) :].lstrip()
+    if _is_assistant_preamble_only(normalized):
+        return ""
+    return text
+
+
 def emit_visible_response(
     owner,
     llm_request: Optional[Any],
@@ -23,6 +42,8 @@ def emit_visible_response(
     sequence_counter: List[int],
 ) -> None:
     """Emit one visible response chunk when streaming produced none."""
+    if _is_assistant_preamble_only(complete_response[0]):
+        complete_response[0] = ""
     if not message or complete_response[0]:
         return
     complete_response[0] = message
@@ -51,6 +72,10 @@ def create_streaming_callback(
 
     def handle_streaming_token(token_text: str) -> None:
         """Forward streaming tokens to the GUI and accumulate response."""
+        token_text = _strip_leading_assistant_preamble(
+            complete_response[0],
+            token_text,
+        )
         if not token_text:
             return
         token_text = prepare_stream_chunk(complete_response[0], token_text)
@@ -112,6 +137,7 @@ def send_end_of_message(
     prompt_tokens: Optional[int],
     completion_tokens: Optional[int],
     total_tokens: Optional[int],
+    final_visible_message: Optional[str] = None,
 ) -> None:
     """Emit the end-of-message chunk for one assistant response."""
     sequence_counter[0] += 1
@@ -122,6 +148,7 @@ def send_end_of_message(
     owner.api.llm.send_llm_text_streamed_signal(
         LLMResponse(
             node_id=llm_request.node_id if llm_request else None,
+            final_visible_message=final_visible_message,
             is_end_of_message=True,
             sequence_number=sequence_counter[0],
             request_id=getattr(owner, "_current_request_id", None),

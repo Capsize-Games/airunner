@@ -5,7 +5,7 @@ import numpy as np
 import torch.nn as nn
 from tqdm import tqdm
 import torch
-from typing import Dict
+from typing import Dict, Optional
 from airunner_services.contract_enums import AvailableLanguage
 from airunner_services.utils.memory.clear_memory import clear_memory
 from airunner_services.vendor.melo import utils
@@ -51,10 +51,11 @@ class TTS(nn.Module):
     def __init__(
         self,
         language: AvailableLanguage = AvailableLanguage.EN,
+        device: Optional[str] = None,
     ):
         super().__init__()
         normalized_language = _normalize_language(language)
-        self._device: str = None
+        self._device: Optional[str] = device
         self.cleaner = Cleaner()
         self._hps = None
         self._model = None

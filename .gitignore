@@ -94,3 +94,4 @@ reports/*
 !scripts/security_audit.sh
 plans
 facehuggershield
+logs

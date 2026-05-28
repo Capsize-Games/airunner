@@ -13,6 +13,9 @@ from airunner_services.llm.adapters.chat_gguf_prompt_harmony_render import (
     render_harmony_message,
     stringify_harmony_content,
 )
+from airunner_services.llm.adapters.chat_gguf_generation_helper import (
+    effective_max_tokens,
+)
 from airunner_services.llm.adapters.chat_gguf_prompt_instructions import (
     gpt_oss_harmony_system_message,
 )
@@ -67,9 +70,10 @@ def build_gpt_oss_completion_kwargs(
     stream: bool,
 ) -> Dict[str, Any]:
     """Build llama.cpp completion kwargs for raw Harmony prompting."""
+    max_tokens = effective_max_tokens(adapter, adapter.max_tokens)
     completion_kwargs: Dict[str, Any] = {
         "prompt": render_gpt_oss_harmony_prompt(adapter, messages),
-        "max_tokens": adapter.max_tokens,
+        "max_tokens": max_tokens,
         "temperature": adapter.temperature,
         "top_p": adapter.top_p,
         "top_k": adapter.top_k,

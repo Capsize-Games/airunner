@@ -18,6 +18,10 @@ from airunner_services.utils.application.log_hygiene import (
 )
 
 
+QWEN_NO_THINK_MIN_TOKENS = 48
+GPT_OSS_MIN_TOKENS = 32
+
+
 def generate_chat_result(
     adapter: Any,
     messages: list[BaseMessage],
@@ -70,9 +74,10 @@ def _chat_completion_kwargs(
     stop: Optional[list[str]],
 ) -> dict[str, Any]:
     """Build one llama.cpp chat completion kwargs payload."""
+    max_tokens = effective_max_tokens(adapter, adapter.max_tokens)
     chat_kwargs = {
         "messages": converted_messages,
-        "max_tokens": adapter.max_tokens,
+        "max_tokens": max_tokens,
         "temperature": adapter.temperature,
         "top_p": adapter.top_p,
         "top_k": adapter.top_k,
@@ -87,6 +92,32 @@ def _chat_completion_kwargs(
         if adapter.tool_choice is not None:
             chat_kwargs["tool_choice"] = adapter.tool_choice
     return chat_kwargs
+
+
+def effective_max_tokens(
+    adapter: Any,
+    requested_max_tokens: Optional[int],
+) -> Optional[int]:
+    """Return the effective max token budget for one GGUF request."""
+    if requested_max_tokens is None:
+        return None
+    max_tokens = int(requested_max_tokens)
+    if _needs_qwen_no_think_floor(adapter):
+        return max(max_tokens, QWEN_NO_THINK_MIN_TOKENS)
+    if _needs_gpt_oss_floor(adapter):
+        return max(max_tokens, GPT_OSS_MIN_TOKENS)
+    return max_tokens
+
+
+def _needs_qwen_no_think_floor(adapter: Any) -> bool:
+    """Return True when Qwen no-think needs a minimum token floor."""
+    model_path = str(getattr(adapter, "model_path", "")).lower()
+    return not getattr(adapter, "enable_thinking", True) and "qwen3" in model_path
+
+
+def _needs_gpt_oss_floor(adapter: Any) -> bool:
+    """Return True when GPT-OSS Harmony needs room to reach `final`."""
+    return adapter._uses_gpt_oss_parser()
 
 
 def _log_tool_mode(adapter: Any) -> None:

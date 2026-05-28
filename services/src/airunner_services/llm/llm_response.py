@@ -13,6 +13,8 @@ class LLMResponse:
     """Represent one streamed or complete LLM response payload."""
 
     message: str = ""
+    final_visible_message: Optional[str] = None
+    skip_tts_stream: bool = False
     is_first_message: bool = False
     is_end_of_message: bool = False
     name: Optional[str] = None

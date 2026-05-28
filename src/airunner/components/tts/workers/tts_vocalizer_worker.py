@@ -13,8 +13,18 @@ from airunner.components.application.workers.worker import Worker
 from airunner.utils.audio.sound_device_manager import SoundDeviceManager
 
 
+class _SoundDeviceProxy:
+    """Lazy sounddevice proxy that preserves the module-level patch seam."""
+
+    def __getattr__(self, name: str):
+        return getattr(import_module("sounddevice"), name)
+
+
+sd = _SoundDeviceProxy()
+
+
 def _sounddevice():
-    return import_module("sounddevice")
+    return sd
 
 
 class TTSVocalizerWorker(Worker):

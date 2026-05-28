@@ -49,7 +49,7 @@ from airunner.bootstrap.openvoice_languages import (
 from airunner.components.tts.workers.tts_vocalizer_worker import (
     TTSVocalizerWorker,
 )
-from airunner.components.tts.workers.tts_generator_worker import (
+from airunner_services.workers.tts_generator_worker import (
     TTSGeneratorWorker,
 )
 from airunner.components.stt.workers.audio_capture_worker import (

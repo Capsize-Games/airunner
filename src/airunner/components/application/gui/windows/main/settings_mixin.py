@@ -108,7 +108,11 @@ class SettingsMixin(
         """Refresh one stale cached API reference when a better one exists."""
         live_api = self._resolve_api_reference()
         current_api = getattr(self, "api", None)
-        if self._api_capability_score(live_api) > (
+        live_client = getattr(live_api, "daemon_client", None)
+        current_client = getattr(current_api, "daemon_client", None)
+        if live_client is not None and live_client is not current_client:
+            self.api = live_api
+        elif self._api_capability_score(live_api) > (
             self._api_capability_score(current_api)
         ):
             self.api = live_api
@@ -142,8 +146,17 @@ class SettingsMixin(
     def resource_store(self) -> GuiResourceStore:
         """Return the shared daemon-backed resource store."""
         shared = self.settings_mixin_shared_instance
+        daemon_client = getattr(self, "daemon_client", None)
+        if daemon_client is None:
+            api = self.refresh_api_reference()
+            daemon_client = getattr(api, "daemon_client", None)
+
         if shared.resource_store is None:
-            daemon_client = getattr(self, "daemon_client", None)
+            shared.resource_store = GuiResourceStore(daemon_client)
+        elif (
+            daemon_client is not None
+            and shared.resource_store._daemon_client is not daemon_client
+        ):
             shared.resource_store = GuiResourceStore(daemon_client)
         return shared.resource_store
 

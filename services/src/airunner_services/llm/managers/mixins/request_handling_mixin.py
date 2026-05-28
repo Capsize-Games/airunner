@@ -328,6 +328,7 @@ class RequestHandlingMixin:
 
         targets = [self._chat_model]
         if self._workflow_manager:
+            targets.append(getattr(self._workflow_manager, "_chat_model", None))
             targets.append(
                 getattr(self._workflow_manager, "_original_chat_model", None)
             )
@@ -369,6 +370,7 @@ class RequestHandlingMixin:
         reasoning_patches: list[tuple[Any, Any]] = []
         targets = [self._chat_model]
         if self._workflow_manager:
+            targets.append(getattr(self._workflow_manager, "_chat_model", None))
             targets.append(
                 getattr(self._workflow_manager, "_original_chat_model", None)
             )
