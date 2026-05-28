@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+import os
 from typing import Any
 from typing import Optional
 
 from airunner_services.contract_enums import ModelStatus
 from airunner_services.contract_enums import ModelType
+from airunner_services.settings import AIRUNNER_BASE_PATH
 from airunner_services.settings import AIRUNNER_LOG_LEVEL
 from airunner_services.database.models.application_settings import (
     ApplicationSettings,
@@ -105,7 +107,19 @@ class TTSModelManager(MediatorMixin):
     @property
     def path_settings(self) -> Any:
         """Return the persisted path settings or one default object."""
-        return self._load_settings(PathSettings)
+        settings = self._load_settings(PathSettings)
+        env_tts_model_path = os.environ.get("AIRUNNER_TTS_MODEL_PATH", "")
+        if env_tts_model_path.strip():
+            settings.tts_model_path = os.path.expanduser(env_tts_model_path)
+            return settings
+        if getattr(settings, "tts_model_path", None):
+            return settings
+        base_path = getattr(settings, "base_path", None) or AIRUNNER_BASE_PATH
+        settings.tts_model_path = os.path.join(
+            os.path.expanduser(base_path),
+            "text/models/tts",
+        )
+        return settings
 
     def change_model_status(
         self,

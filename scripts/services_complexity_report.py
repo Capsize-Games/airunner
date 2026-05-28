@@ -49,8 +49,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--max-function-lines", type=int, default=20)
     parser.add_argument("--max-complexity-rank", default="B")
     parser.add_argument("--min-mi", type=float, default=65.0)
-    parser.add_argument("--xenon-max-average", default="A")
-    parser.add_argument("--xenon-max-modules", default="A")
+    parser.add_argument("--xenon-max-average")
+    parser.add_argument("--xenon-max-modules")
     return parser.parse_args()
 
 
@@ -328,13 +328,15 @@ def run_xenon(
     args: argparse.Namespace,
 ) -> dict[str, Any]:
     """Run Xenon as a best-effort gate over the selected root."""
+    max_average = args.xenon_max_average or args.max_complexity_rank
+    max_modules = args.xenon_max_modules or args.max_complexity_rank
     command = [
         str(Path(sys.executable).with_name("xenon")),
         "--paths-in-front",
         "--max-average",
-        args.xenon_max_average,
+        max_average,
         "--max-modules",
-        args.xenon_max_modules,
+        max_modules,
         "--max-absolute",
         args.max_complexity_rank,
         "--exclude",

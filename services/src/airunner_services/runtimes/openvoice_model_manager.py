@@ -1,6 +1,7 @@
 from typing import Type, Optional
 from abc import ABCMeta
 import os
+from pathlib import Path
 from time import perf_counter
 import torch
 
@@ -28,6 +29,7 @@ torch.hub.set_dir(
 )
 
 from airunner_services.vendor.melo.api import TTS
+from airunner_services.vendor.melo.runtime_support import resolve_tts_model_root
 from airunner_services.runtimes.openvoice_runtime_helpers import (
     StreamingToneColorConverter,
     build_tone_color_converter,
@@ -40,6 +42,16 @@ from airunner_services.runtimes.openvoice_runtime_helpers import (
 from airunner_services.vendor.openvoice.api import ToneColorConverter
 
 
+def _configured_openvoice_root(tts_model_root: str) -> str:
+    """Return the OpenVoice asset directory for the active TTS config."""
+    configured_path = os.environ.get("AIRUNNER_TTS_MODEL_PATH", "").strip()
+    if configured_path:
+        candidate = Path(os.path.expanduser(configured_path))
+        if candidate.name == "openvoice" or (candidate / "checkpoints_v2").exists():
+            return str(candidate)
+    return os.path.join(tts_model_root, "openvoice")
+
+
 class OpenVoiceModelManager(TTSModelManager, metaclass=ABCMeta):
     """
     OpenVoice-based implementation of the TTSModelManager.
@@ -50,12 +62,17 @@ class OpenVoiceModelManager(TTSModelManager, metaclass=ABCMeta):
         self._target_se = None
         self._audio_name = None
         self._skip_download_check = False
+        self._tts_model_root: str = resolve_tts_model_root()
+        self._openvoice_model_root: str = _configured_openvoice_root(
+            self._tts_model_root
+        )
         self._checkpoint_converter_path: str = os.path.join(
-            self.path_settings.tts_model_path,
-            "openvoice/checkpoints_v2/converter",
+            self._openvoice_model_root,
+            "checkpoints_v2/converter",
         )
         self._output_dir: str = os.path.join(
-            self.path_settings.tts_model_path, "openvoice/outputs_v2"
+            self._openvoice_model_root,
+            "outputs_v2",
         )
         self._tone_color_converter: Optional[Type[ToneColorConverter]] = None
         self.model: Optional[TTS] = None
@@ -149,13 +166,13 @@ class OpenVoiceModelManager(TTSModelManager, metaclass=ABCMeta):
             if speaker_key == "en-us":
                 speaker_key = "en-newest"
             path = os.path.join(
-                self.path_settings.tts_model_path,
-                f"openvoice/checkpoints_v2/base_speakers/ses/{speaker_key}.pth",
+                self._openvoice_model_root,
+                f"checkpoints_v2/base_speakers/ses/{speaker_key}.pth",
             )
             if not os.path.exists(path):
                 path = os.path.join(
-                    self.path_settings.tts_model_path,
-                    f"openvoice/checkpoints_v2/base_speakers/ses/en-newest.pth",
+                    self._openvoice_model_root,
+                    "checkpoints_v2/base_speakers/ses/en-newest.pth",
                 )
             self._source_se = torch.load(
                 path,
@@ -209,8 +226,8 @@ class OpenVoiceModelManager(TTSModelManager, metaclass=ABCMeta):
         synthesis_elapsed = perf_counter() - synthesis_start
 
         output_path = os.path.join(
-            self.path_settings.tts_model_path,
-            f"openvoice/{self._output_dir}/output_v2_{self.speaker_key}.wav",
+            self._output_dir,
+            f"output_v2_{self.speaker_key}.wav",
         )
 
         conversion_start = perf_counter()
@@ -444,8 +461,7 @@ class OpenVoiceModelManager(TTSModelManager, metaclass=ABCMeta):
         missing_core_models = []
         for model_id in OPENVOICE_CORE_MODELS:
             model_path = os.path.join(
-                self.path_settings.base_path,
-                "text/models/tts",
+                self._tts_model_root,
                 model_id,
             )
             should_download, _ = should_trigger_openvoice_download(
@@ -460,8 +476,7 @@ class OpenVoiceModelManager(TTSModelManager, metaclass=ABCMeta):
         for lang_key, lang_info in OPENVOICE_LANGUAGE_MODELS.items():
             for model_id in lang_info["models"]:
                 model_path = os.path.join(
-                    self.path_settings.base_path,
-                    "text/models/tts",
+                    self._tts_model_root,
                     model_id,
                 )
                 should_download, _ = should_trigger_openvoice_download(

@@ -17,6 +17,21 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import List, Optional, Tuple
 
+from airunner_services.llm.long_running.task_detector_helpers import (
+    apply_analysis_keywords,
+    apply_coding_patterns,
+    apply_multi_item_patterns,
+    apply_research_patterns,
+)
+from airunner_services.llm.long_running.task_detector_state import (
+    DetectionState,
+    reason_text,
+)
+from airunner_services.llm.long_running.task_detector_patterns import (
+    CODING_PROJECT_KEYWORDS,
+    MULTI_STEP_KEYWORDS,
+)
+
 
 class TaskType(Enum):
     """Types of tasks that benefit from harness wrapping."""
@@ -39,179 +54,58 @@ class TaskAnalysis:
     reason: str  # Human-readable explanation
 
 
-# Patterns that indicate multiple items
-MULTI_ITEM_PATTERNS = [
-    # Explicit numbers: "research 5 papers", "implement 3 features", "write 3 papers"
-    r"(\d+)\s+(papers?|topics?|items?|features?|functions?|tests?|files?|endpoints?|components?|modules?|reports?|articles?)",
-    # "write X papers/reports" pattern
-    r"write\s+(\d+)\s+(?:research\s+)?(?:papers?|reports?|articles?)",
-    # Lists with "and": "research X, Y, and Z"
-    r"research\s+.+(?:,\s*.+)+(?:,?\s+and\s+.+)",
-    # Explicit lists: "the following: 1. X 2. Y"
-    r"(?:following|these)[:.]?\s*(?:\d+[.)]\s*.+){2,}",
-    # Bullet points
-    r"[-•]\s*.+(?:\n[-•]\s*.+)+",
-]
-
-# Legacy implementation keywords
-CODING_PROJECT_KEYWORDS = [
-    "implement",
-    "refactor",
-    "build",
-    "create",
-    "develop",
-    "add feature",
-    "add test",
-    "write test",
-    "unit test",
-    "fix bug",
-    "debug",
-    "optimize",
-    "migrate",
-    "upgrade",
-    "port",
-    "convert",
-    "integrate",
-]
-
-# Compound patterns that indicate coding projects (require fewer matches)
-CODING_COMPOUND_PATTERNS = [
-    r"refactor.*and.*(?:add|write|create)",  # "refactor X and add Y"
-    r"(?:add|write|create).*(?:test|feature).*and",  # "add tests and..."
-    r"implement.*(?:with|including).*test",  # "implement X with tests"
-]
-
-# Keywords indicating multi-step tasks
-MULTI_STEP_KEYWORDS = [
-    "step by step",
-    "steps",
-    "first.*then",
-    "after that",
-    "following steps",
-    "process",
-    "workflow",
-    "pipeline",
-]
-
-# Keywords indicating complex analysis
-ANALYSIS_KEYWORDS = [
-    "analyze",
-    "investigate",
-    "compare",
-    "evaluate",
-    "assess",
-    "review",
-    "audit",
-    "examine",
-    "comprehensive",
-    "thorough",
-    "in-depth",
-    "detailed analysis",
-]
-
-# Research-specific patterns
-RESEARCH_PATTERNS = [
-    r"research\s+(\d+)",  # "research 5 papers"
-    r"write\s+(\d+)\s+(?:papers?|reports?|articles?)",
-    r"investigate\s+(?:multiple|several|\d+)",
-    r"compare\s+(?:multiple|several|\d+)",
+REASON_TASK_TYPES = [
+    ("research", TaskType.MULTI_RESEARCH),
+    ("implementation", TaskType.MULTI_STEP),
+    ("multi-step", TaskType.MULTI_STEP),
+    ("analysis", TaskType.COMPLEX_ANALYSIS),
 ]
 
 
 def analyze_task(prompt: str) -> TaskAnalysis:
-    """Analyze a prompt to determine if it needs harness wrapping.
-
-    Args:
-        prompt: User's input text
-
-    Returns:
-        TaskAnalysis with detection results
-    """
+    """Analyze one prompt to determine if it needs harness wrapping."""
     prompt_lower = prompt.lower()
-    detected_items = []
-    confidence = 0.0
-    reasons = []
-
-    # Check for explicit multiple items (highest confidence)
-    for pattern in MULTI_ITEM_PATTERNS:
-        match = re.search(pattern, prompt_lower)
-        if match:
-            confidence = max(confidence, 0.9)
-            reasons.append(f"Explicit multi-item pattern: {match.group(0)[:50]}")
-            # Try to extract count
-            count_match = re.search(r"(\d+)", match.group(0))
-            if count_match:
-                count = int(count_match.group(1))
-                detected_items = [f"item_{i+1}" for i in range(count)]
-
-    # Check for research patterns
-    for pattern in RESEARCH_PATTERNS:
-        match = re.search(pattern, prompt_lower)
-        if match:
-            confidence = max(confidence, 0.85)
-            reasons.append(f"Research pattern detected: {match.group(0)}")
-            if match.groups():
-                try:
-                    count = int(match.group(1))
-                    detected_items = [f"research_topic_{i+1}" for i in range(count)]
-                except (ValueError, IndexError):
-                    pass
-
-    # Check for coding project keywords
-    coding_score = sum(
-        1 for kw in CODING_PROJECT_KEYWORDS if kw in prompt_lower
-    )
-    
-    # Check for compound coding patterns (these are strong signals)
-    for pattern in CODING_COMPOUND_PATTERNS:
-        if re.search(pattern, prompt_lower):
-            confidence = max(confidence, 0.75)
-            reasons.append(f"Compound coding pattern: {pattern[:30]}")
-            coding_score += 2  # Boost the score
-            break
-    
-    if coding_score >= 2:
-        confidence = max(confidence, 0.7)
-        reasons.append(
-            f"Multiple implementation keywords ({coding_score})"
-        )
-    elif coding_score == 1:
-        confidence = max(confidence, 0.4)
-        reasons.append("Single implementation keyword")
-
-    # Check for multi-step keywords
-    for kw in MULTI_STEP_KEYWORDS:
-        if re.search(kw, prompt_lower):
-            confidence = max(confidence, 0.6)
-            reasons.append(f"Multi-step keyword: {kw}")
-            break
-
-    # Check for analysis keywords
-    analysis_score = sum(1 for kw in ANALYSIS_KEYWORDS if kw in prompt_lower)
-    if analysis_score >= 2:
-        confidence = max(confidence, 0.65)
-        reasons.append(f"Complex analysis ({analysis_score} keywords)")
-
-    # Check for comma-separated lists (e.g., "research X, Y, Z")
-    comma_items = _extract_comma_list(prompt)
-    if len(comma_items) >= 3:
-        confidence = max(confidence, 0.75)
-        reasons.append(f"Comma-separated list: {len(comma_items)} items")
-        detected_items = comma_items
-
-    # Determine task type
-    task_type = _determine_task_type(prompt_lower, confidence, reasons)
-
-    # Decide if harness should be used
-    should_use_harness = confidence >= 0.6 and task_type != TaskType.SIMPLE
-
+    state = DetectionState()
+    apply_multi_item_patterns(prompt_lower, state)
+    apply_research_patterns(prompt_lower, state)
+    apply_coding_patterns(prompt_lower, state)
+    _apply_first_keyword_match(prompt_lower, MULTI_STEP_KEYWORDS, state,
+                               0.6, "Multi-step keyword")
+    apply_analysis_keywords(prompt_lower, state)
+    _apply_comma_list(prompt, state)
+    task_type = _determine_task_type(prompt_lower, state)
+    should_use_harness = state.confidence >= 0.6 and task_type != TaskType.SIMPLE
     return TaskAnalysis(
         task_type=task_type,
         should_use_harness=should_use_harness,
-        detected_items=detected_items,
-        confidence=confidence,
-        reason="; ".join(reasons) if reasons else "Simple task, no harness needed",
+        detected_items=state.detected_items,
+        confidence=state.confidence,
+        reason=reason_text(state.reasons),
     )
+
+
+def _apply_first_keyword_match(
+    prompt_lower: str,
+    keywords: List[str],
+    state: DetectionState,
+    confidence: float,
+    label: str,
+) -> None:
+    """Apply the first matching regex keyword from one list."""
+    for keyword in keywords:
+        if re.search(keyword, prompt_lower):
+            state.confidence = max(state.confidence, confidence)
+            state.reasons.append(f"{label}: {keyword}")
+            return
+
+
+def _apply_comma_list(prompt: str, state: DetectionState) -> None:
+    """Apply comma-list detection to one prompt."""
+    comma_items = _extract_comma_list(prompt)
+    if len(comma_items) >= 3:
+        state.confidence = max(state.confidence, 0.75)
+        state.reasons.append(f"Comma-separated list: {len(comma_items)} items")
+        state.detected_items = comma_items
 
 
 def _extract_comma_list(prompt: str) -> List[str]:
@@ -254,7 +148,8 @@ def _extract_comma_list(prompt: str) -> List[str]:
 
 
 def _determine_task_type(
-    prompt_lower: str, confidence: float, reasons: List[str]
+    prompt_lower: str,
+    state: DetectionState,
 ) -> TaskType:
     """Determine the specific type of task.
 
@@ -266,29 +161,20 @@ def _determine_task_type(
     Returns:
         TaskType enum value
     """
-    if confidence < 0.5:
+    if state.confidence < 0.5:
         return TaskType.SIMPLE
 
-    # Check specific types
-    if any("research" in r.lower() for r in reasons):
-        return TaskType.MULTI_RESEARCH
-
-    if any("implementation" in r.lower() for r in reasons):
-        return TaskType.MULTI_STEP
-
-    if any("multi-step" in r.lower() for r in reasons):
-        return TaskType.MULTI_STEP
-
-    if any("analysis" in r.lower() for r in reasons):
-        return TaskType.COMPLEX_ANALYSIS
-
-    # Default based on keywords in prompt
+    for keyword, task_type in REASON_TASK_TYPES:
+        if _reasons_contain(state.reasons, keyword):
+            return task_type
     if "research" in prompt_lower or "paper" in prompt_lower:
         return TaskType.MULTI_RESEARCH
-    if any(kw in prompt_lower for kw in CODING_PROJECT_KEYWORDS[:5]):
-        return TaskType.MULTI_STEP
-
     return TaskType.MULTI_STEP
+
+
+def _reasons_contain(reasons: List[str], keyword: str) -> bool:
+    """Return whether any recorded reason contains one keyword."""
+    return any(keyword in reason.lower() for reason in reasons)
 
 
 def should_use_harness(prompt: str) -> Tuple[bool, Optional[TaskAnalysis]]:

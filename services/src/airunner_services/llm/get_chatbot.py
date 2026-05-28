@@ -1,7 +1,21 @@
 """Service-owned chatbot selection helper."""
 
+from types import SimpleNamespace
+
 from airunner_services.database.models.chatbot import Chatbot
 from airunner_services.utils.application.get_logger import get_logger
+
+
+def _fallback_chatbot() -> SimpleNamespace:
+    """Return a minimal chatbot-like object for service-only runtimes."""
+    return SimpleNamespace(
+        id=None,
+        name="Default",
+        botname="Computer",
+        gender="Male",
+        voice_id=None,
+        current=True,
+    )
 
 
 def get_chatbot():
@@ -23,6 +37,4 @@ def get_chatbot():
         get_logger("get_chatbot").error(
             f"Error getting chatbot: {exc}"
         )
-        chatbot = Chatbot.objects.create(name="Default")
-        Chatbot.make_current(chatbot.id)
-        return chatbot
+        return _fallback_chatbot()

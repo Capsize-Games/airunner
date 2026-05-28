@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import os
+from types import SimpleNamespace
 from typing import Any, Optional, TypeVar
 
 from airunner_services.contract_enums import SignalCode
@@ -282,6 +284,17 @@ class RuntimeContextMixin:
     def chatbot_voice_settings(self) -> Any:
         """Return voice settings for the current chatbot."""
         chatbot = self.chatbot
+        if getattr(chatbot, "id", None) is None:
+            return SimpleNamespace(
+                id=None,
+                name="Default Voice",
+                model_type=(
+                    os.environ.get("AIRUNNER_TTS_MODEL_TYPE")
+                    or _ESPEAK_MODEL_TYPE
+                ),
+                settings_id=None,
+                voice=None,
+            )
         if getattr(chatbot, "voice_id", None) is None:
             voice_settings = VoiceSettings.objects.first()
             if voice_settings is None:
