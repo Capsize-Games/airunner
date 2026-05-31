@@ -63,7 +63,6 @@ class SettingsMixin(
         super().__init__(*args, **kwargs)
 
         self._selected_layer_ids = set()
-        self._resource_store = None
         self._register_layer_selection_handler()
         self.api = self._resolve_api_reference()
 
