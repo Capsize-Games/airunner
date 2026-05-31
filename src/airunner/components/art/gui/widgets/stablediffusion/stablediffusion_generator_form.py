@@ -444,7 +444,10 @@ class StableDiffusionGeneratorForm(BaseWidget):
 
     @property
     def active_rect(self):
-        pos = self.active_grid_settings.pos
+        pos = (
+            self.active_grid_settings.pos_x,
+            self.active_grid_settings.pos_y,
+        )
         rect = QRect(
             pos[0],
             pos[1],

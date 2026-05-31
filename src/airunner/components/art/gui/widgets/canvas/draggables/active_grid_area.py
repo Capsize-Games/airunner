@@ -69,7 +69,10 @@ class ActiveGridArea(DraggablePixmap):
 
     @property
     def rect(self):
-        pos = self.active_grid_settings.pos
+        pos = (
+            self.active_grid_settings.pos_x,
+            self.active_grid_settings.pos_y,
+        )
         width = getattr(self.application_settings, "working_width", None)
         if not width:
             width = getattr(self.application_settings, "document_width", 0)
