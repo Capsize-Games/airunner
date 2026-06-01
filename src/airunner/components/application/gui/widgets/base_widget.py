@@ -1,8 +1,23 @@
 import traceback
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Protocol, Tuple, runtime_checkable
 from abc import ABC, ABCMeta
 from abc import abstractmethod
 import os
+
+from PySide6.QtWidgets import QWidget  # noqa: E402
+
+
+@runtime_checkable
+class UiForm(Protocol):
+    """Protocol shared by all generated Ui_* classes.
+
+    Every ``.ui`` → ``_ui.py`` template exposes at least these two methods.
+    Subclasses may declare a more specific ``widget_class_`` so that linters
+    and type-checkers can resolve ``self.ui.<widget>`` attributes.
+    """
+
+    def setupUi(self, widget: QWidget) -> None: ...
+    def retranslateUi(self, widget: QWidget) -> None: ...
 
 from airunner.qt_runtime_env import configure_early_qt_environment
 
@@ -66,9 +81,9 @@ class BaseWidget(AbstractBaseWidget):
     Base class for all widgets.
     """
 
-    widget_class_: Optional[object] = None
+    widget_class_: Optional[type[UiForm]] = None
     icons: List[Optional[Tuple[str, str]]] = []
-    ui: Optional[object] = None
+    ui: Optional[UiForm] = None
     _splitters: List[str] = []
     _splitter_debounce_timer: Optional[QTimer] = None
     _splitter_debounce_ms = 300
