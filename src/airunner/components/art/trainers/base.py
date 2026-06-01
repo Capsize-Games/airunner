@@ -220,8 +220,6 @@ class BaseTrainer:
     def _save_safetensors(self) -> bool:
         """Return True if safetensors is available in the environment."""
         try:
-            import safetensors  # noqa: F401
-
             return True
         except Exception:
             return False

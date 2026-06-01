@@ -1,5 +1,4 @@
 from airunner.enums import (
-    DEFAULT_IMAGE_GENERATOR,
     GeneratorSection,
     ImageGenerator,
     normalize_image_generator_name,

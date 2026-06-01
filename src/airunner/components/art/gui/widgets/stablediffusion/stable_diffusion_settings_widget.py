@@ -26,7 +26,6 @@ from airunner.utils.vram_utils import (
 )
 from airunner.utils.model_dtype_utils import detect_model_dtype
 from airunner.enums import (
-    DEFAULT_IMAGE_GENERATOR,
     SignalCode,
     GeneratorSection,
     ImageGenerator,
