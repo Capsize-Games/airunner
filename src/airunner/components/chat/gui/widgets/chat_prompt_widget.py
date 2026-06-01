@@ -5,7 +5,6 @@ from uuid import uuid4
 from PIL import Image
 from PySide6.QtCore import QEvent, QTimer, Slot, Qt, QPoint
 from PySide6.QtWidgets import (
-    QApplication,
     QComboBox,
     QListWidget,
     QListWidgetItem,
