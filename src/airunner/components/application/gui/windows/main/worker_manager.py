@@ -61,7 +61,7 @@ from airunner.components.art.workers.mask_generator_worker import (
 from airunner.components.art.workers.image_export_worker import (
     ImageExportWorker,
 )
-from airunner.components.application.workers.model_scanner_worker import (
+from airunner.components.application.workers.model_scanner.model_scanner_worker import (
     ModelScannerWorker,
 )
 

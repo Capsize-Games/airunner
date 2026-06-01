@@ -11,69 +11,26 @@ Example:
     ~/.local/share/airunner/art/models/SDXL 1.0/txt2img/model.safetensors
 """
 
-import os
-from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, List, Optional
 
-from airunner.enums import SignalCode, ImageGenerator, StableDiffusionVersion
+from airunner.enums import SignalCode
+from airunner.components.application.workers.model_scanner.model_scanner_constants import (
+    MODEL_EXTENSIONS,
+    DIFFUSERS_REQUIRED_FOLDERS,
+    SKIP_FOLDERS,
+)
+from airunner.components.application.workers.model_scanner.model_scanner_data import (
+    ScannedModel,
+)
+from airunner.components.application.workers.model_scanner.model_scanner_helpers import (
+    get_category_for_version,
+    is_supported_model_version,
+)
 from airunner.components.application.gui.windows.main.pipeline_mixin import (
     PipelineMixin,
 )
 from airunner.components.application.workers.worker import Worker
-
-
-# Mapping from version names to ImageGenerator categories
-VERSION_TO_CATEGORY: dict[str, str] = {
-    StableDiffusionVersion.Z_IMAGE_TURBO.value: ImageGenerator.ZIMAGE.value,
-    StableDiffusionVersion.SDXL1_0.value: ImageGenerator.STABLEDIFFUSION.value,
-    StableDiffusionVersion.SDXL_TURBO.value: ImageGenerator.STABLEDIFFUSION.value,
-    StableDiffusionVersion.SDXL_LIGHTNING.value: ImageGenerator.STABLEDIFFUSION.value,
-    StableDiffusionVersion.SDXL_HYPER.value: ImageGenerator.STABLEDIFFUSION.value,
-    StableDiffusionVersion.X4_UPSCALER.value: ImageGenerator.STABLEDIFFUSION.value,
-}
-
-SUPPORTED_ZIMAGE_VERSIONS = {StableDiffusionVersion.Z_IMAGE_TURBO.value}
-
-# Valid model file extensions
-MODEL_EXTENSIONS = (".ckpt", ".safetensors", ".gguf")
-
-# Folders that indicate a diffusers model directory
-DIFFUSERS_REQUIRED_FOLDERS = ("scheduler", "text_encoder", "tokenizer", "unet", "vae")
-
-# Folders to skip during scanning
-SKIP_FOLDERS = ("controlnet_processors",)
-
-
-def get_category_for_version(version: str) -> str:
-    """Get the ImageGenerator category for a given version name.
-
-    Args:
-        version: The version folder name (e.g., 'Z-Image Turbo', 'SDXL 1.0')
-
-    Returns:
-        The category string (e.g., 'zimage', 'stablediffusion').
-        Defaults to 'stablediffusion' for unknown versions.
-    """
-    return VERSION_TO_CATEGORY.get(version, ImageGenerator.STABLEDIFFUSION.value)
-
-
-def is_supported_model_version(version: str) -> bool:
-    """Return whether one scanned art version is still supported."""
-    if version.startswith("Z-Image"):
-        return version in SUPPORTED_ZIMAGE_VERSIONS
-    return True
-
-
-@dataclass
-class ScannedModel:
-    """Represents a model found during scanning."""
-
-    name: str
-    path: str
-    version: str
-    category: str
-    pipeline_action: str
 
 
 class ModelScannerWorker(Worker, PipelineMixin):

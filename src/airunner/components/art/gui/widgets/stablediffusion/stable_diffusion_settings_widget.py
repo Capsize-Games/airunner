@@ -618,7 +618,7 @@ class StableDiffusionSettingsWidget(BaseWidget, PipelineMixin):
             self.version = self.generator_settings.version
 
             # Determine the correct category based on version
-            from airunner.components.application.workers.model_scanner_worker import (
+            from airunner.components.application.workers.model_scanner.model_scanner_worker import (
                 get_category_for_version,
             )
             image_generator = get_category_for_version(self.version)
