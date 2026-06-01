@@ -2,7 +2,7 @@
 
 from typing import Any, List, Optional
 
-from airunner.components.application.data import table_to_resource
+from airunner.daemon_client.resource_store import TABLE_TO_RESOURCE as table_to_resource
 
 
 class ModelManagementMixin:

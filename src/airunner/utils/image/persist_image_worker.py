@@ -1,7 +1,7 @@
 from typing import Optional, Dict, Any, Tuple
 from PIL import Image
 
-from airunner.components.application.data import resource_to_table
+from airunner.daemon_client.resource_store import RESOURCE_TO_TABLE as resource_to_table
 from airunner.daemon_client.resource_store import get_resource_store
 
 
