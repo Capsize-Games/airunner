@@ -228,8 +228,6 @@ services/src/airunner_services/requests/tts_request.py:{tone_color}
 services/src/airunner_services/runtimes/contracts.py:{ArtInvocationResponse, LLMInvocationResponse, STTInvocationResponse, TTSInvocationResponse, accepted, image_count}
 services/src/airunner_services/runtimes/openvoice_model_manager.py:{_audio_name, _warm_model_components}
 services/src/airunner_services/runtimes/tts_model_manager.py:{_processor, move_to_device, processor_class}
-services/src/airunner_services/tests/functional/test_art_service_runtime_conditioned.py:{pytestmark}
-services/src/airunner_services/tests/functional/test_art_service_runtime_smoke.py:{_require_cuda, pytestmark}
 services/src/airunner_services/tools/scrapy/llm_crawler_controller.py:{next_steps, relevance_explanation}
 services/src/airunner_services/tools/scrapy/settings.py:{EXTENSIONS}
 services/src/airunner_services/tools/scrapy/spiders/llm_guided_spider.py:{closed, custom_settings, start_urls}
@@ -248,40 +246,6 @@ services/src/airunner_services/utils/model_optimizer.py:{QuantizationType, detec
 services/src/airunner_services/utils/text/formatter.py:{_is_latex, _render_plaintext_to_image, format_content}
 services/src/airunner_services/utils/text/formatter_extended.py:{_is_latex, format_content, strip_nonlinguistic}
 services/src/airunner_services/utils/vram_utils.py:{PRECISION_VRAM_MULTIPLIERS, format_vram_estimate, get_available_precisions, get_precision_with_vram_estimate, get_recommended_precision_for_vram}
-services/src/airunner_services/vendor/melo/attentions.py:{Decoder, isflow}
-services/src/airunner_services/vendor/melo/commons.py:{add_timing_signal_1d, cat_timing_signal_1d, clip_grad_value_, kl_divergence, rand_gumbel_like, shift_1d}
-services/src/airunner_services/vendor/melo/data_utils.py:{DistributedBucketSampler, TextAudioSpeakerCollate, TextAudioSpeakerLoader, get_sid}
-services/src/airunner_services/vendor/melo/losses.py:{discriminator_loss, feature_loss, generator_loss, kl_loss}
-services/src/airunner_services/vendor/melo/mel_processing.py:{MAX_WAV_VALUE, spec_to_mel_torch, spectral_de_normalize_torch, spectrogram_torch_conv}
-services/src/airunner_services/vendor/melo/models.py:{DurationDiscriminator, noise_scale_delta}
-services/src/airunner_services/vendor/melo/modules.py:{ConvReluNorm, if}
-services/src/airunner_services/vendor/melo/split_utils.py:{merge_short_sentences_en}
-services/src/airunner_services/vendor/melo/text/__init__.py:{get_bert}
-services/src/airunner_services/vendor/melo/text/chinese_mix.py:{ChineseMix}
-services/src/airunner_services/vendor/melo/text/cleaner.py:{clean_text_bert}
-services/src/airunner_services/vendor/melo/text/cleaner_multiling.py:{unicleaners}
-services/src/airunner_services/vendor/melo/text/es_phonemizer/base.py:{print_logs}
-services/src/airunner_services/vendor/melo/text/es_phonemizer/gruut_wrapper.py:{tie}
-services/src/airunner_services/vendor/melo/text/fr_phonemizer/base.py:{print_logs}
-services/src/airunner_services/vendor/melo/text/fr_phonemizer/gruut_wrapper.py:{tie}
-services/src/airunner_services/vendor/melo/text/french.py:{French}
-services/src/airunner_services/vendor/melo/text/japanese.py:{Japanese, japanese_text_to_phonemes}
-services/src/airunner_services/vendor/melo/text/korean.py:{Korean}
-services/src/airunner_services/vendor/melo/text/language_base.py:{cmu_dict_path}
-services/src/airunner_services/vendor/melo/text/spanish.py:{Spanish}
-services/src/airunner_services/vendor/melo/text/symbols.py:{sil_phonemes_ids}
-services/src/airunner_services/vendor/melo/utils.py:{get_hparams}
-services/src/airunner_services/vendor/openvoice/api.py:{BaseSpeakerTTS, detect_watermark}
-services/src/airunner_services/vendor/openvoice/attentions.py:{Decoder, isflow}
-services/src/airunner_services/vendor/openvoice/commons.py:{add_timing_signal_1d, cat_timing_signal_1d, clip_grad_value_, kl_divergence, rand_gumbel_like, shift_1d}
-services/src/airunner_services/vendor/openvoice/mel_processing.py:{MAX_WAV_VALUE, spec_to_mel_torch, spectral_de_normalize_torch, spectrogram_torch_conv}
-services/src/airunner_services/vendor/openvoice/modules.py:{ConvReluNorm, if}
-services/src/airunner_services/vendor/openvoice/se_extractor.py:{model_size}
-services/src/airunner_services/vendor/openvoice/text/__init__.py:{cleaned_text_to_sequence_vits2, sequence_to_text}
-services/src/airunner_services/vendor/openvoice/text/cleaners.py:{cjke_cleaners2}
-services/src/airunner_services/vendor/openvoice/text/english.py:{english_to_lazy_ipa, english_to_lazy_ipa2}
-services/src/airunner_services/vendor/openvoice/text/mandarin.py:{chinese_to_ipa2, chinese_to_lazy_ipa}
-services/src/airunner_services/vendor/openvoice/text/symbols.py:{SPACE_ID}
 services/src/airunner_services/workers/audio_processor_worker.py:{on_stt_process_audio_signal, start_worker_thread, update_properties}
 services/src/airunner_services/workers/llm_generate_worker.py:{_download_dialog, _start_inactivity_timer, download_manager, local_model_manager, manager_thread, on_conversation_deleted_signal, on_llm_add_chatbot_response_to_history, on_llm_load_conversation, on_llm_model_changed_signal, on_quit_application_signal, on_section_changed_signal, start_worker_thread}
 services/src/airunner_services/workers/model_scanner_worker.py:{ModelScannerWorker, branch}

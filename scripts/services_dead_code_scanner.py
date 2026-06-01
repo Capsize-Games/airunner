@@ -134,6 +134,12 @@ def scan_for_dead_code(target_directory: str) -> None:
         # Exclude alembic migrations from output (framework-managed code)
         if "/alembic/versions/" in rel:
             continue
+        # Exclude vendor third-party code
+        if "/vendor/" in rel:
+            continue
+        # Exclude test files
+        if "/tests/" in rel:
+            continue
         by_file.setdefault(fp, []).append(item)
 
     if not by_file:
