@@ -1,13 +1,8 @@
-"""Dead code scanner for the airunner GUI codebase.
+"""Dead code scanner for the airunner services codebase.
 
-Scans the GUI codebase with vulture. Includes _ui.py template files for
-import tracking. Auto-filters known Qt/PySide6 false positives.
-
-Whitelist is kept in a minimal vulture-compatible format:
-    vulture_whitelist.py   (one name per line)
-
-Regenerate the whitelist after changes:
-    venv/bin/python scripts/gui_dead_code_scanner.py | sed -n 's/.*Unused .* \x27\(.*\)\x27.*/\1/p' | sort -u > vulture_whitelist.py.new
+Scans the services codebase with vulture. Services code uses SignalCode
+enum dispatch and FastAPI patterns that vulture cannot trace statically.
+A small whitelist handles the remaining edge cases.
 """
 
 import os
@@ -15,19 +10,8 @@ import re
 from vulture import Vulture
 from vulture.core import Item as VultureItem
 
-AIRUNNER_SRC = "src/airunner"
-WHITELIST_PATH = "gui_vulture_whitelist.py"
-
-# Qt methods called by C++ framework or connected via .ui connectSlotsByName
-QT_AUTO = frozenset({
-    "paintEvent", "mousePressEvent", "mouseMoveEvent", "mouseReleaseEvent",
-    "keyPressEvent", "keyReleaseEvent", "wheelEvent", "resizeEvent",
-    "showEvent", "hideEvent", "closeEvent", "focusInEvent", "focusOutEvent",
-    "enterEvent", "leaveEvent", "dragEnterEvent", "dragLeaveEvent",
-    "dragMoveEvent", "dropEvent", "contextMenuEvent", "changeEvent",
-    "timerEvent", "event", "eventFilter", "supportedDragActions",
-    "mimeTypes", "mimeData",
-})
+SERVICES_SRC = "services/src/airunner_services"
+WHITELIST_PATH = "services_vulture_whitelist.py"
 
 _LINES_CACHE: dict[str, list[str]] = {}
 
@@ -42,19 +26,8 @@ def _lines(p: str) -> list[str]:
     return _LINES_CACHE[p]
 
 
-def _has_slot(ls: list[str], lineno: int) -> bool:
-    for i in range(lineno - 2, max(lineno - 8, -1), -1):
-        if i < 0:
-            break
-        s = ls[i].strip()
-        if s.startswith(("@Slot", "@pyqtSlot")):
-            return True
-        if s.startswith("def ") or (s.startswith("@") and "Slot" not in s):
-            break
-    return False
-
-
 def _in_enum(ls: list[str], lineno: int) -> bool:
+    """Check if line is inside a class inheriting from Enum."""
     for i in range(lineno - 2, max(lineno - 300, -1), -1):
         if i < 0:
             break
@@ -82,35 +55,47 @@ def _load_whitelist() -> dict[str, set[str]]:
             fp = fp.strip()
             namespart = namespart.strip()
             if namespart.startswith('{') and namespart.endswith('}'):
-                out[fp] = {n.strip() for n in namespart[1:-1].split(',') if n.strip()}
+                out[fp] = {
+                    n.strip()
+                    for n in namespart[1:-1].split(',')
+                    if n.strip()
+                }
     return out
 
 
 def _auto_skip(item: VultureItem, filepath: str) -> bool:
+    """Return True to auto-skip this item as a false positive."""
     name = item.name
     typ = getattr(item, "typ", "")
     ls = _lines(filepath)
     fn = os.path.basename(filepath)
 
-    if name in QT_AUTO:
-        return True
-    if fn == "conftest.py" or filepath.endswith("_test.py"):
-        if name in ("pytest_configure", "pytest_ignore_collect",
-                     "pytest_collection_modifyitems", "anyio_backend",
-                     "pytestmark", "mock_scene_with_settings", "grid_size"):
-            return True
-    if fn == "__init__.py" and name in ("__getattr__", "__dir__"):
-        return True
+    # ALL_CAPS constants in settings.py
     if "settings.py" in filepath and name.isupper() and "_" in name:
         return True
-    if typ == "method" and _has_slot(ls, item.first_lineno):
+
+    # ALL_CAPS in enum files
+    if (fn in ("contract_enums.py", "enums.py") and
+            name.isupper() and "_" in name):
         return True
-    if typ == "method" and re.match(
-        r"^(on_|action_)[a-zA-Z]+_[a-zA-Z_]+$", name,
+
+    # __getattr__ lazy loader in __init__.py
+    if fn == "__init__.py" and name in ("__getattr__", "__dir__"):
+        return True
+
+    # Pytest hooks
+    if fn in ("conftest.py",) or filepath.endswith("_test.py"):
+        if name.startswith("pytest_") or name in (
+            "anyio_backend", "pytestmark",
+        ):
+            return True
+
+    # Values inside Enum classes
+    if typ in ("variable", "attribute") and _in_enum(
+        ls, item.first_lineno
     ):
         return True
-    if typ in ("variable", "attribute") and _in_enum(ls, item.first_lineno):
-        return True
+
     return False
 
 
@@ -120,37 +105,27 @@ def scan_for_dead_code(target_directory: str) -> None:
         return
 
     srcs: list[str] = []
-    uis: list[str] = []
     for root, _, files in os.walk(target_directory):
         for fn in files:
-            if not fn.endswith(".py") or fn.endswith("_rc.py"):
-                continue
-            f = os.path.join(root, fn)
-            if fn.endswith("_ui.py"):
-                uis.append(f)
-            else:
-                srcs.append(f)
+            if fn.endswith(".py") and not fn.endswith("_rc.py"):
+                srcs.append(os.path.join(root, fn))
 
-    all_f = srcs + uis
-    if not all_f:
+    if not srcs:
         print("No Python files found.")
         return
 
     v = Vulture(verbose=False)
-    v.scavenge(all_f)
+    v.scavenge(srcs)
     items = v.get_unused_code()
     if not items:
         print("No obsolete code detected.")
         return
 
-    ui_set = {os.path.realpath(p) for p in uis}
     wl = _load_whitelist()
     by_file: dict[str, list[VultureItem]] = {}
 
     for item in items:
         fp = os.path.realpath(item.filename)
-        if fp in ui_set:
-            continue
         if _auto_skip(item, fp):
             continue
         rel = os.path.relpath(fp)
@@ -163,14 +138,16 @@ def scan_for_dead_code(target_directory: str) -> None:
         return
 
     print("=== OBSOLETE CODE REPORT ===")
-    print(f"Scanned {len(srcs)} source files (+{len(uis)} _ui.py)\n")
+    print(f"Scanned {len(srcs)} source files\n")
     for fp in sorted(by_file):
         print(f"File: {fp}")
         for item in sorted(by_file[fp], key=lambda x: x.first_lineno):
-            print(f"  - Line {item.first_lineno:3d}: Unused {item.typ}"
-                  f" '{item.name}' ({item.confidence}% confidence)")
+            print(
+                f"  - Line {item.first_lineno:3d}: Unused {item.typ}"
+                f" '{item.name}' ({item.confidence}% confidence)"
+            )
         print("-" * 60)
 
 
 if __name__ == "__main__":
-    scan_for_dead_code(AIRUNNER_SRC)
+    scan_for_dead_code(SERVICES_SRC)
