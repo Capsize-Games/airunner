@@ -1,10 +1,7 @@
 import os
+import re
 import shutil
 from typing import Optional
-
-from airunner.components.llm.managers.agent.document_loader import (
-    extract_text_from_file,
-)
 
 
 def _naive_read(path: str) -> Optional[str]:
@@ -183,11 +180,18 @@ def extract_text_from_epub(path: str) -> Optional[str]:
 
 
 def extract_text_from_pdf(path: str) -> Optional[str]:
-    """Extract text from PDF using the active LangChain-native loader."""
-    text = extract_text_from_file(path)
-    if not text:
-        return None
-    return _clean_text(text)
+    """Extract text from a PDF file."""
+    try:
+        from pypdf import PdfReader
+
+        reader = PdfReader(path)
+        pages = [page.extract_text() or "" for page in reader.pages]
+        text = "\n\n".join(pages).strip()
+        if not text:
+            return None
+        return _clean_text(text)
+    except Exception:
+        return _naive_read(path)
 
 
 def extract_text_from_html(path: str) -> Optional[str]:

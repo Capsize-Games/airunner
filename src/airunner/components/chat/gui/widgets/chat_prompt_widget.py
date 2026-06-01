@@ -40,9 +40,7 @@ from airunner.components.documents.document_import import (
     is_rag_document_path,
     rag_document_suffixes,
 )
-from airunner.components.llm.managers.agent.document_loader import (
-    extract_text_from_file,
-)
+from airunner.components.llm.utils.document_extraction import extract_text
 from airunner.enums import (
     SignalCode,
     LLMActionType,
@@ -1155,7 +1153,7 @@ class ChatPromptWidget(BaseWidget):
     def _extract_document_attachment_text(self, file_path: str) -> str:
         """Return extracted text for one attached document, if available."""
         try:
-            return extract_text_from_file(file_path) or ""
+            return extract_text(file_path) or ""
         except Exception as exc:
             self.logger.debug(
                 "Attachment capability scan failed for %s: %s",
