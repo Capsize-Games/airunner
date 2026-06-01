@@ -49,6 +49,7 @@ def get_conversation_asset_version() -> str:
 
 
 class ConversationWidget(BaseWidget):
+    ui: Ui_conversation  # type: ignore[assignment]
     """Widget that displays a conversation using a single QWebEngineView and HTML template.
 
     Args:

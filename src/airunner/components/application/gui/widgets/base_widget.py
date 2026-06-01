@@ -38,7 +38,7 @@ from airunner.components.icons.managers.icon_manager import IconManager
 from airunner.utils.settings.get_qsettings import get_qsettings
 
 
-class BaseABCMeta(type(QWidget), ABCMeta):
+class BaseABCMeta(type(QWidget), ABCMeta):  # type: ignore[misc]
     pass
 
 

@@ -11,6 +11,7 @@ from airunner.components.llm.gui.widgets.templates.llm_history_item_ui import (
 
 
 class LLMHistoryItemWidget(BaseWidget):
+    ui: Ui_llm_history_item_widget  # type: ignore[assignment]
     widget_class_ = Ui_llm_history_item_widget
 
     def __init__(self, *args, **kwargs):

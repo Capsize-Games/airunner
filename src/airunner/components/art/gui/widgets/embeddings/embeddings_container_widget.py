@@ -17,6 +17,7 @@ from airunner.components.art.gui.widgets.embeddings.templates.embeddings_contain
 
 
 class EmbeddingsContainerWidget(BaseWidget):
+    ui: Ui_embeddings_container  # type: ignore[assignment]
     widget_class_ = Ui_embeddings_container
     search_filter = ""
     spacer = None

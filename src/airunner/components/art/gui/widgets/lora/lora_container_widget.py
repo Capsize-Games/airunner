@@ -12,6 +12,7 @@ from airunner.components.art.gui.widgets.lora.templates.lora_container_ui import
 
 
 class LoraContainerWidget(BaseWidget):
+    ui: Ui_lora_container  # type: ignore[assignment]
     widget_class_ = Ui_lora_container
     search_filter = ""
     spacer = None

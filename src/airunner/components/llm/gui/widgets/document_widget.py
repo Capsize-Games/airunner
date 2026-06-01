@@ -7,6 +7,7 @@ from airunner.components.llm.gui.widgets.templates.document_widget_ui import (
 
 
 class DocumentWidget(BaseWidget):
+    ui: Ui_document_widget  # type: ignore[assignment]
     widget_class_ = Ui_document_widget
 
     def __init__(self, target_file, delete_function, *args, **kwargs):

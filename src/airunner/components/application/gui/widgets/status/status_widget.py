@@ -10,6 +10,7 @@ from airunner.settings import AIRUNNER_ART_ENABLED
 
 
 class StatusWidget(BaseWidget):
+    ui: Ui_status_widget  # type: ignore[assignment]
     widget_class_ = Ui_status_widget
 
     def __init__(self, *args, **kwargs):

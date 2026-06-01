@@ -14,6 +14,7 @@ from airunner.components.llm.gui.widgets.generator_form.templates.generatorform_
 
 
 class GeneratorForm(BaseWidget):
+    ui: Ui_generator_form  # type: ignore[assignment]
     widget_class_ = Ui_generator_form
     changed_signal = Signal(str, object)
 

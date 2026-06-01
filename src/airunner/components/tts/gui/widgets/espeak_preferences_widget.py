@@ -11,6 +11,7 @@ import pycountry
 
 
 class EspeakPreferencesWidget(BaseWidget):
+    ui: Ui_espeak_preferences  # type: ignore[assignment]
     widget_class_ = Ui_espeak_preferences
 
     def __init__(self, id: int, *args, **kwargs):

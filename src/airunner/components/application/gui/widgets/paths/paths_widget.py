@@ -3,6 +3,7 @@ from airunner.components.application.gui.widgets.paths.templates.paths_ui import
 
 
 class PathsWidget(BaseWidget):
+    ui: Ui_paths_form  # type: ignore[assignment]
     widget_class_ = Ui_paths_form
 
     def __init__(self, **kwargs):

@@ -6,6 +6,7 @@ from airunner.components.art.gui.widgets.controlnet.templates.controlnet_setting
 
 
 class ControlnetSettingsWidget(BaseWidget):
+    ui: Ui_controlnet_settings_widget  # type: ignore[assignment]
     widget_class_ = Ui_controlnet_settings_widget
 
     def __init__(self, *args, **kwargs):

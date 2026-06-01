@@ -13,6 +13,7 @@ from airunner.components.application.gui.widgets.keyboard_shortcuts.templates.ke
 
 
 class KeyboardShortcutsWidget(BaseWidget):
+    ui: Ui_keyboard_shortcuts  # type: ignore[assignment]
     widget_class_ = Ui_keyboard_shortcuts
 
     def __init__(self, **kwargs):

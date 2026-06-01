@@ -41,6 +41,7 @@ from airunner.components.application.gui.widgets.base_widget import BaseWidget
 
 
 class FileExplorerWidget(BaseWidget):
+    ui: Ui_file_explorer  # type: ignore[assignment]
     """File explorer widget with file open signal and context menu for file operations."""
 
     widget_class_ = Ui_file_explorer

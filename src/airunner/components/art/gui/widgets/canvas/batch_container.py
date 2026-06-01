@@ -27,6 +27,7 @@ from airunner.utils.image.export_image import get_today_folder
 
 
 class BatchContainer(BaseWidget):
+    ui: Ui_batch_conatiner  # type: ignore[assignment]
     """Widget that displays generated images grouped by date and batch."""
 
     icons = [("folder", "browse_to_folder_button")]

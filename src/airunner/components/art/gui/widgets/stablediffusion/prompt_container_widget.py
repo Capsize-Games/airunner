@@ -9,6 +9,7 @@ from airunner.enums import SignalCode
 
 
 class PromptContainerWidget(BaseWidget):
+    ui: Ui_prompt_container_widget  # type: ignore[assignment]
     widget_class_ = Ui_prompt_container_widget
     prompt_id: int = None
     icons = (("trash-2", "delete_prompt_button"),)

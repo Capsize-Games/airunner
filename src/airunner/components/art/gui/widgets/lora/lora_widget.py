@@ -9,6 +9,7 @@ from airunner.components.art.gui.widgets.lora.templates.lora_ui import Ui_lora
 
 
 class LoraWidget(BaseWidget):
+    ui: Ui_lora  # type: ignore[assignment]
     """
     This class represents a single lora.
     It is responsible for displaying the lora's name, trigger words,

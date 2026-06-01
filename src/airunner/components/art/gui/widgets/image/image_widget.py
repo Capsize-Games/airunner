@@ -22,6 +22,7 @@ from airunner.components.art.gui.widgets.image.templates.image_widget_ui import 
 
 
 class ImageWidget(BaseWidget):
+    ui: Ui_image_widget  # type: ignore[assignment]
     widget_class_ = Ui_image_widget
     image_path = None
     meta_data = {}

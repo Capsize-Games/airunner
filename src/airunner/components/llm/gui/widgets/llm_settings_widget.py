@@ -23,6 +23,7 @@ from airunner.components.llm.config.provider_config import LLMProviderConfig
 
 
 class LLMSettingsWidget(BaseWidget, AIModelMixin):
+    ui: Ui_llm_settings_widget  # type: ignore[assignment]
     widget_class_ = Ui_llm_settings_widget
     icons = [
         ("cloud-download", "download_model_button"),

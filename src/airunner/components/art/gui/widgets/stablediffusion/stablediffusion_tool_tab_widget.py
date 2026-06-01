@@ -12,6 +12,7 @@ from airunner.utils.settings.get_qsettings import get_qsettings
 
 
 class StablediffusionToolTabWidget(BaseWidget):
+    ui: Ui_stablediffusion_tool_tab_widget  # type: ignore[assignment]
     widget_class_ = Ui_stablediffusion_tool_tab_widget
     _min_tab_index = 0
     _max_tab_index = 5

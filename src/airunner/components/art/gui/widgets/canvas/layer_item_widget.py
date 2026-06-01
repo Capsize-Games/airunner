@@ -18,6 +18,7 @@ from airunner.enums import SignalCode
 
 
 class LayerItemWidget(BaseWidget, PipelineMixin):
+    ui: Ui_layer_item  # type: ignore[assignment]
     widget_class_ = Ui_layer_item
     icons = [
         ("eye", "visibility"),

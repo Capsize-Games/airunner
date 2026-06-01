@@ -8,6 +8,7 @@ from airunner.utils.location import get_lat_lon
 
 
 class UserSettingsWidget(BaseWidget):
+    ui: Ui_user_settings_widget  # type: ignore[assignment]
     widget_class_ = Ui_user_settings_widget
 
     def __init__(self, *args, **kwargs):

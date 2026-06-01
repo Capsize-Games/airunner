@@ -16,6 +16,7 @@ from airunner.enums import SignalCode
 
 
 class BotPreferencesWidget(BaseWidget):
+    ui: Ui_bot_preferences  # type: ignore[assignment]
     widget_class_ = Ui_bot_preferences
 
     def __init__(self, *args, **kwargs):

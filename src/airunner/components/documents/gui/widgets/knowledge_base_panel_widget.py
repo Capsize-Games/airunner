@@ -20,6 +20,7 @@ from airunner.components.documents.gui.widgets.templates.knowledge_base_panel_ui
 
 
 class KnowledgeBasePanelWidget(BaseWidget):
+    ui: Ui_knowledge_base_panel  # type: ignore[assignment]
     """Small widget for showing document statistics and manual indexing controls.
 
     This class wraps the generated `Ui_knowledge_base_panel` UI so it can be

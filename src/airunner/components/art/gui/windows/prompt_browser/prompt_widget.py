@@ -5,6 +5,7 @@ from airunner.components.art.gui.windows.prompt_browser.templates.prompt_browser
 
 
 class PromptWidget(BaseWidget):
+    ui: Ui_prompt_widget  # type: ignore[assignment]
     widget_class_ = Ui_prompt_widget
 
     def __init__(self, *args, **kwargs):

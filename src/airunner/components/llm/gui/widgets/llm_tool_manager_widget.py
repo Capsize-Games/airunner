@@ -28,6 +28,7 @@ from airunner.enums import SignalCode
 
 
 class LLMToolManagerWidget(BaseWidget):
+    ui: Ui_llm_tool_manager  # type: ignore[assignment]
     """
     Widget for managing LLM tools.
     Shows a table of all tools with ability to create, edit, delete, and toggle.

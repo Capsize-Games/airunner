@@ -8,6 +8,7 @@ from PySide6.QtCore import Slot
 
 
 class ActiveGridSettingsWidget(BaseWidget):
+    ui: Ui_active_grid_settings_widget  # type: ignore[assignment]
     widget_class_ = Ui_active_grid_settings_widget
 
     def __init__(self, *args, **kwargs):

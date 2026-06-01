@@ -85,6 +85,7 @@ VERSION_CONSTRAINTS = {
 
 
 class StableDiffusionSettingsWidget(BaseWidget, PipelineMixin):
+    ui: Ui_stable_diffusion_settings_widget  # type: ignore[assignment]
     widget_class_ = Ui_stable_diffusion_settings_widget
 
     def __init__(self, *args, **kwargs):

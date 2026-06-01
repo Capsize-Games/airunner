@@ -8,6 +8,7 @@ from PySide6.QtCore import QTimer
 
 
 class InputImageContainer(BaseWidget):
+    ui: Ui_input_image_container  # type: ignore[assignment]
     widget_class_ = Ui_input_image_container
 
     def __init__(self, *args, **kwargs):

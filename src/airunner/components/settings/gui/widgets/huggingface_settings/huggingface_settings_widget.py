@@ -6,6 +6,7 @@ from airunner.components.settings.gui.widgets.huggingface_settings.templates.hug
 
 
 class HuggingfaceSettingsWidget(BaseWidget):
+    ui: Ui_huggingface_settings_widget  # type: ignore[assignment]
     widget_class_ = Ui_huggingface_settings_widget
 
     def showEvent(self, event):

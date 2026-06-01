@@ -7,6 +7,7 @@ from airunner.components.art.gui.widgets.civitai_preferences.templates.civitai_p
 
 
 class CivitAIPreferencesWidget(BaseWidget):
+    ui: Ui_civitai_preferences  # type: ignore[assignment]
     widget_class_ = Ui_civitai_preferences
 
     def __init__(self, *args, **kwargs):

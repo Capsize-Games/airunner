@@ -25,6 +25,7 @@ from airunner.components.art.gui.widgets.canvas.simple_image_scene import (
 
 
 class InputImage(BaseWidget):
+    ui: Ui_input_image  # type: ignore[assignment]
     widget_class_ = Ui_input_image
     icons = [
         ("pin", "pin_image"),

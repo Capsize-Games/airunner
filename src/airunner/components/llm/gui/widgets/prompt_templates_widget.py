@@ -17,6 +17,7 @@ from airunner.components.llm.gui.widgets.templates.prompt_templates_ui import (
 
 
 class PromptTemplatesWidget(BaseWidget):
+    ui: Ui_prompt_templates_widget  # type: ignore[assignment]
     widget_class_ = Ui_prompt_templates_widget
 
     def __init__(self, *args, **kwargs):

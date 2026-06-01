@@ -15,6 +15,7 @@ from airunner.components.llm.gui.widgets.templates.llm_history_widget_ui import 
 
 
 class LLMHistoryWidget(BaseWidget):
+    ui: Ui_llm_history_widget  # type: ignore[assignment]
     widget_class_ = Ui_llm_history_widget
     icons = [
         ("trash-2", "delete_all"),

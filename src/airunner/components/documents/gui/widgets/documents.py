@@ -51,6 +51,7 @@ from airunner.runtimes.file_policy import (
 
 
 class DocumentsWidget(BaseWidget):
+    ui: Ui_documents  # type: ignore[assignment]
     """Widget for document management and file exploration."""
 
     titleChanged = Signal(str)

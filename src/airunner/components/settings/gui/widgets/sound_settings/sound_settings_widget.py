@@ -13,6 +13,7 @@ def _sounddevice():
 
 
 class SoundSettingsWidget(BaseWidget):
+    ui: Ui_SoundSettings  # type: ignore[assignment]
     widget_class_ = Ui_SoundSettings
 
     def __init__(self, *args, **kwargs):

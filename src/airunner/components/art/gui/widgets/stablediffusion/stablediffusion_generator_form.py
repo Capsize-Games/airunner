@@ -99,6 +99,7 @@ class SaveGeneratorSettingsWorker(
 
 
 class StableDiffusionGeneratorForm(BaseWidget):
+    ui: Ui_stablediffusion_generator_form  # type: ignore[assignment]
     widget_class_ = Ui_stablediffusion_generator_form
     changed_signal = Signal(str, object)
     _prompt_containers: Dict[str, QWidget] = {}

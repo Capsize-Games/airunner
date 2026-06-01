@@ -15,6 +15,7 @@ from airunner.enums import (
 
 
 class LanguageSettingsWidget(BaseWidget, AIModelMixin):
+    ui: Ui_language_settings_widget  # type: ignore[assignment]
     widget_class_ = Ui_language_settings_widget
 
     def __init__(self, *args, **kwargs):

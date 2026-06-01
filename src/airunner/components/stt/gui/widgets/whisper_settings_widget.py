@@ -8,6 +8,7 @@ from airunner.settings import LANGUAGES
 
 
 class WhisperSettingsWidget(BaseWidget):
+    ui: Ui_whisper_settings  # type: ignore[assignment]
     widget_class_ = Ui_whisper_settings
 
     def __init__(self, *args, **kwargs):

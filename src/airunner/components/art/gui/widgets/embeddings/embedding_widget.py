@@ -11,6 +11,7 @@ from airunner.components.art.gui.widgets.embeddings.templates.embedding_ui impor
 
 
 class EmbeddingWidget(BaseWidget):
+    ui: Ui_embedding  # type: ignore[assignment]
     """
     This class represents a single embedding.
     It is responsible for displaying the embedding's name, trigger words,

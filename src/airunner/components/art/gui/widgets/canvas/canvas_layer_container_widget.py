@@ -27,6 +27,7 @@ from airunner.utils.image import convert_image_to_binary
 
 
 class CanvasLayerContainerWidget(BaseWidget, PipelineMixin):
+    ui: Ui_canvas_layer_container  # type: ignore[assignment]
     widget_class_ = Ui_canvas_layer_container
     icons = [
         ("layers-plus", "add_layer"),

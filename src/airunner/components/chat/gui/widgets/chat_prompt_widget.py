@@ -85,6 +85,7 @@ KNOWLEDGE_BASE_DOCUMENT_SUFFIXES = rag_document_suffixes() + (
 
 
 class ChatPromptWidget(BaseWidget):
+    ui: Ui_chat_prompt  # type: ignore[assignment]
     widget_class_ = Ui_chat_prompt
     icons = [
         ("chevron-up", "send_button"),

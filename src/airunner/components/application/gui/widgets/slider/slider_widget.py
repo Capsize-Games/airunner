@@ -11,6 +11,7 @@ from airunner.components.application.gui.widgets.slider.templates.slider_ui impo
 
 
 class SliderWidget(BaseWidget):
+    ui: Ui_slider_widget  # type: ignore[assignment]
     widget_class_ = Ui_slider_widget
     display_as_float = False
     divide_by = 1.0

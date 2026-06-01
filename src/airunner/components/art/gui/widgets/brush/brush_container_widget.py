@@ -6,6 +6,7 @@ from airunner.components.art.gui.widgets.brush.templates.brush_widget_ui import 
 
 
 class BrushContainerWidget(BaseWidget):
+    ui: Ui_brush_widget  # type: ignore[assignment]
     widget_class_ = Ui_brush_widget
 
     def __init__(self, *args, **kwargs):

@@ -17,6 +17,7 @@ from airunner.utils.memory.gpu_memory_stats import gpu_memory_stats
 
 
 class StatsWidget(BaseWidget, PipelineMixin, StylesMixin):
+    ui: Ui_stats_widget  # type: ignore[assignment]
     widget_class_ = Ui_stats_widget
 
     def __init__(self, *args, **kwargs):

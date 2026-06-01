@@ -15,6 +15,7 @@ from airunner.components.documents.gui.widgets.templates.document_ui import (
 
 
 class DocumentWidget(BaseWidget):
+    ui: Ui_document_widget  # type: ignore[assignment]
     """Widget representing a single document in the unified RAG collection."""
 
     widget_class_ = Ui_document_widget

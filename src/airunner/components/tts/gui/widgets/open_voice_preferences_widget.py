@@ -20,6 +20,7 @@ _AUDIO_FILE_SUFFIXES = (".wav", ".mp3", ".ogg")
 
 
 class OpenVoicePreferencesWidget(BaseWidget):
+    ui: Ui_open_voice_preferences  # type: ignore[assignment]
     widget_class_ = Ui_open_voice_preferences
 
     def __init__(self, id: int, *args, **kwargs):

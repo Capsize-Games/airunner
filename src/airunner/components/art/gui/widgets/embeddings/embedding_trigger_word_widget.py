@@ -6,6 +6,7 @@ from PySide6.QtWidgets import QApplication
 
 
 class EmbeddingTriggerWordWidget(BaseWidget):
+    ui: Ui_embedding_trigger_word  # type: ignore[assignment]
     widget_class_ = Ui_embedding_trigger_word
     trigger_word = None
 
