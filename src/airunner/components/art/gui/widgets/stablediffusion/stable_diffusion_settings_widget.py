@@ -10,21 +10,20 @@ from PySide6.QtWidgets import (
     QProgressDialog,
 )
 
-import torch
-
 from airunner.components.art.data.catalog_records import (
     find_ai_models,
     find_first_ai_model,
     get_ai_model,
     list_schedulers,
 )
-from airunner.utils.vram_utils import (
-    estimate_vram_from_path,
+from airunner.components.art.gui.widgets.stablediffusion.vram_calculator import (
+    can_use_precision,
+    estimate_vram_for_precision,
     get_available_precisions,
-    PRECISION_DISPLAY_NAMES,
     is_precision_safe_for_vram,
+    PRECISION_DISPLAY_NAMES,
+    VRAMEstimate,
 )
-from airunner.utils.model_dtype_utils import detect_model_dtype
 from airunner.enums import (
     SignalCode,
     GeneratorSection,
@@ -43,9 +42,6 @@ from airunner.components.application.gui.windows.main.pipeline_mixin import (
 )
 from airunner.settings import AIRUNNER_ART_ENABLED
 from airunner.utils.settings.get_qsettings import get_qsettings
-from airunner.utils.model_utils.model_utils import (
-    get_stable_diffusion_model_storage_path,
-)
 import threading
 import os
 
@@ -315,7 +311,8 @@ class StableDiffusionSettingsWidget(BaseWidget, PipelineMixin):
                 return
         # If we get here, import to AI Runner folder
         filename = os.path.basename(file_path)
-        dest_path = get_stable_diffusion_model_storage_path(
+        dest_path = os.path.join(
+            os.path.expanduser('~/.local/share/airunner/art/models'),
             self.generator_settings.version,
             self.generator_settings.pipeline_action,
             filename,
@@ -752,24 +749,41 @@ class StableDiffusionSettingsWidget(BaseWidget, PipelineMixin):
         self.ui.precision.blockSignals(True)
         self.ui.precision.clear()
         
-        # Get model path and detect native dtype
+        # Get model path and VRAM estimate from daemon
         model_path = self._get_current_model_path()
-        native_dtype = "bfloat16"  # Default assumption
+        daemon_estimate = None
+        native_dtype = "bfloat16"
+        model_size_gb = 0.0
         
         if model_path:
-            native_dtype = detect_model_dtype(model_path)
-            self.logger.debug(f"Detected native dtype: {native_dtype} for model: {model_path}")
+            try:
+                from airunner.daemon_client.gui_daemon_client import (
+                    GuiDaemonClient,
+                )
+                client = GuiDaemonClient()
+                daemon_estimate = client.estimate_vram(model_path)
+                native_dtype = daemon_estimate.get(
+                    "native_dtype",
+                ) or "bfloat16"
+                model_size_gb = float(
+                    daemon_estimate.get("file_size_gb", 0.0),
+                )
+            except Exception:
+                pass
         
         # Get available precisions based on native dtype
         available_precisions = get_available_precisions(native_dtype)
         
-        # Get available VRAM
+        # Get available VRAM from daemon hardware endpoint
         available_vram_gb = 0.0
-        if torch.cuda.is_available():
-            try:
-                available_vram_gb = torch.cuda.get_device_properties(0).total_memory / (1024**3)
-            except Exception:
-                pass
+        try:
+            from airunner.daemon_client.gui_daemon_client import (
+                GuiDaemonClient,
+            )
+            hw = GuiDaemonClient().get_hardware_profile()
+            available_vram_gb = hw.total_vram_gb
+        except Exception:
+            pass
         
         # Filter precision options for Z-Image based on VRAM.
         version = self.generator_settings.version
@@ -800,18 +814,19 @@ class StableDiffusionSettingsWidget(BaseWidget, PipelineMixin):
             
             display_name = PRECISION_DISPLAY_NAMES.get(precision, precision)
             
-            # Add VRAM estimate if model path is available
-            if model_path:
-                estimate = estimate_vram_from_path(
-                    model_path, precision, native_dtype
+            # Add VRAM estimate if model size is available
+            if model_size_gb > 0:
+                estimate = estimate_vram_for_precision(
+                    model_size_gb, precision, native_dtype,
                 )
-                if estimate:
-                    # Check if this precision is safe for current VRAM
-                    if available_vram_gb > 0 and not is_precision_safe_for_vram(estimate, available_vram_gb):
-                        # Add warning indicator for risky precision settings
-                        display_name = f"⚠️ {display_name} ({estimate})"
-                    else:
-                        display_name = f"{display_name} ({estimate})"
+                if available_vram_gb > 0 and not is_precision_safe_for_vram(
+                    estimate, available_vram_gb,
+                ):
+                    display_name = (
+                        f"⚠️ {display_name} ({estimate})"
+                    )
+                else:
+                    display_name = f"{display_name} ({estimate})"
             
             self.ui.precision.addItem(display_name, precision)
         
