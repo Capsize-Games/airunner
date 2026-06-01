@@ -17,7 +17,7 @@ import shutil
 import subprocess
 from pathlib import Path
 
-from scripts.process_qss import build_all_theme_css, generate_resources, process_qss
+from process_qss import build_all_theme_css, generate_resources, process_qss
 
 
 def _find_uic_executable() -> str:
