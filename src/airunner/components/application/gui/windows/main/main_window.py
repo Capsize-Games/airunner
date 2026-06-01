@@ -80,7 +80,6 @@ from airunner.enums import (
     ModelStatus,
 )
 from airunner.utils.application.mediator_mixin import MediatorMixin
-from airunner.utils.application.get_version import get_version
 from airunner.utils.widgets import (
     save_splitter_settings,
     load_splitter_settings,
@@ -357,9 +356,8 @@ class MainWindow(
 
     @property
     def version(self):
-        if self._version is None:
-            self._version = get_version()
-        return f"v{self._version}"
+        from airunner.settings import AIRUNNER_VERSION
+        return f"v{AIRUNNER_VERSION}"
 
     @property
     def latest_version(self):
