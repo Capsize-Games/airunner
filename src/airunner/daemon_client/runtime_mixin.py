@@ -50,6 +50,20 @@ class RuntimeClientMixin:
         )
 
     # ------------------------------------------------------------------
+    # Geolocation
+    # ------------------------------------------------------------------
+
+    def geolocate_zip(
+        self, zipcode: str,
+    ) -> Dict[str, Any]:
+        """Return lat/lon for a US ZIP code from the daemon."""
+        response = self._request(
+            "GET",
+            f"/api/v1/daemon/geolocation/{zipcode}",
+        )
+        return response.json()
+
+    # ------------------------------------------------------------------
     # Runtime control
     # ------------------------------------------------------------------
 

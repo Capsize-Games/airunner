@@ -4,7 +4,6 @@ from airunner.components.application.gui.widgets.base_widget import BaseWidget
 from airunner.components.application.gui.widgets.user.templates.user_settings_ui import (
     Ui_user_settings_widget,
 )
-from airunner.utils.location import get_lat_lon
 
 
 class UserSettingsWidget(BaseWidget):
@@ -38,11 +37,20 @@ class UserSettingsWidget(BaseWidget):
             data = {}
             if user.zipcode != val:
                 data["zipcode"] = val
-                result = get_lat_lon(val)
-                if result:
+                try:
+                    from airunner.daemon_client.gui_daemon_client import (
+                        GuiDaemonClient,
+                    )
+                    client = GuiDaemonClient()
+                    result = client.geolocate_zip(val)
+                except Exception:
+                    result = {}
+                if result.get("lat"):
                     data["latitude"] = result["lat"]
                     data["longitude"] = result["lon"]
-                    data["location_display_name"] = str(result["row"])
+                    data["location_display_name"] = (
+                        result.get("display_name", "")
+                    )
                 self.resource_store.update("User", user.id, data)
 
     @Slot(str)
