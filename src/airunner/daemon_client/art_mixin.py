@@ -139,3 +139,15 @@ class ArtClientMixin:
             f"/api/v1/art/cancel/{job_id}",
         )
         return response.json()
+
+    # ------------------------------------------------------------------
+    # Bootstrap data (model/pipeline/unified_file metadata)
+    # ------------------------------------------------------------------
+
+    def get_bootstrap_data(self) -> Dict[str, Any]:
+        """Return model and pipeline bootstrap data from the daemon."""
+        response = self._request(
+            "GET",
+            "/api/v1/art/bootstrap",
+        )
+        return response.json()

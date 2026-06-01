@@ -16,6 +16,9 @@ from airunner_services.api.models.runtime_summary_response import (
     RuntimeSummaryResponse,
 )
 from airunner_services.api.routes.health import DaemonStatusResponse
+from airunner_services.api.routes.hardware import (
+    router as hardware_router,
+)
 from airunner_services.api.routes.daemon_helpers import (
     cancel_runtime_action,
     collect_runtime_summaries,
@@ -28,6 +31,7 @@ from airunner_services.ipc.messages import ResponseEnvelope
 from airunner_services.runtimes.contracts import RuntimeAction, RuntimeKind
 
 router = APIRouter()
+router.include_router(hardware_router)
 
 
 @router.get("/status", response_model=DaemonRuntimeStatusResponse)

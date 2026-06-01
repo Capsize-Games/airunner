@@ -1,18 +1,53 @@
-"""Runtime control and TTS/STT endpoints for the GUI daemon client."""
+"""Runtime control, TTS, STT, and hardware endpoints for the GUI daemon
+client."""
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import Any, Dict, Optional
 from urllib.parse import urlencode
 
 
+@dataclass
+class HardwareProfile:
+    """Serialized hardware profile returned by the daemon."""
+
+    total_vram_gb: float
+    available_vram_gb: float
+    total_ram_gb: float
+    available_ram_gb: float
+    cuda_available: bool
+    device_name: str | None
+    cpu_count: int
+    platform: str
+
+
 class RuntimeClientMixin:
-    """Daemon runtime control, TTS, and STT API endpoints."""
+    """Daemon runtime control, TTS, STT, and hardware API endpoints."""
 
     _request: Any
     _sleep: Any
     _time_fn: Any
     _poll_interval_seconds: float
+
+    # ------------------------------------------------------------------
+    # Hardware profiling
+    # ------------------------------------------------------------------
+
+    def get_hardware_profile(self) -> HardwareProfile:
+        """Return the host hardware profile from the daemon."""
+        response = self._request("GET", "/api/v1/daemon/hardware")
+        payload = response.json()
+        return HardwareProfile(
+            total_vram_gb=float(payload["total_vram_gb"]),
+            available_vram_gb=float(payload["available_vram_gb"]),
+            total_ram_gb=float(payload["total_ram_gb"]),
+            available_ram_gb=float(payload["available_ram_gb"]),
+            cuda_available=bool(payload["cuda_available"]),
+            device_name=payload.get("device_name"),
+            cpu_count=int(payload["cpu_count"]),
+            platform=str(payload.get("platform", "")),
+        )
 
     # ------------------------------------------------------------------
     # Runtime control
