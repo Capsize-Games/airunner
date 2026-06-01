@@ -43,7 +43,7 @@ class DatabaseChatMessageHistory(BaseChatMessageHistory):
     Ephemeral Mode:
         When ephemeral=True, messages are kept in memory only and never saved to
         the database. This is useful for:
-        - Headless API requests that shouldn't pollute conversation history
+        - API requests that shouldn't pollute conversation history
         - Batch processing tasks (e.g., book classification)
         - Temporary analysis or classification tasks
         - Any operation that should leave no trace in conversation history

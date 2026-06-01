@@ -213,7 +213,7 @@ class ModelLoadBalancer(MediatorMixin):
             refreshed_api = refresher()
             if refreshed_api is not None:
                 self.api = refreshed_api
-        if self.api is None or getattr(self.api, "headless", False):
+        if self.api is None:
             return None
         return getattr(self.api, "daemon_client", None)
 

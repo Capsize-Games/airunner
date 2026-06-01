@@ -513,11 +513,6 @@ class WorkerManager(Worker):
         if main_window is not None:
             return main_window
 
-        # In headless mode we often run a QCoreApplication event loop, which
-        # doesn't support QWidget APIs like activeWindow/topLevelWidgets.
-        if not hasattr(app, "activeWindow") or not hasattr(app, "topLevelWidgets"):
-            return None
-
         window = app.activeWindow()
         if window is not None:
             return window
@@ -566,7 +561,7 @@ class WorkerManager(Worker):
         fallback_api = None
         for candidate in candidates:
             candidate = self._normalize_api_candidate(candidate)
-            if candidate is None or getattr(candidate, "headless", False):
+            if candidate is None:
                 continue
             if getattr(candidate, "daemon_client", None) is not None:
                 self.api = candidate
@@ -1291,9 +1286,9 @@ class WorkerManager(Worker):
     def _get_or_create_application_settings(self):
         """Return ApplicationSettings for the current tenant.
 
-        In headless multi-tenant mode, tenant schemas may be created on-demand and
-        not have bootstrap rows yet. Image generation expects ApplicationSettings
-        to exist; without it, requests crash and art jobs stay RUNNING forever.
+        Tenant schemas may be created on-demand and not have bootstrap rows
+        yet. Image generation expects ApplicationSettings to exist; without
+        it, requests crash and art jobs stay RUNNING forever.
         """
         app_settings = self.resource_store.get_singleton(
             "ApplicationSettings",
@@ -1303,9 +1298,6 @@ class WorkerManager(Worker):
             return app_settings
 
         # Create a sane default row for this tenant.
-        # - Enable SD if the service is enabled in this headless server.
-        # - Default NSFW filter off in headless mode to avoid blocking generation
-        #   on a safety-checker bootstrap step.
         try:
             self.resource_store.update_singleton(
                 "ApplicationSettings",

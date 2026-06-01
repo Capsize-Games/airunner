@@ -105,7 +105,7 @@ if not AIRUNNER_DISABLE_FACEHUGGERSHIELD:
             airunner_src_path,
             "/tmp/",
             "/etc/",
-            "/var/log/airunner/",  # Add headless server log directory
+            "/var/log/airunner/",
             os.path.join(os.path.expanduser("~"), "nltk_data/"),
             os.path.join(
                 os.path.expanduser("~"), "nltk_data/corpora/stopwords/english"

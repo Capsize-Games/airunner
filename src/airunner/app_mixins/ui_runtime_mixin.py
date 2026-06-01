@@ -501,9 +501,6 @@ class UIRuntimeMixin:
             self.http_server_thread.stop()
             self.http_server_thread.wait()
 
-        if self.api_server_thread:
-            self.api_server_thread.stop()
-
     def cleanup(self):
         """Cleanup resources when shutting down."""
         if getattr(self, "_cleaned_up", False):
@@ -618,18 +615,6 @@ class UIRuntimeMixin:
                 except Exception as exc:
                     self.logger.warning(
                         "Error stopping local HTTP server: %s",
-                        exc,
-                    )
-
-            if hasattr(self, "api_server_thread") and self.api_server_thread:
-                self.logger.info("Stopping API server...")
-                try:
-                    self.api_server_thread.stop()
-                    self.api_server_thread.join(timeout=2.0)
-                    self.logger.info("API server stopped")
-                except Exception as exc:
-                    self.logger.warning(
-                        "Error stopping API server: %s",
                         exc,
                     )
 

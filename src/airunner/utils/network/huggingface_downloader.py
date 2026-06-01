@@ -20,7 +20,6 @@ class HuggingfaceDownloader(
     def __init__(
         self,
         callback: Optional[Callable[[int, int], None]] = None,
-        headless: bool = False,
         daemon_client: Optional[GuiDaemonClient] = None,
     ):
         """Initialize one GUI downloader backed by daemon jobs."""
@@ -29,7 +28,6 @@ class HuggingfaceDownloader(
         self._daemon_client = daemon_client
         self._active_job_id: Optional[str] = None
         self.downloading = False
-        self.headless = headless
 
     def _client(self) -> GuiDaemonClient:
         """Return the daemon client used for service-owned downloads."""

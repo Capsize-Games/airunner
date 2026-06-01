@@ -25,8 +25,8 @@ if TYPE_CHECKING:
 class ARTAPIService(APIServiceBase):
     """Art generation API service providing signal-based art operations."""
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, api=None):
+        super().__init__(api=api)
         self._canvas_service = None
         self._embeddings_service = None
         self._lora_service = None

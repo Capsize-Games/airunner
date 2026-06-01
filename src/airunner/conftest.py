@@ -74,7 +74,7 @@ def pytest_configure(config: pytest.Config) -> None:
     )
     config.addinivalue_line(
         "markers",
-        "gui_functional: mark headless GUI functional tests",
+        "gui_functional: mark GUI functional tests",
     )
 
 

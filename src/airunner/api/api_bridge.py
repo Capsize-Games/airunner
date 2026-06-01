@@ -46,7 +46,6 @@ class APIBridge:
         Args:
             daemon_client: The daemon HTTP client instance.
             signal_emitter: Callable that emits (SignalCode, data_dict).
-                When None, signals are not emitted (headless mode).
         """
         self._client = daemon_client
         self._emit = signal_emitter or self._noop_emitter
@@ -319,7 +318,7 @@ class APIBridge:
 
     @staticmethod
     def _noop_emitter(code: Any, data: Dict[str, Any]) -> None:
-        """No-op signal emitter for headless mode."""
+        """No-op signal emitter."""
 
     @staticmethod
     def _extract_image_params(

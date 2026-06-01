@@ -107,7 +107,7 @@ class LLMRequest:
     # GPT-OSS reasoning effort override for runtimes without a native API knob.
     reasoning_effort: Optional[str] = None
     model: str = ""
-    # Request-level backend selection (used by headless API)
+    # Request-level backend selection
     model_service: Optional[str] = None  # local | openrouter | ollama
     api_model: Optional[str] = None  # provider model name for API backends
     final_system_prompt: Optional[str] = None

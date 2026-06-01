@@ -113,7 +113,6 @@ class InstallWorker(
         self,
         parent,
         models_enabled: List[str],
-        headless=False,
         debug_queue: bool = False,
     ):
         super().__init__()
@@ -134,7 +133,6 @@ class InstallWorker(
         self.running = True  # Add running flag for clean shutdown
         self.hf_downloader = HuggingfaceDownloader(
             self._safe_progress_emit,
-            headless=headless,
         )
         self._download_daemon_client = None
         # Optional debug flag to emit/log each queued download (helps trace unwanted downloads)
@@ -1337,7 +1335,6 @@ class InstallPage(BaseWizard):
         self.worker = InstallWorker(
             self,
             models_enabled=self.models_enabled,
-            headless=True,
             debug_queue=True,
         )
         self.worker.moveToThread(self.thread)

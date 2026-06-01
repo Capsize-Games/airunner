@@ -1,4 +1,4 @@
-"""Support helpers for headless GUI functional tests."""
+"""Support helpers for GUI functional tests."""
 
 from __future__ import annotations
 

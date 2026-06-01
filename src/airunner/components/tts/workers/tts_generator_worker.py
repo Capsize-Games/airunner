@@ -128,14 +128,14 @@ class TTSGeneratorWorker(Worker):
         return bool(getattr(settings, "tts_enabled", False))
 
     def _current_api(self):
-        """Return the freshest non-headless API reference available."""
+        """Return the freshest API reference available."""
         refresher = getattr(self, "refresh_api_reference", None)
         if callable(refresher):
             api = refresher()
-            if api is not None and not getattr(api, "headless", False):
+            if api is not None:
                 return api
         api = getattr(self, "api", None)
-        if api is not None and not getattr(api, "headless", False):
+        if api is not None:
             return api
         return None
 

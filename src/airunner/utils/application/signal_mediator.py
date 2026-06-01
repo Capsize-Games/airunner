@@ -14,15 +14,6 @@ from airunner.utils.application.get_logger import get_logger
 logger = get_logger(__name__)
 
 
-def _use_headless_direct_dispatch() -> bool:
-    """Return True when signals should bypass queued Qt delivery."""
-    return os.environ.get("AIRUNNER_HEADLESS", "").lower() in (
-        "1",
-        "true",
-        "yes",
-    )
-
-
 def _trace_signal_registrations() -> bool:
     """Return True when verbose signal registration tracing is enabled."""
     return os.environ.get(
@@ -349,10 +340,7 @@ class SignalMediator(metaclass=SingletonMeta):
 
     @staticmethod
     def _deliver_signal(signal: Signal, data: Dict) -> None:
-        """Deliver one signal with headless-safe dispatch semantics."""
-        if _use_headless_direct_dispatch():
-            signal.on_signal_received(data)
-            return
+        """Deliver one signal via Qt queued dispatch."""
         signal.signal.emit(data)
 
     def register_pending_request(

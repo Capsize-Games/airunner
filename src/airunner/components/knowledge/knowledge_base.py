@@ -66,7 +66,7 @@ def get_daily_template(date_str: str) -> str:
 
 # Tenant-aware singleton instances.
 #
-# In headless multi-tenant mode, AI Runner runs as a multi-tenant service keyed by
+# In multi-tenant mode, AI Runner runs as a multi-tenant service keyed by
 # a per-request tenant header. We must not mix knowledge across tenants.
 _knowledge_base_instances: dict[str, "KnowledgeBase"] = {}
 _lock = threading.Lock()

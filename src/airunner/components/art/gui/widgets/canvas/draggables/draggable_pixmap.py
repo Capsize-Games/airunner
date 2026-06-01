@@ -43,7 +43,9 @@ class DraggablePixmap(
         self.save = False
         if self._use_layer_context:
             settings = self.drawing_pad_settings
-            pos = settings.pos if settings is not None else (0, 0)
+            x_pos = settings.x_pos if settings is not None else 0
+            y_pos = settings.y_pos if settings is not None else 0
+            pos = (x_pos, y_pos)
         else:
             pos = (0, 0)
         self.settings = get_qsettings()

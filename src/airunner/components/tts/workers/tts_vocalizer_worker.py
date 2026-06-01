@@ -119,7 +119,7 @@ class TTSVocalizerWorker(Worker):
         fallback_api = None
         for candidate in candidates:
             candidate = TTSVocalizerWorker._normalize_api_candidate(candidate)
-            if candidate is None or getattr(candidate, "headless", False):
+            if candidate is None:
                 continue
             if TTSVocalizerWorker._candidate_has_sounddevice_manager(
                 candidate
@@ -140,7 +140,7 @@ class TTSVocalizerWorker(Worker):
         had_candidate = False
         for candidate in candidates:
             candidate = TTSVocalizerWorker._normalize_api_candidate(candidate)
-            if candidate is None or getattr(candidate, "headless", False):
+            if candidate is None:
                 continue
             had_candidate = True
             if TTSVocalizerWorker._candidate_has_sounddevice_manager(

@@ -34,8 +34,8 @@ class _DaemonStreamState:
 class LLMAPIService(APIServiceBase):
     """LLM API service providing signal-based LLM operations."""
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, api=None):
+        super().__init__(api=api)
 
     def chatbot_changed(self):
         self.emit_signal(SignalCode.CHATBOT_CHANGED)
@@ -1019,7 +1019,7 @@ class LLMAPIService(APIServiceBase):
             api = LLMAPIService._resolve_api_instance()
             if api is not None:
                 self.api = api
-        if api is None or getattr(api, "headless", False):
+        if api is None:
             return None
         return getattr(api, "daemon_client", None)
 
