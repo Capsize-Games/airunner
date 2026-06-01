@@ -9,11 +9,9 @@ import os
 from pathlib import Path
 from typing import List, Dict, Optional, Tuple
 
-from airunner.components.data.bootstrap.unified_model_files import (
+from airunner.components.data.bootstrap_service import (
+    get_model_bootstrap_data,
     get_required_files_for_model,
-)
-from airunner.components.data.bootstrap.model_bootstrap_data import (
-    model_bootstrap_data,
 )
 
 
@@ -233,7 +231,7 @@ class ModelFileChecker:
         if version == "Safety Checker":
             return "CompVis/stable-diffusion-safety-checker"
 
-        for model in model_bootstrap_data:
+        for model in get_model_bootstrap_data():
             if (
                 model.get("version") == version
                 and model.get("pipeline_action") == pipeline_action

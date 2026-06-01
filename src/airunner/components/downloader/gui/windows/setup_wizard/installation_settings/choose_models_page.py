@@ -17,8 +17,8 @@ from airunner.components.downloader.gui.windows.setup_wizard.installation_settin
 from airunner.bootstrap.controlnet_bootstrap_data import (
     controlnet_bootstrap_data,
 )
-from airunner.components.data.bootstrap.model_bootstrap_data import (
-    model_bootstrap_data,
+from airunner.components.data.bootstrap_service import (
+    get_model_bootstrap_data,
 )
 
 
@@ -51,7 +51,7 @@ class ChooseModelsPage(BaseWizard):
 
         # Group ControlNet models by version
         # Expose the stable-diffusion model bootstrap list for the installer
-        self.models = model_bootstrap_data
+        self.models = get_model_bootstrap_data()
 
         from collections import defaultdict
 
@@ -357,7 +357,7 @@ class ChooseModelsPage(BaseWizard):
         )
 
         total = 0
-        for model in model_bootstrap_data:
+        for model in get_model_bootstrap_data():
             if model.get("category") != "llm":
                 continue
             if model.get("pipeline_action") == "embedding":

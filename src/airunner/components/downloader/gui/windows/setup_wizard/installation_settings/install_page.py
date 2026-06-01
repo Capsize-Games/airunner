@@ -6,8 +6,8 @@ import zipfile
 from PySide6.QtCore import QObject, QThread, Slot, Signal, QTimer
 from PySide6.QtWidgets import QWizard
 
-from airunner.components.data.bootstrap.model_bootstrap_data import (
-    model_bootstrap_data,
+from airunner.components.data.bootstrap_service import (
+    get_model_bootstrap_data,
 )
 from airunner.bootstrap.controlnet_bootstrap_data import (
     controlnet_bootstrap_data,
@@ -78,7 +78,7 @@ def _enabled_llm_download_repo_ids(
         return []
 
     repo_ids = []
-    for model in model_bootstrap_data:
+    for model in get_model_bootstrap_data():
         if model.get("category") != "llm":
             continue
         if (
@@ -232,7 +232,7 @@ class InstallWorker(
             {"label": "Downloading Stable Diffusion models..."}
         )
 
-        models = model_bootstrap_data
+        models = get_model_bootstrap_data()
 
         for model in models:
             action = model["pipeline_action"]
@@ -480,7 +480,7 @@ class InstallWorker(
             return
 
         models = []
-        for model in model_bootstrap_data:
+        for model in get_model_bootstrap_data():
             if model["category"] == "llm":
                 if model["pipeline_action"] == "embedding":
                     if not self.models_enabled["embedding_model"]:
@@ -1406,7 +1406,7 @@ class InstallPage(BaseWizard):
     def calculate_total_files(self):
         self.total_files = 0  # Reset counter
         if self.models_enabled["stable_diffusion"]:
-            models = model_bootstrap_data
+            models = get_model_bootstrap_data()
             for model in models:
                 action = model["pipeline_action"]
                 action_key = model["pipeline_action"]
@@ -1460,7 +1460,7 @@ class InstallPage(BaseWizard):
                     pass
         if self.models_enabled["llm"]:
             models = []
-            for model in model_bootstrap_data:
+            for model in get_model_bootstrap_data():
                 if model["category"] == "llm":
                     if model["pipeline_action"] == "embedding":
                         if not self.models_enabled["embedding_model"]:

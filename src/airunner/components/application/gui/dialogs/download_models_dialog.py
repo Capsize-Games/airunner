@@ -25,8 +25,8 @@ from PySide6.QtCore import Qt, QTimer
 from airunner.components.application.gui.windows.main.settings_mixin import (
     SettingsMixin,
 )
-from airunner.components.data.bootstrap.model_bootstrap_data import (
-    model_bootstrap_data,
+from airunner.components.data.bootstrap_service import (
+    get_model_bootstrap_data,
 )
 from airunner.bootstrap.controlnet_bootstrap_data import (
     controlnet_bootstrap_data,
@@ -143,7 +143,7 @@ class DownloadModelsDialog(MediatorMixin, SettingsMixin, QDialog):
         # Get unique SD versions from model bootstrap data
         sd_models = [
             m
-            for m in model_bootstrap_data
+            for m in get_model_bootstrap_data()
             if m.get("category") in ("stablediffusion", "zimage")
         ]
         
@@ -189,7 +189,7 @@ class DownloadModelsDialog(MediatorMixin, SettingsMixin, QDialog):
         group = QGroupBox("Language Models (LLM)")
         group_layout = QVBoxLayout(group)
         
-        llm_models = [m for m in model_bootstrap_data if m.get("category") == "llm"]
+        llm_models = [m for m in get_model_bootstrap_data() if m.get("category") == "llm"]
         
         for model in llm_models:
             key = f"llm_{model['path']}"
@@ -311,7 +311,7 @@ class DownloadModelsDialog(MediatorMixin, SettingsMixin, QDialog):
             if key.startswith("sd_"):
                 repo_id = key[3:]  # Remove "sd_" prefix
                 model = next(
-                    (m for m in model_bootstrap_data if m["path"] == repo_id),
+                    (m for m in get_model_bootstrap_data() if m["path"] == repo_id),
                     None
                 )
                 if model:
@@ -354,7 +354,7 @@ class DownloadModelsDialog(MediatorMixin, SettingsMixin, QDialog):
             elif key.startswith("llm_"):
                 repo_id = key[4:]  # Remove "llm_" prefix
                 model = next(
-                    (m for m in model_bootstrap_data if m["path"] == repo_id and m["category"] == "llm"),
+                    (m for m in get_model_bootstrap_data() if m["path"] == repo_id and m["category"] == "llm"),
                     None
                 )
                 if model:

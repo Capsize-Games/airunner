@@ -1,5 +1,5 @@
-from airunner.components.data.bootstrap.pipeline_bootstrap_data import (
-    pipeline_bootstrap_data,
+from airunner.components.data.bootstrap_service import (
+    get_pipeline_bootstrap_data,
 )
 
 
@@ -11,7 +11,7 @@ class PipelineMixin:
     def pipeline_get_by_filter(filter_dict):
         return [
             item
-            for item in pipeline_bootstrap_data
+            for item in get_pipeline_bootstrap_data()
             if all(item.get(k) == v for k, v in filter_dict.items())
         ]
 
@@ -23,7 +23,7 @@ class PipelineMixin:
             return None
 
     def get_pipelines(self, pipeline_action=None, version=None, category=None):
-        pipelines = pipeline_bootstrap_data
+        pipelines = get_pipeline_bootstrap_data()
         if pipeline_action:
             pipelines = self.pipeline_get_by_filter(
                 {"pipeline_action": pipeline_action}
@@ -38,7 +38,7 @@ class PipelineMixin:
     def available_pipeline_by_section(section):
         return [
             pipeline["name"]
-            for pipeline in pipeline_bootstrap_data
+            for pipeline in get_pipeline_bootstrap_data()
             if pipeline["section"] == section
         ]
 
@@ -48,7 +48,7 @@ class PipelineMixin:
     ):
         return [
             pipeline["name"]
-            for pipeline in pipeline_bootstrap_data
+            for pipeline in get_pipeline_bootstrap_data()
             if pipeline["pipeline_action"] == pipeline_action
             and pipeline["version"] == version
             and pipeline["category"] == category
@@ -57,5 +57,6 @@ class PipelineMixin:
     @staticmethod
     def pipeline_actions():
         return [
-            pipeline["pipeline_action"] for pipeline in pipeline_bootstrap_data
+            pipeline["pipeline_action"]
+            for pipeline in get_pipeline_bootstrap_data()
         ]

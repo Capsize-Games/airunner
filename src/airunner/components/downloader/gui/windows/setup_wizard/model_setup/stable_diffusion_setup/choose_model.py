@@ -4,7 +4,9 @@ from airunner.components.downloader.gui.windows.setup_wizard.model_setup.stable_
     Ui_choose_model,
 )
 from airunner.enums import StableDiffusionVersion, ImageGenerator
-from airunner.components.data.bootstrap.model_bootstrap_data import model_bootstrap_data
+from airunner.components.data.bootstrap_service import (
+    get_model_bootstrap_data,
+)
 
 
 class ChooseModel(BaseWizard):
@@ -28,7 +30,7 @@ class ChooseModel(BaseWizard):
 
     def initialize_models(self):
         self.ui.models.clear()
-        for model in model_bootstrap_data:
+        for model in get_model_bootstrap_data():
             if (
                 model["category"] in (
                     ImageGenerator.STABLEDIFFUSION.value,
