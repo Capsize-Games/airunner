@@ -1,4 +1,4 @@
-"""Download endpoints for the GUI daemon client."""
+"""Download and setup endpoints for the GUI daemon client."""
 
 from __future__ import annotations
 
@@ -13,6 +13,46 @@ class DownloadsClientMixin:
     _time_fn: Any
     _poll_interval_seconds: float
     logger: Any
+
+    # ------------------------------------------------------------------
+    # Setup wizard
+    # ------------------------------------------------------------------
+
+    def start_setup(
+        self,
+        *,
+        enabled_models: Dict[str, bool],
+        base_path: str,
+        prefer_pre_quantized: bool = True,
+        progress_callback: Optional[
+            Callable[[Dict[str, Any]], None]
+        ] = None,
+    ) -> None:
+        """Run one daemon-backed setup install.  Progress is streamed
+        via SSE events and forwarded through ``progress_callback``.
+        """
+        import json
+        timeout = self._request_timeout_seconds
+        response = self._request(
+            "POST",
+            "/api/v1/setup/install",
+            json_payload={
+                "enabled_models": enabled_models,
+                "base_path": base_path,
+                "prefer_pre_quantized": prefer_pre_quantized,
+            },
+            timeout_seconds=3600.0,
+            stream=True,
+        )
+        for line in response.iter_lines():
+            if not line or not line.startswith(b"data: "):
+                continue
+            try:
+                payload = json.loads(line[6:])
+            except json.JSONDecodeError:
+                continue
+            if progress_callback is not None:
+                progress_callback(payload)
 
     # ------------------------------------------------------------------
     # HuggingFace downloads

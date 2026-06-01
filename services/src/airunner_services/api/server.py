@@ -26,6 +26,7 @@ from airunner_services.api.routes import (
     health,
     llm,
     persistence,
+    setup,
     stt,
     tts,
 )
@@ -296,6 +297,11 @@ def create_app(
         downloads.router,
         prefix="/api/v1/downloads",
         tags=["downloads"],
+    )
+    app.include_router(
+        setup.router,
+        prefix="/api/v1",
+        tags=["setup"],
     )
     app.include_router(tts.router, prefix="/api/v1/tts", tags=["tts"])
     app.include_router(stt.router, prefix="/api/v1/stt", tags=["stt"])
