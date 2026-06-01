@@ -45,12 +45,13 @@ async def stream_chat_completion(
             envelope = websocket_envelope(
                 {"messages": payload.messages},
             )
-            async for delta in stream_runtime(client, envelope):
-                if delta.text:
+            async for stream_delta in stream_runtime(client, envelope):
+                content = stream_delta.delta.get("content", "")
+                if content:
                     yield (
-                        f"data: {json.dumps({'token': delta.text, 'done': delta.final})}\n\n"
+                        f"data: {json.dumps({'token': content, 'done': stream_delta.final})}\n\n"
                     )
-                if delta.final:
+                if stream_delta.final:
                     yield f"data: {json.dumps({'token': '', 'done': True})}\n\n"
         except Exception as exc:
             logger.exception("SSE stream error")
