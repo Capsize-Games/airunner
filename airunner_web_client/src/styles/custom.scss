@@ -1,59 +1,96 @@
 @use "bootstrap/scss/bootstrap";
 
 :root {
-  --sidebar-width: 260px;
-  --rightbar-width: 280px;
+  --leftbar-width: 44px;
+  --rightbar-width: 44px;
+  --panel-min: 0px;
 }
 
-body {
-  overflow: hidden;
-}
+* { box-sizing: border-box; }
 
-.app-layout {
+body, #root { height: 100vh; overflow: hidden; margin: 0; }
+
+.app-shell {
   display: flex;
   height: 100vh;
-  flex-direction: column;
-}
-
-.app-navbar {
-  flex-shrink: 0;
-}
-
-.app-body {
-  display: flex;
-  flex: 1;
   overflow: hidden;
 }
 
-.sidebar {
-  width: var(--sidebar-width);
+/* ── Left icon bar ── */
+.left-bar {
+  width: var(--leftbar-width);
   flex-shrink: 0;
-  overflow-y: auto;
-  border-right: 1px solid var(--bs-border-color);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-top: 8px;
+  gap: 4px;
   background: var(--bs-body-bg);
+  border-right: 1px solid var(--bs-border-color);
 }
-
-.main-content {
-  flex: 1;
-  overflow-y: auto;
-  padding-top: 0;
+.left-bar button {
+  width: 32px; height: 32px;
+  padding: 4px;
+  border: none;
+  background: transparent;
+  border-radius: 6px;
+  cursor: pointer;
 }
+.left-bar button.active { background: var(--bs-primary-bg-subtle); }
+.left-bar button img { width: 18px; height: 18px; opacity: 0.7; }
+.left-bar button.active img { opacity: 1; }
 
-.right-sidebar {
+/* ── Right icon bar ── */
+.right-bar {
   width: var(--rightbar-width);
   flex-shrink: 0;
-  overflow-y: auto;
-  border-left: 1px solid var(--bs-border-color);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-top: 8px;
+  gap: 4px;
   background: var(--bs-body-bg);
+  border-left: 1px solid var(--bs-border-color);
 }
+.right-bar button {
+  width: 32px; height: 32px;
+  padding: 4px;
+  border: none;
+  background: transparent;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.right-bar button.active { background: var(--bs-primary-bg-subtle); }
+.right-bar button img { width: 18px; height: 18px; opacity: 0.7; }
+.right-bar button.active img { opacity: 1; }
 
+/* ── Center splitter ── */
+.center-area {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+}
+.center-area > .resize-handle {
+  width: 4px; cursor: col-resize; background: var(--bs-border-color);
+}
+.panel {
+  overflow: auto;
+  min-width: 0;
+}
+.panel-collapsed { display: none; }
+
+.chat-panel { flex: 4; }
+.art-panel  { flex: 3; border-left: 1px solid var(--bs-border-color); }
+.settings-panel { flex: 2; border-left: 1px solid var(--bs-border-color); }
+.documents-panel { flex: 2; border-left: 1px solid var(--bs-border-color); }
+
+/* ── Chat specific ── */
+.chat-messages { flex: 1; overflow-y: auto; }
+.chat-input-area textarea {
+  resize: none;
+}
 .streaming-cursor::after {
   content: "▌";
   animation: blink 1s step-end infinite;
 }
-
-@keyframes blink {
-  50% {
-    opacity: 0;
-  }
-}
+@keyframes blink { 50% { opacity: 0; } }
