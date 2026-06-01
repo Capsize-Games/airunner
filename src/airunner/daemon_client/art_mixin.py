@@ -148,10 +148,11 @@ class ArtClientMixin:
         self, model_path: str,
     ) -> Dict[str, Any]:
         """Return a VRAM estimate for one model path."""
+        from urllib.parse import urlencode
+        query = urlencode({"model_path": model_path})
         response = self._request(
             "GET",
-            f"/api/v1/art/vram-estimate",
-            params={"model_path": model_path},
+            f"/api/v1/art/vram-estimate?{query}",
         )
         return response.json()
 
