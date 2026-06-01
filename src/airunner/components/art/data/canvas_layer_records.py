@@ -43,6 +43,17 @@ def all_canvas_layers(
     return _store(store).query("CanvasLayer")
 
 
+def first_canvas_layer(
+    *,
+    store: Optional[GuiResourceStore] = None,
+) -> Optional[ResourceRecord]:
+    """Return the first persisted canvas layer by order."""
+    return _store(store).first(
+        "CanvasLayer",
+        order_by=[{"field": "order", "direction": "asc"}],
+    )
+
+
 def find_canvas_layer_by_name(
     name: str,
     *,

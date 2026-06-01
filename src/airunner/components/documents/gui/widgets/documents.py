@@ -795,7 +795,7 @@ class DocumentsWidget(BaseWidget):
             item.setForeground(QColor(color))
         return item
 
-    def _insert_document_table_row(self, row: int, document: Document) -> None:
+    def _insert_document_table_row(self, row: int, document) -> None:
         """Insert one document row into the status table."""
         table = self.ui.documentsTableWidget
         display_name = self._get_display_name(document.path)

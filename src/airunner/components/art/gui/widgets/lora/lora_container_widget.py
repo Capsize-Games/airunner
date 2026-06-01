@@ -196,10 +196,7 @@ class LoraContainerWidget(BaseWidget):
         if self._version is None or self._version != version or force_reload:
             self._version = version
             self.clear_lora_widgets()
-            loras = self.resource_store.query(
-                "Lora",
-                filters={"version": version},
-            )
+            loras = self._safe_lora_query(version)
             if loras:
                 filtered_loras = [
                     lora
@@ -210,6 +207,20 @@ class LoraContainerWidget(BaseWidget):
                     print("adding lora widget for", lora.name)
                     self._add_lora(lora)
                 self.add_spacer()
+
+    def _safe_lora_query(self, version: str):
+        """Query lora from daemon, returning empty list on error."""
+        try:
+            result = self.resource_store.query(
+                "Lora",
+                filters={"version": version},
+            )
+            return result if result is not None else []
+        except Exception as e:
+            self.logger.warning(
+                "Lora query against daemon failed: %s", e
+            )
+            return []
 
     def remove_spacer(self):
         # remove spacer from end of self.ui.scrollAreaWidgetContents.layout()

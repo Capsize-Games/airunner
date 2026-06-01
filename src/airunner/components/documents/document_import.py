@@ -64,6 +64,30 @@ def is_chat_image_path(file_path: str) -> bool:
     return Path(str(file_path)).suffix.lower() in CHAT_IMAGE_SUFFIXES
 
 
+def import_documents_to_library(
+    file_paths: Iterable[str],
+    destination_root: str,
+) -> list[str]:
+    """Copy supported documents into the local AIRunner document library."""
+    destination_dir = Path(
+        normalize_local_path(
+            destination_root,
+            label="Document library path",
+        )
+    )
+    destination_dir.mkdir(parents=True, exist_ok=True)
+
+    imported_paths: list[str] = []
+    for file_path in file_paths:
+        imported_paths.append(
+            import_document_to_library(
+                file_path,
+                str(destination_dir),
+            )
+        )
+    return imported_paths
+
+
 def import_document_to_library(
     file_path: str,
     destination_root: str,
