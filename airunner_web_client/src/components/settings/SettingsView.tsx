@@ -8,34 +8,69 @@ import Tabs from "react-bootstrap/Tabs";
 import { getSingleton, updateSingleton } from "../../api/client";
 import type { ResourceRecord } from "../../types/api";
 
-export default function SettingsView() {
-  const [activeTab, setActiveTab] = useState("llm");
-  const [saving, setSaving] = useState(false);
-  const [modelPath, setModelPath] = useState("");
-  const [temperature, setTemperature] = useState(0.7);
-  const [maxTokens, setMaxTokens] = useState(4096);
-  const [selectedVoice, setSelectedVoice] = useState("");
-  const [whisperModel, setWhisperModel] = useState("");
+/** Read one key from localStorage or return the provided default. */
+function loadLocal<T>(key: string, fallback: T): T {
+  try {
+    const raw = localStorage.getItem(`airunner:${key}`);
+    if (raw === null) return fallback;
+    return JSON.parse(raw) as T;
+  } catch {
+    return fallback;
+  }
+}
 
+/** Write one key to localStorage. */
+function saveLocal(key: string, value: unknown): void {
+  try {
+    localStorage.setItem(`airunner:${key}`, JSON.stringify(value));
+  } catch { /* quota exceeded – silently ignore */ }
+}
+
+export default function SettingsView() {
+  const [activeTab, setActiveTab] = useState(() => loadLocal("activeTab", "llm"));
+  const [saving, setSaving] = useState(false);
+  const [modelPath, setModelPath] = useState(() => loadLocal("modelPath", ""));
+  const [temperature, setTemperature] = useState(() => loadLocal("temperature", 0.7));
+  const [maxTokens, setMaxTokens] = useState(() => loadLocal("maxTokens", 4096));
+  const [selectedVoice, setSelectedVoice] = useState(() => loadLocal("selectedVoice", ""));
+  const [whisperModel, setWhisperModel] = useState(() => loadLocal("whisperModel", ""));
+
+  useEffect(() => {
+    saveLocal("activeTab", activeTab);
+  }, [activeTab]);
+
+  // Hydrate from daemon on mount (daemon takes precedence over localStorage)
   useEffect(() => {
     getSingleton("LLMGeneratorSettings")
       .then((r: ResourceRecord) => {
-        setModelPath(String(r.model_path ?? ""));
-        setTemperature(Number(r.temperature ?? 0.7));
-        setMaxTokens(Number(r.max_new_tokens ?? 4096));
+        const mp = String(r.model_path ?? "");
+        const t = Number(r.temperature ?? 0.7);
+        const mt = Number(r.max_new_tokens ?? 4096);
+        if (mp) setModelPath(mp);
+        if (!Number.isNaN(t)) setTemperature(t);
+        if (!Number.isNaN(mt)) setMaxTokens(mt);
       })
       .catch(() => {});
     getSingleton("VoiceSettings")
-      .then((r: ResourceRecord) =>
-        setSelectedVoice(String(r.voice ?? ""))
-      )
+      .then((r: ResourceRecord) => {
+        const v = String(r.voice ?? "");
+        if (v) setSelectedVoice(v);
+      })
       .catch(() => {});
     getSingleton("STTSettings")
-      .then((r: ResourceRecord) =>
-        setWhisperModel(String(r.model_path ?? ""))
-      )
+      .then((r: ResourceRecord) => {
+        const wm = String(r.model_path ?? "");
+        if (wm) setWhisperModel(wm);
+      })
       .catch(() => {});
   }, []);
+
+  // Persist changes to localStorage on every change
+  useEffect(() => saveLocal("modelPath", modelPath), [modelPath]);
+  useEffect(() => saveLocal("temperature", temperature), [temperature]);
+  useEffect(() => saveLocal("maxTokens", maxTokens), [maxTokens]);
+  useEffect(() => saveLocal("selectedVoice", selectedVoice), [selectedVoice]);
+  useEffect(() => saveLocal("whisperModel", whisperModel), [whisperModel]);
 
   const handleSaveLLM = async () => {
     setSaving(true);
@@ -71,7 +106,10 @@ export default function SettingsView() {
   return (
     <div>
       <h3 className="mb-3">⚙️ Settings</h3>
-      <Tabs activeKey={activeTab} onSelect={(k) => setActiveTab(k ?? "llm")}>
+      <Tabs
+        activeKey={activeTab}
+        onSelect={(k) => k && setActiveTab(k)}
+      >
         <Tab eventKey="llm" title="LLM">
           <Card body className="mt-2">
             <Form.Group className="mb-2">
