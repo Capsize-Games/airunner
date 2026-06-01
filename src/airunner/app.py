@@ -30,7 +30,7 @@ from airunner.app_mixins import (
     UIRuntimeMixin,
 )
 from airunner.enums import (
-    EngineResponseCode,
+    
     ModelStatus,
     ModelType,
     SignalCode,
