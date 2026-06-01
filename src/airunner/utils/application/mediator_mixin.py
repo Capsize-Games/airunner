@@ -1,7 +1,6 @@
 from typing import Callable, Dict, Optional
 
 from airunner.enums import SignalCode
-from airunner.utils.application import get_logger
 from airunner.utils.application.signal_mediator import SignalMediator
 
 

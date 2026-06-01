@@ -8,7 +8,6 @@ for their hardware.
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional, Dict, Tuple
-import os
 
 
 # Multipliers for VRAM usage relative to FP32
