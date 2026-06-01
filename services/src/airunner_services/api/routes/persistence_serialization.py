@@ -2,18 +2,32 @@
 
 from __future__ import annotations
 
+import base64
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
-from sqlalchemy import DateTime
+from sqlalchemy import DateTime, LargeBinary
 from sqlalchemy.inspection import inspect as sqlalchemy_inspect
+
+
+def _safe_value(value: Any, column_type: Any) -> Any:
+    """Base64-encode large binary columns for JSON-safe transport."""
+    if value is None:
+        return None
+    if isinstance(column_type, LargeBinary):
+        if isinstance(value, (bytes, bytearray, memoryview)):
+            return base64.b64encode(bytes(value)).decode("ascii")
+    return value
 
 
 def column_payload(record: Any) -> Dict[str, Any]:
     """Return mapped column values for one ORM record."""
     mapper = sqlalchemy_inspect(record).mapper
     return {
-        column.key: getattr(record, column.key)
+        column.key: _safe_value(
+            getattr(record, column.key),
+            column.columns[0].type,
+        )
         for column in mapper.column_attrs
     }
 
