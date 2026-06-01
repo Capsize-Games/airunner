@@ -1,0 +1,59 @@
+@use "bootstrap/scss/bootstrap";
+
+:root {
+  --sidebar-width: 260px;
+  --rightbar-width: 280px;
+}
+
+body {
+  overflow: hidden;
+}
+
+.app-layout {
+  display: flex;
+  height: 100vh;
+  flex-direction: column;
+}
+
+.app-navbar {
+  flex-shrink: 0;
+}
+
+.app-body {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+.sidebar {
+  width: var(--sidebar-width);
+  flex-shrink: 0;
+  overflow-y: auto;
+  border-right: 1px solid var(--bs-border-color);
+  background: var(--bs-body-bg);
+}
+
+.main-content {
+  flex: 1;
+  overflow-y: auto;
+  padding-top: 0;
+}
+
+.right-sidebar {
+  width: var(--rightbar-width);
+  flex-shrink: 0;
+  overflow-y: auto;
+  border-left: 1px solid var(--bs-border-color);
+  background: var(--bs-body-bg);
+}
+
+.streaming-cursor::after {
+  content: "▌";
+  animation: blink 1s step-end infinite;
+}
+
+@keyframes blink {
+  50% {
+    opacity: 0;
+  }
+}
