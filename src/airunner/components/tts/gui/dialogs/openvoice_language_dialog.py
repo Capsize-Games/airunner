@@ -8,11 +8,7 @@ from PySide6.QtWidgets import (
     QCheckBox,
     QPushButton,
     QGroupBox,
-    QScrollArea,
-    QWidget,
-    QSizePolicy,
 )
-from PySide6.QtCore import Qt
 
 from airunner.bootstrap.openvoice_languages import (
     OPENVOICE_LANGUAGE_MODELS,

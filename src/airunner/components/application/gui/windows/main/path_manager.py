@@ -1,7 +1,3 @@
-import sys
-from PySide6.QtCore import QProcess
-
-
 class PathManager:
     """
     Handles path and script management logic for MainWindow.

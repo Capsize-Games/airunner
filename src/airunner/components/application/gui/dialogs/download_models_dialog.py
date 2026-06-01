@@ -5,7 +5,7 @@ and uses the standard HuggingFace download infrastructure with progress dialogs.
 """
 
 import os
-from typing import Dict, List, Optional, Callable
+from typing import Dict, List
 
 from PySide6.QtWidgets import (
     QDialog,
@@ -30,15 +30,6 @@ from airunner.components.data.bootstrap.model_bootstrap_data import (
 )
 from airunner.bootstrap.controlnet_bootstrap_data import (
     controlnet_bootstrap_data,
-)
-from airunner.bootstrap.sd_file_bootstrap_data import (
-    SD_FILE_BOOTSTRAP_DATA,
-)
-from airunner.bootstrap.openvoice_bootstrap_data import (
-    OPENVOICE_FILES,
-)
-from airunner.bootstrap.llm_file_bootstrap_data import (
-    LLM_FILE_BOOTSTRAP_DATA,
 )
 from airunner.components.llm.config.provider_config import LLMProviderConfig
 from airunner.bootstrap.whisper import WHISPER_FILES

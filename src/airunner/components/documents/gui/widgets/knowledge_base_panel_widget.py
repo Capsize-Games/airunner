@@ -1,9 +1,8 @@
 import os
 from typing import Dict, List
 
-from PySide6.QtCore import QTimer, Qt, Slot
-from PySide6.QtGui import QIcon
-from PySide6.QtWidgets import QFileDialog, QMessageBox, QPushButton
+from PySide6.QtCore import QTimer, Slot
+from PySide6.QtWidgets import QFileDialog, QMessageBox
 
 from airunner.daemon_client.gui_daemon_client import GuiDaemonClient
 from airunner.components.documents.data.document_records import list_documents

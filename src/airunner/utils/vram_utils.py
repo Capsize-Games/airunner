@@ -7,19 +7,7 @@ for their hardware.
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional, Dict, Tuple
-
-
-# Multipliers for VRAM usage relative to FP32
-# These represent how much VRAM a model uses at each precision compared to FP32
-PRECISION_VRAM_MULTIPLIERS: Dict[str, float] = {
-    "float32": 1.0,        # 32 bits = 4 bytes per param
-    "float16": 0.5,        # 16 bits = 2 bytes per param
-    "bfloat16": 0.5,       # 16 bits = 2 bytes per param
-    "float8": 0.25,        # 8 bits = 1 byte per param
-    "8bit": 0.28,          # ~8 bits + some overhead for BitsAndBytes
-    "4bit": 0.15,          # ~4 bits + overhead for NF4 quantization
-}
+from typing import Optional, Dict
 
 # Display names for precision options
 PRECISION_DISPLAY_NAMES: Dict[str, str] = {
@@ -78,35 +66,6 @@ def is_precision_safe_for_vram(
     safety_margin = get_vram_safety_margin_gb()
     required_vram = estimate.total_vram_gb + safety_margin
     return available_vram_gb >= required_vram
-
-
-def get_recommended_precision_for_vram(
-    model_size_gb: float,
-    available_vram_gb: float,
-    source_precision: str = "bfloat16",
-) -> str:
-    """Get the recommended precision for a given VRAM size.
-    
-    Recommends the highest quality precision that fits safely in VRAM.
-    
-    Args:
-        model_size_gb: Model size in GB.
-        available_vram_gb: Available VRAM in GB.
-        source_precision: The precision the model is stored in.
-        
-    Returns:
-        Recommended precision string (e.g., "4bit", "8bit", "bfloat16").
-    """
-    # Try precisions from highest quality to lowest
-    precision_order = ["bfloat16", "float16", "8bit", "4bit"]
-    
-    for precision in precision_order:
-        estimate = estimate_vram_for_precision(model_size_gb, precision, source_precision)
-        if is_precision_safe_for_vram(estimate, available_vram_gb):
-            return precision
-    
-    # Default to 4-bit if nothing else fits
-    return "4bit"
 
 
 @dataclass
@@ -217,50 +176,6 @@ def estimate_vram_from_path(
         target_precision=target_precision,
         source_precision=source_precision,
     )
-
-
-def format_vram_estimate(estimate: VRAMEstimate) -> str:
-    """Format VRAM estimate for display in UI.
-    
-    Args:
-        estimate: The VRAM estimate to format.
-        
-    Returns:
-        Formatted string like "~11.5 GB VRAM"
-    """
-    return f"~{estimate.total_vram_gb:.1f} GB VRAM"
-
-
-def get_precision_with_vram_estimate(
-    precision: str,
-    model_path: Optional[str] = None,
-    model_size_gb: Optional[float] = None,
-    source_precision: str = "bfloat16",
-) -> Tuple[str, Optional[VRAMEstimate]]:
-    """Get display name for precision option with VRAM estimate.
-    
-    Args:
-        precision: The precision value (e.g., "bfloat16", "4bit").
-        model_path: Optional path to model for size calculation.
-        model_size_gb: Optional pre-calculated model size in GB.
-        source_precision: The precision the model is stored in.
-        
-    Returns:
-        Tuple of (display_name, VRAMEstimate or None).
-    """
-    display_name = PRECISION_DISPLAY_NAMES.get(precision, precision)
-    
-    estimate = None
-    if model_path:
-        estimate = estimate_vram_from_path(
-            model_path, precision, source_precision
-        )
-    elif model_size_gb is not None:
-        estimate = estimate_vram_for_precision(
-            model_size_gb, precision, source_precision
-        )
-    
-    return display_name, estimate
 
 
 def can_use_precision(

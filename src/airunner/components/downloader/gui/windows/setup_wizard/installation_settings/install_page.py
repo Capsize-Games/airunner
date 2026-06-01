@@ -1,9 +1,7 @@
 from typing import List, Dict
 import importlib.util
 import os.path
-import sys
 import zipfile
-import time
 
 from PySide6.QtCore import QObject, QThread, Slot, Signal, QTimer
 from PySide6.QtWidgets import QWizard

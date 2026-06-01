@@ -4,7 +4,6 @@ Allows users to modify external service permissions after initial setup.
 """
 
 from PySide6.QtWidgets import (
-    QWidget,
     QVBoxLayout,
     QHBoxLayout,
     QLabel,
@@ -13,7 +12,6 @@ from PySide6.QtWidgets import (
     QPushButton,
 )
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QFont
 
 from airunner.components.application.gui.widgets.base_widget import BaseWidget
 from airunner.components.application.gui.dialogs.privacy_consent_dialog import (
