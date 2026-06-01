@@ -11,7 +11,6 @@ import traceback
 import gc
 from pathlib import Path
 from typing import Optional
-from typing import TYPE_CHECKING
 
 from PySide6 import QtCore
 from PySide6.QtCore import QCoreApplication, QThread, QTimer, qVersion
@@ -26,13 +25,8 @@ from airunner.settings import MATHJAX_VERSION
 from airunner.settings import QTWEBENGINE_REMOTE_DEBUGGING
 from airunner.utils.settings import get_qsettings
 
-_AIRUNNER_IS_HEADLESS = os.environ.get("AIRUNNER_HEADLESS", "0") == "1"
 _QT_RUNTIME_PREPARED = False
 _CAPTURING_WEBENGINE_PAGE_CLASS = None
-
-if TYPE_CHECKING:
-    from PySide6.QtWebEngineCore import QWebEnginePage, QWebEngineSettings
-    from PySide6.QtWebEngineWidgets import QWebEngineView
 
 
 def _prefer_software_rendering() -> bool:
@@ -102,8 +96,6 @@ def _configure_qt_attributes() -> None:
 def prepare_qt_runtime() -> None:
     """Configure Qt runtime once before any QApplication is created."""
     global _QT_RUNTIME_PREPARED
-    if _AIRUNNER_IS_HEADLESS or _QT_RUNTIME_PREPARED:
-        return
     _configure_qt_environment()
     _configure_qt_surface_format()
     _configure_qt_attributes()
@@ -112,8 +104,6 @@ def prepare_qt_runtime() -> None:
 
 def _get_webengine_classes():
     """Import WebEngine classes only after Qt runtime setup."""
-    if _AIRUNNER_IS_HEADLESS:
-        raise RuntimeError("Qt WebEngine is unavailable in headless mode.")
 
     from PySide6.QtWebEngineCore import QWebEnginePage
     from PySide6.QtWebEngineCore import QWebEngineSettings
@@ -233,10 +223,15 @@ class UIRuntimeMixin:
         message = data["message"].split(" - ")
         self.update_splash_message(self.splash, message[4])
 
+    def exception_handler(self, exctype, value, tb):
+        # Prints the exact file, line number, and function call stack
+        traceback.print_exception(exctype, value, tb)
+        sys.exit(1)
+
     def start(self) -> None:
+        sys.excepthook = self.exception_handler
+
         """Initialize QApplication and OpenGL state for GUI mode."""
-        if self.headless:
-            return
         signal.signal(signal.SIGINT, self.signal_handler)
         prepare_qt_runtime()
 
@@ -250,11 +245,7 @@ class UIRuntimeMixin:
         set_global_tooltip_style()
 
     def run(self) -> None:
-        """Run as a GUI application or keep the headless loop alive."""
-        if self.headless:
-            self.run_headless()
-            return
-
+        """Run as a GUI application."""
         if self._launcher_splash is not None:
             self.splash = self._launcher_splash
             self.update_splash_message(self.splash, "Loading AI Runner...")
@@ -275,19 +266,6 @@ class UIRuntimeMixin:
             self.cleanup()
             sys.exit(1)
 
-    def run_headless(self):
-        """Run in headless mode without GUI."""
-        print("run headless function called")
-        self.logger.info("AI Runner headless mode - server running")
-        self.logger.info("Press Ctrl+C to stop")
-
-        def _timer_tick() -> None:
-            return None
-
-        self._headless_timer = QTimer()
-        self._headless_timer.timeout.connect(_timer_tick)
-        self._headless_timer.start(500)
-
         try:
             self.logger.info("DEBUG: Starting Qt event loop")
             ret = self.app.exec()
@@ -298,13 +276,6 @@ class UIRuntimeMixin:
             self.logger.info("Interrupted by user")
             self.cleanup()
             sys.exit(0)
-        except Exception as exc:
-            self.logger.exception(
-                "CRITICAL: Headless server crashed: %s",
-                exc,
-            )
-            self.cleanup()
-            sys.exit(1)
 
     def _post_splash_startup(self):
         """Continue startup after the splash screen is visible."""
@@ -440,9 +411,6 @@ class UIRuntimeMixin:
 
     def show_main_application(self, app: QApplication) -> None:
         """Show the main application window."""
-        if self.headless:
-            return
-
         import sys
         print("[DEBUG] Resolving window class...", file=sys.stderr)
         window_class = self.main_window_class_
@@ -479,7 +447,7 @@ class UIRuntimeMixin:
             self._schedule_main_window_loaded(window)
 
             print(f"Qt Version: {qVersion()}")
-            if hasattr(window, "ui") and not _AIRUNNER_IS_HEADLESS:
+            if hasattr(window, "ui"):
                 (
                     _qwebengine_page,
                     qwebengine_settings,
