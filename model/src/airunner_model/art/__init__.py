@@ -1,1 +1,0 @@
-"""Public art-model package surfaces."""
