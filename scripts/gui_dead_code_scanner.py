@@ -1,19 +1,16 @@
 import os
 from vulture import Vulture
 
-def scan_for_dead_code(target_directory: str):
+def scan_for_dead_code(target_directory: str, whitelist_path: str = None):
     if not os.path.exists(target_directory):
         print(f"Error: The directory '{target_directory}' does not exist.")
         return
 
-    # Initialize Vulture. verbose=False prevents internal debugging prints.
     vulture_checker = Vulture(verbose=False)
     excluded_suffixes = ('_ui.py', '_rc.py')
-    
-    # Track files to verify if any are completely unused
     scanned_files = []
 
-    # Step 1: Collect all valid Python files
+    # Step 1: Collect valid source files
     for root, _, files in os.walk(target_directory):
         for file in files:
             if file.endswith('.py'):
@@ -27,10 +24,15 @@ def scan_for_dead_code(target_directory: str):
         print("No valid Python files found to scan.")
         return
 
-    # Step 2: Run the static analysis across all collected files
+    # Step 2: Inject the whitelist file into the scanned paths if it exists
+    if whitelist_path and os.path.exists(whitelist_path):
+        scanned_files.append(whitelist_path)
+    elif whitelist_path:
+        print(f"Warning: Whitelist file '{whitelist_path}' specified but not found.")
+
+    # Step 3: Scavenge all target files + whitelist together
     vulture_checker.scavenge(scanned_files)
     
-    # Step 3: Parse and categorize the results
     unused_code_items = vulture_checker.get_unused_code()
     
     if not unused_code_items:
@@ -38,32 +40,34 @@ def scan_for_dead_code(target_directory: str):
         return
 
     print("=== OBSOLETE CODE REPORT ===")
-    print(f"Scanned {len(scanned_files)} files in '{target_directory}'\n")
+    print(f"Scanned {len(scanned_files)} paths (including whitelist if present)\n")
 
-    # Group findings by file for cleaner output formatting
     findings_by_file = {}
     for item in unused_code_items:
-        # Vulture types include: 'function', 'class', 'variable', 'import', etc.
+        # Ignore findings that originate from within the whitelist file itself
+        if whitelist_path and os.path.abspath(item.filename) == os.path.abspath(whitelist_path):
+            continue
         findings_by_file.setdefault(item.filename, []).append(item)
 
     for filename in sorted(findings_by_file.keys()):
         print(f"File: {filename}")
         items = findings_by_file[filename]
         
-        # Check if the entire file is obsolete (e.g., entry point or module never imported anywhere)
-        # Vulture marks an entire file as unused by checking if its top-level module name is unused.
         whole_file_unused = any(item.typ == 'unreachable' and item.first_lineno == 1 for item in items)
-        
         if whole_file_unused:
-            print("  [!] WARNING: This entire file appears to be completely unreferenced in the codebase.")
+            print("  [!] WARNING: This entire file appears to be completely unreferenced.")
             print("-" * 60)
             continue
 
         for item in sorted(items, key=lambda x: x.first_lineno):
-            # Format: Line X: Unused function 'my_old_func' (60% confidence)
             print(f"  - Line {item.first_lineno:3d}: Unused {item.typ} '{item.name}' ({item.confidence}% confidence)")
         print("-" * 60)
 
 if __name__ == "__main__":
+    # Target directory to check
     target_path = os.path.join("src", "airunner")
-    scan_for_dead_code(target_path)
+    
+    # Path to the whitelist file located in your project root
+    whitelist_file = "vulture_whitelist.py"
+    
+    scan_for_dead_code(target_path, whitelist_path=whitelist_file)

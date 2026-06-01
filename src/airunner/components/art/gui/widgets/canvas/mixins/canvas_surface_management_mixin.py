@@ -164,7 +164,7 @@ class CanvasSurfaceManagementMixin:
         """Apply expanded image to item."""
         if hasattr(item, "updateImage"):
             try:
-                item.updateImage(new_image, immediate=True)
+                item.updateImage(new_image)
             except Exception as e:
                 self.logger.warning(f"Failed to update item image: {e}")
                 return False

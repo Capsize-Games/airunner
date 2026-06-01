@@ -118,17 +118,6 @@ class App(
             {"model": model, "status": status},
         )
 
-    def worker_response(
-        self,
-        code: EngineResponseCode,
-        message: object,
-    ) -> None:
-        """Emit one worker response via signal dispatch."""
-        self.emit_signal(
-            SignalCode.ENGINE_RESPONSE_WORKER_RESPONSE_SIGNAL,
-            {"code": code, "message": message},
-        )
-
     def application_error(
         self,
         exception: Optional[Exception] = None,
@@ -192,10 +181,6 @@ class App(
                 "val": val,
             },
         )
-
-    def quit_application(self) -> None:
-        """Emit the shared quit signal used by the API wrapper."""
-        self.emit_signal(SignalCode.QUIT_APPLICATION, {})
 
     # ------------------------------------------------------------------
     # Knowledge system
@@ -425,11 +410,8 @@ class App(
         self.app = None
         self.splash = None
         self.http_server_thread = None
-        self.is_running = False
-        self.lifecycle_service = None
         self.model_load_balancer = None
         self._worker_manager = None
-        self._model_load_balancer = None
         self._sounddevice_manager = None
 
     def _init_api_bridge(self) -> None:

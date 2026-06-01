@@ -73,7 +73,6 @@ class DraggablePixmap(
     def _resolve_layer_id(
         self,
         layer_id: Optional[int] = None,
-        model_class_: Optional[type] = None,
     ) -> Optional[int]:
         """Override to handle layer context for draggable pixmaps.
 
@@ -115,7 +114,6 @@ class DraggablePixmap(
     def updateImage(
         self,
         qimage: QImage,
-        immediate: bool = False,
         invalidate_scene: bool = True,
     ):
         """Update the image data directly without conversion to pixmap."""
@@ -151,10 +149,6 @@ class DraggablePixmap(
         """Return the underlying QImage reference if available."""
         return self._qimage
 
-    def set_qimage(self, qimage: QImage) -> None:
-        """Replace the underlying QImage reference and refresh the item."""
-        self._qimage = qimage
-        self.update()
 
     def on_tool_changed_signal(self, _data=None) -> None:
         """Update item interaction when the active tool changes."""

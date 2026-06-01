@@ -15,7 +15,6 @@ class MediatorMixin:
     def __init__(
         self,
         mediator: Optional[SignalMediator] = None,
-        message_backend: Optional[Dict] = None,
         *args,
         **kwargs,
     ):

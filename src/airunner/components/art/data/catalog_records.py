@@ -66,27 +66,6 @@ def find_ai_models(
     return matched
 
 
-def find_first_ai_model(
-    *,
-    category: Optional[str] = None,
-    version: Optional[str] = None,
-    pipeline_actions: Optional[Sequence[str]] = None,
-    enabled: Optional[bool] = None,
-    is_default: Optional[bool] = None,
-    store: Optional[GuiResourceStore] = None,
-) -> Optional[ResourceRecord]:
-    """Return the first art model that matches the provided filters."""
-    models = find_ai_models(
-        category=category,
-        version=version,
-        pipeline_actions=pipeline_actions,
-        enabled=enabled,
-        is_default=is_default,
-        store=store,
-    )
-    return models[0] if models else None
-
-
 def list_schedulers(
     *,
     store: Optional[GuiResourceStore] = None,

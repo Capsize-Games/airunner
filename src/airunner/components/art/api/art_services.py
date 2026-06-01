@@ -95,11 +95,6 @@ class ARTAPIService(APIServiceBase):
     ) -> None:
         self._image_filter_service = value
 
-    def update_batch_images(self, images: List[Image]):
-        self.emit_signal(
-            SignalCode.SD_UPDATE_BATCH_IMAGES_SIGNAL, {"images": images}
-        )
-
     def save_prompt(
         self,
         prompt,
@@ -139,11 +134,6 @@ class ARTAPIService(APIServiceBase):
         if pipeline is not None:
             data["pipeline"] = pipeline
         self.emit_signal(SignalCode.SD_ART_MODEL_CHANGED, data)
-
-    def change_scheduler(self, val: str):
-        self.emit_signal(
-            SignalCode.CHANGE_SCHEDULER_SIGNAL, {"scheduler": val}
-        )
 
     def lora_updated(self):
         self.emit_signal(SignalCode.LORA_UPDATED_SIGNAL, {})
@@ -246,5 +236,3 @@ class ARTAPIService(APIServiceBase):
     def active_grid_area_updated(self):
         self.emit_signal(SignalCode.APPLICATION_ACTIVE_GRID_AREA_UPDATED)
 
-    def update_generator_form_values(self):
-        self.emit_signal(SignalCode.GENERATOR_FORM_UPDATE_VALUES_SIGNAL)

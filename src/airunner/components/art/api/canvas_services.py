@@ -58,11 +58,6 @@ class CanvasAPIService(APIServiceBase):
             SignalCode.BRUSH_COLOR_CHANGED_SIGNAL, {"color": color}
         )
 
-    def image_from_path(self, path):
-        self.emit_signal(
-            SignalCode.CANVAS_LOAD_IMAGE_FROM_PATH_SIGNAL, {"image_path": path}
-        )
-
     def new_document(self):
         self.clear()
 
@@ -137,12 +132,6 @@ class CanvasAPIService(APIServiceBase):
 
     def zoom_level_changed(self):
         self.emit_signal(SignalCode.CANVAS_ZOOM_LEVEL_CHANGED)
-
-    def layer_deleted(self, layer_id: int):
-        self.emit_signal(
-            SignalCode.LAYER_DELETED,
-            {"layer_id": layer_id},
-        )
 
     def layer_selection_changed(self, selected_layer_ids: List[int]):
         self.emit_signal(
@@ -337,21 +326,6 @@ class CanvasAPIService(APIServiceBase):
     def update_image_positions(self):
         self.emit_signal(SignalCode.CANVAS_UPDATE_IMAGE_POSITIONS)
 
-    def create_new_layer(self, **kwargs) -> Any:
-        self.begin_layer_operation("create")
-        layer = create_canvas_layer(kwargs)
-        if not layer:
-            self.cancel_layer_operation("create")
-            return
-        for resource_name in (
-            "DrawingPadSettings",
-            "ControlnetSettings",
-            "ImageToImageSettings",
-            "OutpaintSettings",
-        ):
-            ensure_layer_setting(resource_name, layer.id)
-        self.commit_layer_operation("create", [layer.id])
-        return layer
 
     def begin_layer_operation(
         self, action: str, layer_ids: list[int] | None = None
