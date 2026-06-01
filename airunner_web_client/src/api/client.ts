@@ -1,8 +1,4 @@
-import {
-  BASE_URL,
-  type JsonObject,
-  type StreamChunk,
-} from "../types/api";
+import { BASE_URL, type JsonObject, type StreamChunk } from "../types/api";
 
 // ---------------------------------------------------------------------------
 // Generic fetch wrapper
@@ -24,22 +20,6 @@ async function request<T>(
   return response.json() as Promise<T>;
 }
 
-async function requestBlob(
-  method: string,
-  path: string,
-  body?: JsonObject,
-): Promise<Blob> {
-  const response = await fetch(`${BASE_URL}${path}`, {
-    method,
-    headers: body ? { "Content-Type": "application/json" } : undefined,
-    body: body ? JSON.stringify(body) : undefined,
-  });
-  if (!response.ok) {
-    throw new Error(`${response.status} ${response.statusText}`);
-  }
-  return response.blob();
-}
-
 // ---------------------------------------------------------------------------
 // Streaming helper (SSE / NDJSON)
 // ---------------------------------------------------------------------------
@@ -47,11 +27,13 @@ async function* streamRequest(
   method: string,
   path: string,
   body?: JsonObject,
+  signal?: AbortSignal,
 ): AsyncGenerator<StreamChunk> {
   const response = await fetch(`${BASE_URL}${path}`, {
     method,
     headers: { "Content-Type": "application/json" },
     body: body ? JSON.stringify(body) : undefined,
+    signal,
   });
   if (!response.ok) {
     throw new Error(`${response.status} ${response.statusText}`);
@@ -71,9 +53,7 @@ async function* streamRequest(
       const json = line.slice(6);
       try {
         yield JSON.parse(json) as StreamChunk;
-      } catch {
-        // skip unparseable line
-      }
+      } catch { /* skip */ }
     }
   }
 }
@@ -81,14 +61,13 @@ async function* streamRequest(
 // ---------------------------------------------------------------------------
 // Health / Daemon
 // ---------------------------------------------------------------------------
-export async function healthCheck(): Promise<{ status: string }> {
-  return request("GET", "/api/v1/health");
+export async function healthCheck() {
+  return request<{ status: string }>("GET", "/api/v1/health");
 }
 
 export async function getHardwareProfile() {
   return request<import("../types/api").HardwareProfile>(
-    "GET",
-    "/api/v1/daemon/hardware",
+    "GET", "/api/v1/daemon/hardware",
   );
 }
 
@@ -97,26 +76,12 @@ export async function getHardwareProfile() {
 // ---------------------------------------------------------------------------
 export async function listConversations(limit = 50) {
   return request<import("../types/api").ConversationListResponse>(
-    "GET",
-    `/api/v1/llm/conversations?limit=${limit}`,
+    "GET", `/api/v1/llm/conversations?limit=${limit}`,
   );
 }
 
 export async function createConversation() {
   return request<{ id: number }>("POST", "/api/v1/llm/conversations");
-}
-
-export async function getConversationSession(
-  conversationId?: number,
-  maxMessages = 50,
-) {
-  const query = conversationId
-    ? `conversation_id=${conversationId}&max_messages=${maxMessages}`
-    : `max_messages=${maxMessages}`;
-  return request<import("../types/api").ConversationSessionResponse>(
-    "GET",
-    `/api/v1/llm/conversations/session?${query}`,
-  );
 }
 
 export async function deleteConversation(id: number) {
@@ -126,12 +91,32 @@ export async function deleteConversation(id: number) {
 // ---------------------------------------------------------------------------
 // LLM Streaming
 // ---------------------------------------------------------------------------
-export async function* streamLLM(messages: import("../types/api").Message[]) {
+export async function* streamLLM(
+  messages: import("../types/api").Message[],
+  signal?: AbortSignal,
+) {
   yield* streamRequest(
-    "POST",
-    "/api/v1/llm/conversations/stream",
-    { messages },
+    "POST", "/api/v1/llm/conversations/stream", { messages }, signal,
   );
+}
+
+// ---------------------------------------------------------------------------
+// LLM Models (from catalog bootstrap)
+// ---------------------------------------------------------------------------
+export async function listLLMModels() {
+  const data = await request<import("../types/api").BootstrapData>(
+    "GET", "/api/v1/art/bootstrap",
+  );
+  const models = data.models ?? [];
+  // Return LLM models with repo_id as value and name as label
+  return models
+    .filter((m: JsonObject) => m.category === "llm")
+    .map((m: JsonObject) => ({
+      label: String(m.version ?? m.name ?? m.path),
+      value: String(m.path ?? ""),
+      category: String(m.category ?? ""),
+      pipeline_action: String(m.pipeline_action ?? ""),
+    }));
 }
 
 // ---------------------------------------------------------------------------
@@ -141,16 +126,13 @@ export async function startArtGeneration(
   params: import("../types/api").ArtGenerateRequest,
 ) {
   return request<import("../types/api").ArtGenerateResponse>(
-    "POST",
-    "/api/v1/art/generate",
-    params as unknown as JsonObject,
+    "POST", "/api/v1/art/generate", params as unknown as JsonObject,
   );
 }
 
 export async function getArtJobStatus(jobId: string) {
   return request<import("../types/api").ArtJobStatus>(
-    "GET",
-    `/api/v1/art/status/${jobId}`,
+    "GET", `/api/v1/art/status/${jobId}`,
   );
 }
 
@@ -162,69 +144,30 @@ export async function synthesizeTTS(
   voice?: string,
   speed = 1.0,
 ): Promise<Blob> {
-  return requestBlob("POST", "/api/v1/tts/synthesize", {
-    text,
-    voice,
-    speed,
-  } as unknown as JsonObject);
-}
-
-export async function transcribeAudio(
-  audioBlob: Blob,
-): Promise<{ text: string }> {
-  const form = new FormData();
-  form.append("audio", audioBlob, "audio.wav");
-  const response = await fetch(`${BASE_URL}/api/v1/stt/transcribe`, {
+  const response = await fetch(`${BASE_URL}/api/v1/tts/synthesize`, {
     method: "POST",
-    body: form,
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ text, voice, speed }),
   });
-  if (!response.ok) {
-    throw new Error(`${response.status} ${response.statusText}`);
-  }
-  return response.json();
+  if (!response.ok) throw new Error(`${response.status}`);
+  return response.blob();
 }
 
 // ---------------------------------------------------------------------------
 // Settings (resource store)
 // ---------------------------------------------------------------------------
-export async function getSingleton(
-  resourceName: string,
-): Promise<import("../types/api").ResourceRecord> {
-  return request(
+export async function getSingleton(resourceName: string) {
+  return request<import("../types/api").ResourceRecord>(
     "GET",
     `/api/v1/settings/resources/${resourceName}/singleton?create_if_missing=true`,
   );
 }
 
 export async function updateSingleton(
-  resourceName: string,
-  values: JsonObject,
-): Promise<import("../types/api").ResourceRecord> {
-  return request(
-    "PUT",
-    `/api/v1/settings/resources/${resourceName}/singleton`,
-    { values },
-  );
-}
-
-export async function queryResource(
-  resourceName: string,
-  filters?: JsonObject,
-): Promise<{ records: import("../types/api").ResourceRecord[] }> {
-  return request(
-    "POST",
-    `/api/v1/catalog/resources/${resourceName}/query`,
-    { filters: filters ?? {} },
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Catalog / Bootstrap
-// ---------------------------------------------------------------------------
-export async function getBootstrapData() {
-  return request<import("../types/api").BootstrapData>(
-    "GET",
-    "/api/v1/art/bootstrap",
+  resourceName: string, values: JsonObject,
+) {
+  return request<import("../types/api").ResourceRecord>(
+    "PUT", `/api/v1/settings/resources/${resourceName}/singleton`, { values },
   );
 }
 
@@ -232,19 +175,10 @@ export async function getBootstrapData() {
 // Downloads
 // ---------------------------------------------------------------------------
 export async function startHuggingFaceDownload(
-  repoId: string,
-  modelType = "llm",
+  repoId: string, modelType = "llm",
 ) {
   return request<import("../types/api").DownloadJobAccepted>(
-    "POST",
-    "/api/v1/downloads/huggingface",
+    "POST", "/api/v1/downloads/huggingface",
     { repo_id: repoId, model_type: modelType },
-  );
-}
-
-export async function getDownloadJobStatus(jobId: string) {
-  return request<import("../types/api").DownloadJobStatus>(
-    "GET",
-    `/api/v1/downloads/status/${jobId}`,
   );
 }
