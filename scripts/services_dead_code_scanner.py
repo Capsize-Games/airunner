@@ -131,6 +131,9 @@ def scan_for_dead_code(target_directory: str) -> None:
         rel = os.path.relpath(fp)
         if rel in wl and item.name in wl[rel]:
             continue
+        # Exclude alembic migrations from output (framework-managed code)
+        if "/alembic/versions/" in rel:
+            continue
         by_file.setdefault(fp, []).append(item)
 
     if not by_file:
