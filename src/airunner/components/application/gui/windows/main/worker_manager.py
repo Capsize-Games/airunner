@@ -33,9 +33,6 @@ from airunner.components.art.managers.stablediffusion.image_response import (
     ImageResponse,
 )
 from airunner.components.llm.config.provider_config import LLMProviderConfig
-from airunner.components.llm.managers.download_huggingface import (
-    DownloadHuggingFaceModel,
-)
 from airunner.enums import TTSModel
 from airunner.components.application.gui.dialogs.privacy_consent_dialog import (
     is_huggingface_allowed,
@@ -1399,53 +1396,41 @@ class WorkerManager(Worker):
             model_path=model_path,
         )
         
-        # Create download worker - use local variable to avoid polluting the 
-        # huggingface_download_worker property which is used for STT/TTS downloads
-        llm_download_worker = create_worker(DownloadHuggingFaceModel)
-        
-        # Connect dialog to download worker signals
-        llm_download_worker.register(
+        # Connect dialog to the daemon-backed download worker signals
+        self.huggingface_download_worker.register(
             SignalCode.UPDATE_DOWNLOAD_LOG,
             self._download_dialog.on_log_updated,
         )
-        llm_download_worker.register(
+        self.huggingface_download_worker.register(
             SignalCode.UPDATE_DOWNLOAD_PROGRESS,
             self._download_dialog.on_progress_updated,
         )
-        llm_download_worker.register(
+        self.huggingface_download_worker.register(
             SignalCode.UPDATE_FILE_DOWNLOAD_PROGRESS,
             self._download_dialog.on_file_progress_updated,
         )
-        llm_download_worker.register(
+        self.huggingface_download_worker.register(
             SignalCode.HUGGINGFACE_DOWNLOAD_COMPLETE,
             self._download_dialog.on_download_complete,
         )
-        llm_download_worker.register(
+        self.huggingface_download_worker.register(
             SignalCode.HUGGINGFACE_DOWNLOAD_FAILED,
             self._download_dialog.on_download_failed,
         )
-        
-        if is_gguf and gguf_filename:
-            self.logger.info("Starting GGUF download")
-            llm_download_worker.download(
-                repo_id=repo_id,
-                model_type="gguf",
-                output_dir=model_path,
-                setup_quantization=False,
-                quantization_bits=0,
-                missing_files=None,
-                gguf_filename=gguf_filename,
-            )
-        else:
-            self.logger.info(f"Starting standard download: {repo_id}")
-            llm_download_worker.download(
-                repo_id=repo_id,
-                model_type=model_type,
-                output_dir=os.path.dirname(model_path),
-                setup_quantization=True,
-                quantization_bits=data.get("quantization_bits", 4),
-                missing_files=data.get("missing_files"),
-            )
+
+        download_data = {
+            "repo_id": repo_id,
+            "model_type": model_type,
+            "output_dir": model_path,
+            "gguf_filename": gguf_filename,
+            "missing_files": data.get("missing_files"),
+        }
+        self.logger.info(
+            "Starting %s download via daemon: %s",
+            "GGUF" if is_gguf else "standard",
+            repo_id,
+        )
+        self.huggingface_download_worker.add_to_queue(download_data)
         
         self._download_dialog.show()
 
