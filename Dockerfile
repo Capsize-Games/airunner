@@ -101,7 +101,6 @@ WORKDIR /app
 # Copy project files
 COPY setup.py pyproject.toml README.md ./
 COPY src/ ./src/
-COPY extensions/ ./extensions/
 
 # Install airunner with the selected dependency profiles.
 RUN python3.13 -m pip install -e ".[$AIRUNNER_INSTALL_PROFILES]"

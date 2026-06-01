@@ -7,10 +7,10 @@ from airunner.components.application.gui.widgets.status.templates.status_ui impo
     Ui_status_widget,
 )
 from airunner.settings import AIRUNNER_ART_ENABLED
-from airunner.components.settings.data.voice_settings import VoiceSettings
 
 
 class StatusWidget(BaseWidget):
+    ui: Ui_status_widget  # type: ignore[assignment]
     widget_class_ = Ui_status_widget
 
     def __init__(self, *args, **kwargs):
@@ -209,9 +209,17 @@ class StatusWidget(BaseWidget):
         """Render the active TTS model name in the status bar."""
         label = "TTS"
         if self.chatbot and self.chatbot.voice_id:
-            voice = VoiceSettings.objects.get(pk=self.chatbot.voice_id)
+            voice = self.resource_store.get("VoiceSettings", self.chatbot.voice_id)
             if voice and getattr(voice, "model_type", None):
-                label = f"TTS ({voice.model_type})"
+                model_type = str(voice.model_type or "").strip()
+                normalized = model_type.lower()
+                if normalized in {"openvoice", "tts_openvoice"}:
+                    model_type = "OpenVoice"
+                elif normalized in {"espeak", "espeak-ng", "e-speak"}:
+                    model_type = "eSpeak"
+                elif normalized == "tts":
+                    model_type = "TTS"
+                label = f"TTS ({model_type})"
         try:
             self.ui.tts_status.setText(label)
         except RuntimeError as e:

@@ -83,8 +83,8 @@
        <property name="verticalSpacing">
         <number>10</number>
        </property>
-       <item row="0" column="0" rowspan="2" colspan="2">
-        <widget class="StableDiffusionSettingsWidget" name="stable_diffusion_widget" native="true"/>
+    <item row="0" column="0" rowspan="2" colspan="2">
+     <widget class="QWidget" name="stable_diffusion_widget_placeholder"/>
        </item>
       </layout>
      </widget>
@@ -111,8 +111,8 @@
        <property name="verticalSpacing">
         <number>10</number>
        </property>
-       <item row="0" column="0">
-        <widget class="LoraContainerWidget" name="lora_container_widget" native="true"/>
+    <item row="0" column="0">
+     <widget class="QWidget" name="lora_container_widget_placeholder"/>
        </item>
       </layout>
      </widget>
@@ -139,8 +139,8 @@
        <property name="verticalSpacing">
         <number>10</number>
        </property>
-       <item row="0" column="0">
-        <widget class="EmbeddingsContainerWidget" name="embeddings_container_widget" native="true"/>
+    <item row="0" column="0">
+     <widget class="QWidget" name="embeddings_container_widget_placeholder"/>
        </item>
       </layout>
      </widget>
@@ -162,11 +162,11 @@
         <number>0</number>
        </property>
        <item row="0" column="0">
-        <widget class="QSplitter" name="layer_tab_splitter">
+                 <widget class="QSplitter" name="layer_tab_splitter">
          <property name="orientation">
           <enum>Qt::Orientation::Vertical</enum>
          </property>
-         <widget class="CanvasLayerContainerWidget" name="canvas_layer_container" native="true"/>
+                    <widget class="QWidget" name="canvas_layer_container_placeholder"/>
         </widget>
        </item>
       </layout>
@@ -223,15 +223,8 @@
              <property name="orientation">
               <enum>Qt::Orientation::Vertical</enum>
              </property>
-             <widget class="GridPreferencesWidget" name="grid_preferences" native="true">
-              <property name="sizePolicy">
-               <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-                <horstretch>0</horstretch>
-                <verstretch>0</verstretch>
-               </sizepolicy>
-              </property>
-             </widget>
-             <widget class="ActiveGridSettingsWidget" name="active_grid_settings_widget" native="true"/>
+             <widget class="QWidget" name="grid_preferences_placeholder"/>
+             <widget class="QWidget" name="active_grid_settings_widget_placeholder"/>
             </widget>
            </item>
           </layout>
@@ -254,8 +247,8 @@
        <property name="bottomMargin">
         <number>0</number>
        </property>
-       <item row="0" column="0">
-        <widget class="BatchContainer" name="widget" native="true"/>
+    <item row="0" column="0">
+     <widget class="QWidget" name="batch_container_placeholder"/>
        </item>
       </layout>
      </widget>
@@ -263,50 +256,6 @@
    </item>
   </layout>
  </widget>
- <customwidgets>
-  <customwidget>
-   <class>StableDiffusionSettingsWidget</class>
-   <extends>QWidget</extends>
-   <header>airunner/components/art/gui/widgets/stablediffusion/stable_diffusion_settings_widget</header>
-   <container>1</container>
-  </customwidget>
-  <customwidget>
-   <class>ActiveGridSettingsWidget</class>
-   <extends>QWidget</extends>
-   <header>airunner/components/art/gui/widgets/active_grid_settings/active_grid_settings_widget</header>
-   <container>1</container>
-  </customwidget>
-  <customwidget>
-   <class>LoraContainerWidget</class>
-   <extends>QWidget</extends>
-   <header>airunner/components/art/gui/widgets/lora/lora_container_widget</header>
-   <container>1</container>
-  </customwidget>
-  <customwidget>
-   <class>EmbeddingsContainerWidget</class>
-   <extends>QWidget</extends>
-   <header>airunner/components/art/gui/widgets/embeddings/embeddings_container_widget</header>
-   <container>1</container>
-  </customwidget>
-  <customwidget>
-   <class>GridPreferencesWidget</class>
-   <extends>QWidget</extends>
-   <header>airunner/components/art/gui/widgets/grid_preferences/grid_preferences_widget</header>
-   <container>1</container>
-  </customwidget>
-  <customwidget>
-   <class>BatchContainer</class>
-   <extends>QWidget</extends>
-   <header>airunner/components/art/gui/widgets/canvas/batch_container</header>
-   <container>1</container>
-  </customwidget>
-  <customwidget>
-   <class>CanvasLayerContainerWidget</class>
-   <extends>QWidget</extends>
-   <header>airunner/components/art/gui/widgets/canvas/canvas_layer_container_widget</header>
-   <container>1</container>
-  </customwidget>
- </customwidgets>
  <resources>
   <include location="../../../../../../gui/resources/feather.qrc"/>
  </resources>

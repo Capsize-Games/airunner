@@ -20,8 +20,8 @@ from airunner_startup_env import (
 
 configure_early_torch_allocator_environment()
 
+from airunner.daemon_client.resource_store import get_resource_store
 from airunner.settings import AIRUNNER_BASE_PATH, AIRUNNER_LOG_LEVEL, LOCAL_SERVER_HOST
-from airunner.setup_database import setup_database
 from airunner.utils.application import get_logger
 from airunner.utils.application.logging_utils import (
     configure_noisy_loggers,
@@ -69,7 +69,7 @@ def build_ui_if_needed():
     if not os.path.exists(ui_build_marker):
         try:
             subprocess.run(
-                [sys.executable, "-m", "airunner.bin.build_ui"],
+                [sys.executable, "scripts/build_ui.py"],
                 check=True,
             )
             with open(ui_build_marker, "w") as marker:
@@ -80,6 +80,7 @@ def build_ui_if_needed():
 
 # Optimize component settings registration by caching results
 cached_settings = {}
+resource_store = get_resource_store()
 
 
 def _component_settings_files() -> list[Path]:
@@ -132,17 +133,13 @@ def _write_component_settings_cache(signature: str) -> None:
 
 def register_component_settings():
     """Register settings for each component with a data/settings.py Pydantic dataclass."""
-    from airunner.components.settings.data.airunner_settings import (
-        AIRunnerSettings,
-    )
-
     created_count = 0
     found_count = 0
 
     settings_files = _component_settings_files()
     if os.environ.get("AIRUNNER_DISABLE_COMPONENT_SETTINGS_CACHE") != "1":
         settings_signature = _component_settings_signature(settings_files)
-        if AIRunnerSettings.objects.first() and (
+        if resource_store.first("AIRunnerSettings") and (
             _read_component_settings_cache() == settings_signature
         ):
             logger.info(
@@ -182,14 +179,20 @@ def register_component_settings():
                     if not name:
                         continue
                     found_count += 1
-                    existing = AIRunnerSettings.objects.filter_by(name=name)
+                    existing = resource_store.query(
+                        "AIRunnerSettings",
+                        filters={"name": name},
+                    )
                     if not existing:
                         data = (
                             instance.dict()
                             if hasattr(instance, "dict")
                             else instance.model_dump()
                         )
-                        AIRunnerSettings.objects.create(name=name, data=data)
+                        resource_store.create(
+                            "AIRunnerSettings",
+                            {"name": name, "data": data},
+                        )
                         created_count += 1
                     else:
                         defaults = (
@@ -207,8 +210,10 @@ def register_component_settings():
                             if key in current:
                                 merged[key] = current[key]
                         if merged != current:
-                            AIRunnerSettings.objects.update_by(
-                                {"name": name}, data=merged
+                            resource_store.update(
+                                "AIRunnerSettings",
+                                existing[0].id,
+                                {"data": merged},
                             )
                 except Exception as e:
                     logger.warning(
@@ -317,46 +322,30 @@ def _configure_test_mode():
     1. Creates default settings if they don't exist
     2. Sets model path from AIRUNNER_TEST_MODEL_PATH env var if provided
     """
-    from airunner.components.data.session_manager import _get_session
-    from airunner.components.llm.data.llm_generator_settings import (
-        LLMGeneratorSettings,
+    resource_store.get_singleton("PathSettings", create_if_missing=True)
+    resource_store.get_singleton(
+        "ApplicationSettings",
+        create_if_missing=True,
     )
-    from airunner.components.settings.data.application_settings import (
-        ApplicationSettings,
+
+    llm_settings = resource_store.get_singleton(
+        "LLMGeneratorSettings",
+        create_if_missing=True,
     )
-    from airunner.components.settings.data.path_settings import PathSettings
 
-    Session = _get_session()
-    with Session() as session:
-        # Create default path settings if not exists
-        if not session.query(PathSettings).first():
-            path_settings = PathSettings()
-            session.add(path_settings)
-
-        # Create default application settings if not exists
-        if not session.query(ApplicationSettings).first():
-            app_settings = ApplicationSettings()
-            session.add(app_settings)
-
-        # Create or update LLM settings with test model path
-        llm_settings = session.query(LLMGeneratorSettings).first()
-        if not llm_settings:
-            llm_settings = LLMGeneratorSettings()
-            session.add(llm_settings)
-
-        # Set model path from environment variable if provided
-        test_model_path = os.environ.get("AIRUNNER_TEST_MODEL_PATH")
-        if test_model_path:
-            llm_settings.model_path = test_model_path
-            logger.info(f"Test mode: Using model path: {test_model_path}")
-        else:
-            logger.warning(
-                "Test mode: AIRUNNER_TEST_MODEL_PATH not set. "
-                "Tests requiring LLM will fail. "
-                "Use pytest --model=/path/to/model or set environment variable."
-            )
-
-        session.commit()
+    test_model_path = os.environ.get("AIRUNNER_TEST_MODEL_PATH")
+    if test_model_path:
+        resource_store.update_singleton(
+            "LLMGeneratorSettings",
+            {"model_path": test_model_path},
+        )
+        logger.info(f"Test mode: Using model path: {test_model_path}")
+    else:
+        logger.warning(
+            "Test mode: AIRUNNER_TEST_MODEL_PATH not set. "
+            "Tests requiring LLM will fail. "
+            "Use pytest --model=/path/to/model or set environment variable."
+        )
 
 
 def _check_first_run_agreement():
@@ -486,15 +475,6 @@ def main():
         time.perf_counter() - build_ui_started_at,
     )
 
-    # --- Ensure database and tables are created before any DB access ---
-    _update_splash(splash, "Setting up database...")
-    database_started_at = time.perf_counter()
-    setup_database()
-    logger.info(
-        "Startup phase launcher_database_setup completed in %.2fs",
-        time.perf_counter() - database_started_at,
-    )
-
     # --- Configure test mode if running tests ---
     if os.environ.get("AIRUNNER_ENVIRONMENT") == "test":
         _configure_test_mode()
@@ -514,9 +494,10 @@ def main():
 
     # --- SSL certificate auto-generation ---
     _update_splash(splash, "Generating SSL certificates...")
-    from airunner.components.settings.data.path_settings import PathSettings
-
-    path_settings = PathSettings.objects.first()
+    path_settings = resource_store.get_singleton(
+        "PathSettings",
+        create_if_missing=True,
+    )
     if not path_settings:
         base_path = AIRUNNER_BASE_PATH
     else:

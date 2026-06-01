@@ -14,6 +14,7 @@ from airunner.components.llm.gui.widgets.generator_form.templates.generatorform_
 
 
 class GeneratorForm(BaseWidget):
+    ui: Ui_generator_form  # type: ignore[assignment]
     widget_class_ = Ui_generator_form
     changed_signal = Signal(str, object)
 
@@ -88,7 +89,10 @@ class GeneratorForm(BaseWidget):
 
     @property
     def active_rect(self):
-        pos = self.active_grid_settings.pos
+        pos = (
+            self.active_grid_settings.pos_x,
+            self.active_grid_settings.pos_y,
+        )
         rect = QRect(
             pos[0],
             pos[1],

@@ -1,7 +1,10 @@
+"""AI Runner GUI application entry point."""
 from typing import Dict, List, Optional
 import glob
+import json
 import os
 import os.path
+from pathlib import Path
 
 from airunner_startup_env import (
     configure_early_torch_allocator_environment,
@@ -12,24 +15,22 @@ configure_early_torch_allocator_environment()
 
 from PySide6.QtCore import QObject
 from PySide6.QtGui import QWindow
-from PySide6.QtWidgets import QApplication
 
 from airunner.utils.application import get_logger
 from airunner.utils.application.log_hygiene import summarize_text
 from airunner.settings import (
     AIRUNNER_LOG_LEVEL,
-    DEV_ENV,
+    AIRUNNER_USER_DATA_PATH,
     LOCAL_SERVER_PORT,
     MATHJAX_VERSION,
 )
 
 from airunner.app_mixins import (
-    HeadlessRuntimeMixin,
     LocalizationMixin,
     UIRuntimeMixin,
 )
 from airunner.enums import (
-    EngineResponseCode,
+    
     ModelStatus,
     ModelType,
     SignalCode,
@@ -39,19 +40,17 @@ from airunner.components.application.gui.windows.main.settings_mixin import (
     SettingsMixin,
 )
 from airunner.components.server.local_http_server import LocalHttpServerThread
-from airunner.utils.application.logging_utils import configure_headless_logging
 from airunner.daemon_client import GuiDaemonClient
-from airunner.runtimes.bootstrap import build_runtime_registry
+from airunner.components.knowledge import get_knowledge_base
+from airunner.daemon_client.resource_store import get_resource_store
 
 
 # Enable LNA mode for local server if AIRUNNER_LNA_ENABLED=1
 LNA_ENABLED = os.environ.get("AIRUNNER_LNA_ENABLED", "0") == "1"
 
 
-def _assert_test_gui_launch_allowed(headless: bool) -> None:
+def _assert_test_gui_launch_allowed() -> None:
     """Block real GUI startup while automated tests are running."""
-    if headless:
-        return
     if os.environ.get("AIRUNNER_ALLOW_GUI_TEST_LAUNCH") == "1":
         return
     if os.environ.get("AIRUNNER_TEST_NO_GUI_LAUNCH") != "1":
@@ -62,7 +61,6 @@ def _assert_test_gui_launch_allowed(headless: bool) -> None:
 
 
 class App(
-    HeadlessRuntimeMixin,
     LocalizationMixin,
     UIRuntimeMixin,
     MediatorMixin,
@@ -71,62 +69,40 @@ class App(
 ):
     """
     The main application class for AI Runner.
-    This class can be run as a GUI application or as a socket server.
+    GUI-only application that communicates with backend services
+    via a daemon client.
     """
 
     def __init__(
         self,
         no_splash: bool = False,
-        main_window_class: QWindow = None,
+        main_window_class: Optional[QWindow] = None,
         window_class_params: Optional[Dict] = None,
-        headless: bool = False,
         launcher_splash=None,
         launcher_app=None,
-        start_headless_api_server: bool = True,
-        initialize_headless_lifecycle: bool = True,
     ):
         """Initialize the application.
 
         Args:
-            no_splash: Skip splash screen display (GUI mode only)
-            main_window_class: Custom main window class (GUI mode only)
-            window_class_params: Parameters for main window (GUI mode only)
-            headless: If True, run in headless mode (no GUI)
-            launcher_splash: Splash screen passed from launcher (already showing)
+            no_splash: Skip splash screen display
+            main_window_class: Custom main window class
+            window_class_params: Parameters for main window
+            launcher_splash: Splash screen passed from launcher
             launcher_app: QApplication passed from launcher
-            start_headless_api_server: Start embedded API server in headless mode
-            initialize_headless_lifecycle: Initialize workers during headless boot
         """
-        _assert_test_gui_launch_allowed(headless)
-        self.headless = headless
+        _assert_test_gui_launch_allowed()
         self._launcher_splash = launcher_splash
         self._launcher_app = launcher_app
-        self._start_headless_api_server = start_headless_api_server
-        self._initialize_headless_lifecycle = initialize_headless_lifecycle
         self._init_attributes(
             no_splash, main_window_class, window_class_params
         )
         super().__init__()
-        self.runtime_registry = build_runtime_registry(app_instance=self)
         self.daemon_client = None
-        if not self.headless:
-            self.daemon_client = GuiDaemonClient(
-                detect_stale_dev_daemon=DEV_ENV,
-            )
+        self.daemon_client = GuiDaemonClient()
+        self._init_api_bridge()
         self._register_signals()
         self._ensure_mathjax()
-
-        # Load explicitly enabled runtime extensions early so they can:
-        # - override built-in LLM tools by name (after built-ins are registered)
-        # - apply any UI monkey-patches before widgets are constructed
-        if self._should_load_optional_extensions():
-            self._load_optional_extensions()
-
-        if self.headless:
-            self._init_headless_mode()
-        else:
-            self._init_gui_mode()
-
+        self._init_gui_mode()
         self._initialize_knowledge_system()
 
     def change_model_status(
@@ -139,22 +115,6 @@ class App(
             SignalCode.MODEL_STATUS_CHANGED_SIGNAL,
             {"model": model, "status": status},
         )
-
-    def worker_response(
-        self,
-        code: EngineResponseCode,
-        message: object,
-    ) -> None:
-        """Emit one worker response for headless-compatible flows."""
-        self.emit_signal(
-            SignalCode.ENGINE_RESPONSE_WORKER_RESPONSE_SIGNAL,
-            {"code": code, "message": message},
-        )
-
-    @staticmethod
-    def _should_load_optional_extensions() -> bool:
-        """Return whether this process should scan optional extensions."""
-        return os.environ.get("AIRUNNER_ART_SIDECAR_PROCESS") != "1"
 
     def application_error(
         self,
@@ -220,40 +180,150 @@ class App(
             },
         )
 
-    def quit_application(self) -> None:
-        """Emit the shared quit signal used by the API wrapper."""
-        self.emit_signal(SignalCode.QUIT_APPLICATION, {})
+    # ------------------------------------------------------------------
+    # Knowledge system
+    # ------------------------------------------------------------------
 
-    def _load_optional_extensions(self) -> None:
-        """Load explicitly enabled extensions from local extension roots.
+    @property
+    def _resource_store(self):
+        return get_resource_store()
 
-        Extensions are optional and must never prevent Airunner from starting.
-        """
+    def _initialize_knowledge_system(self):
+        """Initialize the markdown-based knowledge system."""
+        if os.environ.get("AIRUNNER_KNOWLEDGE_ON", "1") == "0":
+            self.logger.info("Knowledge system disabled")
+            return
+
         try:
-            # Ensure the built-in web tools are registered first.
-            # Extensions rely on name-based override semantics.
-            try:
-                from airunner.components.llm.tools import web_tools  # noqa: F401
-            except Exception:
-                pass
-
-            from airunner.components.llm.core.extensions_loader import (
-                load_extensions,
+            knowledge_base = get_knowledge_base()
+            self.logger.info(
+                "Knowledge system initialized: %s",
+                knowledge_base.knowledge_dir,
+            )
+            self._run_knowledge_migration_if_needed()
+        except Exception as exc:
+            self.logger.error(
+                "Failed to initialize knowledge system: %s",
+                exc,
+                exc_info=True,
             )
 
-            stats = load_extensions(force_reload=False)
-            if isinstance(stats, dict):
-                self.logger.info(
-                    "Extensions loaded: loaded=%s failed=%s roots=%s",
-                    stats.get("loaded"),
-                    stats.get("failed"),
-                    stats.get("roots"),
+    def _run_knowledge_migration_if_needed(self):
+        """Run one-time migration from JSON to markdown if needed."""
+        try:
+            settings = self._resource_store.get_singleton(
+                "ApplicationSettings",
+                create_if_missing=True,
+            )
+
+            if settings.knowledge_migrated:
+                self.logger.debug(
+                    "Knowledge migration already completed"
                 )
+                return
+
+            knowledge_dir = Path(AIRUNNER_USER_DATA_PATH) / "knowledge"
+            json_path = knowledge_dir / "user_facts.json"
+            if not json_path.exists():
+                self.logger.info(
+                    "No legacy knowledge data found, skipping migration"
+                )
+                self._resource_store.update_singleton(
+                    "ApplicationSettings",
+                    {"knowledge_migrated": True},
+                )
+                return
+
+            self.logger.info(
+                "Running one-time knowledge migration from JSON to "
+                "markdown..."
+            )
+
+            self._migrate_json_to_markdown(json_path)
+            self._mark_migration_complete()
         except Exception as exc:
-            try:
-                self.logger.debug("Extension loading skipped/failed: %s", exc)
-            except Exception:
-                pass
+            self.logger.error(
+                "Failed to run knowledge migration: %s. Migration NOT "
+                "marked complete - will retry on next startup.",
+                exc,
+                exc_info=True,
+            )
+
+    def _migrate_json_to_markdown(self, json_path: Path):
+        """Migrate legacy JSON facts to the markdown knowledge base."""
+        try:
+            with open(json_path, "r", encoding="utf-8") as handle:
+                data = json.load(handle)
+
+            knowledge_base = get_knowledge_base()
+            migrated = 0
+            facts = data if isinstance(data, list) else data.get("facts", [])
+            section_map = {
+                "identity": "Identity",
+                "personal": "Identity",
+                "work": "Work & Projects",
+                "project": "Work & Projects",
+                "hobby": "Interests & Hobbies",
+                "interest": "Interests & Hobbies",
+                "preference": "Preferences",
+                "health": "Health & Wellness",
+                "relationship": "Relationships",
+                "goal": "Goals",
+                "other": "Notes",
+                "notes": "Notes",
+            }
+
+            for fact_data in facts:
+                if isinstance(fact_data, str):
+                    fact_text = fact_data
+                    category = "Notes"
+                elif isinstance(fact_data, dict):
+                    fact_text = fact_data.get(
+                        "text",
+                        fact_data.get("content", ""),
+                    )
+                    category = fact_data.get("category", "Notes")
+                else:
+                    continue
+
+                if not fact_text:
+                    continue
+                section = section_map.get(category.lower(), "Notes")
+                knowledge_base.add_fact(fact_text, section=section)
+                migrated += 1
+
+            self.logger.info(
+                "Knowledge migration successful: %s facts migrated to "
+                "markdown",
+                migrated,
+            )
+            backup_path = json_path.with_suffix(".json.migrated")
+            json_path.rename(backup_path)
+            self.logger.info("Legacy JSON backed up to: %s", backup_path)
+        except Exception as exc:
+            self.logger.error(
+                "Error during JSON to markdown migration: %s",
+                exc,
+            )
+            raise
+
+    def _mark_migration_complete(self):
+        """Mark knowledge migration as complete in settings."""
+        try:
+            self._resource_store.update_singleton(
+                "ApplicationSettings",
+                {"knowledge_migrated": True},
+            )
+        except Exception as exc:
+            self.logger.error(
+                "Failed to mark migration complete: %s",
+                exc,
+                exc_info=True,
+            )
+
+    # ------------------------------------------------------------------
+    # Properties
+    # ------------------------------------------------------------------
 
     @property
     def static_dir(self) -> str:
@@ -288,19 +358,17 @@ class App(
     @property
     def static_search_dirs(self) -> List[str]:
         """Get the list of static search directories."""
-        # Find all components/**/gui/static directories
         components_static_dirs = glob.glob(
             os.path.join(
-                os.path.dirname(__file__), "components", "**", "gui", "static"
+                os.path.dirname(__file__),
+                "components", "**", "gui", "static",
             ),
             recursive=True,
         )
-        # Include both user static dir and package static dir
         static_search_dirs = [self.static_dir]
         if self._package_static_dir != self.static_dir:
             static_search_dirs.append(self._package_static_dir)
         static_search_dirs.extend(components_static_dirs)
-        # Add user web dir if it exists
         if os.path.isdir(self.user_web_dir):
             static_search_dirs.append(self.user_web_dir)
         return static_search_dirs
@@ -321,16 +389,17 @@ class App(
         """Store the shared sound-device manager."""
         self._sounddevice_manager = value
 
+    # ------------------------------------------------------------------
+    # Internal helpers
+    # ------------------------------------------------------------------
+
     def _init_attributes(
         self,
         no_splash: bool,
-        main_window_class: QWindow,
-        window_class_params: Optional[Dict]
+        main_window_class: Optional[QWindow],
+        window_class_params: Optional[Dict],
     ) -> None:
         """Initialize instance attributes."""
-        if self.headless:
-            configure_headless_logging()
-
         self.logger = get_logger(__name__, level=AIRUNNER_LOG_LEVEL)
 
         self.main_window_class_ = main_window_class
@@ -339,13 +408,23 @@ class App(
         self.app = None
         self.splash = None
         self.http_server_thread = None
-        self.api_server_thread = None
-        self.is_running = False
-        self.lifecycle_service = None
         self.model_load_balancer = None
         self._worker_manager = None
-        self._model_load_balancer = None
         self._sounddevice_manager = None
+
+    def _init_api_bridge(self) -> None:
+        """Wire the daemon client's signal emitter and signal-to-API
+        handler map so that GUI execution triggers go through the
+        daemon client instead of local in-process workers.
+        """
+        if not self.daemon_client:
+            return
+        # Register the mediator's emit function as the daemon client's
+        # signal emitter so it can dispatch response signals.
+        self.daemon_client._emit = self.emit_signal
+        self.logger.debug(
+            "Daemon client wired for GUI backend signal dispatch"
+        )
 
     def _register_signals(self) -> None:
         """Register signal handlers."""
@@ -359,7 +438,8 @@ class App(
         )
         if not os.path.isdir(mathjax_dir):
             raise RuntimeError(
-                "MathJax is required for LaTeX rendering. See README.md for setup instructions."
+                "MathJax is required for LaTeX rendering. "
+                "See README.md for setup instructions."
             )
 
         self._start_local_http_server()
@@ -372,7 +452,7 @@ class App(
             directory=self.static_dir,
             additional_directories=self.static_search_dirs[1:],
             port=LOCAL_SERVER_PORT,
-            lna_enabled=LNA_ENABLED,  # Pass LNA mode to server
+            lna_enabled=LNA_ENABLED,
         )
         self.http_server_thread.start()
         self.start()

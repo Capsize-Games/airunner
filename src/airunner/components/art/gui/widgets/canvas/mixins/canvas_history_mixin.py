@@ -5,7 +5,9 @@ from dataclasses import asdict, is_dataclass
 from PySide6.QtCore import QPointF, QTimer
 from PIL import ImageQt
 
-from airunner.components.art.data.drawingpad_settings import DrawingPadSettings
+from airunner.components.art.data.canvas_layer_records import (
+    ensure_layer_setting,
+)
 from airunner.components.art.utils.canvas_position_manager import (
     CanvasPositionManager,
     ViewState,
@@ -89,8 +91,10 @@ class CanvasHistoryMixin:
         if layer_id is None:
             settings = self.drawing_pad_settings
         else:
-            settings = self._get_layer_specific_settings(
-                DrawingPadSettings, layer_id=layer_id
+            settings = ensure_layer_setting(
+                "DrawingPadSettings",
+                layer_id,
+                store=self.resource_store,
             )
 
         if settings is None:

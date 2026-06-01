@@ -23,7 +23,8 @@ fi
 # Get the actual user (not root when using sudo)
 ACTUAL_USER=${SUDO_USER:-$USER}
 ACTUAL_GROUP=$(id -gn "$ACTUAL_USER")
-AIRUNNER_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )/../.." && pwd )"
+TEMPLATE_ROOT="${AIRUNNER_TEMPLATE_ROOT:-$( cd "$( dirname "${BASH_SOURCE[0]}" )/../.." && pwd )}"
+AIRUNNER_DIR="${AIRUNNER_INSTALL_ROOT:-$TEMPLATE_ROOT}"
 
 find_bundle_python() {
     local candidates=(
@@ -59,6 +60,11 @@ if [ ! -d "$AIRUNNER_DIR" ]; then
     exit 1
 fi
 
+if [ ! -f "$TEMPLATE_ROOT/deployment/systemd/airunner-headless.service" ]; then
+    echo -e "${RED}Error: service template not found under ${TEMPLATE_ROOT}${NC}"
+    exit 1
+fi
+
 # Check if bundle Python exists
 if ! BUNDLE_PYTHON=$(find_bundle_python); then
     echo -e "${RED}Error: No bundle Python found under $AIRUNNER_DIR${NC}"
@@ -83,7 +89,7 @@ DAEMON_CONFIG="$RUNTIME_CONFIG_DIR/daemon.yaml"
 
 # Copy service file
 echo -e "${YELLOW}Installing systemd service file...${NC}"
-cp "$AIRUNNER_DIR/deployment/systemd/airunner-headless.service" /etc/systemd/system/
+cp "$TEMPLATE_ROOT/deployment/systemd/airunner-headless.service" /etc/systemd/system/
 
 # Render the relocatable service template
 echo -e "${YELLOW}Rendering service file with bundle paths...${NC}"

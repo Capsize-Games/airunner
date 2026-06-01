@@ -134,9 +134,6 @@ def _looks_like_bundle_root(candidate_root: Path) -> bool:
         (
             (candidate_root / "deployment" / "systemd").exists(),
             (candidate_root / "src" / "airunner").exists(),
-            (
-                (candidate_root / "bin" / "airunner-headless").exists()
-                and (candidate_root / "bin" / "airunner-daemon").exists()
-            ),
+            (candidate_root / "bin" / "airunner-daemon").exists(),
         )
     )

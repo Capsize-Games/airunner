@@ -1,0 +1,313 @@
+"""Tool execution mixin for WorkflowManager.
+
+Handles tool execution with status tracking and workflow event sinks.
+"""
+
+import re
+from datetime import datetime
+from typing import Optional, TYPE_CHECKING
+
+from airunner_services.llm.managers.forced_tool_execution_policy import (
+    ForcedToolExecutionPolicy,
+)
+from airunner_services.settings import AIRUNNER_LOG_LEVEL
+from airunner_services.utils.application import get_logger
+from airunner_services.utils.application.log_hygiene import summarize_text
+from airunner_services.llm_workflow_events import (
+    resolve_llm_workflow_event_sink,
+)
+
+if TYPE_CHECKING:
+    from airunner_services.llm.workflow_manager import WorkflowState
+
+
+class ToolExecutionMixin:
+    """Manages tool execution with status tracking and signal emission."""
+
+    def __init__(self):
+        """Initialize tool execution mixin."""
+        self.logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
+        self._tools = []
+        self._conversation_id: Optional[int] = None
+        self._executed_tools: list[str] = (
+            []
+        )  # Track tools called in current invocation
+
+    def _get_forced_tool_policy(self) -> ForcedToolExecutionPolicy:
+        """Return the cached forced-tool execution helper."""
+        helper = getattr(self, "_forced_tool_policy", None)
+        if helper is None:
+            helper = ForcedToolExecutionPolicy(self)
+            self._forced_tool_policy = helper
+        return helper
+
+    def _execute_tools_with_status(
+        self, state: "WorkflowState"
+    ) -> "WorkflowState":
+        """Custom tool execution node that emits status signals.
+
+        This wraps the standard ToolNode behavior but adds real-time status
+        updates that can be displayed in the UI.
+
+        NOTE: Validation removed - bind_tools() ensures the model only receives
+        valid tool schemas. Invalid calls should not occur with proper binding.
+
+        Args:
+            state: Workflow state containing messages
+
+        Returns:
+            Updated workflow state with tool results
+        """
+        from langgraph.prebuilt import ToolNode
+
+        # Get the last AIMessage which contains tool_calls
+        messages = state["messages"]
+        last_message = messages[-1] if messages else None
+
+        if not last_message or not hasattr(last_message, "tool_calls"):
+            # No tool calls to execute, just pass through
+            return state
+
+        tool_calls = last_message.tool_calls or []
+        if not tool_calls:
+            return state
+
+        policy = self._get_forced_tool_policy()
+        state, tool_calls, blocked_state = policy.prepare(state, tool_calls)
+        if blocked_state is not None:
+            return blocked_state
+
+        # Emit "starting" status for each tool
+        self._emit_starting_status(tool_calls)
+
+        # Sanitize tool functions to ensure docstrings exist before wrapping
+        self._sanitize_tool_functions()
+
+        # Execute tools using standard ToolNode
+        tool_node = ToolNode(self._tools)
+        result_state = tool_node.invoke(state)
+
+        # Extract tool results and emit "completed" status
+        self._emit_completed_status(result_state, tool_calls)
+
+        policy.complete(tool_calls)
+
+        return result_state
+
+    def _get_next_workflow_tool(self, _current_tool: str) -> str | None:
+        """Get the next required tool in the coding workflow sequence.
+        
+        Previously enforced strict tool ordering, but this caused issues when
+        workflows were already active or the model correctly chose to skip steps.
+        
+        Now returns None to allow the model to choose tools freely based on
+        the workflow instructions in the system prompt.
+        
+        Args:
+            current_tool: The tool that just executed
+            
+        Returns:
+            None - workflow tool ordering is no longer enforced
+        """
+        # No longer enforce tool ordering - let the model follow instructions
+        # The workflow state and instructions guide it appropriately
+        return None
+
+    def _sanitize_tool_functions(self) -> None:
+        """Ensure each tool function has a docstring.
+
+        LangChain's StructuredTool.from_function raises ValueError if a function
+        lacks both a description and a docstring. Some legacy mixin tools created
+        via @tool (langchain.tools) may omit docstrings. This method adds a minimal
+        docstring dynamically to prevent runtime failures.
+        """
+        sanitized = 0
+        for func in self._tools:
+            # Skip if already documented
+            if getattr(func, "__doc__", None):
+                continue
+            # Attempt to use .description attribute if present
+            desc = (
+                getattr(func, "description", None)
+                or f"Tool function '{getattr(func, 'name', func.__name__)}' automatically documented."
+            )
+            func.__doc__ = desc  # type: ignore
+            sanitized += 1
+        if sanitized:
+            self.logger.debug(
+                "Added fallback docstrings to %d tool(s) missing documentation",
+                sanitized,
+            )
+
+    def _emit_starting_status(self, tool_calls: list):
+        """Emit starting status signals for tool calls.
+
+        Args:
+            tool_calls: List of tool call dictionaries
+        """
+        event_sink = resolve_llm_workflow_event_sink(self)
+
+        for tool_call in tool_calls:
+            tool_name = tool_call.get("name", "unknown")
+            tool_args = tool_call.get("args", {})
+            tool_id = tool_call.get("id", "")
+
+            # Track this tool execution
+            self._executed_tools.append(tool_name)
+
+            query = self._extract_query_from_args(tool_args)
+
+            self.logger.info(
+                "Tool starting: %s (%s)",
+                tool_name,
+                summarize_text(query, label="query"),
+            )
+
+            event_sink.emit_tool_status(
+                {
+                    "tool_id": tool_id,
+                    "tool_name": tool_name,
+                    "query": query,
+                    "status": "starting",
+                    "details": None,
+                    "conversation_id": self._conversation_id,
+                    "request_id": getattr(self, "_current_request_id", None),
+                    "timestamp": str(datetime.now()),
+                }
+            )
+
+    def _emit_completed_status(
+        self, result_state: "WorkflowState", tool_calls: list
+    ):
+        """Emit completed status signals for tool results.
+
+        Args:
+            result_state: Workflow state after tool execution
+            tool_calls: List of original tool call dictionaries
+        """
+        from langchain_core.messages import ToolMessage
+
+        event_sink = resolve_llm_workflow_event_sink(self)
+
+        new_messages = result_state.get("messages", [])
+        for msg in new_messages:
+            if isinstance(msg, ToolMessage):
+                # Find the corresponding tool_call
+                matching_tool_call = self._find_matching_tool_call(
+                    msg.tool_call_id, tool_calls
+                )
+
+                if matching_tool_call:
+                    tool_name = matching_tool_call.get("name", "unknown")
+                    tool_args = matching_tool_call.get("args", {})
+                    query = self._extract_query_from_args(tool_args)
+
+                    # Extract details from result (URLs, sources, etc.)
+                    details = self._extract_tool_details(
+                        tool_name, msg.content
+                    )
+
+                    self.logger.info(
+                        f"✅ Tool completed: {tool_name} - {details if details else 'success'}"
+                    )
+
+                    event_sink.emit_tool_status(
+                        {
+                            "tool_id": msg.tool_call_id,
+                            "tool_name": tool_name,
+                            "query": query,
+                            "status": "completed",
+                            "details": details,
+                            "conversation_id": self._conversation_id,
+                            "request_id": getattr(
+                                self,
+                                "_current_request_id",
+                                None,
+                            ),
+                            "timestamp": str(datetime.now()),
+                        }
+                    )
+
+    def _extract_query_from_args(self, tool_args: dict) -> str:
+        """Extract primary query/argument from tool arguments.
+
+        Args:
+            tool_args: Tool argument dictionary
+
+        Returns:
+            Extracted query string (truncated to 50 chars)
+        """
+        query = (
+            tool_args.get("query")
+            or tool_args.get("search_query")
+            or tool_args.get("prompt")
+            or str(tool_args)[:50]
+        )
+        return query
+
+    def _find_matching_tool_call(
+        self, tool_call_id: str, tool_calls: list
+    ) -> Optional[dict]:
+        """Find tool call matching the given ID.
+
+        Args:
+            tool_call_id: Tool call ID to find
+            tool_calls: List of tool call dictionaries
+
+        Returns:
+            Matching tool call dict or None
+        """
+        for tc in tool_calls:
+            if tc.get("id") == tool_call_id:
+                return tc
+        return None
+
+    def _extract_tool_details(
+        self, tool_name: str, result_content: str
+    ) -> Optional[str]:
+        """Extract relevant details from tool result for status display.
+
+        Args:
+            tool_name: Name of the tool that was executed
+            result_content: The result content from the tool
+
+        Returns:
+            Brief details string for display (e.g., "foxnews.com, cnn.com")
+        """
+        if tool_name == "search_web":
+            return self._extract_web_search_details(result_content)
+        elif tool_name == "rag_search":
+            return self._extract_rag_search_details(result_content)
+        return None
+
+    def _extract_web_search_details(
+        self, result_content: str
+    ) -> Optional[str]:
+        """Extract domain names from web search results.
+
+        Args:
+            result_content: Web search result content
+
+        Returns:
+            Comma-separated domain names or None
+        """
+        urls = re.findall(r"URL: (https?://[^\s]+)", result_content)
+        if urls:
+            # Extract domain names only
+            domains = [url.split("/")[2] for url in urls[:3]]  # Top 3
+            return ", ".join(domains)
+        return None
+
+    def _extract_rag_search_details(self, result_content: str) -> str:
+        """Extract details from RAG search results.
+
+        Args:
+            result_content: RAG search result content
+
+        Returns:
+            Status string ("no results" or "found results")
+        """
+        if "No results" in result_content or "couldn't find" in result_content:
+            return "no results"
+        else:
+            return "found results"

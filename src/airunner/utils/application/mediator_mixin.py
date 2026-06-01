@@ -1,7 +1,6 @@
 from typing import Callable, Dict, Optional
 
 from airunner.enums import SignalCode
-from airunner.utils.application import get_logger
 from airunner.utils.application.signal_mediator import SignalMediator
 
 
@@ -16,7 +15,6 @@ class MediatorMixin:
     def __init__(
         self,
         mediator: Optional[SignalMediator] = None,
-        message_backend: Optional[Dict] = None,
         *args,
         **kwargs,
     ):
@@ -76,6 +74,10 @@ class MediatorMixin:
         :return:
         """
         self.mediator.register(code, slot_function)
+
+    def unregister(self, code: SignalCode, slot_function: Callable):
+        """Unregister one previously registered callback."""
+        self.mediator.unregister(code, slot_function)
 
     def unregister_signals(self):
         """

@@ -14,11 +14,11 @@ from airunner.components.downloader.gui.windows.setup_wizard.installation_settin
     QSpacerItem,
     Ui_install_success_page,
 )
-from airunner.components.art.data.bootstrap.controlnet_bootstrap_data import (
-    controlnet_bootstrap_data,
+from airunner.components.data.bootstrap_service import (
+    get_controlnet_bootstrap_data,
 )
-from airunner.components.data.bootstrap.model_bootstrap_data import (
-    model_bootstrap_data,
+from airunner.components.data.bootstrap_service import (
+    get_model_bootstrap_data,
 )
 
 
@@ -30,7 +30,7 @@ class ChooseModelsPage(BaseWizard):
         self.models_enabled = {
             "stable_diffusion": True,
             "whisper": True,
-            "mistral": True,
+            "llm": True,
             "embedding_model": True,
             "openvoice_model": True,
         }
@@ -51,12 +51,12 @@ class ChooseModelsPage(BaseWizard):
 
         # Group ControlNet models by version
         # Expose the stable-diffusion model bootstrap list for the installer
-        self.models = model_bootstrap_data
+        self.models = get_model_bootstrap_data()
 
         from collections import defaultdict
 
         version_map = defaultdict(list)
-        for item in controlnet_bootstrap_data:
+        for item in get_controlnet_bootstrap_data():
             version_map[item["version"]].append(item)
 
         # Make the groupBox act as a checkable 'Stable Diffusion' group
@@ -283,17 +283,17 @@ class ChooseModelsPage(BaseWizard):
 
         # Add Upscaler (x4) option (but place it outside the scroll area below the version groups)
         try:
-            from airunner.components.art.data.bootstrap.sd_file_bootstrap_data import (
-                SD_FILE_BOOTSTRAP_DATA,
+            from airunner.components.data.bootstrap_service import (
+                get_sd_file_bootstrap_data,
             )
 
             upscaler_size = 0
-            if SD_FILE_BOOTSTRAP_DATA.get(
+            if get_sd_file_bootstrap_data().get(
                 "Upscaler"
-            ) and SD_FILE_BOOTSTRAP_DATA["Upscaler"].get("x4"):
+            ) and get_sd_file_bootstrap_data()["Upscaler"].get("x4"):
                 # Very rough size estimate per file (~5-10 MB each) unless more accurate sizes are known
                 upscaler_size = len(
-                    SD_FILE_BOOTSTRAP_DATA["Upscaler"]["x4"]
+                    get_sd_file_bootstrap_data()["Upscaler"]["x4"]
                 ) * (6 * 1024 * 1024)
         except Exception:
             upscaler_size = 6 * 1024 * 1024
@@ -340,26 +340,53 @@ class ChooseModelsPage(BaseWizard):
         except Exception:
             pass
 
-                # Do not reparent the top-level generated checkboxes; leave them in the main grid layout.\n        # The UI template places ministral, e5 (embedding), openvoice, and whisper at top-level\n        # and they should remain there so their grid positions are preserved.
+                # Do not reparent the top-level generated checkboxes; leave them in the main grid layout.\n        # The UI template places the local-LLM, e5, openvoice, and whisper\n        # checkboxes at top-level and they should remain there so their grid\n        # positions are preserved.
 
         self.update_total_size_label()
 
+    def _llm_size_estimate(self) -> int:
+        """Return the total size for enabled local LLM bootstrap files."""
+        if not self.models_enabled.get("llm", False):
+            return 0
+
+        from airunner.components.llm.config.provider_config import (
+            LLMProviderConfig,
+        )
+        from airunner.components.data.bootstrap_service import (
+            get_llm_file_bootstrap_data,
+        )
+
+        total = 0
+        for model in get_model_bootstrap_data():
+            if model.get("category") != "llm":
+                continue
+            if model.get("pipeline_action") == "embedding":
+                continue
+            download_info = LLMProviderConfig.resolve_download_target(
+                "local",
+                repo_id=model["path"],
+                prefer_pre_quantized=True,
+            )
+            repo_id = download_info["repo_id"] if download_info else model["path"]
+            total += sum(get_llm_file_bootstrap_data()[repo_id]["files"].values())
+        return total
+
     def update_total_size_label(self):
         # Sizes are tracked in bytes
-        mistral_size = 5.8 * 1024 * 1024
+        llm_size = self._llm_size_estimate()
         whisper_size = 144.5 * 1024
         embedding_model_size = 1.3 * 1024 * 1024
         zimage_core_sizes = {}
         try:
-            from airunner.components.art.data.bootstrap.sd_file_bootstrap_data import (
-                SD_FILE_BOOTSTRAP_DATA,
+            from airunner.components.data.bootstrap_service import (
+                get_sd_file_bootstrap_data,
             )
 
             for model in self.models:
                 if model.get("category") != "zimage":
                     continue
                 version = model.get("version")
-                files = SD_FILE_BOOTSTRAP_DATA.get(version, {}).get(
+                files = get_sd_file_bootstrap_data().get(version, {}).get(
                     "txt2img",
                     {},
                 )
@@ -382,7 +409,7 @@ class ChooseModelsPage(BaseWizard):
             from collections import defaultdict
 
             version_group = defaultdict(list)
-            for item in controlnet_bootstrap_data:
+            for item in get_controlnet_bootstrap_data():
                 version_group[item["version"]].append(item)
 
             for version, models in version_group.items():
@@ -399,8 +426,8 @@ class ChooseModelsPage(BaseWizard):
                         total_bytes += 722600
 
         # Add other model categories
-        if self.models_enabled.get("mistral", False):
-            total_bytes += mistral_size
+        if self.models_enabled.get("llm", False):
+            total_bytes += llm_size
         if self.models_enabled.get("whisper", False):
             total_bytes += whisper_size
         if self.models_enabled.get("embedding_model", False):
@@ -434,8 +461,8 @@ class ChooseModelsPage(BaseWizard):
         self.update_total_size_label()
 
     @Slot(bool)
-    def ministral_toggled(self, val: bool):
-        self.models_enabled["mistral"] = val
+    def llm_toggled(self, val: bool):
+        self.models_enabled["llm"] = val
         self.update_total_size_label()
 
     @Slot(bool)

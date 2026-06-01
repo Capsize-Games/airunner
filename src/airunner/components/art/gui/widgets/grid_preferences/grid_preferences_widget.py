@@ -10,6 +10,7 @@ from airunner.enums import SignalCode
 
 
 class GridPreferencesWidget(BaseWidget):
+    ui: Ui_grid_preferences  # type: ignore[assignment]
     widget_class_ = Ui_grid_preferences
 
     def __init__(self, *args, **kwargs):

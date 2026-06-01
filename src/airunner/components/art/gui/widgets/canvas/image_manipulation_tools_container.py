@@ -14,6 +14,7 @@ _NO_CONTROLNET_INPAINT_VERSIONS = (
 
 
 class ImageManipulationToolsContainer(BaseWidget):
+    ui: Ui_image_manipulation_tools_container  # type: ignore[assignment]
     widget_class_ = Ui_image_manipulation_tools_container
 
     def __init__(self, *args, **kwargs):

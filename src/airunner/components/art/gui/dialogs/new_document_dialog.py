@@ -1,7 +1,7 @@
 """Dialog for creating a new fixed-size canvas document."""
 
 from dataclasses import dataclass
-from typing import Optional, Tuple
+from typing import Optional
 
 from PySide6.QtCore import QSignalBlocker
 from PySide6.QtWidgets import (

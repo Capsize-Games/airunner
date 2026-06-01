@@ -17,6 +17,7 @@ from airunner.utils.memory.gpu_memory_stats import gpu_memory_stats
 
 
 class StatsWidget(BaseWidget, PipelineMixin, StylesMixin):
+    ui: Ui_stats_widget  # type: ignore[assignment]
     widget_class_ = Ui_stats_widget
 
     def __init__(self, *args, **kwargs):
@@ -31,7 +32,7 @@ class StatsWidget(BaseWidget, PipelineMixin, StylesMixin):
 
         self.timer = QTimer(self)
         self.timer.timeout.connect(self.update_memory_stats)
-        self.timer.start(500)
+        self.timer.start(50)
         self.update_memory_stats()
 
     def showEvent(self, event):

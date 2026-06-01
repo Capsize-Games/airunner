@@ -6,6 +6,7 @@ from airunner.components.settings.gui.widgets.openrouter_settings.templates.open
 
 
 class OpenrouterSettingsWidget(BaseWidget):
+    ui: Ui_openrouter_settings_widget  # type: ignore[assignment]
     widget_class_ = Ui_openrouter_settings_widget
 
     def showEvent(self, event):

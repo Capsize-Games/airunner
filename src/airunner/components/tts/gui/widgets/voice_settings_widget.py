@@ -10,8 +10,6 @@ from PySide6.QtCore import Slot
 from airunner.components.tts.gui.widgets.templates.voice_settings_ui import (
     Ui_voice_settings,
 )
-from airunner.components.settings.data.voice_settings import VoiceSettings
-from airunner.components.tts.data.models.espeak_settings import EspeakSettings
 from airunner.components.tts.gui.widgets.espeak_preferences_widget import (
     EspeakPreferencesWidget,
 )
@@ -21,7 +19,6 @@ from airunner.components.tts.gui.widgets.open_voice_preferences_widget import (
 )
 from airunner.enums import TTSModel
 from airunner.enums import SignalCode
-from airunner.components.tts.data.models.openvoice_settings import OpenVoiceSettings
 
 
 class VoiceSettingsWidget(BaseWidget):
@@ -40,12 +37,13 @@ class VoiceSettingsWidget(BaseWidget):
 
     def initalize_voice_item(self):
         # Get voice from current bot
+        voice = None
         if self.selected_voice is not None:
-            voice = VoiceSettings.objects.get(self.selected_voice)
+            voice = self.resource_store.get("VoiceSettings", self.selected_voice)
         if self.chatbot and self.chatbot.voice_id:
-            voice = VoiceSettings.objects.get(self.chatbot.voice_id)
-        else:
-            voice = VoiceSettings.objects.first()
+            voice = self.resource_store.get("VoiceSettings", self.chatbot.voice_id)
+        if voice is None:
+            voice = self.resource_store.first("VoiceSettings")
         if voice is not None:
             self.add_voice_item(voice)
 
@@ -53,17 +51,17 @@ class VoiceSettingsWidget(BaseWidget):
         # set voices combobox
         self.ui.voice.blockSignals(True)
         self.ui.voice.clear()
-        voices = VoiceSettings.objects.all()
+        voices = self.resource_store.query("VoiceSettings")
         if voices:
             for voice in voices:
                 self.ui.voice.addItem(f"{voice.name}")
         if self.selected_voice is not None:
-            voice = VoiceSettings.objects.get(self.selected_voice)
+            voice = self.resource_store.get("VoiceSettings", self.selected_voice)
             if voice is not None:
                 # set the current voice
                 self.ui.voice.setCurrentText(voice.name)
         elif self.chatbot and self.chatbot.voice_id:
-            voice = VoiceSettings.objects.get(self.chatbot.voice_id)
+            voice = self.resource_store.get("VoiceSettings", self.chatbot.voice_id)
             if voice is not None:
                 # set the current voice
                 self.ui.voice.setCurrentText(voice.name)
@@ -82,7 +80,10 @@ class VoiceSettingsWidget(BaseWidget):
     def on_voice_currentTextChanged(self, text):
         """Handle the change in the voice combobox."""
         if text:
-            voices = VoiceSettings.objects.filter(VoiceSettings.name == text)
+            voices = self.resource_store.query(
+                "VoiceSettings",
+                filters={"name": text},
+            )
             if len(voices) > 0:
                 self.selected_voice = voices[0].id
                 self.clear_voice_item()
@@ -157,43 +158,64 @@ class VoiceSettingsWidget(BaseWidget):
 
     def create_voice(self):
         name = "New Voice"
-        voices = VoiceSettings.objects.filter(VoiceSettings.name == name)
+        voices = self.resource_store.query(
+            "VoiceSettings",
+            filters={"name": name},
+        )
         total = len(voices)
         name = f"{name} ({total + 1})" if total > 0 else name
-        voice = VoiceSettings.objects.create(
-            name=name,
-            model_type=TTSModel.OPENVOICE.value,
-            settings_id=1,
+        settings = self.resource_store.create("OpenVoiceSettings", {})
+        voice = self.resource_store.create(
+            "VoiceSettings",
+            {
+                "name": name,
+                "model_type": TTSModel.OPENVOICE.value,
+                "settings_id": settings.id,
+            },
         )
-        # voice.settings_id = settings.id
         self.add_voice_item(voice)
         self.initialize_voice_combobox()
 
     def update_voice_name(self, voice, name):
         voice.name = name
-        VoiceSettings.objects.update(voice.id, name=name)
+        self.resource_store.update(
+            "VoiceSettings",
+            voice.id,
+            {"name": name},
+        )
         self.initialize_voice_combobox()
 
     def update_voice_model(self, voice, model_type, layout):
         if voice.model_type != model_type:
             # Delete the old settings
             if voice.model_type == TTSModel.ESPEAK.value:
-                EspeakSettings.objects.delete(voice.settings_id)
+                self.resource_store.delete("EspeakSettings", voice.settings_id)
             elif voice.model_type == TTSModel.OPENVOICE.value:
-                OpenVoiceSettings.objects.delete(voice.settings_id)
+                self.resource_store.delete(
+                    "OpenVoiceSettings",
+                    voice.settings_id,
+                )
 
             # Create new settings
             if model_type == TTSModel.ESPEAK.value:
-                settings = EspeakSettings.objects.create()
+                settings = self.resource_store.create("EspeakSettings", {})
             elif model_type == TTSModel.OPENVOICE.value:
-                settings = OpenVoiceSettings.objects.create()
+                settings = self.resource_store.create(
+                    "OpenVoiceSettings",
+                    {},
+                )
             else:
                 return
 
             voice.settings_id = settings.id
             voice.model_type = model_type
-            VoiceSettings.objects.update(
-                voice.id, settings_id=settings.id, model_type=model_type
+            self.resource_store.update(
+                "VoiceSettings",
+                voice.id,
+                {
+                    "settings_id": settings.id,
+                    "model_type": model_type,
+                },
             )
             voice.settings_id = settings.id
             voice.model_type = model_type
@@ -213,10 +235,13 @@ class VoiceSettingsWidget(BaseWidget):
         if confirm == QMessageBox.Yes:
             # Delete the associated settings
             if voice.model_type == TTSModel.ESPEAK.value:
-                EspeakSettings.objects.delete(voice.settings_id)
+                self.resource_store.delete("EspeakSettings", voice.settings_id)
             elif voice.model_type == TTSModel.OPENVOICE.value:
-                OpenVoiceSettings.objects.delete(voice.settings_id)
+                self.resource_store.delete(
+                    "OpenVoiceSettings",
+                    voice.settings_id,
+                )
 
-            VoiceSettings.objects.delete(voice.id)
+            self.resource_store.delete("VoiceSettings", voice.id)
             self.load_voices()
         self.initialize_voice_combobox()

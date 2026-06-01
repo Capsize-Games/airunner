@@ -53,6 +53,9 @@ AIRUNNER_DEFAULT_LLM_HF_PATH = (
 AIRUNNER_DEFAULT_STT_HF_PATH = os.environ.get(
     "AIRUNNER_DEFAULT_STT_HF_PATH", "Systran/faster-distil-whisper-large-v3"
 )
+AIRUNNER_DEFAULT_STT_MODEL_FILENAME = os.environ.get(
+    "AIRUNNER_DEFAULT_STT_MODEL_FILENAME", "ggml-large-v3.bin"
+)
 AIRUNNER_DEFAULT_IMAGE_SYSTEM_PROMPT = os.environ.get(
     "AIRUNNER_DEFAULT_IMAGE_SYSTEM_PROMPT",
     (
@@ -227,13 +230,6 @@ if DEV_ENV:
     default_name = "airunner.dev.db"
 AIRUNNER_DB_NAME = os.environ.get("AIRUNNER_DB_NAME", default_name)
 
-# Set the database URL
-DB_PATH = os.path.join(AIRUNNER_BASE_PATH, "data", AIRUNNER_DB_NAME)
-default_url = "sqlite:///" + DB_PATH
-AIRUNNER_DB_URL = os.environ.get("AIRUNNER_DATABASE_URL", default_url)
-if AIRUNNER_DB_URL == "" or not AIRUNNER_DB_URL:
-    AIRUNNER_DB_URL = default_url
-
 # LLM Behavior Control
 AIRUNNER_LLM_AGENT_MAX_FUNCTION_CALLS = int(
     os.environ.get("AIRUNNER_LLM_AGENT_MAX_FUNCTION_CALLS", 5)
@@ -282,24 +278,12 @@ AIRUNNER_LLM_DUPLICATE_TOOL_CALL_WINDOW = int(
 )
 AIRUNNER_TTS_MODEL_TYPE = os.environ.get("AIRUNNER_TTS_MODEL_TYPE", None)
 
-# Headless
-AIRUNNER_LLM_ON = os.environ.get("AIRUNNER_LLM_ON", "0") == "1"
-AIRUNNER_TTS_ON = os.environ.get("AIRUNNER_TTS_ON", "0") == "1"
-AIRUNNER_STT_ON = os.environ.get("AIRUNNER_STT_ON", "0") == "1"
-AIRUNNER_SD_ON = os.environ.get("AIRUNNER_SD_ON", "0") == "1"
-AIRUNNER_CN_ON = os.environ.get("AIRUNNER_CN_ON", "0") == "1"
-AIRUNNER_LLM_CHAT_STORE = os.environ.get("AIRUNNER_LLM_CHAT_STORE", "db")
 AIRUNNER_DISABLE_SETUP_WIZARD = (
     os.environ.get("AIRUNNER_DISABLE_SETUP_WIZARD", "0") == "1"
 )
-AIRUNNER_ART_MODEL_PATH = os.environ.get("AIRUNNER_ART_MODEL_PATH", "")
-AIRUNNER_ART_MODEL_VERSION = os.environ.get("AIRUNNER_ART_MODEL_VERSION", "")
-AIRUNNER_ART_PIPELINE = os.environ.get("AIRUNNER_ART_PIPELINE", "")
-AIRUNNER_ART_SCHEDULER = os.environ.get("AIRUNNER_ART_SCHEDULER", "")
 AIRUNNER_LOCAL_FILES_ONLY = (
     os.environ.get("AIRUNNER_LOCAL_FILES_ONLY", "1") == "1"
 )
-AIRUNNER_ADD_WATER_MARK = os.environ.get("AIRUNNER_ADD_WATER_MARK", "0") == "1"
 
 AIRUNNER_ART_USE_COMPEL = os.environ.get("AIRUNNER_ART_USE_COMPEL", None)
 if AIRUNNER_ART_USE_COMPEL is not None:
@@ -376,14 +360,6 @@ LANGUAGES = {
 # Server settings for local static content serving
 LOCAL_SERVER_HOST = os.environ.get("LOCAL_SERVER_HOST", "127.0.0.1")
 LOCAL_SERVER_PORT = os.environ.get("LOCAL_SERVER_PORT", 5005)
-
-# Server settings for AI Runner headless server
-AIRUNNER_HEADLESS_SERVER_HOST = os.environ.get(
-    "AIRUNNER_HEADLESS_SERVER_HOST", "localhost"
-)
-AIRUNNER_HEADLESS_SERVER_PORT = int(
-    os.environ.get("AIRUNNER_HEADLESS_SERVER_PORT", 8080)
-)
 
 # STATIC_BASE_PATH should match the protocol used by the local server (default: https)
 STATIC_BASE_PATH = f"https://{LOCAL_SERVER_HOST}:{LOCAL_SERVER_PORT}"

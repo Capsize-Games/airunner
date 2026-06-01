@@ -1,7 +1,6 @@
 from PySide6.QtCore import Slot
 from PySide6.QtCore import QSignalBlocker
 
-from airunner.components.settings.data.language_settings import LanguageSettings
 from airunner.components.application.gui.widgets.base_widget import BaseWidget
 
 from airunner.components.application.gui.widgets.language.templates.language_settings_ui import (
@@ -16,6 +15,7 @@ from airunner.enums import (
 
 
 class LanguageSettingsWidget(BaseWidget, AIModelMixin):
+    ui: Ui_language_settings_widget  # type: ignore[assignment]
     widget_class_ = Ui_language_settings_widget
 
     def __init__(self, *args, **kwargs):
@@ -47,7 +47,7 @@ class LanguageSettingsWidget(BaseWidget, AIModelMixin):
                 LANGUAGE_DISPLAY_MAP[lang]
                 for lang in AVAILABLE_LANGUAGES["bot_language"]
             )
-            settings = LanguageSettings.objects.first()
+            settings = self.resource_store.get_singleton("LanguageSettings")
             if settings:
                 try:
                     lang = AvailableLanguage(settings.gui_language)
@@ -128,21 +128,17 @@ class LanguageSettingsWidget(BaseWidget, AIModelMixin):
         # convert value to AvailableLanguage enum
         value = self.display_to_language_map.get(value, value).value
 
-        settings = LanguageSettings.objects.first()
-        if not settings:
-            default_language = AvailableLanguage.EN.value
-            data = dict(
-                gui_language=default_language,
-                user_language=default_language,
-                bot_language=default_language,
-            )
-            data.update({key: value})
-            LanguageSettings.objects.create(**data)
-        else:
-            data = {}
-            data[key] = value
-            LanguageSettings.objects.update(settings.id, **data)
-        settings = LanguageSettings.objects.first()
+        default_language = AvailableLanguage.EN.value
+        data = {
+            "gui_language": default_language,
+            "user_language": default_language,
+            "bot_language": default_language,
+            key: value,
+        }
+        settings = self.resource_store.update_singleton(
+            "LanguageSettings",
+            data,
+        )
 
         data = dict(
             gui_language=settings.gui_language,

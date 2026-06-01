@@ -1,16 +1,15 @@
 from typing import Optional, Dict, Any, Tuple
 from PIL import Image
-from airunner.components.art.data.controlnet_settings import ControlnetSettings
-from airunner.components.art.data.drawingpad_settings import DrawingPadSettings
-from airunner.components.art.data.image_to_image_settings import ImageToImageSettings
-from airunner.components.art.data.outpaint_settings import OutpaintSettings
+
+from airunner.daemon_client.resource_store import RESOURCE_TO_TABLE as resource_to_table
+from airunner.daemon_client.resource_store import get_resource_store
 
 
-SETTINGS_PERSISTENCE_MAP: Dict[str, Tuple[type, bool]] = {
-    "drawing_pad_settings": (DrawingPadSettings, True),
-    "controlnet_settings": (ControlnetSettings, True),
-    "image_to_image_settings": (ImageToImageSettings, True),
-    "outpaint_settings": (OutpaintSettings, True),
+SETTINGS_PERSISTENCE_MAP: Dict[str, Tuple[str, bool]] = {
+    "drawing_pad_settings": ("DrawingPadSettings", True),
+    "controlnet_settings": ("ControlnetSettings", True),
+    "image_to_image_settings": ("ImageToImageSettings", True),
+    "outpaint_settings": ("OutpaintSettings", True),
 }
 
 
@@ -30,7 +29,8 @@ def persist_image_worker(
             "generation": generation,
         }
 
-    model_class, layer_scoped = model_entry
+    resource_name, layer_scoped = model_entry
+    resource_store = get_resource_store()
     image_binary = binary_data
 
     if image_binary is None and pil_image is not None:
@@ -65,32 +65,35 @@ def persist_image_worker(
         return {"error": "empty_binary", "generation": generation}
 
     try:
-        with session_scope() as session:
-            if layer_scoped:
-                query = session.query(model_class)
-                if layer_id is not None:
-                    query = query.filter(model_class.layer_id == layer_id)
-                setting = query.first()
-                if setting is None:
-                    setting = model_class(layer_id=layer_id)
-                    session.add(setting)
-                setattr(setting, column_name, image_binary)
-            else:
-                setting = (
-                    session.query(model_class)
-                    .order_by(model_class.id.desc())
-                    .first()
-                )
-                if setting is None:
-                    setting = model_class()
-                    session.add(setting)
-                setattr(setting, column_name, image_binary)
+        if layer_scoped:
+            filters = {"layer_id": layer_id}
+            setting = resource_store.first(
+                resource_name,
+                filters=filters,
+            )
+            if setting is None:
+                setting = resource_store.create(resource_name, filters)
+        else:
+            records = resource_store.query(resource_name)
+            setting = max(
+                records,
+                key=lambda record: getattr(record, "id", 0) or 0,
+                default=None,
+            )
+            if setting is None:
+                setting = resource_store.create(resource_name, {})
+
+        resource_store.update(
+            resource_name,
+            setting.id,
+            {column_name: image_binary},
+        )
     except Exception as exc:
         return {"error": f"db_error:{exc}", "generation": generation}
 
     return {
         "generation": generation,
-        "table_name": model_class.__tablename__,
+        "table_name": resource_to_table[resource_name],
         "column_name": column_name,
         "binary": image_binary,
         "settings_key": settings_key,

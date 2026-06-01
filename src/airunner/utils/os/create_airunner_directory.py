@@ -1,9 +1,8 @@
 import os
+from typing import Any
 
-from airunner.components.settings.data.path_settings import PathSettings
 
-
-def create_airunner_paths(path_settings: PathSettings):
+def create_airunner_paths(path_settings: Any):
     """
     This function creates directories based on the paths provided in the path_settings dictionary.
 

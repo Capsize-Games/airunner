@@ -1,41 +1,29 @@
 from typing import List, Dict
 import importlib.util
 import os.path
-import sys
 import zipfile
-import time
-
-
-try:
-    import requests
-except ImportError:
-    requests = None
-
-try:
-    import nltk
-except ImportError:
-    nltk = None
 
 from PySide6.QtCore import QObject, QThread, Slot, Signal, QTimer
 from PySide6.QtWidgets import QWizard
 
-from airunner.components.data.bootstrap.model_bootstrap_data import (
-    model_bootstrap_data,
+from airunner.components.data.bootstrap_service import (
+    get_model_bootstrap_data,
 )
-from airunner.components.art.data.bootstrap.controlnet_bootstrap_data import (
-    controlnet_bootstrap_data,
+from airunner.components.data.bootstrap_service import (
+    get_controlnet_bootstrap_data,
 )
-from airunner.components.art.data.bootstrap.sd_file_bootstrap_data import (
-    SD_FILE_BOOTSTRAP_DATA,
+from airunner.components.data.bootstrap_service import (
+    get_sd_file_bootstrap_data,
 )
-from airunner.components.tts.data.bootstrap.openvoice_bootstrap_data import (
-    OPENVOICE_FILES,
+from airunner.components.data.bootstrap_service import (
+    get_openvoice_files,
 )
-from airunner.components.llm.data.bootstrap.llm_file_bootstrap_data import (
-    LLM_FILE_BOOTSTRAP_DATA,
+from airunner.components.data.bootstrap_service import (
+    get_llm_file_bootstrap_data,
 )
+from airunner.daemon_client.gui_daemon_client import GuiDaemonClient
 from airunner.components.llm.config.provider_config import LLMProviderConfig
-from airunner.components.stt.data.bootstrap.whisper import WHISPER_FILES
+from airunner.components.data.bootstrap_service import get_whisper_files
 from airunner.enums import SignalCode
 from airunner.utils.application.mediator_mixin import MediatorMixin
 from airunner.utils.network import HuggingfaceDownloader
@@ -82,6 +70,33 @@ controlnet_processor_files = [
 ]
 
 
+def _enabled_llm_download_repo_ids(
+    models_enabled: Dict[str, bool],
+) -> list[str]:
+    """Return the enabled local-LLM download repo ids for the installer."""
+    if not models_enabled.get("llm", False):
+        return []
+
+    repo_ids = []
+    for model in get_model_bootstrap_data():
+        if model.get("category") != "llm":
+            continue
+        if (
+            model.get("pipeline_action") == "embedding"
+            and not models_enabled.get("embedding_model", False)
+        ):
+            continue
+        download_info = LLMProviderConfig.resolve_download_target(
+            "local",
+            repo_id=model["path"],
+            prefer_pre_quantized=True,
+        )
+        repo_ids.append(
+            download_info["repo_id"] if download_info else model["path"]
+        )
+    return repo_ids
+
+
 class InstallWorker(
     MediatorMixin,
     SettingsMixin,
@@ -96,7 +111,6 @@ class InstallWorker(
         self,
         parent,
         models_enabled: List[str],
-        headless=False,
         debug_queue: bool = False,
     ):
         super().__init__()
@@ -117,8 +131,8 @@ class InstallWorker(
         self.running = True  # Add running flag for clean shutdown
         self.hf_downloader = HuggingfaceDownloader(
             self._safe_progress_emit,
-            headless=headless,
         )
+        self._download_daemon_client = None
         # Optional debug flag to emit/log each queued download (helps trace unwanted downloads)
         self._debug_queue = debug_queue
         self._openvoice_zip_urls = [
@@ -167,6 +181,49 @@ class InstallWorker(
                 # Last resort: emit safe minimal values
                 self.progress_updated.emit(0, 1)
 
+    def _daemon_client(self):
+        """Return one daemon client for service-owned downloads."""
+        if self._download_daemon_client is not None:
+            return self._download_daemon_client
+
+        api = getattr(self, "api", None)
+        daemon_client = getattr(api, "daemon_client", None)
+        if daemon_client is None:
+            daemon_client = GuiDaemonClient()
+
+        self._download_daemon_client = daemon_client
+        return daemon_client
+
+    def _download_job_progress(self, status):
+        """Map daemon job progress into the existing GUI signal shape."""
+        progress = float(status.get("progress") or 0.0)
+        clamped = max(0, min(100, int(round(progress))))
+        self._safe_progress_emit(clamped, 100)
+
+    def _download_nltk_data(self, data_names):
+        """Download NLTK data through the daemon download service."""
+        daemon_client = self._daemon_client()
+        job = daemon_client.start_nltk_download(data_names=data_names)
+        job_id = str(job.get("job_id") or "")
+        if not job_id:
+            raise RuntimeError("Daemon did not return a download job id")
+
+        result = daemon_client.wait_download_job(
+            job_id,
+            progress_callback=self._download_job_progress,
+        )
+        payload = result.get("result")
+        downloaded_names = data_names
+        if isinstance(payload, dict):
+            resolved_names = payload.get("data_names") or []
+            if resolved_names:
+                downloaded_names = resolved_names
+
+        for data_name in downloaded_names:
+            self.parent.update_download_log(
+                {"message": f"Downloaded NLTK {data_name}"}
+            )
+
     def download_stable_diffusion(self):
         if not self.models_enabled["stable_diffusion"]:
             self.set_page()
@@ -175,7 +232,7 @@ class InstallWorker(
             {"label": "Downloading Stable Diffusion models..."}
         )
 
-        models = model_bootstrap_data
+        models = get_model_bootstrap_data()
 
         for model in models:
             action = model["pipeline_action"]
@@ -190,7 +247,7 @@ class InstallWorker(
             if not self.models_enabled.get(core_flag, True):
                 continue
             try:
-                files = SD_FILE_BOOTSTRAP_DATA[model["version"]][action_key]
+                files = get_sd_file_bootstrap_data()[model["version"]][action_key]
             except KeyError:
                 continue
 
@@ -207,7 +264,7 @@ class InstallWorker(
             if not self.models_enabled.get(core_flag, True):
                 continue
             try:
-                files = SD_FILE_BOOTSTRAP_DATA[model["version"]][action_key]
+                files = get_sd_file_bootstrap_data()[model["version"]][action_key]
                 self.total_models_in_current_step += len(files)
             except KeyError:
                 continue
@@ -261,7 +318,7 @@ class InstallWorker(
         # Download Upscaler x4 files if enabled
         try:
             if self.models_enabled.get("upscaler_x4", False):
-                upscaler_files = SD_FILE_BOOTSTRAP_DATA.get(
+                upscaler_files = get_sd_file_bootstrap_data().get(
                     "Upscaler", {}
                 ).get("x4", [])
                 if upscaler_files:
@@ -313,7 +370,7 @@ class InstallWorker(
         from collections import defaultdict
 
         version_group = defaultdict(list)
-        for cn in controlnet_bootstrap_data:
+        for cn in get_controlnet_bootstrap_data():
             version_group[cn["version"]].append(cn)
 
         # First, tally totals for models that will be downloaded (already counted in calculate_total_files, but keep step tracking)
@@ -329,7 +386,7 @@ class InstallWorker(
                 if not self.models_enabled.get(controlnet_model["name"], True):
                     continue
                 try:
-                    files = SD_FILE_BOOTSTRAP_DATA[
+                    files = get_sd_file_bootstrap_data()[
                         controlnet_model["version"]
                     ]["controlnet"]
                     self.total_models_in_current_step += len(files)
@@ -350,7 +407,7 @@ class InstallWorker(
                 if not self.models_enabled.get(controlnet_model["name"], True):
                     continue
                 try:
-                    files = SD_FILE_BOOTSTRAP_DATA[
+                    files = get_sd_file_bootstrap_data()[
                         controlnet_model["version"]
                     ]["controlnet"]
                 except KeyError:
@@ -418,12 +475,12 @@ class InstallWorker(
                 print(f"Error downloading {filename}: {e}")
 
     def download_llms(self):
-        if not self.models_enabled["mistral"]:
+        if not self.models_enabled["llm"]:
             self.set_page()
             return
 
         models = []
-        for model in model_bootstrap_data:
+        for model in get_model_bootstrap_data():
             if model["category"] == "llm":
                 if model["pipeline_action"] == "embedding":
                     if not self.models_enabled["embedding_model"]:
@@ -438,7 +495,7 @@ class InstallWorker(
             download_repo_id = (
                 download_info["repo_id"] if download_info else model["path"]
             )
-            files = LLM_FILE_BOOTSTRAP_DATA[download_repo_id]["files"]
+            files = get_llm_file_bootstrap_data()[download_repo_id]["files"]
             # Remove redundant total_steps increment - already counted in calculate_total_files()
             self.total_models_in_current_step += len(files)
             requested_file_path = os.path.expanduser(
@@ -478,10 +535,10 @@ class InstallWorker(
         self.parent.on_set_downloading_status_label(
             {"label": "Downloading STT models..."}
         )
-        for k, v in WHISPER_FILES.items():
+        for k, v in get_whisper_files().items():
             self.total_models_in_current_step += len(v)
 
-        for k, v in WHISPER_FILES.items():
+        for k, v in get_whisper_files().items():
             for filename in v:
                 requested_file_path = os.path.expanduser(
                     os.path.join(
@@ -513,9 +570,9 @@ class InstallWorker(
         self.parent.on_set_downloading_status_label(
             {"label": "Downloading OpenVoice models..."}
         )
-        for k, v in OPENVOICE_FILES.items():
+        for k, v in get_openvoice_files().items():
             self.total_models_in_current_step += len(v["files"])
-        for k, v in OPENVOICE_FILES.items():
+        for k, v in get_openvoice_files().items():
             for filename in v["files"]:
                 requested_file_path = os.path.expanduser(
                     os.path.join(
@@ -538,36 +595,47 @@ class InstallWorker(
 
     def _download_file_with_progress(self, url, dest_path, label=None):
         """
-        Download a file from a direct URL with progress reporting.
+        Download a file through the daemon download service.
         """
-        if requests is None:
-            raise ImportError(
-                "requests library is required for downloading files"
-            )
+        daemon_client = self._daemon_client()
+        destination = os.path.expanduser(dest_path)
+        output_dir = os.path.dirname(destination)
+        file_name = os.path.basename(destination)
 
-        chunk_size = 8192
+        job = daemon_client.start_url_download(
+            url=url,
+            output_dir=output_dir,
+            filename=file_name,
+            extract_zip=False,
+        )
+        job_id = str(job.get("job_id") or "")
+        if not job_id:
+            raise RuntimeError("Daemon did not return a download job id")
+
         try:
-            with requests.get(url, stream=True) as r:
-                r.raise_for_status()
-                total = int(r.headers.get("content-length", 0))
-                downloaded = 0
-                with open(dest_path, "wb") as f:
-                    for chunk in r.iter_content(chunk_size=chunk_size):
-                        if chunk:
-                            f.write(chunk)
-                            downloaded += len(chunk)
-                            if total > 0:
-                                self._safe_progress_emit(downloaded, total)
+            result = daemon_client.wait_download_job(
+                job_id,
+                progress_callback=self._download_job_progress,
+            )
+            self._safe_progress_emit(100, 100)
+
+            final_path = destination
+            payload = result.get("result")
+            if isinstance(payload, dict):
+                paths = payload.get("paths") or []
+                if paths:
+                    final_path = str(paths[0])
+
             if label:
                 self.parent.update_download_log(
                     {"message": f"Downloaded {label}"}
                 )
 
             # Check if this is an OpenVoice zip file
-            if "openvoice" in dest_path and dest_path.endswith(".zip"):
-                self.handle_openvoice_zip_download_finished(dest_path)
+            if "openvoice" in final_path and final_path.endswith(".zip"):
+                self.handle_openvoice_zip_download_finished(final_path)
             self.emit_signal(
-                SignalCode.DOWNLOAD_COMPLETE, {"file_name": dest_path}
+                SignalCode.DOWNLOAD_COMPLETE, {"file_name": final_path}
             )
             self.file_download_finished.emit()
 
@@ -1139,33 +1207,8 @@ class InstallWorker(
         )
         nltk_data = ["averaged_perceptron_tagger_eng", "punkt", "punkt_tab"]
 
-        if nltk is None:
-            self.logger.error(
-                "NLTK not available, skipping NLTK data download"
-            )
-            return
-
         try:
-            # Use a maximum recursion limiter to prevent potential recursion errors
-            original_limit = sys.getrecursionlimit()
-            sys.setrecursionlimit(1500)  # Set a reasonable limit
-
-            for data_name in nltk_data:
-                try:
-                    nltk.download(data_name, quiet=True)
-                    self.parent.update_download_log(
-                        {"message": f"Downloaded NLTK {data_name}"}
-                    )
-                except Exception as e:
-                    self.parent.update_download_log(
-                        {
-                            "message": f"Failed to download NLTK {data_name}: {e}"
-                        }
-                    )
-
-            # Reset recursion limit
-            sys.setrecursionlimit(original_limit)
-
+            self._download_nltk_data(nltk_data)
         except Exception as e:
             self.parent.update_download_log(
                 {"message": f"Failed to download NLTK data: {e}"}
@@ -1230,10 +1273,10 @@ class InstallPage(BaseWizard):
         # These will increase
         self.total_steps = 0
 
-        for version in SD_FILE_BOOTSTRAP_DATA.keys():
-            for action in SD_FILE_BOOTSTRAP_DATA[version].keys():
+        for version in get_sd_file_bootstrap_data().keys():
+            for action in get_sd_file_bootstrap_data()[version].keys():
                 self.total_steps += len(
-                    SD_FILE_BOOTSTRAP_DATA[version][action]
+                    get_sd_file_bootstrap_data()[version][action]
                 )
 
         # Determine total controlnet models being downloaded
@@ -1244,7 +1287,7 @@ class InstallPage(BaseWizard):
             if self.models_enabled.get(model["name"], True):
                 try:
                     self.total_steps += len(
-                        SD_FILE_BOOTSTRAP_DATA[model["version"]][
+                        get_sd_file_bootstrap_data()[model["version"]][
                             model["pipeline_action"]
                         ]
                     )
@@ -1253,23 +1296,19 @@ class InstallPage(BaseWizard):
                     continue
 
         # Increase total number of LLMs downloaded
-        if self.models_enabled["mistral"]:
-            self.total_steps += len(
-                LLM_FILE_BOOTSTRAP_DATA[
-                    "mistralai/Ministral-3-8B-Instruct-2512"
-                ]["files"]
-            )
+        for repo_id in _enabled_llm_download_repo_ids(self.models_enabled):
+            self.total_steps += len(get_llm_file_bootstrap_data()[repo_id]["files"])
 
         if self.models_enabled["whisper"]:
-            self.total_steps += len(WHISPER_FILES["openai/whisper-tiny"])
+            self.total_steps += len(get_whisper_files()["openai/whisper-tiny"])
 
         if self.models_enabled["embedding_model"]:
             self.total_steps += len(
-                LLM_FILE_BOOTSTRAP_DATA["intfloat/e5-large"]["files"]
+                get_llm_file_bootstrap_data()["intfloat/e5-large"]["files"]
             )
 
         if self.models_enabled["openvoice_model"]:
-            for k, v in OPENVOICE_FILES.items():
+            for k, v in get_openvoice_files().items():
                 self.total_steps += len(v["files"])
             # Add OpenVoice zip files (2 zips)
             self.total_steps += 2
@@ -1294,7 +1333,6 @@ class InstallPage(BaseWizard):
         self.worker = InstallWorker(
             self,
             models_enabled=self.models_enabled,
-            headless=True,
             debug_queue=True,
         )
         self.worker.moveToThread(self.thread)
@@ -1368,7 +1406,7 @@ class InstallPage(BaseWizard):
     def calculate_total_files(self):
         self.total_files = 0  # Reset counter
         if self.models_enabled["stable_diffusion"]:
-            models = model_bootstrap_data
+            models = get_model_bootstrap_data()
             for model in models:
                 action = model["pipeline_action"]
                 action_key = model["pipeline_action"]
@@ -1382,7 +1420,7 @@ class InstallPage(BaseWizard):
                 if not self.models_enabled.get(core_flag, True):
                     continue
                 try:
-                    files = SD_FILE_BOOTSTRAP_DATA[model["version"]][
+                    files = get_sd_file_bootstrap_data()[model["version"]][
                         action_key
                     ]
                     self.total_files += len(files)
@@ -1392,7 +1430,7 @@ class InstallPage(BaseWizard):
             from collections import defaultdict
 
             version_group = defaultdict(list)
-            for cn in controlnet_bootstrap_data:
+            for cn in get_controlnet_bootstrap_data():
                 version_group[cn["version"]].append(cn)
 
             for version, models in version_group.items():
@@ -1405,7 +1443,7 @@ class InstallPage(BaseWizard):
                     ):
                         continue
                     try:
-                        files = SD_FILE_BOOTSTRAP_DATA[
+                        files = get_sd_file_bootstrap_data()[
                             controlnet_model["version"]
                         ]["controlnet"]
                         self.total_files += len(files)
@@ -1416,19 +1454,19 @@ class InstallPage(BaseWizard):
             if self.models_enabled.get("upscaler_x4", False):
                 try:
                     self.total_files += len(
-                        SD_FILE_BOOTSTRAP_DATA["Upscaler"]["x4"]
+                        get_sd_file_bootstrap_data()["Upscaler"]["x4"]
                     )
                 except Exception:
                     pass
-        if self.models_enabled["mistral"]:
+        if self.models_enabled["llm"]:
             models = []
-            for model in model_bootstrap_data:
+            for model in get_model_bootstrap_data():
                 if model["category"] == "llm":
                     if model["pipeline_action"] == "embedding":
                         if not self.models_enabled["embedding_model"]:
                             continue
                     else:
-                        if not self.models_enabled["mistral"]:
+                        if not self.models_enabled["llm"]:
                             continue
                     models.append(model)
                     download_info = LLMProviderConfig.resolve_download_target(
@@ -1439,13 +1477,13 @@ class InstallPage(BaseWizard):
                     download_repo_id = (
                         download_info["repo_id"] if download_info else model["path"]
                     )
-                    files = LLM_FILE_BOOTSTRAP_DATA[download_repo_id]["files"]
+                    files = get_llm_file_bootstrap_data()[download_repo_id]["files"]
                     self.total_files += len(files)
         if self.models_enabled["whisper"]:
-            for k, v in WHISPER_FILES.items():
+            for k, v in get_whisper_files().items():
                 self.total_files += len(v)
         if self.models_enabled["openvoice_model"]:
-            for k, v in OPENVOICE_FILES.items():
+            for k, v in get_openvoice_files().items():
                 self.total_files += len(v["files"])
             # Add OpenVoice zip files (2 zips)
             self.total_files += 2
@@ -1457,7 +1495,7 @@ class InstallPage(BaseWizard):
         ) and not self.models_enabled.get("stable_diffusion", False):
             try:
                 self.total_files += len(
-                    SD_FILE_BOOTSTRAP_DATA["Upscaler"]["x4"]
+                    get_sd_file_bootstrap_data()["Upscaler"]["x4"]
                 )
             except Exception:
                 pass

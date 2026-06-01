@@ -1,5 +1,4 @@
 from airunner.enums import (
-    DEFAULT_IMAGE_GENERATOR,
     GeneratorSection,
     ImageGenerator,
     normalize_image_generator_name,
@@ -11,6 +10,7 @@ from airunner.components.art.gui.widgets.image_generator_preferences.templates.i
 
 
 class ImageGeneratorPreferencesWidget(BaseWidget):
+    ui: Ui_image_generator_preferences  # type: ignore[assignment]
     widget_class_ = Ui_image_generator_preferences
 
     def __init__(self, *args, **kwargs):

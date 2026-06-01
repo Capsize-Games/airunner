@@ -80,9 +80,11 @@ class ImageExportWorker(Worker):
                 metadata_dict["scheduler"] = data.get("scheduler_name", "")
             if metadata_settings.image_export_metadata_strength:
                 metadata_dict["strength"] = data.get("strength", 0)
-            if metadata_settings.image_export_metadata_lora:
+            if getattr(metadata_settings, "image_export_metadata_lora", False):
                 metadata_dict["lora"] = data.get("loaded_lora", [])
-            if metadata_settings.image_export_metadata_embeddings:
+            if getattr(
+                metadata_settings, "image_export_metadata_embeddings", False
+            ):
                 metadata_dict["embeddings"] = data.get("loaded_embeddings", [])
             if metadata_settings.image_export_metadata_timestamp:
                 metadata_dict["timestamp"] = datetime.datetime.now(

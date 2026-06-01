@@ -8,6 +8,7 @@ from airunner.utils.settings.get_qsettings import get_qsettings
 
 
 class ToolTabWidget(BaseWidget):
+    ui: Ui_tool_tab_widget  # type: ignore[assignment]
     widget_class_ = Ui_tool_tab_widget
 
     def __init__(self, *args, **kwargs):

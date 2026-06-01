@@ -5,13 +5,14 @@ from airunner.utils.application.mediator_mixin import MediatorMixin
 from airunner.components.application.gui.windows.main.settings_mixin import (
     SettingsMixin,
 )
-from airunner.components.art.data.drawingpad_settings import DrawingPadSettings
-from airunner.components.art.data.controlnet_settings import ControlnetSettings
-from airunner.components.art.data.image_to_image_settings import (
-    ImageToImageSettings,
+from airunner.components.art.data.canvas_layer_records import (
+    apply_layer_orders,
+    capture_layer_snapshot,
+    delete_layer_bundle,
+    invalidate_layer_caches,
+    ordered_canvas_layers,
+    restore_layer_snapshot,
 )
-from airunner.components.art.data.outpaint_settings import OutpaintSettings
-from airunner.components.art.data.canvas_layer import CanvasLayer
 from airunner.components.model_management.model_resource_manager import (
     ModelResourceManager,
 )
@@ -41,45 +42,14 @@ class CanvasLayerStructureMixin(MediatorMixin, SettingsMixin):
         """
         snapshots: List[Dict[str, Any]] = []
         for layer_id in layer_ids:
-            layer_record = self._serialize_record(
-                CanvasLayer.objects.get(layer_id)
+            snapshot = capture_layer_snapshot(
+                layer_id,
+                store=self.resource_store,
             )
-            if layer_record is None:
+            if snapshot is None:
                 continue
-            snapshot: Dict[str, Any] = {"layer": layer_record}
-            snapshot["drawing_pad"] = self._serialize_record(
-                DrawingPadSettings.objects.filter_by_first(layer_id=layer_id)
-            )
-            snapshot["controlnet"] = self._serialize_record(
-                ControlnetSettings.objects.filter_by_first(layer_id=layer_id)
-            )
-            snapshot["image_to_image"] = self._serialize_record(
-                ImageToImageSettings.objects.filter_by_first(layer_id=layer_id)
-            )
-            snapshot["outpaint"] = self._serialize_record(
-                OutpaintSettings.objects.filter_by_first(layer_id=layer_id)
-            )
             snapshots.append(snapshot)
         return snapshots
-
-    def _merge_model_from_dict(self, model_cls, data: Dict[str, Any]) -> None:
-        """Merge a model instance from a dict into the database.
-
-        Args:
-            model_cls: SQLAlchemy model class to merge.
-            data: Dict of model attributes.
-        """
-        if not data:
-            return
-        try:
-            model_instance = model_cls(**data)
-            model_cls.objects.merge(model_instance)
-        except Exception as exc:
-            self.logger.error(
-                "Failed to merge %s for layer operation: %s",
-                model_cls.__name__,
-                exc,
-            )
 
     def _restore_layers_from_snapshots(
         self, snapshots: List[Dict[str, Any]]
@@ -90,20 +60,9 @@ class CanvasLayerStructureMixin(MediatorMixin, SettingsMixin):
             snapshots: List of layer state snapshots.
         """
         for snapshot in snapshots:
-            layer_data = snapshot.get("layer")
-            if layer_data:
-                self._merge_model_from_dict(CanvasLayer, layer_data)
-            self._merge_model_from_dict(
-                DrawingPadSettings, snapshot.get("drawing_pad") or {}
-            )
-            self._merge_model_from_dict(
-                ControlnetSettings, snapshot.get("controlnet") or {}
-            )
-            self._merge_model_from_dict(
-                ImageToImageSettings, snapshot.get("image_to_image") or {}
-            )
-            self._merge_model_from_dict(
-                OutpaintSettings, snapshot.get("outpaint") or {}
+            restore_layer_snapshot(
+                snapshot,
+                store=self.resource_store,
             )
 
     def _remove_layers(self, layer_ids: Iterable[int]) -> None:
@@ -124,22 +83,14 @@ class CanvasLayerStructureMixin(MediatorMixin, SettingsMixin):
             }
 
             # Clear layer-specific cache entries to prevent stale data
-            cache_by_key = (
-                self.settings_mixin_shared_instance._settings_cache_by_key
+            invalidate_layer_caches(
+                self.settings_mixin_shared_instance,
+                layer_id,
             )
-            for model_class in [
-                DrawingPadSettings,
-                ControlnetSettings,
-                ImageToImageSettings,
-                OutpaintSettings,
-            ]:
-                cache_key = f"{model_class.__name__}_layer_{layer_id}"
-                cache_by_key.pop(cache_key, None)
-
-            DrawingPadSettings.objects.delete(layer_id=layer_id)
-            ControlnetSettings.objects.delete(layer_id=layer_id)
-            ImageToImageSettings.objects.delete(layer_id=layer_id)
-            OutpaintSettings.objects.delete(layer_id=layer_id)
+            delete_layer_bundle(
+                layer_id,
+                store=self.resource_store,
+            )
 
     def _apply_layer_orders(self, orders: List[Dict[str, int]]) -> None:
         """Apply layer ordering from a list of order dicts.
@@ -147,12 +98,7 @@ class CanvasLayerStructureMixin(MediatorMixin, SettingsMixin):
         Args:
             orders: List of dicts with layer_id and order keys.
         """
-        for entry in orders:
-            layer_id = entry.get("layer_id")
-            order_value = entry.get("order")
-            if layer_id is None or order_value is None:
-                continue
-            CanvasLayer.objects.update(layer_id, order=order_value)
+        apply_layer_orders(orders, store=self.resource_store)
 
     def _begin_layer_structure_transaction(
         self, action: str, layer_ids: Iterable[int]
@@ -174,6 +120,20 @@ class CanvasLayerStructureMixin(MediatorMixin, SettingsMixin):
             self._structure_history_transaction["layers_before"] = (
                 self._capture_layers_state(layer_ids)
             )
+
+    def _capture_layer_orders(self) -> List[Dict[str, int]]:
+        """Capture current layer order state."""
+        layers = ordered_canvas_layers(store=self.resource_store)
+        if not layers:
+            return []
+        orders: List[Dict[str, int]] = []
+        for index, layer in enumerate(layers):
+            layer_id = getattr(layer, "id", None)
+            if layer_id is None:
+                continue
+            order_value = getattr(layer, "order", index)
+            orders.append({"layer_id": layer_id, "order": order_value})
+        return orders
 
     def _commit_layer_structure_transaction(
         self, action: str, layer_ids: Iterable[int]

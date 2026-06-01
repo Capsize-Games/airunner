@@ -3,15 +3,15 @@ from typing import Any
 from PySide6.QtCore import Slot, QTimer
 from PySide6.QtWidgets import QDoubleSpinBox
 
-from airunner.components.application.data import table_to_class
+from airunner.daemon_client.resource_store import TABLE_TO_RESOURCE as table_to_resource
 from airunner.components.application.gui.widgets.base_widget import BaseWidget
 from airunner.components.application.gui.widgets.slider.templates.slider_ui import (
     Ui_slider_widget,
 )
-from airunner.components.art.data.lora import Lora
 
 
 class SliderWidget(BaseWidget):
+    ui: Ui_slider_widget  # type: ignore[assignment]
     widget_class_ = Ui_slider_widget
     display_as_float = False
     divide_by = 1.0
@@ -276,11 +276,17 @@ class SliderWidget(BaseWidget):
             and self.table_name is not None
             and self.table_column is not None
         ):
-            if self.table_name == "lora":
-                self.table_item = Lora.objects.filter_by_first(
-                    id=self.table_id
+            resource_name = table_to_resource.get(self.table_name)
+            if resource_name is not None:
+                self.table_item = self.resource_store.get(
+                    resource_name,
+                    int(self.table_id),
                 )
-                current_value = getattr(self.table_item, self.table_column)
+                current_value = getattr(
+                    self.table_item,
+                    self.table_column,
+                    None,
+                )
 
         elif current_value is None:
             if settings_property is not None:
@@ -358,15 +364,20 @@ class SliderWidget(BaseWidget):
         table_name = keys[0]
         column_name = keys[1]
 
-        # Get the class name from the table name
-        class_name_ = table_to_class.get(table_name)
+        resource_name = table_to_resource.get(table_name)
+        if resource_name is None:
+            self.logger.error(
+                f"No resource mapping found for table: {table_name}"
+            )
+            return None
 
         if self.table_id:
-            # get the object by id
-            obj = class_name_.objects.get(self.table_id)
+            obj = self.resource_store.get(resource_name, int(self.table_id))
         else:
-            # get the first object
-            obj = class_name_.objects.first()
+            if self.resource_store.is_singleton(resource_name):
+                obj = self.resource_store.get_singleton(resource_name)
+            else:
+                obj = self.resource_store.first(resource_name)
 
         # Check if we have an object
         if obj is None:
@@ -397,12 +408,20 @@ class SliderWidget(BaseWidget):
 
             if self.table_item is not None:
                 setattr(self.table_item, self.table_column, val)
-                if self.table_item.__class__.__name__ == "LoraData":
-                    Lora.objects.update(
-                        self.table_item.id, **self.table_item.__dict__
+                resource_name = table_to_resource.get(self.table_name)
+                if resource_name is not None:
+                    values = getattr(
+                        self.table_item,
+                        "to_dict",
+                        lambda: dict(self.table_item.__dict__),
+                    )()
+                    values.pop("id", None)
+                    values.pop("_sa_instance_state", None)
+                    self.resource_store.update(
+                        resource_name,
+                        self.table_item.id,
+                        values,
                     )
-                else:
-                    self.table_item.save()
             elif settings_property is not None:
                 keys = settings_property.split(".")
                 self.update_setting_by_table_name(

@@ -5,6 +5,7 @@ from airunner.components.art.gui.widgets.image.templates.folder_widget_ui import
 
 
 class FolderWidget(BaseWidget):
+    ui: Ui_folder_widget  # type: ignore[assignment]
     widget_class_ = Ui_folder_widget
     path = None
     callback = None

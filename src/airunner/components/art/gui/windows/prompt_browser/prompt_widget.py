@@ -1,11 +1,11 @@
 from airunner.components.application.gui.widgets.base_widget import BaseWidget
-from airunner.components.art.data.saved_prompt import SavedPrompt
 from airunner.components.art.gui.windows.prompt_browser.templates.prompt_browser_prompt_widget_ui import (
     Ui_prompt_widget,
 )
 
 
 class PromptWidget(BaseWidget):
+    ui: Ui_prompt_widget  # type: ignore[assignment]
     widget_class_ = Ui_prompt_widget
 
     def __init__(self, *args, **kwargs):
@@ -35,7 +35,7 @@ class PromptWidget(BaseWidget):
         self.api.art.load(saved_prompt=self.saved_prompt)
 
     def action_clicked_button_delete(self):
-        SavedPrompt.objects.delete(self.saved_prompt.id)
+        self.resource_store.delete("SavedPrompt", self.saved_prompt.id)
 
         self.deleteLater()
 
@@ -53,15 +53,21 @@ class PromptWidget(BaseWidget):
         self.save()
 
     def save(self):
-        new_saved_prompt = SavedPrompt.objects.filter_by_first(
-            id=self.saved_prompt.id
+        new_saved_prompt = self.resource_store.get(
+            "SavedPrompt",
+            self.saved_prompt.id,
         )
         if new_saved_prompt:
-            for key in self.saved_prompt.__dict__.keys():
-                if key != "_sa_instance_state":
-                    setattr(
-                        new_saved_prompt, key, getattr(self.saved_prompt, key)
-                    )
-            new_saved_prompt.save()
-        else:
-            self.saved_prompt.save()
+            values = {
+                "prompt": self.saved_prompt.prompt,
+                "negative_prompt": self.saved_prompt.negative_prompt,
+                "secondary_prompt": self.saved_prompt.secondary_prompt,
+                "secondary_negative_prompt": (
+                    self.saved_prompt.secondary_negative_prompt
+                ),
+            }
+            self.resource_store.update(
+                "SavedPrompt",
+                self.saved_prompt.id,
+                values,
+            )

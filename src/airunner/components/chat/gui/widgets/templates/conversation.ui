@@ -20,7 +20,8 @@
      border: 1.5px solid #23272B;
      border-radius: 6px;
     }
-    QWebEngineView {
+        QWidget#stage,
+        QWebEngineView#stage {
      background: #181C20;
      border: none;
     }
@@ -43,29 +44,17 @@
     <number>0</number>
    </property>
    <item row="0" column="0">
-    <widget class="QWebEngineView" name="stage">
+    <widget class="QWidget" name="stage" native="true">
      <property name="minimumSize">
       <size>
        <width>200</width>
        <height>200</height>
       </size>
      </property>
-     <property name="url">
-      <url>
-       <string>about:blank</string>
-      </url>
-     </property>
     </widget>
    </item>
   </layout>
  </widget>
- <customwidgets>
-  <customwidget>
-   <class>QWebEngineView</class>
-   <extends>QWidget</extends>
-   <header location="global">QtWebEngineWidgets/QWebEngineView</header>
-  </customwidget>
- </customwidgets>
  <resources/>
  <connections/>
 </ui>

@@ -9,8 +9,8 @@ from typing import Iterable
 import torch
 from safetensors import safe_open
 
-from airunner.components.art.data.bootstrap.sd_file_bootstrap_data import (
-    SD_FILE_BOOTSTRAP_DATA,
+from airunner.components.data.bootstrap_service import (
+    get_sd_file_bootstrap_data,
 )
 
 
@@ -39,7 +39,7 @@ _VAE_FILES = (
     "vae/config.json",
     "vae/diffusion_pytorch_model.safetensors",
 )
-_OFFICIAL_FILES = SD_FILE_BOOTSTRAP_DATA["Z-Image Turbo"]["txt2img"]
+_OFFICIAL_FILES = get_sd_file_bootstrap_data()["Z-Image Turbo"]["txt2img"]
 _OFFICIAL_TEXT_ENCODER_SHARDS = tuple(
     file_name
     for file_name in _OFFICIAL_FILES

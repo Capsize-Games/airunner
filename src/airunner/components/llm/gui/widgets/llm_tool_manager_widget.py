@@ -5,7 +5,7 @@ Provides a UI for viewing, creating, editing, and managing LLM tools.
 Displays all tools (built-in and custom) in a table with CRUD operations.
 """
 
-from typing import Dict
+from typing import Any, Dict
 
 from PySide6.QtCore import Slot, Qt
 from PySide6.QtWidgets import (
@@ -22,14 +22,13 @@ from airunner.components.llm.gui.widgets.templates.llm_tool_manager_ui import (
 from airunner.components.llm.gui.widgets.llm_tool_editor_widget import (
     LLMToolEditorWidget,
 )
-from airunner.components.llm.data.llm_tool import LLMTool
 from airunner.enums import SignalCode
-from airunner.components.data.session_manager import session_scope
 
 
 
 
 class LLMToolManagerWidget(BaseWidget):
+    ui: Ui_llm_tool_manager  # type: ignore[assignment]
     """
     Widget for managing LLM tools.
     Shows a table of all tools with ability to create, edit, delete, and toggle.
@@ -107,19 +106,14 @@ class LLMToolManagerWidget(BaseWidget):
     def load_tools(self):
         """Load and display all tools in the table"""
         self.ui.tools_table.setRowCount(0)
-        session = self.session_maker()
-        try:
-            tools = (
-                session.query(LLMTool)
-                .order_by(LLMTool.created_at.desc())
-                .all()
-            )
-            for tool in tools:
-                self._add_tool_row(tool)
-        finally:
-            session.close()
+        tools = self.resource_store.query(
+            "LLMTool",
+            order_by=[{"field": "created_at", "direction": "desc"}],
+        )
+        for tool in tools:
+            self._add_tool_row(tool)
 
-    def _add_tool_row(self, tool: LLMTool):
+    def _add_tool_row(self, tool: Any):
         """Add a tool to the table"""
         row = self.ui.tools_table.rowCount()
         self.ui.tools_table.insertRow(row)
@@ -144,9 +138,11 @@ class LLMToolManagerWidget(BaseWidget):
         )
 
         # Success Rate
-        success_rate = (
-            f"{tool.success_rate:.1f}%" if tool.usage_count > 0 else "N/A"
-        )
+        usage_count = int(getattr(tool, "usage_count", 0) or 0)
+        success_count = int(getattr(tool, "success_count", 0) or 0)
+        success_rate = "N/A"
+        if usage_count > 0:
+            success_rate = f"{(success_count / usage_count) * 100:.1f}%"
         self.ui.tools_table.setItem(row, 4, QTableWidgetItem(success_rate))
 
         # Enabled checkbox
@@ -183,29 +179,32 @@ class LLMToolManagerWidget(BaseWidget):
         return widget
 
     @Slot(object, int)
-    def on_enabled_changed(self, tool: LLMTool, state: int):
+    def on_enabled_changed(self, tool: Any, state: int):
         """Toggle tool enabled status"""
         enabled = state == Qt.CheckState.Checked.value
-        with session_scope() as session:
-            db_tool = session.query(LLMTool).filter_by(id=tool.id).first()
-            if db_tool:
-                db_tool.enabled = enabled
-                self.logger.info(
-                    f"Tool {tool.name} {'enabled' if enabled else 'disabled'}"
-                )
-                self.emit_signal(
-                    SignalCode.LLM_TOOL_UPDATED, {"tool": db_tool}
-                )
+        updated_tool = self.resource_store.update(
+            "LLMTool",
+            tool.id,
+            {"enabled": enabled},
+        )
+        if updated_tool is not None:
+            tool.enabled = enabled
+            self.logger.info(
+                f"Tool {tool.name} {'enabled' if enabled else 'disabled'}"
+            )
+            self.emit_signal(
+                SignalCode.LLM_TOOL_UPDATED, {"tool": tool}
+            )
 
     @Slot(object)
-    def on_edit_tool(self, tool: LLMTool):
+    def on_edit_tool(self, tool: Any):
         """Open editor dialog to edit a tool"""
         editor = LLMToolEditorWidget(tool=tool, parent=self)
         if editor.exec():
             self.load_tools()
 
     @Slot(object)
-    def on_delete_tool(self, tool: LLMTool):
+    def on_delete_tool(self, tool: Any):
         """Delete a tool after confirmation"""
         reply = QMessageBox.question(
             self,
@@ -215,15 +214,12 @@ class LLMToolManagerWidget(BaseWidget):
             QMessageBox.StandardButton.No,
         )
         if reply == QMessageBox.StandardButton.Yes:
-            with session_scope() as session:
-                db_tool = session.query(LLMTool).filter_by(id=tool.id).first()
-                if db_tool:
-                    session.delete(db_tool)
-                    self.logger.info(f"Deleted tool {tool.name}")
-                    self.emit_signal(
-                        SignalCode.LLM_TOOL_DELETED, {"tool_id": tool.id}
-                    )
-                    self.load_tools()
+            if self.resource_store.delete("LLMTool", tool.id):
+                self.logger.info(f"Deleted tool {tool.name}")
+                self.emit_signal(
+                    SignalCode.LLM_TOOL_DELETED, {"tool_id": tool.id}
+                )
+                self.load_tools()
 
     def on_tool_created(self, data: Dict):
         """Handle tool created signal"""

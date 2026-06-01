@@ -3,7 +3,11 @@ from PySide6.QtCore import QFileSystemWatcher, QEventLoop
 
 from airunner.enums import SignalCode
 from airunner.components.application.workers.worker import Worker
-from airunner.components.documents.data.models.document import Document
+from airunner.components.documents.data.document_records import (
+    delete_document,
+    ensure_document_record,
+    list_documents,
+)
 
 
 class DocumentWorker(Worker):
@@ -102,10 +106,12 @@ class DocumentWorker(Worker):
                         current_files.add(fpath)
 
                         if fpath not in self._known_files:
-                            exists = Document.objects.filter_by(path=fpath)
-                            if not exists or len(exists) == 0:
-                                Document.objects.create(
-                                    path=fpath, active=False, indexed=False
+                            exists = list_documents(filters={"path": fpath})
+                            if not exists:
+                                ensure_document_record(
+                                    fpath,
+                                    active=False,
+                                    indexed=False,
                                 )
                                 self.logger.info(
                                     f"Added document to database: {fname}"
@@ -114,9 +120,9 @@ class DocumentWorker(Worker):
 
         deleted_files = self._known_files - current_files
         for fpath in deleted_files:
-            docs = Document.objects.filter_by(path=fpath)
-            if docs and len(docs) > 0:
-                Document.objects.delete(pk=docs[0].id)
+            docs = list_documents(filters={"path": fpath})
+            if docs:
+                delete_document(docs[0].id)
                 fname = os.path.basename(fpath)
                 self.logger.info(f"Removed document from database: {fname}")
                 documents_removed = True

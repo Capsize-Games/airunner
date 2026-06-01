@@ -18,7 +18,6 @@ from PySide6.QtWidgets import (
     QTableWidgetItem,
     QPushButton,
     QLabel,
-    QComboBox,
     QMessageBox,
     QHeaderView,
     QProgressBar,

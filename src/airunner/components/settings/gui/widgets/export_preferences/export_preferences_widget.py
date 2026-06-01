@@ -6,6 +6,7 @@ from PySide6.QtWidgets import QFileDialog
 
 
 class ExportPreferencesWidget(BaseWidget):
+    ui: Ui_export_preferences  # type: ignore[assignment]
     widget_class_ = Ui_export_preferences
 
     def __init__(self, **kwargs):

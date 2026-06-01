@@ -32,10 +32,6 @@ htmlcov
 network_access_attempts.log
 *.lprof
 .env*
-src/airunner/extensions/
-
-# Local convenience-only extensions (not part of the Airunner repo)
-extensions/
 
 # Documentation wiki checkout (separate git repo)
 airunner.wiki/
@@ -90,11 +86,12 @@ logs
 # UI build marker file (generated)
 src/airunner/components/ui_build_marker
 reports/*
-scripts/*
 !scripts/build_airunner_launcher.sh
 !scripts/build_airunner_bundle.sh
 !scripts/build_runtime_sidecars.sh
 !scripts/package_linux_appimage.sh
 !scripts/package_windows_nsis.ps1
-!scripts/run_airunner_dev.sh
 !scripts/security_audit.sh
+plans
+facehuggershield
+logs

@@ -12,6 +12,7 @@ from airunner.components.settings.gui.widgets.memory_preferences.templates.memor
 
 
 class MemoryPreferencesWidget(BaseWidget):
+    ui: Ui_memory_preferences  # type: ignore[assignment]
     widget_class_ = Ui_memory_preferences
 
     def __init__(self, **kwargs):

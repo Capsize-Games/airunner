@@ -52,7 +52,7 @@ Temporary fix for windows - Facehuggershield is not working correctly
 on windows at this time so we disable it.
 """
 if not AIRUNNER_DISABLE_FACEHUGGERSHIELD:
-    from airunner.vendor.facehuggershield.huggingface import activate
+    from facehuggershield.huggingface import activate
 
     airunner_path = os.path.join(
         os.path.expanduser("~"), ".local", "share", "airunner"
@@ -105,7 +105,7 @@ if not AIRUNNER_DISABLE_FACEHUGGERSHIELD:
             airunner_src_path,
             "/tmp/",
             "/etc/",
-            "/var/log/airunner/",  # Add headless server log directory
+            "/var/log/airunner/",
             os.path.join(os.path.expanduser("~"), "nltk_data/"),
             os.path.join(
                 os.path.expanduser("~"), "nltk_data/corpora/stopwords/english"
@@ -237,9 +237,8 @@ torch.hub.set_dir(
 from airunner.components.application.api.api import API
 
 ###############################################################
-# Import Alembic modules to run migrations.
+# GUI startup no longer owns database setup.
 ################################################################
-from airunner.setup_database import setup_database
 
 # These may be set by launcher.py for early splash screen
 _launcher_splash = None
@@ -248,6 +247,17 @@ _launcher_app = None
 
 def main():
     global _launcher_splash, _launcher_app
+
+    # Enable faulthandler for debugging deadlocks.
+    # When the GUI freezes, send SIGUSR1 to the Python GUI process:
+    #   GUI_PID="$(pgrep -n -f 'python.*-m airunner\.launcher')"
+    #   kill -SIGUSR1 "$GUI_PID"
+    import faulthandler
+    import signal
+    faulthandler.enable()
+    faulthandler.register(signal.SIGUSR1, all_threads=True,
+                          chain=False)
+
     startup_started_at = float(
         os.environ.setdefault(
             "AIRUNNER_PROCESS_START_TIME",
@@ -300,13 +310,6 @@ def main():
     if args.watch:
         # Handled in launcher.py, but keep for help output and future use
         pass
-
-    database_started_at = time.perf_counter()
-    setup_database()
-    startup_logger.info(
-        "Startup phase database_setup completed in %.2fs",
-        time.perf_counter() - database_started_at,
-    )
 
     # Start the main application, passing launcher's splash if available
     api_started_at = time.perf_counter()

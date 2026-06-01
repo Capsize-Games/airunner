@@ -11,7 +11,7 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Qt
 
-from airunner.components.art.data.image_filter import ImageFilter
+from airunner.daemon_client.resource_store import get_resource_store
 from airunner.settings import AIRUNNER_LOG_LEVEL
 from airunner.utils.application import get_logger
 
@@ -26,6 +26,7 @@ class FilterListWindow(QDialog):
         # Initialize QDialog with an optional parent and show it non-modally
         super().__init__(parent)
         self.logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
+        self.resource_store = get_resource_store()
         self.setWindowTitle("Image Filters")
         # Provide a sensible default size so the window isn't tiny
         try:
@@ -72,7 +73,7 @@ class FilterListWindow(QDialog):
 
     def _load_filters(self):
         self._list.clear()
-        filters = ImageFilter.objects.all() or []
+        filters = self.resource_store.query("ImageFilter") or []
         for f in filters:
             # Create an empty list item and a widget containing a real QCheckBox
             item = QListWidgetItem()
@@ -93,8 +94,10 @@ class FilterListWindow(QDialog):
                         fid,
                         checked,
                     )
-                    success = ImageFilter.objects.update(
-                        fid, auto_apply=bool(checked)
+                    success = self.resource_store.update(
+                        "ImageFilter",
+                        fid,
+                        {"auto_apply": bool(checked)},
                     )
                     self.logger.debug("ImageFilter update success=%s", success)
                 except Exception:
@@ -126,7 +129,11 @@ class FilterListWindow(QDialog):
         try:
             fid = item.data(Qt.UserRole)
             checked = item.checkState() == Qt.Checked
-            ImageFilter.objects.update(fid, auto_apply=checked)
+            self.resource_store.update(
+                "ImageFilter",
+                fid,
+                {"auto_apply": checked},
+            )
             # Do NOT apply to current canvas image when toggled; these flags
             # are for auto-applying to future generated images. The DB update
             # above is sufficient.

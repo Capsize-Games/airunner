@@ -1,12 +1,24 @@
 import traceback
-from typing import Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 from abc import ABC, ABCMeta
 from abc import abstractmethod
 import os
 
+from PySide6.QtWidgets import QWidget  # noqa: E402
+
+from airunner.qt_runtime_env import configure_early_qt_environment
+
+configure_early_qt_environment()
+
 from PySide6 import QtGui
-from PySide6.QtWidgets import QWidget
-from PySide6.QtCore import QTimer
+from PySide6.QtWidgets import QApplication, QWidget
+from PySide6.QtCore import QCoreApplication, QTimer, Qt
+
+if QCoreApplication.instance() is None:
+    QApplication.setAttribute(
+        Qt.ApplicationAttribute.AA_UseSoftwareOpenGL
+    )
+
 from airunner.enums import CanvasToolName, TemplateName
 from airunner.gui.styles.styles_mixin import StylesMixin
 from airunner.components.application.gui.windows.main.settings_mixin import (
@@ -26,7 +38,7 @@ from airunner.components.icons.managers.icon_manager import IconManager
 from airunner.utils.settings.get_qsettings import get_qsettings
 
 
-class BaseABCMeta(type(QWidget), ABCMeta):
+class BaseABCMeta(type(QWidget), ABCMeta):  # type: ignore[misc]
     pass
 
 
@@ -54,11 +66,20 @@ class AbstractBaseWidget(
 class BaseWidget(AbstractBaseWidget):
     """
     Base class for all widgets.
+
+    ``self.ui`` is typed as ``Any`` because each subclass provides a
+    different generated ``Ui_*`` template class.  Individual widgets
+    that want typed access can redeclare::
+
+        ui: Ui_my_form  # type: ignore[assignment]
+
+    ``widget_class_`` points at the generated template class so that
+    ``setupUi`` and ``retranslateUi`` are available at runtime.
     """
 
-    widget_class_: Optional[object] = None
+    widget_class_: Optional[Any] = None
     icons: List[Optional[Tuple[str, str]]] = []
-    ui: Optional[object] = None
+    ui: Any = None
     _splitters: List[str] = []
     _splitter_debounce_timer: Optional[QTimer] = None
     _splitter_debounce_ms = 300
@@ -124,9 +145,6 @@ class BaseWidget(AbstractBaseWidget):
     def render_template(self):
         if not self.web_engine_view or not self.template:
             return
-        settings = get_qsettings()
-        theme = settings.value("theme", TemplateName.DARK.value)
-        theme_name = theme.lower().replace(" ", "_")
         try:
             # Pass theme variable to Jinja2 template for correct CSS links
             self._render_template(
@@ -134,9 +152,6 @@ class BaseWidget(AbstractBaseWidget):
                 self.template,
                 **self.template_context,
             )
-            # Also set window.currentTheme for JS
-            js = f"window.currentTheme = '{theme_name}';"
-            self.web_engine_view.page().runJavaScript(js)
         except Exception as e:
             self.logger.error(
                 f"Failed to render template {self.template}: {e}"
@@ -386,31 +401,19 @@ class BaseWidget(AbstractBaseWidget):
         # Render the template
         try:
             template = env.get_template(template_name)
-            template.render(**kwargs)
-
-            # Use HTTP server URL - construct the full URL to the template
-            # Server runs on http://127.0.0.1:5005, static files served from /static/
-            # Pass context variables as query parameters for Jinja2 rendering
-            import urllib.parse
-            import json
-
-            query_params = []
-            for key, value in kwargs.items():
-                # JSON encode complex values, simple string for primitives
-                if isinstance(value, (dict, list)):
-                    query_params.append(
-                        f"{key}={urllib.parse.quote(json.dumps(value))}"
-                    )
-                else:
-                    query_params.append(
-                        f"{key}={urllib.parse.quote(str(value))}"
-                    )
-            query_string = "&".join(query_params) if query_params else ""
-            template_url = f"http://127.0.0.1:5005/static/html/{template_name}?{query_string}"
-            self.logger.debug(
-                f"[BaseWidget] Loading template from URL: {template_url}"
+            rendered_html = template.render(**kwargs)
+            template_url = (
+                f"http://127.0.0.1:5005/static/html/{template_name}"
             )
-            element.setUrl(QUrl(template_url))
+            self.logger.debug(
+                f"[BaseWidget] Loading rendered template with base URL: "
+                f"{template_url}"
+            )
+
+            if hasattr(element, "setHtml"):
+                element.setHtml(rendered_html, QUrl(template_url))
+            else:
+                element.setUrl(QUrl(template_url))
         except Exception as e:
             self.logger.error(
                 f"[BaseWidget] Error rendering template {template_name}: {e}"

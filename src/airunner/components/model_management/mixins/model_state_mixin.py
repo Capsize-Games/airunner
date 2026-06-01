@@ -1,6 +1,10 @@
 """Model state management mixin for ModelResourceManager."""
 
 from typing import List
+from airunner.components.model_management.types import (
+    ModelState,
+    ActiveModelInfo,
+)
 
 
 class ModelStateMixin:
@@ -44,7 +48,6 @@ class ModelStateMixin:
         Returns:
             Current ModelState, or UNLOADED if not tracked
         """
-        from airunner.components.model_management.types import ModelState
 
         return self._model_states.get(model_id, ModelState.UNLOADED)
 
@@ -58,7 +61,6 @@ class ModelStateMixin:
         Args:
             model_id: Unique identifier for the model
         """
-        from airunner.components.model_management.types import ModelState
 
         self.set_model_state(model_id, ModelState.LOADED, model_type)
 
@@ -72,7 +74,6 @@ class ModelStateMixin:
         Args:
             model_id: Unique identifier for the model
         """
-        from airunner.components.model_management.types import ModelState
 
         self.set_model_state(model_id, ModelState.BUSY, model_type)
 
@@ -86,7 +87,6 @@ class ModelStateMixin:
         Args:
             model_id: Unique identifier for the model
         """
-        from airunner.components.model_management.types import ModelState
 
         self.set_model_state(model_id, ModelState.LOADED, model_type)
 
@@ -97,7 +97,6 @@ class ModelStateMixin:
             model_id: Unique identifier for the model
             model_type: Type of model being cleaned up
         """
-        from airunner.components.model_management.types import ModelState
 
         self.set_model_state(model_id, ModelState.UNLOADING, model_type)
         self.memory_allocator.deallocate(model_id)
@@ -109,11 +108,6 @@ class ModelStateMixin:
         Returns:
             List of ActiveModelInfo for all non-unloaded models
         """
-        from airunner.components.model_management.types import (
-            ModelState,
-            ActiveModelInfo,
-        )
-
         active_models = []
 
         for model_id, state in self._model_states.items():

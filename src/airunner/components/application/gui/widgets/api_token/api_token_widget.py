@@ -6,6 +6,7 @@ from airunner.components.application.gui.widgets.base_widget import BaseWidget
 
 
 class APITokenWidget(BaseWidget):
+    ui: Ui_api_token  # type: ignore[assignment]
     widget_class_ = Ui_api_token
 
     def __init__(self, *args, **kwargs):

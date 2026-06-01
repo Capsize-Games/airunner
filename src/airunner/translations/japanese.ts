@@ -2270,8 +2270,8 @@ Please be aware that AI-generated content could unintentionally replicate copyri
     </message>
     <message>
         <location filename="../gui/windows/setup_wizard/installation_settings/templates/choose_models.ui" line="135"/>
-        <source>Ministral 8B Instruct 4bit: Large Language Model (LLM)</source>
-        <translation></translation>
+        <source>Local language models: conversation and coding</source>
+        <translation>ローカル言語モデル: 会話とコーディング</translation>
     </message>
     <message>
         <location filename="../gui/windows/setup_wizard/installation_settings/templates/choose_models.ui" line="145"/>

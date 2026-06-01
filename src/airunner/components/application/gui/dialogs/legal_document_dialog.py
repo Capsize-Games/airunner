@@ -9,8 +9,6 @@ from PySide6.QtWidgets import (
     QPushButton,
     QHBoxLayout,
 )
-from PySide6.QtCore import Qt
-from PySide6.QtGui import QFont
 
 
 # Document directory path

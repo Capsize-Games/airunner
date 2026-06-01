@@ -9,7 +9,7 @@ from typing import Optional
 from PIL import Image
 from PIL.ImageQt import ImageQt
 from PySide6.QtCore import QRectF
-from PySide6.QtGui import QImage, QPainter
+from PySide6.QtGui import QImage
 from PySide6.QtWidgets import QGraphicsScene, QGraphicsPixmapItem
 from PySide6.QtGui import QPixmap
 

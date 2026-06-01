@@ -1,8 +1,5 @@
 __all__ = [
     "create_worker",
-    "get_lat_lon",
-    "get_model_optimizer",
-    "get_torch_device",
     "get_version",
     "open_file_path",
     "parse_template",
@@ -13,7 +10,6 @@ __all__ = [
     "is_windows",
     "random_seed",
     "set_widget_state",
-    "snap_to_grid",
     "strip_names_from_message",
     "prepare_text_for_tts",
     "replace_unspeakable_characters",
@@ -21,7 +17,6 @@ __all__ = [
     "replace_numbers_with_words",
     "replace_misc_with_words",
     "roman_to_int",
-    "ModelOptimizer",
 ]
 
 
@@ -30,14 +25,6 @@ def __getattr__(name):
         from .application.create_worker import create_worker
 
         return create_worker
-    elif name == "get_lat_lon":
-        from .location.get_lat_lon import get_lat_lon
-
-        return get_lat_lon
-    elif name == "get_torch_device":
-        from .application.get_torch_device import get_torch_device
-
-        return get_torch_device
     elif name == "get_version":
         from .application.get_version import get_version
 
@@ -78,10 +65,6 @@ def __getattr__(name):
         from .application.set_widget_state import set_widget_state
 
         return set_widget_state
-    elif name == "snap_to_grid":
-        from .application.snap_to_grid import snap_to_grid
-
-        return snap_to_grid
     elif name == "strip_names_from_message":
         from airunner.components.llm.utils.strip_names_from_message import strip_names_from_message
 
@@ -110,12 +93,4 @@ def __getattr__(name):
         from airunner.components.llm.utils.text_preprocessing import roman_to_int
 
         return roman_to_int
-    elif name == "get_model_optimizer":
-        from airunner.utils.model_optimizer import get_model_optimizer
-
-        return get_model_optimizer
-    elif name == "ModelOptimizer":
-        from airunner.utils.model_optimizer import ModelOptimizer
-
-        return ModelOptimizer
     raise AttributeError(f"module {__name__} has no attribute {name}")

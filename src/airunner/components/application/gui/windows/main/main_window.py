@@ -67,10 +67,11 @@ from airunner.settings import (
     AIRUNNER_ART_ENABLED,
 )
 from airunner.utils.application import create_worker
+from airunner.utils.application.gui_probe import (
+    maybe_create_gui_probe_controller,
+)
 from airunner.utils.application.log_hygiene import summarize_mapping_keys
 from airunner.utils.settings import get_qsettings
-from airunner.components.application.data.shortcut_keys import ShortcutKeys
-from airunner.components.art.data.image_filter import ImageFilter
 from airunner.app_installer import AppInstaller
 from airunner.enums import (
     SignalCode,
@@ -79,7 +80,6 @@ from airunner.enums import (
     ModelStatus,
 )
 from airunner.utils.application.mediator_mixin import MediatorMixin
-from airunner.utils.application.get_version import get_version
 from airunner.utils.widgets import (
     save_splitter_settings,
     load_splitter_settings,
@@ -329,7 +329,10 @@ class MainWindow(
         self.single_click_timer.timeout.connect(self.handle_single_click)
         self._updating_settings = True
         self._updating_settings = False
-        self.worker_manager = create_worker(WorkerManager)
+        self.worker_manager = create_worker(
+            WorkerManager,
+            signal_api_adapter=getattr(self.api, "daemon_client", None),
+        )
         self.model_load_balancer = ModelLoadBalancer(
             self.worker_manager,
             logger=getattr(self, "logger", None),
@@ -342,6 +345,7 @@ class MainWindow(
             self._refresh_model_status_from_daemon
         )
         self.initialize_ui()
+        self._gui_probe_controller = maybe_create_gui_probe_controller(self)
         self._daemon_status_timer.start(1000)
         self.last_tray_click_time = 0
         self.settings_window = None
@@ -352,9 +356,8 @@ class MainWindow(
 
     @property
     def version(self):
-        if self._version is None:
-            self._version = get_version()
-        return f"v{self._version}"
+        from airunner.settings import AIRUNNER_VERSION
+        return f"v{AIRUNNER_VERSION}"
 
     @property
     def latest_version(self):
@@ -461,10 +464,29 @@ class MainWindow(
             self.ui.sidebar_tab.setCurrentIndex(page_index)
             self._sync_sidebar_button_states()
 
+        self._schedule_lazy_panel_prewarm()
+
         if self._post_startup_status_refresh_requested:
             return
         self._post_startup_status_refresh_requested = True
         self._refresh_model_status_from_daemon()
+
+    def _schedule_lazy_panel_prewarm(self) -> None:
+        """Preload slow panel widgets after the window becomes interactive."""
+        if getattr(self, "_lazy_panel_prewarm_scheduled", False):
+            return
+        self._lazy_panel_prewarm_scheduled = True
+        QTimer.singleShot(0, self._prewarm_history_panel)
+
+    def _prewarm_history_panel(self) -> None:
+        """Build the history panel outside the first-click path."""
+        try:
+            widget = self._ensure_left_history_loaded()
+            preload = getattr(widget, "preload_content", None)
+            if callable(preload):
+                preload()
+        except Exception:
+            self.logger.exception("Failed to prewarm history panel")
 
     def _schedule_main_window_loaded_signal(self) -> None:
         """Schedule the post-startup signal once after the window is shown."""
@@ -672,24 +694,46 @@ class MainWindow(
 
     def _ensure_left_panel_page_loaded(self, page_index: int) -> None:
         """Load left-panel content lazily for the requested page."""
-        if page_index == self._left_documents_panel_index:
-            self._ensure_knowledgebase_loaded()
-        elif page_index == self._left_history_panel_index:
-            self._ensure_left_history_loaded()
-        elif page_index == self._left_llm_settings_panel_index:
-            self._ensure_left_llm_settings_loaded()
+        try:
+            if page_index == self._left_documents_panel_index:
+                self._ensure_knowledgebase_loaded()
+            elif page_index == self._left_history_panel_index:
+                self._ensure_left_history_loaded()
+            elif page_index == self._left_llm_settings_panel_index:
+                self._ensure_left_llm_settings_loaded()
+        except Exception:
+            self.logger.exception(
+                "Failed to load left panel page %s",
+                page_index,
+            )
+            return False
+
+        return True
 
     def _ensure_sidebar_page_loaded(self, page_index: int) -> None:
         """Load sidebar content lazily for the requested page."""
-        if page_index == self._stats_sidebar_index:
-            self._ensure_stats_loaded()
-        elif page_index == self._art_tools_sidebar_index:
-            self._ensure_art_tools_loaded()
+        try:
+            if page_index == self._stats_sidebar_index:
+                self._ensure_stats_loaded()
+            elif page_index == self._art_tools_sidebar_index:
+                self._ensure_art_tools_loaded(
+                    self._saved_art_tools_tab_index()
+                )
+        except Exception:
+            self.logger.exception(
+                "Failed to load sidebar page %s",
+                page_index,
+            )
+            return False
+
+        return True
 
     def _toggle_sidebar_page(self, page_index: int, visible: bool) -> None:
         """Switch or hide the VS Code style right sidebar page."""
         if visible:
-            self._ensure_sidebar_page_loaded(page_index)
+            if not self._ensure_sidebar_page_loaded(page_index):
+                self._sync_sidebar_button_states()
+                return
             self.ui.sidebar_tab.setCurrentIndex(page_index)
             self._toggle_splitter_section(
                 True,
@@ -714,10 +758,15 @@ class MainWindow(
         """Show or hide one nested art-tools tab from the right sidebar."""
         tab_index = self._clamp_art_tools_tab_index(tab_index)
         if visible:
-            widget = self._ensure_art_tools_loaded()
-            show_tool_page = getattr(widget, "show_tool_page", None)
-            if callable(show_tool_page):
-                show_tool_page(tab_index)
+            try:
+                self._ensure_art_tools_loaded(tab_index)
+            except Exception:
+                self.logger.exception(
+                    "Failed to load art tools tab %s",
+                    tab_index,
+                )
+                self._sync_sidebar_button_states()
+                return
             self._toggle_sidebar_page(self._art_tools_sidebar_index, True)
             return
 
@@ -858,7 +907,9 @@ class MainWindow(
     def _toggle_left_panel_page(self, page_index: int, visible: bool) -> None:
         """Switch or hide the shared left splitter panel page."""
         if visible:
-            self._ensure_left_panel_page_loaded(page_index)
+            if not self._ensure_left_panel_page_loaded(page_index):
+                self._sync_left_panel_button_states()
+                return
             self.ui.left_panel_tab.setCurrentIndex(page_index)
             if not self._left_panel_is_visible():
                 self._toggle_splitter_section(
@@ -1420,7 +1471,7 @@ class MainWindow(
         )
 
         self._ensure_left_panel_host()
-        self._attach_lazy_widget(
+        return self._attach_lazy_widget(
             "left_history_page",
             "left_history_widget",
             "left_history_widget",
@@ -1574,7 +1625,7 @@ class MainWindow(
             placeholder_attr="art_prompt_placeholder",
         )
 
-    def _ensure_art_tools_loaded(self) -> None:
+    def _ensure_art_tools_loaded(self, tab_index: int | None = None) -> None:
         """Create the art settings page only when it is shown."""
         from airunner.components.art.gui.widgets.stablediffusion.stablediffusion_tool_tab_widget import (
             StablediffusionToolTabWidget,
@@ -1588,8 +1639,8 @@ class MainWindow(
             placeholder_attr="art_tools_placeholder",
         )
         show_tool_page = getattr(widget, "show_tool_page", None)
-        if callable(show_tool_page):
-            show_tool_page(self._saved_art_tools_tab_index())
+        if callable(show_tool_page) and tab_index is not None:
+            show_tool_page(self._clamp_art_tools_tab_index(tab_index))
         return widget
 
     @property
@@ -1981,24 +2032,17 @@ class MainWindow(
         This is invoked by SD_SAVE_PROMPT_SIGNAL. Previously this method was
         referenced but not implemented, causing an AttributeError.
         """
-
-        try:
-            from airunner.components.art.data.saved_prompt import SavedPrompt
-        except Exception as e:
-            self.logger.error(f"Failed to import SavedPrompt: {e}")
-            return
-
-        saved_prompt = SavedPrompt(
-            prompt=data.get("prompt"),
-            negative_prompt=data.get("negative_prompt"),
-            secondary_prompt=data.get("secondary_prompt"),
-            secondary_negative_prompt=data.get("secondary_negative_prompt"),
+        self.resource_store.create(
+            "SavedPrompt",
+            {
+                "prompt": data.get("prompt"),
+                "negative_prompt": data.get("negative_prompt"),
+                "secondary_prompt": data.get("secondary_prompt"),
+                "secondary_negative_prompt": data.get(
+                    "secondary_negative_prompt"
+                ),
+            },
         )
-
-        saved_prompt.save()
-        # NOTE: SavedPrompt instances are session-scoped and may be detached
-        # after save(); avoid touching ORM attributes here (e.g. saved_prompt.id)
-        # to prevent DetachedInstanceError.
         self.logger.info("Saved Stable Diffusion prompt")
 
     def set_path_settings(self, key, val):
@@ -2037,7 +2081,6 @@ class MainWindow(
         # path = getattr(self.path_settings, name)
         # TODO: Implement file browser opening if needed
         del name, default_path
-        pass
 
     def on_toggle_fullscreen_signal(self):
         if self.isFullScreen():
@@ -2427,7 +2470,10 @@ class MainWindow(
         self._set_keyboard_shortcuts()
 
     def _set_keyboard_shortcuts(self):
-        quit_key = ShortcutKeys.objects.filter_by_first(display_name="Quit")
+        quit_key = self.resource_store.first(
+            "ShortcutKeys",
+            filters={"display_name": "Quit"},
+        )
         if quit_key is not None:
             key_sequence = QKeySequence(quit_key.key | quit_key.modifiers)
             self.ui.actionQuit.setShortcut(key_sequence)
@@ -2437,7 +2483,7 @@ class MainWindow(
 
     def _initialize_filter_actions(self):
         self.ui.menuFilters.clear()
-        image_filters = ImageFilter.objects.all()
+        image_filters = self.resource_store.query("ImageFilter")
         try:
             for image_filter in image_filters:
                 action = self.ui.menuFilters.addAction(
@@ -2565,7 +2611,6 @@ class MainWindow(
         status = None
         try:
             status = client.daemon_runtime_status(
-                auto_start=False,
                 timeout_seconds=self._daemon_status_request_timeout_seconds,
             )
         except RuntimeError:
@@ -2609,19 +2654,19 @@ class MainWindow(
 
     def _sync_model_resource_manager_from_daemon(self, status: dict) -> None:
         """Mirror daemon runtime state into the shared resource manager."""
-        runtimes = status.get("runtimes")
-        if not isinstance(runtimes, list):
+        preferred_runtimes = MainWindow._preferred_runtime_summaries(status)
+        if not preferred_runtimes:
             return
 
         manager = ModelResourceManager()
-        for runtime in runtimes:
+        for runtime in preferred_runtimes.values():
             model_type = MainWindow._resource_model_type_from_runtime(runtime)
             if model_type is None:
                 continue
             model_status = MainWindow._model_status_from_runtime_summary(
                 runtime
             )
-            model_id = MainWindow._resource_model_id_from_runtime(
+            model_id = self._resource_model_id_from_runtime(
                 runtime,
                 manager,
                 model_type,
@@ -2657,23 +2702,72 @@ class MainWindow(
         ]
 
     @staticmethod
+    def _runtime_metadata_model_id(
+        runtime_name: str,
+        metadata: dict,
+    ) -> Optional[str]:
+        """Return one non-generic model identifier from runtime metadata."""
+        for key in ("model_path", "model_id", "model_version"):
+            value = str(metadata.get(key, "") or "").strip()
+            if value:
+                return value
+
+        model_type = str(metadata.get("model_type", "") or "").strip()
+        if model_type and not MainWindow._is_generic_runtime_model_id(
+            model_type,
+            runtime_name,
+        ):
+            return model_type
+        return None
+
+    @staticmethod
+    def _is_generic_runtime_model_id(
+        value: str,
+        runtime_name: str,
+    ) -> bool:
+        """Return whether one runtime model identifier is too generic."""
+        normalized = str(value or "").strip().lower()
+        generic_ids = {
+            runtime_name,
+            f"{runtime_name} model",
+            "art",
+            "sd",
+            "sd model",
+            "llm",
+            "llm model",
+            "stt",
+            "stt model",
+            "text_to_image",
+            "tts",
+            "tts model",
+        }
+        return normalized in generic_ids
+
     def _resource_model_id_from_runtime(
+        self,
         runtime: dict,
         manager: ModelResourceManager,
         model_type: str,
     ) -> Optional[str]:
         """Resolve one daemon runtime summary to a stable model ID."""
+        runtime_name = str(runtime.get("runtime", "") or "").strip().lower()
         metadata = runtime.get("metadata") or {}
-        for key in ("model_path", "model_id", "model_version", "model_type"):
-            value = str(metadata.get(key, "")).strip()
-            if value:
-                return value
+        resolved = MainWindow._runtime_metadata_model_id(
+            runtime_name,
+            metadata,
+        )
+        if resolved:
+            return resolved
 
         active_ids = MainWindow._active_resource_model_ids(manager, model_type)
         if active_ids:
             return active_ids[0]
 
-        runtime_name = str(runtime.get("runtime", "")).strip().lower()
+        # Avoid GUI-thread settings/database lookups while reconciling the
+        # daemon status timer. Runtime metadata should supply specific IDs;
+        # otherwise fall back to stable generic labels.
+        if runtime_name == "art":
+            return "SD"
         if runtime_name in {"llm", "stt", "tts"}:
             return runtime_name.upper()
         return None
@@ -2707,12 +2801,58 @@ class MainWindow(
             return "Safety Checker"
         return ""
 
+    def _configured_runtime_resource_model_id(
+        self,
+        runtime_name: str,
+    ) -> str:
+        """Return the configured model identifier for one daemon runtime."""
+        if runtime_name == "art":
+            return MainWindow._configured_art_resource_model_id(self)
+        if runtime_name == "llm":
+            return MainWindow._configured_resource_model_id(
+                self,
+                ModelType.LLM,
+            )
+        if runtime_name == "stt":
+            return MainWindow._configured_stt_resource_model_id(self)
+        if runtime_name == "tts":
+            return MainWindow._configured_tts_resource_model_id(self)
+        return ""
+
+    def _configured_art_resource_model_id(self) -> str:
+        """Return the label used for one art runtime row."""
+        settings = getattr(self, "generator_settings", None)
+        aimodel = getattr(settings, "aimodel", None)
+
+        for value in (
+            getattr(aimodel, "path", ""),
+            getattr(settings, "custom_path", ""),
+            getattr(aimodel, "name", ""),
+            getattr(settings, "model_name", ""),
+        ):
+            resolved = str(value or "").strip()
+            if resolved:
+                return resolved
+        return "SD"
+
+    @staticmethod
+    def _display_tts_model_name(value: str) -> str:
+        """Return one user-facing TTS model name."""
+        normalized = str(value or "").strip().lower()
+        if normalized in {"openvoice", "tts_openvoice"}:
+            return "OpenVoice"
+        if normalized in {"espeak", "espeak-ng", "e-speak"}:
+            return "eSpeak"
+        if normalized == "tts":
+            return "TTS"
+        return str(value or "").strip()
+
     def _configured_tts_resource_model_id(self) -> str:
         """Return the label used for one TTS runtime row."""
         voice_settings = getattr(self, "chatbot_voice_settings", None)
         model_type = str(getattr(voice_settings, "model_type", "") or "")
         if model_type.strip():
-            return model_type.strip()
+            return MainWindow._display_tts_model_name(model_type)
 
         settings = getattr(self, "path_settings", None)
         value = str(getattr(settings, "tts_model_path", "") or "")
@@ -2836,22 +2976,7 @@ class MainWindow(
         """Prefer live local worker state over non-ready daemon summaries."""
         if daemon_status in (ModelStatus.LOADED, ModelStatus.LOADING):
             return daemon_status
-        worker_manager = getattr(self, "worker_manager", None)
-        worker = getattr(worker_manager, "_llm_generate_worker", None)
-        if worker is None:
-            return daemon_status
-        status_getter = getattr(worker, "current_model_status", None)
-        if not callable(status_getter):
-            return daemon_status
-        local_status = status_getter()
-        if local_status in (
-            ModelStatus.LOADED,
-            ModelStatus.LOADING,
-            ModelStatus.FAILED,
-        ):
-            return local_status
-        if daemon_status == ModelStatus.FAILED:
-            return ModelStatus.UNLOADED
+        # Local LLM worker removed; daemon handles all LLM state
         return daemon_status
 
     def _normalize_direct_llm_status(
@@ -2861,21 +2986,7 @@ class MainWindow(
         """Ignore stale failed events while a local load is still healthy."""
         if status is not ModelStatus.FAILED:
             return status
-        worker_manager = getattr(self, "worker_manager", None)
-        worker = getattr(worker_manager, "_llm_generate_worker", None)
-        if worker is None:
-            return status
-        status_getter = getattr(worker, "current_model_status", None)
-        if not callable(status_getter):
-            return status
-        local_status = status_getter()
-        if local_status in (ModelStatus.LOADING, ModelStatus.LOADED):
-            return local_status
-        if local_status in (None, ModelStatus.UNLOADED) and (
-            self._model_status.get(ModelType.LLM)
-            in (ModelStatus.LOADING, ModelStatus.LOADED)
-        ):
-            return self._model_status[ModelType.LLM]
+        # Local LLM worker removed; daemon handles all LLM state
         return status
 
     @staticmethod
@@ -2893,10 +3004,19 @@ class MainWindow(
         return ModelStatus.UNLOADED
 
     @staticmethod
-    def _runtime_statuses_from_daemon_status(
+    def _preferred_runtime_mode_for_model(
+        model_type: ModelType,
+    ) -> Optional[str]:
+        """Return the preferred daemon route for one GUI model type."""
+        if model_type in {ModelType.SD, ModelType.TTS}:
+            return "sidecar"
+        return None
+
+    @staticmethod
+    def _preferred_runtime_summaries(
         status: dict,
-    ) -> dict[ModelType, ModelStatus]:
-        """Return GUI model statuses derived from daemon runtime summaries."""
+    ) -> dict[ModelType, dict]:
+        """Return one preferred daemon summary per GUI model type."""
         runtime_map = {
             "llm": ModelType.LLM,
             "tts": ModelType.TTS,
@@ -2906,11 +3026,42 @@ class MainWindow(
         runtimes = status.get("runtimes")
         if not isinstance(runtimes, list):
             return {}
-        statuses: dict[ModelType, ModelStatus] = {}
+
+        selected: dict[ModelType, dict] = {}
         for runtime in runtimes:
-            model_type = runtime_map.get(str(runtime.get("runtime", "")).lower())
+            model_type = runtime_map.get(
+                str(runtime.get("runtime", "")).lower()
+            )
             if model_type is None:
                 continue
+
+            existing = selected.get(model_type)
+            if existing is None:
+                selected[model_type] = runtime
+                continue
+
+            preferred_mode = MainWindow._preferred_runtime_mode_for_model(
+                model_type
+            )
+            if preferred_mode is None:
+                continue
+
+            runtime_mode = str(runtime.get("mode", "")).strip().lower()
+            existing_mode = str(existing.get("mode", "")).strip().lower()
+            if runtime_mode == preferred_mode and existing_mode != preferred_mode:
+                selected[model_type] = runtime
+
+        return selected
+
+    @staticmethod
+    def _runtime_statuses_from_daemon_status(
+        status: dict,
+    ) -> dict[ModelType, ModelStatus]:
+        """Return GUI model statuses derived from daemon runtime summaries."""
+        statuses: dict[ModelType, ModelStatus] = {}
+        for model_type, runtime in MainWindow._preferred_runtime_summaries(
+            status
+        ).items():
             statuses[model_type] = MainWindow._model_status_from_runtime_summary(
                 runtime
             )
@@ -2963,6 +3114,9 @@ class MainWindow(
         )
         is_loaded = loaded_name in loaded_models
         if desired_enabled == is_loaded:
+            self._runtime_preference_retry_after.pop(model_type, None)
+            return
+        if model_type is ModelType.TTS and desired_enabled and not is_loaded:
             self._runtime_preference_retry_after.pop(model_type, None)
             return
         if (
@@ -3058,7 +3212,6 @@ class MainWindow(
             button = getattr(self.ui, "speech_to_text_button", None)
             if button is not None:
                 button.setDisabled(False)
-        QApplication.processEvents()
 
     def _generate_drawingpad_mask(self):
         width = self.application_settings.working_width

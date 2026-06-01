@@ -1,5 +1,4 @@
 from __future__ import annotations
-
 import os
 from typing import TYPE_CHECKING, Any, Dict, Optional
 
@@ -19,7 +18,6 @@ from airunner.utils.application.ui_loader import (
     load_ui_from_string,
 )
 from airunner.utils.application.log_hygiene import summarize_text
-from airunner.setup_database import setup_database
 
 if TYPE_CHECKING:
     from airunner.components.art.api.art_services import ARTAPIService
@@ -32,7 +30,6 @@ if TYPE_CHECKING:
     from airunner.utils.audio.sound_device_manager import (
         SoundDeviceManager,
     )
-
 
 class API(App):
     _instance = None
@@ -50,106 +47,7 @@ class API(App):
         self._launcher_splash = launcher_splash
         self._launcher_app = launcher_app
         
-        self.paths = {
-            "google-bert/bert-base-multilingual-uncased": os.path.expanduser(
-                os.path.join(
-                    self.path_settings.base_path,
-                    "text/models/tts",
-                    "google-bert/bert-base-multilingual-uncased",
-                )
-            ),
-            "google-bert/bert-base-uncased": os.path.expanduser(
-                os.path.join(
-                    self.path_settings.base_path,
-                    "text/models/tts",
-                    "google-bert/bert-base-uncased",
-                )
-            ),
-            "dbmdz/bert-base-french-europeana-cased": os.path.expanduser(
-                os.path.join(
-                    self.path_settings.base_path,
-                    "text/models/tts",
-                    "dbmdz/bert-base-french-europeana-cased",
-                )
-            ),
-            "dccuchile/bert-base-spanish-wwm-uncased": os.path.expanduser(
-                os.path.join(
-                    self.path_settings.base_path,
-                    "text/models/tts",
-                    "dccuchile/bert-base-spanish-wwm-uncased",
-                )
-            ),
-            "kykim/bert-kor-base": os.path.expanduser(
-                os.path.join(
-                    self.path_settings.base_path,
-                    "text/models/tts",
-                    "kykim/bert-kor-base",
-                )
-            ),
-            "myshell-ai/MeloTTS-English": os.path.expanduser(
-                os.path.join(
-                    self.path_settings.base_path,
-                    "text/models/tts",
-                    "myshell-ai/MeloTTS-English",
-                )
-            ),
-            "myshell-ai/MeloTTS-English-v3": os.path.expanduser(
-                os.path.join(
-                    self.path_settings.base_path,
-                    "text/models/tts",
-                    "myshell-ai/MeloTTS-English-v3",
-                )
-            ),
-            "myshell-ai/MeloTTS-French": os.path.expanduser(
-                os.path.join(
-                    self.path_settings.base_path,
-                    "text/models/tts",
-                    "myshell-ai/MeloTTS-French",
-                )
-            ),
-            "myshell-ai/MeloTTS-Japanese": os.path.expanduser(
-                os.path.join(
-                    self.path_settings.base_path,
-                    "text/models/tts",
-                    "myshell-ai/MeloTTS-Japanese",
-                )
-            ),
-            "myshell-ai/MeloTTS-Spanish": os.path.expanduser(
-                os.path.join(
-                    self.path_settings.base_path,
-                    "text/models/tts",
-                    "myshell-ai/MeloTTS-Spanish",
-                )
-            ),
-            "myshell-ai/MeloTTS-Chinese": os.path.expanduser(
-                os.path.join(
-                    self.path_settings.base_path,
-                    "text/models/tts",
-                    "myshell-ai/MeloTTS-Chinese",
-                )
-            ),
-            "myshell-ai/MeloTTS-Korean": os.path.expanduser(
-                os.path.join(
-                    self.path_settings.base_path,
-                    "text/models/tts",
-                    "myshell-ai/MeloTTS-Korean",
-                )
-            ),
-            "tohoku-nlp/bert-base-japanese-v3": os.path.expanduser(
-                os.path.join(
-                    self.path_settings.base_path,
-                    "text/models/tts",
-                    "tohoku-nlp/bert-base-japanese-v3",
-                )
-            ),
-            "hfl/chinese-roberta-wwm-ext-large": os.path.expanduser(
-                os.path.join(
-                    self.path_settings.base_path,
-                    "text/models/tts",
-                    "hfl/chinese-roberta-wwm-ext-large",
-                )
-            ),
-        }
+        self.paths = {}
         self._initialized = True
         self._llm_service = None
         self._art_service = None
@@ -170,8 +68,32 @@ class API(App):
             launcher_app=self._launcher_app,
             **kwargs
         )
-        if self._initialize_app:
-            setup_database()
+        self.paths = self._build_paths()
+
+    def _build_paths(self) -> Dict[str, str]:
+        """Build the TTS artifact path map from the active daemon settings."""
+        base_path = self.path_settings.base_path
+        return {
+            model_name: os.path.expanduser(
+                os.path.join(base_path, "text/models/tts", model_name)
+            )
+            for model_name in (
+                "google-bert/bert-base-multilingual-uncased",
+                "google-bert/bert-base-uncased",
+                "dbmdz/bert-base-french-europeana-cased",
+                "dccuchile/bert-base-spanish-wwm-uncased",
+                "kykim/bert-kor-base",
+                "myshell-ai/MeloTTS-English",
+                "myshell-ai/MeloTTS-English-v3",
+                "myshell-ai/MeloTTS-French",
+                "myshell-ai/MeloTTS-Japanese",
+                "myshell-ai/MeloTTS-Spanish",
+                "myshell-ai/MeloTTS-Chinese",
+                "myshell-ai/MeloTTS-Korean",
+                "tohoku-nlp/bert-base-japanese-v3",
+                "hfl/chinese-roberta-wwm-ext-large",
+            )
+        }
 
     @property
     def emit_signal(self):
@@ -184,7 +106,7 @@ class API(App):
         if self._llm_service is None:
             from airunner.components.llm.api.llm_services import LLMAPIService
 
-            self._llm_service = LLMAPIService()
+            self._llm_service = LLMAPIService(api=self)
         return self._llm_service
 
     @llm.setter
@@ -197,7 +119,7 @@ class API(App):
         if self._art_service is None:
             from airunner.components.art.api.art_services import ARTAPIService
 
-            self._art_service = ARTAPIService()
+            self._art_service = ARTAPIService(api=self)
         return self._art_service
 
     @art.setter
@@ -210,7 +132,7 @@ class API(App):
         if self._tts_service is None:
             from airunner.components.tts.api.tts_services import TTSAPIService
 
-            self._tts_service = TTSAPIService()
+            self._tts_service = TTSAPIService(api=self)
         return self._tts_service
 
     @tts.setter
@@ -223,7 +145,7 @@ class API(App):
         if self._stt_service is None:
             from airunner.components.stt.api.stt_services import STTAPIService
 
-            self._stt_service = STTAPIService()
+            self._stt_service = STTAPIService(api=self)
         return self._stt_service
 
     @stt.setter

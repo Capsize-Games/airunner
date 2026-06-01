@@ -54,6 +54,30 @@ subscription. Everything runs on your hardware.
 | Japanese | ✅ | ✅ | ❌ | ✅ |
 | Spanish/French/Chinese/Korean | ✅ | ✅ | ❌ | ❌ |
 
+## 🧱 Package Overview
+
+```mermaid
+flowchart LR
+  User[User] --> Native[native/ launcher and installers]
+  Native --> GUI[src/ desktop client]
+  Native --> Daemon[services/ headless daemon]
+  GUI --> API[api/ transport contracts]
+  Daemon --> API
+  Daemon --> Model[model/ shared contracts and runtime helpers]
+  Native --> Sidecars[llama.cpp and whisper.cpp sidecars]
+  Daemon --> Sidecars
+  GUI --> Data[(AIRUNNER_BASE_PATH)]
+  Daemon --> Data
+```
+
+| Package | Role |
+|---------|------|
+| [api](api/README.md) | Shared transport contracts, messages, and thin API bootstrap adapters |
+| [services](services/README.md) | Headless daemon, FastAPI server, runtime registry, orchestration, downloads, and persistence |
+| [model](model/README.md) | Shared runtime contracts, settings, ORM models, and runtime helpers |
+| [src](src/README.md) | Desktop GUI client, daemon bridge, widgets, and application entry points |
+| [native](native/README.md) | Launcher, bundle assembly, native sidecar integration, and installer tooling |
+
 ---
 
 ## ⚙️ System Requirements
@@ -74,11 +98,44 @@ Current status:
 The hybrid-runtime branch completed the runtime refactor, and AIRunner now
 has embedded-Python bundle builders and installer packagers.
 
-Available packaging paths:
+Choose one of the three primary install modes:
+
+| Install mode | Best for | Primary command |
+|--------------|----------|-----------------|
+| `single-package` | End users installing a prebuilt desktop bundle | `./install.sh --bundle-archive ...` |
+| `dev` | Contributors working from a repo checkout | `./scripts/install.sh` |
+| `distributed` | Operators separating daemon and GUI-client installs | `./deployment/install_distributed.sh --role ...` |
+
+1. `single-package` for end users who want one local desktop install with
+  embedded Python and bundled native runtimes.
+  ```bash
+  ./install.sh --bundle-archive dist/airunner-<version>-linux-desktop-bundle.tar.gz
+  ```
+
+2. `dev` for contributors working from this repo checkout.
+  This reuses `./venv` by default, installs the Python packages in editable
+  mode, and builds the pinned `llama.cpp` and `whisper.cpp` sidecars under
+  `build/runtime-sidecars/linux/`.
+  ```bash
+  ./scripts/install.sh
+  ```
+  If you already have the venv, rerun the command and it will reuse the
+  existing environment instead of recreating it, and it refreshes the local
+  editable installs without re-solving the full dependency graph. Add
+  `--refresh-deps` when you want a full dependency refresh, and add
+  `--sidecars-cuda` when you want CUDA-enabled native sidecars.
+
+3. `distributed` for operators who want the daemon and GUI client installed
+  separately, including split-machine setups.
+  ```bash
+  ./deployment/install_distributed.sh --role daemon
+  ./deployment/install_distributed.sh --role gui-client
+  ```
+
+Build and packaging commands:
 - Linux staged bundle archive: `./scripts/build_airunner_bundle.sh`
 - Linux AppImage wrapper: `./scripts/package_linux_appimage.sh`
-- Linux tarball installer: `./install.sh --bundle-archive <bundle.tar.gz>`
-- Windows bundle staging: `python src/airunner/bin/build_end_user_bundle.py`
+- Windows bundle staging: `python -m airunner_native.bin.build_end_user_bundle`
 - Windows NSIS installer: `pwsh ./scripts/package_windows_nsis.ps1`
 
 The manual and Docker paths below are still useful developer/operator
@@ -113,7 +170,12 @@ The headless server exposes an HTTP API on port 8080 with endpoints:
 - `POST /llm` - LLM inference
 - `POST /art` - Image generation
 
-### Manual Installation (Ubuntu/Debian)
+### Advanced Python Installation (Ubuntu/Debian)
+
+Use this path when you want to assemble the environment manually instead of
+using `./scripts/install.sh` for repo development or
+`./deployment/install_distributed.sh` for managed daemon and GUI-client
+installs.
 
 **Python 3.13+ required.** We recommend using `pyenv` and `venv`.
 
@@ -253,7 +315,11 @@ AI Runner downloads essential TTS/STT models automatically. LLM and image models
 | `airunner-tests` | Run test suite |
 | `airunner-generate-cert` | Generate SSL certificate |
 
-**Note:** To download models, use *Tools → Download Models* from the main application menu, or use `airunner-hf-download` / `airunner-civitai-download` from the command line.
+**Note:** To download models, use *Tools → Download Models* from the main
+application menu. The GUI now opens a filtered CivitAI browser for SDXL 1.0
+and Z-Image Turbo models and queues downloads through the local daemon. You
+can also use `airunner-hf-download` / `airunner-civitai-download` from the
+command line.
 
 ### Rebuilding Qt UI Files
 
@@ -535,12 +601,40 @@ mkcert -install
 ## 🧪 Testing
 
 ```bash
-# Run headless-safe tests
-pytest src/airunner/utils/tests/
+# General repo validation
+./venv/bin/python scripts/run_tests.py --unit
+./venv/bin/python scripts/run_tests.py --llm-runtime-smoke
+./venv/bin/python scripts/run_tests.py --stt-runtime-smoke
+./venv/bin/python scripts/run_tests.py --art-runtime-smoke
+./venv/bin/python scripts/run_tests.py --tts-runtime-smoke
 
-# Run display-required tests (Qt/GUI)
-xvfb-run -a pytest src/airunner/utils/tests/xvfb_required/
+# API bootstrap and runtime wiring
+./venv/bin/python -m pytest services/tests/test_service_bootstrap.py -v
+./venv/bin/python -m pytest services/tests/test_tts_runtime_load.py -v
+
+# Real daemon-backed functional tests
+./venv/bin/python -m pytest services/tests/test_tts_synthesize_functional.py -v --timeout=120
+./venv/bin/python -m pytest services/tests/test_llm_functional.py -v --timeout=900
+./venv/bin/python -m pytest services/tests/test_llm_tts_functional.py -v --timeout=1200
+./venv/bin/python -m pytest services/tests/test_stt_transcribe_functional.py -v --timeout=1200
+
+# Offscreen GUI end-to-end functional tests
+./venv/bin/python -m pytest services/tests/test_gui_llm_tts_functional.py -v --timeout=1200
+./venv/bin/python -m pytest services/tests/test_gui_stt_llm_tts_functional.py -v --timeout=1200
+
+# Service-owned agent evals
+AIRUNNER_TEST_NO_GUI_LAUNCH=1 ./venv/bin/python -m pytest services/tests/eval --tb=short -ra
 ```
+
+The functional suites under `services/tests/` use real local runtimes and skip
+cleanly when required assets are missing. They cover API bootstrap,
+daemon-only LLM, daemon LLM plus TTS, standalone STT, standalone TTS,
+offscreen GUI LLM plus TTS, offscreen GUI STT plus LLM plus TTS, and the
+GUI conversation-progression path.
+
+The service-owned agent eval runbook lives in
+`docs/agent-eval-tests.md` and documents coverage, commands, tool
+surfaces, and current model notes.
 
 ---
 
@@ -551,10 +645,20 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) and the [Development Wiki](https://github
 ## Documentation
 
 - [Wiki](https://github.com/Capsize-Games/airunner/wiki)
+- [Layered Product Architecture](docs/architecture/layered_product_architecture.md)
+- [Package Split Contract](docs/architecture/package_split_contract.md)
+- [API and Model Extraction Plan](docs/architecture/api_model_extraction_plan.md)
 - [Deliverable-First Workflows](docs/deliverable_workflows.md)
+- [Hybrid Runtime Target](docs/hybrid-runtime-target.md)
+- [Agent Eval Tests](docs/agent-eval-tests.md)
+- [LLM Flow](docs/llm-flow.md)
+- [Document RAG Flow](docs/document-rag-flow.md)
+- [Systemd Distributed Deployment](deployment/systemd/README.md)
 - [API Service Layer](src/airunner/components/application/api/README.md)
-- [Coding Agent Workspace Operator Guide](docs/coding_agent_workspace_operator_guide.md)
-- [ORM Models](src/airunner/components/data/models/README.md)
+- [Services Package README](services/README.md)
+- [Model Package README](model/README.md)
+- [Src Package README](src/README.md)
+- [Native Package README](native/README.md)
 
 ---
 

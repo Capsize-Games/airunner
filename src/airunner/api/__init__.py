@@ -1,10 +1,16 @@
-"""
-FastAPI server for AI Runner remote access.
+"""GUI-facing API package — re-exports from the daemon client.
 
-Provides HTTP REST and WebSocket APIs for:
-- LLM chat and completion
-- Art generation (Stable Diffusion)
-- TTS (Text-to-Speech)
-- STT (Speech-to-Text)
-- Model management
+The bridge and signal adapter functionality is now part of
+``GuiDaemonClient`` itself.  This package is kept as a compatibility
+re-export layer.
 """
+
+from airunner.daemon_client.gui_daemon_client import (
+    APIBridgeError,
+    GuiDaemonClient,
+)
+
+__all__ = [
+    "APIBridgeError",
+    "GuiDaemonClient",
+]

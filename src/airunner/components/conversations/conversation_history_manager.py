@@ -1,377 +1,217 @@
-"""Manages loading and formatting of conversation history."""
+"""Daemon-backed conversation loader for GUI persistence flows."""
 
 from typing import Any, Dict, List, Optional
 
-from airunner.components.llm.data.conversation import Conversation
-from airunner.components.llm.utils.thinking_parser import (
-    normalize_thinking_content,
-    strip_stored_thinking_prefix,
+from airunner.components.conversations.conversation_record import (
+    ConversationRecord,
 )
-from airunner.components.llm.utils.gpt_oss_parser import (
-    has_gpt_oss_markup,
-    parse_gpt_oss_response,
+from airunner.daemon_client.conversation_client import (
+    ConversationDaemonClient,
 )
-from airunner.components.llm.utils.persistence_filters import (
-    is_internal_stage_message_dict,
-)
+from airunner.daemon_client.gui_daemon_client import GuiDaemonClient
 from airunner.settings import AIRUNNER_LOG_LEVEL
 from airunner.utils.application import get_logger
 
 
 class ConversationHistoryManager:
-    """Handles fetching and formatting of conversation history.
+    """Handles GUI-side conversation loading through typed daemon clients."""
 
-    This manager provides a centralized way to access conversation data,
-    decoupling UI components and other services from the specifics of
-    how conversations are stored or whether an LLM agent is active.
-    """
-
-    def __init__(self) -> None:
-        """Initializes the ConversationHistoryManager."""
+    def __init__(
+        self,
+        daemon_client: Optional[GuiDaemonClient] = None,
+    ) -> None:
+        """Initialize one daemon-backed conversation history manager."""
         self.logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
+        client = daemon_client or GuiDaemonClient()
+        self._client = ConversationDaemonClient(client)
 
-    def _extract_query_from_tool_call(self, tool_call: Dict[str, Any]) -> str:
-        """Extract a user-friendly query string from a tool call.
-
-        Args:
-            tool_call: Tool call dictionary with 'args' field
-
-        Returns:
-            Query string for display
-        """
-        args = tool_call.get("args", {})
-        if isinstance(args, dict):
-            # Try common query field names
-            for key in ("query", "search_query", "prompt", "input", "question"):
-                if key in args:
-                    return str(args[key])
-            # Fallback: return first string value
-            for value in args.values():
-                if isinstance(value, str) and value:
-                    return value
-        return ""
-
-    def get_current_conversation(self) -> Optional[Conversation]:
-        """Fetches the current conversation.
-
-        Returns:
-            Optional[Conversation]: The current conversation object, or None
-                                     if no current conversation exists.
-        """
-        conversations = Conversation.objects.filter_by(current=True)
-        if len(conversations) == 0:
-            self.logger.info("No current conversation found.")
-            return None
-        self.logger.debug("Fetching the current conversation.")
-        try:
-            conversation = conversations[0]
-            if conversation:
-                self.logger.debug(
-                    f"Current conversation ID: {conversation.id}"
-                )
+    def get_current_conversation(self) -> Optional[ConversationRecord]:
+        """Return the current daemon-side conversation if one exists."""
+        for conversation in self.list_conversations(limit=0):
+            if conversation.current:
                 return conversation
-            self.logger.info("No current conversation found.")
-            return None
-        except Exception as e:
-            self.logger.error(
-                f"Error fetching current conversation: {e}",
-                exc_info=True,
-            )
-            return None
+        self.logger.info("No current conversation found.")
+        return None
 
     def get_most_recent_conversation_id(self) -> Optional[int]:
-        """Fetches the ID of the most recent conversation.
-
-        Returns:
-            Optional[int]: The ID of the most recent conversation, or None
-                           if no conversations exist.
-        """
-        self.logger.debug("Fetching the most recent conversation ID.")
-        try:
-            conversation = Conversation.most_recent()
-            if conversation:
-                self.logger.info(
-                    f"Most recent conversation ID: {conversation.id}"
-                )
-                return conversation.id
+        """Return the most recent conversation ID if one exists."""
+        conversations = self.list_conversations(limit=1)
+        if not conversations:
             self.logger.info("No conversations found.")
             return None
-        except Exception as e:
-            self.logger.error(
-                f"Error fetching most recent conversation ID: {e}",
-                exc_info=True,
+        conversation_id = conversations[0].id
+        self.logger.info("Most recent conversation ID: %s", conversation_id)
+        return conversation_id
+
+    def list_conversations(
+        self,
+        limit: int = 50,
+    ) -> List[ConversationRecord]:
+        """Return serialized conversation summaries from the daemon."""
+        try:
+            payload = self._client.list_conversations(limit=limit)
+        except RuntimeError as exc:
+            self._log_client_failure("list conversations", exc)
+            return []
+        return [ConversationRecord.from_payload(item) for item in payload]
+
+    def get_conversation_session(
+        self,
+        conversation_id: Optional[int] = None,
+        max_messages: int = 50,
+        mark_current: bool = False,
+    ) -> Dict[str, Any]:
+        """Return one daemon-backed conversation record plus messages."""
+        try:
+            payload = self._load_session_payload(
+                conversation_id=conversation_id,
+                max_messages=max_messages,
+                mark_current=mark_current,
             )
+        except RuntimeError as exc:
+            self._log_client_failure("load conversation session", exc)
+            return self._empty_session()
+        return self._session_response(payload)
+
+    def create_conversation(
+        self,
+        max_messages: int = 50,
+    ) -> Optional[ConversationRecord]:
+        """Create one new daemon-backed conversation and return its DTO."""
+        try:
+            payload = self._client.create_conversation(
+                max_messages=max_messages,
+            )
+        except RuntimeError as exc:
+            self._log_client_failure("create conversation", exc)
             return None
+        return self._session_response(payload).get("conversation")
+
+    def select_conversation(
+        self,
+        conversation_id: int,
+        max_messages: int = 50,
+    ) -> Dict[str, Any]:
+        """Mark one daemon-backed conversation current."""
+        return self.get_conversation_session(
+            conversation_id=conversation_id,
+            max_messages=max_messages,
+            mark_current=True,
+        )
+
+    def delete_conversation(self, conversation_id: int) -> bool:
+        """Delete one conversation through the daemon API."""
+        try:
+            payload = self._client.delete_conversation(conversation_id)
+        except RuntimeError as exc:
+            self._log_client_failure("delete conversation", exc)
+            return False
+        return bool(payload.get("deleted"))
+
+    def delete_all_conversations(self) -> int:
+        """Delete all conversations through the daemon API in tests only."""
+        try:
+            payload = self._client.delete_all_conversations()
+        except RuntimeError as exc:
+            self._log_client_failure("delete all conversations", exc)
+            return 0
+        return int(payload.get("deleted") or 0)
+
+    def update_conversation_messages(
+        self,
+        conversation_id: int,
+        messages: List[Dict[str, Any]],
+    ) -> bool:
+        """Persist one conversation message list through the daemon API."""
+        try:
+            payload = self._client.update_conversation_messages(
+                conversation_id,
+                messages,
+            )
+        except RuntimeError as exc:
+            self._log_client_failure("update conversation messages", exc)
+            return False
+        return bool(payload.get("updated"))
+
+    def update_conversation_user_data(
+        self,
+        conversation_id: int,
+        user_data: Dict[str, Any],
+    ) -> bool:
+        """Persist one conversation user-data payload through the daemon API."""
+        try:
+            payload = self._client.update_conversation_user_data(
+                conversation_id,
+                user_data,
+            )
+        except RuntimeError as exc:
+            self._log_client_failure("update conversation user data", exc)
+            return False
+        return bool(payload.get("updated"))
 
     def load_conversation_history(
         self,
-        conversation: Optional[Conversation] = None,
+        conversation: Optional[ConversationRecord] = None,
         conversation_id: Optional[int] = None,
         max_messages: int = 50,
     ) -> List[Dict[str, Any]]:
-        if conversation is None and conversation_id is not None:
-            conversation = Conversation.objects.filter_by_first(
-                id=conversation_id
-            )
-            if conversation is None:
-                self.logger.warning(
-                    f"Conversation {conversation_id} not found. Returning empty history."
-                )
-                return []
-        elif conversation is None:
-            conversation = self.get_current_conversation()
-
-        if conversation is None:
-            conversation = Conversation.most_recent()
-            if conversation is None:
-                self.logger.warning(
-                    "No conversation found. Returning empty history."
-                )
-                return []
-
-        self.logger.debug(
-            f"Loading conversation history for ID: {getattr(conversation, 'id', None)} (max: {max_messages})"
+        """Load one formatted conversation history through the daemon API."""
+        if conversation is not None and conversation_id is None:
+            messages = list(getattr(conversation, "value", []) or [])
+            return messages[-max_messages:]
+        session = self.get_conversation_session(
+            conversation_id=conversation_id,
+            max_messages=max_messages,
         )
-        conversation_id = getattr(conversation, "id", None)
-        try:
-            raw_messages = getattr(conversation, "value", None)
-            if not isinstance(raw_messages, list):
-                self.logger.warning(
-                    f"Conversation {conversation_id} has invalid message data (not a list): {type(raw_messages)}"
-                )
-                return []
-            if not raw_messages:
-                self.logger.debug(
-                    f"Conversation {conversation_id} is empty."
-                )
-                return []
+        return session.get("messages", [])
 
-            # Apply max_messages limit
-            if len(raw_messages) > max_messages:
-                raw_messages = raw_messages[-max_messages:]
-
-            # Track URLs from tool results for citation
-            pending_citations: List[str] = []
-            
-            # Track tool calls to attach to subsequent assistant message
-            pending_tool_usage: List[Dict[str, Any]] = []
-            # Track tool results to get details (domains, etc.)
-            pending_tool_results: Dict[str, str] = {}  # tool_call_id -> details
-            # Track pre-tool thinking content to attach to assistant message
-            pending_pre_tool_thinking: Optional[str] = None
-
-            formatted_messages: List[Dict[str, Any]] = []
-            for msg_idx, msg_obj in enumerate(raw_messages):
-                if not isinstance(msg_obj, dict):
-                    self.logger.warning(
-                        f"Skipping invalid message object (not a dict) in conversation {conversation_id}: {msg_obj}"
-                    )
-                    continue
-                if is_internal_stage_message_dict(msg_obj):
-                    self.logger.debug(
-                        "Skipping internal-stage assistant row in conversation %s",
-                        conversation_id,
-                    )
-                    continue
-
-                # Collect tool call metadata to attach to next assistant message
-                if msg_obj.get("metadata_type") == "tool_calls":
-                    tool_calls = msg_obj.get("tool_calls", [])
-                    tool_status_metadata = msg_obj.get("tool_status_metadata")
-                    for tc in tool_calls:
-                        pending_tool_usage.append({
-                            "tool_id": tc.get("id", ""),
-                            "tool_name": tc.get("name", "unknown"),
-                            "query": self._extract_query_from_tool_call(tc),
-                            "details": None,  # Will be filled from tool_result
-                            "metadata": (
-                                tool_status_metadata
-                                if isinstance(tool_status_metadata, dict)
-                                else None
-                            ),
-                        })
-                    # Also capture pre-tool thinking content
-                    pending_pre_tool_thinking = normalize_thinking_content(
-                        msg_obj.get("thinking_content")
-                    )
-                    if pending_pre_tool_thinking:
-                        self.logger.debug(
-                            f"Captured pre-tool thinking: {len(pending_pre_tool_thinking)} chars"
-                        )
-                    self.logger.debug(
-                        f"Collected {len(tool_calls)} tool calls for next assistant message"
-                    )
-                    continue
-
-                # Process tool_result to extract details (domains) for display
-                if msg_obj.get("metadata_type") == "tool_result":
-                    content_text = msg_obj.get("content", "")
-                    tool_call_id = msg_obj.get("tool_call_id", "")
-                    
-                    # Extract URLs using regex (matches http:// and https://)
-                    import re
-                    urls = re.findall(
-                        r'https?://[^\s<>"{}|\\^`\[\]]+', content_text
-                    )
-                    pending_citations.extend(urls)
-                    
-                    # Extract domain names for tool details
-                    if urls:
-                        domains = [url.split("/")[2] for url in urls[:3]]  # Top 3 domains
-                        details = ", ".join(domains)
-                        # Store details keyed by tool_call_id
-                        if tool_call_id:
-                            pending_tool_results[tool_call_id] = details
-                        # Also update any pending tool_usage entries
-                        for tu in pending_tool_usage:
-                            if tu.get("tool_id") == tool_call_id:
-                                tu["details"] = details
-                    
-                    self.logger.debug(
-                        f"Processed tool result: {tool_call_id}, details: {pending_tool_results.get(tool_call_id)}"
-                    )
-                    continue
-
-                # Skip tool_calls metadata (already processed above)
-                if msg_obj.get("metadata_type") == "tool_calls":
-                    continue
-
-                # Also skip by role for backward compatibility
-                role = msg_obj.get("role")
-                if role in ("tool_calls", "tool_result"):
-                    self.logger.debug(
-                        f"Skipping tool call message with role: {role}"
-                    )
-                    continue
-
-                is_bot = role == "assistant"
-                post_tool_thinking = normalize_thinking_content(
-                    msg_obj.get("thinking_content")
-                )
-
-                # Name extraction logic: prefer message-level, then conversation-level, then default
-                if is_bot:
-                    name = (
-                        msg_obj.get("bot_name")
-                        or getattr(conversation, "chatbot_name", None)
-                        or "Bot"
-                    )
-                else:
-                    name = (
-                        msg_obj.get("user_name")
-                        or getattr(conversation, "user_name", None)
-                        or "User"
-                    )
-
-                # Content extraction logic
-                content = msg_obj.get("content")
-                if content is None:
-                    # Try to extract from blocks if present
-                    blocks = msg_obj.get("blocks")
-                    if isinstance(blocks, list) and blocks:
-                        for block in blocks:
-                            if isinstance(block, dict) and "text" in block:
-                                content = block["text"]
-                                self.logger.debug(
-                                    f"Extracted content from blocks: {content[:50]}..."
-                                )
-                                break
-                        if content is None:
-                            content = ""
-                            self.logger.warning(
-                                f"No text found in blocks for message {msg_idx}"
-                            )
-                    else:
-                        content = ""
-                        self.logger.warning(
-                            f"No blocks found for message {msg_idx}"
-                        )
-                else:
-                    self.logger.debug(
-                        f"Content found directly in message {msg_idx}: {content[:50]}..."
-                    )
-
-                if is_bot:
-                    if has_gpt_oss_markup(content):
-                        parsed = parse_gpt_oss_response(content)
-                        content = parsed.content or content
-                        parsed_thinking = normalize_thinking_content(
-                            parsed.thinking_content
-                        )
-                        if parsed_thinking and not post_tool_thinking:
-                            post_tool_thinking = parsed_thinking
-                    content = strip_stored_thinking_prefix(
-                        content,
-                        post_tool_thinking,
-                    )
-
-                formatted_msg = {
-                    "name": name,
-                    "content": content,
-                    "is_bot": is_bot,
-                    "id": msg_idx,  # Simple index within this loaded history
-                }
-                
-                # Include thinking content for assistant messages
-                # Pre-tool thinking goes in pre_tool_thinking, post-tool in thinking_content
-                if is_bot:
-                    if pending_pre_tool_thinking:
-                        # Pre-tool thinking always goes in pre_tool_thinking field
-                        formatted_msg["pre_tool_thinking"] = pending_pre_tool_thinking
-                        pending_pre_tool_thinking = None
-                    if post_tool_thinking:
-                        # Post-tool thinking goes in thinking_content field
-                        formatted_msg["thinking_content"] = post_tool_thinking
-                    if isinstance(msg_obj.get("thinking_metadata"), dict):
-                        formatted_msg["thinking_metadata"] = msg_obj.get(
-                            "thinking_metadata"
-                        )
-                
-                # Include tool usage for assistant messages if we have pending tool calls
-                if is_bot and pending_tool_usage:
-                    formatted_msg["tool_usage"] = pending_tool_usage.copy()
-                    pending_tool_usage.clear()
-
-                # Clear pending citations without appending them
-                # (sources are shown in tool status details instead)
-                if is_bot and pending_citations:
-                    pending_citations.clear()
-
-                # Pass through mood/emoji fields if present
-                for key in ("bot_mood", "bot_mood_emoji", "user_mood"):
-                    if key in msg_obj:
-                        formatted_msg[key] = msg_obj[key]
-                formatted_messages.append(formatted_msg)
-            
-            # If there are pending tool calls or thinking that weren't attached to an assistant message
-            # (conversation was interrupted), create a synthetic assistant message to display them
-            if pending_tool_usage or pending_pre_tool_thinking:
-                self.logger.info(
-                    f"Creating synthetic assistant message for pending tool data: "
-                    f"{len(pending_tool_usage)} tools, "
-                    f"thinking={pending_pre_tool_thinking is not None}"
-                )
-                synthetic_msg = {
-                    "name": getattr(conversation, "chatbot_name", None) or "Bot",
-                    "content": "",  # Empty content - just showing widgets
-                    "is_bot": True,
-                    "id": len(formatted_messages),
-                }
-                if pending_pre_tool_thinking:
-                    # Use pre_tool_thinking so it renders BEFORE tool widgets
-                    synthetic_msg["pre_tool_thinking"] = pending_pre_tool_thinking
-                if pending_tool_usage:
-                    synthetic_msg["tool_usage"] = pending_tool_usage.copy()
-                formatted_messages.append(synthetic_msg)
-            
-            self.logger.info(
-                f"Successfully loaded {len(formatted_messages)} messages for conversation ID: {conversation_id}"
+    def _load_session_payload(
+        self,
+        *,
+        conversation_id: Optional[int],
+        max_messages: int,
+        mark_current: bool,
+    ) -> Dict[str, Any]:
+        """Fetch one raw session payload from the daemon conversation API."""
+        if mark_current and conversation_id is not None:
+            return self._client.select_conversation(
+                conversation_id=conversation_id,
+                max_messages=max_messages,
             )
-            return formatted_messages
+        return self._client.get_conversation_session(
+            conversation_id=conversation_id,
+            max_messages=max_messages,
+        )
 
-        except Exception as e:
-            self.logger.error(
-                f"Error loading conversation history for ID {conversation_id}: {e}",
-                exc_info=True,
-            )
-            return []
+    @staticmethod
+    def _empty_session() -> Dict[str, Any]:
+        """Return one empty conversation-session payload."""
+        return {
+            "conversation": None,
+            "conversation_id": None,
+            "messages": [],
+        }
+
+    def _session_response(self, payload: Dict[str, Any]) -> Dict[str, Any]:
+        """Convert one daemon session payload into GUI DTO form."""
+        messages = list(payload.get("messages") or [])
+        conversation_payload = payload.get("conversation")
+        if not isinstance(conversation_payload, dict):
+            return self._empty_session()
+        conversation = ConversationRecord.from_payload(
+            conversation_payload,
+            messages=messages,
+        )
+        return {
+            "conversation": conversation,
+            "conversation_id": conversation.id,
+            "messages": messages,
+        }
+
+    def _log_client_failure(self, action: str, exc: Exception) -> None:
+        """Log one daemon-client failure for GUI persistence operations."""
+        self.logger.warning(
+            "Failed to %s via daemon client: %s",
+            action,
+            exc,
+        )

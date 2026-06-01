@@ -69,7 +69,10 @@ class ActiveGridArea(DraggablePixmap):
 
     @property
     def rect(self):
-        pos = self.active_grid_settings.pos
+        pos = (
+            self.active_grid_settings.pos_x,
+            self.active_grid_settings.pos_y,
+        )
         width = getattr(self.application_settings, "working_width", None)
         if not width:
             width = getattr(self.application_settings, "document_width", 0)
@@ -311,7 +314,7 @@ class ActiveGridArea(DraggablePixmap):
             )
 
             # Verify the update worked by reading back from DB
-            fresh_settings = self.active_grid_settings
+            self.active_grid_settings
 
             view = None
             if self.scene() and self.scene().views():

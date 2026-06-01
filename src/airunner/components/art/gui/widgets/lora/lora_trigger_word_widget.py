@@ -6,6 +6,7 @@ from PySide6.QtWidgets import QApplication
 
 
 class LoraTriggerWordWidget(BaseWidget):
+    ui: Ui_lora_trigger_word  # type: ignore[assignment]
     widget_class_ = Ui_lora_trigger_word
     trigger_word = None
 

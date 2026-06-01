@@ -9,14 +9,16 @@ import shutil
 from pathlib import Path
 from typing import Iterable
 
-from airunner.components.documents.data.models.document import Document
-from airunner.utils.path_policy import (
+from airunner.components.documents.data.document_records import (
+    ensure_document_record,
+)
+from airunner.runtimes.file_policy import (
     normalize_local_path,
     resolve_existing_file,
 )
 
 try:
-    from airunner.vendor.facehuggershield.darklock.restrict_os_access import (
+    from facehuggershield.darklock.restrict_os_access import (
         RestrictOSAccess,
     )
 except Exception:  # pragma: no cover - darklock may be unavailable in tests
@@ -164,11 +166,8 @@ def _resolve_destination_path(
 
 def _ensure_document_record(file_path: str) -> None:
     """Create one database record for one imported document when needed."""
-    existing = Document.objects.filter_by(path=file_path)
-    if existing:
-        return
-    Document.objects.create(
-        path=file_path,
+    ensure_document_record(
+        file_path,
         active=False,
         indexed=False,
     )

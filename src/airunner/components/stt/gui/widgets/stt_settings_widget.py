@@ -3,6 +3,7 @@ from airunner.components.stt.gui.widgets.templates.stt_settings_ui import Ui_stt
 
 
 class STTSettingsWidget(BaseWidget):
+    ui: Ui_stt_settings  # type: ignore[assignment]
     widget_class_ = Ui_stt_settings
 
     def __init__(self, *args, **kwargs):

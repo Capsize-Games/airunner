@@ -22,6 +22,10 @@ from airunner.components.model_management.model_resource_manager import (
 )
 from airunner.enums import SignalCode
 from airunner.utils.application.signal_mediator import SignalMediator
+from airunner.components.llm.config.provider_config import (
+    LLMProviderConfig,
+)
+from airunner.daemon_client.resource_store import get_resource_store
 
 
 _UNLOAD_SIGNALS = {
@@ -117,7 +121,7 @@ class ModelStatusWidget(QWidget):
         """Start 1-second refresh timer."""
         self.timer = QTimer(self)
         self.timer.timeout.connect(self._update_status)
-        self.timer.start(1000)
+        self.timer.start(10)
 
     def _update_status(self):
         """Refresh all status displays."""
@@ -251,19 +255,12 @@ class ModelStatusWidget(QWidget):
     @staticmethod
     def _resolve_llm_display_name(model_id: str) -> str:
         """Resolve one configured LLM display name for the status row."""
-        try:
-            from airunner.components.llm.config.provider_config import (
-                LLMProviderConfig,
-            )
-            from airunner.components.llm.data.llm_generator_settings import (
-                LLMGeneratorSettings,
-            )
-        except Exception:
-            return ""
-
         settings = None
         try:
-            settings = LLMGeneratorSettings.objects.first()
+            settings = get_resource_store().get_singleton(
+                "LLMGeneratorSettings",
+                create_if_missing=True,
+            )
         except Exception:
             settings = None
 
@@ -396,12 +393,7 @@ class ModelStatusWidget(QWidget):
         except Exception:
             pass
 
-        try:
-            from airunner.components.server.api.server import get_api
-
-            return get_api(create_if_missing=False)
-        except Exception:
-            return None
+        return None
 
     @staticmethod
     def _unload_llm_via_api(widget, payload: dict) -> bool:

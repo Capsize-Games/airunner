@@ -10,13 +10,11 @@ for easy parsing and LLM manipulation.
 All files are indexed into RAG for semantic retrieval during thinking/response.
 """
 
-import os
 import re
-from datetime import datetime, date
+from datetime import date
 from pathlib import Path
 from typing import Optional, List, Dict, Tuple
 import threading
-from glob import glob
 
 from airunner.settings import AIRUNNER_BASE_PATH, AIRUNNER_LOG_LEVEL
 from airunner.utils.application import get_logger
@@ -66,7 +64,7 @@ def get_daily_template(date_str: str) -> str:
 
 # Tenant-aware singleton instances.
 #
-# In headless multi-tenant mode, AI Runner runs as a multi-tenant service keyed by
+# In multi-tenant mode, AI Runner runs as a multi-tenant service keyed by
 # a per-request tenant header. We must not mix knowledge across tenants.
 _knowledge_base_instances: dict[str, "KnowledgeBase"] = {}
 _lock = threading.Lock()
@@ -638,22 +636,20 @@ class KnowledgeBase:
             files: List of absolute file paths
         """
         try:
-            from airunner.components.documents.data.models.document import Document
-            from airunner.components.data.session_manager import session_scope
-            
-            with session_scope() as session:
-                for file_path in files:
-                    # Check if already registered
-                    existing = session.query(Document).filter_by(path=file_path).first()
-                    if not existing:
-                        doc = Document(
-                            path=file_path,
-                            active=True,
-                            indexed=False,
-                        )
-                        session.add(doc)
-                        self.logger.debug(f"Registered knowledge doc: {file_path}")
-                session.commit()
+            from airunner.components.documents.data.document_records import (
+                ensure_document_record,
+            )
+
+            for file_path in files:
+                existing = ensure_document_record(
+                    file_path,
+                    active=True,
+                    indexed=False,
+                )
+                if existing is not None:
+                    self.logger.debug(
+                        f"Registered knowledge doc: {file_path}"
+                    )
         except Exception as e:
             self.logger.error(f"Failed to register knowledge documents: {e}")
     

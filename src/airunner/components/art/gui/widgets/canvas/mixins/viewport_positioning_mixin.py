@@ -7,8 +7,11 @@ management, and viewport compensation for window resizes.
 from typing import Dict, Tuple, Optional
 from PySide6.QtCore import QPointF
 
-from airunner.components.art.data.canvas_layer import CanvasLayer
-from airunner.components.art.data.drawingpad_settings import DrawingPadSettings
+from airunner.components.art.data.canvas_layer_records import (
+    first_layer_setting,
+    ordered_canvas_layers,
+    update_layer_setting,
+)
 from airunner.components.art.utils.canvas_position_manager import (
     CanvasPositionManager,
     ViewState,
@@ -75,14 +78,16 @@ class ViewportPositioningMixin:
         Returns:
             Dictionary mapping scene items to their absolute positions.
         """
-        layers = CanvasLayer.objects.order_by("order").all()
+        layers = ordered_canvas_layers(store=self.resource_store)
         original_item_positions = {}
         for index, layer in enumerate(layers):
-            results = DrawingPadSettings.objects.filter_by(layer_id=layer.id)
-            if len(results) == 0:
+            drawingpad_settings = first_layer_setting(
+                "DrawingPadSettings",
+                layer.id,
+                store=self.resource_store,
+            )
+            if drawingpad_settings is None:
                 continue
-
-            drawingpad_settings = results[0]
             scene_item = self.scene._layer_items.get(layer.id)
             if scene_item is None:
                 # Layer may not have been materialized yet; skip safely
@@ -105,10 +110,11 @@ class ViewportPositioningMixin:
                     int(image_width), int(image_height)
                 )
                 # Save this calculated position for future use
-                DrawingPadSettings.objects.update(
-                    drawingpad_settings.id,
-                    x_pos=pos_x,
-                    y_pos=pos_y,
+                update_layer_setting(
+                    "DrawingPadSettings",
+                    layer.id,
+                    {"x_pos": pos_x, "y_pos": pos_y},
+                    store=self.resource_store,
                 )
 
             original_item_positions[scene_item] = QPointF(pos_x, pos_y)
@@ -183,7 +189,10 @@ class ViewportPositioningMixin:
             )
 
             # Convert absolute position to display position
-            abs_pos = QPointF(*self.active_grid_settings.pos)
+            abs_pos = QPointF(
+                self.active_grid_settings.pos_x,
+                self.active_grid_settings.pos_y,
+            )
             abs_pos = self.clamp_active_grid_absolute_position(abs_pos)
             clamped_x = int(round(abs_pos.x()))
             clamped_y = int(round(abs_pos.y()))

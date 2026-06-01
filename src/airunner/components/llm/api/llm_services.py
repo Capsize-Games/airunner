@@ -8,9 +8,6 @@ from airunner.components.llm.utils.thinking_parser import (
     detect_thinking_close_tag,
     detect_thinking_open_tag,
 )
-from airunner.daemon_client.daemon_connection_state import (
-    DaemonConnectionState,
-)
 from airunner.enums import SignalCode
 from airunner.enums import LLMActionType
 from dataclasses import dataclass, field
@@ -24,6 +21,7 @@ class _DaemonStreamState:
     """Track one daemon-backed GUI stream."""
 
     in_thinking_block: bool = False
+    thinking_signal_started: bool = False
     thinking_tag_format: str = ""
     thinking_content: list[str] = field(default_factory=list)
     visible_sequence_number: int = 0
@@ -36,8 +34,8 @@ class _DaemonStreamState:
 class LLMAPIService(APIServiceBase):
     """LLM API service providing signal-based LLM operations."""
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, api=None):
+        super().__init__(api=api)
 
     def chatbot_changed(self):
         self.emit_signal(SignalCode.CHATBOT_CHANGED)
@@ -117,6 +115,14 @@ class LLMAPIService(APIServiceBase):
             mediator = SignalMediator()
             mediator.register_pending_request(resolved_request_id, callback)
 
+        # Keep the daemon path aligned with the local request lifecycle so the
+        # conversation view can append the user prompt and initialize the chat
+        # surface before streamed daemon tokens arrive.
+        self.emit_signal(
+            SignalCode.LLM_TEXT_GENERATE_REQUEST_SIGNAL,
+            data,
+        )
+
         if self._send_request_via_daemon(
             prompt,
             llm_request,
@@ -130,7 +136,23 @@ class LLMAPIService(APIServiceBase):
             self.logger.info("LLM API: Daemon request queued")
             return
 
-        LLMAPIService._emit_local_generation_request(self, data)
+        self.logger.error(
+            "LLM API: Daemon unavailable — cannot process LLM request. "
+            "Ensure the daemon is running."
+        )
+        self.send_llm_text_streamed_signal(
+            LLMResponse(
+                message=(
+                    "Error: Daemon is not running. "
+                    "Please start the daemon and try again."
+                ),
+                is_first_message=True,
+                is_end_of_message=True,
+                action=action,
+                request_id=resolved_request_id,
+                is_system_message=True,
+            )
+        )
 
     def clear_history(self, **kwargs):
         self.emit_signal(SignalCode.LLM_CLEAR_HISTORY_SIGNAL, kwargs)
@@ -182,13 +204,12 @@ class LLMAPIService(APIServiceBase):
     def unload(self, data: Optional[dict] = None) -> None:
         """Unload the active LLM without blocking the caller."""
         payload = dict(data or {})
-        if LLMAPIService._local_llm_should_handle_unload(self):
-            self._emit_local_unload_request(payload)
-            return
 
         client = self._daemon_client()
         if client is None:
-            self._emit_local_unload_request(payload)
+            self.logger.error(
+                "LLM API: Daemon unavailable — cannot unload LLM."
+            )
             return
 
         thread = threading.Thread(
@@ -198,38 +219,6 @@ class LLMAPIService(APIServiceBase):
         )
         thread.start()
 
-    def _emit_local_unload_request(self, payload: dict) -> None:
-        """Emit one best-effort local unload request."""
-        self.emit_signal(SignalCode.INTERRUPT_PROCESS_SIGNAL)
-        self.emit_signal(SignalCode.LLM_UNLOAD_SIGNAL, payload)
-
-    def _local_llm_should_handle_unload(self) -> bool:
-        """Return True when the GUI-local worker owns the live LLM."""
-        from airunner.enums import ModelStatus
-
-        worker_manager_getter = getattr(self, "_worker_manager", None)
-        if not callable(worker_manager_getter):
-            return False
-
-        worker_manager = worker_manager_getter()
-        if worker_manager is None:
-            return False
-
-        worker = getattr(worker_manager, "_llm_generate_worker", None)
-        if worker is None:
-            return False
-
-        status_getter = getattr(worker, "current_model_status", None)
-        if callable(status_getter):
-            try:
-                status = status_getter()
-            except Exception:
-                status = None
-            if status in (ModelStatus.LOADING, ModelStatus.LOADED):
-                return True
-
-        return getattr(worker, "_pending_llm_request", None) is not None
-
     def _run_daemon_unload(self, client, payload: dict) -> None:
         """Interrupt and queue one daemon-side LLM unload."""
         try:
@@ -238,9 +227,12 @@ class LLMAPIService(APIServiceBase):
             pass
 
         try:
-            client.unload_local_llm(auto_start=False)
+            client.unload_local_llm()
         except RuntimeError:
-            self._emit_local_unload_request(payload)
+            self.logger.error(
+                "LLM API: Daemon unload failed — daemon may be "
+                "unreachable."
+            )
 
     def delete_messages_after_id(self, message_id: int):
         self.emit_signal(
@@ -286,6 +278,13 @@ class LLMAPIService(APIServiceBase):
             self._thinking_signal_payload(status, content, request_id),
         )
 
+    def send_llm_tool_status_signal(
+        self,
+        data: dict,
+    ) -> None:
+        """Emit one tool-status update for the chat UI."""
+        self.emit_signal(SignalCode.LLM_TOOL_STATUS_SIGNAL, data)
+
     def _thinking_signal_payload(
         self,
         status: str,
@@ -320,6 +319,15 @@ class LLMAPIService(APIServiceBase):
         handler(dict(data))
         return True
 
+    @staticmethod
+    def _queue_tts_worker_message(worker, message: dict) -> bool:
+        """Queue one TTS stream event onto the worker thread."""
+        add_to_queue = getattr(worker, "add_to_queue", None)
+        if not callable(add_to_queue):
+            return False
+        add_to_queue(message)
+        return True
+
     def _tts_stream_worker(self):
         """Return the live GUI TTS worker when one exists."""
         worker_manager = self._worker_manager()
@@ -349,23 +357,6 @@ class LLMAPIService(APIServiceBase):
                 return worker_manager
         return None
 
-    def _prewarm_tts_runtime_for_request(
-        self,
-        llm_request: LLMRequest,
-    ) -> None:
-        """Start sidecar TTS early when one daemon reply will be spoken."""
-        worker_manager = self._worker_manager()
-        if worker_manager is None:
-            return
-        app_settings = getattr(worker_manager, "application_settings", None)
-        if not getattr(llm_request, "do_tts_reply", False) and not bool(
-            getattr(app_settings, "tts_enabled", False)
-        ):
-            return
-        prewarm = getattr(worker_manager, "_start_tts_runtime_prewarm", None)
-        if callable(prewarm):
-            prewarm()
-
     def _send_request_via_daemon(
         self,
         prompt: str,
@@ -383,6 +374,8 @@ class LLMAPIService(APIServiceBase):
             return False
         if getattr(llm_request, "images", None):
             return False
+
+        self._start_request_scoped_tts_load(llm_request)
 
         thread = threading.Thread(
             target=LLMAPIService._run_daemon_request_or_fallback,
@@ -403,22 +396,44 @@ class LLMAPIService(APIServiceBase):
         thread.start()
         return True
 
-    def _emit_local_generation_request(self, data: dict) -> None:
-        """Emit one local-worker request when daemon routing is skipped."""
-        self.emit_signal(SignalCode.LLM_TEXT_GENERATE_REQUEST_SIGNAL, data)
-        self.logger.info("LLM API: Signal emitted")
+    def _start_request_scoped_tts_load(
+        self,
+        llm_request: LLMRequest,
+    ) -> None:
+        """Start TTS load only for the active spoken request."""
+        if not bool(getattr(llm_request, "do_tts_reply", False)):
+            return
+
+        worker_manager = self._worker_manager()
+        if worker_manager is None:
+            return
+
+        app_settings = getattr(worker_manager, "application_settings", None)
+        if not bool(getattr(app_settings, "tts_enabled", False)):
+            return
+
+        ensure_tts = getattr(
+            worker_manager,
+            "_ensure_tts_loaded_for_request",
+            None,
+        )
+        if callable(ensure_tts):
+            ensure_tts(
+                {
+                    "source": "llm_request",
+                    "request_scoped": True,
+                }
+            )
 
     def _daemon_is_immediately_available(self, client) -> bool:
         """Return True when one daemon can accept a request right now."""
-        if getattr(client, "state", None) is DaemonConnectionState.CONNECTED:
-            return True
         availability_check = getattr(client, "is_available", None)
         if callable(availability_check):
             try:
                 return bool(availability_check(timeout_seconds=0.2))
             except TypeError:
                 return bool(availability_check())
-        return bool(client.ensure_connected(auto_start=False))
+        return bool(client.is_available())
 
     def _run_daemon_request_or_fallback(
         self,
@@ -432,16 +447,21 @@ class LLMAPIService(APIServiceBase):
         node_id: Optional[str],
         signal_data: Optional[dict],
     ) -> None:
-        """Use the daemon when it is already reachable, else fall back."""
-        if not LLMAPIService._daemon_is_immediately_available(self, client):
-            if signal_data is not None:
-                LLMAPIService._emit_local_generation_request(
-                    self,
-                    signal_data,
-                )
-            return
+        """Route an LLM request through the daemon when it is reachable."""
+        import time
 
-        LLMAPIService._prewarm_tts_runtime_for_request(self, llm_request)
+        deadline = time.monotonic() + 10.0
+        while not LLMAPIService._daemon_is_immediately_available(
+            self, client
+        ):
+            if time.monotonic() >= deadline:
+                self.logger.error(
+                    "LLM API: Daemon not available after waiting "
+                    "10s — cannot process LLM request."
+                )
+                return
+            time.sleep(0.5)
+
         self._stream_daemon_request(
             client,
             prompt,
@@ -641,7 +661,16 @@ class LLMAPIService(APIServiceBase):
                 node_id=node_id,
             )
             return True
-        if message_type in {"tool_call", "tool_result", "tool_status"}:
+        if message_type == "tool_status":
+            self._forward_structured_tool_status_chunk(
+                chunk,
+                request_id=request_id,
+            )
+            self._reset_structured_hidden_output(state)
+            if bool(chunk.get("is_end_of_message", False)):
+                self._finish_daemon_thinking(state, request_id=request_id)
+            return True
+        if message_type in {"tool_call", "tool_result"}:
             self._reset_structured_hidden_output(state)
             if bool(chunk.get("is_end_of_message", False)):
                 self._finish_daemon_thinking(state, request_id=request_id)
@@ -699,6 +728,34 @@ class LLMAPIService(APIServiceBase):
         if bool(chunk.get("is_end_of_message", False)):
             self._finish_daemon_thinking(state, request_id=request_id)
 
+    def _forward_structured_tool_status_chunk(
+        self,
+        chunk: dict,
+        *,
+        request_id: str,
+    ) -> None:
+        """Forward one typed tool-status chunk to the unified status widget."""
+        tool_id = chunk.get("tool_id") or ""
+        tool_name = chunk.get("tool_name") or ""
+        query = chunk.get("query") or ""
+        status = chunk.get("tool_status") or ""
+        if not all([tool_id, tool_name, query, status]):
+            return
+
+        self.send_llm_tool_status_signal(
+            {
+                "tool_id": tool_id,
+                "tool_name": tool_name,
+                "query": query,
+                "status": status,
+                "details": chunk.get("details") or chunk.get("message", "") or "",
+                "conversation_id": chunk.get("conversation_id"),
+                "request_id": chunk.get("request_id") or request_id,
+                "metadata": chunk.get("metadata"),
+                "timestamp": chunk.get("timestamp"),
+            }
+        )
+
     def _forward_structured_assistant_chunk(
         self,
         chunk: dict,
@@ -709,23 +766,32 @@ class LLMAPIService(APIServiceBase):
         node_id: Optional[str],
     ) -> None:
         """Forward one typed assistant chunk without legacy heuristics."""
+        message = chunk.get("message", "") or ""
+
+        # The daemon now publishes thinking content as typed
+        # `message_type='thinking'` chunks, so any in-flight thinking block
+        # is finalized as soon as the first assistant content arrives.
         if state.in_thinking_block:
             self._finish_daemon_thinking(state, request_id=request_id)
         self._reset_structured_hidden_output(state)
-        message = chunk.get("message", "") or ""
+
+        chunk_done = bool(chunk.get("is_end_of_message", False))
         if message:
-            self._emit_visible_daemon_parts(
-                [message],
-                chunk=chunk,
-                state=state,
-                request_id=request_id,
-                action=action,
-                node_id=node_id,
+            state.visible_text += message
+            self.send_llm_text_streamed_signal(
+                self._build_visible_daemon_response(
+                    chunk,
+                    state=state,
+                    message=message,
+                    is_end_of_message=chunk_done,
+                    request_id=request_id,
+                    action=action,
+                    node_id=node_id,
+                )
             )
             return
-        if state.visible_sequence_number > 0 and bool(
-            chunk.get("is_end_of_message", False)
-        ):
+
+        if state.visible_sequence_number > 0 and chunk_done:
             self.send_llm_text_streamed_signal(
                 self._build_visible_daemon_response(
                     chunk,
@@ -864,9 +930,9 @@ class LLMAPIService(APIServiceBase):
     ) -> None:
         """Mark one daemon stream as being inside a thinking block."""
         state.in_thinking_block = True
+        state.thinking_signal_started = False
         state.thinking_tag_format = tag_format
         state.thinking_content = []
-        self.send_llm_thinking_signal("started", "", request_id)
 
     def _append_daemon_thinking(
         self,
@@ -879,6 +945,18 @@ class LLMAPIService(APIServiceBase):
         if not content:
             return
         state.thinking_content.append(content)
+        accumulated_content = "".join(state.thinking_content)
+        if not state.thinking_signal_started:
+            if not accumulated_content.strip():
+                return
+            state.thinking_signal_started = True
+            self.send_llm_thinking_signal("started", "", request_id)
+            self.send_llm_thinking_signal(
+                "streaming",
+                accumulated_content,
+                request_id,
+            )
+            return
         self.send_llm_thinking_signal("streaming", content, request_id)
 
     def _finish_daemon_thinking(
@@ -890,12 +968,17 @@ class LLMAPIService(APIServiceBase):
         """Complete one thinking block if the daemon stream is inside one."""
         if not state.in_thinking_block:
             return
-        self.send_llm_thinking_signal(
-            "completed",
-            "".join(state.thinking_content),
-            request_id,
-        )
+        accumulated_content = "".join(state.thinking_content)
+        if accumulated_content.strip():
+            if not state.thinking_signal_started:
+                self.send_llm_thinking_signal("started", "", request_id)
+            self.send_llm_thinking_signal(
+                "completed",
+                accumulated_content,
+                request_id,
+            )
         state.in_thinking_block = False
+        state.thinking_signal_started = False
         state.thinking_tag_format = ""
         state.thinking_content = []
 
@@ -936,7 +1019,7 @@ class LLMAPIService(APIServiceBase):
             api = LLMAPIService._resolve_api_instance()
             if api is not None:
                 self.api = api
-        if api is None or getattr(api, "headless", False):
+        if api is None:
             return None
         return getattr(api, "daemon_client", None)
 
@@ -951,13 +1034,7 @@ class LLMAPIService(APIServiceBase):
                 return getattr(app, "api", None)
         except Exception:
             pass
-
-        try:
-            from airunner.components.server.api.server import get_api
-
-            return get_api()
-        except Exception:
-            return None
+        return None
 
     @staticmethod
     def _response_from_daemon_chunk(

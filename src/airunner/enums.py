@@ -88,7 +88,7 @@ class SignalCode(Enum):
     APPLICATION_STATUS_INFO_SIGNAL = "status_info_signal"
     APPLICATION_STATUS_ERROR_SIGNAL = "status_error_signal"
 
-    # Backwards-compat alias used by some headless API routes.
+    # Backwards-compat alias.
     # Keep the canonical name as APPLICATION_STATUS_ERROR_SIGNAL.
     APPLICATION_ERROR_SIGNAL = "status_error_signal"
     LLM_START_QUANTIZATION = "llm_start_quantization"

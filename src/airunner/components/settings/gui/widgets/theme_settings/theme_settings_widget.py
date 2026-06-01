@@ -8,6 +8,7 @@ from airunner.utils.settings import get_qsettings
 
 
 class ThemeSettingsWidget(BaseWidget):
+    ui: Ui_theme_settings  # type: ignore[assignment]
     widget_class_ = Ui_theme_settings
 
     def __init__(self, *args, **kwargs):

@@ -48,7 +48,7 @@ class CanvasGenerationMixin:
         Args:
             data: Dict containing 'image_response' with generated images
         """
-        self.logger.debug(
+        self.logger.info(
             "[CANVAS DEBUG] on_send_image_to_canvas_signal keys=%s",
             list(data.keys()) if data else None,
         )
@@ -62,7 +62,8 @@ class CanvasGenerationMixin:
         self.cached_send_image_to_canvas = None
         if not image_response or not image_response.images:
             self.logger.debug(
-                "[CANVAS DEBUG] No images in response. image_response=%s images=%s",
+                "[CANVAS DEBUG] No images in response. "
+                "image_response=%s images=%s",
                 image_response,
                 getattr(image_response, "images", "NO ATTR"),
             )
@@ -79,13 +80,14 @@ class CanvasGenerationMixin:
         )
 
         # Load the image to the scene (mark as generated for proper positioning)
-        self.logger.debug(
+        self.logger.info(
             "[CANVAS DEBUG] Calling _load_image_from_object; generated=True"
         )
         self._load_image_from_object(image=image, generated=True)
-        self.logger.debug(
+        self.logger.info(
             "[CANVAS DEBUG] _load_image_from_object completed"
         )
+        self._force_canvas_viewport_refresh()
         self._notify_generated_image_ready()
         self._schedule_generated_follow_up(
             partial(self._finalize_generated_image, layer_id, image)
@@ -98,6 +100,30 @@ class CanvasGenerationMixin:
         )
         if callable(post_display_callback):
             self._schedule_generated_follow_up(post_display_callback)
+
+    def _force_canvas_viewport_refresh(self) -> None:
+        """Force all attached views to repaint the current scene content.
+
+        After an image is added or updated via _update_or_create_item,
+        the Qt paint system sometimes coalesces update regions in a way
+        that skips the newly populated area.  An explicit deferred
+        viewport repaint guarantees the generated image becomes visible.
+        """
+        from PySide6.QtCore import QTimer
+
+        def _repaint_all_viewports():
+            try:
+                # Accessing QGraphicsItem.scene() may raise RuntimeError
+                # if the underlying C++ object was deleted.
+                for view in self.views():
+                    viewport = view.viewport()
+                    if viewport is not None:
+                        viewport.repaint()
+            except RuntimeError:
+                pass
+
+        # Defer one cycle to let any pending paint events be processed first
+        QTimer.singleShot(0, _repaint_all_viewports)
 
     def _notify_generated_image_ready(self) -> None:
         """Notify the view layer so the new image can paint immediately."""

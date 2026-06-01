@@ -5,7 +5,7 @@ Dialog for creating and editing LLM tools.
 Provides form fields for tool properties and code editor with validation.
 """
 
-from typing import Optional
+from typing import Any, Optional
 
 from PySide6.QtCore import Slot
 from PySide6.QtWidgets import QDialog, QMessageBox
@@ -14,16 +14,38 @@ from PySide6.QtGui import QFont
 from airunner.components.llm.gui.widgets.templates.llm_tool_editor_ui import (
     Ui_llm_tool_editor,
 )
-from airunner.components.llm.data.llm_tool import LLMTool
+from airunner.daemon_client.resource_store import get_resource_store
 from airunner.enums import SignalCode
 from airunner.settings import AIRUNNER_LOG_LEVEL
 from airunner.utils.application import get_logger
 from airunner.utils.application.mediator_mixin import MediatorMixin
 from airunner.utils.settings.get_qsettings import get_qsettings
-from airunner.components.data.session_manager import session_scope
 
 
 logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
+
+
+def _validate_tool_code_safety(code: str) -> tuple[bool, str]:
+    dangerous_imports = [
+        "os.system",
+        "subprocess",
+        "eval(",
+        "exec(",
+        "__import__",
+        "open(",
+        "rm ",
+        "shutil",
+    ]
+
+    code_lower = code.lower()
+    for dangerous in dangerous_imports:
+        if dangerous.lower() in code_lower:
+            return False, f"Dangerous operation detected: {dangerous}"
+
+    if "@tool" not in code:
+        return False, "Code must use @tool decorator"
+
+    return True, "Code appears safe"
 
 
 class LLMToolEditorWidget(QDialog, MediatorMixin):
@@ -32,10 +54,11 @@ class LLMToolEditorWidget(QDialog, MediatorMixin):
     Provides form with validation and code editor.
     """
 
-    def __init__(self, tool: Optional[LLMTool] = None, parent=None):
+    def __init__(self, tool: Optional[Any] = None, parent=None):
         super().__init__(parent)
         self.settings = get_qsettings()
         self.tool = tool
+        self.resource_store = get_resource_store()
         self.ui = Ui_llm_tool_editor()
         self.ui.setupUi(self)
 
@@ -94,8 +117,7 @@ class LLMToolEditorWidget(QDialog, MediatorMixin):
             )
             return
 
-        temp_tool = LLMTool(code=code)
-        is_safe, message = temp_tool.validate_code_safety()
+        is_safe, message = _validate_tool_code_safety(code)
 
         if is_safe:
             QMessageBox.information(
@@ -130,8 +152,7 @@ class LLMToolEditorWidget(QDialog, MediatorMixin):
             return
 
         # Validate code safety before saving
-        temp_tool = LLMTool(code=code)
-        is_safe, message = temp_tool.validate_code_safety()
+        is_safe, message = _validate_tool_code_safety(code)
         if not is_safe:
             reply = QMessageBox.question(
                 self,
@@ -155,52 +176,43 @@ class LLMToolEditorWidget(QDialog, MediatorMixin):
 
         # Save to database
         try:
-            with session_scope() as session:
-                if self.tool:
-                    # Update existing tool
-                    db_tool = (
-                        session.query(LLMTool)
-                        .filter_by(id=self.tool.id)
-                        .first()
+            values = {
+                "name": name,
+                "display_name": self.ui.display_name_input.text().strip()
+                or None,
+                "description": self.ui.description_input.toPlainText().strip()
+                or None,
+                "code": code,
+                "enabled": enabled,
+                "safety_validated": is_safe,
+            }
+            if self.tool:
+                values["version"] = int(getattr(self.tool, "version", 0) or 0) + 1
+                updated_tool = self.resource_store.update(
+                    "LLMTool",
+                    self.tool.id,
+                    values,
+                )
+                if updated_tool is not None:
+                    logger.info(
+                        f"Updated tool: {updated_tool.name} (v{updated_tool.version})"
                     )
-                    if db_tool:
-                        db_tool.name = name
-                        db_tool.display_name = (
-                            self.ui.display_name_input.text().strip() or None
-                        )
-                        db_tool.description = (
-                            self.ui.description_input.toPlainText().strip()
-                            or None
-                        )
-                        db_tool.code = code
-                        db_tool.enabled = enabled
-                        db_tool.safety_validated = is_safe
-                        db_tool.version += 1
-                        logger.info(
-                            f"Updated tool: {db_tool.name} (v{db_tool.version})"
-                        )
-                        self.emit_signal(
-                            SignalCode.LLM_TOOL_UPDATED, {"tool": db_tool}
-                        )
-                else:
-                    # Create new tool
-                    new_tool = LLMTool(
-                        name=name,
-                        display_name=self.ui.display_name_input.text().strip()
-                        or None,
-                        description=self.ui.description_input.toPlainText().strip()
-                        or None,
-                        code=code,
-                        enabled=enabled,
-                        safety_validated=is_safe,
-                        created_by="user",
-                        version=1,
-                    )
-                    session.add(new_tool)
-                    logger.info(f"Created tool: {new_tool.name}")
                     self.emit_signal(
-                        SignalCode.LLM_TOOL_CREATED, {"tool": new_tool}
+                        SignalCode.LLM_TOOL_UPDATED, {"tool": updated_tool}
                     )
+            else:
+                new_tool = self.resource_store.create(
+                    "LLMTool",
+                    {
+                        "created_by": "user",
+                        "version": 1,
+                        **values,
+                    },
+                )
+                logger.info(f"Created tool: {new_tool.name}")
+                self.emit_signal(
+                    SignalCode.LLM_TOOL_CREATED, {"tool": new_tool}
+                )
 
             self.accept()
 

@@ -7,14 +7,8 @@ from typing import Dict, Optional
 
 from PySide6.QtCore import QLocale, QTranslator
 
+from airunner.daemon_client.resource_store import get_resource_store
 from airunner.app_installer import AppInstaller
-from airunner.components.settings.data.application_settings import (
-    ApplicationSettings,
-)
-from airunner.components.settings.data.language_settings import (
-    LanguageSettings,
-)
-from airunner.components.settings.data.path_settings import PathSettings
 from airunner.enums import AVAILABLE_LANGUAGES
 from airunner.enums import LANGUAGE_TO_LOCALE_MAP
 from airunner.enums import LOCALE_TO_LANGUAGE_MAP
@@ -42,10 +36,17 @@ class LocalizationMixin:
             ]
 
         if not locale_language:
-            settings = LanguageSettings.objects.first()
-            if settings:
+            # gui_language was moved from language_settings DB table to
+            # QSettings by migration d2ab5f1c9a7e.
+            from airunner.utils.settings.get_qsettings import get_qsettings
+
+            qs = get_qsettings()
+            qs.beginGroup("language")
+            gui_language = qs.value("gui_language", None)
+            qs.endGroup()
+            if gui_language:
                 try:
-                    language = AvailableLanguage(settings.gui_language)
+                    language = AvailableLanguage(gui_language)
                 except ValueError:
                     language = AvailableLanguage.EN
 
@@ -55,7 +56,6 @@ class LocalizationMixin:
                     locale_language = LANGUAGE_TO_LOCALE_MAP.get(
                         AvailableLanguage.EN
                     )
-
         if not locale_language:
             locale_language = QLocale.system().language()
         if locale_language not in LANGUAGE_TO_LOCALE_MAP:
@@ -76,14 +76,15 @@ class LocalizationMixin:
         if AIRUNNER_DISABLE_SETUP_WIZARD:
             return
 
-        application_settings = ApplicationSettings.objects.first()
-        path_settings = PathSettings.objects.first()
-        if path_settings is None:
-            PathSettings.objects.create()
-            path_settings = PathSettings.objects.first()
-        if application_settings is None:
-            ApplicationSettings.objects.create()
-            application_settings = ApplicationSettings.objects.first()
+        resource_store = get_resource_store()
+        application_settings = resource_store.get_singleton(
+            "ApplicationSettings",
+            create_if_missing=True,
+        )
+        path_settings = resource_store.get_singleton(
+            "PathSettings",
+            create_if_missing=True,
+        )
 
         base_path = path_settings.base_path
         if (

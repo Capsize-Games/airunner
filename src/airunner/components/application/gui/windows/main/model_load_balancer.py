@@ -89,10 +89,11 @@ class ModelLoadBalancer(MediatorMixin):
             return
 
         self._last_non_art_models = []
+        # LLM state tracked by daemon; local worker removed
+        # TTS/STT workers removed; daemon handles all runtimes
         for model_type, worker in [
-            (ModelType.LLM, self.worker_manager.llm_generate_worker),
-            (ModelType.TTS, self.worker_manager.tts_generator_worker),
-            (ModelType.STT, self.worker_manager.stt_audio_processor_worker),
+            (ModelType.TTS, None),
+            (ModelType.STT, None),
         ]:
             if not worker:
                 continue
@@ -113,9 +114,7 @@ class ModelLoadBalancer(MediatorMixin):
                 self._last_non_art_models.append(model_type)
                 worker.unload()
                 self._emit_model_status(model_type, ModelStatus.UNLOADED)
-        if self.worker_manager.sd_worker:
-            self.worker_manager.sd_worker.load_model_manager()
-            self._emit_model_status(ModelType.SD, ModelStatus.LOADED)
+        # SD model loading now handled exclusively by daemon
         if self.logger:
             self.logger.info(
                 f"Switched to art mode. Unloaded: {self._last_non_art_models}"
@@ -140,11 +139,11 @@ class ModelLoadBalancer(MediatorMixin):
         for model_type in self._last_non_art_models:
             worker = None
             if model_type == ModelType.LLM:
-                worker = self.worker_manager.llm_generate_worker
+                worker = None  # local LLM worker removed; daemon handles LLM
             elif model_type == ModelType.TTS:
-                worker = self.worker_manager.tts_generator_worker
+                worker = None
             elif model_type == ModelType.STT:
-                worker = self.worker_manager.stt_audio_processor_worker
+                worker = None
             if worker:
                 worker.load()
                 self._emit_model_status(model_type, ModelStatus.LOADED)
@@ -153,11 +152,11 @@ class ModelLoadBalancer(MediatorMixin):
             if model_type not in self._last_non_art_models:
                 worker = None
                 if model_type == ModelType.LLM:
-                    worker = self.worker_manager.llm_generate_worker
+                    worker = None  # local LLM worker removed; daemon handles LLM
                 elif model_type == ModelType.TTS:
-                    worker = self.worker_manager.tts_generator_worker
+                    worker = None
                 elif model_type == ModelType.STT:
-                    worker = self.worker_manager.stt_audio_processor_worker
+                    worker = None
                 if worker:
                     worker.load()
                     self._emit_model_status(model_type, ModelStatus.LOADED)
@@ -173,11 +172,11 @@ class ModelLoadBalancer(MediatorMixin):
             return self._merge_local_llm_loaded_model(loaded_models)
 
         loaded = []
+        # LLM/SD state tracked by daemon; local workers removed
+        # TTS/STT workers removed; daemon handles all runtimes
         for model_type, worker in [
-            (ModelType.LLM, self.worker_manager.llm_generate_worker),
-            (ModelType.TTS, self.worker_manager.tts_generator_worker),
-            (ModelType.STT, self.worker_manager.stt_audio_processor_worker),
-            (ModelType.SD, self.worker_manager.sd_worker),
+            (ModelType.TTS, None),
+            (ModelType.STT, None),
         ]:
             if worker and getattr(worker, "is_loaded", lambda: True)():
                 loaded.append(model_type)
@@ -188,7 +187,8 @@ class ModelLoadBalancer(MediatorMixin):
         loaded_models: List[ModelType],
     ) -> List[ModelType]:
         """Keep local LLM state visible when daemon status is stale."""
-        worker = getattr(self.worker_manager, "_llm_generate_worker", None)
+        # Local LLM worker removed; daemon handles all LLM state
+        worker = None
         if worker is None:
             return loaded_models
         status_getter = getattr(worker, "current_model_status", None)
@@ -213,7 +213,7 @@ class ModelLoadBalancer(MediatorMixin):
             refreshed_api = refresher()
             if refreshed_api is not None:
                 self.api = refreshed_api
-        if self.api is None or getattr(self.api, "headless", False):
+        if self.api is None:
             return None
         return getattr(self.api, "daemon_client", None)
 
@@ -222,16 +222,8 @@ class ModelLoadBalancer(MediatorMixin):
         client = self._daemon_client()
         if client is None:
             return None
-        availability_check = getattr(client, "is_available", None)
-        if callable(availability_check):
-            try:
-                if not availability_check(timeout_seconds=0.2):
-                    return None
-            except TypeError:
-                if not availability_check():
-                    return None
         try:
-            status = client.daemon_runtime_status(auto_start=False)
+            status = client.daemon_runtime_status()
         except RuntimeError:
             return None
         if "runtimes" in status:
@@ -245,16 +237,28 @@ class ModelLoadBalancer(MediatorMixin):
         return loaded
 
     def _daemon_load(self, model_types: List[ModelType]) -> None:
-        """Load models through the daemon control API."""
+        """Load models through the daemon control API without blocking the GUI thread.
+
+        Delegates to the worker manager's async runtime control so the
+        LOADING/LOADED/FAILED lifecycle runs in a background thread.
+        """
         client = self._daemon_client()
         if client is None:
             return
         for model_type in model_types:
-            if self._worker_manager_runtime_control("load", model_type):
-                continue
             runtime_name = _RUNTIME_NAMES.get(model_type)
             if runtime_name is None:
                 continue
+            # Use async dispatch to avoid blocking the GUI thread on
+            # daemon HTTP calls that may take seconds to time out.
+            manager = getattr(self, "worker_manager", None)
+            controller = getattr(
+                manager, "_control_daemon_runtime_async", None
+            )
+            if controller is not None:
+                controller(runtime_name, "load", model_type)
+                continue
+            # Fallback: synchronous dispatch (legacy path)
             self._emit_model_status(model_type, ModelStatus.LOADING)
             try:
                 client.load_runtime(runtime_name)
@@ -264,7 +268,6 @@ class ModelLoadBalancer(MediatorMixin):
             if not client.wait_runtime_ready(
                 runtime_name,
                 loaded=True,
-                auto_start=False,
             ):
                 self._emit_model_status(model_type, ModelStatus.FAILED)
                 continue
@@ -289,7 +292,6 @@ class ModelLoadBalancer(MediatorMixin):
             if not client.wait_runtime_ready(
                 runtime_name,
                 loaded=False,
-                auto_start=False,
             ):
                 self._emit_model_status(model_type, ModelStatus.FAILED)
                 continue

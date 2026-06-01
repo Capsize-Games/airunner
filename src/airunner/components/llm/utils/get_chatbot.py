@@ -1,27 +1,39 @@
-from airunner.components.llm.data.chatbot import Chatbot
+from airunner.daemon_client.resource_store import get_resource_store
 from airunner.utils.application.get_logger import get_logger
 
 
 def get_chatbot():
-    """Return the current chatbot, determined by Chatbot.objects.filter_by_first(current=True, eager_load=...). If none exists, create a default chatbot."""
+    """Return the current chatbot. Creates a default if none exists."""
+    resource_store = get_resource_store()
     eager_load = [
         "target_files",
         "target_directories",
     ]
     try:
-        chatbot = Chatbot.objects.filter_by_first(
-            eager_load=eager_load, current=True
+        chatbot = resource_store.first(
+            "Chatbot",
+            eager_load=eager_load,
+            filters={"current": True},
         )
         if chatbot is None:
-            chatbot = Chatbot.objects.first(eager_load=eager_load)
+            chatbot = resource_store.first("Chatbot", eager_load=eager_load)
         if chatbot is None:
-            chatbot = Chatbot.objects.create(name="Foobar")
-            Chatbot.make_current(chatbot.id)
-            chatbot = Chatbot.objects.first(eager_load=eager_load)
+            chatbot = resource_store.create(
+                "Chatbot",
+                {"name": "Default", "current": True},
+            )
+            if chatbot is not None:
+                chatbot = resource_store.first(
+                    "Chatbot",
+                    eager_load=eager_load,
+                    filters={"id": chatbot.id},
+                )
+        if chatbot is None:
+            get_logger("get_chatbot").warning(
+                "Failed to create default chatbot"
+            )
+            return None
         return chatbot
     except Exception as e:
         get_logger("get_chatbot").error(f"Error getting chatbot: {e}")
-        # Create a default chatbot as fallback
-        chatbot = Chatbot.objects.create(name="Default")
-        Chatbot.make_current(chatbot.id)
-        return chatbot
+        return None

@@ -10,6 +10,7 @@ from airunner.components.llm.gui.widgets.templates.loading_ui import (
 
 
 class LoadingWidget(BaseWidget):
+    ui: Ui_loading_message  # type: ignore[assignment]
     widget_class_ = Ui_loading_message
 
     def __init__(self, *args, **kwargs):

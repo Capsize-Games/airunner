@@ -9,6 +9,7 @@ line-length = 79
 [tool.pytest.ini_options]
 markers = [
     "gui: tests that require Qt GUI components (may cause thread issues when run in bulk)",
+    "gui_functional: headless GUI functional tests with mocked backends",
     "slow: tests that take a long time to run",
     "fast: tests that use mocked responses and run quickly",
     "asyncio: asynchronous test marker",
@@ -19,6 +20,7 @@ markers = [
     "llm_runtime_smoke: safe llama.cpp runtime smoke tests using doubles only",
     "stt_runtime_smoke: safe STT runtime smoke tests using doubles only",
     "art_runtime_smoke: safe art runtime smoke tests using doubles only",
+    "art_service_runtime: direct art service runtime tests using real local models",
     "tts_runtime_smoke: safe TTS runtime smoke tests using doubles only",
     "llm_required: tests that require an LLM model to be loaded",
     "benchmark: tests using standard benchmark datasets (GSM8K, MATH, HumanEval)",

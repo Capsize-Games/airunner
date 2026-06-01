@@ -5,7 +5,6 @@ from uuid import uuid4
 from PIL import Image
 from PySide6.QtCore import QEvent, QTimer, Slot, Qt, QPoint
 from PySide6.QtWidgets import (
-    QApplication,
     QComboBox,
     QListWidget,
     QListWidgetItem,
@@ -30,18 +29,18 @@ from airunner.components.chat.gui.widgets.templates.chat_prompt_ui import (
 from airunner.components.chat.gui.widgets.chat_attachment_pill_widget import (
     ChatAttachmentPillWidget,
 )
-from airunner.components.documents.data.models.document import Document
+from airunner.components.documents.data.document_records import (
+    ensure_document_record,
+    list_documents,
+    update_document,
+)
 from airunner.components.documents.document_import import (
     chat_image_suffixes,
     import_document_to_library,
-    is_chat_image_path,
     is_rag_document_path,
     rag_document_suffixes,
 )
-from airunner.components.llm.data.conversation import Conversation
-from airunner.components.llm.managers.agent.document_loader import (
-    extract_text_from_file,
-)
+from airunner.components.llm.utils.document_extraction import extract_text
 from airunner.enums import (
     SignalCode,
     LLMActionType,
@@ -66,7 +65,10 @@ from airunner.settings import (
     SLASH_COMMANDS,
 )
 from airunner.components.llm.config.provider_config import LLMProviderConfig
-from airunner.utils.path_policy import PathPolicyError, resolve_existing_file
+from airunner.runtimes.file_policy import (
+    PathPolicyError,
+    resolve_existing_file,
+)
 from airunner.utils.image import convert_binary_to_image
 
 
@@ -81,6 +83,7 @@ KNOWLEDGE_BASE_DOCUMENT_SUFFIXES = rag_document_suffixes() + (
 
 
 class ChatPromptWidget(BaseWidget):
+    ui: Ui_chat_prompt  # type: ignore[assignment]
     widget_class_ = Ui_chat_prompt
     icons = [
         ("chevron-up", "send_button"),
@@ -192,7 +195,9 @@ class ChatPromptWidget(BaseWidget):
             LLMResponseWorker, sleep_time_in_ms=1
         )
         # Conversation history manager used to fetch conversation IDs and history
-        self._conversation_history_manager = ConversationHistoryManager()
+        self._conversation_history_manager = ConversationHistoryManager(
+            getattr(self.api, "daemon_client", None)
+        )
         self.loading = True
         self.conversation_id: int = None
         self.conversation = None
@@ -263,14 +268,12 @@ class ChatPromptWidget(BaseWidget):
         self._current_response_tokens = 0
         self._update_token_tracking_labels()
         
-        # Create a new conversation in the database
-        new_conversation = Conversation.create()
+        # Create a new daemon-backed conversation
+        new_conversation = self._conversation_history_manager.create_conversation()
         if new_conversation:
             self.logger.info(
                 f"Created new conversation with ID: {new_conversation.id}"
             )
-            # Make it the current conversation
-            Conversation.make_current(new_conversation.id)
             # Update GUI state
             self.conversation_id = new_conversation.id
             self.conversation = new_conversation
@@ -423,6 +426,7 @@ class ChatPromptWidget(BaseWidget):
             if (prompt_override is None or prompt_override == "")
             else prompt_override
         )
+
         if prompt is None or prompt == "":
             self.logger.warning("Prompt is empty")
             return
@@ -439,8 +443,6 @@ class ChatPromptWidget(BaseWidget):
         request_id = str(uuid4())
 
         self.clear_prompt()
-        QApplication.processEvents()
-
         self.logger.info(
             f"do_generate called with prompt: "
             f"{prompt[:100] if prompt else 'None'}..."
@@ -470,7 +472,6 @@ class ChatPromptWidget(BaseWidget):
                 cleaned_prompt,
                 request_id=request_id,
             )
-            QApplication.processEvents()
 
         QTimer.singleShot(
             0,
@@ -502,15 +503,10 @@ class ChatPromptWidget(BaseWidget):
         if conversation_id is None:
             conversation_id = self._ensure_conversation_context()
         if conversation_id is None:
-            self.logger.error(
-                "Aborting chat request - unable to determine conversation ID"
+            self.logger.warning(
+                "Proceeding without conversation ID - conversation "
+                "persistence is unavailable"
             )
-            self.ui.prompt.setPlainText(actual_prompt)
-            self.prompt = actual_prompt
-            self.generating = False
-            self._set_generation_button_visibility(False)
-            self.enable_send_button()
-            return
 
         model_load_balancer = getattr(self.api, "model_load_balancer", None)
         loaded_models = set(
@@ -520,7 +516,8 @@ class ChatPromptWidget(BaseWidget):
         )
         art_model_loaded = ModelType.SD in loaded_models
         llm_loaded = ModelType.LLM in loaded_models
-        if art_model_loaded and not llm_loaded:
+        daemon_client = getattr(self.api, "daemon_client", None)
+        if art_model_loaded and not llm_loaded and daemon_client is None:
             model_load_balancer.switch_to_non_art_mode()
         if not llm_loaded:
             show_loading = getattr(
@@ -554,7 +551,9 @@ class ChatPromptWidget(BaseWidget):
             action,
             getattr(self, "llm_generator_settings", None),
         )
-        llm_request.enable_thinking = True
+        llm_request.enable_thinking = (
+            self._is_thinking_enabled_for_request()
+        )
         llm_request.reasoning_effort = self._get_reasoning_effort_for_request()
         
         # Set force_tool if slash command specifies one
@@ -576,19 +575,26 @@ class ChatPromptWidget(BaseWidget):
             )
         
         self.logger.info(f"Sending request - action={action}, force_tool={llm_request.force_tool}, tool_categories={llm_request.tool_categories}")
-        
-        self.api.llm.send_request(
-            prompt=actual_prompt,
-            llm_request=llm_request,
-            action=action,
-            do_tts_reply=False,
-            conversation_id=conversation_id,
-            request_id=request_id,
-        )
+        try:
+            self.api.llm.send_request(
+                actual_prompt,
+                llm_request=llm_request,
+                action=action,
+                do_tts_reply=False,
+                conversation_id=conversation_id,
+                request_id=request_id,
+            )
+        except Exception as e:
+            self.logger.error(f"Error submitting generation request: {e}")
 
     def _is_thinking_enabled_for_request(self) -> bool:
         """Return the effective request thinking preference."""
-        return True
+        if not self._model_supports_thinking():
+            return False
+
+        return bool(
+            getattr(self.llm_generator_settings, "enable_thinking", True)
+        )
 
     def _get_reasoning_effort_for_request(self) -> Optional[str]:
         """Return the request-scoped GPT-OSS reasoning effort."""
@@ -915,7 +921,7 @@ class ChatPromptWidget(BaseWidget):
             return
         
         # Calculate position - above the prompt widget
-        prompt_rect = self.ui.prompt.geometry()
+        self.ui.prompt.geometry()
         global_pos = self.ui.prompt.mapToGlobal(QPoint(0, 0))
         
         # Size the popup
@@ -1147,7 +1153,7 @@ class ChatPromptWidget(BaseWidget):
     def _extract_document_attachment_text(self, file_path: str) -> str:
         """Return extracted text for one attached document, if available."""
         try:
-            return extract_text_from_file(file_path) or ""
+            return extract_text(file_path) or ""
         except Exception as exc:
             self.logger.debug(
                 "Attachment capability scan failed for %s: %s",
@@ -1327,10 +1333,10 @@ class ChatPromptWidget(BaseWidget):
         model_path = getattr(settings, "model_path", "") or ""
 
         if model_service == ModelService.LOCAL.value:
-            # Check model_version first (e.g., "qwen3-8b")
+            # Check model_version first (e.g., "qwen3.5-9b")
             if self._lookup_model_supports_thinking(model_version):
                 return True
-            # Fall back to model_path (e.g., "Qwen/Qwen3-8B" or local path)
+            # Fall back to model_path (e.g., "Qwen/Qwen3.5-9B" or local path)
             return self._lookup_model_supports_thinking(model_path)
 
         return False
@@ -1503,7 +1509,6 @@ class ChatPromptWidget(BaseWidget):
 
     def _update_action_dropdown(self) -> None:
         """Deprecated - action is always AUTO now."""
-        pass
 
     def _update_thinking_checkbox_visibility(self) -> None:
         """Update footer reasoning controls for the current model."""
@@ -1668,14 +1673,26 @@ class ChatPromptWidget(BaseWidget):
         self.conversation_id = conversation_id
         self._set_api_conversation_id(conversation_id)
 
-        conversation = Conversation.objects.filter_by_first(id=conversation_id)
+        session = self._conversation_history_manager.get_conversation_session(
+            conversation_id=conversation_id,
+            max_messages=50,
+        )
+        conversation = session.get("conversation")
         self.conversation = conversation
+        if conversation is None:
+            if hasattr(self.ui, "conversation"):
+                self.ui.conversation.clear_conversation()
+            self.conversation_id = None
+            self._set_api_conversation_id(None)
+            return
         if hasattr(self.api, "llm") and hasattr(self.api.llm, "clear_history"):
             self.api.llm.clear_history(conversation_id=conversation_id)
-        messages = (
+        messages = session.get(
+            "messages",
             self._conversation_history_manager.load_conversation_history(
-                conversation_id=conversation_id, max_messages=50
-            )
+                conversation=conversation,
+                max_messages=50,
+            ),
         )
         self.logger.debug(
             f"Loaded {len(messages)} messages from conversation {conversation_id}"
@@ -1704,15 +1721,12 @@ class ChatPromptWidget(BaseWidget):
 
     def _clear_conversation(self, skip_update: bool = False):
         del skip_update
-        pass
 
     def _set_conversation_widgets(self, messages, skip_scroll: bool = False):
         del messages, skip_scroll
-        pass
 
     def _clear_conversation_widgets(self, skip_update: bool = False):
         del skip_update
-        pass
 
     def add_message_to_conversation(self, *args, **kwargs):
         pass
@@ -1725,7 +1739,6 @@ class ChatPromptWidget(BaseWidget):
 
     def register_web_channel(self, channel):
         del channel
-        pass
 
     def _ensure_conversation_context(self) -> Optional[int]:
         """Ensure we have a valid conversation ID before sending a request."""
@@ -1741,12 +1754,11 @@ class ChatPromptWidget(BaseWidget):
             self._set_api_conversation_id(conversation.id)
             return self.conversation_id
 
-        conversation = Conversation.create()
+        conversation = self._conversation_history_manager.create_conversation()
         if conversation is None:
             self.logger.error("Failed to create a new conversation")
             return None
 
-        Conversation.make_current(conversation.id)
         self.conversation = conversation
         self.conversation_id = conversation.id
         self._set_api_conversation_id(conversation.id)
@@ -2035,11 +2047,11 @@ class ChatPromptWidget(BaseWidget):
         model_id: str,
         repo_id: str = "",
     ) -> str:
-        """Return the configured local storage path for one local model."""
+        """Return the expected local artifact path for one local model."""
         base_path = os.path.expanduser(
             getattr(self.path_settings, "base_path", "~/.local/share/airunner")
         )
-        return LLMProviderConfig.get_local_storage_path(
+        return LLMProviderConfig.get_expected_local_artifact_path(
             base_path,
             "local",
             model_id=model_id,
@@ -2415,7 +2427,7 @@ class ChatPromptWidget(BaseWidget):
         """Return active knowledge-base documents for prompt pills."""
         active_paths: List[str] = []
         seen: set[str] = set()
-        for document in Document.objects.all():
+        for document in list_documents():
             file_path = getattr(document, "path", None)
             if not getattr(document, "active", False) or not file_path:
                 continue
@@ -2541,15 +2553,13 @@ class ChatPromptWidget(BaseWidget):
         if not validated_path:
             return
 
-        docs = Document.objects.filter_by(path=validated_path)
-        if docs:
-            Document.objects.update(pk=docs[0].id, active=True)
-        else:
-            Document.objects.create(
-                path=validated_path,
-                active=True,
-                indexed=False,
-            )
+        document = ensure_document_record(
+            validated_path,
+            active=True,
+            indexed=False,
+        )
+        if document is not None:
+            update_document(document.id, {"active": True})
 
         self._add_document_attachment(validated_path)
         self.emit_signal(
@@ -2569,9 +2579,8 @@ class ChatPromptWidget(BaseWidget):
             self._document_attachment_widgets.remove(widget)
         self._remove_attachment_widget(widget)
 
-        docs = Document.objects.filter_by(path=file_path)
-        if docs:
-            Document.objects.update(pk=docs[0].id, active=False)
+        for document in list_documents(filters={"path": file_path}):
+            update_document(document.id, {"active": False})
 
         self.emit_signal(
             SignalCode.DOCUMENT_COLLECTION_CHANGED,

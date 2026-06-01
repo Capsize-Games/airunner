@@ -13,7 +13,6 @@ from PySide6.QtCore import (
 )
 from PySide6.QtWidgets import QApplication, QWidget
 
-from airunner.components.application.data import ShortcutKeys
 from airunner.components.model_management import ModelResourceManager
 from airunner.components.model_management.types import ModelState
 from airunner.enums import (
@@ -51,6 +50,7 @@ class SaveGeneratorSettingsWorker(
         self.current_negative_prompt_value = None
         self.current_secondary_prompt_value = None
         self.current_secondary_negative_prompt_value = None
+        self._image_request = None
 
     def stop(self) -> None:
         """Stop the settings worker loop."""
@@ -99,6 +99,7 @@ class SaveGeneratorSettingsWorker(
 
 
 class StableDiffusionGeneratorForm(BaseWidget):
+    ui: Ui_stablediffusion_generator_form  # type: ignore[assignment]
     widget_class_ = Ui_stablediffusion_generator_form
     changed_signal = Signal(str, object)
     _prompt_containers: Dict[str, QWidget] = {}
@@ -173,6 +174,22 @@ class StableDiffusionGeneratorForm(BaseWidget):
             generate_button.setVisible(not is_generating)
         if interrupt_button is not None:
             interrupt_button.setVisible(is_generating)
+    
+    @property
+    def image_request(self):
+        return self._image_request
+    
+    @image_request.setter
+    def image_request(self, val):
+        self._image_request = val
+    
+    @property
+    def model_is_loaded(self) -> bool:
+        model_path = str(getattr(self.image_request, "model_path", "") or "").strip()
+        if not model_path:
+            return False
+        resource_manager = ModelResourceManager()
+        return resource_manager.get_model_state(model_path) is ModelState.LOADED
 
     @property
     def is_sd_xl_or_turbo(self) -> bool:
@@ -428,7 +445,10 @@ class StableDiffusionGeneratorForm(BaseWidget):
 
     @property
     def active_rect(self):
-        pos = self.active_grid_settings.pos
+        pos = (
+            self.active_grid_settings.pos_x,
+            self.active_grid_settings.pos_y,
+        )
         rect = QRect(
             pos[0],
             pos[1],
@@ -586,15 +606,7 @@ class StableDiffusionGeneratorForm(BaseWidget):
         return self.api.art.canvas.create_image_request(
             additional_prompts=additional_prompts, callback=callback
         )
-
-    @staticmethod
-    def _uses_loaded_generation_progress(image_request) -> bool:
-        model_path = str(getattr(image_request, "model_path", "") or "").strip()
-        if not model_path:
-            return False
-        resource_manager = ModelResourceManager()
-        return resource_manager.get_model_state(model_path) is ModelState.LOADED
-
+    
     def do_generate(self, data=None):
         data = data or {}
         image_request = data.get("image_request")
@@ -621,12 +633,14 @@ class StableDiffusionGeneratorForm(BaseWidget):
                 image_request = None
             if image_request is not None:
                 request_data["image_request"] = image_request
+        
+        self.image_request = image_request
 
         self._generation_in_progress = True
         self._backend_progress_started = False
         self._waiting_for_backend_progress = True
         self._set_generation_button_visibility(True)
-        if self._uses_loaded_generation_progress(image_request):
+        if self.model_is_loaded:
             self.set_progress_bar_value(0)
         else:
             self.start_progress_bar()
@@ -725,6 +739,8 @@ class StableDiffusionGeneratorForm(BaseWidget):
     def set_progress_bar_value(self, value):
         progressbar = self.ui.progress_bar
         if not progressbar:
+            return
+        if not self.model_is_loaded and not self._generation_in_progress:
             return
         if progressbar.maximum() == 0:
             progressbar.setRange(0, 100)
@@ -862,11 +878,13 @@ class StableDiffusionGeneratorForm(BaseWidget):
             progressbar.setFormat("Complete")
 
     def _set_keyboard_shortcuts(self):
-        generate_image_key = ShortcutKeys.objects.filter_by_first(
-            display_name="Generate Image"
+        generate_image_key = self.resource_store.first(
+            "ShortcutKeys",
+            filters={"display_name": "Generate Image"},
         )
-        interrupt_key = ShortcutKeys.objects.filter_by_first(
-            display_name="Interrupt"
+        interrupt_key = self.resource_store.first(
+            "ShortcutKeys",
+            filters={"display_name": "Interrupt"},
         )
         if generate_image_key:
             self.ui.generate_button.setShortcut(generate_image_key.key)

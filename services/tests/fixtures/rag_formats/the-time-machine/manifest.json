@@ -1,0 +1,34 @@
+{
+  "title": "The Time Machine",
+  "author": "H. G. Wells",
+  "project_gutenberg_ebook_id": 35,
+  "source_base_url": "https://www.gutenberg.org",
+  "files": {
+    "source.epub": {
+      "format": "epub",
+      "source_path": "/cache/epub/35/pg35-images-3.epub",
+      "sha256": "c604db3511644bff3519a34d1aef45cb247a28df9b4b53c2ee8ef888cf19071f"
+    },
+    "source.mobi": {
+      "format": "mobi",
+      "source_path": "/cache/epub/35/pg35-images.mobi",
+      "sha256": "12df2a2e7ad7d8f52dd898e8618d36bc5813cc66dab116b8e6f268896d0f794a"
+    },
+    "source.pdf": {
+      "format": "pdf",
+      "derived_from": "source.epub",
+      "derivation": [
+        "pandoc source.epub -t html -o source.html",
+        "libreoffice --headless --convert-to pdf source.html"
+      ],
+      "sha256": "dc83b8db2397a63319f2ec2bcb9b6a8588b6fb02e07fd5a7d44c4211a13dd014"
+    }
+  },
+  "stable_anchors": [
+    "Eloi",
+    "Morlocks",
+    "Weena",
+    "Time Traveller",
+    "Sphinx"
+  ]
+}

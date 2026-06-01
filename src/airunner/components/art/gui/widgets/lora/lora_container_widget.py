@@ -1,31 +1,29 @@
-import os
-from typing import List, Type
-from PySide6.QtCore import Slot, QSize, QThread, QTimer, Qt
+from typing import Any, Dict, List
+from PySide6.QtCore import Slot, QSize, QTimer, Qt
 from PySide6.QtWidgets import QWidget, QSizePolicy, QApplication
 
-from airunner.components.art.data.lora import Lora
 from airunner.enums import SignalCode, ModelType, ModelStatus
-from airunner.utils.models import scan_path_for_lora
 from airunner.components.application.gui.widgets.base_widget import BaseWidget
 from airunner.components.art.gui.widgets.lora.lora_widget import LoraWidget
 from airunner.components.art.gui.widgets.lora.templates.lora_container_ui import (
     Ui_lora_container,
 )
-from airunner.components.application.workers.directory_watcher import (
-    DirectoryWatcher,
-)
 
 
 class LoraContainerWidget(BaseWidget):
+    ui: Ui_lora_container  # type: ignore[assignment]
     widget_class_ = Ui_lora_container
     search_filter = ""
     spacer = None
 
     def __init__(self, *args, **kwargs):
         self.signal_handlers = {
-            # SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL: self.on_application_settings_changed_signal,
-            SignalCode.LORA_UPDATED_SIGNAL: self.on_lora_updated_signal,
-            SignalCode.MODEL_STATUS_CHANGED_SIGNAL: self.on_model_status_changed_signal,
+            SignalCode.LORA_UPDATED_SIGNAL: (
+                self.on_lora_updated_signal
+            ),
+            SignalCode.MODEL_STATUS_CHANGED_SIGNAL: (
+                self.on_model_status_changed_signal
+            ),
             SignalCode.LORA_STATUS_CHANGED: self.on_lora_modified,
             SignalCode.LORA_DELETE_SIGNAL: self._delete_lora,
         }
@@ -40,87 +38,13 @@ class LoraContainerWidget(BaseWidget):
         self._apply_button_enabled = False
         self.ui.apply_lora_button.setEnabled(self._apply_button_enabled)
 
-        # Initialize scanner components
-        self._scanner_worker = None
-        self._scanner_thread = None
-        self._setup_directory_watcher()
-
-    def _setup_directory_watcher(self):
-        """Setup directory watcher with proper error handling and cleanup."""
-        try:
-            self._scanner_worker = DirectoryWatcher(
-                self.path_settings.base_path,
-                self._scan_path_for_lora,
-            )
-            self._scanner_thread = QThread()
-            self._scanner_thread.setObjectName("LoraContainerWidgetScanner")
-            self._scanner_worker.moveToThread(self._scanner_thread)
-
-            # Ensure scan_completed is handled in the UI thread
-            self._scanner_worker.scan_completed.connect(
-                self.on_scan_completed,
-                type=Qt.QueuedConnection,  # Ensure thread-safe signal handling
-            )
-            self._scanner_thread.started.connect(self._scanner_worker.run)
-            self._scanner_thread.finished.connect(self._cleanup_scanner)
-            self._scanner_thread.start()
-
-            self.logger.debug("Directory watcher started for LoRA scanning")
-        except Exception as e:
-            self.logger.error(f"Failed to setup directory watcher: {e}")
-
-    def _cleanup_scanner(self):
-        """Clean up scanner resources."""
-        if self._scanner_worker:
-            self._scanner_worker.deleteLater()
-            self._scanner_worker = None
-        if self._scanner_thread:
-            self._scanner_thread.deleteLater()
-            self._scanner_thread = None
-
-    def _shutdown_scanner(self) -> None:
-        """Stop the directory watcher thread before widget teardown."""
-        try:
-            if self._scanner_worker:
-                self._scanner_worker.stop()
-            if self._scanner_thread:
-                self._scanner_thread.quit()
-                if not self._scanner_thread.wait(2500):
-                    self.logger.warning(
-                        "Scanner thread did not quit gracefully, terminating"
-                    )
-                    self._scanner_thread.terminate()
-                    self._scanner_thread.wait(1000)
-        except Exception as e:
-            self.logger.error(f"Error during scanner cleanup: {e}")
-        finally:
-            self._cleanup_scanner()
-
-    def handle_close(self):
-        """Stop background scanner when the application is quitting."""
-        self._shutdown_scanner()
-
-    def closeEvent(self, event):
-        self._shutdown_scanner()
-        super().closeEvent(event)
-
     @property
-    def lora(self) -> List[Type[Lora]]:
+    def lora(self) -> List[Any]:
         return self.load_lora()
-
-    def _scan_path_for_lora(self, path) -> bool:
-        if self._deleting:
-            return False
-        return scan_path_for_lora(path)
-
-    def on_scan_completed(self, force_reload: bool):
-        self._load_lora(force_reload=force_reload)
 
     @Slot()
     def scan_for_lora(self):
-        # clear all lora widgets
-        force_reload = scan_path_for_lora(self.path_settings.base_path)
-        self._load_lora(force_reload=force_reload)
+        self._load_lora(force_reload=True)
 
     @Slot()
     def on_apply_lora_button_clicked(self):
@@ -157,7 +81,10 @@ class LoraContainerWidget(BaseWidget):
     def _toggle_lora_widgets(self, enable: bool):
         for i in range(self.ui.lora_scroll_area.widget().layout().count()):
             lora_widget = (
-                self.ui.lora_scroll_area.widget().layout().itemAt(i).widget()
+                self.ui.lora_scroll_area.widget()
+                .layout()
+                .itemAt(i)
+                .widget()
             )
             if isinstance(lora_widget, LoraWidget):
                 if enable:
@@ -176,7 +103,10 @@ class LoraContainerWidget(BaseWidget):
             self.ui.lora_scroll_area.widget().layout().itemAt(i).widget()
             for i in range(self.ui.lora_scroll_area.widget().layout().count())
             if isinstance(
-                self.ui.lora_scroll_area.widget().layout().itemAt(i).widget(),
+                self.ui.lora_scroll_area.widget()
+                .layout()
+                .itemAt(i)
+                .widget(),
                 LoraWidget,
             )
         ]
@@ -197,7 +127,7 @@ class LoraContainerWidget(BaseWidget):
         if self._version is None or self._version != version or force_reload:
             self._version = version
             self.clear_lora_widgets()
-            loras = Lora.objects.filter_by(version=version)
+            loras = self._safe_lora_query(version)
             if loras:
                 filtered_loras = [
                     lora
@@ -205,39 +135,47 @@ class LoraContainerWidget(BaseWidget):
                     if self.search_filter.lower() in lora.name.lower()
                 ]
                 for lora in filtered_loras:
-                    print("adding lora widget for", lora.name)
                     self._add_lora(lora)
                 self.add_spacer()
 
+    def _safe_lora_query(self, version: str):
+        """Query lora from daemon, returning empty list on error."""
+        try:
+            result = self.resource_store.query(
+                "Lora",
+                filters={"version": version},
+            )
+            return result if result is not None else []
+        except Exception as e:
+            self.logger.warning(
+                "Lora query against daemon failed: %s", e
+            )
+            return []
+
     def remove_spacer(self):
-        # remove spacer from end of self.ui.scrollAreaWidgetContents.layout()
         if self.spacer:
-            self.ui.scrollAreaWidgetContents.layout().removeWidget(self.spacer)
-            self.spacer.setParent(None)  # Fully remove from parent
-            self.spacer.deleteLater()  # Schedule for deletion
-            self.spacer = None  # Clear reference
+            self.ui.scrollAreaWidgetContents.layout().removeWidget(
+                self.spacer
+            )
+            self.spacer.setParent(None)
+            self.spacer.deleteLater()
+            self.spacer = None
 
     def add_spacer(self):
-        # add spacer to end of self.ui.scrollAreaWidgetContents.layout()
-        self.remove_spacer()  # Always remove old spacer first
+        self.remove_spacer()
 
-        # Create a new visible spacer widget with clear visual presence
         self.spacer = QWidget()
         self.spacer.setSizePolicy(
             QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding
         )
-        self.spacer.setMinimumHeight(100)  # Make it substantially taller
+        self.spacer.setMinimumHeight(100)
 
-        # Add to layout
         self.ui.scrollAreaWidgetContents.layout().addWidget(self.spacer)
-
-        # Force layout update to ensure spacer takes effect
         self.ui.scrollAreaWidgetContents.layout().update()
         QApplication.processEvents()
-
-        # Schedule another layout update after events are processed
         QTimer.singleShot(
-            50, lambda: self.ui.scrollAreaWidgetContents.layout().update()
+            50,
+            lambda: self.ui.scrollAreaWidgetContents.layout().update(),
         )
 
     def _add_lora(self, lora):
@@ -246,29 +184,14 @@ class LoraContainerWidget(BaseWidget):
         lora_widget = LoraWidget(lora=lora)
         self.ui.scrollAreaWidgetContents.layout().addWidget(lora_widget)
 
-    def _delete_lora(self, data: dict):
+    def _delete_lora(self, data: Dict):
         self._deleting = True
         lora_widget = data["lora_widget"]
 
-        # Delete the lora from disc
-        lora_path = os.path.expanduser(
-            os.path.join(
-                self.path_settings.base_path,
-                "art/models",
-                self._version,
-                "lora",
-            )
+        # Delete lora from database via daemon
+        self.resource_store.delete(
+            "Lora", lora_widget.current_lora.id
         )
-        lora_file = lora_widget.current_lora.name
-        for dirpath, dirnames, filenames in os.walk(lora_path):
-            for file in filenames:
-                if file.startswith(lora_file):
-                    os.remove(os.path.join(dirpath, file))
-                    break
-
-        # Remove lora from database
-
-        Lora.objects.delete(lora_widget.current_lora.id)
 
         self._apply_button_enabled = True
         self.ui.apply_lora_button.setEnabled(self._apply_button_enabled)
@@ -282,71 +205,22 @@ class LoraContainerWidget(BaseWidget):
                 available_lora.append(lora)
         return available_lora
 
-    def initialize_lora_trigger_words(self):
-        for lora in self.lora:
-            trigger_word = (
-                lora["trigger_word"] if "trigger_word" in lora else ""
-            )
-            for tab_name in self.tabs.keys():
-                for i in range(
-                    self.tool_menu_widget.lora_container_widget.lora_scroll_area.widget()
-                    .layout()
-                    .count()
-                ):
-                    lora_widget = (
-                        self.tool_menu_widget.lora_container_widget.lora_scroll_area.widget()
-                        .layout()
-                        .itemAt(i)
-                        .widget()
-                    )
-                    if not lora_widget:
-                        continue
-                    if lora_widget.enabledCheckbox.text() == lora["name"]:
-                        if trigger_word != "":
-                            lora_widget.trigger_word.setText(trigger_word)
-                        lora_widget.trigger_word.textChanged.connect(
-                            lambda value, _lora_widget=lora_widget, _lora=lora, _tab_name=tab_name: self.handle_lora_trigger_word(
-                                _lora, _lora_widget, value
-                            )
-                        )
-                        break
-
-    def handle_lora_trigger_word(self, lora, _lora_widget, value):
-        for n in range(len(self.lora)):
-            lora_object = self.lora[n]
-            if lora_object.name == lora.name:
-                lora_object.trigger_word = value
-                self.update_lora(lora_object)
-
-    def handle_lora_slider(self, lora, lora_widget, value, _tab_name):
-        float_val = value / 100
-        for n in range(len(self.lora)):
-            lora_object = self.lora[n]
-            if lora_object.name == lora.name:
-                lora_object.scale = float_val
-                self.update_lora(lora_object)
-        lora_widget.scaleSpinBox.setValue(float_val)
-
-    def handle_lora_spinbox(self, lora, lora_widget, value, _tab_name):
-        for n in range(len(self.lora)):
-            lora_object = self.lora[n]
-            if lora_object.name == lora.name:
-                lora_object.scale = value
-                self.update_lora(lora_object)
-        lora_widget.scaleSlider.setValue(int(value * 100))
-
     def search_text_changed(self, val):
         self.search_filter = val
         self._load_lora(force_reload=True)
 
     def clear_lora_widgets(self):
         if self.spacer:
-            self.ui.scrollAreaWidgetContents.layout().removeWidget(self.spacer)
+            self.ui.scrollAreaWidgetContents.layout().removeWidget(
+                self.spacer
+            )
         for i in reversed(
             range(self.ui.scrollAreaWidgetContents.layout().count())
         ):
             widget = (
-                self.ui.scrollAreaWidgetContents.layout().itemAt(i).widget()
+                self.ui.scrollAreaWidgetContents.layout()
+                .itemAt(i)
+                .widget()
             )
             if isinstance(widget, LoraWidget):
                 widget.deleteLater()

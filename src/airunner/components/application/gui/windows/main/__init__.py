@@ -2,7 +2,7 @@
 # Import directly from the specific modules instead of from this package.
 # e.g., from airunner.components.application.gui.windows.main.model_load_balancer import ModelLoadBalancer
 
-__all__ = ["ModelLoadBalancer", "LLMGeneratorSettings", "WorkerManager"]
+__all__ = ["ModelLoadBalancer", "WorkerManager"]
 
 
 def __getattr__(name):
@@ -12,11 +12,6 @@ def __getattr__(name):
             ModelLoadBalancer,
         )
         return ModelLoadBalancer
-    elif name == "LLMGeneratorSettings":
-        from airunner.components.llm.data.llm_generator_settings import (
-            LLMGeneratorSettings,
-        )
-        return LLMGeneratorSettings
     elif name == "WorkerManager":
         from airunner.components.application.gui.windows.main.worker_manager import (
             WorkerManager,

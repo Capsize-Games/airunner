@@ -8,6 +8,7 @@ from airunner.components.application.gui.widgets.paths.templates.path_ui import 
 
 
 class PathWidget(BaseWidget):
+    ui: Ui_path_widget  # type: ignore[assignment]
     widget_class_ = Ui_path_widget
 
     @property

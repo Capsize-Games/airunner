@@ -147,6 +147,15 @@ flowchart LR
 -
   [tool_management_mixin.py](../src/airunner/components/llm/managers/mixins/tool_management_mixin.py)
   rebinds tools on the active workflow model for each request.
+-
+  [tool_manager.py](../services/src/airunner_services/llm/tool_manager.py)
+  wraps registered tools, injects service-owned dependencies such as the
+  API or active RAG manager at execution time, and applies request-
+  scoped defaults.
+- Dependency-injected wrappers expose only model-controlled arguments in
+  the visible tool schema. Internal kwargs such as `api` stay hidden,
+  which keeps forced-tool and LangGraph execution aligned with the real
+  tool signature.
 - `tool_choice` can be left unset, set to one named tool, or set to
   `"any"` when a tool call is required.
 - In `ChatGGUF`, native llama.cpp tool binding is used only when

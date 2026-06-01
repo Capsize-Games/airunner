@@ -151,7 +151,8 @@ main() {
     local python_path
     cmd=(
         "$(python_command)"
-        "$ROOT_DIR/src/airunner/bin/build_end_user_bundle.py"
+        -m
+        airunner_native.bin.build_end_user_bundle
         --target-platform "$TARGET_PLATFORM"
         --bundle-name "$BUNDLE_NAME"
         --launcher-binary "$(launcher_binary)"
@@ -171,7 +172,7 @@ main() {
         cmd+=(--dry-run)
     fi
 
-    python_path="$ROOT_DIR/src${PYTHONPATH:+:$PYTHONPATH}"
+    python_path="$ROOT_DIR/native/src${PYTHONPATH:+:$PYTHONPATH}"
     run_cmd env "PYTHONPATH=$python_path" "${cmd[@]}"
 }
 

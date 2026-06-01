@@ -5,7 +5,7 @@ This module provides utilities to extract and handle this content.
 
 Supported formats:
 - Qwen3: <think>...</think> (angle bracket format)
-- Ministral 3 Reasoning: [THINK]...[/THINK] (bracket format)
+- Bracket reasoning: [THINK]...[/THINK] (bracket format)
 
 Example response from Qwen3:
     <think>
@@ -14,7 +14,7 @@ Example response from Qwen3:
     </think>
     Here is my final answer.
 
-Example response from Ministral 3 Reasoning:
+Example response from a bracket-format reasoning model:
     [THINK]
     Let me reason through this problem...
     Step 1: Analyze the input...
@@ -29,7 +29,7 @@ from typing import Optional, Tuple
 
 # Thinking tag patterns
 ANGLE_THINK_PATTERN = r"<think>(.*?)</think>"  # Qwen3 format
-BRACKET_THINK_PATTERN = r"\[THINK\](.*?)\[/THINK\]"  # Ministral 3 Reasoning format
+BRACKET_THINK_PATTERN = r"\[THINK\](.*?)\[/THINK\]"  # Bracket reasoning format
 # Combined pattern that matches either format
 COMBINED_THINK_PATTERN = r"(?:<think>(.*?)</think>|\[THINK\](.*?)\[/THINK\])"
 
@@ -58,7 +58,7 @@ def parse_thinking_response(response: str, tag_format: str = "auto") -> Thinking
     """Parse a model response and extract thinking content.
     
     Handles both complete and incomplete thinking blocks gracefully.
-    Supports both Qwen3 (<think>...</think>) and Ministral 3 ([THINK]...[/THINK]).
+    Supports both Qwen3 (<think>...</think>) and bracket reasoning blocks.
     
     Args:
         response: Raw response string from model.
@@ -204,7 +204,7 @@ def parse_thinking_from_tokens(
 def strip_thinking_tags(response: str) -> str:
     """Remove thinking blocks from a response.
     
-    Supports both Qwen3 (<think>...</think>) and Ministral 3 ([THINK]...[/THINK]).
+    Supports both Qwen3 (<think>...</think>) and bracket reasoning blocks.
     Useful when you only want the final answer without reasoning.
     
     Args:
@@ -227,7 +227,7 @@ def strip_thinking_tags(response: str) -> str:
 def has_thinking_content(response: str) -> bool:
     """Check if a response contains thinking content.
     
-    Supports both Qwen3 (<think>) and Ministral 3 ([THINK]) formats.
+    Supports both Qwen3 (<think>) and bracket reasoning formats.
     
     Args:
         response: Response string to check.
@@ -241,7 +241,7 @@ def has_thinking_content(response: str) -> bool:
 def extract_thinking_and_response(response: str, tag_format: str = "auto") -> Tuple[Optional[str], str]:
     """Extract thinking content and main response separately.
     
-    Supports both Qwen3 (<think>...</think>) and Ministral 3 ([THINK]...[/THINK]).
+    Supports both Qwen3 (<think>...</think>) and bracket reasoning blocks.
     
     Args:
         response: Raw response that may contain thinking blocks.
@@ -338,7 +338,7 @@ def strip_stored_thinking_prefix(
 def detect_thinking_open_tag(text: str) -> Tuple[bool, str, str, str]:
     """Detect if text contains an opening thinking tag.
     
-    Supports both <think> (Qwen3) and [THINK] (Ministral 3) formats.
+    Supports both <think> and [THINK] reasoning formats.
     
     Args:
         text: Chunk of streaming text to check.

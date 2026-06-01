@@ -17,7 +17,7 @@ AI Runner uses a **multi-tier model architecture** where different models specia
 │         - Handles conversation                               │
 │         - Makes tool calls                                   │
 │         - Orchestrates workflow                              │
-│         - Examples: Qwen3-8B, Qwen2.5-7B, Ministral3-8B     │
+│         - Examples: Qwen3.5-9B, Qwen2.5-7B                  │
 └────────────────────────┬────────────────────────────────────┘
                          │
                          │ Tool Calls
@@ -100,9 +100,8 @@ stable_diffusion.generate(enhanced_prompt)
 
 | Model | Size | Function Calling | Context | Use Case |
 |-------|------|------------------|---------|----------|
-| **Qwen3-8B** | 8B | ✅ Excellent | 32K (131K YaRN) | **Default** - Supports thinking & instruct modes |
+| **Qwen3.5-9B** | 9B | ✅ Excellent | 262K | **Default** - Long-context local chat model |
 | **Qwen2.5-7B-Instruct** | 7B | ✅ Excellent | 128K | Alternative - great tool calling |
-| **Ministral3-8B-Instruct** | 8B | ✅ Native | 256K | Vision + native function calling |
 
 ### Specialized Models
 

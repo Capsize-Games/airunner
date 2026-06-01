@@ -13,8 +13,11 @@ from urllib.parse import unquote, urlparse
 from PIL import Image
 from PySide6.QtGui import QDragEnterEvent, QDropEvent, QDragMoveEvent
 
-from airunner.components.tools.url_safety import safe_fetch_bytes
-from airunner.utils.path_policy import PathPolicyError, resolve_existing_file
+from airunner.runtimes.file_policy import (
+    PathPolicyError,
+    resolve_existing_file,
+)
+from airunner.url_safety import safe_fetch_bytes
 
 
 # Custom MIME type used by ImageWidget for drag operations

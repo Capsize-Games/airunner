@@ -148,7 +148,7 @@ class ImageAttachmentWidget(QFrame):
             pixmap = QPixmap.fromImage(qimage)
 
             self._thumbnail_label.setPixmap(pixmap)
-        except Exception as e:
+        except Exception:
             # Fallback to placeholder on error
             self._thumbnail_label.setText("🖼")
             self._thumbnail_label.setStyleSheet("font-size: 24px;")

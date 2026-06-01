@@ -7,6 +7,7 @@ from airunner.components.application.gui.widgets.seed.templates.seed_ui import (
 
 
 class SeedWidget(BaseWidget):
+    ui: Ui_seed_widget  # type: ignore[assignment]
     widget_class_ = Ui_seed_widget
     name = "seed_widget"
 

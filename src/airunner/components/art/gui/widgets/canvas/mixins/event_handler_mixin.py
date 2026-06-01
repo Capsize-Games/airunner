@@ -5,7 +5,7 @@ resize, and show events for the canvas view.
 """
 
 from PySide6.QtCore import QEvent, QPointF, Qt, QTimer
-from PySide6.QtGui import QMouseEvent, QResizeEvent
+from PySide6.QtGui import QMouseEvent
 
 
 

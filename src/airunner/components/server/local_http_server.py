@@ -499,44 +499,6 @@ class MultiDirectoryCORSRequestHandler(SimpleHTTPRequestHandler):
         return super().translate_path(safe_path)
 
 
-class CORSRequestHandler(SimpleHTTPRequestHandler):
-    """Request handler with CORS support (locked down for production)."""
-
-    def _send_lna_cors_headers(self):
-        # Do NOT send Access-Control-Allow-Private-Network or permissive CORS
-        pass
-
-    def end_headers(self):
-        self.send_header(
-            "Strict-Transport-Security",
-            "max-age=63072000; includeSubDomains; preload",
-        )
-        self.send_header("X-Content-Type-Options", "nosniff")
-        self.send_header("X-Frame-Options", "DENY")
-        self.send_header("Referrer-Policy", "no-referrer")
-        self.send_header("X-XSS-Protection", "1; mode=block")
-        super().end_headers()
-
-    def do_HEAD(self):
-        return self.do_GET()
-
-    def do_POST(self):
-        self.send_error(405, "Method Not Allowed")
-
-    def do_PUT(self):
-        self.send_error(405, "Method Not Allowed")
-
-    def do_DELETE(self):
-        self.send_error(405, "Method Not Allowed")
-
-    def do_OPTIONS(self):
-        self.send_error(403, "Forbidden")
-
-    def list_directory(self, path):
-        self.send_error(403, "Directory listing not allowed")
-        return None
-
-
 class LocalHttpServerThread(QThread):
     """Thread to run a local HTTPS server with optional directory and SSL support.
 

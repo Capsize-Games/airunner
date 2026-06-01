@@ -9,9 +9,6 @@ class EmbeddingAPIServices(APIServiceBase):
             {"embedding_widget": embedding_widget},
         )
 
-    def status_changed(self):
-        self.emit_signal(SignalCode.EMBEDDING_STATUS_CHANGED)
-
     def update(self):
         self.emit_signal(SignalCode.EMBEDDING_UPDATE_SIGNAL)
 

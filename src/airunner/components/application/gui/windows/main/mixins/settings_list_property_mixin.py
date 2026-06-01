@@ -1,11 +1,6 @@
-"""Mixin providing list/collection properties for settings models."""
+"""Mixin providing list and collection properties for GUI resources."""
 
-from typing import List, Type, Any, Optional
-
-from airunner.components.application.gui.windows.main.settings_model_factory import (
-    get_settings_model,
-)
-# Removed heavy import
+from typing import Any, List, Optional, Type
 
 
 class SettingsListPropertyMixin:
@@ -59,24 +54,36 @@ class SettingsListPropertyMixin:
     @property
     def image_filter_values(self) -> Optional[List[Any]]:
         """Get all image filter value configurations."""
-        ImageFilterValue = get_settings_model("ImageFilterValue")
-        return ImageFilterValue.objects.all()
+        return self.resource_store.query("ImageFilterValue")
 
     @property
     def chatbot(self) -> Optional[Any]:
         """Get current active chatbot."""
-        from airunner.components.llm.utils import get_chatbot
-
-        return get_chatbot()
+        cached = self.settings_mixin_shared_instance.chatbot
+        if cached is not None:
+            return cached
+        chatbot = self.resource_store.first(
+            "Chatbot",
+            filters={"current": True},
+            eager_load=["target_files", "target_directories"],
+        )
+        if chatbot is None:
+            chatbot = self.resource_store.first(
+                "Chatbot",
+                eager_load=["target_files", "target_directories"],
+            )
+        if chatbot is None:
+            chatbot = self.resource_store.create(
+                "Chatbot",
+                {"name": "Default", "botname": "Computer", "current": True},
+            )
+        self.settings_mixin_shared_instance.chatbot = chatbot
+        return chatbot
 
     @property
     def user(self) -> Any:
         """Get or create current user."""
-        User = get_settings_model("User")
-        user = User.objects.first()
+        user = self.resource_store.first("User")
         if user is None:
-            user = User()
-            user.username = "User"
-            user.save()
-            user = User.objects.first()
+            user = self.resource_store.create("User", {"username": "User"})
         return user

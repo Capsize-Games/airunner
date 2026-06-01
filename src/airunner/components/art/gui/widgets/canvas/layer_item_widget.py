@@ -7,7 +7,10 @@ from airunner.components.application.gui.widgets.base_widget import BaseWidget
 from airunner.components.application.gui.windows.main.pipeline_mixin import (
     PipelineMixin,
 )
-from airunner.components.art.data.canvas_layer import CanvasLayer
+from airunner.daemon_client.resource_store import get_resource_store
+from airunner.components.art.data.canvas_layer_records import (
+    get_canvas_layer,
+)
 from airunner.components.art.gui.widgets.canvas.templates.layer_item_ui import (
     Ui_layer_item,
 )
@@ -15,6 +18,7 @@ from airunner.enums import SignalCode
 
 
 class LayerItemWidget(BaseWidget, PipelineMixin):
+    ui: Ui_layer_item  # type: ignore[assignment]
     widget_class_ = Ui_layer_item
     icons = [
         ("eye", "visibility"),
@@ -22,7 +26,14 @@ class LayerItemWidget(BaseWidget, PipelineMixin):
     ]
 
     def __init__(self, layer_id: int, *args, **kwargs):
-        self.layer = CanvasLayer.objects.get(layer_id)
+        self.layer = get_canvas_layer(layer_id) or get_resource_store().new_record(
+            "CanvasLayer",
+            {
+                "id": layer_id,
+                "name": f"Layer {layer_id}",
+                "visible": True,
+            },
+        )
         self.drag_start_position = None
         self.is_selected = False
 

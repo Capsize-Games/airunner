@@ -1,11 +1,11 @@
-import os
-
-from PySide6.QtCore import Slot, QThread, QSize, QTimer, Qt
+from typing import Dict
+from PySide6.QtCore import Slot, QSize, QTimer, Qt
 from PySide6.QtWidgets import QWidget, QSizePolicy, QApplication
 
 from airunner.enums import SignalCode, ModelType, ModelStatus
-from airunner.components.art.utils.embeddings import get_embeddings_by_version
-from airunner.utils.models import scan_path_for_embeddings
+from airunner.components.art.utils.embeddings import (
+    get_embeddings_by_version,
+)
 from airunner.components.application.gui.widgets.base_widget import BaseWidget
 from airunner.components.art.gui.widgets.embeddings.embedding_widget import (
     EmbeddingWidget,
@@ -13,22 +13,28 @@ from airunner.components.art.gui.widgets.embeddings.embedding_widget import (
 from airunner.components.art.gui.widgets.embeddings.templates.embeddings_container_ui import (
     Ui_embeddings_container,
 )
-from airunner.components.application.workers.directory_watcher import (
-    DirectoryWatcher,
-)
 
 
 class EmbeddingsContainerWidget(BaseWidget):
+    ui: Ui_embeddings_container  # type: ignore[assignment]
     widget_class_ = Ui_embeddings_container
     search_filter = ""
     spacer = None
 
     def __init__(self, *args, **kwargs):
         self.signal_handlers = {
-            SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL: self.on_application_settings_changed_signal,
-            SignalCode.EMBEDDING_UPDATED_SIGNAL: self.on_embedding_updated_signal,
-            SignalCode.MODEL_STATUS_CHANGED_SIGNAL: self.on_model_status_changed_signal,
-            SignalCode.EMBEDDING_STATUS_CHANGED: self.on_embedding_modified,
+            SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL: (
+                self.on_application_settings_changed_signal
+            ),
+            SignalCode.EMBEDDING_UPDATED_SIGNAL: (
+                self.on_embedding_updated_signal
+            ),
+            SignalCode.MODEL_STATUS_CHANGED_SIGNAL: (
+                self.on_model_status_changed_signal
+            ),
+            SignalCode.EMBEDDING_STATUS_CHANGED: (
+                self.on_embedding_modified
+            ),
             SignalCode.EMBEDDING_DELETE_SIGNAL: self._delete_embedding,
         }
         self._version = None
@@ -40,83 +46,9 @@ class EmbeddingsContainerWidget(BaseWidget):
             spinner_size=QSize(30, 30), label_size=QSize(24, 24)
         )
         self._apply_button_enabled = False
-        self.ui.apply_embeddings_button.setEnabled(self._apply_button_enabled)
-
-        # Initialize scanner components
-        self._scanner_worker = None
-        self._scanner_thread = None
-        self._setup_directory_watcher()
-
-    def _setup_directory_watcher(self):
-        """Setup directory watcher with proper error handling and cleanup."""
-        try:
-            self._scanner_worker = DirectoryWatcher(
-                self.path_settings.base_path,
-                self._scan_path_for_embeddings,
-            )
-            self._scanner_thread = QThread()
-            self._scanner_thread.setObjectName(
-                "EmbeddingsContainerWidgetScanner"
-            )
-            self._scanner_worker.moveToThread(self._scanner_thread)
-
-            # Ensure scan_completed is handled in the UI thread
-            self._scanner_worker.scan_completed.connect(
-                self.on_scan_completed,
-                type=Qt.QueuedConnection,  # Ensure thread-safe signal handling
-            )
-            self._scanner_thread.started.connect(self._scanner_worker.run)
-            self._scanner_thread.finished.connect(self._cleanup_scanner)
-            self._scanner_thread.start()
-
-            self.logger.debug(
-                "Directory watcher started for embeddings scanning"
-            )
-        except Exception as e:
-            self.logger.error(f"Failed to setup directory watcher: {e}")
-
-    def _cleanup_scanner(self):
-        """Clean up scanner resources."""
-        if self._scanner_worker:
-            self._scanner_worker.deleteLater()
-            self._scanner_worker = None
-        if self._scanner_thread:
-            self._scanner_thread.deleteLater()
-            self._scanner_thread = None
-
-    def _shutdown_scanner(self) -> None:
-        """Stop the directory watcher thread before widget teardown."""
-        try:
-            if self._scanner_worker:
-                self._scanner_worker.stop()
-            if self._scanner_thread:
-                self._scanner_thread.quit()
-                if not self._scanner_thread.wait(2500):
-                    self.logger.warning(
-                        "Scanner thread did not quit gracefully, terminating"
-                    )
-                    self._scanner_thread.terminate()
-                    self._scanner_thread.wait(1000)
-        except Exception as e:
-            self.logger.error(f"Error during scanner cleanup: {e}")
-        finally:
-            self._cleanup_scanner()
-
-    def handle_close(self):
-        """Stop background scanner when the application is quitting."""
-        self._shutdown_scanner()
-
-    def closeEvent(self, event):
-        self._shutdown_scanner()
-        super().closeEvent(event)
-
-    def _scan_path_for_embeddings(self, path) -> bool:
-        if self._deleting:
-            return False
-        return scan_path_for_embeddings(path)
-
-    def on_scan_completed(self, force_reload: bool):
-        self.load_embeddings(force_reload=force_reload)
+        self.ui.apply_embeddings_button.setEnabled(
+            self._apply_button_enabled
+        )
 
     @Slot()
     def action_clicked_button_scan_for_embeddings(self):
@@ -144,14 +76,21 @@ class EmbeddingsContainerWidget(BaseWidget):
 
     def on_embedding_modified(self):
         self._apply_button_enabled = True
-        self.ui.apply_embeddings_button.setEnabled(self._apply_button_enabled)
+        self.ui.apply_embeddings_button.setEnabled(
+            self._apply_button_enabled
+        )
 
     @Slot(bool)
     def toggle_all_toggled(self, val):
         embedding_widgets = [
-            self.ui.embeddings_scroll_area.widget().layout().itemAt(i).widget()
+            self.ui.embeddings_scroll_area.widget()
+            .layout()
+            .itemAt(i)
+            .widget()
             for i in range(
-                self.ui.embeddings_scroll_area.widget().layout().count()
+                self.ui.embeddings_scroll_area.widget()
+                .layout()
+                .count()
             )
             if isinstance(
                 self.ui.embeddings_scroll_area.widget()
@@ -172,31 +111,17 @@ class EmbeddingsContainerWidget(BaseWidget):
     def on_embedding_updated_signal(self):
         self._enable_form()
 
-    def _delete_embedding(self, data):
+    def _delete_embedding(self, data: Dict):
         self._deleting = True
         embedding_widget = data["embedding_widget"]
 
-        # Delete the lora from disc
-        lora_path = os.path.expanduser(
-            os.path.join(
-                self.path_settings.base_path,
-                "art/models",
-                self._version,
-                "embeddings",
-            )
-        )
-        lora_file = embedding_widget.embedding.name
-        for dirpath, dirnames, filenames in os.walk(lora_path):
-            for file in filenames:
-                if file.startswith(lora_file):
-                    os.remove(os.path.join(dirpath, file))
-                    break
-
-        # Remove lora from database
+        # Remove from database via daemon
         embedding_widget.embedding.delete()
 
         self._apply_button_enabled = True
-        self.ui.apply_embeddings_button.setEnabled(self._apply_button_enabled)
+        self.ui.apply_embeddings_button.setEnabled(
+            self._apply_button_enabled
+        )
         self.load_embeddings(force_reload=True)
         self._deleting = False
 
@@ -217,52 +142,49 @@ class EmbeddingsContainerWidget(BaseWidget):
                 filtered_embeddings = [
                     embedding
                     for embedding in embeddings
-                    if self.search_filter.lower() in embedding.name.lower()
+                    if self.search_filter.lower()
+                    in embedding.name.lower()
                 ]
                 for embedding in filtered_embeddings:
                     self._add_embedding(embedding)
                 self.add_spacer()
 
     def remove_spacer(self):
-        # remove spacer from end of self.ui.scrollAreaWidgetContents.layout()
         if self.spacer:
-            self.ui.scrollAreaWidgetContents.layout().removeWidget(self.spacer)
-            self.spacer.setParent(None)  # Fully remove from parent
-            self.spacer.deleteLater()  # Schedule for deletion
-            self.spacer = None  # Clear reference
+            self.ui.scrollAreaWidgetContents.layout().removeWidget(
+                self.spacer
+            )
+            self.spacer.setParent(None)
+            self.spacer.deleteLater()
+            self.spacer = None
 
     def add_spacer(self):
-        # add spacer to end of self.ui.scrollAreaWidgetContents.layout()
-        self.remove_spacer()  # Always remove old spacer first
+        self.remove_spacer()
 
-        # Create a new visible spacer widget with clear visual presence
         self.spacer = QWidget()
         self.spacer.setSizePolicy(
             QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding
         )
-        self.spacer.setMinimumHeight(100)  # Make it substantially taller
+        self.spacer.setMinimumHeight(100)
 
-        # Add to layout
         self.ui.scrollAreaWidgetContents.layout().addWidget(self.spacer)
-
-        # Force layout update to ensure spacer takes effect
         self.ui.scrollAreaWidgetContents.layout().update()
         QApplication.processEvents()
-
-        # Schedule another layout update after events are processed
         QTimer.singleShot(
-            50, lambda: self.ui.scrollAreaWidgetContents.layout().update()
+            50,
+            lambda: self.ui.scrollAreaWidgetContents.layout().update(),
         )
 
     def _add_embedding(self, embedding):
         if embedding is None:
             return
         embedding_widget = EmbeddingWidget(embedding=embedding)
-        self.ui.scrollAreaWidgetContents.layout().addWidget(embedding_widget)
+        self.ui.scrollAreaWidgetContents.layout().addWidget(
+            embedding_widget
+        )
 
     def scan_for_embeddings(self):
-        force_reload = scan_path_for_embeddings(self.path_settings.base_path)
-        self.load_embeddings(force_reload=force_reload)
+        self.load_embeddings(force_reload=True)
 
     def clear_embedding_widgets(self):
         if self.spacer:
@@ -276,26 +198,34 @@ class EmbeddingsContainerWidget(BaseWidget):
             range(self.ui.scrollAreaWidgetContents.layout().count())
         ):
             widget = (
-                self.ui.scrollAreaWidgetContents.layout().itemAt(i).widget()
+                self.ui.scrollAreaWidgetContents.layout()
+                .itemAt(i)
+                .widget()
             )
             if isinstance(widget, EmbeddingWidget):
                 widget.deleteLater()
 
     def _disable_form(self):
-        self.ui.apply_embeddings_button.setEnabled(self._apply_button_enabled)
+        self.ui.apply_embeddings_button.setEnabled(
+            self._apply_button_enabled
+        )
         self.ui.toggle_all_embeddings.setEnabled(False)
         self.ui.loading_icon.show()
         self._toggle_embedding_widgets(False)
 
     def _enable_form(self):
-        self.ui.apply_embeddings_button.setEnabled(self._apply_button_enabled)
+        self.ui.apply_embeddings_button.setEnabled(
+            self._apply_button_enabled
+        )
         self.ui.toggle_all_embeddings.setEnabled(True)
         self.ui.loading_icon.hide()
         self._toggle_embedding_widgets(True)
 
     def _toggle_embedding_widgets(self, enable: bool):
         for i in range(
-            self.ui.embeddings_scroll_area.widget().layout().count()
+            self.ui.embeddings_scroll_area.widget()
+            .layout()
+            .count()
         ):
             embedding_widget = (
                 self.ui.embeddings_scroll_area.widget()

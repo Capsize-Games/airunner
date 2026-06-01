@@ -178,6 +178,9 @@ Current roles:
    structured document analysis, and supporting excerpts for larger
    documents.
 - `rag_search()` performs excerpt retrieval and wider fallback search.
+- `rag_search()` can also search request-attached files passed through
+   `LLMRequest.rag_files` once request handling auto-loads those files
+   into the active RAG state.
 - Summary evidence and chunk frontloading now use request metadata,
   especially `document_summary_focus`, instead of reparsing the prompt.
 - Premise-focused supporting evidence now uses model-selected span roles
@@ -186,6 +189,9 @@ Current roles:
 - `rag_search()` also uses the preprocess-owned rewritten query when one
    is available instead of pronoun-based document expansion in the tool
    layer.
+- Current daemon-backed document evals assert on retrieved evidence
+   reaching the workflow/log path rather than exact final answer wording,
+   because post-tool synthesis quality is still model dependent.
 
 ### 2.5 Retrieval Runtime And Persisted Indexes
 

@@ -1,5 +1,5 @@
-import sounddevice as sd
 import inspect
+from importlib import import_module
 from typing import Optional
 from queue import Queue
 import numpy as np
@@ -11,6 +11,20 @@ from airunner.enums import TTSModel
 from airunner.settings import AIRUNNER_SLEEP_TIME_IN_MS
 from airunner.components.application.workers.worker import Worker
 from airunner.utils.audio.sound_device_manager import SoundDeviceManager
+
+
+class _SoundDeviceProxy:
+    """Lazy sounddevice proxy that preserves the module-level patch seam."""
+
+    def __getattr__(self, name: str):
+        return getattr(import_module("sounddevice"), name)
+
+
+sd = _SoundDeviceProxy()
+
+
+def _sounddevice():
+    return sd
 
 
 class TTSVocalizerWorker(Worker):
@@ -105,7 +119,7 @@ class TTSVocalizerWorker(Worker):
         fallback_api = None
         for candidate in candidates:
             candidate = TTSVocalizerWorker._normalize_api_candidate(candidate)
-            if candidate is None or getattr(candidate, "headless", False):
+            if candidate is None:
                 continue
             if TTSVocalizerWorker._candidate_has_sounddevice_manager(
                 candidate
@@ -126,7 +140,7 @@ class TTSVocalizerWorker(Worker):
         had_candidate = False
         for candidate in candidates:
             candidate = TTSVocalizerWorker._normalize_api_candidate(candidate)
-            if candidate is None or getattr(candidate, "headless", False):
+            if candidate is None:
                 continue
             had_candidate = True
             if TTSVocalizerWorker._candidate_has_sounddevice_manager(
@@ -184,13 +198,7 @@ class TTSVocalizerWorker(Worker):
                 return getattr(app, "api", None)
         except Exception:
             pass
-
-        try:
-            from airunner.components.server.api.server import get_api
-
-            return get_api(create_if_missing=False)
-        except Exception:
-            return None
+        return None
 
     @staticmethod
     def _main_window_api():
@@ -253,6 +261,7 @@ class TTSVocalizerWorker(Worker):
             return
         self.logger.info("Starting TTS vocalizer stream...")
         manager = TTSVocalizerWorker._sounddevice_manager(self)
+        sd = _sounddevice()
 
         if manager is None:
             self.logger.error(
@@ -314,7 +323,8 @@ class TTSVocalizerWorker(Worker):
 
     @property
     def playback_device(self):
-        playback_device = self.sound_settings.playback_device
+        sound_settings = getattr(self, "sound_settings", None)
+        playback_device = getattr(sound_settings, "playback_device", "")
         return playback_device if playback_device != "" else "pulse"
 
     def _initialize_stream(self, samplerate: int) -> bool:
@@ -323,6 +333,7 @@ class TTSVocalizerWorker(Worker):
             f"Initializing TTS stream with samplerate: {samplerate}"
         )
         manager = TTSVocalizerWorker._sounddevice_manager(self)
+        sd = _sounddevice()
         if manager is None:
             self.logger.error(
                 "TTS vocalizer API is missing sounddevice_manager"

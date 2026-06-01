@@ -15,7 +15,6 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QFont, QFontDatabase, QGradient, QIcon,
     QImage, QKeySequence, QLinearGradient, QPainter,
     QPalette, QPixmap, QRadialGradient, QTransform)
-from PySide6.QtWebEngineWidgets import QWebEngineView
 from PySide6.QtWidgets import (QApplication, QGridLayout, QSizePolicy, QWidget)
 
 class Ui_conversation(object):
@@ -29,7 +28,8 @@ class Ui_conversation(object):
 "     border: 1.5px solid #23272B;\n"
 "     border-radius: 6px;\n"
 "    }\n"
-"    QWebEngineView {\n"
+"        QWidget#stage,\n"
+"        QWebEngineView#stage {\n"
 "     background: #181C20;\n"
 "     border: none;\n"
 "    }\n"
@@ -38,10 +38,9 @@ class Ui_conversation(object):
         self.gridLayout.setSpacing(0)
         self.gridLayout.setObjectName(u"gridLayout")
         self.gridLayout.setContentsMargins(0, 0, 0, 0)
-        self.stage = QWebEngineView(conversation)
+        self.stage = QWidget(conversation)
         self.stage.setObjectName(u"stage")
         self.stage.setMinimumSize(QSize(200, 200))
-        self.stage.setUrl(QUrl(u"about:blank"))
 
         self.gridLayout.addWidget(self.stage, 0, 0, 1, 1)
 

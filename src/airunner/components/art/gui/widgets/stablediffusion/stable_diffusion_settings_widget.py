@@ -10,19 +10,21 @@ from PySide6.QtWidgets import (
     QProgressDialog,
 )
 
-import torch
-
-from airunner.components.art.data.ai_models import AIModels
-from airunner.utils.vram_utils import (
-    estimate_vram_from_path,
-    get_available_precisions,
-    PRECISION_DISPLAY_NAMES,
-    is_precision_safe_for_vram,
+from airunner.components.art.data.catalog_records import (
+    find_ai_models,
+    find_first_ai_model,
+    get_ai_model,
+    list_schedulers,
 )
-from airunner.utils.model_dtype_utils import detect_model_dtype
-from airunner.components.art.data.schedulers import Schedulers
+from airunner.components.art.gui.widgets.stablediffusion.vram_calculator import (
+    can_use_precision,
+    estimate_vram_for_precision,
+    get_available_precisions,
+    is_precision_safe_for_vram,
+    PRECISION_DISPLAY_NAMES,
+    VRAMEstimate,
+)
 from airunner.enums import (
-    DEFAULT_IMAGE_GENERATOR,
     SignalCode,
     GeneratorSection,
     ImageGenerator,
@@ -40,9 +42,6 @@ from airunner.components.application.gui.windows.main.pipeline_mixin import (
 )
 from airunner.settings import AIRUNNER_ART_ENABLED
 from airunner.utils.settings.get_qsettings import get_qsettings
-from airunner.utils.model_utils.model_utils import (
-    get_stable_diffusion_model_storage_path,
-)
 import threading
 import os
 
@@ -82,6 +81,7 @@ VERSION_CONSTRAINTS = {
 
 
 class StableDiffusionSettingsWidget(BaseWidget, PipelineMixin):
+    ui: Ui_stable_diffusion_settings_widget  # type: ignore[assignment]
     widget_class_ = Ui_stable_diffusion_settings_widget
 
     def __init__(self, *args, **kwargs):
@@ -94,7 +94,7 @@ class StableDiffusionSettingsWidget(BaseWidget, PipelineMixin):
         self._deferred_startup_loaded = False
         self._version: str = ""
         self._versions: List[str] = []
-        self._models: List[AIModels] = []
+        self._models: List[object] = []
         self._current_action: str = ""
         self.ui.custom_model.blockSignals(True)
         self.ui.custom_model.setText(self.generator_settings.custom_path)
@@ -311,7 +311,8 @@ class StableDiffusionSettingsWidget(BaseWidget, PipelineMixin):
                 return
         # If we get here, import to AI Runner folder
         filename = os.path.basename(file_path)
-        dest_path = get_stable_diffusion_model_storage_path(
+        dest_path = os.path.join(
+            os.path.expanduser('~/.local/share/airunner/art/models'),
             self.generator_settings.version,
             self.generator_settings.pipeline_action,
             filename,
@@ -395,7 +396,7 @@ class StableDiffusionSettingsWidget(BaseWidget, PipelineMixin):
 
         # Automatically switch pipeline action to match the selected model
         if model_id:
-            model = AIModels.objects.filter_first(AIModels.id == model_id)
+            model = get_ai_model(model_id, store=self.resource_store)
             if model and model.pipeline_action:
                 current_pipeline = self.generator_settings.pipeline_action
                 if current_pipeline != model.pipeline_action:
@@ -440,19 +441,21 @@ class StableDiffusionSettingsWidget(BaseWidget, PipelineMixin):
         updated_kwargs = {"pipeline_action": val}
         selected_model_id = generator_settings.model
         if val == GeneratorSection.TXT2IMG.value:
-            model = AIModels.objects.filter_first(
-                AIModels.id == selected_model_id
+            model = get_ai_model(
+                selected_model_id,
+                store=self.resource_store,
             )
             if (
                 model
                 and model.pipeline_action == GeneratorSection.INPAINT.value
             ):
                 # Need a compatible txt2img model for current version
-                new_model = AIModels.objects.filter_first(
-                    AIModels.version == generator_settings.version,
-                    AIModels.pipeline_action == val,
-                    AIModels.enabled.is_(True),
-                    AIModels.is_default.is_(False),
+                new_model = find_first_ai_model(
+                    version=generator_settings.version,
+                    pipeline_actions=[val],
+                    enabled=True,
+                    is_default=False,
+                    store=self.resource_store,
                 )
                 selected_model_id = new_model.id if new_model else None
                 updated_kwargs["model"] = selected_model_id
@@ -488,11 +491,12 @@ class StableDiffusionSettingsWidget(BaseWidget, PipelineMixin):
         generator_settings = self.generator_settings
         pipeline = generator_settings.pipeline_action
         # Try to find a model matching current pipeline
-        model = AIModels.objects.filter_first(
-            AIModels.version == val,
-            AIModels.pipeline_action == pipeline,
-            AIModels.enabled.is_(True),
-            AIModels.is_default.is_(False),
+        model = find_first_ai_model(
+            version=val,
+            pipeline_actions=[pipeline],
+            enabled=True,
+            is_default=False,
+            store=self.resource_store,
         )
         chosen_model_id = None
         chosen_pipeline = pipeline
@@ -500,11 +504,12 @@ class StableDiffusionSettingsWidget(BaseWidget, PipelineMixin):
             chosen_model_id = model.id
         else:
             # fallback to txt2img
-            fallback_model = AIModels.objects.filter_first(
-                AIModels.version == val,
-                AIModels.pipeline_action == GeneratorSection.TXT2IMG.value,
-                AIModels.enabled.is_(True),
-                AIModels.is_default.is_(False),
+            fallback_model = find_first_ai_model(
+                version=val,
+                pipeline_actions=[GeneratorSection.TXT2IMG.value],
+                enabled=True,
+                is_default=False,
+                store=self.resource_store,
             )
             if fallback_model is not None:
                 chosen_model_id = fallback_model.id
@@ -601,7 +606,7 @@ class StableDiffusionSettingsWidget(BaseWidget, PipelineMixin):
         self._current_action = value
 
     @property
-    def models(self) -> List[AIModels]:
+    def models(self) -> List[object]:
         if (
             self.generator_settings.pipeline_action != self.action
             or len(self._models) == 0
@@ -621,17 +626,18 @@ class StableDiffusionSettingsWidget(BaseWidget, PipelineMixin):
             if self.action == GeneratorSection.INPAINT.value:
                 pipeline_actions.append(GeneratorSection.INPAINT.value)
 
-            self.models = AIModels.objects.filter(
-                AIModels.category == image_generator,
-                AIModels.pipeline_action.in_(pipeline_actions),
-                AIModels.version == self.version,
-                AIModels.enabled.is_(True),
-                AIModels.is_default.is_(False),
+            self.models = find_ai_models(
+                category=image_generator,
+                pipeline_actions=pipeline_actions,
+                version=self.version,
+                enabled=True,
+                is_default=False,
+                store=self.resource_store,
             )
         return self._models
 
     @models.setter
-    def models(self, value: List[AIModels]):
+    def models(self, value: List[object]):
         self._models = value
 
     def _load_models_combobox(self):
@@ -666,7 +672,7 @@ class StableDiffusionSettingsWidget(BaseWidget, PipelineMixin):
         
         Other versions support all non-flow-match schedulers.
         """
-        all_schedulers = Schedulers.objects.all()
+        all_schedulers = list_schedulers(store=self.resource_store)
         version = self.generator_settings.version
         
         if version in FLOW_MATCH_VERSIONS:
@@ -713,11 +719,11 @@ class StableDiffusionSettingsWidget(BaseWidget, PipelineMixin):
         model_id = self.generator_settings.model
         if model_id is None:
             return None
-        
-        model = AIModels.objects.filter_first(AIModels.id == model_id)
+
+        model = get_ai_model(model_id, store=self.resource_store)
         if model is None:
             return None
-        
+
         return model.path
 
     def _load_precision_combobox(self):
@@ -743,24 +749,41 @@ class StableDiffusionSettingsWidget(BaseWidget, PipelineMixin):
         self.ui.precision.blockSignals(True)
         self.ui.precision.clear()
         
-        # Get model path and detect native dtype
+        # Get model path and VRAM estimate from daemon
         model_path = self._get_current_model_path()
-        native_dtype = "bfloat16"  # Default assumption
+        daemon_estimate = None
+        native_dtype = "bfloat16"
+        model_size_gb = 0.0
         
         if model_path:
-            native_dtype = detect_model_dtype(model_path)
-            self.logger.debug(f"Detected native dtype: {native_dtype} for model: {model_path}")
+            try:
+                from airunner.daemon_client.gui_daemon_client import (
+                    GuiDaemonClient,
+                )
+                client = GuiDaemonClient()
+                daemon_estimate = client.estimate_vram(model_path)
+                native_dtype = daemon_estimate.get(
+                    "native_dtype",
+                ) or "bfloat16"
+                model_size_gb = float(
+                    daemon_estimate.get("file_size_gb", 0.0),
+                )
+            except Exception:
+                pass
         
         # Get available precisions based on native dtype
         available_precisions = get_available_precisions(native_dtype)
         
-        # Get available VRAM
+        # Get available VRAM from daemon hardware endpoint
         available_vram_gb = 0.0
-        if torch.cuda.is_available():
-            try:
-                available_vram_gb = torch.cuda.get_device_properties(0).total_memory / (1024**3)
-            except Exception:
-                pass
+        try:
+            from airunner.daemon_client.gui_daemon_client import (
+                GuiDaemonClient,
+            )
+            hw = GuiDaemonClient().get_hardware_profile()
+            available_vram_gb = hw.total_vram_gb
+        except Exception:
+            pass
         
         # Filter precision options for Z-Image based on VRAM.
         version = self.generator_settings.version
@@ -791,18 +814,19 @@ class StableDiffusionSettingsWidget(BaseWidget, PipelineMixin):
             
             display_name = PRECISION_DISPLAY_NAMES.get(precision, precision)
             
-            # Add VRAM estimate if model path is available
-            if model_path:
-                estimate = estimate_vram_from_path(
-                    model_path, precision, native_dtype
+            # Add VRAM estimate if model size is available
+            if model_size_gb > 0:
+                estimate = estimate_vram_for_precision(
+                    model_size_gb, precision, native_dtype,
                 )
-                if estimate:
-                    # Check if this precision is safe for current VRAM
-                    if available_vram_gb > 0 and not is_precision_safe_for_vram(estimate, available_vram_gb):
-                        # Add warning indicator for risky precision settings
-                        display_name = f"⚠️ {display_name} ({estimate})"
-                    else:
-                        display_name = f"{display_name} ({estimate})"
+                if available_vram_gb > 0 and not is_precision_safe_for_vram(
+                    estimate, available_vram_gb,
+                ):
+                    display_name = (
+                        f"⚠️ {display_name} ({estimate})"
+                    )
+                else:
+                    display_name = f"{display_name} ({estimate})"
             
             self.ui.precision.addItem(display_name, precision)
         

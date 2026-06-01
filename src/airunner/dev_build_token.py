@@ -21,7 +21,8 @@ def current_dev_build_token() -> Optional[str]:
     now = time.monotonic()
     if now < _cached_deadline:
         return _cached_token
-    _cached_token = _scan_source_tree(Path(__file__).resolve().parent)
+    repo_root = _find_repo_root(Path(__file__).resolve())
+    _cached_token = _scan_source_tree(repo_root)
     _cached_deadline = now + _CACHE_TTL_SECONDS
     return _cached_token
 
@@ -43,7 +44,32 @@ def _scan_source_tree(source_root: Path) -> Optional[str]:
     return f"{newest_mtime}:{newest_relpath}"
 
 
+def _find_repo_root(start: Path) -> Path:
+    """Return the nearest repository root for one source path."""
+    current = start.parent if start.is_file() else start
+    for _ in range(12):
+        if (current / "pyproject.toml").exists():
+            return current
+        if current.parent == current:
+            break
+        current = current.parent
+    return start.parent
+
+
 def _skip_path(path: Path) -> bool:
     """Return True when one file should not affect daemon restart checks."""
     parts = set(path.parts)
-    return bool(parts & {"__pycache__", "tests", "vendor"})
+    return bool(
+        parts
+        & {
+            ".git",
+            "__pycache__",
+            "airunner.egg-info",
+            "build",
+            "dist",
+            "node_modules",
+            "tests",
+            "venv",
+            "vendor",
+        }
+    )

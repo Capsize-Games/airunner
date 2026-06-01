@@ -1,18 +1,19 @@
+import threading
 from typing import Dict
 import os
 import shutil
 
-from PySide6.QtGui import QStandardItemModel
 from PySide6.QtCore import (
     Signal,
     Qt,
     QEvent,
     QFileSystemWatcher,
+    QTimer,
+    Slot,
 )
 from PySide6.QtGui import (
     QIcon,
     QColor,
-    QStandardItem,
     QAction,
 )
 from PySide6.QtWidgets import (
@@ -27,8 +28,14 @@ from PySide6.QtWidgets import (
 from airunner.enums import SignalCode
 from airunner.utils.settings import get_qsettings
 from airunner.components.application.gui.widgets.base_widget import BaseWidget
-from airunner.components.documents.data.models.document import Document
-from airunner.components.documents.data.models.zimfile import ZimFile
+from airunner.components.documents.data.document_records import (
+    delete_document,
+    delete_documents_by_path,
+    ensure_document_record,
+    find_zim_file_by_path,
+    list_documents,
+    update_document,
+)
 from airunner.components.documents.gui.widgets.templates.documents_ui import (
     Ui_documents,
 )
@@ -36,7 +43,7 @@ from airunner.components.documents.gui.widgets.kiwix_widget import KiwixWidget
 from airunner.components.file_explorer.gui.widgets.file_explorer_widget import (
     FileExplorerWidget,
 )
-from airunner.utils.path_policy import (
+from airunner.runtimes.file_policy import (
     PathPolicyError,
     resolve_existing_directory,
     resolve_existing_file,
@@ -44,11 +51,13 @@ from airunner.utils.path_policy import (
 
 
 class DocumentsWidget(BaseWidget):
+    ui: Ui_documents  # type: ignore[assignment]
     """Widget for document management and file exploration."""
 
     titleChanged = Signal(str)
     urlChanged = Signal(str, str)
     faviconChanged = Signal(QIcon)
+    documentWatchPathsReady = Signal(int, object)
     widget_class_ = Ui_documents
 
     def __init__(self, *args, private: bool = False, **kwargs):
@@ -78,9 +87,17 @@ class DocumentsWidget(BaseWidget):
         }
         super().__init__(*args, **kwargs)
         self.setAcceptDrops(True)
+        self._document_watch_refresh_request = 0
+        self._document_watch_refresh_inflight = False
+        self._document_watch_apply_request = 0
+        self._document_watch_pending_additions: list[str] = []
+        self._document_watch_pending_removals: list[str] = []
         self._document_fs_watcher = QFileSystemWatcher(self)
         self._document_fs_watcher.directoryChanged.connect(
             self._on_document_library_changed
+        )
+        self.documentWatchPathsReady.connect(
+            self._apply_document_watch_paths,
         )
         self.knowledgeBasePanelWidget = self.ui.knowledge_base_panel_widget
         self.setup_file_explorer()
@@ -230,9 +247,8 @@ class DocumentsWidget(BaseWidget):
             self._index_next_document()
 
         if activate_after_index is False and document_path:
-            docs = Document.objects.filter_by(path=document_path)
-            if docs and len(docs) > 0:
-                Document.objects.update(pk=docs[0].id, active=False)
+            for document in list_documents(filters={"path": document_path}):
+                update_document(document.id, {"active": False})
         if document_path:
             self._document_index_failures.pop(document_path, None)
 
@@ -469,12 +485,12 @@ class DocumentsWidget(BaseWidget):
         if not validated_path:
             return False
 
-        docs = Document.objects.filter_by(path=validated_path)
+        docs = list_documents(filters={"path": validated_path})
         if docs and docs[0].indexed:
             return False
         if not docs:
-            Document.objects.create(
-                path=validated_path,
+            ensure_document_record(
+                validated_path,
                 active=False,
                 indexed=False,
             )
@@ -492,18 +508,40 @@ class DocumentsWidget(BaseWidget):
         self._pending_document_index_requests[validated_path] = (
             activate_after_index
         )
-        self.emit_signal(
-            SignalCode.RAG_INDEX_SELECTED_DOCUMENTS,
-            {"file_paths": [validated_path]},
-        )
-        return True
+        if self.knowledgeBasePanelWidget.request_index_selected_documents(
+            [validated_path]
+        ):
+            return True
+        self._pending_document_index_requests.pop(validated_path, None)
+        return False
 
     def _refresh_document_watch_paths(self) -> None:
-        """Watch current document directories for external file changes."""
-        watcher = getattr(self, "_document_fs_watcher", None)
-        if watcher is None:
+        """Refresh watcher paths without blocking the GUI thread."""
+        self._document_watch_refresh_request += 1
+        request_id = self._document_watch_refresh_request
+        if self._document_watch_refresh_inflight:
             return
+        self._document_watch_refresh_inflight = True
+        threading.Thread(
+            target=self._scan_document_watch_paths,
+            args=(request_id,),
+            daemon=True,
+        ).start()
 
+    def _scan_document_watch_paths(self, request_id: int) -> None:
+        """Collect watched directories in a background thread."""
+        try:
+            desired_paths = self._collect_document_watch_paths()
+        except Exception as error:
+            self.logger.warning(
+                "Failed to scan document watch paths: %s",
+                error,
+            )
+            desired_paths = set()
+        self.documentWatchPathsReady.emit(request_id, desired_paths)
+
+    def _collect_document_watch_paths(self) -> set[str]:
+        """Return all document directories that should be watched."""
         desired_paths: set[str] = set()
         for root in (self.documents_path, self.zim_path):
             expanded_root = os.path.expanduser(root)
@@ -512,14 +550,95 @@ class DocumentsWidget(BaseWidget):
             desired_paths.add(expanded_root)
             for current_root, _dirs, _files in os.walk(expanded_root):
                 desired_paths.add(current_root)
+        return desired_paths
 
-        existing_paths = set(watcher.directories())
-        stale_paths = sorted(existing_paths - desired_paths)
-        new_paths = sorted(desired_paths - existing_paths)
-        if stale_paths:
-            watcher.removePaths(stale_paths)
-        if new_paths:
-            watcher.addPaths(new_paths)
+    def _document_library_files(self) -> set[str]:
+        """Return supported files currently present in managed libraries."""
+        library_files: set[str] = set()
+        for root in (self.documents_path, self.zim_path):
+            expanded_root = os.path.expanduser(root)
+            if not os.path.isdir(expanded_root):
+                continue
+            for current_root, _dirs, files in os.walk(expanded_root):
+                for filename in files:
+                    ext = os.path.splitext(filename)[1][1:].lower()
+                    if ext not in self.file_extensions:
+                        continue
+                    library_files.add(os.path.join(current_root, filename))
+        return library_files
+
+    def _sync_document_records_with_library(self) -> bool:
+        """Ensure on-disk library files have matching document records."""
+        current_files = self._document_library_files()
+        known_documents = {
+            doc.path: doc
+            for doc in list_documents()
+            if getattr(doc, "path", None)
+        }
+        changed = False
+
+        for file_path in sorted(current_files):
+            if file_path in known_documents:
+                continue
+            ensure_document_record(
+                file_path,
+                active=False,
+                indexed=False,
+            )
+            changed = True
+
+        for file_path, document in known_documents.items():
+            if file_path in current_files:
+                continue
+            if not self._is_managed_document_path(file_path):
+                continue
+            delete_document(document.id)
+            changed = True
+
+        return changed
+
+    @Slot(int, object)
+    def _apply_document_watch_paths(
+        self,
+        request_id: int,
+        desired_paths: object,
+    ) -> None:
+        """Queue watcher path updates back onto the GUI thread."""
+        watcher = getattr(self, "_document_fs_watcher", None)
+        if watcher is None:
+            self._document_watch_refresh_inflight = False
+            return
+        desired = set(desired_paths or [])
+        existing = set(watcher.directories())
+        self._document_watch_apply_request = request_id
+        self._document_watch_pending_removals = list(existing - desired)
+        self._document_watch_pending_additions = list(desired - existing)
+        self._apply_next_document_watch_batch()
+
+    def _apply_next_document_watch_batch(self) -> None:
+        """Apply watcher updates in small batches to keep the UI responsive."""
+        watcher = getattr(self, "_document_fs_watcher", None)
+        if watcher is None:
+            self._document_watch_refresh_inflight = False
+            return
+        batch_size = 128
+        if self._document_watch_pending_removals:
+            batch = self._document_watch_pending_removals[:batch_size]
+            del self._document_watch_pending_removals[:batch_size]
+            watcher.removePaths(batch)
+        elif self._document_watch_pending_additions:
+            batch = self._document_watch_pending_additions[:batch_size]
+            del self._document_watch_pending_additions[:batch_size]
+            watcher.addPaths(batch)
+        if self._document_watch_pending_removals:
+            QTimer.singleShot(0, self._apply_next_document_watch_batch)
+            return
+        if self._document_watch_pending_additions:
+            QTimer.singleShot(0, self._apply_next_document_watch_batch)
+            return
+        self._document_watch_refresh_inflight = False
+        if self._document_watch_apply_request < self._document_watch_refresh_request:
+            self._refresh_document_watch_paths()
 
     def _on_document_library_changed(self, _path: str) -> None:
         """Refresh document views when files are changed outside the app."""
@@ -546,9 +665,8 @@ class DocumentsWidget(BaseWidget):
         # Check if this is a ZIM file
         if filename.lower().endswith(".zim"):
             # Look up ZIM metadata from database
-            zim_records = ZimFile.objects.filter_by(path=file_path)
-            if zim_records and len(zim_records) > 0:
-                zim = zim_records[0]
+            zim = find_zim_file_by_path(file_path)
+            if zim is not None:
                 # Return title if available, otherwise filename
                 if zim.title:
                     return zim.title
@@ -563,7 +681,7 @@ class DocumentsWidget(BaseWidget):
         file_path = validated_path
 
         # Check if indexed
-        docs = Document.objects.filter_by(path=file_path)
+        docs = list_documents(filters={"path": file_path})
         if not docs or not docs[0].indexed:
             self._document_index_failures.pop(file_path, None)
             self._request_document_index(
@@ -582,9 +700,13 @@ class DocumentsWidget(BaseWidget):
 
         # Update database
         if docs:
-            Document.objects.update(pk=docs[0].id, active=True)
+            update_document(docs[0].id, {"active": True})
         else:
-            Document.objects.create(path=file_path, active=True, indexed=True)
+            ensure_document_record(
+                file_path,
+                active=True,
+                indexed=True,
+            )
 
         self.logger.info(f"Added to active documents: {display_name}")
         self.refresh_active_documents_list()
@@ -633,9 +755,8 @@ class DocumentsWidget(BaseWidget):
             return
 
         # Update database
-        docs = Document.objects.filter_by(path=file_path)
-        if docs and len(docs) > 0:
-            Document.objects.update(pk=docs[0].id, active=False)
+        for document in list_documents(filters={"path": file_path}):
+            update_document(document.id, {"active": False})
 
         display_name = self._get_display_name(file_path)
         self.logger.info(f"Removed from active documents: {display_name}")
@@ -675,7 +796,7 @@ class DocumentsWidget(BaseWidget):
             item.setForeground(QColor(color))
         return item
 
-    def _insert_document_table_row(self, row: int, document: Document) -> None:
+    def _insert_document_table_row(self, row: int, document) -> None:
         """Insert one document row into the status table."""
         table = self.ui.documentsTableWidget
         display_name = self._get_display_name(document.path)
@@ -719,7 +840,7 @@ class DocumentsWidget(BaseWidget):
             return
 
         documents = [
-            doc for doc in Document.objects.all() if os.path.exists(doc.path)
+            doc for doc in list_documents() if os.path.exists(doc.path)
         ]
         documents.sort(key=lambda doc: self._get_display_name(doc.path).lower())
         self._document_index_failures = {
@@ -758,7 +879,7 @@ class DocumentsWidget(BaseWidget):
 
         docs_by_path = {}
         for path in selected_paths:
-            matches = Document.objects.filter_by(path=path)
+            matches = list_documents(filters={"path": path})
             docs_by_path[path] = matches[0] if matches else None
 
         menu = QMenu(self)
@@ -805,9 +926,7 @@ class DocumentsWidget(BaseWidget):
         def delete_selected():
             for file_path in selected_paths:
                 self._document_index_failures.pop(file_path, None)
-                docs = Document.objects.filter_by(path=file_path)
-                if docs and len(docs) > 0:
-                    Document.objects.delete(pk=docs[0].id)
+                delete_documents_by_path(file_path)
                 try:
                     if os.path.exists(file_path):
                         os.remove(file_path)
@@ -920,10 +1039,7 @@ class DocumentsWidget(BaseWidget):
         def delete_selected():
             for file_path in selected_files:
                 self._document_index_failures.pop(file_path, None)
-                # Delete from database
-                docs = Document.objects.filter_by(path=file_path)
-                if docs and len(docs) > 0:
-                    Document.objects.delete(pk=docs[0].id)
+                delete_documents_by_path(file_path)
 
                 # Delete the actual file from disk
                 try:
@@ -951,11 +1067,7 @@ class DocumentsWidget(BaseWidget):
                                     file_path,
                                     None,
                                 )
-                                docs = Document.objects.filter_by(
-                                    path=file_path
-                                )
-                                if docs and len(docs) > 0:
-                                    Document.objects.delete(pk=docs[0].id)
+                                delete_documents_by_path(file_path)
 
                         # Then delete the folder from disk
                         shutil.rmtree(folder_path)
@@ -1029,10 +1141,7 @@ class DocumentsWidget(BaseWidget):
                         file_paths.append(file_path)
 
             for file_path in file_paths:
-                # Delete from database
-                docs = Document.objects.filter_by(path=file_path)
-                if docs and len(docs) > 0:
-                    Document.objects.delete(pk=docs[0].id)
+                delete_documents_by_path(file_path)
 
                 # Delete the actual file from disk
                 try:
@@ -1100,13 +1209,11 @@ class DocumentsWidget(BaseWidget):
                 return
 
             # Emit signal to knowledge base panel to handle indexing
-            # This uses the same threaded approach as "Index All" which doesn't freeze
             self.logger.info(
                 f"Requesting reindex for {len(file_paths)} documents"
             )
-            self.emit_signal(
-                SignalCode.RAG_INDEX_SELECTED_DOCUMENTS,
-                {"file_paths": file_paths},
+            self.knowledgeBasePanelWidget.request_index_selected_documents(
+                file_paths
             )
 
         # Delete selected documents from database AND disk
@@ -1120,10 +1227,7 @@ class DocumentsWidget(BaseWidget):
                         file_paths.append(file_path)
 
             for file_path in file_paths:
-                # Delete from database
-                docs = Document.objects.filter_by(path=file_path)
-                if docs and len(docs) > 0:
-                    Document.objects.delete(pk=docs[0].id)
+                delete_documents_by_path(file_path)
 
                 # Delete the actual file from disk
                 try:
@@ -1165,7 +1269,7 @@ class DocumentsWidget(BaseWidget):
         # Query all documents that are not indexed
         self._unindexed_docs = [
             doc.path
-            for doc in Document.objects.filter(Document.indexed == False)
+            for doc in list_documents(filters={"indexed": False})
             if hasattr(doc, "path") and doc.path
         ]
         self._total_to_index = len(self._unindexed_docs)
@@ -1181,8 +1285,11 @@ class DocumentsWidget(BaseWidget):
 
     def refresh_documents_list(self):
         """Refresh the table-driven document state and watcher roots."""
+        changed = self._sync_document_records_with_library()
         self.refresh_active_documents_list()
         self._refresh_document_watch_paths()
+        if changed:
+            self.knowledgeBasePanelWidget._refresh_statistics()
 
     def _expand_available_document_sections(self, *items) -> None:
         """Expand populated document tree branches so imports are visible."""

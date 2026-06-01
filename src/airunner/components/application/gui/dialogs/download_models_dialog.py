@@ -5,7 +5,7 @@ and uses the standard HuggingFace download infrastructure with progress dialogs.
 """
 
 import os
-from typing import Dict, List, Optional, Callable
+from typing import Dict, List
 
 from PySide6.QtWidgets import (
     QDialog,
@@ -25,23 +25,14 @@ from PySide6.QtCore import Qt, QTimer
 from airunner.components.application.gui.windows.main.settings_mixin import (
     SettingsMixin,
 )
-from airunner.components.data.bootstrap.model_bootstrap_data import (
-    model_bootstrap_data,
+from airunner.components.data.bootstrap_service import (
+    get_model_bootstrap_data,
 )
-from airunner.components.art.data.bootstrap.controlnet_bootstrap_data import (
-    controlnet_bootstrap_data,
-)
-from airunner.components.art.data.bootstrap.sd_file_bootstrap_data import (
-    SD_FILE_BOOTSTRAP_DATA,
-)
-from airunner.components.tts.data.bootstrap.openvoice_bootstrap_data import (
-    OPENVOICE_FILES,
-)
-from airunner.components.llm.data.bootstrap.llm_file_bootstrap_data import (
-    LLM_FILE_BOOTSTRAP_DATA,
+from airunner.components.data.bootstrap_service import (
+    get_controlnet_bootstrap_data,
 )
 from airunner.components.llm.config.provider_config import LLMProviderConfig
-from airunner.components.stt.data.bootstrap.whisper import WHISPER_FILES
+from airunner.components.data.bootstrap_service import get_whisper_files
 from airunner.enums import SignalCode
 from airunner.settings import AIRUNNER_LOG_LEVEL, AIRUNNER_ART_ENABLED
 from airunner.utils.application import get_logger
@@ -152,7 +143,7 @@ class DownloadModelsDialog(MediatorMixin, SettingsMixin, QDialog):
         # Get unique SD versions from model bootstrap data
         sd_models = [
             m
-            for m in model_bootstrap_data
+            for m in get_model_bootstrap_data()
             if m.get("category") in ("stablediffusion", "zimage")
         ]
         
@@ -173,13 +164,13 @@ class DownloadModelsDialog(MediatorMixin, SettingsMixin, QDialog):
         
     def _add_controlnet_group(self, layout: QVBoxLayout) -> None:
         """Add ControlNet model selection group."""
-        if not controlnet_bootstrap_data:
+        if not get_controlnet_bootstrap_data():
             return
             
         group = QGroupBox("ControlNet Models")
         group_layout = QVBoxLayout(group)
         
-        for model in controlnet_bootstrap_data:
+        for model in get_controlnet_bootstrap_data():
             key = f"controlnet_{model['name']}"
             checkbox = QCheckBox(f"{model['display_name']} ({model['version']})")
             checkbox.setChecked(False)
@@ -198,7 +189,7 @@ class DownloadModelsDialog(MediatorMixin, SettingsMixin, QDialog):
         group = QGroupBox("Language Models (LLM)")
         group_layout = QVBoxLayout(group)
         
-        llm_models = [m for m in model_bootstrap_data if m.get("category") == "llm"]
+        llm_models = [m for m in get_model_bootstrap_data() if m.get("category") == "llm"]
         
         for model in llm_models:
             key = f"llm_{model['path']}"
@@ -220,7 +211,7 @@ class DownloadModelsDialog(MediatorMixin, SettingsMixin, QDialog):
         group = QGroupBox("Speech-to-Text (STT)")
         group_layout = QVBoxLayout(group)
         
-        for repo_id in WHISPER_FILES.keys():
+        for repo_id in get_whisper_files().keys():
             key = f"stt_{repo_id}"
             name = repo_id.split("/")[-1] if "/" in repo_id else repo_id
             checkbox = QCheckBox(name)
@@ -244,7 +235,7 @@ class DownloadModelsDialog(MediatorMixin, SettingsMixin, QDialog):
         melo_models = []
         bert_models = []
         
-        for repo_id in OPENVOICE_FILES.keys():
+        for repo_id in get_openvoice_files().keys():
             if "MeloTTS" in repo_id:
                 melo_models.append(repo_id)
             else:
@@ -320,7 +311,7 @@ class DownloadModelsDialog(MediatorMixin, SettingsMixin, QDialog):
             if key.startswith("sd_"):
                 repo_id = key[3:]  # Remove "sd_" prefix
                 model = next(
-                    (m for m in model_bootstrap_data if m["path"] == repo_id),
+                    (m for m in get_model_bootstrap_data() if m["path"] == repo_id),
                     None
                 )
                 if model:
@@ -342,7 +333,7 @@ class DownloadModelsDialog(MediatorMixin, SettingsMixin, QDialog):
             elif key.startswith("controlnet_"):
                 cn_name = key[11:]  # Remove "controlnet_" prefix
                 model = next(
-                    (m for m in controlnet_bootstrap_data if m["name"] == cn_name),
+                    (m for m in get_controlnet_bootstrap_data() if m["name"] == cn_name),
                     None
                 )
                 if model:
@@ -363,7 +354,7 @@ class DownloadModelsDialog(MediatorMixin, SettingsMixin, QDialog):
             elif key.startswith("llm_"):
                 repo_id = key[4:]  # Remove "llm_" prefix
                 model = next(
-                    (m for m in model_bootstrap_data if m["path"] == repo_id and m["category"] == "llm"),
+                    (m for m in get_model_bootstrap_data() if m["path"] == repo_id and m["category"] == "llm"),
                     None
                 )
                 if model:

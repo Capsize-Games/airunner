@@ -1,157 +1,122 @@
-#!/bin/bash
-# AI Runner Installation Script
-# https://github.com/Capsize-Games/airunner
-#
-# Usage:
-#   curl -sSL https://raw.githubusercontent.com/Capsize-Games/airunner/develop/install.sh | bash
-#   OR
-#   ./install.sh
-#
-# This script supports two installation modes:
-#   1. Install a prebuilt Linux bundle archive with embedded Python
-#   2. Create a virtual environment and install AI Runner from Python packages
+#!/usr/bin/env bash
 
-set -e
+set -euo pipefail
 
-# Colors for output
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-NC='\033[0m' # No Color
-
-# Configuration
-AIRUNNER_VERSION="5.0.0"
-MIN_PYTHON_VERSION="3.13"
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+MODE="${AIRUNNER_INSTALL_MODE:-single-package}"
 INSTALL_DIR="${AIRUNNER_INSTALL_DIR:-$HOME/.local/airunner}"
-VENV_DIR="${INSTALL_DIR}/venv"
 BIN_DIR="${HOME}/.local/bin"
 BUNDLE_ARCHIVE="${AIRUNNER_BUNDLE_ARCHIVE:-}"
 XDG_DATA_HOME_DIR="${XDG_DATA_HOME:-$HOME/.local/share}"
 DESKTOP_APPLICATIONS_DIR="${XDG_DATA_HOME_DIR}/applications"
 ICON_INSTALL_DIR="${XDG_DATA_HOME_DIR}/icons/hicolor/64x64/apps"
-DATA_DIR="${AIRUNNER_DATA_DIR:-${AIRUNNER_BASE_PATH:-$HOME/.local/share/airunner}}"
-RUNTIME_DIR="${AIRUNNER_RUNTIME_ROOT:-${DATA_DIR}/runtime}"
-RUNTIME_CONFIG_DIR="${AIRUNNER_RUNTIME_CONFIG_DIR:-${RUNTIME_DIR}/configs}"
-RUNTIME_LOG_DIR="${AIRUNNER_RUNTIME_LOG_DIR:-${RUNTIME_DIR}/logs}"
-RUNTIME_SOCKET_DIR="${AIRUNNER_RUNTIME_SOCKET_DIR:-${RUNTIME_DIR}/sockets}"
-CACHE_DIR="${AIRUNNER_CACHE_DIR:-${DATA_DIR}/cache}"
-MODEL_DIR="${AIRUNNER_MODEL_DIR:-${DATA_DIR}/models}"
-DEFAULT_INSTALL_PROFILES="core,llm-native,stt-native,art-python,tts-python,gui"
-AIRUNNER_INSTALL_PROFILES=$(
-    printf '%s' "${AIRUNNER_INSTALL_PROFILES:-$DEFAULT_INSTALL_PROFILES}" |
-        tr -d '[:space:]'
-)
-ADD_TO_PATH=false
 REQUESTED_HELP=0
 REQUESTED_UNINSTALL=0
+MODE_ARGS=()
 
-echo -e "${BLUE}"
-echo "╔═══════════════════════════════════════════════════════════════╗"
-echo "║                                                               ║"
-echo "║     █████╗ ██╗    ██████╗ ██╗   ██╗███╗   ██╗███╗   ██╗███████╗██████╗  ║"
-echo "║    ██╔══██╗██║    ██╔══██╗██║   ██║████╗  ██║████╗  ██║██╔════╝██╔══██╗ ║"
-echo "║    ███████║██║    ██████╔╝██║   ██║██╔██╗ ██║██╔██╗ ██║█████╗  ██████╔╝ ║"
-echo "║    ██╔══██║██║    ██╔══██╗██║   ██║██║╚██╗██║██║╚██╗██║██╔══╝  ██╔══██╗ ║"
-echo "║    ██║  ██║██║    ██║  ██║╚██████╔╝██║ ╚████║██║ ╚████║███████╗██║  ██║ ║"
-echo "║    ╚═╝  ╚═╝╚═╝    ╚═╝  ╚═╝ ╚═════╝ ╚═╝  ╚═══╝╚═╝  ╚═══╝╚══════╝╚═╝  ╚═╝ ║"
-echo "║                                                               ║"
-echo "║              Local AI Models Made Easy                        ║"
-echo "║                                                               ║"
-echo "╚═══════════════════════════════════════════════════════════════╝"
-echo -e "${NC}"
-echo ""
 
-# Helper functions
 log_info() {
-    echo -e "${BLUE}[INFO]${NC} $1"
+    printf '[INFO] %s\n' "$1"
 }
+
 
 log_success() {
-    echo -e "${GREEN}[✓]${NC} $1"
+    printf '[OK] %s\n' "$1"
 }
 
-log_warning() {
-    echo -e "${YELLOW}[WARNING]${NC} $1"
-}
 
 log_error() {
-    echo -e "${RED}[ERROR]${NC} $1"
+    printf '[ERROR] %s\n' "$1" >&2
 }
 
-profile_enabled() {
-    case ",${AIRUNNER_INSTALL_PROFILES}," in
-        *",$1,"*) return 0 ;;
-    esac
-    return 1
+
+usage() {
+    cat <<EOF
+Usage: ./install.sh [options] [-- mode-specific args]
+
+AIRunner now has three installer modes:
+  single-package  Install a prebuilt bundle with embedded Python
+  dev             Delegate to ./scripts/install.sh
+  distributed     Delegate to ./deployment/install_distributed.sh
+
+Options:
+  --mode MODE                 single-package|dev|distributed
+  --bundle-archive PATH       Bundle archive for single-package mode
+  --install-dir PATH          Install root for single-package mode
+  --uninstall                 Remove the single-package install
+  -h, --help                  Show this help text
+EOF
 }
 
-any_profile_enabled() {
-    local profile
 
-    for profile in "$@"; do
-        if profile_enabled "$profile"; then
-            return 0
-        fi
-    done
-
-    return 1
-}
-
-gui_profile_enabled() {
-    any_profile_enabled gui desktop all all_dev all_native all_dev_native
-}
-
-runtime_needs_pytorch() {
-    any_profile_enabled \
-        llm-native \
-        art-python \
-        tts-python \
-        headless \
-        desktop \
-        all \
-        all_dev \
-        all_native \
-        all_dev_native
-}
-
-parse_cli_args() {
+parse_args() {
     while [[ $# -gt 0 ]]; do
         case "$1" in
+            --mode)
+                MODE="$2"
+                shift 2
+                ;;
             --bundle-archive)
                 BUNDLE_ARCHIVE="$2"
+                shift 2
+                ;;
+            --install-dir)
+                INSTALL_DIR="$2"
                 shift 2
                 ;;
             --uninstall|-u)
                 REQUESTED_UNINSTALL=1
                 shift
                 ;;
-            --help|-h)
-                REQUESTED_HELP=1
+            -h|--help)
+                if [[ "$MODE" == 'single-package' ]]; then
+                    REQUESTED_HELP=1
+                else
+                    MODE_ARGS+=("$1")
+                fi
                 shift
                 ;;
+            --)
+                shift
+                MODE_ARGS+=("$@")
+                return
+                ;;
             *)
-                log_error "Unknown argument: $1"
-                exit 1
+                MODE_ARGS+=("$1")
+                shift
                 ;;
         esac
     done
 }
 
-print_help() {
-    echo "AI Runner Installation Script"
-    echo ""
-    echo "Usage:"
-    echo "  ./install.sh"
-    echo "  ./install.sh --bundle-archive dist/airunner-...tar.gz"
-    echo "  ./install.sh --uninstall"
-    echo ""
-    echo "Environment variables:"
-    echo "  AIRUNNER_INSTALL_DIR        Installation directory"
-    echo "  AIRUNNER_INSTALL_PROFILES   Comma-separated extras"
-    echo "  AIRUNNER_DATA_DIR           Runtime data directory"
-    echo "  AIRUNNER_BUNDLE_ARCHIVE     Prebuilt Linux bundle archive"
+
+latest_local_bundle() {
+    local latest=''
+    latest="$(find "$ROOT_DIR/dist" -maxdepth 1 -type f \
+        -name 'airunner-*-linux-*-bundle.tar.gz' | sort | tail -n 1)"
+    printf '%s\n' "$latest"
 }
+
+
+dispatch_mode() {
+    case "$MODE" in
+        dev)
+            exec "$ROOT_DIR/scripts/install.sh" "${MODE_ARGS[@]}"
+            ;;
+        distributed)
+            exec "$ROOT_DIR/deployment/install_distributed.sh" \
+                "${MODE_ARGS[@]}"
+            ;;
+        single-package)
+            return 0
+            ;;
+        *)
+            log_error "Unknown install mode: ${MODE}"
+            exit 1
+            ;;
+    esac
+}
+
 
 extract_bundle_root() {
     local archive_path="$1"
@@ -163,12 +128,13 @@ extract_bundle_root() {
     entries=("$extract_root"/*)
 
     if [[ ${#entries[@]} -eq 1 && -d "${entries[0]}" ]]; then
-        echo "${entries[0]}"
+        printf '%s\n' "${entries[0]}"
         return
     fi
 
-    echo "$extract_root"
+    printf '%s\n' "$extract_root"
 }
+
 
 install_desktop_assets() {
     local desktop_source="$INSTALL_DIR/share/applications/airunner.desktop"
@@ -185,387 +151,81 @@ install_desktop_assets() {
     fi
 }
 
-install_prebuilt_bundle() {
-    local temp_root
-    local extracted_root
 
-    if [[ -z "$BUNDLE_ARCHIVE" ]]; then
-        return 1
+install_headless_wrapper() {
+    mkdir -p "$BIN_DIR"
+    cat > "$BIN_DIR/airunner-headless" <<EOF
+#!/usr/bin/env bash
+exec "$INSTALL_DIR/bin/airunner" --headless "\$@"
+EOF
+    chmod +x "$BIN_DIR/airunner-headless"
+}
+
+
+install_single_package() {
+    local archive_path="$BUNDLE_ARCHIVE"
+    local temp_root=''
+    local extracted_root=''
+
+    if [[ -z "$archive_path" ]]; then
+        archive_path="$(latest_local_bundle)"
     fi
 
-    if [[ ! -f "$BUNDLE_ARCHIVE" ]]; then
-        log_error "Bundle archive not found: $BUNDLE_ARCHIVE"
+    if [[ -z "$archive_path" || ! -f "$archive_path" ]]; then
+        log_error 'single-package mode requires a prebuilt bundle archive'
+        log_error 'Pass --bundle-archive or stage one under ./dist first'
         exit 1
     fi
 
-    log_info "Installing prebuilt AIRunner bundle from ${BUNDLE_ARCHIVE}..."
-
+    log_info "Installing bundle from ${archive_path}"
     temp_root="$(mktemp -d)"
-    extracted_root="$(extract_bundle_root "$BUNDLE_ARCHIVE" "$temp_root")"
+    extracted_root="$(extract_bundle_root "$archive_path" "$temp_root")"
 
     rm -rf "$INSTALL_DIR"
-    mkdir -p "$INSTALL_DIR"
+    mkdir -p "$INSTALL_DIR" "$BIN_DIR"
     cp -a "$extracted_root"/. "$INSTALL_DIR/"
     rm -rf "$temp_root"
 
     if [[ ! -x "$INSTALL_DIR/bin/airunner" ]]; then
-        log_error "Installed bundle is missing bin/airunner"
+        log_error "Installed bundle is missing ${INSTALL_DIR}/bin/airunner"
         exit 1
     fi
 
-    mkdir -p "$BIN_DIR"
     ln -sfn "$INSTALL_DIR/bin/airunner" "$BIN_DIR/airunner"
+    install_headless_wrapper
     install_desktop_assets
 
-    log_success "Prebuilt AIRunner bundle installed"
-    echo ""
-    echo "AIRunner bundle root: $INSTALL_DIR"
-    echo "Primary launcher: $BIN_DIR/airunner"
-    echo ""
-
-    if [[ ":$PATH:" != *":$BIN_DIR:"* ]]; then
-        log_warning "$BIN_DIR is not in your PATH"
-        echo "Add this line to your shell profile:"
-        echo -e "  ${YELLOW}export PATH=\"\$HOME/.local/bin:\$PATH\"${NC}"
-    fi
-
-    return 0
+    log_success 'Single-package install complete'
+    printf 'Launcher: %s/airunner\n' "$BIN_DIR"
 }
 
-# Check if command exists
-command_exists() {
-    command -v "$1" >/dev/null 2>&1
+
+uninstall_single_package() {
+    rm -rf "$INSTALL_DIR"
+    rm -f "$BIN_DIR/airunner" "$BIN_DIR/airunner-headless"
+    rm -f "$DESKTOP_APPLICATIONS_DIR/airunner.desktop"
+    rm -f "$ICON_INSTALL_DIR/airunner.png"
+    log_success 'Single-package install removed'
 }
 
-# Compare version numbers
-version_ge() {
-    # Returns 0 if $1 >= $2
-    printf '%s\n%s\n' "$2" "$1" | sort -V -C
-}
 
-# Get Python version
-get_python_version() {
-    "$1" -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')" 2>/dev/null
-}
+main() {
+    parse_args "$@"
 
-# Find suitable Python
-find_python() {
-    local python_cmd=""
-    
-    # Try python3.13 first, then python3, then python
-    for cmd in python3.13 python3 python; do
-        if command_exists "$cmd"; then
-            local version=$(get_python_version "$cmd")
-            if [ -n "$version" ] && version_ge "$version" "$MIN_PYTHON_VERSION"; then
-                python_cmd="$cmd"
-                break
-            fi
-        fi
-    done
-    
-    echo "$python_cmd"
-}
-
-# Check system requirements
-check_requirements() {
-    log_info "Checking system requirements..."
-    
-    # Check Python
-    PYTHON_CMD=$(find_python)
-    if [ -z "$PYTHON_CMD" ]; then
-        log_error "Python ${MIN_PYTHON_VERSION}+ is required but not found."
-        echo ""
-        echo "Please install Python ${MIN_PYTHON_VERSION} or later:"
-        echo "  Ubuntu/Debian: sudo apt install python3.13 python3.13-venv python3.13-dev"
-        echo "  Fedora: sudo dnf install python3.13"
-        echo "  Arch: sudo pacman -S python"
-        echo "  Or use pyenv: https://github.com/pyenv/pyenv"
-        exit 1
-    fi
-    
-    local python_version=$(get_python_version "$PYTHON_CMD")
-    log_success "Found Python $python_version ($PYTHON_CMD)"
-    
-    # Check for venv module
-    if ! "$PYTHON_CMD" -c "import venv" 2>/dev/null; then
-        log_error "Python venv module not found."
-        echo "Please install it:"
-        echo "  Ubuntu/Debian: sudo apt install python3.13-venv"
-        exit 1
-    fi
-    log_success "Python venv module available"
-    
-    # Check for pip
-    if ! "$PYTHON_CMD" -m pip --version >/dev/null 2>&1; then
-        log_error "pip not found."
-        echo "Please install it:"
-        echo "  Ubuntu/Debian: sudo apt install python3-pip"
-        exit 1
-    fi
-    log_success "pip available"
-    
-    # Check for CUDA (optional)
-    if command_exists nvidia-smi; then
-        local cuda_version=$(nvidia-smi --query-gpu=driver_version --format=csv,noheader 2>/dev/null | head -1)
-        if [ -n "$cuda_version" ]; then
-            log_success "NVIDIA GPU detected (driver: $cuda_version)"
-            HAS_CUDA=true
-        fi
-    else
-        log_warning "No NVIDIA GPU detected. AI Runner will use CPU (slower)."
-        HAS_CUDA=false
-    fi
-    
-    # Check disk space (need at least 20GB for models)
-    local available_space=$(df -BG "$HOME" | awk 'NR==2 {print $4}' | sed 's/G//')
-    if [ "$available_space" -lt 20 ]; then
-        log_warning "Low disk space: ${available_space}GB available. AI models require 10-50GB."
-    else
-        log_success "Disk space: ${available_space}GB available"
-    fi
-    
-    # Check RAM (recommend 16GB+)
-    local total_ram=$(free -g | awk '/^Mem:/{print $2}')
-    if [ "$total_ram" -lt 8 ]; then
-        log_warning "Low RAM: ${total_ram}GB. 16GB+ recommended for AI workloads."
-    else
-        log_success "RAM: ${total_ram}GB"
-    fi
-    
-    echo ""
-}
-
-# Create virtual environment
-create_venv() {
-    log_info "Creating virtual environment at ${VENV_DIR}..."
-    
-    # Create install directory
-    mkdir -p "$INSTALL_DIR"
-    
-    # Create venv if it doesn't exist
-    if [ ! -d "$VENV_DIR" ]; then
-        "$PYTHON_CMD" -m venv "$VENV_DIR"
-        log_success "Virtual environment created"
-    else
-        log_info "Virtual environment already exists, reusing..."
-    fi
-    
-    # Activate venv
-    source "$VENV_DIR/bin/activate"
-    
-    # Upgrade pip
-    log_info "Upgrading pip..."
-    pip install --upgrade pip setuptools wheel >/dev/null 2>&1
-    log_success "pip upgraded"
-}
-
-# Create standardized runtime directories
-prepare_runtime_dirs() {
-    log_info "Creating runtime directories under ${DATA_DIR}..."
-
-    mkdir -p "$DATA_DIR" "$RUNTIME_DIR" "$RUNTIME_CONFIG_DIR"
-    mkdir -p "$RUNTIME_LOG_DIR" "$RUNTIME_SOCKET_DIR"
-    mkdir -p "$CACHE_DIR" "$MODEL_DIR"
-    chmod 700 "$RUNTIME_DIR" "$RUNTIME_CONFIG_DIR" "$RUNTIME_LOG_DIR"
-    chmod 700 "$RUNTIME_SOCKET_DIR" "$CACHE_DIR" "$MODEL_DIR"
-
-    log_success "Runtime directories ready"
-}
-
-# Install PyTorch
-install_pytorch() {
-    if ! runtime_needs_pytorch; then
-        log_info "Skipping PyTorch for profiles: ${AIRUNNER_INSTALL_PROFILES}"
+    if [[ "$REQUESTED_HELP" == '1' ]]; then
+        usage
         return
     fi
 
-    log_info "Installing PyTorch..."
-    
-    if [ "$HAS_CUDA" = true ]; then
-        log_info "Installing PyTorch with CUDA support..."
-        pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu124
-    else
-        log_info "Installing PyTorch (CPU only)..."
-        pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
+    dispatch_mode
+
+    if [[ "$REQUESTED_UNINSTALL" == '1' ]]; then
+        uninstall_single_package
+        return
     fi
-    
-    log_success "PyTorch installed"
+
+    install_single_package
 }
 
-# Install AI Runner
-install_airunner() {
-    log_info "Installing AI Runner profiles: ${AIRUNNER_INSTALL_PROFILES}"
 
-    pip install "airunner[${AIRUNNER_INSTALL_PROFILES}]"
-    
-    log_success "AI Runner installed"
-}
-
-# Create launcher scripts
-create_launchers() {
-    log_info "Creating launcher scripts..."
-    
-    mkdir -p "$BIN_DIR"
-    
-    if gui_profile_enabled; then
-        cat > "$BIN_DIR/airunner" << EOF
-#!/bin/bash
-# AI Runner Launcher
-export AIRUNNER_BASE_PATH="${DATA_DIR}"
-export AIRUNNER_DATA_DIR="${DATA_DIR}"
-export AIRUNNER_BUNDLE_ROOT="${INSTALL_DIR}"
-export AIRUNNER_RUNTIME_ROOT="${RUNTIME_DIR}"
-export AIRUNNER_RUNTIME_CONFIG_DIR="${RUNTIME_CONFIG_DIR}"
-export AIRUNNER_RUNTIME_LOG_DIR="${RUNTIME_LOG_DIR}"
-export AIRUNNER_RUNTIME_SOCKET_DIR="${RUNTIME_SOCKET_DIR}"
-export AIRUNNER_CACHE_DIR="${CACHE_DIR}"
-export AIRUNNER_MODEL_DIR="${MODEL_DIR}"
-export AIRUNNER_PYTHON="${VENV_DIR}/bin/python"
-export AIRUNNER_DAEMON_CONFIG="${RUNTIME_CONFIG_DIR}/daemon.yaml"
-export AIRUNNER_RUNTIME_BIND_HOST="127.0.0.1"
-export XDG_CACHE_HOME="${CACHE_DIR}"
-export HF_HOME="${CACHE_DIR}/huggingface"
-export TRANSFORMERS_CACHE="${CACHE_DIR}/huggingface/transformers"
-source "${VENV_DIR}/bin/activate"
-exec python -m airunner.launcher "\$@"
-EOF
-        chmod +x "$BIN_DIR/airunner"
-    else
-        rm -f "$BIN_DIR/airunner"
-    fi
-    
-    cat > "$BIN_DIR/airunner-headless" << EOF
-#!/bin/bash
-# AI Runner Headless Mode
-export AIRUNNER_BASE_PATH="${DATA_DIR}"
-export AIRUNNER_DATA_DIR="${DATA_DIR}"
-export AIRUNNER_BUNDLE_ROOT="${INSTALL_DIR}"
-export AIRUNNER_RUNTIME_ROOT="${RUNTIME_DIR}"
-export AIRUNNER_RUNTIME_CONFIG_DIR="${RUNTIME_CONFIG_DIR}"
-export AIRUNNER_RUNTIME_LOG_DIR="${RUNTIME_LOG_DIR}"
-export AIRUNNER_RUNTIME_SOCKET_DIR="${RUNTIME_SOCKET_DIR}"
-export AIRUNNER_CACHE_DIR="${CACHE_DIR}"
-export AIRUNNER_MODEL_DIR="${MODEL_DIR}"
-export AIRUNNER_PYTHON="${VENV_DIR}/bin/python"
-export AIRUNNER_DAEMON_CONFIG="${RUNTIME_CONFIG_DIR}/daemon.yaml"
-export AIRUNNER_RUNTIME_BIND_HOST="127.0.0.1"
-export XDG_CACHE_HOME="${CACHE_DIR}"
-export HF_HOME="${CACHE_DIR}/huggingface"
-export TRANSFORMERS_CACHE="${CACHE_DIR}/huggingface/transformers"
-source "${VENV_DIR}/bin/activate"
-exec python -m airunner.bin.airunner_headless "\$@"
-EOF
-    chmod +x "$BIN_DIR/airunner-headless"
-    
-    log_success "Launcher scripts created in $BIN_DIR"
-    
-    # Check if BIN_DIR is in PATH
-    if [[ ":$PATH:" != *":$BIN_DIR:"* ]]; then
-        log_warning "$BIN_DIR is not in your PATH"
-        echo ""
-        echo "Add this line to your ~/.bashrc or ~/.zshrc:"
-        echo -e "  ${YELLOW}export PATH=\"\$HOME/.local/bin:\$PATH\"${NC}"
-        echo ""
-        echo "Then reload your shell:"
-        echo -e "  ${YELLOW}source ~/.bashrc${NC}"
-        ADD_TO_PATH=true
-    fi
-}
-
-# Print success message
-print_success() {
-    echo ""
-    echo -e "${GREEN}╔═══════════════════════════════════════════════════════════════╗${NC}"
-    echo -e "${GREEN}║                  Installation Complete!                       ║${NC}"
-    echo -e "${GREEN}╚═══════════════════════════════════════════════════════════════╝${NC}"
-    echo ""
-    echo "AI Runner has been installed to: ${INSTALL_DIR}"
-    echo ""
-    echo -e "${BLUE}Next steps:${NC}"
-    echo ""
-
-    if [ "$ADD_TO_PATH" = true ]; then
-        echo "1. Add ~/.local/bin to your PATH (see above)"
-        echo ""
-        if gui_profile_enabled; then
-            echo "2. Launch AI Runner:"
-            echo -e "   ${YELLOW}$BIN_DIR/airunner${NC}"
-            echo ""
-            echo "3. Download models from Tools → Download Models menu"
-        else
-            echo "2. Launch the headless service:"
-            echo -e "   ${YELLOW}$BIN_DIR/airunner-headless${NC}"
-        fi
-    elif gui_profile_enabled; then
-        echo "1. Launch AI Runner:"
-        echo -e "   ${YELLOW}airunner${NC}"
-        echo ""
-        echo "2. Download models from Tools → Download Models menu"
-    else
-        echo "1. Launch the headless service:"
-        echo -e "   ${YELLOW}airunner-headless${NC}"
-    fi
-    
-    echo ""
-    echo -e "${BLUE}Documentation:${NC} https://github.com/Capsize-Games/airunner/wiki"
-    echo -e "${BLUE}Issues:${NC} https://github.com/Capsize-Games/airunner/issues"
-    echo ""
-}
-
-# Uninstall function
-uninstall() {
-    log_info "Uninstalling AI Runner..."
-    
-    # Remove install directory
-    if [ -d "$INSTALL_DIR" ]; then
-        rm -rf "$INSTALL_DIR"
-        log_success "Removed $INSTALL_DIR"
-    fi
-    
-    # Remove launcher scripts
-    for script in airunner airunner-headless; do
-        if [ -f "$BIN_DIR/$script" ]; then
-            rm "$BIN_DIR/$script"
-            log_success "Removed $BIN_DIR/$script"
-        fi
-    done
-
-    rm -f "$DESKTOP_APPLICATIONS_DIR/airunner.desktop"
-    rm -f "$ICON_INSTALL_DIR/airunner.png"
-    
-    echo ""
-    log_success "AI Runner has been uninstalled."
-    echo ""
-    echo "Note: Model files in ~/.local/share/airunner were NOT removed."
-    echo "To remove them: rm -rf ~/.local/share/airunner"
-}
-
-# Main installation
-main() {
-    parse_cli_args "$@"
-
-    if [ "$REQUESTED_UNINSTALL" = "1" ]; then
-        uninstall
-        exit 0
-    fi
-
-    if [ "$REQUESTED_HELP" = "1" ]; then
-        print_help
-        exit 0
-    fi
-
-    if install_prebuilt_bundle; then
-        exit 0
-    fi
-    
-    check_requirements
-    create_venv
-    prepare_runtime_dirs
-    install_pytorch
-    install_airunner
-    create_launchers
-    print_success
-}
-
-# Run main function
 main "$@"

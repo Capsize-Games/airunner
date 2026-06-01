@@ -6,12 +6,61 @@ imports to the top of the file.
 """
 
 import threading
+import io
+import os
 from typing import Dict
+from PIL import Image
+
+from PySide6.QtWidgets import QApplication, QMessageBox, QDialog
+from PySide6.QtCore import QTimer, QThread
+
 from airunner.components.application.workers.worker import Worker
 from airunner.enums import SignalCode
 from airunner.utils.application.create_worker import create_worker
 from airunner.utils.application.log_hygiene import summarize_mapping_keys
-
+from airunner.enums import ModelStatus, ModelType
+from airunner.components.documents.workers.document_worker import (
+    DocumentWorker,
+)
+from airunner.components.application.workers.daemon_huggingface_download_worker import (
+    HuggingFaceDownloadWorker,
+)
+from airunner.components.llm.gui.windows.huggingface_download_dialog import (
+    HuggingFaceDownloadDialog,
+)
+from airunner.utils.image import convert_image_to_binary
+from airunner.components.art.managers.stablediffusion.image_response import (
+    ImageResponse,
+)
+from airunner.components.llm.config.provider_config import LLMProviderConfig
+from airunner.enums import TTSModel
+from airunner.components.application.gui.dialogs.privacy_consent_dialog import (
+    is_huggingface_allowed,
+)
+from airunner.components.tts.gui.dialogs.openvoice_language_dialog import (
+    OpenVoiceLanguageDialog,
+)
+from airunner.components.data.bootstrap_service import (
+    get_openvoice_language_models,
+)
+from airunner.components.tts.workers.tts_vocalizer_worker import (
+    TTSVocalizerWorker,
+)
+from airunner_services.workers.tts_generator_worker import (
+    TTSGeneratorWorker,
+)
+from airunner.components.stt.workers.audio_capture_worker import (
+    AudioCaptureWorker,
+)
+from airunner.components.art.workers.mask_generator_worker import (
+    MaskGeneratorWorker,
+)
+from airunner.components.art.workers.image_export_worker import (
+    ImageExportWorker,
+)
+from airunner.components.application.workers.model_scanner.model_scanner_worker import (
+    ModelScannerWorker,
+)
 
 _OPTIONAL_LOAD_REQUEST_TIMEOUT_SECONDS = 5.0
 _OPTIONAL_UNLOAD_REQUEST_TIMEOUT_SECONDS = 2.0
@@ -21,95 +70,58 @@ _STREAM_TTS_WORKER_SLEEP_MS = 1
 
 
 class WorkerManager(Worker):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, signal_api_adapter=None, **kwargs):
         self.signal_handlers = {
-            SignalCode.REMOVE_BACKGROUND: self.on_remove_background_signal,
-            SignalCode.LLM_TEXT_GENERATE_REQUEST_SIGNAL: self.on_llm_request_signal,
-            SignalCode.START_AUTO_IMAGE_GENERATION_SIGNAL: self.on_start_auto_image_generation_signal,
             SignalCode.DO_GENERATE_SIGNAL: self.on_do_generate_signal,
-            SignalCode.TTS_GENERATOR_WORKER_ADD_TO_STREAM_SIGNAL: self.on_tts_generator_worker_add_to_stream_signal,
+            SignalCode.REMOVE_BACKGROUND: self.on_remove_background_signal,
+            SignalCode.TTS_GENERATOR_WORKER_ADD_TO_STREAM_SIGNAL: (
+                self.on_tts_generator_worker_add_to_stream_signal
+            ),
             SignalCode.TTS_ENABLE_SIGNAL: self.on_enable_tts_signal,
-            SignalCode.STT_LOAD_SIGNAL: self.on_stt_load_signal,
-            SignalCode.STT_START_CAPTURE_SIGNAL: self.on_stt_start_capture_signal,
-            SignalCode.ART_MODEL_DOWNLOAD_REQUIRED: self.on_art_model_download_required,
+            SignalCode.TTS_DISABLE_SIGNAL: self.on_disable_tts_signal,
+            # STT load now via daemon runtime control
+            # STT capture start kept for microphone control
             SignalCode.HUGGINGFACE_DOWNLOAD_COMPLETE: self.on_huggingface_download_complete,
-            SignalCode.SD_UNLOAD_SIGNAL: self.on_unload_art_signal,
-            SignalCode.RMBG_UNLOAD_SIGNAL: self.on_unload_rmbg_signal,
-            SignalCode.SD_CANCEL_SIGNAL: self.on_sd_cancel_signal,
-            SignalCode.STOP_AUTO_IMAGE_GENERATION_SIGNAL: self.on_stop_auto_image_generation_signal,
-            SignalCode.INTERRUPT_IMAGE_GENERATION_SIGNAL: self.on_interrupt_image_generation_signal,
-            SignalCode.CHANGE_SCHEDULER_SIGNAL: self.on_change_scheduler_signal,
-            SignalCode.MODEL_STATUS_CHANGED_SIGNAL: self.on_model_status_changed_signal,
-            SignalCode.SD_LOAD_SIGNAL: self.on_load_art_signal,
-            SignalCode.SD_ART_MODEL_CHANGED: self.on_art_model_changed,
-            SignalCode.CONTROLNET_LOAD_SIGNAL: self.on_load_controlnet_signal,
-            SignalCode.CONTROLNET_UNLOAD_SIGNAL: self.on_unload_controlnet_signal,
-            SignalCode.SAFETY_CHECKER_LOAD_SIGNAL: self.on_safety_checker_load_signal,
-            SignalCode.SAFETY_CHECKER_UNLOAD_SIGNAL: self.on_safety_checker_unload_signal,
-            SignalCode.INPUT_IMAGE_SETTINGS_CHANGED: self.on_input_image_settings_changed_signal,
-            SignalCode.LORA_UPDATE_SIGNAL: self.on_update_lora_signal,
-            SignalCode.EMBEDDING_UPDATE_SIGNAL: self.on_update_embeddings_signal,
-            SignalCode.EMBEDDING_DELETE_MISSING_SIGNAL: self.delete_missing_embeddings,
-            SignalCode.LLM_UNLOAD_SIGNAL: self.on_llm_on_unload_signal,
-            SignalCode.LLM_LOAD_SIGNAL: self.on_llm_load_model_signal,
-            SignalCode.LLM_MODEL_CHANGED: self.on_llm_model_changed_signal,
-            SignalCode.LLM_MODEL_DOWNLOAD_REQUIRED: self.on_llm_model_download_required_signal,
-            SignalCode.LLM_CONVERT_TO_GGUF_SIGNAL: self.on_llm_convert_to_gguf_signal,
-            SignalCode.RAG_RELOAD_INDEX_SIGNAL: self.on_llm_reload_rag_index_signal,
-            SignalCode.RAG_UNLOAD_SIGNAL: self.on_llm_unload_rag_signal,
-            SignalCode.RAG_INDEX_ALL_DOCUMENTS: self.on_rag_index_all_documents_signal,
-            SignalCode.RAG_INDEX_SELECTED_DOCUMENTS: self.on_rag_index_selected_documents_signal,
-            SignalCode.RAG_INDEX_CANCEL: self.on_rag_index_cancel_signal,
-            SignalCode.RAG_LOAD_DOCUMENTS: self.on_rag_load_documents_signal,
-            SignalCode.INDEX_DOCUMENT: self.on_index_document_signal,
-            SignalCode.LLM_START_QUANTIZATION: self.on_llm_start_quantization_signal,
-            SignalCode.LLM_CLEAR_HISTORY_SIGNAL: self.on_llm_clear_history_signal,
-            SignalCode.ADD_CHATBOT_MESSAGE_SIGNAL: self.on_llm_add_chatbot_response_to_history,
-            SignalCode.LOAD_CONVERSATION: self.on_llm_load_conversation,
+            # RMBG unload now handled by daemon (future API)
             SignalCode.INTERRUPT_PROCESS_SIGNAL: self.on_interrupt_process_signal,
             SignalCode.QUIT_APPLICATION: self.on_quit_application_signal,
-            SignalCode.CONVERSATION_DELETED: self.on_conversation_deleted_signal,
-            SignalCode.SECTION_CHANGED: self.on_section_changed_signal,
             SignalCode.GENERATE_MASK: self.on_generate_mask_signal,
             SignalCode.AUDIO_CAPTURE_WORKER_RESPONSE_SIGNAL: self.on_stt_process_audio_signal,
             SignalCode.STT_STOP_CAPTURE_SIGNAL: self.on_stt_stop_capture_signal,
-            SignalCode.MODEL_STATUS_CHANGED_SIGNAL: self.on_model_status_changed_signal,
             SignalCode.RECORDING_DEVICE_CHANGED: self.on_recording_device_changed_signal,
             SignalCode.STT_UNLOAD_SIGNAL: self.on_stt_unload_signal,
-            SignalCode.UNBLOCK_TTS_GENERATOR_SIGNAL: self.on_unblock_tts_generator_signal,
-            SignalCode.TTS_DISABLE_SIGNAL: self.on_disable_tts_signal,
+            # TTS unblock now via daemon
+            # TTS disable now via daemon
             SignalCode.LLM_THINKING_SIGNAL: self.on_llm_thinking_signal,
             SignalCode.LLM_TEXT_STREAMED_SIGNAL: self.on_llm_text_streamed_signal,
-            SignalCode.TTS_MODEL_CHANGED: self._reload_tts_model_manager,
+            # TTS model change now via daemon
             SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL: self.on_application_settings_changed_signal,
-            SignalCode.TTS_QUEUE_SIGNAL: self.on_add_to_queue_signal,
+            # TTS queue now via daemon
             SignalCode.PLAYBACK_DEVICE_CHANGED: self.on_playback_device_changed_signal,
             SignalCode.IMAGE_EXPORTED: self.on_image_exported_signal,
             SignalCode.START_HUGGINGFACE_DOWNLOAD: self.on_start_huggingface_download_signal,
             SignalCode.START_OPENVOICE_BATCH_DOWNLOAD: self.on_start_openvoice_batch_download_signal,
             SignalCode.APPLICATION_MAIN_WINDOW_LOADED_SIGNAL: self.on_application_main_window_loaded_signal,
         }
+        self._model_status = {
+            model_type: ModelStatus.UNLOADED for model_type in ModelType
+        }
         super().__init__()
         self._mask_generator_worker = None
-        self._sd_worker = None
-        self._safety_checker_worker = None
+        # safety_checker_worker removed; daemon handles via future API
         self._pending_generation_request = None
         self._download_dialog = (
             None  # Store dialog reference to prevent garbage collection
         )
         self._stt_audio_capture_worker = None
-        self._stt_audio_processor_worker = None
+        # STT transcription now via daemon; local processor worker removed
         self._tts_generator_worker = None
-        self._tts_generator_worker_import_error = None
         self._tts_vocalizer_worker = None
-        self._llm_generate_worker = None
         self._document_worker = None
         self._huggingface_download_worker = None
         self._image_export_worker = None
         self._model_scanner_worker = None
-        self._background_removal_worker = None
-        self._art_runtime_prewarm_started = False
-        self._tts_runtime_prewarm_started = False
+        # background_removal_worker removed; daemon handles via future API
         if self.logger:
             self.logger.debug(
                 f"WorkerManager initialized. Mediator ID: {id(self.mediator)}"
@@ -117,30 +129,30 @@ class WorkerManager(Worker):
 
         self.model_scanner_worker.add_to_queue("scan_for_models")
 
-    @property
-    def background_removal_worker(self):
-        if self._background_removal_worker is None:
-            from airunner.components.art.workers.background_removal_worker import (
-                BackgroundRemovalWorker,
-            )
+        # Merge API adapter handlers with precedence over local handlers.
+        # When the API backend feature flag is enabled, execution triggers
+        # go through the signal-to-API adapter instead of local workers.
+        self._signal_api_adapter = signal_api_adapter
+        if self._signal_api_adapter is not None:
+            adapter_handlers = self._signal_api_adapter.signal_handlers
+            self.signal_handlers.update(adapter_handlers)
+            if self.logger:
+                self.logger.debug(
+                    "Merged %d API adapter handlers into WorkerManager",
+                    len(adapter_handlers),
+                )
 
-            self._background_removal_worker = create_worker(
-                BackgroundRemovalWorker
-            )
-        return self._background_removal_worker
+    # background_removal_worker removed; daemon handles via future API
 
     def on_remove_background_signal(self, _data: Dict):
         """Queue background removal for the selected canvas layer."""
-        from PySide6.QtWidgets import QMessageBox
-
         layer_id = self._get_current_selected_layer_id()
         if layer_id is None:
             try:
-                from airunner.components.art.data.canvas_layer import (
-                    CanvasLayer,
+                layers = self.resource_store.query(
+                    "CanvasLayer",
+                    order_by=[{"field": "order", "direction": "asc"}],
                 )
-
-                layers = CanvasLayer.objects.order_by("order").all() or []
                 if layers:
                     layer_id = getattr(layers[0], "id", None)
             except Exception:
@@ -148,13 +160,10 @@ class WorkerManager(Worker):
 
         image_binary = None
         try:
-            from airunner.components.art.data.drawingpad_settings import (
-                DrawingPadSettings,
-            )
-
             if layer_id is not None:
-                drawing_pad = DrawingPadSettings.objects.filter_by_first(
-                    layer_id=layer_id
+                drawing_pad = self.resource_store.get_layer(
+                    "DrawingPadSettings",
+                    layer_id,
                 )
                 image_binary = getattr(drawing_pad, "image", None)
             else:
@@ -176,24 +185,10 @@ class WorkerManager(Worker):
                 )
             return
 
-        self.background_removal_worker.add_to_queue(
-            {
-                "action": "remove_background",
-                "data": {
-                    "layer_id": layer_id,
-                    "image": image_binary,
-                },
-            }
-        )
+        self.logger.info("Background removal signal received; daemon migration pending")
 
     def on_unload_rmbg_signal(self, data: Dict):
-        """Queue RMBG unloading for the background-removal worker."""
-        self.background_removal_worker.add_to_queue(
-            {
-                "action": "unload",
-                "data": data,
-            }
-        )
+        """Background removal unload handled by daemon (future API)."""
 
     def handle_message(self, message: Dict):
         if self.logger:
@@ -203,26 +198,15 @@ class WorkerManager(Worker):
         data = message.get("data", {})
         request_type = message.get("request_type")
         try:
-            if request_type == "llm_generate":
-                if self.llm_generate_worker is not None:
-                    self.llm_generate_worker.on_llm_request_signal(data)
-            elif request_type == "image_auto_generate":
-                if self.sd_worker is not None:
-                    self.sd_worker.on_start_auto_image_generation_signal(data)
-            elif request_type == "image_generate":
-                # Intercept image generation to ensure safety checker is ready
-                self._handle_image_generation_request(data)
-            elif request_type == "tts_generate":
+            if request_type == "tts_generate":
                 if self.tts_vocalizer_worker is not None:
                     self.tts_vocalizer_worker.on_tts_generator_worker_add_to_stream_signal(
                         data
                     )
-            elif request_type == "tts_enable":
-                if self.tts_generator_worker is not None:
-                    self.tts_generator_worker.on_enable_tts_signal(data)
-            elif request_type == "stt_load":
-                if self.stt_audio_processor_worker is not None:
-                    self.stt_audio_processor_worker.on_stt_load_signal(data)
+            # TTS enable now handled exclusively by daemon
+            # STT load now handled exclusively by daemon
+            elif request_type == "stt_process":
+                self._process_stt_through_daemon(data)
             elif request_type == "stt_start_capture":
                 if self.stt_audio_capture_worker is not None:
                     self.stt_audio_capture_worker.on_stt_start_capture_signal(
@@ -238,109 +222,46 @@ class WorkerManager(Worker):
     @property
     def model_scanner_worker(self):
         if self._model_scanner_worker is None:
-            from airunner.components.application.workers.model_scanner_worker import (
-                ModelScannerWorker,
-            )
-
             self._model_scanner_worker = create_worker(ModelScannerWorker)
         return self._model_scanner_worker
 
     @property
     def image_export_worker(self):
         if self._image_export_worker is None:
-            from airunner.components.art.workers.image_export_worker import (
-                ImageExportWorker,
-            )
-
             self._image_export_worker = create_worker(ImageExportWorker)
         return self._image_export_worker
 
-    @property
-    def safety_checker_worker(self):
-        if self._safety_checker_worker is None:
-            from airunner.components.art.workers.safety_checker_worker import (
-                SafetyCheckerWorker,
-            )
-
-            self._safety_checker_worker = create_worker(SafetyCheckerWorker)
-        return self._safety_checker_worker
+    # safety_checker_worker removed; daemon handles via future API
 
     @property
     def mask_generator_worker(self):
         if self._mask_generator_worker is None:
-            from airunner.components.art.workers.mask_generator_worker import (
-                MaskGeneratorWorker,
-            )
-
             self._mask_generator_worker = create_worker(MaskGeneratorWorker)
         return self._mask_generator_worker
 
     @property
-    def sd_worker(self):
-        if self._sd_worker is None:
-            from airunner.components.art.workers.sd_worker import SDWorker
-
-            self._sd_worker = create_worker(
-                SDWorker, image_export_worker=self.image_export_worker
-            )
-            # reference self.mask_generator_worker to ensure it is created
-            _ = self.mask_generator_worker
-        return self._sd_worker
-
-    @property
     def stt_audio_capture_worker(self):
         if self._stt_audio_capture_worker is None:
-            from airunner.components.stt.workers.audio_capture_worker import (
-                AudioCaptureWorker,
-            )
-
             self._stt_audio_capture_worker = create_worker(AudioCaptureWorker)
         return self._stt_audio_capture_worker
 
-    @property
-    def stt_audio_processor_worker(self):
-        if self._stt_audio_processor_worker is None:
-            from airunner.components.stt.workers.audio_processor_worker import (
-                AudioProcessorWorker,
-            )
-
-            self._stt_audio_processor_worker = create_worker(
-                AudioProcessorWorker
-            )
-        return self._stt_audio_processor_worker
+    # stt_audio_processor_worker removed; STT transcription via daemon client
 
     @property
     def tts_generator_worker(self):
         if self._tts_generator_worker is None:
-            try:
-                from airunner.components.tts.workers.tts_generator_worker import (
-                    TTSGeneratorWorker,
-                )
-            except ModuleNotFoundError as exc:
-                missing_module = getattr(exc, "name", str(exc))
-                if self._tts_generator_worker_import_error != missing_module:
-                    self._tts_generator_worker_import_error = missing_module
-                    if self.logger:
-                        self.logger.warning(
-                            "TTS generator worker unavailable because optional dependency %s is missing",
-                            missing_module,
-                            exc_info=True,
-                        )
-                return None
-
             self._tts_generator_worker = create_worker(
                 TTSGeneratorWorker,
                 sleep_time_in_ms=_STREAM_TTS_WORKER_SLEEP_MS,
             )
+            api = self._current_gui_api()
+            if api is not None:
+                self._tts_generator_worker.api = api
         return self._tts_generator_worker
 
     @property
     def tts_vocalizer_worker(self):
         if self._tts_vocalizer_worker is None:
-            from airunner.components.tts.workers.tts_vocalizer_worker import (
-                TTSVocalizerWorker,
-            )
-
             self._tts_vocalizer_worker = create_worker(
                 TTSVocalizerWorker,
                 sleep_time_in_ms=_STREAM_TTS_WORKER_SLEEP_MS,
@@ -348,58 +269,18 @@ class WorkerManager(Worker):
         return self._tts_vocalizer_worker
 
     @property
-    def llm_generate_worker(self):
-        if self._llm_generate_worker is None:
-            from airunner.components.llm.workers.llm_generate_worker import (
-                LLMGenerateWorker,
-            )
-
-            self._llm_generate_worker = create_worker(LLMGenerateWorker)
-        return self._llm_generate_worker
-
-    @property
     def document_worker(self):
         if self._document_worker is None:
-            from airunner.components.documents.workers.document_worker import (
-                DocumentWorker,
-            )
-
             self._document_worker = create_worker(DocumentWorker)
         return self._document_worker
 
     @property
     def huggingface_download_worker(self):
         if self._huggingface_download_worker is None:
-            from airunner.components.application.workers.huggingface_download_worker import (
-                HuggingFaceDownloadWorker,
-            )
-
             self._huggingface_download_worker = create_worker(
                 HuggingFaceDownloadWorker
             )
         return self._huggingface_download_worker
-
-    def on_llm_request_signal(self, data: Dict):
-        if self.logger:
-            self.logger.info(
-                f"WorkerManager::on_llm_request_signal CALLED with data keys: {list(data.keys())}"
-            )
-
-        worker = self.llm_generate_worker
-        if worker is not None:
-            if self.logger:
-                self.logger.info(
-                    "WorkerManager::on_llm_request_signal forwarding directly to llm_generate_worker"
-                )
-            worker.on_llm_request_signal(data)
-            return
-
-        self.add_to_queue(
-            {
-                "data": data,
-                "request_type": "llm_generate",
-            }
-        )
 
     def on_start_auto_image_generation_signal(self, data: Dict):
         self.add_to_queue(
@@ -409,39 +290,74 @@ class WorkerManager(Worker):
             }
         )
 
-    def on_do_generate_signal(self, data: Dict):
-        self.add_to_queue(
-            {
-                "data": data,
-                "request_type": "image_generate",
-            }
-        )
+    # on_do_generate_signal implementation below (daemon-routed)
 
     def on_tts_generator_worker_add_to_stream_signal(self, data: Dict):
+        vocalizer = self.tts_vocalizer_worker
+        if vocalizer is not None:
+            message = data.get("message") if isinstance(data, dict) else None
+            if message is not None:
+                vocalizer.handle_message(message)
+                return
+            vocalizer.on_tts_generator_worker_add_to_stream_signal(data)
+            return
         self.add_to_queue({"data": data, "request_type": "tts_generate"})
 
-    def on_enable_tts_signal(self, data: Dict):
-        from airunner.enums import ModelType
+    @staticmethod
+    def _is_request_scoped_tts_load(data: Dict | None) -> bool:
+        """Return whether one TTS enable signal should load the runtime."""
+        if not isinstance(data, dict):
+            return False
+        if data.get("request_scoped") is True:
+            return True
+        source = str(data.get("source", "") or "").strip().lower()
+        return source in {"llm_request", "chat_request", "typed_chat"}
 
-        if self._control_daemon_runtime_async(
+    def _ensure_tts_loaded_for_request(
+        self,
+        data: Dict | None = None,
+    ) -> bool:
+        if not getattr(self.application_settings, "tts_enabled", False):
+            return False
+
+        status = self._model_status_cache().get(
+            ModelType.TTS,
+            ModelStatus.UNLOADED,
+        )
+        if status in (
+            ModelStatus.LOADING,
+            ModelStatus.LOADED,
+            ModelStatus.READY,
+        ):
+            return False
+
+        return self._control_daemon_runtime_async(
             "tts",
             "load",
             ModelType.TTS,
             route_metadata=self._tts_runtime_route_metadata(),
-        ):
+        )
+
+    def _model_status_cache(self) -> Dict:
+        """Return the local model-status cache for cheap GUI checks."""
+        cache = getattr(self, "_model_status", None)
+        if isinstance(cache, dict):
+            return cache
+        cache = {
+            model_type: ModelStatus.UNLOADED for model_type in ModelType
+        }
+        self._model_status = cache
+        return cache
+
+    def on_enable_tts_signal(self, data: Dict):
+        if not self._is_request_scoped_tts_load(data):
             return
-        worker = self.tts_generator_worker
-        if worker is not None:
-            worker.add_to_queue(
-                {
-                    "_message_type": "tts_enable",
-                    "data": data,
-                }
-            )
+
+        if self._ensure_tts_loaded_for_request(data):
+            return
+        # TTS enable now handled exclusively by daemon
 
     def on_stt_load_signal(self, data: Dict):
-        from airunner.enums import ModelType
-
         if self._control_daemon_runtime_async(
             "stt",
             "load",
@@ -452,12 +368,7 @@ class WorkerManager(Worker):
             ),
         ):
             return
-        self.stt_audio_processor_worker.add_to_queue(
-            {
-                "_message_type": "stt_load",
-                "data": data,
-            }
-        )
+        # STT load now handled exclusively by daemon
 
     def on_stt_start_capture_signal(self, data: Dict):
         self.add_to_queue(
@@ -473,8 +384,6 @@ class WorkerManager(Worker):
         Args:
             data: Download info with repo_id, model_path, missing_files, version, etc.
         """
-        import os
-
         repo_id = data.get("repo_id")
         model_path = data.get("model_path")
         missing_files = data.get("missing_files", [])
@@ -518,10 +427,6 @@ class WorkerManager(Worker):
         main_window = self._get_main_window()
         if main_window:
             try:
-                from airunner.components.llm.gui.windows.huggingface_download_dialog import (
-                    HuggingFaceDownloadDialog,
-                )
-
                 # Close any existing download dialog
                 if self._download_dialog:
                     self._download_dialog.close()
@@ -596,11 +501,6 @@ class WorkerManager(Worker):
 
     def _get_main_window(self):
         """Return the main application window if available."""
-        try:
-            from PySide6.QtWidgets import QApplication
-        except ImportError:
-            return None
-
         app = QApplication.instance()
         if app is None:
             return None
@@ -608,11 +508,6 @@ class WorkerManager(Worker):
         main_window = getattr(app, "main_window", None)
         if main_window is not None:
             return main_window
-
-        # In headless mode we often run a QCoreApplication event loop, which
-        # doesn't support QWidget APIs like activeWindow/topLevelWidgets.
-        if not hasattr(app, "activeWindow") or not hasattr(app, "topLevelWidgets"):
-            return None
 
         window = app.activeWindow()
         if window is not None:
@@ -652,8 +547,6 @@ class WorkerManager(Worker):
         candidates.append(getattr(self, "api", None))
 
         try:
-            from PySide6.QtWidgets import QApplication
-
             app = QApplication.instance()
             if app is not None:
                 candidates.append(getattr(app, "api", None))
@@ -661,17 +554,10 @@ class WorkerManager(Worker):
         except Exception:
             pass
 
-        try:
-            from airunner.components.server.api.server import get_api
-
-            candidates.append(get_api(create_if_missing=False))
-        except Exception:
-            pass
-
         fallback_api = None
         for candidate in candidates:
             candidate = self._normalize_api_candidate(candidate)
-            if candidate is None or getattr(candidate, "headless", False):
+            if candidate is None:
                 continue
             if getattr(candidate, "daemon_client", None) is not None:
                 self.api = candidate
@@ -710,132 +596,8 @@ class WorkerManager(Worker):
         except Exception:
             return None
 
-    def _llm_worker_for_unload(self, *, create: bool = False):
-        """Return one local LLM worker instance when available."""
-        worker = getattr(self, "_llm_generate_worker", None)
-        if worker is not None:
-            return worker
-        if not create:
-            return None
-        try:
-            return self.llm_generate_worker
-        except Exception:
-            return None
-
-    def _local_llm_should_handle_unload(self) -> bool:
-        """Return True when the live LLM appears to be owned locally."""
-        from airunner.enums import ModelStatus
-
-        worker = self._llm_worker_for_unload(create=False)
-        if worker is None:
-            return False
-        if not callable(
-            getattr(worker, "llm_on_interrupt_process_signal", None)
-        ):
-            return False
-        if not callable(getattr(worker, "add_to_queue", None)):
-            return False
-
-        status_getter = getattr(worker, "current_model_status", None)
-        if callable(status_getter):
-            try:
-                status = status_getter()
-            except Exception:
-                status = None
-            if status in (ModelStatus.LOADING, ModelStatus.LOADED):
-                return True
-
-        if getattr(worker, "_pending_llm_request", None) is not None:
-            return True
-        return False
-
-    def _start_art_runtime_prewarm(self) -> None:
-        """Start the art sidecar in the background after the GUI loads."""
-        if self._art_runtime_prewarm_started:
-            return
-        if self._daemon_client() is None:
-            return
-        self._art_runtime_prewarm_started = True
-        thread = threading.Thread(
-            target=self._prewarm_art_runtime,
-            name="airunner-art-prewarm",
-            daemon=True,
-        )
-        thread.start()
-
-    def _prewarm_art_runtime(self) -> None:
-        """Ensure the art runtime is already running before first generate."""
-        client = self._daemon_client()
-        if client is None:
-            self._art_runtime_prewarm_started = False
-            return
-        try:
-            client.load_runtime(
-                "art",
-                deployment_mode="sidecar",
-                auto_start=False,
-            )
-            return
-        except RuntimeError as exc:
-            if self.logger:
-                self.logger.debug("Art runtime prewarm skipped: %s", exc)
-        self._art_runtime_prewarm_started = False
-
-    def _start_tts_runtime_prewarm(self) -> None:
-        """Start the TTS sidecar before the first spoken reply."""
-        if self._tts_runtime_prewarm_started:
-            return
-        if self._daemon_client() is None:
-            return
-        if callable(getattr(self.logger, "info", None)):
-            self.logger.info("Starting TTS runtime prewarm")
-        self._tts_runtime_prewarm_started = True
-        thread = threading.Thread(
-            target=self._prewarm_tts_runtime,
-            name="airunner-tts-prewarm",
-            daemon=True,
-        )
-        thread.start()
-
-    def _prewarm_tts_runtime(self) -> None:
-        """Ensure sidecar-backed TTS is loaded before synthesis begins."""
-        from airunner.enums import ModelType
-
-        client = self._daemon_client()
-        if client is None:
-            self._tts_runtime_prewarm_started = False
-            return
-        try:
-            client.load_runtime(
-                "tts",
-                deployment_mode="sidecar",
-                metadata=self._tts_runtime_route_metadata(),
-                auto_start=False,
-                timeout_seconds=_OPTIONAL_LOAD_REQUEST_TIMEOUT_SECONDS,
-            )
-            ready = client.wait_runtime_ready(
-                "tts",
-                loaded=True,
-                deployment_mode="sidecar",
-                auto_start=False,
-                timeout_seconds=self._runtime_wait_timeout_seconds(
-                    "load",
-                    ModelType.TTS,
-                ),
-            )
-            if ready:
-                if callable(getattr(self.logger, "info", None)):
-                    self.logger.info("TTS runtime prewarm completed")
-                return
-        except RuntimeError as exc:
-            if self.logger:
-                self.logger.debug("TTS runtime prewarm skipped: %s", exc)
-        self._tts_runtime_prewarm_started = False
-
-    @staticmethod
-    def _is_optional_runtime_unload(action: str, model_type) -> bool:
+    def _is_optional_runtime_unload(self, action: str, model_type) -> bool:
         """Return True for best-effort TTS/STT unload requests."""
-        from airunner.enums import ModelType
 
         return action == "unload" and model_type in (
             ModelType.TTS,
@@ -845,7 +607,6 @@ class WorkerManager(Worker):
     @staticmethod
     def _is_optional_runtime_load(action: str, model_type) -> bool:
         """Return True for TTS/STT load requests."""
-        from airunner.enums import ModelType
 
         return action == "load" and model_type in (
             ModelType.TTS,
@@ -855,7 +616,6 @@ class WorkerManager(Worker):
     @staticmethod
     def _optional_runtime_setting_name(model_type) -> str | None:
         """Return the preference column for one optional runtime."""
-        from airunner.enums import ModelType
 
         if model_type is ModelType.TTS:
             return "tts_enabled"
@@ -907,7 +667,6 @@ class WorkerManager(Worker):
         model_type,
     ) -> float:
         """Return the daemon wait timeout for one lifecycle action."""
-        from airunner.enums import ModelType
 
         if self._is_optional_runtime_unload(action, model_type):
             return _OPTIONAL_UNLOAD_WAIT_TIMEOUT_SECONDS
@@ -925,32 +684,15 @@ class WorkerManager(Worker):
         message: str,
     ) -> bool:
         """Emit the right terminal status after one daemon action fails."""
-        from airunner.enums import ModelStatus, SignalCode
-
-        local_status = self._preferred_local_llm_status_for_failure(
-            action,
-            runtime_name,
-            model_type,
-        )
-        if local_status is not None:
-            if self.logger:
-                self.logger.debug(
-                    "%s; keeping local LLM status=%s",
-                    message,
-                    local_status.value,
-                )
-            self.emit_signal(
-                SignalCode.MODEL_STATUS_CHANGED_SIGNAL,
-                {"model": model_type, "status": local_status},
-            )
-            return True
-
         if self.logger:
             if self._is_optional_runtime_unload(action, model_type):
                 self.logger.debug(message)
             else:
                 self.logger.warning(message)
         status = ModelStatus.FAILED
+        if runtime_name == "llm" and model_type is ModelType.LLM:
+            if action == "load":
+                status = ModelStatus.UNLOADED
         if self._is_optional_runtime_unload(action, model_type):
             status = ModelStatus.UNLOADED
         self.emit_signal(
@@ -959,49 +701,6 @@ class WorkerManager(Worker):
         )
         return True
 
-    def _preferred_local_llm_status_for_failure(
-        self,
-        action: str,
-        runtime_name: str,
-        model_type,
-    ):
-        """Return one local LLM status that should override daemon failure."""
-        from airunner.enums import ModelStatus, ModelType
-
-        if runtime_name != "llm" or model_type is not ModelType.LLM:
-            return None
-
-        worker = getattr(self, "_llm_generate_worker", None)
-        if worker is None:
-            if action == "load":
-                return ModelStatus.UNLOADED
-            return None
-
-        current_model_status = getattr(worker, "current_model_status", None)
-        if not callable(current_model_status):
-            return None
-
-        try:
-            status = current_model_status()
-        except Exception:
-            return None
-
-        if action == "load" and status in (
-            ModelStatus.LOADING,
-            ModelStatus.LOADED,
-            ModelStatus.UNLOADED,
-            ModelStatus.FAILED,
-        ):
-            return status
-
-        if action == "unload" and status in (
-            ModelStatus.LOADED,
-            ModelStatus.UNLOADED,
-        ):
-            return status
-
-        return None
-
     def _revert_optional_runtime_load(
         self,
         client,
@@ -1009,8 +708,6 @@ class WorkerManager(Worker):
         model_type,
     ) -> bool:
         """Unload one optional runtime when its saved preference was cleared."""
-        from airunner.enums import ModelStatus, SignalCode
-
         try:
             ready = self._run_daemon_runtime_action(
                 client,
@@ -1050,7 +747,6 @@ class WorkerManager(Worker):
     ) -> bool:
         """Run one daemon load or unload request and wait for its state."""
         loaded = action == "load"
-        auto_start = loaded
         action_timeout = self._runtime_action_timeout_seconds(
             action,
             model_type,
@@ -1069,7 +765,6 @@ class WorkerManager(Worker):
                 runtime_name,
                 deployment_mode=deployment_mode,
                 metadata=route_metadata,
-                auto_start=auto_start,
                 timeout_seconds=action_timeout,
             )
         except RuntimeError as exc:
@@ -1089,7 +784,6 @@ class WorkerManager(Worker):
             runtime_name,
             loaded=loaded,
             deployment_mode=deployment_mode,
-            auto_start=auto_start,
             timeout_seconds=wait_timeout,
         )
 
@@ -1103,8 +797,6 @@ class WorkerManager(Worker):
         after_success=None,
     ) -> bool:
         """Translate a GUI lifecycle request into one daemon runtime action."""
-        from airunner.enums import ModelStatus, SignalCode
-
         client = self._daemon_client()
         if client is None:
             return False
@@ -1200,8 +892,6 @@ class WorkerManager(Worker):
 
     def _run_daemon_llm_unload(self) -> bool:
         """Unload the daemon-managed local LLM without blocking the UI."""
-        from airunner.enums import ModelStatus, ModelType, SignalCode
-
         client = self._llm_daemon_client()
         if client is None:
             return False
@@ -1210,7 +900,7 @@ class WorkerManager(Worker):
         except RuntimeError:
             pass
         try:
-            client.unload_local_llm(auto_start=False)
+            client.unload_local_llm()
         except RuntimeError as exc:
             return self._emit_daemon_runtime_failure(
                 "unload",
@@ -1221,7 +911,6 @@ class WorkerManager(Worker):
         ready = client.wait_runtime_ready(
             "llm",
             loaded=False,
-            auto_start=False,
             timeout_seconds=self._runtime_wait_timeout_seconds(
                 "unload",
                 ModelType.LLM,
@@ -1259,7 +948,9 @@ class WorkerManager(Worker):
         if voice_settings is not None:
             model_type = getattr(voice_settings, "model_type", None)
             if model_type:
-                metadata["model_type"] = str(model_type)
+                metadata["model_type"] = str(
+                    getattr(model_type, "value", model_type)
+                )
         path_settings = getattr(self, "path_settings", None)
         if path_settings is not None:
             model_path = getattr(path_settings, "tts_model_path", None)
@@ -1273,8 +964,6 @@ class WorkerManager(Worker):
         model_type,
     ) -> str:
         """Return the daemon deployment mode used for one runtime action."""
-        from airunner.enums import ModelType
-
         if runtime_name in {"art", "tts", "stt"} or model_type in {
             ModelType.SD,
             ModelType.TTS,
@@ -1305,8 +994,7 @@ class WorkerManager(Worker):
                     "Safety checker download complete, notifying worker to retry load"
                 )
             # Use queue to ensure thread-safe notification
-            if self._safety_checker_worker is not None:
-                self._safety_checker_worker.add_to_queue({"action": "load", "data": {}})
+            # Safety checker load now via daemon (future API)
             return
         
         if self.logger:
@@ -1321,13 +1009,8 @@ class WorkerManager(Worker):
         # Skip TTS, STT, and other non-LLM model types
         # Use add_to_queue to ensure processing happens in worker thread,
         # not main thread, to prevent UI lockups during model loading
-        model_type = data.get("model_type", "")
-        non_llm_types = {"tts_openvoice", "stt", "openvoice_zip", "art"}
-        if self._llm_generate_worker is not None and model_type not in non_llm_types:
-            self.llm_generate_worker.add_to_queue({
-                "_message_type": "download_complete",
-                "data": data
-            })
+        data.get("model_type", "")
+        # Download completion routing removed; handled by daemon
 
         # If we have a pending generation request (for image generation), retry it now
         if self._pending_generation_request:
@@ -1353,30 +1036,11 @@ class WorkerManager(Worker):
                 )
 
     def _interrupt_active_daemon_art_job(self, data: Dict) -> bool:
-        """Cancel one active daemon art job before unloading its runtime."""
-        worker = getattr(self, "_sd_worker", None)
-        if worker is None:
-            return False
-
-        request_unload = getattr(
-            worker,
-            "request_daemon_unload_after_cancel",
-            None,
-        )
-        if callable(request_unload):
-            if not request_unload():
-                return False
-        elif not getattr(worker, "_active_daemon_job_id", None):
-            return False
-        else:
-            worker._pending_daemon_unload_after_cancel = True
-
-        worker.on_interrupt_image_generation_signal(data)
-        return True
+        """Local SD worker removed; daemon handles all art state."""
+        del data
+        return False
 
     def on_unload_art_signal(self, data: Dict):
-        from airunner.enums import ModelType
-
         data = data or {}
         if self._interrupt_active_daemon_art_job(data):
             return
@@ -1387,43 +1051,19 @@ class WorkerManager(Worker):
             ModelType.SD,
         ):
             return
-        if self._sd_worker is not None:
-
-            def callback(res: Dict):
-                del self._sd_worker
-                self._sd_worker = None
-
-            data["callback"] = callback
-            self.sd_worker.unload(data)
-
-    def on_sd_cancel_signal(self, data):
-        if self._sd_worker is not None:
-            self.sd_worker.on_sd_cancel_signal(data)
-
-    def on_stop_auto_image_generation_signal(self, data):
-        if self._sd_worker is not None:
-            self.sd_worker.on_stop_auto_image_generation_signal(data)
-
-    def on_interrupt_image_generation_signal(self, data):
-        if self._sd_worker is not None:
-            self.sd_worker.on_interrupt_image_generation_signal(data)
-
-    def on_change_scheduler_signal(self, data):
-        if self._sd_worker is not None:
-            self.sd_worker.on_change_scheduler_signal(data)
+        # Art unloading is now handled exclusively by the daemon
 
     def on_model_status_changed_signal(self, data):
-        from airunner.enums import ModelStatus, ModelType
-
         model_type = data.get("model") or data.get("model_type")
         status = data.get("status")
 
+        if model_type is not None and status is not None:
+            self._model_status_cache()[model_type] = status
+
         if model_type == ModelType.TTS:
             if status in (ModelStatus.LOADED, ModelStatus.READY):
-                self._tts_runtime_prewarm_started = True
-            elif status in (ModelStatus.UNLOADED, ModelStatus.FAILED):
-                self._tts_runtime_prewarm_started = False
-
+                pass
+        
         if (
             model_type == ModelType.SAFETY_CHECKER
             and status == ModelStatus.LOADED
@@ -1446,9 +1086,6 @@ class WorkerManager(Worker):
             # or a real failure (show error)
             # The safety checker worker emits FAILED only after download fails or load fails
             # If NSFW filter is enabled, we should NOT proceed - show error instead
-            from airunner.components.settings.data.application_settings import (
-                ApplicationSettings,
-            )
             app_settings = self._get_or_create_application_settings()
             
             if app_settings.nsfw_filter:
@@ -1467,46 +1104,141 @@ class WorkerManager(Worker):
                 )
                 self._proceed_with_generation(self._pending_generation_request)
 
-        if self._sd_worker is not None:
-            self.sd_worker.on_model_status_changed_signal(data)
         if self._stt_audio_capture_worker is not None:
             self.stt_audio_capture_worker.on_model_status_changed_signal(data)
 
     def on_load_art_signal(self, data):
         if self._daemon_client() is not None:
-            self._start_art_runtime_prewarm()
             return
-        if self.sd_worker is not None:
-            self.sd_worker.on_load_art_signal(data)
+        # Art loading is now handled exclusively by the daemon
+
+    def on_do_generate_signal(self, data: dict) -> None:
+        """Route art generation through the daemon and emit result."""
+        def _generate():
+            def _stop_progress(do_clear: bool) -> None:
+                self.emit_signal(
+                    SignalCode.APPLICATION_STOP_SD_PROGRESS_BAR_SIGNAL,
+                    {"do_clear": do_clear},
+                )
+
+            try:
+                image_request = data.get("image_request")
+                if image_request is None:
+                    self.logger.error(
+                        "Art generation: no image_request in data"
+                    )
+                    _stop_progress(True)
+                    return
+
+                client = self._daemon_client()
+                if client is None:
+                    self.logger.error(
+                        "Art generation: daemon unavailable"
+                    )
+                    _stop_progress(True)
+                    return
+
+                # Submit job to daemon
+                result = client.start_art_generation(
+                    prompt=getattr(image_request, "prompt", ""),
+                    negative_prompt=getattr(
+                        image_request, "negative_prompt", ""
+                    ),
+                    width=getattr(image_request, "width", 1024),
+                    height=getattr(image_request, "height", 1024),
+                    steps=getattr(image_request, "steps", 20),
+                    cfg_scale=getattr(image_request, "scale", 7.5),
+                    seed=getattr(image_request, "seed", None),
+                    num_images=getattr(image_request, "n_samples", 1),
+                    model=getattr(image_request, "model_path", None),
+                    version=getattr(image_request, "version", None),
+                    scheduler=getattr(image_request, "scheduler", None),
+                    pipeline=getattr(
+                        image_request, "pipeline_action", None
+                    ),
+                    strength=getattr(image_request, "strength", None),
+                )
+                job_id = result.get("job_id")
+                self.logger.info(
+                    f"Art generation submitted, job_id={job_id}"
+                )
+
+                if not job_id:
+                    self.logger.error("Art generation: no job_id returned")
+                    _stop_progress(True)
+                    return
+
+                # Poll until complete and retrieve image
+                self.logger.info(
+                    f"Waiting for art job {job_id} to complete..."
+                )
+
+                def _progress_callback(status: dict) -> None:
+                    progress = float(status.get("progress", 0))
+                    self.emit_signal(
+                        SignalCode.SD_PROGRESS_SIGNAL,
+                        {
+                            "step": int(progress),
+                            "total": 100,
+                        },
+                    )
+
+                png_bytes = client.wait_art_job(
+                    job_id,
+                    timeout_seconds=600.0,
+                    progress_callback=_progress_callback,
+                )
+                self.logger.info(
+                    f"Art job {job_id} complete, "
+                    f"received {len(png_bytes)} bytes"
+                )
+                image = Image.open(io.BytesIO(png_bytes))
+                image_data = convert_image_to_binary(image)
+
+                # Build ImageResponse and send to canvas
+                response = ImageResponse(
+                    images=[image],
+                    data={
+                        "generator_section": getattr(
+                            image_request, "generator_section", None
+                        ),
+                    },
+                    active_rect=None,
+                    is_outpaint=False,
+                )
+                self.emit_signal(
+                    SignalCode.SEND_IMAGE_TO_CANVAS_SIGNAL,
+                    {"image_response": response},
+                )
+                _stop_progress(False)
+                self.logger.info(
+                    f"Image sent to canvas: "
+                    f"{len(image_data)} bytes"
+                )
+            except Exception as exc:
+                _stop_progress(True)
+                self.logger.error(
+                    f"Art generation failed: {exc}"
+                )
+
+        threading.Thread(target=_generate, daemon=True).start()
 
     def on_application_main_window_loaded_signal(self, _data=None):
-        """Warm optional runtimes once the main window is ready."""
-        self._start_art_runtime_prewarm()
-        if not getattr(self.application_settings, "tts_enabled", False):
-            return
-
-        self.on_enable_tts_signal({"source": "startup"})
+        """Main window loaded — optional runtimes stay unloaded."""
+        return
 
     def on_art_model_changed(self, data):
-        self._start_art_runtime_prewarm()
-        if self._sd_worker is not None:
-            self.sd_worker.on_art_model_changed(data)
-
-    def on_load_controlnet_signal(self, data):
-        if self._sd_worker is not None:
-            self.sd_worker.on_load_controlnet_signal(data)
-
-    def on_unload_controlnet_signal(self, data):
-        if self._sd_worker is not None:
-            self.sd_worker.on_unload_controlnet_signal(data)
+        # Art runtime pre-warm disabled; models load on first generation
+        pass
 
     def on_safety_checker_load_signal(self, data):
-        # Ensure the worker is created and send load request through its queue
+        # Safety checker now handled by daemon (future API)
+        pass
         # Using add_to_queue ensures thread-safe message passing
-        self.safety_checker_worker.add_to_queue({"action": "load", "data": data})
+        # Safety checker worker removed; daemon migration pending
 
     def on_safety_checker_unload_signal(self, data):
-        # Trigger unloading if worker exists
+        # Safety checker unload handled by daemon (future API)
         if self._safety_checker_worker is not None:
             self.safety_checker_worker.add_to_queue(
                 {"action": "unload", "data": data}
@@ -1519,10 +1251,6 @@ class WorkerManager(Worker):
         Args:
             data: Image generation request data
         """
-        from airunner.components.settings.data.application_settings import (
-            ApplicationSettings,
-        )
-
         app_settings = self._get_or_create_application_settings()
 
         # Check if safety checker is enabled
@@ -1552,35 +1280,35 @@ class WorkerManager(Worker):
     def _get_or_create_application_settings(self):
         """Return ApplicationSettings for the current tenant.
 
-        In headless multi-tenant mode, tenant schemas may be created on-demand and
-        not have bootstrap rows yet. Image generation expects ApplicationSettings
-        to exist; without it, requests crash and art jobs stay RUNNING forever.
+        Tenant schemas may be created on-demand and not have bootstrap rows
+        yet. Image generation expects ApplicationSettings to exist; without
+        it, requests crash and art jobs stay RUNNING forever.
         """
-        from airunner.components.settings.data.application_settings import (
-            ApplicationSettings,
+        app_settings = self.resource_store.get_singleton(
+            "ApplicationSettings",
+            create_if_missing=True,
         )
-
-        app_settings = ApplicationSettings.objects.first()
         if app_settings is not None:
             return app_settings
 
         # Create a sane default row for this tenant.
-        # - Enable SD if the service is enabled in this headless server.
-        # - Default NSFW filter off in headless mode to avoid blocking generation
-        #   on a safety-checker bootstrap step.
         try:
-            import os
-
-            ApplicationSettings(
-                sd_enabled=os.environ.get("AIRUNNER_SD_ON") == "1",
-                llm_enabled=True,
-                nsfw_filter=False,
-            ).save()
+            self.resource_store.update_singleton(
+                "ApplicationSettings",
+                {
+                    "sd_enabled": os.environ.get("AIRUNNER_SD_ON") == "1",
+                    "llm_enabled": True,
+                    "nsfw_filter": False,
+                },
+            )
         except Exception:
             # Best-effort; if creation fails, subsequent code will raise a clearer error.
             pass
 
-        app_settings = ApplicationSettings.objects.first()
+        app_settings = self.resource_store.get_singleton(
+            "ApplicationSettings",
+            create_if_missing=True,
+        )
         if app_settings is None:
             raise RuntimeError(
                 "ApplicationSettings row is missing and could not be created"
@@ -1598,69 +1326,18 @@ class WorkerManager(Worker):
             "_proceed_with_generation called with data keys: %s",
             data.keys() if data else "None",
         )
-        if self.sd_worker is not None:
-            self.logger.debug("Calling sd_worker.on_do_generate_signal")
-            self.sd_worker.on_do_generate_signal(data)
-        else:
-            self.logger.error("sd_worker is None, cannot proceed with generation")
-
-    def on_input_image_settings_changed_signal(self, data):
-        if self._sd_worker is not None:
-            self.sd_worker.on_input_image_settings_changed_signal(data)
-
-    def on_update_lora_signal(self, data):
-        if self._sd_worker is not None:
-            self.sd_worker.on_update_lora_signal(data)
-
-    def on_update_embeddings_signal(self, data):
-        if self._sd_worker is not None:
-            self.sd_worker.on_update_embeddings_signal(data)
-
-    def delete_missing_embeddings(self, data):
-        if self._sd_worker is not None:
-            self.sd_worker.delete_missing_embeddings(data)
+        # SD generation now handled exclusively by the daemon
 
     def on_llm_on_unload_signal(self, data):
         data = data or {}
 
-        if self._local_llm_should_handle_unload():
-            worker = self._llm_worker_for_unload(create=False)
-            if worker is None:
-                return
-            worker.llm_on_interrupt_process_signal(data)
-            worker.add_to_queue(
-                {
-                    "_message_type": "llm_unload",
-                    "data": data,
-                }
-            )
-            return
-
         if self._unload_daemon_llm_async():
             return
-        worker = self._llm_worker_for_unload(create=True)
-        if worker is None:
-            return
-
-        worker.llm_on_interrupt_process_signal(data)
-        worker.add_to_queue(
-            {
-                "_message_type": "llm_unload",
-                "data": data,
-            }
-        )
 
     def on_llm_load_model_signal(self, data):
-        from airunner.enums import ModelType
-
         if self._control_daemon_runtime("llm", "load", ModelType.LLM):
             return
-        self.llm_generate_worker.add_to_queue(
-            {
-                "_message_type": "llm_load",
-                "data": data,
-            }
-        )
+        # LLM loading is now handled exclusively by the daemon
 
     def _llm_model_change_requires_runtime_reload(self, data) -> bool:
         """Return True when a model-change notification should unload."""
@@ -1668,47 +1345,11 @@ class WorkerManager(Worker):
             return False
         return bool(data.get("reload_runtime"))
 
-    def on_llm_model_changed_signal(self, data):
-        if not self._llm_model_change_requires_runtime_reload(data):
-            return
-
-        from airunner.enums import ModelType
-
-        if self._control_daemon_runtime("llm", "unload", ModelType.LLM):
-            return
-        if self._llm_generate_worker is not None:
-            self.llm_generate_worker.on_llm_model_changed_signal(data)
-
-    def on_llm_model_download_required_signal(self, data):
-        self.logger.info("WorkerManager received LLM model download request")
-        self.logger.debug(
-            "%s",
-            summarize_mapping_keys(data, label="download"),
-        )
-        if self._llm_generate_worker is not None:
-            self.logger.info("Forwarding to llm_generate_worker")
-            self.llm_generate_worker.on_llm_model_download_required_signal(
-                data
-            )
-        else:
-            # Handle download directly without LLM worker
-            self.logger.info("LLM worker not available, handling download directly")
-            self._handle_llm_download_directly(data)
-
     def _handle_llm_download_directly(self, data):
         """Handle LLM model download when LLM worker is not available.
-        
+
         This allows downloading models from settings before the LLM is loaded.
         """
-        from PySide6.QtWidgets import QApplication
-        from airunner.components.llm.config.provider_config import LLMProviderConfig
-        from airunner.components.llm.gui.windows.huggingface_download_dialog import (
-            HuggingFaceDownloadDialog,
-        )
-        from airunner.components.llm.managers.download_huggingface import (
-            DownloadHuggingFaceModel,
-        )
-        
         model_path = data.get("model_path", "")
         model_name = data.get("model_name", "Unknown Model")
         repo_id = data.get("repo_id", "")
@@ -1752,234 +1393,50 @@ class WorkerManager(Worker):
             model_path=model_path,
         )
         
-        # Create download worker - use local variable to avoid polluting the 
-        # huggingface_download_worker property which is used for STT/TTS downloads
-        llm_download_worker = create_worker(DownloadHuggingFaceModel)
-        
-        # Connect dialog to download worker signals
-        llm_download_worker.register(
+        # Connect dialog to the daemon-backed download worker signals
+        self.huggingface_download_worker.register(
             SignalCode.UPDATE_DOWNLOAD_LOG,
             self._download_dialog.on_log_updated,
         )
-        llm_download_worker.register(
+        self.huggingface_download_worker.register(
             SignalCode.UPDATE_DOWNLOAD_PROGRESS,
             self._download_dialog.on_progress_updated,
         )
-        llm_download_worker.register(
+        self.huggingface_download_worker.register(
             SignalCode.UPDATE_FILE_DOWNLOAD_PROGRESS,
             self._download_dialog.on_file_progress_updated,
         )
-        llm_download_worker.register(
+        self.huggingface_download_worker.register(
             SignalCode.HUGGINGFACE_DOWNLOAD_COMPLETE,
             self._download_dialog.on_download_complete,
         )
-        llm_download_worker.register(
+        self.huggingface_download_worker.register(
             SignalCode.HUGGINGFACE_DOWNLOAD_FAILED,
             self._download_dialog.on_download_failed,
         )
-        
-        if is_gguf and gguf_filename:
-            self.logger.info("Starting GGUF download")
-            llm_download_worker.download(
-                repo_id=repo_id,
-                model_type="gguf",
-                output_dir=model_path,
-                setup_quantization=False,
-                quantization_bits=0,
-                missing_files=None,
-                gguf_filename=gguf_filename,
-            )
-        else:
-            self.logger.info(f"Starting standard download: {repo_id}")
-            llm_download_worker.download(
-                repo_id=repo_id,
-                model_type=model_type,
-                output_dir=os.path.dirname(model_path),
-                setup_quantization=True,
-                quantization_bits=data.get("quantization_bits", 4),
-                missing_files=data.get("missing_files"),
-            )
+
+        download_data = {
+            "repo_id": repo_id,
+            "model_type": model_type,
+            "output_dir": model_path,
+            "gguf_filename": gguf_filename,
+            "missing_files": data.get("missing_files"),
+        }
+        self.logger.info(
+            "Starting %s download via daemon: %s",
+            "GGUF" if is_gguf else "standard",
+            repo_id,
+        )
+        self.huggingface_download_worker.add_to_queue(download_data)
         
         self._download_dialog.show()
 
-    def on_llm_convert_to_gguf_signal(self, data):
-        """Handle GGUF conversion request.
-        
-        Converts safetensors to GGUF format when no pre-quantized GGUF is available.
-        
-        Args:
-            data: Dict with model_path, model_name, quantization
-        """
-        self.logger.info("WorkerManager received GGUF conversion request")
-        self.logger.debug(
-            "%s",
-            summarize_mapping_keys(data, label="conversion"),
-        )
-        
-        from PySide6.QtWidgets import QApplication, QProgressDialog, QMessageBox
-        from PySide6.QtCore import Qt
-        from airunner.utils.model_optimizer import get_model_optimizer
-        
-        model_path = data.get("model_path", "")
-        model_name = data.get("model_name", "Unknown Model")
-        quantization = data.get("quantization", "Q4_K_M")
-        
-        # Get main window
-        main_window = None
-        app = QApplication.instance()
-        for widget in app.topLevelWidgets():
-            if widget.__class__.__name__ == "MainWindow":
-                main_window = widget
-                break
-        
-        if not main_window:
-            self.logger.error("Cannot show conversion dialog - main window not found")
-            return
-        
-        # Show progress dialog
-        progress = QProgressDialog(
-            f"Converting {model_name} to GGUF format...\n\n"
-            "This may take several minutes depending on model size.",
-            "Cancel",
-            0, 0,
-            main_window
-        )
-        progress.setWindowTitle("GGUF Conversion")
-        progress.setWindowModality(Qt.WindowModal)
-        progress.setMinimumDuration(0)
-        progress.show()
-        QApplication.processEvents()
-        
-        try:
-            optimizer = get_model_optimizer()
-            
-            # Check for conversion tools
-            if not optimizer.has_llama_cpp_convert():
-                progress.close()
-                QMessageBox.critical(
-                    main_window,
-                    "Conversion Not Available",
-                    "GGUF conversion requires llama.cpp tools.\n\n"
-                    "Install with:\n"
-                    "  pip install llama-cpp-python\n\n"
-                    "Or clone llama.cpp and build convert tools."
-                )
-                return
-            
-            # Perform conversion
-            success, gguf_path, error = optimizer.convert_to_gguf(
-                model_path=model_path,
-                quantization=quantization,
-            )
-            
-            progress.close()
-            
-            if success:
-                self.logger.info(f"GGUF conversion successful: {gguf_path}")
-                QMessageBox.information(
-                    main_window,
-                    "Conversion Complete",
-                    f"Successfully converted to GGUF:\n{gguf_path}\n\n"
-                    "The model will now be loaded."
-                )
-                
-                # Emit signal to reload the model
-                self.emit_signal(
-                    SignalCode.LLM_GGUF_CONVERSION_COMPLETE,
-                    {"model_path": model_path, "gguf_path": gguf_path}
-                )
-                
-                # Trigger model reload
-                self.emit_signal(SignalCode.LLM_LOAD_SIGNAL)
-            else:
-                self.logger.error(f"GGUF conversion failed: {error}")
-                QMessageBox.critical(
-                    main_window,
-                    "Conversion Failed",
-                    f"Failed to convert model to GGUF:\n\n{error}"
-                )
-                self.emit_signal(
-                    SignalCode.LLM_GGUF_CONVERSION_FAILED,
-                    {"model_path": model_path, "error": error}
-                )
-                
-        except Exception as e:
-            progress.close()
-            self.logger.exception(f"GGUF conversion error: {e}")
-            QMessageBox.critical(
-                main_window,
-                "Conversion Error",
-                f"An error occurred during conversion:\n\n{str(e)}"
-            )
-
     def on_huggingface_download_complete_signal(self, data):
-        # Use add_to_queue to ensure processing happens in worker thread,
-        # not main thread, to prevent UI lockups during model loading
-        if self._llm_generate_worker is not None:
-            self.llm_generate_worker.add_to_queue({
-                "_message_type": "download_complete",
-                "data": data
-            })
-
-    def on_llm_reload_rag_index_signal(self, data):
-        if self._llm_generate_worker is not None:
-            self.llm_generate_worker.on_llm_reload_rag_index_signal(data)
-
-    def on_llm_unload_rag_signal(self, data):
-        if self._llm_generate_worker is not None:
-            self.llm_generate_worker.on_llm_unload_rag_signal(data)
-
-    def on_rag_index_all_documents_signal(self, data):
-        if self.llm_generate_worker is not None:
-            self.llm_generate_worker.on_rag_index_all_documents_signal(data)
-
-    def on_rag_index_selected_documents_signal(self, data):
-        if self.llm_generate_worker is not None:
-            self.llm_generate_worker.on_rag_index_selected_documents_signal(
-                data
-            )
-
-    def on_rag_index_cancel_signal(self, data):
-        if self._llm_generate_worker is not None:
-            self.llm_generate_worker.on_rag_index_cancel_signal(data)
-
-    def on_rag_load_documents_signal(self, data):
-        if self._llm_generate_worker is not None:
-            self.llm_generate_worker.on_rag_load_documents_signal(data)
-
-    def on_index_document_signal(self, data):
-        if self._llm_generate_worker is not None:
-            self.llm_generate_worker.on_index_document_signal(data)
-
-    def on_llm_start_quantization_signal(self, data):
-        if self._llm_generate_worker is not None:
-            self.llm_generate_worker.on_llm_start_quantization_signal(data)
-
-    def on_llm_clear_history_signal(self, data):
-        if self._llm_generate_worker is not None:
-            self.llm_generate_worker.on_llm_clear_history_signal(data)
-
-    def on_llm_add_chatbot_response_to_history(self, data):
-        if self._llm_generate_worker is not None:
-            self.llm_generate_worker.on_llm_add_chatbot_response_to_history(
-                data
-            )
-
-    def on_llm_load_conversation(self, data):
-        if self._llm_generate_worker is not None:
-            self.llm_generate_worker.on_llm_load_conversation(data)
+        # Download completion routing removed; handled by daemon
+        pass
 
     def on_quit_application_signal(self, data):
-        if self._llm_generate_worker is not None:
-            self.llm_generate_worker.on_quit_application_signal(data)
-
-    def on_conversation_deleted_signal(self, data):
-        if self._llm_generate_worker is not None:
-            self.llm_generate_worker.on_conversation_deleted_signal(data)
-
-    def on_section_changed_signal(self, data):
-        if self._llm_generate_worker is not None:
-            self.llm_generate_worker.on_section_changed_signal(data)
+        pass
 
     def on_generate_mask_signal(self, data):
         if self._mask_generator_worker is not None:
@@ -2002,12 +1459,10 @@ class WorkerManager(Worker):
             )
 
     def update_properties(self, data):
-        if self._stt_audio_processor_worker is not None:
-            self.stt_audio_processor_worker.update_properties(data)
+        # STT processor removed; daemon handles transcription
+        pass
 
     def on_stt_unload_signal(self, data):
-        from airunner.enums import ModelType
-
         self.emit_signal(
             SignalCode.STT_STOP_CAPTURE_SIGNAL,
             data,
@@ -2019,44 +1474,72 @@ class WorkerManager(Worker):
             ModelType.STT,
         ):
             return
-        if self._stt_audio_processor_worker is not None:
-            self.stt_audio_processor_worker.add_to_queue(
-                {
-                    "_message_type": "stt_unload",
-                    "data": data,
-                }
-            )
+        # STT unload now handled exclusively by daemon
 
     def on_stt_process_audio_signal(self, data):
-        # Use the property to ensure the worker is created
-        if self.logger:
-            self.logger.debug("on_stt_process_audio_signal called")
-        worker = self.stt_audio_processor_worker
-        if worker is not None:
-            if self.logger:
-                self.logger.debug("Forwarding audio to stt_audio_processor_worker")
-            worker.on_stt_process_audio_signal(data)
-        else:
-            if self.logger:
-                self.logger.warning("stt_audio_processor_worker is None")
+        """Forward captured audio to daemon for transcription."""
+        self.add_to_queue({"data": data, "request_type": "stt_process"})
+
+    def _process_stt_through_daemon(self, data: dict) -> None:
+        """Send captured audio to the daemon for STT transcription."""
+        def _transcribe():
+            try:
+                audio_bytes = data.get("audio_bytes")
+                if not audio_bytes:
+                    self.logger.warning(
+                        "STT process: no audio_bytes in data"
+                    )
+                    return
+                client = self._daemon_client()
+                if client is None:
+                    self.logger.error(
+                        "STT process: daemon unavailable"
+                    )
+                    return
+                result = client.transcribe_audio(audio_bytes)
+                text = result.get("text", "")
+                if text and self.logger:
+                    self.logger.info(
+                        f"STT transcription result: {text[:100]}..."
+                    )
+                    self.emit_signal(
+                        SignalCode.AUDIO_PROCESSOR_RESPONSE_SIGNAL,
+                        {"transcription": text},
+                    )
+            except Exception as exc:
+                self.logger.error(
+                    f"STT transcription failed: {exc}"
+                )
+
+        threading.Thread(target=_transcribe, daemon=True).start()
 
     def on_interrupt_process_signal(self, data):
-        # Interrupt LLM generation
-        if self._llm_generate_worker is not None:
-            self.llm_generate_worker.llm_on_interrupt_process_signal(data)
+        # LLM interrupt now handled exclusively by the daemon
 
-        # Interrupt TTS generation
-        if self.tts_generator_worker is not None:
-            self.tts_generator_worker.on_interrupt_process_signal(data)
+        if self._tts_generator_worker is not None:
+            self._queue_tts_worker_message(
+                self.tts_generator_worker,
+                {
+                    "_message_type": "interrupt",
+                    "data": dict(data or {}),
+                    "options": {"empty_queue": True},
+                },
+            )
 
         if self._tts_vocalizer_worker is not None:
             self.tts_vocalizer_worker.on_interrupt_process_signal(data)
 
     def on_unblock_tts_generator_signal(self, data):
         callback_handled = False
-        
-        if self.tts_generator_worker is not None:
-            self.tts_generator_worker.on_unblock_tts_generator_signal(data)
+
+        if self._tts_generator_worker is not None:
+            self._queue_tts_worker_message(
+                self.tts_generator_worker,
+                {
+                    "_message_type": "unblock_tts_generator",
+                    "data": dict(data or {}),
+                },
+            )
             callback_handled = True
 
         if self._tts_vocalizer_worker is not None:
@@ -2071,9 +1554,6 @@ class WorkerManager(Worker):
                 callback()
 
     def on_disable_tts_signal(self, data):
-        from airunner.enums import ModelType
-
-        self._tts_runtime_prewarm_started = False
         self._stop_tts_activity_immediately()
 
         if self._control_daemon_runtime_async(
@@ -2082,13 +1562,7 @@ class WorkerManager(Worker):
             ModelType.TTS,
         ):
             return
-        if self.tts_generator_worker is not None:
-            self.tts_generator_worker.add_to_queue(
-                {
-                    "_message_type": "tts_disable",
-                    "data": data,
-                }
-            )
+        # TTS disable now handled exclusively by daemon
 
     @staticmethod
     def _queue_tts_worker_message(worker, message: dict) -> None:
@@ -2126,25 +1600,36 @@ class WorkerManager(Worker):
             return
         worker = self._stream_tts_worker()
         if worker is not None:
-            worker.on_llm_text_streamed_signal(data)
+            self._queue_tts_worker_message(
+                worker,
+                {
+                    "_message_type": "llm_text_streamed",
+                    "data": dict(data or {}),
+                },
+            )
 
     def on_llm_thinking_signal(self, data):
         if data and data.get("_skip_worker_manager_tts"):
             return
         worker = self._stream_tts_worker()
         if worker is not None:
-            worker.on_llm_thinking_signal(data)
+            self._queue_tts_worker_message(
+                worker,
+                {
+                    "_message_type": "llm_thinking",
+                    "data": dict(data or {}),
+                },
+            )
 
     def _stream_tts_worker(self):
         """Return the TTS worker only for GUI-owned streamed chat speech."""
         if self._current_gui_api() is None:
             return None
+        if not getattr(self.application_settings, "tts_enabled", False):
+            return None
         return self.tts_generator_worker
 
     def _reload_tts_model_manager(self, data):
-        from airunner.enums import ModelType
-
-        self._tts_runtime_prewarm_started = False
         if getattr(self.application_settings, "tts_enabled", False):
             if self._control_daemon_runtime_async(
                 "tts",
@@ -2153,15 +1638,18 @@ class WorkerManager(Worker):
                 route_metadata=self._tts_runtime_route_metadata(),
             ):
                 return
-        if self.tts_generator_worker is not None:
-            self.tts_generator_worker._reload_tts_model_manager(data)
+        # TTS model reload now handled exclusively by daemon
 
     def on_application_settings_changed_signal(self, data):
         self._refresh_daemon_tts_for_reference_speaker_change(data)
 
-        if self.tts_generator_worker is not None:
-            self.tts_generator_worker.on_application_settings_changed_signal(
-                data
+        if self._tts_generator_worker is not None:
+            self._queue_tts_worker_message(
+                self.tts_generator_worker,
+                {
+                    "_message_type": "application_settings_changed",
+                    "data": dict(data or {}),
+                },
             )
 
         if self._tts_vocalizer_worker is not None:
@@ -2171,7 +1659,6 @@ class WorkerManager(Worker):
 
     def _refresh_daemon_tts_for_reference_speaker_change(self, data) -> None:
         """Restart sidecar-backed TTS after one reference-speaker change."""
-        from airunner.enums import ModelType, TTSModel
 
         if self._daemon_client() is None:
             return
@@ -2200,8 +1687,8 @@ class WorkerManager(Worker):
         )
 
     def on_add_to_queue_signal(self, data):
-        if self.tts_generator_worker is not None:
-            self.tts_generator_worker.on_add_to_queue_signal(data)
+        # TTS queue now handled exclusively by daemon
+        pass
 
     def on_playback_device_changed_signal(self, data):
         if self._tts_vocalizer_worker is not None:
@@ -2225,15 +1712,6 @@ class WorkerManager(Worker):
                 - model_type: Type of model (stt, tts_openvoice)
                 - callback: Optional callback to invoke after download completes
         """
-        from PySide6.QtWidgets import QApplication, QMessageBox
-        from airunner.components.llm.gui.windows.huggingface_download_dialog import (
-            HuggingFaceDownloadDialog,
-        )
-        
-        # Check if HuggingFace downloads are allowed
-        from airunner.components.application.gui.dialogs.privacy_consent_dialog import (
-            is_huggingface_allowed,
-        )
         if not is_huggingface_allowed():
             if self.logger:
                 self.logger.info("HuggingFace downloads disabled by privacy settings")
@@ -2374,12 +1852,6 @@ class WorkerManager(Worker):
             data: Signal data dictionary containing:
                 - callback: Optional callback to invoke after download completes
         """
-        import os
-        from PySide6.QtWidgets import QApplication
-        from airunner.components.llm.gui.windows.huggingface_download_dialog import (
-            HuggingFaceDownloadDialog,
-        )
-
         callback = data.get("callback")
         
         # Target directory for extraction
@@ -2482,20 +1954,6 @@ class WorkerManager(Worker):
                 - missing_languages: List of language keys that need download
                 - callback: Callback to invoke after all downloads complete
         """
-        import os
-        from PySide6.QtCore import QThread
-        from PySide6.QtWidgets import QMessageBox, QDialog
-        from airunner.components.tts.gui.dialogs.openvoice_language_dialog import (
-            OpenVoiceLanguageDialog,
-        )
-        from airunner.components.tts.data.bootstrap.openvoice_languages import (
-            OPENVOICE_CORE_MODELS,
-            OPENVOICE_LANGUAGE_MODELS,
-        )
-        from airunner.components.llm.gui.windows.huggingface_download_dialog import (
-            HuggingFaceDownloadDialog,
-        )
-
         needs_converter = data.get("needs_converter", False)
         missing_core_models = data.get("missing_core_models", [])
         missing_languages = data.get("missing_languages", [])
@@ -2576,8 +2034,8 @@ class WorkerManager(Worker):
         
         # Add language-specific models for selected languages
         for lang_key in selected_languages:
-            if lang_key in OPENVOICE_LANGUAGE_MODELS:
-                lang_info = OPENVOICE_LANGUAGE_MODELS[lang_key]
+            if lang_key in get_openvoice_language_models():
+                lang_info = get_openvoice_language_models()[lang_key]
                 for model_id in lang_info["models"]:
                     if model_id not in models_to_download:
                         models_to_download.append(model_id)
@@ -2812,7 +2270,6 @@ class WorkerManager(Worker):
                 # Notify dialog that all downloads are complete, then close it
                 self._download_dialog.on_download_complete(data)
                 # Use QTimer to close after a brief delay so user sees the completion message
-                from PySide6.QtCore import QTimer
                 dialog = self._download_dialog
                 QTimer.singleShot(1500, dialog.accept)
                 self._download_dialog = None

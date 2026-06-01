@@ -1,12 +1,10 @@
 from typing import Any, Dict, List
 from airunner.components.application.api.api_service_base import APIServiceBase
-from airunner.components.art.data.canvas_layer import CanvasLayer
-from airunner.components.art.data.controlnet_settings import ControlnetSettings
-from airunner.components.art.data.drawingpad_settings import DrawingPadSettings
-from airunner.components.art.data.image_to_image_settings import (
-    ImageToImageSettings,
+from airunner.components.art.data.canvas_layer_records import (
+    create_canvas_layer,
+    ensure_layer_setting,
 )
-from airunner.components.art.data.outpaint_settings import OutpaintSettings
+from airunner.components.art.data.catalog_records import get_ai_model
 from airunner.components.art.managers.stablediffusion.image_request import (
     ImageRequest,
 )
@@ -16,7 +14,6 @@ from PySide6.QtCore import QPoint
 from airunner.components.art.managers.stablediffusion.image_response import (
     ImageResponse,
 )
-from airunner.components.art.data.ai_models import AIModels
 from airunner.enums import SignalCode
 from airunner.utils.image.convert_binary_to_image import (
     convert_binary_to_image,
@@ -59,11 +56,6 @@ class CanvasAPIService(APIServiceBase):
     def brush_color_changed(self, color):
         self.emit_signal(
             SignalCode.BRUSH_COLOR_CHANGED_SIGNAL, {"color": color}
-        )
-
-    def image_from_path(self, path):
-        self.emit_signal(
-            SignalCode.CANVAS_LOAD_IMAGE_FROM_PATH_SIGNAL, {"image_path": path}
         )
 
     def new_document(self):
@@ -140,12 +132,6 @@ class CanvasAPIService(APIServiceBase):
 
     def zoom_level_changed(self):
         self.emit_signal(SignalCode.CANVAS_ZOOM_LEVEL_CHANGED)
-
-    def layer_deleted(self, layer_id: int):
-        self.emit_signal(
-            SignalCode.LAYER_DELETED,
-            {"layer_id": layer_id},
-        )
 
     def layer_selection_changed(self, selected_layer_ids: List[int]):
         self.emit_signal(
@@ -235,15 +221,15 @@ class CanvasAPIService(APIServiceBase):
         model_path = ""
         model_id = generator_settings.model
         if model_id is not None:
-            aimodel = AIModels.objects.get(model_id)
+            aimodel = get_ai_model(model_id)
             if aimodel is not None:
                 model_path = aimodel.path
 
         if model_path == "":
             if generator_settings.model is not None:
-                aimodel = AIModels.objects.get(generator_settings.model)
+                aimodel = get_ai_model(generator_settings.model)
             else:
-                aimodel = AIModels.objects.first()
+                aimodel = self.resource_store.first("AIModels")
 
             if aimodel is not None:
                 model_path = aimodel.path
@@ -308,7 +294,6 @@ class CanvasAPIService(APIServiceBase):
             original_size=generator_settings.original_size,
             negative_target_size=generator_settings.negative_target_size,
             negative_original_size=generator_settings.negative_original_size,
-            lora_scale=generator_settings.lora_scale,
             additional_prompts=kwargs.get("additional_prompts", []),
             callback=kwargs.get("callback", None),
             image=image,
@@ -341,19 +326,6 @@ class CanvasAPIService(APIServiceBase):
     def update_image_positions(self):
         self.emit_signal(SignalCode.CANVAS_UPDATE_IMAGE_POSITIONS)
 
-    def create_new_layer(self, **kwargs) -> CanvasLayer:
-        self.begin_layer_operation("create")
-        layer = CanvasLayer.objects.create(**kwargs)
-        data = {"layer_id": layer.id}
-        DrawingPadSettings.objects.create(**data)
-        ControlnetSettings.objects.create(**data)
-        ImageToImageSettings.objects.create(**data)
-        OutpaintSettings.objects.create(**data)
-        if not layer:
-            self.cancel_layer_operation("create")
-            return
-        self.commit_layer_operation("create", [layer.id])
-        return layer
 
     def begin_layer_operation(
         self, action: str, layer_ids: list[int] | None = None

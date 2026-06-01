@@ -1,14 +1,19 @@
+from importlib import import_module
+
 from PySide6.QtCore import Slot
-import sounddevice as sd
 from airunner.components.application.gui.widgets.base_widget import BaseWidget
-from airunner.components.settings.data.sound_settings import SoundSettings
 from airunner.components.settings.gui.widgets.sound_settings.templates.sound_settings_ui import (
     Ui_SoundSettings,
 )
 from airunner.enums import SignalCode
 
 
+def _sounddevice():
+    return import_module("sounddevice")
+
+
 class SoundSettingsWidget(BaseWidget):
+    ui: Ui_SoundSettings  # type: ignore[assignment]
     widget_class_ = Ui_SoundSettings
 
     def __init__(self, *args, **kwargs):
@@ -18,6 +23,7 @@ class SoundSettingsWidget(BaseWidget):
 
     def load_devices(self):
         # Populate comboboxes with available audio devices
+        sd = _sounddevice()
         devices = sd.query_devices()
         output_devices = filter(
             None,
@@ -72,8 +78,7 @@ class SoundSettingsWidget(BaseWidget):
                 current_input_device["name"]
             )
 
-        # Retrieve current settings
-        sound_settings = SoundSettings.objects.first()
+        sound_settings = self.resource_store.get_singleton("SoundSettings")
 
         # Set playback device
         if (
@@ -86,11 +91,10 @@ class SoundSettingsWidget(BaseWidget):
         elif output_device_names:
             current_device = output_device_names[0]
             self.ui.playbackComboBox.setCurrentIndex(0)
-            sound_settings = SoundSettings.objects.first()
-            if sound_settings:
-                SoundSettings.objects.update(
-                    sound_settings.id, playback_device=current_device
-                )
+            self.resource_store.update_singleton(
+                "SoundSettings",
+                {"playback_device": current_device},
+            )
 
         # Set recording device
         if (
@@ -103,47 +107,31 @@ class SoundSettingsWidget(BaseWidget):
         elif input_device_names:
             current_device = input_device_names[0]
             self.ui.recordingComboBox.setCurrentIndex(0)
-            sound_settings = SoundSettings.objects.first()
-            if sound_settings:
-                SoundSettings.objects.update(
-                    sound_settings.id, recording_device=current_device
-                )
+            self.resource_store.update_singleton(
+                "SoundSettings",
+                {"recording_device": current_device},
+            )
 
     @Slot(str)
     def on_playbackComboBox_currentTextChanged(self, device: str):
-        sound_settings = SoundSettings.objects.first()
-        if sound_settings is None:
-            SoundSettings.objects.create(
-                playback_device=device, recording_device=None
-            )
-        sound_settings = SoundSettings.objects.first()
-        SoundSettings.objects.update(sound_settings.id, playback_device=device)
+        self.resource_store.update_singleton(
+            "SoundSettings",
+            {"playback_device": device},
+        )
         self.emit_signal(SignalCode.PLAYBACK_DEVICE_CHANGED, device)
 
     @Slot(str)
     def on_recordingComboBox_currentTextChanged(self, device: str):
-        sound_settings = SoundSettings.objects.first()
-        if sound_settings is None:
-            SoundSettings.objects.create(
-                recording_device=device, playback_device=None
-            )
-            sound_settings = SoundSettings.objects.first()
-        SoundSettings.objects.update(
-            sound_settings.id, recording_device=device
+        self.resource_store.update_singleton(
+            "SoundSettings",
+            {"recording_device": device},
         )
         self.emit_signal(SignalCode.RECORDING_DEVICE_CHANGED, device)
 
     def update_microphone_volume(self, volume):
-        sound_settings = SoundSettings.objects.first()
-        if sound_settings is None:
-            SoundSettings.objects.create(
-                microphone_volume=volume,
-                playback_device=None,
-                recording_device=None,
-            )
-            sound_settings = SoundSettings.objects.first()
-        SoundSettings.objects.update(
-            sound_settings.id, microphone_volume=volume
+        self.resource_store.update_singleton(
+            "SoundSettings",
+            {"microphone_volume": volume},
         )
 
     def adjust_input_level(self, value):

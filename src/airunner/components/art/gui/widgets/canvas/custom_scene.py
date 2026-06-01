@@ -1,7 +1,7 @@
 from dataclasses import asdict, is_dataclass
 from typing import Optional, Dict, Any, List
 
-from PIL import Image, ImageFilter
+from PIL import Image
 from PySide6.QtGui import QImage
 from PySide6.QtCore import QPointF
 from PySide6.QtWidgets import (
@@ -9,8 +9,9 @@ from PySide6.QtWidgets import (
     QMessageBox,
 )
 from airunner.components.art.gui.widgets.canvas.simple_event import SimpleEvent
-
-from airunner.components.art.data.canvas_layer import CanvasLayer
+from airunner.components.art.data.canvas_layer_records import (
+    ordered_canvas_layers,
+)
 
 from airunner.enums import CanvasToolName, EngineResponseCode
 from airunner.components.art.gui.widgets.canvas.mixins import (
@@ -43,7 +44,6 @@ from airunner.components.application.gui.windows.main.settings_mixin import (
 )
 from airunner.components.art.managers.stablediffusion.rect import Rect
 from airunner.components.art.utils.layer_compositor import LayerCompositor
-from airunner.components.art.data.image_filter import ImageFilter
 from airunner.components.art.utils.image_filter_utils import (
     build_filter_object_from_model,
 )
@@ -217,7 +217,10 @@ class CustomScene(
     def _apply_auto_filters(self) -> None:
         """Apply all auto-apply filters from database to the current image."""
         try:
-            auto_filters = ImageFilter.objects.filter_by(auto_apply=True) or []
+            auto_filters = self.resource_store.query(
+                "ImageFilter",
+                filters={"auto_apply": True},
+            )
             for f in auto_filters:
                 try:
                     filter_obj = build_filter_object_from_model(f)
@@ -329,14 +332,11 @@ class CustomScene(
             return None
 
     def _capture_layer_orders(self) -> List[Dict[str, int]]:
-        layers = CanvasLayer.objects.all()
+        layers = ordered_canvas_layers(store=self.resource_store)
         if not layers:
             return []
-        sorted_layers = sorted(
-            layers, key=lambda layer: getattr(layer, "order", 0)
-        )
         orders: List[Dict[str, int]] = []
-        for index, layer in enumerate(sorted_layers):
+        for index, layer in enumerate(layers):
             layer_id = getattr(layer, "id", None)
             if layer_id is None:
                 continue

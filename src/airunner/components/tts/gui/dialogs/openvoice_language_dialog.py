@@ -8,14 +8,10 @@ from PySide6.QtWidgets import (
     QCheckBox,
     QPushButton,
     QGroupBox,
-    QScrollArea,
-    QWidget,
-    QSizePolicy,
 )
-from PySide6.QtCore import Qt
 
-from airunner.components.tts.data.bootstrap.openvoice_languages import (
-    OPENVOICE_LANGUAGE_MODELS,
+from airunner.components.data.bootstrap_service import (
+    get_openvoice_language_models,
 )
 
 
@@ -39,7 +35,7 @@ class OpenVoiceLanguageDialog(QDialog):
         self._checkboxes = {}
         
         # Filter to only show missing languages if provided
-        self._available_languages = missing_languages or list(OPENVOICE_LANGUAGE_MODELS.keys())
+        self._available_languages = missing_languages or list(get_openvoice_language_models().keys())
         
         self._setup_ui()
     
@@ -62,7 +58,7 @@ class OpenVoiceLanguageDialog(QDialog):
         
         # Create checkboxes for each available language
         for lang_key in self._available_languages:
-            lang_info = OPENVOICE_LANGUAGE_MODELS.get(lang_key, {})
+            lang_info = get_openvoice_language_models().get(lang_key, {})
             display_name = lang_info.get("display_name", lang_key)
             
             checkbox = QCheckBox(display_name)

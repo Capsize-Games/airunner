@@ -3,6 +3,7 @@ import os
 import threading
 from typing import Optional
 
+from airunner.settings import AIRUNNER_BASE_PATH
 from airunner.settings import AIRUNNER_LOG_LEVEL
 from airunner.utils.application.log_hygiene import LogHygieneFilter
 
@@ -45,24 +46,6 @@ class Logger:
         # Add file handler if enabled
         if os.environ.get("AIRUNNER_SAVE_LOG_TO_FILE", "0") == "1":
             try:
-                # Import locally to avoid circular dependency
-                from airunner.components.settings.data.path_settings import (
-                    PathSettings,
-                )
-
-                settings = PathSettings.objects.first()
-                if settings:
-                    base_path = settings.base_path
-                elif os.environ.get("AIRUNNER_FLATPAK") == "1":
-                    xdg_data_home = os.environ.get(
-                        "XDG_DATA_HOME",
-                        os.path.expanduser("~/.local/share")
-                    )
-                    base_path = os.path.join(xdg_data_home, "airunner")
-                else:
-                    base_path = "~/.local/share/airunner"
-            except (ImportError, Exception):
-                # Fallback if PathSettings not available yet (during initialization)
                 if os.environ.get("AIRUNNER_FLATPAK") == "1":
                     xdg_data_home = os.environ.get(
                         "XDG_DATA_HOME",
@@ -70,7 +53,9 @@ class Logger:
                     )
                     base_path = os.path.join(xdg_data_home, "airunner")
                 else:
-                    base_path = "~/.local/share/airunner"
+                    base_path = AIRUNNER_BASE_PATH
+            except Exception:
+                base_path = AIRUNNER_BASE_PATH
 
             try:
                 log_file = os.environ.get(

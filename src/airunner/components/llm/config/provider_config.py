@@ -18,7 +18,6 @@ class LLMProviderConfig:
     """Available models for each LLM provider."""
 
     _SUPPORTED_LOCAL_MODEL_IDS = (
-        "qwen3-8b",
         "qwen3.5-9b",
         "gpt-oss-20b",
         "custom",
@@ -27,63 +26,7 @@ class LLMProviderConfig:
     # Local HuggingFace models available for download
     # Models can have optional GGUF variants via gguf_repo_id and gguf_filename
     LOCAL_MODELS = {
-        "ministral3-8b": {
-            "name": "Ministral-3-8B-Instruct-2512-BF16",
-            # Use BF16 version - the standard FP8 version cannot be requantized with BitsAndBytes
-            # (FP8 tensors are incompatible with 4-bit quantization)
-            "repo_id": "mistralai/Ministral-3-8B-Instruct-2512-BF16",
-            "model_type": "ministral3",
-            "function_calling": True,
-            # NOTE: Changed from "native" to "react" - mistral_common tekken tokenizer
-            # produces corrupted output with Mistral3ForConditionalGeneration (vision model)
-            "tool_calling_mode": "react",
-            "supports_thinking": False,
-            "rag_capable": True,
-            "vision_capable": True,  # Ministral 3 has vision capabilities
-            "code_capable": True,
-            "context_length": 262144,  # 256K context window
-            "vram_2bit_gb": 4,
-            "vram_4bit_gb": 8,
-            "vram_8bit_gb": 18,  # BF16 is ~17.8GB, requires 24GB for full precision
-            "description": "Ministral 3 8B with vision, native function calling, and 256K context",
-            # IMPORTANT: Config files need patching after download (see ministral3_config_patcher.py):
-            # - config.json: text_config.model_type "ministral3" -> "mistral"
-            # - tokenizer_config.json: tokenizer_class and extra_special_tokens fixes
-            "requires_config_patch": True,
-            # NOTE: GGUF disabled - llama-cpp-python 0.3.16 doesn't support mistral3 architecture yet
-            # Official GGUF exists at mistralai/Ministral-3-8B-Instruct-2512-GGUF (5.2GB Q4_K_M)
-            # Re-enable when llama-cpp-python adds mistral3 support
-            # "gguf_repo_id": "mistralai/Ministral-3-8B-Instruct-2512-GGUF",
-            # "gguf_filename": "Ministral-3-8B-Instruct-2512-Q4_K_M.gguf",
-        },
-        "ministral3-8b-reasoning": {
-            "name": "Ministral-3-8B-Reasoning-2512",
-            "repo_id": "mistralai/Ministral-3-8B-Reasoning-2512",
-            "model_type": "ministral3",
-            "function_calling": True,
-            # NOTE: Changed from "native" to "react" - mistral_common tekken tokenizer
-            # produces corrupted output with Mistral3ForConditionalGeneration (vision model)
-            "tool_calling_mode": "react",
-            # Disable template thinking blocks to keep streaming responsive
-            # The reasoning model still does step-by-step internally, but we skip
-            # injecting enable_thinking so the template yields a direct answer.
-            "supports_thinking": False,
-            "thinking_tag_format": "brackets",  # [THINK]...[/THINK] vs angle <think>...</think>
-            "rag_capable": True,
-            "vision_capable": True,  # Ministral 3 has vision capabilities
-            "code_capable": True,
-            "context_length": 262144,  # 256K context window
-            "vram_2bit_gb": 5,
-            "vram_4bit_gb": 10,
-            "vram_8bit_gb": 24,  # BF16 requires 24GB, quantization recommended
-            "description": "Ministral 3 8B Reasoning with [THINK] blocks for step-by-step reasoning",
-            # NOTE: GGUF disabled - llama-cpp-python 0.3.16 doesn't support mistral3 architecture yet
-            # Official GGUF exists at mistralai/Ministral-3-8B-Reasoning-2512-GGUF (5.2GB Q4_K_M)
-            # Re-enable when llama-cpp-python adds mistral3 support
-            # "gguf_repo_id": "mistralai/Ministral-3-8B-Reasoning-2512-GGUF",
-            # "gguf_filename": "Ministral-3-8B-Reasoning-2512-Q4_K_M.gguf",
-        },
-        # NOTE: Meta Llama - No 8B model comparable to Qwen3/Ministral3
+        # NOTE: Meta Llama - No 8B model comparable to current Qwen variants
         # Llama 3.3 is 70B only (42.5GB Q4_K_M GGUF - too large for most users)
         # Llama 3.1 8B is outdated. Meta does NOT have a "thinking" model.
         # CodeLlama is outdated - Qwen3-Coder is the better choice for code.
@@ -108,34 +51,6 @@ class LLMProviderConfig:
             # GGUF variant (official Qwen GGUF)
             "gguf_repo_id": "Qwen/Qwen2.5-7B-Instruct-GGUF",
             "gguf_filename": "qwen2.5-7b-instruct-q4_k_m.gguf",
-        },
-        "qwen3-8b": {
-            "name": "Qwen3-8B",
-            "repo_id": "Qwen/Qwen3-8B",
-            "model_type": "llm",
-            "function_calling": True,
-            "tool_calling_mode": "json",  # Structured JSON output
-            "supports_thinking": True,  # Qwen3 supports both modes via enable_thinking flag
-            "rag_capable": True,
-            "vision_capable": False,
-            "code_capable": True,
-            "context_length": 32768,  # 32K native, 131K with YaRN
-            "native_context_length": 32768,
-            "yarn_max_context_length": 131072,
-            "supports_yarn": True,
-            "vram_2bit_gb": 5,
-            "vram_4bit_gb": 8,
-            "vram_8bit_gb": 16,
-            "description": "Qwen3 8B - supports both thinking (<think>) and instruct modes via enable_thinking flag",
-            # GGUF variant (official Qwen GGUF)
-            "gguf_repo_id": "Qwen/Qwen3-8B-GGUF",
-            "gguf_filename": "Qwen3-8B-Q4_K_M.gguf",
-            "local_storage_subdir": "Qwen",
-            "aliases": [
-                "Qwen 3 8B",
-                "Qwen3 8B",
-                "Qwen3-8B-Q4_K_M.gguf",
-            ],
         },
         "qwen3.5-9b": {
             "name": "Qwen3.5-9B",

@@ -12,7 +12,9 @@ from airunner.components.application.gui.windows.main.settings_mixin import (
     SettingsMixin,
 )
 from airunner.utils.settings import get_qsettings
-from airunner.components.art.data.drawingpad_settings import DrawingPadSettings
+from airunner.components.art.data.canvas_layer_records import (
+    ensure_layer_setting,
+)
 
 
 class DraggablePixmap(
@@ -41,7 +43,9 @@ class DraggablePixmap(
         self.save = False
         if self._use_layer_context:
             settings = self.drawing_pad_settings
-            pos = settings.pos if settings is not None else (0, 0)
+            x_pos = settings.x_pos if settings is not None else 0
+            y_pos = settings.y_pos if settings is not None else 0
+            pos = (x_pos, y_pos)
         else:
             pos = (0, 0)
         self.settings = get_qsettings()
@@ -69,7 +73,6 @@ class DraggablePixmap(
     def _resolve_layer_id(
         self,
         layer_id: Optional[int] = None,
-        model_class_: Optional[type] = None,
     ) -> Optional[int]:
         """Override to handle layer context for draggable pixmaps.
 
@@ -93,11 +96,13 @@ class DraggablePixmap(
         self._layer_id_override = layer_id
 
     @property
-    def drawing_pad_settings(self) -> DrawingPadSettings:  # type: ignore[override]
+    def drawing_pad_settings(self):  # type: ignore[override]
         layer_id = self._resolve_layer_id()
         if layer_id is not None:
-            return self._get_layer_specific_settings(
-                DrawingPadSettings, layer_id=layer_id
+            return ensure_layer_setting(
+                "DrawingPadSettings",
+                layer_id,
+                store=self.resource_store,
             )
         return super().drawing_pad_settings
 
@@ -109,7 +114,6 @@ class DraggablePixmap(
     def updateImage(
         self,
         qimage: QImage,
-        immediate: bool = False,
         invalidate_scene: bool = True,
     ):
         """Update the image data directly without conversion to pixmap."""
@@ -145,10 +149,6 @@ class DraggablePixmap(
         """Return the underlying QImage reference if available."""
         return self._qimage
 
-    def set_qimage(self, qimage: QImage) -> None:
-        """Replace the underlying QImage reference and refresh the item."""
-        self._qimage = qimage
-        self.update()
 
     def on_tool_changed_signal(self, _data=None) -> None:
         """Update item interaction when the active tool changes."""
