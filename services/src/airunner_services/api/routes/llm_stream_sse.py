@@ -1,5 +1,4 @@
-"""SSE-streaming LLM endpoint — works around Python 3.13 StopIteration
-behaviour in asyncio.to_thread by using a non-raising iterator helper."""
+"""SSE-streaming LLM endpoint — builds runtime envelope from chat messages."""
 
 from __future__ import annotations
 
@@ -14,11 +13,15 @@ from fastapi.responses import StreamingResponse
 from airunner_services.api.routes.llm_runtime import (
     require_runtime_registry,
     resolve_llm_client,
-    stream_runtime,
-    websocket_envelope,
+    to_runtime_messages,
 )
 from airunner_services.api.routes.llm_contracts import ChatCompletionRequest
-from airunner_services.ipc.messages import StreamDelta
+from airunner_services.ipc.messages import RequestEnvelope, StreamDelta
+from airunner_services.runtimes.contracts import (
+    LLMInvocationRequest,
+    RuntimeAction,
+    RuntimeKind,
+)
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -65,8 +68,24 @@ async def stream_chat_completion(
             )
             return
         try:
-            envelope = websocket_envelope(
-                {"messages": payload.messages},
+            invocation = LLMInvocationRequest(
+                messages=to_runtime_messages(payload.messages),
+                model=payload.model,
+                temperature=payload.temperature or 0.7,
+                max_tokens=payload.max_tokens,
+                stream=True,
+                metadata={
+                    "gguf_runtime_profile": payload.gguf_runtime_profile,
+                }
+                if payload.gguf_runtime_profile
+                else {},
+            )
+            envelope = RequestEnvelope(
+                runtime=RuntimeKind.LLM,
+                action=RuntimeAction.INVOKE,
+                provider="local",
+                stream=True,
+                payload=invocation.model_dump(),
             )
             iterator = iter(client.stream(envelope))
             while True:
