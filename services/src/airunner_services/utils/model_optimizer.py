@@ -27,11 +27,10 @@ GGUF Conversion Requirements (for option 2):
        ~/llama.cpp/llama-quantize model-f16.gguf model-Q4_K_M.gguf Q4_K_M
 """
 
-import os
 import subprocess
 import shutil
 from pathlib import Path
-from typing import Optional, Tuple, Literal, List
+from typing import Optional, Tuple, Literal
 from enum import Enum
 
 from airunner_services.settings import AIRUNNER_LOG_LEVEL

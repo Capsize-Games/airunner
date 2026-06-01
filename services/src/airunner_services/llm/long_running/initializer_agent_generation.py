@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Optional
+from typing import Any
 
 from airunner_services.llm.long_running.initializer_agent_json import (
     extract_json_from_response,

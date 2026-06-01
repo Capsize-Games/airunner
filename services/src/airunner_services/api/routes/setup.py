@@ -8,11 +8,9 @@ server-side.  Progress is streamed via SSE.
 
 from __future__ import annotations
 
-import asyncio
 import json
 import logging
 import os
-from pathlib import Path
 from typing import Any
 
 import nltk

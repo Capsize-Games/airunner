@@ -29,7 +29,7 @@ from airunner.components.data.bootstrap_service import (
     get_model_bootstrap_data,
 )
 from airunner.components.data.bootstrap_service import (
-    get_controlnet_bootstrap_data(),
+    get_controlnet_bootstrap_data,
 )
 from airunner.components.llm.config.provider_config import LLMProviderConfig
 from airunner.components.data.bootstrap_service import get_whisper_files

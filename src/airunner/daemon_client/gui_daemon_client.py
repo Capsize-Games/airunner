@@ -10,7 +10,6 @@ that callers get a single ``GuiDaemonClient`` instead of three layers.
 
 from __future__ import annotations
 
-import base64
 import io
 import threading
 from pathlib import Path

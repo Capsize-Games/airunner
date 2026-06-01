@@ -32,7 +32,7 @@ class DownloadsClientMixin:
         via SSE events and forwarded through ``progress_callback``.
         """
         import json
-        timeout = self._request_timeout_seconds
+        self._request_timeout_seconds
         response = self._request(
             "POST",
             "/api/v1/setup/install",

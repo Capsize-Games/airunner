@@ -9,7 +9,7 @@ diffusers-compatible interface for seamless integration with existing code.
 from __future__ import annotations
 
 import logging
-from typing import Any, Callable, Dict, List, Optional, Union
+from typing import Any, Callable, List, Optional, Union
 
 import torch
 from PIL import Image

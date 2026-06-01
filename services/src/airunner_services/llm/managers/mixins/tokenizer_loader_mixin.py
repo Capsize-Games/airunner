@@ -4,7 +4,6 @@ This mixin handles tokenizer initialization for various model types,
 including fallback strategies for tokenizer compatibility.
 """
 
-import os
 import traceback
 from typing import TYPE_CHECKING
 

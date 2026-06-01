@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import re
-from typing import Optional
 
 from airunner_services.llm.long_running.task_detector_patterns import (
     ANALYSIS_KEYWORDS,

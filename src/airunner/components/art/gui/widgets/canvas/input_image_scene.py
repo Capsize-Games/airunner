@@ -60,7 +60,6 @@ class InputImageScene(BrushScene):
         except (RuntimeError, AttributeError) as e:
             # Item was deleted or is no longer valid
             self.logger.warning(f"[POSITION DEBUG] _update_item_position failed: {e}")
-            pass
 
     def _create_new_item(self, image: QImage, x: int, y: int) -> None:
         """Override to create items without layer context for input image scenes.

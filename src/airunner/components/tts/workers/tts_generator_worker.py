@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import io
-import queue
 import threading
 import unicodedata
 from typing import Iterable, Optional

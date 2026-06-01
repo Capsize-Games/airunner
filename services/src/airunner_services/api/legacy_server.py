@@ -32,11 +32,9 @@ Usage:
 """
 
 import os
-import io
 import json
 import base64
 import threading
-import uuid
 from http.server import BaseHTTPRequestHandler
 from typing import Dict, Optional, Any
 import sys

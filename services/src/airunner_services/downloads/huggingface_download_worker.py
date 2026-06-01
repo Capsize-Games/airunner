@@ -588,7 +588,6 @@ class HuggingFaceDownloadWorker(BaseDownloadWorker):
             output_dir: Directory to extract to
         """
         import zipfile
-        import tempfile
 
         filename = os.path.basename(zip_url)
         model_path = Path(output_dir)

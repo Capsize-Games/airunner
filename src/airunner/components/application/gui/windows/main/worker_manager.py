@@ -41,7 +41,7 @@ from airunner.components.tts.gui.dialogs.openvoice_language_dialog import (
     OpenVoiceLanguageDialog,
 )
 from airunner.components.data.bootstrap_service import (
-    get_openvoice_language_models(),
+    get_openvoice_language_models,
 )
 from airunner.components.tts.workers.tts_vocalizer_worker import (
     TTSVocalizerWorker,
@@ -189,7 +189,6 @@ class WorkerManager(Worker):
 
     def on_unload_rmbg_signal(self, data: Dict):
         """Background removal unload handled by daemon (future API)."""
-        pass
 
     def handle_message(self, message: Dict):
         if self.logger:
@@ -1010,8 +1009,7 @@ class WorkerManager(Worker):
         # Skip TTS, STT, and other non-LLM model types
         # Use add_to_queue to ensure processing happens in worker thread,
         # not main thread, to prevent UI lockups during model loading
-        model_type = data.get("model_type", "")
-        non_llm_types = {"tts_openvoice", "stt", "openvoice_zip", "art"}
+        data.get("model_type", "")
         # Download completion routing removed; handled by daemon
 
         # If we have a pending generation request (for image generation), retry it now
@@ -1241,7 +1239,6 @@ class WorkerManager(Worker):
 
     def on_safety_checker_unload_signal(self, data):
         # Safety checker unload handled by daemon (future API)
-        pass
         if self._safety_checker_worker is not None:
             self.safety_checker_worker.add_to_queue(
                 {"action": "unload", "data": data}

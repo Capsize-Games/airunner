@@ -15,7 +15,7 @@ from airunner.components.downloader.gui.windows.setup_wizard.installation_settin
     Ui_install_success_page,
 )
 from airunner.components.data.bootstrap_service import (
-    get_controlnet_bootstrap_data(),
+    get_controlnet_bootstrap_data,
 )
 from airunner.components.data.bootstrap_service import (
     get_model_bootstrap_data,
@@ -284,7 +284,7 @@ class ChooseModelsPage(BaseWizard):
         # Add Upscaler (x4) option (but place it outside the scroll area below the version groups)
         try:
             from airunner.components.data.bootstrap_service import (
-                get_sd_file_bootstrap_data(),
+                get_sd_file_bootstrap_data,
             )
 
             upscaler_size = 0
@@ -353,7 +353,7 @@ class ChooseModelsPage(BaseWizard):
             LLMProviderConfig,
         )
         from airunner.components.data.bootstrap_service import (
-            get_llm_file_bootstrap_data(),
+            get_llm_file_bootstrap_data,
         )
 
         total = 0
@@ -379,7 +379,7 @@ class ChooseModelsPage(BaseWizard):
         zimage_core_sizes = {}
         try:
             from airunner.components.data.bootstrap_service import (
-                get_sd_file_bootstrap_data(),
+                get_sd_file_bootstrap_data,
             )
 
             for model in self.models:

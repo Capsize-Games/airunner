@@ -252,7 +252,6 @@ def answers_are_equivalent(answer1: str, answer2: str) -> bool:
     except Exception as e:
         # If sympy fails, fall back to string comparison
         logger.debug(f"Sympy comparison failed: {e}")
-        pass
 
     # No match found
     return False

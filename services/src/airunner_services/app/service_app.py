@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import os
-import signal
 from typing import Optional
 
 from airunner_services.startup_env import (

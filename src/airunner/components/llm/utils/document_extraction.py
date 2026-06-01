@@ -1,5 +1,4 @@
 import os
-import re
 import shutil
 from typing import Optional
 

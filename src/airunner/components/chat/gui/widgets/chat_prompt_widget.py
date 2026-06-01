@@ -921,7 +921,7 @@ class ChatPromptWidget(BaseWidget):
             return
         
         # Calculate position - above the prompt widget
-        prompt_rect = self.ui.prompt.geometry()
+        self.ui.prompt.geometry()
         global_pos = self.ui.prompt.mapToGlobal(QPoint(0, 0))
         
         # Size the popup
@@ -1509,7 +1509,6 @@ class ChatPromptWidget(BaseWidget):
 
     def _update_action_dropdown(self) -> None:
         """Deprecated - action is always AUTO now."""
-        pass
 
     def _update_thinking_checkbox_visibility(self) -> None:
         """Update footer reasoning controls for the current model."""
@@ -1722,15 +1721,12 @@ class ChatPromptWidget(BaseWidget):
 
     def _clear_conversation(self, skip_update: bool = False):
         del skip_update
-        pass
 
     def _set_conversation_widgets(self, messages, skip_scroll: bool = False):
         del messages, skip_scroll
-        pass
 
     def _clear_conversation_widgets(self, skip_update: bool = False):
         del skip_update
-        pass
 
     def add_message_to_conversation(self, *args, **kwargs):
         pass
@@ -1743,7 +1739,6 @@ class ChatPromptWidget(BaseWidget):
 
     def register_web_channel(self, channel):
         del channel
-        pass
 
     def _ensure_conversation_context(self) -> Optional[int]:
         """Ensure we have a valid conversation ID before sending a request."""

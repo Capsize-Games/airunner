@@ -5,8 +5,7 @@ Handles workflow execution via invoke and stream methods.
 
 import uuid
 from contextlib import nullcontext
-from dataclasses import dataclass
-from typing import Optional, Dict, Any, List
+from typing import Optional, Dict, Any
 
 from langchain_core.messages import HumanMessage, AIMessage
 
@@ -48,7 +47,6 @@ class StreamingMixin:
             user_input: The user's message (unused)
         """
         # Automatic extraction disabled - LLM uses tools to record knowledge
-        pass
 
     def invoke(self, user_input: str) -> Dict[str, Any]:
         """Invoke the workflow with user input.
@@ -342,7 +340,7 @@ class StreamingMixin:
                 return
 
             # Get turn interval from settings
-            turn_interval = self.llm_settings.update_mood_after_n_turns
+            self.llm_settings.update_mood_after_n_turns
 
             # Get current conversation history
             if not hasattr(self, "_memory") or not self._memory:

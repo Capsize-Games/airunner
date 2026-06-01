@@ -1,6 +1,6 @@
 """Message-conversion helpers for the GGUF chat adapter."""
 
-from typing import Any, Dict, List, Optional, Sequence
+from typing import Any, Dict, List, Optional
 
 from langchain_core.messages import (
     AIMessage,

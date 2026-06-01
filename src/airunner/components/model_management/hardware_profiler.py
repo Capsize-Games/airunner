@@ -7,8 +7,6 @@ All hardware queries now go through the daemon. This module only needs
 from __future__ import annotations
 
 import platform
-from dataclasses import dataclass
-from typing import Optional
 
 import psutil
 

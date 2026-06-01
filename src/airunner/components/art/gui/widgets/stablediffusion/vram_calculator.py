@@ -7,8 +7,8 @@ native dtype are queried from the daemon via
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from typing import Dict, Optional
+from dataclasses import dataclass
+from typing import Dict
 
 # Display names for precision options
 PRECISION_DISPLAY_NAMES: Dict[str, str] = {

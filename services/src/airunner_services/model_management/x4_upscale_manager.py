@@ -111,7 +111,6 @@ class X4UpscaleManager(
 
     def update_scheduler(self):
         """Ignore scheduler updates because the upscaler uses a fixed one."""
-        pass
 
 
 __all__ = ["X4UpscaleManager"]

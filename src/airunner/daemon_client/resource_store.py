@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Dict, Iterable, List, Optional
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 from airunner.contract_enums import AvailableLanguage, CanvasToolName
 from airunner.contract_enums import GeneratorSection

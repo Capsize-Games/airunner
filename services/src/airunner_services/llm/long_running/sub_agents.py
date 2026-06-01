@@ -194,12 +194,10 @@ class BaseSubAgent(ABC):
     @abstractmethod
     def _get_default_tools(self) -> List[Any]:
         """Get default tools for this agent type."""
-        pass
 
     @abstractmethod
     def _get_system_prompt(self) -> str:
         """Get system prompt for this agent type."""
-        pass
 
     def invoke(self, context: Dict[str, Any]) -> Dict[str, Any]:
         """Invoke the sub-agent with context.

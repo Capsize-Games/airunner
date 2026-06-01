@@ -92,7 +92,6 @@ class ZImageGenerationMixin:
         Z-Image Turbo works best with guidance_scale=0.0 and 8-9 steps,
         but we respect whatever the user has configured.
         """
-        pass
 
     def _load_scheduler(self, scheduler_name=None):
         """Load a flow-match scheduler for Z-Image.

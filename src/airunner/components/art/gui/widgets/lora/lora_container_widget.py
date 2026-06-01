@@ -1,4 +1,3 @@
-import os
 from typing import Any, Dict, List
 from PySide6.QtCore import Slot, QSize, QTimer, Qt
 from PySide6.QtWidgets import QWidget, QSizePolicy, QApplication

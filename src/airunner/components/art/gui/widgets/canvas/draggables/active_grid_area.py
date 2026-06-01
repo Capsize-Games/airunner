@@ -314,7 +314,7 @@ class ActiveGridArea(DraggablePixmap):
             )
 
             # Verify the update worked by reading back from DB
-            fresh_settings = self.active_grid_settings
+            self.active_grid_settings
 
             view = None
             if self.scene() and self.scene().views():

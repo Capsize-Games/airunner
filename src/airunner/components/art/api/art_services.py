@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Dict, List, Optional
+from typing import TYPE_CHECKING, Dict, Optional
 
 from airunner.components.application.api.api_service_base import APIServiceBase
 from airunner.components.model_management import ModelResourceManager

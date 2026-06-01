@@ -16,7 +16,7 @@
 # Based on SanaSprintImg2ImgPipeline and ZImagePipeline.
 
 import inspect
-from typing import Any, Callable, Dict, List, Optional, Union
+from typing import Callable, Dict, List, Optional, Union
 
 import torch
 import torch.nn.functional as F

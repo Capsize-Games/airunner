@@ -11,7 +11,6 @@ Example:
     ~/.local/share/airunner/art/models/SDXL 1.0/txt2img/model.safetensors
 """
 
-import os
 from dataclasses import dataclass
 from pathlib import Path
 from typing import List, Optional

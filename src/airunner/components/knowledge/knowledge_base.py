@@ -10,13 +10,11 @@ for easy parsing and LLM manipulation.
 All files are indexed into RAG for semantic retrieval during thinking/response.
 """
 
-import os
 import re
-from datetime import datetime, date
+from datetime import date
 from pathlib import Path
 from typing import Optional, List, Dict, Tuple
 import threading
-from glob import glob
 
 from airunner.settings import AIRUNNER_BASE_PATH, AIRUNNER_LOG_LEVEL
 from airunner.utils.application import get_logger

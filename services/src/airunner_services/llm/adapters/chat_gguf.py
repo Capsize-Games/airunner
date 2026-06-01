@@ -146,7 +146,6 @@ class ChatGGUF(
 
     def _reload_with_tools(self) -> None:
         """No-op: tool bindings do not require runtime reloading."""
-        pass
 
     def clear_bound_tools(self) -> None:
         """Clear previously bound tools from the live model instance."""

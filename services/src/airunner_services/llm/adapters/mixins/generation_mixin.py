@@ -1,6 +1,5 @@
 """Generation operations for HuggingFace chat models."""
 
-import sys
 from typing import List, Optional, Any, Iterator
 
 import torch
@@ -210,7 +209,6 @@ class GenerationMixin:
         Returns:
             Filtered tool call list
         """
-        import json
         seen = set()
         deduped = []
         for call in tool_calls:

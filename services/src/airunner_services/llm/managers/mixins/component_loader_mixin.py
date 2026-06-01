@@ -9,7 +9,6 @@ This mixin handles:
 
 import gc
 import os
-import traceback
 from typing import TYPE_CHECKING
 
 import torch

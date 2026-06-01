@@ -17,7 +17,7 @@
 # local copy should be removed and the diffusers version used instead.
 
 import inspect
-from typing import Any, Callable, Dict, List, Optional, Union
+from typing import Callable, Dict, List, Optional, Union
 
 import torch
 from transformers import Qwen2Tokenizer, Qwen2VLForConditionalGeneration
