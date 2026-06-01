@@ -182,7 +182,6 @@ class DatabaseChatMessageHistory(BaseChatMessageHistory):
         Args:
             message: LangChain message to add
         """
-        # In ephemeral mode, store in memory only
         if self.ephemeral:
             self._ephemeral_messages.append(message)
             return
@@ -192,228 +191,256 @@ class DatabaseChatMessageHistory(BaseChatMessageHistory):
             return
 
         try:
-            import datetime
-
-            # CRITICAL: Reload conversation from database to get latest state
-            # This ensures deduplication checks against the most current data
             self._refresh_conversation(max_messages=0)
 
-            # Track tool calls and tool messages for debugging, but store them separately
-            # These won't appear as regular conversation messages but will be logged
-
-            # Handle ToolMessages (results from tool execution)
             if message.__class__.__name__ == "ToolMessage":
-                tool_call_id = getattr(message, "tool_call_id", None)
-                self.logger.debug(
-                    f"Tool result: {message.content[:100]}... "
-                    f"(tool_call_id: {tool_call_id or 'unknown'})"
-                )
-
-                # DEDUPLICATION: Check if tool_result with same tool_call_id already exists
-                if self._conversation.value and tool_call_id:
-                    for existing in self._conversation.value:
-                        if (
-                            existing.get("metadata_type") == "tool_result"
-                            and existing.get("tool_call_id") == tool_call_id
-                        ):
-                            self.logger.debug(
-                                f"Skipping duplicate tool_result for tool_call_id: {tool_call_id}"
-                            )
-                            return
-
-                # Store tool result in a separate metadata entry
-                now = datetime.datetime.now(datetime.timezone.utc).isoformat()
-                tool_result_dict = {
-                    "role": "tool_result",
-                    "name": "Tool Result",
-                    "content": message.content,
-                    "timestamp": now,
-                    "blocks": [
-                        {"block_type": "text", "text": message.content}
-                    ],
-                    "tool_call_id": tool_call_id,
-                    "metadata_type": "tool_result",  # Mark as metadata for filtering
-                }
-                updated_messages = list(self._conversation.value or [])
-                updated_messages.append(tool_result_dict)
-                self._persist_messages(updated_messages)
+                self._persist_tool_result(message)
                 return
 
-            # Handle AIMessages with tool_calls (LLM requesting tool execution)
             if (
                 isinstance(message, AIMessage)
                 and hasattr(message, "tool_calls")
                 and message.tool_calls
             ):
-                self.logger.debug(
-                    f"Tool calls requested: {[tc.get('name', 'unknown') for tc in message.tool_calls]}"
-                )
-
-                # DEDUPLICATION: Check if tool_calls with same IDs already exist
-                # Get all tool_call IDs from the incoming message
-                incoming_tool_ids = set(
-                    tc.get("id") for tc in message.tool_calls if tc.get("id")
-                )
-                if self._conversation.value and incoming_tool_ids:
-                    for existing in self._conversation.value:
-                        if existing.get("metadata_type") == "tool_calls":
-                            existing_tool_calls = existing.get("tool_calls", [])
-                            for tc in existing_tool_calls:
-                                if tc.get("id") in incoming_tool_ids:
-                                    self.logger.debug(
-                                        f"Skipping duplicate tool_calls - tool_call_id already exists: {tc.get('id')}"
-                                    )
-                                    return
-
-                # Extract thinking content from the AIMessage that has tool_calls
-                # This captures the "thinking before tool use" phase
-                thinking_content = None
-                if hasattr(message, "additional_kwargs") and message.additional_kwargs:
-                    thinking_content = message.additional_kwargs.get("thinking_content")
-                if not thinking_content and message.content:
-                    thinking_content, _ = extract_thinking_and_response(message.content)
-
-                # Store tool call request in metadata
-                now = datetime.datetime.now(datetime.timezone.utc).isoformat()
-                tool_calls_dict = {
-                    "role": "tool_calls",
-                    "name": "Tool Planning",
-                    "content": f"Requested {len(message.tool_calls)} tool(s): "
-                    + ", ".join(
-                        [
-                            tc.get("name", "unknown")
-                            for tc in message.tool_calls
-                        ]
-                    ),
-                    "timestamp": now,
-                    "blocks": [
-                        {
-                            "block_type": "text",
-                            "text": f"Tool calls: {message.tool_calls}",
-                        }
-                    ],
-                    "tool_calls": message.tool_calls,  # Store actual tool call data
-                    "metadata_type": "tool_calls",  # Mark as metadata for filtering
-                }
-
-                # Store thinking content if present (pre-tool thinking)
-                if thinking_content:
-                    tool_calls_dict["thinking_content"] = thinking_content
-                    self.logger.debug(f"[THINKING SAVE] Saved pre-tool thinking: {len(thinking_content)} chars")
-                if (
-                    hasattr(message, "additional_kwargs")
-                    and isinstance(message.additional_kwargs, dict)
-                    and isinstance(
-                        message.additional_kwargs.get("tool_status_metadata"),
-                        dict,
-                    )
-                ):
-                    tool_calls_dict["tool_status_metadata"] = (
-                        message.additional_kwargs.get(
-                            "tool_status_metadata"
-                        )
-                    )
-
-                updated_messages = list(self._conversation.value or [])
-                updated_messages.append(tool_calls_dict)
-                self._persist_messages(updated_messages)
+                self._persist_tool_calls(message)
                 return
 
-            # Convert LangChain message to database format
-            role = "user"
-            name = "User"
-
-            if isinstance(message, HumanMessage):
-                role = "user"
-                name = getattr(self._conversation, "user_name", "User")
-            elif isinstance(message, AIMessage):
-                role = "assistant"
-                name = getattr(self._conversation, "chatbot_name", "Assistant")
-            elif isinstance(message, SystemMessage):
-                role = "system"
-                name = "System"
-
-            if (
-                isinstance(message, AIMessage)
-                and hasattr(message, "additional_kwargs")
-                and is_internal_stage_metadata(
-                    (message.additional_kwargs or {}).get("thinking_metadata")
-                )
-            ):
-                self.logger.debug(
-                    "Skipping internal-stage assistant message during persistence"
-                )
-                return
-
-            now = datetime.datetime.now(datetime.timezone.utc).isoformat()
-
-            # Extract thinking content for AI messages
-            # First check additional_kwargs (from streaming), then try to extract from content
-            content = message.content
-            thinking_content = None
-            if isinstance(message, AIMessage):
-                # Check if thinking_content was stored in additional_kwargs during streaming
-                if hasattr(message, "additional_kwargs") and message.additional_kwargs:
-                    thinking_content = normalize_thinking_content(
-                        message.additional_kwargs.get("thinking_content")
-                    )
-                    self.logger.debug(f"[THINKING SAVE] Found thinking_content in additional_kwargs: {bool(thinking_content)}")
-                
-                # If not found, try to extract from content (for non-streaming or fallback)
-                if not thinking_content:
-                    thinking_content, content = extract_thinking_and_response(content)
-                    thinking_content = normalize_thinking_content(
-                        thinking_content
-                    )
-                    self.logger.debug(f"[THINKING SAVE] Extracted from content: {bool(thinking_content)}")
-
-                content = strip_stored_thinking_prefix(
-                    content,
-                    thinking_content,
-                )
-                
-                self.logger.debug(f"[THINKING SAVE] Final thinking_content length: {len(thinking_content) if thinking_content else 0}")
-
-            message_dict = {
-                "role": role,
-                "name": name,
-                "content": content,
-                "timestamp": now,
-                "blocks": [{"block_type": "text", "text": content}],
-            }
-
-            # Add thinking content if present
-            if thinking_content:
-                message_dict["thinking_content"] = thinking_content
-
-            # Add metadata if present
-            if (
-                hasattr(message, "additional_kwargs")
-                and message.additional_kwargs
-            ):
-                message_dict.update(message.additional_kwargs)
-
-            # DEDUPLICATION: Check for duplicate user/assistant messages
-            # Skip if the same role + content already exists as the last message of that role
-            if self._conversation.value:
-                # Find the last message with the same role
-                for existing in reversed(self._conversation.value):
-                    if existing.get("role") == role:
-                        existing_content = existing.get("content", "")
-                        if existing_content == content:
-                            self.logger.debug(
-                                f"Skipping duplicate {role} message: {content[:50]}..."
-                            )
-                            return
-                        # Only compare against the most recent message of this role
-                        break
-
-            updated_messages = list(self._conversation.value or [])
-            updated_messages.append(message_dict)
-            self._persist_messages(updated_messages)
+            self._persist_regular_message(message)
 
         except Exception as e:
             self.logger.error(f"Error adding message: {e}", exc_info=True)
+
+    def _persist_tool_result(self, message: BaseMessage) -> None:
+        """Store a ToolMessage as a tool_result metadata entry."""
+        import datetime
+
+        tool_call_id = getattr(message, "tool_call_id", None)
+        self.logger.debug(
+            f"Tool result: {message.content[:100]}... "
+            f"(tool_call_id: {tool_call_id or 'unknown'})"
+        )
+
+        if self._conversation.value and tool_call_id:
+            for existing in self._conversation.value:
+                if (
+                    existing.get("metadata_type") == "tool_result"
+                    and existing.get("tool_call_id") == tool_call_id
+                ):
+                    self.logger.debug(
+                        f"Skipping duplicate tool_result for "
+                        f"tool_call_id: {tool_call_id}"
+                    )
+                    return
+
+        now = datetime.datetime.now(datetime.timezone.utc).isoformat()
+        entry = {
+            "role": "tool_result",
+            "name": "Tool Result",
+            "content": message.content,
+            "timestamp": now,
+            "blocks": [
+                {"block_type": "text", "text": message.content}
+            ],
+            "tool_call_id": tool_call_id,
+            "metadata_type": "tool_result",
+        }
+        updated = list(self._conversation.value or [])
+        updated.append(entry)
+        self._persist_messages(updated)
+
+    def _persist_tool_calls(self, message: AIMessage) -> None:
+        """Store an AIMessage with tool_calls as tool_calls metadata."""
+        import datetime
+
+        self.logger.debug(
+            f"Tool calls requested: "
+            f"{[tc.get('name', 'unknown') for tc in message.tool_calls]}"
+        )
+
+        incoming_ids = set(
+            tc.get("id") for tc in message.tool_calls if tc.get("id")
+        )
+        if self._conversation.value and incoming_ids:
+            for existing in self._conversation.value:
+                if existing.get("metadata_type") != "tool_calls":
+                    continue
+                for tc in existing.get("tool_calls", []):
+                    if tc.get("id") in incoming_ids:
+                        self.logger.debug(
+                            "Skipping duplicate tool_calls - "
+                            f"tool_call_id already exists: {tc.get('id')}"
+                        )
+                        return
+
+        thinking_content = None
+        if (
+            hasattr(message, "additional_kwargs")
+            and message.additional_kwargs
+        ):
+            thinking_content = (
+                message.additional_kwargs.get("thinking_content")
+            )
+        if not thinking_content and message.content:
+            thinking_content, _ = extract_thinking_and_response(
+                message.content,
+            )
+
+        now = datetime.datetime.now(datetime.timezone.utc).isoformat()
+        entry = {
+            "role": "tool_calls",
+            "name": "Tool Planning",
+            "content": (
+                f"Requested {len(message.tool_calls)} tool(s): "
+                + ", ".join(
+                    tc.get("name", "unknown")
+                    for tc in message.tool_calls
+                )
+            ),
+            "timestamp": now,
+            "blocks": [
+                {
+                    "block_type": "text",
+                    "text": f"Tool calls: {message.tool_calls}",
+                }
+            ],
+            "tool_calls": message.tool_calls,
+            "metadata_type": "tool_calls",
+        }
+
+        if thinking_content:
+            entry["thinking_content"] = thinking_content
+            self.logger.debug(
+                "[THINKING SAVE] Saved pre-tool thinking: "
+                f"{len(thinking_content)} chars"
+            )
+        if (
+            hasattr(message, "additional_kwargs")
+            and isinstance(message.additional_kwargs, dict)
+            and isinstance(
+                message.additional_kwargs.get("tool_status_metadata"),
+                dict,
+            )
+        ):
+            entry["tool_status_metadata"] = (
+                message.additional_kwargs.get("tool_status_metadata")
+            )
+
+        updated = list(self._conversation.value or [])
+        updated.append(entry)
+        self._persist_messages(updated)
+
+    def _persist_regular_message(self, message: BaseMessage) -> None:
+        """Store a regular (non-tool) message in the conversation."""
+        import datetime
+
+        role = "user"
+        name = "User"
+
+        if isinstance(message, HumanMessage):
+            role = "user"
+            name = getattr(self._conversation, "user_name", "User")
+        elif isinstance(message, AIMessage):
+            role = "assistant"
+            name = getattr(
+                self._conversation, "chatbot_name", "Assistant",
+            )
+        elif isinstance(message, SystemMessage):
+            role = "system"
+            name = "System"
+
+        if (
+            isinstance(message, AIMessage)
+            and hasattr(message, "additional_kwargs")
+            and is_internal_stage_metadata(
+                (message.additional_kwargs or {}).get(
+                    "thinking_metadata",
+                )
+            )
+        ):
+            self.logger.debug(
+                "Skipping internal-stage assistant message "
+                "during persistence"
+            )
+            return
+
+        now = datetime.datetime.now(datetime.timezone.utc).isoformat()
+        content = message.content
+        thinking_content = self._extract_thinking_content(message, content)
+
+        if isinstance(message, AIMessage):
+            content = strip_stored_thinking_prefix(
+                content,
+                thinking_content,
+            )
+            self.logger.debug(
+                "[THINKING SAVE] Final thinking_content length: "
+                f"{len(thinking_content) if thinking_content else 0}"
+            )
+
+        message_dict: dict = {
+            "role": role,
+            "name": name,
+            "content": content,
+            "timestamp": now,
+            "blocks": [{"block_type": "text", "text": content}],
+        }
+        if thinking_content:
+            message_dict["thinking_content"] = thinking_content
+        if (
+            hasattr(message, "additional_kwargs")
+            and message.additional_kwargs
+        ):
+            message_dict.update(message.additional_kwargs)
+
+        if self._is_duplicate_message(role, content):
+            return
+
+        updated = list(self._conversation.value or [])
+        updated.append(message_dict)
+        self._persist_messages(updated)
+
+    @staticmethod
+    def _extract_thinking_content(
+        message: BaseMessage, content: str,
+    ) -> Optional[str]:
+        """Extract thinking content from an AI message."""
+        thinking_content: Optional[str] = None
+        if not isinstance(message, AIMessage):
+            return thinking_content
+
+        if (
+            hasattr(message, "additional_kwargs")
+            and message.additional_kwargs
+        ):
+            thinking_content = normalize_thinking_content(
+                message.additional_kwargs.get("thinking_content")
+            )
+        if not thinking_content:
+            thinking_content, _ = extract_thinking_and_response(
+                content,
+            )
+            thinking_content = normalize_thinking_content(
+                thinking_content,
+            )
+        return thinking_content
+
+    def _is_duplicate_message(
+        self, role: str, content: str,
+    ) -> bool:
+        """Return True if content matches the last message of *role*."""
+        if not self._conversation.value:
+            return False
+        for existing in reversed(self._conversation.value):
+            if existing.get("role") != role:
+                continue
+            if existing.get("content", "") == content:
+                self.logger.debug(
+                    f"Skipping duplicate {role} message: "
+                    f"{content[:50]}..."
+                )
+                return True
+            break
+        return False
 
     def add_messages(self, messages: List[BaseMessage]) -> None:
         """Add multiple messages to the conversation.
