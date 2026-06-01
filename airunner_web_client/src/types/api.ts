@@ -1,6 +1,8 @@
-/** Server URL — configurable via env or defaults to localhost:8188. */
-export const BASE_URL =
-  import.meta.env.VITE_API_BASE_URL ?? "http://127.0.0.1:8188";
+/** Server URL — empty string when proxied through Vite dev server,
+ *  otherwise configurable via env or defaults to localhost:8188. */
+export const BASE_URL = import.meta.env.PROD
+  ? (import.meta.env.VITE_API_BASE_URL ?? "http://127.0.0.1:8188")
+  : "";
 
 /** Generic JSON response wrapper. */
 export type JsonObject = Record<string, unknown>;
