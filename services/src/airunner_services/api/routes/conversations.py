@@ -160,12 +160,7 @@ async def delete_conversation(
     response_model=DeleteAllConversationsResponse,
 )
 async def delete_all_conversations() -> DeleteAllConversationsResponse:
-    """Delete all conversations through the service API in tests only."""
-    if os.environ.get("AIRUNNER_ENVIRONMENT") != "test":
-        raise HTTPException(
-            status_code=403,
-            detail="delete_all_conversations only allowed in test environment",
-        )
+    """Delete all conversations through the service API."""
     return DeleteAllConversationsResponse(
         deleted=_manager().delete_all_conversations(),
     )

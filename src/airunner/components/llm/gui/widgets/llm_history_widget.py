@@ -1,5 +1,6 @@
 from airunner.enums import SignalCode
 from PySide6.QtWidgets import QSpacerItem, QSizePolicy
+from PySide6.QtCore import Slot
 
 from airunner.components.application.gui.widgets.base_widget import BaseWidget
 from airunner.components.conversations.conversation_history_manager import (
@@ -15,6 +16,9 @@ from airunner.components.llm.gui.widgets.templates.llm_history_widget_ui import 
 
 class LLMHistoryWidget(BaseWidget):
     widget_class_ = Ui_llm_history_widget
+    icons = [
+        ("trash-2", "delete_all"),
+    ]
 
     def __init__(self, *args, **kwargs):
         """Initialize the lazily rendered history sidebar widget."""
@@ -32,6 +36,12 @@ class LLMHistoryWidget(BaseWidget):
         )
         self._history_loaded = False
         self._history_snapshot = ()
+    
+    @Slot()
+    def on_delete_all_clicked(self):
+        """Delete all conversations and refresh the history list."""
+        self._conversation_history_manager.delete_all_conversations()
+        self.load_conversations(force=True)
 
     def preload_content(self) -> None:
         """Populate the history list before the user opens the panel."""

@@ -32,6 +32,23 @@
    <property name="verticalSpacing">
     <number>10</number>
    </property>
+   <item row="1" column="0">
+    <widget class="QPushButton" name="delete_all">
+     <property name="cursor">
+      <cursorShape>PointingHandCursor</cursorShape>
+     </property>
+     <property name="toolTip">
+      <string>Delete all conversations</string>
+     </property>
+     <property name="text">
+      <string>Delete all</string>
+     </property>
+     <property name="icon">
+      <iconset resource="../../../../../gui/resources/feather.qrc">
+       <normaloff>:/light/icons/lucide/light/trash-2.svg</normaloff>:/light/icons/lucide/light/trash-2.svg</iconset>
+     </property>
+    </widget>
+   </item>
    <item row="0" column="0">
     <widget class="QScrollArea" name="conversations_scroll_area">
      <property name="minimumSize">
@@ -49,7 +66,7 @@
         <x>0</x>
         <y>0</y>
         <width>687</width>
-        <height>533</height>
+        <height>497</height>
        </rect>
       </property>
       <layout class="QGridLayout" name="gridLayout_2">
@@ -77,6 +94,8 @@
    </item>
   </layout>
  </widget>
- <resources/>
+ <resources>
+  <include location="../../../../../gui/resources/feather.qrc"/>
+ </resources>
  <connections/>
 </ui>

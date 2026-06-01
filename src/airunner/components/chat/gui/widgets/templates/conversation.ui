@@ -44,7 +44,7 @@
     <number>0</number>
    </property>
    <item row="0" column="0">
-        <widget class="QWidget" name="stage">
+    <widget class="QWidget" name="stage" native="true">
      <property name="minimumSize">
       <size>
        <width>200</width>
