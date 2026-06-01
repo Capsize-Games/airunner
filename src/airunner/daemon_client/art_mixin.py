@@ -141,6 +141,21 @@ class ArtClientMixin:
         return response.json()
 
     # ------------------------------------------------------------------
+    # VRAM estimation
+    # ------------------------------------------------------------------
+
+    def estimate_vram(
+        self, model_path: str,
+    ) -> Dict[str, Any]:
+        """Return a VRAM estimate for one model path."""
+        response = self._request(
+            "GET",
+            f"/api/v1/art/vram-estimate",
+            params={"model_path": model_path},
+        )
+        return response.json()
+
+    # ------------------------------------------------------------------
     # Bootstrap data (model/pipeline/unified_file metadata)
     # ------------------------------------------------------------------
 

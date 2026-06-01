@@ -39,6 +39,12 @@ from airunner_services.database.bootstrap.sd_file_bootstrap_data import (
     SD_FILE_BOOTSTRAP_DATA,
 )
 from airunner_services.database.bootstrap.whisper import WHISPER_FILES
+from airunner_services.bootstrap.imagefilter_bootstrap_data import (
+    imagefilter_bootstrap_data,
+)
+from airunner_services.bootstrap.prompt_templates_bootstrap_data import (
+    prompt_templates_bootstrap_data,
+)
 
 router = APIRouter()
 
@@ -60,4 +66,6 @@ async def catalog_bootstrap():
         "rmbg_files": RMBG_FILES,
         "sd_file_bootstrap_data": SD_FILE_BOOTSTRAP_DATA,
         "whisper_files": WHISPER_FILES,
+        "imagefilter_bootstrap_data": imagefilter_bootstrap_data,
+        "prompt_templates_bootstrap_data": prompt_templates_bootstrap_data,
     }

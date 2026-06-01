@@ -9,6 +9,7 @@ from fastapi import APIRouter
 
 from .art_catalog_routes import router as catalog_router
 from .catalog_bootstrap import router as catalog_bootstrap_router
+from .vram import router as vram_router
 from .art_contracts import (
     ArtComponentResponse,
     BackgroundRemovalRequest,
@@ -27,6 +28,7 @@ router.include_router(generation_router)
 router.include_router(management_router)
 router.include_router(catalog_router)
 router.include_router(catalog_bootstrap_router)
+router.include_router(vram_router)
 
 __all__ = [
     "ArtComponentResponse",
