@@ -1,31 +1,55 @@
-import { useState, useCallback, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import Card from "react-bootstrap/Card";
-import Form from "react-bootstrap/Form";
+import {
+  useState,
+  useCallback,
+  useEffect,
+  useRef,
+} from "react";
+import Alert from "react-bootstrap/Alert";
 import Button from "react-bootstrap/Button";
+import Form from "react-bootstrap/Form";
 import Spinner from "react-bootstrap/Spinner";
-import { streamLLM, createConversation } from "../../api/client";
-import type { Message } from "../../types/api";
+import {
+  streamLLM,
+  listLLMModels,
+  getSingleton,
+  updateSingleton,
+} from "../../api/client";
+import type { Message, ResourceRecord } from "../../types/api";
 import MessageList from "./MessageList";
 
+interface ModelOption {
+  label: string;
+  value: string;
+  pipeline_action: string;
+}
+
 export default function ChatView() {
-  const navigate = useNavigate();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [streaming, setStreaming] = useState(false);
   const [streamBuffer, setStreamBuffer] = useState("");
-
-  const scrollToBottom = useCallback(() => {
-    window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
-  }, []);
+  const [models, setModels] = useState<ModelOption[]>([]);
+  const [selectedModel, setSelectedModel] = useState<string>("");
+  const [error, setError] = useState<string | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
-    scrollToBottom();
-  }, [messages, streamBuffer, scrollToBottom]);
+    listLLMModels().then(setModels).catch(() => {});
+    getSingleton("LLMGeneratorSettings")
+      .then((r: ResourceRecord) =>
+        setSelectedModel(String(r.model_path ?? "")),
+      )
+      .catch(() => {});
+  }, []);
 
   const handleSend = useCallback(async () => {
     const text = input.trim();
     if (!text || streaming) return;
+    if (!selectedModel) {
+      setError("Please select an LLM model in Settings first.");
+      return;
+    }
+    setError(null);
     setInput("");
 
     const userMsg: Message = { role: "user", content: text };
@@ -34,85 +58,128 @@ export default function ChatView() {
     setStreaming(true);
     setStreamBuffer("");
 
+    const controller = new AbortController();
+    abortRef.current = controller;
+    setStreaming(true);
+
     try {
-      const gen = streamLLM(newMessages);
+      const gen = streamLLM(newMessages, controller.signal);
       let fullResponse = "";
       for await (const chunk of gen) {
         if (chunk.done) break;
         if (chunk.error) {
-          setMessages([
-            ...newMessages,
-            { role: "assistant", content: `Error: ${chunk.error}` },
-          ]);
+          setError(chunk.error);
           break;
         }
         fullResponse += chunk.token ?? "";
         setStreamBuffer(fullResponse);
       }
-      if (fullResponse) {
+      if (fullResponse && !controller.signal.aborted) {
         setMessages([
           ...newMessages,
           { role: "assistant", content: fullResponse },
         ]);
       }
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Stream failed";
-      setMessages([
-        ...newMessages,
-        { role: "assistant", content: `Error: ${msg}` },
-      ]);
+      if (!controller.signal.aborted) {
+        const msg = err instanceof Error ? err.message : "Stream failed";
+        setError(msg);
+      }
     } finally {
       setStreamBuffer("");
       setStreaming(false);
+      abortRef.current = null;
     }
-  }, [input, messages, streaming]);
+  }, [input, messages, streaming, selectedModel]);
+
+  const handleCancel = useCallback(() => {
+    abortRef.current?.abort();
+    setStreaming(false);
+    setStreamBuffer("");
+  }, []);
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleSend();
+    }
+  };
+
+  const handleModelChange = (path: string) => {
+    setSelectedModel(path);
+    updateSingleton("LLMGeneratorSettings", { model_path: path }).catch(
+      () => {},
+    );
+  };
 
   return (
-    <Card className="d-flex flex-column" style={{ height: "calc(100vh - 120px)" }}>
-      <Card.Header className="d-flex justify-content-between align-items-center">
-        <span>💬 Chat</span>
-        <Button
-          variant="outline-secondary"
-          size="sm"
-          onClick={async () => {
-            try {
-              await createConversation();
-              setMessages([]);
-              navigate("/chat");
-            } catch { /* */ }
-          }}
-        >
-          New Chat
-        </Button>
-      </Card.Header>
-      <Card.Body className="overflow-auto flex-grow-1">
+    <div className="d-flex flex-column h-100">
+      {/* Error banner */}
+      {error && (
+        <Alert variant="danger" dismissible onClose={() => setError(null)}>
+          {error}
+        </Alert>
+      )}
+
+      {/* Messages */}
+      <div className="chat-messages p-2 flex-grow-1">
         <MessageList messages={messages} streamBuffer={streamBuffer} />
-      </Card.Body>
-      <Card.Footer>
+      </div>
+
+      {/* Input area */}
+      <div className="chat-input-area border-top p-2 bg-body-tertiary">
         <Form
           onSubmit={(e) => {
             e.preventDefault();
             handleSend();
           }}
         >
-          <div className="d-flex gap-2">
+          <Form.Group className="mb-2">
+            <Form.Select
+              size="sm"
+              value={selectedModel}
+              onChange={(e) => handleModelChange(e.target.value)}
+            >
+              <option value="">Select LLM model...</option>
+              {models
+                .filter((m) => m.pipeline_action !== "embedding")
+                .map((m) => (
+                  <option key={m.value} value={m.value}>
+                    {m.label}
+                  </option>
+                ))}
+            </Form.Select>
+          </Form.Group>
+          <Form.Group className="mb-2">
             <Form.Control
+              as="textarea"
+              rows={3}
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="Type a message..."
+              onKeyDown={handleKeyDown}
+              placeholder="Type a message... (Enter to send, Shift+Enter for new line)"
               disabled={streaming}
-              autoFocus
             />
-            <Button
-              type="submit"
-              variant="primary"
-              disabled={streaming || !input.trim()}
-            >
-              {streaming ? <Spinner animation="border" size="sm" /> : "Send"}
-            </Button>
+          </Form.Group>
+          <div className="d-flex justify-content-end">
+            {streaming ? (
+              <Button variant="danger" size="sm" onClick={handleCancel}>
+                <Spinner animation="border" size="sm" className="me-1" />
+                Cancel
+              </Button>
+            ) : (
+              <Button
+                type="submit"
+                variant="primary"
+                size="sm"
+                disabled={!input.trim() || !selectedModel}
+              >
+                Send
+              </Button>
+            )}
           </div>
         </Form>
-      </Card.Footer>
-    </Card>
+      </div>
+    </div>
   );
 }
