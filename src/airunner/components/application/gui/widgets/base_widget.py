@@ -1,23 +1,10 @@
 import traceback
-from typing import Dict, List, Optional, Protocol, Tuple, runtime_checkable
+from typing import Any, Dict, List, Optional, Tuple
 from abc import ABC, ABCMeta
 from abc import abstractmethod
 import os
 
 from PySide6.QtWidgets import QWidget  # noqa: E402
-
-
-@runtime_checkable
-class UiForm(Protocol):
-    """Protocol shared by all generated Ui_* classes.
-
-    Every ``.ui`` → ``_ui.py`` template exposes at least these two methods.
-    Subclasses may declare a more specific ``widget_class_`` so that linters
-    and type-checkers can resolve ``self.ui.<widget>`` attributes.
-    """
-
-    def setupUi(self, widget: QWidget) -> None: ...
-    def retranslateUi(self, widget: QWidget) -> None: ...
 
 from airunner.qt_runtime_env import configure_early_qt_environment
 
@@ -79,11 +66,20 @@ class AbstractBaseWidget(
 class BaseWidget(AbstractBaseWidget):
     """
     Base class for all widgets.
+
+    ``self.ui`` is typed as ``Any`` because each subclass provides a
+    different generated ``Ui_*`` template class.  Individual widgets
+    that want typed access can redeclare::
+
+        ui: Ui_my_form  # type: ignore[assignment]
+
+    ``widget_class_`` points at the generated template class so that
+    ``setupUi`` and ``retranslateUi`` are available at runtime.
     """
 
-    widget_class_: Optional[type[UiForm]] = None
+    widget_class_: Optional[Any] = None
     icons: List[Optional[Tuple[str, str]]] = []
-    ui: Optional[UiForm] = None
+    ui: Any = None
     _splitters: List[str] = []
     _splitter_debounce_timer: Optional[QTimer] = None
     _splitter_debounce_ms = 300
