@@ -20,7 +20,6 @@ class FakeAPI:
 
     headless: bool = False
     daemon_client: Any = None
-    api_adapter: Any = None
     sounddevice_manager: Any = None
     llm: Any = None
     art: Any = None

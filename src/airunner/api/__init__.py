@@ -1,10 +1,16 @@
-"""GUI-facing API package — bridge, adapters, and client facades."""
+"""GUI-facing API package — re-exports from the daemon client.
 
-from airunner.api.api_bridge import APIBridge, APIBridgeError
-from airunner.api.signal_api_adapter import SignalAPIAdapter
+The bridge and signal adapter functionality is now part of
+``GuiDaemonClient`` itself.  This package is kept as a compatibility
+re-export layer.
+"""
+
+from airunner.daemon_client.gui_daemon_client import (
+    APIBridgeError,
+    GuiDaemonClient,
+)
 
 __all__ = [
-    "APIBridge",
     "APIBridgeError",
-    "SignalAPIAdapter",
+    "GuiDaemonClient",
 ]

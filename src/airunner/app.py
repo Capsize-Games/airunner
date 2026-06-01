@@ -98,8 +98,6 @@ class App(
         )
         super().__init__()
         self.daemon_client = None
-        self.api_bridge = None
-        self.api_adapter = None
         self.daemon_client = GuiDaemonClient()
         self._init_api_bridge()
         self._register_signals()
@@ -415,25 +413,17 @@ class App(
         self._sounddevice_manager = None
 
     def _init_api_bridge(self) -> None:
-        """Create the API bridge and signal adapter for GUI-to-backend
-        communication. Execution triggers are routed through this bridge
-        instead of local in-process workers.
+        """Wire the daemon client's signal emitter and signal-to-API
+        handler map so that GUI execution triggers go through the
+        daemon client instead of local in-process workers.
         """
         if not self.daemon_client:
             return
-        from airunner.api.api_bridge import APIBridge
-        from airunner.api.signal_api_adapter import SignalAPIAdapter
-
-        self.api_bridge = APIBridge(
-            self.daemon_client,
-            signal_emitter=self.emit_signal,
-        )
-        self.api_adapter = SignalAPIAdapter(
-            self.api_bridge,
-            emit_signal=self.emit_signal,
-        )
+        # Register the mediator's emit function as the daemon client's
+        # signal emitter so it can dispatch response signals.
+        self.daemon_client._emit = self.emit_signal
         self.logger.debug(
-            "API bridge and signal adapter initialized for GUI backend"
+            "Daemon client wired for GUI backend signal dispatch"
         )
 
     def _register_signals(self) -> None:

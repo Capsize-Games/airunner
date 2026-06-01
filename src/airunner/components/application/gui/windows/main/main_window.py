@@ -332,7 +332,7 @@ class MainWindow(
         self._updating_settings = False
         self.worker_manager = create_worker(
             WorkerManager,
-            signal_api_adapter=getattr(self.api, "api_adapter", None),
+            signal_api_adapter=getattr(self.api, "daemon_client", None),
         )
         self.model_load_balancer = ModelLoadBalancer(
             self.worker_manager,
