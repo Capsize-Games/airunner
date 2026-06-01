@@ -127,7 +127,11 @@ export async function deleteConversation(id: number) {
 // LLM Streaming
 // ---------------------------------------------------------------------------
 export async function* streamLLM(messages: import("../types/api").Message[]) {
-  yield* streamRequest("POST", "/api/v1/conversations/stream", { messages });
+  yield* streamRequest(
+    "POST",
+    "/api/v1/llm/conversations/stream",
+    { messages },
+  );
 }
 
 // ---------------------------------------------------------------------------
