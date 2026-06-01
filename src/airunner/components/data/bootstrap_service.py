@@ -1,53 +1,22 @@
-"""Bootstrap data service — fetches model/pipeline metadata from daemon.
-
-On first access, queries the daemon's ``GET /api/v1/art/bootstrap``
-endpoint and caches the result for the process lifetime.  Falls back
-to a local import when the daemon is unreachable (e.g. during setup
-wizard before services are running).
+"""Bootstrap data service — fetches model/pipeline/settings metadata
+from the daemon.  All data comes from ``GET /api/v1/art/bootstrap``.
 """
 
 from __future__ import annotations
 
-from typing import Any, List
+from typing import Any, Dict, List
 
 _cache: dict[str, Any] | None = None
 
 
 def _fetch_bootstrap() -> dict[str, Any]:
-    """Query the daemon for bootstrap data, falling back to local files."""
-    try:
-        from airunner.daemon_client.gui_daemon_client import (
-            GuiDaemonClient,
-        )
+    """Query the daemon for bootstrap data."""
+    from airunner.daemon_client.gui_daemon_client import (
+        GuiDaemonClient,
+    )
 
-        client = GuiDaemonClient()
-        if not client.is_available():
-            return _local_fallback()
-        return client.get_bootstrap_data()
-    except Exception:
-        return _local_fallback()
-
-
-def _local_fallback() -> dict[str, Any]:
-    """Return bootstrap data from the local package when daemon is down."""
-    try:
-        from airunner.components.data.bootstrap.model_bootstrap_data import (  # noqa: E501
-            model_bootstrap_data,
-        )
-        from airunner.components.data.bootstrap.pipeline_bootstrap_data import (  # noqa: E501
-            pipeline_bootstrap_data,
-        )
-        from airunner.components.data.bootstrap.unified_model_files import (  # noqa: E501
-            UNIFIED_MODEL_FILES,
-        )
-
-        return {
-            "models": model_bootstrap_data,
-            "pipelines": pipeline_bootstrap_data,
-            "unified_model_files": UNIFIED_MODEL_FILES,
-        }
-    except ImportError:
-        return {"models": [], "pipelines": [], "unified_model_files": {}}
+    client = GuiDaemonClient()
+    return client.get_bootstrap_data()
 
 
 def get_bootstrap_data() -> dict[str, Any]:
@@ -59,12 +28,10 @@ def get_bootstrap_data() -> dict[str, Any]:
 
 
 def get_model_bootstrap_data() -> List[dict[str, Any]]:
-    """Return just the model bootstrap list."""
     return get_bootstrap_data().get("models", [])
 
 
 def get_pipeline_bootstrap_data() -> List[dict[str, Any]]:
-    """Return just the pipeline bootstrap list."""
     return get_bootstrap_data().get("pipelines", [])
 
 
@@ -74,31 +41,77 @@ def get_required_files_for_model(
     version: str | None = None,
     pipeline_action: str | None = None,
 ) -> dict[str, Any]:
-    """Return required files for one model type/id pair."""
     unified = get_bootstrap_data().get("unified_model_files", {})
     model_files = unified.get(model_type, {})
     if not isinstance(model_files, dict):
         return {}
-    # Try model_id first, then model_id with version
     result = model_files.get(model_id)
     if result is not None:
         return result
     if version:
-        version_key = f"{model_id}__{version}"
-        result = model_files.get(version_key)
+        result = model_files.get(f"{model_id}__{version}")
         if result is not None:
             return result
     if pipeline_action:
-        action_key = f"{model_id}__{pipeline_action}"
-        result = model_files.get(action_key)
+        result = model_files.get(f"{model_id}__{pipeline_action}")
         if result is not None:
             return result
     return {}
 
 
+def get_controlnet_bootstrap_data() -> List[dict[str, Any]]:
+    return get_bootstrap_data().get("controlnet_bootstrap_data", [])
+
+
+def get_espeak_settings_data() -> List[dict[str, Any]]:
+    return get_bootstrap_data().get("espeak_settings_data", [])
+
+
+def get_llm_file_bootstrap_data() -> Dict[str, Any]:
+    return get_bootstrap_data().get("llm_file_bootstrap_data", {})
+
+
+def get_openvoice_files() -> Dict[str, Any]:
+    return get_bootstrap_data().get("openvoice_files", {})
+
+
+def get_openvoice_core_models() -> List[dict[str, Any]]:
+    return get_bootstrap_data().get("openvoice_core_models", [])
+
+
+def get_openvoice_language_models() -> Dict[str, Any]:
+    return get_bootstrap_data().get("openvoice_language_models", {})
+
+
+def get_path_settings_data() -> List[dict[str, Any]]:
+    return get_bootstrap_data().get("path_settings_data", [])
+
+
+def get_rmbg_files() -> Dict[str, Any]:
+    return get_bootstrap_data().get("rmbg_files", {})
+
+
+def get_sd_file_bootstrap_data() -> Dict[str, Any]:
+    return get_bootstrap_data().get("sd_file_bootstrap_data", {})
+
+
+def get_whisper_files() -> Dict[str, Any]:
+    return get_bootstrap_data().get("whisper_files", {})
+
+
 __all__ = [
     "get_bootstrap_data",
+    "get_controlnet_bootstrap_data",
+    "get_espeak_settings_data",
+    "get_llm_file_bootstrap_data",
     "get_model_bootstrap_data",
+    "get_openvoice_core_models",
+    "get_openvoice_files",
+    "get_openvoice_language_models",
+    "get_path_settings_data",
     "get_pipeline_bootstrap_data",
     "get_required_files_for_model",
+    "get_rmbg_files",
+    "get_sd_file_bootstrap_data",
+    "get_whisper_files",
 ]

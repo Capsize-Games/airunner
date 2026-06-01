@@ -1,6 +1,6 @@
 from PySide6.QtWidgets import QLabel, QCheckBox, QProgressBar
-from airunner.bootstrap.controlnet_bootstrap_data import (
-    controlnet_bootstrap_data,
+from airunner.components.data.bootstrap_service import (
+    get_controlnet_bootstrap_data,
 )
 from airunner.components.downloader.gui.windows.download_wizard.download_thread import DownloadThread
 from airunner.components.downloader.gui.windows.download_wizard.download_wizard_page import (
@@ -14,9 +14,9 @@ class ControlnetDownload(DownloadWizardPage):
 
         self.download_thread = None
         self.models_to_download = []
-        self.ui.tableWidget.setRowCount(len(controlnet_bootstrap_data))
+        self.ui.tableWidget.setRowCount(len(get_controlnet_bootstrap_data()))
         self.ui.tableWidget.setColumnCount(3)
-        for index, controlnet in enumerate(controlnet_bootstrap_data):
+        for index, controlnet in enumerate(get_controlnet_bootstrap_data()):
             label = QLabel(controlnet["name"])
             checkbox = QCheckBox()
             checkbox.setChecked(True)

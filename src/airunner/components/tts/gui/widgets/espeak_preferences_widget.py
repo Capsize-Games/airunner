@@ -3,8 +3,8 @@ import pyttsx3
 from airunner.components.tts.gui.widgets.templates.espeak_preferences_ui import (
     Ui_espeak_preferences,
 )
-from airunner.bootstrap.espeak_settings_data import (
-    ESPEAK_SETTINGS_DATA,
+from airunner.components.data.bootstrap_service import (
+    get_espeak_settings_data,
 )
 from airunner.components.application.gui.widgets.base_widget import BaseWidget
 import pycountry
@@ -102,7 +102,7 @@ class EspeakPreferencesWidget(BaseWidget):
     def gender_changed(self, text):
         self.update_espeak_settings(gender=text)
         self.ui.voice_combobox.clear()
-        self.ui.voice_combobox.addItems(ESPEAK_SETTINGS_DATA["voices"][text])
+        self.ui.voice_combobox.addItems(get_espeak_settings_data()["voices"][text])
         self.update_espeak_settings(voice=self.ui.voice_combobox.currentText())
 
     def load_settings(self):

@@ -14,8 +14,8 @@ from airunner.components.downloader.gui.windows.setup_wizard.installation_settin
     QSpacerItem,
     Ui_install_success_page,
 )
-from airunner.bootstrap.controlnet_bootstrap_data import (
-    controlnet_bootstrap_data,
+from airunner.components.data.bootstrap_service import (
+    get_controlnet_bootstrap_data(),
 )
 from airunner.components.data.bootstrap_service import (
     get_model_bootstrap_data,
@@ -56,7 +56,7 @@ class ChooseModelsPage(BaseWizard):
         from collections import defaultdict
 
         version_map = defaultdict(list)
-        for item in controlnet_bootstrap_data:
+        for item in get_controlnet_bootstrap_data():
             version_map[item["version"]].append(item)
 
         # Make the groupBox act as a checkable 'Stable Diffusion' group
@@ -283,17 +283,17 @@ class ChooseModelsPage(BaseWizard):
 
         # Add Upscaler (x4) option (but place it outside the scroll area below the version groups)
         try:
-            from airunner.bootstrap.sd_file_bootstrap_data import (
-                SD_FILE_BOOTSTRAP_DATA,
+            from airunner.components.data.bootstrap_service import (
+                get_sd_file_bootstrap_data(),
             )
 
             upscaler_size = 0
-            if SD_FILE_BOOTSTRAP_DATA.get(
+            if get_sd_file_bootstrap_data().get(
                 "Upscaler"
-            ) and SD_FILE_BOOTSTRAP_DATA["Upscaler"].get("x4"):
+            ) and get_sd_file_bootstrap_data()["Upscaler"].get("x4"):
                 # Very rough size estimate per file (~5-10 MB each) unless more accurate sizes are known
                 upscaler_size = len(
-                    SD_FILE_BOOTSTRAP_DATA["Upscaler"]["x4"]
+                    get_sd_file_bootstrap_data()["Upscaler"]["x4"]
                 ) * (6 * 1024 * 1024)
         except Exception:
             upscaler_size = 6 * 1024 * 1024
@@ -352,8 +352,8 @@ class ChooseModelsPage(BaseWizard):
         from airunner.components.llm.config.provider_config import (
             LLMProviderConfig,
         )
-        from airunner.bootstrap.llm_file_bootstrap_data import (
-            LLM_FILE_BOOTSTRAP_DATA,
+        from airunner.components.data.bootstrap_service import (
+            get_llm_file_bootstrap_data(),
         )
 
         total = 0
@@ -368,7 +368,7 @@ class ChooseModelsPage(BaseWizard):
                 prefer_pre_quantized=True,
             )
             repo_id = download_info["repo_id"] if download_info else model["path"]
-            total += sum(LLM_FILE_BOOTSTRAP_DATA[repo_id]["files"].values())
+            total += sum(get_llm_file_bootstrap_data()[repo_id]["files"].values())
         return total
 
     def update_total_size_label(self):
@@ -378,15 +378,15 @@ class ChooseModelsPage(BaseWizard):
         embedding_model_size = 1.3 * 1024 * 1024
         zimage_core_sizes = {}
         try:
-            from airunner.bootstrap.sd_file_bootstrap_data import (
-                SD_FILE_BOOTSTRAP_DATA,
+            from airunner.components.data.bootstrap_service import (
+                get_sd_file_bootstrap_data(),
             )
 
             for model in self.models:
                 if model.get("category") != "zimage":
                     continue
                 version = model.get("version")
-                files = SD_FILE_BOOTSTRAP_DATA.get(version, {}).get(
+                files = get_sd_file_bootstrap_data().get(version, {}).get(
                     "txt2img",
                     {},
                 )
@@ -409,7 +409,7 @@ class ChooseModelsPage(BaseWizard):
             from collections import defaultdict
 
             version_group = defaultdict(list)
-            for item in controlnet_bootstrap_data:
+            for item in get_controlnet_bootstrap_data():
                 version_group[item["version"]].append(item)
 
             for version, models in version_group.items():

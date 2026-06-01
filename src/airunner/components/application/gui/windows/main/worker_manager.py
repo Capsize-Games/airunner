@@ -40,8 +40,8 @@ from airunner.components.application.gui.dialogs.privacy_consent_dialog import (
 from airunner.components.tts.gui.dialogs.openvoice_language_dialog import (
     OpenVoiceLanguageDialog,
 )
-from airunner.bootstrap.openvoice_languages import (
-    OPENVOICE_LANGUAGE_MODELS,
+from airunner.components.data.bootstrap_service import (
+    get_openvoice_language_models(),
 )
 from airunner.components.tts.workers.tts_vocalizer_worker import (
     TTSVocalizerWorker,
@@ -2037,8 +2037,8 @@ class WorkerManager(Worker):
         
         # Add language-specific models for selected languages
         for lang_key in selected_languages:
-            if lang_key in OPENVOICE_LANGUAGE_MODELS:
-                lang_info = OPENVOICE_LANGUAGE_MODELS[lang_key]
+            if lang_key in get_openvoice_language_models():
+                lang_info = get_openvoice_language_models()[lang_key]
                 for model_id in lang_info["models"]:
                     if model_id not in models_to_download:
                         models_to_download.append(model_id)

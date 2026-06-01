@@ -28,11 +28,11 @@ from airunner.components.application.gui.windows.main.settings_mixin import (
 from airunner.components.data.bootstrap_service import (
     get_model_bootstrap_data,
 )
-from airunner.bootstrap.controlnet_bootstrap_data import (
-    controlnet_bootstrap_data,
+from airunner.components.data.bootstrap_service import (
+    get_controlnet_bootstrap_data(),
 )
 from airunner.components.llm.config.provider_config import LLMProviderConfig
-from airunner.bootstrap.whisper import WHISPER_FILES
+from airunner.components.data.bootstrap_service import get_whisper_files
 from airunner.enums import SignalCode
 from airunner.settings import AIRUNNER_LOG_LEVEL, AIRUNNER_ART_ENABLED
 from airunner.utils.application import get_logger
@@ -164,13 +164,13 @@ class DownloadModelsDialog(MediatorMixin, SettingsMixin, QDialog):
         
     def _add_controlnet_group(self, layout: QVBoxLayout) -> None:
         """Add ControlNet model selection group."""
-        if not controlnet_bootstrap_data:
+        if not get_controlnet_bootstrap_data():
             return
             
         group = QGroupBox("ControlNet Models")
         group_layout = QVBoxLayout(group)
         
-        for model in controlnet_bootstrap_data:
+        for model in get_controlnet_bootstrap_data():
             key = f"controlnet_{model['name']}"
             checkbox = QCheckBox(f"{model['display_name']} ({model['version']})")
             checkbox.setChecked(False)
@@ -211,7 +211,7 @@ class DownloadModelsDialog(MediatorMixin, SettingsMixin, QDialog):
         group = QGroupBox("Speech-to-Text (STT)")
         group_layout = QVBoxLayout(group)
         
-        for repo_id in WHISPER_FILES.keys():
+        for repo_id in get_whisper_files().keys():
             key = f"stt_{repo_id}"
             name = repo_id.split("/")[-1] if "/" in repo_id else repo_id
             checkbox = QCheckBox(name)
@@ -235,7 +235,7 @@ class DownloadModelsDialog(MediatorMixin, SettingsMixin, QDialog):
         melo_models = []
         bert_models = []
         
-        for repo_id in OPENVOICE_FILES.keys():
+        for repo_id in get_openvoice_files().keys():
             if "MeloTTS" in repo_id:
                 melo_models.append(repo_id)
             else:
@@ -333,7 +333,7 @@ class DownloadModelsDialog(MediatorMixin, SettingsMixin, QDialog):
             elif key.startswith("controlnet_"):
                 cn_name = key[11:]  # Remove "controlnet_" prefix
                 model = next(
-                    (m for m in controlnet_bootstrap_data if m["name"] == cn_name),
+                    (m for m in get_controlnet_bootstrap_data() if m["name"] == cn_name),
                     None
                 )
                 if model:

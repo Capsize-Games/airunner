@@ -9,21 +9,21 @@ from PySide6.QtWidgets import QWizard
 from airunner.components.data.bootstrap_service import (
     get_model_bootstrap_data,
 )
-from airunner.bootstrap.controlnet_bootstrap_data import (
-    controlnet_bootstrap_data,
+from airunner.components.data.bootstrap_service import (
+    get_controlnet_bootstrap_data(),
 )
-from airunner.bootstrap.sd_file_bootstrap_data import (
-    SD_FILE_BOOTSTRAP_DATA,
+from airunner.components.data.bootstrap_service import (
+    get_sd_file_bootstrap_data(),
 )
-from airunner.bootstrap.openvoice_bootstrap_data import (
-    OPENVOICE_FILES,
+from airunner.components.data.bootstrap_service import (
+    get_openvoice_files(),
 )
-from airunner.bootstrap.llm_file_bootstrap_data import (
-    LLM_FILE_BOOTSTRAP_DATA,
+from airunner.components.data.bootstrap_service import (
+    get_llm_file_bootstrap_data(),
 )
 from airunner.daemon_client.gui_daemon_client import GuiDaemonClient
 from airunner.components.llm.config.provider_config import LLMProviderConfig
-from airunner.bootstrap.whisper import WHISPER_FILES
+from airunner.components.data.bootstrap_service import get_whisper_files
 from airunner.enums import SignalCode
 from airunner.utils.application.mediator_mixin import MediatorMixin
 from airunner.utils.network import HuggingfaceDownloader
@@ -247,7 +247,7 @@ class InstallWorker(
             if not self.models_enabled.get(core_flag, True):
                 continue
             try:
-                files = SD_FILE_BOOTSTRAP_DATA[model["version"]][action_key]
+                files = get_sd_file_bootstrap_data()[model["version"]][action_key]
             except KeyError:
                 continue
 
@@ -264,7 +264,7 @@ class InstallWorker(
             if not self.models_enabled.get(core_flag, True):
                 continue
             try:
-                files = SD_FILE_BOOTSTRAP_DATA[model["version"]][action_key]
+                files = get_sd_file_bootstrap_data()[model["version"]][action_key]
                 self.total_models_in_current_step += len(files)
             except KeyError:
                 continue
@@ -318,7 +318,7 @@ class InstallWorker(
         # Download Upscaler x4 files if enabled
         try:
             if self.models_enabled.get("upscaler_x4", False):
-                upscaler_files = SD_FILE_BOOTSTRAP_DATA.get(
+                upscaler_files = get_sd_file_bootstrap_data().get(
                     "Upscaler", {}
                 ).get("x4", [])
                 if upscaler_files:
@@ -370,7 +370,7 @@ class InstallWorker(
         from collections import defaultdict
 
         version_group = defaultdict(list)
-        for cn in controlnet_bootstrap_data:
+        for cn in get_controlnet_bootstrap_data():
             version_group[cn["version"]].append(cn)
 
         # First, tally totals for models that will be downloaded (already counted in calculate_total_files, but keep step tracking)
@@ -386,7 +386,7 @@ class InstallWorker(
                 if not self.models_enabled.get(controlnet_model["name"], True):
                     continue
                 try:
-                    files = SD_FILE_BOOTSTRAP_DATA[
+                    files = get_sd_file_bootstrap_data()[
                         controlnet_model["version"]
                     ]["controlnet"]
                     self.total_models_in_current_step += len(files)
@@ -407,7 +407,7 @@ class InstallWorker(
                 if not self.models_enabled.get(controlnet_model["name"], True):
                     continue
                 try:
-                    files = SD_FILE_BOOTSTRAP_DATA[
+                    files = get_sd_file_bootstrap_data()[
                         controlnet_model["version"]
                     ]["controlnet"]
                 except KeyError:
@@ -495,7 +495,7 @@ class InstallWorker(
             download_repo_id = (
                 download_info["repo_id"] if download_info else model["path"]
             )
-            files = LLM_FILE_BOOTSTRAP_DATA[download_repo_id]["files"]
+            files = get_llm_file_bootstrap_data()[download_repo_id]["files"]
             # Remove redundant total_steps increment - already counted in calculate_total_files()
             self.total_models_in_current_step += len(files)
             requested_file_path = os.path.expanduser(
@@ -535,10 +535,10 @@ class InstallWorker(
         self.parent.on_set_downloading_status_label(
             {"label": "Downloading STT models..."}
         )
-        for k, v in WHISPER_FILES.items():
+        for k, v in get_whisper_files().items():
             self.total_models_in_current_step += len(v)
 
-        for k, v in WHISPER_FILES.items():
+        for k, v in get_whisper_files().items():
             for filename in v:
                 requested_file_path = os.path.expanduser(
                     os.path.join(
@@ -570,9 +570,9 @@ class InstallWorker(
         self.parent.on_set_downloading_status_label(
             {"label": "Downloading OpenVoice models..."}
         )
-        for k, v in OPENVOICE_FILES.items():
+        for k, v in get_openvoice_files().items():
             self.total_models_in_current_step += len(v["files"])
-        for k, v in OPENVOICE_FILES.items():
+        for k, v in get_openvoice_files().items():
             for filename in v["files"]:
                 requested_file_path = os.path.expanduser(
                     os.path.join(
@@ -1273,10 +1273,10 @@ class InstallPage(BaseWizard):
         # These will increase
         self.total_steps = 0
 
-        for version in SD_FILE_BOOTSTRAP_DATA.keys():
-            for action in SD_FILE_BOOTSTRAP_DATA[version].keys():
+        for version in get_sd_file_bootstrap_data().keys():
+            for action in get_sd_file_bootstrap_data()[version].keys():
                 self.total_steps += len(
-                    SD_FILE_BOOTSTRAP_DATA[version][action]
+                    get_sd_file_bootstrap_data()[version][action]
                 )
 
         # Determine total controlnet models being downloaded
@@ -1287,7 +1287,7 @@ class InstallPage(BaseWizard):
             if self.models_enabled.get(model["name"], True):
                 try:
                     self.total_steps += len(
-                        SD_FILE_BOOTSTRAP_DATA[model["version"]][
+                        get_sd_file_bootstrap_data()[model["version"]][
                             model["pipeline_action"]
                         ]
                     )
@@ -1297,18 +1297,18 @@ class InstallPage(BaseWizard):
 
         # Increase total number of LLMs downloaded
         for repo_id in _enabled_llm_download_repo_ids(self.models_enabled):
-            self.total_steps += len(LLM_FILE_BOOTSTRAP_DATA[repo_id]["files"])
+            self.total_steps += len(get_llm_file_bootstrap_data()[repo_id]["files"])
 
         if self.models_enabled["whisper"]:
-            self.total_steps += len(WHISPER_FILES["openai/whisper-tiny"])
+            self.total_steps += len(get_whisper_files()["openai/whisper-tiny"])
 
         if self.models_enabled["embedding_model"]:
             self.total_steps += len(
-                LLM_FILE_BOOTSTRAP_DATA["intfloat/e5-large"]["files"]
+                get_llm_file_bootstrap_data()["intfloat/e5-large"]["files"]
             )
 
         if self.models_enabled["openvoice_model"]:
-            for k, v in OPENVOICE_FILES.items():
+            for k, v in get_openvoice_files().items():
                 self.total_steps += len(v["files"])
             # Add OpenVoice zip files (2 zips)
             self.total_steps += 2
@@ -1420,7 +1420,7 @@ class InstallPage(BaseWizard):
                 if not self.models_enabled.get(core_flag, True):
                     continue
                 try:
-                    files = SD_FILE_BOOTSTRAP_DATA[model["version"]][
+                    files = get_sd_file_bootstrap_data()[model["version"]][
                         action_key
                     ]
                     self.total_files += len(files)
@@ -1430,7 +1430,7 @@ class InstallPage(BaseWizard):
             from collections import defaultdict
 
             version_group = defaultdict(list)
-            for cn in controlnet_bootstrap_data:
+            for cn in get_controlnet_bootstrap_data():
                 version_group[cn["version"]].append(cn)
 
             for version, models in version_group.items():
@@ -1443,7 +1443,7 @@ class InstallPage(BaseWizard):
                     ):
                         continue
                     try:
-                        files = SD_FILE_BOOTSTRAP_DATA[
+                        files = get_sd_file_bootstrap_data()[
                             controlnet_model["version"]
                         ]["controlnet"]
                         self.total_files += len(files)
@@ -1454,7 +1454,7 @@ class InstallPage(BaseWizard):
             if self.models_enabled.get("upscaler_x4", False):
                 try:
                     self.total_files += len(
-                        SD_FILE_BOOTSTRAP_DATA["Upscaler"]["x4"]
+                        get_sd_file_bootstrap_data()["Upscaler"]["x4"]
                     )
                 except Exception:
                     pass
@@ -1477,13 +1477,13 @@ class InstallPage(BaseWizard):
                     download_repo_id = (
                         download_info["repo_id"] if download_info else model["path"]
                     )
-                    files = LLM_FILE_BOOTSTRAP_DATA[download_repo_id]["files"]
+                    files = get_llm_file_bootstrap_data()[download_repo_id]["files"]
                     self.total_files += len(files)
         if self.models_enabled["whisper"]:
-            for k, v in WHISPER_FILES.items():
+            for k, v in get_whisper_files().items():
                 self.total_files += len(v)
         if self.models_enabled["openvoice_model"]:
-            for k, v in OPENVOICE_FILES.items():
+            for k, v in get_openvoice_files().items():
                 self.total_files += len(v["files"])
             # Add OpenVoice zip files (2 zips)
             self.total_files += 2
@@ -1495,7 +1495,7 @@ class InstallPage(BaseWizard):
         ) and not self.models_enabled.get("stable_diffusion", False):
             try:
                 self.total_files += len(
-                    SD_FILE_BOOTSTRAP_DATA["Upscaler"]["x4"]
+                    get_sd_file_bootstrap_data()["Upscaler"]["x4"]
                 )
             except Exception:
                 pass
