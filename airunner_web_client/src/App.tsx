@@ -1,46 +1,56 @@
 import { useState } from "react";
 import Layout from "./components/layout/Layout";
 import ChatView from "./components/chat/ChatView";
-import ArtView from "./components/art/ArtView";
-import SettingsView from "./components/settings/SettingsView";
-import DocumentsView from "./components/documents/DocumentsView";
-import DownloadManager from "./components/downloads/DownloadManager";
+import SettingsModal from "./components/settings/SettingsModal";
 
-type Tab =
-  | "chat"
-  | "art"
-  | "settings"
-  | "documents"
-  | "downloads";
+type PanelId =
+  | "knowledge"
+  | "history"
+  | "llm_settings"
+  | "art_model"
+  | "lora"
+  | "embeddings"
+  | "layers"
+  | "grid"
+  | "image_browser"
+  | "stats";
 
 export default function App() {
-  const [tab, setTab] = useState<Tab>("chat");
-  const [leftPanel, setLeftPanel] = useState<string | null>(null);
-  const [rightPanel, setRightPanel] = useState<string | null>(null);
-  const [artSidebar, setArtSidebar] = useState(false);
-
-  const renderContent = () => {
-    switch (tab) {
-      case "chat":   return <ChatView />;
-      case "art":    return <ArtView />;
-      case "settings": return <SettingsView />;
-      case "documents": return <DocumentsView />;
-      case "downloads": return <DownloadManager />;
-    }
-  };
+  const [showCanvas, setShowCanvas] = useState(false);
+  const [showArtPrompt, setShowArtPrompt] = useState(false);
+  const [ttsOn, setTtsOn] = useState(false);
+  const [sttOn, setSttOn] = useState(false);
+  const [leftPanel, setLeftPanel] = useState<PanelId | null>(null);
+  const [rightPanel, setRightPanel] = useState<PanelId | null>(null);
+  const [showSettings, setShowSettings] = useState(false);
 
   return (
-    <Layout
-      activeTab={tab}
-      onTab={setTab}
-      leftPanel={leftPanel}
-      onLeftPanel={setLeftPanel}
-      rightPanel={rightPanel}
-      onRightPanel={setRightPanel}
-      artSidebar={artSidebar}
-      onArtSidebar={setArtSidebar}
-    >
-      {renderContent()}
-    </Layout>
+    <>
+      <Layout
+        leftPanel={leftPanel}
+        onLeftPanel={(id: PanelId) =>
+          setLeftPanel((prev) => (prev === id ? null : id))
+        }
+        rightPanel={rightPanel}
+        onRightPanel={(id: PanelId) =>
+          setRightPanel((prev) => (prev === id ? null : id))
+        }
+        showCanvas={showCanvas}
+        onToggleCanvas={() => setShowCanvas((s) => !s)}
+        showArtPrompt={showArtPrompt}
+        onToggleArtPrompt={() => setShowArtPrompt((s) => !s)}
+        ttsOn={ttsOn}
+        onToggleTts={() => setTtsOn((s) => !s)}
+        sttOn={sttOn}
+        onToggleStt={() => setSttOn((s) => !s)}
+        onOpenSettings={() => setShowSettings(true)}
+      >
+        <ChatView />
+      </Layout>
+
+      {showSettings && (
+        <SettingsModal onClose={() => setShowSettings(false)} />
+      )}
+    </>
   );
 }
