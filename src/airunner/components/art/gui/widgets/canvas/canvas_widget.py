@@ -49,6 +49,7 @@ class CanvasWidget(BaseWidget):
     - Handles the active grid area.
     """
 
+    ui: Ui_canvas  # type: ignore[assignment]
     widget_class_ = Ui_canvas
     icons = [
         ("file-plus", "new_button"),
