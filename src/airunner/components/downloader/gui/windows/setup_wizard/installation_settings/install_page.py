@@ -10,16 +10,16 @@ from airunner.components.data.bootstrap_service import (
     get_model_bootstrap_data,
 )
 from airunner.components.data.bootstrap_service import (
-    get_controlnet_bootstrap_data(),
+    get_controlnet_bootstrap_data,
 )
 from airunner.components.data.bootstrap_service import (
-    get_sd_file_bootstrap_data(),
+    get_sd_file_bootstrap_data,
 )
 from airunner.components.data.bootstrap_service import (
-    get_openvoice_files(),
+    get_openvoice_files,
 )
 from airunner.components.data.bootstrap_service import (
-    get_llm_file_bootstrap_data(),
+    get_llm_file_bootstrap_data,
 )
 from airunner.daemon_client.gui_daemon_client import GuiDaemonClient
 from airunner.components.llm.config.provider_config import LLMProviderConfig
