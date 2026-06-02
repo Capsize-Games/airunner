@@ -8,6 +8,7 @@ import Alert from "react-bootstrap/Alert";
 import ProgressBar from "react-bootstrap/ProgressBar";
 import {
   streamLLM,
+  listKnowledgeBaseDocuments,
   getSingleton,
 } from "../../api/client";
 import type { Message } from "../../types/api";
@@ -15,6 +16,11 @@ import MessageList from "./MessageList";
 import ModelSelector from "./ModelSelector";
 
 const icon = (name: string) => `/icons/lucide/dark/${name}.svg`;
+
+interface ActiveDoc {
+  id: number;
+  name: string;
+}
 
 export default function ChatView({
   conversationId,
@@ -30,6 +36,74 @@ export default function ChatView({
   const abortRef = useRef<AbortController | null>(null);
   const modelPathRef = useRef("");
   const loadedConvRef = useRef<number | null>(null);
+
+  // ── Active RAG documents state ──
+  const [activeDocs, setActiveDocs] = useState<ActiveDoc[]>([]);
+
+  const reloadActiveDocs = useCallback(async () => {
+    try {
+      const data = await listKnowledgeBaseDocuments();
+      const docs = (data.documents ?? [])
+        .filter((d) => d.active)
+        .map((d) => ({
+          id: d.id,
+          name: d.path.split("/").pop() || d.path,
+        }));
+      setActiveDocs(docs);
+    } catch {
+      // unavailable
+    }
+  }, []);
+
+  useEffect(() => {
+    reloadActiveDocs();
+  }, [reloadActiveDocs]);
+
+  // Listen for knowledge-base changes from other panels
+  useEffect(() => {
+    const handler = () => reloadActiveDocs();
+    window.addEventListener("knowledge-base-changed", handler);
+    return () =>
+      window.removeEventListener("knowledge-base-changed", handler);
+  }, [reloadActiveDocs]);
+
+  // ── Drag-and-drop: accept doc IDs onto the chat ──
+  const handleDragOver = (e: React.DragEvent) => {
+    if (e.dataTransfer.types.includes("application/x-airunner-doc-id")) {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = "copy";
+    }
+  };
+
+  const handleDrop = async (e: React.DragEvent) => {
+    e.preventDefault();
+    const raw = e.dataTransfer.getData("application/x-airunner-doc-id");
+    if (!raw) return;
+    const docId = Number(raw);
+    if (Number.isNaN(docId)) return;
+
+    // Toggle the document active
+    try {
+      const { toggleDocumentActive } = await import("../../api/client");
+      await toggleDocumentActive(docId);
+      await reloadActiveDocs();
+      window.dispatchEvent(new Event("knowledge-base-changed"));
+    } catch {
+      // unchanged
+    }
+  };
+
+  // ── Remove an active document pill ──
+  const handleRemoveDoc = async (docId: number) => {
+    try {
+      const { toggleDocumentActive } = await import("../../api/client");
+      await toggleDocumentActive(docId);
+      await reloadActiveDocs();
+      window.dispatchEvent(new Event("knowledge-base-changed"));
+    } catch {
+      // unchanged
+    }
+  };
 
   const loadModelPath = useCallback(() => {
     getSingleton("LLMGeneratorSettings")
@@ -114,11 +188,14 @@ export default function ChatView({
         }
       } catch { /* ignore */ }
 
+      const activeIds = activeDocs.map((d) => d.id);
+
       const gen = streamLLM(
         newMessages,
         controller.signal,
         modelPathRef.current,
         llmOverrides,
+        activeIds.length > 0 ? activeIds : undefined,
       );
       fullResponse = "";
       let thinking = "";
@@ -176,7 +253,7 @@ export default function ChatView({
       setStreaming(false);
       abortRef.current = null;
     }
-  }, [input, messages, streaming]);
+  }, [input, messages, streaming, activeDocs]);
 
   const handleCancel = useCallback(() => {
     abortRef.current?.abort();
@@ -202,7 +279,11 @@ export default function ChatView({
   }, []);
 
   return (
-    <div className="d-flex flex-column h-100">
+    <div
+      className="d-flex flex-column h-100"
+      onDragOver={handleDragOver}
+      onDrop={handleDrop}
+    >
       {/* New conversation button — top right */}
       <div
         className="d-flex justify-content-end p-1 flex-shrink-0"
@@ -250,6 +331,44 @@ export default function ChatView({
       {/* Input area */}
       <div className="chat-input-area border-top p-2">
         <div className="d-flex flex-column gap-2">
+          {/* Active document pills */}
+          {activeDocs.length > 0 && (
+            <div className="d-flex flex-wrap gap-1">
+              {activeDocs.map((doc) => (
+                <span
+                  key={doc.id}
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 4,
+                    background: "rgba(0,132,185,0.2)",
+                    border: "1px solid var(--bs-primary)",
+                    borderRadius: 12,
+                    padding: "2px 8px",
+                    fontSize: "0.7rem",
+                    color: "#c8c8c8",
+                  }}
+                >
+                  <span
+                    style={{
+                      cursor: "pointer",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      lineHeight: 1,
+                      color: "#ff5555",
+                      fontSize: "0.8rem",
+                    }}
+                    onClick={() => handleRemoveDoc(doc.id)}
+                    title="Remove from RAG"
+                  >
+                    ✕
+                  </span>
+                  {doc.name}
+                </span>
+              ))}
+            </div>
+          )}
+
           <textarea
             rows={3}
             value={input}

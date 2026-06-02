@@ -10,12 +10,10 @@ export function KnowledgeBasePanel() {
   const [indexing, setIndexing] = useState(false);
   const [progress, setProgress] = useState(0);
   const [loading, setLoading] = useState(true);
-  const indexedDocs = documents.filter((d) => d.indexed).length;
-  const totalDocs = documents.length;
 
   const icon = (name: string) => `/icons/lucide/dark/${name}.svg`;
 
-  const load = useCallback(async () => {
+  const reload = useCallback(async () => {
     try {
       const { listKnowledgeBaseDocuments } = await import(
         "../../api/client"
@@ -36,8 +34,41 @@ export function KnowledgeBasePanel() {
   }, []);
 
   useEffect(() => {
-    load();
-  }, [load]);
+    reload();
+  }, [reload]);
+
+  // Re-fetch when other components toggle active state
+  useEffect(() => {
+    const handler = () => reload();
+    window.addEventListener("knowledge-base-changed", handler);
+    return () =>
+      window.removeEventListener("knowledge-base-changed", handler);
+  }, [reload]);
+
+  const handleToggle = async (docId: number) => {
+    try {
+      const { toggleDocumentActive } = await import(
+        "../../api/client"
+      );
+      const result = await toggleDocumentActive(docId);
+      setDocuments((prev) =>
+        prev.map((d) =>
+          d.id === docId ? { ...d, active: result.active } : d,
+        ),
+      );
+      window.dispatchEvent(new Event("knowledge-base-changed"));
+    } catch {
+      // unchanged
+    }
+  };
+
+  const handleDragStart = (
+    e: React.DragEvent<HTMLTableRowElement>,
+    docId: number,
+  ) => {
+    e.dataTransfer.setData("application/x-airunner-doc-id", String(docId));
+    e.dataTransfer.effectAllowed = "copy";
+  };
 
   const handleImport = () => {
     const input = document.createElement("input");
@@ -74,6 +105,10 @@ export function KnowledgeBasePanel() {
     setIndexing(false);
     setProgress(0);
   };
+
+  const indexedDocs = documents.filter((d) => d.indexed).length;
+  const totalDocs = documents.length;
+  const activeDocs = documents.filter((d) => d.active).length;
 
   if (loading) {
     return (
@@ -113,7 +148,12 @@ export function KnowledgeBasePanel() {
             </thead>
             <tbody>
               {documents.map((doc) => (
-                <tr key={doc.id}>
+                <tr
+                  key={doc.id}
+                  draggable
+                  onDragStart={(e) => handleDragStart(e, doc.id)}
+                  style={{ cursor: "grab" }}
+                >
                   <td
                     className="text-truncate"
                     style={{ maxWidth: 180 }}
@@ -122,7 +162,20 @@ export function KnowledgeBasePanel() {
                     {doc.name}
                   </td>
                   <td style={{ textAlign: "center" }}>
-                    {doc.active ? "✅" : "—"}
+                    <span
+                      style={{
+                        cursor: "pointer",
+                        display: "inline-block",
+                      }}
+                      onClick={() => handleToggle(doc.id)}
+                      title={
+                        doc.active
+                          ? "Click to deactivate"
+                          : "Click to activate"
+                      }
+                    >
+                      {doc.active ? "✅" : "☐"}
+                    </span>
                   </td>
                   <td style={{ textAlign: "center" }}>
                     {doc.indexed ? "✅" : "—"}
@@ -137,21 +190,25 @@ export function KnowledgeBasePanel() {
 
       {/* Statistics */}
       <div className="row g-2 mb-1 flex-shrink-0">
-        <div className="col-4">
+        <div className="col-3">
           <div className="stat-box">
             <span className="stat-label">Total</span>
             <span className="stat-value">{totalDocs}</span>
           </div>
         </div>
-        <div className="col-4">
+        <div className="col-3">
           <div className="stat-box">
-            <span className="stat-label">Indexed</span>
-            <span className="stat-value text-success">
-              {indexedDocs}
-            </span>
+            <span className="stat-label">Active</span>
+            <span className="stat-value text-info">{activeDocs}</span>
           </div>
         </div>
-        <div className="col-4">
+        <div className="col-3">
+          <div className="stat-box">
+            <span className="stat-label">Indexed</span>
+            <span className="stat-value text-success">{indexedDocs}</span>
+          </div>
+        </div>
+        <div className="col-3">
           <div className="stat-box">
             <span className="stat-label">Pending</span>
             <span className="stat-value text-warning">

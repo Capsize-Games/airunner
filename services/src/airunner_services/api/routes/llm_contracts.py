@@ -24,6 +24,7 @@ class ChatCompletionRequest(BaseModel):
     max_tokens: Optional[int] = None
     stream: bool = False
     llm_overrides: Optional[Dict[str, Dict[str, Any]]] = None
+    active_document_ids: Optional[List[int]] = None
 
 
 class ChatCompletionResponse(BaseModel):

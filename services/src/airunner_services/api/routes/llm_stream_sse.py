@@ -42,6 +42,19 @@ def _build_llm_request(payload: ChatCompletionRequest) -> LLMRequest:
         llm_request.max_new_tokens = payload.max_tokens
     if payload.llm_overrides:
         llm_request.llm_overrides = payload.llm_overrides
+    # Resolve active document IDs to file paths for RAG
+    if payload.active_document_ids:
+        from airunner_services.database.models.document import Document
+        from airunner_services.database.session import session_scope
+        with session_scope() as session:
+            docs = (
+                session.query(Document)
+                .filter(Document.id.in_(payload.active_document_ids))
+                .all()
+            )
+            paths = [doc.path for doc in docs if doc.active]
+            if paths:
+                llm_request.rag_files = paths
     return llm_request
 
 

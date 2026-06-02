@@ -111,10 +111,17 @@ export async function* streamLLM(
   signal?: AbortSignal,
   model?: string,
   llmOverrides?: Record<string, Record<string, unknown>>,
+  activeDocumentIds?: number[],
 ) {
   yield* streamRequest(
     "POST", "/api/v1/llm/conversations/stream",
-    { messages, model, stream: true, llm_overrides: llmOverrides },
+    {
+      messages,
+      model,
+      stream: true,
+      llm_overrides: llmOverrides,
+      active_document_ids: activeDocumentIds,
+    },
     signal,
   );
 }
@@ -234,6 +241,12 @@ export async function getArtOptions(): Promise<ArtOptionsResponse> {
 export async function listKnowledgeBaseDocuments() {
   return request<{ documents: import("../types/api").DocumentRecord[] }>(
     "GET", "/api/v1/knowledge-base/documents",
+  );
+}
+
+export async function toggleDocumentActive(docId: number) {
+  return request<{ id: number; active: boolean }>(
+    "PATCH", `/api/v1/knowledge-base/documents/${docId}/toggle-active`,
   );
 }
 
