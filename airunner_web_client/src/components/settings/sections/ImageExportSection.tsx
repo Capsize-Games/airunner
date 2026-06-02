@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import Form from "react-bootstrap/Form";
-import Button from "react-bootstrap/Button";
 import Spinner from "react-bootstrap/Spinner";
 import {
   getSingleton,
@@ -77,6 +76,7 @@ export default function ImageExportSection() {
   const [autoExport, setAutoExport] = useState(true);
   const [exportType, setExportType] = useState("png");
   const [exportFolder, setExportFolder] = useState("");
+  const [exportMetadata, setExportMetadata] = useState(true);
   const [metadataFlags, setMetadataFlags] = useState<MetadataFlags>(
     DEFAULT_METADATA_FLAGS,
   );
@@ -92,8 +92,8 @@ export default function ImageExportSection() {
         setAutoExport(appSettings.auto_export_images !== false);
         setExportType(String(appSettings.image_export_type ?? "png"));
         setExportFolder(String(appSettings.image_export_folder ?? ""));
+        setExportMetadata(appSettings.export_metadata_enabled !== false);
 
-        // Parse metadata_export_flags JSON
         const rawFlags = appSettings.metadata_export_flags;
         if (rawFlags && typeof rawFlags === "string") {
           try {
@@ -110,9 +110,7 @@ export default function ImageExportSection() {
       }
     }
     load();
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, []);
 
   function persist(overrides: Record<string, unknown>) {
@@ -122,6 +120,7 @@ export default function ImageExportSection() {
       auto_export_images: autoExport,
       image_export_type: exportType,
       image_export_folder: exportFolder,
+      export_metadata_enabled: exportMetadata,
       metadata_export_flags: JSON.stringify(metadataFlags),
       ...overrides,
     };
@@ -153,6 +152,11 @@ export default function ImageExportSection() {
     persist({ image_export_folder: value });
   }
 
+  function handleToggleExportMetadata(checked: boolean) {
+    setExportMetadata(checked);
+    persist({ export_metadata_enabled: checked });
+  }
+
   function handleMetadataFlag(
     key: keyof MetadataFlags,
     checked: boolean,
@@ -170,11 +174,13 @@ export default function ImageExportSection() {
     );
   }
 
+  const metaKeys = Object.keys(METADATA_LABELS) as Array<keyof MetadataFlags>;
+
   return (
     <div>
       <h6 className="mb-3">Image Export</h6>
 
-      {/* ── Saving group ─────────────────────────────────────────────── */}
+      {/* Saving group */}
       <Form.Label className="small text-muted fw-semibold mb-1">
         Saving
       </Form.Label>
@@ -237,29 +243,47 @@ export default function ImageExportSection() {
         </Form.Select>
       </Form.Group>
 
-      {/* ── Export Metadata group ────────────────────────────────────── */}
+      {/* Export Metadata group */}
       <Form.Label className="small text-muted fw-semibold mb-1">
-        Export Metadata
+        <Form.Check
+          type="switch"
+          id="export-metadata-toggle"
+          label="Export Metadata"
+          checked={exportMetadata}
+          onChange={(e) => handleToggleExportMetadata(e.target.checked)}
+          className="small d-inline-flex align-items-center gap-1"
+          style={{ fontWeight: 600 }}
+        />
       </Form.Label>
 
-      <div
-        className="border rounded p-2 mb-2"
-        style={{ maxHeight: 260, overflowY: "auto" }}
-      >
-        {(Object.keys(METADATA_LABELS) as Array<keyof MetadataFlags>).map(
-          (key) => (
-            <Form.Group key={key} className="mb-1">
+      {exportMetadata && (
+        <div
+          className="border rounded p-2 mb-2"
+          style={{ maxHeight: 280, overflowY: "auto" }}
+        >
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "1fr 1fr",
+              gap: "2px 12px",
+            }}
+          >
+            {metaKeys.map((key) => (
               <Form.Check
+                key={key}
                 type="switch"
+                id={`meta-${key}`}
                 label={METADATA_LABELS[key]}
                 checked={metadataFlags[key]}
-                onChange={(e) => handleMetadataFlag(key, e.target.checked)}
+                onChange={(e) =>
+                  handleMetadataFlag(key, e.target.checked)
+                }
                 className="small"
               />
-            </Form.Group>
-          ),
-        )}
-      </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
