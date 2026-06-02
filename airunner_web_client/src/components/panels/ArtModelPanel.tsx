@@ -2,11 +2,11 @@ import { useState, useEffect } from "react";
 import {
   getSingleton,
   updateSingleton,
-  getArtModelOptions,
 } from "../../api/client";
 import type { ArtOptionsResponse } from "../../api/client";
 import Form from "react-bootstrap/Form";
 import ProgressBar from "react-bootstrap/ProgressBar";
+import ArtModelSelector from "../shared/ArtModelSelector";
 
 export default function ArtModelPanel() {
   const [version, setVersion] = useState("");
@@ -14,7 +14,6 @@ export default function ArtModelPanel() {
   const [scheduler, setScheduler] = useState("");
   const [precision, setPrecision] = useState("");
 
-  // Options loaded from API
   const [options, setOptions] = useState<ArtOptionsResponse | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -31,16 +30,21 @@ export default function ArtModelPanel() {
   useEffect(() => {
     (async () => {
       try {
-        const opts = await getArtModelOptions();
+        const opts = await import("../../api/client").then(m => m.getArtModelOptions());
         setOptions(opts);
       } catch { /* */ }
 
       try {
         const r = await getSingleton("GeneratorSettings");
-        setVersion(String(r.version ?? ""));
+        const savedVersion = String(r.version ?? "");
+        setVersion(savedVersion);
         setModelPath(String(r.model_path ?? ""));
         setScheduler(String(r.scheduler ?? ""));
         setPrecision(String(r.dtype ?? ""));
+        try { localStorage.setItem("airunner_art_version", savedVersion); } catch {}
+        if (r.model_path) {
+          try { localStorage.setItem("airunner_art_model", String(r.model_path)); } catch {}
+        }
         setNSamples(Number(r.n_samples ?? 1));
         setImagesPerBatch(Number(r.images_per_batch ?? 1));
         setSteps(Number(r.steps ?? 20));
@@ -64,71 +68,50 @@ export default function ArtModelPanel() {
     updateSingleton("GeneratorSettings", updates).catch(() => {});
   };
 
-  // Derive available models and schedulers from current version
   const versionInfo = options?.versions?.find((v) => v.name === version);
-  const availableModels = versionInfo?.models ?? [];
   const availableSchedulers = versionInfo?.schedulers ?? [];
   const precisions = options?.precisions ?? [];
 
-  if (loading) {
-    return <div className="p-2 small" style={{ color: "#a0a0a8" }}>Loading...</div>;
-  }
+  const handleVersionChange = (v: string) => {
+    setVersion(v);
+    setModelPath("");
+    setScheduler("");
+    persist({ version: v, model_path: "", scheduler: "" });
+  };
+
+  const handleModelChange = (m: string) => {
+    setModelPath(m);
+    persist({ model_path: m });
+  };
 
   return (
     <div className="p-2">
-      <h6 style={{ color: "#a0a0a8" }} className="mb-2">Art Model</h6>
+      <div className="d-flex align-items-center gap-2 mb-2">
+        <h6 style={{ color: "#a0a0a8" }} className="mb-0">Art Model</h6>
+        {loading && (
+          <div
+            className="spinner-border spinner-border-sm"
+            role="status"
+            style={{ color: "#a0a0a8", width: 12, height: 12 }}
+          />
+        )}
+      </div>
 
-      {/* Version */}
-      <Form.Group className="mb-2">
-        <Form.Label className="small" style={{ color: "#a0a0a8" }}>Version</Form.Label>
-        <Form.Select
-          size="sm"
-          value={version}
-          onChange={(e) => {
-            const v = e.target.value;
-            setVersion(v);
-            setModelPath("");
-            setScheduler("");
-            persist({ version: v, model_path: "", scheduler: "" });
-            window.dispatchEvent(
-              new CustomEvent("art-version-changed", { detail: v }),
-            );
-          }}
-        >
-          <option value="">Select version...</option>
-          {(options?.versions ?? []).map((v) => (
-            <option key={v.name} value={v.name}>{v.name}</option>
-          ))}
-        </Form.Select>
-      </Form.Group>
-
-      {/* Model */}
-      <Form.Group className="mb-2">
-        <Form.Label className="small" style={{ color: "#a0a0a8" }}>Model</Form.Label>
-        <Form.Select
-          size="sm"
-          value={modelPath}
-          disabled={!version || availableModels.length === 0}
-          onChange={(e) => {
-            setModelPath(e.target.value);
-            persist({ model_path: e.target.value });
-          }}
-        >
-          <option value="">
-            {!version ? "Select a version first..." : "Select model..."}
-          </option>
-          {availableModels.map((m) => (
-            <option key={m.value} value={m.value}>{m.label}</option>
-          ))}
-        </Form.Select>
-      </Form.Group>
+      <ArtModelSelector
+        loading={loading}
+        version={version}
+        modelPath={modelPath}
+        onVersionChange={handleVersionChange}
+        onModelChange={handleModelChange}
+      />
 
       {/* Scheduler */}
-      <Form.Group className="mb-2">
+      <Form.Group className="mb-2 mt-2">
         <Form.Label className="small" style={{ color: "#a0a0a8" }}>Scheduler</Form.Label>
         <Form.Select
           size="sm"
           value={scheduler}
+          disabled={loading}
           onChange={(e) => { setScheduler(e.target.value); persist({ scheduler: e.target.value }); }}
         >
           <option value="">Select scheduler...</option>
@@ -144,6 +127,7 @@ export default function ArtModelPanel() {
         <Form.Select
           size="sm"
           value={precision}
+          disabled={loading}
           onChange={(e) => { setPrecision(e.target.value); persist({ dtype: e.target.value }); }}
         >
           <option value="">Select precision...</option>
@@ -176,6 +160,7 @@ export default function ArtModelPanel() {
           <Form.Control
             type="number" size="sm" min={1} max={1000}
             value={nSamples}
+            disabled={loading}
             onChange={(e) => { const v = Number(e.target.value); setNSamples(v); persist({ n_samples: v }); }}
           />
         </div>
@@ -184,6 +169,7 @@ export default function ArtModelPanel() {
           <Form.Control
             type="number" size="sm" min={1} max={6}
             value={imagesPerBatch}
+            disabled={loading}
             onChange={(e) => { const v = Number(e.target.value); setImagesPerBatch(v); persist({ images_per_batch: v }); }}
           />
         </div>
@@ -194,6 +180,7 @@ export default function ArtModelPanel() {
           <Form.Control
             type="number" size="sm" min={1} max={150}
             value={steps}
+            disabled={loading}
             onChange={(e) => { const v = Number(e.target.value); setSteps(v); persist({ steps: v }); }}
           />
         </div>
@@ -204,6 +191,7 @@ export default function ArtModelPanel() {
           <Form.Range
             min={1} max={30} step={0.5}
             value={cfgScale}
+            disabled={loading}
             onChange={(e) => { const v = Number(e.target.value); setCfgScale(v); persist({ cfg_scale: v }); }}
           />
         </div>
@@ -214,6 +202,7 @@ export default function ArtModelPanel() {
           <Form.Control
             type="number" size="sm" min={64} max={4096} step={64}
             value={width}
+            disabled={loading}
             onChange={(e) => { const v = Number(e.target.value); setWidth(v); persist({ width: v }); }}
           />
         </div>
@@ -222,6 +211,7 @@ export default function ArtModelPanel() {
           <Form.Control
             type="number" size="sm" min={64} max={4096} step={64}
             value={height}
+            disabled={loading}
             onChange={(e) => { const v = Number(e.target.value); setHeight(v); persist({ height: v }); }}
           />
         </div>
@@ -231,6 +221,7 @@ export default function ArtModelPanel() {
         <Form.Control
           type="number" size="sm"
           value={seed}
+          disabled={loading}
           onChange={(e) => { const v = Number(e.target.value); setSeed(v); persist({ seed: v }); }}
         />
       </Form.Group>

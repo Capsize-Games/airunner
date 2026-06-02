@@ -5,6 +5,7 @@ import {
 } from "../../api/client";
 import Form from "react-bootstrap/Form";
 import ProgressBar from "react-bootstrap/ProgressBar";
+import ArtModelSelector from "../shared/ArtModelSelector";
 
 const STORAGE_KEY = "airunner_art_prompt_data";
 const icon = (name: string) => `/icons/lucide/dark/${name}.svg`;
@@ -38,7 +39,13 @@ function savePromptData(data: Record<string, string>) {
 }
 
 export default function ArtPromptPanel() {
+  // Read saved version from localStorage synchronously — zero delay
   const initial = loadPromptData();
+  const savedVersion = (() => {
+    try { return localStorage.getItem("airunner_art_version") || ""; }
+    catch { return ""; }
+  })();
+
   const [prompt, setPrompt] = useState(initial.prompt);
   const [negativePrompt, setNegativePrompt] = useState(initial.negative_prompt);
   const [secondaryPrompt, setSecondaryPrompt] = useState(initial.secondary_prompt);
@@ -47,23 +54,24 @@ export default function ArtPromptPanel() {
   const [progress, setProgress] = useState(0);
   const jobIdRef = useRef<string | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const [isZImage, setIsZImage] = useState(false);
+  const [artVersion, setArtVersion] = useState(savedVersion);
+  const [artModel, setArtModel] = useState(() => {
+    try { return localStorage.getItem("airunner_art_model") || ""; }
+    catch { return ""; }
+  });
+  const [isZImage, setIsZImage] = useState(savedVersion === "Z-Image Turbo");
 
   useEffect(() => {
-    // Load saved version directly so prompt fields don't flash on reload
-    import("../../api/client").then(({ getSingleton }) => {
-      getSingleton("GeneratorSettings").then((r) => {
-        const saved = String((r as Record<string, unknown>).version ?? "");
-        if (saved) setIsZImage(saved === "Z-Image Turbo");
-      }).catch(() => {});
-    });
-
-    // Listen for art version changes from ArtModelPanel
     const handler = (e: Event) => {
-      const version = (e as CustomEvent).detail as string;
-      setIsZImage(version === "Z-Image Turbo");
+      const v = (e as CustomEvent).detail as string;
+      setArtVersion(v);
+      setIsZImage(v === "Z-Image Turbo");
     };
     window.addEventListener("art-version-changed", handler);
+    try {
+      const m = localStorage.getItem("airunner_art_model");
+      if (m) setArtModel(m);
+    } catch {}
     return () => {
       window.removeEventListener("art-version-changed", handler);
       if (pollRef.current) clearInterval(pollRef.current);
@@ -176,8 +184,20 @@ export default function ArtPromptPanel() {
         )}
       </div>
 
-      {/* Bottom bar: progress + submit/cancel */}
+      {/* Bottom bar: version/model selector + progress + submit/cancel */}
       <div className="flex-shrink-0 mt-2 pt-2 border-top border-secondary">
+        <div className="mb-1">
+          <ArtModelSelector
+            version={artVersion}
+            modelPath={artModel}
+            onVersionChange={(v) => {
+              setArtVersion(v);
+              setArtModel("");
+              setIsZImage(v === "Z-Image Turbo");
+            }}
+            onModelChange={(m) => setArtModel(m)}
+          />
+        </div>
         <div className="d-flex align-items-center gap-2">
           <div className="flex-grow-1">
             <ProgressBar
