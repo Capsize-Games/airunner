@@ -115,14 +115,13 @@ function ImagePreviewModal({
     versionStr.includes("lightning");
 
   // Only show secondary/negative prompts for SDXL-based versions
+  const hiddenKeys = [
+    "prompt_2", "negative_prompt", "negative_prompt_2",
+    "secondary_prompt", "secondary_negative_prompt",
+  ];
   const metaEntries = img.metadata
     ? Object.entries(img.metadata).filter(([key]) => {
-        if (
-          !isSdxlVersion &&
-          (key === "secondary_prompt" ||
-            key === "negative_prompt" ||
-            key === "secondary_negative_prompt")
-        ) {
+        if (!isSdxlVersion && hiddenKeys.includes(key)) {
           return false;
         }
         return true;
@@ -684,7 +683,8 @@ export default function ImageBrowserPanel() {
         <div className="ms-2 flex-grow-1 overflow-hidden d-flex flex-column"
           style={{ minWidth: 0 }}>
           {/* Row 1: click-to-edit filename + file_size */}
-          <div className="d-flex justify-content-between align-items-start">
+          <div className="d-flex justify-content-between align-items-start"
+            style={{ flex: 1 }}>
             {isEditing ? (
               <input
                 type="text"
