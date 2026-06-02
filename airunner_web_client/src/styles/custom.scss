@@ -32,6 +32,10 @@
 .small, small { color: #a0a0a8; }
 h1, h2, h3, h4, h5, h6, .h1, .h2, .h3, .h4, .h5, .h6 {
   color: var(--bs-heading-color);
+  font-weight: 700;
+}
+th {
+  font-weight: 700;
 }
 label, .form-label { color: #a0a0a8; }
 p { color: #b0b0b8; }

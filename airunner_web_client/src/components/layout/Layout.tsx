@@ -1,10 +1,11 @@
 import {
   type ReactNode,
-  useRef,
   useEffect,
   useState,
 } from "react";
-import { KnowledgeBasePanel, ChatHistoryPanel, LLMSettingsPanel } from "./LeftPanelContent";
+import { KnowledgeBasePanel } from "../panels/KnowledgeBasePanel";
+import { ChatHistoryPanel } from "../panels/ChatHistoryPanel";
+import { LLMSettingsPanel } from "../panels/LLMSettingsPanel";
 import ArtModelPanel from "../panels/ArtModelPanel";
 import ArtPromptPanel from "../panels/ArtPromptPanel";
 import CanvasPanel from "../panels/CanvasPanel";
