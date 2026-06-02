@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import Spinner from "react-bootstrap/Spinner";
-import { queryResources } from "../../api/client";
-import type { ResourceRecord } from "../../types/api";
+import { queryResources } from "../../../api/client";
+import type { ResourceRecord } from "../../../types/api";
 
 export default function KeyboardShortcutsSection() {
   const [shortcuts, setShortcuts] = useState<ResourceRecord[]>([]);

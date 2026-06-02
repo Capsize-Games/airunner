@@ -5,7 +5,7 @@ import Spinner from "react-bootstrap/Spinner";
 import {
   getSingleton,
   updateSingleton,
-} from "../../api/client";
+} from "../../../api/client";
 
 export default function ImageExportSection() {
   const [autoExport, setAutoExport] = useState(true);

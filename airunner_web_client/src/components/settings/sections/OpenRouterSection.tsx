@@ -5,7 +5,7 @@ import Spinner from "react-bootstrap/Spinner";
 import {
   getPrivacySettings,
   updatePrivacySettings,
-} from "../../api/client";
+} from "../../../api/client";
 
 export default function OpenRouterSection() {
   const [allowOpenrouter, setAllowOpenrouter] = useState(true);

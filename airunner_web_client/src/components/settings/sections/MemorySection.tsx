@@ -6,7 +6,7 @@ import {
   getSingleton,
   updateSingleton,
   getArtModelOptions,
-} from "../../api/client";
+} from "../../../api/client";
 
 const GPU_OPTIONS = [
   { label: "GPU 0", value: "0" },

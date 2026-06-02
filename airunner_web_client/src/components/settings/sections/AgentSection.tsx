@@ -5,8 +5,8 @@ import Spinner from "react-bootstrap/Spinner";
 import {
   queryFirstResource,
   updateResource,
-} from "../../api/client";
-import type { ResourceRecord } from "../../types/api";
+} from "../../../api/client";
+import type { ResourceRecord } from "../../../types/api";
 
 const GENDER_OPTIONS = ["Male", "Female"];
 

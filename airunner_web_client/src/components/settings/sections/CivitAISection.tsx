@@ -7,7 +7,7 @@ import {
   updatePrivacySettings,
   getSingleton,
   updateSingleton,
-} from "../../api/client";
+} from "../../../api/client";
 
 export default function CivitAISection() {
   const [apiKey, setApiKey] = useState("");

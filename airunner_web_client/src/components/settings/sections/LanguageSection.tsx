@@ -5,7 +5,7 @@ import Spinner from "react-bootstrap/Spinner";
 import {
   getSingleton,
   updateSingleton,
-} from "../../api/client";
+} from "../../../api/client";
 
 export default function LanguageSection() {
   const [detectedLanguage, setDetectedLanguage] = useState("en");

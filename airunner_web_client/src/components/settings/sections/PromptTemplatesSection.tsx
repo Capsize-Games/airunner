@@ -5,8 +5,8 @@ import Spinner from "react-bootstrap/Spinner";
 import {
   queryResources,
   updateResource,
-} from "../../api/client";
-import type { ResourceRecord } from "../../types/api";
+} from "../../../api/client";
+import type { ResourceRecord } from "../../../types/api";
 
 export default function PromptTemplatesSection() {
   const [templates, setTemplates] = useState<ResourceRecord[]>([]);

@@ -7,7 +7,7 @@ import {
   updatePrivacySettings,
   getSingleton,
   updateSingleton,
-} from "../../api/client";
+} from "../../../api/client";
 
 export default function HuggingFaceSection() {
   const [apiKey, setApiKey] = useState("");

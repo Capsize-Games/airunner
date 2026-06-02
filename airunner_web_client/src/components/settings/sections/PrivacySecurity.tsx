@@ -7,8 +7,8 @@ import {
   updatePrivacySettings,
   getSingleton,
   updateSingleton,
-} from "../../api/client";
-import type { ResourceRecord } from "../../types/api";
+} from "../../../api/client";
+import type { ResourceRecord } from "../../../types/api";
 
 const SERVICE_KEYS = [
   { key: "huggingface", label: "Allow HuggingFace downloads" },

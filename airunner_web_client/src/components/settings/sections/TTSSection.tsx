@@ -5,7 +5,7 @@ import Spinner from "react-bootstrap/Spinner";
 import {
   getSingleton,
   updateSingleton,
-} from "../../api/client";
+} from "../../../api/client";
 
 type TtsEngine = "espeak" | "openvoice";
 
