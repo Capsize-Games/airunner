@@ -36,6 +36,7 @@ from airunner_services.api.routes import (
     lora_watch_router,
     models_watch_router,
     persistence,
+    privacy_router,
     setup,
     stt,
     tts,
@@ -364,6 +365,11 @@ def create_app(
         knowledge_base_watch_router,
         prefix="/api/v1/knowledge-base",
         tags=["knowledge-base"],
+    )
+    app.include_router(
+        privacy_router,
+        prefix="/api/v1/settings",
+        tags=["settings"],
     )
 
     # Legacy compatibility endpoints for existing clients.

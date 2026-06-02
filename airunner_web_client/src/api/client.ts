@@ -252,6 +252,81 @@ export async function toggleDocumentActive(docId: number) {
 }
 
 // ---------------------------------------------------------------------------
+// Privacy Settings
+// ---------------------------------------------------------------------------
+export async function getPrivacySettings() {
+  return request<{ services: Record<string, boolean> }>(
+    "GET", "/api/v1/settings/privacy",
+  );
+}
+
+export async function updatePrivacySettings(
+  services: Record<string, boolean>,
+) {
+  return request<{ services: Record<string, boolean> }>(
+    "PUT", "/api/v1/settings/privacy", { services },
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Resource store CRUD (collections)
+// ---------------------------------------------------------------------------
+export async function queryResources(
+  resource: string,
+  filters?: Record<string, unknown>,
+) {
+  return request<{ records: import("../types/api").ResourceRecord[] }>(
+    "POST",
+    `/api/v1/settings/resources/${resource}/query`,
+    filters ? { filters } : undefined,
+  );
+}
+
+export async function queryFirstResource(
+  resource: string,
+  filters?: Record<string, unknown>,
+) {
+  return request<{ record: import("../types/api").ResourceRecord }>(
+    "POST",
+    `/api/v1/settings/resources/${resource}/first`,
+    filters ? { filters } : undefined,
+  );
+}
+
+export async function createResource(
+  resource: string,
+  values: JsonObject,
+) {
+  return request<import("../types/api").ResourceRecord>(
+    "POST",
+    `/api/v1/settings/resources/${resource}`,
+    { values },
+  );
+}
+
+export async function updateResource(
+  resource: string,
+  id: number,
+  values: JsonObject,
+) {
+  return request<import("../types/api").ResourceRecord>(
+    "PUT",
+    `/api/v1/settings/resources/${resource}/${id}`,
+    { values },
+  );
+}
+
+export async function deleteResource(
+  resource: string,
+  id: number,
+) {
+  return request<{ deleted: boolean }>(
+    "DELETE",
+    `/api/v1/settings/resources/${resource}/${id}`,
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Canvas Layers
 // ---------------------------------------------------------------------------
 export interface LayerInfo {

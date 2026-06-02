@@ -91,6 +91,7 @@ class ApplicationSettings(BaseModel):
     http_server_port = Column(Integer, default=5005)
     lna_enabled = Column(Boolean, default=False)
     knowledge_migrated = Column(Boolean, default=False)
+    privacy_service_consent = Column(String, default="{}")
 
     # ------------------------------------------------------------------
     # QSettings-backed properties (replaces dropped DB columns)

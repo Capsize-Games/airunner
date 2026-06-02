@@ -26,6 +26,7 @@ from airunner_services.api.routes.knowledge_base_watch import (
 from airunner_services.api.routes.layers import router as layers_router
 from airunner_services.api.routes.lora_watch import router as lora_watch_router
 from airunner_services.api.routes.models_watch import router as models_watch_router
+from airunner_services.api.routes.privacy import router as privacy_router
 
 __all__ = [
     "art",
@@ -46,6 +47,7 @@ __all__ = [
     "lora_watch_router",
     "models_watch_router",
     "persistence",
+    "privacy_router",
     "stt",
     "tts",
 ]
