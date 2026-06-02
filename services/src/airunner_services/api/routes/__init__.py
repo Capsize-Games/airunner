@@ -14,6 +14,8 @@ from airunner_services.api.routes import (
     stt,
     tts,
 )
+from airunner_services.api.routes.embeddings import router as embeddings_router
+from airunner_services.api.routes.layers import router as layers_router
 
 __all__ = [
     "art",
@@ -21,8 +23,10 @@ __all__ = [
     "conversations",
     "daemon",
     "downloads",
+    "embeddings_router",
     "health",
     "knowledge_base",
+    "layers_router",
     "legacy",
     "llm",
     "persistence",

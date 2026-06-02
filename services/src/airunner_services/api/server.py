@@ -24,8 +24,10 @@ from airunner_services.api.routes import (
     daemon,
     domain_resources,
     downloads,
+    embeddings_router,
     health,
     knowledge_base,
+    layers_router,
     llm,
     persistence,
     setup,
@@ -308,9 +310,19 @@ def create_app(
     app.include_router(tts.router, prefix="/api/v1/tts", tags=["tts"])
     app.include_router(stt.router, prefix="/api/v1/stt", tags=["stt"])
     app.include_router(
+        embeddings_router,
+        prefix="/api/v1/art",
+        tags=["art"],
+    )
+    app.include_router(
         knowledge_base.router,
         prefix="/api/v1/knowledge-base",
         tags=["knowledge-base"],
+    )
+    app.include_router(
+        layers_router,
+        prefix="/api/v1/canvas",
+        tags=["canvas"],
     )
     app.include_router(
         canvas_image.router,

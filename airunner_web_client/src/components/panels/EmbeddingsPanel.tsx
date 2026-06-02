@@ -1,25 +1,45 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
+import Spinner from "react-bootstrap/Spinner";
 import Form from "react-bootstrap/Form";
-import Button from "react-bootstrap/Button";
+import type { EmbeddingInfo } from "../../api/client";
 
 export default function EmbeddingsPanel() {
   const [search, setSearch] = useState("");
-  const [embeddings, setEmbeddings] = useState<string[]>([]);
+  const [embeddings, setEmbeddings] = useState<EmbeddingInfo[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // TODO: fetch embeddings from /api/v1/catalog/resources/Embeddings/query
+  const scan = useCallback(async () => {
+    setLoading(true);
+    try {
+      const { listEmbeddings } = await import("../../api/client");
+      const data = await listEmbeddings();
+      setEmbeddings(data.embeddings);
+    } catch {
+      setEmbeddings([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    scan();
+  }, [scan]);
+
+  const filtered = embeddings.filter((e) =>
+    e.name.toLowerCase().includes(search.toLowerCase()),
+  );
 
   return (
     <div className="p-2">
       <div className="d-flex justify-content-between align-items-center mb-2">
         <h6 className="text-muted mb-0">Embeddings</h6>
-        <Button
-          size="sm"
-          variant="outline-secondary"
-          onClick={() => setEmbeddings([])}
+        <button
+          className="btn btn-outline-secondary btn-sm"
+          onClick={scan}
+          disabled={loading}
         >
           Scan
-        </Button>
+        </button>
       </div>
 
       <Form.Control
@@ -32,35 +52,22 @@ export default function EmbeddingsPanel() {
       />
 
       {loading ? (
-        <p className="text-muted small">Loading...</p>
-      ) : embeddings.length === 0 ? (
+        <Spinner animation="border" size="sm" className="d-block mx-auto" />
+      ) : filtered.length === 0 ? (
         <p className="text-muted small">
-          No textual inversion embeddings found. Add
-          embedding files to your models directory and click
-          Scan.
+          {embeddings.length === 0
+            ? "No textual inversion embeddings found. Add embedding files to your models directory and click Scan."
+            : "No embeddings match your filter."}
         </p>
       ) : (
         <div className="embed-list">
-          {embeddings
-            .filter((e) =>
-              e.toLowerCase().includes(search.toLowerCase()),
-            )
-            .map((e) => (
-              <div key={e} className="small text-muted py-1">
-                {e}
-              </div>
-            ))}
+          {filtered.map((e) => (
+            <div key={e.path} className="small text-muted py-1">
+              {e.name}
+            </div>
+          ))}
         </div>
       )}
-
-      <Button
-        size="sm"
-        variant="primary"
-        className="w-100 mt-2"
-        disabled={embeddings.length === 0}
-      >
-        Apply Embeddings
-      </Button>
     </div>
   );
 }
