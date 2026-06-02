@@ -30,6 +30,7 @@ from airunner_services.api.routes import (
     health,
     images_router,
     knowledge_base,
+    knowledge_base_index_router,
     knowledge_base_watch_router,
     layers_router,
     llm,
@@ -164,6 +165,12 @@ def create_app(
         else:
             app.state.runtime_registry = _resolve_runtime_registry(app_instance)
         app.state.lifecycle_service = _resolve_lifecycle_service(app_instance)
+
+        # Register indexing progress SSE bridge
+        from airunner_services.api.routes.knowledge_base_index import (  # noqa: PLC0415
+            _register_signal_handlers,
+        )
+        _register_signal_handlers(app_instance)
 
     # Optional API key auth for production.
     # If AIRUNNER_API_KEY is set, requests must provide it via:
@@ -363,6 +370,11 @@ def create_app(
     )
     app.include_router(
         knowledge_base_watch_router,
+        prefix="/api/v1/knowledge-base",
+        tags=["knowledge-base"],
+    )
+    app.include_router(
+        knowledge_base_index_router,
         prefix="/api/v1/knowledge-base",
         tags=["knowledge-base"],
     )

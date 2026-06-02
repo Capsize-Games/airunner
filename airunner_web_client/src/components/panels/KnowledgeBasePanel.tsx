@@ -103,28 +103,60 @@ export function KnowledgeBasePanel() {
     input.click();
   };
 
+  // Subscribe to indexing progress SSE
+  useEffect(() => {
+    if (!indexing) return;
+    const eventSource = new EventSource(
+      `${BASE_URL}/api/v1/knowledge-base/documents/index-progress`,
+    );
+    eventSource.addEventListener("message", (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        if (data.type === "progress") {
+          const total = Number(data.total) || 1;
+          const current = Number(data.current) || 0;
+          setProgress(Math.round((current / total) * 100));
+        } else if (data.type === "complete") {
+          setProgress(100);
+          setIndexing(false);
+          reload();
+          eventSource.close();
+        } else if (data.type === "error") {
+          setIndexing(false);
+          eventSource.close();
+        }
+      } catch { /* ignore */ }
+    });
+    eventSource.onerror = () => {
+      // EventSource auto-reconnects on error
+    };
+    return () => {
+      eventSource.close();
+    };
+  }, [indexing, reload]);
+
   const handleIndex = async () => {
     setIndexing(true);
     setProgress(0);
-    const id = setInterval(() => {
-      setProgress((p) => {
-        if (p >= 90) {
-          clearInterval(id);
-          return p;
-        }
-        return p + 10;
-      });
-    }, 500);
-    setTimeout(() => {
-      clearInterval(id);
+    try {
+      await fetch(
+        `${BASE_URL}/api/v1/knowledge-base/documents/index-all`,
+        { method: "POST" },
+      );
+    } catch {
       setIndexing(false);
-      setProgress(100);
-    }, 5000);
+    }
   };
 
-  const handleCancel = () => {
+  const handleCancel = async () => {
     setIndexing(false);
     setProgress(0);
+    try {
+      await fetch(
+        `${BASE_URL}/api/v1/knowledge-base/documents/index-cancel`,
+        { method: "POST" },
+      );
+    } catch { /* */ }
   };
 
   const indexedDocs = documents.filter((d) => d.indexed).length;

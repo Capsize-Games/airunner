@@ -20,6 +20,9 @@ from airunner_services.api.routes.embeddings_watch import (
     router as embeddings_watch_router,
 )
 from airunner_services.api.routes.images import router as images_router
+from airunner_services.api.routes.knowledge_base_index import (
+    router as knowledge_base_index_router,
+)
 from airunner_services.api.routes.knowledge_base_watch import (
     router as knowledge_base_watch_router,
 )
@@ -40,6 +43,7 @@ __all__ = [
     "health",
     "images_router",
     "knowledge_base",
+    "knowledge_base_index_router",
     "knowledge_base_watch_router",
     "layers_router",
     "legacy",
