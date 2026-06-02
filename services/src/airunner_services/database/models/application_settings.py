@@ -79,6 +79,7 @@ class ApplicationSettings(BaseModel):
     hf_api_key_read_key = Column(String, default="")
     hf_api_key_write_key = Column(String, default="")
     civit_ai_api_key = Column(String, default="")
+    openai_api_key = Column(String, default="")
     mode = Column(String, default=Mode.IMAGE.value)
     autoload_sd = Column(Boolean, default=True)
     autoload_llm = Column(Boolean, default=False)

@@ -8,21 +8,28 @@ import {
   updateSingleton,
 } from "../../../api/client";
 
-const SERVICE_KEYS = [
-  { key: "huggingface", label: "Allow HuggingFace downloads" },
-  { key: "civitai", label: "Allow CivitAI downloads" },
-  { key: "duckduckgo", label: "Allow DuckDuckGo web search" },
-  { key: "openmeteo", label: "Allow Open-Meteo weather API" },
-  { key: "openrouter", label: "Allow OpenRouter API" },
-  { key: "openai", label: "Allow OpenAI API" },
+interface ServiceRow {
+  key: string;
+  label: string;
+  apiKeyField?: string;
+}
+
+const SERVICE_ROWS: ServiceRow[] = [
+  { key: "huggingface", label: "HuggingFace",
+    apiKeyField: "hf_api_key_read_key" },
+  { key: "civitai", label: "CivitAI",
+    apiKeyField: "civit_ai_api_key" },
+  { key: "openrouter", label: "OpenRouter",
+    apiKeyField: "openrouter_api_key" },
+  { key: "openai", label: "OpenAI",
+    apiKeyField: "openai_api_key" },
+  { key: "duckduckgo", label: "DuckDuckGo" },
+  { key: "openmeteo", label: "Open-Meteo" },
 ];
 
 export default function PrivacySecuritySection() {
   const [services, setServices] = useState<Record<string, boolean>>({});
-  const [hfReadKey, setHfReadKey] = useState("");
-  const [hfWriteKey, setHfWriteKey] = useState("");
-  const [civitAiKey, setCivitAiKey] = useState("");
-  const [openRouterKey, setOpenRouterKey] = useState("");
+  const [apiKeys, setApiKeys] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -35,10 +42,20 @@ export default function PrivacySecuritySection() {
         ]);
         if (cancelled) return;
         setServices(privacy.services ?? {});
-        setHfReadKey(String(appSettings.hf_api_key_read_key ?? ""));
-        setHfWriteKey(String(appSettings.hf_api_key_write_key ?? ""));
-        setCivitAiKey(String(appSettings.civit_ai_api_key ?? ""));
-        setOpenRouterKey(String(appSettings.openrouter_api_key ?? ""));
+        setApiKeys({
+          hf_api_key_read_key: String(
+            appSettings.hf_api_key_read_key ?? "",
+          ),
+          civit_ai_api_key: String(
+            appSettings.civit_ai_api_key ?? "",
+          ),
+          openrouter_api_key: String(
+            appSettings.openrouter_api_key ?? "",
+          ),
+          openai_api_key: String(
+            appSettings.openai_api_key ?? "",
+          ),
+        });
       } catch {
         // silently fail
       } finally {
@@ -55,13 +72,21 @@ export default function PrivacySecuritySection() {
     updatePrivacySettings(next).catch(() => {});
   }
 
-  async function saveApiKeys() {
-    await updateSingleton("ApplicationSettings", {
-      hf_api_key_read_key: hfReadKey || null,
-      hf_api_key_write_key: hfWriteKey || null,
-      civit_ai_api_key: civitAiKey || null,
-      openrouter_api_key: openRouterKey || null,
-    } as Record<string, unknown>).catch(() => {});
+  function handleKeyChange(key: string, value: string) {
+    setApiKeys((prev) => ({ ...prev, [key]: value }));
+  }
+
+  function handleKeyBlur() {
+    const payload: Record<string, unknown> = {};
+    for (const row of SERVICE_ROWS) {
+      if (row.apiKeyField) {
+        payload[row.apiKeyField] = apiKeys[row.apiKeyField] || null;
+      }
+    }
+    updateSingleton(
+      "ApplicationSettings",
+      payload as Record<string, unknown>,
+    ).catch(() => {});
   }
 
   if (loading) {
@@ -76,125 +101,112 @@ export default function PrivacySecuritySection() {
     <div>
       <h6 className="mb-3">Privacy & Security</h6>
 
-      <div className="mb-3">
-        <h6 className="small text-muted mb-2">Model Downloads</h6>
-        {SERVICE_KEYS.filter((s) => s.key === "huggingface" || s.key === "civitai").map(({ key, label }) => (
-          <Form.Group key={key} className="mb-1">
-            <Form.Check
-              type="switch"
-              label={label}
-              checked={!!services[key]}
-              onChange={(e) =>
-                handleToggle(key, e.target.checked)
-              }
-              className="small"
-            />
-          </Form.Group>
-        ))}
-      </div>
-
-      <div className="mb-3">
-        <h6 className="small text-muted mb-2">Search & Research</h6>
-        {SERVICE_KEYS.filter((s) => s.key === "duckduckgo").map(({ key, label }) => (
-          <Form.Group key={key} className="mb-1">
-            <Form.Check
-              type="switch"
-              label={label}
-              checked={!!services[key]}
-              onChange={(e) =>
-                handleToggle(key, e.target.checked)
-              }
-              className="small"
-            />
-          </Form.Group>
-        ))}
-      </div>
-
-      <div className="mb-3">
-        <h6 className="small text-muted mb-2">External LLM</h6>
-        {SERVICE_KEYS.filter((s) => s.key === "openrouter" || s.key === "openai").map(({ key, label }) => (
-          <Form.Group key={key} className="mb-1">
-            <Form.Check
-              type="switch"
-              label={label}
-              checked={!!services[key]}
-              onChange={(e) =>
-                handleToggle(key, e.target.checked)
-              }
-              className="small"
-            />
-          </Form.Group>
-        ))}
-      </div>
-
-      <div className="mb-3">
-        <h6 className="small text-muted mb-2">Weather</h6>
-        {SERVICE_KEYS.filter((s) => s.key === "openmeteo").map(({ key, label }) => (
-          <Form.Group key={key} className="mb-1">
-            <Form.Check
-              type="switch"
-              label={label}
-              checked={!!services[key]}
-              onChange={(e) =>
-                handleToggle(key, e.target.checked)
-              }
-              className="small"
-            />
-          </Form.Group>
-        ))}
-      </div>
-
-      <div className="mb-3">
-        <h6 className="small text-muted mb-2">API Keys</h6>
-        <Form.Group className="mb-2">
-          <Form.Label className="small">HuggingFace Read Key</Form.Label>
-          <Form.Control
-            type="password"
-            size="sm"
-            value={hfReadKey}
-            onChange={(e) => setHfReadKey(e.target.value)}
-            onBlur={saveApiKeys}
-            className="bg-dark text-light border-secondary"
-            placeholder="Enter HF read key"
-          />
-        </Form.Group>
-        <Form.Group className="mb-2">
-          <Form.Label className="small">HuggingFace Write Key</Form.Label>
-          <Form.Control
-            type="password"
-            size="sm"
-            value={hfWriteKey}
-            onChange={(e) => setHfWriteKey(e.target.value)}
-            onBlur={saveApiKeys}
-            className="bg-dark text-light border-secondary"
-            placeholder="Enter HF write key"
-          />
-        </Form.Group>
-        <Form.Group className="mb-2">
-          <Form.Label className="small">CivitAI API Key</Form.Label>
-          <Form.Control
-            type="password"
-            size="sm"
-            value={civitAiKey}
-            onChange={(e) => setCivitAiKey(e.target.value)}
-            onBlur={saveApiKeys}
-            className="bg-dark text-light border-secondary"
-            placeholder="Enter CivitAI key"
-          />
-        </Form.Group>
-        <Form.Group className="mb-2">
-          <Form.Label className="small">OpenRouter API Key</Form.Label>
-          <Form.Control
-            type="password"
-            size="sm"
-            value={openRouterKey}
-            onChange={(e) => setOpenRouterKey(e.target.value)}
-            onBlur={saveApiKeys}
-            className="bg-dark text-light border-secondary"
-            placeholder="Enter OpenRouter key"
-          />
-        </Form.Group>
-      </div>
+      <table
+        style={{ width: "100%", borderCollapse: "collapse" }}
+      >
+        <thead>
+          <tr>
+            <th
+              style={{
+                width: 120,
+                textAlign: "left",
+                padding: "4px 8px 4px 0",
+                fontSize: 11,
+                color: "#666",
+                fontWeight: 600,
+                textTransform: "uppercase",
+              }}
+            >
+              Service
+            </th>
+            <th
+              style={{
+                textAlign: "left",
+                padding: "4px 8px",
+                fontSize: 11,
+                color: "#666",
+                fontWeight: 600,
+                textTransform: "uppercase",
+              }}
+            >
+              API Key
+            </th>
+            <th
+              style={{
+                width: 80,
+                textAlign: "center",
+                padding: "4px 0 4px 8px",
+                fontSize: 11,
+                color: "#666",
+                fontWeight: 600,
+                textTransform: "uppercase",
+              }}
+            >
+              Enable
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {SERVICE_ROWS.map((row) => (
+            <tr key={row.key}>
+              <td
+                style={{
+                  padding: "4px 8px 4px 0",
+                  verticalAlign: "middle",
+                  color: "#a0a0a8",
+                  fontSize: 13,
+                }}
+              >
+                {row.label}
+              </td>
+              <td style={{ padding: "3px 8px" }}>
+                {row.apiKeyField ? (
+                  <Form.Control
+                    type="password"
+                    size="sm"
+                    value={apiKeys[row.apiKeyField] ?? ""}
+                    onChange={(e) =>
+                      handleKeyChange(
+                        row.apiKeyField!,
+                        e.target.value,
+                      )
+                    }
+                    onBlur={handleKeyBlur}
+                    className="bg-dark text-light border-secondary"
+                    placeholder={`${row.label} API key`}
+                  />
+                ) : (
+                  <span
+                    style={{
+                      color: "#555",
+                      fontSize: 12,
+                      fontStyle: "italic",
+                    }}
+                  >
+                    No API key required
+                  </span>
+                )}
+              </td>
+              <td
+                style={{
+                  padding: "3px 0 3px 8px",
+                  textAlign: "center",
+                  verticalAlign: "middle",
+                }}
+              >
+                <Form.Check
+                  type="switch"
+                  checked={!!services[row.key]}
+                  onChange={(e) =>
+                    handleToggle(row.key, e.target.checked)
+                  }
+                  id={`enable-${row.key}`}
+                />
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }
