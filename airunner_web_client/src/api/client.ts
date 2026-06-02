@@ -88,15 +88,33 @@ export async function deleteConversation(id: number) {
   return request<void>("DELETE", `/api/v1/llm/conversations/${id}`);
 }
 
+export async function loadConversation(conversationId: number) {
+  return request<import("../types/api").ConversationSessionResponse>(
+    "GET",
+    `/api/v1/llm/conversations/session?conversation_id=${conversationId}`,
+  );
+}
+
+export async function selectConversation(conversationId: number) {
+  return request<import("../types/api").ConversationSessionResponse>(
+    "POST",
+    "/api/v1/llm/conversations/select",
+    { conversation_id: conversationId },
+  );
+}
+
 // ---------------------------------------------------------------------------
 // LLM Streaming
 // ---------------------------------------------------------------------------
 export async function* streamLLM(
   messages: import("../types/api").Message[],
   signal?: AbortSignal,
+  model?: string,
 ) {
   yield* streamRequest(
-    "POST", "/api/v1/llm/conversations/stream", { messages }, signal,
+    "POST", "/api/v1/llm/conversations/stream",
+    { messages, model, stream: true },
+    signal,
   );
 }
 
@@ -108,11 +126,11 @@ export async function listLLMModels() {
     "GET", "/api/v1/art/bootstrap",
   );
   const models = data.models ?? [];
-  // Return LLM models with repo_id as value and name as label
+  // Return LLM models with name as label, path as value
   return models
     .filter((m: JsonObject) => m.category === "llm")
     .map((m: JsonObject) => ({
-      label: String(m.version ?? m.name ?? m.path),
+      label: String(m.name ?? m.version ?? m.path),
       value: String(m.path ?? ""),
       category: String(m.category ?? ""),
       pipeline_action: String(m.pipeline_action ?? ""),
@@ -157,10 +175,11 @@ export async function synthesizeTTS(
 // Settings (resource store)
 // ---------------------------------------------------------------------------
 export async function getSingleton(resourceName: string) {
-  return request<import("../types/api").ResourceRecord>(
+  const data = await request<{ record?: import("../types/api").ResourceRecord }>(
     "GET",
     `/api/v1/settings/resources/${resourceName}/singleton?create_if_missing=true`,
   );
+  return (data.record ?? {}) as import("../types/api").ResourceRecord;
 }
 
 export async function updateSingleton(
@@ -169,6 +188,33 @@ export async function updateSingleton(
   return request<import("../types/api").ResourceRecord>(
     "PUT", `/api/v1/settings/resources/${resourceName}/singleton`, { values },
   );
+}
+
+// ---------------------------------------------------------------------------
+// Bootstrap (catalog metadata from services)
+// ---------------------------------------------------------------------------
+export async function getBootstrap() {
+  return request<import("../types/api").BootstrapData>(
+    "GET", "/api/v1/art/bootstrap",
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Art options (schedulers, precisions from services enums)
+// NOTE: Requires services endpoint GET /api/v1/art/options to be implemented.
+// Falls back to empty lists when the endpoint is unavailable.
+// ---------------------------------------------------------------------------
+export interface ArtOptionsResponse {
+  schedulers: { label: string; value: string }[];
+  precisions: { label: string; value: string }[];
+}
+
+export async function getArtOptions(): Promise<ArtOptionsResponse> {
+  try {
+    return await request<ArtOptionsResponse>("GET", "/api/v1/art/options");
+  } catch {
+    return { schedulers: [], precisions: [] };
+  }
 }
 
 // ---------------------------------------------------------------------------

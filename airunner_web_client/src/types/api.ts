@@ -13,6 +13,7 @@ export type JsonObject = Record<string, unknown>;
 export interface Message {
   role: "user" | "assistant" | "system";
   content: string;
+  thinking_content?: string;
   created_at?: string;
 }
 
@@ -31,7 +32,7 @@ export interface ConversationListResponse {
 
 export interface ConversationSessionResponse {
   conversation_id?: number;
-  messages: Message[];
+  messages: Record<string, unknown>[];
 }
 
 // ---------------------------------------------------------------------------
@@ -62,6 +63,7 @@ export interface ChatCompletionRequest {
 export interface StreamChunk {
   token?: string;
   done?: boolean;
+  message_type?: string;
   conversation_id?: number;
   error?: string;
 }

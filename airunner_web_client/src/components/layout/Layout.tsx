@@ -1,4 +1,20 @@
-import type { ReactNode } from "react";
+import {
+  type ReactNode,
+  useRef,
+  useCallback,
+  useEffect,
+  useState,
+} from "react";
+import { KnowledgeBasePanel, ChatHistoryPanel, LLMSettingsPanel } from "./LeftPanelContent";
+import ArtModelPanel from "../panels/ArtModelPanel";
+import ArtPromptPanel from "../panels/ArtPromptPanel";
+import CanvasPanel from "../panels/CanvasPanel";
+import LoraPanel from "../panels/LoraPanel";
+import EmbeddingsPanel from "../panels/EmbeddingsPanel";
+import LayersPanel from "../panels/LayersPanel";
+import GridPanel from "../panels/GridPanel";
+import ImageBrowserPanel from "../panels/ImageBrowserPanel";
+import StatsPanel from "../panels/StatsPanel";
 
 type PanelId =
   | "knowledge"
@@ -18,6 +34,9 @@ interface LayoutProps {
   onLeftPanel: (id: PanelId) => void;
   rightPanel: PanelId | null;
   onRightPanel: (id: PanelId) => void;
+  onSelectConversation: (id: number) => void;
+  showChat: boolean;
+  onToggleChat: () => void;
   showCanvas: boolean;
   onToggleCanvas: () => void;
   showArtPrompt: boolean;
@@ -31,12 +50,29 @@ interface LayoutProps {
 
 const icon = (name: string) => `/icons/lucide/dark/${name}.svg`;
 
+/** Persist a number value to localStorage. */
+function saveNum(key: string, val: number) {
+  try { localStorage.setItem(key, String(val)); } catch { /* */ }
+}
+
+/** Load a number value from localStorage. */
+function loadNum(key: string, fallback: number): number {
+  try {
+    const v = localStorage.getItem(key);
+    return v !== null ? Number(v) : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
 export default function Layout({
   children,
   leftPanel,
   onLeftPanel,
   rightPanel,
   onRightPanel,
+  showChat,
+  onToggleChat,
   showCanvas,
   onToggleCanvas,
   showArtPrompt,
@@ -46,16 +82,91 @@ export default function Layout({
   sttOn,
   onToggleStt,
   onOpenSettings,
+  onSelectConversation,
 }: LayoutProps) {
   const active = (id: PanelId, panel: PanelId | null) =>
     panel === id ? "active" : "";
+
+  // Panel width state (persisted in localStorage)
+  const [leftPanelW, setLeftPanelW] = useState(() =>
+    loadNum("airunner_left_panel_w", 260),
+  );
+  const [chatW, setChatW] = useState(() =>
+    loadNum("airunner_chat_w", 400),
+  );
+  const [canvasW, setCanvasW] = useState(() =>
+    loadNum("airunner_canvas_w", 400),
+  );
+  const [artPromptW, setArtPromptW] = useState(() =>
+    loadNum("airunner_art_prompt_w", 340),
+  );
+  const [rightPanelW, setRightPanelW] = useState(() =>
+    loadNum("airunner_right_panel_w", 260),
+  );
+
+  // ── Resize drag logic — delta-based for reliable multi-panel resizing ──
+  const dragRef = useRef<{
+    key: string;
+    setter: (v: number) => void;
+    startX: number;
+    startW: number;
+    minW: number;
+    maxW: number;
+  } | null>(null);
+
+  const onMouseDown = (
+    key: string,
+    setter: (v: number) => void,
+    minW: number,
+    maxW: number,
+    getW: () => number,
+  ) => (e: React.MouseEvent) => {
+    e.preventDefault();
+    dragRef.current = { key, setter, startX: e.clientX, startW: getW(), minW, maxW };
+    document.body.style.cursor = "col-resize";
+    document.body.style.userSelect = "none";
+  };
+
+  useEffect(() => {
+    const onMove = (e: MouseEvent) => {
+      const d = dragRef.current;
+      if (!d) return;
+      const delta = e.clientX - d.startX;
+      const next = Math.min(d.maxW, Math.max(d.minW, d.startW + delta));
+      d.setter(next);
+    };
+    const onUp = () => {
+      if (!dragRef.current) return;
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+      dragRef.current = null;
+    };
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+    return () => { window.removeEventListener("mousemove", onMove); window.removeEventListener("mouseup", onUp); };
+  }, []);
+
+  // Persist widths when they change
+  useEffect(() => saveNum("airunner_left_panel_w", leftPanelW), [leftPanelW]);
+  useEffect(() => saveNum("airunner_chat_w", chatW), [chatW]);
+  useEffect(() => saveNum("airunner_canvas_w", canvasW), [canvasW]);
+  useEffect(() => saveNum("airunner_art_prompt_w", artPromptW), [artPromptW]);
+  useEffect(() => saveNum("airunner_right_panel_w", rightPanelW), [rightPanelW]);
+
+  const makeHandle = (key: string, setter: (v: number) => void, minW: number, maxW: number, getW: () => number) => (
+    <div
+      className={`resize-handle ${dragRef.current?.key === key ? "dragging" : ""}`}
+      onMouseDown={onMouseDown(key, setter, minW, maxW, getW)}
+    />
+  );
 
   return (
     <div className="app-shell">
       {/* ── Top bar ── */}
       <div className="topbar">
         <div className="topbar-logo">
-          🎨 AI <span>Runner</span>
+          <img src={icon("brain")} alt="" />
+          AI <span>Runner</span>
         </div>
       </div>
 
@@ -64,10 +175,11 @@ export default function Layout({
         {/* ── Left icon bar ── */}
         <div className="icon-bar left">
           <button
-            title="Chat"
-            onClick={() => onLeftPanel("chat" as PanelId)}
+            className={showChat ? "active" : ""}
+            onClick={onToggleChat}
+            title="Toggle Chat"
           >
-            <img src={icon("message-square-heart")} alt="" />
+            <img src={icon("message-square-text")} alt="" />
           </button>
           <hr />
           <button
@@ -75,7 +187,7 @@ export default function Layout({
             onClick={() => onLeftPanel("knowledge")}
             title="Knowledge Base"
           >
-            <img src={icon("book-open")} alt="" />
+            <img src={icon("book")} alt="" />
           </button>
           <button
             className={active("history", leftPanel)}
@@ -110,102 +222,55 @@ export default function Layout({
 
         {/* ── Left collapsible panel ── */}
         <div
-          className={
-            leftPanel
-              ? "collapsible-panel left"
-              : "panel-hidden"
-          }
+          className={leftPanel ? "collapsible-panel left" : "panel-hidden"}
+          style={{ width: leftPanelW }}
         >
-          {leftPanel === "knowledge" && (
-            <div className="p-2">
-              <h6 className="text-muted">Knowledge Base</h6>
-              <p className="muted-text">Knowledge content will appear here.</p>
-            </div>
-          )}
-          {leftPanel === "history" && (
-            <div className="p-2">
-              <h6 className="text-muted">Chat History</h6>
-              <p className="muted-text">History content will appear here.</p>
-            </div>
-          )}
-          {leftPanel === "llm_settings" && (
-            <div className="p-2">
-              <h6 className="text-muted">LLM Settings</h6>
-              <p className="muted-text">Settings content will appear here.</p>
-            </div>
-          )}
+          {leftPanel === "knowledge" && <KnowledgeBasePanel />}
+          {leftPanel === "history" && <ChatHistoryPanel onSelectConversation={onSelectConversation} />}
+          {leftPanel === "llm_settings" && <LLMSettingsPanel />}
         </div>
+        {leftPanel && makeHandle("left", setLeftPanelW, 180, 500, () => leftPanelW)}
 
-        {/* ── Center ── */}
-        <div className="center-content">
-          {/* Chat panel (always visible) */}
-          <div className="chat-panel">{children}</div>
-
-          {/* Canvas panel (toggled) */}
-          {showCanvas && (
-            <div className="canvas-panel">
-              <span className="text-muted">Canvas</span>
+        {/* ── Chat panel ── */}
+        {showChat && (
+          <>
+            <div className="chat-panel" style={{ width: chatW }}>
+              {children}
             </div>
-          )}
+            {makeHandle("chat", setChatW, 260, 800, () => chatW)}
+          </>
+        )}
 
-          {/* Art prompt panel (toggled) */}
-          {showArtPrompt && (
-            <div className="art-prompt-panel p-2">
-              <h6>Art Prompt</h6>
+        {/* ── Canvas panel ── */}
+        {showCanvas && (
+          <>
+            <div className="canvas-panel" style={{ flex: showArtPrompt ? "" : 1 }}>
+              <CanvasPanel />
             </div>
-          )}
-        </div>
+            {showArtPrompt && makeHandle("canvas", setCanvasW, 260, 1200, () => canvasW)}
+          </>
+        )}
+
+        {/* ── Art prompt panel ── */}
+        {showArtPrompt && (
+          <div className="art-prompt-panel" style={{ width: artPromptW }}>
+            <ArtPromptPanel />
+          </div>
+        )}
 
         {/* ── Right collapsible panel ── */}
+        {rightPanel && makeHandle("right", setRightPanelW, 180, 500, () => rightPanelW)}
         <div
-          className={
-            rightPanel
-              ? "collapsible-panel right"
-              : "panel-hidden"
-          }
+          className={rightPanel ? "collapsible-panel right" : "panel-hidden"}
+          style={{ width: rightPanelW }}
         >
-          {rightPanel === "art_model" && (
-            <div className="p-2">
-              <h6 className="text-muted">Art Model</h6>
-              <p className="muted-text">Model settings will appear here.</p>
-            </div>
-          )}
-          {rightPanel === "lora" && (
-            <div className="p-2">
-              <h6 className="text-muted">LoRA</h6>
-              <p className="muted-text">LoRA settings will appear here.</p>
-            </div>
-          )}
-          {rightPanel === "embeddings" && (
-            <div className="p-2">
-              <h6 className="text-muted">Embeddings</h6>
-              <p className="muted-text">Embeddings will appear here.</p>
-            </div>
-          )}
-          {rightPanel === "layers" && (
-            <div className="p-2">
-              <h6 className="text-muted">Layers</h6>
-              <p className="muted-text">Layer controls will appear here.</p>
-            </div>
-          )}
-          {rightPanel === "grid" && (
-            <div className="p-2">
-              <h6 className="text-muted">Grid Settings</h6>
-              <p className="muted-text">Grid settings will appear here.</p>
-            </div>
-          )}
-          {rightPanel === "image_browser" && (
-            <div className="p-2">
-              <h6 className="text-muted">Image Browser</h6>
-              <p className="muted-text">Image browser will appear here.</p>
-            </div>
-          )}
-          {rightPanel === "stats" && (
-            <div className="p-2">
-              <h6 className="text-muted">Model Resources</h6>
-              <p className="muted-text">Stats will appear here.</p>
-            </div>
-          )}
+          {rightPanel === "art_model" && <ArtModelPanel />}
+          {rightPanel === "lora" && <LoraPanel />}
+          {rightPanel === "embeddings" && <EmbeddingsPanel />}
+          {rightPanel === "layers" && <LayersPanel />}
+          {rightPanel === "grid" && <GridPanel />}
+          {rightPanel === "image_browser" && <ImageBrowserPanel />}
+          {rightPanel === "stats" && <StatsPanel />}
         </div>
 
         {/* ── Right icon bar ── */}
@@ -217,6 +282,7 @@ export default function Layout({
           >
             <img src={icon("image")} alt="Canvas" />
           </button>
+          <hr />
           <button
             className={showArtPrompt ? "active" : ""}
             onClick={onToggleArtPrompt}
@@ -230,21 +296,21 @@ export default function Layout({
             onClick={() => onRightPanel("art_model")}
             title="Art Model"
           >
-            <img src={icon("box")} alt="Model" />
+            <img src={icon("sparkles")} alt="Model" />
           </button>
           <button
             className={active("lora", rightPanel)}
             onClick={() => onRightPanel("lora")}
             title="LoRA"
           >
-            <img src={icon("layers-2")} alt="LoRA" />
+            <img src={icon("puzzle")} alt="LoRA" />
           </button>
           <button
             className={active("embeddings", rightPanel)}
             onClick={() => onRightPanel("embeddings")}
             title="Embeddings"
           >
-            <img src={icon("tag")} alt="Embeddings" />
+            <img src={icon("scan-text")} alt="Embeddings" />
           </button>
           <button
             className={active("layers", rightPanel)}
@@ -258,21 +324,21 @@ export default function Layout({
             onClick={() => onRightPanel("grid")}
             title="Grid"
           >
-            <img src={icon("grid-3x3")} alt="Grid" />
+            <img src={icon("grid-2x2-check")} alt="Grid" />
           </button>
           <button
             className={active("image_browser", rightPanel)}
             onClick={() => onRightPanel("image_browser")}
             title="Image Browser"
           >
-            <img src={icon("folder-open")} alt="Browser" />
+            <img src={icon("images")} alt="Browser" />
           </button>
           <button
             className={active("stats", rightPanel)}
             onClick={() => onRightPanel("stats")}
             title="Stats"
           >
-            <img src={icon("bar-chart-3")} alt="Stats" />
+            <img src={icon("activity")} alt="Stats" />
           </button>
           <div className="flex-spacer" />
           <button onClick={onOpenSettings} title="Settings">
@@ -283,7 +349,7 @@ export default function Layout({
 
       {/* ── Footer ── */}
       <div className="footer-bar">
-        © {new Date().getFullYear()} AI Runner — All rights reserved.
+        © {new Date().getFullYear()} Capsize LLC — All rights reserved.
       </div>
     </div>
   );
