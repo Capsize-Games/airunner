@@ -406,11 +406,16 @@ def rename_image(
         raise HTTPException(status_code=404, detail="Image not found")
 
     new_name = body.new_filename
-    # Always enforce the original extension — strip any user-provided
-    # extension and append the original (.png, .jpg, etc.)
     orig_ext = source.suffix
-    stem = Path(new_name).stem if Path(new_name).suffix else new_name
-    new_name = stem + orig_ext
+    user_ext = Path(new_name).suffix
+    if user_ext and user_ext.lower() != orig_ext.lower():
+        # User provided a different extension — keep user's name
+        # and append the real extension
+        new_name = new_name + orig_ext
+    elif not user_ext:
+        # No extension provided — append the original
+        new_name = new_name + orig_ext
+    # else: user provided correct extension — keep as-is
 
     dest = _date_dir(date) / new_name
 
