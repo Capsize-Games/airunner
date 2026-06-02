@@ -136,31 +136,42 @@ async def canvas_image():
 
 
 @router.put("/image")
-async def update_canvas_image_from_url(
-    image_url: str,
-    request: Request,
-):
-    """Fetch an image from a URL and store it in DrawingPadSettings.
+async def update_canvas_image_from_url(image_url: str):
+    """Fetch an image by API path and store it in DrawingPadSettings.
 
-    Accepts both relative paths and absolute URLs. Relative paths
-    are resolved against the request's base URL.
+    Expects a URL like ``/api/v1/art/images/20260601/full/example.png``.
+    The server reads the file directly from the local filesystem instead
+    of making an HTTP loopback request.
     """
-    import urllib.request
-    import urllib.error
+    from pathlib import Path
 
-    # Resolve relative URLs
-    if image_url.startswith("/"):
-        base = str(request.base_url).rstrip("/")
-        image_url = base + image_url
+    from airunner_services.settings import AIRUNNER_BASE_PATH
 
+    # Parse the URL to extract date + filename
+    # /api/v1/art/images/{date}/full/{filename}
+    parts = [p for p in image_url.split("/") if p]
     try:
-        with urllib.request.urlopen(image_url, timeout=30) as resp:
-            raw_bytes = resp.read()
-    except urllib.error.URLError as exc:
+        # Find the "images" segment and extract date + filename
+        idx = parts.index("images")
+        date_str = parts[idx + 1]
+        filename = parts[-1]
+    except (ValueError, IndexError):
         return Response(
             status_code=400,
-            content=f"Failed to fetch image: {exc}",
+            content="Invalid image URL format",
         )
+
+    source = (
+        Path(AIRUNNER_BASE_PATH)
+        / "art" / "other" / "images" / date_str / filename
+    )
+    if not source.is_file():
+        return Response(
+            status_code=404,
+            content="Image file not found on disk",
+        )
+
+    raw_bytes = source.read_bytes()
 
     # Convert to PNG if needed
     if raw_bytes.startswith(PNG_MAGIC):
