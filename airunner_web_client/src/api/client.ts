@@ -461,6 +461,7 @@ export interface ImageDateInfo {
 
 export interface ImageInfo {
   id: string;
+  image_url: string;
   thumbnail_url: string;
 }
 

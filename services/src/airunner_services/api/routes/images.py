@@ -229,6 +229,9 @@ def list_images(
         "images": [
             {
                 "id": p.name,
+                "image_url": (
+                    f"/api/v1/art/images/{date}/full/{p.name}"
+                ),
                 "thumbnail_url": (
                     f"/api/v1/art/images/{date}/thumb/{p.name}"
                 ),
@@ -236,6 +239,26 @@ def list_images(
             for p in page
         ],
     }
+
+
+# ── Full image serving ────────────────────────────────────────────────────
+
+
+@router.get("/images/{date}/full/{filename}")
+def serve_full_image(date: str, filename: str):
+    """Serve the original full-size image file."""
+    source = _date_dir(date) / filename
+    if not source.is_file():
+        raise HTTPException(status_code=404, detail="Image not found")
+    media_map = {
+        ".png": "image/png",
+        ".jpg": "image/jpeg",
+        ".jpeg": "image/jpeg",
+        ".gif": "image/gif",
+        ".webp": "image/webp",
+    }
+    media_type = media_map.get(source.suffix.lower(), "image/png")
+    return FileResponse(str(source), media_type=media_type)
 
 
 # ── Thumbnail serving ─────────────────────────────────────────────────────

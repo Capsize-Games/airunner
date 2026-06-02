@@ -1,14 +1,16 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { BASE_URL } from "../../types/api";
 
-const IMAGE_URL = "/api/v1/canvas/image";
+const CANVAS_IMAGE_URL = "/api/v1/canvas/image";
 
 export default function CanvasPanel() {
   const [loading, setLoading] = useState(true);
   const [hasImage, setHasImage] = useState(false);
+  const [droppedUrl, setDroppedUrl] = useState<string | null>(null);
 
   useEffect(() => {
     setLoading(true);
-    fetch(IMAGE_URL)
+    fetch(CANVAS_IMAGE_URL)
       .then((r) => {
         setHasImage(r.ok);
         setLoading(false);
@@ -17,6 +19,19 @@ export default function CanvasPanel() {
         setHasImage(false);
         setLoading(false);
       });
+  }, []);
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "copy";
+  }, []);
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    const url = e.dataTransfer.getData("text/image-url");
+    if (url) {
+      setDroppedUrl(url);
+    }
   }, []);
 
   if (loading) {
@@ -49,13 +64,17 @@ export default function CanvasPanel() {
     );
   }
 
+  const displayUrl = droppedUrl || CANVAS_IMAGE_URL;
+
   return (
     <div
       className="canvas-panel d-flex align-items-center justify-content-center h-100 overflow-hidden"
-      style={{ background: "#111" }}
+      style={{ background: "var(--theme-bg)" }}
+      onDragOver={handleDragOver}
+      onDrop={handleDrop}
     >
       <img
-        src={IMAGE_URL}
+        src={displayUrl}
         alt="Canvas"
         style={{
           maxWidth: "100%",

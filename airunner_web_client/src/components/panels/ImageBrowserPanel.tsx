@@ -178,10 +178,18 @@ export default function ImageBrowserPanel() {
                 style={{
                   width: 96,
                   height: 96,
-                  cursor: "pointer",
+                  cursor: "grab",
                   flexShrink: 0,
                 }}
                 title={img.id}
+                draggable
+                onDragStart={(e) => {
+                  e.dataTransfer.setData(
+                    "text/image-url",
+                    `${BASE_URL}${img.image_url}`,
+                  );
+                  e.dataTransfer.effectAllowed = "copy";
+                }}
               >
                 <img
                   src={`${BASE_URL}${img.thumbnail_url}`}
