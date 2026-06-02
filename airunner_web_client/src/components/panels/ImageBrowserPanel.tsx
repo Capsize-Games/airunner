@@ -105,18 +105,20 @@ function ImagePreviewModal({
 
   const img = images[currentIndex];
 
-  // Determine if this is a Z-image based on version metadata
+  // Determine if version is SDXL-based (supports secondary/negative prompts)
+  // or Z-Image (only single prompt - hide secondary/negative fields)
   const version = img.metadata?.version as string | undefined;
-  const isZImage =
-    version !== undefined &&
-    typeof version === "string" &&
-    version.toLowerCase().includes("z-image");
+  const versionStr = typeof version === "string" ? version.toLowerCase() : "";
+  const isSdxlVersion =
+    versionStr.includes("sdxl") ||
+    versionStr.includes("hyper") ||
+    versionStr.includes("lightning");
 
-  // Filter out Z-image-specific fields when version indicates z-image
+  // Only show secondary/negative prompts for SDXL-based versions
   const metaEntries = img.metadata
     ? Object.entries(img.metadata).filter(([key]) => {
         if (
-          isZImage &&
+          !isSdxlVersion &&
           (key === "secondary_prompt" ||
             key === "negative_prompt" ||
             key === "secondary_negative_prompt")
