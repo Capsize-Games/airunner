@@ -6,6 +6,13 @@ import {
 import type { ArtOptionsResponse } from "../../api/client";
 import Form from "react-bootstrap/Form";
 import ProgressBar from "react-bootstrap/ProgressBar";
+import SliderWithSpinbox from "./SliderWithSpinbox";
+
+const icon = (name: string) => `/icons/lucide/dark/${name}.svg`;
+
+function randomSeed(): number {
+  return Math.floor(Math.random() * 2147483647) + 1;
+}
 
 export default function ArtModelPanel() {
   const [version, setVersion] = useState("");
@@ -24,6 +31,7 @@ export default function ArtModelPanel() {
   const [width, setWidth] = useState(1024);
   const [height, setHeight] = useState(1024);
   const [seed, setSeed] = useState(0);
+  const [seedRandomized, setSeedRandomized] = useState(false);
   const [vramEstimate, setVramEstimate] = useState<number | null>(null);
 
   // Listen for changes from ArtPromptPanel's selector
@@ -80,7 +88,9 @@ export default function ArtModelPanel() {
         setCfgScale(Number(r.cfg_scale ?? 7.5));
         setWidth(Number(r.width ?? 1024));
         setHeight(Number(r.height ?? 1024));
-        setSeed(Number(r.seed ?? 0));
+        const savedSeed = Number(r.seed ?? 0);
+        setSeed(savedSeed);
+        setSeedRandomized(savedSeed === -1);
       } catch { /* */ }
 
       try {
@@ -119,7 +129,22 @@ export default function ArtModelPanel() {
     setModelPath(m);
     persist({ model_path: m });
     try { localStorage.setItem("airunner_art_model", m); } catch {}
-    window.dispatchEvent(new CustomEvent("art-model-changed", { detail: m }));
+    window.dispatchEvent(
+      new CustomEvent("art-model-changed", { detail: m }),
+    );
+  };
+
+  const toggleSeedRandom = () => {
+    if (seedRandomized) {
+      setSeedRandomized(false);
+      setSeed(0);
+      persist({ seed: 0 });
+    } else {
+      const s = randomSeed();
+      setSeedRandomized(true);
+      setSeed(s);
+      persist({ seed: -1 });
+    }
   };
 
   return (
@@ -169,9 +194,7 @@ export default function ArtModelPanel() {
           onChange={(e) => handleModelChange(e.target.value)}
         >
           <option value="">
-            {!version
-              ? "Version..."
-              : "Model..."}
+            {!version ? "Version..." : "Model..."}
           </option>
           {availableModels.map((m) => (
             <option key={m.value} value={m.value}>
@@ -243,137 +266,109 @@ export default function ArtModelPanel() {
 
       <hr className="border-secondary" />
 
-      {/* Sampler controls */}
-      <div className="row g-2 mb-2">
-        <div className="col-6">
-          <Form.Label className="small" style={{ color: "#a0a0a8" }}>
-            Samples
-          </Form.Label>
-          <Form.Control
-            type="number"
-            size="sm"
-            min={1}
-            max={1000}
-            value={nSamples}
-            disabled={loading}
-            onChange={(e) => {
-              const v = Number(e.target.value);
-              setNSamples(v);
-              persist({ n_samples: v });
-            }}
-          />
-        </div>
-        <div className="col-6">
-          <Form.Label className="small" style={{ color: "#a0a0a8" }}>
-            Batch
-          </Form.Label>
-          <Form.Control
-            type="number"
-            size="sm"
-            min={1}
-            max={6}
-            value={imagesPerBatch}
-            disabled={loading}
-            onChange={(e) => {
-              const v = Number(e.target.value);
-              setImagesPerBatch(v);
-              persist({ images_per_batch: v });
-            }}
-          />
-        </div>
-      </div>
-      <div className="row g-2 mb-2">
-        <div className="col-6">
-          <Form.Label className="small" style={{ color: "#a0a0a8" }}>
-            Steps
-          </Form.Label>
-          <Form.Control
-            type="number"
-            size="sm"
-            min={1}
-            max={150}
-            value={steps}
-            disabled={loading}
-            onChange={(e) => {
-              const v = Number(e.target.value);
-              setSteps(v);
-              persist({ steps: v });
-            }}
-          />
-        </div>
-        <div className="col-6">
-          <Form.Label className="small" style={{ color: "#a0a0a8" }}>
-            CFG ({cfgScale.toFixed(1)})
-          </Form.Label>
-          <Form.Range
-            min={1}
-            max={30}
-            step={0.5}
-            value={cfgScale}
-            disabled={loading}
-            onChange={(e) => {
-              const v = Number(e.target.value);
-              setCfgScale(v);
-              persist({ cfg_scale: v });
-            }}
-          />
-        </div>
-      </div>
-      <div className="row g-2 mb-2">
-        <div className="col-6">
-          <Form.Label className="small" style={{ color: "#a0a0a8" }}>
-            Width
-          </Form.Label>
-          <Form.Control
-            type="number"
-            size="sm"
-            min={64}
-            max={4096}
-            step={64}
-            value={width}
-            disabled={loading}
-            onChange={(e) => {
-              const v = Number(e.target.value);
-              setWidth(v);
-              persist({ width: v });
-            }}
-          />
-        </div>
-        <div className="col-6">
-          <Form.Label className="small" style={{ color: "#a0a0a8" }}>
-            Height
-          </Form.Label>
-          <Form.Control
-            type="number"
-            size="sm"
-            min={64}
-            max={4096}
-            step={64}
-            value={height}
-            disabled={loading}
-            onChange={(e) => {
-              const v = Number(e.target.value);
-              setHeight(v);
-              persist({ height: v });
-            }}
-          />
-        </div>
-      </div>
+      {/* Sampler controls — stacked vertically */}
+      <SliderWithSpinbox
+        label="Samples"
+        value={nSamples}
+        min={1}
+        max={1000}
+        step={1}
+        onChange={(v) => { setNSamples(v); persist({ n_samples: v }); }}
+      />
+      <SliderWithSpinbox
+        label="Batch"
+        value={imagesPerBatch}
+        min={1}
+        max={6}
+        step={1}
+        onChange={(v) => { setImagesPerBatch(v); persist({ images_per_batch: v }); }}
+      />
+      <SliderWithSpinbox
+        label="Steps"
+        value={steps}
+        min={1}
+        max={150}
+        step={1}
+        onChange={(v) => { setSteps(v); persist({ steps: v }); }}
+      />
+      <SliderWithSpinbox
+        label="CFG"
+        value={cfgScale}
+        min={1}
+        max={30}
+        step={0.5}
+        displayAsFloat
+        onChange={(v) => { setCfgScale(v); persist({ cfg_scale: v }); }}
+      />
+      <SliderWithSpinbox
+        label="Width"
+        value={width}
+        min={64}
+        max={4096}
+        step={64}
+        onChange={(v) => { setWidth(v); persist({ width: v }); }}
+      />
+      <SliderWithSpinbox
+        label="Height"
+        value={height}
+        min={64}
+        max={4096}
+        step={64}
+        onChange={(v) => { setHeight(v); persist({ height: v }); }}
+      />
+
+      {/* Seed */}
       <Form.Group className="mb-2">
         <Form.Label className="small" style={{ color: "#a0a0a8" }}>
-          Seed (0=random)
+          Seed
         </Form.Label>
-        <Form.Control
-          type="number"
-          size="sm"
-          value={seed}
-          disabled={loading}
-          onChange={(e) => {
-            const v = Number(e.target.value);
-            setSeed(v);
-            persist({ seed: v });
-          }}
-        />
+        <div className="d-flex gap-2 align-items-center">
+          <Form.Control
+            type="number"
+            size="sm"
+            value={seed}
+            disabled={seedRandomized || loading}
+            style={{ flex: 1 }}
+            onChange={(e) => {
+              const v = Number(e.target.value);
+              setSeed(v);
+              setSeedRandomized(false);
+              persist({ seed: v });
+            }}
+          />
+          <button
+            type="button"
+            className="btn btn-sm p-1"
+            onClick={toggleSeedRandom}
+            title={
+              seedRandomized
+                ? "Use a fixed seed"
+                : "Randomize seed on each generation"
+            }
+            style={{
+              background: seedRandomized
+                ? "var(--bs-primary)"
+                : "transparent",
+              border: "1px solid #444",
+              borderRadius: 4,
+              minWidth: 30,
+              height: 30,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <img
+              src={icon("dices")}
+              alt="Randomize"
+              style={{
+                width: 16,
+                height: 16,
+                filter: seedRandomized ? "invert(1)" : "invert(0.6)",
+              }}
+            />
+          </button>
+        </div>
       </Form.Group>
     </div>
   );
