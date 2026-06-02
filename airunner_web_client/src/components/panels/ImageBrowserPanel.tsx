@@ -158,36 +158,13 @@ function ImagePreviewModal({
       }}
       onClick={onClose}
     >
-      {/* Close button — top-right outside border */}
-      <button
-        onClick={onClose}
-        style={{
-          position: "fixed",
-          top: 24,
-          right: 24,
-          background: "rgba(0,0,0,0.5)",
-          border: "1px solid rgba(255,255,255,0.3)",
-          color: "#fff",
-          fontSize: 20,
-          cursor: "pointer",
-          lineHeight: 1,
-          width: 32,
-          height: 32,
-          borderRadius: 4,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          zIndex: 1110,
-        }}
-        title="Close (Esc)"
-      >
-        ✕
-      </button>
       <div
         style={{
+          position: "relative",
           display: "flex",
           gap: 16,
           padding: 12,
+          paddingTop: 44,
           maxHeight: "85vh",
           maxWidth: "90vw",
           border: "1px solid rgba(255,255,255,0.2)",
@@ -196,6 +173,30 @@ function ImagePreviewModal({
         }}
         onClick={(e) => e.stopPropagation()}
       >
+        {/* Close button — inside the border, top-right with padding */}
+        <button
+          onClick={onClose}
+          style={{
+            position: "absolute",
+            top: 8,
+            right: 8,
+            background: "rgba(0,0,0,0.5)",
+            border: "1px solid rgba(255,255,255,0.3)",
+            color: "#fff",
+            fontSize: 18,
+            cursor: "pointer",
+            lineHeight: 1,
+            width: 30,
+            height: 30,
+            borderRadius: 4,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+          title="Close (Esc)"
+        >
+          ✕
+        </button>
         {/* Left: full-size image */}
         <div
           style={{
