@@ -323,13 +323,28 @@ export async function listEmbeddings() {
 // LoRA
 // ---------------------------------------------------------------------------
 export interface LoraInfo {
+  id: number;
   name: string;
   path: string;
+  enabled: boolean;
+  trigger_words: string[];
 }
 
 export async function listLoras() {
   return request<{ loras: LoraInfo[] }>(
     "GET", "/api/v1/art/loras",
+  );
+}
+
+export async function updateLora(
+  loraId: number,
+  props: { enabled?: boolean; trigger_words?: string },
+) {
+  const params = new URLSearchParams();
+  if (props.enabled !== undefined) params.set("enabled", String(props.enabled));
+  if (props.trigger_words !== undefined) params.set("trigger_words", props.trigger_words);
+  return request<LoraInfo>(
+    "PATCH", `/api/v1/art/loras/${loraId}?${params.toString()}`,
   );
 }
 
