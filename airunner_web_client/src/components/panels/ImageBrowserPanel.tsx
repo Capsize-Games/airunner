@@ -67,6 +67,307 @@ function truncate(str: string, maxLen: number): string {
   return str.slice(0, maxLen) + "...";
 }
 
+// ── Image Preview Modal ─────────────────────────────────────────────────
+
+function ImagePreviewModal({
+  images,
+  currentIndex,
+  onClose,
+  onPrev,
+  onNext,
+}: {
+  images: ImageInfo[];
+  currentIndex: number;
+  onClose: () => void;
+  onPrev: () => void;
+  onNext: () => void;
+}) {
+  const handleKeyDown = useCallback(
+    (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        onClose();
+      } else if (e.key === "ArrowLeft") {
+        onPrev();
+      } else if (e.key === "ArrowRight") {
+        onNext();
+      }
+    },
+    [onClose, onPrev, onNext],
+  );
+
+  useEffect(() => {
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [handleKeyDown]);
+
+  if (currentIndex < 0 || currentIndex >= images.length) return null;
+
+  const img = images[currentIndex];
+
+  // Determine if this is a Z-image based on version metadata
+  const version = img.metadata?.version as string | undefined;
+  const isZImage =
+    version !== undefined &&
+    typeof version === "string" &&
+    version.toLowerCase().includes("z-image");
+
+  // Filter out Z-image-specific fields when version indicates z-image
+  const metaEntries = img.metadata
+    ? Object.entries(img.metadata).filter(([key]) => {
+        if (
+          isZImage &&
+          (key === "secondary_prompt" ||
+            key === "negative_prompt" ||
+            key === "secondary_negative_prompt")
+        ) {
+          return false;
+        }
+        return true;
+      })
+    : [];
+
+  const separatorColor = "rgba(255,255,255,0.15)";
+  const rowBorderColor = "rgba(255,255,255,0.08)";
+
+  return (
+    <div
+      style={{
+        position: "fixed",
+        inset: 0,
+        background: "rgba(0,0,0,0.8)",
+        zIndex: 1100,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+      }}
+      onClick={onClose}
+    >
+      <div
+        style={{
+          display: "flex",
+          gap: 16,
+          padding: 24,
+          maxHeight: "90vh",
+          maxWidth: "95vw",
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Left: full-size image */}
+        <div
+          style={{
+            flex: 1,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <img
+            src={`${BASE_URL}${img.image_url}`}
+            alt={img.id}
+            style={{
+              maxWidth: "100%",
+              maxHeight: "80vh",
+              objectFit: "contain",
+            }}
+          />
+        </div>
+
+        {/* Right: metadata + navigation */}
+        <div
+          style={{
+            width: 360,
+            overflowY: "auto",
+            maxHeight: "80vh",
+            display: "flex",
+            flexDirection: "column",
+            color: "#ccc",
+          }}
+        >
+          {/* Close button */}
+          <div style={{ textAlign: "right", marginBottom: 8 }}>
+            <button
+              onClick={onClose}
+              style={{
+                background: "none",
+                border: "none",
+                color: "#fff",
+                fontSize: 24,
+                cursor: "pointer",
+                lineHeight: 1,
+              }}
+            >
+              ✕
+            </button>
+          </div>
+
+          {/* Metadata table */}
+          {metaEntries.length > 0 ? (
+            <table
+              style={{
+                width: "100%",
+                borderCollapse: "collapse",
+                fontSize: 12,
+              }}
+            >
+              <thead>
+                <tr style={{ background: "rgba(255,255,255,0.06)" }}>
+                  <th
+                    style={{
+                      padding: "3px 8px 3px 0",
+                      textAlign: "left",
+                      fontSize: 10,
+                      textTransform: "uppercase",
+                      letterSpacing: 0.5,
+                      color: "#aaa",
+                      fontWeight: 600,
+                      borderBottom: `1px solid ${separatorColor}`,
+                    }}
+                  >
+                    Metadata
+                  </th>
+                  <th
+                    style={{
+                      padding: "3px 0",
+                      textAlign: "left",
+                      fontSize: 10,
+                      textTransform: "uppercase",
+                      letterSpacing: 0.5,
+                      color: "#aaa",
+                      fontWeight: 600,
+                      borderBottom: `1px solid ${separatorColor}`,
+                    }}
+                  />
+                </tr>
+              </thead>
+              <tbody>
+                {metaEntries.map(([key, value], idx) => {
+                  const valStr =
+                    typeof value === "object"
+                      ? JSON.stringify(value)
+                      : String(value);
+                  return (
+                    <tr
+                      key={key}
+                      style={{
+                        background:
+                          idx % 2 === 0
+                            ? "rgba(255,255,255,0.03)"
+                            : "transparent",
+                      }}
+                    >
+                      <td
+                        style={{
+                          padding: "2px 8px 2px 0",
+                          verticalAlign: "top",
+                          whiteSpace: "nowrap",
+                          color: "#aaa",
+                          fontWeight: 600,
+                          width: 1,
+                          borderBottom: `1px solid ${rowBorderColor}`,
+                        }}
+                      >
+                        {key}
+                      </td>
+                      <td
+                        style={{
+                          padding: "2px 0",
+                          verticalAlign: "top",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          maxWidth: 0,
+                          borderBottom: `1px solid ${rowBorderColor}`,
+                        }}
+                        title={valStr}
+                      >
+                        {valStr.length > 120
+                          ? valStr.slice(0, 120) + "..."
+                          : valStr}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          ) : (
+            <p
+              style={{
+                color: "#888",
+                fontSize: 12,
+                textAlign: "center",
+              }}
+            >
+              No metadata
+            </p>
+          )}
+
+          {/* Previous / Next navigation */}
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              marginTop: 16,
+              gap: 8,
+              alignItems: "center",
+            }}
+          >
+            <button
+              onClick={onPrev}
+              disabled={currentIndex <= 0}
+              style={{
+                flex: 1,
+                padding: "6px 12px",
+                background:
+                  currentIndex <= 0
+                    ? "rgba(255,255,255,0.1)"
+                    : "rgba(255,255,255,0.2)",
+                border: "1px solid rgba(255,255,255,0.2)",
+                borderRadius: 4,
+                color: currentIndex <= 0 ? "#666" : "#fff",
+                cursor: currentIndex <= 0 ? "default" : "pointer",
+                fontSize: 13,
+              }}
+            >
+              ◀ Previous
+            </button>
+            <span
+              style={{
+                color: "#aaa",
+                fontSize: 12,
+                whiteSpace: "nowrap",
+              }}
+            >
+              {currentIndex + 1} / {images.length}
+            </span>
+            <button
+              onClick={onNext}
+              disabled={currentIndex >= images.length - 1}
+              style={{
+                flex: 1,
+                padding: "6px 12px",
+                background:
+                  currentIndex >= images.length - 1
+                    ? "rgba(255,255,255,0.1)"
+                    : "rgba(255,255,255,0.2)",
+                border: "1px solid rgba(255,255,255,0.2)",
+                borderRadius: 4,
+                color:
+                  currentIndex >= images.length - 1 ? "#666" : "#fff",
+                cursor:
+                  currentIndex >= images.length - 1
+                    ? "default"
+                    : "pointer",
+                fontSize: 13,
+              }}
+            >
+              Next ▶
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Component ──────────────────────────────────────────────────────────────
 
 export default function ImageBrowserPanel() {
@@ -87,6 +388,8 @@ export default function ImageBrowserPanel() {
   const [hasMore, setHasMore] = useState(true);
   const [expandedMeta, setExpandedMeta] = useState<Record<string, boolean>>({});
   const [showLocal, setShowLocal] = useState(false);
+  const [previewIndex, setPreviewIndex] = useState<number | null>(null);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
 
   const sentinelRef = useRef<HTMLDivElement | null>(null);
 
@@ -140,6 +443,8 @@ export default function ImageBrowserPanel() {
         setTotal(data.total);
         setHasMore(currentOffset + PAGE_SIZE < data.total);
         setOffset(currentOffset + PAGE_SIZE);
+        // Close any open preview when images reset
+        setPreviewIndex(null);
       } catch {
         // unavailable
       } finally {
@@ -239,23 +544,17 @@ export default function ImageBrowserPanel() {
     setExpandedMeta((prev) => ({ ...prev, [id]: !prev[id] }));
   };
 
-  // ── Open file path in system file manager ───────────────────────────
+  // ── Copy file path to clipboard (was open-file) ─────────────────────
 
-  const handleOpenFile = async (filePath: string) => {
+  const handleOpenFile = async (imgId: string, filePath: string) => {
     try {
-      // Attempt to open via the backend's open-file endpoint
-      await fetch(`${BASE_URL}/api/v1/system/open-file`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ path: filePath }),
-      });
+      await navigator.clipboard.writeText(filePath);
+      setCopiedId(imgId);
+      setTimeout(() => {
+        setCopiedId((prev) => (prev === imgId ? null : prev));
+      }, 2000);
     } catch {
-      // fallback: copy path to clipboard
-      try {
-        await navigator.clipboard.writeText(filePath);
-      } catch {
-        // ignore
-      }
+      // clipboard unavailable
     }
   };
 
@@ -265,6 +564,22 @@ export default function ImageBrowserPanel() {
     deleteLocalImage(id);
     setLocalImages(getLocalImages());
   };
+
+  // ── Modal navigation callbacks ──────────────────────────────────────
+
+  const handlePrev = useCallback(() => {
+    setPreviewIndex((prev) => {
+      if (prev === null || prev <= 0) return prev;
+      return prev - 1;
+    });
+  }, []);
+
+  const handleNext = useCallback(() => {
+    setPreviewIndex((prev) => {
+      if (prev === null) return prev;
+      return Math.min(prev + 1, serverImages.length - 1);
+    });
+  }, [serverImages.length]);
 
   // ── Render metadata as clickable chips ──────────────────────────────
 
@@ -302,7 +617,27 @@ export default function ImageBrowserPanel() {
       );
     }
 
-    const rows = Object.entries(meta).map(([key, value], idx) => {
+    // Determine if version indicates a Z-image
+    const version = meta.version as string | undefined;
+    const isZImage =
+      version !== undefined &&
+      typeof version === "string" &&
+      version.toLowerCase().includes("z-image");
+
+    // Filter entries for Z-images
+    const entries = Object.entries(meta).filter(([key]) => {
+      if (
+        isZImage &&
+        (key === "secondary_prompt" ||
+          key === "negative_prompt" ||
+          key === "secondary_negative_prompt")
+      ) {
+        return false;
+      }
+      return true;
+    });
+
+    const rows = entries.map(([key, value], idx) => {
       const valStr =
         typeof value === "object"
           ? JSON.stringify(value)
@@ -415,7 +750,7 @@ export default function ImageBrowserPanel() {
 
   // ── Render one server image row ────────────────────────────────────
 
-  const renderServerRow = (img: ImageInfo) => {
+  const renderServerRow = (img: ImageInfo, idx: number) => {
     const isExpanded = expandedMeta[img.id];
     return (
     <div
@@ -429,8 +764,9 @@ export default function ImageBrowserPanel() {
       {/* Thumbnail */}
       <div
         className="border rounded overflow-hidden flex-shrink-0 align-self-start"
-        style={{ width: 96, height: 96, cursor: "grab" }}
-        title={img.id}
+        style={{ width: 96, height: 96, cursor: "pointer" }}
+        title={`Click to preview: ${img.id}`}
+        onClick={() => setPreviewIndex(idx)}
         draggable
         onDragStart={(e) => {
           e.dataTransfer.setData(
@@ -471,24 +807,31 @@ export default function ImageBrowserPanel() {
           <button
             type="button"
             className="btn btn-sm p-0 ms-1 flex-shrink-0"
-            onClick={() => handleOpenFile(img.file_path)}
-            title="Open file location"
+            onClick={() => handleOpenFile(img.id, img.file_path)}
+            title={copiedId === img.id ? "Copied!" : "Copy file path"}
             style={{
               background: "none",
               border: "none",
-              width: 20,
-              height: 20,
+              cursor: "pointer",
+              color: "var(--theme-text-secondary)",
+              fontSize: 11,
+              padding: "0 4px",
+              whiteSpace: "nowrap",
             }}
           >
-            <img
-              src="/icons/lucide/dark/external-link.svg"
-              alt="Open"
-              style={{
-                width: 14,
-                height: 14,
-                filter: "var(--theme-icon-filter)",
-              }}
-            />
+            {copiedId === img.id ? (
+              "Copied!"
+            ) : (
+              <img
+                src="/icons/lucide/dark/external-link.svg"
+                alt="Copy path"
+                style={{
+                  width: 14,
+                  height: 14,
+                  filter: "var(--theme-icon-filter)",
+                }}
+              />
+            )}
           </button>
         </div>
 
@@ -577,6 +920,15 @@ export default function ImageBrowserPanel() {
       <div className="p-2">
         <h6 className="text-muted mb-2">Image Browser</h6>
         <Spinner animation="border" size="sm" className="d-block mx-auto" />
+        {previewIndex !== null && (
+          <ImagePreviewModal
+            images={serverImages}
+            currentIndex={previewIndex}
+            onClose={() => setPreviewIndex(null)}
+            onPrev={handlePrev}
+            onNext={handleNext}
+          />
+        )}
       </div>
     );
   }
@@ -627,7 +979,7 @@ export default function ImageBrowserPanel() {
                 No images for this date.
               </p>
             ) : (
-              serverImages.map(renderServerRow)
+              serverImages.map((img, idx) => renderServerRow(img, idx))
             )}
 
             {/* Sentinel for IntersectionObserver */}
@@ -648,6 +1000,17 @@ export default function ImageBrowserPanel() {
         <div className="text-muted small text-end mt-1">
           {serverImages.length} / {total}
         </div>
+      )}
+
+      {/* Image preview modal */}
+      {previewIndex !== null && (
+        <ImagePreviewModal
+          images={serverImages}
+          currentIndex={previewIndex}
+          onClose={() => setPreviewIndex(null)}
+          onPrev={handlePrev}
+          onNext={handleNext}
+        />
       )}
     </div>
   );
