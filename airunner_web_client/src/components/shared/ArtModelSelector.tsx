@@ -44,6 +44,7 @@ export default function ArtModelSelector({
 
   const handleModel = (m: string) => {
     try { localStorage.setItem("airunner_art_model", m); } catch {}
+    window.dispatchEvent(new CustomEvent("art-model-changed"));
     onModelChange?.(m);
   };
 
