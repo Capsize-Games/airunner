@@ -62,18 +62,24 @@ export default function ArtPromptPanel() {
   const [isZImage, setIsZImage] = useState(savedVersion === "Z-Image Turbo");
 
   useEffect(() => {
-    const handler = (e: Event) => {
+    const versionHandler = (e: Event) => {
       const v = (e as CustomEvent).detail as string;
       setArtVersion(v);
       setIsZImage(v === "Z-Image Turbo");
     };
-    window.addEventListener("art-version-changed", handler);
+    const modelHandler = (e: Event) => {
+      const m = (e as CustomEvent).detail as string;
+      setArtModel(m ?? "");
+    };
+    window.addEventListener("art-version-changed", versionHandler);
+    window.addEventListener("art-model-changed", modelHandler);
     try {
       const m = localStorage.getItem("airunner_art_model");
       if (m) setArtModel(m);
     } catch {}
     return () => {
-      window.removeEventListener("art-version-changed", handler);
+      window.removeEventListener("art-version-changed", versionHandler);
+      window.removeEventListener("art-model-changed", modelHandler);
       if (pollRef.current) clearInterval(pollRef.current);
     };
   }, []);

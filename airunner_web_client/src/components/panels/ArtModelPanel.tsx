@@ -14,6 +14,26 @@ function randomSeed(): number {
   return Math.floor(Math.random() * 2147483647) + 1;
 }
 
+const LS_KEY = "airunner_art_settings";
+
+function saveToStorage(key: string, val: number) {
+  try {
+    const data = JSON.parse(localStorage.getItem(LS_KEY) || "{}");
+    data[key] = val;
+    localStorage.setItem(LS_KEY, JSON.stringify(data));
+  } catch { /* */ }
+}
+
+function loadFromStorage(key: string, fallback: number): number {
+  try {
+    const data = JSON.parse(localStorage.getItem(LS_KEY) || "{}");
+    const v = data[key];
+    return v !== undefined ? Number(v) : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
 export default function ArtModelPanel() {
   const [version, setVersion] = useState("");
   const [modelPath, setModelPath] = useState("");
@@ -23,13 +43,21 @@ export default function ArtModelPanel() {
   const [options, setOptions] = useState<ArtOptionsResponse | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Sampler controls
-  const [nSamples, setNSamples] = useState(1);
-  const [imagesPerBatch, setImagesPerBatch] = useState(1);
-  const [steps, setSteps] = useState(20);
-  const [cfgScale, setCfgScale] = useState(7.5);
-  const [width, setWidth] = useState(1024);
-  const [height, setHeight] = useState(1024);
+  // Sampler controls — load from localStorage on mount
+  const [nSamples, setNSamples] = useState(
+    loadFromStorage("n_samples", 1),
+  );
+  const [imagesPerBatch, setImagesPerBatch] = useState(
+    loadFromStorage("images_per_batch", 1),
+  );
+  const [steps, setSteps] = useState(loadFromStorage("steps", 20));
+  const [cfgScale, setCfgScale] = useState(
+    loadFromStorage("cfg_scale", 7.5),
+  );
+  const [width, setWidth] = useState(loadFromStorage("width", 1024));
+  const [height, setHeight] = useState(
+    loadFromStorage("height", 1024),
+  );
   const [seed, setSeed] = useState(0);
   const [seedRandomized, setSeedRandomized] = useState(false);
   const [vramEstimate, setVramEstimate] = useState<number | null>(null);
@@ -82,12 +110,6 @@ export default function ArtModelPanel() {
             );
           } catch {}
         }
-        setNSamples(Number(r.n_samples ?? 1));
-        setImagesPerBatch(Number(r.images_per_batch ?? 1));
-        setSteps(Number(r.steps ?? 20));
-        setCfgScale(Number(r.cfg_scale ?? 7.5));
-        setWidth(Number(r.width ?? 1024));
-        setHeight(Number(r.height ?? 1024));
         const savedSeed = Number(r.seed ?? 0);
         setSeed(savedSeed);
         setSeedRandomized(savedSeed === -1);
@@ -137,8 +159,7 @@ export default function ArtModelPanel() {
   const toggleSeedRandom = () => {
     if (seedRandomized) {
       setSeedRandomized(false);
-      setSeed(0);
-      persist({ seed: 0 });
+      persist({ seed });
     } else {
       const s = randomSeed();
       setSeedRandomized(true);
@@ -273,7 +294,8 @@ export default function ArtModelPanel() {
         min={1}
         max={1000}
         step={1}
-        onChange={(v) => { setNSamples(v); persist({ n_samples: v }); }}
+        defaultValue={1}
+        onChange={(v) => { setNSamples(v); saveToStorage("n_samples", v); persist({ n_samples: v }); }}
       />
       <SliderWithSpinbox
         label="Batch"
@@ -281,7 +303,8 @@ export default function ArtModelPanel() {
         min={1}
         max={6}
         step={1}
-        onChange={(v) => { setImagesPerBatch(v); persist({ images_per_batch: v }); }}
+        defaultValue={1}
+        onChange={(v) => { setImagesPerBatch(v); saveToStorage("images_per_batch", v); persist({ images_per_batch: v }); }}
       />
       <SliderWithSpinbox
         label="Steps"
@@ -289,7 +312,8 @@ export default function ArtModelPanel() {
         min={1}
         max={150}
         step={1}
-        onChange={(v) => { setSteps(v); persist({ steps: v }); }}
+        defaultValue={20}
+        onChange={(v) => { setSteps(v); saveToStorage("steps", v); persist({ steps: v }); }}
       />
       <SliderWithSpinbox
         label="CFG"
@@ -298,7 +322,8 @@ export default function ArtModelPanel() {
         max={30}
         step={0.5}
         displayAsFloat
-        onChange={(v) => { setCfgScale(v); persist({ cfg_scale: v }); }}
+        defaultValue={7.5}
+        onChange={(v) => { setCfgScale(v); saveToStorage("cfg_scale", v); persist({ cfg_scale: v }); }}
       />
       <SliderWithSpinbox
         label="Width"
@@ -306,7 +331,8 @@ export default function ArtModelPanel() {
         min={64}
         max={4096}
         step={64}
-        onChange={(v) => { setWidth(v); persist({ width: v }); }}
+        defaultValue={1024}
+        onChange={(v) => { setWidth(v); saveToStorage("width", v); persist({ width: v }); }}
       />
       <SliderWithSpinbox
         label="Height"
@@ -314,7 +340,8 @@ export default function ArtModelPanel() {
         min={64}
         max={4096}
         step={64}
-        onChange={(v) => { setHeight(v); persist({ height: v }); }}
+        defaultValue={1024}
+        onChange={(v) => { setHeight(v); saveToStorage("height", v); persist({ height: v }); }}
       />
 
       {/* Seed */}
@@ -324,13 +351,22 @@ export default function ArtModelPanel() {
         </Form.Label>
         <div className="d-flex gap-2 align-items-center">
           <Form.Control
-            type="number"
             size="sm"
             value={seed}
-            disabled={seedRandomized || loading}
-            style={{ flex: 1 }}
+            readOnly={seedRandomized}
+            disabled={loading}
+            style={{
+              flex: 1,
+              background: "#1a1a2e",
+              color: seedRandomized ? "#666" : "#c8c8c8",
+              borderColor: seedRandomized ? "#555" : "#333",
+              opacity: seedRandomized ? 0.5 : 1,
+            }}
             onChange={(e) => {
-              const v = Number(e.target.value);
+              const raw = e.target.value.replace(/[^0-9\-]/g, "");
+              if (raw === "") return;
+              const v = Number(raw);
+              if (isNaN(v)) return;
               setSeed(v);
               setSeedRandomized(false);
               persist({ seed: v });

@@ -1,3 +1,4 @@
+import { useState } from "react";
 import Form from "react-bootstrap/Form";
 
 interface SliderWithSpinboxProps {
@@ -7,8 +8,12 @@ interface SliderWithSpinboxProps {
   max: number;
   step: number;
   displayAsFloat?: boolean;
+  /** Default value for the reset button. When not set, no reset button is shown. */
+  defaultValue?: number;
   onChange: (value: number) => void;
 }
+
+const icon = (name: string) => `/icons/lucide/dark/${name}.svg`;
 
 export default function SliderWithSpinbox({
   label,
@@ -17,8 +22,12 @@ export default function SliderWithSpinbox({
   max,
   step,
   displayAsFloat = false,
+  defaultValue,
   onChange,
 }: SliderWithSpinboxProps) {
+  const [hovered, setHovered] = useState(false);
+  const isChanged = defaultValue !== undefined && value !== defaultValue;
+
   const displayValue = displayAsFloat
     ? value.toFixed(2)
     : String(Math.round(value));
@@ -58,6 +67,42 @@ export default function SliderWithSpinbox({
             textAlign: "right",
           }}
         />
+        {defaultValue !== undefined && (
+          <button
+            type="button"
+            onMouseEnter={() => setHovered(true)}
+            onMouseLeave={() => setHovered(false)}
+            onClick={() => onChange(defaultValue)}
+            disabled={!isChanged}
+            title={`Reset to ${displayAsFloat ? defaultValue.toFixed(2) : defaultValue}`}
+            style={{
+              background: hovered && isChanged
+                ? "rgba(0,132,185,0.15)"
+                : "transparent",
+              border: "1px solid #444",
+              borderRadius: 4,
+              width: 30,
+              height: 30,
+              padding: 4,
+              cursor: isChanged ? "pointer" : "default",
+              opacity: isChanged ? 1 : 0.35,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              flexShrink: 0,
+            }}
+          >
+            <img
+              src={icon("rotate-ccw-square")}
+              alt="Reset"
+              style={{
+                width: 16,
+                height: 16,
+                filter: "invert(0.6)",
+              }}
+            />
+          </button>
+        )}
       </div>
     </Form.Group>
   );
