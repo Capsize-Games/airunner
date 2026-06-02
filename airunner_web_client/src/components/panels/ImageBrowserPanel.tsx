@@ -4,10 +4,14 @@ import { BASE_URL } from "../../types/api";
 import type { ImageDateInfo, ImageInfo } from "../../api/client";
 
 const PAGE_SIZE = 20;
+const LS_DATE_KEY = "airunner_image_browser_date";
 
 export default function ImageBrowserPanel() {
   const [dates, setDates] = useState<ImageDateInfo[]>([]);
-  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [selectedDate, setSelectedDate] = useState<string | null>(() => {
+    try { return localStorage.getItem(LS_DATE_KEY); }
+    catch { return null; }
+  });
   const [images, setImages] = useState<ImageInfo[]>([]);
   const [total, setTotal] = useState(0);
   const [offset, setOffset] = useState(0);
@@ -26,6 +30,14 @@ export default function ImageBrowserPanel() {
       setDates(data.dates);
       if (data.dates.length > 0 && !selectedDate) {
         setSelectedDate(data.dates[0].value);
+      } else if (selectedDate) {
+        // Verify saved date still exists in the list
+        const stillExists = data.dates.some(
+          (d) => d.value === selectedDate,
+        );
+        if (!stillExists && data.dates.length > 0) {
+          setSelectedDate(data.dates[0].value);
+        }
       }
     } catch {
       // unavailable
@@ -128,7 +140,13 @@ export default function ImageBrowserPanel() {
   // ── Handle date selection ───────────────────────────────────────────
 
   const handleDateChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    setSelectedDate(e.target.value || null);
+    const val = e.target.value || null;
+    setSelectedDate(val);
+    if (val) {
+      try { localStorage.setItem(LS_DATE_KEY, val); } catch {}
+    } else {
+      try { localStorage.removeItem(LS_DATE_KEY); } catch {}
+    }
   };
 
   // ── Render ──────────────────────────────────────────────────────────
