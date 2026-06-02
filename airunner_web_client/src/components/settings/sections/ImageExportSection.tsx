@@ -25,6 +25,8 @@ interface MetadataFlags {
   embeddings: boolean;
   timestamp: boolean;
   controlnet: boolean;
+  tome_sd: boolean;
+  tome_ratio: boolean;
 }
 
 const DEFAULT_METADATA_FLAGS: MetadataFlags = {
@@ -46,6 +48,8 @@ const DEFAULT_METADATA_FLAGS: MetadataFlags = {
   embeddings: true,
   timestamp: true,
   controlnet: true,
+  tome_sd: true,
+  tome_ratio: true,
 };
 
 const METADATA_LABELS: Record<keyof MetadataFlags, string> = {
@@ -67,6 +71,8 @@ const METADATA_LABELS: Record<keyof MetadataFlags, string> = {
   embeddings: "Embeddings",
   timestamp: "Timestamp",
   controlnet: "Controlnet",
+  tome_sd: "ToMe SD",
+  tome_ratio: "ToMe Ratio",
 };
 
 export default function ImageExportSection() {
