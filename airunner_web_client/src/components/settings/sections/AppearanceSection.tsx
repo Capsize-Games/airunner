@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import Form from "react-bootstrap/Form";
-import Button from "react-bootstrap/Button";
 import Spinner from "react-bootstrap/Spinner";
 import {
   getSingleton,
@@ -11,7 +10,6 @@ export default function AppearanceSection() {
   const [darkMode, setDarkMode] = useState(true);
   const [checkUpdates, setCheckUpdates] = useState(true);
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -31,16 +29,21 @@ export default function AppearanceSection() {
     return () => { cancelled = true; };
   }, []);
 
-  async function handleSave() {
-    setSaving(true);
-    try {
-      await updateSingleton("ApplicationSettings", {
-        dark_mode_enabled: darkMode,
-        latest_version_check: checkUpdates,
-      } as Record<string, unknown>);
-    } finally {
-      setSaving(false);
-    }
+  function handleThemeChange(value: string) {
+    const isDark = value === "dark";
+    setDarkMode(isDark);
+    updateSingleton("ApplicationSettings", {
+      dark_mode_enabled: isDark,
+      latest_version_check: checkUpdates,
+    } as Record<string, unknown>).catch(() => {});
+  }
+
+  function handleCheckUpdatesToggle(checked: boolean) {
+    setCheckUpdates(checked);
+    updateSingleton("ApplicationSettings", {
+      dark_mode_enabled: darkMode,
+      latest_version_check: checked,
+    } as Record<string, unknown>).catch(() => {});
   }
 
   if (loading) {
@@ -60,7 +63,7 @@ export default function AppearanceSection() {
         <Form.Select
           size="sm"
           value={darkMode ? "dark" : "light"}
-          onChange={(e) => setDarkMode(e.target.value === "dark")}
+          onChange={(e) => handleThemeChange(e.target.value)}
           className="bg-dark text-light border-secondary"
         >
           <option value="dark">Dark</option>
@@ -73,19 +76,10 @@ export default function AppearanceSection() {
           type="switch"
           label="Check for updates"
           checked={checkUpdates}
-          onChange={(e) => setCheckUpdates(e.target.checked)}
+          onChange={(e) => handleCheckUpdatesToggle(e.target.checked)}
           className="small"
         />
       </Form.Group>
-
-      <Button
-        variant="primary"
-        size="sm"
-        onClick={handleSave}
-        disabled={saving}
-      >
-        {saving ? <Spinner animation="border" size="sm" /> : "Save"}
-      </Button>
     </div>
   );
 }

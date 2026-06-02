@@ -121,7 +121,7 @@ export default function SettingsModal({
             onClick={onClose}
             size="sm"
           >
-            \u2715
+            {"\u2715"}
           </Button>
         </div>
         <div className="settings-modal-body">

@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import Form from "react-bootstrap/Form";
-import Button from "react-bootstrap/Button";
 import Spinner from "react-bootstrap/Spinner";
 import {
   getPrivacySettings,
@@ -13,7 +12,6 @@ export default function HuggingFaceSection() {
   const [apiKey, setApiKey] = useState("");
   const [allowHf, setAllowHf] = useState(true);
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -36,18 +34,15 @@ export default function HuggingFaceSection() {
     return () => { cancelled = true; };
   }, []);
 
-  async function handleSave() {
-    setSaving(true);
-    try {
-      await Promise.all([
-        updatePrivacySettings({ huggingface: allowHf }),
-        updateSingleton("ApplicationSettings", {
-          hf_api_key_read_key: apiKey || null,
-        } as Record<string, unknown>),
-      ]);
-    } finally {
-      setSaving(false);
-    }
+  function handleToggle(checked: boolean) {
+    setAllowHf(checked);
+    updatePrivacySettings({ huggingface: checked }).catch(() => {});
+  }
+
+  async function saveApiKey() {
+    await updateSingleton("ApplicationSettings", {
+      hf_api_key_read_key: apiKey || null,
+    } as Record<string, unknown>).catch(() => {});
   }
 
   if (loading) {
@@ -67,7 +62,7 @@ export default function HuggingFaceSection() {
           type="switch"
           label="Allow HuggingFace downloads"
           checked={allowHf}
-          onChange={(e) => setAllowHf(e.target.checked)}
+          onChange={(e) => handleToggle(e.target.checked)}
           className="small"
         />
       </Form.Group>
@@ -79,19 +74,11 @@ export default function HuggingFaceSection() {
           size="sm"
           value={apiKey}
           onChange={(e) => setApiKey(e.target.value)}
+          onBlur={saveApiKey}
           className="bg-dark text-light border-secondary"
           placeholder="Enter HuggingFace read key"
         />
       </Form.Group>
-
-      <Button
-        variant="primary"
-        size="sm"
-        onClick={handleSave}
-        disabled={saving}
-      >
-        {saving ? <Spinner animation="border" size="sm" /> : "Save"}
-      </Button>
     </div>
   );
 }

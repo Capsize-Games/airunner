@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import Form from "react-bootstrap/Form";
-import Button from "react-bootstrap/Button";
 import Spinner from "react-bootstrap/Spinner";
 import {
   getSingleton,
@@ -10,7 +9,6 @@ import {
 export default function ImageExportSection() {
   const [autoExport, setAutoExport] = useState(true);
   const [exportType, setExportType] = useState("png");
-  const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -31,16 +29,20 @@ export default function ImageExportSection() {
     return () => { cancelled = true; };
   }, []);
 
-  async function handleSave() {
-    setSaving(true);
-    try {
-      await updateSingleton("ApplicationSettings", {
-        auto_export_images: autoExport,
-        image_export_type: exportType,
-      } as Record<string, unknown>);
-    } finally {
-      setSaving(false);
-    }
+  function handleToggleAutoExport(checked: boolean) {
+    setAutoExport(checked);
+    updateSingleton("ApplicationSettings", {
+      auto_export_images: checked,
+      image_export_type: exportType,
+    } as Record<string, unknown>).catch(() => {});
+  }
+
+  function handleExportTypeChange(value: string) {
+    setExportType(value);
+    updateSingleton("ApplicationSettings", {
+      auto_export_images: autoExport,
+      image_export_type: value,
+    } as Record<string, unknown>).catch(() => {});
   }
 
   if (loading) {
@@ -60,7 +62,7 @@ export default function ImageExportSection() {
           type="switch"
           label="Automatically export images"
           checked={autoExport}
-          onChange={(e) => setAutoExport(e.target.checked)}
+          onChange={(e) => handleToggleAutoExport(e.target.checked)}
           className="small"
         />
       </Form.Group>
@@ -70,7 +72,7 @@ export default function ImageExportSection() {
         <Form.Select
           size="sm"
           value={exportType}
-          onChange={(e) => setExportType(e.target.value)}
+          onChange={(e) => handleExportTypeChange(e.target.value)}
           className="bg-dark text-light border-secondary"
         >
           <option value="png">PNG</option>
@@ -78,15 +80,6 @@ export default function ImageExportSection() {
           <option value="webp">WebP</option>
         </Form.Select>
       </Form.Group>
-
-      <Button
-        variant="primary"
-        size="sm"
-        onClick={handleSave}
-        disabled={saving}
-      >
-        {saving ? <Spinner animation="border" size="sm" /> : "Save"}
-      </Button>
     </div>
   );
 }

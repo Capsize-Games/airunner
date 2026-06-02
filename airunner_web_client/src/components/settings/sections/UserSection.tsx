@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import Form from "react-bootstrap/Form";
-import Button from "react-bootstrap/Button";
 import Spinner from "react-bootstrap/Spinner";
 import {
   getSingleton,
@@ -12,7 +11,6 @@ export default function UserSection() {
   const [zipcode, setZipcode] = useState("");
   const [unitSystem, setUnitSystem] = useState("imperial");
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -33,17 +31,21 @@ export default function UserSection() {
     return () => { cancelled = true; };
   }, []);
 
-  async function handleSave() {
-    setSaving(true);
-    try {
-      await updateSingleton("User", {
-        username: username || null,
-        zipcode: zipcode || null,
-        unit_system: unitSystem,
-      } as Record<string, unknown>);
-    } finally {
-      setSaving(false);
-    }
+  async function persistUser() {
+    await updateSingleton("User", {
+      username: username || null,
+      zipcode: zipcode || null,
+      unit_system: unitSystem,
+    } as Record<string, unknown>).catch(() => {});
+  }
+
+  function handleUnitSystemChange(value: string) {
+    setUnitSystem(value);
+    updateSingleton("User", {
+      username: username || null,
+      zipcode: zipcode || null,
+      unit_system: value,
+    } as Record<string, unknown>).catch(() => {});
   }
 
   if (loading) {
@@ -64,6 +66,7 @@ export default function UserSection() {
           size="sm"
           value={username}
           onChange={(e) => setUsername(e.target.value)}
+          onBlur={persistUser}
           className="bg-dark text-light border-secondary"
           placeholder="Your display name"
         />
@@ -75,6 +78,7 @@ export default function UserSection() {
           size="sm"
           value={zipcode}
           onChange={(e) => setZipcode(e.target.value)}
+          onBlur={persistUser}
           className="bg-dark text-light border-secondary"
           placeholder="e.g. 90210"
         />
@@ -85,22 +89,13 @@ export default function UserSection() {
         <Form.Select
           size="sm"
           value={unitSystem}
-          onChange={(e) => setUnitSystem(e.target.value)}
+          onChange={(e) => handleUnitSystemChange(e.target.value)}
           className="bg-dark text-light border-secondary"
         >
           <option value="imperial">Imperial</option>
           <option value="metric">Metric</option>
         </Form.Select>
       </Form.Group>
-
-      <Button
-        variant="primary"
-        size="sm"
-        onClick={handleSave}
-        disabled={saving}
-      >
-        {saving ? <Spinner animation="border" size="sm" /> : "Save"}
-      </Button>
     </div>
   );
 }

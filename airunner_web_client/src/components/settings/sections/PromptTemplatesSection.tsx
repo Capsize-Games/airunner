@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import Form from "react-bootstrap/Form";
-import Button from "react-bootstrap/Button";
 import Spinner from "react-bootstrap/Spinner";
 import {
   queryResources,
@@ -16,7 +15,6 @@ export default function PromptTemplatesSection() {
   const [useGuardrails, setUseGuardrails] = useState(true);
   const [useDatetime, setUseDatetime] = useState(true);
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -54,19 +52,14 @@ export default function PromptTemplatesSection() {
     }
   }
 
-  async function handleSave() {
+  function persistAll() {
     if (!selectedId) return;
-    setSaving(true);
-    try {
-      await updateResource("PromptTemplate", selectedId, {
-        system: systemPrompt,
-        guardrails: guardrailsPrompt,
-        use_guardrails: useGuardrails,
-        use_system_datetime_in_system_prompt: useDatetime,
-      } as Record<string, unknown>);
-    } finally {
-      setSaving(false);
-    }
+    updateResource("PromptTemplate", selectedId, {
+      system: systemPrompt,
+      guardrails: guardrailsPrompt,
+      use_guardrails: useGuardrails,
+      use_system_datetime_in_system_prompt: useDatetime,
+    } as Record<string, unknown>).catch(() => {});
   }
 
   if (loading) {
@@ -118,6 +111,7 @@ export default function PromptTemplatesSection() {
               size="sm"
               value={systemPrompt}
               onChange={(e) => setSystemPrompt(e.target.value)}
+              onBlur={persistAll}
               className="bg-dark text-light border-secondary"
             />
           </Form.Group>
@@ -127,7 +121,13 @@ export default function PromptTemplatesSection() {
               type="switch"
               label="Use guardrails"
               checked={useGuardrails}
-              onChange={(e) => setUseGuardrails(e.target.checked)}
+              onChange={(e) => {
+                setUseGuardrails(e.target.checked);
+                if (!selectedId) return;
+                updateResource("PromptTemplate", selectedId, {
+                  use_guardrails: e.target.checked,
+                } as Record<string, unknown>).catch(() => {});
+              }}
               className="small"
             />
           </Form.Group>
@@ -141,6 +141,7 @@ export default function PromptTemplatesSection() {
                 size="sm"
                 value={guardrailsPrompt}
                 onChange={(e) => setGuardrailsPrompt(e.target.value)}
+                onBlur={persistAll}
                 className="bg-dark text-light border-secondary"
               />
             </Form.Group>
@@ -151,21 +152,18 @@ export default function PromptTemplatesSection() {
               type="switch"
               label="Use datetime in system prompt"
               checked={useDatetime}
-              onChange={(e) => setUseDatetime(e.target.checked)}
+              onChange={(e) => {
+                setUseDatetime(e.target.checked);
+                if (!selectedId) return;
+                updateResource("PromptTemplate", selectedId, {
+                  use_system_datetime_in_system_prompt: e.target.checked,
+                } as Record<string, unknown>).catch(() => {});
+              }}
               className="small"
             />
           </Form.Group>
         </>
       )}
-
-      <Button
-        variant="primary"
-        size="sm"
-        onClick={handleSave}
-        disabled={saving || !selectedId}
-      >
-        {saving ? <Spinner animation="border" size="sm" /> : "Save"}
-      </Button>
     </div>
   );
 }

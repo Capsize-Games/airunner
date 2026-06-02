@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import Form from "react-bootstrap/Form";
-import Button from "react-bootstrap/Button";
 import Spinner from "react-bootstrap/Spinner";
 import {
   getSingleton,
@@ -25,7 +24,6 @@ export default function TTSSection() {
   const [ovReferencePath, setOvReferencePath] = useState("");
 
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -54,27 +52,22 @@ export default function TTSSection() {
     return () => { cancelled = true; };
   }, []);
 
-  async function handleSave() {
-    setSaving(true);
-    try {
-      if (engine === "espeak") {
-        await updateSingleton("EspeakSettings", {
-          gender: espeakGender,
-          voice: espeakVoice,
-          rate: espeakRate,
-          pitch: espeakPitch,
-          volume: espeakVolume,
-        } as Record<string, unknown>);
-      } else {
-        await updateSingleton("OpenVoiceSettings", {
-          language: ovLanguage,
-          speed: ovSpeed,
-          reference_speaker_path: ovReferencePath,
-        } as Record<string, unknown>);
-      }
-    } finally {
-      setSaving(false);
-    }
+  function saveEspeak() {
+    updateSingleton("EspeakSettings", {
+      gender: espeakGender,
+      voice: espeakVoice,
+      rate: espeakRate,
+      pitch: espeakPitch,
+      volume: espeakVolume,
+    } as Record<string, unknown>).catch(() => {});
+  }
+
+  function saveOpenVoice() {
+    updateSingleton("OpenVoiceSettings", {
+      language: ovLanguage,
+      speed: ovSpeed,
+      reference_speaker_path: ovReferencePath,
+    } as Record<string, unknown>).catch(() => {});
   }
 
   if (loading) {
@@ -109,7 +102,10 @@ export default function TTSSection() {
             <Form.Select
               size="sm"
               value={espeakGender}
-              onChange={(e) => setEspeakGender(e.target.value)}
+              onChange={(e) => {
+                setEspeakGender(e.target.value);
+                saveEspeak();
+              }}
               className="bg-dark text-light border-secondary"
             >
               <option value="Male">Male</option>
@@ -123,6 +119,7 @@ export default function TTSSection() {
               size="sm"
               value={espeakVoice}
               onChange={(e) => setEspeakVoice(e.target.value)}
+              onBlur={saveEspeak}
               className="bg-dark text-light border-secondary"
               placeholder="e.g. english (america)"
             />
@@ -137,7 +134,10 @@ export default function TTSSection() {
               max={300}
               step={1}
               value={espeakRate}
-              onChange={(e) => setEspeakRate(Number(e.target.value))}
+              onChange={(e) => {
+                setEspeakRate(Number(e.target.value));
+                saveEspeak();
+              }}
             />
           </Form.Group>
 
@@ -150,7 +150,10 @@ export default function TTSSection() {
               max={100}
               step={1}
               value={espeakPitch}
-              onChange={(e) => setEspeakPitch(Number(e.target.value))}
+              onChange={(e) => {
+                setEspeakPitch(Number(e.target.value));
+                saveEspeak();
+              }}
             />
           </Form.Group>
 
@@ -163,7 +166,10 @@ export default function TTSSection() {
               max={100}
               step={1}
               value={espeakVolume}
-              onChange={(e) => setEspeakVolume(Number(e.target.value))}
+              onChange={(e) => {
+                setEspeakVolume(Number(e.target.value));
+                saveEspeak();
+              }}
             />
           </Form.Group>
         </>
@@ -174,7 +180,10 @@ export default function TTSSection() {
             <Form.Select
               size="sm"
               value={ovLanguage}
-              onChange={(e) => setOvLanguage(e.target.value)}
+              onChange={(e) => {
+                setOvLanguage(e.target.value);
+                saveOpenVoice();
+              }}
               className="bg-dark text-light border-secondary"
             >
               <option value="EN">English</option>
@@ -193,7 +202,10 @@ export default function TTSSection() {
               max={100}
               step={1}
               value={ovSpeed}
-              onChange={(e) => setOvSpeed(Number(e.target.value))}
+              onChange={(e) => {
+                setOvSpeed(Number(e.target.value));
+                saveOpenVoice();
+              }}
             />
           </Form.Group>
 
@@ -205,21 +217,13 @@ export default function TTSSection() {
               size="sm"
               value={ovReferencePath}
               onChange={(e) => setOvReferencePath(e.target.value)}
+              onBlur={saveOpenVoice}
               className="bg-dark text-light border-secondary"
               placeholder="/path/to/voice/sample.mp3"
             />
           </Form.Group>
         </>
       )}
-
-      <Button
-        variant="primary"
-        size="sm"
-        onClick={handleSave}
-        disabled={saving}
-      >
-        {saving ? <Spinner animation="border" size="sm" /> : "Save"}
-      </Button>
     </div>
   );
 }

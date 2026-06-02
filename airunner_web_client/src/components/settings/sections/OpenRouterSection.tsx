@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import Form from "react-bootstrap/Form";
-import Button from "react-bootstrap/Button";
 import Spinner from "react-bootstrap/Spinner";
 import {
   getPrivacySettings,
@@ -10,7 +9,6 @@ import {
 export default function OpenRouterSection() {
   const [allowOpenrouter, setAllowOpenrouter] = useState(true);
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -29,13 +27,9 @@ export default function OpenRouterSection() {
     return () => { cancelled = true; };
   }, []);
 
-  async function handleSave() {
-    setSaving(true);
-    try {
-      await updatePrivacySettings({ openrouter: allowOpenrouter });
-    } finally {
-      setSaving(false);
-    }
+  function handleToggle(checked: boolean) {
+    setAllowOpenrouter(checked);
+    updatePrivacySettings({ openrouter: checked }).catch(() => {});
   }
 
   if (loading) {
@@ -55,19 +49,10 @@ export default function OpenRouterSection() {
           type="switch"
           label="Allow OpenRouter API"
           checked={allowOpenrouter}
-          onChange={(e) => setAllowOpenrouter(e.target.checked)}
+          onChange={(e) => handleToggle(e.target.checked)}
           className="small"
         />
       </Form.Group>
-
-      <Button
-        variant="primary"
-        size="sm"
-        onClick={handleSave}
-        disabled={saving}
-      >
-        {saving ? <Spinner animation="border" size="sm" /> : "Save"}
-      </Button>
     </div>
   );
 }

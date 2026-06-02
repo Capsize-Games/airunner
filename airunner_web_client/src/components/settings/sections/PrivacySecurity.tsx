@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import Form from "react-bootstrap/Form";
-import Button from "react-bootstrap/Button";
 import Spinner from "react-bootstrap/Spinner";
 import {
   getPrivacySettings,
@@ -8,7 +7,6 @@ import {
   getSingleton,
   updateSingleton,
 } from "../../../api/client";
-import type { ResourceRecord } from "../../../types/api";
 
 const SERVICE_KEYS = [
   { key: "huggingface", label: "Allow HuggingFace downloads" },
@@ -25,7 +23,6 @@ export default function PrivacySecuritySection() {
   const [hfWriteKey, setHfWriteKey] = useState("");
   const [civitAiKey, setCivitAiKey] = useState("");
   const [openRouterKey, setOpenRouterKey] = useState("");
-  const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -52,29 +49,19 @@ export default function PrivacySecuritySection() {
     return () => { cancelled = true; };
   }, []);
 
-  async function handleSave() {
-    setSaving(true);
-    try {
-      await Promise.all([
-        updatePrivacySettings(services),
-        updateSingleton("ApplicationSettings", {
-          hf_api_key_read_key: hfReadKey || null,
-          hf_api_key_write_key: hfWriteKey || null,
-          civit_ai_api_key: civitAiKey || null,
-          openrouter_api_key: openRouterKey || null,
-        } as Record<string, unknown>),
-      ]);
-    } finally {
-      setSaving(false);
-    }
+  function handleToggle(key: string, checked: boolean) {
+    const next = { ...services, [key]: checked };
+    setServices(next);
+    updatePrivacySettings(next).catch(() => {});
   }
 
-  function toggleAll(enabled: boolean) {
-    const next: Record<string, boolean> = {};
-    for (const { key } of SERVICE_KEYS) {
-      next[key] = enabled;
-    }
-    setServices(next);
+  async function saveApiKeys() {
+    await updateSingleton("ApplicationSettings", {
+      hf_api_key_read_key: hfReadKey || null,
+      hf_api_key_write_key: hfWriteKey || null,
+      civit_ai_api_key: civitAiKey || null,
+      openrouter_api_key: openRouterKey || null,
+    } as Record<string, unknown>).catch(() => {});
   }
 
   if (loading) {
@@ -90,17 +77,6 @@ export default function PrivacySecuritySection() {
       <h6 className="mb-3">Privacy & Security</h6>
 
       <div className="mb-3">
-        <div className="d-flex gap-2 mb-2">
-          <Button size="sm" variant="outline-success" onClick={() => toggleAll(true)}>
-            Enable All
-          </Button>
-          <Button size="sm" variant="outline-danger" onClick={() => toggleAll(false)}>
-            Disable All
-          </Button>
-        </div>
-      </div>
-
-      <div className="mb-3">
         <h6 className="small text-muted mb-2">Model Downloads</h6>
         {SERVICE_KEYS.filter((s) => s.key === "huggingface" || s.key === "civitai").map(({ key, label }) => (
           <Form.Group key={key} className="mb-1">
@@ -109,7 +85,7 @@ export default function PrivacySecuritySection() {
               label={label}
               checked={!!services[key]}
               onChange={(e) =>
-                setServices((prev) => ({ ...prev, [key]: e.target.checked }))
+                handleToggle(key, e.target.checked)
               }
               className="small"
             />
@@ -126,7 +102,7 @@ export default function PrivacySecuritySection() {
               label={label}
               checked={!!services[key]}
               onChange={(e) =>
-                setServices((prev) => ({ ...prev, [key]: e.target.checked }))
+                handleToggle(key, e.target.checked)
               }
               className="small"
             />
@@ -143,7 +119,7 @@ export default function PrivacySecuritySection() {
               label={label}
               checked={!!services[key]}
               onChange={(e) =>
-                setServices((prev) => ({ ...prev, [key]: e.target.checked }))
+                handleToggle(key, e.target.checked)
               }
               className="small"
             />
@@ -160,7 +136,7 @@ export default function PrivacySecuritySection() {
               label={label}
               checked={!!services[key]}
               onChange={(e) =>
-                setServices((prev) => ({ ...prev, [key]: e.target.checked }))
+                handleToggle(key, e.target.checked)
               }
               className="small"
             />
@@ -177,6 +153,7 @@ export default function PrivacySecuritySection() {
             size="sm"
             value={hfReadKey}
             onChange={(e) => setHfReadKey(e.target.value)}
+            onBlur={saveApiKeys}
             className="bg-dark text-light border-secondary"
             placeholder="Enter HF read key"
           />
@@ -188,6 +165,7 @@ export default function PrivacySecuritySection() {
             size="sm"
             value={hfWriteKey}
             onChange={(e) => setHfWriteKey(e.target.value)}
+            onBlur={saveApiKeys}
             className="bg-dark text-light border-secondary"
             placeholder="Enter HF write key"
           />
@@ -199,6 +177,7 @@ export default function PrivacySecuritySection() {
             size="sm"
             value={civitAiKey}
             onChange={(e) => setCivitAiKey(e.target.value)}
+            onBlur={saveApiKeys}
             className="bg-dark text-light border-secondary"
             placeholder="Enter CivitAI key"
           />
@@ -210,20 +189,12 @@ export default function PrivacySecuritySection() {
             size="sm"
             value={openRouterKey}
             onChange={(e) => setOpenRouterKey(e.target.value)}
+            onBlur={saveApiKeys}
             className="bg-dark text-light border-secondary"
             placeholder="Enter OpenRouter key"
           />
         </Form.Group>
       </div>
-
-      <Button
-        variant="primary"
-        size="sm"
-        onClick={handleSave}
-        disabled={saving}
-      >
-        {saving ? <Spinner animation="border" size="sm" /> : "Save"}
-      </Button>
     </div>
   );
 }

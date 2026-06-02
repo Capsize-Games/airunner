@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import Form from "react-bootstrap/Form";
-import Button from "react-bootstrap/Button";
 import Spinner from "react-bootstrap/Spinner";
 import {
   getSingleton,
@@ -10,7 +9,6 @@ import {
 export default function SoundSection() {
   const [micVolume, setMicVolume] = useState(50);
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -29,15 +27,11 @@ export default function SoundSection() {
     return () => { cancelled = true; };
   }, []);
 
-  async function handleSave() {
-    setSaving(true);
-    try {
-      await updateSingleton("SoundSettings", {
-        microphone_volume: micVolume,
-      } as Record<string, unknown>);
-    } finally {
-      setSaving(false);
-    }
+  function handleMicVolumeChange(value: number) {
+    setMicVolume(value);
+    updateSingleton("SoundSettings", {
+      microphone_volume: value,
+    } as Record<string, unknown>).catch(() => {});
   }
 
   if (loading) {
@@ -61,18 +55,9 @@ export default function SoundSection() {
           max={100}
           step={1}
           value={micVolume}
-          onChange={(e) => setMicVolume(Number(e.target.value))}
+          onChange={(e) => handleMicVolumeChange(Number(e.target.value))}
         />
       </Form.Group>
-
-      <Button
-        variant="primary"
-        size="sm"
-        onClick={handleSave}
-        disabled={saving}
-      >
-        {saving ? <Spinner animation="border" size="sm" /> : "Save"}
-      </Button>
     </div>
   );
 }

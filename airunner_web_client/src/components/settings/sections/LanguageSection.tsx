@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import Form from "react-bootstrap/Form";
-import Button from "react-bootstrap/Button";
 import Spinner from "react-bootstrap/Spinner";
 import {
   getSingleton,
@@ -12,7 +11,6 @@ export default function LanguageSection() {
   const [userLanguage, setUserLanguage] = useState("en");
   const [botLanguage, setBotLanguage] = useState("en");
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -36,21 +34,27 @@ export default function LanguageSection() {
     return () => { cancelled = true; };
   }, []);
 
-  async function handleSave() {
-    setSaving(true);
-    try {
-      await Promise.all([
-        updateSingleton("ApplicationSettings", {
-          detected_language: detectedLanguage,
-        } as Record<string, unknown>),
-        updateSingleton("LanguageSettings", {
-          user_language: userLanguage,
-          bot_language: botLanguage,
-        } as Record<string, unknown>),
-      ]);
-    } finally {
-      setSaving(false);
-    }
+  function handleDetectedLanguageChange(value: string) {
+    setDetectedLanguage(value);
+    updateSingleton("ApplicationSettings", {
+      detected_language: value,
+    } as Record<string, unknown>).catch(() => {});
+  }
+
+  function handleUserLanguageChange(value: string) {
+    setUserLanguage(value);
+    updateSingleton("LanguageSettings", {
+      user_language: value,
+      bot_language: botLanguage,
+    } as Record<string, unknown>).catch(() => {});
+  }
+
+  function handleBotLanguageChange(value: string) {
+    setBotLanguage(value);
+    updateSingleton("LanguageSettings", {
+      user_language: userLanguage,
+      bot_language: value,
+    } as Record<string, unknown>).catch(() => {});
   }
 
   if (loading) {
@@ -70,7 +74,7 @@ export default function LanguageSection() {
         <Form.Select
           size="sm"
           value={detectedLanguage}
-          onChange={(e) => setDetectedLanguage(e.target.value)}
+          onChange={(e) => handleDetectedLanguageChange(e.target.value)}
           className="bg-dark text-light border-secondary"
         >
           <option value="en">English</option>
@@ -83,7 +87,7 @@ export default function LanguageSection() {
         <Form.Select
           size="sm"
           value={userLanguage}
-          onChange={(e) => setUserLanguage(e.target.value)}
+          onChange={(e) => handleUserLanguageChange(e.target.value)}
           className="bg-dark text-light border-secondary"
         >
           <option value="en">English</option>
@@ -96,22 +100,13 @@ export default function LanguageSection() {
         <Form.Select
           size="sm"
           value={botLanguage}
-          onChange={(e) => setBotLanguage(e.target.value)}
+          onChange={(e) => handleBotLanguageChange(e.target.value)}
           className="bg-dark text-light border-secondary"
         >
           <option value="en">English</option>
           <option value="ja">Japanese</option>
         </Form.Select>
       </Form.Group>
-
-      <Button
-        variant="primary"
-        size="sm"
-        onClick={handleSave}
-        disabled={saving}
-      >
-        {saving ? <Spinner animation="border" size="sm" /> : "Save"}
-      </Button>
     </div>
   );
 }

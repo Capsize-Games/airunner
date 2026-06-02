@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import Form from "react-bootstrap/Form";
-import Button from "react-bootstrap/Button";
 import Spinner from "react-bootstrap/Spinner";
 import {
   getSingleton,
@@ -56,7 +55,6 @@ export default function MemorySection() {
   const [precisions, setPrecisions] = useState<
     { label: string; value: string }[]
   >([]);
-  const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -115,19 +113,12 @@ export default function MemorySection() {
     key: K,
     value: MemorySettings[K],
   ) {
-    setSettings((prev) => ({ ...prev, [key]: value }));
-  }
-
-  async function handleSave() {
-    setSaving(true);
-    try {
-      await updateSingleton(
-        "MemorySettings",
-        settings as unknown as Record<string, unknown>,
-      );
-    } finally {
-      setSaving(false);
-    }
+    const next = { ...settings, [key]: value };
+    setSettings(next);
+    updateSingleton(
+      "MemorySettings",
+      next as unknown as Record<string, unknown>,
+    ).catch(() => {});
   }
 
   if (loading) {
@@ -250,15 +241,6 @@ export default function MemorySection() {
           </Form.Group>
         </div>
       )}
-
-      <Button
-        variant="primary"
-        size="sm"
-        onClick={handleSave}
-        disabled={saving}
-      >
-        {saving ? <Spinner animation="border" size="sm" /> : "Save"}
-      </Button>
     </div>
   );
 }

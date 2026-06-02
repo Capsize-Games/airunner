@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import Form from "react-bootstrap/Form";
-import Button from "react-bootstrap/Button";
 import Spinner from "react-bootstrap/Spinner";
 import {
   queryFirstResource,
@@ -11,7 +10,7 @@ import type { ResourceRecord } from "../../../types/api";
 const GENDER_OPTIONS = ["Male", "Female"];
 
 export default function AgentSection() {
-  const [agents, setAgents] = useState<ResourceRecord[]>([]);
+  const [agents] = useState<ResourceRecord[]>([]);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [botname, setBotname] = useState("");
   const [botPersonality, setBotPersonality] = useState("");
@@ -24,7 +23,6 @@ export default function AgentSection() {
   const [useDatetime, setUseDatetime] = useState(true);
   const [gender, setGender] = useState("Male");
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -63,25 +61,20 @@ export default function AgentSection() {
     setGender(String(r.gender ?? "Male"));
   }
 
-  async function handleSave() {
+  function persistAll() {
     if (!selectedId) return;
-    setSaving(true);
-    try {
-      await updateResource("Chatbot", selectedId, {
-        botname,
-        bot_personality: botPersonality,
-        system_instructions: systemInstructions,
-        guardrails_prompt: guardrailsPrompt,
-        use_system_instructions: useSystemInstructions,
-        use_guardrails: useGuardrails,
-        use_personality: usePersonality,
-        assign_names: assignNames,
-        use_datetime: useDatetime,
-        gender,
-      } as Record<string, unknown>);
-    } finally {
-      setSaving(false);
-    }
+    updateResource("Chatbot", selectedId, {
+      botname,
+      bot_personality: botPersonality,
+      system_instructions: systemInstructions,
+      guardrails_prompt: guardrailsPrompt,
+      use_system_instructions: useSystemInstructions,
+      use_guardrails: useGuardrails,
+      use_personality: usePersonality,
+      assign_names: assignNames,
+      use_datetime: useDatetime,
+      gender,
+    } as Record<string, unknown>).catch(() => {});
   }
 
   if (loading) {
@@ -103,6 +96,7 @@ export default function AgentSection() {
             size="sm"
             value={botname}
             onChange={(e) => setBotname(e.target.value)}
+            onBlur={persistAll}
             className="bg-dark text-light border-secondary"
           />
         </Form.Group>
@@ -112,7 +106,14 @@ export default function AgentSection() {
             type="switch"
             label="Use personality"
             checked={usePersonality}
-            onChange={(e) => setUsePersonality(e.target.checked)}
+            onChange={(e) => {
+              setUsePersonality(e.target.checked);
+              if (selectedId) {
+                updateResource("Chatbot", selectedId, {
+                  use_personality: e.target.checked,
+                } as Record<string, unknown>).catch(() => {});
+              }
+            }}
             className="small"
           />
         </Form.Group>
@@ -125,6 +126,7 @@ export default function AgentSection() {
               size="sm"
               value={botPersonality}
               onChange={(e) => setBotPersonality(e.target.value)}
+              onBlur={persistAll}
               className="bg-dark text-light border-secondary"
             />
           </Form.Group>
@@ -135,7 +137,14 @@ export default function AgentSection() {
             type="switch"
             label="Use system instructions"
             checked={useSystemInstructions}
-            onChange={(e) => setUseSystemInstructions(e.target.checked)}
+            onChange={(e) => {
+              setUseSystemInstructions(e.target.checked);
+              if (selectedId) {
+                updateResource("Chatbot", selectedId, {
+                  use_system_instructions: e.target.checked,
+                } as Record<string, unknown>).catch(() => {});
+              }
+            }}
             className="small"
           />
         </Form.Group>
@@ -148,6 +157,7 @@ export default function AgentSection() {
               size="sm"
               value={systemInstructions}
               onChange={(e) => setSystemInstructions(e.target.value)}
+              onBlur={persistAll}
               className="bg-dark text-light border-secondary"
             />
           </Form.Group>
@@ -158,7 +168,14 @@ export default function AgentSection() {
             type="switch"
             label="Use guardrails"
             checked={useGuardrails}
-            onChange={(e) => setUseGuardrails(e.target.checked)}
+            onChange={(e) => {
+              setUseGuardrails(e.target.checked);
+              if (selectedId) {
+                updateResource("Chatbot", selectedId, {
+                  use_guardrails: e.target.checked,
+                } as Record<string, unknown>).catch(() => {});
+              }
+            }}
             className="small"
           />
         </Form.Group>
@@ -171,6 +188,7 @@ export default function AgentSection() {
               size="sm"
               value={guardrailsPrompt}
               onChange={(e) => setGuardrailsPrompt(e.target.value)}
+              onBlur={persistAll}
               className="bg-dark text-light border-secondary"
             />
           </Form.Group>
@@ -181,7 +199,14 @@ export default function AgentSection() {
             type="switch"
             label="Assign names"
             checked={assignNames}
-            onChange={(e) => setAssignNames(e.target.checked)}
+            onChange={(e) => {
+              setAssignNames(e.target.checked);
+              if (selectedId) {
+                updateResource("Chatbot", selectedId, {
+                  assign_names: e.target.checked,
+                } as Record<string, unknown>).catch(() => {});
+              }
+            }}
             className="small"
           />
         </Form.Group>
@@ -191,7 +216,14 @@ export default function AgentSection() {
             type="switch"
             label="Use datetime in prompts"
             checked={useDatetime}
-            onChange={(e) => setUseDatetime(e.target.checked)}
+            onChange={(e) => {
+              setUseDatetime(e.target.checked);
+              if (selectedId) {
+                updateResource("Chatbot", selectedId, {
+                  use_datetime: e.target.checked,
+                } as Record<string, unknown>).catch(() => {});
+              }
+            }}
             className="small"
           />
         </Form.Group>
@@ -201,7 +233,14 @@ export default function AgentSection() {
           <Form.Select
             size="sm"
             value={gender}
-            onChange={(e) => setGender(e.target.value)}
+            onChange={(e) => {
+              setGender(e.target.value);
+              if (selectedId) {
+                updateResource("Chatbot", selectedId, {
+                  gender: e.target.value,
+                } as Record<string, unknown>).catch(() => {});
+              }
+            }}
             className="bg-dark text-light border-secondary"
           >
             {GENDER_OPTIONS.map((g) => (
@@ -212,15 +251,6 @@ export default function AgentSection() {
           </Form.Select>
         </Form.Group>
       </div>
-
-      <Button
-        variant="primary"
-        size="sm"
-        onClick={handleSave}
-        disabled={saving || !selectedId}
-      >
-        {saving ? <Spinner animation="border" size="sm" /> : "Save"}
-      </Button>
     </div>
   );
 }
