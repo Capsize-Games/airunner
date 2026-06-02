@@ -683,8 +683,7 @@ export default function ImageBrowserPanel() {
         <div className="ms-2 flex-grow-1 overflow-hidden d-flex flex-column"
           style={{ minWidth: 0 }}>
           {/* Row 1: click-to-edit filename + file_size */}
-          <div className="d-flex justify-content-between align-items-start"
-            style={{ flex: 1 }}>
+          <div className="d-flex justify-content-between align-items-start">
             {isEditing ? (
               <input
                 type="text"
@@ -725,6 +724,9 @@ export default function ImageBrowserPanel() {
               {formatFileSize(img.file_size)}
             </span>
           </div>
+
+          {/* Spacer to push buttons to bottom */}
+          <div style={{ flex: 1 }} />
 
           {/* Row 2: icon buttons */}
           <div
