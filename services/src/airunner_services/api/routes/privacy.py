@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import json
+
 from fastapi import APIRouter
 
 from airunner_services.database.models.application_settings import (
@@ -24,11 +26,11 @@ _DEFAULT_SERVICES: dict[str, bool] = {
 @router.get("/privacy")
 async def get_privacy():
     """Return the current external-service consent state."""
-    app = _app_settings()
-    raw = app.privacy_service_consent or "{}" if app else "{}"
-    import json
+    with session_scope() as session:
+        app = session.query(ApplicationSettings).first()
+        raw = app.privacy_service_consent if app else "{}"
     try:
-        services = json.loads(raw)
+        services = json.loads(raw or "{}")
     except Exception:
         services = {}
     merged = {**_DEFAULT_SERVICES, **services}
@@ -38,22 +40,11 @@ async def get_privacy():
 @router.put("/privacy")
 async def update_privacy(services: dict[str, bool]):
     """Update external-service consent toggles."""
-    import json
-
     with session_scope() as session:
-        app = _app_settings(session=session)
+        app = session.query(ApplicationSettings).first()
         if app is None:
             app = ApplicationSettings()
             session.add(app)
         app.privacy_service_consent = json.dumps(services)
         session.commit()
     return {"services": services}
-
-
-def _app_settings(session=None):
-    from airunner_services.database.session import session_scope
-
-    if session is None:
-        with session_scope() as s:
-            return s.query(ApplicationSettings).first()
-    return session.query(ApplicationSettings).first()
