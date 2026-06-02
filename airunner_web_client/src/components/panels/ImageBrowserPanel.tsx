@@ -3,6 +3,7 @@ import Spinner from "react-bootstrap/Spinner";
 import Button from "react-bootstrap/Button";
 import { BASE_URL } from "../../types/api";
 import type { ImageDateInfo, ImageInfo } from "../../api/client";
+import { deleteImage, renameImage } from "../../api/client";
 
 const PAGE_SIZE = 20;
 const LS_DATE_KEY = "airunner_image_browser_date";
@@ -386,10 +387,10 @@ export default function ImageBrowserPanel() {
   const [loadingDates, setLoadingDates] = useState(true);
   const [loadingImages, setLoadingImages] = useState(false);
   const [hasMore, setHasMore] = useState(true);
-  const [expandedMeta, setExpandedMeta] = useState<Record<string, boolean>>({});
   const [showLocal, setShowLocal] = useState(false);
   const [previewIndex, setPreviewIndex] = useState<number | null>(null);
-  const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editValue, setEditValue] = useState<string>("");
 
   const sentinelRef = useRef<HTMLDivElement | null>(null);
 
@@ -538,23 +539,58 @@ export default function ImageBrowserPanel() {
     }
   };
 
-  // ── Metadata expand toggle ──────────────────────────────────────────
+  // ── Rename handler ─────────────────────────────────────────────────
 
-  const toggleMeta = (id: string) => {
-    setExpandedMeta((prev) => ({ ...prev, [id]: !prev[id] }));
+  const handleStartRename = (img: ImageInfo) => {
+    setEditingId(img.id);
+    setEditValue(img.id);
   };
 
-  // ── Copy file path to clipboard (was open-file) ─────────────────────
-
-  const handleOpenFile = async (imgId: string, filePath: string) => {
+  const handleCommitRename = async (date: string, oldId: string) => {
+    const newName = editValue.trim();
+    if (!newName || newName === oldId) {
+      setEditingId(null);
+      return;
+    }
+    setEditingId(null);
     try {
-      await navigator.clipboard.writeText(filePath);
-      setCopiedId(imgId);
-      setTimeout(() => {
-        setCopiedId((prev) => (prev === imgId ? null : prev));
-      }, 2000);
+      const result = await renameImage(date, oldId, newName);
+      setServerImages((prev) =>
+        prev.map((img) =>
+          img.id === oldId ? { ...img, id: result.new_id } : img,
+        ),
+      );
     } catch {
-      // clipboard unavailable
+      // revert — keep old id
+    }
+  };
+
+  const handleCancelRename = () => {
+    setEditingId(null);
+  };
+
+  // ── Delete server image ────────────────────────────────────────────
+
+  const handleDeleteServer = async (date: string, filename: string) => {
+    if (!window.confirm(`Delete "${filename}"?`)) return;
+    try {
+      await deleteImage(date, filename);
+      setServerImages((prev) => prev.filter((img) => img.id !== filename));
+    } catch {
+      // delete failed
+    }
+  };
+
+  // ── Move to canvas ─────────────────────────────────────────────────
+
+  const handleMoveToCanvas = async (imageUrl: string) => {
+    try {
+      await fetch(
+        `${BASE_URL}/api/v1/canvas/image?image_url=${encodeURIComponent(imageUrl)}`,
+        { method: "PUT" },
+      );
+    } catch {
+      // canvas move failed
     }
   };
 
@@ -581,266 +617,171 @@ export default function ImageBrowserPanel() {
     });
   }, [serverImages.length]);
 
-  // ── Render metadata as clickable chips ──────────────────────────────
-
-  const renderMetadata = (
-    meta: Record<string, unknown> | null,
-    imgId: string,
-  ) => {
-    const isExpanded = expandedMeta[imgId];
-
-    if (!meta || Object.keys(meta).length === 0) {
-      return (
-        <span className="text-muted small">No metadata</span>
-      );
-    }
-
-    if (!isExpanded) {
-      return (
-        <button
-          type="button"
-          className="btn btn-sm p-0 mt-1"
-          onClick={() => toggleMeta(imgId)}
-          title="View image metadata"
-          style={{
-            background: "none",
-            border: "none",
-            color: "var(--theme-text-secondary)",
-            fontSize: 11,
-            cursor: "pointer",
-            textDecoration: "underline",
-            textUnderlineOffset: 2,
-          }}
-        >
-          View metadata
-        </button>
-      );
-    }
-
-    // Determine if version indicates a Z-image
-    const version = meta.version as string | undefined;
-    const isZImage =
-      version !== undefined &&
-      typeof version === "string" &&
-      version.toLowerCase().includes("z-image");
-
-    // Filter entries for Z-images
-    const entries = Object.entries(meta).filter(([key]) => {
-      if (
-        isZImage &&
-        (key === "secondary_prompt" ||
-          key === "negative_prompt" ||
-          key === "secondary_negative_prompt")
-      ) {
-        return false;
-      }
-      return true;
-    });
-
-    const rows = entries.map(([key, value], idx) => {
-      const valStr =
-        typeof value === "object"
-          ? JSON.stringify(value)
-          : String(value);
-      return (
-        <tr
-          key={key}
-          style={{
-            background: idx % 2 === 0
-              ? "rgba(255,255,255,0.03)"
-              : "transparent",
-          }}
-        >
-          <td
-            style={{
-              padding: "2px 8px 2px 0",
-              verticalAlign: "top",
-              whiteSpace: "nowrap",
-              color: "var(--theme-text-secondary)",
-              fontWeight: 600,
-              width: 1,
-              borderBottom: "1px solid var(--theme-border)",
-            }}
-          >
-            {key}
-          </td>
-          <td
-            style={{
-              padding: "2px 0",
-              verticalAlign: "top",
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              maxWidth: 0,
-              borderBottom: "1px solid var(--theme-border)",
-            }}
-            title={valStr}
-          >
-            {truncate(valStr, 120)}
-          </td>
-        </tr>
-      );
-    });
-
-    return (
-      <div className="small text-muted mt-1">
-        <table
-          style={{
-            width: "100%",
-            borderCollapse: "collapse",
-          }}
-        >
-          <thead>
-            <tr
-              style={{
-                background: "rgba(255,255,255,0.06)",
-              }}
-            >
-              <th
-                style={{
-                  padding: "3px 8px 3px 0",
-                  textAlign: "left",
-                  fontSize: 10,
-                  textTransform: "uppercase",
-                  letterSpacing: 0.5,
-                  color: "var(--theme-text-secondary)",
-                  fontWeight: 600,
-                  borderBottom:
-                    "1px solid var(--theme-border)",
-                }}
-              >
-                Metadata
-              </th>
-              <th
-                style={{
-                  padding: "3px 0",
-                  textAlign: "left",
-                  fontSize: 10,
-                  textTransform: "uppercase",
-                  letterSpacing: 0.5,
-                  color: "var(--theme-text-secondary)",
-                  fontWeight: 600,
-                  borderBottom:
-                    "1px solid var(--theme-border)",
-                }}
-              />
-            </tr>
-          </thead>
-          <tbody>{rows}</tbody>
-        </table>
-        <button
-          type="button"
-          className="btn btn-sm p-0 mt-1"
-          onClick={() => toggleMeta(imgId)}
-          title="Hide metadata"
-          style={{
-            background: "none",
-            border: "none",
-            color: "var(--theme-text-secondary)",
-            fontSize: 11,
-            cursor: "pointer",
-            textDecoration: "underline",
-            textUnderlineOffset: 2,
-          }}
-        >
-          ▲ Hide metadata
-        </button>
-      </div>
-    );
-  };
-
   // ── Render one server image row ────────────────────────────────────
 
   const renderServerRow = (img: ImageInfo, idx: number) => {
-    const isExpanded = expandedMeta[img.id];
+    const isEditing = editingId === img.id;
+    const imgFilter = "var(--theme-icon-filter)";
     return (
-    <div
-      key={img.id}
-      className="d-flex border rounded p-1 mb-1"
-      style={{
-        backgroundColor: "rgba(255,255,255,0.02)",
-        minHeight: 98,
-      }}
-    >
-      {/* Thumbnail */}
       <div
-        className="border rounded overflow-hidden flex-shrink-0 align-self-start"
-        style={{ width: 96, height: 96, cursor: "pointer" }}
-        title={`Click to preview: ${img.id}`}
-        onClick={() => setPreviewIndex(idx)}
-        draggable
-        onDragStart={(e) => {
-          e.dataTransfer.setData(
-            "text/image-url",
-            `${BASE_URL}${img.image_url}`,
-          );
-          e.dataTransfer.effectAllowed = "copy";
+        key={img.id}
+        className="d-flex border rounded p-1 mb-1"
+        style={{
+          backgroundColor: "rgba(255,255,255,0.02)",
+          minHeight: 98,
         }}
       >
-        <img
-          src={`${BASE_URL}${img.thumbnail_url}`}
-          alt={img.id}
-          className="w-100 h-100"
-          style={{ objectFit: "cover" }}
-          loading="lazy"
-        />
-      </div>
-
-      {/* Info */}
-      <div className="ms-2 flex-grow-1 overflow-hidden">
-        <div className="d-flex justify-content-between align-items-start">
-          <strong className="small" style={{ wordBreak: "break-all" }}>
-            {img.id}
-          </strong>
-          <span className="small text-muted flex-shrink-0 ms-1">
-            {formatFileSize(img.file_size)}
-          </span>
+        {/* Thumbnail */}
+        <div
+          className="border rounded overflow-hidden flex-shrink-0 align-self-start"
+          style={{ width: 96, height: 96, cursor: "pointer" }}
+          title={`Click to preview: ${img.id}`}
+          onClick={() => setPreviewIndex(idx)}
+          draggable
+          onDragStart={(e) => {
+            e.dataTransfer.setData(
+              "text/image-url",
+              `${BASE_URL}${img.image_url}`,
+            );
+            e.dataTransfer.effectAllowed = "copy";
+          }}
+        >
+          <img
+            src={`${BASE_URL}${img.thumbnail_url}`}
+            alt={img.id}
+            className="w-100 h-100"
+            style={{ objectFit: "cover" }}
+            loading="lazy"
+          />
         </div>
 
-        <div className="d-flex align-items-center small text-muted">
-          <span
-            className="text-truncate flex-grow-1"
-            style={{ minWidth: 0 }}
-            title={img.file_path}
-          >
-            {img.file_path}
-          </span>
-          <button
-            type="button"
-            className="btn btn-sm p-0 ms-1 flex-shrink-0"
-            onClick={() => handleOpenFile(img.id, img.file_path)}
-            title={copiedId === img.id ? "Copied!" : "Copy file path"}
-            style={{
-              background: "none",
-              border: "none",
-              cursor: "pointer",
-              color: "var(--theme-text-secondary)",
-              fontSize: 11,
-              padding: "0 4px",
-              whiteSpace: "nowrap",
-            }}
-          >
-            {copiedId === img.id ? (
-              "Copied!"
-            ) : (
-              <img
-                src="/icons/lucide/dark/external-link.svg"
-                alt="Copy path"
+        {/* Info */}
+        <div className="ms-2 flex-grow-1 overflow-hidden d-flex flex-column"
+          style={{ minWidth: 0 }}>
+          {/* Row 1: click-to-edit filename + file_size */}
+          <div className="d-flex justify-content-between align-items-start">
+            {isEditing ? (
+              <input
+                type="text"
+                className="form-control form-control-sm"
                 style={{
-                  width: 14,
-                  height: 14,
-                  filter: "var(--theme-icon-filter)",
+                  fontSize: 12,
+                  width: "100%",
+                  minWidth: 0,
+                }}
+                value={editValue}
+                onChange={(e) => setEditValue(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    handleCommitRename(selectedDate ?? "", img.id);
+                  } else if (e.key === "Escape") {
+                    handleCancelRename();
+                  }
+                }}
+                onBlur={() =>
+                  handleCommitRename(selectedDate ?? "", img.id)
+                }
+                autoFocus
+              />
+            ) : (
+              <strong
+                className="small"
+                style={{
+                  wordBreak: "break-all",
+                  cursor: "pointer",
+                }}
+                title="Click to rename"
+                onClick={() => handleStartRename(img)}
+              >
+                {img.id}
+              </strong>
+            )}
+            <span className="small text-muted flex-shrink-0 ms-1">
+              {formatFileSize(img.file_size)}
+            </span>
+          </div>
+
+          {/* Row 2: icon buttons */}
+          <div className="d-flex gap-2 mt-1">
+            <button
+              type="button"
+              title="Move to canvas"
+              style={{
+                background: "none",
+                border: "none",
+                cursor: "pointer",
+                padding: 0,
+                lineHeight: 1,
+              }}
+              onClick={() =>
+                handleMoveToCanvas(
+                  `${BASE_URL}${img.image_url}`,
+                )
+              }
+            >
+              <img
+                src="/icons/lucide/dark/panel-right-open.svg"
+                alt="Move to canvas"
+                style={{
+                  width: 16,
+                  height: 16,
+                  filter: imgFilter,
                 }}
               />
-            )}
-          </button>
-        </div>
-
-        <div className="mt-1">
-          {renderMetadata(img.metadata, img.id)}
+            </button>
+            <button
+              type="button"
+              title="View details"
+              style={{
+                background: "none",
+                border: "none",
+                cursor: "pointer",
+                padding: 0,
+                lineHeight: 1,
+              }}
+              onClick={() => setPreviewIndex(idx)}
+            >
+              <img
+                src="/icons/lucide/dark/info.svg"
+                alt="View details"
+                style={{
+                  width: 16,
+                  height: 16,
+                  filter: imgFilter,
+                }}
+              />
+            </button>
+            <button
+              type="button"
+              title="Delete image"
+              style={{
+                background: "none",
+                border: "none",
+                cursor: "pointer",
+                padding: 0,
+                lineHeight: 1,
+              }}
+              onClick={() =>
+                handleDeleteServer(
+                  selectedDate ?? "",
+                  img.id,
+                )
+              }
+            >
+              <img
+                src="/icons/lucide/dark/trash.svg"
+                alt="Delete"
+                style={{
+                  width: 16,
+                  height: 16,
+                  filter: imgFilter,
+                }}
+              />
+            </button>
+          </div>
         </div>
       </div>
-    </div>
-  );
+    );
   };
 
   // ── Render one local storage image row ─────────────────────────────

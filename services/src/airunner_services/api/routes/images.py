@@ -19,6 +19,7 @@ from pathlib import Path
 from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import FileResponse, StreamingResponse
 from PIL import Image
+from pydantic import BaseModel
 from watchdog.events import FileSystemEventHandler
 from watchdog.observers import Observer as _Observer
 
@@ -356,3 +357,72 @@ def serve_thumbnail(date: str, filename: str):
     except Exception as exc:
         logger.error("Failed to generate thumbnail for %s: %s", source, exc)
         raise HTTPException(status_code=500, detail="Thumbnail generation failed") from exc
+
+
+# ── Delete image ─────────────────────────────────────────────────────────
+
+
+class _DeleteResponse(BaseModel):
+    success: bool
+    deleted: str
+
+
+@router.delete("/images/{date}/delete/{filename}")
+def delete_image(date: str, filename: str) -> _DeleteResponse:
+    """Delete an image file from disk."""
+    source = _date_dir(date) / filename
+    if not source.is_file():
+        raise HTTPException(status_code=404, detail="Image not found")
+    source.unlink()
+    # Also delete cached thumbnail
+    cached = _cache_path(date, filename)
+    if cached.is_file():
+        cached.unlink()
+    return _DeleteResponse(success=True, deleted=filename)
+
+
+# ── Rename image ─────────────────────────────────────────────────────────
+
+
+class _RenameImageRequest(BaseModel):
+    new_filename: str
+
+
+class _RenameResponse(BaseModel):
+    success: bool
+    new_id: str
+
+
+@router.put("/images/{date}/rename/{filename}")
+def rename_image(
+    date: str,
+    filename: str,
+    body: _RenameImageRequest,
+) -> _RenameResponse:
+    """Rename an image file on disk, appending a number if the new name
+    exists."""
+    source = _date_dir(date) / filename
+    if not source.is_file():
+        raise HTTPException(status_code=404, detail="Image not found")
+
+    new_name = body.new_filename
+    dest = _date_dir(date) / new_name
+
+    # Handle name collisions
+    if dest.is_file():
+        stem = dest.stem
+        suffix = dest.suffix
+        counter = 1
+        while dest.is_file():
+            dest = _date_dir(date) / f"{stem} ({counter}){suffix}"
+            counter += 1
+
+    source.rename(dest)
+
+    # Also rename cached thumbnail
+    old_cached = _cache_path(date, filename)
+    if old_cached.is_file():
+        new_cached = _cache_path(date, dest.name)
+        old_cached.rename(new_cached)
+
+    return _RenameResponse(success=True, new_id=dest.name)

@@ -508,3 +508,18 @@ export async function getImageInfo(
     `/api/v1/art/images/${date}/info/${filename}`,
   );
 }
+
+export async function deleteImage(date: string, filename: string) {
+  return request<{ success: boolean; deleted: string }>(
+    "DELETE", `/api/v1/art/images/${date}/delete/${filename}`,
+  );
+}
+
+export async function renameImage(
+  date: string, oldFilename: string, newFilename: string,
+) {
+  return request<{ success: boolean; new_id: string }>(
+    "PUT", `/api/v1/art/images/${date}/rename/${oldFilename}`,
+    { new_filename: newFilename },
+  );
+}
