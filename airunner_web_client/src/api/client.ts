@@ -110,10 +110,11 @@ export async function* streamLLM(
   messages: import("../types/api").Message[],
   signal?: AbortSignal,
   model?: string,
+  llmOverrides?: Record<string, Record<string, unknown>>,
 ) {
   yield* streamRequest(
     "POST", "/api/v1/llm/conversations/stream",
-    { messages, model, stream: true },
+    { messages, model, stream: true, llm_overrides: llmOverrides },
     signal,
   );
 }
@@ -169,6 +170,16 @@ export async function synthesizeTTS(
   });
   if (!response.ok) throw new Error(`${response.status}`);
   return response.blob();
+}
+
+// ---------------------------------------------------------------------------
+// LLM Settings Presets
+// ---------------------------------------------------------------------------
+export async function listLLMPresets() {
+  return request<Array<{
+    label: string;
+    args: Record<string, unknown>;
+  }>>("GET", "/api/v1/llm/settings-presets");
 }
 
 // ---------------------------------------------------------------------------

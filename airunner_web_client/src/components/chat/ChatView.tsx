@@ -12,6 +12,7 @@ import {
 } from "../../api/client";
 import type { Message } from "../../types/api";
 import MessageList from "./MessageList";
+import ModelSelector from "./ModelSelector";
 
 const icon = (name: string) => `/icons/lucide/dark/${name}.svg`;
 
@@ -30,13 +31,21 @@ export default function ChatView({
   const modelPathRef = useRef("");
   const loadedConvRef = useRef<number | null>(null);
 
-  useEffect(() => {
+  const loadModelPath = useCallback(() => {
     getSingleton("LLMGeneratorSettings")
       .then((r) => {
         modelPathRef.current = String(r.model_path ?? "");
       })
       .catch(() => {});
   }, []);
+
+  useEffect(() => {
+    loadModelPath();
+    const handler = () => loadModelPath();
+    window.addEventListener("model-settings-changed", handler);
+    return () =>
+      window.removeEventListener("model-settings-changed", handler);
+  }, [loadModelPath]);
 
   // Load conversation when conversationId changes
   useEffect(() => {
@@ -96,10 +105,20 @@ export default function ChatView({
 
     let fullResponse = "";
     try {
+      let llmOverrides: Record<string, Record<string, unknown>> | undefined;
+      try {
+        const ui = localStorage.getItem("airunner_llm_overrides_ui");
+        if (ui && (JSON.parse(ui) as Record<string, unknown>).overrideEnabled) {
+          const raw = localStorage.getItem("airunner_llm_overrides");
+          if (raw) llmOverrides = JSON.parse(raw) as Record<string, Record<string, unknown>>;
+        }
+      } catch { /* ignore */ }
+
       const gen = streamLLM(
         newMessages,
         controller.signal,
         modelPathRef.current,
+        llmOverrides,
       );
       fullResponse = "";
       let thinking = "";
@@ -246,6 +265,7 @@ export default function ChatView({
               borderColor: "#333",
             }}
           />
+          <ModelSelector />
           <div className="d-flex align-items-center gap-2">
             <div className="flex-grow-1">
               <ProgressBar

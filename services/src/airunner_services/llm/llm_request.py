@@ -66,6 +66,18 @@ class LLMRequest:
     dtype: Optional[str] = None
     force_tool: Optional[str] = None
     images: Optional[List[Any]] = field(default_factory=list)
+    llm_overrides: Optional[Dict[str, Dict[str, Any]]] = None
+
+    def merge_preset_overrides(
+        self, overrides: Dict[str, Dict[str, Any]], label: str
+    ) -> None:
+        """Apply per-preset overrides when they exist for *label*."""
+        preset_overrides = overrides.get(label)
+        if not preset_overrides:
+            return
+        for attr, val in preset_overrides.items():
+            if hasattr(self, attr):
+                setattr(self, attr, val)
 
     def to_generation_kwargs(self) -> Dict[str, Any]:
         """Convert one request into model-generation kwargs."""

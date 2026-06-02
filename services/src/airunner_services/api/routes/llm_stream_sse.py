@@ -40,6 +40,8 @@ def _build_llm_request(payload: ChatCompletionRequest) -> LLMRequest:
         llm_request.temperature = payload.temperature
     if payload.max_tokens is not None:
         llm_request.max_new_tokens = payload.max_tokens
+    if payload.llm_overrides:
+        llm_request.llm_overrides = payload.llm_overrides
     return llm_request
 
 
@@ -110,6 +112,17 @@ def stream_chat_completion(
     done = threading.Event()
     last_callback_at = [time.monotonic()]
     action = LLMActionType.CHAT
+
+    # Apply per-preset overrides when the client sent them
+    if llm_request.llm_overrides:
+        from airunner_services.api.routes.llm_settings_presets import (
+            _PRESET_LABELS,
+        )
+        label = _PRESET_LABELS.get(action)
+        if label:
+            llm_request.merge_preset_overrides(
+                llm_request.llm_overrides, label
+            )
 
     def callback(data: dict) -> None:
         done_now = handle_stream_event(

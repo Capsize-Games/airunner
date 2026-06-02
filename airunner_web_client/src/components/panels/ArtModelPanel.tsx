@@ -4,7 +4,6 @@ import {
   updateSingleton,
   getBootstrap,
   getArtOptions,
-  listLLMModels,
 } from "../../api/client";
 import type { ResourceRecord } from "../../types/api";
 import Form from "react-bootstrap/Form";
