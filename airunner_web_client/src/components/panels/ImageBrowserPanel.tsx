@@ -272,111 +272,163 @@ export default function ImageBrowserPanel() {
     meta: Record<string, unknown> | null,
     imgId: string,
   ) => {
-    if (!meta) {
+    const isExpanded = expandedMeta[imgId];
+
+    if (!meta || Object.keys(meta).length === 0) {
       return (
         <span className="text-muted small">No metadata</span>
       );
     }
 
-    const isExpanded = expandedMeta[imgId];
-    // Pick the most interesting keys to show
-    const displayedFields: Record<string, unknown> = {};
-    const extraFields: Record<string, unknown> = {};
-    const priorityKeys = [
-      "prompt", "negative_prompt", "seed", "steps",
-      "scale", "model", "scheduler", "version",
-    ];
-
-    for (const key of priorityKeys) {
-      if (key in meta) {
-        displayedFields[key] = meta[key];
-      }
+    if (!isExpanded) {
+      return (
+        <button
+          type="button"
+          className="btn btn-sm p-0 mt-1"
+          onClick={() => toggleMeta(imgId)}
+          title="View image metadata"
+          style={{
+            background: "none",
+            border: "none",
+            color: "var(--theme-text-secondary)",
+            fontSize: 11,
+            cursor: "pointer",
+            textDecoration: "underline",
+            textUnderlineOffset: 2,
+          }}
+        >
+          View metadata
+        </button>
+      );
     }
-    // Remaining keys go to extra
-    for (const [k, v] of Object.entries(meta)) {
-      if (!(k in displayedFields)) {
-        extraFields[k] = v;
-      }
-    }
 
-    const entries = isExpanded
-      ? { ...displayedFields, ...extraFields }
-      : displayedFields;
+    const rows = Object.entries(meta).map(([key, value], idx) => {
+      const valStr =
+        typeof value === "object"
+          ? JSON.stringify(value)
+          : String(value);
+      return (
+        <tr
+          key={key}
+          style={{
+            background: idx % 2 === 0
+              ? "rgba(255,255,255,0.03)"
+              : "transparent",
+          }}
+        >
+          <td
+            style={{
+              padding: "2px 8px 2px 0",
+              verticalAlign: "top",
+              whiteSpace: "nowrap",
+              color: "var(--theme-text-secondary)",
+              fontWeight: 600,
+              width: 1,
+              borderBottom: "1px solid var(--theme-border)",
+            }}
+          >
+            {key}
+          </td>
+          <td
+            style={{
+              padding: "2px 0",
+              verticalAlign: "top",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              maxWidth: 0,
+              borderBottom: "1px solid var(--theme-border)",
+            }}
+            title={valStr}
+          >
+            {truncate(valStr, 120)}
+          </td>
+        </tr>
+      );
+    });
 
     return (
       <div className="small text-muted mt-1">
-        <table style={{ width: "100%", borderCollapse: "collapse" }}>
-          <tbody>
-            {Object.entries(entries).map(([key, value]) => {
-              const valStr =
-                typeof value === "object"
-                  ? JSON.stringify(value)
-                  : String(value);
-              return (
-                <tr key={key}>
-                  <td
-                    style={{
-                      padding: "1px 8px 1px 0",
-                      verticalAlign: "top",
-                      whiteSpace: "nowrap",
-                      color: "var(--theme-text-secondary)",
-                      fontWeight: 600,
-                      width: 1,
-                    }}
-                  >
-                    {key}
-                  </td>
-                  <td
-                    style={{
-                      padding: "1px 0",
-                      verticalAlign: "top",
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                      maxWidth: 0,
-                    }}
-                    title={valStr}
-                  >
-                    {truncate(valStr, 80)}
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
+        <table
+          style={{
+            width: "100%",
+            borderCollapse: "collapse",
+          }}
+        >
+          <thead>
+            <tr
+              style={{
+                background: "rgba(255,255,255,0.06)",
+              }}
+            >
+              <th
+                style={{
+                  padding: "3px 8px 3px 0",
+                  textAlign: "left",
+                  fontSize: 10,
+                  textTransform: "uppercase",
+                  letterSpacing: 0.5,
+                  color: "var(--theme-text-secondary)",
+                  fontWeight: 600,
+                  borderBottom:
+                    "1px solid var(--theme-border)",
+                }}
+              >
+                Metadata
+              </th>
+              <th
+                style={{
+                  padding: "3px 0",
+                  textAlign: "left",
+                  fontSize: 10,
+                  textTransform: "uppercase",
+                  letterSpacing: 0.5,
+                  color: "var(--theme-text-secondary)",
+                  fontWeight: 600,
+                  borderBottom:
+                    "1px solid var(--theme-border)",
+                }}
+              />
+            </tr>
+          </thead>
+          <tbody>{rows}</tbody>
         </table>
-        {Object.keys(extraFields).length > 0 && (
-          <button
-            type="button"
-            className="btn btn-sm p-0 mt-1"
-            onClick={() => toggleMeta(imgId)}
-            title={isExpanded ? "Show less" : "Show all metadata"}
-            style={{
-              background: "none",
-              border: "none",
-              color: "var(--theme-text-secondary)",
-              fontSize: 11,
-              cursor: "pointer",
-              textDecoration: "underline",
-              textUnderlineOffset: 2,
-            }}
-          >
-            {isExpanded ? "▲ Show less" : "▼ Show all metadata"}
-          </button>
-        )}
+        <button
+          type="button"
+          className="btn btn-sm p-0 mt-1"
+          onClick={() => toggleMeta(imgId)}
+          title="Hide metadata"
+          style={{
+            background: "none",
+            border: "none",
+            color: "var(--theme-text-secondary)",
+            fontSize: 11,
+            cursor: "pointer",
+            textDecoration: "underline",
+            textUnderlineOffset: 2,
+          }}
+        >
+          ▲ Hide metadata
+        </button>
       </div>
     );
   };
 
   // ── Render one server image row ────────────────────────────────────
 
-  const renderServerRow = (img: ImageInfo) => (
+  const renderServerRow = (img: ImageInfo) => {
+    const isExpanded = expandedMeta[img.id];
+    return (
     <div
       key={img.id}
-      className="d-flex border rounded p-1 mb-1 align-items-start"
-      style={{ backgroundColor: "rgba(255,255,255,0.02)" }}
+      className="d-flex border rounded p-1 mb-1"
+      style={{
+        backgroundColor: "rgba(255,255,255,0.02)",
+        minHeight: 98,
+      }}
     >
       {/* Thumbnail */}
       <div
-        className="border rounded overflow-hidden flex-shrink-0"
+        className="border rounded overflow-hidden flex-shrink-0 align-self-start"
         style={{ width: 96, height: 96, cursor: "grab" }}
         title={img.id}
         draggable
@@ -446,6 +498,7 @@ export default function ImageBrowserPanel() {
       </div>
     </div>
   );
+  };
 
   // ── Render one local storage image row ─────────────────────────────
 
