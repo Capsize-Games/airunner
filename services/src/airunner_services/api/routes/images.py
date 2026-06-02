@@ -263,9 +263,12 @@ def list_images(
     for p in page:
         meta = _extract_metadata(p) if p.suffix.lower() == ".png" else None
         try:
-            file_size = p.stat().st_size
+            stat = p.stat()
+            file_size = stat.st_size
+            file_timestamp = stat.st_mtime
         except OSError:
             file_size = 0
+            file_timestamp = 0.0
         images.append({
             "id": p.name,
             "image_url": (
@@ -276,6 +279,7 @@ def list_images(
             ),
             "file_path": str(p),
             "file_size": file_size,
+            "file_timestamp": file_timestamp,
             "metadata": meta,
         })
 

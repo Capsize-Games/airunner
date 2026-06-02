@@ -467,6 +467,8 @@ export interface ImageInfo {
   file_path: string;
   /** File size in bytes. */
   file_size: number;
+  /** File modification timestamp (Unix epoch). */
+  file_timestamp: number;
   /** Extracted PNG metadata (prompt, seed, steps, etc.). */
   metadata: Record<string, unknown> | null;
 }

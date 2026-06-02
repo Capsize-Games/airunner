@@ -63,6 +63,20 @@ function formatFileSize(bytes: number): string {
   return `${val.toFixed(i === 0 ? 0 : 1)} ${units[i]}`;
 }
 
+function formatTimestamp(ts: number): string {
+  try {
+    const d = new Date(ts * 1000);
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    const hours = String(d.getHours()).padStart(2, "0");
+    const mins = String(d.getMinutes()).padStart(2, "0");
+    return `${year}-${month}-${day} ${hours}:${mins}`;
+  } catch {
+    return "";
+  }
+}
+
 function truncate(str: string, maxLen: number): string {
   if (str.length <= maxLen) return str;
   return str.slice(0, maxLen) + "...";
@@ -144,13 +158,34 @@ function ImagePreviewModal({
       }}
       onClick={onClose}
     >
+      {/* Close button floating outside */}
+      <button
+        onClick={onClose}
+        style={{
+          position: "fixed",
+          top: 16,
+          right: 16,
+          background: "none",
+          border: "none",
+          color: "#fff",
+          fontSize: 28,
+          cursor: "pointer",
+          lineHeight: 1,
+          zIndex: 1110,
+        }}
+        title="Close (Esc)"
+      >
+        ✕
+      </button>
       <div
         style={{
           display: "flex",
-          gap: 16,
-          padding: 24,
-          maxHeight: "90vh",
-          maxWidth: "95vw",
+          gap: 0,
+          maxHeight: "85vh",
+          maxWidth: "90vw",
+          border: "1px solid rgba(255,255,255,0.2)",
+          borderRadius: 8,
+          overflow: "hidden",
         }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -184,21 +219,16 @@ function ImagePreviewModal({
             color: "#ccc",
           }}
         >
-          {/* Close button pinned to top */}
-          <div style={{ textAlign: "right", marginBottom: 8, flexShrink: 0 }}>
-            <button
-              onClick={onClose}
-              style={{
-                background: "none",
-                border: "none",
-                color: "#fff",
-                fontSize: 24,
-                cursor: "pointer",
-                lineHeight: 1,
-              }}
-            >
-              ✕
-            </button>
+          {/* File info header */}
+          <div style={{ marginBottom: 8, flexShrink: 0 }}>
+            <div style={{ fontWeight: 600, fontSize: 13, color: "#fff" }}>
+              {img.id}
+            </div>
+            <div style={{ fontSize: 11, color: "#aaa", marginTop: 2 }}>
+              {formatTimestamp(img.file_timestamp)}
+              {" · "}
+              {formatFileSize(img.file_size)}
+            </div>
           </div>
 
           {/* Metadata table — scrollable */}
@@ -720,9 +750,12 @@ export default function ImageBrowserPanel() {
                 {img.id}
               </strong>
             )}
-            <span className="small text-muted flex-shrink-0 ms-1">
+            <span className="small text-muted flex-shrink-0 ms-2">
               {formatFileSize(img.file_size)}
             </span>
+          </div>
+          <div className="small text-muted" style={{ fontSize: 11 }}>
+            {formatTimestamp(img.file_timestamp)}
           </div>
 
           {/* Spacer to push buttons to bottom */}
