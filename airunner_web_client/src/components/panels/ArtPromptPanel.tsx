@@ -1,46 +1,62 @@
 import { useState, useEffect, useRef } from "react";
 import {
-  getSingleton,
-  updateSingleton,
   startArtGeneration,
   getArtJobStatus,
 } from "../../api/client";
-import type { ResourceRecord } from "../../types/api";
 import Form from "react-bootstrap/Form";
 import ProgressBar from "react-bootstrap/ProgressBar";
 
+const STORAGE_KEY = "airunner_art_prompt_data";
 const icon = (name: string) => `/icons/lucide/dark/${name}.svg`;
 
+interface PromptData {
+  prompt: string;
+  negative_prompt: string;
+  secondary_prompt: string;
+  secondary_negative_prompt: string;
+}
+
+const DEFAULT_PROMPT_DATA: PromptData = {
+  prompt: "",
+  negative_prompt: "",
+  secondary_prompt: "",
+  secondary_negative_prompt: "",
+};
+
+function loadPromptData(): PromptData {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) return JSON.parse(raw) as PromptData;
+  } catch { /* ignore */ }
+  return { ...DEFAULT_PROMPT_DATA };
+}
+
+function savePromptData(data: Record<string, string>) {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  } catch { /* ignore */ }
+}
+
 export default function ArtPromptPanel() {
-  const [prompt, setPrompt] = useState("");
-  const [negativePrompt, setNegativePrompt] = useState("");
-  const [secondaryPrompt, setSecondaryPrompt] = useState("");
-  const [secondaryNegativePrompt, setSecondaryNegativePrompt] = useState("");
+  const initial = loadPromptData();
+  const [prompt, setPrompt] = useState(initial.prompt);
+  const [negativePrompt, setNegativePrompt] = useState(initial.negative_prompt);
+  const [secondaryPrompt, setSecondaryPrompt] = useState(initial.secondary_prompt);
+  const [secondaryNegativePrompt, setSecondaryNegativePrompt] = useState(initial.secondary_negative_prompt);
   const [generating, setGenerating] = useState(false);
   const [progress, setProgress] = useState(0);
-  const [loading, setLoading] = useState(true);
   const jobIdRef = useRef<string | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
-    getSingleton("GeneratorFormData")
-      .then((r: ResourceRecord) => {
-        setPrompt(String(r.prompt ?? ""));
-        setNegativePrompt(String(r.negative_prompt ?? ""));
-        setSecondaryPrompt(String(r.secondary_prompt ?? ""));
-        setSecondaryNegativePrompt(
-          String(r.secondary_negative_prompt ?? ""),
-        );
-      })
-      .catch(() => {})
-      .finally(() => setLoading(false));
     return () => {
       if (pollRef.current) clearInterval(pollRef.current);
     };
   }, []);
 
-  const persist = (updates: Record<string, unknown>) => {
-    updateSingleton("GeneratorFormData", updates).catch(() => {});
+  const persist = (updates: Record<string, string>) => {
+    const current = loadPromptData();
+    savePromptData({ ...current, ...updates });
   };
 
   const handleSubmit = async () => {
@@ -79,10 +95,6 @@ export default function ArtPromptPanel() {
     setGenerating(false);
     setProgress(0);
   };
-
-  if (loading) {
-    return <div className="p-2 small" style={{ color: "#a0a0a8" }}>Loading...</div>;
-  }
 
   return (
     <div className="d-flex flex-column h-100 p-2">
