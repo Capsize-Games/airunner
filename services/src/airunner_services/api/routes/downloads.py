@@ -3,9 +3,12 @@
 from __future__ import annotations
 
 import asyncio
+import json
+import logging
 from typing import Any
 
 from fastapi import APIRouter, HTTPException, Request, Response
+from fastapi.responses import StreamingResponse
 from airunner_services.url_safety import safe_fetch_bytes
 
 from airunner_services.downloads.service import (
@@ -30,6 +33,7 @@ from .downloads_models import (
 )
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 
 def get_download_job_service(request: Request) -> DownloadJobService:
@@ -193,6 +197,92 @@ async def fetch_civitai_image_route(
     return Response(
         content=image_bytes,
         media_type="application/octet-stream",
+    )
+
+
+@router.get("/status/{job_id}/stream")
+async def stream_download_progress(
+    job_id: str,
+    request: Request,
+) -> StreamingResponse:
+    """SSE stream that emits download progress events for one job.
+
+    Events:
+      ``{"type": "progress", "progress": 42.5, "status": "running", ...}``
+      ``{"type": "complete", "result": {...}}``
+      ``{"type": "error", "error": "message"}``
+      ``{"type": "cancelled"}``
+    """
+    service = get_download_job_service(request)
+
+    async def event_stream():
+        try:
+            while True:
+                if await request.is_disconnected():
+                    break
+                job = await service.get_status(job_id)
+                if job is None:
+                    yield (
+                        b"data: "
+                        + json.dumps(
+                            {"type": "error", "error": "Job not found"},
+                        ).encode("utf-8")
+                        + b"\n\n"
+                    )
+                    break
+                status = job.status.value
+                payload = {
+                    "type": "progress",
+                    "progress": job.progress,
+                    "status": status,
+                    "metadata": job.metadata,
+                }
+                yield (
+                    b"data: "
+                    + json.dumps(payload).encode("utf-8")
+                    + b"\n\n"
+                )
+                if status in ("completed", "failed", "cancelled"):
+                    if status == "completed":
+                        yield (
+                            b"data: "
+                            + json.dumps(
+                                {
+                                    "type": "complete",
+                                    "result": job.result,
+                                },
+                            ).encode("utf-8")
+                            + b"\n\n"
+                        )
+                    elif status == "failed":
+                        yield (
+                            b"data: "
+                            + json.dumps(
+                                {"type": "error", "error": job.error},
+                            ).encode("utf-8")
+                            + b"\n\n"
+                        )
+                    else:
+                        yield (
+                            b"data: "
+                            + json.dumps({"type": "cancelled"}).encode(
+                                "utf-8",
+                            )
+                            + b"\n\n"
+                        )
+                    break
+                await asyncio.sleep(0.25)
+        except asyncio.CancelledError:
+            pass
+
+    return StreamingResponse(
+        event_stream(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
     )
 
 

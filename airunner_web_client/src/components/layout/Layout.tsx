@@ -16,6 +16,7 @@ import LayersPanel from "../panels/LayersPanel";
 import GridPanel from "../panels/GridPanel";
 import ImageBrowserPanel from "../panels/ImageBrowserPanel";
 import StatsPanel from "../panels/StatsPanel";
+import CivitaiBrowserPanel from "../panels/civitai-browser/CivitaiBrowserPanel";
 import TopBar from "./TopBar";
 import { LeftIconBar, RightIconBar } from "./IconBar";
 
@@ -35,7 +36,8 @@ type PanelId =
   | "layers"
   | "grid"
   | "image_browser"
-  | "stats";
+  | "stats"
+  | "civitai_browser";
 
 interface LayoutProps {
   children: ReactNode;
@@ -402,6 +404,7 @@ export default function Layout({
             }
             style={{ width: rightPanelW }}
           >
+            {rightPanel === "civitai_browser" && <CivitaiBrowserPanel />}
             {rightPanel === "art_model" && <ArtModelPanel />}
             {rightPanel === "lora" && <LoraPanel />}
             {rightPanel === "embeddings" && <EmbeddingsPanel />}

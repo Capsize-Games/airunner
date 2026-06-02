@@ -10,7 +10,8 @@ type PanelId =
   | "layers"
   | "grid"
   | "image_browser"
-  | "stats";
+  | "stats"
+  | "civitai_browser";
 
 export function LeftIconBar({
   showChat,
@@ -110,6 +111,13 @@ export function RightIconBar({
         <img src={icon("image")} alt="Canvas" />
       </button>
       <hr />
+      <button
+        className={active("civitai_browser", rightPanel)}
+        onClick={() => onRightPanel("civitai_browser")}
+        title="CivitAI Browser"
+      >
+        <img src={icon("cloud")} alt="CivitAI" />
+      </button>
       <button
         className={active("art_model", rightPanel)}
         onClick={() => onRightPanel("art_model")}

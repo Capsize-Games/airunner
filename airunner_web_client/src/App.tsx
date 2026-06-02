@@ -13,7 +13,8 @@ type PanelId =
   | "layers"
   | "grid"
   | "image_browser"
-  | "stats";
+  | "stats"
+  | "civitai_browser";
 
 function loadBool(key: string, fallback: boolean): boolean {
   try {
