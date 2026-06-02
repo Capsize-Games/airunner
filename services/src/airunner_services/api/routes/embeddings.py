@@ -47,7 +47,6 @@ async def list_loras():
     """Scan the art models directory tree for LoRA .safetensors files.
     Merges filesystem results with DB records for enabled/trigger_words.
     """
-    _ensure_lora_columns()
     models_root = os.path.join(AIRUNNER_BASE_PATH, "art", "models")
     found: list[dict[str, object]] = []
     seen: set[str] = set()
@@ -113,7 +112,6 @@ async def update_lora(
     trigger_words: str | None = None,
 ):
     """Update one LoRA record's enabled state or trigger words."""
-    _ensure_lora_columns()
     with session_scope() as session:
         rec = session.query(Lora).filter_by(id=lora_id).first()
         if rec is None:
