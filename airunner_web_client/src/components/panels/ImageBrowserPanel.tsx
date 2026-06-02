@@ -393,6 +393,7 @@ export default function ImageBrowserPanel() {
   const [editValue, setEditValue] = useState<string>("");
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [moveFeedback, setMoveFeedback] = useState<string | null>(null);
+  const [confirmDeleteAll, setConfirmDeleteAll] = useState(false);
 
   const sentinelRef = useRef<HTMLDivElement | null>(null);
 
@@ -581,6 +582,22 @@ export default function ImageBrowserPanel() {
     } catch {
       // delete failed
     }
+  };
+
+  const executeDeleteAll = async () => {
+    if (!selectedDate) return;
+    setConfirmDeleteAll(false);
+    const current = serverImages;
+    for (const img of current) {
+      try {
+        await deleteImage(selectedDate, img.id);
+      } catch {
+        // continue with remaining
+      }
+    }
+    setServerImages([]);
+    setTotal(0);
+    setHasMore(false);
   };
 
   // ── Move to canvas ─────────────────────────────────────────────────
@@ -1055,9 +1072,82 @@ export default function ImageBrowserPanel() {
         )}
       </div>
 
-      {!showLocal && total > 0 && (
-        <div className="text-muted small text-end mt-1">
-          {serverImages.length} / {total}
+      {!showLocal && (
+        <div className="d-flex justify-content-between align-items-center mt-1">
+          <div>
+            {total > 0 && (
+              <>
+                {confirmDeleteAll ? (
+                  <div className="d-flex gap-2 align-items-center">
+                    <span className="small text-muted">
+                      Delete all {total} images?
+                    </span>
+                    <button
+                      title="Yes"
+                      onClick={executeDeleteAll}
+                      style={{
+                        background: "none",
+                        border: "none",
+                        padding: 2,
+                        cursor: "pointer",
+                      }}
+                    >
+                      <img
+                        src="/icons/lucide/dark/circle-check.svg"
+                        alt="Yes"
+                        style={{
+                          width: 16,
+                          height: 16,
+                          filter: "var(--theme-icon-filter)",
+                        }}
+                      />
+                    </button>
+                    <button
+                      title="No"
+                      onClick={() => setConfirmDeleteAll(false)}
+                      style={{
+                        background: "none",
+                        border: "none",
+                        padding: 2,
+                        cursor: "pointer",
+                      }}
+                    >
+                      <img
+                        src="/icons/lucide/dark/circle-x.svg"
+                        alt="No"
+                        style={{
+                          width: 16,
+                          height: 16,
+                          filter: "var(--theme-icon-filter)",
+                        }}
+                      />
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setConfirmDeleteAll(true)}
+                    title="Delete all images for this date"
+                    style={{
+                      background: "none",
+                      border: "none",
+                      color: "var(--bs-danger)",
+                      fontSize: 12,
+                      cursor: "pointer",
+                      padding: 0,
+                      textDecoration: "underline",
+                      textUnderlineOffset: 2,
+                    }}
+                  >
+                    Delete All
+                  </button>
+                )}
+              </>
+            )}
+          </div>
+          <div className="text-muted small text-end">
+            {serverImages.length} / {total}
+          </div>
         </div>
       )}
 
