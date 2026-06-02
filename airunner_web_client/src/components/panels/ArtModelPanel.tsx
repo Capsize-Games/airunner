@@ -90,6 +90,9 @@ export default function ArtModelPanel() {
             setModelPath("");
             setScheduler("");
             persist({ version: v, model_path: "", scheduler: "" });
+            window.dispatchEvent(
+              new CustomEvent("art-version-changed", { detail: v }),
+            );
           }}
         >
           <option value="">Select version...</option>

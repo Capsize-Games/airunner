@@ -47,9 +47,17 @@ export default function ArtPromptPanel() {
   const [progress, setProgress] = useState(0);
   const jobIdRef = useRef<string | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [isZImage, setIsZImage] = useState(false);
 
   useEffect(() => {
+    // Listen for art version changes from ArtModelPanel
+    const handler = (e: Event) => {
+      const version = (e as CustomEvent).detail as string;
+      setIsZImage(version === "Z-Image Turbo");
+    };
+    window.addEventListener("art-version-changed", handler);
     return () => {
+      window.removeEventListener("art-version-changed", handler);
       if (pollRef.current) clearInterval(pollRef.current);
     };
   }, []);
@@ -115,43 +123,49 @@ export default function ArtPromptPanel() {
           />
         </Form.Group>
 
-        <Form.Group className="flex-grow-1 d-flex flex-column" style={{ minHeight: 0 }}>
-          <Form.Label className="small flex-shrink-0" style={{ color: "#a0a0a8" }}>Secondary Prompt</Form.Label>
-          <Form.Control
-            as="textarea"
-            className="flex-grow-1"
-            style={{ resize: "none", minHeight: 0 }}
-            value={secondaryPrompt}
-            onChange={(e) => { setSecondaryPrompt(e.target.value); persist({ secondary_prompt: e.target.value }); }}
-            placeholder="Background, colors, atmosphere..."
-            disabled={generating}
-          />
-        </Form.Group>
+        {!isZImage && (
+          <Form.Group className="flex-grow-1 d-flex flex-column" style={{ minHeight: 0 }}>
+            <Form.Label className="small flex-shrink-0" style={{ color: "#a0a0a8" }}>Secondary Prompt</Form.Label>
+            <Form.Control
+              as="textarea"
+              className="flex-grow-1"
+              style={{ resize: "none", minHeight: 0 }}
+              value={secondaryPrompt}
+              onChange={(e) => { setSecondaryPrompt(e.target.value); persist({ secondary_prompt: e.target.value }); }}
+              placeholder="Background, colors, atmosphere..."
+              disabled={generating}
+            />
+          </Form.Group>
+        )}
 
-        <Form.Group className="flex-grow-1 d-flex flex-column" style={{ minHeight: 0 }}>
-          <Form.Label className="small flex-shrink-0" style={{ color: "#a0a0a8" }}>Negative Prompt</Form.Label>
-          <Form.Control
-            as="textarea"
-            className="flex-grow-1"
-            style={{ resize: "none", minHeight: 0 }}
-            value={negativePrompt}
-            onChange={(e) => { setNegativePrompt(e.target.value); persist({ negative_prompt: e.target.value }); }}
-            placeholder="Things to exclude..."
-            disabled={generating}
-          />
-        </Form.Group>
+        {!isZImage && (
+          <Form.Group className="flex-grow-1 d-flex flex-column" style={{ minHeight: 0 }}>
+            <Form.Label className="small flex-shrink-0" style={{ color: "#a0a0a8" }}>Negative Prompt</Form.Label>
+            <Form.Control
+              as="textarea"
+              className="flex-grow-1"
+              style={{ resize: "none", minHeight: 0 }}
+              value={negativePrompt}
+              onChange={(e) => { setNegativePrompt(e.target.value); persist({ negative_prompt: e.target.value }); }}
+              placeholder="Things to exclude..."
+              disabled={generating}
+            />
+          </Form.Group>
+        )}
 
-        <Form.Group className="flex-grow-1 d-flex flex-column" style={{ minHeight: 0 }}>
-          <Form.Label className="small flex-shrink-0" style={{ color: "#a0a0a8" }}>Sec. Negative</Form.Label>
-          <Form.Control
-            as="textarea"
-            className="flex-grow-1"
-            style={{ resize: "none", minHeight: 0 }}
-            value={secondaryNegativePrompt}
-            onChange={(e) => { setSecondaryNegativePrompt(e.target.value); persist({ secondary_negative_prompt: e.target.value }); }}
-            disabled={generating}
-          />
-        </Form.Group>
+        {!isZImage && (
+          <Form.Group className="flex-grow-1 d-flex flex-column" style={{ minHeight: 0 }}>
+            <Form.Label className="small flex-shrink-0" style={{ color: "#a0a0a8" }}>Sec. Negative</Form.Label>
+            <Form.Control
+              as="textarea"
+              className="flex-grow-1"
+              style={{ resize: "none", minHeight: 0 }}
+              value={secondaryNegativePrompt}
+              onChange={(e) => { setSecondaryNegativePrompt(e.target.value); persist({ secondary_negative_prompt: e.target.value }); }}
+              disabled={generating}
+            />
+          </Form.Group>
+        )}
       </div>
 
       {/* Bottom bar: progress + submit/cancel */}
