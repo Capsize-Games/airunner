@@ -319,6 +319,20 @@ export async function listEmbeddings() {
 }
 
 // ---------------------------------------------------------------------------
+// LoRA
+// ---------------------------------------------------------------------------
+export interface LoraInfo {
+  name: string;
+  path: string;
+}
+
+export async function listLoras() {
+  return request<{ loras: LoraInfo[] }>(
+    "GET", "/api/v1/art/loras",
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Downloads
 // ---------------------------------------------------------------------------
 export async function startHuggingFaceDownload(

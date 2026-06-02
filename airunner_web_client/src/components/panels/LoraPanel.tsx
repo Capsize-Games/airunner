@@ -1,26 +1,45 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
+import Spinner from "react-bootstrap/Spinner";
 import Form from "react-bootstrap/Form";
-import Button from "react-bootstrap/Button";
+import type { LoraInfo } from "../../api/client";
 
 export default function LoraPanel() {
   const [search, setSearch] = useState("");
-  const [loras, setLoras] = useState<string[]>([]);
+  const [loras, setLoras] = useState<LoraInfo[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // TODO: fetch LoRA list from /api/v1/catalog/resources/Lora/query
-  // For now, show placeholder data sourced from the services catalog.
+  const scan = useCallback(async () => {
+    setLoading(true);
+    try {
+      const { listLoras } = await import("../../api/client");
+      const data = await listLoras();
+      setLoras(data.loras);
+    } catch {
+      setLoras([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    scan();
+  }, [scan]);
+
+  const filtered = loras.filter((l) =>
+    l.name.toLowerCase().includes(search.toLowerCase()),
+  );
 
   return (
     <div className="p-2">
       <div className="d-flex justify-content-between align-items-center mb-2">
         <h6 className="text-muted mb-0">LoRA</h6>
-        <Button
-          size="sm"
-          variant="outline-secondary"
-          onClick={() => setLoras([])}
+        <button
+          className="btn btn-outline-secondary btn-sm"
+          onClick={scan}
+          disabled={loading}
         >
           Scan
-        </Button>
+        </button>
       </div>
 
       <Form.Control
@@ -33,34 +52,22 @@ export default function LoraPanel() {
       />
 
       {loading ? (
-        <p className="text-muted small">Loading...</p>
-      ) : loras.length === 0 ? (
+        <Spinner animation="border" size="sm" className="d-block mx-auto" />
+      ) : filtered.length === 0 ? (
         <p className="text-muted small">
-          No LoRA models found. Add .safetensors files to
-          your models directory and click Scan.
+          {loras.length === 0
+            ? "No LoRA models found. Add .safetensors files to your models directory and click Scan."
+            : "No LoRA models match your filter."}
         </p>
       ) : (
         <div className="lora-list">
-          {loras
-            .filter((l) =>
-              l.toLowerCase().includes(search.toLowerCase()),
-            )
-            .map((l) => (
-              <div key={l} className="small text-muted py-1">
-                {l}
-              </div>
-            ))}
+          {filtered.map((l) => (
+            <div key={l.path} className="small text-muted py-1">
+              {l.name}
+            </div>
+          ))}
         </div>
       )}
-
-      <Button
-        size="sm"
-        variant="primary"
-        className="w-100 mt-2"
-        disabled={loras.length === 0}
-      >
-        Apply LoRA
-      </Button>
     </div>
   );
 }
