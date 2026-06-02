@@ -5,6 +5,15 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>airunner_web_client</title>
+    <script>
+      // Apply saved theme immediately to prevent flash of wrong theme
+      (function() {
+        try {
+          var t = localStorage.getItem("airunner_theme");
+          if (t) document.documentElement.setAttribute("data-theme", t);
+        } catch(e) {}
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

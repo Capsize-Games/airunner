@@ -11,6 +11,7 @@ type ThemeName = (typeof THEMES)[number];
 
 function applyTheme(themeName: ThemeName): void {
   document.documentElement.setAttribute("data-theme", themeName);
+  try { localStorage.setItem("airunner_theme", themeName); } catch {}
 }
 
 export default function AppearanceSection() {
