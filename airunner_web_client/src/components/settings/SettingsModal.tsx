@@ -34,7 +34,7 @@ interface NavEntry {
 }
 
 const NAV_ENTRIES: NavEntry[] = [
-  { id: "privacy",           label: "Privacy & Security",    icon: "\uD83D\uDD12" },
+  { id: "privacy",           label: "Third-party Services",  icon: "\uD83D\uDD12" },
   { id: "image-export",      label: "Image Export",          icon: "\uD83D\uDDBC" },
   { id: "memory",            label: "Memory",                icon: "\uD83E\uDDE0" },
   { id: "keyboard-shortcuts",label: "Keyboard Shortcuts",    icon: "\u2328" },

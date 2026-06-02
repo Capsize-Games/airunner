@@ -47,6 +47,7 @@ export interface HardwareProfile {
   device_name: string | null;
   cpu_count: number;
   platform: string;
+  num_gpus: number;
 }
 
 // ---------------------------------------------------------------------------

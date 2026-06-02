@@ -99,7 +99,7 @@ export default function PrivacySecuritySection() {
 
   return (
     <div>
-      <h6 className="mb-3">Privacy & Security</h6>
+      <h6 className="mb-3">Third-party Services</h6>
 
       <table
         style={{ width: "100%", borderCollapse: "collapse" }}

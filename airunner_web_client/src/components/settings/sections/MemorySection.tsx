@@ -4,15 +4,9 @@ import Spinner from "react-bootstrap/Spinner";
 import {
   getSingleton,
   updateSingleton,
+  getHardwareProfile,
   getArtModelOptions,
 } from "../../../api/client";
-
-const GPU_OPTIONS = [
-  { label: "GPU 0", value: "0" },
-  { label: "GPU 1", value: "1" },
-  { label: "GPU 2", value: "2" },
-  { label: "GPU 3", value: "3" },
-];
 
 interface MemorySettings {
   use_accelerated_transformers: boolean;
@@ -52,6 +46,7 @@ const DEFAULTS: MemorySettings = {
 
 export default function MemorySection() {
   const [settings, setSettings] = useState<MemorySettings>(DEFAULTS);
+  const [numGpus, setNumGpus] = useState(0);
   const [precisions, setPrecisions] = useState<
     { label: string; value: string }[]
   >([]);
@@ -61,11 +56,13 @@ export default function MemorySection() {
     let cancelled = false;
     async function load() {
       try {
-        const [mem, opts] = await Promise.all([
+        const [mem, hardware, opts] = await Promise.all([
           getSingleton("MemorySettings"),
+          getHardwareProfile().catch(() => ({ num_gpus: 0 })),
           getArtModelOptions().catch(() => ({ precisions: [] })),
         ]);
         if (cancelled) return;
+        setNumGpus(Number(hardware.num_gpus ?? 0));
         setSettings({
           use_accelerated_transformers:
             mem.use_accelerated_transformers !== false,
@@ -121,6 +118,19 @@ export default function MemorySection() {
     ).catch(() => {});
   }
 
+  function resetToDefaults() {
+    setSettings(DEFAULTS);
+    updateSingleton(
+      "MemorySettings",
+      DEFAULTS as unknown as Record<string, unknown>,
+    ).catch(() => {});
+  }
+
+  const gpuOptions = Array.from(
+    { length: Math.max(numGpus, 1) },
+    (_, i) => ({ label: `GPU ${i}`, value: String(i) }),
+  );
+
   if (loading) {
     return (
       <div className="text-center py-4">
@@ -133,61 +143,89 @@ export default function MemorySection() {
     <div>
       <h6 className="mb-3">Memory Settings</h6>
 
-      <div className="mb-3">
-        <h6 className="small text-muted mb-2">Model Assignment</h6>
-        {([
-          { key: "default_gpu_sd" as const, label: "SD Model GPU" },
-          { key: "default_gpu_llm" as const, label: "LLM Model GPU" },
-          { key: "default_gpu_tts" as const, label: "TTS Model GPU" },
-          { key: "default_gpu_stt" as const, label: "STT Model GPU" },
-        ]).map(({ key, label }) => (
-          <Form.Group key={key} className="mb-2">
-            <Form.Label className="small">{label}</Form.Label>
-            <Form.Select
-              size="sm"
-              value={settings[key]}
-              onChange={(e) => setField(key, e.target.value)}
-              className="bg-dark text-light border-secondary"
-            >
-              {GPU_OPTIONS.map((gpu) => (
-                <option key={gpu.value} value={gpu.value}>
-                  {gpu.label}
-                </option>
-              ))}
-            </Form.Select>
+      {numGpus > 1 && (
+        <div className="mb-3">
+          <h6 className="small text-muted mb-2">
+            Model Assignment
+          </h6>
+          {([
+            { key: "default_gpu_sd" as const,
+              label: "SD Model GPU" },
+            { key: "default_gpu_llm" as const,
+              label: "LLM Model GPU" },
+            { key: "default_gpu_tts" as const,
+              label: "TTS Model GPU" },
+            { key: "default_gpu_stt" as const,
+              label: "STT Model GPU" },
+          ]).map(({ key, label }) => (
+            <Form.Group key={key} className="mb-2">
+              <Form.Label className="small">{label}</Form.Label>
+              <Form.Select
+                size="sm"
+                value={settings[key]}
+                onChange={(e) => setField(key, e.target.value)}
+                className="bg-dark text-light border-secondary"
+              >
+                {gpuOptions.map((gpu) => (
+                  <option key={gpu.value} value={gpu.value}>
+                    {gpu.label}
+                  </option>
+                ))}
+              </Form.Select>
+            </Form.Group>
+          ))}
+          <Form.Group className="mb-2">
+            <Form.Check
+              type="switch"
+              label={
+                "Disable auto model management " +
+                "on LLM image generation"
+              }
+              checked={
+                settings.prevent_unload_on_llm_image_generation
+              }
+              onChange={(e) =>
+                setField(
+                  "prevent_unload_on_llm_image_generation",
+                  e.target.checked,
+                )
+              }
+              className="small"
+            />
           </Form.Group>
-        ))}
-        <Form.Group className="mb-2">
-          <Form.Check
-            type="switch"
-            label="Disable auto model management on LLM image generation"
-            checked={settings.prevent_unload_on_llm_image_generation}
-            onChange={(e) =>
-              setField("prevent_unload_on_llm_image_generation", e.target.checked)
-            }
-            className="small"
-          />
-        </Form.Group>
-      </div>
+        </div>
+      )}
 
       <div className="mb-3">
-        <h6 className="small text-muted mb-2">Memory Optimization</h6>
+        <h6 className="small text-muted mb-2">
+          Memory Optimization
+        </h6>
         {([
-          { key: "use_accelerated_transformers" as const, label: "Accelerated Transformers" },
-          { key: "use_attention_slicing" as const, label: "Attention Slicing" },
-          { key: "use_enable_sequential_cpu_offload" as const, label: "Sequential CPU offload" },
-          { key: "enable_model_cpu_offload" as const, label: "Model CPU offload" },
-          { key: "use_last_channels" as const, label: "Channels last memory format" },
-          { key: "use_tf32" as const, label: "TF32 precision" },
-          { key: "use_enable_vae_slicing" as const, label: "VAE Slicing" },
-          { key: "use_tiled_vae" as const, label: "Tile VAE" },
+          { key: "use_accelerated_transformers" as const,
+            label: "Accelerated Transformers" },
+          { key: "use_attention_slicing" as const,
+            label: "Attention Slicing" },
+          { key: "use_enable_sequential_cpu_offload" as const,
+            label: "Sequential CPU offload" },
+          { key: "enable_model_cpu_offload" as const,
+            label: "Model CPU offload" },
+          { key: "use_last_channels" as const,
+            label: "Channels last memory format" },
+          { key: "use_tf32" as const,
+            label: "TF32 precision" },
+          { key: "use_enable_vae_slicing" as const,
+            label: "VAE Slicing" },
+          { key: "use_tiled_vae" as const,
+            label: "Tile VAE" },
         ]).map(({ key, label }) => (
           <Form.Group key={key} className="mb-1">
             <Form.Check
               type="switch"
               label={label}
               checked={settings[key]}
-              onChange={(e) => setField(key, e.target.checked)}
+              onChange={(e) =>
+                setField(key, e.target.checked)
+              }
               className="small"
             />
           </Form.Group>
@@ -195,20 +233,25 @@ export default function MemorySection() {
       </div>
 
       <div className="mb-3">
-        <h6 className="small text-muted mb-2">ToMe Token Merging</h6>
+        <h6 className="small text-muted mb-2">
+          ToMe Token Merging
+        </h6>
         <Form.Group className="mb-2">
           <Form.Check
             type="switch"
             label="Enable ToMe SD"
             checked={settings.use_tome_sd}
-            onChange={(e) => setField("use_tome_sd", e.target.checked)}
+            onChange={(e) =>
+              setField("use_tome_sd", e.target.checked)
+            }
             className="small"
           />
         </Form.Group>
         {settings.use_tome_sd && (
           <Form.Group className="mb-2">
             <Form.Label className="small">
-              ToMe ratio: {settings.tome_sd_ratio.toFixed(2)}
+              ToMe ratio:{" "}
+              {settings.tome_sd_ratio.toFixed(2)}
             </Form.Label>
             <Form.Range
               min={0}
@@ -216,31 +259,29 @@ export default function MemorySection() {
               step={0.01}
               value={settings.tome_sd_ratio}
               onChange={(e) =>
-                setField("tome_sd_ratio", Number(e.target.value))
+                setField(
+                  "tome_sd_ratio",
+                  Number(e.target.value),
+                )
               }
             />
           </Form.Group>
         )}
       </div>
 
-      {precisions.length > 0 && (
-        <div className="mb-3">
-          <h6 className="small text-muted mb-2">Default Precision</h6>
-          <Form.Group className="mb-2">
-            <Form.Select
-              size="sm"
-              className="bg-dark text-light border-secondary"
-            >
-              <option value="">System default</option>
-              {precisions.map((p) => (
-                <option key={p.value} value={p.value}>
-                  {p.label}
-                </option>
-              ))}
-            </Form.Select>
-          </Form.Group>
-        </div>
-      )}
+      <div className="d-flex gap-2 mb-3">
+        <button
+          className="btn btn-sm"
+          style={{
+            background: "var(--bs-primary)",
+            border: "none",
+            color: "#fff",
+          }}
+          onClick={resetToDefaults}
+        >
+          Reset to Defaults
+        </button>
+      </div>
     </div>
   );
 }
