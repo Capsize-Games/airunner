@@ -385,7 +385,7 @@ export function LLMSettingsPanel() {
 
   if (loading) {
     return (
-      <div className="p-2 small" style={{ color: "#a0a0a8" }}>
+      <div className="p-2 small" style={{ color: "var(--theme-text-secondary)" }}>
         Loading...
       </div>
     );
@@ -393,7 +393,7 @@ export function LLMSettingsPanel() {
 
   return (
     <div className="p-2">
-      <h6 style={{ color: "#a0a0a8" }} className="mb-2">
+      <h6 style={{ color: "var(--theme-text-secondary)" }} className="mb-2">
         LLM Settings
       </h6>
       <ModelSelector />
@@ -406,7 +406,7 @@ export function LLMSettingsPanel() {
           type="switch"
           id="llm-override-toggle"
           label={
-            <span style={{ color: "#a0a0a8", fontWeight: 600 }}>
+            <span style={{ color: "var(--theme-text-secondary)", fontWeight: 600 }}>
               Override LLM Settings
             </span>
           }
@@ -420,7 +420,7 @@ export function LLMSettingsPanel() {
               <Form.Group className="mb-2">
                 <Form.Label
                   className="small"
-                  style={{ color: "#a0a0a8" }}
+                  style={{ color: "var(--theme-text-secondary)" }}
                 >
                   Preset
                 </Form.Label>
@@ -480,7 +480,7 @@ export function LLMSettingsPanel() {
                       type="switch"
                       id={`llm-${f.key}`}
                       label={
-                        <span style={{ color: "#a0a0a8" }}>
+                        <span style={{ color: "var(--theme-text-secondary)" }}>
                           {f.label}
                         </span>
                       }
@@ -496,7 +496,7 @@ export function LLMSettingsPanel() {
                   <Form.Group className="mb-2">
                     <Form.Label
                       className="small"
-                      style={{ color: "#a0a0a8" }}
+                      style={{ color: "var(--theme-text-secondary)" }}
                     >
                       Runtime Precision
                     </Form.Label>
@@ -525,7 +525,7 @@ export function LLMSettingsPanel() {
                     onClick={resetToDefaults}
                     title="Reset the current preset to its default values"
                     style={{
-                      color: "#a0a0a8",
+                      color: "var(--theme-text-secondary)",
                       borderColor: "#444",
                     }}
                   >
@@ -547,7 +547,7 @@ export function LLMSettingsPanel() {
                     onClick={resetAllToDefaults}
                     title="Reset all presets to their default values"
                     style={{
-                      color: "#a0a0a8",
+                      color: "var(--theme-text-secondary)",
                       borderColor: "#444",
                     }}
                   >

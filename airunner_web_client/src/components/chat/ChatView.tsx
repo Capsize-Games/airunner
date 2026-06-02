@@ -346,7 +346,7 @@ export default function ChatView({
                     borderRadius: 12,
                     padding: "2px 8px",
                     fontSize: "0.7rem",
-                    color: "#c8c8c8",
+                    color: "var(--theme-text)",
                   }}
                 >
                   <span
@@ -380,7 +380,7 @@ export default function ChatView({
             style={{
               resize: "none",
               background: "#1a1a2e",
-              color: "#c8c8c8",
+              color: "var(--theme-text)",
               borderColor: "#333",
             }}
           />

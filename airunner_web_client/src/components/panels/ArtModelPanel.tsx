@@ -200,21 +200,21 @@ export default function ArtModelPanel() {
   return (
     <div className="p-2">
       <div className="d-flex align-items-center gap-2 mb-2">
-        <h6 style={{ color: "#a0a0a8" }} className="mb-0">
+        <h6 style={{ color: "var(--theme-text-secondary)" }} className="mb-0">
           Art Model
         </h6>
         {loading && (
           <div
             className="spinner-border spinner-border-sm"
             role="status"
-            style={{ color: "#a0a0a8", width: 12, height: 12 }}
+            style={{ color: "var(--theme-text-secondary)", width: 12, height: 12 }}
           />
         )}
       </div>
 
       {/* Version */}
       <Form.Group className="mb-2">
-        <Form.Label className="small" style={{ color: "#a0a0a8" }}>
+        <Form.Label className="small" style={{ color: "var(--theme-text-secondary)" }}>
           Version
         </Form.Label>
         <Form.Select
@@ -234,7 +234,7 @@ export default function ArtModelPanel() {
 
       {/* Model */}
       <Form.Group className="mb-2">
-        <Form.Label className="small" style={{ color: "#a0a0a8" }}>
+        <Form.Label className="small" style={{ color: "var(--theme-text-secondary)" }}>
           Model
         </Form.Label>
         <Form.Select
@@ -256,7 +256,7 @@ export default function ArtModelPanel() {
 
       {/* Scheduler */}
       <Form.Group className="mb-2">
-        <Form.Label className="small" style={{ color: "#a0a0a8" }}>
+        <Form.Label className="small" style={{ color: "var(--theme-text-secondary)" }}>
           Scheduler
         </Form.Label>
         <Form.Select
@@ -279,7 +279,7 @@ export default function ArtModelPanel() {
 
       {/* Precision */}
       <Form.Group className="mb-2">
-        <Form.Label className="small" style={{ color: "#a0a0a8" }}>
+        <Form.Label className="small" style={{ color: "var(--theme-text-secondary)" }}>
           Precision
         </Form.Label>
         <Form.Select
@@ -302,7 +302,7 @@ export default function ArtModelPanel() {
 
       {vramEstimate !== null && (
         <div className="mt-2 mb-2">
-          <small style={{ color: "#a0a0a8" }}>
+          <small style={{ color: "var(--theme-text-secondary)" }}>
             Estimated VRAM: {vramEstimate.toFixed(1)} GB
           </small>
           <ProgressBar
@@ -375,7 +375,7 @@ export default function ArtModelPanel() {
 
       {/* Seed */}
       <Form.Group className="mb-2">
-        <Form.Label className="small" style={{ color: "#a0a0a8" }}>
+        <Form.Label className="small" style={{ color: "var(--theme-text-secondary)" }}>
           Seed
         </Form.Label>
         <div className="d-flex gap-2 align-items-center">

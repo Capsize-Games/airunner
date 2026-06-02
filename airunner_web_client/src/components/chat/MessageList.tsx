@@ -78,7 +78,7 @@ function StreamingBubble({
     >
       <small
         className="fw-bold d-block mb-1"
-        style={{ color: "#a0a0a8" }}
+        style={{ color: "var(--theme-text-secondary)" }}
       >
         AI
       </small>
@@ -100,7 +100,7 @@ function StreamingBubble({
           >
             <span>{thinkingExpanded ? "▼" : "▶"}</span>
             <span>🧠</span>
-            <span style={{ fontSize: "0.75rem", color: "#666" }}>
+            <span style={{ fontSize: "0.75rem", color: "var(--theme-text-secondary)" }}>
               Thinking
             </span>
           </div>
@@ -122,7 +122,7 @@ function StreamingBubble({
       {streamBuffer && (
         <div
           className="streaming-cursor"
-          style={{ color: "#c8c8c8" }}
+          style={{ color: "var(--theme-text)" }}
         >
           {streamBuffer.trimStart()}
         </div>
@@ -151,7 +151,7 @@ function MessageBubble({ message }: { message: Message }) {
     >
       <small
         className="fw-bold d-block mb-1"
-        style={{ color: "#a0a0a8" }}
+        style={{ color: "var(--theme-text-secondary)" }}
       >
         {isUser ? "You" : "AI"}
       </small>
@@ -173,7 +173,7 @@ function MessageBubble({ message }: { message: Message }) {
           >
             <span>{thinkingExpanded ? "▼" : "▶"}</span>
             <span>✅</span>
-            <span style={{ fontSize: "0.75rem", color: "#666" }}>
+            <span style={{ fontSize: "0.75rem", color: "var(--theme-text-secondary)" }}>
               Complete
             </span>
           </div>
@@ -192,7 +192,7 @@ function MessageBubble({ message }: { message: Message }) {
           )}
         </div>
       )}
-      <div style={{ color: "#c8c8c8" }}>
+      <div style={{ color: "var(--theme-text)" }}>
         {(message.content || "").trimStart()}
       </div>
     </div>

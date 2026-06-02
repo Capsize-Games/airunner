@@ -256,7 +256,7 @@ export default function LoraPanel() {
                         borderRadius: 10,
                         padding: "2px 8px",
                         fontSize: "0.75rem",
-                        color: "#c8c8c8",
+                        color: "var(--theme-text)",
                         cursor: "pointer",
                       }}
                     >
@@ -315,7 +315,7 @@ export default function LoraPanel() {
                   onKeyDown={(e) => handleInputKeyDown(e, item.id)}
                   style={{
                     background: "#1a1a2e",
-                    color: "#c8c8c8",
+                    color: "var(--theme-text)",
                     borderColor: "#333",
                     fontSize: "0.7rem",
                   }}

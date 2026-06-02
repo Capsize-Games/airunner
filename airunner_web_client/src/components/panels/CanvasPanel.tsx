@@ -25,7 +25,7 @@ export default function CanvasPanel() {
         <div
           className="spinner-border spinner-border-sm"
           role="status"
-          style={{ color: "#a0a0a8" }}
+          style={{ color: "var(--theme-text-secondary)" }}
         />
       </div>
     );
@@ -41,7 +41,7 @@ export default function CanvasPanel() {
           >
             🎨
           </span>
-          <small style={{ color: "#a0a0a8" }}>
+          <small style={{ color: "var(--theme-text-secondary)" }}>
             No image on canvas. Generate one to see it here.
           </small>
         </div>

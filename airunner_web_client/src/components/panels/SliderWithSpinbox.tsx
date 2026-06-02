@@ -34,7 +34,7 @@ export default function SliderWithSpinbox({
 
   return (
     <Form.Group className="flex-fill">
-      <Form.Label className="small" style={{ color: "#a0a0a8" }}>
+      <Form.Label className="small" style={{ color: "var(--theme-text-secondary)" }}>
         {label}
       </Form.Label>
       <div className="d-flex gap-2 align-items-center">
@@ -62,7 +62,7 @@ export default function SliderWithSpinbox({
           style={{
             width: 88,
             background: "#1a1a2e",
-            color: "#c8c8c8",
+            color: "var(--theme-text)",
             borderColor: "#333",
             textAlign: "right",
           }}

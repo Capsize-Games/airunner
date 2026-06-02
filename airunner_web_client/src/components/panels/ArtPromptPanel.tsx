@@ -237,7 +237,7 @@ export default function ArtPromptPanel() {
 
   return (
     <div className="d-flex flex-column h-100 p-2">
-      <h6 style={{ color: "#a0a0a8" }}
+      <h6 style={{ color: "var(--theme-text-secondary)" }}
         className="mb-2 flex-shrink-0"
       >
         Art Prompt
@@ -252,7 +252,7 @@ export default function ArtPromptPanel() {
         >
           <Form.Label
             className="small flex-shrink-0"
-            style={{ color: "#a0a0a8" }}
+            style={{ color: "var(--theme-text-secondary)" }}
           >
             Prompt
           </Form.Label>
@@ -277,7 +277,7 @@ export default function ArtPromptPanel() {
           >
             <Form.Label
               className="small flex-shrink-0"
-              style={{ color: "#a0a0a8" }}
+              style={{ color: "var(--theme-text-secondary)" }}
             >
               Secondary Prompt
             </Form.Label>
@@ -303,7 +303,7 @@ export default function ArtPromptPanel() {
           >
             <Form.Label
               className="small flex-shrink-0"
-              style={{ color: "#a0a0a8" }}
+              style={{ color: "var(--theme-text-secondary)" }}
             >
               Negative Prompt
             </Form.Label>
@@ -329,7 +329,7 @@ export default function ArtPromptPanel() {
           >
             <Form.Label
               className="small flex-shrink-0"
-              style={{ color: "#a0a0a8" }}
+              style={{ color: "var(--theme-text-secondary)" }}
             >
               Sec. Negative
             </Form.Label>
@@ -384,7 +384,7 @@ export default function ArtPromptPanel() {
                     borderRadius: 12,
                     padding: "2px 8px",
                     fontSize: "0.7rem",
-                    color: "#c8c8c8",
+                    color: "var(--theme-text)",
                   }}
                 >
                   <span
@@ -439,7 +439,7 @@ export default function ArtPromptPanel() {
                     borderRadius: 12,
                     padding: "2px 8px",
                     fontSize: "0.7rem",
-                    color: "#c8c8c8",
+                    color: "var(--theme-text)",
                   }}
                 >
                   <span

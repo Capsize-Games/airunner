@@ -55,7 +55,7 @@ export default function KeyboardShortcutsSection() {
             className="bg-dark bg-opacity-25 rounded p-2 border border-secondary d-flex justify-content-between align-items-center"
           >
             <div>
-              <div className="small" style={{ color: "#c8c8c8" }}>
+              <div className="small" style={{ color: "var(--theme-text)" }}>
                 {String(sc.display_name ?? "")}
               </div>
               {sc.description && (

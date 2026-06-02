@@ -112,7 +112,7 @@ export default function PrivacySecuritySection() {
                 textAlign: "left",
                 padding: "4px 8px 4px 0",
                 fontSize: 11,
-                color: "#666",
+                color: "var(--theme-text-secondary)",
                 fontWeight: 600,
                 textTransform: "uppercase",
               }}
@@ -124,7 +124,7 @@ export default function PrivacySecuritySection() {
                 textAlign: "left",
                 padding: "4px 8px",
                 fontSize: 11,
-                color: "#666",
+                color: "var(--theme-text-secondary)",
                 fontWeight: 600,
                 textTransform: "uppercase",
               }}
@@ -137,7 +137,7 @@ export default function PrivacySecuritySection() {
                 textAlign: "center",
                 padding: "4px 0 4px 8px",
                 fontSize: 11,
-                color: "#666",
+                color: "var(--theme-text-secondary)",
                 fontWeight: 600,
                 textTransform: "uppercase",
               }}
@@ -153,7 +153,7 @@ export default function PrivacySecuritySection() {
                 style={{
                   padding: "4px 8px 4px 0",
                   verticalAlign: "middle",
-                  color: "#a0a0a8",
+                  color: "var(--theme-text-secondary)",
                   fontSize: 13,
                 }}
               >
