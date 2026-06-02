@@ -6,17 +6,31 @@ import {
   updateSingleton,
 } from "../../../api/client";
 
+const THEMES = ["dark", "light", "mint", "neon"] as const;
+type ThemeName = (typeof THEMES)[number];
+
+function applyTheme(themeName: ThemeName): void {
+  document.documentElement.setAttribute("data-theme", themeName);
+}
+
 export default function AppearanceSection() {
-  const [darkMode, setDarkMode] = useState(true);
+  const [themeName, setThemeName] = useState<ThemeName>("dark");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
     async function load() {
       try {
-        const appSettings = await getSingleton("ApplicationSettings");
+        const appSettings: Record<string, unknown> =
+          await getSingleton("ApplicationSettings");
         if (cancelled) return;
-        setDarkMode(appSettings.dark_mode_enabled_db !== false);
+        const raw = appSettings.theme_name as string | undefined;
+        const name: ThemeName =
+          raw !== undefined && THEMES.includes(raw as ThemeName)
+            ? (raw as ThemeName)
+            : "dark";
+        setThemeName(name);
+        applyTheme(name);
       } catch {
         // ignore
       } finally {
@@ -28,10 +42,11 @@ export default function AppearanceSection() {
   }, []);
 
   function handleThemeChange(value: string) {
-    const isDark = value === "dark";
-    setDarkMode(isDark);
+    const name = value as ThemeName;
+    setThemeName(name);
+    applyTheme(name);
     updateSingleton("ApplicationSettings", {
-      dark_mode_enabled_db: isDark,
+      theme_name: name,
     } as Record<string, unknown>).catch(() => {});
   }
 
@@ -43,6 +58,13 @@ export default function AppearanceSection() {
     );
   }
 
+  const labelMap: Record<ThemeName, string> = {
+    dark: "Dark",
+    light: "Light",
+    mint: "Mint",
+    neon: "Neon",
+  };
+
   return (
     <div>
       <h6 className="mb-3">Theme</h6>
@@ -51,12 +73,15 @@ export default function AppearanceSection() {
         <Form.Label className="small">Theme</Form.Label>
         <Form.Select
           size="sm"
-          value={darkMode ? "dark" : "light"}
+          value={themeName}
           onChange={(e) => handleThemeChange(e.target.value)}
           className="bg-dark text-light border-secondary"
         >
-          <option value="dark">Dark</option>
-          <option value="light">Light</option>
+          {THEMES.map((t) => (
+            <option key={t} value={t}>
+              {labelMap[t]}
+            </option>
+          ))}
         </Form.Select>
       </Form.Group>
     </div>

@@ -94,6 +94,7 @@ class ApplicationSettings(BaseModel):
     knowledge_migrated = Column(Boolean, default=False)
     privacy_service_consent = Column(String, default="{}")
     dark_mode_enabled_db = Column(Boolean, default=True)
+    theme_name = Column(String, default="dark")
 
     # ------------------------------------------------------------------
     # QSettings-backed properties (replaces dropped DB columns)
