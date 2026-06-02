@@ -10,6 +10,7 @@ export function KnowledgeBasePanel() {
     { id: number; name: string; active: boolean; indexed: boolean }[]
   >([]);
   const [indexing, setIndexing] = useState(false);
+  const [modelLoading, setModelLoading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [loading, setLoading] = useState(true);
 
@@ -109,20 +110,32 @@ export function KnowledgeBasePanel() {
     const eventSource = new EventSource(
       `${BASE_URL}/api/v1/knowledge-base/documents/index-progress`,
     );
+    let progressStarted = false;
     eventSource.addEventListener("message", (event) => {
       try {
         const data = JSON.parse(event.data);
         if (data.type === "progress") {
+          if (!progressStarted) {
+            progressStarted = true;
+            setModelLoading(false);
+          }
           const total = Number(data.total) || 1;
           const current = Number(data.current) || 0;
           setProgress(Math.round((current / total) * 100));
         } else if (data.type === "complete") {
           setProgress(100);
-          setIndexing(false);
-          reload();
+          setModelLoading(false);
           eventSource.close();
+          // Brief pause so the user sees 100% before resetting
+          setTimeout(() => {
+            setIndexing(false);
+            setProgress(0);
+            reload();
+          }, 500);
         } else if (data.type === "error") {
+          setModelLoading(false);
           setIndexing(false);
+          setProgress(0);
           eventSource.close();
         }
       } catch { /* ignore */ }
@@ -137,6 +150,7 @@ export function KnowledgeBasePanel() {
 
   const handleIndex = async () => {
     setIndexing(true);
+    setModelLoading(true);
     setProgress(0);
     try {
       await fetch(
@@ -145,6 +159,7 @@ export function KnowledgeBasePanel() {
       );
     } catch {
       setIndexing(false);
+      setModelLoading(false);
     }
   };
 
@@ -244,9 +259,9 @@ export function KnowledgeBasePanel() {
       <div className="d-flex align-items-center gap-1 flex-shrink-0">
         <div className="flex-grow-1">
           <ProgressBar
-            now={indexing ? progress : 0}
-            animated={indexing}
-            variant={indexing ? "info" : "secondary"}
+            now={modelLoading ? 0 : indexing ? progress : 0}
+            animated={modelLoading || indexing}
+            variant={modelLoading ? "info" : indexing ? "info" : "secondary"}
             style={{ height: 6 }}
           />
         </div>
