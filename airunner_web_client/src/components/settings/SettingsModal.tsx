@@ -41,9 +41,9 @@ const NAV_ENTRIES: NavEntry[] = [
   { id: "agent",             label: "Agent Preferences",     icon: "\uD83E\uDD16" },
   { id: "user",              label: "User Settings",         icon: "\uD83D\uDC64" },
   { id: "tts",               label: "Text-to-Speech",        icon: "\uD83D\uDCE2" },
+  { id: "sound",             label: "Speech-to-Text",        icon: "\uD83C\uDF99" },
   { id: "prompt-templates",  label: "Prompt Templates",      icon: "\uD83D\uDCDD" },
   { id: "appearance",        label: "Theme",                 icon: "\uD83C\uDFA8" },
-  { id: "sound",             label: "Sound",                 icon: "\uD83D\uDD0A" },
   { id: "language",          label: "Language",              icon: "\uD83C\uDF0D" },
 ];
 
