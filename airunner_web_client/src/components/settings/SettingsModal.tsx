@@ -57,12 +57,27 @@ function getGroupEntries(
   return result;
 }
 
+const LS_KEY = "airunner_settings_section";
+
 export default function SettingsModal({
   onClose,
 }: {
   onClose: () => void;
 }) {
-  const [activeSection, setActiveSection] = useState<SectionId>("privacy");
+  const [activeSection, setActiveSection] = useState<SectionId>(() => {
+    try {
+      const saved = localStorage.getItem(LS_KEY);
+      if (saved && NAV_ENTRIES.some((e) => e.id === saved)) {
+        return saved as SectionId;
+      }
+    } catch { /* ignore */ }
+    return "privacy";
+  });
+
+  function handleNavClick(id: SectionId) {
+    setActiveSection(id);
+    try { localStorage.setItem(LS_KEY, id); } catch { /* ignore */ }
+  }
 
   function renderSection() {
     switch (activeSection) {
@@ -127,7 +142,7 @@ export default function SettingsModal({
                   "settings-nav-item" +
                   (activeSection === entry.id ? " active" : "")
                 }
-                onClick={() => setActiveSection(entry.id)}
+                onClick={() => handleNavClick(entry.id)}
               >
                 <span>{entry.icon}</span>
                 <span>{entry.label}</span>

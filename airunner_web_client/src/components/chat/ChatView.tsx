@@ -374,7 +374,7 @@ export default function ChatView({
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Type a message... (Enter to send, Shift+Enter for new line)"
+            placeholder="Type a message..."
             disabled={streaming}
             className="form-control"
             style={{
