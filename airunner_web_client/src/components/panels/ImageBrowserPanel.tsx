@@ -591,6 +591,7 @@ export default function ImageBrowserPanel() {
       await fetch(url, { method: "PUT" });
       setMoveFeedback(img.id);
       setTimeout(() => setMoveFeedback(prev => prev === img.id ? null : prev), 1500);
+      window.dispatchEvent(new CustomEvent("canvas-image-changed"));
     } catch {
       // canvas move failed
     }

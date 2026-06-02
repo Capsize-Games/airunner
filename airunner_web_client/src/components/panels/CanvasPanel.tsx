@@ -18,7 +18,15 @@ export default function CanvasPanel() {
         setHasImage(false);
         setLoading(false);
       });
-  }, [fetchToken]);
+    }, [fetchToken]);
+  
+    // Listen for canvas-image-changed events from other components
+    useEffect(() => {
+      const handler = () => setFetchToken((t) => t + 1);
+      window.addEventListener("canvas-image-changed", handler);
+      return () =>
+        window.removeEventListener("canvas-image-changed", handler);
+    }, []);
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
