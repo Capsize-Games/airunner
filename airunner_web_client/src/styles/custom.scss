@@ -371,3 +371,9 @@ input::placeholder, textarea::placeholder {
 .form-range::-webkit-slider-thumb {
   background: var(--bs-primary);
 }
+
+/* -- Indeterminate progress bar animation (model loading) -- */
+@keyframes indeterminate-bar {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}

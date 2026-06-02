@@ -248,8 +248,38 @@ class RAGIndexingMixin:
         )
 
     def on_rag_index_cancel_signal(self, data: Dict) -> None:
-        """Request cancellation of one in-flight indexing operation."""
+        """Request cancellation of one in-flight indexing operation.
+
+        When ``data`` contains ``{"unload_embedding": True}`` the embedding
+        model is unloaded directly via the agent's ``unload_rag()`` method.
+        """
         rag_index_status_tracker.cancel_requested()
+
+        # Handle embedding-model unload request
+        if data and data.get("unload_embedding"):
+            self.logger.info("Unload embedding requested via cancel signal")
+            try:
+                agent = getattr(self.model_manager, "agent", None)
+                if agent is not None and hasattr(agent, "unload_rag"):
+                    agent.unload_rag()
+                    self.logger.info("Embedding model unloaded via unload_rag()")
+                    agent._emit_embedding_status("unloaded")
+                    return
+                elif self.model_manager is not None and hasattr(
+                    self.model_manager, "unload_rag",
+                ):
+                    self.model_manager.unload_rag()
+                    self.logger.info(
+                        "Embedding model unloaded via model_manager.unload_rag()",
+                    )
+                    if hasattr(self.model_manager, "_emit_embedding_status"):
+                        self.model_manager._emit_embedding_status("unloaded")
+                    return
+            except Exception as exc:
+                self.logger.error(f"Error unloading embedding: {exc}")
+            return
+
+        # Normal cancel: set interrupt flags for in-progress indexing
         try:
             if self.model_manager and hasattr(
                 self.model_manager,

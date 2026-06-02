@@ -5,6 +5,7 @@ import os
 import tempfile
 from typing import Any, Dict, List, Optional
 
+import torch
 from bs4 import BeautifulSoup
 from langchain_core.documents import Document
 
@@ -125,6 +126,9 @@ class RAGLifecycleMixin:
 
             # Force garbage collection
             gc.collect()
+            # Free cached CUDA memory after model deletion
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
         finally:
             self._is_unloading = False
 

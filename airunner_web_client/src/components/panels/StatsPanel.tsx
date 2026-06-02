@@ -1,10 +1,22 @@
-import { useState, useEffect } from "react";
-import { getHardwareProfile } from "../../api/client";
-import type { HardwareProfile } from "../../types/api";
+import { useState, useEffect, useCallback } from "react";
 import ProgressBar from "react-bootstrap/ProgressBar";
+import { getHardwareProfile, BASE_URL } from "../../api/client";
+import type { HardwareProfile } from "../../types/api";
+import type { ActiveModelInfo } from "../../api/client";
 
 export default function StatsPanel() {
   const [hw, setHw] = useState<HardwareProfile | null>(null);
+  const [models, setModels] = useState<ActiveModelInfo[]>([]);
+
+  const fetchActiveModels = useCallback(async () => {
+    try {
+      const { listActiveModels } = await import("../../api/client");
+      const resp = await listActiveModels();
+      setModels(resp.models ?? []);
+    } catch {
+      // endpoint may be unavailable
+    }
+  }, []);
 
   useEffect(() => {
     getHardwareProfile().then(setHw).catch(() => {});
@@ -13,6 +25,45 @@ export default function StatsPanel() {
     }, 5000);
     return () => clearInterval(timer);
   }, []);
+
+  // Poll active models
+  useEffect(() => {
+    fetchActiveModels();
+    const timer = setInterval(fetchActiveModels, 3000);
+    return () => clearInterval(timer);
+  }, [fetchActiveModels]);
+
+  // Listen for live model-status SSE events
+  useEffect(() => {
+    const eventSource = new EventSource(
+      `${BASE_URL}/api/v1/models/status`,
+    );
+    eventSource.addEventListener("message", (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        if (data.type === "model_status") {
+          // Refresh the model list immediately when a status changes
+          fetchActiveModels();
+        }
+      } catch { /* ignore malformed */ }
+    });
+    eventSource.onerror = () => {
+      // auto-reconnect
+    };
+    return () => {
+      eventSource.close();
+    };
+  }, [fetchActiveModels]);
+
+  const handleUnload = async (m: ActiveModelInfo) => {
+    try {
+      const { unloadModel } = await import("../../api/client");
+      await unloadModel(m.model_id, m.model_type);
+      fetchActiveModels();
+    } catch {
+      // ignore
+    }
+  };
 
   if (!hw) {
     return (
@@ -80,6 +131,61 @@ export default function StatsPanel() {
           {hw.total_ram_gb.toFixed(1)} GB
         </small>
       </div>
+
+      {/* Loaded models list */}
+      {models.length > 0 && (
+        <div className="mt-2">
+          <small className="text-muted d-block mb-1">
+            Loaded Models
+          </small>
+          {models.map((m) => (
+            <div
+              key={m.model_id}
+              className="d-flex align-items-center justify-content-between mb-1"
+              style={{ fontSize: "11px" }}
+            >
+              <span>
+                <span
+                  style={{
+                    display: "inline-block",
+                    width: 8,
+                    height: 8,
+                    borderRadius: "50%",
+                    backgroundColor:
+                      m.status === "loaded"
+                        ? "var(--bs-success)"
+                        : m.status === "loading"
+                          ? "var(--bs-warning)"
+                          : "var(--bs-danger)",
+                    marginRight: 4,
+                  }}
+                />
+                {m.model_type === "embedding"
+                  ? "Embedding"
+                  : m.model_type}
+              </span>
+              {m.can_unload && (
+                <button
+                  onClick={() => handleUnload(m)}
+                  style={{
+                    background: "transparent",
+                    border: "1px solid #555",
+                    borderRadius: 3,
+                    color: "#aaa",
+                    cursor: "pointer",
+                    fontSize: 10,
+                    padding: "0 4px",
+                    lineHeight: "16px",
+                  }}
+                  title={`Unload ${m.model_type}`}
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

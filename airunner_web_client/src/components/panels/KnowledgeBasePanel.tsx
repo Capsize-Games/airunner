@@ -104,7 +104,8 @@ export function KnowledgeBasePanel() {
     input.click();
   };
 
-  // Subscribe to indexing progress SSE
+  // Subscribe to indexing progress SSE — open the connection *before* the
+  // POST so no progress events are missed.
   useEffect(() => {
     if (!indexing) return;
     const eventSource = new EventSource(
@@ -149,9 +150,12 @@ export function KnowledgeBasePanel() {
   }, [indexing, reload]);
 
   const handleIndex = async () => {
+    // Set indexing first so the SSE useEffect fires and connects *before*
+    // the POST request goes out — use setTimeout(0) to let React flush.
     setIndexing(true);
     setModelLoading(true);
     setProgress(0);
+    await new Promise((r) => setTimeout(r, 0));
     try {
       await fetch(
         `${BASE_URL}/api/v1/knowledge-base/documents/index-all`,
@@ -257,13 +261,29 @@ export function KnowledgeBasePanel() {
       </div>
 
       <div className="d-flex align-items-center gap-1 flex-shrink-0">
-        <div className="flex-grow-1">
-          <ProgressBar
-            now={modelLoading ? 0 : indexing ? progress : 0}
-            animated={modelLoading || indexing}
-            variant={modelLoading ? "info" : indexing ? "info" : "secondary"}
-            style={{ height: 6 }}
-          />
+        <div
+          className="flex-grow-1"
+          style={{ position: "relative", height: 6 }}
+        >
+          {modelLoading ? (
+            /* Indeterminate bar: shows a thin animated stripe */
+            <div
+              style={{
+                height: 6,
+                borderRadius: 4,
+                background: "linear-gradient(90deg, transparent 0%, #0dcaf0 50%, transparent 100%)",
+                backgroundSize: "200% 100%",
+                animation: "indeterminate-bar 1.5s ease-in-out infinite",
+              }}
+            />
+          ) : (
+            <ProgressBar
+              now={indexing ? progress : 0}
+              animated={indexing}
+              variant={indexing ? "info" : "secondary"}
+              style={{ height: 6 }}
+            />
+          )}
         </div>
         <button
           title="Import document(s) into knowledge base"

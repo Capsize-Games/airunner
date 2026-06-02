@@ -35,6 +35,7 @@ from airunner_services.api.routes import (
     layers_router,
     llm,
     lora_watch_router,
+    models_status_router,
     models_watch_router,
     persistence,
     privacy_router,
@@ -171,6 +172,12 @@ def create_app(
             _register_signal_handlers,
         )
         _register_signal_handlers(app_instance)
+
+        # Register model-status SSE bridge
+        from airunner_services.api.routes.models_status import (  # noqa: PLC0415
+            _register_model_status_handlers,
+        )
+        _register_model_status_handlers(app_instance)
 
     # Optional API key auth for production.
     # If AIRUNNER_API_KEY is set, requests must provide it via:
@@ -377,6 +384,11 @@ def create_app(
         knowledge_base_index_router,
         prefix="/api/v1/knowledge-base",
         tags=["knowledge-base"],
+    )
+    app.include_router(
+        models_status_router,
+        prefix="/api/v1",
+        tags=["models"],
     )
     app.include_router(
         privacy_router,
