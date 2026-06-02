@@ -50,6 +50,14 @@ export default function ArtPromptPanel() {
   const [isZImage, setIsZImage] = useState(false);
 
   useEffect(() => {
+    // Load saved version directly so prompt fields don't flash on reload
+    import("../../api/client").then(({ getSingleton }) => {
+      getSingleton("GeneratorSettings").then((r) => {
+        const saved = String((r as Record<string, unknown>).version ?? "");
+        if (saved) setIsZImage(saved === "Z-Image Turbo");
+      }).catch(() => {});
+    });
+
     // Listen for art version changes from ArtModelPanel
     const handler = (e: Event) => {
       const version = (e as CustomEvent).detail as string;
