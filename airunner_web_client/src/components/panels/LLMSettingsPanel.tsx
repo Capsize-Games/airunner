@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import {
   getSingleton,
   updateSingleton,
-  getArtOptions,
+  getArtModelOptions,
   listLLMPresets,
 } from "../../api/client";
 import type {
@@ -271,7 +271,7 @@ export function LLMSettingsPanel() {
       })
       .catch(() => {})
       .finally(() => setLoading(false));
-    getArtOptions()
+    getArtModelOptions()
       .then((opts) => setPrecisionOptions(opts.precisions ?? []))
       .catch(() => {});
     listLLMPresets()

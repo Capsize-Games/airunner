@@ -217,22 +217,23 @@ export async function getBootstrap() {
   );
 }
 
+
 // ---------------------------------------------------------------------------
-// Art options (schedulers, precisions from services enums)
-// NOTE: Requires services endpoint GET /api/v1/art/options to be implemented.
-// Falls back to empty lists when the endpoint is unavailable.
+// Art Model Options (single comprehensive endpoint)
 // ---------------------------------------------------------------------------
-export interface ArtOptionsResponse {
+export interface ArtVersionInfo {
+  name: string;
+  models: { label: string; value: string }[];
   schedulers: { label: string; value: string }[];
+}
+
+export interface ArtOptionsResponse {
+  versions: ArtVersionInfo[];
   precisions: { label: string; value: string }[];
 }
 
-export async function getArtOptions(): Promise<ArtOptionsResponse> {
-  try {
-    return await request<ArtOptionsResponse>("GET", "/api/v1/art/options");
-  } catch {
-    return { schedulers: [], precisions: [] };
-  }
+export async function getArtModelOptions(): Promise<ArtOptionsResponse> {
+  return request<ArtOptionsResponse>("GET", "/api/v1/art/options");
 }
 
 // ---------------------------------------------------------------------------

@@ -2,25 +2,22 @@ import { useState, useEffect } from "react";
 import {
   getSingleton,
   updateSingleton,
-  getBootstrap,
-  getArtOptions,
+  getArtModelOptions,
 } from "../../api/client";
-import type { ResourceRecord } from "../../types/api";
+import type { ArtOptionsResponse } from "../../api/client";
 import Form from "react-bootstrap/Form";
 import ProgressBar from "react-bootstrap/ProgressBar";
 
-interface OptionItem {
-  label: string;
-  value: string;
-}
-
 export default function ArtModelPanel() {
   const [version, setVersion] = useState("");
+  const [modelPath, setModelPath] = useState("");
   const [scheduler, setScheduler] = useState("");
   const [precision, setPrecision] = useState("");
-  const [versions, setVersions] = useState<OptionItem[]>([]);
-  const [schedulers, setSchedulers] = useState<OptionItem[]>([]);
-  const [precisions, setPrecisions] = useState<OptionItem[]>([]);
+
+  // Options loaded from API
+  const [options, setOptions] = useState<ArtOptionsResponse | null>(null);
+  const [loading, setLoading] = useState(true);
+
   // Sampler controls
   const [nSamples, setNSamples] = useState(1);
   const [imagesPerBatch, setImagesPerBatch] = useState(1);
@@ -30,32 +27,18 @@ export default function ArtModelPanel() {
   const [height, setHeight] = useState(1024);
   const [seed, setSeed] = useState(0);
   const [vramEstimate, setVramEstimate] = useState<number | null>(null);
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    getArtOptions()
-      .then((opts) => {
-        setSchedulers(opts.schedulers ?? []);
-        setPrecisions(opts.precisions ?? []);
-      })
-      .catch(() => {});
+    (async () => {
+      try {
+        const opts = await getArtModelOptions();
+        setOptions(opts);
+      } catch { /* */ }
 
-    getBootstrap()
-      .then((data) => {
-        const seen = new Map<string, string>();
-        for (const p of data.pipelines ?? []) {
-          const v = String(p.version ?? "");
-          if (v && !seen.has(v)) seen.set(v, v);
-        }
-        const unique: OptionItem[] = [];
-        for (const v of seen.values()) unique.push({ label: v, value: v });
-        setVersions(unique);
-      })
-      .catch(() => {});
-
-    getSingleton("GeneratorSettings")
-      .then((r: ResourceRecord) => {
+      try {
+        const r = await getSingleton("GeneratorSettings");
         setVersion(String(r.version ?? ""));
+        setModelPath(String(r.model_path ?? ""));
         setScheduler(String(r.scheduler ?? ""));
         setPrecision(String(r.dtype ?? ""));
         setNSamples(Number(r.n_samples ?? 1));
@@ -65,21 +48,27 @@ export default function ArtModelPanel() {
         setWidth(Number(r.width ?? 1024));
         setHeight(Number(r.height ?? 1024));
         setSeed(Number(r.seed ?? 0));
-      })
-      .catch(() => {})
-      .finally(() => setLoading(false));
+      } catch { /* */ }
 
-    getSingleton("VRAMEstimate")
-      .then((r: ResourceRecord) => {
-        const gb = Number(r.file_size_gb ?? 0);
+      try {
+        const r = await getSingleton("VRAMEstimate");
+        const gb = Number((r as Record<string, unknown>).file_size_gb ?? 0);
         if (gb > 0) setVramEstimate(gb);
-      })
-      .catch(() => {});
+      } catch { /* */ }
+
+      setLoading(false);
+    })();
   }, []);
 
   const persist = (updates: Record<string, unknown>) => {
     updateSingleton("GeneratorSettings", updates).catch(() => {});
   };
+
+  // Derive available models and schedulers from current version
+  const versionInfo = options?.versions?.find((v) => v.name === version);
+  const availableModels = versionInfo?.models ?? [];
+  const availableSchedulers = versionInfo?.schedulers ?? [];
+  const precisions = options?.precisions ?? [];
 
   if (loading) {
     return <div className="p-2 small" style={{ color: "#a0a0a8" }}>Loading...</div>;
@@ -89,20 +78,49 @@ export default function ArtModelPanel() {
     <div className="p-2">
       <h6 style={{ color: "#a0a0a8" }} className="mb-2">Art Model</h6>
 
+      {/* Version */}
       <Form.Group className="mb-2">
         <Form.Label className="small" style={{ color: "#a0a0a8" }}>Version</Form.Label>
         <Form.Select
           size="sm"
           value={version}
-          onChange={(e) => { setVersion(e.target.value); persist({ version: e.target.value }); }}
+          onChange={(e) => {
+            const v = e.target.value;
+            setVersion(v);
+            setModelPath("");
+            setScheduler("");
+            persist({ version: v, model_path: "", scheduler: "" });
+          }}
         >
           <option value="">Select version...</option>
-          {versions.map((v) => (
-            <option key={v.value} value={v.value}>{v.label}</option>
+          {(options?.versions ?? []).map((v) => (
+            <option key={v.name} value={v.name}>{v.name}</option>
           ))}
         </Form.Select>
       </Form.Group>
 
+      {/* Model */}
+      <Form.Group className="mb-2">
+        <Form.Label className="small" style={{ color: "#a0a0a8" }}>Model</Form.Label>
+        <Form.Select
+          size="sm"
+          value={modelPath}
+          disabled={!version || availableModels.length === 0}
+          onChange={(e) => {
+            setModelPath(e.target.value);
+            persist({ model_path: e.target.value });
+          }}
+        >
+          <option value="">
+            {!version ? "Select a version first..." : "Select model..."}
+          </option>
+          {availableModels.map((m) => (
+            <option key={m.value} value={m.value}>{m.label}</option>
+          ))}
+        </Form.Select>
+      </Form.Group>
+
+      {/* Scheduler */}
       <Form.Group className="mb-2">
         <Form.Label className="small" style={{ color: "#a0a0a8" }}>Scheduler</Form.Label>
         <Form.Select
@@ -111,12 +129,13 @@ export default function ArtModelPanel() {
           onChange={(e) => { setScheduler(e.target.value); persist({ scheduler: e.target.value }); }}
         >
           <option value="">Select scheduler...</option>
-          {schedulers.map((s) => (
+          {availableSchedulers.map((s) => (
             <option key={s.value} value={s.value}>{s.label}</option>
           ))}
         </Form.Select>
       </Form.Group>
 
+      {/* Precision */}
       <Form.Group className="mb-2">
         <Form.Label className="small" style={{ color: "#a0a0a8" }}>Precision</Form.Label>
         <Form.Select

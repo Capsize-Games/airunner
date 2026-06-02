@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { getArtOptions } from "../../api/client";
+import { getArtModelOptions } from "../../api/client";
 import Form from "react-bootstrap/Form";
 import Button from "react-bootstrap/Button";
 
@@ -16,7 +16,7 @@ export default function SettingsModal({
   const [defaultPrecision, setDefaultPrecision] = useState("");
 
   useEffect(() => {
-    getArtOptions()
+    getArtModelOptions()
       .then((opts) => {
         setPrecisions(opts.precisions ?? []);
       })

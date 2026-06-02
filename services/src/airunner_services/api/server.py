@@ -19,6 +19,7 @@ from airunner_services.settings import AIRUNNER_LOG_LEVEL
 from airunner_services.utils.application import get_logger
 from airunner_services.api.routes import (
     art,
+    art_options_router,
     conversations,
     canvas_image,
     daemon,
@@ -309,6 +310,11 @@ def create_app(
     )
     app.include_router(tts.router, prefix="/api/v1/tts", tags=["tts"])
     app.include_router(stt.router, prefix="/api/v1/stt", tags=["stt"])
+    app.include_router(
+        art_options_router,
+        prefix="/api/v1/art",
+        tags=["art"],
+    )
     app.include_router(
         embeddings_router,
         prefix="/api/v1/art",
