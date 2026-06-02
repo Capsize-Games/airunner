@@ -177,15 +177,14 @@ function ImagePreviewModal({
         <div
           style={{
             width: 360,
-            overflowY: "auto",
             maxHeight: "80vh",
             display: "flex",
             flexDirection: "column",
             color: "#ccc",
           }}
         >
-          {/* Close button */}
-          <div style={{ textAlign: "right", marginBottom: 8 }}>
+          {/* Close button pinned to top */}
+          <div style={{ textAlign: "right", marginBottom: 8, flexShrink: 0 }}>
             <button
               onClick={onClose}
               style={{
@@ -201,6 +200,8 @@ function ImagePreviewModal({
             </button>
           </div>
 
+          {/* Metadata table — scrollable */}
+          <div style={{ flex: 1, overflowY: "auto", minHeight: 0 }}>
           {/* Metadata table */}
           {metaEntries.length > 0 ? (
             <table
@@ -300,8 +301,9 @@ function ImagePreviewModal({
               No metadata
             </p>
           )}
+          </div>
 
-          {/* Previous / Next navigation */}
+          {/* Previous / Next navigation — pinned to bottom */}
           <div
             style={{
               display: "flex",
@@ -309,6 +311,7 @@ function ImagePreviewModal({
               marginTop: 16,
               gap: 8,
               alignItems: "center",
+              flexShrink: 0,
             }}
           >
             <button
