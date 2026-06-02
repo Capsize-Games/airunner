@@ -7,7 +7,7 @@ import io
 import logging
 from typing import Optional
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Request
 from fastapi.responses import Response
 from PIL import Image
 
@@ -136,10 +136,22 @@ async def canvas_image():
 
 
 @router.put("/image")
-async def update_canvas_image_from_url(image_url: str):
-    """Fetch an image from a URL and store it in DrawingPadSettings."""
+async def update_canvas_image_from_url(
+    image_url: str,
+    request: Request,
+):
+    """Fetch an image from a URL and store it in DrawingPadSettings.
+
+    Accepts both relative paths and absolute URLs. Relative paths
+    are resolved against the request's base URL.
+    """
     import urllib.request
     import urllib.error
+
+    # Resolve relative URLs
+    if image_url.startswith("/"):
+        base = str(request.base_url).rstrip("/")
+        image_url = base + image_url
 
     try:
         with urllib.request.urlopen(image_url, timeout=30) as resp:
