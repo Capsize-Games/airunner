@@ -16,6 +16,7 @@
   --theme-panel-bg: #16162a;
   --theme-input-bg: #1a1a2e;
   --theme-input-border: #333;
+  --theme-placeholder: #666;
   --theme-icon-filter: none;
 }
 
@@ -33,6 +34,7 @@
   --theme-panel-bg: #ffffff;
   --theme-input-bg: #ffffff;
   --theme-input-border: #aaa;
+  --theme-placeholder: #999;
   --theme-icon-filter: invert(1);
 }
 
@@ -358,6 +360,10 @@ input.form-control:focus, select.form-select:focus, textarea.form-control:focus 
   color: var(--theme-text) !important;
   border-color: var(--bs-primary) !important;
   box-shadow: none !important;
+}
+input::placeholder, textarea::placeholder {
+  color: var(--theme-placeholder) !important;
+  opacity: 1;
 }
 .form-range::-webkit-slider-runnable-track {
   background: var(--theme-border);
