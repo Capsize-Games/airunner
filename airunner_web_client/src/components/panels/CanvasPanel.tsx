@@ -1,12 +1,11 @@
 import { useState, useEffect, useCallback } from "react";
-import { BASE_URL } from "../../types/api";
 
 const CANVAS_IMAGE_URL = "/api/v1/canvas/image";
 
 export default function CanvasPanel() {
   const [loading, setLoading] = useState(true);
   const [hasImage, setHasImage] = useState(false);
-  const [droppedUrl, setDroppedUrl] = useState<string | null>(null);
+  const [fetchToken, setFetchToken] = useState(0);
 
   useEffect(() => {
     setLoading(true);
@@ -19,7 +18,7 @@ export default function CanvasPanel() {
         setHasImage(false);
         setLoading(false);
       });
-  }, []);
+  }, [fetchToken]);
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -30,13 +29,24 @@ export default function CanvasPanel() {
     e.preventDefault();
     const url = e.dataTransfer.getData("text/image-url");
     if (url) {
-      setDroppedUrl(url);
+      // Send the image URL to the API so it's stored in the DB
+      fetch(`${CANVAS_IMAGE_URL}?image_url=${encodeURIComponent(url)}`, {
+        method: "PUT",
+      })
+        .then(() => {
+          // Bump the fetch token to reload from the server
+          setFetchToken((t) => t + 1);
+        })
+        .catch(() => {});
     }
   }, []);
 
   if (loading) {
     return (
-      <div className="canvas-panel d-flex align-items-center justify-content-center h-100">
+      <div
+        className="canvas-panel d-flex align-items-center
+                    justify-content-center h-100"
+      >
         <div
           className="spinner-border spinner-border-sm"
           role="status"
@@ -48,7 +58,10 @@ export default function CanvasPanel() {
 
   if (!hasImage) {
     return (
-      <div className="canvas-panel d-flex align-items-center justify-content-center h-100">
+      <div
+        className="canvas-panel d-flex align-items-center
+                    justify-content-center h-100"
+      >
         <div className="text-center">
           <span
             className="d-block mb-2"
@@ -57,24 +70,23 @@ export default function CanvasPanel() {
             🎨
           </span>
           <small style={{ color: "var(--theme-text-secondary)" }}>
-            No image on canvas. Generate one to see it here.
+            No image on canvas. Generate one or drag an image here.
           </small>
         </div>
       </div>
     );
   }
 
-  const displayUrl = droppedUrl || CANVAS_IMAGE_URL;
-
   return (
     <div
-      className="canvas-panel d-flex align-items-center justify-content-center h-100 overflow-hidden"
+      className="canvas-panel d-flex align-items-center
+                  justify-content-center h-100 overflow-hidden"
       style={{ background: "var(--theme-bg)" }}
       onDragOver={handleDragOver}
       onDrop={handleDrop}
     >
       <img
-        src={displayUrl}
+        src={`${CANVAS_IMAGE_URL}?_t=${fetchToken}`}
         alt="Canvas"
         style={{
           maxWidth: "100%",

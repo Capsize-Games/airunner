@@ -133,3 +133,51 @@ async def canvas_image():
                 return Response(content=png, media_type="image/png")
 
     return Response(status_code=404)
+
+
+@router.put("/image")
+async def update_canvas_image_from_url(image_url: str):
+    """Fetch an image from a URL and store it in DrawingPadSettings."""
+    import urllib.request
+    import urllib.error
+
+    try:
+        with urllib.request.urlopen(image_url, timeout=30) as resp:
+            raw_bytes = resp.read()
+    except urllib.error.URLError as exc:
+        return Response(
+            status_code=400,
+            content=f"Failed to fetch image: {exc}",
+        )
+
+    # Convert to PNG if needed
+    if raw_bytes.startswith(PNG_MAGIC):
+        png_bytes = raw_bytes
+    else:
+        try:
+            img = Image.open(io.BytesIO(raw_bytes))
+            buf = io.BytesIO()
+            img.save(buf, format="PNG")
+            png_bytes = buf.getvalue()
+        except Exception as exc:
+            return Response(
+                status_code=400,
+                content=f"Unsupported image format: {exc}",
+            )
+
+    with session_scope() as session:
+        record = (
+            session.query(DrawingPadSettings)
+            .order_by(DrawingPadSettings.id.desc())
+            .first()
+        )
+        if record is None:
+            record = DrawingPadSettings()
+            session.add(record)
+        record.image = png_bytes
+        session.commit()
+
+    return Response(
+        content=png_bytes,
+        media_type="image/png",
+    )
