@@ -93,7 +93,7 @@ html, body, #root {
   border-color: var(--separator-color);
 }
 .icon-bar.left  { border-right: 1px solid var(--separator-color); }
-.icon-bar.right { border-left:  1px solid var(--separator-color); }
+.icon-bar.right { border-left: 1px solid var(--separator-color); }
 .icon-bar button {
   width: var(--icon-btn-size); height: var(--icon-btn-size); padding: 6px;
   border: none; background: transparent;
@@ -129,9 +129,9 @@ html, body, #root {
   overflow: hidden;
 }
 .canvas-panel {
-  flex: 1; display: flex;
+  display: flex;
   overflow: hidden;
-  border-left: 1px solid var(--separator-color);
+  flex: 1;
 }
 .art-prompt-panel {
   width: 340px; flex-shrink: 0;
