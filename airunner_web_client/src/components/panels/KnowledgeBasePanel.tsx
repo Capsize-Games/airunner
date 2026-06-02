@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import Spinner from "react-bootstrap/Spinner";
 import ProgressBar from "react-bootstrap/ProgressBar";
+import { BASE_URL } from "../../types/api";
 
 // ── Knowledge Base ──
 export function KnowledgeBasePanel() {
@@ -43,6 +44,27 @@ export function KnowledgeBasePanel() {
     window.addEventListener("knowledge-base-changed", handler);
     return () =>
       window.removeEventListener("knowledge-base-changed", handler);
+  }, [reload]);
+
+  // Subscribe to SSE reload events from the KB file watcher
+  useEffect(() => {
+    const eventSource = new EventSource(
+      `${BASE_URL}/api/v1/knowledge-base/documents/watch`,
+    );
+    eventSource.addEventListener("message", (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        if (data.type === "reload") {
+          reload();
+        }
+      } catch { /* ignore malformed events */ }
+    });
+    eventSource.onerror = () => {
+      // The browser will automatically reconnect EventSource on error
+    };
+    return () => {
+      eventSource.close();
+    };
   }, [reload]);
 
   const handleToggle = async (docId: number) => {

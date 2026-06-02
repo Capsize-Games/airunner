@@ -4,6 +4,7 @@ import {
   updateSingleton,
 } from "../../api/client";
 import type { ArtOptionsResponse } from "../../api/client";
+import { BASE_URL } from "../../types/api";
 import Form from "react-bootstrap/Form";
 import ProgressBar from "react-bootstrap/ProgressBar";
 import SliderWithSpinbox from "./SliderWithSpinbox";
@@ -125,6 +126,34 @@ export default function ArtModelPanel() {
 
       setLoading(false);
     })();
+  }, []);
+
+  // Subscribe to SSE reload events from the model file watcher
+  useEffect(() => {
+    const eventSource = new EventSource(
+      `${BASE_URL}/api/v1/art/models/watch`,
+    );
+    eventSource.addEventListener("message", (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        if (data.type === "reload") {
+          (async () => {
+            try {
+              const opts = await import("../../api/client").then(
+                (m) => m.getArtModelOptions(),
+              );
+              setOptions(opts);
+            } catch { /* */ }
+          })();
+        }
+      } catch { /* ignore malformed events */ }
+    });
+    eventSource.onerror = () => {
+      // The browser will automatically reconnect EventSource on error
+    };
+    return () => {
+      eventSource.close();
+    };
   }, []);
 
   const persist = (updates: Record<string, unknown>) => {

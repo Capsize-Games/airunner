@@ -5,6 +5,7 @@ import {
   listLLMModels,
 } from "../../api/client";
 import type { ResourceRecord } from "../../types/api";
+import { BASE_URL } from "../../types/api";
 import Form from "react-bootstrap/Form";
 
 const MODEL_CHANGED_EVENT = "model-settings-changed";
@@ -36,6 +37,27 @@ export default function ModelSelector() {
     const handler = () => fetchSettings();
     window.addEventListener(MODEL_CHANGED_EVENT, handler);
     return () => window.removeEventListener(MODEL_CHANGED_EVENT, handler);
+  }, [fetchSettings]);
+
+  // Subscribe to SSE reload events from the model file watcher
+  useEffect(() => {
+    const eventSource = new EventSource(
+      `${BASE_URL}/api/v1/art/models/watch`,
+    );
+    eventSource.addEventListener("message", (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        if (data.type === "reload") {
+          fetchSettings();
+        }
+      } catch { /* ignore malformed events */ }
+    });
+    eventSource.onerror = () => {
+      // The browser will automatically reconnect EventSource on error
+    };
+    return () => {
+      eventSource.close();
+    };
   }, [fetchSettings]);
 
   const persist = (updates: Record<string, unknown>) => {

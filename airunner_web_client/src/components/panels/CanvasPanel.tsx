@@ -22,7 +22,11 @@ export default function CanvasPanel() {
   if (loading) {
     return (
       <div className="canvas-panel d-flex align-items-center justify-content-center h-100">
-        <small style={{ color: "#a0a0a8" }}>Loading...</small>
+        <div
+          className="spinner-border spinner-border-sm"
+          role="status"
+          style={{ color: "#a0a0a8" }}
+        />
       </div>
     );
   }

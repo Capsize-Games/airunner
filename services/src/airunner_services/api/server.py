@@ -26,10 +26,15 @@ from airunner_services.api.routes import (
     domain_resources,
     downloads,
     embeddings_router,
+    embeddings_watch_router,
     health,
+    images_router,
     knowledge_base,
+    knowledge_base_watch_router,
     layers_router,
     llm,
+    lora_watch_router,
+    models_watch_router,
     persistence,
     setup,
     stt,
@@ -334,6 +339,31 @@ def create_app(
         canvas_image.router,
         prefix="/api/v1/canvas",
         tags=["canvas"],
+    )
+    app.include_router(
+        lora_watch_router,
+        prefix="/api/v1/art",
+        tags=["art"],
+    )
+    app.include_router(
+        embeddings_watch_router,
+        prefix="/api/v1/art",
+        tags=["art"],
+    )
+    app.include_router(
+        models_watch_router,
+        prefix="/api/v1/art",
+        tags=["art"],
+    )
+    app.include_router(
+        images_router,
+        prefix="/api/v1/art",
+        tags=["art"],
+    )
+    app.include_router(
+        knowledge_base_watch_router,
+        prefix="/api/v1/knowledge-base",
+        tags=["knowledge-base"],
     )
 
     # Legacy compatibility endpoints for existing clients.

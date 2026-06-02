@@ -2,6 +2,8 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import Spinner from "react-bootstrap/Spinner";
 import Form from "react-bootstrap/Form";
 import type { LoraInfo } from "../../api/client";
+import { BASE_URL } from "../../types/api";
+import SliderWithSpinbox from "./SliderWithSpinbox";
 
 interface LoraItem extends LoraInfo {
   _inputText: string;
@@ -13,13 +15,22 @@ export default function LoraPanel() {
   const [copiedIndex, setCopiedIndex] = useState<string | null>(null);
   const copiedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const scan = useCallback(async () => {
+  const loadLoras = useCallback(async () => {
     setLoading(true);
     try {
       const { listLoras } = await import("../../api/client");
       const data = await listLoras();
+      // Filter LoRAs by the currently selected art model version.
+      // LoRA paths contain the version directory (e.g. "Z-Image Turbo/lora/").
+      const version = (() => {
+        try { return localStorage.getItem("airunner_art_version") || ""; }
+        catch { return ""; }
+      })();
+      const filtered = data.loras.filter((l: LoraInfo) =>
+        version ? l.path.includes(`/${version}/`) : true,
+      );
       setItems(
-        data.loras.map((l: LoraInfo) => ({
+        filtered.map((l: LoraInfo) => ({
           ...l,
           _inputText: "",
         })),
@@ -31,9 +42,56 @@ export default function LoraPanel() {
     }
   }, []);
 
+  // Load on mount
   useEffect(() => {
-    scan();
-  }, [scan]);
+    loadLoras();
+  }, [loadLoras]);
+
+  // Re-filter when version changes (switching between SDXL and Z-Image)
+  useEffect(() => {
+    const handler = () => loadLoras();
+    window.addEventListener("art-version-changed", handler);
+    return () => window.removeEventListener("art-version-changed", handler);
+  }, [loadLoras]);
+
+  // Subscribe to SSE reload events from the file watcher
+  useEffect(() => {
+    const eventSource = new EventSource(
+      `${BASE_URL}/api/v1/art/loras/watch`,
+    );
+    eventSource.addEventListener("message", (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        if (data.type === "reload") {
+          loadLoras();
+        }
+      } catch { /* ignore malformed events */ }
+    });
+    eventSource.onerror = () => {
+      // The browser will automatically reconnect EventSource on error
+    };
+    return () => {
+      eventSource.close();
+    };
+  }, [loadLoras]);
+
+  // Update individual items in-place when another component toggles LoRA state
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent).detail as { id: number; enabled: boolean } | undefined;
+      if (detail && detail.id) {
+        setItems((prev) =>
+          prev.map((item) =>
+            item.id === detail.id
+              ? { ...item, enabled: detail.enabled }
+              : item,
+          ),
+        );
+      }
+    };
+    window.addEventListener("lora-changed", handler);
+    return () => window.removeEventListener("lora-changed", handler);
+  }, []);
 
   const handleToggle = async (id: number, enabled: boolean) => {
     try {
@@ -46,7 +104,30 @@ export default function LoraPanel() {
             : item,
         ),
       );
-      window.dispatchEvent(new Event("lora-changed"));
+      window.dispatchEvent(
+        new CustomEvent("lora-changed", {
+          detail: { id, enabled: updated.enabled },
+        }),
+      );
+    } catch { /* */ }
+  };
+
+  const handleWeightChange = async (id: number, weight: number) => {
+    try {
+      const { updateLora } = await import("../../api/client");
+      const updated = await updateLora(id, { weight });
+      setItems((prev) =>
+        prev.map((item) =>
+          item.id === id
+            ? { ...item, weight: updated.weight }
+            : item,
+        ),
+      );
+      window.dispatchEvent(
+        new CustomEvent("lora-changed", {
+          detail: { id, weight: updated.weight },
+        }),
+      );
     } catch { /* */ }
   };
 
@@ -114,13 +195,6 @@ export default function LoraPanel() {
     <div className="p-2">
       <div className="d-flex justify-content-between align-items-center mb-2">
         <h6 className="text-muted mb-0">LoRA</h6>
-        <button
-          className="btn btn-outline-secondary btn-sm"
-          onClick={scan}
-          disabled={loading}
-        >
-          Scan
-        </button>
       </div>
 
       {loading ? (
@@ -128,7 +202,7 @@ export default function LoraPanel() {
       ) : items.length === 0 ? (
         <p className="text-muted small">
           No LoRA models found. Add .safetensors files to
-          your models directory and click Scan.
+          your models directory.
         </p>
       ) : (
         <div className="lora-list">
@@ -180,8 +254,8 @@ export default function LoraPanel() {
                             ? "1px solid #00a800"
                             : "1px solid var(--bs-primary)",
                         borderRadius: 10,
-                        padding: "1px 6px",
-                        fontSize: "0.65rem",
+                        padding: "2px 8px",
+                        fontSize: "0.75rem",
                         color: "#c8c8c8",
                         cursor: "pointer",
                       }}
@@ -190,8 +264,9 @@ export default function LoraPanel() {
                         style={{
                           cursor: "pointer",
                           color: "#ff5555",
-                          fontSize: "0.7rem",
+                          fontSize: "0.85rem",
                           lineHeight: 1,
+                          padding: "1px 2px",
                         }}
                         onClick={(e) => {
                           e.stopPropagation();
@@ -206,6 +281,20 @@ export default function LoraPanel() {
                   ))}
                 </div>
               )}
+
+              {/* Weight slider */}
+              <div className="mb-1">
+                <SliderWithSpinbox
+                  label="Weight"
+                  value={item.weight}
+                  min={0}
+                  max={1}
+                  step={0.01}
+                  displayAsFloat
+                  defaultValue={1.0}
+                  onChange={(v) => handleWeightChange(item.id, v)}
+                />
+              </div>
 
               {/* Add trigger words input */}
               <div className="d-flex gap-1">

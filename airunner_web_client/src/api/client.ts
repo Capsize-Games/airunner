@@ -308,14 +308,28 @@ export async function mergeVisibleLayers() {
 // Embeddings
 // ---------------------------------------------------------------------------
 export interface EmbeddingInfo {
+  id: number;
   name: string;
   path: string;
-  file_type: string;
+  enabled: boolean;
+  trigger_words: string[];
 }
 
 export async function listEmbeddings() {
   return request<{ embeddings: EmbeddingInfo[] }>(
     "GET", "/api/v1/art/embeddings",
+  );
+}
+
+export async function updateEmbedding(
+  embeddingId: number,
+  props: { enabled?: boolean; trigger_words?: string },
+) {
+  const params = new URLSearchParams();
+  if (props.enabled !== undefined) params.set("enabled", String(props.enabled));
+  if (props.trigger_words !== undefined) params.set("trigger_words", props.trigger_words);
+  return request<EmbeddingInfo>(
+    "PATCH", `/api/v1/art/embeddings/${embeddingId}?${params.toString()}`,
   );
 }
 
@@ -328,6 +342,7 @@ export interface LoraInfo {
   path: string;
   enabled: boolean;
   trigger_words: string[];
+  weight: number;
 }
 
 export async function listLoras() {
@@ -338,11 +353,12 @@ export async function listLoras() {
 
 export async function updateLora(
   loraId: number,
-  props: { enabled?: boolean; trigger_words?: string },
+  props: { enabled?: boolean; trigger_words?: string; weight?: number },
 ) {
   const params = new URLSearchParams();
   if (props.enabled !== undefined) params.set("enabled", String(props.enabled));
   if (props.trigger_words !== undefined) params.set("trigger_words", props.trigger_words);
+  if (props.weight !== undefined) params.set("weight", String(props.weight));
   return request<LoraInfo>(
     "PATCH", `/api/v1/art/loras/${loraId}?${params.toString()}`,
   );
@@ -357,5 +373,42 @@ export async function startHuggingFaceDownload(
   return request<import("../types/api").DownloadJobAccepted>(
     "POST", "/api/v1/downloads/huggingface",
     { repo_id: repoId, model_type: modelType },
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Image Browser
+// ---------------------------------------------------------------------------
+export interface ImageDateInfo {
+  value: string;
+  label: string;
+}
+
+export interface ImageInfo {
+  id: string;
+  thumbnail_url: string;
+}
+
+export interface ListImageDatesResponse {
+  dates: ImageDateInfo[];
+}
+
+export interface ListImagesResponse {
+  total: number;
+  images: ImageInfo[];
+}
+
+export async function listImageDates() {
+  return request<ListImageDatesResponse>("GET", "/api/v1/art/images/dates");
+}
+
+export async function listImages(
+  date: string,
+  offset = 0,
+  limit = 20,
+) {
+  return request<ListImagesResponse>(
+    "GET",
+    `/api/v1/art/images/${date}?offset=${offset}&limit=${limit}`,
   );
 }
