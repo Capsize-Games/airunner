@@ -65,6 +65,40 @@ def _format_label(date_str: str) -> str:
     return date_str
 
 
+def _extract_metadata(path: Path) -> dict | None:
+    """Extract PNG tEXt metadata chunks from an image file.
+
+    Uses PIL/Pillow's ``img.info`` which exposes PNG metadata such
+    as ``parameters`` (automatic1111/webui format), ``prompt``,
+    ``negative_prompt``, ``seed``, etc.
+    """
+    try:
+        if path.suffix.lower() != ".png":
+            return None
+        with Image.open(path) as img:
+            info: dict = img.info or {}
+            # Filter string values only
+            metadata: dict = {
+                k: v for k, v in info.items()
+                if isinstance(v, str)
+            }
+            # Try to parse the common "parameters" JSON/metadata blob
+            raw = metadata.get("parameters") or metadata.get("params")
+            if raw and isinstance(raw, str):
+                try:
+                    parsed = json.loads(raw)
+                    if isinstance(parsed, dict):
+                        metadata["parameters"] = parsed
+                    else:
+                        metadata["parameters_text"] = str(raw)
+                except (json.JSONDecodeError, TypeError):
+                    metadata["parameters_text"] = str(raw)
+            return metadata or None
+    except Exception as exc:
+        logger.debug("Could not extract metadata from %s: %s", path, exc)
+        return None
+
+
 # ── SSE watch endpoint (must be before {date} routes) ───────────────────
 # ── Watcher state ────────────────────────────────────────────────────────
 
@@ -72,7 +106,7 @@ _WATCH_DIR = _IMAGES_ROOT
 _watch_subscribers: list[queue.Queue[bytes]] = []
 _watch_lock = threading.Lock()
 _watcher_started = False
-_watcher_observer: _Observer | None = None
+_watcher_observer = None  # type: ignore[valid-type]
 
 
 class _ImageFileHandler(FileSystemEventHandler):
@@ -140,8 +174,8 @@ def _stop_watcher() -> None:
     global _watcher_observer, _watcher_started
     obs = _watcher_observer
     if obs is not None:
-        obs.stop()
-        obs.join(timeout=2)
+        obs.stop()  # type: ignore[union-attr]
+        obs.join(timeout=2)  # type: ignore[union-attr]
         _watcher_observer = None
     _watcher_started = False
 
@@ -224,20 +258,59 @@ def list_images(
     total = len(all_files)
     page = all_files[offset: offset + limit]
 
+    images = []
+    for p in page:
+        meta = _extract_metadata(p) if p.suffix.lower() == ".png" else None
+        try:
+            file_size = p.stat().st_size
+        except OSError:
+            file_size = 0
+        images.append({
+            "id": p.name,
+            "image_url": (
+                f"/api/v1/art/images/{date}/full/{p.name}"
+            ),
+            "thumbnail_url": (
+                f"/api/v1/art/images/{date}/thumb/{p.name}"
+            ),
+            "file_path": str(p),
+            "file_size": file_size,
+            "metadata": meta,
+        })
+
     return {
         "total": total,
-        "images": [
-            {
-                "id": p.name,
-                "image_url": (
-                    f"/api/v1/art/images/{date}/full/{p.name}"
-                ),
-                "thumbnail_url": (
-                    f"/api/v1/art/images/{date}/thumb/{p.name}"
-                ),
-            }
-            for p in page
-        ],
+        "images": images,
+    }
+
+
+# ── Single image info ─────────────────────────────────────────────────────
+
+
+@router.get("/images/{date}/info/{filename}")
+def get_image_info(date: str, filename: str):
+    """Return file info and metadata for one image file."""
+    source = _date_dir(date) / filename
+    if not source.is_file():
+        raise HTTPException(status_code=404, detail="Image not found")
+
+    meta = _extract_metadata(source) if source.suffix.lower() == ".png" else None
+    try:
+        file_size = source.stat().st_size
+    except OSError:
+        file_size = 0
+
+    return {
+        "id": source.name,
+        "file_path": str(source),
+        "file_size": file_size,
+        "metadata": meta,
+        "image_url": (
+            f"/api/v1/art/images/{date}/full/{source.name}"
+        ),
+        "thumbnail_url": (
+            f"/api/v1/art/images/{date}/thumb/{source.name}"
+        ),
     }
 
 

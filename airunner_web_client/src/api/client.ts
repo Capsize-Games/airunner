@@ -463,6 +463,16 @@ export interface ImageInfo {
   id: string;
   image_url: string;
   thumbnail_url: string;
+  /** Full filesystem path to the image. */
+  file_path: string;
+  /** File size in bytes. */
+  file_size: number;
+  /** Extracted PNG metadata (prompt, seed, steps, etc.). */
+  metadata: Record<string, unknown> | null;
+}
+
+export interface ImageInfoResponse extends ImageInfo {
+  // Same fields as ImageInfo, returned by the info endpoint.
 }
 
 export interface ListImageDatesResponse {
@@ -486,5 +496,15 @@ export async function listImages(
   return request<ListImagesResponse>(
     "GET",
     `/api/v1/art/images/${date}?offset=${offset}&limit=${limit}`,
+  );
+}
+
+export async function getImageInfo(
+  date: string,
+  filename: string,
+) {
+  return request<ImageInfoResponse>(
+    "GET",
+    `/api/v1/art/images/${date}/info/${filename}`,
   );
 }

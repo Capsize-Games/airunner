@@ -96,6 +96,12 @@ class ApplicationSettings(BaseModel):
     dark_mode_enabled_db = Column(Boolean, default=True)
     theme_name = Column(String, default="dark")
 
+    # --- image storage & export columns ---
+    store_images_in_db = Column(Boolean, default=True)
+    store_images_locally = Column(Boolean, default=True)
+    image_export_folder = Column(String, default="")
+    metadata_export_flags = Column(String, default="{}")
+
     # ------------------------------------------------------------------
     # QSettings-backed properties (replaces dropped DB columns)
     # ------------------------------------------------------------------
