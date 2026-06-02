@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import {
   startArtGeneration,
   getArtJobStatus,
@@ -60,6 +60,18 @@ export default function ArtPromptPanel() {
     catch { return ""; }
   });
   const [isZImage, setIsZImage] = useState(savedVersion === "Z-Image Turbo");
+  const [activeLoras, setActiveLoras] = useState<{ id: number; name: string }[]>([]);
+
+  const reloadActiveLoras = useCallback(async () => {
+    try {
+      const { listLoras } = await import("../../api/client");
+      const data = await listLoras();
+      const enabled = (data.loras ?? [])
+        .filter((l) => l.enabled)
+        .map((l) => ({ id: l.id, name: l.name }));
+      setActiveLoras(enabled);
+    } catch { /* */ }
+  }, []);
 
   useEffect(() => {
     const versionHandler = (e: Event) => {
@@ -83,6 +95,13 @@ export default function ArtPromptPanel() {
       if (pollRef.current) clearInterval(pollRef.current);
     };
   }, []);
+
+  useEffect(() => {
+    reloadActiveLoras();
+    const handler = () => reloadActiveLoras();
+    window.addEventListener("lora-changed", handler);
+    return () => window.removeEventListener("lora-changed", handler);
+  }, [reloadActiveLoras]);
 
   const persist = (updates: Record<string, string>) => {
     const current = loadPromptData();
@@ -190,8 +209,31 @@ export default function ArtPromptPanel() {
         )}
       </div>
 
-      {/* Bottom bar: version/model selector + progress + submit/cancel */}
+      {/* Bottom bar: active LoRA pills + version/model selector + progress + submit/cancel */}
       <div className="flex-shrink-0 mt-2 pt-2 border-top border-secondary">
+        {/* Active LoRA pills */}
+        {activeLoras.length > 0 && (
+          <div className="d-flex flex-wrap gap-1 mb-1">
+            {activeLoras.map((lora) => (
+              <span
+                key={lora.id}
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 4,
+                  background: "rgba(185,0,132,0.2)",
+                  border: "1px solid #b80084",
+                  borderRadius: 12,
+                  padding: "2px 8px",
+                  fontSize: "0.7rem",
+                  color: "#c8c8c8",
+                }}
+              >
+                {lora.name}
+              </span>
+            ))}
+          </div>
+        )}
         <div className="mb-1">
           <ArtModelSelector
             version={artVersion}

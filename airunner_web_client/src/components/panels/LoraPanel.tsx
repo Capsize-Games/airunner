@@ -46,6 +46,7 @@ export default function LoraPanel() {
             : item,
         ),
       );
+      window.dispatchEvent(new Event("lora-changed"));
     } catch { /* */ }
   };
 
