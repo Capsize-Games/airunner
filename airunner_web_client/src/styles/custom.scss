@@ -255,14 +255,6 @@ html, body, #root {
   overflow-y: auto;
   padding: 8px 0;
 }
-.settings-nav-group {
-  padding: 2px 12px;
-  font-size: 10px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  color: #666;
-  margin-top: 8px;
-}
 .settings-nav-item {
   display: flex; align-items: center; gap: 8px;
   padding: 6px 16px;
@@ -280,9 +272,6 @@ html, body, #root {
   background: rgba(0,132,185,0.20);
   color: var(--bs-body-color);
   font-weight: 600;
-}
-.settings-nav-item-sub {
-  padding-left: 36px;
 }
 .settings-content {
   flex: 1; overflow-y: auto; padding: 16px;

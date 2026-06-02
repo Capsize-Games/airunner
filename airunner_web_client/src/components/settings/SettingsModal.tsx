@@ -34,36 +34,26 @@ interface NavEntry {
 }
 
 const NAV_ENTRIES: NavEntry[] = [
-  { id: "privacy", label: "Privacy & Security", icon: "\uD83D\uDD12" },
-  { id: "image-export", label: "Image Export", icon: "\uD83D\uDDBC" },
-  { id: "memory", label: "Memory", icon: "\uD83E\uDDE0" },
-  { id: "keyboard-shortcuts", label: "Keyboard Shortcuts", icon: "\u2328" },
-  { id: "agent", label: "Agent Preferences", icon: "\uD83D\uDCAC", group: "Text", indent: true },
-  { id: "user", label: "User Settings", icon: "\uD83D\uDCAC", group: "Text", indent: true },
-  { id: "tts", label: "Text-to-Speech", icon: "\uD83D\uDCAC", group: "Text", indent: true },
-  { id: "prompt-templates", label: "Prompt Templates", icon: "\uD83D\uDCAC", group: "Text", indent: true },
-  { id: "appearance", label: "Theme", icon: "\u2699", group: "Miscellaneous", indent: true },
-  { id: "sound", label: "Sound", icon: "\u2699", group: "Miscellaneous", indent: true },
-  { id: "language", label: "Language", icon: "\u2699", group: "Miscellaneous", indent: true },
+  { id: "privacy",           label: "Privacy & Security",    icon: "\uD83D\uDD12" },
+  { id: "image-export",      label: "Image Export",          icon: "\uD83D\uDDBC" },
+  { id: "memory",            label: "Memory",                icon: "\uD83E\uDDE0" },
+  { id: "keyboard-shortcuts",label: "Keyboard Shortcuts",    icon: "\u2328" },
+  { id: "agent",             label: "Agent Preferences",     icon: "\uD83E\uDD16" },
+  { id: "user",              label: "User Settings",         icon: "\uD83D\uDC64" },
+  { id: "tts",               label: "Text-to-Speech",        icon: "\uD83D\uDCE2" },
+  { id: "prompt-templates",  label: "Prompt Templates",      icon: "\uD83D\uDCDD" },
+  { id: "appearance",        label: "Theme",                 icon: "\uD83C\uDFA8" },
+  { id: "sound",             label: "Sound",                 icon: "\uD83D\uDD0A" },
+  { id: "language",          label: "Language",              icon: "\uD83C\uDF0D" },
 ];
 
 function getGroupEntries(
   entries: NavEntry[],
 ): { group: string; items: NavEntry[] }[] {
   const topLevel = entries.filter((e) => !e.group);
-  const groups: Record<string, NavEntry[]> = {};
-  for (const e of entries) {
-    if (e.group) {
-      if (!groups[e.group]) groups[e.group] = [];
-      groups[e.group].push(e);
-    }
-  }
   const result: { group: string; items: NavEntry[] }[] = [
     { group: "", items: topLevel },
   ];
-  for (const [group, items] of Object.entries(groups)) {
-    result.push({ group, items });
-  }
   return result;
 }
 
@@ -103,7 +93,7 @@ export default function SettingsModal({
     }
   }
 
-  const grouped = getGroupEntries(NAV_ENTRIES);
+  const icon = (name: string) => `/icons/lucide/dark/${name}.svg`;
 
   return (
     <div className="settings-modal-backdrop" onClick={onClose}>
@@ -117,35 +107,31 @@ export default function SettingsModal({
           <h5 className="mb-0">Settings</h5>
           <Button
             variant="link"
-            className="text-light p-0"
+            className="text-light p-0 d-flex align-items-center"
             onClick={onClose}
             size="sm"
           >
-            {"\u2715"}
+            <img
+              src={icon("circle-x")}
+              alt="Close"
+              style={{ width: 20, height: 20, filter: "invert(0.6)" }}
+            />
           </Button>
         </div>
         <div className="settings-modal-body">
           <nav className="settings-nav">
-            {grouped.map(({ group, items }) => (
-              <div key={group || "__top"}>
-                {group && (
-                  <div className="settings-nav-group">{group}</div>
-                )}
-                {items.map((entry) => (
-                  <button
-                    key={entry.id}
-                    className={
-                      "settings-nav-item" +
-                      (entry.indent ? " settings-nav-item-sub" : "") +
-                      (activeSection === entry.id ? " active" : "")
-                    }
-                    onClick={() => setActiveSection(entry.id)}
-                  >
-                    <span>{entry.icon}</span>
-                    <span>{entry.label}</span>
-                  </button>
-                ))}
-              </div>
+            {NAV_ENTRIES.map((entry) => (
+              <button
+                key={entry.id}
+                className={
+                  "settings-nav-item" +
+                  (activeSection === entry.id ? " active" : "")
+                }
+                onClick={() => setActiveSection(entry.id)}
+              >
+                <span>{entry.icon}</span>
+                <span>{entry.label}</span>
+              </button>
             ))}
           </nav>
           <div className="settings-content">{renderSection()}</div>
