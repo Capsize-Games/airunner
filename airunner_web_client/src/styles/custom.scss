@@ -16,7 +16,7 @@
   --theme-panel-bg: #16162a;
   --theme-input-bg: #1a1a2e;
   --theme-input-border: #333;
-  --theme-icon-filter: invert(1);
+  --theme-icon-filter: none;
 }
 
 [data-theme="light"] {
@@ -33,7 +33,7 @@
   --theme-panel-bg: #ffffff;
   --theme-input-bg: #ffffff;
   --theme-input-border: #aaa;
-  --theme-icon-filter: none;
+  --theme-icon-filter: invert(1);
 }
 
 [data-theme="mint"] {
@@ -50,7 +50,7 @@
   --theme-panel-bg: #1e5c44;
   --theme-input-bg: #183c32;
   --theme-input-border: #2e8c6a;
-  --theme-icon-filter: invert(1);
+  --theme-icon-filter: none;
 }
 
 [data-theme="neon"] {
@@ -67,7 +67,7 @@
   --theme-panel-bg: #1a1a1a;
   --theme-input-bg: #0f0f0f;
   --theme-input-border: #393e46;
-  --theme-icon-filter: invert(1);
+  --theme-icon-filter: none;
 }
 
 /* -- Bootstrap aliases -- */
