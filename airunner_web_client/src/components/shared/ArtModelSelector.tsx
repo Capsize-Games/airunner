@@ -44,7 +44,7 @@ export default function ArtModelSelector({
 
   const handleModel = (m: string) => {
     try { localStorage.setItem("airunner_art_model", m); } catch {}
-    window.dispatchEvent(new CustomEvent("art-model-changed"));
+    window.dispatchEvent(new CustomEvent("art-model-changed", { detail: m }));
     onModelChange?.(m);
   };
 
@@ -73,7 +73,7 @@ export default function ArtModelSelector({
         onChange={(e) => handleModel(e.target.value)}
       >
         <option value="">
-          {!version ? "Select version first..." : "Model..."}
+          {!version ? "Version..." : "Model..."}
         </option>
         {availableModels.map((m) => (
           <option key={m.value} value={m.value}>{m.label}</option>

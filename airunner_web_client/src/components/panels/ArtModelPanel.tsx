@@ -36,11 +36,9 @@ export default function ArtModelPanel() {
       try { localStorage.setItem("airunner_art_version", v); } catch {}
     };
     window.addEventListener("art-version-changed", handler);
-    const modelHandler = () => {
-      try {
-        const m = localStorage.getItem("airunner_art_model");
-        if (m) setModelPath(m);
-      } catch {}
+    const modelHandler = (e: Event) => {
+      const m = (e as CustomEvent).detail as string;
+      setModelPath(m ?? "");
     };
     window.addEventListener("art-model-changed", modelHandler);
     return () => {
@@ -121,7 +119,7 @@ export default function ArtModelPanel() {
     setModelPath(m);
     persist({ model_path: m });
     try { localStorage.setItem("airunner_art_model", m); } catch {}
-    window.dispatchEvent(new CustomEvent("art-model-changed"));
+    window.dispatchEvent(new CustomEvent("art-model-changed", { detail: m }));
   };
 
   return (
@@ -150,7 +148,7 @@ export default function ArtModelPanel() {
           disabled={loading}
           onChange={(e) => handleVersionChange(e.target.value)}
         >
-          <option value="">Select version...</option>
+          <option value="">Version...</option>
           {(options?.versions ?? []).map((v) => (
             <option key={v.name} value={v.name}>
               {v.name}
@@ -172,8 +170,8 @@ export default function ArtModelPanel() {
         >
           <option value="">
             {!version
-              ? "Select a version first..."
-              : "Select model..."}
+              ? "Version..."
+              : "Model..."}
           </option>
           {availableModels.map((m) => (
             <option key={m.value} value={m.value}>
