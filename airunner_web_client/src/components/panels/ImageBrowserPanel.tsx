@@ -304,28 +304,63 @@ export default function ImageBrowserPanel() {
       : displayedFields;
 
     return (
-      <div className="small text-muted" style={{ lineHeight: 1.4 }}>
-        {Object.entries(entries).map(([key, value]) => {
-          const valStr =
-            typeof value === "object"
-              ? JSON.stringify(value)
-              : String(value);
-          return (
-            <span key={key} className="me-2" title={`${key}: ${valStr}`}>
-              <strong>{key}:</strong>{" "}
-              {truncate(valStr, 40)}{" "}
-            </span>
-          );
-        })}
+      <div className="small text-muted mt-1">
+        <table style={{ width: "100%", borderCollapse: "collapse" }}>
+          <tbody>
+            {Object.entries(entries).map(([key, value]) => {
+              const valStr =
+                typeof value === "object"
+                  ? JSON.stringify(value)
+                  : String(value);
+              return (
+                <tr key={key}>
+                  <td
+                    style={{
+                      padding: "1px 8px 1px 0",
+                      verticalAlign: "top",
+                      whiteSpace: "nowrap",
+                      color: "var(--theme-text-secondary)",
+                      fontWeight: 600,
+                      width: 1,
+                    }}
+                  >
+                    {key}
+                  </td>
+                  <td
+                    style={{
+                      padding: "1px 0",
+                      verticalAlign: "top",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      maxWidth: 0,
+                    }}
+                    title={valStr}
+                  >
+                    {truncate(valStr, 80)}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
         {Object.keys(extraFields).length > 0 && (
-          <Button
-            variant="link"
-            size="sm"
-            className="p-0 small text-light"
+          <button
+            type="button"
+            className="btn btn-sm p-0 mt-1"
             onClick={() => toggleMeta(imgId)}
+            title={isExpanded ? "Show less" : "Show all metadata"}
+            style={{
+              background: "none",
+              border: "none",
+              color: "var(--theme-text-secondary)",
+              fontSize: 11,
+              cursor: "pointer",
+              textDecoration: "underline",
+              textUnderlineOffset: 2,
+            }}
           >
-            {isExpanded ? "▲ less" : "▼ more"}
-          </Button>
+            {isExpanded ? "▲ Show less" : "▼ Show all metadata"}
+          </button>
         )}
       </div>
     );
@@ -375,21 +410,34 @@ export default function ImageBrowserPanel() {
 
         <div className="d-flex align-items-center small text-muted">
           <span
-            className="text-truncate d-inline-block"
-            style={{ maxWidth: "240px" }}
+            className="text-truncate flex-grow-1"
+            style={{ minWidth: 0 }}
             title={img.file_path}
           >
             {img.file_path}
           </span>
-          <Button
-            variant="link"
-            size="sm"
-            className="p-0 ms-1 small text-light flex-shrink-0"
+          <button
+            type="button"
+            className="btn btn-sm p-0 ms-1 flex-shrink-0"
             onClick={() => handleOpenFile(img.file_path)}
             title="Open file location"
+            style={{
+              background: "none",
+              border: "none",
+              width: 20,
+              height: 20,
+            }}
           >
-            Open
-          </Button>
+            <img
+              src="/icons/lucide/dark/external-link.svg"
+              alt="Open"
+              style={{
+                width: 14,
+                height: 14,
+                filter: "var(--theme-icon-filter)",
+              }}
+            />
+          </button>
         </div>
 
         <div className="mt-1">
