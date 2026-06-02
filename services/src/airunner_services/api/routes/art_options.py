@@ -52,8 +52,8 @@ _DEFAULT_SCHEDULERS: List[str] = [
 # ── Precision options (quantization for Z-Image text encoders) ──
 _PRECISIONS: List[Dict[str, str]] = [
     {"label": "No Quantization (fp16)", "value": "fp16"},
-    {"label": "INT8 (Recommended)", "value": "int8"},
-    {"label": "INT4", "value": "int4"},
+    {"label": "INT4 (Recommended)", "value": "int4"},
+    {"label": "INT8", "value": "int8"},
 ]
 
 # ── Valid versions ──
@@ -73,6 +73,9 @@ def _find_local_models(version: str) -> List[Dict[str, str]]:
     models: List[Dict[str, str]] = []
     for action_dir in sorted(version_dir.iterdir()):
         if not action_dir.is_dir():
+            continue
+        # Skip lora directories — LoRA models are shown in the LoRA panel
+        if action_dir.name.lower() == "lora":
             continue
         for ext in (".safetensors", ".ckpt", ".gguf"):
             for fpath in sorted(action_dir.glob(f"*{ext}")):
