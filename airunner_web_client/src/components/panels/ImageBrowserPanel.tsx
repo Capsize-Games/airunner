@@ -391,6 +391,8 @@ export default function ImageBrowserPanel() {
   const [previewIndex, setPreviewIndex] = useState<number | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState<string>("");
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [moveFeedback, setMoveFeedback] = useState<string | null>(null);
 
   const sentinelRef = useRef<HTMLDivElement | null>(null);
 
@@ -571,11 +573,11 @@ export default function ImageBrowserPanel() {
 
   // ── Delete server image ────────────────────────────────────────────
 
-  const handleDeleteServer = async (date: string, filename: string) => {
-    if (!window.confirm(`Delete "${filename}"?`)) return;
+  const executeDelete = async (date: string, filename: string) => {
     try {
       await deleteImage(date, filename);
       setServerImages((prev) => prev.filter((img) => img.id !== filename));
+      setConfirmDeleteId(null);
     } catch {
       // delete failed
     }
@@ -583,12 +585,12 @@ export default function ImageBrowserPanel() {
 
   // ── Move to canvas ─────────────────────────────────────────────────
 
-  const handleMoveToCanvas = async (imageUrl: string) => {
+  const handleMoveToCanvas = async (img: ImageInfo) => {
     try {
-      await fetch(
-        `${BASE_URL}/api/v1/canvas/image?image_url=${encodeURIComponent(imageUrl)}`,
-        { method: "PUT" },
-      );
+      const url = `/api/v1/canvas/image?image_url=${encodeURIComponent(img.image_url)}`;
+      await fetch(url, { method: "PUT" });
+      setMoveFeedback(img.id);
+      setTimeout(() => setMoveFeedback(prev => prev === img.id ? null : prev), 1500);
     } catch {
       // canvas move failed
     }
@@ -702,22 +704,38 @@ export default function ImageBrowserPanel() {
           </div>
 
           {/* Row 2: icon buttons */}
-          <div className="d-flex gap-2 mt-1">
+          <div
+            className="d-flex gap-2 mt-1"
+            style={{
+              borderTop: "1px solid var(--theme-border)",
+              paddingTop: 4,
+              marginTop: 4,
+              flexWrap: "wrap",
+            }}
+          >
             <button
               type="button"
-              title="Move to canvas"
+              title={moveFeedback === img.id ? "Sent to canvas" : "Move to canvas"}
               style={{
                 background: "none",
                 border: "none",
                 cursor: "pointer",
-                padding: 0,
+                padding: 4,
+                borderRadius: 4,
+                opacity: 0.7,
+                transition: "opacity 0.15s, background 0.15s",
                 lineHeight: 1,
               }}
-              onClick={() =>
-                handleMoveToCanvas(
-                  `${BASE_URL}${img.image_url}`,
-                )
-              }
+              onClick={() => handleMoveToCanvas(img)}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background =
+                  "rgba(0,132,185,0.15)";
+                e.currentTarget.style.opacity = "1";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = "none";
+                e.currentTarget.style.opacity = "0.7";
+              }}
             >
               <img
                 src="/icons/lucide/dark/panel-right-open.svg"
@@ -736,10 +754,22 @@ export default function ImageBrowserPanel() {
                 background: "none",
                 border: "none",
                 cursor: "pointer",
-                padding: 0,
+                padding: 4,
+                borderRadius: 4,
+                opacity: 0.7,
+                transition: "opacity 0.15s, background 0.15s",
                 lineHeight: 1,
               }}
               onClick={() => setPreviewIndex(idx)}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background =
+                  "rgba(0,132,185,0.15)";
+                e.currentTarget.style.opacity = "1";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = "none";
+                e.currentTarget.style.opacity = "0.7";
+              }}
             >
               <img
                 src="/icons/lucide/dark/info.svg"
@@ -758,15 +788,26 @@ export default function ImageBrowserPanel() {
                 background: "none",
                 border: "none",
                 cursor: "pointer",
-                padding: 0,
+                padding: 4,
+                borderRadius: 4,
+                opacity: 0.7,
+                transition: "opacity 0.15s, background 0.15s",
                 lineHeight: 1,
               }}
               onClick={() =>
-                handleDeleteServer(
-                  selectedDate ?? "",
-                  img.id,
+                setConfirmDeleteId(
+                  confirmDeleteId === img.id ? null : img.id,
                 )
               }
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background =
+                  "rgba(0,132,185,0.15)";
+                e.currentTarget.style.opacity = "1";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = "none";
+                e.currentTarget.style.opacity = "0.7";
+              }}
             >
               <img
                 src="/icons/lucide/dark/trash.svg"
@@ -778,6 +819,82 @@ export default function ImageBrowserPanel() {
                 }}
               />
             </button>
+
+            {confirmDeleteId === img.id && (
+              <div className="d-flex gap-2 align-items-center">
+                <span className="small text-muted">
+                  Delete this image?
+                </span>
+                <button
+                  title="Yes"
+                  style={{
+                    background: "none",
+                    border: "none",
+                    cursor: "pointer",
+                    padding: 4,
+                    borderRadius: 4,
+                    opacity: 0.7,
+                    transition: "opacity 0.15s, background 0.15s",
+                    lineHeight: 1,
+                  }}
+                  onClick={() =>
+                    executeDelete(selectedDate ?? "", img.id)
+                  }
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background =
+                      "rgba(0,132,185,0.15)";
+                    e.currentTarget.style.opacity = "1";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = "none";
+                    e.currentTarget.style.opacity = "0.7";
+                  }}
+                >
+                  <img
+                    src="/icons/lucide/dark/circle-check.svg"
+                    alt="Yes"
+                    style={{
+                      width: 16,
+                      height: 16,
+                      filter: imgFilter,
+                    }}
+                  />
+                </button>
+                <button
+                  title="No"
+                  style={{
+                    background: "none",
+                    border: "none",
+                    cursor: "pointer",
+                    padding: 4,
+                    borderRadius: 4,
+                    opacity: 0.7,
+                    transition: "opacity 0.15s, background 0.15s",
+                    lineHeight: 1,
+                  }}
+                  onClick={() => setConfirmDeleteId(null)}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background =
+                      "rgba(0,132,185,0.15)";
+                    e.currentTarget.style.opacity = "1";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = "none";
+                    e.currentTarget.style.opacity = "0.7";
+                  }}
+                >
+                  <img
+                    src="/icons/lucide/dark/circle-x.svg"
+                    alt="No"
+                    style={{
+                      width: 16,
+                      height: 16,
+                      filter: imgFilter,
+                    }}
+                  />
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </div>

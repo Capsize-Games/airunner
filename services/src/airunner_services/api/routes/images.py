@@ -406,6 +406,11 @@ def rename_image(
         raise HTTPException(status_code=404, detail="Image not found")
 
     new_name = body.new_filename
+    # Auto-append original extension if missing
+    orig_ext = source.suffix
+    if not Path(new_name).suffix:
+        new_name = new_name + orig_ext
+
     dest = _date_dir(date) / new_name
 
     # Handle name collisions
