@@ -9,8 +9,11 @@ import type {
   ResourceRecord,
 } from "../../types/api";
 import Form from "react-bootstrap/Form";
-import SliderWithSpinbox from "./SliderWithSpinbox";
 import ModelSelector from "../chat/ModelSelector";
+import PresetSelector from "./llm-settings/PresetSelector";
+import SliderFields from "./llm-settings/SliderFields";
+import CheckboxFields from "./llm-settings/CheckboxFields";
+import PrecisionSelector from "./llm-settings/PrecisionSelector";
 
 const DEFAULTS = {
   temperature: 0.7,
@@ -64,32 +67,6 @@ function overridesForLabel(
 }
 
 const icon = (name: string) => `/icons/lucide/dark/${name}.svg`;
-
-const SLIDER_FIELDS: {
-  key: string;
-  label: string;
-  min: number;
-  max: number;
-  step: number;
-  float?: boolean;
-}[] = [
-  { key: "top_p", label: "Top P", min: 0, max: 1, step: 0.01, float: true },
-  { key: "max_new_tokens", label: "Max New Tokens", min: 1, max: 32768, step: 1 },
-  { key: "repetition_penalty", label: "Repetition Penalty", min: 0.01, max: 100, step: 0.01, float: true },
-  { key: "min_length", label: "Min Length", min: 1, max: 2556, step: 1 },
-  { key: "length_penalty", label: "Length Penalty", min: 0, max: 1, step: 0.01, float: true },
-  { key: "num_beams", label: "Num Beams", min: 0, max: 100, step: 1 },
-  { key: "ngram_size", label: "NGram Size", min: 0, max: 20, step: 1 },
-  { key: "temperature", label: "Temperature", min: 0, max: 2, step: 0.01, float: true },
-  { key: "sequences", label: "Sequences", min: 0, max: 100, step: 1 },
-  { key: "top_k", label: "Top K", min: 0, max: 256, step: 1 },
-];
-
-const CHECKBOX_FIELDS: { key: string; label: string }[] = [
-  { key: "early_stopping", label: "Early Stopping" },
-  { key: "do_sample", label: "Do Sample" },
-  { key: "use_cache", label: "Use Cache" },
-];
 
 export function LLMSettingsPanel() {
   const [temperature, setTemperature] = useState(DEFAULTS.temperature);
@@ -283,7 +260,6 @@ export function LLMSettingsPanel() {
     fetchAdvanced();
   }, [fetchAdvanced]);
 
-  // Restore preset values after presets load from API
   useEffect(() => {
     if (presets.length === 0 || !selectedPreset) return;
     const preset = presets.find((p) => p.label === selectedPreset);
@@ -308,7 +284,6 @@ export function LLMSettingsPanel() {
       if (activePresetRef.current) {
         const all = loadOverrides();
         const label = activePresetRef.current;
-        // Check if value matches the preset default — if so, remove override
         const preset = presets.find(p => p.label === label);
         const presetDefault = preset?.args?.[key];
         const overridesForLabel = { ...(all[label] ?? {}) };
@@ -383,6 +358,11 @@ export function LLMSettingsPanel() {
     }
   }, [presets, selectedPreset, applyValues, persist]);
 
+  const handlePrecisionChange = (value: string) => {
+    setPrecision(value);
+    persist({ dtype: value });
+  };
+
   if (loading) {
     return (
       <div className="p-2 small" style={{ color: "var(--theme-text-secondary)" }}>
@@ -416,107 +396,34 @@ export function LLMSettingsPanel() {
 
         {overrideEnabled && (
           <>
-            {presets.length > 0 && (
-              <Form.Group className="mb-2">
-                <Form.Label
-                  className="small"
-                  style={{ color: "var(--theme-text-secondary)" }}
-                >
-                  Preset
-                </Form.Label>
-                <Form.Select
-                  size="sm"
-                  key={selectKey}
-                  value={selectedPreset}
-                  onChange={(e) => {
-                    handlePresetChange(e.target.value);
-                    try {
-                      localStorage.setItem(
-                        UI_STORAGE_KEY,
-                        JSON.stringify({
-                          overrideEnabled,
-                          selectedPreset: e.target.value,
-                        }),
-                      );
-                    } catch { /* quota */ }
-                  }}
-                >
-                  <option value="">Select a preset...</option>
-                  {presets.map((p) => (
-                    <option key={p.label} value={p.label}>
-                      {overriddenLabels.has(p.label) ? "● " : ""}
-                      {p.label}
-                    </option>
-                  ))}
-                </Form.Select>
-              </Form.Group>
-            )}
+            <PresetSelector
+              presets={presets}
+              overriddenLabels={overriddenLabels}
+              selectedPreset={selectedPreset}
+              overrideEnabled={overrideEnabled}
+              selectKey={selectKey}
+              handlePresetChange={handlePresetChange}
+            />
 
             {selectedPreset !== "" && (
               <>
-                {SLIDER_FIELDS.map((f) => {
-                  const presetDefault = activePresetRef.current
-                    ? (presets.find(p => p.label === activePresetRef.current)?.args?.[f.key] as number | undefined)
-                    : undefined;
-                  return (
-                    <SliderWithSpinbox
-                      key={f.key}
-                      label={f.label}
-                      value={collectValues()[f.key] as number}
-                      min={f.min}
-                      max={f.max}
-                      step={f.step}
-                      displayAsFloat={f.float}
-                      defaultValue={presetDefault}
-                      onChange={(v) => setOverride(f.key, v)}
-                    />
-                  );
-                })}
+                <SliderFields
+                  presets={presets}
+                  activePresetRef={activePresetRef}
+                  collectValues={collectValues}
+                  setOverride={setOverride}
+                />
 
-                <div className="d-flex gap-3 mb-2 flex-wrap">
-                  {CHECKBOX_FIELDS.map((f) => (
-                    <Form.Check
-                      key={f.key}
-                      type="switch"
-                      id={`llm-${f.key}`}
-                      label={
-                        <span style={{ color: "var(--theme-text-secondary)" }}>
-                          {f.label}
-                        </span>
-                      }
-                      checked={collectValues()[f.key] as boolean}
-                      onChange={(e) =>
-                        setOverride(f.key, e.target.checked)
-                      }
-                    />
-                  ))}
-                </div>
+                <CheckboxFields
+                  collectValues={collectValues}
+                  setOverride={setOverride}
+                />
 
-                {precisionOptions.length > 0 && (
-                  <Form.Group className="mb-2">
-                    <Form.Label
-                      className="small"
-                      style={{ color: "var(--theme-text-secondary)" }}
-                    >
-                      Runtime Precision
-                    </Form.Label>
-                    <Form.Select
-                      size="sm"
-                      value={precision}
-                      onChange={(e) => {
-                        setPrecision(e.target.value);
-                        persist({ dtype: e.target.value });
-                      }}
-                    >
-                      <option value="">Default</option>
-                      {precisionOptions.map((p) => (
-                        <option key={p.value} value={p.value}>
-                          {p.label}
-                        </option>
-                      ))}
-                    </Form.Select>
-                  </Form.Group>
-                )}
+                <PrecisionSelector
+                  precisionOptions={precisionOptions}
+                  precision={precision}
+                  onChange={handlePrecisionChange}
+                />
 
                 <div className="d-flex gap-2 mt-1">
                   <button

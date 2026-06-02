@@ -8,12 +8,11 @@ import { BASE_URL } from "../../types/api";
 import Form from "react-bootstrap/Form";
 import ProgressBar from "react-bootstrap/ProgressBar";
 import SliderWithSpinbox from "./SliderWithSpinbox";
-
-const icon = (name: string) => `/icons/lucide/dark/${name}.svg`;
-
-function randomSeed(): number {
-  return Math.floor(Math.random() * 2147483647) + 1;
-}
+import VersionSelector from "./art-model/VersionSelector";
+import ModelSelector from "./art-model/ModelSelector";
+import SchedulerSelector from "./art-model/SchedulerSelector";
+import PrecisionSelector from "./art-model/PrecisionSelector";
+import SeedControls from "./art-model/SeedControls";
 
 const LS_KEY = "airunner_art_settings";
 
@@ -44,7 +43,6 @@ export default function ArtModelPanel() {
   const [options, setOptions] = useState<ArtOptionsResponse | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Sampler controls — load from localStorage on mount
   const [nSamples, setNSamples] = useState(
     loadFromStorage("n_samples", 1),
   );
@@ -63,7 +61,6 @@ export default function ArtModelPanel() {
   const [seedRandomized, setSeedRandomized] = useState(false);
   const [vramEstimate, setVramEstimate] = useState<number | null>(null);
 
-  // Listen for changes from ArtPromptPanel's selector
   useEffect(() => {
     const handler = (e: Event) => {
       const v = (e as CustomEvent).detail as string;
@@ -128,7 +125,6 @@ export default function ArtModelPanel() {
     })();
   }, []);
 
-  // Subscribe to SSE reload events from the model file watcher
   useEffect(() => {
     const eventSource = new EventSource(
       `${BASE_URL}/api/v1/art/models/watch`,
@@ -190,7 +186,7 @@ export default function ArtModelPanel() {
       setSeedRandomized(false);
       persist({ seed });
     } else {
-      const s = randomSeed();
+      const s = Math.floor(Math.random() * 2147483647) + 1;
       setSeedRandomized(true);
       setSeed(s);
       persist({ seed: -1 });
@@ -207,98 +203,49 @@ export default function ArtModelPanel() {
           <div
             className="spinner-border spinner-border-sm"
             role="status"
-            style={{ color: "var(--theme-text-secondary)", width: 12, height: 12 }}
+            style={{
+              color: "var(--theme-text-secondary)",
+              width: 12,
+              height: 12,
+            }}
           />
         )}
       </div>
 
-      {/* Version */}
-      <Form.Group className="mb-2">
-        <Form.Label className="small" style={{ color: "var(--theme-text-secondary)" }}>
-          Version
-        </Form.Label>
-        <Form.Select
-          size="sm"
-          value={version}
-          disabled={loading}
-          onChange={(e) => handleVersionChange(e.target.value)}
-        >
-          <option value="">Version...</option>
-          {(options?.versions ?? []).map((v) => (
-            <option key={v.name} value={v.name}>
-              {v.name}
-            </option>
-          ))}
-        </Form.Select>
-      </Form.Group>
+      <VersionSelector
+        versions={options?.versions ?? []}
+        value={version}
+        loading={loading}
+        onChange={handleVersionChange}
+      />
 
-      {/* Model */}
-      <Form.Group className="mb-2">
-        <Form.Label className="small" style={{ color: "var(--theme-text-secondary)" }}>
-          Model
-        </Form.Label>
-        <Form.Select
-          size="sm"
-          value={modelPath}
-          disabled={loading || !version || availableModels.length === 0}
-          onChange={(e) => handleModelChange(e.target.value)}
-        >
-          <option value="">
-            {!version ? "Version..." : "Model..."}
-          </option>
-          {availableModels.map((m) => (
-            <option key={m.value} value={m.value}>
-              {m.label}
-            </option>
-          ))}
-        </Form.Select>
-      </Form.Group>
+      <ModelSelector
+        models={availableModels}
+        value={modelPath}
+        loading={loading}
+        hasVersion={!!version}
+        onChange={handleModelChange}
+      />
 
-      {/* Scheduler */}
-      <Form.Group className="mb-2">
-        <Form.Label className="small" style={{ color: "var(--theme-text-secondary)" }}>
-          Scheduler
-        </Form.Label>
-        <Form.Select
-          size="sm"
-          value={scheduler}
-          disabled={loading}
-          onChange={(e) => {
-            setScheduler(e.target.value);
-            persist({ scheduler: e.target.value });
-          }}
-        >
-          <option value="">Select scheduler...</option>
-          {availableSchedulers.map((s) => (
-            <option key={s.value} value={s.value}>
-              {s.label}
-            </option>
-          ))}
-        </Form.Select>
-      </Form.Group>
+      <SchedulerSelector
+        schedulers={availableSchedulers}
+        value={scheduler}
+        loading={loading}
+        onChange={(v) => {
+          setScheduler(v);
+          persist({ scheduler: v });
+        }}
+      />
 
-      {/* Precision */}
-      <Form.Group className="mb-2">
-        <Form.Label className="small" style={{ color: "var(--theme-text-secondary)" }}>
-          Precision
-        </Form.Label>
-        <Form.Select
-          size="sm"
-          value={precision}
-          disabled={loading}
-          onChange={(e) => {
-            setPrecision(e.target.value);
-            persist({ dtype: e.target.value });
-          }}
-        >
-          <option value="">Select precision...</option>
-          {precisions.map((p) => (
-            <option key={p.value} value={p.value}>
-              {p.label}
-            </option>
-          ))}
-        </Form.Select>
-      </Form.Group>
+      <PrecisionSelector
+        precisions={precisions}
+        value={precision}
+        loading={loading}
+        onChange={(v) => {
+          setPrecision(v);
+          persist({ dtype: v });
+        }}
+      />
 
       {vramEstimate !== null && (
         <div className="mt-2 mb-2">
@@ -316,7 +263,6 @@ export default function ArtModelPanel() {
 
       <hr className="border-secondary" />
 
-      {/* Sampler controls — stacked vertically */}
       <SliderWithSpinbox
         label="Samples"
         value={nSamples}
@@ -373,68 +319,17 @@ export default function ArtModelPanel() {
         onChange={(v) => { setHeight(v); saveToStorage("height", v); persist({ height: v }); }}
       />
 
-      {/* Seed */}
-      <Form.Group className="mb-2">
-        <Form.Label className="small" style={{ color: "var(--theme-text-secondary)" }}>
-          Seed
-        </Form.Label>
-        <div className="d-flex gap-2 align-items-center">
-          <Form.Control
-            size="sm"
-            value={seed}
-            readOnly={seedRandomized}
-            disabled={loading}
-            style={{
-              flex: 1,
-              background: "#1a1a2e",
-              color: seedRandomized ? "#666" : "#c8c8c8",
-              borderColor: seedRandomized ? "#555" : "#333",
-              opacity: seedRandomized ? 0.5 : 1,
-            }}
-            onChange={(e) => {
-              const raw = e.target.value.replace(/[^0-9\-]/g, "");
-              if (raw === "") return;
-              const v = Number(raw);
-              if (isNaN(v)) return;
-              setSeed(v);
-              setSeedRandomized(false);
-              persist({ seed: v });
-            }}
-          />
-          <button
-            type="button"
-            className="btn btn-sm p-1"
-            onClick={toggleSeedRandom}
-            title={
-              seedRandomized
-                ? "Use a fixed seed"
-                : "Randomize seed on each generation"
-            }
-            style={{
-              background: seedRandomized
-                ? "var(--bs-primary)"
-                : "transparent",
-              border: "1px solid #444",
-              borderRadius: 4,
-              minWidth: 30,
-              height: 30,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-          >
-            <img
-              src={icon("dices")}
-              alt="Randomize"
-              style={{
-                width: 16,
-                height: 16,
-                filter: seedRandomized ? "invert(1)" : "invert(0.6)",
-              }}
-            />
-          </button>
-        </div>
-      </Form.Group>
+      <SeedControls
+        seed={seed}
+        seedRandomized={seedRandomized}
+        loading={loading}
+        onSeedChange={(v) => {
+          setSeed(v);
+          setSeedRandomized(false);
+          persist({ seed: v });
+        }}
+        onToggleRandom={toggleSeedRandom}
+      />
     </div>
   );
 }

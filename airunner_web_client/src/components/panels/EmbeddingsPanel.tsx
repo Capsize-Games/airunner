@@ -1,15 +1,15 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import Spinner from "react-bootstrap/Spinner";
-import Form from "react-bootstrap/Form";
 import type { EmbeddingInfo } from "../../api/client";
 import { BASE_URL } from "../../types/api";
+import EmbeddingItem from "./embeddings/EmbeddingItem";
 
-interface EmbeddingItem extends EmbeddingInfo {
+interface EmbeddingItemData extends EmbeddingInfo {
   _inputText: string;
 }
 
 export default function EmbeddingsPanel() {
-  const [items, setItems] = useState<EmbeddingItem[]>([]);
+  const [items, setItems] = useState<EmbeddingItemData[]>([]);
   const [loading, setLoading] = useState(true);
   const [copiedIndex, setCopiedIndex] = useState<string | null>(null);
   const copiedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -39,19 +39,16 @@ export default function EmbeddingsPanel() {
     }
   }, []);
 
-  // Load on mount
   useEffect(() => {
     reload();
   }, [reload]);
 
-  // Re-filter when version changes
   useEffect(() => {
     const handler = () => reload();
     window.addEventListener("art-version-changed", handler);
     return () => window.removeEventListener("art-version-changed", handler);
   }, [reload]);
 
-  // Subscribe to SSE reload events
   useEffect(() => {
     const eventSource = new EventSource(
       `${BASE_URL}/api/v1/art/embeddings/watch`,
@@ -72,7 +69,6 @@ export default function EmbeddingsPanel() {
     };
   }, [reload]);
 
-  // Update individual items in-place when another component toggles
   useEffect(() => {
     const handler = (e: Event) => {
       const detail = (e as CustomEvent).detail as
@@ -98,9 +94,7 @@ export default function EmbeddingsPanel() {
       await updateEmbedding(id, { enabled });
       setItems((prev) =>
         prev.map((item) =>
-          item.id === id
-            ? { ...item, enabled }
-            : item,
+          item.id === id ? { ...item, enabled } : item,
         ),
       );
       window.dispatchEvent(
@@ -129,9 +123,7 @@ export default function EmbeddingsPanel() {
       });
       setItems((prev) =>
         prev.map((i) =>
-          i.id === id
-            ? { ...i, trigger_words: remaining }
-            : i,
+          i.id === id ? { ...i, trigger_words: remaining } : i,
         ),
       );
     } catch { /* */ }
@@ -153,18 +145,13 @@ export default function EmbeddingsPanel() {
       });
       setItems((prev) =>
         prev.map((i) =>
-          i.id === id
-            ? { ...i, trigger_words: merged, _inputText: "" }
-            : i,
+          i.id === id ? { ...i, trigger_words: merged, _inputText: "" } : i,
         ),
       );
     } catch { /* */ }
   };
 
-  const handleInputKeyDown = (
-    e: React.KeyboardEvent,
-    id: number,
-  ) => {
+  const handleInputKeyDown = (e: React.KeyboardEvent, id: number) => {
     if (e.key === "Enter") {
       e.preventDefault();
       handleAddWords(id);
@@ -187,121 +174,22 @@ export default function EmbeddingsPanel() {
       ) : (
         <div className="embed-list">
           {items.map((item) => (
-            <div
+            <EmbeddingItem
               key={item.id}
-              className="mb-3 p-2 rounded"
-              style={{
-                background: "rgba(255,255,255,0.03)",
-                border: "1px solid #333",
-              }}
-            >
-              {/* Header: checkbox + name */}
-              <div className="d-flex align-items-center gap-2 mb-1">
-                <Form.Check
-                  type="switch"
-                  checked={item.enabled}
-                  onChange={(e) => handleToggle(item.id, e.target.checked)}
-                  id={`embed-enable-${item.id}`}
-                />
-                <span
-                  className="small"
-                  style={{
-                    color: item.enabled ? "#c8c8c8" : "#666",
-                  }}
-                >
-                  {item.name}
-                </span>
-              </div>
-
-              {/* Trigger words — pills */}
-              {item.trigger_words.length > 0 && (
-                <div className="d-flex flex-wrap gap-1 mb-1">
-                  {item.trigger_words.map((word) => (
-                    <span
-                      key={word}
-                      onClick={() => handleCopyWord(word)}
-                      title="Click to copy"
-                      style={{
-                        display: "inline-flex",
-                        alignItems: "center",
-                        gap: 3,
-                        background:
-                          copiedIndex === word
-                            ? "rgba(0,185,0,0.2)"
-                            : "rgba(0,132,185,0.15)",
-                        border:
-                          copiedIndex === word
-                            ? "1px solid #00a800"
-                            : "1px solid var(--bs-primary)",
-                        borderRadius: 10,
-                        padding: "2px 8px",
-                        fontSize: "0.75rem",
-                        color: "var(--theme-text)",
-                        cursor: "pointer",
-                      }}
-                    >
-                      <span
-                        style={{
-                          cursor: "pointer",
-                          color: "#ff5555",
-                          fontSize: "0.85rem",
-                          lineHeight: 1,
-                          padding: "1px 2px",
-                        }}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDeleteWord(item.id, word);
-                        }}
-                        title="Remove trigger word"
-                      >
-                        ✕
-                      </span>
-                      {copiedIndex === word ? "Copied!" : word}
-                    </span>
-                  ))}
-                </div>
-              )}
-
-              {/* Add trigger words input */}
-              <div className="d-flex gap-1">
-                <Form.Control
-                  size="sm"
-                  type="text"
-                  placeholder="Add trigger words (comma-separated)..."
-                  value={item._inputText}
-                  onChange={(e) =>
-                    setItems((prev) =>
-                      prev.map((i) =>
-                        i.id === item.id
-                          ? { ...i, _inputText: e.target.value }
-                          : i,
-                      ),
-                    )
-                  }
-                  onKeyDown={(e) => handleInputKeyDown(e, item.id)}
-                  style={{
-                    background: "#1a1a2e",
-                    color: "var(--theme-text)",
-                    borderColor: "#333",
-                    fontSize: "0.7rem",
-                  }}
-                />
-                <button
-                  className="btn btn-sm"
-                  onClick={() => handleAddWords(item.id)}
-                  disabled={!item._inputText.trim()}
-                  style={{
-                    background: "var(--bs-primary)",
-                    border: "none",
-                    color: "#fff",
-                    fontSize: "0.7rem",
-                    padding: "2px 8px",
-                  }}
-                >
-                  Add
-                </button>
-              </div>
-            </div>
+              item={item}
+              onToggle={handleToggle}
+              onCopyWord={handleCopyWord}
+              onDeleteWord={handleDeleteWord}
+              onAddWords={handleAddWords}
+              onInputChange={(id, value) =>
+                setItems((prev) =>
+                  prev.map((i) =>
+                    i.id === id ? { ...i, _inputText: value } : i,
+                  ),
+                )
+              }
+              onInputKeyDown={handleInputKeyDown}
+            />
           ))}
         </div>
       )}

@@ -5,6 +5,7 @@ import {
   getSingleton,
   updateSingleton,
 } from "../../../api/client";
+import MetadataCheckboxes from "./image-export/MetadataCheckboxes";
 
 interface MetadataFlags {
   prompt: boolean;
@@ -50,29 +51,6 @@ const DEFAULT_METADATA_FLAGS: MetadataFlags = {
   controlnet: true,
   tome_sd: true,
   tome_ratio: true,
-};
-
-const METADATA_LABELS: Record<keyof MetadataFlags, string> = {
-  prompt: "Prompt",
-  negative_prompt: "Negative Prompt",
-  samples: "Samples",
-  model: "Model",
-  model_branch: "Model Branch",
-  scale: "Scale",
-  seed: "Seed",
-  steps: "Steps",
-  iterations: "Iterations",
-  scheduler: "Scheduler",
-  ddim_eta: "DDIM ETA",
-  strength: "Strength",
-  clip_skip: "Clip Skip",
-  version: "Version",
-  lora: "LoRA",
-  embeddings: "Embeddings",
-  timestamp: "Timestamp",
-  controlnet: "Controlnet",
-  tome_sd: "ToMe SD",
-  tome_ratio: "ToMe Ratio",
 };
 
 export default function ImageExportSection() {
@@ -180,13 +158,10 @@ export default function ImageExportSection() {
     );
   }
 
-  const metaKeys = Object.keys(METADATA_LABELS) as Array<keyof MetadataFlags>;
-
   return (
     <div>
       <h6 className="mb-3">Image Export</h6>
 
-      {/* Saving group */}
       <Form.Label className="small text-muted fw-semibold mb-1">
         Saving
       </Form.Label>
@@ -249,7 +224,6 @@ export default function ImageExportSection() {
         </Form.Select>
       </Form.Group>
 
-      {/* Export Metadata group */}
       <Form.Label className="small text-muted fw-semibold mb-1">
         <Form.Check
           type="switch"
@@ -263,32 +237,10 @@ export default function ImageExportSection() {
       </Form.Label>
 
       {exportMetadata && (
-        <div
-          className="border rounded p-2 mb-2"
-          style={{ maxHeight: 280, overflowY: "auto" }}
-        >
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "1fr 1fr",
-              gap: "2px 12px",
-            }}
-          >
-            {metaKeys.map((key) => (
-              <Form.Check
-                key={key}
-                type="switch"
-                id={`meta-${key}`}
-                label={METADATA_LABELS[key]}
-                checked={metadataFlags[key]}
-                onChange={(e) =>
-                  handleMetadataFlag(key, e.target.checked)
-                }
-                className="small"
-              />
-            ))}
-          </div>
-        </div>
+        <MetadataCheckboxes
+          metadataFlags={metadataFlags}
+          onToggle={handleMetadataFlag}
+        />
       )}
     </div>
   );

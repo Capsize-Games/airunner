@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import Spinner from "react-bootstrap/Spinner";
 import ProgressBar from "react-bootstrap/ProgressBar";
 import { BASE_URL } from "../../types/api";
+import KBRow from "./knowledge-base/KBRow";
 
 // ── Knowledge Base ──
 export function KnowledgeBasePanel() {
@@ -38,7 +39,6 @@ export function KnowledgeBasePanel() {
     reload();
   }, [reload]);
 
-  // Re-fetch when other components toggle active state
   useEffect(() => {
     const handler = () => reload();
     window.addEventListener("knowledge-base-changed", handler);
@@ -46,7 +46,6 @@ export function KnowledgeBasePanel() {
       window.removeEventListener("knowledge-base-changed", handler);
   }, [reload]);
 
-  // Subscribe to SSE reload events from the KB file watcher
   useEffect(() => {
     const eventSource = new EventSource(
       `${BASE_URL}/api/v1/knowledge-base/documents/watch`,
@@ -145,7 +144,6 @@ export function KnowledgeBasePanel() {
     <div className="d-flex flex-column h-100 p-2">
       <h6 className="text-muted mb-2">Knowledge Base</h6>
 
-      {/* Document table — fills available space */}
       <div className="overflow-auto mb-2" style={{ flex: 1, minHeight: 0 }}>
         {documents.length === 0 ? (
           <p className="text-muted small">No documents loaded.</p>
@@ -170,47 +168,18 @@ export function KnowledgeBasePanel() {
             </thead>
             <tbody>
               {documents.map((doc) => (
-                <tr
+                <KBRow
                   key={doc.id}
-                  draggable
-                  onDragStart={(e) => handleDragStart(e, doc.id)}
-                  style={{ cursor: "grab" }}
-                >
-                  <td
-                    className="text-truncate"
-                    style={{ maxWidth: 180 }}
-                    title={doc.name}
-                  >
-                    {doc.name}
-                  </td>
-                  <td style={{ textAlign: "center" }}>
-                    <span
-                      style={{
-                        cursor: "pointer",
-                        display: "inline-block",
-                      }}
-                      onClick={() => handleToggle(doc.id)}
-                      title={
-                        doc.active
-                          ? "Click to deactivate"
-                          : "Click to activate"
-                      }
-                    >
-                      {doc.active ? "✅" : "☐"}
-                    </span>
-                  </td>
-                  <td style={{ textAlign: "center" }}>
-                    {doc.indexed ? "✅" : "—"}
-                  </td>
-                  <td style={{ textAlign: "center" }}>—</td>
-                </tr>
+                  doc={doc}
+                  onToggle={handleToggle}
+                  onDragStart={handleDragStart}
+                />
               ))}
             </tbody>
           </table>
         )}
       </div>
 
-      {/* Statistics */}
       <div className="row g-2 mb-1 flex-shrink-0">
         <div className="col-3">
           <div className="stat-box">
@@ -240,7 +209,6 @@ export function KnowledgeBasePanel() {
         </div>
       </div>
 
-      {/* Progress bar + toolbar */}
       <div className="d-flex align-items-center gap-1 flex-shrink-0">
         <div className="flex-grow-1">
           <ProgressBar

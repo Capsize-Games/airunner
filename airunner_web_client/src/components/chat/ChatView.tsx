@@ -14,6 +14,7 @@ import {
 import type { Message } from "../../types/api";
 import MessageList from "./MessageList";
 import ModelSelector from "./ModelSelector";
+import ActiveDocPills from "./ActiveDocPills";
 
 const icon = (name: string) => `/icons/lucide/dark/${name}.svg`;
 
@@ -37,7 +38,6 @@ export default function ChatView({
   const modelPathRef = useRef("");
   const loadedConvRef = useRef<number | null>(null);
 
-  // ── Active RAG documents state ──
   const [activeDocs, setActiveDocs] = useState<ActiveDoc[]>([]);
 
   const reloadActiveDocs = useCallback(async () => {
@@ -59,7 +59,6 @@ export default function ChatView({
     reloadActiveDocs();
   }, [reloadActiveDocs]);
 
-  // Listen for knowledge-base changes from other panels
   useEffect(() => {
     const handler = () => reloadActiveDocs();
     window.addEventListener("knowledge-base-changed", handler);
@@ -67,7 +66,6 @@ export default function ChatView({
       window.removeEventListener("knowledge-base-changed", handler);
   }, [reloadActiveDocs]);
 
-  // ── Drag-and-drop: accept doc IDs onto the chat ──
   const handleDragOver = (e: React.DragEvent) => {
     if (e.dataTransfer.types.includes("application/x-airunner-doc-id")) {
       e.preventDefault();
@@ -82,7 +80,6 @@ export default function ChatView({
     const docId = Number(raw);
     if (Number.isNaN(docId)) return;
 
-    // Toggle the document active
     try {
       const { toggleDocumentActive } = await import("../../api/client");
       await toggleDocumentActive(docId);
@@ -93,7 +90,6 @@ export default function ChatView({
     }
   };
 
-  // ── Remove an active document pill ──
   const handleRemoveDoc = async (docId: number) => {
     try {
       const { toggleDocumentActive } = await import("../../api/client");
@@ -121,7 +117,6 @@ export default function ChatView({
       window.removeEventListener("model-settings-changed", handler);
   }, [loadModelPath]);
 
-  // Load conversation when conversationId changes
   useEffect(() => {
     if (!conversationId) return;
     if (loadedConvRef.current === conversationId) return;
@@ -132,8 +127,6 @@ export default function ChatView({
           .then((session) => {
             const msgs = (session.messages ?? []).map(
               (raw: Record<string, unknown>) => {
-                // Strip "assistant " prefix that the legacy
-                // system prepends to assistant message content.
                 let content = String(raw.content ?? "");
                 if (
                   raw.is_bot &&
@@ -221,7 +214,6 @@ export default function ChatView({
             thinking_content: thinking || undefined,
           },
         ]);
-        // Persist the newest conversation so reloads restore it
         import("../../api/client").then(
           ({ listConversations }) => {
             listConversations(1)
@@ -284,7 +276,6 @@ export default function ChatView({
       onDragOver={handleDragOver}
       onDrop={handleDrop}
     >
-      {/* New conversation button — top right */}
       <div
         className="d-flex justify-content-end p-1 flex-shrink-0"
         style={{ borderBottom: "1px solid #333" }}
@@ -308,7 +299,6 @@ export default function ChatView({
         </button>
       </div>
 
-      {/* Error banner */}
       {error && (
         <Alert
           variant="danger"
@@ -319,7 +309,6 @@ export default function ChatView({
         </Alert>
       )}
 
-      {/* Messages */}
       <div className="chat-messages p-2 flex-grow-1">
         <MessageList
           messages={messages}
@@ -328,46 +317,12 @@ export default function ChatView({
         />
       </div>
 
-      {/* Input area */}
       <div className="chat-input-area border-top p-2">
         <div className="d-flex flex-column gap-2">
-          {/* Active document pills */}
-          {activeDocs.length > 0 && (
-            <div className="d-flex flex-wrap gap-1">
-              {activeDocs.map((doc) => (
-                <span
-                  key={doc.id}
-                  style={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: 4,
-                    background: "rgba(0,132,185,0.2)",
-                    border: "1px solid var(--bs-primary)",
-                    borderRadius: 12,
-                    padding: "2px 8px",
-                    fontSize: "0.7rem",
-                    color: "var(--theme-text)",
-                  }}
-                >
-                  <span
-                    style={{
-                      cursor: "pointer",
-                      display: "inline-flex",
-                      alignItems: "center",
-                      lineHeight: 1,
-                      color: "#ff5555",
-                      fontSize: "0.8rem",
-                    }}
-                    onClick={() => handleRemoveDoc(doc.id)}
-                    title="Remove from RAG"
-                  >
-                    ✕
-                  </span>
-                  {doc.name}
-                </span>
-              ))}
-            </div>
-          )}
+          <ActiveDocPills
+            activeDocs={activeDocs}
+            onRemoveDoc={handleRemoveDoc}
+          />
 
           <textarea
             rows={3}

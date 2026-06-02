@@ -7,6 +7,7 @@ import {
   getHardwareProfile,
   getArtModelOptions,
 } from "../../../api/client";
+import MemoryOptimizationToggles from "./memory/MemoryOptimizationToggles";
 
 interface MemorySettings {
   use_accelerated_transformers: boolean;
@@ -47,19 +48,15 @@ const DEFAULTS: MemorySettings = {
 export default function MemorySection() {
   const [settings, setSettings] = useState<MemorySettings>(DEFAULTS);
   const [numGpus, setNumGpus] = useState(0);
-  const [precisions, setPrecisions] = useState<
-    { label: string; value: string }[]
-  >([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
     async function load() {
       try {
-        const [mem, hardware, opts] = await Promise.all([
+        const [mem, hardware] = await Promise.all([
           getSingleton("MemorySettings"),
           getHardwareProfile().catch(() => ({ num_gpus: 0 })),
-          getArtModelOptions().catch(() => ({ precisions: [] })),
         ]);
         if (cancelled) return;
         setNumGpus(Number(hardware.num_gpus ?? 0));
@@ -95,7 +92,6 @@ export default function MemorySection() {
           prevent_unload_on_llm_image_generation:
             mem.prevent_unload_on_llm_image_generation === true,
         });
-        setPrecisions(opts.precisions ?? []);
       } catch {
         // ignore
       } finally {
@@ -149,21 +145,17 @@ export default function MemorySection() {
             Model Assignment
           </h6>
           {([
-            { key: "default_gpu_sd" as const,
-              label: "SD Model GPU" },
-            { key: "default_gpu_llm" as const,
-              label: "LLM Model GPU" },
-            { key: "default_gpu_tts" as const,
-              label: "TTS Model GPU" },
-            { key: "default_gpu_stt" as const,
-              label: "STT Model GPU" },
+            { key: "default_gpu_sd" as const, label: "SD Model GPU" },
+            { key: "default_gpu_llm" as const, label: "LLM Model GPU" },
+            { key: "default_gpu_tts" as const, label: "TTS Model GPU" },
+            { key: "default_gpu_stt" as const, label: "STT Model GPU" },
           ]).map(({ key, label }) => (
             <Form.Group key={key} className="mb-2">
               <Form.Label className="small">{label}</Form.Label>
               <Form.Select
                 size="sm"
                 value={settings[key]}
-                onChange={(e) => setField(key, e.target.value)}
+                onChange={(e) => setField(key, e.target.value as MemorySettings[typeof key])}
                 className="bg-dark text-light border-secondary"
               >
                 {gpuOptions.map((gpu) => (
@@ -177,18 +169,10 @@ export default function MemorySection() {
           <Form.Group className="mb-2">
             <Form.Check
               type="switch"
-              label={
-                "Disable auto model management " +
-                "on LLM image generation"
-              }
-              checked={
-                settings.prevent_unload_on_llm_image_generation
-              }
+              label="Disable auto model management on LLM image generation"
+              checked={settings.prevent_unload_on_llm_image_generation}
               onChange={(e) =>
-                setField(
-                  "prevent_unload_on_llm_image_generation",
-                  e.target.checked,
-                )
+                setField("prevent_unload_on_llm_image_generation", e.target.checked)
               }
               className="small"
             />
@@ -196,41 +180,10 @@ export default function MemorySection() {
         </div>
       )}
 
-      <div className="mb-3">
-        <h6 className="small text-muted mb-2">
-          Memory Optimization
-        </h6>
-        {([
-          { key: "use_accelerated_transformers" as const,
-            label: "Accelerated Transformers" },
-          { key: "use_attention_slicing" as const,
-            label: "Attention Slicing" },
-          { key: "use_enable_sequential_cpu_offload" as const,
-            label: "Sequential CPU offload" },
-          { key: "enable_model_cpu_offload" as const,
-            label: "Model CPU offload" },
-          { key: "use_last_channels" as const,
-            label: "Channels last memory format" },
-          { key: "use_tf32" as const,
-            label: "TF32 precision" },
-          { key: "use_enable_vae_slicing" as const,
-            label: "VAE Slicing" },
-          { key: "use_tiled_vae" as const,
-            label: "Tile VAE" },
-        ]).map(({ key, label }) => (
-          <Form.Group key={key} className="mb-1">
-            <Form.Check
-              type="switch"
-              label={label}
-              checked={settings[key]}
-              onChange={(e) =>
-                setField(key, e.target.checked)
-              }
-              className="small"
-            />
-          </Form.Group>
-        ))}
-      </div>
+      <MemoryOptimizationToggles
+        settings={settings as unknown as Record<string, boolean>}
+        onToggle={(key, value) => setField(key as keyof MemorySettings, value as boolean)}
+      />
 
       <div className="mb-3">
         <h6 className="small text-muted mb-2">
@@ -250,8 +203,7 @@ export default function MemorySection() {
         {settings.use_tome_sd && (
           <Form.Group className="mb-2">
             <Form.Label className="small">
-              ToMe ratio:{" "}
-              {settings.tome_sd_ratio.toFixed(2)}
+              ToMe ratio: {settings.tome_sd_ratio.toFixed(2)}
             </Form.Label>
             <Form.Range
               min={0}
@@ -259,10 +211,7 @@ export default function MemorySection() {
               step={0.01}
               value={settings.tome_sd_ratio}
               onChange={(e) =>
-                setField(
-                  "tome_sd_ratio",
-                  Number(e.target.value),
-                )
+                setField("tome_sd_ratio", Number(e.target.value))
               }
             />
           </Form.Group>

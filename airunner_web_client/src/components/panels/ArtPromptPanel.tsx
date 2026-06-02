@@ -3,12 +3,12 @@ import {
   startArtGeneration,
   getArtJobStatus,
 } from "../../api/client";
-import Form from "react-bootstrap/Form";
 import ProgressBar from "react-bootstrap/ProgressBar";
-import ArtModelSelector from "../shared/ArtModelSelector";
+import PromptInput from "./art-prompt/PromptInput";
+import { EmbeddingPills, LoraPills } from "./art-prompt/ActivePills";
+import ArtPromptFooter from "./art-prompt/ArtPromptFooter";
 
 const STORAGE_KEY = "airunner_art_prompt_data";
-const icon = (name: string) => `/icons/lucide/dark/${name}.svg`;
 
 interface PromptData {
   prompt: string;
@@ -131,15 +131,12 @@ export default function ArtPromptPanel() {
       if (m) setArtModel(m);
     } catch {}
     return () => {
-      window.removeEventListener(
-        "art-version-changed", versionHandler,
-      );
+      window.removeEventListener("art-version-changed", versionHandler);
       window.removeEventListener("art-model-changed", modelHandler);
       if (pollRef.current) clearInterval(pollRef.current);
     };
   }, [reloadActiveLoras, reloadActiveEmbeddings]);
 
-  // Load initially + listen for LoRA changes
   useEffect(() => {
     reloadActiveLoras();
     const handler = () => reloadActiveLoras();
@@ -147,13 +144,11 @@ export default function ArtPromptPanel() {
     return () => window.removeEventListener("lora-changed", handler);
   }, [reloadActiveLoras]);
 
-  // Listen for embedding changes
   useEffect(() => {
     reloadActiveEmbeddings();
     const handler = () => reloadActiveEmbeddings();
     window.addEventListener("embedding-changed", handler);
-    return () =>
-      window.removeEventListener("embedding-changed", handler);
+    return () => window.removeEventListener("embedding-changed", handler);
   }, [reloadActiveEmbeddings]);
 
   const persist = (updates: Record<string, string>) => {
@@ -205,13 +200,9 @@ export default function ArtPromptPanel() {
     import("../../api/client").then(({ updateLora }) => {
       updateLora(id, { enabled: false })
         .then(() => {
-          setActiveLoras((prev) =>
-            prev.filter((l) => l.id !== id),
-          );
+          setActiveLoras((prev) => prev.filter((l) => l.id !== id));
           window.dispatchEvent(
-            new CustomEvent("lora-changed", {
-              detail: { id, enabled: false },
-            }),
+            new CustomEvent("lora-changed", { detail: { id, enabled: false } }),
           );
         })
         .catch(() => {});
@@ -222,13 +213,9 @@ export default function ArtPromptPanel() {
     import("../../api/client").then(({ updateEmbedding }) => {
       updateEmbedding(id, { enabled: false })
         .then(() => {
-          setActiveEmbeddings((prev) =>
-            prev.filter((e) => e.id !== id),
-          );
+          setActiveEmbeddings((prev) => prev.filter((e) => e.id !== id));
           window.dispatchEvent(
-            new CustomEvent("embedding-changed", {
-              detail: { id, enabled: false },
-            }),
+            new CustomEvent("embedding-changed", { detail: { id, enabled: false } }),
           );
         })
         .catch(() => {});
@@ -243,287 +230,73 @@ export default function ArtPromptPanel() {
         Art Prompt
       </h6>
 
-      <div className="flex-grow-1 d-flex flex-column gap-2
-                      overflow-hidden"
-      >
-        <Form.Group
-          className="flex-grow-1 d-flex flex-column"
-          style={{ minHeight: 0 }}
-        >
-          <Form.Label
-            className="small flex-shrink-0"
-            style={{ color: "var(--theme-text-secondary)" }}
-          >
-            Prompt
-          </Form.Label>
-          <Form.Control
-            as="textarea"
-            className="flex-grow-1"
-            style={{ resize: "none", minHeight: 0 }}
-            value={prompt}
-            onChange={(e) => {
-              setPrompt(e.target.value);
-              persist({ prompt: e.target.value });
-            }}
-            placeholder="Describe the image..."
+      <div className="flex-grow-1 d-flex flex-column gap-2 overflow-hidden">
+        <PromptInput
+          label="Prompt"
+          value={prompt}
+          onChange={(v) => { setPrompt(v); persist({ prompt: v }); }}
+          placeholder="Describe the image..."
+          disabled={generating}
+        />
+
+        {!isZImage && (
+          <PromptInput
+            label="Secondary Prompt"
+            value={secondaryPrompt}
+            onChange={(v) => { setSecondaryPrompt(v); persist({ secondary_prompt: v }); }}
+            placeholder="Background, colors, atmosphere..."
             disabled={generating}
           />
-        </Form.Group>
-
-        {!isZImage && (
-          <Form.Group
-            className="flex-grow-1 d-flex flex-column"
-            style={{ minHeight: 0 }}
-          >
-            <Form.Label
-              className="small flex-shrink-0"
-              style={{ color: "var(--theme-text-secondary)" }}
-            >
-              Secondary Prompt
-            </Form.Label>
-            <Form.Control
-              as="textarea"
-              className="flex-grow-1"
-              style={{ resize: "none", minHeight: 0 }}
-              value={secondaryPrompt}
-              onChange={(e) => {
-                setSecondaryPrompt(e.target.value);
-                persist({ secondary_prompt: e.target.value });
-              }}
-              placeholder="Background, colors, atmosphere..."
-              disabled={generating}
-            />
-          </Form.Group>
         )}
 
         {!isZImage && (
-          <Form.Group
-            className="flex-grow-1 d-flex flex-column"
-            style={{ minHeight: 0 }}
-          >
-            <Form.Label
-              className="small flex-shrink-0"
-              style={{ color: "var(--theme-text-secondary)" }}
-            >
-              Negative Prompt
-            </Form.Label>
-            <Form.Control
-              as="textarea"
-              className="flex-grow-1"
-              style={{ resize: "none", minHeight: 0 }}
-              value={negativePrompt}
-              onChange={(e) => {
-                setNegativePrompt(e.target.value);
-                persist({ negative_prompt: e.target.value });
-              }}
-              placeholder="Things to exclude..."
-              disabled={generating}
-            />
-          </Form.Group>
+          <PromptInput
+            label="Negative Prompt"
+            value={negativePrompt}
+            onChange={(v) => { setNegativePrompt(v); persist({ negative_prompt: v }); }}
+            placeholder="Things to exclude..."
+            disabled={generating}
+          />
         )}
 
         {!isZImage && (
-          <Form.Group
-            className="flex-grow-1 d-flex flex-column"
-            style={{ minHeight: 0 }}
-          >
-            <Form.Label
-              className="small flex-shrink-0"
-              style={{ color: "var(--theme-text-secondary)" }}
-            >
-              Sec. Negative
-            </Form.Label>
-            <Form.Control
-              as="textarea"
-              className="flex-grow-1"
-              style={{ resize: "none", minHeight: 0 }}
-              value={secondaryNegativePrompt}
-              onChange={(e) => {
-                setSecondaryNegativePrompt(e.target.value);
-                persist({
-                  secondary_negative_prompt: e.target.value,
-                });
-              }}
-              disabled={generating}
-            />
-          </Form.Group>
+          <PromptInput
+            label="Sec. Negative"
+            value={secondaryNegativePrompt}
+            onChange={(v) => {
+              setSecondaryNegativePrompt(v);
+              persist({ secondary_negative_prompt: v });
+            }}
+            placeholder="Secondary negative..."
+            disabled={generating}
+          />
         )}
       </div>
 
       <div className="flex-shrink-0 mt-2">
-        {/* Active embedding pills */}
-        {activeEmbeddings.length > 0 && (
-          <div
-            className="mb-1 p-2 rounded"
-            style={{
-              background: "rgba(0,132,185,0.05)",
-              border: "1px solid rgba(0,132,185,0.25)",
-            }}
-          >
-            <small
-              style={{
-                color: "#0084b8",
-                display: "block",
-                marginBottom: 4,
-                fontSize: "0.65rem",
-                fontWeight: 700,
-              }}
-            >
-              Active Embeddings
-            </small>
-            <div className="d-flex flex-wrap gap-1">
-              {activeEmbeddings.map((emb) => (
-                <span
-                  key={emb.id}
-                  style={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: 4,
-                    background: "rgba(0,132,185,0.2)",
-                    border: "1px solid #0084b8",
-                    borderRadius: 12,
-                    padding: "2px 8px",
-                    fontSize: "0.7rem",
-                    color: "var(--theme-text)",
-                  }}
-                >
-                  <span
-                    style={{
-                      cursor: "pointer",
-                      color: "#ff5555",
-                      fontSize: "0.7rem",
-                      lineHeight: 1,
-                    }}
-                    onClick={() => deactivateEmbedding(emb.id)}
-                    title="Deactivate embedding"
-                  >
-                    ✕
-                  </span>
-                  {emb.name}
-                </span>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Active LoRA pills */}
-        {activeLoras.length > 0 && (
-          <div
-            className="mb-1 p-2 rounded"
-            style={{
-              background: "rgba(185,0,132,0.05)",
-              border: "1px solid rgba(184,0,132,0.25)",
-            }}
-          >
-            <small
-              style={{
-                color: "#b80084",
-                display: "block",
-                marginBottom: 4,
-                fontSize: "0.65rem",
-                fontWeight: 700,
-              }}
-            >
-              Active LoRA
-            </small>
-            <div className="d-flex flex-wrap gap-1">
-              {activeLoras.map((lora) => (
-                <span
-                  key={lora.id}
-                  style={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: 4,
-                    background: "rgba(185,0,132,0.2)",
-                    border: "1px solid #b80084",
-                    borderRadius: 12,
-                    padding: "2px 8px",
-                    fontSize: "0.7rem",
-                    color: "var(--theme-text)",
-                  }}
-                >
-                  <span
-                    style={{
-                      cursor: "pointer",
-                      color: "#ff5555",
-                      fontSize: "0.7rem",
-                      lineHeight: 1,
-                    }}
-                    onClick={() => deactivateLora(lora.id)}
-                    title="Deactivate LoRA"
-                  >
-                    ✕
-                  </span>
-                  {lora.name}
-                </span>
-              ))}
-            </div>
-          </div>
-        )}
-
-        <div className="mb-1">
-          <ArtModelSelector
-            version={artVersion}
-            modelPath={artModel}
-            onVersionChange={(v) => {
-              setArtVersion(v);
-              setArtModel("");
-              setIsZImage(v === "Z-Image Turbo");
-            }}
-            onModelChange={(m) => setArtModel(m)}
-          />
-        </div>
-        <div className="d-flex align-items-center gap-2">
-          <div className="flex-grow-1">
-            <ProgressBar
-              now={progress}
-              variant={generating ? "info" : "secondary"}
-              style={{ height: 8 }}
-              animated={generating && progress < 100}
-            />
-          </div>
-          {generating ? (
-            <button
-              className="btn btn-sm btn-danger p-1"
-              onClick={handleCancel}
-              title="Cancel image generation"
-              style={{ minWidth: 30, height: 30 }}
-            >
-              <img
-                src={icon("circle-stop")}
-                alt="Cancel"
-                style={{
-                  width: 16,
-                  height: 16,
-                  filter: "invert(1)",
-                }}
-              />
-            </button>
-          ) : (
-            <button
-              className="btn btn-sm p-1"
-              style={{
-                background: "var(--bs-primary)",
-                minWidth: 30,
-                height: 30,
-                border: "none",
-              }}
-              onClick={handleSubmit}
-              disabled={!prompt.trim()}
-              title="Generate image"
-            >
-              <img
-                src={icon("chevron-up")}
-                alt="Generate"
-                style={{
-                  width: 16,
-                  height: 16,
-                  filter: "invert(1)",
-                }}
-              />
-            </button>
-          )}
-        </div>
+        <EmbeddingPills
+          embeddings={activeEmbeddings}
+          onDeactivate={deactivateEmbedding}
+        />
+        <LoraPills
+          loras={activeLoras}
+          onDeactivate={deactivateLora}
+        />
+        <ArtPromptFooter
+          progress={progress}
+          generating={generating}
+          hasPrompt={!!prompt.trim()}
+          artVersion={artVersion}
+          artModel={artModel}
+          onVersionChange={(v) => {
+            setArtVersion(v);
+            setArtModel("");
+            setIsZImage(v === "Z-Image Turbo");
+          }}
+          onModelChange={(m) => setArtModel(m)}
+          onSubmit={handleSubmit}
+          onCancel={handleCancel}
+        />
       </div>
     </div>
   );

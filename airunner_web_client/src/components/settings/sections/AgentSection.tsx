@@ -6,11 +6,11 @@ import {
   updateResource,
 } from "../../../api/client";
 import type { ResourceRecord } from "../../../types/api";
+import AgentTextareas from "./agent/AgentTextareas";
 
 const GENDER_OPTIONS = ["Male", "Female"];
 
 export default function AgentSection() {
-  const [agents] = useState<ResourceRecord[]>([]);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [botname, setBotname] = useState("");
   const [botPersonality, setBotPersonality] = useState("");
@@ -28,7 +28,6 @@ export default function AgentSection() {
     let cancelled = false;
     async function load() {
       try {
-        // Try to get current agent first
         const current = await queryFirstResource("Chatbot", {
           current: true,
         } as Record<string, unknown>).catch(() => null);
@@ -77,6 +76,12 @@ export default function AgentSection() {
     } as Record<string, unknown>).catch(() => {});
   }
 
+  function handleTextareaChange(key: string, value: string) {
+    if (key === "botPersonality") setBotPersonality(value);
+    else if (key === "systemInstructions") setSystemInstructions(value);
+    else if (key === "guardrailsPrompt") setGuardrailsPrompt(value);
+  }
+
   if (loading) {
     return (
       <div className="text-center py-4">
@@ -117,20 +122,6 @@ export default function AgentSection() {
             className="small"
           />
         </Form.Group>
-        {usePersonality && (
-          <Form.Group className="mb-2">
-            <Form.Label className="small">Bot Personality</Form.Label>
-            <Form.Control
-              as="textarea"
-              rows={3}
-              size="sm"
-              value={botPersonality}
-              onChange={(e) => setBotPersonality(e.target.value)}
-              onBlur={persistAll}
-              className="bg-dark text-light border-secondary"
-            />
-          </Form.Group>
-        )}
 
         <Form.Group className="mb-2">
           <Form.Check
@@ -148,20 +139,6 @@ export default function AgentSection() {
             className="small"
           />
         </Form.Group>
-        {useSystemInstructions && (
-          <Form.Group className="mb-2">
-            <Form.Label className="small">System Instructions</Form.Label>
-            <Form.Control
-              as="textarea"
-              rows={3}
-              size="sm"
-              value={systemInstructions}
-              onChange={(e) => setSystemInstructions(e.target.value)}
-              onBlur={persistAll}
-              className="bg-dark text-light border-secondary"
-            />
-          </Form.Group>
-        )}
 
         <Form.Group className="mb-2">
           <Form.Check
@@ -179,20 +156,17 @@ export default function AgentSection() {
             className="small"
           />
         </Form.Group>
-        {useGuardrails && (
-          <Form.Group className="mb-2">
-            <Form.Label className="small">Guardrails Prompt</Form.Label>
-            <Form.Control
-              as="textarea"
-              rows={3}
-              size="sm"
-              value={guardrailsPrompt}
-              onChange={(e) => setGuardrailsPrompt(e.target.value)}
-              onBlur={persistAll}
-              className="bg-dark text-light border-secondary"
-            />
-          </Form.Group>
-        )}
+
+        <AgentTextareas
+          botPersonality={botPersonality}
+          systemInstructions={systemInstructions}
+          guardrailsPrompt={guardrailsPrompt}
+          usePersonality={usePersonality}
+          useSystemInstructions={useSystemInstructions}
+          useGuardrails={useGuardrails}
+          onChange={handleTextareaChange}
+          onBlur={persistAll}
+        />
 
         <Form.Group className="mb-2">
           <Form.Check
