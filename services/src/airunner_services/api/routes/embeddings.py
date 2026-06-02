@@ -5,7 +5,6 @@ from __future__ import annotations
 import os
 
 from fastapi import APIRouter, HTTPException
-from sqlalchemy import inspect as sa_inspect
 
 from airunner_services.database.models.lora import Lora
 from airunner_services.database.session import session_scope
@@ -14,28 +13,6 @@ from airunner_services.settings import AIRUNNER_BASE_PATH
 router = APIRouter()
 
 EMBEDDING_EXTENSIONS = {".pt", ".safetensors", ".bin", ".pth"}
-
-
-def _ensure_lora_columns():
-    """Add enabled/trigger_words columns if missing (old schema).
-    Creates the table if it doesn't exist yet.
-    """
-    with session_scope() as session:
-        tables = sa_inspect(session.bind).get_table_names()
-        if "lora" not in tables:
-            Lora.__table__.create(session.bind)
-            return
-        inspector = sa_inspect(session.bind)
-        cols = {c["name"] for c in inspector.get_columns("lora")}
-        if "enabled" not in cols:
-            session.execute(
-                "ALTER TABLE lora ADD COLUMN enabled BOOLEAN DEFAULT 0",
-            )
-        if "trigger_words" not in cols:
-            session.execute(
-                "ALTER TABLE lora ADD COLUMN trigger_words TEXT DEFAULT ''",
-            )
-        session.commit()
 
 
 @router.get("/embeddings")

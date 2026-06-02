@@ -14,7 +14,7 @@ from airunner_services.database.db.column import add_column, column_exists
 
 # revision identifiers, used by Alembic.
 revision: str = "add_lora_columns"
-down_revision: Union[str, None] = "f480bbc9acdb"
+down_revision: Union[str, None] = "f0b1f4cf8f41"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 

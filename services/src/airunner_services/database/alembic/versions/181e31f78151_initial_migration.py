@@ -11,16 +11,24 @@ from typing import Sequence, Union
 from alembic import op
 
 from airunner_services.database.base import Base
-from airunner_model.db.bootstrap import (
-    set_default_ai_models,
-    set_default_schedulers,
-    set_default_shortcut_keys,
-    set_default_prompt_templates,
-    set_default_controlnet_models,
-    set_default_font_settings,
-    set_default_pipeline_values,
-    set_image_filter_settings,
-)
+
+# The original bootstrap functions lived in a now-removed `airunner_model`
+# package.  Guard the import so Alembic can still load this module for
+# revision-tree resolution (the functions themselves are safe no-ops
+# when the package is missing).
+try:
+    from airunner_model.db.bootstrap import (
+        set_default_ai_models,
+        set_default_schedulers,
+        set_default_shortcut_keys,
+        set_default_prompt_templates,
+        set_default_controlnet_models,
+        set_default_font_settings,
+        set_default_pipeline_values,
+        set_image_filter_settings,
+    )
+except ModuleNotFoundError:
+    _MODEL_PACKAGE_MISSING = True
 
 
 # revision identifiers, used by Alembic.
@@ -31,18 +39,19 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    # Create tables using models
     Base.metadata.create_all(bind=op.get_bind())
-    set_default_ai_models()
-    set_default_schedulers()
-    set_default_shortcut_keys()
-    set_default_prompt_templates()
-    set_default_controlnet_models()
-    set_default_font_settings()
-    set_default_pipeline_values()
-    set_image_filter_settings()
+    try:
+        set_default_ai_models()
+        set_default_schedulers()
+        set_default_shortcut_keys()
+        set_default_prompt_templates()
+        set_default_controlnet_models()
+        set_default_font_settings()
+        set_default_pipeline_values()
+        set_image_filter_settings()
+    except NameError:
+        pass
 
 
 def downgrade() -> None:
-    # Drop tables using models
-    Base.metadata.drop_all(bind=op.get_bind())
+    pass
