@@ -93,6 +93,7 @@ class ApplicationSettings(BaseModel):
     lna_enabled = Column(Boolean, default=False)
     knowledge_migrated = Column(Boolean, default=False)
     privacy_service_consent = Column(String, default="{}")
+    dark_mode_enabled_db = Column(Boolean, default=True)
 
     # ------------------------------------------------------------------
     # QSettings-backed properties (replaces dropped DB columns)

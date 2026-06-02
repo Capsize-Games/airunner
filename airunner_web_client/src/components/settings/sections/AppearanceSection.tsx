@@ -16,7 +16,7 @@ export default function AppearanceSection() {
       try {
         const appSettings = await getSingleton("ApplicationSettings");
         if (cancelled) return;
-        setDarkMode(appSettings.dark_mode_enabled !== false);
+        setDarkMode(appSettings.dark_mode_enabled_db !== false);
       } catch {
         // ignore
       } finally {
@@ -31,7 +31,7 @@ export default function AppearanceSection() {
     const isDark = value === "dark";
     setDarkMode(isDark);
     updateSingleton("ApplicationSettings", {
-      dark_mode_enabled: isDark,
+      dark_mode_enabled_db: isDark,
     } as Record<string, unknown>).catch(() => {});
   }
 
