@@ -306,22 +306,35 @@ export function LLMSettingsPanel() {
     (key: string, value: number | boolean) => {
       setters[key](value);
       if (activePresetRef.current) {
-          const all = loadOverrides();
-          const label = activePresetRef.current;
-          all[label] = { ...(all[label] ?? {}), [key]: value };
-          saveOverrides(all);
-          setOverriddenLabels(
-            new Set(
-              Object.keys(loadOverrides()).filter(
-                (k) => Object.keys(loadOverrides()[k]).length > 0,
-              ),
-            ),
-          );
-          setSelectKey((n) => n + 1);
+        const all = loadOverrides();
+        const label = activePresetRef.current;
+        // Check if value matches the preset default — if so, remove override
+        const preset = presets.find(p => p.label === label);
+        const presetDefault = preset?.args?.[key];
+        const overridesForLabel = { ...(all[label] ?? {}) };
+        if (presetDefault !== undefined && presetDefault === value) {
+          delete overridesForLabel[key];
+        } else {
+          overridesForLabel[key] = value;
         }
+        if (Object.keys(overridesForLabel).length === 0) {
+          delete all[label];
+        } else {
+          all[label] = overridesForLabel;
+        }
+        saveOverrides(all);
+        setOverriddenLabels(
+          new Set(
+            Object.keys(all).filter(
+              (k) => Object.keys(all[k]).length > 0,
+            ),
+          ),
+        );
+        setSelectKey((n) => n + 1);
+      }
       persist({ [key]: value });
     },
-    [persist],
+    [persist, presets],
   );
 
   const handlePresetChange = useCallback(
@@ -441,18 +454,24 @@ export function LLMSettingsPanel() {
 
             {selectedPreset !== "" && (
               <>
-                {SLIDER_FIELDS.map((f) => (
-                  <SliderWithSpinbox
-                    key={f.key}
-                    label={f.label}
-                    value={collectValues()[f.key] as number}
-                    min={f.min}
-                    max={f.max}
-                    step={f.step}
-                    displayAsFloat={f.float}
-                    onChange={(v) => setOverride(f.key, v)}
-                  />
-                ))}
+                {SLIDER_FIELDS.map((f) => {
+                  const presetDefault = activePresetRef.current
+                    ? (presets.find(p => p.label === activePresetRef.current)?.args?.[f.key] as number | undefined)
+                    : undefined;
+                  return (
+                    <SliderWithSpinbox
+                      key={f.key}
+                      label={f.label}
+                      value={collectValues()[f.key] as number}
+                      min={f.min}
+                      max={f.max}
+                      step={f.step}
+                      displayAsFloat={f.float}
+                      defaultValue={presetDefault}
+                      onChange={(v) => setOverride(f.key, v)}
+                    />
+                  );
+                })}
 
                 <div className="d-flex gap-3 mb-2 flex-wrap">
                   {CHECKBOX_FIELDS.map((f) => (
