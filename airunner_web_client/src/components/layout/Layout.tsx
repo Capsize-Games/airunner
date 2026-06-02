@@ -1,7 +1,6 @@
 import {
   type ReactNode,
   useRef,
-  useCallback,
   useEffect,
   useState,
 } from "react";
@@ -34,28 +33,24 @@ interface LayoutProps {
   onLeftPanel: (id: PanelId) => void;
   rightPanel: PanelId | null;
   onRightPanel: (id: PanelId) => void;
-  onSelectConversation: (id: number) => void;
   showChat: boolean;
   onToggleChat: () => void;
   showCanvas: boolean;
   onToggleCanvas: () => void;
-  showArtPrompt: boolean;
-  onToggleArtPrompt: () => void;
   ttsOn: boolean;
   onToggleTts: () => void;
   sttOn: boolean;
   onToggleStt: () => void;
   onOpenSettings: () => void;
+  onSelectConversation: (id: number) => void;
 }
 
 const icon = (name: string) => `/icons/lucide/dark/${name}.svg`;
 
-/** Persist a number value to localStorage. */
 function saveNum(key: string, val: number) {
   try { localStorage.setItem(key, String(val)); } catch { /* */ }
 }
 
-/** Load a number value from localStorage. */
 function loadNum(key: string, fallback: number): number {
   try {
     const v = localStorage.getItem(key);
@@ -63,6 +58,42 @@ function loadNum(key: string, fallback: number): number {
   } catch {
     return fallback;
   }
+}
+
+/* ── Shared drag-ref used across mousedown → mousemove → mouseup ── */
+let dragState: {
+  key: string;
+  setter: (v: number) => void;
+  startX: number;
+  startW: number;
+  minW: number;
+  maxW: number;
+} | null = null;
+
+function onGlobalMouseMove(e: MouseEvent) {
+  const d = dragState;
+  if (!d) return;
+  const delta = e.clientX - d.startX;
+  // Left-handle panels grow when dragging RIGHT (+delta).
+  // The right-panel handle grows when dragging LEFT (-delta)
+  // because the panel sits to the right of the handle.
+  const sign = d.key === "right" ? -1 : 1;
+  const next = Math.min(d.maxW, Math.max(d.minW, d.startW + sign * delta));
+  d.setter(next);
+}
+
+function onGlobalMouseUp() {
+  if (!dragState) return;
+  document.body.style.cursor = "";
+  document.body.style.userSelect = "";
+  dragState = null;
+}
+
+// Register once at module scope so the listeners aren't re-added
+// every time the Layout component re-renders.
+if (typeof window !== "undefined") {
+  window.addEventListener("mousemove", onGlobalMouseMove);
+  window.addEventListener("mouseup", onGlobalMouseUp);
 }
 
 export default function Layout({
@@ -75,8 +106,6 @@ export default function Layout({
   onToggleChat,
   showCanvas,
   onToggleCanvas,
-  showArtPrompt,
-  onToggleArtPrompt,
   ttsOn,
   onToggleTts,
   sttOn,
@@ -87,76 +116,35 @@ export default function Layout({
   const active = (id: PanelId, panel: PanelId | null) =>
     panel === id ? "active" : "";
 
-  // Panel width state (persisted in localStorage)
   const [leftPanelW, setLeftPanelW] = useState(() =>
     loadNum("airunner_left_panel_w", 260),
   );
   const [chatW, setChatW] = useState(() =>
     loadNum("airunner_chat_w", 400),
   );
-  const [canvasW, setCanvasW] = useState(() =>
-    loadNum("airunner_canvas_w", 400),
-  );
-  const [artPromptW, setArtPromptW] = useState(() =>
-    loadNum("airunner_art_prompt_w", 340),
-  );
   const [rightPanelW, setRightPanelW] = useState(() =>
     loadNum("airunner_right_panel_w", 260),
   );
 
-  // ── Resize drag logic — delta-based for reliable multi-panel resizing ──
-  const dragRef = useRef<{
-    key: string;
-    setter: (v: number) => void;
-    startX: number;
-    startW: number;
-    minW: number;
-    maxW: number;
-  } | null>(null);
+  useEffect(() => saveNum("airunner_left_panel_w", leftPanelW), [leftPanelW]);
+  useEffect(() => saveNum("airunner_chat_w", chatW), [chatW]);
+  useEffect(() => saveNum("airunner_right_panel_w", rightPanelW), [rightPanelW]);
 
-  const onMouseDown = (
+  const makeHandle = (
     key: string,
     setter: (v: number) => void,
     minW: number,
     maxW: number,
     getW: () => number,
-  ) => (e: React.MouseEvent) => {
-    e.preventDefault();
-    dragRef.current = { key, setter, startX: e.clientX, startW: getW(), minW, maxW };
-    document.body.style.cursor = "col-resize";
-    document.body.style.userSelect = "none";
-  };
-
-  useEffect(() => {
-    const onMove = (e: MouseEvent) => {
-      const d = dragRef.current;
-      if (!d) return;
-      const delta = e.clientX - d.startX;
-      const next = Math.min(d.maxW, Math.max(d.minW, d.startW + delta));
-      d.setter(next);
-    };
-    const onUp = () => {
-      if (!dragRef.current) return;
-      document.body.style.cursor = "";
-      document.body.style.userSelect = "";
-      dragRef.current = null;
-    };
-    window.addEventListener("mousemove", onMove);
-    window.addEventListener("mouseup", onUp);
-    return () => { window.removeEventListener("mousemove", onMove); window.removeEventListener("mouseup", onUp); };
-  }, []);
-
-  // Persist widths when they change
-  useEffect(() => saveNum("airunner_left_panel_w", leftPanelW), [leftPanelW]);
-  useEffect(() => saveNum("airunner_chat_w", chatW), [chatW]);
-  useEffect(() => saveNum("airunner_canvas_w", canvasW), [canvasW]);
-  useEffect(() => saveNum("airunner_art_prompt_w", artPromptW), [artPromptW]);
-  useEffect(() => saveNum("airunner_right_panel_w", rightPanelW), [rightPanelW]);
-
-  const makeHandle = (key: string, setter: (v: number) => void, minW: number, maxW: number, getW: () => number) => (
+  ) => (
     <div
-      className={`resize-handle ${dragRef.current?.key === key ? "dragging" : ""}`}
-      onMouseDown={onMouseDown(key, setter, minW, maxW, getW)}
+      className={`resize-handle ${dragState?.key === key ? "dragging" : ""}`}
+      onMouseDown={(e: React.MouseEvent) => {
+        e.preventDefault();
+        dragState = { key, setter, startX: e.clientX, startW: getW(), minW, maxW };
+        document.body.style.cursor = "col-resize";
+        document.body.style.userSelect = "none";
+      }}
     />
   );
 
@@ -174,57 +162,30 @@ export default function Layout({
       <div className="main-row">
         {/* ── Left icon bar ── */}
         <div className="icon-bar left">
-          <button
-            className={showChat ? "active" : ""}
-            onClick={onToggleChat}
-            title="Toggle Chat"
-          >
+          <button className={showChat ? "active" : ""} onClick={onToggleChat} title="Toggle Chat">
             <img src={icon("message-square-text")} alt="" />
           </button>
           <hr />
-          <button
-            className={active("knowledge", leftPanel)}
-            onClick={() => onLeftPanel("knowledge")}
-            title="Knowledge Base"
-          >
+          <button className={active("knowledge", leftPanel)} onClick={() => onLeftPanel("knowledge")} title="Knowledge Base">
             <img src={icon("book")} alt="" />
           </button>
-          <button
-            className={active("history", leftPanel)}
-            onClick={() => onLeftPanel("history")}
-            title="History"
-          >
+          <button className={active("history", leftPanel)} onClick={() => onLeftPanel("history")} title="History">
             <img src={icon("history")} alt="" />
           </button>
-          <button
-            className={active("llm_settings", leftPanel)}
-            onClick={() => onLeftPanel("llm_settings")}
-            title="LLM Settings"
-          >
+          <button className={active("llm_settings", leftPanel)} onClick={() => onLeftPanel("llm_settings")} title="LLM Settings">
             <img src={icon("settings-2")} alt="" />
           </button>
           <div className="flex-spacer" />
-          <button
-            className={ttsOn ? "active" : ""}
-            onClick={onToggleTts}
-            title="Text to Speech"
-          >
+          <button className={ttsOn ? "active" : ""} onClick={onToggleTts} title="Text to Speech">
             <img src={icon("speaker")} alt="TTS" />
           </button>
-          <button
-            className={sttOn ? "active" : ""}
-            onClick={onToggleStt}
-            title="Speech to Text"
-          >
+          <button className={sttOn ? "active" : ""} onClick={onToggleStt} title="Speech to Text">
             <img src={icon("mic")} alt="STT" />
           </button>
         </div>
 
         {/* ── Left collapsible panel ── */}
-        <div
-          className={leftPanel ? "collapsible-panel left" : "panel-hidden"}
-          style={{ width: leftPanelW }}
-        >
+        <div className={leftPanel ? "collapsible-panel left" : "panel-hidden"} style={{ width: leftPanelW }}>
           {leftPanel === "knowledge" && <KnowledgeBasePanel />}
           {leftPanel === "history" && <ChatHistoryPanel onSelectConversation={onSelectConversation} />}
           {leftPanel === "llm_settings" && <LLMSettingsPanel />}
@@ -234,116 +195,72 @@ export default function Layout({
         {/* ── Chat panel ── */}
         {showChat && (
           <>
-            <div className="chat-panel" style={{ width: chatW }}>
+            <div className="chat-panel" style={{ width: chatW, flex: "none" }}>
               {children}
             </div>
             {makeHandle("chat", setChatW, 260, 800, () => chatW)}
           </>
         )}
 
-        {/* ── Canvas panel ── */}
-        {showCanvas && (
-          <>
-            <div className="canvas-panel" style={{ flex: showArtPrompt ? "" : 1 }}>
+        {/* ── Center area: canvas + art prompt fills remaining space ── */}
+        <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
+          {showCanvas && (
+            <>
               <CanvasPanel />
-            </div>
-            {showArtPrompt && makeHandle("canvas", setCanvasW, 260, 1200, () => canvasW)}
-          </>
-        )}
-
-        {/* ── Art prompt panel ── */}
-        {showArtPrompt && (
-          <div className="art-prompt-panel" style={{ width: artPromptW }}>
-            <ArtPromptPanel />
-          </div>
-        )}
-
-        {/* ── Right collapsible panel ── */}
-        {rightPanel && makeHandle("right", setRightPanelW, 180, 500, () => rightPanelW)}
-        <div
-          className={rightPanel ? "collapsible-panel right" : "panel-hidden"}
-          style={{ width: rightPanelW }}
-        >
-          {rightPanel === "art_model" && <ArtModelPanel />}
-          {rightPanel === "lora" && <LoraPanel />}
-          {rightPanel === "embeddings" && <EmbeddingsPanel />}
-          {rightPanel === "layers" && <LayersPanel />}
-          {rightPanel === "grid" && <GridPanel />}
-          {rightPanel === "image_browser" && <ImageBrowserPanel />}
-          {rightPanel === "stats" && <StatsPanel />}
+              <div className="art-prompt-panel">
+                <ArtPromptPanel />
+              </div>
+            </>
+          )}
+          {!showCanvas && <div style={{ flex: 1 }} />}
         </div>
 
-        {/* ── Right icon bar ── */}
+        {/* ── Right group: handle | right-panel | right-icon-bar ── */}
+        <div style={{ display: "flex", flexShrink: 0 }}>
+
+          {rightPanel && makeHandle("right", setRightPanelW, 180, 500, () => rightPanelW)}
+          <div className={rightPanel ? "collapsible-panel right" : "panel-hidden"} style={{ width: rightPanelW }}>
+            {rightPanel === "art_model" && <ArtModelPanel />}
+            {rightPanel === "lora" && <LoraPanel />}
+            {rightPanel === "embeddings" && <EmbeddingsPanel />}
+            {rightPanel === "layers" && <LayersPanel />}
+            {rightPanel === "grid" && <GridPanel />}
+            {rightPanel === "image_browser" && <ImageBrowserPanel />}
+            {rightPanel === "stats" && <StatsPanel />}
+          </div>
+
+          {/* ── Right icon bar ── */}
         <div className="icon-bar right">
-          <button
-            className={showCanvas ? "active" : ""}
-            onClick={onToggleCanvas}
-            title="Canvas"
-          >
+          <button className={showCanvas ? "active" : ""} onClick={onToggleCanvas} title="Canvas">
             <img src={icon("image")} alt="Canvas" />
           </button>
           <hr />
-          <button
-            className={showArtPrompt ? "active" : ""}
-            onClick={onToggleArtPrompt}
-            title="Prompt Editor"
-          >
-            <img src={icon("message-square-heart")} alt="Prompt" />
-          </button>
-          <hr />
-          <button
-            className={active("art_model", rightPanel)}
-            onClick={() => onRightPanel("art_model")}
-            title="Art Model"
-          >
+          <button className={active("art_model", rightPanel)} onClick={() => onRightPanel("art_model")} title="Art Model">
             <img src={icon("sparkles")} alt="Model" />
           </button>
-          <button
-            className={active("lora", rightPanel)}
-            onClick={() => onRightPanel("lora")}
-            title="LoRA"
-          >
+          <button className={active("lora", rightPanel)} onClick={() => onRightPanel("lora")} title="LoRA">
             <img src={icon("puzzle")} alt="LoRA" />
           </button>
-          <button
-            className={active("embeddings", rightPanel)}
-            onClick={() => onRightPanel("embeddings")}
-            title="Embeddings"
-          >
+          <button className={active("embeddings", rightPanel)} onClick={() => onRightPanel("embeddings")} title="Embeddings">
             <img src={icon("scan-text")} alt="Embeddings" />
           </button>
-          <button
-            className={active("layers", rightPanel)}
-            onClick={() => onRightPanel("layers")}
-            title="Layers"
-          >
+          <button className={active("layers", rightPanel)} onClick={() => onRightPanel("layers")} title="Layers">
             <img src={icon("layers")} alt="Layers" />
           </button>
-          <button
-            className={active("grid", rightPanel)}
-            onClick={() => onRightPanel("grid")}
-            title="Grid"
-          >
+          <button className={active("grid", rightPanel)} onClick={() => onRightPanel("grid")} title="Grid">
             <img src={icon("grid-2x2-check")} alt="Grid" />
           </button>
-          <button
-            className={active("image_browser", rightPanel)}
-            onClick={() => onRightPanel("image_browser")}
-            title="Image Browser"
-          >
+          <button className={active("image_browser", rightPanel)} onClick={() => onRightPanel("image_browser")} title="Image Browser">
             <img src={icon("images")} alt="Browser" />
           </button>
-          <button
-            className={active("stats", rightPanel)}
-            onClick={() => onRightPanel("stats")}
-            title="Stats"
-          >
+          <button className={active("stats", rightPanel)} onClick={() => onRightPanel("stats")} title="Stats">
             <img src={icon("activity")} alt="Stats" />
           </button>
           <div className="flex-spacer" />
           <button onClick={onOpenSettings} title="Settings">
             <img src={icon("settings")} alt="Settings" />
           </button>
+        </div>
         </div>
       </div>
 

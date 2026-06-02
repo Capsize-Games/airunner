@@ -125,6 +125,25 @@ export default function ChatView({
             thinking_content: thinking || undefined,
           },
         ]);
+        // Persist the newest conversation so reloads restore it
+        import("../../api/client").then(
+          ({ listConversations }) => {
+            listConversations(1)
+              .then((resp) => {
+                const convs = resp.conversations ?? [];
+                if (convs.length > 0) {
+                  const id = convs[0].id;
+                  try {
+                    localStorage.setItem(
+                      "airunner_conversation_id",
+                      String(id),
+                    );
+                  } catch {}
+                }
+              })
+              .catch(() => {});
+          },
+        );
       }
     } catch (err: unknown) {
       if (!controller.signal.aborted) {

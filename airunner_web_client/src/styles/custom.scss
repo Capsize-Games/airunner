@@ -121,7 +121,7 @@ html, body, #root {
   flex: 1; display: flex; overflow: hidden;
 }
 .chat-panel {
-  flex: 1; display: flex; flex-direction: column;
+  display: flex; flex-direction: column;
   overflow: hidden;
 }
 .canvas-panel {

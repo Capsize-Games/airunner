@@ -218,6 +218,15 @@ export async function getArtOptions(): Promise<ArtOptionsResponse> {
 }
 
 // ---------------------------------------------------------------------------
+// Knowledge Base
+// ---------------------------------------------------------------------------
+export async function listKnowledgeBaseDocuments() {
+  return request<{ documents: import("../types/api").DocumentRecord[] }>(
+    "GET", "/api/v1/knowledge-base/documents",
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Downloads
 // ---------------------------------------------------------------------------
 export async function startHuggingFaceDownload(

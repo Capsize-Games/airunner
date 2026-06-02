@@ -20,10 +20,12 @@ from airunner_services.utils.application import get_logger
 from airunner_services.api.routes import (
     art,
     conversations,
+    canvas_image,
     daemon,
     domain_resources,
     downloads,
     health,
+    knowledge_base,
     llm,
     persistence,
     setup,
@@ -305,6 +307,16 @@ def create_app(
     )
     app.include_router(tts.router, prefix="/api/v1/tts", tags=["tts"])
     app.include_router(stt.router, prefix="/api/v1/stt", tags=["stt"])
+    app.include_router(
+        knowledge_base.router,
+        prefix="/api/v1/knowledge-base",
+        tags=["knowledge-base"],
+    )
+    app.include_router(
+        canvas_image.router,
+        prefix="/api/v1/canvas",
+        tags=["canvas"],
+    )
 
     # Legacy compatibility endpoints for existing clients.
     app.include_router(legacy_routes.router, tags=["legacy"])

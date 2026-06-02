@@ -2,10 +2,12 @@
 
 from airunner_services.api.routes import (
     art,
+    canvas_image,
     conversations,
     daemon,
     downloads,
     health,
+    knowledge_base,
     legacy,
     llm,
     persistence,
@@ -15,10 +17,12 @@ from airunner_services.api.routes import (
 
 __all__ = [
     "art",
+    "canvas_image",
     "conversations",
     "daemon",
     "downloads",
     "health",
+    "knowledge_base",
     "legacy",
     "llm",
     "persistence",
