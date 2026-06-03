@@ -143,8 +143,9 @@ export default function CivitaiBrowserPanel() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [baseModel, modelType]);
 
-  // Viewport filling
+  // Viewport filling — skip when modal is open
   useEffect(() => {
+    if (selectedModelId !== null) { fillCountRef.current = 0; return; }
     if (!loading && hasMore && results.length > 0 && resultsElRef.current) {
       if (resultsElRef.current.scrollHeight <= resultsElRef.current.clientHeight && fillCountRef.current < 4) {
         fillCountRef.current++;
@@ -152,7 +153,7 @@ export default function CivitaiBrowserPanel() {
       } else { fillCountRef.current = 0; }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [results.length, loading, hasMore]);
+  }, [results.length, loading, hasMore, selectedModelId]);
 
   // Scroll lazy loading — attached via callback ref so it's always active
   const scrollMounted = useRef(false);

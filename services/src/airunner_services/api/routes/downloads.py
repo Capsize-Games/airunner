@@ -395,8 +395,8 @@ async def search_civitai_models_route(
 ) -> dict[str, Any]:
     """Return filtered CivitAI search results with inline 40px thumbnails.
 
-    Search results are cached server-side for 72 hours.
-    Images are cached permanently once fetched.
+    Search results (including thumbnails) are cached server-side for
+    72 hours so page reloads are near-instant.
     """
     cache_key = _search_cache_key(
         payload.query,
@@ -406,8 +406,14 @@ async def search_civitai_models_route(
     )
     cached = _search_cache_get(cache_key)
     if cached is not None:
-        logger.debug("CivitAI search cache HIT")
-        cached["items"] = _attach_thumbnails(cached.get("items", []))
+        total_b64 = sum(
+            len(v) for item in cached.get("items", [])
+            for v in (item.get("thumbnails", {}) or {}).values()
+        )
+        logger.debug(
+            "CivitAI search cache HIT: %d items, %d bytes base64",
+            len(cached.get("items", [])), total_b64,
+        )
         return cached
 
     logger.info(
@@ -429,31 +435,25 @@ async def search_civitai_models_route(
             cursor=payload.cursor,
             api_key=payload.api_key or "",
         )
+
+        # First fetch — attach thumbnails and cache everything together
+        result["items"] = _attach_thumbnails(result.get("items", []))
+        _search_cache_set(cache_key, result)
+
         item_count = len(result.get("items", []))
         next_cursor = (
             result.get("metadata", {}).get("nextCursor")
             if isinstance(result.get("metadata"), dict)
             else None
         )
-        logger.info(
-            "CivitAI search OK: %d items, nextCursor=%s",
-            item_count, "set" if next_cursor else None,
-        )
-
-        cache_item = {
-            "items": result.get("items", []),
-            "metadata": result.get("metadata"),
-        }
-        _search_cache_set(cache_key, cache_item)
-
-        result["items"] = _attach_thumbnails(result.get("items", []))
         total_b64 = sum(
             len(v) for item in result.get("items", [])
             for v in (item.get("thumbnails", {}) or {}).values()
         )
         logger.info(
-            "CivitAI search response: %d items, %d bytes of base64 thumbnails",
-            len(result.get("items", [])), total_b64,
+            "CivitAI search OK: %d items, nextCursor=%s, "
+            "%d bytes base64 thumbnails",
+            item_count, "set" if next_cursor else None, total_b64,
         )
         return result
     except Exception:
