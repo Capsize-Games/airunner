@@ -10,6 +10,8 @@ export default defineConfig({
         target: 'http://127.0.0.1:8188',
         changeOrigin: true,
         secure: false,
+        proxyTimeout: 60_000,
+        timeout: 60_000,
       },
     },
   },

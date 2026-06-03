@@ -227,8 +227,8 @@ export default function CivitaiBrowserPanel() {
         cursorRef.current = next;
         setCursor(next);
         setHasMore(next !== null);
-      } catch {
-        // search failed
+      } catch (err) {
+        console.error("CivitAI search failed:", err);
       } finally {
         setLoading(false);
         loadingRef.current = false;
