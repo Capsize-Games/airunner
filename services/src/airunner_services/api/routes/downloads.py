@@ -145,7 +145,16 @@ def _thumbnail_url(item: dict[str, Any]) -> str | None:
     if versions:
         images = versions[0].get("images", [])
         if images:
-            return str(images[0].get("url") or images[0].get("thumbnailUrl") or "")
+            url = str(images[0].get("url") or images[0].get("thumbnailUrl") or "")
+            if url:
+                logger.debug("_thumbnail_url: model=%s url_hash=%s", item.get("id"), hashlib.sha256(url.encode()).hexdigest()[:12])
+            else:
+                logger.debug("_thumbnail_url: model=%s has image but no usable url", item.get("id"))
+            return url if url else None
+        else:
+            logger.debug("_thumbnail_url: model=%s has version but no images", item.get("id"))
+    else:
+        logger.debug("_thumbnail_url: model=%s has no versions", item.get("id"))
     return None
 
 
@@ -278,6 +287,7 @@ def _fetch_and_prepare_sizes(url: str) -> dict[str, bytes]:
       - ``medium``: 200px (modal preview grid)
       - ``full``:   500px max (detail view)
     """
+    url_hash = hashlib.sha256(url.encode()).hexdigest()[:12]
     sizes = {"small": 40, "medium": 200, "full": _IMAGE_MAX_PX}
     result: dict[str, bytes] = {}
 
@@ -292,10 +302,28 @@ def _fetch_and_prepare_sizes(url: str) -> dict[str, bytes]:
             all_cached = False
 
     if all_cached:
+        logger.debug("_fetch_and_prepare_sizes: ALL CACHED url_hash=%s", url_hash)
         return result
 
+    logger.info(
+        "_fetch_and_prepare_sizes: cache MISS url_hash=%s cached_sizes=%s",
+        url_hash, list(result.keys()),
+    )
+
     # Fetch once, use for all sizes
-    raw = safe_fetch_bytes(url, max_bytes=50_000_000)
+    try:
+        raw = safe_fetch_bytes(url, max_bytes=50_000_000)
+        logger.info(
+            "_fetch_and_prepare_sizes: FETCH OK url_hash=%s size_bytes=%d",
+            url_hash, len(raw),
+        )
+    except Exception as exc:
+        logger.warning(
+            "_fetch_and_prepare_sizes: FETCH FAILED url_hash=%s error=%s",
+            url_hash, type(exc).__name__,
+        )
+        raise
+
     for name, px in sizes.items():
         path = _image_cache_path(url, name)
         if name in result:
@@ -303,6 +331,10 @@ def _fetch_and_prepare_sizes(url: str) -> dict[str, bytes]:
         data = _resize_image(raw, px)
         _write_cache(path, data)
         result[name] = data
+        logger.debug(
+            "_fetch_and_prepare_sizes: CACHED url_hash=%s size=%s bytes=%d",
+            url_hash, name, len(data),
+        )
 
     return result
 
@@ -315,7 +347,11 @@ def _attach_thumbnails(
 ) -> list[dict[str, Any]]:
     """Attach ``thumbnails`` (base64 dict) to each search item."""
     out: list[dict[str, Any]] = []
-    for item in items:
+    total_items = len(items)
+    success_count = 0
+    fail_count = 0
+    for idx, item in enumerate(items):
+        model_id = item.get("id", "?")
         thumb_url = _thumbnail_url(item)
         thumb_data: dict[str, str] = {}
         if thumb_url:
@@ -323,9 +359,29 @@ def _attach_thumbnails(
                 sizes = _fetch_and_prepare_sizes(thumb_url)
                 for name, blob in sizes.items():
                     thumb_data[name] = base64.b64encode(blob).decode()
-            except Exception:
-                pass
+                success_count += 1
+                logger.debug(
+                    "_attach_thumbnails: OK model=%s sizes=%s",
+                    model_id, list(sizes.keys()),
+                )
+            except Exception as exc:
+                fail_count += 1
+                logger.warning(
+                    "_attach_thumbnails: FAIL model=%s error=%s",
+                    model_id, type(exc).__name__,
+                )
+        else:
+            logger.debug(
+                "_attach_thumbnails: NO URL model=%s",
+                model_id,
+            )
         out.append({**item, "thumbnails": thumb_data})
+
+    logger.info(
+        "_attach_thumbnails: done total=%d ok=%d fail=%d no_url=%d",
+        total_items, success_count, fail_count,
+        total_items - success_count - fail_count,
+    )
     return out
 
 
@@ -391,6 +447,14 @@ async def search_civitai_models_route(
 
         # Attach thumbnails (may hit image cache)
         result["items"] = _attach_thumbnails(result.get("items", []))
+        total_b64 = sum(
+            len(v) for item in result.get("items", [])
+            for v in (item.get("thumbnails", {}) or {}).values()
+        )
+        logger.info(
+            "CivitAI search response: %d items, %d bytes of base64 thumbnails",
+            len(result.get("items", [])), total_b64,
+        )
         return result
     except Exception:
         logger.exception("CivitAI search failed")
@@ -426,6 +490,10 @@ def _embed_version_images(
                 "images_base64": imgs_b64,
             })
         out.append({**version, "images": embedded})
+    logger.info(
+        "_embed_version_images: %d versions, total images embedded",
+        len(versions),
+    )
     return out
 
 
@@ -434,6 +502,9 @@ async def fetch_civitai_browser_model_route(
     payload: CivitaiBrowserModelRequest,
 ) -> dict[str, Any]:
     """Return one filtered model detail with all images embedded as base64."""
+    logger.info(
+        "CivitAI model detail request: model_id=%s", payload.model_id,
+    )
     try:
         raw = await asyncio.to_thread(
             fetch_civitai_browser_model_info,
@@ -444,6 +515,16 @@ async def fetch_civitai_browser_model_route(
         )
         raw["modelVersions"] = _embed_version_images(
             raw.get("modelVersions", []),
+        )
+        total_b64 = sum(
+            len(v) for version in raw.get("modelVersions", [])
+            for img in version.get("images", [])
+            for v in (img.get("images_base64", {}) or {}).values()
+        )
+        logger.info(
+            "CivitAI model detail OK: model_id=%s %d versions, "
+            "%d bytes base64 images",
+            payload.model_id, len(raw.get("modelVersions", [])), total_b64,
         )
         return raw
     except ValueError as exc:
