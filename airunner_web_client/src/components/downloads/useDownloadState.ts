@@ -1,7 +1,6 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 
 const STORAGE_KEY = "airunner_active_downloads";
-const CHANGE_EVENT = "airunner-downloads-changed";
 
 export interface DownloadJob {
   jobId: string;
@@ -10,7 +9,6 @@ export interface DownloadJob {
   baseModel?: string;
   modelType?: string;
   startedAt: string;
-  /** CivitAI download URL — preserved so Retry can re-submit. */
   downloadUrl?: string;
 }
 
@@ -29,43 +27,54 @@ function save(jobs: DownloadJob[]) {
   } catch { /* */ }
 }
 
-/** Shared module-level subscribers so all hook instances stay in sync. */
-let _listeners: Array<() => void> = [];
-function notify() { _listeners.forEach((fn) => fn()); }
+/**
+ * Shared version counter incremented on every mutation.
+ * All hook instances watch this counter via a custom DOM event.
+ */
+let _version = 0;
+const EVENT = "airunner-dl-changed";
 
 export function useDownloads() {
-  const [downloads, setDownloads] = useState<DownloadJob[]>(load);
+  const [ver, setVer] = useState(0);
+  const downloads = useRef<DownloadJob[]>(load());
 
-  // Subscribe to cross-component change notifications
   useEffect(() => {
-    const handler = () => setDownloads(load());
-    _listeners.push(handler);
-    return () => { _listeners = _listeners.filter((h) => h !== handler); };
+    const handler = () => {
+      downloads.current = load();
+      setVer((v) => v + 1);
+    };
+    window.addEventListener(EVENT, handler);
+    return () => window.removeEventListener(EVENT, handler);
+  }, []);
+
+  const bump = useCallback(() => {
+    _version++;
+    downloads.current = load();
+    setVer((v) => v + 1);
+    try { window.dispatchEvent(new Event(EVENT)); } catch { /* */ }
   }, []);
 
   const addDownload = useCallback((job: DownloadJob) => {
-    setDownloads((prev) => {
-      const next = [...prev, job];
-      save(next);
-      notify();
-      return next;
-    });
-  }, []);
+    const next = [...load(), job];
+    save(next);
+    bump();
+  }, [bump]);
 
   const removeDownload = useCallback((jobId: string) => {
-    setDownloads((prev) => {
-      const next = prev.filter((d) => d.jobId !== jobId);
-      save(next);
-      notify();
-      return next;
-    });
-  }, []);
+    const next = load().filter((d) => d.jobId !== jobId);
+    save(next);
+    bump();
+  }, [bump]);
 
   const clearDownloads = useCallback(() => {
-    setDownloads([]);
     save([]);
-    notify();
-  }, []);
+    bump();
+  }, [bump]);
 
-  return { downloads, addDownload, removeDownload, clearDownloads };
+  return {
+    downloads: ver >= 0 ? downloads.current : downloads.current,
+    addDownload,
+    removeDownload,
+    clearDownloads,
+  };
 }
