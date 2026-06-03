@@ -12,6 +12,7 @@ import os
 import queue
 import threading
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Any
 
 from PIL import Image as PILImage
@@ -342,45 +343,63 @@ def _fetch_and_prepare_sizes(url: str) -> dict[str, bytes]:
 # ── CivitAI search with inline thumbnails ──
 
 
+_THUMBNAIL_WORKERS = 6  # parallel CivitAI image fetches
+
+
 def _attach_thumbnails(
     items: list[dict[str, Any]],
 ) -> list[dict[str, Any]]:
-    """Attach ``thumbnails`` (base64 dict) to each search item."""
-    out: list[dict[str, Any]] = []
-    total_items = len(items)
-    success_count = 0
-    fail_count = 0
-    for idx, item in enumerate(items):
-        model_id = item.get("id", "?")
-        thumb_url = _thumbnail_url(item)
-        thumb_data: dict[str, str] = {}
-        if thumb_url:
-            try:
-                sizes = _fetch_and_prepare_sizes(thumb_url)
-                for name, blob in sizes.items():
-                    thumb_data[name] = base64.b64encode(blob).decode()
-                success_count += 1
-                logger.debug(
-                    "_attach_thumbnails: OK model=%s sizes=%s",
-                    model_id, list(sizes.keys()),
-                )
-            except Exception as exc:
-                fail_count += 1
-                logger.warning(
-                    "_attach_thumbnails: FAIL model=%s error=%s",
-                    model_id, type(exc).__name__,
-                )
-        else:
-            logger.debug(
-                "_attach_thumbnails: NO URL model=%s",
-                model_id,
-            )
-        out.append({**item, "thumbnails": thumb_data})
+    """Attach ``thumbnails`` (base64) to each search item.
 
+    Only the ``small`` (40px) size is included to keep responses fast
+    and compact.  Larger sizes (medium/full) are embedded in the model
+    detail endpoint.
+    """
+    # Collect all fetchable URLs first
+    url_map: list[tuple[int, int, str]] = []  # (list_idx, model_id, url)
+    for idx, item in enumerate(items):
+        model_id = int(item.get("id", 0))
+        thumb_url = _thumbnail_url(item)
+        if thumb_url:
+            url_map.append((idx, model_id, thumb_url))
+        else:
+            logger.debug("_attach_thumbnails: NO URL model=%s", model_id)
+
+    if not url_map:
+        logger.info("_attach_thumbnails: done total=%d ok=0 no_url=%d", len(items), len(items))
+        return [{**item, "thumbnails": {}} for item in items]
+
+    # Fetch in parallel — only embed the "small" (40px) size
+    results: dict[int, dict[str, str]] = {}
+    with ThreadPoolExecutor(max_workers=_THUMBNAIL_WORKERS) as pool:
+        fut_map = {
+            pool.submit(_fetch_and_prepare_sizes, url): (list_idx, model_id)
+            for list_idx, model_id, url in url_map
+        }
+        for fut in as_completed(fut_map):
+            list_idx, model_id = fut_map[fut]
+            try:
+                sizes = fut.result()
+                thumb_data: dict[str, str] = {}
+                blob = sizes.get("small")
+                if blob:
+                    thumb_data["small"] = base64.b64encode(blob).decode()
+                results[list_idx] = thumb_data
+                logger.debug("_attach_thumbnails: OK model=%s small=%d", model_id, len(blob) if blob else 0)
+            except Exception as exc:
+                logger.warning("_attach_thumbnails: FAIL model=%s error=%s", model_id, type(exc).__name__)
+                results[list_idx] = {}
+
+    # Build output preserving order
+    out = []
+    for idx, item in enumerate(items):
+        out.append({**item, "thumbnails": results.get(idx, {})})
+
+    ok_count = sum(1 for r in results.values() if r)
     logger.info(
         "_attach_thumbnails: done total=%d ok=%d fail=%d no_url=%d",
-        total_items, success_count, fail_count,
-        total_items - success_count - fail_count,
+        len(items), ok_count, len(url_map) - ok_count,
+        len(items) - len(url_map),
     )
     return out
 
