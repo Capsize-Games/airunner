@@ -1,10 +1,10 @@
 import { useState } from "react";
 import DownloadProgress from "./DownloadProgress";
 import { useDownloads, type DownloadJob } from "./useDownloadState";
-import { cancelDownloadJob } from "../../api/downloads";
+import { cancelDownloadJob, startCivitaiFileDownload } from "../../api/downloads";
 
 export default function DownloadTray() {
-  const { downloads, removeDownload, clearDownloads } = useDownloads();
+  const { downloads, addDownload, removeDownload, clearDownloads } = useDownloads();
   const [visible, setVisible] = useState(() => {
     try {
       return localStorage.getItem("airunner_download_tray_visible") !== "false";
@@ -25,6 +25,27 @@ export default function DownloadTray() {
       await cancelDownloadJob(job.jobId);
     } catch { /* */ }
     removeDownload(job.jobId);
+  };
+
+  const handleResume = async (job: DownloadJob) => {
+    if (!job.downloadUrl) return;
+    // Remove the interrupted entry
+    removeDownload(job.jobId);
+    // Re-submit the download
+    try {
+      const result = await startCivitaiFileDownload({
+        url: job.downloadUrl,
+        output_path: `/tmp/airunner/downloads/${job.label}`,
+        api_key: localStorage.getItem("airunner_civitai_api_key") ?? "",
+      });
+      if (result.job_id) {
+        addDownload({
+          ...job,
+          jobId: result.job_id,
+          startedAt: new Date().toISOString(),
+        });
+      }
+    } catch { /* */ }
   };
 
   if (!visible || downloads.length === 0) return null;
@@ -104,27 +125,40 @@ export default function DownloadTray() {
             <DownloadProgress
               jobId={job.jobId}
               onNotFound={() => removeDownload(job.jobId)}
-              onRetry={() => {
-                // Remove interrupted entry; user can re-download from the modal
-                removeDownload(job.jobId);
-              }}
             />
           </div>
-          <button
-            onClick={() => handleCancel(job)}
-            style={{
-              background: "rgba(255,80,80,0.15)",
-              border: "1px solid rgba(255,80,80,0.25)",
-              borderRadius: 3,
-              color: "#ff8888",
-              cursor: "pointer",
-              fontSize: 10,
-              padding: "2px 8px",
-              whiteSpace: "nowrap",
-            }}
-          >
-            Cancel
-          </button>
+          <div style={{ display: "flex", gap: 4 }}>
+            <button
+              onClick={() => handleResume(job)}
+              style={{
+                background: "rgba(255,255,255,0.12)",
+                border: "1px solid rgba(255,255,255,0.2)",
+                borderRadius: 3,
+                color: "#ccc",
+                cursor: "pointer",
+                fontSize: 10,
+                padding: "2px 8px",
+                whiteSpace: "nowrap",
+              }}
+            >
+              Resume
+            </button>
+            <button
+              onClick={() => handleCancel(job)}
+              style={{
+                background: "rgba(255,80,80,0.15)",
+                border: "1px solid rgba(255,80,80,0.25)",
+                borderRadius: 3,
+                color: "#ff8888",
+                cursor: "pointer",
+                fontSize: 10,
+                padding: "2px 8px",
+                whiteSpace: "nowrap",
+              }}
+            >
+              Cancel
+            </button>
+          </div>
         </div>
       ))}
     </div>

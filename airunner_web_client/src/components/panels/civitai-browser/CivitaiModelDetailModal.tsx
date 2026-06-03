@@ -154,6 +154,7 @@ export default function CivitaiModelDetailModal({
           baseModel: currentBaseModel,
           modelType: currentModelType,
           startedAt: new Date().toISOString(),
+          downloadUrl: selectedFile.downloadUrl,
         });
       }
     } catch { /* */ }

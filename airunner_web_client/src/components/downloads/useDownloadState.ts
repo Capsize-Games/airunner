@@ -10,6 +10,8 @@ export interface DownloadJob {
   baseModel?: string;
   modelType?: string;
   startedAt: string;
+  /** CivitAI download URL — preserved so Retry can re-submit. */
+  downloadUrl?: string;
 }
 
 function load(): DownloadJob[] {

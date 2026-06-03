@@ -129,7 +129,6 @@ interface DownloadProgressProps {
   jobId: string;
   label?: string;
   onNotFound?: () => void;
-  onRetry?: () => void;
 }
 
 /**
@@ -139,7 +138,6 @@ export default function DownloadProgress({
   jobId,
   label,
   onNotFound,
-  onRetry,
 }: DownloadProgressProps) {
   const state = useDownloadProgress(jobId, onNotFound);
 
@@ -191,22 +189,6 @@ export default function DownloadProgress({
             <span style={{ color: "var(--bs-danger)" }}>
               {state.error}
             </span>
-          )}
-          {isInterrupted && onRetry && (
-            <button
-              onClick={onRetry}
-              style={{
-                background: "rgba(255,255,255,0.15)",
-                border: "1px solid rgba(255,255,255,0.2)",
-                borderRadius: 3,
-                color: "#ccc",
-                cursor: "pointer",
-                fontSize: 10,
-                padding: "1px 6px",
-              }}
-            >
-              Retry
-            </button>
           )}
         </span>
       </div>
