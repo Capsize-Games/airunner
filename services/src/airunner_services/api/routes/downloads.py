@@ -294,15 +294,11 @@ def _retry_worker() -> None:
             if _image_from_cache(cache_path) is not None:
                 continue
 
-            # Use generous limit (10MB) for retries — full-res CivitAI
-            # images can be 3-5MB, and SSRFBlocked("response too large")
-            # would cause infinite re-queue loops.
-            retry_max_bytes = max(max_bytes or 0, 10_000_000)
             logger.info(
-                "CivitAI RETRY — fetching w=%s  max=%s",
-                width, retry_max_bytes,
+                "CivitAI RETRY — fetching w=%s  url=%s",
+                width, url,
             )
-            raw = safe_fetch_bytes(url, max_bytes=retry_max_bytes)
+            raw = safe_fetch_bytes(url, max_bytes=50_000_000)
             if width is not None:
                 try:
                     img = PILImage.open(io.BytesIO(raw)).convert("RGB")
