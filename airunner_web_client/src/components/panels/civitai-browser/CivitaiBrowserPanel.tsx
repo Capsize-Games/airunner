@@ -209,7 +209,7 @@ export default function CivitaiBrowserPanel() {
           query,
           base_models: baseModels,
           model_types: modelTypes,
-          limit: 20,
+          limit: pageLimit,
           cursor: append ? cursorRef.current : null,
         });
         const items: SearchResult[] = (
@@ -263,18 +263,18 @@ export default function CivitaiBrowserPanel() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [baseModel, modelType]);
 
-  // Lazy loading: detect scroll-to-bottom on the results container
+  // Lazy loading: detect scroll-to-bottom on the results container.
+  // Uses a ref for the guard to avoid stale closure issues.
+  const loadingRef = useRef(false);
+
   const handleResultsScroll = useCallback(() => {
-    if (!resultsRef.current) return;
+    if (!resultsRef.current || loadingRef.current || !hasMore) return;
     const { scrollTop, scrollHeight, clientHeight } = resultsRef.current;
-    if (
-      scrollHeight - scrollTop - clientHeight < 100 &&
-      hasMore &&
-      !loading
-    ) {
+    if (scrollHeight - scrollTop - clientHeight < 100) {
+      loadingRef.current = true;
       performSearch(true);
     }
-  }, [hasMore, loading, performSearch]);
+  }, [hasMore, performSearch]);
 
   useEffect(() => {
     const el = resultsRef.current;
@@ -282,6 +282,36 @@ export default function CivitaiBrowserPanel() {
     el.addEventListener("scroll", handleResultsScroll);
     return () => el.removeEventListener("scroll", handleResultsScroll);
   }, [handleResultsScroll]);
+
+  // Pre-compute how many items to fetch based on viewport size.
+  // After each search completes, update the limit for next page.
+  const [pageLimit, setPageLimit] = useState(20);
+  const resultsElRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (resultsElRef.current && results.length > 0) {
+      const cardHeight = 56; // ~56px per result card
+      const containerH = resultsElRef.current.clientHeight;
+      const visible = Math.ceil(containerH / cardHeight) + 4;
+      setPageLimit(Math.max(20, Math.min(visible, 50)));
+    }
+  }, [results.length]);
+
+  // Reset loading guard when loading finishes
+  useEffect(() => {
+    if (!loading) loadingRef.current = false;
+  }, [loading]);
+
+  // On mount / after search, check if we need more items to fill viewport
+  useEffect(() => {
+    if (!loading && hasMore && results.length > 0 && resultsRef.current) {
+      const { scrollHeight, clientHeight } = resultsRef.current;
+      if (scrollHeight <= clientHeight) {
+        loadingRef.current = true;
+        performSearch(true);
+      }
+    }
+  }, [results.length, hasMore, loading, performSearch]);
 
   const resultsRef = useRef<HTMLDivElement | null>(null);
 
