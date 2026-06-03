@@ -758,7 +758,7 @@ def _coerce_progress(current: int, total: int) -> float:
     """Return one normalized progress percentage."""
     if total <= 0:
         return 0.0
-    return max(0.0, min(99.0, (float(current) / float(total)) * 100.0))
+    return max(0.0, min(100.0, (float(current) / float(total)) * 100.0))
 
 
 def _download_filename(url: str) -> str:
