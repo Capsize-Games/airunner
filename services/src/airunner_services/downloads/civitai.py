@@ -191,24 +191,39 @@ def download_file(
     progress_callback: Optional[ProgressCallback] = None,
     cancel_callback: Optional[CancelCallback] = None,
 ) -> bool:
-    """Download one file with optional progress and cancellation hooks."""
+    """Download one file with optional progress and cancellation hooks.
+
+    When a partial file already exists, sends a ``Range`` header to
+    resume from where the previous download left off.
+    """
     target_path = Path(filepath)
-    downloaded = 0
+    target_path.parent.mkdir(parents=True, exist_ok=True)
+    existing_size = target_path.stat().st_size if target_path.exists() else 0
+    downloaded = existing_size
     total_size = file_size
     try:
-        with _open_download(url, api_key) as response:
-            total_size = _content_length(response, file_size)
-            target_path.parent.mkdir(parents=True, exist_ok=True)
-            with open(target_path, "wb") as handle:
-                for chunk in response.iter_content(chunk_size=chunk_size):
-                    if cancel_callback and cancel_callback():
-                        _remove_partial_download(target_path)
-                        return False
-                    if not chunk:
-                        continue
-                    handle.write(chunk)
-                    downloaded += len(chunk)
-                    _emit_progress(progress_callback, downloaded, total_size)
+        headers = _auth_headers(api_key)
+        if existing_size > 0:
+            headers["Range"] = f"bytes={existing_size}-"
+
+        response = _open_download(url, api_key, custom_headers=headers)
+        total_size = _content_length(response, file_size)
+        if total_size > 0 and existing_size >= total_size:
+            # Already fully downloaded
+            _emit_progress(progress_callback, total_size, total_size)
+            return True
+
+        mode = "ab" if existing_size > 0 else "wb"
+        with open(target_path, mode) as handle:
+            for chunk in response.iter_content(chunk_size=chunk_size):
+                if cancel_callback and cancel_callback():
+                    _remove_partial_download(target_path)
+                    return False
+                if not chunk:
+                    continue
+                handle.write(chunk)
+                downloaded += len(chunk)
+                _emit_progress(progress_callback, downloaded, total_size)
     except Exception:
         _remove_partial_download(target_path)
         raise
@@ -390,11 +405,16 @@ def _planned_download_file(
     }
 
 
-def _open_download(url: str, api_key: str) -> requests.Response:
+def _open_download(
+    url: str,
+    api_key: str,
+    custom_headers: dict | None = None,
+) -> requests.Response:
     """Open one download response, retrying 401s with token query auth."""
+    headers = custom_headers or _auth_headers(api_key)
     response = requests.get(
         url,
-        headers=_auth_headers(api_key),
+        headers=headers,
         stream=True,
         allow_redirects=True,
         timeout=30,

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import DownloadProgress from "./DownloadProgress";
+import DownloadProgress, { useDownloadProgress } from "./DownloadProgress";
 import { useDownloads, type DownloadJob } from "./useDownloadState";
 import { cancelDownloadJob, startCivitaiFileDownload } from "../../api/downloads";
 
@@ -128,21 +128,7 @@ export default function DownloadTray() {
             />
           </div>
           <div style={{ display: "flex", gap: 4 }}>
-            <button
-              onClick={() => handleResume(job)}
-              style={{
-                background: "rgba(255,255,255,0.12)",
-                border: "1px solid rgba(255,255,255,0.2)",
-                borderRadius: 3,
-                color: "#ccc",
-                cursor: "pointer",
-                fontSize: 10,
-                padding: "2px 8px",
-                whiteSpace: "nowrap",
-              }}
-            >
-              Resume
-            </button>
+            <ResumeButton jobId={job.jobId} onResume={() => handleResume(job)} />
             <button
               onClick={() => handleCancel(job)}
               style={{
@@ -162,5 +148,27 @@ export default function DownloadTray() {
         </div>
       ))}
     </div>
+  );
+}
+
+function ResumeButton({ jobId, onResume }: { jobId: string; onResume: () => void }) {
+  const state = useDownloadProgress(jobId);
+  if (state.status !== "interrupted") return null;
+  return (
+    <button
+      onClick={onResume}
+      style={{
+        background: "rgba(255,255,255,0.12)",
+        border: "1px solid rgba(255,255,255,0.2)",
+        borderRadius: 3,
+        color: "#ccc",
+        cursor: "pointer",
+        fontSize: 10,
+        padding: "2px 8px",
+        whiteSpace: "nowrap",
+      }}
+    >
+      Resume
+    </button>
   );
 }
