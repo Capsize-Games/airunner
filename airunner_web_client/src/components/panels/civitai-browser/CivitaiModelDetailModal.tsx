@@ -311,6 +311,7 @@ export default function CivitaiModelDetailModal({
             color: "#ccc",
             fontSize: 12,
             gap: 8,
+            overflow: "hidden",
           }}
         >
           {/* Model name + creator */}
