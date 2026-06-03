@@ -291,6 +291,10 @@ def _retry_worker() -> None:
             cache_path = _image_cache_path(url, width)
             if _image_from_cache(cache_path) is not None:
                 continue
+            logger.info(
+                "CivitAI image RETRY — fetching from CivitAI  width=%s",
+                width,
+            )
             raw = safe_fetch_bytes(url, max_bytes=max_bytes)
             if width is not None:
                 try:
@@ -372,8 +376,16 @@ def _fetch_and_resize(
     cache_path = _image_cache_path(url, width)
     cached = _image_from_cache(cache_path)
     if cached is not None:
+        logger.debug(
+            "CivitAI image cache HIT  width=%s  url=%s",
+            width, url,
+        )
         return cached
 
+    logger.info(
+        "CivitAI image cache MISS — fetching from CivitAI  width=%s  url=%s",
+        width, url,
+    )
     time.sleep(0.2)  # gentle rate limiting
 
     try:
