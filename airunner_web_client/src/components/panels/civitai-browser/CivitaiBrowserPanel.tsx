@@ -219,8 +219,16 @@ export default function CivitaiBrowserPanel() {
         query={query} baseModel={baseModel} modelType={modelType}
         filterOptions={filterOptions}
         onQueryChange={(val) => { setQuery(val); if (val.trim().length > 0) debouncedSearch(false); }}
-        onBaseModelChange={(val) => { setBaseModel(val); setModelType(""); }}
-        onModelTypeChange={(val) => { setModelType(val); }}
+        onBaseModelChange={(val) => {
+          setBaseModel(val);
+          setModelType("");
+          try { localStorage.setItem("airunner_civitai_base_model", val); } catch { /* */ }
+          try { localStorage.setItem("airunner_civitai_model_type", ""); } catch { /* */ }
+        }}
+        onModelTypeChange={(val) => {
+          setModelType(val);
+          try { localStorage.setItem("airunner_civitai_model_type", val); } catch { /* */ }
+        }}
       />
 
       <div ref={resultsRef} className="overflow-auto" style={{ flex: 1, minHeight: 0 }}>

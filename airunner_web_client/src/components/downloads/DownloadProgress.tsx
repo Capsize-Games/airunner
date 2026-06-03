@@ -10,8 +10,8 @@ interface DownloadState {
 
 /**
  * Hook that subscribes to the SSE download-progress stream for one job.
- * First checks job existence via GET /status/{jobId} — if 404 (server
- * restarted), calls `onNotFound` so stale entries can be removed.
+ * First checks job existence via GET /status/{jobId} — if 404, calls
+ * `onNotFound`.  Handles "interrupted" status (server restart).
  */
 export function useDownloadProgress(
   jobId: string | null,
@@ -28,7 +28,6 @@ export function useDownloadProgress(
     let eventSource: EventSource | null = null;
     let cancelled = false;
 
-    // First, check if the job exists via GET
     fetch(`${BASE_URL}/api/v1/downloads/status/${jobId}`)
       .then((res) => {
         if (cancelled) return;
@@ -58,6 +57,13 @@ export function useDownloadProgress(
         }
         if (job.status === "cancelled") {
           setState({ progress: 0, status: "cancelled" });
+          return;
+        }
+        if (job.status === "interrupted") {
+          setState({
+            progress: Number(job.progress) || 0, status: "interrupted",
+            error: "Server was restarted",
+          });
           return;
         }
 
@@ -122,8 +128,8 @@ export function useDownloadProgress(
 interface DownloadProgressProps {
   jobId: string;
   label?: string;
-  /** Called when the job no longer exists on the server (e.g. after restart). */
   onNotFound?: () => void;
+  onRetry?: () => void;
 }
 
 /**
@@ -133,6 +139,7 @@ export default function DownloadProgress({
   jobId,
   label,
   onNotFound,
+  onRetry,
 }: DownloadProgressProps) {
   const state = useDownloadProgress(jobId, onNotFound);
 
@@ -140,6 +147,7 @@ export default function DownloadProgress({
   const isDone = state.status === "completed";
   const isFailed = state.status === "failed";
   const isCancelled = state.status === "cancelled";
+  const isInterrupted = state.status === "interrupted";
 
   const variant = isDone
     ? "success"
@@ -174,13 +182,33 @@ export default function DownloadProgress({
               ? "Failed"
               : isCancelled
                 ? "Cancelled"
-                : `${Math.round(state.progress)}%`}
+                : isInterrupted
+                  ? "Interrupted"
+                  : `${Math.round(state.progress)}%`}
         </span>
-        {state.error && (
-          <span style={{ color: "var(--bs-danger)" }}>
-            {state.error}
-          </span>
-        )}
+        <span style={{ display: "flex", gap: 4, alignItems: "center" }}>
+          {state.error && !isInterrupted && (
+            <span style={{ color: "var(--bs-danger)" }}>
+              {state.error}
+            </span>
+          )}
+          {isInterrupted && onRetry && (
+            <button
+              onClick={onRetry}
+              style={{
+                background: "rgba(255,255,255,0.15)",
+                border: "1px solid rgba(255,255,255,0.2)",
+                borderRadius: 3,
+                color: "#ccc",
+                cursor: "pointer",
+                fontSize: 10,
+                padding: "1px 6px",
+              }}
+            >
+              Retry
+            </button>
+          )}
+        </span>
       </div>
     </div>
   );

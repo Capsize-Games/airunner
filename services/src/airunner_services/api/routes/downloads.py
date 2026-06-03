@@ -620,7 +620,7 @@ async def download_job_stream(
                     )
                     return
                 current_progress = state.progress
-                current_status = state.status.value
+                current_status = state.status
                 if (current_progress != last_progress
                         or current_status != last_status):
                     last_progress = current_progress
@@ -670,7 +670,7 @@ async def download_job_status(
         raise HTTPException(status_code=404, detail="Job not found")
     return DownloadJobStatusResponse(
         job_id=state.job_id,
-        status=state.status.value,
+        status=state.status,
         progress=state.progress,
         result=state.result,
         error=state.error,

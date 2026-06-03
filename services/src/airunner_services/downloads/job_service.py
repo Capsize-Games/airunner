@@ -38,7 +38,11 @@ from airunner_services.llm.utils.model_downloader import (
     DownloadCancelledError,
     HuggingFaceDownloader as SimpleHuggingFaceDownloader,
 )
-from airunner_services.utils.job_tracker import JobState, JobStatus, JobTracker
+from airunner_services.downloads.persistent_job_tracker import (
+    JobState,
+    JobStatus,
+    PersistentJobTracker,
+)
 from airunner_services.utils.zip_utils import safe_extract_zip
 from airunner_services.runtimes.file_policy import normalize_local_path
 
@@ -48,13 +52,13 @@ class DownloadJobService:
 
     def __init__(
         self,
-        tracker: JobTracker | None = None,
+        tracker: PersistentJobTracker | None = None,
         huggingface_downloader: SimpleHuggingFaceDownloader | None = None,
         huggingface_worker_factory: (
             Callable[[], ServiceHuggingFaceDownloadWorker] | None
         ) = None,
     ) -> None:
-        self._tracker = tracker or JobTracker()
+        self._tracker = tracker or PersistentJobTracker()
         self._huggingface_downloader = (
             huggingface_downloader or SimpleHuggingFaceDownloader()
         )
@@ -231,11 +235,11 @@ class DownloadJobService:
             job = await self._tracker.get_status(job_id)
             if job is None:
                 raise ValueError(f"Job {job_id} not found")
-            if job.status is JobStatus.COMPLETED:
+            if job.status == JobStatus.COMPLETED:
                 return job.result
-            if job.status is JobStatus.FAILED:
+            if job.status == JobStatus.FAILED:
                 raise Exception(job.error or "Job failed")
-            if job.status is JobStatus.CANCELLED:
+            if job.status == JobStatus.CANCELLED:
                 raise Exception("Job cancelled")
             if asyncio.get_running_loop().time() >= deadline:
                 raise TimeoutError(f"Job {job_id} timed out")
@@ -710,7 +714,7 @@ class DownloadJobService:
         self,
         job_id: str,
         progress: float,
-        status: JobStatus,
+        status: str,
     ) -> None:
         """Push one status update into the shared tracker."""
         asyncio.run(self._tracker.update_progress(job_id, progress, status))
@@ -765,7 +769,7 @@ def _download_filename(url: str) -> str:
 
 def _progress_reporter(
     job_id: str,
-    tracker: JobTracker,
+    tracker: PersistentJobTracker,
 ) -> Callable[[str, int, int], None]:
     """Return one throttled HF progress callback."""
     last_progress = -1.0
@@ -783,7 +787,7 @@ def _progress_reporter(
 
 def _civitai_progress_reporter(
     job_id: str,
-    tracker: JobTracker,
+    tracker: PersistentJobTracker,
     completed_bytes: int,
     total_bytes: int,
 ) -> Callable[[int, int], None]:
