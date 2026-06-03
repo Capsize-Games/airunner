@@ -1,6 +1,8 @@
 import { BASE_URL, type JsonObject, type StreamChunk } from "../types/api";
 
-const REQUEST_TIMEOUT_MS = 30_000;
+// CivitAI model detail is a batch operation that may take 2+ minutes
+// when fetching many images from the CivitAI API for the first time.
+const REQUEST_TIMEOUT_MS = 180_000;  // 3 minutes
 
 export async function request<T>(
   method: string,
