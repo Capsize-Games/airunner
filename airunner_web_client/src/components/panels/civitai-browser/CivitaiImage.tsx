@@ -1,9 +1,14 @@
 import { useState, useEffect, useCallback } from "react";
 import { BASE_URL } from "../../../types/api";
 
-// CivitAI supports ?width=N in image URLs for smaller thumbnails
+// CivitAI supports ?width=N in image URLs for smaller thumbnails.
+// The `original=true` parameter overrides width so we strip it.
 function resizeUrl(url: string, width: number): string {
   if (!url) return "";
+  // Remove original=true if present (it disables width)
+  url = url.replace(/original=true[&]?/, "");
+  url = url.replace(/[&?]$/, "");
+  if (url.includes("width=")) return url;
   const separator = url.includes("?") ? "&" : "?";
   return `${url}${separator}width=${width}`;
 }
@@ -30,7 +35,7 @@ export default function CivitaiImage({
   className,
   style,
   thumbWidth = 120,
-  maxBytes = 200_000, // 200KB default for thumbnails
+  maxBytes = 1_500_000, // 1.5MB default (CivitAI 120px can be ~300-800KB)
 }: CivitaiImageProps) {
   const [blobUrl, setBlobUrl] = useState<string | null>(null);
   const [failed, setFailed] = useState(false);

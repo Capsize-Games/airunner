@@ -63,9 +63,13 @@ function clearAllCache(
   toastTimeout = setTimeout(() => setToastMsg(null), 2000);
 }
 
-// CivitAI supports ?width=N in image URLs for smaller thumbnails
+// CivitAI supports ?width=N in image URLs for smaller thumbnails.
+// The `original=true` parameter overrides width so we strip it.
 function thumbnailUrl(url: string, width = 120): string {
   if (!url) return "";
+  url = url.replace(/original=true[&]?/, "");
+  url = url.replace(/[&?]$/, "");
+  if (url.includes("width=")) return url;
   const separator = url.includes("?") ? "&" : "?";
   return `${url}${separator}width=${width}`;
 }
