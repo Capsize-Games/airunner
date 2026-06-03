@@ -127,24 +127,34 @@ function TrayHeader({
   const [anyActive, setAnyActive] = useState(true);
 
   useEffect(() => {
+    let cancelled = false;
+    const terminal = new Set<string>();
+
     const check = async () => {
       const results = await Promise.all(
         jobIds.map(async (id) => {
+          if (terminal.has(id)) return false;
           try {
             const res = await fetch(`${BASE_URL}/api/v1/downloads/status/${id}`);
-            if (!res.ok) return false;
+            if (!res.ok) { terminal.add(id); return false; }
             const job = await res.json();
+            if (job.status !== "running" && job.status !== "interrupted") {
+              terminal.add(id);
+            }
             return job.status === "running" || job.status === "interrupted";
           } catch {
             return false;
           }
         }),
       );
-      setAnyActive(results.some(Boolean));
+      const active = results.some(Boolean);
+      if (!cancelled) setAnyActive(active);
+      // Stop polling once everything is terminal
+      if (terminal.size === jobIds.length) return;
+      setTimeout(check, 2000);
     };
     check();
-    const interval = setInterval(check, 2000);
-    return () => clearInterval(interval);
+    return () => { cancelled = true; };
   }, [jobIds]);
 
   return (
