@@ -89,12 +89,55 @@ export default function CivitaiModelDetailModal({
   const stats = model.stats ?? {};
   const desc = model.description ? stripHtml(model.description) : "";
 
+  // When only a small thumbnail is available (non-first versions), fetch
+  // the full-size image from the server proxy so the preview looks good.
+  const [pendingFullFetch, setPendingFullFetch] = useState<string>("");
+
+  useEffect(() => {
+    if (!pendingFullFetch) return;
+    let cancelled = false;
+    fetch(`${BASE_URL}/api/v1/downloads/civitai/image`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ url: pendingFullFetch, width: 500 }),
+    })
+      .then((r) => r.blob())
+      .then((blob) => {
+        if (cancelled) return;
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          if (!cancelled && typeof reader.result === "string") {
+            setPreviewBase64(reader.result.split(",")[1]);
+          }
+        };
+        reader.readAsDataURL(blob);
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [pendingFullFetch]);
+
   const bestBase64 = (img: VersionImage | undefined): string => {
     if (!img?.images_base64) return "";
     return img.images_base64.full
       || img.images_base64.medium
-      || img.images_base64.small
       || "";
+  };
+
+  const setPreviewImage = (img: VersionImage | undefined) => {
+    if (!img) return;
+    setPreviewUrl(img.url);
+    const b64 = bestBase64(img);
+    if (b64) {
+      setPreviewBase64(b64);
+      setPendingFullFetch("");
+    } else if (img.images_base64?.small) {
+      // Show small thumbnail immediately while fetching full
+      setPreviewBase64(img.images_base64.small);
+      setPendingFullFetch(img.url);
+    } else {
+      setPreviewBase64("");
+      setPendingFullFetch(img.url);
+    }
   };
 
   const handleVersionChange = (vid: number) => {
@@ -103,14 +146,11 @@ export default function CivitaiModelDetailModal({
     const files = v?.files ?? [];
     setSelectedFileId(files.length > 0 ? files[0].id : null);
     const images = v?.images ?? [];
-    const firstImg = images[0];
-    setPreviewUrl(firstImg?.url ?? "");
-    setPreviewBase64(bestBase64(firstImg));
+    setPreviewImage(images[0]);
   };
 
   const handleThumbnailClick = (img: VersionImage) => {
-    setPreviewUrl(img.url);
-    setPreviewBase64(bestBase64(img));
+    setPreviewImage(img);
   };
 
   const handleDownload = async (key?: string) => {
