@@ -467,57 +467,67 @@ def _embed_version_images(
 ) -> list[dict[str, Any]]:
     """Attach ``images_base64`` to images for each version.
 
-    Only the **first version** gets full image embeds (small/medium/full).
-    Remaining versions return metadata only.
+    First version: all sizes (small/medium/full) embedded.
+    Other versions: only ``small`` (40px) embedded so the UI can
+    show thumbnail grids when the user switches versions.
     """
     if not versions:
         return versions
 
-    first_version = versions[0]
-    first_images = first_version.get("images", [])
-    url_map: list[tuple[int, str]] = []
-    for ii, img in enumerate(first_images):
-        url = str(img.get("url") or img.get("thumbnailUrl") or "")
-        if url:
-            url_map.append((ii, url))
+    # Collect image URLs grouped by (vi, ii)
+    img_urls: dict[tuple[int, int], str] = {}
+    for vi, version in enumerate(versions):
+        for ii, img in enumerate(version.get("images", [])):
+            url = str(img.get("url") or img.get("thumbnailUrl") or "")
+            if url:
+                img_urls[(vi, ii)] = url
 
-    fetched: dict[int, dict[str, bytes]] = {}
-    if url_map:
-        with ThreadPoolExecutor(max_workers=_THUMBNAIL_WORKERS) as pool:
-            fut_map = {
-                pool.submit(_fetch_and_prepare_sizes, url): ii
-                for ii, url in url_map
-            }
-            for fut in as_completed(fut_map):
-                ii = fut_map[fut]
-                try:
-                    fetched[ii] = fut.result()
-                except Exception:
-                    fetched[ii] = {}
+    if not img_urls:
+        logger.info("_embed_version_images: no images to embed")
+        return versions
 
-    embedded_first: list[dict[str, Any]] = []
-    for ii, img in enumerate(first_images):
-        url = str(img.get("url") or img.get("thumbnailUrl") or "")
-        sizes = fetched.get(ii, {})
-        imgs_b64: dict[str, str] = {}
-        for name, blob in sizes.items():
-            imgs_b64[name] = base64.b64encode(blob).decode()
-        embedded_first.append({
-            "url": url,
-            "nsfw": img.get("nsfw"),
-            "width": img.get("width"),
-            "height": img.get("height"),
-            "images_base64": imgs_b64,
-        })
+    # Fetch all images in parallel
+    fetched: dict[tuple[int, int], dict[str, bytes]] = {}
+    with ThreadPoolExecutor(max_workers=_THUMBNAIL_WORKERS) as pool:
+        fut_map = {
+            pool.submit(
+                _fetch_and_prepare_sizes, url
+            ): key
+            for key, url in img_urls.items()
+        }
+        for fut in as_completed(fut_map):
+            key = fut_map[fut]
+            try:
+                fetched[key] = fut.result()
+            except Exception:
+                fetched[key] = {}
 
-    out = [{**first_version, "images": embedded_first}]
-    for version in versions[1:]:
-        out.append(version)
+    # Build output
+    out: list[dict[str, Any]] = []
+    for vi, version in enumerate(versions):
+        raw_images = version.get("images", [])
+        embedded: list[dict[str, Any]] = []
+        embed_all = (vi == 0)  # first version gets all sizes
+        for ii, img in enumerate(raw_images):
+            url = str(img.get("url") or img.get("thumbnailUrl") or "")
+            sizes = fetched.get((vi, ii), {})
+            imgs_b64: dict[str, str] = {}
+            for name, blob in sizes.items():
+                if embed_all or name == "small":
+                    imgs_b64[name] = base64.b64encode(blob).decode()
+            embedded.append({
+                "url": url,
+                "nsfw": img.get("nsfw"),
+                "width": img.get("width"),
+                "height": img.get("height"),
+                "images_base64": imgs_b64,
+            })
+        out.append({**version, "images": embedded})
 
     logger.info(
-        "_embed_version_images: %d versions, first version has %d images"
-        " with base64",
-        len(versions), len(url_map),
+        "_embed_version_images: %d versions, %d total images "
+        "(first version gets all sizes, others get small)",
+        len(versions), len(img_urls),
     )
     return out
 
