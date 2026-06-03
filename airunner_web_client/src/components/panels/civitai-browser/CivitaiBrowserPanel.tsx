@@ -476,11 +476,15 @@ export default function CivitaiBrowserPanel() {
         }}
       />
 
-      {/* Results list */}
+      {/* Results list: collapse when a model is selected (detail takes space) */}
       <div
         ref={resultsRef}
         className="overflow-auto mb-1"
-        style={{ flex: 1, minHeight: 0 }}
+        style={{
+          flex: selectedModelId ? "0 1 auto" : 1,
+          maxHeight: selectedModelId ? "50%" : "none",
+          minHeight: 0,
+        }}
       >
         {results.map((item) => (
           <CivitaiResultCard
@@ -518,10 +522,11 @@ export default function CivitaiBrowserPanel() {
             Loading model details...
           </div>
         </div>
-      ) : (
+      ) : selectedModelData && (
         <div
           className="overflow-auto"
           style={{
+            flex: 1,
             borderTop:
               "1px solid var(--separator-color)",
             paddingTop: 6,

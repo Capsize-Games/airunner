@@ -88,7 +88,7 @@ export default function CivitaiImage({
   return (
     <img
       src={blobUrl}
-      alt={alt}
+      alt=""
       className={className}
       style={style}
       loading="lazy"

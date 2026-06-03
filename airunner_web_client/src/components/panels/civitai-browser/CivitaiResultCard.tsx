@@ -56,14 +56,8 @@ export default function CivitaiResultCard({
               height: 40,
               borderRadius: 4,
               background: "var(--theme-bg-secondary)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              fontSize: 16,
             }}
-          >
-            🖼
-          </div>
+          />
         )}
       </div>
       <div style={{ flex: 1, minWidth: 0, fontSize: 11, lineHeight: 1.3 }}>
