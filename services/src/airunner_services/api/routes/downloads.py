@@ -406,13 +406,23 @@ async def search_civitai_models_route(
     )
     cached = _search_cache_get(cache_key)
     if cached is not None:
+        items = cached.get("items", [])
+        # Check if cached items already have thumbnails attached.
+        # If not (old cache format), attach thumbnails and re-save.
+        has_thumbnails = any(
+            item.get("thumbnails") for item in items
+        )
+        if not has_thumbnails:
+            items = _attach_thumbnails(items)
+            cached["items"] = items
+            _search_cache_set(cache_key, cached)
         total_b64 = sum(
-            len(v) for item in cached.get("items", [])
+            len(v) for item in items
             for v in (item.get("thumbnails", {}) or {}).values()
         )
         logger.debug(
             "CivitAI search cache HIT: %d items, %d bytes base64",
-            len(cached.get("items", [])), total_b64,
+            len(items), total_b64,
         )
         return cached
 
