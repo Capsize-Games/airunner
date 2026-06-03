@@ -63,15 +63,10 @@ function clearAllCache(
   toastTimeout = setTimeout(() => setToastMsg(null), 2000);
 }
 
-// CivitAI supports ?width=N in image URLs for smaller thumbnails.
-// The `original=true` parameter overrides width so we strip it.
-function thumbnailUrl(url: string, width = 120): string {
-  if (!url) return "";
-  url = url.replace(/original=true[&]?/, "");
-  url = url.replace(/[&?]$/, "");
-  if (url.includes("width=")) return url;
-  const separator = url.includes("?") ? "&" : "?";
-  return `${url}${separator}width=${width}`;
+// Pass the CivitAI URL as-is to the proxy. The proxy enforces max_bytes
+// to cap the response size server-side.
+function thumbnailUrl(url: string, _width = 120): string {
+  return url || "";
 }
 
 // ── Search result flattening ──
@@ -427,20 +422,19 @@ export default function CivitaiBrowserPanel() {
         </button>
       </div>
 
-      {/* Toast notification */}
+      {/* Toast next to clear button */}
       {toastMsg && (
         <div
           style={{
             position: "absolute",
-            top: 4,
-            left: "50%",
-            transform: "translateX(-50%)",
+            top: 30,
+            right: 8,
             zIndex: 10,
             background: "var(--theme-bg-secondary)",
             border: "1px solid var(--bs-primary)",
             borderRadius: 4,
-            padding: "4px 10px",
-            fontSize: 11,
+            padding: "2px 8px",
+            fontSize: 10,
             color: "var(--bs-body-color)",
             whiteSpace: "nowrap",
             pointerEvents: "none",
