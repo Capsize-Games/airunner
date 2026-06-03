@@ -200,16 +200,26 @@ def download_file(
     target_path.parent.mkdir(parents=True, exist_ok=True)
     existing_size = target_path.stat().st_size if target_path.exists() else 0
     downloaded = existing_size
-    total_size = file_size
+    total_size = file_size or existing_size
     try:
         headers = _auth_headers(api_key)
         if existing_size > 0:
             headers["Range"] = f"bytes={existing_size}-"
 
         response = _open_download(url, api_key, custom_headers=headers)
-        total_size = _content_length(response, file_size)
+        remaining = _content_length(response, 0)
+        # When Range is used, Content-Range tells us the true total.
+        if existing_size > 0:
+            cr = response.headers.get("content-range", "")
+            if "/" in cr:
+                try:
+                    total_size = int(cr.split("/")[-1])
+                except (ValueError, IndexError):
+                    total_size = existing_size + remaining
+        else:
+            total_size = max(total_size, remaining)
+
         if total_size > 0 and existing_size >= total_size:
-            # Already fully downloaded
             _emit_progress(progress_callback, total_size, total_size)
             return True
 
