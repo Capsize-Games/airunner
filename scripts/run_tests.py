@@ -170,7 +170,8 @@ def run_unit_tests(component: str = None, verbose: bool = False) -> int:
     Returns:
         Exit code from pytest
     """
-    base_path = Path("src/airunner/components")
+    # Unit tests now target services/ and airunner_web_client/
+    base_path = Path("services/tests")
 
     if component:
         resolved = _component_targets(base_path, component)
@@ -183,7 +184,7 @@ def run_unit_tests(component: str = None, verbose: bool = False) -> int:
         test_targets, description = resolved
     else:
         test_targets = [base_path]
-        description = "Safe unit tests (GUI suites excluded)"
+        description = "Safe unit tests"
 
     include_gui_tests = component in {"chat", "documents"}
 
@@ -205,8 +206,6 @@ def run_unit_tests(component: str = None, verbose: bool = False) -> int:
                 if include_gui_tests
                 else "not gui and not eval and not benchmark and not integration"
             ),
-            "--ignore=src/airunner/components/eval",  # Exclude eval tests
-            "--ignore=src/airunner/components/server/tests/functional",
         ]
     )
 
@@ -229,10 +228,10 @@ def run_gui_functional_tests(
     component: str = None,
     verbose: bool = False,
 ) -> int:
-    """Run headless GUI functional tests with mocked backends."""
-    base_path = Path("src/airunner/components")
+    """Run service-level API functional tests."""
+    base_path = Path("services/tests")
     test_targets = [base_path]
-    description = "Headless GUI functional tests"
+    description = "Service API functional tests"
 
     if component:
         resolved = _gui_component_targets(base_path, component)

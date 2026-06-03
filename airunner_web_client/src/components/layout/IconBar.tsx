@@ -1,4 +1,4 @@
-const icon = (name: string) => `/icons/lucide/dark/${name}.svg`;
+import LucideIcon from "../shared/LucideIcon";
 
 type PanelId =
   | "knowledge"
@@ -42,7 +42,7 @@ export function LeftIconBar({
         onClick={onToggleChat}
         title="Toggle Chat"
       >
-        <img src={icon("message-square-text")} alt="" />
+        <LucideIcon name="message-square-text" />
       </button>
       <hr />
       <button
@@ -50,21 +50,21 @@ export function LeftIconBar({
         onClick={() => onLeftPanel("knowledge")}
         title="Knowledge Base"
       >
-        <img src={icon("book")} alt="" />
+        <LucideIcon name="book" />
       </button>
       <button
         className={active("history", leftPanel)}
         onClick={() => onLeftPanel("history")}
         title="History"
       >
-        <img src={icon("history")} alt="" />
+        <LucideIcon name="history" />
       </button>
       <button
         className={active("llm_settings", leftPanel)}
         onClick={() => onLeftPanel("llm_settings")}
         title="LLM Settings"
       >
-        <img src={icon("settings-2")} alt="" />
+        <LucideIcon name="settings-2" />
       </button>
       <div className="flex-spacer" />
       <button
@@ -72,14 +72,14 @@ export function LeftIconBar({
         onClick={onToggleTts}
         title="Text to Speech"
       >
-        <img src={icon("speaker")} alt="TTS" />
+        <LucideIcon name="speaker" />
       </button>
       <button
         className={sttOn ? "active" : ""}
         onClick={onToggleStt}
         title="Speech to Text"
       >
-        <img src={icon("mic")} alt="STT" />
+        <LucideIcon name="mic" />
       </button>
     </div>
   );
@@ -108,7 +108,7 @@ export function RightIconBar({
         onClick={onToggleCanvas}
         title="Canvas"
       >
-        <img src={icon("image")} alt="Canvas" />
+        <LucideIcon name="image" />
       </button>
       <hr />
       <button
@@ -116,60 +116,60 @@ export function RightIconBar({
         onClick={() => onRightPanel("civitai_browser")}
         title="CivitAI Browser"
       >
-        <img src={icon("cloud")} alt="CivitAI" />
+        <LucideIcon name="cloud" />
       </button>
       <button
         className={active("art_model", rightPanel)}
         onClick={() => onRightPanel("art_model")}
         title="Art Model"
       >
-        <img src={icon("sparkles")} alt="Model" />
+        <LucideIcon name="sparkles" />
       </button>
       <button
         className={active("lora", rightPanel)}
         onClick={() => onRightPanel("lora")}
         title="LoRA"
       >
-        <img src={icon("puzzle")} alt="LoRA" />
+        <LucideIcon name="puzzle" />
       </button>
       <button
         className={active("embeddings", rightPanel)}
         onClick={() => onRightPanel("embeddings")}
         title="Embeddings"
       >
-        <img src={icon("scan-text")} alt="Embeddings" />
+        <LucideIcon name="scan-text" />
       </button>
       <button
         className={active("layers", rightPanel)}
         onClick={() => onRightPanel("layers")}
         title="Layers"
       >
-        <img src={icon("layers")} alt="Layers" />
+        <LucideIcon name="layers" />
       </button>
       <button
         className={active("grid", rightPanel)}
         onClick={() => onRightPanel("grid")}
         title="Grid"
       >
-        <img src={icon("grid-2x2-check")} alt="Grid" />
+        <LucideIcon name="grid-2x2-check" />
       </button>
       <button
         className={active("image_browser", rightPanel)}
         onClick={() => onRightPanel("image_browser")}
         title="Image Browser"
       >
-        <img src={icon("images")} alt="Browser" />
+        <LucideIcon name="images" />
       </button>
       <button
         className={active("stats", rightPanel)}
         onClick={() => onRightPanel("stats")}
         title="Stats"
       >
-        <img src={icon("activity")} alt="Stats" />
+        <LucideIcon name="activity" />
       </button>
       <div className="flex-spacer" />
       <button onClick={onOpenSettings} title="Settings">
-        <img src={icon("settings")} alt="Settings" />
+        <LucideIcon name="settings" />
       </button>
     </div>
   );

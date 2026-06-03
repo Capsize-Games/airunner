@@ -266,14 +266,14 @@ COMMON_ARGS="--rm \
 MATHJAX_URL="https://github.com/mathjax/MathJax/releases/download/$MATHJAX_VERSION/mathjax-$MATHJAX_VERSION.zip"
 
 # In main/entry logic, before starting the app:
-MATHJAX_DIR="/app/src/airunner/static/mathjax/MathJax-{$MATHJAX_VERSION}/es5"
+MATHJAX_DIR="/app/services/src/airunner_services/static/mathjax/MathJax-{$MATHJAX_VERSION}/es5"
 MATHJAX_ENTRY="$MATHJAX_DIR/tex-mml-chtml.js"
 if [ ! -f "$MATHJAX_ENTRY" ]; then
     echo "MathJax not found, downloading..."
     mkdir -p "$MATHJAX_DIR"
     TMP_ZIP="/tmp/mathjax.zip"
     wget -O "$TMP_ZIP" "$MATHJAX_URL"
-    unzip -o "$TMP_ZIP" -d /app/src/airunner/static/mathjax/
+    unzip -o "$TMP_ZIP" -d /app/services/src/airunner_services/static/mathjax/
     rm "$TMP_ZIP"
 fi
 

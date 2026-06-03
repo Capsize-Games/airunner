@@ -58,80 +58,99 @@ We follow the PEP 8 style guide for Python code. You can find the complete guide
 
 ---
 
-## Signal and Slot Management
-We utilize a `SignalMediator` class to manage signal-slot connections across different classes without direct imports.
-**Example**:
-In the `__init__` function of a class, connect a slot:
-`self.register(SignalCode.SOME_CODE_SIGNAL, self.on_some_signal)`
-Then, define the slot function:
-```python
-def on_some_signal(self, message):
-    # Implement functionality here
-    ...
+## Services Architecture
+
+AI Runner uses a headless daemon architecture with a web-based GUI:
+
+- **`services/`**: FastAPI-based daemon that orchestrates LLM, STT, TTS, and
+  art workloads. Runs as `airunner-headless`.
+- **`airunner_web_client/`**: React/TypeScript web GUI built with Vite. Serves
+  as the user-facing client that connects to the daemon API.
+- **`native/`**: Native launcher, bundle assembly, and installer tooling.
+- **`api/`**: Shared transport contracts between services and clients.
+
+### Development Workflow
+
+1. Start the daemon:
+   ```bash
+   ./scripts/dev/run_services.sh
+   ```
+
+2. Start the web client in a separate terminal:
+   ```bash
+   cd airunner_web_client
+   npm install
+   npm run dev
+   ```
+
+3. Open `http://localhost:5173` in your browser.
+
+Or use the combined launcher:
+```bash
+./scripts/run_web.sh
 ```
-To emit the signal (from any class):
-`self.emit(SignalCode.SOME_CODE_SIGNAL, "Hello World!")`
-Note: We use the `SignalCode` enum to define signal codes. The message parameter is optional and can be any object type.
 
 ---
 
-## Inter-Class Function Calls
-We employ a `ServiceLocator` class to call functions defined in one class from another class, avoiding direct imports.
-**Example**:
-Register a function:
-`self.register_service(ServiceCode.SOME_CODE, self.some_function)`
-Define the function:
-```python
-def some_function(self, message):
-    # Implement functionality here
-    ...
+## Web GUI Development (Airunner Web Client)
+
+The web GUI is a React/TypeScript application located in `airunner_web_client/`.
+
+- Built with [React](https://react.dev/), [TypeScript](https://www.typescriptlang.org/), and [Vite](https://vitejs.dev/)
+- Communicates with the daemon API via REST endpoints
+- Source files are under `airunner_web_client/src/`
+
+### Building the Web Client
+
+```bash
+cd airunner_web_client
+npm install
+npm run build
 ```
-To call the function (from any class):
-`self.get_service(ServiceCode.SOME_CODE)("Hello World!")`
+
+### Running in Development
+
+```bash
+cd airunner_web_client
+npm run dev
+```
+
+The dev server runs on `http://localhost:5173` and proxies API calls to the
+daemon on port 8188.
 
 ---
 
-## Widgets, Templates, and Resources (Icons)
+## Services Development
 
-### Widgets
-Widgets are stored under `src/airunner/gui/widgets`. Each widget has a `templates` 
-directory which contains template files for the widget (see below for more information).
-- Widgets all extend from `BaseWidget`.
-- Classes are named `ExampleWidget` where `Example` is the name of the widget and `Widget` is the suffix.
-- See existing widgets for examples of how to extend `BaseWidget` and use the `widget_class_` attribute.
+### Running Tests
 
-### Templates
-- Templates are stored in a `templates` directory inside of each `widget` directory
-- Use `pyside6-designer` to edit templates
-- Build templates with `python bin/build_ui.py`
-- See existing widgets for examples of how to use templates
+```bash
+# Service unit tests
+./venv/bin/python -m pytest services/tests/test_service_bootstrap.py -v
 
-### Icons
-Icons are managed with resource files which are in turn managed with `pyside6-designer` 
-and built with a custom script (see the following list).
-- Use [svgrepo](https://www.svgrepo.com/) for icons
-- Icons are stored in `src/airunner/icons/dark` and `src/airunner/icons/light` for dark and light themes respectively.
-- Use `pyside6-designer` to add or edit icons
-- Build resources with `python bin/build_ui.py`
+# Runtime smoke tests
+./venv/bin/python scripts/run_tests.py --llm-runtime-smoke
+./venv/bin/python scripts/run_tests.py --stt-runtime-smoke
+./venv/bin/python scripts/run_tests.py --art-runtime-smoke
+./venv/bin/python scripts/run_tests.py --tts-runtime-smoke
+```
 
 ---
 
 ## Testing Guidelines
-- Test files are located in the `src/airunner/tests` directory.
-- Run all tests using:
+- Test files are located in `services/tests/` and `airunner_web_client/src/`
+  for their respective packages.
+- Run Python tests using:
   ```bash
-  python -m unittest discover -s src/airunner/tests
-  ```
-- To run a specific test, use:
-  ```bash
-  python -m unittest src/airunner/tests/test_example.py
+  ./venv/bin/python -m pytest
   ```
 - Write new tests for any new features or bug fixes. Follow the structure of existing tests.
 
 ---
 
 ## Documentation Contributions
-- Documentation is stored in the `airunner.wiki` folder.
+- Documentation is stored in the `docs/` folder and as `README.md` files in
+  relevant directories.
 - Update or add relevant sections in the appropriate `.md` files.
 - Ensure that all new features are documented.
 - Use clear and concise language.

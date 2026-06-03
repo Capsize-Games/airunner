@@ -3,6 +3,7 @@ import Spinner from "react-bootstrap/Spinner";
 import ProgressBar from "react-bootstrap/ProgressBar";
 import { BASE_URL } from "../../types/api";
 import KBRow from "./knowledge-base/KBRow";
+import LucideIcon from "../shared/LucideIcon";
 
 // ── Knowledge Base ──
 export function KnowledgeBasePanel() {
@@ -14,7 +15,6 @@ export function KnowledgeBasePanel() {
   const [progress, setProgress] = useState(0);
   const [loading, setLoading] = useState(true);
 
-  const icon = (name: string) => `/icons/lucide/dark/${name}.svg`;
 
   const reload = useCallback(async () => {
     try {
@@ -295,15 +295,14 @@ export function KnowledgeBasePanel() {
             width: 30,
             height: 30,
             padding: 4,
-            cursor: "pointer",
-            flexShrink: 0,
-          }}
-        >
-          <img
-            src={icon("upload")}
-            alt="Import"
-            style={{ width: 16, height: 16, filter: "invert(0.7)" }}
-          />
+          cursor: "pointer",
+          flexShrink: 0,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <LucideIcon name="upload" size={16} />
         </button>
         {indexing ? (
           <button
@@ -317,14 +316,13 @@ export function KnowledgeBasePanel() {
               height: 30,
               padding: 4,
               cursor: "pointer",
-              flexShrink: 0,
-            }}
-          >
-            <img
-              src={icon("circle-x")}
-              alt="Cancel"
-              style={{ width: 16, height: 16, filter: "invert(0.7)" }}
-            />
+            flexShrink: 0,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <LucideIcon name="circle-x" size={16} />
           </button>
         ) : (
           <button
@@ -338,14 +336,13 @@ export function KnowledgeBasePanel() {
               height: 30,
               padding: 4,
               cursor: "pointer",
-              flexShrink: 0,
-            }}
-          >
-            <img
-              src={icon("database")}
-              alt="Index"
-              style={{ width: 16, height: 16, filter: "invert(0.7)" }}
-            />
+            flexShrink: 0,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <LucideIcon name="database" size={16} />
           </button>
         )}
       </div>

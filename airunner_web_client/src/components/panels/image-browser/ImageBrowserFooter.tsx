@@ -1,4 +1,4 @@
-const imgFilter = "var(--theme-icon-filter)";
+import LucideIcon from "../../shared/LucideIcon";
 
 export default function ImageBrowserFooter({
   total,
@@ -33,17 +33,11 @@ export default function ImageBrowserFooter({
                 border: "none",
                 padding: 2,
                 cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
               }}
             >
-              <img
-                src="/icons/lucide/dark/circle-check.svg"
-                alt="Yes"
-                style={{
-                  width: 16,
-                  height: 16,
-                  filter: imgFilter,
-                }}
-              />
+              <LucideIcon name="circle-check" size={16} />
             </button>
             <button
               title="No"
@@ -53,17 +47,11 @@ export default function ImageBrowserFooter({
                 border: "none",
                 padding: 2,
                 cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
               }}
             >
-              <img
-                src="/icons/lucide/dark/circle-x.svg"
-                alt="No"
-                style={{
-                  width: 16,
-                  height: 16,
-                  filter: imgFilter,
-                }}
-              />
+              <LucideIcon name="circle-x" size={16} />
             </button>
           </div>
         ) : (

@@ -1,7 +1,6 @@
 import ProgressBar from "react-bootstrap/ProgressBar";
 import ArtModelSelector from "../../shared/ArtModelSelector";
-
-const icon = (name: string) => `/icons/lucide/dark/${name}.svg`;
+import LucideIcon from "../../shared/LucideIcon";
 
 export default function ArtPromptFooter({
   progress,
@@ -48,17 +47,16 @@ export default function ArtPromptFooter({
             className="btn btn-sm btn-danger p-1"
             onClick={onCancel}
             title="Cancel image generation"
-            style={{ minWidth: 30, height: 30 }}
+            style={{
+              minWidth: 30, height: 30,
+              display: "flex", alignItems: "center", justifyContent: "center",
+            }}
           >
-            <img
-              src={icon("circle-stop")}
-              alt="Cancel"
-              style={{ width: 16, height: 16, filter: "invert(1)" }}
-            />
+            <LucideIcon name="circle-stop" size={16} />
           </button>
         ) : (
           <button
-            className="btn btn-sm p-1"
+            className="btn btn-sm p-1 d-flex align-items-center justify-content-center"
             style={{
               background: "var(--bs-primary)",
               minWidth: 30,
@@ -69,11 +67,7 @@ export default function ArtPromptFooter({
             disabled={!hasPrompt}
             title="Generate image"
           >
-            <img
-              src={icon("chevron-up")}
-              alt="Generate"
-              style={{ width: 16, height: 16, filter: "invert(1)" }}
-            />
+            <LucideIcon name="chevron-up" size={16} />
           </button>
         )}
       </div>

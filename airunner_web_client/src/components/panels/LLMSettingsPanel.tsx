@@ -14,6 +14,7 @@ import PresetSelector from "./llm-settings/PresetSelector";
 import SliderFields from "./llm-settings/SliderFields";
 import CheckboxFields from "./llm-settings/CheckboxFields";
 import PrecisionSelector from "./llm-settings/PrecisionSelector";
+import LucideIcon from "../shared/LucideIcon";
 
 const DEFAULTS = {
   temperature: 0.7,
@@ -66,7 +67,6 @@ function overridesForLabel(
   return loadOverrides()[label] ?? {};
 }
 
-const icon = (name: string) => `/icons/lucide/dark/${name}.svg`;
 
 export function LLMSettingsPanel() {
   const [temperature, setTemperature] = useState(DEFAULTS.temperature);
@@ -436,15 +436,10 @@ export function LLMSettingsPanel() {
                       borderColor: "#444",
                     }}
                   >
-                    <img
-                      src={icon("rotate-ccw-square")}
-                      alt=""
-                      style={{
-                        width: 14,
-                        height: 14,
-                        filter: "invert(0.6)",
-                        marginRight: 6,
-                      }}
+                    <LucideIcon
+                      name="rotate-ccw-square"
+                      size={14}
+                      className="me-1"
                     />
                     Reset {selectedPreset}
                   </button>
@@ -458,15 +453,10 @@ export function LLMSettingsPanel() {
                       borderColor: "#444",
                     }}
                   >
-                    <img
-                      src={icon("rotate-ccw-square")}
-                      alt=""
-                      style={{
-                        width: 14,
-                        height: 14,
-                        filter: "invert(0.6)",
-                        marginRight: 6,
-                      }}
+                    <LucideIcon
+                      name="rotate-ccw-square"
+                      size={14}
+                      className="me-1"
                     />
                     Reset All
                   </button>

@@ -3,8 +3,7 @@ import { BASE_URL } from "../../../types/api";
 import type { ImageInfo } from "../../../api/client";
 import { deleteImage, renameImage } from "../../../api/client";
 import { formatFileSize, formatTimestamp } from "./LocalImageHelpers";
-
-const imgFilter = "var(--theme-icon-filter)";
+import LucideIcon from "../../../components/shared/LucideIcon";
 
 export default function ServerImageRow({
   img,
@@ -185,11 +184,7 @@ export default function ServerImageRow({
               e.currentTarget.style.opacity = "0.7";
             }}
           >
-            <img
-              src="/icons/lucide/dark/panel-right-open.svg"
-              alt="Move to canvas"
-              style={{ width: 16, height: 16, filter: imgFilter }}
-            />
+            <LucideIcon name="panel-right-open" size={16} />
           </button>
           <button
             type="button"
@@ -215,11 +210,7 @@ export default function ServerImageRow({
               e.currentTarget.style.opacity = "0.7";
             }}
           >
-            <img
-              src="/icons/lucide/dark/info.svg"
-              alt="View details"
-              style={{ width: 16, height: 16, filter: imgFilter }}
-            />
+            <LucideIcon name="info" size={16} />
           </button>
           <button
             type="button"
@@ -249,11 +240,7 @@ export default function ServerImageRow({
               e.currentTarget.style.opacity = "0.7";
             }}
           >
-            <img
-              src="/icons/lucide/dark/trash.svg"
-              alt="Delete"
-              style={{ width: 16, height: 16, filter: imgFilter }}
-            />
+            <LucideIcon name="trash" size={16} />
           </button>
 
           {confirmDeleteId === img.id && (
@@ -284,15 +271,7 @@ export default function ServerImageRow({
                   e.currentTarget.style.opacity = "0.7";
                 }}
               >
-                <img
-                  src="/icons/lucide/dark/circle-check.svg"
-                  alt="Yes"
-                  style={{
-                    width: 16,
-                    height: 16,
-                    filter: imgFilter,
-                  }}
-                />
+                <LucideIcon name="circle-check" size={16} />
               </button>
               <button
                 title="No"
@@ -317,15 +296,7 @@ export default function ServerImageRow({
                   e.currentTarget.style.opacity = "0.7";
                 }}
               >
-                <img
-                  src="/icons/lucide/dark/circle-x.svg"
-                  alt="No"
-                  style={{
-                    width: 16,
-                    height: 16,
-                    filter: imgFilter,
-                  }}
-                />
+                <LucideIcon name="circle-x" size={16} />
               </button>
             </div>
           )}

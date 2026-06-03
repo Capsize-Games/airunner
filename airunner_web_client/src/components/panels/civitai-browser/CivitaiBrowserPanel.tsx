@@ -249,8 +249,6 @@ export default function CivitaiBrowserPanel() {
       })()
     : null;
 
-  const icon = (name: string) => `/icons/lucide/dark/${name}.svg`;
-
   return (
     <div className="d-flex flex-column h-100 p-2" style={{ position: "relative" }}>
       <h6 className="text-muted mb-2">CivitAI Browser</h6>

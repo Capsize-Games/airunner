@@ -17,7 +17,6 @@
   --theme-input-bg: #1a1a2e;
   --theme-input-border: #333;
   --theme-placeholder: #666;
-  --theme-icon-filter: none;
 }
 
 [data-theme="light"] {
@@ -35,7 +34,6 @@
   --theme-input-bg: #ffffff;
   --theme-input-border: #aaa;
   --theme-placeholder: #999;
-  --theme-icon-filter: invert(1);
 }
 
 [data-theme="mint"] {
@@ -52,7 +50,7 @@
   --theme-panel-bg: #1e5c44;
   --theme-input-bg: #183c32;
   --theme-input-border: #2e8c6a;
-  --theme-icon-filter: none;
+  --theme-placeholder: #888;
 }
 
 [data-theme="neon"] {
@@ -69,7 +67,7 @@
   --theme-panel-bg: #1a1a1a;
   --theme-input-bg: #0f0f0f;
   --theme-input-border: #393e46;
-  --theme-icon-filter: none;
+  --theme-placeholder: #888;
 }
 
 /* -- Bootstrap aliases -- */
@@ -98,6 +96,31 @@
   --icon-btn-size: 35px;
   --handle-width: 4px;
 }
+
+/* ── Global hover states for buttons and links ── */
+button:not(:disabled),
+a:not(.btn) {
+  transition: opacity 0.15s ease, background-color 0.15s ease;
+}
+a:not(.btn) {
+  color: var(--bs-primary);
+  text-decoration: none;
+}
+a:not(.btn):hover {
+  opacity: 0.85;
+  text-decoration: underline;
+}
+.btn {
+  transition: opacity 0.15s ease, background-color 0.15s ease,
+    border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.btn:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+/* ── Icon color helpers (for lucide-react SVG icons) ── */
+.icon-muted { color: var(--theme-text-secondary); }
+.icon-white { color: #fff; }
 
 /* -- Global overrides for readable text on dark bg -- */
 .text-muted { color: var(--theme-text-secondary) !important; }
@@ -171,11 +194,12 @@ html, body, #root {
   border: none; background: transparent;
   border-radius: 4px; cursor: pointer;
   margin: 2px 0;
+  display: flex; align-items: center; justify-content: center;
 }
 .icon-bar button:hover { background: rgba(var(--theme-primary-rgb), 0.15); }
 .icon-bar button.active { background: var(--bs-primary); }
-.icon-bar button img { width: 20px; height: 20px; filter: var(--theme-icon-filter); }
-.icon-bar button.active img { filter: invert(1); }
+.icon-bar button svg { width: 20px; height: 20px; }
+.icon-bar button.active svg { color: #fff; }
 .icon-bar .flex-spacer { flex: 1; }
 .icon-bar hr {
   width: 24px; border: none;
@@ -294,7 +318,7 @@ html, body, #root {
   border-radius: 4px; cursor: pointer;
 }
 .kb-toolbar button:hover { background: rgba(var(--theme-primary-rgb), 0.15); }
-.kb-toolbar button img { width: 16px; height: 16px; filter: var(--theme-icon-filter); }
+.kb-toolbar button svg { width: 16px; height: 16px; }
 
 /* -- Settings popup (modal) -- */
 .settings-modal-backdrop {

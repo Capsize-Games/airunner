@@ -86,8 +86,8 @@ artifacts plus a platform-specific runtime manifest under
 
 Issue #86 adds pinned embedded Python metadata in
 `native/embedded_python/`, staged bundle assembly in
-`src/airunner/bin/build_end_user_bundle.py`, and installer packagers in
-`scripts/package_linux_appimage.sh` and
+`native/src/airunner_native/bin/build_end_user_bundle.py`, and installer
+packagers in `scripts/package_linux_appimage.sh` and
 `scripts/package_windows_nsis.ps1`.
 
 The shipped bundle layout installs AIRunner into `app/site-packages/`

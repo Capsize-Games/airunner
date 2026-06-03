@@ -15,8 +15,7 @@ import type { Message } from "../../types/api";
 import MessageList from "./MessageList";
 import ModelSelector from "./ModelSelector";
 import ActiveDocPills from "./ActiveDocPills";
-
-const icon = (name: string) => `/icons/lucide/dark/${name}.svg`;
+import LucideIcon from "../shared/LucideIcon";
 
 interface ActiveDoc {
   id: number;
@@ -289,13 +288,11 @@ export default function ChatView({
             borderRadius: 4,
             padding: "2px 4px",
             cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
           }}
         >
-          <img
-            src={icon("plus")}
-            alt="New"
-            style={{ width: 14, height: 14, filter: "invert(0.7)" }}
-          />
+          <LucideIcon name="plus" size={14} />
         </button>
       </div>
 
@@ -358,17 +355,12 @@ export default function ChatView({
                   minWidth: 30,
                   height: 30,
                   border: "none",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
                 }}
               >
-                <img
-                  src={icon("circle-x")}
-                  alt="Cancel"
-                  style={{
-                    width: 16,
-                    height: 16,
-                    filter: "invert(1)",
-                  }}
-                />
+                <LucideIcon name="circle-x" size={16} />
               </button>
             ) : (
               <button
@@ -382,17 +374,12 @@ export default function ChatView({
                   minWidth: 30,
                   height: 30,
                   border: "none",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
                 }}
               >
-                <img
-                  src={icon("chevron-up")}
-                  alt="Send"
-                  style={{
-                    width: 16,
-                    height: 16,
-                    filter: "invert(1)",
-                  }}
-                />
+                <LucideIcon name="chevron-up" size={16} />
               </button>
             )}
           </div>

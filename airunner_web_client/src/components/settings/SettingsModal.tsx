@@ -1,5 +1,6 @@
 import { useState } from "react";
 import Button from "react-bootstrap/Button";
+import LucideIcon from "../shared/LucideIcon";
 import PrivacySecuritySection from "./sections/PrivacySecurity";
 import ImageExportSection from "./sections/ImageExportSection";
 import MemorySection from "./sections/MemorySection";
@@ -108,7 +109,6 @@ export default function SettingsModal({
     }
   }
 
-  const icon = (name: string) => `/icons/lucide/dark/${name}.svg`;
 
   return (
     <div className="settings-modal-backdrop" onClick={onClose}>
@@ -126,11 +126,7 @@ export default function SettingsModal({
             onClick={onClose}
             size="sm"
           >
-            <img
-              src={icon("circle-x")}
-              alt="Close"
-              style={{ width: 20, height: 20, filter: "invert(0.6)" }}
-            />
+            <LucideIcon name="circle-x" size={20} />
           </Button>
         </div>
         <div className="settings-modal-body">

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import Form from "react-bootstrap/Form";
+import LucideIcon from "../shared/LucideIcon";
 
 interface SliderWithSpinboxProps {
   label: string;
@@ -12,8 +13,6 @@ interface SliderWithSpinboxProps {
   defaultValue?: number;
   onChange: (value: number) => void;
 }
-
-const icon = (name: string) => `/icons/lucide/dark/${name}.svg`;
 
 export default function SliderWithSpinbox({
   label,
@@ -92,15 +91,7 @@ export default function SliderWithSpinbox({
               flexShrink: 0,
             }}
           >
-            <img
-              src={icon("rotate-ccw-square")}
-              alt="Reset"
-              style={{
-                width: 16,
-                height: 16,
-                filter: "invert(0.6)",
-              }}
-            />
+            <LucideIcon name="rotate-ccw-square" size={16} />
           </button>
         )}
       </div>

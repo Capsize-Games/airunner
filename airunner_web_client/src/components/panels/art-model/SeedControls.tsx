@@ -1,6 +1,5 @@
 import Form from "react-bootstrap/Form";
-
-const icon = (name: string) => `/icons/lucide/dark/${name}.svg`;
+import LucideIcon from "../../shared/LucideIcon";
 
 export default function SeedControls({
   seed,
@@ -66,14 +65,10 @@ export default function SeedControls({
             justifyContent: "center",
           }}
         >
-          <img
-            src={icon("dices")}
-            alt="Randomize"
-            style={{
-              width: 16,
-              height: 16,
-              filter: seedRandomized ? "invert(1)" : "invert(0.6)",
-            }}
+          <LucideIcon
+            name="dices"
+            size={16}
+            className={seedRandomized ? "icon-white" : "icon-muted"}
           />
         </button>
       </div>

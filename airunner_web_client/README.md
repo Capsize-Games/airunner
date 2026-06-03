@@ -1,73 +1,58 @@
-# React + TypeScript + Vite
+# AI Runner Web Client
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+The web-based GUI for AI Runner, built with React, TypeScript, and Vite.
 
-Currently, two official plugins are available:
+## Overview
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+This is the user-facing web GUI that connects to the AI Runner daemon API.
+It provides:
 
-## React Compiler
+- **AI Companion Chat** — conversation interface with a configurable AI
+  companion with personality, mood, and memory
+- **AI Art Canvas** — layered drawing and generation surface with SDXL and
+  Z-Image Turbo support
+- **Settings** — configuration for LLM, TTS, STT, art models, and more
+- **Model Management** — built-in HuggingFace and CivitAI downloaders
+- **Knowledge Base** — document upload and RAG-based retrieval
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Development
 
-## Expanding the ESLint configuration
+### Prerequisites
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+- Node.js 18+ and npm
+- The AI Runner daemon running on port 8188
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+### Getting Started
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+cd airunner_web_client
+npm install
+npm run dev
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+The dev server starts on `http://localhost:5173` and proxies API requests to
+the daemon at `http://localhost:8188`.
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+### Building for Production
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+npm run build
 ```
+
+Output is written to `dist/`.
+
+## Architecture
+
+The web client communicates with the AI Runner daemon via REST API
+(`/api/v1/*`). It does not run any AI models directly — all LLM, image
+generation, TTS, and STT workloads are handled by the daemon and its
+managed runtimes.
+
+## Project Structure
+
+- `src/` — TypeScript/React source files
+  - `api/` — API client modules
+  - `components/` — React components organized by feature
+  - `styles/` — SCSS stylesheets
+  - `types/` — TypeScript type definitions
+- `public/` — Static assets and icon files
