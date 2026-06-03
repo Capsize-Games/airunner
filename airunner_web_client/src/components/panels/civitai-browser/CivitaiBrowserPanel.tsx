@@ -53,6 +53,8 @@ function thumbnailUrl(url: string, _width = 120): string { return url || ""; }
 interface SearchResult {
   id: number; name: string; type?: string; baseModel?: string;
   creator?: string; thumbnail?: string;
+  /** Inline base64 thumbnails from the server, keyed by size. */
+  thumbnails?: Record<string, string>;
 }
 
 function flattenItem(item: JsonObject): SearchResult {
@@ -71,6 +73,7 @@ function flattenItem(item: JsonObject): SearchResult {
     baseModel: item.baseModel ? String(item.baseModel) : undefined,
     creator: creatorName,
     thumbnail: thumbUrl || undefined,
+    thumbnails: (item.thumbnails as Record<string, string> | undefined) || undefined,
   };
 }
 
