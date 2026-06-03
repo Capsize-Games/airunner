@@ -42,7 +42,7 @@ export default function CivitaiSampleImages({
           <CivitaiImage
             url={preview.url}
             alt="Preview"
-            maxBytes={800_000}
+            width={400}
             style={{
               width: "100%",
               height: "100%",
@@ -81,7 +81,7 @@ export default function CivitaiSampleImages({
             <CivitaiImage
               url={img.url}
               alt="Thumb"
-              maxBytes={300_000}
+              width={48}
               style={{
                 width: "100%",
                 height: "100%",

@@ -6,21 +6,24 @@ interface CivitaiImageProps {
   alt: string;
   className?: string;
   style?: React.CSSProperties;
-  /** Max bytes to accept from the proxy */
+  /** Desired pixel width; server resizes + caches server-side */
+  width?: number;
+  /** Fallback if width not set */
   maxBytes?: number;
 }
 
 /**
- * Fetches a CivitAI image through the daemon proxy and displays it
- * as a blob URL. The CivitAI URL is passed as-is to the proxy which
- * enforces the max_bytes limit server-side.
+ * Fetches a CivitAI image through the daemon proxy.
+ * Passes a ``width`` parameter so the server resizes + caches,
+ * keeping response payloads small (~10-50KB for thumbnails).
  */
 export default function CivitaiImage({
   url,
   alt,
   className,
   style,
-  maxBytes = 2_000_000, // 2MB default
+  width: desiredWidth,
+  maxBytes = 3_000_000,
 }: CivitaiImageProps) {
   const [blobUrl, setBlobUrl] = useState<string | null>(null);
   const [failed, setFailed] = useState(false);
@@ -32,12 +35,14 @@ export default function CivitaiImage({
     }
     setFailed(false);
     try {
+      const body: Record<string, unknown> = { url, max_bytes: maxBytes };
+      if (desiredWidth) body.width = desiredWidth;
       const response = await fetch(
         `${BASE_URL}/api/v1/downloads/civitai/image`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ url, max_bytes: maxBytes }),
+          body: JSON.stringify(body),
         },
       );
       if (!response.ok) {
@@ -50,7 +55,7 @@ export default function CivitaiImage({
     } catch {
       setFailed(true);
     }
-  }, [url, maxBytes]);
+  }, [url, desiredWidth, maxBytes]);
 
   useEffect(() => {
     fetchImage();

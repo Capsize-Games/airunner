@@ -40,6 +40,7 @@ export default function CivitaiResultCard({
           <CivitaiImage
             url={item.thumbnail}
             alt={item.name}
+            width={40}
             style={{
               width: 40,
               height: 40,

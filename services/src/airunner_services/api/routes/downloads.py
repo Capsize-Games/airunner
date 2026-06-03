@@ -3,9 +3,15 @@
 from __future__ import annotations
 
 import asyncio
+import hashlib
+import io
 import json
 import logging
+import os
+import time
 from typing import Any
+
+from PIL import Image as PILImage
 
 from fastapi import APIRouter, HTTPException, Request, Response
 from fastapi.responses import StreamingResponse
@@ -213,22 +219,101 @@ async def fetch_civitai_browser_model_route(
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
+# Disk cache for CivitAI preview images (keyed by URL+width)
+_IMAGE_CACHE_DIR = os.path.join(
+    "/tmp", "airunner", "civitai_image_cache",
+)
+_IMAGE_CACHE_MAX_AGE = 86400  # 24 hours
+
+
+def _image_cache_path(url: str, width: int | None) -> str:
+    """Return one deterministic cache path for a CivitAI image."""
+    raw = f"{url}:{width or 'full'}"
+    digest = hashlib.sha256(raw.encode("utf-8")).hexdigest()[:16]
+    os.makedirs(_IMAGE_CACHE_DIR, exist_ok=True)
+    return os.path.join(_IMAGE_CACHE_DIR, f"{digest}.jpg")
+
+
+def _image_from_cache(path: str) -> bytes | None:
+    """Return cached image bytes or None when stale/missing."""
+    try:
+        if time.time() - os.path.getmtime(path) > _IMAGE_CACHE_MAX_AGE:
+            os.unlink(path)
+            return None
+        with open(path, "rb") as fh:
+            return fh.read()
+    except (FileNotFoundError, PermissionError, OSError):
+        return None
+
+
+def _fetch_and_maybe_resize(
+    url: str,
+    width: int | None,
+    max_bytes: int,
+) -> bytes:
+    """Fetch one CivitAI image, optionally resize, cache, return JPEG.
+
+    When ``width`` is provided the image is resized server-side to
+    keep response sizes small (typically 10-50KB for thumbnails).
+    """
+    cache_path = _image_cache_path(url, width)
+    cached = _image_from_cache(cache_path)
+    if cached is not None:
+        return cached
+
+    raw = safe_fetch_bytes(url, max_bytes=max_bytes)
+
+    if width is not None:
+        try:
+            img = PILImage.open(io.BytesIO(raw)).convert("RGB")
+            ratio = width / float(img.width)
+            h = int(float(img.height) * ratio)
+            img = img.resize((width, h), PILImage.Resampling.LANCZOS)
+            buf = io.BytesIO()
+            img.save(buf, format="JPEG", quality=85, optimize=True)
+            resized = buf.getvalue()
+            try:
+                with open(cache_path, "wb") as fh:
+                    fh.write(resized)
+            except OSError:
+                pass
+            return resized
+        except Exception:
+            pass
+
+    try:
+        with open(cache_path, "wb") as fh:
+            fh.write(raw)
+    except OSError:
+        pass
+    return raw
+
+
 @router.post("/civitai/image")
 async def fetch_civitai_image_route(
     payload: CivitaiImageRequest,
 ) -> Response:
-    """Return one CivitAI preview image through the daemon process."""
+    """Return one CivitAI preview image through the daemon process.
+
+    The image is cached on disk by URL+width for 24 hours.
+    When ``width`` is provided the image is resized server-side
+    with Pillow, keeping response payloads small regardless of
+    the original CivitAI resolution.
+    """
     try:
         image_bytes = await asyncio.to_thread(
-            safe_fetch_bytes,
+            _fetch_and_maybe_resize,
             payload.url,
-            max_bytes=payload.max_bytes,
+            payload.width,
+            payload.max_bytes,
         )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
     return Response(
         content=image_bytes,
-        media_type="application/octet-stream",
+        media_type="image/jpeg",
     )
 
 

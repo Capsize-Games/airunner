@@ -67,6 +67,10 @@ class CivitaiImageRequest(BaseModel):
 
     url: str
     max_bytes: int = Field(default=5_000_000, ge=1, le=25_000_000)
+    width: int | None = Field(
+        default=None,
+        description="Desired thumbnail width (resized server-side)",
+    )
 
 
 class UrlDownloadRequest(BaseModel):
