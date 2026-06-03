@@ -283,35 +283,15 @@ export default function CivitaiBrowserPanel() {
     return () => el.removeEventListener("scroll", handleResultsScroll);
   }, [handleResultsScroll]);
 
-  // Pre-compute how many items to fetch based on viewport size.
-  // After each search completes, update the limit for next page.
-  const [pageLimit, setPageLimit] = useState(20);
-  const resultsElRef = useRef<HTMLDivElement | null>(null);
-
-  useEffect(() => {
-    if (resultsElRef.current && results.length > 0) {
-      const cardHeight = 56; // ~56px per result card
-      const containerH = resultsElRef.current.clientHeight;
-      const visible = Math.ceil(containerH / cardHeight) + 4;
-      setPageLimit(Math.max(20, Math.min(visible, 50)));
-    }
-  }, [results.length]);
+  // Fetch up to 50 items per request (CivitAI max) to fill any viewport
+  // in a single call. Scroll-based lazy loading is only needed when
+  // there are 50+ results.
+  const pageLimit = 50;
 
   // Reset loading guard when loading finishes
   useEffect(() => {
     if (!loading) loadingRef.current = false;
   }, [loading]);
-
-  // On mount / after search, check if we need more items to fill viewport
-  useEffect(() => {
-    if (!loading && hasMore && results.length > 0 && resultsRef.current) {
-      const { scrollHeight, clientHeight } = resultsRef.current;
-      if (scrollHeight <= clientHeight) {
-        loadingRef.current = true;
-        performSearch(true);
-      }
-    }
-  }, [results.length, hasMore, loading, performSearch]);
 
   const resultsRef = useRef<HTMLDivElement | null>(null);
 
