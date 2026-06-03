@@ -22,7 +22,10 @@ export default function CivitaiImage({
   const [failed, setFailed] = useState(false);
 
   const fetchImage = useCallback(async () => {
-    if (!url) return;
+    if (!url || url === "") {
+      setFailed(true);
+      return;
+    }
     setFailed(false);
     try {
       const response = await fetch(
@@ -40,7 +43,6 @@ export default function CivitaiImage({
       const blob = await response.blob();
       const objectUrl = URL.createObjectURL(blob);
       setBlobUrl(objectUrl);
-      return () => URL.revokeObjectURL(objectUrl);
     } catch {
       setFailed(true);
     }

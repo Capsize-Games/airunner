@@ -16,6 +16,8 @@ _ALLOWED_FILE_EXTENSIONS = (".safetensors", ".gguf")
 _ALLOWED_FILE_FORMATS = {"safetensor", "gguf"}
 _BASE_MODEL_ALIASES = {
     "SDXL 1.0": "SDXL 1.0",
+    "SDXL Hyper": "SDXL Hyper",
+    "SDXL Lightning": "SDXL Lightning",
     "Z-Image Turbo": "ZImageTurbo",
     "ZImageTurbo": "ZImageTurbo",
 }
@@ -28,6 +30,9 @@ _MODEL_TYPE_ALIASES = {
     "TEXTUAL EMBEDDING": "TextualInversion",
     "TEXTUALINVERSION": "TextualInversion",
     "TEXTUAL INVERSION": "TextualInversion",
+    "CHECKPOINT": "Checkpoint",
+    "ADAPTER": "LORA",
+    "CONTROLNET": "LORA",
 }
 
 

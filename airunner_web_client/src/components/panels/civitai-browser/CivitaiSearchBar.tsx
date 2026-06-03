@@ -1,41 +1,39 @@
 import { type FormEvent } from "react";
-import { BASE_MODEL_OPTIONS, MODEL_TYPE_OPTIONS } from "./constants";
+
+interface FilterOption {
+  label: string;
+  value: string;
+}
 
 interface CivitaiSearchBarProps {
   query: string;
   baseModel: string;
   modelType: string;
+  filterOptions: {
+    baseModels: FilterOption[];
+    typesByBase: Record<string, string[]>;
+  };
   onQueryChange: (val: string) => void;
   onBaseModelChange: (val: string) => void;
   onModelTypeChange: (val: string) => void;
-  onSearch: () => void;
 }
 
 export default function CivitaiSearchBar({
   query,
   baseModel,
   modelType,
+  filterOptions,
   onQueryChange,
   onBaseModelChange,
   onModelTypeChange,
-  onSearch,
 }: CivitaiSearchBarProps) {
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
-    onSearch();
   };
 
   const modelTypes = baseModel
-    ? MODEL_TYPE_OPTIONS[baseModel] ?? []
+    ? filterOptions.typesByBase[baseModel] ?? []
     : [];
-
-  // Reset model type when base model changes and current type not in new list
-  const currentTypeValid = modelTypes.some(
-    (t) => t.value === modelType,
-  );
-  if (modelType && modelType !== "" && !currentTypeValid) {
-    // We don't call onModelTypeChange here to avoid side-effects during render
-  }
 
   return (
     <form onSubmit={handleSubmit} className="mb-2">
@@ -56,7 +54,7 @@ export default function CivitaiSearchBar({
           style={{ fontSize: 11, flex: 1 }}
         >
           <option value="">All base models</option>
-          {BASE_MODEL_OPTIONS.map((opt) => (
+          {filterOptions.baseModels.map((opt) => (
             <option key={opt.value} value={opt.value}>
               {opt.label}
             </option>
@@ -69,19 +67,12 @@ export default function CivitaiSearchBar({
           style={{ fontSize: 11, flex: 1 }}
         >
           <option value="">All types</option>
-          {modelTypes.map((opt) => (
-            <option key={opt.value} value={opt.value}>
-              {opt.label}
+          {modelTypes.map((t) => (
+            <option key={t} value={t}>
+              {t}
             </option>
           ))}
         </select>
-        <button
-          type="submit"
-          className="btn btn-sm btn-outline-primary"
-          style={{ fontSize: 11, whiteSpace: "nowrap" }}
-        >
-          Search
-        </button>
       </div>
     </form>
   );

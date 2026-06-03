@@ -148,6 +148,39 @@ async def fetch_civitai_model_info_route(
     )
 
 
+from airunner_services.downloads.civitai import _BASE_MODEL_ALIASES, _MODEL_TYPE_ALIASES
+
+
+@router.get("/civitai/options")
+async def civitai_browser_options() -> dict[str, Any]:
+    """Return available base-model and model-type filter options.
+
+    These come from the backend's CivitAI integration so the frontend
+    never needs to hardcode filter values.
+    """
+    base_models: list[dict[str, str]] = []
+    seen = set()
+    for label in _BASE_MODEL_ALIASES:
+        value = _BASE_MODEL_ALIASES[label]
+        if value not in seen:
+            seen.add(value)
+            base_models.append({"label": label, "value": value})
+
+    model_types: set[str] = set()
+    for value in _MODEL_TYPE_ALIASES.values():
+        if value not in ("Checkpoint", "LORA", "TextualInversion"):
+            continue
+        model_types.add(value)
+
+    return {
+        "base_models": base_models,
+        "model_types": sorted(model_types),
+        "model_types_by_base": {
+            bm["value"]: list(model_types) for bm in base_models
+        },
+    }
+
+
 @router.post("/civitai/models")
 async def search_civitai_models_route(
     payload: CivitaiBrowserSearchRequest,
