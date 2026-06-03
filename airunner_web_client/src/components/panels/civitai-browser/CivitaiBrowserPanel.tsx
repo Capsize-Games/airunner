@@ -476,14 +476,14 @@ export default function CivitaiBrowserPanel() {
         }}
       />
 
-      {/* Results list: collapse when a model is selected (detail takes space) */}
+      {/* Results list: capped at half the panel when a model is selected */}
       <div
         ref={resultsRef}
         className="overflow-auto mb-1"
         style={{
-          flex: selectedModelId ? "0 1 auto" : 1,
-          maxHeight: selectedModelId ? "50%" : "none",
+          flex: 1,
           minHeight: 0,
+          maxHeight: selectedModelId ? "50%" : "none",
         }}
       >
         {results.map((item) => (
