@@ -486,21 +486,47 @@ async def search_civitai_models_route(
 def _embed_version_images(
     versions: list[dict[str, Any]],
 ) -> list[dict[str, Any]]:
-    """Attach ``images_base64`` to each version (dict of size→base64 URLs)."""
+    """Attach ``images_base64`` to each version (dict of size→base64 URLs).
+
+    Fetches images in parallel to keep modal response fast.
+    """
+    # Collect all image URLs to fetch
+    url_map: list[tuple[int, int, str]] = []  # (version_idx, img_idx, url)
+    for vi, version in enumerate(versions):
+        for ii, img in enumerate(version.get("images", [])):
+            url = str(img.get("url") or img.get("thumbnailUrl") or "")
+            if url:
+                url_map.append((vi, ii, url))
+
+    if not url_map:
+        logger.info("_embed_version_images: no images to embed")
+        return versions
+
+    # Fetch all images in parallel
+    fetched: dict[tuple[int, int], dict[str, bytes]] = {}
+    with ThreadPoolExecutor(max_workers=_THUMBNAIL_WORKERS) as pool:
+        fut_map = {
+            pool.submit(_fetch_and_prepare_sizes, url): (vi, ii)
+            for vi, ii, url in url_map
+        }
+        for fut in as_completed(fut_map):
+            key = fut_map[fut]
+            try:
+                fetched[key] = fut.result()
+            except Exception:
+                fetched[key] = {}
+
+    # Build output
     out: list[dict[str, Any]] = []
-    for version in versions:
+    for vi, version in enumerate(versions):
         raw_images = version.get("images", [])
         embedded: list[dict[str, Any]] = []
-        for img in raw_images:
+        for ii, img in enumerate(raw_images):
             url = str(img.get("url") or img.get("thumbnailUrl") or "")
+            sizes = fetched.get((vi, ii), {})
             imgs_b64: dict[str, str] = {}
-            if url:
-                try:
-                    sizes = _fetch_and_prepare_sizes(url)
-                    for name, blob in sizes.items():
-                        imgs_b64[name] = base64.b64encode(blob).decode()
-                except Exception:
-                    pass
+            for name, blob in sizes.items():
+                imgs_b64[name] = base64.b64encode(blob).decode()
             embedded.append({
                 "url": url,
                 "nsfw": img.get("nsfw"),
@@ -509,9 +535,10 @@ def _embed_version_images(
                 "images_base64": imgs_b64,
             })
         out.append({**version, "images": embedded})
+
     logger.info(
-        "_embed_version_images: %d versions, total images embedded",
-        len(versions),
+        "_embed_version_images: %d versions, %d images",
+        len(versions), len(url_map),
     )
     return out
 

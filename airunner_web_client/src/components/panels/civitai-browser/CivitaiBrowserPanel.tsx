@@ -237,6 +237,7 @@ export default function CivitaiBrowserPanel() {
               nsfw: img.nsfw ? String(img.nsfw) : undefined,
               width: img.width ? Number(img.width) : undefined,
               height: img.height ? Number(img.height) : undefined,
+              images_base64: (img.images_base64 as Record<string, string> | undefined) || undefined,
             })),
           })),
         };
