@@ -12,7 +12,35 @@ interface CivitaiImageProps {
   maxBytes?: number;
 }
 
-// Module-level cache: URL+width -> blob URL, shared across all instances
+// ── Shared SSE connection (one EventSource for all components) ──
+
+const _readyListeners = new Set<(url: string) => void>();
+let _readySource: EventSource | null = null;
+
+function ensureReadySource() {
+  if (_readySource) return;
+  _readySource = new EventSource(
+    `${BASE_URL}/api/v1/downloads/civitai/images/ready`,
+  );
+  _readySource.addEventListener("message", (event) => {
+    try {
+      const data = JSON.parse(event.data);
+      if (data.type === "image_ready" && data.url) {
+        _readyListeners.forEach((fn) => fn(data.url));
+      }
+    } catch { /* */ }
+  });
+  _readySource.onerror = () => { /* auto-reconnect */ };
+}
+
+function subscribeReady(fn: (url: string) => void) {
+  _readyListeners.add(fn);
+  ensureReadySource();
+  return () => { _readyListeners.delete(fn); };
+}
+
+// ── Module-level cache: URL+width -> blob URL, shared across all instances ──
+
 const _blobCache = new Map<string, string>();
 
 function cacheKey(url: string, width?: number): string {
@@ -39,23 +67,15 @@ export default function CivitaiImage({
   );
   const [failed, setFailed] = useState(false);
 
-  // Subscribe to image-ready SSE for retry on failure
+  // Subscribe to image-ready SSE (shared connection) for retry on failure
   useEffect(() => {
-    const eventSource = new EventSource(
-      `${BASE_URL}/api/v1/downloads/civitai/images/ready`,
-    );
-    eventSource.addEventListener("message", (event) => {
-      try {
-        const data = JSON.parse(event.data);
-        if (data.type === "image_ready" && data.url === url) {
-          // Image now cached — retry the fetch
-          eventSource.close();
-          fetchImage();
-        }
-      } catch { /* */ }
+    const unsub = subscribeReady((readyUrl) => {
+      if (readyUrl === url) {
+        // Image now cached — retry the fetch
+        fetchImage();
+      }
     });
-    eventSource.onerror = () => { /* auto-reconnect */ };
-    return () => eventSource.close();
+    return unsub;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [url]);
 

@@ -1,20 +1,29 @@
 import { BASE_URL, type JsonObject, type StreamChunk } from "../types/api";
 
+const REQUEST_TIMEOUT_MS = 30_000;
+
 export async function request<T>(
   method: string,
   path: string,
   body?: JsonObject,
 ): Promise<T> {
-  const response = await fetch(`${BASE_URL}${path}`, {
-    method,
-    headers: body ? { "Content-Type": "application/json" } : undefined,
-    body: body ? JSON.stringify(body) : undefined,
-  });
-  if (!response.ok) {
-    const text = await response.text().catch(() => "");
-    throw new Error(`${response.status} ${response.statusText}: ${text}`);
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  try {
+    const response = await fetch(`${BASE_URL}${path}`, {
+      method,
+      headers: body ? { "Content-Type": "application/json" } : undefined,
+      body: body ? JSON.stringify(body) : undefined,
+      signal: controller.signal,
+    });
+    if (!response.ok) {
+      const text = await response.text().catch(() => "");
+      throw new Error(`${response.status} ${response.statusText}: ${text}`);
+    }
+    return response.json() as Promise<T>;
+  } finally {
+    clearTimeout(timer);
   }
-  return response.json() as Promise<T>;
 }
 
 export async function* streamRequest(

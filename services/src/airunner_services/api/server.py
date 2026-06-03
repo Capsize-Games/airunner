@@ -231,8 +231,10 @@ def create_app(
     async def api_key_auth_middleware(request: Request, call_next):
         path = request.url.path
 
-        # Always allow health checks without auth.
+        # Always allow health checks and CORS preflights without auth.
         if path in {"/health", "/api/v1/health"}:
+            return await call_next(request)
+        if request.method == "OPTIONS":
             return await call_next(request)
 
         # When API key auth is disabled, default to loopback-only unless explicitly overridden.
@@ -262,11 +264,16 @@ def create_app(
     # Configure CORS
     if enable_cors:
         if allowed_origins is None:
+            # Include explicit Vite dev server origin so the web client
+            # can connect directly (bypassing the Vite proxy which stalls
+            # on consecutive POSTs over the same upstream connection).
             allowed_origins = [
                 "http://localhost",
                 "http://localhost:*",
                 "http://127.0.0.1",
                 "http://127.0.0.1:*",
+                "http://localhost:5173",
+                "http://127.0.0.1:5173",
             ]
 
         app.add_middleware(

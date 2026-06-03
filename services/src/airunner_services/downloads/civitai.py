@@ -2,11 +2,14 @@
 
 from __future__ import annotations
 
+import logging
 import re
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional
 
 import requests
+
+logger = logging.getLogger(__name__)
 
 ProgressCallback = Callable[[int, int], None]
 CancelCallback = Callable[[], bool]
@@ -68,24 +71,42 @@ def search_models(
     api_key: str = "",
 ) -> Dict[str, Any]:
     """Return one filtered CivitAI model-search payload."""
+    url = f"{_CIVITAI_API_URL}/models"
+    params = _search_params(
+        query=query,
+        base_models=base_models,
+        model_types=model_types,
+        limit=limit,
+        cursor=cursor,
+    )
+    logger.info(
+        "Calling CivitAI API: %s params=%s cursor=%s",
+        url, {k: v for k, v in params.items() if k != "cursor"},
+        "set" if cursor else None,
+    )
     response = requests.get(
-        f"{_CIVITAI_API_URL}/models",
-        params=_search_params(
-            query=query,
-            base_models=base_models,
-            model_types=model_types,
-            limit=limit,
-            cursor=cursor,
-        ),
+        url,
+        params=params,
         headers=_auth_headers(api_key),
         timeout=30,
     )
+    logger.info(
+        "CivitAI API responded: status=%s content_length=%s",
+        response.status_code,
+        response.headers.get("content-length", "unknown"),
+    )
     response.raise_for_status()
     payload = response.json()
+    raw_count = len(payload.get("items", []))
     payload["items"] = _filter_model_items(
         payload.get("items", []),
         base_models,
         model_types,
+    )
+    logger.info(
+        "CivitAI search filtered: %d raw items → %d filtered items",
+        raw_count,
+        len(payload.get("items", [])),
     )
     return payload
 

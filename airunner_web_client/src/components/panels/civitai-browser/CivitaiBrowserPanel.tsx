@@ -112,6 +112,7 @@ export default function CivitaiBrowserPanel() {
   const loadingRef = useRef(false);
   const hasMoreRef = useRef(true);
   const fillCountRef = useRef(0);
+  const doSearchRef = useRef<(append?: boolean) => void>(() => {});
 
   // Load filter options on mount
   useEffect(() => { fetchFilterOptions().then((opts) => setFilterOptions({ baseModels: opts.baseModels, typesByBase: opts.typesByBase })).catch(() => {}); }, []);
@@ -122,6 +123,8 @@ export default function CivitaiBrowserPanel() {
     if (!shouldSearch()) return;
     loadingRef.current = true;
     setLoading(true);
+    const pageLabel = append ? `page-2 (cursor=${cursorRef.current?.slice(0, 20)}...)` : "page-1";
+    console.log(`[CivitAI] doSearch ${pageLabel} — sending POST`);
     try {
       const data = await searchCivitaiModels({
         query,
@@ -130,6 +133,7 @@ export default function CivitaiBrowserPanel() {
         limit: 20,
         cursor: append ? cursorRef.current : null,
       });
+      console.log(`[CivitAI] doSearch ${pageLabel} — got response, items=${(data.items as unknown[])?.length}`);
       const items = ((data.items ?? []) as JsonObject[]).map(flattenItem);
       setResults((prev) => (append ? [...prev, ...items] : items));
       const next = ((data.metadata as JsonObject | undefined)?.nextCursor as string) ?? null;
@@ -137,9 +141,14 @@ export default function CivitaiBrowserPanel() {
       hasMoreRef.current = next !== null;
       setCursor(next);
       setHasMore(next !== null);
-    } catch (err) { console.error("CivitAI search failed:", err); }
+    } catch (err) {
+      console.error(`[CivitAI] doSearch ${pageLabel} — FAILED:`, err);
+    }
     finally { setLoading(false); loadingRef.current = false; }
   }, [query, baseModel, modelType]);
+
+  // Keep ref in sync so event handlers never capture stale closures
+  useEffect(() => { doSearchRef.current = doSearch; }, [doSearch]);
 
   const debouncedSearch = useCallback((append = false) => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
@@ -159,7 +168,7 @@ export default function CivitaiBrowserPanel() {
     if (!loading && hasMore && results.length > 0 && resultsElRef.current) {
       if (resultsElRef.current.scrollHeight <= resultsElRef.current.clientHeight && fillCountRef.current < 4) {
         fillCountRef.current++;
-        doSearch(true);
+        doSearchRef.current(true);
       } else { fillCountRef.current = 0; }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -175,7 +184,7 @@ export default function CivitaiBrowserPanel() {
         if (loadingRef.current || !hasMoreRef.current) return;
         const { scrollTop, scrollHeight, clientHeight } = el;
         if (scrollHeight - scrollTop - clientHeight < 150) {
-          doSearch(true);
+          doSearchRef.current(true);
         }
       };
       el.addEventListener("scroll", onScroll, { passive: true });

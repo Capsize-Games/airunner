@@ -188,15 +188,40 @@ async def search_civitai_models_route(
     payload: CivitaiBrowserSearchRequest,
 ) -> dict[str, Any]:
     """Return one filtered CivitAI browser search payload."""
-    return await asyncio.to_thread(
-        search_civitai_models,
+    logger.info(
+        "CivitAI search request: query=%r base_models=%s "
+        "model_types=%s limit=%s cursor=%s",
         payload.query,
-        base_models=payload.base_models,
-        model_types=payload.model_types,
-        limit=payload.limit,
-        cursor=payload.cursor,
-        api_key=payload.api_key or "",
+        payload.base_models,
+        payload.model_types,
+        payload.limit,
+        "set" if payload.cursor else None,
     )
+    try:
+        result = await asyncio.to_thread(
+            search_civitai_models,
+            payload.query,
+            base_models=payload.base_models,
+            model_types=payload.model_types,
+            limit=payload.limit,
+            cursor=payload.cursor,
+            api_key=payload.api_key or "",
+        )
+        item_count = len(result.get("items", []))
+        next_cursor = (
+            result.get("metadata", {}).get("nextCursor")
+            if isinstance(result.get("metadata"), dict)
+            else None
+        )
+        logger.info(
+            "CivitAI search OK: %d items, nextCursor=%s",
+            item_count,
+            "set" if next_cursor else None,
+        )
+        return result
+    except Exception:
+        logger.exception("CivitAI search failed")
+        raise
 
 
 @router.post("/civitai/model")

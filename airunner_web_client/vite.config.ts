@@ -12,6 +12,22 @@ export default defineConfig({
         secure: false,
         proxyTimeout: 60_000,
         timeout: 60_000,
+        configure: (proxy) => {
+          proxy.on('error', (err, req, res) => {
+            console.error('[vite-proxy] error:', err.message, 'url:', req.url);
+            const serverResponse = res as unknown as import('http').ServerResponse;
+            if (!serverResponse.headersSent) {
+              serverResponse.writeHead(502, { 'Content-Type': 'application/json' });
+              serverResponse.end(JSON.stringify({ error: 'Proxy error', detail: err.message }));
+            }
+          });
+          proxy.on('proxyReq', (proxyReq, req) => {
+            console.log('[vite-proxy] →', req.method, req.url);
+          });
+          proxy.on('proxyRes', (proxyRes, req) => {
+            console.log('[vite-proxy] ←', req.method, req.url, proxyRes.statusCode);
+          });
+        },
       },
     },
   },
