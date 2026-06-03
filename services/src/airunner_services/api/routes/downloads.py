@@ -203,7 +203,7 @@ async def civitai_browser_options() -> dict[str, Any]:
 # ── CivitAI search cache (72h TTL, server-side, file-backed) ──
 
 _SEARCH_CACHE_DIR = os.path.join(
-    "/tmp", "airunner", "civitai_search_cache",
+    AIRUNNER_BASE_PATH, "cache", "civitai_search",
 )
 _SEARCH_CACHE_TTL = 72 * 3600  # 72 hours
 
@@ -245,7 +245,7 @@ def _search_cache_set(key: str, data: dict[str, Any]) -> None:
 # ── CivitAI image cache (permanent, sized) ──
 
 _IMAGE_CACHE_DIR = os.path.join(
-    "/tmp", "airunner", "civitai_image_cache",
+    AIRUNNER_BASE_PATH, "cache", "civitai_images",
 )
 _IMAGE_MAX_PX = 500  # longest side
 

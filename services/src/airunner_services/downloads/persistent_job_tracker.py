@@ -11,7 +11,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any, Optional
 
-from airunner_services.settings import AIRUNNER_LOG_LEVEL
+from airunner_services.settings import AIRUNNER_BASE_PATH, AIRUNNER_LOG_LEVEL
 from airunner_services.utils.application import get_logger
 
 
@@ -27,7 +27,7 @@ class JobStatus:
     CANCELLED = "cancelled"
     INTERRUPTED = "interrupted"
 
-_JOBS_DIR = os.path.join("/tmp", "airunner", "download_jobs")
+_JOBS_DIR = os.path.join(AIRUNNER_BASE_PATH, "cache", "download_jobs")
 _TERMINAL_MAX_AGE = 3600  # clean up terminal jobs after 1 hour
 
 
