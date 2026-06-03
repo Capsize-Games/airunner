@@ -222,6 +222,7 @@ export default function CivitaiBrowserPanel() {
               id: Number(f.id), name: String(f.name ?? ""),
               sizeKB: f.sizeKB ? Number(f.sizeKB) : undefined,
               downloadUrl: f.downloadUrl ? String(f.downloadUrl) : undefined,
+              downloaded: f.downloaded === true,
             })),
             images: ((v.images ?? []) as JsonObject[]).map((img: JsonObject) => ({
               url: String(img.url ?? img.thumbnailUrl ?? ""),

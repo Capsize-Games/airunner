@@ -29,6 +29,8 @@ interface CivitaiFile {
   name: string;
   sizeKB?: number;
   downloadUrl?: string;
+  /** Server sets this to true when the file already exists on disk. */
+  downloaded?: boolean;
 }
 
 interface ModelDetailData {
@@ -553,13 +555,8 @@ function DownloadButton({
   const { markCompleted, isDownloaded } = useDownloads();
   const downloadUrl = selectedFile?.downloadUrl;
 
-  // Check both: active/downloaded from localStorage AND completed history
-  const match = downloadUrl
-    ? downloads.find((d) => d.downloadUrl === downloadUrl)
-    : null;
-  const alreadyDownloaded = downloadUrl ? isDownloaded(downloadUrl) : false;
-
-  if (alreadyDownloaded && !match) {
+  // Check: server-reported file existence, active downloads, and history
+  if (selectedFile?.downloaded) {
     return (
       <div
         style={{
@@ -578,6 +575,29 @@ function DownloadButton({
     );
   }
 
+  const alreadyDownloaded = downloadUrl ? isDownloaded(downloadUrl) : false;
+  if (alreadyDownloaded) {
+    return (
+      <div
+        style={{
+          flex: 1,
+          padding: "6px 12px",
+          borderRadius: 4,
+          background: "rgba(0,200,100,0.15)",
+          border: "1px solid rgba(0,200,100,0.25)",
+          color: "#66ddaa",
+          fontSize: 12,
+          textAlign: "center",
+        }}
+      >
+        Downloaded
+      </div>
+    );
+  }
+
+  const match = downloadUrl
+    ? downloads.find((d) => d.downloadUrl === downloadUrl)
+    : null;
   if (match) {
     return (
       <DownloadStatusButton

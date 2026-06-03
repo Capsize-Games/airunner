@@ -538,7 +538,11 @@ def _embed_version_images(
 async def fetch_civitai_browser_model_route(
     payload: CivitaiBrowserModelRequest,
 ) -> dict[str, Any]:
-    """Return one filtered model detail with all images embedded as base64."""
+    """Return one filtered model detail with all images embedded as base64.
+
+    Each file entry includes a ``downloaded`` boolean indicating whether
+    the file already exists on disk at the expected download path.
+    """
     logger.info(
         "CivitAI model detail request: model_id=%s", payload.model_id,
     )
@@ -553,6 +557,21 @@ async def fetch_civitai_browser_model_route(
         raw["modelVersions"] = _embed_version_images(
             raw.get("modelVersions", []),
         )
+
+        # Check which files already exist on disk
+        base_model = (
+            payload.base_models[0] if payload.base_models else None
+        )
+        model_type = (
+            payload.model_types[0] if payload.model_types else None
+        )
+        if base_model and model_type:
+            _mark_downloaded_files(
+                raw.get("modelVersions", []),
+                base_model,
+                model_type,
+            )
+
         total_b64 = sum(
             len(v) for version in raw.get("modelVersions", [])
             for img in version.get("images", [])
@@ -566,6 +585,23 @@ async def fetch_civitai_browser_model_route(
         return raw
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+def _mark_downloaded_files(
+    versions: list[dict[str, Any]],
+    base_model: str,
+    model_type: str,
+) -> None:
+    """Set ``downloaded`` on each file if it exists at the resolved path."""
+    for version in versions:
+        for f in version.get("files", []):
+            filename = f.get("name", "")
+            if not filename:
+                continue
+            path = _resolve_model_download_path(
+                base_model, model_type, filename,
+            )
+            f["downloaded"] = os.path.isfile(path)
 
 
 # ── Legacy single-image endpoint (fallback) ──
