@@ -3,6 +3,7 @@ import { BASE_URL } from "../../../types/api";
 import CivitaiImage from "./CivitaiImage";
 import DownloadProgress from "../../downloads/DownloadProgress";
 import { startCivitaiFileDownload, cancelDownloadJob } from "../../../api/downloads";
+import { useDownloads } from "../../downloads/useDownloadState";
 import type { JsonObject } from "../../../types/api";
 
 interface VersionImage {
@@ -44,47 +45,30 @@ interface CivitaiModelDetailModalProps {
   model: ModelDetailData | null;
   onClose: () => void;
   loading?: boolean;
+  /** Current base model filter (e.g. "SDXL 1.0") for download metadata. */
+  baseModel?: string;
+  /** Current model type filter (e.g. "Checkpoint") for download metadata. */
+  modelType?: string;
 }
 
 function stripHtml(html: string): string {
   return html.replace(/<[^>]*>/g, "").trim();
 }
 
-const DOWNLOADS_STORAGE_KEY = "airunner_active_downloads";
 
-/** Read persisted download jobs from localStorage. */
-function loadPersistedDownloads(): DownloadJob[] {
-  try {
-    const raw = localStorage.getItem(DOWNLOADS_STORAGE_KEY);
-    return raw ? JSON.parse(raw) : [];
-  } catch {
-    return [];
-  }
-}
-
-/** Write the download list to localStorage so it survives page reloads. */
-function persistDownloads(downloads: DownloadJob[]): void {
-  try {
-    localStorage.setItem(DOWNLOADS_STORAGE_KEY, JSON.stringify(downloads));
-  } catch { /* */ }
-}
-
-interface DownloadJob {
-  jobId: string;
-  label: string;
-}
 
 export default function CivitaiModelDetailModal({
   model,
   onClose,
   loading,
+  baseModel: currentBaseModel,
+  modelType: currentModelType,
 }: CivitaiModelDetailModalProps) {
   const [selectedVersionId, setSelectedVersionId] = useState<number | null>(null);
   const [selectedFileId, setSelectedFileId] = useState<number | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string>("");
   const [previewBase64, setPreviewBase64] = useState<string>("");
-  const [downloads, setDownloads] = useState<DownloadJob[]>(loadPersistedDownloads);
-  const [downloadCancel, setDownloadCancel] = useState<Record<string, boolean>>({});
+  const { downloads, addDownload, removeDownload } = useDownloads();
   const [showApiKeyPrompt, setShowApiKeyPrompt] = useState(false);
   const [apiKey, setApiKey] = useState("");
   const [pendingDownloadUrl, setPendingDownloadUrl] = useState<string | null>(null);
@@ -163,10 +147,13 @@ export default function CivitaiModelDetailModal({
         api_key: key ?? "",
       });
       if (result.job_id) {
-        setDownloads((prev) => {
-          const next = [...prev, { jobId: result.job_id, label: selectedFile.name }];
-          persistDownloads(next);
-          return next;
+        addDownload({
+          jobId: result.job_id,
+          label: selectedFile.name,
+          modelName: model?.name,
+          baseModel: currentBaseModel,
+          modelType: currentModelType,
+          startedAt: new Date().toISOString(),
         });
       }
     } catch { /* */ }
@@ -416,20 +403,15 @@ export default function CivitaiModelDetailModal({
           {/* Action buttons */}
           <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
             {downloads.find((d) => d.label === (selectedFile?.name ?? "")) ? (
-              <button
-                onClick={async () => {
-                  const d = downloads.find((dl) => dl.label === (selectedFile?.name ?? ""));
-                  if (!d) return;
-                  setDownloadCancel((prev) => ({ ...prev, [d.jobId]: true }));
-                  try {
-                    await cancelDownloadJob(d.jobId);
-                    setDownloads((prev) => {
-                      const next = prev.filter((dl) => dl.jobId !== d.jobId);
-                      persistDownloads(next);
-                      return next;
-                    });
-                  } catch { /* */ }
-                }}
+          <button
+            onClick={async () => {
+              const d = downloads.find((dl) => dl.label === (selectedFile?.name ?? ""));
+              if (!d) return;
+              try {
+                await cancelDownloadJob(d.jobId);
+                removeDownload(d.jobId);
+              } catch { /* */ }
+            }}
                 style={{
                   flex: 1,
                   padding: "6px 12px",

@@ -55,8 +55,14 @@ async function fetchFilterOptions(): Promise<{ baseModels: FilterOption[]; model
 
 export default function CivitaiBrowserPanel() {
   const [query, setQuery] = useState("");
-  const [baseModel, setBaseModel] = useState("");
-  const [modelType, setModelType] = useState("");
+  const [baseModel, setBaseModel] = useState(() => {
+    try { return localStorage.getItem("airunner_civitai_base_model") ?? ""; }
+    catch { return ""; }
+  });
+  const [modelType, setModelType] = useState(() => {
+    try { return localStorage.getItem("airunner_civitai_model_type") ?? ""; }
+    catch { return ""; }
+  });
   const [results, setResults] = useState<SearchResult[]>([]);
   const [cursor, setCursor] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -233,6 +239,8 @@ export default function CivitaiBrowserPanel() {
         <CivitaiModelDetailModal
           model={modelDetail}
           loading={detailLoading}
+          baseModel={baseModel}
+          modelType={modelType}
           onClose={() => { setSelectedModelId(null); setSelectedModelData(null); }}
         />
       )}

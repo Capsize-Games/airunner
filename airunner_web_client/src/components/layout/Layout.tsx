@@ -17,6 +17,7 @@ import GridPanel from "../panels/GridPanel";
 import ImageBrowserPanel from "../panels/ImageBrowserPanel";
 import StatsPanel from "../panels/StatsPanel";
 import CivitaiBrowserPanel from "../panels/civitai-browser/CivitaiBrowserPanel";
+import DownloadTray from "../downloads/DownloadTray";
 import TopBar from "./TopBar";
 import { LeftIconBar, RightIconBar } from "./IconBar";
 
@@ -423,6 +424,9 @@ export default function Layout({
           onOpenSettings={onOpenSettings}
         />
       </div>
+
+      {/* ── Download tray ── */}
+      <DownloadTray />
 
       {/* ── Footer ── */}
       <div className="footer-bar">
