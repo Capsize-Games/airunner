@@ -281,6 +281,8 @@ def _notify_image_ready(url: str) -> None:
 
 def _retry_worker() -> None:
     """Background thread: retries failed CivitAI image fetches."""
+    from airunner_services.url_safety import SSRFBlocked
+
     while True:
         try:
             url, width, max_bytes = _retry_queue.get(timeout=5)
@@ -291,11 +293,16 @@ def _retry_worker() -> None:
             cache_path = _image_cache_path(url, width)
             if _image_from_cache(cache_path) is not None:
                 continue
+
+            # Use generous limit (10MB) for retries — full-res CivitAI
+            # images can be 3-5MB, and SSRFBlocked("response too large")
+            # would cause infinite re-queue loops.
+            retry_max_bytes = max(max_bytes or 0, 10_000_000)
             logger.info(
-                "CivitAI image RETRY — fetching from CivitAI  width=%s",
-                width,
+                "CivitAI RETRY — fetching w=%s  max=%s",
+                width, retry_max_bytes,
             )
-            raw = safe_fetch_bytes(url, max_bytes=max_bytes)
+            raw = safe_fetch_bytes(url, max_bytes=retry_max_bytes)
             if width is not None:
                 try:
                     img = PILImage.open(io.BytesIO(raw)).convert("RGB")
@@ -312,8 +319,17 @@ def _retry_worker() -> None:
             else:
                 _write_cache(cache_path, raw)
             _notify_image_ready(url)
+        except SSRFBlocked:
+            logger.warning(
+                "CivitAI RETRY — SSRFBlocked (response too large) "
+                "w=%s — dropping",
+                width,
+            )
         except Exception:
-            # Re-queue for another retry
+            logger.warning(
+                "CivitAI RETRY — error, re-queuing  w=%s",
+                width,
+            )
             _retry_queue.put((url, width, max_bytes))
             time.sleep(2.0)
 
