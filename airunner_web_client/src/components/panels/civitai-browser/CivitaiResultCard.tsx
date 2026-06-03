@@ -7,6 +7,8 @@ interface ResultItem {
   baseModel?: string;
   creator?: string;
   thumbnail?: string;
+  /** Inline base64 thumbnails from the server, keyed by size. */
+  thumbnails?: Record<string, string>;
 }
 
 interface CivitaiResultCardProps {
@@ -20,6 +22,7 @@ export default function CivitaiResultCard({
   selected,
   onSelect,
 }: CivitaiResultCardProps) {
+  const thumbBase64 = item.thumbnails?.small;
   return (
     <div
       data-model-id={item.id}
@@ -37,11 +40,11 @@ export default function CivitaiResultCard({
       }}
     >
       <div style={{ flexShrink: 0, width: 40, height: 40 }}>
-        {item.thumbnail ? (
+        {thumbBase64 ? (
           <CivitaiImage
-            url={item.thumbnail}
+            url=""
             alt={item.name}
-            width={40}
+            base64={thumbBase64}
             style={{
               width: 40,
               height: 40,

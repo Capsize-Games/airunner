@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import base64
 import hashlib
 import io
 import json
@@ -54,6 +55,9 @@ def get_download_job_service(request: Request) -> DownloadJobService:
     return service
 
 
+# ── HuggingFace endpoints ──
+
+
 @router.post(
     "/huggingface",
     response_model=DownloadJobAcceptedResponse,
@@ -93,6 +97,9 @@ async def start_huggingface_file_download(
     return DownloadJobAcceptedResponse(job_id=job_id)
 
 
+# ── URL endpoints ──
+
+
 @router.post(
     "/url",
     response_model=DownloadJobAcceptedResponse,
@@ -112,6 +119,9 @@ async def start_url_download(
     return DownloadJobAcceptedResponse(job_id=job_id)
 
 
+# ── NLTK endpoints ──
+
+
 @router.post(
     "/nltk",
     response_model=DownloadJobAcceptedResponse,
@@ -126,35 +136,17 @@ async def start_nltk_download(
     return DownloadJobAcceptedResponse(job_id=job_id)
 
 
-@router.post(
-    "/civitai/file",
-    response_model=DownloadJobAcceptedResponse,
-)
-async def start_civitai_file_download(
-    payload: CivitaiFileDownloadRequest,
-    request: Request,
-) -> DownloadJobAcceptedResponse:
-    """Queue one single-file CivitAI download job."""
-    service = get_download_job_service(request)
-    job_id = await service.start_civitai_file_download(
-        payload.url,
-        output_path=payload.output_path,
-        file_size=payload.file_size,
-        api_key=payload.api_key,
-    )
-    return DownloadJobAcceptedResponse(job_id=job_id)
+# ── CivitAI common endpoints ──
 
 
-@router.post("/civitai/info")
-async def fetch_civitai_model_info_route(
-    payload: CivitaiModelInfoRequest,
-) -> dict[str, Any]:
-    """Return one selected-version-aware CivitAI model payload."""
-    return await asyncio.to_thread(
-        fetch_civitai_model_info_service,
-        payload.url,
-        payload.api_key or "",
-    )
+def _thumbnail_url(item: dict[str, Any]) -> str | None:
+    """Extract the first usable thumbnail URL from a CivitAI search item."""
+    versions = item.get("modelVersions", [])
+    if versions:
+        images = versions[0].get("images", [])
+        if images:
+            return str(images[0].get("url") or images[0].get("thumbnailUrl") or "")
+    return None
 
 
 @router.get("/civitai/options")
@@ -183,14 +175,186 @@ async def civitai_browser_options() -> dict[str, Any]:
     }
 
 
+# ── CivitAI search cache (72h TTL, server-side, file-backed) ──
+
+_SEARCH_CACHE_DIR = os.path.join(
+    "/tmp", "airunner", "civitai_search_cache",
+)
+_SEARCH_CACHE_TTL = 72 * 3600  # 72 hours
+
+
+def _search_cache_key(
+    query: str,
+    base_models: list[str] | None,
+    model_types: list[str] | None,
+    cursor: str | None,
+) -> str:
+    raw = json.dumps(
+        [query, base_models, model_types, cursor], sort_keys=True,
+    )
+    return hashlib.sha256(raw.encode()).hexdigest()[:32]
+
+
+def _search_cache_get(key: str) -> dict[str, Any] | None:
+    path = os.path.join(_SEARCH_CACHE_DIR, f"{key}.json")
+    try:
+        if time.time() - os.path.getmtime(path) > _SEARCH_CACHE_TTL:
+            os.unlink(path)
+            return None
+        with open(path, "r") as fh:
+            return json.load(fh)
+    except OSError:
+        return None
+
+
+def _search_cache_set(key: str, data: dict[str, Any]) -> None:
+    os.makedirs(_SEARCH_CACHE_DIR, exist_ok=True)
+    path = os.path.join(_SEARCH_CACHE_DIR, f"{key}.json")
+    try:
+        with open(path, "w") as fh:
+            json.dump(data, fh)
+    except OSError:
+        pass
+
+
+# ── CivitAI image cache (permanent, sized) ──
+
+_IMAGE_CACHE_DIR = os.path.join(
+    "/tmp", "airunner", "civitai_image_cache",
+)
+_IMAGE_MAX_PX = 500  # longest side
+
+
+def _image_cache_path(url: str, suffix: str) -> str:
+    """Return cache path for one named size of one image."""
+    digest = hashlib.sha256(url.encode("utf-8")).hexdigest()[:16]
+    subdir = os.path.join(_IMAGE_CACHE_DIR, suffix)
+    os.makedirs(subdir, exist_ok=True)
+    return os.path.join(subdir, f"{digest}.jpg")
+
+
+def _image_from_cache(path: str) -> bytes | None:
+    """Return cached image bytes or None when missing (permanent cache)."""
+    try:
+        with open(path, "rb") as fh:
+            return fh.read()
+    except OSError:
+        return None
+
+
+def _write_cache(path: str, data: bytes) -> None:
+    """Write to disk cache."""
+    try:
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        with open(path, "wb") as fh:
+            fh.write(data)
+    except OSError:
+        pass
+
+
+def _resize_image(raw: bytes, target_px: int) -> bytes:
+    """Resize one image so the longest side is ``target_px``, return JPEG."""
+    try:
+        img = PILImage.open(io.BytesIO(raw)).convert("RGB")
+        ratio = target_px / max(img.width, img.height)
+        if ratio >= 1.0 and target_px >= _IMAGE_MAX_PX:
+            # Full-size: cap at _IMAGE_MAX_PX but never upscale
+            ratio = min(1.0, _IMAGE_MAX_PX / max(img.width, img.height))
+        new_w = max(1, int(img.width * ratio))
+        new_h = max(1, int(img.height * ratio))
+        img = img.resize((new_w, new_h), PILImage.Resampling.LANCZOS)
+        buf = io.BytesIO()
+        img.save(buf, format="JPEG", quality=85, optimize=True)
+        return buf.getvalue()
+    except Exception:
+        return raw
+
+
+def _fetch_and_prepare_sizes(url: str) -> dict[str, bytes]:
+    """Fetch one image, prepare & cache three sizes, return them.
+
+    Sizes:
+      - ``small``: 40px  (search list thumbnails)
+      - ``medium``: 200px (modal preview grid)
+      - ``full``:   500px max (detail view)
+    """
+    sizes = {"small": 40, "medium": 200, "full": _IMAGE_MAX_PX}
+    result: dict[str, bytes] = {}
+
+    # Check cache for all sizes
+    all_cached = True
+    for name in sizes:
+        path = _image_cache_path(url, name)
+        cached = _image_from_cache(path)
+        if cached is not None:
+            result[name] = cached
+        else:
+            all_cached = False
+
+    if all_cached:
+        return result
+
+    # Fetch once, use for all sizes
+    raw = safe_fetch_bytes(url, max_bytes=50_000_000)
+    for name, px in sizes.items():
+        path = _image_cache_path(url, name)
+        if name in result:
+            continue  # already cached
+        data = _resize_image(raw, px)
+        _write_cache(path, data)
+        result[name] = data
+
+    return result
+
+
+# ── CivitAI search with inline thumbnails ──
+
+
+def _attach_thumbnails(
+    items: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    """Attach ``thumbnails`` (base64 dict) to each search item."""
+    out: list[dict[str, Any]] = []
+    for item in items:
+        thumb_url = _thumbnail_url(item)
+        thumb_data: dict[str, str] = {}
+        if thumb_url:
+            try:
+                sizes = _fetch_and_prepare_sizes(thumb_url)
+                for name, blob in sizes.items():
+                    thumb_data[name] = base64.b64encode(blob).decode()
+            except Exception:
+                pass
+        out.append({**item, "thumbnails": thumb_data})
+    return out
+
+
 @router.post("/civitai/models")
 async def search_civitai_models_route(
     payload: CivitaiBrowserSearchRequest,
 ) -> dict[str, Any]:
-    """Return one filtered CivitAI browser search payload."""
+    """Return filtered CivitAI search results with inline 40px thumbnails.
+
+    Search results are cached server-side for 72 hours.
+    Images are cached permanently once fetched.
+    """
+    # Check server-side cache (72h) for search metadata
+    cache_key = _search_cache_key(
+        payload.query,
+        payload.base_models,
+        payload.model_types,
+        payload.cursor,
+    )
+    cached = _search_cache_get(cache_key)
+    if cached is not None:
+        logger.debug("CivitAI search cache HIT")
+        # Attach thumbnails (may hit image cache)
+        cached["items"] = _attach_thumbnails(cached.get("items", []))
+        return cached
+
     logger.info(
-        "CivitAI search request: query=%r base_models=%s "
-        "model_types=%s limit=%s cursor=%s",
+        "CivitAI search: query=%r base_models=%s model_types=%s "
+        "limit=%s cursor=%s",
         payload.query,
         payload.base_models,
         payload.model_types,
@@ -215,272 +379,119 @@ async def search_civitai_models_route(
         )
         logger.info(
             "CivitAI search OK: %d items, nextCursor=%s",
-            item_count,
-            "set" if next_cursor else None,
+            item_count, "set" if next_cursor else None,
         )
+
+        # Cache the search metadata (without thumbnails to save space)
+        cache_item = {
+            "items": result.get("items", []),
+            "metadata": result.get("metadata"),
+        }
+        _search_cache_set(cache_key, cache_item)
+
+        # Attach thumbnails (may hit image cache)
+        result["items"] = _attach_thumbnails(result.get("items", []))
         return result
     except Exception:
         logger.exception("CivitAI search failed")
         raise
 
 
+# ── CivitAI model detail with inline images ──
+
+
+def _embed_version_images(
+    versions: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    """Attach ``images_base64`` to each version (dict of size→base64 URLs)."""
+    out: list[dict[str, Any]] = []
+    for version in versions:
+        raw_images = version.get("images", [])
+        embedded: list[dict[str, Any]] = []
+        for img in raw_images:
+            url = str(img.get("url") or img.get("thumbnailUrl") or "")
+            imgs_b64: dict[str, str] = {}
+            if url:
+                try:
+                    sizes = _fetch_and_prepare_sizes(url)
+                    for name, blob in sizes.items():
+                        imgs_b64[name] = base64.b64encode(blob).decode()
+                except Exception:
+                    pass
+            embedded.append({
+                "url": url,
+                "nsfw": img.get("nsfw"),
+                "width": img.get("width"),
+                "height": img.get("height"),
+                "images_base64": imgs_b64,
+            })
+        out.append({**version, "images": embedded})
+    return out
+
+
 @router.post("/civitai/model")
 async def fetch_civitai_browser_model_route(
     payload: CivitaiBrowserModelRequest,
 ) -> dict[str, Any]:
-    """Return one filtered CivitAI browser detail payload."""
+    """Return one filtered model detail with all images embedded as base64."""
     try:
-        return await asyncio.to_thread(
+        raw = await asyncio.to_thread(
             fetch_civitai_browser_model_info,
             payload.model_id,
             base_models=payload.base_models,
             model_types=payload.model_types,
             api_key=payload.api_key or "",
         )
+        raw["modelVersions"] = _embed_version_images(
+            raw.get("modelVersions", []),
+        )
+        return raw
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
-# ── Image proxy with disk cache and background retry queue ──
-
-_IMAGE_CACHE_DIR = os.path.join(
-    "/tmp", "airunner", "civitai_image_cache",
-)
-_IMAGE_CACHE_MAX_AGE = 86400  # 24 hours
-
-_retry_queue: queue.Queue = queue.Queue()
-_retry_thread_started = False
-_image_ready_subscribers: list[queue.Queue] = []
-_image_ready_lock = threading.Lock()
-
-
-def _image_cache_path(url: str, width: int | None) -> str:
-    """Return one deterministic cache path."""
-    raw = f"{url}:{width or 'full'}"
-    digest = hashlib.sha256(raw.encode("utf-8")).hexdigest()[:16]
-    os.makedirs(_IMAGE_CACHE_DIR, exist_ok=True)
-    return os.path.join(_IMAGE_CACHE_DIR, f"{digest}.jpg")
-
-
-def _image_from_cache(path: str) -> bytes | None:
-    """Return cached image bytes or None when stale/missing."""
-    try:
-        if time.time() - os.path.getmtime(path) > _IMAGE_CACHE_MAX_AGE:
-            os.unlink(path)
-            return None
-        with open(path, "rb") as fh:
-            return fh.read()
-    except OSError:
-        return None
-
-
-def _write_cache(path: str, data: bytes) -> None:
-    """Write to disk cache."""
-    try:
-        os.makedirs(os.path.dirname(path), exist_ok=True)
-        with open(path, "wb") as fh:
-            fh.write(data)
-    except OSError:
-        pass
-
-
-def _notify_image_ready(url: str) -> None:
-    """Push an image-ready event to all SSE subscribers."""
-    payload = (
-        b"data: "
-        + json.dumps(
-            {"type": "image_ready", "url": url},
-        ).encode("utf-8")
-        + b"\n\n"
-    )
-    with _image_ready_lock:
-        dead = []
-        for q in _image_ready_subscribers:
-            try:
-                q.put_nowait(payload)
-            except queue.Full:
-                dead.append(q)
-        for q in dead:
-            _image_ready_subscribers.remove(q)
-
-
-def _retry_worker() -> None:
-    """Background thread: retries failed CivitAI image fetches."""
-    from airunner_services.url_safety import SSRFBlocked
-
-    while True:
-        try:
-            url, width, max_bytes = _retry_queue.get(timeout=5)
-        except queue.Empty:
-            continue
-        time.sleep(0.25)  # 4 req/s max
-        try:
-            cache_path = _image_cache_path(url, width)
-            if _image_from_cache(cache_path) is not None:
-                continue
-
-            logger.info(
-                "CivitAI RETRY — fetching w=%s  url=%s",
-                width, url,
-            )
-            raw = safe_fetch_bytes(url, max_bytes=50_000_000)
-            if width is not None:
-                try:
-                    img = PILImage.open(io.BytesIO(raw)).convert("RGB")
-                    ratio = width / float(img.width)
-                    h = int(float(img.height) * ratio)
-                    img = img.resize(
-                        (width, h), PILImage.Resampling.LANCZOS,
-                    )
-                    buf = io.BytesIO()
-                    img.save(buf, format="JPEG", quality=85, optimize=True)
-                    _write_cache(cache_path, buf.getvalue())
-                except Exception:
-                    _write_cache(cache_path, raw)
-            else:
-                _write_cache(cache_path, raw)
-            _notify_image_ready(url)
-        except SSRFBlocked:
-            logger.warning(
-                "CivitAI RETRY — SSRFBlocked (response too large) "
-                "w=%s — dropping",
-                width,
-            )
-        except Exception:
-            logger.warning(
-                "CivitAI RETRY — error, re-queuing  w=%s",
-                width,
-            )
-            _retry_queue.put((url, width, max_bytes))
-            time.sleep(2.0)
-
-
-def _ensure_retry_worker() -> None:
-    """Start the background retry worker if not running."""
-    global _retry_thread_started
-    if not _retry_thread_started:
-        _retry_thread_started = True
-        t = threading.Thread(target=_retry_worker, daemon=True)
-        t.start()
-
-
-@router.get("/civitai/images/ready")
-async def watch_image_ready():
-    """SSE stream that emits ``{"type": "image_ready", "url": "..."}``
-    when a previously-failed CivitAI image has been cached successfully
-    by the background retry worker."""
-    q: queue.Queue = queue.Queue(maxsize=128)
-    with _image_ready_lock:
-        _image_ready_subscribers.append(q)
-
-    def _cleanup():
-        with _image_ready_lock:
-            if q in _image_ready_subscribers:
-                _image_ready_subscribers.remove(q)
-
-    def event_stream():
-        try:
-            while True:
-                try:
-                    yield q.get(timeout=30)
-                except queue.Empty:
-                    yield b": keepalive\n\n"
-        except GeneratorExit:
-            pass
-        finally:
-            _cleanup()
-
-    return StreamingResponse(
-        event_stream(),
-        media_type="text/event-stream",
-        headers={
-            "Cache-Control": "no-cache",
-            "Connection": "keep-alive",
-            "X-Accel-Buffering": "no",
-        },
-    )
-
-
-def _fetch_and_resize(
-    url: str,
-    width: int | None,
-    max_bytes: int,
-) -> bytes:
-    """Fetch one CivitAI image, resize, cache, and return JPEG bytes.
-
-    Tries a synchronous fetch first so first-time loads don't always
-    502.  On failure (network error, size limit) the URL is queued
-    for background retry; the client should subscribe to the SSE
-    ``/civitai/images/ready`` stream and retry after ``image_ready``.
-    """
-    from airunner_services.url_safety import (
-        SSRFBlocked,
-        safe_fetch_bytes,
-    )
-
-    cache_path = _image_cache_path(url, width)
-    cached = _image_from_cache(cache_path)
-    if cached is not None:
-        logger.debug("CivitAI cache HIT  w=%s", width)
-        return cached
-
-    logger.info("CivitAI cache MISS — fetching synchronously  w=%s", width)
-    try:
-        raw = safe_fetch_bytes(url, max_bytes=max_bytes)
-        if width is not None:
-            try:
-                img = PILImage.open(io.BytesIO(raw)).convert("RGB")
-                ratio = width / float(img.width)
-                h = int(float(img.height) * ratio)
-                img = img.resize(
-                    (width, h), PILImage.Resampling.LANCZOS,
-                )
-                buf = io.BytesIO()
-                img.save(buf, format="JPEG", quality=85, optimize=True)
-                data = buf.getvalue()
-            except Exception:
-                data = raw
-        else:
-            data = raw
-        _write_cache(cache_path, data)
-        logger.debug("CivitAI fetch OK  w=%s", width)
-        return data
-    except Exception as exc:
-        logger.info(
-            "CivitAI fetch failed (%s) — queuing background retry  w=%s",
-            type(exc).__name__, width,
-        )
-        _ensure_retry_worker()
-        _retry_queue.put((url, width, max_bytes))
-        raise RuntimeError("Not cached — queued for background fetch") from exc
+# ── Legacy single-image endpoint (fallback) ──
 
 
 @router.post("/civitai/image")
 async def fetch_civitai_image_route(
     payload: CivitaiImageRequest,
 ) -> Response:
-    """Return one CivitAI preview image through the daemon process.
+    """Return one CivitAI preview image (sized, cached permanently).
 
-    The image is cached on disk by URL+width for 24 hours.
-    When ``width`` is provided the image is resized server-side
-    with Pillow, keeping response payloads small.
-
-    On failure (rate limit, timeout) the URL is queued for background
-    retry. Subscribe to ``GET /civitai/images/ready`` for SSE
-    notifications when the image becomes available, then re-request.
+    The server fetches, resizes to 500px max, caches permanently,
+    and returns JPEG bytes.  This endpoint is a fallback — prefer
+    the inline base64 thumbnails from the search/detail endpoints.
     """
     try:
-        image_bytes = await asyncio.to_thread(
-            _fetch_and_resize,
+        sizes = await asyncio.to_thread(
+            _fetch_and_prepare_sizes,
             payload.url,
-            payload.width,
-            payload.max_bytes,
         )
+        # Map width hint to named size
+        if payload.width and payload.width <= 60:
+            key = "small"
+        elif payload.width and payload.width <= 300:
+            key = "medium"
+        else:
+            key = "full"
+        image_bytes = sizes.get(key, sizes.get("full", b""))
+        if not image_bytes:
+            raise HTTPException(status_code=502, detail="Image fetch failed")
+        return Response(content=image_bytes, media_type="image/jpeg")
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
-    except Exception as exc:
-        raise HTTPException(status_code=502, detail=str(exc)) from exc
-    return Response(
-        content=image_bytes,
-        media_type="image/jpeg",
+
+
+# ── Legacy endpoints (kept for backward compat) ──
+
+
+@router.get("/civitai/images/ready")
+async def watch_image_ready():
+    """SSE stream (legacy - no longer required with inline thumbnails)."""
+    async def empty_stream():
+        yield b": legacy endpoint - no retry needed\n\n"
+    return StreamingResponse(
+        empty_stream(),
+        media_type="text/event-stream",
     )

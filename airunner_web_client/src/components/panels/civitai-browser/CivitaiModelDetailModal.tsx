@@ -5,12 +5,21 @@ import DownloadProgress from "../../downloads/DownloadProgress";
 import { startCivitaiFileDownload } from "../../../api/downloads";
 import type { JsonObject } from "../../../types/api";
 
+interface VersionImage {
+  url: string;
+  nsfw?: string;
+  width?: number;
+  height?: number;
+  /** Inline base64 images from the server, keyed by size. */
+  images_base64?: Record<string, string>;
+}
+
 interface CivitaiVersion {
   id: number;
   name: string;
   baseModel?: string;
   files?: CivitaiFile[];
-  images?: { url: string; nsfw?: string; width?: number; height?: number }[];
+  images?: VersionImage[];
   downloadUrl?: string;
 }
 
@@ -52,6 +61,7 @@ export default function CivitaiModelDetailModal({
   const [selectedVersionId, setSelectedVersionId] = useState<number | null>(null);
   const [selectedFileId, setSelectedFileId] = useState<number | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string>("");
+  const [previewBase64, setPreviewBase64] = useState<string>("");
   const [downloads, setDownloads] = useState<DownloadJob[]>([]);
 
   const versions = model?.versions ?? [];
@@ -64,6 +74,9 @@ export default function CivitaiModelDetailModal({
       setSelectedFileId(files.length > 0 ? files[0].id : null);
       const images = versions[0].images ?? [];
       setPreviewUrl(images.length > 0 ? images[0].url : "");
+      setPreviewBase64(
+        images.length > 0 ? (images[0].images_base64?.full ?? "") : "",
+      );
     }
   }, [versions]);
 
@@ -96,6 +109,9 @@ export default function CivitaiModelDetailModal({
     setSelectedFileId(files.length > 0 ? files[0].id : null);
     const images = v?.images ?? [];
     setPreviewUrl(images.length > 0 ? images[0].url : "");
+    setPreviewBase64(
+      images.length > 0 ? (images[0].images_base64?.full ?? "") : "",
+    );
   };
 
   const handleDownload = async () => {
@@ -176,10 +192,11 @@ export default function CivitaiModelDetailModal({
             maxWidth: 500,
           }}
         >
-          {previewUrl ? (
+          {previewUrl || previewBase64 ? (
             <CivitaiImage
               url={previewUrl}
               alt=""
+              base64={previewBase64}
               width={400}
               style={{
                 maxWidth: "100%",
@@ -250,7 +267,10 @@ export default function CivitaiModelDetailModal({
                     .map((img) => (
                       <div
                         key={img.url}
-                        onClick={() => setPreviewUrl(img.url)}
+                        onClick={() => {
+                          setPreviewUrl(img.url);
+                          setPreviewBase64(img.images_base64?.full ?? "");
+                        }}
                         style={{
                           width: 48,
                           height: 48,
@@ -261,7 +281,13 @@ export default function CivitaiModelDetailModal({
                           border: previewUrl === img.url ? "2px solid var(--bs-primary)" : "2px solid transparent",
                         }}
                       >
-                        <CivitaiImage url={img.url} alt="" width={48} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                        <CivitaiImage
+                          url={img.url}
+                          alt=""
+                          base64={img.images_base64?.small}
+                          width={48}
+                          style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                        />
                       </div>
                     ))}
                 </div>

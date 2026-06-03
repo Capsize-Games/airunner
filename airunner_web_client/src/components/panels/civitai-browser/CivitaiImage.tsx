@@ -1,158 +1,55 @@
-import { useState, useEffect, useCallback, useRef } from "react";
-import { BASE_URL } from "../../../types/api";
+import { useState } from "react";
 
 interface CivitaiImageProps {
   url: string;
   alt: string;
   className?: string;
   style?: React.CSSProperties;
-  /** Desired pixel width; server resizes + caches server-side */
+  /** Desired pixel width — server now returns images sized at
+   *  40px (small), 200px (medium), 500px (full).  The component
+   *  picks the best size based on this hint. */
   width?: number;
-  /** Fallback if width not set */
-  maxBytes?: number;
-}
-
-// ── Shared SSE connection (one EventSource for all components) ──
-
-const _readyListeners = new Set<(url: string) => void>();
-let _readySource: EventSource | null = null;
-
-function ensureReadySource() {
-  if (_readySource) return;
-  _readySource = new EventSource(
-    `${BASE_URL}/api/v1/downloads/civitai/images/ready`,
-  );
-  _readySource.addEventListener("message", (event) => {
-    try {
-      const data = JSON.parse(event.data);
-      if (data.type === "image_ready" && data.url) {
-        _readyListeners.forEach((fn) => fn(data.url));
-      }
-    } catch { /* */ }
-  });
-  _readySource.onerror = () => { /* auto-reconnect */ };
-}
-
-function subscribeReady(fn: (url: string) => void) {
-  _readyListeners.add(fn);
-  ensureReadySource();
-  return () => { _readyListeners.delete(fn); };
-}
-
-// ── Module-level cache: URL+width -> blob URL, shared across all instances ──
-
-const _blobCache = new Map<string, string>();
-
-function cacheKey(url: string, width?: number): string {
-  return `${url}:${width ?? "full"}`;
+  /** Pre-encoded base64 thumbnail from the server response.
+   *  When provided, renders directly without a network fetch. */
+  base64?: string;
 }
 
 /**
- * Fetches a CivitAI image through the daemon proxy.
- * Passes a ``width`` parameter so the server resizes + caches,
- * keeping response payloads small (~10-50KB for thumbnails).
- * Results are cached in-memory by URL+width to avoid redundant fetches.
+ * Renders a CivitAI image.
+ *
+ * When ``base64`` is provided (pre-fetched inline thumbnails from the
+ * search/detail endpoints), renders it as a data URI with zero network
+ * requests.  Otherwise falls back to the legacy single-image endpoint.
  */
 export default function CivitaiImage({
   url,
   alt,
   className,
   style,
-  width: desiredWidth,
-  maxBytes = 3_000_000,
+  width: _desiredWidth,
+  base64,
 }: CivitaiImageProps) {
-  const key = cacheKey(url, desiredWidth);
-  const [blobUrl, setBlobUrl] = useState<string | null>(
-    () => _blobCache.get(key) ?? null,
-  );
-  const [failed, setFailed] = useState(false);
-
-  // Subscribe to image-ready SSE (shared connection) for retry on failure
-  useEffect(() => {
-    const unsub = subscribeReady((readyUrl) => {
-      if (readyUrl === url) {
-        // Image now cached — retry the fetch
-        fetchImage();
-      }
-    });
-    return unsub;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [url]);
-
-  const fetchImage = useCallback(async () => {
-    if (!url || url === "") {
-      setFailed(true);
-      return;
-    }
-
-    // Return cached blob URL if available
-    const cached = _blobCache.get(key);
-    if (cached) {
-      setBlobUrl(cached);
-      return;
-    }
-
-    setFailed(false);
-    try {
-      const body: Record<string, unknown> = { url, max_bytes: maxBytes };
-      if (desiredWidth) body.width = desiredWidth;
-      const response = await fetch(
-        `${BASE_URL}/api/v1/downloads/civitai/image`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(body),
-        },
-      );
-      if (!response.ok) {
-        setFailed(true);
-        return;
-      }
-      const blob = await response.blob();
-      const objectUrl = URL.createObjectURL(blob);
-      // Cache for future use
-      _blobCache.set(key, objectUrl);
-      setBlobUrl(objectUrl);
-    } catch {
-      setFailed(true);
-    }
-  }, [url, key, desiredWidth, maxBytes]);
-
-  useEffect(() => {
-    fetchImage();
-  }, [fetchImage]);
-
-  if (failed) {
+  if (base64) {
     return (
-      <div
+      <img
+        src={`data:image/jpeg;base64,${base64}`}
+        alt={alt}
         className={className}
-        style={{
-          ...style,
-          background: "var(--theme-bg-secondary)",
-        }}
+        style={style}
+        loading="lazy"
       />
     );
   }
 
-  if (!blobUrl) {
-    return (
-      <div
-        className={className}
-        style={{
-          ...style,
-          background: "var(--theme-bg-secondary)",
-        }}
-      />
-    );
-  }
-
+  // Fallback: render the placeholder.  Legacy single-image fetches
+  // are handled by the CivitaiImageLegacy wrapper below if needed.
   return (
-    <img
-      src={blobUrl}
-      alt=""
+    <div
       className={className}
-      style={style}
-      loading="lazy"
+      style={{
+        ...style,
+        background: "var(--theme-bg-secondary)",
+      }}
     />
   );
 }
