@@ -23,47 +23,94 @@ export function useDownloadProgress(
 
   useEffect(() => {
     if (!jobId) return;
-    setState({ progress: 0, status: "running" });
 
-    const eventSource = new EventSource(
-      `${BASE_URL}/api/v1/downloads/status/${jobId}/stream`,
-    );
+    let eventSource: EventSource | null = null;
+    let cancelled = false;
 
-    eventSource.addEventListener("message", (event) => {
-      try {
-        const data = JSON.parse(event.data);
-        const type = data.type;
-
-        if (type === "progress") {
+    // First, check if the job exists via GET
+    fetch(`${BASE_URL}/api/v1/downloads/status/${jobId}`)
+      .then((res) => {
+        if (cancelled) return;
+        if (!res.ok) {
           setState({
-            progress: Number(data.progress) || 0,
-            status: data.status ?? "running",
+            progress: 0, status: "failed",
+            error: "Job not found (server may have restarted)",
           });
-        } else if (type === "complete") {
-          setState({ progress: 100, status: "completed" });
-          eventSource.close();
-        } else if (type === "error") {
-          setState((prev) => ({
-            ...prev,
-            status: "failed",
-            error: data.error ?? "Download failed",
-          }));
-          eventSource.close();
-        } else if (type === "cancelled") {
-          setState((prev) => ({ ...prev, status: "cancelled" }));
-          eventSource.close();
+          return null;
         }
-      } catch {
-        // ignore parse errors
-      }
-    });
+        return res.json();
+      })
+      .then((job) => {
+        if (!job || cancelled) return;
 
-    eventSource.onerror = () => {
-      // EventSource auto-reconnects
-    };
+        if (job.status === "completed") {
+          setState({ progress: 100, status: "completed" });
+          return;
+        }
+        if (job.status === "failed") {
+          setState({
+            progress: 0, status: "failed",
+            error: job.error ?? "Download failed",
+          });
+          return;
+        }
+        if (job.status === "cancelled") {
+          setState({ progress: 0, status: "cancelled" });
+          return;
+        }
+
+        // Job exists and is running — open SSE stream
+        setState({ progress: Number(job.progress) || 0, status: "running" });
+
+        eventSource = new EventSource(
+          `${BASE_URL}/api/v1/downloads/status/${jobId}/stream`,
+        );
+
+        eventSource.addEventListener("message", (event) => {
+          try {
+            const data = JSON.parse(event.data);
+            const type = data.type;
+
+            if (type === "progress") {
+              setState({
+                progress: Number(data.progress) || 0,
+                status: data.status ?? "running",
+              });
+            } else if (type === "complete") {
+              setState({ progress: 100, status: "completed" });
+              eventSource?.close();
+            } else if (type === "error") {
+              setState((prev) => ({
+                ...prev,
+                status: "failed",
+                error: data.error ?? "Download failed",
+              }));
+              eventSource?.close();
+            } else if (type === "cancelled") {
+              setState((prev) => ({ ...prev, status: "cancelled" }));
+              eventSource?.close();
+            }
+          } catch {
+            // ignore parse errors
+          }
+        });
+
+        eventSource.onerror = () => {
+          // EventSource auto-reconnects
+        };
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setState({
+            progress: 0, status: "failed",
+            error: "Could not check job status",
+          });
+        }
+      });
 
     return () => {
-      eventSource.close();
+      cancelled = true;
+      if (eventSource) eventSource.close();
     };
   }, [jobId]);
 
