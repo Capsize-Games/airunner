@@ -288,54 +288,28 @@ def _fetch_and_prepare_sizes(url: str) -> dict[str, bytes]:
       - ``medium``: 200px (modal preview grid)
       - ``full``:   500px max (detail view)
     """
-    url_hash = hashlib.sha256(url.encode()).hexdigest()[:12]
     sizes = {"small": 40, "medium": 200, "full": _IMAGE_MAX_PX}
     result: dict[str, bytes] = {}
 
     # Check cache for all sizes
-    all_cached = True
     for name in sizes:
         path = _image_cache_path(url, name)
         cached = _image_from_cache(path)
         if cached is not None:
             result[name] = cached
-        else:
-            all_cached = False
 
-    if all_cached:
-        logger.debug("_fetch_and_prepare_sizes: ALL CACHED url_hash=%s", url_hash)
+    if len(result) == len(sizes):
         return result
 
-    logger.info(
-        "_fetch_and_prepare_sizes: cache MISS url_hash=%s cached_sizes=%s",
-        url_hash, list(result.keys()),
-    )
-
     # Fetch once, use for all sizes
-    try:
-        raw = safe_fetch_bytes(url, max_bytes=50_000_000)
-        logger.info(
-            "_fetch_and_prepare_sizes: FETCH OK url_hash=%s size_bytes=%d",
-            url_hash, len(raw),
-        )
-    except Exception as exc:
-        logger.warning(
-            "_fetch_and_prepare_sizes: FETCH FAILED url_hash=%s error=%s",
-            url_hash, type(exc).__name__,
-        )
-        raise
-
+    raw = safe_fetch_bytes(url, max_bytes=50_000_000)
     for name, px in sizes.items():
         path = _image_cache_path(url, name)
         if name in result:
-            continue  # already cached
+            continue
         data = _resize_image(raw, px)
         _write_cache(path, data)
         result[name] = data
-        logger.debug(
-            "_fetch_and_prepare_sizes: CACHED url_hash=%s size=%s bytes=%d",
-            url_hash, name, len(data),
-        )
 
     return result
 
@@ -486,58 +460,63 @@ async def search_civitai_models_route(
 def _embed_version_images(
     versions: list[dict[str, Any]],
 ) -> list[dict[str, Any]]:
-    """Attach ``images_base64`` to each version (dict of size→base64 URLs).
+    """Attach ``images_base64`` to images for each version.
 
-    Fetches images in parallel to keep modal response fast.
+    Only the **first version** gets full image embeds (small/medium/full).
+    Remaining versions return metadata only — the client lazily fetches
+    them when the user switches versions.
+
+    Fetches the first version's images in parallel.
     """
-    # Collect all image URLs to fetch
-    url_map: list[tuple[int, int, str]] = []  # (version_idx, img_idx, url)
-    for vi, version in enumerate(versions):
-        for ii, img in enumerate(version.get("images", [])):
-            url = str(img.get("url") or img.get("thumbnailUrl") or "")
-            if url:
-                url_map.append((vi, ii, url))
-
-    if not url_map:
-        logger.info("_embed_version_images: no images to embed")
+    if not versions:
         return versions
 
-    # Fetch all images in parallel
-    fetched: dict[tuple[int, int], dict[str, bytes]] = {}
-    with ThreadPoolExecutor(max_workers=_THUMBNAIL_WORKERS) as pool:
-        fut_map = {
-            pool.submit(_fetch_and_prepare_sizes, url): (vi, ii)
-            for vi, ii, url in url_map
-        }
-        for fut in as_completed(fut_map):
-            key = fut_map[fut]
-            try:
-                fetched[key] = fut.result()
-            except Exception:
-                fetched[key] = {}
+    # Only embed images for the first version
+    first_version = versions[0]
+    first_images = first_version.get("images", [])
+    url_map: list[tuple[int, str]] = []  # (img_idx, url)
+    for ii, img in enumerate(first_images):
+        url = str(img.get("url") or img.get("thumbnailUrl") or "")
+        if url:
+            url_map.append((ii, url))
 
-    # Build output
-    out: list[dict[str, Any]] = []
-    for vi, version in enumerate(versions):
-        raw_images = version.get("images", [])
-        embedded: list[dict[str, Any]] = []
-        for ii, img in enumerate(raw_images):
-            url = str(img.get("url") or img.get("thumbnailUrl") or "")
-            sizes = fetched.get((vi, ii), {})
-            imgs_b64: dict[str, str] = {}
-            for name, blob in sizes.items():
-                imgs_b64[name] = base64.b64encode(blob).decode()
-            embedded.append({
-                "url": url,
-                "nsfw": img.get("nsfw"),
-                "width": img.get("width"),
-                "height": img.get("height"),
-                "images_base64": imgs_b64,
-            })
-        out.append({**version, "images": embedded})
+    fetched: dict[int, dict[str, bytes]] = {}
+    if url_map:
+        with ThreadPoolExecutor(max_workers=_THUMBNAIL_WORKERS) as pool:
+            fut_map = {
+                pool.submit(_fetch_and_prepare_sizes, url): ii
+                for ii, url in url_map
+            }
+            for fut in as_completed(fut_map):
+                ii = fut_map[fut]
+                try:
+                    fetched[ii] = fut.result()
+                except Exception:
+                    fetched[ii] = {}
+
+    # Build first version with embedded images
+    embedded_first: list[dict[str, Any]] = []
+    for ii, img in enumerate(first_images):
+        url = str(img.get("url") or img.get("thumbnailUrl") or "")
+        sizes = fetched.get(ii, {})
+        imgs_b64: dict[str, str] = {}
+        for name, blob in sizes.items():
+            imgs_b64[name] = base64.b64encode(blob).decode()
+        embedded_first.append({
+            "url": url,
+            "nsfw": img.get("nsfw"),
+            "width": img.get("width"),
+            "height": img.get("height"),
+            "images_base64": imgs_b64,
+        })
+
+    out = [{**first_version, "images": embedded_first}]
+    # Remaining versions: metadata only, no base64
+    for version in versions[1:]:
+        out.append(version)
 
     logger.info(
-        "_embed_version_images: %d versions, %d images",
+        "_embed_version_images: %d versions, first version has %d images with base64",
         len(versions), len(url_map),
     )
     return out

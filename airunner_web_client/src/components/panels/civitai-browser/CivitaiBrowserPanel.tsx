@@ -199,8 +199,9 @@ export default function CivitaiBrowserPanel() {
     setSelectedModelId(modelId);
     const cached = detailCache.current.get(modelId);
     if (cached) { setSelectedModelData(cached); return; }
+    // Show modal skeleton immediately with a placeholder
+    setSelectedModelData({ id: modelId, name: "Loading...", modelVersions: [] } as unknown as JsonObject);
     setDetailLoading(true);
-    setSelectedModelData(null);
     try {
       const data = await fetchCivitaiModel({
         model_id: String(modelId),
@@ -285,10 +286,10 @@ export default function CivitaiBrowserPanel() {
         )}
       </div>
 
-      {detailLoading && <div className="text-center py-2"><Spinner animation="border" size="sm" /></div>}
-      {modelDetail && (
+      {selectedModelId !== null && (
         <CivitaiModelDetailModal
           model={modelDetail}
+          loading={detailLoading}
           onClose={() => { setSelectedModelId(null); setSelectedModelData(null); }}
         />
       )}

@@ -43,6 +43,7 @@ interface ModelDetailData {
 interface CivitaiModelDetailModalProps {
   model: ModelDetailData | null;
   onClose: () => void;
+  loading?: boolean;
 }
 
 function stripHtml(html: string): string {
@@ -57,6 +58,7 @@ interface DownloadJob {
 export default function CivitaiModelDetailModal({
   model,
   onClose,
+  loading,
 }: CivitaiModelDetailModalProps) {
   const [selectedVersionId, setSelectedVersionId] = useState<number | null>(null);
   const [selectedFileId, setSelectedFileId] = useState<number | null>(null);
@@ -192,7 +194,9 @@ export default function CivitaiModelDetailModal({
             maxWidth: 500,
           }}
         >
-          {previewUrl || previewBase64 ? (
+          {loading ? (
+            <div style={{ color: "#888", fontSize: 12 }}>Loading images...</div>
+          ) : previewUrl || previewBase64 ? (
             <CivitaiImage
               url={previewUrl}
               alt=""
