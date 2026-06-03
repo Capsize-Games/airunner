@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { BASE_URL } from "../../../types/api";
 
 interface CivitaiImageProps {
@@ -12,10 +12,18 @@ interface CivitaiImageProps {
   maxBytes?: number;
 }
 
+// Module-level cache: URL+width -> blob URL, shared across all instances
+const _blobCache = new Map<string, string>();
+
+function cacheKey(url: string, width?: number): string {
+  return `${url}:${width ?? "full"}`;
+}
+
 /**
  * Fetches a CivitAI image through the daemon proxy.
  * Passes a ``width`` parameter so the server resizes + caches,
  * keeping response payloads small (~10-50KB for thumbnails).
+ * Results are cached in-memory by URL+width to avoid redundant fetches.
  */
 export default function CivitaiImage({
   url,
@@ -25,7 +33,10 @@ export default function CivitaiImage({
   width: desiredWidth,
   maxBytes = 3_000_000,
 }: CivitaiImageProps) {
-  const [blobUrl, setBlobUrl] = useState<string | null>(null);
+  const key = cacheKey(url, desiredWidth);
+  const [blobUrl, setBlobUrl] = useState<string | null>(
+    () => _blobCache.get(key) ?? null,
+  );
   const [failed, setFailed] = useState(false);
 
   const fetchImage = useCallback(async () => {
@@ -33,6 +44,14 @@ export default function CivitaiImage({
       setFailed(true);
       return;
     }
+
+    // Return cached blob URL if available
+    const cached = _blobCache.get(key);
+    if (cached) {
+      setBlobUrl(cached);
+      return;
+    }
+
     setFailed(false);
     try {
       const body: Record<string, unknown> = { url, max_bytes: maxBytes };
@@ -51,11 +70,13 @@ export default function CivitaiImage({
       }
       const blob = await response.blob();
       const objectUrl = URL.createObjectURL(blob);
+      // Cache for future use
+      _blobCache.set(key, objectUrl);
       setBlobUrl(objectUrl);
     } catch {
       setFailed(true);
     }
-  }, [url, desiredWidth, maxBytes]);
+  }, [url, key, desiredWidth, maxBytes]);
 
   useEffect(() => {
     fetchImage();
