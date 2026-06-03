@@ -219,6 +219,32 @@ async def fetch_civitai_browser_model_route(
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
+import threading
+
+
+# Rate limiter: CivitAI free tier ~10 req/s, be conservative at 5 req/s
+_image_fetch_lock = threading.Lock()
+_image_fetch_timestamps: list[float] = []
+_IMAGE_MAX_RATE = 5  # max requests per second
+
+
+def _rate_limit_image_fetch() -> None:
+    """Block until a CivitAI image fetch is allowed (5 req/s limit)."""
+    global _image_fetch_timestamps
+    now = time.time()
+    with _image_fetch_lock:
+        # Prune timestamps older than 1 second
+        _image_fetch_timestamps = [
+            t for t in _image_fetch_timestamps if now - t < 1.0
+        ]
+        if len(_image_fetch_timestamps) >= _IMAGE_MAX_RATE:
+            # Sleep until oldest timestamp expires
+            sleep_for = 1.0 - (now - _image_fetch_timestamps[0])
+            if sleep_for > 0:
+                time.sleep(sleep_for)
+        _image_fetch_timestamps.append(time.time())
+
+
 # Disk cache for CivitAI preview images (keyed by URL+width)
 _IMAGE_CACHE_DIR = os.path.join(
     "/tmp", "airunner", "civitai_image_cache",
@@ -246,6 +272,15 @@ def _image_from_cache(path: str) -> bytes | None:
         return None
 
 
+def _write_cache(path: str, data: bytes) -> None:
+    """Write to disk cache, silently ignoring errors."""
+    try:
+        with open(path, "wb") as fh:
+            fh.write(data)
+    except OSError:
+        pass
+
+
 def _fetch_and_maybe_resize(
     url: str,
     width: int | None,
@@ -255,11 +290,15 @@ def _fetch_and_maybe_resize(
 
     When ``width`` is provided the image is resized server-side to
     keep response sizes small (typically 10-50KB for thumbnails).
+    Failed/fetches are NOT cached so they will be retried next time.
     """
     cache_path = _image_cache_path(url, width)
     cached = _image_from_cache(cache_path)
     if cached is not None:
         return cached
+
+    # Rate-limit to avoid CivitAI rejecting requests
+    _rate_limit_image_fetch()
 
     raw = safe_fetch_bytes(url, max_bytes=max_bytes)
 
@@ -272,20 +311,15 @@ def _fetch_and_maybe_resize(
             buf = io.BytesIO()
             img.save(buf, format="JPEG", quality=85, optimize=True)
             resized = buf.getvalue()
-            try:
-                with open(cache_path, "wb") as fh:
-                    fh.write(resized)
-            except OSError:
-                pass
+            # Only cache on successful resize
+            _write_cache(cache_path, resized)
             return resized
         except Exception:
-            pass
+            # Resize failed — return raw bytes but don't cache
+            return raw
 
-    try:
-        with open(cache_path, "wb") as fh:
-            fh.write(raw)
-    except OSError:
-        pass
+    # No resize requested — cache the original
+    _write_cache(cache_path, raw)
     return raw
 
 

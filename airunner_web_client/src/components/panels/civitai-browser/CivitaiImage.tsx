@@ -68,15 +68,8 @@ export default function CivitaiImage({
         style={{
           ...style,
           background: "var(--theme-bg-secondary)",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          fontSize: 10,
-          color: "#666",
         }}
-      >
-        ✕
-      </div>
+      />
     );
   }
 
