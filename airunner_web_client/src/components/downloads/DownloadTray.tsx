@@ -101,7 +101,10 @@ export default function DownloadTray() {
             </div>
           </div>
           <div style={{ flex: "0 0 180px" }}>
-            <DownloadProgress jobId={job.jobId} />
+            <DownloadProgress
+              jobId={job.jobId}
+              onNotFound={() => removeDownload(job.jobId)}
+            />
           </div>
           <button
             onClick={() => handleCancel(job)}

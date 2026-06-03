@@ -10,11 +10,12 @@ interface DownloadState {
 
 /**
  * Hook that subscribes to the SSE download-progress stream for one job.
- * Returns live progress information until the job completes, errors,
- * or is cancelled.
+ * First checks job existence via GET /status/{jobId} — if 404 (server
+ * restarted), calls `onNotFound` so stale entries can be removed.
  */
 export function useDownloadProgress(
   jobId: string | null,
+  onNotFound?: () => void,
 ): DownloadState {
   const [state, setState] = useState<DownloadState>({
     progress: 0,
@@ -34,8 +35,9 @@ export function useDownloadProgress(
         if (!res.ok) {
           setState({
             progress: 0, status: "failed",
-            error: "Job not found (server may have restarted)",
+            error: "Server restarted",
           });
+          if (onNotFound) onNotFound();
           return null;
         }
         return res.json();
@@ -112,7 +114,7 @@ export function useDownloadProgress(
       cancelled = true;
       if (eventSource) eventSource.close();
     };
-  }, [jobId]);
+  }, [jobId, onNotFound]);
 
   return state;
 }
@@ -120,6 +122,8 @@ export function useDownloadProgress(
 interface DownloadProgressProps {
   jobId: string;
   label?: string;
+  /** Called when the job no longer exists on the server (e.g. after restart). */
+  onNotFound?: () => void;
 }
 
 /**
@@ -128,8 +132,9 @@ interface DownloadProgressProps {
 export default function DownloadProgress({
   jobId,
   label,
+  onNotFound,
 }: DownloadProgressProps) {
-  const state = useDownloadProgress(jobId);
+  const state = useDownloadProgress(jobId, onNotFound);
 
   const isRunning = state.status === "running";
   const isDone = state.status === "completed";
