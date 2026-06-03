@@ -601,3 +601,38 @@ async def watch_image_ready():
         empty_stream(),
         media_type="text/event-stream",
     )
+
+
+@router.post(
+    "/civitai/file",
+    response_model=DownloadJobAcceptedResponse,
+)
+async def start_civitai_file_download(
+    payload: CivitaiFileDownloadRequest,
+    request: Request,
+) -> DownloadJobAcceptedResponse:
+    """Queue one single-file CivitAI download job."""
+    logger.info(
+        "CivitAI file download: url=%s output_path=%s file_size=%s",
+        payload.url, payload.output_path, payload.file_size,
+    )
+    service = get_download_job_service(request)
+    job_id = await service.start_civitai_file_download(
+        payload.url,
+        output_path=payload.output_path,
+        file_size=payload.file_size,
+        api_key=payload.api_key,
+    )
+    return DownloadJobAcceptedResponse(job_id=job_id)
+
+
+@router.post("/civitai/info")
+async def fetch_civitai_model_info_route(
+    payload: CivitaiModelInfoRequest,
+) -> dict[str, Any]:
+    """Return one selected-version-aware CivitAI model payload."""
+    return await asyncio.to_thread(
+        fetch_civitai_model_info_service,
+        payload.url,
+        payload.api_key or "",
+    )

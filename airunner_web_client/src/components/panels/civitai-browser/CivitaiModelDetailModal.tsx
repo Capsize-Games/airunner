@@ -65,6 +65,10 @@ export default function CivitaiModelDetailModal({
   const [previewUrl, setPreviewUrl] = useState<string>("");
   const [previewBase64, setPreviewBase64] = useState<string>("");
   const [downloads, setDownloads] = useState<DownloadJob[]>([]);
+  const [showApiKeyPrompt, setShowApiKeyPrompt] = useState(false);
+  const [apiKey, setApiKey] = useState("");
+  const [pendingDownloadUrl, setPendingDownloadUrl] = useState<string | null>(null);
+  const [pendingFileName, setPendingFileName] = useState<string>("");
 
   const versions = model?.versions ?? [];
 
@@ -116,17 +120,39 @@ export default function CivitaiModelDetailModal({
     );
   };
 
-  const handleDownload = async () => {
+  const handleDownload = async (key?: string) => {
     if (!selectedFile?.downloadUrl) return;
     try {
       const result = await startCivitaiFileDownload({
         url: selectedFile.downloadUrl,
         output_path: `/tmp/airunner/downloads/${selectedFile.name}`,
+        api_key: key ?? "",
       });
       if (result.job_id) {
         setDownloads((prev) => [...prev, { jobId: result.job_id, label: selectedFile.name }]);
       }
     } catch { /* */ }
+  };
+
+  const handleDownloadClick = () => {
+    if (!selectedFile?.downloadUrl) return;
+    setPendingDownloadUrl(selectedFile.downloadUrl);
+    setPendingFileName(selectedFile.name ?? "");
+    // Check if an API key is already stored; if not, show prompt
+    const stored = localStorage.getItem("airunner_civitai_api_key");
+    if (stored) {
+      handleDownload(stored);
+    } else {
+      setShowApiKeyPrompt(true);
+    }
+  };
+
+  const handleApiKeySubmit = () => {
+    const trimmed = apiKey.trim();
+    if (!trimmed) return;
+    localStorage.setItem("airunner_civitai_api_key", trimmed);
+    setShowApiKeyPrompt(false);
+    handleDownload(trimmed);
   };
 
   return (
@@ -355,7 +381,7 @@ export default function CivitaiModelDetailModal({
           {/* Action buttons */}
           <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
             <button
-              onClick={handleDownload}
+              onClick={handleDownloadClick}
               disabled={!selectedFile?.downloadUrl}
               style={{
                 flex: 1,
@@ -401,6 +427,97 @@ export default function CivitaiModelDetailModal({
           )}
         </div>
       </div>
+
+      {/* API Key prompt overlay */}
+      {showApiKeyPrompt && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.7)",
+            zIndex: 1200,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+          onClick={() => setShowApiKeyPrompt(false)}
+        >
+          <div
+            style={{
+              background: "var(--theme-bg, #1a1a2e)",
+              border: "1px solid rgba(255,255,255,0.2)",
+              borderRadius: 6,
+              padding: 24,
+              maxWidth: 400,
+              width: "90%",
+              color: "#ccc",
+              fontSize: 13,
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h4 style={{ margin: "0 0 8px", color: "#fff", fontSize: 15 }}>
+              CivitAI API Key Required
+            </h4>
+            <p style={{ margin: "0 0 12px", fontSize: 12, color: "#999", lineHeight: 1.4 }}>
+              A CivitAI API key is needed to download this file.
+              You can get one from your CivitAI account settings.
+              It will be stored in your browser for future downloads.
+            </p>
+            <input
+              type="password"
+              placeholder="Enter your CivitAI API key"
+              value={apiKey}
+              onChange={(e) => setApiKey(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") handleApiKeySubmit(); }}
+              autoFocus
+              style={{
+                width: "100%",
+                padding: "8px 10px",
+                borderRadius: 4,
+                border: "1px solid rgba(255,255,255,0.2)",
+                background: "rgba(255,255,255,0.08)",
+                color: "#fff",
+                fontSize: 13,
+                outline: "none",
+                boxSizing: "border-box",
+              }}
+            />
+            <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
+              <button
+                onClick={handleApiKeySubmit}
+                disabled={!apiKey.trim()}
+                style={{
+                  flex: 1,
+                  padding: "7px 12px",
+                  background: apiKey.trim() ? "rgba(255,255,255,0.2)" : "rgba(255,255,255,0.08)",
+                  border: "1px solid rgba(255,255,255,0.2)",
+                  borderRadius: 4,
+                  color: apiKey.trim() ? "#fff" : "#666",
+                  cursor: apiKey.trim() ? "pointer" : "default",
+                  fontSize: 12,
+                }}
+              >
+                Submit & Download
+              </button>
+              <button
+                onClick={() => setShowApiKeyPrompt(false)}
+                style={{
+                  flexShrink: 0,
+                  padding: "7px 12px",
+                  background: "transparent",
+                  border: "1px solid rgba(255,255,255,0.15)",
+                  borderRadius: 4,
+                  color: "#888",
+                  cursor: "pointer",
+                  fontSize: 12,
+                }}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
