@@ -408,20 +408,51 @@ def _fetch_and_resize(
 ) -> bytes:
     """Fetch one CivitAI image, resize, cache, and return JPEG bytes.
 
-    If the image is not already cached, queues a background fetch and
-    raises an exception (caller returns 502). The client should retry
-    after receiving an ``image_ready`` SSE event.
+    Tries a synchronous fetch first so first-time loads don't always
+    502.  On failure (network error, size limit) the URL is queued
+    for background retry; the client should subscribe to the SSE
+    ``/civitai/images/ready`` stream and retry after ``image_ready``.
     """
+    from airunner_services.url_safety import (
+        SSRFBlocked,
+        safe_fetch_bytes,
+    )
+
     cache_path = _image_cache_path(url, width)
     cached = _image_from_cache(cache_path)
     if cached is not None:
         logger.debug("CivitAI cache HIT  w=%s", width)
         return cached
 
-    logger.info("CivitAI cache MISS — queuing background fetch  w=%s", width)
-    _ensure_retry_worker()
-    _retry_queue.put((url, width, max_bytes))
-    raise RuntimeError("Not cached — queued for background fetch")
+    logger.info("CivitAI cache MISS — fetching synchronously  w=%s", width)
+    try:
+        raw = safe_fetch_bytes(url, max_bytes=max_bytes)
+        if width is not None:
+            try:
+                img = PILImage.open(io.BytesIO(raw)).convert("RGB")
+                ratio = width / float(img.width)
+                h = int(float(img.height) * ratio)
+                img = img.resize(
+                    (width, h), PILImage.Resampling.LANCZOS,
+                )
+                buf = io.BytesIO()
+                img.save(buf, format="JPEG", quality=85, optimize=True)
+                data = buf.getvalue()
+            except Exception:
+                data = raw
+        else:
+            data = raw
+        _write_cache(cache_path, data)
+        logger.debug("CivitAI fetch OK  w=%s", width)
+        return data
+    except Exception as exc:
+        logger.info(
+            "CivitAI fetch failed (%s) — queuing background retry  w=%s",
+            type(exc).__name__, width,
+        )
+        _ensure_retry_worker()
+        _retry_queue.put((url, width, max_bytes))
+        raise RuntimeError("Not cached — queued for background fetch") from exc
 
 
 @router.post("/civitai/image")
