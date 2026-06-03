@@ -14,13 +14,11 @@ interface CivitaiModelDetailModalProps {
   modelType?: string;
 }
 
+const MODAL_W = 740;
+const MODAL_H = 520;
+
 function stripHtml(html: string): string {
   return html.replace(/<[^>]*>/g, "").trim();
-}
-
-interface DownloadJobRef {
-  jobId: string;
-  label: string;
 }
 
 export default function CivitaiModelDetailModal({
@@ -40,7 +38,6 @@ export default function CivitaiModelDetailModal({
 
   const versions = model?.versions ?? [];
 
-  // Auto-select first version
   useEffect(() => {
     if (versions.length > 0) {
       setSelectedVersionId(versions[0].id);
@@ -166,8 +163,8 @@ export default function CivitaiModelDetailModal({
     >
       <div
         style={{
-          position: "relative", display: "flex", gap: 16, padding: 12, paddingTop: 44,
-          maxHeight: "85vh", maxWidth: "90vw",
+          position: "relative", display: "flex", gap: 12, padding: 12,
+          width: MODAL_W, height: MODAL_H,
           border: "1px solid rgba(255,255,255,0.2)", borderRadius: 4,
           overflow: "hidden", background: "var(--theme-bg)",
         }}
@@ -176,54 +173,77 @@ export default function CivitaiModelDetailModal({
         <button
           onClick={onClose}
           style={{
-            position: "absolute", top: 8, right: 8,
+            position: "absolute", top: 6, right: 6,
             background: "rgba(0,0,0,0.5)", border: "1px solid rgba(255,255,255,0.3)",
-            color: "#fff", fontSize: 18, cursor: "pointer", lineHeight: 1,
-            width: 30, height: 30, borderRadius: 4,
-            display: "flex", alignItems: "center", justifyContent: "center", zIndex: 10,
+            color: "#fff", fontSize: 16, cursor: "pointer", lineHeight: 1,
+            width: 26, height: 26, borderRadius: 4, zIndex: 10,
           }}
           title="Close (Esc)"
         >
           ✕
         </button>
 
-        {/* Preview image */}
-        <div
-          style={{
-            flex: 1, display: "flex", alignItems: "center", justifyContent: "center",
-            minWidth: 200, maxWidth: 500,
-          }}
-        >
-          {previewUrl || previewBase64 ? (
-            <CivitaiImage
-              url={previewUrl}
-              alt=""
-              base64={previewBase64}
-              width={400}
-              style={{ maxWidth: "100%", maxHeight: "75vh", objectFit: "contain", borderRadius: 4 }}
-            />
-          ) : (
-            <div style={{ color: "#888", fontSize: 12 }}>No preview</div>
+        {/* ── Left column: preview + thumbnails ── */}
+        <div style={{ flex: "0 0 340px", display: "flex", flexDirection: "column", gap: 8 }}>
+          <div
+            style={{
+              flex: 1, display: "flex", alignItems: "center", justifyContent: "center",
+              background: "rgba(0,0,0,0.2)", borderRadius: 4, minHeight: 0,
+            }}
+          >
+            {previewUrl || previewBase64 ? (
+              <CivitaiImage
+                url={previewUrl}
+                alt=""
+                base64={previewBase64}
+                width={400}
+                style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain", borderRadius: 4 }}
+              />
+            ) : (
+              <div style={{ color: "#888", fontSize: 12 }}>No preview</div>
+            )}
+          </div>
+
+          {/* Thumbnails below preview */}
+          {(selectedVersion?.images ?? []).length > 0 && (
+            <div style={{ flexShrink: 0, display: "flex", gap: 4, flexWrap: "wrap" }}>
+              {(selectedVersion?.images ?? [])
+                .filter((img) => img.nsfw !== "X")
+                .slice(0, 8)
+                .map((img) => (
+                  <div
+                    key={img.url}
+                    onClick={() => handleThumbnailClick(img)}
+                    style={{
+                      width: 40, height: 40, borderRadius: 4, overflow: "hidden",
+                      cursor: "pointer", flexShrink: 0,
+                      border: previewUrl === img.url ? "2px solid var(--bs-primary)" : "2px solid transparent",
+                    }}
+                  >
+                    <CivitaiImage
+                      url={img.url} alt=""
+                      base64={img.images_base64?.small}
+                      width={40}
+                      style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                    />
+                  </div>
+                ))}
+            </div>
           )}
         </div>
 
-        {/* Detail panel */}
-        <div
-          style={{
-            width: 320, display: "flex", flexDirection: "column",
-            color: "#ccc", fontSize: 12, gap: 8, overflow: "hidden",
-          }}
-        >
+        {/* ── Right column: info + selects + buttons ── */}
+        <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 6, overflow: "hidden" }}>
           {/* Header */}
           <div style={{ flexShrink: 0 }}>
-            <div style={{ fontWeight: 700, fontSize: 14, color: "#fff", marginBottom: 2 }}>
+            <div style={{ fontWeight: 700, fontSize: 14, color: "#fff", marginBottom: 1 }}>
               {model.name}
             </div>
             <div style={{ color: "#aaa", fontSize: 11 }}>
               {model.creator ?? "Unknown"}
               {model.type ? ` · ${model.type}` : ""}
             </div>
-            <div style={{ display: "flex", gap: 8, fontSize: 10, color: "#888", marginTop: 4 }}>
+            <div style={{ display: "flex", gap: 8, fontSize: 10, color: "#888", marginTop: 2 }}>
               <span>⬇ {stats.downloadCount ?? 0}</span>
               <span>★ {stats.favoriteCount ?? 0}</span>
               <span>💬 {stats.commentCount ?? 0}</span>
@@ -232,69 +252,39 @@ export default function CivitaiModelDetailModal({
 
           {/* License badges */}
           {model && (
-            <div style={{ display: "flex", gap: 4, flexWrap: "wrap", flexShrink: 0 }}>
-              {model.allowNoCredit === true && <span title="Use without credit" style={{ fontSize: 14, cursor: "help" }}>🙏</span>}
-              {model.allowCommercialUse === "Commercial" && <span title="Commercial use allowed" style={{ fontSize: 14, cursor: "help" }}>💰</span>}
-              {model.allowCommercialUse === "Non-Commercial" && <span title="Non-commercial only" style={{ fontSize: 14, cursor: "help" }}>🚫💰</span>}
-              {model.allowDerivatives === "Allowed" && <span title="Derivatives allowed" style={{ fontSize: 14, cursor: "help" }}>🔀</span>}
-              {model.allowDerivatives === "Not allowed" && <span title="No derivatives" style={{ fontSize: 14, cursor: "help" }}>🚫🔀</span>}
-              {model.allowDifferentLicense === true && <span title="Can use different license" style={{ fontSize: 14, cursor: "help" }}>📜</span>}
+            <div style={{ display: "flex", gap: 3, flexWrap: "wrap", flexShrink: 0 }}>
+              {model.allowNoCredit === true && <span title="Use without credit" style={{ fontSize: 13, cursor: "help" }}>🙏</span>}
+              {model.allowCommercialUse === "Commercial" && <span title="Commercial use allowed" style={{ fontSize: 13, cursor: "help" }}>💰</span>}
+              {model.allowCommercialUse === "Non-Commercial" && <span title="Non-commercial only" style={{ fontSize: 13, cursor: "help" }}>🚫💰</span>}
+              {model.allowDerivatives === "Allowed" && <span title="Derivatives allowed" style={{ fontSize: 13, cursor: "help" }}>🔀</span>}
+              {model.allowDerivatives === "Not allowed" && <span title="No derivatives" style={{ fontSize: 13, cursor: "help" }}>🚫🔀</span>}
+              {model.allowDifferentLicense === true && <span title="Can use different license" style={{ fontSize: 13, cursor: "help" }}>📜</span>}
             </div>
           )}
 
-          {/* Scrollable content area */}
-          <div className="scrollable-modal-content" style={{ flex: 1, overflowY: "auto", minHeight: 0, height: 0 }}>
-            {/* Description */}
-            {desc && (
-              <div
-                className="civitai-model-description"
-                style={{ fontSize: 10, color: "#999", lineHeight: 1.4, marginBottom: 8 }}
-              >
-                {desc}
-              </div>
-            )}
+          {/* Scrollable description */}
+          <div
+            className="civitai-model-description scrollable-modal-content"
+            style={{
+              flex: 1, overflowY: "auto", minHeight: 0, height: 0,
+              fontSize: 10, color: "#999", lineHeight: 1.4,
+            }}
+          >
+            {desc || "No description available."}
+          </div>
 
-            {/* Sample images */}
-            {(selectedVersion?.images ?? []).length > 0 && (
-              <div style={{ marginBottom: 8 }}>
-                <div style={{ color: "#aaa", fontSize: 10, marginBottom: 4 }}>Sample Images</div>
-                <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
-                  {(selectedVersion?.images ?? [])
-                    .filter((img) => img.nsfw !== "X")
-                    .slice(0, 8)
-                    .map((img) => (
-                      <div
-                        key={img.url}
-                        onClick={() => handleThumbnailClick(img)}
-                        style={{
-                          width: 48, height: 48, borderRadius: 4, overflow: "hidden",
-                          cursor: "pointer", flexShrink: 0,
-                          border: previewUrl === img.url ? "2px solid var(--bs-primary)" : "2px solid transparent",
-                        }}
-                      >
-                        <CivitaiImage
-                          url={img.url} alt=""
-                          base64={img.images_base64?.small}
-                          width={48}
-                          style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                        />
-                      </div>
-                    ))}
-                </div>
-              </div>
-            )}
-
-            {/* Version selector */}
+          {/* Version / File selects (anchored to bottom) */}
+          <div style={{ flexShrink: 0 }}>
             {versions.length > 0 && (
-              <div style={{ marginBottom: 6 }}>
-                <div style={{ color: "#aaa", fontSize: 10, marginBottom: 2 }}>Version</div>
+              <div style={{ marginBottom: 4 }}>
+                <div style={{ color: "#aaa", fontSize: 10, marginBottom: 1 }}>Version</div>
                 <select
                   value={selectedVersionId ?? ""}
                   onChange={(e) => handleVersionChange(Number(e.target.value))}
                   style={{
                     width: "100%", background: "rgba(255,255,255,0.1)",
                     border: "1px solid rgba(255,255,255,0.2)", borderRadius: 4,
-                    color: "#fff", fontSize: 11, padding: "4px 6px",
+                    color: "#fff", fontSize: 11, padding: "3px 5px",
                   }}
                 >
                   {versions.map((v) => (
@@ -305,18 +295,16 @@ export default function CivitaiModelDetailModal({
                 </select>
               </div>
             )}
-
-            {/* File selector */}
             {(selectedVersion?.files ?? []).length > 0 && (
-              <div style={{ marginBottom: 6 }}>
-                <div style={{ color: "#aaa", fontSize: 10, marginBottom: 2 }}>File</div>
+              <div style={{ marginBottom: 4 }}>
+                <div style={{ color: "#aaa", fontSize: 10, marginBottom: 1 }}>File</div>
                 <select
                   value={selectedFileId ?? ""}
                   onChange={(e) => setSelectedFileId(Number(e.target.value))}
                   style={{
                     width: "100%", background: "rgba(255,255,255,0.1)",
                     border: "1px solid rgba(255,255,255,0.2)", borderRadius: 4,
-                    color: "#fff", fontSize: 11, padding: "4px 6px",
+                    color: "#fff", fontSize: 11, padding: "3px 5px",
                   }}
                 >
                   {(selectedVersion?.files ?? []).map((f) => (
@@ -331,7 +319,7 @@ export default function CivitaiModelDetailModal({
           </div>
 
           {/* Action buttons */}
-          <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
+          <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
             <DownloadButton
               selectedFile={selectedFile}
               downloads={downloads}
@@ -344,10 +332,10 @@ export default function CivitaiModelDetailModal({
             <button
               onClick={() => window.open(`https://civitai.com/models/${model.id}`, "_blank")}
               style={{
-                flexShrink: 0, padding: "6px 10px",
+                flexShrink: 0, padding: "5px 8px",
                 background: "rgba(255,255,255,0.1)",
                 border: "1px solid rgba(255,255,255,0.2)", borderRadius: 4,
-                color: "#aaa", cursor: "pointer", fontSize: 11,
+                color: "#aaa", cursor: "pointer", fontSize: 10,
               }}
             >
               ↗ CivitAI
