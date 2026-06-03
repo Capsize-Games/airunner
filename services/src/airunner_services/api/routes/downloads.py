@@ -8,6 +8,8 @@ import io
 import json
 import logging
 import os
+import queue
+import threading
 import time
 from typing import Any
 
@@ -23,6 +25,7 @@ from airunner_services.downloads.service import (
     search_civitai_models,
 )
 from airunner_services.downloads.job_service import DownloadJobService
+from airunner_services.downloads.civitai import _BASE_MODEL_ALIASES, _MODEL_TYPE_ALIASES
 
 from .downloads_models import (
     CivitaiBrowserModelRequest,
@@ -37,8 +40,6 @@ from .downloads_models import (
     NltkDownloadRequest,
     UrlDownloadRequest,
 )
-
-from airunner_services.downloads.civitai import _BASE_MODEL_ALIASES, _MODEL_TYPE_ALIASES
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -158,11 +159,7 @@ async def fetch_civitai_model_info_route(
 
 @router.get("/civitai/options")
 async def civitai_browser_options() -> dict[str, Any]:
-    """Return available base-model and model-type filter options.
-
-    These come from the backend's CivitAI integration so the frontend
-    never needs to hardcode filter values.
-    """
+    """Return available base-model and model-type filter options."""
     base_models: list[dict[str, str]] = []
     seen = set()
     for label in _BASE_MODEL_ALIASES:
@@ -219,41 +216,21 @@ async def fetch_civitai_browser_model_route(
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
-import threading
+# ── Image proxy with disk cache and background retry queue ──
 
-
-# Rate limiter: CivitAI free tier ~10 req/s, be conservative at 5 req/s
-_image_fetch_lock = threading.Lock()
-_image_fetch_timestamps: list[float] = []
-_IMAGE_MAX_RATE = 5  # max requests per second
-
-
-def _rate_limit_image_fetch() -> None:
-    """Block until a CivitAI image fetch is allowed (5 req/s limit)."""
-    global _image_fetch_timestamps
-    now = time.time()
-    with _image_fetch_lock:
-        # Prune timestamps older than 1 second
-        _image_fetch_timestamps = [
-            t for t in _image_fetch_timestamps if now - t < 1.0
-        ]
-        if len(_image_fetch_timestamps) >= _IMAGE_MAX_RATE:
-            # Sleep until oldest timestamp expires
-            sleep_for = 1.0 - (now - _image_fetch_timestamps[0])
-            if sleep_for > 0:
-                time.sleep(sleep_for)
-        _image_fetch_timestamps.append(time.time())
-
-
-# Disk cache for CivitAI preview images (keyed by URL+width)
 _IMAGE_CACHE_DIR = os.path.join(
     "/tmp", "airunner", "civitai_image_cache",
 )
 _IMAGE_CACHE_MAX_AGE = 86400  # 24 hours
 
+_retry_queue: queue.Queue = queue.Queue()
+_retry_thread_started = False
+_image_ready_subscribers: list[queue.Queue] = []
+_image_ready_lock = threading.Lock()
+
 
 def _image_cache_path(url: str, width: int | None) -> str:
-    """Return one deterministic cache path for a CivitAI image."""
+    """Return one deterministic cache path."""
     raw = f"{url}:{width or 'full'}"
     digest = hashlib.sha256(raw.encode("utf-8")).hexdigest()[:16]
     os.makedirs(_IMAGE_CACHE_DIR, exist_ok=True)
@@ -268,163 +245,109 @@ def _image_from_cache(path: str) -> bytes | None:
             return None
         with open(path, "rb") as fh:
             return fh.read()
-    except (FileNotFoundError, PermissionError, OSError):
+    except OSError:
         return None
 
 
 def _write_cache(path: str, data: bytes) -> None:
-    """Write to disk cache, silently ignoring errors."""
+    """Write to disk cache."""
     try:
+        os.makedirs(os.path.dirname(path), exist_ok=True)
         with open(path, "wb") as fh:
             fh.write(data)
     except OSError:
         pass
 
 
-def _fetch_and_maybe_resize(
-    url: str,
-    width: int | None,
-    max_bytes: int,
-) -> bytes:
-    """Fetch one CivitAI image, optionally resize, cache, return JPEG.
-
-    When ``width`` is provided the image is resized server-side to
-    keep response sizes small (typically 10-50KB for thumbnails).
-    Failed/fetches are NOT cached so they will be retried next time.
-    """
-    cache_path = _image_cache_path(url, width)
-    cached = _image_from_cache(cache_path)
-    if cached is not None:
-        return cached
-
-    # Rate-limit to avoid CivitAI rejecting requests
-    _rate_limit_image_fetch()
-
-    raw = safe_fetch_bytes(url, max_bytes=max_bytes)
-
-    if width is not None:
-        try:
-            img = PILImage.open(io.BytesIO(raw)).convert("RGB")
-            ratio = width / float(img.width)
-            h = int(float(img.height) * ratio)
-            img = img.resize((width, h), PILImage.Resampling.LANCZOS)
-            buf = io.BytesIO()
-            img.save(buf, format="JPEG", quality=85, optimize=True)
-            resized = buf.getvalue()
-            # Only cache on successful resize
-            _write_cache(cache_path, resized)
-            return resized
-        except Exception:
-            # Resize failed — return raw bytes but don't cache
-            return raw
-
-    # No resize requested — cache the original
-    _write_cache(cache_path, raw)
-    return raw
-
-
-@router.post("/civitai/image")
-async def fetch_civitai_image_route(
-    payload: CivitaiImageRequest,
-) -> Response:
-    """Return one CivitAI preview image through the daemon process.
-
-    The image is cached on disk by URL+width for 24 hours.
-    When ``width`` is provided the image is resized server-side
-    with Pillow, keeping response payloads small regardless of
-    the original CivitAI resolution.
-    """
-    try:
-        image_bytes = await asyncio.to_thread(
-            _fetch_and_maybe_resize,
-            payload.url,
-            payload.width,
-            payload.max_bytes,
-        )
-    except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
-    except Exception as exc:
-        raise HTTPException(status_code=502, detail=str(exc)) from exc
-    return Response(
-        content=image_bytes,
-        media_type="image/jpeg",
+def _notify_image_ready(url: str) -> None:
+    """Push an image-ready event to all SSE subscribers."""
+    payload = (
+        b"data: "
+        + json.dumps(
+            {"type": "image_ready", "url": url},
+        ).encode("utf-8")
+        + b"\n\n"
     )
+    with _image_ready_lock:
+        dead = []
+        for q in _image_ready_subscribers:
+            try:
+                q.put_nowait(payload)
+            except queue.Full:
+                dead.append(q)
+        for q in dead:
+            _image_ready_subscribers.remove(q)
 
 
-@router.get("/status/{job_id}/stream")
-async def stream_download_progress(
-    job_id: str,
-    request: Request,
-) -> StreamingResponse:
-    """SSE stream that emits download progress events for one job.
+def _retry_worker() -> None:
+    """Background thread: retries failed CivitAI image fetches."""
+    while True:
+        try:
+            url, width, max_bytes = _retry_queue.get(timeout=5)
+        except queue.Empty:
+            continue
+        time.sleep(0.25)  # 4 req/s max
+        try:
+            cache_path = _image_cache_path(url, width)
+            if _image_from_cache(cache_path) is not None:
+                continue
+            raw = safe_fetch_bytes(url, max_bytes=max_bytes)
+            if width is not None:
+                try:
+                    img = PILImage.open(io.BytesIO(raw)).convert("RGB")
+                    ratio = width / float(img.width)
+                    h = int(float(img.height) * ratio)
+                    img = img.resize(
+                        (width, h), PILImage.Resampling.LANCZOS,
+                    )
+                    buf = io.BytesIO()
+                    img.save(buf, format="JPEG", quality=85, optimize=True)
+                    _write_cache(cache_path, buf.getvalue())
+                except Exception:
+                    _write_cache(cache_path, raw)
+            else:
+                _write_cache(cache_path, raw)
+            _notify_image_ready(url)
+        except Exception:
+            # Re-queue for another retry
+            _retry_queue.put((url, width, max_bytes))
+            time.sleep(2.0)
 
-    Events:
-      ``{"type": "progress", "progress": 42.5, "status": "running", ...}``
-      ``{"type": "complete", "result": {...}}``
-      ``{"type": "error", "error": "message"}``
-      ``{"type": "cancelled"}``
-    """
-    service = get_download_job_service(request)
 
-    async def event_stream():
+def _ensure_retry_worker() -> None:
+    """Start the background retry worker if not running."""
+    global _retry_thread_started
+    if not _retry_thread_started:
+        _retry_thread_started = True
+        t = threading.Thread(target=_retry_worker, daemon=True)
+        t.start()
+
+
+@router.get("/civitai/images/ready")
+async def watch_image_ready():
+    """SSE stream that emits ``{"type": "image_ready", "url": "..."}``
+    when a previously-failed CivitAI image has been cached successfully
+    by the background retry worker."""
+    q: queue.Queue = queue.Queue(maxsize=128)
+    with _image_ready_lock:
+        _image_ready_subscribers.append(q)
+
+    def _cleanup():
+        with _image_ready_lock:
+            if q in _image_ready_subscribers:
+                _image_ready_subscribers.remove(q)
+
+    def event_stream():
         try:
             while True:
-                if await request.is_disconnected():
-                    break
-                job = await service.get_status(job_id)
-                if job is None:
-                    yield (
-                        b"data: "
-                        + json.dumps(
-                            {"type": "error", "error": "Job not found"},
-                        ).encode("utf-8")
-                        + b"\n\n"
-                    )
-                    break
-                status = job.status.value
-                payload = {
-                    "type": "progress",
-                    "progress": job.progress,
-                    "status": status,
-                    "metadata": job.metadata,
-                }
-                yield (
-                    b"data: "
-                    + json.dumps(payload).encode("utf-8")
-                    + b"\n\n"
-                )
-                if status in ("completed", "failed", "cancelled"):
-                    if status == "completed":
-                        yield (
-                            b"data: "
-                            + json.dumps(
-                                {
-                                    "type": "complete",
-                                    "result": job.result,
-                                },
-                            ).encode("utf-8")
-                            + b"\n\n"
-                        )
-                    elif status == "failed":
-                        yield (
-                            b"data: "
-                            + json.dumps(
-                                {"type": "error", "error": job.error},
-                            ).encode("utf-8")
-                            + b"\n\n"
-                        )
-                    else:
-                        yield (
-                            b"data: "
-                            + json.dumps({"type": "cancelled"}).encode(
-                                "utf-8",
-                            )
-                            + b"\n\n"
-                        )
-                    break
-                await asyncio.sleep(0.25)
-        except asyncio.CancelledError:
+                try:
+                    yield q.get(timeout=30)
+                except queue.Empty:
+                    yield b": keepalive\n\n"
+        except GeneratorExit:
             pass
+        finally:
+            _cleanup()
 
     return StreamingResponse(
         event_stream(),
@@ -437,39 +360,72 @@ async def stream_download_progress(
     )
 
 
-@router.get(
-    "/status/{job_id}",
-    response_model=DownloadJobStatusResponse,
-)
-async def get_download_job_status(
-    job_id: str,
-    request: Request,
-) -> DownloadJobStatusResponse:
-    """Return the tracked state for one download job."""
-    service = get_download_job_service(request)
-    job = await service.get_status(job_id)
-    if job is None:
-        raise HTTPException(status_code=404, detail="Download job not found")
-    return DownloadJobStatusResponse(**job.to_dict())
+def _fetch_and_resize(
+    url: str,
+    width: int | None,
+    max_bytes: int,
+) -> bytes:
+    """Fetch one CivitAI image, resize, cache, and return JPEG bytes.
+
+    On failure, queues for background retry and raises the exception.
+    """
+    cache_path = _image_cache_path(url, width)
+    cached = _image_from_cache(cache_path)
+    if cached is not None:
+        return cached
+
+    time.sleep(0.2)  # gentle rate limiting
+
+    try:
+        raw = safe_fetch_bytes(url, max_bytes=max_bytes)
+    except Exception:
+        _ensure_retry_worker()
+        _retry_queue.put((url, width, max_bytes))
+        raise
+
+    if width is not None:
+        try:
+            img = PILImage.open(io.BytesIO(raw)).convert("RGB")
+            ratio = width / float(img.width)
+            h = int(float(img.height) * ratio)
+            img = img.resize((width, h), PILImage.Resampling.LANCZOS)
+            buf = io.BytesIO()
+            img.save(buf, format="JPEG", quality=85, optimize=True)
+            _write_cache(cache_path, buf.getvalue())
+            return buf.getvalue()
+        except Exception:
+            return raw
+
+    _write_cache(cache_path, raw)
+    return raw
 
 
-@router.delete(
-    "/cancel/{job_id}",
-    response_model=DownloadJobAcceptedResponse,
-)
-async def cancel_download_job(
-    job_id: str,
-    request: Request,
-) -> DownloadJobAcceptedResponse:
-    """Cancel one running download job when possible."""
-    service = get_download_job_service(request)
-    job = await service.get_status(job_id)
-    if job is None:
-        raise HTTPException(status_code=404, detail="Download job not found")
-    await service.cancel(job_id)
-    updated_job = await service.get_status(job_id)
-    status = "cancelled"
-    if updated_job is not None:
-        status = updated_job.status.value
-    return DownloadJobAcceptedResponse(job_id=job_id, status=status)
+@router.post("/civitai/image")
+async def fetch_civitai_image_route(
+    payload: CivitaiImageRequest,
+) -> Response:
+    """Return one CivitAI preview image through the daemon process.
 
+    The image is cached on disk by URL+width for 24 hours.
+    When ``width`` is provided the image is resized server-side
+    with Pillow, keeping response payloads small.
+
+    On failure (rate limit, timeout) the URL is queued for background
+    retry. Subscribe to ``GET /civitai/images/ready`` for SSE
+    notifications when the image becomes available, then re-request.
+    """
+    try:
+        image_bytes = await asyncio.to_thread(
+            _fetch_and_resize,
+            payload.url,
+            payload.width,
+            payload.max_bytes,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+    return Response(
+        content=image_bytes,
+        media_type="image/jpeg",
+    )
