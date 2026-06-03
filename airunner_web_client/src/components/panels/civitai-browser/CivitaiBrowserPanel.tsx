@@ -2,14 +2,9 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import Spinner from "react-bootstrap/Spinner";
 import CivitaiSearchBar from "./CivitaiSearchBar";
 import CivitaiResultCard from "./CivitaiResultCard";
-import CivitaiModelDetail from "./CivitaiModelDetail";
-import DownloadProgress from "../../downloads/DownloadProgress";
-import {
-  searchCivitaiModels,
-  fetchCivitaiModel,
-  startCivitaiFileDownload,
-} from "../../../api/downloads";
+import { searchCivitaiModels, fetchCivitaiModel } from "../../../api/downloads";
 import { BASE_URL, type JsonObject } from "../../../types/api";
+import CivitaiModelDetailModal from "./CivitaiModelDetailModal";
 
 // ── Cache helpers (localStorage, 24-hour TTL) ──
 
@@ -408,7 +403,7 @@ export default function CivitaiBrowserPanel() {
   const icon = (name: string) => `/icons/lucide/dark/${name}.svg`;
 
   return (
-    <div className="d-flex flex-column h-100 p-2">
+    <div className="d-flex flex-column h-100 p-2" style={{ position: "relative" }}>
       <div className="d-flex align-items-center justify-content-between mb-2">
         <h6 className="text-muted mb-0">CivitAI Browser</h6>
         <button
@@ -469,22 +464,18 @@ export default function CivitaiBrowserPanel() {
         }}
         onBaseModelChange={(val) => {
           setBaseModel(val);
-          setModelType(""); // Reset type when base model changes
+          setModelType("");
         }}
         onModelTypeChange={(val) => {
           setModelType(val);
         }}
       />
 
-      {/* Results list: capped at half the panel when a model is selected */}
+      {/* Results list — full height when no modal */}
       <div
         ref={resultsRef}
-        className="overflow-auto mb-1"
-        style={{
-          flex: 1,
-          minHeight: 0,
-          maxHeight: selectedModelId ? "50%" : "none",
-        }}
+        className="overflow-auto"
+        style={{ flex: 1, minHeight: 0 }}
       >
         {results.map((item) => (
           <CivitaiResultCard
@@ -514,51 +505,20 @@ export default function CivitaiBrowserPanel() {
         )}
       </div>
 
-      {/* Model detail */}
-      {detailLoading ? (
+      {/* Model detail modal */}
+      {detailLoading && (
         <div className="text-center py-2">
           <Spinner animation="border" size="sm" />
-          <div className="text-muted small mt-1">
-            Loading model details...
-          </div>
-        </div>
-      ) : selectedModelData && (
-        <div
-          className="overflow-auto"
-          style={{
-            flex: 1,
-            borderTop:
-              "1px solid var(--separator-color)",
-            paddingTop: 6,
-          }}
-        >
-          <CivitaiModelDetail
-            model={modelDetail}
-            onDownload={handleDownload}
-          />
         </div>
       )}
-
-      {/* Active downloads */}
-      {downloads.length > 0 && (
-        <div
-          className="mt-1 pt-1"
-          style={{
-            borderTop: "1px solid var(--separator-color)",
+      {modelDetail && (
+        <CivitaiModelDetailModal
+          model={modelDetail}
+          onClose={() => {
+            setSelectedModelId(null);
+            setSelectedModelData(null);
           }}
-        >
-          <small className="text-muted d-block mb-1">
-            Downloads
-          </small>
-          {downloads.map((d) => (
-            <div key={d.jobId} className="mb-1">
-              <DownloadProgress
-                jobId={d.jobId}
-                label={d.label}
-              />
-            </div>
-          ))}
-        </div>
+        />
       )}
     </div>
   );
