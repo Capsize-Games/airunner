@@ -93,21 +93,7 @@ export default function DownloadTray() {
           </div>
           <div style={{ display: "flex", gap: 4 }}>
             <ResumeButton jobId={job.jobId} onResume={() => handleResume(job)} />
-            <button
-              onClick={() => handleCancel(job)}
-              style={{
-                background: "rgba(255,80,80,0.15)",
-                border: "1px solid rgba(255,80,80,0.25)",
-                borderRadius: 3,
-                color: "#ff8888",
-                cursor: "pointer",
-                fontSize: 10,
-                padding: "2px 8px",
-                whiteSpace: "nowrap",
-              }}
-            >
-              Cancel
-            </button>
+            <CancelButton jobId={job.jobId} onCancel={() => handleCancel(job)} />
           </div>
         </div>
       ))}
@@ -134,7 +120,7 @@ function TrayHeader({
 
     const check = async () => {
       const results = await Promise.all(
-        jobIds.map(async (id) => {
+        jobIds.map(async (id: string) => {
           if (terminal.has(id)) return false;
           try {
             const res = await fetch(`${BASE_URL}/api/v1/downloads/status/${id}`);
@@ -151,7 +137,6 @@ function TrayHeader({
       );
       const active = results.some(Boolean);
       if (!cancelled) setAnyActive(active);
-      // Stop polling once everything is terminal
       if (terminal.size === jobIds.length) return;
       setTimeout(check, 2000);
     };
@@ -226,6 +211,28 @@ function ResumeButton({ jobId, onResume }: { jobId: string; onResume: () => void
       }}
     >
       Resume
+    </button>
+  );
+}
+
+function CancelButton({ jobId, onCancel }: { jobId: string; onCancel: () => void }) {
+  const state = useDownloadProgress(jobId);
+  if (state.status !== "running" && state.status !== "interrupted") return null;
+  return (
+    <button
+      onClick={onCancel}
+      style={{
+        background: "rgba(255,80,80,0.15)",
+        border: "1px solid rgba(255,80,80,0.25)",
+        borderRadius: 3,
+        color: "#ff8888",
+        cursor: "pointer",
+        fontSize: 10,
+        padding: "2px 8px",
+        whiteSpace: "nowrap",
+      }}
+    >
+      Cancel
     </button>
   );
 }

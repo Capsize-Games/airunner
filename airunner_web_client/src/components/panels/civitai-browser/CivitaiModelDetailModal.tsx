@@ -1,9 +1,9 @@
 import { useEffect, useCallback, useState, useRef } from "react";
 import { BASE_URL } from "../../../types/api";
 import CivitaiImage from "./CivitaiImage";
-import DownloadProgress from "../../downloads/DownloadProgress";
+import DownloadProgress, { useDownloadProgress } from "../../downloads/DownloadProgress";
 import { startCivitaiFileDownload, cancelDownloadJob } from "../../../api/downloads";
-import { useDownloads } from "../../downloads/useDownloadState";
+import { useDownloads, type DownloadJob } from "../../downloads/useDownloadState";
 import type { JsonObject } from "../../../types/api";
 
 interface VersionImage {
@@ -405,50 +405,15 @@ export default function CivitaiModelDetailModal({
 
           {/* Action buttons */}
           <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
-            {selectedFile?.downloadUrl && downloads.find((d) => d.downloadUrl === selectedFile.downloadUrl) ? (
-              <button
-                onClick={async () => {
-                  if (!selectedFile?.downloadUrl) return;
-                  const d = downloads.find((dl) => dl.downloadUrl === selectedFile.downloadUrl);
-                  if (!d) return;
-                  try {
-                    await cancelDownloadJob(d.jobId);
-                    removeDownload(d.jobId);
-                  } catch { /* */ }
-                }}
-                style={{
-                  flex: 1,
-                  padding: "6px 12px",
-                  background: "rgba(255,80,80,0.2)",
-                  border: "1px solid rgba(255,80,80,0.3)",
-                  borderRadius: 4,
-                  color: "#ff8888",
-                  cursor: "pointer",
-                  fontSize: 12,
-                }}
-              >
-                Cancel
-              </button>
-            ) : (
-              <button
-                onClick={handleDownloadClick}
-                disabled={!selectedFile?.downloadUrl}
-                style={{
-                  flex: 1,
-                  padding: "6px 12px",
-                  background: selectedFile?.downloadUrl
-                    ? "rgba(255,255,255,0.2)"
-                    : "rgba(255,255,255,0.1)",
-                  border: "1px solid rgba(255,255,255,0.2)",
-                  borderRadius: 4,
-                  color: selectedFile?.downloadUrl ? "#fff" : "#666",
-                  cursor: selectedFile?.downloadUrl ? "pointer" : "default",
-                  fontSize: 12,
-                }}
-              >
-                Download
-              </button>
-            )}
+            <DownloadButton
+              selectedFile={selectedFile}
+              downloads={downloads}
+              onDownloadClick={handleDownloadClick}
+              onCancel={async (jobId: string) => {
+                try { await cancelDownloadJob(jobId); } catch { /* */ }
+                removeDownload(jobId);
+              }}
+            />
             <button
               onClick={() => window.open(`https://civitai.com/models/${model.id}`, "_blank")}
               style={{
@@ -570,5 +535,97 @@ export default function CivitaiModelDetailModal({
         </div>
       )}
     </div>
+  );
+}
+
+/** Renders Download, Cancel, or Downloaded depending on file status. */
+function DownloadButton({
+  selectedFile,
+  downloads,
+  onDownloadClick,
+  onCancel,
+}: {
+  selectedFile: CivitaiFile | null;
+  downloads: DownloadJob[];
+  onDownloadClick: () => void;
+  onCancel: (jobId: string) => void;
+}) {
+  const match = selectedFile?.downloadUrl
+    ? downloads.find((d) => d.downloadUrl === selectedFile.downloadUrl)
+    : null;
+
+  if (match) {
+    return (
+      <DownloadStatusButton
+        jobId={match.jobId}
+        onCancel={() => onCancel(match.jobId)}
+      />
+    );
+  }
+
+  return (
+    <button
+      onClick={onDownloadClick}
+      disabled={!selectedFile?.downloadUrl}
+      style={{
+        flex: 1,
+        padding: "6px 12px",
+        background: selectedFile?.downloadUrl
+          ? "rgba(255,255,255,0.2)"
+          : "rgba(255,255,255,0.1)",
+        border: "1px solid rgba(255,255,255,0.2)",
+        borderRadius: 4,
+        color: selectedFile?.downloadUrl ? "#fff" : "#666",
+        cursor: selectedFile?.downloadUrl ? "pointer" : "default",
+        fontSize: 12,
+      }}
+    >
+      Download
+    </button>
+  );
+}
+
+function DownloadStatusButton({
+  jobId,
+  onCancel,
+}: {
+  jobId: string;
+  onCancel: () => void;
+}) {
+  const state = useDownloadProgress(jobId);
+  if (state.status === "completed") {
+    return (
+      <div
+        style={{
+          flex: 1,
+          padding: "6px 12px",
+          borderRadius: 4,
+          background: "rgba(0,200,100,0.15)",
+          border: "1px solid rgba(0,200,100,0.25)",
+          color: "#66ddaa",
+          fontSize: 12,
+          textAlign: "center",
+        }}
+      >
+        Downloaded
+      </div>
+    );
+  }
+  return (
+    <button
+      onClick={onCancel}
+      style={{
+        flex: 1,
+        padding: "6px 12px",
+        background: "rgba(255,80,80,0.2)",
+        border: "1px solid rgba(255,80,80,0.3)",
+        borderRadius: 4,
+        color: "#ff8888",
+        cursor: "pointer",
+        fontSize: 12,
+      }}
+    >
+      Cancel
+    </button>
   );
 }
