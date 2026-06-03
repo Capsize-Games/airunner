@@ -32,6 +32,8 @@ from .downloads_models import (
     UrlDownloadRequest,
 )
 
+from airunner_services.downloads.civitai import _BASE_MODEL_ALIASES, _MODEL_TYPE_ALIASES
+
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
@@ -146,9 +148,6 @@ async def fetch_civitai_model_info_route(
         payload.url,
         payload.api_key or "",
     )
-
-
-from airunner_services.downloads.civitai import _BASE_MODEL_ALIASES, _MODEL_TYPE_ALIASES
 
 
 @router.get("/civitai/options")

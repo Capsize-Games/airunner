@@ -4,7 +4,11 @@ import CivitaiSearchBar from "./CivitaiSearchBar";
 import CivitaiResultCard from "./CivitaiResultCard";
 import CivitaiModelDetail from "./CivitaiModelDetail";
 import DownloadProgress from "../../downloads/DownloadProgress";
-import { searchCivitaiModels, fetchCivitaiModel, startCivitaiFileDownload } from "../../../api/downloads";
+import {
+  searchCivitaiModels,
+  fetchCivitaiModel,
+  startCivitaiFileDownload,
+} from "../../../api/downloads";
 import { BASE_URL, type JsonObject } from "../../../types/api";
 
 // ── Cache helpers (localStorage, 24-hour TTL) ──
@@ -43,13 +47,27 @@ function cacheSet<T>(key: string, data: T) {
   }
 }
 
-function clearAllCache() {
+let toastTimeout: ReturnType<typeof setTimeout> | null = null;
+
+function clearAllCache(
+  setToastMsg: (msg: string | null) => void,
+) {
   const keys: string[] = [];
   for (let i = 0; i < localStorage.length; i++) {
     const k = localStorage.key(i);
     if (k && k.startsWith(CACHE_KEY_PREFIX)) keys.push(k);
   }
   keys.forEach((k) => localStorage.removeItem(k));
+  setToastMsg(`Cache cleared (${keys.length} entries)`);
+  if (toastTimeout) clearTimeout(toastTimeout);
+  toastTimeout = setTimeout(() => setToastMsg(null), 2000);
+}
+
+// CivitAI supports ?width=N in image URLs for smaller thumbnails
+function thumbnailUrl(url: string, width = 120): string {
+  if (!url) return "";
+  const separator = url.includes("?") ? "&" : "?";
+  return `${url}${separator}width=${width}`;
 }
 
 // ── Search result flattening ──
@@ -67,12 +85,8 @@ function flattenItem(item: JsonObject): SearchResult {
   const creatorObj = item.creator as JsonObject | undefined;
   const creatorName = creatorObj?.username
     ? String(creatorObj.username)
-    : creatorObj?.image
-      ? "CivitAI"
-      : String(item.creator ?? "Unknown");
+    : String(item.creator ?? "Unknown");
 
-  // Thumbnail: use first version's first image (url or thumbnailUrl),
-  // otherwise model-level image
   const versions = (item.modelVersions ?? []) as JsonObject[];
   let thumbUrl = "";
   if (versions.length > 0) {
@@ -93,7 +107,7 @@ function flattenItem(item: JsonObject): SearchResult {
     type: item.type ? String(item.type) : undefined,
     baseModel: item.baseModel ? String(item.baseModel) : undefined,
     creator: creatorName,
-    thumbnail: thumbUrl || undefined,
+    thumbnail: thumbUrl ? thumbnailUrl(thumbUrl) : undefined,
   };
 }
 
@@ -152,8 +166,11 @@ export default function CivitaiBrowserPanel() {
   const [loading, setLoading] = useState(false);
   const [hasMore, setHasMore] = useState(true);
 
-  const [selectedModelId, setSelectedModelId] = useState<number | null>(null);
-  const [selectedModelData, setSelectedModelData] = useState<JsonObject | null>(null);
+  const [selectedModelId, setSelectedModelId] = useState<number | null>(
+    null,
+  );
+  const [selectedModelData, setSelectedModelData] =
+    useState<JsonObject | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
 
   const [downloads, setDownloads] = useState<DownloadJob[]>([]);
@@ -163,28 +180,38 @@ export default function CivitaiBrowserPanel() {
     typesByBase: Record<string, string[]>;
   }>({ baseModels: [], typesByBase: {} });
 
-  const detailCache = useRef<Map<number, JsonObject>>(new Map());
+  const [toastMsg, setToastMsg] = useState<string | null>(null);
 
-  // Sentinel element for IntersectionObserver lazy-load
+  const detailCache = useRef<Map<number, JsonObject>>(new Map());
   const sentinelRef = useRef<HTMLDivElement | null>(null);
   const observerRef = useRef<IntersectionObserver | null>(null);
-
-  // Debounce timer reference
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
 
   // Load filter options on mount
   useEffect(() => {
-    fetchFilterOptions().then((opts) =>
-      setFilterOptions({
-        baseModels: opts.baseModels,
-        typesByBase: opts.typesByBase,
-      }),
-    ).catch(() => {});
+    fetchFilterOptions()
+      .then((opts) =>
+        setFilterOptions({
+          baseModels: opts.baseModels,
+          typesByBase: opts.typesByBase,
+        }),
+      )
+      .catch(() => {});
   }, []);
 
-  // Auto-search helpers
+  // Only search when user has selected both dropdowns OR entered text
+  const shouldSearch = useCallback((): boolean => {
+    return (
+      query.trim().length > 0 ||
+      (baseModel !== "" && modelType !== "")
+    );
+  }, [query, baseModel, modelType]);
+
   const performSearch = useCallback(
     async (append = false) => {
+      if (!shouldSearch()) return;
       setLoading(true);
       try {
         const baseModels = baseModel ? [baseModel] : undefined;
@@ -214,7 +241,7 @@ export default function CivitaiBrowserPanel() {
         setLoading(false);
       }
     },
-    [query, baseModel, modelType, cursor],
+    [query, baseModel, modelType, cursor, shouldSearch],
   );
 
   const debouncedSearch = useCallback(
@@ -228,9 +255,16 @@ export default function CivitaiBrowserPanel() {
     [performSearch],
   );
 
-  // Auto-search when dropdowns change
+  // Auto-search when dropdowns change (only if both selected)
   useEffect(() => {
-    debouncedSearch(false);
+    if (baseModel !== "" && modelType !== "") {
+      debouncedSearch(false);
+    } else {
+      // Clear results when selections are incomplete
+      setResults([]);
+      setCursor(null);
+      setHasMore(true);
+    }
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
     };
@@ -285,7 +319,10 @@ export default function CivitaiBrowserPanel() {
     [baseModel, modelType],
   );
 
-  const handleDownload = async (fileUrl: string, fileName: string) => {
+  const handleDownload = async (
+    fileUrl: string,
+    fileName: string,
+  ) => {
     try {
       const basePath = "/tmp/airunner/downloads";
       const result = await startCivitaiFileDownload({
@@ -315,7 +352,9 @@ export default function CivitaiBrowserPanel() {
         return {
           id: Number(raw.id ?? 0),
           name: String(raw.name ?? ""),
-          description: raw.description ? String(raw.description) : undefined,
+          description: raw.description
+            ? String(raw.description)
+            : undefined,
           creator: creatorName,
           type: raw.type ? String(raw.type) : undefined,
           stats: raw.stats as
@@ -361,7 +400,7 @@ export default function CivitaiBrowserPanel() {
       <div className="d-flex align-items-center justify-content-between mb-2">
         <h6 className="text-muted mb-0">CivitAI Browser</h6>
         <button
-          onClick={clearAllCache}
+          onClick={() => clearAllCache(setToastMsg)}
           style={{
             background: "transparent",
             border: "none",
@@ -375,10 +414,37 @@ export default function CivitaiBrowserPanel() {
           <img
             src={icon("delete")}
             alt="Clear cache"
-            style={{ width: 14, height: 14, filter: "invert(0.5)" }}
+            style={{
+              width: 14,
+              height: 14,
+              filter: "invert(0.5)",
+            }}
           />
         </button>
       </div>
+
+      {/* Toast notification */}
+      {toastMsg && (
+        <div
+          style={{
+            position: "absolute",
+            top: 4,
+            left: "50%",
+            transform: "translateX(-50%)",
+            zIndex: 10,
+            background: "var(--theme-bg-secondary)",
+            border: "1px solid var(--bs-primary)",
+            borderRadius: 4,
+            padding: "4px 10px",
+            fontSize: 11,
+            color: "var(--bs-body-color)",
+            whiteSpace: "nowrap",
+            pointerEvents: "none",
+          }}
+        >
+          {toastMsg}
+        </div>
+      )}
 
       {/* Search */}
       <CivitaiSearchBar
@@ -388,7 +454,7 @@ export default function CivitaiBrowserPanel() {
         filterOptions={filterOptions}
         onQueryChange={(val) => {
           setQuery(val);
-          debouncedSearch(false);
+          if (val.trim().length > 0) debouncedSearch(false);
         }}
         onBaseModelChange={(val) => {
           setBaseModel(val);
@@ -419,16 +485,15 @@ export default function CivitaiBrowserPanel() {
           </div>
         )}
 
-        {/* IntersectionObserver sentinel */}
         {hasMore && !loading && results.length > 0 && (
           <div ref={sentinelRef} style={{ height: 1 }} />
         )}
 
         {!loading && results.length === 0 && (
           <p className="text-muted small text-center mt-3">
-            {query || baseModel || modelType
+            {shouldSearch()
               ? "No results found."
-              : "Use filters above to browse CivitAI models."}
+              : "Select a base model and type, or type a search query."}
           </p>
         )}
       </div>
@@ -446,7 +511,8 @@ export default function CivitaiBrowserPanel() {
           className="overflow-auto"
           style={{
             maxHeight: "45%",
-            borderTop: "1px solid var(--separator-color)",
+            borderTop:
+              "1px solid var(--separator-color)",
             paddingTop: 6,
           }}
         >
@@ -470,7 +536,10 @@ export default function CivitaiBrowserPanel() {
           </small>
           {downloads.map((d) => (
             <div key={d.jobId} className="mb-1">
-              <DownloadProgress jobId={d.jobId} label={d.label} />
+              <DownloadProgress
+                jobId={d.jobId}
+                label={d.label}
+              />
             </div>
           ))}
         </div>
