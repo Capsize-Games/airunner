@@ -104,6 +104,10 @@ export default function DownloadTray() {
             <DownloadProgress
               jobId={job.jobId}
               onNotFound={() => removeDownload(job.jobId)}
+              onRetry={() => {
+                // Remove interrupted entry; user can re-download from the modal
+                removeDownload(job.jobId);
+              }}
             />
           </div>
           <button

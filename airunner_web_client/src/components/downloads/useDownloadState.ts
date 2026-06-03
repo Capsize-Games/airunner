@@ -1,6 +1,7 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 
 const STORAGE_KEY = "airunner_active_downloads";
+const CHANGE_EVENT = "airunner-downloads-changed";
 
 export interface DownloadJob {
   jobId: string;
@@ -26,13 +27,25 @@ function save(jobs: DownloadJob[]) {
   } catch { /* */ }
 }
 
+/** Shared module-level subscribers so all hook instances stay in sync. */
+let _listeners: Array<() => void> = [];
+function notify() { _listeners.forEach((fn) => fn()); }
+
 export function useDownloads() {
   const [downloads, setDownloads] = useState<DownloadJob[]>(load);
+
+  // Subscribe to cross-component change notifications
+  useEffect(() => {
+    const handler = () => setDownloads(load());
+    _listeners.push(handler);
+    return () => { _listeners = _listeners.filter((h) => h !== handler); };
+  }, []);
 
   const addDownload = useCallback((job: DownloadJob) => {
     setDownloads((prev) => {
       const next = [...prev, job];
       save(next);
+      notify();
       return next;
     });
   }, []);
@@ -41,6 +54,7 @@ export function useDownloads() {
     setDownloads((prev) => {
       const next = prev.filter((d) => d.jobId !== jobId);
       save(next);
+      notify();
       return next;
     });
   }, []);
@@ -48,6 +62,7 @@ export function useDownloads() {
   const clearDownloads = useCallback(() => {
     setDownloads([]);
     save([]);
+    notify();
   }, []);
 
   return { downloads, addDownload, removeDownload, clearDownloads };
