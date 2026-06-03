@@ -331,7 +331,7 @@ export default function CivitaiModelDetailModal({
           </div>
 
           {/* Scrollable content area */}
-          <div style={{ flex: 1, overflowY: "auto", minHeight: 0 }}>
+          <div style={{ flex: 1, overflowY: "auto", minHeight: 0, height: 0 }}>
             {/* Description */}
             {desc && (
               <div
