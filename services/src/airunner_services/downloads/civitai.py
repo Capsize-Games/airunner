@@ -193,12 +193,21 @@ def download_file(
 ) -> bool:
     """Download one file with optional progress and cancellation hooks.
 
-    When a partial file already exists, sends a ``Range`` header to
+    Downloads to ``<path>.part`` and renames to ``<path>`` on success,
+    so incomplete files are never visible with the real extension.
+    When a partial ``.part`` file exists, sends a ``Range`` header to
     resume from where the previous download left off.
     """
     target_path = Path(filepath)
     target_path.parent.mkdir(parents=True, exist_ok=True)
-    existing_size = target_path.stat().st_size if target_path.exists() else 0
+    part_path = target_path.with_name(target_path.name + ".part")
+
+    # Check if a complete file already exists
+    if target_path.exists():
+        _emit_progress(progress_callback, target_path.stat().st_size, target_path.stat().st_size)
+        return True
+
+    existing_size = part_path.stat().st_size if part_path.exists() else 0
     downloaded = existing_size
     total_size = file_size or existing_size
     try:
@@ -208,7 +217,6 @@ def download_file(
 
         response = _open_download(url, api_key, custom_headers=headers)
         remaining = _content_length(response, 0)
-        # When Range is used, Content-Range tells us the true total.
         if existing_size > 0:
             cr = response.headers.get("content-range", "")
             if "/" in cr:
@@ -220,14 +228,16 @@ def download_file(
             total_size = max(total_size, remaining)
 
         if total_size > 0 and existing_size >= total_size:
+            if part_path.exists():
+                part_path.rename(target_path)
             _emit_progress(progress_callback, total_size, total_size)
             return True
 
         mode = "ab" if existing_size > 0 else "wb"
-        with open(target_path, mode) as handle:
+        with open(part_path, mode) as handle:
             for chunk in response.iter_content(chunk_size=chunk_size):
                 if cancel_callback and cancel_callback():
-                    _remove_partial_download(target_path)
+                    _remove_partial_download(part_path)
                     return False
                 if not chunk:
                     continue
@@ -235,8 +245,13 @@ def download_file(
                 downloaded += len(chunk)
                 _emit_progress(progress_callback, downloaded, total_size)
     except Exception:
-        _remove_partial_download(target_path)
+        _remove_partial_download(part_path)
         raise
+
+    # Download complete — rename .part to final name
+    if part_path.exists():
+        part_path.rename(target_path)
+
     _emit_progress(progress_callback, downloaded, total_size)
     return True
 
