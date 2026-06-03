@@ -148,14 +148,27 @@ def _thumbnail_url(item: dict[str, Any]) -> str | None:
         if images:
             url = str(images[0].get("url") or images[0].get("thumbnailUrl") or "")
             if url:
-                logger.debug("_thumbnail_url: model=%s url_hash=%s", item.get("id"), hashlib.sha256(url.encode()).hexdigest()[:12])
+                logger.debug(
+                    "_thumbnail_url: model=%s url_hash=%s",
+                    item.get("id"),
+                    hashlib.sha256(url.encode()).hexdigest()[:12],
+                )
             else:
-                logger.debug("_thumbnail_url: model=%s has image but no usable url", item.get("id"))
+                logger.debug(
+                    "_thumbnail_url: model=%s has image but no usable url",
+                    item.get("id"),
+                )
             return url if url else None
         else:
-            logger.debug("_thumbnail_url: model=%s has version but no images", item.get("id"))
+            logger.debug(
+                "_thumbnail_url: model=%s has version but no images",
+                item.get("id"),
+            )
     else:
-        logger.debug("_thumbnail_url: model=%s has no versions", item.get("id"))
+        logger.debug(
+            "_thumbnail_url: model=%s has no versions",
+            item.get("id"),
+        )
     return None
 
 
@@ -268,7 +281,6 @@ def _resize_image(raw: bytes, target_px: int) -> bytes:
         img = PILImage.open(io.BytesIO(raw)).convert("RGB")
         ratio = target_px / max(img.width, img.height)
         if ratio >= 1.0 and target_px >= _IMAGE_MAX_PX:
-            # Full-size: cap at _IMAGE_MAX_PX but never upscale
             ratio = min(1.0, _IMAGE_MAX_PX / max(img.width, img.height))
         new_w = max(1, int(img.width * ratio))
         new_h = max(1, int(img.height * ratio))
@@ -281,17 +293,10 @@ def _resize_image(raw: bytes, target_px: int) -> bytes:
 
 
 def _fetch_and_prepare_sizes(url: str) -> dict[str, bytes]:
-    """Fetch one image, prepare & cache three sizes, return them.
-
-    Sizes:
-      - ``small``: 40px  (search list thumbnails)
-      - ``medium``: 200px (modal preview grid)
-      - ``full``:   500px max (detail view)
-    """
+    """Fetch one image, prepare & cache three sizes, return them."""
     sizes = {"small": 40, "medium": 200, "full": _IMAGE_MAX_PX}
     result: dict[str, bytes] = {}
 
-    # Check cache for all sizes
     for name in sizes:
         path = _image_cache_path(url, name)
         cached = _image_from_cache(path)
@@ -301,7 +306,6 @@ def _fetch_and_prepare_sizes(url: str) -> dict[str, bytes]:
     if len(result) == len(sizes):
         return result
 
-    # Fetch once, use for all sizes
     raw = safe_fetch_bytes(url, max_bytes=50_000_000)
     for name, px in sizes.items():
         path = _image_cache_path(url, name)
@@ -316,8 +320,7 @@ def _fetch_and_prepare_sizes(url: str) -> dict[str, bytes]:
 
 # ── CivitAI search with inline thumbnails ──
 
-
-_THUMBNAIL_WORKERS = 6  # parallel CivitAI image fetches
+_THUMBNAIL_WORKERS = 6
 
 
 def _attach_thumbnails(
@@ -329,8 +332,7 @@ def _attach_thumbnails(
     and compact.  Larger sizes (medium/full) are embedded in the model
     detail endpoint.
     """
-    # Collect all fetchable URLs first
-    url_map: list[tuple[int, int, str]] = []  # (list_idx, model_id, url)
+    url_map: list[tuple[int, int, str]] = []
     for idx, item in enumerate(items):
         model_id = int(item.get("id", 0))
         thumb_url = _thumbnail_url(item)
@@ -340,10 +342,12 @@ def _attach_thumbnails(
             logger.debug("_attach_thumbnails: NO URL model=%s", model_id)
 
     if not url_map:
-        logger.info("_attach_thumbnails: done total=%d ok=0 no_url=%d", len(items), len(items))
+        logger.info(
+            "_attach_thumbnails: done total=%d ok=0 no_url=%d",
+            len(items), len(items),
+        )
         return [{**item, "thumbnails": {}} for item in items]
 
-    # Fetch in parallel — only embed the "small" (40px) size
     results: dict[int, dict[str, str]] = {}
     with ThreadPoolExecutor(max_workers=_THUMBNAIL_WORKERS) as pool:
         fut_map = {
@@ -359,12 +363,17 @@ def _attach_thumbnails(
                 if blob:
                     thumb_data["small"] = base64.b64encode(blob).decode()
                 results[list_idx] = thumb_data
-                logger.debug("_attach_thumbnails: OK model=%s small=%d", model_id, len(blob) if blob else 0)
+                logger.debug(
+                    "_attach_thumbnails: OK model=%s small=%d",
+                    model_id, len(blob) if blob else 0,
+                )
             except Exception as exc:
-                logger.warning("_attach_thumbnails: FAIL model=%s error=%s", model_id, type(exc).__name__)
+                logger.warning(
+                    "_attach_thumbnails: FAIL model=%s error=%s",
+                    model_id, type(exc).__name__,
+                )
                 results[list_idx] = {}
 
-    # Build output preserving order
     out = []
     for idx, item in enumerate(items):
         out.append({**item, "thumbnails": results.get(idx, {})})
@@ -387,7 +396,6 @@ async def search_civitai_models_route(
     Search results are cached server-side for 72 hours.
     Images are cached permanently once fetched.
     """
-    # Check server-side cache (72h) for search metadata
     cache_key = _search_cache_key(
         payload.query,
         payload.base_models,
@@ -397,7 +405,6 @@ async def search_civitai_models_route(
     cached = _search_cache_get(cache_key)
     if cached is not None:
         logger.debug("CivitAI search cache HIT")
-        # Attach thumbnails (may hit image cache)
         cached["items"] = _attach_thumbnails(cached.get("items", []))
         return cached
 
@@ -431,14 +438,12 @@ async def search_civitai_models_route(
             item_count, "set" if next_cursor else None,
         )
 
-        # Cache the search metadata (without thumbnails to save space)
         cache_item = {
             "items": result.get("items", []),
             "metadata": result.get("metadata"),
         }
         _search_cache_set(cache_key, cache_item)
 
-        # Attach thumbnails (may hit image cache)
         result["items"] = _attach_thumbnails(result.get("items", []))
         total_b64 = sum(
             len(v) for item in result.get("items", [])
@@ -463,18 +468,14 @@ def _embed_version_images(
     """Attach ``images_base64`` to images for each version.
 
     Only the **first version** gets full image embeds (small/medium/full).
-    Remaining versions return metadata only — the client lazily fetches
-    them when the user switches versions.
-
-    Fetches the first version's images in parallel.
+    Remaining versions return metadata only.
     """
     if not versions:
         return versions
 
-    # Only embed images for the first version
     first_version = versions[0]
     first_images = first_version.get("images", [])
-    url_map: list[tuple[int, str]] = []  # (img_idx, url)
+    url_map: list[tuple[int, str]] = []
     for ii, img in enumerate(first_images):
         url = str(img.get("url") or img.get("thumbnailUrl") or "")
         if url:
@@ -494,7 +495,6 @@ def _embed_version_images(
                 except Exception:
                     fetched[ii] = {}
 
-    # Build first version with embedded images
     embedded_first: list[dict[str, Any]] = []
     for ii, img in enumerate(first_images):
         url = str(img.get("url") or img.get("thumbnailUrl") or "")
@@ -511,12 +511,12 @@ def _embed_version_images(
         })
 
     out = [{**first_version, "images": embedded_first}]
-    # Remaining versions: metadata only, no base64
     for version in versions[1:]:
         out.append(version)
 
     logger.info(
-        "_embed_version_images: %d versions, first version has %d images with base64",
+        "_embed_version_images: %d versions, first version has %d images"
+        " with base64",
         len(versions), len(url_map),
     )
     return out
@@ -563,18 +563,12 @@ async def fetch_civitai_browser_model_route(
 async def fetch_civitai_image_route(
     payload: CivitaiImageRequest,
 ) -> Response:
-    """Return one CivitAI preview image (sized, cached permanently).
-
-    The server fetches, resizes to 500px max, caches permanently,
-    and returns JPEG bytes.  This endpoint is a fallback — prefer
-    the inline base64 thumbnails from the search/detail endpoints.
-    """
+    """Return one CivitAI preview image (sized, cached permanently)."""
     try:
         sizes = await asyncio.to_thread(
             _fetch_and_prepare_sizes,
             payload.url,
         )
-        # Map width hint to named size
         if payload.width and payload.width <= 60:
             key = "small"
         elif payload.width and payload.width <= 300:
@@ -589,17 +583,88 @@ async def fetch_civitai_image_route(
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
-# ── Legacy endpoints (kept for backward compat) ──
+# ── Download job endpoints ──
 
 
-@router.get("/civitai/images/ready")
-async def watch_image_ready():
-    """SSE stream (legacy - no longer required with inline thumbnails)."""
-    async def empty_stream():
-        yield b": legacy endpoint - no retry needed\n\n"
+@router.get("/status/{job_id}/stream")
+async def download_job_stream(
+    job_id: str,
+    request: Request,
+) -> StreamingResponse:
+    """SSE stream of download progress for one job."""
+    service = get_download_job_service(request)
+    initial = await service.get_status(job_id)
+    if initial is None:
+        raise HTTPException(status_code=404, detail="Job not found")
+
+    async def event_stream():
+        last_progress = -1
+        last_status = ""
+        while True:
+            try:
+                state = await service.get_status(job_id)
+                if state is None:
+                    yield (
+                        b'data: {"type":"error",'
+                        b'"error":"Job not found"}\n\n'
+                    )
+                    return
+                current_progress = state.progress
+                current_status = state.status.value
+                if (current_progress != last_progress
+                        or current_status != last_status):
+                    last_progress = current_progress
+                    last_status = current_status
+                    status_type = (
+                        "progress"
+                        if current_status == "running"
+                        else current_status
+                    )
+                    payload = json.dumps({
+                        "type": status_type,
+                        "progress": current_progress,
+                        "status": current_status,
+                        "error": state.error,
+                    })
+                    yield f"data: {payload}\n\n".encode()
+                    if current_status in ("completed", "failed", "cancelled"):
+                        return
+            except Exception:
+                yield (
+                    b'data: {"type":"error",'
+                    b'"error":"Status check failed"}\n\n'
+                )
+                return
+            await asyncio.sleep(1)
+
     return StreamingResponse(
-        empty_stream(),
+        event_stream(),
         media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )
+
+
+@router.get("/status/{job_id}")
+async def download_job_status(
+    job_id: str,
+    request: Request,
+) -> DownloadJobStatusResponse:
+    """Return the current status of one download job."""
+    service = get_download_job_service(request)
+    state = await service.get_status(job_id)
+    if state is None:
+        raise HTTPException(status_code=404, detail="Job not found")
+    return DownloadJobStatusResponse(
+        job_id=state.job_id,
+        status=state.status.value,
+        progress=state.progress,
+        result=state.result,
+        error=state.error,
+        metadata=state.metadata,
     )
 
 
