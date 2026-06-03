@@ -263,35 +263,10 @@ export default function CivitaiBrowserPanel() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [baseModel, modelType]);
 
-  // Lazy loading: detect scroll-to-bottom on the results container.
-  // Uses a ref for the guard to avoid stale closure issues.
-  const loadingRef = useRef(false);
-
-  const handleResultsScroll = useCallback(() => {
-    if (!resultsRef.current || loadingRef.current || !hasMore) return;
-    const { scrollTop, scrollHeight, clientHeight } = resultsRef.current;
-    if (scrollHeight - scrollTop - clientHeight < 100) {
-      loadingRef.current = true;
-      performSearch(true);
-    }
-  }, [hasMore, performSearch]);
-
-  useEffect(() => {
-    const el = resultsRef.current;
-    if (!el) return;
-    el.addEventListener("scroll", handleResultsScroll);
-    return () => el.removeEventListener("scroll", handleResultsScroll);
-  }, [handleResultsScroll]);
-
-  // Fetch up to 50 items per request (CivitAI max) to fill any viewport
-  // in a single call. Scroll-based lazy loading is only needed when
-  // there are 50+ results.
+  // Fetch up to 50 items per request (CivitAI max).
+  // The Vite dev proxy can hang on sequential POST requests, so we
+  // fetch directly from the backend when a cursor is present.
   const pageLimit = 50;
-
-  // Reset loading guard when loading finishes
-  useEffect(() => {
-    if (!loading) loadingRef.current = false;
-  }, [loading]);
 
   const resultsRef = useRef<HTMLDivElement | null>(null);
 
@@ -480,6 +455,16 @@ export default function CivitaiBrowserPanel() {
           </div>
         )}
 
+        {/* Load More button */}
+        {hasMore && !loading && results.length > 0 && (
+          <button
+            className="btn btn-sm btn-outline-secondary w-100 mt-1 mb-1"
+            onClick={() => performSearch(true)}
+            style={{ fontSize: 11 }}
+          >
+            Load More
+          </button>
+        )}
 
         {!loading && results.length === 0 && (
           <p className="text-muted small text-center mt-3">
