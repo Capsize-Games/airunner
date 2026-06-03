@@ -203,6 +203,10 @@ export default function CivitaiBrowserPanel() {
     );
   }, [query, baseModel, modelType]);
 
+  // Use a ref for cursor so the IntersectionObserver always has
+  // the latest value without needing it as a dependency.
+  const cursorRef = useRef<string | null>(null);
+
   const performSearch = useCallback(
     async (append = false) => {
       if (!shouldSearch()) return;
@@ -215,7 +219,7 @@ export default function CivitaiBrowserPanel() {
           base_models: baseModels,
           model_types: modelTypes,
           limit: 20,
-          cursor: append ? cursor : null,
+          cursor: append ? cursorRef.current : null,
         });
         const items: SearchResult[] = (
           (data.items ?? []) as JsonObject[]
@@ -227,6 +231,7 @@ export default function CivitaiBrowserPanel() {
         }
         const meta = data.metadata as JsonObject | undefined;
         const next = (meta?.nextCursor as string) ?? null;
+        cursorRef.current = next;
         setCursor(next);
         setHasMore(next !== null);
       } catch {
@@ -235,7 +240,7 @@ export default function CivitaiBrowserPanel() {
         setLoading(false);
       }
     },
-    [query, baseModel, modelType, cursor, shouldSearch],
+    [query, baseModel, modelType, shouldSearch],
   );
 
   const debouncedSearch = useCallback(
@@ -282,7 +287,7 @@ export default function CivitaiBrowserPanel() {
       if (observerRef.current) observerRef.current.disconnect();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hasMore, loading, cursor, query, baseModel, modelType]);
+  }, [hasMore, loading, query, baseModel, modelType]);
 
   const resultsRef = useRef<HTMLDivElement | null>(null);
 
