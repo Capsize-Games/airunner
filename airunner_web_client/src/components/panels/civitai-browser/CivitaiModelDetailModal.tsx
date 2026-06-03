@@ -185,6 +185,35 @@ export default function CivitaiModelDetailModal({
     handleDownload(trimmed);
   };
 
+  if (loading) {
+    return (
+      <div
+        style={{
+          position: "fixed",
+          inset: 0,
+          background: "rgba(0,0,0,0.8)",
+          zIndex: 1100,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+        onClick={onClose}
+      >
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <div className="spinner-border text-light" role="status">
+            <span className="visually-hidden">Loading...</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div
       style={{
@@ -250,9 +279,7 @@ export default function CivitaiModelDetailModal({
             maxWidth: 500,
           }}
         >
-          {loading ? (
-            <div style={{ color: "#888", fontSize: 12 }}>Loading images...</div>
-          ) : previewUrl || previewBase64 ? (
+          {previewUrl || previewBase64 ? (
             <CivitaiImage
               url={previewUrl}
               alt=""
