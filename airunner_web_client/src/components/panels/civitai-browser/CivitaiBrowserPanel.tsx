@@ -107,7 +107,7 @@ export default function CivitaiBrowserPanel() {
 
   const detailCache = useRef<Map<number, JsonObject>>(new Map());
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const resultsRef = useRef<HTMLDivElement | null>(null);
+  const resultsElRef = useRef<HTMLDivElement | null>(null);
   const cursorRef = useRef<string | null>(null);
   const loadingRef = useRef(false);
   const hasMoreRef = useRef(true);
@@ -156,8 +156,8 @@ export default function CivitaiBrowserPanel() {
 
   // Viewport filling
   useEffect(() => {
-    if (!loading && hasMore && results.length > 0 && resultsRef.current) {
-      if (resultsRef.current.scrollHeight <= resultsRef.current.clientHeight && fillCountRef.current < 4) {
+    if (!loading && hasMore && results.length > 0 && resultsElRef.current) {
+      if (resultsElRef.current.scrollHeight <= resultsElRef.current.clientHeight && fillCountRef.current < 4) {
         fillCountRef.current++;
         doSearch(true);
       } else { fillCountRef.current = 0; }
@@ -165,29 +165,26 @@ export default function CivitaiBrowserPanel() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [results.length, loading, hasMore]);
 
-  // Scroll lazy loading — uses only refs, no state deps, never re-attaches
-  useEffect(() => {
-    const el = resultsRef.current;
-    if (!el) return;
-    const onScroll = () => {
-      if (loadingRef.current || !hasMoreRef.current) return;
-      const { scrollTop, scrollHeight, clientHeight } = el;
-      if (scrollHeight - scrollTop - clientHeight < 150) {
-        // Read latest doSearch via ref to avoid stale closure
-        doSearch(true);
-      }
-    };
-    el.addEventListener("scroll", onScroll, { passive: true });
-    return () => el.removeEventListener("scroll", onScroll);
+  // Scroll lazy loading — attached via callback ref so it's always active
+  const scrollMounted = useRef(false);
+  const resultsRef = useCallback((el: HTMLDivElement | null) => {
+    resultsElRef.current = el;
+    if (el && !scrollMounted.current) {
+      scrollMounted.current = true;
+      const onScroll = () => {
+        if (loadingRef.current || !hasMoreRef.current) return;
+        const { scrollTop, scrollHeight, clientHeight } = el;
+        if (scrollHeight - scrollTop - clientHeight < 150) {
+          doSearch(true);
+        }
+      };
+      el.addEventListener("scroll", onScroll, { passive: true });
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleSelectModel = useCallback(async (modelId: number) => {
     setSelectedModelId(modelId);
-    if (resultsRef.current) {
-      const el = resultsRef.current.querySelector(`[data-model-id="${modelId}"]`) as HTMLElement | null;
-      if (el) el.scrollIntoView({ block: "start", behavior: "smooth" });
-    }
     const cached = detailCache.current.get(modelId);
     if (cached) { setSelectedModelData(cached); return; }
     setDetailLoading(true);
