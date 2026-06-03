@@ -41,6 +41,10 @@ interface ModelDetailData {
   type?: string;
   stats?: { downloadCount?: number; favoriteCount?: number; commentCount?: number };
   versions?: CivitaiVersion[];
+  allowNoCredit?: boolean;
+  allowCommercialUse?: string;
+  allowDerivatives?: string;
+  allowDifferentLicense?: boolean;
 }
 
 interface CivitaiModelDetailModalProps {

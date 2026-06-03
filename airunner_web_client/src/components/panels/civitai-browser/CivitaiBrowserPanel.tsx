@@ -224,6 +224,10 @@ export default function CivitaiBrowserPanel() {
           description: raw.description ? String(raw.description) : undefined,
           creator: creatorName, type: raw.type ? String(raw.type) : undefined,
           stats: raw.stats as { downloadCount?: number; favoriteCount?: number; commentCount?: number } | undefined,
+          allowNoCredit: raw.allowNoCredit === true,
+          allowCommercialUse: raw.allowCommercialUse === true ? "Commercial" : (raw.allowCommercialUse === false ? "Non-Commercial" : undefined),
+          allowDerivatives: raw.allowDerivatives === true ? "Allowed" : (raw.allowDerivatives === false ? "Not allowed" : undefined),
+          allowDifferentLicense: raw.allowDifferentLicense === true,
           versions: versions.map((v: JsonObject) => ({
             id: Number(v.id), name: String(v.name ?? ""),
             baseModel: v.baseModel ? String(v.baseModel) : undefined,
