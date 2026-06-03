@@ -14,6 +14,13 @@ export default function EmbeddingsPanel() {
   const [copiedIndex, setCopiedIndex] = useState<string | null>(null);
   const copiedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  /** Variant versions whose LoRAs/embeddings are stored under the
+   *  SDXL 1.0 directory rather than their own version directory. */
+  const VARIANT_BASE: Record<string, string> = {
+    "SDXL Lightning": "SDXL 1.0",
+    "SDXL Hyper": "SDXL 1.0",
+  };
+
   const reload = useCallback(async () => {
     setLoading(true);
     try {
@@ -23,8 +30,9 @@ export default function EmbeddingsPanel() {
         try { return localStorage.getItem("airunner_art_version") || ""; }
         catch { return ""; }
       })();
+      const baseDir = VARIANT_BASE[version] || version;
       const filtered = data.embeddings.filter((e: EmbeddingInfo) =>
-        version ? e.path.includes(`/${version}/`) : true,
+        version ? e.path.includes(`/${baseDir}/`) : true,
       );
       setItems(
         filtered.map((e: EmbeddingInfo) => ({

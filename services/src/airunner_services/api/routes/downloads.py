@@ -797,12 +797,14 @@ def _resolve_model_download_path(
     base = base_model
     # Map aliases to SDXL 1.0 sub-directories
     sub_dir = ""
-    if base_model in ("SDXL Hyper", "ZImageTurbo", "Z-Image Turbo"):
-        sub_dir = base_model.replace("-", "").lower()
-        if sub_dir == "zimage turbo":
-            sub_dir = "lightning"
-        else:
-            sub_dir = sub_dir.replace(" ", "")
+    if base_model == "SDXL Lightning":
+        sub_dir = "lightning"
+        base = "SDXL 1.0"
+    elif base_model == "SDXL Hyper":
+        sub_dir = "sdxlhyper"
+        base = "SDXL 1.0"
+    elif base_model in ("ZImageTurbo", "Z-Image Turbo"):
+        sub_dir = "lightning"
         base = "SDXL 1.0"
 
     # Determine type subfolder

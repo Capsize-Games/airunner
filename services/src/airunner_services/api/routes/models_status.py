@@ -58,6 +58,10 @@ class ActiveModelResponse(BaseModel):
     )
     vram_gb: float = Field(default=0.0)
     ram_gb: float = Field(default=0.0)
+    name: str = Field(
+        default="",
+        description="Human-readable model name (filename without path)",
+    )
 
 
 class ActiveModelsResponse(BaseModel):
@@ -164,6 +168,7 @@ async def list_active_models() -> ActiveModelsResponse:
                     can_unload=m.can_unload,
                     vram_gb=m.vram_allocated_gb,
                     ram_gb=m.ram_allocated_gb,
+                    name=m.name,
                 )
             )
     except Exception as exc:
@@ -182,6 +187,7 @@ async def list_active_models() -> ActiveModelsResponse:
                         can_unload=ext["can_unload"],
                         vram_gb=ext.get("vram_gb", 0.0),
                         ram_gb=ext.get("ram_gb", 0.0),
+                        name=ext.get("name", ""),
                     )
                 )
 

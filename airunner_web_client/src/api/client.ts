@@ -24,6 +24,7 @@ export interface ActiveModelInfo {
   can_unload: boolean;
   vram_gb: number;
   ram_gb: number;
+  name?: string;
 }
 
 export interface ActiveModelsResponse {

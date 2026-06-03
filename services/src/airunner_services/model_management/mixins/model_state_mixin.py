@@ -54,6 +54,11 @@ class ModelStateMixin:
         self.memory_allocator.deallocate(model_id)
         self.set_model_state(model_id, ModelState.UNLOADED)
 
+    def _model_name_from_id(self, model_id: str) -> str:
+        """Derive a display name from the model identifier (typically a path)."""
+        import os
+        return os.path.basename(model_id) or model_id
+
     def get_active_models(self) -> list[ActiveModelInfo]:
         """Return all tracked models that are not unloaded."""
         active_models: list[ActiveModelInfo] = []
@@ -73,6 +78,7 @@ class ModelStateMixin:
                         allocation.ram_allocated_gb if allocation else 0.0
                     ),
                     can_unload=(state == ModelState.LOADED),
+                    name=self._model_name_from_id(model_id),
                 )
             )
         return active_models

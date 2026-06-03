@@ -27,6 +27,7 @@ class ActiveModelInfo:
 	vram_allocated_gb: float
 	ram_allocated_gb: float
 	can_unload: bool
+	name: str = ""
 
 
 @dataclass

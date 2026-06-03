@@ -161,9 +161,16 @@ export default function ArtPromptPanel() {
     setGenerating(true);
     setProgress(0);
     try {
+      const scheduler = (() => {
+        try { return localStorage.getItem("airunner_art_scheduler") || ""; }
+        catch { return ""; }
+      })();
       const resp = await startArtGeneration({
         prompt: prompt.trim(),
         negative_prompt: negativePrompt.trim() || undefined,
+        model: artModel || undefined,
+        version: artVersion || undefined,
+        scheduler: scheduler || undefined,
         num_images: 1,
       });
       jobIdRef.current = resp.job_id;

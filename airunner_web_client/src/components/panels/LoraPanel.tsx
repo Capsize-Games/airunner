@@ -14,6 +14,13 @@ export default function LoraPanel() {
   const [copiedIndex, setCopiedIndex] = useState<string | null>(null);
   const copiedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  /** Variant versions whose LoRAs/embeddings are stored under the
+   *  SDXL 1.0 directory rather than their own version directory. */
+  const VARIANT_BASE: Record<string, string> = {
+    "SDXL Lightning": "SDXL 1.0",
+    "SDXL Hyper": "SDXL 1.0",
+  };
+
   const loadLoras = useCallback(async () => {
     setLoading(true);
     try {
@@ -23,8 +30,9 @@ export default function LoraPanel() {
         try { return localStorage.getItem("airunner_art_version") || ""; }
         catch { return ""; }
       })();
+      const baseDir = VARIANT_BASE[version] || version;
       const filtered = data.loras.filter((l: LoraInfo) =>
-        version ? l.path.includes(`/${version}/`) : true,
+        version ? l.path.includes(`/${baseDir}/`) : true,
       );
       setItems(
         filtered.map((l: LoraInfo) => ({

@@ -64,18 +64,41 @@ _VERSIONS: List[str] = [
     StableDiffusionVersion.Z_IMAGE_TURBO.value,
 ]
 
+# Variant versions whose models are physically stored as subdirectories
+# under SDXL 1.0 rather than under their own top-level version directory.
+# Maps variant display name → subdirectory name inside SDXL 1.0.
+# Z-Image Turbo is NOT included here — it has its own top-level directory
+# at art/models/Z-Image Turbo/ (bootstrap downloads land there).
+_VARIANT_TO_SUBDIR: Dict[str, str] = {
+    StableDiffusionVersion.SDXL_LIGHTNING.value: "lightning",
+    StableDiffusionVersion.SDXL_HYPER.value: "sdxlhyper",
+}
 
-def _find_local_models(version: str) -> List[Dict[str, str]]:
-    """Scan local filesystem for model files under a given version."""
-    version_dir = Path(AIRUNNER_BASE_PATH) / "art" / "models" / version
-    if not version_dir.is_dir():
-        return []
+# Directories that are NOT pipeline-action folders and should be skipped
+# when scanning for models.
+_SKIP_DIRS = {"lora", "embedding", "controlnet_processors"}
+
+
+def _variant_scan_dir(version: str) -> Path | None:
+    """Return the physical directory to scan for a variant version.
+
+    Variant models are stored inside ``SDXL 1.0/<variant_subdir>/``,
+    so we scan the variant's subdirectory under the parent version.
+    Returns ``None`` when the version is not a recognised variant.
+    """
+    sub_dir = _VARIANT_TO_SUBDIR.get(version)
+    if sub_dir is None:
+        return None
+    return Path(AIRUNNER_BASE_PATH) / "art" / "models" / "SDXL 1.0" / sub_dir
+
+
+def _find_models_in_dir(scan_dir: Path) -> List[Dict[str, str]]:
+    """Find one model file per pipeline-action subdirectory."""
     models: List[Dict[str, str]] = []
-    for action_dir in sorted(version_dir.iterdir()):
+    for action_dir in sorted(scan_dir.iterdir()):
         if not action_dir.is_dir():
             continue
-        # Skip lora directories — LoRA models are shown in the LoRA panel
-        if action_dir.name.lower() == "lora":
+        if action_dir.name.lower() in _SKIP_DIRS:
             continue
         for ext in (".safetensors", ".ckpt", ".gguf"):
             for fpath in sorted(action_dir.glob(f"*{ext}")):
@@ -85,6 +108,25 @@ def _find_local_models(version: str) -> List[Dict[str, str]]:
                 })
                 break  # one model per action dir
     return models
+
+
+def _find_local_models(version: str) -> List[Dict[str, str]]:
+    """Scan local filesystem for model files under a given version.
+
+    For variant versions (SDXL Lightning, SDXL Hyper, Z-Image Turbo)
+    the models are stored under ``SDXL 1.0/<subdir>/`` so we redirect
+    the scan to that location.
+    """
+    variant_scan = _variant_scan_dir(version)
+    if variant_scan is not None:
+        if not variant_scan.is_dir():
+            return []
+        return _find_models_in_dir(variant_scan)
+
+    version_dir = Path(AIRUNNER_BASE_PATH) / "art" / "models" / version
+    if not version_dir.is_dir():
+        return []
+    return _find_models_in_dir(version_dir)
 
 
 @router.get("/options")

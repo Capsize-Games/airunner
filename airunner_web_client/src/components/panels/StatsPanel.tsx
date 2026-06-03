@@ -144,7 +144,7 @@ export default function StatsPanel() {
               className="d-flex align-items-center justify-content-between mb-1"
               style={{ fontSize: "11px" }}
             >
-              <span>
+              <span className="text-truncate" style={{ maxWidth: 140 }}>
                 <span
                   style={{
                     display: "inline-block",
@@ -158,11 +158,10 @@ export default function StatsPanel() {
                           ? "var(--bs-warning)"
                           : "var(--bs-danger)",
                     marginRight: 4,
+                    flexShrink: 0,
                   }}
                 />
-                {m.model_type === "embedding"
-                  ? "Embedding"
-                  : m.model_type}
+                {m.name || m.model_type}
               </span>
               {m.can_unload && (
                 <button
@@ -176,8 +175,9 @@ export default function StatsPanel() {
                     fontSize: 10,
                     padding: "0 4px",
                     lineHeight: "16px",
+                    flexShrink: 0,
                   }}
-                  title={`Unload ${m.model_type}`}
+                  title={`Unload ${m.name || m.model_type}`}
                 >
                   ✕
                 </button>
