@@ -33,6 +33,8 @@ class CivitaiFileDownloadRequest(BaseModel):
     output_path: str
     file_size: int
     api_key: str | None = None
+    base_model: str | None = None
+    model_type: str | None = None
 
 
 class CivitaiModelInfoRequest(BaseModel):

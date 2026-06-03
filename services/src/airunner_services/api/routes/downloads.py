@@ -17,6 +17,8 @@ from typing import Any
 
 from PIL import Image as PILImage
 
+from airunner_services.settings import AIRUNNER_BASE_PATH
+
 from fastapi import APIRouter, HTTPException, Request, Response
 from fastapi.responses import StreamingResponse
 from airunner_services.url_safety import safe_fetch_bytes
@@ -698,19 +700,81 @@ async def start_civitai_file_download(
     payload: CivitaiFileDownloadRequest,
     request: Request,
 ) -> DownloadJobAcceptedResponse:
-    """Queue one single-file CivitAI download job."""
+    """Queue one single-file CivitAI download job.
+
+    When ``base_model`` and ``model_type`` are provided, the
+    ``output_path`` is adjusted to the correct model directory
+    under AIRUNNER_BASE_PATH/art/models/.
+    """
+    # Resolve download path based on base_model / model_type
+    if payload.base_model and payload.model_type:
+        resolved_path = _resolve_model_download_path(
+            payload.base_model,
+            payload.model_type,
+            os.path.basename(payload.output_path),
+        )
+    else:
+        resolved_path = payload.output_path
+
     logger.info(
-        "CivitAI file download: url=%s output_path=%s file_size=%s",
-        payload.url, payload.output_path, payload.file_size,
+        "CivitAI file download: url=%s output_path=%s base_model=%s model_type=%s",
+        payload.url, resolved_path, payload.base_model, payload.model_type,
     )
     service = get_download_job_service(request)
     job_id = await service.start_civitai_file_download(
         payload.url,
-        output_path=payload.output_path,
+        output_path=resolved_path,
         file_size=payload.file_size,
         api_key=payload.api_key,
     )
     return DownloadJobAcceptedResponse(job_id=job_id)
+
+
+def _resolve_model_download_path(
+    base_model: str,
+    model_type: str,
+    filename: str,
+) -> str:
+    """Return the correct file path for a CivitAI download.
+
+    Directory structure under AIRUNNER_BASE_PATH/art/models/:
+      <base_model>/<subcategory>/  depending on model_type
+
+    Examples:
+      SDXL 1.0 / Checkpoint → SDXL 1.0/txt2img/
+      SDXL 1.0 / LORA       → SDXL 1.0/lora/
+      SDXL 1.0 / Embedding   → SDXL 1.0/embedding/
+      SDXL Hyper / Checkpoint → SDXL 1.0/hyper/txt2img/
+      ZImageTurbo / Checkpoint → SDXL 1.0/lightning/txt2img/
+    """
+    base = base_model
+    # Map aliases to SDXL 1.0 sub-directories
+    sub_dir = ""
+    if base_model in ("SDXL Hyper", "ZImageTurbo", "Z-Image Turbo"):
+        sub_dir = base_model.replace("-", "").lower()
+        if sub_dir == "zimage turbo":
+            sub_dir = "lightning"
+        else:
+            sub_dir = sub_dir.replace(" ", "")
+        base = "SDXL 1.0"
+
+    # Determine type subfolder
+    type_map = {
+        "Checkpoint": "txt2img",
+        "LORA": "lora",
+        "TextualInversion": "embedding",
+    }
+    type_sub = type_map.get(model_type, "txt2img")
+
+    dir_parts = [AIRUNNER_BASE_PATH, "art", "models", base]
+    if sub_dir:
+        dir_parts.append(sub_dir)
+    if type_sub not in ("lora", "embedding"):
+        dir_parts.append(type_sub)
+
+    dir_path = os.path.join(*dir_parts)
+    os.makedirs(dir_path, exist_ok=True)
+    return os.path.join(dir_path, filename)
 
 
 @router.post("/civitai/info")

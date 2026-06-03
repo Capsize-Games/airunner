@@ -145,6 +145,8 @@ export default function CivitaiModelDetailModal({
         url: selectedFile.downloadUrl,
         output_path: `/tmp/airunner/downloads/${selectedFile.name}`,
         api_key: key ?? "",
+        base_model: currentBaseModel,
+        model_type: currentModelType,
       });
       if (result.job_id) {
         addDownload({

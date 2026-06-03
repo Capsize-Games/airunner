@@ -36,6 +36,8 @@ export default function DownloadTray() {
         url: job.downloadUrl,
         output_path: `/tmp/airunner/downloads/${job.label}`,
         api_key: localStorage.getItem("airunner_civitai_api_key") ?? "",
+        base_model: job.baseModel,
+        model_type: job.modelType,
       });
       if (result.job_id) {
         addDownload({

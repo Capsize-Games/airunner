@@ -26,6 +26,8 @@ export interface CivitaiFileDownloadParams {
   output_path: string;
   file_size?: number;
   api_key?: string;
+  base_model?: string;
+  model_type?: string;
 }
 
 export interface CivitaiImageParams {
@@ -73,6 +75,8 @@ export async function startCivitaiFileDownload(
       output_path: params.output_path,
       file_size: params.file_size ?? 0,
       api_key: params.api_key ?? "",
+      base_model: params.base_model ?? null,
+      model_type: params.model_type ?? null,
     },
   );
 }
