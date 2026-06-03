@@ -676,7 +676,19 @@ async def download_job_status(
         error=state.error,
         metadata=state.metadata,
     )
-
+    
+    
+    @router.delete("/cancel/{job_id}")
+    async def cancel_download_job(
+        job_id: str,
+        request: Request,
+    ) -> dict[str, str]:
+        """Cancel one running download job."""
+        service = get_download_job_service(request)
+        cancelled = await service.cancel(job_id)
+        if not cancelled:
+            raise HTTPException(status_code=404, detail="Job not found")
+        return {"job_id": job_id, "status": "cancelled"}
 
 @router.post(
     "/civitai/file",

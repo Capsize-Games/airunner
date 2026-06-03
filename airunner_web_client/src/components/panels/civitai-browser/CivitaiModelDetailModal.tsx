@@ -2,7 +2,7 @@ import { useEffect, useCallback, useState, useRef } from "react";
 import { BASE_URL } from "../../../types/api";
 import CivitaiImage from "./CivitaiImage";
 import DownloadProgress from "../../downloads/DownloadProgress";
-import { startCivitaiFileDownload } from "../../../api/downloads";
+import { startCivitaiFileDownload, cancelDownloadJob } from "../../../api/downloads";
 import type { JsonObject } from "../../../types/api";
 
 interface VersionImage {
@@ -65,6 +65,7 @@ export default function CivitaiModelDetailModal({
   const [previewUrl, setPreviewUrl] = useState<string>("");
   const [previewBase64, setPreviewBase64] = useState<string>("");
   const [downloads, setDownloads] = useState<DownloadJob[]>([]);
+  const [downloadCancel, setDownloadCancel] = useState<Record<string, boolean>>({});
   const [showApiKeyPrompt, setShowApiKeyPrompt] = useState(false);
   const [apiKey, setApiKey] = useState("");
   const [pendingDownloadUrl, setPendingDownloadUrl] = useState<string | null>(null);
@@ -108,16 +109,30 @@ export default function CivitaiModelDetailModal({
   const stats = model.stats ?? {};
   const desc = model.description ? stripHtml(model.description) : "";
 
+  /** Pick the largest available base64 size for a model image. */
+  const bestBase64 = (img: VersionImage | undefined): string => {
+    if (!img?.images_base64) return "";
+    return img.images_base64.full
+      || img.images_base64.medium
+      || img.images_base64.small
+      || "";
+  };
+
   const handleVersionChange = (vid: number) => {
     setSelectedVersionId(vid);
     const v = versions.find((ver) => ver.id === vid);
     const files = v?.files ?? [];
     setSelectedFileId(files.length > 0 ? files[0].id : null);
     const images = v?.images ?? [];
-    setPreviewUrl(images.length > 0 ? images[0].url : "");
-    setPreviewBase64(
-      images.length > 0 ? (images[0].images_base64?.full ?? "") : "",
-    );
+    const firstImg = images[0];
+    setPreviewUrl(firstImg?.url ?? "");
+    setPreviewBase64(bestBase64(firstImg));
+  };
+
+  /** Pick the largest available size when a thumbnail is clicked. */
+  const handleThumbnailClick = (img: VersionImage) => {
+    setPreviewUrl(img.url);
+    setPreviewBase64(bestBase64(img));
   };
 
   const handleDownload = async (key?: string) => {
@@ -297,10 +312,7 @@ export default function CivitaiModelDetailModal({
                     .map((img) => (
                       <div
                         key={img.url}
-                        onClick={() => {
-                          setPreviewUrl(img.url);
-                          setPreviewBase64(img.images_base64?.full ?? "");
-                        }}
+                        onClick={() => handleThumbnailClick(img)}
                         style={{
                           width: 48,
                           height: 48,
@@ -380,24 +392,50 @@ export default function CivitaiModelDetailModal({
 
           {/* Action buttons */}
           <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
-            <button
-              onClick={handleDownloadClick}
-              disabled={!selectedFile?.downloadUrl}
-              style={{
-                flex: 1,
-                padding: "6px 12px",
-                background: selectedFile?.downloadUrl
-                  ? "rgba(255,255,255,0.2)"
-                  : "rgba(255,255,255,0.1)",
-                border: "1px solid rgba(255,255,255,0.2)",
-                borderRadius: 4,
-                color: selectedFile?.downloadUrl ? "#fff" : "#666",
-                cursor: selectedFile?.downloadUrl ? "pointer" : "default",
-                fontSize: 12,
-              }}
-            >
-              Download
-            </button>
+            {downloads.find((d) => d.label === (selectedFile?.name ?? "")) ? (
+              <button
+                onClick={async () => {
+                  const d = downloads.find((dl) => dl.label === (selectedFile?.name ?? ""));
+                  if (!d) return;
+                  setDownloadCancel((prev) => ({ ...prev, [d.jobId]: true }));
+                  try {
+                    await cancelDownloadJob(d.jobId);
+                    setDownloads((prev) => prev.filter((dl) => dl.jobId !== d.jobId));
+                  } catch { /* */ }
+                }}
+                style={{
+                  flex: 1,
+                  padding: "6px 12px",
+                  background: "rgba(255,80,80,0.2)",
+                  border: "1px solid rgba(255,80,80,0.3)",
+                  borderRadius: 4,
+                  color: "#ff8888",
+                  cursor: "pointer",
+                  fontSize: 12,
+                }}
+              >
+                Cancel
+              </button>
+            ) : (
+              <button
+                onClick={handleDownloadClick}
+                disabled={!selectedFile?.downloadUrl}
+                style={{
+                  flex: 1,
+                  padding: "6px 12px",
+                  background: selectedFile?.downloadUrl
+                    ? "rgba(255,255,255,0.2)"
+                    : "rgba(255,255,255,0.1)",
+                  border: "1px solid rgba(255,255,255,0.2)",
+                  borderRadius: 4,
+                  color: selectedFile?.downloadUrl ? "#fff" : "#666",
+                  cursor: selectedFile?.downloadUrl ? "pointer" : "default",
+                  fontSize: 12,
+                }}
+              >
+                Download
+              </button>
+            )}
             <button
               onClick={() => window.open(`https://civitai.com/models/${model.id}`, "_blank")}
               style={{
