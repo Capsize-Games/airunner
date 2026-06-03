@@ -163,7 +163,7 @@ export default function CivitaiModelDetailModal({
     >
       <div
         style={{
-          position: "relative", display: "flex", gap: 12, padding: 12,
+          position: "relative", display: "flex", gap: 12, padding: 20,
           width: MODAL_W, height: MODAL_H,
           border: "1px solid rgba(255,255,255,0.2)", borderRadius: 4,
           overflow: "hidden", background: "var(--theme-bg)",
@@ -173,7 +173,7 @@ export default function CivitaiModelDetailModal({
         <button
           onClick={onClose}
           style={{
-            position: "absolute", top: 6, right: 6,
+            position: "absolute", top: 10, right: 10,
             background: "rgba(0,0,0,0.5)", border: "1px solid rgba(255,255,255,0.3)",
             color: "#fff", fontSize: 16, cursor: "pointer", lineHeight: 1,
             width: 26, height: 26, borderRadius: 4, zIndex: 10,
