@@ -145,11 +145,6 @@ async function fetchFilterOptions(): Promise<{
 
 // ── Panel component ──
 
-interface DownloadJob {
-  jobId: string;
-  label: string;
-}
-
 export default function CivitaiBrowserPanel() {
   const [query, setQuery] = useState("");
   const [baseModel, setBaseModel] = useState("");
@@ -167,8 +162,6 @@ export default function CivitaiBrowserPanel() {
     useState<JsonObject | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
 
-  const [downloads, setDownloads] = useState<DownloadJob[]>([]);
-
   const [filterOptions, setFilterOptions] = useState<{
     baseModels: FilterOption[];
     typesByBase: Record<string, string[]>;
@@ -177,8 +170,6 @@ export default function CivitaiBrowserPanel() {
   const [toastMsg, setToastMsg] = useState<string | null>(null);
 
   const detailCache = useRef<Map<number, JsonObject>>(new Map());
-  const sentinelRef = useRef<HTMLDivElement | null>(null);
-  const observerRef = useRef<IntersectionObserver | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(
     null,
   );
@@ -247,6 +238,7 @@ export default function CivitaiBrowserPanel() {
     (append = false) => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
       debounceRef.current = setTimeout(() => {
+        cursorRef.current = null;
         setCursor(null);
         performSearch(append);
       }, 400);
@@ -261,6 +253,7 @@ export default function CivitaiBrowserPanel() {
     } else {
       // Clear results when selections are incomplete
       setResults([]);
+      cursorRef.current = null;
       setCursor(null);
       setHasMore(true);
     }
@@ -270,24 +263,25 @@ export default function CivitaiBrowserPanel() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [baseModel, modelType]);
 
-  // IntersectionObserver lazy loading
+  // Lazy loading: detect scroll-to-bottom on the results container
+  const handleResultsScroll = useCallback(() => {
+    if (!resultsRef.current) return;
+    const { scrollTop, scrollHeight, clientHeight } = resultsRef.current;
+    if (
+      scrollHeight - scrollTop - clientHeight < 100 &&
+      hasMore &&
+      !loading
+    ) {
+      performSearch(true);
+    }
+  }, [hasMore, loading, performSearch]);
+
   useEffect(() => {
-    if (!sentinelRef.current) return;
-    if (observerRef.current) observerRef.current.disconnect();
-    observerRef.current = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting && hasMore && !loading) {
-          performSearch(true);
-        }
-      },
-      { rootMargin: "200px" },
-    );
-    observerRef.current.observe(sentinelRef.current);
-    return () => {
-      if (observerRef.current) observerRef.current.disconnect();
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hasMore, loading, query, baseModel, modelType]);
+    const el = resultsRef.current;
+    if (!el) return;
+    el.addEventListener("scroll", handleResultsScroll);
+    return () => el.removeEventListener("scroll", handleResultsScroll);
+  }, [handleResultsScroll]);
 
   const resultsRef = useRef<HTMLDivElement | null>(null);
 
@@ -330,27 +324,6 @@ export default function CivitaiBrowserPanel() {
     },
     [baseModel, modelType],
   );
-
-  const handleDownload = async (
-    fileUrl: string,
-    fileName: string,
-  ) => {
-    try {
-      const basePath = "/tmp/airunner/downloads";
-      const result = await startCivitaiFileDownload({
-        url: fileUrl,
-        output_path: `${basePath}/${fileName}`,
-      });
-      if (result.job_id) {
-        setDownloads((prev) => [
-          ...prev,
-          { jobId: result.job_id, label: fileName },
-        ]);
-      }
-    } catch {
-      // download failed
-    }
-  };
 
   // Transform API data for detail component
   const modelDetail = selectedModelData
@@ -497,9 +470,6 @@ export default function CivitaiBrowserPanel() {
           </div>
         )}
 
-        {hasMore && !loading && results.length > 0 && (
-          <div ref={sentinelRef} style={{ height: 1 }} />
-        )}
 
         {!loading && results.length === 0 && (
           <p className="text-muted small text-center mt-3">
