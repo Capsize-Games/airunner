@@ -127,11 +127,19 @@ export default function CivitaiBrowserPanel() {
     debounceRef.current = setTimeout(() => { cursorRef.current = null; hasMoreRef.current = true; doSearch(append); }, 400);
   }, [doSearch]);
 
-  // Auto-search on dropdown change
+  // Auto-search on dropdown change — fire immediately on mount when
+  // filters are restored from localStorage (no debounce).
   useEffect(() => {
-    if (baseModel !== "" && modelType !== "") { debouncedSearch(false); }
-    else { setResults([]); cursorRef.current = null; hasMoreRef.current = true; setHasMore(true); }
-    return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
+    if (baseModel !== "" && modelType !== "") {
+      if (doSearchRef.current) {
+        doSearchRef.current(false);
+      }
+    } else {
+      setResults([]);
+      cursorRef.current = null;
+      hasMoreRef.current = true;
+      setHasMore(true);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [baseModel, modelType]);
 
