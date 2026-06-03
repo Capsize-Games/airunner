@@ -194,13 +194,15 @@ export default function CivitaiBrowserPanel() {
     );
   }, [query, baseModel, modelType]);
 
-  // Use a ref for cursor so the IntersectionObserver always has
-  // the latest value without needing it as a dependency.
+  // Use a ref for cursor so callbacks always have the latest value.
   const cursorRef = useRef<string | null>(null);
+  const loadingRef = useRef(false);
+  const pageLimit = 20;
 
   const performSearch = useCallback(
     async (append = false) => {
-      if (!shouldSearch()) return;
+      if (!shouldSearch() || loadingRef.current) return;
+      loadingRef.current = true;
       setLoading(true);
       try {
         const baseModels = baseModel ? [baseModel] : undefined;
@@ -229,6 +231,7 @@ export default function CivitaiBrowserPanel() {
         // search failed
       } finally {
         setLoading(false);
+        loadingRef.current = false;
       }
     },
     [query, baseModel, modelType, shouldSearch],
@@ -251,7 +254,6 @@ export default function CivitaiBrowserPanel() {
     if (baseModel !== "" && modelType !== "") {
       debouncedSearch(false);
     } else {
-      // Clear results when selections are incomplete
       setResults([]);
       cursorRef.current = null;
       setCursor(null);
@@ -263,10 +265,37 @@ export default function CivitaiBrowserPanel() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [baseModel, modelType]);
 
-  // Fetch up to 50 items per request (CivitAI max).
-  // The Vite dev proxy can hang on sequential POST requests, so we
-  // fetch directly from the backend when a cursor is present.
-  const pageLimit = 50;
+  // Viewport filling: after each search, if results don't fill the
+  // container, fetch more (up to 4 pages = 80 items max).
+  const fillCountRef = useRef(0);
+  useEffect(() => {
+    if (!loading && hasMore && results.length > 0 && resultsRef.current) {
+      const { scrollHeight, clientHeight } = resultsRef.current;
+      if (scrollHeight <= clientHeight && fillCountRef.current < 4) {
+        fillCountRef.current++;
+        performSearch(true);
+      } else {
+        fillCountRef.current = 0;
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [results.length, loading, hasMore]);
+
+  // Lazy loading: scroll-to-bottom detection on results container
+  const handleScroll = useCallback(() => {
+    if (!resultsRef.current || loadingRef.current || !hasMore) return;
+    const { scrollTop, scrollHeight, clientHeight } = resultsRef.current;
+    if (scrollHeight - scrollTop - clientHeight < 150) {
+      performSearch(true);
+    }
+  }, [hasMore, performSearch]);
+
+  useEffect(() => {
+    const el = resultsRef.current;
+    if (!el) return;
+    el.addEventListener("scroll", handleScroll);
+    return () => el.removeEventListener("scroll", handleScroll);
+  }, [handleScroll]);
 
   const resultsRef = useRef<HTMLDivElement | null>(null);
 
@@ -453,17 +482,6 @@ export default function CivitaiBrowserPanel() {
           <div className="text-center py-2">
             <Spinner animation="border" size="sm" />
           </div>
-        )}
-
-        {/* Load More button */}
-        {hasMore && !loading && results.length > 0 && (
-          <button
-            className="btn btn-sm btn-outline-secondary w-100 mt-1 mb-1"
-            onClick={() => performSearch(true)}
-            style={{ fontSize: 11 }}
-          >
-            Load More
-          </button>
         )}
 
         {!loading && results.length === 0 && (
