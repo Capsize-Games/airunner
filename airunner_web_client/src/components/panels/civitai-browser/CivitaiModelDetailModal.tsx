@@ -1,59 +1,16 @@
 import { useEffect, useCallback, useState, useRef } from "react";
 import { BASE_URL } from "../../../types/api";
 import CivitaiImage from "./CivitaiImage";
-import DownloadProgress, { useDownloadProgress } from "../../downloads/DownloadProgress";
 import { startCivitaiFileDownload, cancelDownloadJob } from "../../../api/downloads";
-import { useDownloads, type DownloadJob } from "../../downloads/useDownloadState";
-import type { JsonObject } from "../../../types/api";
-
-interface VersionImage {
-  url: string;
-  nsfw?: string;
-  width?: number;
-  height?: number;
-  /** Inline base64 images from the server, keyed by size. */
-  images_base64?: Record<string, string>;
-}
-
-interface CivitaiVersion {
-  id: number;
-  name: string;
-  baseModel?: string;
-  files?: CivitaiFile[];
-  images?: VersionImage[];
-  downloadUrl?: string;
-}
-
-interface CivitaiFile {
-  id: number;
-  name: string;
-  sizeKB?: number;
-  downloadUrl?: string;
-  /** Server sets this to true when the file already exists on disk. */
-  downloaded?: boolean;
-}
-
-interface ModelDetailData {
-  id: number;
-  name: string;
-  description?: string;
-  creator?: string;
-  type?: string;
-  stats?: { downloadCount?: number; favoriteCount?: number; commentCount?: number };
-  versions?: CivitaiVersion[];
-  allowNoCredit?: boolean;
-  allowCommercialUse?: string;
-  allowDerivatives?: string;
-  allowDifferentLicense?: boolean;
-}
+import { useDownloads } from "../../downloads/useDownloadState";
+import { DownloadButton, ApiKeyPrompt } from "./CivitaiModelDetailDownload";
+import type { ModelDetailData, CivitaiVersion, CivitaiFile, VersionImage } from "./CivitaiModelDetailTypes";
 
 interface CivitaiModelDetailModalProps {
   model: ModelDetailData | null;
   onClose: () => void;
   loading?: boolean;
-  /** Current base model filter (e.g. "SDXL 1.0") for download metadata. */
   baseModel?: string;
-  /** Current model type filter (e.g. "Checkpoint") for download metadata. */
   modelType?: string;
 }
 
@@ -61,7 +18,10 @@ function stripHtml(html: string): string {
   return html.replace(/<[^>]*>/g, "").trim();
 }
 
-
+interface DownloadJobRef {
+  jobId: string;
+  label: string;
+}
 
 export default function CivitaiModelDetailModal({
   model,
@@ -76,8 +36,6 @@ export default function CivitaiModelDetailModal({
   const [previewBase64, setPreviewBase64] = useState<string>("");
   const { downloads, addDownload, removeDownload, isDownloaded } = useDownloads();
   const [showApiKeyPrompt, setShowApiKeyPrompt] = useState(false);
-  const [apiKey, setApiKey] = useState("");
-  const [pendingDownloadUrl, setPendingDownloadUrl] = useState<string | null>(null);
   const [pendingFileName, setPendingFileName] = useState<string>("");
 
   const versions = model?.versions ?? [];
@@ -108,6 +66,22 @@ export default function CivitaiModelDetailModal({
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [handleKeyDown]);
 
+  if (loading) {
+    return (
+      <div
+        style={{
+          position: "fixed", inset: 0, background: "rgba(0,0,0,0.8)",
+          zIndex: 1100, display: "flex", alignItems: "center", justifyContent: "center",
+        }}
+        onClick={onClose}
+      >
+        <div className="spinner-border text-light" role="status">
+          <span className="visually-hidden">Loading...</span>
+        </div>
+      </div>
+    );
+  }
+
   if (!model) return null;
 
   const selectedVersion = versions.find((v) => v.id === selectedVersionId) ?? null;
@@ -118,7 +92,6 @@ export default function CivitaiModelDetailModal({
   const stats = model.stats ?? {};
   const desc = model.description ? stripHtml(model.description) : "";
 
-  /** Pick the largest available base64 size for a model image. */
   const bestBase64 = (img: VersionImage | undefined): string => {
     if (!img?.images_base64) return "";
     return img.images_base64.full
@@ -138,7 +111,6 @@ export default function CivitaiModelDetailModal({
     setPreviewBase64(bestBase64(firstImg));
   };
 
-  /** Pick the largest available size when a thumbnail is clicked. */
   const handleThumbnailClick = (img: VersionImage) => {
     setPreviewUrl(img.url);
     setPreviewBase64(bestBase64(img));
@@ -170,9 +142,7 @@ export default function CivitaiModelDetailModal({
 
   const handleDownloadClick = () => {
     if (!selectedFile?.downloadUrl) return;
-    setPendingDownloadUrl(selectedFile.downloadUrl);
     setPendingFileName(selectedFile.name ?? "");
-    // Check if an API key is already stored; if not, show prompt
     const stored = localStorage.getItem("airunner_civitai_api_key");
     if (stored) {
       handleDownload(stored);
@@ -181,91 +151,36 @@ export default function CivitaiModelDetailModal({
     }
   };
 
-  const handleApiKeySubmit = () => {
-    const trimmed = apiKey.trim();
-    if (!trimmed) return;
-    localStorage.setItem("airunner_civitai_api_key", trimmed);
+  const handleApiKeySubmit = (key: string) => {
     setShowApiKeyPrompt(false);
-    handleDownload(trimmed);
+    handleDownload(key);
   };
-
-  if (loading) {
-    return (
-      <div
-        style={{
-          position: "fixed",
-          inset: 0,
-          background: "rgba(0,0,0,0.8)",
-          zIndex: 1100,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-        }}
-        onClick={onClose}
-      >
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-        >
-          <div className="spinner-border text-light" role="status">
-            <span className="visually-hidden">Loading...</span>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div
       style={{
-        position: "fixed",
-        inset: 0,
-        background: "rgba(0,0,0,0.8)",
-        zIndex: 1100,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
+        position: "fixed", inset: 0, background: "rgba(0,0,0,0.8)",
+        zIndex: 1100, display: "flex", alignItems: "center", justifyContent: "center",
       }}
       onClick={onClose}
     >
       <div
         style={{
-          position: "relative",
-          display: "flex",
-          gap: 16,
-          padding: 12,
-          paddingTop: 44,
-          maxHeight: "85vh",
-          maxWidth: "90vw",
-          border: "1px solid rgba(255,255,255,0.2)",
-          borderRadius: 4,
-          overflow: "hidden",
-          background: "var(--theme-bg)",
+          position: "relative", display: "flex", gap: 16, padding: 12, paddingTop: 44,
+          maxHeight: "85vh", maxWidth: "90vw",
+          border: "1px solid rgba(255,255,255,0.2)", borderRadius: 4,
+          overflow: "hidden", background: "var(--theme-bg)",
         }}
         onClick={(e) => e.stopPropagation()}
       >
         <button
           onClick={onClose}
           style={{
-            position: "absolute",
-            top: 8,
-            right: 8,
-            background: "rgba(0,0,0,0.5)",
-            border: "1px solid rgba(255,255,255,0.3)",
-            color: "#fff",
-            fontSize: 18,
-            cursor: "pointer",
-            lineHeight: 1,
-            width: 30,
-            height: 30,
-            borderRadius: 4,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            zIndex: 10,
+            position: "absolute", top: 8, right: 8,
+            background: "rgba(0,0,0,0.5)", border: "1px solid rgba(255,255,255,0.3)",
+            color: "#fff", fontSize: 18, cursor: "pointer", lineHeight: 1,
+            width: 30, height: 30, borderRadius: 4,
+            display: "flex", alignItems: "center", justifyContent: "center", zIndex: 10,
           }}
           title="Close (Esc)"
         >
@@ -275,12 +190,8 @@ export default function CivitaiModelDetailModal({
         {/* Preview image */}
         <div
           style={{
-            flex: 1,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            minWidth: 200,
-            maxWidth: 500,
+            flex: 1, display: "flex", alignItems: "center", justifyContent: "center",
+            minWidth: 200, maxWidth: 500,
           }}
         >
           {previewUrl || previewBase64 ? (
@@ -289,12 +200,7 @@ export default function CivitaiModelDetailModal({
               alt=""
               base64={previewBase64}
               width={400}
-              style={{
-                maxWidth: "100%",
-                maxHeight: "75vh",
-                objectFit: "contain",
-                borderRadius: 4,
-              }}
+              style={{ maxWidth: "100%", maxHeight: "75vh", objectFit: "contain", borderRadius: 4 }}
             />
           ) : (
             <div style={{ color: "#888", fontSize: 12 }}>No preview</div>
@@ -304,17 +210,11 @@ export default function CivitaiModelDetailModal({
         {/* Detail panel */}
         <div
           style={{
-            width: 320,
-            maxHeight: "80vh",
-            display: "flex",
-            flexDirection: "column",
-            color: "#ccc",
-            fontSize: 12,
-            gap: 8,
-            overflow: "hidden",
+            width: 320, display: "flex", flexDirection: "column",
+            color: "#ccc", fontSize: 12, gap: 8, overflow: "hidden",
           }}
         >
-          {/* Model name + creator */}
+          {/* Header */}
           <div style={{ flexShrink: 0 }}>
             <div style={{ fontWeight: 700, fontSize: 14, color: "#fff", marginBottom: 2 }}>
               {model.name}
@@ -330,21 +230,30 @@ export default function CivitaiModelDetailModal({
             </div>
           </div>
 
+          {/* License badges */}
+          {model && (
+            <div style={{ display: "flex", gap: 4, flexWrap: "wrap", flexShrink: 0 }}>
+              {model.allowNoCredit === true && <span title="Use without credit" style={{ fontSize: 14, cursor: "help" }}>🙏</span>}
+              {model.allowCommercialUse === "Commercial" && <span title="Commercial use allowed" style={{ fontSize: 14, cursor: "help" }}>💰</span>}
+              {model.allowCommercialUse === "Non-Commercial" && <span title="Non-commercial only" style={{ fontSize: 14, cursor: "help" }}>🚫💰</span>}
+              {model.allowDerivatives === "Allowed" && <span title="Derivatives allowed" style={{ fontSize: 14, cursor: "help" }}>🔀</span>}
+              {model.allowDerivatives === "Not allowed" && <span title="No derivatives" style={{ fontSize: 14, cursor: "help" }}>🚫🔀</span>}
+              {model.allowDifferentLicense === true && <span title="Can use different license" style={{ fontSize: 14, cursor: "help" }}>📜</span>}
+            </div>
+          )}
+
           {/* Scrollable content area */}
-          <div style={{ flex: 1, overflowY: "auto", minHeight: 0, height: 0 }}>
+          <div className="scrollable-modal-content" style={{ flex: 1, overflowY: "auto", minHeight: 0, height: 0 }}>
             {/* Description */}
             {desc && (
               <div
-                style={{
-                  fontSize: 10,
-                  color: "#999",
-                  lineHeight: 1.4,
-                  marginBottom: 8,
-                }}
+                className="civitai-model-description"
+                style={{ fontSize: 10, color: "#999", lineHeight: 1.4, marginBottom: 8 }}
               >
                 {desc}
               </div>
             )}
+
             {/* Sample images */}
             {(selectedVersion?.images ?? []).length > 0 && (
               <div style={{ marginBottom: 8 }}>
@@ -358,18 +267,13 @@ export default function CivitaiModelDetailModal({
                         key={img.url}
                         onClick={() => handleThumbnailClick(img)}
                         style={{
-                          width: 48,
-                          height: 48,
-                          borderRadius: 4,
-                          overflow: "hidden",
-                          cursor: "pointer",
-                          flexShrink: 0,
+                          width: 48, height: 48, borderRadius: 4, overflow: "hidden",
+                          cursor: "pointer", flexShrink: 0,
                           border: previewUrl === img.url ? "2px solid var(--bs-primary)" : "2px solid transparent",
                         }}
                       >
                         <CivitaiImage
-                          url={img.url}
-                          alt=""
+                          url={img.url} alt=""
                           base64={img.images_base64?.small}
                           width={48}
                           style={{ width: "100%", height: "100%", objectFit: "cover" }}
@@ -388,13 +292,9 @@ export default function CivitaiModelDetailModal({
                   value={selectedVersionId ?? ""}
                   onChange={(e) => handleVersionChange(Number(e.target.value))}
                   style={{
-                    width: "100%",
-                    background: "rgba(255,255,255,0.1)",
-                    border: "1px solid rgba(255,255,255,0.2)",
-                    borderRadius: 4,
-                    color: "#fff",
-                    fontSize: 11,
-                    padding: "4px 6px",
+                    width: "100%", background: "rgba(255,255,255,0.1)",
+                    border: "1px solid rgba(255,255,255,0.2)", borderRadius: 4,
+                    color: "#fff", fontSize: 11, padding: "4px 6px",
                   }}
                 >
                   {versions.map((v) => (
@@ -414,13 +314,9 @@ export default function CivitaiModelDetailModal({
                   value={selectedFileId ?? ""}
                   onChange={(e) => setSelectedFileId(Number(e.target.value))}
                   style={{
-                    width: "100%",
-                    background: "rgba(255,255,255,0.1)",
-                    border: "1px solid rgba(255,255,255,0.2)",
-                    borderRadius: 4,
-                    color: "#fff",
-                    fontSize: 11,
-                    padding: "4px 6px",
+                    width: "100%", background: "rgba(255,255,255,0.1)",
+                    border: "1px solid rgba(255,255,255,0.2)", borderRadius: 4,
+                    color: "#fff", fontSize: 11, padding: "4px 6px",
                   }}
                 >
                   {(selectedVersion?.files ?? []).map((f) => (
@@ -448,262 +344,24 @@ export default function CivitaiModelDetailModal({
             <button
               onClick={() => window.open(`https://civitai.com/models/${model.id}`, "_blank")}
               style={{
-                flexShrink: 0,
-                padding: "6px 10px",
+                flexShrink: 0, padding: "6px 10px",
                 background: "rgba(255,255,255,0.1)",
-                border: "1px solid rgba(255,255,255,0.2)",
-                borderRadius: 4,
-                color: "#aaa",
-                cursor: "pointer",
-                fontSize: 11,
+                border: "1px solid rgba(255,255,255,0.2)", borderRadius: 4,
+                color: "#aaa", cursor: "pointer", fontSize: 11,
               }}
             >
               ↗ CivitAI
             </button>
           </div>
-
-          {/* Download progress */}
-          {downloads.length > 0 && (
-            <div style={{ flexShrink: 0 }}>
-              {downloads.map((d) => (
-                <div key={d.jobId} style={{ marginTop: 4 }}>
-                  <DownloadProgress jobId={d.jobId} label={d.label} />
-                </div>
-              ))}
-            </div>
-          )}
         </div>
       </div>
 
-      {/* API Key prompt overlay */}
       {showApiKeyPrompt && (
-        <div
-          style={{
-            position: "fixed",
-            inset: 0,
-            background: "rgba(0,0,0,0.7)",
-            zIndex: 1200,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-          onClick={() => setShowApiKeyPrompt(false)}
-        >
-          <div
-            style={{
-              background: "var(--theme-bg, #1a1a2e)",
-              border: "1px solid rgba(255,255,255,0.2)",
-              borderRadius: 6,
-              padding: 24,
-              maxWidth: 400,
-              width: "90%",
-              color: "#ccc",
-              fontSize: 13,
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h4 style={{ margin: "0 0 8px", color: "#fff", fontSize: 15 }}>
-              CivitAI API Key Required
-            </h4>
-            <p style={{ margin: "0 0 12px", fontSize: 12, color: "#999", lineHeight: 1.4 }}>
-              A CivitAI API key is needed to download this file.
-              You can get one from your CivitAI account settings.
-              It will be stored in your browser for future downloads.
-            </p>
-            <input
-              type="password"
-              placeholder="Enter your CivitAI API key"
-              value={apiKey}
-              onChange={(e) => setApiKey(e.target.value)}
-              onKeyDown={(e) => { if (e.key === "Enter") handleApiKeySubmit(); }}
-              autoFocus
-              style={{
-                width: "100%",
-                padding: "8px 10px",
-                borderRadius: 4,
-                border: "1px solid rgba(255,255,255,0.2)",
-                background: "rgba(255,255,255,0.08)",
-                color: "#fff",
-                fontSize: 13,
-                outline: "none",
-                boxSizing: "border-box",
-              }}
-            />
-            <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
-              <button
-                onClick={handleApiKeySubmit}
-                disabled={!apiKey.trim()}
-                style={{
-                  flex: 1,
-                  padding: "7px 12px",
-                  background: apiKey.trim() ? "rgba(255,255,255,0.2)" : "rgba(255,255,255,0.08)",
-                  border: "1px solid rgba(255,255,255,0.2)",
-                  borderRadius: 4,
-                  color: apiKey.trim() ? "#fff" : "#666",
-                  cursor: apiKey.trim() ? "pointer" : "default",
-                  fontSize: 12,
-                }}
-              >
-                Submit & Download
-              </button>
-              <button
-                onClick={() => setShowApiKeyPrompt(false)}
-                style={{
-                  flexShrink: 0,
-                  padding: "7px 12px",
-                  background: "transparent",
-                  border: "1px solid rgba(255,255,255,0.15)",
-                  borderRadius: 4,
-                  color: "#888",
-                  cursor: "pointer",
-                  fontSize: 12,
-                }}
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
+        <ApiKeyPrompt
+          onSubmit={handleApiKeySubmit}
+          onCancel={() => setShowApiKeyPrompt(false)}
+        />
       )}
     </div>
-  );
-}
-
-/** Renders Download, Cancel, or Downloaded depending on file status. */
-function DownloadButton({
-  selectedFile,
-  downloads,
-  onDownloadClick,
-  onCancel,
-}: {
-  selectedFile: CivitaiFile | null;
-  downloads: DownloadJob[];
-  onDownloadClick: () => void;
-  onCancel: (jobId: string) => void;
-}) {
-  const { markCompleted, isDownloaded } = useDownloads();
-  const downloadUrl = selectedFile?.downloadUrl;
-
-  // Check: server-reported file existence, active downloads, and history
-  if (selectedFile?.downloaded) {
-    return (
-      <div
-        style={{
-          flex: 1,
-          padding: "6px 12px",
-          borderRadius: 4,
-          background: "rgba(0,200,100,0.15)",
-          border: "1px solid rgba(0,200,100,0.25)",
-          color: "#66ddaa",
-          fontSize: 12,
-          textAlign: "center",
-        }}
-      >
-        Downloaded
-      </div>
-    );
-  }
-
-  const alreadyDownloaded = downloadUrl ? isDownloaded(downloadUrl) : false;
-  if (alreadyDownloaded) {
-    return (
-      <div
-        style={{
-          flex: 1,
-          padding: "6px 12px",
-          borderRadius: 4,
-          background: "rgba(0,200,100,0.15)",
-          border: "1px solid rgba(0,200,100,0.25)",
-          color: "#66ddaa",
-          fontSize: 12,
-          textAlign: "center",
-        }}
-      >
-        Downloaded
-      </div>
-    );
-  }
-
-  const match = downloadUrl
-    ? downloads.find((d) => d.downloadUrl === downloadUrl)
-    : null;
-  if (match) {
-    return (
-      <DownloadStatusButton
-        jobId={match.jobId}
-        onCancel={() => onCancel(match.jobId)}
-        checkDone={() => markCompleted(downloadUrl ?? "")}
-      />
-    );
-  }
-
-  return (
-    <button
-      onClick={onDownloadClick}
-      disabled={!selectedFile?.downloadUrl}
-      style={{
-        flex: 1,
-        padding: "6px 12px",
-        background: selectedFile?.downloadUrl
-          ? "rgba(255,255,255,0.2)"
-          : "rgba(255,255,255,0.1)",
-        border: "1px solid rgba(255,255,255,0.2)",
-        borderRadius: 4,
-        color: selectedFile?.downloadUrl ? "#fff" : "#666",
-        cursor: selectedFile?.downloadUrl ? "pointer" : "default",
-        fontSize: 12,
-      }}
-    >
-      Download
-    </button>
-  );
-}
-
-function DownloadStatusButton({
-  jobId,
-  onCancel,
-  checkDone,
-}: {
-  jobId: string;
-  onCancel: () => void;
-  checkDone: () => void;
-}) {
-  const state = useDownloadProgress(jobId);
-  if (state.status === "completed") {
-    // Save to completed history so it persists after Clear All
-    setTimeout(() => checkDone(), 0);
-    return (
-      <div
-        style={{
-          flex: 1,
-          padding: "6px 12px",
-          borderRadius: 4,
-          background: "rgba(0,200,100,0.15)",
-          border: "1px solid rgba(0,200,100,0.25)",
-          color: "#66ddaa",
-          fontSize: 12,
-          textAlign: "center",
-        }}
-      >
-        Downloaded
-      </div>
-    );
-  }
-  return (
-    <button
-      onClick={onCancel}
-      style={{
-        flex: 1,
-        padding: "6px 12px",
-        background: "rgba(255,80,80,0.2)",
-        border: "1px solid rgba(255,80,80,0.3)",
-        borderRadius: 4,
-        color: "#ff8888",
-        cursor: "pointer",
-        fontSize: 12,
-      }}
-    >
-      Cancel
-    </button>
   );
 }
