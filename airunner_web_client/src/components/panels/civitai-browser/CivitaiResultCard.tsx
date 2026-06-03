@@ -22,6 +22,7 @@ export default function CivitaiResultCard({
 }: CivitaiResultCardProps) {
   return (
     <div
+      data-model-id={item.id}
       onClick={() => onSelect(item.id)}
       style={{
         display: "flex",

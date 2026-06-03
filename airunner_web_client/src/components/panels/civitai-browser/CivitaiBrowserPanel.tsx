@@ -289,9 +289,22 @@ export default function CivitaiBrowserPanel() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hasMore, loading, cursor, query, baseModel, modelType]);
 
+  const resultsRef = useRef<HTMLDivElement | null>(null);
+
   const handleSelectModel = useCallback(
     async (modelId: number) => {
       setSelectedModelId(modelId);
+
+      // Scroll the selected card to the top of the results list
+      if (resultsRef.current) {
+        const el = resultsRef.current.querySelector(
+          `[data-model-id="${modelId}"]`,
+        ) as HTMLElement | null;
+        if (el) {
+          el.scrollIntoView({ block: "start", behavior: "smooth" });
+        }
+      }
+
       const cached = detailCache.current.get(modelId);
       if (cached) {
         setSelectedModelData(cached);
@@ -465,6 +478,7 @@ export default function CivitaiBrowserPanel() {
 
       {/* Results list */}
       <div
+        ref={resultsRef}
         className="overflow-auto mb-1"
         style={{ flex: 1, minHeight: 0 }}
       >
@@ -508,7 +522,6 @@ export default function CivitaiBrowserPanel() {
         <div
           className="overflow-auto"
           style={{
-            maxHeight: "45%",
             borderTop:
               "1px solid var(--separator-color)",
             paddingTop: 6,
