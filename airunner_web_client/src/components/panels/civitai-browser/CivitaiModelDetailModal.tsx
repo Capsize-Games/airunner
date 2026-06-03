@@ -329,24 +329,21 @@ export default function CivitaiModelDetailModal({
             </div>
           </div>
 
-          {/* Description */}
-          {desc && (
-            <div
-              style={{
-                fontSize: 10,
-                color: "#999",
-                maxHeight: 60,
-                overflow: "hidden",
-                lineHeight: 1.4,
-                flexShrink: 0,
-              }}
-            >
-              {desc.length > 300 ? desc.slice(0, 300) + "..." : desc}
-            </div>
-          )}
-
           {/* Scrollable content area */}
           <div style={{ flex: 1, overflowY: "auto", minHeight: 0 }}>
+            {/* Description */}
+            {desc && (
+              <div
+                style={{
+                  fontSize: 10,
+                  color: "#999",
+                  lineHeight: 1.4,
+                  marginBottom: 8,
+                }}
+              >
+                {desc}
+              </div>
+            )}
             {/* Sample images */}
             {(selectedVersion?.images ?? []).length > 0 && (
               <div style={{ marginBottom: 8 }}>
