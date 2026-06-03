@@ -405,16 +405,17 @@ export default function CivitaiModelDetailModal({
 
           {/* Action buttons */}
           <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
-            {downloads.find((d) => d.label === (selectedFile?.name ?? "")) ? (
-          <button
-            onClick={async () => {
-              const d = downloads.find((dl) => dl.label === (selectedFile?.name ?? ""));
-              if (!d) return;
-              try {
-                await cancelDownloadJob(d.jobId);
-                removeDownload(d.jobId);
-              } catch { /* */ }
-            }}
+            {selectedFile?.downloadUrl && downloads.find((d) => d.downloadUrl === selectedFile.downloadUrl) ? (
+              <button
+                onClick={async () => {
+                  if (!selectedFile?.downloadUrl) return;
+                  const d = downloads.find((dl) => dl.downloadUrl === selectedFile.downloadUrl);
+                  if (!d) return;
+                  try {
+                    await cancelDownloadJob(d.jobId);
+                    removeDownload(d.jobId);
+                  } catch { /* */ }
+                }}
                 style={{
                   flex: 1,
                   padding: "6px 12px",
