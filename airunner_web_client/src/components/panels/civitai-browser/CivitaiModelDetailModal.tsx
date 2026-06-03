@@ -50,6 +50,25 @@ function stripHtml(html: string): string {
   return html.replace(/<[^>]*>/g, "").trim();
 }
 
+const DOWNLOADS_STORAGE_KEY = "airunner_active_downloads";
+
+/** Read persisted download jobs from localStorage. */
+function loadPersistedDownloads(): DownloadJob[] {
+  try {
+    const raw = localStorage.getItem(DOWNLOADS_STORAGE_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+/** Write the download list to localStorage so it survives page reloads. */
+function persistDownloads(downloads: DownloadJob[]): void {
+  try {
+    localStorage.setItem(DOWNLOADS_STORAGE_KEY, JSON.stringify(downloads));
+  } catch { /* */ }
+}
+
 interface DownloadJob {
   jobId: string;
   label: string;
@@ -64,7 +83,7 @@ export default function CivitaiModelDetailModal({
   const [selectedFileId, setSelectedFileId] = useState<number | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string>("");
   const [previewBase64, setPreviewBase64] = useState<string>("");
-  const [downloads, setDownloads] = useState<DownloadJob[]>([]);
+  const [downloads, setDownloads] = useState<DownloadJob[]>(loadPersistedDownloads);
   const [downloadCancel, setDownloadCancel] = useState<Record<string, boolean>>({});
   const [showApiKeyPrompt, setShowApiKeyPrompt] = useState(false);
   const [apiKey, setApiKey] = useState("");
@@ -144,7 +163,11 @@ export default function CivitaiModelDetailModal({
         api_key: key ?? "",
       });
       if (result.job_id) {
-        setDownloads((prev) => [...prev, { jobId: result.job_id, label: selectedFile.name }]);
+        setDownloads((prev) => {
+          const next = [...prev, { jobId: result.job_id, label: selectedFile.name }];
+          persistDownloads(next);
+          return next;
+        });
       }
     } catch { /* */ }
   };
@@ -400,7 +423,11 @@ export default function CivitaiModelDetailModal({
                   setDownloadCancel((prev) => ({ ...prev, [d.jobId]: true }));
                   try {
                     await cancelDownloadJob(d.jobId);
-                    setDownloads((prev) => prev.filter((dl) => dl.jobId !== d.jobId));
+                    setDownloads((prev) => {
+                      const next = prev.filter((dl) => dl.jobId !== d.jobId);
+                      persistDownloads(next);
+                      return next;
+                    });
                   } catch { /* */ }
                 }}
                 style={{
