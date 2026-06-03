@@ -67,7 +67,12 @@ export default function CivitaiBrowserPanel() {
   const [cursor, setCursor] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [hasMore, setHasMore] = useState(true);
-  const [selectedModelId, setSelectedModelId] = useState<number | null>(null);
+  const [selectedModelId, setSelectedModelId] = useState<number | null>(() => {
+    try {
+      const v = localStorage.getItem("airunner_civitai_selected_model");
+      return v ? Number(v) : null;
+    } catch { return null; }
+  });
   const [selectedModelData, setSelectedModelData] = useState<JsonObject | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [filterOptions, setFilterOptions] = useState<{ baseModels: FilterOption[]; typesByBase: Record<string, string[]> }>({ baseModels: [], typesByBase: {} });
@@ -161,9 +166,9 @@ export default function CivitaiBrowserPanel() {
 
   const handleSelectModel = useCallback(async (modelId: number) => {
     setSelectedModelId(modelId);
+    try { localStorage.setItem("airunner_civitai_selected_model", String(modelId)); } catch { /* */ }
     const cached = detailCache.current.get(modelId);
     if (cached) { setSelectedModelData(cached); return; }
-    // Show modal skeleton immediately with a placeholder
     setSelectedModelData({ id: modelId, name: "Loading...", modelVersions: [] } as unknown as JsonObject);
     setDetailLoading(true);
     try {
@@ -176,6 +181,27 @@ export default function CivitaiBrowserPanel() {
       setSelectedModelData(data);
     } catch { /* */ }
     finally { setDetailLoading(false); }
+  }, [baseModel, modelType]);
+
+  // Re-fetch model detail on mount when restoring from localStorage
+  useEffect(() => {
+    const storedId = selectedModelId;
+    if (storedId === null) return;
+    if (detailCache.current.has(storedId)) {
+      setSelectedModelData(detailCache.current.get(storedId) ?? null);
+      return;
+    }
+    if (baseModel === "" || modelType === "") return; // wait for filters
+    setDetailLoading(true);
+    fetchCivitaiModel({
+      model_id: String(storedId),
+      base_models: baseModel ? [baseModel] : undefined,
+      model_types: modelType ? [modelType] : undefined,
+    }).then((data) => {
+      detailCache.current.set(storedId, data);
+      setSelectedModelData(data);
+    }).catch(() => {}).finally(() => setDetailLoading(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [baseModel, modelType]);
 
   const modelDetail = selectedModelData
@@ -249,7 +275,11 @@ export default function CivitaiBrowserPanel() {
           loading={detailLoading}
           baseModel={baseModel}
           modelType={modelType}
-          onClose={() => { setSelectedModelId(null); setSelectedModelData(null); }}
+          onClose={() => {
+            setSelectedModelId(null);
+            setSelectedModelData(null);
+            try { localStorage.removeItem("airunner_civitai_selected_model"); } catch { /* */ }
+          }}
         />
       )}
     </div>
