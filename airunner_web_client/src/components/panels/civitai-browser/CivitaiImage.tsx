@@ -33,7 +33,7 @@ export default function CivitaiImage({
     return (
       <img
         src={`data:image/jpeg;base64,${base64}`}
-        alt={alt}
+        alt=""
         className={className}
         style={style}
         loading="lazy"

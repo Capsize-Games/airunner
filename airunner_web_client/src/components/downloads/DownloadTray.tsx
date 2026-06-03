@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { BASE_URL } from "../../types/api";
 import DownloadProgress, { useDownloadProgress } from "./DownloadProgress";
 import { useDownloads, type DownloadJob } from "./useDownloadState";
 import { cancelDownloadJob, startCivitaiFileDownload } from "../../api/downloads";
@@ -29,9 +30,7 @@ export default function DownloadTray() {
 
   const handleResume = async (job: DownloadJob) => {
     if (!job.downloadUrl) return;
-    // Remove the interrupted entry
     removeDownload(job.jobId);
-    // Re-submit the download
     try {
       const result = await startCivitaiFileDownload({
         url: job.downloadUrl,
@@ -59,49 +58,12 @@ export default function DownloadTray() {
         overflowY: "auto",
       }}
     >
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          padding: "4px 12px",
-          fontSize: 11,
-          color: "#888",
-          borderBottom: "1px solid rgba(255,255,255,0.06)",
-        }}
-      >
-        <span>Downloads ({downloads.length})</span>
-        <div style={{ display: "flex", gap: 8 }}>
-          <button
-            onClick={clearDownloads}
-            style={{
-              background: "transparent",
-              border: "none",
-              color: "#888",
-              cursor: "pointer",
-              fontSize: 10,
-              padding: 0,
-            }}
-          >
-            Clear all
-          </button>
-          <button
-            onClick={handleClose}
-            style={{
-              background: "transparent",
-              border: "none",
-              color: "#888",
-              cursor: "pointer",
-              fontSize: 14,
-              padding: 0,
-              lineHeight: 1,
-            }}
-            title="Close tray"
-          >
-            ✕
-          </button>
-        </div>
-      </div>
+      <TrayHeader
+        count={downloads.length}
+        jobIds={downloads.map((d) => d.jobId)}
+        onClearAll={clearDownloads}
+        onClose={handleClose}
+      />
       {downloads.map((job) => (
         <div
           key={job.jobId}
@@ -147,6 +109,89 @@ export default function DownloadTray() {
           </div>
         </div>
       ))}
+    </div>
+  );
+}
+
+function TrayHeader({
+  count,
+  jobIds,
+  onClearAll,
+  onClose,
+}: {
+  count: number;
+  jobIds: string[];
+  onClearAll: () => void;
+  onClose: () => void;
+}) {
+  const [anyActive, setAnyActive] = useState(true);
+
+  useEffect(() => {
+    const check = async () => {
+      const results = await Promise.all(
+        jobIds.map(async (id) => {
+          try {
+            const res = await fetch(`${BASE_URL}/api/v1/downloads/status/${id}`);
+            if (!res.ok) return false;
+            const job = await res.json();
+            return job.status === "running" || job.status === "interrupted";
+          } catch {
+            return false;
+          }
+        }),
+      );
+      setAnyActive(results.some(Boolean));
+    };
+    check();
+    const interval = setInterval(check, 2000);
+    return () => clearInterval(interval);
+  }, [jobIds]);
+
+  return (
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        padding: "4px 12px",
+        fontSize: 11,
+        color: "#888",
+        borderBottom: "1px solid rgba(255,255,255,0.06)",
+      }}
+    >
+      <span>Downloads ({count})</span>
+      {!anyActive && (
+        <div style={{ display: "flex", gap: 8 }}>
+          <button
+            onClick={onClearAll}
+            style={{
+              background: "transparent",
+              border: "none",
+              color: "#888",
+              cursor: "pointer",
+              fontSize: 10,
+              padding: 0,
+            }}
+          >
+            Clear all
+          </button>
+          <button
+            onClick={onClose}
+            style={{
+              background: "transparent",
+              border: "none",
+              color: "#888",
+              cursor: "pointer",
+              fontSize: 14,
+              padding: 0,
+              lineHeight: 1,
+            }}
+            title="Close tray"
+          >
+            ✕
+          </button>
+        </div>
+      )}
     </div>
   );
 }
