@@ -15,6 +15,8 @@ interface CivitaiImageProps {
   style?: React.CSSProperties;
   /** Request thumbnail at this width (default 120px for thumbnails) */
   thumbWidth?: number;
+  /** Max bytes to accept from the proxy (thumbnails ~100KB, previews ~500KB) */
+  maxBytes?: number;
 }
 
 /**
@@ -28,6 +30,7 @@ export default function CivitaiImage({
   className,
   style,
   thumbWidth = 120,
+  maxBytes = 200_000, // 200KB default for thumbnails
 }: CivitaiImageProps) {
   const [blobUrl, setBlobUrl] = useState<string | null>(null);
   const [failed, setFailed] = useState(false);
@@ -46,7 +49,7 @@ export default function CivitaiImage({
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ url: fetchUrl, max_bytes: 5_000_000 }),
+          body: JSON.stringify({ url: fetchUrl, max_bytes: maxBytes }),
         },
       );
       if (!response.ok) {
@@ -59,7 +62,7 @@ export default function CivitaiImage({
     } catch {
       setFailed(true);
     }
-  }, [url, thumbWidth]);
+  }, [url, thumbWidth, maxBytes]);
 
   useEffect(() => {
     fetchImage();
@@ -103,6 +106,7 @@ export default function CivitaiImage({
       className={className}
       style={style}
       loading="lazy"
+      onContextMenu={(e) => e.preventDefault()}
     />
   );
 }

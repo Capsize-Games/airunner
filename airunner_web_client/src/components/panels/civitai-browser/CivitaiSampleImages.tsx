@@ -43,6 +43,7 @@ export default function CivitaiSampleImages({
             url={preview.url}
             alt="Preview"
             thumbWidth={400}
+            maxBytes={500_000}
             style={{
               width: "100%",
               height: "100%",
@@ -82,6 +83,7 @@ export default function CivitaiSampleImages({
               url={img.url}
               alt="Thumb"
               thumbWidth={48}
+              maxBytes={100_000}
               style={{
                 width: "100%",
                 height: "100%",
