@@ -11,10 +11,7 @@ import CivitaiModelDetailModal from "./CivitaiModelDetailModal";
 const CACHE_KEY_PREFIX = "airunner_civitai_cache_";
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 
-interface CacheEntry<T> {
-  data: T;
-  ts: number;
-}
+interface CacheEntry<T> { data: T; ts: number; }
 
 function cacheGet<T>(key: string): T | null {
   try {
@@ -26,27 +23,18 @@ function cacheGet<T>(key: string): T | null {
       return null;
     }
     return entry.data;
-  } catch {
-    return null;
-  }
+  } catch { return null; }
 }
 
 function cacheSet<T>(key: string, data: T) {
   try {
-    localStorage.setItem(
-      CACHE_KEY_PREFIX + key,
-      JSON.stringify({ data, ts: Date.now() } as CacheEntry<T>),
-    );
-  } catch {
-    // storage full — ignore
-  }
+    localStorage.setItem(CACHE_KEY_PREFIX + key, JSON.stringify({ data, ts: Date.now() } as CacheEntry<T>));
+  } catch { /* */ }
 }
 
 let toastTimeout: ReturnType<typeof setTimeout> | null = null;
 
-function clearAllCache(
-  setToastMsg: (msg: string | null) => void,
-) {
+function clearAllCache(setToastMsg: (msg: string | null) => void) {
   const keys: string[] = [];
   for (let i = 0; i < localStorage.length; i++) {
     const k = localStorage.key(i);
@@ -58,87 +46,45 @@ function clearAllCache(
   toastTimeout = setTimeout(() => setToastMsg(null), 2000);
 }
 
-// Pass the CivitAI URL as-is to the proxy. The proxy enforces max_bytes
-// to cap the response size server-side.
-function thumbnailUrl(url: string, _width = 120): string {
-  return url || "";
-}
+// ── Helpers ──
 
-// ── Search result flattening ──
+function thumbnailUrl(url: string, _width = 120): string { return url || ""; }
 
 interface SearchResult {
-  id: number;
-  name: string;
-  type?: string;
-  baseModel?: string;
-  creator?: string;
-  thumbnail?: string;
+  id: number; name: string; type?: string; baseModel?: string;
+  creator?: string; thumbnail?: string;
 }
 
 function flattenItem(item: JsonObject): SearchResult {
   const creatorObj = item.creator as JsonObject | undefined;
-  const creatorName = creatorObj?.username
-    ? String(creatorObj.username)
-    : String(item.creator ?? "Unknown");
-
+  const creatorName = creatorObj?.username ? String(creatorObj.username) : String(item.creator ?? "Unknown");
   const versions = (item.modelVersions ?? []) as JsonObject[];
   let thumbUrl = "";
   if (versions.length > 0) {
     const images = (versions[0].images ?? []) as JsonObject[];
-    if (images.length > 0) {
-      thumbUrl = String(
-        images[0].url ?? images[0].thumbnailUrl ?? "",
-      );
-    }
+    if (images.length > 0) thumbUrl = String(images[0].url ?? images[0].thumbnailUrl ?? "");
   }
-  if (!thumbUrl) {
-    thumbUrl = String((item as JsonObject).image ?? "");
-  }
-
+  if (!thumbUrl) thumbUrl = String((item as JsonObject).image ?? "");
   return {
-    id: Number(item.id),
-    name: String(item.name ?? ""),
+    id: Number(item.id), name: String(item.name ?? ""),
     type: item.type ? String(item.type) : undefined,
     baseModel: item.baseModel ? String(item.baseModel) : undefined,
     creator: creatorName,
-    thumbnail: thumbUrl ? thumbnailUrl(thumbUrl) : undefined,
+    thumbnail: thumbUrl || undefined,
   };
 }
 
 // ── Filters from API ──
 
-interface FilterOption {
-  label: string;
-  value: string;
-}
+interface FilterOption { label: string; value: string; }
 
-async function fetchFilterOptions(): Promise<{
-  baseModels: FilterOption[];
-  modelTypes: string[];
-  typesByBase: Record<string, string[]>;
-}> {
+async function fetchFilterOptions(): Promise<{ baseModels: FilterOption[]; modelTypes: string[]; typesByBase: Record<string, string[]> }> {
   const cacheKey = "filter_options";
-  const cached = cacheGet<{
-    baseModels: FilterOption[];
-    modelTypes: string[];
-    typesByBase: Record<string, string[]>;
-  }>(cacheKey);
+  const cached = cacheGet<{ baseModels: FilterOption[]; modelTypes: string[]; typesByBase: Record<string, string[]> }>(cacheKey);
   if (cached) return cached;
-
-  const res = await fetch(
-    `${BASE_URL}/api/v1/downloads/civitai/options`,
-  );
-  const data = (await res.json()) as {
-    base_models: FilterOption[];
-    model_types: string[];
-    model_types_by_base: Record<string, string[]>;
-  };
-
-  const result = {
-    baseModels: data.base_models ?? [],
-    modelTypes: data.model_types ?? [],
-    typesByBase: data.model_types_by_base ?? {},
-  };
+  const res = await fetch(`${BASE_URL}/api/v1/downloads/civitai/options`);
+  const data = await res.json() as { base_models: FilterOption[]; model_types: string[]; model_types_by_base: Record<string, string[]> };
+  const result = { baseModels: data.base_models ?? [], modelTypes: data.model_types ?? [], typesByBase: data.model_types_by_base ?? {} };
   cacheSet(cacheKey, result);
   return result;
 }
@@ -149,244 +95,140 @@ export default function CivitaiBrowserPanel() {
   const [query, setQuery] = useState("");
   const [baseModel, setBaseModel] = useState("");
   const [modelType, setModelType] = useState("");
-
   const [results, setResults] = useState<SearchResult[]>([]);
   const [cursor, setCursor] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [hasMore, setHasMore] = useState(true);
-
-  const [selectedModelId, setSelectedModelId] = useState<number | null>(
-    null,
-  );
-  const [selectedModelData, setSelectedModelData] =
-    useState<JsonObject | null>(null);
+  const [selectedModelId, setSelectedModelId] = useState<number | null>(null);
+  const [selectedModelData, setSelectedModelData] = useState<JsonObject | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
-
-  const [filterOptions, setFilterOptions] = useState<{
-    baseModels: FilterOption[];
-    typesByBase: Record<string, string[]>;
-  }>({ baseModels: [], typesByBase: {} });
-
+  const [filterOptions, setFilterOptions] = useState<{ baseModels: FilterOption[]; typesByBase: Record<string, string[]> }>({ baseModels: [], typesByBase: {} });
   const [toastMsg, setToastMsg] = useState<string | null>(null);
 
   const detailCache = useRef<Map<number, JsonObject>>(new Map());
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(
-    null,
-  );
-
-  // Load filter options on mount
-  useEffect(() => {
-    fetchFilterOptions()
-      .then((opts) =>
-        setFilterOptions({
-          baseModels: opts.baseModels,
-          typesByBase: opts.typesByBase,
-        }),
-      )
-      .catch(() => {});
-  }, []);
-
-  // Only search when user has selected both dropdowns OR entered text
-  const shouldSearch = useCallback((): boolean => {
-    return (
-      query.trim().length > 0 ||
-      (baseModel !== "" && modelType !== "")
-    );
-  }, [query, baseModel, modelType]);
-
-  // Use a ref for cursor so callbacks always have the latest value.
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const resultsRef = useRef<HTMLDivElement | null>(null);
   const cursorRef = useRef<string | null>(null);
   const loadingRef = useRef(false);
-  const pageLimit = 20;
+  const hasMoreRef = useRef(true);
+  const fillCountRef = useRef(0);
 
-  const performSearch = useCallback(
-    async (append = false) => {
-      if (!shouldSearch() || loadingRef.current) return;
-      loadingRef.current = true;
-      setLoading(true);
-      try {
-        const baseModels = baseModel ? [baseModel] : undefined;
-        const modelTypes = modelType ? [modelType] : undefined;
-        const data = await searchCivitaiModels({
-          query,
-          base_models: baseModels,
-          model_types: modelTypes,
-          limit: pageLimit,
-          cursor: append ? cursorRef.current : null,
-        });
-        const items: SearchResult[] = (
-          (data.items ?? []) as JsonObject[]
-        ).map(flattenItem);
-        if (append) {
-          setResults((prev) => [...prev, ...items]);
-        } else {
-          setResults(items);
-        }
-        const meta = data.metadata as JsonObject | undefined;
-        const next = (meta?.nextCursor as string) ?? null;
-        cursorRef.current = next;
-        setCursor(next);
-        setHasMore(next !== null);
-      } catch (err) {
-        console.error("CivitAI search failed:", err);
-      } finally {
-        setLoading(false);
-        loadingRef.current = false;
-      }
-    },
-    [query, baseModel, modelType, shouldSearch],
-  );
+  // Load filter options on mount
+  useEffect(() => { fetchFilterOptions().then((opts) => setFilterOptions({ baseModels: opts.baseModels, typesByBase: opts.typesByBase })).catch(() => {}); }, []);
 
-  const debouncedSearch = useCallback(
-    (append = false) => {
-      if (debounceRef.current) clearTimeout(debounceRef.current);
-      debounceRef.current = setTimeout(() => {
-        cursorRef.current = null;
-        setCursor(null);
-        performSearch(append);
-      }, 400);
-    },
-    [performSearch],
-  );
+  const shouldSearch = (): boolean => query.trim().length > 0 || (baseModel !== "" && modelType !== "");
 
-  // Auto-search when dropdowns change (only if both selected)
+  const doSearch = useCallback(async (append = false) => {
+    if (!shouldSearch()) return;
+    loadingRef.current = true;
+    setLoading(true);
+    try {
+      const data = await searchCivitaiModels({
+        query,
+        base_models: baseModel ? [baseModel] : undefined,
+        model_types: modelType ? [modelType] : undefined,
+        limit: 20,
+        cursor: append ? cursorRef.current : null,
+      });
+      const items = ((data.items ?? []) as JsonObject[]).map(flattenItem);
+      setResults((prev) => (append ? [...prev, ...items] : items));
+      const next = ((data.metadata as JsonObject | undefined)?.nextCursor as string) ?? null;
+      cursorRef.current = next;
+      hasMoreRef.current = next !== null;
+      setCursor(next);
+      setHasMore(next !== null);
+    } catch (err) { console.error("CivitAI search failed:", err); }
+    finally { setLoading(false); loadingRef.current = false; }
+  }, [query, baseModel, modelType]);
+
+  const debouncedSearch = useCallback((append = false) => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => { cursorRef.current = null; hasMoreRef.current = true; doSearch(append); }, 400);
+  }, [doSearch]);
+
+  // Auto-search on dropdown change
   useEffect(() => {
-    if (baseModel !== "" && modelType !== "") {
-      debouncedSearch(false);
-    } else {
-      setResults([]);
-      cursorRef.current = null;
-      setCursor(null);
-      setHasMore(true);
-    }
-    return () => {
-      if (debounceRef.current) clearTimeout(debounceRef.current);
-    };
+    if (baseModel !== "" && modelType !== "") { debouncedSearch(false); }
+    else { setResults([]); cursorRef.current = null; hasMoreRef.current = true; setHasMore(true); }
+    return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [baseModel, modelType]);
 
-  // Viewport filling: after each search, if results don't fill the
-  // container, fetch more (up to 4 pages = 80 items max).
-  const fillCountRef = useRef(0);
+  // Viewport filling
   useEffect(() => {
     if (!loading && hasMore && results.length > 0 && resultsRef.current) {
-      const { scrollHeight, clientHeight } = resultsRef.current;
-      if (scrollHeight <= clientHeight && fillCountRef.current < 4) {
+      if (resultsRef.current.scrollHeight <= resultsRef.current.clientHeight && fillCountRef.current < 4) {
         fillCountRef.current++;
-        performSearch(true);
-      } else {
-        fillCountRef.current = 0;
-      }
+        doSearch(true);
+      } else { fillCountRef.current = 0; }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [results.length, loading, hasMore]);
 
-  // Lazy loading: scroll-to-bottom detection on results container
-  const handleScroll = useCallback(() => {
-    if (!resultsRef.current || loadingRef.current || !hasMore) return;
-    const { scrollTop, scrollHeight, clientHeight } = resultsRef.current;
-    if (scrollHeight - scrollTop - clientHeight < 150) {
-      performSearch(true);
-    }
-  }, [hasMore, performSearch]);
-
+  // Scroll lazy loading — uses only refs, no state deps, never re-attaches
   useEffect(() => {
     const el = resultsRef.current;
     if (!el) return;
-    el.addEventListener("scroll", handleScroll);
-    return () => el.removeEventListener("scroll", handleScroll);
-  }, [handleScroll]);
-
-  const resultsRef = useRef<HTMLDivElement | null>(null);
-
-  const handleSelectModel = useCallback(
-    async (modelId: number) => {
-      setSelectedModelId(modelId);
-
-      // Scroll the selected card to the top of the results list
-      if (resultsRef.current) {
-        const el = resultsRef.current.querySelector(
-          `[data-model-id="${modelId}"]`,
-        ) as HTMLElement | null;
-        if (el) {
-          el.scrollIntoView({ block: "start", behavior: "smooth" });
-        }
+    const onScroll = () => {
+      if (loadingRef.current || !hasMoreRef.current) return;
+      const { scrollTop, scrollHeight, clientHeight } = el;
+      if (scrollHeight - scrollTop - clientHeight < 150) {
+        // Read latest doSearch via ref to avoid stale closure
+        doSearch(true);
       }
+    };
+    el.addEventListener("scroll", onScroll, { passive: true });
+    return () => el.removeEventListener("scroll", onScroll);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-      const cached = detailCache.current.get(modelId);
-      if (cached) {
-        setSelectedModelData(cached);
-        return;
-      }
-      setDetailLoading(true);
-      setSelectedModelData(null);
-      try {
-        const baseModels = baseModel ? [baseModel] : undefined;
-        const modelTypes = modelType ? [modelType] : undefined;
-        const data = await fetchCivitaiModel({
-          model_id: String(modelId),
-          base_models: baseModels,
-          model_types: modelTypes,
-        });
-        detailCache.current.set(modelId, data);
-        setSelectedModelData(data);
-      } catch {
-        // failed
-      } finally {
-        setDetailLoading(false);
-      }
-    },
-    [baseModel, modelType],
-  );
+  const handleSelectModel = useCallback(async (modelId: number) => {
+    setSelectedModelId(modelId);
+    if (resultsRef.current) {
+      const el = resultsRef.current.querySelector(`[data-model-id="${modelId}"]`) as HTMLElement | null;
+      if (el) el.scrollIntoView({ block: "start", behavior: "smooth" });
+    }
+    const cached = detailCache.current.get(modelId);
+    if (cached) { setSelectedModelData(cached); return; }
+    setDetailLoading(true);
+    setSelectedModelData(null);
+    try {
+      const data = await fetchCivitaiModel({
+        model_id: String(modelId),
+        base_models: baseModel ? [baseModel] : undefined,
+        model_types: modelType ? [modelType] : undefined,
+      });
+      detailCache.current.set(modelId, data);
+      setSelectedModelData(data);
+    } catch { /* */ }
+    finally { setDetailLoading(false); }
+  }, [baseModel, modelType]);
 
-  // Transform API data for detail component
   const modelDetail = selectedModelData
     ? (() => {
         const raw = selectedModelData as JsonObject;
         const creatorObj = raw.creator as JsonObject | undefined;
-        const creatorName = creatorObj?.username
-          ? String(creatorObj.username)
-          : String(raw.creator ?? "Unknown");
+        const creatorName = creatorObj?.username ? String(creatorObj.username) : String(raw.creator ?? "Unknown");
         const versions = (raw.modelVersions ?? []) as JsonObject[];
         return {
-          id: Number(raw.id ?? 0),
-          name: String(raw.name ?? ""),
-          description: raw.description
-            ? String(raw.description)
-            : undefined,
-          creator: creatorName,
-          type: raw.type ? String(raw.type) : undefined,
-          stats: raw.stats as
-            | {
-                downloadCount?: number;
-                favoriteCount?: number;
-                commentCount?: number;
-              }
-            | undefined,
+          id: Number(raw.id ?? 0), name: String(raw.name ?? ""),
+          description: raw.description ? String(raw.description) : undefined,
+          creator: creatorName, type: raw.type ? String(raw.type) : undefined,
+          stats: raw.stats as { downloadCount?: number; favoriteCount?: number; commentCount?: number } | undefined,
           versions: versions.map((v: JsonObject) => ({
-            id: Number(v.id),
-            name: String(v.name ?? ""),
+            id: Number(v.id), name: String(v.name ?? ""),
             baseModel: v.baseModel ? String(v.baseModel) : undefined,
-            files: ((v.files ?? []) as JsonObject[]).map(
-              (f: JsonObject) => ({
-                id: Number(f.id),
-                name: String(f.name ?? ""),
-                sizeKB: f.sizeKB ? Number(f.sizeKB) : undefined,
-                downloadUrl: f.downloadUrl
-                  ? String(f.downloadUrl)
-                  : undefined,
-              }),
-            ),
-            images: ((v.images ?? []) as JsonObject[]).map(
-              (img: JsonObject) => ({
-                url: String(
-                  img.url ?? img.thumbnailUrl ?? "",
-                ),
-                nsfw: img.nsfw ? String(img.nsfw) : undefined,
-                width: img.width ? Number(img.width) : undefined,
-                height: img.height ? Number(img.height) : undefined,
-              }),
-            ),
+            files: ((v.files ?? []) as JsonObject[]).map((f: JsonObject) => ({
+              id: Number(f.id), name: String(f.name ?? ""),
+              sizeKB: f.sizeKB ? Number(f.sizeKB) : undefined,
+              downloadUrl: f.downloadUrl ? String(f.downloadUrl) : undefined,
+            })),
+            images: ((v.images ?? []) as JsonObject[]).map((img: JsonObject) => ({
+              url: String(img.url ?? img.thumbnailUrl ?? ""),
+              nsfw: img.nsfw ? String(img.nsfw) : undefined,
+              width: img.width ? Number(img.width) : undefined,
+              height: img.height ? Number(img.height) : undefined,
+            })),
           })),
         };
       })()
@@ -400,112 +242,44 @@ export default function CivitaiBrowserPanel() {
         <h6 className="text-muted mb-0">CivitAI Browser</h6>
         <button
           onClick={() => clearAllCache(setToastMsg)}
-          style={{
-            background: "transparent",
-            border: "none",
-            cursor: "pointer",
-            padding: 0,
-            fontSize: 12,
-            color: "#888",
-          }}
+          style={{ background: "transparent", border: "none", cursor: "pointer", padding: 0, fontSize: 12, color: "#888" }}
           title="Clear API cache"
         >
-          <img
-            src={icon("delete")}
-            alt="Clear cache"
-            style={{
-              width: 14,
-              height: 14,
-              filter: "invert(0.5)",
-            }}
-          />
+          <img src={icon("delete")} alt="Clear cache" style={{ width: 14, height: 14, filter: "invert(0.5)" }} />
         </button>
       </div>
 
-      {/* Toast next to clear button */}
       {toastMsg && (
-        <div
-          style={{
-            position: "absolute",
-            top: 30,
-            right: 8,
-            zIndex: 10,
-            background: "var(--theme-bg-secondary)",
-            border: "1px solid var(--bs-primary)",
-            borderRadius: 4,
-            padding: "2px 8px",
-            fontSize: 10,
-            color: "var(--bs-body-color)",
-            whiteSpace: "nowrap",
-            pointerEvents: "none",
-          }}
-        >
+        <div style={{ position: "absolute", top: 30, right: 8, zIndex: 10, background: "var(--theme-bg-secondary)", border: "1px solid var(--bs-primary)", borderRadius: 4, padding: "2px 8px", fontSize: 10, color: "var(--bs-body-color)", whiteSpace: "nowrap", pointerEvents: "none" }}>
           {toastMsg}
         </div>
       )}
 
-      {/* Search */}
       <CivitaiSearchBar
-        query={query}
-        baseModel={baseModel}
-        modelType={modelType}
+        query={query} baseModel={baseModel} modelType={modelType}
         filterOptions={filterOptions}
-        onQueryChange={(val) => {
-          setQuery(val);
-          if (val.trim().length > 0) debouncedSearch(false);
-        }}
-        onBaseModelChange={(val) => {
-          setBaseModel(val);
-          setModelType("");
-        }}
-        onModelTypeChange={(val) => {
-          setModelType(val);
-        }}
+        onQueryChange={(val) => { setQuery(val); if (val.trim().length > 0) debouncedSearch(false); }}
+        onBaseModelChange={(val) => { setBaseModel(val); setModelType(""); }}
+        onModelTypeChange={(val) => { setModelType(val); }}
       />
 
-      {/* Results list — full height when no modal */}
-      <div
-        ref={resultsRef}
-        className="overflow-auto"
-        style={{ flex: 1, minHeight: 0 }}
-      >
+      <div ref={resultsRef} className="overflow-auto" style={{ flex: 1, minHeight: 0 }}>
         {results.map((item) => (
-          <CivitaiResultCard
-            key={item.id}
-            item={item}
-            selected={selectedModelId === item.id}
-            onSelect={handleSelectModel}
-          />
+          <CivitaiResultCard key={item.id} item={item} selected={selectedModelId === item.id} onSelect={handleSelectModel} />
         ))}
-
-        {loading && (
-          <div className="text-center py-2">
-            <Spinner animation="border" size="sm" />
-          </div>
-        )}
-
+        {loading && <div className="text-center py-2"><Spinner animation="border" size="sm" /></div>}
         {!loading && results.length === 0 && (
           <p className="text-muted small text-center mt-3">
-            {shouldSearch()
-              ? "No results found."
-              : "Select a base model and type, or type a search query."}
+            {shouldSearch() ? "No results found." : "Select a base model and type, or type a search query."}
           </p>
         )}
       </div>
 
-      {/* Model detail modal */}
-      {detailLoading && (
-        <div className="text-center py-2">
-          <Spinner animation="border" size="sm" />
-        </div>
-      )}
+      {detailLoading && <div className="text-center py-2"><Spinner animation="border" size="sm" /></div>}
       {modelDetail && (
         <CivitaiModelDetailModal
           model={modelDetail}
-          onClose={() => {
-            setSelectedModelId(null);
-            setSelectedModelData(null);
-          }}
+          onClose={() => { setSelectedModelId(null); setSelectedModelData(null); }}
         />
       )}
     </div>
