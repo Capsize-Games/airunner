@@ -371,45 +371,20 @@ def _fetch_and_resize(
 ) -> bytes:
     """Fetch one CivitAI image, resize, cache, and return JPEG bytes.
 
-    On failure, queues for background retry and raises the exception.
+    If the image is not already cached, queues a background fetch and
+    raises an exception (caller returns 502). The client should retry
+    after receiving an ``image_ready`` SSE event.
     """
     cache_path = _image_cache_path(url, width)
     cached = _image_from_cache(cache_path)
     if cached is not None:
-        logger.debug(
-            "CivitAI image cache HIT  width=%s  url=%s",
-            width, url,
-        )
+        logger.debug("CivitAI cache HIT  w=%s", width)
         return cached
 
-    logger.info(
-        "CivitAI image cache MISS — fetching from CivitAI  width=%s  url=%s",
-        width, url,
-    )
-    time.sleep(0.2)  # gentle rate limiting
-
-    try:
-        raw = safe_fetch_bytes(url, max_bytes=max_bytes)
-    except Exception:
-        _ensure_retry_worker()
-        _retry_queue.put((url, width, max_bytes))
-        raise
-
-    if width is not None:
-        try:
-            img = PILImage.open(io.BytesIO(raw)).convert("RGB")
-            ratio = width / float(img.width)
-            h = int(float(img.height) * ratio)
-            img = img.resize((width, h), PILImage.Resampling.LANCZOS)
-            buf = io.BytesIO()
-            img.save(buf, format="JPEG", quality=85, optimize=True)
-            _write_cache(cache_path, buf.getvalue())
-            return buf.getvalue()
-        except Exception:
-            return raw
-
-    _write_cache(cache_path, raw)
-    return raw
+    logger.info("CivitAI cache MISS — queuing background fetch  w=%s", width)
+    _ensure_retry_worker()
+    _retry_queue.put((url, width, max_bytes))
+    raise RuntimeError("Not cached — queued for background fetch")
 
 
 @router.post("/civitai/image")

@@ -39,6 +39,26 @@ export default function CivitaiImage({
   );
   const [failed, setFailed] = useState(false);
 
+  // Subscribe to image-ready SSE for retry on failure
+  useEffect(() => {
+    const eventSource = new EventSource(
+      `${BASE_URL}/api/v1/downloads/civitai/images/ready`,
+    );
+    eventSource.addEventListener("message", (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        if (data.type === "image_ready" && data.url === url) {
+          // Image now cached — retry the fetch
+          eventSource.close();
+          fetchImage();
+        }
+      } catch { /* */ }
+    });
+    eventSource.onerror = () => { /* auto-reconnect */ };
+    return () => eventSource.close();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [url]);
+
   const fetchImage = useCallback(async () => {
     if (!url || url === "") {
       setFailed(true);
