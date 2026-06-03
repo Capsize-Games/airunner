@@ -34,6 +34,23 @@ function save(jobs: DownloadJob[]) {
 let _version = 0;
 const EVENT = "airunner-dl-changed";
 
+const COMPLETED_KEY = "airunner_completed_downloads";
+
+function loadCompleted(): Set<string> {
+  try {
+    const raw = localStorage.getItem(COMPLETED_KEY);
+    return new Set(raw ? JSON.parse(raw) : []);
+  } catch {
+    return new Set();
+  }
+}
+
+function saveCompleted(urls: Set<string>) {
+  try {
+    localStorage.setItem(COMPLETED_KEY, JSON.stringify([...urls]));
+  } catch { /* */ }
+}
+
 export function useDownloads() {
   const [ver, setVer] = useState(0);
   const downloads = useRef<DownloadJob[]>(load());
@@ -68,6 +85,14 @@ export function useDownloads() {
 
   const clearDownloads = useCallback(() => {
     save([]);
+    saveCompleted(new Set());
+    bump();
+  }, [bump]);
+
+  const markCompleted = useCallback((downloadUrl: string) => {
+    const set = loadCompleted();
+    set.add(downloadUrl);
+    saveCompleted(set);
     bump();
   }, [bump]);
 
@@ -76,5 +101,7 @@ export function useDownloads() {
     addDownload,
     removeDownload,
     clearDownloads,
+    markCompleted,
+    isDownloaded: (url: string) => loadCompleted().has(url),
   };
 }

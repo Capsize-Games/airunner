@@ -68,7 +68,7 @@ export default function CivitaiModelDetailModal({
   const [selectedFileId, setSelectedFileId] = useState<number | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string>("");
   const [previewBase64, setPreviewBase64] = useState<string>("");
-  const { downloads, addDownload, removeDownload } = useDownloads();
+  const { downloads, addDownload, removeDownload, isDownloaded } = useDownloads();
   const [showApiKeyPrompt, setShowApiKeyPrompt] = useState(false);
   const [apiKey, setApiKey] = useState("");
   const [pendingDownloadUrl, setPendingDownloadUrl] = useState<string | null>(null);
@@ -550,15 +550,40 @@ function DownloadButton({
   onDownloadClick: () => void;
   onCancel: (jobId: string) => void;
 }) {
-  const match = selectedFile?.downloadUrl
-    ? downloads.find((d) => d.downloadUrl === selectedFile.downloadUrl)
+  const { markCompleted, isDownloaded } = useDownloads();
+  const downloadUrl = selectedFile?.downloadUrl;
+
+  // Check both: active/downloaded from localStorage AND completed history
+  const match = downloadUrl
+    ? downloads.find((d) => d.downloadUrl === downloadUrl)
     : null;
+  const alreadyDownloaded = downloadUrl ? isDownloaded(downloadUrl) : false;
+
+  if (alreadyDownloaded && !match) {
+    return (
+      <div
+        style={{
+          flex: 1,
+          padding: "6px 12px",
+          borderRadius: 4,
+          background: "rgba(0,200,100,0.15)",
+          border: "1px solid rgba(0,200,100,0.25)",
+          color: "#66ddaa",
+          fontSize: 12,
+          textAlign: "center",
+        }}
+      >
+        Downloaded
+      </div>
+    );
+  }
 
   if (match) {
     return (
       <DownloadStatusButton
         jobId={match.jobId}
         onCancel={() => onCancel(match.jobId)}
+        checkDone={() => markCompleted(downloadUrl ?? "")}
       />
     );
   }
@@ -588,12 +613,16 @@ function DownloadButton({
 function DownloadStatusButton({
   jobId,
   onCancel,
+  checkDone,
 }: {
   jobId: string;
   onCancel: () => void;
+  checkDone: () => void;
 }) {
   const state = useDownloadProgress(jobId);
   if (state.status === "completed") {
+    // Save to completed history so it persists after Clear All
+    setTimeout(() => checkDone(), 0);
     return (
       <div
         style={{
