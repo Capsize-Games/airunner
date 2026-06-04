@@ -57,19 +57,17 @@ export default function ServerImageRow({
     }
   };
 
-  const handleMoveToCanvas = async () => {
-    try {
-      const url = `/api/v1/canvas/image?image_url=${encodeURIComponent(img.image_url)}`;
-      await fetch(url, { method: "PUT" });
-      setMoveFeedback(img.id);
-      setTimeout(
-        () => setMoveFeedback(prev => prev === img.id ? null : prev),
-        1500,
-      );
-      window.dispatchEvent(new CustomEvent("canvas-image-changed"));
-    } catch {
-      // canvas move failed
-    }
+  const handleMoveToCanvas = () => {
+    window.dispatchEvent(
+      new CustomEvent("canvas-place-image", {
+        detail: { imageUrl: `${BASE_URL}${img.image_url}` },
+      }),
+    );
+    setMoveFeedback(img.id);
+    setTimeout(
+      () => setMoveFeedback((prev) => (prev === img.id ? null : prev)),
+      1500,
+    );
   };
 
   const isEditing = editingId === img.id;

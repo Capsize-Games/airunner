@@ -1,4 +1,4 @@
-import { useRef, useState, useCallback } from "react";
+import { useRef, useState, useCallback, useEffect } from "react";
 import Konva from "konva";
 import { useCanvasContext, useCanvasDocument } from "../../features/canvas";
 import type { CanvasStageHandle } from "../../features/canvas/CanvasStage";
@@ -46,7 +46,27 @@ export default function CanvasPanel() {
     isDirty: true,
   });
 
-  // ── Image drop ────────────────────────────────────────────────────────────
+  // ── Image drop helpers ────────────────────────────────────────────────────
+
+  const canvasDropPos = useCallback((clientX: number, clientY: number) => {
+    const stage = stageRef.current;
+    if (!stage) return { x: 0, y: 0 };
+    const rect = stage.container().getBoundingClientRect();
+    const scale = stage.scaleX();
+    return {
+      x: (clientX - rect.left - stage.x()) / scale,
+      y: (clientY - rect.top  - stage.y()) / scale,
+    };
+  }, [stageRef]);
+
+  const queueDrop = useCallback((dataUrl: string, x: number, y: number) => {
+    const img = new Image();
+    img.onload = () => {
+      setPendingDrop({ base64: dataUrl, x, y, naturalW: img.naturalWidth, naturalH: img.naturalHeight });
+      setShowDropModal(true);
+    };
+    img.src = dataUrl;
+  }, []);
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -55,32 +75,58 @@ export default function CanvasPanel() {
 
   const handleDrop = useCallback((e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
+    // Capture canvas coords synchronously before any async work
+    const { x, y } = canvasDropPos(e.clientX, e.clientY);
+
+    // Case 1: file dragged from filesystem
     const file = e.dataTransfer.files[0];
-    if (!file || !file.type.startsWith("image/")) return;
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      const dataUrl = ev.target?.result as string;
-      const stage = stageRef.current;
-      if (!stage) return;
-      const rect = stage.container().getBoundingClientRect();
-      const scale = stage.scaleX();
-      const x = (e.clientX - rect.left - stage.x()) / scale;
-      const y = (e.clientY - rect.top  - stage.y()) / scale;
-      const img = new Image();
-      img.src = dataUrl;
-      img.onload = () => {
-        setPendingDrop({
-          base64: dataUrl,
-          x,
-          y,
-          naturalW: img.naturalWidth,
-          naturalH: img.naturalHeight,
-        });
-        setShowDropModal(true);
+    if (file && file.type.startsWith("image/")) {
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        const dataUrl = ev.target?.result as string;
+        if (dataUrl) queueDrop(dataUrl, x, y);
       };
+      reader.readAsDataURL(file);
+      return;
+    }
+
+    // Case 2: URL dragged from image browser panel
+    const imageUrl = e.dataTransfer.getData("text/image-url");
+    if (imageUrl) {
+      fetch(imageUrl)
+        .then((r) => r.blob())
+        .then((blob) => {
+          const reader = new FileReader();
+          reader.onload = (ev) => {
+            const dataUrl = ev.target?.result as string;
+            if (dataUrl) queueDrop(dataUrl, x, y);
+          };
+          reader.readAsDataURL(blob);
+        })
+        .catch(() => { /* silently ignore */ });
+    }
+  }, [canvasDropPos, queueDrop]);
+
+  // Listen for the "canvas-place-image" event fired by ServerImageRow's button
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const { imageUrl } = (e as CustomEvent<{ imageUrl: string }>).detail;
+      if (!imageUrl) return;
+      fetch(imageUrl)
+        .then((r) => r.blob())
+        .then((blob) => {
+          const reader = new FileReader();
+          reader.onload = (ev) => {
+            const dataUrl = ev.target?.result as string;
+            if (dataUrl) queueDrop(dataUrl, 0, 0);
+          };
+          reader.readAsDataURL(blob);
+        })
+        .catch(() => { /* silently ignore */ });
     };
-    reader.readAsDataURL(file);
-  }, [stageRef]);
+    window.addEventListener("canvas-place-image", handler);
+    return () => window.removeEventListener("canvas-place-image", handler);
+  }, [queueDrop]);
 
   const handleDropConfirm = useCallback((mode: DropResizeMode) => {
     if (!pendingDrop) return;
