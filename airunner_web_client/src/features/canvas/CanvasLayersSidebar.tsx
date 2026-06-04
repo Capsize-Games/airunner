@@ -74,12 +74,11 @@ export default function CanvasLayersSidebar() {
         overflow: "hidden",
       }}
     >
-      {/* Header */}
+      {/* Header — title only, no buttons */}
       <div
         style={{
           display: "flex",
           alignItems: "center",
-          justifyContent: "space-between",
           padding: "6px 8px 5px",
           borderBottom: "1px solid rgba(255,255,255,0.07)",
           flexShrink: 0,
@@ -88,36 +87,9 @@ export default function CanvasLayersSidebar() {
         <span style={{ fontSize: 10, fontWeight: 600, letterSpacing: "0.07em", textTransform: "uppercase", color: "rgba(255,255,255,0.3)" }}>
           Layers
         </span>
-        <div style={{ display: "flex", gap: 2 }}>
-          <IconBtn title="Add layer" onClick={canvas.addLayer}>
-            <Plus size={13} strokeWidth={2} />
-          </IconBtn>
-          <IconBtn
-            title="Move up"
-            disabled={!canvas.activeLayerId}
-            onClick={() => canvas.activeLayerId && canvas.reorderLayer(canvas.activeLayerId, "up")}
-          >
-            <ChevronUp size={13} strokeWidth={2} />
-          </IconBtn>
-          <IconBtn
-            title="Move down"
-            disabled={!canvas.activeLayerId}
-            onClick={() => canvas.activeLayerId && canvas.reorderLayer(canvas.activeLayerId, "down")}
-          >
-            <ChevronDown size={13} strokeWidth={2} />
-          </IconBtn>
-          <IconBtn
-            title="Delete layer"
-            danger
-            disabled={!canvas.activeLayerId || canvas.layers.length <= 1}
-            onClick={() => canvas.activeLayerId && canvas.deleteLayer(canvas.activeLayerId)}
-          >
-            <Trash2 size={13} strokeWidth={2} />
-          </IconBtn>
-        </div>
       </div>
 
-      {/* Layer list */}
+      {/* Layer list — fills middle space */}
       <div style={{ flexGrow: 1, overflowY: "auto", minHeight: 0 }}>
         {displayLayers.map((layer) => {
           const isActive = layer.id === canvas.activeLayerId;
@@ -198,6 +170,45 @@ export default function CanvasLayersSidebar() {
             </div>
           );
         })}
+      </div>
+
+      {/* Footer — action buttons anchored at bottom */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: 2,
+          padding: "5px 8px",
+          borderTop: "1px solid rgba(255,255,255,0.07)",
+          flexShrink: 0,
+        }}
+      >
+        <IconBtn title="Add layer" onClick={canvas.addLayer}>
+          <Plus size={13} strokeWidth={2} />
+        </IconBtn>
+        <IconBtn
+          title="Move up"
+          disabled={!canvas.activeLayerId}
+          onClick={() => canvas.activeLayerId && canvas.reorderLayer(canvas.activeLayerId, "up")}
+        >
+          <ChevronUp size={13} strokeWidth={2} />
+        </IconBtn>
+        <IconBtn
+          title="Move down"
+          disabled={!canvas.activeLayerId}
+          onClick={() => canvas.activeLayerId && canvas.reorderLayer(canvas.activeLayerId, "down")}
+        >
+          <ChevronDown size={13} strokeWidth={2} />
+        </IconBtn>
+        <IconBtn
+          title="Delete layer"
+          danger
+          disabled={!canvas.activeLayerId || canvas.layers.length <= 1}
+          onClick={() => canvas.activeLayerId && canvas.deleteLayer(canvas.activeLayerId)}
+        >
+          <Trash2 size={13} strokeWidth={2} />
+        </IconBtn>
       </div>
     </div>
   );
