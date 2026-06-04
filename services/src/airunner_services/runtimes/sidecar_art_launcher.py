@@ -12,8 +12,8 @@ from typing import Any, Callable, Optional
 from urllib.error import URLError
 from urllib.request import urlopen
 
-from airunner_native.linux_bundle_layout import LinuxBundleLayout
-from airunner_native.linux_bundle_layout import build_linux_bundle_layout
+from airunner_services.runtimes.bundle_layout import LinuxBundleLayout
+from airunner_services.runtimes.bundle_layout import build_linux_bundle_layout
 from airunner_services.runtimes.daemon_config import DaemonConfig
 from airunner_services.runtimes.art_daemon_runtime_settings import (
     ArtDaemonRuntimeSettings,
@@ -69,11 +69,6 @@ def _prepare_managed_daemon_launch() -> None:
     from airunner_services.database.setup_database import setup_database
 
     setup_database()
-    if os.environ.get("AIRUNNER_ENVIRONMENT") != "test":
-        return
-    from airunner_native.launcher import _configure_test_mode
-
-    _configure_test_mode()
 
 
 class SidecarArtLauncher:

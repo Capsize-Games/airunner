@@ -114,18 +114,8 @@ install_packages() {
     local role="$2"
     local service_profile="$3"
 
-    case "$role" in
-        daemon)
-            "$venv_python" -m pip install \
-                "$ROOT_DIR/services[$service_profile]" \
-                "$ROOT_DIR/native"
-            ;;
-        gui-client)
-            "$venv_python" -m pip install \
-                "$ROOT_DIR/services[$service_profile]" \
-                "$ROOT_DIR/native"
-            ;;
-    esac
+    "$venv_python" -m pip install \
+        "$ROOT_DIR/services[$service_profile]"
 }
 
 

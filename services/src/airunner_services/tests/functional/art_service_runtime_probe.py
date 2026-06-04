@@ -27,7 +27,6 @@ PROJECT_ROOT = HERE.parents[5]
 
 for path in (
     PROJECT_ROOT / "services" / "src",
-    PROJECT_ROOT / "native" / "src",
     PROJECT_ROOT / "src",
 ):
     path_str = str(path)

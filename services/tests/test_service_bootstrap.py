@@ -13,20 +13,18 @@ from pathlib import Path
 import pytest
 
 
-# Ensure the services/src and native/src directories
-# are on the path for the service-owned API imports.
+# Ensure the services/src directory is on the path for
+# the service-owned API imports.
 _SERVICES_ROOT = Path(__file__).resolve().parents[1]
 _PROJECT_ROOT = _SERVICES_ROOT.parent
 _SERVICES_SRC = _PROJECT_ROOT / "services" / "src"
-_NATIVE_SRC = _PROJECT_ROOT / "native" / "src"
 
 # Append paths (not prepend) to avoid shadowing site-packages.
 # The services/src directory contains a 'requests/' package that would
 # shadow the real requests library if placed earlier in sys.path.
-for _path in (_SERVICES_SRC, _NATIVE_SRC):
-    _path_str = str(_path)
-    if _path_str not in sys.path:
-        sys.path.append(_path_str)
+_path_str = str(_SERVICES_SRC)
+if _path_str not in sys.path:
+    sys.path.append(_path_str)
 
 
 class TestImportChain:

@@ -3,9 +3,9 @@
 from __future__ import annotations
 
 import os
-from pathlib import Path
 import sys
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Optional
 
 
@@ -30,12 +30,16 @@ class LinuxBundleLayout:
             return candidate
         return None
 
-    def path_environment(self, current_path: Optional[str] = None) -> str:
+    def path_environment(
+        self, current_path: Optional[str] = None
+    ) -> str:
         """Return a PATH string preferring this bundle's bin directory."""
         base_path = current_path or os.environ.get("PATH")
         entries = [str(self.bin_dir)]
         if base_path:
-            entries.extend(part for part in base_path.split(":") if part)
+            entries.extend(
+                part for part in base_path.split(":") if part
+            )
         else:
             entries.extend(DEFAULT_SYSTEM_PATH.split(":"))
         return ":".join(dict.fromkeys(entries))
@@ -46,10 +50,11 @@ def build_linux_bundle_layout(
     python_executable: Optional[Path | str] = None,
 ) -> LinuxBundleLayout:
     """Resolve the active Linux bundle root and Python executable."""
-    resolved_bundle_root = _resolve_bundle_root(bundle_root, python_executable)
+    resolved_bundle_root = _resolve_bundle_root(
+        bundle_root, python_executable
+    )
     resolved_python = _resolve_python_executable(
-        resolved_bundle_root,
-        python_executable,
+        resolved_bundle_root, python_executable,
     )
     return LinuxBundleLayout(
         bundle_root=resolved_bundle_root,
@@ -63,12 +68,15 @@ def _resolve_bundle_root(
     python_executable: Optional[Path | str],
 ) -> Path:
     """Resolve the bundle root from explicit input, env, or Python path."""
-    for candidate in (bundle_root, os.environ.get("AIRUNNER_BUNDLE_ROOT")):
+    for candidate in (
+        bundle_root, os.environ.get("AIRUNNER_BUNDLE_ROOT")
+    ):
         if candidate:
             return Path(candidate).expanduser().resolve()
 
     inferred = _infer_bundle_root_from_python(
-        python_executable or os.environ.get("AIRUNNER_PYTHON")
+        python_executable
+        or os.environ.get("AIRUNNER_PYTHON")
     )
     if inferred is not None:
         return inferred.resolve()
@@ -121,7 +129,7 @@ def _infer_bundle_root_from_python(
 
 
 def _absolute_path(candidate: Path | str) -> Path:
-    """Return an absolute path while preserving virtualenv symlink entries."""
+    """Return an absolute path preserving virtualenv symlink entries."""
     path = Path(candidate).expanduser()
     if path.is_absolute():
         return path
@@ -136,8 +144,12 @@ def _looks_like_bundle_root(candidate_root: Path) -> bool:
             (candidate_root / "deployment" / "systemd").exists(),
             gui_root.exists(),
             (
-                (candidate_root / "bin" / "airunner-headless").exists()
-                and (candidate_root / "bin" / "airunner-daemon").exists()
+                (
+                    candidate_root / "bin" / "airunner-headless"
+                ).exists()
+                and (
+                    candidate_root / "bin" / "airunner-daemon"
+                ).exists()
             ),
         )
     )

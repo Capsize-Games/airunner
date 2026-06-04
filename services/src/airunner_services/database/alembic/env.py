@@ -25,7 +25,6 @@ def _bootstrap_checkout_imports() -> None:
             (
                 candidate / "src",
                 candidate / "services" / "src",
-                candidate / "native" / "src",
             )
         ):
             source_root_str = str(source_root)

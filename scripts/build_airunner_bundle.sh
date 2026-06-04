@@ -172,7 +172,7 @@ main() {
         cmd+=(--dry-run)
     fi
 
-    python_path="$ROOT_DIR/native/src${PYTHONPATH:+:$PYTHONPATH}"
+    python_path="${PYTHONPATH:-}"
     run_cmd env "PYTHONPATH=$python_path" "${cmd[@]}"
 }
 

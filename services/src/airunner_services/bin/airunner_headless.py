@@ -270,7 +270,9 @@ def _validate_host_binding(args: argparse.Namespace) -> bool:
 
 def _configure_environment(args: argparse.Namespace, port: int) -> None:
     """Set headless environment variables inherited by the daemon."""
-    from airunner_native.linux_bundle_layout import build_linux_bundle_layout
+    from airunner_services.runtimes.bundle_layout import (
+        build_linux_bundle_layout,
+    )
 
     bundle_layout = build_linux_bundle_layout()
     os.environ.setdefault("AIRUNNER_HEADLESS", "1")
@@ -439,7 +441,9 @@ def _build_daemon_client(config_path: Path):
     from airunner_services.daemon_client.gui_daemon_client import (
         GuiDaemonClient,
     )
-    from airunner_native.linux_bundle_layout import build_linux_bundle_layout
+    from airunner_services.runtimes.bundle_layout import (
+        build_linux_bundle_layout,
+    )
     from airunner_services.settings import DEV_ENV
 
     bundle_layout = build_linux_bundle_layout()
@@ -460,12 +464,9 @@ def _build_daemon_client(config_path: Path):
 
 def _prepare_managed_daemon_launch() -> None:
     """Run database and test-mode setup before launching a managed daemon."""
-    from airunner_native.launcher import _configure_test_mode
     from airunner_services.database.setup_database import setup_database
 
     setup_database()
-    if os.environ.get("AIRUNNER_ENVIRONMENT") == "test":
-        _configure_test_mode()
 
 
 def _register_shutdown_handlers() -> None:

@@ -113,8 +113,7 @@ install_editable_packages() {
 	fi
 
 	"$venv_python" -m pip "${pip_args[@]}" \
-		-e "$ROOT_DIR/services[$extras]" \
-		-e "$ROOT_DIR/native"
+		-e "$ROOT_DIR/services[$extras]"
 }
 
 

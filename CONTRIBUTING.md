@@ -66,7 +66,6 @@ AI Runner uses a headless daemon architecture with a web-based GUI:
   art workloads. Runs as `airunner-headless`.
 - **`airunner_web_client/`**: React/TypeScript web GUI built with Vite. Serves
   as the user-facing client that connects to the daemon API.
-- **`native/`**: Native launcher, bundle assembly, and installer tooling.
 - **`api/`**: Shared transport contracts between services and clients.
 
 ### Development Workflow
