@@ -32,6 +32,7 @@ export default function CanvasPanel() {
   const [zoom,           setZoom]           = useState(1);
   const [gridLocked,     setGridLocked]     = useState(false);
   const [showSettings,   setShowSettings]   = useState(false);
+  const [showNewDocModal, setShowNewDocModal] = useState(false);
   const [showLayers,     setShowLayers]     = useState(true);
   const [pendingDrop,    setPendingDrop]    = useState<PendingDrop | null>(null);
   const [showDropModal,  setShowDropModal]  = useState(false);
@@ -211,6 +212,18 @@ export default function CanvasPanel() {
     setPendingDrop(null);
   }, [pendingDrop, canvas]);
 
+  // ── New document ──────────────────────────────────────────────────────────
+
+  const handleNewDocument = useCallback(() => {
+    setShowNewDocModal(true);
+  }, []);
+
+  const handleNewDocumentConfirm = useCallback((w: number, h: number, bg: string) => {
+    canvas.resetDocument();
+    canvas.setDocumentSize(w, h);
+    canvas.setDocumentBgColor(bg);
+  }, [canvas]);
+
   // ── Canvas settings ───────────────────────────────────────────────────────
 
   const handleApplySettings = useCallback((w: number, h: number, bg: string) => {
@@ -257,7 +270,7 @@ export default function CanvasPanel() {
           onSetDock={handleSetDock}
           onUndo={canvas.undo}
           onRedo={canvas.redo}
-          onNewDocument={canvas.resetDocument}
+          onNewDocument={handleNewDocument}
           onClearMask={canvas.clearMask}
           hasMaskStrokes={canvas.maskStrokes.length > 0}
           showLayers={showLayers}
@@ -380,7 +393,7 @@ export default function CanvasPanel() {
           onSetDock={handleSetDock}
           onUndo={canvas.undo}
           onRedo={canvas.redo}
-          onNewDocument={canvas.resetDocument}
+          onNewDocument={handleNewDocument}
           onClearMask={canvas.clearMask}
           hasMaskStrokes={canvas.maskStrokes.length > 0}
           showLayers={showLayers}
@@ -396,6 +409,15 @@ export default function CanvasPanel() {
         documentBgColor={canvas.documentBgColor}
         onApply={handleApplySettings}
         onHide={() => setShowSettings(false)}
+      />
+      <CanvasSettingsModal
+        show={showNewDocModal}
+        newDocumentMode
+        documentWidth={canvas.documentWidth}
+        documentHeight={canvas.documentHeight}
+        documentBgColor={canvas.documentBgColor}
+        onApply={handleNewDocumentConfirm}
+        onHide={() => setShowNewDocModal(false)}
       />
 
       <ImageDropModal

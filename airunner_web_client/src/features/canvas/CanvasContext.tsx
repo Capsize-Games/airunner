@@ -16,6 +16,7 @@ export interface CanvasContextValue {
   documentBgColor: string;
   layers: CanvasLayer[];
   layerGroups: LayerGroup[];
+  displayOrder: string[];
   activeLayerId: string | null;
   selectedLayerIds: string[];
   activeLayer: CanvasLayer | null;
@@ -26,7 +27,7 @@ export interface CanvasContextValue {
   maskStrokes: StrokeNode[];
   snapToGrid: boolean;
 
-  addLayer: () => void;
+  addLayer: (name?: string, opacity?: number) => void;
   deleteLayer: (id: string) => void;
   renameLayer: (id: string, name: string) => void;
   setLayerVisible: (id: string, visible: boolean) => void;
@@ -41,7 +42,10 @@ export interface CanvasContextValue {
   toggleGroupExpanded: (id: string) => void;
   renameGroup: (id: string, name: string) => void;
   deleteGroup: (id: string) => void;
-  moveLayerToGroup: (layerId: string, groupId: string | null) => void;
+  setGroupVisible: (id: string, visible: boolean) => void;
+  setGroupOpacity: (id: string, opacity: number) => void;
+  moveLayerToGroup: (layerId: string, groupId: string | null, toIndex?: number) => void;
+  reorderDisplayItem: (id: string, toIndex: number) => void;
   setActiveTool: (tool: ActiveTool) => void;
   setActiveGridArea: (area: ActiveGridArea) => void;
   resetDocument: () => void;

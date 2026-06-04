@@ -1,5 +1,5 @@
 import { useRef, useCallback, useEffect, useState, forwardRef, useImperativeHandle, useLayoutEffect } from "react";
-import { Stage, Layer, Rect, Shape, Text } from "react-konva";
+import { Stage, Layer, Rect, Shape, Text, Circle } from "react-konva";
 import Konva from "konva";
 import CanvasLayerRenderer from "./CanvasLayer";
 import ActiveGridArea from "./ActiveGridArea";
@@ -45,25 +45,16 @@ interface CanvasStageProps {
 const GRID_SIZE = 16;
 const CHECKER_SIZE = 8;
 
-function makeBrushCursor(brushSize: number, zoom: number, color: string): string {
-  const r = Math.max(4, Math.round((brushSize * zoom) / 2));
-  const size = r * 2 + 8;
-  const c = r + 4;
-  const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='${size}' height='${size}'>
-    <circle cx='${c}' cy='${c}' r='${r}' fill='none' stroke='rgba(0,0,0,0.6)' stroke-width='2.5'/>
-    <circle cx='${c}' cy='${c}' r='${r}' fill='none' stroke='${color}' stroke-width='1.5'/>
-    <circle cx='${c}' cy='${c}' r='1.5' fill='${color}'/>
-  </svg>`;
-  return `url("data:image/svg+xml,${encodeURIComponent(svg)}") ${c} ${c}, crosshair`;
-}
-
-function getCursor(tool: ActiveTool, brushSize: number, zoom: number, color: string): string {
+function getCursor(tool: ActiveTool, hasLayers: boolean): string {
+  if (!hasLayers && (tool === "brush" || tool === "eraser" || tool === "mask")) {
+    return "not-allowed";
+  }
   switch (tool) {
     case "select": return "crosshair";
     case "move":   return "grab";
-    case "brush":  return makeBrushCursor(brushSize, zoom, color);
-    case "eraser": return makeBrushCursor(brushSize, zoom, "rgba(200,200,200,0.9)");
-    case "mask":   return makeBrushCursor(brushSize, zoom, "rgba(255,255,255,0.9)");
+    case "brush":
+    case "eraser":
+    case "mask":   return "crosshair";
   }
 }
 
@@ -172,12 +163,59 @@ const CanvasStage = forwardRef<CanvasStageHandle, CanvasStageProps>(function Can
 
   // ── Cursor ────────────────────────────────────────────────────────────────
 
+  // Update cursor when active tool or layer count changes.
   useEffect(() => {
     const container = stageRef.current?.container();
     if (container) {
-      container.style.cursor = getCursor(activeTool, brushSize, zoom, brushColor);
+      container.style.cursor = getCursor(activeTool, layers.length > 0);
     }
-  }, [activeTool, brushSize, zoom, brushColor, stageRef]);
+  }, [activeTool, layers.length, stageRef]);
+
+  // Brush-size indicator circle (imperative Konva, no React re-renders).
+  const brushRingRef = useRef<Konva.Circle | null>(null);
+  const brushDotRef = useRef<Konva.Circle | null>(null);
+  const brushIndicatorLayerRef = useRef<Konva.Layer | null>(null);
+  const showBrushIndicator = activeTool === "brush" || activeTool === "eraser" || activeTool === "mask";
+  const brushRadius = (brushSize * zoom) / 2;
+  const indicatorColor = activeTool === "eraser"
+    ? "rgba(200,200,200,0.8)"
+    : activeTool === "mask"
+      ? "rgba(255,255,255,0.8)"
+      : brushColor;
+
+  /** Update the brush indicator position and visibility imperatively. */
+  const updateBrushIndicator = useCallback(
+    (pos: { x: number; y: number } | null) => {
+      const ring = brushRingRef.current;
+      const dot = brushDotRef.current;
+      if (!ring || !dot) return;
+      if (pos) {
+        ring.position(pos);
+        dot.position(pos);
+        ring.visible(true);
+        dot.visible(true);
+      } else {
+        ring.visible(false);
+        dot.visible(false);
+      }
+    },
+    [],
+  );
+
+  // Use a native Konva mousemove listener for the brush indicator so it
+  // updates synchronously with the canvas render cycle, not React's.
+  useEffect(() => {
+    const stage = stageRef.current;
+    if (!stage) return;
+    const handler = () => {
+      const raw = stage.getPointerPosition();
+      if (!raw) return;
+      const doc = stage.getAbsoluteTransform().copy().invert().point(raw);
+      updateBrushIndicator(doc);
+    };
+    stage.on("mousemove", handler);
+    return () => { stage.off("mousemove", handler); };
+  }, [updateBrushIndicator]);
 
   // ── Zoom and pan ──────────────────────────────────────────────────────────
 
@@ -270,7 +308,7 @@ const CanvasStage = forwardRef<CanvasStageHandle, CanvasStageProps>(function Can
     if (isPanning.current) {
       isPanning.current = false;
       const container = stageRef.current?.container();
-      if (container) container.style.cursor = getCursor(activeTool, brushSize, zoom, brushColor);
+      if (container) container.style.cursor = getCursor(activeTool, layers.length > 0);
     }
     if (activeTool === "select") {
       selectionStartRef.current = null;
@@ -345,6 +383,16 @@ const CanvasStage = forwardRef<CanvasStageHandle, CanvasStageProps>(function Can
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
+        onMouseLeave={() => updateBrushIndicator(null)}
+        onMouseEnter={() => {
+          const stage = stageRef.current;
+          if (!stage) return;
+          const raw = stage.getPointerPosition();
+          if (raw) {
+            const doc = stage.getAbsoluteTransform().copy().invert().point(raw);
+            updateBrushIndicator(doc);
+          }
+        }}
         style={{ display: "block" }}
       >
         {/* Document background */}
@@ -377,6 +425,8 @@ const CanvasStage = forwardRef<CanvasStageHandle, CanvasStageProps>(function Can
             brushSize={brushSize}
             brushColor={brushColor}
             snapToGrid={snapToGrid}
+            canvasWidth={documentWidth}
+            canvasHeight={documentHeight}
             onStrokeComplete={onAddStroke}
             onMoveImage={onMoveImage}
             onMoveLayer={onMoveLayer}
@@ -412,6 +462,26 @@ const CanvasStage = forwardRef<CanvasStageHandle, CanvasStageProps>(function Can
               documentWidth={documentWidth}
               documentHeight={documentHeight}
               onStrokeComplete={onAddMaskStroke}
+            />
+          </Layer>
+        )}
+
+        {/* Brush-size indicator circle (imperative, updated via ref) */}
+        {showBrushIndicator && (
+          <Layer listening={false} ref={brushIndicatorLayerRef}>
+            <Circle
+              ref={brushRingRef}
+              radius={brushRadius}
+              fill="transparent"
+              stroke={indicatorColor}
+              strokeWidth={2 / zoom}
+              visible={false}
+            />
+            <Circle
+              ref={brushDotRef}
+              radius={1.5}
+              fill={indicatorColor}
+              visible={false}
             />
           </Layer>
         )}

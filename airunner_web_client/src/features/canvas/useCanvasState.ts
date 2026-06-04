@@ -35,12 +35,15 @@ export interface CanvasLayer {
   offsetX: number;
   offsetY: number;
   parentGroupId: string | null;
+  fillColor?: string; // hex or 'transparent', rendered as background
 }
 
 export interface LayerGroup {
   id: string;
   name: string;
   expanded: boolean;
+  visible: boolean;
+  opacity: number; // 0–1
 }
 
 export interface ActiveGridArea {
@@ -61,6 +64,10 @@ export interface CanvasState {
   documentBgColor: string; // hex or 'transparent'
   layers: CanvasLayer[];
   layerGroups: LayerGroup[];
+  /** Interleaved order of group IDs and ungrouped layer IDs for display.
+   *  Bottom-first (index 0 = bottom of stack).
+   *  When a group is expanded, its children follow the group header. */
+  displayOrder: string[];
   activeLayerId: string | null;
   selectedLayerIds: string[];
   activeGridArea: ActiveGridArea;
@@ -162,6 +169,7 @@ const defaultState = (): CanvasState => {
       },
     ],
     layerGroups: [],
+    displayOrder: [firstId],
     activeLayerId: firstId,
     selectedLayerIds: [firstId],
     activeGridArea: { x: 0, y: 0, width: DEFAULT_GRID_SIZE, height: DEFAULT_GRID_SIZE },
@@ -186,10 +194,17 @@ function loadPersistedState(): CanvasState | null {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return null;
     const parsed = JSON.parse(raw) as CanvasState;
-    // Validate we have at least layers — discard corrupt data.
-    if (!Array.isArray(parsed.layers) || parsed.layers.length === 0) return null;
+    // Validate we have at least the layers array — discard corrupt data.
+    if (!Array.isArray(parsed.layers)) return null;
     // Ensure new fields that may be missing from old persisted state.
     parsed.layerGroups ??= [];
+    if (!Array.isArray(parsed.displayOrder) || parsed.displayOrder.length === 0) {
+      const groupIds = parsed.layerGroups.map((g: LayerGroup) => g.id);
+      const ungroupedIds = parsed.layers
+        .filter((l: CanvasLayer) => !l.parentGroupId)
+        .map((l: CanvasLayer) => l.id);
+      parsed.displayOrder = [...groupIds, ...ungroupedIds];
+    }
     parsed.layers = parsed.layers.map((l) => ({ ...l, parentGroupId: l.parentGroupId ?? null }));
     // Advance counters so new IDs don't collide with loaded ones.
     advanceCountersFromState(parsed);
@@ -233,27 +248,36 @@ export function useCanvasState() {
 
   // ── Layer operations ──────────────────────────────────────────────────────
 
-  const addLayer = useCallback(() => {
-    setState((prev) => {
-      const newLayer: CanvasLayer = {
-        id: nextLayerId(),
-        name: `Layer ${prev.layers.length + 1}`,
-        visible: true,
-        opacity: 1,
-        filters: [],
-        images: [],
-        strokes: [],
-        offsetX: 0,
-        offsetY: 0,
-        parentGroupId: null,
-      };
-      return recordSnapshot({ ...prev, layers: [...prev.layers, newLayer], activeLayerId: newLayer.id });
-    });
-  }, [recordSnapshot]);
+  const addLayer = useCallback(
+    (name?: string, opacity?: number) => {
+      setState((prev) => {
+        const newLayer: CanvasLayer = {
+          id: nextLayerId(),
+          name: name || `Layer ${prev.layers.length + 1}`,
+          visible: true,
+          opacity: opacity ?? 1,
+          filters: [],
+          images: [],
+          strokes: [],
+          offsetX: 0,
+          offsetY: 0,
+          parentGroupId: null,
+          fillColor: undefined,
+        };
+        return recordSnapshot({
+          ...prev,
+          layers: [...prev.layers, newLayer],
+          displayOrder: [...prev.displayOrder, newLayer.id],
+          activeLayerId: newLayer.id,
+          selectedLayerIds: [newLayer.id],
+        });
+      });
+    },
+    [recordSnapshot],
+  );
 
   const deleteLayer = useCallback((id: string) => {
     setState((prev) => {
-      if (prev.layers.length <= 1) return prev;
       const filtered = prev.layers.filter((l) => l.id !== id);
       let newActive = prev.activeLayerId;
       if (newActive === id) newActive = filtered.at(-1)?.id ?? null;
@@ -263,6 +287,7 @@ export function useCanvasState() {
       return recordSnapshot({
         ...prev,
         layers: filtered,
+        displayOrder: prev.displayOrder.filter((oid) => oid !== id),
         activeLayerId: newActive,
         selectedLayerIds:
           cleanedSelection.length > 0
@@ -316,12 +341,15 @@ export function useCanvasState() {
   // ── Layer group operations ────────────────────────────────────────────────
 
   const addLayerGroup = useCallback(() => {
+    const id = nextGroupId();
     setState((prev) => ({
       ...prev,
+      _ts: Date.now(),
       layerGroups: [
         ...prev.layerGroups,
-        { id: nextGroupId(), name: `Group ${prev.layerGroups.length + 1}`, expanded: true },
+        { id, name: `Group ${prev.layerGroups.length + 1}`, expanded: true, visible: true, opacity: 1 },
       ],
+      displayOrder: [...prev.displayOrder, id],
     }));
   }, []);
 
@@ -343,23 +371,112 @@ export function useCanvasState() {
     }));
   }, []);
 
-  const deleteGroup = useCallback((id: string) => {
+  const setGroupVisible = useCallback((id: string, visible: boolean) => {
     setState((prev) => ({
       ...prev,
-      layerGroups: prev.layerGroups.filter((g) => g.id !== id),
-      layers: prev.layers.map((l) =>
-        l.parentGroupId === id ? { ...l, parentGroupId: null } : l,
+      _ts: Date.now(),
+      layerGroups: prev.layerGroups.map((g) =>
+        g.id === id ? { ...g, visible } : g,
       ),
     }));
   }, []);
 
-  const moveLayerToGroup = useCallback((layerId: string, groupId: string | null) => {
+  const setGroupOpacity = useCallback((id: string, opacity: number) => {
     setState((prev) => ({
       ...prev,
-      layers: prev.layers.map((l) =>
-        l.id === layerId ? { ...l, parentGroupId: groupId } : l,
+      _ts: Date.now(),
+      layerGroups: prev.layerGroups.map((g) =>
+        g.id === id ? { ...g, opacity } : g,
       ),
     }));
+  }, []);
+
+  const deleteGroup = useCallback((id: string) => {
+    setState((prev) => {
+      const groupLayerIds = new Set(
+        prev.layers
+          .filter((l) => l.parentGroupId === id)
+          .map((l) => l.id),
+      );
+      const remainingLayers = prev.layers.filter(
+        (l) => !groupLayerIds.has(l.id),
+      );
+      let newActive = prev.activeLayerId;
+      if (newActive && groupLayerIds.has(newActive)) {
+        newActive = remainingLayers.at(-1)?.id ?? null;
+      }
+      return {
+        ...prev,
+        _ts: Date.now(),
+        layerGroups: prev.layerGroups.filter((g) => g.id !== id),
+        layers: remainingLayers,
+        displayOrder: prev.displayOrder.filter(
+          (oid) => oid !== id && !groupLayerIds.has(oid),
+        ),
+        activeLayerId: newActive,
+        selectedLayerIds:
+          newActive && prev.selectedLayerIds.some((s) => groupLayerIds.has(s))
+            ? [newActive]
+            : prev.selectedLayerIds.filter((s) => !groupLayerIds.has(s)),
+      };
+    });
+  }, []);
+
+  const moveLayerToGroup = useCallback(
+    (layerId: string, groupId: string | null, toIndex?: number) => {
+      setState((prev) => {
+        const layers = prev.layers.map((l) =>
+          l.id === layerId ? { ...l, parentGroupId: groupId } : l,
+        );
+
+        // Update displayOrder: layers inside a group are rendered as
+        // children, not as displayOrder entries.
+        let displayOrder = prev.displayOrder;
+        if (groupId !== null) {
+          // Adding to a group — remove from displayOrder (it renders
+          // as a child of the group header).
+          displayOrder = displayOrder.filter((id) => id !== layerId);
+        } else {
+          // Removing from a group — add back to displayOrder.
+          if (!displayOrder.includes(layerId)) {
+            displayOrder = [...displayOrder, layerId];
+          }
+        }
+
+        if (toIndex === undefined) {
+          return {
+            ...prev,
+            _ts: Date.now(),
+            layers,
+            displayOrder,
+          };
+        }
+
+        // Move to a specific index in the layers array.
+        const fromIdx = layers.findIndex((l) => l.id === layerId);
+        if (fromIdx === -1) {
+          return { ...prev, _ts: Date.now(), layers, displayOrder };
+        }
+        const moved = layers.splice(fromIdx, 1);
+        const adjusted = toIndex > fromIdx ? toIndex - 1 : toIndex;
+        layers.splice(adjusted, 0, moved[0]);
+        return { ...prev, _ts: Date.now(), layers, displayOrder };
+      });
+    },
+    [],
+  );
+
+  /** Move any displayOrder entry (group or ungrouped layer) to a new index. */
+  const reorderDisplayItem = useCallback((id: string, toIndex: number) => {
+    setState((prev) => {
+      const fromIdx = prev.displayOrder.indexOf(id);
+      if (fromIdx === -1 || fromIdx === toIndex) return prev;
+      const order = [...prev.displayOrder];
+      const [moved] = order.splice(fromIdx, 1);
+      const adjusted = toIndex > fromIdx ? toIndex - 1 : toIndex;
+      order.splice(adjusted, 0, moved);
+      return { ...prev, _ts: Date.now(), displayOrder: order };
+    });
   }, []);
 
   /** Ctrl/cmd+click: toggle a layer in/out of the multi-selection. */
@@ -483,7 +600,12 @@ export function useCanvasState() {
     // Do NOT reset module-level ID counters — that would cause duplicate IDs
     // with persisted data from the current session.
     try { localStorage.removeItem(STORAGE_KEY); } catch { /* ignore */ }
-    setState({ ...defaultState(), _ts: Date.now() });
+    setState((prev) => ({
+      ...defaultState(),
+      _ts: Date.now(),
+      brushSize: prev.brushSize,
+      brushColor: prev.brushColor,
+    }));
   }, []);
 
   // ── Move layer ────────────────────────────────────────────────────────────
@@ -657,9 +779,19 @@ export function useCanvasState() {
         if (incomingTs > 0 && incomingTs <= prev._ts) {
           return prev;
         }
+        // Reconstruct displayOrder if missing from old persisted data.
+        let displayOrder = data.displayOrder;
+        if (!Array.isArray(displayOrder) || displayOrder.length === 0) {
+          const groupIds = (data.layerGroups ?? []).map((g: LayerGroup) => g.id);
+          const ungroupedIds = (data.layers ?? [])
+            .filter((l: CanvasLayer) => !l.parentGroupId)
+            .map((l: CanvasLayer) => l.id);
+          displayOrder = [...groupIds, ...ungroupedIds];
+        }
         return {
           ...prev,
           _ts: Math.max(prev._ts, incomingTs),
+          displayOrder,
           layerGroups: data.layerGroups ?? prev.layerGroups,
           layers: (data.layers || prev.layers).map((l: CanvasLayer) => ({
             ...l,
@@ -718,7 +850,10 @@ export function useCanvasState() {
     toggleGroupExpanded,
     renameGroup,
     deleteGroup,
+    setGroupVisible,
+    setGroupOpacity,
     moveLayerToGroup,
+    reorderDisplayItem,
     setActiveTool,
     setActiveGridArea,
     resetDocument,

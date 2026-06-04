@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import Modal from "react-bootstrap/Modal";
 import Form from "react-bootstrap/Form";
 import Button from "react-bootstrap/Button";
+import { Unlock, Lock } from "lucide-react";
 
 interface CanvasSettingsModalProps {
   show: boolean;
@@ -10,6 +11,8 @@ interface CanvasSettingsModalProps {
   documentBgColor: string;
   onApply: (width: number, height: number, bgColor: string) => void;
   onHide: () => void;
+  /** When true, shows "New Document" title and resets on apply. */
+  newDocumentMode?: boolean;
 }
 
 const PRESET_COLORS = [
@@ -18,7 +21,6 @@ const PRESET_COLORS = [
   { label: "Black",       value: "#000000" },
 ];
 
-/** Reusable style for number inputs in this modal. */
 const inputStyle: React.CSSProperties = {
   width: 90,
   background: "var(--theme-input-bg)",
@@ -33,10 +35,12 @@ export default function CanvasSettingsModal({
   documentBgColor,
   onApply,
   onHide,
+  newDocumentMode,
 }: CanvasSettingsModalProps) {
   const [w, setW] = useState(documentWidth);
   const [h, setH] = useState(documentHeight);
   const [bg, setBg] = useState(documentBgColor);
+  const [aspectLocked, setAspectLocked] = useState(false);
   const [customColor, setCustomColor] = useState(
     PRESET_COLORS.some((p) => p.value === documentBgColor) ? "#808080" : documentBgColor,
   );
@@ -46,8 +50,23 @@ export default function CanvasSettingsModal({
       setW(documentWidth);
       setH(documentHeight);
       setBg(documentBgColor);
+      setAspectLocked(false);
     }
   }, [show, documentWidth, documentHeight, documentBgColor]);
+
+  const aspect = documentWidth / documentHeight;
+
+  const handleWChange = (val: number) => {
+    const clamped = Math.max(8, val);
+    setW(clamped);
+    if (aspectLocked) setH(Math.max(8, Math.round(clamped / aspect)));
+  };
+
+  const handleHChange = (val: number) => {
+    const clamped = Math.max(8, val);
+    setH(clamped);
+    if (aspectLocked) setW(Math.max(8, Math.round(clamped * aspect)));
+  };
 
   const isCustom = !PRESET_COLORS.some((p) => p.value === bg);
 
@@ -56,6 +75,7 @@ export default function CanvasSettingsModal({
       show={show}
       onHide={onHide}
       centered
+      size="sm"
       contentClassName="bg-dark"
       style={{ color: "var(--theme-text)" }}
     >
@@ -65,7 +85,7 @@ export default function CanvasSettingsModal({
         style={{ borderColor: "var(--theme-border)" }}
       >
         <Modal.Title style={{ fontSize: 15, color: "var(--theme-heading)" }}>
-          Canvas Settings
+          {newDocumentMode ? "New Document" : "Canvas Settings"}
         </Modal.Title>
       </Modal.Header>
       <Modal.Body style={{ color: "var(--theme-text)" }}>
@@ -81,12 +101,22 @@ export default function CanvasSettingsModal({
                 min={8}
                 step={8}
                 value={w}
-                onChange={(e) => setW(Math.max(8, Number(e.target.value)))}
+                onChange={(e) => handleWChange(Number(e.target.value))}
                 size="sm"
                 style={inputStyle}
               />
             </div>
-            <span style={{ color: "var(--theme-text-secondary)" }}>×</span>
+            <button
+              title={aspectLocked ? "Unlock aspect ratio" : "Lock aspect ratio"}
+              onClick={() => setAspectLocked(!aspectLocked)}
+              style={{
+                background: "none", border: "none", padding: 0,
+                cursor: "pointer", display: "flex",
+                color: aspectLocked ? "#6399ff" : "rgba(255,255,255,0.4)",
+              }}
+            >
+              {aspectLocked ? <Lock size={14} /> : <Unlock size={14} />}
+            </button>
             <div className="d-flex align-items-center gap-1">
               <span style={{ fontSize: 12, color: "var(--theme-text-secondary)" }}>H</span>
               <Form.Control
@@ -94,7 +124,7 @@ export default function CanvasSettingsModal({
                 min={8}
                 step={8}
                 value={h}
-                onChange={(e) => setH(Math.max(8, Number(e.target.value)))}
+                onChange={(e) => handleHChange(Number(e.target.value))}
                 size="sm"
                 style={inputStyle}
               />
@@ -160,7 +190,9 @@ export default function CanvasSettingsModal({
       </Modal.Body>
       <Modal.Footer style={{ borderColor: "var(--theme-border)" }}>
         <Button variant="outline-secondary" size="sm" onClick={onHide}>Cancel</Button>
-        <Button variant="primary" size="sm" onClick={() => { onApply(w, h, bg); onHide(); }}>Apply</Button>
+        <Button variant="primary" size="sm" onClick={() => { onApply(w, h, bg); onHide(); }}>
+          {newDocumentMode ? "Create" : "Apply"}
+        </Button>
       </Modal.Footer>
     </Modal>
   );

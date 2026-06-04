@@ -11,6 +11,8 @@ interface CanvasLayerProps {
   brushSize: number;
   brushColor: string;
   snapToGrid: boolean;
+  canvasWidth: number;
+  canvasHeight: number;
   onStrokeComplete: (stroke: Omit<StrokeNode, "id">) => void;
   onMoveImage: (layerId: string, imageId: string, x: number, y: number) => void;
   onMoveLayer: (layerId: string, x: number, y: number) => void;
@@ -98,6 +100,8 @@ export default function CanvasLayerRenderer({
   brushSize,
   brushColor,
   snapToGrid,
+  canvasWidth,
+  canvasHeight,
   onStrokeComplete,
   onMoveImage,
   onMoveLayer,
@@ -144,6 +148,8 @@ export default function CanvasLayerRenderer({
           opacity={layer.opacity}
           onStrokeComplete={onStrokeComplete}
           isActive={isActive}
+          canvasWidth={canvasWidth}
+          canvasHeight={canvasHeight}
         />
       </Group>
     </Layer>

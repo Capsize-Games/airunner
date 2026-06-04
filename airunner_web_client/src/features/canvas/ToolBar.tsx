@@ -1,10 +1,10 @@
 import { useRef } from "react";
 import Dropdown from "react-bootstrap/Dropdown";
 import {
-  MousePointer2,
-  Paintbrush,
-  Eraser,
+  SquareDashed,
   Brush,
+  Eraser,
+  Drama,
   Move,
   Grid3x3,
   Magnet,
@@ -59,10 +59,10 @@ interface ToolBarProps {
 }
 
 const TOOLS: { id: ActiveTool; label: string; key: string; Icon: React.ComponentType<{ size?: number; strokeWidth?: number }> }[] = [
-  { id: "select", label: "Select", key: "S", Icon: MousePointer2 },
-  { id: "brush",  label: "Brush",  key: "B", Icon: Paintbrush },
+  { id: "select", label: "Select", key: "S", Icon: SquareDashed },
+  { id: "brush",  label: "Brush",  key: "B", Icon: Brush },
   { id: "eraser", label: "Eraser", key: "E", Icon: Eraser },
-  { id: "mask",   label: "Mask",   key: "M", Icon: Brush },
+  { id: "mask",   label: "Mask",   key: "M", Icon: Drama },
   { id: "move",   label: "Move",   key: "V", Icon: Move },
 ];
 
@@ -219,12 +219,8 @@ export default function ToolBar({
 
       <Divider />
 
-      {/* ── Brush options ─────────────────────────────────────── */}
-      {hasBrushOptions && (
-        <>
-          {/* Color swatch (brush only) */}
-          {activeTool !== "eraser" && activeTool !== "mask" && (
-            <label title="Brush color" style={{ cursor: "pointer", flexShrink: 0 }}>
+      {/* Color swatch — always visible regardless of active tool */}
+      <label title="Brush color" style={{ cursor: "pointer", flexShrink: 0 }}>
               <div
                 style={{
                   width: 22,
@@ -243,44 +239,41 @@ export default function ToolBar({
                 style={{ position: "absolute", opacity: 0, width: 1, height: 1, pointerEvents: "none" }}
                 tabIndex={-1}
               />
-            </label>
-          )}
+          </label>
 
-          {/* Brush size — inline in toolbar */}
-          <div style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
-              <span style={{ fontSize: 10, color: "rgba(255,255,255,0.4)", whiteSpace: "nowrap" }}>Size</span>
-              <input
-                type="range"
-                min={1}
-                max={200}
-                step={1}
-                value={brushSize}
-                onChange={(e) => onSetBrushSize(Number(e.target.value))}
-                style={{ width: 80 }}
-                title={`Brush size: ${brushSize}px`}
-              />
-              <input
-                type="number"
-                min={1}
-                max={200}
-                value={brushSize}
-                onChange={(e) => onSetBrushSize(Math.max(1, Math.min(200, Number(e.target.value))))}
-                style={{
-                  width: 44,
-                  background: "rgba(0,0,0,0.4)",
-                  border: "1px solid rgba(255,255,255,0.15)",
-                  borderRadius: 4,
-                  color: "rgba(255,255,255,0.8)",
-                  fontSize: 11,
-                  textAlign: "center",
-                  padding: "2px 0",
-                }}
-              />
-            </div>
+      {/* Brush size — always visible */}
+      <div style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
+        <span style={{ fontSize: 10, color: "rgba(255,255,255,0.4)", whiteSpace: "nowrap" }}>Size</span>
+        <input
+          type="range"
+          min={1}
+          max={200}
+          step={1}
+          value={brushSize}
+          onChange={(e) => onSetBrushSize(Number(e.target.value))}
+          style={{ width: 80 }}
+          title={`Brush size: ${brushSize}px`}
+        />
+        <input
+          type="number"
+          min={1}
+          max={200}
+          value={brushSize}
+          onChange={(e) => onSetBrushSize(Math.max(1, Math.min(200, Number(e.target.value))))}
+          style={{
+            width: 44,
+            background: "rgba(0,0,0,0.4)",
+            border: "1px solid rgba(255,255,255,0.15)",
+            borderRadius: 4,
+            color: "rgba(255,255,255,0.8)",
+            fontSize: 11,
+            textAlign: "center",
+            padding: "2px 0",
+          }}
+        />
+      </div>
 
-          <Divider />
-        </>
-      )}
+      <Divider />
 
       {/* ── Zoom ──────────────────────────────────────────────── */}
       <IconBtn title="Zoom out" onClick={onZoomOut}>
