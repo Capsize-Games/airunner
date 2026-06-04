@@ -2,7 +2,7 @@
   "name": "airunner",
   "version": "6.0.0",
   "description": "AI Runner – Desktop application for local AI inference",
-  "author": "Capsize LLC",
+  "author": "Capsize LLC <contact@capsizegames.com>",
   "license": "Apache-2.0",
   "homepage": "https://github.com/Capsize-Games/airunner",
   "main": "main.js",
@@ -50,7 +50,8 @@
       ],
       "category": "Utility",
       "icon": "../packaging/linux",
-      "desktop": "../packaging/linux/airunner.desktop"
+      "desktop": "../packaging/linux/airunner.desktop",
+      "maintainer": "Capsize LLC <contact@capsizegames.com>"
     },
     "win": {
       "target": [

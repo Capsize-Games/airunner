@@ -172,9 +172,10 @@ jobs:
       - name: Configure llama.cpp with CMake
         shell: bash
         run: |
-          cmake -B "${{ runner.temp }}/llama.cpp/build" \
-            -DGGML_CUDA=on \
-            -DGGML_CUDA_ARCHITECTURES=86 \
+          cmake -S "${{ runner.temp }}/llama.cpp" \
+            -B "${{ runner.temp }}/llama.cpp/build" \
+            -DLLAMA_CUBLAS=on \
+            -DCMAKE_CUDA_ARCHITECTURES=86 \
             -DBUILD_SHARED_LIBS=on \
             -DLLAMA_BUILD_TESTS=off \
             -DLLAMA_BUILD_EXAMPLES=off \
@@ -217,9 +218,10 @@ jobs:
       - name: Configure whisper.cpp with CMake
         shell: bash
         run: |
-          cmake -B "${{ runner.temp }}/whisper.cpp/build" \
+          cmake -S "${{ runner.temp }}/whisper.cpp" \
+            -B "${{ runner.temp }}/whisper.cpp/build" \
             -DGGML_CUDA=on \
-            -DGGML_CUDA_ARCHITECTURES=86 \
+            -DCMAKE_CUDA_ARCHITECTURES=86 \
             -DBUILD_SHARED_LIBS=on \
             -DWHISPER_BUILD_TESTS=off \
             -DWHISPER_BUILD_EXAMPLES=off \
@@ -259,7 +261,7 @@ jobs:
       - name: Build React frontend
         shell: bash
         working-directory: airunner_web_client
-        run: npm run build
+        run: npx vite build
         env:
           VITE_API_BASE_URL: "http://localhost:8080"
 

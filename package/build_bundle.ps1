@@ -94,7 +94,7 @@ if (-not (Test-Path $LLAMA_SRC)) {
         "https://github.com/ggerganov/llama.cpp.git" $LLAMA_SRC
 }
 
-cmake -B "$LLAMA_SRC/build" `
+cmake -S $LLAMA_SRC -B "$LLAMA_SRC/build" `
     -DGGML_CUDA=on `
     -DGGML_CUDA_ARCHITECTURES=86 `
     -DBUILD_SHARED_LIBS=on `
@@ -129,7 +129,7 @@ if (-not (Test-Path $WHISPER_SRC)) {
         "https://github.com/ggerganov/whisper.cpp.git" $WHISPER_SRC
 }
 
-cmake -B "$WHISPER_SRC/build" `
+cmake -S $WHISPER_SRC -B "$WHISPER_SRC/build" `
     -DGGML_CUDA=on `
     -DGGML_CUDA_ARCHITECTURES=86 `
     -DBUILD_SHARED_LIBS=on `
