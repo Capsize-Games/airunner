@@ -190,6 +190,11 @@ export default function ToolBar({
 
   return (
     <div style={containerStyle}>
+      {/* ── New document — first icon on the left ────────────────────── */}
+      <IconBtn title="New document" onClick={onNewDocument}>
+        <FilePlus size={15} strokeWidth={1.75} />
+      </IconBtn>
+
       {/* ── Tools ────────────────────────────────────────────── */}
       {TOOLS.map(({ id, label, key, Icon }) => (
         <IconBtn
@@ -377,9 +382,6 @@ export default function ToolBar({
       {/* ── Settings & Dock ───────────────────────────────────── */}
       <IconBtn title={showLayers ? "Hide layers" : "Show layers"} active={showLayers} onClick={onToggleLayers}>
         <Layers size={15} strokeWidth={1.75} />
-      </IconBtn>
-      <IconBtn title="New document" onClick={onNewDocument}>
-        <FilePlus size={15} strokeWidth={1.75} />
       </IconBtn>
       <IconBtn title="Canvas settings" onClick={onOpenSettings}>
         <Settings size={15} strokeWidth={1.75} />
