@@ -14,7 +14,7 @@
     "build:windows:dir": "electron-builder --win dir --publish never"
   },
   "devDependencies": {
-    "electron": "^30.0.0",
+    "electron": "^39.8.5",
     "electron-builder": "^25.0.0"
   },
   "build": {
