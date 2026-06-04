@@ -1,661 +1,193 @@
 # AI Runner
 
-## Edge AI for art and chat companions, built with privacy, flexibility, and creativity in mind.
+> Edge AI inference engine with a web GUI — LLMs, image generation, voice chat, and agents running entirely on your hardware, at the edge.
 
-AI Runner is a private AI companion you shape — name, personality, voice, memory — and a layered canvas for AI art generation. Everything runs offline on your machine.
-
-
-<img src="./images/art_interface.png" alt="AI Runner Logo" />
-
-
-[![PyPi](https://github.com/Capsize-Games/airunner/actions/workflows/pypi-dispatch.yml/badge.svg)](https://github.com/Capsize-Games/airunner/actions/workflows/pypi-dispatch.yml) ![GitHub last commit](https://img.shields.io/github/last-commit/Capsize-Games/airunner)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Python 3.13+](https://img.shields.io/badge/python-3.13+-blue.svg)](https://www.python.org/downloads/)
+[![GitHub Stars](https://img.shields.io/github/stars/Capsize-Games/airunner?style=social)](https://github.com/Capsize-Games/airunner/stargazers)
 
 [🐞 Report Bug](https://github.com/Capsize-Games/airunner/issues/new?template=bug_report.md) · [✨ Request Feature](https://github.com/Capsize-Games/airunner/issues/new?template=feature_request.md) · [🛡️ Report Vulnerability](https://github.com/Capsize-Games/airunner/issues/new?template=vulnerability_report.md) · [📖 Wiki](https://github.com/Capsize-Games/airunner/wiki)
 
 ---
 
-## What AI Runner Is For
+## What is AI Runner?
 
-AI Runner is built around two interlocking experiences.
+AI Runner is a privacy-first edge AI platform — all inference runs locally on your own hardware, not in the cloud. It runs a Python backend that handles model inference and exposes a REST API, paired with a React web frontend you access in your browser. Your prompts, images, and voice data never leave your machine.
 
-**A companion you shape.** Name it, give it a personality, assign it
-a voice, and let it build memory of who you are over time. Your
-companion is aware of the time, date, and weather, and its mood shifts
-naturally through conversation. Everything — the conversations, the
-memories, the personality — stays on your machine.
+**Architecture at a glance:**
 
-**A canvas for AI art.** A layered drawing and generation surface where
-you can sketch, paint, generate, and filter. Convert sketches to images,
-iterate with image-to-image, composite on layers, and apply styles and
-filters — with your companion present alongside you while you create.
-
-Neither experience requires an internet connection, an API key, or a
-subscription. Everything runs on your hardware.
-
-## ✨ Key Features
-
-| Feature | Description |
-|---------|-------------|
-| **🤖 AI Companion** | Shape a named, voiced companion with persistent personality, shifting mood, and long-term memory built from your conversations |
-| **🎨 Layered Canvas** | Draw, paint, generate, and filter on a multi-layer canvas — convert sketches to images, composite scenes, and iterate in place |
-| **🖼️ Image Generation** | SDXL and Z-Image Turbo with LoRA, embeddings, image-to-image, inpainting, and post-process filters, background removal |
-| **🗣️ Voice Conversation** | Full TTS and STT — speak to your companion and hear it respond in a voice you choose |
-| **🧠 Memory & Recall** | Companion builds long-term memory of you across sessions with RAG-powered recall |
-| **🌤️ Environmental Awareness** | Companion is aware of time, date, and local weather — grounded in the real moment |
-| **🔒 Privacy First** | Fully local — no external APIs, no telemetry, no data leaves your machine |
-| **🛡️ Safety Filters** | Configurable NSFW output filtering and always-on prompt classifier for illegal content |
-| **📦 Model Management** | Built-in HuggingFace and Civitai downloaders with support for multiple local LLMs and image models |
-
-### 🌍 Language Support
-
-| Language | TTS | LLM | STT | GUI (Web) |
-|----------|-----|-----|-----|-----------|
-| English | ✅ | ✅ | ✅ | ✅ |
-| Japanese | ✅ | ✅ | ❌ | ✅ |
-| Spanish/French/Chinese/Korean | ✅ | ✅ | ❌ | ❌ |
-
-## 🧱 Package Overview
-
-```mermaid
-flowchart LR
-  User[User] --> Native[native/ launcher and installers]
-  Native --> Web[airunner_web_client/ web GUI]
-  Native --> Daemon[services/ headless daemon]
-  Web --> API[api/ transport contracts]
-  Daemon --> API
-  Daemon --> Model[model/ shared contracts and runtime helpers]
-  Native --> Sidecars[llama.cpp and whisper.cpp sidecars]
-  Daemon --> Sidecars
-  Web --> Data[(AIRUNNER_BASE_PATH)]
-  Daemon --> Data
+```
+airunner_web_client/   ← React + Vite frontend (port 5173)
+services/src/          ← Python inference backend (port 8080)
 ```
 
-| Package | Role |
-|---------|------|
-| [api](api/README.md) | Shared transport contracts, messages, and thin API bootstrap adapters |
-| [services](services/README.md) | Headless daemon, FastAPI server, runtime registry, orchestration, downloads, and persistence |
-| [airunner_web_client](airunner_web_client/README.md) | Web-based GUI client built with React, TypeScript, and Vite |
-| [native](native/README.md) | Launcher, bundle assembly, native sidecar integration, and installer tooling |
+---
+
+## ✨ Features
+
+| Feature | Description |
+|---|---|
+| **🤖 LLM Chat** | Local LLMs via llama.cpp (GGUF), with optional OpenRouter/OpenAI backends |
+| **🗣️ Voice Chat** | Real-time speech-to-text and text-to-speech for hands-free conversations |
+| **🎨 Image Generation** | Stable Diffusion (SD 1.5, SDXL) and FLUX with LoRA and inpainting |
+| **🧠 AI Agents** | Configurable personalities, moods, RAG-enhanced memory, and tool use |
+| **🔒 Privacy First** | Runs fully offline by default — no data leaves your machine |
+| **🌐 Web UI** | React frontend, accessible from any browser on your local network |
+| **⚡ Optimized** | GGUF quantization, attention slicing, and VRAM offloading for lower-end hardware |
+
 ---
 
 ## ⚙️ System Requirements
 
 | | Minimum | Recommended |
-|---|---------|-------------|
-| **OS** | Ubuntu 22.04, Windows 10 | Ubuntu 22.04 (Wayland) |
+|---|---|---|
+| **OS** | Ubuntu 22.04 | Ubuntu 24.04 |
 | **CPU** | Ryzen 2700K / i7-8700K | Ryzen 5800X / i7-11700K |
 | **RAM** | 16 GB | 32 GB |
-| **GPU** | NVIDIA RTX 3060 | NVIDIA RTX 5080 |
-| **Storage** | 22 GB - 100 GB+ (actual usage varies, SSD recommended) | 100 GB+ |
+| **GPU** | NVIDIA RTX 3060 | NVIDIA RTX 4080+ |
+| **Storage** | 22 GB SSD | 100 GB+ SSD |
+| **Python** | 3.13.3+ | 3.13.3+ |
 
 ---
 
-## 💾 Installation
+## 🚀 Quick Start
 
-Current status:
-The hybrid-runtime branch completed the runtime refactor, and AIRunner now
-has embedded-Python bundle builders and installer packagers.
+### Install
 
-Choose one of the three primary install modes:
-
-| Install mode | Best for | Primary command |
-|--------------|----------|-----------------|
-| `single-package` | End users installing a prebuilt desktop bundle | `./install.sh --bundle-archive ...` |
-| `dev` | Contributors working from a repo checkout | `./scripts/install.sh` |
-| `distributed` | Operators separating daemon and GUI-client installs | `./deployment/install_distributed.sh --role ...` |
-
-1. `single-package` for end users who want one local desktop install with
-  embedded Python and bundled native runtimes.
-  ```bash
-  ./install.sh --bundle-archive dist/airunner-<version>-linux-desktop-bundle.tar.gz
-  ```
-
-2. `dev` for contributors working from this repo checkout.
-  This reuses `./venv` by default, installs the Python packages in editable
-  mode, and builds the pinned `llama.cpp` and `whisper.cpp` sidecars under
-  `build/runtime-sidecars/linux/`.
-  ```bash
-  ./scripts/install.sh
-  ```
-  If you already have the venv, rerun the command and it will reuse the
-  existing environment instead of recreating it, and it refreshes the local
-  editable installs without re-solving the full dependency graph. Add
-  `--refresh-deps` when you want a full dependency refresh, and add
-  `--sidecars-cuda` when you want CUDA-enabled native sidecars.
-
-3. `distributed` for operators who want the daemon and GUI client installed
-  separately, including split-machine setups.
-  ```bash
-  ./deployment/install_distributed.sh --role daemon
-  ./deployment/install_distributed.sh --role gui-client
-  ```
-
-Build and packaging commands:
-- Linux staged bundle archive: `./scripts/build_airunner_bundle.sh`
-- Linux AppImage wrapper: `./scripts/package_linux_appimage.sh`
-- Windows bundle staging: `python -m airunner_native.bin.build_end_user_bundle`
-- Windows NSIS installer: `pwsh ./scripts/package_windows_nsis.ps1`
-
-The manual and Docker paths below are still useful developer/operator
-installation flows. The bundled end-user packaging contract is summarized in
-[END_USER_DISTRIBUTION.md](./END_USER_DISTRIBUTION.md).
-
-### Docker (Recommended)
-
-**Web GUI Mode (development):**
-```bash
-docker compose run --rm --service-ports airunner
-```
-Then open `http://localhost:5173` in your browser.
-
-**Headless API Server:**
-```bash
-docker compose run --rm --service-ports airunner --headless
-```
-
-> **Note:** `--service-ports` is required to expose port 8080 for the API.
-
-To trim container dependencies for a specific deployment, rebuild with a
-profile list such as:
+Clone the repo and run the install script:
 
 ```bash
-docker build \
-  --build-arg AIRUNNER_INSTALL_PROFILES=core,llm-native,stt-native \
-  -t airunner:headless .
+git clone https://github.com/Capsize-Games/airunner.git
+cd airunner
+./scripts/install.sh
 ```
 
-The headless server exposes an HTTP API on port 8080 with endpoints:
-- `GET /health` - Health check and service status
-- `POST /llm` - LLM inference
-- `POST /art` - Image generation
+This installs the Python backend and all frontend dependencies.
 
-### Advanced Python Installation (Ubuntu/Debian)
-
-Use this path when you want to assemble the environment manually instead of
-using `./scripts/install.sh` for repo development or
-`./deployment/install_distributed.sh` for managed daemon and GUI-client
-installs.
-
-**Python 3.13+ required.** We recommend using `pyenv` and `venv`.
-
-1. **Install system dependencies:**
-   ```bash
-   sudo apt update && sudo apt install -y \
-     build-essential cmake git curl wget pkg-config \
-     nvidia-cuda-toolkit pipewire libportaudio2 \
-     espeak espeak-ng-espeak \
-     libsentencepiece-dev \
-     mecab libmecab-dev mecab-ipadic-utf8 libxslt-dev mkcert
-   ```
-
-2. **Create data directory:**
-   ```bash
-   mkdir -p ~/.local/share/airunner
-   ```
-
-3. **Choose the package profiles you need:**
-
-   - `core`: shared API, storage, config, and runtime plumbing
-   - `llm-native`: local llama.cpp runtime and LLM toolchain
-   - `stt-native`: local STT runtime helpers
-   - `art-python`: Python image-generation runtimes
-   - `tts-python`: Python TTS runtimes without MeCab-backed language packs
-   - `development`: test, lint, and packaging tooling
-
-4. **Install AI Runner:**
-
-  From PyPI:
-   ```bash
-   pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128
-   pip install \
-     "airunner[core,llm-native,stt-native,art-python,tts-python]"
-   ```
-
-  From a local clone in editable mode:
-  ```bash
-  git clone https://github.com/Capsize-Games/airunner.git
-  cd airunner
-  python -m venv venv
-  source venv/bin/activate
-  pip install --upgrade pip setuptools wheel
-  pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128
-  pip install -e \
-    ".[core,llm-native,stt-native,art-python,tts-python,development]"
-  ```
-
-  The base `tts-python` profile intentionally excludes the MeCab-backed
-  Japanese and Korean voice packs so a fresh virtual environment can install
-  without extra native build steps.
-
-  To include those language packs after installing the system packages above, use:
-  ```bash
-  pip install -e ".[openvoice_jp,openvoice_kr]"
-  ```
-
-5. **Install llama-cpp-python with CUDA (Python 3.13, Linux):**
-  ```bash
-  pip install --no-cache-dir \
-    --extra-index-url https://abetlen.github.io/llama-cpp-python/whl/cu124 \
-    "llama-cpp-python==0.3.21"
-  ```
-  - This is the verified runtime for `Qwen3.5-9B-Q8_0.gguf` in this repo.
-  - The `cu124` wheel enables GPU offload on Linux without rebuilding from source.
-  - If you must build from source for an RTX 5080 / compute capability 12.0, use CUDA toolkit 12.8+ and `GGML_CUDA_ARCHITECTURES=120`.
-
-6. **Run:**
-   ```bash
-   airunner
-   ```
-
-### Alembic Upgrades
-
-When you need to run database migrations manually from a local clone, use the
-repo Alembic config and upgrade all heads:
-
-```bash
-source venv/bin/activate
-alembic -c services/src/airunner_services/alembic.ini upgrade heads
-```
-
-If you are targeting a non-default database, set `AIRUNNER_DATABASE_URL`
-before running the command.
-
-For detailed instructions, see the [Installation Wiki](https://github.com/Capsize-Games/airunner/wiki/Installation-instructions).
-
-## Hybrid Runtime Migration
-
-The hybrid-runtime rewrite is being delivered in explicit phases: runtime
-foundation, LLM cutover, STT isolation, art/TTS isolation, then packaging,
-bundles, CI, and rollout hardening. The phase order, rollout gates, and full
-issue-tree checklist live in [HYBRID_RUNTIME_MIGRATION.md](./HYBRID_RUNTIME_MIGRATION.md).
-
-That migration is the runtime architecture foundation. AIRunner now also
-includes the no-system-Python distribution layer with one primary
-`airunner` entry point, described in
-[END_USER_DISTRIBUTION.md](./END_USER_DISTRIBUTION.md).
-
----
-
-## 🤖 Models
-
-AI Runner downloads essential TTS/STT models automatically. LLM and image models must be configured:
-
-| Category | Model | Size |
-|----------|-------|------|
-| **LLM (default)** | Llama 3.1 8B Instruct (4bit) | ~4 GB |
-| **Image** | Stable Diffusion 1.5 | ~2 GB |
-| **Image** | SDXL 1.0 | ~6 GB |
-| **Image** | Z-Image Turbo | ~12 GB |
-| **TTS** | OpenVoice | 654 MB |
-| **STT** | Whisper Tiny | 155 MB |
-
-**LLM Providers:** Local (HuggingFace), Ollama, OpenRouter, OpenAI
-
-**Art Models:** Place your models in `~/.local/share/airunner/art/models/`
-
----
-
-## 🛠️ CLI Commands
-
-| Command | Description |
-|---------|-------------|
-| `airunner` | Launch daemon (API server + sidecars) |
-| `airunner-headless` | Start headless API server |
-| `airunner-hf-download` | Download/manage models from HuggingFace |
-| `airunner-civitai-download` | Download models from CivitAI |
-| `airunner-tests` | Run test suite |
-| `airunner-generate-cert` | Generate SSL certificate |
-
-**Note:** To download models, use the model browser from the web GUI or
-use `airunner-hf-download` / `airunner-civitai-download` from the
-command line.
-
-### Running the Web GUI
-
-The web GUI is a React/TypeScript application located in
-[`airunner_web_client/`](airunner_web_client/).
-
-For development, start the daemon first, then the web client:
-
-```bash
-# Start the daemon (API server on port 8188)
-./scripts/dev/run_services.sh
-
-# In a separate terminal, start the web client dev server
-cd airunner_web_client
-npm install
-npm run dev
-```
-
-Or use the combined launcher:
+### Run
 
 ```bash
 ./scripts/run_web.sh
 ```
 
-This starts the daemon, runs health checks, installs web client
-dependencies if needed, and launches the Vite dev server on
-`http://localhost:5173`.
+Then open your browser at **http://localhost:5173**.
+
+The backend API is available at **http://localhost:8080**.
 
 ---
 
-## 🖥️ Headless Server
+## 💾 Manual Installation (Advanced)
 
-AI Runner can run as a headless HTTP API server, enabling remote access to LLM, image generation, TTS, and STT capabilities. This is useful for:
-
-- Running AI services on a remote server
-- Integration with other applications via REST API
-- VS Code integration as an Ollama/OpenAI replacement
-- Automated pipelines and scripting
-
-### Quick Start
+If you need fine-grained control, the install script supports three modes:
 
 ```bash
-# Start with defaults (port 8080, LLM only)
-airunner-headless
+# Developer mode — installs from source (default for contributors)
+./scripts/install.sh
 
-# Start with a specific LLM model
-airunner-headless --model "/path/to/Qwen2.5-7B-Instruct-4bit"
+# Distributed mode — for server/multi-machine deployments
+./deployment/install_distributed.sh
 
-# Run as Ollama replacement for VS Code (port 11434)
-airunner-headless --ollama-mode
-
-# Don't preload models - load on first request
-airunner-headless --no-preload
+# Single-package mode — installs a prebuilt self-contained bundle
+# (not currently supported — use the developer or distributed installer)
 ```
 
-### Command Line Options
+### Python dependencies
 
-| Option | Description |
-|--------|-------------|
-| `--host HOST` | Host address to bind to (default: `127.0.0.1`) |
-| `--port PORT` | Port to listen on (default: `8080`, or `11434` in ollama-mode) |
-| `--ollama-mode` | Run as Ollama replacement on port 11434 |
-| `--insecure-no-auth` | Allow binding to non-loopback without `AIRUNNER_API_KEY` (not recommended) |
-| `--model, -m PATH` | Path to LLM model to load. Also enables the LLM service. Quote paths that contain spaces. |
-| `--art-model PATH` | Path to Stable Diffusion model to load. Also enables the art service. Quote paths that contain spaces. |
-| `--tts-model PATH` | Path to TTS model to load. Also enables the TTS service. Quote paths that contain spaces. |
-| `--stt-model PATH` | Path to STT model to load. Also enables the STT service. Quote paths that contain spaces. |
-| `--enable-llm` | Enable LLM service |
-| `--enable-art` | Enable Stable Diffusion/art service |
-| `--enable-tts` | Enable TTS service |
-| `--enable-stt` | Enable STT service |
-| `--no-preload` | Don't preload models at startup |
+**Python 3.13.3+ is required.** We recommend `pyenv` + `venv`.
 
-### Environment Variables
-
-| Variable | Description |
-|----------|-------------|
-| `AIRUNNER_LLM_MODEL_PATH` | Path to LLM model |
-| `AIRUNNER_ART_MODEL_PATH` | Path to art model |
-| `AIRUNNER_TTS_MODEL_PATH` | Path to TTS model |
-| `AIRUNNER_STT_MODEL_PATH` | Path to STT model |
-| `AIRUNNER_API_KEY` | If set, requires auth for API requests and docs (`X-API-Key` / `Authorization: Bearer`) |
-| `AIRUNNER_INSECURE_NO_AUTH` | Set to `1` to allow unauthenticated remote access (not recommended) |
-| `AIRUNNER_ALLOWED_TENANT_KEYS` | Comma-separated allowlist for `X-Tenant-Key` when API key auth is enabled |
-| `AIRUNNER_DEBUG` | Set to `1` to include exception details in 500s for loopback requests |
-| `AIRUNNER_NO_PRELOAD` | Set to `1` to disable model preloading |
-| `AIRUNNER_LLM_ON` | Enable LLM service (`1` or `0`) |
-| `AIRUNNER_SD_ON` | Enable Stable Diffusion (`1` or `0`) |
-| `AIRUNNER_TTS_ON` | Enable TTS service (`1` or `0`) |
-| `AIRUNNER_STT_ON` | Enable STT service (`1` or `0`) |
-
-### API Endpoints
-
-#### Native AIRunner Endpoints
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/health` | Health check and service status |
-| POST | `/llm` | LLM text generation (streaming) |
-| POST | `/llm/generate` | LLM text generation |
-| POST | `/art` | Image generation |
-| POST | `/tts` | Text-to-speech |
-| POST | `/stt` | Speech-to-text |
-
-#### Ollama-Compatible Endpoints (port 11434)
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/tags` | List available models |
-| GET | `/api/version` | Get version info |
-| GET | `/api/ps` | List running models |
-| POST | `/api/generate` | Text generation |
-| POST | `/api/chat` | Chat completion |
-| POST | `/api/show` | Show model info |
-
-#### OpenAI-Compatible Endpoints
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/v1/models` | List models |
-| POST | `/v1/chat/completions` | Chat completion with tool support |
-
-### Example: LLM Request
+Install PyTorch first:
 
 ```bash
-curl -X POST http://localhost:8080/llm \
-  -H "Content-Type: application/json" \
-  -d '{
-    "prompt": "What is the capital of France?",
-    "stream": true,
-    "temperature": 0.7,
-    "max_tokens": 100
-  }'
+pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128
 ```
 
-### Example: Image Generation (Art)
+Then install the backend package:
 
 ```bash
-# Requires: airunner-headless --enable-art
-curl -X POST http://localhost:8080/art \
-  -H "Content-Type: application/json" \
-  -d '{
-    "prompt": "A beautiful sunset over mountains",
-    "negative_prompt": "blurry, low quality",
-    "width": 512,
-    "height": 512,
-    "steps": 20,
-    "seed": 42
-  }'
-# Returns: {"images": ["base64_png_data..."], "count": 1, "seed": 42}
+pip install -e "services/src/.[core,llm-native,stt-native,art-python,tts-python]"
 ```
 
-### Example: Text-to-Speech (TTS)
+### llama-cpp-python (CUDA build)
 
 ```bash
-# Requires: airunner-headless --enable-tts
-curl -X POST http://localhost:8080/tts \
-  -H "Content-Type: application/json" \
-  -d '{"text": "Hello, world!"}'
-# Returns: {"status": "queued", "message": "Text queued for speech synthesis"}
-# Audio plays through system speakers
+CMAKE_ARGS="-DGGML_CUDA=on -DGGML_CUDA_ARCHITECTURES=90" FORCE_CMAKE=1 \
+  pip install --no-binary=:all: --no-cache-dir "llama-cpp-python==0.3.21"
 ```
 
-### Example: Speech-to-Text (STT)
-
-```bash
-# Requires: airunner-headless --enable-stt
-# Audio must be base64-encoded WAV (16kHz mono recommended)
-curl -X POST http://localhost:8080/stt \
-  -H "Content-Type: application/json" \
-  -d '{"audio": "UklGRi4AAABXQVZFZm10IBAAAAABAAEA..."}'
-# Returns: {"transcription": "Hello world", "status": "success"}
-```
-
-### Example: Ollama Mode with VS Code
-
-1. Start the headless server in Ollama mode:
-   ```bash
-  airunner-headless --ollama-mode --model "/path/to/your/model"
-   ```
-
-If a model path contains spaces, quote it. For example:
-```bash
-airunner-headless --enable-art --art-model "/home/joe/.local/share/airunner/art/models/Z-Image Turbo/txt2img/moodyRealMix_zitV3FP8.safetensors"
-```
-
-2. Configure VS Code Continue extension to use `http://localhost:11434`
-
-3. The server will respond to Ollama API calls, allowing seamless integration.
-
-### Auto-Loading Models
-
-When `--no-preload` is used, models are automatically loaded on the first request to the corresponding endpoint. This is useful for:
-
-- Reducing startup time
-- Running multiple services without loading all models upfront
-- Memory-constrained environments
+> `90` targets RTX 4090/5080-class GPUs. Drop `-DGGML_CUDA_ARCHITECTURES` to auto-detect your GPU.
 
 ---
 
-## 📦 Model Management
 
-### Download Models
+## 🤖 Models
 
-```bash
-# List available models
-airunner-hf-download
+Essential TTS/STT models download automatically on first run. LLM and image models must be configured manually.
 
-# List only LLM models
-airunner-hf-download list --type llm
+| Category | Model | Size |
+|---|---|---|
+| **LLM (default)** | Ministral-8B-Instruct (GGUF) | ~4 GB |
+| **Image** | Stable Diffusion 1.5 | ~2 GB |
+| **Image** | SDXL 1.0 | ~6 GB |
+| **Image** | FLUX.1 Dev/Schnell (GGUF) | 8–12 GB |
+| **TTS** | OpenVoice | 654 MB |
+| **STT** | Whisper Tiny | 155 MB |
 
-# Download a model (GGUF by default)
-airunner-hf-download qwen3-8b
-
-# Download full safetensors version
-airunner-hf-download --full qwen3-8b
-
-# Download any HuggingFace model
-airunner-hf-download Qwen/Qwen3-8B
-
-# List downloaded models
-airunner-hf-download --downloaded
-```
-
-### Delete Models
-
-```bash
-# Delete a model (with confirmation)
-airunner-hf-download --delete Qwen3-8B
-
-# Delete without confirmation (for scripts)
-airunner-hf-download --delete Qwen3-8B --force
-```
-
-### Download from CivitAI
-
-```bash
-# Download a model from CivitAI URL
-airunner-civitai-download https://civitai.com/models/995002/70s-sci-fi-movie
-
-# Download a specific version
-airunner-civitai-download https://civitai.com/models/995002?modelVersionId=1880417
-
-# Download to a custom directory
-airunner-civitai-download <url> --output-dir /path/to/models
-
-# Use API key for authentication (for gated models)
-airunner-civitai-download <url> --api-key your_api_key
-
-# Or set CIVITAI_API_KEY environment variable
-export CIVITAI_API_KEY=your_api_key
-airunner-civitai-download <url>
-```
+Place art models in `~/.local/share/airunner/art/models/`.
 
 ---
 
-## 🔒 HTTPS Configuration
 
-AI Runner's local server uses HTTPS by default. Certificates are auto-generated in `~/.local/share/airunner/certs/`.
+## 🔒 HTTPS
+
+The local server uses HTTPS by default. Certificates are auto-generated at `~/.local/share/airunner/certs/`.
 
 For browser-trusted certificates, install [mkcert](https://github.com/FiloSottile/mkcert):
+
 ```bash
 sudo apt install libnss3-tools
 mkcert -install
+airunner-generate-cert
 ```
-
----
-
-## ⚖️ Colorado AI Act Notice
-
-**Effective February 1, 2026**, the [Colorado AI Act (SB 24-205)](https://leg.colorado.gov/bills/sb24-205) regulates high-risk AI systems.
-
-**Your Responsibility:** If you use AI Runner for decisions with legal or significant effects on individuals (employment screening, loan eligibility, insurance, housing), you may be classified as a **deployer of a high-risk AI system** and must:
-- Implement a risk management policy
-- Complete impact assessments
-- Provide consumer notice and appeal mechanisms
-- Report algorithmic discrimination to the Colorado Attorney General
-
-**AI Runner's Design:** AI Runner is designed with privacy as a core principle—it runs entirely locally with no external data transmission by default. However, certain optional features connect to external services:
-
-- **Model Downloads:** Connecting to HuggingFace or CivitAI to download models
-- **Web Search / Deep Research:** Search queries sent to DuckDuckGo; web pages scraped for research
-- **Weather Prompt:** Location coordinates sent to Open-Meteo API if enabled
-- **External LLM Providers:** Prompts sent to OpenRouter or OpenAI if configured
-
-**We recommend using a VPN** when using features that connect to external services.
 
 ---
 
 ## 🧪 Testing
 
 ```bash
-# General repo validation
-./venv/bin/python scripts/run_tests.py --unit
-./venv/bin/python scripts/run_tests.py --llm-runtime-smoke
-./venv/bin/python scripts/run_tests.py --stt-runtime-smoke
-./venv/bin/python scripts/run_tests.py --art-runtime-smoke
-./venv/bin/python scripts/run_tests.py --tts-runtime-smoke
+# Run the full test suite
+airunner-tests
 
-# API bootstrap and runtime wiring
-./venv/bin/python -m pytest services/tests/test_service_bootstrap.py -v
-./venv/bin/python -m pytest services/tests/test_tts_runtime_load.py -v
+# Run headless-safe tests directly
+pytest services/src/
 
-# Real daemon-backed functional tests
-./venv/bin/python -m pytest services/tests/test_tts_synthesize_functional.py -v --timeout=120
-./venv/bin/python -m pytest services/tests/test_llm_functional.py -v --timeout=900
-./venv/bin/python -m pytest services/tests/test_llm_tts_functional.py -v --timeout=1200
-./venv/bin/python -m pytest services/tests/test_stt_transcribe_functional.py -v --timeout=1200
-
-# Service-owned agent evals
-./venv/bin/python -m pytest services/tests/eval --tb=short -ra
+# With coverage
+airunner-test-coverage-report
 ```
-
-The functional suites under `services/tests/` use real local runtimes and skip
-cleanly when required assets are missing. They cover API bootstrap,
-daemon-only LLM, daemon LLM plus TTS, standalone STT, standalone TTS,
-and all API integration paths.
-
-The service-owned agent eval runbook lives in
-`docs/agent-eval-tests.md` and documents coverage, commands, tool
-surfaces, and current model notes.
 
 ---
 
-## Contributing
+## ⚖️ Colorado AI Act Notice
+
+**Effective February 1, 2026**, the [Colorado AI Act (SB 24-205)](https://leg.colorado.gov/bills/sb24-205) regulates high-risk AI systems. If you use AI Runner to make decisions with legal or significant effects on individuals (employment screening, loan eligibility, housing, etc.), you may be classified as a **deployer of a high-risk AI system** and subject to compliance obligations.
+
+AI Runner is designed to run fully locally with no external data transmission by default. Optional features that do connect externally: model downloads (HuggingFace/CivitAI), web search (DuckDuckGo), weather prompts (Open-Meteo), and external LLM providers (OpenRouter/OpenAI) if configured. We recommend using a VPN when using these features.
+
+---
+
+## 🤝 Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) and the [Development Wiki](https://github.com/Capsize-Games/airunner/wiki/Development).
 
-## Documentation
+## 📚 Documentation
 
 - [Wiki](https://github.com/Capsize-Games/airunner/wiki)
-- [Layered Product Architecture](docs/architecture/layered_product_architecture.md)
-- [Package Split Contract](docs/architecture/package_split_contract.md)
-- [API and Model Extraction Plan](docs/architecture/api_model_extraction_plan.md)
-- [Deliverable-First Workflows](docs/deliverable_workflows.md)
-- [Hybrid Runtime Target](docs/hybrid-runtime-target.md)
-- [Agent Eval Tests](docs/agent-eval-tests.md)
-- [LLM Flow](docs/llm-flow.md)
-- [Document RAG Flow](docs/document-rag-flow.md)
-- [Systemd Distributed Deployment](deployment/systemd/README.md)
-- [Services Package README](services/README.md)
-- [Native Package README](native/README.md)
-- [Web GUI Client README](airunner_web_client/README.md)
+- [Settings Reference](https://github.com/Capsize-Games/airunner/wiki/Settings)
+- [API Service Layer](src/airunner/components/application/api/README.md)
 
 ---
 
-<a href="https://airunner.org">
-   <img src="https://airunner.org/logo.png" alt="AI Runner Logo" width="100"/>
-</a>
+## License
 
+MIT License — see [LICENSE](LICENSE) for details.
+
+[![AI Runner](https://airunner.org/logo.png)](https://airunner.org)

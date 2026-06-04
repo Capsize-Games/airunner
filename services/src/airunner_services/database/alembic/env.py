@@ -24,9 +24,7 @@ def _bootstrap_checkout_imports() -> None:
         for source_root in reversed(
             (
                 candidate / "src",
-                candidate / "model" / "src",
                 candidate / "services" / "src",
-                candidate / "native" / "src",
             )
         ):
             source_root_str = str(source_root)

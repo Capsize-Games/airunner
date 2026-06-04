@@ -12,7 +12,7 @@ VENV_DIR="${AIRUNNER_DEV_VENV:-$ROOT_DIR/venv}"
 PYTHON_CMD="${AIRUNNER_DEV_PYTHON:-}"
 SERVICE_PROFILE="${AIRUNNER_DEV_SERVICE_PROFILE:-desktop}"
 TORCH_MODE="${AIRUNNER_DEV_TORCH:-auto}"
-SIDECAR_MODE="${AIRUNNER_DEV_SIDECARS:-auto}"
+SIDECAR_MODE="${AIRUNNER_DEV_SIDECARS:-skip}"
 SIDECAR_ENABLE_CUDA="${AIRUNNER_DEV_SIDECAR_CUDA:-0}"
 SIDECAR_CLEAN=0
 REFRESH_DEPS=0
@@ -113,10 +113,7 @@ install_editable_packages() {
 	fi
 
 	"$venv_python" -m pip "${pip_args[@]}" \
-		-e "$ROOT_DIR/model" \
-		-e "$ROOT_DIR/services[$extras]" \
-		-e "$ROOT_DIR/native" \
-		-e "$ROOT_DIR"
+		-e "$ROOT_DIR/services[$extras]"
 }
 
 

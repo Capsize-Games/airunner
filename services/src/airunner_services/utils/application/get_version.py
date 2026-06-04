@@ -10,7 +10,6 @@ from pathlib import Path
 
 PACKAGE_NAMES = (
     "airunner",
-    "airunner-native",
     "airunner-services",
 )
 

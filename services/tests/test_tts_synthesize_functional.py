@@ -24,8 +24,6 @@ _PROJECT_ROOT = _SERVICES_ROOT.parent
 
 for _path in (
     _PROJECT_ROOT / "services" / "src",
-    _PROJECT_ROOT / "model" / "src",
-    _PROJECT_ROOT / "native" / "src",
 ):
     _path_str = str(_path)
     if _path_str not in sys.path:
@@ -73,8 +71,6 @@ def _daemon_env(model_path: Path) -> dict[str, str]:
     """Return one environment for the real headless daemon."""
     pythonpath_entries = [
         str(_PROJECT_ROOT / "services" / "src"),
-        str(_PROJECT_ROOT / "model" / "src"),
-        str(_PROJECT_ROOT / "native" / "src"),
         str(_PROJECT_ROOT / "src"),
     ]
     existing = os.environ.get("PYTHONPATH", "").strip()

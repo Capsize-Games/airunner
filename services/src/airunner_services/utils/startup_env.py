@@ -1,4 +1,4 @@
-"""Native-owned startup environment helpers."""
+"""Service-owned startup environment helpers."""
 
 from __future__ import annotations
 

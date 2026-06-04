@@ -17,7 +17,9 @@ from enum import Enum
 from airunner_services.config.runtime_layout import (
     build_runtime_directory_layout,
 )
-from airunner_native.linux_bundle_layout import build_linux_bundle_layout
+from airunner_services.runtimes.bundle_layout import (
+    build_linux_bundle_layout,
+)
 from airunner_services.settings import AIRUNNER_LOG_LEVEL
 from airunner_services.utils.application import get_logger
 

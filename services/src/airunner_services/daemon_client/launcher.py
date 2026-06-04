@@ -7,7 +7,9 @@ import subprocess
 from pathlib import Path
 from typing import Any, Callable, Optional
 
-from airunner_native.linux_bundle_layout import build_linux_bundle_layout
+from airunner_services.runtimes.bundle_layout import (
+    build_linux_bundle_layout,
+)
 from airunner_services.config.runtime_layout import (
     build_runtime_directory_layout,
 )

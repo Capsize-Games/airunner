@@ -24,12 +24,7 @@ run_step() {
 }
 
 # --------------------------------------------------------------------
-# 1. Build the native launcher (required for sidecars)
-# --------------------------------------------------------------------
-run_step "Building native launcher" "${DEV_DIR}/build.sh" "$@"
-
-# --------------------------------------------------------------------
-# 2. Start services (daemon + API)
+# 1. Start services (daemon + API)
 # --------------------------------------------------------------------
 run_step "Starting services" "${DEV_DIR}/run_services.sh"
 

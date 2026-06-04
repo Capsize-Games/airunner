@@ -44,7 +44,6 @@ Responsibilities:
 - surface actionable startup errors when the install is damaged
 
 Current scaffold in this repo:
-- `native/airunner_launcher/` contains the first launcher project
 - `scripts/build_airunner_launcher.sh` builds it locally
 - `scripts/dev/run_gui.sh` runs AIRunner through the native launcher in
 	dev mode using the repository `venv`
@@ -73,21 +72,11 @@ The installer should create a single desktop entry and a single primary
 
 ## Current Implementation
 
-The no-Python end-user distribution delivery now includes:
-- a native launcher in `native/airunner_launcher/` plus
-	`scripts/build_airunner_launcher.sh`
-- pinned `llama.cpp` and `whisper.cpp` sidecar build inputs in
-	`native/runtime_sidecars/` plus `scripts/build_runtime_sidecars.sh`
-- pinned embedded Python metadata in `native/embedded_python/`
-- staged bundle assembly in `native/src/airunner_native/bin/build_end_user_bundle.py`
-- a local Linux bundle wrapper in `scripts/build_airunner_bundle.sh`
-- AppImage packaging in `scripts/package_linux_appimage.sh`
-- Windows NSIS packaging in `scripts/package_windows_nsis.ps1`
-- Linux tarball installation support in `install.sh --bundle-archive`
-- launcher and bundle smoke coverage in
-	`native/src/airunner_native/distribution/tests/test_launcher_smoke.py`
-- Linux and Windows installer validation in
-	`.github/workflows/pypi-dispatch.yml`
+The no-Python end-user distribution delivery has been superseded by the
+Electron-based bundling system. The former `native/` package has been
+removed; legacy installer scripts (`scripts/build_airunner_launcher.sh`,
+`scripts/build_airunner_bundle.sh`, `scripts/build_runtime_sidecars.sh`)
+remain available but are no longer maintained.
 
 The bundle layout currently stages:
 - `python/` for the embedded runtime

@@ -14,8 +14,6 @@ for _path in (
     _TEST_ROOT,
     _TEST_ROOT / "eval",
     _PROJECT_ROOT / "services" / "src",
-    _PROJECT_ROOT / "model" / "src",
-    _PROJECT_ROOT / "native" / "src",
     _PROJECT_ROOT / "src",
 ):
     _path_str = str(_path)
