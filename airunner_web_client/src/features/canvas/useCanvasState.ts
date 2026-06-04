@@ -53,6 +53,9 @@ export interface ActiveGridArea {
 export type ActiveTool = "select" | "brush" | "eraser" | "mask" | "move";
 
 export interface CanvasState {
+  /** Monotonic timestamp (Date.now()) used to resolve localStorage vs server
+   *  conflicts on reload.  The source with the higher _ts wins. */
+  _ts: number;
   documentWidth: number;
   documentHeight: number;
   documentBgColor: string; // hex or 'transparent'
@@ -122,6 +125,7 @@ const pushHistory = (snapshots: string[], index: number, newSnapshot: string) =>
 
 const serialize = (state: CanvasState): string =>
   JSON.stringify({
+    _ts: state._ts,
     layers: state.layers,
     activeLayerId: state.activeLayerId,
     selectedLayerIds: state.selectedLayerIds,
@@ -139,6 +143,7 @@ const serialize = (state: CanvasState): string =>
 const defaultState = (): CanvasState => {
   const firstId = nextLayerId();
   const base = {
+    _ts: Date.now(),
     documentWidth: 1024,
     documentHeight: 1024,
     documentBgColor: "transparent",
@@ -223,7 +228,7 @@ export function useCanvasState() {
   const recordSnapshot = useCallback((prev: CanvasState): CanvasState => {
     const snapshot = serialize(prev);
     const { history, historyIndex } = pushHistory(prev.history, prev.historyIndex, snapshot);
-    return { ...prev, history, historyIndex };
+    return { ...prev, _ts: Date.now(), history, historyIndex };
   }, []);
 
   // ── Layer operations ──────────────────────────────────────────────────────
@@ -478,7 +483,7 @@ export function useCanvasState() {
     // Do NOT reset module-level ID counters — that would cause duplicate IDs
     // with persisted data from the current session.
     try { localStorage.removeItem(STORAGE_KEY); } catch { /* ignore */ }
-    setState(defaultState());
+    setState({ ...defaultState(), _ts: Date.now() });
   }, []);
 
   // ── Move layer ────────────────────────────────────────────────────────────
@@ -574,7 +579,7 @@ export function useCanvasState() {
       const layers = prev.layers.map((l, i) =>
         i === activeIdx ? { ...l, strokes: [...l.strokes, newStroke] } : l,
       );
-      const next = { ...prev, layers };
+      const next = { ...prev, _ts: Date.now(), layers };
       const { history, historyIndex } = pushHistory(prev.history, prev.historyIndex, serialize(next));
       return { ...next, history, historyIndex };
     });
@@ -583,7 +588,7 @@ export function useCanvasState() {
   const addMaskStroke = useCallback((stroke: Omit<StrokeNode, "id">) => {
     setState((prev) => {
       const newStroke: StrokeNode = { ...stroke, id: nextStrokeId() };
-      const next = { ...prev, maskStrokes: [...prev.maskStrokes, newStroke] };
+      const next = { ...prev, _ts: Date.now(), maskStrokes: [...prev.maskStrokes, newStroke] };
       const { history, historyIndex } = pushHistory(prev.history, prev.historyIndex, serialize(next));
       return { ...next, history, historyIndex };
     });
@@ -644,27 +649,37 @@ export function useCanvasState() {
       // Advance counters past any IDs in the loaded data so newly created
       // strokes/images/layers/groups don't collide with loaded ones.
       advanceCountersFromState(data);
-      setState((prev) => ({
-        ...prev,
-        layerGroups: data.layerGroups ?? prev.layerGroups,
-        layers: (data.layers || prev.layers).map((l: CanvasLayer) => ({
-          ...l,
-          offsetX: l.offsetX ?? 0,
-          offsetY: l.offsetY ?? 0,
-          parentGroupId: l.parentGroupId ?? null,
-        })),
-        activeLayerId: data.activeLayerId ?? prev.activeLayerId,
-        selectedLayerIds: data.selectedLayerIds ?? prev.selectedLayerIds,
-        activeGridArea: data.activeGridArea || prev.activeGridArea,
-        activeTool: data.activeTool || "brush",
-        brushSize: data.brushSize ?? prev.brushSize,
-        brushColor: data.brushColor || prev.brushColor,
-        maskStrokes: data.maskStrokes || [],
-        documentWidth: data.documentWidth ?? prev.documentWidth,
-        documentHeight: data.documentHeight ?? prev.documentHeight,
-        documentBgColor: data.documentBgColor ?? prev.documentBgColor,
-        snapToGrid: data.snapToGrid ?? prev.snapToGrid,
-      }));
+      setState((prev) => {
+        // Timestamp-based conflict resolution: only apply incoming data
+        // when it is newer than our current state.  This prevents stale
+        // server data from overwriting recent local changes.
+        const incomingTs = (data as { _ts?: number })._ts ?? 0;
+        if (incomingTs > 0 && incomingTs <= prev._ts) {
+          return prev;
+        }
+        return {
+          ...prev,
+          _ts: Math.max(prev._ts, incomingTs),
+          layerGroups: data.layerGroups ?? prev.layerGroups,
+          layers: (data.layers || prev.layers).map((l: CanvasLayer) => ({
+            ...l,
+            offsetX: l.offsetX ?? 0,
+            offsetY: l.offsetY ?? 0,
+            parentGroupId: l.parentGroupId ?? null,
+          })),
+          activeLayerId: data.activeLayerId ?? prev.activeLayerId,
+          selectedLayerIds: data.selectedLayerIds ?? prev.selectedLayerIds,
+          activeGridArea: data.activeGridArea || prev.activeGridArea,
+          activeTool: data.activeTool || "brush",
+          brushSize: data.brushSize ?? prev.brushSize,
+          brushColor: data.brushColor || prev.brushColor,
+          maskStrokes: data.maskStrokes || [],
+          documentWidth: data.documentWidth ?? prev.documentWidth,
+          documentHeight: data.documentHeight ?? prev.documentHeight,
+          documentBgColor: data.documentBgColor ?? prev.documentBgColor,
+          snapToGrid: data.snapToGrid ?? prev.snapToGrid,
+        };
+      });
     } catch { /* ignore */ }
   }, []);
 
