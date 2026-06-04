@@ -277,16 +277,6 @@ export default function ToolBar({
         </>
       )}
 
-      {/* ── Grid & Snap ───────────────────────────────────────── */}
-      <IconBtn title="Toggle grid" active={showGrid} onClick={onToggleGrid}>
-        <Grid3x3 size={15} strokeWidth={1.75} />
-      </IconBtn>
-      <IconBtn title="Snap to grid" active={snapToGrid} onClick={onToggleSnap}>
-        <Magnet size={15} strokeWidth={1.75} />
-      </IconBtn>
-
-      <Divider />
-
       {/* ── Zoom ──────────────────────────────────────────────── */}
       <IconBtn title="Zoom out" onClick={onZoomOut}>
         <ZoomOut size={15} strokeWidth={1.75} />
@@ -329,6 +319,12 @@ export default function ToolBar({
           flexShrink: 0,
         }}
       >
+        <IconBtn title="Toggle grid" active={showGrid} onClick={onToggleGrid}>
+          <Grid3x3 size={15} strokeWidth={1.75} />
+        </IconBtn>
+        <IconBtn title="Snap to grid" active={snapToGrid} onClick={onToggleSnap}>
+          <Magnet size={15} strokeWidth={1.75} />
+        </IconBtn>
         <span style={{ fontSize: 10, color: "rgba(255,255,255,0.35)", whiteSpace: "nowrap" }}>Grid</span>
         <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
           <span style={{ fontSize: 10, color: "rgba(255,255,255,0.4)" }}>W</span>
