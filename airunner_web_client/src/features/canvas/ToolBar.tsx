@@ -379,6 +379,9 @@ export default function ToolBar({
 
       <Divider />
 
+      {/* ── Spacer — push right-side items to the end ──────── */}
+      <div style={{ flex: 1, minWidth: 0 }} />
+
       {/* ── Settings & Dock ───────────────────────────────────── */}
       <IconBtn title={showLayers ? "Hide layers" : "Show layers"} active={showLayers} onClick={onToggleLayers}>
         <Layers size={15} strokeWidth={1.75} />
