@@ -7,11 +7,6 @@ import requests
 
 from airunner_services.contract_enums import SignalCode
 from airunner_services.settings import AIRUNNER_BASE_PATH, MODELS_DIR
-from airunner_services.art.managers.zimage.zimage_bundle_requirements import (
-    find_active_checkpoint,
-    get_active_zimage_load_mode,
-    get_downloadable_files_for_mode,
-)
 from airunner_services.bootstrap.model_bootstrap_data import (
     model_bootstrap_data,
 )
@@ -21,6 +16,10 @@ from airunner_services.bootstrap.unified_model_files import (
 from airunner_services.config.local_settings_store import get_setting
 from airunner_services.downloads.base_download_worker import (
     BaseDownloadWorker,
+)
+from airunner_services.downloads.huggingface_download_worker._zimage_utils import (
+    prune_zimage_bootstrap_files,
+    prune_zimage_missing_files,
 )
 from airunner_services.llm.utils.model_downloader import (
     HuggingFaceDownloader,
@@ -534,25 +533,7 @@ class HuggingFaceDownloadWorker(BaseDownloadWorker):
         bootstrap_files: dict | None,
     ) -> dict | None:
         """Return a lean bootstrap subset when an FP8 checkpoint already exists."""
-        if not bootstrap_files:
-            return bootstrap_files
-        checkpoint = find_active_checkpoint(output_dir)
-        if checkpoint is None:
-            return bootstrap_files
-        load_mode = get_active_zimage_load_mode(checkpoint)
-        downloadable = set(get_downloadable_files_for_mode(checkpoint, load_mode))
-        pruned = {
-            filename: size
-            for filename, size in bootstrap_files.items()
-            if filename in downloadable
-        }
-        self.logger.info(
-            "Pruned Z-Image bootstrap file set for %s from %d files to %d files",
-            load_mode,
-            len(bootstrap_files),
-            len(pruned),
-        )
-        return pruned
+        return prune_zimage_bootstrap_files(output_dir, bootstrap_files, self.logger)
 
     def _prune_zimage_missing_files(
         self,
@@ -560,25 +541,7 @@ class HuggingFaceDownloadWorker(BaseDownloadWorker):
         missing_files: list | None,
     ) -> list | None:
         """Drop Z-Image missing files that are not needed for the active load mode."""
-        if not missing_files:
-            return missing_files
-        checkpoint = find_active_checkpoint(output_dir)
-        if checkpoint is None:
-            return missing_files
-        load_mode = get_active_zimage_load_mode(checkpoint)
-        downloadable = set(get_downloadable_files_for_mode(checkpoint, load_mode))
-        pruned = [
-            file_name for file_name in missing_files if file_name in downloadable
-        ]
-        dropped = sorted(set(missing_files) - set(pruned))
-        if dropped:
-            self.logger.info(
-                "Dropped %d unneeded Z-Image download files for %s: %s",
-                len(dropped),
-                load_mode,
-                dropped,
-            )
-        return pruned
+        return prune_zimage_missing_files(output_dir, missing_files, self.logger)
 
     def _download_and_extract_zip(self, zip_url: str, output_dir: str):
         """Download and extract a ZIP file with progress tracking.
