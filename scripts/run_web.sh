@@ -3,7 +3,7 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 DEV_DIR="${ROOT_DIR}/scripts/dev"
-WEB_DIR="${ROOT_DIR}/airunner_web_client"
+WEB_DIR="${ROOT_DIR}/client"
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'

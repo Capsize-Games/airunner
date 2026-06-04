@@ -16,8 +16,8 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 ELECTRON_DIR="${ROOT_DIR}/electron"
-WEB_DIR="${ROOT_DIR}/airunner_web_client"
-SERVICES_DIR="${ROOT_DIR}/services"
+WEB_DIR="${ROOT_DIR}/client"
+SERVICES_DIR="${ROOT_DIR}/server"
 BUILD_DIR="${ROOT_DIR}/build/bundle"
 RESOURCES_DIR="${ELECTRON_DIR}/resources"
 

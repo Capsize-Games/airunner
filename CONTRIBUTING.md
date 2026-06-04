@@ -62,9 +62,9 @@ We follow the PEP 8 style guide for Python code. You can find the complete guide
 
 AI Runner uses a headless daemon architecture with a web-based GUI:
 
-- **`services/`**: FastAPI-based daemon that orchestrates LLM, STT, TTS, and
+- **`server/`**: FastAPI-based daemon that orchestrates LLM, STT, TTS, and
   art workloads. Runs as `airunner-headless`.
-- **`airunner_web_client/`**: React/TypeScript web GUI built with Vite. Serves
+- **`client/`**: React/TypeScript web GUI built with Vite. Serves
   as the user-facing client that connects to the daemon API.
 - **`api/`**: Shared transport contracts between services and clients.
 
@@ -77,7 +77,7 @@ AI Runner uses a headless daemon architecture with a web-based GUI:
 
 2. Start the web client in a separate terminal:
    ```bash
-   cd airunner_web_client
+   cd client
    npm install
    npm run dev
    ```
@@ -93,16 +93,16 @@ Or use the combined launcher:
 
 ## Web GUI Development (Airunner Web Client)
 
-The web GUI is a React/TypeScript application located in `airunner_web_client/`.
+The web GUI is a React/TypeScript application located in `client/`.
 
 - Built with [React](https://react.dev/), [TypeScript](https://www.typescriptlang.org/), and [Vite](https://vitejs.dev/)
 - Communicates with the daemon API via REST endpoints
-- Source files are under `airunner_web_client/src/`
+- Source files are under `client/src/`
 
 ### Building the Web Client
 
 ```bash
-cd airunner_web_client
+cd client
 npm install
 npm run build
 ```
@@ -110,7 +110,7 @@ npm run build
 ### Running in Development
 
 ```bash
-cd airunner_web_client
+cd client
 npm run dev
 ```
 
@@ -125,7 +125,7 @@ daemon on port 8188.
 
 ```bash
 # Service unit tests
-./venv/bin/python -m pytest services/tests/test_service_bootstrap.py -v
+./venv/bin/python -m pytest server/tests/test_service_bootstrap.py -v
 
 # Runtime smoke tests
 ./venv/bin/python scripts/run_tests.py --llm-runtime-smoke
@@ -137,7 +137,7 @@ daemon on port 8188.
 ---
 
 ## Testing Guidelines
-- Test files are located in `services/tests/` and `airunner_web_client/src/`
+- Test files are located in `server/tests/` and `client/src/`
   for their respective packages.
 - Run Python tests using:
   ```bash

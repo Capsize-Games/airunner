@@ -14,7 +14,7 @@ Generates an LLM-friendly report of code quality issues including:
 Command-line flags (new and existing):
 
 - --path PATH
-    Path to analyze. Defaults to `services/src/airunner_services` (automatically discovered by looking for
+    Path to analyze. Defaults to `server/src/airunner_services` (automatically discovered by looking for
     the project's `setup.py` when not provided).
 
 - --verbose
@@ -507,7 +507,7 @@ def main():
         "--path",
         type=Path,
         default=None,
-        help="Path to analyze (default: services/src/airunner_services)",
+        help="Path to analyze (default: server/src/airunner_services)",
     )
     parser.add_argument(
         "--verbose",
@@ -561,7 +561,7 @@ def main():
     args = parser.parse_args()
 
     # Always exclude these patterns regardless of user input
-    permanent_exclusions = ["alembic", "/data/", "vendor", "_ui.py", '/bin/', '/db/', '/services/']
+    permanent_exclusions = ["alembic", "/data/", "vendor", "_ui.py", '/bin/', '/db/', '/server/']
 
     # Conditionally add /gui/ to permanent exclusions
     if not args.include_gui:

@@ -25,7 +25,7 @@ It provides:
 ### Getting Started
 
 ```bash
-cd airunner_web_client
+cd client
 npm install
 npm run dev
 ```

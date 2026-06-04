@@ -13,7 +13,7 @@ def _pytest_args(gui_functional: bool, component: str | None) -> list[str]:
     if not gui_functional:
         return []
 
-    base_path = Path("services/tests")
+    base_path = Path("server/tests")
     if component:
         test_path = base_path / component
         if not test_path.exists():

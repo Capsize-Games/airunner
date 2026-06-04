@@ -4,7 +4,7 @@ Test runner script for AI Runner project.
 
 This script provides a unified interface for running different test suites:
 - Unit tests: Safe component tests excluding GUI/widget-only suites
-- Eval tests: Daemon-backed LLM eval tests in services/tests/eval/
+- Eval tests: Daemon-backed LLM eval tests in server/tests/eval/
 - LLM runtime smoke tests: safe route/runtime checks with no app startup
 - STT runtime smoke tests: safe route/worker checks with no app startup
 - Art runtime smoke tests: safe daemon-backed art checks with no app startup
@@ -170,8 +170,8 @@ def run_unit_tests(component: str = None, verbose: bool = False) -> int:
     Returns:
         Exit code from pytest
     """
-    # Unit tests now target services/ and airunner_web_client/
-    base_path = Path("services/tests")
+    # Unit tests now target server/ and client/
+    base_path = Path("server/tests")
 
     if component:
         resolved = _component_targets(base_path, component)
@@ -229,7 +229,7 @@ def run_gui_functional_tests(
     verbose: bool = False,
 ) -> int:
     """Run service-level API functional tests."""
-    base_path = Path("services/tests")
+    base_path = Path("server/tests")
     test_targets = [base_path]
     description = "Service API functional tests"
 
@@ -267,7 +267,7 @@ def run_eval_tests(
     Returns:
         Exit code from pytest
     """
-    test_path = Path("services/tests/eval")
+    test_path = Path("server/tests/eval")
 
     if not test_path.exists():
         print(f"Error: Eval tests directory not found at {test_path}")
@@ -319,7 +319,7 @@ def run_eval_tests(
 
 def run_llm_runtime_smoke_tests(verbose: bool = False) -> int:
     """Run the safe llama.cpp runtime smoke suite."""
-    test_path = Path("services/tests")
+    test_path = Path("server/tests")
     cmd = _pytest_command(
         str(test_path),
         "-m",
@@ -341,7 +341,7 @@ def run_llm_runtime_smoke_tests(verbose: bool = False) -> int:
 
 def run_stt_runtime_smoke_tests(verbose: bool = False) -> int:
     """Run the safe STT runtime smoke suite."""
-    test_path = Path("services/tests")
+    test_path = Path("server/tests")
     cmd = _pytest_command(
         str(test_path),
         "-m",
@@ -363,7 +363,7 @@ def run_stt_runtime_smoke_tests(verbose: bool = False) -> int:
 
 def run_art_runtime_smoke_tests(verbose: bool = False) -> int:
     """Run the safe art runtime smoke suite."""
-    test_path = Path("services/tests")
+    test_path = Path("server/tests")
     cmd = _pytest_command(
         str(test_path),
         "-m",
@@ -385,7 +385,7 @@ def run_art_runtime_smoke_tests(verbose: bool = False) -> int:
 
 def run_art_service_runtime_tests(verbose: bool = False) -> int:
     """Run the direct art service runtime suite."""
-    test_path = Path("services/src/airunner_services/tests/functional")
+    test_path = Path("server/src/airunner_services/tests/functional")
     cmd = _pytest_command(
         str(test_path),
         "-m",
@@ -407,7 +407,7 @@ def run_art_service_runtime_tests(verbose: bool = False) -> int:
 
 def run_tts_runtime_smoke_tests(verbose: bool = False) -> int:
     """Run the safe TTS runtime smoke suite."""
-    test_path = Path("services/tests")
+    test_path = Path("server/tests")
     cmd = _pytest_command(
         str(test_path),
         "-m",
