@@ -121,6 +121,16 @@ async def setup_install(
 ):
     """Install AIRunner models and data through the daemon."""
 
+    async def _safe_stream():
+        """Wrap _stream to prevent stack-trace exposure."""
+        try:
+            async for event in _stream():
+                yield event
+        except Exception as exc:
+            logger.exception("Setup stream failed")
+            yield _emit({"status": "error", "message": "Setup error", "progress": 0})
+
+    
     async def _stream():
         download_service = getattr(
             request.app.state, "download_job_service", None,
@@ -170,7 +180,7 @@ async def setup_install(
         yield _emit({"status": "completed", "message": "Setup complete", "progress": 100})
 
     return StreamingResponse(
-        _stream(),
+        _safe_stream(),
         media_type="text/event-stream",
         headers={
             "Cache-Control": "no-cache",

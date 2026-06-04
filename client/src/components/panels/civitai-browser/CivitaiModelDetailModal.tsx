@@ -18,6 +18,10 @@ const MODAL_W = 740;
 const MODAL_H = 520;
 
 function stripHtml(html: string): string {
+  if (typeof DOMParser !== "undefined") {
+    const doc = new DOMParser().parseFromString(html, "text/html");
+    return (doc.body.textContent ?? "").trim();
+  }
   return html.replace(/<[^>]*>/g, "").trim();
 }
 

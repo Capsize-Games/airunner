@@ -35,10 +35,15 @@ def timeout_payload(action_str: str) -> dict:
 
 
 def error_payload(message: str, action_str: str) -> bytes:
-    """Return the NDJSON error line for one stream failure."""
+    """Return the NDJSON error line for one stream failure.
+
+    The message is truncated to prevent internal stack-trace details
+    from being exposed to the client.
+    """
+    safe_message = message[:500] if message else ""
     body = JSONResponse(
         content={
-            "message": message,
+            "message": safe_message,
             "is_first_message": True,
             "is_end_of_message": True,
             "sequence_number": 0,

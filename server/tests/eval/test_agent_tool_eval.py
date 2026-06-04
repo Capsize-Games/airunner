@@ -166,7 +166,7 @@ def _assert_scrape_website_result(
     assert "web scraping error" not in log_text, log_text
     visible_message = result.visible_message.lower()
     assert (
-        "example.com" in visible_message
+        "visited example.com" in visible_message
         or "non-mutating tools (scrape_website)" in visible_message
     ), result.payload
 
