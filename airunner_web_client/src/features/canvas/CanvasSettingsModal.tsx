@@ -18,6 +18,14 @@ const PRESET_COLORS = [
   { label: "Black",       value: "#000000" },
 ];
 
+/** Reusable style for number inputs in this modal. */
+const inputStyle: React.CSSProperties = {
+  width: 90,
+  background: "var(--theme-input-bg)",
+  color: "var(--theme-text)",
+  borderColor: "var(--theme-input-border)",
+};
+
 export default function CanvasSettingsModal({
   show,
   documentWidth,
@@ -44,16 +52,30 @@ export default function CanvasSettingsModal({
   const isCustom = !PRESET_COLORS.some((p) => p.value === bg);
 
   return (
-    <Modal show={show} onHide={onHide} centered contentClassName="bg-dark text-light border-secondary">
-      <Modal.Header closeButton closeVariant="white" style={{ borderColor: "rgba(255,255,255,0.1)" }}>
-        <Modal.Title style={{ fontSize: 15 }}>Canvas Settings</Modal.Title>
+    <Modal
+      show={show}
+      onHide={onHide}
+      centered
+      contentClassName="bg-dark"
+      style={{ color: "var(--theme-text)" }}
+    >
+      <Modal.Header
+        closeButton
+        closeVariant="white"
+        style={{ borderColor: "var(--theme-border)" }}
+      >
+        <Modal.Title style={{ fontSize: 15, color: "var(--theme-heading)" }}>
+          Canvas Settings
+        </Modal.Title>
       </Modal.Header>
-      <Modal.Body>
+      <Modal.Body style={{ color: "var(--theme-text)" }}>
         <Form.Group className="mb-3">
-          <Form.Label className="small text-secondary">Canvas Size</Form.Label>
+          <Form.Label style={{ color: "var(--theme-text-secondary)" }}>
+            Canvas Size
+          </Form.Label>
           <div className="d-flex gap-2 align-items-center">
             <div className="d-flex align-items-center gap-1">
-              <span className="small text-secondary">W</span>
+              <span style={{ fontSize: 12, color: "var(--theme-text-secondary)" }}>W</span>
               <Form.Control
                 type="number"
                 min={8}
@@ -61,12 +83,12 @@ export default function CanvasSettingsModal({
                 value={w}
                 onChange={(e) => setW(Math.max(8, Number(e.target.value)))}
                 size="sm"
-                style={{ width: 90, background: "#1a1a2e", color: "#ccc", borderColor: "#444" }}
+                style={inputStyle}
               />
             </div>
-            <span className="text-secondary">×</span>
+            <span style={{ color: "var(--theme-text-secondary)" }}>×</span>
             <div className="d-flex align-items-center gap-1">
-              <span className="small text-secondary">H</span>
+              <span style={{ fontSize: 12, color: "var(--theme-text-secondary)" }}>H</span>
               <Form.Control
                 type="number"
                 min={8}
@@ -74,14 +96,16 @@ export default function CanvasSettingsModal({
                 value={h}
                 onChange={(e) => setH(Math.max(8, Number(e.target.value)))}
                 size="sm"
-                style={{ width: 90, background: "#1a1a2e", color: "#ccc", borderColor: "#444" }}
+                style={inputStyle}
               />
             </div>
           </div>
         </Form.Group>
 
         <Form.Group className="mb-1">
-          <Form.Label className="small text-secondary">Background</Form.Label>
+          <Form.Label style={{ color: "var(--theme-text-secondary)" }}>
+            Background
+          </Form.Label>
           <div className="d-flex flex-wrap gap-2">
             {PRESET_COLORS.map((p) => (
               <button
@@ -91,11 +115,15 @@ export default function CanvasSettingsModal({
                 style={{
                   padding: "3px 10px",
                   borderRadius: 4,
-                  border: bg === p.value ? "1.5px solid #6399ff" : "1px solid rgba(255,255,255,0.2)",
+                  border: bg === p.value
+                    ? "1.5px solid #6399ff"
+                    : "1px solid var(--theme-border)",
                   background: p.value === "transparent"
                     ? "repeating-linear-gradient(45deg,#555 0,#555 4px,#888 4px,#888 8px)"
                     : p.value,
-                  color: p.value === "#000000" ? "#fff" : p.value === "transparent" ? "#fff" : "#000",
+                  color: p.value === "#000000" ? "#fff"
+                    : p.value === "transparent" ? "#fff"
+                    : "var(--theme-text)",
                   fontSize: 11,
                   cursor: "pointer",
                   minWidth: 80,
@@ -111,11 +139,15 @@ export default function CanvasSettingsModal({
                   height: 24,
                   borderRadius: 4,
                   background: customColor,
-                  border: isCustom ? "1.5px solid #6399ff" : "1px solid rgba(255,255,255,0.2)",
+                  border: isCustom
+                    ? "1.5px solid #6399ff"
+                    : "1px solid var(--theme-border)",
                   cursor: "pointer",
                 }}
               />
-              <span style={{ fontSize: 11, color: "rgba(255,255,255,0.6)" }}>Custom</span>
+              <span style={{ fontSize: 11, color: "var(--theme-text-secondary)" }}>
+                Custom
+              </span>
               <input
                 type="color"
                 value={customColor}
@@ -126,7 +158,7 @@ export default function CanvasSettingsModal({
           </div>
         </Form.Group>
       </Modal.Body>
-      <Modal.Footer style={{ borderColor: "rgba(255,255,255,0.1)" }}>
+      <Modal.Footer style={{ borderColor: "var(--theme-border)" }}>
         <Button variant="outline-secondary" size="sm" onClick={onHide}>Cancel</Button>
         <Button variant="primary" size="sm" onClick={() => { onApply(w, h, bg); onHide(); }}>Apply</Button>
       </Modal.Footer>
