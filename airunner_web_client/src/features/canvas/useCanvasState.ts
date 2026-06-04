@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useEffect, useRef } from "react";
 
 // ── Types ───────────────────────────────────────────────────────────────────
 
@@ -127,10 +127,49 @@ const defaultState = (): CanvasState => {
   return { ...base, history: [initialSnapshot], historyIndex: 0 };
 };
 
+// ── Helpers ──────────────────────────────────────────────────────────────────
+
+const STORAGE_KEY = "airunner_canvas_state";
+
+/** Load persisted canvas state from localStorage, or null on cache miss. */
+function loadPersistedState(): CanvasState | null {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as CanvasState;
+    // Validate we have at least layers — discard corrupt data.
+    if (!Array.isArray(parsed.layers) || parsed.layers.length === 0) return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+/** Persist canvas state to localStorage (synchronous, no debounce needed). */
+function persistState(state: CanvasState): void {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  } catch {
+    // localStorage may be full — silently discard.
+  }
+}
+
 // ── Hook ────────────────────────────────────────────────────────────────────
 
 export function useCanvasState() {
-  const [state, setState] = useState<CanvasState>(defaultState);
+  const [state, setState] = useState<CanvasState>(
+    () => loadPersistedState() ?? defaultState(),
+  );
+  const persistTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Debounced localStorage persistence — writes 300 ms after last change.
+  useEffect(() => {
+    if (persistTimer.current) clearTimeout(persistTimer.current);
+    persistTimer.current = setTimeout(() => persistState(state), 300);
+    return () => {
+      if (persistTimer.current) clearTimeout(persistTimer.current);
+    };
+  }, [state]);
 
   const recordSnapshot = useCallback((prev: CanvasState): CanvasState => {
     const snapshot = serialize(prev);
@@ -382,6 +421,12 @@ export function useCanvasState() {
 
   const getSerializedState = useCallback((): CanvasState => state, [state]);
 
+  /** Return state without history, suitable for backend / cross-session storage. */
+  const getPersistableState = useCallback(() => {
+    const { history, historyIndex, ...rest } = state;
+    return rest;
+  }, [state]);
+
   const loadFromJSON = useCallback((json: string) => {
     try {
       const data = JSON.parse(json);
@@ -450,6 +495,7 @@ export function useCanvasState() {
     undo,
     redo,
     getSerializedState,
+    getPersistableState,
     loadFromJSON,
     setBrushSize,
     setBrushColor,

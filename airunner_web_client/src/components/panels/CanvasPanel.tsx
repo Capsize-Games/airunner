@@ -41,11 +41,18 @@ export default function CanvasPanel() {
     localStorage.setItem("canvas_toolbar_dock", d);
   }, []);
 
-  const documentString = JSON.stringify(canvas.getSerializedState());
+  // Use persistable state (no history) for the backend — history is local-only.
+  const documentString = JSON.stringify(canvas.getPersistableState());
+  // Track whether the content actually differs from what was last saved.
+  const [lastSavedDigest, setLastSavedDigest] = useState<string | null>(null);
+  const currentDigest = documentString;
+  const isDirty = currentDigest !== lastSavedDigest;
+
   const { isLoaded } = useCanvasDocument({
     documentString,
     onLoad: canvas.loadFromJSON,
-    isDirty: true,
+    isDirty,
+    onSaved: () => setLastSavedDigest(currentDigest),
   });
 
   // ── Image drop helpers ────────────────────────────────────────────────────

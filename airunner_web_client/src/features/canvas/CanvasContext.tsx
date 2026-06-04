@@ -47,6 +47,7 @@ export interface CanvasContextValue {
   undo: () => void;
   redo: () => void;
   getSerializedState: () => CanvasState;
+  getPersistableState: () => Omit<CanvasState, "history" | "historyIndex">;
   loadFromJSON: (json: string) => void;
   setBrushSize: (size: number) => void;
   setBrushColor: (color: string) => void;

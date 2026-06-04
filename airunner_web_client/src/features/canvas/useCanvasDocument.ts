@@ -5,6 +5,7 @@ interface UseCanvasDocumentOptions {
   documentString: string | null;
   onLoad: (json: string) => void;
   isDirty: boolean;
+  onSaved?: () => void;
 }
 
 interface UseCanvasDocumentReturn {
@@ -22,6 +23,7 @@ export function useCanvasDocument({
   documentString,
   onLoad,
   isDirty,
+  onSaved,
 }: UseCanvasDocumentOptions): UseCanvasDocumentReturn {
   const [isLoaded, setIsLoaded] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -63,6 +65,7 @@ export function useCanvasDocument({
       try {
         setSaveError(null);
         await saveCanvasDocument(documentString);
+        onSaved?.();
       } catch {
         // Silently fail on autosave errors
       }
@@ -82,6 +85,7 @@ export function useCanvasDocument({
     setSaveError(null);
     try {
       await saveCanvasDocument(documentString);
+      onSaved?.();
     } catch (err: unknown) {
       const msg =
         err instanceof Error ? err.message : "Failed to save canvas";
