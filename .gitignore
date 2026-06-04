@@ -102,3 +102,8 @@ plans
 electron/node_modules
 electron/dist
 electron/resources
+
+# Vite client (new location)
+client/node_modules
+client/dist
+client/.vite
