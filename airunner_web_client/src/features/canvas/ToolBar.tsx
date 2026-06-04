@@ -364,22 +364,18 @@ export default function ToolBar({
           </IconBtn>
         </div>
       </div>
-
-      <Divider />
-
-      {/* ── Mask controls ─────────────────────────────────────── */}
-      {(activeTool === "mask" || hasMaskStrokes) && (
-        <>
-          <Divider />
-          <IconBtn title="Clear mask" danger onClick={onClearMask}>
-            <Trash2 size={14} strokeWidth={1.75} />
-          </IconBtn>
-        </>
-      )}
-
-      <Divider />
-
-      {/* ── Spacer — push right-side items to the end ──────── */}
+  
+        {/* ── Mask controls ─────────────────────────────────────── */}
+        {(activeTool === "mask" || hasMaskStrokes) && (
+          <>
+            <Divider />
+            <IconBtn title="Clear mask" danger onClick={onClearMask}>
+              <Trash2 size={14} strokeWidth={1.75} />
+            </IconBtn>
+          </>
+        )}
+  
+        {/* ── Spacer — push right-side items to the end ──────── */}
       <div style={{ flex: 1, minWidth: 0 }} />
 
       {/* ── Settings & Dock ───────────────────────────────────── */}
