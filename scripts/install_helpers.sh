@@ -81,7 +81,7 @@ ensure_venv() {
         printf '[INFO] Reusing virtual environment at %s\n' "$venv_dir" >&2
     fi
 
-    "$venv_python" -m pip install --upgrade pip setuptools wheel >/dev/null
+    "$venv_python" -m pip install --upgrade pip 'setuptools<82' wheel >/dev/null
     printf '%s\n' "$venv_python"
 }
 

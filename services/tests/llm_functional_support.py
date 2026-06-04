@@ -104,7 +104,6 @@ def daemon_env(
     """Return one environment for the real headless daemon."""
     pythonpath_entries = [
         str(_PROJECT_ROOT / "services" / "src"),
-        str(_PROJECT_ROOT / "model" / "src"),
         str(_PROJECT_ROOT / "native" / "src"),
         str(_PROJECT_ROOT / "src"),
     ]

@@ -117,16 +117,13 @@ install_packages() {
     case "$role" in
         daemon)
             "$venv_python" -m pip install \
-                "$ROOT_DIR/model" \
-                "$ROOT_DIR/api" \
-                "$ROOT_DIR/services[$service_profile]"
+                "$ROOT_DIR/services[$service_profile]" \
+                "$ROOT_DIR/native"
             ;;
         gui-client)
             "$venv_python" -m pip install \
-                "$ROOT_DIR/model" \
-                "$ROOT_DIR/api" \
                 "$ROOT_DIR/services[$service_profile]" \
-                "$ROOT_DIR"
+                "$ROOT_DIR/native"
             ;;
     esac
 }

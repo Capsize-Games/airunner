@@ -21,7 +21,6 @@ _PROJECT_ROOT = _SERVICES_ROOT.parent.parent.parent
 
 for _path in (
     _PROJECT_ROOT / "services" / "src",
-    _PROJECT_ROOT / "model" / "src",
     _PROJECT_ROOT / "native" / "src",
     _PROJECT_ROOT / "src",
 ):

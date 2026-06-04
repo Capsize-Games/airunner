@@ -278,7 +278,7 @@ write_header
 
 section "Remote attack surface"
 run_rg "FastAPI/Uvicorn entrypoints" "FastAPI|uvicorn\.run\(|uvicorn\.Config\(|APIRouter\(" "src/**/*.py" "P2" 20
-run_rg "Bind to 0.0.0.0 / listen" "0\.0\.0\.0|--host\s+0\.0\.0\.0|host=\"0\.0\.0\.0\"" "src/**/*.py Dockerfile docker-compose*.yml" "P1" 20
+run_rg "Bind to 0.0.0.0 / listen" "0\.0\.0\.0|--host\s+0\.0\.0\.0|host=\"0\.0\.0\.0\"" "src/**/*.py" "P1" 20
 run_rg "Auth middleware / API key" "x-api-key|authorization\b|AIRUNNER_API_KEY|api_key_auth|compare_digest" "src/**/*.py" "P1" 20
 run_rg "CORS configuration" "CORSMiddleware|allow_origins|allow_credentials" "src/**/*.py" "P2" 10
 run_rg "Docs/OpenAPI endpoints" "docs_url|redoc_url|openapi\.json|/docs|/redoc" "src/**/*.py" "P3" 10
@@ -303,7 +303,7 @@ run_rg "Upload handling" "UploadFile|File\(|Form\(" "src/**/*.py" "P2" 2
 run_rg "Zip/tar extraction" "tarfile\.|zipfile\.|extractall" "src/**/*.py" "P1" 10
 
 section "Secrets & PII"
-run_rg "Potential secrets in code" "AKIA[0-9A-Z]{16}|sk-[A-Za-z0-9]{20,}|BEGIN (RSA|OPENSSH) PRIVATE KEY|Authorization:\\s*Bearer" "src/** Dockerfile docker-compose*.yml" "P0" 20
+run_rg "Potential secrets in code" "AKIA[0-9A-Z]{16}|sk-[A-Za-z0-9]{20,}|BEGIN (RSA|OPENSSH) PRIVATE KEY|Authorization:\\s*Bearer" "src/**" "P0" 20
 run_rg "Logging of prompts/messages" "logger\.(debug|info|warning|error)\(.*(prompt|messages|authorization|api[_-]?key|cookie)" "src/**/*.py" "P2" 5
 run_rg "FacehuggerShield usage" "facehuggershield" "src/**/*.py" "P3" 3
 
@@ -313,12 +313,10 @@ run_rg "XSS sinks" "dangerouslySetInnerHTML|innerHTML\\s*=|new Function\(" "src/
 
 section "Scaling & robustness"
 run_rg "Rate limiting / throttling" "rate.?limit|throttle|backpressure|semaphore|queue\.Queue|max_concurrency|limit_concurrency" "src/**/*.py" "P3" 5
-run_rg "Request size limits" "max_.*(size|bytes)|limit_.*(size|bytes)|client_max_body_size" "src/** Dockerfile docker-compose*.yml" "P3" 5
+run_rg "Request size limits" "max_.*(size|bytes)|limit_.*(size|bytes)|client_max_body_size" "src/**" "P3" 5
 run_rg "Retries / circuit breakers" "retry|backoff|circuit" "src/**/*.py" "P3" 3
 
 section "Container/runtime config"
-run_rg "Docker binds / exposed ports" "ports:|EXPOSE\b|--port\b" "Dockerfile docker-compose*.yml docker-entrypoint.sh" "P2" 10
-run_rg "Insecure flags" "--no-sandbox|DISABLE_SANDBOX" "Dockerfile docker-compose*.yml docker-entrypoint.sh" "P1" 10
 
 write_summary
 

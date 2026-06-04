@@ -62,7 +62,6 @@ def _facehugger_activate_kwargs() -> dict[str, object]:
     repo_root = resolve_repo_root(Path(__file__))
     api_src_path = str(repo_root / "api" / "src")
     gui_src_path = str(resolve_gui_source_root(repo_root))
-    model_src_path = str(repo_root / "model" / "src")
     services_src_path = str(repo_root / "services" / "src")
     native_src_path = str(repo_root / "native" / "src")
 
@@ -103,7 +102,6 @@ def _facehugger_activate_kwargs() -> dict[str, object]:
             "/usr/share/zoneinfo/",
             api_src_path,
             gui_src_path,
-            model_src_path,
             services_src_path,
             native_src_path,
             "/tmp/",
