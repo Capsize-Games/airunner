@@ -40,6 +40,7 @@ def _validate_model_path(model_path: str) -> Path:
     """Validate and resolve a model path, rejecting traversal attempts."""
     if not model_path or "\x00" in model_path:
         raise HTTPException(status_code=422, detail="Invalid model path")
+    # Normalize the path (do not resolve symlinks on user input).
     path = Path(model_path).expanduser()
     # Reject path traversal components after expansion
     if ".." in path.parts:

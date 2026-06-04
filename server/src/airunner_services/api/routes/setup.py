@@ -126,7 +126,7 @@ async def setup_install(
         try:
             async for event in _stream():
                 yield event
-        except Exception as exc:
+        except Exception:
             logger.exception("Setup stream failed")
             yield _emit({"status": "error", "message": "Setup error", "progress": 0})
 

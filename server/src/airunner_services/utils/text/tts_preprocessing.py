@@ -34,33 +34,38 @@ def replace_unspeakable_characters(text: str) -> str:
     return text
 
 
+# Non-overlapping Unicode ranges for emoji characters.
+# Defined as a module-level constant so the regex is compiled once.
+_EMOJI_RANGES: list[tuple[int, int]] = [
+    (0x1F600, 0x1F64F),  # Emoticons
+    (0x1F300, 0x1F5FF),  # Misc Symbols and Pictographs
+    (0x1F680, 0x1F6FF),  # Transport and Map Symbols
+    (0x1F700, 0x1F77F),  # Alchemical Symbols
+    (0x1F780, 0x1F7FF),  # Geometric Shapes Extended
+    (0x1F800, 0x1F8FF),  # Supplemental Arrows-C
+    (0x1F900, 0x1F9FF),  # Supplemental Symbols and Pictographs
+    (0x1FA00, 0x1FA6F),  # Chess Symbols
+    (0x1FA70, 0x1FAFF),  # Symbols and Pictographs Extended-A
+    (0x2702,  0x27B0),   # Dingbats
+    (0x24C2, 0x24C2),    # Ⓜ metro
+    (0x25B6, 0x25B6),    # ▶ play button
+    (0x25C0, 0x25C0),    # ◀ reverse button
+    (0x25FB, 0x25FE),    # ◻◼◽◾ medium squares
+    (0x2600, 0x26FF),    # Miscellaneous Symbols
+    (0x2B05, 0x2B55),    # ⬅⬆⬇ arrows, stars
+    (0x1F100, 0x1F1FF),  # Enclosed Alphanumeric Supplement
+    (0x1F200, 0x1F2FF),  # Enclosed Ideographic Supplement
+]
+
+_EMOJI_PATTERN = re.compile(
+    "[" + "".join(f"{chr(lo)}-{chr(hi)}" for lo, hi in _EMOJI_RANGES) + "]+",
+    flags=re.UNICODE,
+)
+
+
 def strip_emoji_characters(text: str) -> str:
     """Remove emoji code points before sending text to TTS."""
-    emoji_pattern = re.compile(
-        "["
-        "\U0001f600-\U0001f64f"  # Emoticons
-        "\U0001f300-\U0001f5ff"  # Misc Symbols and Pictographs
-        "\U0001f680-\U0001f6ff"  # Transport and Map Symbols
-        "\U0001f700-\U0001f77f"  # Alchemical Symbols
-        "\U0001f780-\U0001f7ff"  # Geometric Shapes Extended
-        "\U0001f800-\U0001f8ff"  # Supplemental Arrows-C
-        "\U0001f900-\U0001f9ff"  # Supplemental Symbols and Pictographs
-        "\U0001fa00-\U0001fa6f"  # Chess Symbols
-        "\U0001fa70-\U0001faff"  # Symbols and Pictographs Extended-A
-        "\U00002702-\U000027b0"  # Dingbats
-        "\U000024c2"             # Ⓜ metro
-        "\U000025b6"             # ▶ play button
-        "\U000025c0"             # ◀ reverse button
-        "\U000025fb-\U000025fe"  # ◻◼◽◾ medium squares
-        "\U00002600-\U000026ff"  # Miscellaneous Symbols
-        "\U000026bd-\U000026be"  # ⚽⚾ sports
-        "\U00002b05-\U00002b55"  # ⬅⬆⬇ arrows, stars
-        "\U0001f100-\U0001f1ff"  # Enclosed Alphanumeric Supplement
-        "\U0001f200-\U0001f2ff"  # Enclosed Ideographic Supplement
-        "]+",
-        flags=re.UNICODE,
-    )
-    return emoji_pattern.sub("", text)
+    return _EMOJI_PATTERN.sub("", text)
 
 
 def replace_numbers_with_words(text: str) -> str:

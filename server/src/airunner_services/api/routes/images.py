@@ -47,6 +47,12 @@ def _validate_path_safe(
 ) -> Path:
     """Resolve and verify that *candidate* sits inside one of the allowed
     root directories.  Raises ``HTTPException(403)`` on mismatch."""
+    # Reject path traversal components before resolving.
+    if ".." in candidate.parts:
+        raise HTTPException(
+            status_code=403,
+            detail=f"{label} must not contain path traversal elements",
+        )
     resolved = candidate.resolve()
     safe = False
     for root in _SAFE_ROOTS:
