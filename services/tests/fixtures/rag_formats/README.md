@@ -189,9 +189,7 @@ Why this is the smallest safe design:
 
 - it reuses existing EPUB and PDF normalization,
 - it keeps the RAG chunking path unified,
-- it avoids format-specific retrieval heuristics,
-- the project license is GPL-3.0, so the GPL-3.0 `mobi` package is not a new
-  license mismatch.
+- it avoids format-specific retrieval heuristics
 
 ## Eval Design
 
