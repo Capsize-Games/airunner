@@ -15,7 +15,7 @@
   },
   "devDependencies": {
     "electron": "^39.8.5",
-    "electron-builder": "^25.0.0"
+    "electron-builder": "^26.8.1"
   },
   "build": {
     "appId": "org.capsizegames.airunner",
