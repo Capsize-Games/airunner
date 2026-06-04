@@ -10,8 +10,6 @@ type PanelId =
   | "art_model"
   | "lora"
   | "embeddings"
-  | "layers"
-  | "grid"
   | "image_browser"
   | "stats"
   | "civitai_browser";
