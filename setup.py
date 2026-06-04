@@ -5,18 +5,6 @@ from setuptools import find_packages, setup
 README = Path("README.md").read_text(encoding="utf-8")
 
 VERSION = "6.0.0"
-FACEHUGGERSHIELD_REQUIREMENT = (
-    "facehuggershield @ "
-    "https://github.com/Capsize-Games/facehuggershield/"
-    "archive/refs/tags/v1.0.0.tar.gz"
-)
-
-GUI_REQUIREMENTS = [
-    "PySide6==6.9.0",
-    "PySide6_Addons==6.9.0",
-    "PySide6_Essentials==6.9.0",
-    FACEHUGGERSHIELD_REQUIREMENT,
-]
 
 ANALYSIS_REQUIREMENTS = [
     "radon>=6.0.1,<7",
@@ -35,51 +23,32 @@ setup(
     name="airunner",
     version=VERSION,
     author="Capsize LLC",
-    description="Run local opensource AI models (Stable Diffusion, LLMs, TTS, STT, chatbots) in a lightweight Python GUI",
+    description="Run local opensource AI models (Stable Diffusion, LLMs, TTS, STT, chatbots) with a web GUI and headless API",
     long_description=README,
     long_description_content_type="text/markdown",
-    keywords="llm, pyside6, gui, local llm, stable diffusion, generative ai, local chatgpt, text-to-speech, speech-to-text, open source chatbot, python ai runner",
+    keywords="llm, web gui, local llm, stable diffusion, generative ai, local chatgpt, text-to-speech, speech-to-text, open source chatbot, python ai runner",
     license="Apache-2.0",
     author_email="contact@capsizegames.com",
     url="https://github.com/Capsize-Games/airunner",
-    package_dir={"": "src", "scripts": "."},
+    package_dir={"": "services/src", "scripts": "."},
     py_modules=["airunner_startup_env"],
-    packages=find_packages("src") + ["scripts"],
+    packages=find_packages("services/src") + ["scripts"],
     python_requires=">=3.13.3",
-    install_requires=GUI_REQUIREMENTS,
+    install_requires=[],
     extras_require={"analysis": ANALYSIS_REQUIREMENTS},
-    package_data={
-        "airunner": [
-            # GUI resources
-            "gui/cursors/*",
-            "gui/images/*",
-            "gui/resources/**/*",
-            "gui/styles/**/*",
-            # Component resources
-            "components/icons/*",
-            "components/art/filters/*",
-            # UI templates (all .ui files in templates directories)
-            "components/**/templates/*.ui",
-            # Legal documents (user agreement, privacy policy)
-            "components/**/user_agreement/*.md",
-            # Static files (HTML, CSS, JS templates for web views)
-            "components/**/static/**/*",
-            "static/**/*",
-        ],
-    },
     include_package_data=True,
     entry_points={
         "console_scripts": [
-            "airunner=airunner.launcher:main",
-            "airunner-build-ui=scripts.build_ui:main",
-            "airunner-compile-translations=scripts.compile_translations:main",
-            "airunner-gui-probe=scripts.gui_probe:main",
+            "airunner-headless=airunner_services.bin.airunner_headless:main",
+            "airunner-hf-download=airunner_services.bin.airunner_hf_download:main",
+            "airunner-civitai-download=airunner_services.bin.airunner_civitai_download:main",
             "airunner-tests=scripts.run_tests:main",
             "airunner-test-coverage-report=scripts.coverage_report:main",
             "airunner-mypy=scripts.mypy_shortcut:main",
             "airunner-quality-report=scripts.code_quality_report:main",
             "airunner-services-complexity-report=scripts.services_complexity_report:main",
             "airunner-remove-unused-imports=scripts.remove_unused_imports:main",
+            "airunner-generate-cert=airunner_services.bin.generate_cert:main",
         ],
     },
 )

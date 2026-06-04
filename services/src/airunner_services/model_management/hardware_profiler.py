@@ -23,6 +23,7 @@ class HardwareProfile:
 	device_name: str | None
 	cpu_count: int
 	platform: str
+	num_gpus: int = 0
 
 
 class HardwareProfiler:
@@ -43,6 +44,7 @@ class HardwareProfiler:
 			device_name=self._get_device_name(),
 			cpu_count=self._get_cpu_count(),
 			platform=platform.system(),
+			num_gpus=torch.cuda.device_count() if torch.cuda.is_available() else 0,
 		)
 
 	def _get_total_vram_gb(self) -> float:

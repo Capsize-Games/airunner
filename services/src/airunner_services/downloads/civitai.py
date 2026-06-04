@@ -2,11 +2,14 @@
 
 from __future__ import annotations
 
+import logging
 import re
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional
 
 import requests
+
+logger = logging.getLogger(__name__)
 
 ProgressCallback = Callable[[int, int], None]
 CancelCallback = Callable[[], bool]
@@ -16,6 +19,8 @@ _ALLOWED_FILE_EXTENSIONS = (".safetensors", ".gguf")
 _ALLOWED_FILE_FORMATS = {"safetensor", "gguf"}
 _BASE_MODEL_ALIASES = {
     "SDXL 1.0": "SDXL 1.0",
+    "SDXL Hyper": "SDXL Hyper",
+    "SDXL Lightning": "SDXL Lightning",
     "Z-Image Turbo": "ZImageTurbo",
     "ZImageTurbo": "ZImageTurbo",
 }
@@ -28,6 +33,9 @@ _MODEL_TYPE_ALIASES = {
     "TEXTUAL EMBEDDING": "TextualInversion",
     "TEXTUALINVERSION": "TextualInversion",
     "TEXTUAL INVERSION": "TextualInversion",
+    "CHECKPOINT": "Checkpoint",
+    "ADAPTER": "LORA",
+    "CONTROLNET": "LORA",
 }
 
 
@@ -63,24 +71,42 @@ def search_models(
     api_key: str = "",
 ) -> Dict[str, Any]:
     """Return one filtered CivitAI model-search payload."""
+    url = f"{_CIVITAI_API_URL}/models"
+    params = _search_params(
+        query=query,
+        base_models=base_models,
+        model_types=model_types,
+        limit=limit,
+        cursor=cursor,
+    )
+    logger.info(
+        "Calling CivitAI API: %s params=%s cursor=%s",
+        url, {k: v for k, v in params.items() if k != "cursor"},
+        "set" if cursor else None,
+    )
     response = requests.get(
-        f"{_CIVITAI_API_URL}/models",
-        params=_search_params(
-            query=query,
-            base_models=base_models,
-            model_types=model_types,
-            limit=limit,
-            cursor=cursor,
-        ),
+        url,
+        params=params,
         headers=_auth_headers(api_key),
         timeout=30,
     )
+    logger.info(
+        "CivitAI API responded: status=%s content_length=%s",
+        response.status_code,
+        response.headers.get("content-length", "unknown"),
+    )
     response.raise_for_status()
     payload = response.json()
+    raw_count = len(payload.get("items", []))
     payload["items"] = _filter_model_items(
         payload.get("items", []),
         base_models,
         model_types,
+    )
+    logger.info(
+        "CivitAI search filtered: %d raw items → %d filtered items",
+        raw_count,
+        len(payload.get("items", [])),
     )
     return payload
 
@@ -165,27 +191,67 @@ def download_file(
     progress_callback: Optional[ProgressCallback] = None,
     cancel_callback: Optional[CancelCallback] = None,
 ) -> bool:
-    """Download one file with optional progress and cancellation hooks."""
+    """Download one file with optional progress and cancellation hooks.
+
+    Downloads to ``<path>.part`` and renames to ``<path>`` on success,
+    so incomplete files are never visible with the real extension.
+    When a partial ``.part`` file exists, sends a ``Range`` header to
+    resume from where the previous download left off.
+    """
     target_path = Path(filepath)
-    downloaded = 0
-    total_size = file_size
+    target_path.parent.mkdir(parents=True, exist_ok=True)
+    part_path = target_path.with_name(target_path.name + ".part")
+
+    # Check if a complete file already exists
+    if target_path.exists():
+        _emit_progress(progress_callback, target_path.stat().st_size, target_path.stat().st_size)
+        return True
+
+    existing_size = part_path.stat().st_size if part_path.exists() else 0
+    downloaded = existing_size
+    total_size = file_size or existing_size
     try:
-        with _open_download(url, api_key) as response:
-            total_size = _content_length(response, file_size)
-            target_path.parent.mkdir(parents=True, exist_ok=True)
-            with open(target_path, "wb") as handle:
-                for chunk in response.iter_content(chunk_size=chunk_size):
-                    if cancel_callback and cancel_callback():
-                        _remove_partial_download(target_path)
-                        return False
-                    if not chunk:
-                        continue
-                    handle.write(chunk)
-                    downloaded += len(chunk)
-                    _emit_progress(progress_callback, downloaded, total_size)
+        headers = _auth_headers(api_key)
+        if existing_size > 0:
+            headers["Range"] = f"bytes={existing_size}-"
+
+        response = _open_download(url, api_key, custom_headers=headers)
+        remaining = _content_length(response, 0)
+        if existing_size > 0:
+            cr = response.headers.get("content-range", "")
+            if "/" in cr:
+                try:
+                    total_size = int(cr.split("/")[-1])
+                except (ValueError, IndexError):
+                    total_size = existing_size + remaining
+        else:
+            total_size = max(total_size, remaining)
+
+        if total_size > 0 and existing_size >= total_size:
+            if part_path.exists():
+                part_path.rename(target_path)
+            _emit_progress(progress_callback, total_size, total_size)
+            return True
+
+        mode = "ab" if existing_size > 0 else "wb"
+        with open(part_path, mode) as handle:
+            for chunk in response.iter_content(chunk_size=chunk_size):
+                if cancel_callback and cancel_callback():
+                    _remove_partial_download(part_path)
+                    return False
+                if not chunk:
+                    continue
+                handle.write(chunk)
+                downloaded += len(chunk)
+                _emit_progress(progress_callback, downloaded, total_size)
     except Exception:
-        _remove_partial_download(target_path)
+        _remove_partial_download(part_path)
         raise
+
+    # Download complete — rename .part to final name
+    if part_path.exists():
+        part_path.rename(target_path)
+
     _emit_progress(progress_callback, downloaded, total_size)
     return True
 
@@ -364,11 +430,16 @@ def _planned_download_file(
     }
 
 
-def _open_download(url: str, api_key: str) -> requests.Response:
+def _open_download(
+    url: str,
+    api_key: str,
+    custom_headers: dict | None = None,
+) -> requests.Response:
     """Open one download response, retrying 401s with token query auth."""
+    headers = custom_headers or _auth_headers(api_key)
     response = requests.get(
         url,
-        headers=_auth_headers(api_key),
+        headers=headers,
         stream=True,
         allow_redirects=True,
         timeout=30,

@@ -175,7 +175,6 @@ Examples:
   %(prog)s --verbose                # Show detailed output
 
 Permanent exclusions (always skipped):
-  - *_ui.py files (auto-generated Qt UI - don't modify generated code)
   - alembic/ (database migrations)
   - data/ directories (SQLAlchemy models)
   - vendor/ (third-party code)
@@ -185,7 +184,7 @@ Permanent exclusions (always skipped):
         "--path",
         type=Path,
         default=None,
-        help="Path to analyze (default: src/airunner)",
+        help="Path to analyze (default: services/src/airunner_services)",
     )
     parser.add_argument(
         "--check",
@@ -217,7 +216,7 @@ Permanent exclusions (always skipped):
         current = Path.cwd()
         while current != current.parent:
             if (current / "setup.py").exists():
-                root_path = current / "src" / "airunner"
+                root_path = current / "services" / "src" / "airunner_services"
                 break
             current = current.parent
         else:

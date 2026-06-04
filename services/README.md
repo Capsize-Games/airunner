@@ -7,7 +7,7 @@ coordinate LLM, STT, TTS, and art workloads.
 
 ```mermaid
 flowchart LR
-    GUI[src/ GUI client] --> Daemon[services/ daemon routes]
+    Web[airunner_web_client/ web GUI] --> Daemon[services/ daemon routes]
     API[api/ transport contracts] --> Daemon
     Daemon --> Registry[runtime registry]
     Registry --> Model[model/ shared runtime helpers]

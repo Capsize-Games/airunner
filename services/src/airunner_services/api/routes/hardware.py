@@ -27,6 +27,7 @@ class HardwareProfileResponse(BaseModel):
     device_name: str | None = Field(default=None)
     cpu_count: int
     platform: str
+    num_gpus: int = Field(default=0)
 
 
 @router.get("/hardware", response_model=HardwareProfileResponse)
@@ -42,4 +43,5 @@ async def hardware_profile() -> HardwareProfileResponse:
         device_name=profile.device_name,
         cpu_count=profile.cpu_count,
         platform=profile.platform,
+        num_gpus=profile.num_gpus,
     )

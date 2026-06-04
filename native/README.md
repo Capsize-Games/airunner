@@ -7,7 +7,7 @@ deliverable desktop application.
 ```mermaid
 flowchart LR
 	Bundle[bundle archive or install root] --> Native[native/ launcher]
-	Native --> GUI[src/ desktop app]
+	Native --> Web[airunner_web_client/ web GUI]
 	Native --> Services[services/ daemon entry points]
 	Native --> Sidecars[llama.cpp and whisper.cpp sidecars]
 	Native --> Data[(embedded Python and runtime layout)]

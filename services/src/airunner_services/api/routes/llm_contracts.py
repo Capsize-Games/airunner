@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel
 
@@ -23,6 +23,8 @@ class ChatCompletionRequest(BaseModel):
     temperature: float = 0.7
     max_tokens: Optional[int] = None
     stream: bool = False
+    llm_overrides: Optional[Dict[str, Dict[str, Any]]] = None
+    active_document_ids: Optional[List[int]] = None
 
 
 class ChatCompletionResponse(BaseModel):

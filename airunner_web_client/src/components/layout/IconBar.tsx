@@ -1,0 +1,176 @@
+import LucideIcon from "../shared/LucideIcon";
+
+type PanelId =
+  | "knowledge"
+  | "history"
+  | "llm_settings"
+  | "art_model"
+  | "lora"
+  | "embeddings"
+  | "layers"
+  | "grid"
+  | "image_browser"
+  | "stats"
+  | "civitai_browser";
+
+export function LeftIconBar({
+  showChat,
+  leftPanel,
+  ttsOn,
+  sttOn,
+  onToggleChat,
+  onLeftPanel,
+  onToggleTts,
+  onToggleStt,
+}: {
+  showChat: boolean;
+  leftPanel: PanelId | null;
+  ttsOn: boolean;
+  sttOn: boolean;
+  onToggleChat: () => void;
+  onLeftPanel: (id: PanelId) => void;
+  onToggleTts: () => void;
+  onToggleStt: () => void;
+}) {
+  const active = (id: PanelId, panel: PanelId | null) =>
+    panel === id ? "active" : "";
+
+  return (
+    <div className="icon-bar left">
+      <button
+        className={showChat ? "active" : ""}
+        onClick={onToggleChat}
+        title="Toggle Chat"
+      >
+        <LucideIcon name="message-square-text" />
+      </button>
+      <hr />
+      <button
+        className={active("knowledge", leftPanel)}
+        onClick={() => onLeftPanel("knowledge")}
+        title="Knowledge Base"
+      >
+        <LucideIcon name="book" />
+      </button>
+      <button
+        className={active("history", leftPanel)}
+        onClick={() => onLeftPanel("history")}
+        title="History"
+      >
+        <LucideIcon name="history" />
+      </button>
+      <button
+        className={active("llm_settings", leftPanel)}
+        onClick={() => onLeftPanel("llm_settings")}
+        title="LLM Settings"
+      >
+        <LucideIcon name="settings-2" />
+      </button>
+      <div className="flex-spacer" />
+      <button
+        className={ttsOn ? "active" : ""}
+        onClick={onToggleTts}
+        title="Text to Speech"
+      >
+        <LucideIcon name="speaker" />
+      </button>
+      <button
+        className={sttOn ? "active" : ""}
+        onClick={onToggleStt}
+        title="Speech to Text"
+      >
+        <LucideIcon name="mic" />
+      </button>
+    </div>
+  );
+}
+
+export function RightIconBar({
+  showCanvas,
+  rightPanel,
+  onToggleCanvas,
+  onRightPanel,
+  onOpenSettings,
+}: {
+  showCanvas: boolean;
+  rightPanel: PanelId | null;
+  onToggleCanvas: () => void;
+  onRightPanel: (id: PanelId) => void;
+  onOpenSettings: () => void;
+}) {
+  const active = (id: PanelId, panel: PanelId | null) =>
+    panel === id ? "active" : "";
+
+  return (
+    <div className="icon-bar right">
+      <button
+        className={showCanvas ? "active" : ""}
+        onClick={onToggleCanvas}
+        title="Canvas"
+      >
+        <LucideIcon name="image" />
+      </button>
+      <hr />
+      <button
+        className={active("civitai_browser", rightPanel)}
+        onClick={() => onRightPanel("civitai_browser")}
+        title="CivitAI Browser"
+      >
+        <LucideIcon name="cloud" />
+      </button>
+      <button
+        className={active("art_model", rightPanel)}
+        onClick={() => onRightPanel("art_model")}
+        title="Art Model"
+      >
+        <LucideIcon name="sparkles" />
+      </button>
+      <button
+        className={active("lora", rightPanel)}
+        onClick={() => onRightPanel("lora")}
+        title="LoRA"
+      >
+        <LucideIcon name="puzzle" />
+      </button>
+      <button
+        className={active("embeddings", rightPanel)}
+        onClick={() => onRightPanel("embeddings")}
+        title="Embeddings"
+      >
+        <LucideIcon name="scan-text" />
+      </button>
+      <button
+        className={active("layers", rightPanel)}
+        onClick={() => onRightPanel("layers")}
+        title="Layers"
+      >
+        <LucideIcon name="layers" />
+      </button>
+      <button
+        className={active("grid", rightPanel)}
+        onClick={() => onRightPanel("grid")}
+        title="Grid"
+      >
+        <LucideIcon name="grid-2x2-check" />
+      </button>
+      <button
+        className={active("image_browser", rightPanel)}
+        onClick={() => onRightPanel("image_browser")}
+        title="Image Browser"
+      >
+        <LucideIcon name="images" />
+      </button>
+      <button
+        className={active("stats", rightPanel)}
+        onClick={() => onRightPanel("stats")}
+        title="Stats"
+      >
+        <LucideIcon name="activity" />
+      </button>
+      <div className="flex-spacer" />
+      <button onClick={onOpenSettings} title="Settings">
+        <LucideIcon name="settings" />
+      </button>
+    </div>
+  );
+}

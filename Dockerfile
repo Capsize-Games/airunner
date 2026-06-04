@@ -1,17 +1,17 @@
-# Dockerfile for AI Runner - supports both headless server and GUI modes
+# Dockerfile for AI Runner - supports headless server and web GUI modes
 # Provides HTTP API for LLM, Art generation, TTS, STT, and Vision
-# Can also run full PySide6 GUI with X11 forwarding
 #
 # Usage:
-#   GUI mode:      docker compose run --rm airunner
-#   Headless mode: docker compose run --rm airunner --headless
+#   Web GUI mode: docker compose run --rm --service-ports airunner
+#                 then open http://localhost:5173
+#   Headless mode: docker compose run --rm --service-ports airunner --headless
 
 FROM nvidia/cuda:12.9.1-devel-ubuntu24.04
 
 # Prevent interactive prompts
 ENV DEBIAN_FRONTEND=noninteractive
 
-ARG AIRUNNER_INSTALL_PROFILES=core,llm-native,stt-native,art-python,tts-python,gui,development,computer-use
+ARG AIRUNNER_INSTALL_PROFILES=core,llm-native,stt-native,art-python,tts-python,development
 
 # Install system dependencies required by the selected runtime profiles.
 RUN set -e; \
@@ -26,7 +26,7 @@ RUN set -e; \
         packages="$packages ffmpeg libsndfile1 portaudio19-dev"; \
         packages="$packages pulseaudio libasound2-dev"; \
     fi; \
-    if profile_match 'gui|desktop|all|all_dev|all_native|all_dev_native|computer-use|computer_use'; then \
+    if profile_match 'gui|desktop|all|all_dev|all_native|all_dev_native'; then \
         packages="$packages libnss3 libxslt1.1 libxkbfile1"; \
         packages="$packages libx11-xcb1 libxcb-cursor0 libxcb-icccm4"; \
         packages="$packages libxcb-image0 libxcb-keysyms1"; \
@@ -38,8 +38,7 @@ RUN set -e; \
         packages="$packages libxcomposite1 libxdamage1 libxrandr2"; \
         packages="$packages libxtst6 libdrm2 libgbm1 libxss1"; \
         packages="$packages libcups2 libatk1.0-0"; \
-        packages="$packages libatk-bridge2.0-0 xclip"; \
-        packages="$packages scrot xdotool gnome-screenshot"; \
+        packages="$packages libatk-bridge2.0-0"; \
     fi; \
     if profile_match 'openvoice_jp|openvoice_kr|all_native|all_dev_native'; then \
         packages="$packages mecab libmecab-dev mecab-ipadic-utf8"; \
@@ -53,7 +52,7 @@ RUN set -e; \
     apt-get update; \
     packages="python3.13 python3.13-dev"; \
     if printf '%s' ",${AIRUNNER_INSTALL_PROFILES}," | \
-        grep -Eq ',(gui|desktop|all|all_dev|all_native|all_dev_native|computer-use|computer_use),'; then \
+        grep -Eq ',(desktop|all|all_dev|all_native|all_dev_native),'; then \
         packages="$packages python3.13-tk"; \
     fi; \
     apt-get install -y $packages && rm -rf /var/lib/apt/lists/*

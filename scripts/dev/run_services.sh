@@ -165,7 +165,7 @@ start_services() {
             return
         fi
         echo -n "."
-        sleep 0.5
+        sleep 0.1
     done
 
     echo ""

@@ -101,14 +101,14 @@ class SidecarLauncher:
 		return self._process is not None and self._process.poll() is None
 
 	def is_ready(self) -> bool:
-		"""Return True when the subprocess health endpoint is responding."""
-		if not self.is_running():
-			return False
-		try:
-			with self._health_opener(self._health_url(), timeout=1) as response:
-				return 200 <= getattr(response, "status", 0) < 300
-		except (OSError, URLError):
-			return False
+	    """Return True when the subprocess health endpoint is responding."""
+	    if not self.is_running():
+	        return False
+	    try:
+	        with self._health_opener(self._health_url(), timeout=1) as response:
+	            return 200 <= getattr(response, "status", 0) < 300
+	    except (OSError, URLError):
+	        return False
 
 	def health_status(self) -> tuple[RuntimeHealthStatus, str]:
 		"""Return the runtime health state exposed to AIRunner."""

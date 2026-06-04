@@ -13,14 +13,14 @@ def _pytest_args(gui_functional: bool, component: str | None) -> list[str]:
     if not gui_functional:
         return []
 
-    base_path = Path("src/airunner/components")
+    base_path = Path("services/tests")
     if component:
-        gui_path = base_path / component / "gui"
-        if not gui_path.exists():
+        test_path = base_path / component
+        if not test_path.exists():
             raise SystemExit(
-                f"GUI component '{component}' is not configured for coverage"
+                f"Service component '{component}' is not configured for coverage"
             )
-        return [str(gui_path), "-m", "gui_functional"]
+        return [str(test_path), "-m", "gui_functional"]
 
     return [str(base_path), "-m", "gui_functional"]
 

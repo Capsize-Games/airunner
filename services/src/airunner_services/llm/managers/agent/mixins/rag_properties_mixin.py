@@ -7,11 +7,31 @@ import torch
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
+from airunner_services.contract_enums import ModelStatus, ModelType, SignalCode
 from airunner_services.settings import AIRUNNER_LOCAL_FILES_ONLY
 
 
 class RAGPropertiesMixin:
     """Mixin for RAG properties and configuration."""
+
+    def _emit_embedding_status(self, status: str) -> None:
+        """Emit a model-status signal for the embedding model.
+
+        Args:
+            status: One of "loading", "loaded", "unloaded", "failed".
+        """
+        signal = getattr(self, "emit_signal", None)
+        if callable(signal):
+            signal(
+                SignalCode.MODEL_STATUS_CHANGED_SIGNAL,
+                {
+                    "model": ModelType.EMBEDDINGS,
+                    "model_type": "embedding",
+                    "model_id": "intfloat/e5-large",
+                    "status": status,
+                    "path": "",
+                },
+            )
 
     @property
     def text_splitter(self) -> RecursiveCharacterTextSplitter:
@@ -134,6 +154,8 @@ class RAGPropertiesMixin:
                     f"{model_name}"
                 )
 
+                self._emit_embedding_status("loading")
+
                 model_kwargs = {}
                 model_kwargs["device"] = device
                 model_kwargs["trust_remote_code"] = True
@@ -146,12 +168,14 @@ class RAGPropertiesMixin:
                 )
 
                 self.logger.info("Embedding model initialized successfully")
+                self._emit_embedding_status("loaded")
 
             except Exception as e:
                 self.logger.error(
                     f"Failed to initialize embedding model: {e}",
                     exc_info=True,
                 )
+                self._emit_embedding_status("failed")
                 # Don't raise - return None to allow RAG setup to skip gracefully
                 return None
 

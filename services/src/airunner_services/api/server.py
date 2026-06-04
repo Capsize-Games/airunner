@@ -19,13 +19,26 @@ from airunner_services.settings import AIRUNNER_LOG_LEVEL
 from airunner_services.utils.application import get_logger
 from airunner_services.api.routes import (
     art,
+    art_options_router,
     conversations,
+    canvas_image,
     daemon,
     domain_resources,
     downloads,
+    embeddings_router,
+    embeddings_watch_router,
     health,
+    images_router,
+    knowledge_base,
+    knowledge_base_index_router,
+    knowledge_base_watch_router,
+    layers_router,
     llm,
+    lora_watch_router,
+    models_status_router,
+    models_watch_router,
     persistence,
+    privacy_router,
     setup,
     stt,
     tts,
@@ -154,6 +167,18 @@ def create_app(
             app.state.runtime_registry = _resolve_runtime_registry(app_instance)
         app.state.lifecycle_service = _resolve_lifecycle_service(app_instance)
 
+        # Register indexing progress SSE bridge
+        from airunner_services.api.routes.knowledge_base_index import (  # noqa: PLC0415
+            _register_signal_handlers,
+        )
+        _register_signal_handlers(app_instance)
+
+        # Register model-status SSE bridge
+        from airunner_services.api.routes.models_status import (  # noqa: PLC0415
+            _register_model_status_handlers,
+        )
+        _register_model_status_handlers(app_instance)
+
     # Optional API key auth for production.
     # If AIRUNNER_API_KEY is set, requests must provide it via:
     # - X-API-Key: <key>
@@ -206,8 +231,10 @@ def create_app(
     async def api_key_auth_middleware(request: Request, call_next):
         path = request.url.path
 
-        # Always allow health checks without auth.
+        # Always allow health checks and CORS preflights without auth.
         if path in {"/health", "/api/v1/health"}:
+            return await call_next(request)
+        if request.method == "OPTIONS":
             return await call_next(request)
 
         # When API key auth is disabled, default to loopback-only unless explicitly overridden.
@@ -237,11 +264,16 @@ def create_app(
     # Configure CORS
     if enable_cors:
         if allowed_origins is None:
+            # Include explicit Vite dev server origin so the web client
+            # can connect directly (bypassing the Vite proxy which stalls
+            # on consecutive POSTs over the same upstream connection).
             allowed_origins = [
                 "http://localhost",
                 "http://localhost:*",
                 "http://127.0.0.1",
                 "http://127.0.0.1:*",
+                "http://localhost:5173",
+                "http://127.0.0.1:5173",
             ]
 
         app.add_middleware(
@@ -305,6 +337,71 @@ def create_app(
     )
     app.include_router(tts.router, prefix="/api/v1/tts", tags=["tts"])
     app.include_router(stt.router, prefix="/api/v1/stt", tags=["stt"])
+    app.include_router(
+        art_options_router,
+        prefix="/api/v1/art",
+        tags=["art"],
+    )
+    app.include_router(
+        embeddings_router,
+        prefix="/api/v1/art",
+        tags=["art"],
+    )
+    app.include_router(
+        knowledge_base.router,
+        prefix="/api/v1/knowledge-base",
+        tags=["knowledge-base"],
+    )
+    app.include_router(
+        layers_router,
+        prefix="/api/v1/canvas",
+        tags=["canvas"],
+    )
+    app.include_router(
+        canvas_image.router,
+        prefix="/api/v1/canvas",
+        tags=["canvas"],
+    )
+    app.include_router(
+        lora_watch_router,
+        prefix="/api/v1/art",
+        tags=["art"],
+    )
+    app.include_router(
+        embeddings_watch_router,
+        prefix="/api/v1/art",
+        tags=["art"],
+    )
+    app.include_router(
+        models_watch_router,
+        prefix="/api/v1/art",
+        tags=["art"],
+    )
+    app.include_router(
+        images_router,
+        prefix="/api/v1/art",
+        tags=["art"],
+    )
+    app.include_router(
+        knowledge_base_watch_router,
+        prefix="/api/v1/knowledge-base",
+        tags=["knowledge-base"],
+    )
+    app.include_router(
+        knowledge_base_index_router,
+        prefix="/api/v1/knowledge-base",
+        tags=["knowledge-base"],
+    )
+    app.include_router(
+        models_status_router,
+        prefix="/api/v1",
+        tags=["models"],
+    )
+    app.include_router(
+        privacy_router,
+        prefix="/api/v1/settings",
+        tags=["settings"],
+    )
 
     # Legacy compatibility endpoints for existing clients.
     app.include_router(legacy_routes.router, tags=["legacy"])

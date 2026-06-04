@@ -48,8 +48,8 @@ subscription. Everything runs on your hardware.
 
 ### 🌍 Language Support
 
-| Language | TTS | LLM | STT | GUI |
-|----------|-----|-----|-----|-----|
+| Language | TTS | LLM | STT | GUI (Web) |
+|----------|-----|-----|-----|-----------|
 | English | ✅ | ✅ | ✅ | ✅ |
 | Japanese | ✅ | ✅ | ❌ | ✅ |
 | Spanish/French/Chinese/Korean | ✅ | ✅ | ❌ | ❌ |
@@ -59,14 +59,14 @@ subscription. Everything runs on your hardware.
 ```mermaid
 flowchart LR
   User[User] --> Native[native/ launcher and installers]
-  Native --> GUI[src/ desktop client]
+  Native --> Web[airunner_web_client/ web GUI]
   Native --> Daemon[services/ headless daemon]
-  GUI --> API[api/ transport contracts]
+  Web --> API[api/ transport contracts]
   Daemon --> API
   Daemon --> Model[model/ shared contracts and runtime helpers]
   Native --> Sidecars[llama.cpp and whisper.cpp sidecars]
   Daemon --> Sidecars
-  GUI --> Data[(AIRUNNER_BASE_PATH)]
+  Web --> Data[(AIRUNNER_BASE_PATH)]
   Daemon --> Data
 ```
 
@@ -74,10 +74,8 @@ flowchart LR
 |---------|------|
 | [api](api/README.md) | Shared transport contracts, messages, and thin API bootstrap adapters |
 | [services](services/README.md) | Headless daemon, FastAPI server, runtime registry, orchestration, downloads, and persistence |
-| [model](model/README.md) | Shared runtime contracts, settings, ORM models, and runtime helpers |
-| [src](src/README.md) | Desktop GUI client, daemon bridge, widgets, and application entry points |
+| [airunner_web_client](airunner_web_client/README.md) | Web-based GUI client built with React, TypeScript, and Vite |
 | [native](native/README.md) | Launcher, bundle assembly, native sidecar integration, and installer tooling |
-
 ---
 
 ## ⚙️ System Requirements
@@ -144,10 +142,11 @@ installation flows. The bundled end-user packaging contract is summarized in
 
 ### Docker (Recommended)
 
-**GUI Mode:**
+**Web GUI Mode (development):**
 ```bash
-xhost +local:docker && docker compose run --rm airunner
+docker compose run --rm --service-ports airunner
 ```
+Then open `http://localhost:5173` in your browser.
 
 **Headless API Server:**
 ```bash
@@ -183,8 +182,8 @@ installs.
    ```bash
    sudo apt update && sudo apt install -y \
      build-essential cmake git curl wget pkg-config \
-     nvidia-cuda-toolkit pipewire libportaudio2 libxcb-cursor0 \
-     espeak espeak-ng-espeak qt6-qpa-plugins qt6-wayland \
+     nvidia-cuda-toolkit pipewire libportaudio2 \
+     espeak espeak-ng-espeak \
      libsentencepiece-dev \
      mecab libmecab-dev mecab-ipadic-utf8 libxslt-dev mkcert
    ```
@@ -201,7 +200,6 @@ installs.
    - `stt-native`: local STT runtime helpers
    - `art-python`: Python image-generation runtimes
    - `tts-python`: Python TTS runtimes without MeCab-backed language packs
-   - `gui`: desktop UI dependencies
    - `development`: test, lint, and packaging tooling
 
 4. **Install AI Runner:**
@@ -210,14 +208,8 @@ installs.
    ```bash
    pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128
    pip install \
-     "airunner[core,llm-native,stt-native,art-python,tts-python,gui]"
+     "airunner[core,llm-native,stt-native,art-python,tts-python]"
    ```
-
-  For a headless-only install, omit the GUI profile:
-  ```bash
-  pip install \
-    "airunner[core,llm-native,stt-native,art-python,tts-python]"
-  ```
 
   From a local clone in editable mode:
   ```bash
@@ -228,7 +220,7 @@ installs.
   pip install --upgrade pip setuptools wheel
   pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128
   pip install -e \
-    ".[core,llm-native,stt-native,art-python,tts-python,gui,development]"
+    ".[core,llm-native,stt-native,art-python,tts-python,development]"
   ```
 
   The base `tts-python` profile intentionally excludes the MeCab-backed
@@ -262,7 +254,7 @@ repo Alembic config and upgrade all heads:
 
 ```bash
 source venv/bin/activate
-alembic -c src/airunner/alembic.ini upgrade heads
+alembic -c services/src/airunner_services/alembic.ini upgrade heads
 ```
 
 If you are targeting a non-default database, set `AIRUNNER_DATABASE_URL`
@@ -307,35 +299,43 @@ AI Runner downloads essential TTS/STT models automatically. LLM and image models
 
 | Command | Description |
 |---------|-------------|
-| `airunner` | Launch GUI |
+| `airunner` | Launch daemon (API server + sidecars) |
 | `airunner-headless` | Start headless API server |
 | `airunner-hf-download` | Download/manage models from HuggingFace |
 | `airunner-civitai-download` | Download models from CivitAI |
-| `airunner-build-ui` | Rebuild UI from `.ui` files |
 | `airunner-tests` | Run test suite |
 | `airunner-generate-cert` | Generate SSL certificate |
 
-**Note:** To download models, use *Tools → Download Models* from the main
-application menu. The GUI now opens a filtered CivitAI browser for SDXL 1.0
-and Z-Image Turbo models and queues downloads through the local daemon. You
-can also use `airunner-hf-download` / `airunner-civitai-download` from the
+**Note:** To download models, use the model browser from the web GUI or
+use `airunner-hf-download` / `airunner-civitai-download` from the
 command line.
 
-### Rebuilding Qt UI Files
+### Running the Web GUI
 
-When you change any `.ui` file in a local clone, rebuild the generated
-`*_ui.py` files from the repo root with:
+The web GUI is a React/TypeScript application located in
+[`airunner_web_client/`](airunner_web_client/).
+
+For development, start the daemon first, then the web client:
 
 ```bash
-source venv/bin/activate
-python src/airunner/bin/build_ui.py
+# Start the daemon (API server on port 8188)
+./scripts/dev/run_services.sh
+
+# In a separate terminal, start the web client dev server
+cd airunner_web_client
+npm install
+npm run dev
 ```
 
-If you installed AIRunner's console scripts, `airunner-build-ui` runs the
-same rebuild.
+Or use the combined launcher:
 
-This rebuild also refreshes the Qt resources and generated stylesheet
-assets.
+```bash
+./scripts/run_web.sh
+```
+
+This starts the daemon, runs health checks, installs web client
+dependencies if needed, and launches the Vite dev server on
+`http://localhost:5173`.
 
 ---
 
@@ -594,7 +594,7 @@ mkcert -install
 - **Weather Prompt:** Location coordinates sent to Open-Meteo API if enabled
 - **External LLM Providers:** Prompts sent to OpenRouter or OpenAI if configured
 
-**We recommend using a VPN** when using features that connect to external services. See our full [Privacy Policy](src/airunner/components/downloader/gui/windows/setup_wizard/user_agreement/privacy_policy.md) for details.
+**We recommend using a VPN** when using features that connect to external services.
 
 ---
 
@@ -618,19 +618,14 @@ mkcert -install
 ./venv/bin/python -m pytest services/tests/test_llm_tts_functional.py -v --timeout=1200
 ./venv/bin/python -m pytest services/tests/test_stt_transcribe_functional.py -v --timeout=1200
 
-# Offscreen GUI end-to-end functional tests
-./venv/bin/python -m pytest services/tests/test_gui_llm_tts_functional.py -v --timeout=1200
-./venv/bin/python -m pytest services/tests/test_gui_stt_llm_tts_functional.py -v --timeout=1200
-
 # Service-owned agent evals
-AIRUNNER_TEST_NO_GUI_LAUNCH=1 ./venv/bin/python -m pytest services/tests/eval --tb=short -ra
+./venv/bin/python -m pytest services/tests/eval --tb=short -ra
 ```
 
 The functional suites under `services/tests/` use real local runtimes and skip
 cleanly when required assets are missing. They cover API bootstrap,
 daemon-only LLM, daemon LLM plus TTS, standalone STT, standalone TTS,
-offscreen GUI LLM plus TTS, offscreen GUI STT plus LLM plus TTS, and the
-GUI conversation-progression path.
+and all API integration paths.
 
 The service-owned agent eval runbook lives in
 `docs/agent-eval-tests.md` and documents coverage, commands, tool
@@ -654,11 +649,9 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) and the [Development Wiki](https://github
 - [LLM Flow](docs/llm-flow.md)
 - [Document RAG Flow](docs/document-rag-flow.md)
 - [Systemd Distributed Deployment](deployment/systemd/README.md)
-- [API Service Layer](src/airunner/components/application/api/README.md)
 - [Services Package README](services/README.md)
-- [Model Package README](model/README.md)
-- [Src Package README](src/README.md)
 - [Native Package README](native/README.md)
+- [Web GUI Client README](airunner_web_client/README.md)
 
 ---
 

@@ -56,9 +56,8 @@ Issues:
 - #61 Add LLM load, cancellation, concurrency, and performance smoke tests
 - #62 Add daemon control, status, and runtime health endpoints
 - #63 Refactor headless entrypoints to launch or connect to the daemon
-- #64 Add a GUI daemon client with auto-launch and reconnect behavior
-- #65 Simplify App, MainWindow, and WorkerManager so they stop owning model
-  lifecycles
+- #64 Add a daemon client with auto-launch and reconnect behavior
+- #65 Simplify workers so they stop owning model lifecycles
 
 Gate:
 - LLM requests route through the runtime client by default.
@@ -119,7 +118,7 @@ Gate:
 - Recovery and soak coverage exists for both modalities.
 
 Cutover criteria:
-- Art and TTS workloads can restart independently of the GUI/headless app.
+- Art and TTS workloads can restart independently of the app.
 
 Stop condition:
 - Do not move to packaging and rollout hardening until all four modalities use

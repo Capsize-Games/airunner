@@ -36,6 +36,70 @@ def resolve_seed_value(seed: Optional[int]) -> int:
     return secrets.randbelow(2**31 - 1)
 
 
+async def _track_art_model(
+    tracker: JobTracker,
+    job_id: str,
+    model_path: str,
+    model_version: str,
+) -> None:
+    """Poll a generation job and update the active-models list.
+
+    Registered as "loading" immediately, then transitions to "loaded"
+    once the job completes.
+    """
+    import os as _os
+
+    from .models_status import (  # noqa: PLC0415
+        _external_models,
+        _external_models_lock,
+        _notify_status_subscribers,
+    )
+
+    model_name = _os.path.basename(model_path.rstrip("/")) or model_path
+
+    # Register as loading
+    with _external_models_lock:
+        _external_models[model_path] = {
+            "model_id": model_path,
+            "model_type": model_version or "art",
+            "status": "loading",
+            "can_unload": True,
+            "vram_gb": 0.0,
+            "ram_gb": 0.0,
+            "name": model_name,
+        }
+    _notify_status_subscribers({
+        "type": "model_status",
+        "model_type": model_version or "art",
+        "model_id": model_path,
+        "status": "loading",
+    })
+
+    # Poll until the job finishes
+    from airunner_services.utils.job_tracker import JobStatus as _JobStatus  # noqa: PLC0415
+    terminal_states = {_JobStatus.COMPLETED, _JobStatus.FAILED, _JobStatus.CANCELLED}
+    while True:
+        job_state = await tracker.get_status(job_id)
+        if job_state is None or job_state.status in terminal_states:
+            break
+        await asyncio.sleep(1)
+
+    loaded = job_state is not None and job_state.status == _JobStatus.COMPLETED
+    final_status = "loaded" if loaded else "unloaded"
+    with _external_models_lock:
+        if loaded:
+            _external_models[model_path]["status"] = "loaded"
+            _external_models[model_path]["can_unload"] = True
+        else:
+            _external_models.pop(model_path, None)
+    _notify_status_subscribers({
+        "type": "model_status",
+        "model_type": model_version or "art",
+        "model_id": model_path,
+        "status": final_status,
+    })
+
+
 async def create_generation_job(
     request: GenerationRequest,
     req: Request,
@@ -52,6 +116,17 @@ async def create_generation_job(
     )
     await tracker.update_progress(job_id, 1.0, JobState.RUNNING)
     art_request = request.model_copy(update={"seed": seed_value})
+
+    # Track the art model in the main daemon's active-models list so it
+    # appears in the /api/v1/models/active response even when the model
+    # loads in a sidecar process.
+    if request.model:
+        asyncio.create_task(
+            _track_art_model(
+                tracker, job_id, request.model, request.version or "",
+            ),
+        )
+
     asyncio.create_task(run_art_job(tracker, job_id, art_request, client))
     return job_id
 

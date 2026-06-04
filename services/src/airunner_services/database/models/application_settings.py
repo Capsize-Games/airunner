@@ -79,6 +79,7 @@ class ApplicationSettings(BaseModel):
     hf_api_key_read_key = Column(String, default="")
     hf_api_key_write_key = Column(String, default="")
     civit_ai_api_key = Column(String, default="")
+    openai_api_key = Column(String, default="")
     mode = Column(String, default=Mode.IMAGE.value)
     autoload_sd = Column(Boolean, default=True)
     autoload_llm = Column(Boolean, default=False)
@@ -91,6 +92,16 @@ class ApplicationSettings(BaseModel):
     http_server_port = Column(Integer, default=5005)
     lna_enabled = Column(Boolean, default=False)
     knowledge_migrated = Column(Boolean, default=False)
+    privacy_service_consent = Column(String, default="{}")
+    dark_mode_enabled_db = Column(Boolean, default=True)
+    export_metadata_enabled = Column(Boolean, default=True)
+    theme_name = Column(String, default="dark")
+
+    # --- image storage & export columns ---
+    store_images_in_db = Column(Boolean, default=True)
+    store_images_locally = Column(Boolean, default=True)
+    image_export_folder = Column(String, default="")
+    metadata_export_flags = Column(String, default="{}")
 
     # ------------------------------------------------------------------
     # QSettings-backed properties (replaces dropped DB columns)
