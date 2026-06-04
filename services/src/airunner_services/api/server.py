@@ -21,8 +21,8 @@ from airunner_services.utils.application import get_logger
 from airunner_services.api.routes import (
     art,
     art_options_router,
+    canvas_document_router,
     conversations,
-    canvas_image,
     daemon,
     domain_resources,
     downloads,
@@ -33,7 +33,6 @@ from airunner_services.api.routes import (
     knowledge_base,
     knowledge_base_index_router,
     knowledge_base_watch_router,
-    layers_router,
     llm,
     lora_watch_router,
     models_status_router,
@@ -354,12 +353,7 @@ def create_app(
         tags=["knowledge-base"],
     )
     app.include_router(
-        layers_router,
-        prefix="/api/v1/canvas",
-        tags=["canvas"],
-    )
-    app.include_router(
-        canvas_image.router,
+        canvas_document_router,
         prefix="/api/v1/canvas",
         tags=["canvas"],
     )

@@ -12,14 +12,13 @@ import ArtPromptPanel from "../panels/ArtPromptPanel";
 import CanvasPanel from "../panels/CanvasPanel";
 import LoraPanel from "../panels/LoraPanel";
 import EmbeddingsPanel from "../panels/EmbeddingsPanel";
-import LayersPanel from "../panels/LayersPanel";
-import GridPanel from "../panels/GridPanel";
 import ImageBrowserPanel from "../panels/ImageBrowserPanel";
 import StatsPanel from "../panels/StatsPanel";
 import CivitaiBrowserPanel from "../panels/civitai-browser/CivitaiBrowserPanel";
 import DownloadTray from "../downloads/DownloadTray";
 import TopBar from "./TopBar";
 import { LeftIconBar, RightIconBar } from "./IconBar";
+import { CanvasProvider } from "../../features/canvas";
 
 const HANDLE_W = 4;
 const LEFT_MIN = 180;
@@ -34,8 +33,6 @@ type PanelId =
   | "art_model"
   | "lora"
   | "embeddings"
-  | "layers"
-  | "grid"
   | "image_browser"
   | "stats"
   | "civitai_browser";
@@ -387,12 +384,12 @@ export default function Layout({
             style={{ width: canvasW, flex: "none" }}
           >
             {showCanvas && (
-              <>
+              <CanvasProvider>
                 <CanvasPanel />
                 <div className="art-prompt-panel">
                   <ArtPromptPanel />
                 </div>
-              </>
+              </CanvasProvider>
             )}
           </div>
 
@@ -409,8 +406,6 @@ export default function Layout({
             {rightPanel === "art_model" && <ArtModelPanel />}
             {rightPanel === "lora" && <LoraPanel />}
             {rightPanel === "embeddings" && <EmbeddingsPanel />}
-            {rightPanel === "layers" && <LayersPanel />}
-            {rightPanel === "grid" && <GridPanel />}
             {rightPanel === "image_browser" && <ImageBrowserPanel />}
             {rightPanel === "stats" && <StatsPanel />}
           </div>

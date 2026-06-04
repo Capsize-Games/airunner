@@ -7,8 +7,6 @@ type PanelId =
   | "art_model"
   | "lora"
   | "embeddings"
-  | "layers"
-  | "grid"
   | "image_browser"
   | "stats"
   | "civitai_browser";
@@ -138,20 +136,6 @@ export function RightIconBar({
         title="Embeddings"
       >
         <LucideIcon name="scan-text" />
-      </button>
-      <button
-        className={active("layers", rightPanel)}
-        onClick={() => onRightPanel("layers")}
-        title="Layers"
-      >
-        <LucideIcon name="layers" />
-      </button>
-      <button
-        className={active("grid", rightPanel)}
-        onClick={() => onRightPanel("grid")}
-        title="Grid"
-      >
-        <LucideIcon name="grid-2x2-check" />
       </button>
       <button
         className={active("image_browser", rightPanel)}

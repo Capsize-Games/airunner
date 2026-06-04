@@ -159,6 +159,8 @@ class AIRunnerDaemon:
         """Start the daemon."""
         logger.info("Starting AI Runner daemon...")
 
+        self._run_database_migrations()
+
         if not self._acquire_lock():
             logger.error(
                 "Daemon is already running on port %s. "
@@ -326,6 +328,14 @@ class AIRunnerDaemon:
 
         finally:
             sys.exit(0)
+
+    def _run_database_migrations(self) -> None:
+        """Run Alembic migrations before any service starts."""
+        from airunner_services.database.setup_database import (  # noqa: PLC0415
+            setup_database,
+        )
+
+        setup_database()
 
     def _shutdown_runtime_clients(self) -> None:
         """Close runtime clients owned by the daemon-backed app instance."""
