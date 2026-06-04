@@ -5,34 +5,17 @@ import {
 } from "../../api/client";
 import type { ArtOptionsResponse } from "../../api/client";
 import { BASE_URL } from "../../types/api";
-import Form from "react-bootstrap/Form";
-import ProgressBar from "react-bootstrap/ProgressBar";
-import SliderWithSpinbox from "./SliderWithSpinbox";
 import VersionSelector from "./art-model/VersionSelector";
 import ModelSelector from "./art-model/ModelSelector";
 import SchedulerSelector from "./art-model/SchedulerSelector";
 import PrecisionSelector from "./art-model/PrecisionSelector";
 import SeedControls from "./art-model/SeedControls";
-
-const LS_KEY = "airunner_art_settings";
-
-function saveToStorage(key: string, val: number) {
-  try {
-    const data = JSON.parse(localStorage.getItem(LS_KEY) || "{}");
-    data[key] = val;
-    localStorage.setItem(LS_KEY, JSON.stringify(data));
-  } catch { /* */ }
-}
-
-function loadFromStorage(key: string, fallback: number): number {
-  try {
-    const data = JSON.parse(localStorage.getItem(LS_KEY) || "{}");
-    const v = data[key];
-    return v !== undefined ? Number(v) : fallback;
-  } catch {
-    return fallback;
-  }
-}
+import VRAMEstimate from "./art-model/VRAMEstimate";
+import ArtModelSliders from "./art-model/ArtModelSliders";
+import {
+  saveToStorage,
+  loadFromStorage,
+} from "./art-model/ArtModelStorage";
 
 export default function ArtModelPanel() {
   const [version, setVersion] = useState("");
@@ -247,76 +230,47 @@ export default function ArtModelPanel() {
         }}
       />
 
-      {vramEstimate !== null && (
-        <div className="mt-2 mb-2">
-          <small style={{ color: "var(--theme-text-secondary)" }}>
-            Estimated VRAM: {vramEstimate.toFixed(1)} GB
-          </small>
-          <ProgressBar
-            now={Math.min((vramEstimate / 24) * 100, 100)}
-            variant={vramEstimate > 20 ? "danger" : "success"}
-            className="mt-1"
-            style={{ height: 6 }}
-          />
-        </div>
-      )}
+      <VRAMEstimate vramGb={vramEstimate} />
 
       <hr className="border-secondary" />
 
-      <SliderWithSpinbox
-        label="Samples"
-        value={nSamples}
-        min={1}
-        max={1000}
-        step={1}
-        defaultValue={1}
-        onChange={(v) => { setNSamples(v); saveToStorage("n_samples", v); persist({ n_samples: v }); }}
-      />
-      <SliderWithSpinbox
-        label="Batch"
-        value={imagesPerBatch}
-        min={1}
-        max={6}
-        step={1}
-        defaultValue={1}
-        onChange={(v) => { setImagesPerBatch(v); saveToStorage("images_per_batch", v); persist({ images_per_batch: v }); }}
-      />
-      <SliderWithSpinbox
-        label="Steps"
-        value={steps}
-        min={1}
-        max={150}
-        step={1}
-        defaultValue={20}
-        onChange={(v) => { setSteps(v); saveToStorage("steps", v); persist({ steps: v }); }}
-      />
-      <SliderWithSpinbox
-        label="CFG"
-        value={cfgScale}
-        min={1}
-        max={30}
-        step={0.5}
-        displayAsFloat
-        defaultValue={7.5}
-        onChange={(v) => { setCfgScale(v); saveToStorage("cfg_scale", v); persist({ cfg_scale: v }); }}
-      />
-      <SliderWithSpinbox
-        label="Width"
-        value={width}
-        min={64}
-        max={4096}
-        step={64}
-        defaultValue={1024}
-        onChange={(v) => { setWidth(v); saveToStorage("width", v); persist({ width: v }); }}
-      />
-      <SliderWithSpinbox
-        label="Height"
-        value={height}
-        min={64}
-        max={4096}
-        step={64}
-        defaultValue={1024}
-        onChange={(v) => { setHeight(v); saveToStorage("height", v); persist({ height: v }); }}
+      <ArtModelSliders
+        nSamples={nSamples}
+        imagesPerBatch={imagesPerBatch}
+        steps={steps}
+        cfgScale={cfgScale}
+        width={width}
+        height={height}
+        onNSamplesChange={(v) => {
+          setNSamples(v);
+          saveToStorage("n_samples", v);
+          persist({ n_samples: v });
+        }}
+        onImagesPerBatchChange={(v) => {
+          setImagesPerBatch(v);
+          saveToStorage("images_per_batch", v);
+          persist({ images_per_batch: v });
+        }}
+        onStepsChange={(v) => {
+          setSteps(v);
+          saveToStorage("steps", v);
+          persist({ steps: v });
+        }}
+        onCfgScaleChange={(v) => {
+          setCfgScale(v);
+          saveToStorage("cfg_scale", v);
+          persist({ cfg_scale: v });
+        }}
+        onWidthChange={(v) => {
+          setWidth(v);
+          saveToStorage("width", v);
+          persist({ width: v });
+        }}
+        onHeightChange={(v) => {
+          setHeight(v);
+          saveToStorage("height", v);
+          persist({ height: v });
+        }}
       />
 
       <SeedControls
