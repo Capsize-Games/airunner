@@ -28,9 +28,6 @@ AIRunner supports three installer paths, and `native/` is involved in all
 of them:
 
 ```bash
-# single-package end-user install
-./install.sh --bundle-archive dist/airunner-<version>-linux-desktop-bundle.tar.gz
-
 # repo-local developer install
 ./scripts/install.sh
 

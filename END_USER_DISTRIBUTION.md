@@ -83,11 +83,8 @@ The no-Python end-user distribution delivery now includes:
 - a local Linux bundle wrapper in `scripts/build_airunner_bundle.sh`
 - AppImage packaging in `scripts/package_linux_appimage.sh`
 - Windows NSIS packaging in `scripts/package_windows_nsis.ps1`
-- Linux tarball installation support in `install.sh --bundle-archive`
 - launcher and bundle smoke coverage in
 	`native/src/airunner_native/distribution/tests/test_launcher_smoke.py`
-- Linux and Windows installer validation in
-	`.github/workflows/pypi-dispatch.yml`
 
 The bundle layout currently stages:
 - `python/` for the embedded runtime

@@ -82,16 +82,13 @@ If you need fine-grained control, the install script supports three modes:
 
 ```bash
 # Developer mode — installs from source (default for contributors)
-./install.sh --mode dev
+./scripts/install.sh
 
 # Distributed mode — for server/multi-machine deployments
-./install.sh --mode distributed
+./deployment/install_distributed.sh
 
 # Single-package mode — installs a prebuilt self-contained bundle
-./install.sh --mode single-package --bundle-archive /path/to/bundle.tar.gz
-
-# Uninstall a single-package install
-./install.sh --uninstall
+# (not currently supported — use the developer or distributed installer)
 ```
 
 ### Python dependencies
