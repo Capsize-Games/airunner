@@ -196,10 +196,12 @@ html, body, #root {
   margin: 2px 0;
   display: flex; align-items: center; justify-content: center;
 }
+.icon-bar button { color: var(--theme-text); }
 .icon-bar button:hover { background: rgba(var(--theme-primary-rgb), 0.15); }
 .icon-bar button.active { background: var(--bs-primary); }
-.icon-bar button svg { width: 20px; height: 20px; }
+.icon-bar button svg { width: 20px; height: 20px; color: var(--theme-text); }
 .icon-bar button.active svg { color: #fff; }
+.icon-bar button:hover svg { color: var(--theme-text); }
 .icon-bar .flex-spacer { flex: 1; }
 .icon-bar hr {
   width: 24px; border: none;
