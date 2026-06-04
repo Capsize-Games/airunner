@@ -42,8 +42,8 @@ function applyKonvaFilters(group: Konva.Group, filters: CanvasLayerType["filters
   else group.clearCache();
 }
 
-const GRID_SNAP = 8;
-const snap = (v: number, on: boolean) => on ? Math.round(v / GRID_SNAP) * GRID_SNAP : v;
+const VIS_SNAP = 16;
+const snapVal = (v: number, on: boolean) => on ? Math.round(v / VIS_SNAP) * VIS_SNAP : v;
 
 function LayerImage({
   node,
@@ -85,7 +85,7 @@ function LayerImage({
       image={imgElementRef.current ?? undefined}
       draggable={isMovable}
       onDragEnd={(e) => {
-        onMove(snap(e.target.x(), snapToGrid), snap(e.target.y(), snapToGrid));
+        onMove(snapVal(e.target.x(), snapToGrid), snapVal(e.target.y(), snapToGrid));
       }}
     />
   );
@@ -119,7 +119,11 @@ export default function CanvasLayerRenderer({
         y={layer.offsetY}
         draggable={isLayerMovable}
         onDragEnd={(e) => {
-          onMoveLayer(layer.id, e.target.x(), e.target.y());
+          const x = snapVal(e.target.x(), snapToGrid);
+          const y = snapVal(e.target.y(), snapToGrid);
+          e.target.x(x);
+          e.target.y(y);
+          onMoveLayer(layer.id, x, y);
         }}
       >
         {layer.images.map((img) => (

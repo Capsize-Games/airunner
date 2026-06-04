@@ -12,7 +12,8 @@ interface ActiveGridAreaProps {
   snapToGrid?: boolean;
 }
 
-const SNAP = 8;
+const MIN_SNAP = 8;   // generation constraint — always applied
+const VIS_SNAP = 16;  // visual grid — applied when snapToGrid is on
 
 export default function ActiveGridArea({
   area,
@@ -32,15 +33,20 @@ export default function ActiveGridArea({
     }
   }, []);
 
-  const snap = (val: number) => snapToGrid ? snapTo8(val) : snapTo8(val);
+  // Snap to 16px visual grid when enabled, otherwise fine 8px constraint
+  const snap = (val: number) =>
+    snapToGrid
+      ? Math.round(val / VIS_SNAP) * VIS_SNAP
+      : snapTo8(val);
 
   const handleDragEnd = (e: Konva.KonvaEventObject<DragEvent>) => {
     const node = e.target;
-    onChange({
-      ...area,
-      x: clamp(snap(node.x()), 0, documentWidth - area.width),
-      y: clamp(snap(node.y()), 0, documentHeight - area.height),
-    });
+    const sx = clamp(snap(node.x()), 0, documentWidth  - area.width);
+    const sy = clamp(snap(node.y()), 0, documentHeight - area.height);
+    // Move the Konva node to the snapped position immediately so it doesn't jump on re-render
+    node.x(sx);
+    node.y(sy);
+    onChange({ ...area, x: sx, y: sy });
   };
 
   const handleTransformEnd = () => {
@@ -50,12 +56,12 @@ export default function ActiveGridArea({
     const scaleY = node.scaleY();
     node.scaleX(1);
     node.scaleY(1);
-    onChange({
-      x: snap(node.x()),
-      y: snap(node.y()),
-      width: Math.max(SNAP, snap(node.width() * scaleX)),
-      height: Math.max(SNAP, snap(node.height() * scaleY)),
-    });
+    const nx = snap(node.x());
+    const ny = snap(node.y());
+    const nw = Math.max(MIN_SNAP, snap(node.width()  * scaleX));
+    const nh = Math.max(MIN_SNAP, snap(node.height() * scaleY));
+    node.x(nx); node.y(ny); node.width(nw); node.height(nh);
+    onChange({ x: nx, y: ny, width: nw, height: nh });
   };
 
   const label = `${area.width}×${area.height}  (${area.x}, ${area.y})`;
@@ -90,8 +96,8 @@ export default function ActiveGridArea({
           ...newBox,
           x: clamp(newBox.x, 0, documentWidth - newBox.width),
           y: clamp(newBox.y, 0, documentHeight - newBox.height),
-          width: clamp(newBox.width, SNAP, documentWidth - newBox.x),
-          height: clamp(newBox.height, SNAP, documentHeight - newBox.y),
+          width: clamp(newBox.width, MIN_SNAP, documentWidth - newBox.x),
+          height: clamp(newBox.height, MIN_SNAP, documentHeight - newBox.y),
         })}
       />
       <Text
