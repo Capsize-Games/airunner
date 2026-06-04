@@ -1,0 +1,6 @@
+name: "Custom CodeQL Config"
+
+# Tell CodeQL which paths to ignore during database extraction
+paths-ignore:
+  - '**/alembic/versions/*.py'      # Ignores all python files inside Alembic's versions/ folders
+  - '**/alembic/env.py'     # Optional: Ignores the main Alembic env file if needed
