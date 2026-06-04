@@ -1,28 +1,13 @@
 import { useRef } from "react";
 import Dropdown from "react-bootstrap/Dropdown";
 import {
-  SquareDashed,
-  Brush,
-  Eraser,
-  Drama,
-  Move,
-  Grid3x3,
-  Magnet,
-  ZoomIn,
-  ZoomOut,
-  Crosshair,
-  Settings,
-  GripHorizontal,
-  Lock,
-  Unlock,
-  Undo2,
-  Redo2,
-  FilePlus,
-  Trash2,
-  Layers,
+  ZoomIn, ZoomOut, Crosshair, Settings, GripHorizontal,
+  Undo2, Redo2, FilePlus, Trash2, Layers,
 } from "lucide-react";
 import type { ActiveTool, ActiveGridArea } from "./useCanvasState";
 import SliderWithSpinbox from "../../components/panels/SliderWithSpinbox";
+import { TOOLS, IconBtn, Divider } from "./ToolBarTools";
+import ToolBarGrid from "./ToolBarGrid";
 
 export type ToolbarDock = "top" | "bottom";
 
@@ -58,84 +43,9 @@ interface ToolBarProps {
   onToggleLayers: () => void;
 }
 
-const TOOLS: { id: ActiveTool; label: string; key: string; Icon: React.ComponentType<{ size?: number; strokeWidth?: number }> }[] = [
-  { id: "select", label: "Select", key: "S", Icon: SquareDashed },
-  { id: "brush",  label: "Brush",  key: "B", Icon: Brush },
-  { id: "eraser", label: "Eraser", key: "E", Icon: Eraser },
-  { id: "mask",   label: "Mask",   key: "M", Icon: Drama },
-  { id: "move",   label: "Move",   key: "V", Icon: Move },
-];
-
 const DOCK_LABELS: Record<ToolbarDock, string> = {
   top: "Dock Top", bottom: "Dock Bottom",
 };
-
-function IconBtn({
-  title,
-  active,
-  danger,
-  disabled,
-  onClick,
-  children,
-}: {
-  title: string;
-  active?: boolean;
-  danger?: boolean;
-  disabled?: boolean;
-  onClick?: () => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <button
-      title={title}
-      disabled={disabled}
-      onClick={onClick}
-      style={{
-        width: 30,
-        height: 30,
-        padding: 0,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        border: "none",
-        borderRadius: 5,
-        flexShrink: 0,
-        cursor: disabled ? "default" : "pointer",
-        background: active ? "rgba(99,153,255,0.22)" : "transparent",
-        color: disabled ? "rgba(255,255,255,0.2)" :
-               danger ? "rgba(255,100,100,0.8)" :
-               active ? "#6fa8ff" : "rgba(255,255,255,0.55)",
-        boxShadow: active ? "inset 0 0 0 1.5px rgba(99,153,255,0.55)" : "none",
-        transition: "background 0.1s, color 0.1s",
-      }}
-      onMouseEnter={(e) => {
-        if (!active && !disabled) {
-          (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.07)";
-          (e.currentTarget as HTMLButtonElement).style.color = "rgba(255,255,255,0.9)";
-        }
-      }}
-      onMouseLeave={(e) => {
-        if (!active && !disabled) {
-          (e.currentTarget as HTMLButtonElement).style.background = "transparent";
-          (e.currentTarget as HTMLButtonElement).style.color = disabled ? "rgba(255,255,255,0.2)" : "rgba(255,255,255,0.55)";
-        }
-      }}
-    >
-      {children}
-    </button>
-  );
-}
-
-function Divider() {
-  return (
-    <div style={{
-      width: 1, height: 20,
-      background: "rgba(255,255,255,0.1)",
-      flexShrink: 0,
-      margin: "0 2px",
-    }} />
-  );
-}
 
 export default function ToolBar({
   activeTool,
@@ -169,7 +79,10 @@ export default function ToolBar({
   onToggleLayers,
 }: ToolBarProps) {
   const colorInputRef = useRef<HTMLInputElement>(null);
-  const hasBrushOptions = activeTool === "brush" || activeTool === "eraser" || activeTool === "mask";
+  const hasBrushOptions =
+    activeTool === "brush" ||
+    activeTool === "eraser" ||
+    activeTool === "mask";
   const zoomPct = `${Math.round(zoom * 100)}%`;
 
   const containerStyle: React.CSSProperties = {
@@ -179,8 +92,12 @@ export default function ToolBar({
     gap: 3,
     padding: "4px 8px",
     background: "#161620",
-    borderBottom: dock === "top" ? "1px solid rgba(255,255,255,0.07)" : undefined,
-    borderTop:  dock === "bottom" ? "1px solid rgba(255,255,255,0.07)" : undefined,
+    borderBottom: dock === "top"
+      ? "1px solid rgba(255,255,255,0.07)"
+      : undefined,
+    borderTop: dock === "bottom"
+      ? "1px solid rgba(255,255,255,0.07)"
+      : undefined,
     flexWrap: "wrap",
     flexShrink: 0,
     userSelect: "none",
@@ -220,30 +137,46 @@ export default function ToolBar({
       <Divider />
 
       {/* Color swatch — always visible regardless of active tool */}
-      <label title="Brush color" style={{ cursor: "pointer", flexShrink: 0 }}>
-              <div
-                style={{
-                  width: 22,
-                  height: 22,
-                  borderRadius: 4,
-                  background: brushColor,
-                  border: "2px solid rgba(255,255,255,0.2)",
-                  cursor: "pointer",
-                }}
-              />
-              <input
-                ref={colorInputRef}
-                type="color"
-                value={brushColor}
-                onChange={(e) => onSetBrushColor(e.target.value)}
-                style={{ position: "absolute", opacity: 0, width: 1, height: 1, pointerEvents: "none" }}
-                tabIndex={-1}
-              />
-          </label>
+      <label
+        title="Brush color"
+        style={{ cursor: "pointer", flexShrink: 0 }}
+      >
+        <div
+          style={{
+            width: 22,
+            height: 22,
+            borderRadius: 4,
+            background: brushColor,
+            border: "2px solid rgba(255,255,255,0.2)",
+            cursor: "pointer",
+          }}
+        />
+        <input
+          ref={colorInputRef}
+          type="color"
+          value={brushColor}
+          onChange={(e) => onSetBrushColor(e.target.value)}
+          style={{
+            position: "absolute", opacity: 0,
+            width: 1, height: 1, pointerEvents: "none",
+          }}
+          tabIndex={-1}
+        />
+      </label>
 
       {/* Brush size — always visible */}
-      <div style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
-        <span style={{ fontSize: 10, color: "rgba(255,255,255,0.4)", whiteSpace: "nowrap" }}>Size</span>
+      <div
+        style={{
+          display: "flex", alignItems: "center",
+          gap: 4, flexShrink: 0,
+        }}
+      >
+        <span style={{
+          fontSize: 10, color: "rgba(255,255,255,0.4)",
+          whiteSpace: "nowrap",
+        }}>
+          Size
+        </span>
         <input
           type="range"
           min={1}
@@ -259,7 +192,11 @@ export default function ToolBar({
           min={1}
           max={200}
           value={brushSize}
-          onChange={(e) => onSetBrushSize(Math.max(1, Math.min(200, Number(e.target.value))))}
+          onChange={(e) =>
+            onSetBrushSize(
+              Math.max(1, Math.min(200, Number(e.target.value))),
+            )
+          }
           style={{
             width: 44,
             background: "rgba(0,0,0,0.4)",
@@ -308,72 +245,36 @@ export default function ToolBar({
       <Divider />
 
       {/* ── Active Grid Area ──────────────────────────────────── */}
-      <div
-        style={{
-          display: "flex",
-          flexDirection: "row",
-          alignItems: "center",
-          gap: 3,
-          flexShrink: 0,
-        }}
-      >
-        <IconBtn title="Toggle grid" active={showGrid} onClick={onToggleGrid}>
-          <Grid3x3 size={15} strokeWidth={1.75} />
-        </IconBtn>
-        <IconBtn title="Snap to grid" active={snapToGrid} onClick={onToggleSnap}>
-          <Magnet size={15} strokeWidth={1.75} />
-        </IconBtn>
-        <span style={{ fontSize: 10, color: "rgba(255,255,255,0.35)", whiteSpace: "nowrap" }}>Grid</span>
-        <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
-          <span style={{ fontSize: 10, color: "rgba(255,255,255,0.4)" }}>W</span>
-          <input
-            type="number"
-            min={8}
-            step={8}
-            value={activeGridArea.width}
-            onChange={(e) => {
-              const w = Math.max(8, Math.round(Number(e.target.value) / 8) * 8);
-              const h = gridLocked ? w : activeGridArea.height;
-              onSetGridArea({ ...activeGridArea, width: w, height: h });
-            }}
-            style={gridInputStyle}
-            title="Grid area width"
-          />
-          <span style={{ fontSize: 10, color: "rgba(255,255,255,0.4)" }}>H</span>
-          <input
-            type="number"
-            min={8}
-            step={8}
-            value={activeGridArea.height}
-            onChange={(e) => {
-              const h = Math.max(8, Math.round(Number(e.target.value) / 8) * 8);
-              const w = gridLocked ? h : activeGridArea.width;
-              onSetGridArea({ ...activeGridArea, width: w, height: h });
-            }}
-            style={gridInputStyle}
-            title="Grid area height"
-          />
-          <IconBtn title={gridLocked ? "Unlock aspect ratio" : "Lock aspect ratio"} active={gridLocked} onClick={onToggleGridLock}>
-            {gridLocked ? <Lock size={13} strokeWidth={1.75} /> : <Unlock size={13} strokeWidth={1.75} />}
+      <ToolBarGrid
+        showGrid={showGrid}
+        snapToGrid={snapToGrid}
+        activeGridArea={activeGridArea}
+        gridLocked={gridLocked}
+        onToggleGrid={onToggleGrid}
+        onToggleSnap={onToggleSnap}
+        onSetGridArea={onSetGridArea}
+        onToggleGridLock={onToggleGridLock}
+      />
+
+      {/* ── Mask controls ─────────────────────────────────────── */}
+      {(activeTool === "mask" || hasMaskStrokes) && (
+        <>
+          <Divider />
+          <IconBtn title="Clear mask" danger onClick={onClearMask}>
+            <Trash2 size={14} strokeWidth={1.75} />
           </IconBtn>
-        </div>
-      </div>
-  
-        {/* ── Mask controls ─────────────────────────────────────── */}
-        {(activeTool === "mask" || hasMaskStrokes) && (
-          <>
-            <Divider />
-            <IconBtn title="Clear mask" danger onClick={onClearMask}>
-              <Trash2 size={14} strokeWidth={1.75} />
-            </IconBtn>
-          </>
-        )}
-  
-        {/* ── Spacer — push right-side items to the end ──────── */}
+        </>
+      )}
+
+      {/* ── Spacer — push right-side items to the end ──────── */}
       <div style={{ flex: 1, minWidth: 0 }} />
 
       {/* ── Settings & Dock ───────────────────────────────────── */}
-      <IconBtn title={showLayers ? "Hide layers" : "Show layers"} active={showLayers} onClick={onToggleLayers}>
+      <IconBtn
+        title={showLayers ? "Hide layers" : "Show layers"}
+        active={showLayers}
+        onClick={onToggleLayers}
+      >
         <Layers size={15} strokeWidth={1.75} />
       </IconBtn>
       <IconBtn title="Canvas settings" onClick={onOpenSettings}>
@@ -400,13 +301,21 @@ export default function ToolBar({
         >
           <GripHorizontal size={15} strokeWidth={1.75} />
         </Dropdown.Toggle>
-        <Dropdown.Menu style={{ background: "#1e1e2e", border: "1px solid rgba(255,255,255,0.1)", minWidth: 130, zIndex: 9999 }}>
+        <Dropdown.Menu
+          style={{
+            background: "#1e1e2e",
+            border: "1px solid rgba(255,255,255,0.1)",
+            minWidth: 130, zIndex: 9999,
+          }}
+        >
           {(["top", "bottom"] as ToolbarDock[]).map((d) => (
             <Dropdown.Item
               key={d}
               onClick={() => onSetDock(d)}
               active={dock === d}
-              style={{ fontSize: 12, color: "rgba(255,255,255,0.7)" }}
+              style={{
+                fontSize: 12, color: "rgba(255,255,255,0.7)",
+              }}
             >
               {DOCK_LABELS[d]}
             </Dropdown.Item>
@@ -416,14 +325,3 @@ export default function ToolBar({
     </div>
   );
 }
-
-const gridInputStyle: React.CSSProperties = {
-  width: 52,
-  background: "rgba(0,0,0,0.4)",
-  border: "1px solid rgba(255,255,255,0.12)",
-  borderRadius: 4,
-  color: "rgba(255,255,255,0.8)",
-  fontSize: 11,
-  textAlign: "center",
-  padding: "2px 0",
-};
