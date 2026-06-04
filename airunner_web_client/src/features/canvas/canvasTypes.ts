@@ -1,0 +1,79 @@
+// ── Canvas Types ─────────────────────────────────────────────────────────────
+
+export interface FilterConfig {
+  type: "blur" | "pixelate" | "noise" | "brighten" | "contrast" | "grayscale";
+  params: Record<string, number>;
+}
+
+export interface ImageNode {
+  id: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  src: string; // base64 data URL
+}
+
+export interface StrokeNode {
+  id: string;
+  points: number[];
+  color: string;
+  strokeWidth: number;
+  tool: "brush" | "eraser";
+}
+
+export interface CanvasLayer {
+  id: string;
+  name: string;
+  visible: boolean;
+  opacity: number; // 0–1
+  filters: FilterConfig[];
+  images: ImageNode[];
+  strokes: StrokeNode[];
+  offsetX: number;
+  offsetY: number;
+  parentGroupId: string | null;
+  fillColor?: string; // hex or 'transparent', rendered as background
+}
+
+export interface LayerGroup {
+  id: string;
+  name: string;
+  expanded: boolean;
+  visible: boolean;
+  opacity: number; // 0–1
+}
+
+export interface ActiveGridArea {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+export type ActiveTool = "select" | "brush" | "eraser" | "mask" | "move";
+
+export interface CanvasState {
+  /** Monotonic timestamp (Date.now()) used to resolve localStorage vs server
+   *  conflicts on reload.  The source with the higher _ts wins. */
+  _ts: number;
+  documentWidth: number;
+  documentHeight: number;
+  documentBgColor: string; // hex or 'transparent'
+  layers: CanvasLayer[];
+  layerGroups: LayerGroup[];
+  /** Interleaved order of group IDs and ungrouped layer IDs for display.
+   *  Bottom-first (index 0 = bottom of stack).
+   *  When a group is expanded, its children follow the group header. */
+  displayOrder: string[];
+  activeLayerId: string | null;
+  selectedLayerIds: string[];
+  activeGridArea: ActiveGridArea;
+  activeTool: ActiveTool;
+  brushSize: number;
+  brushColor: string;
+  maskStrokes: StrokeNode[];
+  snapToGrid: boolean;
+  history: string[];
+  historyIndex: number;
+}

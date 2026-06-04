@@ -5,41 +5,9 @@ import {
 } from "lucide-react";
 import { useCanvasContext } from "./CanvasContext";
 import type { CanvasLayer, LayerGroup } from "./useCanvasState";
-import Form from "react-bootstrap/Form";
 import NewLayerModal from "./NewLayerModal";
-
-function IconBtn({
-  title,
-  disabled,
-  danger,
-  onClick,
-  children,
-}: {
-  title: string;
-  disabled?: boolean;
-  danger?: boolean;
-  onClick?: () => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <button
-      title={title}
-      disabled={disabled}
-      onClick={onClick}
-      style={{
-        width: 22, height: 22, padding: 0, flexShrink: 0,
-        display: "flex", alignItems: "center", justifyContent: "center",
-        border: "none", borderRadius: 4, background: "transparent",
-        color: disabled ? "rgba(255,255,255,0.15)"
-          : danger ? "rgba(255,100,100,0.65)"
-          : "rgba(255,255,255,0.5)",
-        cursor: disabled ? "default" : "pointer",
-      }}
-    >
-      {children}
-    </button>
-  );
-}
+import IconBtn from "./IconBtn";
+import OpacitySlider from "./OpacitySlider";
 
 export default function CanvasLayersSidebar() {
   const canvas = useCanvasContext();
@@ -475,33 +443,10 @@ export default function CanvasLayersSidebar() {
       </div>
 
       {/* Anchored opacity slider */}
-      <div
-        style={{
-          padding: "4px 8px 6px",
-          borderBottom: "1px solid rgba(255,255,255,0.07)",
-          flexShrink: 0,
-        }}
-      >
-        <div style={{
-          display: "flex", alignItems: "center", gap: 6,
-        }}>
-          <span style={{
-            fontSize: 10, fontFamily: "monospace",
-            color: "rgba(255,255,255,0.35)", flexShrink: 0, width: 28,
-            textAlign: "right",
-          }}>
-            {Math.round(activeOpacity * 100)}%
-          </span>
-          <Form.Range
-            min={0} max={1} step={0.01}
-            value={activeOpacity}
-            onChange={(e) =>
-              handleOpacityChange(Number(e.target.value))
-            }
-            style={{ marginBottom: 0, flexGrow: 1 }}
-          />
-        </div>
-      </div>
+      <OpacitySlider
+        value={activeOpacity}
+        onChange={handleOpacityChange}
+      />
 
       {/* Layer list */}
       <div style={{ flexGrow: 1, overflowY: "auto", minHeight: 0 }}>
