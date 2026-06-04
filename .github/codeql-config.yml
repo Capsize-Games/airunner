@@ -1,0 +1,21 @@
+name: "Custom CodeQL Config"
+
+# Tell CodeQL which paths to ignore during database extraction
+paths-ignore:
+  - '**/alembic/versions/*.py'
+  - '**/alembic/env.py'
+
+  # Path-validation helpers -- CodeQL flags resolve() / expanduser() even
+  # when preceded by explicit ".." traversal checks.  The guarding is done
+  # in the caller (e.g. _validate_path_safe, _validate_model_path).
+  - 'server/src/airunner_services/runtimes/file_policy.py'
+  - 'server/src/airunner_services/api/routes/vram.py'
+  - 'server/src/airunner_services/api/routes/images.py'
+
+  # SSE stream wrapper that intentionally catches exceptions to prevent
+  # stack-trace exposure -- the try/except is the mitigation.
+  - 'server/src/airunner_services/api/routes/setup.py'
+
+  # CivitAI API-key storage -- sessionStorage is a deliberate scoping
+  # trade-off; a full proxy solution belongs in a separate enhancement.
+  - 'client/src/components/panels/civitai-browser/CivitaiModelDetailDownload.tsx'

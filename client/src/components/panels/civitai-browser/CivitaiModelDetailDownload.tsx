@@ -133,7 +133,9 @@ export function ApiKeyPrompt({
   const handleSubmit = () => {
     const trimmed = apiKey.trim();
     if (!trimmed) return;
-    localStorage.setItem("airunner_civitai_api_key", trimmed);
+    // Stored in sessionStorage (cleared on tab close) rather than
+    // localStorage to limit exposure of the API key.
+    sessionStorage.setItem("airunner_civitai_api_key", trimmed);
     onSubmit(trimmed);
   };
 

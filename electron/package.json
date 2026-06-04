@@ -68,5 +68,8 @@
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true
     }
+  },
+  "overrides": {
+    "tar": ">=7.5.11"
   }
 }

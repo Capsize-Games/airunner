@@ -32,7 +32,15 @@ def normalize_local_path(path: str, *, label: str = "Path") -> str:
     value = _coerce_path_text(path, label)
     if _URI_SCHEME_RE.match(value):
         raise PathPolicyError(f"{label} must be a local filesystem path")
-    resolved = Path(os.path.expandvars(value)).expanduser().resolve()
+    expanded = os.path.expandvars(value)
+    expanded = os.path.expanduser(expanded)
+    path_obj = Path(expanded)
+    # Reject path traversal components after variable expansion
+    if ".." in path_obj.parts:
+        raise PathPolicyError(
+            f"{label} must not contain path traversal elements"
+        )
+    resolved = path_obj.resolve()
     return str(resolved)
 
 

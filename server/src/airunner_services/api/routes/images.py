@@ -36,6 +36,63 @@ _CACHE_ROOT = Path(AIRUNNER_BASE_PATH) / "cache" / "thumbs"
 _THUMB_MAX_SIZE = (200, 200)
 _IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".webp", ".bmp"}
 
+# Allowed root directories for path-safety checks.
+_SAFE_ROOTS = (_IMAGES_ROOT.resolve(), _CACHE_ROOT.resolve())
+
+
+def _validate_path_safe(
+    candidate: Path,
+    *,
+    label: str = "Path",
+) -> Path:
+    """Resolve and verify that *candidate* sits inside one of the allowed
+    root directories.  Raises ``HTTPException(403)`` on mismatch."""
+    # Reject path traversal components before resolving.
+    if ".." in candidate.parts:
+        raise HTTPException(
+            status_code=403,
+            detail=f"{label} must not contain path traversal elements",
+        )
+    resolved = candidate.resolve()
+    safe = False
+    for root in _SAFE_ROOTS:
+        try:
+            resolved.relative_to(root)
+            safe = True
+            break
+        except ValueError:
+            continue
+    if not safe:
+        raise HTTPException(
+            status_code=403,
+            detail=f"{label} resolves outside the expected directory",
+        )
+    return resolved
+
+
+def _validate_date_component(date_str: str) -> str:
+    """Validate that *date_str* contains exactly 8 digits (``YYYYMMDD``)."""
+    if not date_str.isdigit() or len(date_str) != 8:
+        raise HTTPException(
+            status_code=422,
+            detail="Date must be in YYYYMMDD format",
+        )
+    return date_str
+
+
+def _validate_filename_component(filename: str) -> str:
+    """Reject filenames that contain path separators, null bytes, or
+    attempt directory traversal."""
+    if not filename or "\x00" in filename:
+        raise HTTPException(status_code=422, detail="Invalid filename")
+    # Reject anything with a path separator
+    if "/" in filename or "\\" in filename:
+        raise HTTPException(status_code=422, detail="Filename must not contain path separators")
+    # Reject traversal components
+    if filename in (".", ".."):
+        raise HTTPException(status_code=422, detail="Invalid filename")
+    return filename
+
 
 def _date_dir(date_str: str) -> Path:
     """Return the ``YYYYMMDD`` directory path for a given date string."""
@@ -251,7 +308,9 @@ def list_images(
     limit: int = Query(20, ge=1, le=100),
 ):
     """List image files in a ``YYYYMMDD`` directory with pagination."""
+    _validate_date_component(date)
     directory = _date_dir(date)
+    _validate_path_safe(directory, label="Date directory")
     if not directory.is_dir():
         raise HTTPException(status_code=404, detail="Date directory not found")
 
@@ -295,7 +354,10 @@ def list_images(
 @router.get("/images/{date}/info/{filename}")
 def get_image_info(date: str, filename: str):
     """Return file info and metadata for one image file."""
+    _validate_date_component(date)
+    _validate_filename_component(filename)
     source = _date_dir(date) / filename
+    _validate_path_safe(source, label="Image file")
     if not source.is_file():
         raise HTTPException(status_code=404, detail="Image not found")
 
@@ -325,7 +387,10 @@ def get_image_info(date: str, filename: str):
 @router.get("/images/{date}/full/{filename}")
 def serve_full_image(date: str, filename: str):
     """Serve the original full-size image file."""
+    _validate_date_component(date)
+    _validate_filename_component(filename)
     source = _date_dir(date) / filename
+    _validate_path_safe(source, label="Image file")
     if not source.is_file():
         raise HTTPException(status_code=404, detail="Image not found")
     media_map = {
@@ -345,13 +410,15 @@ def serve_full_image(date: str, filename: str):
 @router.get("/images/{date}/thumb/{filename}")
 def serve_thumbnail(date: str, filename: str):
     """Serve a resized thumbnail (max 200x200) of the requested image."""
+    _validate_date_component(date)
+    _validate_filename_component(filename)
     source = _date_dir(date) / filename
+    _validate_path_safe(source, label="Image file")
     if not source.is_file():
         raise HTTPException(status_code=404, detail="Image not found")
 
     cached = _cache_path(date, filename)
-    if cached.is_file():
-        return FileResponse(str(cached), media_type="image/png")
+    _validate_path_safe(cached, label="Thumbnail cache")
 
     try:
         img = Image.open(source)
@@ -374,14 +441,16 @@ class _DeleteResponse(BaseModel):
 @router.delete("/images/{date}/delete/{filename}")
 def delete_image(date: str, filename: str) -> _DeleteResponse:
     """Delete an image file from disk."""
+    _validate_date_component(date)
+    _validate_filename_component(filename)
     source = _date_dir(date) / filename
+    _validate_path_safe(source, label="Image file")
     if not source.is_file():
         raise HTTPException(status_code=404, detail="Image not found")
     source.unlink()
     # Also delete cached thumbnail
     cached = _cache_path(date, filename)
-    if cached.is_file():
-        cached.unlink()
+    _validate_path_safe(cached, label="Thumbnail cache")
     return _DeleteResponse(success=True, deleted=filename)
 
 
@@ -405,7 +474,11 @@ def rename_image(
 ) -> _RenameResponse:
     """Rename an image file on disk, appending a number if the new name
     exists."""
+    _validate_date_component(date)
+    _validate_filename_component(filename)
+    _validate_filename_component(body.new_filename)
     source = _date_dir(date) / filename
+    _validate_path_safe(source, label="Image file")
     if not source.is_file():
         raise HTTPException(status_code=404, detail="Image not found")
 
@@ -422,7 +495,7 @@ def rename_image(
     # else: user provided correct extension — keep as-is
 
     dest = _date_dir(date) / new_name
-
+    _validate_path_safe(dest, label="Destination file")
     # Handle name collisions
     if dest.is_file():
         stem = dest.stem

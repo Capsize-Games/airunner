@@ -43,6 +43,12 @@ interface CivitaiModelDetailProps {
 }
 
 function stripHtml(html: string): string {
+  // Remove HTML tags using a DOMParser which handles edge cases
+  // like <<tag> better than a plain regex.
+  if (typeof DOMParser !== "undefined") {
+    const doc = new DOMParser().parseFromString(html, "text/html");
+    return (doc.body.textContent ?? "").trim();
+  }
   return html.replace(/<[^>]*>/g, "").trim();
 }
 
