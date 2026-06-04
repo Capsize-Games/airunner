@@ -10,7 +10,7 @@ import re
 from vulture import Vulture
 from vulture.core import Item as VultureItem
 
-SERVICES_SRC = "services/src/airunner_services"
+SERVICES_SRC = "server/src/airunner_services"
 WHITELIST_PATH = "services_vulture_whitelist.py"
 
 _LINES_CACHE: dict[str, list[str]] = {}

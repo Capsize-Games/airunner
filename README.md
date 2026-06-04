@@ -17,8 +17,8 @@ AI Runner is a privacy-first edge AI platform — all inference runs locally on 
 **Architecture at a glance:**
 
 ```
-airunner_web_client/   ← React + Vite frontend (port 5173)
-services/src/          ← Python inference backend (port 8080)
+client/                ← React + Vite frontend (port 5173)
+server/src/            ← Python inference backend (port 8080)
 ```
 
 ---
@@ -115,7 +115,7 @@ Electron app
 
 electron/resources/
 ├── python/     ← embedded CPython 3.13 + all pip dependencies + CUDA native libs
-└── web/        ← compiled React frontend (airunner_web_client/dist/)
+└── web/        ← compiled React frontend (client/dist/)
 ```
 
 ### Building from source (for maintainers)
@@ -162,7 +162,7 @@ pip install torch torchvision torchaudio --index-url https://download.pytorch.or
 Then install the backend package:
 
 ```bash
-pip install -e "services/src/.[core,llm-native,stt-native,art-python,tts-python]"
+pip install -e "server/src/.[core,llm-native,stt-native,art-python,tts-python]"
 ```
 
 ### llama-cpp-python (CUDA build)
@@ -216,7 +216,7 @@ airunner-generate-cert
 airunner-tests
 
 # Run headless-safe tests directly
-pytest services/src/
+pytest server/src/
 
 # With coverage
 airunner-test-coverage-report

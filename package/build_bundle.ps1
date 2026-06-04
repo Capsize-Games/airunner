@@ -15,8 +15,8 @@
 $ErrorActionPreference = "Stop"
 $ROOT_DIR = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
 $ELECTRON_DIR = Join-Path $ROOT_DIR "electron"
-$WEB_DIR = Join-Path $ROOT_DIR "airunner_web_client"
-$SERVICES_DIR = Join-Path $ROOT_DIR "services"
+$WEB_DIR = Join-Path $ROOT_DIR "client"
+$SERVICES_DIR = Join-Path $ROOT_DIR "server"
 $BUILD_DIR = Join-Path $ROOT_DIR "build\bundle"
 $RESOURCES_DIR = Join-Path $ELECTRON_DIR "resources"
 

@@ -9,7 +9,7 @@ Add reproducible daemon-backed RAG eval fixtures for three file formats:
 - PDF
 
 The fixture set should stay public-domain, live in-repo, and exercise the
-same service-owned RAG path used by `services/tests/eval/test_agent_document_eval.py`.
+same service-owned RAG path used by `server/tests/eval/test_agent_document_eval.py`.
 
 ## Current Boundary
 
@@ -17,15 +17,15 @@ What the code supports today:
 
 - The service document loader has first-class loaders for `.epub`, `.mobi`,
   and `.pdf` in
-  `services/src/airunner_services/llm/managers/agent/document_loader.py`.
+  `server/src/airunner_services/llm/managers/agent/document_loader.py`.
 - Request-attached document payloads special-case `.epub`, `.mobi`, and
   `.pdf` in
-  `services/src/airunner_services/llm/managers/mixins/request_handling_mixin.py`.
+  `server/src/airunner_services/llm/managers/mixins/request_handling_mixin.py`.
 - Worker-side document uploads route `.epub`, `.mobi`, and `.pdf` through the
   same byte-loading path in
-  `services/src/airunner_services/workers/llm_generate_worker.py`.
+  `server/src/airunner_services/workers/llm_generate_worker.py`.
 - The broader document surface advertises `.mobi` as supported in
-  `services/src/airunner_services/llm/tools/rag_tools_helpers/_shared.py`
+  `server/src/airunner_services/llm/tools/rag_tools_helpers/_shared.py`
   and `src/airunner/components/documents/document_import.py`.
 
 What is missing today:
@@ -136,7 +136,7 @@ flowchart LR
 ```
 
 ```text
-services/tests/fixtures/rag_formats/
+server/tests/fixtures/rag_formats/
   the-time-machine/
     source.epub
     source.mobi
@@ -178,7 +178,7 @@ Add explicit `.mobi` support to the service document path.
 Recommended implementation:
 
 1. Add a `.mobi` loader to
-   `services/src/airunner_services/llm/managers/agent/document_loader.py`.
+   `server/src/airunner_services/llm/managers/agent/document_loader.py`.
 2. Use the `mobi` Python package to unpack unencrypted MOBI files.
 3. Feed the unpacked HTML, EPUB, or PDF artifact back through the existing
    loader path instead of building a separate chunker or parser branch.

@@ -31,4 +31,4 @@ fi
 echo ""
 echo "Build complete."
 echo "Run ./scripts/dev/run_services.sh to start the daemon, then"
-echo "run 'cd airunner_web_client && npm run dev' for the web GUI."
+echo "run 'cd client && npm run dev' for the web GUI."

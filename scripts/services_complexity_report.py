@@ -19,7 +19,7 @@ from radon.metrics import h_visit, mi_visit
 from radon.raw import analyze
 
 
-DEFAULT_ROOT = Path("services/src/airunner_services")
+DEFAULT_ROOT = Path("server/src/airunner_services")
 DEFAULT_OUTPUT = Path("build/services_complexity")
 DEFAULT_EXCLUDES = ("build", "dist", "vendor", "__pycache__")
 RANKS = "ABCDEF"

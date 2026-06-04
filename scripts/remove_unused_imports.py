@@ -184,7 +184,7 @@ Permanent exclusions (always skipped):
         "--path",
         type=Path,
         default=None,
-        help="Path to analyze (default: services/src/airunner_services)",
+        help="Path to analyze (default: server/src/airunner_services)",
     )
     parser.add_argument(
         "--check",
