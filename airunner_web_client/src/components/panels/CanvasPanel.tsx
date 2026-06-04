@@ -82,6 +82,31 @@ export default function CanvasPanel() {
     e.dataTransfer.dropEffect = "copy";
   }, []);
 
+  /** Magic-byte signatures for common image formats. */
+  const IMAGE_MAGIC: [number[], number][] = [
+    [[0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A], 8], // PNG
+    [[0xFF, 0xD8, 0xFF],                                     3], // JPEG
+    [[0x47, 0x49, 0x46, 0x38],                               4], // GIF87a / GIF89a
+    [[0x42, 0x4D],                                            2], // BMP
+  ];
+
+  /** Check whether a file is an image using MIME type (fast) or magic bytes. */
+  const isImageFile = useCallback(async (file: File): Promise<boolean> => {
+    // Fast path: browser provides MIME type.
+    if (file.type.startsWith("image/")) return true;
+
+    // Fallback: read the first 8 bytes and check magic signatures.
+    try {
+      const buf = await file.slice(0, 8).arrayBuffer();
+      const header = new Uint8Array(buf);
+      return IMAGE_MAGIC.some(([sig, len]) =>
+        sig.every((byte, i) => header[i] === byte),
+      );
+    } catch {
+      return false;
+    }
+  }, []);
+
   const handleDrop = useCallback((e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     // Capture canvas coords synchronously before any async work
@@ -89,17 +114,38 @@ export default function CanvasPanel() {
 
     // Case 1: file dragged from filesystem
     const file = e.dataTransfer.files[0];
-    if (file && file.type.startsWith("image/")) {
-      const reader = new FileReader();
-      reader.onload = (ev) => {
-        const dataUrl = ev.target?.result as string;
-        if (dataUrl) queueDrop(dataUrl, x, y);
-      };
-      reader.readAsDataURL(file);
+    if (file) {
+      isImageFile(file).then((isImage) => {
+        // Not an image by MIME or magic — ignore silently.
+        if (!isImage) {
+          // Still check for URL drop below.
+          const imageUrl = e.dataTransfer.getData("text/image-url");
+          if (imageUrl) {
+            fetch(imageUrl)
+              .then((r) => r.blob())
+              .then((blob) => {
+                const r2 = new FileReader();
+                r2.onload = (ev) => {
+                  const dataUrl = ev.target?.result as string;
+                  if (dataUrl) queueDrop(dataUrl, x, y);
+                };
+                r2.readAsDataURL(blob);
+              })
+              .catch(() => { /* silently ignore */ });
+          }
+          return;
+        }
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+          const dataUrl = ev.target?.result as string;
+          if (dataUrl) queueDrop(dataUrl, x, y);
+        };
+        reader.readAsDataURL(file);
+      });
       return;
     }
 
-    // Case 2: URL dragged from image browser panel
+    // Case 2: URL dragged from image browser panel (no file in drop)
     const imageUrl = e.dataTransfer.getData("text/image-url");
     if (imageUrl) {
       fetch(imageUrl)
@@ -114,7 +160,7 @@ export default function CanvasPanel() {
         })
         .catch(() => { /* silently ignore */ });
     }
-  }, [canvasDropPos, queueDrop]);
+  }, [canvasDropPos, queueDrop, isImageFile]);
 
   // Listen for the "canvas-place-image" event fired by ServerImageRow's button
   useEffect(() => {
