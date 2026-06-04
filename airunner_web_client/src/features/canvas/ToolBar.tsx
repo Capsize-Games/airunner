@@ -19,6 +19,7 @@ import {
   Redo2,
   FilePlus,
   Trash2,
+  Layers,
 } from "lucide-react";
 import type { ActiveTool, ActiveGridArea } from "./useCanvasState";
 import SliderWithSpinbox from "../../components/panels/SliderWithSpinbox";
@@ -53,6 +54,8 @@ interface ToolBarProps {
   onNewDocument: () => void;
   onClearMask?: () => void;
   hasMaskStrokes?: boolean;
+  showLayers: boolean;
+  onToggleLayers: () => void;
 }
 
 const TOOLS: { id: ActiveTool; label: string; key: string; Icon: React.ComponentType<{ size?: number; strokeWidth?: number }> }[] = [
@@ -163,6 +166,8 @@ export default function ToolBar({
   onNewDocument,
   onClearMask,
   hasMaskStrokes = false,
+  showLayers,
+  onToggleLayers,
 }: ToolBarProps) {
   const colorInputRef = useRef<HTMLInputElement>(null);
   const isVertical = dock === "left" || dock === "right";
@@ -393,6 +398,9 @@ export default function ToolBar({
       <Divider vertical={isVertical} />
 
       {/* ── Settings & Dock ───────────────────────────────────── */}
+      <IconBtn title={showLayers ? "Hide layers" : "Show layers"} active={showLayers} onClick={onToggleLayers}>
+        <Layers size={15} strokeWidth={1.75} />
+      </IconBtn>
       <IconBtn title="New document" onClick={onNewDocument}>
         <FilePlus size={15} strokeWidth={1.75} />
       </IconBtn>

@@ -6,6 +6,7 @@ import CanvasStage from "../../features/canvas/CanvasStage";
 import ToolBar, { type ToolbarDock } from "../../features/canvas/ToolBar";
 import CanvasSettingsModal from "../../features/canvas/CanvasSettingsModal";
 import ImageDropModal, { fitDimensions, type DropResizeMode } from "../../features/canvas/ImageDropModal";
+import CanvasLayersSidebar from "../../features/canvas/CanvasLayersSidebar";
 
 interface PendingDrop {
   base64: string;
@@ -27,6 +28,7 @@ export default function CanvasPanel() {
   const [zoom,           setZoom]           = useState(1);
   const [gridLocked,     setGridLocked]     = useState(false);
   const [showSettings,   setShowSettings]   = useState(false);
+  const [showLayers,     setShowLayers]     = useState(true);
   const [pendingDrop,    setPendingDrop]    = useState<PendingDrop | null>(null);
   const [showDropModal,  setShowDropModal]  = useState(false);
 
@@ -140,7 +142,7 @@ export default function CanvasPanel() {
       const fit = fitDimensions(naturalW, naturalH, canvas.documentWidth, canvas.documentHeight);
       w = fit.w; h = fit.h;
     }
-    canvas.placeImage(base64, Math.max(0, x - w / 2), Math.max(0, y - h / 2), w, h);
+    canvas.placeImageOnNewLayer(base64, Math.max(0, x - w / 2), Math.max(0, y - h / 2), w, h);
     setPendingDrop(null);
   }, [pendingDrop, canvas]);
 
@@ -195,47 +197,53 @@ export default function CanvasPanel() {
           onNewDocument={canvas.resetDocument}
           onClearMask={canvas.clearMask}
           hasMaskStrokes={canvas.maskStrokes.length > 0}
+          showLayers={showLayers}
+          onToggleLayers={() => setShowLayers((v) => !v)}
         />
       )}
 
-      {/* Canvas viewport */}
+      {/* Canvas viewport + layers sidebar */}
       <div
         className="flex-grow-1 d-flex flex-column overflow-hidden"
-        style={{ minWidth: 0, minHeight: 0, position: "relative" }}
+        style={{ minWidth: 0, minHeight: 0 }}
       >
-        <div
-          className="flex-grow-1 overflow-hidden d-flex align-items-center justify-content-center"
-          style={{ background: "#0a0a0f", position: "relative" }}
-          onDragOver={handleDragOver}
-          onDrop={handleDrop}
-        >
-          <CanvasStage
-            ref={canvasHandleRef}
-            documentWidth={canvas.documentWidth}
-            documentHeight={canvas.documentHeight}
-            documentBgColor={canvas.documentBgColor}
-            layers={canvas.layers}
-            activeLayerId={canvas.activeLayerId}
-            activeGridArea={canvas.activeGridArea}
-            activeTool={canvas.activeTool}
-            brushSize={canvas.brushSize}
-            brushColor={canvas.brushColor}
-            maskStrokes={canvas.maskStrokes}
-            showGrid={showGrid}
-            snapToGrid={canvas.snapToGrid}
-            onAddStroke={canvas.addStroke}
-            onMoveImage={canvas.moveImage}
-            onMoveLayer={canvas.moveLayer}
-            onAddMaskStroke={canvas.addMaskStroke}
-            setActiveGridArea={canvas.setActiveGridArea}
-            onUndo={canvas.undo}
-            onRedo={canvas.redo}
-            setActiveTool={canvas.setActiveTool}
-            onZoomChange={setZoom}
-            gridLayerRef={gridLayerRef}
-            maskLayerRef={maskLayerRef}
-            stageRef={stageRef}
-          />
+        {/* Canvas + optional layers sidebar, side by side */}
+        <div className="flex-grow-1 d-flex flex-row overflow-hidden" style={{ minHeight: 0 }}>
+          <div
+            className="flex-grow-1 overflow-hidden"
+            style={{ background: "#0a0a0f", position: "relative" }}
+            onDragOver={handleDragOver}
+            onDrop={handleDrop}
+          >
+            <CanvasStage
+              ref={canvasHandleRef}
+              documentWidth={canvas.documentWidth}
+              documentHeight={canvas.documentHeight}
+              documentBgColor={canvas.documentBgColor}
+              layers={canvas.layers}
+              activeLayerId={canvas.activeLayerId}
+              activeGridArea={canvas.activeGridArea}
+              activeTool={canvas.activeTool}
+              brushSize={canvas.brushSize}
+              brushColor={canvas.brushColor}
+              maskStrokes={canvas.maskStrokes}
+              showGrid={showGrid}
+              snapToGrid={canvas.snapToGrid}
+              onAddStroke={canvas.addStroke}
+              onMoveImage={canvas.moveImage}
+              onMoveLayer={canvas.moveLayer}
+              onAddMaskStroke={canvas.addMaskStroke}
+              setActiveGridArea={canvas.setActiveGridArea}
+              onUndo={canvas.undo}
+              onRedo={canvas.redo}
+              setActiveTool={canvas.setActiveTool}
+              onZoomChange={setZoom}
+              gridLayerRef={gridLayerRef}
+              maskLayerRef={maskLayerRef}
+              stageRef={stageRef}
+            />
+          </div>
+          {showLayers && <CanvasLayersSidebar />}
         </div>
 
         {/* Status bar */}
@@ -289,6 +297,8 @@ export default function CanvasPanel() {
           onNewDocument={canvas.resetDocument}
           onClearMask={canvas.clearMask}
           hasMaskStrokes={canvas.maskStrokes.length > 0}
+          showLayers={showLayers}
+          onToggleLayers={() => setShowLayers((v) => !v)}
         />
       )}
 

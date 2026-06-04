@@ -259,6 +259,31 @@ export function useCanvasState() {
 
   // ── Image placement ───────────────────────────────────────────────────────
 
+  const placeImageOnNewLayer = useCallback((base64: string, x: number, y: number, width: number, height: number) => {
+    setState((prev) => {
+      const newLayerId = nextLayerId();
+      const newImage: ImageNode = {
+        id: nextImageId(),
+        x, y, width, height,
+        src: base64.startsWith("data:") ? base64 : `data:image/png;base64,${base64}`,
+      };
+      const newLayer: CanvasLayer = {
+        id: newLayerId,
+        name: `Image ${prev.layers.length + 1}`,
+        visible: true,
+        opacity: 1,
+        filters: [],
+        images: [newImage],
+        strokes: [],
+        offsetX: 0,
+        offsetY: 0,
+      };
+      const next = { ...prev, layers: [...prev.layers, newLayer], activeLayerId: newLayerId };
+      const { history, historyIndex } = pushHistory(prev.history, prev.historyIndex, serialize(next));
+      return { ...next, history, historyIndex };
+    });
+  }, []);
+
   const placeImage = useCallback((base64: string, x: number, y: number, width: number, height: number) => {
     setState((prev) => {
       const activeIdx = prev.layers.findIndex((l) => l.id === prev.activeLayerId);
@@ -415,6 +440,7 @@ export function useCanvasState() {
     setDocumentSize,
     setDocumentBgColor,
     setSnapToGrid,
+    placeImageOnNewLayer,
     placeImage,
     moveImage,
     addStroke,

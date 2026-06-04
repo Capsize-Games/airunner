@@ -37,6 +37,7 @@ export interface CanvasContextValue {
   setDocumentSize: (width: number, height: number) => void;
   setDocumentBgColor: (color: string) => void;
   setSnapToGrid: (on: boolean) => void;
+  placeImageOnNewLayer: (base64: string, x: number, y: number, width: number, height: number) => void;
   placeImage: (base64: string, x: number, y: number, width: number, height: number) => void;
   moveImage: (layerId: string, imageId: string, x: number, y: number) => void;
   addStroke: (stroke: Omit<StrokeNode, "id">) => void;
