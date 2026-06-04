@@ -1,0 +1,8 @@
+# AI Runner Bundle – Pinned dependency versions
+# Update this file when bumping any external dependency.
+
+python-build-standalone=20250113
+llama.cpp=b4815
+whisper.cpp=v1.7.4
+cuda=12.8
+torch=cu128
