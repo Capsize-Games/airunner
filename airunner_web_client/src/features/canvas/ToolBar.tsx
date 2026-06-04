@@ -24,7 +24,7 @@ import {
 import type { ActiveTool, ActiveGridArea } from "./useCanvasState";
 import SliderWithSpinbox from "../../components/panels/SliderWithSpinbox";
 
-export type ToolbarDock = "top" | "bottom" | "left" | "right";
+export type ToolbarDock = "top" | "bottom";
 
 interface ToolBarProps {
   activeTool: ActiveTool;
@@ -67,7 +67,7 @@ const TOOLS: { id: ActiveTool; label: string; key: string; Icon: React.Component
 ];
 
 const DOCK_LABELS: Record<ToolbarDock, string> = {
-  top: "Dock Top", bottom: "Dock Bottom", left: "Dock Left", right: "Dock Right",
+  top: "Dock Top", bottom: "Dock Bottom",
 };
 
 function IconBtn({
@@ -126,14 +126,13 @@ function IconBtn({
   );
 }
 
-function Divider({ vertical }: { vertical: boolean }) {
+function Divider() {
   return (
     <div style={{
-      [vertical ? "height" : "width"]: 1,
-      [vertical ? "width" : "height"]: 20,
+      width: 1, height: 20,
       background: "rgba(255,255,255,0.1)",
       flexShrink: 0,
-      margin: vertical ? "2px 0" : "0 2px",
+      margin: "0 2px",
     }} />
   );
 }
@@ -170,22 +169,19 @@ export default function ToolBar({
   onToggleLayers,
 }: ToolBarProps) {
   const colorInputRef = useRef<HTMLInputElement>(null);
-  const isVertical = dock === "left" || dock === "right";
   const hasBrushOptions = activeTool === "brush" || activeTool === "eraser" || activeTool === "mask";
   const zoomPct = `${Math.round(zoom * 100)}%`;
 
   const containerStyle: React.CSSProperties = {
     display: "flex",
-    flexDirection: isVertical ? "column" : "row",
-    alignItems: isVertical ? "center" : "center",
+    flexDirection: "row",
+    alignItems: "center",
     gap: 3,
-    padding: isVertical ? "8px 4px" : "4px 8px",
+    padding: "4px 8px",
     background: "#161620",
-    borderBottom: !isVertical && dock === "top" ? "1px solid rgba(255,255,255,0.07)" : undefined,
-    borderTop:  !isVertical && dock === "bottom" ? "1px solid rgba(255,255,255,0.07)" : undefined,
-    borderRight: isVertical && dock === "left" ? "1px solid rgba(255,255,255,0.07)" : undefined,
-    borderLeft:  isVertical && dock === "right" ? "1px solid rgba(255,255,255,0.07)" : undefined,
-    flexWrap: isVertical ? undefined : "wrap",
+    borderBottom: dock === "top" ? "1px solid rgba(255,255,255,0.07)" : undefined,
+    borderTop:  dock === "bottom" ? "1px solid rgba(255,255,255,0.07)" : undefined,
+    flexWrap: "wrap",
     flexShrink: 0,
     userSelect: "none",
     position: "relative",
@@ -206,7 +202,7 @@ export default function ToolBar({
         </IconBtn>
       ))}
 
-      <Divider vertical={isVertical} />
+      <Divider />
 
       {/* ── Undo / Redo ───────────────────────────────────────── */}
       <IconBtn title="Undo (Ctrl+Z)" onClick={onUndo}>
@@ -216,7 +212,7 @@ export default function ToolBar({
         <Redo2 size={15} strokeWidth={1.75} />
       </IconBtn>
 
-      <Divider vertical={isVertical} />
+      <Divider />
 
       {/* ── Brush options ─────────────────────────────────────── */}
       {hasBrushOptions && (
@@ -245,21 +241,8 @@ export default function ToolBar({
             </label>
           )}
 
-          {/* Brush size — compact in toolbar */}
-          {isVertical ? (
-            <div style={{ width: "100%", padding: "0 2px" }}>
-              <SliderWithSpinbox
-                label="Size"
-                value={brushSize}
-                min={1}
-                max={200}
-                step={1}
-                defaultValue={10}
-                onChange={onSetBrushSize}
-              />
-            </div>
-          ) : (
-            <div style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
+          {/* Brush size — inline in toolbar */}
+          <div style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
               <span style={{ fontSize: 10, color: "rgba(255,255,255,0.4)", whiteSpace: "nowrap" }}>Size</span>
               <input
                 type="range"
@@ -289,9 +272,8 @@ export default function ToolBar({
                 }}
               />
             </div>
-          )}
 
-          <Divider vertical={isVertical} />
+          <Divider />
         </>
       )}
 
@@ -303,7 +285,7 @@ export default function ToolBar({
         <Magnet size={15} strokeWidth={1.75} />
       </IconBtn>
 
-      <Divider vertical={isVertical} />
+      <Divider />
 
       {/* ── Zoom ──────────────────────────────────────────────── */}
       <IconBtn title="Zoom out" onClick={onZoomOut}>
@@ -335,13 +317,13 @@ export default function ToolBar({
         <Crosshair size={14} strokeWidth={1.75} />
       </IconBtn>
 
-      <Divider vertical={isVertical} />
+      <Divider />
 
       {/* ── Active Grid Area ──────────────────────────────────── */}
       <div
         style={{
           display: "flex",
-          flexDirection: isVertical ? "column" : "row",
+          flexDirection: "row",
           alignItems: "center",
           gap: 3,
           flexShrink: 0,
@@ -383,19 +365,19 @@ export default function ToolBar({
         </div>
       </div>
 
-      <Divider vertical={isVertical} />
+      <Divider />
 
       {/* ── Mask controls ─────────────────────────────────────── */}
       {(activeTool === "mask" || hasMaskStrokes) && (
         <>
-          <Divider vertical={isVertical} />
+          <Divider />
           <IconBtn title="Clear mask" danger onClick={onClearMask}>
             <Trash2 size={14} strokeWidth={1.75} />
           </IconBtn>
         </>
       )}
 
-      <Divider vertical={isVertical} />
+      <Divider />
 
       {/* ── Settings & Dock ───────────────────────────────────── */}
       <IconBtn title={showLayers ? "Hide layers" : "Show layers"} active={showLayers} onClick={onToggleLayers}>
@@ -429,7 +411,7 @@ export default function ToolBar({
           <GripHorizontal size={15} strokeWidth={1.75} />
         </Dropdown.Toggle>
         <Dropdown.Menu style={{ background: "#1e1e2e", border: "1px solid rgba(255,255,255,0.1)", minWidth: 130, zIndex: 9999 }}>
-          {(["top", "bottom", "left", "right"] as ToolbarDock[]).map((d) => (
+          {(["top", "bottom"] as ToolbarDock[]).map((d) => (
             <Dropdown.Item
               key={d}
               onClick={() => onSetDock(d)}

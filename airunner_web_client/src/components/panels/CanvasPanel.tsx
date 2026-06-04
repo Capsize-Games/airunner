@@ -168,14 +168,12 @@ export default function CanvasPanel() {
     );
   }
 
-  const isVertical = dock === "left" || dock === "right";
-
   return (
     <div
-      className={`canvas-panel d-flex h-100 overflow-hidden ${isVertical ? "flex-row" : "flex-column"}`}
+      className="canvas-panel d-flex h-100 overflow-hidden flex-column"
       style={{ background: "#0a0a0f" }}
     >
-      {(dock === "top" || dock === "left") && (
+      {dock === "top" && (
         <ToolBar
           activeTool={canvas.activeTool}
           brushSize={canvas.brushSize}
@@ -275,7 +273,7 @@ export default function CanvasPanel() {
         </div>
       </div>
 
-      {(dock === "bottom" || dock === "right") && (
+      {dock === "bottom" && (
         <ToolBar
           activeTool={canvas.activeTool}
           brushSize={canvas.brushSize}
