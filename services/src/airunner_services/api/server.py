@@ -13,6 +13,7 @@ from ipaddress import ip_address
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
 import uvicorn
 
 from airunner_services.settings import AIRUNNER_LOG_LEVEL
@@ -406,10 +407,33 @@ def create_app(
     # Legacy compatibility endpoints for existing clients.
     app.include_router(legacy_routes.router, tags=["legacy"])
 
-    @app.get("/")
-    async def root():
-        """Root endpoint."""
-        return {"status": "ready", "service": "airunner"}
+    # ------------------------------------------------------------------
+    # Static file serving for end-user bundle mode.
+    #
+    # When AIRUNNER_STATIC_DIR is set (by the Electron main process), the
+    # compiled React frontend is served at / so that loading
+    # http://localhost:8080 shows the full AI Runner UI.
+    #
+    # API routes (/health, /api/v1/*, /llm/*, /art, etc.) are registered
+    # before this static mount and take precedence.
+    # ------------------------------------------------------------------
+    static_dir = os.environ.get("AIRUNNER_STATIC_DIR", "").strip()
+    if static_dir:
+        resolved = os.path.abspath(static_dir)
+        if os.path.isdir(resolved) and os.path.isfile(
+            os.path.join(resolved, "index.html"),
+        ):
+            logger.info(
+                "Bundle mode detected — serving React frontend from %s",
+                resolved,
+            )
+            app.mount("/", StaticFiles(directory=resolved, html=True), name="web")
+        else:
+            logger.warning(
+                "AIRUNNER_STATIC_DIR=%s does not contain index.html — "
+                "falling back to JSON root endpoint",
+                resolved,
+            )
 
     # Global exception handler
     @app.exception_handler(Exception)

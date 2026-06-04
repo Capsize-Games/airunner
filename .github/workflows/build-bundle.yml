@@ -1,0 +1,323 @@
+# ---------------------------------------------------------------------------
+# AI Runner End-User Bundle — CI Build Pipeline
+#
+# Produces platform-specific installer artifacts for Windows (NVIDIA) and
+# Linux (NVIDIA).  The bundle includes an embedded CPython runtime, all pip
+# dependencies, pre-built CUDA-accelerated llama.cpp and whisper.cpp shared
+# libraries, the compiled React frontend, and an Electron shell.
+#
+# Triggers:
+#   - Push of a version tag (v*)
+#   - Manual workflow_dispatch (for pre-release testing)
+#
+# The user only needs an NVIDIA GPU driver.  No Python, Node, CMake, CUDA
+# toolkit, or compiler is required to run the resulting installer.
+# ---------------------------------------------------------------------------
+
+name: Build Bundle
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-22.04
+            platform: linux
+            electron-script: build:linux
+            python-standalone-suffix: x86_64-unknown-linux-gnu-install_only
+            python-interpreter: python/bin/python3
+            llama-lib: src/libllama.so
+            whisper-lib: src/libwhisper.so
+            installer-glob: |
+              dist/*.AppImage
+              dist/*.deb
+
+          - os: windows-2022
+            platform: win32
+            electron-script: build:windows
+            python-standalone-suffix: x86_64-pc-windows-msvc-install_only
+            python-interpreter: python/python.exe
+            llama-lib: bin/Release/llama.dll
+            whisper-lib: bin/Release/whisper.dll
+            installer-glob: |
+              dist/*.exe
+
+    runs-on: ${{ matrix.os }}
+
+    env:
+      VITE_API_BASE_URL: "http://localhost:8080"
+
+    steps:
+      # --------------------------------------------------------------------
+      # Checkout
+      # --------------------------------------------------------------------
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      # --------------------------------------------------------------------
+      # Install CUDA toolkit
+      # --------------------------------------------------------------------
+      - name: Install CUDA toolkit
+        uses: Jimver/cuda-toolkit@v0.2.20
+        id: cuda-toolkit
+        with:
+          cuda: "12.8.0"
+          method: "network"
+          linux-local-args: '--toolkit'
+
+      - name: Log CUDA path
+        run: echo "CUDA_HOME=${{ steps.cuda-toolkit.outputs.CUDA_HOME }}"
+
+      # --------------------------------------------------------------------
+      # Install system dependencies (Linux)
+      # --------------------------------------------------------------------
+      - name: Install Linux system dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq \
+            build-essential \
+            cmake \
+            curl \
+            libgl1-mesa-glx \
+            libglib2.0-0 \
+            libsm6 \
+            libxext6 \
+            libxrender-dev \
+            libgomp1
+
+      # --------------------------------------------------------------------
+      # Install Node.js
+      # --------------------------------------------------------------------
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      # --------------------------------------------------------------------
+      # Read pinned versions from versions.txt
+      # --------------------------------------------------------------------
+      - name: Read pinned versions
+        id: versions
+        shell: bash
+        run: |
+          while IFS='=' read -r key value; do
+            [[ -z "$key" || "$key" == \#* ]] && continue
+            echo "$key=$value" >> "$GITHUB_ENV"
+          done < package/versions.txt
+          echo "PYTHON_STANDALONE_SUFFIX=${{ matrix.python-standalone-suffix }}" >> "$GITHUB_ENV"
+
+      # --------------------------------------------------------------------
+      # Step 1 – Download and extract python-build-standalone
+      # --------------------------------------------------------------------
+      - name: Download python-build-standalone
+        shell: bash
+        run: |
+          PYTHON_ARCHIVE="cpython-3.13.${python-build-standalone}-${PYTHON_STANDALONE_SUFFIX}.tar.gz"
+          PYTHON_URL="https://github.com/indygreg/python-build-standalone/releases/download/${python-build-standalone}/${PYTHON_ARCHIVE}"
+          echo "Downloading ${PYTHON_URL}..."
+          curl -fsSL -o "${RUNNER_TEMP}/${PYTHON_ARCHIVE}" "$PYTHON_URL"
+          echo "PYTHON_ARCHIVE=${RUNNER_TEMP}/${PYTHON_ARCHIVE}" >> "$GITHUB_ENV"
+
+      - name: Extract python-build-standalone
+        shell: bash
+        run: |
+          mkdir -p "${{ runner.temp }}/embedded-python"
+          tar -xzf "${{ env.PYTHON_ARCHIVE }}" -C "${{ runner.temp }}/embedded-python"
+          echo "EMBEDDED_PYTHON=${{ runner.temp }}/embedded-python/python" >> "$GITHUB_ENV"
+
+      - name: Verify embedded Python
+        shell: bash
+        run: |
+          ${{ runner.temp }}/embedded-python/python/${{ matrix.python-interpreter }} --version
+
+      # --------------------------------------------------------------------
+      # Step 2 – Install Python dependencies
+      # --------------------------------------------------------------------
+      - name: Install pip dependencies into embedded Python
+        shell: bash
+        run: |
+          EMBEDDED_PYTHON_DIR="${{ env.EMBEDDED_PYTHON }}"
+
+          # Upgrade pip and base tools
+          "$EMBEDDED_PYTHON_DIR/${{ matrix.python-interpreter }}" -m pip install --upgrade pip setuptools wheel
+
+          # Install PyTorch with CUDA
+          "$EMBEDDED_PYTHON_DIR/${{ matrix.python-interpreter }}" -m pip install \
+            torch torchvision torchaudio \
+            --index-url "https://download.pytorch.org/whl/${torch}"
+
+          # Install the airunner services package with the headless profile
+          "$EMBEDDED_PYTHON_DIR/${{ matrix.python-interpreter }}" -m pip install \
+            -e "${{ github.workspace }}/services[headless]"
+
+      # --------------------------------------------------------------------
+      # Step 3 – Build llama.cpp from source with CUDA
+      # --------------------------------------------------------------------
+      - name: Clone llama.cpp
+        shell: bash
+        run: |
+          git clone --depth 1 --branch "${llama-cpp}" \
+            https://github.com/ggerganov/llama.cpp.git "${{ runner.temp }}/llama.cpp"
+
+      - name: Configure llama.cpp with CMake
+        shell: bash
+        run: |
+          cmake -S "${{ runner.temp }}/llama.cpp" \
+            -B "${{ runner.temp }}/llama.cpp/build" \
+            -DLLAMA_CUBLAS=on \
+            -DCMAKE_CUDA_ARCHITECTURES=86 \
+            -DBUILD_SHARED_LIBS=on \
+            -DLLAMA_BUILD_TESTS=off \
+            -DLLAMA_BUILD_EXAMPLES=off \
+            -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build llama.cpp
+        shell: bash
+        run: |
+          cmake --build "${{ runner.temp }}/llama.cpp/build" --config Release -j$(nproc)
+
+      - name: Place llama.cpp shared library into embedded Python
+        shell: bash
+        run: |
+          EMBEDDED="${{ env.EMBEDDED_PYTHON }}"
+
+          # Find the llama_cpp package directory.
+          LLAMA_CPP_DIR=$(find "$EMBEDDED" -type d -name "llama_cpp" \
+            -path "*/site-packages/llama_cpp" 2>/dev/null | head -1)
+
+          if [ -n "$LLAMA_CPP_DIR" ]; then
+            mkdir -p "${LLAMA_CPP_DIR}/lib"
+            cp "${{ runner.temp }}/llama.cpp/build/${{ matrix.llama-lib }}" \
+               "${LLAMA_CPP_DIR}/lib/"
+          else
+            # Fallback: place alongside Python libs.
+            mkdir -p "$EMBEDDED/lib"
+            cp "${{ runner.temp }}/llama.cpp/build/${{ matrix.llama-lib }}" \
+               "$EMBEDDED/lib/"
+          fi
+
+      # --------------------------------------------------------------------
+      # Step 4 – Build whisper.cpp from source with CUDA
+      # --------------------------------------------------------------------
+      - name: Clone whisper.cpp
+        shell: bash
+        run: |
+          git clone --depth 1 --branch "${whisper-cpp}" \
+            https://github.com/ggerganov/whisper.cpp.git "${{ runner.temp }}/whisper.cpp"
+
+      - name: Configure whisper.cpp with CMake
+        shell: bash
+        run: |
+          cmake -S "${{ runner.temp }}/whisper.cpp" \
+            -B "${{ runner.temp }}/whisper.cpp/build" \
+            -DGGML_CUDA=on \
+            -DCMAKE_CUDA_ARCHITECTURES=86 \
+            -DBUILD_SHARED_LIBS=on \
+            -DWHISPER_BUILD_TESTS=off \
+            -DWHISPER_BUILD_EXAMPLES=off \
+            -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build whisper.cpp
+        shell: bash
+        run: |
+          cmake --build "${{ runner.temp }}/whisper.cpp/build" --config Release -j$(nproc)
+
+      - name: Place whisper.cpp shared library into embedded Python
+        shell: bash
+        run: |
+          EMBEDDED="${{ env.EMBEDDED_PYTHON }}"
+
+          WHISPER_CPP_DIR=$(find "$EMBEDDED" -type d -name "whisper_cpp" \
+            -path "*/site-packages/whisper_cpp" 2>/dev/null | head -1)
+
+          if [ -n "$WHISPER_CPP_DIR" ]; then
+            mkdir -p "${WHISPER_CPP_DIR}/lib"
+            cp "${{ runner.temp }}/whisper.cpp/build/${{ matrix.whisper-lib }}" \
+               "${WHISPER_CPP_DIR}/lib/"
+          else
+            mkdir -p "$EMBEDDED/lib"
+            cp "${{ runner.temp }}/whisper.cpp/build/${{ matrix.whisper-lib }}" \
+               "$EMBEDDED/lib/"
+          fi
+
+      # --------------------------------------------------------------------
+      # Step 5 – Build the React frontend
+      # --------------------------------------------------------------------
+      - name: Install web client dependencies
+        shell: bash
+        working-directory: airunner_web_client
+        run: npm ci
+
+      - name: Build React frontend
+        shell: bash
+        working-directory: airunner_web_client
+        run: npx vite build
+        env:
+          VITE_API_BASE_URL: "http://localhost:8080"
+
+      # --------------------------------------------------------------------
+      # Step 6 – Stage resources for Electron
+      # --------------------------------------------------------------------
+      - name: Create electron/resources directory
+        shell: bash
+        run: |
+          mkdir -p electron/resources/python
+          mkdir -p electron/resources/web
+
+      - name: Copy embedded Python into electron/resources
+        shell: bash
+        run: |
+          cp -a "${{ env.EMBEDDED_PYTHON }}"/* electron/resources/python/
+
+      - name: Copy React build output into electron/resources
+        shell: bash
+        run: |
+          cp -a airunner_web_client/dist/* electron/resources/web/
+
+      # --------------------------------------------------------------------
+      # Step 7 – Build the Electron installer
+      # --------------------------------------------------------------------
+      - name: Install Electron dependencies
+        shell: bash
+        working-directory: electron
+        run: npm ci
+
+      - name: Build Electron installer
+        shell: bash
+        working-directory: electron
+        run: npm run ${{ matrix.electron-script }}
+
+      # --------------------------------------------------------------------
+      # Step 8 – Upload installer artifacts
+      # --------------------------------------------------------------------
+      - name: Upload installer artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: airunner-bundle-${{ matrix.platform }}-${{ github.sha }}
+          path: |
+            electron/${{ matrix.installer-glob }}
+          if-no-files-found: error
+          retention-days: 30
+
+      # --------------------------------------------------------------------
+      # Step 9 – Attach to GitHub Release (on tag push only)
+      # --------------------------------------------------------------------
+      - name: Attach artifacts to Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            electron/${{ matrix.installer-glob }}
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

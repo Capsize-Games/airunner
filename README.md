@@ -76,6 +76,64 @@ The backend API is available at **http://localhost:8080**.
 
 ---
 
+## 📦 End-User Bundle (Desktop Application)
+
+For non-developer users, AI Runner provides a self-contained desktop application
+via **Electron**.  The bundle includes an embedded Python runtime, all Python
+dependencies, CUDA-accelerated `llama.cpp` and `whisper.cpp` binaries, and the
+compiled React frontend — all in a single installable package.
+
+**No Python, Node.js, CMake, C++ compiler, or CUDA toolkit is required.**
+Only an NVIDIA GPU driver (525+) is needed.
+
+### Platforms
+
+| Platform | Installer Format | GPU |
+|----------|-----------------|-----|
+| Linux    | `.AppImage`, `.deb` | NVIDIA (CUDA, Ampere+) |
+| Windows  | `.exe` (NSIS) | NVIDIA (CUDA, Ampere+) |
+
+### Download
+
+Pre-built installers are attached to each [GitHub Release](https://github.com/Capsize-Games/airunner/releases)
+tagged with a `v*` version.  Look for artifacts named:
+
+- `airunner-bundle-linux-*.AppImage` or `airunner-bundle-linux-*.deb`
+- `airunner-bundle-win32-*.exe`
+
+### How it works
+
+```
+Electron app
+├── main process (Node.js)
+│   ├── Spawns the embedded Python backend as a child process
+│   ├── Polls GET /health until the backend is ready
+│   ├── Loads the React frontend once the backend is healthy
+│   └── Kills the backend on app quit
+└── renderer process
+    └── Loads http://localhost:8080 (served by the Python backend)
+
+electron/resources/
+├── python/     ← embedded CPython 3.13 + all pip dependencies + CUDA native libs
+└── web/        ← compiled React frontend (airunner_web_client/dist/)
+```
+
+### Building from source (for maintainers)
+
+```bash
+# Linux
+./package/build_bundle.sh
+
+# Windows (PowerShell)
+.\package\build_bundle.ps1
+```
+
+Prerequisites on the build host: CUDA toolkit 12.x, CMake ≥ 3.24,
+Node.js ≥ 20, and a C++ compiler.  These are **not** required on the
+end user's machine.
+
+---
+
 ## 💾 Manual Installation (Advanced)
 
 If you need fine-grained control, the install script supports three modes:
@@ -88,7 +146,7 @@ If you need fine-grained control, the install script supports three modes:
 ./deployment/install_distributed.sh
 
 # Single-package mode — installs a prebuilt self-contained bundle
-# (not currently supported — use the developer or distributed installer)
+./package/build_bundle.sh
 ```
 
 ### Python dependencies
