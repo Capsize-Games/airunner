@@ -9,6 +9,8 @@ export type {
   ActiveTool,
 } from "./useCanvasState";
 export { useCanvasDocument } from "./useCanvasDocument";
+export { useCanvasSync } from "./useCanvasSync";
+export type { UseCanvasSyncReturn } from "./useCanvasSync";
 export { CanvasProvider, useCanvasContext } from "./CanvasContext";
 export type { CanvasContextValue } from "./CanvasContext";
 export { default as CanvasStage } from "./CanvasStage";

@@ -1,6 +1,10 @@
 import { useRef, useState, useCallback, useEffect } from "react";
 import Konva from "konva";
-import { useCanvasContext, useCanvasDocument } from "../../features/canvas";
+import {
+  useCanvasContext,
+  useCanvasDocument,
+  useCanvasSync,
+} from "../../features/canvas";
 import type { CanvasStageHandle } from "../../features/canvas/CanvasStage";
 import CanvasStage from "../../features/canvas/CanvasStage";
 import ToolBar, { type ToolbarDock } from "../../features/canvas/ToolBar";
@@ -41,6 +45,13 @@ export default function CanvasPanel() {
     localStorage.setItem("canvas_toolbar_dock", d);
   }, []);
 
+  // WebSocket sync for instant canvas persistence.
+  const canvasSync = useCanvasSync({
+    onDocument: (json) => {
+      if (json) canvas.loadFromJSON(json);
+    },
+  });
+
   // Use persistable state (no history) for the backend — history is local-only.
   const documentString = JSON.stringify(canvas.getPersistableState());
   // Track whether the content actually differs from what was last saved.
@@ -51,6 +62,7 @@ export default function CanvasPanel() {
   const { isLoaded } = useCanvasDocument({
     documentString,
     onLoad: canvas.loadFromJSON,
+    wsSend: canvasSync.send,
     isDirty,
     onSaved: () => setLastSavedDigest(currentDigest),
   });
@@ -316,6 +328,29 @@ export default function CanvasPanel() {
           <span>Zoom: {Math.round(zoom * 100)}%</span>
           <span>Grid: {canvas.activeGridArea.width} × {canvas.activeGridArea.height}</span>
           {canvas.activeLayer && <span>Layer: {canvas.activeLayer.name}</span>}
+          <span
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 4,
+              color: canvasSync.connected
+                ? "rgba(0,200,100,0.7)"
+                : "rgba(255,150,50,0.6)",
+            }}
+          >
+            <span
+              style={{
+                width: 6,
+                height: 6,
+                borderRadius: "50%",
+                background: canvasSync.connected
+                  ? "rgb(0,200,100)"
+                  : "rgb(255,150,50)",
+                display: "inline-block",
+              }}
+            />
+            {canvasSync.connected ? "Live" : "Reconnecting…"}
+          </span>
         </div>
       </div>
 

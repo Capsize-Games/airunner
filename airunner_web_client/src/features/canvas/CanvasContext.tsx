@@ -2,6 +2,7 @@ import { createContext, useContext, type ReactNode } from "react";
 import { useCanvasState } from "./useCanvasState";
 import type {
   CanvasLayer,
+  LayerGroup,
   ActiveGridArea,
   StrokeNode,
   FilterConfig,
@@ -14,7 +15,9 @@ export interface CanvasContextValue {
   documentHeight: number;
   documentBgColor: string;
   layers: CanvasLayer[];
+  layerGroups: LayerGroup[];
   activeLayerId: string | null;
+  selectedLayerIds: string[];
   activeLayer: CanvasLayer | null;
   activeGridArea: ActiveGridArea;
   activeTool: ActiveTool;
@@ -29,7 +32,16 @@ export interface CanvasContextValue {
   setLayerVisible: (id: string, visible: boolean) => void;
   setLayerOpacity: (id: string, opacity: number) => void;
   reorderLayer: (id: string, direction: "up" | "down") => void;
+  reorderLayerToIndex: (id: string, toIndex: number) => void;
   setActiveLayer: (id: string) => void;
+  toggleLayerSelection: (id: string) => void;
+  mergeSelectedLayers: () => void;
+  selectLayerRange: (id: string) => void;
+  addLayerGroup: () => void;
+  toggleGroupExpanded: (id: string) => void;
+  renameGroup: (id: string, name: string) => void;
+  deleteGroup: (id: string) => void;
+  moveLayerToGroup: (layerId: string, groupId: string | null) => void;
   setActiveTool: (tool: ActiveTool) => void;
   setActiveGridArea: (area: ActiveGridArea) => void;
   resetDocument: () => void;

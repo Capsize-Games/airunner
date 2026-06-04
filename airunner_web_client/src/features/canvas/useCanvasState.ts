@@ -34,6 +34,13 @@ export interface CanvasLayer {
   strokes: StrokeNode[];
   offsetX: number;
   offsetY: number;
+  parentGroupId: string | null;
+}
+
+export interface LayerGroup {
+  id: string;
+  name: string;
+  expanded: boolean;
 }
 
 export interface ActiveGridArea {
@@ -50,7 +57,9 @@ export interface CanvasState {
   documentHeight: number;
   documentBgColor: string; // hex or 'transparent'
   layers: CanvasLayer[];
+  layerGroups: LayerGroup[];
   activeLayerId: string | null;
+  selectedLayerIds: string[];
   activeGridArea: ActiveGridArea;
   activeTool: ActiveTool;
   brushSize: number;
@@ -61,14 +70,45 @@ export interface CanvasState {
   historyIndex: number;
 }
 
-// ── Helpers ──────────────────────────────────────────────────────────────────
+// ── ID counter helpers ──────────────────────────────────────────────────────
 
 let _layerIdCounter = 0;
-const nextLayerId = (): string => `layer_${++_layerIdCounter}`;
 let _strokeIdCounter = 0;
-const nextStrokeId = (): string => `stroke_${++_strokeIdCounter}`;
 let _imageIdCounter = 0;
+let _groupIdCounter = 0;
+
+const nextLayerId = (): string => `layer_${++_layerIdCounter}`;
+const nextStrokeId = (): string => `stroke_${++_strokeIdCounter}`;
 const nextImageId = (): string => `image_${++_imageIdCounter}`;
+const nextGroupId = (): string => `group_${++_groupIdCounter}`;
+
+/**
+ * Advance all module-level ID counters past any IDs found in parsed state,
+ * so that new elements don't collide with IDs from loaded/persisted data.
+ */
+function advanceCountersFromState(state: Partial<CanvasState>): void {
+  for (const layer of state.layers ?? []) {
+    const m = layer.id?.match(/^layer_(\d+)$/);
+    if (m) _layerIdCounter = Math.max(_layerIdCounter, Number(m[1]));
+
+    for (const stroke of layer.strokes ?? []) {
+      const sm = stroke.id?.match(/^stroke_(\d+)$/);
+      if (sm) _strokeIdCounter = Math.max(_strokeIdCounter, Number(sm[1]));
+    }
+    for (const image of layer.images ?? []) {
+      const im = image.id?.match(/^image_(\d+)$/);
+      if (im) _imageIdCounter = Math.max(_imageIdCounter, Number(im[1]));
+    }
+  }
+  for (const group of state.layerGroups ?? []) {
+    const gm = group.id?.match(/^group_(\d+)$/);
+    if (gm) _groupIdCounter = Math.max(_groupIdCounter, Number(gm[1]));
+  }
+  for (const stroke of state.maskStrokes ?? []) {
+    const sm = stroke.id?.match(/^stroke_(\d+)$/);
+    if (sm) _strokeIdCounter = Math.max(_strokeIdCounter, Number(sm[1]));
+  }
+}
 
 const DEFAULT_GRID_SIZE = 512;
 
@@ -84,6 +124,7 @@ const serialize = (state: CanvasState): string =>
   JSON.stringify({
     layers: state.layers,
     activeLayerId: state.activeLayerId,
+    selectedLayerIds: state.selectedLayerIds,
     activeGridArea: state.activeGridArea,
     activeTool: state.activeTool,
     brushSize: state.brushSize,
@@ -112,9 +153,12 @@ const defaultState = (): CanvasState => {
         strokes: [],
         offsetX: 0,
         offsetY: 0,
+        parentGroupId: null,
       },
     ],
+    layerGroups: [],
     activeLayerId: firstId,
+    selectedLayerIds: [firstId],
     activeGridArea: { x: 0, y: 0, width: DEFAULT_GRID_SIZE, height: DEFAULT_GRID_SIZE },
     activeTool: "brush" as ActiveTool,
     brushSize: 10,
@@ -139,6 +183,11 @@ function loadPersistedState(): CanvasState | null {
     const parsed = JSON.parse(raw) as CanvasState;
     // Validate we have at least layers — discard corrupt data.
     if (!Array.isArray(parsed.layers) || parsed.layers.length === 0) return null;
+    // Ensure new fields that may be missing from old persisted state.
+    parsed.layerGroups ??= [];
+    parsed.layers = parsed.layers.map((l) => ({ ...l, parentGroupId: l.parentGroupId ?? null }));
+    // Advance counters so new IDs don't collide with loaded ones.
+    advanceCountersFromState(parsed);
     return parsed;
   } catch {
     return null;
@@ -191,6 +240,7 @@ export function useCanvasState() {
         strokes: [],
         offsetX: 0,
         offsetY: 0,
+        parentGroupId: null,
       };
       return recordSnapshot({ ...prev, layers: [...prev.layers, newLayer], activeLayerId: newLayer.id });
     });
@@ -202,7 +252,20 @@ export function useCanvasState() {
       const filtered = prev.layers.filter((l) => l.id !== id);
       let newActive = prev.activeLayerId;
       if (newActive === id) newActive = filtered.at(-1)?.id ?? null;
-      return recordSnapshot({ ...prev, layers: filtered, activeLayerId: newActive });
+      const cleanedSelection = prev.selectedLayerIds.filter(
+        (s) => s !== id,
+      );
+      return recordSnapshot({
+        ...prev,
+        layers: filtered,
+        activeLayerId: newActive,
+        selectedLayerIds:
+          cleanedSelection.length > 0
+            ? cleanedSelection
+            : newActive
+              ? [newActive]
+              : [],
+      });
     });
   }, [recordSnapshot]);
 
@@ -242,8 +305,150 @@ export function useCanvasState() {
   }, [recordSnapshot]);
 
   const setActiveLayer = useCallback((id: string) => {
-    setState((prev) => ({ ...prev, activeLayerId: id }));
+    setState((prev) => ({ ...prev, activeLayerId: id, selectedLayerIds: [id] }));
   }, []);
+
+  // ── Layer group operations ────────────────────────────────────────────────
+
+  const addLayerGroup = useCallback(() => {
+    setState((prev) => ({
+      ...prev,
+      layerGroups: [
+        ...prev.layerGroups,
+        { id: nextGroupId(), name: `Group ${prev.layerGroups.length + 1}`, expanded: true },
+      ],
+    }));
+  }, []);
+
+  const toggleGroupExpanded = useCallback((id: string) => {
+    setState((prev) => ({
+      ...prev,
+      layerGroups: prev.layerGroups.map((g) =>
+        g.id === id ? { ...g, expanded: !g.expanded } : g,
+      ),
+    }));
+  }, []);
+
+  const renameGroup = useCallback((id: string, name: string) => {
+    setState((prev) => ({
+      ...prev,
+      layerGroups: prev.layerGroups.map((g) =>
+        g.id === id ? { ...g, name } : g,
+      ),
+    }));
+  }, []);
+
+  const deleteGroup = useCallback((id: string) => {
+    setState((prev) => ({
+      ...prev,
+      layerGroups: prev.layerGroups.filter((g) => g.id !== id),
+      layers: prev.layers.map((l) =>
+        l.parentGroupId === id ? { ...l, parentGroupId: null } : l,
+      ),
+    }));
+  }, []);
+
+  const moveLayerToGroup = useCallback((layerId: string, groupId: string | null) => {
+    setState((prev) => ({
+      ...prev,
+      layers: prev.layers.map((l) =>
+        l.id === layerId ? { ...l, parentGroupId: groupId } : l,
+      ),
+    }));
+  }, []);
+
+  /** Ctrl/cmd+click: toggle a layer in/out of the multi-selection. */
+  const toggleLayerSelection = useCallback((id: string) => {
+    setState((prev) => {
+      const isSelected = prev.selectedLayerIds.includes(id);
+      const nextSelection = isSelected
+        ? prev.selectedLayerIds.filter((s) => s !== id)
+        : [...prev.selectedLayerIds, id];
+      // Ensure at least one layer remains selected.
+      if (nextSelection.length === 0) return prev;
+      return {
+        ...prev,
+        selectedLayerIds: nextSelection,
+      };
+    });
+  }, []);
+
+  /** Shift+click: select a contiguous range from the active layer. */
+  const selectLayerRange = useCallback((id: string) => {
+    setState((prev) => {
+      const startIdx = prev.layers.findIndex(
+        (l) => l.id === prev.activeLayerId,
+      );
+      const endIdx = prev.layers.findIndex((l) => l.id === id);
+      if (startIdx === -1 || endIdx === -1) return prev;
+      const lo = Math.min(startIdx, endIdx);
+      const hi = Math.max(startIdx, endIdx);
+      const rangeIds = prev.layers.slice(lo, hi + 1).map((l) => l.id);
+      return { ...prev, selectedLayerIds: rangeIds, activeLayerId: id };
+    });
+  }, []);
+
+  /** Drag-and-drop reorder: move a layer to a specific index (0 = bottom). */
+  const reorderLayerToIndex = useCallback((id: string, toIndex: number) => {
+    setState((prev) => {
+      const fromIdx = prev.layers.findIndex((l) => l.id === id);
+      if (fromIdx === -1 || fromIdx === toIndex) return prev;
+      const layers = [...prev.layers];
+      const [moved] = layers.splice(fromIdx, 1);
+      // Adjust toIndex after removal if needed.
+      const adjusted = toIndex > fromIdx ? toIndex - 1 : toIndex;
+      layers.splice(adjusted, 0, moved);
+      return recordSnapshot({ ...prev, layers });
+    });
+  }, [recordSnapshot]);
+
+  /** Merge selected layers downward into the layer below the selection. */
+  const mergeSelectedLayers = useCallback(() => {
+    setState((prev) => {
+      const sel = prev.selectedLayerIds;
+      if (sel.length < 1) return prev;
+
+      // Sort selected by index ascending (0 = bottom of stack).
+      const sorted = [...sel]
+        .map((id) => ({ id, idx: prev.layers.findIndex((l) => l.id === id) }))
+        .filter((e) => e.idx !== -1)
+        .sort((a, b) => a.idx - b.idx);
+
+      if (sorted.length === 0) return prev;
+
+      // The layer directly below the bottommost selected layer.
+      const targetIdx = sorted[0].idx - 1;
+      if (targetIdx < 0) return prev; // nothing to merge into
+
+      const targetId = prev.layers[targetIdx].id;
+      const mergeIds = new Set(sorted.map((e) => e.id));
+
+      // Collect all content from selected layers.
+      const extraImages: ImageNode[] = [];
+      const extraStrokes: StrokeNode[] = [];
+      for (const { id } of sorted) {
+        const mLayer = prev.layers.find((l) => l.id === id);
+        if (!mLayer) continue;
+        extraImages.push(...mLayer.images);
+        extraStrokes.push(...mLayer.strokes);
+      }
+
+      const mergedLayers = prev.layers
+        .filter((l) => !mergeIds.has(l.id))
+        .map((l) =>
+          l.id === targetId
+            ? { ...l, images: [...l.images, ...extraImages], strokes: [...l.strokes, ...extraStrokes] }
+            : l,
+        );
+
+      return recordSnapshot({
+        ...prev,
+        layers: mergedLayers,
+        selectedLayerIds: [targetId],
+        activeLayerId: targetId,
+      });
+    });
+  }, [recordSnapshot]);
 
   // ── Active tool ───────────────────────────────────────────────────────────
 
@@ -268,12 +473,10 @@ export function useCanvasState() {
   // ── Reset document ────────────────────────────────────────────────────────
 
   const resetDocument = useCallback(() => {
-    // Reset ID counters so the new session starts with fresh IDs.
-    _layerIdCounter = 0;
-    _strokeIdCounter = 0;
-    _imageIdCounter = 0;
     // Wipe localStorage immediately so a reload after reset sees a clean slate
     // even if the debounced persist hasn't fired yet.
+    // Do NOT reset module-level ID counters — that would cause duplicate IDs
+    // with persisted data from the current session.
     try { localStorage.removeItem(STORAGE_KEY); } catch { /* ignore */ }
     setState(defaultState());
   }, []);
@@ -323,6 +526,7 @@ export function useCanvasState() {
         strokes: [],
         offsetX: 0,
         offsetY: 0,
+        parentGroupId: null,
       };
       const next = { ...prev, layers: [...prev.layers, newLayer], activeLayerId: newLayerId };
       const { history, historyIndex } = pushHistory(prev.history, prev.historyIndex, serialize(next));
@@ -437,14 +641,20 @@ export function useCanvasState() {
   const loadFromJSON = useCallback((json: string) => {
     try {
       const data = JSON.parse(json);
+      // Advance counters past any IDs in the loaded data so newly created
+      // strokes/images/layers/groups don't collide with loaded ones.
+      advanceCountersFromState(data);
       setState((prev) => ({
         ...prev,
+        layerGroups: data.layerGroups ?? prev.layerGroups,
         layers: (data.layers || prev.layers).map((l: CanvasLayer) => ({
           ...l,
           offsetX: l.offsetX ?? 0,
           offsetY: l.offsetY ?? 0,
+          parentGroupId: l.parentGroupId ?? null,
         })),
         activeLayerId: data.activeLayerId ?? prev.activeLayerId,
+        selectedLayerIds: data.selectedLayerIds ?? prev.selectedLayerIds,
         activeGridArea: data.activeGridArea || prev.activeGridArea,
         activeTool: data.activeTool || "brush",
         brushSize: data.brushSize ?? prev.brushSize,
@@ -484,7 +694,16 @@ export function useCanvasState() {
     setLayerVisible,
     setLayerOpacity,
     reorderLayer,
+    reorderLayerToIndex,
     setActiveLayer,
+    toggleLayerSelection,
+    selectLayerRange,
+    mergeSelectedLayers,
+    addLayerGroup,
+    toggleGroupExpanded,
+    renameGroup,
+    deleteGroup,
+    moveLayerToGroup,
     setActiveTool,
     setActiveGridArea,
     resetDocument,
