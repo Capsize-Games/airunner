@@ -1,4 +1,4 @@
-import { useRef, useState, useCallback, useEffect } from "react";
+import { useRef, useState, useCallback } from "react";
 import Konva from "konva";
 import {
   useCanvasContext,
@@ -9,33 +9,28 @@ import type { CanvasStageHandle } from "../../features/canvas/CanvasStage";
 import CanvasStage from "../../features/canvas/CanvasStage";
 import ToolBar, { type ToolbarDock } from "../../features/canvas/ToolBar";
 import CanvasSettingsModal from "../../features/canvas/CanvasSettingsModal";
-import ImageDropModal, { fitDimensions, type DropResizeMode } from "../../features/canvas/ImageDropModal";
+import ImageDropModal, {
+  type DropResizeMode,
+  fitDimensions,
+} from "../../features/canvas/ImageDropModal";
 import CanvasLayersSidebar from "../../features/canvas/CanvasLayersSidebar";
-
-interface PendingDrop {
-  base64: string;
-  x: number;
-  y: number;
-  naturalW: number;
-  naturalH: number;
-}
+import CanvasStatusBar from "./canvas/CanvasStatusBar";
+import { useCanvasImageDrop } from "./canvas/useCanvasImageDrop";
 
 export default function CanvasPanel() {
   const canvas = useCanvasContext();
 
-  const stageRef        = useRef<Konva.Stage>(null!) as React.RefObject<Konva.Stage>;
-  const gridLayerRef    = useRef<Konva.Layer>(null!) as React.RefObject<Konva.Layer>;
-  const maskLayerRef    = useRef<Konva.Layer>(null!) as React.RefObject<Konva.Layer>;
+  const stageRef = useRef<Konva.Stage>(null!) as React.RefObject<Konva.Stage>;
+  const gridLayerRef = useRef<Konva.Layer>(null!) as React.RefObject<Konva.Layer>;
+  const maskLayerRef = useRef<Konva.Layer>(null!) as React.RefObject<Konva.Layer>;
   const canvasHandleRef = useRef<CanvasStageHandle>(null);
 
-  const [showGrid,       setShowGrid]       = useState(true);
-  const [zoom,           setZoom]           = useState(1);
-  const [gridLocked,     setGridLocked]     = useState(false);
-  const [showSettings,   setShowSettings]   = useState(false);
+  const [showGrid, setShowGrid] = useState(true);
+  const [zoom, setZoom] = useState(1);
+  const [gridLocked, setGridLocked] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
   const [showNewDocModal, setShowNewDocModal] = useState(false);
-  const [showLayers,     setShowLayers]     = useState(true);
-  const [pendingDrop,    setPendingDrop]    = useState<PendingDrop | null>(null);
-  const [showDropModal,  setShowDropModal]  = useState(false);
+  const [showLayers, setShowLayers] = useState(true);
 
   const [dock, setDock] = useState<ToolbarDock>(() =>
     (localStorage.getItem("canvas_toolbar_dock") as ToolbarDock | null) ?? "top",
@@ -68,149 +63,56 @@ export default function CanvasPanel() {
     onSaved: () => setLastSavedDigest(currentDigest),
   });
 
-  // ── Image drop helpers ────────────────────────────────────────────────────
+  // ── Image drop handling ────────────────────────────────────────────────────
 
-  const canvasDropPos = useCallback((clientX: number, clientY: number) => {
-    const stage = stageRef.current;
-    if (!stage) return { x: 0, y: 0 };
-    const rect = stage.container().getBoundingClientRect();
-    const scale = stage.scaleX();
-    return {
-      x: (clientX - rect.left - stage.x()) / scale,
-      y: (clientY - rect.top  - stage.y()) / scale,
-    };
-  }, [stageRef]);
+  const {
+    pendingDrop,
+    showDropModal,
+    setShowDropModal,
+    handleDragOver,
+    handleDrop,
+    queueDrop,
+    useCanvasPlaceImage,
+  } = useCanvasImageDrop(stageRef);
 
-  const queueDrop = useCallback((dataUrl: string, x: number, y: number) => {
-    const img = new Image();
-    img.onload = () => {
-      setPendingDrop({ base64: dataUrl, x, y, naturalW: img.naturalWidth, naturalH: img.naturalHeight });
-      setShowDropModal(true);
-    };
-    img.src = dataUrl;
-  }, []);
+  // Listen for the "canvas-place-image" event fired by ServerImageRow
+  useCanvasPlaceImage(queueDrop);
 
-  const handleDragOver = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = "copy";
-  }, []);
-
-  /** Magic-byte signatures for common image formats. */
-  const IMAGE_MAGIC: [number[], number][] = [
-    [[0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A], 8], // PNG
-    [[0xFF, 0xD8, 0xFF],                                     3], // JPEG
-    [[0x47, 0x49, 0x46, 0x38],                               4], // GIF87a / GIF89a
-    [[0x42, 0x4D],                                            2], // BMP
-  ];
-
-  /** Check whether a file is an image using MIME type (fast) or magic bytes. */
-  const isImageFile = useCallback(async (file: File): Promise<boolean> => {
-    // Fast path: browser provides MIME type.
-    if (file.type.startsWith("image/")) return true;
-
-    // Fallback: read the first 8 bytes and check magic signatures.
-    try {
-      const buf = await file.slice(0, 8).arrayBuffer();
-      const header = new Uint8Array(buf);
-      return IMAGE_MAGIC.some(([sig, len]) =>
-        sig.every((byte, i) => header[i] === byte),
+  const handleDropConfirm = useCallback(
+    (mode: DropResizeMode) => {
+      if (!pendingDrop) return;
+      const { base64, x, y, naturalW, naturalH } = pendingDrop;
+      let w = naturalW;
+      let h = naturalH;
+      if (mode === "fit-grid") {
+        const fit = fitDimensions(
+          naturalW,
+          naturalH,
+          canvas.activeGridArea.width,
+          canvas.activeGridArea.height,
+        );
+        w = fit.w;
+        h = fit.h;
+      } else if (mode === "fit-canvas") {
+        const fit = fitDimensions(
+          naturalW,
+          naturalH,
+          canvas.documentWidth,
+          canvas.documentHeight,
+        );
+        w = fit.w;
+        h = fit.h;
+      }
+      canvas.placeImageOnNewLayer(
+        base64,
+        Math.max(0, x - w / 2),
+        Math.max(0, y - h / 2),
+        w,
+        h,
       );
-    } catch {
-      return false;
-    }
-  }, []);
-
-  const handleDrop = useCallback((e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    // Capture canvas coords synchronously before any async work
-    const { x, y } = canvasDropPos(e.clientX, e.clientY);
-
-    // Case 1: file dragged from filesystem
-    const file = e.dataTransfer.files[0];
-    if (file) {
-      isImageFile(file).then((isImage) => {
-        // Not an image by MIME or magic — ignore silently.
-        if (!isImage) {
-          // Still check for URL drop below.
-          const imageUrl = e.dataTransfer.getData("text/image-url");
-          if (imageUrl) {
-            fetch(imageUrl)
-              .then((r) => r.blob())
-              .then((blob) => {
-                const r2 = new FileReader();
-                r2.onload = (ev) => {
-                  const dataUrl = ev.target?.result as string;
-                  if (dataUrl) queueDrop(dataUrl, x, y);
-                };
-                r2.readAsDataURL(blob);
-              })
-              .catch(() => { /* silently ignore */ });
-          }
-          return;
-        }
-        const reader = new FileReader();
-        reader.onload = (ev) => {
-          const dataUrl = ev.target?.result as string;
-          if (dataUrl) queueDrop(dataUrl, x, y);
-        };
-        reader.readAsDataURL(file);
-      });
-      return;
-    }
-
-    // Case 2: URL dragged from image browser panel (no file in drop)
-    const imageUrl = e.dataTransfer.getData("text/image-url");
-    if (imageUrl) {
-      fetch(imageUrl)
-        .then((r) => r.blob())
-        .then((blob) => {
-          const reader = new FileReader();
-          reader.onload = (ev) => {
-            const dataUrl = ev.target?.result as string;
-            if (dataUrl) queueDrop(dataUrl, x, y);
-          };
-          reader.readAsDataURL(blob);
-        })
-        .catch(() => { /* silently ignore */ });
-    }
-  }, [canvasDropPos, queueDrop, isImageFile]);
-
-  // Listen for the "canvas-place-image" event fired by ServerImageRow's button
-  useEffect(() => {
-    const handler = (e: Event) => {
-      const { imageUrl } = (e as CustomEvent<{ imageUrl: string }>).detail;
-      if (!imageUrl) return;
-      fetch(imageUrl)
-        .then((r) => r.blob())
-        .then((blob) => {
-          const reader = new FileReader();
-          reader.onload = (ev) => {
-            const dataUrl = ev.target?.result as string;
-            if (dataUrl) queueDrop(dataUrl, 0, 0);
-          };
-          reader.readAsDataURL(blob);
-        })
-        .catch(() => { /* silently ignore */ });
-    };
-    window.addEventListener("canvas-place-image", handler);
-    return () => window.removeEventListener("canvas-place-image", handler);
-  }, [queueDrop]);
-
-  const handleDropConfirm = useCallback((mode: DropResizeMode) => {
-    if (!pendingDrop) return;
-    const { base64, x, y, naturalW, naturalH } = pendingDrop;
-    let w = naturalW;
-    let h = naturalH;
-    if (mode === "fit-grid") {
-      const fit = fitDimensions(naturalW, naturalH, canvas.activeGridArea.width, canvas.activeGridArea.height);
-      w = fit.w; h = fit.h;
-    } else if (mode === "fit-canvas") {
-      const fit = fitDimensions(naturalW, naturalH, canvas.documentWidth, canvas.documentHeight);
-      w = fit.w; h = fit.h;
-    }
-    canvas.placeImageOnNewLayer(base64, Math.max(0, x - w / 2), Math.max(0, y - h / 2), w, h);
-    setPendingDrop(null);
-  }, [pendingDrop, canvas]);
+    },
+    [pendingDrop, canvas],
+  );
 
   // ── New document ──────────────────────────────────────────────────────────
 
@@ -218,73 +120,84 @@ export default function CanvasPanel() {
     setShowNewDocModal(true);
   }, []);
 
-  const handleNewDocumentConfirm = useCallback((w: number, h: number, bg: string) => {
-    canvas.resetDocument();
-    canvas.setDocumentSize(w, h);
-    canvas.setDocumentBgColor(bg);
-  }, [canvas]);
+  const handleNewDocumentConfirm = useCallback(
+    (w: number, h: number, bg: string) => {
+      canvas.resetDocument();
+      canvas.setDocumentSize(w, h);
+      canvas.setDocumentBgColor(bg);
+    },
+    [canvas],
+  );
 
   // ── Canvas settings ───────────────────────────────────────────────────────
 
-  const handleApplySettings = useCallback((w: number, h: number, bg: string) => {
-    canvas.setDocumentSize(w, h);
-    canvas.setDocumentBgColor(bg);
-  }, [canvas]);
+  const handleApplySettings = useCallback(
+    (w: number, h: number, bg: string) => {
+      canvas.setDocumentSize(w, h);
+      canvas.setDocumentBgColor(bg);
+    },
+    [canvas],
+  );
 
   if (!isLoaded) {
     return (
       <div className="canvas-panel d-flex align-items-center justify-content-center h-100">
-        <div className="spinner-border spinner-border-sm" role="status" style={{ color: "var(--theme-text-secondary)" }} />
+        <div
+          className="spinner-border spinner-border-sm"
+          role="status"
+          style={{ color: "var(--theme-text-secondary)" }}
+        />
       </div>
     );
   }
+
+  const sharedToolbarProps = {
+    activeTool: canvas.activeTool,
+    brushSize: canvas.brushSize,
+    brushColor: canvas.brushColor,
+    showGrid,
+    snapToGrid: canvas.snapToGrid,
+    zoom,
+    activeGridArea: canvas.activeGridArea,
+    gridLocked,
+    onSetActiveTool: canvas.setActiveTool,
+    onSetBrushSize: canvas.setBrushSize,
+    onSetBrushColor: canvas.setBrushColor,
+    onToggleGrid: () => setShowGrid((v) => !v),
+    onToggleSnap: () => canvas.setSnapToGrid(!canvas.snapToGrid),
+    onZoomIn: () => canvasHandleRef.current?.zoomIn(),
+    onZoomOut: () => canvasHandleRef.current?.zoomOut(),
+    onZoomReset: () => canvasHandleRef.current?.zoomReset(),
+    onCenterView: () => canvasHandleRef.current?.centerView(),
+    onSetGridArea: canvas.setActiveGridArea,
+    onToggleGridLock: () => setGridLocked((v) => !v),
+    onOpenSettings: () => setShowSettings(true),
+    onSetDock: handleSetDock,
+    onUndo: canvas.undo,
+    onRedo: canvas.redo,
+    onNewDocument: handleNewDocument,
+    onClearMask: canvas.clearMask,
+    hasMaskStrokes: canvas.maskStrokes.length > 0,
+    showLayers,
+    onToggleLayers: () => setShowLayers((v) => !v),
+  };
 
   return (
     <div
       className="canvas-panel d-flex h-100 overflow-hidden flex-column"
       style={{ background: "#0a0a0f" }}
     >
-      {dock === "top" && (
-        <ToolBar
-          activeTool={canvas.activeTool}
-          brushSize={canvas.brushSize}
-          brushColor={canvas.brushColor}
-          showGrid={showGrid}
-          snapToGrid={canvas.snapToGrid}
-          zoom={zoom}
-          activeGridArea={canvas.activeGridArea}
-          gridLocked={gridLocked}
-          dock={dock}
-          onSetActiveTool={canvas.setActiveTool}
-          onSetBrushSize={canvas.setBrushSize}
-          onSetBrushColor={canvas.setBrushColor}
-          onToggleGrid={() => setShowGrid((v) => !v)}
-          onToggleSnap={() => canvas.setSnapToGrid(!canvas.snapToGrid)}
-          onZoomIn={() => canvasHandleRef.current?.zoomIn()}
-          onZoomOut={() => canvasHandleRef.current?.zoomOut()}
-          onZoomReset={() => canvasHandleRef.current?.zoomReset()}
-          onCenterView={() => canvasHandleRef.current?.centerView()}
-          onSetGridArea={canvas.setActiveGridArea}
-          onToggleGridLock={() => setGridLocked((v) => !v)}
-          onOpenSettings={() => setShowSettings(true)}
-          onSetDock={handleSetDock}
-          onUndo={canvas.undo}
-          onRedo={canvas.redo}
-          onNewDocument={handleNewDocument}
-          onClearMask={canvas.clearMask}
-          hasMaskStrokes={canvas.maskStrokes.length > 0}
-          showLayers={showLayers}
-          onToggleLayers={() => setShowLayers((v) => !v)}
-        />
-      )}
+      {dock === "top" && <ToolBar {...sharedToolbarProps} dock="top" />}
 
       {/* Canvas viewport + layers sidebar */}
       <div
         className="flex-grow-1 d-flex flex-column overflow-hidden"
         style={{ minWidth: 0, minHeight: 0 }}
       >
-        {/* Canvas + optional layers sidebar, side by side */}
-        <div className="flex-grow-1 d-flex flex-row overflow-hidden" style={{ minHeight: 0 }}>
+        <div
+          className="flex-grow-1 d-flex flex-row overflow-hidden"
+          style={{ minHeight: 0 }}
+        >
           <div
             className="flex-grow-1 overflow-hidden"
             style={{ background: "#0a0a0f", position: "relative" }}
@@ -323,82 +236,19 @@ export default function CanvasPanel() {
         </div>
 
         {/* Status bar */}
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 12,
-            padding: "3px 10px",
-            background: "#111118",
-            borderTop: "1px solid rgba(255,255,255,0.06)",
-            fontSize: 11,
-            fontFamily: "monospace",
-            color: "rgba(255,255,255,0.4)",
-            flexShrink: 0,
-          }}
-        >
-          <span>{canvas.documentWidth} × {canvas.documentHeight}</span>
-          <span>Zoom: {Math.round(zoom * 100)}%</span>
-          <span>Grid: {canvas.activeGridArea.width} × {canvas.activeGridArea.height}</span>
-          {canvas.activeLayer && <span>Layer: {canvas.activeLayer.name}</span>}
-          <span
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 4,
-              color: canvasSync.connected
-                ? "rgba(0,200,100,0.7)"
-                : "rgba(255,150,50,0.6)",
-            }}
-          >
-            <span
-              style={{
-                width: 6,
-                height: 6,
-                borderRadius: "50%",
-                background: canvasSync.connected
-                  ? "rgb(0,200,100)"
-                  : "rgb(255,150,50)",
-                display: "inline-block",
-              }}
-            />
-            {canvasSync.connected ? "Live" : "Reconnecting…"}
-          </span>
-        </div>
+        <CanvasStatusBar
+          documentWidth={canvas.documentWidth}
+          documentHeight={canvas.documentHeight}
+          zoom={zoom}
+          gridWidth={canvas.activeGridArea.width}
+          gridHeight={canvas.activeGridArea.height}
+          activeLayer={canvas.activeLayer}
+          connected={canvasSync.connected}
+        />
       </div>
 
       {dock === "bottom" && (
-        <ToolBar
-          activeTool={canvas.activeTool}
-          brushSize={canvas.brushSize}
-          brushColor={canvas.brushColor}
-          showGrid={showGrid}
-          snapToGrid={canvas.snapToGrid}
-          zoom={zoom}
-          activeGridArea={canvas.activeGridArea}
-          gridLocked={gridLocked}
-          dock={dock}
-          onSetActiveTool={canvas.setActiveTool}
-          onSetBrushSize={canvas.setBrushSize}
-          onSetBrushColor={canvas.setBrushColor}
-          onToggleGrid={() => setShowGrid((v) => !v)}
-          onToggleSnap={() => canvas.setSnapToGrid(!canvas.snapToGrid)}
-          onZoomIn={() => canvasHandleRef.current?.zoomIn()}
-          onZoomOut={() => canvasHandleRef.current?.zoomOut()}
-          onZoomReset={() => canvasHandleRef.current?.zoomReset()}
-          onCenterView={() => canvasHandleRef.current?.centerView()}
-          onSetGridArea={canvas.setActiveGridArea}
-          onToggleGridLock={() => setGridLocked((v) => !v)}
-          onOpenSettings={() => setShowSettings(true)}
-          onSetDock={handleSetDock}
-          onUndo={canvas.undo}
-          onRedo={canvas.redo}
-          onNewDocument={handleNewDocument}
-          onClearMask={canvas.clearMask}
-          hasMaskStrokes={canvas.maskStrokes.length > 0}
-          showLayers={showLayers}
-          onToggleLayers={() => setShowLayers((v) => !v)}
-        />
+        <ToolBar {...sharedToolbarProps} dock="bottom" />
       )}
 
       {/* Modals */}

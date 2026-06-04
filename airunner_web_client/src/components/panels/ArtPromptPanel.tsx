@@ -1,42 +1,12 @@
-import { useState, useEffect, useRef, useCallback } from "react";
-import {
-  startArtGeneration,
-  getArtJobStatus,
-} from "../../api/client";
-import ProgressBar from "react-bootstrap/ProgressBar";
+import { useState, useEffect, useCallback } from "react";
 import PromptInput from "./art-prompt/PromptInput";
 import { EmbeddingPills, LoraPills } from "./art-prompt/ActivePills";
 import ArtPromptFooter from "./art-prompt/ArtPromptFooter";
-
-const STORAGE_KEY = "airunner_art_prompt_data";
-
-interface PromptData {
-  prompt: string;
-  negative_prompt: string;
-  secondary_prompt: string;
-  secondary_negative_prompt: string;
-}
-
-const DEFAULT_PROMPT_DATA: PromptData = {
-  prompt: "",
-  negative_prompt: "",
-  secondary_prompt: "",
-  secondary_negative_prompt: "",
-};
-
-function loadPromptData(): PromptData {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) return JSON.parse(raw) as PromptData;
-  } catch { /* ignore */ }
-  return { ...DEFAULT_PROMPT_DATA };
-}
-
-function savePromptData(data: Record<string, string>) {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-  } catch { /* ignore */ }
-}
+import { useArtGeneration } from "./art-prompt/useArtGeneration";
+import {
+  loadPromptData,
+  savePromptData,
+} from "./art-prompt/ArtPromptStorage";
 
 export default function ArtPromptPanel() {
   const initial = loadPromptData();
@@ -55,10 +25,6 @@ export default function ArtPromptPanel() {
   const [secondaryNegativePrompt, setSecondaryNegativePrompt] = useState(
     initial.secondary_negative_prompt,
   );
-  const [generating, setGenerating] = useState(false);
-  const [progress, setProgress] = useState(0);
-  const jobIdRef = useRef<string | null>(null);
-  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [artVersion, setArtVersion] = useState(savedVersion);
   const [artModel, setArtModel] = useState(() => {
     try { return localStorage.getItem("airunner_art_model") || ""; }
@@ -73,6 +39,13 @@ export default function ArtPromptPanel() {
   const [activeEmbeddings, setActiveEmbeddings] = useState<
     { id: number; name: string }[]
   >([]);
+
+  const {
+    generating,
+    progress,
+    handleSubmit,
+    handleCancel,
+  } = useArtGeneration();
 
   const reloadActiveLoras = useCallback(async () => {
     try {
@@ -133,7 +106,6 @@ export default function ArtPromptPanel() {
     return () => {
       window.removeEventListener("art-version-changed", versionHandler);
       window.removeEventListener("art-model-changed", modelHandler);
-      if (pollRef.current) clearInterval(pollRef.current);
     };
   }, [reloadActiveLoras, reloadActiveEmbeddings]);
 
@@ -156,51 +128,18 @@ export default function ArtPromptPanel() {
     savePromptData({ ...current, ...updates });
   };
 
-  const handleSubmit = async () => {
-    if (generating || !prompt.trim()) return;
-    setGenerating(true);
-    setProgress(0);
-    try {
-      const scheduler = (() => {
-        try { return localStorage.getItem("airunner_art_scheduler") || ""; }
-        catch { return ""; }
-      })();
-      const resp = await startArtGeneration({
-        prompt: prompt.trim(),
-        negative_prompt: negativePrompt.trim() || undefined,
-        model: artModel || undefined,
-        version: artVersion || undefined,
-        scheduler: scheduler || undefined,
-        num_images: 1,
-      });
-      jobIdRef.current = resp.job_id;
-      pollRef.current = setInterval(async () => {
-        try {
-          const status = await getArtJobStatus(resp.job_id);
-          setProgress(status.progress ?? 0);
-          if (
-            status.status === "complete" ||
-            status.status === "failed"
-          ) {
-            handleCancel();
-          }
-        } catch {
-          // keep polling
-        }
-      }, 1000);
-    } catch {
-      setGenerating(false);
-    }
-  };
-
-  const handleCancel = () => {
-    if (pollRef.current) {
-      clearInterval(pollRef.current);
-      pollRef.current = null;
-    }
-    jobIdRef.current = null;
-    setGenerating(false);
-    setProgress(0);
+  const onSubmit = () => {
+    const scheduler = (() => {
+      try { return localStorage.getItem("airunner_art_scheduler") || ""; }
+      catch { return ""; }
+    })();
+    handleSubmit({
+      prompt,
+      negativePrompt,
+      artModel,
+      artVersion,
+      scheduler,
+    });
   };
 
   const deactivateLora = (id: number) => {
@@ -301,7 +240,7 @@ export default function ArtPromptPanel() {
             setIsZImage(v === "Z-Image Turbo");
           }}
           onModelChange={(m) => setArtModel(m)}
-          onSubmit={handleSubmit}
+          onSubmit={onSubmit}
           onCancel={handleCancel}
         />
       </div>

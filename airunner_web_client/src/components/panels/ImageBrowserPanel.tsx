@@ -1,8 +1,8 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Spinner from "react-bootstrap/Spinner";
 import { BASE_URL } from "../../types/api";
-import type { ImageDateInfo, ImageInfo } from "../../api/client";
-import { deleteImage, renameImage } from "../../api/client";
+import type { ImageInfo } from "../../api/client";
+import { deleteImage } from "../../api/client";
 import {
   getLocalImages,
   deleteLocalImage,
@@ -14,13 +14,18 @@ import ImagePreviewModal from "./image-browser/ImagePreviewModal";
 import ServerImageRow from "./image-browser/ServerImageRow";
 import LocalImageRow from "./image-browser/LocalImageRow";
 import ImageBrowserFooter from "./image-browser/ImageBrowserFooter";
+import ImageDateSelector from "./image-browser/ImageDateSelector";
+import { useInfiniteScroll } from "./image-browser/useInfiniteScroll";
+import { useImageBrowserSSE } from "./image-browser/useImageBrowserSSE";
 
 const PAGE_SIZE = 20;
 
 export { saveLocalImage, getLocalImages, type LocalImageEntry };
 
 export default function ImageBrowserPanel() {
-  const [dates, setDates] = useState<ImageDateInfo[]>([]);
+  const [dates, setDates] = useState<
+    { value: string; label: string }[]
+  >([]);
   const [selectedDate, setSelectedDate] = useState<string | null>(() => {
     try {
       return localStorage.getItem(LS_DATE_KEY);
@@ -38,8 +43,6 @@ export default function ImageBrowserPanel() {
   const [showLocal, setShowLocal] = useState(false);
   const [previewIndex, setPreviewIndex] = useState<number | null>(null);
   const [confirmDeleteAll, setConfirmDeleteAll] = useState(false);
-
-  const sentinelRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     setLocalImages(getLocalImages());
@@ -103,53 +106,29 @@ export default function ImageBrowserPanel() {
     loadImages(selectedDate, 0, false);
   }, [selectedDate, loadImages]);
 
-  useEffect(() => {
-    if (!hasMore || loadingImages || !sentinelRef.current) return;
-    const sentinel = sentinelRef.current;
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting && hasMore && selectedDate) {
-          loadImages(selectedDate, offset, true);
-        }
-      },
-      { rootMargin: "200px" },
-    );
-    observer.observe(sentinel);
-    return () => observer.disconnect();
+  const loadMore = useCallback(() => {
+    if (hasMore && !loadingImages && selectedDate) {
+      loadImages(selectedDate, offset, true);
+    }
   }, [hasMore, loadingImages, selectedDate, offset, loadImages]);
 
-  useEffect(() => {
-    const eventSource = new EventSource(
-      `${BASE_URL}/api/v1/art/images/watch`,
-    );
-    eventSource.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data);
-        if (data.type === "reload") {
-          loadDates();
-          setServerImages([]);
-          setOffset(0);
-          setHasMore(true);
-          if (selectedDate) {
-            loadImages(selectedDate, 0, false);
-          }
-          setLocalImages(getLocalImages());
-        }
-      } catch {
-        // ignore malformed events
-      }
-    };
-    eventSource.onerror = () => {
-      // The browser will auto-reconnect
-    };
-    return () => {
-      eventSource.close();
-    };
+  const sentinelRef = useInfiniteScroll(loadMore, hasMore && !loadingImages);
+
+  const handleSSEReload = useCallback(() => {
+    loadDates();
+    setServerImages([]);
+    setOffset(0);
+    setHasMore(true);
+    if (selectedDate) {
+      loadImages(selectedDate, 0, false);
+    }
+    setLocalImages(getLocalImages());
   }, [loadDates, selectedDate, loadImages]);
 
-  const handleDateChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const val = e.target.value || null;
-    if (val === "__local__") {
+  useImageBrowserSSE(handleSSEReload);
+
+  const handleDateChange = (val: string | null, isLocal: boolean) => {
+    if (isLocal) {
       setShowLocal(true);
       return;
     }
@@ -223,31 +202,17 @@ export default function ImageBrowserPanel() {
     );
   }
 
-  const hasLocalImages = localImages.length > 0;
-
   return (
     <div className="p-2 d-flex flex-column h-100">
       <h6 className="text-muted mb-2">Image Browser</h6>
 
-      <select
-        className="form-select form-select-sm mb-2"
-        value={showLocal ? "__local__" : selectedDate ?? ""}
+      <ImageDateSelector
+        dates={dates}
+        selectedDate={selectedDate}
+        showLocal={showLocal}
+        localImageCount={localImages.length}
         onChange={handleDateChange}
-      >
-        {hasLocalImages && (
-          <option value="__local__">
-            Local Storage ({localImages.length})
-          </option>
-        )}
-        {dates.length === 0 && !hasLocalImages && (
-          <option value="">No images found</option>
-        )}
-        {dates.map((d) => (
-          <option key={d.value} value={d.value}>
-            {d.label}
-          </option>
-        ))}
-      </select>
+      />
 
       <div className="flex-grow-1 overflow-auto">
         {showLocal ? (
