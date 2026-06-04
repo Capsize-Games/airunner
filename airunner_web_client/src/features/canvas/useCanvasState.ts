@@ -268,6 +268,13 @@ export function useCanvasState() {
   // ── Reset document ────────────────────────────────────────────────────────
 
   const resetDocument = useCallback(() => {
+    // Reset ID counters so the new session starts with fresh IDs.
+    _layerIdCounter = 0;
+    _strokeIdCounter = 0;
+    _imageIdCounter = 0;
+    // Wipe localStorage immediately so a reload after reset sees a clean slate
+    // even if the debounced persist hasn't fired yet.
+    try { localStorage.removeItem(STORAGE_KEY); } catch { /* ignore */ }
     setState(defaultState());
   }, []);
 
