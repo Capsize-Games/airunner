@@ -41,6 +41,8 @@ export default function DrawingLayer({
 
   const handleMouseDown = useCallback(
     (e: Konva.KonvaEventObject<MouseEvent>) => {
+      // Only left button (0) should draw — ignore middle/right button.
+      if (e.evt.button !== 0) return;
       if (!isActive || !isDrawingTool) return;
       const pos = getCanvasPos(e);
       if (!pos) return;
