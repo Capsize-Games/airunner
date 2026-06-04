@@ -10,6 +10,7 @@ from airunner_services.database.models.application_settings import (
     ApplicationSettings,
 )
 from airunner_services.database.models.brush_settings import BrushSettings
+from airunner_services.database.models.canvas_document import CanvasDocument
 from airunner_services.database.models.canvas_layer import CanvasLayer
 from airunner_services.database.models.chatstore import Chatstore
 from airunner_services.database.models.chatbot import Chatbot
@@ -92,6 +93,7 @@ __all__ = [
     "AIRunnerSettings",
     "ApplicationSettings",
     "BrushSettings",
+    "CanvasDocument",
     "CanvasLayer",
     "Chatstore",
     "Chatbot",

@@ -8,6 +8,7 @@ export { BASE_URL, type JsonObject, type StreamChunk };
 export { request, streamRequest } from "./client-base";
 
 // Re-export from domain modules
+export * from "./canvas";
 export * from "./chat";
 export * from "./art";
 export * from "./layers";

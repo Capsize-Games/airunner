@@ -84,6 +84,8 @@ export interface ArtGenerateRequest {
   model?: string;
   version?: string;
   scheduler?: string;
+  init_image?: string;   // base64 PNG of the canvas region
+  mask_image?: string;   // base64 PNG of the inpaint mask, white = inpaint region
 }
 
 export interface ArtGenerateResponse {
@@ -94,6 +96,9 @@ export interface ArtJobStatus {
   status: string;
   progress: number;
   error?: string;
+  image?: string;  // base64 PNG, present when status === "completed"
+  width?: number;  // pixel width of the generated image
+  height?: number; // pixel height of the generated image
 }
 
 // ---------------------------------------------------------------------------

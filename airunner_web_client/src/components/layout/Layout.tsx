@@ -20,6 +20,7 @@ import CivitaiBrowserPanel from "../panels/civitai-browser/CivitaiBrowserPanel";
 import DownloadTray from "../downloads/DownloadTray";
 import TopBar from "./TopBar";
 import { LeftIconBar, RightIconBar } from "./IconBar";
+import { CanvasProvider } from "../../features/canvas";
 
 const HANDLE_W = 4;
 const LEFT_MIN = 180;
@@ -387,12 +388,12 @@ export default function Layout({
             style={{ width: canvasW, flex: "none" }}
           >
             {showCanvas && (
-              <>
+              <CanvasProvider>
                 <CanvasPanel />
                 <div className="art-prompt-panel">
                   <ArtPromptPanel />
                 </div>
-              </>
+              </CanvasProvider>
             )}
           </div>
 

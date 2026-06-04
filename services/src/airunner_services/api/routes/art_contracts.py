@@ -22,6 +22,7 @@ class GenerationRequest(BaseModel):
     pipeline: Optional[str] = None
     strength: Optional[float] = None
     image_b64: Optional[str] = None
+    mask_image_b64: Optional[str] = None
     skip_auto_export: bool = False
 
 
@@ -39,6 +40,7 @@ class JobStatusResponse(BaseModel):
     status: str
     progress: float
     image_url: Optional[str] = None
+    image: Optional[str] = None
     error: Optional[str] = None
 
 

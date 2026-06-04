@@ -2,7 +2,6 @@
 
 from airunner_services.api.routes import (
     art,
-    canvas_image,
     conversations,
     daemon,
     downloads,
@@ -15,6 +14,9 @@ from airunner_services.api.routes import (
     tts,
 )
 from airunner_services.api.routes.art_options import router as art_options_router
+from airunner_services.api.routes.canvas_document import (
+    router as canvas_document_router,
+)
 from airunner_services.api.routes.embeddings import router as embeddings_router
 from airunner_services.api.routes.embeddings_watch import (
     router as embeddings_watch_router,
@@ -26,7 +28,6 @@ from airunner_services.api.routes.knowledge_base_index import (
 from airunner_services.api.routes.knowledge_base_watch import (
     router as knowledge_base_watch_router,
 )
-from airunner_services.api.routes.layers import router as layers_router
 from airunner_services.api.routes.lora_watch import router as lora_watch_router
 from airunner_services.api.routes.models_status import router as models_status_router
 from airunner_services.api.routes.models_watch import router as models_watch_router
@@ -35,7 +36,7 @@ from airunner_services.api.routes.privacy import router as privacy_router
 __all__ = [
     "art",
     "art_options_router",
-    "canvas_image",
+    "canvas_document_router",
     "conversations",
     "daemon",
     "downloads",
@@ -46,7 +47,6 @@ __all__ = [
     "knowledge_base",
     "knowledge_base_index_router",
     "knowledge_base_watch_router",
-    "layers_router",
     "legacy",
     "llm",
     "lora_watch_router",
