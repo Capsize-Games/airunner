@@ -19,3 +19,7 @@ paths-ignore:
   # CivitAI API-key storage -- sessionStorage is a deliberate scoping
   # trade-off; a full proxy solution belongs in a separate enhancement.
   - 'client/src/components/panels/civitai-browser/CivitaiModelDetailDownload.tsx'
+
+  # Error-payload builder -- uses json.dumps instead of JSONResponse
+  # to avoid stack-trace exposure via the response body.
+  - 'server/src/airunner_services/api/routes/legacy_llm_stream_payloads.py'

@@ -141,7 +141,7 @@ class ModelValidationMixin:
         model_path: Optional[str] = None,
     ) -> Tuple[bool, str]:
         """Ensure the art model is loaded before processing a request."""
-        from airunner_services.contract_enums import ModelStatus, SignalCode
+        from airunner_services.contract_enums import SignalCode
 
         if self._is_art_model_loaded():
             return True, ""

@@ -58,7 +58,7 @@ def _eval_latex_expression(
         if all(c in "0123456789.+-*/()\nsqrtmath." for c in expr):
             result = eval(expr, {"__builtins__": {}, "math": math})
             return -result if is_negative else float(result)
-    except:
+    except Exception:
         pass
     return None
 

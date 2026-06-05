@@ -6,7 +6,7 @@ import json
 import logging
 import queue
 import threading
-from typing import Any, Optional
+from typing import Any
 
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import StreamingResponse

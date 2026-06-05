@@ -15,7 +15,6 @@ from fastapi.responses import StreamingResponse
 from airunner_services.api.routes.legacy_common import get_airunner_app
 from airunner_services.api.routes.legacy_llm_stream_helpers import (
     handle_stream_event,
-    unregister_pending_request,
 )
 from airunner_services.api.routes.legacy_llm_stream_payloads import (
     error_payload,

@@ -162,7 +162,7 @@ Now solve the problem:
 
             # Already numeric
             return result
-        except:
+        except Exception:
             # Return as-is if simplification fails
             return result
 

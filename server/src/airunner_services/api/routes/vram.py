@@ -5,7 +5,6 @@ from __future__ import annotations
 import logging
 from pathlib import Path
 
-import torch
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
 from safetensors import safe_open
