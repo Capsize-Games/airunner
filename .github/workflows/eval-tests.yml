@@ -12,7 +12,6 @@ permissions:
 
 env:
   PYTHON_VERSION: "3.13"
-  TEST_PROFILES: core,development
 
 jobs:
   runtime-contract-tests:
@@ -40,7 +39,7 @@ jobs:
       - name: Install Python dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -e server/
+          pip install -e server/ 2>&1
 
       - name: Run runtime contract tests
         run: |
@@ -147,13 +146,11 @@ jobs:
       - name: Install Python dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -e ".[$TEST_PROFILES]"
+          pip install -e server/ 2>&1
 
       - name: Run ${{ matrix.name }} runtime smoke tests
         run: |
-          python server/src/airunner_services/tests/functional/run_runtime_smoke.py \
-            ${{ matrix.smoke-flag }} \
-            --verbose 2>&1 || python scripts/run_tests.py \
+          python scripts/run_tests.py \
             ${{ matrix.smoke-flag }} \
             --verbose 2>&1
 
@@ -183,7 +180,7 @@ jobs:
       - name: Install Python dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -e server/
+          pip install -e server/ 2>&1
       
       - name: Run eval tests
         run: |
