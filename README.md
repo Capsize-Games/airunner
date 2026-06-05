@@ -74,6 +74,14 @@ Then open your browser at **http://localhost:5173**.
 
 The backend API is available at **http://localhost:8080**.
 
+### Logs
+
+All server and sidecar (art, TTS, STT, LLM) logs go to a single file:
+
+```bash
+tail -f build/logs/server.log
+```
+
 ---
 
 ## 📦 End-User Bundle (Desktop Application)
@@ -240,7 +248,8 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) and the [Development Wiki](https://github
 
 - [Wiki](https://github.com/Capsize-Games/airunner/wiki)
 - [Settings Reference](https://github.com/Capsize-Games/airunner/wiki/Settings)
-- [API Service Layer](src/airunner/components/application/api/README.md)
+- [Logging](README.md#logs)
+- [Development Wiki](https://github.com/Capsize-Games/airunner/wiki/Development)
 
 ---
 
