@@ -129,17 +129,18 @@ def handle_interrupted_generation(
 ) -> str:
     """Handle interrupted generation and send an empty end marker."""
     owner.logger.info("Generation interrupted by user")
-    owner.api.llm.send_llm_text_streamed_signal(
-        LLMResponse(
-            node_id=llm_request.node_id if llm_request else None,
-            message="",
-            is_end_of_message=True,
-            sequence_number=sequence_counter + 1,
-            request_id=getattr(owner, "_current_request_id", None),
-            message_type="assistant",
-            turn_index=current_assistant_turn_index(owner),
+    if hasattr(owner, "send_llm_text_streamed_signal"):
+        owner.send_llm_text_streamed_signal(
+            LLMResponse(
+                node_id=llm_request.node_id if llm_request else None,
+                message="",
+                is_end_of_message=True,
+                sequence_number=sequence_counter + 1,
+                request_id=getattr(owner, "_current_request_id", None),
+                message_type="assistant",
+                turn_index=current_assistant_turn_index(owner),
+            )
         )
-    )
     return ""
 
 
@@ -156,16 +157,21 @@ def handle_generation_error(
     print(
         f"[ERROR HANDLER] Error message to send: {error_message}", flush=True
     )
-    owner.api.llm.send_llm_text_streamed_signal(
-        LLMResponse(
-            node_id=llm_request.node_id if llm_request else None,
-            message=error_message,
-            is_end_of_message=False,
-            request_id=getattr(owner, "_current_request_id", None),
-            message_type="system",
-            turn_index=current_assistant_turn_index(owner),
+    if hasattr(owner, "send_llm_text_streamed_signal"):
+        owner.send_llm_text_streamed_signal(
+            LLMResponse(
+                node_id=llm_request.node_id if llm_request else None,
+                message=error_message,
+                is_end_of_message=False,
+                request_id=getattr(owner, "_current_request_id", None),
+                message_type="system",
+                turn_index=current_assistant_turn_index(owner),
+            )
         )
-    )
+    else:
+        owner.logger.error(
+            "Cannot send error signal - owner has no send_llm_text_streamed_signal"
+        )
     return error_message
 
 

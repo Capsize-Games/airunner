@@ -23,9 +23,12 @@ def build_runtime_registry(
     signal_source = (
         app_instance if hasattr(app_instance, "emit_signal") else None
     )
+    # Only include runtimes that have their dependencies available.
+    # LLM is always available in-process. STT, TTS, and art require
+    # a signal source (GUI app instance) to be fully functional.
     register_local_fallback_clients(
         registry,
-        include_llm=False,
+        include_llm=True,
         stt_client=(
             LocalFallbackSTTClient(signal_source=signal_source)
             if signal_source is not None

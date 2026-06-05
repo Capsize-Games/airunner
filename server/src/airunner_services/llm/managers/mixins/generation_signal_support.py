@@ -48,18 +48,29 @@ def emit_visible_response(
         return
     complete_response[0] = message
     sequence_counter[0] += 1
-    owner.api.llm.send_llm_text_streamed_signal(
-        LLMResponse(
-            node_id=llm_request.node_id if llm_request else None,
-            message=message,
-            is_end_of_message=False,
-            is_first_message=(sequence_counter[0] == 1),
-            sequence_number=sequence_counter[0],
-            request_id=getattr(owner, "_current_request_id", None),
-            message_type="assistant",
-            turn_index=current_assistant_turn_index(owner),
-        )
+    _send_signal(
+        owner,
+        llm_request,
+        message,
+        is_end_of_message=False,
+        is_first_message=(sequence_counter[0] == 1),
+        sequence_number=sequence_counter[0],
+        message_type="assistant",
     )
+
+
+def _send_signal(owner, llm_request, message, **kwargs):
+    """Emit a streamed signal if the owner supports it."""
+    if hasattr(owner, "send_llm_text_streamed_signal"):
+        owner.send_llm_text_streamed_signal(
+            LLMResponse(
+                node_id=llm_request.node_id if llm_request else None,
+                message=message,
+                request_id=getattr(owner, "_current_request_id", None),
+                turn_index=current_assistant_turn_index(owner),
+                **kwargs,
+            )
+        )
 
 
 def create_streaming_callback(
@@ -87,17 +98,14 @@ def create_streaming_callback(
             owner.logger.warning(
                 "[STREAM] Missing _current_request_id while streaming token"
             )
-        owner.api.llm.send_llm_text_streamed_signal(
-            LLMResponse(
-                node_id=llm_request.node_id if llm_request else None,
-                message=token_text,
-                is_end_of_message=False,
-                is_first_message=(sequence_counter[0] == 1),
-                sequence_number=sequence_counter[0],
-                request_id=getattr(owner, "_current_request_id", None),
-                message_type="assistant",
-                turn_index=current_assistant_turn_index(owner),
-            )
+        _send_signal(
+            owner,
+            llm_request,
+            token_text,
+            is_end_of_message=False,
+            is_first_message=(sequence_counter[0] == 1),
+            sequence_number=sequence_counter[0],
+            message_type="assistant",
         )
 
     return handle_streaming_token
@@ -113,17 +121,14 @@ def create_thinking_callback(
     def handle_thinking_event(status: str, content: str) -> None:
         """Forward one thinking event to the streaming consumer."""
         sequence_counter[0] += 1
-        owner.api.llm.send_llm_text_streamed_signal(
-            LLMResponse(
-                node_id=llm_request.node_id if llm_request else None,
-                message=content or "",
-                is_end_of_message=(status == "completed"),
-                is_first_message=(status == "started"),
-                sequence_number=sequence_counter[0],
-                request_id=getattr(owner, "_current_request_id", None),
-                message_type="thinking",
-                turn_index=current_assistant_turn_index(owner),
-            )
+        _send_signal(
+            owner,
+            llm_request,
+            content or "",
+            is_end_of_message=(status == "completed"),
+            is_first_message=(status == "started"),
+            sequence_number=sequence_counter[0],
+            message_type="thinking",
         )
 
     return handle_thinking_event
@@ -145,18 +150,16 @@ def send_end_of_message(
         owner.logger.warning(
             "[STREAM] Missing _current_request_id when sending end-of-message"
         )
-    owner.api.llm.send_llm_text_streamed_signal(
-        LLMResponse(
-            node_id=llm_request.node_id if llm_request else None,
-            final_visible_message=final_visible_message,
-            is_end_of_message=True,
-            sequence_number=sequence_counter[0],
-            request_id=getattr(owner, "_current_request_id", None),
-            tools=executed_tools,
-            prompt_tokens=prompt_tokens,
-            completion_tokens=completion_tokens,
-            total_tokens=total_tokens,
-            message_type="assistant",
-            turn_index=current_assistant_turn_index(owner),
-        )
+    _send_signal(
+        owner,
+        llm_request,
+        "",
+        is_end_of_message=True,
+        sequence_number=sequence_counter[0],
+        final_visible_message=final_visible_message,
+        tools=executed_tools,
+        prompt_tokens=prompt_tokens,
+        completion_tokens=completion_tokens,
+        total_tokens=total_tokens,
+        message_type="assistant",
     )

@@ -1,25 +1,25 @@
 {
   "url": "http://localhost:5173/art",
-  "capturedAt": "2026-06-05T21:36:49.742Z",
+  "capturedAt": "2026-06-05T22:49:25.096Z",
   "errors": [],
   "wsEvents": [
     {
       "dir": "open",
-      "url": "ws://localhost:5173/?token=egPV9RrtPvlU",
-      "ts": 1780695404035
+      "url": "ws://localhost:5173/?token=cVDoDRsUM_0G",
+      "ts": 1780699761374
     },
     {
       "dir": "in",
-      "url": "ws://localhost:5173/?token=egPV9RrtPvlU",
+      "url": "ws://localhost:5173/?token=cVDoDRsUM_0G",
       "data": {
         "type": "connected"
       },
-      "ts": 1780695404036
+      "ts": 1780699761376
     },
     {
       "dir": "open",
       "url": "ws://localhost:8188/api/v1/events",
-      "ts": 1780695404216
+      "ts": 1780699761573
     }
   ],
   "consoleLogs": [],

@@ -38,10 +38,23 @@ export function useArtWebSocket() {
   const mountedRef = useRef(true);
   const pendingResolve = useRef<((image: string) => void) | null>(null);
   const pendingReject = useRef<((err: Error) => void) | null>(null);
+  const sendQueueRef = useRef<Record<string, unknown>[]>([]);
+
+  const flushQueue = useCallback(() => {
+    const q = sendQueueRef.current;
+    sendQueueRef.current = [];
+    for (const msg of q) {
+      if (wsRef.current?.readyState === WebSocket.OPEN) {
+        wsRef.current.send(JSON.stringify(msg));
+      }
+    }
+  }, []);
 
   const sendMessage = useCallback((msg: Record<string, unknown>) => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {
       wsRef.current.send(JSON.stringify(msg));
+    } else if (wsRef.current?.readyState === WebSocket.CONNECTING) {
+      sendQueueRef.current.push(msg);
     }
   }, []);
 
@@ -58,6 +71,10 @@ export function useArtWebSocket() {
     try {
       const socket = new WebSocket(wsUrl());
       wsRef.current = socket;
+
+      socket.onopen = () => {
+        flushQueue();
+      };
 
       socket.onmessage = (event) => {
         try {

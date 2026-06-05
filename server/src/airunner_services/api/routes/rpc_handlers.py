@@ -726,7 +726,7 @@ async def _rpc_art_bootstrap(body: dict, **kw: Any) -> dict[str, Any]:
                     if spec.model_type
                     else ""
                 ),
-                "path": getattr(spec, "path", ""),
+                "path": spec.huggingface_id or model_id,
                 "pipeline_action": getattr(spec, "pipeline_action", ""),
             }
             for model_id, spec in registry.models.items()

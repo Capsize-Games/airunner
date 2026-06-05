@@ -47,6 +47,9 @@ export function useLLMWebSocket() {
   // callbacks (from orphaned sockets during StrictMode) are ignored.
   const connGenRef = useRef(0);
 
+  // Messages queued while WS is connecting
+  const sendQueueRef = useRef<Record<string, unknown>[]>([]);
+
   // Callbacks set per-stream (not per-hook-lifetime) so we can read
   // the latest values without re-creating the WS connection.
   const onChunkRef = useRef<
@@ -58,6 +61,19 @@ export function useLLMWebSocket() {
   const sendMessage = useCallback((msg: Record<string, unknown>) => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {
       wsRef.current.send(JSON.stringify(msg));
+    } else if (wsRef.current?.readyState === WebSocket.CONNECTING) {
+      sendQueueRef.current.push(msg);
+    }
+  }, []);
+
+  // Flush queued messages when the socket opens
+  const flushQueue = useCallback(() => {
+    const q = sendQueueRef.current;
+    sendQueueRef.current = [];
+    for (const msg of q) {
+      if (wsRef.current?.readyState === WebSocket.OPEN) {
+        wsRef.current.send(JSON.stringify(msg));
+      }
     }
   }, []);
 
@@ -82,6 +98,11 @@ export function useLLMWebSocket() {
     try {
       const socket = new WebSocket(wsUrl());
       wsRef.current = socket;
+
+      socket.onopen = () => {
+        if (gen !== connGenRef.current) return; // stale
+        flushQueue();
+      };
 
       socket.onmessage = (event) => {
         if (gen !== connGenRef.current) return; // stale
