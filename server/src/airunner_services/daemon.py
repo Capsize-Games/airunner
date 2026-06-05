@@ -97,7 +97,7 @@ class AIRunnerDaemon:
         log_config = self.config.config.get("logging", {})
         log_file = Path(
             log_config.get("file", "build/logs/server.log")
-        ).expanduser()
+        ).expanduser().resolve()
         log_level = getattr(logging, log_config.get("level", "INFO"))
 
         root_logger = logging.getLogger()
