@@ -51,7 +51,6 @@ from airunner_services.daemon_helpers import (  # noqa: E402
     resolve_lock_host_port,
     shutdown_runtime_clients,
     start_heartbeat_loop,
-    start_sidecar_daemons,
     write_heartbeat,
 )
 
@@ -117,9 +116,6 @@ class AIRunnerDaemon:
         try:
             self.app = App(start_embedded_api_server=False)
             self._initialize_lifecycle_service()
-            start_sidecar_daemons(
-                getattr(self.app, "runtime_registry", None),
-            )
             self._preload_models()
             self._start_health_monitor()
             self._start_api_server()

@@ -15,11 +15,6 @@ from airunner_services.utils.application import get_logger
 
 logger = get_logger(__name__)
 
-_SIDECAR_MISSING_MSG = (
-    "%s sidecar not available: %s "
-    "(build sidecar binaries or run without them)"
-)
-
 
 def configure_logging(
     log_config: dict[str, Any],
@@ -109,38 +104,6 @@ def resolve_heartbeat_config(
     return hb_file, interval
 
 
-def _launch_sidecar(launcher: Any, name: str) -> None:
-    """Start one sidecar and log its status."""
-    try:
-        launcher.start()
-        logger.info("%s sidecar daemon ready", name)
-    except Exception as exc:
-        logger.warning(_SIDECAR_MISSING_MSG, name, exc)
-
-
-def start_sidecar_daemons(runtime_registry: Any) -> None:
-    """Start sidecar processes in background threads."""
-    if runtime_registry is None:
-        return
-    seen: set[int] = set()
-    for route in runtime_registry.list_routes():
-        client = _resolve_client(runtime_registry, route)
-        if client is None or id(client) in seen:
-            continue
-        seen.add(id(client))
-        launcher = getattr(client, "_launcher", None)
-        if launcher is None:
-            continue
-        name = _route_name(route)
-        thread = threading.Thread(
-            target=lambda launcher_=launcher, n=name: _launch_sidecar(
-                launcher_, n
-            ),
-            daemon=True,
-        )
-        thread.start()
-
-
 def shutdown_runtime_clients(runtime_registry: Any) -> None:
     """Close all runtime clients in the registry."""
     if runtime_registry is None:
@@ -186,12 +149,3 @@ def _resolve_client(registry: Any, route: Any) -> Any:
         )
     except KeyError:
         return None
-
-
-def _route_name(route: Any) -> str:
-    """Return a human-readable name for a runtime route."""
-    return str(
-        route.runtime.value
-        if hasattr(route.runtime, "value")
-        else route.runtime
-    )

@@ -203,7 +203,7 @@ def test_gui_stt_llm_and_tts_round_trip_without_audio_output(
                 f"{daemon.base_url}/api/v1/daemon/runtimes/stt/load",
                 {
                     "provider": "local",
-                    "deployment_mode": "sidecar",
+                    "deployment_mode": "local_fallback",
                     "request_id": "functional-gui-stt-load",
                 },
                 timeout_seconds=180.0,

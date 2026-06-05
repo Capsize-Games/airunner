@@ -139,6 +139,10 @@ async def _run_generation(
     try:
         await unload_llm_before_art(ws, source="art_ws_generate")
     except HTTPException as exc:
+        logger.error(
+            "Art generation failed at LLM unload step: %s",
+            exc.detail,
+        )
         await ws.send_json(
             {"type": "error", "job_id": msg_id, "error": exc.detail}
         )
@@ -147,6 +151,10 @@ async def _run_generation(
     try:
         client = resolve_art_client(require_runtime_registry(ws))
     except HTTPException as exc:
+        logger.error(
+            "Art generation failed at runtime resolution step: %s",
+            exc.detail,
+        )
         await ws.send_json(
             {"type": "error", "job_id": msg_id, "error": exc.detail}
         )
@@ -243,8 +251,25 @@ async def _run_generation(
                 "already be closed",
                 exc_info=True,
             )
+    except Exception as exc:
+        logger.error(
+            "Unhandled exception in art generation: %s",
+            exc,
+            exc_info=True,
+        )
+        await fail_art_job_impl(tracker, job_id, str(exc))
     finally:
         _active_generations.pop(job_id, None)
+
+async def fail_art_job_impl(
+    tracker: JobTracker,
+    job_id: str,
+    message: str,
+) -> None:
+    """Fail the job and send an error event to the client."""
+    from airunner_services.api.routes.art_job_progress import fail_art_job
+
+    await fail_art_job(tracker, job_id, message)
 
 
 async def _handle_generate(

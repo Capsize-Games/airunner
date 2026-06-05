@@ -135,7 +135,7 @@ def test_whisper_transcribe_end_to_end_without_gui_or_llm() -> None:
             f"{daemon.base_url}/api/v1/daemon/runtimes/stt/load",
             {
                 "provider": "local",
-                "deployment_mode": "sidecar",
+                "deployment_mode": "local_fallback",
                 "request_id": "functional-stt-load",
             },
             timeout_seconds=180.0,

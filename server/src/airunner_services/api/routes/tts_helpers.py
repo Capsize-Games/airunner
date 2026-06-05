@@ -73,20 +73,17 @@ def require_runtime_registry(request) -> RuntimeRegistry:
 
 
 def resolve_tts_client(registry: RuntimeRegistry) -> RuntimeClient:
-    """Resolve the preferred TTS runtime client for this process."""
-    for deployment_mode in (
-        RuntimeMode.LOCAL_FALLBACK.value,
-        RuntimeMode.SIDECAR.value,
-    ):
-        try:
-            return registry.resolve(
-                RuntimeKind.TTS,
-                provider="local",
-                deployment_mode=deployment_mode,
-            )
-        except KeyError:
-            continue
-    raise HTTPException(status_code=503, detail="TTS runtime unavailable")
+    """Resolve the TTS runtime client (in-process local fallback)."""
+    try:
+        return registry.resolve(
+            RuntimeKind.TTS,
+            provider="local",
+            deployment_mode=RuntimeMode.LOCAL_FALLBACK.value,
+        )
+    except KeyError:
+        raise HTTPException(
+            status_code=503, detail="TTS runtime unavailable"
+        ) from None
 
 
 def build_tts_envelope(request: TTSRequest) -> RequestEnvelope:

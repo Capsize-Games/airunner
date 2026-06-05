@@ -462,7 +462,7 @@ class TTSGeneratorWorker(Worker):
             try:
                 client.cancel_runtime(
                     "tts",
-                    deployment_mode="sidecar",
+                    deployment_mode="local_fallback",
                     request_id=request_id,
                     auto_start=False,
                 )

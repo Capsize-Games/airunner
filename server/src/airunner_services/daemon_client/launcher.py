@@ -80,8 +80,6 @@ class DaemonLauncher:
         runtime_layout = build_runtime_directory_layout()
         environment = dict(os.environ)
         environment.update(runtime_layout.as_environment(self.config_path))
-        environment.pop("AIRUNNER_ART_SIDECAR_PROCESS", None)
-        environment.pop("AIRUNNER_TTS_SIDECAR_PROCESS", None)
         environment.setdefault("AIRUNNER_DAEMON", "1")
         environment.setdefault(
             "AIRUNNER_BUNDLE_ROOT",
