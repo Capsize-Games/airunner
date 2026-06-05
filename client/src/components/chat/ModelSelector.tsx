@@ -5,8 +5,9 @@ import {
   listLLMModels,
 } from "../../api/client";
 import type { ResourceRecord } from "../../types/api";
-import { BASE_URL } from "../../types/api";
 import Form from "react-bootstrap/Form";
+import { useEventBus } from "../../features/events/useEventBus";
+import { EVENT_MODEL_STATUS } from "../../features/events/types";
 
 const MODEL_CHANGED_EVENT = "model-settings-changed";
 
@@ -39,26 +40,8 @@ export default function ModelSelector() {
     return () => window.removeEventListener(MODEL_CHANGED_EVENT, handler);
   }, [fetchSettings]);
 
-  // Subscribe to SSE reload events from the model file watcher
-  useEffect(() => {
-    const eventSource = new EventSource(
-      `${BASE_URL}/api/v1/art/models/watch`,
-    );
-    eventSource.addEventListener("message", (event) => {
-      try {
-        const data = JSON.parse(event.data);
-        if (data.type === "reload") {
-          fetchSettings();
-        }
-      } catch { /* ignore malformed events */ }
-    });
-    eventSource.onerror = () => {
-      // The browser will automatically reconnect EventSource on error
-    };
-    return () => {
-      eventSource.close();
-    };
-  }, [fetchSettings]);
+  // Reload models when file-system changes are detected (via event bus)
+  useEventBus([EVENT_MODEL_STATUS], () => { fetchSettings(); });
 
   const persist = (updates: Record<string, unknown>) => {
     updateSingleton("LLMGeneratorSettings", updates)

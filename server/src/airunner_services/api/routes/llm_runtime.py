@@ -150,6 +150,27 @@ async def stream_runtime(client: RuntimeClient, envelope: RequestEnvelope):
             return
 
 
+_ROLE_MAP: dict[str, MessageRole] = {
+    "user": MessageRole.USER,
+    "assistant": MessageRole.ASSISTANT,
+    "system": MessageRole.SYSTEM,
+}
+
+
+def _parse_messages(
+    raw_messages: list[dict[str, Any]],
+) -> list[RuntimeChatMessage]:
+    """Convert API-format messages to runtime chat messages."""
+    result: list[RuntimeChatMessage] = []
+    for msg in raw_messages:
+        role_str = str(msg.get("role", "user")).lower()
+        role = _ROLE_MAP.get(role_str, MessageRole.USER)
+        content = str(msg.get("content", "")).strip()
+        if content:
+            result.append(RuntimeChatMessage(role=role, content=content))
+    return result
+
+
 def websocket_chunk(delta: StreamDelta) -> dict[str, Any]:
     """Convert a runtime stream delta into websocket payload shape."""
     if delta.status is EnvelopeStatus.FAILED:
@@ -158,8 +179,9 @@ def websocket_chunk(delta: StreamDelta) -> dict[str, Any]:
             "content": delta.metadata.get("error", "LLM runtime failed"),
             "done": True,
         }
-    payload = {
-        "type": "chunk",
+    msg_type = delta.metadata.get("message_type", "")
+    payload: dict[str, Any] = {
+        "type": msg_type if msg_type in ("thinking",) else "chunk",
         "content": delta.delta.get("content", ""),
         "done": delta.final,
     }
@@ -172,14 +194,16 @@ def websocket_chunk(delta: StreamDelta) -> dict[str, Any]:
 def websocket_envelope(data: dict[str, Any]) -> RequestEnvelope:
     """Build one streaming runtime envelope from a websocket payload."""
     profile = data.get("gguf_runtime_profile")
+    raw_messages: list[dict[str, Any]] = data.get("messages") or []
+    if not raw_messages:
+        # Backward compat: single message field
+        raw_messages = [
+            {"role": "user", "content": str(data.get("message", "")).strip()},
+        ]
+    messages = _parse_messages(raw_messages)
     payload = LLMInvocationRequest(
         model=data.get("model"),
-        messages=[
-            RuntimeChatMessage(
-                role=MessageRole.USER,
-                content=str(data.get("message", "")).strip(),
-            )
-        ],
+        messages=messages,
         max_tokens=data.get("max_tokens"),
         metadata={"gguf_runtime_profile": profile} if profile else {},
         temperature=float(data.get("temperature", 0.7)),

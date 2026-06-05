@@ -1,7 +1,8 @@
-"""HTTP runtime client for the supervised TTS sidecar."""
+"""HTTP+WebSocket runtime client for the supervised TTS sidecar."""
 
 from __future__ import annotations
 
+import asyncio
 import base64
 import threading
 from dataclasses import replace
@@ -29,6 +30,10 @@ from airunner_services.runtimes.tts_daemon_runtime_settings import (
 	TTSDaemonRuntimeSettings,
 	resolve_tts_daemon_runtime_settings,
 )
+from airunner_services.runtimes.websocket_transport import (
+	SidecarWebSocketTransport,
+	WebSocketTransportDisconnected,
+)
 
 DEFAULT_PROVIDER = "local"
 _INNER_RUNTIME_STATUS_TIMEOUT_SECONDS = 1.0
@@ -51,7 +56,11 @@ TTSLauncherFactory = Callable[[TTSDaemonRuntimeSettings], TTSLauncherLike]
 
 
 class SidecarTTSClient(RuntimeClient):
-	"""Route TTS envelopes through one supervised sidecar daemon."""
+	"""Route TTS envelopes through one supervised sidecar daemon.
+
+	Supports both WebSocket (preferred) and HTTP (legacy) transport.
+	WebSocket is used for INVOKE actions when enabled.
+	"""
 
 	@staticmethod
 	def _normalize_model_type(value: Any) -> Optional[str]:
@@ -96,13 +105,15 @@ class SidecarTTSClient(RuntimeClient):
 		self._active_requests: set[str] = set()
 		self._active_requests_lock = threading.Lock()
 		self._invoke_lock = threading.Lock()
+		self._ws_transport: Optional[SidecarWebSocketTransport] = None
+
 		self.descriptor = RuntimeDescriptor(
 			runtime=RuntimeKind.TTS,
 			provider=provider,
 			mode=RuntimeMode.SIDECAR,
-			transport=TransportKind.HTTP,
+			transport=TransportKind.WEBSOCKET,
 			endpoint=resolved_settings.endpoint,
-			supports_streaming=False,
+			supports_streaming=True,
 			allows_model_control=True,
 		)
 
@@ -171,6 +182,15 @@ class SidecarTTSClient(RuntimeClient):
 
 	def close(self) -> None:
 		"""Release the managed sidecar process during shutdown."""
+		if self._ws_transport is not None:
+			try:
+				asyncio.run_coroutine_threadsafe(
+					self._ws_transport.close(),
+					asyncio.get_event_loop(),
+				).result(timeout=5)
+			except Exception:
+				pass
+			self._ws_transport = None
 		if self._launcher is not None:
 			self._launcher.stop()
 		close = getattr(self._session, "close", None)
@@ -251,8 +271,34 @@ class SidecarTTSClient(RuntimeClient):
 			metadata=self._metadata(),
 		)
 
+	def _ensure_ws_transport(self, endpoint: str) -> SidecarWebSocketTransport:
+		"""Return or create a WebSocket transport for the given endpoint."""
+		ws = self._ws_transport
+		if ws is not None:
+			if ws.is_connected:
+				return ws
+			asyncio.run_coroutine_threadsafe(
+				ws.close(), asyncio.get_event_loop(),
+			)
+			self._ws_transport = None
+		ws = SidecarWebSocketTransport(endpoint)
+		try:
+			asyncio.run_coroutine_threadsafe(
+				ws.connect(), asyncio.get_event_loop(),
+			).result(timeout=10)
+		except Exception as exc:
+			raise RuntimeError(
+				f"Failed to connect WebSocket transport: {exc}"
+			) from exc
+		self._ws_transport = ws
+		return ws
+
 	def _synthesize_speech(self, request: Any) -> Any:
-		"""Execute one TTS request through the supervised sidecar daemon."""
+		"""Execute one TTS request via WebSocket transport only.
+
+		Raises immediately when the WebSocket connection cannot be
+		established -- no HTTP fallback.
+		"""
 		messages = load_message_types()
 		invocation = TTSInvocationRequest.model_validate(request.payload)
 		with self._invoke_lock:
@@ -261,36 +307,85 @@ class SidecarTTSClient(RuntimeClient):
 				self._ensure_launcher(settings)
 				launcher = self._require_launcher()
 				launcher.start()
-				self._track_request(request.request_id)
-				audio_bytes = self._request(
-					"POST",
-					f"{launcher.api_base_url}/synthesize",
-					json_payload={
-						"text": invocation.text,
-						"voice": invocation.voice,
-						"speed": invocation.speed,
-						"model": invocation.model,
-						"model_type": invocation.metadata.get("model_type"),
-						"request_id": request.request_id,
-					},
-					expect_json=False,
+				return self._synthesize_via_websocket(
+					request, invocation, launcher,
 				)
 			except RuntimeError as exc:
 				return self._runtime_error_response(
 					request.request_id,
 					str(exc),
 				)
-			finally:
-				self._untrack_request(request.request_id)
 
+	def _ws_transport_available(self, launcher: TTSLauncherLike) -> bool:
+		"""Check if WebSocket transport is available for this launcher."""
+		ws = self._ws_transport
+		return ws is not None and ws.is_connected
+
+	def _synthesize_via_websocket(
+		self,
+		request: Any,
+		invocation: TTSInvocationRequest,
+		launcher: TTSLauncherLike,
+	) -> Any:
+		"""Send one TTS synthesis request through the WebSocket transport."""
+		messages = load_message_types()
+		ws = self._ensure_ws_transport(launcher.endpoint)
+
+		payload = {
+			"text": invocation.text,
+			"voice": invocation.voice,
+			"speed": invocation.speed,
+			"model": invocation.model,
+			"model_type": invocation.metadata.get("model_type"),
+		}
+
+		envelope = messages.RequestEnvelope(
+			request_id=request.request_id,
+			runtime=messages.RuntimeKind.TTS,
+			action=messages.RuntimeAction.INVOKE,
+			payload=payload,
+			metadata={"request_id": request.request_id},
+		)
+
+		try:
+			response = asyncio.run_coroutine_threadsafe(
+				ws.invoke(envelope),
+				asyncio.get_event_loop(),
+			).result(timeout=self._settings.request_timeout_seconds)
+		except WebSocketTransportDisconnected:
+			return self._failure_response(
+				request.request_id,
+				"tts_disconnected",
+				"WebSocket connection lost",
+			)
+		except TimeoutError:
+			return self._failure_response(
+				request.request_id,
+				"tts_timeout",
+				"Timed out waiting for TTS response via WebSocket",
+				retryable=True,
+			)
+
+		if response.status is messages.EnvelopeStatus.FAILED:
+			err = "TTS synthesis failed"
+			if response.error:
+				err = getattr(response.error, "message", None) or err
+			return self._runtime_error_response(request.request_id, err)
+
+		payload_data = response.payload or {}
+		audio_b64 = (
+			payload_data.get("audio_b64")
+			or payload_data.get("audio")
+			or ""
+		)
 		return messages.ResponseEnvelope(
 			request_id=request.request_id,
 			status=messages.EnvelopeStatus.SUCCEEDED,
 			payload={
 				"accepted": True,
-				"audio_b64": base64.b64encode(audio_bytes).decode("ascii"),
+				"audio_b64": audio_b64,
 			},
-			metadata=self._metadata(),
+			metadata={"ws": True, **self._metadata()},
 		)
 
 	def _settings_for_invocation(

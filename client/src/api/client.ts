@@ -5,7 +5,7 @@ import { BASE_URL, type JsonObject, type StreamChunk } from "../types/api";
 export { BASE_URL, type JsonObject, type StreamChunk };
 
 // Re-export shared helpers from client
-export { request, streamRequest } from "./client-base";
+export { request } from "./client-base";
 
 // Re-export from domain modules
 export * from "./canvas";

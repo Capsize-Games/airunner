@@ -161,11 +161,7 @@ class HeadlessRuntimeMixin:
         self.app.api = self
         self.logger.info("Qt Core event loop initialized (headless mode)")
 
-        from airunner_services.api.legacy_server import set_api
-
-        set_api(self)
         self._ensure_headless_api_services()
-        self.logger.info("API instance registered globally")
 
         if self._initialize_headless_lifecycle:
             self.initialize_headless_lifecycle()
@@ -184,7 +180,9 @@ class HeadlessRuntimeMixin:
             self._kill_process_on_port(port)
 
             self.logger.info("Starting API server on %s:%s", host, port)
-            self.api_server_thread = APIServerThread(host=host, port=port)
+            self.api_server_thread = APIServerThread(
+                host=host, port=port, app_instance=self,
+            )
             self.api_server_thread.start()
             self.logger.info(
                 "API server started - /health, /llm, /art endpoints "

@@ -4,7 +4,7 @@ const WS_RECONNECT_DELAY = 1000;
 const WS_MAX_RECONNECT_DELAY = 10_000;
 
 /** Default API host:port. */
-const DEFAULT_API_HOST = "127.0.0.1:8188";
+const DEFAULT_API_HOST = "localhost:8188";
 
 /**
  * Build a WebSocket URL for the given API path.

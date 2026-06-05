@@ -11,39 +11,21 @@ import secrets
 from ipaddress import ip_address
 
 from fastapi import FastAPI, Request
-from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 import uvicorn
 
 from airunner_services.settings import AIRUNNER_LOG_LEVEL
 from airunner_services.utils.application import get_logger
-from airunner_services.api.routes import (
-    art,
-    art_options_router,
-    canvas_document_router,
-    conversations,
-    daemon,
-    domain_resources,
-    downloads,
-    embeddings_router,
-    embeddings_watch_router,
-    health,
-    images_router,
-    knowledge_base,
-    knowledge_base_index_router,
-    knowledge_base_watch_router,
-    llm,
-    lora_watch_router,
-    models_status_router,
-    models_watch_router,
-    persistence,
-    privacy_router,
-    setup,
-    stt,
-    tts,
-)
-from airunner_services.api.routes import legacy as legacy_routes
+from airunner_services.api.routes import events_router
+from airunner_services.api.routes.health import router as health_router
+from airunner_services.api.routes.art_daemon_ws import router as art_daemon_ws_router
+from airunner_services.api.routes.art_websocket import router as art_ws_router
+from airunner_services.api.routes.llm_stream_routes import router as llm_ws_router
+from airunner_services.api.routes.tts import router as tts_router
+from airunner_services.api.routes.hardware import router as hardware_ws_router
+from airunner_services.api.routes.daemon import router as daemon_router
+from airunner_services.api.routes.canvas_document import router as canvas_ws_router
 from airunner_services.data.tenant import reset_tenant_key, set_tenant_key
 from airunner_services.runtimes.bootstrap import build_runtime_registry
 
@@ -145,39 +127,73 @@ def create_app(
     app.state.runtime_registry = None
     app.state.lifecycle_service = None
 
-    try:
-        app.state.runtime_registry = build_runtime_registry(
-            app_instance=app_instance,
-        )
-    except Exception:
-        logger.exception("Failed to build runtime registry")
+    # If the caller already owns a runtime registry (e.g. the daemon built it
+    # before starting the API server and already launched sidecar processes),
+    # reuse it so we don't lose process tracking.
+    existing_registry = (
+        getattr(app_instance, "runtime_registry", None) if app_instance else None
+    )
+
+    if existing_registry is not None:
+        app.state.runtime_registry = existing_registry
+    else:
+        try:
+            app.state.runtime_registry = build_runtime_registry(
+                app_instance=app_instance,
+            )
+        except Exception:
+            logger.exception("Failed to build runtime registry")
+
+        if app_instance:
+            if app.state.runtime_registry is not None:
+                try:
+                    setattr(
+                        app_instance,
+                        "runtime_registry",
+                        app.state.runtime_registry,
+                    )
+                except Exception:
+                    logger.debug("Unable to attach runtime registry to app instance")
+            else:
+                app.state.runtime_registry = _resolve_runtime_registry(app_instance)
 
     if app_instance:
         app.state.airunner_app = app_instance
-        if app.state.runtime_registry is not None:
-            try:
-                setattr(
-                    app_instance,
-                    "runtime_registry",
-                    app.state.runtime_registry,
-                )
-            except Exception:
-                logger.debug("Unable to attach runtime registry to app instance")
-        else:
-            app.state.runtime_registry = _resolve_runtime_registry(app_instance)
         app.state.lifecycle_service = _resolve_lifecycle_service(app_instance)
 
-        # Register indexing progress SSE bridge
+        # Register indexing progress signal bridge
         from airunner_services.api.routes.knowledge_base_index import (  # noqa: PLC0415
             _register_signal_handlers,
         )
         _register_signal_handlers(app_instance)
 
-        # Register model-status SSE bridge
+        # Register model-status signal bridge
         from airunner_services.api.routes.models_status import (  # noqa: PLC0415
             _register_model_status_handlers,
         )
         _register_model_status_handlers(app_instance)
+
+        # Start file-system watchers (previously triggered by SSE endpoints)
+        from airunner_services.api.routes.images import (  # noqa: PLC0415
+            _start_watcher as _start_image_watcher,
+        )
+        from airunner_services.api.routes.lora_watch import (  # noqa: PLC0415
+            _start_watcher as _start_lora_watcher,
+        )
+        from airunner_services.api.routes.embeddings_watch import (  # noqa: PLC0415
+            _start_watcher as _start_embedding_watcher,
+        )
+        from airunner_services.api.routes.knowledge_base_watch import (  # noqa: PLC0415
+            _start_watcher as _start_kb_watcher,
+        )
+        from airunner_services.api.routes.models_watch import (  # noqa: PLC0415
+            _start_watcher as _start_models_watcher,
+        )
+        _start_image_watcher()
+        _start_lora_watcher()
+        _start_embedding_watcher()
+        _start_kb_watcher()
+        _start_models_watcher()
 
     # Optional API key auth for production.
     # If AIRUNNER_API_KEY is set, requests must provide it via:
@@ -261,145 +277,24 @@ def create_app(
 
         return await call_next(request)
 
-    # Configure CORS
-    if enable_cors:
-        if allowed_origins is None:
-            # Include explicit Vite dev server origin so the web client
-            # can connect directly (bypassing the Vite proxy which stalls
-            # on consecutive POSTs over the same upstream connection).
-            allowed_origins = [
-                "http://localhost",
-                "http://localhost:*",
-                "http://127.0.0.1",
-                "http://127.0.0.1:*",
-                "http://localhost:5173",
-                "http://127.0.0.1:5173",
-            ]
+    # CORS middleware removed — all traffic goes through WebSocket.
 
-        app.add_middleware(
-            CORSMiddleware,
-            allow_origins=allowed_origins,
-            allow_credentials=True,
-            allow_methods=["*"],
-            allow_headers=["*"],
-        )
-        logger.info(f"CORS enabled with origins: {allowed_origins}")
+    # ── Endpoints ──
 
-    # Register routers
-    app.include_router(health.router, prefix="/api/v1", tags=["health"])
-    app.include_router(daemon.router, prefix="/api/v1/daemon", tags=["daemon"])
-    app.include_router(llm.router, prefix="/api/v1/llm", tags=["llm"])
-    app.include_router(
-        conversations.router,
-        prefix="/api/v1/llm",
-        tags=["llm", "conversations"],
-    )
-    app.include_router(
-        persistence.router,
-        prefix="/api/v1/state",
-        tags=["state"],
-    )
-    app.include_router(
-        persistence.router,
-        prefix="/api/v1/persistence",
-        tags=["persistence"],
-    )
-    app.include_router(
-        domain_resources.settings_router,
-        prefix="/api/v1/settings",
-        tags=["settings"],
-    )
-    app.include_router(
-        domain_resources.catalog_router,
-        prefix="/api/v1/catalog",
-        tags=["catalog"],
-    )
-    app.include_router(
-        domain_resources.library_router,
-        prefix="/api/v1/library",
-        tags=["library"],
-    )
-    app.include_router(
-        domain_resources.workspace_router,
-        prefix="/api/v1/workspace",
-        tags=["workspace"],
-    )
-    app.include_router(art.router, prefix="/api/v1/art", tags=["art"])
-    app.include_router(
-        downloads.router,
-        prefix="/api/v1/downloads",
-        tags=["downloads"],
-    )
-    app.include_router(
-        setup.router,
-        prefix="/api/v1",
-        tags=["setup"],
-    )
-    app.include_router(tts.router, prefix="/api/v1/tts", tags=["tts"])
-    app.include_router(stt.router, prefix="/api/v1/stt", tags=["stt"])
-    app.include_router(
-        art_options_router,
-        prefix="/api/v1/art",
-        tags=["art"],
-    )
-    app.include_router(
-        embeddings_router,
-        prefix="/api/v1/art",
-        tags=["art"],
-    )
-    app.include_router(
-        knowledge_base.router,
-        prefix="/api/v1/knowledge-base",
-        tags=["knowledge-base"],
-    )
-    app.include_router(
-        canvas_document_router,
-        prefix="/api/v1/canvas",
-        tags=["canvas"],
-    )
-    app.include_router(
-        lora_watch_router,
-        prefix="/api/v1/art",
-        tags=["art"],
-    )
-    app.include_router(
-        embeddings_watch_router,
-        prefix="/api/v1/art",
-        tags=["art"],
-    )
-    app.include_router(
-        models_watch_router,
-        prefix="/api/v1/art",
-        tags=["art"],
-    )
-    app.include_router(
-        images_router,
-        prefix="/api/v1/art",
-        tags=["art"],
-    )
-    app.include_router(
-        knowledge_base_watch_router,
-        prefix="/api/v1/knowledge-base",
-        tags=["knowledge-base"],
-    )
-    app.include_router(
-        knowledge_base_index_router,
-        prefix="/api/v1/knowledge-base",
-        tags=["knowledge-base"],
-    )
-    app.include_router(
-        models_status_router,
-        prefix="/api/v1",
-        tags=["models"],
-    )
-    app.include_router(
-        privacy_router,
-        prefix="/api/v1/settings",
-        tags=["settings"],
-    )
+    # Health check (HTTP — needed for daemon health)
+    app.include_router(health_router, prefix="/api/v1", tags=["health"])
 
-    # Legacy compatibility endpoints for existing clients.
-    app.include_router(legacy_routes.router, tags=["legacy"])
+    # Unified events + RPC WebSocket
+    app.include_router(events_router, prefix="/api/v1", tags=["events"])
+
+    # Domain-specific WebSocket endpoints
+    app.include_router(art_ws_router, prefix="/api/v1/art", tags=["art"])
+    app.include_router(llm_ws_router, prefix="/api/v1/llm", tags=["llm"])
+    app.include_router(tts_router, prefix="/api/v1/tts", tags=["tts"])
+    app.include_router(hardware_ws_router, prefix="/api/v1/daemon", tags=["daemon"])
+    app.include_router(daemon_router, prefix="/api/v1/daemon", tags=["daemon"])
+    app.include_router(art_daemon_ws_router, prefix="/api/v1/art", tags=["art"])
+    app.include_router(canvas_ws_router, prefix="/api/v1/canvas", tags=["canvas"])
 
     # ------------------------------------------------------------------
     # Static file serving for end-user bundle mode.

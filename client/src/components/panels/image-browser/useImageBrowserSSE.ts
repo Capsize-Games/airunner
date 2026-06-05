@@ -1,28 +1,13 @@
-import { useEffect } from "react";
-import { BASE_URL } from "../../../types/api";
+import { useEventBus } from "../../../features/events/useEventBus";
+import { EVENT_IMAGES } from "../../../features/events/types";
 
 export function useImageBrowserSSE(
   onReload: () => void,
 ) {
-  useEffect(() => {
-    const eventSource = new EventSource(
-      `${BASE_URL}/api/v1/art/images/watch`,
-    );
-    eventSource.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data);
-        if (data.type === "reload") {
-          onReload();
-        }
-      } catch {
-        // ignore malformed events
-      }
-    };
-    eventSource.onerror = () => {
-      // The browser will auto-reconnect
-    };
-    return () => {
-      eventSource.close();
-    };
-  }, [onReload]);
+  useEventBus([EVENT_IMAGES], (_event, data) => {
+    const payload = data as { type?: string };
+    if (payload.type === "reload") {
+      onReload();
+    }
+  });
 }

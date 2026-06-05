@@ -251,6 +251,9 @@ class SidecarArtLauncher:
                 "AIRUNNER_CN_ON": "0",
                 "AIRUNNER_KNOWLEDGE_ON": "0",
                 "AIRUNNER_ART_SIDECAR_PROCESS": "1",
+                "AIRUNNER_TTS_SIDECAR_PROCESS": "1",
+                "AIRUNNER_LLM_SIDECAR_PROCESS": "1",
+                "AIRUNNER_STT_SIDECAR_PROCESS": "1",
                 "AIRUNNER_NO_PRELOAD": "1",
                 "QT_QPA_PLATFORM": "offscreen",
                 "QT_LOGGING_RULES": "*.debug=false;qt.qpa.*=false",
@@ -298,4 +301,4 @@ class SidecarArtLauncher:
 
     def _health_url(self) -> str:
         """Return the sidecar health-check URL."""
-        return f"{self.endpoint}/health"
+        return f"{self.endpoint}/api/v1/health"

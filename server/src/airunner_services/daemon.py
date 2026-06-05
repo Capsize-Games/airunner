@@ -174,6 +174,7 @@ class AIRunnerDaemon:
             self._initialize_lifecycle_service()
 
             logger.info("AI Runner app initialized in headless mode")
+            self._start_sidecar_daemons()
             self._preload_models()
             self._start_health_monitor()
             self._start_api_server()
@@ -328,6 +329,43 @@ class AIRunnerDaemon:
 
         finally:
             sys.exit(0)
+
+    def _start_sidecar_daemons(self) -> None:
+        """Eagerly start sidecar daemon processes in background threads.
+
+        Sidecar processes run the core services (art, TTS, etc.) as
+        separate subprocesses.  Model weights are NOT loaded here —
+        only the daemon HTTP+WS server starts.  Actual model loading
+        happens on the first inference request.
+        """
+        registry = getattr(getattr(self, "app", None), "runtime_registry", None)
+        if registry is None:
+            return
+        import threading
+        seen = set()
+        for route in registry.list_routes():
+            try:
+                client = registry.resolve(
+                    route.runtime, route.provider, route.deployment_mode,
+                )
+            except KeyError:
+                continue
+            client_id = id(client)
+            if client_id in seen:
+                continue
+            seen.add(client_id)
+            launcher = getattr(client, "_launcher", None)
+            if launcher is None:
+                continue
+            name = str(route.runtime.value if hasattr(route.runtime, "value") else route.runtime)
+            def _launch(l=launcher, n=name):
+                try:
+                    l.start()
+                    logger.info("%s sidecar daemon ready", n)
+                except Exception as exc:
+                    logger.error("%s sidecar failed to start: %s", n, exc)
+            thread = threading.Thread(target=_launch, daemon=True)
+            thread.start()
 
     def _run_database_migrations(self) -> None:
         """Run Alembic migrations before any service starts."""

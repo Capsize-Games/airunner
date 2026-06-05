@@ -27,6 +27,7 @@ markers = [
     "code: tests for code generation capabilities",
 ]
 testpaths = ["src"]
+asyncio_mode = "auto"
 # Disable parallel execution to prevent worker cleanup issues
 # Use serial execution for now until worker cleanup is fixed
 # -s disables output capturing for real-time feedback

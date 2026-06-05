@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import Spinner from "react-bootstrap/Spinner";
 import type { EmbeddingInfo } from "../../api/client";
-import { BASE_URL } from "../../types/api";
 import EmbeddingItem from "./embeddings/EmbeddingItem";
+import { useEventBus } from "../../features/events/useEventBus";
+import { EVENT_EMBEDDINGS } from "../../features/events/types";
 
 interface EmbeddingItemData extends EmbeddingInfo {
   _inputText: string;
@@ -57,25 +58,12 @@ export default function EmbeddingsPanel() {
     return () => window.removeEventListener("art-version-changed", handler);
   }, [reload]);
 
-  useEffect(() => {
-    const eventSource = new EventSource(
-      `${BASE_URL}/api/v1/art/embeddings/watch`,
-    );
-    eventSource.addEventListener("message", (event) => {
-      try {
-        const data = JSON.parse(event.data);
-        if (data.type === "reload") {
-          reload();
-        }
-      } catch { /* ignore malformed events */ }
-    });
-    eventSource.onerror = () => {
-      // The browser will automatically reconnect EventSource on error
-    };
-    return () => {
-      eventSource.close();
-    };
-  }, [reload]);
+  useEventBus([EVENT_EMBEDDINGS], (_event, data) => {
+    const payload = data as { type?: string };
+    if (payload.type === "reload") {
+      reload();
+    }
+  });
 
   useEffect(() => {
     const handler = (e: Event) => {

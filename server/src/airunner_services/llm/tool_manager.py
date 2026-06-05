@@ -51,7 +51,6 @@ class ToolManager(
 
     def _wrap_tool_with_dependencies(self, tool_info):
         """Wrap one tool function with dependency injection for LangChain."""
-        from airunner_services.api.legacy_server import get_api
         from functools import wraps
 
         sig = None
@@ -98,7 +97,7 @@ class ToolManager(
                 ):
                     api = self.rag_manager.api
                 else:
-                    api = get_api()
+                    api = None
 
                 if api is None:
                     return (

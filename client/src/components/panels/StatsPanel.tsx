@@ -1,19 +1,17 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import ProgressBar from "react-bootstrap/ProgressBar";
-import { getHardwareProfile, BASE_URL } from "../../api/client";
+import { getHardwareProfile } from "../../api/client";
 import type { HardwareProfile } from "../../types/api";
 import type { ActiveModelInfo } from "../../api/client";
 import { useArtWebSocket } from "../../features/art/useArtWebSocket";
+import { useEventBus } from "../../features/events/useEventBus";
+import { EVENT_MODEL_STATUS } from "../../features/events/types";
 
 function wsUrl(): string {
-  const base = import.meta.env.PROD
-    ? (import.meta.env.VITE_API_BASE_URL ?? "http://127.0.0.1:8188")
-    : "";
-  const host = (
-    base.replace(/^http/, "ws") ||
-    `${location.protocol === "https:" ? "wss" : "ws"}://${location.host}`
-  );
-  return `${host}/api/v1/daemon/hardware/ws`;
+  const proto = location.protocol === "https:" ? "wss" : "ws";
+  const raw = (import.meta.env.VITE_API_BASE_URL as string) || "localhost:8188";
+  const host = raw.replace(/^https?:\/\//, "");
+  return `${proto}://${host}/api/v1/daemon/hardware/ws`;
 }
 
 export default function StatsPanel() {
@@ -114,33 +112,15 @@ export default function StatsPanel() {
     }
   }, []);
 
-  // Poll active models
+  // Fetch active models on mount
   useEffect(() => {
     fetchActiveModels();
-    const timer = setInterval(fetchActiveModels, 3000);
-    return () => clearInterval(timer);
   }, [fetchActiveModels]);
 
-  // Listen for live model-status SSE events
-  useEffect(() => {
-    const eventSource = new EventSource(
-      `${BASE_URL}/api/v1/models/status`,
-    );
-    eventSource.addEventListener("message", (event) => {
-      try {
-        const data = JSON.parse(event.data);
-        if (data.type === "model_status") {
-          fetchActiveModels();
-        }
-      } catch { /* ignore malformed */ }
-    });
-    eventSource.onerror = () => {
-      // auto-reconnect
-    };
-    return () => {
-      eventSource.close();
-    };
-  }, [fetchActiveModels]);
+  // Listen for live model-status events via unified event bus
+  useEventBus([EVENT_MODEL_STATUS], () => {
+    fetchActiveModels();
+  });
 
   const handleUnload = (m: ActiveModelInfo) => {
     const key = m.model_id || m.model_type;

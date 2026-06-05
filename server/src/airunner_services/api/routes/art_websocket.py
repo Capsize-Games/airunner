@@ -7,7 +7,7 @@ import json
 import secrets
 from typing import Optional
 
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, HTTPException, WebSocket, WebSocketDisconnect
 
 from airunner_services.api.routes.art_contracts import GenerationRequest
 from airunner_services.api.routes.art_job_response import run_art_job
@@ -132,8 +132,17 @@ async def _run_generation(
     # progress bar while the model loads.
     await ws.send_json({"type": "ack", "job_id": job_id})
 
-    await unload_llm_before_art(ws, source="art_ws_generate")
-    client = resolve_art_client(require_runtime_registry(ws))
+    try:
+        await unload_llm_before_art(ws, source="art_ws_generate")
+    except HTTPException as exc:
+        await ws.send_json({"type": "error", "job_id": msg_id, "error": exc.detail})
+        return
+
+    try:
+        client = resolve_art_client(require_runtime_registry(ws))
+    except HTTPException as exc:
+        await ws.send_json({"type": "error", "job_id": msg_id, "error": exc.detail})
+        return
 
     if art_request.model:
         asyncio.create_task(

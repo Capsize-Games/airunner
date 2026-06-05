@@ -12,12 +12,9 @@ def api_from_qt_application() -> Any:
 
 def peek_registered_api() -> Any:
     """Return the registered service API without creating one."""
-    try:
-        from airunner_services.api.legacy_server import get_api
-
-        return get_api(create_if_missing=False)
-    except Exception:
-        return None
+    # Legacy server removed — returns None.
+    # Callers should access the app through FastAPI app.state instead.
+    return None
 
 
 def resolve_live_api_reference() -> Any:

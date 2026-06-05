@@ -4,6 +4,9 @@ import ProgressBar from "react-bootstrap/ProgressBar";
 import { BASE_URL } from "../../types/api";
 import KBRow from "./knowledge-base/KBRow";
 import LucideIcon from "../shared/LucideIcon";
+import { useEventBus } from "../../features/events/useEventBus";
+import { EVENT_DOCUMENTS, EVENT_INDEX_PROGRESS }
+  from "../../features/events/types";
 
 // ── Knowledge Base ──
 export function KnowledgeBasePanel() {
@@ -47,25 +50,12 @@ export function KnowledgeBasePanel() {
       window.removeEventListener("knowledge-base-changed", handler);
   }, [reload]);
 
-  useEffect(() => {
-    const eventSource = new EventSource(
-      `${BASE_URL}/api/v1/knowledge-base/documents/watch`,
-    );
-    eventSource.addEventListener("message", (event) => {
-      try {
-        const data = JSON.parse(event.data);
-        if (data.type === "reload") {
-          reload();
-        }
-      } catch { /* ignore malformed events */ }
-    });
-    eventSource.onerror = () => {
-      // The browser will automatically reconnect EventSource on error
-    };
-    return () => {
-      eventSource.close();
-    };
-  }, [reload]);
+  useEventBus([EVENT_DOCUMENTS], (_event, data) => {
+    const payload = data as { type?: string };
+    if (payload.type === "reload") {
+      reload();
+    }
+  });
 
   const handleToggle = async (docId: number) => {
     try {
@@ -104,50 +94,35 @@ export function KnowledgeBasePanel() {
     input.click();
   };
 
-  // Subscribe to indexing progress SSE — open the connection *before* the
-  // POST so no progress events are missed.
-  useEffect(() => {
-    if (!indexing) return;
-    const eventSource = new EventSource(
-      `${BASE_URL}/api/v1/knowledge-base/documents/index-progress`,
-    );
-    let progressStarted = false;
-    eventSource.addEventListener("message", (event) => {
-      try {
-        const data = JSON.parse(event.data);
-        if (data.type === "progress") {
-          if (!progressStarted) {
-            progressStarted = true;
-            setModelLoading(false);
-          }
-          const total = Number(data.total) || 1;
-          const current = Number(data.current) || 0;
-          setProgress(Math.round((current / total) * 100));
-        } else if (data.type === "complete") {
-          setProgress(100);
-          setModelLoading(false);
-          eventSource.close();
-          // Brief pause so the user sees 100% before resetting
-          setTimeout(() => {
-            setIndexing(false);
-            setProgress(0);
-            reload();
-          }, 500);
-        } else if (data.type === "error") {
-          setModelLoading(false);
-          setIndexing(false);
-          setProgress(0);
-          eventSource.close();
-        }
-      } catch { /* ignore */ }
-    });
-    eventSource.onerror = () => {
-      // EventSource auto-reconnects on error
+  // Subscribe to indexing progress events via the unified event bus.
+  useEventBus([EVENT_INDEX_PROGRESS], (_event, data) => {
+    const payload = data as {
+      type?: string;
+      current?: number;
+      total?: number;
+      success?: boolean;
+      message?: string;
     };
-    return () => {
-      eventSource.close();
-    };
-  }, [indexing, reload]);
+    if (payload.type === "progress") {
+      setModelLoading(false);
+      const total = Number(payload.total) || 1;
+      const current = Number(payload.current) || 0;
+      setProgress(Math.round((current / total) * 100));
+    } else if (payload.type === "complete") {
+      setProgress(100);
+      setModelLoading(false);
+      // Brief pause so the user sees 100% before resetting
+      setTimeout(() => {
+        setIndexing(false);
+        setProgress(0);
+        reload();
+      }, 500);
+    } else if (payload.type === "error") {
+      setModelLoading(false);
+      setIndexing(false);
+      setProgress(0);
+    }
+  });
 
   const handleIndex = async () => {
     // Set indexing first so the SSE useEffect fires and connects *before*

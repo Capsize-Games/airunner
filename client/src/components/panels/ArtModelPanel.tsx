@@ -4,7 +4,8 @@ import {
   updateSingleton,
 } from "../../api/client";
 import type { ArtOptionsResponse } from "../../api/client";
-import { BASE_URL } from "../../types/api";
+import { useEventBus } from "../../features/events/useEventBus";
+import { EVENT_MODEL_STATUS } from "../../features/events/types";
 import VersionSelector from "./art-model/VersionSelector";
 import ModelSelector from "./art-model/ModelSelector";
 import SchedulerSelector from "./art-model/SchedulerSelector";
@@ -134,31 +135,15 @@ export default function ArtModelPanel() {
     })();
   }, []);
 
-  useEffect(() => {
-    const eventSource = new EventSource(
-      `${BASE_URL}/api/v1/art/models/watch`,
-    );
-    eventSource.addEventListener("message", (event) => {
+  useEventBus([EVENT_MODEL_STATUS], () => {
+    (async () => {
       try {
-        const data = JSON.parse(event.data);
-        if (data.type === "reload") {
-          (async () => {
-            try {
-              const opts = await import("../../api/client").then(
-                (m) => m.getArtModelOptions(),
-              );
-              setOptions(opts);
-            } catch { /* */ }
-          })();
-        }
-      } catch { /* ignore malformed events */ }
-    });
-    eventSource.onerror = () => {
-      // The browser will automatically reconnect EventSource on error
-    };
-    return () => {
-      eventSource.close();
-    };
+        const opts = await import("../../api/client").then(
+          (m) => m.getArtModelOptions(),
+        );
+        setOptions(opts);
+      } catch { /* */ }
+    })();
   }, []);
 
   const persist = (updates: Record<string, unknown>) => {

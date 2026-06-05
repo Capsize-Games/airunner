@@ -7,15 +7,15 @@ import {
 import Alert from "react-bootstrap/Alert";
 import ProgressBar from "react-bootstrap/ProgressBar";
 import {
-  streamLLM,
   listKnowledgeBaseDocuments,
   getSingleton,
 } from "../../api/client";
-import type { Message } from "../../types/api";
+import type { Message, StreamChunk } from "../../types/api";
 import MessageList from "./MessageList";
 import ModelSelector from "./ModelSelector";
 import ActiveDocPills from "./ActiveDocPills";
 import LucideIcon from "../shared/LucideIcon";
+import { useLLMWebSocket } from "../../features/llm/useLLMWebSocket";
 
 interface ActiveDoc {
   id: number;
@@ -29,13 +29,11 @@ export default function ChatView({
 }) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
-  const [streaming, setStreaming] = useState(false);
-  const [streamBuffer, setStreamBuffer] = useState("");
-  const [thinkingBuffer, setThinkingBuffer] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const abortRef = useRef<AbortController | null>(null);
+  const llm = useLLMWebSocket();
   const modelPathRef = useRef("");
   const loadedConvRef = useRef<number | null>(null);
+  const fullResponseRef = useRef("");
 
   const [activeDocs, setActiveDocs] = useState<ActiveDoc[]>([]);
 
@@ -151,68 +149,46 @@ export default function ChatView({
 
   const handleSend = useCallback(async () => {
     const text = input.trim();
-    if (!text || streaming) return;
+    if (!text || llm.streaming) return;
     if (!modelPathRef.current) {
       setError("Please select an LLM model in Settings first.");
       return;
     }
     setError(null);
     setInput("");
-    setThinkingBuffer("");
 
     const userMsg: Message = { role: "user", content: text };
     const newMessages = [...messages, userMsg];
     setMessages(newMessages);
-    setStreaming(true);
-    setStreamBuffer("");
+    fullResponseRef.current = "";
 
-    const controller = new AbortController();
-    abortRef.current = controller;
-
-    let fullResponse = "";
     try {
-      let llmOverrides: Record<string, Record<string, unknown>> | undefined;
-      try {
-        const ui = localStorage.getItem("airunner_llm_overrides_ui");
-        if (ui && (JSON.parse(ui) as Record<string, unknown>).overrideEnabled) {
-          const raw = localStorage.getItem("airunner_llm_overrides");
-          if (raw) llmOverrides = JSON.parse(raw) as Record<string, Record<string, unknown>>;
-        }
-      } catch { /* ignore */ }
+      const chunks = await llm.send(newMessages, {
+        model: modelPathRef.current,
+      });
 
-      const activeIds = activeDocs.map((d) => d.id);
-
-      const gen = streamLLM(
-        newMessages,
-        controller.signal,
-        modelPathRef.current,
-        llmOverrides,
-        activeIds.length > 0 ? activeIds : undefined,
-      );
-      fullResponse = "";
+      // Reconstruct full response from chunks
+      let fullResponse = "";
       let thinking = "";
-      for await (const chunk of gen) {
-        if (chunk.error) {
-          setError(chunk.error);
-          break;
-        }
+      for (const chunk of chunks) {
         if (chunk.message_type === "thinking") {
           thinking = chunk.token ?? "";
-          setThinkingBuffer(thinking);
         } else if (chunk.token) {
           fullResponse += chunk.token;
-          setStreamBuffer(fullResponse);
         }
       }
-      if (fullResponse && !controller.signal.aborted) {
-        setMessages([
-          ...newMessages,
+      fullResponseRef.current = fullResponse;
+
+      if (fullResponse) {
+        setMessages((prev) => [
+          ...prev,
           {
             role: "assistant",
             content: fullResponse,
             thinking_content: thinking || undefined,
           },
         ]);
+        // Refresh conversation list so the new message appears
         import("../../api/client").then(
           ({ listConversations }) => {
             listConversations(1)
@@ -233,25 +209,15 @@ export default function ChatView({
         );
       }
     } catch (err: unknown) {
-      if (!controller.signal.aborted) {
-        const msg =
-          err instanceof Error ? err.message : "Stream failed";
-        setError(msg);
-      }
-    } finally {
-      setStreamBuffer("");
-      setThinkingBuffer("");
-      setStreaming(false);
-      abortRef.current = null;
+      const msg =
+        err instanceof Error ? err.message : "Stream failed";
+      setError(msg);
     }
-  }, [input, messages, streaming, activeDocs]);
+  }, [input, messages, llm, activeDocs]);
 
   const handleCancel = useCallback(() => {
-    abortRef.current?.abort();
-    setStreaming(false);
-    setStreamBuffer("");
-    setThinkingBuffer("");
-  }, []);
+    llm.cancel();
+  }, [llm]);
 
   const handleKeyDown = (
     e: React.KeyboardEvent<HTMLTextAreaElement>,
@@ -309,8 +275,8 @@ export default function ChatView({
       <div className="chat-messages p-2 flex-grow-1">
         <MessageList
           messages={messages}
-          streamBuffer={streamBuffer}
-          thinkingBuffer={thinkingBuffer}
+          streamBuffer={llm.streamBuffer}
+          thinkingBuffer={llm.thinkingBuffer}
         />
       </div>
 
@@ -327,7 +293,7 @@ export default function ChatView({
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="Type a message..."
-            disabled={streaming}
+            disabled={llm.streaming}
             className="form-control"
             style={{
               resize: "none",
@@ -340,13 +306,13 @@ export default function ChatView({
           <div className="d-flex align-items-center gap-2">
             <div className="flex-grow-1">
               <ProgressBar
-                now={streamBuffer ? 50 : 0}
-                variant={streaming ? "info" : "secondary"}
+                now={llm.streamBuffer ? 50 : 0}
+                variant={llm.streaming ? "info" : "secondary"}
                 style={{ height: 6 }}
-                animated={streaming}
+                animated={llm.streaming}
               />
             </div>
-            {streaming ? (
+            {llm.streaming ? (
               <button
                 className="btn btn-sm btn-danger p-1"
                 onClick={handleCancel}

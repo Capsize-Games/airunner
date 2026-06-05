@@ -31,6 +31,7 @@ class TransportKind(str, Enum):
     IN_PROCESS = "in_process"
     UNIX_SOCKET = "unix_socket"
     HTTP = "http"
+    WEBSOCKET = "websocket"
 
 
 class RuntimeAction(str, Enum):

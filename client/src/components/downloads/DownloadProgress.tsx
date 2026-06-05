@@ -1,6 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import ProgressBar from "react-bootstrap/ProgressBar";
 import { BASE_URL } from "../../types/api";
+import { useEventBus } from "../../features/events/useEventBus";
+import { EVENT_DOWNLOADS } from "../../features/events/types";
 
 interface DownloadState {
   progress: number;
@@ -21,11 +23,15 @@ export function useDownloadProgress(
     progress: 0,
     status: "pending",
   });
+  const checkedRef = useRef(false);
+  const onNotFoundRef = useRef(onNotFound);
+  onNotFoundRef.current = onNotFound;
 
+  // Initial check: fetch job status from HTTP endpoint
   useEffect(() => {
-    if (!jobId) return;
+    if (!jobId || checkedRef.current) return;
+    checkedRef.current = true;
 
-    let eventSource: EventSource | null = null;
     let cancelled = false;
 
     fetch(`${BASE_URL}/api/v1/downloads/status/${jobId}`)
@@ -36,7 +42,7 @@ export function useDownloadProgress(
             progress: 0, status: "failed",
             error: "Server restarted",
           });
-          if (onNotFound) onNotFound();
+          if (onNotFoundRef.current) onNotFoundRef.current();
           return null;
         }
         return res.json();
@@ -67,45 +73,11 @@ export function useDownloadProgress(
           return;
         }
 
-        // Job exists and is running — open SSE stream
-        setState({ progress: Number(job.progress) || 0, status: "running" });
-
-        eventSource = new EventSource(
-          `${BASE_URL}/api/v1/downloads/status/${jobId}/stream`,
-        );
-
-        eventSource.addEventListener("message", (event) => {
-          try {
-            const data = JSON.parse(event.data);
-            const type = data.type;
-
-            if (type === "progress") {
-              setState({
-                progress: Number(data.progress) || 0,
-                status: data.status ?? "running",
-              });
-            } else if (type === "complete") {
-              setState({ progress: 100, status: "completed" });
-              eventSource?.close();
-            } else if (type === "error") {
-              setState((prev) => ({
-                ...prev,
-                status: "failed",
-                error: data.error ?? "Download failed",
-              }));
-              eventSource?.close();
-            } else if (type === "cancelled") {
-              setState((prev) => ({ ...prev, status: "cancelled" }));
-              eventSource?.close();
-            }
-          } catch {
-            // ignore parse errors
-          }
+        // Job exists and is running — apply initial progress
+        setState({
+          progress: Number(job.progress) || 0,
+          status: "running",
         });
-
-        eventSource.onerror = () => {
-          // EventSource auto-reconnects
-        };
       })
       .catch(() => {
         if (!cancelled) {
@@ -118,9 +90,38 @@ export function useDownloadProgress(
 
     return () => {
       cancelled = true;
-      if (eventSource) eventSource.close();
     };
-  }, [jobId, onNotFound]);
+  }, [jobId]);
+
+  // Subscribe to live download progress events via unified event bus
+  useEventBus([EVENT_DOWNLOADS], (_event, data) => {
+    if (!jobId) return;
+    const payload = data as {
+      job_id?: string;
+      type?: string;
+      progress?: number;
+      status?: string;
+      error?: string;
+    };
+    if (payload.job_id !== jobId) return;
+
+    if (payload.type === "progress") {
+      setState({
+        progress: Number(payload.progress) || 0,
+        status: payload.status ?? "running",
+      });
+    } else if (payload.type === "completed") {
+      setState({ progress: 100, status: "completed" });
+    } else if (payload.type === "error") {
+      setState((prev) => ({
+        ...prev,
+        status: "failed",
+        error: payload.error ?? "Download failed",
+      }));
+    } else if (payload.type === "cancelled") {
+      setState((prev) => ({ ...prev, status: "cancelled" }));
+    }
+  });
 
   return state;
 }

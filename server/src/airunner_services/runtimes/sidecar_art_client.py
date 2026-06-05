@@ -1,7 +1,8 @@
-"""HTTP runtime client for the supervised art sidecar."""
+"""HTTP+WebSocket runtime client for the supervised art sidecar."""
 
 from __future__ import annotations
 
+import asyncio
 import base64
 import threading
 import time
@@ -29,6 +30,11 @@ from airunner_services.runtimes.registry import RuntimeRoute
 from airunner_services.runtimes.sidecar_art_launcher import (
 	SidecarArtLauncher,
 )
+from airunner_services.runtimes.websocket_transport import (
+	SidecarWebSocketTransport,
+	WebSocketTransportDisconnected,
+	WebSocketTransportError,
+)
 
 DEFAULT_PROVIDER = "local"
 ProgressCallback = Callable[[dict[str, Any]], None]
@@ -49,7 +55,12 @@ ArtLauncherFactory = Callable[[ArtDaemonRuntimeSettings], ArtLauncherLike]
 
 
 class SidecarArtClient(RuntimeClient):
-	"""Route art envelopes through one supervised sidecar daemon."""
+	"""Route art envelopes through one supervised sidecar daemon.
+
+	Supports both WebSocket (``invoke_stream``) and HTTP (legacy polling)
+	transport.  WebSocket is preferred for INVOKE actions to eliminate
+	the polling overhead.
+	"""
 
 	def __init__(
 		self,
@@ -80,13 +91,16 @@ class SidecarArtClient(RuntimeClient):
 		self._active_jobs_lock = threading.Lock()
 		self._invoke_lock = threading.Lock()
 		self._last_known_model_status: Optional[str] = None
+
+		self._ws_transport: Optional[SidecarWebSocketTransport] = None
+
 		self.descriptor = RuntimeDescriptor(
 			runtime=RuntimeKind.ART,
 			provider=provider,
 			mode=RuntimeMode.SIDECAR,
-			transport=TransportKind.HTTP,
+			transport=TransportKind.WEBSOCKET,
 			endpoint=resolved_settings.endpoint,
-			supports_streaming=False,
+			supports_streaming=True,
 			allows_model_control=True,
 		)
 
@@ -151,6 +165,29 @@ class SidecarArtClient(RuntimeClient):
 		"""Cancel an active art job on a best-effort basis."""
 		messages = load_message_types()
 		job_id = self._untrack_job(request_id)
+
+		# Try WebSocket cancel first when the transport is available
+		if self._ws_transport is not None and self._ws_transport.is_connected:
+			try:
+				envelope = messages.RequestEnvelope(
+					request_id=request_id,
+					runtime=messages.RuntimeKind.ART,
+					action=messages.RuntimeAction.CANCEL,
+					payload={"job_id": job_id or request_id},
+				)
+				asyncio.run_coroutine_threadsafe(
+					self._ws_transport.invoke(envelope),
+					asyncio.get_event_loop(),
+				).result(timeout=10)
+				return messages.ResponseEnvelope(
+					request_id=request_id,
+					status=messages.EnvelopeStatus.CANCELLED,
+					metadata={"ws": True, **self._metadata()},
+				)
+			except Exception:
+				pass  # Fall through to HTTP cancel
+
+		# HTTP fallback
 		if job_id is not None:
 			try:
 				self._request("DELETE", f"/cancel/{job_id}")
@@ -170,6 +207,30 @@ class SidecarArtClient(RuntimeClient):
 		close = getattr(self._session, "close", None)
 		if close is not None:
 			close()
+
+	def _ensure_ws_transport(self, endpoint: str) -> SidecarWebSocketTransport:
+		"""Return or create a WebSocket transport for the given endpoint."""
+		ws = self._ws_transport
+		if ws is not None:
+			if hasattr(ws, "_ws_url") and endpoint in ws._ws_url:
+				if ws.is_connected:
+					return ws
+			# Endpoint changed or disconnected — close and reconnect
+			asyncio.run_coroutine_threadsafe(
+				ws.close(), asyncio.get_event_loop(),
+			)
+			self._ws_transport = None
+		ws = SidecarWebSocketTransport(endpoint)
+		try:
+			asyncio.run_coroutine_threadsafe(
+				ws.connect(), asyncio.get_event_loop(),
+			).result(timeout=10)
+		except Exception as exc:
+			raise RuntimeError(
+				f"Failed to connect WebSocket transport: {exc}"
+			) from exc
+		self._ws_transport = ws
+		return ws
 
 	def _has_active_jobs(self) -> bool:
 		"""Return whether the sidecar currently has one tracked art job."""
@@ -346,65 +407,119 @@ class SidecarArtClient(RuntimeClient):
 		request: Any,
 		progress_callback: Optional[ProgressCallback] = None,
 	) -> Any:
-		"""Execute an art request through the supervised sidecar daemon."""
-		messages = load_message_types()
+		"""Execute an art request via WebSocket transport only.
+
+		Raises immediately when the WebSocket connection cannot be
+		established -- no HTTP fallback.
+		"""
 		invocation = ArtInvocationRequest.model_validate(request.payload)
 		with self._invoke_lock:
 			try:
 				settings = self._settings_for_invocation(invocation)
 				self._ensure_launcher(settings)
 				launcher = self._require_launcher()
-				print(
-					"[SidecarArtClient] Starting sidecar launcher "
-					f"(endpoint={launcher.endpoint})"
-				)
 				launcher.start()
-				print(
-					"[SidecarArtClient] Sidecar launcher ready, "
-					"submitting art job"
-				)
 				if self._last_known_model_status not in {"loaded", "ready"}:
 					self._remember_model_status("loading")
-				job_id = self._submit_job(invocation)
-				print(
-					"[SidecarArtClient] Art job submitted to sidecar: "
-					f"job_id={job_id}"
-				)
-				if progress_callback is not None:
-					progress_callback(
-						{
-							"job_id": job_id,
-							"status": "running",
-							"progress": 2.0,
-							"phase": "submitted",
-						}
-					)
-				self._track_job(request.request_id, job_id)
-				status, payload, error = self._wait_for_job(
-					job_id,
-					progress_callback,
+				return self._generate_via_websocket(
+					request, invocation, progress_callback,
 				)
 			except RuntimeError as exc:
-				return self._runtime_error_response(request.request_id, str(exc))
-			finally:
-				self._untrack_job(request.request_id)
+				return self._runtime_error_response(
+					request.request_id, str(exc),
+				)
 
-		if status is messages.EnvelopeStatus.CANCELLED:
+	def _generate_via_websocket(
+		self,
+		request: Any,
+		invocation: ArtInvocationRequest,
+		progress_callback: Optional[ProgressCallback] = None,
+	) -> Any:
+		"""Send one art generation request through the WebSocket transport."""
+		messages = load_message_types()
+		launcher = self._require_launcher()
+		ws = self._ensure_ws_transport(launcher.endpoint)
+
+		payload = {
+			"prompt": invocation.prompt,
+			"negative_prompt": invocation.negative_prompt,
+			"model": self._settings.art_model_path or invocation.model,
+			"width": invocation.width,
+			"height": invocation.height,
+			"steps": invocation.steps,
+			"cfg_scale": invocation.cfg_scale,
+			"seed": invocation.seed,
+			"num_images": invocation.num_images,
+			"version": self._settings.art_model_version,
+			"scheduler": self._settings.art_scheduler,
+			"metadata": invocation.metadata or {},
+		}
+
+		envelope = messages.RequestEnvelope(
+			request_id=request.request_id,
+			runtime=messages.RuntimeKind.ART,
+			action=messages.RuntimeAction.INVOKE,
+			payload=payload,
+			metadata={"job_id": request.request_id},
+		)
+
+		self._remember_model_status("loading")
+
+		def ws_progress(data: dict[str, Any]):
+			if progress_callback is not None:
+				progress_callback(data)
+			status = str(data.get("status", "") or "").lower()
+			if status == "running":
+				progress = float(data.get("progress", 0.0))
+				if progress > 1.0:
+					self._remember_model_status("loaded")
+				else:
+					self._remember_model_status("loading")
+			if status == "completed":
+				self._remember_model_status("loaded")
+
+		try:
+			# Run the async WS call in a thread (compatible with existing
+			# threading model)
+			response = asyncio.run_coroutine_threadsafe(
+				ws.invoke_stream(envelope, on_progress=ws_progress),
+				asyncio.get_event_loop(),
+			).result(timeout=self._settings.invocation_timeout_seconds)
+		except WebSocketTransportDisconnected:
+			return self._failure_response(
+				request.request_id,
+				"art_disconnected",
+				"WebSocket connection lost",
+			)
+		except TimeoutError:
+			return self._failure_response(
+				request.request_id,
+				"art_timeout",
+				"Timed out waiting for art response via WebSocket",
+				retryable=True,
+			)
+
+		if response.status is messages.EnvelopeStatus.CANCELLED:
 			return messages.ResponseEnvelope(
 				request_id=request.request_id,
 				status=messages.EnvelopeStatus.CANCELLED,
-				metadata={"job_id": job_id, **self._metadata()},
+				metadata={"ws": True, **self._metadata()},
 			)
-		if status is messages.EnvelopeStatus.FAILED:
+		if response.status is messages.EnvelopeStatus.FAILED:
+			error_detail = "Art generation failed"
+			if response.error is not None:
+				error_detail = (
+					getattr(response.error, "message", None) or error_detail
+				)
 			return self._runtime_error_response(
 				request.request_id,
-				error or "Art generation failed",
+				error_detail,
 			)
 		return messages.ResponseEnvelope(
 			request_id=request.request_id,
 			status=messages.EnvelopeStatus.SUCCEEDED,
-			payload=payload,
-			metadata={"job_id": job_id, **self._metadata()},
+			payload=response.payload,
+			metadata={"ws": True, **self._metadata()},
 		)
 
 	def _settings_for_invocation(

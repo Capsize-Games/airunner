@@ -1,9 +1,6 @@
 """API Server Thread for headless mode.
 
 Runs the headless HTTP API inside uvicorn/FastAPI.
-
-We keep the legacy endpoints (/llm/*, /art, etc.) via a compatibility router
-so existing clients continue to work.
 """
 
 import threading
@@ -17,7 +14,6 @@ from airunner_services.api.server import (
     create_app,
     is_loopback_host,
 )
-from airunner_services.api.legacy_server import get_api
 from airunner_services.settings import AIRUNNER_LOG_LEVEL
 from airunner_services.utils.application import get_logger
 from airunner_services.settings import (
@@ -37,16 +33,19 @@ class APIServerThread(threading.Thread):
     Args:
         host: Host address to bind to (default: localhost)
         port: Port to listen on (default: 8080)
+        app_instance: Optional AIRunner app instance for dependency injection
     """
 
     def __init__(
         self,
         host: str = AIRUNNER_HEADLESS_SERVER_HOST,
         port: int = AIRUNNER_HEADLESS_SERVER_PORT,
+        app_instance=None,
     ):
         super().__init__(daemon=True)
         self.host = host
         self.port = port
+        self.app_instance = app_instance
         self.server: uvicorn.Server | None = None
         self._stop_event = threading.Event()
 
@@ -62,8 +61,7 @@ class APIServerThread(threading.Thread):
                 )
                 return
 
-            api = get_api()
-            app = create_app(app_instance=api)
+            app = create_app(app_instance=self.app_instance)
 
             logger.info(f"FastAPI server listening on http://{self.host}:{self.port}")
             logger.info("Available endpoints: /health, /llm/*, /art, /api/v1/*")

@@ -53,10 +53,30 @@ def build_runtime_registry(
             else None
         ),
     )
-    register_sidecar_llm_client(registry, SidecarLLMClient())
-    register_sidecar_stt_client(registry, SidecarSTTClient())
+    if os.environ.get("AIRUNNER_LLM_SIDECAR_PROCESS") != "1":
+        register_sidecar_llm_client(registry, SidecarLLMClient())
+    if os.environ.get("AIRUNNER_STT_SIDECAR_PROCESS") != "1":
+        register_sidecar_stt_client(registry, SidecarSTTClient())
     if os.environ.get("AIRUNNER_ART_SIDECAR_PROCESS") != "1":
         register_sidecar_art_client(registry, SidecarArtClient())
     if os.environ.get("AIRUNNER_TTS_SIDECAR_PROCESS") != "1":
         register_sidecar_tts_client(registry, SidecarTTSClient())
     return registry
+
+
+def _start_sidecar_launcher(client: Any, name: str) -> None:
+    """Start the sidecar daemon process in a background thread."""
+    launcher = getattr(client, "_launcher", None)
+    if launcher is None:
+        return
+    import logging
+    import threading
+    log = logging.getLogger(__name__)
+    def _start():
+        try:
+            launcher.start()
+            log.info("%s sidecar daemon ready", name)
+        except Exception as exc:
+            log.error("%s sidecar failed to start: %s", name, exc)
+    thread = threading.Thread(target=_start, daemon=True)
+    thread.start()

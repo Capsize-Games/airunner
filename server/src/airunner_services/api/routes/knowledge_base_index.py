@@ -1,26 +1,30 @@
-"""RAG document indexing endpoint with SSE progress streaming."""
+"""RAG document indexing endpoint with WsEventBus progress broadcast."""
 
 from __future__ import annotations
 
 import json
 import logging
-import queue
-import threading
 from typing import Any
 
 from fastapi import APIRouter, HTTPException, Request
-from fastapi.responses import StreamingResponse
 
-from airunner_services.api.routes.legacy_common import get_airunner_app
+from airunner_services.api.routes.events import WsEventBus
+
+def get_airunner_app(req: Request):
+    """Return the AIRunner app or raise when it is unavailable."""
+    from fastapi import HTTPException
+    app = getattr(req.app.state, "airunner_app", None)
+    if app is None:
+        raise HTTPException(status_code=503, detail="AI Runner app not available")
+    return app
 from airunner_services.contract_enums import SignalCode
 from airunner_services.utils.application.signal_mediator import SignalMediator
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
-# Module-level SSE state for indexing progress
-_index_subscribers: list[queue.Queue[bytes]] = []
-_index_lock = threading.Lock()
+# Module level state for indexing (SSE subscriber lists removed;
+# events now go through WsEventBus).
 
 
 def _resolve_emit_signal(app: Any):
@@ -77,60 +81,8 @@ async def cancel_indexing(request: Request):
 
 
 def _notify_index_subscribers(data: dict[str, Any]) -> None:
-    """Push one progress event to every connected SSE subscriber."""
-    line = b"data: " + json.dumps(data).encode("utf-8") + b"\n\n"
-    with _index_lock:
-        dead: list[queue.Queue[bytes]] = []
-        for q in _index_subscribers:
-            try:
-                q.put_nowait(line)
-            except queue.Full:
-                dead.append(q)
-        for q in dead:
-            _index_subscribers.remove(q)
-
-
-@router.get("/documents/index-progress")
-def watch_index_progress():
-    """SSE stream that emits indexing progress events.
-
-    Events:
-      ``{"type": "progress", "current": N, "total": M}``
-      ``{"type": "complete", "success": true, "message": "..."}``
-      ``{"type": "error", "message": "..."}``
-    """
-    q: queue.Queue[bytes] = queue.Queue(maxsize=128)
-
-    with _index_lock:
-        _index_subscribers.append(q)
-
-    def _cleanup():
-        with _index_lock:
-            if q in _index_subscribers:
-                _index_subscribers.remove(q)
-
-    def event_stream():  # noqa: DOC502
-        try:
-            while True:
-                try:
-                    data = q.get(timeout=30)
-                    yield data
-                except queue.Empty:
-                    yield b": keepalive\n\n"
-        except GeneratorExit:
-            pass
-        finally:
-            _cleanup()
-
-    return StreamingResponse(
-        event_stream(),
-        media_type="text/event-stream",
-        headers={
-            "Cache-Control": "no-cache",
-            "Connection": "keep-alive",
-            "X-Accel-Buffering": "no",
-        },
-    )
+    """Broadcast one indexing progress event via WsEventBus."""
+    WsEventBus().broadcast("index_progress", data)
 
 
 def _register_signal_handlers(app_instance) -> None:

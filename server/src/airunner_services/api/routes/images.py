@@ -17,6 +17,8 @@ from pathlib import Path
 
 from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import FileResponse, StreamingResponse
+
+from airunner_services.api.routes.events import WsEventBus
 from PIL import Image
 from pydantic import BaseModel
 from watchdog.events import FileSystemEventHandler
@@ -156,12 +158,9 @@ def _extract_metadata(path: Path) -> dict | None:
         return None
 
 
-# ── SSE watch endpoint (must be before {date} routes) ───────────────────
-# ── Watcher state ────────────────────────────────────────────────────────
+# ── File watcher state ─────────────────────────────────────────────────
 
 _WATCH_DIR = _IMAGES_ROOT
-_watch_subscribers: list[queue.Queue[bytes]] = []
-_watch_lock = threading.Lock()
 _watcher_started = False
 _watcher_observer = None  # type: ignore[valid-type]
 
@@ -192,18 +191,8 @@ class _ImageFileHandler(FileSystemEventHandler):
 
 
 def _notify_subscribers() -> None:
-    """Push a ``reload`` event to every connected SSE subscriber."""
-    payload = json.dumps({"type": "reload"}).encode("utf-8") + b"\n"
-    line = b"data: " + payload + b"\n"
-    with _watch_lock:
-        dead: list[queue.Queue[bytes]] = []
-        for q in _watch_subscribers:
-            try:
-                q.put_nowait(line)
-            except queue.Full:
-                dead.append(q)
-        for q in dead:
-            _watch_subscribers.remove(q)
+    """Push a ``reload`` event via WsEventBus."""
+    WsEventBus().broadcast("images", {"type": "reload"})
 
 
 def _start_watcher() -> None:
@@ -237,43 +226,9 @@ def _stop_watcher() -> None:
     _watcher_started = False
 
 
-@router.get("/images/watch")
-def watch_images() -> StreamingResponse:
-    """SSE stream that emits ``data: {"type": "reload"}\n\n``"""
-    _start_watcher()
-
-    q: queue.Queue[bytes] = queue.Queue(maxsize=128)
-
-    with _watch_lock:
-        _watch_subscribers.append(q)
-
-    def _cleanup():
-        with _watch_lock:
-            if q in _watch_subscribers:
-                _watch_subscribers.remove(q)
-
-    def event_stream():
-        try:
-            while True:
-                try:
-                    data = q.get(timeout=30)
-                    yield data
-                except queue.Empty:
-                    yield b": keepalive\n\n"
-        except GeneratorExit:
-            pass
-        finally:
-            _cleanup()
-
-    return StreamingResponse(
-        event_stream(),
-        media_type="text/event-stream",
-        headers={
-            "Cache-Control": "no-cache",
-            "Connection": "keep-alive",
-            "X-Accel-Buffering": "no",
-        },
-    )
+# SSE endpoint removed — events now broadcast via WsEventBus.
+# The file watcher above still triggers _notify_subscribers which
+# calls WsEventBus().broadcast("images", {"type": "reload"}).
 
 
 # ── Date listing ──────────────────────────────────────────────────────────

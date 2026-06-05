@@ -27,8 +27,10 @@ async def websocket_chat(websocket: WebSocket):
         client = resolve_llm_client(require_websocket_runtime_registry(websocket))
         while True:
             data = await websocket.receive_json()
-            prompt = str(data.get("message", "")).strip()
-            if not prompt:
+            has_content = bool(str(data.get("message", "")).strip()) or bool(
+                data.get("messages")
+            )
+            if not has_content:
                 await websocket.send_json(
                     {"type": "error", "content": "No message provided"}
                 )

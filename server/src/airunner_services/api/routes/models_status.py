@@ -1,23 +1,21 @@
-"""Model status SSE endpoint and active-model management routes.
+"""Model status event broadcast and active-model management routes.
 
-Provides a real-time stream of ``MODEL_STATUS_CHANGED_SIGNAL`` events
-so that the frontend can show loaded/loading models and allow users to
-unload individual models.
+Provides a ``WsEventBus``-backed broadcast of
+``MODEL_STATUS_CHANGED_SIGNAL`` events so that the frontend can show
+loaded/loading models and allow users to unload individual models.
 """
 
 from __future__ import annotations
 
-import json
 import asyncio
 import logging
-import queue
 import threading
 from typing import Any
 
 from fastapi import APIRouter, Request
-from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
+from airunner_services.api.routes.events import WsEventBus
 from airunner_services.contract_enums import SignalCode
 from airunner_services.model_management import ModelResourceManager
 from airunner_services.runtimes.contracts import RuntimeAction
@@ -27,10 +25,6 @@ from airunner_services.utils.application.signal_mediator import (
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
-
-# Module-level SSE state for model status events
-_status_subscribers: list[queue.Queue[bytes]] = []
-_status_lock = threading.Lock()
 
 # In-memory snapshot of externally-tracked models (e.g. embedding).
 # Keyed by model_id, value is a dict with keys:
@@ -82,68 +76,14 @@ class UnloadModelRequest(BaseModel):
     )
 
 
-# ── SSE helpers ──────────────────────────────────────────────────────
+# ── WsEventBus bridge ───────────────────────────────────────────────
 
 
 def _notify_status_subscribers(
     data: dict[str, Any],
 ) -> None:
-    """Push one model-status event to every connected SSE subscriber."""
-    line = b"data: " + json.dumps(data).encode("utf-8") + b"\n\n"
-    with _status_lock:
-        dead: list[queue.Queue[bytes]] = []
-        for q in _status_subscribers:
-            try:
-                q.put_nowait(line)
-            except queue.Full:
-                dead.append(q)
-        for q in dead:
-            _status_subscribers.remove(q)
-
-
-# ── SSE endpoint ─────────────────────────────────────────────────────
-
-
-@router.get("/models/status")
-def watch_model_status() -> StreamingResponse:
-    """SSE stream that emits model-lifecycle status changes.
-
-    Events:
-      ``{"type": "model_status", "model_type": "...", "model_id": "...",
-        "status": "loaded|loading|unloaded"}``
-    """
-    q: queue.Queue[bytes] = queue.Queue(maxsize=128)
-
-    with _status_lock:
-        _status_subscribers.append(q)
-
-    def _cleanup() -> None:
-        with _status_lock:
-            if q in _status_subscribers:
-                _status_subscribers.remove(q)
-
-    def event_stream():  # noqa: DOC502
-        try:
-            while True:
-                try:
-                    data = q.get(timeout=30)
-                    yield data
-                except queue.Empty:
-                    yield b": keepalive\n\n"
-        except GeneratorExit:
-            pass
-        finally:
-            _cleanup()
-
-    return StreamingResponse(
-        event_stream(),
-        media_type="text/event-stream",
-        headers={
-            "Cache-Control": "no-cache",
-            "Connection": "keep-alive",
-            "X-Accel-Buffering": "no",
-        },
-    )
+    """Broadcast one model-status event via WsEventBus."""
+    WsEventBus().broadcast("model_status", data)
 
 
 # ── REST endpoints ───────────────────────────────────────────────────
@@ -298,7 +238,7 @@ async def unload_model(
 
 
 def _register_model_status_handlers(app_instance) -> None:
-    """Bridge ``MODEL_STATUS_CHANGED_SIGNAL`` to the SSE subscriber list.
+    """Bridge ``MODEL_STATUS_CHANGED_SIGNAL`` to the WsEventBus broadcast.
 
     Tries ``app_instance.mediator`` first, then the global
     ``SignalMediator`` singleton.
@@ -307,7 +247,7 @@ def _register_model_status_handlers(app_instance) -> None:
     if signal_mediator is None:
         signal_mediator = SignalMediator()
         logger.info(
-            "Fell back to global SignalMediator for model-status SSE",
+            "Fell back to global SignalMediator for model-status broadcast",
         )
 
     from airunner_services.contract_enums import SignalCode  # noqa: PLC0415
@@ -355,9 +295,9 @@ def _register_model_status_handlers(app_instance) -> None:
             SignalCode.MODEL_STATUS_CHANGED_SIGNAL,
             on_model_status,
         )
-        logger.info("Registered model-status SSE bridge handler")
+        logger.info("Registered model-status WsEventBus bridge handler")
     except Exception as exc:
         logger.warning(
-            "Failed to register model-status SSE handler: %s",
+            "Failed to register model-status handler: %s",
             exc,
         )

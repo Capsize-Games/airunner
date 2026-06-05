@@ -1,7 +1,8 @@
-"""HTTP runtime client for the supervised llama.cpp sidecar."""
+"""HTTP+WebSocket runtime client for the supervised llama.cpp sidecar."""
 
 from __future__ import annotations
 
+import asyncio
 import json
 from typing import Any, Callable, Iterable, Optional
 from urllib.error import HTTPError, URLError
@@ -23,14 +24,22 @@ from airunner_services.runtimes.message_envelopes import load_message_types
 from airunner_services.runtimes.registry import RuntimeRegistry
 from airunner_services.runtimes.registry import RuntimeRoute
 from airunner_services.runtimes.sidecar_launcher import SidecarLauncher
-
+from airunner_services.runtimes.websocket_transport import (
+	SidecarWebSocketTransport,
+	WebSocketTransportDisconnected,
+)
 
 DEFAULT_PROVIDER = "local"
 LlamaSettingsResolver = Callable[[Optional[str]], LlamaCppRuntimeSettings]
 
 
 class SidecarLLMClient(RuntimeClient):
-	"""Route LLM runtime envelopes through a supervised llama.cpp server."""
+	"""Route LLM runtime envelopes through a supervised llama.cpp server.
+
+	Supports both WebSocket (via the llm_ws_adapter process) and HTTP
+	(direct to llama.cpp).  WebSocket is preferred for consistency with
+	other sidecar runtimes.
+	"""
 
 	def __init__(
 		self,
@@ -51,11 +60,15 @@ class SidecarLLMClient(RuntimeClient):
 		self._managed_launcher = launcher is None
 		self._http_opener = http_opener
 		self._timeout_seconds = timeout_seconds
+		self._ws_transport: Optional[SidecarWebSocketTransport] = None
+		# Adapter port offset: adapter listens on llama.cpp port + 1000
+		self._adapter_port = resolved_settings.port + 1000
+
 		self.descriptor = RuntimeDescriptor(
+			transport=TransportKind.WEBSOCKET,
 			runtime=RuntimeKind.LLM,
 			provider=provider,
 			mode=RuntimeMode.SIDECAR,
-			transport=TransportKind.HTTP,
 			endpoint=resolved_settings.endpoint,
 			supports_streaming=True,
 			allows_model_control=True,
@@ -155,14 +168,17 @@ class SidecarLLMClient(RuntimeClient):
 		)
 
 	def _invoke_chat(self, request: Any) -> Any:
-		"""Execute a non-streaming chat completion through the sidecar."""
+		"""Execute a non-streaming chat completion via WebSocket adapter.
+
+		Raises immediately when the WebSocket connection cannot be
+		established -- no HTTP fallback.
+		"""
 		messages = load_message_types()
 		invocation = LLMInvocationRequest.model_validate(request.payload)
 		try:
 			self._prepare_launcher(self._runtime_profile(invocation))
 			self._launcher.start()
-			with self._open_request(self._chat_payload(invocation)) as response:
-				data = self._decode_json(response)
+			return self._invoke_via_websocket(request, invocation)
 		except RuntimeError as exc:
 			return self._failure_response(
 				request.request_id,
@@ -170,13 +186,6 @@ class SidecarLLMClient(RuntimeClient):
 				str(exc),
 				retryable=True,
 			)
-
-		return messages.ResponseEnvelope(
-			request_id=request.request_id,
-			status=messages.EnvelopeStatus.SUCCEEDED,
-			payload=self._completion_payload(data),
-			metadata=self._metadata(),
-		)
 
 	def _chat_payload(
 		self,
