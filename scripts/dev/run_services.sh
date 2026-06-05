@@ -7,7 +7,6 @@ LOG_DIR="${ROOT_DIR}/build/logs"
 DAEMON_PORT="${AIRUNNER_DAEMON_PORT:-8188}"
 DEV_VENV="${AIRUNNER_DEV_VENV:-${ROOT_DIR}/venv}"
 DEV_VENV_BIN="${DEV_VENV}/bin"
-SIDECAR_BIN_DIR="${ROOT_DIR}/build/runtime-sidecars/linux/bin"
 
 mkdir -p "${LOG_DIR}"
 
@@ -145,14 +144,6 @@ start_services() {
     export AIRUNNER_DISABLE_STALE_DAEMON_CHECK=1
     export AIRUNNER_SERVER_HOST="${AIRUNNER_SERVER_HOST:-127.0.0.1}"
     export PYTHONPATH="${ROOT_DIR}/server/src:${ROOT_DIR}/src${PYTHONPATH:+:${PYTHONPATH}}"
-    export PATH="${DEV_VENV_BIN}:${SIDECAR_BIN_DIR}${PATH:+:${PATH}}"
-
-    if [[ -x "${SIDECAR_BIN_DIR}/llama-server" ]]; then
-        export AIRUNNER_LLAMA_SERVER_BIN="${SIDECAR_BIN_DIR}/llama-server"
-    fi
-    if [[ -x "${SIDECAR_BIN_DIR}/whisper-server" ]]; then
-        export AIRUNNER_WHISPER_SERVER_BIN="${SIDECAR_BIN_DIR}/whisper-server"
-    fi
 
     "${DEV_VENV_BIN}/python" -m airunner_services.daemon \
         > "${LOG_DIR}/server.log" 2>&1 &
