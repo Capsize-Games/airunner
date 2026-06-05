@@ -251,8 +251,6 @@ class LLMAPIService(
 		return None
 
 	def _daemon_client(self):
-		"""Return the daemon client when one is already attached."""
-		api = getattr(self, "api", None)
-		if api is None or getattr(api, "headless", False):
-			return None
-		return getattr(api, "daemon_client", None)
+	    """Return the daemon client when one is already attached."""
+	    api = peek_registered_api()
+	    return getattr(api, "daemon_client", None) if api else None

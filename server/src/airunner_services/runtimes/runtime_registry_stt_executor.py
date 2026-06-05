@@ -25,25 +25,13 @@ def _response_status_is(response: object, expected: EnvelopeStatus) -> bool:
 class RuntimeRegistrySTTExecutor(STTExecutor):
     """Route STT model control and transcription through the runtime registry."""
 
-    def __init__(self, *, api: Optional[object] = None) -> None:
+    def __init__(self) -> None:
         self.logger = get_logger(self.__class__.__name__, AIRUNNER_LOG_LEVEL)
-        self.api = api or self._resolve_api_reference()
         self._loaded = False
-
-    def _resolve_api_reference(self) -> Optional[object]:
-        """Return the registered shared API reference when available."""
-        return peek_registered_api()
-
-    def refresh_api_reference(self) -> Optional[object]:
-        """Refresh one stale cached API reference when possible."""
-        live_api = self._resolve_api_reference()
-        if live_api is not None:
-            self.api = live_api
-        return getattr(self, "api", None)
 
     def _resolve_client(self):
         """Resolve the default local STT runtime client."""
-        api = self.refresh_api_reference()
+        api = peek_registered_api()
         registry = getattr(api, "runtime_registry", None)
         if registry is None:
             raise RuntimeError("STT runtime registry unavailable")

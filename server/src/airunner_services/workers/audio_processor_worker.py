@@ -1,6 +1,9 @@
 """Service-owned STT audio processor worker."""
 
 from airunner_services.runtimes.stt_executor import STTExecutor
+from airunner_services.utils.application.api_reference import (
+    peek_registered_api,
+)
 from airunner_services.runtimes.runtime_registry_stt_executor import (
 	RuntimeRegistrySTTExecutor,
 )
@@ -35,8 +38,8 @@ class AudioProcessorWorker(Worker):
 			self._executor = self._create_stt_executor()
 
 	def _create_stt_executor(self) -> STTExecutor:
-		"""Create the shared STT executor used by the processor worker."""
-		return RuntimeRegistrySTTExecutor(api=self._current_api())
+	    """Create the shared STT executor used by the processor worker."""
+	    return RuntimeRegistrySTTExecutor()
 
 	def _current_api(self):
 	    """Return the registered service API reference."""

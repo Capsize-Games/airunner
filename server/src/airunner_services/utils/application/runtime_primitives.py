@@ -131,7 +131,6 @@ class QCoreApplication(QObject):
     def __init__(self, _args: Optional[list[object]] = None) -> None:
         del _args
         super().__init__()
-        self.api = None
         self._quit_requested = False
         self.__class__._instance = self
 
