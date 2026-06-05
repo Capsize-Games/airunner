@@ -216,7 +216,7 @@ class SidecarTTSLauncher:
         environment.update(layout.as_environment(self._config_path))
         environment.update(
             {
-                "AIRUNNER_HEADLESS": "1",
+                "AIRUNNER_DAEMON": "1",
                 "AIRUNNER_HTTP_HOST": self.settings.host,
                 "AIRUNNER_HTTP_PORT": str(self.settings.port),
                 "AIRUNNER_LLM_ON": "0",

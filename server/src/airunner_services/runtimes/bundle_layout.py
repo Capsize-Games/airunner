@@ -145,7 +145,7 @@ def _looks_like_bundle_root(candidate_root: Path) -> bool:
             gui_root.exists(),
             (
                 (
-                    candidate_root / "bin" / "airunner-headless"
+                    candidate_root / "bin" / "airunner-server"
                 ).exists()
                 and (
                     candidate_root / "bin" / "airunner-daemon"

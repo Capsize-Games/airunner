@@ -24,7 +24,7 @@ from airunner_services.startup_env import (
 
 def _configure_daemon_environment() -> None:
     """Set  environment defaults before imports."""
-    os.environ.setdefault("AIRUNNER_HEADLESS", "1")
+    os.environ.setdefault("AIRUNNER_DAEMON", "1")
     os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
     os.environ.setdefault(
         "QT_LOGGING_RULES",

@@ -17,8 +17,8 @@ from airunner_services.api.server import (
 from airunner_services.settings import AIRUNNER_LOG_LEVEL
 from airunner_services.utils.application import get_logger
 from airunner_services.settings import (
-    AIRUNNER_HEADLESS_SERVER_HOST,
-    AIRUNNER_HEADLESS_SERVER_PORT,
+    AIRUNNER_SERVER_HOST,
+    AIRUNNER_SERVER_PORT,
 )
 
 logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
@@ -38,8 +38,8 @@ class APIServerThread(threading.Thread):
 
     def __init__(
         self,
-        host: str = AIRUNNER_HEADLESS_SERVER_HOST,
-        port: int = AIRUNNER_HEADLESS_SERVER_PORT,
+        host: str = AIRUNNER_SERVER_HOST,
+        port: int = AIRUNNER_SERVER_PORT,
         app_instance=None,
     ):
         super().__init__(daemon=True)

@@ -13,21 +13,21 @@ Startup, shutdown, and logging behavior:
         - Daemon logging still writes to the configured daemon log file.
 
 Usage:
-    airunner-headless
-    airunner-headless --host 0.0.0.0 --port 8080
-        airunner-headless --connect-only
-        airunner-headless \
+    airunner-server
+    airunner-server --host 0.0.0.0 --port 8080
+        airunner-server --connect-only
+        airunner-server \
             --daemon-config ~/.local/share/airunner/runtime/configs/daemon.yaml
-    airunner-headless --ollama-mode  # Run as Ollama replacement on port 11434
-    airunner-headless --model "/path/to/llm/model"  # Load specific LLM model
-    airunner-headless --art-model "/path/to/art/model"  # Load specific art model
-    airunner-headless --tts-model "/path/to/tts/model"  # Load specific TTS model
-    airunner-headless --stt-model "/path/to/stt/model"  # Load specific STT model
-    airunner-headless --no-preload  # Don't preload models, load on first request
-    airunner-headless --help
+    airunner-server --ollama-mode  # Run as Ollama replacement on port 11434
+    airunner-server --model "/path/to/llm/model"  # Load specific LLM model
+    airunner-server --art-model "/path/to/art/model"  # Load specific art model
+    airunner-server --tts-model "/path/to/tts/model"  # Load specific TTS model
+    airunner-server --stt-model "/path/to/stt/model"  # Load specific STT model
+    airunner-server --no-preload  # Don't preload models, load on first request
+    airunner-server --help
 
 Environment Variables:
-    AIRUNNER_HEADLESS: Set to 1 (automatically set by this script)
+    AIRUNNER_DAEMON: Set to 1 (automatically set by this script)
     AIRUNNER_DAEMON_CONFIG: Base daemon config to clone for this session
     AIRUNNER_HTTP_HOST: Override host (default: 127.0.0.1)
     AIRUNNER_HTTP_PORT: Override port (default: 8080)
@@ -46,31 +46,31 @@ Environment Variables:
 
 Examples:
     # Start with defaults (127.0.0.1:8080)
-    airunner-headless
+    airunner-server
 
     # Start on custom port
-    airunner-headless --port 9000
+    airunner-server --port 9000
 
     # Start on localhost only
-    airunner-headless --host 127.0.0.1 --port 8080
+    airunner-server --host 127.0.0.1 --port 8080
 
     # Verify and reuse an already running daemon
-    airunner-headless --connect-only --host 127.0.0.1 --port 8080
+    airunner-server --connect-only --host 127.0.0.1 --port 8080
 
     # Run as Ollama replacement (port 11434) for VS Code integration
-    airunner-headless --ollama-mode
+    airunner-server --ollama-mode
 
     # Load a specific LLM model at startup
-    airunner-headless --model "/path/to/Qwen2.5-7B-Instruct-4bit"
+    airunner-server --model "/path/to/Qwen2.5-7B-Instruct-4bit"
 
     # Run without preloading models (load on first request)
-    airunner-headless --no-preload
+    airunner-server --no-preload
 
     # Enable Stable Diffusion and load a specific art model
-    airunner-headless --enable-art --art-model "/path/to/stable-diffusion-v1-5"
+    airunner-server --enable-art --art-model "/path/to/stable-diffusion-v1-5"
 
     # Enable all services with specific models
-    airunner-headless --enable-llm --enable-art --enable-tts --enable-stt \\
+    airunner-server --enable-llm --enable-art --enable-tts --enable-stt \\
         --model "/path/to/llm" --art-model "/path/to/art"
 
 Important:
@@ -106,7 +106,7 @@ BANNER = """
 
 
 def _build_parser() -> argparse.ArgumentParser:
-    """Create the CLI parser for the headless daemon supervisor."""
+    """Create the CLI parser for the daemon supervisor."""
     parser = argparse.ArgumentParser(
         description="AI Runner Headless Server - daemon-backed HTTP API",
         formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -128,7 +128,7 @@ def _build_parser() -> argparse.ArgumentParser:
         "--daemon-config",
         type=Path,
         default=_default_daemon_config(),
-        help="Base daemon config to clone for this headless session",
+        help="Base daemon config to clone for this session",
     )
     parser.add_argument(
         "--connect-only",
@@ -269,13 +269,13 @@ def _validate_host_binding(args: argparse.Namespace) -> bool:
 
 
 def _configure_environment(args: argparse.Namespace, port: int) -> None:
-    """Set headless environment variables inherited by the daemon."""
+    """Set daemon environment variables inherited by the daemon."""
     from airunner_services.runtimes.bundle_layout import (
         build_linux_bundle_layout,
     )
 
     bundle_layout = build_linux_bundle_layout()
-    os.environ.setdefault("AIRUNNER_HEADLESS", "1")
+    os.environ.setdefault("AIRUNNER_DAEMON", "1")
     os.environ.setdefault(
         "AIRUNNER_BUNDLE_ROOT",
         str(bundle_layout.bundle_root),
@@ -284,8 +284,8 @@ def _configure_environment(args: argparse.Namespace, port: int) -> None:
         "AIRUNNER_PYTHON",
         str(bundle_layout.python_executable),
     )
-    os.environ["AIRUNNER_HEADLESS_SERVER_HOST"] = args.host
-    os.environ["AIRUNNER_HEADLESS_SERVER_PORT"] = str(port)
+    os.environ["AIRUNNER_SERVER_HOST"] = args.host
+    os.environ["AIRUNNER_SERVER_PORT"] = str(port)
     os.environ["AIRUNNER_HTTP_HOST"] = args.host
     os.environ["AIRUNNER_HTTP_PORT"] = str(port)
     os.environ["AIRUNNER_OLLAMA_MODE"] = "1" if args.ollama_mode else "0"
@@ -354,7 +354,7 @@ def _log_startup(
     port: int,
     log_level: int,
 ) -> None:
-    """Log the daemon-backed headless startup configuration."""
+    """Log the daemon-backed daemon startup configuration."""
     logger.info("=" * 60)
     logger.info("AI Runner Headless Supervisor")
     logger.info("Daemon-backed mode; no local worker graph is created")
@@ -425,7 +425,7 @@ def _prepare_daemon_config(args: argparse.Namespace, port: int) -> Path:
     layout.ensure_exists()
     fd, temp_path = tempfile.mkstemp(
         dir=layout.config_dir,
-        prefix="airunner-headless-",
+        prefix="airunner-server-",
         suffix=".yaml",
     )
     os.close(fd)
@@ -436,7 +436,7 @@ def _prepare_daemon_config(args: argparse.Namespace, port: int) -> Path:
 
 
 def _build_daemon_client(config_path: Path):
-    """Create the daemon client used by the headless supervisor."""
+    """Create the daemon client used by the daemon supervisor."""
     from airunner_services.daemon_client.launcher import DaemonLauncher
     from airunner_services.daemon_client.gui_daemon_client import (
         GuiDaemonClient,
@@ -508,12 +508,12 @@ def _cleanup_config(config_path: Optional[Path]) -> None:
 
 
 def _print_banner() -> None:
-    """Print the existing AI Runner headless banner."""
+    """Print the existing AI Runner daemon banner."""
     print(BANNER)
 
 
 def main(argv: Optional[Sequence[str]] = None) -> int:
-    """Run the daemon-backed headless CLI."""
+    """Run the daemon-backed daemon CLI."""
     args = _build_parser().parse_args(argv)
     if not _validate_host_binding(args):
         return 2

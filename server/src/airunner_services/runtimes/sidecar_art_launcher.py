@@ -239,7 +239,7 @@ class SidecarArtLauncher:
         environment.pop("AIRUNNER_TTS_SIDECAR_PROCESS", None)
         environment.update(
             {
-                "AIRUNNER_HEADLESS": "1",
+                "AIRUNNER_DAEMON": "1",
                 "AIRUNNER_BUNDLE_ROOT": str(bundle_layout.bundle_root),
                 "AIRUNNER_PYTHON": str(bundle_layout.python_executable),
                 "AIRUNNER_HTTP_HOST": self.settings.host,

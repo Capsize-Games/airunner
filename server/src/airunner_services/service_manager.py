@@ -360,7 +360,7 @@ WantedBy=default.target
         environment.update(
             {
                 "AIRUNNER_BUNDLE_ROOT": str(bundle_layout.bundle_root),
-                "AIRUNNER_HEADLESS": "1",
+                "AIRUNNER_DAEMON": "1",
                 "AIRUNNER_HTTP_HOST": "127.0.0.1",
                 "AIRUNNER_RUNTIME_BIND_HOST": "127.0.0.1",
                 "AIRUNNER_LLM_ON": "1",

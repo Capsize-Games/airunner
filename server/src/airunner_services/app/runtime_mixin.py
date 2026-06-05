@@ -18,8 +18,8 @@ from airunner_services.lifecycle_service import CoreLifecycleService
 from airunner_services.utils.application.runtime_primitives import (
     QCoreApplication,
 )
-from airunner_services.settings import AIRUNNER_HEADLESS_SERVER_HOST
-from airunner_services.settings import AIRUNNER_HEADLESS_SERVER_PORT
+from airunner_services.settings import AIRUNNER_SERVER_HOST
+from airunner_services.settings import AIRUNNER_SERVER_PORT
 from airunner_services.settings import AIRUNNER_USER_DATA_PATH
 
 if TYPE_CHECKING:
@@ -175,8 +175,8 @@ class RuntimeMixin:
                 APIServerThread,
             )
 
-            host = AIRUNNER_HEADLESS_SERVER_HOST
-            port = AIRUNNER_HEADLESS_SERVER_PORT
+            host = AIRUNNER_SERVER_HOST
+            port = AIRUNNER_SERVER_PORT
             self._kill_process_on_port(port)
 
             self.logger.info("Starting API server on %s:%s", host, port)
