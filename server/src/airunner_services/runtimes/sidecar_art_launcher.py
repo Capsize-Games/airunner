@@ -284,12 +284,16 @@ class SidecarArtLauncher:
 
     @staticmethod
     def _resolved_stdio(stream: Any) -> Any:
-        """Use inherited stdio in dev mode so sidecar failures are visible."""
+        """Resolve DEVNULL to a log file so sidecar stderr is captured."""
         if stream is not subprocess.DEVNULL:
             return stream
-        if os.environ.get("DEV_ENV", "1") != "1":
+        layout = build_runtime_directory_layout()
+        layout.ensure_exists()
+        log_path = str(layout.log_file("art-runtime-stderr"))
+        try:
+            return open(log_path, "a")
+        except OSError:
             return stream
-        return None
 
     def _cleanup_config(self) -> None:
         """Delete the temporary config file used for this launcher."""

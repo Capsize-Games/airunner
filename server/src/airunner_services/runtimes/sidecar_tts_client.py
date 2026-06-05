@@ -33,6 +33,7 @@ from airunner_services.runtimes.tts_daemon_runtime_settings import (
 from airunner_services.runtimes.websocket_transport import (
 	SidecarWebSocketTransport,
 	WebSocketTransportDisconnected,
+	get_ws_event_loop,
 )
 
 DEFAULT_PROVIDER = "local"
@@ -186,7 +187,7 @@ class SidecarTTSClient(RuntimeClient):
 			try:
 				asyncio.run_coroutine_threadsafe(
 					self._ws_transport.close(),
-					asyncio.get_event_loop(),
+					get_ws_event_loop(),
 				).result(timeout=5)
 			except Exception:
 				pass
@@ -278,13 +279,15 @@ class SidecarTTSClient(RuntimeClient):
 			if ws.is_connected:
 				return ws
 			asyncio.run_coroutine_threadsafe(
-				ws.close(), asyncio.get_event_loop(),
+				ws.close(), get_ws_event_loop(),
 			)
 			self._ws_transport = None
-		ws = SidecarWebSocketTransport(endpoint)
+		ws = SidecarWebSocketTransport(
+			endpoint, ws_path="/api/v1/tts/daemon/ws",
+		)
 		try:
 			asyncio.run_coroutine_threadsafe(
-				ws.connect(), asyncio.get_event_loop(),
+				ws.connect(), get_ws_event_loop(),
 			).result(timeout=10)
 		except Exception as exc:
 			raise RuntimeError(
@@ -350,7 +353,7 @@ class SidecarTTSClient(RuntimeClient):
 		try:
 			response = asyncio.run_coroutine_threadsafe(
 				ws.invoke(envelope),
-				asyncio.get_event_loop(),
+				get_ws_event_loop(),
 			).result(timeout=self._settings.request_timeout_seconds)
 		except WebSocketTransportDisconnected:
 			return self._failure_response(

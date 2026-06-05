@@ -859,9 +859,12 @@ class SDWorker(Worker):
 				self.send_missing_model_alert(err)
 			except Exception as error:
 				import traceback
-
+	
 				traceback_text = traceback.format_exc()
 				error_message = str(error) or f"{type(error).__name__}"
+				self.logger.exception(
+					"SDWorker: unhandled exception in handle_generate_signal"
+				)
 				self.handle_error(
 					f"Unexpected error: {error_message}\n{traceback_text}"
 				)

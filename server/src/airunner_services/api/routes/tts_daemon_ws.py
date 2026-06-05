@@ -104,8 +104,10 @@ async def _handle_synthesize(
     )
     from .tts_models import TTSRequest
 
-    mock_request = FastAPIRequest({"type": "http"})
-    mock_request.app = getattr(websocket, "app", None)  # type: ignore[assignment]
+    mock_request = FastAPIRequest({
+        "type": "http",
+        "app": getattr(websocket, "app", None),
+    })
 
     try:
         client = resolve_tts_client(require_runtime_registry(mock_request))
@@ -203,8 +205,10 @@ async def _handle_load(
         resolve_tts_client,
     )
 
-    mock_request = FastAPIRequest({"type": "http"})
-    mock_request.app = getattr(websocket, "app", None)  # type: ignore[assignment]
+    mock_request = FastAPIRequest({
+        "type": "http",
+        "app": getattr(websocket, "app", None),
+    })
 
     try:
         client = resolve_tts_client(require_runtime_registry(mock_request))
@@ -249,8 +253,10 @@ async def _handle_unload(
         resolve_tts_client,
     )
 
-    mock_request = FastAPIRequest({"type": "http"})
-    mock_request.app = getattr(websocket, "app", None)  # type: ignore[assignment]
+    mock_request = FastAPIRequest({
+        "type": "http",
+        "app": getattr(websocket, "app", None),
+    })
 
     try:
         client = resolve_tts_client(require_runtime_registry(mock_request))
@@ -293,8 +299,10 @@ async def _handle_health(
         resolve_tts_client,
     )
 
-    mock_request = FastAPIRequest({"type": "http"})
-    mock_request.app = getattr(websocket, "app", None)  # type: ignore[assignment]
+    mock_request = FastAPIRequest({
+        "type": "http",
+        "app": getattr(websocket, "app", None),
+    })
 
     try:
         client = resolve_tts_client(require_runtime_registry(mock_request))
@@ -331,8 +339,10 @@ async def _handle_cancel(
         resolve_tts_client,
     )
 
-    mock_request = FastAPIRequest({"type": "http"})
-    mock_request.app = getattr(websocket, "app", None)  # type: ignore[assignment]
+    mock_request = FastAPIRequest({
+        "type": "http",
+        "app": getattr(websocket, "app", None),
+    })
 
     try:
         client = resolve_tts_client(require_runtime_registry(mock_request))

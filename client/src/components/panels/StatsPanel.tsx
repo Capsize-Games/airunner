@@ -205,9 +205,9 @@ export default function StatsPanel() {
           <small className="text-muted d-block mb-1">
             Loaded Models
           </small>
-          {models.map((m) => (
+          {models.map((m, index) => (
             <div
-              key={m.model_id}
+              key={m.model_id ?? `model-${index}`}
               className="d-flex align-items-center justify-content-between mb-1"
               style={{ fontSize: "11px" }}
             >

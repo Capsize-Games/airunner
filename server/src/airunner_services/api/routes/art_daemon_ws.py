@@ -29,8 +29,10 @@ async def _resolve_art_client(ws: WebSocket):
         require_runtime_registry,
         resolve_art_client,
     )
-    mock = FastAPIRequest({"type": "http"})
-    mock.app = getattr(ws, "app", None)
+    mock = FastAPIRequest({
+        "type": "http",
+        "app": getattr(ws, "app", None),
+    })
     return resolve_art_client(require_runtime_registry(mock))
 
 
@@ -89,6 +91,7 @@ async def _handle_generate(
     try:
         response = await asyncio.to_thread(client.invoke, envelope)
     except Exception as exc:
+        logger.exception("Art daemon: client.invoke failed for %s", request_id)
         await ws.send_json({"type": "response", "request_id": request_id, "status": "failed", "error": str(exc)})
         return
     if response.status is not EnvelopeStatus.SUCCEEDED:

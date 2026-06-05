@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import threading
 from typing import Any, Callable, Optional
 
 import websockets
@@ -34,6 +35,40 @@ logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 
 # Defaults
 _DEFAULT_CONNECT_TIMEOUT = 10.0
+
+# ── Dedicated background event loop for all WebSocket operations ──
+# The sidecar clients are called from ThreadPoolExecutor threads where
+# no asyncio event loop is available.  This background thread runs a
+# single event loop that all WS transports share via
+# run_coroutine_threadsafe.
+
+_ws_loop: Optional[asyncio.AbstractEventLoop] = None
+_ws_loop_lock = threading.Lock()
+
+
+def get_ws_event_loop() -> asyncio.AbstractEventLoop:
+	"""Return a shared background event loop for WebSocket operations.
+
+	Creates a daemon thread running ``run_forever`` on first call.
+	All sidecar clients call ``run_coroutine_threadsafe`` against
+	this loop so that async WS methods execute regardless of which
+	thread the caller is on.
+	"""
+	global _ws_loop
+	if _ws_loop is not None and not _ws_loop.is_closed():
+		return _ws_loop
+	with _ws_loop_lock:
+		if _ws_loop is not None and not _ws_loop.is_closed():
+			return _ws_loop
+		loop = asyncio.new_event_loop()
+		t = threading.Thread(
+			target=loop.run_forever,
+			daemon=True,
+			name="ws-event-loop",
+		)
+		t.start()
+		_ws_loop = loop
+	return _ws_loop
 _DEFAULT_RESPONSE_TIMEOUT = 30.0
 _DEFAULT_STREAM_TIMEOUT = 1800.0
 _DEFAULT_PING_INTERVAL = 5.0
@@ -459,4 +494,5 @@ __all__ = [
 	"WebSocketTransportError",
 	"WebSocketTransportTimeout",
 	"WebSocketTransportDisconnected",
+	"get_ws_event_loop",
 ]

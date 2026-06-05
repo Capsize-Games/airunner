@@ -31,6 +31,7 @@ from airunner_services.runtimes.whisper_cpp_runtime_settings import (
 from airunner_services.runtimes.websocket_transport import (
     SidecarWebSocketTransport,
     WebSocketTransportDisconnected,
+    get_ws_event_loop,
 )
 from airunner_services.settings import AIRUNNER_LOG_LEVEL
 from airunner_services.utils.application import get_logger
@@ -122,7 +123,7 @@ class SidecarSTTClient(RuntimeClient):
             try:
                 asyncio.run_coroutine_threadsafe(
                     self._ws_transport.close(),
-                    asyncio.get_event_loop(),
+                    get_ws_event_loop(),
                 ).result(timeout=5)
             except Exception:
                 pass
@@ -177,13 +178,13 @@ class SidecarSTTClient(RuntimeClient):
             return ws
         if ws is not None:
             asyncio.run_coroutine_threadsafe(
-                ws.close(), asyncio.get_event_loop(),
+                ws.close(), get_ws_event_loop(),
             )
         endpoint = f"http://127.0.0.1:{self._adapter_port}"
         ws = SidecarWebSocketTransport(endpoint)
         try:
             asyncio.run_coroutine_threadsafe(
-                ws.connect(), asyncio.get_event_loop(),
+                ws.connect(), get_ws_event_loop(),
             ).result(timeout=10)
         except Exception as exc:
             raise RuntimeError(
@@ -249,7 +250,7 @@ class SidecarSTTClient(RuntimeClient):
         try:
             response = asyncio.run_coroutine_threadsafe(
                 ws.invoke(envelope),
-                asyncio.get_event_loop(),
+                get_ws_event_loop(),
             ).result(timeout=self._timeout_seconds)
         except (WebSocketTransportDisconnected, TimeoutError) as exc:
             raise RuntimeError(str(exc)) from exc

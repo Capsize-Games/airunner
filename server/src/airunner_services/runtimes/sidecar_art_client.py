@@ -34,6 +34,7 @@ from airunner_services.runtimes.websocket_transport import (
 	SidecarWebSocketTransport,
 	WebSocketTransportDisconnected,
 	WebSocketTransportError,
+	get_ws_event_loop,
 )
 
 DEFAULT_PROVIDER = "local"
@@ -177,7 +178,7 @@ class SidecarArtClient(RuntimeClient):
 				)
 				asyncio.run_coroutine_threadsafe(
 					self._ws_transport.invoke(envelope),
-					asyncio.get_event_loop(),
+					get_ws_event_loop(),
 				).result(timeout=10)
 				return messages.ResponseEnvelope(
 					request_id=request_id,
@@ -217,13 +218,15 @@ class SidecarArtClient(RuntimeClient):
 					return ws
 			# Endpoint changed or disconnected — close and reconnect
 			asyncio.run_coroutine_threadsafe(
-				ws.close(), asyncio.get_event_loop(),
+				ws.close(), get_ws_event_loop(),
 			)
 			self._ws_transport = None
-		ws = SidecarWebSocketTransport(endpoint)
+		ws = SidecarWebSocketTransport(
+			endpoint, ws_path="/api/v1/art/daemon/ws",
+		)
 		try:
 			asyncio.run_coroutine_threadsafe(
-				ws.connect(), asyncio.get_event_loop(),
+				ws.connect(), get_ws_event_loop(),
 			).result(timeout=10)
 		except Exception as exc:
 			raise RuntimeError(
@@ -429,6 +432,19 @@ class SidecarArtClient(RuntimeClient):
 					request.request_id, str(exc),
 				)
 
+	@staticmethod
+	def _build_invocation_metadata(
+		invocation: ArtInvocationRequest,
+		settings: ArtDaemonRuntimeSettings,
+	) -> dict[str, Any]:
+		"""Merge invocation metadata with version and scheduler settings."""
+		metadata = dict(invocation.metadata or {})
+		if settings.art_model_version:
+			metadata.setdefault("version", settings.art_model_version)
+		if settings.art_scheduler:
+			metadata.setdefault("scheduler", settings.art_scheduler)
+		return metadata
+
 	def _generate_via_websocket(
 		self,
 		request: Any,
@@ -450,9 +466,7 @@ class SidecarArtClient(RuntimeClient):
 			"cfg_scale": invocation.cfg_scale,
 			"seed": invocation.seed,
 			"num_images": invocation.num_images,
-			"version": self._settings.art_model_version,
-			"scheduler": self._settings.art_scheduler,
-			"metadata": invocation.metadata or {},
+			"metadata": self._build_invocation_metadata(invocation, self._settings),
 		}
 
 		envelope = messages.RequestEnvelope(
@@ -483,7 +497,7 @@ class SidecarArtClient(RuntimeClient):
 			# threading model)
 			response = asyncio.run_coroutine_threadsafe(
 				ws.invoke_stream(envelope, on_progress=ws_progress),
-				asyncio.get_event_loop(),
+				get_ws_event_loop(),
 			).result(timeout=self._settings.invocation_timeout_seconds)
 		except WebSocketTransportDisconnected:
 			return self._failure_response(

@@ -140,9 +140,14 @@ class SDImageGenerationMixin:
                     else:
                         nsfw_flags = []
 
-                    self.api.art.final_progress_update(
-                        total=self.image_request.steps
-                    )
+                    api = getattr(self, "api", None)
+                    if api is not None:
+                        try:
+                            api.art.final_progress_update(
+                                total=self.image_request.steps
+                            )
+                        except Exception:
+                            pass
 
                     data.update(
                         {
@@ -217,14 +222,24 @@ class SDImageGenerationMixin:
                     self.logger.error(error_message)
                 if self.image_request.callback:
                     self.image_request.callback(response)
-                self.api.worker_response(code=code, message=response)
+                api = getattr(self, "api", None)
+                if api is not None:
+                    try:
+                        api.worker_response(code=code, message=response)
+                    except Exception:
+                        pass
         except InterruptedException:
             self.logger.debug("Image generation interrupted")
             self._current_state = HandlerState.READY
-            self.api.worker_response(
-                code=EngineResponseCode.INTERRUPTED,
-                message="Image generation interrupted",
-            )
+            api = getattr(self, "api", None)
+            if api is not None:
+                try:
+                    api.worker_response(
+                        code=EngineResponseCode.INTERRUPTED,
+                        message="Image generation interrupted",
+                    )
+                except Exception:
+                    pass
             self.do_interrupt_image_generation = False
 
         clear_memory()
@@ -295,7 +310,14 @@ class SDImageGenerationMixin:
         Returns:
             Updated callback_kwargs.
         """
-        self.api.art.progress_update(step=_i, total=self.image_request.steps)
+        api = getattr(self, "api", None)
+        if api is not None:
+            try:
+                api.art.progress_update(
+                    step=_i, total=self.image_request.steps,
+                )
+            except Exception:
+                pass
         return callback_kwargs
 
     def _interrupt_callback(self, _pipe, _i, _t, callback_kwargs):

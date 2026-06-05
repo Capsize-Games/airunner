@@ -178,8 +178,8 @@ export default function CanvasLayersSidebar() {
 
   // ── Group row ───────────────────────────────────────────────────────
 
-  const renderGroupRow = (group: LayerGroup) => (
-    <div key={group.id}>
+  const renderGroupRow = (group: LayerGroup, idx: number) => (
+    <div key={group.id ?? `group-${idx}`}>
       <div
         draggable
         onClick={() => canvas.toggleGroupExpanded(group.id)}
@@ -285,12 +285,12 @@ export default function CanvasLayersSidebar() {
 
   // ── Layer row ───────────────────────────────────────────────────────
 
-  const renderLayerRow = (layer: CanvasLayer, depth: number) => {
+  const renderLayerRow = (layer: CanvasLayer, depth: number, idx: number) => {
     const isSelected = canvas.selectedLayerIds.includes(layer.id);
     const isActive = layer.id === canvas.activeLayerId;
     const indent = depth * 12;
     return (
-      <div key={layer.id}>
+      <div key={layer.id ?? `layer-${idx}`}>
         <div
           draggable
           onClick={(e) => {
@@ -529,11 +529,11 @@ export default function CanvasLayersSidebar() {
 
       {/* Layer list */}
       <div style={{ flexGrow: 1, overflowY: "auto", minHeight: 0 }}>
-        {renderItems.map((item) => {
+        {renderItems.map((item, idx) => {
           if (item.type === "layer") {
-            return renderLayerRow(item.layer, item.depth);
+            return renderLayerRow(item.layer, item.depth, idx);
           }
-          return renderGroupRow(item.group);
+          return renderGroupRow(item.group, idx);
         })}
       </div>
 
