@@ -8,6 +8,7 @@ import {
   savePromptData,
 } from "./art-prompt/ArtPromptStorage";
 import LucideIcon from "../shared/LucideIcon";
+import { useCanvasContext } from "../../features/canvas/CanvasContext";
 
 interface ArtPromptPanelProps {
   showArtModelSettings: boolean;
@@ -37,12 +38,38 @@ export default function ArtPromptPanel({
     { id: number; name: string }[]
   >([]);
 
+  // Canvas context for grid dimensions and image placement
+  let canvasCtx: ReturnType<typeof useCanvasContext> | null = null;
+  try {
+    canvasCtx = useCanvasContext();
+  } catch {
+    // not inside a canvas provider — art generation still works
+  }
+
+  const activeGridArea = canvasCtx?.activeGridArea ?? {
+    x: 0, y: 0, width: 512, height: 512,
+  };
+
   const {
     generating,
     progress,
     handleSubmit,
     handleCancel,
   } = useArtGeneration();
+
+  const onGenerationComplete = useCallback(
+    (imageBase64: string) => {
+      if (!canvasCtx) return;
+      canvasCtx.placeImageOnNewLayer(
+        imageBase64,
+        activeGridArea.x,
+        activeGridArea.y,
+        activeGridArea.width,
+        activeGridArea.height,
+      );
+    },
+    [canvasCtx, activeGridArea],
+  );
 
   const reloadActiveLoras = useCallback(async () => {
     try {
@@ -104,6 +131,9 @@ export default function ArtPromptPanel({
       artModel: readLs("airunner_art_model"),
       artVersion: readLs("airunner_art_version"),
       scheduler: readLs("airunner_art_scheduler"),
+      width: activeGridArea.width,
+      height: activeGridArea.height,
+      onComplete: onGenerationComplete,
     });
   };
 

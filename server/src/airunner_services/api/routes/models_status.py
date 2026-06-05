@@ -8,6 +8,7 @@ unload individual models.
 from __future__ import annotations
 
 import json
+import asyncio
 import logging
 import queue
 import threading
@@ -19,6 +20,7 @@ from pydantic import BaseModel, Field
 
 from airunner_services.contract_enums import SignalCode
 from airunner_services.model_management import ModelResourceManager
+from airunner_services.runtimes.contracts import RuntimeAction
 from airunner_services.utils.application.signal_mediator import (
     SignalMediator,
 )
@@ -231,6 +233,47 @@ async def unload_model(
         return {
             "status": "accepted",
             "message": "LLM unload requested",
+        }
+
+    if any(
+        keyword in model_type_lower
+        for keyword in ("art", "sd", "stablediffusion", "z-image", "turbo")
+    ):
+        from .art_runtime_control import (  # noqa: PLC0415
+            build_control_request,
+            control_response,
+        )
+        from .art_runtime_registry import (  # noqa: PLC0415
+            require_runtime_registry,
+            resolve_art_client,
+        )
+
+        # Fire unload in the background so the HTTP response returns
+        # immediately instead of blocking on the worker thread.
+        async def _fire_art_unload():
+            try:
+                client = resolve_art_client(
+                    require_runtime_registry(req),
+                )
+                envelope = build_control_request(
+                    RuntimeAction.UNLOAD_MODEL, None, None,
+                )
+                await asyncio.to_thread(client.invoke, envelope)
+            except Exception as exc:
+                logger.warning(
+                    "Background art unload failed: %s", exc,
+                )
+
+        asyncio.create_task(_fire_art_unload())
+
+        logger.info(
+            "Unload requested for art model %s (type=%s)",
+            request.model_id,
+            request.model_type,
+        )
+        return {
+            "status": "accepted",
+            "message": "Art model unload requested",
         }
 
     logger.info(

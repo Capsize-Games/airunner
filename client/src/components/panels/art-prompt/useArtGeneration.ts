@@ -3,6 +3,7 @@ import {
   startArtGeneration,
   getArtJobStatus,
 } from "../../../api/client";
+import type { ArtJobStatus } from "../../../types/api";
 
 export function useArtGeneration() {
   const [generating, setGenerating] = useState(false);
@@ -27,9 +28,20 @@ export function useArtGeneration() {
       artModel?: string;
       artVersion?: string;
       scheduler?: string;
+      width?: number;
+      height?: number;
+      onComplete?: (imageBase64: string) => void;
     }) => {
-      const { prompt, negativePrompt, artModel, artVersion, scheduler } =
-        params;
+      const {
+        prompt,
+        negativePrompt,
+        artModel,
+        artVersion,
+        scheduler,
+        width,
+        height,
+        onComplete,
+      } = params;
       if (generating || !prompt.trim()) return;
       setGenerating(true);
       setProgress(0);
@@ -41,16 +53,25 @@ export function useArtGeneration() {
           version: artVersion || undefined,
           scheduler: scheduler || undefined,
           num_images: 1,
+          width: width ?? undefined,
+          height: height ?? undefined,
         });
         jobIdRef.current = resp.job_id;
         pollRef.current = setInterval(async () => {
           try {
-            const status = await getArtJobStatus(resp.job_id);
+            const status: ArtJobStatus = await getArtJobStatus(
+              resp.job_id,
+            );
             setProgress(status.progress ?? 0);
             if (
               status.status === "complete" ||
-              status.status === "failed"
+              status.status === "completed"
             ) {
+              if (status.image && onComplete) {
+                onComplete(status.image);
+              }
+              handleCancel();
+            } else if (status.status === "failed") {
               handleCancel();
             }
           } catch {

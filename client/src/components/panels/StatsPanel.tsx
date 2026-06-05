@@ -23,6 +23,7 @@ export default function StatsPanel() {
     null,
   );
   const mountedRef = useRef(true);
+  const unloadingRef = useRef<Set<string>>(new Set());
 
   const scheduleReconnect = useCallback(() => {
     if (!mountedRef.current) return;
@@ -140,12 +141,17 @@ export default function StatsPanel() {
   }, [fetchActiveModels]);
 
   const handleUnload = async (m: ActiveModelInfo) => {
+    const key = m.model_id || m.model_type;
+    if (unloadingRef.current.has(key)) return;
+    unloadingRef.current.add(key);
     try {
       const { unloadModel } = await import("../../api/client");
       await unloadModel(m.model_id, m.model_type);
       fetchActiveModels();
     } catch {
       // ignore
+    } finally {
+      unloadingRef.current.delete(key);
     }
   };
 
