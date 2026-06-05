@@ -22,6 +22,9 @@ from airunner_services.utils.application.enum_resolver import (
 )
 from airunner_services.utils.application.enum_resolver import signal_code_proxy
 from airunner_services.utils.application.get_logger import get_logger
+from airunner_services.utils.application.get_torch_device import (
+    get_torch_device,
+)
 from airunner_services.utils.application.get_version import get_version
 from airunner_services.utils.application.mediator_mixin import (
     MediatorMixin,
@@ -65,17 +68,11 @@ __all__ = [
 
 
 def __getattr__(name: str):
-    """Resolve cycle-prone or torch-dependent application exports lazily."""
+    """Resolve cycle-prone application exports lazily."""
     if name == "RuntimeContextMixin":
         from airunner_services.utils.application.runtime_context_mixin import (
             RuntimeContextMixin,
         )
 
         return RuntimeContextMixin
-    if name == "get_torch_device":
-        from airunner_services.utils.application.get_torch_device import (
-            get_torch_device,
-        )
-
-        return get_torch_device
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

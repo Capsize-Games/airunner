@@ -107,3 +107,4 @@ electron/resources
 client/node_modules
 client/dist
 client/.vite
+airunner.wiki
