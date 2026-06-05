@@ -46,7 +46,7 @@ def _build_temp_daemon_config(
         layout.heartbeat_file("tts-runtime")
     )
     config.setdefault("logging", {})["file"] = str(
-        layout.log_file("tts-runtime")
+        Path("build/logs/server.log")
     )
     config["runtime"] = layout.as_config()
 

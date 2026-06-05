@@ -1,6 +1,7 @@
 """Process supervision for the llama.cpp sidecar runtime."""
 
 from __future__ import annotations
+from pathlib import Path
 
 import os
 import subprocess
@@ -189,7 +190,7 @@ class SidecarLauncher:
 		layout = build_runtime_directory_layout()
 		layout.ensure_exists()
 		self._close_log_handle()
-		self._log_handle = open(layout.log_file("llama-sidecar"), "ab")
+		self._log_handle = open(Path("build/logs/server.log"), "ab")
 		return self._log_handle
 
 	def _stdout_target(self):

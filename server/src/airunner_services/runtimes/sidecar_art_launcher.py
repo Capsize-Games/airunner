@@ -48,7 +48,7 @@ def _build_temp_daemon_config(
         layout.heartbeat_file("art-runtime")
     )
     config.setdefault("logging", {})["file"] = str(
-        layout.log_file("art-runtime")
+        Path("build/logs/server.log")
     )
     config["runtime"] = layout.as_config()
 
@@ -289,7 +289,7 @@ class SidecarArtLauncher:
             return stream
         layout = build_runtime_directory_layout()
         layout.ensure_exists()
-        log_path = str(layout.log_file("art-runtime-stderr"))
+        log_path = str(Path("build/logs/server.log"))
         try:
             return open(log_path, "a")
         except OSError:

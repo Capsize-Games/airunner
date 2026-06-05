@@ -64,10 +64,7 @@ def _configure_file_handler(
     logger: logging.Logger,
     formatter: logging.Formatter,
 ) -> None:
-    """Attach one hygiene-filtered file handler when enabled."""
-    if os.environ.get("AIRUNNER_SAVE_LOG_TO_FILE", "0") != "1":
-        return
-
+    """Attach one hygiene-filtered file handler."""
     try:
         log_file = os.environ.get(
             "AIRUNNER_LOG_FILE",

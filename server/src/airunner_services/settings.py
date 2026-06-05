@@ -392,7 +392,7 @@ AIRUNNER_MOOD_PROMPT_OVERRIDE = os.environ.get(
 )
 AIRUNNER_LOG_FILE = os.environ.get(
     "AIRUNNER_LOG_FILE",
-    os.path.join(AIRUNNER_BASE_PATH, "airunner.log"),
+    os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "build/logs/server.log"),
 )
 AIRUNNER_SAVE_LOG_TO_FILE = _env_bool(
     "AIRUNNER_SAVE_LOG_TO_FILE",

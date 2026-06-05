@@ -96,13 +96,9 @@ class AIRunnerDaemon:
         """Configure logging for daemon mode."""
         log_config = self.config.config.get("logging", {})
         log_file = Path(
-            log_config.get("file", "~/.airunner/logs/daemon.log")
+            log_config.get("file", "build/logs/server.log")
         ).expanduser()
         log_level = getattr(logging, log_config.get("level", "INFO"))
-        log_to_file = (
-            os.environ.get("AIRUNNER_SAVE_LOG_TO_FILE", "0") == "1"
-            or bool(log_config.get("to_file", False))
-        )
 
         root_logger = logging.getLogger()
         root_logger.handlers.clear()
@@ -112,24 +108,20 @@ class AIRunnerDaemon:
             "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
         )
 
-        if log_to_file:
-            log_file.parent.mkdir(parents=True, exist_ok=True)
-            handler = RotatingFileHandler(
-                log_file,
-                maxBytes=log_config.get("max_bytes", 50 * 1024 * 1024),
-                backupCount=log_config.get("backup_count", 5),
-            )
-            handler.setFormatter(formatter)
-            root_logger.addHandler(handler)
+        log_file.parent.mkdir(parents=True, exist_ok=True)
+        handler = RotatingFileHandler(
+            log_file,
+            maxBytes=log_config.get("max_bytes", 50 * 1024 * 1024),
+            backupCount=log_config.get("backup_count", 5),
+        )
+        handler.setFormatter(formatter)
+        root_logger.addHandler(handler)
 
         console_handler = logging.StreamHandler()
         console_handler.setFormatter(formatter)
         root_logger.addHandler(console_handler)
 
-        if log_to_file:
-            logger.info("Daemon logging initialized with file output")
-        else:
-            logger.info("Daemon logging initialized without file output")
+        logger.info("Daemon logging initialized")
 
     def _setup_signal_handlers(self):
         """Set up signal handlers for graceful shutdown."""
