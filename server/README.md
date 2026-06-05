@@ -1,6 +1,6 @@
 # Server
 
-The `server/` package is AIRunner's headless orchestration layer. It
+The `server/` package is AIRunner's daemon orchestration layer. It
 owns the daemon entry points, FastAPI server wiring, runtime registry,
 downloads, persistence, lifecycle control, and the modality services that
 coordinate LLM, STT, TTS, and art workloads.
@@ -47,7 +47,7 @@ python -m venv venv
 source venv/bin/activate
 pip install --upgrade pip setuptools wheel
 pip install -e ./model
-pip install -e './server[headless,development]'
+pip install -e './server[daemon,development]'
 ```
 
 Use `server[desktop]` when you want the broader desktop-oriented extra

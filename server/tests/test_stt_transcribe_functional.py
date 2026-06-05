@@ -1,4 +1,4 @@
-"""Functional end-to-end STT test using the real headless daemon."""
+"""Functional end-to-end STT test using the real daemon."""
 
 from __future__ import annotations
 

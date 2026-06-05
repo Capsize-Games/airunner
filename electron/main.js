@@ -85,7 +85,7 @@ function spawnBackend() {
 
   const pythonArgs = [
     "-m",
-    "airunner_services.bin.airunner_headless",
+    "airunner_services.bin.airunner_server",
     "--host",
     BACKEND_HOST,
     "--port",

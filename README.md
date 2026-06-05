@@ -215,7 +215,7 @@ airunner-generate-cert
 # Run the full test suite
 airunner-tests
 
-# Run headless-safe tests directly
+# Run daemon-safe tests directly
 pytest server/src/
 
 # With coverage

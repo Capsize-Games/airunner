@@ -191,7 +191,7 @@ DEVELOPMENT_REQUIREMENTS = [
 
 SERVICE_CONSOLE_SCRIPTS = [
     "airunner-daemon=airunner_services.daemon:main",
-    "airunner-headless=airunner_services.bin.airunner_headless:main",
+    "airunner-server=airunner_services.bin.airunner_server:main",
     "airunner-service=airunner_services.bin.airunner_service:main",
     "airunner-generate-migration="
     "airunner_services.bin.generate_migration:main",
@@ -276,17 +276,17 @@ def _aggregate_extras_require(
     extras_require: dict[str, list[str]],
 ) -> dict[str, list[str]]:
     """Return the aggregate service extras."""
-    headless = _aggregate_extra(
+    server_extras = _aggregate_extra(
         extras_require,
         "llm-native",
         "stt-native",
         "art-python",
         "tts-python",
     )
-    aggregate_require = {**extras_require, "headless": headless}
+    aggregate_require = {**extras_require, "server": server_extras}
     desktop = _aggregate_extra(
         aggregate_require,
-        "headless",
+        "server",
         "llm_weather",
         "search",
         "computer_use",
@@ -300,7 +300,7 @@ def _aggregate_extras_require(
         *sorted(SYSTEM_DEP_EXTRAS),
     )
     return {
-        "headless": headless,
+        "server": server_extras,
         "desktop": desktop,
         "all": desktop,
         "all_dev": _aggregate_extra(
@@ -316,7 +316,7 @@ def _aggregate_extras_require(
         ),
         "windows": _aggregate_extra(
             aggregate_require,
-            "headless",
+            "server",
             "llm_weather",
             "search",
             "computer_use",
@@ -342,7 +342,7 @@ def build_setup_kwargs(*, package_source_dir: str) -> dict[str, Any]:
         "name": "airunner-services",
         "version": VERSION,
         "author": "Capsize LLC",
-        "description": "AIRunner headless service package",
+        "description": "AIRunner service package",
         "long_description": README,
         "long_description_content_type": "text/markdown",
         "license": "Apache-2.0",

@@ -346,7 +346,7 @@ def test_gui_llm_and_tts_end_to_end_without_audio_output(
             )
         ) as daemon:
             api = SimpleNamespace(
-                headless=False,
+                use_gui=False,
                 daemon_client=GuiDaemonClient(
                     config_path=_daemon_client_config(tmp_path, daemon.port)
                 ),
@@ -625,7 +625,7 @@ def test_gui_llm_conversation_progresses_without_audio_output(
             )
         ) as daemon:
             api = SimpleNamespace(
-                headless=False,
+                use_gui=False,
                 daemon_client=GuiDaemonClient(
                     config_path=_daemon_client_config(tmp_path, daemon.port)
                 ),

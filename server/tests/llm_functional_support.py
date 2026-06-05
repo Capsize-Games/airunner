@@ -100,7 +100,7 @@ def daemon_env(
     openvoice_model_path: Path | None = None,
     extra_env: dict[str, str] | None = None,
 ) -> dict[str, str]:
-    """Return one environment for the real headless daemon."""
+    """Return one environment for the real daemon."""
     pythonpath_entries = [
         str(_PROJECT_ROOT / "services" / "src"),
         str(_PROJECT_ROOT / "src"),

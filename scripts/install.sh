@@ -107,7 +107,7 @@ ensure_venv() {
 
 service_extra_needs_torch() {
     case ",${1}," in
-        *,llm-native,*|*,art-python,*|*,tts-python,*|*,headless,*|\
+        *,llm-native,*|*,art-python,*|*,tts-python,*|*,server,*|\
         *,desktop,*|*,all,*|*,all_dev,*|*,all_native,*|*,all_dev_native,*)
             return 0
             ;;
@@ -117,7 +117,7 @@ service_extra_needs_torch() {
 
 service_extra_needs_sidecars() {
     case ",${1}," in
-        *,llm-native,*|*,stt-native,*|*,llm,*|*,headless,*|\
+        *,llm-native,*|*,stt-native,*|*,llm,*|*,server,*|\
         *,desktop,*|*,all,*|*,all_dev,*|*,all_native,*|*,all_dev_native,*)
             return 0
             ;;

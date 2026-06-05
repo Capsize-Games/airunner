@@ -220,7 +220,7 @@ def test_gui_stt_llm_and_tts_round_trip_without_audio_output(
             )
 
             api = SimpleNamespace(
-                headless=False,
+                use_gui=False,
                 daemon_client=GuiDaemonClient(
                     config_path=_daemon_client_config(tmp_path, daemon.port)
                 ),

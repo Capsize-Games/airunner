@@ -92,7 +92,7 @@ def _build_pytest_env(skip_gui: bool = False) -> dict[str, str]:
 
 def kill_stale_servers():
     """
-    Kill any stale airunner-headless processes from previous runs.
+    Kill any stale airunner-server processes from previous runs.
 
     This ensures we start with a clean state. Pytest fixtures will
     start a fresh server for the test session.
@@ -101,10 +101,10 @@ def kill_stale_servers():
     print("Cleaning up stale server processes...")
     print("=" * 80)
 
-    # Find airunner-headless processes
+    # Find airunner-server processes
     try:
         result = subprocess.run(
-            ["pgrep", "-f", "airunner-headless"],
+            ["pgrep", "-f", "airunner-server"],
             capture_output=True,
             text=True,
         )
@@ -498,7 +498,7 @@ Examples:
     parser.add_argument(
         "--gui-functional",
         action="store_true",
-        help="Run headless GUI functional tests with mocked backends",
+        help="Run GUI functional tests with mocked backends",
     )
 
     parser.add_argument(

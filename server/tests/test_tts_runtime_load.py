@@ -1,4 +1,4 @@
-"""Service-owned tests for headless TTS runtime control."""
+"""Service-owned tests for daemon TTS runtime control."""
 
 from __future__ import annotations
 
@@ -26,7 +26,7 @@ from airunner_services.runtimes.registry import RuntimeRegistry, RuntimeRoute
 
 
 class _FakeTTSWorker:
-    """Minimal headless TTS worker used by the daemon route test."""
+    """Minimal daemon TTS worker used by the daemon route test."""
 
     def __init__(self) -> None:
         self.load_calls = 0
@@ -49,7 +49,7 @@ class _FakeTTSWorker:
 
 
 class _FakeWorkerManager:
-    """Expose the TTS worker through the real headless lookup shape."""
+    """Expose the TTS worker through the real daemon lookup shape."""
 
     def __init__(self, worker: _FakeTTSWorker) -> None:
         self.tts_generator_worker = worker
@@ -62,7 +62,7 @@ class _FakeSignalSource:
         self._worker_manager = _FakeWorkerManager(worker)
 
     def emit_signal(self, _code, _data=None) -> None:
-        """Ignore signal emissions during the headless API test."""
+        """Ignore signal emissions during the daemon API test."""
 
 
 def _runtime_registry(worker: _FakeTTSWorker) -> RuntimeRegistry:
@@ -84,8 +84,8 @@ def _runtime_registry(worker: _FakeTTSWorker) -> RuntimeRegistry:
     return registry
 
 
-def test_tts_runtime_load_uses_headless_worker(monkeypatch) -> None:
-    """The daemon TTS load route should use the headless worker path."""
+def test_tts_runtime_load_uses_daemon_worker(monkeypatch) -> None:
+    """The daemon TTS load route should use the daemon worker path."""
     import airunner_services.api.server as service_server
     from airunner_services.api.server import create_app
 

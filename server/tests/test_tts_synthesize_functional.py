@@ -1,4 +1,4 @@
-"""Functional end-to-end TTS test using the real headless daemon."""
+"""Functional end-to-end TTS test using the real daemon."""
 
 from __future__ import annotations
 
@@ -68,7 +68,7 @@ def _tts_model_path() -> Path:
 
 
 def _daemon_env(model_path: Path) -> dict[str, str]:
-    """Return one environment for the real headless daemon."""
+    """Return one environment for the real daemon."""
     pythonpath_entries = [
         str(_PROJECT_ROOT / "services" / "src"),
         str(_PROJECT_ROOT / "src"),
