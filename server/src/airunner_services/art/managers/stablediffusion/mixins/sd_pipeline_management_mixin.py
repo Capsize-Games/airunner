@@ -130,8 +130,6 @@ class SDPipelineManagementMixin:
                 pipeline_type = GeneratorSection.IMG2IMG
             elif pipeline_class in self.outpaint_pipelines:
                 pipeline_type = GeneratorSection.INPAINT
-        if pipeline_type is not None:
-            self.api.art.pipeline_loaded(pipeline_type)
 
     def _move_pipe_to_device(self):
         """

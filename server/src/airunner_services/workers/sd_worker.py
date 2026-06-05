@@ -661,8 +661,6 @@ class SDWorker(Worker):
 			)
 			step = int(round((progress / 100.0) * total_steps))
 			step = max(0, min(total_steps, step))
-			if hasattr(self.api, "art"):
-				self.api.art.progress_update(step=step, total=total_steps)
 
 		try:
 			self.logger.info(
@@ -730,17 +728,6 @@ class SDWorker(Worker):
 
 	def _handle_daemon_art_error(self, message: str) -> None:
 		self.handle_error(message)
-		if "cancelled" in message.lower():
-			self.api.worker_response(
-				code=EngineResponseCode.INTERRUPTED,
-				message="Image generation interrupted",
-			)
-			return
-		self.send_missing_model_alert(message)
-		self.api.worker_response(
-			code=EngineResponseCode.ERROR,
-			message=message,
-		)
 
 	def _publish_daemon_art_result(
 		self,
@@ -767,20 +754,10 @@ class SDWorker(Worker):
 			post_display_callback=export_callback,
 		)
 		sent_to_canvas = False
-		if response.node_id is None and hasattr(self.api, "art"):
-			try:
-				self.api.art.canvas.send_image_to_canvas(response)
-				sent_to_canvas = True
-			except Exception as exc:
-				self.logger.debug(f"Failed to send image to canvas: {exc}")
 		if not sent_to_canvas:
 			export_callback()
 		if image_request.callback:
 			image_request.callback(response)
-		self.api.worker_response(
-			code=EngineResponseCode.IMAGE_GENERATED,
-			message=response,
-		)
 
 	def _queue_post_display_export(
 		self,

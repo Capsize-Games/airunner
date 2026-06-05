@@ -251,11 +251,6 @@ class BackgroundRemovalWorker(Worker):
         except Exception:
             pass
 
-        try:
-            self.api.art.canvas.image_updated()
-            self.api.art.canvas.do_draw(True)
-        except Exception:
-            pass
 
 
 __all__ = ["BackgroundRemovalWorker"]

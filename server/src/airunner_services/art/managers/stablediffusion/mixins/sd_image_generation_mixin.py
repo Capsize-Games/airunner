@@ -140,15 +140,6 @@ class SDImageGenerationMixin:
                     else:
                         nsfw_flags = []
 
-                    api = getattr(self, "api", None)
-                    if api is not None:
-                        try:
-                            api.art.final_progress_update(
-                                total=self.image_request.steps
-                            )
-                        except Exception:
-                            pass
-
                     data.update(
                         {
                             "current_prompt": self._current_prompt,
@@ -200,14 +191,6 @@ class SDImageGenerationMixin:
                     )
                     code = EngineResponseCode.IMAGE_GENERATED
 
-                    # Send image to canvas for layer support (if not a node-based generation)
-                    if response.node_id is None and hasattr(self.api, "art"):
-                        try:
-                            self.api.art.canvas.send_image_to_canvas(response)
-                        except Exception as e:
-                            self.logger.debug(
-                                f"Failed to send image to canvas: {e}"
-                            )
                 except PipeNotLoadedException as e:
                     self.logger.error(e)
                 except InterruptedException:
@@ -222,24 +205,9 @@ class SDImageGenerationMixin:
                     self.logger.error(error_message)
                 if self.image_request.callback:
                     self.image_request.callback(response)
-                api = getattr(self, "api", None)
-                if api is not None:
-                    try:
-                        api.worker_response(code=code, message=response)
-                    except Exception:
-                        pass
         except InterruptedException:
             self.logger.debug("Image generation interrupted")
             self._current_state = HandlerState.READY
-            api = getattr(self, "api", None)
-            if api is not None:
-                try:
-                    api.worker_response(
-                        code=EngineResponseCode.INTERRUPTED,
-                        message="Image generation interrupted",
-                    )
-                except Exception:
-                    pass
             self.do_interrupt_image_generation = False
 
         clear_memory()
@@ -310,14 +278,6 @@ class SDImageGenerationMixin:
         Returns:
             Updated callback_kwargs.
         """
-        api = getattr(self, "api", None)
-        if api is not None:
-            try:
-                api.art.progress_update(
-                    step=_i, total=self.image_request.steps,
-                )
-            except Exception:
-                pass
         return callback_kwargs
 
     def _interrupt_callback(self, _pipe, _i, _t, callback_kwargs):
