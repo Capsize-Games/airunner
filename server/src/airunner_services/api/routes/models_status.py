@@ -263,6 +263,16 @@ async def unload_model(
                 logger.warning(
                     "Background art unload failed: %s", exc,
                 )
+            # Emit status update so the active-models list reflects
+            # the unload immediately.
+            SignalMediator().emit_signal(
+                SignalCode.MODEL_STATUS_CHANGED_SIGNAL,
+                {
+                    "model_id": request.model_id,
+                    "model_type": request.model_type or "art",
+                    "status": "unloaded",
+                },
+            )
 
         asyncio.create_task(_fire_art_unload())
 
