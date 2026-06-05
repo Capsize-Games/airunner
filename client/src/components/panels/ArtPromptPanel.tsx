@@ -242,20 +242,13 @@ export default function ArtPromptPanel() {
           loras={activeLoras}
           onDeactivate={deactivateLora}
         />
-        <ArtPromptFooter
-          progress={progress}
-          generating={generating}
-          hasPrompt={!!prompt.trim()}
-          onSubmit={onGenerate}
-          onCancel={onCancel}
-        />
         {showCompleteToast && (
           <div
             style={{
               display: "flex",
               alignItems: "center",
               gap: 6,
-              marginTop: 6,
+              marginBottom: 6,
               padding: "4px 8px",
               borderRadius: 4,
               background: "rgba(40,167,69,0.15)",
@@ -269,6 +262,13 @@ export default function ArtPromptPanel() {
             <span>Image generated</span>
           </div>
         )}
+        <ArtPromptFooter
+          progress={progress}
+          generating={generating}
+          hasPrompt={!!prompt.trim()}
+          onSubmit={onGenerate}
+          onCancel={onCancel}
+        />
       </div>
     </div>
   );

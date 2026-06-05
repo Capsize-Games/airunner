@@ -125,10 +125,15 @@ async def _run_generation(
         scheduler=str(msg.get("scheduler")) if msg.get("scheduler") else None,
     )
 
+    msg_id = msg.get("_id", job_id)
+    tracker = JobTracker()
+
+    # Send ack immediately so the frontend shows an indeterminate
+    # progress bar while the model loads.
+    await ws.send_json({"type": "ack", "job_id": job_id})
+
     await unload_llm_before_art(ws, source="art_ws_generate")
     client = resolve_art_client(require_runtime_registry(ws))
-    tracker = JobTracker()
-    msg_id = msg.get("_id", job_id)
 
     if art_request.model:
         asyncio.create_task(
@@ -137,8 +142,6 @@ async def _run_generation(
                 art_request.version or "",
             ),
         )
-
-    await ws.send_json({"type": "ack", "job_id": job_id})
 
     run_task = asyncio.create_task(
         run_art_job(tracker, job_id, art_request, client),
