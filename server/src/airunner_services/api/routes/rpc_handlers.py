@@ -12,7 +12,9 @@ These replace the existing FastAPI HTTP route functions — callers
 from __future__ import annotations
 
 import asyncio
+import importlib
 import logging
+import re
 from pathlib import Path
 from typing import Any
 
@@ -20,6 +22,18 @@ from airunner_services.api.routes.events import _rpc_register
 from airunner_services.settings import AIRUNNER_BASE_PATH
 
 logger = logging.getLogger(__name__)
+
+
+def resource_store_table(resource_name: str):
+    """Return the SQLAlchemy model class for a resource name."""
+    snake = re.sub(
+        r"([A-Z]+)([A-Z][a-z])", r"\1_\2", resource_name
+    )
+    snake = re.sub(r"([a-z0-9])([A-Z])", r"\1_\2", snake)
+    snake = snake.lower()
+    module_path = f"airunner_services.database.models.{snake}"
+    module = importlib.import_module(module_path)
+    return getattr(module, resource_name)
 
 
 # ── Health ────────────────────────────────────────────────────────────────
@@ -340,7 +354,6 @@ async def _rpc_settings_singleton(body: dict, **kw: Any) -> dict[str, Any]:
     resource_name = pp.get("name", "")
     try:
         from airunner_services.database.session import session_scope
-        from airunner_services.settings import resource_store_table
 
         table = resource_store_table(resource_name)
         with session_scope() as session:
@@ -367,7 +380,6 @@ async def _rpc_settings_singleton_update(
     values: dict = body.get("values", {})
     try:
         from airunner_services.database.session import session_scope
-        from airunner_services.settings import resource_store_table
 
         table = resource_store_table(resource_name)
         with session_scope() as session:
@@ -394,7 +406,6 @@ async def _rpc_settings_query(body: dict, **kw: Any) -> dict[str, Any]:
     resource_name = pp.get("name", "")
     try:
         from airunner_services.database.session import session_scope
-        from airunner_services.settings import resource_store_table
 
         table = resource_store_table(resource_name)
         with session_scope() as session:
@@ -418,7 +429,6 @@ async def _rpc_settings_first(body: dict, **kw: Any) -> dict[str, Any]:
     resource_name = pp.get("name", "")
     try:
         from airunner_services.database.session import session_scope
-        from airunner_services.settings import resource_store_table
 
         table = resource_store_table(resource_name)
         with session_scope() as session:
