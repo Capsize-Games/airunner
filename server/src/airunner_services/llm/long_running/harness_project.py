@@ -54,9 +54,3 @@ def create_project(
             {"event": "project_created", "project_id": project_id, "feature_count": feature_count}
         )
     return project_id
-
-
-def _recovery_info(agent: Any, project_id: int) -> Optional[dict[str, Any]]:
-    """Deprecated local recovery helper kept for import compatibility."""
-    del agent, project_id
-    return None
