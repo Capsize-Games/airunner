@@ -12,7 +12,6 @@ from __future__ import annotations
 
 import json
 import logging
-import os
 import queue
 import threading
 from pathlib import Path
@@ -22,7 +21,7 @@ from fastapi.responses import StreamingResponse
 from watchdog.events import FileSystemEventHandler
 from watchdog.observers import Observer as _Observer
 
-from airunner_services.settings import AIRUNNER_BASE_PATH, MODELS_DIR
+from airunner_services.settings import AIRUNNER_BASE_PATH
 
 router = APIRouter()
 logger = logging.getLogger(__name__)

@@ -11,14 +11,14 @@ import json
 import logging
 import queue
 import threading
-from typing import Any, Optional
+from typing import Any
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, Request
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
-from airunner_services.contract_enums import ModelType, ModelStatus, SignalCode
-from airunner_services.model_management import ModelResourceManager, ModelState
+from airunner_services.contract_enums import SignalCode
+from airunner_services.model_management import ModelResourceManager
 from airunner_services.utils.application.signal_mediator import (
     SignalMediator,
 )

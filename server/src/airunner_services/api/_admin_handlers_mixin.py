@@ -3,7 +3,6 @@
 import os
 import threading
 import time
-from typing import Any
 
 from airunner_services.settings import AIRUNNER_LOG_LEVEL
 from airunner_services.utils.application.get_logger import get_logger
@@ -14,8 +13,6 @@ class AdminHandlersMixin:
 
     def _handle_reset_memory(self):
         """Reset the LLM conversation memory."""
-        import json
-
         logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
         logger.info("Resetting LLM memory...")
         from airunner_services.api.legacy_server import get_api
@@ -37,8 +34,6 @@ class AdminHandlersMixin:
 
     def _handle_reset_database(self):
         """Reset the application database."""
-        import json
-
         logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
         logger.info("Resetting database...")
         try:
@@ -63,8 +58,6 @@ class AdminHandlersMixin:
 
     def _handle_shutdown(self):
         """Gracefully shut down the server."""
-        import json
-
         logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
         logger.info("Shutdown requested via admin endpoint")
 

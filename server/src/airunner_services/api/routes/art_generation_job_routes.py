@@ -51,7 +51,6 @@ def completed_image_url(job_id: str, job: Any) -> Optional[str]:
 def status_response(job_id: str, job: Any) -> JobStatusResponse:
     """Build the response payload for one tracked art job."""
     import base64
-    import io
     image_b64 = None
     if job.status == JobState.COMPLETED and job.result:
         raw = job.result.get("image_bytes")
