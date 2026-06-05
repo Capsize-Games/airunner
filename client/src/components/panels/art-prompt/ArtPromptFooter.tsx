@@ -1,38 +1,21 @@
 import ProgressBar from "react-bootstrap/ProgressBar";
-import ArtModelSelector from "../../shared/ArtModelSelector";
 import LucideIcon from "../../shared/LucideIcon";
 
 export default function ArtPromptFooter({
   progress,
   generating,
   hasPrompt,
-  artVersion,
-  artModel,
-  onVersionChange,
-  onModelChange,
   onSubmit,
   onCancel,
 }: {
   progress: number;
   generating: boolean;
   hasPrompt: boolean;
-  artVersion: string;
-  artModel: string;
-  onVersionChange: (v: string) => void;
-  onModelChange: (m: string) => void;
   onSubmit: () => void;
   onCancel: () => void;
 }) {
   return (
     <div className="flex-shrink-0 mt-2">
-      <div className="mb-1">
-        <ArtModelSelector
-          version={artVersion}
-          modelPath={artModel}
-          onVersionChange={onVersionChange}
-          onModelChange={onModelChange}
-        />
-      </div>
       <div className="d-flex align-items-center gap-2">
         <div className="flex-grow-1">
           <ProgressBar

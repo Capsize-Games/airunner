@@ -7,7 +7,6 @@ type PanelId =
   | "knowledge"
   | "history"
   | "llm_settings"
-  | "art_model"
   | "lora"
   | "embeddings"
   | "image_browser"
@@ -52,9 +51,6 @@ export default function App() {
   );
   const [showCanvas, setShowCanvas] = useState(() =>
     loadBool("airunner_show_canvas", false),
-  );
-  const [showArtPrompt, setShowArtPrompt] = useState(() =>
-    loadBool("airunner_show_art_prompt", false),
   );
   const [ttsOn, setTtsOn] = useState(() =>
     loadBool("airunner_tts_on", false),
@@ -123,12 +119,6 @@ export default function App() {
           "airunner_show_canvas",
           !showCanvas,
           setShowCanvas,
-        )}
-        showArtPrompt={showArtPrompt}
-        onToggleArtPrompt={makeToggle(
-          "airunner_show_art_prompt",
-          !showArtPrompt,
-          setShowArtPrompt,
         )}
         ttsOn={ttsOn}
         onToggleTts={makeToggle("airunner_tts_on", !ttsOn, setTtsOn)}

@@ -27,7 +27,7 @@ export default function PromptInput({
       <Form.Control
         as="textarea"
         className="flex-grow-1"
-        style={{ resize: "none", minHeight: 0 }}
+        style={{ resize: "none", minHeight: 0, width: "100%" }}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}

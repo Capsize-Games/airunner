@@ -82,6 +82,19 @@ export default function ToolBarGrid({
           style={gridInputStyle}
           title="Grid area width"
         />
+        <IconBtn
+          title={
+            gridLocked
+              ? "Unlock aspect ratio"
+              : "Lock aspect ratio"
+          }
+          active={gridLocked}
+          onClick={onToggleGridLock}
+        >
+          {gridLocked
+            ? <Lock size={13} strokeWidth={1.75} />
+            : <Unlock size={13} strokeWidth={1.75} />}
+        </IconBtn>
         <span style={{ fontSize: 10, color: "rgba(255,255,255,0.4)" }}>
           H
         </span>
@@ -100,19 +113,6 @@ export default function ToolBarGrid({
           style={gridInputStyle}
           title="Grid area height"
         />
-        <IconBtn
-          title={
-            gridLocked
-              ? "Unlock aspect ratio"
-              : "Lock aspect ratio"
-          }
-          active={gridLocked}
-          onClick={onToggleGridLock}
-        >
-          {gridLocked
-            ? <Lock size={13} strokeWidth={1.75} />
-            : <Unlock size={13} strokeWidth={1.75} />}
-        </IconBtn>
       </div>
     </div>
   );

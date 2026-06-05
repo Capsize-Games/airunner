@@ -36,10 +36,6 @@ export default function ArtModelPanel() {
   const [cfgScale, setCfgScale] = useState(
     loadFromStorage("cfg_scale", 7.5),
   );
-  const [width, setWidth] = useState(loadFromStorage("width", 1024));
-  const [height, setHeight] = useState(
-    loadFromStorage("height", 1024),
-  );
   const [seed, setSeed] = useState(0);
   const [seedRandomized, setSeedRandomized] = useState(false);
   const [vramEstimate, setVramEstimate] = useState<number | null>(null);
@@ -180,7 +176,7 @@ export default function ArtModelPanel() {
     <div className="p-2">
       <div className="d-flex align-items-center gap-2 mb-2">
         <h6 style={{ color: "var(--theme-text-secondary)" }} className="mb-0">
-          Art Model
+          Art Model Settings
         </h6>
         {loading && (
           <div
@@ -195,95 +191,96 @@ export default function ArtModelPanel() {
         )}
       </div>
 
-      <VersionSelector
-        versions={options?.versions ?? []}
-        value={version}
-        loading={loading}
-        onChange={handleVersionChange}
-      />
-
-      <ModelSelector
-        models={availableModels}
-        value={modelPath}
-        loading={loading}
-        hasVersion={!!version}
-        onChange={handleModelChange}
-      />
-
-      <SchedulerSelector
-        schedulers={availableSchedulers}
-        value={scheduler}
-        loading={loading}
-        onChange={(v) => {
-          setScheduler(v);
-          persist({ scheduler: v });
-        }}
-      />
-
-      <PrecisionSelector
-        precisions={precisions}
-        value={precision}
-        loading={loading}
-        onChange={(v) => {
-          setPrecision(v);
-          persist({ dtype: v });
-        }}
-      />
-
-      <VRAMEstimate vramGb={vramEstimate} />
+      {/* 2-column grid: Version, Model, Scheduler, Precision */}
+      <div className="row g-1 mb-1">
+        <div className="col-6">
+          <VersionSelector
+            versions={options?.versions ?? []}
+            value={version}
+            loading={loading}
+            onChange={handleVersionChange}
+          />
+        </div>
+        <div className="col-6">
+          <ModelSelector
+            models={availableModels}
+            value={modelPath}
+            loading={loading}
+            hasVersion={!!version}
+            onChange={handleModelChange}
+          />
+        </div>
+        <div className="col-6">
+          <SchedulerSelector
+            schedulers={availableSchedulers}
+            value={scheduler}
+            loading={loading}
+            onChange={(v) => {
+              setScheduler(v);
+              persist({ scheduler: v });
+            }}
+          />
+        </div>
+        <div className="col-6">
+          <PrecisionSelector
+            precisions={precisions}
+            value={precision}
+            loading={loading}
+            onChange={(v) => {
+              setPrecision(v);
+              persist({ dtype: v });
+            }}
+          />
+        </div>
+      </div>
 
       <hr className="border-secondary" />
 
-      <ArtModelSliders
-        nSamples={nSamples}
-        imagesPerBatch={imagesPerBatch}
-        steps={steps}
-        cfgScale={cfgScale}
-        width={width}
-        height={height}
-        onNSamplesChange={(v) => {
-          setNSamples(v);
-          saveToStorage("n_samples", v);
-          persist({ n_samples: v });
-        }}
-        onImagesPerBatchChange={(v) => {
-          setImagesPerBatch(v);
-          saveToStorage("images_per_batch", v);
-          persist({ images_per_batch: v });
-        }}
-        onStepsChange={(v) => {
-          setSteps(v);
-          saveToStorage("steps", v);
-          persist({ steps: v });
-        }}
-        onCfgScaleChange={(v) => {
-          setCfgScale(v);
-          saveToStorage("cfg_scale", v);
-          persist({ cfg_scale: v });
-        }}
-        onWidthChange={(v) => {
-          setWidth(v);
-          saveToStorage("width", v);
-          persist({ width: v });
-        }}
-        onHeightChange={(v) => {
-          setHeight(v);
-          saveToStorage("height", v);
-          persist({ height: v });
-        }}
-      />
-
-      <SeedControls
-        seed={seed}
-        seedRandomized={seedRandomized}
-        loading={loading}
-        onSeedChange={(v) => {
-          setSeed(v);
-          setSeedRandomized(false);
-          persist({ seed: v });
-        }}
-        onToggleRandom={toggleSeedRandom}
-      />
+      {/* 2-column grid: sliders + seed + VRAM */}
+      <div className="row g-1">
+        <ArtModelSliders
+          nSamples={nSamples}
+          imagesPerBatch={imagesPerBatch}
+          steps={steps}
+          cfgScale={cfgScale}
+          onNSamplesChange={(v) => {
+            setNSamples(v);
+            saveToStorage("n_samples", v);
+            persist({ n_samples: v });
+          }}
+          onImagesPerBatchChange={(v) => {
+            setImagesPerBatch(v);
+            saveToStorage("images_per_batch", v);
+            persist({ images_per_batch: v });
+          }}
+          onStepsChange={(v) => {
+            setSteps(v);
+            saveToStorage("steps", v);
+            persist({ steps: v });
+          }}
+          onCfgScaleChange={(v) => {
+            setCfgScale(v);
+            saveToStorage("cfg_scale", v);
+            persist({ cfg_scale: v });
+          }}
+        />
+        <div className="col-12">
+          <SeedControls
+            seed={seed}
+            seedRandomized={seedRandomized}
+            loading={loading}
+            onSeedChange={(v) => {
+              setSeed(v);
+              setSeedRandomized(false);
+              persist({ seed: v });
+            }}
+            onToggleRandom={toggleSeedRandom}
+          />
+        </div>
+        <div className="col-6">
+          <VRAMEstimate vramGb={vramEstimate} />
+        </div>
+      </div>
     </div>
   );
 }

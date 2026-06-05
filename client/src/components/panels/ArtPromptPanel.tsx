@@ -7,13 +7,18 @@ import {
   loadPromptData,
   savePromptData,
 } from "./art-prompt/ArtPromptStorage";
+import LucideIcon from "../shared/LucideIcon";
 
-export default function ArtPromptPanel() {
+interface ArtPromptPanelProps {
+  showArtModelSettings: boolean;
+  onToggleArtModelSettings: () => void;
+}
+
+export default function ArtPromptPanel({
+  showArtModelSettings,
+  onToggleArtModelSettings,
+}: ArtPromptPanelProps) {
   const initial = loadPromptData();
-  const savedVersion = (() => {
-    try { return localStorage.getItem("airunner_art_version") || ""; }
-    catch { return ""; }
-  })();
 
   const [prompt, setPrompt] = useState(initial.prompt);
   const [negativePrompt, setNegativePrompt] = useState(
@@ -24,14 +29,6 @@ export default function ArtPromptPanel() {
   );
   const [secondaryNegativePrompt, setSecondaryNegativePrompt] = useState(
     initial.secondary_negative_prompt,
-  );
-  const [artVersion, setArtVersion] = useState(savedVersion);
-  const [artModel, setArtModel] = useState(() => {
-    try { return localStorage.getItem("airunner_art_model") || ""; }
-    catch { return ""; }
-  });
-  const [isZImage, setIsZImage] = useState(
-    savedVersion === "Z-Image Turbo",
   );
   const [activeLoras, setActiveLoras] = useState<
     { id: number; name: string }[]
@@ -51,16 +48,8 @@ export default function ArtPromptPanel() {
     try {
       const { listLoras } = await import("../../api/client");
       const data = await listLoras();
-      const version = (() => {
-        try {
-          return localStorage.getItem("airunner_art_version") || "";
-        } catch { return ""; }
-      })();
       const enabled = (data.loras ?? [])
         .filter((l) => l.enabled)
-        .filter((l) =>
-          version ? l.path.includes(`/${version}/`) : true,
-        )
         .map((l) => ({ id: l.id, name: l.name }));
       setActiveLoras(enabled);
     } catch { /* */ }
@@ -70,44 +59,12 @@ export default function ArtPromptPanel() {
     try {
       const { listEmbeddings } = await import("../../api/client");
       const data = await listEmbeddings();
-      const version = (() => {
-        try {
-          return localStorage.getItem("airunner_art_version") || "";
-        } catch { return ""; }
-      })();
       const enabled = (data.embeddings ?? [])
         .filter((e) => e.enabled)
-        .filter((e) =>
-          version ? e.path.includes(`/${version}/`) : true,
-        )
         .map((e) => ({ id: e.id, name: e.name }));
       setActiveEmbeddings(enabled);
     } catch { /* */ }
   }, []);
-
-  useEffect(() => {
-    const versionHandler = (e: Event) => {
-      const v = (e as CustomEvent).detail as string;
-      setArtVersion(v);
-      setIsZImage(v === "Z-Image Turbo");
-      reloadActiveLoras();
-      reloadActiveEmbeddings();
-    };
-    const modelHandler = (e: Event) => {
-      const m = (e as CustomEvent).detail as string;
-      setArtModel(m ?? "");
-    };
-    window.addEventListener("art-version-changed", versionHandler);
-    window.addEventListener("art-model-changed", modelHandler);
-    try {
-      const m = localStorage.getItem("airunner_art_model");
-      if (m) setArtModel(m);
-    } catch {}
-    return () => {
-      window.removeEventListener("art-version-changed", versionHandler);
-      window.removeEventListener("art-model-changed", modelHandler);
-    };
-  }, [reloadActiveLoras, reloadActiveEmbeddings]);
 
   useEffect(() => {
     reloadActiveLoras();
@@ -115,6 +72,14 @@ export default function ArtPromptPanel() {
     window.addEventListener("lora-changed", handler);
     return () => window.removeEventListener("lora-changed", handler);
   }, [reloadActiveLoras]);
+
+  const [versionBump, setVersionBump] = useState(0);
+
+  useEffect(() => {
+    const handler = () => setVersionBump((v) => v + 1);
+    window.addEventListener("art-version-changed", handler);
+    return () => window.removeEventListener("art-version-changed", handler);
+  }, []);
 
   useEffect(() => {
     reloadActiveEmbeddings();
@@ -128,17 +93,17 @@ export default function ArtPromptPanel() {
     savePromptData({ ...current, ...updates });
   };
 
+  const readLs = (key: string) => {
+    try { return localStorage.getItem(key) || ""; } catch { return ""; }
+  };
+
   const onSubmit = () => {
-    const scheduler = (() => {
-      try { return localStorage.getItem("airunner_art_scheduler") || ""; }
-      catch { return ""; }
-    })();
     handleSubmit({
       prompt,
       negativePrompt,
-      artModel,
-      artVersion,
-      scheduler,
+      artModel: readLs("airunner_art_model"),
+      artVersion: readLs("airunner_art_version"),
+      scheduler: readLs("airunner_art_scheduler"),
     });
   };
 
@@ -170,13 +135,35 @@ export default function ArtPromptPanel() {
 
   return (
     <div className="d-flex flex-column h-100 p-2">
-      <h6 style={{ color: "var(--theme-text-secondary)" }}
-        className="mb-2 flex-shrink-0"
-      >
-        Art Prompt
-      </h6>
+      <div className="d-flex align-items-center gap-2 mb-2 flex-shrink-0">
+        <h6 style={{ color: "var(--theme-text-secondary)" }} className="mb-0 flex-grow-1">
+          Art Prompt
+        </h6>
+        <button
+          type="button"
+          onClick={onToggleArtModelSettings}
+          title={showArtModelSettings ? "Hide model settings" : "Show model settings"}
+          style={{
+            background: showArtModelSettings
+              ? "rgba(99,153,255,0.2)"
+              : "transparent",
+            border: "1px solid #444",
+            borderRadius: 4,
+            width: 26,
+            height: 26,
+            padding: 0,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            cursor: "pointer",
+            flexShrink: 0,
+          }}
+        >
+          <LucideIcon name="settings" size={14} />
+        </button>
+      </div>
 
-      <div className="flex-grow-1 d-flex flex-column gap-2 overflow-hidden">
+      <div className="flex-grow-1 d-flex flex-column gap-2 overflow-auto">
         <PromptInput
           label="Prompt"
           value={prompt}
@@ -185,37 +172,35 @@ export default function ArtPromptPanel() {
           disabled={generating}
         />
 
-        {!isZImage && (
-          <PromptInput
-            label="Secondary Prompt"
-            value={secondaryPrompt}
-            onChange={(v) => { setSecondaryPrompt(v); persist({ secondary_prompt: v }); }}
-            placeholder="Background, colors, atmosphere..."
-            disabled={generating}
-          />
-        )}
+        {readLs("airunner_art_version") !== "Z-Image Turbo" && (
+          <>
+            <PromptInput
+              label="Secondary Prompt"
+              value={secondaryPrompt}
+              onChange={(v) => { setSecondaryPrompt(v); persist({ secondary_prompt: v }); }}
+              placeholder="Background, colors, atmosphere..."
+              disabled={generating}
+            />
 
-        {!isZImage && (
-          <PromptInput
-            label="Negative Prompt"
-            value={negativePrompt}
-            onChange={(v) => { setNegativePrompt(v); persist({ negative_prompt: v }); }}
-            placeholder="Things to exclude..."
-            disabled={generating}
-          />
-        )}
+            <PromptInput
+              label="Negative Prompt"
+              value={negativePrompt}
+              onChange={(v) => { setNegativePrompt(v); persist({ negative_prompt: v }); }}
+              placeholder="Things to exclude..."
+              disabled={generating}
+            />
 
-        {!isZImage && (
-          <PromptInput
-            label="Sec. Negative"
-            value={secondaryNegativePrompt}
-            onChange={(v) => {
-              setSecondaryNegativePrompt(v);
-              persist({ secondary_negative_prompt: v });
-            }}
-            placeholder="Secondary negative..."
-            disabled={generating}
-          />
+            <PromptInput
+              label="Sec. Negative"
+              value={secondaryNegativePrompt}
+              onChange={(v) => {
+                setSecondaryNegativePrompt(v);
+                persist({ secondary_negative_prompt: v });
+              }}
+              placeholder="Secondary negative..."
+              disabled={generating}
+            />
+          </>
         )}
       </div>
 
@@ -232,14 +217,6 @@ export default function ArtPromptPanel() {
           progress={progress}
           generating={generating}
           hasPrompt={!!prompt.trim()}
-          artVersion={artVersion}
-          artModel={artModel}
-          onVersionChange={(v) => {
-            setArtVersion(v);
-            setArtModel("");
-            setIsZImage(v === "Z-Image Turbo");
-          }}
-          onModelChange={(m) => setArtModel(m)}
           onSubmit={onSubmit}
           onCancel={handleCancel}
         />

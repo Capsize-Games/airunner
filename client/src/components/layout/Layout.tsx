@@ -7,8 +7,6 @@ import {
 import { KnowledgeBasePanel } from "../panels/KnowledgeBasePanel";
 import { ChatHistoryPanel } from "../panels/ChatHistoryPanel";
 import { LLMSettingsPanel } from "../panels/LLMSettingsPanel";
-import ArtModelPanel from "../panels/ArtModelPanel";
-import ArtPromptPanel from "../panels/ArtPromptPanel";
 import CanvasPanel from "../panels/CanvasPanel";
 import LoraPanel from "../panels/LoraPanel";
 import EmbeddingsPanel from "../panels/EmbeddingsPanel";
@@ -30,7 +28,6 @@ type PanelId =
   | "knowledge"
   | "history"
   | "llm_settings"
-  | "art_model"
   | "lora"
   | "embeddings"
   | "image_browser"
@@ -386,9 +383,6 @@ export default function Layout({
             {showCanvas && (
               <CanvasProvider>
                 <CanvasPanel />
-                <div className="art-prompt-panel">
-                  <ArtPromptPanel />
-                </div>
               </CanvasProvider>
             )}
           </div>
@@ -403,7 +397,6 @@ export default function Layout({
             style={{ width: rightPanelW }}
           >
             {rightPanel === "civitai_browser" && <CivitaiBrowserPanel />}
-            {rightPanel === "art_model" && <ArtModelPanel />}
             {rightPanel === "lora" && <LoraPanel />}
             {rightPanel === "embeddings" && <EmbeddingsPanel />}
             {rightPanel === "image_browser" && <ImageBrowserPanel />}

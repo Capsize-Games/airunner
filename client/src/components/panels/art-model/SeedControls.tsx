@@ -22,7 +22,7 @@ export default function SeedControls({
       >
         Seed
       </Form.Label>
-      <div className="d-flex gap-2 align-items-center">
+      <div className="d-flex align-items-center">
         <Form.Control
           size="sm"
           value={seed}
@@ -34,6 +34,8 @@ export default function SeedControls({
             color: seedRandomized ? "#666" : "#c8c8c8",
             borderColor: seedRandomized ? "#555" : "#333",
             opacity: seedRandomized ? 0.5 : 1,
+            borderTopRightRadius: 0,
+            borderBottomRightRadius: 0,
           }}
           onChange={(e) => {
             const raw = e.target.value.replace(/[^0-9\-]/g, "");
@@ -55,14 +57,19 @@ export default function SeedControls({
           style={{
             background: seedRandomized
               ? "var(--bs-primary)"
-              : "transparent",
+              : "#1a1a2e",
             border: "1px solid #444",
-            borderRadius: 4,
-            minWidth: 30,
-            height: 30,
+            borderLeft: "none",
+            borderTopRightRadius: 4,
+            borderBottomRightRadius: 4,
+            borderTopLeftRadius: 0,
+            borderBottomLeftRadius: 0,
+            width: 30,
+            height: "100%",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
+            flexShrink: 0,
           }}
         >
           <LucideIcon

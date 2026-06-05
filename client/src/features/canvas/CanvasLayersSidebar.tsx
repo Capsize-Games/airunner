@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import {
   Eye, EyeOff, ChevronUp, ChevronDown, Trash2, Combine,
   FolderPlus, Copy, FilePlus,
@@ -9,8 +9,27 @@ import NewLayerModal from "./NewLayerModal";
 import IconBtn from "./IconBtn";
 import OpacitySlider from "./OpacitySlider";
 
+const LS_KEY = "airunner_layers_sidebar_w";
+
+function loadWidth(): number {
+  try {
+    const v = localStorage.getItem(LS_KEY);
+    return v !== null ? Number(v) : 200;
+  } catch {
+    return 200;
+  }
+}
+
+function saveWidth(w: number) {
+  try { localStorage.setItem(LS_KEY, String(w)); } catch { /* */ }
+}
+
 export default function CanvasLayersSidebar() {
   const canvas = useCanvasContext();
+  const [width, setWidth] = useState(loadWidth);
+  const dragging = useRef(false);
+  const startX = useRef(0);
+  const startW = useRef(0);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName]   = useState("");
   const [dragOverId, setDragOverId] = useState<string | null>(null);
@@ -412,18 +431,78 @@ export default function CanvasLayersSidebar() {
     }
   }, [canvas]);
 
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    dragging.current = true;
+    startX.current = e.clientX;
+    startW.current = width;
+    document.body.style.cursor = "col-resize";
+    document.body.style.userSelect = "none";
+
+    const onMove = (ev: MouseEvent) => {
+      if (!dragging.current) return;
+      const delta = ev.clientX - startX.current;
+      const newW = Math.max(180, Math.min(500, startW.current - delta));
+      setWidth(newW);
+    };
+
+    const onUp = () => {
+      dragging.current = false;
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
+    };
+
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+  }, [width]);
+
+  useEffect(() => {
+    saveWidth(width);
+  }, [width]);
+
   return (
     <div
       style={{
-        width: 200,
+        width,
         flexShrink: 0,
         display: "flex",
-        flexDirection: "column",
-        background: "#181824",
-        borderLeft: "1px solid rgba(255,255,255,0.07)",
+        flexDirection: "row",
         overflow: "hidden",
       }}
     >
+      {/* ── Resize handle on the left ── */}
+      <div
+        onMouseDown={handleMouseDown}
+        style={{
+          width: 4,
+          cursor: "col-resize",
+          flexShrink: 0,
+          background: "transparent",
+          transition: "background 0.15s",
+        }}
+        onMouseEnter={(e) => {
+          (e.currentTarget as HTMLDivElement).style.background =
+            "rgba(99,153,255,0.3)";
+        }}
+        onMouseLeave={(e) => {
+          if (!dragging.current) {
+            (e.currentTarget as HTMLDivElement).style.background =
+              "transparent";
+          }
+        }}
+      />
+      <div
+        style={{
+          flex: 1,
+          display: "flex",
+          flexDirection: "column",
+          background: "#181824",
+          overflow: "hidden",
+          minWidth: 0,
+        }}
+      >
       {/* Header — title */}
       <div
         style={{
@@ -529,6 +608,7 @@ export default function CanvasLayersSidebar() {
         }}
         onHide={() => setShowNewLayer(false)}
       />
+      </div>
     </div>
   );
 }
