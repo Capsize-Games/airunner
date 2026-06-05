@@ -340,10 +340,10 @@ def _configure_logging():
     from airunner_services.settings import AIRUNNER_LOG_LEVEL
     from airunner_services.utils.application import get_logger
     from airunner_services.utils.application.logging_utils import (
-        configure_headless_logging,
+        configure_service_logging,
     )
 
-    configure_headless_logging()
+    configure_service_logging()
     logger = get_logger(__name__, level=AIRUNNER_LOG_LEVEL)
     return logger, AIRUNNER_LOG_LEVEL
 

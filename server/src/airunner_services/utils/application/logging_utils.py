@@ -129,8 +129,8 @@ def _setup_file_logging(
     _create_file_handler(log_file, log_level, formatter, root_logger)
 
 
-def configure_headless_logging() -> None:
-    """Configure root logging for daemon and headless execution."""
+def configure_service_logging() -> None:
+    """Configure root logging for daemon and service execution."""
     log_level = _get_log_level_from_env()
     root_logger = logging.getLogger()
     root_logger.setLevel(log_level)
@@ -198,7 +198,7 @@ def log_method_entry_exit(method):
 
 
 __all__ = [
-    "configure_headless_logging",
+    "configure_service_logging",
     "configure_noisy_loggers",
     "log_method_entry_exit",
 ]

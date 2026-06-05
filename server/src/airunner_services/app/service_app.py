@@ -20,7 +20,7 @@ from airunner_services.contract_enums import (
 from airunner_services.settings import AIRUNNER_LOG_LEVEL
 from airunner_services.utils.application import get_logger
 from airunner_services.utils.application.log_hygiene import summarize_text
-from airunner_services.utils.application.logging_utils import configure_headless_logging
+from airunner_services.utils.application.logging_utils import configure_service_logging
 from airunner_services.utils.application.mediator_mixin import MediatorMixin
 from airunner_services.utils.application.runtime_primitives import (
     QCoreApplication,
@@ -63,7 +63,7 @@ class ServiceApp(HeadlessRuntimeMixin, MediatorMixin):
 
     def _init_attributes(self) -> None:
         """Initialize service-owned attributes for headless execution."""
-        configure_headless_logging()
+        configure_service_logging()
         self.logger = get_logger(__name__, level=AIRUNNER_LOG_LEVEL)
         self.app = None
         self.splash = None

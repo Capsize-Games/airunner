@@ -60,7 +60,7 @@ class LocalFallbackTTSClient(_SignalRuntimeClient):
         if request.action is not RuntimeAction.INVOKE:
             raise ValueError("LocalFallbackTTSClient only supports invoke")
         invocation = TTSInvocationRequest.model_validate(request.payload)
-        if self._headless_tts_worker() is not None:
+        if self._tts_worker() is not None:
             return self._invoke_headless_runtime(
                 request.request_id,
                 invocation,
@@ -121,7 +121,7 @@ class LocalFallbackTTSClient(_SignalRuntimeClient):
         """Enable and load the local TTS model."""
         from airunner_services.contract_enums import ModelStatus, SignalCode
 
-        worker = self._headless_tts_worker()
+        worker = self._tts_worker()
         if worker is not None:
             load_tts = getattr(worker, "_load_tts", None)
             current_status = getattr(worker, "_current_tts_status", None)
@@ -172,7 +172,7 @@ class LocalFallbackTTSClient(_SignalRuntimeClient):
         """Disable and unload the local TTS model."""
         from airunner_services.contract_enums import ModelStatus, SignalCode
 
-        worker = self._headless_tts_worker()
+        worker = self._tts_worker()
         if worker is not None:
             unload_tts = getattr(worker, "_unload_tts", None)
             current_status = getattr(worker, "_current_tts_status", None)
@@ -231,7 +231,7 @@ class LocalFallbackTTSClient(_SignalRuntimeClient):
         invocation: TTSInvocationRequest,
     ) -> Optional[bytes]:
         """Render one TTS request to WAV bytes in headless mode."""
-        worker = self._headless_tts_worker()
+        worker = self._tts_worker()
         manager = self._tts_manager(worker)
         request = self._tts_request(invocation, worker)
         if worker is None or manager is None or request is None:
@@ -241,8 +241,8 @@ class LocalFallbackTTSClient(_SignalRuntimeClient):
             return None
         return self._encode_audio(audio, self._sample_rate(manager))
 
-    def _headless_tts_worker(self):
-        """Return the headless TTS worker when one exists."""
+    def _tts_worker(self):
+        """Return the TTS worker when one exists."""
         worker_manager = getattr(self._signal_source, "_worker_manager", None)
         if worker_manager is None:
             return None

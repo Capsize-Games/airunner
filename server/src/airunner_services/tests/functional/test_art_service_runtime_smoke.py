@@ -280,7 +280,7 @@ def test_direct_art_runtime_bootstraps_headless_worker_only(
     assert service_app.api_server_thread is None
     assert service_app._worker_manager is not None
 
-    worker = client._headless_art_worker(create=True)
+    worker = client._art_worker(create=True)
 
     assert worker is not None
     assert worker is service_app._worker_manager.sd_worker

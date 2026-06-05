@@ -301,7 +301,7 @@ class LocalFallbackArtClient(_SignalRuntimeClient):
             f"DO_GENERATE_SIGNAL model={image_request.model_path!r} "
             f"version={image_request.version!r}"
         )
-        sd_worker = self._headless_art_worker(create=True)
+        sd_worker = self._art_worker(create=True)
         if sd_worker is None:
             print(
                 "[LocalFallbackArtClient] ERROR: SD worker could not "
@@ -413,8 +413,8 @@ class LocalFallbackArtClient(_SignalRuntimeClient):
             self._rmbg_model_manager = RMBGModelManager()
         return self._rmbg_model_manager
 
-    def _headless_art_worker(self, *, create: bool = False):
-        """Return the headless art worker when one exists."""
+    def _art_worker(self, *, create: bool = False):
+        """Return the art worker when one exists."""
         worker_manager = getattr(self._signal_source, "_worker_manager", None)
         if worker_manager is None:
             return None
@@ -424,7 +424,7 @@ class LocalFallbackArtClient(_SignalRuntimeClient):
 
     def _art_model_manager(self, *, create: bool = False):
         """Return the headless SD model manager when one exists."""
-        worker = self._headless_art_worker(create=create)
+        worker = self._art_worker(create=create)
         if worker is None:
             return None
         return getattr(worker, "model_manager", None)
