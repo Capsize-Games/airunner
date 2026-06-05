@@ -39,18 +39,13 @@ class AudioProcessorWorker(Worker):
 		return RuntimeRegistrySTTExecutor(api=self._current_api())
 
 	def _current_api(self):
-		"""Return the freshest API reference available to this worker."""
-		refresher = getattr(self, "refresh_api_reference", None)
-		if callable(refresher):
-			return refresher()
-		return getattr(self, "api", None)
+	    """Return the registered service API reference."""
+	    return peek_registered_api()
 
 	def _daemon_client(self):
-		"""Return the GUI daemon client when STT is running remotely."""
-		api = self._current_api()
-		if api is None or getattr(api, "headless", False):
-			return None
-		return getattr(api, "daemon_client", None)
+	    """Return the daemon client when STT is running remotely."""
+	    api = self._current_api()
+	    return getattr(api, "daemon_client", None) if api else None
 
 	def _emit_transcription(self, transcription: str) -> None:
 		"""Forward one transcription to the shared UI boundary."""

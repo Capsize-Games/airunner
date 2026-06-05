@@ -10,6 +10,10 @@ from typing import Dict, Optional
 import torch
 from PIL import Image
 
+from airunner_services.utils.application.api_reference import (
+    peek_registered_api,
+)
+
 from airunner_services.model_management.sdxl_model_manager import (
 	SDXLModelManager,
 )
@@ -615,10 +619,8 @@ class SDWorker(Worker):
 		self.load_model_manager(message)
 
 	def _daemon_client(self):
-		api = getattr(self, "api", None)
-		if api is None or getattr(api, "headless", False):
-			return None
-		return getattr(api, "daemon_client", None)
+		api = peek_registered_api()
+		return getattr(api, "daemon_client", None) if api else None
 
 	@staticmethod
 	def _encode_daemon_image(image: Optional[Image.Image]) -> Optional[str]:
