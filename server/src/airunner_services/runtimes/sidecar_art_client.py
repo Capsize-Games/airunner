@@ -307,10 +307,21 @@ class SidecarArtClient(RuntimeClient):
 				status, _details = launcher.health_status()
 				if status is RuntimeHealthStatus.READY:
 					try:
-						self._request("DELETE", "/unload")
-						self._remember_model_status("unloaded")
-					except RuntimeError:
-						launcher.stop()
+						# Fire-and-forget: the sidecar daemon processes the
+						# unload asynchronously.  A short timeout prevents
+						# blocking the thread pool on GPU deallocation.
+						url = (
+							f"{self._require_launcher().api_base_url}"
+							"/unload"
+						)
+						self._session.request(
+							"DELETE", url, timeout=2.0,
+						)
+					except Exception:
+						# Timeout or connection error — the sidecar is
+						# still processing; proceed as unloaded.
+						pass
+					finally:
 						self._remember_model_status("unloaded")
 				elif status in (
 					RuntimeHealthStatus.STARTING,
