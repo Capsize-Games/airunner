@@ -69,27 +69,57 @@ export default function ArtModelPanel() {
         setOptions(opts);
       } catch { /* */ }
 
+      const _ls = (k: string) => {
+        try { return localStorage.getItem(k) || ""; } catch { return ""; }
+      };
       try {
         const r = await getSingleton("GeneratorSettings");
         const savedVersion = String(r.version ?? "");
-        setVersion(savedVersion);
-        setModelPath(String(r.model_path ?? ""));
-        setScheduler(String(r.scheduler ?? ""));
-        setPrecision(String(r.dtype ?? ""));
-        try {
-          localStorage.setItem("airunner_art_version", savedVersion);
-        } catch {}
-        if (r.model_path) {
-          try {
-            localStorage.setItem(
-              "airunner_art_model",
-              String(r.model_path),
-            );
-          } catch {}
+        const savedModelPath = String(r.model_path ?? "");
+        const savedScheduler = String(r.scheduler ?? "");
+        const savedDtype = String(r.dtype ?? "");
+
+        // Server returned values — use them
+        if (savedVersion) {
+          setVersion(savedVersion);
+          try { localStorage.setItem("airunner_art_version", savedVersion); } catch {}
+        } else {
+          // Server returned empty — try localStorage
+          const fv = _ls("airunner_art_version");
+          if (fv) setVersion(fv);
         }
-        const savedSeed = Number(r.seed ?? 0);
-        setSeed(savedSeed);
-        setSeedRandomized(savedSeed === -1);
+        if (savedModelPath) {
+          setModelPath(savedModelPath);
+          try { localStorage.setItem("airunner_art_model", savedModelPath); } catch {}
+        } else {
+          const fm = _ls("airunner_art_model");
+          if (fm) setModelPath(fm);
+        }
+        if (savedScheduler) {
+          setScheduler(savedScheduler);
+        } else {
+          const fs = _ls("airunner_art_scheduler");
+          if (fs) setScheduler(fs);
+        }
+        if (savedDtype) {
+          setPrecision(savedDtype);
+        }
+      } catch {
+        // Server unavailable — fall back to localStorage
+        const fv = _ls("airunner_art_version");
+        const fm = _ls("airunner_art_model");
+        const fs = _ls("airunner_art_scheduler");
+        if (fv) setVersion(fv);
+        if (fm) setModelPath(fm);
+        if (fs) setScheduler(fs);
+      }
+      // Seed is always restored from localStorage to survive server restarts
+      try {
+        const seedVal = Number(
+          (() => { try { return localStorage.getItem("airunner_seed") || "0"; } catch { return "0"; } })(),
+        );
+        setSeed(seedVal);
+        setSeedRandomized(seedVal === -1);
       } catch { /* */ }
 
       try {

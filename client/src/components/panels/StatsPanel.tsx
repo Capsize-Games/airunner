@@ -3,6 +3,7 @@ import ProgressBar from "react-bootstrap/ProgressBar";
 import { getHardwareProfile, BASE_URL } from "../../api/client";
 import type { HardwareProfile } from "../../types/api";
 import type { ActiveModelInfo } from "../../api/client";
+import { useArtWebSocket } from "../../features/art/useArtWebSocket";
 
 function wsUrl(): string {
   const base = import.meta.env.PROD
@@ -24,6 +25,7 @@ export default function StatsPanel() {
   );
   const mountedRef = useRef(true);
   const unloadingRef = useRef<Set<string>>(new Set());
+  const artWs = useArtWebSocket();
 
   const scheduleReconnect = useCallback(() => {
     if (!mountedRef.current) return;
@@ -140,19 +142,14 @@ export default function StatsPanel() {
     };
   }, [fetchActiveModels]);
 
-  const handleUnload = async (m: ActiveModelInfo) => {
+  const handleUnload = (m: ActiveModelInfo) => {
     const key = m.model_id || m.model_type;
     if (unloadingRef.current.has(key)) return;
     unloadingRef.current.add(key);
-    try {
-      const { unloadModel } = await import("../../api/client");
-      await unloadModel(m.model_id, m.model_type);
-      fetchActiveModels();
-    } catch {
-      // ignore
-    } finally {
-      unloadingRef.current.delete(key);
-    }
+    artWs.unload(m.model_id);
+    // Remove from unloading set after a short delay so repeated clicks
+    // on the same model are still gated.
+    setTimeout(() => unloadingRef.current.delete(key), 2000);
   };
 
   if (!hw) {

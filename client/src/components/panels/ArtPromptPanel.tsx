@@ -2,13 +2,13 @@ import { useState, useEffect, useCallback } from "react";
 import PromptInput from "./art-prompt/PromptInput";
 import { EmbeddingPills, LoraPills } from "./art-prompt/ActivePills";
 import ArtPromptFooter from "./art-prompt/ArtPromptFooter";
-import { useArtGeneration } from "./art-prompt/useArtGeneration";
 import {
   loadPromptData,
   savePromptData,
 } from "./art-prompt/ArtPromptStorage";
 import LucideIcon from "../shared/LucideIcon";
 import { useCanvasContext } from "../../features/canvas/CanvasContext";
+import { useArtWebSocket } from "../../features/art/useArtWebSocket";
 
 interface ArtPromptPanelProps {
   showArtModelSettings: boolean;
@@ -43,7 +43,7 @@ export default function ArtPromptPanel({
   try {
     canvasCtx = useCanvasContext();
   } catch {
-    // not inside a canvas provider — art generation still works
+    // not inside a canvas provider
   }
 
   const activeGridArea = canvasCtx?.activeGridArea ?? {
@@ -53,23 +53,42 @@ export default function ArtPromptPanel({
   const {
     generating,
     progress,
-    handleSubmit,
-    handleCancel,
-  } = useArtGeneration();
+    generate: artGenerate,
+    cancel: artCancel,
+  } = useArtWebSocket();
 
-  const onGenerationComplete = useCallback(
-    (imageBase64: string) => {
-      if (!canvasCtx) return;
-      canvasCtx.placeImageOnNewLayer(
-        imageBase64,
-        activeGridArea.x,
-        activeGridArea.y,
-        activeGridArea.width,
-        activeGridArea.height,
-      );
-    },
-    [canvasCtx, activeGridArea],
-  );
+  const onGenerate = useCallback(async () => {
+    if (!prompt.trim()) return;
+    const ls = (k: string) => {
+      try { return localStorage.getItem(k) || ""; } catch { return ""; }
+    };
+    try {
+      const imageBase64 = await artGenerate({
+        prompt: prompt.trim(),
+        negativePrompt: negativePrompt?.trim() || undefined,
+        artModel: ls("airunner_art_model") || undefined,
+        artVersion: ls("airunner_art_version") || undefined,
+        scheduler: ls("airunner_art_scheduler") || undefined,
+        width: activeGridArea.width,
+        height: activeGridArea.height,
+      });
+      if (imageBase64 && canvasCtx) {
+        canvasCtx.placeImageOnNewLayer(
+          imageBase64,
+          activeGridArea.x,
+          activeGridArea.y,
+          activeGridArea.width,
+          activeGridArea.height,
+        );
+      }
+    } catch {
+      // generation failed or cancelled
+    }
+  }, [prompt, negativePrompt, activeGridArea, canvasCtx, artGenerate]);
+
+  const onCancel = useCallback(() => {
+    artCancel();
+  }, [artCancel]);
 
   const reloadActiveLoras = useCallback(async () => {
     try {
@@ -122,19 +141,6 @@ export default function ArtPromptPanel({
 
   const readLs = (key: string) => {
     try { return localStorage.getItem(key) || ""; } catch { return ""; }
-  };
-
-  const onSubmit = () => {
-    handleSubmit({
-      prompt,
-      negativePrompt,
-      artModel: readLs("airunner_art_model"),
-      artVersion: readLs("airunner_art_version"),
-      scheduler: readLs("airunner_art_scheduler"),
-      width: activeGridArea.width,
-      height: activeGridArea.height,
-      onComplete: onGenerationComplete,
-    });
   };
 
   const deactivateLora = (id: number) => {
@@ -247,8 +253,8 @@ export default function ArtPromptPanel({
           progress={progress}
           generating={generating}
           hasPrompt={!!prompt.trim()}
-          onSubmit={onSubmit}
-          onCancel={handleCancel}
+          onSubmit={onGenerate}
+          onCancel={onCancel}
         />
       </div>
     </div>

@@ -22,10 +22,12 @@ from .art_contracts import (
 )
 from .art_generation_routes import router as generation_router
 from .art_management_routes import router as management_router
+from .art_websocket import router as art_websocket_router
 
 router = APIRouter()
 router.include_router(generation_router)
 router.include_router(management_router)
+router.include_router(art_websocket_router)
 router.include_router(catalog_router)
 router.include_router(catalog_bootstrap_router)
 router.include_router(vram_router)

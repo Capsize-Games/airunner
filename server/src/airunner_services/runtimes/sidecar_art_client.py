@@ -280,7 +280,16 @@ class SidecarArtClient(RuntimeClient):
 		request_id = request.request_id
 		metadata = getattr(request, "metadata", None) or {}
 		release_process = bool(metadata.get("release_process", False))
-		with self._invoke_lock:
+		# Don't block if the generation lock is held — the caller will emit
+		# the model-status change signal regardless.
+		if not self._invoke_lock.acquire(blocking=False):
+			return messages.ResponseEnvelope(
+				request_id=request_id,
+				status=messages.EnvelopeStatus.SUCCEEDED,
+				payload={"model_status": "unload_queued"},
+				metadata=self._metadata(),
+			)
+		try:
 			launcher = self._launcher
 			if launcher is not None:
 				if release_process:
@@ -309,6 +318,8 @@ class SidecarArtClient(RuntimeClient):
 				):
 					launcher.stop()
 					self._remember_model_status("unloaded")
+		finally:
+			self._invoke_lock.release()
 		return messages.ResponseEnvelope(
 			request_id=request_id,
 			status=messages.EnvelopeStatus.SUCCEEDED,
