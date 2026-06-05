@@ -1,0 +1,27 @@
+repos:
+  - repo: https://github.com/psf/black
+    rev: 26.3.1
+    hooks:
+      - id: black
+        name: black (server)
+        files: ^server/
+        types: [python]
+        language_version: python3
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.15.16
+    hooks:
+      - id: ruff
+        name: ruff (server)
+        files: ^server/
+        types: [python]
+        args: [--fix, --exit-non-zero-on-fix, --show-fixes]
+
+  - repo: local
+    hooks:
+      - id: check-code-size
+        name: check code size
+        entry: python scripts/check_code_size.py
+        files: ^server/
+        types: [python]
+        language: system

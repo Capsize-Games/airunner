@@ -30,7 +30,11 @@ logger = logging.getLogger(__name__)
 
 @_rpc_register("GET", "/api/v1/models/active")
 async def _rpc_models_active(body: dict, **kwargs: Any) -> dict[str, Any]:
-    """Return all currently active models."""
+    """Return all currently active models.
+
+    Merges models tracked by ``ModelResourceManager`` (LLM, etc.) with
+    externally-tracked models (art, embedding) from ``_external_models``.
+    """
     try:
         from airunner_services.model_management import ModelResourceManager
 
@@ -48,6 +52,33 @@ async def _rpc_models_active(body: dict, **kwargs: Any) -> dict[str, Any]:
                     "name": m.name or "",
                 }
             )
+
+        # Merge externally-tracked models (art via _track_model, etc.)
+        try:
+            from airunner_services.api.routes.models_status import (  # noqa: PLC0415
+                _external_models,
+                _external_models_lock,
+            )
+
+            seen_ids = {m["model_id"] for m in models}
+            with _external_models_lock:
+                for ext in _external_models.values():
+                    if ext["model_id"] not in seen_ids:
+                        models.append(
+                            {
+                                "model_id": ext["model_id"],
+                                "model_type": ext["model_type"],
+                                "status": ext["status"],
+                                "can_unload": ext.get("can_unload", False),
+                                "vram_gb": ext.get("vram_gb", 0.0),
+                                "ram_gb": ext.get("ram_gb", 0.0),
+                                "name": ext.get("name", ""),
+                            }
+                        )
+                        seen_ids.add(ext["model_id"])
+        except Exception:
+            pass
+
         return {"status": 200, "body": {"models": models}}
     except Exception as exc:
         logger.warning("Failed to read active models: %s", exc)

@@ -38,7 +38,7 @@ _configure_daemon_environment()
 from logging.handlers import RotatingFileHandler  # noqa: E402
 
 from airunner_services.runtimes.daemon_config import DaemonConfig  # noqa: E402
-from airunner_services.api.server import APIServer  # noqa: E402
+from airunner_services.api.api_server import APIServer  # noqa: E402
 from airunner_services.app import ServiceApp  # noqa: E402
 from airunner_services.model_management.model_resource_manager import (  # noqa: E402
     ModelResourceManager,

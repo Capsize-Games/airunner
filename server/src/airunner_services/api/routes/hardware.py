@@ -48,23 +48,6 @@ def _build_profile() -> dict:
     }
 
 
-@router.get("/hardware", response_model=HardwareProfileResponse)
-async def hardware_profile() -> HardwareProfileResponse:
-    """Return the current hardware profile from the host machine."""
-    profile = _profiler.get_profile()
-    return HardwareProfileResponse(
-        total_vram_gb=profile.total_vram_gb,
-        available_vram_gb=profile.available_vram_gb,
-        total_ram_gb=profile.total_ram_gb,
-        available_ram_gb=profile.available_ram_gb,
-        cuda_available=profile.cuda_available,
-        device_name=profile.device_name,
-        cpu_count=profile.cpu_count,
-        platform=profile.platform,
-        num_gpus=profile.num_gpus,
-    )
-
-
 @router.websocket("/hardware/ws")
 async def hardware_profile_websocket(websocket: WebSocket):
     """WebSocket endpoint that pushes hardware profile data every 5 seconds.
