@@ -435,7 +435,7 @@ def _open_download(
     api_key: str,
     custom_headers: dict | None = None,
 ) -> requests.Response:
-    """Open one download response, retrying 401s with token query auth."""
+    """Open one download response with Authorization header auth."""
     headers = custom_headers or _auth_headers(api_key)
     response = requests.get(
         url,
@@ -444,25 +444,8 @@ def _open_download(
         allow_redirects=True,
         timeout=30,
     )
-    if response.status_code != 401 or not api_key:
-        response.raise_for_status()
-        return response
-    response.close()
-    retry_url = _url_with_token(url, api_key)
-    retry_response = requests.get(
-        retry_url,
-        stream=True,
-        allow_redirects=True,
-        timeout=30,
-    )
-    retry_response.raise_for_status()
-    return retry_response
-
-
-def _url_with_token(url: str, api_key: str) -> str:
-    """Return one retry URL that carries the API key as a query token."""
-    separator = "&" if "?" in url else "?"
-    return f"{url}{separator}token={api_key}"
+    response.raise_for_status()
+    return response
 
 
 def _content_length(response: requests.Response, fallback: int) -> int:

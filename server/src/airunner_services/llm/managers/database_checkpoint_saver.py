@@ -213,22 +213,12 @@ class DatabaseCheckpointSaver(BaseCheckpointSaver):
             # First, try to get from in-memory checkpoint state
             thread_id = config.get("configurable", {}).get("thread_id")
 
-            # DEBUG: Write to file
-            import sys
-
-            with open("/tmp/checkpoint_debug.log", "a") as f:
-                f.write(
-                    f"[GET] thread_id={thread_id}, conv_id={self.conversation_id}, "
-                    f"checkpoint_keys={list(self._checkpoint_state.keys())}\n"
-                )
-                sys.stdout.flush()
-
             if thread_id and thread_id in self._checkpoint_state:
                 state = self._checkpoint_state[thread_id]
-                with open("/tmp/checkpoint_debug.log", "a") as f:
-                    f.write(
-                        f"[GET] ✅ FOUND in memory: {len(state['messages'])} messages\n"
-                    )
+                self.logger.debug(
+                    "Found %d messages in memory checkpoint for thread %s",
+                    len(state["messages"]), thread_id,
+                )
                 return CheckpointTuple(
                     config=config,
                     checkpoint=state["checkpoint"],
@@ -238,20 +228,14 @@ class DatabaseCheckpointSaver(BaseCheckpointSaver):
 
             # Fallback: Load from database (may not have ToolMessages)
             messages = self.message_history.messages
-            with open("/tmp/checkpoint_debug.log", "a") as f:
-                f.write(
-                    f"[GET] DB has {len(messages)} messages for conv {self.conversation_id}\n"
-                )
+            self.logger.debug(
+                "DB has %d messages for conversation %s",
+                len(messages), self.conversation_id,
+            )
 
             if not messages:
-                with open("/tmp/checkpoint_debug.log", "a") as f:
-                    f.write("[GET] ❌ No messages - starting fresh\n")
+                self.logger.debug("No messages in DB - starting fresh")
                 return None
-
-            with open("/tmp/checkpoint_debug.log", "a") as f:
-                f.write(
-                    f"[GET] ✅ Building checkpoint from DB: {len(messages)} messages\n"
-                )
 
             checkpoint: Checkpoint = {
                 "v": 1,
