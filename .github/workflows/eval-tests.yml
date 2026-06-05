@@ -39,7 +39,7 @@ jobs:
       - name: Install Python dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -e server/ 2>&1
+          pip install -e server/
 
       - name: Run runtime contract tests
         run: |
@@ -80,19 +80,13 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y cmake ninja-build
 
-      - name: Create repo-local test venv
+      - name: Install Python dependencies
         run: |
-          python -m venv venv
-          . venv/bin/activate
           python -m pip install --upgrade pip
-          pip install pytest
-
-      - name: Build Linux launcher
-        run: ./scripts/build_airunner_launcher.sh --clean --target-platform linux
+          pip install -e server/
 
       - name: Run launcher smoke tests
         run: |
-          . venv/bin/activate
           python -m pytest \
             server/tests/ \
             -v \
@@ -146,7 +140,7 @@ jobs:
       - name: Install Python dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -e server/ 2>&1
+          pip install -e server/
 
       - name: Run ${{ matrix.name }} runtime smoke tests
         run: |
@@ -180,7 +174,7 @@ jobs:
       - name: Install Python dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -e server/ 2>&1
+          pip install -e server/
       
       - name: Run eval tests
         run: |
