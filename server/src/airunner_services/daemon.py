@@ -43,7 +43,10 @@ from airunner_services.app import ServiceApp  # noqa: E402
 from airunner_services.model_management.model_resource_manager import (  # noqa: E402
     ModelResourceManager,
 )
-from airunner_services.settings import AIRUNNER_LOG_LEVEL  # noqa: E402
+from airunner_services.settings import (  # noqa: E402
+    AIRUNNER_LOG_FILE,
+    AIRUNNER_LOG_LEVEL,
+)
 from airunner_services.utils.application import get_logger  # noqa: E402
 
 logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
@@ -95,9 +98,7 @@ class AIRunnerDaemon:
     def _setup_logging(self):
         """Configure logging for daemon mode."""
         log_config = self.config.config.get("logging", {})
-        log_file = Path(
-            log_config.get("file", "build/logs/server.log")
-        ).expanduser().resolve()
+        log_file = Path(AIRUNNER_LOG_FILE).expanduser().resolve()
         log_level = getattr(logging, log_config.get("level", "INFO"))
 
         root_logger = logging.getLogger()

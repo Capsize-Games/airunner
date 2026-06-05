@@ -21,6 +21,7 @@ from airunner_services.runtimes.tts_daemon_runtime_settings import (
 from airunner_services.config.runtime_layout import (
     build_runtime_directory_layout,
 )
+from airunner_services.settings import AIRUNNER_LOG_FILE
 
 HealthOpener = Callable[..., Any]
 LaunchPreparer = Callable[[], None]
@@ -46,7 +47,7 @@ def _build_temp_daemon_config(
         layout.heartbeat_file("tts-runtime")
     )
     config.setdefault("logging", {})["file"] = str(
-        Path("build/logs/server.log")
+        Path(AIRUNNER_LOG_FILE).expanduser().resolve()
     )
     config["runtime"] = layout.as_config()
 

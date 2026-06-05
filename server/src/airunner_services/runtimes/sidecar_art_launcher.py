@@ -22,6 +22,7 @@ from airunner_services.runtimes.contracts import RuntimeHealthStatus
 from airunner_services.config.runtime_layout import (
     build_runtime_directory_layout,
 )
+from airunner_services.settings import AIRUNNER_LOG_FILE
 
 HealthOpener = Callable[..., Any]
 LaunchPreparer = Callable[[], None]
@@ -48,7 +49,7 @@ def _build_temp_daemon_config(
         layout.heartbeat_file("art-runtime")
     )
     config.setdefault("logging", {})["file"] = str(
-        Path("build/logs/server.log")
+        Path(AIRUNNER_LOG_FILE).expanduser().resolve()
     )
     config["runtime"] = layout.as_config()
 
@@ -290,11 +291,10 @@ class SidecarArtLauncher:
         """Resolve DEVNULL to a log file so sidecar stderr is captured."""
         if stream is not subprocess.DEVNULL:
             return stream
-        layout = build_runtime_directory_layout()
-        layout.ensure_exists()
-        log_path = str(Path("build/logs/server.log"))
+        log_path = Path(AIRUNNER_LOG_FILE).expanduser().resolve()
+        log_path.parent.mkdir(parents=True, exist_ok=True)
         try:
-            return open(log_path, "a")
+            return open(str(log_path), "a")
         except OSError:
             return stream
 

@@ -19,6 +19,7 @@ from airunner_services.config.runtime_layout import (
 from airunner_services.runtimes.whisper_cpp_runtime_settings import (
     WhisperCppRuntimeSettings,
 )
+from airunner_services.settings import AIRUNNER_LOG_FILE
 
 HealthOpener = Callable[..., Any]
 ProcessFactory = Callable[..., subprocess.Popen]
@@ -209,7 +210,9 @@ class SidecarSTTLauncher:
         layout = build_runtime_directory_layout()
         layout.ensure_exists()
         self._close_log_handle()
-        self._log_handle = open(Path("build/logs/server.log"), "ab")
+        log_path = Path(AIRUNNER_LOG_FILE).expanduser().resolve()
+        log_path.parent.mkdir(parents=True, exist_ok=True)
+        self._log_handle = open(log_path, "ab")
         return self._log_handle
 
     def _stdout_target(self):

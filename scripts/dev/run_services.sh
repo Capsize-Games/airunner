@@ -132,7 +132,11 @@ start_services() {
     fi
 
     echo "=== Starting AI Runner daemon ==="
-    echo "Log: ${LOG_DIR}/daemon.log"
+    # Process-level stdout/stderr goes to server.log (crash traces, early
+    # startup output). Structured logs are written to AIRUNNER_LOG_FILE
+    # (default: under AIRUNNER_BASE_PATH) by the logging framework.
+    echo "  Process output: ${LOG_DIR}/server.log"
+    echo "  Application logs: ${AIRUNNER_LOG_FILE:-~/.local/share/airunner/airunner.log}"
 
     export DEV_ENV=1
     export AIRUNNER_HEADLESS=1
@@ -150,7 +154,7 @@ start_services() {
     fi
 
     "${DEV_VENV_BIN}/python" -m airunner_services.daemon \
-        > "${LOG_DIR}/daemon.log" 2>&1 &
+        > "${LOG_DIR}/server.log" 2>&1 &
 
     local daemon_pid=$!
     echo "${daemon_pid}" > "${PID_FILE}"
@@ -170,7 +174,7 @@ start_services() {
 
     echo ""
     echo "WARNING: Daemon did not respond to health check within 30s."
-    echo "Check ${LOG_DIR}/daemon.log for details."
+    echo "Check ${LOG_DIR}/server.log for details."
 }
 
 # --------------------------------------------------
@@ -182,4 +186,5 @@ echo ""
 echo "=== Services running ==="
 echo "  Health:  http://localhost:${DAEMON_PORT}/api/v1/health"
 echo "  API docs: http://localhost:${DAEMON_PORT}/api/v1/docs"
-echo "  Logs:    ${LOG_DIR}/daemon.log"
+echo "  Process output: ${LOG_DIR}/server.log"
+echo "  Application logs: ${AIRUNNER_LOG_FILE:-~/.local/share/airunner/airunner.log}"

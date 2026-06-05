@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import os
+import sys
 
 from dotenv import load_dotenv
 
@@ -385,15 +386,35 @@ AIRUNNER_DISABLE_FLASH_ATTENTION = _env_bool(
 )
 AIRUNNER_CUDA_OUT_OF_MEMORY_MESSAGE = "Insufficient GPU memory."
 AIRUNNER_MOOD_PROMPT_OVERRIDE = os.environ.get("AIRUNNER_MOOD_PROMPT_OVERRIDE")
-AIRUNNER_LOG_FILE = os.environ.get(
-    "AIRUNNER_LOG_FILE",
-    os.path.join(
-        os.path.dirname(os.path.dirname(
-            os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        )),
-        "build/logs/server.log",
-    ),
-)
+
+
+def _default_log_file_path() -> str:
+    """Return the platform-appropriate default log file path.
+
+    Order of precedence:
+    1. ``AIRUNNER_LOG_FILE`` environment variable
+    2. Platform-specific standard location
+       (all user-writable — no root required)
+
+    Linux:   ``AIRUNNER_BASE_PATH / airunner.log``
+             (defaults to ``~/.local/share/airunner/airunner.log``)
+    macOS:   ``~/Library/Logs/AI Runner/airunner.log``
+    Windows: ``%APPDATA%\\AI Runner\\airunner.log``
+    """
+    env_value = os.environ.get("AIRUNNER_LOG_FILE")
+    if env_value:
+        return env_value
+    if sys.platform.startswith("win"):
+        appdata = os.environ.get("APPDATA", "C:\\Users\\Default\\AppData\\Roaming")
+        return os.path.join(appdata, "AI Runner", "airunner.log")
+    if sys.platform.startswith("darwin"):
+        home = os.path.expanduser("~")
+        return os.path.join(home, "Library", "Logs", "AI Runner", "airunner.log")
+    # Linux, BSD, and everything else — use the app data directory
+    return os.path.join(AIRUNNER_BASE_PATH, "airunner.log")
+
+
+AIRUNNER_LOG_FILE = _default_log_file_path()
 AIRUNNER_SAVE_LOG_TO_FILE = _env_bool(
     "AIRUNNER_SAVE_LOG_TO_FILE",
     "0",

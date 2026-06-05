@@ -42,9 +42,13 @@ class ServiceApp(RuntimeMixin, MediatorMixin):
 
     def __init__(
         self,
+        initialize_lifecycle: bool = True,
+        start_embedded_api_server: bool = True,
         **_: object,
     ) -> None:
         self.signal_handlers = {}
+        self._initialize_lifecycle = initialize_lifecycle
+        self._start_embedded_api_server = start_embedded_api_server
         self._init_attributes()
         super().__init__()
         self.runtime_registry = build_runtime_registry(app_instance=self)

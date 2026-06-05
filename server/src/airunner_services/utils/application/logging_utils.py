@@ -8,9 +8,8 @@ import os
 import sys
 from typing import Optional
 
-from airunner_services.settings import AIRUNNER_LOG_LEVEL
+from airunner_services.settings import AIRUNNER_LOG_FILE, AIRUNNER_LOG_LEVEL
 from airunner_services.utils.application.get_logger import (
-    _resolve_log_base_path,
     get_logger,
 )
 from airunner_services.utils.application.log_hygiene import LogHygieneFilter
@@ -61,10 +60,7 @@ def _get_log_level_from_env() -> int:
 def _get_log_file_path(root_logger: logging.Logger) -> Optional[str]:
     """Determine the file log path or disable file logging cleanly."""
     try:
-        log_file = os.environ.get(
-            "AIRUNNER_LOG_FILE",
-            os.path.join(_resolve_log_base_path(), "airunner.log"),
-        )
+        log_file = AIRUNNER_LOG_FILE
         log_dir = os.path.dirname(log_file)
         if log_dir:
             os.makedirs(log_dir, mode=0o700, exist_ok=True)
