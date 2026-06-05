@@ -87,4 +87,8 @@ async def hardware_profile_websocket(websocket: WebSocket):
         try:
             await websocket.close()
         except Exception:
-            pass
+            logger.debug(
+                "Failed to close hardware profile WebSocket "
+                "(expected during disconnect races)",
+                exc_info=True,
+            )

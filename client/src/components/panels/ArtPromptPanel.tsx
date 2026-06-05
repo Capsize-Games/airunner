@@ -119,7 +119,7 @@ export default function ArtPromptPanel({
     return () => window.removeEventListener("lora-changed", handler);
   }, [reloadActiveLoras]);
 
-  const [versionBump, setVersionBump] = useState(0);
+  const [, setVersionBump] = useState(0);
 
   useEffect(() => {
     const handler = () => setVersionBump((v) => v + 1);

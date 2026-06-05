@@ -224,5 +224,8 @@ class HardwareProfiler:
             if count is not None:
                 return count
         except Exception:
-            pass
+            logger.debug(
+                "cpu_count() failed — falling back to 1",
+                exc_info=True,
+            )
         return 1

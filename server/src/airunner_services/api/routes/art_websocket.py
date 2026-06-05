@@ -5,14 +5,11 @@ from __future__ import annotations
 import asyncio
 import json
 import secrets
-from typing import Any, Optional
+from typing import Optional
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
 from airunner_services.api.routes.art_contracts import GenerationRequest
-from airunner_services.api.routes.art_job_runner import (
-    build_generation_job_metadata,
-)
 from airunner_services.api.routes.art_job_response import run_art_job
 from airunner_services.api.routes.art_runtime import (
     require_runtime_registry,
@@ -131,7 +128,6 @@ async def _run_generation(
     await unload_llm_before_art(ws, source="art_ws_generate")
     client = resolve_art_client(require_runtime_registry(ws))
     tracker = JobTracker()
-    seed_value = art_request.seed if art_request.seed is not None else 0
     msg_id = msg.get("_id", job_id)
 
     if art_request.model:
@@ -206,7 +202,11 @@ async def _run_generation(
                 "job_id": msg_id,
             })
         except Exception:
-            pass
+            logger.debug(
+                "Failed to send cancelled event — connection may "
+                "already be closed",
+                exc_info=True,
+            )
     finally:
         _active_generations.pop(job_id, None)
 
@@ -226,7 +226,6 @@ async def _handle_generate(
 
     # Create the job ID first so cancel can use it immediately.
     tracker = JobTracker()
-    seed_value = _resolve_seed(msg.get("seed"))
     job_id = await tracker.create_job(metadata={})
     await tracker.update_progress(job_id, 1.0, JobState.RUNNING)
     msg["_id"] = job_id
@@ -263,7 +262,11 @@ async def _handle_cancel(
         client = resolve_art_client(require_runtime_registry(ws))
         await asyncio.to_thread(client.cancel, job_id)
     except Exception:
-        pass
+        logger.debug(
+            "Runtime client cancel failed — continuing with "
+            "best-effort cancellation",
+            exc_info=True,
+        )
 
     await ws.send_json({"type": "cancelled", "job_id": job_id})
 

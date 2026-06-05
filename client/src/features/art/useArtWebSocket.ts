@@ -1,5 +1,4 @@
 import { useState, useRef, useCallback, useEffect } from "react";
-import { BASE_URL } from "../../types/api";
 
 function wsUrl(): string {
   const base = import.meta.env.PROD
