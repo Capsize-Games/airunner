@@ -137,7 +137,6 @@ export function useArtWebSocket() {
 
   useEffect(() => {
     mountedRef.current = true;
-    connect();
     return () => {
       mountedRef.current = false;
       if (wsRef.current) {
@@ -152,10 +151,12 @@ export function useArtWebSocket() {
         reconnectTimerRef.current = null;
       }
     };
-  }, [connect]);
+  }, []);
 
   const generate = useCallback(
     (params: ArtGenerateParams): Promise<string> => {
+      // Lazily connect if not already connected
+      connect();
       return new Promise((resolve, reject) => {
         pendingResolve.current = resolve;
         pendingReject.current = reject;
@@ -172,12 +173,14 @@ export function useArtWebSocket() {
         });
       });
     },
-    [sendMessage],
+    [sendMessage, connect],
   );
 
   const cancel = useCallback(() => {
     const jid = state.jobId;
     if (jid) {
+      // Lazily connect if not already connected
+      connect();
       sendMessage({ type: "cancel", job_id: jid });
     }
     setState((prev) => ({
@@ -186,13 +189,15 @@ export function useArtWebSocket() {
       progress: 0,
       jobId: null,
     }));
-  }, [sendMessage, state.jobId]);
+  }, [sendMessage, connect, state.jobId]);
 
   const unload = useCallback(
     (modelId: string) => {
+      // Lazily connect if not already connected
+      connect();
       sendMessage({ type: "unload", model_id: modelId });
     },
-    [sendMessage],
+    [sendMessage, connect],
   );
 
   return {

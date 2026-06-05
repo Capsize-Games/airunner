@@ -1,0 +1,27 @@
+{
+  "url": "http://localhost:5173",
+  "capturedAt": "2026-06-05T20:24:15.942Z",
+  "errors": [],
+  "wsEvents": [
+    {
+      "dir": "open",
+      "url": "ws://localhost:5173/?token=FsPuPxwRq-Yb",
+      "ts": 1780691050175
+    },
+    {
+      "dir": "in",
+      "url": "ws://localhost:5173/?token=FsPuPxwRq-Yb",
+      "data": {
+        "type": "connected"
+      },
+      "ts": 1780691050176
+    },
+    {
+      "dir": "open",
+      "url": "ws://localhost:8188/api/v1/events",
+      "ts": 1780691050412
+    }
+  ],
+  "consoleLogs": [],
+  "failedRequests": []
+}

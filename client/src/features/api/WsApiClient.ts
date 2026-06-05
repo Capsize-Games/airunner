@@ -40,12 +40,18 @@ let _ws: WebSocket | null = null;
 let _connected = false;
 let _reconnectTimer: ReturnType<typeof setTimeout> | null = null;
 let _mountCount = 0;
+let _connecting = false;
 
 // Event callbacks: event type → Set of callbacks
 const _eventCallbacks = new Map<string, Set<EventBusCallback>>();
 
 // Subscribed event types on the WS
 const _subscribedEvents = new Set<string>();
+
+// Connection generation — incremented each time we create a fresh socket.
+// Stale generations are ignored by onclose/onerror to prevent race
+// conditions during StrictMode double-mount and rapid reconnect cycles.
+let _connGen = 0;
 
 // Pending RPC requests: request ID → PendingRpc
 const _pendingRpc = new Map<string, PendingRpc>();
@@ -88,6 +94,12 @@ function _reconnect(): void {
 }
 
 function _connect(): void {
+  // Prevent concurrent connection attempts
+  if (_connecting) return;
+  if (_ws && (_ws.readyState === WebSocket.OPEN ||
+              _ws.readyState === WebSocket.CONNECTING)) {
+    return;
+  }
   if (_ws) {
     const old = _ws;
     old.onclose = null;
@@ -97,11 +109,16 @@ function _connect(): void {
     _ws = null;
   }
 
+  _connecting = true;
+  const gen = ++_connGen;
+
   try {
     const socket = new WebSocket(wsUrl());
     _ws = socket;
 
     socket.onopen = () => {
+      if (gen !== _connGen) return; // stale — a newer socket took over
+      _connecting = false;
       _connected = true;
       // Re-subscribe all currently tracked event types
       const events = [..._subscribedEvents];
@@ -116,6 +133,7 @@ function _connect(): void {
     };
 
     socket.onmessage = (event: MessageEvent) => {
+      if (gen !== _connGen) return; // stale
       // ── Binary frame: resolve the first pending binary RPC ──
       if (typeof event.data !== "string") {
         for (const [id, pending] of _pendingRpc) {
@@ -176,6 +194,8 @@ function _connect(): void {
     };
 
     socket.onclose = (event) => {
+      if (gen !== _connGen) return; // stale
+      _connecting = false;
       _ws = null;
       _connected = false;
       // Reject all pending RPCs
@@ -187,9 +207,12 @@ function _connect(): void {
     };
 
     socket.onerror = () => {
+      if (gen !== _connGen) return; // stale
+      _connecting = false;
       socket.close();
     };
   } catch {
+    _connecting = false;
     if (_mountCount > 0) _reconnect();
   }
 }
@@ -200,13 +223,31 @@ function _disconnect(): void {
     _reconnectTimer = null;
   }
   if (_ws) {
-    const old = _ws;
-    old.onclose = null;
-    old.onerror = null;
-    old.onmessage = null;
-    old.close();
+    // Bump generation so any stale socket callbacks are ignored.
+    _connGen++;
+    if (_ws.readyState === WebSocket.CONNECTING) {
+      // Orphan the connecting socket instead of force-closing it.
+      // Force-closing a CONNECTING socket triggers a
+      // "WebSocket is closed before the connection is established"
+      // error in the browser, which is noisy and misleading since
+      // the disconnect is intentional (e.g. React StrictMode).
+      _ws.onopen = null;
+      _ws.onmessage = null;
+      _ws.onclose = null;
+      _ws.onerror = null;
+      // _ws is intentionally NOT closed — the browser will eventually
+      // time out the connection attempt and fire the close event,
+      // but by then our handlers are removed so no side effects occur.
+    } else {
+      const old = _ws;
+      old.onclose = null;
+      old.onerror = null;
+      old.onmessage = null;
+      old.close();
+    }
     _ws = null;
   }
+  _connecting = false;
   _connected = false;
   // Reject all pending RPCs
   for (const [id, pending] of _pendingRpc) {

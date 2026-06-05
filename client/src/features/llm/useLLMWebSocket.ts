@@ -43,6 +43,9 @@ export function useLLMWebSocket() {
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
     null,
   );
+  // Incremented each time we start a fresh connection so stale
+  // callbacks (from orphaned sockets during StrictMode) are ignored.
+  const connGenRef = useRef(0);
 
   // Callbacks set per-stream (not per-hook-lifetime) so we can read
   // the latest values without re-creating the WS connection.
@@ -60,6 +63,12 @@ export function useLLMWebSocket() {
 
   const connect = useCallback(() => {
     if (!mountedRef.current) return;
+    // Don't disrupt an in-flight connection.
+    if (wsRef.current &&
+        (wsRef.current.readyState === WebSocket.OPEN ||
+         wsRef.current.readyState === WebSocket.CONNECTING)) {
+      return;
+    }
     if (wsRef.current) {
       wsRef.current.onclose = null;
       wsRef.current.onerror = null;
@@ -68,11 +77,14 @@ export function useLLMWebSocket() {
       wsRef.current = null;
     }
 
+    const gen = ++connGenRef.current;
+
     try {
       const socket = new WebSocket(wsUrl());
       wsRef.current = socket;
 
       socket.onmessage = (event) => {
+        if (gen !== connGenRef.current) return; // stale
         try {
           const data = JSON.parse(event.data) as {
             type?: string;
@@ -124,6 +136,7 @@ export function useLLMWebSocket() {
       };
 
       socket.onclose = (event) => {
+        if (gen !== connGenRef.current) return; // stale
         wsRef.current = null;
         if (mountedRef.current && !event.wasClean) {
           reconnectTimerRef.current = setTimeout(connect, 5000);
@@ -131,6 +144,7 @@ export function useLLMWebSocket() {
       };
 
       socket.onerror = () => {
+        if (gen !== connGenRef.current) return; // stale
         socket.close();
       };
     } catch {
@@ -142,14 +156,20 @@ export function useLLMWebSocket() {
 
   useEffect(() => {
     mountedRef.current = true;
-    connect();
     return () => {
       mountedRef.current = false;
+      // Bump gen so any orphaned socket callbacks are ignored
+      connGenRef.current++;
       if (wsRef.current) {
+        // Orphan a CONNECTING socket instead of force-closing it
+        // to avoid "WebSocket is closed before the connection is
+        // established" errors (e.g. React StrictMode double-mount).
+        if (wsRef.current.readyState !== WebSocket.CONNECTING) {
+          wsRef.current.close();
+        }
         wsRef.current.onclose = null;
         wsRef.current.onerror = null;
         wsRef.current.onmessage = null;
-        wsRef.current.close();
         wsRef.current = null;
       }
       if (reconnectTimerRef.current) {
@@ -157,7 +177,8 @@ export function useLLMWebSocket() {
         reconnectTimerRef.current = null;
       }
     };
-  }, [connect]);
+  }, []);
+
 
   const send = useCallback(
     (
@@ -190,6 +211,9 @@ export function useLLMWebSocket() {
         setThinkingBuffer("");
         setError(null);
 
+        // Lazily connect if not already connected
+        connect();
+
         sendMessage({
           type: "chat",
           messages: messages.map((m) => ({
@@ -202,7 +226,7 @@ export function useLLMWebSocket() {
         });
       });
     },
-    [sendMessage],
+    [sendMessage, connect],
   );
 
   const cancel = useCallback(() => {
