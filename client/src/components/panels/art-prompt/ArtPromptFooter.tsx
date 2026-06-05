@@ -4,29 +4,26 @@ import LucideIcon from "../../shared/LucideIcon";
 export default function ArtPromptFooter({
   progress,
   generating,
-  indeterminate,
   hasPrompt,
   onSubmit,
   onCancel,
 }: {
   progress: number;
   generating: boolean;
-  indeterminate: boolean;
   hasPrompt: boolean;
   onSubmit: () => void;
   onCancel: () => void;
 }) {
-
   return (
     <div className="flex-shrink-0 mt-2">
       <div className="d-flex align-items-center gap-2">
         <div className="flex-grow-1">
           <ProgressBar
-            now={indeterminate ? 10 : progress}
+            now={progress}
             variant={generating ? "info" : "secondary"}
             style={{ height: 8 }}
-            animated={generating && progress < 100}
-            striped={indeterminate}
+            animated={generating}
+            striped={generating}
           />
         </div>
         {generating ? (

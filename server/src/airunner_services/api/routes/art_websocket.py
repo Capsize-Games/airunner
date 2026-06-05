@@ -282,17 +282,8 @@ async def _handle_unload(
     model_id = str(msg.get("model_id", ""))
 
     async def _bg():
-        try:
-            client = resolve_art_runtime_client(
-                require_art_runtime_registry(ws),
-            )
-            envelope = build_control_request(
-                RuntimeAction.UNLOAD_MODEL, None, None,
-            )
-            await asyncio.to_thread(client.invoke, envelope)
-        except Exception as exc:
-            logger.warning("Bg unload failed: %s", exc)
-
+        # Notify frontend immediately so the model disappears from the
+        # UI without waiting for the runtime cleanup (which may be slow).
         from airunner_services.api.routes.models_status import (  # noqa: PLC0415
             _external_models,
             _external_models_lock,
@@ -307,6 +298,17 @@ async def _handle_unload(
             "model_type": "art",
             "status": "unloaded",
         })
+
+        try:
+            client = resolve_art_runtime_client(
+                require_art_runtime_registry(ws),
+            )
+            envelope = build_control_request(
+                RuntimeAction.UNLOAD_MODEL, None, None,
+            )
+            await asyncio.to_thread(client.invoke, envelope)
+        except Exception as exc:
+            logger.warning("Bg unload failed: %s", exc)
 
     asyncio.create_task(_bg())
     await ws.send_json({

@@ -52,28 +52,11 @@ export default function ArtPromptPanel() {
   } = useArtWebSocket();
 
   type Phase =
-    | "idle" | "loading" | "generating"
+    | "idle" | "loading"
     | "completed" | "cancelled" | "failed";
 
   const [phase, setPhase] = useState<Phase>("idle");
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  // Track generation phase based on generating/progress transitions
-  const prevGenerating = useRef(generating);
-  useEffect(() => {
-    if (generating && progress === 0 && phase === "idle") {
-      setPhase("loading");
-    } else if (generating && progress > 0) {
-      setPhase("generating");
-    } else if (!generating && prevGenerating.current) {
-      if (progress >= 100) {
-        setPhase("completed");
-      } else {
-        // Could be cancelled or failed — distinguish below
-      }
-    }
-    prevGenerating.current = generating;
-  }, [generating, progress, phase]);
 
   // Auto-dismiss status messages after a few seconds
   useEffect(() => {
@@ -91,8 +74,6 @@ export default function ArtPromptPanel() {
       if (hideTimer.current) clearTimeout(hideTimer.current);
     };
   }, [phase]);
-
-  const indeterminate = phase === "loading";
 
   const onGenerate = useCallback(async () => {
     if (!prompt.trim()) return;
@@ -276,17 +257,12 @@ export default function ArtPromptPanel() {
           loras={activeLoras}
           onDeactivate={deactivateLora}
         />
-        {(phase === "loading" ||
-          phase === "generating" ||
-          phase === "completed" ||
-          phase === "cancelled" ||
-          phase === "failed") && (
+        {phase !== "idle" && (
           <StatusBadge phase={phase} progress={progress} />
         )}
         <ArtPromptFooter
           progress={progress}
           generating={generating}
-          indeterminate={indeterminate}
           hasPrompt={!!prompt.trim()}
           onSubmit={onGenerate}
           onCancel={onCancel}
@@ -305,13 +281,6 @@ const STATUS_CFG: Record<
   loading: {
     icon: "sparkles",
     label: "Loading model…",
-    bg: "rgba(99,153,255,0.12)",
-    border: "rgba(99,153,255,0.25)",
-    color: "#6399ff",
-  },
-  generating: {
-    icon: "sparkles",
-    label: "",
     bg: "rgba(99,153,255,0.12)",
     border: "rgba(99,153,255,0.25)",
     color: "#6399ff",
@@ -349,11 +318,6 @@ function StatusBadge({
   const cfg = STATUS_CFG[phase];
   if (!cfg) return null;
 
-  const label =
-    phase === "generating"
-      ? `Generating… ${Math.round(progress)}%`
-      : cfg.label;
-
   return (
     <div
       style={{
@@ -371,7 +335,7 @@ function StatusBadge({
       }}
     >
       <LucideIcon name={cfg.icon} size={14} />
-      <span>{label}</span>
+      <span>{cfg.label}</span>
     </div>
   );
 }
