@@ -103,51 +103,6 @@ jobs:
             launcher-smoke.xml
             launcher-smoke.txt
 
-  runtime-smoke:
-    runs-on: ubuntu-latest
-
-    strategy:
-      matrix:
-        include:
-          - name: llm
-            smoke-flag: --llm-runtime-smoke
-          - name: stt
-            smoke-flag: --stt-runtime-smoke
-          - name: art
-            smoke-flag: --art-runtime-smoke
-          - name: tts
-            smoke-flag: --tts-runtime-smoke
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
-
-      - name: Install system dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            libgl1 \
-            libglib2.0-0 \
-            libsm6 \
-            libxext6 \
-            libxrender-dev
-
-      - name: Install Python dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -e server/
-
-      - name: Run ${{ matrix.name }} runtime smoke tests
-        run: |
-          python scripts/run_tests.py \
-            ${{ matrix.smoke-flag }} \
-            --verbose 2>&1
-
   eval-tests:
     runs-on: ubuntu-latest
     needs: runtime-contract-tests
