@@ -400,25 +400,16 @@ class ModelDownloadMixin:
             "[Download] Complete. Loading model with automatic quantization...\n"
         )
 
-        try:
-            self.api.llm.send_llm_text_streamed_signal(
-                LLMResponse(
+        self.emit_signal(
+            SignalCode.LLM_TEXT_STREAMED_SIGNAL,
+            {
+                "response": LLMResponse(
                     message=message,
                     is_end_of_message=False,
                     is_system_message=True,
                 )
-            )
-        except Exception:
-            self.emit_signal(
-                SignalCode.LLM_TEXT_STREAMED_SIGNAL,
-                {
-                    "response": LLMResponse(
-                        message=message,
-                        is_end_of_message=False,
-                        is_system_message=True,
-                    )
-                },
-            )
+            },
+        )
 
     def _auto_load_downloaded_model(self) -> None:
         """Load the downloaded model and replay any pending request."""

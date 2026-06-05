@@ -162,10 +162,6 @@ class BackgroundRemovalWorker(Worker):
             self._mark_model_ready()
         except Exception as exc:
             self._mark_model_failed()
-            try:
-                self.api.application_error(message=str(exc))
-            except Exception:
-                pass
 
     def _request_model_download(
         self,

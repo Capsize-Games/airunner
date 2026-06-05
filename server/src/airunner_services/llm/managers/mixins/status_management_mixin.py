@@ -35,13 +35,10 @@ class StatusManagementMixin:
             request_id=getattr(self, "_current_request_id", None),
         )
 
-        try:
-            self.api.llm.send_llm_text_streamed_signal(response)
-        except Exception:
-            self.emit_signal(
-                SignalCode.LLM_TEXT_STREAMED_SIGNAL,
-                {"response": response, "request_id": response.request_id},
-            )
+        self.emit_signal(
+            SignalCode.LLM_TEXT_STREAMED_SIGNAL,
+            {"response": response, "request_id": response.request_id},
+        )
 
     def _send_success_message(self: "LLMModelManager", is_api: bool) -> None:
         """Send model loaded success message to GUI.
@@ -62,13 +59,10 @@ class StatusManagementMixin:
             request_id=getattr(self, "_current_request_id", None),
         )
 
-        try:
-            self.api.llm.send_llm_text_streamed_signal(response)
-        except Exception:
-            self.emit_signal(
-                SignalCode.LLM_TEXT_STREAMED_SIGNAL,
-                {"response": response, "request_id": response.request_id},
-            )
+        self.emit_signal(
+            SignalCode.LLM_TEXT_STREAMED_SIGNAL,
+            {"response": response, "request_id": response.request_id},
+        )
 
     def _send_quantization_info(self: "LLMModelManager") -> None:
         """Send auto-selected quantization information to GUI.
