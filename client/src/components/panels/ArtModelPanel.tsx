@@ -193,11 +193,13 @@ export default function ArtModelPanel() {
   const toggleSeedRandom = () => {
     if (seedRandomized) {
       setSeedRandomized(false);
+      try { localStorage.setItem("airunner_seed", String(seed)); } catch {}
       persist({ seed });
     } else {
       const s = Math.floor(Math.random() * 2147483647) + 1;
       setSeedRandomized(true);
       setSeed(s);
+      try { localStorage.setItem("airunner_seed", String(-1)); } catch {}
       persist({ seed: -1 });
     }
   };
@@ -302,6 +304,7 @@ export default function ArtModelPanel() {
             onSeedChange={(v) => {
               setSeed(v);
               setSeedRandomized(false);
+              try { localStorage.setItem("airunner_seed", String(v)); } catch {}
               persist({ seed: v });
             }}
             onToggleRandom={toggleSeedRandom}

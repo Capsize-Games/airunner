@@ -20,6 +20,7 @@ export interface ArtWebSocketState {
 export interface ArtGenerateParams {
   prompt: string;
   negativePrompt?: string;
+  seed?: number;
   artModel?: string;
   artVersion?: string;
   scheduler?: string;
@@ -166,6 +167,7 @@ export function useArtWebSocket() {
           type: "generate",
           prompt: params.prompt,
           negative_prompt: params.negativePrompt,
+          seed: params.seed,
           model: params.artModel,
           version: params.artVersion,
           scheduler: params.scheduler,

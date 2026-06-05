@@ -62,10 +62,19 @@ export default function ArtPromptPanel({
     const ls = (k: string) => {
       try { return localStorage.getItem(k) || ""; } catch { return ""; }
     };
+    const lsNum = (k: string): number | undefined => {
+      try {
+        const v = localStorage.getItem(k);
+        if (v === null || v === "") return undefined;
+        const n = Number(v);
+        return isNaN(n) ? undefined : n;
+      } catch { return undefined; }
+    };
     try {
       const imageBase64 = await artGenerate({
         prompt: prompt.trim(),
         negativePrompt: negativePrompt?.trim() || undefined,
+        seed: lsNum("airunner_seed"),
         artModel: ls("airunner_art_model") || undefined,
         artVersion: ls("airunner_art_version") || undefined,
         scheduler: ls("airunner_art_scheduler") || undefined,
