@@ -10,6 +10,10 @@ from typing import Optional
 
 import torch
 
+from airunner_services.utils.application.api_reference import (
+    peek_registered_api,
+)
+
 from airunner_services.settings import AIRUNNER_MEM_LLM_DEVICE
 from airunner_services.settings import AIRUNNER_MEM_SD_DEVICE
 from airunner_services.settings import AIRUNNER_MEM_STT_DEVICE
@@ -178,7 +182,7 @@ class BaseModelManager(
             )
             return
         self._model_status[model] = status
-        api = self.refresh_api_reference()
+        api = peek_registered_api()
         callback = getattr(api, "change_model_status", None)
         if callable(callback):
             try:

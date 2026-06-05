@@ -5,6 +5,9 @@ from __future__ import annotations
 from typing import List, Optional
 
 from airunner_services.contract_enums import ModelType, SignalCode, ModelStatus
+from airunner_services.utils.application.api_reference import (
+    peek_registered_api,
+)
 from airunner_services.utils.application.mediator_mixin import MediatorMixin
 from airunner_services.utils.memory.gpu_memory_stats import (
     gpu_memory_stats,
@@ -206,18 +209,12 @@ class ModelLoadBalancer(MediatorMixin):
         return gpu_memory_stats(device)
 
     def _daemon_client(self):
-        """Return the GUI daemon client when daemon-backed control is active."""
+        """Return the daemon client when daemon-backed control is active."""
         worker_manager_client = self._worker_manager_daemon_client()
         if worker_manager_client is not None:
             return worker_manager_client
-        refresher = getattr(self, "refresh_api_reference", None)
-        if callable(refresher):
-            refreshed_api = refresher()
-            if refreshed_api is not None:
-                self.api = refreshed_api
-        if self.api is None or getattr(self.api, "headless", False):
-            return None
-        return getattr(self.api, "daemon_client", None)
+        api = peek_registered_api()
+        return getattr(api, "daemon_client", None) if api else None
 
     def _daemon_loaded_models(self) -> Optional[List[ModelType]]:
         """Return loaded models from daemon status when available."""

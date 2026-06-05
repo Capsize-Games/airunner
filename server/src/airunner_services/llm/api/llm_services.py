@@ -57,20 +57,9 @@ class LLMAPIService(ServiceLLMAPIService):
         return None
 
     def _daemon_client(self):
-        """Return the GUI daemon client when one is available."""
-        refresher = getattr(self, "refresh_api_reference", None)
-        if callable(refresher):
-            refreshed_api = refresher()
-            if refreshed_api is not None:
-                self.api = refreshed_api
-        api = getattr(self, "api", None)
-        if api is None:
-            api = LLMAPIService._resolve_api_instance()
-            if api is not None:
-                self.api = api
-        if api is None or getattr(api, "headless", False):
-            return None
-        return getattr(api, "daemon_client", None)
+        """Return the daemon client when one is available."""
+        api = peek_registered_api()
+        return getattr(api, "daemon_client", None) if api else None
 
     @staticmethod
     def _resolve_api_instance():
