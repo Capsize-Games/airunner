@@ -24,7 +24,7 @@ SignalCode = signal_code_proxy(
 )
 
 
-class HeadlessDownloadProgress:
+class DownloadProgress:
     """Track one service model download with tqdm when available."""
 
     def __init__(self, model_name: str, model_path: str):
@@ -269,7 +269,7 @@ class ModelDownloadMixin:
         print(f"[Download] Repository: {repo_id}")
         print(f"[Download] Destination: {model_path}\n")
 
-        progress = HeadlessDownloadProgress(model_name, model_path)
+        progress = DownloadProgress(model_name, model_path)
         job_service = DownloadJobService()
         download_model_type = "gguf" if is_gguf and gguf_filename else (
             model_info.get("model_type", "llm")
@@ -447,4 +447,4 @@ class ModelDownloadMixin:
             )
 
 
-__all__ = ["HeadlessDownloadProgress", "ModelDownloadMixin"]
+__all__ = ["DownloadProgress", "ModelDownloadMixin"]

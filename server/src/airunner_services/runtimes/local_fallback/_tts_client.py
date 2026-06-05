@@ -88,7 +88,7 @@ class LocalFallbackTTSClient(_SignalRuntimeClient):
         return self._failure_response(
             request_id,
             "tts_audio_unavailable",
-            "Headless TTS runtime could not render audio",
+            "TTS runtime could not render audio",
             retryable=True,
         )
 
@@ -129,7 +129,7 @@ class LocalFallbackTTSClient(_SignalRuntimeClient):
                 return self._failure_response(
                     request_id,
                     "tts_load_failed",
-                    "Headless TTS worker is unavailable",
+                    "TTS worker is unavailable",
                 )
 
             load_tts()
@@ -180,7 +180,7 @@ class LocalFallbackTTSClient(_SignalRuntimeClient):
                 return self._failure_response(
                     request_id,
                     "tts_unload_failed",
-                    "Headless TTS worker is unavailable",
+                    "TTS worker is unavailable",
                 )
 
             unload_tts()

@@ -124,7 +124,7 @@ class QThread(QObject):
 
 
 class QCoreApplication(QObject):
-    """Headless application singleton used by the service layer."""
+    """Application singleton used by the service layer."""
 
     _instance: Optional["QCoreApplication"] = None
 

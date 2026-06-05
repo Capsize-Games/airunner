@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Headless AI Runner daemon supervisor for eval testing and API access.
+AI Runner daemon supervisor for eval testing and API access.
 
 This command no longer creates its own App or worker graph. Instead it
 connects to an already running daemon or launches a managed daemon and lets
@@ -108,7 +108,7 @@ BANNER = """
 def _build_parser() -> argparse.ArgumentParser:
     """Create the CLI parser for the daemon supervisor."""
     parser = argparse.ArgumentParser(
-        description="AI Runner Headless Server - daemon-backed HTTP API",
+        description="AI Runner Server - daemon-backed HTTP API",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=__doc__,
     )
@@ -356,7 +356,7 @@ def _log_startup(
 ) -> None:
     """Log the daemon-backed daemon startup configuration."""
     logger.info("=" * 60)
-    logger.info("AI Runner Headless Supervisor")
+    logger.info("AI Runner Supervisor")
     logger.info("Daemon-backed mode; no local worker graph is created")
     logger.info("=" * 60)
     logger.info("Host: %s", args.host)

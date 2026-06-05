@@ -1,4 +1,4 @@
-"""Headless lifecycle and knowledge-system helpers for App."""
+"""Lifecycle and knowledge-system helpers for App."""
 
 from __future__ import annotations
 

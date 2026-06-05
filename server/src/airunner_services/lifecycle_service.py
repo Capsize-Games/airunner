@@ -66,7 +66,7 @@ class CoreLifecycleService:
         )
         self._attach_state()
         self._initialized = True
-        self.logger.info("Headless lifecycle initialized")
+        self.logger.info("Lifecycle initialized")
 
     def preload_llm_model(self) -> None:
         """Preload the configured local LLM when enabled."""
