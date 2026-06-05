@@ -1,6 +1,13 @@
 """Service-owned ControlNet settings model."""
 
-from sqlalchemy import Boolean, Column, ForeignKey, Integer, LargeBinary, String
+from sqlalchemy import (
+    Boolean,
+    Column,
+    ForeignKey,
+    Integer,
+    LargeBinary,
+    String,
+)
 
 from airunner_services.database.base import BaseModel
 

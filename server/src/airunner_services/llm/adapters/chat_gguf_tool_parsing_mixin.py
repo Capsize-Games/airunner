@@ -41,7 +41,7 @@ class ChatGGUFToolParsingMixin:
         """Parse JSON-mode tool calls embedded in assistant text."""
         tool_calls: List[Dict[str, Any]] = []
         cleaned = content
-        pattern = r'\{(?:[^{}]|(\{(?:[^{}]|\{[^{}]*\})*\}))*\}'
+        pattern = r"\{(?:[^{}]|(\{(?:[^{}]|\{[^{}]*\})*\}))*\}"
         for match in re.finditer(pattern, content or "", re.DOTALL):
             json_str = match.group(0)
             try:
@@ -114,7 +114,7 @@ class ChatGGUFToolParsingMixin:
     ) -> tuple[List[Dict[str, Any]], str]:
         """Parse XML-tagged tool calls from model response text."""
         tool_calls: List[Dict[str, Any]] = []
-        pattern = r'<tool_call>\s*(.*?)\s*</tool_call>'
+        pattern = r"<tool_call>\s*(.*?)\s*</tool_call>"
         matches = re.findall(pattern, content, re.DOTALL)
         for match in matches:
             tool_call = self._parse_xml_tool_call_match(match)
@@ -143,7 +143,7 @@ class ChatGGUFToolParsingMixin:
     def _strip_xml_tool_calls(self, content: str) -> str:
         """Remove XML tool-call tags from response text."""
         return re.sub(
-            r'<tool_call>\s*.*?\s*</tool_call>',
+            r"<tool_call>\s*.*?\s*</tool_call>",
             "",
             content,
             flags=re.DOTALL,
@@ -166,9 +166,13 @@ class ChatGGUFToolParsingMixin:
             tool_calls.append(self._build_native_tool_call(raw_call))
         return tool_calls
 
-    def _build_native_tool_call(self, raw_call: Dict[str, Any]) -> Dict[str, Any]:
+    def _build_native_tool_call(
+        self, raw_call: Dict[str, Any]
+    ) -> Dict[str, Any]:
         """Build one normalized native tool-call payload."""
-        function = raw_call.get("function", {}) if isinstance(raw_call, dict) else {}
+        function = (
+            raw_call.get("function", {}) if isinstance(raw_call, dict) else {}
+        )
         arguments = self._parse_native_tool_arguments(function)
         return {
             "id": raw_call.get("id") or str(uuid.uuid4()),
@@ -177,7 +181,9 @@ class ChatGGUFToolParsingMixin:
             "type": "tool_call",
         }
 
-    def _parse_native_tool_arguments(self, function: Dict[str, Any]) -> Dict[str, Any]:
+    def _parse_native_tool_arguments(
+        self, function: Dict[str, Any]
+    ) -> Dict[str, Any]:
         """Parse native tool-call arguments into a dictionary."""
         arguments = function.get("arguments", {})
         if not isinstance(arguments, str):

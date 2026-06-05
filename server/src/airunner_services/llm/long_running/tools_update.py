@@ -36,8 +36,11 @@ def _added_feature_message(
     requires_api=False,
 )
 def add_project_feature(
-    project_id: int, name: str, description: str,
-    category: str = "functional", priority: int = 5,
+    project_id: int,
+    name: str,
+    description: str,
+    category: str = "functional",
+    priority: int = 5,
     verification_steps: Optional[list[str]] = None,
 ) -> str:
     """Add a feature to one project."""
@@ -52,8 +55,9 @@ def add_project_feature(
             priority=priority,
             verification_steps=steps,
         )
-        return _added_feature_message(name, feature.id, parsed_category.value,
-                                      priority, len(steps))
+        return _added_feature_message(
+            name, feature.id, parsed_category.value, priority, len(steps)
+        )
     except Exception as error:
         return error_message("Error adding feature", error)
 
@@ -81,7 +85,9 @@ def update_feature_status(
             "not_started, blocked"
         )
     try:
-        project_manager().update_feature_status(feature_id, parsed_status, error)
+        project_manager().update_feature_status(
+            feature_id, parsed_status, error
+        )
         return f"Feature {feature_id} status updated to: {status}"
     except Exception as exc:
         return error_message("Error updating status", exc)
@@ -109,7 +115,11 @@ def log_project_progress(
             files_changed=files_changed or [],
             git_commit=git_commit,
         )
-        commit_msg = f"\nGit commit: {entry.git_commit_hash[:7]}" if entry.git_commit_hash else ""
+        commit_msg = (
+            f"\nGit commit: {entry.git_commit_hash[:7]}"
+            if entry.git_commit_hash
+            else ""
+        )
         return f"Progress logged at {entry.timestamp}{commit_msg}"
     except Exception as error:
         return error_message("Error logging progress", error)

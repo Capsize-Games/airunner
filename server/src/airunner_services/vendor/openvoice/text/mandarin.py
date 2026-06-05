@@ -3,7 +3,6 @@ from pypinyin import lazy_pinyin, BOPOMOFO
 import jieba
 import cn2an
 
-
 # List of (Latin alphabet, bopomofo) pairs:
 _latin_to_bopomofo = [
     (re.compile("%s" % x[0], re.IGNORECASE), x[1])

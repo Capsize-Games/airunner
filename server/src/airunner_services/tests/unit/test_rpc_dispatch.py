@@ -15,14 +15,18 @@ def test_path_to_regex_literal():
 
 
 def test_path_to_regex_with_params():
-    pattern, params = _path_to_regex("/api/v1/settings/resources/{name}/singleton")
+    pattern, params = _path_to_regex(
+        "/api/v1/settings/resources/{name}/singleton"
+    )
     match = pattern.match("/api/v1/settings/resources/myres/singleton")
     assert match is not None
     assert params == ["name"]
 
 
 def test_path_to_regex_multiple_params():
-    pattern, params = _path_to_regex("/api/v1/art/images/{date}/info/{filename}")
+    pattern, params = _path_to_regex(
+        "/api/v1/art/images/{date}/info/{filename}"
+    )
     match = pattern.match("/api/v1/art/images/20240601/info/test.png")
     assert match is not None
     assert params == ["date", "filename"]

@@ -33,9 +33,7 @@ class ServiceWorkerManager:
                 ImageExportWorker,
             )
 
-            self._image_export_worker = self._worker_factory(
-                ImageExportWorker
-            )
+            self._image_export_worker = self._worker_factory(ImageExportWorker)
         return self._image_export_worker
 
     @property
@@ -46,9 +44,7 @@ class ServiceWorkerManager:
                 LLMGenerateWorker,
             )
 
-            self._llm_generate_worker = self._worker_factory(
-                LLMGenerateWorker
-            )
+            self._llm_generate_worker = self._worker_factory(LLMGenerateWorker)
         return self._llm_generate_worker
 
     @property

@@ -29,10 +29,10 @@ logger = logging.getLogger(__name__)
 class ZImageTextEncoder(nn.Module):
     """
     Z-Image text encoder wrapper.
-    
+
     Wraps a Qwen model for text encoding, supporting quantization
     for memory efficiency.
-    
+
     Args:
         model_path: Path to text encoder model
         tokenizer_path: Path to tokenizer (defaults to model_path)
@@ -40,7 +40,7 @@ class ZImageTextEncoder(nn.Module):
         dtype: Data type
         quantization: Quantization level (None, "4bit", "8bit")
     """
-    
+
     def __init__(
         self,
         model_path: Optional[str] = None,
@@ -53,7 +53,7 @@ class ZImageTextEncoder(nn.Module):
         enable_cpu_offload: bool = False,
     ):
         super().__init__()
-        
+
         self.model_path = model_path
         self.tokenizer_path = tokenizer_path
         self.dtype = dtype or torch.bfloat16
@@ -65,13 +65,13 @@ class ZImageTextEncoder(nn.Module):
         self._prefer_cpu_execution = (
             device is not None and torch.device(device).type == "cpu"
         )
-        
+
         self.model: Optional[nn.Module] = None
         self.tokenizer: Optional[ZImageTokenizer] = None
-        
+
         # Hidden state extraction settings
         self.layer_idx = -2  # Second to last layer
-        
+
         if model_path is not None:
             self.load_model(model_path)
 
@@ -82,19 +82,19 @@ class ZImageTextEncoder(nn.Module):
             helper = ZImageTextEncoderLoaderHelper(self)
             self._loader_helper = helper
         return helper
-    
+
     @property
     def device(self) -> torch.device:
         """Get model device."""
         if self.model is not None:
             return next(self.model.parameters()).device
         return self._device or torch.device("cpu")
-    
+
     @property
     def hidden_size(self) -> int:
         """Get hidden size of text encoder."""
         return 2560  # Qwen3-4B hidden size
-    
+
     def load_model(self, model_path: str):
         """Load the text encoder model."""
         self._get_loader_helper().load_model(model_path)
@@ -122,7 +122,7 @@ class ZImageTextEncoder(nn.Module):
         del self.model
         self.model = None
         clear_memory(device)
-    
+
     def encode(
         self,
         text: Union[str, List[str]],
@@ -130,22 +130,22 @@ class ZImageTextEncoder(nn.Module):
     ) -> Tuple[torch.Tensor, Optional[torch.Tensor]]:
         """
         Encode text to embeddings.
-        
+
         Args:
             text: Input text or list of texts
             return_attention_mask: Whether to return attention mask
-            
+
         Returns:
             Tuple of (embeddings, attention_mask)
         """
         if self.model is None or self.tokenizer is None:
             raise RuntimeError("Model not loaded. Call load_model first.")
-        
+
         # Tokenize
         tokens = self.tokenizer.tokenize(text)
         input_ids = tokens["input_ids"].to(self.device)
         attention_mask = tokens["attention_mask"].to(self.device)
-        
+
         # Forward pass
         with torch.no_grad():
             outputs = self.model(
@@ -153,14 +153,14 @@ class ZImageTextEncoder(nn.Module):
                 attention_mask=attention_mask,
                 output_hidden_states=True,
             )
-        
+
         # Get hidden state from specified layer
         hidden_states = outputs.hidden_states[self.layer_idx]
-        
+
         if return_attention_mask:
             return hidden_states, attention_mask
         return hidden_states, None
-    
+
     def forward(
         self,
         input_ids: torch.Tensor,
@@ -168,52 +168,52 @@ class ZImageTextEncoder(nn.Module):
     ) -> torch.Tensor:
         """
         Forward pass with pre-tokenized input.
-        
+
         Args:
             input_ids: Token IDs of shape (B, L)
             attention_mask: Optional attention mask
-            
+
         Returns:
             Hidden states of shape (B, L, D)
         """
         if self.model is None:
             raise RuntimeError("Model not loaded.")
-        
+
         with torch.no_grad():
             outputs = self.model(
                 input_ids=input_ids,
                 attention_mask=attention_mask,
                 output_hidden_states=True,
             )
-        
+
         return outputs.hidden_states[self.layer_idx]
-    
+
     def unload(self):
         """Unload model to free memory."""
         device = getattr(self.model, "device", None)
         if self.model is not None:
             del self.model
             self.model = None
-        
+
         if self.tokenizer is not None:
             del self.tokenizer
             self.tokenizer = None
-        
+
         clear_memory(device)
 
 
 class SimpleTextEncoder(nn.Module):
     """
     Simple text encoder for testing without full Qwen model.
-    
+
     Uses random projections for text encoding - NOT for production use.
-    
+
     Args:
         vocab_size: Vocabulary size
         hidden_size: Output hidden size
         max_length: Maximum sequence length
     """
-    
+
     def __init__(
         self,
         vocab_size: int = 151936,
@@ -221,15 +221,15 @@ class SimpleTextEncoder(nn.Module):
         max_length: int = 512,
     ):
         super().__init__()
-        
+
         self.vocab_size = vocab_size
         self.hidden_size = hidden_size
         self.max_length = max_length
-        
+
         # Simple embedding + projection
         self.embedding = nn.Embedding(vocab_size, hidden_size)
         self.proj = nn.Linear(hidden_size, hidden_size)
-    
+
     def forward(
         self,
         input_ids: torch.Tensor,
@@ -237,11 +237,11 @@ class SimpleTextEncoder(nn.Module):
     ) -> torch.Tensor:
         """
         Forward pass.
-        
+
         Args:
             input_ids: Token IDs
             attention_mask: Optional mask (unused)
-            
+
         Returns:
             Embeddings
         """

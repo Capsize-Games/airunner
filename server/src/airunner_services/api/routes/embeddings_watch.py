@@ -75,7 +75,9 @@ class _EmbeddingFileHandler(FileSystemEventHandler):
             dest.lower().endswith(tuple(EMBEDDING_EXTENSIONS))
         ):
             logger.debug(
-                "Embedding watch move event: %s -> %s", src, dest,
+                "Embedding watch move event: %s -> %s",
+                src,
+                dest,
             )
             _notify_subscribers()
 
@@ -111,8 +113,7 @@ def _start_watcher() -> None:
     observer.start()
     _watcher_observer = observer
     logger.info(
-        "Embedding file watcher started — "
-        "monitoring %d director%s",
+        "Embedding file watcher started — " "monitoring %d director%s",
         len(dirs),
         "ies" if len(dirs) != 1 else "y",
     )

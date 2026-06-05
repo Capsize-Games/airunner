@@ -29,7 +29,9 @@ def feature_section(features: list[Any]) -> list[str]:
     """Return the feature-status section lines."""
     lines: list[str] = []
     for status in FeatureStatus:
-        status_features = [feature for feature in features if feature.status == status]
+        status_features = [
+            feature for feature in features if feature.status == status
+        ]
         if status_features:
             lines.append(f"\n#### {status.value.upper()}")
             lines.extend(f"- {feature.name}" for feature in status_features)
@@ -38,13 +40,20 @@ def feature_section(features: list[Any]) -> list[str]:
 
 def progress_section(progress_log: list[Any]) -> list[str]:
     """Return the progress-log section lines."""
-    return ["", "## Progress Log", "", *[entry.to_log_string() for entry in progress_log]]
+    return [
+        "",
+        "## Progress Log",
+        "",
+        *[entry.to_log_string() for entry in progress_log],
+    ]
 
 
 def git_section(git_log: list[dict[str, str]]) -> list[str]:
     """Return the git-history section lines."""
     lines = ["", "## Git History", ""]
-    lines.extend(f"- [{commit['hash'][:7]}] {commit['message']}" for commit in git_log)
+    lines.extend(
+        f"- [{commit['hash'][:7]}] {commit['message']}" for commit in git_log
+    )
     return lines
 
 

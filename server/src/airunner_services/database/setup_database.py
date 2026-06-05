@@ -11,9 +11,10 @@ from sqlalchemy import inspect
 from sqlalchemy.orm import sessionmaker
 
 from airunner_services.settings import AIRUNNER_BASE_PATH
-from airunner_services.settings import AIRUNNER_DB_URL as DEFAULT_AIRUNNER_DB_URL
+from airunner_services.settings import (
+    AIRUNNER_DB_URL as DEFAULT_AIRUNNER_DB_URL,
+)
 from airunner_services.database.db.engine import create_configured_engine
-
 
 _SETUP_LOCK = threading.Lock()
 _COMPLETED_SETUP_URLS: set[str] = set()
@@ -88,9 +89,7 @@ def _migration_signature(
         for migration_file in sorted(version_dir.glob("*.py")):
             stat = migration_file.stat()
             relative_path = migration_file.relative_to(base)
-            parts.append(
-                f"{relative_path}:{stat.st_mtime_ns}:{stat.st_size}"
-            )
+            parts.append(f"{relative_path}:{stat.st_mtime_ns}:{stat.st_size}")
     return "|".join(parts)
 
 

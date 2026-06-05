@@ -53,8 +53,14 @@ class APIServerThread(threading.Thread):
         """Start uvicorn and serve requests."""
         try:
             api_key = (os.environ.get("AIRUNNER_API_KEY") or "").strip()
-            insecure_no_auth = os.environ.get("AIRUNNER_INSECURE_NO_AUTH", "0") == "1"
-            if not is_loopback_host(self.host) and not insecure_no_auth and not api_key:
+            insecure_no_auth = (
+                os.environ.get("AIRUNNER_INSECURE_NO_AUTH", "0") == "1"
+            )
+            if (
+                not is_loopback_host(self.host)
+                and not insecure_no_auth
+                and not api_key
+            ):
                 logger.error(
                     "Refusing to bind to non-loopback host without AIRUNNER_API_KEY. "
                     "Set AIRUNNER_API_KEY or AIRUNNER_INSECURE_NO_AUTH=1 (not recommended)."
@@ -63,8 +69,12 @@ class APIServerThread(threading.Thread):
 
             app = create_app(app_instance=self.app_instance)
 
-            logger.info(f"FastAPI server listening on http://{self.host}:{self.port}")
-            logger.info("Available endpoints: /health, /llm/*, /art, /api/v1/*")
+            logger.info(
+                f"FastAPI server listening on http://{self.host}:{self.port}"
+            )
+            logger.info(
+                "Available endpoints: /health, /llm/*, /art, /api/v1/*"
+            )
 
             config = uvicorn.Config(
                 app,

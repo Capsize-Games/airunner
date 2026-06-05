@@ -29,14 +29,23 @@ def _decision_record(
 
 
 def record_decision(
-    manager: Any, project_id: int, context: str, decision: str,
-    reasoning: str, feature_id: Optional[int] = None,
+    manager: Any,
+    project_id: int,
+    context: str,
+    decision: str,
+    reasoning: str,
+    feature_id: Optional[int] = None,
     tags: Optional[list[str]] = None,
 ) -> DecisionMemory:
     """Record one decision for future reference."""
     with session_scope() as db:
         memory = _decision_record(
-            project_id, context, decision, reasoning, feature_id, tags,
+            project_id,
+            context,
+            decision,
+            reasoning,
+            feature_id,
+            tags,
         )
         db.add(memory)
         db.commit()

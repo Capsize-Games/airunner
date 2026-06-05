@@ -8,7 +8,6 @@ from airunner_services.startup_env import (
     configure_early_torch_allocator_environment,
 )
 
-
 configure_early_torch_allocator_environment()
 
 from airunner_services.contract_enums import (  # noqa: E402
@@ -19,15 +18,23 @@ from airunner_services.contract_enums import (  # noqa: E402
 )
 from airunner_services.settings import AIRUNNER_LOG_LEVEL  # noqa: E402
 from airunner_services.utils.application import get_logger  # noqa: E402
-from airunner_services.utils.application.log_hygiene import summarize_text  # noqa: E402
-from airunner_services.utils.application.logging_utils import configure_service_logging  # noqa: E402
-from airunner_services.utils.application.mediator_mixin import MediatorMixin  # noqa: E402
+from airunner_services.utils.application.log_hygiene import (
+    summarize_text,
+)  # noqa: E402
+from airunner_services.utils.application.logging_utils import (
+    configure_service_logging,
+)  # noqa: E402
+from airunner_services.utils.application.mediator_mixin import (
+    MediatorMixin,
+)  # noqa: E402
 from airunner_services.utils.application.runtime_primitives import (  # noqa: E402
     QCoreApplication,
 )
 
 from airunner_services.app.runtime_mixin import RuntimeMixin  # noqa: E402
-from airunner_services.runtimes.bootstrap import build_runtime_registry  # noqa: E402
+from airunner_services.runtimes.bootstrap import (
+    build_runtime_registry,
+)  # noqa: E402
 
 
 class ServiceApp(RuntimeMixin, MediatorMixin):

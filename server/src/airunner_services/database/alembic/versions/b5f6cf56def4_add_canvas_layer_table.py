@@ -11,7 +11,6 @@ from typing import Sequence, Union
 from airunner_services.database.models.canvas_layer import CanvasLayer
 from airunner_services.database.db.table import add_table, drop_table
 
-
 # revision identifiers, used by Alembic.
 revision: str = "b5f6cf56def4"
 down_revision: Union[str, None] = "16692f02ba0d"

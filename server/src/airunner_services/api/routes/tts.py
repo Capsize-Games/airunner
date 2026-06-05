@@ -7,7 +7,13 @@ import base64
 import io
 from typing import List
 
-from fastapi import APIRouter, HTTPException, Request, WebSocket, WebSocketDisconnect
+from fastapi import (
+    APIRouter,
+    HTTPException,
+    Request,
+    WebSocket,
+    WebSocketDisconnect,
+)
 from fastapi.responses import StreamingResponse
 
 from airunner_services.ipc.messages import EnvelopeStatus
@@ -60,9 +66,7 @@ async def synthesize_speech(request: TTSRequest, req: Request):
         )
     if response.status is not EnvelopeStatus.SUCCEEDED:
         detail = (
-            response.error.message
-            if response.error
-            else "TTS request failed"
+            response.error.message if response.error else "TTS request failed"
         )
         raise HTTPException(
             status_code=tts_error_status_code(response),
@@ -137,10 +141,12 @@ async def tts_websocket(websocket: WebSocket):
             if msg_type == "synthesize":
                 text = str(data.get("text", "")).strip()
                 if not text:
-                    await websocket.send_json({
-                        "type": "error",
-                        "message": "No text provided",
-                    })
+                    await websocket.send_json(
+                        {
+                            "type": "error",
+                            "message": "No text provided",
+                        }
+                    )
                     continue
 
                 logger.info(
@@ -158,20 +164,25 @@ async def tts_websocket(websocket: WebSocket):
                     )
                     envelope = build_tts_envelope(request)
                     response = await asyncio.to_thread(
-                        client.invoke, envelope,
+                        client.invoke,
+                        envelope,
                     )
                 except HTTPException as exc:
-                    await websocket.send_json({
-                        "type": "error",
-                        "message": exc.detail,
-                    })
+                    await websocket.send_json(
+                        {
+                            "type": "error",
+                            "message": exc.detail,
+                        }
+                    )
                     continue
                 except Exception as exc:
                     logger.error(f"TTS WS error: {exc}")
-                    await websocket.send_json({
-                        "type": "error",
-                        "message": f"Synthesis failed: {str(exc)}",
-                    })
+                    await websocket.send_json(
+                        {
+                            "type": "error",
+                            "message": f"Synthesis failed: {str(exc)}",
+                        }
+                    )
                     continue
 
                 if response.status is not EnvelopeStatus.SUCCEEDED:
@@ -180,30 +191,38 @@ async def tts_websocket(websocket: WebSocket):
                         if response.error
                         else "TTS request failed"
                     )
-                    await websocket.send_json({
-                        "type": "error",
-                        "message": detail,
-                    })
+                    await websocket.send_json(
+                        {
+                            "type": "error",
+                            "message": detail,
+                        }
+                    )
                     continue
 
                 try:
                     audio_data = tts_response_audio(response)
                     audio_b64 = base64.b64encode(audio_data).decode("ascii")
-                    await websocket.send_json({
-                        "type": "audio",
-                        "data": audio_b64,
-                        "format": "wav",
-                    })
+                    await websocket.send_json(
+                        {
+                            "type": "audio",
+                            "data": audio_b64,
+                            "format": "wav",
+                        }
+                    )
                 except HTTPException as exc:
-                    await websocket.send_json({
-                        "type": "error",
-                        "message": exc.detail,
-                    })
+                    await websocket.send_json(
+                        {
+                            "type": "error",
+                            "message": exc.detail,
+                        }
+                    )
             else:
-                await websocket.send_json({
-                    "type": "error",
-                    "message": f"Unknown message type: {msg_type}",
-                })
+                await websocket.send_json(
+                    {
+                        "type": "error",
+                        "message": f"Unknown message type: {msg_type}",
+                    }
+                )
     except WebSocketDisconnect:
         logger.info("TTS WebSocket disconnected")
     except Exception as exc:

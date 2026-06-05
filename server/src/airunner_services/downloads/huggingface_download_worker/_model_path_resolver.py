@@ -6,7 +6,6 @@ placed, based on model type and repository ID.
 
 from pathlib import Path
 
-
 _MODEL_TYPES_WITH_FLAT_DIR = frozenset({"art", "stt", "tts_openvoice", "rmbg"})
 
 

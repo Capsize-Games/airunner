@@ -11,7 +11,6 @@ from typing import Sequence, Union
 from airunner_services.database.db import add_table, drop_table
 from airunner_services.database.models.agent_config import AgentConfig
 
-
 # revision identifiers, used by Alembic.
 revision: str = "310819639420"
 down_revision: Union[str, None] = "04ea79f25b7a"

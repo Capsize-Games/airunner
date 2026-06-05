@@ -12,7 +12,6 @@ from typing import Sequence, Union
 from airunner_services.database.db import add_column, drop_column
 from airunner_services.database.models.rag_settings import RAGSettings
 
-
 # revision identifiers, used by Alembic.
 revision: str = "65aa37e4593f"
 down_revision: Union[str, None] = "4cd9977eb573"

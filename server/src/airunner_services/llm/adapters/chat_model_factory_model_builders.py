@@ -13,7 +13,6 @@ from airunner_services.llm.adapters.chat_gguf import (
     find_gguf_file,
 )
 
-
 _DEFAULT_GGUF_MODEL_KWARGS: dict[str, object] = {
     "gguf_runtime_profile": None,
     "n_ctx": 32768,

@@ -124,7 +124,9 @@ def _resolve_stream_tool_calls(
     finalize_native_tool_call_deltas: Any,
 ) -> Any:
     """Resolve tool calls emitted during one native stream."""
-    gpt_oss_tool_calls = adapter._parse_gpt_oss_commentary_tool_calls(full_text)
+    gpt_oss_tool_calls = adapter._parse_gpt_oss_commentary_tool_calls(
+        full_text
+    )
     tool_calls = finalize_native_tool_call_deltas(
         adapter,
         native_tool_call_buffers,
@@ -155,8 +157,10 @@ def final_native_stream_chunks(
     full_text = "".join(full_content)
     _log_stream_finish(adapter, call_started, chunk_count, full_text)
     tool_calls = _resolve_stream_tool_calls(
-        adapter, full_text, native_tool_call_buffers,
-        finalize_native_tool_call_deltas
+        adapter,
+        full_text,
+        native_tool_call_buffers,
+        finalize_native_tool_call_deltas,
     )
     if tool_calls:
         _log_stream_tool_calls(adapter, tool_calls)

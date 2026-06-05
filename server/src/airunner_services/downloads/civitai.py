@@ -80,7 +80,8 @@ def search_models(
     )
     logger.info(
         "Calling CivitAI API: %s params=%s cursor=%s",
-        url, {k: v for k, v in params.items() if k != "cursor"},
+        url,
+        {k: v for k, v in params.items() if k != "cursor"},
         "set" if cursor else None,
     )
     response = requests.get(
@@ -203,7 +204,11 @@ def download_file(
 
     # Check if a complete file already exists
     if target_path.exists():
-        _emit_progress(progress_callback, target_path.stat().st_size, target_path.stat().st_size)
+        _emit_progress(
+            progress_callback,
+            target_path.stat().st_size,
+            target_path.stat().st_size,
+        )
         return True
 
     existing_size = part_path.stat().st_size if part_path.exists() else 0
@@ -336,7 +341,11 @@ def _filter_model_payload(
         selected_version_id = selected_version.get("id")
         filtered_model["selectedVersion"] = select_version(
             filtered_model,
-            str(selected_version_id) if selected_version_id is not None else None,
+            (
+                str(selected_version_id)
+                if selected_version_id is not None
+                else None
+            ),
         )
     return filtered_model
 
@@ -467,7 +476,9 @@ def _url_with_token(url: str, api_key: str) -> str:
 def _content_length(response: requests.Response, fallback: int) -> int:
     """Return one best-effort total byte count for a download response."""
     try:
-        return int(response.headers.get("content-length", fallback) or fallback)
+        return int(
+            response.headers.get("content-length", fallback) or fallback
+        )
     except (TypeError, ValueError):
         return fallback
 

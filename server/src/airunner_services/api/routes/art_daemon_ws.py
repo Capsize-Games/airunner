@@ -29,10 +29,13 @@ async def _resolve_art_client(ws: WebSocket):
         require_runtime_registry,
         resolve_art_client,
     )
-    mock = FastAPIRequest({
-        "type": "http",
-        "app": getattr(ws, "app", None),
-    })
+
+    mock = FastAPIRequest(
+        {
+            "type": "http",
+            "app": getattr(ws, "app", None),
+        }
+    )
     return resolve_art_client(require_runtime_registry(mock))
 
 
@@ -47,7 +50,9 @@ async def art_daemon_websocket(websocket: WebSocket):
             try:
                 data = json.loads(raw)
             except json.JSONDecodeError:
-                await websocket.send_json({"type": "error", "error": "Invalid JSON"})
+                await websocket.send_json(
+                    {"type": "error", "error": "Invalid JSON"}
+                )
                 continue
 
             rid = str(data.get("request_id", ""))
@@ -63,10 +68,14 @@ async def art_daemon_websocket(websocket: WebSocket):
             elif action in ("unload", "unload_model"):
                 await _handle_unload(websocket, rid)
             else:
-                await websocket.send_json({
-                    "type": "response", "request_id": rid,
-                    "status": "failed", "error": f"Unknown action: {action}",
-                })
+                await websocket.send_json(
+                    {
+                        "type": "response",
+                        "request_id": rid,
+                        "status": "failed",
+                        "error": f"Unknown action: {action}",
+                    }
+                )
     except WebSocketDisconnect:
         logger.info("Art daemon WebSocket disconnected")
     except Exception as exc:
@@ -74,61 +83,180 @@ async def art_daemon_websocket(websocket: WebSocket):
 
 
 async def _handle_generate(
-    ws: WebSocket, request_id: str, payload: dict[str, Any],
+    ws: WebSocket,
+    request_id: str,
+    payload: dict[str, Any],
 ) -> None:
     try:
         client = await _resolve_art_client(ws)
     except Exception as exc:
-        await ws.send_json({"type": "response", "request_id": request_id, "status": "failed", "error": str(exc)})
+        await ws.send_json(
+            {
+                "type": "response",
+                "request_id": request_id,
+                "status": "failed",
+                "error": str(exc),
+            }
+        )
         return
 
     envelope = RequestEnvelope(
-        request_id=request_id, runtime=RuntimeKind.ART,
-        action=RuntimeAction.INVOKE, payload=payload,
+        request_id=request_id,
+        runtime=RuntimeKind.ART,
+        action=RuntimeAction.INVOKE,
+        payload=payload,
         metadata=payload.get("metadata", {}),
     )
-    await ws.send_json({"type": "progress", "request_id": request_id, "progress": 5.0, "phase": "loading", "status": "running"})
+    await ws.send_json(
+        {
+            "type": "progress",
+            "request_id": request_id,
+            "progress": 5.0,
+            "phase": "loading",
+            "status": "running",
+        }
+    )
     try:
         response = await asyncio.to_thread(client.invoke, envelope)
     except Exception as exc:
         logger.exception("Art daemon: client.invoke failed for %s", request_id)
-        await ws.send_json({"type": "response", "request_id": request_id, "status": "failed", "error": str(exc)})
+        await ws.send_json(
+            {
+                "type": "response",
+                "request_id": request_id,
+                "status": "failed",
+                "error": str(exc),
+            }
+        )
         return
     if response.status is not EnvelopeStatus.SUCCEEDED:
-        await ws.send_json({"type": "response", "request_id": request_id, "status": "failed", "error": response.error.message if response.error else "Art generation failed"})
+        await ws.send_json(
+            {
+                "type": "response",
+                "request_id": request_id,
+                "status": "failed",
+                "error": (
+                    response.error.message
+                    if response.error
+                    else "Art generation failed"
+                ),
+            }
+        )
         return
-    await ws.send_json({"type": "progress", "request_id": request_id, "progress": 100.0, "phase": "complete", "status": "completed"})
-    await ws.send_json({"type": "response", "request_id": request_id, "status": "succeeded", "payload": response.payload or {}, "metadata": response.payload.get("metadata", {}) if response.payload else {}})
+    await ws.send_json(
+        {
+            "type": "progress",
+            "request_id": request_id,
+            "progress": 100.0,
+            "phase": "complete",
+            "status": "completed",
+        }
+    )
+    await ws.send_json(
+        {
+            "type": "response",
+            "request_id": request_id,
+            "status": "succeeded",
+            "payload": response.payload or {},
+            "metadata": (
+                response.payload.get("metadata", {})
+                if response.payload
+                else {}
+            ),
+        }
+    )
 
 
 async def _handle_cancel(
-    ws: WebSocket, request_id: str, payload: dict[str, Any],
+    ws: WebSocket,
+    request_id: str,
+    payload: dict[str, Any],
 ) -> None:
     try:
         client = await _resolve_art_client(ws)
-        cid = str(payload.get("request_id") or payload.get("job_id") or request_id)
+        cid = str(
+            payload.get("request_id") or payload.get("job_id") or request_id
+        )
         response = await asyncio.to_thread(client.cancel, cid)
-        status = "cancelled" if response.status is EnvelopeStatus.CANCELLED else "failed"
-        await ws.send_json({"type": "response", "request_id": request_id, "status": status, "payload": response.payload or {}})
+        status = (
+            "cancelled"
+            if response.status is EnvelopeStatus.CANCELLED
+            else "failed"
+        )
+        await ws.send_json(
+            {
+                "type": "response",
+                "request_id": request_id,
+                "status": status,
+                "payload": response.payload or {},
+            }
+        )
     except Exception as exc:
-        await ws.send_json({"type": "response", "request_id": request_id, "status": "failed", "error": str(exc)})
+        await ws.send_json(
+            {
+                "type": "response",
+                "request_id": request_id,
+                "status": "failed",
+                "error": str(exc),
+            }
+        )
 
 
 async def _handle_health(ws: WebSocket, request_id: str) -> None:
     try:
         client = await _resolve_art_client(ws)
         health = client.healthcheck()
-        await ws.send_json({"type": "response", "request_id": request_id, "status": "succeeded", "payload": {"status": health.status.value, "details": health.details}, "metadata": health.metadata})
+        await ws.send_json(
+            {
+                "type": "response",
+                "request_id": request_id,
+                "status": "succeeded",
+                "payload": {
+                    "status": health.status.value,
+                    "details": health.details,
+                },
+                "metadata": health.metadata,
+            }
+        )
     except Exception as exc:
-        await ws.send_json({"type": "response", "request_id": request_id, "status": "failed", "error": str(exc)})
+        await ws.send_json(
+            {
+                "type": "response",
+                "request_id": request_id,
+                "status": "failed",
+                "error": str(exc),
+            }
+        )
 
 
 async def _handle_unload(ws: WebSocket, request_id: str) -> None:
     try:
         client = await _resolve_art_client(ws)
-        envelope = RequestEnvelope(request_id=request_id, runtime=RuntimeKind.ART, action=RuntimeAction.UNLOAD_MODEL)
+        envelope = RequestEnvelope(
+            request_id=request_id,
+            runtime=RuntimeKind.ART,
+            action=RuntimeAction.UNLOAD_MODEL,
+        )
         response = await asyncio.to_thread(client.invoke, envelope)
-        status = "succeeded" if response.status is EnvelopeStatus.SUCCEEDED else "failed"
-        await ws.send_json({"type": "response", "request_id": request_id, "status": status, "payload": response.payload or {}})
+        status = (
+            "succeeded"
+            if response.status is EnvelopeStatus.SUCCEEDED
+            else "failed"
+        )
+        await ws.send_json(
+            {
+                "type": "response",
+                "request_id": request_id,
+                "status": status,
+                "payload": response.payload or {},
+            }
+        )
     except Exception as exc:
-        await ws.send_json({"type": "response", "request_id": request_id, "status": "failed", "error": str(exc)})
+        await ws.send_json(
+            {
+                "type": "response",
+                "request_id": request_id,
+                "status": "failed",
+                "error": str(exc),
+            }
+        )

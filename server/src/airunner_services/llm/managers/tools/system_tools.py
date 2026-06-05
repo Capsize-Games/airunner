@@ -22,7 +22,9 @@ class SystemTools(BaseTool):
                 Confirmation message
             """
             try:
-                clear_history = getattr(self.rag_manager, "clear_history", None)
+                clear_history = getattr(
+                    self.rag_manager, "clear_history", None
+                )
                 if callable(clear_history):
                     clear_history({})
                     return "Conversation history cleared"

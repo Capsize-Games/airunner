@@ -11,7 +11,6 @@ from airunner_services.llm.long_running.harness_session_checks import (
 from airunner_services.settings import AIRUNNER_LOG_LEVEL
 from airunner_services.utils.application import get_logger
 
-
 logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 
 
@@ -30,7 +29,9 @@ def run_session(
         return status_result
     result = agent._session_agent.run_session(project_id)
     if agent._on_progress:
-        agent._on_progress({"event": "session_complete", "project_id": project_id, **result})
+        agent._on_progress(
+            {"event": "session_complete", "project_id": project_id, **result}
+        )
     return result
 
 

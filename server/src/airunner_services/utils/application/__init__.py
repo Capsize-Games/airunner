@@ -41,7 +41,6 @@ from airunner_services.utils.application.signal_mediator import (
     SignalMediator,
 )
 
-
 __all__ = [
     "api_from_qt_application",
     "create_worker",

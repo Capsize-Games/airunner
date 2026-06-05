@@ -97,7 +97,8 @@ def build_structured_document_analysis_prompt(
         STRUCTURED_ANALYSIS_SCHEMA,
         STRUCTURED_ANALYSIS_RULES,
         f"Requested analysis: {query}\nSummary focus: {summary_focus or 'none'}",
-        "Document coverage:\n" + _joined_lines(_coverage_lines(coverage_chunks)),
+        "Document coverage:\n"
+        + _joined_lines(_coverage_lines(coverage_chunks)),
         "Refined whole-document synthesis:\n" + (refined_synthesis or "none"),
         "Chunk summaries:\n" + _joined_lines(_chunk_lines(analyses)),
         "Supporting evidence:\n" + _joined_lines(_evidence_lines(evidence)),
@@ -166,7 +167,7 @@ def _evidence_lines(evidence: list[Any]) -> list[str]:
     return [
         f"- {text}"
         for item in evidence[:4]
-        if (text := str(getattr(item, 'page_content', '') or '').strip())
+        if (text := str(getattr(item, "page_content", "") or "").strip())
     ]
 
 
@@ -212,7 +213,11 @@ def _selected_span_document(
 ) -> Any | None:
     """Return one selected evidence document when a span item is valid."""
     candidate_id, role = _selected_span_identity(item)
-    if not candidate_id or candidate_id in seen_ids or role not in PREMISE_EVIDENCE_ROLES:
+    if (
+        not candidate_id
+        or candidate_id in seen_ids
+        or role not in PREMISE_EVIDENCE_ROLES
+    ):
         return None
     candidate = candidate_map.get(candidate_id)
     if candidate is None:

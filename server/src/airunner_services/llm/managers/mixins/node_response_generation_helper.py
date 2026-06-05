@@ -82,7 +82,9 @@ class NodeResponseGenerationHelper:
             self._owner._token_callback(response_content)
         return response_content
 
-    def generate_response(self, formatted_prompt, generation_kwargs: Dict) -> Optional[AIMessage]:
+    def generate_response(
+        self, formatted_prompt, generation_kwargs: Dict
+    ) -> Optional[AIMessage]:
         """Generate one response using streaming when available."""
         if hasattr(self._owner._chat_model, "stream"):
             return self._owner._get_streaming_response_helper().generate_streaming_response(
@@ -115,9 +117,13 @@ class NodeResponseGenerationHelper:
         additional_kwargs = {}
         tool_calls = collected_tool_calls or []
         if last_chunk_message is not None:
-            additional_kwargs = getattr(last_chunk_message, "additional_kwargs", {})
+            additional_kwargs = getattr(
+                last_chunk_message, "additional_kwargs", {}
+            )
             if not collected_tool_calls:
-                tool_calls = getattr(last_chunk_message, "tool_calls", None) or []
+                tool_calls = (
+                    getattr(last_chunk_message, "tool_calls", None) or []
+                )
         visible_chunks = []
         for chunk in streamed_content:
             cleaned_chunk = strip_thinking_tags(chunk)
@@ -146,6 +152,7 @@ class NodeResponseGenerationHelper:
                         "additional_kwargs",
                         {},
                     ),
-                    tool_calls=getattr(response_message, "tool_calls", []) or [],
+                    tool_calls=getattr(response_message, "tool_calls", [])
+                    or [],
                 )
         return response_message

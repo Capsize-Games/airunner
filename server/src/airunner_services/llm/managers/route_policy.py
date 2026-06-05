@@ -89,8 +89,7 @@ class RoutePolicy:
         last_tool_msg = tool_messages[-1]
         tool_content = str(getattr(last_tool_msg, "content", ""))
         if not (
-            tool_content.startswith("ERROR:")
-            and "Cannot use" in tool_content
+            tool_content.startswith("ERROR:") and "Cannot use" in tool_content
         ):
             return
 
@@ -137,7 +136,11 @@ class RoutePolicy:
                 tool_name,
             )
             return "force_response"
-        if force_tool and force_tool != "search_web" and tool_name == force_tool:
+        if (
+            force_tool
+            and force_tool != "search_web"
+            and tool_name == force_tool
+        ):
             self._owner.logger.info(
                 "[ROUTE DEBUG] Forced tool '%s' completed - routing to "
                 "force_response",

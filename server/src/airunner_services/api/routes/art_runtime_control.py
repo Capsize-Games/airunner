@@ -12,7 +12,6 @@ from airunner_services.runtimes.contracts import RuntimeAction, RuntimeKind
 from .art_runtime_llm import unload_llm_before_art
 from .art_runtime_registry import require_runtime_registry, resolve_art_client
 
-
 # Control request construction
 
 
@@ -83,7 +82,9 @@ def require_successful_control(response: object):
     """Return one control response or raise when the runtime failed."""
     if response_status_is(response, EnvelopeStatus.SUCCEEDED):
         return response
-    raise HTTPException(status_code=500, detail=response_error_detail(response))
+    raise HTTPException(
+        status_code=500, detail=response_error_detail(response)
+    )
 
 
 async def invoke_art_control(

@@ -61,7 +61,9 @@ def _commentary_recipient(match: re.Match[str]) -> Optional[str]:
         return None
     if not _is_call_terminator(match.group("terminator") or ""):
         return None
-    return extract_gpt_oss_recipient(match.group("role_header"), channel_header)
+    return extract_gpt_oss_recipient(
+        match.group("role_header"), channel_header
+    )
 
 
 def _channel_name(channel_header: str) -> str:

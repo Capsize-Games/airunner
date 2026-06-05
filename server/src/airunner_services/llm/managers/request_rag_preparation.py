@@ -67,7 +67,9 @@ def ensure_request_rag_files(manager: Any, rag_files: Any) -> None:
         )
 
 
-def load_rag_document_payload(manager: Any, document: Mapping[str, Any]) -> None:
+def load_rag_document_payload(
+    manager: Any, document: Mapping[str, Any]
+) -> None:
     """Load one request-provided document payload into RAG."""
     file_type = str(document.get("file_type", "")).lower()
     content = document.get("content")
@@ -94,8 +96,6 @@ def _indexed_rag_candidates(limit: int) -> list[str]:
     """Return a small set of indexed documents for auto-attached search."""
     with session_scope() as session:
         documents = (
-            session.query(Document)
-            .filter_by(active=True, indexed=True)
-            .all()
+            session.query(Document).filter_by(active=True, indexed=True).all()
         )
     return [document.path for document in documents[:limit]]

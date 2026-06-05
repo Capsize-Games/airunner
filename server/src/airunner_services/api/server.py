@@ -4,6 +4,7 @@ FastAPI server implementation for AI Runner.
 Provides REST and WebSocket endpoints for remote access to AI Runner's
 capabilities including LLM, art generation, TTS, and STT.
 """
+
 from typing import Optional, Any
 from contextlib import asynccontextmanager
 import os
@@ -19,16 +20,21 @@ from airunner_services.settings import AIRUNNER_LOG_LEVEL
 from airunner_services.utils.application import get_logger
 from airunner_services.api.routes import events_router
 from airunner_services.api.routes.health import router as health_router
-from airunner_services.api.routes.art_daemon_ws import router as art_daemon_ws_router
+from airunner_services.api.routes.art_daemon_ws import (
+    router as art_daemon_ws_router,
+)
 from airunner_services.api.routes.art_websocket import router as art_ws_router
-from airunner_services.api.routes.llm_stream_routes import router as llm_ws_router
+from airunner_services.api.routes.llm_stream_routes import (
+    router as llm_ws_router,
+)
 from airunner_services.api.routes.tts import router as tts_router
 from airunner_services.api.routes.hardware import router as hardware_ws_router
 from airunner_services.api.routes.daemon import router as daemon_router
-from airunner_services.api.routes.canvas_document import router as canvas_ws_router
+from airunner_services.api.routes.canvas_document import (
+    router as canvas_ws_router,
+)
 from airunner_services.data.tenant import reset_tenant_key, set_tenant_key
 from airunner_services.runtimes.bootstrap import build_runtime_registry
-
 
 logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 
@@ -131,7 +137,9 @@ def create_app(
     # before starting the API server and already launched sidecar processes),
     # reuse it so we don't lose process tracking.
     existing_registry = (
-        getattr(app_instance, "runtime_registry", None) if app_instance else None
+        getattr(app_instance, "runtime_registry", None)
+        if app_instance
+        else None
     )
 
     if existing_registry is not None:
@@ -153,9 +161,13 @@ def create_app(
                         app.state.runtime_registry,
                     )
                 except Exception:
-                    logger.debug("Unable to attach runtime registry to app instance")
+                    logger.debug(
+                        "Unable to attach runtime registry to app instance"
+                    )
             else:
-                app.state.runtime_registry = _resolve_runtime_registry(app_instance)
+                app.state.runtime_registry = _resolve_runtime_registry(
+                    app_instance
+                )
 
     if app_instance:
         app.state.airunner_app = app_instance
@@ -165,12 +177,14 @@ def create_app(
         from airunner_services.api.routes.knowledge_base_index import (  # noqa: PLC0415
             _register_signal_handlers,
         )
+
         _register_signal_handlers(app_instance)
 
         # Register model-status signal bridge
         from airunner_services.api.routes.models_status import (  # noqa: PLC0415
             _register_model_status_handlers,
         )
+
         _register_model_status_handlers(app_instance)
 
         # Start file-system watchers (previously triggered by SSE endpoints)
@@ -189,6 +203,7 @@ def create_app(
         from airunner_services.api.routes.models_watch import (  # noqa: PLC0415
             _start_watcher as _start_models_watcher,
         )
+
         _start_image_watcher()
         _start_lora_watcher()
         _start_embedding_watcher()
@@ -203,7 +218,9 @@ def create_app(
     require_api_key = bool(api_key)
     insecure_no_auth = os.environ.get("AIRUNNER_INSECURE_NO_AUTH", "0") == "1"
 
-    allowed_env = (os.environ.get("AIRUNNER_ALLOWED_TENANT_KEYS") or "").strip()
+    allowed_env = (
+        os.environ.get("AIRUNNER_ALLOWED_TENANT_KEYS") or ""
+    ).strip()
     allowed_tenants = {t.strip() for t in allowed_env.split(",") if t.strip()}
 
     @app.middleware("http")
@@ -258,10 +275,14 @@ def create_app(
             if path.startswith("/admin/"):
                 if is_loopback_request(request):
                     return await call_next(request)
-                return JSONResponse(status_code=403, content={"error": "Forbidden"})
+                return JSONResponse(
+                    status_code=403, content={"error": "Forbidden"}
+                )
 
             if not insecure_no_auth and not is_loopback_request(request):
-                return JSONResponse(status_code=401, content={"error": "Unauthorized"})
+                return JSONResponse(
+                    status_code=401, content={"error": "Unauthorized"}
+                )
 
             return await call_next(request)
 
@@ -273,7 +294,9 @@ def create_app(
                 provided = auth.split(" ", 1)[-1].strip()
 
         if not provided or not secrets.compare_digest(provided, api_key):
-            return JSONResponse(status_code=401, content={"error": "Unauthorized"})
+            return JSONResponse(
+                status_code=401, content={"error": "Unauthorized"}
+            )
 
         return await call_next(request)
 
@@ -291,10 +314,16 @@ def create_app(
     app.include_router(art_ws_router, prefix="/api/v1/art", tags=["art"])
     app.include_router(llm_ws_router, prefix="/api/v1/llm", tags=["llm"])
     app.include_router(tts_router, prefix="/api/v1/tts", tags=["tts"])
-    app.include_router(hardware_ws_router, prefix="/api/v1/daemon", tags=["daemon"])
+    app.include_router(
+        hardware_ws_router, prefix="/api/v1/daemon", tags=["daemon"]
+    )
     app.include_router(daemon_router, prefix="/api/v1/daemon", tags=["daemon"])
-    app.include_router(art_daemon_ws_router, prefix="/api/v1/art", tags=["art"])
-    app.include_router(canvas_ws_router, prefix="/api/v1/canvas", tags=["canvas"])
+    app.include_router(
+        art_daemon_ws_router, prefix="/api/v1/art", tags=["art"]
+    )
+    app.include_router(
+        canvas_ws_router, prefix="/api/v1/canvas", tags=["canvas"]
+    )
 
     # ------------------------------------------------------------------
     # Static file serving for end-user bundle mode.
@@ -316,7 +345,9 @@ def create_app(
                 "Bundle mode detected — serving React frontend from %s",
                 resolved,
             )
-            app.mount("/", StaticFiles(directory=resolved, html=True), name="web")
+            app.mount(
+                "/", StaticFiles(directory=resolved, html=True), name="web"
+            )
         else:
             logger.warning(
                 "AIRUNNER_STATIC_DIR=%s does not contain index.html — "
@@ -335,7 +366,9 @@ def create_app(
                 content={"error": "Internal server error", "detail": str(exc)},
             )
 
-        return JSONResponse(status_code=500, content={"error": "Internal server error"})
+        return JSONResponse(
+            status_code=500, content={"error": "Internal server error"}
+        )
 
     return app
 
@@ -364,7 +397,9 @@ class APIServer:
         self.host = host
         self.port = port
         self.app_instance = app_instance
-        self.app = create_app(allowed_origins, enable_cors, app_instance=app_instance)
+        self.app = create_app(
+            allowed_origins, enable_cors, app_instance=app_instance
+        )
 
         self.server = None
 

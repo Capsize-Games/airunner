@@ -21,7 +21,6 @@ from airunner_services.model_management.hardware_profiler import (
 from airunner_services.utils.application.enum_resolver import signal_code_proxy
 from airunner_services.utils.memory.clear_memory import clear_memory
 
-
 SignalCode = signal_code_proxy(
     {
         "LLM_QUANTIZATION_PROGRESS": "llm_quantization_progress",
@@ -104,9 +103,7 @@ class QuantizationMixin:
             )
             return has_model and has_config
         except Exception as error:
-            self.logger.warning(
-                f"Error checking quantized model: {error}"
-            )
+            self.logger.warning(f"Error checking quantized model: {error}")
             return False
 
     def _save_quantized_model(self, dtype: str, original_path: str) -> None:
@@ -140,9 +137,7 @@ class QuantizationMixin:
                 total=1,
             )
         except Exception as error:
-            self.logger.error(
-                f"Failed to save quantized model: {error}"
-            )
+            self.logger.error(f"Failed to save quantized model: {error}")
             raise
 
     def _ensure_quantized_models(self, base_model_path: str) -> None:

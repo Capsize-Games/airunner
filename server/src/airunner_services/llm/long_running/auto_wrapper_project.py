@@ -12,7 +12,6 @@ from airunner_services.llm.long_running.auto_wrapper_naming import (
 )
 from airunner_services.llm.long_running.task_detector import TaskAnalysis
 
-
 logger = logging.getLogger(__name__)
 
 
@@ -36,7 +35,7 @@ def create_project_for_task(
     )
     logger.info("Created project '%s' (ID: %s) for task", name, project.id)
     return project
-        # Project creation keeps task metadata close to the original prompt.
+    # Project creation keeps task metadata close to the original prompt.
 
 
 def create_features_from_analysis(
@@ -49,7 +48,7 @@ def create_features_from_analysis(
     if analysis.detected_items:
         return _features_from_items(agent, project_id, analysis.detected_items)
     return [_main_task_feature(agent, project_id, original_prompt)]
-        # Feature derivation stays deterministic so execution order matches user intent.
+    # Feature derivation stays deterministic so execution order matches user intent.
 
 
 def _features_from_items(
@@ -70,7 +69,7 @@ def _features_from_items(
         features.append(feature)
         logger.debug("Created feature: %s", feature.name)
     return features
-        # Multi-item prompts become one tracked feature per detected item.
+    # Multi-item prompts become one tracked feature per detected item.
 
 
 def _main_task_feature(agent: Any, project_id: int, prompt: str) -> Any:
@@ -82,7 +81,7 @@ def _main_task_feature(agent: Any, project_id: int, prompt: str) -> Any:
         priority=1,
         dependencies=[],
     )
-        # Single complex prompts still get one feature so downstream flow is uniform.
+    # Single complex prompts still get one feature so downstream flow is uniform.
 
 
 def mark_project_complete(agent: Any, project_id: int) -> None:

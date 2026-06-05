@@ -33,7 +33,9 @@ class ZImageRuntimeLoaderHelper:
         """Load a flow-match scheduler based on current user selection."""
         scheduler_name = None
         if hasattr(self._owner, "image_request") and self._owner.image_request:
-            scheduler_name = getattr(self._owner.image_request, "scheduler", None)
+            scheduler_name = getattr(
+                self._owner.image_request, "scheduler", None
+            )
         if not scheduler_name:
             scheduler_name = Scheduler.FLOW_MATCH_EULER.value
         self._owner.logger.info(
@@ -44,7 +46,9 @@ class ZImageRuntimeLoaderHelper:
         base_config = self._load_base_scheduler_config(scheduler_path)
         if is_flow_match_scheduler(scheduler_name):
             try:
-                scheduler = create_flow_match_scheduler(scheduler_name, base_config)
+                scheduler = create_flow_match_scheduler(
+                    scheduler_name, base_config
+                )
                 self._log_scheduler_config(scheduler_name, scheduler)
                 self._owner.logger.info(
                     "Loaded %s with config: %s",
@@ -88,7 +92,9 @@ class ZImageRuntimeLoaderHelper:
             )
             return None
 
-    def _log_scheduler_config(self, scheduler_name: str, scheduler: Any) -> None:
+    def _log_scheduler_config(
+        self, scheduler_name: str, scheduler: Any
+    ) -> None:
         """Log scheduler-specific runtime flags when available."""
         if not hasattr(scheduler, "config"):
             return
@@ -114,9 +120,12 @@ class ZImageRuntimeLoaderHelper:
             checkpoint_path,
         )
         pipeline_started_at = time.perf_counter()
-        if importlib.util.find_spec(
-            "airunner_services.art.managers.zimage.native"
-        ) is None:
+        if (
+            importlib.util.find_spec(
+                "airunner_services.art.managers.zimage.native"
+            )
+            is None
+        ):
             self._owner.logger.warning(
                 "Native FP8 implementation not available - falling back "
                 "to pretrained loading with 4-bit quantization"
@@ -133,15 +142,21 @@ class ZImageRuntimeLoaderHelper:
                 allocated,
                 reserved,
             )
-        native_pipeline = self._create_native_pipeline(checkpoint_path, model_dir)
+        native_pipeline = self._create_native_pipeline(
+            checkpoint_path, model_dir
+        )
         self._load_native_components(native_pipeline)
         self._owner._native_pipeline = native_pipeline
-        self._owner._pipe = self.create_native_pipeline_wrapper(native_pipeline)
+        self._owner._pipe = self.create_native_pipeline_wrapper(
+            native_pipeline
+        )
         self._owner.logger.info(
             "Native FP8 pipeline loaded successfully in %.2fs",
             time.perf_counter() - pipeline_started_at,
         )
-        self._owner.logger.info("Memory usage: %s", native_pipeline.memory_usage)
+        self._owner.logger.info(
+            "Memory usage: %s", native_pipeline.memory_usage
+        )
 
     def _clear_cuda_memory(self) -> None:
         """Clear GPU memory before heavy native loading work."""
@@ -172,7 +187,9 @@ class ZImageRuntimeLoaderHelper:
             text_encoder_quantization="4bit",
         )
 
-    def _load_native_components(self, native_pipeline: ZImageNativePipeline) -> None:
+    def _load_native_components(
+        self, native_pipeline: ZImageNativePipeline
+    ) -> None:
         """Load transformer, text encoder, and VAE into one native pipeline."""
         for label, metric_name, loader in (
             (

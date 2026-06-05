@@ -83,7 +83,6 @@ def delete_project(manager: Any, project_id: int) -> bool:
         manager._logger.info("Deleted project %s", project_id)
         return True
 
-
     # Project query helpers keep lookup, listing, and status mutation on one shared
     # persistence boundary.
     # The detached-object pattern is repeated here so callers never depend on an

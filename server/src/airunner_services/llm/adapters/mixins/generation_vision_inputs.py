@@ -105,7 +105,10 @@ def processor_inputs(
             padding=True,
             add_special_tokens=False,
         )
-        inputs = {key: value.to(adapter.model.device) for key, value in inputs.items()}
+        inputs = {
+            key: value.to(adapter.model.device)
+            for key, value in inputs.items()
+        }
         align_model_dtype(adapter, inputs)
         log_vision_inputs(adapter, pil_images, inputs)
         return inputs

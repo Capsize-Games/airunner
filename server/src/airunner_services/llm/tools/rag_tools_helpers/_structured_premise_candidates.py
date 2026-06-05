@@ -14,7 +14,6 @@ from airunner_services.llm.tools.rag_tools_helpers._structured_document_renderin
     format_structured_premise_evidence_documents as render_premise_docs,
 )
 
-
 PREMISE_CANDIDATE_LIMIT = 8
 
 

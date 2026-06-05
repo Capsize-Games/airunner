@@ -11,7 +11,6 @@ from typing import Sequence, Union
 from airunner_services.database.models.zimfile import ZimFile
 from airunner_services.database.db.table import add_table, drop_table
 
-
 # revision identifiers, used by Alembic.
 revision: str = "16692f02ba0d"
 down_revision: Union[str, None] = "7e840c47b899"

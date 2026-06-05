@@ -9,7 +9,6 @@ from lingua import LanguageDetectorBuilder
 
 from airunner_services.contract_enums import AvailableLanguage
 
-
 _DETECTOR = LanguageDetectorBuilder.from_languages(
     Language.ENGLISH,
     Language.FRENCH,

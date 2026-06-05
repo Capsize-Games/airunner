@@ -14,7 +14,9 @@ from sqlalchemy import pool
 from sqlalchemy.orm import scoped_session, sessionmaker
 
 from airunner_services.database.db.engine import create_configured_engine
-from airunner_services.settings import AIRUNNER_DB_URL as DEFAULT_AIRUNNER_DB_URL
+from airunner_services.settings import (
+    AIRUNNER_DB_URL as DEFAULT_AIRUNNER_DB_URL,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -27,8 +29,10 @@ def _db_url() -> str:
 
 def _tenancy_mode() -> str:
     return (
-        os.environ.get("AIRUNNER_DB_TENANCY", "single") or "single"
-    ).strip().lower()
+        (os.environ.get("AIRUNNER_DB_TENANCY", "single") or "single")
+        .strip()
+        .lower()
+    )
 
 
 def _is_postgres(url: str) -> bool:
@@ -107,9 +111,7 @@ def _ensure_tenant_ready(tenant: str) -> None:
         poolclass=pool.NullPool,
     )
     with base_engine.begin() as connection:
-        connection.execute(
-            text(f"CREATE SCHEMA IF NOT EXISTS {tenant}")
-        )
+        connection.execute(text(f"CREATE SCHEMA IF NOT EXISTS {tenant}"))
 
     tenant_url = _tenant_db_url(db_url, tenant)
     setup_database(db_url=tenant_url)
@@ -127,15 +129,9 @@ def _get_engine(tenant: str):
         _ensure_sqlite_parent_dir(db_url)
 
         pool_size = int(os.environ.get("AIRUNNER_DB_POOL_SIZE", "20"))
-        max_overflow = int(
-            os.environ.get("AIRUNNER_DB_MAX_OVERFLOW", "40")
-        )
-        pool_timeout = int(
-            os.environ.get("AIRUNNER_DB_POOL_TIMEOUT", "60")
-        )
-        pool_recycle = int(
-            os.environ.get("AIRUNNER_DB_POOL_RECYCLE", "0")
-        )
+        max_overflow = int(os.environ.get("AIRUNNER_DB_MAX_OVERFLOW", "40"))
+        pool_timeout = int(os.environ.get("AIRUNNER_DB_POOL_TIMEOUT", "60"))
+        pool_recycle = int(os.environ.get("AIRUNNER_DB_POOL_RECYCLE", "0"))
 
         engine_kwargs = {
             "pool_pre_ping": True,

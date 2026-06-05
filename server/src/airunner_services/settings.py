@@ -9,7 +9,6 @@ from dotenv import load_dotenv
 
 from airunner_services.contract_enums import Scheduler
 
-
 if os.environ.get("DEV_ENV", "1") == "1":
     load_dotenv(override=True)
 
@@ -240,9 +239,7 @@ AIRUNNER_SERVER_HOST = os.environ.get(
     "AIRUNNER_SERVER_HOST",
     "localhost",
 )
-AIRUNNER_SERVER_PORT = int(
-    os.environ.get("AIRUNNER_SERVER_PORT", 8080)
-)
+AIRUNNER_SERVER_PORT = int(os.environ.get("AIRUNNER_SERVER_PORT", 8080))
 AIRUNNER_MAX_SEED = os.environ.get("AIRUNNER_MAX_SEED", 4294967295)
 AIRUNNER_SCRAPER_BLACKLIST = []
 
@@ -387,12 +384,15 @@ AIRUNNER_DISABLE_FLASH_ATTENTION = _env_bool(
     "0",
 )
 AIRUNNER_CUDA_OUT_OF_MEMORY_MESSAGE = "Insufficient GPU memory."
-AIRUNNER_MOOD_PROMPT_OVERRIDE = os.environ.get(
-    "AIRUNNER_MOOD_PROMPT_OVERRIDE"
-)
+AIRUNNER_MOOD_PROMPT_OVERRIDE = os.environ.get("AIRUNNER_MOOD_PROMPT_OVERRIDE")
 AIRUNNER_LOG_FILE = os.environ.get(
     "AIRUNNER_LOG_FILE",
-    os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "build/logs/server.log"),
+    os.path.join(
+        os.path.dirname(
+            os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        ),
+        "build/logs/server.log",
+    ),
 )
 AIRUNNER_SAVE_LOG_TO_FILE = _env_bool(
     "AIRUNNER_SAVE_LOG_TO_FILE",

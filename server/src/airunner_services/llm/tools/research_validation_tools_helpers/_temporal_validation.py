@@ -43,7 +43,9 @@ def check_temporal_accuracy_impl(
     issues.extend(_future_year_issues(content, content_lower, current_year))
     issues.extend(_death_year_issues(content_lower, current_year))
     suggestions = _date_consistency_suggestions(content)
-    suggestions.extend(_subject_context_suggestions(subject_context, content_lower))
+    suggestions.extend(
+        _subject_context_suggestions(subject_context, content_lower)
+    )
     return {
         "issues_found": bool(issues),
         "issues": issues,
@@ -62,10 +64,18 @@ def _explicit_age_result(text: str) -> dict | None:
     """Return an age payload when explicit age text is present."""
     year_old = re.search(r"(\d{1,3})\s*-?\s*years?\s*-?\s*old", text)
     if year_old is not None:
-        return {"found": True, "age": int(year_old.group(1)), "source_pattern": "X-year-old"}
+        return {
+            "found": True,
+            "age": int(year_old.group(1)),
+            "source_pattern": "X-year-old",
+        }
     age_match = re.search(r"age\s*(\d{1,3})", text)
     if age_match is not None:
-        return {"found": True, "age": int(age_match.group(1)), "source_pattern": "age X"}
+        return {
+            "found": True,
+            "age": int(age_match.group(1)),
+            "source_pattern": "age X",
+        }
     return None
 
 
@@ -77,7 +87,11 @@ def _birth_year_result(text: str) -> dict | None:
     year = int(born_match.group(1))
     approx_age = datetime.now().year - year
     if 0 < approx_age < 150:
-        return {"found": True, "age": approx_age, "source_pattern": f"born in {year}"}
+        return {
+            "found": True,
+            "age": approx_age,
+            "source_pattern": f"born in {year}",
+        }
     return None
 
 
@@ -103,8 +117,12 @@ def _future_year_issues(
     issues: list[str] = []
     year_pattern = r"\b(20[3-9]\d|2[1-9]\d{2})\b"
     for year in set(re.findall(year_pattern, content)):
-        if int(year) > current_year and re.search(rf"(?:in|during|since)\s+{year}", content_lower):
-            issues.append(f"Year {year} is in the future but may be referenced as past")
+        if int(year) > current_year and re.search(
+            rf"(?:in|during|since)\s+{year}", content_lower
+        ):
+            issues.append(
+                f"Year {year} is in the future but may be referenced as past"
+            )
     return issues
 
 
@@ -134,7 +152,9 @@ def _date_consistency_suggestions(content: str) -> list[str]:
     for pattern in patterns:
         dates_found.extend(re.findall(pattern, content))
     if len(dates_found) > 1:
-        return [f"Multiple dates found ({len(dates_found)}) - verify consistency"]
+        return [
+            f"Multiple dates found ({len(dates_found)}) - verify consistency"
+        ]
     return []
 
 
@@ -145,5 +165,7 @@ def _subject_context_suggestions(
     """Return subject-specific temporal review suggestions."""
     context_lower = subject_context.lower()
     if "current" in context_lower and "former" in content_lower:
-        return ["Subject context says 'current' but content uses 'former' - verify"]
+        return [
+            "Subject context says 'current' but content uses 'former' - verify"
+        ]
     return []

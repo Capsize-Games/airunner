@@ -14,7 +14,6 @@ from airunner_services.runtimes.file_policy import (
 )
 from airunner_services.utils.application.enum_resolver import signal_code_proxy
 
-
 _DOCUMENT_FILE_SUFFIXES = (
     ".md",
     ".txt",
@@ -94,7 +93,9 @@ class RAGIndexingMixin:
 
     def _validate_agent_supports_indexing(self) -> bool:
         """Return whether the active agent or manager supports full indexing."""
-        agent = getattr(self.model_manager, "agent", None) or self.model_manager
+        agent = (
+            getattr(self.model_manager, "agent", None) or self.model_manager
+        )
         if not hasattr(agent, "index_all_documents"):
             self.logger.error("Agent/manager does not support manual indexing")
             self._emit_indexing_error("Agent does not support indexing")
@@ -156,7 +157,9 @@ class RAGIndexingMixin:
 
     def _validate_indexing_support(self) -> bool:
         """Return whether the active agent supports single-document indexing."""
-        agent = getattr(self.model_manager, "agent", None) or self.model_manager
+        agent = (
+            getattr(self.model_manager, "agent", None) or self.model_manager
+        )
         if not hasattr(agent, "_index_single_document"):
             self.logger.error(
                 "Agent/manager does not support document indexing"
@@ -262,11 +265,14 @@ class RAGIndexingMixin:
                 agent = getattr(self.model_manager, "agent", None)
                 if agent is not None and hasattr(agent, "unload_rag"):
                     agent.unload_rag()
-                    self.logger.info("Embedding model unloaded via unload_rag()")
+                    self.logger.info(
+                        "Embedding model unloaded via unload_rag()"
+                    )
                     agent._emit_embedding_status("unloaded")
                     return
                 elif self.model_manager is not None and hasattr(
-                    self.model_manager, "unload_rag",
+                    self.model_manager,
+                    "unload_rag",
                 ):
                     self.model_manager.unload_rag()
                     self.logger.info(

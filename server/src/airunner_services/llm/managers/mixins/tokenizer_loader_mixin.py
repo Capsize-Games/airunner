@@ -31,9 +31,7 @@ class TokenizerLoaderMixin:
         falls back to trusted mode if that fails.
         """
         is_mistral = (
-            "mistral" in self.model_path.lower()
-            if self.model_path
-            else False
+            "mistral" in self.model_path.lower() if self.model_path else False
         )
         extra_kwargs = {"fix_mistral_regex": True} if is_mistral else {}
 
@@ -59,7 +57,7 @@ class TokenizerLoaderMixin:
 
         Used when standard loading fails. Falls back to slow tokenizer
         if KeyError occurs (tokenizer class not in mapping).
-        
+
         Args:
             extra_kwargs: Additional kwargs to pass to from_pretrained.
         """
@@ -88,7 +86,7 @@ class TokenizerLoaderMixin:
 
         Slow tokenizers are Python-based rather than Rust-based,
         guaranteed to work but slower than fast tokenizers.
-        
+
         Args:
             extra_kwargs: Additional kwargs to pass to from_pretrained.
         """

@@ -7,6 +7,7 @@ from typing import Any, Dict, Optional
 
 from airunner_services.contract_enums import ModelStatus, ModelType
 
+
 def invalid_model_path_response(owner) -> Optional[Dict[str, Any]]:
     """Return an error payload when the configured model path is invalid."""
     try:
@@ -196,6 +197,8 @@ def _gguf_present(
                 name.lower().endswith(".gguf")
                 for name in os.listdir(model_path)
             )
-        return model_path.lower().endswith(".gguf") and os.path.exists(model_path)
+        return model_path.lower().endswith(".gguf") and os.path.exists(
+            model_path
+        )
     except Exception:
         return False

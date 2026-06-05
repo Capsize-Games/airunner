@@ -4,9 +4,13 @@ import requests
 from airunner_services.contract_enums import SignalCode
 
 
-def download_single_file(worker, repo_id, filename, file_size, temp_dir, model_path, api_key):
+def download_single_file(
+    worker, repo_id, filename, file_size, temp_dir, model_path, api_key
+):
     """Download a single file from HuggingFace in a thread with resume support."""
-    worker.logger.info("[THREAD] Starting download for %s from %s", filename, repo_id)
+    worker.logger.info(
+        "[THREAD] Starting download for %s from %s", filename, repo_id
+    )
     temp_path = temp_dir / filename
     final_path = model_path / filename
     temp_path.parent.mkdir(parents=True, exist_ok=True)
@@ -14,10 +18,21 @@ def download_single_file(worker, repo_id, filename, file_size, temp_dir, model_p
     headers = {}
     if api_key:
         headers["Authorization"] = f"Bearer {api_key}"
-    resume_from, file_mode = _check_resume(temp_path, file_size, filename, worker)
+    resume_from, file_mode = _check_resume(
+        temp_path, file_size, filename, worker
+    )
     if resume_from < 0:
         return  # file already complete
-    downloaded = _do_download(url, headers, temp_path, file_mode, resume_from, file_size, filename, worker)
+    downloaded = _do_download(
+        url,
+        headers,
+        temp_path,
+        file_mode,
+        resume_from,
+        file_size,
+        filename,
+        worker,
+    )
     if downloaded is None:
         return
     _finalize(downloaded, file_size, filename, temp_path, final_path, worker)
@@ -41,19 +56,32 @@ def _check_resume(temp_path, file_size, filename, worker):
             temp_path.rename(fp)
             worker._mark_file_complete(filename)
         except Exception as exc:
-            worker.logger.error("Failed to move complete temp %s: %s", filename, exc)
+            worker.logger.error(
+                "Failed to move complete temp %s: %s", filename, exc
+            )
         return -1, "wb"
     return 0, "wb"
 
 
-def _do_download(url, headers, temp_path, file_mode, resume_from, file_size, filename, worker):
+def _do_download(
+    url,
+    headers,
+    temp_path,
+    file_mode,
+    resume_from,
+    file_size,
+    filename,
+    worker,
+):
     """Stream the file, retrying on HTTP 416. Returns bytes written or None."""
     cur_resume, cur_headers, cur_mode = resume_from, dict(headers), file_mode
     while True:
         if cur_resume > 0:
             cur_headers["Range"] = f"bytes={cur_resume}-"
         try:
-            with requests.get(url, headers=cur_headers, stream=True, timeout=30) as r:
+            with requests.get(
+                url, headers=cur_headers, stream=True, timeout=30
+            ) as r:
                 action = _handle_range(r, cur_resume, filename, worker)
                 if action == "restart":
                     _clean_stale(temp_path, filename, worker)
@@ -61,10 +89,21 @@ def _do_download(url, headers, temp_path, file_mode, resume_from, file_size, fil
                     cur_headers = dict(headers)
                     continue
                 total_size = _track_size(r, cur_resume, filename, worker)
-                return _stream_to_disk(r, temp_path, cur_mode, cur_resume, total_size, filename, worker)
+                return _stream_to_disk(
+                    r,
+                    temp_path,
+                    cur_mode,
+                    cur_resume,
+                    total_size,
+                    filename,
+                    worker,
+                )
         except requests.RequestException as exc:
             worker.logger.error("Failed to download %s: %s", filename, exc)
-            worker.emit_signal(SignalCode.UPDATE_DOWNLOAD_LOG, {"message": f"Error downloading {filename}: {exc}"})
+            worker.emit_signal(
+                SignalCode.UPDATE_DOWNLOAD_LOG,
+                {"message": f"Error downloading {filename}: {exc}"},
+            )
             worker._mark_file_failed(filename)
             return None
 
@@ -81,8 +120,13 @@ def _handle_range(response, resume_from, filename, worker):
         worker.logger.warning("No range support for %s, restarting", filename)
         return "restart"
     if response.status_code == 416:
-        worker.logger.warning("HTTP 416 for %s, deleting temp and retrying", filename)
-        worker.emit_signal(SignalCode.UPDATE_DOWNLOAD_LOG, {"message": f"Stale partial for {filename}. Restarting..."})
+        worker.logger.warning(
+            "HTTP 416 for %s, deleting temp and retrying", filename
+        )
+        worker.emit_signal(
+            SignalCode.UPDATE_DOWNLOAD_LOG,
+            {"message": f"Stale partial for {filename}. Restarting..."},
+        )
         return "retry"
     response.raise_for_status()
     return None
@@ -92,7 +136,9 @@ def _clean_stale(temp_path, filename, worker):
     try:
         temp_path.unlink(missing_ok=True)
     except Exception as exc:
-        worker.logger.warning("Failed to delete stale temp %s: %s", filename, exc)
+        worker.logger.warning(
+            "Failed to delete stale temp %s: %s", filename, exc
+        )
 
 
 def _track_size(response, resume_from, filename, worker):
@@ -111,7 +157,9 @@ def _track_size(response, resume_from, filename, worker):
     return total
 
 
-def _stream_to_disk(response, temp_path, file_mode, resume_from, total_size, filename, worker):
+def _stream_to_disk(
+    response, temp_path, file_mode, resume_from, total_size, filename, worker
+):
     downloaded = resume_from
     with open(temp_path, file_mode) as f:
         for chunk in response.iter_content(chunk_size=8192):
@@ -121,14 +169,21 @@ def _stream_to_disk(response, temp_path, file_mode, resume_from, total_size, fil
                 f.write(chunk)
                 downloaded += len(chunk)
                 if downloaded % (1024 * 1024) < 8192:
-                    worker._update_file_progress(filename, downloaded, total_size)
+                    worker._update_file_progress(
+                        filename, downloaded, total_size
+                    )
     worker._update_file_progress(filename, downloaded, total_size)
     return downloaded
 
 
 def _finalize(downloaded, file_size, filename, temp_path, final_path, worker):
     if downloaded < file_size:
-        worker.logger.error("Download incomplete for %s: %d vs %d", filename, downloaded, file_size)
+        worker.logger.error(
+            "Download incomplete for %s: %d vs %d",
+            filename,
+            downloaded,
+            file_size,
+        )
         worker._mark_file_failed(filename)
         return
     final_path.parent.mkdir(parents=True, exist_ok=True)

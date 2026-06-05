@@ -13,7 +13,6 @@ from alembic import op
 
 from airunner_services.database.db.engine import get_inspector
 
-
 # revision identifiers, used by Alembic.
 revision: str = "7b88f4d9a4a1"
 down_revision: Union[str, None] = "c3f4b2a1d9e8"

@@ -44,16 +44,17 @@ from airunner_services.art.managers.zimage.native.zimage_native_pipeline_vae_hel
 
 logger = logging.getLogger(__name__)
 
+
 class ZImageNativePipeline:
     """
     Native Z-Image pipeline for image generation.
-    
+
     This pipeline handles:
     - FP8 checkpoint loading with streaming
     - Text encoding with Qwen
     - Flow matching sampling
     - VAE decoding
-    
+
     Args:
         transformer_path: Path to transformer checkpoint (FP8 or regular)
         text_encoder_path: Path to text encoder model
@@ -62,7 +63,7 @@ class ZImageNativePipeline:
         dtype: Compute dtype (bfloat16 recommended)
         text_encoder_quantization: Quantization for text encoder ("4bit", "8bit", None)
     """
-    
+
     def __init__(
         self,
         transformer_path: Optional[str] = None,
@@ -73,7 +74,9 @@ class ZImageNativePipeline:
         text_encoder_quantization: Optional[str] = "4bit",
     ):
         if device is None:
-            self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+            self.device = torch.device(
+                "cuda" if torch.cuda.is_available() else "cpu"
+            )
         elif isinstance(device, str):
             self.device = torch.device(device)
         else:
@@ -81,19 +84,19 @@ class ZImageNativePipeline:
         self.dtype = dtype
         self.text_encoder_quantization = text_encoder_quantization
         self.image_processor: Optional[NativeVaeImageProcessor] = None
-        
+
         # Components
         self.transformer: Optional[NextDiT] = None
         self.text_encoder: Optional[ZImageTextEncoder] = None
         self.tokenizer: Optional[ZImageTokenizer] = None
         self.vae: Optional[nn.Module] = None
         self.scheduler: Optional[FlowMatchEulerScheduler] = None
-        
+
         # Paths
         self.transformer_path = transformer_path
         self.text_encoder_path = text_encoder_path
         self.vae_path = vae_path
-        
+
         # State
         self.is_fp8 = False
         self.hf_device_map = None
@@ -125,7 +128,9 @@ class ZImageNativePipeline:
             self._transformer_loader_helper = helper
         return helper
 
-    def _get_transformer_support(self) -> ZImageNativePipelineTransformerSupport:
+    def _get_transformer_support(
+        self,
+    ) -> ZImageNativePipelineTransformerSupport:
         """Return the cached transformer support helper."""
         helper = getattr(self, "_transformer_support", None)
         if helper is None:
@@ -152,22 +157,22 @@ class ZImageNativePipeline:
             "scheduler": self.scheduler,
         }
         return {k: v for k, v in comps.items() if v is not None}
-    
+
     @property
     def memory_usage(self) -> Dict[str, float]:
         """Get current memory usage in GB."""
         if not torch.cuda.is_available():
             return {"vram": 0, "cpu": 0}
-        
+
         vram = torch.cuda.memory_allocated() / 1024**3
         cpu = torch.cuda.memory_reserved() / 1024**3  # Approximation
 
         # PEFT compatibility: diffusers LoRA loader checks hf_device_map
         # even though native pipeline manages devices internally.
         self.hf_device_map = None
-        
+
         return {"vram": vram, "cpu": cpu}
-    
+
     def load_transformer(
         self,
         checkpoint_path: Optional[str] = None,
@@ -178,7 +183,7 @@ class ZImageNativePipeline:
             checkpoint_path,
             stream_load,
         )
-    
+
     def load_text_encoder(
         self,
         model_path: Optional[str] = None,
@@ -191,14 +196,14 @@ class ZImageNativePipeline:
             tokenizer_path,
             use_4bit,
         )
-    
+
     def load_vae(
         self,
         vae_path: Optional[str] = None,
     ) -> None:
         """Load the VAE decoder."""
         self._get_vae_helper().load_vae(vae_path)
-    
+
     def setup_scheduler(
         self,
         num_inference_steps: int = 4,
@@ -206,7 +211,7 @@ class ZImageNativePipeline:
     ) -> None:
         """Set up the flow matching scheduler."""
         self._get_vae_helper().setup_scheduler(num_inference_steps, shift)
-    
+
     def encode_prompt(
         self,
         prompt: Union[str, List[str]],
@@ -217,7 +222,7 @@ class ZImageNativePipeline:
             prompt,
             negative_prompt,
         )
-    
+
     @torch.no_grad()
     def generate(
         self,
@@ -253,11 +258,11 @@ class ZImageNativePipeline:
             callback,
             callback_steps,
         )
-    
+
     def unload(self, components: Optional[List[str]] = None) -> None:
         """Unload components to free memory."""
         self._get_vae_helper().unload(components)
-    
+
     def __del__(self):
         """Cleanup on deletion."""
         try:

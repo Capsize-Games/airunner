@@ -9,7 +9,9 @@ from typing import Optional
 
 from airunner_services.settings import AIRUNNER_BASE_PATH
 
-from airunner_services.runtimes.runtime_bind_host import resolve_runtime_bind_host
+from airunner_services.runtimes.runtime_bind_host import (
+    resolve_runtime_bind_host,
+)
 
 
 @dataclass(frozen=True)

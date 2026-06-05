@@ -112,7 +112,9 @@ class QuantizationConfigMixin:
         )
         if config is None:
             raise RuntimeError("Failed to build 4-bit quantization config")
-        self.logger.info("Created 4-bit BitsAndBytes config with bfloat16 compute")
+        self.logger.info(
+            "Created 4-bit BitsAndBytes config with bfloat16 compute"
+        )
         return config
 
     def _configure_quantization_memory(self, dtype: str) -> Dict[str, Any]:

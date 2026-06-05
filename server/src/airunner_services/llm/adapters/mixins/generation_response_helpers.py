@@ -24,8 +24,10 @@ def decode_response(adapter: Any, outputs: Any, inputs: dict[str, Any]) -> str:
 
 def _decode_mistral_response(adapter: Any, generated_tokens: Any) -> str:
     """Decode one Mistral-native response payload."""
-    response_text = adapter._mistral_tokenizer.instruct_tokenizer.tokenizer.decode(
-        generated_tokens.tolist()
+    response_text = (
+        adapter._mistral_tokenizer.instruct_tokenizer.tokenizer.decode(
+            generated_tokens.tolist()
+        )
     )
     adapter.logger.debug(
         "Mistral decoded response length: %s",

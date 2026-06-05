@@ -9,7 +9,6 @@ import re
 from collections.abc import Mapping
 from typing import Any
 
-
 _URL_PATTERN = re.compile(r"https?://[^\s\"'<>),;]+")
 _PATH_PATTERN = re.compile(
     r"(?P<path>(?:~|/)[^\s\"'<>),;]+(?:/[^\s\"'<>),;]+)+)"

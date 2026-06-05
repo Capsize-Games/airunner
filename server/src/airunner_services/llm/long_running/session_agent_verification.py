@@ -13,13 +13,14 @@ from airunner_services.llm.long_running.session_agent_state import (
     SessionWorkflowState,
 )
 
-
 logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 
 
 def _steps_text(feature: Any) -> str:
     """Return checkbox-formatted verification steps."""
-    return "\n".join(f"- [ ] {step}" for step in (feature.verification_steps or []))
+    return "\n".join(
+        f"- [ ] {step}" for step in (feature.verification_steps or [])
+    )
 
 
 def _verification_prompt(feature: Any) -> str:
@@ -72,7 +73,8 @@ def _verification_response(
 ) -> dict[str, Any]:
     """Invoke the model for one verification step."""
     response = agent._chat_model.invoke(
-        state["messages"] + [HumanMessage(content=_verification_prompt(feature))]
+        state["messages"]
+        + [HumanMessage(content=_verification_prompt(feature))]
     )
     result, should_continue = _verification_result(response.content.lower())
     return {

@@ -34,9 +34,7 @@ def _discover_lora_dirs() -> list[Path]:
     art_models = Path(AIRUNNER_BASE_PATH) / "art" / "models"
     if not art_models.is_dir():
         return []
-    return [
-        p for p in art_models.glob(_LORA_GLOB) if p.is_dir()
-    ]
+    return [p for p in art_models.glob(_LORA_GLOB) if p.is_dir()]
 
 
 class _LoraFileHandler(FileSystemEventHandler):

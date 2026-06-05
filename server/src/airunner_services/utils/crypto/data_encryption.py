@@ -85,4 +85,6 @@ def decrypt_bytes(token: bytes) -> bytes:
             last_err = exc
             continue
 
-    raise DataEncryptionError("Failed to decrypt payload with provided keys") from last_err
+    raise DataEncryptionError(
+        "Failed to decrypt payload with provided keys"
+    ) from last_err

@@ -90,66 +90,101 @@ async def mock_daemon_server():
             rid = str(data.get("request_id", ""))
 
             if rid.startswith("ok-"):
-                await ws.send(json.dumps({
-                    "request_id": rid,
-                    "status": "succeeded",
-                    "payload": {"result": "ok"},
-                }))
+                await ws.send(
+                    json.dumps(
+                        {
+                            "request_id": rid,
+                            "status": "succeeded",
+                            "payload": {"result": "ok"},
+                        }
+                    )
+                )
 
             elif rid.startswith("stream-"):
                 # Send progress messages before final
                 for pct in [10, 50, 90]:
-                    await ws.send(json.dumps({
-                        "type": "progress",
-                        "request_id": rid,
-                        "progress": float(pct),
-                        "phase": "processing",
-                        "status": "running",
-                    }))
+                    await ws.send(
+                        json.dumps(
+                            {
+                                "type": "progress",
+                                "request_id": rid,
+                                "progress": float(pct),
+                                "phase": "processing",
+                                "status": "running",
+                            }
+                        )
+                    )
                     await asyncio.sleep(0.01)
-                await ws.send(json.dumps({
-                    "request_id": rid,
-                    "status": "succeeded",
-                    "payload": {"result": "stream-done"},
-                }))
+                await ws.send(
+                    json.dumps(
+                        {
+                            "request_id": rid,
+                            "status": "succeeded",
+                            "payload": {"result": "stream-done"},
+                        }
+                    )
+                )
 
             elif rid.startswith("slow-"):
                 await asyncio.sleep(0.5)
-                await ws.send(json.dumps({
-                    "request_id": rid,
-                    "status": "succeeded",
-                    "payload": {"result": "slow-ok"},
-                }))
+                await ws.send(
+                    json.dumps(
+                        {
+                            "request_id": rid,
+                            "status": "succeeded",
+                            "payload": {"result": "slow-ok"},
+                        }
+                    )
+                )
 
             elif rid.startswith("fail-"):
-                await ws.send(json.dumps({
-                    "request_id": rid,
-                    "status": "failed",
-                    "error": {"code": "test_error", "message": "Intentional failure"},
-                }))
+                await ws.send(
+                    json.dumps(
+                        {
+                            "request_id": rid,
+                            "status": "failed",
+                            "error": {
+                                "code": "test_error",
+                                "message": "Intentional failure",
+                            },
+                        }
+                    )
+                )
 
             elif rid.startswith("cancel-"):
-                await ws.send(json.dumps({
-                    "request_id": rid,
-                    "status": "cancelled",
-                }))
+                await ws.send(
+                    json.dumps(
+                        {
+                            "request_id": rid,
+                            "status": "cancelled",
+                        }
+                    )
+                )
 
             elif rid.startswith("bad-json-"):
                 await ws.send("{{{invalid json")
 
             elif rid.startswith("no-request-id-"):
-                await ws.send(json.dumps({
-                    "status": "succeeded",
-                    "payload": {},
-                }))
+                await ws.send(
+                    json.dumps(
+                        {
+                            "status": "succeeded",
+                            "payload": {},
+                        }
+                    )
+                )
 
             else:
                 # Default: echo back a success
-                await ws.send(json.dumps({
-                    "request_id": rid,
-                    "status": "succeeded",
-                    "payload": data.get("payload", {}),
-                }))
+                await ws.send(
+                    json.dumps(
+                        {
+                            "request_id": rid,
+                            "status": "succeeded",
+                            "payload": data.get("payload", {}),
+                        }
+                    )
+                )
 
     server = await ws_serve(handler, "127.0.0.1", _TEST_PORT)
     yield server, received
@@ -176,9 +211,12 @@ async def transport(mock_daemon_server):
 @pytest.mark.asyncio
 async def test_connect_to_running_server():
     """Connecting to a running server succeeds."""
+
     async def handler(ws: ServerConnection):
         async for _ in ws:
-            await ws.send(json.dumps({"request_id": "ping", "status": "succeeded"}))
+            await ws.send(
+                json.dumps({"request_id": "ping", "status": "succeeded"})
+            )
 
     server = await ws_serve(handler, "127.0.0.1", _TEST_PORT + 1)
     t = SidecarWebSocketTransport(
@@ -261,6 +299,7 @@ async def test_invoke_cancelled(transport):
 @pytest.mark.asyncio
 async def test_invoke_timeout():
     """A slow request times out."""
+
     async def handler(ws: ServerConnection):
         async for raw in ws:
             data = json.loads(raw)
@@ -307,7 +346,8 @@ async def test_invoke_stream_progress(transport):
 
     envelope = _make_envelope("stream-progress")
     response = await transport.invoke_stream(
-        envelope, on_progress=on_progress,
+        envelope,
+        on_progress=on_progress,
     )
 
     assert response.status is EnvelopeStatus.SUCCEEDED
@@ -316,9 +356,7 @@ async def test_invoke_stream_progress(transport):
     # Should have received progress callbacks
     assert len(progress_data) >= 3
     # Progress values should be ascending
-    progress_values = [
-        p["progress"] for p in progress_data if "progress" in p
-    ]
+    progress_values = [p["progress"] for p in progress_data if "progress" in p]
     assert all(
         progress_values[i] <= progress_values[i + 1]
         for i in range(len(progress_values) - 1)
@@ -353,11 +391,11 @@ async def test_concurrent_requests_not_supported(transport):
 
 @pytest.mark.asyncio
 async def test_descriptor_property(transport):
-	"""The ``descriptor`` property returns correct metadata."""
-	d = transport.descriptor
-	assert d.transport.value == "websocket"
-	assert d.supports_streaming
-	assert d.endpoint is not None
+    """The ``descriptor`` property returns correct metadata."""
+    d = transport.descriptor
+    assert d.transport.value == "websocket"
+    assert d.supports_streaming
+    assert d.endpoint is not None
 
 
 @pytest.mark.asyncio
@@ -374,39 +412,56 @@ async def test_reconnect_not_supported(transport):
 @pytest.mark.asyncio
 async def test_llm_adapter_protocol():
     """Verify the LLM adapter's expected message format works."""
+
     async def llm_adapter_mock(ws: ServerConnection):
         async for raw in ws:
             data = json.loads(raw)
             rid = data.get("request_id", "")
             action = data.get("action", "")
             if action == "invoke":
-                await ws.send(json.dumps({
-                    "type": "stream",
-                    "request_id": rid,
-                    "sequence": 0,
-                    "delta": {"content": "Hello"},
-                    "final": False,
-                }))
-                await ws.send(json.dumps({
-                	"type": "stream",
-                	"request_id": rid,
-                	"sequence": 1,
-                	"delta": {"content": " world"},
-                	"final": True,
-                }))
+                await ws.send(
+                    json.dumps(
+                        {
+                            "type": "stream",
+                            "request_id": rid,
+                            "sequence": 0,
+                            "delta": {"content": "Hello"},
+                            "final": False,
+                        }
+                    )
+                )
+                await ws.send(
+                    json.dumps(
+                        {
+                            "type": "stream",
+                            "request_id": rid,
+                            "sequence": 1,
+                            "delta": {"content": " world"},
+                            "final": True,
+                        }
+                    )
+                )
                 # Send final response envelope after stream completes
-                await ws.send(json.dumps({
-                	"request_id": rid,
-                	"status": "succeeded",
-                	"payload": {"content": "Hello world"},
-                }))
+                await ws.send(
+                    json.dumps(
+                        {
+                            "request_id": rid,
+                            "status": "succeeded",
+                            "payload": {"content": "Hello world"},
+                        }
+                    )
+                )
             elif action in ("health", "status"):
-                await ws.send(json.dumps({
-                    "type": "response",
-                    "request_id": rid,
-                    "status": "succeeded",
-                    "payload": {"status": "ready"},
-                }))
+                await ws.send(
+                    json.dumps(
+                        {
+                            "type": "response",
+                            "request_id": rid,
+                            "status": "succeeded",
+                            "payload": {"status": "ready"},
+                        }
+                    )
+                )
 
     server = await ws_serve(llm_adapter_mock, "127.0.0.1", _TEST_PORT + 4)
     t = SidecarWebSocketTransport(
@@ -440,7 +495,8 @@ async def test_llm_adapter_protocol():
         # Use invoke (not invoke_stream) since adapter sends
         # stream-type messages and a final response
         response = await t.invoke_stream(
-            invoke_env, on_progress=on_chunk,
+            invoke_env,
+            on_progress=on_chunk,
         )
         assert response.status is EnvelopeStatus.SUCCEEDED
     finally:
@@ -452,21 +508,26 @@ async def test_llm_adapter_protocol():
 @pytest.mark.asyncio
 async def test_stt_adapter_protocol():
     """Verify the STT adapter's expected message format works."""
+
     async def stt_adapter_mock(ws: ServerConnection):
         async for raw in ws:
             data = json.loads(raw)
             rid = data.get("request_id", "")
             action = data.get("action", "")
             if action == "invoke":
-                await ws.send(json.dumps({
-                    "type": "response",
-                    "request_id": rid,
-                    "status": "succeeded",
-                    "payload": {
-                        "text": "Hello world",
-                        "language": "en",
-                    },
-                }))
+                await ws.send(
+                    json.dumps(
+                        {
+                            "type": "response",
+                            "request_id": rid,
+                            "status": "succeeded",
+                            "payload": {
+                                "text": "Hello world",
+                                "language": "en",
+                            },
+                        }
+                    )
+                )
 
     server = await ws_serve(stt_adapter_mock, "127.0.0.1", _TEST_PORT + 5)
     t = SidecarWebSocketTransport(

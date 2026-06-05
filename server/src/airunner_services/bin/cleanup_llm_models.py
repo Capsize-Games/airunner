@@ -9,7 +9,6 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable
 
-
 DEFAULT_MODELS_DIR = Path.home() / ".local/share/airunner/text/models/llm"
 
 

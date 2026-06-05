@@ -118,9 +118,7 @@ class ApplicationSettings(BaseModel):
 
     @property
     def current_layer_index(self):
-        return _qsettings_value(
-            "current_layer_index", 0, value_type=int
-        )
+        return _qsettings_value("current_layer_index", 0, value_type=int)
 
     @current_layer_index.setter
     def current_layer_index(self, value):
@@ -128,9 +126,7 @@ class ApplicationSettings(BaseModel):
 
     @property
     def paths_initialized(self):
-        return _qsettings_value(
-            "paths_initialized", False, value_type=bool
-        )
+        return _qsettings_value("paths_initialized", False, value_type=bool)
 
     @paths_initialized.setter
     def paths_initialized(self, value):
@@ -138,9 +134,7 @@ class ApplicationSettings(BaseModel):
 
     @property
     def resize_on_paste(self):
-        return _qsettings_value(
-            "resize_on_paste", True, value_type=bool
-        )
+        return _qsettings_value("resize_on_paste", True, value_type=bool)
 
     @resize_on_paste.setter
     def resize_on_paste(self, value):
@@ -148,9 +142,7 @@ class ApplicationSettings(BaseModel):
 
     @property
     def image_to_new_layer(self):
-        return _qsettings_value(
-            "image_to_new_layer", True, value_type=bool
-        )
+        return _qsettings_value("image_to_new_layer", True, value_type=bool)
 
     @image_to_new_layer.setter
     def image_to_new_layer(self, value):
@@ -158,9 +150,7 @@ class ApplicationSettings(BaseModel):
 
     @property
     def dark_mode_enabled(self):
-        return _qsettings_value(
-            "dark_mode_enabled", True, value_type=bool
-        )
+        return _qsettings_value("dark_mode_enabled", True, value_type=bool)
 
     @dark_mode_enabled.setter
     def dark_mode_enabled(self, value):
@@ -168,9 +158,7 @@ class ApplicationSettings(BaseModel):
 
     @property
     def override_system_theme(self):
-        return _qsettings_value(
-            "override_system_theme", True, value_type=bool
-        )
+        return _qsettings_value("override_system_theme", True, value_type=bool)
 
     @override_system_theme.setter
     def override_system_theme(self, value):
@@ -178,9 +166,7 @@ class ApplicationSettings(BaseModel):
 
     @property
     def latest_version_check(self):
-        return _qsettings_value(
-            "latest_version_check", True, value_type=bool
-        )
+        return _qsettings_value("latest_version_check", True, value_type=bool)
 
     @latest_version_check.setter
     def latest_version_check(self, value):
@@ -188,9 +174,7 @@ class ApplicationSettings(BaseModel):
 
     @property
     def current_tool(self):
-        return _qsettings_value(
-            "current_tool", CanvasToolName.BRUSH.value
-        )
+        return _qsettings_value("current_tool", CanvasToolName.BRUSH.value)
 
     @current_tool.setter
     def current_tool(self, value):
@@ -219,8 +203,10 @@ class ApplicationSettings(BaseModel):
     @property
     def is_maximized(self):
         return _qsettings_value(
-            "is_maximized", False,
-            group="window_settings", value_type=bool,
+            "is_maximized",
+            False,
+            group="window_settings",
+            value_type=bool,
         )
 
     @is_maximized.setter
@@ -247,9 +233,7 @@ class ApplicationSettings(BaseModel):
 
     @property
     def run_setup_wizard(self):
-        return _qsettings_value(
-            "run_setup_wizard", True, value_type=bool
-        )
+        return _qsettings_value("run_setup_wizard", True, value_type=bool)
 
     @run_setup_wizard.setter
     def run_setup_wizard(self, value):
@@ -273,9 +257,7 @@ class ApplicationSettings(BaseModel):
 
     @stable_diffusion_agreement_checked.setter
     def stable_diffusion_agreement_checked(self, value):
-        _set_qsettings_value(
-            "stable_diffusion_agreement_checked", bool(value)
-        )
+        _set_qsettings_value("stable_diffusion_agreement_checked", bool(value))
 
     @property
     def airunner_agreement_checked(self):
@@ -299,9 +281,7 @@ class ApplicationSettings(BaseModel):
 
     @property
     def age_agreement_checked(self):
-        return _qsettings_value(
-            "age_agreement_checked", True, value_type=bool
-        )
+        return _qsettings_value("age_agreement_checked", True, value_type=bool)
 
     @age_agreement_checked.setter
     def age_agreement_checked(self, value):
@@ -315,9 +295,7 @@ class ApplicationSettings(BaseModel):
 
     @llama_license_agreement_checked.setter
     def llama_license_agreement_checked(self, value):
-        _set_qsettings_value(
-            "llama_license_agreement_checked", bool(value)
-        )
+        _set_qsettings_value("llama_license_agreement_checked", bool(value))
 
 
 __all__ = ["ApplicationSettings"]

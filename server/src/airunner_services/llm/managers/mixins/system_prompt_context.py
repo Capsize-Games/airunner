@@ -87,7 +87,9 @@ def _identity_parts(owner, action: LLMActionType) -> list[str]:
     if not chatbot:
         return ["You are a helpful AI assistant."]
     parts = [f"You are {chatbot.botname}, a helpful AI assistant."]
-    if action in CONVERSATIONAL_ACTIONS and getattr(chatbot, "personality", None):
+    if action in CONVERSATIONAL_ACTIONS and getattr(
+        chatbot, "personality", None
+    ):
         parts.append(f"Personality: {chatbot.personality}")
     return parts
 
@@ -176,7 +178,9 @@ def build_research_mode_prompt(owner) -> str:
     else:
         identity = "You are a research assistant performing deep research."
     now = datetime.now()
-    datetime_line = f"Current date and time: {now.strftime('%Y-%m-%d %H:%M:%S')}"
+    datetime_line = (
+        f"Current date and time: {now.strftime('%Y-%m-%d %H:%M:%S')}"
+    )
     instruction = (
         "You are in DEEP RESEARCH MODE. Your sole focus is completing "
         "the research workflow.\nIGNORE any UI context or dashboard "

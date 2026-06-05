@@ -9,7 +9,6 @@ from dataclasses import dataclass
 import psutil
 import torch
 
-
 logger = logging.getLogger(__name__)
 
 
@@ -142,9 +141,7 @@ class HardwareProfiler:
         if total > 0:
             return total
         if torch.cuda.is_available():
-            return torch.cuda.get_device_properties(0).total_memory / (
-                1024**3
-            )
+            return torch.cuda.get_device_properties(0).total_memory / (1024**3)
         return 0.0
 
     def _get_available_vram_gb(self) -> float:

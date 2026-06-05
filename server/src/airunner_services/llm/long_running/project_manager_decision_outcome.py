@@ -21,7 +21,11 @@ def update_decision_outcome(
     """Update one decision with its outcome."""
     del manager
     with session_scope() as db:
-        memory = db.query(DecisionMemory).filter(DecisionMemory.id == decision_id).first()
+        memory = (
+            db.query(DecisionMemory)
+            .filter(DecisionMemory.id == decision_id)
+            .first()
+        )
         if memory is None:
             return
         memory.outcome = outcome

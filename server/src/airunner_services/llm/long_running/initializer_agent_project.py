@@ -17,7 +17,6 @@ from airunner_services.llm.long_running.initializer_agent_state import (
 from airunner_services.settings import AIRUNNER_LOG_LEVEL
 from airunner_services.utils.application import get_logger
 
-
 logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 
 
@@ -39,7 +38,9 @@ def _load_features(state: InitializerWorkflowState) -> list[dict[str, Any]]:
 
 def _activate_project(agent: Any, project_id: int, feature_count: int) -> None:
     """Activate one project and log its initialization."""
-    agent._project_manager.update_project_status(project_id, ProjectStatus.ACTIVE)
+    agent._project_manager.update_project_status(
+        project_id, ProjectStatus.ACTIVE
+    )
     agent._project_manager.log_progress(
         project_id=project_id,
         action="Project initialized",

@@ -46,7 +46,9 @@ class NativeVaeImageProcessor:
             if not isinstance(img, Image.Image):
                 raise ValueError("Expected PIL Image for preprocess")
             img = img.convert("RGB")
-            img = img.resize((target_w, target_h), resample=Image.Resampling.LANCZOS)
+            img = img.resize(
+                (target_w, target_h), resample=Image.Resampling.LANCZOS
+            )
             arr = np.array(img).astype(np.float32) / 255.0
             arr = torch.from_numpy(arr).permute(2, 0, 1)
             tensors.append(arr * 2.0 - 1.0)
@@ -65,7 +67,9 @@ class ZImageNativePipelineVaeHelper:
         if self._owner.image_processor is not None:
             return
         try:
-            vae_scale_factor = 2 ** (len(self._owner.vae.config.block_out_channels) - 1)
+            vae_scale_factor = 2 ** (
+                len(self._owner.vae.config.block_out_channels) - 1
+            )
         except Exception:
             vae_scale_factor = 8
         self._owner.image_processor = NativeVaeImageProcessor(vae_scale_factor)
@@ -76,7 +80,9 @@ class ZImageNativePipelineVaeHelper:
             raise RuntimeError("VAE not loaded")
         vae_device = next(self._owner.vae.parameters()).device
         if vae_device != self._owner.device:
-            logger.debug("Moving VAE from %s to %s", vae_device, self._owner.device)
+            logger.debug(
+                "Moving VAE from %s to %s", vae_device, self._owner.device
+            )
             self._owner.vae.to(self._owner.device)
 
     def load_vae(self, vae_path: Optional[str] = None) -> None:
@@ -126,7 +132,10 @@ class ZImageNativePipelineVaeHelper:
             del self._owner.transformer
             self._owner.transformer = None
             self._remove_loaded_component("transformer")
-        if "text_encoder" in components and self._owner.text_encoder is not None:
+        if (
+            "text_encoder" in components
+            and self._owner.text_encoder is not None
+        ):
             self._owner.text_encoder.unload()
             self._owner.text_encoder = None
             self._owner.tokenizer = None

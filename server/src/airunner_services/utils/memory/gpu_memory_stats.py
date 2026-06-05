@@ -47,8 +47,8 @@ def gpu_memory_stats(device: torch.device) -> Dict[str, float | str]:
     if device.type != "cuda":
         return stats
 
-    total_gb = (
-        torch.cuda.get_device_properties(device).total_memory / (1024**3)
+    total_gb = torch.cuda.get_device_properties(device).total_memory / (
+        1024**3
     )
     reserved_gb = torch.cuda.memory_reserved(device) / (1024**3)
     used_gb, free_gb = _driver_used_free(device, total_gb)

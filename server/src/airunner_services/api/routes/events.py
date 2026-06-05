@@ -51,15 +51,17 @@ EVENT_MODEL_STATUS = "model_status"
 EVENT_INDEX_PROGRESS = "index_progress"
 EVENT_DOWNLOADS = "downloads"
 
-ALL_EVENTS = frozenset({
-    EVENT_IMAGES,
-    EVENT_LORAS,
-    EVENT_EMBEDDINGS,
-    EVENT_DOCUMENTS,
-    EVENT_MODEL_STATUS,
-    EVENT_INDEX_PROGRESS,
-    EVENT_DOWNLOADS,
-})
+ALL_EVENTS = frozenset(
+    {
+        EVENT_IMAGES,
+        EVENT_LORAS,
+        EVENT_EMBEDDINGS,
+        EVENT_DOCUMENTS,
+        EVENT_MODEL_STATUS,
+        EVENT_INDEX_PROGRESS,
+        EVENT_DOWNLOADS,
+    }
+)
 
 # ── RPC dispatcher ───────────────────────────────────────────────────────
 # Maps (method, path-pattern) to (handler, param_names).
@@ -97,10 +99,12 @@ def _rpc_register(
     ``/api/v1/settings/resources/{name}/singleton``.
     """
     pattern, param_names = _path_to_regex(path)
+
     def decorator(func: Callable) -> Callable:
         with _rpc_lock:
             _rpc_routes.append((method.upper(), pattern, param_names, func))
         return func
+
     return decorator
 
 
@@ -123,7 +127,10 @@ async def _dispatch_rpc(
                     handler_entry = func
                     break
     if handler_entry is None:
-        return {"status": 404, "body": {"error": f"Not found: {method} {path}"}}
+        return {
+            "status": 404,
+            "body": {"error": f"Not found: {method} {path}"},
+        }
     try:
         kw: dict[str, Any] = {"body": body or {}, "ws": websocket}
         if path_params:
@@ -137,12 +144,15 @@ async def _dispatch_rpc(
 
 # ── Built-in RPC routes ─────────────────────────────────────────────────
 
+
 @_rpc_register("GET", "/health")
 @_rpc_register("GET", "/api/v1/health")
 async def _rpc_health(body: dict, **kwargs: Any) -> dict[str, Any]:
     """Return server health status."""
-    return {"status": 200, "body": {"status": "healthy", "service": "airunner"}}
-
+    return {
+        "status": 200,
+        "body": {"status": "healthy", "service": "airunner"},
+    }
 
 
 # ── Subscriber ────────────────────────────────────────────────────────────
@@ -159,8 +169,8 @@ class _WsSubscriber:
 
     def __init__(self, websocket: WebSocket) -> None:
         self.websocket = websocket
-        self._sync_queue: queue.Queue[dict[str, Any] | None] = (
-            queue.Queue(maxsize=256)
+        self._sync_queue: queue.Queue[dict[str, Any] | None] = queue.Queue(
+            maxsize=256
         )
         self.subscriptions: set[str] = set()
 
@@ -286,11 +296,13 @@ class WsEventBus:
         dead: list[_WsSubscriber] = []
         for sub in subscribers:
             try:
-                sub.enqueue({
-                    "type": "event",
-                    "event": event_type,
-                    "data": data,
-                })
+                sub.enqueue(
+                    {
+                        "type": "event",
+                        "event": event_type,
+                        "data": data,
+                    }
+                )
             except Exception:
                 dead.append(sub)
 
@@ -345,18 +357,22 @@ async def unified_events(websocket: WebSocket) -> None:
             if msg_type == "subscribe":
                 events: list[str] = raw.get("events", [])
                 bus.subscribe(subscriber, events)
-                await websocket.send_json({
-                    "type": "subscribed",
-                    "events": sorted(subscriber.subscriptions),
-                })
+                await websocket.send_json(
+                    {
+                        "type": "subscribed",
+                        "events": sorted(subscriber.subscriptions),
+                    }
+                )
 
             elif msg_type == "unsubscribe":
                 events = raw.get("events", [])
                 bus.unsubscribe(subscriber, events)
-                await websocket.send_json({
-                    "type": "unsubscribed",
-                    "events": sorted(subscriber.subscriptions),
-                })
+                await websocket.send_json(
+                    {
+                        "type": "unsubscribed",
+                        "events": sorted(subscriber.subscriptions),
+                    }
+                )
 
             elif msg_type == "ping":
                 await websocket.send_json({"type": "pong"})
@@ -404,4 +420,6 @@ async def unified_events(websocket: WebSocket) -> None:
 
 # ── Import RPC handlers so their @_rpc_register decorators run ──────────
 # This ensures the dispatch table is populated at module load time.
-from airunner_services.api.routes import rpc_handlers  # noqa: E402, F401, PLC0415
+from airunner_services.api.routes import (
+    rpc_handlers,
+)  # noqa: E402, F401, PLC0415

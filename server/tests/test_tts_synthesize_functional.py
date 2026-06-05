@@ -18,13 +18,10 @@ from pathlib import Path
 import pytest
 import yaml
 
-
 _SERVICES_ROOT = Path(__file__).resolve().parents[1]
 _PROJECT_ROOT = _SERVICES_ROOT.parent
 
-for _path in (
-    _PROJECT_ROOT / "services" / "src",
-):
+for _path in (_PROJECT_ROOT / "services" / "src",):
     _path_str = str(_path)
     if _path_str not in sys.path:
         sys.path.append(_path_str)
@@ -129,7 +126,9 @@ def _daemon_output(log_path: Path) -> str:
     return "\n".join(lines[-120:])
 
 
-def _wait_for_health(port: int, process: subprocess.Popen, log_path: Path) -> None:
+def _wait_for_health(
+    port: int, process: subprocess.Popen, log_path: Path
+) -> None:
     """Wait until the daemon health endpoint answers successfully."""
     deadline = time.time() + 45
     url = f"http://127.0.0.1:{port}/health"
@@ -149,8 +148,7 @@ def _wait_for_health(port: int, process: subprocess.Popen, log_path: Path) -> No
         time.sleep(0.25)
 
     pytest.fail(
-        "Timed out waiting for daemon health.\n"
-        f"{_daemon_output(log_path)}"
+        "Timed out waiting for daemon health.\n" f"{_daemon_output(log_path)}"
     )
 
 
@@ -179,7 +177,9 @@ def _post_json(url: str, payload: dict[str, object]) -> tuple[int, bytes, str]:
 def _get_json(url: str) -> tuple[int, dict[str, object]]:
     """Return the decoded JSON payload for one GET request."""
     with urllib.request.urlopen(url, timeout=30) as response:
-        return int(response.status), json.loads(response.read().decode("utf-8"))
+        return int(response.status), json.loads(
+            response.read().decode("utf-8")
+        )
 
 
 def _stop_process(process: subprocess.Popen) -> None:
@@ -207,10 +207,7 @@ def test_openvoice_synthesize_end_to_end_without_gui_or_llm() -> None:
 
     model_path = _tts_model_path()
     if not model_path.is_dir():
-        pytest.skip(
-            "Real OpenVoice assets are required at "
-            f"{model_path}"
-        )
+        pytest.skip("Real OpenVoice assets are required at " f"{model_path}")
 
     port = _free_tcp_port()
     with tempfile.TemporaryDirectory() as temp_dir:

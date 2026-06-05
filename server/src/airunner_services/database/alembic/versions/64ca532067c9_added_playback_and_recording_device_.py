@@ -11,7 +11,6 @@ from typing import Sequence, Union
 from airunner_services.database.models.sound_settings import SoundSettings
 from airunner_services.database.db import add_table, drop_table
 
-
 # revision identifiers, used by Alembic.
 revision: str = "64ca532067c9"
 down_revision: Union[str, None] = "b808bb218e22"

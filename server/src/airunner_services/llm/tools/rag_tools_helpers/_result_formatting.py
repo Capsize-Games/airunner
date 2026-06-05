@@ -115,9 +115,7 @@ def format_rag_search_results(
             "Matched documents:\n" + "\n\n".join(document_summaries)
         )
     if excerpt_sections:
-        sections.append(
-            "Relevant excerpts:\n" + "\n\n".join(excerpt_sections)
-        )
+        sections.append("Relevant excerpts:\n" + "\n\n".join(excerpt_sections))
     return "\n\n".join(sections)
 
 
@@ -130,9 +128,7 @@ def format_summary_evidence_results(results: list[Any]) -> str:
 
     sections = ["Current document: loaded document"]
     if excerpt_sections:
-        sections.append(
-            "Relevant excerpts:\n" + "\n\n".join(excerpt_sections)
-        )
+        sections.append("Relevant excerpts:\n" + "\n\n".join(excerpt_sections))
     return "\n\n".join(sections)
 
 

@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from airunner_services.settings import AIRUNNER_ART_ENABLED
 
-
 controlnet_bootstrap_data = [
     {
         "display_name": "Canny",

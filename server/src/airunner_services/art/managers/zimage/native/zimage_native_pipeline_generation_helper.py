@@ -115,9 +115,11 @@ class ZImageNativePipelineGenerationHelper:
             )
             return batch_size, prompt_embeds, None, None
         prompt_helper.prepare_text_encoder_for_encoding()
-        prompt_embeds, negative_embeds, attention_mask = prompt_helper.encode_prompt(
-            prompt_list,
-            negative_prompt,
+        prompt_embeds, negative_embeds, attention_mask = (
+            prompt_helper.encode_prompt(
+                prompt_list,
+                negative_prompt,
+            )
         )
         if num_images_per_prompt > 1:
             prompt_embeds = prompt_embeds.repeat(num_images_per_prompt, 1, 1)
@@ -128,7 +130,9 @@ class ZImageNativePipelineGenerationHelper:
                     1,
                 )
             if attention_mask is not None:
-                attention_mask = attention_mask.repeat(num_images_per_prompt, 1)
+                attention_mask = attention_mask.repeat(
+                    num_images_per_prompt, 1
+                )
         prompt_embeds, negative_embeds, attention_mask = (
             prompt_helper.move_prompt_conditioning_to_device(
                 prompt_embeds,

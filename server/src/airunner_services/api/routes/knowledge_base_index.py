@@ -9,15 +9,23 @@ from fastapi import APIRouter, HTTPException, Request
 
 from airunner_services.api.routes.events import WsEventBus
 
+
 def get_airunner_app(req: Request):
     """Return the AIRunner app or raise when it is unavailable."""
     from fastapi import HTTPException
+
     app = getattr(req.app.state, "airunner_app", None)
     if app is None:
-        raise HTTPException(status_code=503, detail="AI Runner app not available")
+        raise HTTPException(
+            status_code=503, detail="AI Runner app not available"
+        )
     return app
+
+
 from airunner_services.contract_enums import SignalCode  # noqa: E402
-from airunner_services.utils.application.signal_mediator import SignalMediator  # noqa: E402
+from airunner_services.utils.application.signal_mediator import (
+    SignalMediator,
+)  # noqa: E402
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -102,41 +110,50 @@ def _register_signal_handlers(app_instance) -> None:
         )
 
     def on_progress(data: dict) -> None:
-        _notify_index_subscribers({
-            "type": "progress",
-            "current": int(data.get("current", 0)),
-            "total": int(data.get("total", 0)),
-            "message": str(data.get("message", "")),
-            "document_name": str(
-                data.get("document_name", data.get("documentName", "")),
-            ),
-        })
+        _notify_index_subscribers(
+            {
+                "type": "progress",
+                "current": int(data.get("current", 0)),
+                "total": int(data.get("total", 0)),
+                "message": str(data.get("message", "")),
+                "document_name": str(
+                    data.get("document_name", data.get("documentName", "")),
+                ),
+            }
+        )
 
     def on_complete(data: dict) -> None:
-        _notify_index_subscribers({
-            "type": "complete",
-            "success": bool(data.get("success", False)),
-            "message": str(data.get("message", "")),
-        })
+        _notify_index_subscribers(
+            {
+                "type": "complete",
+                "success": bool(data.get("success", False)),
+                "message": str(data.get("message", "")),
+            }
+        )
 
     def on_error(data: dict) -> None:
-        _notify_index_subscribers({
-            "type": "error",
-            "message": str(data.get("message", "")),
-        })
+        _notify_index_subscribers(
+            {
+                "type": "error",
+                "message": str(data.get("message", "")),
+            }
+        )
 
     # Register handlers on the signal mediator
     try:
         signal_mediator.register(
-            SignalCode.RAG_INDEXING_PROGRESS, on_progress,
+            SignalCode.RAG_INDEXING_PROGRESS,
+            on_progress,
         )
         signal_mediator.register(
-            SignalCode.RAG_INDEXING_COMPLETE, on_complete,
+            SignalCode.RAG_INDEXING_COMPLETE,
+            on_complete,
         )
         logger.info(
             "Registered indexing progress SSE bridge handlers",
         )
     except Exception as exc:
         logger.warning(
-            "Failed to register indexing SSE handlers: %s", exc,
+            "Failed to register indexing SSE handlers: %s",
+            exc,
         )

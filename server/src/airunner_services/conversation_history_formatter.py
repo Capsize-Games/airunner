@@ -5,7 +5,6 @@ from __future__ import annotations
 import re
 from typing import Any, Callable, Optional
 
-
 NormalizeThinking = Callable[[Any], Optional[str]]
 StripStoredThinking = Callable[[str, Optional[str]], str]
 HasMarkup = Callable[[str], bool]
@@ -223,8 +222,7 @@ def load_formatted_conversation_history(
                 pending_pre_tool_thinking is not None,
             )
             synthetic_msg = {
-                "name": getattr(conversation, "chatbot_name", None)
-                or "Bot",
+                "name": getattr(conversation, "chatbot_name", None) or "Bot",
                 "content": "",
                 "is_bot": True,
                 "id": len(formatted_messages),

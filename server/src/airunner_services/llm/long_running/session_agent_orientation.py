@@ -14,25 +14,29 @@ from airunner_services.llm.long_running.session_agent_state import (
     SessionWorkflowState,
 )
 
-
 logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 
 
 def _git_context(agent: Any, project_id: int) -> str:
     """Return recent git history for one project."""
     git_commits = agent._project_manager.get_git_log(project_id, limit=10)
-    return "\n".join(
-        f"- [{commit['hash'][:7]}] {commit['message']} ({commit['date']})"
-        for commit in git_commits
-    ) or "No git history yet"
+    return (
+        "\n".join(
+            f"- [{commit['hash'][:7]}] {commit['message']} ({commit['date']})"
+            for commit in git_commits
+        )
+        or "No git history yet"
+    )
 
 
 def _decision_context(agent: Any, project_id: int) -> str:
     """Return recent decisions for one project."""
-    decisions = agent._project_manager.get_relevant_decisions(project_id, limit=5)
-    return "\n\n".join(decision.to_context_string() for decision in decisions) or (
-        "No past decisions recorded"
+    decisions = agent._project_manager.get_relevant_decisions(
+        project_id, limit=5
     )
+    return "\n\n".join(
+        decision.to_context_string() for decision in decisions
+    ) or ("No past decisions recorded")
 
 
 def orientation_node(
@@ -42,7 +46,9 @@ def orientation_node(
     """Orient the agent to current project state."""
     project_id = state["project_id"]
     logger.info("Orientation phase for project %s", project_id)
-    progress_context = agent._project_manager.get_progress_as_text(project_id, limit=10)
+    progress_context = agent._project_manager.get_progress_as_text(
+        project_id, limit=10
+    )
     features = agent._project_manager.get_project_features(project_id)
     return {
         "phase": SessionPhase.PLANNING,
@@ -52,5 +58,7 @@ def orientation_node(
         "decision_context": _decision_context(agent, project_id),
         "messages": [SystemMessage(content=SESSION_SYSTEM_PROMPT)],
     }
+
+
 # MI note: this helper stays intentionally narrow and delegated.
 # MI note: related orchestration lives in neighboring long_running modules.

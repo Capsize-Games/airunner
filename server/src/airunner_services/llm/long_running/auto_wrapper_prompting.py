@@ -4,7 +4,10 @@ from __future__ import annotations
 
 from typing import Any
 
-from airunner_services.llm.long_running.task_detector import TaskAnalysis, TaskType
+from airunner_services.llm.long_running.task_detector import (
+    TaskAnalysis,
+    TaskType,
+)
 
 
 def create_sub_prompt(

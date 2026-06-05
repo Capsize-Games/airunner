@@ -130,7 +130,9 @@ class CoreLifecycleService:
             return False
 
         payload = {"source": source}
-        request_unload = getattr(worker, "request_unload_after_interrupt", None)
+        request_unload = getattr(
+            worker, "request_unload_after_interrupt", None
+        )
         if callable(request_unload):
             return bool(request_unload(payload))
 
@@ -147,7 +149,10 @@ class CoreLifecycleService:
             return status
 
         model_manager = getattr(worker, "_model_manager", None)
-        if model_manager is not None and getattr(model_manager, "_chat_model", None) is not None:
+        if (
+            model_manager is not None
+            and getattr(model_manager, "_chat_model", None) is not None
+        ):
             return ModelStatus.LOADED
         return None
 
@@ -206,9 +211,19 @@ class CoreLifecycleService:
     def _attach_state(self) -> None:
         """Expose lifecycle objects on the signal source for compatibility."""
         setattr(self.signal_source, "_worker_manager", self.worker_manager)
-        setattr(self.signal_source, "_model_load_balancer", self.model_load_balancer)
-        setattr(self.signal_source, "model_load_balancer", self.model_load_balancer)
-        setattr(self.signal_source, "_llm_generate_worker", self.llm_generate_worker)
+        setattr(
+            self.signal_source,
+            "_model_load_balancer",
+            self.model_load_balancer,
+        )
+        setattr(
+            self.signal_source, "model_load_balancer", self.model_load_balancer
+        )
+        setattr(
+            self.signal_source,
+            "_llm_generate_worker",
+            self.llm_generate_worker,
+        )
 
     def _log_preload_disabled(self) -> None:
         """Log that model preloading is disabled."""

@@ -26,15 +26,15 @@ class Korean(LanguageBase):
         # Ranges are kept non-overlapping to avoid CodeQL overlap warnings.
         text = re.sub(
             "["
-            "\u2e80-\u2e99"   # CJK Radicals Supplement (⺀-⺙)
-            "\u2e9b-\u2ef3"   # CJK Radicals Supplement cont. (⺛-⻳)
-            "\u2f00-\u2fd5"   # Kangxi Radicals (⼀-⿕)
-            "\u3005"           # 々
-            "\u3007"           # 〇
-            "\u3021-\u3029"   # Hangzhou numerals (〡-〩)
-            "\u3038-\u303b"   # CJK symbols (〸-〻)
-            "\u3400-\u4db5"   # CJK Ext A (㐀-䶵)
-            "\u4e00-\u9fc3"   # CJK Unified Ideographs (一-鿃)
+            "\u2e80-\u2e99"  # CJK Radicals Supplement (⺀-⺙)
+            "\u2e9b-\u2ef3"  # CJK Radicals Supplement cont. (⺛-⻳)
+            "\u2f00-\u2fd5"  # Kangxi Radicals (⼀-⿕)
+            "\u3005"  # 々
+            "\u3007"  # 〇
+            "\u3021-\u3029"  # Hangzhou numerals (〡-〩)
+            "\u3038-\u303b"  # CJK symbols (〸-〻)
+            "\u3400-\u4db5"  # CJK Ext A (㐀-䶵)
+            "\u4e00-\u9fc3"  # CJK Unified Ideographs (一-鿃)
             "]",
             "",
             text,

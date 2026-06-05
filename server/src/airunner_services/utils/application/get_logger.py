@@ -10,7 +10,6 @@ from typing import Optional
 from airunner_services.settings import AIRUNNER_BASE_PATH, AIRUNNER_LOG_LEVEL
 from airunner_services.utils.application.log_hygiene import LogHygieneFilter
 
-
 _LOGGER_CACHE: dict[str, "Logger"] = {}
 _LOGGER_CACHE_LOCK = threading.RLock()
 
@@ -29,7 +28,9 @@ def _default_log_base_path() -> str:
 def _resolve_log_base_path() -> str:
     """Return the configured base path for persistent AIRunner logs."""
     try:
-        from airunner_services.database.models.path_settings import PathSettings
+        from airunner_services.database.models.path_settings import (
+            PathSettings,
+        )
 
         settings = PathSettings.objects.first()
         base_path = getattr(settings, "base_path", None)

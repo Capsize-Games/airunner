@@ -9,7 +9,6 @@ from langchain_core.messages import HumanMessage, SystemMessage
 from airunner_services.contract_enums import SignalCode
 from airunner_services.database.models.conversation import Conversation
 
-
 TITLE_PASS_SYSTEM_PROMPT = (
     "You generate short conversation titles for chat history. "
     "Return only one concise title in 3 to 7 words. "
@@ -33,7 +32,10 @@ def conversation_for_title_pass(owner) -> Optional[Conversation]:
             conversation_id,
         )
         return None
-    if not conversation or str(getattr(conversation, "title", "") or "").strip():
+    if (
+        not conversation
+        or str(getattr(conversation, "title", "") or "").strip()
+    ):
         return None
     return conversation
 
@@ -70,7 +72,7 @@ def sanitize_generated_title(raw_title: Any) -> str:
     title = str(raw_title or "").strip()
     if not title:
         return ""
-    title = title.splitlines()[0].strip().strip('"\'` ')
+    title = title.splitlines()[0].strip().strip("\"'` ")
     title = title.rstrip(".!?:;,- ")
     return title[:80].strip()
 
@@ -86,7 +88,9 @@ def maybe_generate_conversation_title(owner) -> None:
         return
     try:
         response = owner._chat_model.invoke(build_title_pass_prompt(messages))
-        title = sanitize_generated_title(getattr(response, "content", response))
+        title = sanitize_generated_title(
+            getattr(response, "content", response)
+        )
         if not title:
             return
         Conversation.objects.update(conversation.id, title=title)

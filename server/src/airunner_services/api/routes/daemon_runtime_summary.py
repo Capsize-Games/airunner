@@ -31,9 +31,7 @@ def build_runtime_summary(
     route_aliases: List[str],
 ) -> RuntimeSummaryResponse:
     """Build a daemon-facing runtime summary for a client."""
-    lifecycle_loaded = runtime_loaded(
-        request, client.descriptor.runtime
-    )
+    lifecycle_loaded = runtime_loaded(request, client.descriptor.runtime)
     status, details, metadata = health_fields(
         request, client, lifecycle_loaded
     )
@@ -62,9 +60,7 @@ def collect_runtime_summaries(
     runtime_registry = get_runtime_registry(request)
     if runtime_registry is None:
         return []
-    grouped: dict[
-        tuple[str, str, str, str, Optional[str]], dict
-    ] = {}
+    grouped: dict[tuple[str, str, str, str, Optional[str]], dict] = {}
     for route in runtime_registry.list_routes():
         client = runtime_registry.resolve(
             route.runtime, route.provider, route.deployment_mode
@@ -84,9 +80,7 @@ def collect_runtime_summaries(
         )
         for entry in grouped.values()
     ]
-    return sorted(
-        summaries, key=lambda item: (item.runtime, item.provider)
-    )
+    return sorted(summaries, key=lambda item: (item.runtime, item.provider))
 
 
 def summary_matches_route(

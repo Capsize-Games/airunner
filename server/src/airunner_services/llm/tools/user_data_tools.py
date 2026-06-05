@@ -27,7 +27,15 @@ from airunner_services.database.models.user import User
     category=ToolCategory.KNOWLEDGE,
     description="Store user information in the database by key-value pairs",
     requires_api=False,
-    keywords=["save", "store", "user", "data", "remember", "profile", "setting"],
+    keywords=[
+        "save",
+        "store",
+        "user",
+        "data",
+        "remember",
+        "profile",
+        "setting",
+    ],
     input_examples=[
         {"key": "name", "value": "Alice"},
         {"key": "email", "value": "alice@example.com"},
@@ -72,7 +80,15 @@ def store_user_data(key: str, value: str) -> str:
     category=ToolCategory.KNOWLEDGE,
     description="Retrieve user information from the database by key",
     requires_api=False,
-    keywords=["get", "retrieve", "user", "data", "recall", "profile", "setting"],
+    keywords=[
+        "get",
+        "retrieve",
+        "user",
+        "data",
+        "recall",
+        "profile",
+        "setting",
+    ],
     input_examples=[
         {"key": "name"},
         {"key": "email"},

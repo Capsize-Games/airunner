@@ -71,12 +71,14 @@ async def _track_model(
             "ram_gb": 0.0,
             "name": model_name,
         }
-    _notify_status_subscribers({
-        "type": "model_status",
-        "model_type": model_version or "art",
-        "model_id": model_path,
-        "status": "loading",
-    })
+    _notify_status_subscribers(
+        {
+            "type": "model_status",
+            "model_type": model_version or "art",
+            "model_id": model_path,
+            "status": "loading",
+        }
+    )
 
     terminal = {JobState.COMPLETED, JobState.FAILED, JobState.CANCELLED}
     while True:
@@ -92,12 +94,14 @@ async def _track_model(
             if model_path in _external_models:
                 _external_models[model_path]["status"] = "loaded"
                 _external_models[model_path]["can_unload"] = True
-        _notify_status_subscribers({
-            "type": "model_status",
-            "model_type": model_version or "art",
-            "model_id": model_path,
-            "status": "loaded",
-        })
+        _notify_status_subscribers(
+            {
+                "type": "model_status",
+                "model_type": model_version or "art",
+                "model_id": model_path,
+                "status": "loaded",
+            }
+        )
 
 
 async def _run_generation(
@@ -135,19 +139,25 @@ async def _run_generation(
     try:
         await unload_llm_before_art(ws, source="art_ws_generate")
     except HTTPException as exc:
-        await ws.send_json({"type": "error", "job_id": msg_id, "error": exc.detail})
+        await ws.send_json(
+            {"type": "error", "job_id": msg_id, "error": exc.detail}
+        )
         return
 
     try:
         client = resolve_art_client(require_runtime_registry(ws))
     except HTTPException as exc:
-        await ws.send_json({"type": "error", "job_id": msg_id, "error": exc.detail})
+        await ws.send_json(
+            {"type": "error", "job_id": msg_id, "error": exc.detail}
+        )
         return
 
     if art_request.model:
         asyncio.create_task(
             _track_model(
-                tracker, job_id, art_request.model,
+                tracker,
+                job_id,
+                art_request.model,
                 art_request.version or "",
             ),
         )
@@ -166,11 +176,13 @@ async def _run_generation(
                 pct = int(state.progress)
                 if pct != last_pct:
                     last_pct = pct
-                    await ws.send_json({
-                        "type": "progress",
-                        "job_id": msg_id,
-                        "progress": pct,
-                    })
+                    await ws.send_json(
+                        {
+                            "type": "progress",
+                            "job_id": msg_id,
+                            "progress": pct,
+                        }
+                    )
                 if state.status in terminal:
                     break
             await asyncio.sleep(0.25)
@@ -180,39 +192,51 @@ async def _run_generation(
             raw = (final.result or {}).get("image_bytes")
             if raw:
                 import base64
+
                 image_b64 = (
                     base64.b64encode(raw).decode("ascii")
-                    if isinstance(raw, bytes) else str(raw)
+                    if isinstance(raw, bytes)
+                    else str(raw)
                 )
-                await ws.send_json({
-                    "type": "complete",
-                    "job_id": msg_id,
-                    "image": image_b64,
-                })
+                await ws.send_json(
+                    {
+                        "type": "complete",
+                        "job_id": msg_id,
+                        "image": image_b64,
+                    }
+                )
             else:
-                await ws.send_json({
+                await ws.send_json(
+                    {
+                        "type": "error",
+                        "job_id": msg_id,
+                        "error": "No image in result",
+                    }
+                )
+        elif final is not None and final.status == JobState.CANCELLED:
+            await ws.send_json(
+                {
+                    "type": "cancelled",
+                    "job_id": msg_id,
+                }
+            )
+        else:
+            await ws.send_json(
+                {
                     "type": "error",
                     "job_id": msg_id,
-                    "error": "No image in result",
-                })
-        elif final is not None and final.status == JobState.CANCELLED:
-            await ws.send_json({
-                "type": "cancelled",
-                "job_id": msg_id,
-            })
-        else:
-            await ws.send_json({
-                "type": "error",
-                "job_id": msg_id,
-                "error": final.error if final else "Unknown error",
-            })
+                    "error": final.error if final else "Unknown error",
+                }
+            )
     except asyncio.CancelledError:
         # Generation was cancelled via the task — send cancelled event
         try:
-            await ws.send_json({
-                "type": "cancelled",
-                "job_id": msg_id,
-            })
+            await ws.send_json(
+                {
+                    "type": "cancelled",
+                    "job_id": msg_id,
+                }
+            )
         except Exception:
             logger.debug(
                 "Failed to send cancelled event — connection may "
@@ -301,30 +325,36 @@ async def _handle_unload(
 
         with _external_models_lock:
             _external_models.pop(model_id, None)
-        _notify_status_subscribers({
-            "type": "model_status",
-            "model_id": model_id,
-            "model_type": "art",
-            "status": "unloaded",
-        })
+        _notify_status_subscribers(
+            {
+                "type": "model_status",
+                "model_id": model_id,
+                "model_type": "art",
+                "status": "unloaded",
+            }
+        )
 
         try:
             client = resolve_art_runtime_client(
                 require_art_runtime_registry(ws),
             )
             envelope = build_control_request(
-                RuntimeAction.UNLOAD_MODEL, None, None,
+                RuntimeAction.UNLOAD_MODEL,
+                None,
+                None,
             )
             await asyncio.to_thread(client.invoke, envelope)
         except Exception as exc:
             logger.warning("Bg unload failed: %s", exc)
 
     asyncio.create_task(_bg())
-    await ws.send_json({
-        "type": "ack",
-        "action": "unload",
-        "model_id": model_id,
-    })
+    await ws.send_json(
+        {
+            "type": "ack",
+            "action": "unload",
+            "model_id": model_id,
+        }
+    )
 
 
 @router.websocket("/ws")
@@ -362,10 +392,12 @@ async def art_websocket(websocket: WebSocket):
             elif msg_type == "unload":
                 await _handle_unload(websocket, msg)
             else:
-                await websocket.send_json({
-                    "type": "error",
-                    "error": f"Unknown type: {msg_type}",
-                })
+                await websocket.send_json(
+                    {
+                        "type": "error",
+                        "error": f"Unknown type: {msg_type}",
+                    }
+                )
     except WebSocketDisconnect:
         logger.info("Art WebSocket disconnected")
     except Exception as exc:

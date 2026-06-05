@@ -15,14 +15,14 @@ class ZImageMemoryMixin:
     @contextmanager
     def memory_optimized_loading() -> Generator[None, None, None]:
         """Context manager for memory-optimized model loading.
-        
+
         Clears GPU memory before and after loading to minimize VRAM spikes.
         """
         gc.collect()
         if torch.cuda.is_available():
             torch.cuda.empty_cache()
             torch.cuda.synchronize()
-        
+
         try:
             yield
         finally:
@@ -42,7 +42,7 @@ class ZImageMemoryMixin:
 
     def _make_memory_efficient(self):
         """Apply memory optimizations for low VRAM systems.
-        
+
         Z-Image has a ~6B parameter transformer and ~8GB text encoder (Qwen).
         Total model size is ~32GB unquantized, so memory optimization is critical.
         """
@@ -72,7 +72,7 @@ class ZImageMemoryMixin:
 
     def _is_quantized(self) -> bool:
         """Check if the model is using quantization (4-bit or 8-bit).
-        
+
         Returns:
             True if the model is quantized, False otherwise.
         """
@@ -80,50 +80,60 @@ class ZImageMemoryMixin:
         text_encoder = getattr(self._pipe, "text_encoder", None)
         if text_encoder is not None:
             # Check for HF quantizer (used by both 4-bit and 8-bit)
-            if hasattr(text_encoder, "hf_quantizer") and text_encoder.hf_quantizer is not None:
+            if (
+                hasattr(text_encoder, "hf_quantizer")
+                and text_encoder.hf_quantizer is not None
+            ):
                 return True
             # Check for quantization_config attribute
-            if hasattr(text_encoder, "config") and hasattr(text_encoder.config, "quantization_config"):
+            if hasattr(text_encoder, "config") and hasattr(
+                text_encoder.config, "quantization_config"
+            ):
                 return True
             # Check for BitsAndBytes linear layers (8-bit uses these)
             if Linear8bitLt is not None and Linear4bit is not None:
                 for module in text_encoder.modules():
                     if isinstance(module, (Linear8bitLt, Linear4bit)):
                         return True
-        
+
         # Check transformer for quantization
         transformer = getattr(self._pipe, "transformer", None)
         if transformer is not None:
-            if hasattr(transformer, "hf_quantizer") and transformer.hf_quantizer is not None:
+            if (
+                hasattr(transformer, "hf_quantizer")
+                and transformer.hf_quantizer is not None
+            ):
                 return True
             if Linear8bitLt is not None and Linear4bit is not None:
                 for module in transformer.modules():
                     if isinstance(module, (Linear8bitLt, Linear4bit)):
                         return True
-        
+
         return False
 
     def _apply_vram_optimizations(self, vram_gb: float):
         """Apply memory optimizations for Z-Image models.
-        
+
         Memory usage varies by quantization level:
         - 4-bit: Transformer ~1.4GB, Text Encoder ~2.4GB, Total ~4GB
         - 8-bit: Transformer ~3GB, Text Encoder ~4GB, Total ~7-8GB
         - Full precision (bf16): Transformer ~5.7GB, Text Encoder ~8GB, Total ~14GB
-        
+
         For 16GB cards with 8-bit models, VAE tiling is critical to avoid OOM
         during decode, which can spike memory by ~2-3GB.
         """
         self.logger.info(f"Detected {vram_gb:.1f}GB total VRAM")
-        
+
         is_quantized = self._is_quantized()
-        
+
         if is_quantized:
-            self.logger.info("Using quantized models - applying memory optimizations")
+            self.logger.info(
+                "Using quantized models - applying memory optimizations"
+            )
             # Quantized models handle device placement via device_map='auto'
             # Just move VAE to GPU since it's not quantized
             self._move_vae_to_gpu()
-            
+
             # For cards with <= 16GB VRAM, keep VAE in float16 instead of float32
             # to save ~200MB and reduce decode memory spikes
             if vram_gb <= 18:
@@ -146,15 +156,17 @@ class ZImageMemoryMixin:
 
     def _move_vae_to_gpu(self):
         """Move VAE to GPU (for use with quantized models).
-        
+
         Note: For native FP8 pipelines, VAE is kept on CPU and moved
         dynamically during decode to conserve VRAM.
         """
         # Check if using native FP8 pipeline - skip VAE move
         if hasattr(self._pipe, "is_native_fp8") and self._pipe.is_native_fp8:
-            self.logger.debug("Native FP8 pipeline: keeping VAE on CPU (dynamic placement during decode)")
+            self.logger.debug(
+                "Native FP8 pipeline: keeping VAE on CPU (dynamic placement during decode)"
+            )
             return
-        
+
         vae = getattr(self._pipe, "vae", None)
         if vae is not None:
             try:
@@ -166,7 +178,7 @@ class ZImageMemoryMixin:
     def _ensure_models_on_gpu(self):
         """Ensure all models are on GPU for high VRAM systems."""
         device = torch.device("cuda:0")
-        
+
         for component_name in ["vae", "text_encoder", "transformer"]:
             component = getattr(self._pipe, component_name, None)
             if component is not None:
@@ -178,7 +190,7 @@ class ZImageMemoryMixin:
 
     def _force_vae_fp32(self):
         """Force VAE to use float32 for better image quality.
-        
+
         The VAE can produce artifacts in bfloat16, especially for complex images.
         Only use this when VRAM is plentiful (>18GB).
         """
@@ -187,13 +199,15 @@ class ZImageMemoryMixin:
             try:
                 if hasattr(vae, "dtype") and vae.dtype == torch.bfloat16:
                     vae.to(torch.float32)
-                    self.logger.debug("Converted VAE to float32 for better quality")
+                    self.logger.debug(
+                        "Converted VAE to float32 for better quality"
+                    )
             except Exception as e:
                 self.logger.debug(f"Could not convert VAE to float32: {e}")
 
     def _optimize_vae_for_low_vram(self):
         """Keep VAE in float16 for lower memory usage.
-        
+
         For VRAM-constrained systems, keeping VAE in float16/bfloat16
         saves ~200MB and reduces memory spikes during decode.
         """
@@ -203,15 +217,19 @@ class ZImageMemoryMixin:
                 # If VAE is in float32, convert to float16 to save memory
                 if hasattr(vae, "dtype") and vae.dtype == torch.float32:
                     vae.to(torch.float16)
-                    self.logger.debug("Converted VAE to float16 for lower VRAM usage")
+                    self.logger.debug(
+                        "Converted VAE to float16 for lower VRAM usage"
+                    )
                 else:
-                    self.logger.debug(f"VAE dtype: {getattr(vae, 'dtype', 'unknown')}")
+                    self.logger.debug(
+                        f"VAE dtype: {getattr(vae, 'dtype', 'unknown')}"
+                    )
             except Exception as e:
                 self.logger.debug(f"Could not optimize VAE for low VRAM: {e}")
 
     def _enable_slicing_optimizations(self):
         """Enable VAE slicing optimizations for lower VRAM usage.
-        
+
         VAE slicing and tiling reduce peak memory during decode by processing
         the image in smaller chunks. This is critical for avoiding OOM on
         16GB cards when using 8-bit quantization.
@@ -222,7 +240,7 @@ class ZImageMemoryMixin:
                 self.logger.debug("Enabled VAE slicing")
         except Exception as e:
             self.logger.debug(f"Could not enable VAE slicing: {e}")
-        
+
         try:
             if hasattr(self._pipe, "enable_vae_tiling"):
                 self._pipe.enable_vae_tiling()

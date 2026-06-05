@@ -24,7 +24,9 @@ def _status_icon(feature: ProjectFeature) -> str:
 def _summary_line(features: list[ProjectFeature]) -> str:
     """Return the summary line for the feature list."""
     total = len(features)
-    passing = sum(1 for feature in features if feature.status == FeatureStatus.PASSING)
+    passing = sum(
+        1 for feature in features if feature.status == FeatureStatus.PASSING
+    )
     percent = passing * 100 // total if total else 0
     return f"Total: {total} features, {passing} passing ({percent}%)\n"
 

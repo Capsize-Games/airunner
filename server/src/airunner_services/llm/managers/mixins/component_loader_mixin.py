@@ -48,16 +48,24 @@ class ComponentLoaderMixin:
         and tokenizer ownership.
         """
         chat_model = getattr(self, "_chat_model", None)
-        has_model = self._model is not None or getattr(
-            chat_model,
-            "model",
-            None,
-        ) is not None
-        has_tokenizer = self._tokenizer is not None or getattr(
-            chat_model,
-            "tokenizer",
-            None,
-        ) is not None
+        has_model = (
+            self._model is not None
+            or getattr(
+                chat_model,
+                "model",
+                None,
+            )
+            is not None
+        )
+        has_tokenizer = (
+            self._tokenizer is not None
+            or getattr(
+                chat_model,
+                "tokenizer",
+                None,
+            )
+            is not None
+        )
         return has_model, has_tokenizer
 
     def _release_local_execution_ownership(self) -> None:
@@ -82,7 +90,7 @@ class ComponentLoaderMixin:
 
         Sets self._chat_model to the created ChatModel instance or None if
         creation fails.
-        
+
         NOTE: RAG initialization is now lazy - embedding model only loads
         when RAG is actually used (rag_files provided in request).
         """
@@ -287,7 +295,9 @@ class ComponentLoaderMixin:
         if not self._should_keep_unused_model_in_cpu_memory():
             return False
 
-        current_model_path = str(getattr(self, "_current_model_path", "") or "")
+        current_model_path = str(
+            getattr(self, "_current_model_path", "") or ""
+        )
         try:
             requested_model_path = str(getattr(self, "model_path", "") or "")
         except Exception:

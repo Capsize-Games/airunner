@@ -76,7 +76,10 @@ async def get_runtime_status(
     summaries = collect_runtime_summaries(request)
     expected_alias = f"{provider}:{deployment_mode}"
     for summary in summaries:
-        if summary.runtime == runtime.value and expected_alias in summary.route_aliases:
+        if (
+            summary.runtime == runtime.value
+            and expected_alias in summary.route_aliases
+        ):
             return summary
     from airunner_services.api.routes.daemon_helpers import (
         build_runtime_summary,
@@ -135,7 +138,9 @@ async def _ensure_vram_available_for(
     )
 
 
-@router.post("/runtimes/{runtime_name}/unload", response_model=ResponseEnvelope)
+@router.post(
+    "/runtimes/{runtime_name}/unload", response_model=ResponseEnvelope
+)
 async def unload_runtime(
     runtime_name: str,
     route_request: RuntimeRouteRequest,
@@ -157,7 +162,9 @@ async def unload_runtime(
     )
 
 
-@router.post("/runtimes/{runtime_name}/cancel", response_model=ResponseEnvelope)
+@router.post(
+    "/runtimes/{runtime_name}/cancel", response_model=ResponseEnvelope
+)
 async def cancel_runtime(
     runtime_name: str,
     route_request: RuntimeRouteRequest,

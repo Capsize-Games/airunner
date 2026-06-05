@@ -33,7 +33,9 @@ def build_runtime_registry(
 ) -> RuntimeRegistry:
     """Build the default runtime registry for the current process."""
     registry = RuntimeRegistry()
-    signal_source = app_instance if hasattr(app_instance, "emit_signal") else None
+    signal_source = (
+        app_instance if hasattr(app_instance, "emit_signal") else None
+    )
     register_local_fallback_clients(
         registry,
         include_llm=False,
@@ -71,12 +73,15 @@ def _start_sidecar_launcher(client: Any, name: str) -> None:
         return
     import logging
     import threading
+
     log = logging.getLogger(__name__)
+
     def _start():
         try:
             launcher.start()
             log.info("%s sidecar daemon ready", name)
         except Exception as exc:
             log.error("%s sidecar failed to start: %s", name, exc)
+
     thread = threading.Thread(target=_start, daemon=True)
     thread.start()

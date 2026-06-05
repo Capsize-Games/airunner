@@ -2,5 +2,4 @@
 
 from airunner_services.downloads.job_service import DownloadJobService
 
-
 __all__ = ["DownloadJobService"]

@@ -25,5 +25,7 @@ def get_next_feature_to_work_on(
         feature = _in_progress_feature(db, project_id)
         if feature is None:
             features = _project_features(db, project_id)
-            feature = _next_not_started_feature(features) or _retry_feature(features)
+            feature = _next_not_started_feature(features) or _retry_feature(
+                features
+            )
         return manager._detach(db, feature)

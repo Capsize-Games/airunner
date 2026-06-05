@@ -20,20 +20,16 @@ from typing import Iterator
 import pytest
 import yaml
 
-
 _SERVICES_ROOT = Path(__file__).resolve().parents[1]
 _PROJECT_ROOT = _SERVICES_ROOT.parent
 
-for _path in (
-    _PROJECT_ROOT / "services" / "src",
-):
+for _path in (_PROJECT_ROOT / "services" / "src",):
     _path_str = str(_path)
     if _path_str not in sys.path:
         sys.path.append(_path_str)
 
 from airunner_services.llm.provider_config import LLMProviderConfig
 from airunner_services.settings import AIRUNNER_BASE_PATH
-
 
 BUNDLED_REFERENCE_SPEAKER = (
     _PROJECT_ROOT
@@ -46,13 +42,7 @@ BUNDLED_REFERENCE_SPEAKER = (
 )
 
 DEFAULT_TTS_MODEL_PATH = (
-    Path.home()
-    / ".local"
-    / "share"
-    / "airunner"
-    / "text"
-    / "models"
-    / "tts"
+    Path.home() / ".local" / "share" / "airunner" / "text" / "models" / "tts"
 )
 FUNCTIONAL_TEST_LOG_ROOT = _PROJECT_ROOT / "logs" / "functional-tests"
 
@@ -187,7 +177,9 @@ def post_json(
         headers={"Content-Type": "application/json"},
     )
     try:
-        with urllib.request.urlopen(request, timeout=timeout_seconds) as response:
+        with urllib.request.urlopen(
+            request, timeout=timeout_seconds
+        ) as response:
             return (
                 int(response.status),
                 response.read(),
@@ -358,7 +350,9 @@ def _daemon_config(port: int, heartbeat_file: Path) -> dict[str, object]:
     }
 
 
-def _wait_for_health(port: int, process: subprocess.Popen, log_path: Path) -> None:
+def _wait_for_health(
+    port: int, process: subprocess.Popen, log_path: Path
+) -> None:
     """Wait until the daemon health endpoint answers successfully."""
     deadline = time.time() + 45
     url = f"http://127.0.0.1:{port}/health"
@@ -378,8 +372,7 @@ def _wait_for_health(port: int, process: subprocess.Popen, log_path: Path) -> No
         time.sleep(0.25)
 
     pytest.fail(
-        "Timed out waiting for daemon health.\n"
-        f"{daemon_output(log_path)}"
+        "Timed out waiting for daemon health.\n" f"{daemon_output(log_path)}"
     )
 
 

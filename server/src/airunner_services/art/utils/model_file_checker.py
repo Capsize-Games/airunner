@@ -123,7 +123,9 @@ class ModelFileChecker:
         # If using a single-file checkpoint, skip checking for large model weight files
         # (transformer, unet, text_encoder weights) - only check for config files
         if is_single_file and model_type == "art":
-            required_files = ModelFileChecker._filter_to_config_files_only(required_files)
+            required_files = ModelFileChecker._filter_to_config_files_only(
+                required_files
+            )
 
         missing_files = []
 
@@ -145,18 +147,18 @@ class ModelFileChecker:
     @staticmethod
     def _filter_to_config_files_only(files: List[str]) -> List[str]:
         """Filter file list to skip transformer/unet weights when using single-file checkpoint.
-        
-        When using a single-file checkpoint (quantized safetensors), we don't need 
-        to download the original transformer/unet weights since the checkpoint 
+
+        When using a single-file checkpoint (quantized safetensors), we don't need
+        to download the original transformer/unet weights since the checkpoint
         contains those. However, we STILL need:
         - Config files for all components
         - Text encoder weights (not in single-file checkpoints)
         - VAE weights (usually not in single-file checkpoints)
         - Tokenizer files
-        
+
         Args:
             files: List of file paths
-            
+
         Returns:
             Filtered list excluding only transformer/unet weight files
         """
@@ -166,7 +168,7 @@ class ModelFileChecker:
             "transformer/diffusion_pytorch_model",
             "unet/diffusion_pytorch_model",
         )
-        
+
         filtered = []
         for f in files:
             # Skip transformer/unet weight files (but keep their configs)
@@ -175,10 +177,10 @@ class ModelFileChecker:
                 if pattern in f and f.endswith((".safetensors", ".bin")):
                     should_skip = True
                     break
-            
+
             if not should_skip:
                 filtered.append(f)
-        
+
         return filtered
 
     @staticmethod

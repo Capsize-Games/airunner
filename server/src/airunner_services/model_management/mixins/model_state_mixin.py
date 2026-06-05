@@ -57,6 +57,7 @@ class ModelStateMixin:
     def _model_name_from_id(self, model_id: str) -> str:
         """Derive a display name from the model identifier (typically a path)."""
         import os
+
         return os.path.basename(model_id) or model_id
 
     def get_active_models(self) -> list[ActiveModelInfo]:

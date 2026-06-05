@@ -26,8 +26,12 @@ from airunner_services.database.models.metadata_settings import (
 from airunner_services.database.models.outpaint_settings import (
     OutpaintSettings,
 )
-from airunner_services.art.managers.stablediffusion.image_request import ImageRequest
-from airunner_services.art.managers.stablediffusion.image_response import ImageResponse
+from airunner_services.art.managers.stablediffusion.image_request import (
+    ImageRequest,
+)
+from airunner_services.art.managers.stablediffusion.image_response import (
+    ImageResponse,
+)
 
 
 def _point_coordinates(point: Any) -> tuple[int, int]:
@@ -198,7 +202,9 @@ class CanvasAPIService(APIServiceBase):
         self.emit_signal(get_art_signal_code("CANVAS_UPDATE_GRID_INFO"), data)
 
     def interrupt_image_generation(self) -> None:
-        self.emit_signal(get_art_signal_code("INTERRUPT_IMAGE_GENERATION_SIGNAL"))
+        self.emit_signal(
+            get_art_signal_code("INTERRUPT_IMAGE_GENERATION_SIGNAL")
+        )
 
     def send_image_to_canvas(self, image_response: ImageResponse) -> None:
         self.cached_send_image_to_canvas = image_response

@@ -68,12 +68,15 @@ def analyze_task(prompt: str) -> TaskAnalysis:
     apply_multi_item_patterns(prompt_lower, state)
     apply_research_patterns(prompt_lower, state)
     apply_coding_patterns(prompt_lower, state)
-    _apply_first_keyword_match(prompt_lower, MULTI_STEP_KEYWORDS, state,
-                               0.6, "Multi-step keyword")
+    _apply_first_keyword_match(
+        prompt_lower, MULTI_STEP_KEYWORDS, state, 0.6, "Multi-step keyword"
+    )
     apply_analysis_keywords(prompt_lower, state)
     _apply_comma_list(prompt, state)
     task_type = _determine_task_type(prompt_lower, state)
-    should_use_harness = state.confidence >= 0.6 and task_type != TaskType.SIMPLE
+    should_use_harness = (
+        state.confidence >= 0.6 and task_type != TaskType.SIMPLE
+    )
     return TaskAnalysis(
         task_type=task_type,
         should_use_harness=should_use_harness,

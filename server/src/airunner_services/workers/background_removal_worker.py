@@ -148,15 +148,17 @@ class BackgroundRemovalWorker(Worker):
                     )
                     self._mark_model_failed()
                     return
-                output_binary = self.model_manager.remove_background_to_png_bytes(
-                    image
+                output_binary = (
+                    self.model_manager.remove_background_to_png_bytes(image)
                 )
             logger.info(
                 "BackgroundRemovalWorker inference complete "
                 "(out_bytes=%s, device=%s)",
-                len(output_binary)
-                if hasattr(output_binary, "__len__")
-                else None,
+                (
+                    len(output_binary)
+                    if hasattr(output_binary, "__len__")
+                    else None
+                ),
                 getattr(self.model_manager, "_device", None),
             )
             self._persist_output(layer_id, output_binary)
@@ -248,7 +250,6 @@ class BackgroundRemovalWorker(Worker):
             )
         except Exception:
             pass
-
 
 
 __all__ = ["BackgroundRemovalWorker"]

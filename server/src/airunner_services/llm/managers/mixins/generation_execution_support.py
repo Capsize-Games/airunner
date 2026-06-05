@@ -33,7 +33,9 @@ from airunner_services.llm.managers.mixins.generation_workflow_support import (
     setup_generation_workflow,
     sync_request_scope_to_workflow_manager,
 )
-from airunner_services.llm.managers.request_preparation import extract_request_images
+from airunner_services.llm.managers.request_preparation import (
+    extract_request_images,
+)
 
 
 def run_generation_stream(
@@ -88,7 +90,9 @@ def _stream_generation(
     """Execute the workflow stream and convert it into the result dict."""
     try:
         _prepare_cuda()
-        generation_kwargs = llm_request.to_generation_kwargs() if llm_request else {}
+        generation_kwargs = (
+            llm_request.to_generation_kwargs() if llm_request else {}
+        )
         _normalize_generation_kwargs(owner, llm_request, generation_kwargs)
         images = extract_request_images(llm_request)
         if images:
@@ -130,7 +134,9 @@ def _normalize_generation_kwargs(
 ) -> None:
     """Normalize generation kwargs before streaming."""
     if "max_tokens" in generation_kwargs:
-        generation_kwargs["max_new_tokens"] = generation_kwargs.pop("max_tokens")
+        generation_kwargs["max_new_tokens"] = generation_kwargs.pop(
+            "max_tokens"
+        )
     clamp_generation_tokens(owner, generation_kwargs)
     owner.logger.debug(
         "llm_request.max_new_tokens=%s",
@@ -146,7 +152,9 @@ def _normalize_generation_kwargs(
     )
 
 
-def _stream_messages(owner, prompt: str, generation_kwargs: dict, images) -> Dict[str, Any]:
+def _stream_messages(
+    owner, prompt: str, generation_kwargs: dict, images
+) -> Dict[str, Any]:
     """Collect raw and final workflow messages from the stream."""
     result_messages = []
     raw_messages = []
@@ -156,7 +164,9 @@ def _stream_messages(owner, prompt: str, generation_kwargs: dict, images) -> Dic
         images=images,
     ):
         if owner._interrupted:
-            owner.logger.info("Stream interrupted - breaking out of generation")
+            owner.logger.info(
+                "Stream interrupted - breaking out of generation"
+            )
             break
         raw_messages.append(message)
         if not getattr(message, "tool_calls", None):
@@ -209,7 +219,9 @@ def do_generate(
         complete_response,
         sequence_counter,
     )
-    prompt_tokens, completion_tokens, total_tokens = extract_usage_tokens(result)
+    prompt_tokens, completion_tokens, total_tokens = extract_usage_tokens(
+        result
+    )
     executed_tools = executed_tools_from_workflow(owner._workflow_manager)
     _finalize_visible_response(
         owner,
@@ -289,7 +301,9 @@ def _finalize_visible_response(
         complete_response[0] = final_response
     if complete_response[0]:
         return
-    fallback_response = fallback_response_for_empty_result(result, executed_tools)
+    fallback_response = fallback_response_for_empty_result(
+        result, executed_tools
+    )
     emit_visible_response(
         owner,
         llm_request,

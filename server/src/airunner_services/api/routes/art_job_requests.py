@@ -9,7 +9,6 @@ from airunner_services.runtimes.contracts import (
 
 from .art_contracts import GenerationRequest
 
-
 # Request payload assembly
 
 

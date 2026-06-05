@@ -22,7 +22,6 @@ from airunner_services.database.db import (
     drop_constraint,
 )
 
-
 # revision identifiers, used by Alembic.
 revision: str = "ac88a4dea04b"
 down_revision: Union[str, None] = "986e262645eb"

@@ -7,7 +7,6 @@ import re
 from pathlib import Path
 from typing import Iterable, Sequence
 
-
 _URI_SCHEME_RE = re.compile(r"^[A-Za-z][A-Za-z0-9+.-]*://")
 
 

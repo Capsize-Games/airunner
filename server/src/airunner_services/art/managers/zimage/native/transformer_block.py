@@ -24,11 +24,11 @@ from airunner_services.art.managers.zimage.native.feedforward import (
 def modulate(x: torch.Tensor, scale: torch.Tensor) -> torch.Tensor:
     """
     Apply scale modulation.
-    
+
     Args:
         x: Input tensor of shape (B, S, D)
         scale: Scale tensor of shape (B, D)
-        
+
     Returns:
         Modulated tensor
     """
@@ -38,12 +38,12 @@ def modulate(x: torch.Tensor, scale: torch.Tensor) -> torch.Tensor:
 class JointTransformerBlock(nn.Module):
     """
     Transformer block with AdaLN modulation.
-    
+
     This is the main building block of Z-Image/Lumina2 with:
     - Pre-RMSNorm on attention and FFN
     - AdaLN modulation from timestep embedding
     - Tanh gating on residual connections
-    
+
     Args:
         layer_id: Layer index (for logging)
         dim: Model dimension
@@ -59,7 +59,7 @@ class JointTransformerBlock(nn.Module):
         device: Target device
         dtype: Data type
     """
-    
+
     def __init__(
         self,
         layer_id: int,
@@ -109,7 +109,9 @@ class JointTransformerBlock(nn.Module):
         ) = self._build_norm_layers(dim, norm_eps, device, dtype)
 
         self.adaLN_modulation = (
-            self._build_modulation_layer(dim, z_image_modulation, device, dtype)
+            self._build_modulation_layer(
+                dim, z_image_modulation, device, dtype
+            )
             if modulation
             else None
         )
@@ -154,14 +156,40 @@ class JointTransformerBlock(nn.Module):
     @staticmethod
     def _build_norm_layers(dim: int, norm_eps: float, device, dtype):
         return (
-            RMSNorm(dim, eps=norm_eps, elementwise_affine=True, device=device, dtype=dtype),
-            RMSNorm(dim, eps=norm_eps, elementwise_affine=True, device=device, dtype=dtype),
-            RMSNorm(dim, eps=norm_eps, elementwise_affine=True, device=device, dtype=dtype),
-            RMSNorm(dim, eps=norm_eps, elementwise_affine=True, device=device, dtype=dtype),
+            RMSNorm(
+                dim,
+                eps=norm_eps,
+                elementwise_affine=True,
+                device=device,
+                dtype=dtype,
+            ),
+            RMSNorm(
+                dim,
+                eps=norm_eps,
+                elementwise_affine=True,
+                device=device,
+                dtype=dtype,
+            ),
+            RMSNorm(
+                dim,
+                eps=norm_eps,
+                elementwise_affine=True,
+                device=device,
+                dtype=dtype,
+            ),
+            RMSNorm(
+                dim,
+                eps=norm_eps,
+                elementwise_affine=True,
+                device=device,
+                dtype=dtype,
+            ),
         )
 
     @staticmethod
-    def _build_modulation_layer(dim: int, z_image_modulation: bool, device, dtype):
+    def _build_modulation_layer(
+        dim: int, z_image_modulation: bool, device, dtype
+    ):
         if z_image_modulation:
             return nn.Sequential(
                 nn.Linear(
@@ -182,7 +210,7 @@ class JointTransformerBlock(nn.Module):
                 dtype=dtype,
             ),
         )
-    
+
     def forward(
         self,
         x: torch.Tensor,
@@ -193,28 +221,30 @@ class JointTransformerBlock(nn.Module):
     ) -> torch.Tensor:
         """
         Forward pass.
-        
+
         Args:
             x: Input tensor of shape (B, S, D)
             x_mask: Optional attention mask
             freqs_cis: RoPE frequencies
             adaln_input: Timestep embedding for modulation
             transformer_options: Additional options
-            
+
         Returns:
             Output tensor of shape (B, S, D)
         """
         if transformer_options is None:
             transformer_options = {}
-        
+
         if self.modulation:
-            assert adaln_input is not None, "adaln_input required when modulation=True"
-            
+            assert (
+                adaln_input is not None
+            ), "adaln_input required when modulation=True"
+
             # Get modulation parameters
             scale_msa, gate_msa, scale_mlp, gate_mlp = self.adaLN_modulation(
                 adaln_input
             ).chunk(4, dim=1)
-            
+
             # Attention with modulation
             x = x + gate_msa.unsqueeze(1).tanh() * self.attention_norm2(
                 clamp_fp16(
@@ -226,7 +256,7 @@ class JointTransformerBlock(nn.Module):
                     )
                 )
             )
-            
+
             # FFN with modulation
             x = x + gate_mlp.unsqueeze(1).tanh() * self.ffn_norm2(
                 clamp_fp16(
@@ -237,8 +267,10 @@ class JointTransformerBlock(nn.Module):
             )
         else:
             # Without modulation (used in context refiner)
-            assert adaln_input is None, "adaln_input not used when modulation=False"
-            
+            assert (
+                adaln_input is None
+            ), "adaln_input not used when modulation=False"
+
             x = x + self.attention_norm2(
                 clamp_fp16(
                     self.attention(
@@ -249,22 +281,22 @@ class JointTransformerBlock(nn.Module):
                     )
                 )
             )
-            
+
             x = x + self.ffn_norm2(
                 self.feed_forward(
                     self.ffn_norm1(x),
                 )
             )
-        
+
         return x
 
 
 class FinalLayer(nn.Module):
     """
     Final layer of NextDiT.
-    
+
     Applies final normalization and projection to patch space.
-    
+
     Args:
         hidden_size: Model dimension
         patch_size: Patch size
@@ -273,7 +305,7 @@ class FinalLayer(nn.Module):
         device: Target device
         dtype: Data type
     """
-    
+
     def __init__(
         self,
         hidden_size: int,
@@ -284,7 +316,7 @@ class FinalLayer(nn.Module):
         dtype=None,
     ):
         super().__init__()
-        
+
         self.norm_final = nn.LayerNorm(
             hidden_size,
             elementwise_affine=False,
@@ -292,7 +324,7 @@ class FinalLayer(nn.Module):
             device=device,
             dtype=dtype,
         )
-        
+
         self.linear = nn.Linear(
             hidden_size,
             patch_size * patch_size * out_channels,
@@ -300,7 +332,7 @@ class FinalLayer(nn.Module):
             device=device,
             dtype=dtype,
         )
-        
+
         # AdaLN modulation
         mod_dim = 256 if z_image_modulation else 1024
         self.adaLN_modulation = nn.Sequential(
@@ -313,15 +345,15 @@ class FinalLayer(nn.Module):
                 dtype=dtype,
             ),
         )
-    
+
     def forward(self, x: torch.Tensor, c: torch.Tensor) -> torch.Tensor:
         """
         Forward pass.
-        
+
         Args:
             x: Input tensor of shape (B, S, D)
             c: Conditioning tensor (timestep embedding)
-            
+
         Returns:
             Output patches of shape (B, S, patch_size^2 * channels)
         """

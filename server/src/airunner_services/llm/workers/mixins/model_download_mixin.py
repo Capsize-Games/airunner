@@ -10,7 +10,6 @@ from airunner_services.llm.llm_response import LLMResponse
 from airunner_services.llm.provider_config import LLMProviderConfig
 from airunner_services.utils.application.enum_resolver import signal_code_proxy
 
-
 SignalCode = signal_code_proxy(
     {
         "HUGGINGFACE_DOWNLOAD_COMPLETE": "huggingface_download_complete",
@@ -271,8 +270,10 @@ class ModelDownloadMixin:
 
         progress = DownloadProgress(model_name, model_path)
         job_service = DownloadJobService()
-        download_model_type = "gguf" if is_gguf and gguf_filename else (
-            model_info.get("model_type", "llm")
+        download_model_type = (
+            "gguf"
+            if is_gguf and gguf_filename
+            else (model_info.get("model_type", "llm"))
         )
         output_dir = model_path if is_gguf else os.path.dirname(model_path)
 
@@ -304,9 +305,7 @@ class ModelDownloadMixin:
                         "model_type": download_model_type,
                     }
                     progress.on_download_complete(complete_data)
-                    self.on_huggingface_download_complete_signal(
-                        complete_data
-                    )
+                    self.on_huggingface_download_complete_signal(complete_data)
                     self._download_dialog_showing = False
                     return True
 
@@ -396,9 +395,7 @@ class ModelDownloadMixin:
 
     def _emit_download_complete_message(self) -> None:
         """Emit a completion message through the normal LLM stream path."""
-        message = (
-            "[Download] Complete. Loading model with automatic quantization...\n"
-        )
+        message = "[Download] Complete. Loading model with automatic quantization...\n"
 
         self.emit_signal(
             SignalCode.LLM_TEXT_STREAMED_SIGNAL,
@@ -419,7 +416,10 @@ class ModelDownloadMixin:
             load_success = self.model_manager.load()
             self.logger.info(f"Model load returned: {load_success}")
 
-            if self.model_manager.model_status[ModelType.LLM] != ModelStatus.LOADED:
+            if (
+                self.model_manager.model_status[ModelType.LLM]
+                != ModelStatus.LOADED
+            ):
                 self.logger.error(
                     "Model failed to load after download - status: %s",
                     self.model_manager.model_status[ModelType.LLM],

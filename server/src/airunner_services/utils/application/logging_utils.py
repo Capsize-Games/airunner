@@ -15,7 +15,6 @@ from airunner_services.utils.application.get_logger import (
 )
 from airunner_services.utils.application.log_hygiene import LogHygieneFilter
 
-
 _NOISY_LOGGERS = (
     "PIL.PngImagePlugin",
     "sqlalchemy.engine",
@@ -108,8 +107,7 @@ def _create_file_handler(
         )
     except Exception as exc:
         root_logger.error(
-            "Failed to setup file logging: %s. "
-            "File logging disabled.",
+            "Failed to setup file logging: %s. " "File logging disabled.",
             exc,
         )
 

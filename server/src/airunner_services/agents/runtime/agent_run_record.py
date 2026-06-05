@@ -94,9 +94,7 @@ class AgentRunRecord:
     ) -> list[AgentMessageRecord]:
         """Return the persisted messages for one structured channel."""
         return [
-            message
-            for message in self.messages
-            if message.channel == channel
+            message for message in self.messages if message.channel == channel
         ]
 
     def to_dict(self) -> dict[str, Any]:
@@ -156,8 +154,7 @@ class AgentRunRecord:
             return ""
         counts = Counter(message.channel.value for message in messages)
         channels = ", ".join(
-            f"{channel}={count}"
-            for channel, count in sorted(counts.items())
+            f"{channel}={count}" for channel, count in sorted(counts.items())
         )
         last_message = self._summary_snippet(messages[-1].content)
         return (

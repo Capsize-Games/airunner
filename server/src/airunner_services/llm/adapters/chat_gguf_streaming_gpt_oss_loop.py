@@ -22,19 +22,27 @@ def _stream_raw_gpt_oss_completion(
     run_manager: Optional[CallbackManagerForLLMRun],
 ) -> Iterator[ChatGenerationChunk]:
     """Stream one raw GPT-OSS Harmony completion."""
-    completion_kwargs, parser, forced_tool_name = _raw_gpt_oss_state(adapter, messages, stop)
+    completion_kwargs, parser, forced_tool_name = _raw_gpt_oss_state(
+        adapter, messages, stop
+    )
     raw_text, saw_visible_text = yield from _yield_raw_gpt_oss_deltas(
         adapter, completion_kwargs, parser, forced_tool_name, run_manager
     )
     yield from _final_raw_gpt_oss_chunks(
-        adapter, parser, raw_text, forced_tool_name, run_manager, saw_visible_text
+        adapter,
+        parser,
+        raw_text,
+        forced_tool_name,
+        run_manager,
+        saw_visible_text,
     )
 
 
 def _yield_raw_gpt_oss_deltas(
     adapter: Any,
     completion_kwargs: dict[str, Any],
-    parser: GPTOSSStreamParser, forced_tool_name: Optional[str],
+    parser: GPTOSSStreamParser,
+    forced_tool_name: Optional[str],
     run_manager: Optional[CallbackManagerForLLMRun],
 ) -> Iterator[ChatGenerationChunk]:
     """Yield raw GPT-OSS deltas and return the completed raw text."""
@@ -51,7 +59,12 @@ def _yield_raw_gpt_oss_deltas(
                 parser, raw_text, forced_tool_name, run_manager
             )
         )
-    return _completed_raw_text(adapter, completion_kwargs, full_content, forced_tool_name), saw_visible_text
+    return (
+        _completed_raw_text(
+            adapter, completion_kwargs, full_content, forced_tool_name
+        ),
+        saw_visible_text,
+    )
 
 
 def _raw_gpt_oss_state(
@@ -84,10 +97,14 @@ def _yield_raw_gpt_oss_delta(
         yield ChatGenerationChunk(
             message=AIMessageChunk(
                 content="",
-                additional_kwargs={"reasoning_content": parsed_delta.analysis_text},
+                additional_kwargs={
+                    "reasoning_content": parsed_delta.analysis_text
+                },
             )
         )
-    visible_text_emitted = bool(parsed_delta.final_text and not forced_tool_name)
+    visible_text_emitted = bool(
+        parsed_delta.final_text and not forced_tool_name
+    )
     if visible_text_emitted:
         yield _raw_text_chunk(parsed_delta.final_text, run_manager)
     return visible_text_emitted
@@ -113,5 +130,7 @@ def _completed_raw_text(
     """Return the completed raw GPT-OSS transcript after continuation."""
     raw_text = "".join(full_content)
     if forced_tool_name:
-        return _continued_prefilled_raw_text(adapter, completion_kwargs, raw_text)
+        return _continued_prefilled_raw_text(
+            adapter, completion_kwargs, raw_text
+        )
     return raw_text

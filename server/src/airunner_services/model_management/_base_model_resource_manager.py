@@ -13,8 +13,12 @@ from typing import Tuple
 from airunner_services.model_management.canvas_memory_tracker import (
     CanvasMemoryTracker,
 )
-from airunner_services.model_management.hardware_profiler import HardwareProfile
-from airunner_services.model_management.hardware_profiler import HardwareProfiler
+from airunner_services.model_management.hardware_profiler import (
+    HardwareProfile,
+)
+from airunner_services.model_management.hardware_profiler import (
+    HardwareProfiler,
+)
 from airunner_services.model_management.memory_allocator import MemoryAllocator
 from airunner_services.model_management.mixins.memory_tracking_mixin import (
     MemoryTrackingMixin,
@@ -150,7 +154,9 @@ class ModelResourceManager(
             ),
             (ModelState.BUSY, "{name} is currently processing. Please wait."),
         ):
-            match = next((model for model in active if model.state is state), None)
+            match = next(
+                (model for model in active if model.state is state), None
+            )
             if match is not None:
                 return False, message.format(name=match.model_type.upper())
         return None

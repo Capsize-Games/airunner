@@ -149,8 +149,7 @@ async def unload_model(
     ``unload_rag()`` and emit a status-update signal.
     """
     model_type_lower = (
-        request.model_type.strip().lower()
-        or request.model_id.strip().lower()
+        request.model_type.strip().lower() or request.model_id.strip().lower()
     )
 
     if "embedding" in model_type_lower:
@@ -158,7 +157,9 @@ async def unload_model(
             SignalCode.RAG_INDEX_CANCEL,
             {"unload_embedding": True},
         )
-        logger.info("Unload requested for embedding model %s", request.model_id)
+        logger.info(
+            "Unload requested for embedding model %s", request.model_id
+        )
         return {
             "status": "accepted",
             "message": "Embedding model unload requested",
@@ -195,12 +196,15 @@ async def unload_model(
                     require_runtime_registry(req),
                 )
                 envelope = build_control_request(
-                    RuntimeAction.UNLOAD_MODEL, None, None,
+                    RuntimeAction.UNLOAD_MODEL,
+                    None,
+                    None,
                 )
                 await asyncio.to_thread(client.invoke, envelope)
             except Exception as exc:
                 logger.warning(
-                    "Background art unload failed: %s", exc,
+                    "Background art unload failed: %s",
+                    exc,
                 )
             # Emit status update so the active-models list reflects
             # the unload immediately.
@@ -230,7 +234,10 @@ async def unload_model(
         request.model_id,
         request.model_type,
     )
-    return {"status": "accepted", "message": f"No handler for {request.model_type}"}
+    return {
+        "status": "accepted",
+        "message": f"No handler for {request.model_type}",
+    }
 
 
 # ── Signal registration (called from server.py) ──────────────────────

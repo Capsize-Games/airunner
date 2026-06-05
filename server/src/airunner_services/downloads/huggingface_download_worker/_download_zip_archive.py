@@ -53,7 +53,11 @@ def download_and_extract_zip(
     temp_path = temp_dir / filename
     try:
         downloaded = _stream_zip_to_disk(
-            zip_url, temp_path, filename, file_size, worker,
+            zip_url,
+            temp_path,
+            filename,
+            file_size,
+            worker,
         )
         if worker.is_cancelled:
             return
@@ -102,7 +106,9 @@ def _reset_worker_state(worker) -> None:
 
 
 def _fetch_file_size(
-    url: str, filename: str, worker,
+    url: str,
+    filename: str,
+    worker,
 ) -> int:
     """Retrieve the Content-Length for a URL, returning 0 on failure."""
     try:
@@ -111,7 +117,9 @@ def _fetch_file_size(
         return int(head.headers.get("Content-Length", 0))
     except requests.RequestException as exc:
         worker.logger.error(
-            "Failed to get ZIP file size for %s: %s", filename, exc,
+            "Failed to get ZIP file size for %s: %s",
+            filename,
+            exc,
         )
         return 0
 
@@ -142,6 +150,8 @@ def _stream_zip_to_disk(
 
                     if downloaded % (1024 * 1024) < 8192:
                         worker._update_file_progress(
-                            filename, downloaded, file_size,
+                            filename,
+                            downloaded,
+                            file_size,
                         )
     return downloaded

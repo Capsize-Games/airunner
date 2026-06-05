@@ -21,7 +21,9 @@ def export_project_report(agent: Any, project_id: int) -> str:
     features = agent._project_manager.get_project_features(project_id)
     progress_log = agent._project_manager.get_progress_log(project_id, 50)
     git_log = agent._project_manager.get_git_log(project_id, 20)
-    decisions = agent._project_manager.get_relevant_decisions(project_id, limit=20)
+    decisions = agent._project_manager.get_relevant_decisions(
+        project_id, limit=20
+    )
     lines = report_header(project)
     lines.extend(feature_section(features))
     lines.extend(progress_section(progress_log))

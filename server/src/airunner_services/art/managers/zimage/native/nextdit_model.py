@@ -34,37 +34,39 @@ def pad_to_patch_size(
 ) -> torch.Tensor:
     """
     Pad input to be divisible by patch size.
-    
+
     Args:
         x: Input tensor of shape (B, C, H, W)
         patch_size: (patch_height, patch_width)
-        
+
     Returns:
         Padded tensor
     """
     _, _, h, w = x.shape
     ph, pw = patch_size
-    
+
     pad_h = (ph - h % ph) % ph
     pad_w = (pw - w % pw) % pw
-    
+
     if pad_h > 0 or pad_w > 0:
-        x = nn.functional.pad(x, (0, pad_w, 0, pad_h), mode='constant', value=0)
-    
+        x = nn.functional.pad(
+            x, (0, pad_w, 0, pad_h), mode="constant", value=0
+        )
+
     return x
 
 
 class NextDiT(nn.Module):
     """
     NextDiT: Diffusion Transformer for Z-Image/Lumina2.
-    
+
     This is the main transformer architecture that processes:
     1. Noisy latent patches (image embeddings)
     2. Text conditioning (caption features)
     3. Timestep information
-    
+
     And outputs predicted velocity/noise for denoising.
-    
+
     Args:
         patch_size: Patch size for latent patchification
         in_channels: Input latent channels (16 for SD3 VAE)
@@ -88,7 +90,7 @@ class NextDiT(nn.Module):
         device: Target device
         dtype: Data type
     """
-    
+
     def __init__(
         self,
         patch_size: int = 2,
@@ -158,7 +160,11 @@ class NextDiT(nn.Module):
         )
 
         self.norm_final = RMSNorm(
-            dim, eps=norm_eps, elementwise_affine=True, device=device, dtype=dtype
+            dim,
+            eps=norm_eps,
+            elementwise_affine=True,
+            device=device,
+            dtype=dtype,
         )
         self.final_layer = FinalLayer(
             dim,
@@ -226,26 +232,30 @@ class NextDiT(nn.Module):
         device,
         dtype,
     ) -> nn.ModuleList:
-        return nn.ModuleList([
-            JointTransformerBlock(
-                layer_id=i,
-                dim=dim,
-                n_heads=n_heads,
-                n_kv_heads=n_kv_heads,
-                multiple_of=multiple_of,
-                ffn_dim_multiplier=ffn_dim_multiplier,
-                norm_eps=norm_eps,
-                qk_norm=qk_norm,
-                modulation=modulation,
-                z_image_modulation=z_image_modulation,
-                device=device,
-                dtype=dtype,
-            )
-            for i in range(count)
-        ])
+        return nn.ModuleList(
+            [
+                JointTransformerBlock(
+                    layer_id=i,
+                    dim=dim,
+                    n_heads=n_heads,
+                    n_kv_heads=n_kv_heads,
+                    multiple_of=multiple_of,
+                    ffn_dim_multiplier=ffn_dim_multiplier,
+                    norm_eps=norm_eps,
+                    qk_norm=qk_norm,
+                    modulation=modulation,
+                    z_image_modulation=z_image_modulation,
+                    device=device,
+                    dtype=dtype,
+                )
+                for i in range(count)
+            ]
+        )
 
     @staticmethod
-    def _build_t_embedder(dim: int, z_image_modulation: bool, device, dtype) -> TimestepEmbedder:
+    def _build_t_embedder(
+        dim: int, z_image_modulation: bool, device, dtype
+    ) -> TimestepEmbedder:
         return TimestepEmbedder(
             min(dim, 1024),
             output_size=min(dim, 256) if z_image_modulation else None,
@@ -254,10 +264,20 @@ class NextDiT(nn.Module):
         )
 
     @staticmethod
-    def _build_caption_embedder(cap_feat_dim: int, dim: int, norm_eps: float, device, dtype) -> nn.Sequential:
+    def _build_caption_embedder(
+        cap_feat_dim: int, dim: int, norm_eps: float, device, dtype
+    ) -> nn.Sequential:
         return nn.Sequential(
-            RMSNorm(cap_feat_dim, eps=norm_eps, elementwise_affine=True, device=device, dtype=dtype),
-            nn.Linear(cap_feat_dim, dim, bias=True, device=device, dtype=dtype),
+            RMSNorm(
+                cap_feat_dim,
+                eps=norm_eps,
+                elementwise_affine=True,
+                device=device,
+                dtype=dtype,
+            ),
+            nn.Linear(
+                cap_feat_dim, dim, bias=True, device=device, dtype=dtype
+            ),
         )
 
     def _init_embeddings(
@@ -268,9 +288,15 @@ class NextDiT(nn.Module):
         device,
         dtype,
     ) -> None:
-        self.x_embedder = self._build_patch_embedder(self.patch_size, self.in_channels, dim, device, dtype)
-        self.t_embedder = self._build_t_embedder(dim, self.z_image_modulation, device, dtype)
-        self.cap_embedder = self._build_caption_embedder(cap_feat_dim, dim, norm_eps, device, dtype)
+        self.x_embedder = self._build_patch_embedder(
+            self.patch_size, self.in_channels, dim, device, dtype
+        )
+        self.t_embedder = self._build_t_embedder(
+            dim, self.z_image_modulation, device, dtype
+        )
+        self.cap_embedder = self._build_caption_embedder(
+            cap_feat_dim, dim, norm_eps, device, dtype
+        )
 
     def _init_refiners(
         self,
@@ -353,10 +379,14 @@ class NextDiT(nn.Module):
         dim: int,
         n_heads: int,
     ) -> None:
-        assert (dim // n_heads) == sum(axes_dims), f"head_dim {dim//n_heads} != sum(axes_dims) {sum(axes_dims)}"
+        assert (dim // n_heads) == sum(
+            axes_dims
+        ), f"head_dim {dim//n_heads} != sum(axes_dims) {sum(axes_dims)}"
         self.axes_dims = axes_dims
         self.axes_lens = axes_lens
-        self.rope_embedder = EmbedND(dim=dim // n_heads, theta=rope_theta, axes_dim=axes_dims)
+        self.rope_embedder = EmbedND(
+            dim=dim // n_heads, theta=rope_theta, axes_dim=axes_dims
+        )
 
     def _build_main_layers(
         self,
@@ -372,24 +402,26 @@ class NextDiT(nn.Module):
         device,
         dtype,
     ) -> nn.ModuleList:
-        return nn.ModuleList([
-            JointTransformerBlock(
-                layer_id=i,
-                dim=dim,
-                n_heads=n_heads,
-                n_kv_heads=n_kv_heads,
-                multiple_of=multiple_of,
-                ffn_dim_multiplier=ffn_dim_multiplier,
-                norm_eps=norm_eps,
-                qk_norm=qk_norm,
-                modulation=True,
-                z_image_modulation=z_image_modulation,
-                attn_out_bias=False,
-                device=device,
-                dtype=dtype,
-            )
-            for i in range(count)
-        ])
+        return nn.ModuleList(
+            [
+                JointTransformerBlock(
+                    layer_id=i,
+                    dim=dim,
+                    n_heads=n_heads,
+                    n_kv_heads=n_kv_heads,
+                    multiple_of=multiple_of,
+                    ffn_dim_multiplier=ffn_dim_multiplier,
+                    norm_eps=norm_eps,
+                    qk_norm=qk_norm,
+                    modulation=True,
+                    z_image_modulation=z_image_modulation,
+                    attn_out_bias=False,
+                    device=device,
+                    dtype=dtype,
+                )
+                for i in range(count)
+            ]
+        )
 
     def _init_padding_tokens(self, dim: int, device, dtype) -> None:
         if self.pad_tokens_multiple is None:
@@ -400,7 +432,7 @@ class NextDiT(nn.Module):
         self.cap_pad_token = nn.Parameter(
             torch.empty((1, dim), device=device, dtype=dtype)
         )
-    
+
     def unpatchify(
         self,
         x: torch.Tensor,
@@ -410,24 +442,24 @@ class NextDiT(nn.Module):
     ) -> Union[List[torch.Tensor], torch.Tensor]:
         """
         Convert patches back to image tensor.
-        
+
         Args:
             x: Patch tensor of shape (B, S, patch_size^2 * C)
             img_size: List of (H, W) for each batch element
             cap_size: List of caption lengths for each batch element
             return_tensor: Whether to stack results
-            
+
         Returns:
             List of image tensors or stacked tensor
         """
         pH = pW = self.patch_size
         imgs = []
-        
+
         for i in range(x.size(0)):
             H, W = img_size[i]
             begin = cap_size[i]
             end = begin + (H // pH) * (W // pW)
-            
+
             img = (
                 x[i][begin:end]
                 .view(H // pH, W // pW, pH, pW, self.out_channels)
@@ -436,11 +468,11 @@ class NextDiT(nn.Module):
                 .flatten(1, 2)
             )
             imgs.append(img)
-        
+
         if return_tensor:
             imgs = torch.stack(imgs, dim=0)
         return imgs
-    
+
     def patchify_and_embed(
         self,
         x: torch.Tensor,
@@ -449,10 +481,16 @@ class NextDiT(nn.Module):
         t: torch.Tensor,
         num_tokens: int,
         transformer_options: dict = None,
-    ) -> Tuple[torch.Tensor, Optional[torch.Tensor], List[Tuple[int, int]], List[int], torch.Tensor]:
+    ) -> Tuple[
+        torch.Tensor,
+        Optional[torch.Tensor],
+        List[Tuple[int, int]],
+        List[int],
+        torch.Tensor,
+    ]:
         """
         Patchify image and embed with positional encoding.
-        
+
         Args:
             x: Image latent of shape (B, C, H, W)
             cap_feats: Caption features of shape (B, L, D_cap)
@@ -460,7 +498,7 @@ class NextDiT(nn.Module):
             t: Timestep embedding
             num_tokens: Number of text tokens
             transformer_options: Additional options
-            
+
         Returns:
             Tuple of:
             - padded_full_embed: Combined caption + image embeddings
@@ -473,18 +511,32 @@ class NextDiT(nn.Module):
         cap_feats, cap_mask = self._pad_caption_tokens(cap_feats, cap_mask)
         cap_pos_ids = self._build_caption_pos_ids(cap_feats, x.device)
 
-        rope_scales = self._rope_scaling(transformer_options.get("rope_options"))
+        rope_scales = self._rope_scaling(
+            transformer_options.get("rope_options")
+        )
         x, h_tokens, w_tokens, H, W = self._embed_image_tokens(x)
-        x_pos_ids = self._build_image_pos_ids(cap_feats, x, h_tokens, w_tokens, rope_scales)
+        x_pos_ids = self._build_image_pos_ids(
+            cap_feats, x, h_tokens, w_tokens, rope_scales
+        )
         x, x_pos_ids = self._pad_image_tokens(x, x_pos_ids)
 
-        freqs_cis = self.rope_embedder(torch.cat((cap_pos_ids, x_pos_ids), dim=1)).movedim(1, 2)
-        cap_feats, x = self._refine_embeddings(cap_feats, cap_mask, x, freqs_cis, transformer_options, t)
+        freqs_cis = self.rope_embedder(
+            torch.cat((cap_pos_ids, x_pos_ids), dim=1)
+        ).movedim(1, 2)
+        cap_feats, x = self._refine_embeddings(
+            cap_feats, cap_mask, x, freqs_cis, transformer_options, t
+        )
 
         padded_full_embed = torch.cat((cap_feats, x), dim=1)
         img_sizes = [(H, W)] * x.shape[0]
         l_effective_cap_len = [cap_feats.shape[1]] * x.shape[0]
-        return padded_full_embed, None, img_sizes, l_effective_cap_len, freqs_cis
+        return (
+            padded_full_embed,
+            None,
+            img_sizes,
+            l_effective_cap_len,
+            freqs_cis,
+        )
 
     def _pad_caption_tokens(
         self, cap_feats: torch.Tensor, cap_mask: Optional[torch.Tensor]
@@ -494,24 +546,49 @@ class NextDiT(nn.Module):
         pad_extra = (-cap_feats.shape[1]) % self.pad_tokens_multiple
         if pad_extra == 0:
             return cap_feats, cap_mask
-        pad_token = self.cap_pad_token.to(device=cap_feats.device, dtype=cap_feats.dtype)
+        pad_token = self.cap_pad_token.to(
+            device=cap_feats.device, dtype=cap_feats.dtype
+        )
         cap_feats = torch.cat(
-            (cap_feats, pad_token.unsqueeze(0).repeat(cap_feats.shape[0], pad_extra, 1)), dim=1
+            (
+                cap_feats,
+                pad_token.unsqueeze(0).repeat(
+                    cap_feats.shape[0], pad_extra, 1
+                ),
+            ),
+            dim=1,
         )
         if cap_mask is None:
             return cap_feats, cap_mask
         pad_value = False if cap_mask.dtype == torch.bool else 0
-        cap_mask = torch.nn.functional.pad(cap_mask, (0, pad_extra), value=pad_value)
+        cap_mask = torch.nn.functional.pad(
+            cap_mask, (0, pad_extra), value=pad_value
+        )
         return cap_feats, cap_mask
 
     @staticmethod
-    def _build_caption_pos_ids(cap_feats: torch.Tensor, device: torch.device) -> torch.Tensor:
-        cap_pos_ids = torch.zeros(cap_feats.shape[0], cap_feats.shape[1], 3, dtype=torch.float32, device=device)
-        cap_pos_ids[:, :, 0] = torch.arange(cap_feats.shape[1], dtype=torch.float32, device=device) + 1.0
+    def _build_caption_pos_ids(
+        cap_feats: torch.Tensor, device: torch.device
+    ) -> torch.Tensor:
+        cap_pos_ids = torch.zeros(
+            cap_feats.shape[0],
+            cap_feats.shape[1],
+            3,
+            dtype=torch.float32,
+            device=device,
+        )
+        cap_pos_ids[:, :, 0] = (
+            torch.arange(
+                cap_feats.shape[1], dtype=torch.float32, device=device
+            )
+            + 1.0
+        )
         return cap_pos_ids
 
     @staticmethod
-    def _rope_scaling(rope_options: Optional[dict]) -> tuple[float, float, float, float]:
+    def _rope_scaling(
+        rope_options: Optional[dict],
+    ) -> tuple[float, float, float, float]:
         if rope_options is None:
             return 1.0, 1.0, 0.0, 0.0
         return (
@@ -521,7 +598,9 @@ class NextDiT(nn.Module):
             rope_options.get("shift_x", 0.0),
         )
 
-    def _embed_image_tokens(self, x: torch.Tensor) -> tuple[torch.Tensor, int, int, int, int]:
+    def _embed_image_tokens(
+        self, x: torch.Tensor
+    ) -> tuple[torch.Tensor, int, int, int, int]:
         B, C, H, W = x.shape
         pH = pW = self.patch_size
         x = self.x_embedder(
@@ -542,14 +621,30 @@ class NextDiT(nn.Module):
     ) -> torch.Tensor:
         h_scale, w_scale, h_start, w_start = rope_scales
         device = x.device
-        x_pos_ids = torch.zeros((x.shape[0], x.shape[1], 3), dtype=torch.float32, device=device)
+        x_pos_ids = torch.zeros(
+            (x.shape[0], x.shape[1], 3), dtype=torch.float32, device=device
+        )
         x_pos_ids[:, :, 0] = cap_feats.shape[1] + 1
         x_pos_ids[:, :, 1] = (
-            torch.arange(h_tokens, dtype=torch.float32, device=device) * h_scale + h_start
-        ).view(-1, 1).repeat(1, w_tokens).flatten()
+            (
+                torch.arange(h_tokens, dtype=torch.float32, device=device)
+                * h_scale
+                + h_start
+            )
+            .view(-1, 1)
+            .repeat(1, w_tokens)
+            .flatten()
+        )
         x_pos_ids[:, :, 2] = (
-            torch.arange(w_tokens, dtype=torch.float32, device=device) * w_scale + w_start
-        ).view(1, -1).repeat(h_tokens, 1).flatten()
+            (
+                torch.arange(w_tokens, dtype=torch.float32, device=device)
+                * w_scale
+                + w_start
+            )
+            .view(1, -1)
+            .repeat(h_tokens, 1)
+            .flatten()
+        )
         return x_pos_ids
 
     def _pad_image_tokens(
@@ -561,7 +656,9 @@ class NextDiT(nn.Module):
         if pad_extra == 0:
             return x, x_pos_ids
         pad_token = self.x_pad_token.to(device=x.device, dtype=x.dtype)
-        x = torch.cat((x, pad_token.unsqueeze(0).repeat(x.shape[0], pad_extra, 1)), dim=1)
+        x = torch.cat(
+            (x, pad_token.unsqueeze(0).repeat(x.shape[0], pad_extra, 1)), dim=1
+        )
         x_pos_ids = nn.functional.pad(x_pos_ids, (0, 0, 0, pad_extra))
         return x, x_pos_ids
 
@@ -578,7 +675,7 @@ class NextDiT(nn.Module):
             cap_feats = layer(
                 cap_feats,
                 cap_mask,
-                freqs_cis[:, :cap_feats.shape[1]],
+                freqs_cis[:, : cap_feats.shape[1]],
                 transformer_options=transformer_options,
             )
 
@@ -587,12 +684,12 @@ class NextDiT(nn.Module):
             x = layer(
                 x,
                 padded_img_mask,
-                freqs_cis[:, cap_feats.shape[1]:],
+                freqs_cis[:, cap_feats.shape[1] :],
                 t,
                 transformer_options=transformer_options,
             )
         return cap_feats, x
-    
+
     def forward(
         self,
         x: torch.Tensor,
@@ -605,7 +702,7 @@ class NextDiT(nn.Module):
     ) -> torch.Tensor:
         """
         Forward pass.
-        
+
         Args:
             x: Noisy latent of shape (B, C, H, W)
             timesteps: Diffusion timesteps of shape (B,)
@@ -613,13 +710,13 @@ class NextDiT(nn.Module):
             num_tokens: Number of text tokens
             attention_mask: Optional attention mask for text
             transformer_options: Additional options
-            
+
         Returns:
             Predicted velocity/noise of shape (B, C, H, W)
         """
         if transformer_options is None:
             transformer_options = {}
-        
+
         # Official Z-Image timestep handling:
         # Pipeline passes: t_normalized = (1000 - t_scheduler) / 1000
         # Transformer does: t_scaled = t_normalized * t_scale (1000.0)
@@ -635,61 +732,73 @@ class NextDiT(nn.Module):
         else:
             # Already normalized to [0, 1] range
             t = timesteps
-        
+
         cap_feats = context
         cap_mask = attention_mask
         bs, c, h, w = x.shape
-        
+
         # Pad to patch size
         x = pad_to_patch_size(x, (self.patch_size, self.patch_size))
-        
+
         # Embed timestep - multiply by time_scale as official implementation does
         t = self.t_embedder(t * self.time_scale, dtype=x.dtype)
         adaln_input = t
-        
+
         # Embed caption
         cap_feats = self.cap_embedder(cap_feats)
-        
+
         # Patchify and embed everything
         patches = transformer_options.get("patches", {})
         img, mask, img_size, cap_size, freqs_cis = self.patchify_and_embed(
-            x, cap_feats, cap_mask, t, num_tokens, transformer_options=transformer_options
+            x,
+            cap_feats,
+            cap_mask,
+            t,
+            num_tokens,
+            transformer_options=transformer_options,
         )
         freqs_cis = freqs_cis.to(img.device)
-        
+
         # Main transformer layers
         for i, layer in enumerate(self.layers):
             img = layer(
-                img, mask, freqs_cis, adaln_input,
+                img,
+                mask,
+                freqs_cis,
+                adaln_input,
                 transformer_options=transformer_options,
             )
-            
+
             # Handle patches (for ControlNet, etc.)
             if "double_block" in patches:
                 for p in patches["double_block"]:
-                    out = p({
-                        "img": img[:, cap_size[0]:],
-                        "txt": img[:, :cap_size[0]],
-                        "pe": freqs_cis[:, cap_size[0]:],
-                        "vec": adaln_input,
-                        "x": x,
-                        "block_index": i,
-                        "transformer_options": transformer_options,
-                    })
+                    out = p(
+                        {
+                            "img": img[:, cap_size[0] :],
+                            "txt": img[:, : cap_size[0]],
+                            "pe": freqs_cis[:, cap_size[0] :],
+                            "vec": adaln_input,
+                            "x": x,
+                            "block_index": i,
+                            "transformer_options": transformer_options,
+                        }
+                    )
                     if "img" in out:
-                        img[:, cap_size[0]:] = out["img"]
+                        img[:, cap_size[0] :] = out["img"]
                     if "txt" in out:
-                        img[:, :cap_size[0]] = out["txt"]
-        
+                        img[:, : cap_size[0]] = out["txt"]
+
         # Final layer
         img = self.final_layer(img, adaln_input)
-        
+
         # Unpatchify
-        img = self.unpatchify(img, img_size, cap_size, return_tensor=True)[:, :, :h, :w]
-        
+        img = self.unpatchify(img, img_size, cap_size, return_tensor=True)[
+            :, :, :h, :w
+        ]
+
         # Return model output - negation is handled in the pipeline
         return img
-    
+
     @property
     def device(self) -> torch.device:
         """Get model device."""
@@ -726,11 +835,11 @@ def create_zimage_transformer(
 ) -> NextDiT:
     """
     Create a Z-Image transformer with default configuration.
-    
+
     Args:
         device: Target device
         dtype: Data type
-        
+
     Returns:
         Configured NextDiT model
     """

@@ -6,7 +6,6 @@ import os
 import re
 from contextvars import ContextVar, Token
 
-
 _tenant_key: ContextVar[str | None] = ContextVar(
     "airunner_tenant_key",
     default=None,

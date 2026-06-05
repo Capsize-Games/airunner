@@ -32,7 +32,9 @@ def check_existing_file(
         logger.warning(
             "File %s is incomplete: %d bytes vs expected %d bytes. "
             "Will re-download.",
-            path.name, actual_size, expected_size,
+            path.name,
+            actual_size,
+            expected_size,
         )
         return False
 
@@ -40,13 +42,15 @@ def check_existing_file(
         logger.warning(
             "File %s exists but is very small (%d bytes) with unknown "
             "expected size. Assuming incomplete and re-downloading.",
-            path.name, actual_size,
+            path.name,
+            actual_size,
         )
         return False
 
     logger.debug(
         "File %s exists (%d bytes), skipping",
-        path.name, actual_size,
+        path.name,
+        actual_size,
     )
     return True
 
@@ -58,7 +62,9 @@ def remove_file(path: Path, logger: logging.Logger) -> bool:
         return True
     except Exception as exc:
         logger.error(
-            "Failed to delete file %s: %s", path.name, exc,
+            "Failed to delete file %s: %s",
+            path.name,
+            exc,
         )
         return False
 

@@ -11,7 +11,6 @@ from airunner_services.llm.long_running.initializer_agent_state import (
 from airunner_services.settings import AIRUNNER_LOG_LEVEL
 from airunner_services.utils.application import get_logger
 
-
 logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 
 
@@ -44,7 +43,9 @@ def _initial_state(
     }
 
 
-def _result_payload(agent: Any, result: dict[str, Any], name: str) -> dict[str, Any]:
+def _result_payload(
+    agent: Any, result: dict[str, Any], name: str
+) -> dict[str, Any]:
     """Build the public response for one initialized project."""
     project = agent._project_manager.get_project(result["project_id"])
     feature_count = project.total_features if project else 0
@@ -64,7 +65,9 @@ def initialize_project(
 ) -> dict[str, Any]:
     """Initialize one long-running project."""
     logger.info("Starting project initialization: %s", name)
-    result = agent._graph.invoke(_initial_state(name, description, working_directory))
+    result = agent._graph.invoke(
+        _initial_state(name, description, working_directory)
+    )
     if result.get("error"):
         return {"error": result["error"]}
     return _result_payload(agent, result, name)

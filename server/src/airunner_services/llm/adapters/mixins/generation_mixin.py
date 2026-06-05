@@ -88,11 +88,11 @@ class GenerationMixin:
         """
         # Check if we have pending images for vision processing
         pending_images = getattr(self, "_pending_images", [])
-        
+
         if pending_images and hasattr(self, "processor") and self.processor:
             # Vision model with images - use processor
             return self._prepare_vision_inputs(prompt, pending_images)
-        
+
         if isinstance(prompt, list):
             # Token list from Mistral native tokenizer - create attention mask too
             input_ids = torch.tensor([prompt]).to(self.model.device)
@@ -100,7 +100,9 @@ class GenerationMixin:
             return {"input_ids": input_ids, "attention_mask": attention_mask}
         else:
             # Get max length from model config, default to 131072 for modern LLMs
-            max_length = getattr(self.model.config, "max_position_embeddings", 131072)
+            max_length = getattr(
+                self.model.config, "max_position_embeddings", 131072
+            )
             # CRITICAL: add_special_tokens=False because the chat template already
             # includes the BOS token (<s>). Without this, we get double <s><s>
             # which corrupts the model output.
@@ -114,11 +116,11 @@ class GenerationMixin:
 
     def _prepare_vision_inputs(self, prompt, image_urls):
         """Prepare inputs for vision model with images.
-        
+
         Args:
             prompt: Text prompt string
             image_urls: List of image sources (data URLs, http/https, file paths, PIL, bytes)
-            
+
         Returns:
             Dictionary with input tensors including pixel_values
         """
@@ -126,15 +128,15 @@ class GenerationMixin:
 
     def _resize_image_for_quantized_model(self, image, max_size: int = 768):
         """Resize image to prevent garbage output from quantized vision models.
-        
+
         Some 4-bit quantized vision models produce corrupted output when
         processing images larger than approximately 640x640 pixels. This method
         resizes images to stay within safe bounds while preserving aspect ratio.
-        
+
         Args:
             image: PIL Image to resize
             max_size: Maximum dimension (width or height) in pixels
-            
+
         Returns:
             Resized PIL Image if needed, otherwise original image
         """
@@ -198,7 +200,9 @@ class GenerationMixin:
             )
         finally:
             thread.join()
-        yield from _final_stream_tool_call_chunks(self, full_response, kwargs, has_tools)
+        yield from _final_stream_tool_call_chunks(
+            self, full_response, kwargs, has_tools
+        )
 
     def _deduplicate_tool_calls(self, tool_calls: List[dict]) -> List[dict]:
         """Remove duplicate consecutive tool calls with identical name/args.
@@ -273,7 +277,9 @@ def _start_stream_generation(
     inputs = adapter._prepare_inputs(prompt)
     streamer = create_streamer(adapter)
     adapter._interrupted = False
-    generation_kwargs = build_generation_kwargs(adapter, inputs, streamer, kwargs)
+    generation_kwargs = build_generation_kwargs(
+        adapter, inputs, streamer, kwargs
+    )
     thread = start_generation_thread(adapter, generation_kwargs)
     return streamer, thread, [], bool(adapter.tools)
 
@@ -300,4 +306,6 @@ def _final_stream_tool_call_chunks(
     response_text = "".join(full_response)
     tool_calls = parse_stream_tool_calls(adapter, response_text, kwargs)
     if tool_calls:
-        yield create_tool_call_chunk(adapter._deduplicate_tool_calls(tool_calls))
+        yield create_tool_call_chunk(
+            adapter._deduplicate_tool_calls(tool_calls)
+        )

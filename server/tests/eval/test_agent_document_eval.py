@@ -14,7 +14,6 @@ from llm_functional_support import daemon_env
 from llm_functional_support import llm_artifact_path
 from llm_functional_support import started_daemon
 
-
 _MODEL_IDS = ["qwen3.5-9b", "gpt-oss-20b"]
 _DOCUMENT_PATH = (
     Path(__file__).resolve().parents[1] / "fixtures" / "agent_eval_document.md"

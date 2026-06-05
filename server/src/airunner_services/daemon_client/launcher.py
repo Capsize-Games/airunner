@@ -50,7 +50,10 @@ class DaemonLauncher:
         """Return the daemon launch command."""
         bundle_layout = build_linux_bundle_layout()
         daemon_executable = bundle_layout.daemon_executable()
-        if daemon_executable is not None and os.environ.get("DEV_ENV", "1") != "1":
+        if (
+            daemon_executable is not None
+            and os.environ.get("DEV_ENV", "1") != "1"
+        ):
             command = [str(daemon_executable)]
         else:
             command = [

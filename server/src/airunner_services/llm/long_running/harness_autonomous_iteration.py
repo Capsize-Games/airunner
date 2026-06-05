@@ -13,7 +13,6 @@ from airunner_services.llm.long_running.harness_autonomous_results import (
 from airunner_services.settings import AIRUNNER_LOG_LEVEL
 from airunner_services.utils.application import get_logger
 
-
 logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 
 
@@ -57,7 +56,9 @@ def project_iteration_result(
 
 
 def run_iteration(
-    agent: Any, project_id: int, sessions_run: int,
+    agent: Any,
+    project_id: int,
+    sessions_run: int,
     max_sessions: int,
     project: Any,
     errors: list[str],

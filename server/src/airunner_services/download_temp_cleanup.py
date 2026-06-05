@@ -7,7 +7,6 @@ from pathlib import Path
 import shutil
 import time
 
-
 DEFAULT_STALE_DOWNLOAD_AGE_SECONDS = 24 * 60 * 60
 
 

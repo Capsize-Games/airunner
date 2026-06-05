@@ -135,7 +135,9 @@ def normalize_punctuation_for_pauses(text):
     text = re.sub(r"…", "...", text)  # Normalize ellipsis character to dots
     text = re.sub(r"\.{3,}", ", , ", text)  # Multiple dots -> longer pause
     # Colon should create a pause (but not in time expressions like 9:16)
-    text = re.sub(r"(?<!\d):(?!\d)", ", ", text)  # Colon not surrounded by digits
+    text = re.sub(
+        r"(?<!\d):(?!\d)", ", ", text
+    )  # Colon not surrounded by digits
     # Clean up multiple commas/spaces
     text = re.sub(r",\s*,", ", ", text)
     text = re.sub(r"\s+", " ", text)
@@ -186,31 +188,33 @@ def _expand_decade_plural(m):
     """Expand decade/century plurals like '1800s' -> 'eighteen hundreds'."""
     num_str = m.group(1)
     num = int(num_str)
-    
+
     # Handle short decades like '60s, '90s or just 60s, 90s
     if num < 100:
         decade_word = _inflect.number_to_words(num, andword="")
         return f"{decade_word}s"  # "sixties", "nineties"
-    
+
     # Handle century references like 1800s, 1900s (meaning the century/era)
     if num % 100 == 0 and 1000 <= num <= 2000:
         century = num // 100
         century_word = _inflect.number_to_words(century, andword="")
         return f"{century_word} hundreds"  # "eighteen hundreds"
-    
+
     # Handle decade references like 1980s, 1990s, 2020s
     if num >= 1000:
         # Split into century and decade parts
         century_part = num // 100  # e.g., 19 for 1980
         decade_part = (num % 100) // 10 * 10  # e.g., 80 for 1980
-        
+
         if century_part >= 20:  # 2000s and beyond
             if decade_part == 0:
                 # 2000s -> "two thousands"
                 return _inflect.number_to_words(num, andword="") + "s"
             else:
                 # 2020s -> "twenty twenties"
-                century_word = _inflect.number_to_words(century_part, andword="")
+                century_word = _inflect.number_to_words(
+                    century_part, andword=""
+                )
                 decade_word = _inflect.number_to_words(decade_part, andword="")
                 return f"{century_word} {decade_word}s"
         else:  # 1000s-1900s
@@ -218,7 +222,7 @@ def _expand_decade_plural(m):
             century_word = _inflect.number_to_words(century_part, andword="")
             decade_word = _inflect.number_to_words(decade_part, andword="")
             return f"{century_word} {decade_word}s"
-    
+
     # Fallback for other numbers
     return _inflect.number_to_words(num, andword="") + "s"
 
@@ -228,19 +232,19 @@ def _expand_time(m):
     hour = int(m.group(1))
     minute = int(m.group(2))
     period = m.group(3).upper().replace(".", "")  # Normalize to AM or PM
-    
+
     hour_word = _inflect.number_to_words(hour, andword="")
-    
+
     if minute == 0:
         minute_word = "o'clock"
     elif minute < 10:
         minute_word = "oh " + _inflect.number_to_words(minute, andword="")
     else:
         minute_word = _inflect.number_to_words(minute, andword="")
-    
+
     # Expand AM/PM to spelled out letters
     period_expanded = " ".join(period)  # "AM" -> "A M", "PM" -> "P M"
-    
+
     return f"{hour_word} {minute_word} {period_expanded}"
 
 
@@ -321,13 +325,13 @@ def normalize_numbers(text):
     text = re.sub(_comma_number_re, _remove_commas, text)
 
     # 1.3. Process time expressions FIRST (e.g., "9:16 AM" -> "nine sixteen A M")
-    text = re.sub(
-        _time_re, lambda m: add_placeholder(_expand_time, m), text
-    )
+    text = re.sub(_time_re, lambda m: add_placeholder(_expand_time, m), text)
 
     # 1.5. Process decade/century plurals BEFORE other number processing (e.g., "1800s" -> "eighteen hundreds")
     text = re.sub(
-        _decade_plural_re, lambda m: add_placeholder(_expand_decade_plural, m), text
+        _decade_plural_re,
+        lambda m: add_placeholder(_expand_decade_plural, m),
+        text,
     )
 
     # 2. Process and placeholder pounds. Uses _expand_pounds.
@@ -359,9 +363,7 @@ def normalize_numbers(text):
     )
 
     # 6.5. Expand any remaining standalone AM/PM
-    text = re.sub(
-        _am_pm_re, lambda m: add_placeholder(_expand_am_pm, m), text
-    )
+    text = re.sub(_am_pm_re, lambda m: add_placeholder(_expand_am_pm, m), text)
 
     # 7. Restore placeholders in the correct order.
     for key in sorted(placeholders.keys(), key=len, reverse=True):

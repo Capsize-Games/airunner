@@ -53,9 +53,7 @@ def _apply_optional_int_overrides(tuning: dict[str, Any]) -> None:
     if n_threads_override is not None:
         tuning["n_threads"] = n_threads_override
 
-    n_threads_batch_override = _get_int_env(
-        "AIRUNNER_GGUF_N_THREADS_BATCH"
-    )
+    n_threads_batch_override = _get_int_env("AIRUNNER_GGUF_N_THREADS_BATCH")
     if n_threads_batch_override is not None:
         tuning["n_threads_batch"] = n_threads_batch_override
 
@@ -81,9 +79,7 @@ def format_llama_tuning(tuning: dict[str, Any]) -> str:
         "offload_kqv",
         "op_offload",
     ]
-    return ", ".join(
-        f"{key}={tuning[key]}" for key in keys if key in tuning
-    )
+    return ", ".join(f"{key}={tuning[key]}" for key in keys if key in tuning)
 
 
 def apply_runtime_env_overrides(adapter: Any) -> None:

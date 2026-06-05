@@ -27,7 +27,11 @@ class ZImageBundleHelper:
         version = getattr(self._owner, "version", None)
         pipeline_action = getattr(self._owner, "pipeline_action", "txt2img")
         if version != "Z-Image Turbo":
-            parent = getattr(super(type(self._owner), self._owner), "_check_and_trigger_download", None)
+            parent = getattr(
+                super(type(self._owner), self._owner),
+                "_check_and_trigger_download",
+                None,
+            )
             return parent() if callable(parent) else (False, {})
         model_path = Path(self._owner.model_path)
         load_mode = get_active_zimage_load_mode(model_path)
@@ -41,9 +45,13 @@ class ZImageBundleHelper:
                 missing_files,
             )
             return False, {}
-        repo_id = ModelFileChecker.get_repo_id_for_version(version, pipeline_action)
+        repo_id = ModelFileChecker.get_repo_id_for_version(
+            version, pipeline_action
+        )
         if repo_id is None:
-            return False, {"error": "Unable to resolve Z-Image download source"}
+            return False, {
+                "error": "Unable to resolve Z-Image download source"
+            }
         download_info = self.build_zimage_download_info(repo_id, missing_files)
         self._owner.emit_signal(
             SignalCode.ART_MODEL_DOWNLOAD_REQUIRED,
@@ -62,7 +70,9 @@ class ZImageBundleHelper:
             "model_path": self._owner.model_path,
             "missing_files": missing_files,
             "version": self._owner.version,
-            "pipeline_action": getattr(self._owner, "pipeline_action", "txt2img"),
+            "pipeline_action": getattr(
+                self._owner, "pipeline_action", "txt2img"
+            ),
             "image_request": getattr(self._owner, "image_request", None),
         }
 
@@ -83,9 +93,13 @@ class ZImageBundleHelper:
                     component,
                 )
                 return False
-            config_file = self._component_config_path(component_path, component)
+            config_file = self._component_config_path(
+                component_path, component
+            )
             if not config_file.exists():
-                self._owner.logger.debug("Missing config file: %s", config_file)
+                self._owner.logger.debug(
+                    "Missing config file: %s", config_file
+                )
                 return False
         model_index = model_dir / "model_index.json"
         if not model_index.exists():
@@ -113,13 +127,17 @@ class ZImageBundleHelper:
     ) -> Optional[Path]:
         """Return the canonical Z-Image Turbo companion directory when present."""
         del checkpoint_path
-        from airunner_services.database.models.path_settings import PathSettings
+        from airunner_services.database.models.path_settings import (
+            PathSettings,
+        )
         from airunner_services.database.session import session_scope
 
         try:
             with session_scope() as session:
                 path_settings = session.query(PathSettings).first()
-                base_path = (getattr(path_settings, "base_path", "") or "").strip()
+                base_path = (
+                    getattr(path_settings, "base_path", "") or ""
+                ).strip()
         except Exception:
             base_path = ""
         base_path = base_path or os.path.expanduser(
@@ -145,15 +163,21 @@ class ZImageBundleHelper:
         model_path = Path(self._owner.model_path)
         load_mode = get_active_zimage_load_mode(model_path)
         if load_mode != "pretrained_directory" and not model_path.exists():
-            raise RuntimeError(f"Selected Z-Image checkpoint missing: {model_path}")
+            raise RuntimeError(
+                f"Selected Z-Image checkpoint missing: {model_path}"
+            )
         companion_dir = self.resolve_zimage_companion_dir(model_path)
-        search_dir = companion_dir if companion_dir else (
-            model_path.parent if model_path.is_file() else model_path
+        search_dir = (
+            companion_dir
+            if companion_dir
+            else (model_path.parent if model_path.is_file() else model_path)
         )
         bundle_probe_path = search_dir
         if search_dir.is_dir() and model_path.is_file():
             bundle_probe_path = search_dir / model_path.name
-        missing_files = get_missing_files_for_mode(bundle_probe_path, load_mode)
+        missing_files = get_missing_files_for_mode(
+            bundle_probe_path, load_mode
+        )
         if (
             bundle_probe_path != model_path
             and model_path.exists()

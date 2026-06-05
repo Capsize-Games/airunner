@@ -134,10 +134,14 @@ class LLMWebSocketAdapter:
                 try:
                     data = json.loads(raw)
                 except json.JSONDecodeError:
-                    await websocket.send(json.dumps({
-                        "type": "error",
-                        "error": "Invalid JSON",
-                    }))
+                    await websocket.send(
+                        json.dumps(
+                            {
+                                "type": "error",
+                                "error": "Invalid JSON",
+                            }
+                        )
+                    )
                     continue
 
                 request_id = str(data.get("request_id", ""))
@@ -145,17 +149,23 @@ class LLMWebSocketAdapter:
 
                 if action == "invoke":
                     await self._handle_invoke(
-                        websocket, request_id, data.get("payload", {}),
+                        websocket,
+                        request_id,
+                        data.get("payload", {}),
                     )
                 elif action in ("health", "status"):
                     await self._handle_health(websocket, request_id)
                 else:
-                    await websocket.send(json.dumps({
-                        "type": "response",
-                        "request_id": request_id,
-                        "status": "failed",
-                        "error": f"Unknown action: {action}",
-                    }))
+                    await websocket.send(
+                        json.dumps(
+                            {
+                                "type": "response",
+                                "request_id": request_id,
+                                "status": "failed",
+                                "error": f"Unknown action: {action}",
+                            }
+                        )
+                    )
         except websockets.ConnectionClosed:
             logger.info("LLM adapter: client disconnected")
         except Exception as exc:
@@ -184,11 +194,15 @@ class LLMWebSocketAdapter:
 
         if stream:
             await self._forward_stream(
-                websocket, request_id, body,
+                websocket,
+                request_id,
+                body,
             )
         else:
             await self._forward_sync(
-                websocket, request_id, body,
+                websocket,
+                request_id,
+                body,
             )
 
     async def _forward_sync(
@@ -200,26 +214,34 @@ class LLMWebSocketAdapter:
         """Forward one non-streaming request and return the response."""
         result = await self._http_request(body)
         if result is None:
-            await websocket.send(json.dumps({
-                "type": "response",
-                "request_id": request_id,
-                "status": "failed",
-                "error": "llama.cpp request failed",
-            }))
+            await websocket.send(
+                json.dumps(
+                    {
+                        "type": "response",
+                        "request_id": request_id,
+                        "status": "failed",
+                        "error": "llama.cpp request failed",
+                    }
+                )
+            )
             return
 
         choices = result.get("choices") or [{}]
         message = choices[0].get("message") or {}
-        await websocket.send(json.dumps({
-            "type": "response",
-            "request_id": request_id,
-            "status": "succeeded",
-            "payload": {
-                "content": message.get("content", "") or "",
-                "tools": message.get("tool_calls") or [],
-                "usage": result.get("usage", {}),
-            },
-        }))
+        await websocket.send(
+            json.dumps(
+                {
+                    "type": "response",
+                    "request_id": request_id,
+                    "status": "succeeded",
+                    "payload": {
+                        "content": message.get("content", "") or "",
+                        "tools": message.get("tool_calls") or [],
+                        "usage": result.get("usage", {}),
+                    },
+                }
+            )
+        )
 
     async def _forward_stream(
         self,
@@ -230,12 +252,16 @@ class LLMWebSocketAdapter:
         """Forward one streaming request and send deltas via WebSocket."""
         response = await self._http_request_raw(body)
         if response is None:
-            await websocket.send(json.dumps({
-                "type": "response",
-                "request_id": request_id,
-                "status": "failed",
-                "error": "llama.cpp streaming request failed",
-            }))
+            await websocket.send(
+                json.dumps(
+                    {
+                        "type": "response",
+                        "request_id": request_id,
+                        "status": "failed",
+                        "error": "llama.cpp streaming request failed",
+                    }
+                )
+            )
             return
 
         sequence = 0
@@ -249,13 +275,17 @@ class LLMWebSocketAdapter:
                     continue
                 payload = line.split(b":", 1)[1].strip()
                 if payload == b"[DONE]":
-                    await websocket.send(json.dumps({
-                        "type": "stream",
-                        "request_id": request_id,
-                        "sequence": sequence,
-                        "delta": {},
-                        "final": True,
-                    }))
+                    await websocket.send(
+                        json.dumps(
+                            {
+                                "type": "stream",
+                                "request_id": request_id,
+                                "sequence": sequence,
+                                "delta": {},
+                                "final": True,
+                            }
+                        )
+                    )
                     break
 
                 data = json.loads(payload.decode("utf-8"))
@@ -269,13 +299,17 @@ class LLMWebSocketAdapter:
                 if delta.get("tool_calls"):
                     chunk["tool_calls"] = delta["tool_calls"]
 
-                await websocket.send(json.dumps({
-                    "type": "stream",
-                    "request_id": request_id,
-                    "sequence": sequence,
-                    "delta": chunk,
-                    "final": finish_reason is not None,
-                }))
+                await websocket.send(
+                    json.dumps(
+                        {
+                            "type": "stream",
+                            "request_id": request_id,
+                            "sequence": sequence,
+                            "delta": chunk,
+                            "final": finish_reason is not None,
+                        }
+                    )
+                )
                 sequence += 1
 
                 if finish_reason is not None:
@@ -289,12 +323,16 @@ class LLMWebSocketAdapter:
         request_id: str,
     ) -> None:
         """Return the adapter health status."""
-        await websocket.send(json.dumps({
-            "type": "response",
-            "request_id": request_id,
-            "status": "succeeded",
-            "payload": {"status": "ready", "adapter": "llm_ws"},
-        }))
+        await websocket.send(
+            json.dumps(
+                {
+                    "type": "response",
+                    "request_id": request_id,
+                    "status": "succeeded",
+                    "payload": {"status": "ready", "adapter": "llm_ws"},
+                }
+            )
+        )
 
     async def _http_request(
         self,
@@ -344,13 +382,16 @@ async def run_adapter() -> None:
         llama_host=_env_str("LLAMA_HOST", _DEFAULT_LLAMA_HOST),
         llama_port=_env_int("LLAMA_PORT", _DEFAULT_LLAMA_PORT),
         adapter_host=_env_str(
-            "LLM_ADAPTER_HOST", _DEFAULT_ADAPTER_HOST,
+            "LLM_ADAPTER_HOST",
+            _DEFAULT_ADAPTER_HOST,
         ),
         adapter_port=_env_int(
-            "LLM_ADAPTER_PORT", _DEFAULT_ADAPTER_PORT,
+            "LLM_ADAPTER_PORT",
+            _DEFAULT_ADAPTER_PORT,
         ),
         http_timeout=_env_int(
-            "LLM_HTTP_TIMEOUT", int(_DEFAULT_HTTP_TIMEOUT),
+            "LLM_HTTP_TIMEOUT",
+            int(_DEFAULT_HTTP_TIMEOUT),
         ),
     )
     await adapter.start()

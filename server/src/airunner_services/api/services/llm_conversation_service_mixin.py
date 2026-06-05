@@ -13,7 +13,6 @@ from airunner_services.database.models.llm_generator_settings import (
 from airunner_services.database.session import session_scope
 from airunner_services.utils.application.enum_resolver import signal_code_proxy
 
-
 SignalCode = signal_code_proxy()
 
 

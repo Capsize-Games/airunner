@@ -5,6 +5,7 @@ Revises: f480bbc9acdb
 Create Date: 2025-12-01
 
 """
+
 from typing import Sequence, Union
 
 

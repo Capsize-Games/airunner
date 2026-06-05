@@ -11,7 +11,6 @@ from airunner_services.settings import (
     AIRUNNER_DEFAULT_UPDATE_MOOD_SYSTEM_PROMPT,
 )
 
-
 prompt_templates_bootstrap_data = [
     {
         "template_name": "image",

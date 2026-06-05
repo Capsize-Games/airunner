@@ -100,7 +100,9 @@ def test_gui_stt_llm_and_tts_round_trip_without_audio_output(
 ) -> None:
     """Transcribe bundled audio, generate one reply, and vocalize it."""
     if not BUNDLED_REFERENCE_SPEAKER.is_file():
-        pytest.fail(f"Missing bundled audio fixture: {BUNDLED_REFERENCE_SPEAKER}")
+        pytest.fail(
+            f"Missing bundled audio fixture: {BUNDLED_REFERENCE_SPEAKER}"
+        )
 
     artifact_path = llm_artifact_path(_MODEL_ID)
     if not artifact_path.is_file():
@@ -117,9 +119,13 @@ def test_gui_stt_llm_and_tts_round_trip_without_audio_output(
             "or install one under ~/.local/share/airunner/text/models/stt"
         )
 
-    whisper_model_path = Path(whisper_settings.model_path).expanduser().resolve()
+    whisper_model_path = (
+        Path(whisper_settings.model_path).expanduser().resolve()
+    )
     if not whisper_model_path.is_file():
-        pytest.skip(f"Configured whisper.cpp model is missing: {whisper_model_path}")
+        pytest.skip(
+            f"Configured whisper.cpp model is missing: {whisper_model_path}"
+        )
 
     if not _executable_exists(whisper_settings.executable):
         pytest.skip(
@@ -244,7 +250,9 @@ def test_gui_stt_llm_and_tts_round_trip_without_audio_output(
                 WorkerManager,
                 signal_api_adapter=api.api_adapter,
             )
-            main_window = SimpleNamespace(worker_manager=worker_manager, api=api)
+            main_window = SimpleNamespace(
+                worker_manager=worker_manager, api=api
+            )
             api.main_window = main_window
             api.app = SimpleNamespace(main_window=main_window, api=api)
             qapp.main_window = main_window
@@ -312,7 +320,9 @@ def test_gui_stt_llm_and_tts_round_trip_without_audio_output(
                 "tts_enabled",
                 property(lambda _self: True),
             )
-            monkeypatch.setattr(TTSGeneratorWorker, "_generate", generate_probe)
+            monkeypatch.setattr(
+                TTSGeneratorWorker, "_generate", generate_probe
+            )
             monkeypatch.setattr(
                 TTSGeneratorWorker,
                 "_generate_via_daemon",
@@ -434,9 +444,15 @@ def test_gui_stt_llm_and_tts_round_trip_without_audio_output(
             _stop_worker(getattr(widget, "_llm_response_worker", None))
             widget.close()
         if worker_manager is not None:
-            _stop_worker(getattr(worker_manager, "_tts_generator_worker", None))
-            _stop_worker(getattr(worker_manager, "_tts_vocalizer_worker", None))
-            _stop_worker(getattr(worker_manager, "_model_scanner_worker", None))
+            _stop_worker(
+                getattr(worker_manager, "_tts_generator_worker", None)
+            )
+            _stop_worker(
+                getattr(worker_manager, "_tts_vocalizer_worker", None)
+            )
+            _stop_worker(
+                getattr(worker_manager, "_model_scanner_worker", None)
+            )
             _stop_worker(worker_manager)
         qapp.processEvents()
         qapp.api = previous_qt_api

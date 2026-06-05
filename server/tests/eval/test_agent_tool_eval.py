@@ -43,9 +43,9 @@ def _assert_clear_history_result(
         log_path=log_path,
     )
     assert "clear_chat_history" in result.visible_message, result.payload
-    assert "did not make any changes" in result.visible_message.lower(), (
-        result.payload
-    )
+    assert (
+        "did not make any changes" in result.visible_message.lower()
+    ), result.payload
 
 
 def _assert_datetime_result(
@@ -60,9 +60,9 @@ def _assert_datetime_result(
         log_path=log_path,
     )
     assert current_year in result.visible_message, result.payload
-    assert "current local date and time:" in result.visible_message.lower(), (
-        result.payload
-    )
+    assert (
+        "current local date and time:" in result.visible_message.lower()
+    ), result.payload
 
 
 def _assert_python_compute_result(
@@ -173,9 +173,7 @@ def _assert_scrape_website_result(
 
 _TOOL_CASES = [
     pytest.param(
-        (
-            "Use the clear chat history tool."
-        ),
+        ("Use the clear chat history tool."),
         ["conversation"],
         "clear_chat_history",
         16,
@@ -191,9 +189,7 @@ _TOOL_CASES = [
         id="forced-current-datetime",
     ),
     pytest.param(
-        (
-            "Calculate 6 to the power of 4. Answer with digits only."
-        ),
+        ("Calculate 6 to the power of 4. Answer with digits only."),
         ["math"],
         "python_compute",
         64,
@@ -265,8 +261,7 @@ _TOOL_CASES = [
 @pytest.mark.slow
 @pytest.mark.timeout(900)
 @pytest.mark.parametrize(
-    ("prompt", "tool_categories", "force_tool", "max_new_tokens",
-     "validator"),
+    ("prompt", "tool_categories", "force_tool", "max_new_tokens", "validator"),
     _TOOL_CASES,
 )
 def test_agent_forced_tool_usage(

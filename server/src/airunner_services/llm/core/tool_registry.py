@@ -12,7 +12,6 @@ from enum import Enum
 
 from airunner_services.utils.application import get_logger
 
-
 logger = get_logger(__name__)
 
 
@@ -75,7 +74,7 @@ class ToolCategory(Enum):
 @dataclass
 class ToolInfo:
     """Metadata about a registered tool.
-    
+
     Attributes:
         func: The tool function
         name: Unique tool identifier
@@ -100,7 +99,9 @@ class ToolInfo:
     return_direct: bool = False
     requires_agent: bool = False
     requires_api: bool = False
-    defer_loading: bool = True  # Default to deferred - use search_tools to discover
+    defer_loading: bool = (
+        True  # Default to deferred - use search_tools to discover
+    )
     keywords: List[str] = field(default_factory=list)
     allowed_callers: List[str] = field(default_factory=list)
     input_examples: List[Dict[str, Any]] = field(default_factory=list)
@@ -168,7 +169,7 @@ class ToolRegistry:
 
             if category not in cls._categories:
                 cls._categories[category] = []
-            
+
             # Remove existing entry with same name to prevent duplicates on reload
             cls._categories[category] = [
                 t for t in cls._categories[category] if t.name != name
@@ -201,9 +202,9 @@ class ToolRegistry:
     @classmethod
     def get_immediate_tools(cls) -> Dict[str, ToolInfo]:
         """Get tools that should be loaded immediately (defer_loading=False).
-        
+
         These tools are always available in the initial context.
-        
+
         Returns:
             Dict mapping tool names to ToolInfo for immediate tools
         """
@@ -213,10 +214,10 @@ class ToolRegistry:
     @classmethod
     def get_deferred_tools(cls) -> Dict[str, ToolInfo]:
         """Get tools that can be loaded on-demand (defer_loading=True).
-        
+
         These tools are not included in the initial context to save tokens.
         Use search_tools to discover them when needed.
-        
+
         Returns:
             Dict mapping tool names to ToolInfo for deferred tools
         """

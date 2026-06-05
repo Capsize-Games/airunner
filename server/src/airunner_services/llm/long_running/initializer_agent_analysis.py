@@ -13,7 +13,6 @@ from airunner_services.llm.long_running.initializer_agent_state import (
 from airunner_services.settings import AIRUNNER_LOG_LEVEL
 from airunner_services.utils.application import get_logger
 
-
 logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 
 
@@ -49,7 +48,9 @@ def analyze_requirements(
     state: InitializerWorkflowState,
 ) -> dict[str, Any]:
     """Analyze one set of project requirements."""
-    logger.info("Analyzing requirements for project: %s", state["project_name"])
+    logger.info(
+        "Analyzing requirements for project: %s", state["project_name"]
+    )
     messages = _analysis_prompt().format_messages(
         project_name=state["project_name"],
         project_description=state["project_description"],

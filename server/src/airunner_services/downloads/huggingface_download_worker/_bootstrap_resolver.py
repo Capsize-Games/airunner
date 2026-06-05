@@ -29,7 +29,9 @@ def get_bootstrap_data_for_model(
         if data:
             logger.info(
                 "Found bootstrap data for %s/%s with %d files",
-                model_type, repo_id, len(data),
+                model_type,
+                repo_id,
+                len(data),
             )
         return data
 
@@ -38,7 +40,8 @@ def get_bootstrap_data_for_model(
         if data:
             logger.info(
                 "Found bootstrap data for rmbg/%s with %d files",
-                repo_id, len(data),
+                repo_id,
+                len(data),
             )
         return data
 
@@ -59,7 +62,8 @@ def get_bootstrap_data_for_model(
         if data:
             logger.info(
                 "Found bootstrap data for %s with %d files",
-                resolved_version, len(data),
+                resolved_version,
+                len(data),
             )
         return data
 
@@ -68,7 +72,8 @@ def get_bootstrap_data_for_model(
         if data:
             logger.info(
                 "Found bootstrap data for llm/%s with %d files",
-                repo_id, len(data),
+                repo_id,
+                len(data),
             )
         else:
             logger.warning(
@@ -182,7 +187,8 @@ def _build_missing_files_dict(
             expected_size = full_bootstrap_data[f]
             logger.info(
                 "Missing file %s: expected size %d (from bootstrap)",
-                f, expected_size,
+                f,
+                expected_size,
             )
         else:
             logger.warning(

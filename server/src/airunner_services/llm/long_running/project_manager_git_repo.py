@@ -5,7 +5,9 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any, Optional
 
-from airunner_services.llm.long_running.project_manager_git_exec import _run_git
+from airunner_services.llm.long_running.project_manager_git_exec import (
+    _run_git,
+)
 
 
 def _project_repo_path(manager: Any, project_id: int) -> Optional[str]:

@@ -5,20 +5,28 @@ QUESTION_PATTERNS = [
     (("where ", "where's"), "PLACE/LOCATION", "Expects a location or place"),
     (("when ", "when's"), "TIME/DATE", "Expects a time or date"),
     (("how many", "how much"), "NUMBER/QUANTITY", "Expects a numeric answer"),
-    ((
-        "is ",
-        "are ",
-        "was ",
-        "were ",
-        "do ",
-        "does ",
-        "did ",
-        "can ",
-        "could ",
-        "would ",
-        "should ",
-    ), "YES/NO", "Expects a yes/no answer (may include explanation)"),
-    (("why ", "how "), "EXPLANATION", "Expects a detailed explanation or reasoning"),
+    (
+        (
+            "is ",
+            "are ",
+            "was ",
+            "were ",
+            "do ",
+            "does ",
+            "did ",
+            "can ",
+            "could ",
+            "would ",
+            "should ",
+        ),
+        "YES/NO",
+        "Expects a yes/no answer (may include explanation)",
+    ),
+    (
+        ("why ", "how "),
+        "EXPLANATION",
+        "Expects a detailed explanation or reasoning",
+    ),
 ]
 
 ANSWER_STRATEGIES = {
@@ -40,7 +48,9 @@ DEFAULT_QUESTIONS = [
 ]
 
 
-def generate_clarifying_questions_impl(query: str, num_questions: int = 3) -> str:
+def generate_clarifying_questions_impl(
+    query: str, num_questions: int = 3
+) -> str:
     """Generate clarifying questions for an ambiguous query."""
     questions = _specific_clarifying_questions(query)
     _fill_default_questions(questions, num_questions)
@@ -70,7 +80,9 @@ def _specific_clarifying_questions(query: str) -> list[str]:
     if any(word in words for word in ["it", "this", "that", "they", "them"]):
         questions.append("What specifically are you referring to?")
     if any(word in words for word in ["thing", "stuff", "something", "some"]):
-        questions.append("Could you be more specific about what you're asking about?")
+        questions.append(
+            "Could you be more specific about what you're asking about?"
+        )
     if any(word in words for word in ["recent", "latest", "new", "old"]):
         questions.append("What time period are you interested in?")
     return questions
@@ -79,7 +91,9 @@ def _specific_clarifying_questions(query: str) -> list[str]:
 def _fill_default_questions(questions: list[str], num_questions: int) -> None:
     """Pad a question list with general clarifiers up to the target size."""
     while len(questions) < num_questions:
-        questions.append(DEFAULT_QUESTIONS[len(questions) % len(DEFAULT_QUESTIONS)])
+        questions.append(
+            DEFAULT_QUESTIONS[len(questions) % len(DEFAULT_QUESTIONS)]
+        )
 
 
 def _answer_type_details(question_lower: str) -> tuple[str, str]:
@@ -104,4 +118,7 @@ def _what_question_details(question_lower: str) -> tuple[str, str]:
     """Return the answer type details for a what-question."""
     if "definition" in question_lower or "mean" in question_lower:
         return "DEFINITION", "Expects a definition or meaning"
-    return "DESCRIPTION/ENTITY", "Expects a description or entity identification"
+    return (
+        "DESCRIPTION/ENTITY",
+        "Expects a description or entity identification",
+    )

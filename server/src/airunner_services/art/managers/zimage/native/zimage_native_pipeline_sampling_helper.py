@@ -14,6 +14,7 @@ from airunner_services.art.managers.zimage.native.nextdit_model import (
 
 logger = logging.getLogger(__name__)
 
+
 class ZImageNativePipelineSamplingHelper:
     """Handle scheduler setup, latent preparation, and decoding."""
 
@@ -25,11 +26,15 @@ class ZImageNativePipelineSamplingHelper:
         self, num_inference_steps: int, is_img2img: bool, strength: float
     ) -> torch.Tensor:
         """Prepare scheduler timesteps and truncate them for img2img."""
-        self._owner.scheduler.set_timesteps(num_inference_steps, device=self._owner.device)
+        self._owner.scheduler.set_timesteps(
+            num_inference_steps, device=self._owner.device
+        )
         timesteps = self._owner.scheduler.timesteps
         sigmas = self._owner.scheduler.sigmas
         if is_img2img:
-            init_timestep = min(int(num_inference_steps * strength), num_inference_steps)
+            init_timestep = min(
+                int(num_inference_steps * strength), num_inference_steps
+            )
             init_timestep = max(init_timestep, 1)
             t_start = max(num_inference_steps - init_timestep, 0)
             timesteps = timesteps[t_start:]
@@ -78,7 +83,9 @@ class ZImageNativePipelineSamplingHelper:
             height=height,
             width=width,
         ).to(device=self._owner.device, dtype=self._owner.vae.dtype)
-        image_latents = self._owner.vae.encode(init_image).latent_dist.sample(generator)
+        image_latents = self._owner.vae.encode(init_image).latent_dist.sample(
+            generator
+        )
         shift_factor = getattr(self._owner.vae.config, "shift_factor", 0.0)
         scaling_factor = getattr(self._owner.vae.config, "scaling_factor", 1.0)
         image_latents = (image_latents - shift_factor) * scaling_factor
@@ -92,11 +99,17 @@ class ZImageNativePipelineSamplingHelper:
             image_latents = torch.cat([image_latents] * repeat_count, dim=0)
         else:
             image_latents = image_latents[:batch_size]
-        image_latents = image_latents.to(device=self._owner.device, dtype=torch.float32)
+        image_latents = image_latents.to(
+            device=self._owner.device, dtype=torch.float32
+        )
         if latents is not None:
             return latents.to(device=self._owner.device, dtype=torch.float32)
-        noise = self._randn(tuple(image_latents.shape), generator, torch.float32)
-        timestep_value = float(timesteps[0].item()) if timesteps.numel() > 0 else 0.0
+        noise = self._randn(
+            tuple(image_latents.shape), generator, torch.float32
+        )
+        timestep_value = (
+            float(timesteps[0].item()) if timesteps.numel() > 0 else 0.0
+        )
         timestep_ratio = timestep_value / max(
             self._owner.scheduler.config.num_train_timesteps,
             1,
@@ -167,7 +180,9 @@ class ZImageNativePipelineSamplingHelper:
                 self._owner.dtype,
             )
         else:
-            latents = latents.to(device=self._owner.device, dtype=self._owner.dtype)
+            latents = latents.to(
+                device=self._owner.device, dtype=self._owner.dtype
+            )
         if hasattr(self._owner.scheduler, "init_noise_sigma"):
             latents = latents * self._owner.scheduler.init_noise_sigma
         return latents
@@ -185,7 +200,9 @@ class ZImageNativePipelineSamplingHelper:
         callback_steps: int,
     ) -> torch.Tensor:
         """Run the main denoising loop over the prepared timestep window."""
-        num_tokens = prompt_embeds.shape[1] if prompt_embeds is not None else 77
+        num_tokens = (
+            prompt_embeds.shape[1] if prompt_embeds is not None else 77
+        )
         for index, timestep_value in enumerate(timesteps):
             latents = self._run_denoising_step(
                 latents,
@@ -266,7 +283,9 @@ class ZImageNativePipelineSamplingHelper:
         except TypeError:
             callback(index)
 
-    def decode_output(self, latents: torch.Tensor, output_type: str) -> Union[torch.Tensor, List[Image.Image]]:
+    def decode_output(
+        self, latents: torch.Tensor, output_type: str
+    ) -> Union[torch.Tensor, List[Image.Image]]:
         """Decode the final latent tensor into the requested output type."""
         vae_helper = self._owner._get_vae_helper()
         if output_type == "latent":

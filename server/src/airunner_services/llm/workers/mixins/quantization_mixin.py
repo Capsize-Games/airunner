@@ -3,7 +3,6 @@
 from typing import Dict
 from airunner_services.utils.application.enum_resolver import signal_code_proxy
 
-
 SignalCode = signal_code_proxy(
     {
         "LLM_QUANTIZATION_COMPLETE": "llm_quantization_complete",

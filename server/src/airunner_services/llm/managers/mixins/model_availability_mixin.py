@@ -271,9 +271,7 @@ class ModelAvailabilityMixin:
         has_model = self._model is not None
         has_tokenizer = self._tokenizer is not None
         if hasattr(self, "_local_execution_component_state"):
-            has_model, has_tokenizer = (
-                self._local_execution_component_state()
-            )
+            has_model, has_tokenizer = self._local_execution_component_state()
         if self._is_mistral3_model():
             has_tokenizer = True
 

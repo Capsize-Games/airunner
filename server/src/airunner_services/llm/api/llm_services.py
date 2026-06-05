@@ -65,4 +65,3 @@ class LLMAPIService(ServiceLLMAPIService):
     def _resolve_api_instance():
         """Resolve the registered App/API object when service init ran early."""
         return peek_registered_api()
-

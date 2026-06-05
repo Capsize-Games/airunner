@@ -22,7 +22,9 @@ def _next_not_started_feature(
 ) -> ProjectFeature | None:
     """Return the highest-priority unblocked not-started feature."""
     passing_ids = _passing_feature_ids(features)
-    for feature in sorted(features, key=lambda item: item.priority, reverse=True):
+    for feature in sorted(
+        features, key=lambda item: item.priority, reverse=True
+    ):
         dependencies = feature.depends_on or []
         is_ready = feature.status == FeatureStatus.NOT_STARTED
         if is_ready and all(dep_id in passing_ids for dep_id in dependencies):
@@ -37,7 +39,9 @@ def _retry_feature(features: list[ProjectFeature]) -> ProjectFeature | None:
         for feature in features
         if feature.status == FeatureStatus.FAILING
     ]
-    return min(failing, key=lambda item: item.attempts or 0) if failing else None
+    return (
+        min(failing, key=lambda item: item.attempts or 0) if failing else None
+    )
 
 
 # Dependency checks stay separate from feature lookup so scheduling code can

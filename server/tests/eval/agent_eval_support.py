@@ -40,7 +40,9 @@ def build_agent_request(
     max_new_tokens: int = 128,
 ) -> dict[str, Any]:
     """Return one stable request payload for agent flow evals."""
-    if model_id.startswith("qwen3") and not prompt.lstrip().startswith("/no_think"):
+    if model_id.startswith("qwen3") and not prompt.lstrip().startswith(
+        "/no_think"
+    ):
         prompt = f"/no_think\n{prompt}"
 
     llm_request = {
@@ -76,7 +78,9 @@ def build_agent_request(
     return payload
 
 
-def run_agent_eval_case(base_url: str, payload: dict[str, Any]) -> AgentEvalResult:
+def run_agent_eval_case(
+    base_url: str, payload: dict[str, Any]
+) -> AgentEvalResult:
     """Execute one eval case against the daemon and return parsed data."""
     status_code, response_body, _content_type = post_json(
         f"{base_url}/llm/generate",

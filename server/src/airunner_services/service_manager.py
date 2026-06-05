@@ -270,7 +270,9 @@ class LinuxSystemdHandler(ServiceHandlerBase):
     def install(self, config_path: Path, **kwargs) -> bool:
         """Install systemd user service."""
         # Get Python executable and airunner-daemon path
-        bundle_layout = build_linux_bundle_layout(python_executable=sys.executable)
+        bundle_layout = build_linux_bundle_layout(
+            python_executable=sys.executable
+        )
         daemon_script = bundle_layout.daemon_executable()
 
         if daemon_script is None:
@@ -353,7 +355,9 @@ StandardError=journal
 WantedBy=default.target
 """
 
-    def _environment_lines(self, config_path: Path, bundle_layout) -> list[str]:
+    def _environment_lines(
+        self, config_path: Path, bundle_layout
+    ) -> list[str]:
         """Return environment lines for the systemd unit."""
         layout = build_runtime_directory_layout()
         environment = layout.as_environment(config_path)

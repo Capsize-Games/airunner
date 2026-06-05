@@ -12,13 +12,12 @@ from langchain_core.messages import HumanMessage, AIMessage
 from airunner_services.settings import AIRUNNER_LOG_LEVEL
 from airunner_services.utils.application import get_logger
 
-
 DEFAULT_WORKFLOW_RECURSION_LIMIT = 20
 
 
 class StreamingMixin:
     """Manages workflow execution and streaming."""
-    
+
     def __init__(self):
         """Initialize streaming mixin."""
         self.logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
@@ -38,11 +37,11 @@ class StreamingMixin:
 
     def _auto_learn_from_message(self, user_input: str) -> None:
         """Previously auto-extracted facts - now handled via LLM tools.
-        
+
         The LLM now explicitly decides when to record knowledge using the
         record_knowledge tool, which provides better control over what
         gets stored and avoids duplicate facts.
-        
+
         Args:
             user_input: The user's message (unused)
         """
@@ -70,8 +69,10 @@ class StreamingMixin:
         return result
 
     def stream(
-        self, user_input: str, generation_kwargs: Optional[Dict] = None,
-        images: Optional[list] = None
+        self,
+        user_input: str,
+        generation_kwargs: Optional[Dict] = None,
+        images: Optional[list] = None,
     ):
         """Stream the workflow execution with user input, yielding messages.
 
@@ -100,55 +101,57 @@ class StreamingMixin:
 
         with math_context:
             for event in self._compiled_workflow.stream(
-                    initial_state,
-                    config,
-                    stream_mode="values",
-                ):
-                    # Check interrupt flag on each event
-                    if self._interrupted:
-                        break
+                initial_state,
+                config,
+                stream_mode="values",
+            ):
+                # Check interrupt flag on each event
+                if self._interrupted:
+                    break
 
-                    # Yield only NEW AI messages (not previously yielded)
-                    # Note: We don't filter by content because tool_calls may have empty content
-                    if self._has_ai_message(event):
-                        messages = event["messages"]
+                # Yield only NEW AI messages (not previously yielded)
+                # Note: We don't filter by content because tool_calls may have empty content
+                if self._has_ai_message(event):
+                    messages = event["messages"]
 
-                        # Only yield AIMessages we haven't yielded yet
-                        # Count how many AIMessages are in the list
-                        ai_message_count = sum(
-                            1 for msg in messages if isinstance(msg, AIMessage)
-                        )
+                    # Only yield AIMessages we haven't yielded yet
+                    # Count how many AIMessages are in the list
+                    ai_message_count = sum(
+                        1 for msg in messages if isinstance(msg, AIMessage)
+                    )
 
-                        # If there are more AIMessages than we've yielded, yield the new ones
-                        if ai_message_count > last_yielded_count:
-                            # Get all AIMessages
-                            ai_messages = [
-                                msg
-                                for msg in messages
-                                if isinstance(msg, AIMessage)
-                            ]
-                            # Yield only the ones we haven't yielded yet
-                            for i in range(last_yielded_count, ai_message_count):
-                                # Attach current mood to AI message for system prompt retrieval
-                                # Use getattr with defaults to avoid AttributeError
-                                current_mood = getattr(
-                                    self, "_current_mood", "neutral"
-                                )
-                                current_emoji = getattr(
-                                    self, "_current_emoji", "😐"
-                                )
-                                ai_messages[i].additional_kwargs[
-                                    "bot_mood"
-                                ] = current_mood
-                                ai_messages[i].additional_kwargs[
-                                    "bot_mood_emoji"
-                                ] = current_emoji
-                                yield ai_messages[i]
-                            last_yielded_count = ai_message_count
+                    # If there are more AIMessages than we've yielded, yield the new ones
+                    if ai_message_count > last_yielded_count:
+                        # Get all AIMessages
+                        ai_messages = [
+                            msg
+                            for msg in messages
+                            if isinstance(msg, AIMessage)
+                        ]
+                        # Yield only the ones we haven't yielded yet
+                        for i in range(last_yielded_count, ai_message_count):
+                            # Attach current mood to AI message for system prompt retrieval
+                            # Use getattr with defaults to avoid AttributeError
+                            current_mood = getattr(
+                                self, "_current_mood", "neutral"
+                            )
+                            current_emoji = getattr(
+                                self, "_current_emoji", "😐"
+                            )
+                            ai_messages[i].additional_kwargs[
+                                "bot_mood"
+                            ] = current_mood
+                            ai_messages[i].additional_kwargs[
+                                "bot_mood_emoji"
+                            ] = current_emoji
+                            yield ai_messages[i]
+                        last_yielded_count = ai_message_count
 
     def _create_initial_state(
-        self, user_input: str, generation_kwargs: Optional[Dict],
-        images: Optional[list] = None
+        self,
+        user_input: str,
+        generation_kwargs: Optional[Dict],
+        images: Optional[list] = None,
     ) -> Dict[str, Any]:
         """Create initial state for workflow.
 
@@ -163,13 +166,13 @@ class StreamingMixin:
         # The checkpointer handles loading existing messages from the database.
         # We only need to provide the new user message here - the add_messages
         # reducer will merge it with any existing messages from the checkpoint.
-        
+
         # Create HumanMessage - multimodal if images provided
         if images and len(images) > 0:
             human_message = self._create_multimodal_message(user_input, images)
         else:
             human_message = HumanMessage(user_input)
-            
+
         initial_state = {"messages": [human_message]}
 
         if generation_kwargs:
@@ -235,10 +238,9 @@ class StreamingMixin:
                     )
                     data_url = f"data:image/png;base64,{img_base64}"
 
-                    content.append({
-                        "type": "image_url",
-                        "image_url": {"url": data_url}
-                    })
+                    content.append(
+                        {"type": "image_url", "image_url": {"url": data_url}}
+                    )
                 else:
                     self.logger.warning(
                         f"Skipping non-PIL image in multimodal message: {type(img)}"

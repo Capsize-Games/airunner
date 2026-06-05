@@ -10,8 +10,6 @@ import importlib.util
 import sys
 from pathlib import Path
 
-
-
 # Ensure the services/src directory is on the path for
 # the service-owned API imports.
 _SERVICES_ROOT = Path(__file__).resolve().parents[1]
@@ -35,7 +33,9 @@ class TestImportChain:
 
     def test_service_message_envelopes_are_self_owned(self):
         """Services resolve runtime envelope classes from their own module."""
-        from airunner_services.ipc.messages import EnvelopeStatus as ServiceStatus
+        from airunner_services.ipc.messages import (
+            EnvelopeStatus as ServiceStatus,
+        )
         from airunner_services.runtimes.message_envelopes import (
             load_message_types,
         )
@@ -117,7 +117,9 @@ class TestFastAPIAppConstruction:
 
         for prefix in expected_prefixes:
             found = any(route.startswith(prefix) for route in routes)
-            assert found, f"Route prefix {prefix} not found in {sorted(routes)}"
+            assert (
+                found
+            ), f"Route prefix {prefix} not found in {sorted(routes)}"
 
     def test_root_endpoint(self, monkeypatch):
         """The root endpoint returns service info."""

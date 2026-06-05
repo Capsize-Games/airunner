@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from airunner_services.settings import AIRUNNER_ART_ENABLED
 
-
 SD_FILE_BOOTSTRAP_DATA = {
     "SDXL 1.0": {
         "txt2img": {

@@ -17,7 +17,6 @@ from alembic import op
 
 from airunner_services.settings import AIRUNNER_BASE_PATH
 
-
 revision: str = "d2ab5f1c9a7e"
 down_revision: Union[tuple[str, ...], None] = (
     "48b1c0d3e4f5",
@@ -50,12 +49,16 @@ def _migrate_gui_language(bind, inspector) -> None:
     """Copy one persisted GUI language value into QSettings."""
     if not _has_column(inspector, "language_settings", "gui_language"):
         return
-    row = bind.execute(
-        sa.text(
-            "SELECT gui_language FROM language_settings "
-            "ORDER BY id LIMIT 1"
+    row = (
+        bind.execute(
+            sa.text(
+                "SELECT gui_language FROM language_settings "
+                "ORDER BY id LIMIT 1"
+            )
         )
-    ).mappings().first()
+        .mappings()
+        .first()
+    )
     if row is None:
         return
     value = row.get("gui_language")
@@ -67,11 +70,15 @@ def _migrate_audio_device(bind, inspector, column_name: str) -> None:
     """Copy one persisted audio device selection into QSettings."""
     if not _has_column(inspector, "sound_settings", column_name):
         return
-    row = bind.execute(
-        sa.text(
-            f"SELECT {column_name} FROM sound_settings ORDER BY id LIMIT 1"
+    row = (
+        bind.execute(
+            sa.text(
+                f"SELECT {column_name} FROM sound_settings ORDER BY id LIMIT 1"
+            )
         )
-    ).mappings().first()
+        .mappings()
+        .first()
+    )
     if row is None:
         return
     value = row.get(column_name)
@@ -101,9 +108,7 @@ def _has_column(inspector, table_name: str, column_name: str) -> bool:
     """Return whether one table still includes one named column."""
     if not inspector.has_table(table_name):
         return False
-    existing = {
-        column["name"] for column in inspector.get_columns(table_name)
-    }
+    existing = {column["name"] for column in inspector.get_columns(table_name)}
     return column_name in existing
 
 

@@ -59,7 +59,9 @@ def _stream_native_completion(
         state,
         run_manager,
     )
-    yield from _yield_native_stream_tail(adapter, state, run_manager, chunk_count)
+    yield from _yield_native_stream_tail(
+        adapter, state, run_manager, chunk_count
+    )
 
 
 def _native_stream_state(
@@ -71,13 +73,17 @@ def _native_stream_state(
     """Build the initial state for one native llama.cpp stream."""
     adapter.logger.info("[ChatGGUF._stream] Starting stream generation")
     converted_messages = adapter._convert_messages(messages)
-    adapter.logger.info("[ChatGGUF._stream] Converted %s messages", len(converted_messages))
+    adapter.logger.info(
+        "[ChatGGUF._stream] Converted %s messages", len(converted_messages)
+    )
     max_tokens = _stream_max_tokens(adapter, kwargs)
     adapter._interrupted = False
     call_started = time.perf_counter()
     _log_stream_start(adapter, max_tokens)
     return NativeStreamState(
-        chat_kwargs=stream_chat_kwargs(adapter, converted_messages, max_tokens, stop),
+        chat_kwargs=stream_chat_kwargs(
+            adapter, converted_messages, max_tokens, stop
+        ),
         full_content=[],
         native_tool_call_buffers={},
         call_started=call_started,
@@ -87,7 +93,8 @@ def _native_stream_state(
 
 def _yield_native_stream_deltas(
     adapter: Any,
-    state: NativeStreamState, run_manager: Optional[CallbackManagerForLLMRun],
+    state: NativeStreamState,
+    run_manager: Optional[CallbackManagerForLLMRun],
 ) -> Iterator[ChatGenerationChunk]:
     """Yield native stream deltas and return the final chunk count."""
     chunk_count = 0
@@ -143,7 +150,9 @@ def _yield_native_stream_tail(
 ) -> Iterator[ChatGenerationChunk]:
     """Yield the GPT-OSS and tool-call tail for a native stream."""
     if state.gpt_oss_parser is not None:
-        yield from _yield_gpt_oss_stream_tail(state.gpt_oss_parser, run_manager)
+        yield from _yield_gpt_oss_stream_tail(
+            state.gpt_oss_parser, run_manager
+        )
     yield from final_native_stream_chunks(
         adapter,
         state.full_content,

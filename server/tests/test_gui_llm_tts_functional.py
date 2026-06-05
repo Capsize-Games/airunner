@@ -64,7 +64,6 @@ from airunner.components.application.gui.windows.main.worker_manager import (
     WorkerManager,
 )
 
-
 _MODEL_ID = "qwen3.5-9b"
 _PROMPT = "/no_think\nReply with exactly the single digit 7."
 _PROGRESSION_FIRST_REPLY = "marigold"
@@ -130,7 +129,9 @@ def _clear_settings_cache() -> None:
     shared._settings_cache_by_key.clear()
 
 
-def _configure_test_database(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> str:
+def _configure_test_database(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> str:
     db_url = f"sqlite:///{tmp_path / 'gui-functional.sqlite'}"
     monkeypatch.setenv("AIRUNNER_DATABASE_URL", db_url)
     monkeypatch.setenv("AIRUNNER_DISABLE_DB_SETUP_CACHE", "1")
@@ -360,7 +361,9 @@ def test_gui_llm_and_tts_end_to_end_without_audio_output(
             qapp.api = api
 
             worker_manager = create_worker(WorkerManager)
-            main_window = SimpleNamespace(worker_manager=worker_manager, api=api)
+            main_window = SimpleNamespace(
+                worker_manager=worker_manager, api=api
+            )
             api.main_window = main_window
             api.app = SimpleNamespace(main_window=main_window, api=api)
             qapp.main_window = main_window
@@ -376,7 +379,9 @@ def test_gui_llm_and_tts_end_to_end_without_audio_output(
             ) -> None:
                 llm_request = kwargs.get("llm_request")
                 if llm_request is not None:
-                    llm_request.system_prompt = "Reply with one character only."
+                    llm_request.system_prompt = (
+                        "Reply with one character only."
+                    )
                     llm_request.enable_thinking = False
                     llm_request.do_sample = False
                     llm_request.temperature = 0.1
@@ -530,9 +535,15 @@ def test_gui_llm_and_tts_end_to_end_without_audio_output(
             _stop_worker(getattr(widget, "_llm_response_worker", None))
             widget.close()
         if worker_manager is not None:
-            _stop_worker(getattr(worker_manager, "_tts_generator_worker", None))
-            _stop_worker(getattr(worker_manager, "_tts_vocalizer_worker", None))
-            _stop_worker(getattr(worker_manager, "_model_scanner_worker", None))
+            _stop_worker(
+                getattr(worker_manager, "_tts_generator_worker", None)
+            )
+            _stop_worker(
+                getattr(worker_manager, "_tts_vocalizer_worker", None)
+            )
+            _stop_worker(
+                getattr(worker_manager, "_model_scanner_worker", None)
+            )
             _stop_worker(worker_manager)
         qapp.processEvents()
         qapp.api = previous_qt_api
@@ -578,9 +589,7 @@ def test_gui_llm_conversation_progresses_without_audio_output(
         if response is None:
             return
         request_id = str(
-            data.get("request_id")
-            or getattr(response, "request_id", "")
-            or ""
+            data.get("request_id") or getattr(response, "request_id", "") or ""
         )
         if not request_id:
             return
@@ -639,7 +648,9 @@ def test_gui_llm_conversation_progresses_without_audio_output(
             qapp.api = api
 
             worker_manager = create_worker(WorkerManager)
-            main_window = SimpleNamespace(worker_manager=worker_manager, api=api)
+            main_window = SimpleNamespace(
+                worker_manager=worker_manager, api=api
+            )
             api.main_window = main_window
             api.app = SimpleNamespace(main_window=main_window, api=api)
             qapp.main_window = main_window
@@ -695,12 +706,15 @@ def test_gui_llm_conversation_progresses_without_audio_output(
             widget.show()
             qapp.processEvents()
 
-            def send_prompt_and_wait(prompt: str) -> tuple[str, str, list[str]]:
+            def send_prompt_and_wait(
+                prompt: str,
+            ) -> tuple[str, str, list[str]]:
                 previous_request_count = len(submitted_request_ids)
                 widget.do_generate(prompt_override=prompt)
                 _wait_until(
                     qapp,
-                    lambda: len(submitted_request_ids) > previous_request_count,
+                    lambda: len(submitted_request_ids)
+                    > previous_request_count,
                     timeout_seconds=30,
                     message=(
                         "Timed out waiting for GUI request submission.\n"
@@ -737,9 +751,11 @@ def test_gui_llm_conversation_progresses_without_audio_output(
             first_conversation_id = getattr(widget, "conversation_id", None)
             assert first_conversation_id is not None
 
-            second_request_id, second_visible_message, second_system_messages = (
-                send_prompt_and_wait(_PROGRESSION_SECOND_PROMPT)
-            )
+            (
+                second_request_id,
+                second_visible_message,
+                second_system_messages,
+            ) = send_prompt_and_wait(_PROGRESSION_SECOND_PROMPT)
 
             assert second_request_id != first_request_id
             assert not second_system_messages, second_system_messages
@@ -749,7 +765,10 @@ def test_gui_llm_conversation_progresses_without_audio_output(
             assert compact_visible_text(second_visible_message) != (
                 compact_visible_text(first_visible_message)
             )
-            assert getattr(widget, "conversation_id", None) == first_conversation_id
+            assert (
+                getattr(widget, "conversation_id", None)
+                == first_conversation_id
+            )
 
             wait_for_log_text(
                 daemon.log_path,
@@ -762,9 +781,15 @@ def test_gui_llm_conversation_progresses_without_audio_output(
             _stop_worker(getattr(widget, "_llm_response_worker", None))
             widget.close()
         if worker_manager is not None:
-            _stop_worker(getattr(worker_manager, "_tts_generator_worker", None))
-            _stop_worker(getattr(worker_manager, "_tts_vocalizer_worker", None))
-            _stop_worker(getattr(worker_manager, "_model_scanner_worker", None))
+            _stop_worker(
+                getattr(worker_manager, "_tts_generator_worker", None)
+            )
+            _stop_worker(
+                getattr(worker_manager, "_tts_vocalizer_worker", None)
+            )
+            _stop_worker(
+                getattr(worker_manager, "_model_scanner_worker", None)
+            )
             _stop_worker(worker_manager)
         qapp.processEvents()
         qapp.api = previous_qt_api

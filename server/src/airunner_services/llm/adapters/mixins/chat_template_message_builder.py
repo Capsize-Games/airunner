@@ -67,9 +67,13 @@ def _append_human_message(
     payload.extracted_images = []
     payload.image_placeholders = 0
     if not isinstance(message.content, list):
-        payload.chat_messages.append({"role": "user", "content": message.content})
+        payload.chat_messages.append(
+            {"role": "user", "content": message.content}
+        )
         return
-    content, images, placeholders = _build_human_content(adapter, message.content)
+    content, images, placeholders = _build_human_content(
+        adapter, message.content
+    )
     payload.chat_messages.append({"role": "user", "content": content})
     payload.extracted_images.extend(images)
     payload.image_placeholders = placeholders

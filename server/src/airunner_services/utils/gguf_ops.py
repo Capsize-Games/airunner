@@ -9,7 +9,6 @@ import torch
 import gguf
 from typing import Optional
 
-
 # Mapping from GGUF quantization types to gguf Python package classes
 QUANTS_MAPPING = {
     gguf.GGMLQuantizationType.Q2_K: gguf.Q2_K,

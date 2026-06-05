@@ -8,7 +8,6 @@ from typing import Mapping
 
 from airunner_services.settings import AIRUNNER_BASE_PATH
 
-
 _TRUE_VALUES = {"1", "true", "yes", "on"}
 
 

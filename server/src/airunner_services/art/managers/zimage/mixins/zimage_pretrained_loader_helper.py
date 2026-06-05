@@ -29,7 +29,9 @@ class ZImagePretrainedLoaderHelper:
     ) -> None:
         """Load a complete pretrained Z-Image pipeline."""
         del data
-        self._owner.logger.info("Loading Z-Image from pretrained: %s", model_path)
+        self._owner.logger.info(
+            "Loading Z-Image from pretrained: %s", model_path
+        )
         model_dir = Path(model_path)
         use_quant, quant_bits, model_dtype = self._resolve_precision_settings()
         max_memory = self.compute_max_memory_for_models(use_quant)
@@ -46,8 +48,10 @@ class ZImagePretrainedLoaderHelper:
             use_quant,
             quant_bits,
         )
-        scheduler = self._owner._get_runtime_loader_helper().load_zimage_scheduler(
-            model_dir / "scheduler"
+        scheduler = (
+            self._owner._get_runtime_loader_helper().load_zimage_scheduler(
+                model_dir / "scheduler"
+            )
         )
         self._owner.logger.info("Assembling ZImagePipeline from components...")
         try:
@@ -59,7 +63,9 @@ class ZImagePretrainedLoaderHelper:
                 tokenizer,
                 scheduler,
             )
-            precision = self._precision_label(use_quant, quant_bits, model_dtype)
+            precision = self._precision_label(
+                use_quant, quant_bits, model_dtype
+            )
             self._owner.logger.info(
                 "Pipeline assembled successfully (%s)",
                 precision,
@@ -120,7 +126,9 @@ class ZImagePretrainedLoaderHelper:
                 DiffusersBnBConfig(load_in_8bit=True),
                 TransformersBnBConfig(load_in_8bit=True),
             )
-        self._owner.logger.info("No quantization requested for pretrained load")
+        self._owner.logger.info(
+            "No quantization requested for pretrained load"
+        )
         return None, None
 
     def _load_components(
@@ -176,7 +184,9 @@ class ZImagePretrainedLoaderHelper:
         """Compute one max-memory mapping for quantized component loads."""
         if not torch.cuda.is_available() or not use_quant:
             return None
-        total_vram = torch.cuda.get_device_properties(0).total_memory / (1024**3)
+        total_vram = torch.cuda.get_device_properties(0).total_memory / (
+            1024**3
+        )
         reserved_gb = 3.0
         usable_vram_gb = max(total_vram - reserved_gb, 4.0)
         self._owner.logger.info(
@@ -196,7 +206,10 @@ class ZImagePretrainedLoaderHelper:
     ) -> Any:
         """Load a pretrained transformer component."""
         try:
-            load_kwargs = {"torch_dtype": model_dtype, "local_files_only": True}
+            load_kwargs = {
+                "torch_dtype": model_dtype,
+                "local_files_only": True,
+            }
             if transformer_bnb_config is not None:
                 load_kwargs["quantization_config"] = transformer_bnb_config
                 load_kwargs["device_map"] = "auto"
@@ -219,7 +232,9 @@ class ZImagePretrainedLoaderHelper:
         max_memory_for_models: Optional[dict],
     ) -> tuple[Any, Any]:
         """Load the text encoder and tokenizer from pretrained assets."""
-        self._owner.logger.info("Loading text encoder from %s", text_encoder_path)
+        self._owner.logger.info(
+            "Loading text encoder from %s", text_encoder_path
+        )
         try:
             load_kwargs = {"local_files_only": True}
             if text_encoder_bnb_config is not None:

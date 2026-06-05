@@ -178,13 +178,15 @@ class SidecarSTTClient(RuntimeClient):
             return ws
         if ws is not None:
             asyncio.run_coroutine_threadsafe(
-                ws.close(), get_ws_event_loop(),
+                ws.close(),
+                get_ws_event_loop(),
             )
         endpoint = f"http://127.0.0.1:{self._adapter_port}"
         ws = SidecarWebSocketTransport(endpoint)
         try:
             asyncio.run_coroutine_threadsafe(
-                ws.connect(), get_ws_event_loop(),
+                ws.connect(),
+                get_ws_event_loop(),
             ).result(timeout=10)
         except Exception as exc:
             raise RuntimeError(
@@ -202,7 +204,8 @@ class SidecarSTTClient(RuntimeClient):
         invocation = STTInvocationRequest.model_validate(request.payload)
         try:
             audio_bytes = base64.b64decode(
-                invocation.audio_b64, validate=True,
+                invocation.audio_b64,
+                validate=True,
             )
         except Exception:
             return self._failure_response(
@@ -213,7 +216,9 @@ class SidecarSTTClient(RuntimeClient):
 
         try:
             return self._transcribe_via_websocket(
-                request, invocation, audio_bytes,
+                request,
+                invocation,
+                audio_bytes,
             )
         except RuntimeError as exc:
             return self._failure_response(
@@ -268,7 +273,8 @@ class SidecarSTTClient(RuntimeClient):
                 "text": str(payload_data.get("text", "")),
                 "language": str(
                     payload_data.get(
-                        "language", invocation.language or "auto",
+                        "language",
+                        invocation.language or "auto",
                     )
                 ),
             },
@@ -288,15 +294,14 @@ class SidecarSTTClient(RuntimeClient):
             data=body,
             method="POST",
             headers={
-                "Content-Type": (
-                    f"multipart/form-data; boundary={boundary}"
-                ),
+                "Content-Type": (f"multipart/form-data; boundary={boundary}"),
                 "Accept": "application/json",
             },
         )
         try:
             return self._http_opener(
-                request, timeout=self._timeout_seconds,
+                request,
+                timeout=self._timeout_seconds,
             )
         except HTTPError as exc:
             message = self._http_error_message(exc)
@@ -305,7 +310,9 @@ class SidecarSTTClient(RuntimeClient):
             raise RuntimeError(str(exc.reason)) from exc
 
     def _prepare_launcher(
-        self, *, for_reload: bool = False,
+        self,
+        *,
+        for_reload: bool = False,
     ) -> None:
         """Refresh managed launcher settings before starting."""
         if not self._managed_launcher:
@@ -327,10 +334,14 @@ class SidecarSTTClient(RuntimeClient):
         """Encode one whisper.cpp multipart inference request body."""
         parts = [
             SidecarSTTClient._form_field(
-                boundary, "response_format", "json",
+                boundary,
+                "response_format",
+                "json",
             ),
             SidecarSTTClient._form_field(
-                boundary, "language", invocation.language or "auto",
+                boundary,
+                "language",
+                invocation.language or "auto",
             ),
         ]
         parts.append(
@@ -364,8 +375,8 @@ class SidecarSTTClient(RuntimeClient):
         """Encode one multipart file field."""
         header = (
             f"--{boundary}\r\n"
-            "Content-Disposition: form-data; name=\"file\"; "
-            f"filename=\"{filename}\"\r\n"
+            'Content-Disposition: form-data; name="file"; '
+            f'filename="{filename}"\r\n'
             f"Content-Type: {content_type}\r\n\r\n"
         ).encode("utf-8")
         return b"".join([header, payload, b"\r\n"])

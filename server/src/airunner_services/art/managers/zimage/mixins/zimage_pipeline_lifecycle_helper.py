@@ -33,7 +33,9 @@ class ZImagePipelineLifecycleHelper:
         model_dir = companion_dir or (
             model_path.parent if is_single_file else model_path
         )
-        has_pretrained = bundle_helper.has_complete_pretrained_structure(model_dir)
+        has_pretrained = bundle_helper.has_complete_pretrained_structure(
+            model_dir
+        )
         is_fp8_checkpoint = bundle_helper.detect_fp8_checkpoint(model_path)
         self._load_pipeline_for_mode(
             model_path,
@@ -92,7 +94,9 @@ class ZImagePipelineLifecycleHelper:
                 "Complete pretrained structure found - loading from "
                 "pretrained directory"
             )
-            self._owner._load_from_pretrained(str(model_dir), pipeline_class, data)
+            self._owner._load_from_pretrained(
+                str(model_dir), pipeline_class, data
+            )
             return
         if self._owner.use_from_single_file:
             self._owner._load_from_single_file(

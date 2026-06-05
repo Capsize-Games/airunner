@@ -31,9 +31,9 @@ def build_tts_invocation(request: TTSRequest) -> TTSInvocationRequest:
         model=request.model,
         voice=request.voice,
         speed=request.speed,
-        metadata={"model_type": request.model_type}
-        if request.model_type
-        else {},
+        metadata=(
+            {"model_type": request.model_type} if request.model_type else {}
+        ),
     )
 
 
@@ -68,9 +68,7 @@ def require_runtime_registry(request) -> RuntimeRegistry:
     """Return the runtime registry or raise when it is unavailable."""
     runtime_registry = get_runtime_registry(request)
     if runtime_registry is None:
-        raise HTTPException(
-            status_code=503, detail="TTS runtime unavailable"
-        )
+        raise HTTPException(status_code=503, detail="TTS runtime unavailable")
     return runtime_registry
 
 

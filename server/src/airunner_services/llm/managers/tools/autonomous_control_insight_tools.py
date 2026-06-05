@@ -18,8 +18,6 @@ def _tool_error(owner: BaseTool, action: str, exc: Exception) -> str:
     return f"Error {action}: {exc}"
 
 
-
-
 def _propose_action_result(
     owner: BaseTool,
     action: str,

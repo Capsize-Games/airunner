@@ -12,7 +12,6 @@ from airunner_services.utils.text.tts_preprocessing import (
     strip_emoji_characters,
 )
 
-
 __all__ = [
     "parse_template",
     "strip_names_from_message",

@@ -5,7 +5,12 @@ from __future__ import annotations
 import re
 from typing import Any, Dict, List
 
-from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, trim_messages
+from langchain_core.messages import (
+    AIMessage,
+    BaseMessage,
+    HumanMessage,
+    trim_messages,
+)
 from langchain_core.messages import SystemMessage
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 
@@ -44,14 +49,19 @@ class NodePromptAssemblyHelper:
         else:
             trimmed_messages = self.trim_messages(state["messages"])
         prompt = self.build_prompt(trimmed_messages)
-        self._owner._assistant_turn_index = getattr(
-            self._owner,
-            "_assistant_turn_index",
-            0,
-        ) + 1
-        response_message = self._owner._get_response_generation_helper().generate_response(
-            prompt,
-            generation_kwargs,
+        self._owner._assistant_turn_index = (
+            getattr(
+                self._owner,
+                "_assistant_turn_index",
+                0,
+            )
+            + 1
+        )
+        response_message = (
+            self._owner._get_response_generation_helper().generate_response(
+                prompt,
+                generation_kwargs,
+            )
         )
         if response_message is None:
             self._owner.logger.error(
@@ -82,7 +92,9 @@ class NodePromptAssemblyHelper:
         if chat_model and getattr(chat_model, "is_vision_model", False):
             return self._build_vision_prompt(trimmed_messages)
         escaped_system_prompt = self.escape_system_prompt()
-        escaped_system_prompt = self.add_tool_instructions(escaped_system_prompt)
+        escaped_system_prompt = self.add_tool_instructions(
+            escaped_system_prompt
+        )
         escaped_system_prompt = self._owner._get_post_tool_instructions_helper().add_post_tool_instructions(
             escaped_system_prompt,
             trimmed_messages,
@@ -98,7 +110,9 @@ class NodePromptAssemblyHelper:
     def _build_vision_prompt(self, trimmed_messages: List[BaseMessage]):
         """Build one vision prompt while preserving multimodal messages."""
         escaped_system_prompt = self.escape_system_prompt()
-        escaped_system_prompt = self.add_tool_instructions(escaped_system_prompt)
+        escaped_system_prompt = self.add_tool_instructions(
+            escaped_system_prompt
+        )
         escaped_system_prompt = self._owner._get_post_tool_instructions_helper().add_post_tool_instructions(
             escaped_system_prompt,
             trimmed_messages,
@@ -123,7 +137,9 @@ class NodePromptAssemblyHelper:
                 continue
             merged_messages.append(message)
         vision_messages = [vision_system, *merged_messages]
-        has_human = any(isinstance(message, HumanMessage) for message in vision_messages)
+        has_human = any(
+            isinstance(message, HumanMessage) for message in vision_messages
+        )
         if not has_human:
             self._owner.logger.warning(
                 "[VISION PROMPT] No HumanMessage present after vision prompt build; messages len=%s",
@@ -138,7 +154,9 @@ class NodePromptAssemblyHelper:
         return vision_messages
 
     @staticmethod
-    def _merge_human_content(target: HumanMessage, message: HumanMessage) -> None:
+    def _merge_human_content(
+        target: HumanMessage, message: HumanMessage
+    ) -> None:
         """Merge one human message into the previous human message."""
         current_content = target.content
         new_content = message.content
@@ -225,11 +243,15 @@ class NodePromptAssemblyHelper:
         """Add compact tool instructions when the active mode needs them."""
         if not self._owner._tools:
             return system_prompt
-        tool_calling_mode = getattr(self._owner._chat_model, "tool_calling_mode", "react")
+        tool_calling_mode = getattr(
+            self._owner._chat_model, "tool_calling_mode", "react"
+        )
         if tool_calling_mode == "react":
             compact_tools = self._owner._create_compact_tool_list()
             if compact_tools:
-                escaped_tools = compact_tools.replace("{", "{{").replace("}", "}}")
+                escaped_tools = compact_tools.replace("{", "{{").replace(
+                    "}", "}}"
+                )
                 system_prompt = f"{system_prompt}\n\n{escaped_tools}"
         self._owner.logger.debug(
             "Tools (%s) bound via bind_tools() - chat adapter will format them (mode: %s)",

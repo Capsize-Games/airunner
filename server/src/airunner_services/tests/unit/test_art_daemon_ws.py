@@ -51,8 +51,10 @@ uvicorn.run(app, host="127.0.0.1", port={port}, log_level="error")
     while time.monotonic() < deadline:
         try:
             import urllib.request
+
             resp = urllib.request.urlopen(
-                f"http://127.0.0.1:{port}/openapi.json", timeout=1,
+                f"http://127.0.0.1:{port}/openapi.json",
+                timeout=1,
             )
             if resp.status == 200:
                 ready.set()

@@ -13,7 +13,6 @@ from airunner_services.utils.memory.gpu_memory_stats import (
     gpu_memory_stats,
 )
 
-
 _DAEMON_MODEL_TYPES = {
     "LLM": ModelType.LLM,
     "TTS": ModelType.TTS,
@@ -70,7 +69,9 @@ class ModelLoadBalancer(MediatorMixin):
             return False
         route_metadata = None
         if action == "load" and model_type is ModelType.TTS:
-            metadata_getter = getattr(manager, "_tts_runtime_route_metadata", None)
+            metadata_getter = getattr(
+                manager, "_tts_runtime_route_metadata", None
+            )
             if callable(metadata_getter):
                 route_metadata = metadata_getter()
         return bool(
@@ -313,7 +314,11 @@ class ModelLoadBalancer(MediatorMixin):
     @staticmethod
     def _non_art_models(model_types: List[ModelType]) -> List[ModelType]:
         """Return only non-art model types from a loaded model list."""
-        return [model_type for model_type in model_types if model_type is not ModelType.SD]
+        return [
+            model_type
+            for model_type in model_types
+            if model_type is not ModelType.SD
+        ]
 
     def _restore_types(
         self,

@@ -44,8 +44,11 @@ def _final_raw_gpt_oss_chunks(
         yield _tool_call_chunk(tool_calls)
         return
     tail_text = _final_tail_text(
-        raw_text, cleaned_text, forced_tool_name,
-        saw_visible_text or bool(parsed_tail.final_text and not forced_tool_name),
+        raw_text,
+        cleaned_text,
+        forced_tool_name,
+        saw_visible_text
+        or bool(parsed_tail.final_text and not forced_tool_name),
     )
     if tail_text:
         yield _text_tail_chunk(tail_text, run_manager)

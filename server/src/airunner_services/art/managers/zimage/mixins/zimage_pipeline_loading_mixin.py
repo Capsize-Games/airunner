@@ -33,7 +33,7 @@ def _clear_gpu_memory() -> None:
 
 class ZImagePipelineLoadingMixin:
     """Mixin for Z-Image pipeline loading operations.
-    
+
     Overrides the base _set_pipe method to handle Z-Image's specific
     requirements for loading from single-file checkpoints, particularly
     the need to load the text encoder separately.
@@ -91,7 +91,9 @@ class ZImagePipelineLoadingMixin:
         """Load Z-Image pipeline from the selected model file."""
         self._get_lifecycle_helper().set_pipe(config_path, data)
 
-    def _load_from_pretrained(self, model_path: str, pipeline_class: Any, data: Dict):
+    def _load_from_pretrained(
+        self, model_path: str, pipeline_class: Any, data: Dict
+    ):
         """Load Z-Image from one pretrained directory."""
         self._get_pretrained_loader_helper().load_from_pretrained(
             model_path,

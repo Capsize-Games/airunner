@@ -7,7 +7,6 @@ from airunner_services.database.session import reset_engine
 from airunner_services.database.session import session_scope
 from airunner_services.database.setup_database import setup_database
 
-
 __all__ = [
     "Base",
     "BaseModel",

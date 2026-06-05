@@ -34,7 +34,5 @@ def get_chatbot():
             chatbot = Chatbot.objects.first(eager_load=eager_load)
         return chatbot
     except Exception as exc:
-        get_logger("get_chatbot").error(
-            f"Error getting chatbot: {exc}"
-        )
+        get_logger("get_chatbot").error(f"Error getting chatbot: {exc}")
         return _fallback_chatbot()

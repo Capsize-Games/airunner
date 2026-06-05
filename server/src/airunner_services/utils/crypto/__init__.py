@@ -11,7 +11,6 @@ from airunner_services.utils.crypto.data_encryption import (
 )
 from airunner_services.utils.crypto.data_encryption import get_keyring
 
-
 __all__ = [
     "DataEncryptionError",
     "Keyring",

@@ -19,7 +19,9 @@ def create_feature_records(
             project_id=project_id,
             name=feature_data["name"],
             description=feature_data.get("description", ""),
-            category=FeatureCategory(feature_data.get("category", "functional")),
+            category=FeatureCategory(
+                feature_data.get("category", "functional")
+            ),
             verification_steps=feature_data.get("verification_steps", []),
             priority=feature_data.get("priority", 5),
             depends_on=[],
@@ -33,7 +35,9 @@ def dependency_ids(
     feature_ids: dict[str, int],
 ) -> list[int]:
     """Return known dependency IDs for one feature."""
-    return [feature_ids[name] for name in depends_on_names if name in feature_ids]
+    return [
+        feature_ids[name] for name in depends_on_names if name in feature_ids
+    ]
 
 
 def update_feature_dependencies(

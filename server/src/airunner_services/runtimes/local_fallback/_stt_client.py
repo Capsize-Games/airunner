@@ -1,4 +1,5 @@
 """Local fallback STT runtime client."""
+
 from __future__ import annotations
 
 import base64
@@ -23,6 +24,7 @@ from airunner_services.runtimes.local_fallback._base import (
     _resolve_model_type,
     _SignalRuntimeClient,
 )
+
 
 class LocalFallbackSTTClient(_SignalRuntimeClient):
     """Bridge STT runtime requests to the current synchronous signal path."""
@@ -145,7 +147,9 @@ class LocalFallbackSTTClient(_SignalRuntimeClient):
                 on_transcription,
             )
 
-        payload = self._transcription_payload(transcription, invocation.language)
+        payload = self._transcription_payload(
+            transcription, invocation.language
+        )
         return ResponseEnvelope(
             request_id=request.request_id,
             status=EnvelopeStatus.SUCCEEDED,

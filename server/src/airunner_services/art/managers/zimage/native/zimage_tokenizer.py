@@ -56,7 +56,9 @@ class ZImageTokenizer:
     ) -> Dict[str, torch.Tensor]:
         """Tokenize text with the Z-Image chat template."""
         if self.tokenizer is None:
-            raise RuntimeError("Tokenizer not loaded. Call _load_tokenizer first.")
+            raise RuntimeError(
+                "Tokenizer not loaded. Call _load_tokenizer first."
+            )
         template = llama_template if llama_template else self.LLAMA_TEMPLATE
         texts = [text] if isinstance(text, str) else text
         formatted_texts = [template.format(item) for item in texts]

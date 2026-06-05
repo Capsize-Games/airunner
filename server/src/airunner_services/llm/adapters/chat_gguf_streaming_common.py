@@ -89,6 +89,8 @@ def _merge_function_delta(
         buffer["function"][key],
         fragment,
     )
+
+
 def _log_stream_start(adapter: Any, max_tokens: int) -> None:
     """Log the start of one streaming llama.cpp request."""
     adapter.logger.info(

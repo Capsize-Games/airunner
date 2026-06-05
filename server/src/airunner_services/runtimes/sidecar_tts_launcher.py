@@ -154,7 +154,9 @@ class SidecarTTSLauncher:
         if not self.is_running():
             return False
         try:
-            with self._health_opener(self._health_url(), timeout=1) as response:
+            with self._health_opener(
+                self._health_url(), timeout=1
+            ) as response:
                 return 200 <= getattr(response, "status", 0) < 300
         except (OSError, URLError):
             return False

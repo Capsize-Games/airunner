@@ -1,4 +1,5 @@
 """Local fallback TTS runtime client."""
+
 from __future__ import annotations
 
 import base64
@@ -24,6 +25,7 @@ from airunner_services.runtimes.local_fallback._base import (
     _resolve_model_type,
     _SignalRuntimeClient,
 )
+
 
 class LocalFallbackTTSClient(_SignalRuntimeClient):
     """Bridge TTS runtime requests to the existing playback-oriented path."""
@@ -255,7 +257,9 @@ class LocalFallbackTTSClient(_SignalRuntimeClient):
             return None
         manager = getattr(worker, "tts", None)
         if manager is None:
-            initializer = getattr(worker, "_initialize_tts_model_manager", None)
+            initializer = getattr(
+                worker, "_initialize_tts_model_manager", None
+            )
             if callable(initializer):
                 initializer()
             manager = getattr(worker, "tts", None)
@@ -287,7 +291,9 @@ class LocalFallbackTTSClient(_SignalRuntimeClient):
         )
 
     @staticmethod
-    def _tts_model_type(invocation: TTSInvocationRequest, worker) -> Optional[str]:
+    def _tts_model_type(
+        invocation: TTSInvocationRequest, worker
+    ) -> Optional[str]:
         """Return the active TTS model type as a normalized string."""
         resolver = getattr(worker, "_active_tts_model", None)
         active_model = resolver() if callable(resolver) else None

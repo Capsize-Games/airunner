@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from airunner_services.utils.application.runtime_primitives import QThread
 
-
 WORKERS = []
 THREADS = []
 

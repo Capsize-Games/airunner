@@ -10,7 +10,6 @@ from airunner_services.runtimes.runtime_bind_host import (
     resolve_runtime_bind_host,
 )
 
-
 DEFAULT_HOST = "127.0.0.1"
 DEFAULT_PORT = 8190
 DEFAULT_REQUEST_TIMEOUT_SECONDS = 10.0

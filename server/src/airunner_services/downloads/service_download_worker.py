@@ -10,7 +10,6 @@ from airunner_services.utils.application.enum_resolver import signal_code_proxy
 from airunner_services.utils.job_tracker import JobStatus
 from airunner_services.workers.worker import Worker
 
-
 SignalCode = signal_code_proxy(
     {
         "CANCEL_HUGGINGFACE_DOWNLOAD": "cancel_huggingface_download",
@@ -66,7 +65,9 @@ class ServiceDownloadWorker(Worker):
             zip_url = str(payload.get("zip_url") or "")
             output_dir = str(payload.get("output_dir") or "")
             if not zip_url or not output_dir:
-                raise ValueError("OpenVoice ZIP downloads require url and output")
+                raise ValueError(
+                    "OpenVoice ZIP downloads require url and output"
+                )
             return self._download_job_service.start_url_download_sync(
                 zip_url,
                 output_dir=output_dir,

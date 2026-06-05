@@ -9,7 +9,11 @@ from airunner_services.art.schedulers.flow_match_scheduler_factory import (
     is_flow_match_scheduler,
     create_flow_match_scheduler,
 )
-from airunner_services.art.runtime_enums import Scheduler, ModelType, ModelStatus
+from airunner_services.art.runtime_enums import (
+    Scheduler,
+    ModelType,
+    ModelStatus,
+)
 
 from accelerate.hooks import remove_hook_from_module
 
@@ -29,7 +33,7 @@ def _aggressive_memory_cleanup():
         # Reset peak memory stats
         torch.cuda.reset_peak_memory_stats()
         torch.cuda.synchronize()
-    
+
     # Final gc passes
     gc.collect()
     gc.collect()
@@ -63,7 +67,9 @@ class ZImageGenerationMixin:
         """Load and prepare prompt embeddings for Z-Image."""
         self._current_prompt = self.prompt
         self._current_negative_prompt = self.negative_prompt
-        self.logger.debug("Z-Image prompt handling (no pre-computed embeddings)")
+        self.logger.debug(
+            "Z-Image prompt handling (no pre-computed embeddings)"
+        )
 
     def _prepare_data(self, active_rect=None) -> Dict:
         """Prepare generation data for Z-Image pipeline."""
@@ -88,29 +94,29 @@ class ZImageGenerationMixin:
 
     def _enforce_zimage_guidance(self, data: Dict) -> None:
         """Log guidance and steps for Z-Image (uses DB settings).
-        
+
         Z-Image Turbo works best with guidance_scale=0.0 and 8-9 steps,
         but we respect whatever the user has configured.
         """
 
     def _load_scheduler(self, scheduler_name=None):
         """Load a flow-match scheduler for Z-Image.
-        
+
         Overrides base class to use flow-match scheduler factory.
-        
+
         Args:
             scheduler_name: Display name of the scheduler to load.
         """
         # imports moved to module level for performance and clarity
-        
+
         # Get scheduler name
         requested_name = (
             scheduler_name
             or (self.image_request.scheduler if self.image_request else None)
-            or getattr(self, '_scheduler_name', None)
+            or getattr(self, "_scheduler_name", None)
             or Scheduler.FLOW_MATCH_EULER.value
         )
-        
+
         # Only handle flow-match schedulers
         if not is_flow_match_scheduler(requested_name):
             self.logger.warning(
@@ -118,9 +124,9 @@ class ZImageGenerationMixin:
                 f"Z-Image requires flow-match schedulers."
             )
             requested_name = Scheduler.FLOW_MATCH_EULER.value
-        
+
         self.change_model_status(ModelType.SCHEDULER, ModelStatus.LOADING)
-        
+
         try:
             # Use base config from current scheduler for structural params, but
             # strip behavioral flags so the factory sets them explicitly.
@@ -134,21 +140,25 @@ class ZImageGenerationMixin:
                     "use_beta_sigmas",
                 ):
                     base_config.pop(flag, None)
-            
+
             # Create the new scheduler
-            scheduler = create_flow_match_scheduler(requested_name, base_config)
-            
+            scheduler = create_flow_match_scheduler(
+                requested_name, base_config
+            )
+
             # Apply to pipeline
             if self._pipe is not None:
                 self._pipe.scheduler = scheduler
-            
+
             self._scheduler = scheduler
             self._scheduler_name = requested_name
             self.change_model_status(ModelType.SCHEDULER, ModelStatus.LOADED)
             self.logger.info(f"Loaded Z-Image scheduler: {requested_name}")
-            
+
         except Exception as e:
-            self.logger.error(f"Failed to load scheduler {requested_name}: {e}")
+            self.logger.error(
+                f"Failed to load scheduler {requested_name}: {e}"
+            )
             self.change_model_status(ModelType.SCHEDULER, ModelStatus.FAILED)
 
     def _load_deep_cache(self):
@@ -159,48 +169,54 @@ class ZImageGenerationMixin:
 
         Z-Image uses a `transformer` instead of a `unet`, so we must
         explicitly delete it along with the text encoder.
-        
+
         CRITICAL: When using bitsandbytes quantization with device_map="auto",
         the model weights are stored in CPU RAM and moved to GPU on demand.
         We must properly dequantize and delete these models to free CPU RAM.
         """
         self.logger.info("=== Z-IMAGE _unload_pipe CALLED ===")
         self.logger.debug("Unloading Z-Image pipe")
-        
+
         if self._pipe is None:
             return
-        
+
         # Import accelerate hooks removal if available
         has_accelerate_hooks = remove_hook_from_module is not None
         if not has_accelerate_hooks:
-            self.logger.debug("accelerate.hooks not available, using manual cleanup")
-        
+            self.logger.debug(
+                "accelerate.hooks not available, using manual cleanup"
+            )
+
         # List of all Z-Image components to clean up (ordered by size)
         component_names = [
             "text_encoder",  # Largest, ~8GB - clean first
-            "transformer",   # Second largest
+            "transformer",  # Second largest
             "vae",
             "scheduler",
             "tokenizer",
         ]
-        
+
         try:
             # CRITICAL: Remove Accelerate hooks from pipeline first
             if hasattr(self._pipe, "_all_hooks"):
-                self.logger.debug("Removing Accelerate _all_hooks from pipeline")
+                self.logger.debug(
+                    "Removing Accelerate _all_hooks from pipeline"
+                )
                 for hook in list(self._pipe._all_hooks):
                     try:
                         hook.remove()
                     except Exception as e:
                         self.logger.debug(f"Error removing hook: {e}")
                 self._pipe._all_hooks.clear()
-            
+
             # Process each component via helper
             for component_name in component_names:
                 component = getattr(self._pipe, component_name, None)
                 if component is None:
                     continue
-                self._cleanup_pipeline_component(component_name, component, has_accelerate_hooks)
+                self._cleanup_pipeline_component(
+                    component_name, component, has_accelerate_hooks
+                )
         except Exception as e:
             self.logger.warning(f"Error during hook removal: {e}")
 
@@ -217,7 +233,9 @@ class ZImageGenerationMixin:
 
         self.logger.info("✓ Z-Image pipeline unloaded and memory freed")
 
-    def _cleanup_pipeline_component(self, component_name: str, component: Any, has_accelerate_hooks: bool) -> None:
+    def _cleanup_pipeline_component(
+        self, component_name: str, component: Any, has_accelerate_hooks: bool
+    ) -> None:
         """Cleanup a component attached to the pipeline.
 
         Extraction from the prior implementation to reduce _unload_pipe size.
@@ -236,7 +254,10 @@ class ZImageGenerationMixin:
         if hasattr(component, "_hf_hook"):
             try:
                 hook = component._hf_hook
-                if hasattr(hook, "weights_map") and hook.weights_map is not None:
+                if (
+                    hasattr(hook, "weights_map")
+                    and hook.weights_map is not None
+                ):
                     hook.weights_map.clear()
                 if hasattr(hook, "offload"):
                     try:
@@ -245,8 +266,10 @@ class ZImageGenerationMixin:
                         pass
                 delattr(component, "_hf_hook")
             except Exception as e:
-                self.logger.debug(f"Manual hook cleanup for {component_name}: {e}")
-        
+                self.logger.debug(
+                    f"Manual hook cleanup for {component_name}: {e}"
+                )
+
     def _clear_pipeline_caches(self):
         """Clear cached tensors and per-component caches on the active pipeline.
 
@@ -254,14 +277,16 @@ class ZImageGenerationMixin:
         """
         if self._pipe is None:
             return
-        
+
         self.logger.debug("Clearing pipeline caches to free RAM")
-        
+
         # For text encoder, clear any cached key/values
         text_encoder = getattr(self._pipe, "text_encoder", None)
-        if text_encoder is not None and hasattr(text_encoder, "past_key_values"):
+        if text_encoder is not None and hasattr(
+            text_encoder, "past_key_values"
+        ):
             text_encoder.past_key_values = None
-        
+
         # Clear transformer attention caches if any
         transformer = getattr(self._pipe, "transformer", None)
         if transformer is not None:
@@ -271,7 +296,7 @@ class ZImageGenerationMixin:
                     module.attention_cache = None
                 if hasattr(module, "_cached_key_values"):
                     module._cached_key_values = None
-        
+
         # Keep per-request cleanup lightweight so repeated generations
         # do not pay unload-grade synchronization costs every time.
         _incremental_memory_cleanup()
@@ -280,9 +305,17 @@ class ZImageGenerationMixin:
         """Override to add cleanup after Z-Image generation."""
         # Log the active scheduler flags at generation time for debugging
         try:
-            if self._pipe and hasattr(self._pipe, "scheduler") and hasattr(self._pipe.scheduler, "config"):
-                karras = self._pipe.scheduler.config.get("use_karras_sigmas", False)
-                stochastic = self._pipe.scheduler.config.get("stochastic_sampling", False)
+            if (
+                self._pipe
+                and hasattr(self._pipe, "scheduler")
+                and hasattr(self._pipe.scheduler, "config")
+            ):
+                karras = self._pipe.scheduler.config.get(
+                    "use_karras_sigmas", False
+                )
+                stochastic = self._pipe.scheduler.config.get(
+                    "stochastic_sampling", False
+                )
                 self.logger.debug(
                     "[ZIMAGE SCHEDULER DEBUG] generate() using %s (karras=%s, stochastic=%s)",
                     self._pipe.scheduler.__class__.__name__,
@@ -290,7 +323,10 @@ class ZImageGenerationMixin:
                     stochastic,
                 )
         except Exception:
-            self.logger.debug("Could not log scheduler flags during generation", exc_info=True)
+            self.logger.debug(
+                "Could not log scheduler flags during generation",
+                exc_info=True,
+            )
         try:
             super()._generate()
         finally:
@@ -299,7 +335,7 @@ class ZImageGenerationMixin:
 
     def _get_results(self, data):
         """Run pipeline inference with cleanup between generations.
-        
+
         Z-Image uses a single text encoder (Qwen-based), so memory management
         is simpler than dual-encoder image pipelines.
         """
@@ -313,11 +349,11 @@ class ZImageGenerationMixin:
 
                 # Run pipeline
                 pipeline_output = self._pipe(**data)
-                
+
                 # Convert pipeline output to dict format expected by base class
                 results = {"images": pipeline_output.images}
                 yield results
-                
+
                 # Cleanup after each generation
                 del pipeline_output
                 del results

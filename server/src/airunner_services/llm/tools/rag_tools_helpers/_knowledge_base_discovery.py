@@ -107,14 +107,18 @@ def upsert_discovered_documents(
             logger.debug("Document already exists: %s", file_path)
             continue
         logger.info("Creating Document record for: %s", file_path)
-        document_model.objects.create(path=file_path, active=True, indexed=False)
+        document_model.objects.create(
+            path=file_path, active=True, indexed=False
+        )
         emit_discovery_signal(api, signal_code, file_path)
 
 
 def find_repo_fallback_directories(module_file: str, logger: Any) -> list[str]:
     """Return repo fallback directories when a bundled booksite exists."""
     candidate = os.path.abspath(
-        os.path.join(os.path.dirname(module_file), "..", "..", "..", "..", "..")
+        os.path.join(
+            os.path.dirname(module_file), "..", "..", "..", "..", ".."
+        )
     )
     while True:
         booksite_dirs = _booksite_directories(candidate)
@@ -136,9 +140,13 @@ def _discover_configured_documents(
     logger: Any,
 ) -> tuple[list[Any], list[str]]:
     """Discover documents from configured knowledge-base directories."""
-    logger.info("No docs in DB, attempting discovery. api=%s", type(api).__name__)
+    logger.info(
+        "No docs in DB, attempting discovery. api=%s", type(api).__name__
+    )
     try:
-        candidate_dirs = get_candidate_directories(api, path_settings_model, logger)
+        candidate_dirs = get_candidate_directories(
+            api, path_settings_model, logger
+        )
         found_files = discover_supported_files(candidate_dirs, logger)
         upsert_discovered_documents(
             found_files,
@@ -148,7 +156,9 @@ def _discover_configured_documents(
             logger=logger,
         )
         docs = get_active_documents(session, document_model)
-        logger.info("After discovery, DB now has %s active document records", len(docs))
+        logger.info(
+            "After discovery, DB now has %s active document records", len(docs)
+        )
         return docs, found_files
     except Exception as error:
         logger.error("Disk discovery failed: %s", error, exc_info=True)
@@ -174,7 +184,11 @@ def _discover_repo_documents(
             signal_code=signal_code,
             logger=logger,
         )
-        docs = get_active_documents(session, document_model) if found_files else []
+        docs = (
+            get_active_documents(session, document_model)
+            if found_files
+            else []
+        )
         return docs, found_files
     except Exception as error:
         logger.warning("Fallback repo discovery failed: %s", error)
@@ -192,7 +206,10 @@ def _discover_directory_files(directory: str, logger: Any) -> list[str]:
     file_count = 0
     for root, _, files in os.walk(expanded):
         for file_name in files:
-            if os.path.splitext(file_name)[1].lower() not in SUPPORTED_DOCUMENT_EXTENSIONS:
+            if (
+                os.path.splitext(file_name)[1].lower()
+                not in SUPPORTED_DOCUMENT_EXTENSIONS
+            ):
                 continue
             file_count += 1
             found_files.append(os.path.join(root, file_name))

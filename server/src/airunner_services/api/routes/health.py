@@ -10,7 +10,6 @@ from pydantic import BaseModel, Field
 from airunner_services.dev_build_token import current_dev_build_token
 from airunner_services.settings import AIRUNNER_VERSION
 
-
 router = APIRouter()
 
 

@@ -61,7 +61,9 @@ class NodeForcedResponseHelper:
             )
             return {
                 "messages": [
-                    self.create_direct_tool_response_message(tool_messages, tool_name)
+                    self.create_direct_tool_response_message(
+                        tool_messages, tool_name
+                    )
                 ],
                 "workflow_continuation": False,
             }
@@ -98,7 +100,11 @@ class NodeForcedResponseHelper:
     @staticmethod
     def get_tool_messages(messages: List[BaseMessage]) -> List[Any]:
         """Return the tool messages from one message list."""
-        return [message for message in messages if message.__class__.__name__ == "ToolMessage"]
+        return [
+            message
+            for message in messages
+            if message.__class__.__name__ == "ToolMessage"
+        ]
 
     @staticmethod
     def combine_tool_results(tool_messages: List[Any]) -> str:
@@ -138,7 +144,9 @@ class NodeForcedResponseHelper:
                 direct_content = str(tool_message.content).strip()
                 break
         if not direct_content and tool_messages:
-            direct_content = str(getattr(tool_messages[-1], "content", "")).strip()
+            direct_content = str(
+                getattr(tool_messages[-1], "content", "")
+            ).strip()
         return AIMessage(content=direct_content, tool_calls=[])
 
     def generate_forced_response_message(

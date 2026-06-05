@@ -5,6 +5,7 @@ Revises: a2b5afa74dde
 Create Date: 2025-11-28 04:54:23.299121
 
 """
+
 from typing import Sequence, Union
 
 from alembic import op
@@ -19,10 +20,9 @@ from airunner_services.database.models.project_state import (
     DecisionMemory,
 )
 
-
 # revision identifiers, used by Alembic.
-revision: str = '01b52e38f588'
-down_revision: Union[str, None] = 'a2b5afa74dde'
+revision: str = "01b52e38f588"
+down_revision: Union[str, None] = "a2b5afa74dde"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
@@ -39,7 +39,9 @@ def upgrade() -> None:
             "__table__": sa.Table(
                 "fine_tuned_models",
                 sa.MetaData(),
-                sa.Column("id", sa.Integer(), autoincrement=True, nullable=False),
+                sa.Column(
+                    "id", sa.Integer(), autoincrement=True, nullable=False
+                ),
                 sa.Column("name", sa.String(), nullable=False),
                 sa.Column("adapter_path", sa.String(), nullable=True),
                 sa.Column("date_added", sa.DateTime(), nullable=True),
@@ -68,9 +70,9 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     # Drop tables in reverse order of creation
-    op.drop_table('progress_entries')
-    op.drop_table('decision_memories')
-    op.drop_table('session_states')
-    op.drop_table('project_features')
-    op.drop_table('project_states')
-    op.drop_table('fine_tuned_models')
+    op.drop_table("progress_entries")
+    op.drop_table("decision_memories")
+    op.drop_table("session_states")
+    op.drop_table("project_features")
+    op.drop_table("project_states")
+    op.drop_table("fine_tuned_models")

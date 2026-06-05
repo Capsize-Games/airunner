@@ -181,7 +181,9 @@ class RuntimeMixin:
 
             self.logger.info("Starting API server on %s:%s", host, port)
             self.api_server_thread = APIServerThread(
-                host=host, port=port, app_instance=self,
+                host=host,
+                port=port,
+                app_instance=self,
             )
             self.api_server_thread.start()
             self.logger.info(
@@ -196,9 +198,7 @@ class RuntimeMixin:
 
     def _ensure_api_services(self) -> None:
         """Attach compatibility API services used by legacy daemon routes."""
-        llm_service_class, art_service_class = (
-            _get_api_service_classes()
-        )
+        llm_service_class, art_service_class = _get_api_service_classes()
 
         if getattr(self, "llm", None) is None:
             self.llm = llm_service_class()
@@ -277,7 +277,9 @@ class RuntimeMixin:
 
             worker = getattr(self, "_llm_generate_worker", None)
             if worker is not None:
-                self.logger.info("DEBUG: Forwarding to lifecycle LLM worker...")
+                self.logger.info(
+                    "DEBUG: Forwarding to lifecycle LLM worker..."
+                )
                 worker.on_rag_load_documents_signal(data)
                 self.logger.info("✓ Forwarded RAG load signal to LLM worker")
             elif hasattr(self, "_worker_manager") and self._worker_manager:
@@ -325,9 +327,7 @@ class RuntimeMixin:
                     )
 
                 if settings.knowledge_migrated:
-                    self.logger.debug(
-                        "Knowledge migration already completed"
-                    )
+                    self.logger.debug("Knowledge migration already completed")
                     return
 
                 knowledge_dir = Path(AIRUNNER_USER_DATA_PATH) / "knowledge"

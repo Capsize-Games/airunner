@@ -17,7 +17,6 @@ from airunner_services.utils.application.enum_resolver import (
 )
 from airunner_services.utils.application.enum_resolver import signal_code_proxy
 
-
 SignalCode = signal_code_proxy()
 ModelAction = model_action_type()
 HandlerState = handler_state_type()

@@ -55,16 +55,16 @@ class SafetyCheckerWorker(Worker):
 
     def handle_message(self, message: Any):
         """Process messages from the worker queue.
-        
+
         Args:
             message: Message dict with 'action' and optional 'data' keys
         """
         if not isinstance(message, dict):
             return
-            
+
         action = message.get("action")
         data = message.get("data")
-        
+
         if action == "load":
             self.handle_load(data)
         elif action == "unload":
@@ -111,13 +111,11 @@ class SafetyCheckerWorker(Worker):
                 "Safety checker is already loading, skipping duplicate request"
             )
             return
-        
+
         # If this is a retry after download, reset the download pending flag
         # (WorkerManager calls this after download completes)
         if self._download_pending:
-            self.logger.info(
-                "Retrying load after download completion"
-            )
+            self.logger.info("Retrying load after download completion")
             self._download_pending = False
 
         self._is_loading = True
@@ -167,7 +165,7 @@ class SafetyCheckerWorker(Worker):
                 self.logger.info(
                     "Triggering download via ART_MODEL_DOWNLOAD_REQUIRED signal"
                 )
-                
+
                 # Mark download as pending to prevent duplicate triggers
                 self._download_pending = True
 

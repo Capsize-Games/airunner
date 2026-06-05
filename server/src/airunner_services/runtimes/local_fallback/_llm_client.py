@@ -1,4 +1,5 @@
 """Local fallback LLM runtime client."""
+
 from __future__ import annotations
 
 from queue import Empty, Queue
@@ -26,6 +27,7 @@ from airunner_services.runtimes.local_fallback._base import (
     _resolve_model_type,
     _SignalRuntimeClient,
 )
+
 
 class LocalFallbackLLMClient(_SignalRuntimeClient):
     """Bridge LLM runtime envelopes to the existing signal service path."""
@@ -77,7 +79,9 @@ class LocalFallbackLLMClient(_SignalRuntimeClient):
         invocation = self._validate_request(request)
         response_queue = self._dispatch(request, invocation)
         try:
-            yield from self._stream_responses(request.request_id, response_queue)
+            yield from self._stream_responses(
+                request.request_id, response_queue
+            )
         except TimeoutError as exc:
             yield self._failure_delta(request.request_id, str(exc))
         finally:

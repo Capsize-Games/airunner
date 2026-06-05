@@ -8,7 +8,6 @@ from langchain_core.messages import BaseMessage
 from langgraph.graph import add_messages
 from typing_extensions import TypedDict
 
-
 INITIALIZER_SYSTEM_PROMPT = """You are a project initialization specialist. Your task is to analyze a user's project requirements and create a comprehensive, structured feature list.
 
 CRITICAL RULES:

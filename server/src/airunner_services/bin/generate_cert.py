@@ -15,7 +15,9 @@ def main() -> int:
     """Run the packaged certificate helper script."""
     script_path = _resolve_script_path()
     if not script_path.exists():
-        raise FileNotFoundError(f"Missing certificate helper script: {script_path}")
+        raise FileNotFoundError(
+            f"Missing certificate helper script: {script_path}"
+        )
     subprocess.run(["bash", str(script_path)], check=True)
     return 0
 

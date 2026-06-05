@@ -29,7 +29,10 @@ def _normalize_tts_model_root(path: str) -> str:
     """Return the shared TTS root for one configured model path."""
     expanded = os.path.expanduser(path)
     candidate = Path(expanded)
-    if candidate.name == "openvoice" or (candidate / "checkpoints_v2").exists():
+    if (
+        candidate.name == "openvoice"
+        or (candidate / "checkpoints_v2").exists()
+    ):
         return str(candidate.parent)
     return expanded
 

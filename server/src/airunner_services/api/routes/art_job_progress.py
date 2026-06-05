@@ -8,7 +8,6 @@ from airunner_services.utils.job_tracker import (
     JobTracker,
 )
 
-
 # JobTracker coordination
 # Progress callbacks run from the runtime thread, so this module exists only to
 # normalize those updates before they cross back into the async tracker layer.

@@ -1,9 +1,7 @@
 """Prompt-instruction helpers for manual tool calling."""
 
 INSTRUCTION_HEADER = "## IMPORTANT: Tool Usage Instructions\n\n"
-INSTRUCTION_INTRO = (
-    "You have access to the following tools to help users:\n\n"
-)
+INSTRUCTION_INTRO = "You have access to the following tools to help users:\n\n"
 INSTRUCTION_USAGE = (
     "\n\n**How to use a tool:**\n\n"
     "When you need to use a tool, respond with ONLY a JSON code block "

@@ -127,7 +127,10 @@ class SidecarArtLauncher:
             self._config_path = self._config_path_builder(self.settings)
         bundle_layout = self._bundle_layout_builder()
         daemon_executable = bundle_layout.daemon_executable()
-        if daemon_executable is not None and os.environ.get("DEV_ENV", "1") != "1":
+        if (
+            daemon_executable is not None
+            and os.environ.get("DEV_ENV", "1") != "1"
+        ):
             command = [str(daemon_executable)]
         else:
             command = [
@@ -171,7 +174,9 @@ class SidecarArtLauncher:
         if not self.is_running():
             return False
         try:
-            with self._health_opener(self._health_url(), timeout=1) as response:
+            with self._health_opener(
+                self._health_url(), timeout=1
+            ) as response:
                 return 200 <= getattr(response, "status", 0) < 300
         except (OSError, URLError):
             return False
@@ -271,9 +276,7 @@ class SidecarArtLauncher:
                 self.settings.art_model_version
             )
         if self.settings.art_scheduler:
-            environment["AIRUNNER_ART_SCHEDULER"] = (
-                self.settings.art_scheduler
-            )
+            environment["AIRUNNER_ART_SCHEDULER"] = self.settings.art_scheduler
         return environment
 
     def _process_working_directory(self) -> Optional[str]:

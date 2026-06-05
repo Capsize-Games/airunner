@@ -24,7 +24,9 @@ async def websocket_chat(websocket: WebSocket):
     """Stream chat responses from the runtime-backed local LLM."""
     await websocket.accept()
     try:
-        client = resolve_llm_client(require_websocket_runtime_registry(websocket))
+        client = resolve_llm_client(
+            require_websocket_runtime_registry(websocket)
+        )
         while True:
             data = await websocket.receive_json()
             has_content = bool(str(data.get("message", "")).strip()) or bool(
@@ -35,7 +37,9 @@ async def websocket_chat(websocket: WebSocket):
                     {"type": "error", "content": "No message provided"}
                 )
                 continue
-            async for delta in stream_runtime(client, websocket_envelope(data)):
+            async for delta in stream_runtime(
+                client, websocket_envelope(data)
+            ):
                 await websocket.send_json(websocket_chunk(delta))
                 if delta.final:
                     break

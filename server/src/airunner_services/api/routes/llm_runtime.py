@@ -7,7 +7,11 @@ from typing import Any, Iterable, List, Optional
 
 from fastapi import HTTPException, Request, WebSocket
 
-from airunner_services.ipc.messages import EnvelopeStatus, RequestEnvelope, StreamDelta
+from airunner_services.ipc.messages import (
+    EnvelopeStatus,
+    RequestEnvelope,
+    StreamDelta,
+)
 from airunner_services.runtimes.base import RuntimeClient
 from airunner_services.runtimes.contracts import (
     ChatMessage as RuntimeChatMessage,
@@ -34,7 +38,9 @@ def require_runtime_registry(request: Request) -> RuntimeRegistry:
     return runtime_registry
 
 
-def require_websocket_runtime_registry(websocket: WebSocket) -> RuntimeRegistry:
+def require_websocket_runtime_registry(
+    websocket: WebSocket,
+) -> RuntimeRegistry:
     """Return the runtime registry for a websocket session."""
     app = getattr(websocket, "app", None)
     state = getattr(app, "state", None)
@@ -49,10 +55,14 @@ def resolve_llm_client(registry: RuntimeRegistry) -> RuntimeClient:
     try:
         return registry.resolve(RuntimeKind.LLM, provider="local")
     except KeyError as exc:
-        raise HTTPException(status_code=503, detail="LLM runtime unavailable") from exc
+        raise HTTPException(
+            status_code=503, detail="LLM runtime unavailable"
+        ) from exc
 
 
-def to_runtime_messages(messages: List[ChatMessage]) -> List[RuntimeChatMessage]:
+def to_runtime_messages(
+    messages: List[ChatMessage],
+) -> List[RuntimeChatMessage]:
     """Convert API messages into the neutral runtime contract format."""
     runtime_messages = []
     for message in messages:
@@ -102,9 +112,11 @@ async def invoke_llm_runtime(
     invocation = LLMInvocationRequest(
         messages=messages,
         model=model,
-        metadata={"gguf_runtime_profile": gguf_runtime_profile}
-        if gguf_runtime_profile
-        else {},
+        metadata=(
+            {"gguf_runtime_profile": gguf_runtime_profile}
+            if gguf_runtime_profile
+            else {}
+        ),
         temperature=temperature,
         max_tokens=max_tokens,
     )

@@ -325,15 +325,20 @@ class AIRunnerDaemon:
         only the daemon HTTP+WS server starts.  Actual model loading
         happens on the first inference request.
         """
-        registry = getattr(getattr(self, "app", None), "runtime_registry", None)
+        registry = getattr(
+            getattr(self, "app", None), "runtime_registry", None
+        )
         if registry is None:
             return
         import threading
+
         seen = set()
         for route in registry.list_routes():
             try:
                 client = registry.resolve(
-                    route.runtime, route.provider, route.deployment_mode,
+                    route.runtime,
+                    route.provider,
+                    route.deployment_mode,
                 )
             except KeyError:
                 continue
@@ -344,13 +349,19 @@ class AIRunnerDaemon:
             launcher = getattr(client, "_launcher", None)
             if launcher is None:
                 continue
-            name = str(route.runtime.value if hasattr(route.runtime, "value") else route.runtime)
+            name = str(
+                route.runtime.value
+                if hasattr(route.runtime, "value")
+                else route.runtime
+            )
+
             def _launch(launcher_=launcher, n=name):
                 try:
                     launcher_.start()
                     logger.info("%s sidecar daemon ready", n)
                 except Exception as exc:
                     logger.error("%s sidecar failed to start: %s", n, exc)
+
             thread = threading.Thread(target=_launch, daemon=True)
             thread.start()
 

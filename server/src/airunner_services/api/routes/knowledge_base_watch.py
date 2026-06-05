@@ -26,10 +26,21 @@ _watcher_started = False
 _watcher_observer: _Observer | None = None
 
 # Document extensions supported by the knowledge base.
-DOCUMENT_EXTENSIONS = frozenset({
-    ".mobi", ".pdf", ".epub", ".html", ".htm",
-    ".md", ".txt", ".zim", ".doc", ".docx", ".odt",
-})
+DOCUMENT_EXTENSIONS = frozenset(
+    {
+        ".mobi",
+        ".pdf",
+        ".epub",
+        ".html",
+        ".htm",
+        ".md",
+        ".txt",
+        ".zim",
+        ".doc",
+        ".docx",
+        ".odt",
+    }
+)
 
 
 def _discover_kb_dirs() -> list[Path]:
@@ -76,7 +87,9 @@ class _KBDocumentHandler(FileSystemEventHandler):
             dest.lower().endswith(tuple(DOCUMENT_EXTENSIONS))
         ):
             logger.debug(
-                "KB watch move event: %s -> %s", src, dest,
+                "KB watch move event: %s -> %s",
+                src,
+                dest,
             )
             _notify_subscribers()
 
@@ -112,8 +125,7 @@ def _start_watcher() -> None:
     observer.start()
     _watcher_observer = observer
     logger.info(
-        "KB file watcher started — "
-        "monitoring %d director%s",
+        "KB file watcher started — " "monitoring %d director%s",
         len(dirs),
         "ies" if len(dirs) != 1 else "y",
     )

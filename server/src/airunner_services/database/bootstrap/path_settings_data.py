@@ -6,17 +6,12 @@ import os
 
 from airunner_services.settings import AIRUNNER_ART_ENABLED
 
-
 PATH_SETTINGS_DATA = {
     "documents_path": os.path.expanduser(
         os.path.join("text", "other", "documents")
     ),
-    "ebook_path": os.path.expanduser(
-        os.path.join("text", "other", "ebooks")
-    ),
-    "rag_index_path": os.path.expanduser(
-        os.path.join("text", "rag", "db")
-    ),
+    "ebook_path": os.path.expanduser(os.path.join("text", "other", "ebooks")),
+    "rag_index_path": os.path.expanduser(os.path.join("text", "rag", "db")),
     "webpages_path": os.path.expanduser(
         os.path.join("text", "other", "webpages")
     ),

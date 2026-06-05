@@ -35,6 +35,7 @@ class WorkerState(Enum):
     PAUSED = "paused"
     RUNNING = "running"
 
+
 class Worker(
     RuntimeContextMixin,
     MediatorMixin,

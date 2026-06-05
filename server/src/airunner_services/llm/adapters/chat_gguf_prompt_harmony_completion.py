@@ -153,8 +153,7 @@ def _continuation_text(response: Dict[str, Any]) -> str:
 def _log_tool_json_continuation(adapter: Any, attempt: int) -> None:
     """Log one continuation attempt for forced Harmony tool JSON."""
     adapter.logger.info(
-        "Continuing incomplete prefilled GPT-OSS tool JSON "
-        "(attempt %s)",
+        "Continuing incomplete prefilled GPT-OSS tool JSON " "(attempt %s)",
         attempt + 1,
     )
 
@@ -167,11 +166,13 @@ def continue_prefilled_gpt_oss_tool_call(
     """Continue a truncated prefilled Harmony tool call body."""
     combined = raw_text or ""
     for attempt in range(2):
-        if not prefilled_gpt_oss_tool_json_needs_continuation(adapter, combined):
+        if not prefilled_gpt_oss_tool_json_needs_continuation(
+            adapter, combined
+        ):
             break
-        response = adapter._llama.create_completion(**_continuation_kwargs(
-            adapter, completion_kwargs, combined
-        ))
+        response = adapter._llama.create_completion(
+            **_continuation_kwargs(adapter, completion_kwargs, combined)
+        )
         continuation_text = _continuation_text(response)
         if not continuation_text:
             break

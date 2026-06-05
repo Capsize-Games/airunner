@@ -33,18 +33,21 @@ async def _rpc_models_active(body: dict, **kwargs: Any) -> dict[str, Any]:
     """Return all currently active models."""
     try:
         from airunner_services.model_management import ModelResourceManager
+
         resource_mgr = ModelResourceManager()
         models: list[dict[str, Any]] = []
         for m in resource_mgr.get_active_models():
-            models.append({
-                "model_id": m.model_id,
-                "model_type": m.model_type,
-                "status": m.state.value,
-                "can_unload": m.can_unload,
-                "vram_gb": m.vram_allocated_gb,
-                "ram_gb": m.ram_allocated_gb,
-                "name": m.name or "",
-            })
+            models.append(
+                {
+                    "model_id": m.model_id,
+                    "model_type": m.model_type,
+                    "status": m.state.value,
+                    "can_unload": m.can_unload,
+                    "vram_gb": m.vram_allocated_gb,
+                    "ram_gb": m.ram_allocated_gb,
+                    "name": m.name or "",
+                }
+            )
         return {"status": 200, "body": {"models": models}}
     except Exception as exc:
         logger.warning("Failed to read active models: %s", exc)
@@ -62,17 +65,19 @@ async def _rpc_models_unload(body: dict, **kwargs: Any) -> dict[str, Any]:
     model_id = str(body.get("model_id", ""))
     model_type = str(body.get("model_type", ""))
 
-    model_type_lower = (model_type.strip().lower() or model_id.strip().lower())
+    model_type_lower = model_type.strip().lower() or model_id.strip().lower()
 
     if "embedding" in model_type_lower:
         SignalMediator().emit_signal(
-            SignalCode.RAG_INDEX_CANCEL, {"unload_embedding": True},
+            SignalCode.RAG_INDEX_CANCEL,
+            {"unload_embedding": True},
         )
         return {"status": 200, "body": {"status": "accepted"}}
 
     if "llm" in model_type_lower:
         SignalMediator().emit_signal(
-            SignalCode.LLM_UNLOAD_SIGNAL, {},
+            SignalCode.LLM_UNLOAD_SIGNAL,
+            {},
         )
         return {"status": 200, "body": {"status": "accepted"}}
 
@@ -107,12 +112,15 @@ async def _rpc_kb_documents(body: dict, **kwargs: Any) -> dict[str, Any]:
         return {"status": 200, "body": {"documents": []}}
 
 
-@_rpc_register("PATCH", "/api/v1/knowledge-base/documents/{doc_id}/toggle-active")
+@_rpc_register(
+    "PATCH", "/api/v1/knowledge-base/documents/{doc_id}/toggle-active"
+)
 async def _rpc_kb_toggle_active(body: dict, **kwargs: Any) -> dict[str, Any]:
     """Toggle a document's active state."""
     # Path param resolution: path is /documents/{doc_id}/toggle-active
     # The path template has {doc_id} — we extract from the actual path
     import re
+
     path = body.get("_path", "")
     match = re.search(r"/documents/(\d+)/toggle-active", path)
     if not match:
@@ -144,8 +152,10 @@ async def _rpc_kb_index_all(body: dict, **kwargs: Any) -> dict[str, Any]:
     from airunner_services.utils.application.signal_mediator import (
         SignalMediator,
     )
+
     SignalMediator().emit_signal(
-        SignalCode.RAG_INDEX_ALL_DOCUMENTS, {},
+        SignalCode.RAG_INDEX_ALL_DOCUMENTS,
+        {},
     )
     return {"status": 200, "body": {"status": "started"}}
 
@@ -157,6 +167,7 @@ async def _rpc_kb_index_cancel(body: dict, **kwargs: Any) -> dict[str, Any]:
     from airunner_services.utils.application.signal_mediator import (
         SignalMediator,
     )
+
     SignalMediator().emit_signal(SignalCode.RAG_INDEX_CANCEL, {})
     return {"status": 200, "body": {"status": "cancelled"}}
 
@@ -170,6 +181,7 @@ async def _rpc_privacy_get(body: dict, **kwargs: Any) -> dict[str, Any]:
     try:
         from airunner_services.data.models import PrivacySetting
         from airunner_services.database.session import session_scope
+
         with session_scope() as session:
             records = session.query(PrivacySetting).all()
             services = {r.service_name: bool(r.enabled) for r in records}
@@ -185,17 +197,25 @@ async def _rpc_privacy_update(body: dict, **kwargs: Any) -> dict[str, Any]:
     try:
         from airunner_services.data.models import PrivacySetting
         from airunner_services.database.session import session_scope
+
         with session_scope() as session:
             for name, enabled in services.items():
-                record = session.query(PrivacySetting).filter(
-                    PrivacySetting.service_name == name,
-                ).first()
+                record = (
+                    session.query(PrivacySetting)
+                    .filter(
+                        PrivacySetting.service_name == name,
+                    )
+                    .first()
+                )
                 if record:
                     record.enabled = bool(enabled)
                 else:
-                    session.add(PrivacySetting(
-                        service_name=name, enabled=bool(enabled),
-                    ))
+                    session.add(
+                        PrivacySetting(
+                            service_name=name,
+                            enabled=bool(enabled),
+                        )
+                    )
             session.commit()
         return {"status": 200, "body": {"services": services}}
     except Exception as exc:
@@ -211,9 +231,12 @@ async def _rpc_canvas_doc_get(body: dict, **kwargs: Any) -> dict[str, Any]:
     try:
         from airunner_services.data.models import CanvasSetting
         from airunner_services.database.session import session_scope
+
         with session_scope() as session:
             record = session.query(CanvasSetting).first()
-            doc = str(record.document) if (record and record.document) else None
+            doc = (
+                str(record.document) if (record and record.document) else None
+            )
             return {"status": 200, "body": {"document": doc}}
     except Exception:
         return {"status": 200, "body": {"document": None}}
@@ -226,6 +249,7 @@ async def _rpc_canvas_doc_save(body: dict, **kwargs: Any) -> dict[str, Any]:
     try:
         from airunner_services.data.models import CanvasSetting
         from airunner_services.database.session import session_scope
+
         with session_scope() as session:
             record = session.query(CanvasSetting).first()
             if record:
@@ -247,6 +271,7 @@ async def _rpc_canvas_layers_list(body: dict, **kwargs: Any) -> dict[str, Any]:
     try:
         from airunner_services.data.models import Layer
         from airunner_services.database.session import session_scope
+
         with session_scope() as session:
             layers = session.query(Layer).order_by(Layer.order).all()
             return {
@@ -260,7 +285,11 @@ async def _rpc_canvas_layers_list(body: dict, **kwargs: Any) -> dict[str, Any]:
                             "locked": bool(layer.locked),
                             "order": int(layer.order),
                             "opacity": float(layer.opacity),
-                            "blend_mode": str(layer.blend_mode) if layer.blend_mode else "normal",
+                            "blend_mode": (
+                                str(layer.blend_mode)
+                                if layer.blend_mode
+                                else "normal"
+                            ),
                         }
                         for layer in layers
                     ]
@@ -289,14 +318,18 @@ async def _rpc_settings_singleton(body: dict, **kw: Any) -> dict[str, Any]:
                 item = table()
                 session.add(item)
                 session.commit()
-            record = {c.name: getattr(item, c.name) for c in table.__table__.columns}
+            record = {
+                c.name: getattr(item, c.name) for c in table.__table__.columns
+            }
             return {"status": 200, "body": {"record": record}}
     except Exception:
         return {"status": 200, "body": {"record": {}}}
 
 
 @_rpc_register("PUT", "/api/v1/settings/resources/{name}/singleton")
-async def _rpc_settings_singleton_update(body: dict, **kw: Any) -> dict[str, Any]:
+async def _rpc_settings_singleton_update(
+    body: dict, **kw: Any
+) -> dict[str, Any]:
     """Update a singleton resource."""
     pp: dict = kw.get("path_params", {})
     resource_name = pp.get("name", "")
@@ -315,7 +348,9 @@ async def _rpc_settings_singleton_update(body: dict, **kw: Any) -> dict[str, Any
                 if hasattr(item, key):
                     setattr(item, key, val)
             session.commit()
-            record = {c.name: getattr(item, c.name) for c in table.__table__.columns}
+            record = {
+                c.name: getattr(item, c.name) for c in table.__table__.columns
+            }
             return {"status": 200, "body": record}
     except Exception as exc:
         return {"status": 500, "body": {"error": str(exc)}}
@@ -334,7 +369,10 @@ async def _rpc_settings_query(body: dict, **kw: Any) -> dict[str, Any]:
         with session_scope() as session:
             items = session.query(table).all()
             records = [
-                {c.name: getattr(item, c.name) for c in table.__table__.columns}
+                {
+                    c.name: getattr(item, c.name)
+                    for c in table.__table__.columns
+                }
                 for item in items
             ]
             return {"status": 200, "body": {"records": records}}
@@ -354,7 +392,14 @@ async def _rpc_settings_first(body: dict, **kw: Any) -> dict[str, Any]:
         table = resource_store_table(resource_name)
         with session_scope() as session:
             item = session.query(table).first()
-            record = {c.name: getattr(item, c.name) for c in table.__table__.columns} if item else {}
+            record = (
+                {
+                    c.name: getattr(item, c.name)
+                    for c in table.__table__.columns
+                }
+                if item
+                else {}
+            )
             return {"status": 200, "body": {"record": record}}
     except Exception:
         return {"status": 200, "body": {"record": {}}}
@@ -369,6 +414,7 @@ async def _rpc_loras_list(body: dict, **kw: Any) -> dict[str, Any]:
     try:
         from airunner_services.database.models.lora import Lora
         from airunner_services.database.session import session_scope
+
         with session_scope() as session:
             items = session.query(Lora).all()
             return {
@@ -376,10 +422,14 @@ async def _rpc_loras_list(body: dict, **kw: Any) -> dict[str, Any]:
                 "body": {
                     "loras": [
                         {
-                            "id": item.id, "name": item.name or "",
-                            "path": item.path or "", "enabled": bool(item.enabled),
+                            "id": item.id,
+                            "name": item.name or "",
+                            "path": item.path or "",
+                            "enabled": bool(item.enabled),
                             "trigger_words": item.trigger_words or [],
-                            "weight": float(item.weight) if item.weight else 1.0,
+                            "weight": (
+                                float(item.weight) if item.weight else 1.0
+                            ),
                         }
                         for item in items
                     ]
@@ -399,6 +449,7 @@ async def _rpc_loras_update(body: dict, **kw: Any) -> dict[str, Any]:
     try:
         from airunner_services.database.models.lora import Lora
         from airunner_services.database.session import session_scope
+
         with session_scope() as session:
             item = session.query(Lora).filter(Lora.id == int(raw_id)).first()
             if not item:
@@ -410,7 +461,8 @@ async def _rpc_loras_update(body: dict, **kw: Any) -> dict[str, Any]:
             return {
                 "status": 200,
                 "body": {
-                    "id": item.id, "name": item.name or "",
+                    "id": item.id,
+                    "name": item.name or "",
                     "enabled": bool(item.enabled),
                     "trigger_words": item.trigger_words or [],
                     "weight": float(item.weight) if item.weight else 1.0,
@@ -429,6 +481,7 @@ async def _rpc_embeddings_list(body: dict, **kw: Any) -> dict[str, Any]:
     try:
         from airunner_services.database.models.embedding import Embedding
         from airunner_services.database.session import session_scope
+
         with session_scope() as session:
             items = session.query(Embedding).all()
             return {
@@ -436,8 +489,10 @@ async def _rpc_embeddings_list(body: dict, **kw: Any) -> dict[str, Any]:
                 "body": {
                     "embeddings": [
                         {
-                            "id": e.id, "name": e.name or "",
-                            "path": e.path or "", "enabled": bool(e.enabled),
+                            "id": e.id,
+                            "name": e.name or "",
+                            "path": e.path or "",
+                            "enabled": bool(e.enabled),
                             "trigger_words": e.trigger_words or [],
                         }
                         for e in items
@@ -458,8 +513,13 @@ async def _rpc_embeddings_update(body: dict, **kw: Any) -> dict[str, Any]:
     try:
         from airunner_services.database.models.embedding import Embedding
         from airunner_services.database.session import session_scope
+
         with session_scope() as session:
-            item = session.query(Embedding).filter(Embedding.id == int(raw_id)).first()
+            item = (
+                session.query(Embedding)
+                .filter(Embedding.id == int(raw_id))
+                .first()
+            )
             if not item:
                 return {"status": 404, "body": {"error": "Not found"}}
             for key in ("enabled", "trigger_words"):
@@ -469,7 +529,8 @@ async def _rpc_embeddings_update(body: dict, **kw: Any) -> dict[str, Any]:
             return {
                 "status": 200,
                 "body": {
-                    "id": item.id, "name": item.name or "",
+                    "id": item.id,
+                    "name": item.name or "",
                     "enabled": bool(item.enabled),
                     "trigger_words": item.trigger_words or [],
                 },
@@ -488,6 +549,7 @@ async def _rpc_conversations_list(body: dict, **kw: Any) -> dict[str, Any]:
         from airunner_services.conversations.conversation_history_manager import (
             ConversationHistoryManager,
         )
+
         manager = ConversationHistoryManager()
         convs = manager.list_conversations(limit=int(body.get("limit", 50)))
         return {"status": 200, "body": {"conversations": convs}}
@@ -502,6 +564,7 @@ async def _rpc_conversations_create(body: dict, **kw: Any) -> dict[str, Any]:
         from airunner_services.conversations.conversation_history_manager import (
             ConversationHistoryManager,
         )
+
         manager = ConversationHistoryManager()
         session = manager.create_conversation(
             max_messages=body.get("max_messages"),
@@ -522,6 +585,7 @@ async def _rpc_conversations_delete(body: dict, **kw: Any) -> dict[str, Any]:
         from airunner_services.conversations.conversation_history_manager import (
             ConversationHistoryManager,
         )
+
         manager = ConversationHistoryManager()
         manager.delete_conversation(int(raw_id))
         return {"status": 200, "body": {"status": "deleted"}}
@@ -536,6 +600,7 @@ async def _rpc_conversations_session(body: dict, **kw: Any) -> dict[str, Any]:
         from airunner_services.conversations.conversation_history_manager import (
             ConversationHistoryManager,
         )
+
         manager = ConversationHistoryManager()
         conv_id = body.get("conversation_id")
         session = manager.get_conversation_session(
@@ -554,6 +619,7 @@ async def _rpc_conversations_select(body: dict, **kw: Any) -> dict[str, Any]:
         from airunner_services.conversations.conversation_history_manager import (
             ConversationHistoryManager,
         )
+
         manager = ConversationHistoryManager()
         conv_id = body.get("conversation_id")
         if conv_id:
@@ -573,20 +639,30 @@ async def _rpc_conversations_select(body: dict, **kw: Any) -> dict[str, Any]:
 async def _rpc_art_options(body: dict, **kw: Any) -> dict[str, Any]:
     """Return art model options (versions, precisions)."""
     try:
-        from airunner_services.model_management.model_registry import ModelRegistry
+        from airunner_services.model_management.model_registry import (
+            ModelRegistry,
+        )
+
         registry = ModelRegistry()
         versions: list[dict[str, Any]] = []
         for model_id, spec in registry.models.items():
-            if getattr(spec, "model_type", None) and \
-               getattr(spec.model_type, "value", None) == "sd":
-                versions.append({
-                    "name": spec.name or model_id,
-                    "models": [
-                        {"label": m.get("name", m.get("path", "")), "value": m.get("path", "")}
-                        for m in getattr(spec, "files", []) or []
-                    ],
-                    "schedulers": [],
-                })
+            if (
+                getattr(spec, "model_type", None)
+                and getattr(spec.model_type, "value", None) == "sd"
+            ):
+                versions.append(
+                    {
+                        "name": spec.name or model_id,
+                        "models": [
+                            {
+                                "label": m.get("name", m.get("path", "")),
+                                "value": m.get("path", ""),
+                            }
+                            for m in getattr(spec, "files", []) or []
+                        ],
+                        "schedulers": [],
+                    }
+                )
         return {
             "status": 200,
             "body": {
@@ -605,12 +681,20 @@ async def _rpc_art_options(body: dict, **kw: Any) -> dict[str, Any]:
 async def _rpc_art_bootstrap(body: dict, **kw: Any) -> dict[str, Any]:
     """Return bootstrap data."""
     try:
-        from airunner_services.model_management.model_registry import ModelRegistry
+        from airunner_services.model_management.model_registry import (
+            ModelRegistry,
+        )
+
         registry = ModelRegistry()
         models = [
             {
-                "name": spec.name, "version": model_id,
-                "category": getattr(spec.model_type, "value", "") if spec.model_type else "",
+                "name": spec.name,
+                "version": model_id,
+                "category": (
+                    getattr(spec.model_type, "value", "")
+                    if spec.model_type
+                    else ""
+                ),
                 "path": getattr(spec, "path", ""),
                 "pipeline_action": getattr(spec, "pipeline_action", ""),
             }
@@ -659,7 +743,11 @@ async def _rpc_images_dates(body: dict, **kw: Any) -> dict[str, Any]:
 @_rpc_register("GET", "/api/v1/art/images/{date}")
 async def _rpc_images_list(body: dict, **kw: Any) -> dict[str, Any]:
     """List images for a date."""
-    from airunner_services.api.routes.images import _list_image_files, _extract_metadata
+    from airunner_services.api.routes.images import (
+        _list_image_files,
+        _extract_metadata,
+    )
+
     pp: dict = kw.get("path_params", {})
     date = pp.get("date", "")
     if not date.isdigit() or len(date) != 8:
@@ -670,7 +758,7 @@ async def _rpc_images_list(body: dict, **kw: Any) -> dict[str, Any]:
     files = _list_image_files(root)
     offset = int(body.get("offset", 0))
     limit_val = int(body.get("limit", 20))
-    page = files[offset:offset + limit_val]
+    page = files[offset : offset + limit_val]
     images = []
     for p in page:
         meta = _extract_metadata(p) if p.suffix.lower() == ".png" else None
@@ -679,13 +767,17 @@ async def _rpc_images_list(body: dict, **kw: Any) -> dict[str, Any]:
             fsize, ftm = st.st_size, st.st_mtime
         except OSError:
             fsize, ftm = 0, 0.0
-        images.append({
-            "id": p.name, "file_path": str(p),
-            "file_size": fsize, "file_timestamp": ftm,
-            "metadata": meta,
-            "image_url": f"/api/v1/art/images/{date}/full/{p.name}",
-            "thumbnail_url": f"/api/v1/art/images/{date}/thumb/{p.name}",
-        })
+        images.append(
+            {
+                "id": p.name,
+                "file_path": str(p),
+                "file_size": fsize,
+                "file_timestamp": ftm,
+                "metadata": meta,
+                "image_url": f"/api/v1/art/images/{date}/full/{p.name}",
+                "thumbnail_url": f"/api/v1/art/images/{date}/thumb/{p.name}",
+            }
+        )
     return {"status": 200, "body": {"total": len(files), "images": images}}
 
 
@@ -693,12 +785,17 @@ async def _rpc_images_list(body: dict, **kw: Any) -> dict[str, Any]:
 async def _rpc_images_info(body: dict, **kw: Any) -> dict[str, Any]:
     """Get image info."""
     from airunner_services.api.routes.images import _extract_metadata
+
     pp: dict = kw.get("path_params", {})
     date, filename = pp.get("date", ""), pp.get("filename", "")
-    source = Path(AIRUNNER_BASE_PATH) / "art" / "other" / "images" / date / filename
+    source = (
+        Path(AIRUNNER_BASE_PATH) / "art" / "other" / "images" / date / filename
+    )
     if not source.is_file():
         return {"status": 404, "body": {"error": "Not found"}}
-    meta = _extract_metadata(source) if source.suffix.lower() == ".png" else None
+    meta = (
+        _extract_metadata(source) if source.suffix.lower() == ".png" else None
+    )
     try:
         fsize = source.stat().st_size
     except OSError:
@@ -706,8 +803,10 @@ async def _rpc_images_info(body: dict, **kw: Any) -> dict[str, Any]:
     return {
         "status": 200,
         "body": {
-            "id": source.name, "file_path": str(source),
-            "file_size": fsize, "metadata": meta,
+            "id": source.name,
+            "file_path": str(source),
+            "file_size": fsize,
+            "metadata": meta,
             "image_url": f"/api/v1/art/images/{date}/full/{source.name}",
             "thumbnail_url": f"/api/v1/art/images/{date}/thumb/{source.name}",
         },
@@ -719,7 +818,9 @@ async def _rpc_images_delete(body: dict, **kw: Any) -> dict[str, Any]:
     """Delete an image."""
     pp: dict = kw.get("path_params", {})
     date, filename = pp.get("date", ""), pp.get("filename", "")
-    source = Path(AIRUNNER_BASE_PATH) / "art" / "other" / "images" / date / filename
+    source = (
+        Path(AIRUNNER_BASE_PATH) / "art" / "other" / "images" / date / filename
+    )
     if not source.is_file():
         return {"status": 404, "body": {"error": "Not found"}}
     try:
@@ -734,13 +835,16 @@ async def _rpc_images_full(body: dict, **kw: Any) -> dict[str, Any]:
     """Serve full image as binary."""
     pp: dict = kw.get("path_params", {})
     date, filename = pp.get("date", ""), pp.get("filename", "")
-    source = Path(AIRUNNER_BASE_PATH) / "art" / "other" / "images" / date / filename
+    source = (
+        Path(AIRUNNER_BASE_PATH) / "art" / "other" / "images" / date / filename
+    )
     if not source.is_file():
         return {"status": 404, "body": {"error": "Not found"}}
     try:
         data = source.read_bytes()
         return {
-            "status": 200, "binary": True,
+            "status": 200,
+            "binary": True,
             "headers": {"Content-Type": "image/png"},
             "body": data,
         }
@@ -753,9 +857,12 @@ async def _rpc_images_thumb(body: dict, **kw: Any) -> dict[str, Any]:
     """Serve thumbnail as binary."""
     from PIL import Image as PILImage
     from io import BytesIO
+
     pp: dict = kw.get("path_params", {})
     date, filename = pp.get("date", ""), pp.get("filename", "")
-    source = Path(AIRUNNER_BASE_PATH) / "art" / "other" / "images" / date / filename
+    source = (
+        Path(AIRUNNER_BASE_PATH) / "art" / "other" / "images" / date / filename
+    )
     if not source.is_file():
         return {"status": 404, "body": {"error": "Not found"}}
     try:
@@ -765,7 +872,8 @@ async def _rpc_images_thumb(body: dict, **kw: Any) -> dict[str, Any]:
         img.save(buf, format="PNG")
         data = buf.getvalue()
         return {
-            "status": 200, "binary": True,
+            "status": 200,
+            "binary": True,
             "headers": {"Content-Type": "image/png"},
             "body": data,
         }
@@ -780,7 +888,10 @@ async def _rpc_images_thumb(body: dict, **kw: Any) -> dict[str, Any]:
 async def _rpc_llm_presets(body: dict, **kw: Any) -> dict[str, Any]:
     """List LLM settings presets."""
     try:
-        from airunner_services.api.routes.llm_settings_presets import load_presets
+        from airunner_services.api.routes.llm_settings_presets import (
+            load_presets,
+        )
+
         presets = load_presets()
         return {"status": 200, "body": {"presets": presets}}
     except Exception:
@@ -795,6 +906,7 @@ async def _rpc_downloads_hf(body: dict, **kw: Any) -> dict[str, Any]:
     """Start a HuggingFace download."""
     try:
         from airunner_services.downloads.service import DownloadJobService
+
         service = DownloadJobService()
         job_id = await asyncio.to_thread(
             service.start_huggingface_download,
@@ -817,6 +929,7 @@ async def _rpc_downloads_status(body: dict, **kw: Any) -> dict[str, Any]:
     job_id = pp.get("job_id", "")
     try:
         from airunner_services.downloads.service import DownloadJobService
+
         service = DownloadJobService()
         state = await asyncio.to_thread(service.get_status, job_id)
         if state is None:
@@ -843,22 +956,29 @@ async def _rpc_downloads_cancel(body: dict, **kw: Any) -> dict[str, Any]:
     job_id = pp.get("job_id", "")
     try:
         from airunner_services.downloads.service import DownloadJobService
+
         service = DownloadJobService()
         cancelled = await asyncio.to_thread(service.cancel, job_id)
         if not cancelled:
             return {"status": 404, "body": {"error": "Job not found"}}
-        return {"status": 200, "body": {"job_id": job_id, "status": "cancelled"}}
+        return {
+            "status": 200,
+            "body": {"job_id": job_id, "status": "cancelled"},
+        }
     except Exception as exc:
         return {"status": 500, "body": {"error": str(exc)}}
 
 
 @_rpc_register("POST", "/api/v1/downloads/civitai/models")
-async def _rpc_downloads_civitai_search(body: dict, **kw: Any) -> dict[str, Any]:
+async def _rpc_downloads_civitai_search(
+    body: dict, **kw: Any
+) -> dict[str, Any]:
     """Search CivitAI models."""
     try:
         from airunner_services.downloads.service import (
             search_civitai_models as search_fn,
         )
+
         result = await asyncio.to_thread(
             search_fn,
             str(body.get("query", "")),
@@ -874,12 +994,15 @@ async def _rpc_downloads_civitai_search(body: dict, **kw: Any) -> dict[str, Any]
 
 
 @_rpc_register("POST", "/api/v1/downloads/civitai/model")
-async def _rpc_downloads_civitai_model(body: dict, **kw: Any) -> dict[str, Any]:
+async def _rpc_downloads_civitai_model(
+    body: dict, **kw: Any
+) -> dict[str, Any]:
     """Get CivitAI model detail."""
     try:
         from airunner_services.downloads.service import (
             fetch_civitai_model_info as fetch_fn,
         )
+
         result = await asyncio.to_thread(
             fetch_fn,
             str(body.get("model_id", "")),
@@ -897,6 +1020,7 @@ async def _rpc_downloads_civitai_file(body: dict, **kw: Any) -> dict[str, Any]:
     """Start a CivitAI file download."""
     try:
         from airunner_services.downloads.service import DownloadJobService
+
         service = DownloadJobService()
         job_id = await asyncio.to_thread(
             service.start_civitai_file_download,
@@ -917,6 +1041,7 @@ async def _rpc_downloads_civitai_info(body: dict, **kw: Any) -> dict[str, Any]:
         from airunner_services.downloads.service import (
             fetch_civitai_model_info as fetch_fn,
         )
+
         result = await asyncio.to_thread(
             fetch_fn,
             str(body.get("url", "")),
@@ -928,10 +1053,16 @@ async def _rpc_downloads_civitai_info(body: dict, **kw: Any) -> dict[str, Any]:
 
 
 @_rpc_register("GET", "/api/v1/downloads/civitai/options")
-async def _rpc_downloads_civitai_options(body: dict, **kw: Any) -> dict[str, Any]:
+async def _rpc_downloads_civitai_options(
+    body: dict, **kw: Any
+) -> dict[str, Any]:
     """Get CivitAI filter options."""
     try:
-        from airunner_services.downloads.civitai import _BASE_MODEL_ALIASES, _MODEL_TYPE_ALIASES
+        from airunner_services.downloads.civitai import (
+            _BASE_MODEL_ALIASES,
+            _MODEL_TYPE_ALIASES,
+        )
+
         base_models = [
             {"label": label, "value": value}
             for label, value in _BASE_MODEL_ALIASES.items()

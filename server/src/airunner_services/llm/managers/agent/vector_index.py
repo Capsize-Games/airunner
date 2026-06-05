@@ -10,7 +10,6 @@ from typing import Any, Optional, Sequence
 import numpy as np
 from langchain_core.documents import Document
 
-
 DOCUMENTS_FILE = "documents.json"
 EMBEDDINGS_FILE = "embeddings.npy"
 
@@ -110,16 +109,22 @@ class DocumentVectorIndex:
         np.save(_embeddings_path(persist_dir), self.embeddings)
 
 
-def _chunk_documents(documents: Sequence[Document], text_splitter: Any) -> list[Document]:
+def _chunk_documents(
+    documents: Sequence[Document], text_splitter: Any
+) -> list[Document]:
     chunks = text_splitter.split_documents(list(documents))
     return [chunk for chunk in chunks if chunk.page_content.strip()]
 
 
-def _embed_documents(documents: Sequence[Document], embedding_model: Any) -> np.ndarray:
+def _embed_documents(
+    documents: Sequence[Document], embedding_model: Any
+) -> np.ndarray:
     if not documents:
         return np.zeros((0, 0), dtype=np.float32)
     texts = [document.page_content for document in documents]
-    return _normalize_rows(np.asarray(embedding_model.embed_documents(texts), dtype=np.float32))
+    return _normalize_rows(
+        np.asarray(embedding_model.embed_documents(texts), dtype=np.float32)
+    )
 
 
 def _combine_embeddings(current: np.ndarray, new: np.ndarray) -> np.ndarray:

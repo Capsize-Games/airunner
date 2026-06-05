@@ -67,9 +67,7 @@ class RequestHandlingMixin:
                 pass
 
         settings_snapshot = capture_request_settings_snapshot(self)
-        request_settings_changed = self._apply_request_overrides(
-            llm_request
-        )
+        request_settings_changed = self._apply_request_overrides(llm_request)
         if request_settings_changed:
             self.unload()
 
@@ -176,9 +174,7 @@ class RequestHandlingMixin:
         if not conversation:
             return
 
-        ephemeral = bool(
-            getattr(llm_request, "ephemeral_conversation", False)
-        )
+        ephemeral = bool(getattr(llm_request, "ephemeral_conversation", False))
         if hasattr(self, "_update_workflow_with_conversation"):
             self._update_workflow_with_conversation(
                 conversation,
@@ -298,6 +294,7 @@ class RequestHandlingMixin:
             self.logger.info("No tool filtering - using all tools")
 
         return tools_filtered, selected_categories, system_prompt
+
     def _prepare_request_rag(
         self,
         data: Dict[str, Any],
@@ -328,7 +325,9 @@ class RequestHandlingMixin:
 
         targets = [self._chat_model]
         if self._workflow_manager:
-            targets.append(getattr(self._workflow_manager, "_chat_model", None))
+            targets.append(
+                getattr(self._workflow_manager, "_chat_model", None)
+            )
             targets.append(
                 getattr(self._workflow_manager, "_original_chat_model", None)
             )
@@ -370,7 +369,9 @@ class RequestHandlingMixin:
         reasoning_patches: list[tuple[Any, Any]] = []
         targets = [self._chat_model]
         if self._workflow_manager:
-            targets.append(getattr(self._workflow_manager, "_chat_model", None))
+            targets.append(
+                getattr(self._workflow_manager, "_chat_model", None)
+            )
             targets.append(
                 getattr(self._workflow_manager, "_original_chat_model", None)
             )

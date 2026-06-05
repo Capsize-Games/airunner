@@ -12,7 +12,6 @@ import requests
 from airunner_services.eval.client import AIRunnerClient
 from airunner_services.settings import AIRUNNER_LLM_OPENROUTER_MODEL
 
-
 JUDGE_SERVICE_ENV = "AIRUNNER_TEST_JUDGE_SERVICE"
 JUDGE_MODEL_ENV = "AIRUNNER_TEST_JUDGE_MODEL"
 _DEFAULT_SERVICE = "airunner"
@@ -131,7 +130,10 @@ class OpenAIJudgeClient:
         )
         request_data.update(_supported_request_kwargs(kwargs))
         response_data = self._post(request_data)
-        return {"text": _extract_text(response_data), "raw_response": response_data}
+        return {
+            "text": _extract_text(response_data),
+            "raw_response": response_data,
+        }
 
     def _headers(self) -> dict[str, str]:
         """Return request headers for one judge service."""
@@ -186,9 +188,7 @@ def _resolve_model(
     default_model = _SERVICE_DEFAULT_MODELS.get(service)
     if default_model:
         return default_model
-    raise JudgeProviderError(
-        f"Judge model required for service '{service}'"
-    )
+    raise JudgeProviderError(f"Judge model required for service '{service}'")
 
 
 def _required_api_key(service: str) -> str:

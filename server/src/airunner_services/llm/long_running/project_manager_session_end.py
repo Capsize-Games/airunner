@@ -19,7 +19,11 @@ def end_session(
 ) -> None:
     """End one working session."""
     with session_scope() as db:
-        session = db.query(SessionState).filter(SessionState.id == session_id).first()
+        session = (
+            db.query(SessionState)
+            .filter(SessionState.id == session_id)
+            .first()
+        )
         if session is None:
             return
         session.ended_at = datetime.utcnow()

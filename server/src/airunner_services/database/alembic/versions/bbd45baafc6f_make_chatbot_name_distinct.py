@@ -9,8 +9,10 @@ Create Date: 2025-03-16 08:28:29.562179
 from typing import Union
 
 from airunner_services.database.models.chatbot import Chatbot
-from airunner_services.database.db import create_unique_constraint, drop_constraint
-
+from airunner_services.database.db import (
+    create_unique_constraint,
+    drop_constraint,
+)
 
 revision: str = "bbd45baafc6f"
 down_revision: Union[str, None] = "5dbbe8800572"

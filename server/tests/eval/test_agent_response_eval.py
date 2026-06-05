@@ -47,10 +47,7 @@ def _judge_input(prompt: str, system_prompt: str | None) -> str:
     """Return the combined judge input for one response case."""
     if not system_prompt:
         return f"User prompt: {prompt}"
-    return (
-        f"System prompt: {system_prompt}\n"
-        f"User prompt: {prompt}"
-    )
+    return f"System prompt: {system_prompt}\n" f"User prompt: {prompt}"
 
 
 @pytest.mark.parametrize("model_id", _MODEL_IDS, ids=_MODEL_IDS)
@@ -94,6 +91,4 @@ def test_agent_response_quality_against_reference(
         assert_judged_quality(scores, minimum=0.7)
 
         if reference_output.endswith("!"):
-            assert result.visible_message.endswith("!"), (
-                result.payload
-            )
+            assert result.visible_message.endswith("!"), result.payload

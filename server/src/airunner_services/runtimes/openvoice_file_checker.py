@@ -4,7 +4,9 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from airunner_services.database.bootstrap.openvoice_bootstrap_data import OPENVOICE_FILES
+from airunner_services.database.bootstrap.openvoice_bootstrap_data import (
+    OPENVOICE_FILES,
+)
 
 
 def get_required_openvoice_files(model_id: str) -> list[str] | None:

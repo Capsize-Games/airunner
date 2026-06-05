@@ -3,7 +3,6 @@ OOM handling helpers extracted from core mixin.
 """
 
 
-
 class X4OOMMixin:
     def _reduce_batch_size_if_possible(
         self,

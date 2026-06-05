@@ -12,7 +12,10 @@ from airunner_services.api.models.runtime_route_request import (
 )
 from airunner_services.runtimes.contracts import RuntimeAction, RuntimeKind
 
-from .daemon_runtime_actions import invoke_runtime_action, resolve_runtime_client
+from .daemon_runtime_actions import (
+    invoke_runtime_action,
+    resolve_runtime_client,
+)
 from .daemon_runtime_registry import parse_runtime_kind
 from .daemon_runtime_summary import (
     collect_runtime_summaries,
@@ -83,7 +86,10 @@ def ensure_vram_available_for(
         if not summary.loaded or summary.runtime == target_runtime.value:
             continue
         other_runtime = parse_runtime_kind(summary.runtime)
-        if {target_runtime, other_runtime} == {RuntimeKind.LLM, RuntimeKind.TTS}:
+        if {target_runtime, other_runtime} == {
+            RuntimeKind.LLM,
+            RuntimeKind.TTS,
+        }:
             continue
         logger.info(
             "Unloading %s (%s:%s) to free VRAM for %s",
@@ -104,7 +110,10 @@ def ensure_vram_available_for(
             request_id=route_request.request_id,
             metadata=dict(route_request.metadata or {}),
         )
-        if target_runtime is RuntimeKind.LLM and other_runtime is RuntimeKind.ART:
+        if (
+            target_runtime is RuntimeKind.LLM
+            and other_runtime is RuntimeKind.ART
+        ):
             if summary.mode == "sidecar":
                 unload_request.metadata["release_process"] = True
         invoke_runtime_action(

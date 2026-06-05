@@ -267,12 +267,14 @@ class ModelLoadingMixin:
                 continue
             model_type = self._model_types.get(model_id, "unknown")
             model_priority = _PRIORITY_MAP.get(model_type, 2)
-            candidates.append((
-                model_id,
-                model_type,
-                model_priority,
-                allocation.vram_allocated_gb,
-            ))
+            candidates.append(
+                (
+                    model_id,
+                    model_type,
+                    model_priority,
+                    allocation.vram_allocated_gb,
+                )
+            )
 
         candidates.sort(key=lambda c: (c[2], -c[3]))
         result: list[tuple[str, str]] = []
@@ -450,8 +452,11 @@ class ModelLoadingMixin:
     ) -> tuple[str, str, int, float] | None:
         """Return one unload candidate when the model qualifies."""
         del target_priority
-        if state not in (ModelState.LOADED, ModelState.UNLOADED,
-                         ModelState.LOADED_CPU):
+        if state not in (
+            ModelState.LOADED,
+            ModelState.UNLOADED,
+            ModelState.LOADED_CPU,
+        ):
             self.logger.debug(
                 "Skipping %s - state %s not eligible for unload",
                 model_id,

@@ -14,18 +14,19 @@ from typing import Any, Optional
 from airunner_services.settings import AIRUNNER_BASE_PATH, AIRUNNER_LOG_LEVEL
 from airunner_services.utils.application import get_logger
 
-
 logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 
 
 class JobStatus:
     """Enum-compatible status constants (string values)."""
+
     PENDING = "pending"
     RUNNING = "running"
     COMPLETED = "completed"
     FAILED = "failed"
     CANCELLED = "cancelled"
     INTERRUPTED = "interrupted"
+
 
 _JOBS_DIR = os.path.join(AIRUNNER_BASE_PATH, "cache", "download_jobs")
 _TERMINAL_MAX_AGE = 3600  # clean up terminal jobs after 1 hour
@@ -36,7 +37,9 @@ class JobState:
     """Serializable state for one tracked download job."""
 
     job_id: str
-    status: str  # pending | running | completed | failed | cancelled | interrupted
+    status: (
+        str  # pending | running | completed | failed | cancelled | interrupted
+    )
     progress: float = 0.0
     result: Optional[Any] = None
     error: Optional[str] = None
@@ -87,16 +90,19 @@ class PersistentJobTracker:
         path = self._job_path(job.job_id)
         try:
             with open(path, "w") as fh:
-                json.dump({
-                    "job_id": job.job_id,
-                    "status": job.status,
-                    "progress": job.progress,
-                    "result": job.result,
-                    "error": job.error,
-                    "created_at": job.created_at,
-                    "updated_at": job.updated_at,
-                    "metadata": job.metadata,
-                }, fh)
+                json.dump(
+                    {
+                        "job_id": job.job_id,
+                        "status": job.status,
+                        "progress": job.progress,
+                        "result": job.result,
+                        "error": job.error,
+                        "created_at": job.created_at,
+                        "updated_at": job.updated_at,
+                        "metadata": job.metadata,
+                    },
+                    fh,
+                )
         except OSError:
             pass
 

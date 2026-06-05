@@ -63,7 +63,9 @@ class RuntimeRegistrySTTExecutor(STTExecutor):
             return ""
         payload = {
             "audio_b64": base64.b64encode(item).decode("ascii"),
-            "mime_type": audio_data.get("mime_type", "application/octet-stream"),
+            "mime_type": audio_data.get(
+                "mime_type", "application/octet-stream"
+            ),
         }
         if audio_data.get("language"):
             payload["language"] = audio_data["language"]
@@ -97,7 +99,9 @@ class RuntimeRegistrySTTExecutor(STTExecutor):
             return None
         if not _response_status_is(response, EnvelopeStatus.SUCCEEDED):
             error = response.error.message if response.error else action.value
-            self.logger.warning("STT runtime %s failed: %s", action.value, error)
+            self.logger.warning(
+                "STT runtime %s failed: %s", action.value, error
+            )
             return None
         return response.payload
 

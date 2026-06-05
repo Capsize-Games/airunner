@@ -52,10 +52,12 @@ async def tts_daemon_websocket(websocket: WebSocket):
             try:
                 data = json.loads(raw)
             except json.JSONDecodeError:
-                await websocket.send_json({
-                    "type": "error",
-                    "error": "Invalid JSON",
-                })
+                await websocket.send_json(
+                    {
+                        "type": "error",
+                        "error": "Invalid JSON",
+                    }
+                )
                 continue
 
             request_id = str(data.get("request_id", ""))
@@ -73,12 +75,14 @@ async def tts_daemon_websocket(websocket: WebSocket):
             elif action == "cancel":
                 await _handle_cancel(websocket, request_id, payload)
             else:
-                await websocket.send_json({
-                    "type": "response",
-                    "request_id": request_id,
-                    "status": "failed",
-                    "error": f"Unknown action: {action}",
-                })
+                await websocket.send_json(
+                    {
+                        "type": "response",
+                        "request_id": request_id,
+                        "status": "failed",
+                        "error": f"Unknown action: {action}",
+                    }
+                )
     except WebSocketDisconnect:
         logger.info("TTS daemon WebSocket disconnected")
     except Exception as exc:
@@ -104,20 +108,24 @@ async def _handle_synthesize(
     )
     from .tts_models import TTSRequest
 
-    mock_request = FastAPIRequest({
-        "type": "http",
-        "app": getattr(websocket, "app", None),
-    })
+    mock_request = FastAPIRequest(
+        {
+            "type": "http",
+            "app": getattr(websocket, "app", None),
+        }
+    )
 
     try:
         client = resolve_tts_client(require_runtime_registry(mock_request))
     except Exception as exc:
-        await websocket.send_json({
-            "type": "response",
-            "request_id": request_id,
-            "status": "failed",
-            "error": str(exc),
-        })
+        await websocket.send_json(
+            {
+                "type": "response",
+                "request_id": request_id,
+                "status": "failed",
+                "error": str(exc),
+            }
+        )
         return
 
     # Build a TTS request from the payload
@@ -129,13 +137,15 @@ async def _handle_synthesize(
     )
 
     # Push initial progress
-    await websocket.send_json({
-        "type": "progress",
-        "request_id": request_id,
-        "progress": 10.0,
-        "phase": "synthesizing",
-        "status": "running",
-    })
+    await websocket.send_json(
+        {
+            "type": "progress",
+            "request_id": request_id,
+            "progress": 10.0,
+            "phase": "synthesizing",
+            "status": "running",
+        }
+    )
 
     try:
         envelope = build_tts_envelope(tts_req)
@@ -143,12 +153,14 @@ async def _handle_synthesize(
         envelope.request_id = request_id
         response = await asyncio.to_thread(client.invoke, envelope)
     except Exception as exc:
-        await websocket.send_json({
-            "type": "response",
-            "request_id": request_id,
-            "status": "failed",
-            "error": str(exc),
-        })
+        await websocket.send_json(
+            {
+                "type": "response",
+                "request_id": request_id,
+                "status": "failed",
+                "error": str(exc),
+            }
+        )
         return
 
     if response.status is not EnvelopeStatus.SUCCEEDED:
@@ -157,39 +169,43 @@ async def _handle_synthesize(
             if response.error
             else "TTS synthesis failed"
         )
-        await websocket.send_json({
-            "type": "response",
-            "request_id": request_id,
-            "status": "failed",
-            "error": error_msg,
-        })
+        await websocket.send_json(
+            {
+                "type": "response",
+                "request_id": request_id,
+                "status": "failed",
+                "error": error_msg,
+            }
+        )
         return
 
     # Extract audio from response payload
     payload_data = response.payload or {}
     audio_b64 = (
-        payload_data.get("audio_b64")
-        or payload_data.get("audio")
-        or ""
+        payload_data.get("audio_b64") or payload_data.get("audio") or ""
     )
 
-    await websocket.send_json({
-        "type": "progress",
-        "request_id": request_id,
-        "progress": 100.0,
-        "phase": "complete",
-        "status": "completed",
-    })
-    await websocket.send_json({
-        "type": "response",
-        "request_id": request_id,
-        "status": "succeeded",
-        "payload": {
-            "accepted": True,
-            "audio_b64": audio_b64,
-        },
-        "metadata": payload_data.get("metadata", {}),
-    })
+    await websocket.send_json(
+        {
+            "type": "progress",
+            "request_id": request_id,
+            "progress": 100.0,
+            "phase": "complete",
+            "status": "completed",
+        }
+    )
+    await websocket.send_json(
+        {
+            "type": "response",
+            "request_id": request_id,
+            "status": "succeeded",
+            "payload": {
+                "accepted": True,
+                "audio_b64": audio_b64,
+            },
+            "metadata": payload_data.get("metadata", {}),
+        }
+    )
 
 
 async def _handle_load(
@@ -205,17 +221,22 @@ async def _handle_load(
         resolve_tts_client,
     )
 
-    mock_request = FastAPIRequest({
-        "type": "http",
-        "app": getattr(websocket, "app", None),
-    })
+    mock_request = FastAPIRequest(
+        {
+            "type": "http",
+            "app": getattr(websocket, "app", None),
+        }
+    )
 
     try:
         client = resolve_tts_client(require_runtime_registry(mock_request))
         from airunner_services.runtimes.contracts import (  # noqa: PLC0415
-            RuntimeAction, RuntimeKind,
+            RuntimeAction,
+            RuntimeKind,
         )
-        from airunner_services.ipc.messages import RequestEnvelope  # noqa: PLC0415
+        from airunner_services.ipc.messages import (
+            RequestEnvelope,
+        )  # noqa: PLC0415
 
         envelope = RequestEnvelope(
             request_id=request_id,
@@ -225,20 +246,28 @@ async def _handle_load(
             metadata=payload.get("metadata", {}),
         )
         response = await asyncio.to_thread(client.invoke, envelope)
-        status = "succeeded" if response.status is EnvelopeStatus.SUCCEEDED else "failed"
-        await websocket.send_json({
-            "type": "response",
-            "request_id": request_id,
-            "status": status,
-            "payload": response.payload or {},
-        })
+        status = (
+            "succeeded"
+            if response.status is EnvelopeStatus.SUCCEEDED
+            else "failed"
+        )
+        await websocket.send_json(
+            {
+                "type": "response",
+                "request_id": request_id,
+                "status": status,
+                "payload": response.payload or {},
+            }
+        )
     except Exception as exc:
-        await websocket.send_json({
-            "type": "response",
-            "request_id": request_id,
-            "status": "failed",
-            "error": str(exc),
-        })
+        await websocket.send_json(
+            {
+                "type": "response",
+                "request_id": request_id,
+                "status": "failed",
+                "error": str(exc),
+            }
+        )
 
 
 async def _handle_unload(
@@ -253,17 +282,22 @@ async def _handle_unload(
         resolve_tts_client,
     )
 
-    mock_request = FastAPIRequest({
-        "type": "http",
-        "app": getattr(websocket, "app", None),
-    })
+    mock_request = FastAPIRequest(
+        {
+            "type": "http",
+            "app": getattr(websocket, "app", None),
+        }
+    )
 
     try:
         client = resolve_tts_client(require_runtime_registry(mock_request))
         from airunner_services.runtimes.contracts import (  # noqa: PLC0415
-            RuntimeAction, RuntimeKind,
+            RuntimeAction,
+            RuntimeKind,
         )
-        from airunner_services.ipc.messages import RequestEnvelope  # noqa: PLC0415
+        from airunner_services.ipc.messages import (
+            RequestEnvelope,
+        )  # noqa: PLC0415
 
         envelope = RequestEnvelope(
             request_id=request_id,
@@ -271,20 +305,28 @@ async def _handle_unload(
             action=RuntimeAction.UNLOAD_MODEL,
         )
         response = await asyncio.to_thread(client.invoke, envelope)
-        status = "succeeded" if response.status is EnvelopeStatus.SUCCEEDED else "failed"
-        await websocket.send_json({
-            "type": "response",
-            "request_id": request_id,
-            "status": status,
-            "payload": response.payload or {},
-        })
+        status = (
+            "succeeded"
+            if response.status is EnvelopeStatus.SUCCEEDED
+            else "failed"
+        )
+        await websocket.send_json(
+            {
+                "type": "response",
+                "request_id": request_id,
+                "status": status,
+                "payload": response.payload or {},
+            }
+        )
     except Exception as exc:
-        await websocket.send_json({
-            "type": "response",
-            "request_id": request_id,
-            "status": "failed",
-            "error": str(exc),
-        })
+        await websocket.send_json(
+            {
+                "type": "response",
+                "request_id": request_id,
+                "status": "failed",
+                "error": str(exc),
+            }
+        )
 
 
 async def _handle_health(
@@ -299,31 +341,37 @@ async def _handle_health(
         resolve_tts_client,
     )
 
-    mock_request = FastAPIRequest({
-        "type": "http",
-        "app": getattr(websocket, "app", None),
-    })
+    mock_request = FastAPIRequest(
+        {
+            "type": "http",
+            "app": getattr(websocket, "app", None),
+        }
+    )
 
     try:
         client = resolve_tts_client(require_runtime_registry(mock_request))
         health = client.healthcheck()
-        await websocket.send_json({
-            "type": "response",
-            "request_id": request_id,
-            "status": "succeeded",
-            "payload": {
-                "status": health.status.value,
-                "details": health.details,
-            },
-            "metadata": health.metadata,
-        })
+        await websocket.send_json(
+            {
+                "type": "response",
+                "request_id": request_id,
+                "status": "succeeded",
+                "payload": {
+                    "status": health.status.value,
+                    "details": health.details,
+                },
+                "metadata": health.metadata,
+            }
+        )
     except Exception as exc:
-        await websocket.send_json({
-            "type": "response",
-            "request_id": request_id,
-            "status": "failed",
-            "error": str(exc),
-        })
+        await websocket.send_json(
+            {
+                "type": "response",
+                "request_id": request_id,
+                "status": "failed",
+                "error": str(exc),
+            }
+        )
 
 
 async def _handle_cancel(
@@ -339,10 +387,12 @@ async def _handle_cancel(
         resolve_tts_client,
     )
 
-    mock_request = FastAPIRequest({
-        "type": "http",
-        "app": getattr(websocket, "app", None),
-    })
+    mock_request = FastAPIRequest(
+        {
+            "type": "http",
+            "app": getattr(websocket, "app", None),
+        }
+    )
 
     try:
         client = resolve_tts_client(require_runtime_registry(mock_request))
@@ -350,17 +400,25 @@ async def _handle_cancel(
             payload.get("request_id") or payload.get("job_id") or request_id
         )
         response = await asyncio.to_thread(client.cancel, cancel_request_id)
-        status = "cancelled" if response.status is EnvelopeStatus.CANCELLED else "failed"
-        await websocket.send_json({
-            "type": "response",
-            "request_id": request_id,
-            "status": status,
-            "payload": response.payload or {},
-        })
+        status = (
+            "cancelled"
+            if response.status is EnvelopeStatus.CANCELLED
+            else "failed"
+        )
+        await websocket.send_json(
+            {
+                "type": "response",
+                "request_id": request_id,
+                "status": status,
+                "payload": response.payload or {},
+            }
+        )
     except Exception as exc:
-        await websocket.send_json({
-            "type": "response",
-            "request_id": request_id,
-            "status": "failed",
-            "error": str(exc),
-        })
+        await websocket.send_json(
+            {
+                "type": "response",
+                "request_id": request_id,
+                "status": "failed",
+                "error": str(exc),
+            }
+        )

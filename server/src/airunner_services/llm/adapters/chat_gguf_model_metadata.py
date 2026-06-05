@@ -154,7 +154,13 @@ def estimate_gguf_kv_cache_gb(
             type_v_bytes=type_v_bytes,
         )
 
-    return _metadata_kv_cache_estimate(metadata_values, architecture, n_ctx, type_k_bytes=type_k_bytes, type_v_bytes=type_v_bytes)
+    return _metadata_kv_cache_estimate(
+        metadata_values,
+        architecture,
+        n_ctx,
+        type_k_bytes=type_k_bytes,
+        type_v_bytes=type_v_bytes,
+    )
 
 
 def _metadata_kv_cache_estimate(
@@ -212,7 +218,7 @@ def _kv_cache_gb_from_shape(
             + int(value_length) * int(type_v_bytes)
         )
     )
-    return kv_bytes / float(1024 ** 3)
+    return kv_bytes / float(1024**3)
 
 
 def detect_known_unsupported_architecture(

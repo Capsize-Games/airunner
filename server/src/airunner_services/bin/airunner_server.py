@@ -88,7 +88,6 @@ import time
 from pathlib import Path
 from typing import Optional, Sequence
 
-
 BANNER = """
 \033[96m
      █████╗ ██╗    ██████╗ ██╗   ██╗███╗   ██╗███╗   ██╗███████╗██████╗
@@ -193,17 +192,13 @@ def _add_model_args(parser: argparse.ArgumentParser) -> None:
         "--tts-model",
         type=str,
         default=os.environ.get("AIRUNNER_TTS_MODEL_PATH"),
-        help=(
-            "Path to TTS model to load. Also enables the TTS service."
-        ),
+        help=("Path to TTS model to load. Also enables the TTS service."),
     )
     parser.add_argument(
         "--stt-model",
         type=str,
         default=os.environ.get("AIRUNNER_STT_MODEL_PATH"),
-        help=(
-            "Path to STT model to load. Also enables the STT service."
-        ),
+        help=("Path to STT model to load. Also enables the STT service."),
     )
 
 
@@ -387,8 +382,12 @@ def _log_preload_mode(logger, no_preload: bool) -> None:
 def _enabled_services(args: argparse.Namespace) -> list[str]:
     """Return formatted service descriptions for startup logging."""
     services = [
-        _service_description("AIRUNNER_LLM_ON", "LLM", os.environ.get("AIRUNNER_LLM_MODEL_PATH")),
-        _service_description("AIRUNNER_SD_ON", "Stable Diffusion", args.art_model),
+        _service_description(
+            "AIRUNNER_LLM_ON", "LLM", os.environ.get("AIRUNNER_LLM_MODEL_PATH")
+        ),
+        _service_description(
+            "AIRUNNER_SD_ON", "Stable Diffusion", args.art_model
+        ),
         _service_description("AIRUNNER_TTS_ON", "TTS", args.tts_model),
         _service_description("AIRUNNER_STT_ON", "STT", args.stt_model),
     ]
@@ -556,6 +555,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     finally:
         _cleanup_client(client)
         _cleanup_config(config_path)
+
 
 if __name__ == "__main__":
     raise SystemExit(main())

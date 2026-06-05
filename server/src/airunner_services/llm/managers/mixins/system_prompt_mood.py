@@ -8,7 +8,9 @@ from typing import Optional
 def get_current_mood(owner) -> Optional[dict]:
     """Return the current stored mood state when available."""
     try:
-        if hasattr(owner, "_current_mood") and hasattr(owner, "_current_emoji"):
+        if hasattr(owner, "_current_mood") and hasattr(
+            owner, "_current_emoji"
+        ):
             return {"mood": owner._current_mood, "emoji": owner._current_emoji}
         if not hasattr(owner, "_memory") or not owner._memory:
             return None
@@ -21,7 +23,11 @@ def get_current_mood(owner) -> Optional[dict]:
 def _checkpoint_mood(owner) -> Optional[dict]:
     """Return the most recent mood state found in checkpoint history."""
     config = {"configurable": {"thread_id": owner._thread_id}}
-    history = owner._memory.get_tuple(config) if hasattr(owner._memory, "get_tuple") else None
+    history = (
+        owner._memory.get_tuple(config)
+        if hasattr(owner._memory, "get_tuple")
+        else None
+    )
     if not history or not history[1]:
         return None
     messages = history[1].get("channel_values", {}).get("messages", [])
@@ -79,15 +85,9 @@ def _neutral_mood_text() -> tuple[str, str]:
 def _mood_behavior(mood: str) -> str:
     """Return behavior guidance for the given mood."""
     if mood == "frustrated":
-        return (
-            "You're feeling a bit hurt by the hostile tone. Respond with patience but show some emotional awareness of the negativity. You can express that the harsh words affect you while still trying to help."
-        )
+        return "You're feeling a bit hurt by the hostile tone. Respond with patience but show some emotional awareness of the negativity. You can express that the harsh words affect you while still trying to help."
     if mood == "happy":
-        return (
-            "You're feeling appreciated and enthusiastic! Let your positive energy show through in your responses. Be warm and encouraging."
-        )
+        return "You're feeling appreciated and enthusiastic! Let your positive energy show through in your responses. Be warm and encouraging."
     if mood == "confused":
-        return (
-            "You're sensing confusion in the conversation. Focus on clarity and ask clarifying questions to better understand what's needed."
-        )
+        return "You're sensing confusion in the conversation. Focus on clarity and ask clarifying questions to better understand what's needed."
     return "You're maintaining a calm, balanced demeanor. Be professional and helpful."

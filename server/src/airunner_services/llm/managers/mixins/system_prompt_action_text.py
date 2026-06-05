@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from airunner_services.contract_enums import LLMActionType
 
-
 ACTION_MODE_PROMPTS = {
     LLMActionType.CHAT: (
         "\n\nMode: CHAT"

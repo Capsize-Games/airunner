@@ -146,7 +146,11 @@ class ZImageSingleFileTransformerHelper:
             if not key.startswith(("vae.", "text_encoder."))
         ]
         transformer_state_dict = (
-            {key: value for key, value in state_dict.items() if key in transformer_keys}
+            {
+                key: value
+                for key, value in state_dict.items()
+                if key in transformer_keys
+            }
             if transformer_keys
             else state_dict
         )
@@ -159,7 +163,9 @@ class ZImageSingleFileTransformerHelper:
                 "Missing keys when loading transformer: %s keys",
                 len(missing),
             )
-            self._owner._owner.logger.debug("Missing keys: %s...", missing[:10])
+            self._owner._owner.logger.debug(
+                "Missing keys: %s...", missing[:10]
+            )
         if unexpected:
             self._owner._owner.logger.warning(
                 "Unexpected keys when loading transformer: %s keys",

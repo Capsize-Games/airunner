@@ -229,9 +229,7 @@ class ProgressEntry(BaseModel):
         """Format the entry for human-readable logs."""
         timestamp = self.timestamp.strftime("%Y-%m-%d %H:%M:%S")
         commit = (
-            f" [{self.git_commit_hash[:7]}]"
-            if self.git_commit_hash
-            else ""
+            f" [{self.git_commit_hash[:7]}]" if self.git_commit_hash else ""
         )
         files = (
             f"\n  Files: {', '.join(self.files_changed)}"

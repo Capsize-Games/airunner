@@ -6,7 +6,10 @@ from typing import Any, Dict, Optional
 from diffusers import SchedulerMixin
 
 from airunner_services.database.models.schedulers import Schedulers
-from airunner_services.settings import AIRUNNER_LOCAL_FILES_ONLY, AIRUNNER_LOG_LEVEL
+from airunner_services.settings import (
+    AIRUNNER_LOCAL_FILES_ONLY,
+    AIRUNNER_LOG_LEVEL,
+)
 from airunner_services.utils.application import get_logger
 
 logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
@@ -153,9 +156,7 @@ def load_controlnet_processor(
         return None
 
     try:
-        controlnet_data = _get_controlnet_aux_models()[
-            controlnet_model.name
-        ]
+        controlnet_data = _get_controlnet_aux_models()[controlnet_model.name]
         controlnet_class_ = controlnet_data["class"]
         checkpoint = controlnet_data["checkpoint"]
         if checkpoint:

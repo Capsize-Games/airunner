@@ -231,9 +231,11 @@ class ToolFilteringMixin:
         disable_always = (
             os.environ.get("AIRUNNER_DISABLE_ALWAYS_TOOLS", "0") == "1"
         )
-        if disable_always or self._is_simple_greeting_prompt(
-            prompt
-        ) or self._is_simple_no_tool_prompt(prompt):
+        if (
+            disable_always
+            or self._is_simple_greeting_prompt(prompt)
+            or self._is_simple_no_tool_prompt(prompt)
+        ):
             self.logger.info(
                 "tool_categories=[] - disabling all tools for this request"
             )
@@ -344,8 +346,10 @@ class ToolFilteringMixin:
             and action == LLMActionType.PERFORM_RAG_SEARCH
         ):
             return "any"
-        if supports_forced_choice and tool_categories and (
-            "search" in tool_categories or "research" in tool_categories
+        if (
+            supports_forced_choice
+            and tool_categories
+            and ("search" in tool_categories or "research" in tool_categories)
         ):
             return "any"
         if action == LLMActionType.CODE:
@@ -382,7 +386,9 @@ class ToolFilteringMixin:
         update_kwargs = {}
         if plan.tool_choice is not None:
             update_kwargs["tool_choice"] = plan.tool_choice
-        self._workflow_manager.update_tools(plan.filtered_tools, **update_kwargs)
+        self._workflow_manager.update_tools(
+            plan.filtered_tools, **update_kwargs
+        )
         if plan.rebuild_workflow:
             self._workflow_manager._build_and_compile_workflow()
 

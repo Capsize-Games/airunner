@@ -40,7 +40,9 @@ class LLMPreloadSettingsStore:
         cli_model_path = os.environ.get("AIRUNNER_LLM_MODEL_PATH")
         if cli_model_path:
             self._log_info("Using CLI-provided model path for preload")
-            return self._store_model_path(session, llm_settings, cli_model_path)
+            return self._store_model_path(
+                session, llm_settings, cli_model_path
+            )
         if llm_settings and llm_settings.model_path:
             return llm_settings.model_path
         return self._create_default_settings(session)
@@ -69,7 +71,9 @@ class LLMPreloadSettingsStore:
         default_model_path = self._default_model_path(session)
         if not default_model_path:
             return None
-        self._log_info("No LLM settings row; creating default preload settings")
+        self._log_info(
+            "No LLM settings row; creating default preload settings"
+        )
         return self._store_model_path(session, None, default_model_path)
 
     def _default_model_path(self, session: Any) -> Optional[str]:

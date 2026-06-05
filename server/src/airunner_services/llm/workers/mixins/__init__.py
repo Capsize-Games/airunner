@@ -10,7 +10,6 @@ from airunner_services.llm.workers.mixins.rag_indexing_mixin import (
     RAGIndexingMixin,
 )
 
-
 __all__ = [
     "ModelDownloadMixin",
     "QuantizationMixin",

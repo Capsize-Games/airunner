@@ -11,7 +11,6 @@ from airunner_services.contract_enums import LLMActionType
 from airunner_services.llm.llm_request import LLMRequest
 from airunner_services.utils.application.enum_resolver import signal_code_proxy
 
-
 SignalCode = signal_code_proxy()
 
 
@@ -240,9 +239,12 @@ class LLMRequestDispatchMixin:
 
     def _daemon_is_immediately_available(self, client) -> bool:
         """Return True when the daemon can accept one request right now."""
-        if LLMRequestDispatchMixin._daemon_state_value(
-            getattr(client, "state", None)
-        ) == DaemonConnectionState.CONNECTED.value:
+        if (
+            LLMRequestDispatchMixin._daemon_state_value(
+                getattr(client, "state", None)
+            )
+            == DaemonConnectionState.CONNECTED.value
+        ):
             return True
         availability_check = getattr(client, "is_available", None)
         if callable(availability_check):

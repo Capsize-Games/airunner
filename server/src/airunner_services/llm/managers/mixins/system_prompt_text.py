@@ -6,7 +6,6 @@ from typing import Set
 
 from airunner_services.contract_enums import LLMActionType
 
-
 CONVERSATIONAL_ACTIONS: Set[LLMActionType] = {
     LLMActionType.CHAT,
     LLMActionType.APPLICATION_COMMAND,

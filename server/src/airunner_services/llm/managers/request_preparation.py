@@ -6,7 +6,6 @@ from dataclasses import dataclass
 from collections.abc import Mapping
 from typing import Any, Optional
 
-
 DTYPE_ALIASES = {
     "4-bit": "4bit",
     "4bit": "4bit",

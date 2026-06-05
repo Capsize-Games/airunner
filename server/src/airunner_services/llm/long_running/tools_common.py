@@ -48,5 +48,7 @@ def feature_category(value: str) -> FeatureCategory:
 def error_message(prefix: str, error: Exception) -> str:
     """Return a consistent error message for tool failures."""
     return f"{prefix}: {error}"
+
+
 # MI note: this helper stays intentionally narrow and delegated.
 # MI note: related orchestration lives in neighboring long_running modules.

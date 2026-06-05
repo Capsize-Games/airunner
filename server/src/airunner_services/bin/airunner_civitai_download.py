@@ -258,7 +258,9 @@ def download_file(
         return True
 
     except requests.RequestException as e:
-        print(f"{Colors.RED}Error downloading {filepath.name}: {e}{Colors.ENDC}")
+        print(
+            f"{Colors.RED}Error downloading {filepath.name}: {e}{Colors.ENDC}"
+        )
         # Clean up partial download
         if filepath.exists():
             filepath.unlink()

@@ -178,7 +178,7 @@ class DatabaseChatMessageHistory(BaseChatMessageHistory):
 
         try:
             import datetime
-            
+
             # CRITICAL: Reload conversation from database to get latest state
             # This ensures deduplication checks against the most current data
             self._load_conversation()
@@ -193,17 +193,19 @@ class DatabaseChatMessageHistory(BaseChatMessageHistory):
                     f"Tool result: {message.content[:100]}... "
                     f"(tool_call_id: {tool_call_id or 'unknown'})"
                 )
-                
+
                 # DEDUPLICATION: Check if tool_result with same tool_call_id already exists
                 if self._conversation.value and tool_call_id:
                     for existing in self._conversation.value:
-                        if (existing.get("metadata_type") == "tool_result" and 
-                            existing.get("tool_call_id") == tool_call_id):
+                        if (
+                            existing.get("metadata_type") == "tool_result"
+                            and existing.get("tool_call_id") == tool_call_id
+                        ):
                             self.logger.debug(
                                 f"Skipping duplicate tool_result for tool_call_id: {tool_call_id}"
                             )
                             return
-                
+
                 # Store tool result in a separate metadata entry
                 now = datetime.datetime.now(datetime.timezone.utc).isoformat()
                 tool_result_dict = {
@@ -234,7 +236,7 @@ class DatabaseChatMessageHistory(BaseChatMessageHistory):
                 self.logger.debug(
                     f"Tool calls requested: {[tc.get('name', 'unknown') for tc in message.tool_calls]}"
                 )
-                
+
                 # DEDUPLICATION: Check if tool_calls with same IDs already exist
                 # Get all tool_call IDs from the incoming message
                 incoming_tool_ids = set(
@@ -248,13 +250,17 @@ class DatabaseChatMessageHistory(BaseChatMessageHistory):
                 ):
                     for existing in self._conversation.value:
                         if existing.get("metadata_type") == "tool_calls":
-                            existing_tool_calls = existing.get("tool_calls", [])
+                            existing_tool_calls = existing.get(
+                                "tool_calls", []
+                            )
                             existing_tool_ids = {
                                 tc.get("id")
                                 for tc in existing_tool_calls
                                 if tc.get("id")
                             }
-                            if incoming_tool_ids.intersection(existing_tool_ids):
+                            if incoming_tool_ids.intersection(
+                                existing_tool_ids
+                            ):
                                 self.logger.debug(
                                     "Skipping duplicate tool_calls - "
                                     "tool_call_id already exists"
@@ -271,15 +277,22 @@ class DatabaseChatMessageHistory(BaseChatMessageHistory):
                                     "tool identity already exists"
                                 )
                                 return
-                
+
                 # Extract thinking content from the AIMessage that has tool_calls
                 # This captures the "thinking before tool use" phase
                 thinking_content = None
-                if hasattr(message, "additional_kwargs") and message.additional_kwargs:
-                    thinking_content = message.additional_kwargs.get("thinking_content")
+                if (
+                    hasattr(message, "additional_kwargs")
+                    and message.additional_kwargs
+                ):
+                    thinking_content = message.additional_kwargs.get(
+                        "thinking_content"
+                    )
                 if not thinking_content and message.content:
-                    thinking_content, _ = extract_thinking_and_response(message.content)
-                
+                    thinking_content, _ = extract_thinking_and_response(
+                        message.content
+                    )
+
                 # Store tool call request in metadata
                 now = datetime.datetime.now(datetime.timezone.utc).isoformat()
                 tool_calls_dict = {
@@ -302,12 +315,14 @@ class DatabaseChatMessageHistory(BaseChatMessageHistory):
                     "tool_calls": message.tool_calls,  # Store actual tool call data
                     "metadata_type": "tool_calls",  # Mark as metadata for filtering
                 }
-                
+
                 # Store thinking content if present (pre-tool thinking)
                 if thinking_content:
                     tool_calls_dict["thinking_content"] = thinking_content
-                    self.logger.debug(f"[THINKING SAVE] Saved pre-tool thinking: {len(thinking_content)} chars")
-                
+                    self.logger.debug(
+                        f"[THINKING SAVE] Saved pre-tool thinking: {len(thinking_content)} chars"
+                    )
+
                 if self._conversation.value is None:
                     self._conversation.value = []
                 self._conversation.value.append(tool_calls_dict)
@@ -338,26 +353,37 @@ class DatabaseChatMessageHistory(BaseChatMessageHistory):
             thinking_content = None
             if isinstance(message, AIMessage):
                 # Check if thinking_content was stored in additional_kwargs during streaming
-                if hasattr(message, "additional_kwargs") and message.additional_kwargs:
+                if (
+                    hasattr(message, "additional_kwargs")
+                    and message.additional_kwargs
+                ):
                     thinking_content = normalize_thinking_content(
                         message.additional_kwargs.get("thinking_content")
                     )
-                    self.logger.debug(f"[THINKING SAVE] Found thinking_content in additional_kwargs: {bool(thinking_content)}")
-                
+                    self.logger.debug(
+                        f"[THINKING SAVE] Found thinking_content in additional_kwargs: {bool(thinking_content)}"
+                    )
+
                 # If not found, try to extract from content (for non-streaming or fallback)
                 if not thinking_content:
-                    thinking_content, content = extract_thinking_and_response(content)
+                    thinking_content, content = extract_thinking_and_response(
+                        content
+                    )
                     thinking_content = normalize_thinking_content(
                         thinking_content
                     )
-                    self.logger.debug(f"[THINKING SAVE] Extracted from content: {bool(thinking_content)}")
+                    self.logger.debug(
+                        f"[THINKING SAVE] Extracted from content: {bool(thinking_content)}"
+                    )
 
                 content = strip_stored_thinking_prefix(
                     content,
                     thinking_content,
                 )
-                
-                self.logger.debug(f"[THINKING SAVE] Final thinking_content length: {len(thinking_content) if thinking_content else 0}")
+
+                self.logger.debug(
+                    f"[THINKING SAVE] Final thinking_content length: {len(thinking_content) if thinking_content else 0}"
+                )
 
             message_dict = {
                 "role": role,
@@ -366,7 +392,7 @@ class DatabaseChatMessageHistory(BaseChatMessageHistory):
                 "timestamp": now,
                 "blocks": [{"block_type": "text", "text": content}],
             }
-            
+
             # Add thinking content if present
             if thinking_content:
                 message_dict["thinking_content"] = thinking_content

@@ -7,7 +7,6 @@ from typing import Any
 
 from setuptools import find_packages
 
-
 VERSION = "6.0.0"
 FACEHUGGERSHIELD_REQUIREMENT = (
     "facehuggershield @ "
@@ -15,9 +14,9 @@ FACEHUGGERSHIELD_REQUIREMENT = (
     "archive/refs/tags/v1.0.0.tar.gz"
 )
 
-README = (
-    Path(__file__).resolve().parents[1] / "README.md"
-).read_text(encoding="utf-8")
+README = (Path(__file__).resolve().parents[1] / "README.md").read_text(
+    encoding="utf-8"
+)
 
 CORE_REQUIREMENTS = [
     "numpy>=2.2.5,<3.0",

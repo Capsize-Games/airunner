@@ -27,7 +27,6 @@ from airunner_services.llm.tools.rag_tools_helpers._summary_evidence import (
     request_document_summary_focus,
 )
 
-
 FULL_DOCUMENT_ANALYSIS_TOKEN_LIMIT = 4000
 
 

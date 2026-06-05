@@ -5,7 +5,6 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-
 _TEST_ROOT = Path(__file__).resolve().parent
 _SERVICES_ROOT = _TEST_ROOT.parent
 _PROJECT_ROOT = _SERVICES_ROOT.parent

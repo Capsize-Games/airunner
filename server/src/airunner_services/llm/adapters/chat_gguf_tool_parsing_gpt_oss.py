@@ -63,10 +63,12 @@ def build_gpt_oss_message_from_raw(
 ) -> AIMessage:
     """Normalize one raw Harmony completion into an AIMessage."""
     parsed = parse_gpt_oss_response(raw_text)
-    tool_calls, content, suppressed_prefilled_payload = _resolved_raw_tool_calls(
-        adapter,
-        raw_text,
-        parsed.content,
+    tool_calls, content, suppressed_prefilled_payload = (
+        _resolved_raw_tool_calls(
+            adapter,
+            raw_text,
+            parsed.content,
+        )
     )
     additional_kwargs = _message_additional_kwargs(
         parsed.thinking_content,
@@ -92,7 +94,9 @@ def _resolved_raw_tool_calls(
     if tool_calls:
         return tool_calls, "", False
     suppressed = _suppressed_prefilled_payload(adapter, raw_text)
-    tool_calls, content = adapter._extract_tool_calls(parsed_content or raw_text)
+    tool_calls, content = adapter._extract_tool_calls(
+        parsed_content or raw_text
+    )
     if suppressed and not tool_calls:
         _log_suppressed_prefilled_payload(adapter)
         return tool_calls, "", True
@@ -108,7 +112,9 @@ def _suppressed_prefilled_payload(adapter: Any, raw_text: str) -> bool:
 
 def _log_suppressed_prefilled_payload(adapter: Any) -> None:
     """Log when a malformed forced Harmony payload is suppressed."""
-    adapter.logger.warning("Suppressing malformed prefilled GPT-OSS tool payload")
+    adapter.logger.warning(
+        "Suppressing malformed prefilled GPT-OSS tool payload"
+    )
 
 
 def _message_additional_kwargs(

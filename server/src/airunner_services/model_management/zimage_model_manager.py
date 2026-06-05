@@ -72,7 +72,9 @@ class ZImageModelManager(
                 return torch.float32
             return torch.float32
         if dtype_setting == "float16":
-            return torch.float16 if torch.cuda.is_available() else torch.float32
+            return (
+                torch.float16 if torch.cuda.is_available() else torch.float32
+            )
         if dtype_setting == "float32":
             return torch.float32
 
@@ -217,7 +219,9 @@ class ZImageModelManager(
         self.change_model_status(ModelType.SCHEDULER, ModelStatus.LOADING)
 
         base_config = None
-        if current_scheduler is not None and hasattr(current_scheduler, "config"):
+        if current_scheduler is not None and hasattr(
+            current_scheduler, "config"
+        ):
             base_config = dict(current_scheduler.config)
             for flag in (
                 "use_karras_sigmas",

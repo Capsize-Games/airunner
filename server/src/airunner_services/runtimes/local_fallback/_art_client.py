@@ -1,4 +1,5 @@
 """Local fallback art runtime client."""
+
 from __future__ import annotations
 
 import base64
@@ -39,6 +40,7 @@ from airunner_services.runtimes.local_fallback._base import (
     _resolve_model_type,
     _SignalRuntimeClient,
 )
+
 
 class LocalFallbackArtClient(_SignalRuntimeClient):
     """Bridge art runtime requests to the current callback-based pipeline."""
@@ -158,7 +160,7 @@ class LocalFallbackArtClient(_SignalRuntimeClient):
             payload=payload,
             metadata=response.metadata,
         )
-    
+
     def _load_model(self, request: RequestEnvelope) -> ResponseEnvelope:
         """Load one explicit art component when supported."""
         component = self._art_component(request)
@@ -264,9 +266,7 @@ class LocalFallbackArtClient(_SignalRuntimeClient):
             prompt=invocation.prompt,
             negative_prompt=invocation.negative_prompt,
             model_path=invocation.model or "",
-            skip_auto_export=bool(
-                metadata.get("skip_auto_export", False)
-            ),
+            skip_auto_export=bool(metadata.get("skip_auto_export", False)),
             scheduler=_resolve_art_request_scheduler(metadata),
             version=_resolve_art_request_version(metadata),
             steps=invocation.steps,
@@ -316,7 +316,9 @@ class LocalFallbackArtClient(_SignalRuntimeClient):
 
         progress_handler = None
         if progress_callback is not None:
-            progress_handler = self._build_art_progress_handler(progress_callback)
+            progress_handler = self._build_art_progress_handler(
+                progress_callback
+            )
             self._mediator.register(
                 SignalCode.SD_PROGRESS_SIGNAL,
                 progress_handler,

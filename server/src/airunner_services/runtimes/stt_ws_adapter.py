@@ -85,9 +85,7 @@ class STTWebSocketAdapter:
         adapter_port: int = _DEFAULT_ADAPTER_PORT,
         http_timeout: float = _DEFAULT_HTTP_TIMEOUT,
     ) -> None:
-        self._whisper_url = (
-            f"http://{whisper_host}:{whisper_port}/inference"
-        )
+        self._whisper_url = f"http://{whisper_host}:{whisper_port}/inference"
         self._adapter_host = adapter_host
         self._adapter_port = adapter_port
         self._http_timeout = http_timeout
@@ -123,10 +121,14 @@ class STTWebSocketAdapter:
                 try:
                     data = json.loads(raw)
                 except json.JSONDecodeError:
-                    await websocket.send(json.dumps({
-                        "type": "error",
-                        "error": "Invalid JSON",
-                    }))
+                    await websocket.send(
+                        json.dumps(
+                            {
+                                "type": "error",
+                                "error": "Invalid JSON",
+                            }
+                        )
+                    )
                     continue
 
                 request_id = str(data.get("request_id", ""))
@@ -134,22 +136,35 @@ class STTWebSocketAdapter:
 
                 if action in ("invoke", "transcribe"):
                     await self._handle_transcribe(
-                        websocket, request_id, data.get("payload", {}),
+                        websocket,
+                        request_id,
+                        data.get("payload", {}),
                     )
                 elif action in ("health", "status"):
-                    await websocket.send(json.dumps({
-                        "type": "response",
-                        "request_id": request_id,
-                        "status": "succeeded",
-                        "payload": {"status": "ready", "adapter": "stt_ws"},
-                    }))
+                    await websocket.send(
+                        json.dumps(
+                            {
+                                "type": "response",
+                                "request_id": request_id,
+                                "status": "succeeded",
+                                "payload": {
+                                    "status": "ready",
+                                    "adapter": "stt_ws",
+                                },
+                            }
+                        )
+                    )
                 else:
-                    await websocket.send(json.dumps({
-                        "type": "response",
-                        "request_id": request_id,
-                        "status": "failed",
-                        "error": f"Unknown action: {action}",
-                    }))
+                    await websocket.send(
+                        json.dumps(
+                            {
+                                "type": "response",
+                                "request_id": request_id,
+                                "status": "failed",
+                                "error": f"Unknown action: {action}",
+                            }
+                        )
+                    )
         except websockets.ConnectionClosed:
             logger.info("STT adapter: client disconnected")
         except Exception as exc:
@@ -164,61 +179,75 @@ class STTWebSocketAdapter:
         """Forward one transcription request to whisper.cpp."""
         audio_b64 = str(payload.get("audio_b64", "") or "")
         if not audio_b64:
-            await websocket.send(json.dumps({
-                "type": "response",
-                "request_id": request_id,
-                "status": "failed",
-                "error": "No audio data provided",
-            }))
+            await websocket.send(
+                json.dumps(
+                    {
+                        "type": "response",
+                        "request_id": request_id,
+                        "status": "failed",
+                        "error": "No audio data provided",
+                    }
+                )
+            )
             return
 
         try:
             audio_bytes = base64.b64decode(audio_b64, validate=True)
         except Exception:
-            await websocket.send(json.dumps({
-                "type": "response",
-                "request_id": request_id,
-                "status": "failed",
-                "error": "Invalid base64 audio",
-            }))
+            await websocket.send(
+                json.dumps(
+                    {
+                        "type": "response",
+                        "request_id": request_id,
+                        "status": "failed",
+                        "error": "Invalid base64 audio",
+                    }
+                )
+            )
             return
 
         language = str(payload.get("language", "auto") or "auto")
-        mime_type = str(
-            payload.get("mime_type", "audio/wav") or "audio/wav"
-        )
+        mime_type = str(payload.get("mime_type", "audio/wav") or "audio/wav")
 
         # Build multipart request for whisper.cpp
         boundary = f"airunner-ws-adapter-{uuid4().hex}"
         body = self._multipart_body(
-            boundary, audio_bytes, language, mime_type,
+            boundary,
+            audio_bytes,
+            language,
+            mime_type,
         )
 
         result = await self._http_request(body, boundary)
         if result is None:
-            await websocket.send(json.dumps({
-                "type": "response",
-                "request_id": request_id,
-                "status": "failed",
-                "error": "whisper.cpp request failed",
-            }))
+            await websocket.send(
+                json.dumps(
+                    {
+                        "type": "response",
+                        "request_id": request_id,
+                        "status": "failed",
+                        "error": "whisper.cpp request failed",
+                    }
+                )
+            )
             return
 
-        text = (
-            result.get("text")
-            or result.get("transcription", "")
-        )
+        text = result.get("text") or result.get("transcription", "")
         detected_language = result.get("language", language)
 
-        await websocket.send(json.dumps({
-            "type": "response",
-            "request_id": request_id,
-            "status": "succeeded",
-            "payload": {
-                "text": str(text),
-                "language": detected_language,
-            },
-        }))
+        await websocket.send(
+            json.dumps(
+                {
+                    "type": "response",
+                    "request_id": request_id,
+                    "status": "succeeded",
+                    "payload": {
+                        "text": str(text),
+                        "language": detected_language,
+                    },
+                }
+            )
+        )
 
     def _multipart_body(
         self,
@@ -236,7 +265,9 @@ class STTWebSocketAdapter:
             b"--" + boundary.encode("utf-8") + b"\r\n"
             b'Content-Disposition: form-data; name="file"; '
             b'filename="audio.wav"\r\n'
-            b"Content-Type: " + mime_type.encode("utf-8") + b"\r\n\r\n"
+            b"Content-Type: "
+            + mime_type.encode("utf-8")
+            + b"\r\n\r\n"
             + audio_bytes
             + b"\r\n"
         )
@@ -263,9 +294,7 @@ class STTWebSocketAdapter:
             data=body,
             method="POST",
             headers={
-                "Content-Type": (
-                    f"multipart/form-data; boundary={boundary}"
-                ),
+                "Content-Type": (f"multipart/form-data; boundary={boundary}"),
                 "Accept": "application/json",
             },
         )
@@ -274,9 +303,7 @@ class STTWebSocketAdapter:
         def _do_request():
             try:
                 with urlopen(req, timeout=self._http_timeout) as resp:
-                    return json.loads(
-                        resp.read().decode("utf-8") or "{}"
-                    )
+                    return json.loads(resp.read().decode("utf-8") or "{}")
             except (HTTPError, URLError) as exc:
                 logger.error("whisper.cpp HTTP error: %s", exc)
                 return None
@@ -290,13 +317,16 @@ async def run_adapter() -> None:
         whisper_host=_env_str("WHISPER_HOST", _DEFAULT_WHISPER_HOST),
         whisper_port=_env_int("WHISPER_PORT", _DEFAULT_WHISPER_PORT),
         adapter_host=_env_str(
-            "STT_ADAPTER_HOST", _DEFAULT_ADAPTER_HOST,
+            "STT_ADAPTER_HOST",
+            _DEFAULT_ADAPTER_HOST,
         ),
         adapter_port=_env_int(
-            "STT_ADAPTER_PORT", _DEFAULT_ADAPTER_PORT,
+            "STT_ADAPTER_PORT",
+            _DEFAULT_ADAPTER_PORT,
         ),
         http_timeout=_env_int(
-            "STT_HTTP_TIMEOUT", int(_DEFAULT_HTTP_TIMEOUT),
+            "STT_HTTP_TIMEOUT",
+            int(_DEFAULT_HTTP_TIMEOUT),
         ),
     )
     await adapter.start()

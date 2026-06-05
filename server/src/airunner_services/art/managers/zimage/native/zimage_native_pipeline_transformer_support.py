@@ -9,7 +9,9 @@ import torch
 import torch.nn as nn
 from safetensors import safe_open
 
-from airunner_services.art.managers.zimage.native.fp8_ops import QuantizedTensor
+from airunner_services.art.managers.zimage.native.fp8_ops import (
+    QuantizedTensor,
+)
 from airunner_services.art.managers.zimage.native.nextdit_model import (
     ZIMAGE_CONFIG,
 )
@@ -86,7 +88,7 @@ class ZImageNativePipelineTransformerSupport:
         ]
         for prefix in prefixes:
             if key.startswith(prefix):
-                key = key[len(prefix):]
+                key = key[len(prefix) :]
                 break
         if "scale_weight" in key:
             return None
@@ -166,5 +168,7 @@ class ZImageNativePipelineTransformerSupport:
     def resolve_module(module: nn.Module, parts: list[str]) -> nn.Module:
         """Walk one dotted module path and return the target module."""
         for part in parts:
-            module = module[int(part)] if part.isdigit() else getattr(module, part)
+            module = (
+                module[int(part)] if part.isdigit() else getattr(module, part)
+            )
         return module

@@ -5,7 +5,9 @@ from __future__ import annotations
 from typing import Any, Optional
 
 from airunner_services.llm.long_running.project_manager import ProjectManager
-from airunner_services.llm.long_running.session_agent_cleanup import cleanup_node
+from airunner_services.llm.long_running.session_agent_cleanup import (
+    cleanup_node,
+)
 from airunner_services.llm.long_running.session_agent_delegate import (
     delegate_to_sub_agent,
 )
@@ -16,7 +18,9 @@ from airunner_services.llm.long_running.session_agent_implementation import (
 from airunner_services.llm.long_running.session_agent_orientation import (
     orientation_node,
 )
-from airunner_services.llm.long_running.session_agent_planning import planning_node
+from airunner_services.llm.long_running.session_agent_planning import (
+    planning_node,
+)
 from airunner_services.llm.long_running.session_agent_routes import (
     format_feature_list,
     route_after_implementation,
@@ -29,7 +33,6 @@ from airunner_services.llm.long_running.session_agent_verification import (
 )
 from airunner_services.settings import AIRUNNER_LOG_LEVEL
 from airunner_services.utils.application import get_logger
-
 
 logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 
@@ -67,6 +70,7 @@ class SessionAgent:
     _route_after_verification = route_after_verification
     _format_feature_list = format_feature_list
     run_session = run_session
+
 
 # Session-agent responsibilities are intentionally split across modules.
 # The facade preserves the public API, graph wiring, and runtime dependencies.

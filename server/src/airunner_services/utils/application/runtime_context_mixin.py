@@ -48,7 +48,6 @@ from airunner_services.utils.application.api_reference import (
 )
 from airunner_services.utils.application.get_logger import get_logger
 
-
 SettingsModel = TypeVar("SettingsModel")
 
 _ESPEAK_MODEL_TYPE = "eSpeak"

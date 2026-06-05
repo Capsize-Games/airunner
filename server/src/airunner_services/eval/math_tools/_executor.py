@@ -237,9 +237,14 @@ class SafePythonExecutor:
             if isinstance(node, ast.Attribute):
                 return node.attr
             if isinstance(node, ast.Subscript):
-                if isinstance(node.value, ast.Name) and node.value.id in {"__builtins__", "builtins"}:
+                if isinstance(node.value, ast.Name) and node.value.id in {
+                    "__builtins__",
+                    "builtins",
+                }:
                     sl = node.slice
-                    if isinstance(sl, ast.Constant) and isinstance(sl.value, str):
+                    if isinstance(sl, ast.Constant) and isinstance(
+                        sl.value, str
+                    ):
                         return sl.value
             return None
 
@@ -248,12 +253,19 @@ class SafePythonExecutor:
                 errors.append(f"Access to name '{node.id}' is not allowed")
 
             if isinstance(node, ast.Subscript):
-                if isinstance(node.value, ast.Name) and node.value.id in {"__builtins__", "builtins"}:
-                    errors.append("Access to builtins via subscript is not allowed")
+                if isinstance(node.value, ast.Name) and node.value.id in {
+                    "__builtins__",
+                    "builtins",
+                }:
+                    errors.append(
+                        "Access to builtins via subscript is not allowed"
+                    )
 
             if isinstance(node, ast.Attribute):
                 if node.attr.startswith("_") or "__" in node.attr:
-                    errors.append(f"Access to attribute '{node.attr}' is not allowed")
+                    errors.append(
+                        f"Access to attribute '{node.attr}' is not allowed"
+                    )
 
             if isinstance(node, ast.Call):
                 called = called_symbol_name(node.func)

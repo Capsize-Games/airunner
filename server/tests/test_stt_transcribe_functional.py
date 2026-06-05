@@ -50,10 +50,12 @@ def _multipart_audio_body(
     header = (
         f"--{boundary}\r\n"
         "Content-Disposition: form-data; "
-        f"name=\"audio\"; filename=\"{audio_path.name}\"\r\n"
+        f'name="audio"; filename="{audio_path.name}"\r\n'
         f"Content-Type: {mime_type}\r\n\r\n"
     ).encode("utf-8")
-    return b"".join([header, payload, b"\r\n", f"--{boundary}--\r\n".encode("utf-8")])
+    return b"".join(
+        [header, payload, b"\r\n", f"--{boundary}--\r\n".encode("utf-8")]
+    )
 
 
 def _post_audio(
@@ -79,7 +81,9 @@ def _post_audio(
         method="POST",
     )
     try:
-        with urllib.request.urlopen(request, timeout=timeout_seconds) as response:
+        with urllib.request.urlopen(
+            request, timeout=timeout_seconds
+        ) as response:
             return (
                 int(response.status),
                 response.read(),
@@ -96,7 +100,9 @@ def _post_audio(
 def _get_json(url: str) -> tuple[int, dict[str, object]]:
     """Return the decoded JSON payload for one GET request."""
     with urllib.request.urlopen(url, timeout=30) as response:
-        return int(response.status), json.loads(response.read().decode("utf-8"))
+        return int(response.status), json.loads(
+            response.read().decode("utf-8")
+        )
 
 
 @pytest.mark.integration

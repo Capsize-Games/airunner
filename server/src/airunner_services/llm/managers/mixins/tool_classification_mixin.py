@@ -65,12 +65,10 @@ class ToolClassificationMixin:
         r"^\s*what\s+can\s+you\s+do[!.?,\s]*$",
         r"^\s*(?:tell\s+me\s+another|another\s+one)\b.*$",
         r"^\s*(?:like\s+what|for\s+example)[!.?,\s]*$",
-        r"^\s*(?:can\s+you\s+)?tell\s+me\s+"
-        r"(?:a|another)?\s*joke\b.*$",
+        r"^\s*(?:can\s+you\s+)?tell\s+me\s+" r"(?:a|another)?\s*joke\b.*$",
         r"^\s*(?:please\s+)?(?:tell\s+me|write\s+me|make\s+up)\s+"
         r"(?:a|another)?\s*(?:story|poem|haiku|riddle)\b.*$",
-        r"^\s*(?:give\s+me|share)\s+(?:a\s+)?"
-        r"(?:fun\s+fact|quote)\b.*$",
+        r"^\s*(?:give\s+me|share)\s+(?:a\s+)?" r"(?:fun\s+fact|quote)\b.*$",
         r"^\s*(?:make\s+me\s+laugh|be\s+funny)[!.?,\s]*$",
     )
     CONSTRAINED_REPLY_HINTS: Tuple[str, ...] = (
@@ -148,10 +146,7 @@ class ToolClassificationMixin:
             return False
         if not re.match(r"^(?:reply|respond)\s+with\b", prompt_lc):
             return False
-        return any(
-            hint in prompt_lc
-            for hint in cls.CONSTRAINED_REPLY_HINTS
-        )
+        return any(hint in prompt_lc for hint in cls.CONSTRAINED_REPLY_HINTS)
 
     @classmethod
     def _has_search_trigger_prompt(cls, prompt: str) -> bool:
@@ -225,7 +220,10 @@ class ToolClassificationMixin:
         selected_categories = []
         for cat in candidate_text.split(","):
             token = cat.strip()
-            if token in available_categories and token not in selected_categories:
+            if (
+                token in available_categories
+                and token not in selected_categories
+            ):
                 selected_categories.append(token)
         if selected_categories:
             return selected_categories[:5]
@@ -312,9 +310,11 @@ class ToolClassificationMixin:
         remaining = text
         while remaining:
             if state["in_thinking_block"]:
-                found_close, before_close, after_close = detect_thinking_close_tag(
-                    remaining,
-                    state["thinking_tag_format"],
+                found_close, before_close, after_close = (
+                    detect_thinking_close_tag(
+                        remaining,
+                        state["thinking_tag_format"],
+                    )
                 )
                 if not found_close:
                     self._append_classification_thinking(
@@ -365,16 +365,17 @@ class ToolClassificationMixin:
             "thinking_parts": [],
             "visible_parts": [],
         }
-        for chunk in chat_model.stream([HumanMessage(content=classification_prompt)]):
+        for chunk in chat_model.stream(
+            [HumanMessage(content=classification_prompt)]
+        ):
             chunk_message = getattr(chunk, "message", chunk)
             text = getattr(chunk_message, "content", "") or ""
             additional_kwargs = (
                 getattr(chunk_message, "additional_kwargs", {}) or {}
             )
-            reasoning_delta = (
-                additional_kwargs.get("thinking_content")
-                or additional_kwargs.get("reasoning_content")
-            )
+            reasoning_delta = additional_kwargs.get(
+                "thinking_content"
+            ) or additional_kwargs.get("reasoning_content")
             self._append_classification_thinking(
                 state,
                 reasoning_delta or "",
@@ -493,7 +494,9 @@ Reply with ONLY category names (comma-separated) or \"none\":"""
                     candidate_texts = self._classification_candidates(
                         response_text
                     )
-                    candidate_text = candidate_texts[0] if candidate_texts else ""
+                    candidate_text = (
+                        candidate_texts[0] if candidate_texts else ""
+                    )
                     self.logger.info(
                         "LLM classification response: %s",
                         candidate_text,
