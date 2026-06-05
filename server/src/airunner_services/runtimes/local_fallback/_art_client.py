@@ -19,9 +19,6 @@ from airunner_services.runtimes.contracts import (
     RuntimeAction,
     RuntimeKind,
 )
-from airunner_services.runtimes.art_daemon_runtime_settings import (
-    resolve_art_daemon_runtime_settings,
-)
 from airunner_services.runtimes.local_fallback._base import (
     DEFAULT_PROVIDER,
     HealthProvider,
@@ -53,11 +50,9 @@ class LocalFallbackArtClient(_SignalRuntimeClient):
         mediator: Any = None,
         health_provider: Optional[HealthProvider] = None,
     ) -> None:
-        resolved_timeout = timeout_seconds
-        if resolved_timeout is None:
-            resolved_timeout = (
-                resolve_art_daemon_runtime_settings().invocation_timeout_seconds
-            )
+        resolved_timeout = (
+            timeout_seconds if timeout_seconds is not None else 300.0
+        )
         super().__init__(
             RuntimeKind.ART,
             provider,

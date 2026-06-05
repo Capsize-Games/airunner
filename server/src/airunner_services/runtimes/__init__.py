@@ -4,20 +4,22 @@ from importlib import import_module
 from typing import Any
 
 _EXPORTS = {
-    "ArtDaemonRuntimeSettings": "airunner_services.runtimes.art_daemon_runtime_settings",
     "ArtInvocationResponse": "airunner_services.runtimes.contracts",
     "ArtInvocationRequest": "airunner_services.runtimes.contracts",
     "ChatMessage": "airunner_services.runtimes.contracts",
+    "FasterWhisperSTTExecutor": (
+        "airunner_services.runtimes.faster_whisper_stt_executor"
+    ),
     "LLMInvocationRequest": "airunner_services.runtimes.contracts",
     "LLMInvocationResponse": "airunner_services.runtimes.contracts",
-    "LlamaCppRuntimeSettings": "airunner_services.runtimes.llama_cpp_runtime_settings",
-    "LocalFallbackArtClient": "airunner_services.runtimes.local_fallback",
-    "LocalFallbackLLMClient": "airunner_services.runtimes.local_fallback",
-    "LocalFallbackSTTClient": "airunner_services.runtimes.local_fallback",
-    "LocalFallbackTTSClient": "airunner_services.runtimes.local_fallback",
+    "LocalFallbackArtClient": ("airunner_services.runtimes.local_fallback"),
+    "LocalFallbackLLMClient": ("airunner_services.runtimes.local_fallback"),
+    "LocalFallbackSTTClient": ("airunner_services.runtimes.local_fallback"),
+    "LocalFallbackTTSClient": ("airunner_services.runtimes.local_fallback"),
     "MessageRole": "airunner_services.runtimes.contracts",
-    "RuntimeRegistrySTTExecutor": "airunner_services.runtimes.runtime_registry_stt_executor",
-    "WhisperCppRuntimeSettings": "airunner_services.runtimes.whisper_cpp_runtime_settings",
+    "RuntimeRegistrySTTExecutor": (
+        "airunner_services.runtimes.runtime_registry_stt_executor"
+    ),
     "build_runtime_registry": "airunner_services.runtimes.bootstrap",
     "RuntimeAction": "airunner_services.runtimes.contracts",
     "RuntimeClient": "airunner_services.runtimes.base",
@@ -28,25 +30,14 @@ _EXPORTS = {
     "RuntimeMode": "airunner_services.runtimes.contracts",
     "RuntimeRegistry": "airunner_services.runtimes.registry",
     "RuntimeRoute": "airunner_services.runtimes.registry",
-    "SidecarLauncher": "airunner_services.runtimes.sidecar_launcher",
-    "SidecarArtClient": "airunner_services.runtimes.sidecar_art_client",
-    "SidecarArtLauncher": "airunner_services.runtimes.sidecar_art_launcher",
-    "SidecarLLMClient": "airunner_services.runtimes.sidecar_llm_client",
-    "SidecarSTTClient": "airunner_services.runtimes.sidecar_stt_client",
-    "SidecarSTTLauncher": "airunner_services.runtimes.sidecar_stt_launcher",
     "STTInvocationRequest": "airunner_services.runtimes.contracts",
     "STTInvocationResponse": "airunner_services.runtimes.contracts",
     "TTSInvocationRequest": "airunner_services.runtimes.contracts",
     "TTSInvocationResponse": "airunner_services.runtimes.contracts",
-    "TTSDaemonRuntimeSettings": "airunner_services.runtimes.tts_daemon_runtime_settings",
     "TransportKind": "airunner_services.runtimes.contracts",
-    "register_local_fallback_clients": "airunner_services.runtimes.local_fallback",
-    "register_sidecar_art_client": "airunner_services.runtimes.sidecar_art_client",
-    "register_sidecar_llm_client": "airunner_services.runtimes.sidecar_llm_client",
-    "register_sidecar_stt_client": "airunner_services.runtimes.sidecar_stt_client",
-    "register_sidecar_tts_client": "airunner_services.runtimes.sidecar_tts_client",
-    "SidecarTTSClient": "airunner_services.runtimes.sidecar_tts_client",
-    "SidecarTTSLauncher": "airunner_services.runtimes.sidecar_tts_launcher",
+    "register_local_fallback_clients": (
+        "airunner_services.runtimes.local_fallback"
+    ),
 }
 
 __all__ = sorted(_EXPORTS)

@@ -72,7 +72,7 @@ ART_REQUIREMENTS = [
 ]
 
 LLM_NATIVE_REQUIREMENTS = [
-    "llama-cpp-python==0.3.21",
+    "llama-cpp-python==0.3.26",
     "bitsandbytes==0.45.5",
     "sentence_transformers==3.4.1",
     "cryptography==46.0.7",
@@ -95,7 +95,7 @@ LLM_NATIVE_REQUIREMENTS = [
     "pypdf>=5.6.0",
 ]
 
-STT_NATIVE_REQUIREMENTS = ["sounddevice==0.5.1"]
+STT_NATIVE_REQUIREMENTS = ["sounddevice==0.5.1", "faster-whisper==1.2.1"]
 
 LLM_WEATHER_REQUIREMENTS = [
     "requests-cache==1.2.1",

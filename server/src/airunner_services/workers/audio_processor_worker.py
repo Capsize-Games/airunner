@@ -4,8 +4,8 @@ from airunner_services.runtimes.stt_executor import STTExecutor
 from airunner_services.utils.application.api_reference import (
     peek_registered_api,
 )
-from airunner_services.runtimes.runtime_registry_stt_executor import (
-    RuntimeRegistrySTTExecutor,
+from airunner_services.runtimes.faster_whisper_stt_executor import (
+    FasterWhisperSTTExecutor,
 )
 from airunner_services.utils.application.enum_resolver import signal_code_proxy
 from airunner_services.workers.worker import Worker
@@ -19,7 +19,7 @@ SignalCode = signal_code_proxy(
 
 
 class AudioProcessorWorker(Worker):
-    """Process audio payloads through local or daemon-backed STT."""
+    """Process audio payloads through local in-process STT."""
 
     fs = 0
 
@@ -38,7 +38,7 @@ class AudioProcessorWorker(Worker):
 
     def _create_stt_executor(self) -> STTExecutor:
         """Create the shared STT executor used by the processor worker."""
-        return RuntimeRegistrySTTExecutor()
+        return FasterWhisperSTTExecutor()
 
     def _current_api(self):
         """Return the registered service API reference."""

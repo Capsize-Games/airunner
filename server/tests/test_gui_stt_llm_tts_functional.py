@@ -57,8 +57,8 @@ from airunner.utils.application.signal_mediator import SignalMediator
 from airunner_services.database.models.application_settings import (
     ApplicationSettings,
 )
-from airunner_services.runtimes.whisper_cpp_runtime_settings import (
-    resolve_whisper_cpp_runtime_settings,
+from airunner_services.runtimes.faster_whisper_stt_executor import (
+    discover_model_path,
 )
 from airunner_services.workers.tts_generator_worker import (
     TTSGeneratorWorker,
@@ -112,26 +112,16 @@ def test_gui_stt_llm_and_tts_round_trip_without_audio_output(
     if not openvoice_path.is_dir():
         pytest.skip(f"Real OpenVoice assets are required at {openvoice_path}")
 
-    whisper_settings = resolve_whisper_cpp_runtime_settings()
-    if not whisper_settings.model_path:
+    model_path = discover_model_path()
+    if not model_path:
         pytest.skip(
-            "Real whisper.cpp model required; set AIRUNNER_WHISPER_MODEL_PATH "
+            "Real faster-whisper model required; set AIRUNNER_WHISPER_MODEL_PATH "
             "or install one under ~/.local/share/airunner/text/models/stt"
         )
 
-    whisper_model_path = (
-        Path(whisper_settings.model_path).expanduser().resolve()
-    )
-    if not whisper_model_path.is_file():
-        pytest.skip(
-            f"Configured whisper.cpp model is missing: {whisper_model_path}"
-        )
-
-    if not _executable_exists(whisper_settings.executable):
-        pytest.skip(
-            "whisper-server executable required; set "
-            "AIRUNNER_WHISPER_SERVER_BIN or AIRUNNER_BUNDLE_ROOT"
-        )
+    whisper_model_path = Path(model_path).expanduser().resolve()
+    if not whisper_model_path.exists():
+        pytest.skip(f"Configured STT model is missing: {whisper_model_path}")
 
     db_url = _configure_test_database(monkeypatch, tmp_path)
     _seed_gui_settings(_MODEL_ID, openvoice_path)
