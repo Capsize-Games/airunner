@@ -1,4 +1,4 @@
-"""Service-owned persistence helpers for headless LLM preload settings."""
+"""Service-owned persistence helpers for LLM preload settings."""
 
 from __future__ import annotations
 

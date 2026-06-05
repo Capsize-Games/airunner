@@ -320,8 +320,8 @@ def main() -> int:
     app = None
     try:
         app = ServiceApp(
-            start_headless_api_server=False,
-            initialize_headless_lifecycle=True,
+            start_embedded_api_server=False,
+            initialize_lifecycle=True,
         )
         client = LocalFallbackArtClient(signal_source=app)
         progress_updates = []

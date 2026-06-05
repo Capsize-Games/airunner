@@ -1,6 +1,6 @@
-"""API Server Thread for headless mode.
+"""API Server Thread for service mode.
 
-Runs the headless HTTP API inside uvicorn/FastAPI.
+Runs the HTTP API inside uvicorn/FastAPI.
 """
 
 import threading
@@ -28,7 +28,7 @@ class APIServerThread(threading.Thread):
     """Background thread running the AI Runner API server.
 
     Provides HTTP endpoints for LLM, art generation, TTS, and STT.
-    Designed for headless operation without Qt GUI.
+    Designed for operation without Qt GUI.
 
     Args:
         host: Host address to bind to (default: localhost)

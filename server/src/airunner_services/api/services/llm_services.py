@@ -39,16 +39,16 @@ class LLMAPIService(
 
 	def __init__(self) -> None:
 		super().__init__()
-		self._headless_tts_response_buffer: dict[str, str] = {}
-		self._headless_tts_request_enabled: dict[str, bool] = {}
+		self._tts_response_buffer: dict[str, str] = {}
+		self._tts_request_enabled: dict[str, bool] = {}
 
 	def _register_request_tts_preference(
 		self,
 		request_id: str,
 		do_tts_reply: bool,
 	) -> None:
-		"""Remember whether one request should be spoken headlessly."""
-		self._headless_tts_request_enabled[request_id] = bool(do_tts_reply)
+		"""Remember whether one request should be spoken ."""
+		self._tts_request_enabled[request_id] = bool(do_tts_reply)
 
 	def chatbot_changed(self) -> None:
 		"""Emit one chatbot-changed signal."""
@@ -80,9 +80,9 @@ class LLMAPIService(
 				pass
 		if self._forward_tts_stream_signal(data):
 			data["_skip_worker_manager_tts"] = True
-		elif self._forward_headless_tts_final_response(response):
+		elif self._forward_tts_final_response(response):
 			data["_skip_worker_manager_tts"] = True
-		elif self._should_skip_headless_tts_stream(response):
+		elif self._should_skip_tts_stream(response):
 			response.skip_tts_stream = True
 			data["_skip_worker_manager_tts"] = True
 		self.emit_signal(SignalCode.LLM_TEXT_STREAMED_SIGNAL, data)
@@ -125,46 +125,46 @@ class LLMAPIService(
 		del data
 		return False
 
-	def _should_skip_headless_tts_stream(
+	def _should_skip_tts_stream(
 		self,
 		response: LLMResponse,
 	) -> bool:
-		"""Return True when headless TTS should ignore raw stream chunks."""
+		"""Return True when TTS should ignore raw stream chunks."""
 		request_id = getattr(response, "request_id", None)
-		if not request_id or not self._is_headless_tts_assistant_response(
+		if not request_id or not self._is_tts_assistant_response(
 			response,
 		):
 			return False
 		if getattr(response, "is_end_of_message", False):
 			return False
-		return self._headless_tts_request_enabled.get(request_id, True)
+		return self._tts_request_enabled.get(request_id, True)
 
-	def _is_headless_tts_assistant_response(
+	def _is_tts_assistant_response(
 		self,
 		response: LLMResponse,
 	) -> bool:
-		"""Return True for assistant-visible chunks that headless TTS may speak."""
+		"""Return True for assistant-visible chunks that TTS may speak."""
 		if getattr(response, "is_system_message", False):
 			return False
 		message_type = getattr(response, "message_type", None)
 		return message_type in (None, "", "assistant")
 
-	def _forward_headless_tts_final_response(
+	def _forward_tts_final_response(
 		self,
 		response: LLMResponse,
 	) -> bool:
-		"""Forward one completed visible reply to headless TTS."""
+		"""Forward one completed visible reply to TTS."""
 		request_id = getattr(response, "request_id", None)
 		message = getattr(response, "message", "") or ""
-		if not self._is_headless_tts_assistant_response(response):
+		if not self._is_tts_assistant_response(response):
 			return False
-		if request_id and not self._headless_tts_request_enabled.get(
+		if request_id and not self._tts_request_enabled.get(
 			request_id,
 			True,
 		):
 			if getattr(response, "is_end_of_message", False):
-				self._headless_tts_response_buffer.pop(request_id, None)
-				self._headless_tts_request_enabled.pop(request_id, None)
+				self._tts_response_buffer.pop(request_id, None)
+				self._tts_request_enabled.pop(request_id, None)
 			return False
 
 		if request_id and message and not getattr(
@@ -172,8 +172,8 @@ class LLMAPIService(
 			"is_system_message",
 			False,
 		):
-			buffered = self._headless_tts_response_buffer.get(request_id, "")
-			self._headless_tts_response_buffer[request_id] = (
+			buffered = self._tts_response_buffer.get(request_id, "")
+			self._tts_response_buffer[request_id] = (
 				buffered + message
 			)
 
@@ -182,10 +182,10 @@ class LLMAPIService(
 
 		full_message = (
 			getattr(response, "final_visible_message", None)
-			or self._headless_tts_response_buffer.pop(request_id, "")
+			or self._tts_response_buffer.pop(request_id, "")
 		)
-		self._headless_tts_response_buffer.pop(request_id, None)
-		self._headless_tts_request_enabled.pop(request_id, None)
+		self._tts_response_buffer.pop(request_id, None)
+		self._tts_request_enabled.pop(request_id, None)
 		if not full_message or getattr(response, "is_system_message", False):
 			return False
 

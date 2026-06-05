@@ -423,7 +423,7 @@ class LocalFallbackArtClient(_SignalRuntimeClient):
         return getattr(worker_manager, "_sd_worker", None)
 
     def _art_model_manager(self, *, create: bool = False):
-        """Return the headless SD model manager when one exists."""
+        """Return the SD model manager when one exists."""
         worker = self._art_worker(create=create)
         if worker is None:
             return None

@@ -46,14 +46,9 @@ class DatasetDownloadMixin:
         """Download file with progress tracking."""
         total_size = int(response.headers.get("content-length", 0))
 
-        if self.headless:
-            self._download_with_tqdm(
-                response, dest_file, file_name, total_size, callback
-            )
-        else:
-            self._download_with_callback(
-                response, dest_file, total_size, callback
-            )
+        self._download_with_tqdm(
+            response, dest_file, file_name, total_size, callback
+        )
 
         logger.info(
             f"Successfully downloaded {dest_file} ({total_size} bytes)"

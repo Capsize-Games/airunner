@@ -254,7 +254,7 @@ class SignalMediator(metaclass=SingletonMeta):
 
     @staticmethod
     def _deliver_signal(signal: Signal, data: Dict) -> None:
-        """Deliver one signal payload with headless-safe semantics."""
+        """Deliver one signal payload with  semantics."""
         signal.signal.emit(data)
 
     def register_pending_request(

@@ -78,16 +78,13 @@ class DatasetManager(
     def __init__(
         self,
         cache_dir: Optional[str] = None,
-        headless: bool = True,
     ):
         """Initialize dataset manager.
 
         Args:
             cache_dir: Directory to cache downloaded datasets
-            headless: If True, use tqdm progress bars
         """
         super().__init__()
-        self.headless = headless
 
         if cache_dir is None:
             base_path = get_airunner_base_path(AIRUNNER_BASE_PATH)

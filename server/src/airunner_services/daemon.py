@@ -23,7 +23,7 @@ from airunner_services.startup_env import (
 
 
 def _configure_daemon_environment() -> None:
-    """Set headless-safe environment defaults before imports."""
+    """Set  environment defaults before imports."""
     os.environ.setdefault("AIRUNNER_HEADLESS", "1")
     os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
     os.environ.setdefault(
@@ -170,10 +170,10 @@ class AIRunnerDaemon:
             sys.exit(1)
 
         try:
-            self.app = self._create_headless_app()
+            self.app = self._create_app()
             self._initialize_lifecycle_service()
 
-            logger.info("AI Runner app initialized in headless mode")
+            logger.info("AI Runner app initialized")
             self._start_sidecar_daemons()
             self._preload_models()
             self._start_health_monitor()
@@ -186,14 +186,9 @@ class AIRunnerDaemon:
             logger.error(f"Fatal error in daemon: {e}", exc_info=True)
             sys.exit(1)
 
-    def _create_headless_app(self) -> App:
-        """Create the daemon-owned app without embedded server ownership."""
-        return App(
-            headless=True,
-            no_splash=True,
-            start_headless_api_server=False,
-            initialize_headless_lifecycle=False,
-        )
+    def _create_app(self) -> App:
+        """Create the daemon-owned app."""
+        return App()
 
     def _initialize_lifecycle_service(self) -> None:
         """Initialize runtime lifecycle through the reusable service."""

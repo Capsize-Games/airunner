@@ -1,4 +1,4 @@
-"""Service-owned download job coordination for headless clients."""
+"""Service-owned download job coordination ."""
 
 from __future__ import annotations
 

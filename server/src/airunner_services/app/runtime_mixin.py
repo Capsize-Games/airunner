@@ -30,8 +30,8 @@ ARTAPIService = None
 LLMAPIService = None
 
 
-def _get_headless_api_service_classes():
-    """Return lazily imported API service classes for headless mode."""
+def _get_api_service_classes():
+    """Return lazily imported API service classes for service mode."""
     global ARTAPIService
     global LLMAPIService
 
@@ -52,15 +52,15 @@ def _get_headless_api_service_classes():
     return LLMAPIService, ARTAPIService
 
 
-class HeadlessRuntimeMixin:
-    """Provide headless bootstrapping and knowledge migration helpers."""
+class RuntimeMixin:
+    """Provide bootstrapping and knowledge migration helpers."""
 
-    def _init_headless_mode(self) -> None:
-        """Initialize headless mode."""
-        self.logger.info("Running in headless mode (no GUI)")
+    def _init_service_mode(self) -> None:
+        """Initialize service mode."""
+        self.logger.info("Running in service mode (no GUI)")
         signal.signal(signal.SIGINT, self.signal_handler)
         signal.signal(signal.SIGTERM, self.signal_handler)
-        self._init_headless_services()
+        self._init_services()
         self.is_running = True
 
     def _kill_via_lsof(self, port: int) -> bool:
@@ -153,22 +153,22 @@ class HeadlessRuntimeMixin:
         if not self._kill_via_lsof(port):
             self._kill_via_netstat(port)
 
-    def _init_headless_services(self):
-        """Initialize services for headless mode."""
+    def _init_services(self):
+        """Initialize services for service mode."""
         self.app = QCoreApplication.instance()
         if self.app is None:
             self.app = QCoreApplication([])
         self.app.api = self
-        self.logger.info("Qt Core event loop initialized (headless mode)")
+        self.logger.info("Qt Core event loop initialized (service mode)")
 
-        self._ensure_headless_api_services()
+        self._ensure_api_services()
 
-        if self._initialize_headless_lifecycle:
-            self.initialize_headless_lifecycle()
+        if self._initialize_lifecycle:
+            self.initialize_lifecycle()
 
-        if not self._start_headless_api_server:
+        if not self._start_embedded_api_server:
             self.logger.info(
-                "Embedded headless API server disabled for this App instance"
+                "Embedded API server disabled for this App instance"
             )
         elif os.environ.get("AIRUNNER_SERVER_RUNNING") != "1":
             from airunner_services.api.server_thread import (
@@ -194,10 +194,10 @@ class HeadlessRuntimeMixin:
                 "API server already running - skipping initialization"
             )
 
-    def _ensure_headless_api_services(self) -> None:
+    def _ensure_api_services(self) -> None:
         """Attach compatibility API services used by legacy daemon routes."""
         llm_service_class, art_service_class = (
-            _get_headless_api_service_classes()
+            _get_api_service_classes()
         )
 
         if getattr(self, "llm", None) is None:
@@ -214,8 +214,8 @@ class HeadlessRuntimeMixin:
             )
         return self.lifecycle_service
 
-    def initialize_headless_lifecycle(self, preload_llm: bool = True) -> None:
-        """Initialize headless workers and optionally preload the local LLM."""
+    def initialize_lifecycle(self, preload_llm: bool = True) -> None:
+        """Initialize service workers and optionally preload the local LLM."""
         lifecycle_service = self.ensure_lifecycle_service()
         lifecycle_service.initialize()
         if preload_llm:
@@ -241,13 +241,13 @@ class HeadlessRuntimeMixin:
                 exc_info=True,
             )
 
-    def _initialize_headless_workers(self):
-        """Initialize essential workers for headless mode."""
+    def _initialize_workers(self):
+        """Initialize essential workers for service mode."""
         try:
             self.ensure_lifecycle_service().initialize()
         except Exception as exc:
             self.logger.error(
-                "Failed to initialize headless workers: %s",
+                "Failed to initialize service workers: %s",
                 exc,
                 exc_info=True,
             )
@@ -267,7 +267,7 @@ class HeadlessRuntimeMixin:
         return None
 
     def on_rag_load_documents_signal(self, data: Dict) -> None:
-        """Forward RAG document loading to the headless LLM worker."""
+        """Forward RAG document loading to the LLM worker."""
         try:
             self.logger.info("✓✓✓ RAG_LOAD_DOCUMENTS signal received in App!")
             self.logger.info(

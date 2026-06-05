@@ -61,19 +61,19 @@ class LocalFallbackTTSClient(_SignalRuntimeClient):
             raise ValueError("LocalFallbackTTSClient only supports invoke")
         invocation = TTSInvocationRequest.model_validate(request.payload)
         if self._tts_worker() is not None:
-            return self._invoke_headless_runtime(
+            return self._invoke_runtime(
                 request.request_id,
                 invocation,
             )
 
         return self._invoke_playback_runtime(request.request_id, invocation)
 
-    def _invoke_headless_runtime(
+    def _invoke_runtime(
         self,
         request_id: str,
         invocation: TTSInvocationRequest,
     ) -> ResponseEnvelope:
-        """Return audio from one headless runtime instead of local playback."""
+        """Return audio from one runtime instead of local playback."""
         audio_b64 = self._audio_payload(invocation)
         if audio_b64 is not None:
             return ResponseEnvelope(
@@ -220,7 +220,7 @@ class LocalFallbackTTSClient(_SignalRuntimeClient):
         self,
         invocation: TTSInvocationRequest,
     ) -> Optional[str]:
-        """Return base64 WAV audio when headless synthesis is available."""
+        """Return base64 WAV audio when synthesis is available."""
         audio_bytes = self._render_audio_bytes(invocation)
         if not audio_bytes:
             return None
@@ -230,7 +230,7 @@ class LocalFallbackTTSClient(_SignalRuntimeClient):
         self,
         invocation: TTSInvocationRequest,
     ) -> Optional[bytes]:
-        """Render one TTS request to WAV bytes in headless mode."""
+        """Render one TTS request to WAV bytes in service mode."""
         worker = self._tts_worker()
         manager = self._tts_manager(worker)
         request = self._tts_request(invocation, worker)
@@ -249,7 +249,7 @@ class LocalFallbackTTSClient(_SignalRuntimeClient):
         return getattr(worker_manager, "tts_generator_worker", None)
 
     def _tts_manager(self, worker):
-        """Return one loaded TTS manager from the headless worker."""
+        """Return one loaded TTS manager from the worker."""
         from airunner_services.contract_enums import ModelStatus
 
         if worker is None:

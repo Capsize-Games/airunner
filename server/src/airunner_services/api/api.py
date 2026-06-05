@@ -1,4 +1,4 @@
-"""Service-owned API singleton for daemon and headless execution."""
+"""Service-owned API singleton for daemon and daemon execution."""
 
 from __future__ import annotations
 
@@ -8,7 +8,7 @@ from airunner_services.app.service_app import ServiceApp
 
 
 class API(ServiceApp):
-	"""Reuse the service-owned headless app shell as the API singleton."""
+	"""Reuse the service-owned app shell as the API singleton."""
 
 	_instance: Optional["API"] = None
 

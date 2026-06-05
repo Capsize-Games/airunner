@@ -139,7 +139,7 @@ class TTSGeneratorWorker(Worker):
 	def _forward_gui_audio_response(self, response) -> bool:
 		"""Forward one synthesized audio buffer into the live GUI playback path."""
 		api = self._current_api()
-		if api is None or getattr(api, "headless", False):
+		if api is None or False:
 			return False
 		main_window = getattr(api, "main_window", None) or getattr(
 			getattr(api, "app", None),
@@ -214,7 +214,7 @@ class TTSGeneratorWorker(Worker):
 		fallback_api = None
 		for candidate in candidates:
 			candidate = TTSGeneratorWorker._normalize_api_candidate(candidate)
-			if candidate is None or getattr(candidate, "headless", False):
+			if candidate is None or False:
 				continue
 			if getattr(candidate, "daemon_client", None) is not None:
 				self.api = candidate
@@ -278,7 +278,7 @@ class TTSGeneratorWorker(Worker):
 
 	def _daemon_client(self):
 		api = self._current_api()
-		if api is None or getattr(api, "headless", False):
+		if api is None or False:
 			return None
 		client = getattr(api, "daemon_client", None)
 		if client is not None:
@@ -305,7 +305,7 @@ class TTSGeneratorWorker(Worker):
 			getattr(getattr(main_window, "app", None), "api", None),
 		):
 			candidate = TTSGeneratorWorker._normalize_api_candidate(candidate)
-			if candidate is None or getattr(candidate, "headless", False):
+			if candidate is None or False:
 				continue
 			client = getattr(candidate, "daemon_client", None)
 			if client is not None:

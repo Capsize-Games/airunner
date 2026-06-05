@@ -1,4 +1,4 @@
-"""Reusable lifecycle service for headless runtime supervision."""
+"""Reusable lifecycle service for runtime supervision."""
 
 from __future__ import annotations
 
@@ -25,7 +25,7 @@ WorkerManagerFactory = Callable[[], Any]
 
 
 class CoreLifecycleService:
-    """Manage worker lifecycle for headless and daemon execution."""
+    """Manage worker lifecycle for daemon execution."""
 
     def __init__(
         self,
@@ -233,7 +233,7 @@ class CoreLifecycleService:
             return
 
     def _resolve_preload_model_path(self) -> Optional[str]:
-        """Resolve and persist the model path used for headless preload."""
+        """Resolve and persist the model path used for preload."""
         try:
             return self._preload_settings_store.resolve_model_path()
         except Exception as exc:

@@ -1,4 +1,4 @@
-"""Service-owned headless application shell for daemon execution."""
+"""Service-owned application shell for daemon execution."""
 
 from __future__ import annotations
 
@@ -26,43 +26,27 @@ from airunner_services.utils.application.runtime_primitives import (
     QCoreApplication,
 )
 
-from airunner_services.app.headless_runtime_mixin import HeadlessRuntimeMixin
+from airunner_services.app.runtime_mixin import RuntimeMixin
 from airunner_services.runtimes.bootstrap import build_runtime_registry
 
 
-class ServiceApp(HeadlessRuntimeMixin, MediatorMixin):
-    """Minimal headless app shell used by service and daemon flows."""
+class ServiceApp(RuntimeMixin, MediatorMixin):
+    """Minimal app shell used by service and daemon flows."""
 
     def __init__(
         self,
-        *,
-        headless: bool = True,
-        no_splash: bool = True,
-        launcher_splash: object = None,
-        launcher_app: object = None,
-        start_headless_api_server: bool = True,
-        initialize_headless_lifecycle: bool = True,
         **_: object,
     ) -> None:
-        if not headless:
-            raise ValueError("ServiceApp only supports headless mode.")
-
-        self.headless = True
-        self.no_splash = no_splash
-        self._launcher_splash = launcher_splash
-        self._launcher_app = launcher_app
-        self._start_headless_api_server = start_headless_api_server
-        self._initialize_headless_lifecycle = initialize_headless_lifecycle
         self.signal_handlers = {}
         self._init_attributes()
         super().__init__()
         self.runtime_registry = build_runtime_registry(app_instance=self)
 
-        self._init_headless_mode()
+        self._init_service_mode()
         self._initialize_knowledge_system()
 
     def _init_attributes(self) -> None:
-        """Initialize service-owned attributes for headless execution."""
+        """Initialize service-owned attributes ."""
         configure_service_logging()
         self.logger = get_logger(__name__, level=AIRUNNER_LOG_LEVEL)
         self.app = None
@@ -99,7 +83,7 @@ class ServiceApp(HeadlessRuntimeMixin, MediatorMixin):
         code: EngineResponseCode,
         message: object,
     ) -> None:
-        """Emit one worker response for headless-compatible flows."""
+        """Emit one worker response for  flows."""
         self.emit_signal(
             SignalCode.ENGINE_RESPONSE_WORKER_RESPONSE_SIGNAL,
             {"code": code, "message": message},
@@ -174,7 +158,7 @@ class ServiceApp(HeadlessRuntimeMixin, MediatorMixin):
         self.emit_signal(SignalCode.QUIT_APPLICATION, {})
 
     def cleanup(self) -> None:
-        """Release headless resources owned by the service app shell."""
+        """Release resources owned by the service app shell."""
         if self._cleaned_up:
             return
 

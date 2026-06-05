@@ -136,7 +136,7 @@ class QCoreApplication(QObject):
 
     @classmethod
     def instance(cls) -> Optional["QCoreApplication"]:
-        """Return the currently active headless application instance."""
+        """Return the currently active application instance."""
         return cls._instance
 
     def processEvents(self) -> None:

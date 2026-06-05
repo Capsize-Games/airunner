@@ -1,4 +1,4 @@
-"""Service-owned application utilities used by headless and shared code."""
+"""Service-owned application utilities used by shared code."""
 
 from airunner_services.utils.application.api_reference import (
     api_from_qt_application,

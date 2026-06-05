@@ -1,4 +1,4 @@
-"""Service-owned worker container for daemon and headless execution."""
+"""Service-owned worker container for daemon and daemon execution."""
 
 from __future__ import annotations
 
@@ -40,7 +40,7 @@ class ServiceWorkerManager:
 
     @property
     def llm_generate_worker(self) -> Any:
-        """Return the shared LLM worker for headless orchestration."""
+        """Return the shared LLM worker for orchestration."""
         if self._llm_generate_worker is None:
             from airunner_services.workers.llm_generate_worker import (
                 LLMGenerateWorker,

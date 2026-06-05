@@ -260,8 +260,8 @@ def service_app(
         output_root=tmp_path / "generated-images",
     )
     app = ServiceApp(
-        start_headless_api_server=False,
-        initialize_headless_lifecycle=True,
+        start_embedded_api_server=False,
+        initialize_lifecycle=True,
     )
     try:
         yield app
@@ -271,7 +271,7 @@ def service_app(
 
 @pytest.mark.art_runtime_smoke
 @pytest.mark.integration
-def test_direct_art_runtime_bootstraps_headless_worker_only(
+def test_direct_art_runtime_bootstraps_worker_only(
     service_app: ServiceApp,
 ) -> None:
     """The direct art runtime can create the SD worker without HTTP."""

@@ -1,4 +1,4 @@
-"""Logging configuration helpers for headless service execution."""
+"""Logging configuration helpers for service execution."""
 
 from __future__ import annotations
 
