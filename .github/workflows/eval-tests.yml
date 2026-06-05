@@ -133,7 +133,7 @@ jobs:
       
       - name: Run eval tests
         run: |
-          pytest src/airunner/components/eval/tests/ \
+          pytest server/tests/eval/ \
             -v \
             -m eval \
             --timeout=300 \

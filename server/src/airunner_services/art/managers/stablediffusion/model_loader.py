@@ -19,32 +19,6 @@ def _get_controlnet_aux_models() -> Dict[str, Any]:
     return controlnet_aux_models
 
 
-class SomeModelClass:  # legacy test helper
-    def __init__(self, path):
-        self.path = path
-
-    def unload(self):
-        return True
-
-
-class SomeSchedulerClass:  # legacy test helper
-    pass
-
-
-class SomeControlNetClass:  # legacy test helper
-    pass
-
-
-class SomeCompelClass:  # legacy test helper
-    def __init__(self, *args, **kwargs):
-        pass
-
-
-class SomeDeepCacheClass:  # legacy test helper
-    def __init__(self, *args, **kwargs):
-        pass
-
-
 def load_scheduler(
     scheduler_name: str, path_settings, version: str, logger: Any
 ) -> Optional[SchedulerMixin]:
@@ -207,31 +181,3 @@ def unload_controlnet_processor(
         logger.info("Unloaded ControlNet processor.")
     except Exception as e:
         logger.warning(f"Failed to unload ControlNet processor: {e}")
-
-
-def load_model(path):
-    return SomeModelClass(path)
-
-
-def unload_model(model):
-    return model.unload()
-
-
-def load_controlnet(path):
-    return SomeControlNetClass()
-
-
-def load_compel(*args, **kwargs):
-    return SomeCompelClass(*args, **kwargs)
-
-
-def load_deep_cache(*args, **kwargs):
-    return SomeDeepCacheClass(*args, **kwargs)
-
-
-def load_scheduler(*args, **kwargs):
-    return SomeSchedulerClass()
-
-
-def unload_deep_cache(instance):
-    return instance.unload()
