@@ -19,7 +19,7 @@ export default function ArtPromptFooter({
       <div className="d-flex align-items-center gap-2">
         <div className="flex-grow-1">
           <ProgressBar
-            now={progress}
+            now={generating ? Math.max(progress, 2) : progress}
             variant={generating ? "info" : "secondary"}
             style={{ height: 8 }}
             animated={generating}

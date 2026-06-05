@@ -100,6 +100,7 @@ export default function ArtPromptPanel() {
         width: activeGridArea.width,
         height: activeGridArea.height,
       });
+      setPhase("completed");
       if (imageBase64 && canvasCtx) {
         canvasCtx.placeImageOnNewLayer(
           imageBase64,
