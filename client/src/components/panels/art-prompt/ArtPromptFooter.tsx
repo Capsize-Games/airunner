@@ -4,17 +4,18 @@ import LucideIcon from "../../shared/LucideIcon";
 export default function ArtPromptFooter({
   progress,
   generating,
+  indeterminate,
   hasPrompt,
   onSubmit,
   onCancel,
 }: {
   progress: number;
   generating: boolean;
+  indeterminate: boolean;
   hasPrompt: boolean;
   onSubmit: () => void;
   onCancel: () => void;
 }) {
-  const indeterminate = generating && progress === 0;
 
   return (
     <div className="flex-shrink-0 mt-2">

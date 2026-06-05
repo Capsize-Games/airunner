@@ -51,20 +51,52 @@ export default function ArtPromptPanel() {
     cancel: artCancel,
   } = useArtWebSocket();
 
-  const [showCompleteToast, setShowCompleteToast] = useState(false);
-  const wasGeneratingRef = useRef(generating);
+  type Phase =
+    | "idle" | "loading" | "generating"
+    | "completed" | "cancelled" | "failed";
 
+  const [phase, setPhase] = useState<Phase>("idle");
+  const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Track generation phase based on generating/progress transitions
+  const prevGenerating = useRef(generating);
   useEffect(() => {
-    if (wasGeneratingRef.current && !generating && progress >= 100) {
-      setShowCompleteToast(true);
-      const t = setTimeout(() => setShowCompleteToast(false), 3000);
-      return () => clearTimeout(t);
+    if (generating && progress === 0 && phase === "idle") {
+      setPhase("loading");
+    } else if (generating && progress > 0) {
+      setPhase("generating");
+    } else if (!generating && prevGenerating.current) {
+      if (progress >= 100) {
+        setPhase("completed");
+      } else {
+        // Could be cancelled or failed — distinguish below
+      }
     }
-    wasGeneratingRef.current = generating;
-  }, [generating, progress]);
+    prevGenerating.current = generating;
+  }, [generating, progress, phase]);
+
+  // Auto-dismiss status messages after a few seconds
+  useEffect(() => {
+    if (
+      phase === "completed" ||
+      phase === "cancelled" ||
+      phase === "failed"
+    ) {
+      if (hideTimer.current) clearTimeout(hideTimer.current);
+      hideTimer.current = setTimeout(() => {
+        setPhase("idle");
+      }, 4000);
+    }
+    return () => {
+      if (hideTimer.current) clearTimeout(hideTimer.current);
+    };
+  }, [phase]);
+
+  const indeterminate = phase === "loading";
 
   const onGenerate = useCallback(async () => {
     if (!prompt.trim()) return;
+    setPhase("loading");
     const ls = (k: string) => {
       try { return localStorage.getItem(k) || ""; } catch { return ""; }
     };
@@ -96,8 +128,10 @@ export default function ArtPromptPanel() {
           activeGridArea.height,
         );
       }
-    } catch {
-      // generation failed or cancelled
+    } catch (err) {
+      const msg =
+        err instanceof Error ? err.message : String(err);
+      setPhase(msg === "Cancelled" ? "cancelled" : "failed");
     }
   }, [prompt, negativePrompt, activeGridArea, canvasCtx, artGenerate]);
 
@@ -242,34 +276,102 @@ export default function ArtPromptPanel() {
           loras={activeLoras}
           onDeactivate={deactivateLora}
         />
-        {showCompleteToast && (
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 6,
-              marginBottom: 6,
-              padding: "4px 8px",
-              borderRadius: 4,
-              background: "rgba(40,167,69,0.15)",
-              border: "1px solid rgba(40,167,69,0.3)",
-              color: "#28a745",
-              fontSize: 12,
-              lineHeight: 1.4,
-            }}
-          >
-            <LucideIcon name="circle-check" size={14} />
-            <span>Image generated</span>
-          </div>
+        {(phase === "loading" ||
+          phase === "generating" ||
+          phase === "completed" ||
+          phase === "cancelled" ||
+          phase === "failed") && (
+          <StatusBadge phase={phase} progress={progress} />
         )}
         <ArtPromptFooter
           progress={progress}
           generating={generating}
+          indeterminate={indeterminate}
           hasPrompt={!!prompt.trim()}
           onSubmit={onGenerate}
           onCancel={onCancel}
         />
       </div>
+    </div>
+  );
+}
+
+/* ── Inline status badge component ── */
+
+const STATUS_CFG: Record<
+  string,
+  { icon: string; label: string; bg: string; border: string; color: string }
+> = {
+  loading: {
+    icon: "sparkles",
+    label: "Loading model…",
+    bg: "rgba(99,153,255,0.12)",
+    border: "rgba(99,153,255,0.25)",
+    color: "#6399ff",
+  },
+  generating: {
+    icon: "sparkles",
+    label: "",
+    bg: "rgba(99,153,255,0.12)",
+    border: "rgba(99,153,255,0.25)",
+    color: "#6399ff",
+  },
+  completed: {
+    icon: "circle-check",
+    label: "Image generated",
+    bg: "rgba(40,167,69,0.15)",
+    border: "rgba(40,167,69,0.3)",
+    color: "#28a745",
+  },
+  cancelled: {
+    icon: "circle-x",
+    label: "Cancelled generation",
+    bg: "rgba(255,193,7,0.15)",
+    border: "rgba(255,193,7,0.3)",
+    color: "#ffc107",
+  },
+  failed: {
+    icon: "circle-x",
+    label: "Failed generation",
+    bg: "rgba(220,53,69,0.15)",
+    border: "rgba(220,53,69,0.3)",
+    color: "#dc3545",
+  },
+};
+
+function StatusBadge({
+  phase,
+  progress,
+}: {
+  phase: string;
+  progress: number;
+}) {
+  const cfg = STATUS_CFG[phase];
+  if (!cfg) return null;
+
+  const label =
+    phase === "generating"
+      ? `Generating… ${Math.round(progress)}%`
+      : cfg.label;
+
+  return (
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: 6,
+        marginBottom: 6,
+        padding: "4px 8px",
+        borderRadius: 4,
+        background: cfg.bg,
+        border: `1px solid ${cfg.border}`,
+        color: cfg.color,
+        fontSize: 12,
+        lineHeight: 1.4,
+      }}
+    >
+      <LucideIcon name={cfg.icon} size={14} />
+      <span>{label}</span>
     </div>
   );
 }
