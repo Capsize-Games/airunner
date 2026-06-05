@@ -1,20 +1,17 @@
 """Internal helpers for FastAPI app setup — imported by server.py."""
 
 from __future__ import annotations
+
 import os
 import secrets
 from typing import Any
+
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
+
 from airunner_services.data.tenant import reset_tenant_key, set_tenant_key
 from airunner_services.runtimes.bootstrap import build_runtime_registry
-from .server import (
-    _resolve_lifecycle_service,
-    _resolve_runtime_registry,
-    is_loopback_request,
-    logger,
-)
 
 _api_key_cfg: dict = {}
 
@@ -34,6 +31,8 @@ def _attach_existing_registry(app: FastAPI, app_instance: Any) -> bool:
 
 def _build_and_attach_registry(app: FastAPI, app_instance: Any) -> None:
     """Build and attach a new runtime registry."""
+    from .server import logger, _resolve_runtime_registry
+
     try:
         app.state.runtime_registry = build_runtime_registry(
             app_instance=app_instance,
@@ -57,6 +56,8 @@ def _build_and_attach_registry(app: FastAPI, app_instance: Any) -> None:
 
 def _setup_registry_and_lifecycle(app: FastAPI, app_instance: Any) -> None:
     """Attach runtime registry and lifecycle service to app state."""
+    from .server import _resolve_lifecycle_service
+
     if not _attach_existing_registry(app, app_instance):
         _build_and_attach_registry(app, app_instance)
     if app_instance:
@@ -144,6 +145,8 @@ def _resolve_request_api_key(request: Request) -> str:
 
 async def _tenant_middleware_impl(request: Request, call_next):
     """Scope DB operations to the request's tenant/namespace."""
+    from .server import is_loopback_request
+
     header_value = _request_tenant_key(request)
     tenant_key: str | None = None
     if header_value:
@@ -211,6 +214,8 @@ def update_api_key_config() -> None:
 
 
 def _mount_static_files(app: FastAPI) -> None:
+    from .server import logger
+
     static_dir = os.environ.get("AIRUNNER_STATIC_DIR", "").strip()
     if not static_dir:
         return
