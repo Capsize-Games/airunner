@@ -20,7 +20,6 @@ def _qsettings_value(
 ):
     """Read a value from QSettings, falling back to the provided default."""
     try:
-        from PySide6.QtCore import QSettings
         from airunner.utils.settings.get_qsettings import get_qsettings
 
         settings = get_qsettings()

@@ -74,7 +74,7 @@ Now solve the problem:
             Dict with solution, code, result, success
         """
         if verbose:
-            print(f"🐍 Requesting Python code solution...")
+            print("🐍 Requesting Python code solution...")
 
         code_prompt = self._create_code_prompt(prompt)
 
@@ -114,7 +114,7 @@ Now solve the problem:
     ) -> Dict[str, Any]:
         """Create result when no code is found."""
         if verbose:
-            print(f"⚠️  No code block found in response")
+            print("⚠️  No code block found in response")
         return {
             "success": False,
             "solution": solution_text,
@@ -443,7 +443,7 @@ Answer:"""
             Dict with solution and metadata
         """
         if verbose:
-            print(f"🔬 Attempting hybrid solution: Code + Verification")
+            print("🔬 Attempting hybrid solution: Code + Verification")
 
         code_result = self.solve_with_code(prompt, temperature, verbose)
 
@@ -451,7 +451,7 @@ Answer:"""
             return self._create_code_result_dict(code_result)
 
         if verbose:
-            print(f"⚠️  Code solution failed, trying verification loop...")
+            print("⚠️  Code solution failed, trying verification loop...")
 
         verification_result = self.solve_with_verification(
             prompt, expected_answer, temperature, verbose

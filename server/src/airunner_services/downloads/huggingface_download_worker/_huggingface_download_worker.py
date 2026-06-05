@@ -1,6 +1,7 @@
 """Worker for HuggingFace model downloads using Python threading."""
 
-import os, threading
+import os
+import threading
 from pathlib import Path
 
 from airunner_services.contract_enums import SignalCode

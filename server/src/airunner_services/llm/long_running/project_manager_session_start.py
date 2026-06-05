@@ -9,7 +9,6 @@ from sqlalchemy.orm import Session
 
 from airunner_services.database.models.project_state import (
     FeatureStatus,
-    ProjectFeature,
     SessionState,
 )
 from airunner_services.database.session import session_scope

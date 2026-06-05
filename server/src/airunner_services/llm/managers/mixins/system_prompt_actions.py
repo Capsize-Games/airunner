@@ -12,7 +12,6 @@ from airunner_services.llm.managers.mixins.system_prompt_action_text import (
     START_WORKFLOW_FORCE_PROMPT,
 )
 from airunner_services.llm.managers.mixins.system_prompt_context import (
-    augment_custom_system_prompt,
     build_research_mode_prompt,
     build_system_prompt_for_action,
     get_prompt_mode,

@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import asyncio
 import json
 from typing import Any, Callable, Iterable, Optional
 from urllib.error import HTTPError, URLError
@@ -26,7 +25,6 @@ from airunner_services.runtimes.registry import RuntimeRoute
 from airunner_services.runtimes.sidecar_launcher import SidecarLauncher
 from airunner_services.runtimes.websocket_transport import (
 	SidecarWebSocketTransport,
-	WebSocketTransportDisconnected,
 )
 
 DEFAULT_PROVIDER = "local"
@@ -173,7 +171,6 @@ class SidecarLLMClient(RuntimeClient):
 		Raises immediately when the WebSocket connection cannot be
 		established -- no HTTP fallback.
 		"""
-		messages = load_message_types()
 		invocation = LLMInvocationRequest.model_validate(request.payload)
 		try:
 			self._prepare_launcher(self._runtime_profile(invocation))

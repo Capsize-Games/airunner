@@ -228,7 +228,7 @@ class ModelScannerWorker(Worker):
         Returns:
             ScannedModel if valid model file, None otherwise.
         """
-        if not path.suffix.lower() in MODEL_EXTENSIONS:
+        if path.suffix.lower() not in MODEL_EXTENSIONS:
             return None
 
         # Remove extension to get model name

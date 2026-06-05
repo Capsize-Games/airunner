@@ -129,11 +129,6 @@ class StreamingMixin:
                             ]
                             # Yield only the ones we haven't yielded yet
                             for i in range(last_yielded_count, ai_message_count):
-                                content_preview = (
-                                    ai_messages[i].content[:100]
-                                    if ai_messages[i].content
-                                    else "(empty)"
-                                )
                                 # Attach current mood to AI message for system prompt retrieval
                                 # Use getattr with defaults to avoid AttributeError
                                 current_mood = getattr(

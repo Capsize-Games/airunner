@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import base64
-from queue import Queue
+from queue import Empty, Queue
 from typing import Any, Optional
 
 from airunner_services.ipc.messages import (
@@ -19,7 +19,6 @@ from airunner_services.runtimes.local_fallback._base import (
     DEFAULT_PROVIDER,
     DEFAULT_TIMEOUT_SECONDS,
     HealthProvider,
-    _build_signal_mediator,
     _build_stt_service,
     _resolve_model_type,
     _SignalRuntimeClient,

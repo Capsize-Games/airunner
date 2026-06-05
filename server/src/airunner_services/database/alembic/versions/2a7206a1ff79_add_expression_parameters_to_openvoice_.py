@@ -8,8 +8,7 @@ Create Date: 2025-12-01 09:12:18.067121
 from typing import Sequence, Union
 
 from alembic import op
-import sqlalchemy as sa
-from airunner_services.database.db import add_column, column_exists
+from airunner_services.database.db import add_column
 from airunner_services.database.models.openvoice_settings import (
     OpenVoiceSettings,
 )

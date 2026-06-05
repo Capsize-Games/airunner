@@ -10,7 +10,7 @@ import os
 from typing import Dict
 
 import torch
-from airunner_services.art.runtime_enums import GeneratorSection, ModelStatus
+from airunner_services.art.runtime_enums import ModelStatus
 from airunner_services.settings import AIRUNNER_ADD_WATER_MARK
 from airunner_services.art.runtime_memory import clear_memory
 
@@ -121,15 +121,6 @@ class SDPipelineManagementMixin:
 
         Determines pipeline type from loaded class and notifies API.
         """
-        pipeline_type = None
-        if self._pipe:
-            pipeline_class = self._pipe.__class__
-            if pipeline_class in self.txt2img_pipelines:
-                pipeline_type = GeneratorSection.TXT2IMG
-            elif pipeline_class in self.img2img_pipelines:
-                pipeline_type = GeneratorSection.IMG2IMG
-            elif pipeline_class in self.outpaint_pipelines:
-                pipeline_type = GeneratorSection.INPAINT
 
     def _move_pipe_to_device(self):
         """

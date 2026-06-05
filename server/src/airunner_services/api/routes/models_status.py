@@ -181,7 +181,6 @@ async def unload_model(
     ):
         from .art_runtime_control import (  # noqa: PLC0415
             build_control_request,
-            control_response,
         )
         from .art_runtime_registry import (  # noqa: PLC0415
             require_runtime_registry,

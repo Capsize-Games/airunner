@@ -26,7 +26,6 @@ from tqdm import tqdm
 
 from airunner_services.config.local_settings_store import get_setting
 from airunner_services.downloads.job_service import DownloadJobService
-from airunner_services.settings import MODELS_DIR
 
 
 # Terminal colors

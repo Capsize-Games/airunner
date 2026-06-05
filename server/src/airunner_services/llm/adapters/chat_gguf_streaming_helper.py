@@ -8,11 +8,6 @@ from langchain_core.callbacks import CallbackManagerForLLMRun
 from langchain_core.messages import BaseMessage
 from langchain_core.outputs import ChatGenerationChunk
 
-from airunner_services.llm.adapters.chat_gguf_streaming_common import (
-    finalize_native_tool_call_deltas,
-    merge_native_tool_call_deltas,
-    merge_streamed_text,
-)
 from airunner_services.llm.adapters.chat_gguf_streaming_gpt_oss import (
     _stream_raw_gpt_oss_completion,
 )

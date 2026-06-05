@@ -8,7 +8,6 @@ in the WebSocket transport integration tests.
 
 import asyncio
 import json
-import signal
 import subprocess
 import sys
 import threading
@@ -16,7 +15,6 @@ import time
 from pathlib import Path
 
 import pytest
-import websockets
 import websockets.asyncio.client as ws_client
 
 WS_PATH = "/api/v1/art/daemon/ws"

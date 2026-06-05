@@ -10,7 +10,7 @@ from airunner_services.llm.long_running.auto_wrapper_naming import (
     generate_project_name,
     sanitize_feature_name,
 )
-from airunner_services.llm.long_running.task_detector import TaskAnalysis, TaskType
+from airunner_services.llm.long_running.task_detector import TaskAnalysis
 
 
 logger = logging.getLogger(__name__)

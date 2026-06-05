@@ -33,7 +33,6 @@ from airunner_services.runtimes.sidecar_art_launcher import (
 from airunner_services.runtimes.websocket_transport import (
 	SidecarWebSocketTransport,
 	WebSocketTransportDisconnected,
-	WebSocketTransportError,
 	get_ws_event_loop,
 )
 

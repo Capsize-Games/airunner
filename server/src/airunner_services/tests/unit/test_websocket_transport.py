@@ -8,17 +8,15 @@ from __future__ import annotations
 
 import asyncio
 import json
-from typing import Any, Callable, Optional
+from typing import Any, Optional
 
 import pytest
-import websockets
 from websockets.asyncio.server import serve as ws_serve
 from websockets.asyncio.server import ServerConnection
 
 from airunner_services.ipc.messages import (
     EnvelopeStatus,
     RequestEnvelope,
-    ResponseEnvelope,
 )
 from airunner_services.runtimes.websocket_transport import (
     SidecarWebSocketTransport,

@@ -6,8 +6,8 @@ import os
 import time
 from typing import Any, Callable, Optional
 
-from airunner_services.contract_enums import ModelService, ModelStatus, SignalCode
-from airunner_services.settings import AIRUNNER_DEFAULT_LLM_HF_PATH, AIRUNNER_LOG_LEVEL
+from airunner_services.contract_enums import ModelStatus, SignalCode
+from airunner_services.settings import AIRUNNER_LOG_LEVEL
 from airunner_services.utils.application import get_logger
 from airunner_services.utils.application.create_worker import create_worker
 from airunner_services.utils.application.log_hygiene import fingerprint_value

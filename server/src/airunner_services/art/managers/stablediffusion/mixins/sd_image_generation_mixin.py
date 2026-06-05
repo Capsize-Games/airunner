@@ -18,7 +18,6 @@ from airunner_services.art.managers.stablediffusion.image_response import (
 )
 from airunner_services.art.runtime_enums import (
     HandlerState,
-    EngineResponseCode,
 )
 from airunner_services.settings import AIRUNNER_CUDA_OUT_OF_MEMORY_MESSAGE
 from airunner_services.art.runtime_memory import clear_memory
@@ -180,7 +179,6 @@ class SDImageGenerationMixin:
 
                 self._current_state = HandlerState.PREPARING_TO_GENERATE
                 response = None
-                code = EngineResponseCode.NONE
                 try:
                     response = ImageResponse(
                         images=images,
@@ -189,18 +187,15 @@ class SDImageGenerationMixin:
                         is_outpaint=self.is_outpaint,
                         node_id=self.image_request.node_id,
                     )
-                    code = EngineResponseCode.IMAGE_GENERATED
 
                 except PipeNotLoadedException as e:
                     self.logger.error(e)
                 except InterruptedException:
-                    code = EngineResponseCode.INTERRUPTED
+                    pass
                 except Exception as e:
-                    code = EngineResponseCode.ERROR
                     error_message = f"Error generating image: {e}"
                     response = error_message
                     if _is_out_of_memory_error(e):
-                        code = EngineResponseCode.INSUFFICIENT_GPU_MEMORY
                         response = AIRUNNER_CUDA_OUT_OF_MEMORY_MESSAGE
                     self.logger.error(error_message)
                 if self.image_request.callback:
@@ -242,7 +237,7 @@ class SDImageGenerationMixin:
                     if isinstance(img, Image.Image):
                         img_array = np.array(img)
                         self.logger.info(
-                            f"[PIPELINE DEBUG] Image type: PIL Image"
+                            "[PIPELINE DEBUG] Image type: PIL Image"
                         )
                         self.logger.info(
                             f"[PIPELINE DEBUG] Image shape: {img_array.shape}"

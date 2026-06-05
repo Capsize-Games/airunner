@@ -19,7 +19,6 @@ from airunner_services.runtimes.local_fallback._base import (
     DEFAULT_PROVIDER,
     DEFAULT_TIMEOUT_SECONDS,
     HealthProvider,
-    _build_signal_mediator,
     _build_tts_service,
     _model_status_value,
     _resolve_model_type,

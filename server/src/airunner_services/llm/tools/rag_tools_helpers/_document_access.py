@@ -7,9 +7,6 @@ from typing import Any
 from airunner_services.llm.tools.rag_tools_helpers._document_splitting import (
     extract_document_structure_headings,
 )
-from airunner_services.llm.tools.rag_tools_helpers._result_formatting import (
-    infer_filename_details,
-)
 
 
 def coerce_active_values(values: Any) -> list[str]:

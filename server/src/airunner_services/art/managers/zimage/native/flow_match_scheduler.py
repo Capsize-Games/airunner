@@ -13,7 +13,6 @@ from dataclasses import dataclass
 from typing import Optional, Tuple, Union
 
 import torch
-import numpy as np
 
 
 @dataclass

@@ -33,7 +33,6 @@ _MODEL_TYPE_ALIASES = {
     "TEXTUAL EMBEDDING": "TextualInversion",
     "TEXTUALINVERSION": "TextualInversion",
     "TEXTUAL INVERSION": "TextualInversion",
-    "CHECKPOINT": "Checkpoint",
     "ADAPTER": "LORA",
     "CONTROLNET": "LORA",
 }

@@ -157,7 +157,7 @@ class DatabaseCheckpointSaver(BaseCheckpointSaver):
                     )
                 elif checkpoint_count == existing_langchain_count:
                     self.logger.info(
-                        f"✅ No new messages to save (checkpoint matches DB count)"
+                        "✅ No new messages to save (checkpoint matches DB count)"
                     )
                 # CRITICAL: Use conversation_id as thread_id to prevent contamination
                 # between different conversations (e.g., in tests)

@@ -1,6 +1,6 @@
 """Service-owned sound settings model."""
 
-from sqlalchemy import Column, Integer, String
+from sqlalchemy import Column, Integer
 
 from airunner_services.database.base import BaseModel
 

@@ -9,15 +9,11 @@ Based on ComfyUI's comfy/text_encoders/z_image.py implementation.
 
 from __future__ import annotations
 
-import gc
 import logging
 from typing import Dict, List, Optional, Tuple, Union
 
 import torch
 import torch.nn as nn
-from transformers import (
-    AutoModel,
-)
 
 from airunner_services.art.managers.zimage.native.zimage_text_encoder_loader_helper import (
     ZImageTextEncoderLoaderHelper,

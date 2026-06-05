@@ -7,8 +7,6 @@ Create Date: 2025-11-28 07:40:37.588168
 """
 from typing import Sequence, Union
 
-from alembic import op
-import sqlalchemy as sa
 
 from airunner_services.database.db import add_column, drop_column
 from airunner_services.database.models.llm_generator_settings import (

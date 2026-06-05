@@ -11,7 +11,7 @@ from airunner_services.settings import AIRUNNER_LOG_LEVEL
 from airunner_services.utils.application import get_logger
 
 if TYPE_CHECKING:
-    from airunner_services.llm.workflow_manager import WorkflowState
+    pass
 
 
 class WorkflowBuildingMixin:

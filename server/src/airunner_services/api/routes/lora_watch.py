@@ -8,7 +8,6 @@ Each detected change pushes a ``reload`` event via ``WsEventBus``.
 
 from __future__ import annotations
 
-import json
 import logging
 from pathlib import Path
 

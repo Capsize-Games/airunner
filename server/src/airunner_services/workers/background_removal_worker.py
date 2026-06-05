@@ -162,7 +162,7 @@ class BackgroundRemovalWorker(Worker):
             self._persist_output(layer_id, output_binary)
             self._refresh_canvas()
             self._mark_model_ready()
-        except Exception as exc:
+        except Exception:
             self._mark_model_failed()
 
     def _request_model_download(

@@ -1,6 +1,5 @@
 """Single-file download with HTTP range-request resume support."""
 
-from pathlib import Path
 import requests
 from airunner_services.contract_enums import SignalCode
 

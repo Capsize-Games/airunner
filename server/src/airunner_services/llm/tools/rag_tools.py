@@ -202,7 +202,7 @@ def search_knowledge_base_documents(
                     )
                     for d in candidate_dirs:
                         if not d:
-                            logger.debug(f"Skipping empty candidate dir")
+                            logger.debug("Skipping empty candidate dir")
                             continue
                         d = os.path.expanduser(d)
                         if not os.path.exists(d):
@@ -363,7 +363,7 @@ def search_knowledge_base_documents(
 
             if not docs:
                 logger.info(
-                    f"[KB SEARCH] No docs found after all discovery attempts. Returning error message."
+                    "[KB SEARCH] No docs found after all discovery attempts. Returning error message."
                 )
                 return (
                     "No documents found in knowledge base. "

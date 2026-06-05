@@ -10,7 +10,6 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 import shutil
 import socket
 import threading
-import time
 from pathlib import Path
 from types import SimpleNamespace
 

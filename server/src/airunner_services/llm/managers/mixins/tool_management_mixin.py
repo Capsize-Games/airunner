@@ -44,7 +44,7 @@ class ToolManagementMixin:
             self._bind_tools_to_model()
         elif self._tools:
             self.logger.warning(
-                f"Chat model does not support bind_tools() - tools will not be available"
+                "Chat model does not support bind_tools() - tools will not be available"
             )
 
     def _unbind_tools_from_model(self) -> None:

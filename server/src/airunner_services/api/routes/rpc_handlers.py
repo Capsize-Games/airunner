@@ -12,7 +12,6 @@ These replace the existing FastAPI HTTP route functions — callers
 from __future__ import annotations
 
 import asyncio
-import json
 import logging
 from pathlib import Path
 from typing import Any
@@ -255,15 +254,15 @@ async def _rpc_canvas_layers_list(body: dict, **kwargs: Any) -> dict[str, Any]:
                 "body": {
                     "layers": [
                         {
-                            "id": l.id,
-                            "name": str(l.name) if l.name else "",
-                            "visible": bool(l.visible),
-                            "locked": bool(l.locked),
-                            "order": int(l.order),
-                            "opacity": float(l.opacity),
-                            "blend_mode": str(l.blend_mode) if l.blend_mode else "normal",
+                            "id": layer.id,
+                            "name": str(layer.name) if layer.name else "",
+                            "visible": bool(layer.visible),
+                            "locked": bool(layer.locked),
+                            "order": int(layer.order),
+                            "opacity": float(layer.opacity),
+                            "blend_mode": str(layer.blend_mode) if layer.blend_mode else "normal",
                         }
-                        for l in layers
+                        for layer in layers
                     ]
                 },
             }
@@ -280,7 +279,6 @@ async def _rpc_settings_singleton(body: dict, **kw: Any) -> dict[str, Any]:
     pp: dict = kw.get("path_params", {})
     resource_name = pp.get("name", "")
     try:
-        from airunner_services.database.models import ResourceStoreItem
         from airunner_services.database.session import session_scope
         from airunner_services.settings import resource_store_table
 
@@ -304,7 +302,6 @@ async def _rpc_settings_singleton_update(body: dict, **kw: Any) -> dict[str, Any
     resource_name = pp.get("name", "")
     values: dict = body.get("values", {})
     try:
-        from airunner_services.database.models import ResourceStoreItem
         from airunner_services.database.session import session_scope
         from airunner_services.settings import resource_store_table
 
@@ -330,7 +327,6 @@ async def _rpc_settings_query(body: dict, **kw: Any) -> dict[str, Any]:
     pp: dict = kw.get("path_params", {})
     resource_name = pp.get("name", "")
     try:
-        from airunner_services.database.models import ResourceStoreItem
         from airunner_services.database.session import session_scope
         from airunner_services.settings import resource_store_table
 
@@ -352,7 +348,6 @@ async def _rpc_settings_first(body: dict, **kw: Any) -> dict[str, Any]:
     pp: dict = kw.get("path_params", {})
     resource_name = pp.get("name", "")
     try:
-        from airunner_services.database.models import ResourceStoreItem
         from airunner_services.database.session import session_scope
         from airunner_services.settings import resource_store_table
 
@@ -381,12 +376,12 @@ async def _rpc_loras_list(body: dict, **kw: Any) -> dict[str, Any]:
                 "body": {
                     "loras": [
                         {
-                            "id": l.id, "name": l.name or "",
-                            "path": l.path or "", "enabled": bool(l.enabled),
-                            "trigger_words": l.trigger_words or [],
-                            "weight": float(l.weight) if l.weight else 1.0,
+                            "id": item.id, "name": item.name or "",
+                            "path": item.path or "", "enabled": bool(item.enabled),
+                            "trigger_words": item.trigger_words or [],
+                            "weight": float(item.weight) if item.weight else 1.0,
                         }
-                        for l in items
+                        for item in items
                     ]
                 },
             }
@@ -651,7 +646,6 @@ async def _rpc_art_bootstrap(body: dict, **kw: Any) -> dict[str, Any]:
 @_rpc_register("GET", "/api/v1/art/images/dates")
 async def _rpc_images_dates(body: dict, **kw: Any) -> dict[str, Any]:
     """List image date directories."""
-    from airunner_services.api.routes.images import _list_image_files
     root = Path(AIRUNNER_BASE_PATH) / "art" / "other" / "images"
     dates: list[dict[str, str]] = []
     if root.is_dir():

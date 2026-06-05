@@ -14,7 +14,7 @@ from airunner_services.llm.managers.mixins.model_availability_mixin import (
 from airunner_services.model_management.model_resource_manager import (
     ModelResourceManager,
 )
-from airunner_services.contract_enums import ModelType, SignalCode
+from airunner_services.contract_enums import SignalCode
 
 if TYPE_CHECKING:
     from airunner_services.model_management.llm_model_manager import (

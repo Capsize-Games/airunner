@@ -253,7 +253,7 @@ def load_formatted_conversation_history(
 
 def _message_name(
     *,
-    conversation: Conversation,
+    conversation: "Conversation",  # noqa: F821
     message: dict[str, Any],
     is_bot: bool,
 ) -> str:

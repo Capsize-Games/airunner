@@ -3,8 +3,10 @@ from __future__ import annotations
 
 import base64
 import io
-from queue import Queue
+from queue import Empty, Queue
 from typing import Any, Callable, Optional
+
+from PIL import Image
 
 from airunner_services.ipc.messages import (
     EnvelopeStatus,
@@ -21,10 +23,9 @@ from airunner_services.runtimes.art_daemon_runtime_settings import (
 )
 from airunner_services.runtimes.local_fallback._base import (
     DEFAULT_PROVIDER,
+    HealthProvider,
     ProgressCallback,
     _build_art_service,
-    _build_signal_mediator,
-    _model_status_value,
     _resolve_art_active_rect,
     _resolve_art_generator_section,
     _resolve_art_operation,

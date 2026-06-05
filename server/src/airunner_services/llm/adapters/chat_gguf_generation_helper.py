@@ -13,9 +13,6 @@ from airunner_services.llm.adapters.chat_gguf_generation_request import (
     chat_completion_kwargs,
     generate_raw_gpt_oss_result,
 )
-from airunner_services.llm.gpt_oss_parser import (
-    has_gpt_oss_markup,
-)
 from airunner_services.llm.adapters.chat_gguf_response_message import (
     response_message,
 )

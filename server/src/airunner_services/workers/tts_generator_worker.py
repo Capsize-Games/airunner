@@ -783,7 +783,7 @@ class TTSGeneratorWorker(Worker):
 			return
 		self.logger.debug("Generating TTS...")
 
-		if type(message) == dict:
+		if isinstance(message, dict):
 			message = message.get("message", "")
 
 		message = FormatterExtended.to_speakable_text(message)

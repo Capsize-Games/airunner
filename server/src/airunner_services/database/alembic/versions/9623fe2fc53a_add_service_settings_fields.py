@@ -9,7 +9,6 @@ Create Date: 2025-10-28 12:20:40.496296
 from typing import Sequence, Union
 
 from alembic import op
-import sqlalchemy as sa
 from airunner_services.database.db import add_column
 from airunner_services.database.models.application_settings import (
     ApplicationSettings,

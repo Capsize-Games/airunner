@@ -4,9 +4,6 @@ import gc
 
 from diffusers import StableDiffusionUpscalePipeline
 
-from airunner_services.model_management.model_manager_interface import (
-    ModelManagerInterface,
-)
 from airunner_services.art.managers.stablediffusion.base_diffusers_model_manager import (
     BaseDiffusersModelManager,
 )

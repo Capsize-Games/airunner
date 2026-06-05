@@ -10,6 +10,8 @@ from __future__ import annotations
 import logging
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
+from PIL import Image
+
 import torch
 import torch.nn as nn
 

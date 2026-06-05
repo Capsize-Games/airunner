@@ -146,10 +146,6 @@ def convert_binary_to_image(binary_data) -> Image:  # type: ignore[override]
     validated = _validate_or_none(binary_data)
     if validated is None:
         # Debug trace for invalid header
-        try:
-            snippet = binary_data[:16]
-        except Exception:
-            pass
         return None
 
     try:

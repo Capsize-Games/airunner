@@ -9,11 +9,6 @@ from airunner_services.llm.tools.rag_tools_helpers._structured_document_renderin
     build_structured_document_analysis_prompt as render_analysis_prompt,
     format_structured_document_analysis as render_analysis_payload,
 )
-from airunner_services.llm.tools.rag_tools_helpers._structured_premise_candidates import (
-    build_structured_premise_candidate_spans,
-    build_structured_premise_evidence_prompt,
-    format_structured_premise_evidence_documents,
-)
 
 
 StructuredAnalyses = list[dict[str, str]]

@@ -19,7 +19,6 @@ from airunner_services.llm.adapters.chat_model_factory_local_gguf_resolution imp
     local_gguf_state,
     resolve_gguf_path,
     resolved_local_model_id,
-    resolve_local_model_id,
     supports_local_gguf,
 )
 from airunner_services.llm.config.provider_config import LLMProviderConfig

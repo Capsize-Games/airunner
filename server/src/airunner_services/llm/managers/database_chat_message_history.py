@@ -15,7 +15,6 @@ from airunner_services.llm.thinking_parser import (
     extract_thinking_and_response,
     normalize_thinking_content,
     strip_stored_thinking_prefix,
-    strip_thinking_tags,
 )
 from airunner_services.llm.gpt_oss_parser import (
     has_gpt_oss_markup,

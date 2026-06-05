@@ -52,7 +52,6 @@ import websockets
 from websockets.asyncio.server import serve as ws_serve
 from websockets.asyncio.server import ServerConnection
 
-from airunner_services.ipc.messages import EnvelopeStatus
 from airunner_services.settings import AIRUNNER_LOG_LEVEL
 from airunner_services.utils.application import get_logger
 

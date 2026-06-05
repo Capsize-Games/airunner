@@ -199,7 +199,6 @@ class SidecarSTTClient(RuntimeClient):
         Raises immediately when the WebSocket connection cannot be
         established -- no HTTP fallback.
         """
-        messages = load_message_types()
         invocation = STTInvocationRequest.model_validate(request.payload)
         try:
             audio_bytes = base64.b64decode(

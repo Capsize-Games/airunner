@@ -1,6 +1,5 @@
 """Integration tests for RPC dispatch infrastructure."""
 
-import asyncio
 import pytest
 from airunner_services.api.routes.events import (
     _rpc_routes,

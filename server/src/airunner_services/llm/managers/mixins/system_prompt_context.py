@@ -8,7 +8,6 @@ from typing import List, Optional
 from airunner_services.contract_enums import LLMActionType
 from airunner_services.llm.core.tool_registry import ToolCategory
 from airunner_services.llm.managers.mixins.system_prompt_mood import (
-    get_current_mood,
     get_mood_section,
 )
 from airunner_services.llm.managers.mixins.system_prompt_text import (

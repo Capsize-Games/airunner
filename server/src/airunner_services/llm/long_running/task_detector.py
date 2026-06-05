@@ -28,7 +28,6 @@ from airunner_services.llm.long_running.task_detector_state import (
     reason_text,
 )
 from airunner_services.llm.long_running.task_detector_patterns import (
-    CODING_PROJECT_KEYWORDS,
     MULTI_STEP_KEYWORDS,
 )
 

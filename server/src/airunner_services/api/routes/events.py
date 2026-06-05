@@ -28,12 +28,10 @@ from __future__ import annotations
 
 import asyncio
 import functools
-import json
 import logging
 import queue
 import re
 import threading
-import uuid
 from collections import defaultdict
 from typing import Any, Callable
 
@@ -406,4 +404,4 @@ async def unified_events(websocket: WebSocket) -> None:
 
 # ── Import RPC handlers so their @_rpc_register decorators run ──────────
 # This ensures the dispatch table is populated at module load time.
-from airunner_services.api.routes import rpc_handlers  # noqa: F401, PLC0415
+from airunner_services.api.routes import rpc_handlers  # noqa: E402, F401, PLC0415

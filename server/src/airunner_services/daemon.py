@@ -35,16 +35,16 @@ def _configure_daemon_environment() -> None:
 
 _configure_daemon_environment()
 
-from logging.handlers import RotatingFileHandler
+from logging.handlers import RotatingFileHandler  # noqa: E402
 
-from airunner_services.runtimes.daemon_config import DaemonConfig
-from airunner_services.api.server import APIServer
-from airunner_services.app import ServiceApp
-from airunner_services.model_management.model_resource_manager import (
+from airunner_services.runtimes.daemon_config import DaemonConfig  # noqa: E402
+from airunner_services.api.server import APIServer  # noqa: E402
+from airunner_services.app import ServiceApp  # noqa: E402
+from airunner_services.model_management.model_resource_manager import (  # noqa: E402
     ModelResourceManager,
 )
-from airunner_services.settings import AIRUNNER_LOG_LEVEL
-from airunner_services.utils.application import get_logger
+from airunner_services.settings import AIRUNNER_LOG_LEVEL  # noqa: E402
+from airunner_services.utils.application import get_logger  # noqa: E402
 
 logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 App = ServiceApp
@@ -345,9 +345,9 @@ class AIRunnerDaemon:
             if launcher is None:
                 continue
             name = str(route.runtime.value if hasattr(route.runtime, "value") else route.runtime)
-            def _launch(l=launcher, n=name):
+            def _launch(launcher_=launcher, n=name):
                 try:
-                    l.start()
+                    launcher_.start()
                     logger.info("%s sidecar daemon ready", n)
                 except Exception as exc:
                     logger.error("%s sidecar failed to start: %s", n, exc)

@@ -2,13 +2,11 @@
 
 from __future__ import annotations
 
+import json
 from typing import Callable, Optional
 
 from langchain_core.tools import tool
 
-from airunner_services.llm.managers.tools.autonomous_control_request_tools import (
-    build_request_user_input_tool,
-)
 from airunner_services.tools.base_tool import BaseTool
 
 

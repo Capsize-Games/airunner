@@ -38,7 +38,8 @@ def _yield_raw_gpt_oss_deltas(
     run_manager: Optional[CallbackManagerForLLMRun],
 ) -> Iterator[ChatGenerationChunk]:
     """Yield raw GPT-OSS deltas and return the completed raw text."""
-    full_content: list[str] = []; saw_visible_text = False
+    full_content: list[str] = []
+    saw_visible_text = False
     for chunk in adapter._llama.create_completion(**completion_kwargs):
         if adapter._interrupted:
             break

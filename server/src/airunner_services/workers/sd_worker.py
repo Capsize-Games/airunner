@@ -23,7 +23,6 @@ from airunner_services.model_management.x4_upscale_manager import (
 from airunner_services.model_management.zimage_model_manager import (
 	ZImageModelManager,
 )
-from airunner_services.contract_enums import EngineResponseCode
 from airunner_services.contract_enums import GeneratorSection
 from airunner_services.contract_enums import ModelStatus
 from airunner_services.contract_enums import ModelType

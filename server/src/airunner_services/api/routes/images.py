@@ -11,12 +11,10 @@ from __future__ import annotations
 
 import json
 import logging
-import queue
-import threading
 from pathlib import Path
 
 from fastapi import APIRouter, HTTPException, Query
-from fastapi.responses import FileResponse, StreamingResponse
+from fastapi.responses import FileResponse
 
 from airunner_services.api.routes.events import WsEventBus
 from PIL import Image

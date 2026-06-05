@@ -11,9 +11,6 @@ from langchain_core.outputs import ChatGenerationChunk
 from airunner_services.llm.adapters.chat_gguf_streaming_payloads import (
     text_chunk,
 )
-from airunner_services.llm.adapters.chat_gguf_streaming_gpt_oss import (
-    _yield_gpt_oss_stream_tail,
-)
 from airunner_services.llm.gpt_oss_parser import (
     GPTOSSStreamParser,
     has_gpt_oss_markup,

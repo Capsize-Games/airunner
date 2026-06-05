@@ -10,7 +10,6 @@ import importlib.util
 import sys
 from pathlib import Path
 
-import pytest
 
 
 # Ensure the services/src directory is on the path for

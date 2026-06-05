@@ -22,7 +22,6 @@ from airunner_services.ipc.messages import (
 	ErrorEnvelope,
 	RequestEnvelope,
 	ResponseEnvelope,
-	StreamDelta,
 )
 from airunner_services.runtimes.contracts import (
 	RuntimeDescriptor,

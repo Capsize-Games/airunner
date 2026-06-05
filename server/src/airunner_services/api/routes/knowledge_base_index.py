@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 import logging
 from typing import Any
 
@@ -17,8 +16,8 @@ def get_airunner_app(req: Request):
     if app is None:
         raise HTTPException(status_code=503, detail="AI Runner app not available")
     return app
-from airunner_services.contract_enums import SignalCode
-from airunner_services.utils.application.signal_mediator import SignalMediator
+from airunner_services.contract_enums import SignalCode  # noqa: E402
+from airunner_services.utils.application.signal_mediator import SignalMediator  # noqa: E402
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
