@@ -14,15 +14,18 @@ export default function ArtPromptFooter({
   onSubmit: () => void;
   onCancel: () => void;
 }) {
+  const indeterminate = generating && progress === 0;
+
   return (
     <div className="flex-shrink-0 mt-2">
       <div className="d-flex align-items-center gap-2">
         <div className="flex-grow-1">
           <ProgressBar
-            now={progress}
+            now={indeterminate ? 10 : progress}
             variant={generating ? "info" : "secondary"}
             style={{ height: 8 }}
             animated={generating && progress < 100}
+            striped={indeterminate}
           />
         </div>
         {generating ? (

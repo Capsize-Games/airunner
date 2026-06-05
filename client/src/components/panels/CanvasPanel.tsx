@@ -17,6 +17,7 @@ import CanvasLayersSidebar from "../../features/canvas/CanvasLayersSidebar";
 import CanvasStatusBar from "./canvas/CanvasStatusBar";
 import ArtPromptPanel from "./ArtPromptPanel";
 import ArtModelPanel from "./ArtModelPanel";
+import SeedControls from "./art-model/SeedControls";
 import LucideIcon from "../shared/LucideIcon";
 import { useCanvasImageDrop } from "./canvas/useCanvasImageDrop";
 
@@ -102,6 +103,15 @@ export default function CanvasPanel() {
       return 200;
     }
   });
+  const [collapsedSeed, setCollapsedSeed] = useState(() => {
+    try {
+      const v = localStorage.getItem("airunner_seed");
+      return v !== null ? Number(v) : 0;
+    } catch { return 0; }
+  });
+  const [collapsedSeedRandomized, setCollapsedSeedRandomized] = useState(
+    () => collapsedSeed === -1,
+  );
   const artModelSettingsDrag = useRef(false);
   const artModelSettingsStartY = useRef(0);
   const artModelSettingsStartH = useRef(0);
@@ -391,10 +401,7 @@ export default function CanvasPanel() {
                 style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", overflow: "hidden" }}
               >
                 <div className="art-prompt-panel" style={{ flex: 1, overflow: "auto" }}>
-                  <ArtPromptPanel
-                    showArtModelSettings={showArtModelSettings}
-                    onToggleArtModelSettings={() => setShowArtModelSettings((v) => !v)}
-                  />
+                  <ArtPromptPanel />
                 </div>
                 {showArtModelSettings && (
                   <div
@@ -420,46 +427,142 @@ export default function CanvasPanel() {
                 )}
                 {showArtModelSettings ? (
                   <div style={{ overflow: "auto", height: artModelSettingsH, flexShrink: 0 }}>
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        padding: "4px 8px",
+                        borderBottom: "1px solid rgba(255,255,255,0.07)",
+                        fontSize: 11,
+                        color: "rgba(255,255,255,0.45)",
+                      }}
+                    >
+                      <span>Model Settings</span>
+                      <button
+                        type="button"
+                        onClick={() => setShowArtModelSettings(false)}
+                        title="Hide model settings"
+                        style={{
+                          background: "transparent",
+                          border: "1px solid #555",
+                          borderRadius: 4,
+                          width: 22,
+                          height: 22,
+                          padding: 0,
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          cursor: "pointer",
+                          color: "#ccc",
+                          fontSize: 12,
+                          lineHeight: 1,
+                        }}
+                        onMouseEnter={(e) => {
+                          (e.currentTarget as HTMLButtonElement).style.background
+                            = "rgba(255,255,255,0.1)";
+                        }}
+                        onMouseLeave={(e) => {
+                          (e.currentTarget as HTMLButtonElement).style.background
+                            = "transparent";
+                        }}
+                      >
+                        <LucideIcon name="circle-x" size={12} />
+                      </button>
+                    </div>
                     <ArtModelPanel />
                   </div>
                 ) : (
-                  <div
-                    onClick={() => setShowArtModelSettings(true)}
-                    style={{
-                      borderTop: "1px solid rgba(255,255,255,0.07)",
-                      padding: "6px 8px",
-                      flexShrink: 0,
-                      fontSize: 11,
-                      color: "rgba(255,255,255,0.35)",
-                      display: "flex",
-                      alignItems: "flex-start",
-                      gap: 6,
-                      cursor: "pointer",
-                    }}
-                  >
-                    <LucideIcon name="sparkles" size={12} />
-                    <span style={{
-                      flex: 1, minWidth: 0,
-                      lineHeight: 1.5,
-                      whiteSpace: "pre-line",
-                    }}>
-                      {(() => {
-                        const ls = (k: string, fb = "") => {
-                          try { return localStorage.getItem(k) || fb; } catch { return fb; }
-                        };
-                        const v = ls("airunner_art_version");
-                        const m = ls("airunner_art_model");
-                        const short = m ? m.split(/[/\\]/).pop() || m : "";
-                        const s = ls("n_samples", "1");
-                        const b = ls("images_per_batch", "1");
-                        const st = ls("steps", "20");
-                        const c = ls("cfg_scale", "7.5");
-                        if (v && short) {
-                          return `${v} · ${short}\nSamples: ${s} · Batch: ${b} · Steps: ${st} · CFG: ${c}`;
-                        }
-                        return "No model selected";
-                      })()}
-                    </span>
+                  <div style={{ flexShrink: 0 }}>
+                    <div
+                      style={{
+                        borderTop: "1px solid rgba(255,255,255,0.07)",
+                        padding: "6px 8px",
+                        fontSize: 11,
+                        color: "rgba(255,255,255,0.35)",
+                        display: "flex",
+                        alignItems: "flex-start",
+                        gap: 6,
+                      }}
+                    >
+                      <LucideIcon name="sparkles" size={12} />
+                      <span style={{
+                        flex: 1, minWidth: 0,
+                        lineHeight: 1.5,
+                        whiteSpace: "pre-line",
+                      }}>
+                        {(() => {
+                          const _ls = (k: string, fb = "") => {
+                            try { return localStorage.getItem(k) || fb; } catch { return fb; }
+                          };
+                          const v = _ls("airunner_art_version");
+                          const m = _ls("airunner_art_model");
+                          const short = m ? m.split(/[/\\]/).pop() || m : "";
+                          const s = _ls("n_samples", "1");
+                          const b = _ls("images_per_batch", "1");
+                          const st = _ls("steps", "20");
+                          const c = _ls("cfg_scale", "7.5");
+                          if (v && short) {
+                            return `${v} · ${short}\nSamples: ${s} · Batch: ${b} · Steps: ${st} · CFG: ${c}`;
+                          }
+                          return "No model selected";
+                        })()}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setShowArtModelSettings(true)}
+                        title="Show model settings"
+                        style={{
+                          background: "transparent",
+                          border: "1px solid #555",
+                          borderRadius: 4,
+                          width: 22,
+                          height: 22,
+                          padding: 0,
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          cursor: "pointer",
+                          color: "#ccc",
+                          flexShrink: 0,
+                          marginTop: 0,
+                          transition: "background 0.15s",
+                        }}
+                        onMouseEnter={(e) => {
+                          (e.currentTarget as HTMLButtonElement).style.background
+                            = "rgba(255,255,255,0.1)";
+                        }}
+                        onMouseLeave={(e) => {
+                          (e.currentTarget as HTMLButtonElement).style.background
+                            = "transparent";
+                        }}
+                      >
+                        <LucideIcon name="sliders-horizontal" size={12} />
+                      </button>
+                    </div>
+                    <div style={{ padding: "4px 8px 6px", borderTop: "1px solid rgba(255,255,255,0.04)" }}>
+                      <SeedControls
+                        seed={collapsedSeed}
+                        seedRandomized={collapsedSeedRandomized}
+                        loading={false}
+                        onSeedChange={(v) => {
+                          setCollapsedSeed(v);
+                          setCollapsedSeedRandomized(false);
+                          try { localStorage.setItem("airunner_seed", String(v)); } catch {}
+                        }}
+                        onToggleRandom={() => {
+                          if (collapsedSeedRandomized) {
+                            setCollapsedSeedRandomized(false);
+                            try { localStorage.setItem("airunner_seed", String(collapsedSeed)); } catch {}
+                          } else {
+                            const s = Math.floor(Math.random() * 2147483647) + 1;
+                            setCollapsedSeedRandomized(true);
+                            setCollapsedSeed(s);
+                            try { localStorage.setItem("airunner_seed", String(-1)); } catch {}
+                          }
+                        }}
+                      />
+                    </div>
                   </div>
                 )}
               </div>

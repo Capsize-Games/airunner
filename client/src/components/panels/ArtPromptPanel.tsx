@@ -1,4 +1,6 @@
-import { useState, useEffect, useCallback } from "react";
+import {
+  useState, useEffect, useCallback, useRef,
+} from "react";
 import PromptInput from "./art-prompt/PromptInput";
 import { EmbeddingPills, LoraPills } from "./art-prompt/ActivePills";
 import ArtPromptFooter from "./art-prompt/ArtPromptFooter";
@@ -10,15 +12,7 @@ import LucideIcon from "../shared/LucideIcon";
 import { useCanvasContext } from "../../features/canvas/CanvasContext";
 import { useArtWebSocket } from "../../features/art/useArtWebSocket";
 
-interface ArtPromptPanelProps {
-  showArtModelSettings: boolean;
-  onToggleArtModelSettings: () => void;
-}
-
-export default function ArtPromptPanel({
-  showArtModelSettings,
-  onToggleArtModelSettings,
-}: ArtPromptPanelProps) {
+export default function ArtPromptPanel() {
   const initial = loadPromptData();
 
   const [prompt, setPrompt] = useState(initial.prompt);
@@ -56,6 +50,18 @@ export default function ArtPromptPanel({
     generate: artGenerate,
     cancel: artCancel,
   } = useArtWebSocket();
+
+  const [showCompleteToast, setShowCompleteToast] = useState(false);
+  const wasGeneratingRef = useRef(generating);
+
+  useEffect(() => {
+    if (wasGeneratingRef.current && !generating && progress >= 100) {
+      setShowCompleteToast(true);
+      const t = setTimeout(() => setShowCompleteToast(false), 3000);
+      return () => clearTimeout(t);
+    }
+    wasGeneratingRef.current = generating;
+  }, [generating, progress]);
 
   const onGenerate = useCallback(async () => {
     if (!prompt.trim()) return;
@@ -184,28 +190,6 @@ export default function ArtPromptPanel({
         <h6 style={{ color: "var(--theme-text-secondary)" }} className="mb-0 flex-grow-1">
           Art Prompt
         </h6>
-        <button
-          type="button"
-          onClick={onToggleArtModelSettings}
-          title={showArtModelSettings ? "Hide model settings" : "Show model settings"}
-          style={{
-            background: showArtModelSettings
-              ? "rgba(99,153,255,0.2)"
-              : "transparent",
-            border: "1px solid #444",
-            borderRadius: 4,
-            width: 26,
-            height: 26,
-            padding: 0,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            cursor: "pointer",
-            flexShrink: 0,
-          }}
-        >
-          <LucideIcon name="settings" size={14} />
-        </button>
       </div>
 
       <div className="flex-grow-1 d-flex flex-column gap-2 overflow-auto">
@@ -265,6 +249,26 @@ export default function ArtPromptPanel({
           onSubmit={onGenerate}
           onCancel={onCancel}
         />
+        {showCompleteToast && (
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+              marginTop: 6,
+              padding: "4px 8px",
+              borderRadius: 4,
+              background: "rgba(40,167,69,0.15)",
+              border: "1px solid rgba(40,167,69,0.3)",
+              color: "#28a745",
+              fontSize: 12,
+              lineHeight: 1.4,
+            }}
+          >
+            <LucideIcon name="circle-check" size={14} />
+            <span>Image generated</span>
+          </div>
+        )}
       </div>
     </div>
   );
