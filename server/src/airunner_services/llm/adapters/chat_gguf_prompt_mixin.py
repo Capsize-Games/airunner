@@ -4,36 +4,46 @@ from typing import Any, Dict, List, Optional, Sequence
 
 from langchain_core.messages import AIMessage, BaseMessage, ToolMessage
 
-from airunner_services.llm.adapters.chat_gguf_tool_parsing import (
-    build_gpt_oss_message_from_raw,
-    forced_gpt_oss_tool_name,
-)
-from airunner_services.llm.adapters.chat_gguf_prompt_helper import (
-    apply_gpt_oss_reasoning_effort,
-    apply_thinking_directive,
+from airunner_services.llm.adapters.chat_gguf_prompt_harmony_completion import (
     build_gpt_oss_completion_kwargs,
     continue_prefilled_gpt_oss_tool_call,
-    convert_langchain_tool_call,
-    convert_langchain_tool_calls,
-    convert_messages,
-    format_gpt_oss_namespace,
-    format_gpt_oss_object_type,
-    format_gpt_oss_shared_definitions,
-    format_gpt_oss_tool,
-    format_gpt_oss_type,
+    prefilled_gpt_oss_tool_json_needs_continuation,
+    render_gpt_oss_harmony_prompt,
+)
+from airunner_services.llm.adapters.chat_gguf_prompt_harmony_render import (
+    render_gpt_oss_ai_message,
+    render_gpt_oss_developer_message,
+    render_gpt_oss_prefilled_tool_call,
+    render_gpt_oss_tool_message,
+    render_harmony_message,
+    stringify_harmony_content,
+)
+from airunner_services.llm.adapters.chat_gguf_prompt_instructions import (
+    apply_gpt_oss_reasoning_effort,
+    apply_thinking_directive,
     format_react_tool,
     gpt_oss_harmony_system_message,
     inject_gpt_oss_tool_instructions,
     inject_react_tool_instructions,
     inject_tool_instructions,
-    prefilled_gpt_oss_tool_json_needs_continuation,
-    render_gpt_oss_ai_message,
-    render_gpt_oss_developer_message,
-    render_gpt_oss_harmony_prompt,
-    render_gpt_oss_prefilled_tool_call,
-    render_gpt_oss_tool_message,
-    render_harmony_message,
-    stringify_harmony_content,
+)
+from airunner_services.llm.adapters.chat_gguf_prompt_messages import (
+    convert_messages,
+)
+from airunner_services.llm.adapters.chat_gguf_prompt_schema import (
+    format_gpt_oss_namespace,
+    format_gpt_oss_object_type,
+    format_gpt_oss_shared_definitions,
+    format_gpt_oss_tool,
+    format_gpt_oss_type,
+)
+from airunner_services.llm.adapters.chat_gguf_tool_call_conversion import (
+    convert_langchain_tool_call,
+    convert_langchain_tool_calls,
+)
+from airunner_services.llm.adapters.chat_gguf_tool_parsing_gpt_oss import (
+    build_gpt_oss_message_from_raw,
+    forced_gpt_oss_tool_name,
 )
 from airunner_services.llm.gpt_oss_parser import END_TOKEN
 

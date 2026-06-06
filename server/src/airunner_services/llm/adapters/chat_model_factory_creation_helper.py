@@ -6,7 +6,7 @@ from typing import Any, Callable
 
 from langchain_core.language_models.chat_models import BaseChatModel
 
-from airunner_services.llm.adapters.chat_gguf import (
+from airunner_services.llm.adapters.chat_gguf_model_metadata import (
     UnsupportedGGUFArchitectureError,
 )
 from airunner_services.llm.adapters.chat_model_factory_helpers import (

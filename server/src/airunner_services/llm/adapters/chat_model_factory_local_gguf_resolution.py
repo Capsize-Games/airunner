@@ -5,7 +5,9 @@ from __future__ import annotations
 import os
 from typing import Any
 
-from airunner_services.llm.adapters.chat_gguf import is_gguf_model
+from airunner_services.llm.adapters.chat_gguf_model_discovery import (
+    is_gguf_model,
+)
 from airunner_services.llm.config.provider_config import LLMProviderConfig
 
 

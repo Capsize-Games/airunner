@@ -8,7 +8,7 @@ from airunner_services.settings import AIRUNNER_LOG_LEVEL
 from airunner_services.llm.adapters.chat_gguf_execution_mixin import (
     ChatGGUFExecutionMixin,
 )
-from airunner_services.llm.adapters.chat_gguf_model_helper import (
+from airunner_services.llm.adapters.chat_gguf_chat_format_detection import (
     _detect_chat_format,
 )
 from airunner_services.llm.adapters.chat_gguf_prompt_mixin import (

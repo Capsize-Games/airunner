@@ -5,13 +5,19 @@ import re
 import uuid
 from typing import Any, Dict, List, Optional
 
-from airunner_services.llm.adapters.chat_gguf_tool_parsing import (
-    extract_gpt_oss_recipient,
-    extract_prefilled_gpt_oss_tool_json,
+from airunner_services.llm.adapters.chat_gguf_tool_parsing_common import (
     normalize_tool_payload,
     normalize_tool_value,
-    parse_gpt_oss_commentary_tool_calls,
+)
+from airunner_services.llm.adapters.chat_gguf_tool_parsing_gpt_oss import (
+    extract_prefilled_gpt_oss_tool_json,
     parse_prefilled_gpt_oss_tool_call,
+)
+from airunner_services.llm.adapters.chat_gguf_tool_parsing_gpt_oss_commentary import (
+    extract_gpt_oss_recipient,
+    parse_gpt_oss_commentary_tool_calls,
+)
+from airunner_services.llm.adapters.chat_gguf_tool_parsing_react import (
     parse_react_tool_calls,
 )
 
