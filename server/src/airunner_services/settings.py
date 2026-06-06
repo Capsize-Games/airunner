@@ -405,11 +405,15 @@ def _default_log_file_path() -> str:
     if env_value:
         return env_value
     if sys.platform.startswith("win"):
-        appdata = os.environ.get("APPDATA", "C:\\Users\\Default\\AppData\\Roaming")
+        appdata = os.environ.get(
+            "APPDATA", "C:\\Users\\Default\\AppData\\Roaming"
+        )
         return os.path.join(appdata, "AI Runner", "airunner.log")
     if sys.platform.startswith("darwin"):
         home = os.path.expanduser("~")
-        return os.path.join(home, "Library", "Logs", "AI Runner", "airunner.log")
+        return os.path.join(
+            home, "Library", "Logs", "AI Runner", "airunner.log"
+        )
     # Linux, BSD, and everything else — use the app data directory
     return os.path.join(AIRUNNER_BASE_PATH, "airunner.log")
 

@@ -261,6 +261,7 @@ async def _run_generation(
     finally:
         _active_generations.pop(job_id, None)
 
+
 async def fail_art_job_impl(
     tracker: JobTracker,
     job_id: str,
