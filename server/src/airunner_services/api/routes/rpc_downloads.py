@@ -6,14 +6,22 @@ import asyncio
 from typing import Any
 
 from airunner_services.api.routes.events import _rpc_register
+from airunner_services.downloads.civitai_filters import (
+    _BASE_MODEL_ALIASES,
+    _MODEL_TYPE_ALIASES,
+)
+from airunner_services.downloads.civitai_thumbnails import _fetch_cached_image
+from airunner_services.downloads.job_service import DownloadJobService
+from airunner_services.downloads.service import (
+    fetch_civitai_model_info as fetch_fn,
+    search_civitai_models as search_fn,
+)
 
 
 @_rpc_register("POST", "/api/v1/downloads/huggingface")
 async def _rpc_downloads_hf(body: dict, **kw: Any) -> dict[str, Any]:
     """Start a HuggingFace download."""
     try:
-        from airunner_services.downloads.service import DownloadJobService
-
         service = DownloadJobService()
         job_id = await asyncio.to_thread(
             service.start_huggingface_download,
@@ -35,8 +43,6 @@ async def _rpc_downloads_status(body: dict, **kw: Any) -> dict[str, Any]:
     pp: dict = kw.get("path_params", {})
     job_id = pp.get("job_id", "")
     try:
-        from airunner_services.downloads.service import DownloadJobService
-
         service = DownloadJobService()
         state = await asyncio.to_thread(service.get_status, job_id)
         if state is None:
@@ -62,8 +68,6 @@ async def _rpc_downloads_cancel(body: dict, **kw: Any) -> dict[str, Any]:
     pp: dict = kw.get("path_params", {})
     job_id = pp.get("job_id", "")
     try:
-        from airunner_services.downloads.service import DownloadJobService
-
         service = DownloadJobService()
         cancelled = await asyncio.to_thread(service.cancel, job_id)
         if not cancelled:
@@ -82,10 +86,6 @@ async def _rpc_downloads_civitai_search(
 ) -> dict[str, Any]:
     """Search CivitAI models."""
     try:
-        from airunner_services.downloads.service import (
-            search_civitai_models as search_fn,
-        )
-
         result = await asyncio.to_thread(
             search_fn,
             str(body.get("query", "")),
@@ -106,10 +106,6 @@ async def _rpc_downloads_civitai_model(
 ) -> dict[str, Any]:
     """Get CivitAI model detail."""
     try:
-        from airunner_services.downloads.service import (
-            fetch_civitai_model_info as fetch_fn,
-        )
-
         result = await asyncio.to_thread(
             fetch_fn,
             str(body.get("model_id", "")),
@@ -126,8 +122,6 @@ async def _rpc_downloads_civitai_model(
 async def _rpc_downloads_civitai_file(body: dict, **kw: Any) -> dict[str, Any]:
     """Start a CivitAI file download."""
     try:
-        from airunner_services.downloads.service import DownloadJobService
-
         service = DownloadJobService()
         job_id = await asyncio.to_thread(
             service.start_civitai_file_download,
@@ -145,10 +139,6 @@ async def _rpc_downloads_civitai_file(body: dict, **kw: Any) -> dict[str, Any]:
 async def _rpc_downloads_civitai_info(body: dict, **kw: Any) -> dict[str, Any]:
     """Get CivitAI model info by URL."""
     try:
-        from airunner_services.downloads.service import (
-            fetch_civitai_model_info as fetch_fn,
-        )
-
         result = await asyncio.to_thread(
             fetch_fn,
             str(body.get("url", "")),
@@ -165,11 +155,6 @@ async def _rpc_downloads_civitai_options(
 ) -> dict[str, Any]:
     """Get CivitAI filter options."""
     try:
-        from airunner_services.downloads.civitai import (
-            _BASE_MODEL_ALIASES,
-            _MODEL_TYPE_ALIASES,
-        )
-
         base_models = [
             {"label": label, "value": value}
             for label, value in _BASE_MODEL_ALIASES.items()
@@ -184,3 +169,26 @@ async def _rpc_downloads_civitai_options(
         }
     except Exception:
         return {"status": 200, "body": {"base_models": [], "model_types": []}}
+
+
+@_rpc_register("POST", "/api/v1/downloads/civitai/image")
+async def _rpc_downloads_civitai_image(
+    body: dict, **kw: Any
+) -> dict[str, Any]:
+    """Fetch, cache, and return a CivitAI image through the server proxy."""
+    url = str(body.get("url", ""))
+    width = int(body.get("width", 0))
+    if width <= 0 or width > 1200:
+        width = 500
+    if not url:
+        return {"status": 400, "body": {"error": "Missing url"}}
+    try:
+        img_data, content_type = _fetch_cached_image(url, width)
+        return {
+            "status": 200,
+            "body": img_data,
+            "headers": {"content-type": content_type},
+            "binary": True,
+        }
+    except Exception as exc:
+        return {"status": 500, "body": {"error": str(exc)}}

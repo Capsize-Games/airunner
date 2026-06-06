@@ -1,5 +1,5 @@
 import { useEffect, useCallback, useState, useRef } from "react";
-import { BASE_URL } from "../../../types/api";
+import { rpcRequestBlob } from "../../../features/api/WsApiClient";
 import CivitaiImage from "./CivitaiImage";
 import { startCivitaiFileDownload, cancelDownloadJob } from "../../../api/downloads";
 import { useDownloads } from "../../downloads/useDownloadState";
@@ -100,13 +100,12 @@ export default function CivitaiModelDetailModal({
   useEffect(() => {
     if (!pendingFullFetch) return;
     let cancelled = false;
-    fetch(`${BASE_URL}/api/v1/downloads/civitai/image`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ url: pendingFullFetch, width: 500 }),
+
+    rpcRequestBlob("POST", "/api/v1/downloads/civitai/image", {
+      url: pendingFullFetch,
+      width: 500,
     })
-      .then((r) => r.blob())
-      .then((blob) => {
+      .then((blob: Blob) => {
         if (cancelled) return;
         const reader = new FileReader();
         reader.onloadend = () => {
@@ -117,6 +116,7 @@ export default function CivitaiModelDetailModal({
         reader.readAsDataURL(blob);
       })
       .catch(() => {});
+
     return () => { cancelled = true; };
   }, [pendingFullFetch]);
 

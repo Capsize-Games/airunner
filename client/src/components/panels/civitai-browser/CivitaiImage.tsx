@@ -17,19 +17,24 @@ interface CivitaiImageProps {
 /**
  * Renders a CivitAI image.
  *
- * When ``base64`` is provided (pre-fetched inline thumbnails from the
- * search/detail endpoints), renders it as a data URI with zero network
- * requests.  Otherwise falls back to the legacy single-image endpoint.
+ * Priority:
+ * 1. ``base64`` prop — data URI (zero network, used for inline thumbnails
+ *    that the server embeds in search/detail JSON responses).
+ * 2. Empty placeholder when no base64 is available.
+ *
+ * A failing image is silently hidden (no broken-image alt text).
  */
 export default function CivitaiImage({
-  url,
-  alt,
+  url: _url,
+  alt: _alt,
   className,
   style,
   width: _desiredWidth,
   base64,
 }: CivitaiImageProps) {
-  if (base64) {
+  const [failed, setFailed] = useState(false);
+
+  if (base64 && !failed) {
     return (
       <img
         src={`data:image/jpeg;base64,${base64}`}
@@ -37,25 +42,12 @@ export default function CivitaiImage({
         className={className}
         style={style}
         loading="lazy"
+        onError={() => setFailed(true)}
       />
     );
   }
 
-  // Fallback: if a URL is available, render it directly (the server proxy
-  // handles the fetch so the client doesn't expose CivitAI URLs directly).
-  if (url) {
-    return (
-      <img
-        src={url}
-        alt={alt}
-        className={className}
-        style={style}
-        loading="lazy"
-      />
-    );
-  }
-
-  // Last resort: empty placeholder when neither base64 nor URL is known.
+  /* ── Empty placeholder — never show alt text ── */
   return (
     <div
       className={className}

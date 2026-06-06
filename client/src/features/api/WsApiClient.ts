@@ -307,6 +307,11 @@ export function rpcRequestBlob(
       resolve: resolve as (value: unknown) => void,
       reject,
     });
+    // Ensure the WS connection exists (same as rpcRequest)
+    if (!_ws || (_ws.readyState !== WebSocket.OPEN && _ws.readyState !== WebSocket.CONNECTING)) {
+      _mountCount++;
+      _connect();
+    }
     _send({ type: "rpc", id, method, path, body: body ?? {} });
   });
 }
