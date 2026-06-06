@@ -135,8 +135,8 @@ export default function CacheDebugPanel() {
 
 const panelStyle: React.CSSProperties = {
   position: "fixed",
-  bottom: 12,
-  right: 12,
+  bottom: 40,
+  right: 56,
   background: "#1a1a2e",
   border: "1px solid #444",
   borderRadius: 6,

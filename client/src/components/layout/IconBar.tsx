@@ -88,12 +88,16 @@ export function RightIconBar({
   onToggleCanvas,
   onRightPanel,
   onOpenSettings,
+  showCacheDebug,
+  onToggleCacheDebug,
 }: {
   showCanvas: boolean;
   rightPanel: PanelId | null;
   onToggleCanvas: () => void;
   onRightPanel: (id: PanelId) => void;
   onOpenSettings: () => void;
+  showCacheDebug: boolean;
+  onToggleCacheDebug: () => void;
 }) {
   const active = (id: PanelId, panel: PanelId | null) =>
     panel === id ? "active" : "";
@@ -144,6 +148,13 @@ export function RightIconBar({
         <LucideIcon name="activity" />
       </button>
       <div className="flex-spacer" />
+      <button
+        className={showCacheDebug ? "active" : ""}
+        onClick={onToggleCacheDebug}
+        title="Cache Debug"
+      >
+        <LucideIcon name="database-zap" />
+      </button>
       <button onClick={onOpenSettings} title="Settings">
         <LucideIcon name="settings" />
       </button>

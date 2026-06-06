@@ -1,10 +1,11 @@
 import {
   Activity, Book, BotMessageSquare, Brain, ChevronUp, CircleCheck,
-  CircleStop, CircleX, Cloud, Database, Dices, Grid2x2Check, History,
-  Image, Images, Info, Layers, MessageSquareHeart, MessageSquareText,
-  Mic, PanelRightOpen, Plus, Puzzle, RotateCcwSquare, ScanText,
-  Settings, Settings2, SlidersHorizontal, Sparkles, Speaker,
-  Trash, Upload, type LucideIcon,
+  CircleStop, CircleX, Cloud, Database, DatabaseZap, Dices,
+  Grid2x2Check, History, Image, Images, Info, Layers,
+  MessageSquareHeart, MessageSquareText, Mic, PanelRightOpen, Plus,
+  Puzzle, RotateCcwSquare, ScanText, Settings, Settings2,
+  SlidersHorizontal, Sparkles, Speaker, Trash, Upload,
+  type LucideIcon,
 } from "lucide-react";
 
 /* ── Map SVG filenames (kebab-case) to lucide-react components ── */
@@ -19,6 +20,7 @@ const MAP: Record<string, LucideIcon> = {
   "circle-x": CircleX,
   cloud: Cloud,
   database: Database,
+  "database-zap": DatabaseZap,
   dices: Dices,
   "grid-2x2-check": Grid2x2Check,
   history: History,

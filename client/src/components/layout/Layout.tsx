@@ -50,6 +50,8 @@ interface LayoutProps {
   onToggleStt: () => void;
   onOpenSettings: () => void;
   onSelectConversation: (id: number) => void;
+  showCacheDebug: boolean;
+  onToggleCacheDebug: () => void;
 }
 
 function saveNum(key: string, val: number) {
@@ -196,6 +198,8 @@ export default function Layout({
   onToggleStt,
   onOpenSettings,
   onSelectConversation,
+  showCacheDebug,
+  onToggleCacheDebug,
 }: LayoutProps) {
   const panelsRef = useRef<HTMLDivElement>(null);
   const [panelsWidth, setPanelsWidth] = useState(0);
@@ -410,6 +414,8 @@ export default function Layout({
           onToggleCanvas={onToggleCanvas}
           onRightPanel={onRightPanel}
           onOpenSettings={onOpenSettings}
+          showCacheDebug={showCacheDebug}
+          onToggleCacheDebug={onToggleCacheDebug}
         />
       </div>
 

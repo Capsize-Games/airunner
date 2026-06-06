@@ -27,10 +27,15 @@ export default function App() {
   } = useLayoutPrefs();
 
   const [showSettings, setShowSettings] = useState(false);
+  const [showCacheDebug, setShowCacheDebug] = useState(false);
 
   const handleSelectConversation = useCallback((id: number) => {
     setConversationId(id);
   }, [setConversationId]);
+
+  const handleToggleCacheDebug = useCallback(() => {
+    setShowCacheDebug((v) => !v);
+  }, []);
 
   return (
     <>
@@ -57,6 +62,8 @@ export default function App() {
               onToggleStt={() => setSttOn(!sttOn)}
               onOpenSettings={() => setShowSettings(true)}
               onSelectConversation={handleSelectConversation}
+              showCacheDebug={showCacheDebug}
+              onToggleCacheDebug={handleToggleCacheDebug}
             >
               {showChat && <ChatView conversationId={conversationId} />}
             </Layout>
@@ -76,7 +83,7 @@ export default function App() {
         <SettingsModal onClose={() => setShowSettings(false)} />
       )}
 
-      {showDebugPanel && (
+      {showCacheDebug && (
         <Suspense fallback={null}>
           <CacheDebugPanel />
         </Suspense>

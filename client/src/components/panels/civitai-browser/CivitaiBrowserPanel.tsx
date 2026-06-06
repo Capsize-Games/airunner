@@ -2,7 +2,7 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import Spinner from "react-bootstrap/Spinner";
 import CivitaiSearchBar from "./CivitaiSearchBar";
 import CivitaiResultCard from "./CivitaiResultCard";
-import { searchCivitaiModels, fetchCivitaiModel, requestCivitaiVersionThumbnails } from "../../../api/downloads";
+import { searchCivitaiModels, fetchCivitaiModel, requestCivitaiVersionThumbnails, cancelCivitaiVersionThumbnails } from "../../../api/downloads";
 import { request } from "../../../api/client-base";
 import { type JsonObject } from "../../../types/api";
 import CivitaiModelDetailModal from "./CivitaiModelDetailModal";
@@ -11,6 +11,7 @@ import { EVENT_CIVITAI_THUMBNAIL } from "../../../features/events/types";
 import { useCivitaiPrefs } from "../../../hooks/useCivitaiPrefs";
 import { useCivitaiDetailCache } from "../../../hooks/useCivitaiDetailCache";
 import { useCivitaiThumbnailCache } from "../../../hooks/useCivitaiThumbnailCache";
+import { BASE_MODEL_OPTIONS, MODEL_TYPE_OPTIONS } from "./constants";
 
 // ── Helpers ──
 
@@ -48,7 +49,20 @@ async function fetchFilterOptions(): Promise<{ baseModels: FilterOption[]; model
   const data = await request<{ base_models: FilterOption[]; model_types: string[]; model_types_by_base: Record<string, string[]> }>(
     "GET", "/api/v1/downloads/civitai/options",
   );
-  return { baseModels: data.base_models ?? [], modelTypes: data.model_types ?? [], typesByBase: data.model_types_by_base ?? {} };
+  const baseModels: FilterOption[] = data.base_models ?? [];
+  const modelTypes: string[] = data.model_types ?? [];
+  let typesByBase = data.model_types_by_base ?? {};
+  // Fall back to local constants if the server didn't return typesByBase.
+  if (Object.keys(typesByBase).length === 0 && baseModels.length > 0) {
+    typesByBase = {};
+    for (const bm of baseModels) {
+      const types = MODEL_TYPE_OPTIONS[bm.value];
+      if (types) {
+        typesByBase[bm.value] = types.map((t) => t.value);
+      }
+    }
+  }
+  return { baseModels, modelTypes, typesByBase };
 }
 
 // ── Panel component ──
@@ -108,10 +122,8 @@ export default function CivitaiBrowserPanel() {
       const imageUrl = payload.image_url;
       const b64Map = payload.images_base64;
 
-      // Persist each size variant to IndexedDB.
-      for (const [, blob] of Object.entries(b64Map)) {
-        thumbCache.store(payload.model_id!, vIdx, imageUrl, blob).catch(() => {});
-      }
+      // Persist the full size-variant map as a single IndexedDB entry.
+      thumbCache.store(payload.model_id!, vIdx, imageUrl, b64Map).catch(() => {});
 
       setSelectedModelData((prev) => {
         if (!prev) return prev;
@@ -227,7 +239,39 @@ export default function CivitaiBrowserPanel() {
   const fetchModelDetail = useCallback(async (modelId: number) => {
     // Check IndexedDB cache first.
     const cached = await detailCache.get(modelId);
-    if (cached) { setSelectedModelData(cached); setDetailLoading(false); return; }
+    if (cached) {
+      // Re-hydrate any thumbnails that arrived via streaming on the previous open.
+      // The detail cache stores the raw API response (no images_base64); thumbnails
+      // live separately in the civitaiThumbnails table keyed by version index + URL.
+      const versions = ((cached.modelVersions ?? []) as JsonObject[]);
+      const hydratedVersions = await Promise.all(
+        versions.map(async (v, vIdx) => {
+          const images = ((v.images ?? []) as JsonObject[]);
+          const storedBlobs = await thumbCache.getAll(modelId, vIdx);
+          if (Object.keys(storedBlobs).length === 0) return v;
+          const hydratedImages = images.map((img) => {
+            const imageUrl = String(img.url ?? img.thumbnailUrl ?? "");
+            const b64Map = storedBlobs[imageUrl];
+            if (!b64Map) return img;
+            return { ...img, images_base64: b64Map };
+          });
+          return { ...v, images: hydratedImages };
+        }),
+      );
+      const hydrated = { ...cached, modelVersions: hydratedVersions };
+      setSelectedModelData(hydrated);
+      setDetailLoading(false);
+
+      // Resume fetching any thumbnails that were cancelled before they finished.
+      // Server-side file cache means already-fetched images return from disk.
+      const v0Images = ((hydratedVersions[0]?.images ?? []) as JsonObject[]);
+      const hasMissing = v0Images.some((img) => !img.images_base64);
+      if (hasMissing) {
+        requestCivitaiVersionThumbnails({ model_data: hydrated, version_index: 0 })
+          .catch(() => {});
+      }
+      return;
+    }
 
     setSelectedModelData({ id: modelId, name: "Loading...", modelVersions: [] } as unknown as JsonObject);
     setDetailLoading(true);
@@ -244,12 +288,16 @@ export default function CivitaiBrowserPanel() {
     } finally {
       setDetailLoading(false);
     }
-  }, [baseModel, modelType, detailCache]);
+  }, [baseModel, modelType, detailCache, thumbCache]);
 
   const handleSelectModel = useCallback(async (modelId: number) => {
+    // Cancel any in-progress stream for the previously selected model.
+    if (selectedModelId !== null && selectedModelId !== modelId) {
+      cancelCivitaiVersionThumbnails(selectedModelId).catch(() => {});
+    }
     setSelectedModelId(modelId);
     await fetchModelDetail(modelId);
-  }, [fetchModelDetail, setSelectedModelId]);
+  }, [fetchModelDetail, setSelectedModelId, selectedModelId]);
 
   const handleRequestVersionThumbnails = useCallback(async (versionId: number) => {
     if (!selectedModelData) return;
@@ -317,7 +365,19 @@ export default function CivitaiBrowserPanel() {
         filterOptions={filterOptions}
         onQueryChange={(val) => {
           setQuery(val);
-          if (val.trim().length > 0) debouncedSearch(false);
+          if (val.trim().length > 0) {
+            debouncedSearch(false);
+          } else if (baseModel !== "" && modelType !== "") {
+            // Filters still active — re-search with empty query.
+            debouncedSearch(false);
+          } else {
+            // No remaining search criteria — clear results immediately.
+            if (debounceRef.current) clearTimeout(debounceRef.current);
+            setResults([]);
+            cursorRef.current = null;
+            hasMoreRef.current = true;
+            setHasMore(true);
+          }
         }}
         onBaseModelChange={(val) => {
           setBaseModel(val);
@@ -357,6 +417,9 @@ export default function CivitaiBrowserPanel() {
           modelType={modelType}
           onVersionChange={handleRequestVersionThumbnails}
           onClose={() => {
+            if (selectedModelId !== null) {
+              cancelCivitaiVersionThumbnails(selectedModelId).catch(() => {});
+            }
             setSelectedModelId(null);
             setSelectedModelData(null);
           }}

@@ -117,3 +117,7 @@ export async function requestCivitaiVersionThumbnails(params: {
 }): Promise<void> {
   await request("POST", "/api/v1/downloads/civitai/version-thumbnails", params);
 }
+
+export async function cancelCivitaiVersionThumbnails(modelId: number): Promise<void> {
+  await request("DELETE", "/api/v1/downloads/civitai/version-thumbnails", { model_id: modelId });
+}
