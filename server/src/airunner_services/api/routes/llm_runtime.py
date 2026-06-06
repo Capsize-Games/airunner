@@ -203,21 +203,38 @@ def websocket_chunk(delta: StreamDelta) -> dict[str, Any]:
     return payload
 
 
-def websocket_envelope(data: dict[str, Any]) -> RequestEnvelope:
-    """Build one streaming runtime envelope from a websocket payload."""
-    profile = data.get("gguf_runtime_profile")
-    raw_messages: list[dict[str, Any]] = data.get("messages") or []
-    if not raw_messages:
-        # Backward compat: single message field
-        raw_messages = [
+def _parse_raw_messages(data: dict[str, Any]) -> list[dict[str, Any]]:
+    """Extract messages from a websocket payload (backward compat)."""
+    raw = data.get("messages") or []
+    if not raw:
+        raw = [
             {"role": "user", "content": str(data.get("message", "")).strip()},
         ]
-    messages = _parse_messages(raw_messages)
+    return raw
+
+
+def _build_envelope_metadata(data: dict[str, Any]) -> dict[str, Any]:
+    """Build runtime metadata from a websocket payload."""
+    metadata: dict[str, Any] = {}
+    profile = data.get("gguf_runtime_profile")
+    if profile:
+        metadata["gguf_runtime_profile"] = profile
+    conversation_id = data.get("conversation_id")
+    if conversation_id is not None:
+        metadata["conversation_id"] = conversation_id
+    return metadata
+
+
+def websocket_envelope(data: dict[str, Any]) -> RequestEnvelope:
+    """Build one streaming runtime envelope from a websocket payload."""
+    messages = _parse_messages(_parse_raw_messages(data))
+    metadata = _build_envelope_metadata(data)
+
     payload = LLMInvocationRequest(
         model=data.get("model"),
         messages=messages,
         max_tokens=data.get("max_tokens"),
-        metadata={"gguf_runtime_profile": profile} if profile else {},
+        metadata=metadata,
         temperature=float(data.get("temperature", 0.7)),
         stream=True,
     )

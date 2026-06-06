@@ -156,7 +156,7 @@ def create_thinking_callback(
             owner,
             llm_request,
             content or "",
-            is_end_of_message=(status == "completed"),
+            is_end_of_message=False,
             is_first_message=(status == "started"),
             sequence_number=sequence_counter[0],
             message_type="thinking",

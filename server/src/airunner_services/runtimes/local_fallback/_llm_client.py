@@ -7,7 +7,6 @@ from typing import Any, Iterable, Optional
 
 from airunner_services.ipc.messages import (
     EnvelopeStatus,
-    ErrorEnvelope,
     RequestEnvelope,
     ResponseEnvelope,
     StreamDelta,
@@ -26,6 +25,14 @@ from airunner_services.runtimes.local_fallback._base import (
     _build_llm_service,
     _resolve_model_type,
     _SignalRuntimeClient,
+)
+from airunner_services.runtimes.local_fallback._llm_client_helpers import (
+    failure_delta,
+    is_complete,
+    resolve_action,
+    response_message,
+    response_metadata,
+    timeout_response,
 )
 
 
@@ -70,7 +77,7 @@ class LocalFallbackLLMClient(_SignalRuntimeClient):
         try:
             return self._collect_response(request.request_id, response_queue)
         except TimeoutError as exc:
-            return self._timeout_response(request.request_id, str(exc))
+            return timeout_response(request.request_id, str(exc))
         finally:
             self._mediator.unregister_pending_request(request.request_id)
 
@@ -83,7 +90,7 @@ class LocalFallbackLLMClient(_SignalRuntimeClient):
                 request.request_id, response_queue
             )
         except TimeoutError as exc:
-            yield self._failure_delta(request.request_id, str(exc))
+            yield failure_delta(request.request_id, str(exc))
         finally:
             self._mediator.unregister_pending_request(request.request_id)
 
@@ -96,6 +103,10 @@ class LocalFallbackLLMClient(_SignalRuntimeClient):
             status=EnvelopeStatus.CANCELLED,
             metadata={"best_effort": True},
         )
+
+    # ------------------------------------------------------------------
+    # Internal helpers
+    # ------------------------------------------------------------------
 
     def _validate_request(
         self, request: RequestEnvelope
@@ -143,12 +154,14 @@ class LocalFallbackLLMClient(_SignalRuntimeClient):
             request.request_id
         )
         try:
+            conversation_id = invocation.metadata.get("conversation_id")
             self._llm_service.send_request(
                 prompt=self._prompt_from_messages(invocation),
                 llm_request=self._prepare_llm_request(invocation),
-                action=self._resolve_action(),
+                action=resolve_action(),
                 do_tts_reply=False,
                 request_id=request.request_id,
+                conversation_id=conversation_id,
             )
         except Exception:
             self._mediator.unregister_pending_request(request.request_id)
@@ -178,13 +191,13 @@ class LocalFallbackLLMClient(_SignalRuntimeClient):
         """Collect a full response from streamed legacy chunks."""
         chunks = []
         for response in self._iter_responses(response_queue):
-            chunks.append(self._response_message(response))
-            if self._is_complete(response):
+            chunks.append(response_message(response))
+            if is_complete(response):
                 return ResponseEnvelope(
                     request_id=request_id,
                     status=EnvelopeStatus.SUCCEEDED,
                     payload={"content": "".join(chunks)},
-                    metadata=self._response_metadata(response),
+                    metadata=response_metadata(response),
                 )
         raise TimeoutError("Timed out waiting for LLM response")
 
@@ -194,14 +207,18 @@ class LocalFallbackLLMClient(_SignalRuntimeClient):
         """Yield response deltas from the legacy LLM service."""
         responses = self._iter_responses(response_queue)
         for sequence, response in enumerate(responses):
+            if getattr(response, "is_system_message", False):
+                if is_complete(response):
+                    return
+                continue
             yield StreamDelta(
                 request_id=request_id,
                 sequence=sequence,
-                delta={"content": self._response_message(response)},
-                final=self._is_complete(response),
-                metadata=self._response_metadata(response),
+                delta={"content": response_message(response)},
+                final=is_complete(response),
+                metadata=response_metadata(response),
             )
-            if self._is_complete(response):
+            if is_complete(response):
                 return
         raise TimeoutError("Timed out waiting for streamed LLM response")
 
@@ -221,68 +238,18 @@ class LocalFallbackLLMClient(_SignalRuntimeClient):
     @staticmethod
     def _prompt_from_messages(invocation: LLMInvocationRequest) -> str:
         """Extract the user-facing prompt from a message list."""
-        for message in reversed(invocation.messages):
-            if message.content:
-                return message.content
-        return ""
+        return next(
+            (m.content for m in reversed(invocation.messages) if m.content), ""
+        )
 
     @staticmethod
     def _system_prompt(invocation: LLMInvocationRequest) -> Optional[str]:
         """Extract the leading system prompt when present."""
-        for message in invocation.messages:
-            if message.role.value == "system" and message.content:
-                return message.content
-        return None
-
-    @staticmethod
-    def _response_message(response: Any) -> str:
-        """Read message text from a legacy response object."""
-        return getattr(response, "message", "")
-
-    @staticmethod
-    def _is_complete(response: Any) -> bool:
-        """Return True when a legacy response marks completion."""
-        return bool(getattr(response, "is_end_of_message", False))
-
-    @staticmethod
-    def _response_metadata(response: Any) -> dict[str, Any]:
-        """Collect optional usage data from a legacy response object."""
-        metadata = {}
-        for field in ("tools", "prompt_tokens", "completion_tokens"):
-            value = getattr(response, field, None)
-            if value is not None:
-                metadata[field] = value
-        total_tokens = getattr(response, "total_tokens", None)
-        if total_tokens is not None:
-            metadata["total_tokens"] = total_tokens
-        return metadata
-
-    @staticmethod
-    def _resolve_action() -> Any:
-        """Resolve the legacy action enum lazily."""
-        from airunner_services.contract_enums import LLMActionType
-
-        return LLMActionType.CHAT
-
-    @staticmethod
-    def _timeout_response(request_id: str, message: str) -> ResponseEnvelope:
-        """Create a timeout failure envelope."""
-        return ResponseEnvelope(
-            request_id=request_id,
-            status=EnvelopeStatus.FAILED,
-            error=ErrorEnvelope(
-                code="llm_timeout",
-                message=message,
-                retryable=True,
+        return next(
+            (
+                m.content
+                for m in invocation.messages
+                if m.role.value == "system" and m.content
             ),
-        )
-
-    @staticmethod
-    def _failure_delta(request_id: str, message: str) -> StreamDelta:
-        """Create a terminal error delta for streamed requests."""
-        return StreamDelta(
-            request_id=request_id,
-            final=True,
-            status=EnvelopeStatus.FAILED,
-            metadata={"error": message},
+            None,
         )

@@ -1,16 +1,11 @@
-"""
-FastAPI server implementation for AI Runner.
-
-Provides REST and WebSocket endpoints for remote access to AI Runner's
-capabilities including LLM, art generation, TTS, and STT.
-"""
+"""FastAPI application setup and server configuration."""
 
 from __future__ import annotations
 
-from typing import Any, Optional
-from contextlib import asynccontextmanager
 import os
+from contextlib import asynccontextmanager
 from ipaddress import ip_address
+from typing import Any, Optional
 
 from fastapi import FastAPI, Request
 
@@ -22,12 +17,14 @@ from .server_helpers import (
     _setup_registry_and_lifecycle,
     _setup_signal_bridges,
     _register_watchers,
-    _register_middleware,
-    _register_routes,
-    _register_exception_handler,
     _mount_static_files,
+)
+from .server_auth import (
+    register_middleware,
+    register_exception_handler,
     update_api_key_config,
 )
+from .server_routes import register_routes
 
 logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 
@@ -106,8 +103,8 @@ def create_app(
     _setup_signal_bridges(app_instance)
     _register_watchers(app_instance)
     update_api_key_config()
-    _register_middleware(app)
-    _register_routes(app)
+    register_middleware(app)
+    register_routes(app)
     _mount_static_files(app)
-    _register_exception_handler(app)
+    register_exception_handler(app)
     return app
