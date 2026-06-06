@@ -23,6 +23,7 @@ export default function CivitaiResultCard({
   onSelect,
 }: CivitaiResultCardProps) {
   const thumbBase64 = item.thumbnails?.small;
+  const thumbUrl = item.thumbnail || "";
   return (
     <div
       data-model-id={item.id}
@@ -40,9 +41,9 @@ export default function CivitaiResultCard({
       }}
     >
       <div style={{ flexShrink: 0, width: 40, height: 40 }}>
-        {thumbBase64 ? (
+        {thumbBase64 || thumbUrl ? (
           <CivitaiImage
-            url=""
+            url={thumbUrl}
             alt={item.name}
             base64={thumbBase64}
             style={{

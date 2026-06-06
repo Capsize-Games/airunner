@@ -41,8 +41,21 @@ export default function CivitaiImage({
     );
   }
 
-  // Fallback: render the placeholder.  Legacy single-image fetches
-  // are handled by the CivitaiImageLegacy wrapper below if needed.
+  // Fallback: if a URL is available, render it directly (the server proxy
+  // handles the fetch so the client doesn't expose CivitAI URLs directly).
+  if (url) {
+    return (
+      <img
+        src={url}
+        alt={alt}
+        className={className}
+        style={style}
+        loading="lazy"
+      />
+    );
+  }
+
+  // Last resort: empty placeholder when neither base64 nor URL is known.
   return (
     <div
       className={className}
