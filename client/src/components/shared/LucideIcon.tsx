@@ -55,5 +55,5 @@ export default function LucideIcon({ name, size = 20, className }: Props) {
     console.warn(`LucideIcon: unknown icon "${name}"`);
     return null;
   }
-  return <Icon size={size} className={className} />;
+  return <Icon size={size} className={`lucide-icon ${className ?? ""}`.trim()} />;
 }

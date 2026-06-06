@@ -29,9 +29,9 @@ export default function IconBtn({
         width: 22, height: 22, padding: 0, flexShrink: 0,
         display: "flex", alignItems: "center", justifyContent: "center",
         border: "none", borderRadius: 4, background: "transparent",
-        color: disabled ? "rgba(255,255,255,0.15)"
+        color: disabled ? "rgba(var(--theme-text-rgb), 0.15)"
           : danger ? "rgba(255,100,100,0.65)"
-          : "rgba(255,255,255,0.5)",
+          : "rgba(var(--theme-text-rgb), 0.5)",
         cursor: disabled ? "default" : "pointer",
       }}
     >

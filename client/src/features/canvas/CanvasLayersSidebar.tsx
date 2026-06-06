@@ -224,8 +224,8 @@ export default function CanvasLayersSidebar() {
             background: "none", border: "none", padding: 0,
             marginRight: 4, flexShrink: 0, cursor: "pointer",
             color: group.visible
-              ? "rgba(255,255,255,0.55)"
-              : "rgba(255,255,255,0.2)",
+              ? "rgba(var(--theme-text-rgb), 0.55)"
+              : "rgba(var(--theme-text-rgb), 0.2)",
             display: "flex", alignItems: "center",
           }}
         >
@@ -237,7 +237,7 @@ export default function CanvasLayersSidebar() {
         </button>
         {group.expanded ? (
           <svg viewBox="0 0 24 24" width={12} height={12}
-            style={{ marginRight: 4, flexShrink: 0, color: "rgba(255,255,255,0.4)" }}
+            style={{ marginRight: 4, flexShrink: 0, color: "rgba(var(--theme-text-rgb), 0.4)" }}
           >
             <path d="M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"
               fill="none" stroke="currentColor" strokeWidth={1.75} />
@@ -245,7 +245,7 @@ export default function CanvasLayersSidebar() {
           </svg>
         ) : (
           <svg viewBox="0 0 24 24" width={12} height={12}
-            style={{ marginRight: 4, flexShrink: 0, color: "rgba(255,255,255,0.4)" }}
+            style={{ marginRight: 4, flexShrink: 0, color: "rgba(var(--theme-text-rgb), 0.4)" }}
           >
             <path d="M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"
               fill="none" stroke="currentColor" strokeWidth={1.75} />
@@ -257,14 +257,14 @@ export default function CanvasLayersSidebar() {
           textOverflow: "ellipsis", whiteSpace: "nowrap",
           fontSize: 11, fontWeight: 600,
           color: group.visible
-            ? "rgba(255,255,255,0.5)"
-            : "rgba(255,255,255,0.25)",
+            ? "rgba(var(--theme-text-rgb), 0.5)"
+            : "rgba(var(--theme-text-rgb), 0.25)",
         }}>
           {group.name}
         </span>
         <span style={{
           fontSize: 10, fontFamily: "monospace",
-          color: "rgba(255,255,255,0.3)", flexShrink: 0, marginLeft: 4,
+          color: "rgba(var(--theme-text-rgb), 0.3)", flexShrink: 0, marginLeft: 4,
         }}>
           {Math.round(group.opacity * 100)}%
         </span>
@@ -346,8 +346,8 @@ export default function CanvasLayersSidebar() {
               background: "none", border: "none", padding: 0,
               marginRight: 4, flexShrink: 0, cursor: "pointer",
               color: layer.visible
-                ? "rgba(255,255,255,0.55)"
-                : "rgba(255,255,255,0.2)",
+                ? "rgba(var(--theme-text-rgb), 0.55)"
+                : "rgba(var(--theme-text-rgb), 0.2)",
               display: "flex", alignItems: "center",
             }}
           >
@@ -371,7 +371,7 @@ export default function CanvasLayersSidebar() {
                 background: "rgba(0,0,0,0.5)",
                 border: "1px solid rgba(99,153,255,0.5)",
                 borderRadius: 3,
-                color: "rgba(255,255,255,0.9)", outline: "none",
+                color: "rgba(var(--theme-text-rgb), 0.9)", outline: "none",
               }}
             />
           ) : (
@@ -382,9 +382,9 @@ export default function CanvasLayersSidebar() {
                 fontSize: 12,
                 color: layer.visible
                   ? isActive
-                    ? "rgba(255,255,255,0.9)"
-                    : "rgba(255,255,255,0.65)"
-                  : "rgba(255,255,255,0.25)",
+                    ? "rgba(var(--theme-text-rgb), 0.9)"
+                    : "rgba(var(--theme-text-rgb), 0.65)"
+                  : "rgba(var(--theme-text-rgb), 0.25)",
                 cursor: "default",
               }}
               onDoubleClick={(e) => {
@@ -398,7 +398,7 @@ export default function CanvasLayersSidebar() {
 
           <span style={{
             fontSize: 10, fontFamily: "monospace",
-            color: "rgba(255,255,255,0.3)",
+            color: "rgba(var(--theme-text-rgb), 0.3)",
             flexShrink: 0, marginLeft: 4,
           }}>
             {Math.round(layer.opacity * 100)}%
@@ -515,7 +515,7 @@ export default function CanvasLayersSidebar() {
       >
         <span style={{
           fontSize: 10, fontWeight: 600, letterSpacing: "0.07em",
-          textTransform: "uppercase", color: "rgba(255,255,255,0.3)",
+          textTransform: "uppercase", color: "rgba(var(--theme-text-rgb), 0.3)",
         }}>
           Layers
         </span>

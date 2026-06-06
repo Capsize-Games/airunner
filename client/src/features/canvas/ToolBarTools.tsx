@@ -61,9 +61,9 @@ export function IconBtn({
         flexShrink: 0,
         cursor: disabled ? "default" : "pointer",
         background: active ? "rgba(99,153,255,0.22)" : "transparent",
-        color: disabled ? "rgba(255,255,255,0.2)" :
+        color: disabled ? "rgba(var(--theme-text-rgb), 0.2)" :
                danger ? "rgba(255,100,100,0.8)" :
-               active ? "#6fa8ff" : "rgba(255,255,255,0.55)",
+               active ? "#6fa8ff" : "rgba(var(--theme-text-rgb), 0.55)",
         boxShadow: active
           ? "inset 0 0 0 1.5px rgba(99,153,255,0.55)"
           : "none",
@@ -72,9 +72,9 @@ export function IconBtn({
       onMouseEnter={(e) => {
         if (!active && !disabled) {
           (e.currentTarget as HTMLButtonElement).style.background =
-            "rgba(255,255,255,0.07)";
+            "rgba(var(--theme-text-rgb), 0.07)";
           (e.currentTarget as HTMLButtonElement).style.color =
-            "rgba(255,255,255,0.9)";
+            "rgba(var(--theme-text-rgb), 0.9)";
         }
       }}
       onMouseLeave={(e) => {
@@ -83,8 +83,8 @@ export function IconBtn({
             "transparent";
           (e.currentTarget as HTMLButtonElement).style.color =
             disabled
-              ? "rgba(255,255,255,0.2)"
-              : "rgba(255,255,255,0.55)";
+              ? "rgba(var(--theme-text-rgb), 0.2)"
+              : "rgba(var(--theme-text-rgb), 0.55)";
         }
       }}
     >

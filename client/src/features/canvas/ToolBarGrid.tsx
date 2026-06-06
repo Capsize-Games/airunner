@@ -18,7 +18,7 @@ const gridInputStyle: React.CSSProperties = {
   background: "rgba(0,0,0,0.4)",
   border: "1px solid rgba(255,255,255,0.12)",
   borderRadius: 4,
-  color: "rgba(255,255,255,0.8)",
+  color: "rgba(var(--theme-text-rgb), 0.8)",
   fontSize: 11,
   textAlign: "center",
   padding: "2px 0",
@@ -58,13 +58,13 @@ export default function ToolBarGrid({
         <Magnet size={15} strokeWidth={1.75} />
       </IconBtn>
       <span style={{
-        fontSize: 10, color: "rgba(255,255,255,0.35)",
+        fontSize: 10, color: "rgba(var(--theme-text-rgb), 0.35)",
         whiteSpace: "nowrap",
       }}>
         Grid
       </span>
       <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
-        <span style={{ fontSize: 10, color: "rgba(255,255,255,0.4)" }}>
+        <span style={{ fontSize: 10, color: "rgba(var(--theme-text-rgb), 0.4)" }}>
           W
         </span>
         <input
@@ -95,7 +95,7 @@ export default function ToolBarGrid({
             ? <Lock size={13} strokeWidth={1.75} />
             : <Unlock size={13} strokeWidth={1.75} />}
         </IconBtn>
-        <span style={{ fontSize: 10, color: "rgba(255,255,255,0.4)" }}>
+        <span style={{ fontSize: 10, color: "rgba(var(--theme-text-rgb), 0.4)" }}>
           H
         </span>
         <input

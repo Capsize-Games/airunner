@@ -7,6 +7,7 @@
   --theme-bg-secondary: #12121e;
   --theme-bg-tertiary: #16162a;
   --theme-text: #c8c8c8;
+  --theme-text-rgb: 200, 200, 200;
   --theme-text-secondary: #a0a0a8;
   --theme-heading: #e0e0e0;
   --theme-border: #333;
@@ -24,6 +25,7 @@
   --theme-bg-secondary: #ffffff;
   --theme-bg-tertiary: #fafafa;
   --theme-text: #000000;
+  --theme-text-rgb: 0, 0, 0;
   --theme-text-secondary: #1a1a1a;
   --theme-heading: #000000;
   --theme-border: #b0b0b0;
@@ -41,6 +43,7 @@
   --theme-bg-secondary: #1e5c44;
   --theme-bg-tertiary: #2e8c6a;
   --theme-text: #e0f5eb;
+  --theme-text-rgb: 224, 245, 235;
   --theme-text-secondary: #aaf0d1;
   --theme-heading: #ffffff;
   --theme-border: #2e8c6a;
@@ -58,6 +61,7 @@
   --theme-bg-secondary: #1a1a1a;
   --theme-bg-tertiary: #222;
   --theme-text: #ffffff;
+  --theme-text-rgb: 255, 255, 255;
   --theme-text-secondary: #39ff14;
   --theme-heading: #00fff7;
   --theme-border: #393e46;
@@ -121,6 +125,12 @@ a:not(.btn):hover {
 /* ── Icon color helpers (for lucide-react SVG icons) ── */
 .icon-muted { color: var(--theme-text-secondary); }
 .icon-white { color: #fff; }
+/* Default icon color — applied to every lucide-icon element so SVGs are
+   theme-aware without per-instance inline styles.  Components set their own
+   color via CSS when a specific hue is needed (e.g. danger, active). */
+.lucide-icon {
+  color: var(--theme-text);
+}
 
 /* -- Global overrides for readable text on dark bg -- */
 .text-muted { color: var(--theme-text-secondary) !important; }
