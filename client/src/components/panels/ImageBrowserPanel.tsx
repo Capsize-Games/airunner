@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
 import Spinner from "react-bootstrap/Spinner";
-import { BASE_URL } from "../../types/api";
 import type { ImageInfo } from "../../api/client";
 import { deleteImage } from "../../api/client";
 import {
@@ -17,27 +16,20 @@ import ImageBrowserFooter from "./image-browser/ImageBrowserFooter";
 import ImageDateSelector from "./image-browser/ImageDateSelector";
 import { useInfiniteScroll } from "./image-browser/useInfiniteScroll";
 import { useImageBrowserSSE } from "./image-browser/useImageBrowserSSE";
+import { useImageDates } from "../../hooks/useImageDates";
+import { useLocalStorage } from "../../hooks/useLocalStorage";
 
 const PAGE_SIZE = 20;
 
 export { saveLocalImage, getLocalImages, type LocalImageEntry };
 
 export default function ImageBrowserPanel() {
-  const [dates, setDates] = useState<
-    { value: string; label: string }[]
-  >([]);
-  const [selectedDate, setSelectedDate] = useState<string | null>(() => {
-    try {
-      return localStorage.getItem(LS_DATE_KEY);
-    } catch {
-      return null;
-    }
-  });
+  const { dates, loading: loadingDates, reload: reloadDates } = useImageDates();
+  const [selectedDate, setSelectedDate] = useLocalStorage<string | null>(LS_DATE_KEY, null);
   const [serverImages, setServerImages] = useState<ImageInfo[]>([]);
   const [localImages, setLocalImages] = useState<LocalImageEntry[]>([]);
   const [total, setTotal] = useState(0);
   const [offset, setOffset] = useState(0);
-  const [loadingDates, setLoadingDates] = useState(true);
   const [loadingImages, setLoadingImages] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const [showLocal, setShowLocal] = useState(false);
@@ -48,31 +40,16 @@ export default function ImageBrowserPanel() {
     setLocalImages(getLocalImages());
   }, []);
 
-  const loadDates = useCallback(async () => {
-    try {
-      const { listImageDates } = await import("../../api/client");
-      const data = await listImageDates();
-      setDates(data.dates);
-      if (data.dates.length > 0 && !selectedDate) {
-        setSelectedDate(data.dates[0].value);
-      } else if (selectedDate) {
-        const stillExists = data.dates.some(
-          (d) => d.value === selectedDate,
-        );
-        if (!stillExists && data.dates.length > 0) {
-          setSelectedDate(data.dates[0].value);
-        }
-      }
-    } catch {
-      // unavailable
-    } finally {
-      setLoadingDates(false);
-    }
-  }, [selectedDate]);
-
+  // Auto-select first date when dates load and nothing is selected.
   useEffect(() => {
-    loadDates();
-  }, [loadDates]);
+    if (dates.length === 0) return;
+    if (!selectedDate) {
+      setSelectedDate(dates[0].value);
+    } else {
+      const stillExists = dates.some((d) => d.value === selectedDate);
+      if (!stillExists) setSelectedDate(dates[0].value);
+    }
+  }, [dates]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadImages = useCallback(
     async (date: string, currentOffset: number, append: boolean) => {
@@ -115,7 +92,7 @@ export default function ImageBrowserPanel() {
   const sentinelRef = useInfiniteScroll(loadMore, hasMore && !loadingImages);
 
   const handleSSEReload = useCallback(() => {
-    loadDates();
+    reloadDates();
     setServerImages([]);
     setOffset(0);
     setHasMore(true);
@@ -123,7 +100,7 @@ export default function ImageBrowserPanel() {
       loadImages(selectedDate, 0, false);
     }
     setLocalImages(getLocalImages());
-  }, [loadDates, selectedDate, loadImages]);
+  }, [reloadDates, selectedDate, loadImages]);
 
   useImageBrowserSSE(handleSSEReload);
 
@@ -134,15 +111,6 @@ export default function ImageBrowserPanel() {
     }
     setShowLocal(false);
     setSelectedDate(val);
-    if (val) {
-      try {
-        localStorage.setItem(LS_DATE_KEY, val);
-      } catch {}
-    } else {
-      try {
-        localStorage.removeItem(LS_DATE_KEY);
-      } catch {}
-    }
   };
 
   const handleDeleteFromServer = (id: string) => {

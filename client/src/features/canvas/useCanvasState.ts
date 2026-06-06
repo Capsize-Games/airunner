@@ -21,6 +21,7 @@ import {
   nextLayerId, nextStrokeId, nextImageId, nextGroupId,
   advanceCountersFromState, snapTo8, pushHistory, serialize,
   defaultState, loadPersistedState, persistState,
+  loadPersistedStateAsync, persistStateAsync,
 } from "./canvasStateUtils";
 
 // ── Hook ────────────────────────────────────────────────────────────────────
@@ -30,11 +31,30 @@ export function useCanvasState() {
     () => loadPersistedState() ?? defaultState(),
   );
   const persistTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const initialLoadDone = useRef(false);
 
-  // Debounced localStorage persistence.
+  // On first mount, attempt to load from IndexedDB; it may have a newer state
+  // than what localStorage provided synchronously (e.g. after a crash that
+  // flushed IndexedDB but not localStorage).
+  useEffect(() => {
+    if (initialLoadDone.current) return;
+    initialLoadDone.current = true;
+    loadPersistedStateAsync().then((dbState) => {
+      if (!dbState) return;
+      setState((prev) => {
+        if (dbState._ts > prev._ts) return dbState;
+        return prev;
+      });
+    }).catch(() => {});
+  }, []);
+
+  // Debounced persistence to both localStorage and IndexedDB.
   useEffect(() => {
     if (persistTimer.current) clearTimeout(persistTimer.current);
-    persistTimer.current = setTimeout(() => persistState(state), 300);
+    persistTimer.current = setTimeout(
+      () => persistStateAsync(state).catch(() => {}),
+      300,
+    );
     return () => {
       if (persistTimer.current) clearTimeout(persistTimer.current);
     };
@@ -447,6 +467,9 @@ export function useCanvasState() {
     try {
       localStorage.removeItem("airunner_canvas_state");
     } catch { /* noop */ }
+    import("../../db/db").then(({ getDb }) => {
+      getDb()?.canvasDocuments.delete("default").catch(() => {});
+    }).catch(() => {});
     setState((prev) => ({
       ...defaultState(),
       _ts: Date.now(),

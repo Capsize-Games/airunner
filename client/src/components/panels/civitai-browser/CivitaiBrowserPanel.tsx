@@ -1,26 +1,22 @@
-
 import { useState, useRef, useCallback, useEffect } from "react";
 import Spinner from "react-bootstrap/Spinner";
 import CivitaiSearchBar from "./CivitaiSearchBar";
 import CivitaiResultCard from "./CivitaiResultCard";
 import { searchCivitaiModels, fetchCivitaiModel, requestCivitaiVersionThumbnails } from "../../../api/downloads";
 import { request } from "../../../api/client-base";
-import { BASE_URL, type JsonObject } from "../../../types/api";
+import { type JsonObject } from "../../../types/api";
 import CivitaiModelDetailModal from "./CivitaiModelDetailModal";
 import { useEventBus } from "../../../features/events/useEventBus";
 import { EVENT_CIVITAI_THUMBNAIL } from "../../../features/events/types";
-
-// Note: CivitAI data caching is handled server-side (72h for search
-// results, permanent for images).  No client-side caching needed.
+import { useCivitaiPrefs } from "../../../hooks/useCivitaiPrefs";
+import { useCivitaiDetailCache } from "../../../hooks/useCivitaiDetailCache";
+import { useCivitaiThumbnailCache } from "../../../hooks/useCivitaiThumbnailCache";
 
 // ── Helpers ──
-
-function thumbnailUrl(url: string, _width = 120): string { return url || ""; }
 
 interface SearchResult {
   id: number; name: string; type?: string; baseModel?: string;
   creator?: string; thumbnail?: string;
-  /** Inline base64 thumbnails from the server, keyed by size. */
   thumbnails?: Record<string, string>;
 }
 
@@ -58,30 +54,24 @@ async function fetchFilterOptions(): Promise<{ baseModels: FilterOption[]; model
 // ── Panel component ──
 
 export default function CivitaiBrowserPanel() {
+  const {
+    baseModel, setBaseModel,
+    modelType, setModelType,
+    selectedModelId, setSelectedModelId,
+  } = useCivitaiPrefs();
+
+  const detailCache = useCivitaiDetailCache();
+  const thumbCache = useCivitaiThumbnailCache();
+
   const [query, setQuery] = useState("");
-  const [baseModel, setBaseModel] = useState(() => {
-    try { return localStorage.getItem("airunner_civitai_base_model") ?? ""; }
-    catch { return ""; }
-  });
-  const [modelType, setModelType] = useState(() => {
-    try { return localStorage.getItem("airunner_civitai_model_type") ?? ""; }
-    catch { return ""; }
-  });
   const [results, setResults] = useState<SearchResult[]>([]);
   const [cursor, setCursor] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [hasMore, setHasMore] = useState(true);
-  const [selectedModelId, setSelectedModelId] = useState<number | null>(() => {
-    try {
-      const v = localStorage.getItem("airunner_civitai_selected_model");
-      return v ? Number(v) : null;
-    } catch { return null; }
-  });
   const [selectedModelData, setSelectedModelData] = useState<JsonObject | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [filterOptions, setFilterOptions] = useState<{ baseModels: FilterOption[]; typesByBase: Record<string, string[]> }>({ baseModels: [], typesByBase: {} });
 
-  const detailCache = useRef<Map<number, JsonObject>>(new Map());
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const resultsElRef = useRef<HTMLDivElement | null>(null);
   const cursorRef = useRef<string | null>(null);
@@ -90,10 +80,13 @@ export default function CivitaiBrowserPanel() {
   const fillCountRef = useRef(0);
   const doSearchRef = useRef<(append?: boolean) => void>(() => {});
 
-  // Load filter options on mount
-  useEffect(() => { fetchFilterOptions().then((opts) => setFilterOptions({ baseModels: opts.baseModels, typesByBase: opts.typesByBase })).catch(() => {}); }, []);
+  useEffect(() => {
+    fetchFilterOptions()
+      .then((opts) => setFilterOptions({ baseModels: opts.baseModels, typesByBase: opts.typesByBase }))
+      .catch(() => {});
+  }, []);
 
-  // Listen for streaming thumbnails pushed by the server
+  // Listen for streaming thumbnails pushed by the server; persist to IndexedDB.
   useEventBus([EVENT_CIVITAI_THUMBNAIL], (_event, data) => {
     const payload = data as {
       model_id?: number;
@@ -103,7 +96,8 @@ export default function CivitaiBrowserPanel() {
       image_url?: string;
       images_base64?: Record<string, string>;
     };
-    // Per-image streaming update for version thumbnails
+
+    // Per-image streaming update for version thumbnails.
     if (
       payload.model_id === selectedModelId &&
       payload.version_index !== undefined &&
@@ -112,7 +106,13 @@ export default function CivitaiBrowserPanel() {
     ) {
       const vIdx = payload.version_index;
       const imageUrl = payload.image_url;
-      const b64 = payload.images_base64;
+      const b64Map = payload.images_base64;
+
+      // Persist each size variant to IndexedDB.
+      for (const [, blob] of Object.entries(b64Map)) {
+        thumbCache.store(payload.model_id!, vIdx, imageUrl, blob).catch(() => {});
+      }
+
       setSelectedModelData((prev) => {
         if (!prev) return prev;
         const versions = [...((prev as JsonObject).modelVersions ?? [])] as JsonObject[];
@@ -122,18 +122,20 @@ export default function CivitaiBrowserPanel() {
           (img) => (img.url ?? img.thumbnailUrl) === imageUrl,
         );
         if (iIdx < 0) return prev;
-        images[iIdx] = { ...images[iIdx], images_base64: b64 };
+        images[iIdx] = { ...images[iIdx], images_base64: b64Map };
         versions[vIdx] = { ...versions[vIdx], images };
         return { ...(prev as JsonObject), modelVersions: versions };
       });
       return;
     }
-    // Full model update (legacy fallback)
+
+    // Full model update (legacy fallback).
     if (payload.model && payload.model_id === selectedModelId) {
       setSelectedModelData(payload.model);
       return;
     }
-    // Search result thumbnail update
+
+    // Search result thumbnail update.
     if (!payload.model_id || !payload.thumbnails) return;
     setResults((prev) =>
       prev.map((r) =>
@@ -150,8 +152,6 @@ export default function CivitaiBrowserPanel() {
     if (!shouldSearch()) return;
     loadingRef.current = true;
     setLoading(true);
-    const pageLabel = append ? `page-2 (cursor=${cursorRef.current?.slice(0, 20)}...)` : "page-1";
-    console.log(`[CivitAI] doSearch ${pageLabel} — sending POST`);
     try {
       const data = await searchCivitaiModels({
         query,
@@ -160,7 +160,6 @@ export default function CivitaiBrowserPanel() {
         limit: 20,
         cursor: append ? cursorRef.current : null,
       });
-      console.log(`[CivitAI] doSearch ${pageLabel} — got response, items=${(data.items as unknown[])?.length}`);
       const items = ((data.items ?? []) as JsonObject[]).map(flattenItem);
       setResults((prev) => (append ? [...prev, ...items] : items));
       const next = ((data.metadata as JsonObject | undefined)?.nextCursor as string) ?? null;
@@ -168,27 +167,26 @@ export default function CivitaiBrowserPanel() {
       hasMoreRef.current = next !== null;
       setCursor(next);
       setHasMore(next !== null);
-    } catch (err) {
-      console.error(`[CivitAI] doSearch ${pageLabel} — FAILED:`, err);
+    } catch { /* network error */ } finally {
+      setLoading(false);
+      loadingRef.current = false;
     }
-    finally { setLoading(false); loadingRef.current = false; }
   }, [query, baseModel, modelType]);
 
-  // Keep ref in sync so event handlers never capture stale closures
   useEffect(() => { doSearchRef.current = doSearch; }, [doSearch]);
 
   const debouncedSearch = useCallback((append = false) => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => { cursorRef.current = null; hasMoreRef.current = true; doSearch(append); }, 400);
+    debounceRef.current = setTimeout(() => {
+      cursorRef.current = null;
+      hasMoreRef.current = true;
+      doSearch(append);
+    }, 400);
   }, [doSearch]);
 
-  // Auto-search on dropdown change — fire immediately on mount when
-  // filters are restored from localStorage (no debounce).
   useEffect(() => {
     if (baseModel !== "" && modelType !== "") {
-      if (doSearchRef.current) {
-        doSearchRef.current(false);
-      }
+      doSearchRef.current?.(false);
     } else {
       setResults([]);
       cursorRef.current = null;
@@ -198,19 +196,19 @@ export default function CivitaiBrowserPanel() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [baseModel, modelType]);
 
-  // Viewport filling — skip when modal is open
+  // Viewport fill.
   useEffect(() => {
     if (selectedModelId !== null) { fillCountRef.current = 0; return; }
     if (!loading && hasMore && results.length > 0 && resultsElRef.current) {
       if (resultsElRef.current.scrollHeight <= resultsElRef.current.clientHeight && fillCountRef.current < 4) {
         fillCountRef.current++;
-        doSearchRef.current(true);
+        doSearchRef.current?.(true);
       } else { fillCountRef.current = 0; }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [results.length, loading, hasMore, selectedModelId]);
 
-  // Scroll lazy loading — attached via callback ref so it's always active
+  // Scroll lazy loading.
   const scrollMounted = useRef(false);
   const resultsRef = useCallback((el: HTMLDivElement | null) => {
     resultsElRef.current = el;
@@ -219,20 +217,18 @@ export default function CivitaiBrowserPanel() {
       const onScroll = () => {
         if (loadingRef.current || !hasMoreRef.current) return;
         const { scrollTop, scrollHeight, clientHeight } = el;
-        if (scrollHeight - scrollTop - clientHeight < 150) {
-          doSearchRef.current(true);
-        }
+        if (scrollHeight - scrollTop - clientHeight < 150) doSearchRef.current?.(true);
       };
       el.addEventListener("scroll", onScroll, { passive: true });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const handleSelectModel = useCallback(async (modelId: number) => {
-    setSelectedModelId(modelId);
-    try { localStorage.setItem("airunner_civitai_selected_model", String(modelId)); } catch { /* */ }
-    const cached = detailCache.current.get(modelId);
-    if (cached) { setSelectedModelData(cached); return; }
+  const fetchModelDetail = useCallback(async (modelId: number) => {
+    // Check IndexedDB cache first.
+    const cached = await detailCache.get(modelId);
+    if (cached) { setSelectedModelData(cached); setDetailLoading(false); return; }
+
     setSelectedModelData({ id: modelId, name: "Loading...", modelVersions: [] } as unknown as JsonObject);
     setDetailLoading(true);
     try {
@@ -241,14 +237,19 @@ export default function CivitaiBrowserPanel() {
         base_models: baseModel ? [baseModel] : undefined,
         model_types: modelType ? [modelType] : undefined,
       });
-      detailCache.current.set(modelId, data);
+      await detailCache.set(modelId, data);
       setSelectedModelData(data);
     } catch {
       setSelectedModelData(null);
     } finally {
       setDetailLoading(false);
     }
-  }, [baseModel, modelType]);
+  }, [baseModel, modelType, detailCache]);
+
+  const handleSelectModel = useCallback(async (modelId: number) => {
+    setSelectedModelId(modelId);
+    await fetchModelDetail(modelId);
+  }, [fetchModelDetail, setSelectedModelId]);
 
   const handleRequestVersionThumbnails = useCallback(async (versionId: number) => {
     if (!selectedModelData) return;
@@ -263,24 +264,11 @@ export default function CivitaiBrowserPanel() {
     } catch { /* */ }
   }, [selectedModelData]);
 
-  // Re-fetch model detail on mount when restoring from localStorage
+  // Restore selected model detail on mount if filters are already set.
   useEffect(() => {
-    const storedId = selectedModelId;
-    if (storedId === null) return;
-    if (detailCache.current.has(storedId)) {
-      setSelectedModelData(detailCache.current.get(storedId) ?? null);
-      return;
-    }
-    if (baseModel === "" || modelType === "") return; // wait for filters
-    setDetailLoading(true);
-    fetchCivitaiModel({
-      model_id: String(storedId),
-      base_models: baseModel ? [baseModel] : undefined,
-      model_types: modelType ? [modelType] : undefined,
-    }).then((data) => {
-      detailCache.current.set(storedId, data);
-      setSelectedModelData(data);
-    }).catch(() => {}).finally(() => setDetailLoading(false));
+    if (selectedModelId === null) return;
+    if (baseModel === "" || modelType === "") return;
+    fetchModelDetail(selectedModelId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [baseModel, modelType]);
 
@@ -327,27 +315,36 @@ export default function CivitaiBrowserPanel() {
       <CivitaiSearchBar
         query={query} baseModel={baseModel} modelType={modelType}
         filterOptions={filterOptions}
-        onQueryChange={(val) => { setQuery(val); if (val.trim().length > 0) debouncedSearch(false); }}
+        onQueryChange={(val) => {
+          setQuery(val);
+          if (val.trim().length > 0) debouncedSearch(false);
+        }}
         onBaseModelChange={(val) => {
           setBaseModel(val);
           setModelType("");
-          try { localStorage.setItem("airunner_civitai_base_model", val); } catch { /* */ }
-          try { localStorage.setItem("airunner_civitai_model_type", ""); } catch { /* */ }
         }}
-        onModelTypeChange={(val) => {
-          setModelType(val);
-          try { localStorage.setItem("airunner_civitai_model_type", val); } catch { /* */ }
-        }}
+        onModelTypeChange={setModelType}
       />
 
       <div ref={resultsRef} className="overflow-auto" style={{ flex: 1, minHeight: 0 }}>
         {results.map((item) => (
-          <CivitaiResultCard key={item.id} item={item} selected={selectedModelId === item.id} onSelect={handleSelectModel} />
+          <CivitaiResultCard
+            key={item.id}
+            item={item}
+            selected={selectedModelId === item.id}
+            onSelect={handleSelectModel}
+          />
         ))}
-        {loading && <div className="text-center py-2"><Spinner animation="border" size="sm" /></div>}
+        {loading && (
+          <div className="text-center py-2">
+            <Spinner animation="border" size="sm" />
+          </div>
+        )}
         {!loading && results.length === 0 && (
           <p className="text-muted small text-center mt-3">
-            {shouldSearch() ? "No results found." : "Select a base model and type, or type a search query."}
+            {shouldSearch()
+              ? "No results found."
+              : "Select a base model and type, or type a search query."}
           </p>
         )}
       </div>
@@ -362,7 +359,6 @@ export default function CivitaiBrowserPanel() {
           onClose={() => {
             setSelectedModelId(null);
             setSelectedModelData(null);
-            try { localStorage.removeItem("airunner_civitai_selected_model"); } catch { /* */ }
           }}
         />
       )}

@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "bootstrap": "^5.3.8",
+    "dexie": "^4.4.3",
     "konva": "^10.3.0",
     "lucide-react": "^1.17.0",
     "react": "^19.2.6",

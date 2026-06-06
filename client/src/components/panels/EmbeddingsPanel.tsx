@@ -1,103 +1,55 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import Spinner from "react-bootstrap/Spinner";
 import type { EmbeddingInfo } from "../../api/client";
 import EmbeddingItem from "./embeddings/EmbeddingItem";
 import { useEventBus } from "../../features/events/useEventBus";
 import { EVENT_EMBEDDINGS } from "../../features/events/types";
+import { useEmbeddings } from "../../hooks/useEmbeddings";
 
 interface EmbeddingItemData extends EmbeddingInfo {
   _inputText: string;
 }
 
+/** Variant versions whose embeddings are stored under the SDXL 1.0 directory. */
+const VARIANT_BASE: Record<string, string> = {
+  "SDXL Lightning": "SDXL 1.0",
+  "SDXL Hyper": "SDXL 1.0",
+};
+
+function getVersion(): string {
+  try { return localStorage.getItem("airunner_art_version") || ""; }
+  catch { return ""; }
+}
+
 export default function EmbeddingsPanel() {
-  const [items, setItems] = useState<EmbeddingItemData[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { embeddings, loading, sync, patchEmbedding } = useEmbeddings();
+  const [inputTexts, setInputTexts] = useState<Record<number, string>>({});
   const [copiedIndex, setCopiedIndex] = useState<string | null>(null);
   const copiedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  /** Variant versions whose LoRAs/embeddings are stored under the
-   *  SDXL 1.0 directory rather than their own version directory. */
-  const VARIANT_BASE: Record<string, string> = {
-    "SDXL Lightning": "SDXL 1.0",
-    "SDXL Hyper": "SDXL 1.0",
-  };
-
-  const reload = useCallback(async () => {
-    setLoading(true);
-    try {
-      const { listEmbeddings } = await import("../../api/client");
-      const data = await listEmbeddings();
-      const version = (() => {
-        try { return localStorage.getItem("airunner_art_version") || ""; }
-        catch { return ""; }
-      })();
-      const baseDir = VARIANT_BASE[version] || version;
-      const filtered = data.embeddings.filter((e: EmbeddingInfo) =>
-        version ? e.path.includes(`/${baseDir}/`) : true,
-      );
-      setItems(
-        filtered.map((e: EmbeddingInfo) => ({
-          ...e,
-          _inputText: "",
-        })),
-      );
-    } catch {
-      setItems([]);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    reload();
-  }, [reload]);
-
-  useEffect(() => {
-    const handler = () => reload();
-    window.addEventListener("art-version-changed", handler);
-    return () => window.removeEventListener("art-version-changed", handler);
-  }, [reload]);
+  const version = getVersion();
+  const baseDir = VARIANT_BASE[version] || version;
+  const items: EmbeddingItemData[] = embeddings
+    .filter((e) => version ? e.path.includes(`/${baseDir}/`) : true)
+    .map((e) => ({ ...e, _inputText: inputTexts[e.id] ?? "" }));
 
   useEventBus([EVENT_EMBEDDINGS], (_event, data) => {
     const payload = data as { type?: string };
-    if (payload.type === "reload") {
-      reload();
-    }
+    if (payload.type === "reload") sync();
   });
 
   useEffect(() => {
-    const handler = (e: Event) => {
-      const detail = (e as CustomEvent).detail as
-        { id: number; enabled: boolean } | undefined;
-      if (detail && detail.id) {
-        setItems((prev) =>
-          prev.map((item) =>
-            item.id === detail.id
-              ? { ...item, enabled: detail.enabled }
-              : item,
-          ),
-        );
-      }
-    };
-    window.addEventListener("embedding-changed", handler);
-    return () =>
-      window.removeEventListener("embedding-changed", handler);
-  }, []);
+    const handler = () => sync();
+    window.addEventListener("art-version-changed", handler);
+    return () => window.removeEventListener("art-version-changed", handler);
+  }, [sync]);
 
   const handleToggle = async (id: number, enabled: boolean) => {
     try {
       const { updateEmbedding } = await import("../../api/client");
-      await updateEmbedding(id, { enabled });
-      setItems((prev) =>
-        prev.map((item) =>
-          item.id === id ? { ...item, enabled } : item,
-        ),
-      );
-      window.dispatchEvent(
-        new CustomEvent("embedding-changed", {
-          detail: { id, enabled },
-        }),
-      );
+      const updated = await updateEmbedding(id, { enabled });
+      await patchEmbedding(updated);
+      window.dispatchEvent(new CustomEvent("embedding-changed", { detail: { id, enabled } }));
     } catch { /* */ }
   };
 
@@ -109,49 +61,35 @@ export default function EmbeddingsPanel() {
   };
 
   const handleDeleteWord = async (id: number, word: string) => {
-    const item = items.find((i) => i.id === id);
+    const item = embeddings.find((i) => i.id === id);
     if (!item) return;
     const remaining = item.trigger_words.filter((w) => w !== word);
     try {
       const { updateEmbedding } = await import("../../api/client");
-      await updateEmbedding(id, {
-        trigger_words: remaining.join(","),
-      });
-      setItems((prev) =>
-        prev.map((i) =>
-          i.id === id ? { ...i, trigger_words: remaining } : i,
-        ),
-      );
+      await updateEmbedding(id, { trigger_words: remaining.join(",") });
+      await patchEmbedding({ ...item, trigger_words: remaining });
     } catch { /* */ }
   };
 
   const handleAddWords = async (id: number) => {
-    const item = items.find((i) => i.id === id);
-    if (!item || !item._inputText.trim()) return;
-    const newWords = item._inputText
-      .split(",")
+    const item = embeddings.find((i) => i.id === id);
+    const text = inputTexts[id] ?? "";
+    if (!item || !text.trim()) return;
+    const newWords = text.split(",")
       .map((w) => w.trim())
       .filter((w) => w.length > 0 && !item.trigger_words.includes(w));
     if (newWords.length === 0) return;
     const merged = [...item.trigger_words, ...newWords];
     try {
       const { updateEmbedding } = await import("../../api/client");
-      await updateEmbedding(id, {
-        trigger_words: merged.join(","),
-      });
-      setItems((prev) =>
-        prev.map((i) =>
-          i.id === id ? { ...i, trigger_words: merged, _inputText: "" } : i,
-        ),
-      );
+      const updated = await updateEmbedding(id, { trigger_words: merged.join(",") });
+      await patchEmbedding(updated);
+      setInputTexts((prev) => ({ ...prev, [id]: "" }));
     } catch { /* */ }
   };
 
   const handleInputKeyDown = (e: React.KeyboardEvent, id: number) => {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      handleAddWords(id);
-    }
+    if (e.key === "Enter") { e.preventDefault(); handleAddWords(id); }
   };
 
   return (
@@ -178,11 +116,7 @@ export default function EmbeddingsPanel() {
               onDeleteWord={handleDeleteWord}
               onAddWords={handleAddWords}
               onInputChange={(id, value) =>
-                setItems((prev) =>
-                  prev.map((i) =>
-                    i.id === id ? { ...i, _inputText: value } : i,
-                  ),
-                )
+                setInputTexts((prev) => ({ ...prev, [id]: value }))
               }
               onInputKeyDown={handleInputKeyDown}
             />

@@ -7,39 +7,21 @@ import Tab from "react-bootstrap/Tab";
 import Tabs from "react-bootstrap/Tabs";
 import { getSingleton, updateSingleton } from "../../api/client";
 import type { ResourceRecord } from "../../types/api";
-
-/** Read one key from localStorage or return the provided default. */
-function loadLocal<T>(key: string, fallback: T): T {
-  try {
-    const raw = localStorage.getItem(`airunner:${key}`);
-    if (raw === null) return fallback;
-    return JSON.parse(raw) as T;
-  } catch {
-    return fallback;
-  }
-}
-
-/** Write one key to localStorage. */
-function saveLocal(key: string, value: unknown): void {
-  try {
-    localStorage.setItem(`airunner:${key}`, JSON.stringify(value));
-  } catch { /* quota exceeded – silently ignore */ }
-}
+import { useLlmPrefs } from "../../hooks/useLlmPrefs";
 
 export default function SettingsView() {
-  const [activeTab, setActiveTab] = useState(() => loadLocal("activeTab", "llm"));
+  const {
+    activeTab, setActiveTab,
+    modelPath, setModelPath,
+    temperature, setTemperature,
+    maxTokens, setMaxTokens,
+    selectedVoice, setSelectedVoice,
+    whisperModel, setWhisperModel,
+  } = useLlmPrefs();
+
   const [saving, setSaving] = useState(false);
-  const [modelPath, setModelPath] = useState(() => loadLocal("modelPath", ""));
-  const [temperature, setTemperature] = useState(() => loadLocal("temperature", 0.7));
-  const [maxTokens, setMaxTokens] = useState(() => loadLocal("maxTokens", 4096));
-  const [selectedVoice, setSelectedVoice] = useState(() => loadLocal("selectedVoice", ""));
-  const [whisperModel, setWhisperModel] = useState(() => loadLocal("whisperModel", ""));
 
-  useEffect(() => {
-    saveLocal("activeTab", activeTab);
-  }, [activeTab]);
-
-  // Hydrate from daemon on mount (daemon takes precedence over localStorage)
+  // Hydrate from daemon on mount — server values take precedence.
   useEffect(() => {
     getSingleton("LLMGeneratorSettings")
       .then((r: ResourceRecord) => {
@@ -63,14 +45,7 @@ export default function SettingsView() {
         if (wm) setWhisperModel(wm);
       })
       .catch(() => {});
-  }, []);
-
-  // Persist changes to localStorage on every change
-  useEffect(() => saveLocal("modelPath", modelPath), [modelPath]);
-  useEffect(() => saveLocal("temperature", temperature), [temperature]);
-  useEffect(() => saveLocal("maxTokens", maxTokens), [maxTokens]);
-  useEffect(() => saveLocal("selectedVoice", selectedVoice), [selectedVoice]);
-  useEffect(() => saveLocal("whisperModel", whisperModel), [whisperModel]);
+  }, [setModelPath, setTemperature, setMaxTokens, setSelectedVoice, setWhisperModel]);
 
   const handleSaveLLM = async () => {
     setSaving(true);
@@ -106,10 +81,7 @@ export default function SettingsView() {
   return (
     <div>
       <h3 className="mb-3">⚙️ Settings</h3>
-      <Tabs
-        activeKey={activeTab}
-        onSelect={(k) => k && setActiveTab(k)}
-      >
+      <Tabs activeKey={activeTab} onSelect={(k) => k && setActiveTab(k)}>
         <Tab eventKey="llm" title="LLM">
           <Card body className="mt-2">
             <Form.Group className="mb-2">
@@ -123,9 +95,7 @@ export default function SettingsView() {
             <Form.Group className="mb-2">
               <Form.Label>Temperature</Form.Label>
               <Form.Range
-                min={0}
-                max={2}
-                step={0.1}
+                min={0} max={2} step={0.1}
                 value={temperature}
                 onChange={(e) => setTemperature(Number(e.target.value))}
               />
@@ -135,15 +105,11 @@ export default function SettingsView() {
               <Form.Label>Max Tokens</Form.Label>
               <Form.Control
                 type="number"
-                value={maxTokens}
+                value={maxTokens ?? ""}
                 onChange={(e) => setMaxTokens(Number(e.target.value))}
               />
             </Form.Group>
-            <Button
-              variant="primary"
-              onClick={handleSaveLLM}
-              disabled={saving}
-            >
+            <Button variant="primary" onClick={handleSaveLLM} disabled={saving}>
               {saving ? <Spinner animation="border" size="sm" /> : "Save LLM Settings"}
             </Button>
           </Card>
@@ -158,11 +124,7 @@ export default function SettingsView() {
                 placeholder="Voice ID"
               />
             </Form.Group>
-            <Button
-              variant="primary"
-              onClick={handleSaveVoice}
-              disabled={saving}
-            >
+            <Button variant="primary" onClick={handleSaveVoice} disabled={saving}>
               {saving ? <Spinner animation="border" size="sm" /> : "Save Voice"}
             </Button>
           </Card>
@@ -177,11 +139,7 @@ export default function SettingsView() {
                 placeholder="openai/whisper-tiny"
               />
             </Form.Group>
-            <Button
-              variant="primary"
-              onClick={handleSaveSTT}
-              disabled={saving}
-            >
+            <Button variant="primary" onClick={handleSaveSTT} disabled={saving}>
               {saving ? <Spinner animation="border" size="sm" /> : "Save STT Settings"}
             </Button>
           </Card>
