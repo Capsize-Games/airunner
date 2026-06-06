@@ -10,8 +10,8 @@ This module provides system prompt templates that teach the LLM how to:
 WORKFLOW_SYSTEM_PROMPT = """
 ## Workflow Execution Guidelines
 
-You have access to workflow management tools that help you execute complex tasks 
-in a structured, reliable manner. Use these for multi-step tasks that benefit 
+You have access to workflow management tools that help you execute complex tasks
+in a structured, reliable manner. Use these for multi-step tasks that benefit
 from explicit planning and tracking.
 
 ### When to Use Structured Workflows
@@ -45,7 +45,7 @@ from explicit planning and tracking.
 
 ```
 1. START: Call start_workflow(type, description)
-   
+
 2. DISCOVERY PHASE:
    - Understand the task fully
    - Search for relevant context

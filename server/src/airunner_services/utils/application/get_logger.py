@@ -82,8 +82,7 @@ def _configure_file_handler(
         logger.addHandler(file_handler)
     except PermissionError:
         logger.warning(
-            "Permission denied: cannot write to %s; "
-            "file logging disabled",
+            "Permission denied: cannot write to %s; " "file logging disabled",
             AIRUNNER_LOG_FILE,
         )
     except Exception as exc:

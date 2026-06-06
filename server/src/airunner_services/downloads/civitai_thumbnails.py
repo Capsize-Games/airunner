@@ -4,6 +4,7 @@ for CivitAI model images."""
 from __future__ import annotations
 
 import base64
+import concurrent.futures
 import hashlib
 import logging
 import os
@@ -89,12 +90,17 @@ def _do_fetch(image_url, timeout=15):
     for attempt in range(2):
         try:
             return requests.get(
-                image_url, headers=_headers(), timeout=timeout,
+                image_url,
+                headers=_headers(),
+                timeout=timeout,
             )
         except (requests.exceptions.ConnectionError, OSError) as exc:
             last_exc = exc
             logger.warning(
-                "RETRY url=%s attempt=%d: %s", image_url[:80], attempt, exc,
+                "RETRY url=%s attempt=%d: %s",
+                image_url[:80],
+                attempt,
+                exc,
             )
     raise last_exc  # type: ignore[arg-type]
 
@@ -111,7 +117,10 @@ def _download_and_resize(image_url, size):
         img.save(buf, format="PNG")
         logger.info(
             "RESIZE url=%s size=%d original=%d -> %d",
-            image_url[:80], size, len(data), buf.tell(),
+            image_url[:80],
+            size,
+            len(data),
+            buf.tell(),
         )
         return buf.getvalue(), "image/png"
     return data, resp.headers.get("content-type", "image/jpeg")
@@ -127,8 +136,6 @@ def _fetch_cached_image(image_url, size=0):
     (cache_dir / key).write_bytes(data)
     return data, ct
 
-
-import concurrent.futures
 
 _MAX_WORKERS = 4
 
@@ -190,7 +197,8 @@ def embed_version_thumbnails(model_info: Dict[str, Any]) -> None:
 
 
 def embed_single_version(
-    model_info: Dict[str, Any], version_index: int,
+    model_info: Dict[str, Any],
+    version_index: int,
 ) -> None:
     """Embed thumbnails on one specific version's images.
     Used when the user switches versions in the modal."""
@@ -198,8 +206,7 @@ def embed_single_version(
     if version_index < 0 or version_index >= len(versions):
         return
     tasks = [
-        (img, True)
-        for img in versions[version_index].get("images") or []
+        (img, True) for img in versions[version_index].get("images") or []
     ]
     with concurrent.futures.ThreadPoolExecutor(max_workers=_MAX_WORKERS) as ex:
         list(ex.map(_embed_one_version_image, tasks))
@@ -209,9 +216,12 @@ def embed_single_version_streaming(
     model_info: Dict[str, Any],
     version_index: int,
     on_image_done,
+    cancel_event=None,
 ) -> None:
-    """Process version images concurrently and call on_image_done after each
-    one completes so callers can stream results as they arrive."""
+    """Process version images concurrently, calling on_image_done as each completes.
+
+    If cancel_event (threading.Event) is set, stops fetching and broadcasting.
+    """
     versions = model_info.get("modelVersions") or []
     if version_index < 0 or version_index >= len(versions):
         return
@@ -222,6 +232,14 @@ def embed_single_version_streaming(
             for img in images
         }
         for future in concurrent.futures.as_completed(futures):
+            if cancel_event is not None and cancel_event.is_set():
+                for f in futures:
+                    f.cancel()
+                logger.info(
+                    "embed_single_version_streaming: cancelled (v%d)",
+                    version_index,
+                )
+                break
             img = futures[future]
             try:
                 future.result()

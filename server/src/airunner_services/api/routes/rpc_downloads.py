@@ -3,14 +3,21 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 from typing import Any
 
 from airunner_services.api.routes.events import _rpc_register
-from airunner_services.api.routes.events_bus import WsEventBus
-from airunner_services.api.routes.events_rpc import EVENT_CIVITAI_THUMBNAIL
+from airunner_services.api.routes.rpc_downloads_helpers import (
+    _stream_civitai_thumbnails,
+    _stream_one_version_bg,
+    _stream_version_thumbnails_bg,
+    _thumbnail_cancel_events,
+    _thumbnail_cancel_lock,
+)
 from airunner_services.downloads.civitai_filters import (
     _BASE_MODEL_ALIASES,
     _MODEL_TYPE_ALIASES,
+    _MODEL_TYPES_BY_BASE,
 )
 from airunner_services.downloads.civitai_thumbnails import _fetch_cached_image
 from airunner_services.downloads.job_service import DownloadJobService
@@ -19,6 +26,14 @@ from airunner_services.downloads.service import (
     fetch_civitai_model_info as fetch_info_fn,
     search_civitai_models as search_fn,
 )
+
+_log = logging.getLogger(__name__)
+
+_EMPTY_OPTIONS: dict[str, Any] = {
+    "base_models": [],
+    "model_types": [],
+    "model_types_by_base": {},
+}
 
 
 @_rpc_register("POST", "/api/v1/downloads/huggingface")
@@ -75,10 +90,8 @@ async def _rpc_downloads_cancel(body: dict, **kw: Any) -> dict[str, Any]:
         cancelled = await asyncio.to_thread(service.cancel, job_id)
         if not cancelled:
             return {"status": 404, "body": {"error": "Job not found"}}
-        return {
-            "status": 200,
-            "body": {"job_id": job_id, "status": "cancelled"},
-        }
+        ok_body = {"job_id": job_id, "status": "cancelled"}
+        return {"status": 200, "body": ok_body}
     except Exception as exc:
         return {"status": 500, "body": {"error": str(exc)}}
 
@@ -98,15 +111,9 @@ async def _rpc_downloads_civitai_search(
             cursor=body.get("cursor"),
             api_key=str(body.get("api_key", "")),
         )
-        # Fire background task to stream thumbnails via event bus
         items = (result.get("items") or []) if isinstance(result, dict) else []
         if items:
-            import logging
-            logging.getLogger(
-                "airunner_services.api.routes.rpc_downloads",
-            ).info(
-                "SEARCH returned %d items, starting stream", len(items),
-            )
+            _log.info("SEARCH returned %d items, starting stream", len(items))
             asyncio.create_task(_stream_civitai_thumbnails(items))
         return {"status": 200, "body": result}
     except Exception as exc:
@@ -126,7 +133,6 @@ async def _rpc_downloads_civitai_model(
             model_types=body.get("model_types"),
             api_key=str(body.get("api_key", "")),
         )
-        # Fire background task to stream version thumbnails
         if isinstance(result, dict):
             asyncio.create_task(_stream_version_thumbnails_bg(result))
         return {"status": 200, "body": result}
@@ -165,41 +171,11 @@ async def _rpc_downloads_civitai_info(body: dict, **kw: Any) -> dict[str, Any]:
         return {"status": 500, "body": {"error": str(exc)}}
 
 
-def _stream_one_thumbnail(item: dict) -> None:
-    """Fetch and broadcast a thumbnail for one search result."""
-    import logging
-    dl_logger = logging.getLogger("airunner_services.api.routes.rpc_downloads")
-    from airunner_services.downloads.civitai_thumbnails import (
-        _fetch_thumbnail_b64,
-        _first_image_url,
-    )
-    bus = WsEventBus()
-    versions = item.get("modelVersions") or []
-    if not versions:
-        return
-    url = _first_image_url(versions[0].get("images") or [])
-    if not url:
-        return
-    model_id = item.get("id")
-    try:
-        b64 = _fetch_thumbnail_b64(url)
-    except Exception as exc:
-        dl_logger.warning(
-            "STREAM model=%s FAILED: %s", model_id, exc,
-        )
-        return
-    dl_logger.info("STREAM model=%s OK", model_id)
-    bus.broadcast(
-        EVENT_CIVITAI_THUMBNAIL,
-        {"model_id": model_id, "thumbnails": {"small": b64}},
-    )
-
-
 @_rpc_register("POST", "/api/v1/downloads/civitai/version-thumbnails")
 async def _rpc_downloads_civitai_version_thumbs(
     body: dict, **kw: Any
 ) -> dict[str, Any]:
-    """Start background thumbnail embedding for one version of a model."""
+    """Start background thumbnail embedding for a model version."""
     model_data = body.get("model_data")
     version_index = int(body.get("version_index", 0))
     if not model_data:
@@ -208,61 +184,20 @@ async def _rpc_downloads_civitai_version_thumbs(
     return {"status": 200, "body": {"status": "started"}}
 
 
-def _stream_one_version_sync(model_data: dict, version_index: int) -> None:
-    """Embed thumbnails on one version's images, broadcasting each as it completes."""
-    from airunner_services.downloads.civitai_thumbnails import (
-        embed_single_version_streaming,
-    )
-    model_id = model_data.get("id")
-    bus = WsEventBus()
-
-    def _on_image_done(img: dict) -> None:
-        url = str(img.get("url") or img.get("thumbnailUrl") or "")
-        b64 = img.get("images_base64") or {}
-        if url and b64:
-            bus.broadcast(
-                EVENT_CIVITAI_THUMBNAIL,
-                {
-                    "model_id": model_id,
-                    "version_index": version_index,
-                    "image_url": url,
-                    "images_base64": b64,
-                },
-            )
-
-    embed_single_version_streaming(model_data, version_index, _on_image_done)
-
-
-async def _stream_one_version_bg(
-    model_data: dict, version_index: int,
-) -> None:
-    await asyncio.to_thread(_stream_one_version_sync, model_data, version_index)
-
-
-def _stream_thumbnails_sync(items: list) -> None:
-    """Synchronous thumbnail streaming with concurrent fetches."""
-    import concurrent.futures
-    import logging
-    dl_logger = logging.getLogger("airunner_services.api.routes.rpc_downloads")
-    total = len(items)
-    dl_logger.info("STREAM starting: %d items (concurrent)", total)
-    with concurrent.futures.ThreadPoolExecutor(max_workers=4) as ex:
-        list(ex.map(_stream_one_thumbnail, items))
-    dl_logger.info("STREAM finished: %d items", total)
-
-
-def _stream_version_thumbnails_sync(model_data: dict) -> None:
-    """Embed thumbnails for the initial version (index 0), broadcasting each image as it completes."""
-    _stream_one_version_sync(model_data, 0)
-
-
-async def _stream_version_thumbnails_bg(model_data: dict) -> None:
-    await asyncio.to_thread(_stream_version_thumbnails_sync, model_data)
-
-
-async def _stream_civitai_thumbnails(items: list) -> None:
-    """Run thumbnail streaming in a thread to avoid blocking the event loop."""
-    await asyncio.to_thread(_stream_thumbnails_sync, items)
+@_rpc_register("DELETE", "/api/v1/downloads/civitai/version-thumbnails")
+async def _rpc_downloads_civitai_cancel_thumbs(
+    body: dict, **kw: Any
+) -> dict[str, Any]:
+    """Cancel any in-progress thumbnail streaming for a model."""
+    model_id = int(body.get("model_id") or 0)
+    if not model_id:
+        return {"status": 400, "body": {"error": "Missing model_id"}}
+    with _thumbnail_cancel_lock:
+        event = _thumbnail_cancel_events.get(model_id)
+        if event:
+            event.set()
+    resp = {"status": "cancelled", "model_id": model_id}
+    return {"status": 200, "body": resp}
 
 
 @_rpc_register("GET", "/api/v1/downloads/civitai/options")
@@ -276,22 +211,27 @@ async def _rpc_downloads_civitai_options(
             for label, value in _BASE_MODEL_ALIASES.items()
         ]
         model_types = sorted(set(_MODEL_TYPE_ALIASES.values()))
+        model_types_by_base = {
+            value: _MODEL_TYPES_BY_BASE.get(value, model_types)
+            for value in _BASE_MODEL_ALIASES.values()
+        }
         return {
             "status": 200,
             "body": {
                 "base_models": base_models,
                 "model_types": model_types,
+                "model_types_by_base": model_types_by_base,
             },
         }
     except Exception:
-        return {"status": 200, "body": {"base_models": [], "model_types": []}}
+        return {"status": 200, "body": _EMPTY_OPTIONS}
 
 
 @_rpc_register("POST", "/api/v1/downloads/civitai/image")
 async def _rpc_downloads_civitai_image(
     body: dict, **kw: Any
 ) -> dict[str, Any]:
-    """Fetch, cache, and return a CivitAI image through the server proxy."""
+    """Proxy a CivitAI image through the server cache."""
     url = str(body.get("url", ""))
     width = int(body.get("width", 0))
     if width <= 0 or width > 1200:

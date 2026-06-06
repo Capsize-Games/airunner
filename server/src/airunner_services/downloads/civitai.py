@@ -85,26 +85,36 @@ def _filter_model_payload(model_info, base_models, model_types):
     if isinstance(sel, dict):
         sid = sel.get("id")
         filtered["selectedVersion"] = select_version(
-            filtered, str(sid) if sid is not None else None,
+            filtered,
+            str(sid) if sid is not None else None,
         )
     return filtered
 
 
 def _filter_model_items(items, base_models, model_types):
     return [
-        f for item in items
+        f
+        for item in items
         if (f := _filter_model_payload(item, base_models, model_types))
     ]
 
 
 def search_models(
-    query="", *, base_models=None, model_types=None,
-    limit=20, cursor=None, api_key="",
+    query="",
+    *,
+    base_models=None,
+    model_types=None,
+    limit=20,
+    cursor=None,
+    api_key="",
 ):
     url = f"{_CIVITAI_API_URL}/models"
     params = _search_params(
-        query=query, base_models=base_models, model_types=model_types,
-        limit=limit, cursor=cursor,
+        query=query,
+        base_models=base_models,
+        model_types=model_types,
+        limit=limit,
+        cursor=cursor,
     )
     logger.info(
         "CivitAI search params=%s cursor=%s",
@@ -112,7 +122,10 @@ def search_models(
         "set" if cursor else None,
     )
     resp = requests.get(
-        url, params=params, headers=_auth_headers(api_key), timeout=30,
+        url,
+        params=params,
+        headers=_auth_headers(api_key),
+        timeout=30,
     )
     resp.raise_for_status()
     payload = resp.json()
@@ -122,7 +135,11 @@ def search_models(
 
 
 def fetch_browser_model_info(
-    model_id, *, base_models=None, model_types=None, api_key="",
+    model_id,
+    *,
+    base_models=None,
+    model_types=None,
+    api_key="",
 ):
     info = fetch_model_info(model_id, api_key)
     filtered = _filter_model_payload(info, base_models, model_types)

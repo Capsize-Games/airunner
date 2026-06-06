@@ -12,6 +12,16 @@ _BASE_MODEL_ALIASES = {
     "SDXL Lightning": "SDXL Lightning",
     "Z-Image Turbo": "ZImageTurbo",
 }
+
+# Allowed model types per base-model *value* (mirrors client constants.tsx).
+# Keyed by value so the client can look them up using the selected baseModel.
+_MODEL_TYPES_BY_BASE: dict[str, list[str]] = {
+    "SDXL 1.0": ["Checkpoint", "LORA", "TextualInversion"],
+    "SDXL Hyper": ["Checkpoint", "LORA", "TextualInversion"],
+    "SDXL Lightning": ["Checkpoint", "LORA", "TextualInversion"],
+    "ZImageTurbo": ["Checkpoint", "LORA"],
+}
+
 _MODEL_TYPE_ALIASES = {
     "CHECKPOINT": "Checkpoint",
     "MODEL": "Checkpoint",
