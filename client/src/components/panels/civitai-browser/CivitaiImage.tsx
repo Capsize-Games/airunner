@@ -25,7 +25,7 @@ interface CivitaiImageProps {
  * A failing image is silently hidden (no broken-image alt text).
  */
 export default function CivitaiImage({
-  url: _url,
+  url,
   alt: _alt,
   className,
   style,
@@ -33,6 +33,7 @@ export default function CivitaiImage({
   base64,
 }: CivitaiImageProps) {
   const [failed, setFailed] = useState(false);
+  const waiting = !base64 && !!url;
 
   if (base64 && !failed) {
     return (
@@ -47,14 +48,27 @@ export default function CivitaiImage({
     );
   }
 
-  /* ── Empty placeholder — never show alt text ── */
+  /* ── Placeholder — show spinner when waiting for streaming thumbnail ── */
   return (
     <div
       className={className}
       style={{
         ...style,
         background: "var(--theme-bg-secondary)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
       }}
-    />
+    >
+      {waiting && (
+        <div
+          className="spinner-border spinner-border-sm"
+          role="status"
+          style={{ color: "var(--bs-primary)" }}
+        >
+          <span className="visually-hidden">Loading...</span>
+        </div>
+      )}
+    </div>
   );
 }

@@ -7,6 +7,8 @@ import { searchCivitaiModels, fetchCivitaiModel } from "../../../api/downloads";
 import { request } from "../../../api/client-base";
 import { BASE_URL, type JsonObject } from "../../../types/api";
 import CivitaiModelDetailModal from "./CivitaiModelDetailModal";
+import { useEventBus } from "../../../features/events/useEventBus";
+import { EVENT_CIVITAI_THUMBNAIL } from "../../../features/events/types";
 
 // Note: CivitAI data caching is handled server-side (72h for search
 // results, permanent for images).  No client-side caching needed.
@@ -90,6 +92,19 @@ export default function CivitaiBrowserPanel() {
 
   // Load filter options on mount
   useEffect(() => { fetchFilterOptions().then((opts) => setFilterOptions({ baseModels: opts.baseModels, typesByBase: opts.typesByBase })).catch(() => {}); }, []);
+
+  // Listen for streaming thumbnails pushed by the server after search
+  useEventBus([EVENT_CIVITAI_THUMBNAIL], (_event, data) => {
+    const payload = data as { model_id?: number; thumbnails?: Record<string, string> };
+    if (!payload.model_id || !payload.thumbnails) return;
+    setResults((prev) =>
+      prev.map((r) =>
+        r.id === payload.model_id
+          ? { ...r, thumbnails: { ...r.thumbnails, ...payload.thumbnails } }
+          : r,
+      ),
+    );
+  });
 
   const shouldSearch = (): boolean => query.trim().length > 0 || (baseModel !== "" && modelType !== "");
 
@@ -283,10 +298,17 @@ export default function CivitaiBrowserPanel() {
         )}
       </div>
 
-      {selectedModelId !== null && (
+      {detailLoading && (
+        <div className="text-center py-3">
+          <Spinner animation="border" size="sm" />
+          <span className="text-muted small d-block mt-1">Loading model details...</span>
+        </div>
+      )}
+
+      {!detailLoading && selectedModelId !== null && modelDetail && (
         <CivitaiModelDetailModal
           model={modelDetail}
-          loading={detailLoading}
+          loading={false}
           baseModel={baseModel}
           modelType={modelType}
           onClose={() => {

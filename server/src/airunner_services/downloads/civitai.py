@@ -17,7 +17,6 @@ from airunner_services.downloads.civitai_filters import (
     supported_files,
 )
 from airunner_services.downloads.civitai_thumbnails import (
-    embed_search_thumbnails,
     embed_version_thumbnails,
 )
 
@@ -147,7 +146,6 @@ def search_models(
     )
     items = payload.get("items", [])
     payload["items"] = _filter_model_items(items, base_models, model_types)
-    embed_search_thumbnails(payload.get("items", []))
     return payload
 
 

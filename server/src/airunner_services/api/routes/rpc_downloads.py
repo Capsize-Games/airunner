@@ -6,6 +6,8 @@ import asyncio
 from typing import Any
 
 from airunner_services.api.routes.events import _rpc_register
+from airunner_services.api.routes.events_bus import WsEventBus
+from airunner_services.api.routes.events_rpc import EVENT_CIVITAI_THUMBNAIL
 from airunner_services.downloads.civitai_filters import (
     _BASE_MODEL_ALIASES,
     _MODEL_TYPE_ALIASES,
@@ -95,6 +97,10 @@ async def _rpc_downloads_civitai_search(
             cursor=body.get("cursor"),
             api_key=str(body.get("api_key", "")),
         )
+        # Fire background task to stream thumbnails via event bus
+        items = (result.get("items") or []) if isinstance(result, dict) else []
+        if items:
+            asyncio.create_task(_stream_civitai_thumbnails(items))
         return {"status": 200, "body": result}
     except Exception as exc:
         return {"status": 500, "body": {"error": str(exc)}}
@@ -147,6 +153,38 @@ async def _rpc_downloads_civitai_info(body: dict, **kw: Any) -> dict[str, Any]:
         return {"status": 200, "body": result}
     except Exception as exc:
         return {"status": 500, "body": {"error": str(exc)}}
+
+
+async def _stream_civitai_thumbnails(items: list) -> None:
+    """Fetch thumbnails in the background and push them one at a time
+    via the event bus so the client can render results immediately and
+    fill in thumbnails as they arrive."""
+    from airunner_services.downloads.civitai_thumbnails import (
+        _fetch_thumbnail_b64,
+    )
+
+    bus = WsEventBus()
+    for item in items:
+        versions = item.get("modelVersions") or []
+        if not versions:
+            continue
+        images = versions[0].get("images") or []
+        if not images:
+            continue
+        url = str(images[0].get("url") or images[0].get("thumbnailUrl") or "")
+        if not url:
+            continue
+        try:
+            b64 = _fetch_thumbnail_b64(url)
+        except Exception:
+            continue
+        bus.broadcast(
+            EVENT_CIVITAI_THUMBNAIL,
+            {
+                "model_id": item.get("id"),
+                "thumbnails": {"small": b64},
+            },
+        )
 
 
 @_rpc_register("GET", "/api/v1/downloads/civitai/options")

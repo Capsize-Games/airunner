@@ -67,22 +67,6 @@ export default function CivitaiModelDetailModal({
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [handleKeyDown]);
 
-  if (loading) {
-    return (
-      <div
-        style={{
-          position: "fixed", inset: 0, background: "rgba(0,0,0,0.8)",
-          zIndex: 1100, display: "flex", alignItems: "center", justifyContent: "center",
-        }}
-        onClick={onClose}
-      >
-        <div className="spinner-border text-light" role="status">
-          <span className="visually-hidden">Loading...</span>
-        </div>
-      </div>
-    );
-  }
-
   if (!model) return null;
 
   const selectedVersion = versions.find((v) => v.id === selectedVersionId) ?? null;
