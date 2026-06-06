@@ -3,7 +3,7 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import Spinner from "react-bootstrap/Spinner";
 import CivitaiSearchBar from "./CivitaiSearchBar";
 import CivitaiResultCard from "./CivitaiResultCard";
-import { searchCivitaiModels, fetchCivitaiModel } from "../../../api/downloads";
+import { searchCivitaiModels, fetchCivitaiModel, requestCivitaiVersionThumbnails } from "../../../api/downloads";
 import { request } from "../../../api/client-base";
 import { BASE_URL, type JsonObject } from "../../../types/api";
 import CivitaiModelDetailModal from "./CivitaiModelDetailModal";
@@ -93,9 +93,47 @@ export default function CivitaiBrowserPanel() {
   // Load filter options on mount
   useEffect(() => { fetchFilterOptions().then((opts) => setFilterOptions({ baseModels: opts.baseModels, typesByBase: opts.typesByBase })).catch(() => {}); }, []);
 
-  // Listen for streaming thumbnails pushed by the server after search
+  // Listen for streaming thumbnails pushed by the server
   useEventBus([EVENT_CIVITAI_THUMBNAIL], (_event, data) => {
-    const payload = data as { model_id?: number; thumbnails?: Record<string, string> };
+    const payload = data as {
+      model_id?: number;
+      thumbnails?: Record<string, string>;
+      model?: JsonObject;
+      version_index?: number;
+      image_url?: string;
+      images_base64?: Record<string, string>;
+    };
+    // Per-image streaming update for version thumbnails
+    if (
+      payload.model_id === selectedModelId &&
+      payload.version_index !== undefined &&
+      payload.image_url &&
+      payload.images_base64
+    ) {
+      const vIdx = payload.version_index;
+      const imageUrl = payload.image_url;
+      const b64 = payload.images_base64;
+      setSelectedModelData((prev) => {
+        if (!prev) return prev;
+        const versions = [...((prev as JsonObject).modelVersions ?? [])] as JsonObject[];
+        if (vIdx >= versions.length) return prev;
+        const images = [...((versions[vIdx].images ?? []) as JsonObject[])];
+        const iIdx = images.findIndex(
+          (img) => (img.url ?? img.thumbnailUrl) === imageUrl,
+        );
+        if (iIdx < 0) return prev;
+        images[iIdx] = { ...images[iIdx], images_base64: b64 };
+        versions[vIdx] = { ...versions[vIdx], images };
+        return { ...(prev as JsonObject), modelVersions: versions };
+      });
+      return;
+    }
+    // Full model update (legacy fallback)
+    if (payload.model && payload.model_id === selectedModelId) {
+      setSelectedModelData(payload.model);
+      return;
+    }
+    // Search result thumbnail update
     if (!payload.model_id || !payload.thumbnails) return;
     setResults((prev) =>
       prev.map((r) =>
@@ -205,9 +243,25 @@ export default function CivitaiBrowserPanel() {
       });
       detailCache.current.set(modelId, data);
       setSelectedModelData(data);
-    } catch { /* */ }
-    finally { setDetailLoading(false); }
+    } catch {
+      setSelectedModelData(null);
+    } finally {
+      setDetailLoading(false);
+    }
   }, [baseModel, modelType]);
+
+  const handleRequestVersionThumbnails = useCallback(async (versionId: number) => {
+    if (!selectedModelData) return;
+    const versions = ((selectedModelData as JsonObject).modelVersions ?? []) as JsonObject[];
+    const versionIndex = versions.findIndex((v) => Number(v.id) === versionId);
+    if (versionIndex < 0) return;
+    try {
+      await requestCivitaiVersionThumbnails({
+        model_data: selectedModelData,
+        version_index: versionIndex,
+      });
+    } catch { /* */ }
+  }, [selectedModelData]);
 
   // Re-fetch model detail on mount when restoring from localStorage
   useEffect(() => {
@@ -298,19 +352,13 @@ export default function CivitaiBrowserPanel() {
         )}
       </div>
 
-      {detailLoading && (
-        <div className="text-center py-3">
-          <Spinner animation="border" size="sm" />
-          <span className="text-muted small d-block mt-1">Loading model details...</span>
-        </div>
-      )}
-
-      {!detailLoading && selectedModelId !== null && modelDetail && (
+      {selectedModelId !== null && (
         <CivitaiModelDetailModal
           model={modelDetail}
-          loading={false}
+          loading={detailLoading}
           baseModel={baseModel}
           modelType={modelType}
+          onVersionChange={handleRequestVersionThumbnails}
           onClose={() => {
             setSelectedModelId(null);
             setSelectedModelData(null);

@@ -11,7 +11,6 @@ _BASE_MODEL_ALIASES = {
     "SDXL Hyper": "SDXL Hyper",
     "SDXL Lightning": "SDXL Lightning",
     "Z-Image Turbo": "ZImageTurbo",
-    "ZImageTurbo": "ZImageTurbo",
 }
 _MODEL_TYPE_ALIASES = {
     "CHECKPOINT": "Checkpoint",

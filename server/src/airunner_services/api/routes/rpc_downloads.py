@@ -15,7 +15,8 @@ from airunner_services.downloads.civitai_filters import (
 from airunner_services.downloads.civitai_thumbnails import _fetch_cached_image
 from airunner_services.downloads.job_service import DownloadJobService
 from airunner_services.downloads.service import (
-    fetch_civitai_model_info as fetch_fn,
+    fetch_civitai_browser_model_info as fetch_browser_fn,
+    fetch_civitai_model_info as fetch_info_fn,
     search_civitai_models as search_fn,
 )
 
@@ -100,6 +101,12 @@ async def _rpc_downloads_civitai_search(
         # Fire background task to stream thumbnails via event bus
         items = (result.get("items") or []) if isinstance(result, dict) else []
         if items:
+            import logging
+            logging.getLogger(
+                "airunner_services.api.routes.rpc_downloads",
+            ).info(
+                "SEARCH returned %d items, starting stream", len(items),
+            )
             asyncio.create_task(_stream_civitai_thumbnails(items))
         return {"status": 200, "body": result}
     except Exception as exc:
@@ -113,12 +120,15 @@ async def _rpc_downloads_civitai_model(
     """Get CivitAI model detail."""
     try:
         result = await asyncio.to_thread(
-            fetch_fn,
+            fetch_browser_fn,
             str(body.get("model_id", "")),
             base_models=body.get("base_models"),
             model_types=body.get("model_types"),
             api_key=str(body.get("api_key", "")),
         )
+        # Fire background task to stream version thumbnails
+        if isinstance(result, dict):
+            asyncio.create_task(_stream_version_thumbnails_bg(result))
         return {"status": 200, "body": result}
     except Exception as exc:
         return {"status": 500, "body": {"error": str(exc)}}
@@ -146,7 +156,7 @@ async def _rpc_downloads_civitai_info(body: dict, **kw: Any) -> dict[str, Any]:
     """Get CivitAI model info by URL."""
     try:
         result = await asyncio.to_thread(
-            fetch_fn,
+            fetch_info_fn,
             str(body.get("url", "")),
             str(body.get("api_key", "")),
         )
@@ -155,36 +165,104 @@ async def _rpc_downloads_civitai_info(body: dict, **kw: Any) -> dict[str, Any]:
         return {"status": 500, "body": {"error": str(exc)}}
 
 
-async def _stream_civitai_thumbnails(items: list) -> None:
-    """Fetch thumbnails in the background and push them one at a time
-    via the event bus so the client can render results immediately and
-    fill in thumbnails as they arrive."""
+def _stream_one_thumbnail(item: dict) -> None:
+    """Fetch and broadcast a thumbnail for one search result."""
+    import logging
+    dl_logger = logging.getLogger("airunner_services.api.routes.rpc_downloads")
     from airunner_services.downloads.civitai_thumbnails import (
         _fetch_thumbnail_b64,
+        _first_image_url,
+    )
+    bus = WsEventBus()
+    versions = item.get("modelVersions") or []
+    if not versions:
+        return
+    url = _first_image_url(versions[0].get("images") or [])
+    if not url:
+        return
+    model_id = item.get("id")
+    try:
+        b64 = _fetch_thumbnail_b64(url)
+    except Exception as exc:
+        dl_logger.warning(
+            "STREAM model=%s FAILED: %s", model_id, exc,
+        )
+        return
+    dl_logger.info("STREAM model=%s OK", model_id)
+    bus.broadcast(
+        EVENT_CIVITAI_THUMBNAIL,
+        {"model_id": model_id, "thumbnails": {"small": b64}},
     )
 
+
+@_rpc_register("POST", "/api/v1/downloads/civitai/version-thumbnails")
+async def _rpc_downloads_civitai_version_thumbs(
+    body: dict, **kw: Any
+) -> dict[str, Any]:
+    """Start background thumbnail embedding for one version of a model."""
+    model_data = body.get("model_data")
+    version_index = int(body.get("version_index", 0))
+    if not model_data:
+        return {"status": 400, "body": {"error": "Missing model_data"}}
+    asyncio.create_task(_stream_one_version_bg(model_data, version_index))
+    return {"status": 200, "body": {"status": "started"}}
+
+
+def _stream_one_version_sync(model_data: dict, version_index: int) -> None:
+    """Embed thumbnails on one version's images, broadcasting each as it completes."""
+    from airunner_services.downloads.civitai_thumbnails import (
+        embed_single_version_streaming,
+    )
+    model_id = model_data.get("id")
     bus = WsEventBus()
-    for item in items:
-        versions = item.get("modelVersions") or []
-        if not versions:
-            continue
-        images = versions[0].get("images") or []
-        if not images:
-            continue
-        url = str(images[0].get("url") or images[0].get("thumbnailUrl") or "")
-        if not url:
-            continue
-        try:
-            b64 = _fetch_thumbnail_b64(url)
-        except Exception:
-            continue
-        bus.broadcast(
-            EVENT_CIVITAI_THUMBNAIL,
-            {
-                "model_id": item.get("id"),
-                "thumbnails": {"small": b64},
-            },
-        )
+
+    def _on_image_done(img: dict) -> None:
+        url = str(img.get("url") or img.get("thumbnailUrl") or "")
+        b64 = img.get("images_base64") or {}
+        if url and b64:
+            bus.broadcast(
+                EVENT_CIVITAI_THUMBNAIL,
+                {
+                    "model_id": model_id,
+                    "version_index": version_index,
+                    "image_url": url,
+                    "images_base64": b64,
+                },
+            )
+
+    embed_single_version_streaming(model_data, version_index, _on_image_done)
+
+
+async def _stream_one_version_bg(
+    model_data: dict, version_index: int,
+) -> None:
+    await asyncio.to_thread(_stream_one_version_sync, model_data, version_index)
+
+
+def _stream_thumbnails_sync(items: list) -> None:
+    """Synchronous thumbnail streaming with concurrent fetches."""
+    import concurrent.futures
+    import logging
+    dl_logger = logging.getLogger("airunner_services.api.routes.rpc_downloads")
+    total = len(items)
+    dl_logger.info("STREAM starting: %d items (concurrent)", total)
+    with concurrent.futures.ThreadPoolExecutor(max_workers=4) as ex:
+        list(ex.map(_stream_one_thumbnail, items))
+    dl_logger.info("STREAM finished: %d items", total)
+
+
+def _stream_version_thumbnails_sync(model_data: dict) -> None:
+    """Embed thumbnails for the initial version (index 0), broadcasting each image as it completes."""
+    _stream_one_version_sync(model_data, 0)
+
+
+async def _stream_version_thumbnails_bg(model_data: dict) -> None:
+    await asyncio.to_thread(_stream_version_thumbnails_sync, model_data)
+
+
+async def _stream_civitai_thumbnails(items: list) -> None:
+    """Run thumbnail streaming in a thread to avoid blocking the event loop."""
+    await asyncio.to_thread(_stream_thumbnails_sync, items)
 
 
 @_rpc_register("GET", "/api/v1/downloads/civitai/options")
