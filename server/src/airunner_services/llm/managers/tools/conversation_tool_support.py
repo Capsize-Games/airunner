@@ -8,7 +8,6 @@ from typing import Optional
 from airunner_services.database.models.conversation import Conversation
 from airunner_services.tools.base_tool import BaseTool
 
-
 NO_TITLE = "(no title)"
 
 
@@ -71,7 +70,9 @@ def conversation_list_text(conversations) -> str:
     if not conversations:
         return "No conversations found."
     lines = [f"Found {len(conversations)} conversation(s):\n"]
-    lines.extend(conversation_list_line(conversation) for conversation in conversations)
+    lines.extend(
+        conversation_list_line(conversation) for conversation in conversations
+    )
     return "\n".join(lines)
 
 
@@ -181,9 +182,7 @@ def conversation_search_text(matches, query: str) -> str:
     """Format the final search response for conversation matches."""
     if not matches:
         return f"No conversations found matching '{query}'"
-    lines = [
-        f"Found {len(matches)} conversation(s) matching '{query}':\n"
-    ]
+    lines = [f"Found {len(matches)} conversation(s) matching '{query}':\n"]
     lines.extend(
         conversation_search_line(score, conversation)
         for score, conversation in matches

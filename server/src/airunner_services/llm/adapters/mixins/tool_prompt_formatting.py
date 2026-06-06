@@ -22,8 +22,7 @@ def build_tool_descriptions(tools: list[dict]) -> list[str]:
 def _tool_description(tool: dict) -> str:
     """Return one formatted tool description."""
     tool_str = (
-        f"- {tool['function']['name']}: "
-        f"{tool['function']['description']}"
+        f"- {tool['function']['name']}: " f"{tool['function']['description']}"
     )
     params = tool["function"].get("parameters", {}).get("properties", {})
     if not params:
@@ -37,7 +36,5 @@ def format_parameters(params: dict) -> list[str]:
     for param_name, param_info in params.items():
         param_type = param_info.get("type", "string")
         param_desc = param_info.get("description", "")
-        param_strs.append(
-            f"  - {param_name} ({param_type}): {param_desc}"
-        )
+        param_strs.append(f"  - {param_name} ({param_type}): {param_desc}")
     return param_strs

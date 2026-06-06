@@ -35,8 +35,12 @@ class ZImageNativePipelinePromptHelper:
             raise ValueError("No text encoder path provided")
         tok_path = tokenizer_path
         if tok_path is None:
-            sibling_tokenizer = os.path.join(os.path.dirname(path), "tokenizer")
-            tok_path = sibling_tokenizer if os.path.isdir(sibling_tokenizer) else path
+            sibling_tokenizer = os.path.join(
+                os.path.dirname(path), "tokenizer"
+            )
+            tok_path = (
+                sibling_tokenizer if os.path.isdir(sibling_tokenizer) else path
+            )
         logger.info("Loading text encoder from %s", path)
         quantization = (
             "4bit" if use_4bit else self._owner.text_encoder_quantization
@@ -71,8 +75,8 @@ class ZImageNativePipelinePromptHelper:
         if not torch.cuda.is_available():
             return plan
         free_vram_gb = torch.cuda.mem_get_info()[0] / (1024**3)
-        total_vram_gb = (
-            torch.cuda.get_device_properties(0).total_memory / (1024**3)
+        total_vram_gb = torch.cuda.get_device_properties(0).total_memory / (
+            1024**3
         )
         cpu_budget = "32GiB"
         if quantization in {"4bit", "8bit"} and free_vram_gb < 4.0:
@@ -145,7 +149,9 @@ class ZImageNativePipelinePromptHelper:
             return
         if text_encoder.uses_accelerate_offload:
             text_encoder.unload_model()
-            logger.debug("Released accelerate-managed text encoder after encoding")
+            logger.debug(
+                "Released accelerate-managed text encoder after encoding"
+            )
             return
         text_encoder.model.to("cpu")
         gc.collect()

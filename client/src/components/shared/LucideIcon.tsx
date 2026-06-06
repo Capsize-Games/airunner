@@ -1,8 +1,9 @@
 import {
-  Activity, Book, Brain, ChevronUp, CircleCheck, CircleStop, CircleX,
-  Cloud, Database, Dices, Grid2x2Check, History, Image, Images, Info,
-  Layers, MessageSquareText, Mic, PanelRightOpen, Plus, Puzzle,
-  RotateCcwSquare, ScanText, Settings, Settings2, Sparkles, Speaker,
+  Activity, Book, BotMessageSquare, Brain, ChevronUp, CircleCheck,
+  CircleStop, CircleX, Cloud, Database, Dices, Grid2x2Check, History,
+  Image, Images, Info, Layers, MessageSquareHeart, MessageSquareText,
+  Mic, PanelRightOpen, Plus, Puzzle, RotateCcwSquare, ScanText,
+  Settings, Settings2, SlidersHorizontal, Sparkles, Speaker,
   Trash, Upload, type LucideIcon,
 } from "lucide-react";
 
@@ -10,6 +11,7 @@ import {
 const MAP: Record<string, LucideIcon> = {
   activity: Activity,
   book: Book,
+  "bot-message-square": BotMessageSquare,
   brain: Brain,
   "chevron-up": ChevronUp,
   "circle-check": CircleCheck,
@@ -24,6 +26,7 @@ const MAP: Record<string, LucideIcon> = {
   images: Images,
   info: Info,
   layers: Layers,
+  "message-square-heart": MessageSquareHeart,
   "message-square-text": MessageSquareText,
   mic: Mic,
   "panel-right-open": PanelRightOpen,
@@ -33,6 +36,7 @@ const MAP: Record<string, LucideIcon> = {
   "scan-text": ScanText,
   settings: Settings,
   "settings-2": Settings2,
+  "sliders-horizontal": SlidersHorizontal,
   sparkles: Sparkles,
   speaker: Speaker,
   trash: Trash,

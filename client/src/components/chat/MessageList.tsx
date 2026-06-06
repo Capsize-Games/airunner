@@ -12,7 +12,17 @@ export default function MessageList({
 }) {
   const [thinkingExpanded, setThinkingExpanded] = useState(true);
 
-  if (messages.length === 0 && !streamBuffer && !thinkingBuffer) {
+  // ── Determine whether we are mid-stream ───────────────────────────
+  // The stream buffers are non-empty only while streaming is active.
+  // Once onDone fires the hook clears them; a stale non-empty buffer
+  // after a completed turn would produce a duplicate "streaming" bubble.
+  const isStreaming = !!(
+    (thinkingBuffer && thinkingBuffer.length > 0) ||
+    (streamBuffer && streamBuffer.length > 0)
+  );
+
+  // ── When nothing at all is shown, render the placeholder ───────────
+  if (messages.length === 0 && !isStreaming) {
     return (
       <div className="text-muted text-center mt-5">
         <p>Start a conversation by typing a message below.</p>
@@ -20,39 +30,43 @@ export default function MessageList({
     );
   }
 
-  const userMessages = messages.filter((m) => m.role === "user");
-  const assistantMessages = messages.filter(
-    (m) => m.role === "assistant",
-  );
-  const lastAssistant =
-    assistantMessages.length > 0
-      ? assistantMessages[assistantMessages.length - 1]
-      : null;
-  const hasCompletedThinking =
-    lastAssistant?.thinking_content != null;
+  // ── Build an ordered render plan ──────────────────────────────────
+  // Render messages in their natural array order so that user and
+  // assistant turns appear interleaved correctly (Bug 2: user-first
+  // grouping caused prior assistant replies to appear after the next
+  // user message).
+  //
+  // If there is a completed assistant message with thinking_content,
+  // its thinking block is rendered inline inside MessageBubble, so
+  // there is no need to split the last assistant out.
+  type RenderEntry =
+    | { type: "message"; msg: Message; key: string }
+    | { type: "streaming"; key: string };
+  const rendered: RenderEntry[] = messages.map((msg, i) => ({
+    type: "message" as const,
+    msg,
+    key: `msg-${i}`,
+  }));
+
+  if (isStreaming) {
+    rendered.push({ type: "streaming" as const, key: "streaming" });
+  }
 
   return (
     <div className="d-flex flex-column gap-2">
-      {userMessages.map((msg, i) => (
-        <MessageBubble key={`u-${i}`} message={msg} />
-      ))}
-      {assistantMessages
-        .slice(0, hasCompletedThinking ? -1 : assistantMessages.length)
-        .map((msg, i) => (
-          <MessageBubble key={`a-${i}`} message={msg} />
-        ))}
-      {hasCompletedThinking && lastAssistant && (
-        <MessageBubble key="a-last" message={lastAssistant} />
-      )}
-      {!hasCompletedThinking &&
-        (thinkingBuffer || streamBuffer) && (
+      {rendered.map((item) =>
+        item.type === "message" ? (
+          <MessageBubble key={item.key} message={item.msg} />
+        ) : (
           <StreamingBubble
+            key={item.key}
             thinkingBuffer={thinkingBuffer}
             streamBuffer={streamBuffer}
             thinkingExpanded={thinkingExpanded}
             onToggle={() => setThinkingExpanded((e) => !e)}
           />
-        )}
+        ),
+      )}
     </div>
   );
 }

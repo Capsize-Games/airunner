@@ -13,16 +13,12 @@ from airunner_services.llm.adapters.chat_gguf_generation_request import (
     chat_completion_kwargs,
     generate_raw_gpt_oss_result,
 )
-from airunner_services.llm.gpt_oss_parser import (
-    has_gpt_oss_markup,
-)
 from airunner_services.llm.adapters.chat_gguf_response_message import (
     response_message,
 )
 from airunner_services.utils.application.log_hygiene import (
     summarize_mapping_keys,
 )
-
 
 QWEN_NO_THINK_MIN_TOKENS = 48
 GPT_OSS_MIN_TOKENS = 64
@@ -87,7 +83,9 @@ def effective_max_tokens(
 def _needs_qwen_no_think_floor(adapter: Any) -> bool:
     """Return True when Qwen no-think needs a minimum token floor."""
     model_path = str(getattr(adapter, "model_path", "")).lower()
-    return not getattr(adapter, "enable_thinking", True) and "qwen3" in model_path
+    return (
+        not getattr(adapter, "enable_thinking", True) and "qwen3" in model_path
+    )
 
 
 def _needs_gpt_oss_floor(adapter: Any) -> bool:

@@ -31,9 +31,9 @@ def build_tts_invocation(request: TTSRequest) -> TTSInvocationRequest:
         model=request.model,
         voice=request.voice,
         speed=request.speed,
-        metadata={"model_type": request.model_type}
-        if request.model_type
-        else {},
+        metadata=(
+            {"model_type": request.model_type} if request.model_type else {}
+        ),
     )
 
 
@@ -68,27 +68,22 @@ def require_runtime_registry(request) -> RuntimeRegistry:
     """Return the runtime registry or raise when it is unavailable."""
     runtime_registry = get_runtime_registry(request)
     if runtime_registry is None:
-        raise HTTPException(
-            status_code=503, detail="TTS runtime unavailable"
-        )
+        raise HTTPException(status_code=503, detail="TTS runtime unavailable")
     return runtime_registry
 
 
 def resolve_tts_client(registry: RuntimeRegistry) -> RuntimeClient:
-    """Resolve the preferred TTS runtime client for this process."""
-    for deployment_mode in (
-        RuntimeMode.LOCAL_FALLBACK.value,
-        RuntimeMode.SIDECAR.value,
-    ):
-        try:
-            return registry.resolve(
-                RuntimeKind.TTS,
-                provider="local",
-                deployment_mode=deployment_mode,
-            )
-        except KeyError:
-            continue
-    raise HTTPException(status_code=503, detail="TTS runtime unavailable")
+    """Resolve the TTS runtime client (in-process local fallback)."""
+    try:
+        return registry.resolve(
+            RuntimeKind.TTS,
+            provider="local",
+            deployment_mode=RuntimeMode.LOCAL_FALLBACK.value,
+        )
+    except KeyError:
+        raise HTTPException(
+            status_code=503, detail="TTS runtime unavailable"
+        ) from None
 
 
 def build_tts_envelope(request: TTSRequest) -> RequestEnvelope:

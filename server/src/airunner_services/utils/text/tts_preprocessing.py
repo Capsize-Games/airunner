@@ -46,13 +46,13 @@ _EMOJI_RANGES: list[tuple[int, int]] = [
     (0x1F900, 0x1F9FF),  # Supplemental Symbols and Pictographs
     (0x1FA00, 0x1FA6F),  # Chess Symbols
     (0x1FA70, 0x1FAFF),  # Symbols and Pictographs Extended-A
-    (0x2702,  0x27B0),   # Dingbats
-    (0x24C2, 0x24C2),    # Ⓜ metro
-    (0x25B6, 0x25B6),    # ▶ play button
-    (0x25C0, 0x25C0),    # ◀ reverse button
-    (0x25FB, 0x25FE),    # ◻◼◽◾ medium squares
-    (0x2600, 0x26FF),    # Miscellaneous Symbols
-    (0x2B05, 0x2B55),    # ⬅⬆⬇ arrows, stars
+    (0x2702, 0x27B0),  # Dingbats
+    (0x24C2, 0x24C2),  # Ⓜ metro
+    (0x25B6, 0x25B6),  # ▶ play button
+    (0x25C0, 0x25C0),  # ◀ reverse button
+    (0x25FB, 0x25FE),  # ◻◼◽◾ medium squares
+    (0x2600, 0x26FF),  # Miscellaneous Symbols
+    (0x2B05, 0x2B55),  # ⬅⬆⬇ arrows, stars
     (0x1F100, 0x1F1FF),  # Enclosed Alphanumeric Supplement
     (0x1F200, 0x1F2FF),  # Enclosed Ideographic Supplement
 ]

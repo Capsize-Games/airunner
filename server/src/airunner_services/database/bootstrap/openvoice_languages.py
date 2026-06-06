@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-
 OPENVOICE_CORE_MODELS = [
     "google-bert/bert-base-multilingual-uncased",
     "google-bert/bert-base-uncased",

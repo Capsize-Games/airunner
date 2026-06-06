@@ -214,7 +214,8 @@ class SDGenerationPreparationMixin:
         # DEBUG: Log strength value from image_request
         self.logger.debug(
             "[PREPARE_DATA DEBUG] image_request.strength=%s, is_img2img=%s",
-            self.image_request.strength, getattr(self, "is_img2img", False)
+            self.image_request.strength,
+            getattr(self, "is_img2img", False),
         )
         data.update(
             {

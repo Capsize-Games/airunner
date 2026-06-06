@@ -12,7 +12,7 @@ import yaml
 from airunner_services.config.runtime_layout import (
     build_runtime_directory_layout,
 )
-
+from airunner_services.settings import AIRUNNER_LOG_FILE
 
 logger = logging.getLogger(__name__)
 
@@ -71,8 +71,8 @@ class DaemonConfig:
             },
             "logging": {
                 "level": "INFO",
-                "to_file": False,
-                "file": str(layout.log_file("daemon")),
+                "to_file": True,
+                "file": AIRUNNER_LOG_FILE,
                 "max_bytes": 50 * 1024 * 1024,
                 "backup_count": 5,
             },

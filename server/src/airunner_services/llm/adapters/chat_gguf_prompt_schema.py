@@ -100,16 +100,13 @@ def _union_type(
     if not variants:
         return None
     return " | ".join(
-        format_gpt_oss_type(variant, indent_level)
-        for variant in variants
+        format_gpt_oss_type(variant, indent_level) for variant in variants
     )
 
 
 def _enum_type(schema: Dict[str, Any]) -> str:
     """Return one enum type representation."""
-    return " | ".join(
-        json.dumps(value) for value in schema.get("enum", [])
-    )
+    return " | ".join(json.dumps(value) for value in schema.get("enum", []))
 
 
 def _primitive_schema_type(

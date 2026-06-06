@@ -1,5 +1,5 @@
-import { request, streamRequest } from "./client-base";
-import { BASE_URL, type JsonObject, type StreamChunk, type Message } from "../types/api";
+import { request } from "./client-base";
+import { BASE_URL, type JsonObject, type Message } from "../types/api";
 
 // ── Health / Daemon ──
 export async function healthCheck() {
@@ -42,27 +42,6 @@ export async function selectConversation(conversationId: number) {
   );
 }
 
-// ── LLM Streaming ──
-export async function* streamLLM(
-  messages: Message[],
-  signal?: AbortSignal,
-  model?: string,
-  llmOverrides?: Record<string, Record<string, unknown>>,
-  activeDocumentIds?: number[],
-) {
-  yield* streamRequest(
-    "POST", "/api/v1/llm/conversations/stream",
-    {
-      messages,
-      model,
-      stream: true,
-      llm_overrides: llmOverrides,
-      active_document_ids: activeDocumentIds,
-    },
-    signal,
-  );
-}
-
 // ── LLM Models ──
 export async function listLLMModels() {
   const data = await request<import("../types/api").BootstrapData>(
@@ -79,25 +58,139 @@ export async function listLLMModels() {
     }));
 }
 
-// ── TTS ──
+// ---------------------------------------------------------------------------
+// TTS — module-level singleton WebSocket for non-React callers
+// ---------------------------------------------------------------------------
+
+let _ttsWs: WebSocket | null = null;
+let _ttsReady = false;
+let _ttsPendingResolve: ((blob: Blob) => void) | null = null;
+let _ttsPendingReject: ((err: Error) => void) | null = null;
+let _ttsReconnectTimer: ReturnType<typeof setTimeout> | null = null;
+
+function _ttsWsUrl(): string {
+  const proto = location.protocol === "https:" ? "wss" : "ws";
+  const raw = (import.meta.env.VITE_API_BASE_URL as string) || "localhost:8188";
+  const host = raw.replace(/^https?:\/\//, "");
+  return `${proto}://${host}/api/v1/tts/ws`;
+}
+
+function _ttsConnect(): void {
+  if (_ttsWs) {
+    _ttsWs.onclose = null;
+    _ttsWs.onerror = null;
+    _ttsWs.onmessage = null;
+    _ttsWs.close();
+    _ttsWs = null;
+  }
+
+  try {
+    const socket = new WebSocket(_ttsWsUrl());
+    _ttsWs = socket;
+
+    socket.onopen = () => {
+      _ttsReady = true;
+    };
+
+    socket.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        if (data.type === "audio") {
+          const raw = data.data as string;
+          const binary = atob(raw);
+          const bytes = new Uint8Array(binary.length);
+          for (let i = 0; i < binary.length; i++) {
+            bytes[i] = binary.charCodeAt(i);
+          }
+          const blob = new Blob([bytes], { type: "audio/wav" });
+          if (_ttsPendingResolve) {
+            _ttsPendingResolve(blob);
+            _ttsPendingResolve = null;
+            _ttsPendingReject = null;
+          }
+        } else if (data.type === "error") {
+          const msg = data.message ?? "TTS failed";
+          if (_ttsPendingReject) {
+            _ttsPendingReject(new Error(msg));
+            _ttsPendingResolve = null;
+            _ttsPendingReject = null;
+          }
+        }
+      } catch { /* ignore */ }
+    };
+
+    socket.onclose = (event) => {
+      _ttsWs = null;
+      _ttsReady = false;
+      if (!event.wasClean) {
+        _ttsReconnectTimer = setTimeout(_ttsConnect, 5000);
+      }
+    };
+
+    socket.onerror = () => {
+      socket.close();
+    };
+  } catch {
+    _ttsReconnectTimer = setTimeout(_ttsConnect, 5000);
+  }
+}
+
+function _ttsSend(msg: Record<string, unknown>): void {
+  if (_ttsWs?.readyState === WebSocket.OPEN) {
+    _ttsWs.send(JSON.stringify(msg));
+  }
+}
+
+function _ttsDisconnect(): void {
+  if (_ttsReconnectTimer) {
+    clearTimeout(_ttsReconnectTimer);
+    _ttsReconnectTimer = null;
+  }
+  if (_ttsWs) {
+    _ttsWs.onclose = null;
+    _ttsWs.onerror = null;
+    _ttsWs.onmessage = null;
+    _ttsWs.close();
+    _ttsWs = null;
+  }
+  _ttsReady = false;
+}
+
+// Initialize TTS WebSocket connection eagerly (lazy on first call)
+let _ttsInit = false;
+function _ttsEnsureConnected(): void {
+  if (!_ttsInit) {
+    _ttsInit = true;
+    _ttsConnect();
+  }
+}
+
 export async function synthesizeTTS(
   text: string,
   voice?: string,
   speed = 1.0,
 ): Promise<Blob> {
-  const response = await fetch(`${BASE_URL}/api/v1/tts/synthesize`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ text, voice, speed }),
+  _ttsEnsureConnected();
+
+  return new Promise((resolve, reject) => {
+    _ttsPendingResolve = resolve;
+    _ttsPendingReject = reject;
+
+    _ttsSend({
+      type: "synthesize",
+      text,
+      voice,
+      speed,
+    });
   });
-  if (!response.ok) throw new Error(`${response.status}`);
-  return response.blob();
 }
 
 // ── LLM Settings Presets ──
-export async function listLLMPresets() {
-  return request<Array<{
-    label: string;
-    args: Record<string, unknown>;
-  }>>("GET", "/api/v1/llm/settings-presets");
+export async function listLLMPresets(): Promise<
+  Array<{ label: string; args: Record<string, unknown> }>
+> {
+  const data = await request<{
+    presets: Array<{ label: string; args: Record<string, unknown> }>;
+  }>("GET", "/api/v1/llm/settings-presets");
+  return Array.isArray(data) ? data : (data.presets ?? []);
 }

@@ -83,15 +83,19 @@ def get_reasoning_effort(
     allowed = {"low", "medium", "high"}
 
     if db_settings is not None and hasattr(db_settings, "reasoning_effort"):
-        db_value = str(
-            getattr(db_settings, "reasoning_effort", "medium") or "medium"
-        ).strip().lower()
+        db_value = (
+            str(getattr(db_settings, "reasoning_effort", "medium") or "medium")
+            .strip()
+            .lower()
+        )
         if db_value in allowed:
             return db_value
 
-    ui_value = str(
-        getattr(llm_settings, "reasoning_effort", "medium") or "medium"
-    ).strip().lower()
+    ui_value = (
+        str(getattr(llm_settings, "reasoning_effort", "medium") or "medium")
+        .strip()
+        .lower()
+    )
     if ui_value in allowed:
         return ui_value
 

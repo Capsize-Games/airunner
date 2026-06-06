@@ -14,7 +14,9 @@ from airunner_services.database.models.project_state import (
 
 def _project_features(db: Session, project_id: int) -> list[ProjectFeature]:
     """Return all features for one project."""
-    query = db.query(ProjectFeature).filter(ProjectFeature.project_id == project_id)
+    query = db.query(ProjectFeature).filter(
+        ProjectFeature.project_id == project_id
+    )
     return query.all()
 
 

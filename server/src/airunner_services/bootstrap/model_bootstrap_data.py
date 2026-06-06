@@ -2,7 +2,6 @@
 
 from airunner_services.settings import AIRUNNER_ART_ENABLED
 
-
 ai_art_models = [
     {
         "name": "Stable Diffusion XL Base 1.0",

@@ -122,7 +122,9 @@ class NodeFunctionsMixin:
 
     def _should_return_tool_direct(self, tool_name: str) -> bool:
         """Return whether one bound tool should bypass the model pass."""
-        return self._get_forced_response_helper().should_return_tool_direct(tool_name)
+        return self._get_forced_response_helper().should_return_tool_direct(
+            tool_name
+        )
 
     def _stream_model_response(
         self,
@@ -172,7 +174,9 @@ class NodeFunctionsMixin:
         self, last_message: BaseMessage, messages: List[BaseMessage]
     ):
         """Log routing debug information for one workflow turn."""
-        self._get_routing_debug_helper().log_routing_debug(last_message, messages)
+        self._get_routing_debug_helper().log_routing_debug(
+            last_message, messages
+        )
 
     def _is_duplicate_tool_call(
         self, last_message: BaseMessage, messages: List[BaseMessage]

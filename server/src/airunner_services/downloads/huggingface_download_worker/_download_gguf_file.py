@@ -49,7 +49,9 @@ def download_gguf_model(
 
     size_gb = file_size / (1024**3)
     worker.logger.info(
-        "Downloading GGUF file: %s (%.2f GB)", gguf_filename, size_gb,
+        "Downloading GGUF file: %s (%.2f GB)",
+        gguf_filename,
+        size_gb,
     )
     worker.emit_signal(
         SignalCode.UPDATE_DOWNLOAD_LOG,
@@ -58,8 +60,15 @@ def download_gguf_model(
 
     thread = threading.Thread(
         target=_start_gguf_download_thread,
-        args=(worker, repo_id, gguf_filename, file_size, temp_dir,
-              model_path, api_key),
+        args=(
+            worker,
+            repo_id,
+            gguf_filename,
+            file_size,
+            temp_dir,
+            model_path,
+            api_key,
+        ),
         daemon=True,
     )
     worker._file_threads[gguf_filename] = thread
@@ -98,22 +107,24 @@ def _fetch_gguf_file_size(
     worker,
 ) -> int:
     """Retrieve the remote file size for a GGUF file via HTTP HEAD."""
-    url = (
-        f"https://huggingface.co/{repo_id}/resolve/main/{gguf_filename}"
-    )
+    url = f"https://huggingface.co/{repo_id}/resolve/main/{gguf_filename}"
     headers = {}
     if api_key:
         headers["Authorization"] = f"Bearer {api_key}"
 
     try:
         head = requests.head(
-            url, headers=headers, allow_redirects=True, timeout=30,
+            url,
+            headers=headers,
+            allow_redirects=True,
+            timeout=30,
         )
         head.raise_for_status()
         return int(head.headers.get("Content-Length", 0))
     except requests.RequestException as exc:
         worker.logger.error(
-            "Failed to get GGUF file size: %s", exc,
+            "Failed to get GGUF file size: %s",
+            exc,
         )
         return 0
 
@@ -132,8 +143,9 @@ def _start_gguf_download_thread(
     This is called in a daemon thread and delegates to the shared
     single-file downloader.
     """
-    from airunner_services.downloads.huggingface_download_worker._download_single_file import \
-        download_single_file  # noqa: E501
+    from airunner_services.downloads.huggingface_download_worker._download_single_file import (
+        download_single_file,
+    )  # noqa: E501
 
     download_single_file(
         worker,

@@ -11,7 +11,10 @@ from airunner_services.database.models.llm_generator_settings import (
     LLMGeneratorSettings,
 )
 from airunner_services.runtimes.base import RuntimeClient
-from airunner_services.runtimes.contracts import RuntimeHealthStatus, RuntimeKind
+from airunner_services.runtimes.contracts import (
+    RuntimeHealthStatus,
+    RuntimeKind,
+)
 
 ART_MODEL_NAME = "SD"
 

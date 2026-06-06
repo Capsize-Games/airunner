@@ -2,13 +2,11 @@
 
 from __future__ import annotations
 
+import json
 from typing import Callable, Optional
 
 from langchain_core.tools import tool
 
-from airunner_services.llm.managers.tools.autonomous_control_request_tools import (
-    build_request_user_input_tool,
-)
 from airunner_services.tools.base_tool import BaseTool
 
 
@@ -21,11 +19,19 @@ def _tool_error(owner: BaseTool, action: str, exc: Exception) -> str:
 def _application_state_result(owner: BaseTool) -> str:
     """Return the current autonomous-control state payload."""
     state = {
-        "application": {"name": "AI Runner", "version": "2.0", "mode": "autonomous"},
+        "application": {
+            "name": "AI Runner",
+            "version": "2.0",
+            "mode": "autonomous",
+        },
         "llm": {
             "active": True,
             "model": getattr(owner, "active_llm_model_name", "unknown"),
-            "tools_count": len(owner.get_all_tools()) if hasattr(owner, "get_all_tools") else 0,
+            "tools_count": (
+                len(owner.get_all_tools())
+                if hasattr(owner, "get_all_tools")
+                else 0
+            ),
         },
         "conversation": {
             "current_id": getattr(owner, "current_conversation_id", None),
@@ -150,4 +156,3 @@ def build_set_application_mode_tool(owner: BaseTool) -> Callable:
             return _tool_error(owner, "setting application mode", exc)
 
     return set_application_mode
-

@@ -241,7 +241,7 @@ def intelligent_crawl(
             return f"No pages were successfully crawled from {start_url}"
 
         # Aggregate content from all pages
-        result_text = f"# Intelligent Crawl Results\n\n"
+        result_text = "# Intelligent Crawl Results\n\n"
         result_text += f"**Research Goal:** {research_goal}\n"
         result_text += f"**Start URL:** {start_url}\n"
         result_text += f"**Pages Crawled:** {len(collected_pages)}\n\n"
@@ -265,7 +265,7 @@ def intelligent_crawl(
 
         # Add stats
         stats = controller.get_stats()
-        result_text += f"\n**Crawl Statistics:**\n"
+        result_text += "\n**Crawl Statistics:**\n"
         result_text += f"- Pages analyzed: {stats['pages_analyzed']}\n"
         result_text += f"- Relevant pages: {stats['relevant_pages']}\n"
         result_text += f"- Relevance rate: {stats['relevance_rate']:.1%}\n"

@@ -38,12 +38,16 @@ class NodePostToolInstructionsHelper:
             return f"{system_prompt}{error_instruction}"
         instruction = self._build_instruction(trimmed_messages, tool_messages)
         system_prompt += instruction
-        self._owner.logger.info("[POST-TOOL] Full instruction text:\n%s", instruction)
+        self._owner.logger.info(
+            "[POST-TOOL] Full instruction text:\n%s", instruction
+        )
         self._log_tool_results(tool_messages)
         return system_prompt
 
     @staticmethod
-    def _tool_messages(trimmed_messages: List[BaseMessage]) -> List[BaseMessage]:
+    def _tool_messages(
+        trimmed_messages: List[BaseMessage],
+    ) -> List[BaseMessage]:
         """Return the tool messages from one trimmed message list."""
         return [
             message
@@ -88,9 +92,15 @@ class NodePostToolInstructionsHelper:
         """Return the post-tool instruction for the current workflow mode."""
         response_format = getattr(self._owner, "_response_format", None)
         force_tool = getattr(self._owner, "_force_tool", None)
-        tool_calling_mode = getattr(self._owner._chat_model, "tool_calling_mode", "react")
+        tool_calling_mode = getattr(
+            self._owner._chat_model, "tool_calling_mode", "react"
+        )
         tool_call_count = len(
-            [message for message in trimmed_messages if hasattr(message, "tool_calls") and message.tool_calls]
+            [
+                message
+                for message in trimmed_messages
+                if hasattr(message, "tool_calls") and message.tool_calls
+            ]
         )
         scrape_attempts = sum(
             1
@@ -99,8 +109,8 @@ class NodePostToolInstructionsHelper:
             for tool_call in message.tool_calls
             if tool_call.get("name") == "scrape_website"
         )
-        successful_scrapes, failed_scrapes = self._research_helper.scrape_counts(
-            tool_messages
+        successful_scrapes, failed_scrapes = (
+            self._research_helper.scrape_counts(tool_messages)
         )
         search_urls = self._research_helper.search_urls(tool_messages)
         self._owner.logger.info(
@@ -196,8 +206,17 @@ class NodePostToolInstructionsHelper:
         if not tool_messages:
             return False
         last_tool_content = str(getattr(tool_messages[-1], "content", ""))
-        indicators = ["created", "successfully", "written", "✓", "complete", "done"]
-        return any(indicator in last_tool_content.lower() for indicator in indicators)
+        indicators = [
+            "created",
+            "successfully",
+            "written",
+            "✓",
+            "complete",
+            "done",
+        ]
+        return any(
+            indicator in last_tool_content.lower() for indicator in indicators
+        )
 
     def _log_tool_results(self, tool_messages: List[BaseMessage]) -> None:
         """Log previews of available tool results."""

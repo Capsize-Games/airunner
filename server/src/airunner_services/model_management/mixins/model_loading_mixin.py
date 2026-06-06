@@ -56,6 +56,7 @@ def offload_service_model(logger: Any, model_type: str) -> None:
         from airunner_services.model_management.llm_model_manager import (
             LLMModelManager,
         )
+
         LLMModelManager().offload_to_cpu()
         logger.info("LLM offloaded to CPU for auto-swap")
         return
@@ -63,6 +64,7 @@ def offload_service_model(logger: Any, model_type: str) -> None:
         from airunner_services.model_management.zimage_model_manager import (
             ZImageModelManager,
         )
+
         ZImageModelManager().offload_to_cpu()
         logger.info("Art model offloaded to CPU for auto-swap")
         return
@@ -79,6 +81,7 @@ def restore_service_model(logger: Any, model_type: str) -> None:
         from airunner_services.model_management.llm_model_manager import (
             LLMModelManager,
         )
+
         LLMModelManager().restore_to_gpu()
         logger.info("LLM restored from CPU to GPU")
         return
@@ -86,6 +89,7 @@ def restore_service_model(logger: Any, model_type: str) -> None:
         from airunner_services.model_management.zimage_model_manager import (
             ZImageModelManager,
         )
+
         ZImageModelManager().restore_to_gpu()
         logger.info("Art model restored from CPU to GPU")
         return

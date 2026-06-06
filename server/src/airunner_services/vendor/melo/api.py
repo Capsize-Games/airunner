@@ -14,7 +14,9 @@ from airunner_services.vendor.melo.split_utils import split_sentence
 from airunner_services.vendor.melo.text.cleaner import Cleaner
 from airunner_services.vendor.melo import commons
 from airunner_services.vendor.melo.text import cleaned_text_to_sequence
-from airunner_services.vendor.melo.runtime_support import resolve_tts_model_path
+from airunner_services.vendor.melo.runtime_support import (
+    resolve_tts_model_path,
+)
 
 
 def _normalize_language(value) -> AvailableLanguage:
@@ -23,7 +25,10 @@ def _normalize_language(value) -> AvailableLanguage:
         return value
 
     member_name = getattr(value, "name", None)
-    if isinstance(member_name, str) and member_name in AvailableLanguage.__members__:
+    if (
+        isinstance(member_name, str)
+        and member_name in AvailableLanguage.__members__
+    ):
         return AvailableLanguage[member_name]
 
     member_value = getattr(value, "value", None)

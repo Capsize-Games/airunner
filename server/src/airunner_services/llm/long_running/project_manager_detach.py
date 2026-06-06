@@ -6,7 +6,6 @@ from typing import TypeVar
 
 from sqlalchemy.orm import Session, make_transient
 
-
 DetachedType = TypeVar("DetachedType")
 
 

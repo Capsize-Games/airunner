@@ -206,7 +206,9 @@ def build_llm_tool_action_handler(
 def resolve_llm_workflow_event_sink(owner: Any) -> LLMWorkflowEventSink:
     """Resolve one workflow event sink from an owner instance."""
     signal_emitter = getattr(owner, "_signal_emitter", None)
-    if signal_emitter is None and callable(getattr(owner, "emit_signal", None)):
+    if signal_emitter is None and callable(
+        getattr(owner, "emit_signal", None)
+    ):
         signal_emitter = owner
     return build_llm_workflow_event_sink(
         event_sink=getattr(owner, "_event_sink", None),

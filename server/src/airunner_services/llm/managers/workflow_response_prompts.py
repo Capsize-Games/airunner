@@ -2,10 +2,8 @@
 
 from __future__ import annotations
 
-
 DEFAULT_WORKFLOW_NEXT_ACTION = (
-    "Call transition_phase('planning', "
-    "'Simple task, moving to planning')"
+    "Call transition_phase('planning', " "'Simple task, moving to planning')"
 )
 
 

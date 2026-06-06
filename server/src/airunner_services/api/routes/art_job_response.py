@@ -12,7 +12,6 @@ from .art_job_progress import fail_art_job, job_cancelled, progress_callback
 from .art_job_requests import build_art_envelope
 from .art_runtime import response_status_is
 
-
 # Runtime response handling
 
 
@@ -83,7 +82,9 @@ async def run_art_job(
 ) -> None:
     """Execute one art runtime request and store the JobTracker result."""
     envelope = build_art_envelope(job_id, request)
-    on_progress = progress_callback(asyncio.get_running_loop(), tracker, job_id)
+    on_progress = progress_callback(
+        asyncio.get_running_loop(), tracker, job_id
+    )
     try:
         response = await invoke_art_request(client, envelope, on_progress)
     except Exception as exc:

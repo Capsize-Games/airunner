@@ -13,7 +13,6 @@ from airunner_services.utils.image.load_metadata_from_image import (
     load_metadata_from_image,
 )
 
-
 __all__ = [
     "convert_binary_to_image",
     "convert_image_to_binary",

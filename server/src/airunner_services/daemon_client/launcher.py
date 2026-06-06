@@ -50,7 +50,10 @@ class DaemonLauncher:
         """Return the daemon launch command."""
         bundle_layout = build_linux_bundle_layout()
         daemon_executable = bundle_layout.daemon_executable()
-        if daemon_executable is not None and os.environ.get("DEV_ENV", "1") != "1":
+        if (
+            daemon_executable is not None
+            and os.environ.get("DEV_ENV", "1") != "1"
+        ):
             command = [str(daemon_executable)]
         else:
             command = [
@@ -77,9 +80,7 @@ class DaemonLauncher:
         runtime_layout = build_runtime_directory_layout()
         environment = dict(os.environ)
         environment.update(runtime_layout.as_environment(self.config_path))
-        environment.pop("AIRUNNER_ART_SIDECAR_PROCESS", None)
-        environment.pop("AIRUNNER_TTS_SIDECAR_PROCESS", None)
-        environment.setdefault("AIRUNNER_HEADLESS", "1")
+        environment.setdefault("AIRUNNER_DAEMON", "1")
         environment.setdefault(
             "AIRUNNER_BUNDLE_ROOT",
             str(bundle_layout.bundle_root),

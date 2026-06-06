@@ -1,6 +1,6 @@
 # Server
 
-The `server/` package is AIRunner's headless orchestration layer. It
+The `server/` package is AIRunner's daemon orchestration layer. It
 owns the daemon entry points, FastAPI server wiring, runtime registry,
 downloads, persistence, lifecycle control, and the modality services that
 coordinate LLM, STT, TTS, and art workloads.
@@ -11,7 +11,7 @@ flowchart LR
     API[api/ transport contracts] --> Daemon
     Daemon --> Registry[runtime registry]
     Registry --> Model[model/ shared runtime helpers]
-    Registry --> Sidecars[llama.cpp or whisper.cpp sidecars]
+    Registry --> Native[llama.cpp or whisper.cpp binaries]
     Daemon --> Data[(AIRUNNER_BASE_PATH)]
 ```
 
@@ -32,8 +32,7 @@ and the package map lives in
 ## Installation
 
 For normal repo development, use the developer installer. It installs the
-split packages in editable mode and builds the pinned native sidecars used
-by daemon-backed functional tests:
+split packages in editable mode:
 
 ```bash
 ./scripts/install.sh
@@ -47,7 +46,7 @@ python -m venv venv
 source venv/bin/activate
 pip install --upgrade pip setuptools wheel
 pip install -e ./model
-pip install -e './server[headless,development]'
+pip install -e './server[daemon,development]'
 ```
 
 Use `server[desktop]` when you want the broader desktop-oriented extra

@@ -18,6 +18,9 @@ from airunner_services.llm.adapters.chat_gguf_model_helper import (
     is_gguf_model,
     read_gguf_architecture,
 )
+from airunner_services.llm.adapters.chat_gguf_model_helper import (
+    _detect_chat_format,
+)
 from airunner_services.llm.adapters.chat_gguf_prompt_mixin import (
     ChatGGUFPromptMixin,
 )

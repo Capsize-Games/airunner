@@ -136,10 +136,10 @@ For each section:
 
 def get_workflow_prompt(workflow_type: str) -> str:
     """Get the appropriate workflow prompt for a workflow type.
-    
+
     Args:
       workflow_type: One of "research", "writing", "math", "dynamic"
-        
+
     Returns:
         System prompt addition for the workflow
     """
@@ -147,8 +147,8 @@ def get_workflow_prompt(workflow_type: str) -> str:
         "research": RESEARCH_WORKFLOW_PROMPT,
         # Add more as needed
     }
-    
+
     base = WORKFLOW_SYSTEM_PROMPT
     specific = prompts.get(workflow_type, "")
-    
+
     return f"{base}\n\n{specific}" if specific else base

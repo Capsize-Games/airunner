@@ -14,7 +14,7 @@ from airunner_services.llm.managers.mixins.model_availability_mixin import (
 from airunner_services.model_management.model_resource_manager import (
     ModelResourceManager,
 )
-from airunner_services.contract_enums import ModelType, SignalCode
+from airunner_services.contract_enums import SignalCode
 
 if TYPE_CHECKING:
     from airunner_services.model_management.llm_model_manager import (
@@ -69,10 +69,10 @@ class ValidationMixin:
 
     def _model_supports_gguf(self: "LLMModelManager") -> bool:
         """Check if the current model supports GGUF format.
-        
+
         This checks the provider config to see if GGUF repo/filename is configured.
         Models without GGUF config will use transformers instead.
-        
+
         Returns:
             True if the model has GGUF support configured.
         """
@@ -80,7 +80,7 @@ class ValidationMixin:
         if not model_id:
             # No model_id - can't determine GGUF support, assume no
             return False
-            
+
         gguf_info = LLMProviderConfig.get_gguf_info("local", model_id)
         return gguf_info is not None
 
@@ -198,7 +198,9 @@ class ValidationMixin:
         llm_generator_settings = getattr(self, "llm_generator_settings", None)
         saved_model_id = getattr(llm_generator_settings, "model_id", None)
         if saved_model_id:
-            model_info = LLMProviderConfig.get_model_info("local", saved_model_id)
+            model_info = LLMProviderConfig.get_model_info(
+                "local", saved_model_id
+            )
             if model_info:
                 return saved_model_id
 

@@ -7,14 +7,18 @@ from airunner_services.llm.tools.rag_tools_helpers._knowledge_base_discovery imp
     get_active_documents,
 )
 
-
 ScoredDocuments = list[tuple[int, Any]]
 ScoreDocumentsFn = Callable[[list[Any], str], ScoredDocuments]
 
 
 def retry_scoring_after_indexing(
-    docs: list[Any], *, query: str, api: Any, session: Any,
-    document_model: Any, logger: Any,
+    docs: list[Any],
+    *,
+    query: str,
+    api: Any,
+    session: Any,
+    document_model: Any,
+    logger: Any,
     score_documents_fn: ScoreDocumentsFn,
 ) -> ScoredDocuments:
     """Retry filename scoring after indexing any unindexed documents."""
@@ -53,8 +57,14 @@ def _ensure_indexed_files(
 
 
 def find_top_documents(
-    docs: list[Any], *, query: str, k: int, api: Any, session: Any,
-    document_model: Any, logger: Any,
+    docs: list[Any],
+    *,
+    query: str,
+    k: int,
+    api: Any,
+    session: Any,
+    document_model: Any,
+    logger: Any,
     score_documents_fn: ScoreDocumentsFn,
 ) -> ScoredDocuments:
     """Return top-scored documents, retrying after indexing when needed."""
@@ -63,8 +73,12 @@ def find_top_documents(
         return top_docs
     try:
         return retry_scoring_after_indexing(
-            docs, query=query, api=api, session=session,
-            document_model=document_model, logger=logger,
+            docs,
+            query=query,
+            api=api,
+            session=session,
+            document_model=document_model,
+            logger=logger,
             score_documents_fn=score_documents_fn,
         )[:k]
     except Exception as error:

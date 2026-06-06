@@ -8,7 +8,6 @@ from airunner_services.database.models.project_state import DecisionOutcome
 from airunner_services.settings import AIRUNNER_LOG_LEVEL
 from airunner_services.utils.application import get_logger
 
-
 logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 
 
@@ -18,7 +17,9 @@ def get_decision_history(
     limit: int = 20,
 ) -> list[dict[str, Any]]:
     """Get decision history for learning insights."""
-    decisions = agent._project_manager.get_relevant_decisions(project_id, limit=limit)
+    decisions = agent._project_manager.get_relevant_decisions(
+        project_id, limit=limit
+    )
     return [
         {
             "id": decision.id,

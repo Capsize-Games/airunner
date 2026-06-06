@@ -62,7 +62,11 @@ def ensure_success(response: ResponseEnvelope) -> ResponseEnvelope:
         return response
     raise HTTPException(
         status_code=runtime_failure_status(response),
-        detail=response.error.message if response.error else "Runtime action failed",
+        detail=(
+            response.error.message
+            if response.error
+            else "Runtime action failed"
+        ),
     )
 
 

@@ -21,8 +21,7 @@ class RuntimeMode(str, Enum):
     """Execution mode used by a runtime."""
 
     LOCAL_FALLBACK = "local_fallback"
-    WORKER_PROCESS = "worker_process"
-    SIDECAR = "sidecar"
+    IN_PROCESS = "in_process"
 
 
 class TransportKind(str, Enum):
@@ -31,6 +30,7 @@ class TransportKind(str, Enum):
     IN_PROCESS = "in_process"
     UNIX_SOCKET = "unix_socket"
     HTTP = "http"
+    WEBSOCKET = "websocket"
 
 
 class RuntimeAction(str, Enum):

@@ -135,9 +135,9 @@ def _search_conversations_result(
 ) -> str:
     """Return the formatted search results for one query."""
     with session_scope() as session:
-        conversations = session.query(Conversation).order_by(
-            Conversation.id.desc()
-        ).all()
+        conversations = (
+            session.query(Conversation).order_by(Conversation.id.desc()).all()
+        )
         matches = conversation_search_matches(
             conversations,
             query,

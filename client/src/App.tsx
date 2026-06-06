@@ -1,13 +1,14 @@
 import { useState, useCallback } from "react";
+import { Routes, Route } from "react-router-dom";
 import Layout from "./components/layout/Layout";
 import ChatView from "./components/chat/ChatView";
+import ArtView from "./components/art/ArtView";
 import SettingsModal from "./components/settings/SettingsModal";
 
 type PanelId =
   | "knowledge"
   | "history"
   | "llm_settings"
-  | "art_model"
   | "lora"
   | "embeddings"
   | "image_browser"
@@ -53,9 +54,6 @@ export default function App() {
   const [showCanvas, setShowCanvas] = useState(() =>
     loadBool("airunner_show_canvas", false),
   );
-  const [showArtPrompt, setShowArtPrompt] = useState(() =>
-    loadBool("airunner_show_art_prompt", false),
-  );
   const [ttsOn, setTtsOn] = useState(() =>
     loadBool("airunner_tts_on", false),
   );
@@ -94,51 +92,60 @@ export default function App() {
 
   return (
     <>
-      <Layout
-        leftPanel={leftPanel}
-        onLeftPanel={(id: PanelId) =>
-          setLeftPanel((prev) => {
-            const next = prev === id ? null : id;
-            persist("airunner_left_panel", next ?? "");
-            return next;
-          })
-        }
-        rightPanel={rightPanel}
-        onRightPanel={(id: PanelId) =>
-          setRightPanel((prev) => {
-            const next = prev === id ? null : id;
-            persist("airunner_right_panel", next ?? "");
-            return next;
-          })
-        }
-        showChat={showChat}
-        onToggleChat={() =>
-          setShowChat((s) => {
-            persist("airunner_show_chat", !s);
-            return !s;
-          })
-        }
-        showCanvas={showCanvas}
-        onToggleCanvas={makeToggle(
-          "airunner_show_canvas",
-          !showCanvas,
-          setShowCanvas,
-        )}
-        showArtPrompt={showArtPrompt}
-        onToggleArtPrompt={makeToggle(
-          "airunner_show_art_prompt",
-          !showArtPrompt,
-          setShowArtPrompt,
-        )}
-        ttsOn={ttsOn}
-        onToggleTts={makeToggle("airunner_tts_on", !ttsOn, setTtsOn)}
-        sttOn={sttOn}
-        onToggleStt={makeToggle("airunner_stt_on", !sttOn, setSttOn)}
-        onOpenSettings={() => setShowSettings(true)}
-        onSelectConversation={handleSelectConversation}
-      >
-        {showChat && <ChatView conversationId={conversationId} />}
-      </Layout>
+      <Routes>
+        <Route
+          path="/"
+          element={
+            <Layout
+              leftPanel={leftPanel}
+              onLeftPanel={(id: PanelId) =>
+                setLeftPanel((prev) => {
+                  const next = prev === id ? null : id;
+                  persist("airunner_left_panel", next ?? "");
+                  return next;
+                })
+              }
+              rightPanel={rightPanel}
+              onRightPanel={(id: PanelId) =>
+                setRightPanel((prev) => {
+                  const next = prev === id ? null : id;
+                  persist("airunner_right_panel", next ?? "");
+                  return next;
+                })
+              }
+              showChat={showChat}
+              onToggleChat={() =>
+                setShowChat((s) => {
+                  persist("airunner_show_chat", !s);
+                  return !s;
+                })
+              }
+              showCanvas={showCanvas}
+              onToggleCanvas={makeToggle(
+                "airunner_show_canvas",
+                !showCanvas,
+                setShowCanvas,
+              )}
+              ttsOn={ttsOn}
+              onToggleTts={makeToggle("airunner_tts_on", !ttsOn, setTtsOn)}
+              sttOn={sttOn}
+              onToggleStt={makeToggle("airunner_stt_on", !sttOn, setSttOn)}
+              onOpenSettings={() => setShowSettings(true)}
+              onSelectConversation={handleSelectConversation}
+            >
+              {showChat && <ChatView conversationId={conversationId} />}
+            </Layout>
+          }
+        />
+        <Route path="/chat" element={<ChatView conversationId={conversationId} />} />
+        <Route path="/art" element={<ArtView />} />
+        <Route
+          path="/settings"
+          element={
+            <SettingsModal onClose={() => window.history.back()} />
+          }
+        />
+      </Routes>
 
       {showSettings && (
         <SettingsModal onClose={() => setShowSettings(false)} />

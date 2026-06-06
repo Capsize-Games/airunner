@@ -232,7 +232,6 @@ html, body, #root {
   flex: 1;
 }
 .art-prompt-panel {
-  width: 340px; flex-shrink: 0;
   overflow-y: auto; background: var(--theme-panel-bg);
   border-left: 1px solid var(--separator-color);
 }

@@ -416,9 +416,9 @@ const CanvasStage = forwardRef<CanvasStageHandle, CanvasStageProps>(
           />
 
           {/* Content layers */}
-          {layers.map((layer) => (
+          {layers.map((layer, index) => (
             <CanvasLayerRenderer
-              key={layer.id}
+              key={layer.id ?? `layer-${index}`}
               layer={layer}
               isActive={layer.id === activeLayerId}
               activeTool={activeTool}

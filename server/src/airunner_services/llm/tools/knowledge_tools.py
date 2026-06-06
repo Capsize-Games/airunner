@@ -32,11 +32,23 @@ logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
     return_direct=False,
     requires_api=True,
     defer_loading=False,  # Essential tool - always available
-    keywords=["remember", "memory", "fact", "store", "save", "learn", "record", "note"],
+    keywords=[
+        "remember",
+        "memory",
+        "fact",
+        "store",
+        "save",
+        "learn",
+        "record",
+        "note",
+    ],
     input_examples=[
         {"fact": "User's name is Joe Curlee", "section": "Identity"},
         {"fact": "User has chronic back pain", "section": "Health & Wellness"},
-        {"fact": "User is working on AI Runner project", "section": "Work & Projects"},
+        {
+            "fact": "User is working on AI Runner project",
+            "section": "Work & Projects",
+        },
         {"fact": "User prefers dark mode", "section": "Preferences"},
     ],
 )
@@ -77,9 +89,16 @@ def record_knowledge(
             return f"✓ Recorded in {section}: {fact[:60]}{'...' if len(fact) > 60 else ''}"
         else:
             # Check if it's a duplicate vs section not found
-            if section in ["Identity", "Work & Projects", "Interests & Hobbies", 
-                          "Preferences", "Health & Wellness", "Relationships", 
-                          "Goals", "Notes"]:
+            if section in [
+                "Identity",
+                "Work & Projects",
+                "Interests & Hobbies",
+                "Preferences",
+                "Health & Wellness",
+                "Relationships",
+                "Goals",
+                "Notes",
+            ]:
                 return f"⚡ Already known (skipped duplicate): {fact[:50]}..."
             return f"Failed to record fact. Section '{section}' may not exist."
 
@@ -98,7 +117,15 @@ def record_knowledge(
     return_direct=False,
     requires_api=True,
     defer_loading=False,  # Essential tool - always available
-    keywords=["remember", "memory", "recall", "search", "find", "know", "what do I know"],
+    keywords=[
+        "remember",
+        "memory",
+        "recall",
+        "search",
+        "find",
+        "know",
+        "what do I know",
+    ],
     input_examples=[
         {"query": "user's health conditions"},
         {"query": "what projects is the user working on"},
@@ -126,16 +153,16 @@ def recall_knowledge(
         from airunner_services.knowledge import get_knowledge_base
 
         kb = get_knowledge_base()
-        
+
         # Try RAG search first - api is the agent with RAGMixin
-        agent = api if api and hasattr(api, 'search') else None
+        agent = api if api and hasattr(api, "search") else None
         results = kb.search_rag(query, k=max_results, agent=agent)
-        
+
         if not results:
             # Fallback to keyword search
             keyword_results = kb.search(query, max_results=max_results)
-            results = [r['line'] for r in keyword_results]
-        
+            results = [r["line"] for r in keyword_results]
+
         if not results:
             return (
                 f"No knowledge found for: '{query}'.\n\n"
@@ -146,13 +173,13 @@ def recall_knowledge(
         output = f"Found {len(results)} relevant fact(s):\n\n"
         for i, fact in enumerate(results, 1):
             output += f"{i}. {fact}\n"
-        
+
         output += (
             "\n**IMPORTANT:** If these facts don't directly answer the user's question, "
             "you MUST use search_news or search_web to find current information. "
             "Do NOT tell the user to search elsewhere."
         )
-        
+
         return output
 
     except Exception as e:
@@ -178,12 +205,10 @@ def recall_knowledge(
 )
 def read_knowledge_file(
     date: Annotated[
-        str,
-        "Date in YYYY-MM-DD format, or leave empty for today"
+        str, "Date in YYYY-MM-DD format, or leave empty for today"
     ] = None,
     read_all: Annotated[
-        bool,
-        "If True, read all recent knowledge files combined"
+        bool, "If True, read all recent knowledge files combined"
     ] = False,
 ) -> str:
     """Read knowledge from a specific date or all recent files.
@@ -197,18 +222,18 @@ def read_knowledge_file(
         from airunner_services.knowledge import get_knowledge_base
 
         kb = get_knowledge_base()
-        
+
         if read_all:
             content = kb.read_all(max_files=30)
         else:
             content = kb.read_file(date)
-        
+
         if not content or not content.strip():
             if date:
                 return f"No knowledge file found for {date}"
             else:
                 return "No knowledge recorded yet for today. Use record_knowledge to add facts."
-        
+
         return content
 
     except Exception as e:
@@ -226,7 +251,15 @@ def read_knowledge_file(
     ),
     return_direct=False,
     requires_api=True,
-    keywords=["update", "replace", "change", "modify", "edit", "fix", "correct"],
+    keywords=[
+        "update",
+        "replace",
+        "change",
+        "modify",
+        "edit",
+        "fix",
+        "correct",
+    ],
     input_examples=[
         {
             "find_text": "User lives in Seattle",
@@ -243,8 +276,7 @@ def update_knowledge(
     find_text: Annotated[str, "Text or regex pattern to find"],
     replace_text: Annotated[str, "Replacement text"],
     date: Annotated[
-        str,
-        "Specific date (YYYY-MM-DD) or None to search all files"
+        str, "Specific date (YYYY-MM-DD) or None to search all files"
     ] = None,
     is_regex: Annotated[bool, "Treat find_text as regex pattern"] = False,
     api: Any = None,
@@ -301,8 +333,7 @@ def update_knowledge(
 def delete_knowledge(
     text: Annotated[str, "Text or regex pattern to find and delete"],
     date: Annotated[
-        str,
-        "Specific date (YYYY-MM-DD) or None to search all files"
+        str, "Specific date (YYYY-MM-DD) or None to search all files"
     ] = None,
     is_regex: Annotated[bool, "Treat text as regex pattern"] = False,
     api: Any = None,
@@ -350,9 +381,7 @@ def delete_knowledge(
     input_examples=[],
 )
 def list_knowledge_files() -> str:
-    """List all knowledge files.
-
-    """
+    """List all knowledge files."""
     try:
         from airunner_services.knowledge import get_knowledge_base
 
@@ -366,7 +395,7 @@ def list_knowledge_files() -> str:
         for f in files[:20]:  # Show max 20
             size = f.stat().st_size
             output += f"• {f.stem} ({size} bytes)\n"
-        
+
         if len(files) > 20:
             output += f"\n... and {len(files) - 20} more files"
 

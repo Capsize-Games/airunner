@@ -24,9 +24,12 @@ def _feature_records(
     for feature in features:
         records.append(
             _feature_record(
-                project_id, feature["name"], feature.get("description", ""),
+                project_id,
+                feature["name"],
+                feature.get("description", ""),
                 FeatureCategory(feature.get("category", "functional")),
-                feature.get("verification_steps"), feature.get("priority", 5),
+                feature.get("verification_steps"),
+                feature.get("priority", 5),
                 feature.get("depends_on"),
             )
         )

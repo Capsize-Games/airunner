@@ -5,10 +5,9 @@ Revises: add_lora_columns
 Create Date: 2025-12-02
 
 """
+
 from typing import Sequence, Union
 
-from alembic import op
-import sqlalchemy as sa
 
 from airunner_services.database.db.column import add_column, column_exists
 

@@ -17,7 +17,6 @@ from alembic import op
 
 from airunner_services.settings import AIRUNNER_BASE_PATH
 
-
 revision: str = "6b0f0f6c3e4a"
 down_revision: Union[str, tuple[str, ...], None] = "d2ab5f1c9a7e"
 branch_labels: Union[str, Sequence[str], None] = None
@@ -86,12 +85,16 @@ def _migrate_application_setting(
     """Copy one persisted application setting value into QSettings."""
     if not _has_column(inspector, "application_settings", column_name):
         return
-    row = bind.execute(
-        sa.text(
-            f"SELECT {column_name} FROM application_settings "
-            "ORDER BY id LIMIT 1"
+    row = (
+        bind.execute(
+            sa.text(
+                f"SELECT {column_name} FROM application_settings "
+                "ORDER BY id LIMIT 1"
+            )
         )
-    ).mappings().first()
+        .mappings()
+        .first()
+    )
     if row is None:
         return
     value = row.get(column_name)
@@ -135,9 +138,7 @@ def _has_column(inspector, table_name: str, column_name: str) -> bool:
     """Return whether one table still includes one named column."""
     if not inspector.has_table(table_name):
         return False
-    existing = {
-        column["name"] for column in inspector.get_columns(table_name)
-    }
+    existing = {column["name"] for column in inspector.get_columns(table_name)}
     return column_name in existing
 
 

@@ -198,7 +198,9 @@ class FormatterExtended:
                 for part in content_string:
                     if isinstance(part, dict) and part.get("type") == "text":
                         text_parts.append(str(part.get("text", "")))
-                content_string = " ".join(text_parts) if text_parts else str(content_string)
+                content_string = (
+                    " ".join(text_parts) if text_parts else str(content_string)
+                )
             else:
                 content_string = str(content_string)
 

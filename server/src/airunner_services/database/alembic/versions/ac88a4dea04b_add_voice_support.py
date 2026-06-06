@@ -8,7 +8,6 @@ Create Date: 2025-04-02 05:20:25.495089
 
 from typing import Sequence, Union
 
-import sqlalchemy as sa
 from alembic import op
 from sqlalchemy import inspect
 
@@ -22,7 +21,6 @@ from airunner_services.database.db import (
     create_unique_constraint,
     drop_constraint,
 )
-
 
 # revision identifiers, used by Alembic.
 revision: str = "ac88a4dea04b"

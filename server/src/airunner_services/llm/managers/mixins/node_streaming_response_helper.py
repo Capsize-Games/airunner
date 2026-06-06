@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Dict, Optional
 
-from langchain_core.messages import AIMessage, BaseMessage
+from langchain_core.messages import AIMessage
 
 from airunner_services.llm.managers.mixins.node_streaming_state import (
     StreamingState,
@@ -67,7 +67,9 @@ class NodeStreamingResponseHelper:
                 event_sink,
             )
             if state.streamed_content or state.last_chunk_message:
-                thinking_to_save = self._thinking_helper.thinking_to_save(state)
+                thinking_to_save = self._thinking_helper.thinking_to_save(
+                    state
+                )
                 return self._owner._get_response_generation_helper().create_streamed_message(
                     state.streamed_content,
                     state.last_chunk_message,
@@ -112,11 +114,12 @@ class NodeStreamingResponseHelper:
         """Process one streamed chunk from the chat model."""
         chunk_message = getattr(chunk, "message", chunk)
         text = getattr(chunk_message, "content", "") or ""
-        additional_kwargs = getattr(chunk_message, "additional_kwargs", {}) or {}
-        reasoning_delta = (
-            additional_kwargs.get("thinking_content")
-            or additional_kwargs.get("reasoning_content")
+        additional_kwargs = (
+            getattr(chunk_message, "additional_kwargs", {}) or {}
         )
+        reasoning_delta = additional_kwargs.get(
+            "thinking_content"
+        ) or additional_kwargs.get("reasoning_content")
         chunk_tool_calls = getattr(chunk_message, "tool_calls", None)
         print_stream_debug(
             "node_functions.chunk",
@@ -177,28 +180,30 @@ class NodeStreamingResponseHelper:
             text_to_stream = after_close if after_close.strip() else ""
         original_text = text_to_stream
         if not state.in_json_tool_call and "{" in original_text:
-            remaining = original_text[original_text.index("{"):]
+            remaining = original_text[original_text.index("{") :]
             if self._owner._get_response_generation_helper().is_tool_call_json(
                 remaining
             ):
                 state.in_json_tool_call = True
-                before_json = original_text[:original_text.index("{")]
+                before_json = original_text[: original_text.index("{")]
                 text_to_stream = before_json if before_json.strip() else ""
-                state.json_buffer.append(original_text[original_text.index("{"):])
-                state.json_brace_depth = (
-                    original_text.count("{") - original_text.count("}")
+                state.json_buffer.append(
+                    original_text[original_text.index("{") :]
                 )
+                state.json_brace_depth = original_text.count(
+                    "{"
+                ) - original_text.count("}")
         if state.in_json_tool_call and original_text == text_to_stream:
             state.json_buffer.append(original_text)
-            state.json_brace_depth += (
-                original_text.count("{") - original_text.count("}")
-            )
+            state.json_brace_depth += original_text.count(
+                "{"
+            ) - original_text.count("}")
             text_to_stream = ""
             if state.json_brace_depth <= 0:
                 state.in_json_tool_call = False
                 buffered = "".join(state.json_buffer)
                 if "}" in buffered:
-                    after_json = buffered[buffered.rfind("}") + 1:]
+                    after_json = buffered[buffered.rfind("}") + 1 :]
                     if after_json.strip():
                         text_to_stream = after_json
                 state.json_buffer = []

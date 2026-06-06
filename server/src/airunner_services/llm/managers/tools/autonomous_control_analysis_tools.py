@@ -34,7 +34,9 @@ def _behavior_recommendations(
 ) -> list[str]:
     """Return recommendation lines for one behavior report."""
     if avg_messages_per_conversation < 5:
-        lines = ["  - User prefers brief interactions - keep responses concise"]
+        lines = [
+            "  - User prefers brief interactions - keep responses concise"
+        ]
     else:
         lines = [
             "  - User engages in detailed discussions - provide thorough responses"
@@ -47,8 +49,12 @@ def _behavior_recommendations(
 def _behavior_report_lines(conversations, days_back: int) -> list[str]:
     """Build one user-behavior report from stored conversations."""
     total_conversations = len(conversations)
-    total_messages = sum(len(item.value) if item.value else 0 for item in conversations)
-    average = total_messages / total_conversations if total_conversations else 0
+    total_messages = sum(
+        len(item.value) if item.value else 0 for item in conversations
+    )
+    average = (
+        total_messages / total_conversations if total_conversations else 0
+    )
     lines = [
         f"User Behavior Analysis (last {days_back} days):",
         "\nActivity:",
@@ -70,9 +76,11 @@ def _analyze_user_behavior_result(days_back: int) -> str:
     """Analyze recent conversation patterns for one behavior report."""
     with session_scope() as session:
         cutoff = datetime.now() - timedelta(days=days_back)
-        conversations = session.query(Conversation).filter(
-            Conversation.timestamp >= cutoff
-        ).all()
+        conversations = (
+            session.query(Conversation)
+            .filter(Conversation.timestamp >= cutoff)
+            .all()
+        )
         if not conversations:
             return f"No conversation data found in the last {days_back} days."
         return "\n".join(_behavior_report_lines(conversations, days_back))

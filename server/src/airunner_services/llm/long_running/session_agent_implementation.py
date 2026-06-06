@@ -13,7 +13,6 @@ from airunner_services.llm.long_running.session_agent_state import (
     SessionWorkflowState,
 )
 
-
 logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 
 
@@ -54,14 +53,19 @@ def _implementation_response(
 ) -> dict[str, Any]:
     """Invoke the model for one implementation step."""
     response = agent._chat_model.invoke(
-        state["messages"] + [HumanMessage(content=_implementation_prompt(feature))]
+        state["messages"]
+        + [HumanMessage(content=_implementation_prompt(feature))]
     )
     complete = _implementation_complete(response.content.lower())
     return {
         "messages": [response],
         "tools_output": response.content,
         "files_changed": state.get("files_changed", []),
-        "phase": SessionPhase.VERIFICATION if complete else SessionPhase.IMPLEMENTATION,
+        "phase": (
+            SessionPhase.VERIFICATION
+            if complete
+            else SessionPhase.IMPLEMENTATION
+        ),
         "should_continue": not complete,
     }
 
@@ -74,7 +78,10 @@ def implementation_node(
     logger.info("Implementation phase for feature %s", state.get("feature_id"))
     feature = agent._project_manager.get_feature(state["feature_id"])
     if feature is None:
-        return {"error": f"Feature {state['feature_id']} not found", "should_continue": False}
+        return {
+            "error": f"Feature {state['feature_id']} not found",
+            "should_continue": False,
+        }
     if feature.category and feature.category.value in agent._sub_agents:
         return agent._delegate_to_sub_agent(state, feature)
     try:

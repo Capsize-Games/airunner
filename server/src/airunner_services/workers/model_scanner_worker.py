@@ -21,7 +21,6 @@ from airunner_services.contract_enums import StableDiffusionVersion
 from airunner_services.database.models.ai_models import AIModels
 from airunner_services.workers.worker import Worker
 
-
 # Mapping from version names to ImageGenerator categories
 VERSION_TO_CATEGORY: dict[str, str] = {
     StableDiffusionVersion.Z_IMAGE_TURBO.value: ImageGenerator.ZIMAGE.value,
@@ -38,7 +37,13 @@ SUPPORTED_ZIMAGE_VERSIONS = {StableDiffusionVersion.Z_IMAGE_TURBO.value}
 MODEL_EXTENSIONS = (".ckpt", ".safetensors", ".gguf")
 
 # Folders that indicate a diffusers model directory
-DIFFUSERS_REQUIRED_FOLDERS = ("scheduler", "text_encoder", "tokenizer", "unet", "vae")
+DIFFUSERS_REQUIRED_FOLDERS = (
+    "scheduler",
+    "text_encoder",
+    "tokenizer",
+    "unet",
+    "vae",
+)
 
 # Folders to skip during scanning
 SKIP_FOLDERS = ("controlnet_processors",)
@@ -54,7 +59,9 @@ def get_category_for_version(version: str) -> str:
         The category string (e.g., 'zimage', 'stablediffusion').
         Defaults to 'stablediffusion' for unknown versions.
     """
-    return VERSION_TO_CATEGORY.get(version, ImageGenerator.STABLEDIFFUSION.value)
+    return VERSION_TO_CATEGORY.get(
+        version, ImageGenerator.STABLEDIFFUSION.value
+    )
 
 
 def is_supported_model_version(version: str) -> bool:
@@ -98,7 +105,9 @@ class ModelScannerWorker(Worker):
     @property
     def model_base_path(self) -> Path:
         """Get the base path for art models."""
-        return Path(self.path_settings.base_path).expanduser() / "art" / "models"
+        return (
+            Path(self.path_settings.base_path).expanduser() / "art" / "models"
+        )
 
     def scan_for_models(self) -> None:
         """Scan the model directory and register found models."""
@@ -210,7 +219,9 @@ class ModelScannerWorker(Worker):
         if path.is_file():
             return self._identify_model_file(path, version, category, action)
         elif path.is_dir():
-            return self._identify_model_directory(path, version, category, action)
+            return self._identify_model_directory(
+                path, version, category, action
+            )
 
         return None
 
@@ -228,7 +239,7 @@ class ModelScannerWorker(Worker):
         Returns:
             ScannedModel if valid model file, None otherwise.
         """
-        if not path.suffix.lower() in MODEL_EXTENSIONS:
+        if path.suffix.lower() not in MODEL_EXTENSIONS:
             return None
 
         # Remove extension to get model name
@@ -321,5 +332,7 @@ class ModelScannerWorker(Worker):
             if not self.running:
                 break
             if not Path(model.path).exists():
-                self.logger.debug(f"Removing missing model: {model.name} (id={model.id})")
+                self.logger.debug(
+                    f"Removing missing model: {model.name} (id={model.id})"
+                )
                 AIModels.objects.delete(model.id)

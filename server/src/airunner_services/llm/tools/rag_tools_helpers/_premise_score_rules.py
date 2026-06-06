@@ -107,9 +107,7 @@ def premise_current_setting_score(paragraph: str) -> int:
     if counts is None:
         return 0
     score = (
-        counts["scene"] * 5
-        + counts["context"] * 3
-        + counts["grounded"] * 2
+        counts["scene"] * 5 + counts["context"] * 3 + counts["grounded"] * 2
     )
     penalty = counts["backstory"] * 4
     penalty += min(premise_dialogue_penalty(paragraph), 4)
@@ -173,8 +171,7 @@ def _is_backstory_only(counts: dict[str, int]) -> bool:
 def _has_mixed_current_scene(counts: dict[str, int]) -> bool:
     """Return whether a paragraph mixes current-scene and hook cues."""
     return bool(
-        counts["scene"]
-        and (counts["plot"] or counts["grounded"] >= 2)
+        counts["scene"] and (counts["plot"] or counts["grounded"] >= 2)
     )
 
 

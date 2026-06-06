@@ -4,7 +4,6 @@ type PanelId =
   | "knowledge"
   | "history"
   | "llm_settings"
-  | "art_model"
   | "lora"
   | "embeddings"
   | "image_browser"
@@ -40,7 +39,7 @@ export function LeftIconBar({
         onClick={onToggleChat}
         title="Toggle Chat"
       >
-        <LucideIcon name="message-square-text" />
+        <LucideIcon name="bot-message-square" />
       </button>
       <hr />
       <button
@@ -62,7 +61,7 @@ export function LeftIconBar({
         onClick={() => onLeftPanel("llm_settings")}
         title="LLM Settings"
       >
-        <LucideIcon name="settings-2" />
+        <LucideIcon name="sliders-horizontal" />
       </button>
       <div className="flex-spacer" />
       <button
@@ -115,13 +114,6 @@ export function RightIconBar({
         title="CivitAI Browser"
       >
         <LucideIcon name="cloud" />
-      </button>
-      <button
-        className={active("art_model", rightPanel)}
-        onClick={() => onRightPanel("art_model")}
-        title="Art Model"
-      >
-        <LucideIcon name="sparkles" />
       </button>
       <button
         className={active("lora", rightPanel)}

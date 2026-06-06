@@ -1,4 +1,4 @@
-"""Logging configuration helpers for headless service execution."""
+"""Logging configuration helpers for service execution."""
 
 from __future__ import annotations
 
@@ -8,13 +8,11 @@ import os
 import sys
 from typing import Optional
 
-from airunner_services.settings import AIRUNNER_LOG_LEVEL
+from airunner_services.settings import AIRUNNER_LOG_FILE, AIRUNNER_LOG_LEVEL
 from airunner_services.utils.application.get_logger import (
-    _resolve_log_base_path,
     get_logger,
 )
 from airunner_services.utils.application.log_hygiene import LogHygieneFilter
-
 
 _NOISY_LOGGERS = (
     "PIL.PngImagePlugin",
@@ -62,10 +60,7 @@ def _get_log_level_from_env() -> int:
 def _get_log_file_path(root_logger: logging.Logger) -> Optional[str]:
     """Determine the file log path or disable file logging cleanly."""
     try:
-        log_file = os.environ.get(
-            "AIRUNNER_LOG_FILE",
-            os.path.join(_resolve_log_base_path(), "airunner.log"),
-        )
+        log_file = AIRUNNER_LOG_FILE
         log_dir = os.path.dirname(log_file)
         if log_dir:
             os.makedirs(log_dir, mode=0o700, exist_ok=True)
@@ -108,8 +103,7 @@ def _create_file_handler(
         )
     except Exception as exc:
         root_logger.error(
-            "Failed to setup file logging: %s. "
-            "File logging disabled.",
+            "Failed to setup file logging: %s. " "File logging disabled.",
             exc,
         )
 
@@ -119,18 +113,15 @@ def _setup_file_logging(
     log_level: int,
     formatter: logging.Formatter,
 ) -> None:
-    """Configure file logging when explicitly enabled."""
-    if os.environ.get("AIRUNNER_SAVE_LOG_TO_FILE", "0") != "1":
-        return
-
+    """Configure file logging."""
     log_file = _get_log_file_path(root_logger)
     if not log_file:
         return
     _create_file_handler(log_file, log_level, formatter, root_logger)
 
 
-def configure_headless_logging() -> None:
-    """Configure root logging for daemon and headless execution."""
+def configure_service_logging() -> None:
+    """Configure root logging for daemon and service execution."""
     log_level = _get_log_level_from_env()
     root_logger = logging.getLogger()
     root_logger.setLevel(log_level)
@@ -198,7 +189,7 @@ def log_method_entry_exit(method):
 
 
 __all__ = [
-    "configure_headless_logging",
+    "configure_service_logging",
     "configure_noisy_loggers",
     "log_method_entry_exit",
 ]

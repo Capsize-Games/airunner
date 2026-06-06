@@ -7,6 +7,7 @@ from airunner_services.utils.application.runtime_context_mixin import (
     RuntimeContextMixin,
 )
 
+
 class APIServiceBase(RuntimeContextMixin, MediatorMixin, QObject):
     """Base class for shared API services without direct Qt dependencies."""
 

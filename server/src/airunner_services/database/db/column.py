@@ -11,7 +11,6 @@ from airunner_services.settings import AIRUNNER_LOG_LEVEL
 from airunner_services.utils.application import get_logger
 from airunner_services.database.db.engine import get_inspector
 
-
 logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 
 
@@ -116,7 +115,9 @@ def add_column_with_fk(
     """Add one column and attach one foreign-key constraint."""
     if column_exists(cls, column_name):
         return
-    with op.batch_alter_table(cls.__tablename__, recreate="always") as batch_op:
+    with op.batch_alter_table(
+        cls.__tablename__, recreate="always"
+    ) as batch_op:
         batch_op.add_column(sa.Column(column_name, column_type))
         batch_op.create_foreign_key(
             fk_name,
@@ -170,7 +171,9 @@ def safe_alter_column(
         options["server_default"] = existing_server_default
 
     try:
-        with op.batch_alter_table(cls.__tablename__, recreate="auto") as batch_op:
+        with op.batch_alter_table(
+            cls.__tablename__, recreate="auto"
+        ) as batch_op:
             batch_op.alter_column(column_name, **options)
     except sa.exc.OperationalError as exc:
         logger.error("Error altering column '%s': %s", column_name, exc)
@@ -196,16 +199,14 @@ def set_default_and_create_fk(
     default_value,
 ) -> None:
     """Backfill one FK column with a default before tightening schema."""
-    op.execute(
-        f"""
+    op.execute(f"""
         UPDATE {table_name}
         SET {column_name} = {default_value}
         WHERE {column_name} IS NULL
         OR {column_name} NOT IN (
             SELECT {ref_column_name} FROM {ref_table_name}
         )
-        """
-    )
+        """)
     safe_alter_column(
         table_name,
         column_name,
@@ -240,7 +241,9 @@ def create_unique_constraint(
     table_name = cls.__tablename__
     try:
         if _dialect_name() == "sqlite":
-            with op.batch_alter_table(table_name, recreate="always") as batch_op:
+            with op.batch_alter_table(
+                table_name, recreate="always"
+            ) as batch_op:
                 batch_op.create_unique_constraint(constraint_name, columns)
         else:
             op.create_unique_constraint(constraint_name, table_name, columns)
@@ -270,7 +273,9 @@ def drop_constraint(
     table_name = cls.__tablename__
     try:
         if _dialect_name() == "sqlite":
-            with op.batch_alter_table(table_name, recreate="always") as batch_op:
+            with op.batch_alter_table(
+                table_name, recreate="always"
+            ) as batch_op:
                 batch_op.drop_constraint(
                     constraint_name,
                     type_=constraint_type,

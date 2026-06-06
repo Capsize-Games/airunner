@@ -39,18 +39,14 @@ class ModelResourceManager(_ModelResourceManager):
             model_type,
         )
 
-    def _offload_service_model(
-        self, model_id: str, model_type: str
-    ) -> None:
+    def _offload_service_model(self, model_id: str, model_type: str) -> None:
         """Offload one model from GPU to CPU RAM."""
         offload_service_model(
             self.logger,
             model_type,
         )
 
-    def _restore_service_model(
-        self, model_id: str, model_type: str
-    ) -> None:
+    def _restore_service_model(self, model_id: str, model_type: str) -> None:
         """Restore one model from CPU RAM back to GPU."""
         restore_service_model(
             self.logger,

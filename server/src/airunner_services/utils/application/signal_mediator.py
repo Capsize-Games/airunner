@@ -14,16 +14,18 @@ from typing import Callable as CallableType
 
 from airunner_services.utils.application.get_logger import get_logger
 
-
 logger = get_logger(__name__)
 
 
 def _trace_signal_registrations() -> bool:
     """Return whether verbose signal registration tracing is enabled."""
-    return os.environ.get(
-        "AIRUNNER_TRACE_SIGNAL_REGISTRATION",
-        "0",
-    ) == "1"
+    return (
+        os.environ.get(
+            "AIRUNNER_TRACE_SIGNAL_REGISTRATION",
+            "0",
+        )
+        == "1"
+    )
 
 
 class SingletonMeta(type):
@@ -113,8 +115,7 @@ class Signal:
         if inspect.ismethod(slot_function):
             return (
                 getattr(slot_function, "__func__", None) == self._orig_func
-                and getattr(slot_function, "__self__", None)
-                == self._orig_self
+                and getattr(slot_function, "__self__", None) == self._orig_self
             )
         return slot_function == self._orig_func
 
@@ -254,7 +255,7 @@ class SignalMediator(metaclass=SingletonMeta):
 
     @staticmethod
     def _deliver_signal(signal: Signal, data: Dict) -> None:
-        """Deliver one signal payload with headless-safe semantics."""
+        """Deliver one signal payload with  semantics."""
         signal.signal.emit(data)
 
     def register_pending_request(

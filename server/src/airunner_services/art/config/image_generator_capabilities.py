@@ -13,33 +13,33 @@ from airunner_services.art.runtime_enums import ImageGenerator
 @dataclass
 class ImageGeneratorCapabilities:
     """Capabilities of an image generation model."""
-    
+
     # Whether the model supports negative prompts
     supports_negative_prompt: bool = True
-    
+
     # Whether the model supports a second (background/style) prompt
     supports_second_prompt: bool = True
-    
+
     # Whether the model supports a second negative prompt
     supports_second_negative_prompt: bool = True
-    
+
     # Default width for this model
     default_width: int = 1024
-    
+
     # Default height for this model
     default_height: int = 1024
-    
+
     # Maximum supported dimensions
     max_width: int = 2048
     max_height: int = 2048
-    
+
     # Minimum supported dimensions
     min_width: int = 64
     min_height: int = 64
-    
+
     # Dimension step (must be multiple of this)
     dimension_step: int = 64
-    
+
     # Brief description for LLM tool prompts
     prompt_guidance: str = ""
 
@@ -71,13 +71,15 @@ IMAGE_GENERATOR_CAPABILITIES: Dict[str, ImageGeneratorCapabilities] = {
 }
 
 
-def get_generator_capabilities(generator_name: str) -> ImageGeneratorCapabilities:
+def get_generator_capabilities(
+    generator_name: str,
+) -> ImageGeneratorCapabilities:
     """
     Get capabilities for an image generator.
-    
+
     Args:
         generator_name: Name of the generator (stablediffusion, zimage)
-        
+
     Returns:
         Capabilities dataclass for the generator
     """
@@ -91,28 +93,30 @@ def get_generator_capabilities(generator_name: str) -> ImageGeneratorCapabilitie
 def get_tool_description_for_generator(generator_name: str) -> str:
     """
     Get a dynamic tool description based on the current generator.
-    
+
     Args:
         generator_name: Name of the current image generator
-        
+
     Returns:
         Description string for the generate_image tool
     """
     caps = get_generator_capabilities(generator_name)
-    
+
     base_desc = "Generate an image from a text description. "
-    
+
     if caps.supports_negative_prompt:
         base_desc += "Supports negative prompts to exclude unwanted elements. "
     else:
         base_desc += "This model does NOT use negative prompts - focus on positive descriptions. "
-    
+
     if caps.supports_second_prompt:
-        base_desc += "Use second_prompt for background, colors, and atmosphere. "
+        base_desc += (
+            "Use second_prompt for background, colors, and atmosphere. "
+        )
     else:
         base_desc += "This model uses a single prompt - include ALL details in the main prompt. "
-    
+
     if caps.prompt_guidance:
         base_desc += caps.prompt_guidance
-    
+
     return base_desc.strip()

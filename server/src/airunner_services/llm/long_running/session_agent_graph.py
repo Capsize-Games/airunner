@@ -32,7 +32,11 @@ def _add_edges(workflow: StateGraph, agent: Any) -> None:
     workflow.add_conditional_edges(
         "implementation",
         agent._route_after_implementation,
-        {"verify": "verification", "continue": "implementation", "end": "cleanup"},
+        {
+            "verify": "verification",
+            "continue": "implementation",
+            "end": "cleanup",
+        },
     )
     workflow.add_conditional_edges(
         "verification",

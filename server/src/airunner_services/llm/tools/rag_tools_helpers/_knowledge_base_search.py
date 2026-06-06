@@ -15,7 +15,6 @@ from airunner_services.llm.tools.rag_tools_helpers._knowledge_base_search_workfl
     find_top_documents,
 )
 
-
 SearchDocs = list[Any]
 
 
@@ -68,8 +67,14 @@ def _load_discovered_documents(
 
 
 def _search_result_from_docs(
-    docs: SearchDocs, *, query: str, k: int, api: Any, session: Any,
-    document_model: Any, logger: Any,
+    docs: SearchDocs,
+    *,
+    query: str,
+    k: int,
+    api: Any,
+    session: Any,
+    document_model: Any,
+    logger: Any,
 ) -> str:
     """Return the KB search result for already-discovered documents."""
     if not docs:
@@ -80,48 +85,79 @@ def _search_result_from_docs(
         return no_documents_message()
 
     top_docs = find_top_documents(
-        docs, query=query, k=k, api=api, session=session,
-        document_model=document_model, logger=logger,
+        docs,
+        query=query,
+        k=k,
+        api=api,
+        session=session,
+        document_model=document_model,
+        logger=logger,
         score_documents_fn=score_documents,
     )
     if not top_docs:
         return no_matches_message(query)
-    return format_knowledge_base_results(top_docs, query=query, api=api, logger=logger)
+    return format_knowledge_base_results(
+        top_docs, query=query, api=api, logger=logger
+    )
 
 
 def _search_knowledge_base_in_session(
-    query: str, k: int, api: Any, *, session: Any,
-    document_model: Any, path_settings_model: Any,
-    signal_code: Any, logger: Any,
+    query: str,
+    k: int,
+    api: Any,
+    *,
+    session: Any,
+    document_model: Any,
+    path_settings_model: Any,
+    signal_code: Any,
+    logger: Any,
     module_file: str,
 ) -> str:
     """Run one KB search inside an already-open session."""
     docs = _load_discovered_documents(
-        api, session=session, document_model=document_model,
+        api,
+        session=session,
+        document_model=document_model,
         path_settings_model=path_settings_model,
-        signal_code=signal_code, logger=logger,
+        signal_code=signal_code,
+        logger=logger,
         module_file=module_file,
     )
     return _search_result_from_docs(
-        docs, query=query, k=k, api=api, session=session,
-        document_model=document_model, logger=logger,
+        docs,
+        query=query,
+        k=k,
+        api=api,
+        session=session,
+        document_model=document_model,
+        logger=logger,
     )
 
 
 def search_knowledge_base_documents_impl(
-    query: str, k: int, api: Any, *, session_scope: Any,
-    document_model: Any, path_settings_model: Any,
-    signal_code: Any, logger: Any,
+    query: str,
+    k: int,
+    api: Any,
+    *,
+    session_scope: Any,
+    document_model: Any,
+    path_settings_model: Any,
+    signal_code: Any,
+    logger: Any,
     module_file: str,
 ) -> str:
     """Search active knowledge-base documents and discover missing ones."""
     try:
         with session_scope() as session:
             return _search_knowledge_base_in_session(
-                query=query, k=k, api=api, session=session,
+                query=query,
+                k=k,
+                api=api,
+                session=session,
                 document_model=document_model,
                 path_settings_model=path_settings_model,
-                signal_code=signal_code, logger=logger,
+                signal_code=signal_code,
+                logger=logger,
                 module_file=module_file,
             )
     except Exception as error:

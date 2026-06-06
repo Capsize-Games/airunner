@@ -20,7 +20,6 @@ from airunner_services.runtimes.openvoice_file_checker import (
     should_trigger_openvoice_download,
 )
 from airunner_services.runtimes.openvoice_exceptions import (
-    FileMissing,
     OpenVoiceError,
 )
 
@@ -28,9 +27,11 @@ torch.hub.set_dir(
     os.environ.get("TORCH_HOME", os.path.join(AIRUNNER_BASE_PATH, "torch/hub"))
 )
 
-from airunner_services.vendor.melo.api import TTS
-from airunner_services.vendor.melo.runtime_support import resolve_tts_model_root
-from airunner_services.runtimes.openvoice_runtime_helpers import (
+from airunner_services.vendor.melo.api import TTS  # noqa: E402
+from airunner_services.vendor.melo.runtime_support import (
+    resolve_tts_model_root,
+)  # noqa: E402
+from airunner_services.runtimes.openvoice_runtime_helpers import (  # noqa: E402
     StreamingToneColorConverter,
     build_tone_color_converter,
     default_openvoice_device,
@@ -39,7 +40,9 @@ from airunner_services.runtimes.openvoice_runtime_helpers import (
     precompute_reference_speaker,
     processed_target_dir,
 )
-from airunner_services.vendor.openvoice.api import ToneColorConverter
+from airunner_services.vendor.openvoice.api import (
+    ToneColorConverter,
+)  # noqa: E402
 
 
 def _configured_openvoice_root(tts_model_root: str) -> str:
@@ -47,7 +50,10 @@ def _configured_openvoice_root(tts_model_root: str) -> str:
     configured_path = os.environ.get("AIRUNNER_TTS_MODEL_PATH", "").strip()
     if configured_path:
         candidate = Path(os.path.expanduser(configured_path))
-        if candidate.name == "openvoice" or (candidate / "checkpoints_v2").exists():
+        if (
+            candidate.name == "openvoice"
+            or (candidate / "checkpoints_v2").exists()
+        ):
             return str(candidate)
     return os.path.join(tts_model_root, "openvoice")
 
@@ -209,9 +215,17 @@ class OpenVoiceModelManager(TTSModelManager, metaclass=ABCMeta):
         # Get expression parameters from settings (stored as 0-100, convert to 0.0-1.0)
         # Higher values = more expressive speech
         settings = self.openvoice_settings
-        sdp_ratio = (settings.sdp_ratio if settings.sdp_ratio is not None else 50) / 100.0
-        noise_scale = (settings.noise_scale if settings.noise_scale is not None else 80) / 100.0
-        noise_scale_w = (settings.noise_scale_w if settings.noise_scale_w is not None else 90) / 100.0
+        sdp_ratio = (
+            settings.sdp_ratio if settings.sdp_ratio is not None else 50
+        ) / 100.0
+        noise_scale = (
+            settings.noise_scale if settings.noise_scale is not None else 80
+        ) / 100.0
+        noise_scale_w = (
+            settings.noise_scale_w
+            if settings.noise_scale_w is not None
+            else 90
+        ) / 100.0
 
         synthesis_start = perf_counter()
         self.model.tts_to_file(
@@ -268,7 +282,9 @@ class OpenVoiceModelManager(TTSModelManager, metaclass=ABCMeta):
             self._skip_download_check = False
             self.logger.info("Skipping download check after batch download")
         else:
-            should_download, _download_info = self._check_and_trigger_download()
+            should_download, _download_info = (
+                self._check_and_trigger_download()
+            )
             if should_download:
                 self.logger.info(
                     "OpenVoice model files missing, download triggered"
@@ -384,10 +400,12 @@ class OpenVoiceModelManager(TTSModelManager, metaclass=ABCMeta):
 
         try:
             self.logger.info(f"Loading {self._reference_speaker}")
-            self._target_se, self._audio_name = ensure_reference_speaker_embedding(
-                self._reference_speaker,
-                self.tone_color_converter,
-                target_dir=processed_target_dir(),
+            self._target_se, self._audio_name = (
+                ensure_reference_speaker_embedding(
+                    self._reference_speaker,
+                    self.tone_color_converter,
+                    target_dir=processed_target_dir(),
+                )
             )
             self.logger.info(
                 "OpenVoice target speaker embedding ready in %.3fs",
@@ -410,6 +428,10 @@ class OpenVoiceModelManager(TTSModelManager, metaclass=ABCMeta):
         """Force-load the lazy frontend and one full synthesis pass."""
         if self.model is None:
             return
+        from airunner_services.runtimes.openvoice_runtime_helpers import (  # noqa: E402
+            warm_melo_tts,
+        )
+
         warm_melo_tts(self.model, self.language)
         self._warm_inference_path()
 
@@ -455,7 +477,9 @@ class OpenVoiceModelManager(TTSModelManager, metaclass=ABCMeta):
         converter_checkpoint = os.path.join(
             self._checkpoint_converter_path, "checkpoint.pth"
         )
-        needs_converter = not os.path.exists(converter_config) or not os.path.exists(converter_checkpoint)
+        needs_converter = not os.path.exists(
+            converter_config
+        ) or not os.path.exists(converter_checkpoint)
 
         # Check which core models are missing
         missing_core_models = []
@@ -491,7 +515,7 @@ class OpenVoiceModelManager(TTSModelManager, metaclass=ABCMeta):
         # Determine if this is a first-time setup (core models or converter missing)
         # vs just missing optional language models
         is_first_time_setup = needs_converter or len(missing_core_models) > 0
-        
+
         # Only trigger download for first-time setup (missing core components)
         # Don't show language dialog for optional language models on subsequent loads
         if is_first_time_setup:
@@ -499,12 +523,12 @@ class OpenVoiceModelManager(TTSModelManager, metaclass=ABCMeta):
                 f"OpenVoice first-time setup: converter={needs_converter}, "
                 f"{len(missing_core_models)} core models missing"
             )
-            
+
             def on_download_complete():
                 """Callback after batch download completes - skip re-checking."""
                 self._skip_download_check = True
                 self.load()
-            
+
             self.emit_signal(
                 SignalCode.START_OPENVOICE_BATCH_DOWNLOAD,
                 {

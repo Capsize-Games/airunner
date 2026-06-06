@@ -6,7 +6,12 @@ state logging for the LLM model manager.
 
 from typing import TYPE_CHECKING
 
-from airunner_services.contract_enums import SignalCode, ModelType, ModelStatus, LLMActionType
+from airunner_services.contract_enums import (
+    SignalCode,
+    ModelType,
+    ModelStatus,
+    LLMActionType,
+)
 from airunner_services.llm.llm_response import LLMResponse
 
 if TYPE_CHECKING:
@@ -35,13 +40,10 @@ class StatusManagementMixin:
             request_id=getattr(self, "_current_request_id", None),
         )
 
-        try:
-            self.api.llm.send_llm_text_streamed_signal(response)
-        except Exception:
-            self.emit_signal(
-                SignalCode.LLM_TEXT_STREAMED_SIGNAL,
-                {"response": response, "request_id": response.request_id},
-            )
+        self.emit_signal(
+            SignalCode.LLM_TEXT_STREAMED_SIGNAL,
+            {"response": response, "request_id": response.request_id},
+        )
 
     def _send_success_message(self: "LLMModelManager", is_api: bool) -> None:
         """Send model loaded success message to GUI.
@@ -62,13 +64,10 @@ class StatusManagementMixin:
             request_id=getattr(self, "_current_request_id", None),
         )
 
-        try:
-            self.api.llm.send_llm_text_streamed_signal(response)
-        except Exception:
-            self.emit_signal(
-                SignalCode.LLM_TEXT_STREAMED_SIGNAL,
-                {"response": response, "request_id": response.request_id},
-            )
+        self.emit_signal(
+            SignalCode.LLM_TEXT_STREAMED_SIGNAL,
+            {"response": response, "request_id": response.request_id},
+        )
 
     def _send_quantization_info(self: "LLMModelManager") -> None:
         """Send auto-selected quantization information to GUI.
@@ -129,13 +128,17 @@ class StatusManagementMixin:
         if self.llm_settings.use_local_llm:
             # For GGUF models, _model and _tokenizer are not used
             # Check if GGUF is selected via the validation mixin method
-            is_gguf = getattr(self, '_is_gguf_quantization_selected', lambda: False)()
-            
+            is_gguf = getattr(
+                self, "_is_gguf_quantization_selected", lambda: False
+            )()
+
             if not is_gguf:
                 has_model = self._model is not None
                 has_tokenizer = self._tokenizer is not None
                 if hasattr(self, "_local_execution_component_state"):
-                    has_model, has_tokenizer = self._local_execution_component_state()
+                    has_model, has_tokenizer = (
+                        self._local_execution_component_state()
+                    )
 
                 if not has_model:
                     self.logger.error("Model failed to load")

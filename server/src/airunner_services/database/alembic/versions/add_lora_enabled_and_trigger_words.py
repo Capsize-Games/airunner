@@ -5,10 +5,9 @@ Revises: f480bbc9acdb
 Create Date: 2025-12-01
 
 """
+
 from typing import Sequence, Union
 
-from alembic import op
-import sqlalchemy as sa
 
 from airunner_services.database.db.column import add_column, column_exists
 

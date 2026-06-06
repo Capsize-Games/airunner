@@ -2,20 +2,15 @@
 
 from typing import Any, Dict, List, Optional
 
-from airunner_services.conversation_history_formatter import (
-    load_formatted_conversation_history,
-)
-from airunner_services.llm.gpt_oss_parser import (
-    has_gpt_oss_markup,
-    parse_gpt_oss_response,
-)
-from airunner_services.llm.thinking_parser import (
-    normalize_thinking_content,
-    strip_stored_thinking_prefix,
-)
+from airunner_services.database.models.conversation import Conversation
 from airunner_services.settings import AIRUNNER_LOG_LEVEL
 from airunner_services.utils.application import get_logger
-from airunner_services.database.models.conversation import Conversation
+
+from .conversation_summary_helpers import (
+    format_conversation_payload,
+    load_history,
+    resolve_conversation_summary,
+)
 
 
 class ConversationHistoryManager:
@@ -77,7 +72,11 @@ class ConversationHistoryManager:
         )
         if limit > 0:
             ordered = ordered[:limit]
-        return [self._conversation_payload(item) for item in ordered]
+        summary = resolve_conversation_summary
+        return [
+            format_conversation_payload(item, summary(item, self.logger))
+            for item in ordered
+        ]
 
     def get_conversation_session(
         self,
@@ -96,14 +95,13 @@ class ConversationHistoryManager:
 
         if mark_current:
             Conversation.make_current(conversation.id)
-            conversation.current = True
-
         messages = self.load_conversation_history(
             conversation=conversation,
             max_messages=max_messages,
         )
+        summary = resolve_conversation_summary(conversation, self.logger)
         return {
-            "conversation": self._conversation_payload(conversation),
+            "conversation": format_conversation_payload(conversation, summary),
             "conversation_id": conversation.id,
             "messages": messages,
         }
@@ -118,7 +116,7 @@ class ConversationHistoryManager:
             return None
         return {
             "conversation_id": conversation_id,
-            "summary": self._conversation_summary(conversation),
+            "summary": resolve_conversation_summary(conversation, self.logger),
         }
 
     def create_conversation(
@@ -196,76 +194,6 @@ class ConversationHistoryManager:
         """Return one conversation by primary key."""
         return Conversation.objects.filter_by_first(id=conversation_id)
 
-    def _conversation_payload(
-        self,
-        conversation: Conversation,
-    ) -> Dict[str, Any]:
-        """Serialize one conversation into JSON-safe metadata."""
-        raw_messages = getattr(conversation, "value", None)
-        if not isinstance(raw_messages, list):
-            raw_messages = []
-
-        return {
-            "id": getattr(conversation, "id", None),
-            "title": str(getattr(conversation, "title", "") or ""),
-            "summary": self._conversation_summary(conversation),
-            "current": bool(getattr(conversation, "current", False)),
-            "timestamp": self._serialize_timestamp(
-                getattr(conversation, "timestamp", None)
-            ),
-            "chatbot_id": getattr(conversation, "chatbot_id", None),
-            "chatbot_name": str(
-                getattr(conversation, "chatbot_name", "") or ""
-            ),
-            "user_id": getattr(conversation, "user_id", None),
-            "user_name": str(getattr(conversation, "user_name", "") or ""),
-            "message_count": len(raw_messages),
-            "user_data": dict(getattr(conversation, "user_data", None) or {}),
-        }
-
-    def _conversation_summary(self, conversation: Conversation) -> str:
-        """Return one cached or generated conversation summary."""
-        summary = str(getattr(conversation, "summary", "") or "").strip()
-        if summary:
-            return summary
-
-        try:
-            summary = str(conversation.summarize() or "").strip()
-        except Exception as exc:
-            self.logger.warning(
-                "Failed to summarize conversation %s: %s",
-                getattr(conversation, "id", None),
-                exc,
-            )
-            return ""
-
-        if not summary:
-            return ""
-
-        try:
-            Conversation.objects.update(conversation.id, summary=summary)
-        except Exception as exc:
-            self.logger.warning(
-                "Failed to persist summary for conversation %s: %s",
-                getattr(conversation, "id", None),
-                exc,
-            )
-        conversation.summary = summary
-        return summary
-
-    @staticmethod
-    def _serialize_timestamp(timestamp: Any) -> str:
-        """Return one string representation for a conversation timestamp."""
-        if timestamp is None:
-            return ""
-        formatter = getattr(timestamp, "isoformat", None)
-        if callable(formatter):
-            try:
-                return formatter()
-            except Exception:
-                pass
-        return str(timestamp)
-
     def load_conversation_history(
         self,
         conversation: Optional[Conversation] = None,
@@ -279,7 +207,7 @@ class ConversationHistoryManager:
             )
             if conversation is None:
                 self.logger.warning(
-                    f"Conversation {conversation_id} not found. Returning empty history."
+                    f"Conversation {conversation_id} not found."
                 )
                 return []
         elif conversation is None:
@@ -292,12 +220,4 @@ class ConversationHistoryManager:
                     "No conversation found. Returning empty history."
                 )
                 return []
-        return load_formatted_conversation_history(
-            logger=self.logger,
-            conversation=conversation,
-            max_messages=max_messages,
-            normalize_thinking_content=normalize_thinking_content,
-            strip_stored_thinking_prefix=strip_stored_thinking_prefix,
-            has_gpt_oss_markup=has_gpt_oss_markup,
-            parse_gpt_oss_response=parse_gpt_oss_response,
-        )
+        return load_history(conversation, self.logger, max_messages)

@@ -74,9 +74,7 @@ def _stream_sampling_kwargs(
 
 def _stream_stopping_criteria(adapter: Any) -> list[Any]:
     """Build stopping criteria for streamed generation."""
-    return [
-        ExternalConditionStoppingCriteria(adapter.should_stop_generation)
-    ]
+    return [ExternalConditionStoppingCriteria(adapter.should_stop_generation)]
 
 
 def start_generation_thread(

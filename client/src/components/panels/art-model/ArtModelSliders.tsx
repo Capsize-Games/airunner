@@ -5,14 +5,10 @@ export interface ArtModelSlidersProps {
   imagesPerBatch: number;
   steps: number;
   cfgScale: number;
-  width: number;
-  height: number;
   onNSamplesChange: (v: number) => void;
   onImagesPerBatchChange: (v: number) => void;
   onStepsChange: (v: number) => void;
   onCfgScaleChange: (v: number) => void;
-  onWidthChange: (v: number) => void;
-  onHeightChange: (v: number) => void;
 }
 
 export default function ArtModelSliders({
@@ -20,72 +16,40 @@ export default function ArtModelSliders({
   imagesPerBatch,
   steps,
   cfgScale,
-  width,
-  height,
   onNSamplesChange,
   onImagesPerBatchChange,
   onStepsChange,
   onCfgScaleChange,
-  onWidthChange,
-  onHeightChange,
 }: ArtModelSlidersProps) {
+  const slider = (
+    label: string,
+    value: number,
+    min: number,
+    max: number,
+    step: number,
+    onChange: (v: number) => void,
+    opts?: { displayAsFloat?: boolean; defaultVal?: number },
+  ) => (
+    <div className="col-6" key={label}>
+      <SliderWithSpinbox
+        label={label}
+        value={value}
+        min={min}
+        max={max}
+        step={step}
+        defaultValue={opts?.defaultVal ?? min}
+        displayAsFloat={opts?.displayAsFloat}
+        onChange={onChange}
+      />
+    </div>
+  );
+
   return (
-    <>
-      <SliderWithSpinbox
-        label="Samples"
-        value={nSamples}
-        min={1}
-        max={1000}
-        step={1}
-        defaultValue={1}
-        onChange={onNSamplesChange}
-      />
-      <SliderWithSpinbox
-        label="Batch"
-        value={imagesPerBatch}
-        min={1}
-        max={6}
-        step={1}
-        defaultValue={1}
-        onChange={onImagesPerBatchChange}
-      />
-      <SliderWithSpinbox
-        label="Steps"
-        value={steps}
-        min={1}
-        max={150}
-        step={1}
-        defaultValue={20}
-        onChange={onStepsChange}
-      />
-      <SliderWithSpinbox
-        label="CFG"
-        value={cfgScale}
-        min={1}
-        max={30}
-        step={0.5}
-        displayAsFloat
-        defaultValue={7.5}
-        onChange={onCfgScaleChange}
-      />
-      <SliderWithSpinbox
-        label="Width"
-        value={width}
-        min={64}
-        max={4096}
-        step={64}
-        defaultValue={1024}
-        onChange={onWidthChange}
-      />
-      <SliderWithSpinbox
-        label="Height"
-        value={height}
-        min={64}
-        max={4096}
-        step={64}
-        defaultValue={1024}
-        onChange={onHeightChange}
-      />
-    </>
+    <div className="row g-1">
+      {slider("Samples", nSamples, 1, 1000, 1, onNSamplesChange, { defaultVal: 1 })}
+      {slider("Batch", imagesPerBatch, 1, 6, 1, onImagesPerBatchChange, { defaultVal: 1 })}
+      {slider("Steps", steps, 1, 150, 1, onStepsChange, { defaultVal: 20 })}
+      {slider("CFG", cfgScale, 1, 30, 0.5, onCfgScaleChange, { defaultVal: 7.5, displayAsFloat: true })}
+    </div>
   );
 }

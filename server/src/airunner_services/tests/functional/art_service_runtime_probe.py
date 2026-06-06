@@ -12,7 +12,6 @@ from pathlib import Path
 
 from PIL import Image
 
-
 os.environ.setdefault("AIRUNNER_TEST_NO_GUI_LAUNCH", "1")
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 os.environ.setdefault("AIRUNNER_KNOWLEDGE_ON", "0")
@@ -34,8 +33,12 @@ for path in (
         sys.path.append(path_str)
 
 
-from airunner_services.database.models.application_settings import ApplicationSettings
-from airunner_services.database.models.generator_settings import GeneratorSettings
+from airunner_services.database.models.application_settings import (
+    ApplicationSettings,
+)
+from airunner_services.database.models.generator_settings import (
+    GeneratorSettings,
+)
 from airunner_services.database.models.path_settings import PathSettings
 from airunner_services.database.setup_database import setup_database
 from airunner_services.art.managers.zimage.zimage_bundle_requirements import (
@@ -320,8 +323,8 @@ def main() -> int:
     app = None
     try:
         app = ServiceApp(
-            start_headless_api_server=False,
-            initialize_headless_lifecycle=True,
+            start_embedded_api_server=False,
+            initialize_lifecycle=True,
         )
         client = LocalFallbackArtClient(signal_source=app)
         progress_updates = []

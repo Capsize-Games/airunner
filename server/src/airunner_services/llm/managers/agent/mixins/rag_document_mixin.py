@@ -69,7 +69,7 @@ class RAGDocumentMixin:
         """
         try:
             active_docs = DBDocument.objects.filter(
-                DBDocument.active == True, DBDocument.indexed == True
+                DBDocument.active, DBDocument.indexed
             )
             doc_ids = []
             for doc in active_docs:
@@ -89,7 +89,7 @@ class RAGDocumentMixin:
         """
         try:
             active_docs = DBDocument.objects.filter(
-                DBDocument.active == True, DBDocument.indexed == True
+                DBDocument.active, DBDocument.indexed
             )
             names = []
             for doc in active_docs:

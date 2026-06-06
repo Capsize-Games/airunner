@@ -21,7 +21,9 @@ from airunner_services.llm.long_running.auto_wrapper_prompting import (
 from airunner_services.llm.long_running.auto_wrapper_results import (
     aggregate_results,
 )
-from airunner_services.llm.long_running.auto_wrapper_progress import emit_progress
+from airunner_services.llm.long_running.auto_wrapper_progress import (
+    emit_progress,
+)
 from airunner_services.llm.long_running.task_detector import analyze_task
 from airunner_services.llm.long_running.project_manager import ProjectManager
 from airunner_services.llm.long_running.runtime_components import (

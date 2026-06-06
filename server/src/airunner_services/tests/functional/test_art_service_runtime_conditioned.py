@@ -11,7 +11,6 @@ from pathlib import Path
 import pytest
 from PIL import Image, ImageDraw
 
-
 os.environ.setdefault("AIRUNNER_TEST_NO_GUI_LAUNCH", "1")
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
@@ -29,7 +28,6 @@ for _path in (
 
 
 from airunner_services.contract_enums import Scheduler, StableDiffusionVersion
-
 
 _PROBE_RESULT_PREFIX = "ART_RUNTIME_RESULT:"
 pytestmark = [pytest.mark.art_service_runtime]
@@ -58,7 +56,9 @@ def _require_model_file(version: str, pipeline_action: str) -> Path:
         if preferred_model is not None:
             return preferred_model
 
-    for action_dir in sorted(path for path in version_dir.iterdir() if path.is_dir()):
+    for action_dir in sorted(
+        path for path in version_dir.iterdir() if path.is_dir()
+    ):
         candidate = _first_model_file(action_dir)
         if candidate is not None:
             return candidate

@@ -10,7 +10,6 @@ from typing import Sequence, Union
 
 from airunner_services.database.db import drop_table
 
-
 # revision identifiers, used by Alembic.
 revision: str = "50e125c2e188"
 down_revision: Union[str, None] = "e2e0d379a36e"

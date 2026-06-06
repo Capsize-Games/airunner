@@ -36,7 +36,15 @@ try:
     from diffusers.models.attention_dispatch import dispatch_attention_fn
 except ImportError:
     # Fallback for older diffusers versions
-    def dispatch_attention_fn(query, key, value, attn_mask=None, dropout_p=0.0, is_causal=False, **kwargs):
+    def dispatch_attention_fn(
+        query,
+        key,
+        value,
+        attn_mask=None,
+        dropout_p=0.0,
+        is_causal=False,
+        **kwargs,
+    ):
         return F.scaled_dot_product_attention(
             query.transpose(1, 2),
             key.transpose(1, 2),
@@ -46,12 +54,16 @@ except ImportError:
             is_causal=is_causal,
         ).transpose(1, 2)
 
+
 # Register ZImageTransformer2DModel in diffusers' LoRA scale mapping
 # This allows set_adapters() to work with our custom transformer
 try:
     from diffusers.loaders.peft import _SET_ADAPTER_SCALE_FN_MAPPING
+
     if "ZImageTransformer2DModel" not in _SET_ADAPTER_SCALE_FN_MAPPING:
-        _SET_ADAPTER_SCALE_FN_MAPPING["ZImageTransformer2DModel"] = lambda model_cls, weights: weights
+        _SET_ADAPTER_SCALE_FN_MAPPING["ZImageTransformer2DModel"] = (
+            lambda model_cls, weights: weights
+        )
 except ImportError:
     pass  # Older diffusers version without this mapping
 
@@ -85,12 +97,18 @@ class TimestepEmbedder(nn.Module):
         with torch.amp.autocast("cuda", enabled=False):
             half = dim // 2
             freqs = torch.exp(
-                -math.log(max_period) * torch.arange(start=0, end=half, dtype=torch.float32, device=t.device) / half
+                -math.log(max_period)
+                * torch.arange(
+                    start=0, end=half, dtype=torch.float32, device=t.device
+                )
+                / half
             )
             args = t[:, None].float() * freqs[None]
             embedding = torch.cat([torch.cos(args), torch.sin(args)], dim=-1)
             if dim % 2:
-                embedding = torch.cat([embedding, torch.zeros_like(embedding[:, :1])], dim=-1)
+                embedding = torch.cat(
+                    [embedding, torch.zeros_like(embedding[:, :1])], dim=-1
+                )
             return embedding
 
     def forward(self, t):
@@ -140,9 +158,13 @@ class ZSingleStreamAttnProcessor:
             key = attn.norm_k(key)
 
         # Apply RoPE
-        def apply_rotary_emb(x_in: torch.Tensor, freqs_cis: torch.Tensor) -> torch.Tensor:
+        def apply_rotary_emb(
+            x_in: torch.Tensor, freqs_cis: torch.Tensor
+        ) -> torch.Tensor:
             with torch.amp.autocast("cuda", enabled=False):
-                x = torch.view_as_complex(x_in.float().reshape(*x_in.shape[:-1], -1, 2))
+                x = torch.view_as_complex(
+                    x_in.float().reshape(*x_in.shape[:-1], -1, 2)
+                )
                 freqs_cis = freqs_cis.unsqueeze(2)
                 x_out = torch.view_as_real(x * freqs_cis).flatten(3)
                 return x_out.type_as(x_in)
@@ -250,7 +272,9 @@ class ZImageTransformerBlock(nn.Module):
     ):
         if self.modulation:
             assert adaln_input is not None
-            scale_msa, gate_msa, scale_mlp, gate_mlp = self.adaLN_modulation(adaln_input).unsqueeze(1).chunk(4, dim=2)
+            scale_msa, gate_msa, scale_mlp, gate_mlp = (
+                self.adaLN_modulation(adaln_input).unsqueeze(1).chunk(4, dim=2)
+            )
             gate_msa, gate_mlp = gate_msa.tanh(), gate_mlp.tanh()
             scale_msa, scale_mlp = 1.0 + scale_msa, 1.0 + scale_mlp
 
@@ -290,11 +314,15 @@ class ZImageTransformerBlock(nn.Module):
 class FinalLayer(nn.Module):
     def __init__(self, hidden_size, out_channels):
         super().__init__()
-        self.norm_final = nn.LayerNorm(hidden_size, elementwise_affine=False, eps=1e-6)
+        self.norm_final = nn.LayerNorm(
+            hidden_size, elementwise_affine=False, eps=1e-6
+        )
         self.linear = nn.Linear(hidden_size, out_channels, bias=True)
         self.adaLN_modulation = nn.Sequential(
             nn.SiLU(),
-            nn.Linear(min(hidden_size, ADALN_EMBED_DIM), hidden_size, bias=True),
+            nn.Linear(
+                min(hidden_size, ADALN_EMBED_DIM), hidden_size, bias=True
+            ),
         )
 
     def forward(self, x, c):
@@ -314,18 +342,34 @@ class RopeEmbedder:
         self.theta = theta
         self.axes_dims = axes_dims
         self.axes_lens = axes_lens
-        assert len(axes_dims) == len(axes_lens), "axes_dims and axes_lens must have the same length"
+        assert len(axes_dims) == len(
+            axes_lens
+        ), "axes_dims and axes_lens must have the same length"
         self.freqs_cis = None
 
     @staticmethod
-    def precompute_freqs_cis(dim: List[int], end: List[int], theta: float = 256.0):
+    def precompute_freqs_cis(
+        dim: List[int], end: List[int], theta: float = 256.0
+    ):
         with torch.device("cpu"):
             freqs_cis = []
             for i, (d, e) in enumerate(zip(dim, end)):
-                freqs = 1.0 / (theta ** (torch.arange(0, d, 2, dtype=torch.float64, device="cpu") / d))
-                timestep = torch.arange(e, device=freqs.device, dtype=torch.float64)
+                freqs = 1.0 / (
+                    theta
+                    ** (
+                        torch.arange(
+                            0, d, 2, dtype=torch.float64, device="cpu"
+                        )
+                        / d
+                    )
+                )
+                timestep = torch.arange(
+                    e, device=freqs.device, dtype=torch.float64
+                )
                 freqs = torch.outer(timestep, freqs).float()
-                freqs_cis_i = torch.polar(torch.ones_like(freqs), freqs).to(torch.complex64)
+                freqs_cis_i = torch.polar(torch.ones_like(freqs), freqs).to(
+                    torch.complex64
+                )
                 freqs_cis.append(freqs_cis_i)
             return freqs_cis
 
@@ -336,12 +380,18 @@ class RopeEmbedder:
         device = ids.device
 
         if self.freqs_cis is None:
-            self.freqs_cis = self.precompute_freqs_cis(self.axes_dims, self.axes_lens, theta=self.theta)
-            self.freqs_cis = [freqs_cis.to(device) for freqs_cis in self.freqs_cis]
+            self.freqs_cis = self.precompute_freqs_cis(
+                self.axes_dims, self.axes_lens, theta=self.theta
+            )
+            self.freqs_cis = [
+                freqs_cis.to(device) for freqs_cis in self.freqs_cis
+            ]
         else:
             # Ensure freqs_cis are on the same device as ids
             if self.freqs_cis[0].device != device:
-                self.freqs_cis = [freqs_cis.to(device) for freqs_cis in self.freqs_cis]
+                self.freqs_cis = [
+                    freqs_cis.to(device) for freqs_cis in self.freqs_cis
+                ]
 
         result = []
         for i in range(len(self.axes_dims)):
@@ -350,11 +400,16 @@ class RopeEmbedder:
         return torch.cat(result, dim=-1)
 
 
-class ZImageTransformer2DModel(ModelMixin, ConfigMixin, PeftAdapterMixin, FromOriginalModelMixin):
+class ZImageTransformer2DModel(
+    ModelMixin, ConfigMixin, PeftAdapterMixin, FromOriginalModelMixin
+):
     _supports_gradient_checkpointing = True
     _no_split_modules = ["ZImageTransformerBlock"]
     _repeated_blocks = ["ZImageTransformerBlock"]
-    _skip_layerwise_casting_patterns = ["t_embedder", "cap_embedder"]  # precision sensitive layers
+    _skip_layerwise_casting_patterns = [
+        "t_embedder",
+        "cap_embedder",
+    ]  # precision sensitive layers
 
     @register_to_config
     def __init__(
@@ -391,11 +446,19 @@ class ZImageTransformer2DModel(ModelMixin, ConfigMixin, PeftAdapterMixin, FromOr
 
         all_x_embedder = {}
         all_final_layer = {}
-        for patch_idx, (patch_size, f_patch_size) in enumerate(zip(all_patch_size, all_f_patch_size)):
-            x_embedder = nn.Linear(f_patch_size * patch_size * patch_size * in_channels, dim, bias=True)
+        for patch_idx, (patch_size, f_patch_size) in enumerate(
+            zip(all_patch_size, all_f_patch_size)
+        ):
+            x_embedder = nn.Linear(
+                f_patch_size * patch_size * patch_size * in_channels,
+                dim,
+                bias=True,
+            )
             all_x_embedder[f"{patch_size}-{f_patch_size}"] = x_embedder
 
-            final_layer = FinalLayer(dim, patch_size * patch_size * f_patch_size * self.out_channels)
+            final_layer = FinalLayer(
+                dim, patch_size * patch_size * f_patch_size * self.out_channels
+            )
             all_final_layer[f"{patch_size}-{f_patch_size}"] = final_layer
 
         self.all_x_embedder = nn.ModuleDict(all_x_embedder)
@@ -428,7 +491,9 @@ class ZImageTransformer2DModel(ModelMixin, ConfigMixin, PeftAdapterMixin, FromOr
                 for layer_id in range(n_refiner_layers)
             ]
         )
-        self.t_embedder = TimestepEmbedder(min(dim, ADALN_EMBED_DIM), mid_size=1024)
+        self.t_embedder = TimestepEmbedder(
+            min(dim, ADALN_EMBED_DIM), mid_size=1024
+        )
         self.cap_embedder = nn.Sequential(
             RMSNorm(cap_feat_dim, eps=norm_eps),
             nn.Linear(cap_feat_dim, dim, bias=True),
@@ -439,7 +504,9 @@ class ZImageTransformer2DModel(ModelMixin, ConfigMixin, PeftAdapterMixin, FromOr
 
         self.layers = nn.ModuleList(
             [
-                ZImageTransformerBlock(layer_id, dim, n_heads, n_kv_heads, norm_eps, qk_norm)
+                ZImageTransformerBlock(
+                    layer_id, dim, n_heads, n_kv_heads, norm_eps, qk_norm
+                )
                 for layer_id in range(n_layers)
             ]
         )
@@ -448,9 +515,17 @@ class ZImageTransformer2DModel(ModelMixin, ConfigMixin, PeftAdapterMixin, FromOr
         self.axes_dims = axes_dims
         self.axes_lens = axes_lens
 
-        self.rope_embedder = RopeEmbedder(theta=rope_theta, axes_dims=axes_dims, axes_lens=axes_lens)
+        self.rope_embedder = RopeEmbedder(
+            theta=rope_theta, axes_dims=axes_dims, axes_lens=axes_lens
+        )
 
-    def unpatchify(self, x: List[torch.Tensor], size: List[Tuple], patch_size, f_patch_size) -> List[torch.Tensor]:
+    def unpatchify(
+        self,
+        x: List[torch.Tensor],
+        size: List[Tuple],
+        patch_size,
+        f_patch_size,
+    ) -> List[torch.Tensor]:
         pH = pW = patch_size
         pF = f_patch_size
         bsz = len(x)
@@ -472,7 +547,10 @@ class ZImageTransformer2DModel(ModelMixin, ConfigMixin, PeftAdapterMixin, FromOr
         if start is None:
             start = (0 for _ in size)
 
-        axes = [torch.arange(x0, x0 + span, dtype=torch.int32, device=device) for x0, span in zip(start, size)]
+        axes = [
+            torch.arange(x0, x0 + span, dtype=torch.int32, device=device)
+            for x0, span in zip(start, size)
+        ]
         grids = torch.meshgrid(axes, indexing="ij")
         return torch.stack(grids, dim=-1)
 
@@ -511,8 +589,12 @@ class ZImageTransformer2DModel(ModelMixin, ConfigMixin, PeftAdapterMixin, FromOr
             all_cap_pad_mask.append(
                 torch.cat(
                     [
-                        torch.zeros((cap_ori_len,), dtype=torch.bool, device=device),
-                        torch.ones((cap_padding_len,), dtype=torch.bool, device=device),
+                        torch.zeros(
+                            (cap_ori_len,), dtype=torch.bool, device=device
+                        ),
+                        torch.ones(
+                            (cap_padding_len,), dtype=torch.bool, device=device
+                        ),
                     ],
                     dim=0,
                 )
@@ -531,7 +613,9 @@ class ZImageTransformer2DModel(ModelMixin, ConfigMixin, PeftAdapterMixin, FromOr
 
             image = image.view(C, F_tokens, pF, H_tokens, pH, W_tokens, pW)
             # "c f pf h ph w pw -> (f h w) (pf ph pw c)"
-            image = image.permute(1, 3, 5, 2, 4, 6, 0).reshape(F_tokens * H_tokens * W_tokens, pF * pH * pW * C)
+            image = image.permute(1, 3, 5, 2, 4, 6, 0).reshape(
+                F_tokens * H_tokens * W_tokens, pF * pH * pW * C
+            )
 
             image_ori_len = len(image)
             image_padding_len = (-image_ori_len) % SEQ_MULTI_OF
@@ -550,20 +634,30 @@ class ZImageTransformer2DModel(ModelMixin, ConfigMixin, PeftAdapterMixin, FromOr
                 .flatten(0, 2)
                 .repeat(image_padding_len, 1)
             )
-            image_padded_pos_ids = torch.cat([image_ori_pos_ids, image_padding_pos_ids], dim=0)
+            image_padded_pos_ids = torch.cat(
+                [image_ori_pos_ids, image_padding_pos_ids], dim=0
+            )
             all_image_pos_ids.append(image_padded_pos_ids)
             # pad mask
             all_image_pad_mask.append(
                 torch.cat(
                     [
-                        torch.zeros((image_ori_len,), dtype=torch.bool, device=device),
-                        torch.ones((image_padding_len,), dtype=torch.bool, device=device),
+                        torch.zeros(
+                            (image_ori_len,), dtype=torch.bool, device=device
+                        ),
+                        torch.ones(
+                            (image_padding_len,),
+                            dtype=torch.bool,
+                            device=device,
+                        ),
                     ],
                     dim=0,
                 )
             )
             # padded feature
-            image_padded_feat = torch.cat([image, image[-1:].repeat(image_padding_len, 1)], dim=0)
+            image_padded_feat = torch.cat(
+                [image, image[-1:].repeat(image_padding_len, 1)], dim=0
+            )
             all_image_out.append(image_padded_feat)
 
         return (
@@ -614,17 +708,27 @@ class ZImageTransformer2DModel(ModelMixin, ConfigMixin, PeftAdapterMixin, FromOr
         adaln_input = t.type_as(x)
         x[torch.cat(x_inner_pad_mask)] = self.x_pad_token
         x = list(x.split(x_item_seqlens, dim=0))
-        x_freqs_cis = list(self.rope_embedder(torch.cat(x_pos_ids, dim=0)).split(x_item_seqlens, dim=0))
+        x_freqs_cis = list(
+            self.rope_embedder(torch.cat(x_pos_ids, dim=0)).split(
+                x_item_seqlens, dim=0
+            )
+        )
 
         x = pad_sequence(x, batch_first=True, padding_value=0.0)
-        x_freqs_cis = pad_sequence(x_freqs_cis, batch_first=True, padding_value=0.0)
-        x_attn_mask = torch.zeros((bsz, x_max_item_seqlen), dtype=torch.bool, device=device)
+        x_freqs_cis = pad_sequence(
+            x_freqs_cis, batch_first=True, padding_value=0.0
+        )
+        x_attn_mask = torch.zeros(
+            (bsz, x_max_item_seqlen), dtype=torch.bool, device=device
+        )
         for i, seq_len in enumerate(x_item_seqlens):
             x_attn_mask[i, :seq_len] = 1
 
         if torch.is_grad_enabled() and self.gradient_checkpointing:
             for layer in self.noise_refiner:
-                x = self._gradient_checkpointing_func(layer, x, x_attn_mask, x_freqs_cis, adaln_input)
+                x = self._gradient_checkpointing_func(
+                    layer, x, x_attn_mask, x_freqs_cis, adaln_input
+                )
         else:
             for layer in self.noise_refiner:
                 x = layer(x, x_attn_mask, x_freqs_cis, adaln_input)
@@ -638,17 +742,29 @@ class ZImageTransformer2DModel(ModelMixin, ConfigMixin, PeftAdapterMixin, FromOr
         cap_feats = self.cap_embedder(cap_feats)
         cap_feats[torch.cat(cap_inner_pad_mask)] = self.cap_pad_token
         cap_feats = list(cap_feats.split(cap_item_seqlens, dim=0))
-        cap_freqs_cis = list(self.rope_embedder(torch.cat(cap_pos_ids, dim=0)).split(cap_item_seqlens, dim=0))
+        cap_freqs_cis = list(
+            self.rope_embedder(torch.cat(cap_pos_ids, dim=0)).split(
+                cap_item_seqlens, dim=0
+            )
+        )
 
-        cap_feats = pad_sequence(cap_feats, batch_first=True, padding_value=0.0)
-        cap_freqs_cis = pad_sequence(cap_freqs_cis, batch_first=True, padding_value=0.0)
-        cap_attn_mask = torch.zeros((bsz, cap_max_item_seqlen), dtype=torch.bool, device=device)
+        cap_feats = pad_sequence(
+            cap_feats, batch_first=True, padding_value=0.0
+        )
+        cap_freqs_cis = pad_sequence(
+            cap_freqs_cis, batch_first=True, padding_value=0.0
+        )
+        cap_attn_mask = torch.zeros(
+            (bsz, cap_max_item_seqlen), dtype=torch.bool, device=device
+        )
         for i, seq_len in enumerate(cap_item_seqlens):
             cap_attn_mask[i, :seq_len] = 1
 
         if torch.is_grad_enabled() and self.gradient_checkpointing:
             for layer in self.context_refiner:
-                cap_feats = self._gradient_checkpointing_func(layer, cap_feats, cap_attn_mask, cap_freqs_cis)
+                cap_feats = self._gradient_checkpointing_func(
+                    layer, cap_feats, cap_attn_mask, cap_freqs_cis
+                )
         else:
             for layer in self.context_refiner:
                 cap_feats = layer(cap_feats, cap_attn_mask, cap_freqs_cis)
@@ -660,27 +776,43 @@ class ZImageTransformer2DModel(ModelMixin, ConfigMixin, PeftAdapterMixin, FromOr
             x_len = x_item_seqlens[i]
             cap_len = cap_item_seqlens[i]
             unified.append(torch.cat([x[i][:x_len], cap_feats[i][:cap_len]]))
-            unified_freqs_cis.append(torch.cat([x_freqs_cis[i][:x_len], cap_freqs_cis[i][:cap_len]]))
-        unified_item_seqlens = [a + b for a, b in zip(cap_item_seqlens, x_item_seqlens)]
+            unified_freqs_cis.append(
+                torch.cat([x_freqs_cis[i][:x_len], cap_freqs_cis[i][:cap_len]])
+            )
+        unified_item_seqlens = [
+            a + b for a, b in zip(cap_item_seqlens, x_item_seqlens)
+        ]
         assert unified_item_seqlens == [len(_) for _ in unified]
         unified_max_item_seqlen = max(unified_item_seqlens)
 
         unified = pad_sequence(unified, batch_first=True, padding_value=0.0)
-        unified_freqs_cis = pad_sequence(unified_freqs_cis, batch_first=True, padding_value=0.0)
-        unified_attn_mask = torch.zeros((bsz, unified_max_item_seqlen), dtype=torch.bool, device=device)
+        unified_freqs_cis = pad_sequence(
+            unified_freqs_cis, batch_first=True, padding_value=0.0
+        )
+        unified_attn_mask = torch.zeros(
+            (bsz, unified_max_item_seqlen), dtype=torch.bool, device=device
+        )
         for i, seq_len in enumerate(unified_item_seqlens):
             unified_attn_mask[i, :seq_len] = 1
 
         if torch.is_grad_enabled() and self.gradient_checkpointing:
             for layer in self.layers:
                 unified = self._gradient_checkpointing_func(
-                    layer, unified, unified_attn_mask, unified_freqs_cis, adaln_input
+                    layer,
+                    unified,
+                    unified_attn_mask,
+                    unified_freqs_cis,
+                    adaln_input,
                 )
         else:
             for layer in self.layers:
-                unified = layer(unified, unified_attn_mask, unified_freqs_cis, adaln_input)
+                unified = layer(
+                    unified, unified_attn_mask, unified_freqs_cis, adaln_input
+                )
 
-        unified = self.all_final_layer[f"{patch_size}-{f_patch_size}"](unified, adaln_input)
+        unified = self.all_final_layer[f"{patch_size}-{f_patch_size}"](
+            unified, adaln_input
+        )
         unified = list(unified.unbind(dim=0))
         x = self.unpatchify(unified, x_size, patch_size, f_patch_size)
 

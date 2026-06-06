@@ -29,7 +29,9 @@ class ZImageSingleFileLoaderHelper:
         is_fp8_checkpoint: Optional[bool] = None,
     ) -> None:
         """Load one single-file Z-Image checkpoint via manual assembly."""
-        self._owner.logger.info("Loading Z-Image from single file: %s", model_path)
+        self._owner.logger.info(
+            "Loading Z-Image from single file: %s", model_path
+        )
         use_quant = getattr(self._owner, "use_quantization", False)
         quant_bits = getattr(self._owner, "quantization_bits", None)
         model_dtype = self._owner.data_type
@@ -49,7 +51,9 @@ class ZImageSingleFileLoaderHelper:
             model_dtype,
         )
         model_dir = self._resolve_model_dir(model_path)
-        max_memory = self.compute_max_memory_for_text_encoder(is_fp8_checkpoint)
+        max_memory = self.compute_max_memory_for_text_encoder(
+            is_fp8_checkpoint
+        )
         text_encoder_cfg = self._build_text_encoder_quantization_config(
             use_quant,
             quant_bits,
@@ -98,7 +102,11 @@ class ZImageSingleFileLoaderHelper:
         companion_dir = bundle_helper.resolve_zimage_companion_dir(
             checkpoint_path
         )
-        model_dir = str(companion_dir) if companion_dir else os.path.dirname(model_path)
+        model_dir = (
+            str(companion_dir)
+            if companion_dir
+            else os.path.dirname(model_path)
+        )
         self._owner.logger.info("Loading companion files from: %s", model_dir)
         return model_dir
 
@@ -138,7 +146,9 @@ class ZImageSingleFileLoaderHelper:
         """Calculate one device-map memory budget for the text encoder."""
         if not torch.cuda.is_available():
             return None
-        total_vram = torch.cuda.get_device_properties(0).total_memory / (1024**3)
+        total_vram = torch.cuda.get_device_properties(0).total_memory / (
+            1024**3
+        )
         reserved = 10.0 if is_fp8_checkpoint else 6.0
         budget = max(total_vram - reserved, 2.0)
         self._owner.logger.info(
@@ -166,9 +176,11 @@ class ZImageSingleFileLoaderHelper:
         use_quant = getattr(self._owner, "use_quantization", False)
         quant_bits = getattr(self._owner, "quantization_bits", None)
         max_memory = helper.compute_max_memory_for_models(use_quant)
-        transformer_cfg = self._transformer_helper.build_transformer_quantization_config(
-            use_quant,
-            quant_bits,
+        transformer_cfg = (
+            self._transformer_helper.build_transformer_quantization_config(
+                use_quant,
+                quant_bits,
+            )
         )
         model_dir = os.path.dirname(model_path)
         transformer = self._transformer_helper.load_transformer_for_fallback(
@@ -184,13 +196,17 @@ class ZImageSingleFileLoaderHelper:
             os.path.join(model_dir, "vae"),
             model_dtype,
         )
-        scheduler = self._owner._get_runtime_loader_helper().load_zimage_scheduler(
-            Path(os.path.join(model_dir, "scheduler"))
+        scheduler = (
+            self._owner._get_runtime_loader_helper().load_zimage_scheduler(
+                Path(os.path.join(model_dir, "scheduler"))
+            )
         )
         if text_encoder is None or tokenizer is None:
-            text_encoder, tokenizer = self._transformer_helper.load_local_text_encoder(
-                model_dir,
-                model_dtype,
+            text_encoder, tokenizer = (
+                self._transformer_helper.load_local_text_encoder(
+                    model_dir,
+                    model_dtype,
+                )
             )
         self._owner._pipe = pipeline_class(
             transformer=transformer,

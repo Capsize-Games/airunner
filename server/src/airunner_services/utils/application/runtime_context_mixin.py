@@ -48,7 +48,6 @@ from airunner_services.utils.application.api_reference import (
 )
 from airunner_services.utils.application.get_logger import get_logger
 
-
 SettingsModel = TypeVar("SettingsModel")
 
 _ESPEAK_MODEL_TYPE = "eSpeak"
@@ -56,31 +55,17 @@ _OPENVOICE_MODEL_TYPE = "OpenVoice"
 
 
 class RuntimeContextMixin:
-    """Provide service-safe API and settings accessors."""
+    """Provide service-safe settings accessors and helpers."""
 
     def __init__(
         self,
         *args: object,
-        api: Optional[object] = None,
         **kwargs: object,
     ) -> None:
         self._runtime_settings_cache: dict[type[Any], Any] = {}
         super().__init__(*args, **kwargs)
         if not hasattr(self, "logger"):
             self.logger = get_logger(self.__class__.__module__)
-        if api is not None or getattr(self, "api", None) is None:
-            self.api = api or self._resolve_api_reference()
-
-    def _resolve_api_reference(self) -> Optional[object]:
-        """Return the registered service API reference when available."""
-        return peek_registered_api()
-
-    def refresh_api_reference(self) -> Optional[object]:
-        """Refresh one stale cached API reference when possible."""
-        live_api = self._resolve_api_reference()
-        if live_api is not None:
-            self.api = live_api
-        return getattr(self, "api", None)
 
     def _load_settings(
         self,
@@ -164,7 +149,7 @@ class RuntimeContextMixin:
             "column_name": column_name,
             "val": val,
         }
-        api_ref = self.refresh_api_reference()
+        api_ref = peek_registered_api()
         notify = getattr(api_ref, "application_settings_changed", None)
         if callable(notify):
             notify(setting_name=setting_name, column_name=column_name, val=val)

@@ -29,7 +29,9 @@ def _detect_chat_format(model_path: str) -> Optional[str]:
         return None
     if "qwen" in path_lower:
         return "chatml"
-    if any(name in path_lower for name in ["llama-3", "llama3", "meta-llama-3"]):
+    if any(
+        name in path_lower for name in ["llama-3", "llama3", "meta-llama-3"]
+    ):
         return "llama-3"
     if any(name in path_lower for name in ["mistral", "magistral"]):
         return "mistral-instruct"

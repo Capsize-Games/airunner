@@ -22,7 +22,11 @@ def _project_by_id(db: Session, project_id: int) -> Optional[ProjectState]:
 
 def _feature_by_id(db: Session, feature_id: int) -> Optional[ProjectFeature]:
     """Return one feature by id."""
-    return db.query(ProjectFeature).filter(ProjectFeature.id == feature_id).first()
+    return (
+        db.query(ProjectFeature)
+        .filter(ProjectFeature.id == feature_id)
+        .first()
+    )
 
 
 def get_feature(

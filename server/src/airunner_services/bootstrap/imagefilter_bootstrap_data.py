@@ -2,7 +2,6 @@
 
 from airunner_services.settings import AIRUNNER_ART_ENABLED
 
-
 imagefilter_bootstrap_data = {
     "pixel_art": {
         "display_name": "Pixel Art",

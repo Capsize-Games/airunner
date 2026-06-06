@@ -1,4 +1,4 @@
-"""Functional end-to-end LLM tests using the real headless daemon."""
+"""Functional end-to-end LLM tests using the real daemon."""
 
 from __future__ import annotations
 
@@ -14,7 +14,6 @@ from llm_functional_support import post_json
 from llm_functional_support import started_daemon
 from llm_functional_support import visible_digits
 from llm_functional_support import wait_for_log_text
-
 
 _MODEL_IDS = ["qwen3.5-9b", "gpt-oss-20b"]
 

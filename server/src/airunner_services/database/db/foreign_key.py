@@ -23,7 +23,9 @@ def create_foreign_key(
         )
 
     if dialect_name == "sqlite":
-        with op.batch_alter_table(cls.__tablename__, recreate="always") as batch_op:
+        with op.batch_alter_table(
+            cls.__tablename__, recreate="always"
+        ) as batch_op:
             batch_op.create_foreign_key(
                 constraint_name,
                 referent_table,

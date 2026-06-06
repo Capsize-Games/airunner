@@ -115,7 +115,9 @@ Report what you did and the results."""
 
 def _verification_steps(feature: Dict[str, Any]) -> str:
     """Return formatted verification steps for one feature."""
-    return "\n".join(f"- {step}" for step in feature.get("verification_steps", []))
+    return "\n".join(
+        f"- {step}" for step in feature.get("verification_steps", [])
+    )
 
 
 def _context_prompt(context: Dict[str, Any]) -> str:

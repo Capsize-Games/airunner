@@ -1,117 +1,49 @@
-"""STT executor backed by the shared runtime registry."""
+"""STT executor backed by the shared runtime registry (legacy adapter).
+
+This executor delegates to ``FasterWhisperSTTExecutor`` for the
+actual in-process faster-whisper transcription, preserving the
+``STTExecutor`` interface expected by the audio processor worker.
+"""
 
 from __future__ import annotations
 
-import base64
-from typing import Any, Optional
+from typing import Any
 
-from airunner_services.settings import AIRUNNER_LOG_LEVEL
-from airunner_services.ipc.messages import EnvelopeStatus, RequestEnvelope
-from airunner_services.runtimes.contracts import RuntimeAction, RuntimeKind
 from airunner_services.runtimes.stt_executor import STTExecutor
-from airunner_services.utils.application.api_reference import (
-    peek_registered_api,
+from airunner_services.runtimes.faster_whisper_stt_executor import (
+    FasterWhisperSTTExecutor,
 )
+from airunner_services.settings import AIRUNNER_LOG_LEVEL
 from airunner_services.utils.application.get_logger import get_logger
 
 
-def _response_status_is(response: object, expected: EnvelopeStatus) -> bool:
-    """Return True when one envelope-like response matches a status."""
-    status = getattr(response, "status", None)
-    value = getattr(status, "value", status)
-    return str(value or "").strip().lower() == expected.value
-
-
 class RuntimeRegistrySTTExecutor(STTExecutor):
-    """Route STT model control and transcription through the runtime registry."""
+    """Route STT model control and transcription through in-process
+    faster-whisper, preserving the registry-compatible interface."""
 
-    def __init__(self, *, api: Optional[object] = None) -> None:
-        self.logger = get_logger(self.__class__.__name__, AIRUNNER_LOG_LEVEL)
-        self.api = api or self._resolve_api_reference()
-        self._loaded = False
-
-    def _resolve_api_reference(self) -> Optional[object]:
-        """Return the registered shared API reference when available."""
-        return peek_registered_api()
-
-    def refresh_api_reference(self) -> Optional[object]:
-        """Refresh one stale cached API reference when possible."""
-        live_api = self._resolve_api_reference()
-        if live_api is not None:
-            self.api = live_api
-        return getattr(self, "api", None)
-
-    def _resolve_client(self):
-        """Resolve the default local STT runtime client."""
-        api = self.refresh_api_reference()
-        registry = getattr(api, "runtime_registry", None)
-        if registry is None:
-            raise RuntimeError("STT runtime registry unavailable")
-        return registry.resolve(RuntimeKind.STT, provider="local")
+    def __init__(self) -> None:
+        self.logger = get_logger(
+            self.__class__.__name__,
+            AIRUNNER_LOG_LEVEL,
+        )
+        self._executor = FasterWhisperSTTExecutor()
 
     @property
     def stt_is_loaded(self) -> bool:
-        """Return whether the runtime-backed executor is ready."""
-        return self._loaded
+        """Return whether the executor is ready."""
+        return self._executor.stt_is_loaded
 
     def load(self, retry: bool = False) -> bool:
-        """Start the configured STT runtime and cache one loaded state."""
-        del retry
-        response = self._invoke(RuntimeAction.LOAD_MODEL)
-        self._loaded = response is not None
-        return self._loaded
+        """Load the faster-whisper model."""
+        return self._executor.load(retry=retry)
 
     def unload(self) -> None:
-        """Stop the configured STT runtime and clear local loaded state."""
-        if not self._loaded:
-            return
-        self._invoke(RuntimeAction.UNLOAD_MODEL)
-        self._loaded = False
+        """Release the faster-whisper model."""
+        self._executor.unload()
 
     def transcribe(self, audio_data: Any) -> str:
-        """Submit one queued audio payload to the STT runtime."""
-        item = audio_data.get("item") if audio_data else None
-        if not item:
-            return ""
-        payload = {
-            "audio_b64": base64.b64encode(item).decode("ascii"),
-            "mime_type": audio_data.get("mime_type", "application/octet-stream"),
-        }
-        if audio_data.get("language"):
-            payload["language"] = audio_data["language"]
-        if audio_data.get("sample_rate"):
-            payload["sample_rate"] = audio_data["sample_rate"]
-        response = self._invoke(RuntimeAction.INVOKE, payload=payload)
-        if response is None:
-            return ""
-        self._loaded = True
-        return str(response.get("text", "") or "")
-
-    def _invoke(
-        self,
-        action: RuntimeAction,
-        *,
-        payload: Optional[dict[str, Any]] = None,
-    ) -> Optional[dict[str, Any]]:
-        """Invoke one STT runtime action and normalize failures."""
-        try:
-            client = self._resolve_client()
-            response = client.invoke(
-                RequestEnvelope(
-                    runtime=RuntimeKind.STT,
-                    action=action,
-                    provider="local",
-                    payload=payload or {},
-                )
-            )
-        except Exception as exc:
-            self.logger.warning("STT runtime %s failed: %s", action.value, exc)
-            return None
-        if not _response_status_is(response, EnvelopeStatus.SUCCEEDED):
-            error = response.error.message if response.error else action.value
-            self.logger.warning("STT runtime %s failed: %s", action.value, error)
-            return None
-        return response.payload
+        """Submit one queued audio payload to faster-whisper."""
+        return self._executor.transcribe(audio_data)
 
 
 __all__ = ["RuntimeRegistrySTTExecutor"]

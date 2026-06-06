@@ -11,12 +11,12 @@ from __future__ import annotations
 
 import json
 import logging
-import queue
-import threading
 from pathlib import Path
 
 from fastapi import APIRouter, HTTPException, Query
-from fastapi.responses import FileResponse, StreamingResponse
+from fastapi.responses import FileResponse
+
+from airunner_services.api.routes.events import WsEventBus
 from PIL import Image
 from pydantic import BaseModel
 from watchdog.events import FileSystemEventHandler
@@ -86,7 +86,9 @@ def _validate_filename_component(filename: str) -> str:
         raise HTTPException(status_code=422, detail="Invalid filename")
     # Reject anything with a path separator
     if "/" in filename or "\\" in filename:
-        raise HTTPException(status_code=422, detail="Filename must not contain path separators")
+        raise HTTPException(
+            status_code=422, detail="Filename must not contain path separators"
+        )
     # Reject traversal components
     if filename in (".", ".."):
         raise HTTPException(status_code=422, detail="Invalid filename")
@@ -110,7 +112,8 @@ def _list_image_files(directory: Path) -> list[Path]:
     if not directory.is_dir():
         return []
     return sorted(
-        p for p in directory.iterdir()
+        p
+        for p in directory.iterdir()
         if p.is_file() and p.suffix.lower() in _IMAGE_EXTENSIONS
     )
 
@@ -136,8 +139,7 @@ def _extract_metadata(path: Path) -> dict | None:
             info: dict = img.info or {}
             # Filter string values only
             metadata: dict = {
-                k: v for k, v in info.items()
-                if isinstance(v, str)
+                k: v for k, v in info.items() if isinstance(v, str)
             }
             # Try to parse the common "parameters" JSON/metadata blob
             raw = metadata.get("parameters") or metadata.get("params")
@@ -156,12 +158,9 @@ def _extract_metadata(path: Path) -> dict | None:
         return None
 
 
-# ── SSE watch endpoint (must be before {date} routes) ───────────────────
-# ── Watcher state ────────────────────────────────────────────────────────
+# ── File watcher state ─────────────────────────────────────────────────
 
 _WATCH_DIR = _IMAGES_ROOT
-_watch_subscribers: list[queue.Queue[bytes]] = []
-_watch_lock = threading.Lock()
 _watcher_started = False
 _watcher_observer = None  # type: ignore[valid-type]
 
@@ -192,18 +191,8 @@ class _ImageFileHandler(FileSystemEventHandler):
 
 
 def _notify_subscribers() -> None:
-    """Push a ``reload`` event to every connected SSE subscriber."""
-    payload = json.dumps({"type": "reload"}).encode("utf-8") + b"\n"
-    line = b"data: " + payload + b"\n"
-    with _watch_lock:
-        dead: list[queue.Queue[bytes]] = []
-        for q in _watch_subscribers:
-            try:
-                q.put_nowait(line)
-            except queue.Full:
-                dead.append(q)
-        for q in dead:
-            _watch_subscribers.remove(q)
+    """Push a ``reload`` event via WsEventBus."""
+    WsEventBus().broadcast("images", {"type": "reload"})
 
 
 def _start_watcher() -> None:
@@ -237,43 +226,9 @@ def _stop_watcher() -> None:
     _watcher_started = False
 
 
-@router.get("/images/watch")
-def watch_images() -> StreamingResponse:
-    """SSE stream that emits ``data: {"type": "reload"}\n\n``"""
-    _start_watcher()
-
-    q: queue.Queue[bytes] = queue.Queue(maxsize=128)
-
-    with _watch_lock:
-        _watch_subscribers.append(q)
-
-    def _cleanup():
-        with _watch_lock:
-            if q in _watch_subscribers:
-                _watch_subscribers.remove(q)
-
-    def event_stream():
-        try:
-            while True:
-                try:
-                    data = q.get(timeout=30)
-                    yield data
-                except queue.Empty:
-                    yield b": keepalive\n\n"
-        except GeneratorExit:
-            pass
-        finally:
-            _cleanup()
-
-    return StreamingResponse(
-        event_stream(),
-        media_type="text/event-stream",
-        headers={
-            "Cache-Control": "no-cache",
-            "Connection": "keep-alive",
-            "X-Accel-Buffering": "no",
-        },
-    )
+# SSE endpoint removed — events now broadcast via WsEventBus.
+# The file watcher above still triggers _notify_subscribers which
+# calls WsEventBus().broadcast("images", {"type": "reload"}).
 
 
 # ── Date listing ──────────────────────────────────────────────────────────
@@ -286,14 +241,15 @@ def list_dates():
         return {"dates": []}
 
     dates: list[str] = sorted(
-        [entry.name for entry in _IMAGES_ROOT.iterdir()
-         if entry.is_dir() and entry.name.isdigit() and len(entry.name) == 8],
+        [
+            entry.name
+            for entry in _IMAGES_ROOT.iterdir()
+            if entry.is_dir() and entry.name.isdigit() and len(entry.name) == 8
+        ],
         reverse=True,
     )
     return {
-        "dates": [
-            {"value": d, "label": _format_label(d)} for d in dates
-        ],
+        "dates": [{"value": d, "label": _format_label(d)} for d in dates],
     }
 
 
@@ -315,7 +271,7 @@ def list_images(
 
     all_files = _list_image_files(directory)
     total = len(all_files)
-    page = all_files[offset: offset + limit]
+    page = all_files[offset : offset + limit]
 
     images = []
     for p in page:
@@ -327,19 +283,17 @@ def list_images(
         except OSError:
             file_size = 0
             file_timestamp = 0.0
-        images.append({
-            "id": p.name,
-            "image_url": (
-                f"/api/v1/art/images/{date}/full/{p.name}"
-            ),
-            "thumbnail_url": (
-                f"/api/v1/art/images/{date}/thumb/{p.name}"
-            ),
-            "file_path": str(p),
-            "file_size": file_size,
-            "file_timestamp": file_timestamp,
-            "metadata": meta,
-        })
+        images.append(
+            {
+                "id": p.name,
+                "image_url": (f"/api/v1/art/images/{date}/full/{p.name}"),
+                "thumbnail_url": (f"/api/v1/art/images/{date}/thumb/{p.name}"),
+                "file_path": str(p),
+                "file_size": file_size,
+                "file_timestamp": file_timestamp,
+                "metadata": meta,
+            }
+        )
 
     return {
         "total": total,
@@ -360,7 +314,9 @@ def get_image_info(date: str, filename: str):
     if not source.is_file():
         raise HTTPException(status_code=404, detail="Image not found")
 
-    meta = _extract_metadata(source) if source.suffix.lower() == ".png" else None
+    meta = (
+        _extract_metadata(source) if source.suffix.lower() == ".png" else None
+    )
     try:
         file_size = source.stat().st_size
     except OSError:
@@ -371,12 +327,8 @@ def get_image_info(date: str, filename: str):
         "file_path": str(source),
         "file_size": file_size,
         "metadata": meta,
-        "image_url": (
-            f"/api/v1/art/images/{date}/full/{source.name}"
-        ),
-        "thumbnail_url": (
-            f"/api/v1/art/images/{date}/thumb/{source.name}"
-        ),
+        "image_url": (f"/api/v1/art/images/{date}/full/{source.name}"),
+        "thumbnail_url": (f"/api/v1/art/images/{date}/thumb/{source.name}"),
     }
 
 
@@ -426,7 +378,9 @@ def serve_thumbnail(date: str, filename: str):
         return FileResponse(str(cached), media_type="image/png")
     except Exception as exc:
         logger.error("Failed to generate thumbnail for %s: %s", source, exc)
-        raise HTTPException(status_code=500, detail="Thumbnail generation failed") from exc
+        raise HTTPException(
+            status_code=500, detail="Thumbnail generation failed"
+        ) from exc
 
 
 # ── Delete image ─────────────────────────────────────────────────────────

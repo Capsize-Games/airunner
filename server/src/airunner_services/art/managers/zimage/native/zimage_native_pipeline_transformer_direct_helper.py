@@ -34,8 +34,12 @@ class ZImageNativePipelineTransformerDirectHelper:
             device=torch.device("meta"),
             dtype=self._owner.dtype,
         )
-        fp8_layers, non_fp8_weights = self._collect_direct_checkpoint_tensors(path)
-        replaced, fp8_non_linear = self._replace_unscaled_fp8_layers(fp8_layers)
+        fp8_layers, non_fp8_weights = self._collect_direct_checkpoint_tensors(
+            path
+        )
+        replaced, fp8_non_linear = self._replace_unscaled_fp8_layers(
+            fp8_layers
+        )
         non_fp8_weights.update(fp8_non_linear)
         loaded_other = self._materialize_non_fp8_weights(non_fp8_weights)
         logger.info(
@@ -62,7 +66,9 @@ class ZImageNativePipelineTransformerDirectHelper:
     def _collect_direct_checkpoint_tensors(
         self,
         path: str,
-    ) -> tuple[Dict[str, list[Optional[torch.Tensor]]], Dict[str, torch.Tensor]]:
+    ) -> tuple[
+        Dict[str, list[Optional[torch.Tensor]]], Dict[str, torch.Tensor]
+    ]:
         """Collect direct-load tensors from one checkpoint."""
         support = self._owner._get_transformer_support()
         fp8_layers: Dict[str, list[Optional[torch.Tensor]]] = {}
@@ -74,7 +80,9 @@ class ZImageNativePipelineTransformerDirectHelper:
                     continue
                 tensor = checkpoint.get_tensor(key)
                 if tensor.dtype == torch.float8_e4m3fn:
-                    self._collect_direct_fp8_tensor(fp8_layers, model_key, tensor)
+                    self._collect_direct_fp8_tensor(
+                        fp8_layers, model_key, tensor
+                    )
                 else:
                     non_fp8_weights[model_key] = tensor.to(
                         device=self._owner.device,
@@ -139,7 +147,9 @@ class ZImageNativePipelineTransformerDirectHelper:
             layer_name = layer_key.split(".")[-1]
             old_layer = getattr(parent, layer_name, None)
             if old_layer is None or not isinstance(old_layer, nn.Linear):
-                self._store_non_linear_fp8(fp8_non_linear, layer_key, weight, bias)
+                self._store_non_linear_fp8(
+                    fp8_non_linear, layer_key, weight, bias
+                )
                 return False
             fp8_linear = UnscaledFP8Linear(
                 weight.shape[1],
@@ -164,7 +174,9 @@ class ZImageNativePipelineTransformerDirectHelper:
         bias: Optional[torch.Tensor],
     ) -> None:
         """Store FP8 tensors that must be materialized as regular tensors."""
-        fp8_non_linear[f"{layer_key}.weight"] = weight.to(dtype=self._owner.dtype)
+        fp8_non_linear[f"{layer_key}.weight"] = weight.to(
+            dtype=self._owner.dtype
+        )
         if bias is not None:
             fp8_non_linear[f"{layer_key}.bias"] = bias
 

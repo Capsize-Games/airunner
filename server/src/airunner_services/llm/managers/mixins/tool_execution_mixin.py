@@ -96,16 +96,16 @@ class ToolExecutionMixin:
 
     def _get_next_workflow_tool(self, _current_tool: str) -> str | None:
         """Get the next required tool in the coding workflow sequence.
-        
+
         Previously enforced strict tool ordering, but this caused issues when
         workflows were already active or the model correctly chose to skip steps.
-        
+
         Now returns None to allow the model to choose tools freely based on
         the workflow instructions in the system prompt.
-        
+
         Args:
             current_tool: The tool that just executed
-            
+
         Returns:
             None - workflow tool ordering is no longer enforced
         """

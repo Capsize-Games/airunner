@@ -42,7 +42,9 @@ def list_project_features(
 def _feature_summary(feature: Any) -> str:
     """Return the detailed next-feature summary."""
     category = feature.category.value if feature.category else "functional"
-    last_error = f"## Last Error\n{feature.last_error}" if feature.last_error else ""
+    last_error = (
+        f"## Last Error\n{feature.last_error}" if feature.last_error else ""
+    )
     steps = next_feature_steps(feature) or "None specified"
     return (
         f"# Next Feature: {feature.name}\n\n"

@@ -14,7 +14,6 @@ from airunner_services.llm.long_running.session_agent_state import (
     SessionWorkflowState,
 )
 
-
 logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 
 
@@ -27,7 +26,9 @@ def _planning_complete_message() -> AIMessage:
     )
 
 
-def _session_id(agent: Any, state: SessionWorkflowState, feature_id: int) -> int:
+def _session_id(
+    agent: Any, state: SessionWorkflowState, feature_id: int
+) -> int:
     """Ensure one session id exists for the selected feature."""
     session_id = state.get("session_id")
     if session_id is not None:
@@ -41,8 +42,12 @@ def _session_id(agent: Any, state: SessionWorkflowState, feature_id: int) -> int
 
 def _planning_prompt(feature: Any) -> str:
     """Return the planning prompt for the selected feature."""
-    steps = "\n".join(f"- {step}" for step in (feature.verification_steps or []))
-    last_error = f"**Last Error:** {feature.last_error}" if feature.last_error else ""
+    steps = "\n".join(
+        f"- {step}" for step in (feature.verification_steps or [])
+    )
+    last_error = (
+        f"**Last Error:** {feature.last_error}" if feature.last_error else ""
+    )
     category = feature.category.value if feature.category else "functional"
     return f"""# Planning Phase
 
@@ -74,7 +79,9 @@ def _planning_result(
 ) -> dict[str, Any]:
     """Build the state update for one selected feature."""
     session_id = _session_id(agent, state, next_feature.id)
-    agent._project_manager.update_feature_status(next_feature.id, FeatureStatus.IN_PROGRESS)
+    agent._project_manager.update_feature_status(
+        next_feature.id, FeatureStatus.IN_PROGRESS
+    )
     return {
         "phase": SessionPhase.IMPLEMENTATION,
         "feature_id": next_feature.id,
@@ -90,7 +97,9 @@ def planning_node(
 ) -> dict[str, Any]:
     """Plan what feature to work on."""
     logger.info("Planning phase")
-    next_feature = agent._project_manager.get_next_feature_to_work_on(state["project_id"])
+    next_feature = agent._project_manager.get_next_feature_to_work_on(
+        state["project_id"]
+    )
     if next_feature is None:
         logger.info("No features left to work on - project may be complete")
         return {

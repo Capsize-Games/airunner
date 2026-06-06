@@ -4,6 +4,7 @@ import Spinner from "react-bootstrap/Spinner";
 import CivitaiSearchBar from "./CivitaiSearchBar";
 import CivitaiResultCard from "./CivitaiResultCard";
 import { searchCivitaiModels, fetchCivitaiModel } from "../../../api/downloads";
+import { request } from "../../../api/client-base";
 import { BASE_URL, type JsonObject } from "../../../types/api";
 import CivitaiModelDetailModal from "./CivitaiModelDetailModal";
 
@@ -46,8 +47,9 @@ function flattenItem(item: JsonObject): SearchResult {
 interface FilterOption { label: string; value: string; }
 
 async function fetchFilterOptions(): Promise<{ baseModels: FilterOption[]; modelTypes: string[]; typesByBase: Record<string, string[]> }> {
-  const res = await fetch(`${BASE_URL}/api/v1/downloads/civitai/options`);
-  const data = await res.json() as { base_models: FilterOption[]; model_types: string[]; model_types_by_base: Record<string, string[]> };
+  const data = await request<{ base_models: FilterOption[]; model_types: string[]; model_types_by_base: Record<string, string[]> }>(
+    "GET", "/api/v1/downloads/civitai/options",
+  );
   return { baseModels: data.base_models ?? [], modelTypes: data.model_types ?? [], typesByBase: data.model_types_by_base ?? {} };
 }
 

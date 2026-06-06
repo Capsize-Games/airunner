@@ -1,7 +1,6 @@
 from airunner_services.contract_enums import AvailableLanguage
 from airunner_services.vendor.melo.text.symbols import *
 
-
 _symbol_to_id = {s: i for i, s in enumerate(symbols)}
 from airunner_services.vendor.melo.text import language_tone_start_map
 

@@ -15,7 +15,6 @@ from airunner_services.database.models import LLMGeneratorSettings
 from airunner_services.database.models import GeneratorSettings
 from airunner_services.database.models import MetadataSettings
 
-
 revision: str = "0f8b4e43d1c2"
 down_revision: Union[str, None] = "6b0f0f6c3e4a"
 branch_labels: Union[str, Sequence[str], None] = None

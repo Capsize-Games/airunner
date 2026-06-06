@@ -30,9 +30,14 @@ def stream_chat_result(
 ) -> Iterator[ChatGenerationChunk]:
     """Stream chat chunks through llama.cpp."""
     if adapter._use_raw_gpt_oss_completion():
-        yield from _stream_raw_gpt_oss_completion(adapter, messages, stop, run_manager)
+        yield from _stream_raw_gpt_oss_completion(
+            adapter, messages, stop, run_manager
+        )
         return
     yield from _stream_native_completion(
-        adapter, messages, stop, run_manager,
+        adapter,
+        messages,
+        stop,
+        run_manager,
         **kwargs,
     )

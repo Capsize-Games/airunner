@@ -4,7 +4,6 @@ from dataclasses import dataclass
 from typing import Optional
 from airunner_services.utils.application.enum_resolver import llm_action_type
 
-
 LLMActionType = llm_action_type()
 
 

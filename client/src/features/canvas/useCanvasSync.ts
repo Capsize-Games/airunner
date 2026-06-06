@@ -4,7 +4,7 @@ const WS_RECONNECT_DELAY = 1000;
 const WS_MAX_RECONNECT_DELAY = 10_000;
 
 /** Default API host:port. */
-const DEFAULT_API_HOST = "127.0.0.1:8188";
+const DEFAULT_API_HOST = "localhost:8188";
 
 /**
  * Build a WebSocket URL for the given API path.
@@ -78,7 +78,9 @@ export function useCanvasSync({
   useEffect(() => {
     let stopped = false;
 
-    const connect = (delay = 0) => {
+    // Delay initial connection so the server has time to accept WebSocket
+    // upgrades during page load, avoiding noisy console errors.
+    const connect = (delay = 1000) => {
       if (stopped) return;
 
       if (reconnectTimer.current) {
@@ -141,7 +143,7 @@ export function useCanvasSync({
       };
     };
 
-    connect(0);
+    connect();
 
     return () => {
       stopped = true;

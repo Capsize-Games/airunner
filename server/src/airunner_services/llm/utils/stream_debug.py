@@ -5,16 +5,13 @@ from __future__ import annotations
 import os
 from typing import Any
 
-
 _ENABLED_VALUES = {"1", "true", "yes", "on"}
 
 
 def stream_debug_enabled() -> bool:
     """Return True when raw stream diagnostics should print to stdout."""
     return (
-        os.environ.get("AIRUNNER_DEBUG_STREAM_CHUNKS", "")
-        .strip()
-        .lower()
+        os.environ.get("AIRUNNER_DEBUG_STREAM_CHUNKS", "").strip().lower()
         in _ENABLED_VALUES
     )
 

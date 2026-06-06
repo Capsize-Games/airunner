@@ -10,11 +10,12 @@ from airunner_services.database.models.project_state import ProjectFeature
 from airunner_services.settings import AIRUNNER_LOG_LEVEL
 from airunner_services.utils.application import get_logger
 
-
 logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 
 
-def _sub_context(state: dict[str, Any], feature: ProjectFeature) -> dict[str, Any]:
+def _sub_context(
+    state: dict[str, Any], feature: ProjectFeature
+) -> dict[str, Any]:
     """Build the delegated sub-agent context."""
     return {
         "feature": feature.to_dict(),
@@ -41,13 +42,17 @@ def _record_delegation(
 
 
 def delegate_to_sub_agent(
-    agent: Any, state: dict[str, Any], feature: ProjectFeature,
+    agent: Any,
+    state: dict[str, Any],
+    feature: ProjectFeature,
 ) -> dict[str, Any]:
     """Delegate implementation to a specialized sub-agent."""
     category = feature.category.value if feature.category else "functional"
     sub_agent = agent._sub_agents.get(category)
     if sub_agent is None:
-        logger.warning("No sub-agent for category %s, using main agent", category)
+        logger.warning(
+            "No sub-agent for category %s, using main agent", category
+        )
         return {}
     logger.info("Delegating to %s sub-agent", category)
     try:
@@ -55,10 +60,14 @@ def delegate_to_sub_agent(
         _record_delegation(agent, state, feature, category)
         return {
             "tools_output": str(result),
-            "messages": [AIMessage(content=f"Sub-agent ({category}) result:\n{result}")],
+            "messages": [
+                AIMessage(content=f"Sub-agent ({category}) result:\n{result}")
+            ],
         }
     except Exception as error:
         logger.error("Sub-agent delegation failed: %s", error)
         return {"error": f"Sub-agent failed: {error}"}
+
+
 # MI note: this helper stays intentionally narrow and delegated.
 # MI note: related orchestration lives in neighboring long_running modules.

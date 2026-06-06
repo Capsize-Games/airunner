@@ -125,7 +125,9 @@ class ResponseSynthesizer:
             generation_kwargs,
         )
         response_content = ""
-        if response_message is not None and hasattr(response_message, "content"):
+        if response_message is not None and hasattr(
+            response_message, "content"
+        ):
             response_content = response_message.content or ""
 
         self._owner.logger.info(

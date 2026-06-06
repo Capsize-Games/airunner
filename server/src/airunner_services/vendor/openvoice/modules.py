@@ -7,7 +7,10 @@ from torch.nn import Conv1d
 from torch.nn.utils import weight_norm, remove_weight_norm
 
 from airunner_services.vendor.openvoice import commons
-from airunner_services.vendor.openvoice.commons import init_weights, get_padding
+from airunner_services.vendor.openvoice.commons import (
+    init_weights,
+    get_padding,
+)
 from airunner_services.vendor.openvoice.transforms import (
     piecewise_rational_quadratic_transform,
 )

@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-
 MULTI_ITEM_PATTERNS = [
     r"(\d+)\s+(papers?|topics?|items?|features?|functions?|tests?|files?|endpoints?|components?|modules?|reports?|articles?)",
     r"write\s+(\d+)\s+(?:research\s+)?(?:papers?|reports?|articles?)",

@@ -10,7 +10,9 @@ import torch
 def get_token_ids(adapter: Any) -> tuple[int, int]:
     """Return EOS and PAD token IDs for one adapter."""
     if adapter.use_mistral_native and adapter._mistral_tokenizer:
-        eos_token_id = adapter._mistral_tokenizer.instruct_tokenizer.tokenizer.eos_id
+        eos_token_id = (
+            adapter._mistral_tokenizer.instruct_tokenizer.tokenizer.eos_id
+        )
         return eos_token_id, eos_token_id
     if adapter.tokenizer:
         eos_token_id = adapter.tokenizer.eos_token_id

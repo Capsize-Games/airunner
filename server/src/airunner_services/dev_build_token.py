@@ -7,7 +7,6 @@ import time
 from pathlib import Path
 from typing import Optional
 
-
 _CACHE_TTL_SECONDS = 2.0
 _cached_deadline = 0.0
 _cached_token: Optional[str] = None

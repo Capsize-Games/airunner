@@ -787,7 +787,9 @@ class GuiDaemonClient:
     def _prepare_connection_attempt(self) -> None:
         """Set the state for a new connection attempt."""
         if self._state is DaemonConnectionState.NOT_STARTED:
-            self._set_state(DaemonConnectionState.CONNECTING, "starting daemon")
+            self._set_state(
+                DaemonConnectionState.CONNECTING, "starting daemon"
+            )
             return
         self._set_state(DaemonConnectionState.RECONNECTING, "starting daemon")
 
@@ -798,13 +800,15 @@ class GuiDaemonClient:
             exit_code = self._launcher.last_exit_code()
             if exit_code is not None:
                 self._last_error = (
-                    "Daemon process exited early with code "
-                    f"{exit_code}"
+                    "Daemon process exited early with code " f"{exit_code}"
                 )
                 self._set_state(DaemonConnectionState.FAILED, self._last_error)
                 return False
             health = self._healthcheck_payload()
-            if health is not None and self._stale_dev_daemon_reason(health) is None:
+            if (
+                health is not None
+                and self._stale_dev_daemon_reason(health) is None
+            ):
                 self._set_state(DaemonConnectionState.CONNECTED, "connected")
                 return True
             self._sleep(self._poll_interval_seconds)
@@ -950,7 +954,9 @@ class GuiDaemonClient:
             return response
         except requests.RequestException as exc:
             self._last_error = str(exc)
-            self._set_state(DaemonConnectionState.DISCONNECTED, self._last_error)
+            self._set_state(
+                DaemonConnectionState.DISCONNECTED, self._last_error
+            )
             raise RuntimeError(self._last_error) from exc
 
     def _runtime_action(

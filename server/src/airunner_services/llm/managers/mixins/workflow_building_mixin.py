@@ -11,7 +11,7 @@ from airunner_services.settings import AIRUNNER_LOG_LEVEL
 from airunner_services.utils.application import get_logger
 
 if TYPE_CHECKING:
-    from airunner_services.llm.workflow_manager import WorkflowState
+    pass
 
 
 class WorkflowBuildingMixin:
@@ -75,14 +75,14 @@ class WorkflowBuildingMixin:
 
     def _route_after_force_response(self, state: Dict[str, Any]) -> str:
         """Route after force_response node.
-        
+
         For workflow continuation (duplicate workflow tool detected),
         route back to the model so it can call the next tool.
         Otherwise, end the graph.
-        
+
         Args:
             state: Current workflow state
-            
+
         Returns:
             "model" for workflow continuation, "end" otherwise
         """

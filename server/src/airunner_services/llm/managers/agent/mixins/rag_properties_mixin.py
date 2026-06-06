@@ -7,7 +7,7 @@ import torch
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
-from airunner_services.contract_enums import ModelStatus, ModelType, SignalCode
+from airunner_services.contract_enums import ModelType, SignalCode
 from airunner_services.settings import AIRUNNER_LOCAL_FILES_ONLY
 
 

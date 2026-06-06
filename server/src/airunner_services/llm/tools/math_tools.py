@@ -15,7 +15,6 @@ from airunner_services.eval.math_tools import (
 )
 from airunner_services.llm.core.tool_registry import tool, ToolCategory
 
-
 # Shared executor instance
 _executor = SafePythonExecutor()
 

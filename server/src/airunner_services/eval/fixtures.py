@@ -1,7 +1,7 @@
 """
 Pytest fixtures for AI Runner evaluation testing.
 
-Provides fixtures to connect to the running airunner-headless systemd service
+Provides fixtures to connect to the running airunner-server systemd service
 for testing. Tests should NOT start their own server - they use the existing
 service on port 8080.
 
@@ -20,8 +20,8 @@ from airunner_services.eval.client import AIRunnerClient
 from airunner_services.settings import AIRUNNER_LOG_LEVEL
 from airunner_services.utils.application import get_logger
 from airunner_services.settings import (
-    AIRUNNER_HEADLESS_SERVER_HOST,
-    AIRUNNER_HEADLESS_SERVER_PORT,
+    AIRUNNER_SERVER_HOST,
+    AIRUNNER_SERVER_PORT,
 )
 
 logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
@@ -47,7 +47,7 @@ def _wait_for_server_health(base_url: str, timeout: int = 10) -> bool:
 
 @pytest.fixture(scope="session")
 def airunner_server():
-    """Verify the airunner-headless systemd service is running.
+    """Verify the airunner-server systemd service is running.
 
     This fixture does NOT start a server - it checks that the existing
     systemd service on port 8080 is accessible.
@@ -55,19 +55,19 @@ def airunner_server():
     Raises:
         RuntimeError: If server is not accessible
     """
-    base_url = f"http://{AIRUNNER_HEADLESS_SERVER_HOST}:{AIRUNNER_HEADLESS_SERVER_PORT}"
+    base_url = f"http://{AIRUNNER_SERVER_HOST}:{AIRUNNER_SERVER_PORT}"
 
     logger.info(
-        f"Checking for running airunner-headless service on port {AIRUNNER_HEADLESS_SERVER_PORT}..."
+        f"Checking for running airunner-server service on port {AIRUNNER_SERVER_PORT}..."
     )
 
     if not _wait_for_server_health(base_url, timeout=10):
         raise RuntimeError(
-            f"airunner-headless service is not running on port {AIRUNNER_HEADLESS_SERVER_PORT}. "
-            f"Start it with: sudo systemctl start airunner-headless"
+            f"airunner-server service is not running on port {AIRUNNER_SERVER_PORT}. "
+            f"Start it with: sudo systemctl start airunner-server"
         )
 
-    logger.info("✓ Found running airunner-headless service")
+    logger.info("✓ Found running airunner-server service")
     yield base_url
     # No cleanup - we don't own the server
 

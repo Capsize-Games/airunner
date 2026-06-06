@@ -12,7 +12,6 @@ from airunner_services.llm.long_running.runtime_components import (
 from airunner_services.settings import AIRUNNER_LOG_LEVEL
 from airunner_services.utils.application import get_logger
 
-
 logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 
 
@@ -28,8 +27,14 @@ def initialize_runtime(
         project_manager=project_manager,
         sub_agents=sub_agents,
     )
-    agent._project_manager, agent._sub_agents = runtime.project_manager, runtime.sub_agents
-    agent._initializer, agent._session_agent = runtime.initializer, runtime.session_agent
+    agent._project_manager, agent._sub_agents = (
+        runtime.project_manager,
+        runtime.sub_agents,
+    )
+    agent._initializer, agent._session_agent = (
+        runtime.initializer,
+        runtime.session_agent,
+    )
 
 
 def register_sub_agent(agent: Any, category: str, sub_agent: Any) -> None:

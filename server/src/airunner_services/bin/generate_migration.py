@@ -17,9 +17,7 @@ def main() -> None:
 
     message = sys.argv[1]
     alembic_ini = (
-        Path(__file__).resolve().parent.parent
-        / "database"
-        / "alembic.ini"
+        Path(__file__).resolve().parent.parent / "database" / "alembic.ini"
     )
     if not alembic_ini.exists():
         print(f"Could not find alembic.ini at {alembic_ini}")

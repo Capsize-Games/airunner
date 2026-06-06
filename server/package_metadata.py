@@ -7,7 +7,6 @@ from typing import Any
 
 from setuptools import find_packages
 
-
 VERSION = "6.0.0"
 FACEHUGGERSHIELD_REQUIREMENT = (
     "facehuggershield @ "
@@ -15,12 +14,12 @@ FACEHUGGERSHIELD_REQUIREMENT = (
     "archive/refs/tags/v1.0.0.tar.gz"
 )
 
-README = (
-    Path(__file__).resolve().parents[1] / "README.md"
-).read_text(encoding="utf-8")
+README = (Path(__file__).resolve().parents[1] / "README.md").read_text(
+    encoding="utf-8"
+)
 
 CORE_REQUIREMENTS = [
-    "numpy==2.2.5",
+    "numpy>=2.2.5,<3.0",
     "packaging>=24.0",
     "pillow==12.2.0",
     "pydantic>=2.7,<3.0",
@@ -33,7 +32,7 @@ CORE_REQUIREMENTS = [
     "jinja2==3.1.6",
     "pyyaml==6.0.2",
     "python-dotenv==1.2.2",
-    "fastapi==0.115.0",
+    "fastapi>=0.115.0,<1.0",
     "python-multipart>=0.0.27",
     "uvicorn[standard]==0.34.0",
     "psutil>=7.0.0",
@@ -41,19 +40,22 @@ CORE_REQUIREMENTS = [
 ]
 
 ML_RUNTIME_REQUIREMENTS = [
-    "torch",
-    "torchvision",
-    "torchaudio",
+    "torch>=2.10.0",
+    "torchvision>=0.20.0",
+    "torchaudio>=2.10.0",
     "accelerate==1.7.0",
     "huggingface-hub>=0.34.0,<2.0",
     "tokenizers==0.22.2",
     "optimum==1.25.1",
 ]
 
-NVIDIA_REQUIREMENTS = ["nvidia-cuda-runtime"]
+NVIDIA_REQUIREMENTS = [
+    "nvidia-cuda-runtime",
+    "nvidia-ml-py>=13.610.43",
+]
 
 HUGGINGFACE_REQUIREMENTS = [
-    "diffusers>=0.30.0,<0.38.0",
+    "diffusers>=0.30.0,<0.39.0",
     "controlnet_aux==0.0.10",
     "safetensors>=0.6.2",
     "kornia",
@@ -70,7 +72,7 @@ ART_REQUIREMENTS = [
 ]
 
 LLM_NATIVE_REQUIREMENTS = [
-    "llama-cpp-python==0.3.21",
+    "llama-cpp-python==0.3.26",
     "bitsandbytes==0.45.5",
     "sentence_transformers==3.4.1",
     "cryptography==46.0.7",
@@ -93,7 +95,7 @@ LLM_NATIVE_REQUIREMENTS = [
     "pypdf>=5.6.0",
 ]
 
-STT_NATIVE_REQUIREMENTS = ["sounddevice==0.5.1"]
+STT_NATIVE_REQUIREMENTS = ["sounddevice==0.5.1", "faster-whisper==1.2.1"]
 
 LLM_WEATHER_REQUIREMENTS = [
     "requests-cache==1.2.1",
@@ -128,7 +130,7 @@ MELOTTS_REQUIREMENTS = [
 
 OPENVOICE_CN_REQUIREMENTS = [
     "pypinyin==0.54.0",
-    "jieba==0.42.1",
+    "jieba==0.5.23",
     "cn2an==0.5.23",
 ]
 
@@ -158,7 +160,7 @@ SEARCH_REQUIREMENTS = [
     "aiohttp>=3.13.4",
     "google-api-python-client>=2.170.0",
     "wikipedia>=1.4.0",
-    "scrapy==2.14.2",
+    "scrapy>=2.16.0,<3.0",
     "trafilatura==2.0.0",
 ]
 
@@ -188,7 +190,7 @@ DEVELOPMENT_REQUIREMENTS = [
 
 SERVICE_CONSOLE_SCRIPTS = [
     "airunner-daemon=airunner_services.daemon:main",
-    "airunner-headless=airunner_services.bin.airunner_headless:main",
+    "airunner-server=airunner_services.bin.airunner_server:main",
     "airunner-service=airunner_services.bin.airunner_service:main",
     "airunner-generate-migration="
     "airunner_services.bin.generate_migration:main",
@@ -204,6 +206,8 @@ def unique_requirements(*groups: list[str]) -> list[str]:
     for group in groups:
         dependencies.extend(group)
     return list(dict.fromkeys(dependencies))
+
+
 def _base_extras_require() -> dict[str, list[str]]:
     """Return the non-aggregate service extras."""
     return {
@@ -271,17 +275,17 @@ def _aggregate_extras_require(
     extras_require: dict[str, list[str]],
 ) -> dict[str, list[str]]:
     """Return the aggregate service extras."""
-    headless = _aggregate_extra(
+    server_extras = _aggregate_extra(
         extras_require,
         "llm-native",
         "stt-native",
         "art-python",
         "tts-python",
     )
-    aggregate_require = {**extras_require, "headless": headless}
+    aggregate_require = {**extras_require, "server": server_extras}
     desktop = _aggregate_extra(
         aggregate_require,
-        "headless",
+        "server",
         "llm_weather",
         "search",
         "computer_use",
@@ -295,7 +299,7 @@ def _aggregate_extras_require(
         *sorted(SYSTEM_DEP_EXTRAS),
     )
     return {
-        "headless": headless,
+        "server": server_extras,
         "desktop": desktop,
         "all": desktop,
         "all_dev": _aggregate_extra(
@@ -311,7 +315,7 @@ def _aggregate_extras_require(
         ),
         "windows": _aggregate_extra(
             aggregate_require,
-            "headless",
+            "server",
             "llm_weather",
             "search",
             "computer_use",
@@ -337,7 +341,7 @@ def build_setup_kwargs(*, package_source_dir: str) -> dict[str, Any]:
         "name": "airunner-services",
         "version": VERSION,
         "author": "Capsize LLC",
-        "description": "AIRunner headless service package",
+        "description": "AIRunner service package",
         "long_description": README,
         "long_description_content_type": "text/markdown",
         "license": "Apache-2.0",

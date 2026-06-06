@@ -31,9 +31,7 @@ router = APIRouter()
 
 
 @router.post("/transcribe", response_model=TranscriptionResponse)
-async def transcribe_audio(
-    audio: UploadFile = File(...), req: Request = None
-):
+async def transcribe_audio(audio: UploadFile = File(...), req: Request = None):
     """
     Transcribe audio file.
 
@@ -58,9 +56,7 @@ async def transcribe_audio(
                 action=RuntimeAction.INVOKE,
                 provider="local",
                 payload={
-                    "audio_b64": base64.b64encode(audio_data).decode(
-                        "ascii"
-                    ),
+                    "audio_b64": base64.b64encode(audio_data).decode("ascii"),
                     "mime_type": audio.content_type
                     or "application/octet-stream",
                 },
@@ -69,9 +65,11 @@ async def transcribe_audio(
         if not response_status_is(response, EnvelopeStatus.SUCCEEDED):
             raise HTTPException(
                 status_code=runtime_error_status(response),
-                detail=response.error.message
-                if response.error
-                else "STT request failed",
+                detail=(
+                    response.error.message
+                    if response.error
+                    else "STT request failed"
+                ),
             )
         return TranscriptionResponse(
             text=response.payload.get("text", ""),
@@ -157,16 +155,12 @@ async def websocket_transcription(websocket: WebSocket):
                     {"type": "chunk", "text": text, "final": is_final}
                 )
 
-        mediator.register(
-            SignalCode.STT_CHUNK_SIGNAL, on_transcription_chunk
-        )
+        mediator.register(SignalCode.STT_CHUNK_SIGNAL, on_transcription_chunk)
 
         try:
             while True:
                 data = await websocket.receive_bytes()
-                logger.debug(
-                    f"Received audio chunk: {len(data)} bytes"
-                )
+                logger.debug(f"Received audio chunk: {len(data)} bytes")
                 stt_service.emit_signal(
                     SignalCode.STT_TRANSCRIBE_CHUNK_SIGNAL,
                     {"audio_chunk": data},

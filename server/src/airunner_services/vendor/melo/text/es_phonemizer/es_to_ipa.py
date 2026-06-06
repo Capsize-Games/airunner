@@ -1,4 +1,6 @@
-from airunner_services.vendor.melo.text.es_phonemizer.gruut_wrapper import Gruut
+from airunner_services.vendor.melo.text.es_phonemizer.gruut_wrapper import (
+    Gruut,
+)
 
 
 def es2ipa(text):

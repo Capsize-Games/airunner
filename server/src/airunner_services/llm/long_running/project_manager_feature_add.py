@@ -16,20 +16,31 @@ from airunner_services.llm.long_running.project_manager_feature_records import (
 
 
 def add_feature(
-    manager: Any, project_id: int, name: str, description: str,
+    manager: Any,
+    project_id: int,
+    name: str,
+    description: str,
     category: FeatureCategory = FeatureCategory.FUNCTIONAL,
-    verification_steps: Optional[list[str]] = None, priority: int = 5,
+    verification_steps: Optional[list[str]] = None,
+    priority: int = 5,
     depends_on: Optional[list[int]] = None,
 ) -> ProjectFeature:
     """Add one feature to a project."""
     with session_scope() as db:
         feature = _feature_record(
-            project_id, name, description, category,
-            verification_steps, priority, depends_on,
+            project_id,
+            name,
+            description,
+            category,
+            verification_steps,
+            priority,
+            depends_on,
         )
         db.add(feature)
         _increment_total_features(db, project_id, 1)
         db.commit()
         db.refresh(feature)
-        manager._logger.info("Added feature '%s' to project %s", name, project_id)
+        manager._logger.info(
+            "Added feature '%s' to project %s", name, project_id
+        )
         return manager._detach(db, feature)

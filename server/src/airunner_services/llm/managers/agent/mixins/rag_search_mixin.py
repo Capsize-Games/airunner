@@ -2,7 +2,6 @@
 
 from typing import List, Optional, Any
 
-from langchain_core.documents import Document
 
 from airunner_services.llm.managers.agent.retriever import (
     DocumentIndexRetriever,

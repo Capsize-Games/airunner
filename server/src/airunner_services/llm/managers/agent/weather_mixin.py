@@ -91,7 +91,7 @@ class WeatherMixin:
     def get_weather(self) -> Optional[VariablesWithTime]:
         if not is_openmeteo_allowed():
             return None
-            
+
         if (
             not self.user.latitude
             or not self.user.longitude

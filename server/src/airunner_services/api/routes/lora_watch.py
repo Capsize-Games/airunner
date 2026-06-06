@@ -1,33 +1,27 @@
-"""SSE endpoint for LoRA file-system change notifications.
+"""LoRA file-system change notifications via WsEventBus.
 
 Starts a background ``watchdog`` observer that monitors all
 ``{AIRUNNER_BASE_PATH}/art/models/**/lora/`` directories for
 ``.safetensors`` file changes (created, modified, deleted, moved).
-Each detected change pushes a ``data: {"type": "reload"}\n\n`` event
-to every connected SSE client.
+Each detected change pushes a ``reload`` event via ``WsEventBus``.
 """
 
 from __future__ import annotations
 
-import json
 import logging
-import queue
-import threading
 from pathlib import Path
 
 from fastapi import APIRouter
-from fastapi.responses import StreamingResponse
 from watchdog.events import FileSystemEventHandler
 from watchdog.observers import Observer as _Observer
 
+from airunner_services.api.routes.events import WsEventBus
 from airunner_services.settings import AIRUNNER_BASE_PATH
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
 # ── Module-level watcher state ──────────────────────────────────────────
-_watch_subscribers: list[queue.Queue[bytes]] = []
-_watch_lock = threading.Lock()
 _watcher_started = False
 _watcher_observer: _Observer | None = None
 
@@ -40,9 +34,7 @@ def _discover_lora_dirs() -> list[Path]:
     art_models = Path(AIRUNNER_BASE_PATH) / "art" / "models"
     if not art_models.is_dir():
         return []
-    return [
-        p for p in art_models.glob(_LORA_GLOB) if p.is_dir()
-    ]
+    return [p for p in art_models.glob(_LORA_GLOB) if p.is_dir()]
 
 
 class _LoraFileHandler(FileSystemEventHandler):
@@ -81,18 +73,8 @@ class _LoraFileHandler(FileSystemEventHandler):
 
 
 def _notify_subscribers() -> None:
-    """Push a ``reload`` event to every connected SSE subscriber."""
-    payload = json.dumps({"type": "reload"}).encode("utf-8") + b"\n"
-    line = b"data: " + payload + b"\n"
-    with _watch_lock:
-        dead: list[queue.Queue[bytes]] = []
-        for q in _watch_subscribers:
-            try:
-                q.put_nowait(line)
-            except queue.Full:
-                dead.append(q)
-        for q in dead:
-            _watch_subscribers.remove(q)
+    """Push a ``reload`` event via WsEventBus."""
+    WsEventBus().broadcast("loras", {"type": "reload"})
 
 
 def _start_watcher() -> None:
@@ -109,9 +91,6 @@ def _start_watcher() -> None:
             "watcher will not monitor anything until directories appear.",
             AIRUNNER_BASE_PATH,
         )
-        # Start anyway — the observer can watch new dirs later if needed,
-        # but watchdog requires specific paths at schedule time.  We simply
-        # skip scheduling and log a warning.
         return
 
     handler = _LoraFileHandler()
@@ -139,50 +118,3 @@ def _stop_watcher() -> None:
         obs.join(timeout=2)
         _watcher_observer = None
     _watcher_started = False
-
-
-# ── SSE endpoint ────────────────────────────────────────────────────────
-
-
-@router.get("/loras/watch")
-def watch_loras() -> StreamingResponse:
-    """SSE stream that emits ``data: {"type": "reload"}\n\n``
-
-    whenever a ``.safetensors`` file is created, modified, or deleted
-    inside any ``lora/`` subdirectory of the art models tree.
-    """
-    _start_watcher()
-
-    q: queue.Queue[bytes] = queue.Queue(maxsize=128)
-
-    with _watch_lock:
-        _watch_subscribers.append(q)
-
-    def _cleanup():
-        with _watch_lock:
-            if q in _watch_subscribers:
-                _watch_subscribers.remove(q)
-
-    def event_stream():  # noqa: DOC502
-        try:
-            while True:
-                try:
-                    data = q.get(timeout=30)
-                    yield data
-                except queue.Empty:
-                    # Send a keepalive comment to prevent proxy timeouts
-                    yield b": keepalive\n\n"
-        except GeneratorExit:
-            pass
-        finally:
-            _cleanup()
-
-    return StreamingResponse(
-        event_stream(),
-        media_type="text/event-stream",
-        headers={
-            "Cache-Control": "no-cache",
-            "Connection": "keep-alive",
-            "X-Accel-Buffering": "no",
-        },
-    )

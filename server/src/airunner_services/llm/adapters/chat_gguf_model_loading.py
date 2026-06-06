@@ -79,9 +79,9 @@ def _raise_for_unsupported_architecture(adapter: Any) -> None:
     raise UnsupportedGGUFArchitectureError(
         unsupported_architecture,
         adapter.model_path,
-        runtime_version=str(runtime_version)
-        if runtime_version is not None
-        else None,
+        runtime_version=(
+            str(runtime_version) if runtime_version is not None else None
+        ),
     )
 
 
@@ -150,7 +150,7 @@ def _log_model_load_start(
 def _log_model_file_size(adapter: Any) -> None:
     """Log GGUF file size when the model file is readable."""
     try:
-        model_size_gb = os.path.getsize(adapter.model_path) / float(1024 ** 3)
+        model_size_gb = os.path.getsize(adapter.model_path) / float(1024**3)
     except OSError:
         return
     adapter.logger.info("  GGUF file size=%.2f GiB", model_size_gb)

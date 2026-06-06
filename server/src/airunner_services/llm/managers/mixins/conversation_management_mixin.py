@@ -105,7 +105,7 @@ class ConversationManagementMixin:
             return self._load_existing_conversation(conversation_id)
 
         # UwUChat convention: pass the chat session UUID in node_id.
-        # Reuse or create a Conversation keyed by that identifier so 
+        # Reuse or create a Conversation keyed by that identifier so
         # history attaches to the same record.
         node_id = data.get("node_id")
         if isinstance(node_id, str):

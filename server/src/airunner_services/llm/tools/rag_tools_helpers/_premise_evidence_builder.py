@@ -63,7 +63,9 @@ def best_early_current_setting_paragraph(paragraphs: list[str]) -> str:
     ranked = _ranked_early_setting_candidates(paragraphs)
     if not ranked:
         return ""
-    early_candidates = [paragraph for score, _, paragraph in ranked if score >= 4]
+    early_candidates = [
+        paragraph for score, _, paragraph in ranked if score >= 4
+    ]
     if early_candidates:
         return early_candidates[0]
     return ranked[0][2]
@@ -276,7 +278,9 @@ def _ranked_early_setting_candidates(
     """Return ranked early current-setting candidates by score then order."""
     if not paragraphs:
         return []
-    window_limit = min(len(paragraphs), max(12, min(120, len(paragraphs) // 8)))
+    window_limit = min(
+        len(paragraphs), max(12, min(120, len(paragraphs) // 8))
+    )
     ranked = [
         (premise_current_setting_score(paragraph), index, paragraph)
         for index, paragraph in enumerate(paragraphs[:window_limit])

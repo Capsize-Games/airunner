@@ -1,4 +1,5 @@
 """Shared helpers and base class for local fallback runtime clients."""
+
 from __future__ import annotations
 
 import base64
@@ -17,16 +18,12 @@ from airunner_services.ipc.messages import (
 )
 from airunner_services.runtimes.base import RuntimeClient
 from airunner_services.runtimes.contracts import (
-    ArtInvocationRequest,
     LLMInvocationRequest,
-    RuntimeAction,
     RuntimeDescriptor,
     RuntimeHealth,
     RuntimeHealthStatus,
     RuntimeKind,
     RuntimeMode,
-    STTInvocationRequest,
-    TTSInvocationRequest,
     TransportKind,
 )
 
@@ -56,40 +53,47 @@ def _build_signal_mediator() -> Any:
     from airunner_services.utils.application.signal_mediator import (
         SignalMediator,
     )
+
     return SignalMediator()
 
 
 def _build_llm_service() -> Any:
     """Create the default LLM API service lazily."""
     from airunner_services.api.services.llm_services import LLMAPIService
+
     return LLMAPIService()
 
 
 def _build_stt_service() -> Any:
     """Create the default STT API service lazily."""
     from airunner_services.api.services.stt_services import STTAPIService
+
     return STTAPIService()
 
 
 def _build_tts_service() -> Any:
     """Create the default TTS API service lazily."""
     from airunner_services.api.services.tts_services import TTSAPIService
+
     return TTSAPIService()
 
 
 def _build_art_service() -> Any:
     """Create the default art API service lazily."""
     from airunner_services.api.services.art_services import ARTAPIService
+
     return ARTAPIService()
 
 
 def _resolve_art_request_version(metadata: dict[str, Any]) -> str:
     """Return the model version carried by one art invocation."""
     from airunner_services.contract_enums import normalize_art_version
+
     version = str(metadata.get("version") or "").strip()
     if version:
         return normalize_art_version(version)
     from airunner_services.contract_enums import DEFAULT_ART_VERSION
+
     return DEFAULT_ART_VERSION.value
 
 
@@ -99,6 +103,7 @@ def _resolve_art_request_scheduler(metadata: dict[str, Any]) -> str:
     if scheduler:
         return scheduler
     from airunner_services.settings import AIRUNNER_DEFAULT_SCHEDULER
+
     return AIRUNNER_DEFAULT_SCHEDULER
 
 
@@ -113,6 +118,7 @@ def _resolve_art_pipeline_action(metadata: dict[str, Any]) -> str:
 def _resolve_art_generator_section(metadata: dict[str, Any]) -> Any:
     """Return the requested generator section for one art job."""
     from airunner_services.contract_enums import GeneratorSection
+
     pipeline_action = _resolve_art_pipeline_action(metadata)
     try:
         return GeneratorSection(pipeline_action)
@@ -174,6 +180,7 @@ def _resolve_art_active_rect(metadata: dict[str, Any]) -> Any:
         return None
     try:
         from airunner_services.art.managers.stablediffusion.rect import Rect
+
         return Rect(
             int(raw_rect.get("x", 0)),
             int(raw_rect.get("y", 0)),
@@ -193,6 +200,7 @@ def _resolve_art_operation(metadata: dict[str, Any]) -> str:
 def _build_llm_request(invocation: LLMInvocationRequest) -> Any:
     """Create an LLM request object for the legacy signal path."""
     from airunner_services.llm.llm_request import LLMRequest
+
     request = LLMRequest()
     request.temperature = invocation.temperature
     if invocation.max_tokens is not None:
@@ -205,12 +213,14 @@ def _build_llm_request(invocation: LLMInvocationRequest) -> Any:
 def _resolve_model_type(name: str) -> Any:
     """Resolve a model type lazily to avoid eager imports."""
     from airunner_services.contract_enums import ModelType
+
     return getattr(ModelType, name)
 
 
 def _model_health_status(model_status: Any) -> RuntimeHealthStatus:
     """Translate application model status into runtime health status."""
     from airunner_services.contract_enums import ModelStatus
+
     status_map = {
         None: RuntimeHealthStatus.UNKNOWN,
         ModelStatus.LOADING: RuntimeHealthStatus.STARTING,
@@ -272,9 +282,7 @@ class _SignalRuntimeClient(RuntimeClient):
             metadata=self._status_metadata(),
         )
 
-    def _emit_signal(
-        self, code: Any, data: Optional[dict[str, Any]] = None
-    ):
+    def _emit_signal(self, code: Any, data: Optional[dict[str, Any]] = None):
         """Emit a signal through the configured source."""
         emitter = getattr(self._signal_source, "emit_signal", None)
         if emitter is not None:
@@ -323,6 +331,7 @@ class _SignalRuntimeClient(RuntimeClient):
     ) -> ResponseEnvelope:
         """Emit a control signal and wait for the matching model status."""
         from airunner_services.contract_enums import ModelStatus, SignalCode
+
         status_queue: Queue[Any] = Queue()
 
         def on_status_changed(data: dict[str, Any]) -> None:

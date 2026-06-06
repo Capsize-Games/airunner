@@ -1,7 +1,8 @@
-
 import re
 from typing import List, Optional
-from airunner_services.eval.benchmark_datasets.benchmark_example import BenchmarkExample
+from airunner_services.eval.benchmark_datasets.benchmark_example import (
+    BenchmarkExample,
+)
 from airunner_services.eval.dataset_manager import DatasetManager
 from airunner_services.utils.application import get_logger
 
@@ -186,4 +187,3 @@ def load_math(
         subject=subject,
         seed=seed,
     )
-

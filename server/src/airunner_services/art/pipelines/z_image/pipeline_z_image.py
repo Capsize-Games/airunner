@@ -30,9 +30,12 @@ from diffusers.schedulers import FlowMatchEulerDiscreteScheduler
 from diffusers.utils import logging
 from diffusers.utils.torch_utils import randn_tensor
 
-from airunner_services.art.pipelines.z_image.pipeline_output import ZImagePipelineOutput
-from airunner_services.art.pipelines.z_image.transformer_z_image import ZImageTransformer2DModel
-
+from airunner_services.art.pipelines.z_image.pipeline_output import (
+    ZImagePipelineOutput,
+)
+from airunner_services.art.pipelines.z_image.transformer_z_image import (
+    ZImageTransformer2DModel,
+)
 
 logger = logging.get_logger(__name__)
 
@@ -83,17 +86,25 @@ def retrieve_timesteps(
         second element is the number of inference steps.
     """
     # Filter kwargs to only include parameters accepted by the scheduler's set_timesteps method
-    accepted_params = set(inspect.signature(scheduler.set_timesteps).parameters.keys())
+    accepted_params = set(
+        inspect.signature(scheduler.set_timesteps).parameters.keys()
+    )
     filtered_kwargs = {k: v for k, v in kwargs.items() if k in accepted_params}
 
     # Propagate sampler behavioral flags from scheduler.config into set_timesteps when supported
     config = getattr(scheduler, "config", {}) or {}
     for flag in ("use_karras_sigmas", "stochastic_sampling"):
-        if flag in accepted_params and flag not in filtered_kwargs and flag in config:
+        if (
+            flag in accepted_params
+            and flag not in filtered_kwargs
+            and flag in config
+        ):
             filtered_kwargs[flag] = config.get(flag)
-    
+
     if timesteps is not None and sigmas is not None:
-        raise ValueError("Only one of `timesteps` or `sigmas` can be passed. Please choose one to set custom values")
+        raise ValueError(
+            "Only one of `timesteps` or `sigmas` can be passed. Please choose one to set custom values"
+        )
     if timesteps is not None:
         accepts_timesteps = "timesteps" in accepted_params
         if not accepts_timesteps:
@@ -101,7 +112,9 @@ def retrieve_timesteps(
                 f"The current scheduler class {scheduler.__class__}'s `set_timesteps` does not support custom"
                 f" timestep schedules. Please check whether you are using the correct scheduler."
             )
-        scheduler.set_timesteps(timesteps=timesteps, device=device, **filtered_kwargs)
+        scheduler.set_timesteps(
+            timesteps=timesteps, device=device, **filtered_kwargs
+        )
         timesteps = scheduler.timesteps
         num_inference_steps = len(timesteps)
     elif sigmas is not None:
@@ -111,11 +124,15 @@ def retrieve_timesteps(
                 f"The current scheduler class {scheduler.__class__}'s `set_timesteps` does not support custom"
                 f" sigmas schedules. Please check whether you are using the correct scheduler."
             )
-        scheduler.set_timesteps(sigmas=sigmas, device=device, **filtered_kwargs)
+        scheduler.set_timesteps(
+            sigmas=sigmas, device=device, **filtered_kwargs
+        )
         timesteps = scheduler.timesteps
         num_inference_steps = len(timesteps)
     else:
-        scheduler.set_timesteps(num_inference_steps, device=device, **filtered_kwargs)
+        scheduler.set_timesteps(
+            num_inference_steps, device=device, **filtered_kwargs
+        )
         timesteps = scheduler.timesteps
     return timesteps, num_inference_steps
 
@@ -159,10 +176,18 @@ class ZImagePipeline(DiffusionPipeline, FromSingleFileMixin):
             text_encoder=text_encoder,
             tokenizer=tokenizer,
         )
-        self.vae_scale_factor = 2 ** (len(self.vae.config.block_out_channels) - 1) if getattr(self, "vae", None) else 8
-        self.image_processor = VaeImageProcessor(vae_scale_factor=self.vae_scale_factor)
+        self.vae_scale_factor = (
+            2 ** (len(self.vae.config.block_out_channels) - 1)
+            if getattr(self, "vae", None)
+            else 8
+        )
+        self.image_processor = VaeImageProcessor(
+            vae_scale_factor=self.vae_scale_factor
+        )
         self.tokenizer_max_length = (
-            self.tokenizer.model_max_length if hasattr(self, "tokenizer") and self.tokenizer is not None else 256
+            self.tokenizer.model_max_length
+            if hasattr(self, "tokenizer") and self.tokenizer is not None
+            else 256
         )
 
     def encode_prompt(
@@ -246,7 +271,11 @@ class ZImagePipeline(DiffusionPipeline, FromSingleFileMixin):
                 all_prompt_embeds.append(prompt_embed)
 
         # Repeat for num_images_per_prompt
-        all_prompt_embeds = [pe for pe in all_prompt_embeds for _ in range(num_images_per_prompt)]
+        all_prompt_embeds = [
+            pe
+            for pe in all_prompt_embeds
+            for _ in range(num_images_per_prompt)
+        ]
 
         return all_prompt_embeds
 
@@ -270,7 +299,8 @@ class ZImagePipeline(DiffusionPipeline, FromSingleFileMixin):
             )
 
         if callback_on_step_end_tensor_inputs is not None and not all(
-            k in self._callback_tensor_inputs for k in callback_on_step_end_tensor_inputs
+            k in self._callback_tensor_inputs
+            for k in callback_on_step_end_tensor_inputs
         ):
             raise ValueError(
                 f"`callback_on_step_end_tensor_inputs` has to be in {self._callback_tensor_inputs}, but found {[k for k in callback_on_step_end_tensor_inputs if k not in self._callback_tensor_inputs]}"
@@ -285,11 +315,17 @@ class ZImagePipeline(DiffusionPipeline, FromSingleFileMixin):
             raise ValueError(
                 "Provide either `prompt` or `prompt_embeds`. Cannot leave both `prompt` and `prompt_embeds` undefined."
             )
-        elif prompt is not None and (not isinstance(prompt, str) and not isinstance(prompt, list)):
-            raise ValueError(f"`prompt` has to be of type `str` or `list` but is {type(prompt)}")
+        elif prompt is not None and (
+            not isinstance(prompt, str) and not isinstance(prompt, list)
+        ):
+            raise ValueError(
+                f"`prompt` has to be of type `str` or `list` but is {type(prompt)}"
+            )
 
         if prompt_embeds is not None and max_sequence_length is not None:
-            raise ValueError("`max_sequence_length` cannot be provided when `prompt_embeds` is provided.")
+            raise ValueError(
+                "`max_sequence_length` cannot be provided when `prompt_embeds` is provided."
+            )
 
     def prepare_latents(
         self,
@@ -310,10 +346,14 @@ class ZImagePipeline(DiffusionPipeline, FromSingleFileMixin):
         shape = (batch_size, num_channels_latents, height, width)
 
         if latents is None:
-            latents = randn_tensor(shape, generator=generator, device=device, dtype=dtype)
+            latents = randn_tensor(
+                shape, generator=generator, device=device, dtype=dtype
+            )
         else:
             if latents.shape != shape:
-                raise ValueError(f"Unexpected latents shape, got {latents.shape}, expected {shape}")
+                raise ValueError(
+                    f"Unexpected latents shape, got {latents.shape}, expected {shape}"
+                )
             latents = latents.to(device)
         return latents
 
@@ -339,12 +379,16 @@ class ZImagePipeline(DiffusionPipeline, FromSingleFileMixin):
         sigmas: Optional[List[float]] = None,
         guidance_scale: float = 5.0,
         num_images_per_prompt: Optional[int] = 1,
-        generator: Optional[Union[torch.Generator, List[torch.Generator]]] = None,
+        generator: Optional[
+            Union[torch.Generator, List[torch.Generator]]
+        ] = None,
         latents: Optional[torch.Tensor] = None,
         prompt_embeds: Optional[torch.Tensor] = None,
         output_type: Optional[str] = "pil",
         return_dict: bool = True,
-        callback_on_step_end: Optional[Callable[[int, int, Dict], None]] = None,
+        callback_on_step_end: Optional[
+            Callable[[int, int, Dict], None]
+        ] = None,
         callback_on_step_end_tensor_inputs: List[str] = ["latents"],
         max_sequence_length: int = 128,
     ):
@@ -474,7 +518,9 @@ class ZImagePipeline(DiffusionPipeline, FromSingleFileMixin):
             sigmas=sigmas,
             mu=mu,
         )
-        num_warmup_steps = max(len(timesteps) - num_inference_steps * self.scheduler.order, 0)
+        num_warmup_steps = max(
+            len(timesteps) - num_inference_steps * self.scheduler.order, 0
+        )
         self._num_timesteps = len(timesteps)
 
         # Debug: capture scheduler timesteps/sigmas to verify sampler behavior
@@ -508,7 +554,9 @@ class ZImagePipeline(DiffusionPipeline, FromSingleFileMixin):
                 if apply_cfg:
                     latents_typed = latents.to(self.transformer.dtype)
                     latent_model_input = latents_typed.repeat(2, 1, 1, 1)
-                    prompt_embeds_model_input = prompt_embeds + uncond_prompt_embeds
+                    prompt_embeds_model_input = (
+                        prompt_embeds + uncond_prompt_embeds
+                    )
                     timestep_model_input = timestep.repeat(2)
                 else:
                     latent_model_input = latents.to(self.transformer.dtype)
@@ -517,7 +565,9 @@ class ZImagePipeline(DiffusionPipeline, FromSingleFileMixin):
 
                 # Add temporal dimension for transformer (5D input)
                 latent_model_input = latent_model_input.unsqueeze(2)
-                latent_model_input_list = list(latent_model_input.unbind(dim=0))
+                latent_model_input_list = list(
+                    latent_model_input.unbind(dim=0)
+                )
 
                 # Transformer forward pass
                 model_out_list = self.transformer(
@@ -538,29 +588,42 @@ class ZImagePipeline(DiffusionPipeline, FromSingleFileMixin):
                         noise_pred.append(pred)
                     noise_pred = torch.stack(noise_pred, dim=0)
                 else:
-                    noise_pred = torch.stack([out.float() for out in model_out_list], dim=0)
+                    noise_pred = torch.stack(
+                        [out.float() for out in model_out_list], dim=0
+                    )
 
                 # Remove temporal dimension from output
                 noise_pred = noise_pred.squeeze(2)
                 noise_pred = -noise_pred
 
                 # Compute the previous noisy sample x_t -> x_t-1
-                latents = self.scheduler.step(noise_pred.to(torch.float32), t, latents, return_dict=False)[0]
+                latents = self.scheduler.step(
+                    noise_pred.to(torch.float32), t, latents, return_dict=False
+                )[0]
                 assert latents.dtype == torch.float32
 
                 if callback_on_step_end is not None:
                     callback_kwargs = {}
                     for k in callback_on_step_end_tensor_inputs:
                         callback_kwargs[k] = locals()[k]
-                    callback_outputs = callback_on_step_end(self, i, t, callback_kwargs)
+                    callback_outputs = callback_on_step_end(
+                        self, i, t, callback_kwargs
+                    )
 
                     latents = callback_outputs.pop("latents", latents)
-                    prompt_embeds = callback_outputs.pop("prompt_embeds", prompt_embeds)
+                    prompt_embeds = callback_outputs.pop(
+                        "prompt_embeds", prompt_embeds
+                    )
                     if apply_cfg:
-                        uncond_prompt_embeds = callback_outputs.pop("negative_prompt_embeds", uncond_prompt_embeds)
+                        uncond_prompt_embeds = callback_outputs.pop(
+                            "negative_prompt_embeds", uncond_prompt_embeds
+                        )
 
                 # Call the callback, if provided
-                if i == len(timesteps) - 1 or ((i + 1) > num_warmup_steps and (i + 1) % self.scheduler.order == 0):
+                if i == len(timesteps) - 1 or (
+                    (i + 1) > num_warmup_steps
+                    and (i + 1) % self.scheduler.order == 0
+                ):
                     progress_bar.update()
 
         if output_type == "latent":
@@ -573,36 +636,48 @@ class ZImagePipeline(DiffusionPipeline, FromSingleFileMixin):
         # which can require ~1-2GB depending on image size.
         # Strategy: offload transformer to CPU to free GPU memory for VAE
         import gc
-        
+
         # Check available VRAM before decode
         _vram_tight = False
         if torch.cuda.is_available():
-            free_memory = torch.cuda.get_device_properties(0).total_memory - torch.cuda.memory_allocated(0)
+            free_memory = torch.cuda.get_device_properties(
+                0
+            ).total_memory - torch.cuda.memory_allocated(0)
             _vram_tight = free_memory < 2 * 1024**3  # Less than 2GB free
-        
+
         # If VRAM is tight, offload transformer to CPU temporarily
         _transformer_was_on_gpu = False
-        if _vram_tight and hasattr(self, 'transformer') and self.transformer is not None:
+        if (
+            _vram_tight
+            and hasattr(self, "transformer")
+            and self.transformer is not None
+        ):
             try:
                 # Check if transformer is on GPU
-                if hasattr(self.transformer, 'device') and str(self.transformer.device).startswith('cuda'):
+                if hasattr(self.transformer, "device") and str(
+                    self.transformer.device
+                ).startswith("cuda"):
                     _transformer_was_on_gpu = True
-                    self.transformer.to('cpu')
+                    self.transformer.to("cpu")
                     gc.collect()
                     torch.cuda.empty_cache()
             except Exception:
                 pass  # If offload fails, continue anyway
-        
+
         # Clear GPU memory caches
         gc.collect()
         if torch.cuda.is_available():
             torch.cuda.empty_cache()
             torch.cuda.synchronize()
-        
+
         latents = latents.to(self.vae.dtype)
-        latents = (latents / self.vae.config.scaling_factor) + self.vae.config.shift_factor
+        latents = (
+            latents / self.vae.config.scaling_factor
+        ) + self.vae.config.shift_factor
         image = self.vae.decode(latents, return_dict=False)[0]
-        images = self.image_processor.postprocess(image, output_type=output_type)
+        images = self.image_processor.postprocess(
+            image, output_type=output_type
+        )
 
         # Offload all models
         self.maybe_free_model_hooks()

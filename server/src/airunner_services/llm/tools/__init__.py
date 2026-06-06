@@ -18,7 +18,7 @@ from airunner_services.llm.tools import (
     # Phase 2: Mode-specific tools
     author_tools,
     research_validation_tools,  # URL, content, and temporal validation for research
-    research_rag_tools,  # RAG-based research tools (search, summaries)
+    research_rag_tools as _,  # noqa: F401 — RAG-based research tools
     qa_tools,
 )
 from airunner_services.tools import web_tools

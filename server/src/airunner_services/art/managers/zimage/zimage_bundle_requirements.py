@@ -13,7 +13,6 @@ from airunner_services.database.bootstrap.sd_file_bootstrap_data import (
     SD_FILE_BOOTSTRAP_DATA,
 )
 
-
 ZIMAGE_LOAD_MODES = (
     "native_fp8_single_file",
     "single_file_checkpoint",
@@ -26,7 +25,9 @@ _TEXT_ENCODER_CONFIG = "text_encoder/config.json"
 _TEXT_ENCODER_INDEX = "text_encoder/model.safetensors.index.json"
 _TEXT_ENCODER_MERGED = "text_encoder/model.safetensors"
 _TRANSFORMER_CONFIG = "transformer/config.json"
-_TRANSFORMER_INDEX = "transformer/diffusion_pytorch_model.safetensors.index.json"
+_TRANSFORMER_INDEX = (
+    "transformer/diffusion_pytorch_model.safetensors.index.json"
+)
 _TRANSFORMER_MERGED = "transformer/diffusion_pytorch_model.safetensors"
 _SCHEDULER_CONFIG = "scheduler/scheduler_config.json"
 _TOKENIZER_FILES = (
@@ -70,7 +71,9 @@ def find_checkpoint_candidates(model_path: Path) -> list[Path]:
     if not bundle_dir.is_dir():
         return []
     return sorted(
-        path for path in bundle_dir.iterdir() if path.is_file() and looks_like_single_file(path)
+        path
+        for path in bundle_dir.iterdir()
+        if path.is_file() and looks_like_single_file(path)
     )
 
 
@@ -79,7 +82,9 @@ def find_active_checkpoint(model_path: Path) -> Path | None:
     if looks_like_single_file(model_path):
         return model_path if model_path.exists() else None
     candidates = find_checkpoint_candidates(model_path)
-    return next((path for path in candidates if detect_fp8_checkpoint(path)), None)
+    return next(
+        (path for path in candidates if detect_fp8_checkpoint(path)), None
+    )
 
 
 def detect_fp8_checkpoint(model_path: Path) -> bool:
@@ -115,11 +120,28 @@ def get_required_files_for_mode(
     tokenizer = list(_TOKENIZER_FILES)
     vae_files = list(_VAE_FILES)
     if active_mode == "native_fp8_single_file":
-        return _dedupe([model_path.name, _TEXT_ENCODER_CONFIG] + text_encoder + tokenizer + vae_files)
+        return _dedupe(
+            [model_path.name, _TEXT_ENCODER_CONFIG]
+            + text_encoder
+            + tokenizer
+            + vae_files
+        )
     if active_mode == "single_file_checkpoint":
-        return _dedupe([model_path.name, _TEXT_ENCODER_CONFIG] + text_encoder + tokenizer + vae_files)
+        return _dedupe(
+            [model_path.name, _TEXT_ENCODER_CONFIG]
+            + text_encoder
+            + tokenizer
+            + vae_files
+        )
     transformer = _resolve_transformer_weight_files(bundle_dir)
-    return _dedupe([_TRANSFORMER_CONFIG] + transformer + [_TEXT_ENCODER_CONFIG] + text_encoder + tokenizer + vae_files)
+    return _dedupe(
+        [_TRANSFORMER_CONFIG]
+        + transformer
+        + [_TEXT_ENCODER_CONFIG]
+        + text_encoder
+        + tokenizer
+        + vae_files
+    )
 
 
 def get_optional_used_files_for_mode(
@@ -132,7 +154,9 @@ def get_optional_used_files_for_mode(
     if active_mode == "native_fp8_single_file":
         return []
     if active_mode == "single_file_checkpoint":
-        return _existing_files(bundle_dir, [_TRANSFORMER_CONFIG, _SCHEDULER_CONFIG])
+        return _existing_files(
+            bundle_dir, [_TRANSFORMER_CONFIG, _SCHEDULER_CONFIG]
+        )
     return _existing_files(bundle_dir, [_SCHEDULER_CONFIG])
 
 
@@ -143,7 +167,11 @@ def get_missing_files_for_mode(
     """Return missing runtime files for the requested Z-Image load mode."""
     bundle_dir = get_bundle_dir(model_path)
     required = get_required_files_for_mode(model_path, mode)
-    return [file_name for file_name in required if not (bundle_dir / file_name).exists()]
+    return [
+        file_name
+        for file_name in required
+        if not (bundle_dir / file_name).exists()
+    ]
 
 
 def get_downloadable_files_for_mode(
@@ -188,7 +216,11 @@ def list_archived_files(model_path: Path) -> list[str]:
     archive_dir = bundle_dir / ARCHIVE_DIR_NAME
     if not archive_dir.is_dir():
         return []
-    return sorted(_relative_paths(bundle_dir, archive_dir.rglob("*"), include_archived=True))
+    return sorted(
+        _relative_paths(
+            bundle_dir, archive_dir.rglob("*"), include_archived=True
+        )
+    )
 
 
 def get_unused_files_for_mode(
@@ -276,7 +308,9 @@ def _index_weight_files(index_path: Path, prefix: str) -> list[str]:
 
 def _existing_files(bundle_dir: Path, files: list[str]) -> list[str]:
     """Return files from the list that exist inside the bundle directory."""
-    return [file_name for file_name in files if (bundle_dir / file_name).exists()]
+    return [
+        file_name for file_name in files if (bundle_dir / file_name).exists()
+    ]
 
 
 def _relative_paths(

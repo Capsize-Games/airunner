@@ -14,7 +14,6 @@ from airunner_services.database.models.application_settings import (
     ApplicationSettings,
 )
 
-
 # revision identifiers, used by Alembic.
 revision: str = "f0b1f4cf8f41"
 down_revision: Union[str, None] = "f480bbc9acdb"

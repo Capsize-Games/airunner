@@ -40,12 +40,10 @@ class TTSModelManager(MediatorMixin):
     def __init__(
         self,
         *args: object,
-        api: Optional[object] = None,
         **kwargs: object,
     ) -> None:
         self.signal_handlers = {}
         self.logger = get_logger(self.__class__.__name__, AIRUNNER_LOG_LEVEL)
-        self.api = api or self._resolve_api_reference()
         self._model_status = {
             ModelType.TTS: ModelStatus.UNLOADED,
             ModelType.TTS_PROCESSOR: ModelStatus.UNLOADED,
@@ -60,17 +58,6 @@ class TTSModelManager(MediatorMixin):
         self._model = None
         self._processor = None
         super().__init__(*args, **kwargs)
-
-    def _resolve_api_reference(self) -> Optional[object]:
-        """Resolve the registered service API for this manager."""
-        return peek_registered_api()
-
-    def refresh_api_reference(self) -> Optional[object]:
-        """Refresh one stale cached API reference when possible."""
-        live_api = self._resolve_api_reference()
-        if live_api is not None:
-            self.api = live_api
-        return getattr(self, "api", None)
 
     def _load_settings(self, model_cls: type[Any]) -> Any:
         """Load one settings row, creating or defaulting when needed."""
@@ -137,7 +124,7 @@ class TTSModelManager(MediatorMixin):
             )
             return
 
-        api_ref = self.refresh_api_reference()
+        api_ref = peek_registered_api()
         notify = getattr(api_ref, "change_model_status", None)
         if callable(notify):
             try:

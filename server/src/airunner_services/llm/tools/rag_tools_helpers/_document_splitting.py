@@ -115,8 +115,7 @@ def select_evenly_spaced_items(items: list[Any], limit: int) -> list[Any]:
 
     last_index = len(items) - 1
     return [
-        items[int(index * last_index / (limit - 1))]
-        for index in range(limit)
+        items[int(index * last_index / (limit - 1))] for index in range(limit)
     ]
 
 

@@ -14,7 +14,6 @@ from llm_functional_support import llm_artifact_path
 from llm_functional_support import started_daemon
 from llm_functional_support import visible_last_number
 
-
 _MODEL_IDS = ["qwen3.5-9b", "gpt-oss-20b"]
 _TOOL_FLOW_MODEL_IDS = ["qwen3.5-9b", "gpt-oss-20b"]
 
@@ -87,6 +86,7 @@ def test_agent_forced_math_tool_flow(model_id: str) -> None:
             expected={"python_compute"},
             log_path=daemon.log_path,
         )
-        assert visible_last_number(str(result.payload.get("message") or "")) == "156", (
-            result.payload
-        )
+        assert (
+            visible_last_number(str(result.payload.get("message") or ""))
+            == "156"
+        ), result.payload

@@ -8,11 +8,8 @@ Create Date: 2025-10-28 09:10:18.321490
 
 from typing import Sequence, Union
 
-from alembic import op
-import sqlalchemy as sa
 from airunner_services.database.db import add_table, drop_table
 from airunner_services.database.models.agent_config import AgentConfig
-
 
 # revision identifiers, used by Alembic.
 revision: str = "310819639420"

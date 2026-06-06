@@ -5,12 +5,9 @@ ControlNet request construction and validation utilities for Stable Diffusion ha
 from typing import Optional, Any
 from dataclasses import dataclass
 
-from typing import Optional
-from dataclasses import dataclass
 
 from airunner_services.settings import AIRUNNER_LOG_LEVEL
 from airunner_services.utils.application import get_logger
-
 
 logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 

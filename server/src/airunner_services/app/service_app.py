@@ -1,4 +1,4 @@
-"""Service-owned headless application shell for daemon execution."""
+"""Service-owned application shell for daemon execution."""
 
 from __future__ import annotations
 
@@ -8,62 +8,57 @@ from airunner_services.startup_env import (
     configure_early_torch_allocator_environment,
 )
 
-
 configure_early_torch_allocator_environment()
 
-from airunner_services.contract_enums import (
+from airunner_services.contract_enums import (  # noqa: E402
     EngineResponseCode,
     ModelStatus,
     ModelType,
     SignalCode,
 )
-from airunner_services.settings import AIRUNNER_LOG_LEVEL
-from airunner_services.utils.application import get_logger
-from airunner_services.utils.application.log_hygiene import summarize_text
-from airunner_services.utils.application.logging_utils import configure_headless_logging
-from airunner_services.utils.application.mediator_mixin import MediatorMixin
-from airunner_services.utils.application.runtime_primitives import (
+from airunner_services.settings import AIRUNNER_LOG_LEVEL  # noqa: E402
+from airunner_services.utils.application import get_logger  # noqa: E402
+from airunner_services.utils.application.log_hygiene import (
+    summarize_text,
+)  # noqa: E402
+from airunner_services.utils.application.logging_utils import (
+    configure_service_logging,
+)  # noqa: E402
+from airunner_services.utils.application.mediator_mixin import (
+    MediatorMixin,
+)  # noqa: E402
+from airunner_services.utils.application.runtime_primitives import (  # noqa: E402
     QCoreApplication,
 )
 
-from airunner_services.app.headless_runtime_mixin import HeadlessRuntimeMixin
-from airunner_services.runtimes.bootstrap import build_runtime_registry
+from airunner_services.app.runtime_mixin import RuntimeMixin  # noqa: E402
+from airunner_services.runtimes.bootstrap import (
+    build_runtime_registry,
+)  # noqa: E402
 
 
-class ServiceApp(HeadlessRuntimeMixin, MediatorMixin):
-    """Minimal headless app shell used by service and daemon flows."""
+class ServiceApp(RuntimeMixin, MediatorMixin):
+    """Minimal app shell used by service and daemon flows."""
 
     def __init__(
         self,
-        *,
-        headless: bool = True,
-        no_splash: bool = True,
-        launcher_splash: object = None,
-        launcher_app: object = None,
-        start_headless_api_server: bool = True,
-        initialize_headless_lifecycle: bool = True,
+        initialize_lifecycle: bool = True,
+        start_embedded_api_server: bool = True,
         **_: object,
     ) -> None:
-        if not headless:
-            raise ValueError("ServiceApp only supports headless mode.")
-
-        self.headless = True
-        self.no_splash = no_splash
-        self._launcher_splash = launcher_splash
-        self._launcher_app = launcher_app
-        self._start_headless_api_server = start_headless_api_server
-        self._initialize_headless_lifecycle = initialize_headless_lifecycle
         self.signal_handlers = {}
+        self._initialize_lifecycle = initialize_lifecycle
+        self._start_embedded_api_server = start_embedded_api_server
         self._init_attributes()
         super().__init__()
         self.runtime_registry = build_runtime_registry(app_instance=self)
 
-        self._init_headless_mode()
+        self._init_service_mode()
         self._initialize_knowledge_system()
 
     def _init_attributes(self) -> None:
-        """Initialize service-owned attributes for headless execution."""
-        configure_headless_logging()
+        """Initialize service-owned attributes ."""
+        configure_service_logging()
         self.logger = get_logger(__name__, level=AIRUNNER_LOG_LEVEL)
         self.app = None
         self.splash = None
@@ -99,7 +94,7 @@ class ServiceApp(HeadlessRuntimeMixin, MediatorMixin):
         code: EngineResponseCode,
         message: object,
     ) -> None:
-        """Emit one worker response for headless-compatible flows."""
+        """Emit one worker response for  flows."""
         self.emit_signal(
             SignalCode.ENGINE_RESPONSE_WORKER_RESPONSE_SIGNAL,
             {"code": code, "message": message},
@@ -174,7 +169,7 @@ class ServiceApp(HeadlessRuntimeMixin, MediatorMixin):
         self.emit_signal(SignalCode.QUIT_APPLICATION, {})
 
     def cleanup(self) -> None:
-        """Release headless resources owned by the service app shell."""
+        """Release resources owned by the service app shell."""
         if self._cleaned_up:
             return
 
@@ -207,17 +202,6 @@ class ServiceApp(HeadlessRuntimeMixin, MediatorMixin):
     @staticmethod
     def signal_handler(_signal: int, _frame: object) -> None:
         """Handle SIGINT and SIGTERM without abrupt process exit."""
-        try:
-            from airunner_services.api.legacy_server import get_api
-
-            api = get_api(create_if_missing=False)
-            if api is not None:
-                cleanup = getattr(api, "cleanup", None)
-                if callable(cleanup):
-                    cleanup()
-        except Exception:
-            pass
-
         try:
             qt_app = QCoreApplication.instance()
             if qt_app is not None:

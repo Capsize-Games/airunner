@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-
 ESPEAK_SETTINGS_DATA = {
     "voices": {
         "Male": [

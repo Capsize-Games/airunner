@@ -42,7 +42,7 @@ def upgrade() -> None:
             sa.Column("created_at", sa.DateTime()),
             sa.Column("message_count", sa.Integer(), default=0),
         )
-    
+
     if "knowledge_facts" not in existing_tables:
         op.create_table(
             "knowledge_facts",

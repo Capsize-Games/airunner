@@ -33,9 +33,16 @@ _watcher_started = False
 _watcher_observer: _Observer | None = None
 
 # Model file extensions relevant for art and LLM models.
-MODEL_EXTENSIONS = frozenset({
-    ".safetensors", ".gguf", ".ckpt", ".pt", ".bin", ".pth",
-})
+MODEL_EXTENSIONS = frozenset(
+    {
+        ".safetensors",
+        ".gguf",
+        ".ckpt",
+        ".pt",
+        ".bin",
+        ".pth",
+    }
+)
 
 
 def _discover_watch_dirs() -> list[Path]:
@@ -75,7 +82,9 @@ class _ModelFileHandler(FileSystemEventHandler):
             dest.lower().endswith(tuple(MODEL_EXTENSIONS))
         ):
             logger.debug(
-                "Model watch move event: %s -> %s", src, dest,
+                "Model watch move event: %s -> %s",
+                src,
+                dest,
             )
             _notify_subscribers()
 
@@ -121,8 +130,7 @@ def _start_watcher() -> None:
     observer.start()
     _watcher_observer = observer
     logger.info(
-        "Model file watcher started — "
-        "monitoring %d director%s",
+        "Model file watcher started — " "monitoring %d director%s",
         len(dirs),
         "ies" if len(dirs) != 1 else "y",
     )

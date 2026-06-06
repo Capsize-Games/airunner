@@ -41,7 +41,8 @@ def _create_openrouter_runtime(
     )
     return create_openrouter_model(
         api_key=api_key,
-        model_name=provider_runtime.model_name or "mistralai/mistral-7b-instruct",
+        model_name=provider_runtime.model_name
+        or "mistralai/mistral-7b-instruct",
         temperature=provider_runtime.temperature,
         max_tokens=provider_runtime.max_tokens,
     )

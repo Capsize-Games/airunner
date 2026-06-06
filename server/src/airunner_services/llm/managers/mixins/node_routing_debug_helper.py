@@ -24,19 +24,29 @@ class NodeRoutingDebugHelper:
     ) -> None:
         """Log the routing state for one workflow turn."""
         forced_helper = self._owner._get_forced_response_helper()
-        self._owner.logger.debug("Last message type: %s", type(last_message).__name__)
+        self._owner.logger.debug(
+            "Last message type: %s", type(last_message).__name__
+        )
         self._owner.logger.debug(
             "Has tool_calls attribute: %s",
             hasattr(last_message, "tool_calls"),
         )
         if hasattr(last_message, "tool_calls"):
-            self._owner.logger.debug("tool_calls value: %s", last_message.tool_calls)
+            self._owner.logger.debug(
+                "tool_calls value: %s", last_message.tool_calls
+            )
         if hasattr(last_message, "content"):
-            content_preview = last_message.content[:300] if last_message.content else "None"
-            self._owner.logger.debug("Message content preview: %s", content_preview)
+            content_preview = (
+                last_message.content[:300] if last_message.content else "None"
+            )
+            self._owner.logger.debug(
+                "Message content preview: %s", content_preview
+            )
         tool_messages = forced_helper.get_tool_messages(messages)
         ai_messages = [
-            message for message in messages if message.__class__.__name__ == "AIMessage"
+            message
+            for message in messages
+            if message.__class__.__name__ == "AIMessage"
         ]
         self._owner.logger.debug(
             "Routing: has_tool_calls=%s, message_type=%s",
@@ -55,11 +65,15 @@ class NodeRoutingDebugHelper:
         messages: List[BaseMessage],
     ) -> bool:
         """Return whether the latest tool call duplicates a recent one."""
-        tool_messages = self._owner._get_forced_response_helper().get_tool_messages(
-            messages
+        tool_messages = (
+            self._owner._get_forced_response_helper().get_tool_messages(
+                messages
+            )
         )
         ai_messages = [
-            message for message in messages if message.__class__.__name__ == "AIMessage"
+            message
+            for message in messages
+            if message.__class__.__name__ == "AIMessage"
         ]
         if not tool_messages or len(ai_messages) < 2:
             return False
@@ -84,9 +98,12 @@ class NodeRoutingDebugHelper:
         """Return previous tool-call identities from AI messages."""
         previous_tool_calls = []
         if max_last_messages is not None and max_last_messages > 0:
-            ai_messages = ai_messages[-(max_last_messages + 1):]
+            ai_messages = ai_messages[-(max_last_messages + 1) :]
         for index, ai_message in enumerate(ai_messages[:-1]):
-            if not hasattr(ai_message, "tool_calls") or not ai_message.tool_calls:
+            if (
+                not hasattr(ai_message, "tool_calls")
+                or not ai_message.tool_calls
+            ):
                 continue
             for tool_call in ai_message.tool_calls:
                 previous_tool_calls.append(
@@ -111,7 +128,9 @@ class NodeRoutingDebugHelper:
         for previous_tool_call in previous_tool_calls:
             if tool_call_identity_key(previous_tool_call) != current_identity:
                 continue
-            self.log_duplicate_detection(current_name, current_args, tool_messages)
+            self.log_duplicate_detection(
+                current_name, current_args, tool_messages
+            )
             return True
         return False
 
@@ -133,7 +152,9 @@ class NodeRoutingDebugHelper:
         )
         if not tool_messages:
             return
-        last_tool_content = tool_messages[-1].content if tool_messages[-1].content else ""
+        last_tool_content = (
+            tool_messages[-1].content if tool_messages[-1].content else ""
+        )
         self._owner.logger.info(
             "   Previous tool results available: %s chars",
             len(last_tool_content),
@@ -145,14 +166,18 @@ class NodeRoutingDebugHelper:
         messages: List[BaseMessage],
     ) -> None:
         """Log the requested tool calls and previous tool result preview."""
-        tool_names = [tool_call.get("name") for tool_call in last_message.tool_calls]
+        tool_names = [
+            tool_call.get("name") for tool_call in last_message.tool_calls
+        ]
         self._owner.logger.info(
             "Model requested %s tool calls: %s",
             len(last_message.tool_calls),
             tool_names,
         )
-        tool_messages = self._owner._get_forced_response_helper().get_tool_messages(
-            messages
+        tool_messages = (
+            self._owner._get_forced_response_helper().get_tool_messages(
+                messages
+            )
         )
         if not tool_messages:
             return
@@ -160,7 +185,9 @@ class NodeRoutingDebugHelper:
         if not hasattr(last_tool_result, "content"):
             return
         result_content = last_tool_result.content
-        result_preview = result_content[:200] if result_content else "No content"
+        result_preview = (
+            result_content[:200] if result_content else "No content"
+        )
         self._owner.logger.info(
             "📋 Previous tool result length: %s chars, preview: %s...",
             len(result_content),

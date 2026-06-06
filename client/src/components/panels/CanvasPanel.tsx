@@ -1,4 +1,4 @@
-import { useRef, useState, useCallback } from "react";
+import { useRef, useState, useCallback, useEffect } from "react";
 import Konva from "konva";
 import {
   useCanvasContext,
@@ -15,6 +15,10 @@ import ImageDropModal, {
 } from "../../features/canvas/ImageDropModal";
 import CanvasLayersSidebar from "../../features/canvas/CanvasLayersSidebar";
 import CanvasStatusBar from "./canvas/CanvasStatusBar";
+import ArtPromptPanel from "./ArtPromptPanel";
+import ArtModelPanel from "./ArtModelPanel";
+import SeedControls from "./art-model/SeedControls";
+import LucideIcon from "../shared/LucideIcon";
 import { useCanvasImageDrop } from "./canvas/useCanvasImageDrop";
 
 export default function CanvasPanel() {
@@ -30,7 +34,118 @@ export default function CanvasPanel() {
   const [gridLocked, setGridLocked] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showNewDocModal, setShowNewDocModal] = useState(false);
-  const [showLayers, setShowLayers] = useState(true);
+  const [showLayers, setShowLayers] = useState(() => {
+    try {
+      return localStorage.getItem("canvas_show_layers") !== "false";
+    } catch {
+      return true;
+    }
+  });
+  const [showArtPanel, setShowArtPanel] = useState(() => {
+    try {
+      return localStorage.getItem("canvas_show_art_panel") !== "false";
+    } catch {
+      return true;
+    }
+  });
+
+  const [artPromptW, setArtPromptW] = useState(() => {
+    try {
+      const v = localStorage.getItem("canvas_art_prompt_w");
+      return v !== null ? Number(v) : 260;
+    } catch {
+      return 260;
+    }
+  });
+  const artPromptDrag = useRef(false);
+  const artPromptStartX = useRef(0);
+  const artPromptStartW = useRef(0);
+
+  const handleArtPromptResize = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    artPromptDrag.current = true;
+    artPromptStartX.current = e.clientX;
+    artPromptStartW.current = artPromptW;
+    document.body.style.cursor = "col-resize";
+    document.body.style.userSelect = "";
+
+    const onMove = (ev: MouseEvent) => {
+      if (!artPromptDrag.current) return;
+      const delta = ev.clientX - artPromptStartX.current;
+      const newW = Math.max(180, Math.min(500, artPromptStartW.current - delta));
+      setArtPromptW(newW);
+    };
+
+    const onUp = () => {
+      artPromptDrag.current = false;
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
+    };
+
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+  }, [artPromptW]);
+
+  const [showArtModelSettings, setShowArtModelSettings] = useState(() => {
+    try {
+      return localStorage.getItem("canvas_show_art_model_settings") !== "false";
+    } catch {
+      return true;
+    }
+  });
+  const [artModelSettingsH, setArtModelSettingsH] = useState(() => {
+    try {
+      const v = localStorage.getItem("canvas_art_model_settings_h");
+      return v !== null ? Number(v) : 200;
+    } catch {
+      return 200;
+    }
+  });
+  const [collapsedSeed, setCollapsedSeed] = useState(() => {
+    try {
+      const v = localStorage.getItem("airunner_seed");
+      return v !== null ? Number(v) : 0;
+    } catch { return 0; }
+  });
+  const [collapsedSeedRandomized, setCollapsedSeedRandomized] = useState(
+    () => collapsedSeed === -1,
+  );
+  const artModelSettingsDrag = useRef(false);
+  const artModelSettingsStartY = useRef(0);
+  const artModelSettingsStartH = useRef(0);
+
+  const handleArtModelSettingsResize = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    artModelSettingsDrag.current = true;
+    artModelSettingsStartY.current = e.clientY;
+    artModelSettingsStartH.current = artModelSettingsH;
+    document.body.style.cursor = "row-resize";
+    document.body.style.userSelect = "";
+
+    const onMove = (ev: MouseEvent) => {
+      if (!artModelSettingsDrag.current) return;
+      const delta = ev.clientY - artModelSettingsStartY.current;
+      const parent = (ev.target as HTMLElement).closest(
+        "[data-art-panel]",
+      ) as HTMLElement | null;
+      const maxH = parent ? parent.clientHeight - 100 : 600;
+      const newH = Math.max(120, Math.min(maxH, artModelSettingsStartH.current - delta));
+      setArtModelSettingsH(newH);
+    };
+
+    const onUp = () => {
+      artModelSettingsDrag.current = false;
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
+    };
+
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+  }, [artModelSettingsH]);
 
   const [dock, setDock] = useState<ToolbarDock>(() =>
     (localStorage.getItem("canvas_toolbar_dock") as ToolbarDock | null) ?? "top",
@@ -139,6 +254,22 @@ export default function CanvasPanel() {
     [canvas],
   );
 
+  useEffect(() => {
+    try { localStorage.setItem("canvas_show_layers", String(showLayers)); } catch { /* */ }
+  }, [showLayers]);
+  useEffect(() => {
+    try { localStorage.setItem("canvas_show_art_panel", String(showArtPanel)); } catch { /* */ }
+  }, [showArtPanel]);
+  useEffect(() => {
+    try { localStorage.setItem("canvas_show_art_model_settings", String(showArtModelSettings)); } catch { /* */ }
+  }, [showArtModelSettings]);
+  useEffect(() => {
+    try { localStorage.setItem("canvas_art_model_settings_h", String(artModelSettingsH)); } catch { /* */ }
+  }, [artModelSettingsH]);
+  useEffect(() => {
+    try { localStorage.setItem("canvas_art_prompt_w", String(artPromptW)); } catch { /* */ }
+  }, [artPromptW]);
+
   if (!isLoaded) {
     return (
       <div className="canvas-panel d-flex align-items-center justify-content-center h-100">
@@ -180,6 +311,8 @@ export default function CanvasPanel() {
     hasMaskStrokes: canvas.maskStrokes.length > 0,
     showLayers,
     onToggleLayers: () => setShowLayers((v) => !v),
+    showArtPanel,
+    onToggleArtPanel: () => setShowArtPanel((v) => !v),
   };
 
   return (
@@ -233,6 +366,208 @@ export default function CanvasPanel() {
             />
           </div>
           {showLayers && <CanvasLayersSidebar />}
+          {showArtPanel && (
+            <div
+              style={{
+                width: artPromptW,
+                flexShrink: 0,
+                display: "flex",
+                flexDirection: "row",
+                overflow: "hidden",
+              }}
+            >
+              <div
+                onMouseDown={handleArtPromptResize}
+                style={{
+                  width: 4,
+                  cursor: "col-resize",
+                  flexShrink: 0,
+                  background: "transparent",
+                  transition: "background 0.15s",
+                }}
+                onMouseEnter={(e) => {
+                  (e.currentTarget as HTMLDivElement).style.background =
+                    "rgba(99,153,255,0.3)";
+                }}
+                onMouseLeave={(e) => {
+                  if (!artPromptDrag.current) {
+                    (e.currentTarget as HTMLDivElement).style.background =
+                      "transparent";
+                  }
+                }}
+              />
+              <div
+                data-art-panel
+                style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", overflow: "hidden" }}
+              >
+                <div className="art-prompt-panel" style={{ flex: 1, overflow: "auto" }}>
+                  <ArtPromptPanel />
+                </div>
+                {showArtModelSettings && (
+                  <div
+                    onMouseDown={handleArtModelSettingsResize}
+                    style={{
+                      height: 4,
+                      cursor: "row-resize",
+                      flexShrink: 0,
+                      background: "transparent",
+                      transition: "background 0.15s",
+                    }}
+                    onMouseEnter={(e) => {
+                      (e.currentTarget as HTMLDivElement).style.background =
+                        "rgba(99,153,255,0.3)";
+                    }}
+                    onMouseLeave={(e) => {
+                      if (!artModelSettingsDrag.current) {
+                        (e.currentTarget as HTMLDivElement).style.background =
+                          "transparent";
+                      }
+                    }}
+                  />
+                )}
+                {showArtModelSettings ? (
+                  <div style={{ overflow: "auto", height: artModelSettingsH, flexShrink: 0 }}>
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        padding: "4px 8px",
+                        borderBottom: "1px solid rgba(255,255,255,0.07)",
+                        fontSize: 11,
+                        color: "rgba(255,255,255,0.45)",
+                      }}
+                    >
+                      <span>Model Settings</span>
+                      <button
+                        type="button"
+                        onClick={() => setShowArtModelSettings(false)}
+                        title="Hide model settings"
+                        style={{
+                          background: "transparent",
+                          border: "1px solid #555",
+                          borderRadius: 4,
+                          width: 22,
+                          height: 22,
+                          padding: 0,
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          cursor: "pointer",
+                          color: "#ccc",
+                          fontSize: 12,
+                          lineHeight: 1,
+                        }}
+                        onMouseEnter={(e) => {
+                          (e.currentTarget as HTMLButtonElement).style.background
+                            = "rgba(255,255,255,0.1)";
+                        }}
+                        onMouseLeave={(e) => {
+                          (e.currentTarget as HTMLButtonElement).style.background
+                            = "transparent";
+                        }}
+                      >
+                        <LucideIcon name="circle-x" size={12} />
+                      </button>
+                    </div>
+                    <ArtModelPanel />
+                  </div>
+                ) : (
+                  <div style={{ flexShrink: 0 }}>
+                    <div
+                      style={{
+                        borderTop: "1px solid rgba(255,255,255,0.07)",
+                        padding: "6px 8px",
+                        fontSize: 11,
+                        color: "rgba(255,255,255,0.35)",
+                        display: "flex",
+                        alignItems: "flex-start",
+                        gap: 6,
+                      }}
+                    >
+                      <LucideIcon name="sparkles" size={12} />
+                      <span style={{
+                        flex: 1, minWidth: 0,
+                        lineHeight: 1.5,
+                        whiteSpace: "pre-line",
+                      }}>
+                        {(() => {
+                          const _ls = (k: string, fb = "") => {
+                            try { return localStorage.getItem(k) || fb; } catch { return fb; }
+                          };
+                          const v = _ls("airunner_art_version");
+                          const m = _ls("airunner_art_model");
+                          const short = m ? m.split(/[/\\]/).pop() || m : "";
+                          const s = _ls("n_samples", "1");
+                          const b = _ls("images_per_batch", "1");
+                          const st = _ls("steps", "20");
+                          const c = _ls("cfg_scale", "7.5");
+                          if (v && short) {
+                            return `${v} · ${short}\nSamples: ${s} · Batch: ${b} · Steps: ${st} · CFG: ${c}`;
+                          }
+                          return "No model selected";
+                        })()}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setShowArtModelSettings(true)}
+                        title="Show model settings"
+                        style={{
+                          background: "transparent",
+                          border: "1px solid #555",
+                          borderRadius: 4,
+                          width: 22,
+                          height: 22,
+                          padding: 0,
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          cursor: "pointer",
+                          color: "#ccc",
+                          flexShrink: 0,
+                          marginTop: 0,
+                          transition: "background 0.15s",
+                        }}
+                        onMouseEnter={(e) => {
+                          (e.currentTarget as HTMLButtonElement).style.background
+                            = "rgba(255,255,255,0.1)";
+                        }}
+                        onMouseLeave={(e) => {
+                          (e.currentTarget as HTMLButtonElement).style.background
+                            = "transparent";
+                        }}
+                      >
+                        <LucideIcon name="sliders-horizontal" size={12} />
+                      </button>
+                    </div>
+                    <div style={{ padding: "4px 8px 6px", borderTop: "1px solid rgba(255,255,255,0.04)" }}>
+                      <SeedControls
+                        seed={collapsedSeed}
+                        seedRandomized={collapsedSeedRandomized}
+                        loading={false}
+                        onSeedChange={(v) => {
+                          setCollapsedSeed(v);
+                          setCollapsedSeedRandomized(false);
+                          try { localStorage.setItem("airunner_seed", String(v)); } catch {}
+                        }}
+                        onToggleRandom={() => {
+                          if (collapsedSeedRandomized) {
+                            setCollapsedSeedRandomized(false);
+                            try { localStorage.setItem("airunner_seed", String(collapsedSeed)); } catch {}
+                          } else {
+                            const s = Math.floor(Math.random() * 2147483647) + 1;
+                            setCollapsedSeedRandomized(true);
+                            setCollapsedSeed(s);
+                            try { localStorage.setItem("airunner_seed", String(-1)); } catch {}
+                          }
+                        }}
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Status bar */}

@@ -1,4 +1,4 @@
-"""Service-owned worker container for daemon and headless execution."""
+"""Service-owned worker container for daemon and daemon execution."""
 
 from __future__ import annotations
 
@@ -33,22 +33,18 @@ class ServiceWorkerManager:
                 ImageExportWorker,
             )
 
-            self._image_export_worker = self._worker_factory(
-                ImageExportWorker
-            )
+            self._image_export_worker = self._worker_factory(ImageExportWorker)
         return self._image_export_worker
 
     @property
     def llm_generate_worker(self) -> Any:
-        """Return the shared LLM worker for headless orchestration."""
+        """Return the shared LLM worker for orchestration."""
         if self._llm_generate_worker is None:
             from airunner_services.workers.llm_generate_worker import (
                 LLMGenerateWorker,
             )
 
-            self._llm_generate_worker = self._worker_factory(
-                LLMGenerateWorker
-            )
+            self._llm_generate_worker = self._worker_factory(LLMGenerateWorker)
         return self._llm_generate_worker
 
     @property

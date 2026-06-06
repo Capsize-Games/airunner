@@ -5,6 +5,7 @@ Revises: c42b9a3d807a
 Create Date: 2025-11-11 05:27:57.681114
 
 """
+
 from typing import Sequence, Union
 
 from airunner_services.database.db import add_column
@@ -12,10 +13,9 @@ from airunner_services.database.models.application_settings import (
     ApplicationSettings,
 )
 
-
 # revision identifiers, used by Alembic.
-revision: str = '20c05328cd3b'
-down_revision: Union[str, None] = 'c42b9a3d807a'
+revision: str = "20c05328cd3b"
+down_revision: Union[str, None] = "c42b9a3d807a"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 

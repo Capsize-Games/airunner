@@ -35,6 +35,6 @@ class ExternalConditionStoppingCriteria(StoppingCriteria):
         # Only log when True to avoid spam
         if result:
             print(
-                f"[INTERRUPT] ExternalConditionStoppingCriteria: stopping generation!"
+                "[INTERRUPT] ExternalConditionStoppingCriteria: stopping generation!"
             )
         return result

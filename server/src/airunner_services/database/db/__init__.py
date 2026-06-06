@@ -23,7 +23,6 @@ from airunner_services.database.db.table import drop_tables
 from airunner_services.database.db.table import get_tables
 from airunner_services.database.db.table import table_exists
 
-
 __all__ = [
     "add_column",
     "add_column_with_fk",

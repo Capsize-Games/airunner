@@ -283,7 +283,10 @@ class BaseDownloadWorker(Worker):
     def _mark_orphaned_threads_failed(self):
         """Mark any dead download threads without a terminal status as failed."""
         for filename, thread in list(self._file_threads.items()):
-            if filename in self._completed_files or filename in self._failed_files:
+            if (
+                filename in self._completed_files
+                or filename in self._failed_files
+            ):
                 continue
             if thread.is_alive():
                 continue

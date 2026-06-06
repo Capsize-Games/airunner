@@ -25,7 +25,6 @@ from airunner_services.url_safety import (
 from airunner_services.utils.application import get_logger
 from airunner_services.utils.application.log_hygiene import fingerprint_value
 
-
 # Rotating User Agents - looks like real browsers
 USER_AGENTS = [
     # Chrome on Windows
@@ -67,10 +66,12 @@ def _patch_signals_for_subprocess():
 
 _patch_signals_for_subprocess()
 
+
 # Dynamically resolve cache directory based on PathSettings
 def _get_base_path() -> Path:
     """Get the base path for cache and blocklist persistence."""
     return Path(AIRUNNER_BASE_PATH)
+
 
 try:
     path_settings = PathSettings.objects.first()
@@ -230,7 +231,10 @@ class WebContentExtractor:
             sorted_list = sorted(cls._blocklist)
             content = "\n".join(sorted_list) + "\n"
             cls.BLOCKLIST_FILE.write_text(content, encoding="utf-8")
-            logger.info("Saved %d blocked domains to scraper blocklist", len(cls._blocklist))
+            logger.info(
+                "Saved %d blocked domains to scraper blocklist",
+                len(cls._blocklist),
+            )
         except Exception as e:
             logger.warning(f"Failed to save scraper blocklist: {e}")
 
@@ -242,7 +246,10 @@ class WebContentExtractor:
         if base_url not in blocklist:
             blocklist.add(base_url)
             cls._save_blocklist()
-            logger.info("Added blocked domain (%s)", fingerprint_value(base_url, label="domain"))
+            logger.info(
+                "Added blocked domain (%s)",
+                fingerprint_value(base_url, label="domain"),
+            )
 
     @classmethod
     def _is_blocked(cls, url: str) -> bool:
@@ -269,7 +276,11 @@ class WebContentExtractor:
             try:
                 return path.read_text(encoding="utf-8")
             except Exception as e:
-                logger.warning("Failed to read cache for %s: %s", fingerprint_value(url, label="url"), e)
+                logger.warning(
+                    "Failed to read cache for %s: %s",
+                    fingerprint_value(url, label="url"),
+                    e,
+                )
         return None
 
     @staticmethod
@@ -282,7 +293,11 @@ class WebContentExtractor:
 
                 return json.loads(path.read_text(encoding="utf-8"))
             except Exception as e:
-                logger.warning("Failed to read metadata cache for %s: %s", fingerprint_value(url, label="url"), e)
+                logger.warning(
+                    "Failed to read metadata cache for %s: %s",
+                    fingerprint_value(url, label="url"),
+                    e,
+                )
         return None
 
     @staticmethod
@@ -291,7 +306,11 @@ class WebContentExtractor:
         try:
             path.write_text(text, encoding="utf-8")
         except Exception as e:
-            logger.warning("Failed to write cache for %s: %s", fingerprint_value(url, label="url"), e)
+            logger.warning(
+                "Failed to write cache for %s: %s",
+                fingerprint_value(url, label="url"),
+                e,
+            )
 
     @staticmethod
     def set_metadata_cache(url: str, metadata: Dict):
@@ -302,7 +321,11 @@ class WebContentExtractor:
 
             path.write_text(json.dumps(metadata, indent=2), encoding="utf-8")
         except Exception as e:
-            logger.warning("Failed to write metadata cache for %s: %s", fingerprint_value(url, label="url"), e)
+            logger.warning(
+                "Failed to write metadata cache for %s: %s",
+                fingerprint_value(url, label="url"),
+                e,
+            )
 
     @staticmethod
     def _safe_fetch_html(url: str) -> Optional[str]:
@@ -310,17 +333,29 @@ class WebContentExtractor:
         try:
             validate_url_for_fetch(url)
         except SSRFBlocked as e:
-            logger.warning("Blocked URL fetch (%s): %s", fingerprint_value(url, label="url"), e)
+            logger.warning(
+                "Blocked URL fetch (%s): %s",
+                fingerprint_value(url, label="url"),
+                e,
+            )
             return None
 
         try:
             headers = WebContentExtractor._get_browser_headers()
             return safe_fetch_url(url, headers=headers)
         except SSRFBlocked as e:
-            logger.warning("Blocked URL fetch (%s): %s", fingerprint_value(url, label="url"), e)
+            logger.warning(
+                "Blocked URL fetch (%s): %s",
+                fingerprint_value(url, label="url"),
+                e,
+            )
             return None
         except Exception as e:
-            logger.warning("Failed to fetch URL %s: %s", fingerprint_value(url, label="url"), e)
+            logger.warning(
+                "Failed to fetch URL %s: %s",
+                fingerprint_value(url, label="url"),
+                e,
+            )
             return None
 
     @staticmethod
@@ -329,7 +364,9 @@ class WebContentExtractor:
         try:
             validate_url_for_fetch(url)
         except SSRFBlocked as e:
-            logger.warning("Blocked URL (%s): %s", fingerprint_value(url, label="url"), e)
+            logger.warning(
+                "Blocked URL (%s): %s", fingerprint_value(url, label="url"), e
+            )
             return None
 
         # Check if this domain is blocked
@@ -425,13 +462,18 @@ class WebContentExtractor:
         try:
             validate_url_for_fetch(url)
         except SSRFBlocked as e:
-            logger.warning("Blocked URL (%s): %s", fingerprint_value(url, label="url"), e)
+            logger.warning(
+                "Blocked URL (%s): %s", fingerprint_value(url, label="url"), e
+            )
             return None
 
         # Check if this domain is blocked
         if WebContentExtractor._is_blocked(url):
             logger.info(
-                "Skipping blocked domain (%s)", fingerprint_value(WebContentExtractor._get_base_url(url), label="domain"),
+                "Skipping blocked domain (%s)",
+                fingerprint_value(
+                    WebContentExtractor._get_base_url(url), label="domain"
+                ),
             )
             return None
 
@@ -441,10 +483,16 @@ class WebContentExtractor:
             if cached_metadata:
                 # If cache has the content type we need, return it
                 if summarize and "content" in cached_metadata:
-                    logger.debug("Using cached summarized metadata for %s", fingerprint_value(url, label="url"))
+                    logger.debug(
+                        "Using cached summarized metadata for %s",
+                        fingerprint_value(url, label="url"),
+                    )
                     return cached_metadata
                 elif not summarize and "raw_content" in cached_metadata:
-                    logger.debug("Using cached raw metadata for %s", fingerprint_value(url, label="url"))
+                    logger.debug(
+                        "Using cached raw metadata for %s",
+                        fingerprint_value(url, label="url"),
+                    )
                     # Return with raw content as 'content'
                     result = cached_metadata.copy()
                     result["content"] = result.pop("raw_content")
@@ -454,7 +502,10 @@ class WebContentExtractor:
             html_content = WebContentExtractor._safe_fetch_html(url)
 
             if not html_content:
-                logger.warning("Failed to fetch content from %s", fingerprint_value(url, label="url"))
+                logger.warning(
+                    "Failed to fetch content from %s",
+                    fingerprint_value(url, label="url"),
+                )
                 # Add to blocklist - site is blocking scrapers
                 WebContentExtractor._add_to_blocklist(url)
                 return None
@@ -467,7 +518,10 @@ class WebContentExtractor:
             )
 
             if not main_text:
-                logger.warning("No main text extracted from %s", fingerprint_value(url, label="url"))
+                logger.warning(
+                    "No main text extracted from %s",
+                    fingerprint_value(url, label="url"),
+                )
                 # Add to blocklist - likely blocking scrapers
                 WebContentExtractor._add_to_blocklist(url)
                 return None
@@ -498,14 +552,17 @@ class WebContentExtractor:
                 )
                 WebContentExtractor.set_metadata_cache(url, cache_entry)
                 logger.debug(
-                    "Cached raw and summarized content for %s", fingerprint_value(url, label="url"),
+                    "Cached raw and summarized content for %s",
+                    fingerprint_value(url, label="url"),
                 )
 
             return result
 
         except Exception as e:
             logger.error(
-                "Extraction with metadata failed for %s: %s", fingerprint_value(url, label="url"), e,
+                "Extraction with metadata failed for %s: %s",
+                fingerprint_value(url, label="url"),
+                e,
                 exc_info=True,
             )
             # Add to blocklist on exception - likely blocking scrapers
@@ -558,7 +615,10 @@ class WebContentExtractor:
             if content is None:
                 content = WebContentExtractor._safe_fetch_html(url)
                 if not content:
-                    logger.warning("Failed to fetch content from %s", fingerprint_value(url, label="url"))
+                    logger.warning(
+                        "Failed to fetch content from %s",
+                        fingerprint_value(url, label="url"),
+                    )
                     return None
 
             # Extract main text content
@@ -569,7 +629,10 @@ class WebContentExtractor:
             )
 
             if not main_text:
-                logger.warning("No main text extracted from %s", fingerprint_value(url, label="url"))
+                logger.warning(
+                    "No main text extracted from %s",
+                    fingerprint_value(url, label="url"),
+                )
                 return None
 
             # Extract metadata using trafilatura
@@ -597,7 +660,10 @@ class WebContentExtractor:
 
         except Exception as e:
             logger.error(
-                "extract_with_links failed for %s: %s", fingerprint_value(url, label="url"), e, exc_info=True
+                "extract_with_links failed for %s: %s",
+                fingerprint_value(url, label="url"),
+                e,
+                exc_info=True,
             )
             return None
 
@@ -800,7 +866,11 @@ class WebContentExtractor:
             if downloaded:
                 return WebContentExtractor.extract_markdown(downloaded)
         except Exception as e:
-            logger.error("Trafilatura Markdown fetch failed for %s: %s", fingerprint_value(url, label="url"), e)
+            logger.error(
+                "Trafilatura Markdown fetch failed for %s: %s",
+                fingerprint_value(url, label="url"),
+                e,
+            )
         return None
 
     @staticmethod
@@ -809,9 +879,15 @@ class WebContentExtractor:
         try:
             downloaded = WebContentExtractor._safe_fetch_html(url)
             if downloaded:
-                return trafilatura.extract(downloaded, include_comments=False, include_tables=False)
+                return trafilatura.extract(
+                    downloaded, include_comments=False, include_tables=False
+                )
         except Exception as e:
-            logger.error("Trafilatura failed for %s: %s", fingerprint_value(url, label="url"), e)
+            logger.error(
+                "Trafilatura failed for %s: %s",
+                fingerprint_value(url, label="url"),
+                e,
+            )
         return None
 
     @staticmethod
@@ -854,7 +930,14 @@ class WebContentExtractor:
                 if text:
                     clean_documents.append(text)
                 else:
-                    logger.warning("No main content extracted for %s", fingerprint_value(url, label="url"))
+                    logger.warning(
+                        "No main content extracted for %s",
+                        fingerprint_value(url, label="url"),
+                    )
             except Exception as e:
-                logger.error("Error extracting content for %s: %s", fingerprint_value(url, label="url"), e)
+                logger.error(
+                    "Error extracting content for %s: %s",
+                    fingerprint_value(url, label="url"),
+                    e,
+                )
         return clean_documents

@@ -5,7 +5,6 @@ from __future__ import annotations
 import logging
 import os
 
-
 LOGGER = logging.getLogger(__name__)
 DEFAULT_RUNTIME_HOST = "127.0.0.1"
 

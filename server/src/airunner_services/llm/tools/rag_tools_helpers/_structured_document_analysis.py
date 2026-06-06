@@ -9,12 +9,6 @@ from airunner_services.llm.tools.rag_tools_helpers._structured_document_renderin
     build_structured_document_analysis_prompt as render_analysis_prompt,
     format_structured_document_analysis as render_analysis_payload,
 )
-from airunner_services.llm.tools.rag_tools_helpers._structured_premise_candidates import (
-    build_structured_premise_candidate_spans,
-    build_structured_premise_evidence_prompt,
-    format_structured_premise_evidence_documents,
-)
-
 
 StructuredAnalyses = list[dict[str, str]]
 CoverageChunks = list[tuple[str, str]]
@@ -56,9 +50,14 @@ def build_structured_document_analysis_prompt(
 
 
 def build_structured_document_analysis(
-    builder: Callable[..., Any] | None, *, metadata: dict[str, Any],
-    query: str, analyses: StructuredAnalyses, evidence: list[Any],
-    coverage_chunks: CoverageChunks, refined_synthesis: str,
+    builder: Callable[..., Any] | None,
+    *,
+    metadata: dict[str, Any],
+    query: str,
+    analyses: StructuredAnalyses,
+    evidence: list[Any],
+    coverage_chunks: CoverageChunks,
+    refined_synthesis: str,
     summary_focus: str | None,
     logger: Any = None,
 ) -> str:
@@ -66,9 +65,14 @@ def build_structured_document_analysis(
     if not callable(builder):
         return ""
     payload = _invoke_structured_document_analysis_builder(
-        builder, metadata=metadata, query=query, analyses=analyses,
-        evidence=evidence, coverage_chunks=coverage_chunks,
-        refined_synthesis=refined_synthesis, summary_focus=summary_focus,
+        builder,
+        metadata=metadata,
+        query=query,
+        analyses=analyses,
+        evidence=evidence,
+        coverage_chunks=coverage_chunks,
+        refined_synthesis=refined_synthesis,
+        summary_focus=summary_focus,
         logger=logger,
     )
     if payload is None:
@@ -77,17 +81,25 @@ def build_structured_document_analysis(
 
 
 def _invoke_structured_document_analysis_builder(
-    builder: Callable[..., Any], *, metadata: dict[str, Any],
-    query: str, analyses: StructuredAnalyses, evidence: list[Any],
-    coverage_chunks: CoverageChunks, refined_synthesis: str,
+    builder: Callable[..., Any],
+    *,
+    metadata: dict[str, Any],
+    query: str,
+    analyses: StructuredAnalyses,
+    evidence: list[Any],
+    coverage_chunks: CoverageChunks,
+    refined_synthesis: str,
     summary_focus: str | None,
     logger: Any,
 ) -> Any | None:
     """Invoke the structured-analysis builder and normalize failures."""
     try:
         return builder(
-            metadata=metadata, query=query, analyses=analyses,
-            evidence=evidence, coverage_chunks=coverage_chunks,
+            metadata=metadata,
+            query=query,
+            analyses=analyses,
+            evidence=evidence,
+            coverage_chunks=coverage_chunks,
             refined_synthesis=refined_synthesis,
             summary_focus=summary_focus,
         )

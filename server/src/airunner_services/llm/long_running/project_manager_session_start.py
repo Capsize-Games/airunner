@@ -9,7 +9,6 @@ from sqlalchemy.orm import Session
 
 from airunner_services.database.models.project_state import (
     FeatureStatus,
-    ProjectFeature,
     SessionState,
 )
 from airunner_services.database.session import session_scope
@@ -57,14 +56,20 @@ def _session_record(
 
 
 def start_session(
-    manager: Any, project_id: int, feature_id: Optional[int] = None,
+    manager: Any,
+    project_id: int,
+    feature_id: Optional[int] = None,
     context_snapshot: Optional[dict[str, Any]] = None,
 ) -> SessionState:
     """Start one working session."""
     with session_scope() as db:
-        selected_feature_id = _selected_feature_id(manager, project_id, feature_id)
+        selected_feature_id = _selected_feature_id(
+            manager, project_id, feature_id
+        )
         _mark_feature_in_progress(db, selected_feature_id)
-        session = _session_record(project_id, selected_feature_id, context_snapshot)
+        session = _session_record(
+            project_id, selected_feature_id, context_snapshot
+        )
         db.add(session)
         if (project := _project_by_id(db, project_id)) is not None:
             project.current_feature_id = selected_feature_id

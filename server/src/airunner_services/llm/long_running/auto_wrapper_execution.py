@@ -16,7 +16,6 @@ from airunner_services.llm.long_running.task_detector import (
 )
 from airunner_services.utils.application.log_hygiene import summarize_text
 
-
 logger = logging.getLogger(__name__)
 
 
@@ -31,11 +30,18 @@ def wrap_and_execute(
     if not analysis.should_use_harness:
         return _execute_direct(prompt, execute_fn)
     project, features = _initialize_execution(
-        agent, prompt, analysis, working_directory,
+        agent,
+        prompt,
+        analysis,
+        working_directory,
     )
     if not features:
-        return _execute_single_complex_task(agent, prompt, execute_fn, project.id)
-    results = _execute_features(agent, features, prompt, analysis, execute_fn, project)
+        return _execute_single_complex_task(
+            agent, prompt, execute_fn, project.id
+        )
+    results = _execute_features(
+        agent, features, prompt, analysis, execute_fn, project
+    )
     agent._mark_project_complete(project.id)
     return agent._aggregate_results(results, analysis, project)
 
@@ -64,10 +70,14 @@ def _initialize_execution(
         analysis.task_type.value,
         analysis.reason,
     )
-    project = agent._create_project_for_task(prompt, analysis, working_directory)
+    project = agent._create_project_for_task(
+        prompt, analysis, working_directory
+    )
     agent._current_project_id = project.id
     agent._emit_progress(f"Project '{project.name}'", "created", 0.0)
-    features = agent._create_features_from_analysis(project.id, analysis, prompt)
+    features = agent._create_features_from_analysis(
+        project.id, analysis, prompt
+    )
     return project, features
 
 
@@ -85,7 +95,9 @@ def _execute_single_complex_task(
 
 
 def _execute_features(
-    agent: Any, features: list[Any], prompt: str,
+    agent: Any,
+    features: list[Any],
+    prompt: str,
     analysis: TaskAnalysis,
     execute_fn: Callable[[str], dict[str, Any]],
     project: Any,
@@ -94,8 +106,16 @@ def _execute_features(
     results: list[dict[str, Any]] = []
     total_features = len(features)
     for index, feature in enumerate(features):
-        result = _run_feature(agent, feature, index, total_features, prompt,
-                              analysis, execute_fn, project.id)
+        result = _run_feature(
+            agent,
+            feature,
+            index,
+            total_features,
+            prompt,
+            analysis,
+            execute_fn,
+            project.id,
+        )
         if result is not None:
             results.append(result)
     return results

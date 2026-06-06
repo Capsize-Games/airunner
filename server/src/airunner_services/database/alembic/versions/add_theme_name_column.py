@@ -5,6 +5,7 @@ Revises: add_dark_mode_enabled
 Create Date: 2025-12-03
 
 """
+
 from typing import Sequence, Union
 
 from airunner_services.database.db.column import add_column, column_exists

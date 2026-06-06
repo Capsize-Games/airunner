@@ -1,4 +1,5 @@
 """Local fallback runtime registration helpers."""
+
 from typing import Optional
 
 from airunner_services.runtimes.base import RuntimeClient
@@ -16,6 +17,7 @@ from airunner_services.runtimes.local_fallback._tts_client import (
 from airunner_services.runtimes.local_fallback._art_client import (
     LocalFallbackArtClient,
 )
+
 
 def register_local_fallback_clients(
     registry: RuntimeRegistry,

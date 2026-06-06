@@ -84,7 +84,9 @@ class RAGIndexingMixin:
 
             doc_id = self._generate_doc_id(db_doc.path)
 
-            docs = load_documents_from_file(db_doc.path, self._extract_metadata)
+            docs = load_documents_from_file(
+                db_doc.path, self._extract_metadata
+            )
             if not docs:
                 self.logger.warning(f"No content extracted from {db_doc.path}")
                 return False
@@ -125,7 +127,7 @@ class RAGIndexingMixin:
         are not already present. It returns True if at least one file was
         indexed or all files were already indexed. It returns False only if
         one or more indexing operations failed.
-        
+
         NOTE: This triggers lazy RAG initialization if not already done.
         """
         if not file_paths:

@@ -8,13 +8,10 @@ Create Date: 2025-11-03 05:07:46.889231
 
 from typing import Sequence, Union
 
-from alembic import op
-import sqlalchemy as sa
 from airunner_services.database.db import add_column, drop_column
 from airunner_services.database.models.llm_generator_settings import (
     LLMGeneratorSettings,
 )
-
 
 # revision identifiers, used by Alembic.
 revision: str = "4cd9977eb573"

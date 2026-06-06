@@ -18,7 +18,6 @@ from airunner_services.art.managers.stablediffusion.image_response import (
 )
 from airunner_services.art.runtime_enums import (
     HandlerState,
-    EngineResponseCode,
 )
 from airunner_services.settings import AIRUNNER_CUDA_OUT_OF_MEMORY_MESSAGE
 from airunner_services.art.runtime_memory import clear_memory
@@ -110,7 +109,9 @@ class SDImageGenerationMixin:
 
         Handles interruption and errors gracefully.
         """
-        self.logger.debug(f"[GEN DEBUG] _generate called: self._pipe={self._pipe}, self={id(self)}")
+        self.logger.debug(
+            f"[GEN DEBUG] _generate called: self._pipe={self._pipe}, self={id(self)}"
+        )
         if self._pipe is None:
             raise PipeNotLoadedException()
 
@@ -139,10 +140,6 @@ class SDImageGenerationMixin:
                         images = processed_images
                     else:
                         nsfw_flags = []
-
-                    self.api.art.final_progress_update(
-                        total=self.image_request.steps
-                    )
 
                     data.update(
                         {
@@ -184,7 +181,6 @@ class SDImageGenerationMixin:
 
                 self._current_state = HandlerState.PREPARING_TO_GENERATE
                 response = None
-                code = EngineResponseCode.NONE
                 try:
                     response = ImageResponse(
                         images=images,
@@ -193,38 +189,22 @@ class SDImageGenerationMixin:
                         is_outpaint=self.is_outpaint,
                         node_id=self.image_request.node_id,
                     )
-                    code = EngineResponseCode.IMAGE_GENERATED
 
-                    # Send image to canvas for layer support (if not a node-based generation)
-                    if response.node_id is None and hasattr(self.api, "art"):
-                        try:
-                            self.api.art.canvas.send_image_to_canvas(response)
-                        except Exception as e:
-                            self.logger.debug(
-                                f"Failed to send image to canvas: {e}"
-                            )
                 except PipeNotLoadedException as e:
                     self.logger.error(e)
                 except InterruptedException:
-                    code = EngineResponseCode.INTERRUPTED
+                    pass
                 except Exception as e:
-                    code = EngineResponseCode.ERROR
                     error_message = f"Error generating image: {e}"
                     response = error_message
                     if _is_out_of_memory_error(e):
-                        code = EngineResponseCode.INSUFFICIENT_GPU_MEMORY
                         response = AIRUNNER_CUDA_OUT_OF_MEMORY_MESSAGE
                     self.logger.error(error_message)
                 if self.image_request.callback:
                     self.image_request.callback(response)
-                self.api.worker_response(code=code, message=response)
         except InterruptedException:
             self.logger.debug("Image generation interrupted")
             self._current_state = HandlerState.READY
-            self.api.worker_response(
-                code=EngineResponseCode.INTERRUPTED,
-                message="Image generation interrupted",
-            )
             self.do_interrupt_image_generation = False
 
         clear_memory()
@@ -259,7 +239,7 @@ class SDImageGenerationMixin:
                     if isinstance(img, Image.Image):
                         img_array = np.array(img)
                         self.logger.info(
-                            f"[PIPELINE DEBUG] Image type: PIL Image"
+                            "[PIPELINE DEBUG] Image type: PIL Image"
                         )
                         self.logger.info(
                             f"[PIPELINE DEBUG] Image shape: {img_array.shape}"
@@ -295,7 +275,6 @@ class SDImageGenerationMixin:
         Returns:
             Updated callback_kwargs.
         """
-        self.api.art.progress_update(step=_i, total=self.image_request.steps)
         return callback_kwargs
 
     def _interrupt_callback(self, _pipe, _i, _t, callback_kwargs):

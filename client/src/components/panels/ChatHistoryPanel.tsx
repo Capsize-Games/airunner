@@ -7,7 +7,6 @@ import type {
   Conversation,
 } from "../../types/api";
 import Spinner from "react-bootstrap/Spinner";
-import Button from "react-bootstrap/Button";
 import ListGroup from "react-bootstrap/ListGroup";
 
 // ── Chat History ──
@@ -47,15 +46,15 @@ export function ChatHistoryPanel({
     <div className="p-2">
       <div className="d-flex justify-content-between align-items-center mb-2">
         <h6 className="text-muted mb-0">Chat History</h6>
-        <Button
-          size="sm"
-          variant="outline-danger"
+        <button
+          type="button"
+          className="btn btn-sm btn-outline-danger"
           onClick={() =>
             conversations.forEach((c) => handleDelete(c.id))
           }
         >
           Clear All
-        </Button>
+        </button>
       </div>
 
       {loading ? (
@@ -77,18 +76,25 @@ export function ChatHistoryPanel({
               <small className="text-truncate">
                 {c.title || `Chat #${c.id}`}
               </small>
-              <Button
-                variant="link"
-                size="sm"
+              <span
+                role="button"
+                tabIndex={0}
                 className="text-danger p-0 ms-1"
+                style={{ cursor: "pointer", fontSize: "0.875rem", lineHeight: 1 }}
                 onClick={(e) => {
                   e.stopPropagation();
                   handleDelete(c.id);
                 }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.stopPropagation();
+                    handleDelete(c.id);
+                  }
+                }}
                 title="Delete"
               >
                 ✕
-              </Button>
+              </span>
             </ListGroup.Item>
           ))}
         </ListGroup>

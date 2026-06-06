@@ -19,7 +19,6 @@ from airunner_services.llm.adapters.chat_model_factory_local_gguf_resolution imp
     local_gguf_state,
     resolve_gguf_path,
     resolved_local_model_id,
-    resolve_local_model_id,
     supports_local_gguf,
 )
 from airunner_services.llm.config.provider_config import LLMProviderConfig
@@ -39,7 +38,11 @@ def get_local_gguf_runtime_params(
         model_id,
         profile_name=profile_name or "default",
     )
-    return {key: value for key, value in runtime_params.items() if value is not None}
+    return {
+        key: value
+        for key, value in runtime_params.items()
+        if value is not None
+    }
 
 
 def _unsupported_gguf_architecture_message(
@@ -91,11 +94,20 @@ def create_local_model_from_settings(
     if not model_path:
         return None
     db_settings = get_db_settings()
-    local_runtime = build_local_runtime_config(db_settings, llm_settings, chatbot)
-    resolution = _resolved_local_gguf_path(db_settings, get_model_optimizer(), model_path, local_runtime.quantization_bits)
+    local_runtime = build_local_runtime_config(
+        db_settings, llm_settings, chatbot
+    )
+    resolution = _resolved_local_gguf_path(
+        db_settings,
+        get_model_optimizer(),
+        model_path,
+        local_runtime.quantization_bits,
+    )
     if resolution is None:
         return None
-    return _local_chat_model(create_gguf_model, resolution, local_runtime, gguf_runtime_profile)
+    return _local_chat_model(
+        create_gguf_model, resolution, local_runtime, gguf_runtime_profile
+    )
 
 
 def _local_model_info(resolved_model_id: str | None) -> dict[str, Any]:
@@ -148,10 +160,21 @@ def _resolved_local_gguf_path(
     quantization_bits: int,
 ) -> tuple[str, str | None] | None:
     """Return the resolved GGUF path and final model ID when available."""
-    resolved_model_id, allow_generic_scan, existing_gguf, generic_available = local_gguf_state(db_settings, optimizer, model_path)
-    if not supports_local_gguf(quantization_bits, existing_gguf, generic_available):
+    resolved_model_id, allow_generic_scan, existing_gguf, generic_available = (
+        local_gguf_state(db_settings, optimizer, model_path)
+    )
+    if not supports_local_gguf(
+        quantization_bits, existing_gguf, generic_available
+    ):
         return None
-    gguf_path = _valid_gguf_path(optimizer, model_path, allow_generic_scan, existing_gguf, generic_available, quantization_bits)
+    gguf_path = _valid_gguf_path(
+        optimizer,
+        model_path,
+        allow_generic_scan,
+        existing_gguf,
+        generic_available,
+        quantization_bits,
+    )
     if gguf_path is None:
         return None
     return gguf_path, resolved_local_model_id(resolved_model_id, gguf_path)

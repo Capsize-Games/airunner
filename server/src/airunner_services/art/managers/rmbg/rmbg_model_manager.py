@@ -251,7 +251,9 @@ class RMBGModelManager:
         input_tensor = transform(image_rgb).unsqueeze(0).to(self._device)
 
         with torch.no_grad():
-            predictions = self._model(input_tensor)[-1].sigmoid().detach().cpu()
+            predictions = (
+                self._model(input_tensor)[-1].sigmoid().detach().cpu()
+            )
 
         mask = transforms.ToPILImage()(predictions[0].squeeze())
         output = image.convert("RGBA")

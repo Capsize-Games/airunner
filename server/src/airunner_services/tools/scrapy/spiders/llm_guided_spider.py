@@ -194,7 +194,9 @@ class LLMGuidedSpider(scrapy.Spider):
             result["page_number"] = self.pages_scraped
 
             logger.info(
-                "Extracted %d chars content and %d links", len(result["content"]), len(result["links"])
+                "Extracted %d chars content and %d links",
+                len(result["content"]),
+                len(result["links"]),
             )
 
             return result

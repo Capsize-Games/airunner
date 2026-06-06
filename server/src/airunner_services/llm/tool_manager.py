@@ -51,7 +51,6 @@ class ToolManager(
 
     def _wrap_tool_with_dependencies(self, tool_info):
         """Wrap one tool function with dependency injection for LangChain."""
-        from airunner_services.api.legacy_server import get_api
         from functools import wraps
 
         sig = None
@@ -98,7 +97,7 @@ class ToolManager(
                 ):
                     api = self.rag_manager.api
                 else:
-                    api = get_api()
+                    api = None
 
                 if api is None:
                     return (
@@ -146,7 +145,7 @@ class ToolManager(
         """Return all available tools for the current request."""
         from airunner_services.llm.core.tool_registry import ToolRegistry
 
-        tools = [
+        tools_list = [
             self.clear_conversation_tool(),
             self.list_files_tool(),
             self.emit_signal_tool(),
@@ -179,10 +178,10 @@ class ToolManager(
             wrapped_func.description = tool_info.description
             wrapped_func.return_direct = tool_info.return_direct
             wrapped_func.category = getattr(tool_info, "category", None)
-            tools.append(wrapped_func)
+            tools_list.append(wrapped_func)
 
-        tools.extend(self._load_custom_tools())
-        return tools
+        tools_list.extend(self._load_custom_tools())
+        return tools_list
 
     def get_immediate_tools(self) -> List[Callable]:
         """Return only immediate tools with deferred ones excluded."""

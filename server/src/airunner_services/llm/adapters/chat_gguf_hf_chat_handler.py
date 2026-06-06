@@ -31,9 +31,7 @@ def configure_chat_handler(adapter: Any) -> None:
 
     def chat_handler_with_kwargs(*args: Any, **kwargs: Any) -> Any:
         template_kwargs = {
-            "enable_thinking": bool(
-                getattr(adapter, "enable_thinking", True)
-            )
+            "enable_thinking": bool(getattr(adapter, "enable_thinking", True))
         }
         return base_handler(*args, **{**template_kwargs, **kwargs})
 
@@ -70,6 +68,7 @@ def build_hf_chat_handler(adapter: Any, repo_id: str) -> Any | None:
 
 def _format_messages_handler(tokenizer: Any) -> Any:
     """Return a llama.cpp formatter callback for one HF tokenizer."""
+
     def format_messages(messages: list[dict[str, Any]], **kwargs: Any) -> Any:
         return _chat_formatter_response(tokenizer, messages, kwargs)
 

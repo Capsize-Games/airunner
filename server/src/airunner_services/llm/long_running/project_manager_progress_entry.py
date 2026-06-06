@@ -41,10 +41,16 @@ def _commit_hash(
 
 
 def _progress_entry(
-    manager: Any, db: Session, project_id: int, action: str,
-    outcome: str, session_id: Optional[int],
-    feature_id: Optional[int], files_changed: Optional[list[str]],
-    git_commit: bool, tokens_used: int,
+    manager: Any,
+    db: Session,
+    project_id: int,
+    action: str,
+    outcome: str,
+    session_id: Optional[int],
+    feature_id: Optional[int],
+    files_changed: Optional[list[str]],
+    git_commit: bool,
+    tokens_used: int,
 ) -> ProgressEntry:
     """Build one progress-entry ORM record."""
     return ProgressEntry(
@@ -62,23 +68,35 @@ def _progress_entry(
 
 
 def log_progress(
-    manager: Any, project_id: int, action: str, outcome: str,
-    session_id: Optional[int] = None, feature_id: Optional[int] = None,
-    files_changed: Optional[list[str]] = None, git_commit: bool = False,
+    manager: Any,
+    project_id: int,
+    action: str,
+    outcome: str,
+    session_id: Optional[int] = None,
+    feature_id: Optional[int] = None,
+    files_changed: Optional[list[str]] = None,
+    git_commit: bool = False,
     tokens_used: int = 0,
 ) -> ProgressEntry:
     """Log one progress entry for a project."""
     with session_scope() as db:
         entry = _progress_entry(
-            manager, db, project_id, action, outcome, session_id,
-            feature_id, files_changed, git_commit, tokens_used,
+            manager,
+            db,
+            project_id,
+            action,
+            outcome,
+            session_id,
+            feature_id,
+            files_changed,
+            git_commit,
+            tokens_used,
         )
         db.add(entry)
         db.commit()
         db.refresh(entry)
         manager._logger.info("Logged progress: %s", action)
         return manager._detach(db, entry)
-
 
     # Progress-entry helpers isolate ORM construction from the public logging API.
     # Git commit creation stays nested here because it is part of one persisted

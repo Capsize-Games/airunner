@@ -26,7 +26,6 @@ from tqdm import tqdm
 
 from airunner_services.config.local_settings_store import get_setting
 from airunner_services.downloads.job_service import DownloadJobService
-from airunner_services.settings import MODELS_DIR
 
 
 # Terminal colors
@@ -259,7 +258,9 @@ def download_file(
         return True
 
     except requests.RequestException as e:
-        print(f"{Colors.RED}Error downloading {filepath.name}: {e}{Colors.ENDC}")
+        print(
+            f"{Colors.RED}Error downloading {filepath.name}: {e}{Colors.ENDC}"
+        )
         # Clean up partial download
         if filepath.exists():
             filepath.unlink()

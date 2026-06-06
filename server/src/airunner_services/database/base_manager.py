@@ -54,8 +54,7 @@ class RealBaseManager:
                     )
                 except Exception as exc:
                     self.logger.error(
-                        "Error applying eager load for "
-                        "relationship %s: %s",
+                        "Error applying eager load for " "relationship %s: %s",
                         relationship,
                         exc,
                     )
@@ -64,9 +63,7 @@ class RealBaseManager:
     # ------------------------------------------------------------------
     # Query methods
     # ------------------------------------------------------------------
-    def get(
-        self, pk, eager_load: Optional[List[str]] = None
-    ) -> Optional[_T]:
+    def get(self, pk, eager_load: Optional[List[str]] = None) -> Optional[_T]:
         """Return one row by primary key, or None."""
         with session_scope() as session:
             if self.cls.__name__ == "Chatbot" and eager_load is None:
@@ -93,9 +90,7 @@ class RealBaseManager:
                 self.logger.error("Error in get_orm(%s): %s", pk, exc)
                 return None
 
-    def first(
-        self, eager_load: Optional[List[str]] = None
-    ) -> Optional[_T]:
+    def first(self, eager_load: Optional[List[str]] = None) -> Optional[_T]:
         """Return the first row as a dataclass, or None."""
         with session_scope() as session:
             if self.cls.__name__ == "Chatbot" and eager_load is None:
@@ -107,17 +102,13 @@ class RealBaseManager:
             session.expunge_all()
             return result.to_dataclass() if result else None
 
-    def get_or_create(
-        self, defaults: Optional[dict] = None, **kwargs
-    ) -> Any:
+    def get_or_create(self, defaults: Optional[dict] = None, **kwargs) -> Any:
         """Get one existing record or create and return a new one."""
         with session_scope() as session:
             try:
                 if kwargs:
                     result = (
-                        session.query(self.cls)
-                        .filter_by(**kwargs)
-                        .first()
+                        session.query(self.cls).filter_by(**kwargs).first()
                     )
                 else:
                     result = session.query(self.cls).first()
@@ -165,9 +156,7 @@ class RealBaseManager:
                 if record_id is None:
                     result = query.first()
                 else:
-                    result = query.filter(
-                        self.cls.id == record_id
-                    ).first()
+                    result = query.filter(self.cls.id == record_id).first()
 
                 if result is None:
                     return False
@@ -202,45 +191,33 @@ class RealBaseManager:
         """Return rows matching simple equality filters."""
         with session_scope() as session:
             try:
-                result = (
-                    session.query(self.cls).filter_by(**kwargs).all()
-                )
+                result = session.query(self.cls).filter_by(**kwargs).all()
                 session.expunge_all()
                 return [obj.to_dataclass() for obj in result]
             except Exception as exc:
-                self.logger.error(
-                    "Error in filter_by(%s): %s", kwargs, exc
-                )
+                self.logger.error("Error in filter_by(%s): %s", kwargs, exc)
                 return None
 
     def filter_first(self, *args) -> Optional[_T]:
         """Return the first row matching arbitrary filters."""
         with session_scope() as session:
             try:
-                result = (
-                    session.query(self.cls).filter(*args).first()
-                )
+                result = session.query(self.cls).filter(*args).first()
                 session.expunge_all()
                 return result.to_dataclass() if result else None
             except Exception as exc:
-                self.logger.error(
-                    "Error in filter(%s): %s", args, exc
-                )
+                self.logger.error("Error in filter(%s): %s", args, exc)
                 return None
 
     def filter(self, *args) -> Optional[List[_T]]:
         """Return all rows matching arbitrary filters."""
         with session_scope() as session:
             try:
-                result = (
-                    session.query(self.cls).filter(*args).all()
-                )
+                result = session.query(self.cls).filter(*args).all()
                 session.expunge_all()
                 return [obj.to_dataclass() for obj in result]
             except Exception as exc:
-                self.logger.error(
-                    "Error in filter(%s): %s", args, exc
-                )
+                self.logger.error("Error in filter(%s): %s", args, exc)
                 return None
 
     def filter_by_first(
@@ -256,14 +233,11 @@ class RealBaseManager:
                     for relationship in eager_load:
                         try:
                             query = query.options(
-                                joinedload(
-                                    getattr(self.cls, relationship)
-                                )
+                                joinedload(getattr(self.cls, relationship))
                             )
                         except AttributeError:
                             self.logger.warning(
-                                "Class %s does not have "
-                                "relationship %s",
+                                "Class %s does not have " "relationship %s",
                                 self.cls.__name__,
                                 relationship,
                             )
@@ -271,9 +245,7 @@ class RealBaseManager:
                 session.expunge_all()
                 return result.to_dataclass() if result else None
             except Exception as exc:
-                self.logger.error(
-                    "Error in filter_by(%s): %s", kwargs, exc
-                )
+                self.logger.error("Error in filter_by(%s): %s", kwargs, exc)
                 return None
 
     def order_by(self, *args) -> Optional[Query]:
@@ -284,9 +256,7 @@ class RealBaseManager:
                 session.expunge_all()
                 return result
             except Exception as exc:
-                self.logger.error(
-                    "Error in order_by(%s): %s", args, exc
-                )
+                self.logger.error("Error in order_by(%s): %s", args, exc)
                 return None
 
     def options(self, *args) -> Optional[Query]:
@@ -297,9 +267,7 @@ class RealBaseManager:
                 session.expunge_all()
                 return result
             except Exception as exc:
-                self.logger.error(
-                    "Error in options(%s): %s", args, exc
-                )
+                self.logger.error("Error in options(%s): %s", args, exc)
                 return None
 
     def delete(self, pk=None, **kwargs) -> bool:
@@ -319,9 +287,7 @@ class RealBaseManager:
                     return False
                 if kwargs:
                     result = (
-                        session.query(self.cls)
-                        .filter_by(**kwargs)
-                        .delete()
+                        session.query(self.cls).filter_by(**kwargs).delete()
                     )
                     session.commit()
                     return bool(result)
@@ -347,17 +313,11 @@ class RealBaseManager:
         """Delete rows matching equality filters."""
         with session_scope() as session:
             try:
-                result = (
-                    session.query(self.cls)
-                    .filter_by(**kwargs)
-                    .delete()
-                )
+                result = session.query(self.cls).filter_by(**kwargs).delete()
                 session.commit()
                 return result
             except Exception as exc:
-                self.logger.error(
-                    "Error in delete_by(%s): %s", kwargs, exc
-                )
+                self.logger.error("Error in delete_by(%s): %s", kwargs, exc)
                 return False
 
     # ------------------------------------------------------------------

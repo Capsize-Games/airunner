@@ -18,7 +18,6 @@ from airunner_services.database.db import (
 
 import sqlalchemy as sa
 
-
 # revision identifiers, used by Alembic.
 revision: str = "201952ffe80a"
 down_revision: Union[str, None] = "b96406b64944"

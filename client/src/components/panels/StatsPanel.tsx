@@ -1,12 +1,109 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import ProgressBar from "react-bootstrap/ProgressBar";
-import { getHardwareProfile, BASE_URL } from "../../api/client";
+import { getHardwareProfile } from "../../api/client";
 import type { HardwareProfile } from "../../types/api";
 import type { ActiveModelInfo } from "../../api/client";
+import { useArtWebSocket } from "../../features/art/useArtWebSocket";
+import { useEventBus } from "../../features/events/useEventBus";
+import { EVENT_MODEL_STATUS } from "../../features/events/types";
+
+function wsUrl(): string {
+  const proto = location.protocol === "https:" ? "wss" : "ws";
+  const raw = (import.meta.env.VITE_API_BASE_URL as string) || "localhost:8188";
+  const host = raw.replace(/^https?:\/\//, "");
+  return `${proto}://${host}/api/v1/daemon/hardware/ws`;
+}
 
 export default function StatsPanel() {
   const [hw, setHw] = useState<HardwareProfile | null>(null);
   const [models, setModels] = useState<ActiveModelInfo[]>([]);
+  const wsRef = useRef<WebSocket | null>(null);
+  const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
+  const mountedRef = useRef(true);
+  const unloadingRef = useRef<Set<string>>(new Set());
+  const artWs = useArtWebSocket();
+
+  const scheduleReconnect = useCallback(() => {
+    if (!mountedRef.current) return;
+    reconnectTimerRef.current = setTimeout(connectWs, 5000);
+  }, []);
+
+  const connectWs = useCallback(() => {
+    if (!mountedRef.current) return;
+
+    // Close any existing connection without triggering reconnect
+    if (wsRef.current) {
+      const old = wsRef.current;
+      old.onclose = null;
+      old.onerror = null;
+      old.onmessage = null;
+      old.close();
+      wsRef.current = null;
+    }
+
+    try {
+      const socket = new WebSocket(wsUrl());
+      wsRef.current = socket;
+
+      socket.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          if (data.type === "hardware_profile") {
+            setHw(data as unknown as HardwareProfile);
+          }
+        } catch {
+          // ignore malformed messages
+        }
+      };
+
+      socket.onclose = (event) => {
+        wsRef.current = null;
+        // Only reconnect on accidental close, not intentional cleanup
+        if (mountedRef.current && !event.wasClean) {
+          scheduleReconnect();
+        }
+      };
+
+      socket.onerror = () => {
+        // onclose will fire after this
+        socket.close();
+      };
+    } catch {
+      // WebSocket creation failed, retry later
+      if (mountedRef.current) {
+        scheduleReconnect();
+      }
+    }
+  }, [scheduleReconnect]);
+
+  // Connect on mount, disconnect on unmount
+  useEffect(() => {
+    mountedRef.current = true;
+    // Use HTTP as initial data source so the panel isn't blank while WS connects.
+    // Delay the WebSocket connection slightly so the server has time to accept
+    // the upgrade, avoiding noisy console errors during page load.
+    getHardwareProfile().then(setHw).catch(() => {});
+    const initialTimer = setTimeout(connectWs, 1000);
+
+    return () => {
+      clearTimeout(initialTimer);
+      mountedRef.current = false;
+      if (wsRef.current) {
+        const old = wsRef.current;
+        old.onclose = null;
+        old.onerror = null;
+        old.onmessage = null;
+        old.close();
+        wsRef.current = null;
+      }
+      if (reconnectTimerRef.current) {
+        clearTimeout(reconnectTimerRef.current);
+        reconnectTimerRef.current = null;
+      }
+    };
+  }, [connectWs]);
 
   const fetchActiveModels = useCallback(async () => {
     try {
@@ -18,51 +115,24 @@ export default function StatsPanel() {
     }
   }, []);
 
-  useEffect(() => {
-    getHardwareProfile().then(setHw).catch(() => {});
-    const timer = setInterval(() => {
-      getHardwareProfile().then(setHw).catch(() => {});
-    }, 5000);
-    return () => clearInterval(timer);
-  }, []);
-
-  // Poll active models
+  // Fetch active models on mount
   useEffect(() => {
     fetchActiveModels();
-    const timer = setInterval(fetchActiveModels, 3000);
-    return () => clearInterval(timer);
   }, [fetchActiveModels]);
 
-  // Listen for live model-status SSE events
-  useEffect(() => {
-    const eventSource = new EventSource(
-      `${BASE_URL}/api/v1/models/status`,
-    );
-    eventSource.addEventListener("message", (event) => {
-      try {
-        const data = JSON.parse(event.data);
-        if (data.type === "model_status") {
-          // Refresh the model list immediately when a status changes
-          fetchActiveModels();
-        }
-      } catch { /* ignore malformed */ }
-    });
-    eventSource.onerror = () => {
-      // auto-reconnect
-    };
-    return () => {
-      eventSource.close();
-    };
-  }, [fetchActiveModels]);
+  // Listen for live model-status events via unified event bus
+  useEventBus([EVENT_MODEL_STATUS], () => {
+    fetchActiveModels();
+  });
 
-  const handleUnload = async (m: ActiveModelInfo) => {
-    try {
-      const { unloadModel } = await import("../../api/client");
-      await unloadModel(m.model_id, m.model_type);
-      fetchActiveModels();
-    } catch {
-      // ignore
-    }
+  const handleUnload = (m: ActiveModelInfo) => {
+    const key = m.model_id || m.model_type;
+    if (unloadingRef.current.has(key)) return;
+    unloadingRef.current.add(key);
+    artWs.unload(m.model_id);
+    // Remove from unloading set after a short delay so repeated clicks
+    // on the same model are still gated.
+    setTimeout(() => unloadingRef.current.delete(key), 2000);
   };
 
   if (!hw) {
@@ -99,7 +169,7 @@ export default function StatsPanel() {
 
       <div className="small text-muted mb-2">
         {hw.device_name ?? "CPU"} &middot; {hw.cpu_count}{" "}
-        cores
+        cores &middot; {hw.num_gpus} GPU(s)
       </div>
 
       {/* VRAM bar */}
@@ -138,9 +208,9 @@ export default function StatsPanel() {
           <small className="text-muted d-block mb-1">
             Loaded Models
           </small>
-          {models.map((m) => (
+          {models.map((m, index) => (
             <div
-              key={m.model_id}
+              key={m.model_id ?? `model-${index}`}
               className="d-flex align-items-center justify-content-between mb-1"
               style={{ fontSize: "11px" }}
             >

@@ -119,15 +119,21 @@ class ZImageTextEncoderLoaderHelper:
             load_path = model_path
             cache_path = self.quantized_cache_path(model_path)
             use_quantized_cache = self.should_use_quantized_cache()
-            cache_hit = use_quantized_cache and _quantized_cache_is_ready(cache_path)
+            cache_hit = use_quantized_cache and _quantized_cache_is_ready(
+                cache_path
+            )
             if cache_hit:
                 load_path = str(cache_path)
                 logger.info(
                     "Loading cached %s text encoder weights",
                     self._owner.quantization,
                 )
-            config = AutoConfig.from_pretrained(load_path, trust_remote_code=True)
-            transformers_weights = _resolve_transformers_weights_override(load_path)
+            config = AutoConfig.from_pretrained(
+                load_path, trust_remote_code=True
+            )
+            transformers_weights = _resolve_transformers_weights_override(
+                load_path
+            )
             if transformers_weights is not None:
                 config.transformers_weights = transformers_weights
             quantization_config = self._quantization_config(cache_hit)
@@ -141,7 +147,9 @@ class ZImageTextEncoderLoaderHelper:
             }
             if device_map is not None and self._owner._max_memory is not None:
                 load_kwargs["max_memory"] = self._owner._max_memory
-            self._owner.model = AutoModel.from_pretrained(load_path, **load_kwargs)
+            self._owner.model = AutoModel.from_pretrained(
+                load_path, **load_kwargs
+            )
             self._move_model_to_device(cache_hit, quantization_config)
             self._owner.model.eval()
             if use_quantized_cache and not cache_hit:
@@ -187,7 +195,9 @@ class ZImageTextEncoderLoaderHelper:
             _remove_cache_dir(cache_path)
             _remove_cache_dir(temp_dir)
 
-    def _quantization_config(self, cache_hit: bool) -> Optional[BitsAndBytesConfig]:
+    def _quantization_config(
+        self, cache_hit: bool
+    ) -> Optional[BitsAndBytesConfig]:
         """Build the quantization config for one model load."""
         if cache_hit:
             return None
@@ -213,7 +223,9 @@ class ZImageTextEncoderLoaderHelper:
         """Choose the device_map for one model load."""
         device_map = self._owner._device_map
         if device_map is None and (
-            quantization_config is not None or cache_hit or self._owner._device is None
+            quantization_config is not None
+            or cache_hit
+            or self._owner._device is None
         ):
             return "auto"
         return device_map

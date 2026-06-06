@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-
 LLM_FILE_BOOTSTRAP_DATA = {
     "unsloth/Qwen3.5-9B-GGUF": {
         "path_settings": "llm_causallm_model_path",

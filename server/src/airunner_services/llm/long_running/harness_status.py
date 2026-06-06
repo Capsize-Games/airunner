@@ -17,7 +17,11 @@ def get_project_status(agent: Any, project_id: int) -> dict[str, Any]:
         return {"error": "Project not found"}
     features = agent._project_manager.get_project_features(project_id)
     progress_log = agent._project_manager.get_progress_log(project_id, 5)
-    progress_percent = (project.passing_features / project.total_features * 100) if project.total_features else 0
+    progress_percent = (
+        (project.passing_features / project.total_features * 100)
+        if project.total_features
+        else 0
+    )
     return {
         "project_id": project_id,
         "name": project.name,

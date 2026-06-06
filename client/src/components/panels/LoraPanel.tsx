@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import Spinner from "react-bootstrap/Spinner";
 import type { LoraInfo } from "../../api/client";
-import { BASE_URL } from "../../types/api";
 import LoraItem from "./lora/LoraItem";
+import { useEventBus } from "../../features/events/useEventBus";
+import { EVENT_LORAS } from "../../features/events/types";
 
 interface LoraItemData extends LoraInfo {
   _inputText: string;
@@ -57,25 +58,12 @@ export default function LoraPanel() {
     return () => window.removeEventListener("art-version-changed", handler);
   }, [loadLoras]);
 
-  useEffect(() => {
-    const eventSource = new EventSource(
-      `${BASE_URL}/api/v1/art/loras/watch`,
-    );
-    eventSource.addEventListener("message", (event) => {
-      try {
-        const data = JSON.parse(event.data);
-        if (data.type === "reload") {
-          loadLoras();
-        }
-      } catch { /* ignore malformed events */ }
-    });
-    eventSource.onerror = () => {
-      // The browser will automatically reconnect EventSource on error
-    };
-    return () => {
-      eventSource.close();
-    };
-  }, [loadLoras]);
+  useEventBus([EVENT_LORAS], (_event, data) => {
+    const payload = data as { type?: string };
+    if (payload.type === "reload") {
+      loadLoras();
+    }
+  });
 
   useEffect(() => {
     const handler = (e: Event) => {

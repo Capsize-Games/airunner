@@ -1,6 +1,15 @@
 """Execution and binding mixin for the GGUF chat adapter."""
 
-from typing import Any, Callable, Dict, Iterator, List, Optional, Sequence, Union
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    Iterator,
+    List,
+    Optional,
+    Sequence,
+    Union,
+)
 
 from langchain_core.callbacks import CallbackManagerForLLMRun
 from langchain_core.language_models.base import LanguageModelInput

@@ -15,7 +15,9 @@ def resolve_local_model_id(
 ) -> str | None:
     """Resolve one local model identifier from settings or model path."""
     if not model_path:
-        model_id = getattr(db_settings, "model_id", None) if db_settings else None
+        model_id = (
+            getattr(db_settings, "model_id", None) if db_settings else None
+        )
         return model_id or None
     resolved_from_path = LLMProviderConfig.resolve_model_id(
         "local",
@@ -125,7 +127,12 @@ def local_gguf_state(
         allow_generic_scan,
     )
     generic_available = generic_gguf_available(model_path, allow_generic_scan)
-    return resolved_model_id, allow_generic_scan, existing_path, generic_available
+    return (
+        resolved_model_id,
+        allow_generic_scan,
+        existing_path,
+        generic_available,
+    )
 
 
 def supports_local_gguf(

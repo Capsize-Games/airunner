@@ -1,4 +1,4 @@
-"""Service-owned download job coordination for headless clients."""
+"""Service-owned download job coordination ."""
 
 from __future__ import annotations
 
@@ -253,7 +253,9 @@ class DownloadJobService:
             cancel_event.set()
         return await self._tracker.cancel_job(job_id)
 
-    def start_huggingface_download_sync(self, *args: Any, **kwargs: Any) -> str:
+    def start_huggingface_download_sync(
+        self, *args: Any, **kwargs: Any
+    ) -> str:
         """Synchronously create one HuggingFace download job."""
         return asyncio.run(self.start_huggingface_download(*args, **kwargs))
 
@@ -263,7 +265,9 @@ class DownloadJobService:
         **kwargs: Any,
     ) -> str:
         """Synchronously create one single-file HuggingFace download job."""
-        return asyncio.run(self.start_huggingface_file_download(*args, **kwargs))
+        return asyncio.run(
+            self.start_huggingface_file_download(*args, **kwargs)
+        )
 
     def start_civitai_file_download_sync(
         self,
@@ -322,11 +326,15 @@ class DownloadJobService:
         failure: str | None = None
         stop_watch = threading.Event()
 
-        def handle_signal(code: object, data: dict[str, Any] | None = None) -> None:
+        def handle_signal(
+            code: object, data: dict[str, Any] | None = None
+        ) -> None:
             nonlocal completion, failure
             payload = data or {}
             if code == WorkerSignalCode.UPDATE_DOWNLOAD_LOG:
-                self._record_log_message(job_id, str(payload.get("message") or ""))
+                self._record_log_message(
+                    job_id, str(payload.get("message") or "")
+                )
                 return
             if code == WorkerSignalCode.UPDATE_DOWNLOAD_PROGRESS:
                 progress = float(payload.get("progress") or 0.0)
@@ -370,7 +378,9 @@ class DownloadJobService:
                     "Download ended without completion signal",
                 )
                 return
-            model_path = str(completion.get("model_path") or request.output_dir or "")
+            model_path = str(
+                completion.get("model_path") or request.output_dir or ""
+            )
             self._complete_job(
                 job_id,
                 {
@@ -408,7 +418,10 @@ class DownloadJobService:
         def progress(downloaded: int, total: int) -> None:
             nonlocal last_progress
             current_progress = _coerce_progress(downloaded, total)
-            if current_progress < 100.0 and current_progress - last_progress < 1.0:
+            if (
+                current_progress < 100.0
+                and current_progress - last_progress < 1.0
+            ):
                 return
             last_progress = current_progress
             asyncio.run(
@@ -578,7 +591,10 @@ class DownloadJobService:
         def progress(downloaded: int, total: int) -> None:
             nonlocal last_progress
             current_progress = _coerce_progress(downloaded, total)
-            if current_progress < 100.0 and current_progress - last_progress < 1.0:
+            if (
+                current_progress < 100.0
+                and current_progress - last_progress < 1.0
+            ):
                 return
             last_progress = current_progress
             self._update_job(job_id, current_progress, JobStatus.RUNNING)
@@ -685,9 +701,7 @@ class DownloadJobService:
 
                 completed = bool(nltk.download(data_name, quiet=True))
                 if not completed:
-                    raise RuntimeError(
-                        f"Failed to download NLTK {data_name}"
-                    )
+                    raise RuntimeError(f"Failed to download NLTK {data_name}")
 
                 downloaded_names.append(data_name)
                 progress = min(99.0, (float(index) / float(total)) * 100.0)
@@ -750,7 +764,9 @@ def _default_hf_output_dir(repo_id: str, model_type: str) -> str:
     if model_type == "stt":
         return os.path.join(MODELS_DIR, "text/models/stt", model_name)
     if model_type == "embedding":
-        return os.path.join(MODELS_DIR, "text/models/llm/embedding", model_name)
+        return os.path.join(
+            MODELS_DIR, "text/models/llm/embedding", model_name
+        )
     return os.path.join(MODELS_DIR, "models", model_name)
 
 
@@ -780,7 +796,9 @@ def _progress_reporter(
         if progress < 100.0 and progress - last_progress < 1.0:
             return
         last_progress = progress
-        asyncio.run(tracker.update_progress(job_id, progress, JobStatus.RUNNING))
+        asyncio.run(
+            tracker.update_progress(job_id, progress, JobStatus.RUNNING)
+        )
 
     return report
 
@@ -797,12 +815,16 @@ def _civitai_progress_reporter(
     def report(downloaded: int, total: int) -> None:
         nonlocal last_progress
         overall_total = total_bytes or total
-        overall_progress = _coerce_progress(completed_bytes + downloaded, overall_total)
+        overall_progress = _coerce_progress(
+            completed_bytes + downloaded, overall_total
+        )
         if overall_progress < 100.0 and overall_progress - last_progress < 1.0:
             return
         last_progress = overall_progress
         asyncio.run(
-            tracker.update_progress(job_id, overall_progress, JobStatus.RUNNING)
+            tracker.update_progress(
+                job_id, overall_progress, JobStatus.RUNNING
+            )
         )
 
     return report

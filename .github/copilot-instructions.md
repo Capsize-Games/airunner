@@ -40,7 +40,7 @@
 
 - Treat log hygiene as a product requirement, not a cleanup pass. Do not add logs that expose prompts, conversation bodies, transcriptions, raw tool payloads, API responses, filesystem paths, tokens, secrets, or other user content unless the user explicitly asks for that level of logging.
 - Prefer structured summaries in logs over raw values. Log counts, sizes, IDs, hashes, timing, and state transitions instead of full content.
-- Reuse the existing log-hygiene utilities in `src/airunner/utils/application/log_hygiene.py` and keep sanitization active for both headless/root logging and wrapped GUI loggers.
+- Reuse the existing log-hygiene utilities in `src/airunner/utils/application/log_hygiene.py` and keep sanitization active for both daemon/root logging and wrapped GUI loggers.
 - Do not introduce fallback logging to shared temp locations such as `/tmp`. If file logging is unavailable, disable it cleanly instead of redirecting sensitive output to a broader filesystem scope.
 - Route any new remote fetch path through the existing URL safety layer in `src/airunner/components/tools/url_safety.py`. Do not add direct `requests` or similar network fetches for user-supplied URLs without the shared validation path.
 - Validate and normalize every user-controlled local path through the shared helpers in `src/airunner/utils/path_policy.py` before reading, persisting, or executing against it.

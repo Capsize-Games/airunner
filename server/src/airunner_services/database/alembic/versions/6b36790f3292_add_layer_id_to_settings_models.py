@@ -23,7 +23,6 @@ from airunner_services.database.models.outpaint_settings import (
     OutpaintSettings,
 )
 
-
 # revision identifiers, used by Alembic.
 revision: str = "6b36790f3292"
 down_revision: Union[str, None] = "b5f6cf56def4"

@@ -27,7 +27,9 @@ def _react_tool_calls(
     """Build parsed tool-call payloads from ReAct matches."""
     tool_calls: List[Dict[str, Any]] = []
     for tool_name, raw_input in react_matches:
-        tool_call = _react_tool_call(adapter, tool_name, raw_input, len(tool_calls))
+        tool_call = _react_tool_call(
+            adapter, tool_name, raw_input, len(tool_calls)
+        )
         if tool_call is not None:
             tool_calls.append(tool_call)
     return tool_calls

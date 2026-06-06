@@ -14,7 +14,6 @@ from airunner_services.database.models.llm_generator_settings import (  # type: 
 from airunner_services.llm.get_chatbot import get_chatbot
 from airunner_services.utils.application.enum_resolver import llm_action_type
 
-
 LLMActionType = llm_action_type()
 _MIN_GENERATION_VALUE = 0.0001
 
@@ -358,9 +357,7 @@ class OpenrouterMistralRequest(LLMRequest):
             "frequency_penalty": _clamp_generation_value(
                 self.frequency_penalty
             ),
-            "presence_penalty": _clamp_generation_value(
-                self.presence_penalty
-            ),
+            "presence_penalty": _clamp_generation_value(self.presence_penalty),
             "repetition_penalty": _clamp_generation_value(
                 self.repetition_penalty
             ),

@@ -1,4 +1,4 @@
-"""Reusable lifecycle service for headless runtime supervision."""
+"""Reusable lifecycle service for runtime supervision."""
 
 from __future__ import annotations
 
@@ -6,8 +6,8 @@ import os
 import time
 from typing import Any, Callable, Optional
 
-from airunner_services.contract_enums import ModelService, ModelStatus, SignalCode
-from airunner_services.settings import AIRUNNER_DEFAULT_LLM_HF_PATH, AIRUNNER_LOG_LEVEL
+from airunner_services.contract_enums import ModelStatus, SignalCode
+from airunner_services.settings import AIRUNNER_LOG_LEVEL
 from airunner_services.utils.application import get_logger
 from airunner_services.utils.application.create_worker import create_worker
 from airunner_services.utils.application.log_hygiene import fingerprint_value
@@ -25,7 +25,7 @@ WorkerManagerFactory = Callable[[], Any]
 
 
 class CoreLifecycleService:
-    """Manage worker lifecycle for headless and daemon execution."""
+    """Manage worker lifecycle for daemon execution."""
 
     def __init__(
         self,
@@ -66,7 +66,7 @@ class CoreLifecycleService:
         )
         self._attach_state()
         self._initialized = True
-        self.logger.info("Headless lifecycle initialized")
+        self.logger.info("Lifecycle initialized")
 
     def preload_llm_model(self) -> None:
         """Preload the configured local LLM when enabled."""
@@ -130,7 +130,9 @@ class CoreLifecycleService:
             return False
 
         payload = {"source": source}
-        request_unload = getattr(worker, "request_unload_after_interrupt", None)
+        request_unload = getattr(
+            worker, "request_unload_after_interrupt", None
+        )
         if callable(request_unload):
             return bool(request_unload(payload))
 
@@ -147,7 +149,10 @@ class CoreLifecycleService:
             return status
 
         model_manager = getattr(worker, "_model_manager", None)
-        if model_manager is not None and getattr(model_manager, "_chat_model", None) is not None:
+        if (
+            model_manager is not None
+            and getattr(model_manager, "_chat_model", None) is not None
+        ):
             return ModelStatus.LOADED
         return None
 
@@ -206,9 +211,19 @@ class CoreLifecycleService:
     def _attach_state(self) -> None:
         """Expose lifecycle objects on the signal source for compatibility."""
         setattr(self.signal_source, "_worker_manager", self.worker_manager)
-        setattr(self.signal_source, "_model_load_balancer", self.model_load_balancer)
-        setattr(self.signal_source, "model_load_balancer", self.model_load_balancer)
-        setattr(self.signal_source, "_llm_generate_worker", self.llm_generate_worker)
+        setattr(
+            self.signal_source,
+            "_model_load_balancer",
+            self.model_load_balancer,
+        )
+        setattr(
+            self.signal_source, "model_load_balancer", self.model_load_balancer
+        )
+        setattr(
+            self.signal_source,
+            "_llm_generate_worker",
+            self.llm_generate_worker,
+        )
 
     def _log_preload_disabled(self) -> None:
         """Log that model preloading is disabled."""
@@ -233,7 +248,7 @@ class CoreLifecycleService:
             return
 
     def _resolve_preload_model_path(self) -> Optional[str]:
-        """Resolve and persist the model path used for headless preload."""
+        """Resolve and persist the model path used for preload."""
         try:
             return self._preload_settings_store.resolve_model_path()
         except Exception as exc:

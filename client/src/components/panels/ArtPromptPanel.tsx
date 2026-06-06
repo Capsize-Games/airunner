@@ -1,19 +1,19 @@
-import { useState, useEffect, useCallback } from "react";
+import {
+  useState, useEffect, useCallback, useRef,
+} from "react";
 import PromptInput from "./art-prompt/PromptInput";
 import { EmbeddingPills, LoraPills } from "./art-prompt/ActivePills";
 import ArtPromptFooter from "./art-prompt/ArtPromptFooter";
-import { useArtGeneration } from "./art-prompt/useArtGeneration";
 import {
   loadPromptData,
   savePromptData,
 } from "./art-prompt/ArtPromptStorage";
+import LucideIcon from "../shared/LucideIcon";
+import { useCanvasContext } from "../../features/canvas/CanvasContext";
+import { useArtWebSocket } from "../../features/art/useArtWebSocket";
 
 export default function ArtPromptPanel() {
   const initial = loadPromptData();
-  const savedVersion = (() => {
-    try { return localStorage.getItem("airunner_art_version") || ""; }
-    catch { return ""; }
-  })();
 
   const [prompt, setPrompt] = useState(initial.prompt);
   const [negativePrompt, setNegativePrompt] = useState(
@@ -25,14 +25,6 @@ export default function ArtPromptPanel() {
   const [secondaryNegativePrompt, setSecondaryNegativePrompt] = useState(
     initial.secondary_negative_prompt,
   );
-  const [artVersion, setArtVersion] = useState(savedVersion);
-  const [artModel, setArtModel] = useState(() => {
-    try { return localStorage.getItem("airunner_art_model") || ""; }
-    catch { return ""; }
-  });
-  const [isZImage, setIsZImage] = useState(
-    savedVersion === "Z-Image Turbo",
-  );
   const [activeLoras, setActiveLoras] = useState<
     { id: number; name: string }[]
   >([]);
@@ -40,27 +32,101 @@ export default function ArtPromptPanel() {
     { id: number; name: string }[]
   >([]);
 
+  // Canvas context for grid dimensions and image placement
+  let canvasCtx: ReturnType<typeof useCanvasContext> | null = null;
+  try {
+    canvasCtx = useCanvasContext();
+  } catch {
+    // not inside a canvas provider
+  }
+
+  const activeGridArea = canvasCtx?.activeGridArea ?? {
+    x: 0, y: 0, width: 512, height: 512,
+  };
+
   const {
     generating,
     progress,
-    handleSubmit,
-    handleCancel,
-  } = useArtGeneration();
+    generate: artGenerate,
+    cancel: artCancel,
+  } = useArtWebSocket();
+
+  type Phase =
+    | "idle" | "loading"
+    | "completed" | "cancelled" | "failed";
+
+  const [phase, setPhase] = useState<Phase>("idle");
+  const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Auto-dismiss status messages after a few seconds
+  useEffect(() => {
+    if (
+      phase === "completed" ||
+      phase === "cancelled" ||
+      phase === "failed"
+    ) {
+      if (hideTimer.current) clearTimeout(hideTimer.current);
+      hideTimer.current = setTimeout(() => {
+        setPhase("idle");
+      }, 4000);
+    }
+    return () => {
+      if (hideTimer.current) clearTimeout(hideTimer.current);
+    };
+  }, [phase]);
+
+  const onGenerate = useCallback(async () => {
+    if (!prompt.trim()) return;
+    setPhase("loading");
+    const ls = (k: string) => {
+      try { return localStorage.getItem(k) || ""; } catch { return ""; }
+    };
+    const lsNum = (k: string): number | undefined => {
+      try {
+        const v = localStorage.getItem(k);
+        if (v === null || v === "") return undefined;
+        const n = Number(v);
+        return isNaN(n) ? undefined : n;
+      } catch { return undefined; }
+    };
+    try {
+      const imageBase64 = await artGenerate({
+        prompt: prompt.trim(),
+        negativePrompt: negativePrompt?.trim() || undefined,
+        seed: lsNum("airunner_seed"),
+        artModel: ls("airunner_art_model") || undefined,
+        artVersion: ls("airunner_art_version") || undefined,
+        scheduler: ls("airunner_art_scheduler") || undefined,
+        width: activeGridArea.width,
+        height: activeGridArea.height,
+      });
+      setPhase("completed");
+      if (imageBase64 && canvasCtx) {
+        canvasCtx.placeImageOnNewLayer(
+          imageBase64,
+          activeGridArea.x,
+          activeGridArea.y,
+          activeGridArea.width,
+          activeGridArea.height,
+        );
+      }
+    } catch (err) {
+      const msg =
+        err instanceof Error ? err.message : String(err);
+      setPhase(msg === "Cancelled" ? "cancelled" : "failed");
+    }
+  }, [prompt, negativePrompt, activeGridArea, canvasCtx, artGenerate]);
+
+  const onCancel = useCallback(() => {
+    artCancel();
+  }, [artCancel]);
 
   const reloadActiveLoras = useCallback(async () => {
     try {
       const { listLoras } = await import("../../api/client");
       const data = await listLoras();
-      const version = (() => {
-        try {
-          return localStorage.getItem("airunner_art_version") || "";
-        } catch { return ""; }
-      })();
       const enabled = (data.loras ?? [])
         .filter((l) => l.enabled)
-        .filter((l) =>
-          version ? l.path.includes(`/${version}/`) : true,
-        )
         .map((l) => ({ id: l.id, name: l.name }));
       setActiveLoras(enabled);
     } catch { /* */ }
@@ -70,44 +136,12 @@ export default function ArtPromptPanel() {
     try {
       const { listEmbeddings } = await import("../../api/client");
       const data = await listEmbeddings();
-      const version = (() => {
-        try {
-          return localStorage.getItem("airunner_art_version") || "";
-        } catch { return ""; }
-      })();
       const enabled = (data.embeddings ?? [])
         .filter((e) => e.enabled)
-        .filter((e) =>
-          version ? e.path.includes(`/${version}/`) : true,
-        )
         .map((e) => ({ id: e.id, name: e.name }));
       setActiveEmbeddings(enabled);
     } catch { /* */ }
   }, []);
-
-  useEffect(() => {
-    const versionHandler = (e: Event) => {
-      const v = (e as CustomEvent).detail as string;
-      setArtVersion(v);
-      setIsZImage(v === "Z-Image Turbo");
-      reloadActiveLoras();
-      reloadActiveEmbeddings();
-    };
-    const modelHandler = (e: Event) => {
-      const m = (e as CustomEvent).detail as string;
-      setArtModel(m ?? "");
-    };
-    window.addEventListener("art-version-changed", versionHandler);
-    window.addEventListener("art-model-changed", modelHandler);
-    try {
-      const m = localStorage.getItem("airunner_art_model");
-      if (m) setArtModel(m);
-    } catch {}
-    return () => {
-      window.removeEventListener("art-version-changed", versionHandler);
-      window.removeEventListener("art-model-changed", modelHandler);
-    };
-  }, [reloadActiveLoras, reloadActiveEmbeddings]);
 
   useEffect(() => {
     reloadActiveLoras();
@@ -115,6 +149,14 @@ export default function ArtPromptPanel() {
     window.addEventListener("lora-changed", handler);
     return () => window.removeEventListener("lora-changed", handler);
   }, [reloadActiveLoras]);
+
+  const [, setVersionBump] = useState(0);
+
+  useEffect(() => {
+    const handler = () => setVersionBump((v) => v + 1);
+    window.addEventListener("art-version-changed", handler);
+    return () => window.removeEventListener("art-version-changed", handler);
+  }, []);
 
   useEffect(() => {
     reloadActiveEmbeddings();
@@ -128,18 +170,8 @@ export default function ArtPromptPanel() {
     savePromptData({ ...current, ...updates });
   };
 
-  const onSubmit = () => {
-    const scheduler = (() => {
-      try { return localStorage.getItem("airunner_art_scheduler") || ""; }
-      catch { return ""; }
-    })();
-    handleSubmit({
-      prompt,
-      negativePrompt,
-      artModel,
-      artVersion,
-      scheduler,
-    });
+  const readLs = (key: string) => {
+    try { return localStorage.getItem(key) || ""; } catch { return ""; }
   };
 
   const deactivateLora = (id: number) => {
@@ -170,13 +202,13 @@ export default function ArtPromptPanel() {
 
   return (
     <div className="d-flex flex-column h-100 p-2">
-      <h6 style={{ color: "var(--theme-text-secondary)" }}
-        className="mb-2 flex-shrink-0"
-      >
-        Art Prompt
-      </h6>
+      <div className="d-flex align-items-center gap-2 mb-2 flex-shrink-0">
+        <h6 style={{ color: "var(--theme-text-secondary)" }} className="mb-0 flex-grow-1">
+          Art Prompt
+        </h6>
+      </div>
 
-      <div className="flex-grow-1 d-flex flex-column gap-2 overflow-hidden">
+      <div className="flex-grow-1 d-flex flex-column gap-2 overflow-auto">
         <PromptInput
           label="Prompt"
           value={prompt}
@@ -185,37 +217,35 @@ export default function ArtPromptPanel() {
           disabled={generating}
         />
 
-        {!isZImage && (
-          <PromptInput
-            label="Secondary Prompt"
-            value={secondaryPrompt}
-            onChange={(v) => { setSecondaryPrompt(v); persist({ secondary_prompt: v }); }}
-            placeholder="Background, colors, atmosphere..."
-            disabled={generating}
-          />
-        )}
+        {readLs("airunner_art_version") !== "Z-Image Turbo" && (
+          <>
+            <PromptInput
+              label="Secondary Prompt"
+              value={secondaryPrompt}
+              onChange={(v) => { setSecondaryPrompt(v); persist({ secondary_prompt: v }); }}
+              placeholder="Background, colors, atmosphere..."
+              disabled={generating}
+            />
 
-        {!isZImage && (
-          <PromptInput
-            label="Negative Prompt"
-            value={negativePrompt}
-            onChange={(v) => { setNegativePrompt(v); persist({ negative_prompt: v }); }}
-            placeholder="Things to exclude..."
-            disabled={generating}
-          />
-        )}
+            <PromptInput
+              label="Negative Prompt"
+              value={negativePrompt}
+              onChange={(v) => { setNegativePrompt(v); persist({ negative_prompt: v }); }}
+              placeholder="Things to exclude..."
+              disabled={generating}
+            />
 
-        {!isZImage && (
-          <PromptInput
-            label="Sec. Negative"
-            value={secondaryNegativePrompt}
-            onChange={(v) => {
-              setSecondaryNegativePrompt(v);
-              persist({ secondary_negative_prompt: v });
-            }}
-            placeholder="Secondary negative..."
-            disabled={generating}
-          />
+            <PromptInput
+              label="Sec. Negative"
+              value={secondaryNegativePrompt}
+              onChange={(v) => {
+                setSecondaryNegativePrompt(v);
+                persist({ secondary_negative_prompt: v });
+              }}
+              placeholder="Secondary negative..."
+              disabled={generating}
+            />
+          </>
         )}
       </div>
 
@@ -228,22 +258,85 @@ export default function ArtPromptPanel() {
           loras={activeLoras}
           onDeactivate={deactivateLora}
         />
+        {phase !== "idle" && (
+          <StatusBadge phase={phase} progress={progress} />
+        )}
         <ArtPromptFooter
           progress={progress}
           generating={generating}
           hasPrompt={!!prompt.trim()}
-          artVersion={artVersion}
-          artModel={artModel}
-          onVersionChange={(v) => {
-            setArtVersion(v);
-            setArtModel("");
-            setIsZImage(v === "Z-Image Turbo");
-          }}
-          onModelChange={(m) => setArtModel(m)}
-          onSubmit={onSubmit}
-          onCancel={handleCancel}
+          onSubmit={onGenerate}
+          onCancel={onCancel}
         />
       </div>
+    </div>
+  );
+}
+
+/* ── Inline status badge component ── */
+
+const STATUS_CFG: Record<
+  string,
+  { icon: string; label: string; bg: string; border: string; color: string }
+> = {
+  loading: {
+    icon: "sparkles",
+    label: "Loading model…",
+    bg: "rgba(99,153,255,0.12)",
+    border: "rgba(99,153,255,0.25)",
+    color: "#6399ff",
+  },
+  completed: {
+    icon: "circle-check",
+    label: "Image generated",
+    bg: "rgba(40,167,69,0.15)",
+    border: "rgba(40,167,69,0.3)",
+    color: "#28a745",
+  },
+  cancelled: {
+    icon: "circle-x",
+    label: "Cancelled generation",
+    bg: "rgba(255,193,7,0.15)",
+    border: "rgba(255,193,7,0.3)",
+    color: "#ffc107",
+  },
+  failed: {
+    icon: "circle-x",
+    label: "Failed generation",
+    bg: "rgba(220,53,69,0.15)",
+    border: "rgba(220,53,69,0.3)",
+    color: "#dc3545",
+  },
+};
+
+function StatusBadge({
+  phase,
+  progress,
+}: {
+  phase: string;
+  progress: number;
+}) {
+  const cfg = STATUS_CFG[phase];
+  if (!cfg) return null;
+
+  return (
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: 6,
+        marginBottom: 6,
+        padding: "4px 8px",
+        borderRadius: 4,
+        background: cfg.bg,
+        border: `1px solid ${cfg.border}`,
+        color: cfg.color,
+        fontSize: 12,
+        lineHeight: 1.4,
+      }}
+    >
+      <LucideIcon name={cfg.icon} size={14} />
+      <span>{cfg.label}</span>
     </div>
   );
 }

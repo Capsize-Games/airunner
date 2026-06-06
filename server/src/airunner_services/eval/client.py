@@ -1,7 +1,7 @@
 """
 AIRunnerClient - Python client library for AI Runner eval testing.
 
-Provides a simple interface to interact with the headless AI Runner server
+Provides a simple interface to interact with the AI Runner server
 for evaluation testing purposes. Supports both streaming and non-streaming
 LLM generation, model listing, and health checks.
 
@@ -28,7 +28,7 @@ class AIRunnerClientError(Exception):
 
 
 class AIRunnerClient:
-    """Client library for interacting with AI Runner headless server.
+    """Client library for interacting with AI Runner server.
 
     This client provides methods to:
     - Generate LLM completions (streaming and non-streaming)

@@ -7,7 +7,11 @@ from typing import Any, Iterable, List, Optional
 
 from fastapi import HTTPException, Request, WebSocket
 
-from airunner_services.ipc.messages import EnvelopeStatus, RequestEnvelope, StreamDelta
+from airunner_services.ipc.messages import (
+    EnvelopeStatus,
+    RequestEnvelope,
+    StreamDelta,
+)
 from airunner_services.runtimes.base import RuntimeClient
 from airunner_services.runtimes.contracts import (
     ChatMessage as RuntimeChatMessage,
@@ -34,7 +38,9 @@ def require_runtime_registry(request: Request) -> RuntimeRegistry:
     return runtime_registry
 
 
-def require_websocket_runtime_registry(websocket: WebSocket) -> RuntimeRegistry:
+def require_websocket_runtime_registry(
+    websocket: WebSocket,
+) -> RuntimeRegistry:
     """Return the runtime registry for a websocket session."""
     app = getattr(websocket, "app", None)
     state = getattr(app, "state", None)
@@ -49,10 +55,14 @@ def resolve_llm_client(registry: RuntimeRegistry) -> RuntimeClient:
     try:
         return registry.resolve(RuntimeKind.LLM, provider="local")
     except KeyError as exc:
-        raise HTTPException(status_code=503, detail="LLM runtime unavailable") from exc
+        raise HTTPException(
+            status_code=503, detail="LLM runtime unavailable"
+        ) from exc
 
 
-def to_runtime_messages(messages: List[ChatMessage]) -> List[RuntimeChatMessage]:
+def to_runtime_messages(
+    messages: List[ChatMessage],
+) -> List[RuntimeChatMessage]:
     """Convert API messages into the neutral runtime contract format."""
     runtime_messages = []
     for message in messages:
@@ -102,9 +112,11 @@ async def invoke_llm_runtime(
     invocation = LLMInvocationRequest(
         messages=messages,
         model=model,
-        metadata={"gguf_runtime_profile": gguf_runtime_profile}
-        if gguf_runtime_profile
-        else {},
+        metadata=(
+            {"gguf_runtime_profile": gguf_runtime_profile}
+            if gguf_runtime_profile
+            else {}
+        ),
         temperature=temperature,
         max_tokens=max_tokens,
     )
@@ -150,6 +162,27 @@ async def stream_runtime(client: RuntimeClient, envelope: RequestEnvelope):
             return
 
 
+_ROLE_MAP: dict[str, MessageRole] = {
+    "user": MessageRole.USER,
+    "assistant": MessageRole.ASSISTANT,
+    "system": MessageRole.SYSTEM,
+}
+
+
+def _parse_messages(
+    raw_messages: list[dict[str, Any]],
+) -> list[RuntimeChatMessage]:
+    """Convert API-format messages to runtime chat messages."""
+    result: list[RuntimeChatMessage] = []
+    for msg in raw_messages:
+        role_str = str(msg.get("role", "user")).lower()
+        role = _ROLE_MAP.get(role_str, MessageRole.USER)
+        content = str(msg.get("content", "")).strip()
+        if content:
+            result.append(RuntimeChatMessage(role=role, content=content))
+    return result
+
+
 def websocket_chunk(delta: StreamDelta) -> dict[str, Any]:
     """Convert a runtime stream delta into websocket payload shape."""
     if delta.status is EnvelopeStatus.FAILED:
@@ -158,8 +191,9 @@ def websocket_chunk(delta: StreamDelta) -> dict[str, Any]:
             "content": delta.metadata.get("error", "LLM runtime failed"),
             "done": True,
         }
-    payload = {
-        "type": "chunk",
+    msg_type = delta.metadata.get("message_type", "")
+    payload: dict[str, Any] = {
+        "type": msg_type if msg_type in ("thinking",) else "chunk",
         "content": delta.delta.get("content", ""),
         "done": delta.final,
     }
@@ -169,19 +203,38 @@ def websocket_chunk(delta: StreamDelta) -> dict[str, Any]:
     return payload
 
 
+def _parse_raw_messages(data: dict[str, Any]) -> list[dict[str, Any]]:
+    """Extract messages from a websocket payload (backward compat)."""
+    raw = data.get("messages") or []
+    if not raw:
+        raw = [
+            {"role": "user", "content": str(data.get("message", "")).strip()},
+        ]
+    return raw
+
+
+def _build_envelope_metadata(data: dict[str, Any]) -> dict[str, Any]:
+    """Build runtime metadata from a websocket payload."""
+    metadata: dict[str, Any] = {}
+    profile = data.get("gguf_runtime_profile")
+    if profile:
+        metadata["gguf_runtime_profile"] = profile
+    conversation_id = data.get("conversation_id")
+    if conversation_id is not None:
+        metadata["conversation_id"] = conversation_id
+    return metadata
+
+
 def websocket_envelope(data: dict[str, Any]) -> RequestEnvelope:
     """Build one streaming runtime envelope from a websocket payload."""
-    profile = data.get("gguf_runtime_profile")
+    messages = _parse_messages(_parse_raw_messages(data))
+    metadata = _build_envelope_metadata(data)
+
     payload = LLMInvocationRequest(
         model=data.get("model"),
-        messages=[
-            RuntimeChatMessage(
-                role=MessageRole.USER,
-                content=str(data.get("message", "")).strip(),
-            )
-        ],
+        messages=messages,
         max_tokens=data.get("max_tokens"),
-        metadata={"gguf_runtime_profile": profile} if profile else {},
+        metadata=metadata,
         temperature=float(data.get("temperature", 0.7)),
         stream=True,
     )

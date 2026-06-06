@@ -124,20 +124,19 @@ class QThread(QObject):
 
 
 class QCoreApplication(QObject):
-    """Headless application singleton used by the service layer."""
+    """Application singleton used by the service layer."""
 
     _instance: Optional["QCoreApplication"] = None
 
     def __init__(self, _args: Optional[list[object]] = None) -> None:
         del _args
         super().__init__()
-        self.api = None
         self._quit_requested = False
         self.__class__._instance = self
 
     @classmethod
     def instance(cls) -> Optional["QCoreApplication"]:
-        """Return the currently active headless application instance."""
+        """Return the currently active application instance."""
         return cls._instance
 
     def processEvents(self) -> None:

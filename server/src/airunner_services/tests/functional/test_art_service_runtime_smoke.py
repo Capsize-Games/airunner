@@ -10,7 +10,6 @@ from pathlib import Path
 
 import pytest
 
-
 os.environ.setdefault("AIRUNNER_TEST_NO_GUI_LAUNCH", "1")
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
@@ -28,14 +27,17 @@ for _path in (
 
 
 from airunner_services.database.session import reset_engine
-from airunner_services.database.models.application_settings import ApplicationSettings
-from airunner_services.database.models.generator_settings import GeneratorSettings
+from airunner_services.database.models.application_settings import (
+    ApplicationSettings,
+)
+from airunner_services.database.models.generator_settings import (
+    GeneratorSettings,
+)
 from airunner_services.database.models.path_settings import PathSettings
 from airunner_services.database.setup_database import setup_database
 from airunner_services.app.service_app import ServiceApp
 from airunner_services.contract_enums import Scheduler, StableDiffusionVersion
 from airunner_services.runtimes.local_fallback import LocalFallbackArtClient
-
 
 _PROBE_RESULT_PREFIX = "ART_RUNTIME_RESULT:"
 pytestmark = [pytest.mark.art_service_runtime]
@@ -260,8 +262,8 @@ def service_app(
         output_root=tmp_path / "generated-images",
     )
     app = ServiceApp(
-        start_headless_api_server=False,
-        initialize_headless_lifecycle=True,
+        start_embedded_api_server=False,
+        initialize_lifecycle=True,
     )
     try:
         yield app
@@ -271,7 +273,7 @@ def service_app(
 
 @pytest.mark.art_runtime_smoke
 @pytest.mark.integration
-def test_direct_art_runtime_bootstraps_headless_worker_only(
+def test_direct_art_runtime_bootstraps_worker_only(
     service_app: ServiceApp,
 ) -> None:
     """The direct art runtime can create the SD worker without HTTP."""
@@ -280,7 +282,7 @@ def test_direct_art_runtime_bootstraps_headless_worker_only(
     assert service_app.api_server_thread is None
     assert service_app._worker_manager is not None
 
-    worker = client._headless_art_worker(create=True)
+    worker = client._art_worker(create=True)
 
     assert worker is not None
     assert worker is service_app._worker_manager.sd_worker

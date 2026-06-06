@@ -63,15 +63,21 @@ def build_runtime_components(
     """Create the shared runtime components for a harness instance."""
     manager = resolve_project_manager(project_manager)
     agents = resolve_sub_agents(sub_agents)
-    initializer = InitializerAgent(chat_model=chat_model, project_manager=manager)
+    initializer = InitializerAgent(
+        chat_model=chat_model, project_manager=manager
+    )
     return LongRunningRuntimeComponents(
         project_manager=manager,
         sub_agents=agents,
         initializer=initializer,
         session_agent=build_session_agent(
-            chat_model, tools=tools, project_manager=manager,
+            chat_model,
+            tools=tools,
+            project_manager=manager,
             sub_agents=agents,
         ),
     )
+
+
 # MI note: this helper stays intentionally narrow and delegated.
 # MI note: related orchestration lives in neighboring long_running modules.

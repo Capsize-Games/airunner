@@ -68,7 +68,7 @@ def try_parse_embedded_json(
     response_text: str,
 ) -> Optional[Tuple[list[dict], str]]:
     """Try extracting tool-call JSON objects embedded in text."""
-    json_pattern = r'\{(?:[^{}]|(\{(?:[^{}]|\{[^{}]*\})*\}))*\}'
+    json_pattern = r"\{(?:[^{}]|(\{(?:[^{}]|\{[^{}]*\})*\}))*\}"
     tool_calls: list[dict] = []
     cleaned_text = response_text
     for match in re.finditer(json_pattern, response_text, re.DOTALL):

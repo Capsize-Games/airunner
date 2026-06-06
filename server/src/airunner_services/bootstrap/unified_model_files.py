@@ -5,13 +5,14 @@ from __future__ import annotations
 from airunner_services.database.bootstrap.llm_file_bootstrap_data import (
     LLM_FILE_BOOTSTRAP_DATA,
 )
-from airunner_services.database.bootstrap.openvoice_bootstrap_data import OPENVOICE_FILES
+from airunner_services.database.bootstrap.openvoice_bootstrap_data import (
+    OPENVOICE_FILES,
+)
 from airunner_services.database.bootstrap.rmbg_bootstrap_data import RMBG_FILES
 from airunner_services.database.bootstrap.sd_file_bootstrap_data import (
     SD_FILE_BOOTSTRAP_DATA,
 )
 from airunner_services.database.bootstrap.whisper import WHISPER_FILES
-
 
 UNIFIED_MODEL_FILES = {
     "art": SD_FILE_BOOTSTRAP_DATA,

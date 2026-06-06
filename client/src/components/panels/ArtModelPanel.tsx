@@ -4,7 +4,8 @@ import {
   updateSingleton,
 } from "../../api/client";
 import type { ArtOptionsResponse } from "../../api/client";
-import { BASE_URL } from "../../types/api";
+import { useEventBus } from "../../features/events/useEventBus";
+import { EVENT_MODEL_STATUS } from "../../features/events/types";
 import VersionSelector from "./art-model/VersionSelector";
 import ModelSelector from "./art-model/ModelSelector";
 import SchedulerSelector from "./art-model/SchedulerSelector";
@@ -35,10 +36,6 @@ export default function ArtModelPanel() {
   const [steps, setSteps] = useState(loadFromStorage("steps", 20));
   const [cfgScale, setCfgScale] = useState(
     loadFromStorage("cfg_scale", 7.5),
-  );
-  const [width, setWidth] = useState(loadFromStorage("width", 1024));
-  const [height, setHeight] = useState(
-    loadFromStorage("height", 1024),
   );
   const [seed, setSeed] = useState(0);
   const [seedRandomized, setSeedRandomized] = useState(false);
@@ -73,27 +70,57 @@ export default function ArtModelPanel() {
         setOptions(opts);
       } catch { /* */ }
 
+      const _ls = (k: string) => {
+        try { return localStorage.getItem(k) || ""; } catch { return ""; }
+      };
       try {
         const r = await getSingleton("GeneratorSettings");
         const savedVersion = String(r.version ?? "");
-        setVersion(savedVersion);
-        setModelPath(String(r.model_path ?? ""));
-        setScheduler(String(r.scheduler ?? ""));
-        setPrecision(String(r.dtype ?? ""));
-        try {
-          localStorage.setItem("airunner_art_version", savedVersion);
-        } catch {}
-        if (r.model_path) {
-          try {
-            localStorage.setItem(
-              "airunner_art_model",
-              String(r.model_path),
-            );
-          } catch {}
+        const savedModelPath = String(r.model_path ?? "");
+        const savedScheduler = String(r.scheduler ?? "");
+        const savedDtype = String(r.dtype ?? "");
+
+        // Server returned values — use them
+        if (savedVersion) {
+          setVersion(savedVersion);
+          try { localStorage.setItem("airunner_art_version", savedVersion); } catch {}
+        } else {
+          // Server returned empty — try localStorage
+          const fv = _ls("airunner_art_version");
+          if (fv) setVersion(fv);
         }
-        const savedSeed = Number(r.seed ?? 0);
-        setSeed(savedSeed);
-        setSeedRandomized(savedSeed === -1);
+        if (savedModelPath) {
+          setModelPath(savedModelPath);
+          try { localStorage.setItem("airunner_art_model", savedModelPath); } catch {}
+        } else {
+          const fm = _ls("airunner_art_model");
+          if (fm) setModelPath(fm);
+        }
+        if (savedScheduler) {
+          setScheduler(savedScheduler);
+        } else {
+          const fs = _ls("airunner_art_scheduler");
+          if (fs) setScheduler(fs);
+        }
+        if (savedDtype) {
+          setPrecision(savedDtype);
+        }
+      } catch {
+        // Server unavailable — fall back to localStorage
+        const fv = _ls("airunner_art_version");
+        const fm = _ls("airunner_art_model");
+        const fs = _ls("airunner_art_scheduler");
+        if (fv) setVersion(fv);
+        if (fm) setModelPath(fm);
+        if (fs) setScheduler(fs);
+      }
+      // Seed is always restored from localStorage to survive server restarts
+      try {
+        const seedVal = Number(
+          (() => { try { return localStorage.getItem("airunner_seed") || "0"; } catch { return "0"; } })(),
+        );
+        setSeed(seedVal);
+        setSeedRandomized(seedVal === -1);
       } catch { /* */ }
 
       try {
@@ -108,31 +135,15 @@ export default function ArtModelPanel() {
     })();
   }, []);
 
-  useEffect(() => {
-    const eventSource = new EventSource(
-      `${BASE_URL}/api/v1/art/models/watch`,
-    );
-    eventSource.addEventListener("message", (event) => {
+  useEventBus([EVENT_MODEL_STATUS], () => {
+    (async () => {
       try {
-        const data = JSON.parse(event.data);
-        if (data.type === "reload") {
-          (async () => {
-            try {
-              const opts = await import("../../api/client").then(
-                (m) => m.getArtModelOptions(),
-              );
-              setOptions(opts);
-            } catch { /* */ }
-          })();
-        }
-      } catch { /* ignore malformed events */ }
-    });
-    eventSource.onerror = () => {
-      // The browser will automatically reconnect EventSource on error
-    };
-    return () => {
-      eventSource.close();
-    };
+        const opts = await import("../../api/client").then(
+          (m) => m.getArtModelOptions(),
+        );
+        setOptions(opts);
+      } catch { /* */ }
+    })();
   }, []);
 
   const persist = (updates: Record<string, unknown>) => {
@@ -167,11 +178,13 @@ export default function ArtModelPanel() {
   const toggleSeedRandom = () => {
     if (seedRandomized) {
       setSeedRandomized(false);
+      try { localStorage.setItem("airunner_seed", String(seed)); } catch {}
       persist({ seed });
     } else {
       const s = Math.floor(Math.random() * 2147483647) + 1;
       setSeedRandomized(true);
       setSeed(s);
+      try { localStorage.setItem("airunner_seed", String(-1)); } catch {}
       persist({ seed: -1 });
     }
   };
@@ -180,7 +193,7 @@ export default function ArtModelPanel() {
     <div className="p-2">
       <div className="d-flex align-items-center gap-2 mb-2">
         <h6 style={{ color: "var(--theme-text-secondary)" }} className="mb-0">
-          Art Model
+          Art Model Settings
         </h6>
         {loading && (
           <div
@@ -195,95 +208,97 @@ export default function ArtModelPanel() {
         )}
       </div>
 
-      <VersionSelector
-        versions={options?.versions ?? []}
-        value={version}
-        loading={loading}
-        onChange={handleVersionChange}
-      />
-
-      <ModelSelector
-        models={availableModels}
-        value={modelPath}
-        loading={loading}
-        hasVersion={!!version}
-        onChange={handleModelChange}
-      />
-
-      <SchedulerSelector
-        schedulers={availableSchedulers}
-        value={scheduler}
-        loading={loading}
-        onChange={(v) => {
-          setScheduler(v);
-          persist({ scheduler: v });
-        }}
-      />
-
-      <PrecisionSelector
-        precisions={precisions}
-        value={precision}
-        loading={loading}
-        onChange={(v) => {
-          setPrecision(v);
-          persist({ dtype: v });
-        }}
-      />
-
-      <VRAMEstimate vramGb={vramEstimate} />
+      {/* 2-column grid: Version, Model, Scheduler, Precision */}
+      <div className="row g-1 mb-1">
+        <div className="col-6">
+          <VersionSelector
+            versions={options?.versions ?? []}
+            value={version}
+            loading={loading}
+            onChange={handleVersionChange}
+          />
+        </div>
+        <div className="col-6">
+          <ModelSelector
+            models={availableModels}
+            value={modelPath}
+            loading={loading}
+            hasVersion={!!version}
+            onChange={handleModelChange}
+          />
+        </div>
+        <div className="col-6">
+          <SchedulerSelector
+            schedulers={availableSchedulers}
+            value={scheduler}
+            loading={loading}
+            onChange={(v) => {
+              setScheduler(v);
+              persist({ scheduler: v });
+            }}
+          />
+        </div>
+        <div className="col-6">
+          <PrecisionSelector
+            precisions={precisions}
+            value={precision}
+            loading={loading}
+            onChange={(v) => {
+              setPrecision(v);
+              persist({ dtype: v });
+            }}
+          />
+        </div>
+      </div>
 
       <hr className="border-secondary" />
 
-      <ArtModelSliders
-        nSamples={nSamples}
-        imagesPerBatch={imagesPerBatch}
-        steps={steps}
-        cfgScale={cfgScale}
-        width={width}
-        height={height}
-        onNSamplesChange={(v) => {
-          setNSamples(v);
-          saveToStorage("n_samples", v);
-          persist({ n_samples: v });
-        }}
-        onImagesPerBatchChange={(v) => {
-          setImagesPerBatch(v);
-          saveToStorage("images_per_batch", v);
-          persist({ images_per_batch: v });
-        }}
-        onStepsChange={(v) => {
-          setSteps(v);
-          saveToStorage("steps", v);
-          persist({ steps: v });
-        }}
-        onCfgScaleChange={(v) => {
-          setCfgScale(v);
-          saveToStorage("cfg_scale", v);
-          persist({ cfg_scale: v });
-        }}
-        onWidthChange={(v) => {
-          setWidth(v);
-          saveToStorage("width", v);
-          persist({ width: v });
-        }}
-        onHeightChange={(v) => {
-          setHeight(v);
-          saveToStorage("height", v);
-          persist({ height: v });
-        }}
-      />
-
-      <SeedControls
-        seed={seed}
-        seedRandomized={seedRandomized}
-        loading={loading}
-        onSeedChange={(v) => {
-          setSeed(v);
-          setSeedRandomized(false);
-          persist({ seed: v });
-        }}
-        onToggleRandom={toggleSeedRandom}
-      />
+      {/* 2-column grid: sliders + seed + VRAM */}
+      <div className="row g-1">
+        <ArtModelSliders
+          nSamples={nSamples}
+          imagesPerBatch={imagesPerBatch}
+          steps={steps}
+          cfgScale={cfgScale}
+          onNSamplesChange={(v) => {
+            setNSamples(v);
+            saveToStorage("n_samples", v);
+            persist({ n_samples: v });
+          }}
+          onImagesPerBatchChange={(v) => {
+            setImagesPerBatch(v);
+            saveToStorage("images_per_batch", v);
+            persist({ images_per_batch: v });
+          }}
+          onStepsChange={(v) => {
+            setSteps(v);
+            saveToStorage("steps", v);
+            persist({ steps: v });
+          }}
+          onCfgScaleChange={(v) => {
+            setCfgScale(v);
+            saveToStorage("cfg_scale", v);
+            persist({ cfg_scale: v });
+          }}
+        />
+        <div className="col-12">
+          <SeedControls
+            seed={seed}
+            seedRandomized={seedRandomized}
+            loading={loading}
+            onSeedChange={(v) => {
+              setSeed(v);
+              setSeedRandomized(false);
+              try { localStorage.setItem("airunner_seed", String(v)); } catch {}
+              persist({ seed: v });
+            }}
+            onToggleRandom={toggleSeedRandom}
+          />
+        </div>
+        <div className="col-6">
+          <VRAMEstimate vramGb={vramEstimate} />
+        </div>
+      </div>
     </div>
   );
 }

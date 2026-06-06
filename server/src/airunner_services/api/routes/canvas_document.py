@@ -53,10 +53,12 @@ async def canvas_document_websocket(websocket: WebSocket):
                 .first()
             )
             current_doc = record.document if record is not None else None
-            await websocket.send_json({
-                "type": "document",
-                "document": current_doc,
-            })
+            await websocket.send_json(
+                {
+                    "type": "document",
+                    "document": current_doc,
+                }
+            )
 
         while True:
             data = await websocket.receive_json()

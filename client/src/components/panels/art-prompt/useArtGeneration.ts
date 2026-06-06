@@ -1,24 +1,12 @@
 import { useState, useRef, useCallback } from "react";
-import {
-  startArtGeneration,
-  getArtJobStatus,
-} from "../../../api/client";
+import { useArtWebSocket } from "../../../features/art/useArtWebSocket";
 
 export function useArtGeneration() {
-  const [generating, setGenerating] = useState(false);
-  const [progress, setProgress] = useState(0);
-  const jobIdRef = useRef<string | null>(null);
-  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const artWs = useArtWebSocket();
 
   const handleCancel = useCallback(() => {
-    if (pollRef.current) {
-      clearInterval(pollRef.current);
-      pollRef.current = null;
-    }
-    jobIdRef.current = null;
-    setGenerating(false);
-    setProgress(0);
-  }, []);
+    artWs.cancel();
+  }, [artWs]);
 
   const handleSubmit = useCallback(
     async (params: {
@@ -27,46 +15,45 @@ export function useArtGeneration() {
       artModel?: string;
       artVersion?: string;
       scheduler?: string;
+      width?: number;
+      height?: number;
+      onComplete?: (imageBase64: string) => void;
     }) => {
-      const { prompt, negativePrompt, artModel, artVersion, scheduler } =
-        params;
-      if (generating || !prompt.trim()) return;
-      setGenerating(true);
-      setProgress(0);
+      const {
+        prompt,
+        negativePrompt,
+        artModel,
+        artVersion,
+        scheduler,
+        width,
+        height,
+        onComplete,
+      } = params;
+      if (artWs.generating || !prompt.trim()) return;
+
       try {
-        const resp = await startArtGeneration({
+        const image = await artWs.generate({
           prompt: prompt.trim(),
-          negative_prompt: negativePrompt?.trim() || undefined,
-          model: artModel || undefined,
-          version: artVersion || undefined,
-          scheduler: scheduler || undefined,
-          num_images: 1,
+          negativePrompt,
+          artModel,
+          artVersion,
+          scheduler,
+          width,
+          height,
         });
-        jobIdRef.current = resp.job_id;
-        pollRef.current = setInterval(async () => {
-          try {
-            const status = await getArtJobStatus(resp.job_id);
-            setProgress(status.progress ?? 0);
-            if (
-              status.status === "complete" ||
-              status.status === "failed"
-            ) {
-              handleCancel();
-            }
-          } catch {
-            // keep polling
-          }
-        }, 1000);
+        if (onComplete && image) {
+          onComplete(image);
+        }
       } catch {
-        setGenerating(false);
+        // cancelled or failed — handled by artWs state
       }
     },
-    [generating, handleCancel],
+    [artWs],
   );
 
   return {
-    generating,
-    progress,
+    generating: artWs.generating,
+    progress: artWs.progress,
     handleSubmit,
     handleCancel,
   };

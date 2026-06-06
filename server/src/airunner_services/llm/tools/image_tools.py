@@ -19,16 +19,16 @@ logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 def _get_current_generator_capabilities(api: Any):
     """
     Get capabilities for the currently selected image generator.
-    
+
     Args:
         api: The API object with settings access
-        
+
     """
     from airunner_services.art.config.image_generator_capabilities import (
         get_generator_capabilities,
         ImageGeneratorCapabilities,
     )
-    
+
     try:
         generator_name = api.application_settings.current_image_generator
         return get_generator_capabilities(generator_name), generator_name
@@ -124,7 +124,16 @@ Enhanced (detailed, specific, no explanations):"""
     return_direct=True,
     requires_api=True,
     defer_loading=False,  # Essential tool - always available
-    keywords=["picture", "art", "draw", "create", "painting", "photo", "image", "generate"],
+    keywords=[
+        "picture",
+        "art",
+        "draw",
+        "create",
+        "painting",
+        "photo",
+        "image",
+        "generate",
+    ],
     input_examples=[
         {
             "prompt": "A majestic wolf standing on a mountain peak at sunset, photorealistic, detailed fur",
@@ -164,7 +173,7 @@ def generate_image(
     """Generate an image based on prompts and current model settings."""
     # Get current generator capabilities
     caps, generator_name = _get_current_generator_capabilities(api)
-    
+
     # Normalize dimensions to multiples of the step size
     step = caps.dimension_step
     width = (width // step) * step
@@ -173,14 +182,16 @@ def generate_image(
     # Clamp to valid range for this generator
     width = max(caps.min_width, min(caps.max_width, width))
     height = max(caps.min_height, min(caps.max_height, height))
-    
+
     # Handle second_prompt based on model capabilities
     effective_second_prompt = ""
     if caps.supports_second_prompt and second_prompt:
         effective_second_prompt = second_prompt
     elif not caps.supports_second_prompt and second_prompt:
         # Model doesn't support second prompt - merge into main prompt
-        logger.info(f"Model '{generator_name}' doesn't support second_prompt, merging into main prompt")
+        logger.info(
+            f"Model '{generator_name}' doesn't support second_prompt, merging into main prompt"
+        )
         prompt = f"{prompt}. {second_prompt}"
 
     # Enhance prompts using specialized model
@@ -203,7 +214,9 @@ def generate_image(
             "status": "generating",
             "generator": generator_name,
             "prompt": enhanced_prompt,
-            "second_prompt": enhanced_second if caps.supports_second_prompt else None,
+            "second_prompt": (
+                enhanced_second if caps.supports_second_prompt else None
+            ),
             "original_prompt": prompt,
             "width": width,
             "height": height,
@@ -236,11 +249,13 @@ def set_image_dimensions(
     """Set default image dimensions."""
     # Get capabilities for dimension constraints
     caps, generator_name = _get_current_generator_capabilities(api)
-    
+
     # Normalize and clamp
     step = caps.dimension_step
     width = max(caps.min_width, min(caps.max_width, (width // step) * step))
-    height = max(caps.min_height, min(caps.max_height, (height // step) * step))
+    height = max(
+        caps.min_height, min(caps.max_height, (height // step) * step)
+    )
 
     try:
         api.update_application_settings(
@@ -305,12 +320,14 @@ def open_image(
 def get_image_model_info(api: Any = None) -> str:
     """Get current image model capabilities."""
     caps, generator_name = _get_current_generator_capabilities(api)
-    
-    return json.dumps({
-        "generator": generator_name,
-        "supports_negative_prompt": caps.supports_negative_prompt,
-        "supports_second_prompt": caps.supports_second_prompt,
-        "default_dimensions": f"{caps.default_width}x{caps.default_height}",
-        "max_dimensions": f"{caps.max_width}x{caps.max_height}",
-        "guidance": caps.prompt_guidance,
-    })
+
+    return json.dumps(
+        {
+            "generator": generator_name,
+            "supports_negative_prompt": caps.supports_negative_prompt,
+            "supports_second_prompt": caps.supports_second_prompt,
+            "default_dimensions": f"{caps.default_width}x{caps.default_height}",
+            "max_dimensions": f"{caps.max_width}x{caps.max_height}",
+            "guidance": caps.prompt_guidance,
+        }
+    )

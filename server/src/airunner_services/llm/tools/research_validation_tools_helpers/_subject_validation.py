@@ -48,7 +48,9 @@ def _missing_subject_result() -> dict:
     }
 
 
-def _name_match_findings(content_lower: str, subject_name: str) -> tuple[list[str], list[str]]:
+def _name_match_findings(
+    content_lower: str, subject_name: str
+) -> tuple[list[str], list[str]]:
     """Return findings based on direct or partial subject-name matches."""
     name_lower = subject_name.lower()
     name_parts = name_lower.split()
@@ -64,7 +66,9 @@ def _obituary_flags(content_lower: str) -> list[str]:
     """Return obituary-style red flags when the content looks unrelated."""
     for pattern in OBITUARY_PATTERNS:
         if re.search(pattern, content_lower):
-            return ["Content appears to be an obituary - verify correct person"]
+            return [
+                "Content appears to be an obituary - verify correct person"
+            ]
     return []
 
 
@@ -75,8 +79,14 @@ def _expected_context_findings(
     """Return findings based on expected contextual terms."""
     if not expected_context:
         return [], []
-    context_terms = [term.strip() for term in expected_context.lower().split(",")]
-    reasons = [f"Context match: '{term}'" for term in context_terms if term in content_lower]
+    context_terms = [
+        term.strip() for term in expected_context.lower().split(",")
+    ]
+    reasons = [
+        f"Context match: '{term}'"
+        for term in context_terms
+        if term in content_lower
+    ]
     if reasons:
         return reasons, []
     return [], [f"Expected context not found: {expected_context}"]

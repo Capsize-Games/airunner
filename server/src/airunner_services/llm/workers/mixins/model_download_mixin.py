@@ -10,7 +10,6 @@ from airunner_services.llm.llm_response import LLMResponse
 from airunner_services.llm.provider_config import LLMProviderConfig
 from airunner_services.utils.application.enum_resolver import signal_code_proxy
 
-
 SignalCode = signal_code_proxy(
     {
         "HUGGINGFACE_DOWNLOAD_COMPLETE": "huggingface_download_complete",
@@ -24,11 +23,11 @@ SignalCode = signal_code_proxy(
 )
 
 
-class HeadlessDownloadProgress:
-    """Track one headless model download with tqdm when available."""
+class DownloadProgress:
+    """Track one service model download with tqdm when available."""
 
     def __init__(self, model_name: str, model_path: str):
-        """Initialize headless download progress state."""
+        """Initialize download progress state."""
         self.model_name = model_name
         self.model_path = model_path
         self._overall_bar = None
@@ -85,7 +84,7 @@ class HeadlessDownloadProgress:
         self._completed.set()
 
     def on_download_failed(self, data: Dict) -> None:
-        """Mark one headless download as failed."""
+        """Mark one download as failed."""
         error = data.get("error", "Unknown error")
         self._failed = True
         self._error_message = error
@@ -118,10 +117,10 @@ class HeadlessDownloadProgress:
 
 
 class ModelDownloadMixin:
-    """Handle LLM model download requests for GUI and headless flows."""
+    """Handle LLM model download requests for GUI and flows."""
 
     def on_llm_model_download_required_signal(self, data: Dict) -> None:
-        """Start a model download through the headless or GUI flow."""
+        """Start a model download through the flow."""
         model_type = data.get("model_type", "llm")
         if model_type == "embedding":
             self.logger.debug(
@@ -201,7 +200,7 @@ class ModelDownloadMixin:
             self.logger.error("Unable to show GUI download dialog")
             return
 
-        self._download_headless(
+        self._download(
             model_info,
             model_path,
             repo_id,
@@ -244,14 +243,14 @@ class ModelDownloadMixin:
             self._download_dialog_showing = False
         return shown
 
-    def _download_headless(
+    def _download(
         self,
         model_info: Dict,
         model_path: str,
         repo_id: str,
         missing_files: Optional[list] = None,
     ) -> bool:
-        """Download one model in headless mode with progress output."""
+        """Download one model in service mode with progress output."""
         from airunner_services.downloads.job_service import DownloadJobService
         from airunner_services.utils.job_tracker import JobStatus
 
@@ -264,15 +263,17 @@ class ModelDownloadMixin:
         if is_gguf:
             model_name = f"{model_name} (GGUF)"
 
-        self.logger.info(f"Starting headless download: {model_name}")
+        self.logger.info(f"Starting download: {model_name}")
         print(f"\n[Download] Model: {model_name}")
         print(f"[Download] Repository: {repo_id}")
         print(f"[Download] Destination: {model_path}\n")
 
-        progress = HeadlessDownloadProgress(model_name, model_path)
+        progress = DownloadProgress(model_name, model_path)
         job_service = DownloadJobService()
-        download_model_type = "gguf" if is_gguf and gguf_filename else (
-            model_info.get("model_type", "llm")
+        download_model_type = (
+            "gguf"
+            if is_gguf and gguf_filename
+            else (model_info.get("model_type", "llm"))
         )
         output_dir = model_path if is_gguf else os.path.dirname(model_path)
 
@@ -304,9 +305,7 @@ class ModelDownloadMixin:
                         "model_type": download_model_type,
                     }
                     progress.on_download_complete(complete_data)
-                    self.on_huggingface_download_complete_signal(
-                        complete_data
-                    )
+                    self.on_huggingface_download_complete_signal(complete_data)
                     self._download_dialog_showing = False
                     return True
 
@@ -327,7 +326,7 @@ class ModelDownloadMixin:
                 time.sleep(0.1)
 
         except Exception as exc:
-            self.logger.error(f"Error during headless download: {exc}")
+            self.logger.error(f"Error during download: {exc}")
             self._download_dialog_showing = False
             return False
 
@@ -396,29 +395,18 @@ class ModelDownloadMixin:
 
     def _emit_download_complete_message(self) -> None:
         """Emit a completion message through the normal LLM stream path."""
-        message = (
-            "[Download] Complete. Loading model with automatic quantization...\n"
-        )
+        message = "[Download] Complete. Loading model with automatic quantization...\n"
 
-        try:
-            self.api.llm.send_llm_text_streamed_signal(
-                LLMResponse(
+        self.emit_signal(
+            SignalCode.LLM_TEXT_STREAMED_SIGNAL,
+            {
+                "response": LLMResponse(
                     message=message,
                     is_end_of_message=False,
                     is_system_message=True,
                 )
-            )
-        except Exception:
-            self.emit_signal(
-                SignalCode.LLM_TEXT_STREAMED_SIGNAL,
-                {
-                    "response": LLMResponse(
-                        message=message,
-                        is_end_of_message=False,
-                        is_system_message=True,
-                    )
-                },
-            )
+            },
+        )
 
     def _auto_load_downloaded_model(self) -> None:
         """Load the downloaded model and replay any pending request."""
@@ -428,7 +416,10 @@ class ModelDownloadMixin:
             load_success = self.model_manager.load()
             self.logger.info(f"Model load returned: {load_success}")
 
-            if self.model_manager.model_status[ModelType.LLM] != ModelStatus.LOADED:
+            if (
+                self.model_manager.model_status[ModelType.LLM]
+                != ModelStatus.LOADED
+            ):
                 self.logger.error(
                     "Model failed to load after download - status: %s",
                     self.model_manager.model_status[ModelType.LLM],
@@ -456,4 +447,4 @@ class ModelDownloadMixin:
             )
 
 
-__all__ = ["HeadlessDownloadProgress", "ModelDownloadMixin"]
+__all__ = ["DownloadProgress", "ModelDownloadMixin"]

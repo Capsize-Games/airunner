@@ -11,7 +11,6 @@ from typing import Sequence, Union
 import sqlalchemy as sa
 from alembic import op
 
-
 # revision identifiers, used by Alembic.
 revision: str = "b1c4d5e6f7a8"
 down_revision: Union[str, None] = "810df6adb9db"
@@ -30,9 +29,7 @@ def _drop_columns_if_present(
     inspector = sa.inspect(op.get_bind())
     if not inspector.has_table(table_name):
         return
-    existing = {
-        column["name"] for column in inspector.get_columns(table_name)
-    }
+    existing = {column["name"] for column in inspector.get_columns(table_name)}
     targets = [name for name in column_names if name in existing]
     if not targets:
         return

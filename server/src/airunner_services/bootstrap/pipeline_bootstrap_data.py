@@ -2,7 +2,6 @@
 
 from airunner_services.settings import AIRUNNER_ART_ENABLED
 
-
 art_pipline_data = [
     {
         "pipeline_action": "txt2img",

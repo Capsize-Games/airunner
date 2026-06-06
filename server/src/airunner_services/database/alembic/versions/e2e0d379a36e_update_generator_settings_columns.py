@@ -15,7 +15,6 @@ from airunner_services.database.models.llm_generator_settings import (
 )
 from airunner_services.database.db import safe_alter_column
 
-
 # revision identifiers, used by Alembic.
 revision: str = "e2e0d379a36e"
 down_revision: Union[str, None] = "3b1030ac9b9c"

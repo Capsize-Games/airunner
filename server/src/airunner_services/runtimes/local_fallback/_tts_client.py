@@ -1,4 +1,5 @@
 """Local fallback TTS runtime client."""
+
 from __future__ import annotations
 
 import base64
@@ -19,12 +20,12 @@ from airunner_services.runtimes.local_fallback._base import (
     DEFAULT_PROVIDER,
     DEFAULT_TIMEOUT_SECONDS,
     HealthProvider,
-    _build_signal_mediator,
     _build_tts_service,
     _model_status_value,
     _resolve_model_type,
     _SignalRuntimeClient,
 )
+
 
 class LocalFallbackTTSClient(_SignalRuntimeClient):
     """Bridge TTS runtime requests to the existing playback-oriented path."""
@@ -60,20 +61,20 @@ class LocalFallbackTTSClient(_SignalRuntimeClient):
         if request.action is not RuntimeAction.INVOKE:
             raise ValueError("LocalFallbackTTSClient only supports invoke")
         invocation = TTSInvocationRequest.model_validate(request.payload)
-        if self._headless_tts_worker() is not None:
-            return self._invoke_headless_runtime(
+        if self._tts_worker() is not None:
+            return self._invoke_runtime(
                 request.request_id,
                 invocation,
             )
 
         return self._invoke_playback_runtime(request.request_id, invocation)
 
-    def _invoke_headless_runtime(
+    def _invoke_runtime(
         self,
         request_id: str,
         invocation: TTSInvocationRequest,
     ) -> ResponseEnvelope:
-        """Return audio from one headless runtime instead of local playback."""
+        """Return audio from one runtime instead of local playback."""
         audio_b64 = self._audio_payload(invocation)
         if audio_b64 is not None:
             return ResponseEnvelope(
@@ -88,7 +89,7 @@ class LocalFallbackTTSClient(_SignalRuntimeClient):
         return self._failure_response(
             request_id,
             "tts_audio_unavailable",
-            "Headless TTS runtime could not render audio",
+            "TTS runtime could not render audio",
             retryable=True,
         )
 
@@ -121,7 +122,7 @@ class LocalFallbackTTSClient(_SignalRuntimeClient):
         """Enable and load the local TTS model."""
         from airunner_services.contract_enums import ModelStatus, SignalCode
 
-        worker = self._headless_tts_worker()
+        worker = self._tts_worker()
         if worker is not None:
             load_tts = getattr(worker, "_load_tts", None)
             current_status = getattr(worker, "_current_tts_status", None)
@@ -129,7 +130,7 @@ class LocalFallbackTTSClient(_SignalRuntimeClient):
                 return self._failure_response(
                     request_id,
                     "tts_load_failed",
-                    "Headless TTS worker is unavailable",
+                    "TTS worker is unavailable",
                 )
 
             load_tts()
@@ -172,7 +173,7 @@ class LocalFallbackTTSClient(_SignalRuntimeClient):
         """Disable and unload the local TTS model."""
         from airunner_services.contract_enums import ModelStatus, SignalCode
 
-        worker = self._headless_tts_worker()
+        worker = self._tts_worker()
         if worker is not None:
             unload_tts = getattr(worker, "_unload_tts", None)
             current_status = getattr(worker, "_current_tts_status", None)
@@ -180,7 +181,7 @@ class LocalFallbackTTSClient(_SignalRuntimeClient):
                 return self._failure_response(
                     request_id,
                     "tts_unload_failed",
-                    "Headless TTS worker is unavailable",
+                    "TTS worker is unavailable",
                 )
 
             unload_tts()
@@ -220,7 +221,7 @@ class LocalFallbackTTSClient(_SignalRuntimeClient):
         self,
         invocation: TTSInvocationRequest,
     ) -> Optional[str]:
-        """Return base64 WAV audio when headless synthesis is available."""
+        """Return base64 WAV audio when synthesis is available."""
         audio_bytes = self._render_audio_bytes(invocation)
         if not audio_bytes:
             return None
@@ -230,8 +231,8 @@ class LocalFallbackTTSClient(_SignalRuntimeClient):
         self,
         invocation: TTSInvocationRequest,
     ) -> Optional[bytes]:
-        """Render one TTS request to WAV bytes in headless mode."""
-        worker = self._headless_tts_worker()
+        """Render one TTS request to WAV bytes in service mode."""
+        worker = self._tts_worker()
         manager = self._tts_manager(worker)
         request = self._tts_request(invocation, worker)
         if worker is None or manager is None or request is None:
@@ -241,22 +242,24 @@ class LocalFallbackTTSClient(_SignalRuntimeClient):
             return None
         return self._encode_audio(audio, self._sample_rate(manager))
 
-    def _headless_tts_worker(self):
-        """Return the headless TTS worker when one exists."""
+    def _tts_worker(self):
+        """Return the TTS worker when one exists."""
         worker_manager = getattr(self._signal_source, "_worker_manager", None)
         if worker_manager is None:
             return None
         return getattr(worker_manager, "tts_generator_worker", None)
 
     def _tts_manager(self, worker):
-        """Return one loaded TTS manager from the headless worker."""
+        """Return one loaded TTS manager from the worker."""
         from airunner_services.contract_enums import ModelStatus
 
         if worker is None:
             return None
         manager = getattr(worker, "tts", None)
         if manager is None:
-            initializer = getattr(worker, "_initialize_tts_model_manager", None)
+            initializer = getattr(
+                worker, "_initialize_tts_model_manager", None
+            )
             if callable(initializer):
                 initializer()
             manager = getattr(worker, "tts", None)
@@ -288,7 +291,9 @@ class LocalFallbackTTSClient(_SignalRuntimeClient):
         )
 
     @staticmethod
-    def _tts_model_type(invocation: TTSInvocationRequest, worker) -> Optional[str]:
+    def _tts_model_type(
+        invocation: TTSInvocationRequest, worker
+    ) -> Optional[str]:
         """Return the active TTS model type as a normalized string."""
         resolver = getattr(worker, "_active_tts_model", None)
         active_model = resolver() if callable(resolver) else None

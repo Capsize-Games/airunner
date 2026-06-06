@@ -7,7 +7,6 @@ from typing import Any
 
 from airunner_services.database.models.project_state import FeatureStatus
 
-
 logger = logging.getLogger(__name__)
 
 
@@ -23,7 +22,7 @@ def mark_feature_in_progress(
         feature.id,
         FeatureStatus.IN_PROGRESS.value,
     )
-        # Keep state transitions separate so the execution loop stays linear.
+    # Keep state transitions separate so the execution loop stays linear.
 
 
 def mark_feature_success(
@@ -44,8 +43,10 @@ def mark_feature_success(
         feature.id,
         FeatureStatus.COMPLETED.value,
     )
-    agent._emit_progress(feature.name, "completed", (index + 1) / total_features)
-        # Success bookkeeping pairs persistence with the outward progress signal.
+    agent._emit_progress(
+        feature.name, "completed", (index + 1) / total_features
+    )
+    # Success bookkeeping pairs persistence with the outward progress signal.
 
 
 def mark_feature_failure(
@@ -66,4 +67,4 @@ def mark_feature_failure(
         message=f"Failed: {error}",
         work_type="error",
     )
-        # Failure bookkeeping mirrors the success path with an error outcome.
+    # Failure bookkeeping mirrors the success path with an error outcome.

@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import os
 
-
 CUDA_MALLOC_ASYNC_ALLOCATOR = "backend:cudaMallocAsync"
 
 

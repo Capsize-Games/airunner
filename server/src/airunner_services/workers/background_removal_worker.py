@@ -5,6 +5,10 @@ from __future__ import annotations
 import logging
 from typing import Any
 
+from airunner_services.utils.application.api_reference import (
+    peek_registered_api,
+)
+
 from airunner_services.contract_enums import ModelStatus, ModelType, SignalCode
 from airunner_services.database.models.drawingpad_settings import (
     DrawingPadSettings,
@@ -59,11 +63,9 @@ class BackgroundRemovalWorker(Worker):
         self._remove_background(data)
 
     def _daemon_client(self):
-        """Return the GUI daemon client when one is active."""
-        api_ref = self.refresh_api_reference() or getattr(self, "api", None)
-        if api_ref is None or getattr(api_ref, "headless", False):
-            return None
-        return getattr(api_ref, "daemon_client", None)
+        """Return the daemon client when one is active."""
+        api_ref = peek_registered_api()
+        return getattr(api_ref, "daemon_client", None) if api_ref else None
 
     def _unload_model(self) -> None:
         """Release RMBG resources and publish unloaded status."""
@@ -146,26 +148,24 @@ class BackgroundRemovalWorker(Worker):
                     )
                     self._mark_model_failed()
                     return
-                output_binary = self.model_manager.remove_background_to_png_bytes(
-                    image
+                output_binary = (
+                    self.model_manager.remove_background_to_png_bytes(image)
                 )
             logger.info(
                 "BackgroundRemovalWorker inference complete "
                 "(out_bytes=%s, device=%s)",
-                len(output_binary)
-                if hasattr(output_binary, "__len__")
-                else None,
+                (
+                    len(output_binary)
+                    if hasattr(output_binary, "__len__")
+                    else None
+                ),
                 getattr(self.model_manager, "_device", None),
             )
             self._persist_output(layer_id, output_binary)
             self._refresh_canvas()
             self._mark_model_ready()
-        except Exception as exc:
+        except Exception:
             self._mark_model_failed()
-            try:
-                self.api.application_error(message=str(exc))
-            except Exception:
-                pass
 
     def _request_model_download(
         self,
@@ -248,12 +248,6 @@ class BackgroundRemovalWorker(Worker):
                 BackgroundRemovalWorkerSignalCode.LAYERS_SHOW_SIGNAL,
                 {},
             )
-        except Exception:
-            pass
-
-        try:
-            self.api.art.canvas.image_updated()
-            self.api.art.canvas.do_draw(True)
         except Exception:
             pass
 

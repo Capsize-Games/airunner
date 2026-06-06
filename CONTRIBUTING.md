@@ -60,10 +60,10 @@ We follow the PEP 8 style guide for Python code. You can find the complete guide
 
 ## Services Architecture
 
-AI Runner uses a headless daemon architecture with a web-based GUI:
+AI Runner uses a daemon architecture with a web-based GUI:
 
 - **`server/`**: FastAPI-based daemon that orchestrates LLM, STT, TTS, and
-  art workloads. Runs as `airunner-headless`.
+  art workloads. Runs as `airunner-server`.
 - **`client/`**: React/TypeScript web GUI built with Vite. Serves
   as the user-facing client that connects to the daemon API.
 - **`api/`**: Shared transport contracts between services and clients.

@@ -13,7 +13,6 @@ from airunner_services.llm.adapters.mixins.generation_mixin import (
     GenerationMixin,
 )
 
-
 __all__ = [
     "TokenizationMixin",
     "MessageFormattingMixin",

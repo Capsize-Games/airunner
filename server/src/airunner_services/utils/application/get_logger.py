@@ -7,9 +7,12 @@ import os
 import threading
 from typing import Optional
 
-from airunner_services.settings import AIRUNNER_BASE_PATH, AIRUNNER_LOG_LEVEL
+from airunner_services.settings import (
+    AIRUNNER_BASE_PATH,
+    AIRUNNER_LOG_FILE,
+    AIRUNNER_LOG_LEVEL,
+)
 from airunner_services.utils.application.log_hygiene import LogHygieneFilter
-
 
 _LOGGER_CACHE: dict[str, "Logger"] = {}
 _LOGGER_CACHE_LOCK = threading.RLock()
@@ -29,7 +32,9 @@ def _default_log_base_path() -> str:
 def _resolve_log_base_path() -> str:
     """Return the configured base path for persistent AIRunner logs."""
     try:
-        from airunner_services.database.models.path_settings import PathSettings
+        from airunner_services.database.models.path_settings import (
+            PathSettings,
+        )
 
         settings = PathSettings.objects.first()
         base_path = getattr(settings, "base_path", None)
@@ -64,15 +69,9 @@ def _configure_file_handler(
     logger: logging.Logger,
     formatter: logging.Formatter,
 ) -> None:
-    """Attach one hygiene-filtered file handler when enabled."""
-    if os.environ.get("AIRUNNER_SAVE_LOG_TO_FILE", "0") != "1":
-        return
-
+    """Attach one hygiene-filtered file handler."""
     try:
-        log_file = os.environ.get(
-            "AIRUNNER_LOG_FILE",
-            os.path.join(_resolve_log_base_path(), "airunner.log"),
-        )
+        log_file = AIRUNNER_LOG_FILE
         log_dir = os.path.dirname(log_file)
         if log_dir:
             os.makedirs(log_dir, mode=0o700, exist_ok=True)
@@ -81,6 +80,12 @@ def _configure_file_handler(
         file_handler.setFormatter(formatter)
         file_handler.addFilter(LogHygieneFilter())
         logger.addHandler(file_handler)
+    except PermissionError:
+        logger.warning(
+            "Permission denied: cannot write to %s; "
+            "file logging disabled",
+            AIRUNNER_LOG_FILE,
+        )
     except Exception as exc:
         logger.error("Failed to setup file logging: %s", exc)
 

@@ -484,12 +484,11 @@ class BaseDiffusersModelManager(
         except Exception as e:
             self.logger.error(f"[_load_pipe] Error accessing properties: {e}")
             import traceback
+
             self.logger.error(traceback.format_exc())
             return False
-        
-        self.logger.debug(
-            f"Loading pipe {pipeline_class} for {section}"
-        )
+
+        self.logger.debug(f"Loading pipe {pipeline_class} for {section}")
         self.change_model_status(self.model_type, ModelStatus.LOADING)
         data = self._prepare_pipe_data()
 

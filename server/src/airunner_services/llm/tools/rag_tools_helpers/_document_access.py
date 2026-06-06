@@ -7,9 +7,6 @@ from typing import Any
 from airunner_services.llm.tools.rag_tools_helpers._document_splitting import (
     extract_document_structure_headings,
 )
-from airunner_services.llm.tools.rag_tools_helpers._result_formatting import (
-    infer_filename_details,
-)
 
 
 def coerce_active_values(values: Any) -> list[str]:
@@ -24,11 +21,7 @@ def coerce_active_values(values: Any) -> list[str]:
         except TypeError:
             return []
 
-    return [
-        str(value).strip()
-        for value in values
-        if str(value or "").strip()
-    ]
+    return [str(value).strip() for value in values if str(value or "").strip()]
 
 
 def get_single_active_document_path(rag_manager: Any) -> str | None:
@@ -117,8 +110,7 @@ def build_document_structure_result(
         return None
 
     structure = "\n".join(
-        f"{index}. {heading}"
-        for index, heading in enumerate(headings, 1)
+        f"{index}. {heading}" for index, heading in enumerate(headings, 1)
     )
     return "Document structure:\n" + structure
 

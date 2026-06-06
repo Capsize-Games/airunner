@@ -10,7 +10,6 @@ from typing import Sequence, Union
 
 from alembic import op
 import sqlalchemy as sa
-from sqlalchemy.dialects import sqlite
 
 # revision identifiers, used by Alembic.
 revision: str = "533e97f2b74c"
@@ -43,16 +42,12 @@ def upgrade() -> None:
     # 1. Migration 810df6adb9db creates the table without unique constraint
     # 2. This migration adds the unique constraint but needs to ensure no duplicates exist first
     # 3. If duplicates exist (from manual entries or previous issues), rename them to prevent constraint violation
-    result = connection.execute(
-        sa.text(
-            """
+    result = connection.execute(sa.text("""
             SELECT name, COUNT(*) as count 
             FROM fine_tuned_models 
             GROUP BY name 
             HAVING COUNT(*) > 1
-        """
-        )
-    )
+        """))
 
     duplicates = result.fetchall()
     for name, count in duplicates:

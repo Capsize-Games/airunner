@@ -117,4 +117,6 @@ def _create_provider_model_from_runtime(
     )
     if provider_model is not None:
         return provider_model
-    raise ValueError("Unable to create ChatModel: no valid configuration found")
+    raise ValueError(
+        "Unable to create ChatModel: no valid configuration found"
+    )

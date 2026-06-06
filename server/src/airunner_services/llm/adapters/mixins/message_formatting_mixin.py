@@ -40,10 +40,10 @@ class MessageFormattingMixin:
 
     def _check_model_supports_thinking(self) -> bool:
         """Check if the current model supports thinking mode.
-        
+
         Currently only Qwen3 models support the enable_thinking parameter
         with <think>...</think> reasoning blocks.
-        
+
         Returns:
             True if the model supports thinking mode, False otherwise.
         """
@@ -51,28 +51,33 @@ class MessageFormattingMixin:
         model_path = getattr(self, "model_path", None)
         if not model_path:
             return False
-        
+
         model_path_lower = str(model_path).lower()
-        
+
         # Check LLMProviderConfig.LOCAL_MODELS for supports_thinking
-        from airunner_services.llm.config.provider_config import LLMProviderConfig
-        
+        from airunner_services.llm.config.provider_config import (
+            LLMProviderConfig,
+        )
+
         for model_config in LLMProviderConfig.LOCAL_MODELS.values():
             repo_id = model_config.get("repo_id", "")
             if not repo_id:
                 continue
-            
+
             # Extract model name from repo_id
             model_name = repo_id.split("/")[-1].lower()
-            
+
             # Match if model name appears in path
-            if model_name in model_path_lower or model_path_lower in model_name:
+            if (
+                model_name in model_path_lower
+                or model_path_lower in model_name
+            ):
                 return model_config.get("supports_thinking", False)
-        
+
         # Fallback: Check for "qwen3" in the model path (covers custom paths)
         if "qwen3" in model_path_lower:
             return True
-        
+
         return False
 
     def _messages_to_prompt(self, messages: List[BaseMessage]) -> str:
@@ -144,7 +149,7 @@ class MessageFormattingMixin:
             Simple formatted prompt string
         """
         from langchain_core.messages import ToolMessage
-        
+
         prompt_parts = []
         for msg in messages:
             if isinstance(msg, SystemMessage):

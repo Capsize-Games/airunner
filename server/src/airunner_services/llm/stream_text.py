@@ -5,7 +5,6 @@ from __future__ import annotations
 import unicodedata
 from typing import Iterable
 
-
 _NO_SPACE_BEFORE = frozenset(".,!?;:%)]}>/\\")
 _OPENING_CHARS = frozenset("([{</\\")
 _WORD_CONTINUATION = frozenset("_")
@@ -39,9 +38,7 @@ def needs_stream_space(existing: str, chunk: str) -> bool:
     prev_is_symbol = _is_space_separated_symbol(prev)
     next_is_symbol = _is_space_separated_symbol(next_char)
 
-    if (prev_is_word or prev_is_symbol) and (
-        next_is_word or next_is_symbol
-    ):
+    if (prev_is_word or prev_is_symbol) and (next_is_word or next_is_symbol):
         return True
     if prev in _SENTENCE_ENDERS and (next_is_word or next_is_symbol):
         return True

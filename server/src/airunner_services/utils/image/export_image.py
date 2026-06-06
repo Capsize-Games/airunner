@@ -5,7 +5,6 @@ import datetime
 import glob
 import threading
 
-
 _SEQUENCE_LOCK = threading.Lock()
 _NEXT_IMAGE_SEQUENCE: Dict[tuple[str, str], int] = {}
 

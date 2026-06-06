@@ -55,7 +55,9 @@ class HuggingFaceDownloader:
             cache_dir: Directory to store downloaded models
         """
         if cache_dir is None:
-            cache_dir = os.path.join(AIRUNNER_BASE_PATH, "text/models/llm/causallm")
+            cache_dir = os.path.join(
+                AIRUNNER_BASE_PATH, "text/models/llm/causallm"
+            )
         self.cache_dir = Path(cache_dir)
         self.cache_dir.mkdir(parents=True, exist_ok=True)
 
@@ -315,7 +317,16 @@ class HuggingFaceDownloader:
         # Extract model name from filename (remove .gguf extension and quant suffix)
         model_name = filename.replace(".gguf", "")
         # Remove common quant suffixes for cleaner folder names
-        for suffix in ["-Q4_K_M", "-Q4_K_S", "-Q5_K_M", "-Q8_0", "-q4_k_m", "-q4_k_s", "-q5_k_m", "-q8_0"]:
+        for suffix in [
+            "-Q4_K_M",
+            "-Q4_K_S",
+            "-Q5_K_M",
+            "-Q8_0",
+            "-q4_k_m",
+            "-q4_k_s",
+            "-q5_k_m",
+            "-q8_0",
+        ]:
             model_name = model_name.replace(suffix, "")
 
         if local_dir is None:

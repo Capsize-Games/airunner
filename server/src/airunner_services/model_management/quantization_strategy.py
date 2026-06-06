@@ -6,7 +6,9 @@ import logging
 from dataclasses import dataclass
 from enum import Enum
 
-from airunner_services.model_management.hardware_profiler import HardwareProfile
+from airunner_services.model_management.hardware_profiler import (
+    HardwareProfile,
+)
 
 
 class QuantizationLevel(Enum):
@@ -63,7 +65,9 @@ class QuantizationStrategy:
                 QuantizationLevel.INT8,
                 model_size_gb,
             )
-        return self._get_config_for_level(QuantizationLevel.INT4, model_size_gb)
+        return self._get_config_for_level(
+            QuantizationLevel.INT4, model_size_gb
+        )
 
     def _get_config_for_level(
         self,

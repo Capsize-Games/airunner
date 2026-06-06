@@ -4,7 +4,9 @@ from __future__ import annotations
 
 from typing import Any
 
-from airunner_services.llm.long_running.project_manager_git_exec import _run_git
+from airunner_services.llm.long_running.project_manager_git_exec import (
+    _run_git,
+)
 from airunner_services.llm.long_running.project_manager_git_repo import (
     _project_repo_path,
 )

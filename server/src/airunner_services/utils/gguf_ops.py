@@ -9,7 +9,6 @@ import torch
 import gguf
 from typing import Optional
 
-
 # Mapping from GGUF quantization types to gguf Python package classes
 QUANTS_MAPPING = {
     gguf.GGMLQuantizationType.Q2_K: gguf.Q2_K,
@@ -281,12 +280,12 @@ def print_gguf_stats(state_dict: dict) -> None:
         total_params += v.numel() if hasattr(v, "numel") else 0
 
     if gguf_params > 0:
-        print(f"\n=== GGUF Quantization Statistics ===")
+        print("\n=== GGUF Quantization Statistics ===")
         print(f"Total parameters: {total_params:,}")
         print(
             f"GGUF parameters: {gguf_params:,} ({gguf_params/total_params*100:.1f}%)"
         )
-        print(f"\nQuantization types:")
+        print("\nQuantization types:")
         for qtype, count in sorted(quant_counts.items()):
             print(f"  {qtype}: {count} tensors")
-        print(f"=====================================\n")
+        print("=====================================\n")

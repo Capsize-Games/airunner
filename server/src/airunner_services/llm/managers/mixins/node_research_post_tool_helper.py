@@ -11,7 +11,9 @@ from langchain_core.messages import BaseMessage
 class NodeResearchPostToolHelper:
     """Build research-mode follow-up instructions after tool calls."""
 
-    def scrape_counts(self, tool_messages: List[BaseMessage]) -> tuple[int, int]:
+    def scrape_counts(
+        self, tool_messages: List[BaseMessage]
+    ) -> tuple[int, int]:
         """Return successful and failed scrape counts."""
         successful_scrapes, failed_scrapes = 0, 0
         for tool_message in tool_messages:
@@ -38,7 +40,9 @@ class NodeResearchPostToolHelper:
             content = str(getattr(tool_message, "content", ""))
             if "http" not in content or "search" not in content.lower():
                 continue
-            search_urls.extend(re.findall(r'https?://[^\s\]"\'<>]+', content)[:5])
+            search_urls.extend(
+                re.findall(r'https?://[^\s\]"\'<>]+', content)[:5]
+            )
         return search_urls
 
     def research_instruction(
@@ -61,7 +65,11 @@ class NodeResearchPostToolHelper:
                 f"{url_hint}\n"
                 "**DO NOT** write a response yet. You need more detailed content first."
             )
-        if scrape_attempts > 0 and successful_scrapes == 0 and failed_scrapes > 0:
+        if (
+            scrape_attempts > 0
+            and successful_scrapes == 0
+            and failed_scrapes > 0
+        ):
             return (
                 "\n\n=== DEEP RESEARCH WORKFLOW - SCRAPE ERROR RECOVERY ===\n"
                 "Your previous scrape attempt failed. This is normal - some sites block scraping.\n\n"

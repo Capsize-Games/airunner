@@ -13,7 +13,6 @@ from airunner_services.database.models.application_settings import (
 )
 from airunner_services.database.db import add_column, drop_column
 
-
 # revision identifiers, used by Alembic.
 revision: str = "ee56e41aa8cb"
 down_revision: Union[str, None] = "978459f9d332"

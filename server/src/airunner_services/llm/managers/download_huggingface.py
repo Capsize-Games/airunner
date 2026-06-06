@@ -12,7 +12,6 @@ from airunner_services.utils.application import create_worker
 from airunner_services.utils.application.enum_resolver import signal_code_proxy
 from airunner_services.workers.worker import QueueType, Worker
 
-
 SignalCode = signal_code_proxy(
     {"CANCEL_HUGGINGFACE_DOWNLOAD": "cancel_huggingface_download"}
 )

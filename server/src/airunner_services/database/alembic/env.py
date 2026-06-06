@@ -35,9 +35,12 @@ def _bootstrap_checkout_imports() -> None:
 
 _bootstrap_checkout_imports()
 
+
 def _default_db_url() -> str:
     """Return the default database URL for Alembic commands."""
-    from airunner_services.settings import AIRUNNER_DB_URL as default_airunner_db_url
+    from airunner_services.settings import (
+        AIRUNNER_DB_URL as default_airunner_db_url,
+    )
 
     return (
         os.environ.get("AIRUNNER_DATABASE_URL")
@@ -56,7 +59,9 @@ if not existing_url:
 
 # Configure Python logging (best-effort).
 try:
-    if getattr(config, "config_file_name", None) and os.path.exists(config.config_file_name):
+    if getattr(config, "config_file_name", None) and os.path.exists(
+        config.config_file_name
+    ):
         fileConfig(config.config_file_name)
 except Exception:
     pass

@@ -3,6 +3,7 @@ import Dropdown from "react-bootstrap/Dropdown";
 import {
   ZoomIn, ZoomOut, Crosshair, Settings, GripHorizontal,
   Undo2, Redo2, FilePlus, Trash2, Layers,
+  MessageSquareHeart,
 } from "lucide-react";
 import type { ActiveTool, ActiveGridArea } from "./useCanvasState";
 import SliderWithSpinbox from "../../components/panels/SliderWithSpinbox";
@@ -41,6 +42,8 @@ interface ToolBarProps {
   hasMaskStrokes?: boolean;
   showLayers: boolean;
   onToggleLayers: () => void;
+  showArtPanel: boolean;
+  onToggleArtPanel: () => void;
 }
 
 const DOCK_LABELS: Record<ToolbarDock, string> = {
@@ -77,6 +80,8 @@ export default function ToolBar({
   hasMaskStrokes = false,
   showLayers,
   onToggleLayers,
+  showArtPanel,
+  onToggleArtPanel,
 }: ToolBarProps) {
   const colorInputRef = useRef<HTMLInputElement>(null);
   const hasBrushOptions =
@@ -276,6 +281,13 @@ export default function ToolBar({
         onClick={onToggleLayers}
       >
         <Layers size={15} strokeWidth={1.75} />
+      </IconBtn>
+      <IconBtn
+        title={showArtPanel ? "Hide art panel" : "Show art panel"}
+        active={showArtPanel}
+        onClick={onToggleArtPanel}
+      >
+        <MessageSquareHeart size={15} strokeWidth={1.75} />
       </IconBtn>
       <IconBtn title="Canvas settings" onClick={onOpenSettings}>
         <Settings size={15} strokeWidth={1.75} />

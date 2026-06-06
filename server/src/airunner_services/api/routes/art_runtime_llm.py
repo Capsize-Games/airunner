@@ -28,13 +28,17 @@ _UNLOAD_ERROR = "LLM runtime could not be unloaded for art"
 def current_llm_status(req: Request) -> Optional[ModelStatus]:
     """Return the current daemon-owned LLM status when available."""
     lifecycle_service = getattr(req.app.state, "lifecycle_service", None)
-    status_getter = getattr(lifecycle_service, "current_llm_model_status", None)
+    status_getter = getattr(
+        lifecycle_service, "current_llm_model_status", None
+    )
     if not callable(status_getter):
         return None
     try:
         return status_getter()
     except Exception:
-        logger.debug("Failed to read LLM status before art request", exc_info=True)
+        logger.debug(
+            "Failed to read LLM status before art request", exc_info=True
+        )
         return None
 
 

@@ -1,7 +1,6 @@
 # punctuation = ["!", "?", "…", ",", ".", "'", "-"]
 from airunner_services.contract_enums import AvailableLanguage
 
-
 punctuation = ["!", "?", "…", ",", ".", "'", "-", "¿", "¡"]
 pu_symbols = punctuation + ["SP", "UNK"]
 pad = "_"

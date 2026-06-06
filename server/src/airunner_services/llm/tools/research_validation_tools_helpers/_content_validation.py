@@ -95,7 +95,9 @@ def validate_url_impl(url: str) -> dict:
         blocked_path = _blocked_path_result(parsed.path.lower(), domain)
         if blocked_path is not None:
             return blocked_path
-        return _url_result(True, "URL is suitable for research scraping", domain)
+        return _url_result(
+            True, "URL is suitable for research scraping", domain
+        )
     except Exception as exc:
         return _url_error_result(exc)
 
@@ -106,14 +108,18 @@ def validate_content_impl(content: str, source_url: str = "") -> dict:
     short_result = _short_content_result(content, warnings)
     if short_result is not None:
         return short_result
-    blocked_result = _hard_block_result(content.lower(), warnings, len(content))
+    blocked_result = _hard_block_result(
+        content.lower(), warnings, len(content)
+    )
     if blocked_result is not None:
         return blocked_result
     injection_result = _injection_result(content, source_url, warnings)
     if injection_result is not None:
         return injection_result
     warnings.extend(_content_warnings(content.lower()))
-    return _content_result(True, "Content quality acceptable", warnings, len(content))
+    return _content_result(
+        True, "Content quality acceptable", warnings, len(content)
+    )
 
 
 def _invalid_url_result(parsed: ParseResult) -> dict | None:
@@ -125,7 +131,9 @@ def _invalid_url_result(parsed: ParseResult) -> dict | None:
             None,
         )
     if parsed.scheme not in ("http", "https"):
-        return _url_result(False, f"Unsupported URL scheme: {parsed.scheme}", None)
+        return _url_result(
+            False, f"Unsupported URL scheme: {parsed.scheme}", None
+        )
     return None
 
 
@@ -177,7 +185,9 @@ def _short_content_result(content: str, warnings: list[str]) -> dict | None:
     if content and len(content) >= 200:
         return None
     length = len(content) if content else 0
-    reason = "Content too short (< 200 characters) - likely blocked or empty page"
+    reason = (
+        "Content too short (< 200 characters) - likely blocked or empty page"
+    )
     return _content_result(False, reason, warnings, length)
 
 

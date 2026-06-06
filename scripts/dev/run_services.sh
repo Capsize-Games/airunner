@@ -7,7 +7,6 @@ LOG_DIR="${ROOT_DIR}/build/logs"
 DAEMON_PORT="${AIRUNNER_DAEMON_PORT:-8188}"
 DEV_VENV="${AIRUNNER_DEV_VENV:-${ROOT_DIR}/venv}"
 DEV_VENV_BIN="${DEV_VENV}/bin"
-SIDECAR_BIN_DIR="${ROOT_DIR}/build/runtime-sidecars/linux/bin"
 
 mkdir -p "${LOG_DIR}"
 
@@ -132,25 +131,22 @@ start_services() {
     fi
 
     echo "=== Starting AI Runner daemon ==="
-    echo "Log: ${LOG_DIR}/daemon.log"
+    # Process-level stdout/stderr goes to server.log (crash traces, early
+    # startup output). Structured logs are written to AIRUNNER_LOG_FILE
+    # (default: under AIRUNNER_BASE_PATH) by the logging framework.
+    echo "  Process output: ${LOG_DIR}/server.log"
+    echo "  Application logs: ${AIRUNNER_LOG_FILE:-~/.local/share/airunner/airunner.log}"
 
     export DEV_ENV=1
     export AIRUNNER_HEADLESS=1
     export AIRUNNER_SD_ON=1
     export AIRUNNER_LOG_LEVEL="${AIRUNNER_LOG_LEVEL:-INFO}"
     export AIRUNNER_DISABLE_STALE_DAEMON_CHECK=1
+    export AIRUNNER_SERVER_HOST="${AIRUNNER_SERVER_HOST:-127.0.0.1}"
     export PYTHONPATH="${ROOT_DIR}/server/src:${ROOT_DIR}/src${PYTHONPATH:+:${PYTHONPATH}}"
-    export PATH="${DEV_VENV_BIN}:${SIDECAR_BIN_DIR}${PATH:+:${PATH}}"
-
-    if [[ -x "${SIDECAR_BIN_DIR}/llama-server" ]]; then
-        export AIRUNNER_LLAMA_SERVER_BIN="${SIDECAR_BIN_DIR}/llama-server"
-    fi
-    if [[ -x "${SIDECAR_BIN_DIR}/whisper-server" ]]; then
-        export AIRUNNER_WHISPER_SERVER_BIN="${SIDECAR_BIN_DIR}/whisper-server"
-    fi
 
     "${DEV_VENV_BIN}/python" -m airunner_services.daemon \
-        > "${LOG_DIR}/daemon.log" 2>&1 &
+        > "${LOG_DIR}/server.log" 2>&1 &
 
     local daemon_pid=$!
     echo "${daemon_pid}" > "${PID_FILE}"
@@ -170,7 +166,7 @@ start_services() {
 
     echo ""
     echo "WARNING: Daemon did not respond to health check within 30s."
-    echo "Check ${LOG_DIR}/daemon.log for details."
+    echo "Check ${LOG_DIR}/server.log for details."
 }
 
 # --------------------------------------------------
@@ -182,4 +178,5 @@ echo ""
 echo "=== Services running ==="
 echo "  Health:  http://localhost:${DAEMON_PORT}/api/v1/health"
 echo "  API docs: http://localhost:${DAEMON_PORT}/api/v1/docs"
-echo "  Logs:    ${LOG_DIR}/daemon.log"
+echo "  Process output: ${LOG_DIR}/server.log"
+echo "  Application logs: ${AIRUNNER_LOG_FILE:-~/.local/share/airunner/airunner.log}"

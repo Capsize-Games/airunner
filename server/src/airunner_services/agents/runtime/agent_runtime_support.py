@@ -4,7 +4,6 @@ from datetime import UTC, datetime
 from typing import Any, TypeVar
 from uuid import uuid4
 
-
 EnumType = TypeVar("EnumType")
 
 

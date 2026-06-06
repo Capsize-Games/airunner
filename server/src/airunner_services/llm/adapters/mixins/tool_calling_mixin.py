@@ -6,7 +6,6 @@ from airunner_services.llm.adapters.chat_gguf_tool_parsing_react import (
     parse_react_tool_calls,
 )
 from airunner_services.llm.adapters.mixins.tool_call_json_parsing import (
-    try_parse_embedded_json,
     try_parse_json_blocks,
 )
 from airunner_services.llm.adapters.mixins.tool_prompt_formatting import (

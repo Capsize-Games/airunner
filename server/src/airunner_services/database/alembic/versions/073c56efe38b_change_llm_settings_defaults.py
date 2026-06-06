@@ -13,7 +13,6 @@ from airunner_services.database.models.llm_generator_settings import (
 )
 from airunner_services.database.db import set_default
 
-
 # revision identifiers, used by Alembic.
 revision: str = "073c56efe38b"
 down_revision: Union[str, None] = "bbd45baafc6f"

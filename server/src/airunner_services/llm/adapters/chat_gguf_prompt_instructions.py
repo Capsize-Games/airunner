@@ -56,9 +56,7 @@ def _append_reasoning_directive(
     if not isinstance(content, str):
         return
     message["content"] = (
-        f"{content.rstrip()}\n\n{directive}"
-        if content.strip()
-        else directive
+        f"{content.rstrip()}\n\n{directive}" if content.strip() else directive
     )
 
 

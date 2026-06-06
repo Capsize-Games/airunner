@@ -30,7 +30,9 @@ class ZImageNativePipelineTransformerLoaderHelper:
     def __init__(self, owner) -> None:
         """Store the owning native pipeline."""
         self._owner = owner
-        self._direct_helper = ZImageNativePipelineTransformerDirectHelper(owner)
+        self._direct_helper = ZImageNativePipelineTransformerDirectHelper(
+            owner
+        )
 
     def load_transformer(
         self,
@@ -114,7 +116,9 @@ class ZImageNativePipelineTransformerLoaderHelper:
             all_weights,
         )
         self._attach_fp8_biases(fp8_layers, bias_dict)
-        linked = sum(1 for layer in fp8_layers.values() if layer[2] is not None)
+        linked = sum(
+            1 for layer in fp8_layers.values() if layer[2] is not None
+        )
         logger.info(
             "Found %s biases, %s associated with FP8 layers",
             len(bias_dict),
@@ -149,7 +153,9 @@ class ZImageNativePipelineTransformerLoaderHelper:
         self,
         support,
         scale_dict: Dict[str, torch.Tensor],
-        fp8_layers: Dict[str, tuple[torch.Tensor, torch.Tensor, Optional[torch.Tensor]]],
+        fp8_layers: Dict[
+            str, tuple[torch.Tensor, torch.Tensor, Optional[torch.Tensor]]
+        ],
         bias_dict: Dict[str, torch.Tensor],
         key: str,
         tensor: torch.Tensor,
@@ -168,7 +174,9 @@ class ZImageNativePipelineTransformerLoaderHelper:
 
     @staticmethod
     def _store_fp8_layer(
-        fp8_layers: Dict[str, tuple[torch.Tensor, torch.Tensor, Optional[torch.Tensor]]],
+        fp8_layers: Dict[
+            str, tuple[torch.Tensor, torch.Tensor, Optional[torch.Tensor]]
+        ],
         model_key: str,
         tensor: torch.Tensor,
         scale: Optional[torch.Tensor],
@@ -183,7 +191,9 @@ class ZImageNativePipelineTransformerLoaderHelper:
 
     @staticmethod
     def _attach_fp8_biases(
-        fp8_layers: Dict[str, tuple[torch.Tensor, torch.Tensor, Optional[torch.Tensor]]],
+        fp8_layers: Dict[
+            str, tuple[torch.Tensor, torch.Tensor, Optional[torch.Tensor]]
+        ],
         bias_dict: Dict[str, torch.Tensor],
     ) -> None:
         """Attach deferred bias tensors to their matching FP8 layers."""
@@ -193,7 +203,9 @@ class ZImageNativePipelineTransformerLoaderHelper:
             fp8_weight, scale, _ = fp8_layers[layer_key]
             fp8_layers[layer_key] = (fp8_weight, scale, bias)
 
-    def _materialize_tensor(self, model_key: str, tensor: torch.Tensor) -> None:
+    def _materialize_tensor(
+        self, model_key: str, tensor: torch.Tensor
+    ) -> None:
         """Materialize one non-FP8 tensor directly on the target device."""
         support = self._owner._get_transformer_support()
         try:
@@ -208,7 +220,9 @@ class ZImageNativePipelineTransformerLoaderHelper:
 
     def _replace_fp8_layers(
         self,
-        fp8_layers: Dict[str, tuple[torch.Tensor, torch.Tensor, Optional[torch.Tensor]]],
+        fp8_layers: Dict[
+            str, tuple[torch.Tensor, torch.Tensor, Optional[torch.Tensor]]
+        ],
     ) -> None:
         """Replace linear layers with FP8Linear modules."""
         replaced = 0

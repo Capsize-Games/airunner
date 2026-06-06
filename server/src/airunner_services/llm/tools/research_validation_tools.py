@@ -102,7 +102,7 @@ def check_temporal_accuracy(
     content: Annotated[str, "Text content to check for temporal issues"],
     subject_context: Annotated[
         str,
-        "Context about the subject (e.g., 'John Smith, current CEO of Acme Corp')"
+        "Context about the subject (e.g., 'John Smith, current CEO of Acme Corp')",
     ] = "",
 ) -> dict:
     """Check content for temporal accuracy issues."""
@@ -125,8 +125,7 @@ def validate_research_subject(
     content: Annotated[str, "Scraped content to validate"],
     subject_name: Annotated[str, "Name of the research subject"],
     expected_context: Annotated[
-        str,
-        "Expected context (e.g., 'CEO of Acme', 'born 1960', 'physicist')"
+        str, "Expected context (e.g., 'CEO of Acme', 'born 1960', 'physicist')"
     ] = "",
 ) -> dict:
     """Validate that content is about the correct research subject."""

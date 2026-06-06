@@ -1,6 +1,5 @@
 import sys
 
-
 PLATFORM_WINDOWS = "windows"
 PLATFORM_LINUX = "linux"
 PLATFORM_BSD = "bsd"

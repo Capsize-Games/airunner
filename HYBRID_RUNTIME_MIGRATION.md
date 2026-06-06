@@ -46,16 +46,16 @@ Stop condition:
 Scope:
 - Move local LLM inference to llama.cpp first.
 - Use the LLM slice to prove the daemon, runtime registry, route migration,
-  and GUI/headless launch model.
+  and GUI/daemon launch model.
 
 Issues:
 - #57 Extract local LLM orchestration from direct transformers inference
-- #58 Implement a llama.cpp sidecar launcher and client
+- #58 Implement a llama.cpp native binary launcher and client
 - #59 Migrate LLM API routes and workers to the runtime client
 - #60 Update model download and conversion flow for GGUF-first local LLMs
 - #61 Add LLM load, cancellation, concurrency, and performance smoke tests
 - #62 Add daemon control, status, and runtime health endpoints
-- #63 Refactor headless entrypoints to launch or connect to the daemon
+- #63 Refactor daemon entrypoints to launch or connect to the daemon
 - #64 Add a daemon client with auto-launch and reconnect behavior
 - #65 Simplify workers so they stop owning model lifecycles
 
@@ -77,12 +77,12 @@ Stop condition:
 
 Scope:
 - Separate audio capture from STT execution.
-- Move STT execution into a whisper.cpp sidecar and validate timeout and
-  recovery behavior.
+- Move STT execution into a whisper.cpp native binary client and validate
+  timeout and recovery behavior.
 
 Issues:
 - #66 Separate audio capture and queueing from STT execution
-- #67 Implement a whisper.cpp sidecar launcher and client
+- #67 Implement a whisper.cpp native binary launcher and client
 - #68 Migrate STT API routes and workers to the runtime client
 - #69 Add STT timeout, recovery, and live-audio smoke tests
 
@@ -136,8 +136,8 @@ Issues:
 - #76 Add local-only runtime security boundaries and explicit runtime
   directories
 - #77 Split dependency and package profiles for hybrid deployment
-- #78 Build Linux desktop and headless bundle and service templates
-- #79 Refactor CI for sidecars, bundles, and contract tests
+- #78 Build Linux desktop and daemon bundle and service templates
+- #79 Refactor CI for native binary bundles, and contract tests
 
 Gate:
 - Runtime config, log, cache, socket, and model directories are explicit.
@@ -145,7 +145,7 @@ Gate:
   understand the new profile and bundle layout.
 
 Cutover criteria:
-- Linux desktop and headless delivery artifacts can be built from explicit
+- Linux desktop and daemon delivery artifacts can be built from explicit
   profile lists and relocatable bundle metadata.
 
 Stop condition:
@@ -177,7 +177,7 @@ for end-user distribution, but it does not by itself ship AIRunner as a
 consumer-ready desktop application.
 
 That follow-on product requirement was implemented in #82: AIRunner now has a
-native launcher, embedded-Python bundle assembly, pinned bundled sidecars,
+native launcher, embedded-Python bundle assembly, pinned bundled binaries,
 and installable Linux and Windows artifacts with installer validation.
 
 That delivered scope includes:
@@ -218,7 +218,7 @@ This distinction matters:
 ### Epic #47: Local LLM Runtime Migration
 
 - [x] #57 Extract local LLM orchestration from direct transformers inference
-- [x] #58 Implement a llama.cpp sidecar launcher and client
+- [x] #58 Implement a llama.cpp native binary launcher and client
 - [x] #59 Migrate LLM API routes and workers to the runtime client
 - [x] #60 Update model download and conversion flow for GGUF-first local LLMs
 - [x] #61 Add LLM load, cancellation, concurrency, and performance smoke tests
@@ -226,7 +226,7 @@ This distinction matters:
 ### Epic #46: Core Daemon App Refactor
 
 - [x] #62 Add daemon control, status, and runtime health endpoints
-- [x] #63 Refactor headless entrypoints to launch or connect to the daemon
+- [x] #63 Refactor daemon entrypoints to launch or connect to the daemon
 - [x] #64 Add a GUI daemon client with auto-launch and reconnect behavior
 - [x] #65 Simplify App, MainWindow, and WorkerManager so they stop owning model
   lifecycles
@@ -234,7 +234,7 @@ This distinction matters:
 ### Epic #48: STT Native Runtime Migration
 
 - [x] #66 Separate audio capture and queueing from STT execution
-- [x] #67 Implement a whisper.cpp sidecar launcher and client
+- [x] #67 Implement a whisper.cpp native binary launcher and client
 - [x] #68 Migrate STT API routes and workers to the runtime client
 - [x] #69 Add STT timeout, recovery, and live-audio smoke tests
 
@@ -253,8 +253,8 @@ This distinction matters:
 - [x] #76 Add local-only runtime security boundaries and explicit runtime
   directories
 - [x] #77 Split dependency and package profiles for hybrid deployment
-- [x] #78 Build Linux desktop and headless bundle and service templates
-- [x] #79 Refactor CI for sidecars, bundles, and contract tests
+- [x] #78 Build Linux desktop and daemon bundle and service templates
+- [x] #79 Refactor CI for native binary bundles, and contract tests
 - [x] #80 Write migration docs, rollout gates, and a phased implementation
   checklist
 

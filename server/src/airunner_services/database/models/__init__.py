@@ -5,7 +5,9 @@ from airunner_services.database.models.active_grid_settings import (
 )
 from airunner_services.database.models.ai_models import AIModels
 from airunner_services.database.models.agent_config import AgentConfig
-from airunner_services.database.models.airunner_settings import AIRunnerSettings
+from airunner_services.database.models.airunner_settings import (
+    AIRunnerSettings,
+)
 from airunner_services.database.models.application_settings import (
     ApplicationSettings,
 )

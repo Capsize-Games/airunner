@@ -16,7 +16,6 @@ from airunner_services.llm.adapters.chat_gguf_prompt_instructions import (
     inject_tool_instructions,
 )
 from airunner_services.llm.adapters.chat_gguf_tool_call_conversion import (
-    convert_langchain_tool_call,
     convert_langchain_tool_calls,
 )
 

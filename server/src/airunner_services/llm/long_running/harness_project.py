@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from typing import Any, Optional
 
-from airunner_services.database.models.project_state import ProjectStatus
 from airunner_services.llm.long_running.harness_project_resume import (
     resume_project,
 )
@@ -15,7 +14,6 @@ from airunner_services.llm.long_running.harness_project_state import (
 )
 from airunner_services.settings import AIRUNNER_LOG_LEVEL
 from airunner_services.utils.application import get_logger
-
 
 logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 
@@ -48,9 +46,15 @@ def create_project(
     project_id, feature_count = _creation_result(
         agent, name, description, working_directory
     )
-    logger.info("Project %s created with %s features", project_id, feature_count)
+    logger.info(
+        "Project %s created with %s features", project_id, feature_count
+    )
     if agent._on_progress:
         agent._on_progress(
-            {"event": "project_created", "project_id": project_id, "feature_count": feature_count}
+            {
+                "event": "project_created",
+                "project_id": project_id,
+                "feature_count": feature_count,
+            }
         )
     return project_id

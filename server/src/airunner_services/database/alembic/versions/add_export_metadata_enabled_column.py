@@ -5,6 +5,7 @@ Revises: add_theme_name
 Create Date: 2025-12-02
 
 """
+
 from typing import Sequence, Union
 
 from airunner_services.database.db.column import add_column, column_exists

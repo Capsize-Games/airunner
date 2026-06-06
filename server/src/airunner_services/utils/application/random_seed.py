@@ -1,7 +1,6 @@
 import random
 from airunner_services.settings import AIRUNNER_MAX_SEED
 
-
 _random_generator = random.Random()
 
 

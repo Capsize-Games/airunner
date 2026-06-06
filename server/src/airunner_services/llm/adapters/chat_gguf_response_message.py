@@ -17,8 +17,8 @@ def response_message(adapter: Any, response: dict[str, Any]) -> AIMessage:
     message_data = response["choices"][0].get("message", {})
     content = message_data.get("content", "") or ""
     thinking_content = _thinking_content(adapter, message_data)
-    gpt_oss_tool_calls, content, thinking_content = (
-        _normalized_response_parts(adapter, content, thinking_content)
+    gpt_oss_tool_calls, content, thinking_content = _normalized_response_parts(
+        adapter, content, thinking_content
     )
     tool_calls, content = _tool_calls_from_message(
         adapter, message_data, content, gpt_oss_tool_calls

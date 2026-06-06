@@ -11,7 +11,3 @@ from airunner_services.llm.long_running.tools_status_project import (
     get_project_status,
     list_long_running_projects,
 )
-
-
-# This module preserves the original import surface while the registered status
-# tools live in smaller, focused modules.

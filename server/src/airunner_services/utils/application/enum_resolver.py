@@ -5,9 +5,10 @@ from __future__ import annotations
 from enum import Enum, auto
 from typing import Any, Mapping
 
-from airunner_services.contract_enums import LLMActionType as SharedLLMActionType
+from airunner_services.contract_enums import (
+    LLMActionType as SharedLLMActionType,
+)
 from airunner_services.contract_enums import SignalCode as SharedSignalCode
-
 
 _SERVICE_SIGNAL_DEFAULTS: dict[str, str] = {
     "AI_MODELS_SAVE_OR_UPDATE_SIGNAL": "ai_models_save_or_update_signal",
@@ -28,17 +29,13 @@ _SERVICE_SIGNAL_DEFAULTS: dict[str, str] = {
     "KNOWLEDGE_FACT_ADDED": "knowledge_fact_added_signal",
     "LAYERS_SHOW_SIGNAL": "show_layers_signal",
     "LLM_CONVERT_TO_GGUF_SIGNAL": "llm_convert_to_gguf_signal",
-    "LLM_IMAGE_PROMPT_GENERATED_SIGNAL": (
-        "llm_image_prompt_generated_signal"
-    ),
+    "LLM_IMAGE_PROMPT_GENERATED_SIGNAL": ("llm_image_prompt_generated_signal"),
     "LLM_MODEL_CHANGED": "llm_model_changed_signal",
     "LLM_MODEL_DOWNLOAD_REQUIRED": "llm_model_download_required",
     "LLM_QUANTIZATION_COMPLETE": "llm_quantization_complete",
     "LLM_QUANTIZATION_FAILED": "llm_quantization_failed",
     "LLM_QUANTIZATION_PROGRESS": "llm_quantization_progress",
-    "LLM_TEXT_GENERATE_REQUEST_SIGNAL": (
-        "llm_text_generate_request_signal"
-    ),
+    "LLM_TEXT_GENERATE_REQUEST_SIGNAL": ("llm_text_generate_request_signal"),
     "LLM_TEXT_STREAMED_SIGNAL": "llm_text_streamed_signal",
     "LLM_TEXT_STREAM_PROCESS_SIGNAL": "llm_text_stream_process_signal",
     "MISSING_REQUIRED_MODELS": "missing_required_models",

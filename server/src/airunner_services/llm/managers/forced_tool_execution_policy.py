@@ -29,10 +29,14 @@ class ForcedToolExecutionPolicy:
 
         first_tool = tool_calls[0].get("name") if tool_calls else None
         if first_tool != force_tool:
-            return state, tool_calls, self._build_violation_state(
+            return (
+                state,
                 tool_calls,
-                first_tool,
-                force_tool,
+                self._build_violation_state(
+                    tool_calls,
+                    first_tool,
+                    force_tool,
+                ),
             )
         if len(tool_calls) == 1:
             return state, tool_calls, None
