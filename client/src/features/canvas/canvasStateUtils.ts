@@ -215,11 +215,19 @@ export async function persistStateAsync(state: CanvasState): Promise<void> {
   } catch { /* quota or unavailable */ }
 }
 
-/** Kept for callers that still use the synchronous form (canvas WebSocket). */
-export function persistState(state: CanvasState): void {
+/**
+ * Write only to localStorage synchronously. Use this for the immediate
+ * write so a fast page reload never loses the latest state.
+ */
+export function persistStateSync(state: CanvasState): void {
   try {
     localStorage.setItem(LEGACY_STORAGE_KEY, JSON.stringify(state));
   } catch { /* quota */ }
+}
+
+/** Kept for callers that still use the synchronous form (canvas WebSocket). */
+export function persistState(state: CanvasState): void {
+  persistStateSync(state);
   // Fire-and-forget async write.
   persistStateAsync(state).catch(() => {});
 }

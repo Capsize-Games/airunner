@@ -1,3 +1,4 @@
+import os
 from typing import Any, Dict, List, Optional
 
 import torch
@@ -452,7 +453,7 @@ class BaseDiffusersModelManager(
 
         Returns:
             Dictionary with torch_dtype, safetensors flags, device, and
-            optional controlnet configuration
+            optional controlnet/quantized-component configuration.
         """
         data = {
             "torch_dtype": self.data_type,
@@ -461,12 +462,52 @@ class BaseDiffusersModelManager(
             "device": self._device,
         }
         if self.controlnet_enabled:
-            data.update(controlnet=self.controlnet)
-
-        if self.controlnet_enabled:
             data["controlnet"] = self.controlnet
 
+        # For SDXL with quantization enabled, pre-load quantized text encoders
+        # and UNet so the pipeline assembles from already-quantized components.
+        if getattr(self, "_is_sdxl", False) and self.use_quantization:
+            self._inject_sdxl_quantized_components(data)
+
         return data
+
+    def _inject_sdxl_quantized_components(self, data: Dict[str, Any]) -> None:
+        """Load 8-bit quantized SDXL text encoders + UNet into *data* in-place."""
+        try:
+            from airunner_services.art.managers.stablediffusion.sdxl_quantization_helper import (
+                load_quantized_text_encoder,
+                load_quantized_text_encoder_2,
+                load_quantized_unet,
+            )
+
+            model_dir = os.path.dirname(self.model_path)
+            compute_dtype = self.data_type
+
+            te1 = load_quantized_text_encoder(model_dir, compute_dtype)
+            if te1 is not None:
+                data["text_encoder"] = te1
+
+            te2 = load_quantized_text_encoder_2(model_dir, compute_dtype)
+            if te2 is not None:
+                data["text_encoder_2"] = te2
+
+            unet = load_quantized_unet(model_dir, compute_dtype)
+            if unet is not None:
+                data["unet"] = unet
+
+            self.logger.info(
+                "SDXL: injected 8-bit quantized components "
+                "(te1=%s, te2=%s, unet=%s)",
+                te1 is not None,
+                te2 is not None,
+                unet is not None,
+            )
+        except Exception as exc:
+            self.logger.warning(
+                "SDXL quantization component injection failed, "
+                "loading unquantized pipeline: %s",
+                exc,
+            )
 
     def _load_pipe(self) -> bool:
         """

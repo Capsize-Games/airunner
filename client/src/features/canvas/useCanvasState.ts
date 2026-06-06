@@ -21,7 +21,7 @@ import {
   nextLayerId, nextStrokeId, nextImageId, nextGroupId,
   advanceCountersFromState, snapTo8, pushHistory, serialize,
   defaultState, loadPersistedState, persistState,
-  loadPersistedStateAsync, persistStateAsync,
+  loadPersistedStateAsync, persistStateAsync, persistStateSync,
 } from "./canvasStateUtils";
 
 // ── Hook ────────────────────────────────────────────────────────────────────
@@ -48,8 +48,10 @@ export function useCanvasState() {
     }).catch(() => {});
   }, []);
 
-  // Debounced persistence to both localStorage and IndexedDB.
+  // Persist on every state change: localStorage immediately (so a fast reload
+  // never loses the latest change), IndexedDB debounced (heavier write).
   useEffect(() => {
+    persistStateSync(state);
     if (persistTimer.current) clearTimeout(persistTimer.current);
     persistTimer.current = setTimeout(
       () => persistStateAsync(state).catch(() => {}),

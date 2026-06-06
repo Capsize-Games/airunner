@@ -49,7 +49,7 @@ export default function ArtModelSliders({
       {slider("Samples", nSamples, 1, 1000, 1, onNSamplesChange, { defaultVal: 1 })}
       {slider("Batch", imagesPerBatch, 1, 6, 1, onImagesPerBatchChange, { defaultVal: 1 })}
       {slider("Steps", steps, 1, 150, 1, onStepsChange, { defaultVal: 20 })}
-      {slider("CFG", cfgScale, 1, 30, 0.5, onCfgScaleChange, { defaultVal: 7.5, displayAsFloat: true })}
+      {slider("CFG", cfgScale, 1, 30, 0.01, onCfgScaleChange, { defaultVal: 7.5, displayAsFloat: true })}
     </div>
   );
 }
