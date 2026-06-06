@@ -523,18 +523,16 @@ export function useCanvasState() {
           offsetY: 0,
           parentGroupId: null,
         };
-        const next = {
+        return recordSnapshot({
           ...prev,
           layers: [...prev.layers, newLayer],
+          displayOrder: [...prev.displayOrder, newLayerId],
           activeLayerId: newLayerId,
-        };
-        const { history, historyIndex } = pushHistory(
-          prev.history, prev.historyIndex, serialize(next),
-        );
-        return { ...next, history, historyIndex };
+          selectedLayerIds: [newLayerId],
+        });
       });
     },
-    [],
+    [recordSnapshot],
   );
 
   const placeImage = useCallback(
