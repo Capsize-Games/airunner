@@ -13,9 +13,8 @@ from airunner_services.llm.gpt_oss_parser import (
     looks_like_tool_argument_payload,
     parse_gpt_oss_response,
 )
-from airunner_services.llm.llm_response import LLMResponse
 from airunner_services.llm.managers.mixins.generation_signal_support import (
-    current_assistant_turn_index,
+    _send_signal,
 )
 
 READ_ONLY_TASK_TOOLS = {
@@ -129,19 +128,27 @@ def handle_interrupted_generation(
 ) -> str:
     """Handle interrupted generation and send an empty end marker."""
     owner.logger.info("Generation interrupted by user")
-    if hasattr(owner, "send_llm_text_streamed_signal"):
-        owner.send_llm_text_streamed_signal(
-            LLMResponse(
-                node_id=llm_request.node_id if llm_request else None,
-                message="",
-                is_end_of_message=True,
-                sequence_number=sequence_counter + 1,
-                request_id=getattr(owner, "_current_request_id", None),
-                message_type="assistant",
-                turn_index=current_assistant_turn_index(owner),
-            )
-        )
+    _send_signal(
+        owner,
+        llm_request,
+        "",
+        is_end_of_message=True,
+        sequence_number=sequence_counter + 1,
+        message_type="assistant",
+    )
     return ""
+
+
+def _debug_print_error(exc: Exception, error_message: str) -> None:
+    """Print error diagnostics to stdout for debugging."""
+    print(f"[ERROR HANDLER] Exception type: {type(exc)}", flush=True)
+    print(f"[ERROR HANDLER] Exception message: {str(exc)}", flush=True)
+    print("[ERROR HANDLER] Full traceback:", flush=True)
+    traceback.print_exc()
+    print(
+        f"[ERROR HANDLER] Error message to send: {error_message}",
+        flush=True,
+    )
 
 
 def handle_generation_error(
@@ -149,29 +156,15 @@ def handle_generation_error(
 ) -> str:
     """Handle generation errors and emit the system error chunk."""
     owner.logger.error("Error during generation: %s", exc, exc_info=True)
-    print(f"[ERROR HANDLER] Exception type: {type(exc)}", flush=True)
-    print(f"[ERROR HANDLER] Exception message: {str(exc)}", flush=True)
-    print("[ERROR HANDLER] Full traceback:", flush=True)
-    traceback.print_exc()
     error_message = _generation_error_message(owner, exc)
-    print(
-        f"[ERROR HANDLER] Error message to send: {error_message}", flush=True
+    _debug_print_error(exc, error_message)
+    _send_signal(
+        owner,
+        llm_request,
+        error_message,
+        is_end_of_message=False,
+        message_type="system",
     )
-    if hasattr(owner, "send_llm_text_streamed_signal"):
-        owner.send_llm_text_streamed_signal(
-            LLMResponse(
-                node_id=llm_request.node_id if llm_request else None,
-                message=error_message,
-                is_end_of_message=False,
-                request_id=getattr(owner, "_current_request_id", None),
-                message_type="system",
-                turn_index=current_assistant_turn_index(owner),
-            )
-        )
-    else:
-        owner.logger.error(
-            "Cannot send error signal - owner has no send_llm_text_streamed_signal"
-        )
     return error_message
 
 
@@ -198,13 +191,10 @@ def _generation_error_message(owner, exc: Exception) -> str:
     )
 
 
-def extract_final_response(owner, result: Dict[str, Any]) -> str:
-    """Extract the final visible assistant response from one result."""
-    final_messages = _final_ai_messages(result)
-    if not final_messages:
-        owner.logger.info("No final AIMessage found in generation result")
-        return ""
-    saw_gpt_oss_markup = False
+def _find_first_non_tool_message(
+    final_messages: list[AIMessage],
+) -> Optional[str]:
+    """Return the first assistant message with visible content."""
     for message in reversed(final_messages):
         final_content = message.content or ""
         if not final_content or looks_like_tool_argument_payload(
@@ -212,7 +202,6 @@ def extract_final_response(owner, result: Dict[str, Any]) -> str:
         ):
             continue
         if has_gpt_oss_markup(final_content):
-            saw_gpt_oss_markup = True
             parsed = parse_gpt_oss_response(final_content)
             if parsed.content:
                 return _normalize_final_content(parsed.content)
@@ -223,9 +212,18 @@ def extract_final_response(owner, result: Dict[str, Any]) -> str:
                 return _normalize_final_content(response_part)
             continue
         return _normalize_final_content(final_content)
-    if saw_gpt_oss_markup:
-        owner.logger.info("GPT-OSS response had no visible final content")
+    return None
+
+
+def extract_final_response(owner, result: Dict[str, Any]) -> str:
+    """Extract the final visible assistant response from one result."""
+    final_messages = _final_ai_messages(result)
+    if not final_messages:
+        owner.logger.info("No final AIMessage found in generation result")
         return ""
+    content = _find_first_non_tool_message(final_messages)
+    if content is not None:
+        return content
     owner.logger.info("Final AIMessage was empty")
     return ""
 
@@ -249,98 +247,3 @@ def _normalize_final_content(content: str) -> str:
         if lowered.startswith(prefix):
             return normalized[len(prefix) :].lstrip()
     return normalized
-
-
-def extract_usage_tokens(
-    result: Dict[str, Any],
-) -> tuple[Optional[int], Optional[int], Optional[int]]:
-    """Best-effort extract provider token usage from one result."""
-    try:
-        last_msg = _last_message(result)
-        if last_msg is None:
-            return None, None, None
-        return _usage_from_message(last_msg)
-    except Exception:
-        return None, None, None
-
-
-def _last_message(result: Dict[str, Any]):
-    """Return the final message object from one result when present."""
-    messages = result.get("messages") if isinstance(result, dict) else None
-    if isinstance(messages, list) and messages:
-        return messages[-1]
-    return None
-
-
-def _usage_from_message(
-    last_msg,
-) -> tuple[Optional[int], Optional[int], Optional[int]]:
-    """Return extracted usage counts from one provider message."""
-    prompt_tokens = None
-    completion_tokens = None
-    total_tokens = None
-    usage = getattr(last_msg, "usage_metadata", None)
-    if isinstance(usage, dict):
-        prompt_tokens = usage.get("input_tokens") or usage.get("prompt_tokens")
-        completion_tokens = usage.get("output_tokens") or usage.get(
-            "completion_tokens"
-        )
-        total_tokens = usage.get("total_tokens")
-    if prompt_tokens is None or completion_tokens is None:
-        prompt_tokens, completion_tokens, total_tokens = (
-            _usage_from_response_metadata(
-                last_msg,
-                prompt_tokens,
-                completion_tokens,
-                total_tokens,
-            )
-        )
-    if total_tokens is None and (
-        prompt_tokens is not None or completion_tokens is not None
-    ):
-        total_tokens = int(prompt_tokens or 0) + int(completion_tokens or 0)
-    return (
-        _int_or_none(prompt_tokens),
-        _int_or_none(completion_tokens),
-        _int_or_none(total_tokens),
-    )
-
-
-def _usage_from_response_metadata(
-    last_msg,
-    prompt_tokens,
-    completion_tokens,
-    total_tokens,
-):
-    """Return usage counts extracted from response metadata."""
-    response_metadata = getattr(last_msg, "response_metadata", None)
-    if not isinstance(response_metadata, dict):
-        return prompt_tokens, completion_tokens, total_tokens
-    token_usage = response_metadata.get(
-        "token_usage"
-    ) or response_metadata.get("usage")
-    if not isinstance(token_usage, dict):
-        return prompt_tokens, completion_tokens, total_tokens
-    prompt_tokens = prompt_tokens or token_usage.get("prompt_tokens")
-    completion_tokens = completion_tokens or token_usage.get(
-        "completion_tokens"
-    )
-    total_tokens = total_tokens or token_usage.get("total_tokens")
-    return prompt_tokens, completion_tokens, total_tokens
-
-
-def _int_or_none(value: Optional[int]) -> Optional[int]:
-    """Return one integer value or None."""
-    if value is None:
-        return None
-    return int(value)
-
-
-def executed_tools_from_workflow(workflow_manager) -> list[str]:
-    """Return the executed tools reported by one workflow manager."""
-    if not hasattr(workflow_manager, "get_executed_tools"):
-        return []
-    raw_executed_tools = workflow_manager.get_executed_tools()
-    if isinstance(raw_executed_tools, (list, tuple, set)):
-        return list(raw_executed_tools)
-    return []

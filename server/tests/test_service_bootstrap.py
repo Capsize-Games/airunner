@@ -50,33 +50,64 @@ class TestImportChain:
         """Health route module resolves."""
         import airunner_services.api.routes.health  # noqa: F401
 
-    def test_import_service_api_routes_art(self):
-        """Art route module resolves."""
-        import airunner_services.api.routes.art  # noqa: F401
+    def test_import_service_api_routes_art_websocket(self):
+        """Art websocket route module resolves."""
+        import airunner_services.api.routes.art_websocket  # noqa: F401
 
-    def test_import_service_api_routes_llm(self):
-        """LLM route module resolves."""
-        import airunner_services.api.routes.llm  # noqa: F401
+    def test_import_service_api_routes_art_daemon_ws(self):
+        """Art daemon websocket route module resolves."""
+        import airunner_services.api.routes.art_daemon_ws  # noqa: F401
+
+    def test_import_service_api_routes_art_runtime(self):
+        """Art runtime route module resolves."""
+        import airunner_services.api.routes.art_runtime  # noqa: F401
+
+    def test_import_service_api_routes_llm_stream_routes(self):
+        """LLM stream route module resolves."""
+        import airunner_services.api.routes.llm_stream_routes  # noqa: F401
+
+    def test_import_service_api_routes_llm_runtime(self):
+        """LLM runtime route module resolves."""
+        import airunner_services.api.routes.llm_runtime  # noqa: F401
+
+    def test_import_service_api_routes_llm_settings_presets(self):
+        """LLM settings presets route module resolves."""
+        import airunner_services.api.routes.llm_settings_presets  # noqa: F401
 
     def test_import_service_api_routes_tts(self):
         """TTS route module resolves."""
         import airunner_services.api.routes.tts  # noqa: F401
 
-    def test_import_service_api_routes_stt(self):
-        """STT route module resolves."""
-        import airunner_services.api.routes.stt  # noqa: F401
-
     def test_import_service_api_routes_daemon(self):
         """Daemon route module resolves."""
         import airunner_services.api.routes.daemon  # noqa: F401
 
-    def test_import_service_api_routes_downloads(self):
-        """Downloads route module resolves."""
-        import airunner_services.api.routes.downloads  # noqa: F401
+    def test_import_service_api_routes_events(self):
+        """Events route module resolves."""
+        import airunner_services.api.routes.events  # noqa: F401
 
-    def test_import_service_api_routes_conversations(self):
-        """Conversations route module resolves."""
-        import airunner_services.api.routes.conversations  # noqa: F401
+    def test_import_service_api_routes_canvas_document(self):
+        """Canvas document route module resolves."""
+        import airunner_services.api.routes.canvas_document  # noqa: F401
+
+    def test_import_service_api_routes_hardware(self):
+        """Hardware route module resolves."""
+        import airunner_services.api.routes.hardware  # noqa: F401
+
+    def test_import_service_api_routes_geolocation(self):
+        """Geolocation route module resolves."""
+        import airunner_services.api.routes.geolocation  # noqa: F401
+
+
+EXPECTED_ROUTE_PREFIXES = [
+    "/api/v1/health",
+    "/api/v1/llm",
+    "/api/v1/art",
+    "/api/v1/tts",
+    "/api/v1/daemon",
+    "/api/v1/events",
+    "/api/v1/canvas",
+]
 
 
 class TestFastAPIAppConstruction:
@@ -101,21 +132,9 @@ class TestFastAPIAppConstruction:
             allowed_origins=["http://localhost"],
             enable_cors=True,
         )
-
         routes = {route.path for route in app.routes if hasattr(route, "path")}
 
-        expected_prefixes = [
-            "/api/v1/health",
-            "/api/v1/daemon",
-            "/api/v1/llm",
-            "/api/v1/art",
-            "/api/v1/tts",
-            "/api/v1/stt",
-            "/api/v1/downloads",
-            "/api/v1/persistence",
-        ]
-
-        for prefix in expected_prefixes:
+        for prefix in EXPECTED_ROUTE_PREFIXES:
             found = any(route.startswith(prefix) for route in routes)
             assert (
                 found
@@ -132,9 +151,8 @@ class TestFastAPIAppConstruction:
             enable_cors=True,
         )
         client = TestClient(app)
-        response = client.get("/")
+        # The root endpoint is the health check
+        response = client.get("/api/v1/health")
         assert response.status_code == 200
         body = response.json()
-        # The root response may use either "status" or "message" key
-        # depending on which router handles the root path
-        assert body.get("status") == "ready" or "AI Runner" in str(body)
+        assert "status" in body

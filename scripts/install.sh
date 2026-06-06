@@ -213,6 +213,52 @@ install_editable_packages() {
 
 
 # ---------------------------------------------------------------------------
+# llama-cpp-python CUDA rebuild
+# ---------------------------------------------------------------------------
+
+_has_nvidia() {
+    if command_exists nvidia-smi; then
+        nvidia-smi -L >/dev/null 2>&1 && return 0
+    fi
+    "$VENV_DIR/bin/python" -c "
+import sys
+try:
+    import pynvml
+    pynvml.nvmlInit()
+    count = pynvml.nvmlDeviceGetCount()
+    pynvml.nvmlShutdown()
+    sys.exit(0 if count > 0 else 1)
+except Exception:
+    sys.exit(1)
+" 2>/dev/null && return 0
+    return 1
+}
+
+install_llama_cpp_cuda() {
+    local venv_python="$1"
+    local extras="$2"
+
+    if ! service_extra_needs_torch "$extras"; then
+        return 0
+    fi
+
+    if ! _has_nvidia; then
+        log_info 'No NVIDIA GPU detected — skipping llama-cpp-python CUDA rebuild'
+        return 0
+    fi
+
+    log_info 'NVIDIA GPU detected — rebuilding llama-cpp-python with CUDA support'
+    CMAKE_ARGS="-DGGML_CUDA=on -DCMAKE_CUDA_ARCHITECTURES=89;90" \
+        "$venv_python" -m pip install \
+        --force-reinstall \
+        --no-cache-dir \
+        --no-deps \
+        llama-cpp-python==0.3.26
+    log_success 'llama-cpp-python rebuilt with CUDA support'
+}
+
+
+# ---------------------------------------------------------------------------
 # Sidecar management
 # ---------------------------------------------------------------------------
 
@@ -402,6 +448,8 @@ main() {
         log_info "Installing editable packages with services[${extras}]"
     fi
     install_editable_packages "$venv_python" "$extras" "$install_mode"
+
+    install_llama_cpp_cuda "$venv_python" "$extras"
 
     if sidecars_requested "$extras"; then
         install_runtime_sidecars "$venv_python"

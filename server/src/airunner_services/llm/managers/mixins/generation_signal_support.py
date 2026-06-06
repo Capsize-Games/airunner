@@ -34,6 +34,37 @@ def _strip_leading_assistant_preamble(existing: str, text: str) -> str:
     return text
 
 
+def _signal_mediator_fallback(response: LLMResponse) -> None:
+    """Route one response through SignalMediator when direct signal is
+    unavailable."""
+    request_id = getattr(response, "request_id", None)
+    if not request_id:
+        return
+    from airunner_services.utils.application.signal_mediator import (
+        SignalMediator,
+    )
+
+    SignalMediator().emit_signal(
+        None,
+        {"response": response, "request_id": request_id},
+    )
+
+
+def _send_signal(owner, llm_request, message, **kwargs):
+    """Emit a streamed signal if the owner supports it."""
+    response = LLMResponse(
+        node_id=llm_request.node_id if llm_request else None,
+        message=message,
+        request_id=getattr(owner, "_current_request_id", None),
+        turn_index=current_assistant_turn_index(owner),
+        **kwargs,
+    )
+    if hasattr(owner, "send_llm_text_streamed_signal"):
+        owner.send_llm_text_streamed_signal(response)
+        return
+    _signal_mediator_fallback(response)
+
+
 def emit_visible_response(
     owner,
     llm_request: Optional[Any],
@@ -59,18 +90,40 @@ def emit_visible_response(
     )
 
 
-def _send_signal(owner, llm_request, message, **kwargs):
-    """Emit a streamed signal if the owner supports it."""
-    if hasattr(owner, "send_llm_text_streamed_signal"):
-        owner.send_llm_text_streamed_signal(
-            LLMResponse(
-                node_id=llm_request.node_id if llm_request else None,
-                message=message,
-                request_id=getattr(owner, "_current_request_id", None),
-                turn_index=current_assistant_turn_index(owner),
-                **kwargs,
-            )
-        )
+def _handle_streaming_token(
+    token_text: str,
+    owner,
+    llm_request: Optional[Any],
+    complete_response: List[str],
+    sequence_counter: List[int],
+) -> None:
+    """Forward streaming tokens to the GUI and accumulate response."""
+    token_text = _strip_leading_assistant_preamble(
+        complete_response[0], token_text
+    )
+    if not token_text:
+        return
+    token_text = prepare_stream_chunk(complete_response[0], token_text)
+    if not token_text:
+        return
+    complete_response[0] += token_text
+    sequence_counter[0] += 1
+    if not getattr(owner, "_current_request_id", None):
+        owner.logger.warning("[STREAM] Missing _current_request_id")
+    _emit_token_signal(owner, llm_request, token_text, sequence_counter)
+
+
+def _emit_token_signal(owner, llm_request, token_text, sequence_counter):
+    """Emit a streamed signal for one token chunk."""
+    _send_signal(
+        owner,
+        llm_request,
+        token_text,
+        is_end_of_message=False,
+        is_first_message=(sequence_counter[0] == 1),
+        sequence_number=sequence_counter[0],
+        message_type="assistant",
+    )
 
 
 def create_streaming_callback(
@@ -80,35 +133,13 @@ def create_streaming_callback(
     sequence_counter: List[int],
 ):
     """Create the callback that forwards streaming assistant tokens."""
-
-    def handle_streaming_token(token_text: str) -> None:
-        """Forward streaming tokens to the GUI and accumulate response."""
-        token_text = _strip_leading_assistant_preamble(
-            complete_response[0],
-            token_text,
-        )
-        if not token_text:
-            return
-        token_text = prepare_stream_chunk(complete_response[0], token_text)
-        if not token_text:
-            return
-        complete_response[0] += token_text
-        sequence_counter[0] += 1
-        if not getattr(owner, "_current_request_id", None):
-            owner.logger.warning(
-                "[STREAM] Missing _current_request_id while streaming token"
-            )
-        _send_signal(
-            owner,
-            llm_request,
-            token_text,
-            is_end_of_message=False,
-            is_first_message=(sequence_counter[0] == 1),
-            sequence_number=sequence_counter[0],
-            message_type="assistant",
-        )
-
-    return handle_streaming_token
+    return lambda token_text: _handle_streaming_token(
+        token_text,
+        owner,
+        llm_request,
+        complete_response,
+        sequence_counter,
+    )
 
 
 def create_thinking_callback(
