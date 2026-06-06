@@ -34,6 +34,13 @@ export default function ChatView({
   const modelPathRef = useRef("");
   const loadedConvRef = useRef<number | null>(null);
   const fullResponseRef = useRef("");
+  const conversationIdRef = useRef<number | null>(conversationId);
+  // Keep the ref in sync with the prop so that subsequent turns
+  // reuse the same conversation on the server instead of creating
+  // a brand-new one each time.
+  if (conversationId !== null) {
+    conversationIdRef.current = conversationId;
+  }
 
   const [activeDocs, setActiveDocs] = useState<ActiveDoc[]>([]);
 
@@ -165,18 +172,23 @@ export default function ChatView({
     try {
       const chunks = await llm.send(newMessages, {
         model: modelPathRef.current,
+        conversation_id: conversationIdRef.current ?? undefined,
       });
 
-      // Reconstruct full response from chunks
+      // Reconstruct full response from chunks.
+      // Accumulate thinking chunks so multi-part or streamed
+      // reasoning content is preserved (not just the last frame).
       let fullResponse = "";
-      let thinking = "";
+      let thinkingChunks: string[] = [];
       for (const chunk of chunks) {
         if (chunk.message_type === "thinking") {
-          thinking = chunk.token ?? "";
+          const token = chunk.token ?? "";
+          if (token) thinkingChunks.push(token);
         } else if (chunk.token) {
           fullResponse += chunk.token;
         }
       }
+      const thinking = thinkingChunks.join("");
       fullResponseRef.current = fullResponse;
 
       if (fullResponse) {
@@ -196,6 +208,7 @@ export default function ChatView({
                 const convs = resp.conversations ?? [];
                 if (convs.length > 0) {
                   const id = convs[0].id;
+                  conversationIdRef.current = id;
                   try {
                     localStorage.setItem(
                       "airunner_conversation_id",
@@ -213,7 +226,7 @@ export default function ChatView({
         err instanceof Error ? err.message : "Stream failed";
       setError(msg);
     }
-  }, [input, messages, llm, activeDocs]);
+  }, [input, messages, llm, activeDocs, conversationId]);
 
   const handleCancel = useCallback(() => {
     llm.cancel();

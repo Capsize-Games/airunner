@@ -30,6 +30,7 @@ export interface LLMOptions {
   model?: string;
   temperature?: number;
   max_tokens?: number;
+  conversation_id?: number;
 }
 
 export function useLLMWebSocket() {
@@ -132,6 +133,8 @@ export function useLLMWebSocket() {
             };
             onChunkRef.current?.(chunk);
             if (data.done) {
+              setStreamBuffer("");
+              setThinkingBuffer("");
               onDoneRef.current?.();
               setStreaming(false);
             }
@@ -148,6 +151,11 @@ export function useLLMWebSocket() {
           onChunkRef.current?.(chunk);
 
           if (data.done) {
+            // Clear live buffers so the StreamingBubble doesn't
+            // linger after the turn completes.  The final content
+            // is now carried by the assistant Message in state.
+            setStreamBuffer("");
+            setThinkingBuffer("");
             onDoneRef.current?.();
             setStreaming(false);
           }
@@ -244,6 +252,7 @@ export function useLLMWebSocket() {
           model: options?.model,
           temperature: options?.temperature ?? 0.7,
           max_tokens: options?.max_tokens,
+          conversation_id: options?.conversation_id,
         });
       });
     },

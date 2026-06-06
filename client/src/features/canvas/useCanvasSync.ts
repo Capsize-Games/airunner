@@ -78,7 +78,9 @@ export function useCanvasSync({
   useEffect(() => {
     let stopped = false;
 
-    const connect = (delay = 0) => {
+    // Delay initial connection so the server has time to accept WebSocket
+    // upgrades during page load, avoiding noisy console errors.
+    const connect = (delay = 1000) => {
       if (stopped) return;
 
       if (reconnectTimer.current) {
@@ -141,7 +143,7 @@ export function useCanvasSync({
       };
     };
 
-    connect(0);
+    connect();
 
     return () => {
       stopped = true;

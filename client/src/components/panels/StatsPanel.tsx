@@ -81,11 +81,14 @@ export default function StatsPanel() {
   // Connect on mount, disconnect on unmount
   useEffect(() => {
     mountedRef.current = true;
-    // Also try HTTP as initial fallback so the panel isn't blank while WS connects
+    // Use HTTP as initial data source so the panel isn't blank while WS connects.
+    // Delay the WebSocket connection slightly so the server has time to accept
+    // the upgrade, avoiding noisy console errors during page load.
     getHardwareProfile().then(setHw).catch(() => {});
-    connectWs();
+    const initialTimer = setTimeout(connectWs, 1000);
 
     return () => {
+      clearTimeout(initialTimer);
       mountedRef.current = false;
       if (wsRef.current) {
         const old = wsRef.current;
