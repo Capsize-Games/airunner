@@ -47,7 +47,7 @@ class RequestEnvelope(BaseModel):
 
 
 class ResponseEnvelope(BaseModel):
-    """Envelope returned by runtime clients and sidecars."""
+    """Envelope returned by runtime clients."""
 
     model_config = ConfigDict(extra="forbid")
 

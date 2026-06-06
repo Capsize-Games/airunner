@@ -17,7 +17,7 @@ def build_runtime_registry(
     """Build the default runtime registry for the current process.
 
     All runtimes are in-process via local fallback clients.  The
-    sidecar-based clients have been retired.
+    native binary clients have been retired.
     """
     registry = RuntimeRegistry()
     signal_source = (

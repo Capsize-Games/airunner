@@ -110,12 +110,6 @@ def ensure_vram_available_for(
             request_id=route_request.request_id,
             metadata=dict(route_request.metadata or {}),
         )
-        if (
-            target_runtime is RuntimeKind.LLM
-            and other_runtime is RuntimeKind.ART
-        ):
-            if summary.mode == "sidecar":
-                unload_request.metadata["release_process"] = True
         invoke_runtime_action(
             other_client,
             other_runtime,

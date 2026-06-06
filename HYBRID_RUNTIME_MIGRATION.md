@@ -50,7 +50,7 @@ Scope:
 
 Issues:
 - #57 Extract local LLM orchestration from direct transformers inference
-- #58 Implement a llama.cpp sidecar launcher and client
+- #58 Implement a llama.cpp native binary launcher and client
 - #59 Migrate LLM API routes and workers to the runtime client
 - #60 Update model download and conversion flow for GGUF-first local LLMs
 - #61 Add LLM load, cancellation, concurrency, and performance smoke tests
@@ -77,12 +77,12 @@ Stop condition:
 
 Scope:
 - Separate audio capture from STT execution.
-- Move STT execution into a whisper.cpp sidecar and validate timeout and
-  recovery behavior.
+- Move STT execution into a whisper.cpp native binary client and validate
+  timeout and recovery behavior.
 
 Issues:
 - #66 Separate audio capture and queueing from STT execution
-- #67 Implement a whisper.cpp sidecar launcher and client
+- #67 Implement a whisper.cpp native binary launcher and client
 - #68 Migrate STT API routes and workers to the runtime client
 - #69 Add STT timeout, recovery, and live-audio smoke tests
 
@@ -137,7 +137,7 @@ Issues:
   directories
 - #77 Split dependency and package profiles for hybrid deployment
 - #78 Build Linux desktop and daemon bundle and service templates
-- #79 Refactor CI for sidecars, bundles, and contract tests
+- #79 Refactor CI for native binary bundles, and contract tests
 
 Gate:
 - Runtime config, log, cache, socket, and model directories are explicit.
@@ -177,7 +177,7 @@ for end-user distribution, but it does not by itself ship AIRunner as a
 consumer-ready desktop application.
 
 That follow-on product requirement was implemented in #82: AIRunner now has a
-native launcher, embedded-Python bundle assembly, pinned bundled sidecars,
+native launcher, embedded-Python bundle assembly, pinned bundled binaries,
 and installable Linux and Windows artifacts with installer validation.
 
 That delivered scope includes:
@@ -218,7 +218,7 @@ This distinction matters:
 ### Epic #47: Local LLM Runtime Migration
 
 - [x] #57 Extract local LLM orchestration from direct transformers inference
-- [x] #58 Implement a llama.cpp sidecar launcher and client
+- [x] #58 Implement a llama.cpp native binary launcher and client
 - [x] #59 Migrate LLM API routes and workers to the runtime client
 - [x] #60 Update model download and conversion flow for GGUF-first local LLMs
 - [x] #61 Add LLM load, cancellation, concurrency, and performance smoke tests
@@ -234,7 +234,7 @@ This distinction matters:
 ### Epic #48: STT Native Runtime Migration
 
 - [x] #66 Separate audio capture and queueing from STT execution
-- [x] #67 Implement a whisper.cpp sidecar launcher and client
+- [x] #67 Implement a whisper.cpp native binary launcher and client
 - [x] #68 Migrate STT API routes and workers to the runtime client
 - [x] #69 Add STT timeout, recovery, and live-audio smoke tests
 
@@ -254,7 +254,7 @@ This distinction matters:
   directories
 - [x] #77 Split dependency and package profiles for hybrid deployment
 - [x] #78 Build Linux desktop and daemon bundle and service templates
-- [x] #79 Refactor CI for sidecars, bundles, and contract tests
+- [x] #79 Refactor CI for native binary bundles, and contract tests
 - [x] #80 Write migration docs, rollout gates, and a phased implementation
   checklist
 

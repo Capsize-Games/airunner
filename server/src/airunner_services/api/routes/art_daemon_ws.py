@@ -1,4 +1,4 @@
-"""WebSocket endpoint for the Art sidecar daemon.
+"""WebSocket endpoint for the Art daemon.
 
 Protocol: request_id-correlated envelopes over WS.
 See ``tts_daemon_ws.py`` for more details.

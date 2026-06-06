@@ -38,13 +38,6 @@ class ZImageBundleHelper:
         missing_files = get_missing_files_for_mode(model_path, load_mode)
         if not missing_files:
             return False, {}
-        if os.environ.get("AIRUNNER_ART_SIDECAR_PROCESS") == "1":
-            self._owner.logger.info(
-                "Z-Image companion files missing in sidecar mode "
-                "(skipping download trigger): %s",
-                missing_files,
-            )
-            return False, {}
         repo_id = ModelFileChecker.get_repo_id_for_version(
             version, pipeline_action
         )
@@ -193,14 +186,6 @@ class ZImageBundleHelper:
                 "All Z-Image model files present for %s (checked %s)",
                 load_mode,
                 search_dir,
-            )
-            return
-        if os.environ.get("AIRUNNER_ART_SIDECAR_PROCESS") == "1":
-            self._owner.logger.warning(
-                "Z-Image companion files missing in sidecar mode "
-                "(checked %s): %s",
-                search_dir,
-                missing_files,
             )
             return
         repo_id = ModelFileChecker.get_repo_id_for_version(

@@ -1,8 +1,7 @@
-"""WebSocket endpoint for the TTS sidecar daemon.
+"""WebSocket endpoint for the TTS daemon.
 
 Provides push-based messaging for TTS synthesis requests, replacing
-HTTP request-response for the ``SidecarWebSocketTransport`` running
-in the main API server process.
+HTTP request-response with a WebSocket transport.
 
 Protocol
 --------
@@ -42,7 +41,7 @@ router = APIRouter()
 
 @router.websocket("/daemon/ws")
 async def tts_daemon_websocket(websocket: WebSocket):
-    """WebSocket endpoint for the TTS daemon sidecar transport."""
+    """WebSocket endpoint for the TTS daemon transport."""
     await websocket.accept()
     logger.info("TTS daemon WebSocket connected")
 

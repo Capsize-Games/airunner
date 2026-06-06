@@ -11,7 +11,7 @@ flowchart LR
     API[api/ transport contracts] --> Daemon
     Daemon --> Registry[runtime registry]
     Registry --> Model[model/ shared runtime helpers]
-    Registry --> Sidecars[llama.cpp or whisper.cpp sidecars]
+    Registry --> Native[llama.cpp or whisper.cpp binaries]
     Daemon --> Data[(AIRUNNER_BASE_PATH)]
 ```
 
@@ -32,8 +32,7 @@ and the package map lives in
 ## Installation
 
 For normal repo development, use the developer installer. It installs the
-split packages in editable mode and builds the pinned native sidecars used
-by daemon-backed functional tests:
+split packages in editable mode:
 
 ```bash
 ./scripts/install.sh

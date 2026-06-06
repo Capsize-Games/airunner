@@ -117,7 +117,7 @@ customModes:
 
       After every QA run, always check both sources:
       1. `qa/last-report.json` - client-side errors, WS events, network failures
-      2. The last 100 lines of `~/.local/share/airunner/airunner.log` - server-side errors, exceptions, and sidecar output
+      2. The last 100 lines of `~/.local/share/airunner/airunner.log` - server-side errors, exceptions, and runtime output
 
       Correlate them. A client-side WebSocket error often has a corresponding server-side traceback. A missing AI response often shows up as a closed connection in the WS events and an exception in the server log.
 

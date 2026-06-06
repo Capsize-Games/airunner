@@ -76,7 +76,7 @@ The backend API is available at **http://localhost:8080**.
 
 ### Logs
 
-All server and sidecar (art, TTS, STT, LLM) logs go to a single file:
+All server and runtime (art, TTS, STT, LLM) logs go to a single file:
 
 ```bash
 tail -f build/logs/server.log
