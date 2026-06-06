@@ -108,3 +108,4 @@ client/dist
 client/.vite
 airunner.wiki
 node_modules
+.roo
