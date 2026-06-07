@@ -114,11 +114,13 @@ export default function ChatView({
 
     setMessages((prev) => [...prev, { role: "user", content: text }]);
     const newMessages = [...messages, { role: "user" as const, content: text }];
+    const activeDocIds = activeDocs.map((d) => d.id);
 
     try {
       const chunks = await llm.send(newMessages, {
         model: modelPathRef.current,
         conversation_id: conversationIdRef.current ?? undefined,
+        active_document_ids: activeDocIds.length > 0 ? activeDocIds : undefined,
       });
 
       let fullResponse = "";

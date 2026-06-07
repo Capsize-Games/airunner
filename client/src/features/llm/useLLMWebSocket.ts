@@ -31,6 +31,7 @@ export interface LLMOptions {
   temperature?: number;
   max_tokens?: number;
   conversation_id?: number;
+  active_document_ids?: number[];
 }
 
 export function useLLMWebSocket() {
@@ -253,6 +254,7 @@ export function useLLMWebSocket() {
           temperature: options?.temperature ?? 0.7,
           max_tokens: options?.max_tokens,
           conversation_id: options?.conversation_id,
+          active_document_ids: options?.active_document_ids,
         });
       });
     },
