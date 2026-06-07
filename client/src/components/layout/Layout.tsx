@@ -15,6 +15,7 @@ import StatsPanel from "../panels/StatsPanel";
 import CivitaiBrowserPanel from "../panels/civitai-browser/CivitaiBrowserPanel";
 import DownloadTray from "../downloads/DownloadTray";
 import TopBar from "./TopBar";
+import { isWsConnected } from "../../features/api/WsApiClient";
 import { LeftIconBar, RightIconBar } from "./IconBar";
 import { CanvasProvider } from "../../features/canvas";
 
@@ -444,16 +445,12 @@ export default function Layout({
 
 /** Small dot + label showing WebSocket connection status. */
 function LiveIndicator() {
-  const [connected, setConnected] = useState(false);
+  const [connected, setConnected] = useState(isWsConnected);
   useEffect(() => {
     let canceled = false;
-    const poll = () => {
-      import("../../features/api/WsApiClient").then((m) => {
-        if (!canceled) setConnected(m.isWsConnected());
-      });
-    };
-    poll();
-    const id = setInterval(poll, 3000);
+    const id = setInterval(() => {
+      if (!canceled) setConnected(isWsConnected());
+    }, 1000);
     return () => {
       canceled = true;
       clearInterval(id);
