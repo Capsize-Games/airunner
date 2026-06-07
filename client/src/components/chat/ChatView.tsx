@@ -7,7 +7,6 @@ import {
 import Alert from "react-bootstrap/Alert";
 import ProgressBar from "react-bootstrap/ProgressBar";
 import { getSingleton } from "../../api/client";
-import type { StreamChunk } from "../../types/api";
 import MessageList from "./MessageList";
 import ModelSelector from "./ModelSelector";
 import ActiveDocPills from "./ActiveDocPills";
@@ -27,9 +26,13 @@ export default function ChatView({
 }: {
   conversationId: number | null;
 }) {
-  const { messages, setMessages, load, appendMessage } = useConversationMessages();
+  const { messages, setMessages, load, appendMessage, deleteMessagesAfter } =
+    useConversationMessages();
   const { docs: kbDocs, reload: reloadDocs } = useKnowledgeBaseDocs();
-  const [, setStoredConvId] = useLocalStorage<number | null>("airunner_conversation_id", null);
+  const [, setStoredConvId] = useLocalStorage<number | null>(
+    "airunner_conversation_id",
+    null,
+  );
 
   const [input, setInput] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -37,9 +40,12 @@ export default function ChatView({
   const modelPathRef = useRef("");
   const loadedConvRef = useRef<number | null>(null);
   const conversationIdRef = useRef<number | null>(conversationId);
-  if (conversationId !== null) {
-    conversationIdRef.current = conversationId;
-  }
+
+  useEffect(() => {
+    if (conversationId !== null) {
+      conversationIdRef.current = conversationId;
+    }
+  }, [conversationId]);
 
   const activeDocs: ActiveDoc[] = kbDocs
     .filter((d) => d.active)
@@ -84,7 +90,9 @@ export default function ChatView({
 
   const loadModelPath = useCallback(() => {
     getSingleton("LLMGeneratorSettings")
-      .then((r) => { modelPathRef.current = String(r.model_path ?? ""); })
+      .then((r) => {
+        modelPathRef.current = String(r.model_path ?? "");
+      })
       .catch(() => {});
   }, []);
 
@@ -92,7 +100,8 @@ export default function ChatView({
     loadModelPath();
     const handler = () => loadModelPath();
     window.addEventListener("model-settings-changed", handler);
-    return () => window.removeEventListener("model-settings-changed", handler);
+    return () =>
+      window.removeEventListener("model-settings-changed", handler);
   }, [loadModelPath]);
 
   useEffect(() => {
@@ -102,53 +111,58 @@ export default function ChatView({
     load(conversationId);
   }, [conversationId, load]);
 
-  const handleSend = useCallback(async () => {
-    const text = input.trim();
-    if (!text || llm.streaming) return;
-    if (!modelPathRef.current) {
-      setError("Please select an LLM model in Settings first.");
-      return;
-    }
-    setError(null);
-    setInput("");
-
-    setMessages((prev) => [...prev, { role: "user", content: text }]);
-    const newMessages = [...messages, { role: "user" as const, content: text }];
-    const activeDocIds = activeDocs.map((d) => d.id);
-
-    try {
-      const chunks = await llm.send(newMessages, {
-        model: modelPathRef.current,
-        conversation_id: conversationIdRef.current ?? undefined,
-        active_document_ids: activeDocIds.length > 0 ? activeDocIds : undefined,
-      });
-
-      let fullResponse = "";
-      const thinkingChunks: string[] = [];
-      for (const chunk of chunks) {
-        if (chunk.message_type === "thinking") {
-          const token = chunk.token ?? "";
-          if (token) thinkingChunks.push(token);
-        } else if (chunk.token) {
-          fullResponse += chunk.token;
-        }
+  // ── Core send helper ──────────────────────────────────────────────
+  // Sends a list of messages (already in state) through the WS and
+  // appends the assistant reply.  The caller is responsible for having
+  // updated state *before* calling this.
+  const doInference = useCallback(
+    async (msgs: import("../../types/api").Message[]) => {
+      if (!modelPathRef.current) {
+        setError("Please select an LLM model in Settings first.");
+        return;
       }
-      const thinking = thinkingChunks.join("");
+      setError(null);
 
-      if (fullResponse) {
-        const assistantMsg = {
-          role: "assistant" as const,
-          content: fullResponse,
-          thinking_content: thinking || undefined,
-        };
-        const nextIndex = newMessages.length;
-        await appendMessage(
-          conversationIdRef.current ?? 0,
-          assistantMsg,
-          nextIndex,
-        );
+      const activeDocIds = activeDocs.map((d) => d.id);
 
-        // Refresh conversation list to pick up server-assigned conversation ID.
+      try {
+        const chunks = await llm.send(msgs as import("../../types/api").Message[], {
+          model: modelPathRef.current,
+          conversation_id: conversationIdRef.current ?? undefined,
+          active_document_ids:
+            activeDocIds.length > 0 ? activeDocIds : undefined,
+        });
+
+        let fullResponse = "";
+        const thinkingChunks: string[] = [];
+        for (const chunk of chunks) {
+          if (chunk.message_type === "thinking") {
+            const token = chunk.token ?? "";
+            if (token) thinkingChunks.push(token);
+          } else if (chunk.token) {
+            fullResponse += chunk.token;
+          }
+        }
+        const thinking = thinkingChunks.join("");
+
+        const nextIndex = msgs.length;
+
+        // Always show the streamed content (may include tool call XML).
+        if (fullResponse) {
+          const assistantMsg = {
+            role: "assistant" as const,
+            content: fullResponse,
+            thinking_content: thinking || undefined,
+          };
+          await appendMessage(
+            conversationIdRef.current ?? 0,
+            assistantMsg,
+            nextIndex,
+          );
+        }
+
+        // Refresh conversation to pick up server-assigned ID AND any
+        // direct-return tool result that was not streamed via WS.
         import("../../api/client").then(({ listConversations }) => {
           listConversations(1)
             .then((resp) => {
@@ -157,17 +171,92 @@ export default function ChatView({
                 const id = convs[0].id;
                 conversationIdRef.current = id;
                 setStoredConvId(id);
+                load(id);
               }
             })
             .catch(() => {});
         });
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : "Stream failed";
+        setError(msg);
       }
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Stream failed";
-      setError(msg);
-    }
-  }, [input, messages, llm, appendMessage, setMessages, setStoredConvId]);
+    },
+    [activeDocs, llm, appendMessage, setStoredConvId],
+  );
 
+  // ── Send (new message) ────────────────────────────────────────────
+  const handleSend = useCallback(async () => {
+    const text = input.trim();
+    if (!text || llm.streaming) return;
+    if (!modelPathRef.current) {
+      setError("Please select an LLM model in Settings first.");
+      return;
+    }
+    setInput("");
+
+    setMessages((prev) => [...prev, { role: "user", content: text }]);
+    const newMessages: import("../../types/api").Message[] = [
+      ...messages,
+      { role: "user" as const, content: text },
+    ];
+
+    await doInference(newMessages);
+  }, [input, messages, llm.streaming, setMessages, doInference]);
+
+  // ── Delete message (and all after it) ─────────────────────────────
+  const handleDeleteMessage = useCallback(
+    (index: number) => {
+      const convId = conversationIdRef.current;
+      if (convId !== null) {
+        // Remove from IndexedDB cache
+        deleteMessagesAfter(convId, index);
+        // Notify server to truncate
+        import("../../api/chat").then(({ truncateConversation }) => {
+          truncateConversation(convId, index).catch(() => {});
+        });
+      } else {
+        setMessages((prev) => prev.slice(0, index));
+      }
+    },
+    [setMessages, deleteMessagesAfter],
+  );
+
+  // ── Edit message (truncate chain + re-infer) ──────────────────────
+  const handleSubmitEdit = useCallback(
+    async (index: number, newContent: string) => {
+      const truncated = messages.slice(0, index);
+      const edited: import("../../types/api").Message[] = [
+        ...truncated,
+        { role: "user" as const, content: newContent },
+      ];
+      setMessages(edited);
+      await doInference(edited);
+    },
+    [messages, setMessages, doInference],
+  );
+
+  // ── Copy message to clipboard ─────────────────────────────────────
+  const handleCopyMessage = useCallback((content: string) => {
+    navigator.clipboard.writeText(content).catch(() => {
+      // clipboard write failed — silently ignore
+    });
+  }, []);
+
+  // ── Play TTS ──────────────────────────────────────────────────────
+  const handlePlayMessage = useCallback(async (content: string) => {
+    try {
+      const { synthesizeTTS } = await import("../../api/chat");
+      const blob = await synthesizeTTS(content);
+      const url = URL.createObjectURL(blob);
+      const audio = new Audio(url);
+      audio.onended = () => URL.revokeObjectURL(url);
+      await audio.play();
+    } catch {
+      // TTS failed — silently ignore
+    }
+  }, []);
+
+  // ── Cancel ────────────────────────────────────────────────────────
   const handleCancel = useCallback(() => llm.cancel(), [llm]);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -177,9 +266,20 @@ export default function ChatView({
     }
   };
 
-  const handleNewConversation = useCallback(() => {
-    setMessages([]);
-    setStoredConvId(null);
+  const handleNewConversation = useCallback(async () => {
+    try {
+      const { createConversation } = await import("../../api/client");
+      const result = await createConversation();
+      const newId = result.id;
+      conversationIdRef.current = newId;
+      setStoredConvId(newId);
+      setMessages([]);
+      loadedConvRef.current = newId;
+    } catch {
+      // If server call fails, at least clear local state
+      setMessages([]);
+      setStoredConvId(null);
+    }
   }, [setMessages, setStoredConvId]);
 
   return (
@@ -220,6 +320,10 @@ export default function ChatView({
           messages={messages}
           streamBuffer={llm.streamBuffer}
           thinkingBuffer={llm.thinkingBuffer}
+          onDeleteMessage={handleDeleteMessage}
+          onSubmitEdit={handleSubmitEdit}
+          onCopyMessage={handleCopyMessage}
+          onPlayMessage={handlePlayMessage}
         />
       </div>
 
@@ -258,8 +362,12 @@ export default function ChatView({
                 onClick={handleCancel}
                 title="Cancel"
                 style={{
-                  minWidth: 30, height: 30, border: "none",
-                  display: "flex", alignItems: "center", justifyContent: "center",
+                  minWidth: 30,
+                  height: 30,
+                  border: "none",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
                 }}
               >
                 <LucideIcon name="circle-x" size={16} />
@@ -273,8 +381,12 @@ export default function ChatView({
                 title="Send message"
                 style={{
                   background: "var(--bs-primary)",
-                  minWidth: 30, height: 30, border: "none",
-                  display: "flex", alignItems: "center", justifyContent: "center",
+                  minWidth: 30,
+                  height: 30,
+                  border: "none",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
                 }}
               >
                 <LucideIcon name="chevron-up" size={16} />

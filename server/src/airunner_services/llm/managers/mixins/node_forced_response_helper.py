@@ -62,7 +62,7 @@ class NodeForcedResponseHelper:
             return {
                 "messages": [
                     self.create_direct_tool_response_message(
-                        tool_messages, tool_name
+                        tool_messages, tool_name, ai_message_with_tools
                     )
                 ],
                 "workflow_continuation": False,
@@ -78,6 +78,19 @@ class NodeForcedResponseHelper:
             user_question,
             generation_kwargs,
         )
+        # Prepend the <tool_call> XML from the original message so the
+        # client-side parser can render the tool call widget on reload.
+        if ai_message_with_tools is not None:
+            src = str(getattr(ai_message_with_tools, "content", "") or "")
+            if "<tool_call>" in src:
+                forced_message = AIMessage(
+                    content=src + "\n" + (forced_message.content or ""),
+                    additional_kwargs=getattr(
+                        forced_message, "additional_kwargs", {}
+                    )
+                    or {},
+                    tool_calls=[],
+                )
         self._owner.logger.info(
             "✓ Force response node: Generated %s char response",
             len(forced_message.content) if forced_message.content else 0,
@@ -132,6 +145,7 @@ class NodeForcedResponseHelper:
         self,
         tool_messages: List[Any],
         tool_name: str,
+        ai_message_with_tools: Optional[BaseMessage] = None,
     ) -> AIMessage:
         """Create one assistant message directly from tool output."""
         direct_content = ""
@@ -147,6 +161,14 @@ class NodeForcedResponseHelper:
             direct_content = str(
                 getattr(tool_messages[-1], "content", "")
             ).strip()
+
+        # Prepend the <tool_call> XML from the original message so the
+        # client-side parser can render the tool call widget on reload.
+        if ai_message_with_tools is not None:
+            src = str(getattr(ai_message_with_tools, "content", "") or "")
+            if "<tool_call>" in src:
+                direct_content = src + "\n" + direct_content
+
         return AIMessage(content=direct_content, tool_calls=[])
 
     def generate_forced_response_message(

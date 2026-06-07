@@ -9,7 +9,7 @@ Knowledge files are stored in ~/.local/share/airunner/text/knowledge/
 with one file per day (YYYY-MM-DD.md format).
 """
 
-from typing import Annotated, Any
+from typing import Annotated, Any, List
 
 from airunner_services.llm.core.tool_registry import tool, ToolCategory
 from airunner_services.contract_enums import SignalCode
@@ -29,8 +29,8 @@ logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
         "Sections: Identity, Work & Projects, Interests & Hobbies, "
         "Preferences, Health & Wellness, Relationships, Goals, Notes."
     ),
-    return_direct=False,
-    requires_api=True,
+    return_direct=True,
+    requires_api=False,
     defer_loading=False,  # Essential tool - always available
     keywords=[
         "remember",
@@ -115,7 +115,7 @@ def record_knowledge(
         "(RAG) to find facts related to the query across all stored knowledge."
     ),
     return_direct=False,
-    requires_api=True,
+    requires_api=False,
     defer_loading=False,  # Essential tool - always available
     keywords=[
         "remember",
@@ -154,33 +154,45 @@ def recall_knowledge(
 
         kb = get_knowledge_base()
 
-        # Try RAG search first - api is the agent with RAGMixin
+        # Try RAG search (if agent available) + keyword search
         agent = api if api and hasattr(api, "search") else None
-        results = kb.search_rag(query, k=max_results, agent=agent)
+        rag_results = kb.search_rag(query, k=max_results, agent=agent)
+        keyword_results = kb.search(query, max_results=max_results)
 
-        if not results:
-            # Fallback to keyword search
-            keyword_results = kb.search(query, max_results=max_results)
-            results = [r["line"] for r in keyword_results]
+        # Always run TF-IDF semantic search for robustness
+        tfidf_results = kb.search_tfidf(query, max_results=max_results)
+
+        # Merge: RAG results first, then keyword, then TF-IDF (deduplicated)
+        seen = set()
+        results: List[str] = []
+        for r in rag_results:
+            line = r.strip().lstrip("- ")
+            if line not in seen:
+                results.append(line)
+                seen.add(line)
+        for r in keyword_results:
+            line = r["line"].strip().lstrip("- ")
+            if line not in seen:
+                results.append(line)
+                seen.add(line)
+        for r in tfidf_results:
+            line = r["line"].strip().lstrip("- ")
+            if line not in seen:
+                results.append(line)
+                seen.add(line)
 
         if not results:
             return (
                 f"No knowledge found for: '{query}'.\n\n"
-                "**ACTION REQUIRED:** You MUST now use search_news or search_web to find this information. "
-                "Do NOT tell the user to search elsewhere - use the tools available to you."
+                "**ACTION REQUIRED:** You MUST now use search_news or search_web "
+                "to find this information. Do NOT tell the user to search "
+                "elsewhere - use the tools available to you."
             )
 
-        output = f"Found {len(results)} relevant fact(s):\n\n"
-        for i, fact in enumerate(results, 1):
-            output += f"{i}. {fact}\n"
-
-        output += (
-            "\n**IMPORTANT:** If these facts don't directly answer the user's question, "
-            "you MUST use search_news or search_web to find current information. "
-            "Do NOT tell the user to search elsewhere."
-        )
-
-        return output
+        output_parts = []
+        for i, fact in enumerate(results[:max_results], 1):
+            output_parts.append(f"- {fact}")
+        return "\n".join(output_parts)
 
     except Exception as e:
         logger.error(f"Error recalling knowledge: {e}")
@@ -250,7 +262,7 @@ def read_knowledge_file(
         "Searches all knowledge files unless a specific date is given."
     ),
     return_direct=False,
-    requires_api=True,
+    requires_api=False,
     keywords=[
         "update",
         "replace",
@@ -323,7 +335,7 @@ def update_knowledge(
         "Searches all knowledge files unless a specific date is given."
     ),
     return_direct=False,
-    requires_api=True,
+    requires_api=False,
     keywords=["delete", "remove", "forget", "erase", "clear"],
     input_examples=[
         {"text": "User lives in Seattle"},

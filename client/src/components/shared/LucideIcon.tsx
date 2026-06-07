@@ -1,11 +1,11 @@
 import {
   Activity, Book, BotMessageSquare, Brain, ChevronUp, CircleCheck,
-  CircleStop, CircleX, Cloud, Database, DatabaseZap, Dices,
+  CircleStop, CircleX, Cloud, Copy, Database, DatabaseZap, Dices,
   Grid2x2Check, History, Image, Images, Info, Layers, Loader,
   MessageSquareHeart, MessageSquareText, Mic, OctagonAlert,
-  PanelRightOpen, Play, Plus, Puzzle, RotateCcwSquare, ScanText,
-  Settings, Settings2, SlidersHorizontal, Sparkles, Speaker,
-  Trash, Upload,
+  PanelRightOpen, Pencil, Play, Plus, Puzzle, RotateCcwSquare,
+  ScanText, Settings, Settings2, SlidersHorizontal, Sparkles,
+  Speaker, Trash, Upload,
   type LucideIcon,
 } from "lucide-react";
 
@@ -13,6 +13,7 @@ import {
 const MAP: Record<string, LucideIcon> = {
   activity: Activity,
   book: Book,
+  copy: Copy,
   "bot-message-square": BotMessageSquare,
   brain: Brain,
   "chevron-up": ChevronUp,
@@ -35,6 +36,7 @@ const MAP: Record<string, LucideIcon> = {
   mic: Mic,
   "octagon-alert": OctagonAlert,
   "panel-right-open": PanelRightOpen,
+  pencil: Pencil,
   play: Play,
   plus: Plus,
   puzzle: Puzzle,

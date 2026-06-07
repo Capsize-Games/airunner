@@ -47,8 +47,8 @@ class KnowledgeMigrationMixin:
                 exc_info=True,
             )
 
-    def _get_migration_settings(self):
-        """Return migration settings, creating defaults if needed."""
+    def _resolve_migration_json_path(self):
+        """Return the JSON path to migrate, or None if not needed."""
         with session_scope() as session:
             settings = (
                 session.query(ApplicationSettings)
@@ -56,7 +56,6 @@ class KnowledgeMigrationMixin:
                 .with_for_update()
                 .first()
             )
-
             if not settings:
                 self.logger.info("Creating default application settings")
                 settings = ApplicationSettings(
@@ -71,14 +70,9 @@ class KnowledgeMigrationMixin:
                     .with_for_update()
                     .first()
                 )
-        return settings
-
-    def _resolve_migration_json_path(self):
-        """Return the JSON path to migrate, or None if not needed."""
-        settings = self._get_migration_settings()
-        if settings.knowledge_migrated:
-            self.logger.debug("Knowledge migration already completed")
-            return None
+            if settings.knowledge_migrated:
+                self.logger.debug("Knowledge migration already completed")
+                return None
 
         knowledge_dir = Path(AIRUNNER_USER_DATA_PATH) / "knowledge"
         json_path = knowledge_dir / "user_facts.json"

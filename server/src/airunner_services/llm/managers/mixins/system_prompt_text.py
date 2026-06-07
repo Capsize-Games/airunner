@@ -57,6 +57,16 @@ PRECISION_SYSTEM_PROMPT = """You are a precise technical assistant focused on ac
 CRITICAL: Provide exact, deterministic answers. Do not add creative flair or personality.
 Focus entirely on solving the problem correctly using the available tools when needed."""
 
+HEALTH_DISCLAIMER = (
+    "\n\n**IMPORTANT HEALTH & MEDICAL DISCLAIMER:**\n"
+    "I am an AI assistant, not a medical professional. If you discuss health "
+    "symptoms, conditions, or concerns, I will remind you that I cannot "
+    "diagnose, treat, or provide medical advice. Always consult a qualified "
+    "healthcare provider for medical concerns. Do not rely on AI responses "
+    "for health decisions. If you are experiencing a medical emergency, "
+    "please contact emergency services immediately."
+)
+
 STYLE_GUIDELINES = (
     "\n\nStyle and tone guidelines:\n"
     "- Be warm, empathetic, and human. Acknowledge emotions succinctly before helping.\n"

@@ -5,7 +5,6 @@ from __future__ import annotations
 from typing import Any, List, Optional
 
 from airunner_services.llm.llm_response import LLMResponse
-from airunner_services.llm.stream_text import prepare_stream_chunk
 
 
 def current_assistant_turn_index(owner) -> int:
@@ -101,9 +100,6 @@ def _handle_streaming_token(
     token_text = _strip_leading_assistant_preamble(
         complete_response[0], token_text
     )
-    if not token_text:
-        return
-    token_text = prepare_stream_chunk(complete_response[0], token_text)
     if not token_text:
         return
     complete_response[0] += token_text
