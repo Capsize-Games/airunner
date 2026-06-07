@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { getCanvasDocument, saveCanvasDocument } from "../../api/canvas";
+import { getRequestHeaders } from "virtual:extensions";
 
 interface UseCanvasDocumentOptions {
   documentString: string | null;
@@ -57,7 +58,7 @@ export function useCanvasDocument({
       try {
         fetch("/api/v1/canvas/document", {
           method: "PUT",
-          headers: { "Content-Type": "application/json" },
+          headers: { "Content-Type": "application/json", ...getRequestHeaders() },
           body: JSON.stringify({ document: doc }),
           keepalive: true,
         });

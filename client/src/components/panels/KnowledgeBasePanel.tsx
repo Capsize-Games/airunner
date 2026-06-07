@@ -200,40 +200,25 @@ export function KnowledgeBasePanel() {
           )}
         </div>
         <button
+          className="icon-btn icon-btn-bordered"
           title="Import document(s) into knowledge base"
           onClick={handleImport}
-          style={{
-            background: "transparent", border: "1px solid #444",
-            borderRadius: 4, width: 30, height: 30, padding: 4,
-            cursor: "pointer", flexShrink: 0,
-            display: "flex", alignItems: "center", justifyContent: "center",
-          }}
         >
           <LucideIcon name="upload" size={16} />
         </button>
         {indexing ? (
           <button
+            className="icon-btn icon-btn-bordered"
             title="Cancel indexing"
             onClick={handleCancel}
-            style={{
-              background: "transparent", border: "1px solid #444",
-              borderRadius: 4, width: 30, height: 30, padding: 4,
-              cursor: "pointer", flexShrink: 0,
-              display: "flex", alignItems: "center", justifyContent: "center",
-            }}
           >
             <LucideIcon name="circle-x" size={16} />
           </button>
         ) : (
           <button
+            className="icon-btn icon-btn-bordered"
             title="Index all documents"
             onClick={handleIndex}
-            style={{
-              background: "transparent", border: "1px solid #444",
-              borderRadius: 4, width: 30, height: 30, padding: 4,
-              cursor: "pointer", flexShrink: 0,
-              display: "flex", alignItems: "center", justifyContent: "center",
-            }}
           >
             <LucideIcon name="database" size={16} />
           </button>

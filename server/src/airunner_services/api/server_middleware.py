@@ -1,4 +1,4 @@
-"""API authentication and tenant middleware."""
+"""Core API-key and tenant middleware."""
 
 from __future__ import annotations
 

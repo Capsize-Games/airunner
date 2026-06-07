@@ -90,8 +90,8 @@ export default function CacheDebugPanel() {
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
         <strong>Cache Debug</strong>
         <div style={{ display: "flex", gap: 6 }}>
-          <button style={btnStyle} onClick={refresh}>Refresh</button>
-          <button style={{ ...btnStyle, color: "#f88" }} onClick={handleClearAll} disabled={clearing}>
+          <button className="debug-panel-btn" onClick={refresh}>Refresh</button>
+          <button className="debug-panel-btn debug-panel-btn-danger" onClick={handleClearAll} disabled={clearing}>
             {clearing ? "Clearing…" : "Clear All"}
           </button>
         </div>
@@ -118,7 +118,7 @@ export default function CacheDebugPanel() {
               </td>
               <td style={tdStyle}>
                 {s.lastSynced && (
-                  <button style={btnStyle} onClick={() => handleForceSync(s.name)}>
+                  <button className="debug-panel-btn" onClick={() => handleForceSync(s.name)}>
                     Force Sync
                   </button>
                 )}
@@ -143,16 +143,6 @@ const panelStyle: React.CSSProperties = {
   color: "#ccc",
   fontSize: 12,
   boxShadow: "0 4px 20px rgba(0,0,0,0.5)",
-};
-
-const btnStyle: React.CSSProperties = {
-  background: "transparent",
-  border: "1px solid #555",
-  borderRadius: 4,
-  color: "#aaa",
-  cursor: "pointer",
-  fontSize: 11,
-  padding: "2px 6px",
 };
 
 const thStyle: React.CSSProperties = {

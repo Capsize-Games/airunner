@@ -25,50 +25,19 @@ export default function ImageBrowserFooter({
             <span className="small text-muted">
               Delete all {total} images?
             </span>
-            <button
-              title="Yes"
-              onClick={onDeleteAll}
-              style={{
-                background: "none",
-                border: "none",
-                padding: 2,
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-              }}
-            >
+            <button className="icon-btn" title="Yes" onClick={onDeleteAll}>
               <LucideIcon name="circle-check" size={16} />
             </button>
-            <button
-              title="No"
-              onClick={onCancelDeleteAll}
-              style={{
-                background: "none",
-                border: "none",
-                padding: 2,
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-              }}
-            >
+            <button className="icon-btn" title="No" onClick={onCancelDeleteAll}>
               <LucideIcon name="circle-x" size={16} />
             </button>
           </div>
         ) : (
           <button
             type="button"
+            className="btn-text-danger"
             onClick={onConfirmDeleteAll}
             title="Delete all images for this date"
-            style={{
-              background: "none",
-              border: "none",
-              color: "var(--bs-danger)",
-              fontSize: 12,
-              cursor: "pointer",
-              padding: 0,
-              textDecoration: "underline",
-              textUnderlineOffset: 2,
-            }}
           >
             Delete All
           </button>

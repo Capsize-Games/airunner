@@ -87,7 +87,9 @@
   --bs-secondary: #470081;
   --bs-secondary-rgb: 71, 0, 129;
   --bs-success: #00a800;
+  --bs-success-rgb: 0, 168, 0;
   --bs-danger: #ff5555;
+  --bs-danger-rgb: 255, 85, 85;
   --bs-warning: #ffaa00;
   --bs-info: #00a8d8;
   --bs-light: #c8c8c8;
@@ -479,17 +481,14 @@ input::placeholder, textarea::placeholder {
   border-radius: 3px;
   transition: background-color 0.15s ease, opacity 0.15s ease;
 }
-.model-action-btn:hover {
-  background: rgba(var(--theme-primary-rgb), 0.15);
+.model-action-btn:hover { background: rgba(var(--theme-primary-rgb), 0.15); }
+.model-action-btn:focus-visible {
+  outline: 2px solid var(--bs-primary); outline-offset: 2px;
 }
 
 /* -- Message action buttons (copy, edit, delete, play) -- */
-.message-bubble {
-  position: relative;
-}
-.message-bubble:hover .message-actions {
-  visibility: visible !important;
-}
+.message-bubble { position: relative; }
+.message-bubble:hover .message-actions { visibility: visible !important; }
 .message-action-btn {
   background: transparent;
   border: none;
@@ -505,6 +504,218 @@ input::placeholder, textarea::placeholder {
 .message-action-btn:hover {
   color: var(--theme-text);
   background: rgba(var(--theme-primary-rgb), 0.2);
+}
+.message-action-btn:focus-visible {
+  outline: 2px solid var(--bs-primary); outline-offset: 2px;
+}
+
+/* -- Icon bar focus/active states -- */
+.icon-bar button:focus-visible {
+  outline: 2px solid var(--bs-primary); outline-offset: 2px;
+}
+
+/* -- Settings nav focus state -- */
+.settings-nav-item:focus-visible {
+  outline: 2px solid var(--bs-primary); outline-offset: -2px;
+}
+
+/* -- KB toolbar focus state -- */
+.kb-toolbar button:focus-visible {
+  outline: 2px solid var(--bs-primary); outline-offset: 2px;
+}
+
+/* ── Reusable bare icon button ─────────────────────────────────────────────
+   Use for transparent icon-only buttons anywhere outside .icon-bar.
+   Modifiers: .icon-btn-bordered adds a separator-colored border (30×30 variant).
+   ────────────────────────────────────────────────────────────────────────── */
+.icon-btn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--theme-text);
+  opacity: 0.7;
+  transition: background-color 0.15s ease, opacity 0.15s ease;
+}
+.icon-btn:hover:not(:disabled) {
+  background: rgba(var(--theme-primary-rgb), 0.15);
+  opacity: 1;
+}
+.icon-btn:focus-visible {
+  outline: 2px solid var(--bs-primary);
+  outline-offset: 2px;
+  opacity: 1;
+}
+.icon-btn:disabled { opacity: 0.3; cursor: default; }
+.icon-btn-bordered {
+  width: 30px; height: 30px;
+  border: 1px solid var(--separator-color);
+  flex-shrink: 0;
+}
+
+/* ── Download tray small text buttons (Clear all / Close) ── */
+.tray-text-btn {
+  background: transparent;
+  border: none;
+  color: var(--theme-text-secondary);
+  cursor: pointer;
+  padding: 0;
+  font-size: 10px;
+  line-height: 1;
+  transition: color 0.15s ease;
+}
+.tray-text-btn:hover { color: var(--theme-text); }
+.tray-text-btn:focus-visible {
+  outline: 2px solid var(--bs-primary); outline-offset: 2px;
+}
+.tray-text-btn-lg { font-size: 14px; }
+
+/* ── Download tray Resume / Cancel pill buttons ── */
+.download-resume-btn {
+  background: rgba(var(--theme-primary-rgb), 0.15);
+  border: 1px solid rgba(var(--theme-primary-rgb), 0.3);
+  border-radius: 3px;
+  color: var(--theme-text);
+  cursor: pointer;
+  font-size: 10px;
+  padding: 2px 8px;
+  white-space: nowrap;
+  transition: background-color 0.15s ease;
+}
+.download-resume-btn:hover { background: rgba(var(--theme-primary-rgb), 0.28); }
+.download-resume-btn:focus-visible {
+  outline: 2px solid var(--bs-primary); outline-offset: 2px;
+}
+.download-cancel-btn {
+  background: rgba(var(--bs-danger-rgb), 0.15);
+  border: 1px solid rgba(var(--bs-danger-rgb), 0.3);
+  border-radius: 3px;
+  color: var(--bs-danger);
+  cursor: pointer;
+  font-size: 10px;
+  padding: 2px 8px;
+  white-space: nowrap;
+  transition: background-color 0.15s ease;
+}
+.download-cancel-btn:hover { background: rgba(var(--bs-danger-rgb), 0.28); }
+.download-cancel-btn:focus-visible {
+  outline: 2px solid var(--bs-danger); outline-offset: 2px;
+}
+
+/* ── Modal / overlay action buttons (CivitAI download panel, API key prompt) ──
+   Use .modal-primary-btn for the main action, .modal-cancel-btn for cancel,
+   .modal-secondary-btn for secondary (Ghost) actions.
+   ────────────────────────────────────────────────────────────────────────── */
+.modal-primary-btn {
+  flex: 1;
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+  background: rgba(255,255,255,0.18);
+  border: 1px solid rgba(255,255,255,0.25);
+  color: #fff;
+  transition: opacity 0.15s ease, background-color 0.15s ease;
+}
+.modal-primary-btn:hover:not(:disabled) { opacity: 0.85; }
+.modal-primary-btn:disabled {
+  background: rgba(255,255,255,0.08);
+  border-color: rgba(255,255,255,0.1);
+  color: #666;
+  cursor: default;
+}
+.modal-primary-btn:focus-visible {
+  outline: 2px solid rgba(255,255,255,0.6); outline-offset: 2px;
+}
+.modal-cancel-btn {
+  flex: 1;
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+  background: rgba(var(--bs-danger-rgb), 0.18);
+  border: 1px solid rgba(var(--bs-danger-rgb), 0.3);
+  color: var(--bs-danger);
+  transition: background-color 0.15s ease;
+}
+.modal-cancel-btn:hover { background: rgba(var(--bs-danger-rgb), 0.3); }
+.modal-cancel-btn:focus-visible {
+  outline: 2px solid var(--bs-danger); outline-offset: 2px;
+}
+.modal-secondary-btn {
+  flex-shrink: 0;
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+  background: transparent;
+  border: 1px solid rgba(255,255,255,0.15);
+  color: #888;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+.modal-secondary-btn:hover { color: #ccc; border-color: rgba(255,255,255,0.3); }
+.modal-secondary-btn:focus-visible {
+  outline: 2px solid rgba(255,255,255,0.4); outline-offset: 2px;
+}
+.modal-downloaded-badge {
+  flex: 1;
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-size: 12px;
+  text-align: center;
+  background: rgba(var(--bs-success-rgb), 0.15);
+  border: 1px solid rgba(var(--bs-success-rgb), 0.25);
+  color: #66ddaa;
+}
+
+/* ── Cache debug panel buttons ── */
+.debug-panel-btn {
+  background: transparent;
+  border: 1px solid #555;
+  border-radius: 4px;
+  color: #aaa;
+  cursor: pointer;
+  font-size: 11px;
+  font-family: monospace;
+  padding: 2px 6px;
+  transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+.debug-panel-btn:hover:not(:disabled) {
+  background: rgba(255,255,255,0.08);
+  border-color: #777;
+  color: #ddd;
+}
+.debug-panel-btn:disabled { opacity: 0.4; cursor: default; }
+.debug-panel-btn:focus-visible {
+  outline: 2px solid #888; outline-offset: 2px;
+}
+.debug-panel-btn-danger { color: #f88; }
+.debug-panel-btn-danger:hover:not(:disabled) {
+  background: rgba(255, 136, 136, 0.12);
+  border-color: #f88;
+  color: #ffaaaa;
+}
+
+/* ── Text-link style danger button (e.g. "Delete All") ── */
+.btn-text-danger {
+  background: none;
+  border: none;
+  color: var(--bs-danger);
+  cursor: pointer;
+  padding: 0;
+  font-size: 12px;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  transition: opacity 0.15s ease;
+}
+.btn-text-danger:hover { opacity: 0.75; }
+.btn-text-danger:focus-visible {
+  outline: 2px solid var(--bs-danger); outline-offset: 2px;
 }
 
 /* -- Indeterminate progress bar animation (model loading) -- */
