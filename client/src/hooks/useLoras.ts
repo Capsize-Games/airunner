@@ -57,8 +57,13 @@ export function useLoras() {
 
   // Optimistic update: patch a single item in both state and IndexedDB.
   const patchLora = useCallback(async (updated: LoraInfo) => {
-    setLoras((prev) => prev.map((l) => l.id === updated.id ? updated : l));
-    if (db) await db.loras.put(toCached(updated));
+    setLoras((prev) => prev.map((l) => l.id === updated.id ? { ...l, ...updated } : l));
+    if (db) {
+      const existing = await db.loras.get(updated.id);
+      if (existing) {
+        await db.loras.put({ ...existing, ...updated, cachedAt: Date.now() });
+      }
+    }
   }, [db]);
 
   return { loras, loading, sync, patchLora };

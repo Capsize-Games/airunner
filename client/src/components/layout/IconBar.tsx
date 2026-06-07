@@ -4,8 +4,6 @@ type PanelId =
   | "knowledge"
   | "history"
   | "llm_settings"
-  | "lora"
-  | "embeddings"
   | "image_browser"
   | "civitai_browser";
 
@@ -124,20 +122,6 @@ export function RightIconBar({
         title="CivitAI Browser"
       >
         <LucideIcon name="cloud" />
-      </button>
-      <button
-        className={active("lora", rightPanel)}
-        onClick={() => onRightPanel("lora")}
-        title="LoRA"
-      >
-        <LucideIcon name="puzzle" />
-      </button>
-      <button
-        className={active("embeddings", rightPanel)}
-        onClick={() => onRightPanel("embeddings")}
-        title="Embeddings"
-      >
-        <LucideIcon name="scan-text" />
       </button>
       <button
         className={active("image_browser", rightPanel)}

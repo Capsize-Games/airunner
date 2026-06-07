@@ -4,8 +4,6 @@ export type PanelId =
   | "knowledge"
   | "history"
   | "llm_settings"
-  | "lora"
-  | "embeddings"
   | "image_browser"
   | "civitai_browser";
 

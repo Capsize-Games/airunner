@@ -1,9 +1,13 @@
 import {
   useState, useEffect, useCallback, useRef,
 } from "react";
+import { updateSingleton } from "../../api/client";
 import PromptInput from "./art-prompt/PromptInput";
 import { EmbeddingPills, LoraPills } from "./art-prompt/ActivePills";
 import ArtPromptFooter from "./art-prompt/ArtPromptFooter";
+import SeedControls from "./art-model/SeedControls";
+import LoraPanel from "./LoraPanel";
+import EmbeddingsPanel from "./EmbeddingsPanel";
 import {
   loadPromptData,
   savePromptData,
@@ -12,9 +16,18 @@ import LucideIcon from "../shared/LucideIcon";
 import { useCanvasContext } from "../../features/canvas/CanvasContext";
 import { useArtWebSocket } from "../../features/art/useArtWebSocket";
 
+type ArtTab = "prompt" | "lora" | "embeddings";
+
+const TABS: { id: ArtTab; label: string; icon: string }[] = [
+  { id: "prompt", label: "Prompt", icon: "pencil" },
+  { id: "lora", label: "LoRA", icon: "puzzle" },
+  { id: "embeddings", label: "Embeddings", icon: "scan-text" },
+];
+
 export default function ArtPromptPanel() {
   const initial = loadPromptData();
 
+  const [tab, setTab] = useState<ArtTab>("prompt");
   const [prompt, setPrompt] = useState(initial.prompt);
   const [negativePrompt, setNegativePrompt] = useState(
     initial.negative_prompt,
@@ -31,6 +44,18 @@ export default function ArtPromptPanel() {
   const [activeEmbeddings, setActiveEmbeddings] = useState<
     { id: number; name: string }[]
   >([]);
+
+  // Seed state (persisted to localStorage and server)
+  const [seed, setSeed] = useState(() => {
+    try {
+      const v = Number(localStorage.getItem("airunner_seed") || "0");
+      return v === -1 ? Math.floor(Math.random() * 2147483647) + 1 : v;
+    } catch { return 0; }
+  });
+  const [seedRandomized, setSeedRandomized] = useState(() => {
+    try { return Number(localStorage.getItem("airunner_seed") || "0") === -1; }
+    catch { return false; }
+  });
 
   // Canvas context for grid dimensions and image placement
   let canvasCtx: ReturnType<typeof useCanvasContext> | null = null;
@@ -121,6 +146,27 @@ export default function ArtPromptPanel() {
     artCancel();
   }, [artCancel]);
 
+  const handleSeedChange = useCallback((v: number) => {
+    setSeed(v);
+    setSeedRandomized(false);
+    try { localStorage.setItem("airunner_seed", String(v)); } catch {}
+    updateSingleton("GeneratorSettings", { seed: v }).catch(() => {});
+  }, []);
+
+  const handleToggleRandom = useCallback(() => {
+    if (seedRandomized) {
+      setSeedRandomized(false);
+      try { localStorage.setItem("airunner_seed", String(seed)); } catch {}
+      updateSingleton("GeneratorSettings", { seed }).catch(() => {});
+    } else {
+      const s = Math.floor(Math.random() * 2147483647) + 1;
+      setSeedRandomized(true);
+      setSeed(s);
+      try { localStorage.setItem("airunner_seed", String(-1)); } catch {}
+      updateSingleton("GeneratorSettings", { seed: -1 }).catch(() => {});
+    }
+  }, [seed, seedRandomized]);
+
   const reloadActiveLoras = useCallback(async () => {
     try {
       const { listLoras } = await import("../../api/client");
@@ -201,74 +247,133 @@ export default function ArtPromptPanel() {
   };
 
   return (
-    <div className="d-flex flex-column h-100 p-2">
-      <div className="d-flex align-items-center gap-2 mb-2 flex-shrink-0">
-        <h6 style={{ color: "var(--theme-text-secondary)" }} className="mb-0 flex-grow-1">
-          Art Prompt
-        </h6>
+    <div className="d-flex flex-column h-100">
+      {/* Tab bar */}
+      <div
+        style={{
+          display: "flex",
+          borderBottom: "1px solid rgba(255,255,255,0.07)",
+          flexShrink: 0,
+        }}
+      >
+        {TABS.map((t) => (
+          <button
+            key={t.id}
+            type="button"
+            onClick={() => setTab(t.id)}
+            style={{
+              flex: 1,
+              padding: "6px 4px",
+              background: tab === t.id
+                ? "var(--theme-panel-bg)"
+                : "transparent",
+              border: "none",
+              borderBottom: tab === t.id
+                ? "2px solid var(--bs-primary)"
+                : "2px solid transparent",
+              color: tab === t.id
+                ? "var(--bs-primary)"
+                : "rgba(255,255,255,0.45)",
+              fontSize: 11,
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 4,
+              transition: "color 0.15s, border-color 0.15s",
+            }}
+          >
+            <LucideIcon name={t.icon} size={12} />
+            {t.label}
+          </button>
+        ))}
       </div>
 
-      <div className="flex-grow-1 d-flex flex-column gap-2 overflow-auto">
-        <PromptInput
-          label="Prompt"
-          value={prompt}
-          onChange={(v) => { setPrompt(v); persist({ prompt: v }); }}
-          placeholder="Describe the image..."
-          disabled={generating}
-        />
-
-        {readLs("airunner_art_version") !== "Z-Image Turbo" && (
-          <>
+      {/* Tab content */}
+      {tab === "prompt" && (
+        <div className="d-flex flex-column flex-grow-1 overflow-hidden p-2">
+          <div className="flex-grow-1 d-flex flex-column gap-2 overflow-auto">
             <PromptInput
-              label="Secondary Prompt"
-              value={secondaryPrompt}
-              onChange={(v) => { setSecondaryPrompt(v); persist({ secondary_prompt: v }); }}
-              placeholder="Background, colors, atmosphere..."
+              label="Prompt"
+              value={prompt}
+              onChange={(v) => { setPrompt(v); persist({ prompt: v }); }}
+              placeholder="Describe the image..."
               disabled={generating}
             />
 
-            <PromptInput
-              label="Negative Prompt"
-              value={negativePrompt}
-              onChange={(v) => { setNegativePrompt(v); persist({ negative_prompt: v }); }}
-              placeholder="Things to exclude..."
-              disabled={generating}
-            />
+            {readLs("airunner_art_version") !== "Z-Image Turbo" && (
+              <>
+                <PromptInput
+                  label="Secondary Prompt"
+                  value={secondaryPrompt}
+                  onChange={(v) => { setSecondaryPrompt(v); persist({ secondary_prompt: v }); }}
+                  placeholder="Background, colors, atmosphere..."
+                  disabled={generating}
+                />
 
-            <PromptInput
-              label="Secondary Negative Prompt"
-              value={secondaryNegativePrompt}
-              onChange={(v) => {
-                setSecondaryNegativePrompt(v);
-                persist({ secondary_negative_prompt: v });
-              }}
-              placeholder="Secondary negative..."
-              disabled={generating}
-            />
-          </>
-        )}
-      </div>
+                <PromptInput
+                  label="Negative Prompt"
+                  value={negativePrompt}
+                  onChange={(v) => { setNegativePrompt(v); persist({ negative_prompt: v }); }}
+                  placeholder="Things to exclude..."
+                  disabled={generating}
+                />
 
-      <div className="flex-shrink-0 mt-2">
-        <EmbeddingPills
-          embeddings={activeEmbeddings}
-          onDeactivate={deactivateEmbedding}
-        />
-        <LoraPills
-          loras={activeLoras}
-          onDeactivate={deactivateLora}
-        />
-        {phase !== "idle" && (
-          <StatusBadge phase={phase} progress={progress} />
-        )}
-        <ArtPromptFooter
-          progress={progress}
-          generating={generating}
-          hasPrompt={!!prompt.trim()}
-          onSubmit={onGenerate}
-          onCancel={onCancel}
-        />
-      </div>
+                <PromptInput
+                  label="Secondary Negative Prompt"
+                  value={secondaryNegativePrompt}
+                  onChange={(v) => {
+                    setSecondaryNegativePrompt(v);
+                    persist({ secondary_negative_prompt: v });
+                  }}
+                  placeholder="Secondary negative..."
+                  disabled={generating}
+                />
+              </>
+            )}
+          </div>
+
+          <div className="flex-shrink-0 mt-2">
+            <EmbeddingPills
+              embeddings={activeEmbeddings}
+              onDeactivate={deactivateEmbedding}
+            />
+            <LoraPills
+              loras={activeLoras}
+              onDeactivate={deactivateLora}
+            />
+            <SeedControls
+              seed={seed}
+              seedRandomized={seedRandomized}
+              loading={false}
+              onSeedChange={handleSeedChange}
+              onToggleRandom={handleToggleRandom}
+            />
+            {phase !== "idle" && (
+              <StatusBadge phase={phase} progress={progress} />
+            )}
+            <ArtPromptFooter
+              progress={progress}
+              generating={generating}
+              hasPrompt={!!prompt.trim()}
+              onSubmit={onGenerate}
+              onCancel={onCancel}
+            />
+          </div>
+        </div>
+      )}
+
+      {tab === "lora" && (
+        <div className="flex-grow-1 overflow-auto">
+          <LoraPanel />
+        </div>
+      )}
+
+      {tab === "embeddings" && (
+        <div className="flex-grow-1 overflow-auto">
+          <EmbeddingsPanel />
+        </div>
+      )}
     </div>
   );
 }
@@ -281,7 +386,7 @@ const STATUS_CFG: Record<
 > = {
   loading: {
     icon: "sparkles",
-    label: "Loading model…",
+    label: "Loading model\u2026",
     bg: "rgba(99,153,255,0.12)",
     border: "rgba(99,153,255,0.25)",
     color: "#6399ff",

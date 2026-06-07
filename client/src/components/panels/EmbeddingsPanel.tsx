@@ -30,7 +30,7 @@ export default function EmbeddingsPanel() {
   const version = getVersion();
   const baseDir = VARIANT_BASE[version] || version;
   const items: EmbeddingItemData[] = embeddings
-    .filter((e) => version ? e.path.includes(`/${baseDir}/`) : true)
+    .filter((e) => version ? (e.path || "").includes(`/${baseDir}/`) : true)
     .map((e) => ({ ...e, _inputText: inputTexts[e.id] ?? "" }));
 
   useEventBus([EVENT_EMBEDDINGS], (_event, data) => {

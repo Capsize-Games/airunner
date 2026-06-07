@@ -31,7 +31,7 @@ export default function LoraPanel() {
   const version = getVersion();
   const baseDir = VARIANT_BASE[version] || version;
   const items: LoraItemData[] = loras
-    .filter((l) => version ? l.path.includes(`/${baseDir}/`) : true)
+    .filter((l) => version ? (l.path || "").includes(`/${baseDir}/`) : true)
     .map((l) => ({ ...l, _inputText: inputTexts[l.id] ?? "" }));
 
   // Sync on EVENT_LORAS instead of full reload.
