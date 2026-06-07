@@ -39,6 +39,7 @@ export default function ArtModelSliders({
         step={step}
         defaultValue={opts?.defaultVal ?? min}
         displayAsFloat={opts?.displayAsFloat}
+        labelWidth={52}
         onChange={onChange}
       />
     </div>

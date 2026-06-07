@@ -15,6 +15,18 @@ import { useLLMWebSocket } from "../../features/llm/useLLMWebSocket";
 import { useConversationMessages } from "../../hooks/useConversationMessages";
 import { useKnowledgeBaseDocs } from "../../hooks/useKnowledgeBaseDocs";
 import { useLocalStorage } from "../../hooks/useLocalStorage";
+import { KnowledgeBasePanel } from "../panels/KnowledgeBasePanel";
+import { ChatHistoryPanel } from "../panels/ChatHistoryPanel";
+import { LLMSettingsPanel } from "../panels/LLMSettingsPanel";
+
+type ChatTab = "chat" | "knowledge" | "history" | "llm_settings";
+
+const TABS: { id: ChatTab; label: string; icon: string }[] = [
+  { id: "chat", label: "Chat", icon: "bot-message-square" },
+  { id: "knowledge", label: "Knowledge Base", icon: "book" },
+  { id: "history", label: "History", icon: "history" },
+  { id: "llm_settings", label: "LLM Settings", icon: "sliders-horizontal" },
+];
 
 interface ActiveDoc {
   id: number;
@@ -23,9 +35,46 @@ interface ActiveDoc {
 
 export default function ChatView({
   conversationId,
+  onSelectConversation,
 }: {
   conversationId: number | null;
+  onSelectConversation?: (id: number) => void;
 }) {
+  const [tab, setTab] = useState<ChatTab>("chat");
+  const [textareaH, setTextareaH] = useState(() => {
+    try { return Number(localStorage.getItem("chat_textarea_h")) || 200; }
+    catch { return 220; }
+  });
+  const textareaDrag = useRef(false);
+  const textareaStartY = useRef(0);
+  const textareaStartH = useRef(0);
+
+  const handleTextareaResize = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    textareaDrag.current = true;
+    textareaStartY.current = e.clientY;
+    textareaStartH.current = textareaH;
+    document.body.style.cursor = "row-resize";
+    document.body.style.userSelect = "none";
+
+    const onMove = (ev: MouseEvent) => {
+      if (!textareaDrag.current) return;
+      const delta = ev.clientY - textareaStartY.current;
+      const newH = Math.max(200, Math.min(500, textareaStartH.current - delta));
+      setTextareaH(newH);
+    };
+
+    const onUp = () => {
+      textareaDrag.current = false;
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
+    };
+
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+  }, [textareaH]);
   const { messages, loading, setMessages, load, appendMessage, deleteMessagesAfter } =
     useConversationMessages();
   const { docs: kbDocs, reload: reloadDocs } = useKnowledgeBaseDocs();
@@ -282,121 +331,225 @@ export default function ChatView({
     }
   }, [setMessages, setStoredConvId]);
 
+  useEffect(() => {
+    try { localStorage.setItem("chat_textarea_h", String(textareaH)); } catch { /* */ }
+  }, [textareaH]);
+
   return (
     <div
       className="d-flex flex-column h-100"
       onDragOver={handleDragOver}
       onDrop={handleDrop}
     >
+      {/* Tab bar — icons only with tooltips */}
       <div
-        className="d-flex justify-content-end p-1 flex-shrink-0"
-        style={{ borderBottom: "1px solid #333" }}
+        style={{
+          display: "flex",
+          borderBottom: "1px solid rgba(255,255,255,0.07)",
+          flexShrink: 0,
+        }}
       >
-        <button
-          onClick={handleNewConversation}
-          title="New conversation"
-          style={{
-            background: "transparent",
-            border: "1px solid #444",
-            borderRadius: 4,
-            padding: "2px 4px",
-            cursor: "pointer",
-            display: "flex",
-            alignItems: "center",
-          }}
-        >
-          <LucideIcon name="plus" size={14} />
-        </button>
-      </div>
-
-      {error && (
-        <Alert variant="danger" dismissible onClose={() => setError(null)}>
-          {error}
-        </Alert>
-      )}
-
-      <div className="chat-messages p-2 flex-grow-1">
-        {loading ? null : (
-          <MessageList
-            messages={messages}
-          streamBuffer={llm.streamBuffer}
-          thinkingBuffer={llm.thinkingBuffer}
-          onDeleteMessage={handleDeleteMessage}
-          onSubmitEdit={handleSubmitEdit}
-          onCopyMessage={handleCopyMessage}
-          onPlayMessage={handlePlayMessage}
-        />
-        )}
-      </div>
-
-      <div className="chat-input-area border-top p-2">
-        <div className="d-flex flex-column gap-2">
-          <ActiveDocPills activeDocs={activeDocs} onRemoveDoc={handleRemoveDoc} />
-
-          <textarea
-            rows={3}
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="Type a message..."
-            disabled={llm.streaming}
-            className="form-control"
+        {TABS.map((t) => (
+          <button
+            key={t.id}
+            type="button"
+            onClick={() => setTab(t.id)}
+            title={t.label}
             style={{
-              resize: "none",
-              background: "#1a1a2e",
-              color: "var(--theme-text)",
-              borderColor: "#333",
+              flex: 1,
+              padding: "6px 0",
+              background: tab === t.id
+                ? "var(--theme-panel-bg)"
+                : "transparent",
+              border: "none",
+              borderBottom: tab === t.id
+                ? "2px solid var(--bs-primary)"
+                : "2px solid transparent",
+              color: tab === t.id
+                ? "var(--bs-primary)"
+                : "rgba(255,255,255,0.45)",
+              fontSize: 11,
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              transition: "color 0.15s, border-color 0.15s",
             }}
-          />
-          <ModelSelector />
-          <div className="d-flex align-items-center gap-2">
-            <div className="flex-grow-1">
-              <ProgressBar
-                now={llm.streamBuffer ? 50 : 0}
-                variant={llm.streaming ? "info" : "secondary"}
-                style={{ height: 6 }}
-                animated={llm.streaming}
+          >
+            <LucideIcon name={t.icon} size={16} />
+          </button>
+        ))}
+      </div>
+
+      {/* Tab content */}
+      {tab === "chat" && (
+        <>
+          <div
+            className="d-flex justify-content-end p-1 flex-shrink-0"
+            style={{ borderBottom: "1px solid #333" }}
+          >
+            <button
+              onClick={handleNewConversation}
+              title="New conversation"
+              style={{
+                background: "transparent",
+                border: "1px solid #444",
+                borderRadius: 4,
+                padding: "2px 4px",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+              }}
+            >
+              <LucideIcon name="plus" size={14} />
+            </button>
+          </div>
+
+          {error && (
+            <Alert variant="danger" dismissible onClose={() => setError(null)}>
+              {error}
+            </Alert>
+          )}
+
+          <div className="chat-messages p-2" style={{ flex: 1, minHeight: 0, overflow: "auto" }}>
+            {loading ? null : (
+              <MessageList
+                messages={messages}
+            streamBuffer={llm.streamBuffer}
+            thinkingBuffer={llm.thinkingBuffer}
+            onDeleteMessage={handleDeleteMessage}
+            onSubmitEdit={handleSubmitEdit}
+            onCopyMessage={handleCopyMessage}
+            onPlayMessage={handlePlayMessage}
               />
-            </div>
-            {llm.streaming ? (
-              <button
-                className="btn btn-sm btn-danger p-1"
-                onClick={handleCancel}
-                title="Cancel"
-                style={{
-                  minWidth: 30,
-                  height: 30,
-                  border: "none",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-              >
-                <LucideIcon name="circle-x" size={16} />
-              </button>
-            ) : (
-              <button
-                type="button"
-                className="btn btn-sm p-1"
-                onClick={handleSend}
-                disabled={!input.trim()}
-                title="Send message"
-                style={{
-                  background: "var(--bs-primary)",
-                  minWidth: 30,
-                  height: 30,
-                  border: "none",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-              >
-                <LucideIcon name="chevron-up" size={16} />
-              </button>
             )}
           </div>
+
+          <div
+            onMouseDown={handleTextareaResize}
+            style={{
+              height: 4,
+              cursor: "row-resize",
+              flexShrink: 0,
+              background: "transparent",
+              transition: "background 0.15s",
+            }}
+            onMouseEnter={(e) => {
+              (e.currentTarget as HTMLDivElement).style.background =
+                "rgba(99,153,255,0.3)";
+            }}
+            onMouseLeave={(e) => {
+              if (!textareaDrag.current) {
+                (e.currentTarget as HTMLDivElement).style.background =
+                  "transparent";
+              }
+            }}
+          />
+
+          <div
+            className="chat-input-area border-top p-2"
+            style={{
+              height: textareaH,
+              flexShrink: 0,
+              display: "flex",
+              flexDirection: "column",
+              gap: 8,
+            }}
+          >
+            <ActiveDocPills activeDocs={activeDocs} onRemoveDoc={handleRemoveDoc} />
+
+            <textarea
+              style={{
+                resize: "none",
+                flex: 1,
+                background: "#1a1a2e",
+                color: "var(--theme-text)",
+                borderColor: "#333",
+                minHeight: 60,
+              }}
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder="Type a message..."
+              disabled={llm.streaming}
+              className="form-control"
+            />
+
+            <div style={{ flexShrink: 0, display: "flex", flexDirection: "column", gap: 8 }}>
+              <ModelSelector />
+              <div className="d-flex align-items-center gap-2">
+                <div className="flex-grow-1">
+                  <ProgressBar
+                    now={llm.streamBuffer ? 50 : 0}
+                    variant={llm.streaming ? "info" : "secondary"}
+                    style={{ height: 6 }}
+                    animated={llm.streaming}
+                  />
+                </div>
+                {llm.streaming ? (
+                  <button
+                    className="btn btn-sm btn-danger p-1"
+                    onClick={handleCancel}
+                    title="Cancel"
+                    style={{
+                      minWidth: 30,
+                      height: 30,
+                      border: "none",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
+                    <LucideIcon name="circle-x" size={16} />
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    className="btn btn-sm p-1"
+                    onClick={handleSend}
+                    disabled={!input.trim()}
+                    title="Send message"
+                    style={{
+                      background: "var(--bs-primary)",
+                      minWidth: 30,
+                      height: 30,
+                      border: "none",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
+                    <LucideIcon name="chevron-up" size={16} />
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+
+      {tab === "knowledge" && (
+        <div className="flex-grow-1 overflow-auto">
+          <KnowledgeBasePanel />
         </div>
-      </div>
+      )}
+
+      {tab === "history" && (
+        <div className="flex-grow-1 overflow-auto">
+          <ChatHistoryPanel
+            onSelectConversation={(id) => {
+              onSelectConversation?.(id);
+              setTab("chat");
+            }}
+          />
+        </div>
+      )}
+
+      {tab === "llm_settings" && (
+        <div className="flex-grow-1 overflow-auto">
+          <LLMSettingsPanel />
+        </div>
+      )}
     </div>
   );
 }

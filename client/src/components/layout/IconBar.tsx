@@ -1,36 +1,26 @@
 import LucideIcon from "../shared/LucideIcon";
 
 type PanelId =
-  | "knowledge"
-  | "history"
-  | "llm_settings"
   | "image_browser"
   | "civitai_browser";
 
 export function LeftIconBar({
   showChat,
-  leftPanel,
   ttsOn,
   sttOn,
   onToggleChat,
-  onLeftPanel,
   onToggleTts,
   onToggleStt,
   bottomSlot,
 }: {
   showChat: boolean;
-  leftPanel: PanelId | null;
   ttsOn: boolean;
   sttOn: boolean;
   onToggleChat: () => void;
-  onLeftPanel: (id: PanelId) => void;
   onToggleTts: () => void;
   onToggleStt: () => void;
   bottomSlot?: React.ReactNode;
 }) {
-  const active = (id: PanelId, panel: PanelId | null) =>
-    panel === id ? "active" : "";
-
   return (
     <div className="icon-bar left">
       <button
@@ -39,28 +29,6 @@ export function LeftIconBar({
         title="Toggle Chat"
       >
         <LucideIcon name="bot-message-square" />
-      </button>
-      <hr />
-      <button
-        className={active("knowledge", leftPanel)}
-        onClick={() => onLeftPanel("knowledge")}
-        title="Knowledge Base"
-      >
-        <LucideIcon name="book" />
-      </button>
-      <button
-        className={active("history", leftPanel)}
-        onClick={() => onLeftPanel("history")}
-        title="History"
-      >
-        <LucideIcon name="history" />
-      </button>
-      <button
-        className={active("llm_settings", leftPanel)}
-        onClick={() => onLeftPanel("llm_settings")}
-        title="LLM Settings"
-      >
-        <LucideIcon name="sliders-horizontal" />
       </button>
       <div className="flex-spacer" />
       <button
