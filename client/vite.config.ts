@@ -5,6 +5,8 @@ import * as path from "path";
 
 // https://vite.dev/config/
 export default defineConfig({
+  // Load .env from repo root (shared between server and client)
+  envDir: path.resolve(__dirname, ".."),
   plugins: [react(), extensionLoaderPlugin()],
   resolve: {
     alias: {
