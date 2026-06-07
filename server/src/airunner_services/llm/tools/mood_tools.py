@@ -15,7 +15,7 @@ from airunner_services.contract_enums import SignalCode
     category=ToolCategory.MOOD,
     description="Update the chatbot's emotional state based on conversation",
     return_direct=False,
-    requires_api=True,
+    requires_api=False,
 )
 def update_mood(
     mood: Annotated[

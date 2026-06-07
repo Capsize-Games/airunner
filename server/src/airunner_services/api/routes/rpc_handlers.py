@@ -128,6 +128,56 @@ async def _rpc_conversations_select(body: dict, **kw: Any) -> dict[str, Any]:
         return {"status": 500, "body": {"error": str(exc)}}
 
 
+@_rpc_register("POST", "/api/v1/llm/conversations/truncate")
+async def _rpc_conversations_truncate(body: dict, **kw: Any) -> dict[str, Any]:
+    """Truncate a conversation to keep only the first N messages.
+
+    Request body::
+
+        {"conversation_id": 42, "keep_count": 3}
+
+    This keeps messages[0:keep_count] and discards the rest.
+
+    Operates on the raw ``value`` list stored on the Conversation model
+    so that the ``is_bot`` / ``role`` fields are preserved correctly.
+    """
+    try:
+        from airunner_services.database.models.conversation import (
+            Conversation,
+        )
+
+        conv_id = body.get("conversation_id")
+        keep_count = int(body.get("keep_count", 0))
+        if not conv_id or keep_count < 0:
+            return {
+                "status": 400,
+                "body": {
+                    "error": "conversation_id and keep_count are required",
+                },
+            }
+
+        conversation = Conversation.objects.filter_by_first(id=int(conv_id))
+        if conversation is None:
+            return {
+                "status": 404,
+                "body": {"error": f"Conversation {conv_id} not found"},
+            }
+
+        raw = list(getattr(conversation, "value", None) or [])
+        truncated = raw[:keep_count]
+        Conversation.objects.update(pk=int(conv_id), value=list(truncated))
+        return {
+            "status": 200,
+            "body": {
+                "truncated": True,
+                "kept": keep_count,
+                "original_count": len(raw),
+            },
+        }
+    except Exception as exc:
+        return {"status": 500, "body": {"error": str(exc)}}
+
+
 # ── LLM settings presets ─────────────────────────────────────────────────
 
 

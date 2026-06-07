@@ -427,6 +427,30 @@ input::placeholder, textarea::placeholder {
   background: rgba(var(--theme-primary-rgb), 0.15);
 }
 
+/* -- Message action buttons (copy, edit, delete, play) -- */
+.message-bubble {
+  position: relative;
+}
+.message-bubble:hover .message-actions {
+  visibility: visible !important;
+}
+.message-action-btn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 3px;
+  color: var(--theme-text-secondary);
+  transition: color 0.15s ease, background-color 0.15s ease;
+}
+.message-action-btn:hover {
+  color: var(--theme-text);
+  background: rgba(var(--theme-primary-rgb), 0.2);
+}
+
 /* -- Indeterminate progress bar animation (model loading) -- */
 @keyframes indeterminate-bar {
   0%   { background-position: 200% 0; }

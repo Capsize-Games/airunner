@@ -133,16 +133,48 @@ class ChatGGUFToolParsingMixin:
         self,
         match: str,
     ) -> Optional[Dict[str, Any]]:
-        """Parse one XML-tagged tool-call payload."""
+        """Parse one XML-tagged tool-call payload.
+
+        Supports two formats inside ``:
+          1. JSON: {"name": "...", "arguments": {...}}
+          2. Custom XML:
+               <function=NAME>
+               <parameter=KEY>value</parameter>
+               </function>
+        """
+        stripped = match.strip()
+        # Try JSON first (format 1)
         try:
-            call_data = json.loads(match.strip())
-        except json.JSONDecodeError as error:
-            self.logger.warning("Failed to parse tool call JSON: %s", error)
+            call_data = json.loads(stripped)
+            return {
+                "id": str(uuid.uuid4()),
+                "name": call_data.get("name"),
+                "args": call_data.get("arguments", {}),
+                "type": "tool_call",
+            }
+        except json.JSONDecodeError:
+            pass
+
+        # Fallback: custom XML format (format 2)
+        func_match = re.search(r"<function=(\w+)>", stripped)
+        if not func_match:
+            self.logger.warning(
+                "Failed to parse tool call (not JSON or <function=>): %s",
+                stripped[:100],
+            )
             return None
+
+        name = func_match.group(1)
+        args: Dict[str, str] = {}
+        for param_match in re.finditer(
+            r"<parameter=(\w+)>([\s\S]*?)</parameter>", stripped
+        ):
+            args[param_match.group(1)] = param_match.group(2).strip()
+
         return {
             "id": str(uuid.uuid4()),
-            "name": call_data.get("name"),
-            "args": call_data.get("arguments", {}),
+            "name": name,
+            "args": args,
             "type": "tool_call",
         }
 

@@ -27,6 +27,17 @@ export async function deleteConversation(id: number) {
   return request<void>("DELETE", `/api/v1/llm/conversations/${id}`);
 }
 
+export async function truncateConversation(
+  conversationId: number,
+  keepCount: number,
+) {
+  return request<{ truncated: boolean; kept: number }>(
+    "POST",
+    "/api/v1/llm/conversations/truncate",
+    { conversation_id: conversationId, keep_count: keepCount },
+  );
+}
+
 export async function loadConversation(conversationId: number) {
   return request<import("../types/api").ConversationSessionResponse>(
     "GET",

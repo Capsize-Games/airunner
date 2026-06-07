@@ -21,6 +21,7 @@ from airunner_services.llm.managers.mixins.system_prompt_mood import (
     get_mood_section,
 )
 from airunner_services.llm.managers.mixins.system_prompt_text import (
+    HEALTH_DISCLAIMER,
     MEMORY_INSTRUCTIONS,
     STYLE_GUIDELINES,
 )
@@ -114,7 +115,7 @@ class SystemPromptMixin:
 
     def _get_style_guidelines(self) -> str:
         """Return the conversational style guidelines block."""
-        return STYLE_GUIDELINES
+        return STYLE_GUIDELINES + HEALTH_DISCLAIMER
 
     def _get_memory_instructions(self) -> str:
         """Return the proactive memory-instructions block."""

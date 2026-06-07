@@ -6,41 +6,9 @@ Tools for controlling the application, managing files, and system operations.
 
 import os
 from datetime import datetime
-from typing import Annotated, Any
+from typing import Annotated
 
 from airunner_services.llm.core.tool_registry import tool, ToolCategory
-
-
-@tool(
-    name="quit_application",
-    category=ToolCategory.SYSTEM,
-    description="Quit the AI Runner application",
-    return_direct=True,
-    requires_api=True,
-    defer_loading=False,  # Essential tool - always available
-)
-def quit_application(api: Any = None) -> str:
-    """Quit the application."""
-    api.quit_application()
-    return "Quitting application..."
-
-
-@tool(
-    name="toggle_tts",
-    category=ToolCategory.SYSTEM,
-    description="Enable or disable text-to-speech",
-    return_direct=True,
-    requires_api=True,
-    defer_loading=False,  # Essential tool - always available
-)
-def toggle_tts(
-    enabled: Annotated[bool, "True to enable, False to disable"],
-    api: Any = None,
-) -> str:
-    """Toggle text-to-speech."""
-    api.tts.toggle(enabled)
-    status = "enabled" if enabled else "disabled"
-    return f"Text-to-speech {status}"
 
 
 @tool(

@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
-from typing import Dict, List, Optional
+import re
+import uuid
+from typing import Any, Dict, List, Optional
 
 from langchain_core.messages import AIMessage, BaseMessage
 
-from airunner_services.llm.stream_text import combine_stream_chunks
 from airunner_services.llm.thinking_parser import strip_thinking_tags
 
 
@@ -106,6 +107,60 @@ class NodeResponseGenerationHelper:
             return True
         return False
 
+    @staticmethod
+    def _parse_xml_tool_calls_from_content(
+        content: str,
+    ) -> tuple[List[Dict[str, Any]], str]:
+        """Parse `` tool calls from content, return (tool_calls, cleaned_text).
+
+        Supports both JSON and custom XML format inside:
+          JSON: {"name": "...", "arguments": {...}}
+          XML:  <function=NAME><parameter=KEY>value</parameter></function>
+        """
+        pattern = r"<tool_call>\s*(.*?)\s*</tool_call>"
+        tool_calls: List[Dict[str, Any]] = []
+        for match in re.finditer(pattern, content, re.DOTALL):
+            inner = match.group(1).strip()
+            # Try JSON first
+            try:
+                import json
+
+                data = json.loads(inner)
+                tool_calls.append(
+                    {
+                        "id": str(uuid.uuid4()),
+                        "type": "function",
+                        "function": {
+                            "name": data.get("name"),
+                            "arguments": json.dumps(data.get("arguments", {})),
+                        },
+                    }
+                )
+                continue
+            except (json.JSONDecodeError, TypeError):
+                pass
+            # Fallback: custom XML format
+            func_match = re.search(r"<function=(\w+)>", inner)
+            if not func_match:
+                continue
+            args: Dict[str, str] = {}
+            for pm in re.finditer(
+                r"<parameter=(\w+)>([\s\S]*?)</parameter>", inner
+            ):
+                args[pm.group(1)] = pm.group(2).strip()
+            tool_calls.append(
+                {
+                    "id": str(uuid.uuid4()),
+                    "type": "function",
+                    "function": {
+                        "name": func_match.group(1),
+                        "arguments": json.dumps(args),
+                    },
+                }
+            )
+        cleaned = re.sub(pattern, "", content, flags=re.DOTALL).strip()
+        return tool_calls, cleaned
+
     def create_streamed_message(
         self,
         streamed_content: List[str],
@@ -129,7 +184,17 @@ class NodeResponseGenerationHelper:
             cleaned_chunk = strip_thinking_tags(chunk)
             if cleaned_chunk:
                 visible_chunks.append(cleaned_chunk)
-        complete_content = combine_stream_chunks(visible_chunks)
+        complete_content = "".join(visible_chunks)
+        # If no tool calls were captured from the chunk stream, try to
+        # parse them from the assembled text (e.g. `` XML format).
+        # We keep the `` XML in the content so the client-side
+        # parser can render the tool call widget on reload.
+        if not tool_calls and "<tool_call>" in complete_content:
+            parsed_tc, _ = self._parse_xml_tool_calls_from_content(
+                complete_content
+            )
+            if parsed_tc:
+                tool_calls = parsed_tc
         if thinking_content:
             additional_kwargs = dict(additional_kwargs)
             additional_kwargs["thinking_content"] = thinking_content

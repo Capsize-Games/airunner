@@ -49,7 +49,7 @@ def parse_thinking_response(
         match = re.search(pattern, response, re.DOTALL | re.IGNORECASE)
         if match:
             thinking_content = match.group(1).strip()
-            content = response[match.end() :].strip()
+            content = response[match.end() :]
             return ThinkingResponse(
                 thinking_content=thinking_content,
                 content=content,
@@ -90,7 +90,7 @@ def parse_thinking_response(
 
     return ThinkingResponse(
         thinking_content=None,
-        content=response.strip(),
+        content=response,
         raw_response=response,
         tag_format=None,
     )
@@ -126,7 +126,7 @@ def strip_thinking_tags(response: str) -> str:
     )
     cleaned = cleaned.replace("<think>", "").replace("</think>", "")
     cleaned = re.sub(r"\[/?THINK\]", "", cleaned, flags=re.IGNORECASE)
-    return cleaned.strip()
+    return cleaned
 
 
 def has_thinking_content(response: str) -> bool:
@@ -189,8 +189,8 @@ def strip_stored_thinking_prefix(
     if not cleaned or not compact_thinking:
         return cleaned
     if not _compact_text(cleaned).startswith(compact_thinking):
-        return cleaned.strip()
-    return _content_after_compact_prefix(cleaned, compact_thinking).lstrip()
+        return cleaned
+    return _content_after_compact_prefix(cleaned, compact_thinking)
 
 
 def detect_thinking_open_tag(text: str) -> Tuple[bool, str, str, str]:

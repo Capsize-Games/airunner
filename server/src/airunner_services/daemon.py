@@ -131,7 +131,6 @@ class AIRunnerDaemon:
             raise RuntimeError("Daemon App must exist before lifecycle init")
         self.lifecycle_service = self.app.ensure_lifecycle_service()
         self.lifecycle_service.initialize()
-        self.lifecycle_service.preload_llm_model()
 
     def _preload_models(self):
         """Preload configured models on startup."""

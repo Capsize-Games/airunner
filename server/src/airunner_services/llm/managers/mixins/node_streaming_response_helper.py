@@ -17,6 +17,20 @@ from airunner_services.llm_workflow_events import (
     resolve_llm_workflow_event_sink,
 )
 
+_STRIP_ASSISTANT_PREFIXES = ("assistant\n", "assistant:", "assistant ")
+
+
+def _strip_leading_assistant_preamble(text: str) -> str:
+    """Strip 'assistant' role label from the start of one text chunk."""
+    normalized = text.lstrip()
+    lowered = normalized.lower()
+    for prefix in _STRIP_ASSISTANT_PREFIXES:
+        if lowered.startswith(prefix):
+            return normalized[len(prefix) :]
+    if lowered in {"assistant", "assistant:"}:
+        return ""
+    return text
+
 
 class NodeStreamingResponseHelper:
     """Handle streamed chunk parsing for workflow nodes."""
@@ -162,53 +176,8 @@ class NodeStreamingResponseHelper:
             self._store_visible_text(state, request_id, text_to_stream)
 
     def _filter_tool_markup(self, state: StreamingState, text: str) -> str:
-        """Filter streamed tool-call markup from one text chunk."""
-        text_to_stream = text
-        if not state.in_tool_call_tag and "<tool_call>" in text:
-            state.in_tool_call_tag = True
-            before_tag, _, after_tag = text.partition("<tool_call>")
-            state.tool_call_tag_buffer.append(after_tag)
-            return before_tag if before_tag.strip() else ""
-        if state.in_tool_call_tag:
-            if "</tool_call>" not in text:
-                state.tool_call_tag_buffer.append(text)
-                return ""
-            before_close, _, after_close = text.partition("</tool_call>")
-            state.tool_call_tag_buffer.append(before_close)
-            state.in_tool_call_tag = False
-            state.tool_call_tag_buffer = []
-            text_to_stream = after_close if after_close.strip() else ""
-        original_text = text_to_stream
-        if not state.in_json_tool_call and "{" in original_text:
-            remaining = original_text[original_text.index("{") :]
-            if self._owner._get_response_generation_helper().is_tool_call_json(
-                remaining
-            ):
-                state.in_json_tool_call = True
-                before_json = original_text[: original_text.index("{")]
-                text_to_stream = before_json if before_json.strip() else ""
-                state.json_buffer.append(
-                    original_text[original_text.index("{") :]
-                )
-                state.json_brace_depth = original_text.count(
-                    "{"
-                ) - original_text.count("}")
-        if state.in_json_tool_call and original_text == text_to_stream:
-            state.json_buffer.append(original_text)
-            state.json_brace_depth += original_text.count(
-                "{"
-            ) - original_text.count("}")
-            text_to_stream = ""
-            if state.json_brace_depth <= 0:
-                state.in_json_tool_call = False
-                buffered = "".join(state.json_buffer)
-                if "}" in buffered:
-                    after_json = buffered[buffered.rfind("}") + 1 :]
-                    if after_json.strip():
-                        text_to_stream = after_json
-                state.json_buffer = []
-                state.json_brace_depth = 0
-        return text_to_stream
+        """Return the text chunk as-is — tool call markup is preserved for visibility."""
+        return text
 
     def _store_visible_text(
         self,
@@ -220,7 +189,7 @@ class NodeStreamingResponseHelper:
     ) -> None:
         """Persist one visible chunk and optionally forward it."""
         if not state.has_streamed_content:
-            text_to_stream = text_to_stream.lstrip()
+            text_to_stream = _strip_leading_assistant_preamble(text_to_stream)
         if not text_to_stream:
             return
         state.streamed_content.append(text_to_stream)
