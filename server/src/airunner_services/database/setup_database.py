@@ -10,11 +10,11 @@ from pathlib import Path
 from sqlalchemy import inspect
 from sqlalchemy.orm import sessionmaker
 
-from airunner_services.settings import AIRUNNER_BASE_PATH
-from airunner_services.settings import (
-    AIRUNNER_DB_URL as DEFAULT_AIRUNNER_DB_URL,
-)
+from airunner_services.conf import settings as _settings
 from airunner_services.database.db.engine import create_configured_engine
+
+AIRUNNER_BASE_PATH = _settings.AIRUNNER_BASE_PATH
+DEFAULT_AIRUNNER_DB_URL = _settings.AIRUNNER_DB_URL
 
 _SETUP_LOCK = threading.Lock()
 _COMPLETED_SETUP_URLS: set[str] = set()
@@ -30,8 +30,8 @@ def _ensure_private_directory(path: str | Path) -> None:
 
 
 def _default_db_url() -> str:
-    """Return the configured database URL with a fresh env lookup."""
-    return os.environ.get("AIRUNNER_DATABASE_URL") or DEFAULT_AIRUNNER_DB_URL
+    """Return the configured database URL from settings."""
+    return _settings.DATABASE_URL
 
 
 def _extract_search_path_schema(db_url: str) -> str | None:
@@ -198,6 +198,36 @@ def _ensure_startup_rows(engine) -> None:
             session.commit()
 
 
+def _extension_model_classes() -> list:
+    """Return extension models that should be created in the target schema.
+
+    Models with ``__public_schema__ = True`` are excluded here; they
+    are handled separately in the public schema setup.
+    """
+    from airunner_services.extensions.loader import (  # noqa: PLC0415
+        get_extension_models,
+    )
+
+    return [
+        m
+        for m in get_extension_models()
+        if not getattr(m, "__public_schema__", False)
+    ]
+
+
+def _extension_public_model_classes() -> list:
+    """Return extension models that belong in the **public** schema."""
+    from airunner_services.extensions.loader import (  # noqa: PLC0415
+        get_extension_models,
+    )
+
+    return [
+        m
+        for m in get_extension_models()
+        if getattr(m, "__public_schema__", False)
+    ]
+
+
 def _repair_application_schema(target_db_url: str) -> None:
     """Ensure core application tables exist even on pristine databases."""
     import airunner_services.database.models as model_module
@@ -209,6 +239,8 @@ def _repair_application_schema(target_db_url: str) -> None:
         for name in model_module.__all__
         if hasattr(getattr(model_module, name), "__tablename__")
     ]
+    # Append extension models (non-public-schema).
+    _model_classes.extend(_extension_model_classes())
 
     engine = create_configured_engine(target_db_url)
     try:
@@ -225,6 +257,48 @@ def _repair_application_schema(target_db_url: str) -> None:
                 checkfirst=True,
             )
         _ensure_startup_rows(engine)
+    finally:
+        engine.dispose()
+
+
+def _append_extension_migration_paths(version_locations: list[Path]) -> None:
+    """Append extension Alembic version directories to the locations list."""
+    from airunner_services.extensions.loader import (  # noqa: PLC0415
+        get_extension_migration_paths,
+    )
+
+    for ext_path in get_extension_migration_paths():
+        versions_dir = ext_path / "versions"
+        if versions_dir.is_dir():
+            version_locations.append(ext_path)
+
+
+def _setup_public_schema_tables(target_db_url: str) -> None:
+    """Create extension tables that belong to the **public** schema.
+
+    Only relevant for PostgreSQL multi-tenant mode.  In single-tenant
+    mode the public schema tables are created alongside tenant tables
+    via _repair_application_schema.
+    """
+    import sqlalchemy as sa  # noqa: PLC0415
+    from airunner_services.database.base import Base  # noqa: PLC0415
+
+    models = _extension_public_model_classes()
+    if not models:
+        return
+
+    engine = create_configured_engine(target_db_url)
+    try:
+        existing = set(sa.inspect(engine).get_table_names())
+        missing = [
+            m.__table__ for m in models if m.__tablename__ not in existing
+        ]
+        if missing:
+            Base.metadata.create_all(
+                bind=engine,
+                tables=missing,
+                checkfirst=True,
+            )
     finally:
         engine.dispose()
 
@@ -246,6 +320,10 @@ def setup_database(db_url: str | None = None):
         alembic_cfg = Config(alembic_file)
         alembic_cfg.set_main_option("script_location", str(alembic_dir))
         version_locations = _version_locations(base, alembic_dir)
+
+        # Append extension migration directories so Alembic discovers
+        # their version files.
+        _append_extension_migration_paths(version_locations)
 
         # Allow extensions to ship their own migrations.
         try:
@@ -318,6 +396,7 @@ def setup_database(db_url: str | None = None):
                 os.environ["AIRUNNER_MIGRATION_RUNNING"] = old_flag
 
         _repair_application_schema(target_db_url)
+        _setup_public_schema_tables(target_db_url)
 
         if _use_setup_cache():
             _COMPLETED_SETUP_URLS.add(target_db_url)

@@ -13,18 +13,19 @@ from contextlib import contextmanager
 from sqlalchemy import pool
 from sqlalchemy.orm import scoped_session, sessionmaker
 
+from airunner_services.conf import settings as _settings
 from airunner_services.database.db.engine import create_configured_engine
-from airunner_services.settings import (
-    AIRUNNER_DB_URL as DEFAULT_AIRUNNER_DB_URL,
-)
+
+# Default database URL — resolved lazily through the settings module.
+DEFAULT_AIRUNNER_DB_URL: str = ""
 
 
 # ---------------------------------------------------------------------------
 # URL helpers
 # ---------------------------------------------------------------------------
 def _db_url() -> str:
-    """Return the active database URL with env overrides applied lazily."""
-    return os.environ.get("AIRUNNER_DATABASE_URL") or DEFAULT_AIRUNNER_DB_URL
+    """Return the active database URL from the settings module."""
+    return _settings.DATABASE_URL
 
 
 def _tenancy_mode() -> str:
@@ -201,4 +202,28 @@ def session_scope():
         Session.remove()
 
 
-__all__ = ["reset_engine", "session_scope"]
+# ---------------------------------------------------------------------------
+# Public schema session (for models outside tenant scope, e.g. Account)
+# ---------------------------------------------------------------------------
+@contextmanager
+def public_session_scope():
+    """Transactional scope for the **public** schema — bypasses tenants."""
+    Session = scoped_session(
+        sessionmaker(bind=create_configured_engine(_db_url()))
+    )
+    session = Session()
+    try:
+        yield session
+        session.commit()
+    except Exception:
+        session.rollback()
+        raise
+    finally:
+        Session.remove()
+
+
+__all__ = [
+    "reset_engine",
+    "session_scope",
+    "public_session_scope",
+]

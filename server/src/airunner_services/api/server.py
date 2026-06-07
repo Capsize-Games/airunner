@@ -103,6 +103,16 @@ def create_app(
     _setup_signal_bridges(app_instance)
     _register_watchers(app_instance)
     update_api_key_config()
+
+    # ---- Load extensions (no-op when EXTENSIONS is empty) ----
+    from airunner_services.extensions.loader import (  # noqa: PLC0415
+        load_extensions,
+        apply_server_hooks,
+    )
+
+    load_extensions()
+    apply_server_hooks(app)
+
     register_middleware(app)
     register_routes(app)
     _mount_static_files(app)
