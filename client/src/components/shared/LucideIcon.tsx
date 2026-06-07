@@ -1,7 +1,7 @@
 import {
   Activity, Book, BotMessageSquare, Brain, ChevronUp, CircleCheck,
   CircleStop, CircleX, Cloud, Database, DatabaseZap, Dices,
-  Grid2x2Check, History, Image, Images, Info, Layers,
+  Grid2x2Check, History, Image, Images, Info, Layers, Loader,
   MessageSquareHeart, MessageSquareText, Mic, OctagonAlert,
   PanelRightOpen, Play, Plus, Puzzle, RotateCcwSquare, ScanText,
   Settings, Settings2, SlidersHorizontal, Sparkles, Speaker,
@@ -29,6 +29,7 @@ const MAP: Record<string, LucideIcon> = {
   images: Images,
   info: Info,
   layers: Layers,
+  loader: Loader,
   "message-square-heart": MessageSquareHeart,
   "message-square-text": MessageSquareText,
   mic: Mic,

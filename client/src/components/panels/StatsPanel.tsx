@@ -239,7 +239,11 @@ export default function StatsPanel() {
                 />
                 {label}: {name || "none"}
               </span>
-              {m?.can_unload || loadingRef.current.has(type) ? (
+              {status === "loading" ? (
+                <span style={{ display: "flex", opacity: 0.5 }}>
+                  <LucideIcon name="loader" size={14} />
+                </span>
+              ) : m?.can_unload || loadingRef.current.has(type) ? (
                 <button
                   className="model-action-btn"
                   onClick={() => m && handleUnload(m)}
