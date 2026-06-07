@@ -407,6 +407,12 @@ input::placeholder, textarea::placeholder {
   background: var(--bs-primary);
 }
 
+/* -- Spinning loader for model loading state -- */
+@keyframes spin { to { transform: rotate(360deg); } }
+.lucide-loader {
+  animation: spin 1s linear infinite;
+}
+
 /* -- Model resources action buttons -- */
 .model-action-btn {
   background: transparent; border: none;
