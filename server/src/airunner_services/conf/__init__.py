@@ -17,6 +17,14 @@ from __future__ import annotations
 import os
 from typing import Any
 
+from dotenv import load_dotenv
+
+# Load .env file before any settings resolution.
+# This runs on every import of this module, which is the first settings
+# module imported in most import chains.  The check is cheap — dotenv
+# caches after the first call.
+load_dotenv()
+
 
 def _env_bool(name: str, default: str = "0") -> bool:
     """Return one boolean environment flag."""
@@ -73,14 +81,30 @@ class LazySettings:
                 self._store[attr] = getattr(default_settings, attr)
 
         # 2. Environment variable overrides (.env + runtime)
+        # Strip the AIRUNNER_ prefix so AIRUNNER_EXTENSIONS sets the
+        # EXTENSIONS key, AIRUNNER_DATABASE_BACKEND sets DATABASE_BACKEND,
+        # etc.  Settings whose natural name already includes the prefix
+        # (e.g. AIRUNNER_BASE_PATH) are stored under both forms.
         for key, value in os.environ.items():
             if key.startswith("AIRUNNER_"):
                 self._store[key] = _coerce_value(key, value)
+                stripped = key[len("AIRUNNER_") :]
+                # Only set the stripped key if it doesn't already exist
+                # from the defaults (handles the case where the default
+                # uses the prefixed name like AIRUNNER_BASE_PATH).
+                self._store[stripped] = _coerce_value(key, value)
 
         # 3. Preset overlay
         _apply_preset(self._store)
 
         # 4. Extension defaults — applied lazily after extensions load
+
+        # 4. Normalise string-typed extension list
+        raw = self._store.get("EXTENSIONS")
+        if isinstance(raw, str):
+            self._store["EXTENSIONS"] = [
+                s.strip() for s in raw.split(",") if s.strip()
+            ]
 
         # 5. Computed values
         self._store["DATABASE_URL"] = self._build_db_url()

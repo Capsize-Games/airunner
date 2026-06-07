@@ -20,11 +20,17 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    """Add model_version column to schedulers table."""
-    op.add_column(
-        "schedulers",
-        sa.Column("model_version", sa.String(), nullable=True),
-    )
+    """Add model_version column to schedulers table (idempotent)."""
+    from sqlalchemy import inspect  # noqa: PLC0415
+
+    conn = op.get_bind()
+    inspector = inspect(conn)
+    columns = [c["name"] for c in inspector.get_columns("schedulers")]
+    if "model_version" not in columns:
+        op.add_column(
+            "schedulers",
+            sa.Column("model_version", sa.String(), nullable=True),
+        )
 
 
 def downgrade() -> None:

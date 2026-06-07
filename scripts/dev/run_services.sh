@@ -143,7 +143,7 @@ start_services() {
     export AIRUNNER_LOG_LEVEL="${AIRUNNER_LOG_LEVEL:-INFO}"
     export AIRUNNER_DISABLE_STALE_DAEMON_CHECK=1
     export AIRUNNER_SERVER_HOST="${AIRUNNER_SERVER_HOST:-127.0.0.1}"
-    export PYTHONPATH="${ROOT_DIR}/server/src:${ROOT_DIR}/src${PYTHONPATH:+:${PYTHONPATH}}"
+    export PYTHONPATH="${ROOT_DIR}/extensions:${ROOT_DIR}/server/src:${ROOT_DIR}/src${PYTHONPATH:+:${PYTHONPATH}}"
 
     "${DEV_VENV_BIN}/python" -m airunner_services.daemon \
         > "${LOG_DIR}/server.log" 2>&1 &

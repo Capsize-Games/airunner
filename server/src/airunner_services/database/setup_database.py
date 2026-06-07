@@ -310,6 +310,14 @@ def setup_database(db_url: str | None = None):
     if _use_setup_cache() and target_db_url in _COMPLETED_SETUP_URLS:
         return
 
+    # Extensions must be loaded before schema repair so their models
+    # and migrations are discovered.  Safe to call multiple times.
+    from airunner_services.extensions.loader import (  # noqa: PLC0415
+        load_extensions,
+    )
+
+    load_extensions()
+
     base = Path(os.path.dirname(os.path.realpath(__file__)))
     alembic_file = base / "alembic.ini"
     alembic_dir = base / "alembic"
