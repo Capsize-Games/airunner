@@ -46,20 +46,9 @@ export function DownloadButton({
 
   return (
     <button
+      className="modal-primary-btn"
       onClick={onDownloadClick}
       disabled={!selectedFile?.downloadUrl}
-      style={{
-        flex: 1,
-        padding: "6px 12px",
-        background: selectedFile?.downloadUrl
-          ? "rgba(255,255,255,0.2)"
-          : "rgba(255,255,255,0.1)",
-        border: "1px solid rgba(255,255,255,0.2)",
-        borderRadius: 4,
-        color: selectedFile?.downloadUrl ? "#fff" : "#666",
-        cursor: selectedFile?.downloadUrl ? "pointer" : "default",
-        fontSize: 12,
-      }}
     >
       Download
     </button>
@@ -67,22 +56,7 @@ export function DownloadButton({
 }
 
 function DownloadedBadge() {
-  return (
-    <div
-      style={{
-        flex: 1,
-        padding: "6px 12px",
-        borderRadius: 4,
-        background: "rgba(0,200,100,0.15)",
-        border: "1px solid rgba(0,200,100,0.25)",
-        color: "#66ddaa",
-        fontSize: 12,
-        textAlign: "center",
-      }}
-    >
-      Downloaded
-    </div>
-  );
+  return <div className="modal-downloaded-badge">Downloaded</div>;
 }
 
 function DownloadStatusButton({
@@ -100,19 +74,7 @@ function DownloadStatusButton({
     return <DownloadedBadge />;
   }
   return (
-    <button
-      onClick={onCancel}
-      style={{
-        flex: 1,
-        padding: "6px 12px",
-        background: "rgba(255,80,80,0.2)",
-        border: "1px solid rgba(255,80,80,0.3)",
-        borderRadius: 4,
-        color: "#ff8888",
-        cursor: "pointer",
-        fontSize: 12,
-      }}
-    >
+    <button className="modal-cancel-btn" onClick={onCancel}>
       Cancel
     </button>
   );
@@ -194,34 +156,13 @@ export function ApiKeyPrompt({
         />
         <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
           <button
+            className="modal-primary-btn"
             onClick={handleSubmit}
             disabled={!apiKey.trim()}
-            style={{
-              flex: 1,
-              padding: "7px 12px",
-              background: apiKey.trim() ? "rgba(255,255,255,0.2)" : "rgba(255,255,255,0.08)",
-              border: "1px solid rgba(255,255,255,0.2)",
-              borderRadius: 4,
-              color: apiKey.trim() ? "#fff" : "#666",
-              cursor: apiKey.trim() ? "pointer" : "default",
-              fontSize: 12,
-            }}
           >
-            Submit & Download
+            Submit &amp; Download
           </button>
-          <button
-            onClick={onCancel}
-            style={{
-              flexShrink: 0,
-              padding: "7px 12px",
-              background: "transparent",
-              border: "1px solid rgba(255,255,255,0.15)",
-              borderRadius: 4,
-              color: "#888",
-              cursor: "pointer",
-              fontSize: 12,
-            }}
-          >
+          <button className="modal-secondary-btn" onClick={onCancel}>
             Cancel
           </button>
         </div>

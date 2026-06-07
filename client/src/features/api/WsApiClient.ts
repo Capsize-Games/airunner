@@ -11,6 +11,7 @@
  */
 
 import { wsHost } from "../../api/client-base";
+import { getRequestHeaders } from "virtual:extensions";
 
 // ---------------------------------------------------------------------------
 // WS URL resolver
@@ -18,7 +19,10 @@ import { wsHost } from "../../api/client-base";
 
 function wsUrl(): string {
   const proto = location.protocol === "https:" ? "wss" : "ws";
-  return `${proto}://${wsHost()}/api/v1/events`;
+  const base = `${proto}://${wsHost()}/api/v1/events`;
+  const authHeader = getRequestHeaders()["Authorization"];
+  const token = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null;
+  return token ? `${base}?token=${encodeURIComponent(token)}` : base;
 }
 
 // ---------------------------------------------------------------------------

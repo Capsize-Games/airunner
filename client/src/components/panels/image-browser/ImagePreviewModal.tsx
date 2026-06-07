@@ -1,7 +1,7 @@
 import { useEffect, useCallback } from "react";
-import { BASE_URL } from "../../../types/api";
 import type { ImageInfo } from "../../../api/client";
 import { formatTimestamp, formatFileSize } from "./LocalImageHelpers";
+import { useAuthenticatedBlobUrl } from "../../../hooks/useAuthenticatedBlobUrl";
 
 const separatorColor = "rgba(255,255,255,0.15)";
 const rowBorderColor = "rgba(255,255,255,0.08)";
@@ -61,9 +61,12 @@ export default function ImagePreviewModal({
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [handleKeyDown]);
 
-  if (currentIndex < 0 || currentIndex >= images.length) return null;
+  const currentImg = currentIndex >= 0 && currentIndex < images.length ? images[currentIndex] : null;
+  const imageBlobUrl = useAuthenticatedBlobUrl(currentImg?.image_url ?? null);
 
-  const img = images[currentIndex];
+  if (!currentImg) return null;
+
+  const img = currentImg;
   const metaEntries = filterMetadata(img);
 
   return (
@@ -126,7 +129,7 @@ export default function ImagePreviewModal({
           }}
         >
           <img
-            src={`${BASE_URL}${img.image_url}`}
+            src={imageBlobUrl ?? undefined}
             alt={img.id}
             style={{
               maxWidth: "100%",
