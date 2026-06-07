@@ -423,10 +423,66 @@ export default function Layout({
       <DownloadTray />
 
       {/* ── Footer ── */}
-      <div className="footer-bar">
-        &copy; {new Date().getFullYear()} Capsize LLC &mdash; All rights
-        reserved.
+      <div
+        className="footer-bar"
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+        }}
+      >
+        <span>
+          &copy; {new Date().getFullYear()} Capsize LLC &mdash; All rights
+          reserved.
+        </span>
+        <LiveIndicator />
       </div>
     </div>
+  );
+}
+
+/** Small dot + label showing WebSocket connection status. */
+function LiveIndicator() {
+  const [connected, setConnected] = useState(false);
+  useEffect(() => {
+    let canceled = false;
+    const poll = () => {
+      import("../../features/api/WsApiClient").then((m) => {
+        if (!canceled) setConnected(m.isWsConnected());
+      });
+    };
+    poll();
+    const id = setInterval(poll, 3000);
+    return () => {
+      canceled = true;
+      clearInterval(id);
+    };
+  }, []);
+  return (
+    <span
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 4,
+        fontSize: 11,
+        fontFamily: "monospace",
+        color: connected
+          ? "rgba(0,200,100,0.7)"
+          : "rgba(255,150,50,0.6)",
+      }}
+    >
+      <span
+        style={{
+          width: 6,
+          height: 6,
+          borderRadius: "50%",
+          background: connected
+            ? "rgb(0,200,100)"
+            : "rgb(255,150,50)",
+          display: "inline-block",
+        }}
+      />
+      {connected ? "Live" : "Reconnecting\u2026"}
+    </span>
   );
 }

@@ -267,6 +267,11 @@ function _nextRpcId(): string {
   return `rpc-${Date.now()}-${_rpcIdCounter}`;
 }
 
+/** Return whether the WebSocket is currently connected. */
+export function isWsConnected(): boolean {
+  return _connected;
+}
+
 /**
  * Send an RPC request and wait for the JSON response.
  * Replaces the old `fetch()`-based request() in client-base.ts.

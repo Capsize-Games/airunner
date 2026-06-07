@@ -596,7 +596,6 @@ export default function CanvasPanel() {
           gridWidth={canvas.activeGridArea.width}
           gridHeight={canvas.activeGridArea.height}
           activeLayer={canvas.activeLayer}
-          connected={canvasSync.connected}
         />
       </div>
 
