@@ -57,6 +57,13 @@ export function useKnowledgeBaseDocs() {
     reload();
   }, [reload]);
 
+  // Listen for external toggle events from other panels.
+  useEffect(() => {
+    const handler = () => reload();
+    window.addEventListener("knowledge-base-changed", handler);
+    return () => window.removeEventListener("knowledge-base-changed", handler);
+  }, [reload]);
+
   // Optimistic toggle: flip active in state and cache, then re-fetch to confirm.
   const toggle = useCallback(async (docId: number) => {
     try {

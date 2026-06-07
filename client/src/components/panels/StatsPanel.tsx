@@ -1,109 +1,16 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import ProgressBar from "react-bootstrap/ProgressBar";
-import { getHardwareProfile } from "../../api/client";
+import { getHardwareProfile, unloadModel } from "../../api/client";
 import type { HardwareProfile } from "../../types/api";
 import type { ActiveModelInfo } from "../../api/client";
-import { useArtWebSocket } from "../../features/art/useArtWebSocket";
 import { useEventBus } from "../../features/events/useEventBus";
 import { EVENT_MODEL_STATUS } from "../../features/events/types";
-
-function wsUrl(): string {
-  const proto = location.protocol === "https:" ? "wss" : "ws";
-  const raw = (import.meta.env.VITE_API_BASE_URL as string) || "localhost:8188";
-  const host = raw.replace(/^https?:\/\//, "");
-  return `${proto}://${host}/api/v1/daemon/hardware/ws`;
-}
 
 export default function StatsPanel() {
   const [hw, setHw] = useState<HardwareProfile | null>(null);
   const [models, setModels] = useState<ActiveModelInfo[]>([]);
-  const wsRef = useRef<WebSocket | null>(null);
-  const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
-    null,
-  );
   const mountedRef = useRef(true);
   const unloadingRef = useRef<Set<string>>(new Set());
-  const artWs = useArtWebSocket();
-
-  const scheduleReconnect = useCallback(() => {
-    if (!mountedRef.current) return;
-    reconnectTimerRef.current = setTimeout(connectWs, 5000);
-  }, []);
-
-  const connectWs = useCallback(() => {
-    if (!mountedRef.current) return;
-
-    // Close any existing connection without triggering reconnect
-    if (wsRef.current) {
-      const old = wsRef.current;
-      old.onclose = null;
-      old.onerror = null;
-      old.onmessage = null;
-      old.close();
-      wsRef.current = null;
-    }
-
-    try {
-      const socket = new WebSocket(wsUrl());
-      wsRef.current = socket;
-
-      socket.onmessage = (event) => {
-        try {
-          const data = JSON.parse(event.data);
-          if (data.type === "hardware_profile") {
-            setHw(data as unknown as HardwareProfile);
-          }
-        } catch {
-          // ignore malformed messages
-        }
-      };
-
-      socket.onclose = (event) => {
-        wsRef.current = null;
-        // Only reconnect on accidental close, not intentional cleanup
-        if (mountedRef.current && !event.wasClean) {
-          scheduleReconnect();
-        }
-      };
-
-      socket.onerror = () => {
-        // onclose will fire after this
-        socket.close();
-      };
-    } catch {
-      // WebSocket creation failed, retry later
-      if (mountedRef.current) {
-        scheduleReconnect();
-      }
-    }
-  }, [scheduleReconnect]);
-
-  // Connect on mount, disconnect on unmount
-  useEffect(() => {
-    mountedRef.current = true;
-    // Use HTTP as initial data source so the panel isn't blank while WS connects.
-    // Delay the WebSocket connection slightly so the server has time to accept
-    // the upgrade, avoiding noisy console errors during page load.
-    getHardwareProfile().then(setHw).catch(() => {});
-    const initialTimer = setTimeout(connectWs, 1000);
-
-    return () => {
-      clearTimeout(initialTimer);
-      mountedRef.current = false;
-      if (wsRef.current) {
-        const old = wsRef.current;
-        old.onclose = null;
-        old.onerror = null;
-        old.onmessage = null;
-        old.close();
-        wsRef.current = null;
-      }
-      if (reconnectTimerRef.current) {
-        clearTimeout(reconnectTimerRef.current);
-        reconnectTimerRef.current = null;
-      }
-    };
-  }, [connectWs]);
 
   const fetchActiveModels = useCallback(async () => {
     try {
@@ -115,10 +22,28 @@ export default function StatsPanel() {
     }
   }, []);
 
-  // Fetch active models on mount
-  useEffect(() => {
-    fetchActiveModels();
+  // Poll hardware profile via shared RPC channel every 5 seconds.
+  const fetchHw = useCallback(async () => {
+    try {
+      const data = await getHardwareProfile();
+      if (mountedRef.current) {
+        setHw(data);
+        fetchActiveModels();
+      }
+    } catch {
+      // endpoint may be unavailable
+    }
   }, [fetchActiveModels]);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    fetchHw();
+    const id = setInterval(fetchHw, 5000);
+    return () => {
+      mountedRef.current = false;
+      clearInterval(id);
+    };
+  }, [fetchHw]);
 
   // Listen for live model-status events via unified event bus
   useEventBus([EVENT_MODEL_STATUS], () => {
@@ -129,7 +54,7 @@ export default function StatsPanel() {
     const key = m.model_id || m.model_type;
     if (unloadingRef.current.has(key)) return;
     unloadingRef.current.add(key);
-    artWs.unload(m.model_id);
+    unloadModel(m.model_id, m.model_type).catch(() => {});
     // Remove from unloading set after a short delay so repeated clicks
     // on the same model are still gated.
     setTimeout(() => unloadingRef.current.delete(key), 2000);

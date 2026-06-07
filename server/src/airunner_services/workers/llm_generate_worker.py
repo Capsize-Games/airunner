@@ -29,6 +29,7 @@ SignalCode = signal_code_proxy(
             "llm_text_generate_request_signal"
         ),
         "LLM_CLEAR_HISTORY_SIGNAL": ("llm_clear_history_signal"),
+        "LLM_UNLOAD_SIGNAL": "llm_unload_signal",
         "RAG_INDEX_ALL_DOCUMENTS": ("rag_index_all_documents_signal"),
         "RAG_INDEX_SELECTED_DOCUMENTS": (
             "rag_index_selected_documents_signal"
@@ -56,6 +57,9 @@ class LLMGenerateWorker(
             ),
             SignalCode.LLM_CLEAR_HISTORY_SIGNAL: (
                 self.on_llm_clear_history_signal
+            ),
+            SignalCode.LLM_UNLOAD_SIGNAL: (
+                self.on_llm_on_unload_signal
             ),
             SignalCode.RAG_INDEX_ALL_DOCUMENTS: (
                 self.on_rag_index_all_documents_signal
