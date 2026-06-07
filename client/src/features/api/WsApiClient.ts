@@ -42,6 +42,10 @@ let _reconnectTimer: ReturnType<typeof setTimeout> | null = null;
 let _mountCount = 0;
 let _connecting = false;
 
+// Establish the shared WebSocket immediately on module load.
+_mountCount++;
+_connect();
+
 // Event callbacks: event type → Set of callbacks
 const _eventCallbacks = new Map<string, Set<EventBusCallback>>();
 
@@ -371,5 +375,4 @@ export function unregisterEventCallbacks(
   if (orphaned.length > 0) _unsubscribeEvents(orphaned);
 
   _mountCount--;
-  if (_mountCount === 0) _disconnect();
 }
