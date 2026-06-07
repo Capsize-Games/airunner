@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import ProgressBar from "react-bootstrap/ProgressBar";
 import {
   getHardwareProfile,
   unloadModel,
@@ -147,7 +146,7 @@ export default function StatsPanel() {
 
   if (!hw) {
     return (
-      <div className="p-2">
+      <div style={panelStyle}>
         <h6 className="text-muted mb-2">Model Resources</h6>
         <p className="text-muted small">
           Hardware info unavailable.
@@ -174,7 +173,7 @@ export default function StatsPanel() {
       : 0;
 
   return (
-    <div className="p-2">
+    <div style={panelStyle}>
       <h6 className="text-muted mb-2">Model Resources</h6>
 
       <div className="small text-muted mb-2">
@@ -185,12 +184,18 @@ export default function StatsPanel() {
       {/* VRAM bar */}
       <div className="mb-2">
         <small className="text-muted">VRAM</small>
-        <ProgressBar
-          now={Math.min(vramPct, 100)}
-          variant={vramPct > 90 ? "danger" : "success"}
-          className="mt-1"
-          style={{ height: 8 }}
-        />
+        <div style={progressOuter}>
+          <div
+            style={{
+              ...progressInner,
+              width: `${Math.min(vramPct, 100)}%`,
+              backgroundColor:
+                vramPct > 90
+                  ? "var(--bs-danger)"
+                  : "var(--bs-success)",
+            }}
+          />
+        </div>
         <small className="text-muted">
           {vramUsed.toFixed(1)} /{" "}
           {hw.total_vram_gb.toFixed(1)} GB
@@ -200,12 +205,18 @@ export default function StatsPanel() {
       {/* RAM bar */}
       <div className="mb-2">
         <small className="text-muted">RAM</small>
-        <ProgressBar
-          now={Math.min(ramPct, 100)}
-          variant={ramPct > 90 ? "danger" : "info"}
-          className="mt-1"
-          style={{ height: 8 }}
-        />
+        <div style={progressOuter}>
+          <div
+            style={{
+              ...progressInner,
+              width: `${Math.min(ramPct, 100)}%`,
+              backgroundColor:
+                ramPct > 90
+                  ? "var(--bs-danger)"
+                  : "var(--bs-info)",
+            }}
+          />
+        </div>
         <small className="text-muted">
           {ramUsed.toFixed(1)} /{" "}
           {hw.total_ram_gb.toFixed(1)} GB
@@ -268,3 +279,32 @@ export default function StatsPanel() {
     </div>
   );
 }
+
+// ── Styles ────────────────────────────────────────────────────────────────────
+
+const panelStyle: React.CSSProperties = {
+  background: "#1a1a2e",
+  border: "1px solid #444",
+  borderRadius: 6,
+  padding: "10px 12px",
+  width: 280,
+  fontFamily: "monospace",
+  color: "#ccc",
+  fontSize: 12,
+  boxShadow: "0 4px 20px rgba(0,0,0,0.5)",
+};
+
+const progressOuter: React.CSSProperties = {
+  width: "100%",
+  height: 8,
+  background: "#333",
+  borderRadius: 4,
+  marginTop: 4,
+  overflow: "hidden",
+};
+
+const progressInner: React.CSSProperties = {
+  height: "100%",
+  borderRadius: 4,
+  transition: "width 0.3s ease",
+};
