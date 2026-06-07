@@ -12,7 +12,6 @@ import CanvasPanel from "../panels/CanvasPanel";
 import LoraPanel from "../panels/LoraPanel";
 import EmbeddingsPanel from "../panels/EmbeddingsPanel";
 import ImageBrowserPanel from "../panels/ImageBrowserPanel";
-import StatsPanel from "../panels/StatsPanel";
 import CivitaiBrowserPanel from "../panels/civitai-browser/CivitaiBrowserPanel";
 import DownloadTray from "../downloads/DownloadTray";
 import TopBar from "./TopBar";
@@ -33,7 +32,6 @@ type PanelId =
   | "lora"
   | "embeddings"
   | "image_browser"
-  | "stats"
   | "civitai_browser";
 
 interface LayoutProps {
@@ -54,6 +52,8 @@ interface LayoutProps {
   onSelectConversation: (id: number) => void;
   showCacheDebug: boolean;
   onToggleCacheDebug: () => void;
+  showStats: boolean;
+  onToggleStats: () => void;
   /** Slot for extension-provided UI (e.g. account menu button). */
   bottomBarSlot?: React.ReactNode;
 }
@@ -204,6 +204,8 @@ export default function Layout({
   onSelectConversation,
   showCacheDebug,
   onToggleCacheDebug,
+  showStats,
+  onToggleStats,
   bottomBarSlot,
 }: LayoutProps) {
   const panelsRef = useRef<HTMLDivElement>(null);
@@ -410,7 +412,6 @@ export default function Layout({
             {rightPanel === "lora" && <LoraPanel />}
             {rightPanel === "embeddings" && <EmbeddingsPanel />}
             {rightPanel === "image_browser" && <ImageBrowserPanel />}
-            {rightPanel === "stats" && <StatsPanel />}
           </div>
         </div>
 
@@ -422,6 +423,8 @@ export default function Layout({
           onOpenSettings={onOpenSettings}
           showCacheDebug={showCacheDebug}
           onToggleCacheDebug={onToggleCacheDebug}
+          showStats={showStats}
+          onToggleStats={onToggleStats}
         />
       </div>
 

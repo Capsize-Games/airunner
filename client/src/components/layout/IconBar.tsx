@@ -7,7 +7,6 @@ type PanelId =
   | "lora"
   | "embeddings"
   | "image_browser"
-  | "stats"
   | "civitai_browser";
 
 export function LeftIconBar({
@@ -93,6 +92,8 @@ export function RightIconBar({
   onOpenSettings,
   showCacheDebug,
   onToggleCacheDebug,
+  showStats,
+  onToggleStats,
 }: {
   showCanvas: boolean;
   rightPanel: PanelId | null;
@@ -101,6 +102,8 @@ export function RightIconBar({
   onOpenSettings: () => void;
   showCacheDebug: boolean;
   onToggleCacheDebug: () => void;
+  showStats: boolean;
+  onToggleStats: () => void;
 }) {
   const active = (id: PanelId, panel: PanelId | null) =>
     panel === id ? "active" : "";
@@ -143,14 +146,14 @@ export function RightIconBar({
       >
         <LucideIcon name="images" />
       </button>
+      <div className="flex-spacer" />
       <button
-        className={active("stats", rightPanel)}
-        onClick={() => onRightPanel("stats")}
+        className={showStats ? "active" : ""}
+        onClick={onToggleStats}
         title="Stats"
       >
         <LucideIcon name="activity" />
       </button>
-      <div className="flex-spacer" />
       <button
         className={showCacheDebug ? "active" : ""}
         onClick={onToggleCacheDebug}

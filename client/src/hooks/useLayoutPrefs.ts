@@ -7,7 +7,6 @@ export type PanelId =
   | "lora"
   | "embeddings"
   | "image_browser"
-  | "stats"
   | "civitai_browser";
 
 export function useLayoutPrefs() {
