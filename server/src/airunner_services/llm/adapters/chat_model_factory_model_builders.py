@@ -8,8 +8,8 @@ from airunner_services.downloads.policy import (
     is_openai_allowed,
     is_openrouter_allowed,
 )
-from airunner_services.llm.adapters.chat_gguf import (
-    ChatGGUF,
+from airunner_services.llm.adapters.chat_gguf import ChatGGUF
+from airunner_services.llm.adapters.chat_gguf_model_discovery import (
     find_gguf_file,
 )
 

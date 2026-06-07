@@ -4,11 +4,13 @@ export default function SchedulerSelector({
   schedulers,
   value,
   loading,
+  hasVersion,
   onChange,
 }: {
   schedulers: { label: string; value: string }[];
   value: string;
   loading: boolean;
+  hasVersion: boolean;
   onChange: (v: string) => void;
 }) {
   return (
@@ -22,7 +24,7 @@ export default function SchedulerSelector({
       <Form.Select
         size="sm"
         value={value}
-        disabled={loading}
+        disabled={loading || !hasVersion}
         onChange={(e) => onChange(e.target.value)}
       >
         <option value="">Select scheduler...</option>

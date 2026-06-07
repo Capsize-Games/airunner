@@ -118,7 +118,6 @@ export const defaultState = (): CanvasState => {
     maskStrokes: [] as StrokeNode[],
     snapToGrid: false,
   };
-  // Seed history with the initial empty state so undo always has a baseline.
   const initialSnapshot = JSON.stringify(base);
   return {
     ...base,
@@ -132,26 +131,22 @@ export const defaultState = (): CanvasState => {
 import type {
   ActiveTool, FilterConfig, ImageNode, ActiveGridArea,
 } from "./canvasTypes";
+import { getDb } from "../../db/db";
 
-const STORAGE_KEY = "airunner_canvas_state";
+const CANVAS_DOC_ID = "default";
+const LEGACY_STORAGE_KEY = "airunner_canvas_state";
 
-/** Load persisted canvas state from localStorage, or null on cache miss. */
-export function loadPersistedState(): CanvasState | null {
+/** Parse and validate a raw CanvasState JSON string. Returns null if invalid. */
+function parseCanvasState(raw: string): CanvasState | null {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return null;
     const parsed = JSON.parse(raw) as CanvasState;
-    // Validate we have at least the layers array — discard corrupt data.
     if (!Array.isArray(parsed.layers)) return null;
-    // Ensure new fields that may be missing from old persisted state.
     parsed.layerGroups ??= [];
     if (
       !Array.isArray(parsed.displayOrder) ||
       parsed.displayOrder.length === 0
     ) {
-      const groupIds = parsed.layerGroups.map(
-        (g: LayerGroup) => g.id,
-      );
+      const groupIds = parsed.layerGroups.map((g: LayerGroup) => g.id);
       const ungroupedIds = parsed.layers
         .filter((l: CanvasLayer) => !l.parentGroupId)
         .map((l: CanvasLayer) => l.id);
@@ -160,7 +155,6 @@ export function loadPersistedState(): CanvasState | null {
     parsed.layers = parsed.layers.map(
       (l) => ({ ...l, parentGroupId: l.parentGroupId ?? null }),
     );
-    // Advance counters so new IDs don't collide with loaded ones.
     advanceCountersFromState(parsed);
     return parsed;
   } catch {
@@ -168,11 +162,72 @@ export function loadPersistedState(): CanvasState | null {
   }
 }
 
-/** Persist canvas state to localStorage. */
-export function persistState(state: CanvasState): void {
+/**
+ * Load canvas state synchronously from localStorage (legacy fallback used on
+ * first render before IndexedDB is ready).
+ */
+export function loadPersistedState(): CanvasState | null {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    const raw = localStorage.getItem(LEGACY_STORAGE_KEY);
+    if (!raw) return null;
+    return parseCanvasState(raw);
   } catch {
-    // localStorage may be full — silently discard.
+    return null;
   }
+}
+
+/**
+ * Load canvas state from IndexedDB asynchronously.
+ * Returns null on cache miss or when IndexedDB is unavailable.
+ */
+export async function loadPersistedStateAsync(): Promise<CanvasState | null> {
+  const db = getDb();
+  if (!db) return null;
+  try {
+    const record = await db.canvasDocuments.get(CANVAS_DOC_ID);
+    if (!record) return null;
+    return parseCanvasState(record.documentJson);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Persist canvas state to IndexedDB (primary) and keep localStorage in sync
+ * as a fallback for the synchronous first-render load.
+ */
+export async function persistStateAsync(state: CanvasState): Promise<void> {
+  const json = JSON.stringify(state);
+
+  // Keep localStorage in sync for synchronous first-render load.
+  try {
+    localStorage.setItem(LEGACY_STORAGE_KEY, json);
+  } catch { /* quota */ }
+
+  const db = getDb();
+  if (!db) return;
+  try {
+    await db.canvasDocuments.put({
+      id: CANVAS_DOC_ID,
+      documentJson: json,
+      updatedAt: state._ts,
+    });
+  } catch { /* quota or unavailable */ }
+}
+
+/**
+ * Write only to localStorage synchronously. Use this for the immediate
+ * write so a fast page reload never loses the latest state.
+ */
+export function persistStateSync(state: CanvasState): void {
+  try {
+    localStorage.setItem(LEGACY_STORAGE_KEY, JSON.stringify(state));
+  } catch { /* quota */ }
+}
+
+/** Kept for callers that still use the synchronous form (canvas WebSocket). */
+export function persistState(state: CanvasState): void {
+  persistStateSync(state);
+  // Fire-and-forget async write.
+  persistStateAsync(state).catch(() => {});
 }

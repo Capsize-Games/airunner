@@ -43,9 +43,9 @@ def upgrade() -> None:
     # 2. This migration adds the unique constraint but needs to ensure no duplicates exist first
     # 3. If duplicates exist (from manual entries or previous issues), rename them to prevent constraint violation
     result = connection.execute(sa.text("""
-            SELECT name, COUNT(*) as count 
-            FROM fine_tuned_models 
-            GROUP BY name 
+            SELECT name, COUNT(*) as count
+            FROM fine_tuned_models
+            GROUP BY name
             HAVING COUNT(*) > 1
         """))
 

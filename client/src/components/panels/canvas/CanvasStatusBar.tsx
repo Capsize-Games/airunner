@@ -7,7 +7,6 @@ export interface CanvasStatusBarProps {
   gridWidth: number;
   gridHeight: number;
   activeLayer: CanvasLayer | null;
-  connected: boolean;
 }
 
 export default function CanvasStatusBar({
@@ -17,7 +16,6 @@ export default function CanvasStatusBar({
   gridWidth,
   gridHeight,
   activeLayer,
-  connected,
 }: CanvasStatusBarProps) {
   return (
     <div
@@ -38,29 +36,6 @@ export default function CanvasStatusBar({
       <span>Zoom: {Math.round(zoom * 100)}%</span>
       <span>Grid: {gridWidth} &times; {gridHeight}</span>
       {activeLayer && <span>Layer: {activeLayer.name}</span>}
-      <span
-        style={{
-          display: "inline-flex",
-          alignItems: "center",
-          gap: 4,
-          color: connected
-            ? "rgba(0,200,100,0.7)"
-            : "rgba(255,150,50,0.6)",
-        }}
-      >
-        <span
-          style={{
-            width: 6,
-            height: 6,
-            borderRadius: "50%",
-            background: connected
-              ? "rgb(0,200,100)"
-              : "rgb(255,150,50)",
-            display: "inline-block",
-          }}
-        />
-        {connected ? "Live" : "Reconnecting\u2026"}
-      </span>
     </div>
   );
 }

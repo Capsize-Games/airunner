@@ -21,9 +21,11 @@ from airunner_services.settings import MODELS_DIR
 from airunner_services.config.local_settings_store import get_setting
 from airunner_services.downloads.civitai import (
     fetch_model_info_for_url,
-    get_files_to_download,
     sanitize_filename,
     select_version,
+)
+from airunner_services.downloads.civitai_download import (
+    get_files_to_download,
 )
 from airunner_services.downloads.huggingface import (
     HuggingFaceDownloadRequest,

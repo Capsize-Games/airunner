@@ -60,3 +60,4 @@ export const EVENT_DOCUMENTS = "documents";
 export const EVENT_MODEL_STATUS = "model_status";
 export const EVENT_INDEX_PROGRESS = "index_progress";
 export const EVENT_DOWNLOADS = "downloads";
+export const EVENT_CIVITAI_THUMBNAIL = "civitai_thumbnail";

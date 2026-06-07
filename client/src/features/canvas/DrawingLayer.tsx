@@ -16,7 +16,7 @@ interface DrawingLayerProps {
   canvasHeight: number;
 }
 
-function getCanvasPos(e: Konva.KonvaEventObject<MouseEvent>) {
+function getCanvasPos(e: Konva.KonvaEventObject<PointerEvent>) {
   const stage = e.currentTarget.getStage();
   if (!stage) return null;
   const raw = stage.getPointerPosition();
@@ -62,9 +62,9 @@ export default function DrawingLayer({
 
   const isDrawingTool = activeTool === "brush" || activeTool === "eraser";
 
-  const handleMouseDown = useCallback(
-    (e: Konva.KonvaEventObject<MouseEvent>) => {
-      if (e.evt.button !== 0) return;
+  const handlePointerDown = useCallback(
+    (e: Konva.KonvaEventObject<PointerEvent>) => {
+      if (e.evt.button !== 0 && e.evt.button !== undefined) return;
       if (!isActive || !isDrawingTool) return;
       const pos = getCanvasPos(e);
       if (!pos) return;
@@ -80,8 +80,8 @@ export default function DrawingLayer({
     [isActive, isDrawingTool, canvasWidth, canvasHeight, brushSize],
   );
 
-  const handleMouseMove = useCallback(
-    (e: Konva.KonvaEventObject<MouseEvent>) => {
+  const handlePointerMove = useCallback(
+    (e: Konva.KonvaEventObject<PointerEvent>) => {
       if (!isDrawing.current) return;
       const pos = getCanvasPos(e);
       if (!pos) return;
@@ -113,7 +113,7 @@ export default function DrawingLayer({
     [canvasWidth, canvasHeight, brushSize],
   );
 
-  const handleMouseUp = useCallback(() => {
+  const handlePointerUp = useCallback(() => {
     if (!isDrawing.current) return;
     isDrawing.current = false;
     if (liveLineRef.current) {
@@ -133,12 +133,12 @@ export default function DrawingLayer({
     currentPoints.current = [];
   }, [activeTool, brushSize, brushColor, onStrokeComplete]);
 
-  // Catch mouseup anywhere in the browser window — Konva only fires
-  // onMouseUp when the cursor is over the Stage/Canvas at release time.
+  // Catch pointerup anywhere in the browser window — Konva only fires
+  // onPointerUp when the pointer is over the Stage/Canvas at release.
   useEffect(() => {
-    window.addEventListener("mouseup", handleMouseUp);
-    return () => window.removeEventListener("mouseup", handleMouseUp);
-  }, [handleMouseUp]);
+    window.addEventListener("pointerup", handlePointerUp);
+    return () => window.removeEventListener("pointerup", handlePointerUp);
+  }, [handlePointerUp]);
 
   return (
     <>
@@ -179,9 +179,9 @@ export default function DrawingLayer({
           width={100000}
           height={100000}
           fill="transparent"
-          onMouseDown={handleMouseDown}
-          onMouseMove={handleMouseMove}
-          onMouseUp={handleMouseUp}
+          onPointerDown={handlePointerDown}
+          onPointerMove={handlePointerMove}
+          onPointerUp={handlePointerUp}
         />
       )}
     </>

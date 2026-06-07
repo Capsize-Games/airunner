@@ -22,10 +22,12 @@ from langchain_core.utils.function_calling import convert_to_openai_tool
 from airunner_services.llm.adapters.chat_gguf_generation_helper import (
     generate_chat_result,
 )
-from airunner_services.llm.adapters.chat_gguf_streaming_helper import (
+from airunner_services.llm.adapters.chat_gguf_streaming_common import (
     finalize_native_tool_call_deltas,
     merge_native_tool_call_deltas,
     merge_streamed_text,
+)
+from airunner_services.llm.adapters.chat_gguf_streaming_helper import (
     stream_chat_result,
 )
 

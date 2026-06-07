@@ -18,6 +18,9 @@ from diffusers import (
     StableDiffusionControlNetPipeline,
     StableDiffusionControlNetImg2ImgPipeline,
     StableDiffusionControlNetInpaintPipeline,
+    StableDiffusionXLPipeline,
+    StableDiffusionXLImg2ImgPipeline,
+    StableDiffusionXLInpaintPipeline,
     ControlNetModel,
 )
 from PIL.Image import Image
@@ -32,7 +35,6 @@ from airunner_services.art.runtime_enums import (
     GeneratorSection,
     ModelStatus,
     ModelType,
-    StableDiffusionVersion,
 )
 from airunner_services.settings import (
     AIRUNNER_MEM_SD_DEVICE,
@@ -165,8 +167,6 @@ class SDPropertiesMixin:
         """
         if self.controlnet_model:
             version = self.version
-            if version == StableDiffusionVersion.SDXL_TURBO.value:
-                version = StableDiffusionVersion.SDXL1_0.value
             return os.path.join(
                 self.path_settings.base_path,
                 "art/models",
@@ -507,19 +507,13 @@ class SDPropertiesMixin:
 
     @property
     def use_quantization(self) -> bool:
-        """Check if quantization should be used based on dtype setting."""
-        dtype_setting = getattr(self.generator_settings, "dtype", None)
-        return dtype_setting in ("4bit", "8bit")
+        """Always quantize — 8-bit is the enforced default."""
+        return True
 
     @property
     def quantization_bits(self) -> Optional[int]:
-        """Get quantization bits if quantization is enabled."""
-        dtype_setting = getattr(self.generator_settings, "dtype", None)
-        if dtype_setting == "4bit":
-            return 4
-        elif dtype_setting == "8bit":
-            return 8
-        return None
+        """Always 8-bit quantization."""
+        return 8
 
     @property
     def is_txt2img(self) -> bool:
@@ -615,12 +609,29 @@ class SDPropertiesMixin:
         return True
 
     @property
+    def _is_sdxl(self) -> bool:
+        """Return True when the active version is an SDXL family model."""
+        v = getattr(self, "real_model_version", "") or ""
+        return "SDXL" in v
+
+    @property
     def pipeline_map(self) -> Dict[str, Any]:
         """Get mapping of operation types to pipeline classes.
 
-        Returns:
-            Dict mapping operation strings to pipeline classes.
+        Returns SDXL pipeline variants when the active version is SDXL.
         """
+        if self._is_sdxl:
+            return {
+                "txt2img": StableDiffusionXLPipeline,
+                "img2img": StableDiffusionXLImg2ImgPipeline,
+                "inpaint": StableDiffusionXLInpaintPipeline,
+                "outpaint": StableDiffusionXLInpaintPipeline,
+                # No SDXL ControlNet variant registered yet — fall back to base
+                "txt2img_controlnet": StableDiffusionXLPipeline,
+                "img2img_controlnet": StableDiffusionXLImg2ImgPipeline,
+                "inpaint_controlnet": StableDiffusionXLInpaintPipeline,
+                "outpaint_controlnet": StableDiffusionXLInpaintPipeline,
+            }
         return {
             "txt2img": StableDiffusionPipeline,
             "img2img": StableDiffusionImg2ImgPipeline,

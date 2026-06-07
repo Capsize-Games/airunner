@@ -252,20 +252,22 @@ class GeneratorSection(Enum):
     UPSCALER = "x4-upscaler"
 
 
-class StableDiffusionVersion(Enum):
-    """Supported stable diffusion versions."""
+class ArtVersion(Enum):
+    """Supported art model versions available for inference."""
 
     NONE = "None"
     SDXL1_0 = "SDXL 1.0"
-    SDXL_TURBO = "SDXL Turbo"
     SDXL_LIGHTNING = "SDXL Lightning"
     SDXL_HYPER = "SDXL Hyper"
     X4_UPSCALER = "x4-upscaler"
     Z_IMAGE_TURBO = "Z-Image Turbo"
 
 
+# Keep legacy alias so any external code importing StableDiffusionVersion still works.
+StableDiffusionVersion = ArtVersion
+
 DEFAULT_IMAGE_GENERATOR = ImageGenerator.ZIMAGE
-DEFAULT_ART_VERSION = StableDiffusionVersion.Z_IMAGE_TURBO
+DEFAULT_ART_VERSION = ArtVersion.Z_IMAGE_TURBO
 
 
 def normalize_image_generator_name(value: str | None) -> str:
@@ -277,7 +279,7 @@ def normalize_image_generator_name(value: str | None) -> str:
 
 def normalize_art_version(value: str | None) -> str:
     """Return a supported art version string."""
-    if value in {item.value for item in StableDiffusionVersion}:
+    if value in {item.value for item in ArtVersion}:
         return str(value)
     return DEFAULT_ART_VERSION.value
 
@@ -375,6 +377,7 @@ __all__ = [
     "ModelType",
     "Scheduler",
     "SignalCode",
+    "ArtVersion",
     "StableDiffusionVersion",
     "TTSModel",
     "normalize_art_version",

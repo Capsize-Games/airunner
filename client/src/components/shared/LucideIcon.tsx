@@ -1,10 +1,12 @@
 import {
   Activity, Book, BotMessageSquare, Brain, ChevronUp, CircleCheck,
-  CircleStop, CircleX, Cloud, Database, Dices, Grid2x2Check, History,
-  Image, Images, Info, Layers, MessageSquareHeart, MessageSquareText,
-  Mic, PanelRightOpen, Plus, Puzzle, RotateCcwSquare, ScanText,
+  CircleStop, CircleX, Cloud, Database, DatabaseZap, Dices,
+  Grid2x2Check, History, Image, Images, Info, Layers, Loader,
+  MessageSquareHeart, MessageSquareText, Mic, OctagonAlert,
+  PanelRightOpen, Play, Plus, Puzzle, RotateCcwSquare, ScanText,
   Settings, Settings2, SlidersHorizontal, Sparkles, Speaker,
-  Trash, Upload, type LucideIcon,
+  Trash, Upload,
+  type LucideIcon,
 } from "lucide-react";
 
 /* ── Map SVG filenames (kebab-case) to lucide-react components ── */
@@ -19,6 +21,7 @@ const MAP: Record<string, LucideIcon> = {
   "circle-x": CircleX,
   cloud: Cloud,
   database: Database,
+  "database-zap": DatabaseZap,
   dices: Dices,
   "grid-2x2-check": Grid2x2Check,
   history: History,
@@ -26,10 +29,13 @@ const MAP: Record<string, LucideIcon> = {
   images: Images,
   info: Info,
   layers: Layers,
+  loader: Loader,
   "message-square-heart": MessageSquareHeart,
   "message-square-text": MessageSquareText,
   mic: Mic,
+  "octagon-alert": OctagonAlert,
   "panel-right-open": PanelRightOpen,
+  play: Play,
   plus: Plus,
   puzzle: Puzzle,
   "rotate-ccw-square": RotateCcwSquare,
@@ -55,5 +61,5 @@ export default function LucideIcon({ name, size = 20, className }: Props) {
     console.warn(`LucideIcon: unknown icon "${name}"`);
     return null;
   }
-  return <Icon size={size} className={className} />;
+  return <Icon size={size} className={`lucide-icon ${className ?? ""}`.trim()} />;
 }

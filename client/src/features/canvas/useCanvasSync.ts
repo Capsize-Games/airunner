@@ -1,26 +1,12 @@
 import { useEffect, useRef, useCallback, useState } from "react";
+import { wsHost } from "../../api/client-base";
 
 const WS_RECONNECT_DELAY = 1000;
 const WS_MAX_RECONNECT_DELAY = 10_000;
 
-/** Default API host:port. */
-const DEFAULT_API_HOST = "localhost:8188";
-
-/**
- * Build a WebSocket URL for the given API path.
- *
- * Always connects directly to the API server port rather than going through
- * the Vite dev server proxy, because the proxy does not reliably forward
- * WebSocket upgrade requests.
- */
 function wsUrl(path: string): string {
   const proto = window.location.protocol === "https:" ? "wss" : "ws";
-
-  // Honor VITE_API_BASE_URL if set (used in production / bundle mode),
-  // otherwise fall back to the default API server address.
-  const raw = import.meta.env.VITE_API_BASE_URL ?? DEFAULT_API_HOST;
-  const host = raw.replace(/^https?:\/\//, "");
-  return `${proto}://${host}${path}`;
+  return `${proto}://${wsHost()}${path}`;
 }
 
 export interface UseCanvasSyncOptions {

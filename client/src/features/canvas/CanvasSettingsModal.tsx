@@ -112,7 +112,7 @@ export default function CanvasSettingsModal({
               style={{
                 background: "none", border: "none", padding: 0,
                 cursor: "pointer", display: "flex",
-                color: aspectLocked ? "#6399ff" : "rgba(255,255,255,0.4)",
+                color: aspectLocked ? "#6399ff" : "rgba(var(--theme-text-rgb), 0.4)",
               }}
             >
               {aspectLocked ? <Lock size={14} /> : <Unlock size={14} />}

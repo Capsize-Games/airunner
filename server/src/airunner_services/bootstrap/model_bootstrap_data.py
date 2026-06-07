@@ -15,17 +15,6 @@ ai_art_models = [
         "is_default": True,
     },
     {
-        "name": "Stable Diffusion XL Turbo",
-        "path": "stabilityai/sdxl-turbo",
-        "branch": "main",
-        "version": "SDXL Turbo",
-        "category": "stablediffusion",
-        "pipeline_action": "txt2img",
-        "enabled": True,
-        "model_type": "art",
-        "is_default": True,
-    },
-    {
         "name": "SDXL Inpaint",
         "path": "diffusers/stable-diffusion-xl-1.0-inpainting-0.1",
         "branch": "fp16",

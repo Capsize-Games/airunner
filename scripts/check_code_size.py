@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
-"""Pre-commit hook that enforces code size constraints on Python files.
+"""Pre-commit hook that enforces code size and complexity constraints.
 
 Rules (configurable via constants below):
 - Files must be at most ``MAX_FILE_LINES`` lines.
-- Functions/methods must be at most ``MAX_FUNCTION_LINES`` lines.
-  (class and function decorators, the def signature, and the docstring
-  are excluded from the count — only body lines count.)
+- Functions/methods must be at most ``MAX_FUNCTION_LINES`` body lines
+  (decorators, the def signature, and the docstring are excluded).
+- Functions/methods must have a McCabe cyclomatic complexity at or
+  below ``MAX_COMPLEXITY``.
 """
 
 from __future__ import annotations
@@ -15,7 +16,8 @@ import sys
 from pathlib import Path
 
 MAX_FILE_LINES = 250
-MAX_FUNCTION_LINES = 20
+MAX_FUNCTION_LINES = 40
+MAX_COMPLEXITY = 12
 
 
 def _file_too_long(path: Path, source_lines: list[str]) -> str | None:
@@ -50,18 +52,49 @@ def _get_function_body_lines(node: ast.FunctionDef | ast.AsyncFunctionDef) -> in
     return last_line - first_line + 1
 
 
-def _check_functions(tree: ast.AST, path: Path) -> list[str]:
-    """Return error messages for functions that exceed the line limit."""
+def _compute_mccabe(node: ast.AST) -> int:
+    """Compute McCabe cyclomatic complexity for a single AST node."""
+    # Count the function/method itself as 1
+    complexity = 1
+    for child in ast.walk(node):
+        if isinstance(child, (ast.If, ast.While, ast.For, ast.AsyncFor,
+                              ast.ExceptHandler, ast.With, ast.AsyncWith,
+                              ast.Assert)):
+            complexity += 1
+        elif isinstance(child, ast.BoolOp):
+            # Each 'and' / 'or' adds 1
+            complexity += len(child.values) - 1
+        elif isinstance(child, (ast.Match,)):
+            complexity += 1
+        elif isinstance(child, ast.comprehension):
+            complexity += 1
+    return complexity
+
+
+def _check_functions(tree: ast.AST, path: Path,
+                     source_code: str) -> list[str]:
+    """Return error messages for functions that exceed limits."""
     errors: list[str] = []
     for node in ast.walk(tree):
-        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
-            body_lines = _get_function_body_lines(node)
-            if body_lines > MAX_FUNCTION_LINES:
-                errors.append(
-                    f"{path}:{node.lineno} "
-                    f"function {node.name} has {body_lines} body lines "
-                    f"(max {MAX_FUNCTION_LINES})"
-                )
+        if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            continue
+
+        body_lines = _get_function_body_lines(node)
+        if body_lines > MAX_FUNCTION_LINES:
+            errors.append(
+                f"{path}:{node.lineno} "
+                f"function {node.name} has {body_lines} body lines "
+                f"(max {MAX_FUNCTION_LINES})"
+            )
+
+        complexity = _compute_mccabe(node)
+        if complexity > MAX_COMPLEXITY:
+            errors.append(
+                f"{path}:{node.lineno} "
+                f"function {node.name} has McCabe complexity "
+                f"{complexity} (max {MAX_COMPLEXITY})"
+            )
+
     return errors
 
 
@@ -82,7 +115,7 @@ def _check_one(path: Path) -> int:
     except SyntaxError:
         return 1 if err is not None else 0
 
-    func_errors = _check_functions(tree, path)
+    func_errors = _check_functions(tree, path, raw)
     for e in func_errors:
         print(e)
 

@@ -187,14 +187,14 @@ INSTRUCTIONS:
 2. Show all your work and reasoning
 3. Double-check calculations
 4. At the very end, write your final answer CLEARLY in this exact format:
-   
+
    #### [your answer]
-   
+
    For example:
    #### 42
    #### 3/8
    #### (1, 2, 3)
-   
+
 CRITICAL: You MUST include the #### marker with your final answer!
 
 Your solution:"""

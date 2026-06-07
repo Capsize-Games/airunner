@@ -213,6 +213,71 @@ def _parse_raw_messages(data: dict[str, Any]) -> list[dict[str, Any]]:
     return raw
 
 
+def _inject_rag_context(
+    messages: list[dict[str, Any]],
+    active_doc_ids: list[int],
+) -> list[dict[str, Any]]:
+    """Fetch active documents from DB and inject their content as system context."""
+    if not active_doc_ids:
+        return messages
+    logging = __import__("logging").getLogger(__name__)
+    try:
+        from airunner_services.database.session import session_scope
+        from airunner_services.database.models.document import Document
+
+        snippets: list[str] = []
+        with session_scope() as session:
+            docs = (
+                session.query(Document)
+                .filter(Document.id.in_(active_doc_ids))
+                .filter(Document.active.is_(True))
+                .all()
+            )
+            logging.info(
+                "RAG: found %d active docs for IDs %s",
+                len(docs), active_doc_ids,
+            )
+            for doc in docs:
+                file_path = doc.path
+                try:
+                    with open(file_path, "r", errors="replace") as f:
+                        text = f.read(4096)
+                    if text.strip():
+                        snippets.append(
+                            f"--- Document: {file_path} ---\n{text}"
+                        )
+                    else:
+                        logging.warning(
+                            "RAG: doc %d (%s) is empty", doc.id, file_path
+                        )
+                except Exception as exc:
+                    logging.warning(
+                        "RAG: failed to read doc %d at %s: %s",
+                        doc.id, file_path, exc,
+                    )
+        if not snippets:
+            logging.warning(
+                "RAG: no document content extracted for IDs %s",
+                active_doc_ids,
+            )
+            return messages
+        rag_text = "\n\n".join(snippets)
+        logging.info("RAG: injected %d chars from %d docs", len(rag_text), len(snippets))
+        return [
+            {
+                "role": "system",
+                "content": (
+                    "The following documents are attached to this conversation. "
+                    f"Use them when relevant:\n\n{rag_text}"
+                ),
+            },
+            *messages,
+        ]
+    except Exception as exc:
+        logging.error("RAG injection failed: %s", exc, exc_info=True)
+        return messages
+
+
 def _build_envelope_metadata(data: dict[str, Any]) -> dict[str, Any]:
     """Build runtime metadata from a websocket payload."""
     metadata: dict[str, Any] = {}
@@ -227,7 +292,11 @@ def _build_envelope_metadata(data: dict[str, Any]) -> dict[str, Any]:
 
 def websocket_envelope(data: dict[str, Any]) -> RequestEnvelope:
     """Build one streaming runtime envelope from a websocket payload."""
-    messages = _parse_messages(_parse_raw_messages(data))
+    raw_messages = _parse_raw_messages(data)
+    active_ids: list[int] = data.get("active_document_ids") or []
+    if active_ids:
+        raw_messages = _inject_rag_context(raw_messages, active_ids)
+    messages = _parse_messages(raw_messages)
     metadata = _build_envelope_metadata(data)
 
     payload = LLMInvocationRequest(

@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>airunner_web_client</title>
     <script>
       // Apply saved theme immediately to prevent flash of wrong theme
@@ -12,6 +12,18 @@
           var t = localStorage.getItem("airunner_theme");
           if (t) document.documentElement.setAttribute("data-theme", t);
         } catch(e) {}
+      })();
+      // Mobile: set --app-height to the visible viewport height so the
+      // footer isn't hidden behind browser chrome (Firefox Android).
+      (function() {
+        function fixHeight() {
+          var h = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+          document.documentElement.style.setProperty('--app-height', h + 'px');
+        }
+        fixHeight();
+        window.visualViewport && window.visualViewport.addEventListener('resize', fixHeight);
+        window.addEventListener('resize', fixHeight);
+        window.addEventListener('orientationchange', function() { setTimeout(fixHeight, 100); });
       })();
     </script>
   </head>

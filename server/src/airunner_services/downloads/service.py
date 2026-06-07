@@ -6,9 +6,11 @@ from typing import Any
 
 from airunner_services.downloads.civitai import (
     fetch_browser_model_info,
-    download_file as civitai_download_file,
     fetch_model_info_for_url,
     search_models,
+)
+from airunner_services.downloads.civitai_download import (
+    download_file as civitai_download_file,
 )
 from airunner_services.downloads.huggingface import (
     prepare_huggingface_download_request,

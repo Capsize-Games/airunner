@@ -110,3 +110,14 @@ export async function cancelDownloadJob(
 ): Promise<{ job_id: string; status?: string }> {
   return request("DELETE", `/api/v1/downloads/cancel/${jobId}`);
 }
+
+export async function requestCivitaiVersionThumbnails(params: {
+  model_data: object;
+  version_index: number;
+}): Promise<void> {
+  await request("POST", "/api/v1/downloads/civitai/version-thumbnails", params);
+}
+
+export async function cancelCivitaiVersionThumbnails(modelId: number): Promise<void> {
+  await request("DELETE", "/api/v1/downloads/civitai/version-thumbnails", { model_id: modelId });
+}

@@ -1,6 +1,22 @@
 import { rpcRequest } from "../features/api/WsApiClient";
 import type { JsonObject, StreamChunk } from "../types/api";
 
+/**
+ * Resolve the WebSocket host for any WS endpoint.
+ *
+ * In dev mode the Vite proxy forwards /api/v1/* to the backend, so we
+ * use the page's own host (port 5173).  In production the caller must
+ * set VITE_API_BASE_URL; the fallback is localhost:8188.
+ */
+export function wsHost(): string {
+  const raw = import.meta.env.VITE_API_BASE_URL as string | undefined;
+  if (raw) {
+    return raw.replace(/^https?:\/\//, "");
+  }
+  // Dev mode — go through the Vite proxy.
+  return location.host;
+}
+
 const REQUEST_TIMEOUT_MS = 180_000; // 3 minutes
 
 /**

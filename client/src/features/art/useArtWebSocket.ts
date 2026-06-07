@@ -1,10 +1,10 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 
+import { wsHost } from "../../api/client-base";
+
 function wsUrl(): string {
   const proto = location.protocol === "https:" ? "wss" : "ws";
-  const raw = (import.meta.env.VITE_API_BASE_URL as string) || "localhost:8188";
-  const host = raw.replace(/^https?:\/\//, "");
-  return `${proto}://${host}/api/v1/art/ws`;
+  return `${proto}://${wsHost()}/api/v1/art/ws`;
 }
 
 export interface ArtWebSocketState {

@@ -1,103 +1,57 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import Spinner from "react-bootstrap/Spinner";
 import type { LoraInfo } from "../../api/client";
 import LoraItem from "./lora/LoraItem";
 import { useEventBus } from "../../features/events/useEventBus";
 import { EVENT_LORAS } from "../../features/events/types";
+import { useLoras } from "../../hooks/useLoras";
 
 interface LoraItemData extends LoraInfo {
   _inputText: string;
 }
 
+/** Variant versions whose LoRAs are stored under the SDXL 1.0 directory. */
+const VARIANT_BASE: Record<string, string> = {
+  "SDXL Lightning": "SDXL 1.0",
+  "SDXL Hyper": "SDXL 1.0",
+};
+
+function getVersion(): string {
+  try { return localStorage.getItem("airunner_art_version") || ""; }
+  catch { return ""; }
+}
+
 export default function LoraPanel() {
-  const [items, setItems] = useState<LoraItemData[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { loras, loading, sync, patchLora } = useLoras();
+  const [inputTexts, setInputTexts] = useState<Record<number, string>>({});
   const [copiedIndex, setCopiedIndex] = useState<string | null>(null);
   const copiedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  /** Variant versions whose LoRAs/embeddings are stored under the
-   *  SDXL 1.0 directory rather than their own version directory. */
-  const VARIANT_BASE: Record<string, string> = {
-    "SDXL Lightning": "SDXL 1.0",
-    "SDXL Hyper": "SDXL 1.0",
-  };
+  // Filter by selected art version.
+  const version = getVersion();
+  const baseDir = VARIANT_BASE[version] || version;
+  const items: LoraItemData[] = loras
+    .filter((l) => version ? l.path.includes(`/${baseDir}/`) : true)
+    .map((l) => ({ ...l, _inputText: inputTexts[l.id] ?? "" }));
 
-  const loadLoras = useCallback(async () => {
-    setLoading(true);
-    try {
-      const { listLoras } = await import("../../api/client");
-      const data = await listLoras();
-      const version = (() => {
-        try { return localStorage.getItem("airunner_art_version") || ""; }
-        catch { return ""; }
-      })();
-      const baseDir = VARIANT_BASE[version] || version;
-      const filtered = data.loras.filter((l: LoraInfo) =>
-        version ? l.path.includes(`/${baseDir}/`) : true,
-      );
-      setItems(
-        filtered.map((l: LoraInfo) => ({
-          ...l,
-          _inputText: "",
-        })),
-      );
-    } catch {
-      setItems([]);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    loadLoras();
-  }, [loadLoras]);
-
-  useEffect(() => {
-    const handler = () => loadLoras();
-    window.addEventListener("art-version-changed", handler);
-    return () => window.removeEventListener("art-version-changed", handler);
-  }, [loadLoras]);
-
+  // Sync on EVENT_LORAS instead of full reload.
   useEventBus([EVENT_LORAS], (_event, data) => {
     const payload = data as { type?: string };
-    if (payload.type === "reload") {
-      loadLoras();
-    }
+    if (payload.type === "reload") sync();
   });
 
   useEffect(() => {
-    const handler = (e: Event) => {
-      const detail = (e as CustomEvent).detail as { id: number; enabled: boolean } | undefined;
-      if (detail && detail.id) {
-        setItems((prev) =>
-          prev.map((item) =>
-            item.id === detail.id
-              ? { ...item, enabled: detail.enabled }
-              : item,
-          ),
-        );
-      }
-    };
-    window.addEventListener("lora-changed", handler);
-    return () => window.removeEventListener("lora-changed", handler);
-  }, []);
+    const handler = () => sync();
+    window.addEventListener("art-version-changed", handler);
+    return () => window.removeEventListener("art-version-changed", handler);
+  }, [sync]);
 
   const handleToggle = async (id: number, enabled: boolean) => {
     try {
       const { updateLora } = await import("../../api/client");
       const updated = await updateLora(id, { enabled });
-      setItems((prev) =>
-        prev.map((item) =>
-          item.id === id
-            ? { ...item, enabled: updated.enabled }
-            : item,
-        ),
-      );
-      window.dispatchEvent(
-        new CustomEvent("lora-changed", {
-          detail: { id, enabled: updated.enabled },
-        }),
-      );
+      await patchLora(updated);
+      window.dispatchEvent(new CustomEvent("lora-changed", { detail: { id, enabled: updated.enabled } }));
     } catch { /* */ }
   };
 
@@ -105,18 +59,8 @@ export default function LoraPanel() {
     try {
       const { updateLora } = await import("../../api/client");
       const updated = await updateLora(id, { weight });
-      setItems((prev) =>
-        prev.map((item) =>
-          item.id === id
-            ? { ...item, weight: updated.weight }
-            : item,
-        ),
-      );
-      window.dispatchEvent(
-        new CustomEvent("lora-changed", {
-          detail: { id, weight: updated.weight },
-        }),
-      );
+      await patchLora(updated);
+      window.dispatchEvent(new CustomEvent("lora-changed", { detail: { id, weight: updated.weight } }));
     } catch { /* */ }
   };
 
@@ -128,53 +72,35 @@ export default function LoraPanel() {
   };
 
   const handleDeleteWord = async (id: number, word: string) => {
-    const item = items.find((i) => i.id === id);
+    const item = loras.find((i) => i.id === id);
     if (!item) return;
     const remaining = item.trigger_words.filter((w) => w !== word);
     try {
       const { updateLora } = await import("../../api/client");
-      const updated = await updateLora(id, {
-        trigger_words: remaining.join(","),
-      });
-      setItems((prev) =>
-        prev.map((i) =>
-          i.id === id
-            ? { ...i, trigger_words: updated.trigger_words }
-            : i,
-        ),
-      );
+      const updated = await updateLora(id, { trigger_words: remaining.join(",") });
+      await patchLora(updated);
     } catch { /* */ }
   };
 
   const handleAddWords = async (id: number) => {
-    const item = items.find((i) => i.id === id);
-    if (!item || !item._inputText.trim()) return;
-    const newWords = item._inputText
-      .split(",")
+    const item = loras.find((i) => i.id === id);
+    const text = inputTexts[id] ?? "";
+    if (!item || !text.trim()) return;
+    const newWords = text.split(",")
       .map((w) => w.trim())
       .filter((w) => w.length > 0 && !item.trigger_words.includes(w));
     if (newWords.length === 0) return;
     const merged = [...item.trigger_words, ...newWords];
     try {
       const { updateLora } = await import("../../api/client");
-      const updated = await updateLora(id, {
-        trigger_words: merged.join(","),
-      });
-      setItems((prev) =>
-        prev.map((i) =>
-          i.id === id
-            ? { ...i, trigger_words: updated.trigger_words, _inputText: "" }
-            : i,
-        ),
-      );
+      const updated = await updateLora(id, { trigger_words: merged.join(",") });
+      await patchLora(updated);
+      setInputTexts((prev) => ({ ...prev, [id]: "" }));
     } catch { /* */ }
   };
 
   const handleInputKeyDown = (e: React.KeyboardEvent, id: number) => {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      handleAddWords(id);
-    }
+    if (e.key === "Enter") { e.preventDefault(); handleAddWords(id); }
   };
 
   return (
@@ -187,8 +113,7 @@ export default function LoraPanel() {
         <Spinner animation="border" size="sm" className="d-block mx-auto" />
       ) : items.length === 0 ? (
         <p className="text-muted small">
-          No LoRA models found. Add .safetensors files to
-          your models directory.
+          No LoRA models found. Add .safetensors files to your models directory.
         </p>
       ) : (
         <div className="lora-list">
@@ -202,11 +127,7 @@ export default function LoraPanel() {
               onDeleteWord={handleDeleteWord}
               onAddWords={handleAddWords}
               onInputChange={(id, value) =>
-                setItems((prev) =>
-                  prev.map((i) =>
-                    i.id === id ? { ...i, _inputText: value } : i,
-                  ),
-                )
+                setInputTexts((prev) => ({ ...prev, [id]: value }))
               }
               onInputKeyDown={handleInputKeyDown}
             />

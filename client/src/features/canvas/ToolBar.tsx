@@ -307,7 +307,7 @@ export default function ToolBar({
             border: "none",
             borderRadius: 5,
             background: "transparent",
-            color: "rgba(255,255,255,0.4)",
+            color: "rgba(var(--theme-text-rgb), 0.4)",
             cursor: "pointer",
           }}
         >

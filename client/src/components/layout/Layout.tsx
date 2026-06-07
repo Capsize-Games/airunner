@@ -15,6 +15,7 @@ import StatsPanel from "../panels/StatsPanel";
 import CivitaiBrowserPanel from "../panels/civitai-browser/CivitaiBrowserPanel";
 import DownloadTray from "../downloads/DownloadTray";
 import TopBar from "./TopBar";
+import { isWsConnected } from "../../features/api/WsApiClient";
 import { LeftIconBar, RightIconBar } from "./IconBar";
 import { CanvasProvider } from "../../features/canvas";
 
@@ -50,6 +51,8 @@ interface LayoutProps {
   onToggleStt: () => void;
   onOpenSettings: () => void;
   onSelectConversation: (id: number) => void;
+  showCacheDebug: boolean;
+  onToggleCacheDebug: () => void;
 }
 
 function saveNum(key: string, val: number) {
@@ -196,6 +199,8 @@ export default function Layout({
   onToggleStt,
   onOpenSettings,
   onSelectConversation,
+  showCacheDebug,
+  onToggleCacheDebug,
 }: LayoutProps) {
   const panelsRef = useRef<HTMLDivElement>(null);
   const [panelsWidth, setPanelsWidth] = useState(0);
@@ -410,6 +415,8 @@ export default function Layout({
           onToggleCanvas={onToggleCanvas}
           onRightPanel={onRightPanel}
           onOpenSettings={onOpenSettings}
+          showCacheDebug={showCacheDebug}
+          onToggleCacheDebug={onToggleCacheDebug}
         />
       </div>
 
@@ -417,10 +424,63 @@ export default function Layout({
       <DownloadTray />
 
       {/* ── Footer ── */}
-      <div className="footer-bar">
-        &copy; {new Date().getFullYear()} Capsize LLC &mdash; All rights
-        reserved.
+      <div
+        className="footer-bar"
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          padding: "0 12px",
+        }}
+      >
+        <span>
+          &copy; {new Date().getFullYear()} Capsize LLC &mdash; All rights
+          reserved.
+        </span>
+        <LiveIndicator />
       </div>
     </div>
+  );
+}
+
+/** Small dot + label showing WebSocket connection status. */
+function LiveIndicator() {
+  const [connected, setConnected] = useState(isWsConnected);
+  useEffect(() => {
+    let canceled = false;
+    const id = setInterval(() => {
+      if (!canceled) setConnected(isWsConnected());
+    }, 1);
+    return () => {
+      canceled = true;
+      clearInterval(id);
+    };
+  }, []);
+  return (
+    <span
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 4,
+        fontSize: 11,
+        fontFamily: "monospace",
+        color: connected
+          ? "rgba(0,200,100,0.7)"
+          : "rgba(255,150,50,0.6)",
+      }}
+    >
+      <span
+        style={{
+          width: 6,
+          height: 6,
+          borderRadius: "50%",
+          background: connected
+            ? "rgb(0,200,100)"
+            : "rgb(255,150,50)",
+          display: "inline-block",
+        }}
+      />
+      {connected ? "Live" : "Reconnecting\u2026"}
+    </span>
   );
 }

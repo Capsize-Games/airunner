@@ -15,11 +15,11 @@ import type { Message, StreamChunk } from "../../types/api";
 // WS URL resolver
 // ---------------------------------------------------------------------------
 
+import { wsHost } from "../../api/client-base";
+
 function wsUrl(): string {
   const proto = location.protocol === "https:" ? "wss" : "ws";
-  const raw = (import.meta.env.VITE_API_BASE_URL as string) || "localhost:8188";
-  const host = raw.replace(/^https?:\/\//, "");
-  return `${proto}://${host}/api/v1/llm/stream`;
+  return `${proto}://${wsHost()}/api/v1/llm/stream`;
 }
 
 // ---------------------------------------------------------------------------
@@ -31,6 +31,7 @@ export interface LLMOptions {
   temperature?: number;
   max_tokens?: number;
   conversation_id?: number;
+  active_document_ids?: number[];
 }
 
 export function useLLMWebSocket() {
@@ -253,6 +254,7 @@ export function useLLMWebSocket() {
           temperature: options?.temperature ?? 0.7,
           max_tokens: options?.max_tokens,
           conversation_id: options?.conversation_id,
+          active_document_ids: options?.active_document_ids,
         });
       });
     },

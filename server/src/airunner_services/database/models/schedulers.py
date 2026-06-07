@@ -13,6 +13,7 @@ class Schedulers(BaseModel):
     id = Column(Integer, primary_key=True, autoincrement=True)
     name = Column(String, nullable=True)
     display_name = Column(String, nullable=True)
+    model_version = Column(String, nullable=True, default="")
 
 
 __all__ = ["Schedulers"]

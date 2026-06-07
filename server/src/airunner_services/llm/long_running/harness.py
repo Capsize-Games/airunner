@@ -12,10 +12,14 @@ from airunner_services.llm.long_running.harness_decisions import (
     get_decision_history,
 )
 from airunner_services.llm.long_running.harness_project import (
-    abandon_project,
     create_project,
-    pause_project,
+)
+from airunner_services.llm.long_running.harness_project_resume import (
     resume_project,
+)
+from airunner_services.llm.long_running.harness_project_state import (
+    abandon_project,
+    pause_project,
     revert_to_checkpoint,
 )
 from airunner_services.llm.long_running.harness_reporting import (

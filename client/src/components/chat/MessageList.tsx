@@ -1,4 +1,6 @@
 import { useState } from "react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import type { Message } from "../../types/api";
 
 export default function MessageList({
@@ -138,7 +140,9 @@ function StreamingBubble({
           className="streaming-cursor"
           style={{ color: "var(--theme-text)" }}
         >
-          {streamBuffer.trimStart()}
+          <ReactMarkdown remarkPlugins={[remarkGfm]}>
+            {streamBuffer.trimStart()}
+          </ReactMarkdown>
         </div>
       )}
     </div>
@@ -207,7 +211,9 @@ function MessageBubble({ message }: { message: Message }) {
         </div>
       )}
       <div style={{ color: "var(--theme-text)" }}>
-        {(message.content || "").trimStart()}
+        <ReactMarkdown remarkPlugins={[remarkGfm]}>
+          {(message.content || "").trimStart()}
+        </ReactMarkdown>
       </div>
     </div>
   );

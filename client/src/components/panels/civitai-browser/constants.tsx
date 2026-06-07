@@ -13,6 +13,7 @@ export const MODEL_TYPE_OPTIONS: Record<string, { label: string; value: string }
   ],
   ZImageTurbo: [
     { label: "Checkpoint", value: "Checkpoint" },
+    { label: "LoRA", value: "LORA" },
   ],
 };
 

@@ -14,6 +14,7 @@ SignalCode = signal_code_proxy(
     {
         "STT_START_CAPTURE_SIGNAL": "stt_start_capture",
         "STT_STOP_CAPTURE_SIGNAL": "stt_stop_capture",
+        "STT_LOAD_SIGNAL": "stt_load_signal",
     }
 )
 
@@ -25,6 +26,9 @@ class AudioProcessorWorker(Worker):
 
     def __init__(self):
         self._executor = None
+        self.signal_handlers = {
+            SignalCode.STT_LOAD_SIGNAL: self.on_stt_load_signal,
+        }
         super().__init__()
 
     def start_worker_thread(self):

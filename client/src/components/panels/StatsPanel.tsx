@@ -1,109 +1,92 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import ProgressBar from "react-bootstrap/ProgressBar";
-import { getHardwareProfile } from "../../api/client";
+import {
+  getHardwareProfile,
+  unloadModel,
+  loadModel,
+  getSingleton,
+} from "../../api/client";
 import type { HardwareProfile } from "../../types/api";
 import type { ActiveModelInfo } from "../../api/client";
-import { useArtWebSocket } from "../../features/art/useArtWebSocket";
-import { useEventBus } from "../../features/events/useEventBus";
-import { EVENT_MODEL_STATUS } from "../../features/events/types";
+import LucideIcon from "../shared/LucideIcon";
 
-function wsUrl(): string {
-  const proto = location.protocol === "https:" ? "wss" : "ws";
-  const raw = (import.meta.env.VITE_API_BASE_URL as string) || "localhost:8188";
-  const host = raw.replace(/^https?:\/\//, "");
-  return `${proto}://${host}/api/v1/daemon/hardware/ws`;
+interface ModelSlot {
+  type: string;
+  label: string;
+  name: string;
+  /** If true, the load/play button is shown. */
+  canLoad: boolean;
 }
+
+const MODEL_SLOTS: { type: string; label: string }[] = [
+  { type: "llm", label: "LLM" },
+  { type: "art", label: "Art" },
+  { type: "stt", label: "STT" },
+  { type: "tts", label: "TTS" },
+];
 
 export default function StatsPanel() {
   const [hw, setHw] = useState<HardwareProfile | null>(null);
   const [models, setModels] = useState<ActiveModelInfo[]>([]);
-  const wsRef = useRef<WebSocket | null>(null);
-  const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
-    null,
-  );
+  const [slots, setSlots] = useState<ModelSlot[]>([]);
   const mountedRef = useRef(true);
   const unloadingRef = useRef<Set<string>>(new Set());
-  const artWs = useArtWebSocket();
+  const loadingRef = useRef<Set<string>>(new Set());
 
-  const scheduleReconnect = useCallback(() => {
-    if (!mountedRef.current) return;
-    reconnectTimerRef.current = setTimeout(connectWs, 5000);
-  }, []);
-
-  const connectWs = useCallback(() => {
-    if (!mountedRef.current) return;
-
-    // Close any existing connection without triggering reconnect
-    if (wsRef.current) {
-      const old = wsRef.current;
-      old.onclose = null;
-      old.onerror = null;
-      old.onmessage = null;
-      old.close();
-      wsRef.current = null;
-    }
-
-    try {
-      const socket = new WebSocket(wsUrl());
-      wsRef.current = socket;
-
-      socket.onmessage = (event) => {
-        try {
-          const data = JSON.parse(event.data);
-          if (data.type === "hardware_profile") {
-            setHw(data as unknown as HardwareProfile);
-          }
-        } catch {
-          // ignore malformed messages
-        }
-      };
-
-      socket.onclose = (event) => {
-        wsRef.current = null;
-        // Only reconnect on accidental close, not intentional cleanup
-        if (mountedRef.current && !event.wasClean) {
-          scheduleReconnect();
-        }
-      };
-
-      socket.onerror = () => {
-        // onclose will fire after this
-        socket.close();
-      };
-    } catch {
-      // WebSocket creation failed, retry later
-      if (mountedRef.current) {
-        scheduleReconnect();
-      }
-    }
-  }, [scheduleReconnect]);
-
-  // Connect on mount, disconnect on unmount
+  // Fetch configured model names from settings once on mount.
   useEffect(() => {
-    mountedRef.current = true;
-    // Use HTTP as initial data source so the panel isn't blank while WS connects.
-    // Delay the WebSocket connection slightly so the server has time to accept
-    // the upgrade, avoiding noisy console errors during page load.
-    getHardwareProfile().then(setHw).catch(() => {});
-    const initialTimer = setTimeout(connectWs, 1000);
+    (async () => {
+      try {
+        const [llmRec, artRec, pathRec, espeakRec, openvoiceRec] =
+          await Promise.all([
+            getSingleton("LLMGeneratorSettings").catch(() => null),
+            getSingleton("GeneratorSettings").catch(() => null),
+            getSingleton("PathSettings").catch(() => null),
+            getSingleton("EspeakSettings").catch(() => null),
+            getSingleton("OpenVoiceSettings").catch(() => null),
+          ]);
 
-    return () => {
-      clearTimeout(initialTimer);
-      mountedRef.current = false;
-      if (wsRef.current) {
-        const old = wsRef.current;
-        old.onclose = null;
-        old.onerror = null;
-        old.onmessage = null;
-        old.close();
-        wsRef.current = null;
+        // ── LLM ──────────────────────────────────────────────────────
+        const llmName = String(llmRec?.model_path ?? "");
+
+        // ── Art ──────────────────────────────────────────────────────
+        const artVersion = String(artRec?.version ?? "");
+        const artModel = String(artRec?.custom_path ?? "");
+        const artRawName = artModel.split("/").pop() || artModel.split("\\").pop() || artModel;
+        const artModelName = artRawName.replace(/\.[^.]+$/, "");
+        const artName = artVersion + (artModelName ? `/${artModelName}` : "");
+
+        // ── STT ──────────────────────────────────────────────────────
+        const sttRaw = String(pathRec?.stt_model_path ?? "");
+        const sttBase = sttRaw.split("/").pop() || sttRaw.split("\\").pop() || "";
+        const sttName = sttBase && sttBase !== "stt" ? sttBase : "whisper";
+
+        // ── TTS ──────────────────────────────────────────────────────
+        // If OpenVoice has a non-default voice, show it; else espeak.
+        const ovVoice = String(openvoiceRec?.voice ?? "");
+        const ovRef = String(openvoiceRec?.reference_speaker_path ?? "");
+        const espeakVoice = String(espeakRec?.voice ?? "english (america)");
+        const useOpenVoice = !!(ovVoice !== "default" || (ovRef && ovRef !== "default"));
+        const ttsName = useOpenVoice
+          ? `openvoice${ovRef && ovRef !== "default" ? ` - ${ovRef}` : ""}`
+          : `espeak - ${espeakVoice}`;
+
+        setSlots([
+          { type: "llm", label: "LLM", name: llmName, canLoad: !!llmName },
+          { type: "art", label: "Art", name: artName || "none", canLoad: !!artModel },
+          { type: "stt", label: "STT", name: sttName || "none", canLoad: !!sttName },
+          {
+            type: "tts",
+            label: "TTS",
+            name: ttsName,
+            canLoad: useOpenVoice,
+          },
+        ]);
+      } catch {
+        setSlots(MODEL_SLOTS.map((s) => ({ ...s, name: "", canLoad: false })));
       }
-      if (reconnectTimerRef.current) {
-        clearTimeout(reconnectTimerRef.current);
-        reconnectTimerRef.current = null;
-      }
-    };
-  }, [connectWs]);
+    })();
+  }, []);
 
   const fetchActiveModels = useCallback(async () => {
     try {
@@ -115,24 +98,51 @@ export default function StatsPanel() {
     }
   }, []);
 
-  // Fetch active models on mount
-  useEffect(() => {
-    fetchActiveModels();
+  const fetchHw = useCallback(async () => {
+    try {
+      const data = await getHardwareProfile();
+      if (mountedRef.current) {
+        setHw(data);
+        fetchActiveModels();
+      }
+    } catch {
+      // endpoint may be unavailable
+    }
   }, [fetchActiveModels]);
 
-  // Listen for live model-status events via unified event bus
-  useEventBus([EVENT_MODEL_STATUS], () => {
-    fetchActiveModels();
-  });
+  useEffect(() => {
+    mountedRef.current = true;
+    fetchHw();
+    const id = setInterval(fetchHw, 100);
+    return () => {
+      mountedRef.current = false;
+      clearInterval(id);
+    };
+  }, [fetchHw]);
 
-  const handleUnload = (m: ActiveModelInfo) => {
+  const handleUnload = (m: ActiveModelInfo, slotType: string) => {
     const key = m.model_id || m.model_type;
     if (unloadingRef.current.has(key)) return;
     unloadingRef.current.add(key);
-    artWs.unload(m.model_id);
-    // Remove from unloading set after a short delay so repeated clicks
-    // on the same model are still gated.
+    loadingRef.current.delete(slotType);
+    unloadModel(m.model_id, m.model_type).catch(() => {});
     setTimeout(() => unloadingRef.current.delete(key), 2000);
+  };
+
+  const handleLoad = (type: string, id: string) => {
+    loadingRef.current.add(type);
+    loadModel(id, type).catch(() => {});
+  };
+
+  const findModel = (type: string): ActiveModelInfo | undefined =>
+    models.find((m) => m.model_type.toLowerCase().startsWith(type));
+
+  const statusColor = (status: string) => {
+    switch (status) {
+      case "loaded": return "var(--bs-success)";
+      case "loading": return "var(--bs-warning)";
+      default: return "var(--bs-danger)";
+    }
   };
 
   if (!hw) {
@@ -202,60 +212,59 @@ export default function StatsPanel() {
         </small>
       </div>
 
-      {/* Loaded models list */}
-      {models.length > 0 && (
-        <div className="mt-2">
-          <small className="text-muted d-block mb-1">
-            Loaded Models
-          </small>
-          {models.map((m, index) => (
+      {/* Models list */}
+      <div className="mt-2">
+        <small className="text-muted d-block mb-1">
+          Models
+        </small>
+        {slots.map(({ type, label, name, canLoad }) => {
+          const m = findModel(type);
+          const status = m?.status ?? "unloaded";
+          return (
             <div
-              key={m.model_id ?? `model-${index}`}
+              key={type}
               className="d-flex align-items-center justify-content-between mb-1"
               style={{ fontSize: "11px" }}
             >
-              <span className="text-truncate" style={{ maxWidth: 140 }}>
+              <span className="text-truncate" style={{ maxWidth: "70%" }}>
                 <span
                   style={{
                     display: "inline-block",
                     width: 8,
                     height: 8,
                     borderRadius: "50%",
-                    backgroundColor:
-                      m.status === "loaded"
-                        ? "var(--bs-success)"
-                        : m.status === "loading"
-                          ? "var(--bs-warning)"
-                          : "var(--bs-danger)",
+                    backgroundColor: statusColor(status),
                     marginRight: 4,
                     flexShrink: 0,
                   }}
                 />
-                {m.name || m.model_type}
+                {label}: {name || "none"}
               </span>
-              {m.can_unload && (
+              {status === "loading" || (status !== "loaded" && loadingRef.current.has(type)) ? (
+                <span style={{ display: "flex", opacity: 0.5 }}>
+                  <LucideIcon name="loader" size={14} />
+                </span>
+              ) : m?.can_unload ? (
                 <button
-                  onClick={() => handleUnload(m)}
-                  style={{
-                    background: "transparent",
-                    border: "1px solid #555",
-                    borderRadius: 3,
-                    color: "#aaa",
-                    cursor: "pointer",
-                    fontSize: 10,
-                    padding: "0 4px",
-                    lineHeight: "16px",
-                    flexShrink: 0,
-                  }}
-                  title={`Unload ${m.name || m.model_type}`}
+                  className="model-action-btn"
+                  onClick={() => handleUnload(m, type)}
+                  title={`Unload ${label}`}
                 >
-                  ✕
+                  <LucideIcon name="octagon-alert" size={14} />
                 </button>
-              )}
+              ) : canLoad ? (
+                <button
+                  className="model-action-btn"
+                  onClick={() => handleLoad(type, name)}
+                  title={`Load ${label}`}
+                >
+                  <LucideIcon name="play" size={14} />
+                </button>
+              ) : null}
             </div>
-          ))}
-        </div>
-      )}
+          );
+        })}
+      </div>
     </div>
   );
 }

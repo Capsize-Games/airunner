@@ -1,13 +1,6 @@
-import { useState, useEffect, useCallback } from "react";
-import {
-  listConversations,
-  deleteConversation,
-} from "../../api/client";
-import type {
-  Conversation,
-} from "../../types/api";
 import Spinner from "react-bootstrap/Spinner";
 import ListGroup from "react-bootstrap/ListGroup";
+import { useConversations } from "../../hooks/useConversations";
 
 // ── Chat History ──
 export function ChatHistoryPanel({
@@ -15,32 +8,7 @@ export function ChatHistoryPanel({
 }: {
   onSelectConversation: (id: number) => void;
 }) {
-  const [conversations, setConversations] = useState<Conversation[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  const refresh = useCallback(async () => {
-    try {
-      const data = await listConversations(50);
-      setConversations(data.conversations ?? []);
-    } catch {
-      // daemon not available
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    refresh();
-  }, [refresh]);
-
-  const handleDelete = async (id: number) => {
-    try {
-      await deleteConversation(id);
-      await refresh();
-    } catch {
-      // ignore
-    }
-  };
+  const { conversations, loading, remove } = useConversations();
 
   return (
     <div className="p-2">
@@ -49,9 +17,7 @@ export function ChatHistoryPanel({
         <button
           type="button"
           className="btn btn-sm btn-outline-danger"
-          onClick={() =>
-            conversations.forEach((c) => handleDelete(c.id))
-          }
+          onClick={() => conversations.forEach((c) => remove(c.id))}
         >
           Clear All
         </button>
@@ -83,12 +49,12 @@ export function ChatHistoryPanel({
                 style={{ cursor: "pointer", fontSize: "0.875rem", lineHeight: 1 }}
                 onClick={(e) => {
                   e.stopPropagation();
-                  handleDelete(c.id);
+                  remove(c.id);
                 }}
                 onKeyDown={(e) => {
                   if (e.key === "Enter" || e.key === " ") {
                     e.stopPropagation();
-                    handleDelete(c.id);
+                    remove(c.id);
                   }
                 }}
                 title="Delete"

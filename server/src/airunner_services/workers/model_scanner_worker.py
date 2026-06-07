@@ -16,22 +16,20 @@ from pathlib import Path
 from typing import List, Optional
 
 from airunner_services.contract_enums import ImageGenerator
-from airunner_services.contract_enums import SignalCode
-from airunner_services.contract_enums import StableDiffusionVersion
+from airunner_services.contract_enums import ArtVersion
 from airunner_services.database.models.ai_models import AIModels
+from airunner_services.database.session import session_scope
 from airunner_services.workers.worker import Worker
 
 # Mapping from version names to ImageGenerator categories
 VERSION_TO_CATEGORY: dict[str, str] = {
-    StableDiffusionVersion.Z_IMAGE_TURBO.value: ImageGenerator.ZIMAGE.value,
-    StableDiffusionVersion.SDXL1_0.value: ImageGenerator.STABLEDIFFUSION.value,
-    StableDiffusionVersion.SDXL_TURBO.value: ImageGenerator.STABLEDIFFUSION.value,
-    StableDiffusionVersion.SDXL_LIGHTNING.value: ImageGenerator.STABLEDIFFUSION.value,
-    StableDiffusionVersion.SDXL_HYPER.value: ImageGenerator.STABLEDIFFUSION.value,
-    StableDiffusionVersion.X4_UPSCALER.value: ImageGenerator.STABLEDIFFUSION.value,
+    ArtVersion.Z_IMAGE_TURBO.value: ImageGenerator.ZIMAGE.value,
+    ArtVersion.SDXL1_0.value: ImageGenerator.STABLEDIFFUSION.value,
+    ArtVersion.SDXL_LIGHTNING.value: ImageGenerator.STABLEDIFFUSION.value,
+    ArtVersion.SDXL_HYPER.value: ImageGenerator.STABLEDIFFUSION.value,
 }
 
-SUPPORTED_ZIMAGE_VERSIONS = {StableDiffusionVersion.Z_IMAGE_TURBO.value}
+SUPPORTED_ZIMAGE_VERSIONS = {ArtVersion.Z_IMAGE_TURBO.value}
 
 # Valid model file extensions
 MODEL_EXTENSIONS = (".ckpt", ".safetensors", ".gguf")
@@ -110,27 +108,48 @@ class ModelScannerWorker(Worker):
         )
 
     def scan_for_models(self) -> None:
-        """Scan the model directory and register found models."""
+        """Scan the model directory and sync found models to the database.
+
+        For each model found on disk, upsert (insert or update) into the
+        ``aimodels`` table matched by path.  Models no longer on disk are
+        removed separately by ``remove_missing_models``.
+        """
         self.logger.debug("Starting model scan")
         model_path = self.model_base_path
-
         if not self.running:
             return
-
         if not model_path.exists():
             self.logger.debug(f"Creating model path: {model_path}")
             model_path.mkdir(parents=True, exist_ok=True)
-
-        models = self._scan_model_directory(model_path)
+        scanned = self._scan_model_directory(model_path)
         if not self.running:
             return
-        self.logger.debug(f"Total models found: {len(models)}")
-
-        # Convert to AIModels and emit signal
-        ai_models = [self._create_ai_model(m) for m in models]
-        self.emit_signal(
-            SignalCode.AI_MODELS_SAVE_OR_UPDATE_SIGNAL, {"models": ai_models}
-        )
+        self.logger.debug("Found %d models on disk", len(scanned))
+        if not scanned:
+            return
+        try:
+            with session_scope() as session:
+                for m in scanned:
+                    ai = self._create_ai_model(m)
+                    existing = (
+                        session.query(AIModels)
+                        .filter(AIModels.path == ai.path)
+                        .first()
+                    )
+                    if existing:
+                        existing.name = ai.name
+                        existing.branch = ai.branch
+                        existing.version = ai.version
+                        existing.category = ai.category
+                        existing.pipeline_action = ai.pipeline_action
+                        existing.enabled = True
+                        existing.model_type = ai.model_type
+                        existing.is_default = ai.is_default
+                    else:
+                        session.add(ai)
+            self.logger.debug("Synced %d models to database", len(scanned))
+        except Exception:
+            self.logger.exception("Failed to sync scanned models to database")
 
     def _scan_model_directory(self, base_path: Path) -> List[ScannedModel]:
         """Scan the model directory structure.

@@ -1,5 +1,4 @@
-import { useEffect, useCallback, useState, useRef } from "react";
-import { BASE_URL } from "../../../types/api";
+import { useEffect, useCallback, useState } from "react";
 import CivitaiImage from "./CivitaiImage";
 import { startCivitaiFileDownload, cancelDownloadJob } from "../../../api/downloads";
 import { useDownloads } from "../../downloads/useDownloadState";
@@ -12,10 +11,24 @@ interface CivitaiModelDetailModalProps {
   loading?: boolean;
   baseModel?: string;
   modelType?: string;
+  onVersionChange?: (versionId: number) => void;
 }
 
 const MODAL_W = 740;
 const MODAL_H = 520;
+const _VIDEO_EXTS = [".mp4", ".webm", ".mov", ".avi"];
+
+function _isVideoUrl(url: string): boolean {
+  const clean = url.split("?")[0].toLowerCase();
+  return _VIDEO_EXTS.some((ext) => clean.endsWith(ext));
+}
+
+function _firstImageUrl(images: { url?: string }[]): string {
+  for (const img of images) {
+    if (img.url && !_isVideoUrl(img.url)) return img.url;
+  }
+  return "";
+}
 
 function stripHtml(html: string): string {
   if (typeof DOMParser !== "undefined") {
@@ -31,6 +44,7 @@ export default function CivitaiModelDetailModal({
   loading,
   baseModel: currentBaseModel,
   modelType: currentModelType,
+  onVersionChange,
 }: CivitaiModelDetailModalProps) {
   const [selectedVersionId, setSelectedVersionId] = useState<number | null>(null);
   const [selectedFileId, setSelectedFileId] = useState<number | null>(null);
@@ -43,17 +57,17 @@ export default function CivitaiModelDetailModal({
   const versions = model?.versions ?? [];
 
   useEffect(() => {
-    if (versions.length > 0) {
-      setSelectedVersionId(versions[0].id);
-      const files = versions[0].files ?? [];
-      setSelectedFileId(files.length > 0 ? files[0].id : null);
-      const images = versions[0].images ?? [];
-      setPreviewUrl(images.length > 0 ? images[0].url : "");
-      setPreviewBase64(
-        images.length > 0 ? (images[0].images_base64?.full ?? "") : "",
-      );
-    }
-  }, [versions]);
+    const v0 = model?.versions?.[0];
+    if (!v0) return;
+    setSelectedVersionId(v0.id);
+    const files = v0.files ?? [];
+    setSelectedFileId(files.length > 0 ? files[0].id : null);
+    const images = v0.images ?? [];
+    const firstUrl = _firstImageUrl(images);
+    const firstImg = images.find((img) => img.url === firstUrl);
+    setPreviewImage(firstImg);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [model?.id, model?.versions?.length]);
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
@@ -67,22 +81,6 @@ export default function CivitaiModelDetailModal({
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [handleKeyDown]);
 
-  if (loading) {
-    return (
-      <div
-        style={{
-          position: "fixed", inset: 0, background: "rgba(0,0,0,0.8)",
-          zIndex: 1100, display: "flex", alignItems: "center", justifyContent: "center",
-        }}
-        onClick={onClose}
-      >
-        <div className="spinner-border text-light" role="status">
-          <span className="visually-hidden">Loading...</span>
-        </div>
-      </div>
-    );
-  }
-
   if (!model) return null;
 
   const selectedVersion = versions.find((v) => v.id === selectedVersionId) ?? null;
@@ -93,56 +91,20 @@ export default function CivitaiModelDetailModal({
   const stats = model.stats ?? {};
   const desc = model.description ? stripHtml(model.description) : "";
 
-  // When only a small thumbnail is available (non-first versions), fetch
-  // the full-size image from the server proxy so the preview looks good.
-  const [pendingFullFetch, setPendingFullFetch] = useState<string>("");
-
-  useEffect(() => {
-    if (!pendingFullFetch) return;
-    let cancelled = false;
-    fetch(`${BASE_URL}/api/v1/downloads/civitai/image`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ url: pendingFullFetch, width: 500 }),
-    })
-      .then((r) => r.blob())
-      .then((blob) => {
-        if (cancelled) return;
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          if (!cancelled && typeof reader.result === "string") {
-            setPreviewBase64(reader.result.split(",")[1]);
-          }
-        };
-        reader.readAsDataURL(blob);
-      })
-      .catch(() => {});
-    return () => { cancelled = true; };
-  }, [pendingFullFetch]);
-
-  const bestBase64 = (img: VersionImage | undefined): string => {
-    if (!img?.images_base64) return "";
-    return img.images_base64.full
-      || img.images_base64.medium
-      || "";
-  };
-
   const setPreviewImage = (img: VersionImage | undefined) => {
     if (!img) return;
     setPreviewUrl(img.url);
-    const b64 = bestBase64(img);
-    if (b64) {
-      setPreviewBase64(b64);
-      setPendingFullFetch("");
-    } else if (img.images_base64?.small) {
-      // Show small thumbnail immediately while fetching full
-      setPreviewBase64(img.images_base64.small);
-      setPendingFullFetch(img.url);
-    } else {
-      setPreviewBase64("");
-      setPendingFullFetch(img.url);
-    }
+    const full = img.images_base64?.full || "";
+    const small = img.images_base64?.small || "";
+    setPreviewBase64(full || small);
   };
+
+  // Derive live base64 for the current preview URL from up-to-date model data,
+  // so the large preview updates automatically when streaming thumbnails arrive.
+  const livePreviewImg = (selectedVersion?.images ?? []).find((img) => img.url === previewUrl);
+  const livePreviewBase64 = livePreviewImg?.images_base64?.full
+    || livePreviewImg?.images_base64?.small
+    || previewBase64;
 
   const handleVersionChange = (vid: number) => {
     setSelectedVersionId(vid);
@@ -150,7 +112,11 @@ export default function CivitaiModelDetailModal({
     const files = v?.files ?? [];
     setSelectedFileId(files.length > 0 ? files[0].id : null);
     const images = v?.images ?? [];
-    setPreviewImage(images[0]);
+    const firstUrl = _firstImageUrl(images);
+    const firstImg = images.find((img) => img.url === firstUrl);
+    setPreviewImage(firstImg);
+    const needsThumbnails = images.some((img) => !img.images_base64?.small);
+    if (needsThumbnails) onVersionChange?.(vid);
   };
 
   const handleThumbnailClick = (img: VersionImage) => {
@@ -235,11 +201,11 @@ export default function CivitaiModelDetailModal({
               background: "rgba(0,0,0,0.2)", borderRadius: 4, minHeight: 0,
             }}
           >
-            {previewUrl || previewBase64 ? (
+            {previewUrl || livePreviewBase64 ? (
               <CivitaiImage
                 url={previewUrl}
                 alt=""
-                base64={previewBase64}
+                base64={livePreviewBase64}
                 width={400}
                 style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain", borderRadius: 4 }}
               />

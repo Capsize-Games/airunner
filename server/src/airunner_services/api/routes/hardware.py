@@ -4,10 +4,12 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from typing import Any
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from pydantic import BaseModel, Field
 
+from airunner_services.api.routes.events import _rpc_register
 from airunner_services.model_management.hardware_profiler import (
     HardwareProfiler,
 )
@@ -46,6 +48,17 @@ def _build_profile() -> dict:
         "platform": profile.platform,
         "num_gpus": profile.num_gpus,
     }
+
+
+@_rpc_register("GET", "/api/v1/daemon/hardware")
+async def _rpc_hardware_profile(body: dict, **kw: Any) -> dict[str, Any]:
+    """Return the current hardware profile."""
+    try:
+        profile = _build_profile()
+        profile.pop("type", None)
+        return {"status": 200, "body": profile}
+    except Exception as exc:
+        return {"status": 500, "body": {"error": str(exc)}}
 
 
 @router.websocket("/hardware/ws")

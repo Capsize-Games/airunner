@@ -2,50 +2,83 @@
 
 from __future__ import annotations
 
+import logging
 from typing import Any
 
 from airunner_services.api.routes.events import _rpc_register
 
+logger = logging.getLogger(__name__)
+
+
+def _fetch_art_options_data(session: Any):
+    from airunner_services.database.models.ai_models import AIModels
+    from airunner_services.database.models.schedulers import Schedulers
+    from airunner_services.contract_enums import GeneratorSection
+
+    allowed_pipelines = {
+        GeneratorSection.TXT2IMG.value,
+        GeneratorSection.INPAINT.value,
+    }
+    models_by_version: dict[str, list[dict[str, str]]] = {}
+    for m in (
+        session.query(AIModels)
+        .filter(AIModels.enabled.is_(True))
+        .filter(AIModels.pipeline_action.in_(allowed_pipelines))
+        .all()
+    ):
+        ver = m.version or ""
+        if ver:
+            models_by_version.setdefault(ver, []).append(
+                {"label": m.name or m.path, "value": m.path}
+            )
+    # Build per-version scheduler lists
+    all_schedulers = session.query(Schedulers).all()
+    schedulers_by_version: dict[str, list[dict[str, str]]] = {}
+    for r in all_schedulers:
+        if not r.display_name:
+            continue
+        ver = r.model_version or ""
+        schedulers_by_version.setdefault(ver, []).append(
+            {"label": r.display_name, "value": r.display_name}
+        )
+    return schedulers_by_version, models_by_version
+
+
+def _build_versions(
+    models_by_version: dict[str, list[dict[str, str]]],
+    schedulers_by_version: dict[str, list[dict[str, str]]],
+) -> list[dict[str, Any]]:
+    return [
+        {
+            "name": ver,
+            "models": model_list,
+            "schedulers": schedulers_by_version.get(ver, []),
+        }
+        for ver, model_list in models_by_version.items()
+        if model_list
+    ]
+
 
 @_rpc_register("GET", "/api/v1/art/options")
 async def _rpc_art_options(body: dict, **kw: Any) -> dict[str, Any]:
-    """Return art model options (versions, precisions)."""
+    """Return art model options (versions, models per version, schedulers)."""
     try:
-        from airunner_services.model_management.model_registry import (
-            ModelRegistry,
-        )
+        from airunner_services.database.session import session_scope
 
-        registry = ModelRegistry()
-        versions: list[dict[str, Any]] = []
-        for model_id, spec in registry.models.items():
-            if (
-                getattr(spec, "model_type", None)
-                and getattr(spec.model_type, "value", None) == "sd"
-            ):
-                versions.append(
-                    {
-                        "name": spec.name or model_id,
-                        "models": [
-                            {
-                                "label": m.get("name", m.get("path", "")),
-                                "value": m.get("path", ""),
-                            }
-                            for m in getattr(spec, "files", []) or []
-                        ],
-                        "schedulers": [],
-                    }
-                )
+        with session_scope() as session:
+            schedulers_by_version, models_by_version = _fetch_art_options_data(
+                session
+            )
+        versions = _build_versions(models_by_version, schedulers_by_version)
         return {
             "status": 200,
-            "body": {
-                "versions": versions,
-                "precisions": [
-                    {"label": "FP16", "value": "fp16"},
-                    {"label": "FP32", "value": "fp32"},
-                ],
-            },
+            "body": {"versions": versions, "precisions": []},
         }
-    except Exception:
+    except Exception as exc:
+        logger.exception(
+            "Failed to fetch art model options: %s",
+            exc,
+        )
         return {"status": 200, "body": {"versions": [], "precisions": []}}
 
 

@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import {
   getSingleton,
   updateSingleton,
+  getArtModelOptions,
 } from "../../api/client";
 import type { ArtOptionsResponse } from "../../api/client";
 import { useEventBus } from "../../features/events/useEventBus";
@@ -9,7 +10,6 @@ import { EVENT_MODEL_STATUS } from "../../features/events/types";
 import VersionSelector from "./art-model/VersionSelector";
 import ModelSelector from "./art-model/ModelSelector";
 import SchedulerSelector from "./art-model/SchedulerSelector";
-import PrecisionSelector from "./art-model/PrecisionSelector";
 import SeedControls from "./art-model/SeedControls";
 import VRAMEstimate from "./art-model/VRAMEstimate";
 import ArtModelSliders from "./art-model/ArtModelSliders";
@@ -22,7 +22,6 @@ export default function ArtModelPanel() {
   const [version, setVersion] = useState("");
   const [modelPath, setModelPath] = useState("");
   const [scheduler, setScheduler] = useState("");
-  const [precision, setPrecision] = useState("");
 
   const [options, setOptions] = useState<ArtOptionsResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -64,9 +63,7 @@ export default function ArtModelPanel() {
   useEffect(() => {
     (async () => {
       try {
-        const opts = await import("../../api/client").then(
-          (m) => m.getArtModelOptions(),
-        );
+        const opts = await getArtModelOptions();
         setOptions(opts);
       } catch { /* */ }
 
@@ -76,9 +73,9 @@ export default function ArtModelPanel() {
       try {
         const r = await getSingleton("GeneratorSettings");
         const savedVersion = String(r.version ?? "");
-        const savedModelPath = String(r.model_path ?? "");
+        // DB column is custom_path (not model_path)
+        const savedModelPath = String(r.custom_path ?? "");
         const savedScheduler = String(r.scheduler ?? "");
-        const savedDtype = String(r.dtype ?? "");
 
         // Server returned values — use them
         if (savedVersion) {
@@ -102,9 +99,7 @@ export default function ArtModelPanel() {
           const fs = _ls("airunner_art_scheduler");
           if (fs) setScheduler(fs);
         }
-        if (savedDtype) {
-          setPrecision(savedDtype);
-        }
+
       } catch {
         // Server unavailable — fall back to localStorage
         const fv = _ls("airunner_art_version");
@@ -114,13 +109,21 @@ export default function ArtModelPanel() {
         if (fm) setModelPath(fm);
         if (fs) setScheduler(fs);
       }
-      // Seed is always restored from localStorage to survive server restarts
+      // Seed is always restored from localStorage to survive server restarts.
+      // -1 is the sentinel for "randomize each run" — generate a fresh number
+      // so the field always shows a real seed value, never -1.
       try {
         const seedVal = Number(
           (() => { try { return localStorage.getItem("airunner_seed") || "0"; } catch { return "0"; } })(),
         );
-        setSeed(seedVal);
-        setSeedRandomized(seedVal === -1);
+        if (seedVal === -1) {
+          const freshSeed = Math.floor(Math.random() * 2147483647) + 1;
+          setSeed(freshSeed);
+          setSeedRandomized(true);
+        } else {
+          setSeed(seedVal);
+          setSeedRandomized(false);
+        }
       } catch { /* */ }
 
       try {
@@ -138,9 +141,7 @@ export default function ArtModelPanel() {
   useEventBus([EVENT_MODEL_STATUS], () => {
     (async () => {
       try {
-        const opts = await import("../../api/client").then(
-          (m) => m.getArtModelOptions(),
-        );
+        const opts = await getArtModelOptions();
         setOptions(opts);
       } catch { /* */ }
     })();
@@ -153,13 +154,12 @@ export default function ArtModelPanel() {
   const versionInfo = options?.versions?.find((v) => v.name === version);
   const availableModels = versionInfo?.models ?? [];
   const availableSchedulers = versionInfo?.schedulers ?? [];
-  const precisions = options?.precisions ?? [];
 
   const handleVersionChange = (v: string) => {
     setVersion(v);
     setModelPath("");
     setScheduler("");
-    persist({ version: v, model_path: "", scheduler: "" });
+    persist({ version: v, custom_path: "", scheduler: "" });
     try { localStorage.setItem("airunner_art_version", v); } catch {}
     window.dispatchEvent(
       new CustomEvent("art-version-changed", { detail: v }),
@@ -168,7 +168,7 @@ export default function ArtModelPanel() {
 
   const handleModelChange = (m: string) => {
     setModelPath(m);
-    persist({ model_path: m });
+    persist({ custom_path: m });
     try { localStorage.setItem("airunner_art_model", m); } catch {}
     window.dispatchEvent(
       new CustomEvent("art-model-changed", { detail: m }),
@@ -208,7 +208,7 @@ export default function ArtModelPanel() {
         )}
       </div>
 
-      {/* 2-column grid: Version, Model, Scheduler, Precision */}
+      {/* Version + Model (2-col), then Scheduler (full-width) */}
       <div className="row g-1 mb-1">
         <div className="col-6">
           <VersionSelector
@@ -227,25 +227,15 @@ export default function ArtModelPanel() {
             onChange={handleModelChange}
           />
         </div>
-        <div className="col-6">
+        <div className="col-12">
           <SchedulerSelector
             schedulers={availableSchedulers}
             value={scheduler}
             loading={loading}
+            hasVersion={!!version}
             onChange={(v) => {
               setScheduler(v);
               persist({ scheduler: v });
-            }}
-          />
-        </div>
-        <div className="col-6">
-          <PrecisionSelector
-            precisions={precisions}
-            value={precision}
-            loading={loading}
-            onChange={(v) => {
-              setPrecision(v);
-              persist({ dtype: v });
             }}
           />
         </div>

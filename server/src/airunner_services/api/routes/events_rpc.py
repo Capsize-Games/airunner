@@ -17,6 +17,7 @@ EVENT_DOCUMENTS = "documents"
 EVENT_MODEL_STATUS = "model_status"
 EVENT_INDEX_PROGRESS = "index_progress"
 EVENT_DOWNLOADS = "downloads"
+EVENT_CIVITAI_THUMBNAIL = "civitai_thumbnail"
 
 ALL_EVENTS = frozenset(
     {
@@ -27,6 +28,7 @@ ALL_EVENTS = frozenset(
         EVENT_MODEL_STATUS,
         EVENT_INDEX_PROGRESS,
         EVENT_DOWNLOADS,
+        EVENT_CIVITAI_THUMBNAIL,
     }
 )
 

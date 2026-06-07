@@ -48,3 +48,15 @@ export async function unloadModel(
     { model_id: modelId, model_type: modelType },
   );
 }
+
+export async function loadModel(
+  modelId: string,
+  modelType: string,
+): Promise<{ status: string; message: string }> {
+  const { request } = await import("./client-base");
+  return request<{ status: string; message: string }>(
+    "POST",
+    "/api/v1/models/load",
+    { model_id: modelId, model_type: modelType },
+  );
+}
