@@ -41,10 +41,7 @@ let _connected = false;
 let _reconnectTimer: ReturnType<typeof setTimeout> | null = null;
 let _mountCount = 0;
 let _connecting = false;
-
-// Establish the shared WebSocket immediately on module load.
-_mountCount++;
-_connect();
+let _connGen = 0;
 
 // Event callbacks: event type → Set of callbacks
 const _eventCallbacks = new Map<string, Set<EventBusCallback>>();
@@ -52,16 +49,15 @@ const _eventCallbacks = new Map<string, Set<EventBusCallback>>();
 // Subscribed event types on the WS
 const _subscribedEvents = new Set<string>();
 
-// Connection generation — incremented each time we create a fresh socket.
-// Stale generations are ignored by onclose/onerror to prevent race
-// conditions during StrictMode double-mount and rapid reconnect cycles.
-let _connGen = 0;
-
 // Pending RPC requests: request ID → PendingRpc
 const _pendingRpc = new Map<string, PendingRpc>();
 
 // Messages queued while WS is connecting
 const _sendQueue: Record<string, unknown>[] = [];
+
+// Establish the shared WebSocket immediately on module load.
+_mountCount++;
+_connect();
 
 // ---------------------------------------------------------------------------
 // Internal helpers
