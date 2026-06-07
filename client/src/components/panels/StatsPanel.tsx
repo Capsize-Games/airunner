@@ -239,14 +239,14 @@ export default function StatsPanel() {
                 />
                 {label}: {name || "none"}
               </span>
-              {status === "loading" ? (
+              {status === "loading" || (status !== "loaded" && loadingRef.current.has(type)) ? (
                 <span style={{ display: "flex", opacity: 0.5 }}>
                   <LucideIcon name="loader" size={14} />
                 </span>
-              ) : m?.can_unload || loadingRef.current.has(type) ? (
+              ) : m?.can_unload ? (
                 <button
                   className="model-action-btn"
-                  onClick={() => m && handleUnload(m)}
+                  onClick={() => handleUnload(m)}
                   title={`Unload ${label}`}
                 >
                   <LucideIcon name="octagon-alert" size={14} />
