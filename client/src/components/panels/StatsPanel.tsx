@@ -120,10 +120,11 @@ export default function StatsPanel() {
     };
   }, [fetchHw]);
 
-  const handleUnload = (m: ActiveModelInfo) => {
+  const handleUnload = (m: ActiveModelInfo, slotType: string) => {
     const key = m.model_id || m.model_type;
     if (unloadingRef.current.has(key)) return;
     unloadingRef.current.add(key);
+    loadingRef.current.delete(slotType);
     unloadModel(m.model_id, m.model_type).catch(() => {});
     setTimeout(() => unloadingRef.current.delete(key), 2000);
   };
@@ -246,7 +247,7 @@ export default function StatsPanel() {
               ) : m?.can_unload ? (
                 <button
                   className="model-action-btn"
-                  onClick={() => handleUnload(m)}
+                  onClick={() => handleUnload(m, type)}
                   title={`Unload ${label}`}
                 >
                   <LucideIcon name="octagon-alert" size={14} />
