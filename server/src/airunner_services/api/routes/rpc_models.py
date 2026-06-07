@@ -86,3 +86,39 @@ async def _rpc_models_unload(body: dict, **kwargs: Any) -> dict[str, Any]:
         )
         return {"status": 200, "body": {"status": "accepted"}}
     return {"status": 200, "body": {"status": "accepted"}}
+
+
+@_rpc_register("POST", "/api/v1/models/load")
+async def _rpc_models_load(body: dict, **kwargs: Any) -> dict[str, Any]:
+    """Request one model to be loaded."""
+    from airunner_services.contract_enums import SignalCode
+    from airunner_services.utils.application.signal_mediator import (
+        SignalMediator,
+    )
+
+    model_type = str(body.get("model_type", "")).lower()
+    if "llm" in model_type:
+        SignalMediator().emit_signal(
+            SignalCode.LLM_LOAD_SIGNAL,
+            {"model_path": body.get("model_id", "")},
+        )
+        return {"status": 200, "body": {"status": "accepted"}}
+    if "art" in model_type:
+        SignalMediator().emit_signal(
+            SignalCode.SD_LOAD_SIGNAL,
+            {"model_path": body.get("model_id", "")},
+        )
+        return {"status": 200, "body": {"status": "accepted"}}
+    if "stt" in model_type:
+        SignalMediator().emit_signal(
+            SignalCode.STT_LOAD_SIGNAL,
+            {},
+        )
+        return {"status": 200, "body": {"status": "accepted"}}
+    if "tts" in model_type:
+        SignalMediator().emit_signal(
+            SignalCode.TTS_ENABLE_SIGNAL,
+            {},
+        )
+        return {"status": 200, "body": {"status": "accepted"}}
+    return {"status": 200, "body": {"status": "accepted"}}

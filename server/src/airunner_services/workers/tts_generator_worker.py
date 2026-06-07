@@ -37,6 +37,7 @@ SignalCode = signal_code_proxy(
         "TTS_GENERATOR_WORKER_ADD_TO_STREAM_SIGNAL": (
             "TTSGeneratorWorker_add_to_stream_signal"
         ),
+        "TTS_ENABLE_SIGNAL": "tts_enable_signal",
     }
 )
 
@@ -61,6 +62,9 @@ class TTSGeneratorWorker(Worker):
         self._sentence_buffer = []
         self._active_request_id: Optional[str] = None
         self._reset_llm_stream_state()
+        self.signal_handlers = {
+            SignalCode.TTS_ENABLE_SIGNAL: self.on_enable_tts_signal,
+        }
         super().__init__()
 
     def _reset_llm_stream_state(self) -> None:

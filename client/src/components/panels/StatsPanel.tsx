@@ -1,16 +1,91 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import ProgressBar from "react-bootstrap/ProgressBar";
-import { getHardwareProfile, unloadModel } from "../../api/client";
+import {
+  getHardwareProfile,
+  unloadModel,
+  loadModel,
+  getSingleton,
+} from "../../api/client";
 import type { HardwareProfile } from "../../types/api";
 import type { ActiveModelInfo } from "../../api/client";
-import { useEventBus } from "../../features/events/useEventBus";
-import { EVENT_MODEL_STATUS } from "../../features/events/types";
+import LucideIcon from "../shared/LucideIcon";
+
+interface ModelSlot {
+  type: string;
+  label: string;
+  name: string;
+  /** If true, the load/play button is shown. */
+  canLoad: boolean;
+}
+
+const MODEL_SLOTS: { type: string; label: string }[] = [
+  { type: "llm", label: "LLM" },
+  { type: "art", label: "Art" },
+  { type: "stt", label: "STT" },
+  { type: "tts", label: "TTS" },
+];
 
 export default function StatsPanel() {
   const [hw, setHw] = useState<HardwareProfile | null>(null);
   const [models, setModels] = useState<ActiveModelInfo[]>([]);
+  const [slots, setSlots] = useState<ModelSlot[]>([]);
   const mountedRef = useRef(true);
   const unloadingRef = useRef<Set<string>>(new Set());
+
+  // Fetch configured model names from settings once on mount.
+  useEffect(() => {
+    (async () => {
+      try {
+        const [llmRec, artRec, pathRec, espeakRec, openvoiceRec] =
+          await Promise.all([
+            getSingleton("LLMGeneratorSettings").catch(() => null),
+            getSingleton("GeneratorSettings").catch(() => null),
+            getSingleton("PathSettings").catch(() => null),
+            getSingleton("EspeakSettings").catch(() => null),
+            getSingleton("OpenVoiceSettings").catch(() => null),
+          ]);
+
+        // ── LLM ──────────────────────────────────────────────────────
+        const llmName = String(llmRec?.model_path ?? "");
+
+        // ── Art ──────────────────────────────────────────────────────
+        const artVersion = String(artRec?.version ?? "");
+        const artModel = String(artRec?.custom_path ?? "");
+        const artRawName = artModel.split("/").pop() || artModel.split("\\").pop() || artModel;
+        const artModelName = artRawName.replace(/\.[^.]+$/, "");
+        const artName = artVersion + (artModelName ? `/${artModelName}` : "");
+
+        // ── STT ──────────────────────────────────────────────────────
+        const sttRaw = String(pathRec?.stt_model_path ?? "");
+        const sttBase = sttRaw.split("/").pop() || sttRaw.split("\\").pop() || "";
+        const sttName = sttBase && sttBase !== "stt" ? sttBase : "whisper";
+
+        // ── TTS ──────────────────────────────────────────────────────
+        // If OpenVoice has a non-default voice, show it; else espeak.
+        const ovVoice = String(openvoiceRec?.voice ?? "");
+        const ovRef = String(openvoiceRec?.reference_speaker_path ?? "");
+        const espeakVoice = String(espeakRec?.voice ?? "english (america)");
+        const useOpenVoice = !!(ovVoice !== "default" || (ovRef && ovRef !== "default"));
+        const ttsName = useOpenVoice
+          ? `openvoice${ovRef && ovRef !== "default" ? ` - ${ovRef}` : ""}`
+          : `espeak - ${espeakVoice}`;
+
+        setSlots([
+          { type: "llm", label: "LLM", name: llmName, canLoad: !!llmName },
+          { type: "art", label: "Art", name: artName || "none", canLoad: !!artModel },
+          { type: "stt", label: "STT", name: sttName || "none", canLoad: !!sttName },
+          {
+            type: "tts",
+            label: "TTS",
+            name: ttsName,
+            canLoad: useOpenVoice,
+          },
+        ]);
+      } catch {
+        setSlots(MODEL_SLOTS.map((s) => ({ ...s, name: "", canLoad: false })));
+      }
+    })();
+  }, []);
 
   const fetchActiveModels = useCallback(async () => {
     try {
@@ -22,7 +97,6 @@ export default function StatsPanel() {
     }
   }, []);
 
-  // Poll hardware profile via shared RPC channel every 5 seconds.
   const fetchHw = useCallback(async () => {
     try {
       const data = await getHardwareProfile();
@@ -38,26 +112,34 @@ export default function StatsPanel() {
   useEffect(() => {
     mountedRef.current = true;
     fetchHw();
-    const id = setInterval(fetchHw, 5000);
+    const id = setInterval(fetchHw, 100);
     return () => {
       mountedRef.current = false;
       clearInterval(id);
     };
   }, [fetchHw]);
 
-  // Listen for live model-status events via unified event bus
-  useEventBus([EVENT_MODEL_STATUS], () => {
-    fetchActiveModels();
-  });
-
   const handleUnload = (m: ActiveModelInfo) => {
     const key = m.model_id || m.model_type;
     if (unloadingRef.current.has(key)) return;
     unloadingRef.current.add(key);
     unloadModel(m.model_id, m.model_type).catch(() => {});
-    // Remove from unloading set after a short delay so repeated clicks
-    // on the same model are still gated.
     setTimeout(() => unloadingRef.current.delete(key), 2000);
+  };
+
+  const handleLoad = (type: string, id: string) => {
+    loadModel(id, type).catch(() => {});
+  };
+
+  const findModel = (type: string): ActiveModelInfo | undefined =>
+    models.find((m) => m.model_type.toLowerCase().startsWith(type));
+
+  const statusColor = (status: string) => {
+    switch (status) {
+      case "loaded": return "var(--bs-success)";
+      case "loading": return "var(--bs-warning)";
+      default: return "var(--bs-danger)";
+    }
   };
 
   if (!hw) {
@@ -127,60 +209,73 @@ export default function StatsPanel() {
         </small>
       </div>
 
-      {/* Loaded models list */}
-      {models.length > 0 && (
-        <div className="mt-2">
-          <small className="text-muted d-block mb-1">
-            Loaded Models
-          </small>
-          {models.map((m, index) => (
+      {/* Models list */}
+      <div className="mt-2">
+        <small className="text-muted d-block mb-1">
+          Models
+        </small>
+        {slots.map(({ type, label, name, canLoad }) => {
+          const m = findModel(type);
+          const status = m?.status ?? "unloaded";
+          return (
             <div
-              key={m.model_id ?? `model-${index}`}
+              key={type}
               className="d-flex align-items-center justify-content-between mb-1"
               style={{ fontSize: "11px" }}
             >
-              <span className="text-truncate" style={{ maxWidth: 140 }}>
+              <span className="text-truncate" style={{ maxWidth: "70%" }}>
                 <span
                   style={{
                     display: "inline-block",
                     width: 8,
                     height: 8,
                     borderRadius: "50%",
-                    backgroundColor:
-                      m.status === "loaded"
-                        ? "var(--bs-success)"
-                        : m.status === "loading"
-                          ? "var(--bs-warning)"
-                          : "var(--bs-danger)",
+                    backgroundColor: statusColor(status),
                     marginRight: 4,
                     flexShrink: 0,
                   }}
                 />
-                {m.name || m.model_type}
+                {label}: {name || "none"}
               </span>
-              {m.can_unload && (
+              {m?.can_unload ? (
                 <button
                   onClick={() => handleUnload(m)}
                   style={{
                     background: "transparent",
-                    border: "1px solid #555",
-                    borderRadius: 3,
+                    border: "none",
                     color: "#aaa",
                     cursor: "pointer",
-                    fontSize: 10,
-                    padding: "0 4px",
-                    lineHeight: "16px",
+                    padding: 0,
+                    display: "flex",
+                    alignItems: "center",
                     flexShrink: 0,
                   }}
-                  title={`Unload ${m.name || m.model_type}`}
+                  title={`Unload ${label}`}
                 >
-                  ✕
+                  <LucideIcon name="octagon-alert" size={14} />
                 </button>
-              )}
+              ) : canLoad ? (
+                <button
+                  onClick={() => handleLoad(type, name)}
+                  style={{
+                    background: "transparent",
+                    border: "none",
+                    color: "#aaa",
+                    cursor: "pointer",
+                    padding: 0,
+                    display: "flex",
+                    alignItems: "center",
+                    flexShrink: 0,
+                  }}
+                  title={`Load ${label}`}
+                >
+                  <LucideIcon name="play" size={14} />
+                </button>
+              ) : null}
             </div>
-          ))}
-        </div>
-      )}
+          );
+        })}
+      </div>
     </div>
   );
 }

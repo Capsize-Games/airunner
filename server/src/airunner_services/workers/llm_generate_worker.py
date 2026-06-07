@@ -30,6 +30,7 @@ SignalCode = signal_code_proxy(
         ),
         "LLM_CLEAR_HISTORY_SIGNAL": ("llm_clear_history_signal"),
         "LLM_UNLOAD_SIGNAL": "llm_unload_signal",
+        "LLM_LOAD_SIGNAL": "llm_load_signal",
         "RAG_INDEX_ALL_DOCUMENTS": ("rag_index_all_documents_signal"),
         "RAG_INDEX_SELECTED_DOCUMENTS": (
             "rag_index_selected_documents_signal"
@@ -60,6 +61,9 @@ class LLMGenerateWorker(
             ),
             SignalCode.LLM_UNLOAD_SIGNAL: (
                 self.on_llm_on_unload_signal
+            ),
+            SignalCode.LLM_LOAD_SIGNAL: (
+                self.on_llm_load_model_signal
             ),
             SignalCode.RAG_INDEX_ALL_DOCUMENTS: (
                 self.on_rag_index_all_documents_signal
@@ -571,8 +575,7 @@ class LLMGenerateWorker(
     def _load_llm(self, data: Optional[Dict] = None) -> None:
         """Load the LLM model and execute an optional callback."""
         data = data or {}
-        if self._model_manager is not None:
-            self._model_manager.load()
+        self.model_manager.load()
         callback = data.get("callback", None)
         if callback:
             callback(data)
