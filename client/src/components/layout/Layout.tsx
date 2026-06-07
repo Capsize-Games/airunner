@@ -53,6 +53,8 @@ interface LayoutProps {
   onSelectConversation: (id: number) => void;
   showCacheDebug: boolean;
   onToggleCacheDebug: () => void;
+  /** Slot for extension-provided UI (e.g. account menu button). */
+  bottomBarSlot?: React.ReactNode;
 }
 
 function saveNum(key: string, val: number) {
@@ -201,6 +203,7 @@ export default function Layout({
   onSelectConversation,
   showCacheDebug,
   onToggleCacheDebug,
+  bottomBarSlot,
 }: LayoutProps) {
   const panelsRef = useRef<HTMLDivElement>(null);
   const [panelsWidth, setPanelsWidth] = useState(0);
@@ -342,6 +345,7 @@ export default function Layout({
           onLeftPanel={onLeftPanel}
           onToggleTts={onToggleTts}
           onToggleStt={onToggleStt}
+          bottomSlot={bottomBarSlot}
         />
 
         {/* ── Panels container ── */}

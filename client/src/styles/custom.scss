@@ -221,6 +221,62 @@ html, body, #root {
   margin: 4px 0;
 }
 
+/* -- Account menu (extension slot) -- */
+.account-menu {
+  position: fixed;
+  bottom: 70px;
+  left: 5px;
+  background: #1a1a1a;
+  border: 1px solid #333;
+  border-radius: 8px;
+  padding: 4px 0;
+  min-width: 180px;
+  z-index: 1000;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+}
+.menu-item {
+  all: unset !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+  width: 100% !important;
+  padding: 8px 16px !important;
+  cursor: pointer !important;
+  font-size: 14px !important;
+  color: #ccc !important;
+  box-sizing: border-box !important;
+  background: transparent !important;
+  border: none !important;
+  outline: none !important;
+  line-height: 1.4 !important;
+}
+.menu-item:hover { background: #2a2a2a !important; }
+.menu-item-danger { color: #e55 !important; }
+.menu-item-danger:hover { background: #3a1a1a !important; }
+.menu-item svg { width: 16px; height: 16px; display: block; }
+.menu-item-danger svg { color: #e55; }
+.menu-divider { border-top: 1px solid #333; margin: 4px 0; }
+.modal-backdrop-placeholder {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+.modal-content-placeholder {
+  background: #222;
+  border-radius: 8px;
+  padding: 32px;
+  min-width: 300px;
+}
+.modal-close-btn {
+  margin-top: 16px;
+  padding: 8px 24px;
+  cursor: pointer;
+}
+
 /* -- Panels -- */
 .collapsible-panel {
   width: var(--panel-width); flex-shrink: 0;

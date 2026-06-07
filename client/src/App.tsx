@@ -8,6 +8,7 @@ import { useLayoutPrefs, type PanelId } from "./hooks/useLayoutPrefs";
 import {
   extensionRouteElements,
   extensionProviders,
+  extensionBottomBarItems,
 } from "virtual:extensions";
 
 const CacheDebugPanel = lazy(
@@ -90,6 +91,7 @@ export default function App() {
               onSelectConversation={handleSelectConversation}
               showCacheDebug={showCacheDebug}
               onToggleCacheDebug={handleToggleCacheDebug}
+              bottomBarSlot={extensionBottomBarItems}
             >
               {showChat && <ChatView conversationId={conversationId} />}
             </Layout>

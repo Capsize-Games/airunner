@@ -20,4 +20,9 @@ declare module "virtual:extensions" {
 
   /** Provider components registered by enabled extensions. */
   export const extensionProviders: FC<{ children: ReactNode }>[];
+
+  /**
+   * ReactNode(s) rendered at the bottom of the left icon bar.
+   */
+  export const extensionBottomBarItems: ReactNode;
 }

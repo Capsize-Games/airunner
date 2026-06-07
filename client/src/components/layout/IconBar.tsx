@@ -19,6 +19,7 @@ export function LeftIconBar({
   onLeftPanel,
   onToggleTts,
   onToggleStt,
+  bottomSlot,
 }: {
   showChat: boolean;
   leftPanel: PanelId | null;
@@ -28,6 +29,7 @@ export function LeftIconBar({
   onLeftPanel: (id: PanelId) => void;
   onToggleTts: () => void;
   onToggleStt: () => void;
+  bottomSlot?: React.ReactNode;
 }) {
   const active = (id: PanelId, panel: PanelId | null) =>
     panel === id ? "active" : "";
@@ -78,6 +80,7 @@ export function LeftIconBar({
       >
         <LucideIcon name="mic" />
       </button>
+      {bottomSlot}
     </div>
   );
 }

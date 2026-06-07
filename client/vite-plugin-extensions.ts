@@ -99,15 +99,35 @@ export function extensionLoaderPlugin(): Plugin {
           );
           providers.push(`Ext${i}Provider`);
         }
+
+        const bottomBarPath = path.join(clientDir, "BottomBar.tsx");
+        if (fs.existsSync(bottomBarPath)) {
+          imports.push(
+            `import { BottomBar as Ext${i}BottomBar } from "@extensions/${name}/client/BottomBar";`,
+          );
+        }
       });
+
+      const bottomBarName =
+        extNames.length > 0
+          ? extNames
+              .map(
+                (_, i) =>
+                  `Ext${i}BottomBar !== undefined ? /* @__PURE__ */React.createElement(Ext${i}BottomBar) : null`,
+              )
+              .filter(Boolean)
+              .join("")
+          : "null";
 
       const source = [
         'import { Route } from "react-router-dom";',
+        'import React from "react";',
         "",
         imports.join("\n"),
         "",
         `export const extensionRouteElements = [${routeElements.join(", ")}];`,
         `export const extensionProviders = [${providers.join(", ")}];`,
+        `export const extensionBottomBarItems = ${bottomBarName};`,
       ].join("\n");
 
       return source;
