@@ -51,8 +51,6 @@ export default function App() {
     setTtsOn,
     sttOn,
     setSttOn,
-    leftPanel,
-    setLeftPanel,
     rightPanel,
     setRightPanel,
     conversationId,
@@ -104,10 +102,6 @@ export default function App() {
           path="/"
           element={
             <Layout
-              leftPanel={leftPanel}
-              onLeftPanel={(id: PanelId) =>
-                setLeftPanel(leftPanel === id ? null : id)
-              }
               rightPanel={rightPanel}
               onRightPanel={(id: PanelId) =>
                 setRightPanel(rightPanel === id ? null : id)
@@ -128,13 +122,19 @@ export default function App() {
               onToggleStats={handleToggleStats}
               bottomBarSlot={extensionBottomBarItems}
             >
-              {showChat && <ChatView conversationId={conversationId} />}
+              {showChat && <ChatView
+                conversationId={conversationId}
+                onSelectConversation={handleSelectConversation}
+              />}
             </Layout>
           }
         />
         <Route
           path="/chat"
-          element={<ChatView conversationId={conversationId} />}
+          element={<ChatView
+            conversationId={conversationId}
+            onSelectConversation={handleSelectConversation}
+          />}
         />
         <Route path="/art" element={<ArtView />} />
         <Route

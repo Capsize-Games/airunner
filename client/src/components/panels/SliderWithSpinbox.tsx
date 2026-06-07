@@ -11,8 +11,12 @@ interface SliderWithSpinboxProps {
   displayAsFloat?: boolean;
   /** Default value for the reset button. When not set, no reset button is shown. */
   defaultValue?: number;
+  /** Fixed pixel width for the label column so sibling sliders align. */
+  labelWidth?: number;
   onChange: (value: number) => void;
 }
+
+const ITEM_H = 30;
 
 export default function SliderWithSpinbox({
   label,
@@ -22,6 +26,7 @@ export default function SliderWithSpinbox({
   step,
   displayAsFloat = false,
   defaultValue,
+  labelWidth,
   onChange,
 }: SliderWithSpinboxProps) {
   const [hovered, setHovered] = useState(false);
@@ -34,28 +39,74 @@ export default function SliderWithSpinbox({
 
   const inputValue = draftText !== null ? draftText : displayValue;
 
+  const borderColor = "#444";
+  const bgColor = "#1a1a2e";
+
   return (
-    <Form.Group className="flex-fill">
-      <Form.Label className="small" style={{ color: "var(--theme-text-secondary)" }}>
-        {label}
-      </Form.Label>
-      <div className="d-flex gap-2 align-items-center">
-        <Form.Range
-          className="flex-grow-1"
-          min={min}
-          max={max}
-          step={step}
-          value={value}
-          onChange={(e) => onChange(Number(e.target.value))}
-        />
-        <div style={{ display: "flex", flexShrink: 0 }}>
+    <div className="d-flex align-items-center" style={{ height: ITEM_H }}>
+        {/* Label — attached left */}
+        <span
+          style={{
+            background: bgColor,
+            border: `1px solid ${borderColor}`,
+            borderTopLeftRadius: 4,
+            borderBottomLeftRadius: 4,
+            borderTopRightRadius: 0,
+            borderBottomRightRadius: 0,
+            padding: "0 6px",
+            fontSize: 11,
+            color: "var(--theme-text-secondary)",
+            lineHeight: `${ITEM_H}px`,
+            height: ITEM_H,
+            flexShrink: 0,
+            whiteSpace: "nowrap",
+            boxSizing: "border-box",
+            ...(labelWidth !== undefined && { width: labelWidth, minWidth: labelWidth }),
+          }}
+        >
+          {label}
+        </span>
+
+        {/* Range slider — attached middle */}
+        <div
+          style={{
+            flex: 1,
+            height: ITEM_H,
+            border: `1px solid ${borderColor}`,
+            marginLeft: -1,
+            display: "flex",
+            alignItems: "center",
+            padding: "0 6px",
+            boxSizing: "border-box",
+            background: bgColor,
+          }}
+        >
+          <Form.Range
+            min={min}
+            max={max}
+            step={step}
+            value={value}
+            onChange={(e) => onChange(Number(e.target.value))}
+            style={{
+              width: "100%",
+              display: "block",
+              height: 4,
+              cursor: "pointer",
+              margin: 0,
+              padding: 0,
+            }}
+          />
+        </div>
+
+        {/* Spinbox input + optional reset — attached right */}
+        <div style={{ display: "flex", flexShrink: 0, marginLeft: -1 }}>
           <Form.Control
             size="sm"
             type="text"
             inputMode="decimal"
             value={inputValue}
             onChange={(e) => {
-              const raw = e.target.value.replace(/[^0-9.\-]/g, "");
+              const raw = e.target.value.replace(/[^0-9.-]/g, "");
               setDraftText(raw);
               if (raw === "" || raw === "-" || raw.endsWith(".")) return;
               const v = Number(raw);
@@ -64,7 +115,7 @@ export default function SliderWithSpinbox({
             }}
             onBlur={() => {
               if (draftText !== null) {
-                const v = Number(draftText.replace(/[^0-9.\-]/g, ""));
+                const v = Number(draftText.replace(/[^0-9.-]/g, ""));
                 if (draftText !== "" && !isNaN(v)) {
                   onChange(Math.min(max, Math.max(min, v)));
                 }
@@ -73,12 +124,16 @@ export default function SliderWithSpinbox({
             }}
             style={{
               width: 48,
-              background: "#1a1a2e",
+              height: ITEM_H,
+              background: bgColor,
               color: "var(--theme-text)",
-              borderColor: "#333",
+              border: `1px solid ${borderColor}`,
               textAlign: "right",
-              borderTopRightRadius: defaultValue !== undefined ? 0 : undefined,
-              borderBottomRightRadius: defaultValue !== undefined ? 0 : undefined,
+              borderTopRightRadius: defaultValue !== undefined ? 0 : 4,
+              borderBottomRightRadius: defaultValue !== undefined ? 0 : 4,
+              borderTopLeftRadius: 0,
+              borderBottomLeftRadius: 0,
+              boxSizing: "border-box",
             }}
           />
           {defaultValue !== undefined && (
@@ -90,30 +145,32 @@ export default function SliderWithSpinbox({
               disabled={!isChanged}
               title={`Reset to ${displayAsFloat ? defaultValue.toFixed(2) : defaultValue}`}
               style={{
+                height: ITEM_H,
+                width: 24,
                 background: hovered && isChanged
                   ? "rgba(0,132,185,0.15)"
-                  : "#1a1a2e",
-                border: "1px solid #444",
+                  : bgColor,
+                border: `1px solid ${borderColor}`,
                 borderLeft: "none",
                 borderTopRightRadius: 4,
                 borderBottomRightRadius: 4,
                 borderTopLeftRadius: 0,
                 borderBottomLeftRadius: 0,
-                width: 24,
-                padding: 4,
+                marginLeft: -1,
+                padding: 0,
                 cursor: isChanged ? "pointer" : "default",
                 opacity: isChanged ? 1 : 0.35,
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
                 flexShrink: 0,
+                boxSizing: "border-box",
               }}
             >
-              <LucideIcon name="rotate-ccw-square" size={16} />
+              <LucideIcon name="rotate-ccw-square" size={14} />
             </button>
           )}
-        </div>
       </div>
-    </Form.Group>
+    </div>
   );
 }

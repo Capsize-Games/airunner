@@ -56,7 +56,7 @@ export default function ModelSelector() {
   }
 
   return (
-    <div className="d-flex gap-2 align-items-center">
+    <div className="d-flex gap-2 align-items-center" style={{ minWidth: 0, flex: 1 }}>
       <Form.Select
         size="sm"
         value={modelService}
@@ -64,7 +64,7 @@ export default function ModelSelector() {
           setModelService(e.target.value);
           persist({ model_service: e.target.value });
         }}
-        style={{ width: "auto", minWidth: 130 }}
+        style={{ width: "auto", flexShrink: 0 }}
       >
         <option value="local">Local</option>
         <option value="openrouter">OpenRouter (API)</option>
@@ -74,13 +74,12 @@ export default function ModelSelector() {
       {isLocal ? (
         <Form.Select
           size="sm"
-          className="flex-grow-1"
           value={modelPath}
           onChange={(e) => {
             setModelPath(e.target.value);
             persist({ model_path: e.target.value });
           }}
-          style={{ width: "auto", minWidth: 180 }}
+          style={{ flex: "1 1 0%", minWidth: 0 }}
         >
           <option value="">Select model...</option>
           {localModels.map((m) => (
@@ -90,14 +89,13 @@ export default function ModelSelector() {
       ) : (
         <Form.Control
           size="sm"
-          className="flex-grow-1"
           value={modelPath}
           onChange={(e) => {
             setModelPath(e.target.value);
             persist({ model_path: e.target.value });
           }}
           placeholder="model-id or endpoint URL"
-          style={{ width: "auto", minWidth: 180 }}
+          style={{ flex: "1 1 0%", minWidth: 0 }}
         />
       )}
     </div>

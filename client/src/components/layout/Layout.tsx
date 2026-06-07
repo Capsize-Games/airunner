@@ -5,9 +5,6 @@ import {
   useRef,
   useState,
 } from "react";
-import { KnowledgeBasePanel } from "../panels/KnowledgeBasePanel";
-import { ChatHistoryPanel } from "../panels/ChatHistoryPanel";
-import { LLMSettingsPanel } from "../panels/LLMSettingsPanel";
 import CanvasPanel from "../panels/CanvasPanel";
 import ImageBrowserPanel from "../panels/ImageBrowserPanel";
 import CivitaiBrowserPanel from "../panels/civitai-browser/CivitaiBrowserPanel";
@@ -18,22 +15,16 @@ import { LeftIconBar, RightIconBar } from "./IconBar";
 import { CanvasProvider } from "../../features/canvas";
 
 const HANDLE_W = 4;
-const LEFT_MIN = 180;
 const CHAT_MIN = 260;
 const CANVAS_MIN = 400;
 const RIGHT_MIN = 180;
 
 type PanelId =
-  | "knowledge"
-  | "history"
-  | "llm_settings"
   | "image_browser"
   | "civitai_browser";
 
 interface LayoutProps {
   children: ReactNode;
-  leftPanel: PanelId | null;
-  onLeftPanel: (id: PanelId) => void;
   rightPanel: PanelId | null;
   onRightPanel: (id: PanelId) => void;
   showChat: boolean;
@@ -71,14 +62,12 @@ function loadNum(key: string, fallback: number): number {
 let dragState: {
   key: string;
   startX: number;
-  wL: number;
   wC: number;
   wV: number;
   wR: number;
   showChat: boolean;
   showCanvas: boolean;
   showRight: boolean;
-  setL: (w: number) => void;
   setC: (w: number) => void;
   setV: (w: number) => void;
   setR: (w: number) => void;
@@ -89,54 +78,7 @@ function onGlobalMouseMove(e: MouseEvent) {
   if (!d) return;
   const delta = e.clientX - d.startX;
 
-  if (d.key === "left-chat") {
-    let room = 0;
-    if (d.showCanvas) room += d.wV - CANVAS_MIN;
-    if (d.showRight) room += d.wR - RIGHT_MIN;
-    const clamped = Math.max(-(d.wL - LEFT_MIN), Math.min(room, delta));
-
-    let remaining = clamped;
-    let newV = d.wV;
-    let newR = d.wR;
-    if (d.showCanvas) {
-      const s = Math.min(d.wV - CANVAS_MIN, remaining);
-      newV = d.wV - s;
-      remaining -= s;
-    }
-    if (d.showRight) {
-      const s = Math.min(d.wR - RIGHT_MIN, remaining);
-      newR = d.wR - s;
-    }
-    d.setL(d.wL + clamped);
-    d.setV(newV);
-    d.setR(newR);
-  } else if (d.key === "left-canvas") {
-    let room = 0;
-    if (d.showCanvas) room += d.wV - CANVAS_MIN;
-    if (d.showRight) room += d.wR - RIGHT_MIN;
-    const clamped = Math.max(-(d.wL - LEFT_MIN), Math.min(room, delta));
-
-    let remaining = clamped;
-    let newV = d.wV;
-    let newR = d.wR;
-    if (d.showCanvas) {
-      const s = Math.min(d.wV - CANVAS_MIN, remaining);
-      newV = d.wV - s;
-      remaining -= s;
-    }
-    if (d.showRight) {
-      const s = Math.min(d.wR - RIGHT_MIN, remaining);
-      newR = d.wR - s;
-    }
-    d.setL(d.wL + clamped);
-    d.setV(newV);
-    d.setR(newR);
-  } else if (d.key === "left-right") {
-    const room = d.wR - RIGHT_MIN;
-    const clamped = Math.max(-(d.wL - LEFT_MIN), Math.min(room, delta));
-    d.setL(d.wL + clamped);
-    d.setR(d.wR - clamped);
-  } else if (d.key === "chat-canvas") {
+  if (d.key === "chat-canvas") {
     let room = 0;
     if (d.showCanvas) room += d.wV - CANVAS_MIN;
     if (d.showRight) room += d.wR - RIGHT_MIN;
@@ -184,8 +126,6 @@ if (typeof window !== "undefined") {
 
 export default function Layout({
   children,
-  leftPanel,
-  onLeftPanel,
   rightPanel,
   onRightPanel,
   showChat,
@@ -219,9 +159,6 @@ export default function Layout({
     return () => ro.disconnect();
   }, []);
 
-  const [leftPanelW, setLeftPanelW] = useState(() =>
-    loadNum("airunner_left_panel_w", 260),
-  );
   const [chatW, setChatW] = useState(() =>
     loadNum("airunner_chat_w", 400),
   );
@@ -234,7 +171,6 @@ export default function Layout({
 
   // Build ordered list of visible panels and their handles.
   const visible: string[] = [];
-  if (leftPanel) visible.push("left");
   if (showChat) visible.push("chat");
   if (showCanvas) visible.push("canvas");
   if (rightPanel) visible.push("right");
@@ -247,7 +183,6 @@ export default function Layout({
     if (panelsWidth === 0) return;
     const total =
       fixedWidths +
-      (leftPanel ? leftPanelW : 0) +
       (showChat ? chatW : 0) +
       (showCanvas ? canvasW : 0) +
       (rightPanel ? rightPanelW : 0);
@@ -269,10 +204,6 @@ export default function Layout({
         setChatW((w) => w - s);
         excess -= s;
       }
-      if (leftPanel && excess > 0) {
-        const s = Math.min(leftPanelW - LEFT_MIN, excess);
-        setLeftPanelW((w) => w - s);
-      }
     } else if (total < panelsWidth) {
       const slack = panelsWidth - total;
       if (rightPanel) {
@@ -281,14 +212,11 @@ export default function Layout({
         setCanvasW((w) => w + slack);
       } else if (showChat) {
         setChatW((w) => w + slack);
-      } else if (leftPanel) {
-        setLeftPanelW((w) => w + slack);
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [panelsWidth, leftPanel, showChat, showCanvas, rightPanel]);
+  }, [panelsWidth, showChat, showCanvas, rightPanel]);
 
-  useEffect(() => saveNum("airunner_left_panel_w", leftPanelW), [leftPanelW]);
   useEffect(() => saveNum("airunner_chat_w", chatW), [chatW]);
   useEffect(() => saveNum("airunner_canvas_w", canvasW), [canvasW]);
   useEffect(() => saveNum("airunner_right_panel_w", rightPanelW), [rightPanelW]);
@@ -304,14 +232,12 @@ export default function Layout({
       dragState = {
         key,
         startX: e.clientX,
-        wL: leftPanelW,
         wC: chatW,
         wV: canvasW,
         wR: rightPanelW,
         showChat,
         showCanvas,
         showRight: rightPanel !== null,
-        setL: setLeftPanelW,
         setC: setChatW,
         setV: setCanvasW,
         setR: setRightPanelW,
@@ -337,11 +263,9 @@ export default function Layout({
       <div className="main-row">
         <LeftIconBar
           showChat={showChat}
-          leftPanel={leftPanel}
           ttsOn={ttsOn}
           sttOn={sttOn}
           onToggleChat={onToggleChat}
-          onLeftPanel={onLeftPanel}
           onToggleTts={onToggleTts}
           onToggleStt={onToggleStt}
           bottomSlot={bottomBarSlot}
@@ -352,26 +276,6 @@ export default function Layout({
           ref={panelsRef}
           style={{ flex: 1, display: "flex", overflow: "hidden", minWidth: 0 }}
         >
-          {/* ── Left panel ── */}
-          <div
-            className={
-              leftPanel ? "collapsible-panel left" : "panel-hidden"
-            }
-            style={{ width: leftPanelW }}
-          >
-            {leftPanel === "knowledge" && <KnowledgeBasePanel />}
-            {leftPanel === "history" && (
-              <ChatHistoryPanel
-                onSelectConversation={onSelectConversation}
-              />
-            )}
-            {leftPanel === "llm_settings" && <LLMSettingsPanel />}
-          </div>
-
-          {hasHandle("left-chat") && makeHandle("left-chat")}
-          {hasHandle("left-canvas") && makeHandle("left-canvas")}
-          {hasHandle("left-right") && makeHandle("left-right")}
-
           {/* ── Chat panel ── */}
           <div
             className={showChat ? "chat-panel" : "panel-hidden"}
