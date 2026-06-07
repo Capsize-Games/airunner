@@ -68,11 +68,11 @@ let _ttsPendingResolve: ((blob: Blob) => void) | null = null;
 let _ttsPendingReject: ((err: Error) => void) | null = null;
 let _ttsReconnectTimer: ReturnType<typeof setTimeout> | null = null;
 
+import { wsHost } from "./client-base";
+
 function _ttsWsUrl(): string {
   const proto = location.protocol === "https:" ? "wss" : "ws";
-  const raw = (import.meta.env.VITE_API_BASE_URL as string) || "localhost:8188";
-  const host = raw.replace(/^https?:\/\//, "");
-  return `${proto}://${host}/api/v1/tts/ws`;
+  return `${proto}://${wsHost()}/api/v1/tts/ws`;
 }
 
 function _ttsConnect(): void {

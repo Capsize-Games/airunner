@@ -151,7 +151,8 @@ p { color: var(--theme-text-secondary); }
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
 html, body, #root {
-  height: 100vh; overflow: hidden;
+  height: 100dvh;
+  overflow: hidden;
   background: var(--bs-body-bg);
   color: var(--bs-body-color);
   font-size: 13px;
@@ -160,7 +161,7 @@ html, body, #root {
 /* -- Shell -- */
 .app-shell {
   display: flex; flex-direction: column;
-  height: 100vh; user-select: none;
+  height: 100%; user-select: none;
 }
 
 .topbar {
@@ -187,6 +188,7 @@ html, body, #root {
   background: var(--theme-bg-secondary);
   border-top: 1px solid var(--separator-color);
   font-size: 11px; color: #888;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
 /* -- Icon bars -- */

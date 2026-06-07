@@ -17,16 +17,11 @@ import { useState, useRef, useCallback, useEffect } from "react";
 // WS URL resolver
 // ---------------------------------------------------------------------------
 
+import { wsHost } from "../../api/client-base";
+
 function wsUrl(): string {
-  const base = import.meta.env.PROD
-    ? (import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8188")
-    : "";
-  const host =
-    base.replace(/^http/, "ws") ||
-    `${
-      location.protocol === "https:" ? "wss" : "ws"
-    }://${location.host}`;
-  return `${host}/api/v1/tts/ws`;
+  const proto = location.protocol === "https:" ? "wss" : "ws";
+  return `${proto}://${wsHost()}/api/v1/tts/ws`;
 }
 
 // ---------------------------------------------------------------------------

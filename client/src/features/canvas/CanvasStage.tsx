@@ -81,6 +81,7 @@ const CanvasStage = forwardRef<CanvasStageHandle, CanvasStageProps>(
   }, ref) {
     const isPanning = useRef(false);
     const lastPointerPos = useRef({ x: 0, y: 0 });
+    const lastTouchDist = useRef(0);
     const [zoom, setZoom] = useState(1);
     const containerRef = useRef<HTMLDivElement>(null);
     const selectionStartRef = useRef<{ x: number; y: number } | null>(null);
@@ -89,24 +90,35 @@ const CanvasStage = forwardRef<CanvasStageHandle, CanvasStageProps>(
     } | null>(null);
     const [stageSize, setStageSize] = useState({ width: 800, height: 600 });
 
-    // Fill stage to container and center document on resize
+    // Fill stage to container and zoom-to-fit on first mount
     useLayoutEffect(() => {
       const container = containerRef.current;
       if (!container) return;
+      const PADDING = 40;
       const observer = new ResizeObserver(([entry]) => {
         const { width, height } = entry.contentRect;
         setStageSize({ width, height });
         const stage = stageRef.current;
-        if (stage && stage.x() === 0 && stage.y() === 0) {
+        if (!stage) return;
+        // First time: zoom to fit the document inside the viewport.
+        if (stage.x() === 0 && stage.y() === 0 && stage.scaleX() === 1) {
+          const fitScale = Math.min(
+            (width - PADDING) / Math.max(documentWidth, 1),
+            (height - PADDING) / Math.max(documentHeight, 1),
+            1, // never zoom in past 1:1
+          );
+          stage.scale({ x: fitScale, y: fitScale });
+          setZoom(fitScale);
+          onZoomChange(fitScale);
           stage.position({
-            x: (width - documentWidth) / 2,
-            y: (height - documentHeight) / 2,
+            x: (width - documentWidth * fitScale) / 2,
+            y: (height - documentHeight * fitScale) / 2,
           });
         }
       });
       observer.observe(container);
       return () => observer.disconnect();
-    }, [stageRef, documentWidth, documentHeight]);
+    }, [stageRef, documentWidth, documentHeight, onZoomChange]);
 
     // ── Imperative handle ─────────────────────────────────────────────
 
@@ -156,6 +168,71 @@ const CanvasStage = forwardRef<CanvasStageHandle, CanvasStageProps>(
       getZoom: () => stageRef.current?.scaleX() ?? 1,
       getStage: () => stageRef.current,
     }), [stageRef, documentWidth, documentHeight, onZoomChange]);
+
+    // Multi-touch: two-finger drag to pan, pinch to zoom.
+    useEffect(() => {
+      const container = containerRef.current;
+      if (!container) return;
+      const onStart = (e: TouchEvent) => {
+        if (e.touches.length < 2) return;
+        e.preventDefault();
+        const t1 = e.touches[0];
+        const t2 = e.touches[1];
+        lastPointerPos.current = {
+          x: (t1.clientX + t2.clientX) / 2,
+          y: (t1.clientY + t2.clientY) / 2,
+        };
+        lastTouchDist.current = Math.hypot(
+          t1.clientX - t2.clientX,
+          t1.clientY - t2.clientY,
+        );
+      };
+      const onMove = (e: TouchEvent) => {
+        if (e.touches.length < 2) return;
+        e.preventDefault();
+        const t1 = e.touches[0];
+        const t2 = e.touches[1];
+        const mx = (t1.clientX + t2.clientX) / 2;
+        const my = (t1.clientY + t2.clientY) / 2;
+        const dx = mx - lastPointerPos.current.x;
+        const dy = my - lastPointerPos.current.y;
+        lastPointerPos.current = { x: mx, y: my };
+        const dist = Math.hypot(
+          t1.clientX - t2.clientX,
+          t1.clientY - t2.clientY,
+        );
+        const stage = stageRef.current;
+        if (!stage) return;
+        // Only zoom when distance changes by at least 3% — prevents
+        // jittery zoom competing with pan when fingers move together.
+        if (lastTouchDist.current > 0) {
+          const pinchRatio = dist / lastTouchDist.current;
+          if (Math.abs(pinchRatio - 1) > 0.03) {
+            const newScale = Math.max(0.05, Math.min(
+              stage.scaleX() * pinchRatio, 20,
+            ));
+            stage.scale({ x: newScale, y: newScale });
+            setZoom(newScale);
+            onZoomChange(newScale);
+            lastTouchDist.current = dist;
+          }
+        }
+        stage.position({
+          x: stage.x() + dx,
+          y: stage.y() + dy,
+        });
+        lastTouchDist.current = dist;
+      };
+      const onEnd = () => { lastTouchDist.current = 0; };
+      container.addEventListener("touchstart", onStart, { passive: false });
+      container.addEventListener("touchmove", onMove, { passive: false });
+      container.addEventListener("touchend", onEnd);
+      return () => {
+        container.removeEventListener("touchstart", onStart);
+        container.removeEventListener("touchmove", onMove);
+        container.removeEventListener("touchend", onEnd);
+      };
+    }, [stageRef, onZoomChange]);
 
     // Clear selection when switching away from select tool
     useEffect(() => {
