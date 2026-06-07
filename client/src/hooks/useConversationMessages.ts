@@ -37,8 +37,12 @@ function toStored(
 export function useConversationMessages() {
   const db = useDb();
   const [messages, setMessages] = useState<Message[]>([]);
+  const [loading, setLoading] = useState(false);
 
   const load = useCallback(async (conversationId: number) => {
+    setLoading(true);
+    setMessages([]);
+
     if (db) {
       // Serve from cache first if available.
       const cached = await db.messages
@@ -95,6 +99,8 @@ export function useConversationMessages() {
       }
     } catch {
       /* network unavailable — stale cache already shown */
+    } finally {
+      setLoading(false);
     }
   }, [db]);
 
@@ -136,6 +142,7 @@ export function useConversationMessages() {
 
   return {
     messages,
+    loading,
     setMessages,
     load,
     appendMessage,

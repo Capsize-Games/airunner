@@ -26,7 +26,7 @@ export default function ChatView({
 }: {
   conversationId: number | null;
 }) {
-  const { messages, setMessages, load, appendMessage, deleteMessagesAfter } =
+  const { messages, loading, setMessages, load, appendMessage, deleteMessagesAfter } =
     useConversationMessages();
   const { docs: kbDocs, reload: reloadDocs } = useKnowledgeBaseDocs();
   const [, setStoredConvId] = useLocalStorage<number | null>(
@@ -316,8 +316,9 @@ export default function ChatView({
       )}
 
       <div className="chat-messages p-2 flex-grow-1">
-        <MessageList
-          messages={messages}
+        {loading ? null : (
+          <MessageList
+            messages={messages}
           streamBuffer={llm.streamBuffer}
           thinkingBuffer={llm.thinkingBuffer}
           onDeleteMessage={handleDeleteMessage}
@@ -325,6 +326,7 @@ export default function ChatView({
           onCopyMessage={handleCopyMessage}
           onPlayMessage={handlePlayMessage}
         />
+        )}
       </div>
 
       <div className="chat-input-area border-top p-2">

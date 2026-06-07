@@ -5,6 +5,8 @@ import ChatView from "./components/chat/ChatView";
 import ArtView from "./components/art/ArtView";
 import SettingsModal from "./components/settings/SettingsModal";
 import { useLayoutPrefs, type PanelId } from "./hooks/useLayoutPrefs";
+import { useMemo } from "react";
+import type { FC, ReactNode } from "react";
 import {
   extensionRouteElements,
   extensionProviders,
@@ -52,16 +54,23 @@ export default function App() {
     setShowCacheDebug((v) => !v);
   }, []);
 
-  // Compose extension providers (empty in core, populated in fork)
-  const Providers = extensionProviders.reduce(
-    (Acc, Provider) =>
-      ({ children }: { children: React.ReactNode }) =>
-        (
-          <Acc>
-            <Provider>{children}</Provider>
-          </Acc>
-        ),
-    ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  // Compose extension providers (empty in core, populated in fork).
+  // useMemo prevents the wrapper component from being recreated on every
+  // render, which would force all children (including AuthProvider) to
+  // unmount and remount — causing a "Signing in…" flash.
+  const Providers = useMemo(
+    () =>
+      extensionProviders.reduce(
+        (Acc, Provider) =>
+          ({ children }: { children: ReactNode }) =>
+            (
+              <Acc>
+                <Provider>{children}</Provider>
+              </Acc>
+            ),
+        ({ children }: { children: ReactNode }) => <>{children}</>,
+      ),
+    [],
   );
 
   return (

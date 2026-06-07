@@ -1,8 +1,9 @@
 import {
   type ReactNode,
   useEffect,
-  useState,
+  useMemo,
   useRef,
+  useState,
 } from "react";
 import { KnowledgeBasePanel } from "../panels/KnowledgeBasePanel";
 import { ChatHistoryPanel } from "../panels/ChatHistoryPanel";
