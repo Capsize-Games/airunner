@@ -31,6 +31,7 @@ export default function StatsPanel() {
   const [slots, setSlots] = useState<ModelSlot[]>([]);
   const mountedRef = useRef(true);
   const unloadingRef = useRef<Set<string>>(new Set());
+  const loadingRef = useRef<Set<string>>(new Set());
 
   // Fetch configured model names from settings once on mount.
   useEffect(() => {
@@ -128,6 +129,7 @@ export default function StatsPanel() {
   };
 
   const handleLoad = (type: string, id: string) => {
+    loadingRef.current.add(type);
     loadModel(id, type).catch(() => {});
   };
 
@@ -237,13 +239,12 @@ export default function StatsPanel() {
                 />
                 {label}: {name || "none"}
               </span>
-              {m?.can_unload ? (
+              {m?.can_unload || loadingRef.current.has(type) ? (
                 <button
-                  onClick={() => handleUnload(m)}
+                  onClick={() => m && handleUnload(m)}
                   style={{
                     background: "transparent",
                     border: "none",
-                    color: "#aaa",
                     cursor: "pointer",
                     padding: 0,
                     display: "flex",
@@ -260,7 +261,6 @@ export default function StatsPanel() {
                   style={{
                     background: "transparent",
                     border: "none",
-                    color: "#aaa",
                     cursor: "pointer",
                     padding: 0,
                     display: "flex",
