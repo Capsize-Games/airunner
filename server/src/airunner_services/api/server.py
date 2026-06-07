@@ -20,7 +20,7 @@ from .server_helpers import (
     _register_watchers,
     _mount_static_files,
 )
-from .server_auth import (
+from .server_middleware import (
     register_middleware,
     register_exception_handler,
     update_api_key_config,
@@ -97,6 +97,48 @@ def _default_allowed_origins() -> list[str]:
     return ["http://localhost:5173", "http://127.0.0.1:5173"]
 
 
+def _setup_cors(
+    app: FastAPI,
+    allowed_origins: Optional[list],
+    enable_cors: bool,
+) -> None:
+    """Apply CORS middleware to the app."""
+    if not enable_cors:
+        return
+    origins = (
+        allowed_origins
+        if allowed_origins is not None
+        else _default_allowed_origins()
+    )
+    if not origins:
+        mode = os.environ.get(
+            "AIRUNNER_DEPLOYMENT_MODE", "development"
+        ).lower()
+        if mode == "production":
+            logger.warning(
+                "CORS is enabled but AIRUNNER_ALLOWED_ORIGINS is not set. "
+                "Set it to your frontend domain(s) in production."
+            )
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=origins,
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+
+
+def _load_and_apply_extensions(app: FastAPI) -> None:
+    """Load extensions and apply server hooks (no-op when empty)."""
+    from airunner_services.extensions.loader import (  # noqa: PLC0415
+        load_extensions,
+        apply_server_hooks,
+    )
+
+    load_extensions()
+    apply_server_hooks(app)
+
+
 def create_app(
     allowed_origins: Optional[list] = None,
     enable_cors: bool = True,
@@ -115,39 +157,8 @@ def create_app(
     _setup_signal_bridges(app_instance)
     _register_watchers(app_instance)
     update_api_key_config()
-
-    if enable_cors:
-        origins = (
-            allowed_origins
-            if allowed_origins is not None
-            else _default_allowed_origins()
-        )
-        if not origins:
-            mode = os.environ.get(
-                "AIRUNNER_DEPLOYMENT_MODE", "development"
-            ).lower()
-            if mode == "production":
-                logger.warning(
-                    "CORS is enabled but AIRUNNER_ALLOWED_ORIGINS is not set. "
-                    "Set it to your frontend domain(s) in production."
-                )
-        app.add_middleware(
-            CORSMiddleware,
-            allow_origins=origins,
-            allow_credentials=True,
-            allow_methods=["*"],
-            allow_headers=["*"],
-        )
-
-    # ---- Load extensions (no-op when EXTENSIONS is empty) ----
-    from airunner_services.extensions.loader import (  # noqa: PLC0415
-        load_extensions,
-        apply_server_hooks,
-    )
-
-    load_extensions()
-    apply_server_hooks(app)
-
+    _setup_cors(app, allowed_origins, enable_cors)
+    _load_and_apply_extensions(app)
     register_middleware(app)
     register_routes(app)
     _mount_static_files(app)
