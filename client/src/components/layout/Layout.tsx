@@ -429,6 +429,7 @@ export default function Layout({
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
+          padding: "0 12px",
         }}
       >
         <span>
