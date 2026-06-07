@@ -135,7 +135,7 @@ export function extensionLoaderPlugin(): Plugin {
               .join("; ")
           : "";
       const getRequestHeadersFn = headerGetterBody
-        ? `export function getRequestHeaders() { const h: Record<string, string> = {}; ${headerGetterBody}; return h; }`
+        ? `export function getRequestHeaders() { const h = {}; ${headerGetterBody}; return h; }`
         : `export function getRequestHeaders() { return {}; }`;
 
       const source = [
