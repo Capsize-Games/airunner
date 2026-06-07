@@ -9,8 +9,6 @@ import { KnowledgeBasePanel } from "../panels/KnowledgeBasePanel";
 import { ChatHistoryPanel } from "../panels/ChatHistoryPanel";
 import { LLMSettingsPanel } from "../panels/LLMSettingsPanel";
 import CanvasPanel from "../panels/CanvasPanel";
-import LoraPanel from "../panels/LoraPanel";
-import EmbeddingsPanel from "../panels/EmbeddingsPanel";
 import ImageBrowserPanel from "../panels/ImageBrowserPanel";
 import CivitaiBrowserPanel from "../panels/civitai-browser/CivitaiBrowserPanel";
 import DownloadTray from "../downloads/DownloadTray";
@@ -29,8 +27,6 @@ type PanelId =
   | "knowledge"
   | "history"
   | "llm_settings"
-  | "lora"
-  | "embeddings"
   | "image_browser"
   | "civitai_browser";
 
@@ -409,8 +405,6 @@ export default function Layout({
             style={{ width: rightPanelW }}
           >
             {rightPanel === "civitai_browser" && <CivitaiBrowserPanel />}
-            {rightPanel === "lora" && <LoraPanel />}
-            {rightPanel === "embeddings" && <EmbeddingsPanel />}
             {rightPanel === "image_browser" && <ImageBrowserPanel />}
           </div>
         </div>
