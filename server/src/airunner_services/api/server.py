@@ -8,6 +8,7 @@ from ipaddress import ip_address
 from typing import Any, Optional
 
 from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
 
 from airunner_services.settings import AIRUNNER_LOG_LEVEL
 from airunner_services.utils.application import get_logger
@@ -85,6 +86,17 @@ async def lifespan(app: FastAPI):
     logger.info("FastAPI server shutting down...")
 
 
+def _default_allowed_origins() -> list[str]:
+    """Return CORS origins from env, or sensible defaults per deployment mode."""
+    env_origins = os.environ.get("AIRUNNER_ALLOWED_ORIGINS", "").strip()
+    if env_origins:
+        return [o.strip() for o in env_origins.split(",") if o.strip()]
+    mode = os.environ.get("AIRUNNER_DEPLOYMENT_MODE", "development").lower()
+    if mode == "production":
+        return []  # Must be set explicitly via AIRUNNER_ALLOWED_ORIGINS
+    return ["http://localhost:5173", "http://127.0.0.1:5173"]
+
+
 def create_app(
     allowed_origins: Optional[list] = None,
     enable_cors: bool = True,
@@ -103,6 +115,29 @@ def create_app(
     _setup_signal_bridges(app_instance)
     _register_watchers(app_instance)
     update_api_key_config()
+
+    if enable_cors:
+        origins = (
+            allowed_origins
+            if allowed_origins is not None
+            else _default_allowed_origins()
+        )
+        if not origins:
+            mode = os.environ.get(
+                "AIRUNNER_DEPLOYMENT_MODE", "development"
+            ).lower()
+            if mode == "production":
+                logger.warning(
+                    "CORS is enabled but AIRUNNER_ALLOWED_ORIGINS is not set. "
+                    "Set it to your frontend domain(s) in production."
+                )
+        app.add_middleware(
+            CORSMiddleware,
+            allow_origins=origins,
+            allow_credentials=True,
+            allow_methods=["*"],
+            allow_headers=["*"],
+        )
 
     # ---- Load extensions (no-op when EXTENSIONS is empty) ----
     from airunner_services.extensions.loader import (  # noqa: PLC0415

@@ -2,18 +2,11 @@
  * Vite plugin that generates a `virtual:extensions` module at build time.
  *
  * The plugin reads the `AIRUNNER_EXTENSIONS` environment variable (from .env)
- * to discover which extensions are active. For each active extension, it
- * checks the convention-based client directory and generates the appropriate
- * imports for route elements and providers.
+ * to discover which extensions are active. If empty, it auto-scans the
+ * `extensions/` directory for any subdirectories containing a `config.py`.
  *
- * In the core repo (where AIRUNNER_EXTENSIONS is empty), the virtual module
- * exports empty arrays — no extensions are rendered.
- *
- * In the fork (where AIRUNNER_EXTENSIONS is populated), the virtual module
- * imports the extension's client code directly.
- *
- * Usage (App.tsx — same in core and fork):
- *   import { extensionRouteElements, extensionProviders } from "virtual:extensions";
+ * For each active extension, it checks the convention-based client directory
+ * and generates appropriate imports for route elements and providers.
  */
 
 import type { Plugin } from "vite";
@@ -28,9 +21,6 @@ const EXTENSIONS_DIR = path.resolve(__dirname, "../extensions");
 
 /**
  * Parse the AIRUNNER_EXTENSIONS setting into a list of extension names.
- *
- * Input:  "extensions.auth.config,extensions.billing.config"
- * Output: ["auth", "billing"]
  */
 function parseExtensionNames(): string[] {
   const raw = process.env.AIRUNNER_EXTENSIONS || "";
@@ -41,6 +31,28 @@ function parseExtensionNames(): string[] {
     .map((s) =>
       s.replace(/^extensions\./, "").replace(/\.config$/, ""),
     );
+}
+
+/**
+ * Auto-discover extensions by scanning the extensions/ directory.
+ * Returns names of subdirectories that contain a config.py file.
+ */
+function autodiscoverExtensions(): string[] {
+  const names: string[] = [];
+  try {
+    if (!fs.existsSync(EXTENSIONS_DIR)) return names;
+    for (const entry of fs.readdirSync(EXTENSIONS_DIR)) {
+      const entryPath = path.join(EXTENSIONS_DIR, entry);
+      if (!fs.statSync(entryPath).isDirectory()) continue;
+      const configPath = path.join(entryPath, "config.py");
+      if (fs.existsSync(configPath)) {
+        names.push(entry);
+      }
+    }
+  } catch {
+    // extensions/ dir doesn't exist — normal in core
+  }
+  return names;
 }
 
 export function extensionLoaderPlugin(): Plugin {
@@ -55,7 +67,14 @@ export function extensionLoaderPlugin(): Plugin {
     load(id) {
       if (id !== RESOLVED_VIRTUAL_MODULE_ID) return null;
 
-      const extNames = parseExtensionNames();
+      // Try AIRUNNER_EXTENSIONS first, fall back to auto-scan
+      let extNames = parseExtensionNames();
+      if (extNames.length === 0) {
+        extNames = autodiscoverExtensions();
+      }
+
+      console.log("[airunner-extensions] loading:", extNames);
+
       const imports: string[] = [];
       const routeElements: string[] = [];
       const providers: string[] = [];
@@ -65,7 +84,6 @@ export function extensionLoaderPlugin(): Plugin {
 
         if (!fs.existsSync(clientDir)) return;
 
-        // Check for client route elements (JSX <Route> elements)
         const routesPath = path.join(clientDir, "routes.tsx");
         if (fs.existsSync(routesPath)) {
           imports.push(
@@ -74,7 +92,6 @@ export function extensionLoaderPlugin(): Plugin {
           routeElements.push(`...ext${i}RouteElements`);
         }
 
-        // Check for client Provider
         const providerPath = path.join(clientDir, "Provider.tsx");
         if (fs.existsSync(providerPath)) {
           imports.push(
@@ -84,7 +101,6 @@ export function extensionLoaderPlugin(): Plugin {
         }
       });
 
-      // Generate the virtual module source
       const source = [
         'import { Route } from "react-router-dom";',
         "",
