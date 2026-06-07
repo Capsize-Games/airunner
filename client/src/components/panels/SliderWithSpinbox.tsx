@@ -25,11 +25,14 @@ export default function SliderWithSpinbox({
   onChange,
 }: SliderWithSpinboxProps) {
   const [hovered, setHovered] = useState(false);
+  const [draftText, setDraftText] = useState<string | null>(null);
   const isChanged = defaultValue !== undefined && value !== defaultValue;
 
   const displayValue = displayAsFloat
     ? value.toFixed(2)
     : String(Math.round(value));
+
+  const inputValue = draftText !== null ? draftText : displayValue;
 
   return (
     <Form.Group className="flex-fill">
@@ -50,14 +53,23 @@ export default function SliderWithSpinbox({
             size="sm"
             type="text"
             inputMode="decimal"
-            value={displayValue}
+            value={inputValue}
             onChange={(e) => {
               const raw = e.target.value.replace(/[^0-9.\-]/g, "");
-              if (raw === "") return;
-              let v = Number(raw);
+              setDraftText(raw);
+              if (raw === "" || raw === "-" || raw.endsWith(".")) return;
+              const v = Number(raw);
               if (isNaN(v)) return;
-              v = Math.min(max, Math.max(min, v));
-              onChange(v);
+              onChange(Math.min(max, Math.max(min, v)));
+            }}
+            onBlur={() => {
+              if (draftText !== null) {
+                const v = Number(draftText.replace(/[^0-9.\-]/g, ""));
+                if (draftText !== "" && !isNaN(v)) {
+                  onChange(Math.min(max, Math.max(min, v)));
+                }
+                setDraftText(null);
+              }
             }}
             style={{
               width: 48,

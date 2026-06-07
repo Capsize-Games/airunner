@@ -26,7 +26,10 @@ from airunner_services.model_management.zimage_model_manager import (
 from airunner_services.contract_enums import GeneratorSection
 from airunner_services.contract_enums import ModelStatus
 from airunner_services.contract_enums import ModelType
-from airunner_services.contract_enums import StableDiffusionVersion
+from airunner_services.contract_enums import ArtVersion
+from airunner_services.contract_enums import (
+    ArtVersion as StableDiffusionVersion,
+)
 from airunner_services.contract_enums import normalize_art_version
 from airunner_services.utils.image import convert_image_to_binary
 from airunner_services.application_exceptions import PipeNotLoadedException
@@ -116,17 +119,14 @@ class SDWorker(Worker):
             if self._model_manager is None:
                 version = self.version
 
-                if version in (StableDiffusionVersion.Z_IMAGE_TURBO,):
+                if version in (ArtVersion.Z_IMAGE_TURBO,):
                     self._model_manager = self.zimage
                 elif version in (
-                    StableDiffusionVersion.SDXL1_0,
-                    StableDiffusionVersion.SDXL_TURBO,
-                    StableDiffusionVersion.SDXL_LIGHTNING,
-                    StableDiffusionVersion.SDXL_HYPER,
+                    ArtVersion.SDXL1_0,
+                    ArtVersion.SDXL_LIGHTNING,
+                    ArtVersion.SDXL_HYPER,
                 ):
                     self._model_manager = self.sdxl
-                elif version == StableDiffusionVersion.X4_UPSCALER:
-                    self._model_manager = self.x4_upscaler
                 else:
                     raise ValueError(
                         f"Unsupported Stable Diffusion version: {version}"

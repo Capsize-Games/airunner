@@ -35,7 +35,6 @@ from airunner_services.art.runtime_enums import (
     GeneratorSection,
     ModelStatus,
     ModelType,
-    StableDiffusionVersion,
 )
 from airunner_services.settings import (
     AIRUNNER_MEM_SD_DEVICE,
@@ -168,8 +167,6 @@ class SDPropertiesMixin:
         """
         if self.controlnet_model:
             version = self.version
-            if version == StableDiffusionVersion.SDXL_TURBO.value:
-                version = StableDiffusionVersion.SDXL1_0.value
             return os.path.join(
                 self.path_settings.base_path,
                 "art/models",

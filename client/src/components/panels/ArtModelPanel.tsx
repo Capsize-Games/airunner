@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import {
   getSingleton,
   updateSingleton,
+  getArtModelOptions,
 } from "../../api/client";
 import type { ArtOptionsResponse } from "../../api/client";
 import { useEventBus } from "../../features/events/useEventBus";
@@ -62,9 +63,7 @@ export default function ArtModelPanel() {
   useEffect(() => {
     (async () => {
       try {
-        const opts = await import("../../api/client").then(
-          (m) => m.getArtModelOptions(),
-        );
+        const opts = await getArtModelOptions();
         setOptions(opts);
       } catch { /* */ }
 
@@ -142,9 +141,7 @@ export default function ArtModelPanel() {
   useEventBus([EVENT_MODEL_STATUS], () => {
     (async () => {
       try {
-        const opts = await import("../../api/client").then(
-          (m) => m.getArtModelOptions(),
-        );
+        const opts = await getArtModelOptions();
         setOptions(opts);
       } catch { /* */ }
     })();

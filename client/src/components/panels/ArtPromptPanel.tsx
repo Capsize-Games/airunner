@@ -236,7 +236,7 @@ export default function ArtPromptPanel() {
             />
 
             <PromptInput
-              label="Sec. Negative"
+              label="Secondary Negative Prompt"
               value={secondaryNegativePrompt}
               onChange={(v) => {
                 setSecondaryNegativePrompt(v);

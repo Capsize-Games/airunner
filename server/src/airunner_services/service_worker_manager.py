@@ -24,6 +24,7 @@ class ServiceWorkerManager:
         self._sd_worker: Optional[Any] = None
         self._stt_audio_processor_worker: Optional[Any] = None
         self._tts_generator_worker: Optional[Any] = None
+        self._model_scanner_worker: Optional[Any] = None
 
     @property
     def image_export_worker(self) -> Any:
@@ -87,6 +88,19 @@ class ServiceWorkerManager:
                 TTSGeneratorWorker
             )
         return self._tts_generator_worker
+
+    @property
+    def model_scanner_worker(self) -> Any:
+        """Return the shared model scanner worker for art models."""
+        if self._model_scanner_worker is None:
+            from airunner_services.workers.model_scanner_worker import (
+                ModelScannerWorker,
+            )
+
+            self._model_scanner_worker = self._worker_factory(
+                ModelScannerWorker,
+            )
+        return self._model_scanner_worker
 
     def loaded_model_names(self) -> list[str]:
         """Return the names of models already loaded by instantiated workers."""

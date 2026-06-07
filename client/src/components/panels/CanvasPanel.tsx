@@ -29,9 +29,21 @@ export default function CanvasPanel() {
   const maskLayerRef = useRef<Konva.Layer>(null!) as React.RefObject<Konva.Layer>;
   const canvasHandleRef = useRef<CanvasStageHandle>(null);
 
-  const [showGrid, setShowGrid] = useState(true);
+  const [showGrid, setShowGrid] = useState(() => {
+    try {
+      return localStorage.getItem("canvas_show_grid") !== "false";
+    } catch {
+      return true;
+    }
+  });
   const [zoom, setZoom] = useState(1);
-  const [gridLocked, setGridLocked] = useState(false);
+  const [gridLocked, setGridLocked] = useState(() => {
+    try {
+      return localStorage.getItem("canvas_grid_locked") === "true";
+    } catch {
+      return false;
+    }
+  });
   const [showSettings, setShowSettings] = useState(false);
   const [showNewDocModal, setShowNewDocModal] = useState(false);
   const [showLayers, setShowLayers] = useState(() => {
@@ -254,6 +266,12 @@ export default function CanvasPanel() {
     [canvas],
   );
 
+  useEffect(() => {
+    try { localStorage.setItem("canvas_show_grid", String(showGrid)); } catch { /* */ }
+  }, [showGrid]);
+  useEffect(() => {
+    try { localStorage.setItem("canvas_grid_locked", String(gridLocked)); } catch { /* */ }
+  }, [gridLocked]);
   useEffect(() => {
     try { localStorage.setItem("canvas_show_layers", String(showLayers)); } catch { /* */ }
   }, [showLayers]);

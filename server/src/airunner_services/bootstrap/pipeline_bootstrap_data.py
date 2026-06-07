@@ -25,13 +25,6 @@ art_pipline_data = [
         "default": False,
     },
     {
-        "pipeline_action": "txt2img",
-        "version": "SDXL Turbo",
-        "category": "stablediffusion",
-        "classname": "diffusers.AutoPipelineForText2Image",
-        "default": False,
-    },
-    {
         "pipeline_action": "img2img",
         "version": "SDXL 1.0",
         "category": "stablediffusion",
@@ -41,13 +34,6 @@ art_pipline_data = [
     {
         "pipeline_action": "text_encoder",
         "version": "SDXL 1.0",
-        "category": "stablediffusion",
-        "classname": "transformers.CLIPTextModel",
-        "default": False,
-    },
-    {
-        "pipeline_action": "upscaler",
-        "version": "x4-upscaler",
         "category": "stablediffusion",
         "classname": "transformers.CLIPTextModel",
         "default": False,

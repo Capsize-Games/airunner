@@ -66,7 +66,71 @@ class CoreLifecycleService:
         )
         self._attach_state()
         self._initialized = True
+        self._trigger_initial_model_scan()
         self.logger.info("Lifecycle initialized")
+
+    def _trigger_initial_model_scan(self) -> None:
+        """Trigger initial filesystem scans for all model types (art, lora,
+        embedding, schedulers) to sync the database with the disk at startup.
+        """
+        try:
+            scanner = self.worker_manager.model_scanner_worker
+            if scanner is not None and hasattr(scanner, "add_to_queue"):
+                scanner.add_to_queue({"scan": True})
+                self.logger.info("Initial art model scan queued")
+        except Exception:
+            self.logger.exception("Failed to queue initial model scan")
+        self._scan_loras()
+        self._scan_embeddings()
+        self._seed_schedulers()
+
+    def _seed_schedulers(self) -> None:
+        """Seed the schedulers table with known SDXL and Z-Image schedulers."""
+        from airunner_services.database.models.schedulers import (  # noqa: PLC0415
+            Schedulers,
+        )
+        from airunner_services.database.session import (  # noqa: PLC0415
+            session_scope,
+        )
+        from airunner_services.database.scan_helpers import (  # noqa: PLC0415
+            seed_schedulers,
+        )
+
+        seed_schedulers(Schedulers, session_scope)
+
+    def _scan_loras(self) -> None:
+        """Scan LoRA directories and upsert found files into the DB."""
+        from airunner_services.database.models.lora import (  # noqa: PLC0415
+            Lora,
+        )
+        from airunner_services.database.session import (  # noqa: PLC0415
+            session_scope,
+        )
+        from airunner_services.database.scan_helpers import (  # noqa: PLC0415
+            scan_loras,
+        )
+        from airunner_services.settings import (  # noqa: PLC0415
+            AIRUNNER_BASE_PATH,
+        )
+
+        scan_loras(AIRUNNER_BASE_PATH, Lora, session_scope)
+
+    def _scan_embeddings(self) -> None:
+        """Scan embedding directories and upsert found files into the DB."""
+        from airunner_services.database.models.embedding import (  # noqa: PLC0415
+            Embedding,
+        )
+        from airunner_services.database.session import (  # noqa: PLC0415
+            session_scope,
+        )
+        from airunner_services.database.scan_helpers import (  # noqa: PLC0415
+            scan_embeddings,
+        )
+        from airunner_services.settings import (  # noqa: PLC0415
+            AIRUNNER_BASE_PATH,
+        )
+
+        scan_embeddings(AIRUNNER_BASE_PATH, Embedding, session_scope)
 
     def preload_llm_model(self) -> None:
         """Preload the configured local LLM when enabled."""

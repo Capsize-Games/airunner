@@ -1,6 +1,5 @@
 """Service-owned SDXL model manager."""
 
-import os
 from typing import Any, Dict, List
 
 import torch
@@ -21,7 +20,7 @@ from airunner_services.art.managers.stablediffusion import prompt_utils
 from airunner_services.art.managers.stablediffusion.base_diffusers_model_manager import (
     BaseDiffusersModelManager,
 )
-from airunner_services.contract_enums import StableDiffusionVersion
+from airunner_services.contract_enums import ArtVersion
 from airunner_services.utils.memory.clear_memory import clear_memory
 
 
@@ -81,39 +80,11 @@ class SDXLModelManager(BaseDiffusersModelManager, ModelManagerInterface):
 
     @property
     def is_sd_xl(self) -> bool:
-        return self.real_model_version == StableDiffusionVersion.SDXL1_0.value
-
-    @property
-    def is_sd_xl_turbo(self) -> bool:
-        return (
-            self.real_model_version == StableDiffusionVersion.SDXL_TURBO.value
-        )
-
-    @property
-    def is_sd_xl_or_turbo(self) -> bool:
-        return self.is_sd_xl or self.is_sd_xl_turbo
-
-    @property
-    def version(self) -> str:
-        version = super().version
-        if version == "SDXL Turbo":
-            version = "SDXL 1.0"
-        return version
+        return self.real_model_version == ArtVersion.SDXL1_0.value
 
     @property
     def config_path(self) -> str:
-        config_path = super().config_path
-        if self.is_sd_xl_turbo:
-            config_path = os.path.expanduser(
-                os.path.join(
-                    self.path_settings.base_path,
-                    "art",
-                    "models",
-                    StableDiffusionVersion.SDXL1_0.value,
-                    self.generator_settings.pipeline_action,
-                )
-            )
-        return config_path
+        return super().config_path
 
     @property
     def pipeline_map(
