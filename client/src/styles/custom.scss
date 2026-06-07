@@ -407,6 +407,18 @@ input::placeholder, textarea::placeholder {
   background: var(--bs-primary);
 }
 
+/* -- Model resources action buttons -- */
+.model-action-btn {
+  background: transparent; border: none;
+  cursor: pointer; padding: 2px;
+  display: flex; align-items: center;
+  border-radius: 3px;
+  transition: background-color 0.15s ease, opacity 0.15s ease;
+}
+.model-action-btn:hover {
+  background: rgba(var(--theme-primary-rgb), 0.15);
+}
+
 /* -- Indeterminate progress bar animation (model loading) -- */
 @keyframes indeterminate-bar {
   0%   { background-position: 200% 0; }

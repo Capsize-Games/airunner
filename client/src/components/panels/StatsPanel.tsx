@@ -241,32 +241,16 @@ export default function StatsPanel() {
               </span>
               {m?.can_unload || loadingRef.current.has(type) ? (
                 <button
+                  className="model-action-btn"
                   onClick={() => m && handleUnload(m)}
-                  style={{
-                    background: "transparent",
-                    border: "none",
-                    cursor: "pointer",
-                    padding: 0,
-                    display: "flex",
-                    alignItems: "center",
-                    flexShrink: 0,
-                  }}
                   title={`Unload ${label}`}
                 >
                   <LucideIcon name="octagon-alert" size={14} />
                 </button>
               ) : canLoad ? (
                 <button
+                  className="model-action-btn"
                   onClick={() => handleLoad(type, name)}
-                  style={{
-                    background: "transparent",
-                    border: "none",
-                    cursor: "pointer",
-                    padding: 0,
-                    display: "flex",
-                    alignItems: "center",
-                    flexShrink: 0,
-                  }}
                   title={`Load ${label}`}
                 >
                   <LucideIcon name="play" size={14} />
