@@ -450,7 +450,7 @@ function LiveIndicator() {
     let canceled = false;
     const id = setInterval(() => {
       if (!canceled) setConnected(isWsConnected());
-    }, 1000);
+    }, 100);
     return () => {
       canceled = true;
       clearInterval(id);
