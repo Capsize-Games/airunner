@@ -1,4 +1,9 @@
-"""Service-owned engine helpers for migrations and DB setup."""
+"""Service-owned engine helpers for migrations and DB setup.
+
+Reads the active database URL from the settings module,
+supporting both SQLite (default, offline) and PostgreSQL
+(production, multi-tenant).
+"""
 
 from __future__ import annotations
 

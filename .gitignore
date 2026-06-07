@@ -109,3 +109,6 @@ client/.vite
 airunner.wiki
 node_modules
 .roo
+
+# Private extension bundles (from w4ffl35/airunner_extensions repo)
+/extensions/
