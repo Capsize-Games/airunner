@@ -25,4 +25,11 @@ declare module "virtual:extensions" {
    * ReactNode(s) rendered at the bottom of the left icon bar.
    */
   export const extensionBottomBarItems: ReactNode;
+
+  /**
+   * Returns extra HTTP headers that extensions want added to outgoing
+   * requests (e.g. Authorization from the auth extension).
+   * Returns an empty object when no extension provides headers.
+   */
+  export function getRequestHeaders(): Record<string, string>;
 }
