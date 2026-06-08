@@ -171,7 +171,7 @@ class SystemTools(BaseTool):
                 return f"Signal '{signal_name}' emitted successfully"
 
             except Exception as e:
-                self.logger.error(f"Error emitting signal: {e}")
+                self.logger.error("Error emitting signal: %s", e)
                 return f"Error emitting signal: {str(e)}"
 
         return emit_signal

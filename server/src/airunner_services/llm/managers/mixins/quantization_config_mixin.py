@@ -38,7 +38,7 @@ class QuantizationConfigMixin:
             Selected dtype string (e.g., "4bit", "8bit", "float16")
         """
         dtype = self.llm_dtype
-        self.logger.info(f"Current dtype setting: {dtype}")
+        self.logger.info("Current dtype setting: %s", dtype)
 
         dtype, auto_selected = resolve_quantization_dtype(
             dtype,
@@ -46,9 +46,9 @@ class QuantizationConfigMixin:
         )
         if auto_selected:
             self.llm_generator_settings.dtype = dtype
-            self.logger.info(f"✓ Auto-selected quantization: {dtype}")
+            self.logger.info("✓ Auto-selected quantization: %s", dtype)
         else:
-            self.logger.info(f"Using configured dtype: {dtype}")
+            self.logger.info("Using configured dtype: %s", dtype)
 
         return dtype
 
@@ -69,7 +69,7 @@ class QuantizationConfigMixin:
             )
             return None
 
-        self.logger.info(f"Using BitsAndBytes runtime {dtype} quantization")
+        self.logger.info("Using BitsAndBytes runtime %s quantization", dtype)
 
         if dtype == "8bit":
             return self._create_8bit_config()
@@ -151,7 +151,7 @@ class QuantizationConfigMixin:
         Returns:
             Empty dict for auto allocation
         """
-        self.logger.info(f"✓ Applying {dtype} quantization (no CUDA)")
+        self.logger.info("✓ Applying %s quantization (no CUDA)", dtype)
         self.logger.info(
             f"  Using device_map='auto', dtype={self.torch_dtype}"
         )
@@ -166,7 +166,7 @@ class QuantizationConfigMixin:
         Returns:
             Empty dict for auto allocation
         """
-        self.logger.info(f"✓ Applying {dtype} quantization")
+        self.logger.info("✓ Applying %s quantization", dtype)
         self.logger.info(
             f"  Using device_map='auto', dtype={self.torch_dtype}"
         )
@@ -285,7 +285,7 @@ class QuantizationConfigMixin:
         with open(config_path, "w") as f:
             json.dump(config, f, indent=2)
 
-        self.logger.info(f"✓ Injected quantization_config into {config_path}")
+        self.logger.info("✓ Injected quantization_config into %s", config_path)
 
     def _build_quantization_config_dict(self, dtype: str) -> Dict[str, Any]:
         """Build quantization configuration dictionary for config.json.
@@ -332,7 +332,7 @@ class QuantizationConfigMixin:
             error: Exception that occurred
             quantized_path: Path to clean up
         """
-        self.logger.error(f"Failed to save quantized model: {error}")
+        self.logger.error("Failed to save quantized model: %s", error)
         if os.path.exists(quantized_path):
             try:
                 shutil.rmtree(quantized_path)

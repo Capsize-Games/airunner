@@ -6,6 +6,8 @@ Tools for tracking and updating the chatbot's emotional state.
 
 from typing import Annotated, Any
 
+from langgraph.types import Command
+
 from airunner_services.llm.core.tool_registry import tool, ToolCategory
 from airunner_services.contract_enums import SignalCode
 
@@ -54,6 +56,8 @@ def update_mood(
             SignalCode.BOT_MOOD_UPDATED,
             {"mood": mood, "emoji": emoji},
         )
-        return f"Mood updated to '{mood}' {emoji}"
+        # Write mood into LangGraph state so get_current_mood() can read it
+        # in O(1) instead of scanning message history.
+        return Command(update={"current_mood": {"mood": mood, "emoji": emoji}})
     except Exception as e:
         return f"Error updating mood: {str(e)}"

@@ -81,7 +81,7 @@ def update_knowledge(
 
         if api and hasattr(api, "emit_signal"):
             api.emit_signal(
-                SignalCode.KNOWLEDGE_FACT_ADDED,
+                SignalCode.KNOWLEDGE_FACT_UPDATED,
                 {"updated": True, "count": count},
             )
         return f"✓ Updated {count} occurrence(s)"

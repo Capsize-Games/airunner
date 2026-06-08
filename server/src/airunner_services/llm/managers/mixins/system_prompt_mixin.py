@@ -115,6 +115,11 @@ class SystemPromptMixin:
 
     def _get_style_guidelines(self) -> str:
         """Return the conversational style guidelines block."""
+        settings = getattr(self, "llm_settings", None)
+        if settings is not None and not getattr(
+            settings, "include_health_disclaimer", True
+        ):
+            return STYLE_GUIDELINES
         return STYLE_GUIDELINES + HEALTH_DISCLAIMER
 
     def _get_memory_instructions(self) -> str:

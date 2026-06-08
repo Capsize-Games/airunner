@@ -72,7 +72,7 @@ class RAGLifecycleMixin:
             self._rag_initialized = True
             self.logger.info("RAG system initialized successfully")
         except Exception as e:
-            self.logger.error(f"Error setting up RAG: {str(e)}", exc_info=True)
+            self.logger.error("Error setting up RAG: %s", e, exc_info=True)
 
     def reload_rag(self):
         """Reload RAG components.
@@ -120,7 +120,7 @@ class RAGLifecycleMixin:
                 try:
                     del self._embedding
                 except Exception as e:
-                    self.logger.warning(f"Error deleting embedding: {e}")
+                    self.logger.warning("Error deleting embedding: %s", e)
             self._embedding = None
             self._text_splitter = None
 
@@ -163,7 +163,7 @@ class RAGLifecycleMixin:
             self._add_documents_to_unified_index([doc], source_name)
 
         except Exception as e:
-            self.logger.error(f"Error loading HTML into RAG: {e}")
+            self.logger.error("Error loading HTML into RAG: %s", e)
 
     def load_file_into_rag(self, file_path: str) -> None:
         """Load a local file into the unified RAG index.
@@ -177,7 +177,7 @@ class RAGLifecycleMixin:
         """
         try:
             if not os.path.exists(file_path):
-                self.logger.warning(f"File not found: {file_path}")
+                self.logger.warning("File not found: %s", file_path)
                 return
             if file_path in self._loaded_doc_ids:
                 return
@@ -192,7 +192,7 @@ class RAGLifecycleMixin:
             )
             self._add_documents_to_unified_index(documents, file_path)
         except Exception as e:
-            self.logger.error(f"Error loading file into RAG: {e}")
+            self.logger.error("Error loading file into RAG: %s", e)
 
     def load_bytes_into_rag(
         self, content_bytes: bytes, source_name: str, file_ext: str = ".epub"
@@ -223,7 +223,7 @@ class RAGLifecycleMixin:
             except Exception:
                 pass
         except Exception as e:
-            self.logger.error(f"Error loading bytes into RAG: {e}")
+            self.logger.error("Error loading bytes into RAG: %s", e)
 
     def _add_documents_to_unified_index(
         self,

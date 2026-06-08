@@ -31,8 +31,18 @@ class StreamingMixin:
 
     def _prepare_workflow_run(self) -> tuple[Dict[str, Any], Any]:
         """Reset request-scoped state and return config plus math context."""
+        from airunner_services.llm.agents.workflow_tools import set_current_state
+        from airunner_services.llm.agents.workflow_state import WorkflowState as AgentWorkflowState
+
         self._executed_tools = []
         self._assistant_turn_index = 0
+
+        # Bind this conversation's agent workflow state to the current asyncio
+        # task context so concurrent conversations don't contaminate each other.
+        if self._agent_workflow_state is None:
+            self._agent_workflow_state = AgentWorkflowState()
+        set_current_state(self._agent_workflow_state)
+
         return self._create_config(), self._get_math_context()
 
     def _auto_learn_from_message(self, user_input: str) -> None:
@@ -443,6 +453,22 @@ class StreamingMixin:
             # Store mood in instance for attaching to AI messages
             self._current_mood = mood
             self._current_emoji = emoji
+
+            # Persist mood to conversation user_data so it survives restarts.
+            try:
+                from airunner_services.database.models.conversation import (
+                    Conversation,
+                )
+
+                conv_id = getattr(self, "_conversation_id", None)
+                if conv_id:
+                    conv = Conversation.objects.get(conv_id)
+                    if conv is not None:
+                        existing = conv.user_data or {}
+                        existing["current_mood"] = {"mood": mood, "emoji": emoji}
+                        Conversation.objects.update(conv_id, user_data=existing)
+            except Exception:
+                pass
 
             # Regenerate system prompt with updated mood
             if hasattr(self, "update_system_prompt") and hasattr(

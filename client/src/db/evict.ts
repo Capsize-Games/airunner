@@ -1,7 +1,8 @@
 import { getDb } from "./db";
 
 // Eviction order — most expendable first.
-// Never evict: conversations, messages, canvasDocuments, kbDocuments.
+// kbDocuments is last because KB data is harder to re-fetch than image caches.
+// Never evict: conversations, messages, canvasDocuments.
 const EVICTION_ORDER = [
   "civitaiThumbnails",
   "civitaiModels",
@@ -9,6 +10,7 @@ const EVICTION_ORDER = [
   "imageDates",
   "loras",
   "embeddings",
+  "kbDocuments",
 ] as const;
 
 const EVICT_BATCH = 30;

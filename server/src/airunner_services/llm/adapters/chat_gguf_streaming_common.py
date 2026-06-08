@@ -7,15 +7,23 @@ from typing import Any, Optional
 from airunner_services.llm.utils.stream_debug import print_stream_debug
 
 
+_MAX_OVERLAP = 50  # Streaming duplicates are always short; cap scan length
+
+
 def merge_streamed_text(existing: str, fragment: str) -> str:
-    """Merge one streamed text fragment without duplicating overlap."""
+    """Merge one streamed text fragment without duplicating overlap.
+
+    The overlap scan is capped at _MAX_OVERLAP characters: genuine streaming
+    duplicates are always short prefix/suffix artifacts.  Without the cap the
+    loop is O(accumulated_length × fragment_size) for large responses.
+    """
     if not existing or not fragment:
         return existing + fragment
     if fragment == existing or existing.endswith(fragment):
         return existing
     if fragment.startswith(existing):
         return fragment
-    max_overlap = min(len(existing), len(fragment))
+    max_overlap = min(len(existing), len(fragment), _MAX_OVERLAP)
     for overlap in range(max_overlap, 0, -1):
         if existing.endswith(fragment[:overlap]):
             return existing + fragment[overlap:]

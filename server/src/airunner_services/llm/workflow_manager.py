@@ -1,5 +1,6 @@
 """Service-owned LangGraph workflow manager."""
 
+import uuid
 from typing import Any, Annotated, Callable, List, Optional
 
 from langchain_core.messages import BaseMessage
@@ -37,11 +38,25 @@ from airunner_services.utils.application import get_logger
 
 
 class WorkflowState(TypedDict, total=False):
-    """State schema for the workflow."""
+    """LangGraph state schema for the conversation workflow.
+
+    Note: a second WorkflowState exists in agents/workflow_state.py — that one
+    is a dataclass tracking multi-step task phases and TODOs. It is owned by
+    WorkflowManager (self._agent_workflow_state) and bound to the async-task
+    context via a ContextVar before each invocation. The two types are separate
+    by design: this TypedDict drives LangGraph message passing; the dataclass
+    drives tool-level workflow logic.
+    """
 
     messages: Annotated[list[BaseMessage], add_messages]
     generation_kwargs: dict[str, Any]
     workflow_continuation: bool
+    # Mood state: written by update_mood tool and auto-mood logic; read by
+    # get_current_mood() to avoid O(n) message-scanning on every prompt build.
+    current_mood: Optional[dict]
+    # Placeholder so LangGraph state can carry the agent workflow reference
+    # if needed for InjectedState migration (see task 3.2 / audit todo).
+    agent_workflow: Optional[Any]
 
 
 class WorkflowManager(
@@ -77,7 +92,9 @@ class WorkflowManager(
         self._max_history_tokens = max_history_tokens
         self._token_counter = lambda msgs: count_tokens_approximately(msgs)
         self._conversation_id = conversation_id
-        self._memory = DatabaseCheckpointSaver(conversation_id)
+        self._memory = DatabaseCheckpointSaver(
+            conversation_id, max_history_tokens=max_history_tokens
+        )
         self._response_format = None
         self._force_tool = None
         self._current_request_id: Optional[str] = None
@@ -90,7 +107,7 @@ class WorkflowManager(
         )
         self._signal_emitter = signal_emitter
         self._thread_id = (
-            str(conversation_id) if conversation_id else "default"
+            str(conversation_id) if conversation_id else str(uuid.uuid4())
         )
 
         self._workflow = None
@@ -99,6 +116,10 @@ class WorkflowManager(
         self._thinking_callback: Optional[Callable[[str, str], None]] = None
         self._interrupted = False
         self._executed_tools: list[str] = []
+        # Per-conversation agent workflow state for multi-step tasks.
+        # Set on the ContextVar before each LangGraph invocation so concurrent
+        # conversations cannot share or corrupt each other's state.
+        self._agent_workflow_state = None
 
         self._initialize_model()
         self._build_and_compile_workflow()
@@ -116,21 +137,37 @@ class WorkflowManager(
         self,
         conversation_id: int,
         ephemeral: bool = False,
+        force_rebuild: bool = False,
     ):
-        """Set the conversation ID used for persistence."""
+        """Set the conversation ID used for persistence.
+
+        Only updates memory and thread_id — does not recompile the LangGraph
+        unless force_rebuild is True or the compiled workflow doesn't exist yet.
+        Recompiling on every conversation switch is expensive and unnecessary
+        since the graph topology (model, tools, system prompt) hasn't changed.
+        """
         self._conversation_id = conversation_id
         self._thread_id = str(conversation_id)
 
         self._memory = DatabaseCheckpointSaver(
             conversation_id,
             ephemeral=ephemeral,
+            max_history_tokens=self._max_history_tokens,
         )
-        self._build_and_compile_workflow()
+
+        if force_rebuild or self._compiled_workflow is None:
+            self._build_and_compile_workflow()
+        else:
+            # Reattach the new checkpointer to the already-compiled workflow
+            # without triggering a full LangGraph recompile.
+            self._compiled_workflow = self._workflow.compile(
+                checkpointer=self._memory
+            )
 
     def update_system_prompt(self, system_prompt: str):
         """Update the system prompt and rebuild the workflow."""
         self.logger.debug(
-            f"Updating system prompt to: {system_prompt[:200]}...",
+            "Updating system prompt to: %s...", system_prompt[:200]
         )
         self._system_prompt = system_prompt
         self._build_and_compile_workflow()
@@ -138,12 +175,12 @@ class WorkflowManager(
     def set_response_format(self, response_format: Optional[str]):
         """Set the expected response format after tool execution."""
         self._response_format = response_format
-        self.logger.info(f"Response format set to: {response_format}")
+        self.logger.debug("Response format set to: %s", response_format)
 
     def set_force_tool(self, force_tool: Optional[str]):
         """Set the forced tool for agentic research mode."""
         self._force_tool = force_tool
-        self.logger.info(f"Force tool set to: {force_tool}")
+        self.logger.debug("Force tool set to: %s", force_tool)
 
     def set_token_callback(
         self,

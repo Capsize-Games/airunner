@@ -22,7 +22,7 @@ from airunner_services.llm_workflow_events import (
 class ToolClassificationMixin:
     """Classify prompts into tool categories and direct tool routes."""
 
-    ALWAYS_INCLUDE_CATEGORIES = {"knowledge"}
+    ALWAYS_INCLUDE_CATEGORIES = {"knowledge", "mood"}
     SIMPLE_SYSTEM_TOOL_PATTERNS: Tuple[Tuple[str, str], ...] = (
         (r"\bwhat\s+time\s+is\s+it\b", "get_current_datetime"),
         (
@@ -547,26 +547,3 @@ Reply with ONLY category names (comma-separated) or \"none\":"""
         )
         return ["search", "knowledge", "system", "math"]
 
-    def _should_use_harness(self, prompt: str) -> bool:
-        """Check if a prompt should use the long-running harness."""
-        try:
-            from airunner_services.llm.long_running import should_use_harness
-
-            use_harness, analysis = should_use_harness(prompt)
-            if use_harness and analysis:
-                self.logger.info(
-                    "Harness recommended: %s (confidence: %.2f) - %s",
-                    analysis.task_type.value,
-                    analysis.confidence,
-                    analysis.reason,
-                )
-            return use_harness
-        except ImportError:
-            self.logger.debug("Long-running harness not available")
-            return False
-        except Exception as exc:
-            self.logger.warning(
-                "Error checking harness applicability: %s",
-                exc,
-            )
-            return False

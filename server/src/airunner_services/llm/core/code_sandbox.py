@@ -1,4 +1,11 @@
-"""Restricted builtins helpers for runtime execution."""
+"""Restricted builtins helpers for runtime execution.
+
+SECURITY NOTE: Restricting __builtins__ is not a complete sandbox. Python code
+can still escape via attribute traversal (e.g. ().__class__.__mro__[-1].__subclasses__()).
+This is a best-effort mitigation only. The long-term fix is subprocess isolation.
+All custom tool execution must go through a safety_validated=True gate and a hard
+timeout (see tool_manager._compile_custom_tool).
+"""
 
 import builtins
 from typing import Any, Dict

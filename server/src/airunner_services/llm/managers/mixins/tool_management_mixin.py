@@ -125,7 +125,7 @@ class ToolManagementMixin:
             self.logger.warning(
                 f"Could not bind tools: {type(e).__name__}: {e}"
             )
-            self.logger.debug(f"Traceback: {traceback.format_exc()}")
+            self.logger.debug("Traceback: %s", traceback.format_exc())
 
     def _create_compact_tool_list(self) -> str:
         """

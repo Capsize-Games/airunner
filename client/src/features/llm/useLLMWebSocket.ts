@@ -34,11 +34,19 @@ export interface LLMOptions {
   active_document_ids?: number[];
 }
 
+export interface ToolStatusEvent {
+  tool_id: string;
+  tool_name: string;
+  status: "starting" | "completed" | "error";
+  details?: string | null;
+}
+
 export function useLLMWebSocket() {
   const [streaming, setStreaming] = useState(false);
   const [streamBuffer, setStreamBuffer] = useState("");
   const [thinkingBuffer, setThinkingBuffer] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [activeTools, setActiveTools] = useState<ToolStatusEvent[]>([]);
 
   const wsRef = useRef<WebSocket | null>(null);
   const mountedRef = useRef(true);
@@ -48,6 +56,8 @@ export function useLLMWebSocket() {
   // Incremented each time we start a fresh connection so stale
   // callbacks (from orphaned sockets during StrictMode) are ignored.
   const connGenRef = useRef(0);
+  const retryCountRef = useRef(0);
+  const MAX_RETRIES = 10;
 
   // Messages queued while WS is connecting
   const sendQueueRef = useRef<Record<string, unknown>[]>([]);
@@ -103,6 +113,7 @@ export function useLLMWebSocket() {
 
       socket.onopen = () => {
         if (gen !== connGenRef.current) return; // stale
+        retryCountRef.current = 0; // reset backoff on successful connect
         flushQueue();
       };
 
@@ -125,6 +136,18 @@ export function useLLMWebSocket() {
             return;
           }
 
+          if (data.type === "tool_status") {
+            const ev = data as unknown as ToolStatusEvent;
+            setActiveTools((prev) => {
+              const filtered = prev.filter((t) => t.tool_id !== ev.tool_id);
+              if (ev.status === "completed" || ev.status === "error") {
+                return filtered;
+              }
+              return [...filtered, ev];
+            });
+            return;
+          }
+
           if (data.type === "thinking") {
             setThinkingBuffer(data.content ?? "");
             const chunk: StreamChunk = {
@@ -134,10 +157,9 @@ export function useLLMWebSocket() {
             };
             onChunkRef.current?.(chunk);
             if (data.done) {
-              setStreamBuffer("");
+              // Only clear the thinking buffer — the response stream may
+              // still be in progress, so streamBuffer must not be touched here.
               setThinkingBuffer("");
-              onDoneRef.current?.();
-              setStreaming(false);
             }
             return;
           }
@@ -157,6 +179,7 @@ export function useLLMWebSocket() {
             // is now carried by the assistant Message in state.
             setStreamBuffer("");
             setThinkingBuffer("");
+            setActiveTools([]);
             onDoneRef.current?.();
             setStreaming(false);
           }
@@ -169,7 +192,16 @@ export function useLLMWebSocket() {
         if (gen !== connGenRef.current) return; // stale
         wsRef.current = null;
         if (mountedRef.current && !event.wasClean) {
-          reconnectTimerRef.current = setTimeout(connect, 5000);
+          if (retryCountRef.current >= MAX_RETRIES) {
+            setError("Connection lost — please refresh the page");
+            return;
+          }
+          const backoffMs = Math.min(
+            1000 * Math.pow(2, retryCountRef.current) + Math.random() * 500,
+            30000,
+          );
+          retryCountRef.current++;
+          reconnectTimerRef.current = setTimeout(connect, backoffMs);
         }
       };
 
@@ -179,7 +211,16 @@ export function useLLMWebSocket() {
       };
     } catch {
       if (mountedRef.current) {
-        reconnectTimerRef.current = setTimeout(connect, 5000);
+        if (retryCountRef.current >= MAX_RETRIES) {
+          setError("Connection lost — please refresh the page");
+          return;
+        }
+        const backoffMs = Math.min(
+          1000 * Math.pow(2, retryCountRef.current) + Math.random() * 500,
+          30000,
+        );
+        retryCountRef.current++;
+        reconnectTimerRef.current = setTimeout(connect, backoffMs);
       }
     }
   }, []);
@@ -268,6 +309,7 @@ export function useLLMWebSocket() {
     setStreaming(false);
     setStreamBuffer("");
     setThinkingBuffer("");
+    setActiveTools([]);
     onChunkRef.current = null;
     onDoneRef.current = null;
     onErrorRef.current = null;
@@ -277,6 +319,7 @@ export function useLLMWebSocket() {
     streaming,
     streamBuffer,
     thinkingBuffer,
+    activeTools,
     error,
     send,
     cancel,

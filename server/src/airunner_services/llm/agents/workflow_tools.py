@@ -12,6 +12,7 @@ explicit control over its execution flow.
 """
 
 import json
+from contextvars import ContextVar
 from typing import Any, Optional
 
 from airunner_services.llm.core.tool_registry import tool, ToolCategory
@@ -24,36 +25,40 @@ from airunner_services.llm.agents.workflow_state import (
     get_workflow,
 )
 
-# Global workflow state - in practice, this would be passed through LangGraph state
-_current_workflow_state: Optional[WorkflowState] = None
+# Per-asyncio-task (per-conversation) workflow state.
+# ContextVar is safe for concurrent requests: each asyncio Task copies the
+# calling context, so set_current_state() in one conversation never bleeds
+# into another conversation running concurrently.
+_workflow_state_var: ContextVar[Optional[WorkflowState]] = ContextVar(
+    "agent_workflow_state", default=None
+)
 
 
 def get_current_state() -> WorkflowState:
-    """Get or create the current workflow state."""
-    global _current_workflow_state
-    if _current_workflow_state is None:
-        _current_workflow_state = WorkflowState()
-    return _current_workflow_state
+    """Get or create the current workflow state for this task context."""
+    state = _workflow_state_var.get()
+    if state is None:
+        state = WorkflowState()
+        _workflow_state_var.set(state)
+    return state
 
 
 def set_current_state(state: WorkflowState) -> None:
-    """Set the current workflow state."""
-    global _current_workflow_state
-    _current_workflow_state = state
+    """Set the current workflow state for this task context."""
+    _workflow_state_var.set(state)
 
 
 def reset_workflow_state() -> None:
-    """Reset the workflow state."""
-    global _current_workflow_state
-    _current_workflow_state = None
+    """Reset the workflow state for this task context."""
+    _workflow_state_var.set(None)
 
 
 def is_workflow_active() -> bool:
     """Check if a structured workflow is currently active."""
-    global _current_workflow_state
-    if _current_workflow_state is None:
+    state = _workflow_state_var.get()
+    if state is None:
         return False
-    return _current_workflow_state.workflow_type in (
+    return state.workflow_type in (
         WorkflowType.CODING,
         WorkflowType.RESEARCH,
         WorkflowType.WRITING,

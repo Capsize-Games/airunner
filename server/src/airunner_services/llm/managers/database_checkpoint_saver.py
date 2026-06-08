@@ -1,8 +1,12 @@
 """Custom LangGraph checkpointer that persists to the Conversation database."""
 
 import uuid
-from typing import Optional, Dict, Any, Iterator, Tuple
+from collections import OrderedDict
+from typing import Optional, Dict, Any, Iterator, List, Tuple
 from collections.abc import Sequence
+
+from langchain_core.messages import BaseMessage
+from langchain_core.messages.utils import count_tokens_approximately
 
 from langgraph.checkpoint.base import (
     BaseCheckpointSaver,
@@ -19,6 +23,9 @@ from airunner_services.settings import AIRUNNER_LOG_LEVEL
 from airunner_services.utils.application import get_logger
 
 
+_CHECKPOINT_STATE_MAX_SIZE = 100
+
+
 class DatabaseCheckpointSaver(BaseCheckpointSaver):
     """LangGraph checkpoint saver that persists conversation state to database.
 
@@ -26,26 +33,21 @@ class DatabaseCheckpointSaver(BaseCheckpointSaver):
     model, ensuring conversation state is properly saved and can be restored.
     """
 
-    # CLASS-LEVEL storage for checkpoint state (shared across all instances)
-    # This ensures checkpoint state persists even when new instances are created
-    _checkpoint_state: Dict[str, Any] = {}
-    _stateless_mode: bool = (
-        False  # New: disable checkpoint persistence globally
-    )
-
     def __init__(
         self,
         conversation_id: Optional[int] = None,
         stateless: bool = False,
         ephemeral: bool = False,
+        max_history_tokens: Optional[int] = None,
     ):
         """Initialize the database checkpoint saver.
 
         Args:
-            conversation_id: Optional conversation ID to use. If None, will use
-                           the current conversation.
-            stateless: If True, disable checkpoint persistence (for independent requests)
-            ephemeral: If True, disable conversation history persistence (no DB writes)
+            conversation_id: Optional conversation ID to use.
+            stateless: If True, disable checkpoint persistence.
+            ephemeral: If True, disable conversation history persistence.
+            max_history_tokens: When set, trim history to this token budget
+                before returning a checkpoint.
         """
         super().__init__()
         self.logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
@@ -54,7 +56,11 @@ class DatabaseCheckpointSaver(BaseCheckpointSaver):
         self.message_history = DatabaseChatMessageHistory(
             conversation_id, ephemeral=ephemeral
         )
-        self.stateless = stateless or DatabaseCheckpointSaver._stateless_mode
+        self.stateless = stateless
+        self.max_history_tokens = max_history_tokens
+        # Instance-level LRU cache — keyed by thread_id (str(conversation_id)).
+        # OrderedDict gives O(1) move-to-end for LRU ordering.
+        self._checkpoint_state: OrderedDict[str, Any] = OrderedDict()
 
     def put(
         self,
@@ -87,15 +93,15 @@ class DatabaseCheckpointSaver(BaseCheckpointSaver):
                     }
                 }
 
-            self.logger.info(
-                f"🔵 DatabaseCheckpointSaver.put() called for conversation {self.conversation_id}"
+            self.logger.debug(
+                "DatabaseCheckpointSaver.put() called for conversation %s", self.conversation_id
             )
 
             # Extract messages from checkpoint
             if "messages" in checkpoint.get("channel_values", {}):
                 messages = checkpoint["channel_values"]["messages"]
 
-                self.logger.info(f"🔵 Checkpoint has {len(messages)} messages")
+                self.logger.debug("Checkpoint has %d messages", len(messages))
                 if messages:
                     last_msg = messages[-1]
                     last_msg_type = type(last_msg).__name__
@@ -143,25 +149,26 @@ class DatabaseCheckpointSaver(BaseCheckpointSaver):
                 )
                 checkpoint_count = len(messages)
 
-                self.logger.info(
-                    f"🔵 Comparing: DB has {existing_langchain_count} user/assistant msgs, "
-                    f"checkpoint has {checkpoint_count} messages"
+                self.logger.debug(
+                    "Comparing: DB has %d user/assistant msgs, checkpoint has %d messages",
+                    existing_langchain_count, checkpoint_count,
                 )
 
                 # Only add messages that are NEW (beyond what's already in DB)
                 if checkpoint_count > existing_langchain_count:
                     new_messages = messages[existing_langchain_count:]
-                    self.logger.info(
-                        f"🔵 Adding {len(new_messages)} new messages to conversation"
+                    self.logger.debug(
+                        "Adding %d new messages to conversation", len(new_messages)
                     )
                     for msg in new_messages:
                         self.message_history.add_message(msg)
-                    self.logger.info(
-                        f"✅ Appended {len(new_messages)} new messages to conversation {self.message_history.conversation_id}"
+                    self.logger.debug(
+                        "Appended %d new messages to conversation %s",
+                        len(new_messages), self.message_history.conversation_id,
                     )
                 elif checkpoint_count == existing_langchain_count:
-                    self.logger.info(
-                        "✅ No new messages to save (checkpoint matches DB count)"
+                    self.logger.debug(
+                        "No new messages to save (checkpoint matches DB count)"
                     )
                 # CRITICAL: Use conversation_id as thread_id to prevent contamination
                 # between different conversations (e.g., in tests)
@@ -172,12 +179,16 @@ class DatabaseCheckpointSaver(BaseCheckpointSaver):
                         "metadata": metadata,
                         "messages": messages,
                     }
-                    self.logger.info(
-                        f"💾 Stored full checkpoint state with {len(messages)} messages for thread {thread_id}"
+                    self._checkpoint_state.move_to_end(thread_id)
+                    if len(self._checkpoint_state) > _CHECKPOINT_STATE_MAX_SIZE:
+                        self._checkpoint_state.popitem(last=False)
+                    self.logger.debug(
+                        "Stored full checkpoint state with %d messages for thread %s",
+                        len(messages), thread_id,
                     )
                 else:
                     self.logger.warning(
-                        f"⚠️ Skipping checkpoint save - no changes detected ({len(messages)} messages)"
+                        "Skipping checkpoint save - no changes detected (%d messages)", len(messages)
                     )
 
             # Generate a proper UUID for the checkpoint if not present
@@ -194,7 +205,7 @@ class DatabaseCheckpointSaver(BaseCheckpointSaver):
             }
 
         except Exception as e:
-            self.logger.error(f"Error saving checkpoint: {e}", exc_info=True)
+            self.logger.error("Error saving checkpoint: %s", e, exc_info=True)
             return config
 
     def get_tuple(self, config: RunnableConfig) -> Optional[CheckpointTuple]:
@@ -217,45 +228,30 @@ class DatabaseCheckpointSaver(BaseCheckpointSaver):
             # First, try to get from in-memory checkpoint state
             thread_id = config.get("configurable", {}).get("thread_id")
 
-            # DEBUG: Write to file
-            import sys
-
-            with open("/tmp/checkpoint_debug.log", "a") as f:
-                f.write(
-                    f"[GET] thread_id={thread_id}, conv_id={self.conversation_id}, "
-                    f"checkpoint_keys={list(self._checkpoint_state.keys())}\n"
-                )
-                sys.stdout.flush()
-
             if thread_id and thread_id in self._checkpoint_state:
                 state = self._checkpoint_state[thread_id]
-                with open("/tmp/checkpoint_debug.log", "a") as f:
-                    f.write(
-                        f"[GET] ✅ FOUND in memory: {len(state['messages'])} messages\n"
+                trimmed = self._trim_messages(state["messages"])
+                checkpoint_data = state["checkpoint"]
+                if trimmed is not state["messages"]:
+                    checkpoint_data = dict(checkpoint_data)
+                    checkpoint_data["channel_values"] = dict(
+                        checkpoint_data.get("channel_values", {})
                     )
+                    checkpoint_data["channel_values"]["messages"] = trimmed
                 return CheckpointTuple(
                     config=config,
-                    checkpoint=state["checkpoint"],
+                    checkpoint=checkpoint_data,
                     metadata=state["metadata"],
                     parent_config=None,
                 )
 
             # Fallback: Load from database (may not have ToolMessages)
             messages = self.message_history.messages
-            with open("/tmp/checkpoint_debug.log", "a") as f:
-                f.write(
-                    f"[GET] DB has {len(messages)} messages for conv {self.conversation_id}\n"
-                )
 
             if not messages:
-                with open("/tmp/checkpoint_debug.log", "a") as f:
-                    f.write("[GET] ❌ No messages - starting fresh\n")
                 return None
 
-            with open("/tmp/checkpoint_debug.log", "a") as f:
-                f.write(
-                    f"[GET] ✅ Building checkpoint from DB: {len(messages)} messages\n"
-                )
+            messages = self._trim_messages(messages)
 
             checkpoint: Checkpoint = {
                 "v": 1,
@@ -284,9 +280,36 @@ class DatabaseCheckpointSaver(BaseCheckpointSaver):
 
         except Exception as e:
             self.logger.error(
-                f"Error retrieving checkpoint: {e}", exc_info=True
+                "Error retrieving checkpoint: %s", e, exc_info=True
             )
             return None
+
+    def _trim_messages(self, messages: List[BaseMessage]) -> List[BaseMessage]:
+        """Trim message history to fit within max_history_tokens budget.
+
+        Removes oldest messages (excluding the last user/assistant pair) when
+        the token count exceeds the configured limit.  Returns the original
+        list unchanged when no limit is set or it is not exceeded.
+        """
+        if not self.max_history_tokens or not messages:
+            return messages
+
+        total_tokens = count_tokens_approximately(messages)
+        if total_tokens <= self.max_history_tokens:
+            return messages
+
+        # Keep trimming from the front (oldest) until we fit, but always
+        # preserve at least the last 2 messages (most recent exchange).
+        trimmed = list(messages)
+        while len(trimmed) > 2 and count_tokens_approximately(trimmed) > self.max_history_tokens:
+            trimmed.pop(0)
+
+        self.logger.info(
+            "History trimmed from %d to %d messages to fit %d token budget (%d tokens)",
+            len(messages), len(trimmed), self.max_history_tokens,
+            count_tokens_approximately(trimmed),
+        )
+        return trimmed
 
     def get(self, config: RunnableConfig) -> Optional[Checkpoint]:
         """Retrieve a checkpoint payload from the database.
@@ -316,9 +339,28 @@ class DatabaseCheckpointSaver(BaseCheckpointSaver):
             writes: Sequence of (channel, value) writes to store
             task_id: Unique identifier for the task
         """
-        del config, writes, task_id, task_path
-        # For our simple implementation, we don't need to store intermediate writes
-        # The final state will be saved via put()
+        del task_path
+        # TODO: persist intermediate writes so tool side-effects (write_file,
+        # record_knowledge, generate_image, etc.) are not re-executed if the
+        # server crashes between the tool call and the final LLM response.
+        # For now, stash them in memory so they survive within a single process
+        # lifetime, but they will be lost on server restart.
+        thread_id = config.get("configurable", {}).get("thread_id") if config else None
+        if thread_id and writes:
+            state = self._checkpoint_state.get(thread_id)
+            if state is not None:
+                pending = state.setdefault("pending_writes", {})
+                pending[task_id] = list(writes)
+                self.logger.debug(
+                    "put_writes: stored %d writes for task %s thread %s",
+                    len(writes), task_id, thread_id,
+                )
+            else:
+                self.logger.warning(
+                    "put_writes: no checkpoint state for thread %s — intermediate "
+                    "writes not persisted; tool results may re-execute on restart",
+                    thread_id,
+                )
 
     def list(
         self,
@@ -360,63 +402,30 @@ class DatabaseCheckpointSaver(BaseCheckpointSaver):
         # CRITICAL FIX: Only clear checkpoint state for THIS conversation's thread,
         # not ALL conversations. The old code was wiping all checkpoint state globally.
         thread_id = str(self.conversation_id) if self.conversation_id else None
-        if (
-            thread_id
-            and thread_id in DatabaseCheckpointSaver._checkpoint_state
-        ):
-            del DatabaseCheckpointSaver._checkpoint_state[thread_id]
+        if thread_id and thread_id in self._checkpoint_state:
+            del self._checkpoint_state[thread_id]
             self.logger.info(
-                f"Cleared checkpoint state for thread {thread_id}"
+                "Cleared checkpoint state for thread %s", thread_id
             )
         else:
-            self.logger.info(
-                f"No checkpoint state to clear for thread {thread_id}"
+            self.logger.debug(
+                "No checkpoint state to clear for thread %s", thread_id
             )
 
         if clear_history:
             self.message_history.clear()
             self.logger.info(
-                f"Cleared message history for conversation {self.conversation_id}"
+                "Cleared message history for conversation %s", self.conversation_id
             )
 
     def clear_thread(self, thread_id: str) -> None:
         """Clear checkpoint state for a specific thread.
 
-        This removes checkpoint state for a single thread, useful for
-        cleaning up between independent operations (e.g., classifying different books).
-
         Args:
             thread_id: The thread ID to clear
         """
-        if thread_id in DatabaseCheckpointSaver._checkpoint_state:
-            del DatabaseCheckpointSaver._checkpoint_state[thread_id]
+        if thread_id in self._checkpoint_state:
+            del self._checkpoint_state[thread_id]
             self.logger.info(
-                f"Cleared checkpoint state for thread {thread_id}"
+                "Cleared checkpoint state for thread %s", thread_id
             )
-
-    @classmethod
-    def clear_all_checkpoint_state(cls) -> None:
-        """Clear ALL checkpoint state globally. Use only for testing cleanup.
-
-        WARNING: This clears checkpoint state for ALL conversations, not just one.
-        Use clear_checkpoints() for normal per-conversation cleanup.
-        """
-        cls._checkpoint_state.clear()
-        get_logger(__name__, AIRUNNER_LOG_LEVEL).info(
-            "Cleared ALL global checkpoint state (test cleanup)"
-        )
-
-    @classmethod
-    def set_stateless_mode(cls, enabled: bool) -> None:
-        """Enable or disable stateless mode globally.
-
-        When enabled, all DatabaseCheckpointSaver instances will not persist
-        checkpoints, making each operation completely independent.
-
-        Args:
-            enabled: Whether to enable stateless mode
-        """
-        cls._stateless_mode = enabled
-        get_logger(__name__, AIRUNNER_LOG_LEVEL).info(
-            f"Stateless mode: {enabled}"
-        )

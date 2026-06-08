@@ -3,7 +3,15 @@
 from __future__ import annotations
 
 import asyncio
+import os
+from pathlib import Path
 from typing import Any, Iterable, List, Optional
+
+# Documents must reside under this root to be eligible for RAG injection.
+# Prevents path-traversal attacks where a tampered DB entry points to /etc/passwd etc.
+_DOCUMENTS_ROOT = Path(
+    os.environ.get("AIRUNNER_DOCUMENTS_ROOT", os.environ.get("AIRUNNER_BASE_PATH", "/tmp"))
+).resolve()
 
 from fastapi import HTTPException, Request, WebSocket
 
@@ -192,6 +200,13 @@ def websocket_chunk(delta: StreamDelta) -> dict[str, Any]:
             "done": True,
         }
     msg_type = delta.metadata.get("message_type", "")
+    if msg_type == "tool_status":
+        import json as _json
+        try:
+            tool_data = _json.loads(delta.delta.get("content", "{}"))
+        except Exception:
+            tool_data = {}
+        return {"type": "tool_status", "done": False, **tool_data}
     payload: dict[str, Any] = {
         "type": msg_type if msg_type in ("thinking",) else "chunk",
         "content": delta.delta.get("content", ""),
@@ -240,15 +255,22 @@ def _inject_rag_context(
             for doc in docs:
                 file_path = doc.path
                 try:
-                    with open(file_path, "r", errors="replace") as f:
+                    resolved = Path(file_path).resolve()
+                    if not str(resolved).startswith(str(_DOCUMENTS_ROOT)):
+                        logging.warning(
+                            "RAG: path escape attempt for doc %d: %s",
+                            doc.id, file_path,
+                        )
+                        continue
+                    with open(resolved, "r", errors="replace") as f:
                         text = f.read(4096)
                     if text.strip():
                         snippets.append(
-                            f"--- Document: {file_path} ---\n{text}"
+                            f"--- Document: {resolved.name} ---\n{text}"
                         )
                     else:
                         logging.warning(
-                            "RAG: doc %d (%s) is empty", doc.id, file_path
+                            "RAG: doc %d (%s) is empty", doc.id, resolved.name
                         )
                 except Exception as exc:
                     logging.warning(

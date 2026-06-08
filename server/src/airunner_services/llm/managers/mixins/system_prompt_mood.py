@@ -12,16 +12,36 @@ def get_current_mood(owner) -> Optional[dict]:
             owner, "_current_emoji"
         ):
             return {"mood": owner._current_mood, "emoji": owner._current_emoji}
-        if not hasattr(owner, "_memory") or not owner._memory:
-            return None
-        return _checkpoint_mood(owner)
+        if hasattr(owner, "_memory") and owner._memory:
+            mood = _checkpoint_mood(owner)
+            if mood:
+                return mood
+        # Fallback: read from conversation user_data (persisted by auto-mood).
+        return _conversation_mood(owner)
     except Exception as exc:
         owner.logger.debug("Could not retrieve current mood: %s", exc)
         return None
 
 
+def _conversation_mood(owner) -> Optional[dict]:
+    """Return mood persisted in conversation user_data."""
+    try:
+        from airunner_services.database.models.conversation import Conversation
+
+        conv_id = getattr(owner, "_conversation_id", None)
+        if not conv_id:
+            return None
+        conv = Conversation.objects.get(conv_id)
+        if conv is None:
+            return None
+        user_data = conv.user_data or {}
+        return user_data.get("current_mood")
+    except Exception:
+        return None
+
+
 def _checkpoint_mood(owner) -> Optional[dict]:
-    """Return the most recent mood state found in checkpoint history."""
+    """Return the current mood from checkpoint state."""
     config = {"configurable": {"thread_id": owner._thread_id}}
     history = (
         owner._memory.get_tuple(config)
@@ -30,7 +50,13 @@ def _checkpoint_mood(owner) -> Optional[dict]:
     )
     if not history or not history[1]:
         return None
-    messages = history[1].get("channel_values", {}).get("messages", [])
+    channel_values = history[1].get("channel_values", {})
+    # Fast path: read current_mood field written by update_mood tool.
+    current_mood = channel_values.get("current_mood")
+    if current_mood:
+        return current_mood
+    # Backward-compat fallback: scan messages for legacy mood storage.
+    messages = channel_values.get("messages", [])
     for message in reversed(messages):
         if getattr(message, "type", None) != "ai":
             continue

@@ -163,6 +163,6 @@ class TokenizerLoaderMixin:
         self.logger.error(
             f"Error loading tokenizer: {type(error).__name__}: {str(error)}"
         )
-        self.logger.error(f"Tokenizer traceback:\n{traceback.format_exc()}")
+        self.logger.error("Tokenizer traceback:\n%s", traceback.format_exc())
         self._tokenizer = None
         self.logger.error("Tokenizer failed to load")

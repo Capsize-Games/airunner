@@ -8,6 +8,9 @@ import torch
 
 from airunner_services.contract_enums import LLMActionType
 from airunner_services.llm.llm_request import LLMRequest
+from airunner_services.llm.managers.mixins.conversation_summarization import (
+    maybe_summarize_checkpoint,
+)
 from airunner_services.llm.managers.mixins.generation_execution_finalize import (
     finalize_generation,
 )
@@ -188,6 +191,7 @@ def do_generate(
     result = run_generation_stream(
         owner, prompt, llm_request, complete_response, sequence_counter
     )
+    maybe_summarize_checkpoint(owner)
     executed_tools = executed_tools_from_workflow(owner._workflow_manager)
     return finalize_generation(
         owner,

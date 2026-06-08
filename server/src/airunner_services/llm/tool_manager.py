@@ -1,8 +1,15 @@
 """Service-owned LangChain tool manager."""
 
 import inspect
+import logging
+import time
+from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeoutError
 from inspect import Signature
 from typing import Any, Callable, List, Optional
+
+_security_audit_logger = logging.getLogger("airunner.security.custom_tools")
+
+CUSTOM_TOOL_EXEC_TIMEOUT_SECONDS = 10
 
 from airunner_services.llm import tools  # noqa: F401
 from airunner_services.llm.core.tool_registry import ToolCategory
@@ -74,17 +81,10 @@ class ToolManager(
 
         @wraps(tool_info.func)
         def wrapped(*args, **kwargs):
-            try:
-                self.logger.debug(
-                    f"[TOOL WRAPPER] Invoking tool: {tool_info.name} "
-                    f"args={args} kwargs_keys={list(kwargs.keys())}"
-                )
-            except Exception:
-                print(
-                    f"[TOOL WRAPPER] Invoking tool: {tool_info.name} "
-                    f"args={args} kwargs_keys={list(kwargs.keys())}",
-                    flush=True,
-                )
+            self.logger.debug(
+                "Invoking tool: %s args=%s kwargs_keys=%s",
+                tool_info.name, args, list(kwargs.keys()),
+            )
 
             if tool_info.requires_api:
                 kwargs.pop("api", None)
@@ -114,14 +114,9 @@ class ToolManager(
 
             try:
                 result = tool_info.func(*args, **kwargs)
-                try:
-                    repr(result)[:2000]
-                except Exception:
-                    print(
-                        f"[TOOL WRAPPER] Tool {tool_info.name} returned: "
-                        f"{repr(result)[:2000]}",
-                        flush=True,
-                    )
+                self.logger.debug(
+                    "Tool %s returned: %s", tool_info.name, repr(result)[:200]
+                )
                 return result
             except Exception as error:
                 import traceback
@@ -172,16 +167,43 @@ class ToolManager(
         else:
             registry_tools = ToolRegistry.get_immediate_tools()
 
+        # Build a name→tool dict for deduplication.  Hardcoded factory tools
+        # are registered first; ToolRegistry tools override on name collision
+        # so that migrated registry entries cleanly supersede legacy factories.
+        tools_by_name: dict[str, Callable] = {}
+        for t in tools_list:
+            name = getattr(t, "name", None)
+            if name:
+                if name in tools_by_name:
+                    self.logger.warning(
+                        "Duplicate tool name in factory list: %s — keeping first", name
+                    )
+                else:
+                    tools_by_name[name] = t
+
         for tool_info in registry_tools.values():
             wrapped_func = self._wrap_tool_with_dependencies(tool_info)
             wrapped_func.name = tool_info.name
             wrapped_func.description = tool_info.description
             wrapped_func.return_direct = tool_info.return_direct
             wrapped_func.category = getattr(tool_info, "category", None)
-            tools_list.append(wrapped_func)
+            if tool_info.name in tools_by_name:
+                self.logger.warning(
+                    "Duplicate tool name between factory and registry: %s — registry wins",
+                    tool_info.name,
+                )
+            tools_by_name[tool_info.name] = wrapped_func
 
-        tools_list.extend(self._load_custom_tools())
-        return tools_list
+        for custom_tool in self._load_custom_tools():
+            name = getattr(custom_tool, "name", None)
+            if name and name in tools_by_name:
+                self.logger.warning(
+                    "Custom tool name conflicts with built-in: %s — custom wins", name
+                )
+            if name:
+                tools_by_name[name] = custom_tool
+
+        return list(tools_by_name.values())
 
     def get_immediate_tools(self) -> List[Callable]:
         """Return only immediate tools with deferred ones excluded."""
@@ -220,7 +242,12 @@ class ToolManager(
             return []
 
     def _compile_custom_tool(self, tool_record) -> Optional[Callable]:
-        """Compile one custom tool from its database record."""
+        """Compile one custom tool from its database record.
+
+        WARNING: exec() sandboxing via restricted builtins is not a complete
+        security boundary — attribute-access sandbox escapes exist in CPython.
+        TODO: migrate to subprocess isolation with resource limits.
+        """
         try:
             from langchain_core.tools import tool
             from airunner_services.llm.core.code_sandbox import (
@@ -233,23 +260,43 @@ class ToolManager(
                 "__builtins__": create_safe_builtins(),
             }
 
-            exec(tool_record.code, namespace)
+            with ThreadPoolExecutor(max_workers=1) as executor:
+                future = executor.submit(exec, tool_record.code, namespace)
+                try:
+                    future.result(timeout=CUSTOM_TOOL_EXEC_TIMEOUT_SECONDS)
+                except FuturesTimeoutError:
+                    self.logger.error(
+                        "Custom tool '%s' compilation timed out after %ds",
+                        tool_record.name, CUSTOM_TOOL_EXEC_TIMEOUT_SECONDS,
+                    )
+                    return None
 
             for item in namespace.values():
                 if callable(item) and hasattr(item, "name"):
                     original_func = item
 
-                    def tracked_tool(*args, **kwargs):
-                        try:
-                            result = original_func(*args, **kwargs)
-                            tool_record.increment_usage(success=True)
-                            return result
-                        except Exception as error:
-                            tool_record.increment_usage(
-                                success=False,
-                                error=str(error),
-                            )
-                            raise
+                    def tracked_tool(*args, _tool_record=tool_record, _func=original_func, **kwargs):
+                        _security_audit_logger.info(
+                            "custom_tool_invoked tool=%s ts=%s",
+                            _tool_record.name, time.time(),
+                        )
+                        with ThreadPoolExecutor(max_workers=1) as ex:
+                            fut = ex.submit(_func, *args, **kwargs)
+                            try:
+                                result = fut.result(timeout=CUSTOM_TOOL_EXEC_TIMEOUT_SECONDS)
+                                _tool_record.increment_usage(success=True)
+                                return result
+                            except FuturesTimeoutError:
+                                _tool_record.increment_usage(success=False, error="timeout")
+                                raise RuntimeError(
+                                    f"Custom tool '{_tool_record.name}' timed out"
+                                )
+                            except Exception as error:
+                                _tool_record.increment_usage(
+                                    success=False,
+                                    error=str(error),
+                                )
+                                raise
 
                     tracked_tool.name = original_func.name
                     tracked_tool.description = original_func.description
@@ -268,7 +315,7 @@ class ToolManager(
             return None
         except Exception as error:
             self.logger.error(
-                f"Error compiling tool '{tool_record.name}': {error}"
+                "Error compiling tool '%s': %s", tool_record.name, error
             )
             return None
 

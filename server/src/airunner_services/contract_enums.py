@@ -55,6 +55,8 @@ class SignalCode(Enum):
     GENERATOR_FORM_UPDATE_VALUES_SIGNAL = "generator_form_update_values"
     IMAGE_EXPORTED = "image_exported_signal"
     KNOWLEDGE_FACT_ADDED = "knowledge_fact_added_signal"
+    KNOWLEDGE_FACT_DELETED = "knowledge_fact_deleted_signal"
+    KNOWLEDGE_FACT_UPDATED = "knowledge_fact_updated_signal"
     LAYERS_SHOW_SIGNAL = "show_layers_signal"
     LLM_CONVERT_TO_GGUF_SIGNAL = "llm_convert_to_gguf_signal"
     LLM_IMAGE_PROMPT_GENERATED_SIGNAL = "llm_image_prompt_generated_signal"
@@ -359,6 +361,7 @@ class ModelService(Enum):
     LOCAL = "local"
     OPENROUTER = "openrouter"
     OLLAMA = "ollama"
+    OPENAI = "openai"
 
 
 __all__ = [

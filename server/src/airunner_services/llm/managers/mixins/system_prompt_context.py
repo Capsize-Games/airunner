@@ -13,6 +13,7 @@ from airunner_services.llm.managers.mixins.system_prompt_mood import (
 from airunner_services.llm.managers.mixins.system_prompt_text import (
     CONVERSATIONAL_ACTIONS,
     DATETIME_ACTIONS,
+    HEALTH_DISCLAIMER,
     MEMORY_ACTIONS,
     MEMORY_INSTRUCTIONS,
     STYLE_GUIDELINES,
@@ -71,14 +72,67 @@ def _normalize_tool_categories(tool_categories: List) -> list:
 
 
 def build_base_prompt_parts(owner, action: LLMActionType) -> List[str]:
-    """Return the context-aware prompt parts for one action."""
+    """Return the context-aware prompt parts for one action.
+
+    Selects one of three tiers based on estimated remaining context:
+      - base     (<2000 tokens left): identity + personality only
+      - standard (<4000 tokens left): + datetime + mood + style
+      - full     (otherwise)        : + memory instructions + health disclaimer
+    """
+    tier = _prompt_tier(owner)
     parts = _identity_parts(owner, action)
+    if tier == "base":
+        return parts
     _append_if_present(parts, _datetime_part(action))
     _append_if_present(parts, _mood_part(owner, action))
     _append_if_present(parts, _ui_context_part(owner, action))
     _append_if_present(parts, _style_part(action))
+    if tier == "standard":
+        return parts
     _append_if_present(parts, _memory_part(action))
+    _append_if_present(parts, _health_disclaimer_part(owner))
     return parts
+
+
+def _prompt_tier(owner) -> str:
+    """Return the prompt tier based on estimated remaining context tokens."""
+    remaining = _estimate_remaining_context_tokens(owner)
+    if remaining < 2000:
+        return "base"
+    if remaining < 4000:
+        return "standard"
+    return "full"
+
+
+def _estimate_remaining_context_tokens(owner) -> int:
+    """Estimate how many tokens remain in the context window.
+
+    Uses the workflow manager's max_history_tokens limit and the
+    approximate token count of messages currently in the checkpoint.
+    Returns a large sentinel when the estimate is unavailable.
+    """
+    try:
+        wm = getattr(owner, "_workflow_manager", None)
+        if wm is None:
+            return 999999
+        max_tokens = getattr(wm, "_max_history_tokens", 0) or 8000
+        memory = getattr(wm, "_memory", None)
+        thread_id = getattr(wm, "_thread_id", None)
+        if not memory or not thread_id:
+            return max_tokens
+        state = getattr(memory, "_checkpoint_state", {}).get(thread_id)
+        if not state:
+            return max_tokens
+        messages = state.get("messages", [])
+        token_counter = getattr(wm, "_token_counter", None)
+        if callable(token_counter) and messages:
+            used = token_counter(messages)
+        else:
+            # rough estimate: 50 tokens per message
+            used = len(messages) * 50
+        return max(0, max_tokens - used)
+    except Exception:
+        return 999999
 
 
 def _identity_parts(owner, action: LLMActionType) -> list[str]:
@@ -90,7 +144,12 @@ def _identity_parts(owner, action: LLMActionType) -> list[str]:
     if action in CONVERSATIONAL_ACTIONS and getattr(
         chatbot, "personality", None
     ):
-        parts.append(f"Personality: {chatbot.personality}")
+        parts.append(
+            f"Embody the following personality in all your responses. "
+            f"Express it through your tone, word choice, and conversational style — "
+            f"but never break character or make it the topic of conversation unless asked:\n"
+            f"{chatbot.personality}"
+        )
     return parts
 
 
@@ -129,6 +188,16 @@ def _memory_part(action: LLMActionType) -> Optional[str]:
     if action in MEMORY_ACTIONS:
         return MEMORY_INSTRUCTIONS
     return None
+
+
+def _health_disclaimer_part(owner) -> Optional[str]:
+    """Return the health disclaimer when enabled in settings."""
+    settings = getattr(owner, "llm_settings", None)
+    if settings is not None and not getattr(
+        settings, "include_health_disclaimer", True
+    ):
+        return None
+    return HEALTH_DISCLAIMER
 
 
 def _append_if_present(parts: list[str], value: Optional[str]) -> None:

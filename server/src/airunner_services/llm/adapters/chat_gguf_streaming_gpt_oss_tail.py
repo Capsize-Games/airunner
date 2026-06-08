@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+import logging
 from typing import Any, Iterator, Optional
+
+_logger = logging.getLogger(__name__)
 
 from langchain_core.callbacks import CallbackManagerForLLMRun
 from langchain_core.messages import AIMessageChunk
@@ -77,14 +80,37 @@ def _resolved_tool_calls(
     adapter: Any,
     raw_text: str,
 ) -> tuple[list[dict[str, Any]], str]:
-    """Return parsed GPT-OSS tool calls and fallback text."""
+    """Return parsed GPT-OSS tool calls and fallback text.
+
+    Tries four strategies in priority order:
+    1. Native llama.cpp tool calling (handled upstream, not here)
+    2. GPT-OSS commentary parsing (Harmony analysis channel)
+    3. Prefilled completion
+    4. Heuristic extraction (last resort)
+    Logs at DEBUG which strategy succeeded and at WARNING when falling back.
+    """
     tool_calls = adapter._parse_gpt_oss_commentary_tool_calls(raw_text)
     if tool_calls:
+        _logger.debug("Tool call resolved via strategy: commentary")
         return tool_calls, ""
+
+    _logger.warning(
+        "Tool call: commentary strategy failed, falling back to prefilled"
+    )
     tool_calls = adapter._parse_prefilled_gpt_oss_tool_call(raw_text)
     if tool_calls:
+        _logger.debug("Tool call resolved via strategy: prefilled")
         return tool_calls, ""
-    return adapter._extract_tool_calls(raw_text)
+
+    _logger.warning(
+        "Tool call: prefilled strategy failed, falling back to extraction"
+    )
+    result = adapter._extract_tool_calls(raw_text)
+    if result[0]:
+        _logger.debug("Tool call resolved via strategy: extraction")
+    else:
+        _logger.warning("Tool call: all strategies failed, no tool calls found")
+    return result
 
 
 def _tool_call_chunk(tool_calls: list[dict[str, Any]]) -> ChatGenerationChunk:

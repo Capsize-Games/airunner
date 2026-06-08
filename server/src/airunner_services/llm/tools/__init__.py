@@ -23,9 +23,6 @@ from airunner_services.llm.tools import (
 )
 from airunner_services.tools import web_tools
 
-# Long-running project management tools
-from airunner_services.llm.long_running import tools as project_tools
-
 # Load explicitly enabled external extensions.
 # Extensions register tools via the same ToolRegistry and can override by name.
 try:
@@ -53,6 +50,4 @@ __all__ = [
     "author_tools",
     "research_validation_tools",
     "qa_tools",
-    # Long-running project tools
-    "project_tools",
 ]

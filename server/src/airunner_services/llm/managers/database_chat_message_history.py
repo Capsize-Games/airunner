@@ -158,7 +158,7 @@ class DatabaseChatMessageHistory(BaseChatMessageHistory):
             return langchain_messages
 
         except Exception as e:
-            self.logger.error(f"Error retrieving messages: {e}", exc_info=True)
+            self.logger.error("Error retrieving messages: %s", e, exc_info=True)
             return []
 
     def add_message(self, message: BaseMessage) -> None:
@@ -430,7 +430,7 @@ class DatabaseChatMessageHistory(BaseChatMessageHistory):
             )
 
         except Exception as e:
-            self.logger.error(f"Error adding message: {e}", exc_info=True)
+            self.logger.error("Error adding message: %s", e, exc_info=True)
 
     def add_messages(self, messages: List[BaseMessage]) -> None:
         """Add multiple messages to the conversation.
@@ -449,7 +449,7 @@ class DatabaseChatMessageHistory(BaseChatMessageHistory):
         try:
             self._conversation.value = []
             Conversation.objects.update(self.conversation_id, value=[])
-            self.logger.info(f"Cleared conversation {self.conversation_id}")
+            self.logger.info("Cleared conversation %s", self.conversation_id)
 
         except Exception as e:
             self.logger.error(

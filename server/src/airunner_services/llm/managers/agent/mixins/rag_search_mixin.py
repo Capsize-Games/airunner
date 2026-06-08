@@ -43,7 +43,7 @@ class RAGSearchMixin:
             return results[:k]
 
         except Exception as e:
-            self.logger.error(f"Error during search: {e}")
+            self.logger.error("Error during search: %s", e)
             return []
 
     def get_retriever_for_query(
@@ -81,7 +81,7 @@ class RAGSearchMixin:
             return retriever
 
         except Exception as e:
-            self.logger.error(f"Error creating retriever: {e}")
+            self.logger.error("Error creating retriever: %s", e)
             return None
 
     @property

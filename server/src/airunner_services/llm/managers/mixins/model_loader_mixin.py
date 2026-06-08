@@ -90,6 +90,11 @@ class ModelLoaderMixin:
 
         if should_scale:
             target_ctx = yarn_max_ctx
+            yarn_target_ctx_setting = getattr(
+                self.llm_settings, "yarn_target_context", 0
+            )
+            if yarn_target_ctx_setting and yarn_target_ctx_setting <= yarn_max_ctx:
+                target_ctx = yarn_target_ctx_setting
             factor = float(target_ctx) / float(native_ctx)
             config.rope_scaling = {
                 "type": "yarn",
@@ -322,7 +327,7 @@ class ModelLoaderMixin:
         self.logger.error(
             f"Error loading model: {type(error).__name__}: {str(error)}"
         )
-        self.logger.error(f"Model traceback:\n{traceback.format_exc()}")
+        self.logger.error("Model traceback:\n%s", traceback.format_exc())
         self._model = None
 
     def _load_pre_quantized_model(
