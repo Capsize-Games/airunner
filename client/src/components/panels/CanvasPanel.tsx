@@ -199,6 +199,8 @@ export default function CanvasPanel() {
                 documentHeight={canvas.documentHeight}
                 documentBgColor={canvas.documentBgColor}
                 layers={canvas.layers}
+                layerGroups={canvas.layerGroups}
+                displayOrder={canvas.displayOrder}
                 activeLayerId={canvas.activeLayerId}
                 activeGridArea={canvas.activeGridArea}
                 activeTool={canvas.activeTool}

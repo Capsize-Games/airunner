@@ -1,5 +1,4 @@
-import { useRef, useCallback, useEffect } from "react";
-import { Line, Rect } from "react-konva";
+import { Line } from "react-konva";
 import Konva from "konva";
 import type { StrokeNode, ActiveTool } from "./useCanvasState";
 
@@ -10,39 +9,8 @@ interface DrawingLayerProps {
   brushColor: string;
   visible: boolean;
   opacity: number;
-  onStrokeComplete: (stroke: Omit<StrokeNode, "id">) => void;
   isActive: boolean;
-  canvasWidth: number;
-  canvasHeight: number;
 }
-
-function getCanvasPos(e: Konva.KonvaEventObject<PointerEvent>) {
-  const stage = e.currentTarget.getStage();
-  if (!stage) return null;
-  const raw = stage.getPointerPosition();
-  if (!raw) return null;
-  const t = stage.getAbsoluteTransform().copy().invert();
-  return t.point(raw);
-}
-
-/** Clamp a point so the stroke cap stays within the document rectangle. */
-function clampToDoc(
-  x: number, y: number, w: number, h: number, inset: number,
-): { x: number; y: number } {
-  return {
-    x: Math.max(inset, Math.min(w - inset, x)),
-    y: Math.max(inset, Math.min(h - inset, y)),
-  };
-}
-
-/** Linear interpolation between two points. */
-function lerp(
-  x1: number, y1: number, x2: number, y2: number, t: number,
-): { x: number; y: number } {
-  return { x: x1 + (x2 - x1) * t, y: y1 + (y2 - y1) * t };
-}
-
-const INTERP_THRESHOLD = 3; // px — max gap before inserting intermediate points
 
 export default function DrawingLayer({
   strokes,
@@ -51,94 +19,9 @@ export default function DrawingLayer({
   brushColor,
   visible,
   opacity,
-  onStrokeComplete,
   isActive,
-  canvasWidth,
-  canvasHeight,
 }: DrawingLayerProps) {
-  const isDrawing = useRef(false);
-  const currentPoints = useRef<number[]>([]);
-  const liveLineRef = useRef<Konva.Line>(null);
-
   const isDrawingTool = activeTool === "brush" || activeTool === "eraser";
-
-  const handlePointerDown = useCallback(
-    (e: Konva.KonvaEventObject<PointerEvent>) => {
-      if (e.evt.button !== 0 && e.evt.button !== undefined) return;
-      if (!isActive || !isDrawingTool) return;
-      const pos = getCanvasPos(e);
-      if (!pos) return;
-      const inset = brushSize / 2;
-      const clamped = clampToDoc(pos.x, pos.y, canvasWidth, canvasHeight, inset);
-      isDrawing.current = true;
-      currentPoints.current = [clamped.x, clamped.y];
-      if (liveLineRef.current) {
-        liveLineRef.current.points([clamped.x, clamped.y]);
-        liveLineRef.current.getLayer()?.batchDraw();
-      }
-    },
-    [isActive, isDrawingTool, canvasWidth, canvasHeight, brushSize],
-  );
-
-  const handlePointerMove = useCallback(
-    (e: Konva.KonvaEventObject<PointerEvent>) => {
-      if (!isDrawing.current) return;
-      const pos = getCanvasPos(e);
-      if (!pos) return;
-      const inset = brushSize / 2;
-      const clamped = clampToDoc(pos.x, pos.y, canvasWidth, canvasHeight, inset);
-      const pts = currentPoints.current;
-      if (pts.length >= 2) {
-        const px = pts[pts.length - 2];
-        const py = pts[pts.length - 1];
-        const dx = clamped.x - px;
-        const dy = clamped.y - py;
-        const dist = Math.sqrt(dx * dx + dy * dy);
-        if (dist > INTERP_THRESHOLD) {
-          // Insert intermediate points for smooth curves during fast strokes.
-          const steps = Math.floor(dist / INTERP_THRESHOLD);
-          for (let i = 1; i <= steps; i++) {
-            const t = i / (steps + 1);
-            const ip = lerp(px, py, clamped.x, clamped.y, t);
-            pts.push(ip.x, ip.y);
-          }
-        }
-      }
-      pts.push(clamped.x, clamped.y);
-      if (liveLineRef.current) {
-        liveLineRef.current.points([...pts]);
-        liveLineRef.current.getLayer()?.batchDraw();
-      }
-    },
-    [canvasWidth, canvasHeight, brushSize],
-  );
-
-  const handlePointerUp = useCallback(() => {
-    if (!isDrawing.current) return;
-    isDrawing.current = false;
-    if (liveLineRef.current) {
-      liveLineRef.current.points([]);
-      liveLineRef.current.getLayer()?.batchDraw();
-    }
-    if (currentPoints.current.length < 4) {
-      currentPoints.current = [];
-      return;
-    }
-    onStrokeComplete({
-      points: [...currentPoints.current],
-      color: activeTool === "eraser" ? "#000000" : brushColor,
-      strokeWidth: brushSize,
-      tool: activeTool as "brush" | "eraser",
-    });
-    currentPoints.current = [];
-  }, [activeTool, brushSize, brushColor, onStrokeComplete]);
-
-  // Catch pointerup anywhere in the browser window — Konva only fires
-  // onPointerUp when the pointer is over the Stage/Canvas at release.
-  useEffect(() => {
-    window.addEventListener("pointerup", handlePointerUp);
-    return () => window.removeEventListener("pointerup", handlePointerUp);
-  }, [handlePointerUp]);
 
   return (
     <>
@@ -156,9 +39,15 @@ export default function DrawingLayer({
         />
       ))}
 
-      {/* Live preview line — updated imperatively */}
+      {/* Live preview line — managed imperatively by the stage overlay.
+          Placed here so it renders inside the layer's offset <Group>. */}
       <Line
-        ref={liveLineRef}
+        ref={(node) => {
+          if (isActive && isDrawingTool && node) {
+            (window as unknown as Record<string, Konva.Line | undefined>)
+              .__airunnerLiveStrokeRef = node;
+          }
+        }}
         points={[]}
         stroke={activeTool === "eraser" ? "#000000" : brushColor}
         strokeWidth={brushSize}
@@ -166,24 +55,9 @@ export default function DrawingLayer({
         lineJoin="round"
         globalCompositeOperation={activeTool === "eraser" ? "destination-out" : "source-over"}
         opacity={opacity}
-        visible={visible && isDrawingTool}
+        visible={visible && isDrawingTool && isActive}
         listening={false}
       />
-
-      {/* Hit area — large enough in document coords to cover the zoomed/panned
-          viewport, so strokes aren't interrupted when straying outside the doc. */}
-      {isActive && isDrawingTool && (
-        <Rect
-          x={-50000}
-          y={-50000}
-          width={100000}
-          height={100000}
-          fill="transparent"
-          onPointerDown={handlePointerDown}
-          onPointerMove={handlePointerMove}
-          onPointerUp={handlePointerUp}
-        />
-      )}
     </>
   );
 }

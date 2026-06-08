@@ -18,6 +18,7 @@ export default function CanvasLayersSidebar() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName]   = useState("");
   const [dragOverId, setDragOverId] = useState<string | null>(null);
+  const [dragPosition, setDragPosition] = useState<"above" | "below">("below");
   const [showNewLayer, setShowNewLayer] = useState(false);
   const [showMaskModal, setShowMaskModal] = useState(false);
   const [draggingId, setDraggingId] = useState<string | null>(null);
@@ -119,6 +120,9 @@ export default function CanvasLayersSidebar() {
       e.preventDefault();
       e.dataTransfer.dropEffect = "move";
       setDragOverId(id);
+      const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+      const midY = rect.top + rect.height / 2;
+      setDragPosition(e.clientY < midY ? "above" : "below");
     },
     [],
   );
@@ -134,14 +138,20 @@ export default function CanvasLayersSidebar() {
       const srcId = dragSourceId.current;
       if (!srcId || srcId === targetId) return;
       const targetLayer = canvas.layers.find((l) => l.id === targetId);
-      const toIndex = canvas.displayOrder.indexOf(targetId);
+      let toIndex = canvas.displayOrder.indexOf(targetId);
+      // In the sidebar the list is reversed (top item = highest index).
+      // Hovering the TOP half means "insert above" → higher displayOrder
+      // index → toIndex + 1 (push target down one slot).
+      // Hovering the BOTTOM half means "insert below" → at the target's
+      // current index (target shifts up one slot).
+      if (dragPosition === "above") toIndex += 1;
       if (targetLayer?.parentGroupId) {
         canvas.moveLayerToGroup(srcId, targetLayer.parentGroupId, toIndex);
       } else {
         canvas.reorderDisplayItem(srcId, toIndex);
       }
     },
-    [canvas],
+    [canvas, dragPosition],
   );
 
   // ── Copy selected layers/groups ─────────────────────────────────────
@@ -172,8 +182,16 @@ export default function CanvasLayersSidebar() {
 
   // ── Group row ───────────────────────────────────────────────────────
 
-  const renderGroupRow = (group: LayerGroup, idx: number) => (
+  const renderGroupRow = (group: LayerGroup, idx: number) => {
+    const isGroupDragOver = dragOverId === group.id;
+    const groupDropAbove = isGroupDragOver && dragPosition === "above";
+    const groupDropBelow = isGroupDragOver && dragPosition === "below";
+    return (
     <div key={group.id ?? `group-${idx}`}>
+      {/* Drop‑indicator line shown above the group when hovering its top half */}
+      {groupDropAbove && (
+        <div style={{ height: 2, background: "#6399ff", margin: "0 4px" }} />
+      )}
       <div
         draggable
         onClick={() => canvas.toggleGroupExpanded(group.id)}
@@ -185,7 +203,8 @@ export default function CanvasLayersSidebar() {
           setDragOverId(null);
           const srcId = dragSourceId.current;
           if (!srcId) return;
-          const orderIdx = canvas.displayOrder.indexOf(group.id);
+          let orderIdx = canvas.displayOrder.indexOf(group.id);
+          if (dragPosition === "above") orderIdx += 1;
           const isLayer = canvas.layers.some((l) => l.id === srcId);
           if (isLayer) {
             canvas.moveLayerToGroup(srcId, group.id, orderIdx);
@@ -202,7 +221,7 @@ export default function CanvasLayersSidebar() {
           padding: "0 6px 0 4px",
           height: 28,
           cursor: "default",
-          background: dragOverId === group.id
+          background: isGroupDragOver
             ? "rgba(99,153,255,0.12)"
             : "rgba(255,255,255,0.03)",
           userSelect: "none",
@@ -263,8 +282,13 @@ export default function CanvasLayersSidebar() {
           {Math.round(group.opacity * 100)}%
         </span>
       </div>
+      {/* Drop‑indicator line shown below the group when hovering its bottom half */}
+      {groupDropBelow && (
+        <div style={{ height: 2, background: "#6399ff", margin: "0 4px" }} />
+      )}
     </div>
-  );
+    );
+  };
 
   /** Compute display name with dedup suffix for the sidebar only. */
   const displayLayerName = useCallback(
@@ -285,8 +309,15 @@ export default function CanvasLayersSidebar() {
     const hasMask = Array.isArray(layer.maskStrokes);
     const maskTarget = layer.maskTarget ?? "content";
     const indent = depth * 12;
+    const isDragOver = dragOverId === layer.id;
+    const dropAbove = isDragOver && dragPosition === "above";
+    const dropBelow = isDragOver && dragPosition === "below";
     return (
       <div key={layer.id ?? `layer-${idx}`}>
+        {/* Drop‑indicator line shown above the row when hovering its top half */}
+        {dropAbove && (
+          <div style={{ height: 2, background: "#6399ff", margin: "0 4px" }} />
+        )}
         <div
           draggable
           onClick={(e) => {
@@ -313,8 +344,8 @@ export default function CanvasLayersSidebar() {
               ? "rgba(99,153,255,0.16)"
               : isSelected
                 ? "rgba(99,153,255,0.08)"
-                : dragOverId === layer.id
-                  ? "rgba(255,255,255,0.08)"
+                : isDragOver
+                  ? "rgba(255,255,255,0.06)"
                   : "transparent",
             borderLeft: `2px solid ${isSelected ? "#6399ff" : "transparent"}`,
             userSelect: "none",
@@ -411,6 +442,10 @@ export default function CanvasLayersSidebar() {
             {Math.round(layer.opacity * 100)}%
           </span>
         </div>
+        {/* Drop‑indicator line shown below the row when hovering its bottom half */}
+        {dropBelow && (
+          <div style={{ height: 2, background: "#6399ff", margin: "0 4px" }} />
+        )}
       </div>
     );
   };
