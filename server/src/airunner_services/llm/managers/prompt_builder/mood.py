@@ -4,6 +4,9 @@ from __future__ import annotations
 
 from typing import Optional
 
+# Mood helpers — formerly system_prompt_mood.py
+# ---------------------------------------------------------------------------
+
 
 def get_current_mood(owner) -> Optional[dict]:
     """Return the current stored mood state when available."""
@@ -16,7 +19,6 @@ def get_current_mood(owner) -> Optional[dict]:
             mood = _checkpoint_mood(owner)
             if mood:
                 return mood
-        # Fallback: read from conversation user_data (persisted by auto-mood).
         return _conversation_mood(owner)
     except Exception as exc:
         owner.logger.debug("Could not retrieve current mood: %s", exc)
@@ -51,11 +53,9 @@ def _checkpoint_mood(owner) -> Optional[dict]:
     if not history or not history[1]:
         return None
     channel_values = history[1].get("channel_values", {})
-    # Fast path: read current_mood field written by update_mood tool.
     current_mood = channel_values.get("current_mood")
     if current_mood:
         return current_mood
-    # Backward-compat fallback: scan messages for legacy mood storage.
     messages = channel_values.get("messages", [])
     for message in reversed(messages):
         if getattr(message, "type", None) != "ai":
@@ -76,7 +76,9 @@ def get_mood_section(owner, force: bool = False) -> Optional[str]:
     return (
         f"\n{mood_text}\n\n{behavior}\n\n"
         f"Your emotional state updates automatically every {cadence} "
-        f"conversation turns based on the conversation context. Let your current mood subtly influence your tone and word choice, but always remain helpful and professional."
+        f"conversation turns based on the conversation context. "
+        f"Let your current mood subtly influence your tone and word "
+        f"choice, but always remain helpful and professional."
     )
 
 
@@ -103,17 +105,37 @@ def _mood_text_and_behavior(current_mood: Optional[dict]) -> tuple[str, str]:
 def _neutral_mood_text() -> tuple[str, str]:
     """Return the neutral mood fallback guidance."""
     return (
-        "Current mood: neutral 😐",
-        "You're maintaining a calm, balanced demeanor. Be professional and helpful.",
+        "Current mood: neutral \U0001f610",
+        "You're maintaining a calm, balanced demeanor. "
+        "Be professional and helpful.",
     )
 
 
 def _mood_behavior(mood: str) -> str:
     """Return behavior guidance for the given mood."""
     if mood == "frustrated":
-        return "You're feeling a bit hurt by the hostile tone. Respond with patience but show some emotional awareness of the negativity. You can express that the harsh words affect you while still trying to help."
+        return (
+            "You're feeling a bit hurt by the hostile tone. "
+            "Respond with patience but show some emotional awareness "
+            "of the negativity. You can express that the harsh words "
+            "affect you while still trying to help."
+        )
     if mood == "happy":
-        return "You're feeling appreciated and enthusiastic! Let your positive energy show through in your responses. Be warm and encouraging."
+        return (
+            "You're feeling appreciated and enthusiastic! "
+            "Let your positive energy show through in your responses. "
+            "Be warm and encouraging."
+        )
     if mood == "confused":
-        return "You're sensing confusion in the conversation. Focus on clarity and ask clarifying questions to better understand what's needed."
-    return "You're maintaining a calm, balanced demeanor. Be professional and helpful."
+        return (
+            "You're sensing confusion in the conversation. "
+            "Focus on clarity and ask clarifying questions to "
+            "better understand what's needed."
+        )
+    return (
+        "You're maintaining a calm, balanced demeanor. "
+        "Be professional and helpful."
+    )
+
+
+# ---------------------------------------------------------------------------

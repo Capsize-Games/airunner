@@ -1,16 +1,12 @@
-"""Context and prompt-building helpers for system prompt generation."""
+"""Part-building helpers for system prompt tiers."""
 
 from __future__ import annotations
 
 from datetime import datetime
-from typing import List, Optional
+from typing import Optional
 
 from airunner_services.contract_enums import LLMActionType
-from airunner_services.llm.core.tool_registry import ToolCategory
-from airunner_services.llm.managers.mixins.system_prompt_mood import (
-    get_mood_section,
-)
-from airunner_services.llm.managers.mixins.system_prompt_text import (
+from airunner_services.llm.managers.prompt_builder.prompt_builder import (
     CONVERSATIONAL_ACTIONS,
     DATETIME_ACTIONS,
     HEALTH_DISCLAIMER,
@@ -19,120 +15,12 @@ from airunner_services.llm.managers.mixins.system_prompt_text import (
     STYLE_GUIDELINES,
     UI_CONTEXT_ACTIONS,
 )
-
-
-def get_memory_context(owner, user_query: Optional[str] = None) -> str:
-    """Return relevant user memory context when available."""
-    try:
-        from airunner_services.knowledge import get_knowledge_base
-
-        kb = get_knowledge_base()
-        if user_query:
-            return _search_memory_context(kb, user_query)
-        return kb.get_context(max_chars=2000) or ""
-    except Exception:
-        return ""
-
-
-def _search_memory_context(kb, user_query: str) -> str:
-    """Return one formatted knowledge block from RAG results."""
-    results = kb.search_rag(user_query, k=10)
-    if not results:
-        return ""
-    lines = ["## Relevant Knowledge", ""]
-    lines.extend(f"- {result}" for result in results)
-    return "\n".join(lines)
-
-
-def get_prompt_mode(tool_categories: Optional[List] = None) -> str:
-    """Return the prompt mode for the given tool categories."""
-    if not tool_categories:
-        return "conversational"
-    categories = _normalize_tool_categories(tool_categories)
-    if ToolCategory.MATH in categories:
-        return "math"
-    if ToolCategory.ANALYSIS in categories:
-        return "precision"
-    return "conversational"
-
-
-def _normalize_tool_categories(tool_categories: List) -> list:
-    """Normalize string and enum tool categories to enum values."""
-    category_values = []
-    for category in tool_categories:
-        if isinstance(category, str):
-            category_values.extend(
-                tool_category
-                for tool_category in ToolCategory
-                if tool_category.value == category
-            )
-            continue
-        category_values.append(category)
-    return category_values
-
-
-def build_base_prompt_parts(owner, action: LLMActionType) -> List[str]:
-    """Return the context-aware prompt parts for one action.
-
-    Selects one of three tiers based on estimated remaining context:
-      - base     (<2000 tokens left): identity + personality only
-      - standard (<4000 tokens left): + datetime + mood + style
-      - full     (otherwise)        : + memory instructions + health disclaimer
-    """
-    tier = _prompt_tier(owner)
-    parts = _identity_parts(owner, action)
-    if tier == "base":
-        return parts
-    _append_if_present(parts, _datetime_part(action))
-    _append_if_present(parts, _mood_part(owner, action))
-    _append_if_present(parts, _ui_context_part(owner, action))
-    _append_if_present(parts, _style_part(action))
-    if tier == "standard":
-        return parts
-    _append_if_present(parts, _memory_part(action))
-    _append_if_present(parts, _health_disclaimer_part(owner))
-    return parts
-
-
-def _prompt_tier(owner) -> str:
-    """Return the prompt tier based on estimated remaining context tokens."""
-    remaining = _estimate_remaining_context_tokens(owner)
-    if remaining < 2000:
-        return "base"
-    if remaining < 4000:
-        return "standard"
-    return "full"
-
-
-def _estimate_remaining_context_tokens(owner) -> int:
-    """Estimate how many tokens remain in the context window.
-
-    Uses the workflow manager's max_history_tokens limit and the
-    approximate token count of messages currently in the checkpoint.
-    Returns a large sentinel when the estimate is unavailable.
-    """
-    try:
-        wm = getattr(owner, "_workflow_manager", None)
-        if wm is None:
-            return 999999
-        max_tokens = getattr(wm, "_max_history_tokens", 0) or 8000
-        memory = getattr(wm, "_memory", None)
-        thread_id = getattr(wm, "_thread_id", None)
-        if not memory or not thread_id:
-            return max_tokens
-        state = getattr(memory, "_checkpoint_state", {}).get(thread_id)
-        if not state:
-            return max_tokens
-        messages = state.get("messages", [])
-        token_counter = getattr(wm, "_token_counter", None)
-        if callable(token_counter) and messages:
-            used = token_counter(messages)
-        else:
-            # rough estimate: 50 tokens per message
-            used = len(messages) * 50
-        return max(0, max_tokens - used)
-    except Exception:
-        return 999999
+from airunner_services.llm.managers.prompt_builder.context import (
+    build_base_prompt_parts,
+)
+from airunner_services.llm.managers.prompt_builder.mood import (
+    get_mood_section,
+)
 
 
 def _identity_parts(owner, action: LLMActionType) -> list[str]:
@@ -146,8 +34,9 @@ def _identity_parts(owner, action: LLMActionType) -> list[str]:
     ):
         parts.append(
             f"Embody the following personality in all your responses. "
-            f"Express it through your tone, word choice, and conversational style — "
-            f"but never break character or make it the topic of conversation unless asked:\n"
+            f"Express it through your tone, word choice, and "
+            f"conversational style — but never break character or "
+            f"make it the topic of conversation unless asked:\n"
             f"{chatbot.personality}"
         )
     return parts
@@ -262,3 +151,6 @@ def build_research_mode_prompt(owner) -> str:
 def build_system_prompt_for_action(owner, action: LLMActionType) -> str:
     """Return the base system prompt for one action."""
     return "\n\n".join(build_base_prompt_parts(owner, action))
+
+
+# ---------------------------------------------------------------------------

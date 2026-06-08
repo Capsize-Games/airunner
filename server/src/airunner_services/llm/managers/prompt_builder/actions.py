@@ -11,15 +11,20 @@ from airunner_services.llm.managers.mixins.system_prompt_action_text import (
     SEARCH_WEB_FORCE_PROMPT,
     START_WORKFLOW_FORCE_PROMPT,
 )
-from airunner_services.llm.managers.mixins.system_prompt_context import (
-    build_research_mode_prompt,
-    build_system_prompt_for_action,
+from airunner_services.llm.managers.prompt_builder.context import (
     get_prompt_mode,
 )
-from airunner_services.llm.managers.mixins.system_prompt_text import (
+from airunner_services.llm.managers.prompt_builder.parts import (
+    build_research_mode_prompt,
+    build_system_prompt_for_action,
+)
+from airunner_services.llm.managers.prompt_builder.prompt_builder import (
     MATH_SYSTEM_PROMPT,
     PRECISION_SYSTEM_PROMPT,
 )
+
+# Action-specific helpers — formerly system_prompt_actions.py
+# ---------------------------------------------------------------------------
 
 
 def get_system_prompt_with_context(
@@ -74,6 +79,7 @@ def get_force_tool_instruction(tool_name: str) -> str:
         f"\n\n**CRITICAL RULES:**"
         f"\n1. Your FIRST action MUST be to call `{tool_name}`"
         f"\n2. Do NOT skip the tool call or try to answer without it"
-        f"\n3. After the tool returns results, provide a helpful response based on those results"
+        f"\n3. After the tool returns results, provide a helpful "
+        f"response based on those results"
         f"\n4. If the tool fails, explain what went wrong"
     )
