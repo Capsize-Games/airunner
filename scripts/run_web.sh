@@ -24,46 +24,77 @@ run_step() {
 }
 
 # --------------------------------------------------------------------
-# 1. Start services (daemon + API)
+# Parse flags
 # --------------------------------------------------------------------
-run_step "Starting services" "${DEV_DIR}/run_services.sh"
+RUN_SERVER=false
+RUN_CLIENT=false
+
+for arg in "$@"; do
+    case "${arg}" in
+        --server) RUN_SERVER=true ;;
+        --client) RUN_CLIENT=true ;;
+        *)
+            echo "Usage: $0 [--server] [--client]" >&2
+            echo "  No flags  → start both server and client" >&2
+            echo "  --server  → start server (daemon + API) only" >&2
+            echo "  --client  → start client (Vite dev server) only" >&2
+            exit 1
+            ;;
+    esac
+done
+
+# Default: start both if neither flag is given
+if ! $RUN_SERVER && ! $RUN_CLIENT; then
+    RUN_SERVER=true
+    RUN_CLIENT=true
+fi
 
 # --------------------------------------------------------------------
-# 3. Health check
+# Resolve client port from .env
 # --------------------------------------------------------------------
-run_step "Testing services" "${DEV_DIR}/test_services.sh"
+resolve_client_port() {
+    if [[ -f "${ROOT_DIR}/.env" ]]; then
+        grep -E '^VITE_PORT=' "${ROOT_DIR}/.env" | cut -d= -f2 | tr -d ' '
+    fi
+}
+CLIENT_PORT="$(resolve_client_port)"
+CLIENT_PORT="${CLIENT_PORT:-5173}"
 
 # --------------------------------------------------------------------
-# 4. Install web client dependencies (if needed)
+# Server
 # --------------------------------------------------------------------
-if [[ ! -d "${WEB_DIR}/node_modules" ]]; then
+if $RUN_SERVER; then
+    run_step "Starting services" "${DEV_DIR}/run_services.sh"
+    run_step "Testing services" "${DEV_DIR}/test_services.sh"
     echo ""
-    echo -e "${YELLOW}Installing web client dependencies...${NC}"
-    (cd "${WEB_DIR}" && npm install) || fail "npm install failed"
+    echo -e "${GREEN}Server running on http://localhost:${AIRUNNER_DAEMON_PORT:-8188}${NC}"
 fi
 
 # --------------------------------------------------------------------
-# 5. Start web client dev server
+# Client
 # --------------------------------------------------------------------
-# Read VITE_PORT from .env if present; default to 5173
-if [[ -f "${ROOT_DIR}/.env" ]]; then
-    # shellcheck disable=SC1090
-    VITE_PORT=$(grep -E '^VITE_PORT=' "${ROOT_DIR}/.env" | cut -d= -f2 | tr -d ' ')
+if $RUN_CLIENT; then
+    if [[ ! -d "${WEB_DIR}/node_modules" ]]; then
+        echo ""
+        echo -e "${YELLOW}Installing web client dependencies...${NC}"
+        (cd "${WEB_DIR}" && npm install) || fail "npm install failed"
+    fi
+
+    echo ""
+    echo -e "${GREEN}=== Starting web client ===${NC}"
+    echo "Web client starting on http://localhost:${CLIENT_PORT}"
+    echo ""
+    echo "Press Ctrl+C to stop."
+    echo ""
+
+    if $RUN_SERVER; then
+        echo "Press Ctrl+C to stop all services."
+        trap 'echo ""; echo -e "${GREEN}Shutting down...${NC}"; kill 0' EXIT
+    fi
+
+    # Start Vite dev server in background (Vite reads VITE_PORT from .env)
+    (cd "${WEB_DIR}" && npm run dev -- --host 0.0.0.0) &
+
+    # Wait for any child to exit
+    wait
 fi
-CLIENT_PORT="${VITE_PORT:-5173}"
-
-echo ""
-echo -e "${GREEN}=== Starting web client ===${NC}"
-echo "Services running on http://localhost:${AIRUNNER_DAEMON_PORT:-8188}"
-echo "Web client starting on http://localhost:${CLIENT_PORT}"
-echo ""
-echo "Press Ctrl+C to stop all services."
-echo ""
-
-trap 'echo ""; echo -e "${GREEN}Shutting down...${NC}"; kill 0' EXIT
-
-# Start Vite dev server in background (Vite reads VITE_PORT from .env)
-(cd "${WEB_DIR}" && npm run dev -- --host 0.0.0.0) &
-
-# Wait for any child to exit
-wait
