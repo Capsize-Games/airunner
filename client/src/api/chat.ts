@@ -20,7 +20,10 @@ export async function listConversations(limit = 50) {
 }
 
 export async function createConversation() {
-  return request<{ id: number }>("POST", "/api/v1/llm/conversations");
+  return request<{ conversation_id: number }>(
+    "POST",
+    "/api/v1/llm/conversations",
+  );
 }
 
 export async function deleteConversation(id: number) {

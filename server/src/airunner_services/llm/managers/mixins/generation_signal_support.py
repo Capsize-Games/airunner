@@ -147,6 +147,10 @@ def create_thinking_callback(
 
     def handle_thinking_event(status: str, content: str) -> None:
         """Forward one thinking event to the streaming consumer."""
+        # "completed" carries the full accumulated text — skip it to avoid
+        # doubling content that was already sent token-by-token via "streaming".
+        if status == "completed":
+            return
         sequence_counter[0] += 1
         _send_signal(
             owner,

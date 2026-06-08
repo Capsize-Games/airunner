@@ -149,7 +149,7 @@ export function useLLMWebSocket() {
           }
 
           if (data.type === "thinking") {
-            setThinkingBuffer(data.content ?? "");
+            setThinkingBuffer((prev) => prev + (data.content ?? ""));
             const chunk: StreamChunk = {
               token: data.content ?? "",
               message_type: "thinking",

@@ -179,9 +179,20 @@ def apply_thinking_directive(
     adapter: Any,
     converted: List[Dict[str, Any]],
 ) -> None:
-    """Prefix the final Qwen3 user turn with a no-think directive."""
-    model_path = str(adapter.model_path).lower()
-    if adapter.enable_thinking or "qwen3" not in model_path:
+    """Prefix the final Qwen3 user turn with a /think or /no_think directive.
+
+    Qwen3.5 models use ``/think`` to enter deep-reasoning mode and
+    ``/no_think`` to stay in shallow mode.  The adapter's
+    ``enable_thinking`` flag controls which directive is prepended.
+
+    The model identity is resolved through ``model_path`` first, then
+    falls back to the detected chat format (``chatml`` for all Qwen
+    models) so the hash-based path assignments still match.
+    """
+    # Resolve the model identity for Qwen3 detection.
+    model_path_lower = str(adapter.model_path).lower()
+    chat_format = getattr(adapter, "_detected_format", None) or ""
+    if "qwen3" not in model_path_lower and chat_format != "chatml":
         return
 
     for message in reversed(converted):
@@ -193,5 +204,8 @@ def apply_thinking_directive(
         stripped = content.lstrip()
         if stripped.startswith("/no_think") or stripped.startswith("/think"):
             return
-        message["content"] = f"/no_think\n{content}"
+        if getattr(adapter, "enable_thinking", False):
+            message["content"] = f"/think\n{content}"
+        else:
+            message["content"] = f"/no_think\n{content}"
         return

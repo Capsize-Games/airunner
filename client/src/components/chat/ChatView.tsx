@@ -192,7 +192,7 @@ export default function ChatView({
             fullResponse += chunk.token;
           }
         }
-        const thinking = thinkingChunks.join("");
+        const thinking = thinkingChunks.join("").trim();
 
         const nextIndex = msgs.length;
 
@@ -218,7 +218,7 @@ export default function ChatView({
         setError(msg);
       }
     },
-    [activeDocs, llm, appendMessage, setStoredConvId],
+    [activeDocs, llm, appendMessage],
   );
 
   // ── Send (new message) ────────────────────────────────────────────
@@ -231,14 +231,42 @@ export default function ChatView({
     }
     setInput("");
 
-    setMessages((prev) => [...prev, { role: "user", content: text }]);
+    // Ensure a conversation exists before sending — this guarantees the server
+    // associates messages with a known ID that we can reload after a page refresh.
+    if (conversationIdRef.current === null) {
+      try {
+        const { createConversation } = await import("../../api/client");
+        const result = await createConversation();
+        conversationIdRef.current = result.conversation_id;
+        setStoredConvId(result.conversation_id);
+        loadedConvRef.current = result.conversation_id;
+      } catch {
+        // Proceed without a conversation ID; history won't survive a reload.
+      }
+    }
+
+    // Persist the user message to IndexedDB so it survives a page reload.
+    const userMsgIndex = messages.length;
+    const userMsg: import("../../types/api").Message = {
+      role: "user" as const,
+      content: text,
+    };
+    if (conversationIdRef.current !== null) {
+      await appendMessage(
+        conversationIdRef.current,
+        userMsg,
+        userMsgIndex,
+      );
+    } else {
+      setMessages((prev) => [...prev, userMsg]);
+    }
     const newMessages: import("../../types/api").Message[] = [
       ...messages,
-      { role: "user" as const, content: text },
+      userMsg,
     ];
 
     await doInference(newMessages);
-  }, [input, messages, llm.streaming, setMessages, doInference]);
+  }, [input, messages, llm.streaming, setMessages, appendMessage, setStoredConvId, doInference]);
 
   // ── Delete message (and all after it) ─────────────────────────────
   const handleDeleteMessage = useCallback(
@@ -319,7 +347,7 @@ export default function ChatView({
     try {
       const { createConversation } = await import("../../api/client");
       const result = await createConversation();
-      const newId = result.id;
+      const newId = result.conversation_id;
       conversationIdRef.current = newId;
       setStoredConvId(newId);
       setMessages([]);

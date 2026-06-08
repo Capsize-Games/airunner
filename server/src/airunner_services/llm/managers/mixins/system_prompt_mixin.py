@@ -18,12 +18,12 @@ from airunner_services.llm.managers.prompt_builder.actions import (
     get_system_prompt_with_context,
 )
 from airunner_services.llm.managers.prompt_builder.context import (
-    build_base_prompt_parts,
     get_memory_context,
     get_prompt_mode,
 )
 from airunner_services.llm.managers.prompt_builder.parts import (
     augment_custom_system_prompt,
+    build_base_prompt_parts,
     build_research_mode_prompt,
     build_system_prompt_for_action,
 )

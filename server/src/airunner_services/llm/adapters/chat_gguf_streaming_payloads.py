@@ -50,6 +50,26 @@ def _apply_tool_calling_kwargs(
         chat_kwargs["tool_choice"] = adapter.tool_choice
 
 
+def _apply_thinking_kwargs(
+    adapter: Any,
+    chat_kwargs: dict[str, Any],
+) -> None:
+    """Let the adapter control whether thinking mode is active.
+
+    The adapter's ``enable_thinking`` attribute (``True`` by default on
+    ``ChatGGUF``) is authoritative.  When enabled, thinking is handled
+    transparently by the chat-format template (e.g. ``chatml`` for Qwen
+    models) which instructs the model to emit ``<think>…</think>`` blocks.
+
+    No extra kwargs are sent to ``Llama.create_chat_completion`` because
+    ``llama-cpp-python`` ≤ 0.3.28 does **not** expose an
+    ``enable_thinking`` parameter on that method.
+    """
+    if not getattr(adapter, "enable_thinking", False):
+        return
+    # No kwargs to set — thinking is driven by the chat template.
+
+
 def stream_chat_kwargs(
     adapter: Any,
     converted_messages: list[dict[str, Any]],
@@ -64,6 +84,7 @@ def stream_chat_kwargs(
     )
     _apply_stop_sequences(chat_kwargs, stop)
     _apply_tool_calling_kwargs(adapter, chat_kwargs)
+    _apply_thinking_kwargs(adapter, chat_kwargs)
     return chat_kwargs
 
 

@@ -7,6 +7,10 @@ from typing import Any, Optional
 
 from langchain_core.outputs import ChatGeneration, ChatResult
 
+from airunner_services.llm.adapters.chat_gguf_streaming_payloads import (
+    _apply_thinking_kwargs,
+)
+
 
 def generate_raw_gpt_oss_result(
     adapter: Any,
@@ -65,6 +69,7 @@ def chat_completion_kwargs(
     if stop:
         chat_kwargs["stop"] = stop
     _apply_native_tool_kwargs(adapter, chat_kwargs)
+    _apply_thinking_kwargs(adapter, chat_kwargs)
     return chat_kwargs
 
 
