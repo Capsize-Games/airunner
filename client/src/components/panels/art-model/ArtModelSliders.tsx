@@ -30,23 +30,22 @@ export default function ArtModelSliders({
     onChange: (v: number) => void,
     opts?: { displayAsFloat?: boolean; defaultVal?: number },
   ) => (
-    <div className="col-6" key={label}>
-      <SliderWithSpinbox
-        label={label}
-        value={value}
-        min={min}
-        max={max}
-        step={step}
-        defaultValue={opts?.defaultVal ?? min}
-        displayAsFloat={opts?.displayAsFloat}
-        labelWidth={52}
-        onChange={onChange}
-      />
-    </div>
+    <SliderWithSpinbox
+      key={label}
+      label={label}
+      value={value}
+      min={min}
+      max={max}
+      step={step}
+      defaultValue={opts?.defaultVal ?? min}
+      displayAsFloat={opts?.displayAsFloat}
+      labelWidth={52}
+      onChange={onChange}
+    />
   );
 
   return (
-    <div className="row g-1">
+    <div className="d-flex flex-column gap-1">
       {slider("Samples", nSamples, 1, 1000, 1, onNSamplesChange, { defaultVal: 1 })}
       {slider("Batch", imagesPerBatch, 1, 6, 1, onImagesPerBatchChange, { defaultVal: 1 })}
       {slider("Steps", steps, 1, 150, 1, onStepsChange, { defaultVal: 20 })}

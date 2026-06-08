@@ -2,6 +2,9 @@ import {
   useState, useEffect, useCallback, useRef,
 } from "react";
 import { updateSingleton } from "../../api/client";
+import ArtPromptToolbar from "./art-prompt/ArtPromptToolbar";
+import ArtModelSliders from "./art-model/ArtModelSliders";
+import { saveToStorage, loadFromStorage } from "./art-model/ArtModelStorage";
 import PromptInput from "./art-prompt/PromptInput";
 import { EmbeddingPills, LoraPills } from "./art-prompt/ActivePills";
 import ArtPromptFooter from "./art-prompt/ArtPromptFooter";
@@ -18,16 +21,37 @@ import { useArtWebSocket } from "../../features/art/useArtWebSocket";
 
 type ArtTab = "prompt" | "lora" | "embeddings";
 
+const ART_PANEL_W = 260;
+const LS_COLLAPSED = "canvas_art_panel_collapsed";
+
 const TABS: { id: ArtTab; label: string; icon: string }[] = [
-  { id: "prompt", label: "Prompt", icon: "pencil" },
+  { id: "prompt", label: "Prompt", icon: "message-square-heart" },
   { id: "lora", label: "LoRA", icon: "puzzle" },
   { id: "embeddings", label: "Embeddings", icon: "scan-text" },
 ];
+
+const railBtnStyle: React.CSSProperties = {
+  background: "none",
+  border: "none",
+  cursor: "pointer",
+  color: "rgba(255,255,255,0.4)",
+  padding: 0,
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  borderRadius: 4,
+  width: 28,
+  height: 28,
+  flexShrink: 0,
+};
 
 export default function ArtPromptPanel() {
   const initial = loadPromptData();
 
   const [tab, setTab] = useState<ArtTab>("prompt");
+  const [collapsed, setCollapsed] = useState(() => {
+    try { return localStorage.getItem(LS_COLLAPSED) === "true"; } catch { return false; }
+  });
   const [prompt, setPrompt] = useState(initial.prompt);
   const [negativePrompt, setNegativePrompt] = useState(
     initial.negative_prompt,
@@ -44,6 +68,20 @@ export default function ArtPromptPanel() {
   const [activeEmbeddings, setActiveEmbeddings] = useState<
     { id: number; name: string }[]
   >([]);
+
+  // Output size state
+  const [genWidth, setGenWidth] = useState(512);
+  const [genHeight, setGenHeight] = useState(512);
+
+  // Generation parameter state (samples, batch, steps, cfg)
+  const [nSamples, setNSamples] = useState(() => loadFromStorage("n_samples", 1));
+  const [imagesPerBatch, setImagesPerBatch] = useState(() => loadFromStorage("images_per_batch", 1));
+  const [steps, setSteps] = useState(() => loadFromStorage("steps", 20));
+  const [cfgScale, setCfgScale] = useState(() => loadFromStorage("cfg_scale", 7.5));
+
+  const persistGen = (updates: Record<string, unknown>) => {
+    updateSingleton("GeneratorSettings", updates).catch(() => {});
+  };
 
   // Seed state (persisted to localStorage and server)
   const [seed, setSeed] = useState(() => {
@@ -64,10 +102,6 @@ export default function ArtPromptPanel() {
   } catch {
     // not inside a canvas provider
   }
-
-  const activeGridArea = canvasCtx?.activeGridArea ?? {
-    x: 0, y: 0, width: 512, height: 512,
-  };
 
   const {
     generating,
@@ -122,17 +156,19 @@ export default function ArtPromptPanel() {
         artModel: ls("airunner_art_model") || undefined,
         artVersion: ls("airunner_art_version") || undefined,
         scheduler: ls("airunner_art_scheduler") || undefined,
-        width: activeGridArea.width,
-        height: activeGridArea.height,
+        width: genWidth,
+        height: genHeight,
       });
       setPhase("completed");
       if (imageBase64 && canvasCtx) {
+        const docW = canvasCtx.documentWidth ?? genWidth;
+        const docH = canvasCtx.documentHeight ?? genHeight;
         canvasCtx.placeImageOnNewLayer(
           imageBase64,
-          activeGridArea.x,
-          activeGridArea.y,
-          activeGridArea.width,
-          activeGridArea.height,
+          Math.round((docW - genWidth) / 2),
+          Math.round((docH - genHeight) / 2),
+          genWidth,
+          genHeight,
         );
       }
     } catch (err) {
@@ -140,7 +176,7 @@ export default function ArtPromptPanel() {
         err instanceof Error ? err.message : String(err);
       setPhase(msg === "Cancelled" ? "cancelled" : "failed");
     }
-  }, [prompt, negativePrompt, activeGridArea, canvasCtx, artGenerate]);
+  }, [prompt, negativePrompt, genWidth, genHeight, canvasCtx, artGenerate]);
 
   const onCancel = useCallback(() => {
     artCancel();
@@ -246,8 +282,84 @@ export default function ArtPromptPanel() {
     });
   };
 
+  const collapseToStorage = (val: boolean) => {
+    setCollapsed(val);
+    try { localStorage.setItem(LS_COLLAPSED, String(val)); } catch { /* */ }
+  };
+
+  if (collapsed) {
+    return (
+      <div
+        style={{
+          width: 32,
+          flexShrink: 0,
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          background: "var(--theme-panel-bg)",
+          borderRight: "1px solid var(--separator-color)",
+          padding: "4px 0",
+          gap: 2,
+          overflow: "hidden",
+        }}
+      >
+        <button
+          style={railBtnStyle}
+          title="Expand art panel"
+          onClick={() => collapseToStorage(false)}
+        >
+          <LucideIcon name="chevron-right" size={14} />
+        </button>
+        <div style={{ width: "60%", height: 1, background: "rgba(255,255,255,0.07)", margin: "2px 0" }} />
+        {TABS.map((t) => (
+          <button
+            key={t.id}
+            style={{
+              ...railBtnStyle,
+              color: tab === t.id ? "var(--bs-primary)" : "rgba(255,255,255,0.4)",
+            }}
+            title={t.label}
+            onClick={() => { setTab(t.id); collapseToStorage(false); }}
+          >
+            <LucideIcon name={t.icon} size={14} />
+          </button>
+        ))}
+      </div>
+    );
+  }
+
   return (
-    <div className="d-flex flex-column h-100">
+    <div
+      style={{
+        width: ART_PANEL_W,
+        flexShrink: 0,
+        display: "flex",
+        flexDirection: "column",
+        overflow: "hidden",
+        borderRight: "1px solid var(--separator-color)",
+      }}
+    >
+      {/* Collapse header row */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          flexShrink: 0,
+          borderBottom: "1px solid rgba(255,255,255,0.07)",
+          padding: "2px 4px",
+        }}
+      >
+        <button
+          type="button"
+          onClick={() => collapseToStorage(true)}
+          title="Collapse art panel"
+          style={{ ...railBtnStyle, width: 24, height: 24, color: "rgba(255,255,255,0.25)", flexShrink: 0 }}
+        >
+          <LucideIcon name="chevron-left" size={13} />
+        </button>
+        <span style={{ fontSize: 10, fontWeight: 600, color: "rgba(255,255,255,0.25)", letterSpacing: "0.06em", paddingLeft: 4 }}>ART PROMPT</span>
+      </div>
+
       {/* Tab bar */}
       <div
         style={{
@@ -264,16 +376,10 @@ export default function ArtPromptPanel() {
             style={{
               flex: 1,
               padding: "6px 4px",
-              background: tab === t.id
-                ? "var(--theme-panel-bg)"
-                : "transparent",
+              background: tab === t.id ? "var(--theme-panel-bg)" : "transparent",
               border: "none",
-              borderBottom: tab === t.id
-                ? "2px solid var(--bs-primary)"
-                : "2px solid transparent",
-              color: tab === t.id
-                ? "var(--bs-primary)"
-                : "rgba(255,255,255,0.45)",
+              borderBottom: tab === t.id ? "2px solid var(--bs-primary)" : "2px solid transparent",
+              color: tab === t.id ? "var(--bs-primary)" : "rgba(255,255,255,0.45)",
               fontSize: 11,
               cursor: "pointer",
               display: "flex",
@@ -291,57 +397,65 @@ export default function ArtPromptPanel() {
 
       {/* Tab content */}
       {tab === "prompt" && (
-        <div className="d-flex flex-column flex-grow-1 overflow-hidden p-2">
-          <div className="flex-grow-1 d-flex flex-column gap-2 overflow-auto">
-            <PromptInput
-              label="Prompt"
-              value={prompt}
-              onChange={(v) => { setPrompt(v); persist({ prompt: v }); }}
-              placeholder="Describe the image..."
-              disabled={generating}
-            />
-
-            {readLs("airunner_art_version") !== "Z-Image Turbo" && (
-              <>
-                <PromptInput
-                  label="Secondary Prompt"
-                  value={secondaryPrompt}
-                  onChange={(v) => { setSecondaryPrompt(v); persist({ secondary_prompt: v }); }}
-                  placeholder="Background, colors, atmosphere..."
-                  disabled={generating}
-                />
-
-                <PromptInput
-                  label="Negative Prompt"
-                  value={negativePrompt}
-                  onChange={(v) => { setNegativePrompt(v); persist({ negative_prompt: v }); }}
-                  placeholder="Things to exclude..."
-                  disabled={generating}
-                />
-
-                <PromptInput
-                  label="Secondary Negative Prompt"
-                  value={secondaryNegativePrompt}
-                  onChange={(v) => {
-                    setSecondaryNegativePrompt(v);
-                    persist({ secondary_negative_prompt: v });
-                  }}
-                  placeholder="Secondary negative..."
-                  disabled={generating}
-                />
-              </>
-            )}
+        <div className="d-flex flex-column flex-grow-1 overflow-hidden">
+          <div className="flex-grow-1 d-flex flex-column gap-2 overflow-auto p-2">
+            {(() => {
+              const isMultiPrompt = readLs("airunner_art_version") !== "Z-Image Turbo";
+              return (
+                <>
+                  <PromptInput
+                    label={isMultiPrompt ? "Prompt 1" : "Prompt"}
+                    value={prompt}
+                    onChange={(v) => { setPrompt(v); persist({ prompt: v }); }}
+                    placeholder="Describe the image..."
+                    disabled={generating}
+                  />
+                  {isMultiPrompt && (
+                    <>
+                      <PromptInput
+                        label="Prompt 2"
+                        value={secondaryPrompt}
+                        onChange={(v) => { setSecondaryPrompt(v); persist({ secondary_prompt: v }); }}
+                        placeholder="Background, colors, atmosphere..."
+                        disabled={generating}
+                      />
+                      <PromptInput
+                        label="Negative Prompt 1"
+                        value={negativePrompt}
+                        onChange={(v) => { setNegativePrompt(v); persist({ negative_prompt: v }); }}
+                        placeholder="Things to exclude..."
+                        disabled={generating}
+                      />
+                      <PromptInput
+                        label="Negative Prompt 2"
+                        value={secondaryNegativePrompt}
+                        onChange={(v) => { setSecondaryNegativePrompt(v); persist({ secondary_negative_prompt: v }); }}
+                        placeholder="Secondary negative..."
+                        disabled={generating}
+                      />
+                    </>
+                  )}
+                </>
+              );
+            })()}
           </div>
 
-          <div className="flex-shrink-0 mt-2">
-            <EmbeddingPills
-              embeddings={activeEmbeddings}
-              onDeactivate={deactivateEmbedding}
+          <div className="flex-shrink-0" style={{ padding: "0 8px 8px" }}>
+            <EmbeddingPills embeddings={activeEmbeddings} onDeactivate={deactivateEmbedding} />
+            <LoraPills loras={activeLoras} onDeactivate={deactivateLora} />
+            {/* Model / version / scheduler — above generation sliders */}
+            <ArtPromptToolbar />
+            <ArtModelSliders
+              nSamples={nSamples}
+              imagesPerBatch={imagesPerBatch}
+              steps={steps}
+              cfgScale={cfgScale}
+              onNSamplesChange={(v) => { setNSamples(v); saveToStorage("n_samples", v); persistGen({ n_samples: v }); }}
+              onImagesPerBatchChange={(v) => { setImagesPerBatch(v); saveToStorage("images_per_batch", v); persistGen({ images_per_batch: v }); }}
+              onStepsChange={(v) => { setSteps(v); saveToStorage("steps", v); persistGen({ steps: v }); }}
+              onCfgScaleChange={(v) => { setCfgScale(v); saveToStorage("cfg_scale", v); persistGen({ cfg_scale: v }); }}
             />
-            <LoraPills
-              loras={activeLoras}
-              onDeactivate={deactivateLora}
-            />
+            <div style={{ marginTop: 8 }} />
             <SeedControls
               seed={seed}
               seedRandomized={seedRandomized}
@@ -349,9 +463,22 @@ export default function ArtPromptPanel() {
               onSeedChange={handleSeedChange}
               onToggleRandom={handleToggleRandom}
             />
-            {phase !== "idle" && (
-              <StatusBadge phase={phase} progress={progress} />
-            )}
+            {/* Output W × H */}
+            <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 6 }}>
+              <span style={{ fontSize: 11, color: "rgba(255,255,255,0.45)", flexShrink: 0 }}>W</span>
+              <input
+                type="number" min={64} max={2048} step={64} value={genWidth}
+                onChange={(e) => setGenWidth(Math.max(64, Math.min(2048, Number(e.target.value))))}
+                style={{ flex: 1, minWidth: 0, background: "rgba(0,0,0,0.4)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 4, color: "rgba(255,255,255,0.8)", fontSize: 11, textAlign: "center", padding: "3px 2px" }}
+              />
+              <span style={{ fontSize: 11, color: "rgba(255,255,255,0.45)", flexShrink: 0 }}>H</span>
+              <input
+                type="number" min={64} max={2048} step={64} value={genHeight}
+                onChange={(e) => setGenHeight(Math.max(64, Math.min(2048, Number(e.target.value))))}
+                style={{ flex: 1, minWidth: 0, background: "rgba(0,0,0,0.4)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 4, color: "rgba(255,255,255,0.8)", fontSize: 11, textAlign: "center", padding: "3px 2px" }}
+              />
+            </div>
+            {phase !== "idle" && <StatusBadge phase={phase} progress={progress} />}
             <ArtPromptFooter
               progress={progress}
               generating={generating}
