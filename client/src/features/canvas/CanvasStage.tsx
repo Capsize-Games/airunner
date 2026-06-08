@@ -11,6 +11,7 @@ import type {
   CanvasLayer, ActiveGridArea as ActiveGridAreaType,
   StrokeNode, ActiveTool, LayerGroup,
 } from "./useCanvasState";
+import type { LiveStrokeMessage, StrokeEndMessage } from "./canvasSyncTypes";
 import { getCursor } from "./cursorUtils";
 import CanvasBackground from "./CanvasBackground";
 
@@ -81,6 +82,9 @@ interface CanvasStageProps {
   gridLayerRef: React.RefObject<Konva.Layer>;
   maskLayerRef: React.RefObject<Konva.Layer>;
   stageRef: React.RefObject<Konva.Stage>;
+  ghostLayerRef: React.RefObject<Konva.Layer | null>;
+  sendLiveStroke?: (msg: LiveStrokeMessage) => void;
+  sendStrokeEnd?: (msg: StrokeEndMessage) => void;
 }
 
 const GRID_SIZE = 16;
@@ -116,6 +120,9 @@ const CanvasStage = forwardRef<CanvasStageHandle, CanvasStageProps>(
     gridLayerRef,
     maskLayerRef,
     stageRef,
+    ghostLayerRef,
+    sendLiveStroke,
+    sendStrokeEnd,
   }, ref) {
     const isPanning = useRef(false);
     const lastPointerPos = useRef({ x: 0, y: 0 });
@@ -131,6 +138,14 @@ const CanvasStage = forwardRef<CanvasStageHandle, CanvasStageProps>(
       x: number; y: number; width: number; height: number;
     } | null>(null);
     const [stageSize, setStageSize] = useState({ width: 800, height: 600 });
+
+    // ── Session identity (stable for tab lifetime) ────────────────────
+    const sessionId = useRef(crypto.randomUUID());
+
+    // ── Live stroke sync state ────────────────────────────────────────
+    const liveStrokeId = useRef<string>("");
+    const lastSentCount = useRef(0);
+    const liveThrottleRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     // ── Drawing overlay state (topmost layer for brush/eraser) ────────
     const isDrawingOverlay = useRef(false);
@@ -591,6 +606,8 @@ const CanvasStage = forwardRef<CanvasStageHandle, CanvasStageProps>(
         );
         isDrawingOverlay.current = true;
         drawingPoints.current = [clamped.x, clamped.y];
+        liveStrokeId.current = crypto.randomUUID();
+        lastSentCount.current = 0;
         if (getLiveStroke()) {
           getLiveStroke().points([clamped.x, clamped.y]);
           getLiveStroke().getLayer()?.batchDraw();
@@ -631,13 +648,53 @@ const CanvasStage = forwardRef<CanvasStageHandle, CanvasStageProps>(
           getLiveStroke().points([...pts]);
           getLiveStroke().getLayer()?.batchDraw();
         }
+
+        // ── Throttled live-stroke delta send (80 ms) ─────────────
+        if (!liveThrottleRef.current && sendLiveStroke && activeLayerId) {
+          liveThrottleRef.current = setTimeout(() => {
+            liveThrottleRef.current = null;
+            const currentPts = drawingPoints.current;
+            const delta = currentPts.slice(lastSentCount.current);
+            if (delta.length > 0) {
+              lastSentCount.current = currentPts.length;
+              sendLiveStroke({
+                type: "stroke:live",
+                sessionId: sessionId.current,
+                layerId: activeLayerId,
+                strokeId: liveStrokeId.current,
+                tool: activeTool as "brush" | "eraser",
+                color: brushColor,
+                strokeWidth: brushSize,
+                delta,
+              });
+            }
+          }, 80);
+        }
       },
-      [brushSize, documentWidth, documentHeight, drawingOffsetX, drawingOffsetY],
+      [brushSize, documentWidth, documentHeight, drawingOffsetX, drawingOffsetY,
+       sendLiveStroke, activeLayerId, activeTool, brushColor],
     );
 
     const handleOverlayPointerUp = useCallback(() => {
       if (!isDrawingOverlay.current) return;
       isDrawingOverlay.current = false;
+
+      // Cancel any pending live-stroke flush.
+      if (liveThrottleRef.current) {
+        clearTimeout(liveThrottleRef.current);
+        liveThrottleRef.current = null;
+      }
+
+      // Send stroke:end so remote tabs discard the ghost.
+      if (sendStrokeEnd) {
+        sendStrokeEnd({
+          type: "stroke:end",
+          sessionId: sessionId.current,
+          strokeId: liveStrokeId.current,
+        });
+      }
+      lastSentCount.current = 0;
+
       if (getLiveStroke()) {
         getLiveStroke().points([]);
         getLiveStroke().getLayer()?.batchDraw();
@@ -653,7 +710,7 @@ const CanvasStage = forwardRef<CanvasStageHandle, CanvasStageProps>(
         tool: activeTool as "brush" | "eraser",
       });
       drawingPoints.current = [];
-    }, [activeTool, brushSize, brushColor, onAddStroke]);
+    }, [activeTool, brushSize, brushColor, onAddStroke, sendStrokeEnd]);
 
     // Catch pointerup anywhere in the browser window — Konva only fires
     // onPointerUp when the pointer is over the Stage/Canvas at release.
@@ -762,6 +819,10 @@ const CanvasStage = forwardRef<CanvasStageHandle, CanvasStageProps>(
 
           {/* Active Grid Area — hidden; ref kept for compatibility */}
           <Layer ref={gridLayerRef} listening={false} visible={false} />
+
+          {/* Ghost strokes — imperatively managed by useGhostStrokes.
+              Lives above content layers and below the brush indicator. */}
+          <Layer ref={ghostLayerRef} listening={false} />
 
           {/* Mask layer — routes to per-layer mask when active layer has one */}
           {activeTool === "mask" && (() => {

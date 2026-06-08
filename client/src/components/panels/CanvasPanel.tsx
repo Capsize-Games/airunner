@@ -5,6 +5,7 @@ import {
   useCanvasDocument,
   useCanvasSync,
 } from "../../features/canvas";
+import { useGhostStrokes } from "../../features/canvas/useGhostStrokes";
 import type { CanvasStageHandle } from "../../features/canvas/CanvasStage";
 import CanvasStage from "../../features/canvas/CanvasStage";
 import ToolBar from "../../features/canvas/ToolBar";
@@ -25,6 +26,9 @@ export default function CanvasPanel() {
   const gridLayerRef = useRef<Konva.Layer>(null!) as React.RefObject<Konva.Layer>;
   const maskLayerRef = useRef<Konva.Layer>(null!) as React.RefObject<Konva.Layer>;
   const canvasHandleRef = useRef<CanvasStageHandle>(null);
+
+  // ── Ghost strokes (imperative Konva, outside React state) ──────────
+  const ghostStrokes = useGhostStrokes();
 
   const [showGrid] = useState(() => {
     try {
@@ -48,8 +52,13 @@ export default function CanvasPanel() {
   // WebSocket sync for instant canvas persistence.
   const canvasSync = useCanvasSync({
     onDocument: (json) => {
-      if (json) canvas.loadFromJSON(json);
+      if (json) {
+        ghostStrokes.clearAll();
+        canvas.loadFromJSON(json);
+      }
     },
+    onLiveStroke: ghostStrokes.applyLiveDelta,
+    onStrokeEnd: (msg) => ghostStrokes.clearGhost(msg.sessionId),
   });
 
   // Use persistable state (no history) for the backend — history is local-only.
@@ -224,6 +233,9 @@ export default function CanvasPanel() {
                 gridLayerRef={gridLayerRef}
                 maskLayerRef={maskLayerRef}
                 stageRef={stageRef}
+                ghostLayerRef={ghostStrokes.ghostLayerRef}
+                sendLiveStroke={canvasSync.sendLiveStroke}
+                sendStrokeEnd={canvasSync.sendStrokeEnd}
               />
             </div>
           </div>

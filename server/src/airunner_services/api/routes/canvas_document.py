@@ -37,9 +37,8 @@ class CanvasDocumentPutResponse(BaseModel):
     status: str
 
 
-async def _broadcast_document(document: str, sender: WebSocket) -> None:
-    """Send a document update to all connected clients except the sender."""
-    payload = {"type": "document", "document": document}
+async def _broadcast_raw(payload: dict, sender: WebSocket) -> None:
+    """Send a raw dict payload to all connected clients except the sender."""
     stale: list[WebSocket] = []
     for client in _connected_clients:
         if client is sender:
@@ -50,6 +49,44 @@ async def _broadcast_document(document: str, sender: WebSocket) -> None:
             stale.append(client)
     for s in stale:
         _connected_clients.discard(s)
+
+
+async def _broadcast_document(document: str, sender: WebSocket) -> None:
+    """Send a document update to all connected clients except the sender."""
+    await _broadcast_raw({"type": "document", "document": document}, sender)
+
+
+async def _send_current_document(websocket: WebSocket) -> None:
+    """Fetch the latest document from the DB and push it to *websocket*."""
+    with session_scope() as session:
+        record = (
+            session.query(CanvasDocument)
+            .order_by(CanvasDocument.id.desc())
+            .first()
+        )
+        current_doc = record.document if record is not None else None
+        await websocket.send_json(
+            {
+                "type": "document",
+                "document": current_doc,
+            }
+        )
+
+
+def _persist_document(doc: str) -> None:
+    """Upsert the given document string into the database."""
+    with session_scope() as session:
+        record = (
+            session.query(CanvasDocument)
+            .order_by(CanvasDocument.id.desc())
+            .first()
+        )
+        if record is None:
+            record = CanvasDocument(document=doc)
+            session.add(record)
+        else:
+            record.document = doc
+        session.flush()
 
 
 @router.websocket("/ws")
@@ -67,39 +104,22 @@ async def canvas_document_websocket(websocket: WebSocket):
     )
 
     try:
-        # Send current document on connect
-        with session_scope() as session:
-            record = (
-                session.query(CanvasDocument)
-                .order_by(CanvasDocument.id.desc())
-                .first()
-            )
-            current_doc = record.document if record is not None else None
-            await websocket.send_json(
-                {
-                    "type": "document",
-                    "document": current_doc,
-                }
-            )
+        await _send_current_document(websocket)
 
         while True:
             data = await websocket.receive_json()
+
+            # Relay live-stroke and stroke-end messages without persistence.
+            msg_type = data.get("type")
+            if msg_type in ("stroke:live", "stroke:end"):
+                await _broadcast_raw(data, sender=websocket)
+                continue
+
             doc = data.get("document")
             if doc is None:
                 continue
 
-            with session_scope() as session:
-                record = (
-                    session.query(CanvasDocument)
-                    .order_by(CanvasDocument.id.desc())
-                    .first()
-                )
-                if record is None:
-                    record = CanvasDocument(document=doc)
-                    session.add(record)
-                else:
-                    record.document = doc
-                session.flush()
+            _persist_document(doc)
 
             # Broadcast to all other connected clients.
             await _broadcast_document(doc, websocket)
