@@ -72,7 +72,7 @@ export function useConversationMessages() {
       // message after a tool-call metadata row.  Use that if the direct
       // `thinking_content` field is not present.
       const mapped: Message[] = rawMsgs.map(
-        (raw: Record<string, unknown>, i) => {
+        (raw: Record<string, unknown>) => {
           let content = String(raw.content ?? "");
           if (raw.is_bot && content.toLowerCase().startsWith("assistant ")) {
             content = content.slice(10);
@@ -90,8 +90,10 @@ export function useConversationMessages() {
       );
       setMessages(mapped);
 
-      // Persist to IndexedDB (append-only via bulkPut keyed by index).
-      if (db) {
+      // Persist to IndexedDB only when the server returned messages.
+      // If the server returns empty (e.g. conversation not yet synced),
+      // keep the existing local cache to avoid losing data.
+      if (db && rawMsgs.length > 0) {
         const stored = rawMsgs.map((raw, i) =>
           toStored(raw as Record<string, unknown>, conversationId, i),
         );

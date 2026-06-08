@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+import logging
 import traceback
 from typing import Any, Dict, List, Optional
+
+_logger = logging.getLogger(__name__)
 
 from langchain_core.messages import AIMessage
 from langgraph.errors import GraphRecursionError
@@ -140,14 +143,11 @@ def handle_interrupted_generation(
 
 
 def _debug_print_error(exc: Exception, error_message: str) -> None:
-    """Print error diagnostics to stdout for debugging."""
-    print(f"[ERROR HANDLER] Exception type: {type(exc)}", flush=True)
-    print(f"[ERROR HANDLER] Exception message: {str(exc)}", flush=True)
-    print("[ERROR HANDLER] Full traceback:", flush=True)
-    traceback.print_exc()
-    print(
-        f"[ERROR HANDLER] Error message to send: {error_message}",
-        flush=True,
+    """Log error diagnostics for debugging."""
+    _logger.error(
+        "Exception type: %s; message: %s; error_message: %s",
+        type(exc).__name__, exc, error_message,
+        exc_info=True,
     )
 
 

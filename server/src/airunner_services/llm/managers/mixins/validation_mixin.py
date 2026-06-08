@@ -96,7 +96,7 @@ class ValidationMixin:
         try:
             return self._check_model_files_exist(model_path)
         except Exception as e:
-            self.logger.error(f"Error checking model files: {e}")
+            self.logger.error("Error checking model files: %s", e)
             return False
 
     def _check_model_files_exist(
@@ -145,7 +145,7 @@ class ValidationMixin:
             self._log_missing_files(model_path, essential_files)
 
         if not safetensors_found:
-            self.logger.info(f"No .safetensors files found in {model_path}")
+            self.logger.info("No .safetensors files found in %s", model_path)
 
         self.logger.info(
             f"Model exists check: {has_essential and safetensors_found} "
@@ -187,7 +187,7 @@ class ValidationMixin:
             for f in essential_files
             if not os.path.exists(os.path.join(model_path, f))
         ]
-        self.logger.info(f"Missing essential files: {missing}")
+        self.logger.info("Missing essential files: %s", missing)
 
     def _get_model_id_for_model(self: "LLMModelManager") -> str:
         """Get model ID for current model.
@@ -300,7 +300,7 @@ class ValidationMixin:
         except ValueError as e:
             # Catch the ValueError raised by the property when path is not configured
             # or when embedding model is incorrectly used as main LLM
-            self.logger.error(f"Model path validation failed: {e}")
+            self.logger.error("Model path validation failed: %s", e)
 
             # Check if this is an embedding model error - auto-fix it
             error_msg = str(e)

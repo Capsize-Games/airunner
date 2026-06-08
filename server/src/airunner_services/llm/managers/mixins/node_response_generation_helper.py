@@ -195,7 +195,7 @@ class NodeResponseGenerationHelper:
             )
             if parsed_tc:
                 tool_calls = parsed_tc
-        if thinking_content:
+        if thinking_content and thinking_content.strip():
             additional_kwargs = dict(additional_kwargs)
             additional_kwargs["thinking_content"] = thinking_content
         return AIMessage(

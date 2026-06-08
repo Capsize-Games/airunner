@@ -64,7 +64,7 @@ export default function MessageList({
 
   // ── Determine whether we are mid-stream ───────────────────────────
   const isStreaming = !!(
-    (thinkingBuffer && thinkingBuffer.length > 0) ||
+    thinkingBuffer?.trim() ||
     (streamBuffer && streamBuffer.length > 0)
   );
 
@@ -235,7 +235,7 @@ function StreamingBubble({
       </small>
 
       {/* Thinking section */}
-      {thinkingBuffer && (
+      {thinkingBuffer?.trim() && (
         <div
           className="mb-2 rounded"
           style={{
@@ -357,8 +357,8 @@ function MessageBubble({
 }) {
   const isUser = message.role === "user";
   const [thinkingExpanded, setThinkingExpanded] = useState(false);
-  const hasThinking = !isUser;
-  const thinkingExpandable = !!message.thinking_content;
+  const hasThinking = !isUser && !!(message.thinking_content?.trim());
+  const thinkingExpandable = hasThinking;
 
   // Parse tool calls from message content
   const { toolCalls, cleanContent } = parseToolCallContent(message.content);

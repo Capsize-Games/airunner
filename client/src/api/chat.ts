@@ -20,7 +20,10 @@ export async function listConversations(limit = 50) {
 }
 
 export async function createConversation() {
-  return request<{ id: number }>("POST", "/api/v1/llm/conversations");
+  return request<{ conversation_id: number }>(
+    "POST",
+    "/api/v1/llm/conversations",
+  );
 }
 
 export async function deleteConversation(id: number) {
@@ -78,6 +81,8 @@ let _ttsReady = false;
 let _ttsPendingResolve: ((blob: Blob) => void) | null = null;
 let _ttsPendingReject: ((err: Error) => void) | null = null;
 let _ttsReconnectTimer: ReturnType<typeof setTimeout> | null = null;
+let _ttsRetryCount = 0;
+const _TTS_MAX_RETRIES = 10;
 
 import { wsHost } from "./client-base";
 
@@ -101,6 +106,7 @@ function _ttsConnect(): void {
 
     socket.onopen = () => {
       _ttsReady = true;
+      _ttsRetryCount = 0;
     };
 
     socket.onmessage = (event) => {
@@ -134,7 +140,14 @@ function _ttsConnect(): void {
       _ttsWs = null;
       _ttsReady = false;
       if (!event.wasClean) {
-        _ttsReconnectTimer = setTimeout(_ttsConnect, 5000);
+        if (_ttsRetryCount < _TTS_MAX_RETRIES) {
+          const backoffMs = Math.min(
+            1000 * Math.pow(2, _ttsRetryCount) + Math.random() * 500,
+            30000,
+          );
+          _ttsRetryCount++;
+          _ttsReconnectTimer = setTimeout(_ttsConnect, backoffMs);
+        }
       }
     };
 
@@ -142,7 +155,14 @@ function _ttsConnect(): void {
       socket.close();
     };
   } catch {
-    _ttsReconnectTimer = setTimeout(_ttsConnect, 5000);
+    if (_ttsRetryCount < _TTS_MAX_RETRIES) {
+      const backoffMs = Math.min(
+        1000 * Math.pow(2, _ttsRetryCount) + Math.random() * 500,
+        30000,
+      );
+      _ttsRetryCount++;
+      _ttsReconnectTimer = setTimeout(_ttsConnect, backoffMs);
+    }
   }
 }
 
@@ -165,6 +185,7 @@ function _ttsDisconnect(): void {
     _ttsWs = null;
   }
   _ttsReady = false;
+  _ttsRetryCount = 0;
 }
 
 // Initialize TTS WebSocket connection eagerly (lazy on first call)

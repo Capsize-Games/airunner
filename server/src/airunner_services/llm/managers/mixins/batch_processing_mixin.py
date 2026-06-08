@@ -170,7 +170,7 @@ class BatchProcessingMixin:
             )
 
         except Exception as e:
-            self.logger.error(f"Batch request failed: {e}")
+            self.logger.error("Batch request failed: %s", e)
             return BatchResponse(
                 request_id=request.request_id,
                 success=False,

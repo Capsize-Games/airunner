@@ -127,7 +127,7 @@ class ComponentLoaderMixin:
             # This saves VRAM when RAG isn't needed
 
         except Exception as e:
-            self.logger.error(f"Error creating ChatModel: {e}")
+            self.logger.error("Error creating ChatModel: %s", e)
             self._last_load_error = str(e)
             self._chat_model = None
 
@@ -252,7 +252,7 @@ class ComponentLoaderMixin:
                 del self._tool_manager
                 self._tool_manager = None
             except Exception as e:
-                self.logger.warning(f"Error unloading tool manager: {e}")
+                self.logger.warning("Error unloading tool manager: %s", e)
                 self._tool_manager = None
 
     def _unload_workflow_manager(self) -> None:
@@ -265,7 +265,7 @@ class ComponentLoaderMixin:
                 del self._workflow_manager
                 self._workflow_manager = None
             except Exception as e:
-                self.logger.warning(f"Error unloading workflow manager: {e}")
+                self.logger.warning("Error unloading workflow manager: %s", e)
                 self._workflow_manager = None
 
     def _should_keep_unused_model_in_cpu_memory(self) -> bool:
@@ -346,7 +346,7 @@ class ComponentLoaderMixin:
                     torch.cuda.empty_cache()
                     torch.cuda.synchronize()
         except AttributeError as e:
-            self.logger.warning(f"Error unloading model: {e}")
+            self.logger.warning("Error unloading model: %s", e)
             self._model = None
 
     def _unload_tokenizer(self) -> None:
@@ -360,7 +360,7 @@ class ComponentLoaderMixin:
                 self._tokenizer = None
                 gc.collect()
         except AttributeError as e:
-            self.logger.warning(f"Error unloading tokenizer: {e}")
+            self.logger.warning("Error unloading tokenizer: %s", e)
             self._tokenizer = None
 
     def _unload_components(self) -> None:
@@ -385,4 +385,4 @@ class ComponentLoaderMixin:
             try:
                 unload_func()
             except Exception as e:
-                self.logger.error(f"Error during unload: {e}", exc_info=True)
+                self.logger.error("Error during unload: %s", e, exc_info=True)

@@ -34,7 +34,7 @@ class RAGIndexManagementMixin:
                 )
                 return registry
             except Exception as e:
-                self.logger.error(f"Error loading registry: {e}")
+                self.logger.error("Error loading registry: %s", e)
 
         return {"documents": {}, "version": "2.0"}
 
@@ -46,7 +46,7 @@ class RAGIndexManagementMixin:
                 json.dump(self._index_registry, f, indent=2)
             self.logger.debug("Registry saved successfully")
         except Exception as e:
-            self.logger.error(f"Error saving registry: {e}")
+            self.logger.error("Error saving registry: %s", e)
 
     def _registry_candidates(self) -> list[str]:
         paths = [self.registry_path]
@@ -127,7 +127,7 @@ class RAGIndexManagementMixin:
         # Get doc info from registry
         doc_info = self.index_registry["documents"].get(doc_id)
         if not doc_info:
-            self.logger.warning(f"Document {doc_id} not found in registry")
+            self.logger.warning("Document %s not found in registry", doc_id)
             return None
 
         # Load from disk
@@ -148,7 +148,7 @@ class RAGIndexManagementMixin:
             return doc_index
 
         except Exception as e:
-            self.logger.error(f"Error loading index for {doc_id}: {e}")
+            self.logger.error("Error loading index for %s: %s", doc_id, e)
             return None
 
     def _resolve_doc_index_dir(
@@ -163,7 +163,7 @@ class RAGIndexManagementMixin:
         for index_dir in candidates:
             if DocumentVectorIndex.is_persisted(index_dir):
                 return index_dir
-        self.logger.warning(f"Index directory not found for {file_path}")
+        self.logger.warning("Index directory not found for %s", file_path)
         return None
 
     def _unload_doc_index(self, doc_id: str):
@@ -176,7 +176,7 @@ class RAGIndexManagementMixin:
             del self._doc_indexes_cache[doc_id]
             if doc_id in self._loaded_doc_ids:
                 self._loaded_doc_ids.remove(doc_id)
-            self.logger.debug(f"Unloaded index for document {doc_id}")
+            self.logger.debug("Unloaded index for document %s", doc_id)
 
     def _save_index(self):
         """Save the unified index to disk (legacy).
@@ -189,7 +189,7 @@ class RAGIndexManagementMixin:
                 self._index.persist(self.storage_persist_dir)
                 self.logger.info("Unified index saved to storage")
             except Exception as e:
-                self.logger.error(f"Error saving index: {e}")
+                self.logger.error("Error saving index: %s", e)
 
     def _load_index(self) -> Optional[DocumentVectorIndex]:
         """Load the unified index from disk (legacy).
@@ -205,7 +205,7 @@ class RAGIndexManagementMixin:
                 self.logger.info("Unified index loaded from storage")
                 return index
             except Exception as e:
-                self.logger.error(f"Error loading index: {e}")
+                self.logger.error("Error loading index: %s", e)
         return None
 
     def _index_candidates(self) -> list[str]:
@@ -256,7 +256,7 @@ class RAGIndexManagementMixin:
                 f"Migrated {migrated} documents and archived {storage_dir}"
             )
         except Exception as e:
-            self.logger.error(f"Error during migration: {e}")
+            self.logger.error("Error during migration: %s", e)
 
     def _detect_and_migrate_old_index(self):
         """Detect and migrate old unified index if present."""
@@ -305,5 +305,5 @@ class RAGIndexManagementMixin:
             return True
 
         except Exception as e:
-            self.logger.error(f"Error validating cache integrity: {e}")
+            self.logger.error("Error validating cache integrity: %s", e)
             return False

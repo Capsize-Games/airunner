@@ -192,7 +192,7 @@ export default function ChatView({
             fullResponse += chunk.token;
           }
         }
-        const thinking = thinkingChunks.join("");
+        const thinking = thinkingChunks.join("").trim();
 
         const nextIndex = msgs.length;
 
@@ -210,27 +210,15 @@ export default function ChatView({
           );
         }
 
-        // Refresh conversation to pick up server-assigned ID AND any
-        // direct-return tool result that was not streamed via WS.
-        import("../../api/client").then(({ listConversations }) => {
-          listConversations(1)
-            .then((resp) => {
-              const convs = resp.conversations ?? [];
-              if (convs.length > 0) {
-                const id = convs[0].id;
-                conversationIdRef.current = id;
-                setStoredConvId(id);
-                load(id);
-              }
-            })
-            .catch(() => {});
-        });
+        // Conversation ID is tracked via conversationIdRef; no need to
+        // refetch all messages here — appendMessage already persisted the
+        // response and a full reload would risk duplicates.
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : "Stream failed";
         setError(msg);
       }
     },
-    [activeDocs, llm, appendMessage, setStoredConvId],
+    [activeDocs, llm, appendMessage],
   );
 
   // ── Send (new message) ────────────────────────────────────────────
@@ -243,26 +231,56 @@ export default function ChatView({
     }
     setInput("");
 
-    setMessages((prev) => [...prev, { role: "user", content: text }]);
+    // Ensure a conversation exists before sending — this guarantees the server
+    // associates messages with a known ID that we can reload after a page refresh.
+    if (conversationIdRef.current === null) {
+      try {
+        const { createConversation } = await import("../../api/client");
+        const result = await createConversation();
+        conversationIdRef.current = result.conversation_id;
+        setStoredConvId(result.conversation_id);
+        loadedConvRef.current = result.conversation_id;
+      } catch {
+        // Proceed without a conversation ID; history won't survive a reload.
+      }
+    }
+
+    // Persist the user message to IndexedDB so it survives a page reload.
+    const userMsgIndex = messages.length;
+    const userMsg: import("../../types/api").Message = {
+      role: "user" as const,
+      content: text,
+    };
+    if (conversationIdRef.current !== null) {
+      await appendMessage(
+        conversationIdRef.current,
+        userMsg,
+        userMsgIndex,
+      );
+    } else {
+      setMessages((prev) => [...prev, userMsg]);
+    }
     const newMessages: import("../../types/api").Message[] = [
       ...messages,
-      { role: "user" as const, content: text },
+      userMsg,
     ];
 
     await doInference(newMessages);
-  }, [input, messages, llm.streaming, setMessages, doInference]);
+  }, [input, messages, llm.streaming, setMessages, appendMessage, setStoredConvId, doInference]);
 
   // ── Delete message (and all after it) ─────────────────────────────
   const handleDeleteMessage = useCallback(
-    (index: number) => {
+    async (index: number) => {
       const convId = conversationIdRef.current;
       if (convId !== null) {
-        // Remove from IndexedDB cache
+        try {
+          const { truncateConversation } = await import("../../api/chat");
+          await truncateConversation(convId, index);
+        } catch {
+          setError("Failed to delete message on server. Local state not changed.");
+          return;
+        }
         deleteMessagesAfter(convId, index);
-        // Notify server to truncate
-        import("../../api/chat").then(({ truncateConversation }) => {
-          truncateConversation(convId, index).catch(() => {});
-        });
       } else {
         setMessages((prev) => prev.slice(0, index));
       }
@@ -273,6 +291,16 @@ export default function ChatView({
   // ── Edit message (truncate chain + re-infer) ──────────────────────
   const handleSubmitEdit = useCallback(
     async (index: number, newContent: string) => {
+      const convId = conversationIdRef.current;
+      if (convId !== null) {
+        try {
+          const { truncateConversation } = await import("../../api/chat");
+          await truncateConversation(convId, index);
+        } catch {
+          setError("Failed to truncate conversation on server. Edit aborted.");
+          return;
+        }
+      }
       const truncated = messages.slice(0, index);
       const edited: import("../../types/api").Message[] = [
         ...truncated,
@@ -319,7 +347,7 @@ export default function ChatView({
     try {
       const { createConversation } = await import("../../api/client");
       const result = await createConversation();
-      const newId = result.id;
+      const newId = result.conversation_id;
       conversationIdRef.current = newId;
       setStoredConvId(newId);
       setMessages([]);
@@ -477,6 +505,19 @@ export default function ChatView({
 
             <div style={{ flexShrink: 0, display: "flex", flexDirection: "column", gap: 8 }}>
               <ModelSelector />
+              {llm.activeTools.length > 0 && (
+                <div
+                  className="px-2 pb-1"
+                  style={{ fontSize: "0.75rem", color: "var(--bs-info)" }}
+                >
+                  {llm.activeTools.map((t) => (
+                    <div key={t.tool_id} className="d-flex align-items-center gap-1">
+                      <span>⚙</span>
+                      <span>{t.tool_name} running…</span>
+                    </div>
+                  ))}
+                </div>
+              )}
               <div className="d-flex align-items-center gap-2">
                 <div className="flex-grow-1">
                   <ProgressBar

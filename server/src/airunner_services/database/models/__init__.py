@@ -58,15 +58,6 @@ from airunner_services.database.models.outpaint_settings import (
 from airunner_services.database.models.path_settings import PathSettings
 from airunner_services.database.models.pipeline_model import PipelineModel
 from airunner_services.database.models.prompt_template import PromptTemplate
-from airunner_services.database.models.project_state import DecisionMemory
-from airunner_services.database.models.project_state import DecisionOutcome
-from airunner_services.database.models.project_state import FeatureCategory
-from airunner_services.database.models.project_state import FeatureStatus
-from airunner_services.database.models.project_state import ProgressEntry
-from airunner_services.database.models.project_state import ProjectFeature
-from airunner_services.database.models.project_state import ProjectState
-from airunner_services.database.models.project_state import ProjectStatus
-from airunner_services.database.models.project_state import SessionState
 from airunner_services.database.models.rag_settings import RAGSettings
 from airunner_services.database.models.saved_prompt import SavedPrompt
 from airunner_services.database.models.schedulers import Schedulers
@@ -102,14 +93,10 @@ __all__ = [
     "ControlnetModel",
     "ControlnetSettings",
     "Conversation",
-    "DecisionMemory",
-    "DecisionOutcome",
     "DrawingPadSettings",
     "Document",
     "Embedding",
     "EspeakSettings",
-    "FeatureCategory",
-    "FeatureStatus",
     "FineTunedModel",
     "FontSetting",
     "GeneratorSettings",
@@ -127,15 +114,10 @@ __all__ = [
     "OutpaintSettings",
     "PathSettings",
     "PipelineModel",
-    "ProgressEntry",
-    "ProjectFeature",
-    "ProjectState",
-    "ProjectStatus",
     "PromptTemplate",
     "RAGSettings",
     "SavedPrompt",
     "Schedulers",
-    "SessionState",
     "ShortcutKeys",
     "SoundSettings",
     "STTSettings",

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from typing import Any, Protocol, runtime_checkable
 
 from airunner_services.contract_enums import SignalCode
@@ -83,6 +84,36 @@ class MediatorSignalLLMWorkflowEventSink:
     def emit_tool_status(self, payload: dict[str, Any]) -> None:
         """Forward one tool-status payload through the mediator."""
         self._emit(SignalCode.LLM_TOOL_STATUS_SIGNAL, payload)
+        # Also route into the text-stream path so WebSocket clients see it.
+        # The response queue in the LLM client only yields items that have a
+        # "response" key; wrapping in LLMResponse satisfies that contract.
+        self._emit_tool_status_stream(payload)
+
+    def _emit_tool_status_stream(self, payload: dict[str, Any]) -> None:
+        """Inject a tool-status marker into the LLM text stream."""
+        try:
+            from airunner_services.llm.llm_response import LLMResponse
+
+            request_id = payload.get("request_id")
+            response = LLMResponse(
+                message=json.dumps(
+                    {
+                        "tool_id": payload.get("tool_id", ""),
+                        "tool_name": payload.get("tool_name", ""),
+                        "status": payload.get("status", ""),
+                        "details": payload.get("details"),
+                    }
+                ),
+                message_type="tool_status",
+                is_end_of_message=False,
+                request_id=request_id,
+            )
+            self._emit(
+                SignalCode.LLM_TEXT_STREAMED_SIGNAL,
+                {"response": response, "request_id": request_id},
+            )
+        except Exception:
+            pass
 
     def emit_thinking(self, payload: dict[str, Any]) -> None:
         """Forward one thinking-status payload through the mediator."""

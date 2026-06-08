@@ -56,8 +56,13 @@ class LLMSettings:
     use_ollama: bool = False
     use_openai: bool = False
 
+    openrouter_api_key: str = ""
+    openai_api_key: str = ""
+
     use_yarn: bool = False
     yarn_target_context: int = 0
+
+    include_health_disclaimer: bool = True
 
     enable_thinking: bool = True
 
@@ -76,7 +81,4 @@ class LLMSettings:
         )
 
 
-AIRUNNER_LLM_USE_OPENAI = False
-
-
-__all__ = ["AIRUNNER_LLM_USE_OPENAI", "LLMSettings"]
+__all__ = ["LLMSettings"]

@@ -199,7 +199,7 @@ class RAGPropertiesMixin:
         """
         self._target_files = value
         if value:
-            self.logger.info(f"Set {len(value)} target files for indexing")
+            self.logger.info("Set %s target files for indexing", len(value))
         else:
             self.logger.info("Cleared target files (will index all documents)")
 
@@ -292,7 +292,7 @@ class RAGPropertiesMixin:
         self.logger.info(
             f"Missing {len(missing_files)} files for embedding model {repo_id}, triggering download"
         )
-        self.logger.debug(f"Missing files: {missing_files}")
+        self.logger.debug("Missing files: %s", missing_files)
 
         # Emit signal to trigger download dialog
         # Avoid triggering multiple simultaneous downloads

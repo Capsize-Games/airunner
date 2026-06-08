@@ -63,7 +63,7 @@ def delete_knowledge(
 
         if api and hasattr(api, "emit_signal"):
             api.emit_signal(
-                SignalCode.KNOWLEDGE_FACT_ADDED,
+                SignalCode.KNOWLEDGE_FACT_DELETED,
                 {"deleted": True, "count": count},
             )
         return f"✓ Deleted {count} fact(s)"

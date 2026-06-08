@@ -50,6 +50,9 @@ class LLMGeneratorSettings(BaseModel):
     quantization_bits = Column(Integer, default=0)
     enable_thinking = Column(Boolean, default=True)
     reasoning_effort = Column(String, default="medium")
+    api_base_url = Column(String, nullable=True)
+    perform_conversation_summary = Column(Boolean, default=False)
+    summarize_after_n_turns = Column(Integer, default=8)
 
 
 __all__ = ["LLMGeneratorSettings"]

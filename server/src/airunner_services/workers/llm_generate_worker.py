@@ -113,6 +113,14 @@ class LLMGenerateWorker(
         )
 
     @property
+    def use_openai(self) -> bool:
+        """Return whether the worker is configured for OpenAI."""
+        return (
+            self.llm_generator_settings.model_service
+            == ModelService.OPENAI.value
+        )
+
+    @property
     def has_model_manager(self) -> bool:
         """Return whether the unified model manager is initialized."""
         return self._model_manager is not None
@@ -130,12 +138,23 @@ class LLMGenerateWorker(
             if self._model_manager is None:
                 self._model_manager = LLMModelManager()
 
+                db_api_key = getattr(self.llm_generator_settings, "api_key", None) or None
+                db_api_base_url = getattr(self.llm_generator_settings, "api_base_url", None) or None
                 if self.use_openrouter:
                     self._model_manager.llm_settings.use_local_llm = False
                     self._model_manager.llm_settings.use_openrouter = True
+                    if db_api_key:
+                        self._model_manager.llm_settings.openrouter_api_key = db_api_key
                 elif self.use_ollama:
                     self._model_manager.llm_settings.use_local_llm = False
                     self._model_manager.llm_settings.use_ollama = True
+                    if db_api_base_url:
+                        self._model_manager.llm_settings.ollama_base_url = db_api_base_url
+                elif self.use_openai:
+                    self._model_manager.llm_settings.use_local_llm = False
+                    self._model_manager.llm_settings.use_openai = True
+                    if db_api_key:
+                        self._model_manager.llm_settings.openai_api_key = db_api_key
                 else:
                     self._model_manager.llm_settings.use_local_llm = True
 

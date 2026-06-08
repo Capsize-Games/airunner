@@ -158,7 +158,9 @@ class DatabaseChatMessageHistory(BaseChatMessageHistory):
             return langchain_messages
 
         except Exception as e:
-            self.logger.error(f"Error retrieving messages: {e}", exc_info=True)
+            self.logger.error(
+                "Error retrieving messages: %s", e, exc_info=True
+            )
             return []
 
     def add_message(self, message: BaseMessage) -> None:
@@ -285,12 +287,16 @@ class DatabaseChatMessageHistory(BaseChatMessageHistory):
                     hasattr(message, "additional_kwargs")
                     and message.additional_kwargs
                 ):
-                    thinking_content = message.additional_kwargs.get(
-                        "thinking_content"
+                    thinking_content = normalize_thinking_content(
+                        message.additional_kwargs.get("thinking_content")
+                        or message.additional_kwargs.get("reasoning_content")
                     )
                 if not thinking_content and message.content:
                     thinking_content, _ = extract_thinking_and_response(
                         message.content
+                    )
+                    thinking_content = normalize_thinking_content(
+                        thinking_content
                     )
 
                 # Store tool call request in metadata
@@ -352,13 +358,16 @@ class DatabaseChatMessageHistory(BaseChatMessageHistory):
             content = message.content
             thinking_content = None
             if isinstance(message, AIMessage):
-                # Check if thinking_content was stored in additional_kwargs during streaming
+                # Check if thinking_content was stored in additional_kwargs
+                # during streaming.  Also inspect ``reasoning_content`` for
+                # native reasoning-delta chunks that weren't converted.
                 if (
                     hasattr(message, "additional_kwargs")
                     and message.additional_kwargs
                 ):
                     thinking_content = normalize_thinking_content(
                         message.additional_kwargs.get("thinking_content")
+                        or message.additional_kwargs.get("reasoning_content")
                     )
                     self.logger.debug(
                         f"[THINKING SAVE] Found thinking_content in additional_kwargs: {bool(thinking_content)}"
@@ -397,12 +406,18 @@ class DatabaseChatMessageHistory(BaseChatMessageHistory):
             if thinking_content:
                 message_dict["thinking_content"] = thinking_content
 
-            # Add metadata if present
+            # Add metadata if present, but strip keys already handled above
+            # to prevent raw (un-normalized) values from leaking back in.
             if (
                 hasattr(message, "additional_kwargs")
                 and message.additional_kwargs
             ):
-                message_dict.update(message.additional_kwargs)
+                safe_kwargs = {
+                    k: v
+                    for k, v in message.additional_kwargs.items()
+                    if k not in ("thinking_content", "reasoning_content")
+                }
+                message_dict.update(safe_kwargs)
 
             # DEDUPLICATION: Check for duplicate user/assistant messages
             # Skip if the same role + content already exists as the last message of that role
@@ -430,7 +445,7 @@ class DatabaseChatMessageHistory(BaseChatMessageHistory):
             )
 
         except Exception as e:
-            self.logger.error(f"Error adding message: {e}", exc_info=True)
+            self.logger.error("Error adding message: %s", e, exc_info=True)
 
     def add_messages(self, messages: List[BaseMessage]) -> None:
         """Add multiple messages to the conversation.
@@ -449,7 +464,7 @@ class DatabaseChatMessageHistory(BaseChatMessageHistory):
         try:
             self._conversation.value = []
             Conversation.objects.update(self.conversation_id, value=[])
-            self.logger.info(f"Cleared conversation {self.conversation_id}")
+            self.logger.info("Cleared conversation %s", self.conversation_id)
 
         except Exception as e:
             self.logger.error(

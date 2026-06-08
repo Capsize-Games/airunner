@@ -43,7 +43,7 @@ class RAGIndexingMixin:
                 )
                 self.logger.debug("Document reader created successfully")
             except Exception as e:
-                self.logger.error(f"Error creating document reader: {str(e)}")
+                self.logger.error("Error creating document reader: %s", str(e))
                 return None
         return self._document_reader
 
@@ -65,7 +65,7 @@ class RAGIndexingMixin:
             )
             return documents
         except Exception as e:
-            self.logger.error(f"Error loading documents: {e}")
+            self.logger.error("Error loading documents: %s", e)
             return []
 
     def _index_single_document(self, db_doc: DBDocument) -> bool:
@@ -88,7 +88,7 @@ class RAGIndexingMixin:
                 db_doc.path, self._extract_metadata
             )
             if not docs:
-                self.logger.warning(f"No content extracted from {db_doc.path}")
+                self.logger.warning("No content extracted from %s", db_doc.path)
                 return False
             for doc in docs:
                 doc.metadata.update(self._extract_metadata(db_doc.path))
@@ -117,7 +117,7 @@ class RAGIndexingMixin:
             return True
 
         except Exception as e:
-            self.logger.error(f"Failed to index {db_doc.path}: {e}")
+            self.logger.error("Failed to index %s: %s", db_doc.path, e)
             return False
 
     def ensure_indexed_files(self, file_paths: List[str]) -> bool:
@@ -143,7 +143,7 @@ class RAGIndexingMixin:
             # Skip if already tracked as loaded/indexed
             try:
                 if path in getattr(self, "_loaded_doc_ids", []):
-                    self.logger.debug(f"Skipping already indexed path: {path}")
+                    self.logger.debug("Skipping already indexed path: %s", path)
                     continue
             except Exception:
                 pass
@@ -157,10 +157,10 @@ class RAGIndexingMixin:
 
             # Use the load_file_into_rag to index - it will update _loaded_doc_ids
             try:
-                self.logger.info(f"Ensuring indexing for file: {path}")
+                self.logger.info("Ensuring indexing for file: %s", path)
                 self.load_file_into_rag(path)
             except Exception as e:
-                self.logger.error(f"Failed to ensure index for {path}: {e}")
+                self.logger.error("Failed to ensure index for %s: %s", path, e)
                 success = False
 
         # Recreate retriever after any indexing operations
@@ -199,7 +199,7 @@ class RAGIndexingMixin:
             self.logger.info("Getting list of unindexed documents...")
             unindexed_docs = self._get_unindexed_documents()
             total_docs = len(unindexed_docs)
-            self.logger.info(f"Found {total_docs} unindexed documents")
+            self.logger.info("Found %s unindexed documents", total_docs)
 
             if total_docs == 0:
                 self.logger.info("No documents need indexing")
@@ -240,7 +240,7 @@ class RAGIndexingMixin:
                     return False
 
                 if not os.path.exists(db_doc.path):
-                    self.logger.warning(f"Document not found: {db_doc.path}")
+                    self.logger.warning("Document not found: %s", db_doc.path)
                     continue
 
                 # Emit progress
@@ -284,7 +284,7 @@ class RAGIndexingMixin:
             return success_count > 0
 
         except Exception as e:
-            self.logger.error(f"Error during per-document indexing: {e}")
+            self.logger.error("Error during per-document indexing: %s", e)
             self.emit_signal(
                 SignalCode.RAG_INDEXING_COMPLETE,
                 {

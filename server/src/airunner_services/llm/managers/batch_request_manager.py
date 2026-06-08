@@ -158,7 +158,7 @@ class BatchRequestManager:
             self.active_requests[request_id] = request
 
         self.request_queue.put(request)
-        self.logger.debug(f"Submitted request {request_id}")
+        self.logger.debug("Submitted request %s", request_id)
 
         return future
 
@@ -170,7 +170,7 @@ class BatchRequestManager:
                 if batch:
                     self._process_batch(batch)
             except Exception as e:
-                self.logger.error(f"Error in batch processing loop: {e}")
+                self.logger.error("Error in batch processing loop: %s", e)
                 time.sleep(0.1)
 
     def _collect_batch(self) -> List[BatchRequest]:
@@ -212,7 +212,7 @@ class BatchRequestManager:
         if len(batch) == 0:
             return
 
-        self.logger.debug(f"Processing batch of {len(batch)} requests")
+        self.logger.debug("Processing batch of %s requests", len(batch))
 
         # Submit each request to the executor
         futures = []
@@ -287,7 +287,7 @@ class BatchRequestManager:
             try:
                 request.callback(response)
             except Exception as e:
-                self.logger.error(f"Error in callback: {e}")
+                self.logger.error("Error in callback: %s", e)
 
         # Remove from active requests
         with self._lock:

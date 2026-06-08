@@ -247,7 +247,13 @@ class ToolFilteringMixin:
                 rebuild_workflow=True,
             )
 
-        effective_categories = sorted(self.ALWAYS_INCLUDE_CATEGORIES)
+        auto_extract = getattr(
+            getattr(self, "llm_settings", None), "auto_extract_knowledge", True
+        )
+        effective_categories = sorted(
+            cat for cat in self.ALWAYS_INCLUDE_CATEGORIES
+            if cat != "knowledge" or auto_extract
+        )
         self.logger.info(
             "tool_categories=[] - including always-available categories: %s",
             effective_categories,
@@ -290,7 +296,12 @@ class ToolFilteringMixin:
                 effective_categories.append(category.value)
                 seen_categories.add(category.value)
 
+        auto_extract = getattr(
+            getattr(self, "llm_settings", None), "auto_extract_knowledge", True
+        )
         for always_cat in sorted(self.ALWAYS_INCLUDE_CATEGORIES):
+            if always_cat == "knowledge" and not auto_extract:
+                continue
             if always_cat not in seen_categories:
                 effective_categories.append(always_cat)
                 seen_categories.add(always_cat)

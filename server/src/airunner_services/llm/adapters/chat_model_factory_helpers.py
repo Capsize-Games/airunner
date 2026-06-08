@@ -166,6 +166,10 @@ def _openrouter_provider_runtime(
     provider_params: dict[str, Any],
 ) -> ProviderRuntimeConfig:
     """Build the OpenRouter provider runtime configuration."""
+    api_key = (
+        getattr(llm_settings, "openrouter_api_key", None)
+        or os.getenv("OPENROUTER_API_KEY")
+    )
     return ProviderRuntimeConfig(
         provider="openrouter",
         model_name=getattr(
@@ -173,7 +177,7 @@ def _openrouter_provider_runtime(
             "model",
             "mistralai/mistral-7b-instruct",
         ),
-        api_key=os.getenv("OPENROUTER_API_KEY"),
+        api_key=api_key,
         **provider_params,
     )
 
@@ -200,10 +204,14 @@ def _openai_provider_runtime(
     provider_params: dict[str, Any],
 ) -> ProviderRuntimeConfig:
     """Build the OpenAI provider runtime configuration."""
+    api_key = (
+        getattr(llm_settings, "openai_api_key", None)
+        or os.getenv("OPENAI_API_KEY")
+    )
     return ProviderRuntimeConfig(
         provider="openai",
         model_name=getattr(llm_settings, "openai_model", "gpt-4"),
-        api_key=os.getenv("OPENAI_API_KEY"),
+        api_key=api_key,
         **provider_params,
     )
 

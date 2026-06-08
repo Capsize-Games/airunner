@@ -3,7 +3,21 @@
 from __future__ import annotations
 
 import asyncio
+import os
+from pathlib import Path
 from typing import Any, Iterable, List, Optional
+
+# Documents must reside under this root to be eligible for RAG injection.
+# Prevents path-traversal attacks where a tampered DB entry points to /etc/passwd etc.
+try:
+    from airunner_services.settings import AIRUNNER_BASE_PATH as _SETTINGS_BASE
+except ImportError:
+    _SETTINGS_BASE = "/tmp"
+_DOCUMENTS_ROOT = Path(
+    os.environ.get("AIRUNNER_DOCUMENTS_ROOT")
+    or os.environ.get("AIRUNNER_BASE_PATH")
+    or _SETTINGS_BASE
+).resolve()
 
 from fastapi import HTTPException, Request, WebSocket
 
@@ -192,6 +206,14 @@ def websocket_chunk(delta: StreamDelta) -> dict[str, Any]:
             "done": True,
         }
     msg_type = delta.metadata.get("message_type", "")
+    if msg_type == "tool_status":
+        import json as _json
+
+        try:
+            tool_data = _json.loads(delta.delta.get("content", "{}"))
+        except Exception:
+            tool_data = {}
+        return {"type": "tool_status", "done": False, **tool_data}
     payload: dict[str, Any] = {
         "type": msg_type if msg_type in ("thinking",) else "chunk",
         "content": delta.delta.get("content", ""),
@@ -211,6 +233,35 @@ def _parse_raw_messages(data: dict[str, Any]) -> list[dict[str, Any]]:
             {"role": "user", "content": str(data.get("message", "")).strip()},
         ]
     return raw
+
+
+def _resolve_doc_path(file_path: Path) -> Path | None:
+    """Resolve a document path within _DOCUMENTS_ROOT.
+
+    Tries: direct resolve, prepending _DOCUMENTS_ROOT,
+    and searching _DOCUMENTS_ROOT recursively by basename.
+    Returns None if path escapes _DOCUMENTS_ROOT.
+    """
+    root = str(_DOCUMENTS_ROOT)
+
+    # Direct resolve (works for absolute paths)
+    resolved = file_path.resolve()
+    if str(resolved).startswith(root) and resolved.exists():
+        return resolved
+
+    # Try prepending root for relative paths
+    candidate = (_DOCUMENTS_ROOT / file_path).resolve()
+    if str(candidate).startswith(root) and candidate.exists():
+        return candidate
+
+    # Try stripping any hash/prefix and searching by basename
+    basename = file_path.name
+    matches = list(_DOCUMENTS_ROOT.rglob(basename))
+    for match in matches:
+        if str(match.resolve()).startswith(root):
+            return match.resolve()
+
+    return None
 
 
 def _inject_rag_context(
@@ -235,25 +286,36 @@ def _inject_rag_context(
             )
             logging.info(
                 "RAG: found %d active docs for IDs %s",
-                len(docs), active_doc_ids,
+                len(docs),
+                active_doc_ids,
             )
             for doc in docs:
                 file_path = doc.path
                 try:
-                    with open(file_path, "r", errors="replace") as f:
+                    resolved = _resolve_doc_path(Path(file_path))
+                    if resolved is None:
+                        logging.warning(
+                            "RAG: could not resolve doc %d path: %s",
+                            doc.id,
+                            file_path,
+                        )
+                        continue
+                    with open(resolved, "r", errors="replace") as f:
                         text = f.read(4096)
                     if text.strip():
                         snippets.append(
-                            f"--- Document: {file_path} ---\n{text}"
+                            f"--- Document: {resolved.name} ---\n{text}"
                         )
                     else:
                         logging.warning(
-                            "RAG: doc %d (%s) is empty", doc.id, file_path
+                            "RAG: doc %d (%s) is empty", doc.id, resolved.name
                         )
                 except Exception as exc:
                     logging.warning(
                         "RAG: failed to read doc %d at %s: %s",
-                        doc.id, file_path, exc,
+                        doc.id,
+                        file_path,
+                        exc,
                     )
         if not snippets:
             logging.warning(
@@ -262,7 +324,9 @@ def _inject_rag_context(
             )
             return messages
         rag_text = "\n\n".join(snippets)
-        logging.info("RAG: injected %d chars from %d docs", len(rag_text), len(snippets))
+        logging.info(
+            "RAG: injected %d chars from %d docs", len(rag_text), len(snippets)
+        )
         return [
             {
                 "role": "system",
