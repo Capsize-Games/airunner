@@ -94,7 +94,8 @@ def _default_allowed_origins() -> list[str]:
     mode = os.environ.get("AIRUNNER_DEPLOYMENT_MODE", "development").lower()
     if mode == "production":
         return []  # Must be set explicitly via AIRUNNER_ALLOWED_ORIGINS
-    return ["http://localhost:5173", "http://127.0.0.1:5173"]
+    # Development mode: empty list signals "allow all loopback ports"
+    return []
 
 
 def _setup_cors(
@@ -110,22 +111,37 @@ def _setup_cors(
         if allowed_origins is not None
         else _default_allowed_origins()
     )
-    if not origins:
-        mode = os.environ.get(
-            "AIRUNNER_DEPLOYMENT_MODE", "development"
-        ).lower()
-        if mode == "production":
-            logger.warning(
-                "CORS is enabled but AIRUNNER_ALLOWED_ORIGINS is not set. "
-                "Set it to your frontend domain(s) in production."
-            )
-    app.add_middleware(
-        CORSMiddleware,
-        allow_origins=origins,
-        allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
-    )
+    mode = os.environ.get("AIRUNNER_DEPLOYMENT_MODE", "development").lower()
+    if origins:
+        app.add_middleware(
+            CORSMiddleware,
+            allow_origins=origins,
+            allow_credentials=True,
+            allow_methods=["*"],
+            allow_headers=["*"],
+        )
+    elif mode == "production":
+        logger.warning(
+            "CORS is enabled but AIRUNNER_ALLOWED_ORIGINS is not set. "
+            "Set it to your frontend domain(s) in production."
+        )
+        app.add_middleware(
+            CORSMiddleware,
+            allow_origins=[],
+            allow_credentials=True,
+            allow_methods=["*"],
+            allow_headers=["*"],
+        )
+    else:
+        # Development mode: allow any localhost or 127.0.0.1 origin
+        # on any port so multiple agent client instances can coexist
+        app.add_middleware(
+            CORSMiddleware,
+            allow_origin_regex=(r"https?://(localhost|127\.0\.0\.1)(:\d+)?"),
+            allow_credentials=True,
+            allow_methods=["*"],
+            allow_headers=["*"],
+        )
 
 
 def _load_and_apply_extensions(app: FastAPI) -> None:
