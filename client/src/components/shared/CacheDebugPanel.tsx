@@ -134,14 +134,10 @@ export default function CacheDebugPanel() {
 // ── Styles ────────────────────────────────────────────────────────────────────
 
 const panelStyle: React.CSSProperties = {
-  position: "fixed",
-  bottom: 40,
-  right: 56,
   background: "#1a1a2e",
   border: "1px solid #444",
   borderRadius: 6,
   padding: "10px 12px",
-  zIndex: 9999,
   minWidth: 380,
   fontFamily: "monospace",
   color: "#ccc",

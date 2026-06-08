@@ -34,6 +34,9 @@ export interface CanvasLayer {
   offsetY: number;
   parentGroupId: string | null;
   fillColor?: string; // hex or 'transparent', rendered as background
+  maskStrokes?: StrokeNode[] | null; // null/undefined = no mask; array = mask exists (white = show, black = hide)
+  maskFill?: "white" | "black";      // background of the mask: white = fully visible, black = fully hidden
+  maskTarget?: "content" | "mask";   // which target receives strokes (default "content")
 }
 
 export interface LayerGroup {

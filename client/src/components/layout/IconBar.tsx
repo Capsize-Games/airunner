@@ -1,38 +1,36 @@
 import LucideIcon from "../shared/LucideIcon";
 
-type PanelId =
-  | "knowledge"
-  | "history"
-  | "llm_settings"
-  | "lora"
-  | "embeddings"
-  | "image_browser"
-  | "stats"
-  | "civitai_browser";
+type PanelId = "civitai_browser";
 
 export function LeftIconBar({
   showChat,
-  leftPanel,
+  showCanvas,
+  rightPanel,
   ttsOn,
   sttOn,
   onToggleChat,
-  onLeftPanel,
+  onToggleCanvas,
+  onRightPanel,
   onToggleTts,
   onToggleStt,
+  onOpenSettings,
   bottomSlot,
 }: {
   showChat: boolean;
-  leftPanel: PanelId | null;
+  showCanvas: boolean;
+  rightPanel: PanelId | null;
   ttsOn: boolean;
   sttOn: boolean;
   onToggleChat: () => void;
-  onLeftPanel: (id: PanelId) => void;
+  onToggleCanvas: () => void;
+  onRightPanel: (id: PanelId) => void;
   onToggleTts: () => void;
   onToggleStt: () => void;
+  onOpenSettings: () => void;
   bottomSlot?: React.ReactNode;
 }) {
-  const active = (id: PanelId, panel: PanelId | null) =>
-    panel === id ? "active" : "";
+  const canvasActive = showCanvas && rightPanel !== "civitai_browser";
+  const civitaiActive = rightPanel === "civitai_browser";
 
   return (
     <div className="icon-bar left">
@@ -41,126 +39,54 @@ export function LeftIconBar({
         onClick={onToggleChat}
         title="Toggle Chat"
       >
-        <LucideIcon name="bot-message-square" />
+        <LucideIcon name="bot-message-square" size={18} />
+        <span className="icon-bar-label">Chat</span>
       </button>
-      <hr />
+
       <button
-        className={active("knowledge", leftPanel)}
-        onClick={() => onLeftPanel("knowledge")}
-        title="Knowledge Base"
+        className={canvasActive ? "active" : ""}
+        onClick={onToggleCanvas}
+        title="Canvas"
       >
-        <LucideIcon name="book" />
+        <LucideIcon name="image" size={18} />
+        <span className="icon-bar-label">Canvas</span>
       </button>
+
       <button
-        className={active("history", leftPanel)}
-        onClick={() => onLeftPanel("history")}
-        title="History"
+        className={civitaiActive ? "active" : ""}
+        onClick={() => onRightPanel("civitai_browser")}
+        title="CivitAI Browser"
       >
-        <LucideIcon name="history" />
+        <LucideIcon name="cloud" size={18} />
+        <span className="icon-bar-label">CivitAI</span>
       </button>
-      <button
-        className={active("llm_settings", leftPanel)}
-        onClick={() => onLeftPanel("llm_settings")}
-        title="LLM Settings"
-      >
-        <LucideIcon name="sliders-horizontal" />
-      </button>
+
       <div className="flex-spacer" />
+
       <button
         className={ttsOn ? "active" : ""}
         onClick={onToggleTts}
         title="Text to Speech"
       >
-        <LucideIcon name="speaker" />
+        <LucideIcon name="speaker" size={18} />
+        <span className="icon-bar-label">TTS</span>
       </button>
+
       <button
         className={sttOn ? "active" : ""}
         onClick={onToggleStt}
         title="Speech to Text"
       >
-        <LucideIcon name="mic" />
+        <LucideIcon name="mic" size={18} />
+        <span className="icon-bar-label">STT</span>
       </button>
-      {bottomSlot}
-    </div>
-  );
-}
 
-export function RightIconBar({
-  showCanvas,
-  rightPanel,
-  onToggleCanvas,
-  onRightPanel,
-  onOpenSettings,
-  showCacheDebug,
-  onToggleCacheDebug,
-}: {
-  showCanvas: boolean;
-  rightPanel: PanelId | null;
-  onToggleCanvas: () => void;
-  onRightPanel: (id: PanelId) => void;
-  onOpenSettings: () => void;
-  showCacheDebug: boolean;
-  onToggleCacheDebug: () => void;
-}) {
-  const active = (id: PanelId, panel: PanelId | null) =>
-    panel === id ? "active" : "";
-
-  return (
-    <div className="icon-bar right">
-      <button
-        className={showCanvas ? "active" : ""}
-        onClick={onToggleCanvas}
-        title="Canvas"
-      >
-        <LucideIcon name="image" />
-      </button>
-      <hr />
-      <button
-        className={active("civitai_browser", rightPanel)}
-        onClick={() => onRightPanel("civitai_browser")}
-        title="CivitAI Browser"
-      >
-        <LucideIcon name="cloud" />
-      </button>
-      <button
-        className={active("lora", rightPanel)}
-        onClick={() => onRightPanel("lora")}
-        title="LoRA"
-      >
-        <LucideIcon name="puzzle" />
-      </button>
-      <button
-        className={active("embeddings", rightPanel)}
-        onClick={() => onRightPanel("embeddings")}
-        title="Embeddings"
-      >
-        <LucideIcon name="scan-text" />
-      </button>
-      <button
-        className={active("image_browser", rightPanel)}
-        onClick={() => onRightPanel("image_browser")}
-        title="Image Browser"
-      >
-        <LucideIcon name="images" />
-      </button>
-      <button
-        className={active("stats", rightPanel)}
-        onClick={() => onRightPanel("stats")}
-        title="Stats"
-      >
-        <LucideIcon name="activity" />
-      </button>
-      <div className="flex-spacer" />
-      <button
-        className={showCacheDebug ? "active" : ""}
-        onClick={onToggleCacheDebug}
-        title="Cache Debug"
-      >
-        <LucideIcon name="database-zap" />
-      </button>
       <button onClick={onOpenSettings} title="Settings">
-        <LucideIcon name="settings" />
+        <LucideIcon name="settings" size={18} />
+        <span className="icon-bar-label">Settings</span>
       </button>
+
+      {bottomSlot}
     </div>
   );
 }

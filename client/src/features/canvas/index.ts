@@ -20,7 +20,6 @@ export { default as DrawingLayer } from "./DrawingLayer";
 export { default as MaskLayer } from "./MaskLayer";
 export { default as CanvasLayerRenderer } from "./CanvasLayer";
 export { default as ToolBar } from "./ToolBar";
-export type { ToolbarDock } from "./ToolBar";
 export { default as FilterPanel } from "./FilterPanel";
 export { default as CanvasSettingsModal } from "./CanvasSettingsModal";
 export { default as ImageDropModal } from "./ImageDropModal";

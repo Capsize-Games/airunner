@@ -30,7 +30,7 @@ export default function EmbeddingsPanel() {
   const version = getVersion();
   const baseDir = VARIANT_BASE[version] || version;
   const items: EmbeddingItemData[] = embeddings
-    .filter((e) => version ? e.path.includes(`/${baseDir}/`) : true)
+    .filter((e) => version ? (e.path || "").includes(`/${baseDir}/`) : true)
     .map((e) => ({ ...e, _inputText: inputTexts[e.id] ?? "" }));
 
   useEventBus([EVENT_EMBEDDINGS], (_event, data) => {
@@ -94,10 +94,6 @@ export default function EmbeddingsPanel() {
 
   return (
     <div className="p-2">
-      <div className="d-flex justify-content-between align-items-center mb-2">
-        <h6 className="text-muted mb-0">Embeddings</h6>
-      </div>
-
       {loading ? (
         <Spinner animation="border" size="sm" className="d-block mx-auto" />
       ) : items.length === 0 ? (

@@ -39,17 +39,19 @@ export default function SliderFields({
               ?.args?.[f.key] as number | undefined)
           : undefined;
         return (
-          <SliderWithSpinbox
-            key={f.key}
-            label={f.label}
-            value={collectValues()[f.key] as number}
-            min={f.min}
-            max={f.max}
-            step={f.step}
-            displayAsFloat={f.float}
-            defaultValue={presetDefault}
-            onChange={(v) => setOverride(f.key, v)}
-          />
+          <div key={f.key} style={{ marginBottom: 4 }}>
+            <SliderWithSpinbox
+              label={f.label}
+              value={collectValues()[f.key] as number}
+              min={f.min}
+              max={f.max}
+              step={f.step}
+              displayAsFloat={f.float}
+              defaultValue={presetDefault}
+              labelWidth={120}
+              onChange={(v) => setOverride(f.key, v)}
+            />
+          </div>
         );
       })}
     </>

@@ -31,7 +31,7 @@ export default function LoraPanel() {
   const version = getVersion();
   const baseDir = VARIANT_BASE[version] || version;
   const items: LoraItemData[] = loras
-    .filter((l) => version ? l.path.includes(`/${baseDir}/`) : true)
+    .filter((l) => version ? (l.path || "").includes(`/${baseDir}/`) : true)
     .map((l) => ({ ...l, _inputText: inputTexts[l.id] ?? "" }));
 
   // Sync on EVENT_LORAS instead of full reload.
@@ -105,10 +105,6 @@ export default function LoraPanel() {
 
   return (
     <div className="p-2">
-      <div className="d-flex justify-content-between align-items-center mb-2">
-        <h6 className="text-muted mb-0">LoRA</h6>
-      </div>
-
       {loading ? (
         <Spinner animation="border" size="sm" className="d-block mx-auto" />
       ) : items.length === 0 ? (

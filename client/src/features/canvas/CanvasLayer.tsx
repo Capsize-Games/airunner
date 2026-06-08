@@ -1,5 +1,5 @@
-import { useRef, useEffect } from "react";
-import { Group, Image as KonvaImage, Layer } from "react-konva";
+import { useRef, useEffect, useLayoutEffect } from "react";
+import { Group, Image as KonvaImage, Layer, Line, Rect } from "react-konva";
 import Konva from "konva";
 import type { CanvasLayer as CanvasLayerType, StrokeNode, ActiveTool } from "./useCanvasState";
 import DrawingLayer from "./DrawingLayer";
@@ -106,52 +106,131 @@ export default function CanvasLayerRenderer({
   onMoveImage,
   onMoveLayer,
 }: CanvasLayerProps) {
-  const groupRef = useRef<Konva.Group>(null);
+  const outerGroupRef = useRef<Konva.Group>(null);   // wrapper for mask compositing (cached)
+  const contentGroupRef = useRef<Konva.Group>(null);  // layer content (filters applied here)
+  const maskGroupRef = useRef<Konva.Group>(null);     // mask bitmap (must be cached before outer group)
+  const hasMask = Array.isArray(layer.maskStrokes);
 
   useEffect(() => {
-    const group = groupRef.current;
-    if (group) applyKonvaFilters(group, layer.filters);
+    if (contentGroupRef.current) applyKonvaFilters(contentGroupRef.current, layer.filters);
   }, [layer.filters]);
+
+  // Re-cache both the mask group and outer group when mask or content changes.
+  // Mask group must be cached first so destination-in compositing works correctly:
+  // its isolated offscreen canvas (white with transparent holes) is then composited
+  // onto the outer group's cache via destination-in to clip the layer content.
+  useLayoutEffect(() => {
+    if (!hasMask) return;
+    requestAnimationFrame(() => {
+      const cacheBounds = {
+        x: -layer.offsetX,
+        y: -layer.offsetY,
+        width: canvasWidth,
+        height: canvasHeight,
+        pixelRatio: 1,
+      };
+      // Cache mask group first — creates the isolated white-with-holes bitmap.
+      const maskG = maskGroupRef.current;
+      if (maskG) maskG.cache(cacheBounds);
+      // Cache outer group second — composites masked content into its own bitmap.
+      const outerG = outerGroupRef.current;
+      if (!outerG) return;
+      outerG.cache(cacheBounds);
+      outerG.getLayer()?.batchDraw();
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hasMask, layer.maskStrokes, layer.maskFill, layer.images, layer.strokes, layer.offsetX, layer.offsetY, canvasWidth, canvasHeight]);
 
   const isLayerMovable = activeTool === "move" && isActive;
 
+  const contentChildren = (
+    <>
+      {layer.images.map((img) => (
+        <LayerImage
+          key={img.id}
+          node={img}
+          isMovable={false}
+          snapToGrid={snapToGrid}
+          onMove={(x, y) => onMoveImage(layer.id, img.id, x, y)}
+        />
+      ))}
+      <DrawingLayer
+        strokes={layer.strokes}
+        activeTool={activeTool}
+        brushSize={brushSize}
+        brushColor={brushColor}
+        visible={layer.visible}
+        opacity={layer.opacity}
+        onStrokeComplete={onStrokeComplete}
+        isActive={isActive}
+        canvasWidth={canvasWidth}
+        canvasHeight={canvasHeight}
+      />
+    </>
+  );
+
   return (
     <Layer visible={layer.visible} opacity={layer.opacity}>
-      <Group
-        ref={groupRef}
-        x={layer.offsetX}
-        y={layer.offsetY}
-        draggable={isLayerMovable}
-        onDragEnd={(e) => {
-          const x = snapVal(e.target.x(), snapToGrid);
-          const y = snapVal(e.target.y(), snapToGrid);
-          e.target.x(x);
-          e.target.y(y);
-          onMoveLayer(layer.id, x, y);
-        }}
-      >
-        {layer.images.map((img) => (
-          <LayerImage
-            key={img.id}
-            node={img}
-            isMovable={false}
-            snapToGrid={snapToGrid}
-            onMove={(x, y) => onMoveImage(layer.id, img.id, x, y)}
-          />
-        ))}
-        <DrawingLayer
-          strokes={layer.strokes}
-          activeTool={activeTool}
-          brushSize={brushSize}
-          brushColor={brushColor}
-          visible={layer.visible}
-          opacity={layer.opacity}
-          onStrokeComplete={onStrokeComplete}
-          isActive={isActive}
-          canvasWidth={canvasWidth}
-          canvasHeight={canvasHeight}
-        />
-      </Group>
+      {hasMask ? (
+        <Group
+          ref={outerGroupRef}
+          x={layer.offsetX}
+          y={layer.offsetY}
+          draggable={isLayerMovable}
+          onDragEnd={(e) => {
+            const x = snapVal(e.target.x(), snapToGrid);
+            const y = snapVal(e.target.y(), snapToGrid);
+            e.target.x(x);
+            e.target.y(y);
+            onMoveLayer(layer.id, x, y);
+          }}
+        >
+          <Group ref={contentGroupRef}>
+            {contentChildren}
+          </Group>
+          <Group ref={maskGroupRef} globalCompositeOperation="destination-in" listening={false}>
+            {layer.maskFill !== "black" && (
+              <Rect
+                x={-layer.offsetX}
+                y={-layer.offsetY}
+                width={canvasWidth}
+                height={canvasHeight}
+                fill="white"
+              />
+            )}
+            {layer.maskStrokes!.map((stroke) => (
+              <Line
+                key={stroke.id}
+                points={stroke.points}
+                stroke={stroke.color}
+                strokeWidth={stroke.strokeWidth}
+                tension={0.5}
+                lineCap="round"
+                lineJoin="round"
+                globalCompositeOperation={
+                  stroke.color === "#000000" ? "destination-out" : "source-over"
+                }
+              />
+            ))}
+          </Group>
+        </Group>
+      ) : (
+        <Group
+          ref={contentGroupRef}
+          x={layer.offsetX}
+          y={layer.offsetY}
+          draggable={isLayerMovable}
+          onDragEnd={(e) => {
+            const x = snapVal(e.target.x(), snapToGrid);
+            const y = snapVal(e.target.y(), snapToGrid);
+            e.target.x(x);
+            e.target.y(y);
+            onMoveLayer(layer.id, x, y);
+          }}
+        >
+          {contentChildren}
+        </Group>
+      )}
     </Layer>
   );
 }

@@ -1,4 +1,8 @@
-import { useCallback, useState, lazy, Suspense } from "react";
+import {
+  useCallback,
+  useState,
+  type ReactNode,
+} from "react";
 import { Routes, Route } from "react-router-dom";
 import Layout from "./components/layout/Layout";
 import ChatView from "./components/chat/ChatView";
@@ -6,21 +10,12 @@ import ArtView from "./components/art/ArtView";
 import SettingsModal from "./components/settings/SettingsModal";
 import { useLayoutPrefs, type PanelId } from "./hooks/useLayoutPrefs";
 import { useMemo } from "react";
-import type { FC, ReactNode } from "react";
 import {
   extensionRouteElements,
   extensionProviders,
   extensionBottomBarItems,
 } from "virtual:extensions";
 
-const CacheDebugPanel = lazy(
-  () => import("./components/shared/CacheDebugPanel"),
-);
-
-const showDebugPanel =
-  import.meta.env.DEV ||
-  (typeof window !== "undefined" &&
-    new URLSearchParams(window.location.search).has("debug"));
 
 export default function App() {
   const {
@@ -32,8 +27,6 @@ export default function App() {
     setTtsOn,
     sttOn,
     setSttOn,
-    leftPanel,
-    setLeftPanel,
     rightPanel,
     setRightPanel,
     conversationId,
@@ -41,7 +34,6 @@ export default function App() {
   } = useLayoutPrefs();
 
   const [showSettings, setShowSettings] = useState(false);
-  const [showCacheDebug, setShowCacheDebug] = useState(false);
 
   const handleSelectConversation = useCallback(
     (id: number) => {
@@ -49,10 +41,6 @@ export default function App() {
     },
     [setConversationId],
   );
-
-  const handleToggleCacheDebug = useCallback(() => {
-    setShowCacheDebug((v) => !v);
-  }, []);
 
   // Compose extension providers (empty in core, populated in fork).
   // useMemo prevents the wrapper component from being recreated on every
@@ -80,35 +68,42 @@ export default function App() {
           path="/"
           element={
             <Layout
-              leftPanel={leftPanel}
-              onLeftPanel={(id: PanelId) =>
-                setLeftPanel(leftPanel === id ? null : id)
-              }
               rightPanel={rightPanel}
-              onRightPanel={(id: PanelId) =>
-                setRightPanel(rightPanel === id ? null : id)
-              }
+              onRightPanel={(id: PanelId) => {
+                if (rightPanel !== id) setShowCanvas(true);
+                setRightPanel(rightPanel === id ? null : id);
+              }}
               showChat={showChat}
               onToggleChat={() => setShowChat(!showChat)}
               showCanvas={showCanvas}
-              onToggleCanvas={() => setShowCanvas(!showCanvas)}
+              onToggleCanvas={() => {
+                if (rightPanel === "civitai_browser") {
+                  setRightPanel(null);
+                } else {
+                  setShowCanvas(!showCanvas);
+                }
+              }}
               ttsOn={ttsOn}
               onToggleTts={() => setTtsOn(!ttsOn)}
               sttOn={sttOn}
               onToggleStt={() => setSttOn(!sttOn)}
               onOpenSettings={() => setShowSettings(true)}
               onSelectConversation={handleSelectConversation}
-              showCacheDebug={showCacheDebug}
-              onToggleCacheDebug={handleToggleCacheDebug}
               bottomBarSlot={extensionBottomBarItems}
             >
-              {showChat && <ChatView conversationId={conversationId} />}
+              {showChat && <ChatView
+                conversationId={conversationId}
+                onSelectConversation={handleSelectConversation}
+              />}
             </Layout>
           }
         />
         <Route
           path="/chat"
-          element={<ChatView conversationId={conversationId} />}
+          element={<ChatView
+            conversationId={conversationId}
+            onSelectConversation={handleSelectConversation}
+          />}
         />
         <Route path="/art" element={<ArtView />} />
         <Route
@@ -125,11 +120,6 @@ export default function App() {
         <SettingsModal onClose={() => setShowSettings(false)} />
       )}
 
-      {showCacheDebug && (
-        <Suspense fallback={null}>
-          <CacheDebugPanel />
-        </Suspense>
-      )}
     </Providers>
   );
 }
