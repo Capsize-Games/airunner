@@ -161,10 +161,7 @@ export default function CanvasLayerRenderer({
         brushColor={brushColor}
         visible={layer.visible}
         opacity={layer.opacity}
-        onStrokeComplete={onStrokeComplete}
         isActive={isActive}
-        canvasWidth={canvasWidth}
-        canvasHeight={canvasHeight}
       />
     </>
   );
@@ -176,6 +173,10 @@ export default function CanvasLayerRenderer({
           ref={outerGroupRef}
           x={layer.offsetX}
           y={layer.offsetY}
+          clipX={-layer.offsetX}
+          clipY={-layer.offsetY}
+          clipWidth={canvasWidth}
+          clipHeight={canvasHeight}
           draggable={isLayerMovable}
           onDragEnd={(e) => {
             const x = snapVal(e.target.x(), snapToGrid);
@@ -219,6 +220,10 @@ export default function CanvasLayerRenderer({
           ref={contentGroupRef}
           x={layer.offsetX}
           y={layer.offsetY}
+          clipX={-layer.offsetX}
+          clipY={-layer.offsetY}
+          clipWidth={canvasWidth}
+          clipHeight={canvasHeight}
           draggable={isLayerMovable}
           onDragEnd={(e) => {
             const x = snapVal(e.target.x(), snapToGrid);

@@ -131,13 +131,13 @@ export function useCanvasState() {
   }, [recordSnapshot]);
 
   const renameLayer = useCallback((id: string, name: string) => {
-    setState((prev) => ({
+    setState((prev) => recordSnapshot({
       ...prev,
       layers: prev.layers.map(
         (l) => (l.id === id ? { ...l, name } : l),
       ),
     }));
-  }, []);
+  }, [recordSnapshot]);
 
   const setLayerVisible = useCallback(
     (id: string, visible: boolean) => {
@@ -168,17 +168,36 @@ export function useCanvasState() {
       setState((prev) => {
         const idx = prev.layers.findIndex((l) => l.id === id);
         if (idx === -1) return prev;
+        const otherIdx = direction === "up" ? idx + 1 : idx - 1;
+        if (
+          (direction === "up" && idx >= prev.layers.length - 1) ||
+          (direction === "down" && idx <= 0)
+        ) {
+          return prev;
+        }
         const layers = [...prev.layers];
-        if (direction === "up" && idx < layers.length - 1) {
-          [layers[idx], layers[idx + 1]] = [
-            layers[idx + 1], layers[idx],
-          ];
-        } else if (direction === "down" && idx > 0) {
-          [layers[idx], layers[idx - 1]] = [
-            layers[idx - 1], layers[idx],
-          ];
-        } else return prev;
-        return recordSnapshot({ ...prev, layers });
+        [layers[idx], layers[otherIdx]] = [
+          layers[otherIdx], layers[idx],
+        ];
+        // Keep displayOrder in sync so both canvas and sidebar reflect
+        // the new stacking order.  Only swap when both layers are
+        // ungrouped (the group itself owns the displayOrder slot).
+        const a = prev.layers[idx];
+        const b = prev.layers[otherIdx];
+        let displayOrder = prev.displayOrder;
+        if (!a.parentGroupId && !b.parentGroupId) {
+          const diA = displayOrder.indexOf(a.id);
+          const diB = displayOrder.indexOf(b.id);
+          if (diA !== -1 && diB !== -1 && diA !== diB) {
+            displayOrder = [...displayOrder];
+            [displayOrder[diA], displayOrder[diB]] = [
+              displayOrder[diB], displayOrder[diA],
+            ];
+          }
+        }
+        return recordSnapshot({
+          ...prev, layers, displayOrder,
+        });
       });
     },
     [recordSnapshot],
@@ -196,9 +215,8 @@ export function useCanvasState() {
 
   const addLayerGroup = useCallback(() => {
     const id = nextGroupId();
-    setState((prev) => ({
+    setState((prev) => recordSnapshot({
       ...prev,
-      _ts: Date.now(),
       layerGroups: [
         ...prev.layerGroups,
         {
@@ -211,7 +229,7 @@ export function useCanvasState() {
       ],
       displayOrder: [...prev.displayOrder, id],
     }));
-  }, []);
+  }, [recordSnapshot]);
 
   const toggleGroupExpanded = useCallback((id: string) => {
     setState((prev) => ({
@@ -271,9 +289,8 @@ export function useCanvasState() {
       if (newActive && groupLayerIds.has(newActive)) {
         newActive = remainingLayers.at(-1)?.id ?? null;
       }
-      return {
+      return recordSnapshot({
         ...prev,
-        _ts: Date.now(),
         layerGroups: prev.layerGroups.filter((g) => g.id !== id),
         layers: remainingLayers,
         displayOrder: prev.displayOrder.filter(
@@ -287,9 +304,9 @@ export function useCanvasState() {
             : prev.selectedLayerIds.filter(
               (s) => !groupLayerIds.has(s),
             ),
-      };
+      });
     });
-  }, []);
+  }, [recordSnapshot]);
 
   const moveLayerToGroup = useCallback(
     (layerId: string, groupId: string | null, toIndex?: number) => {
@@ -310,22 +327,22 @@ export function useCanvasState() {
         }
 
         if (toIndex === undefined) {
-          return {
-            ...prev, _ts: Date.now(), layers, displayOrder,
-          };
+          return recordSnapshot({
+            ...prev, layers, displayOrder,
+          });
         }
 
         const fromIdx = layers.findIndex((l) => l.id === layerId);
         if (fromIdx === -1) {
-          return { ...prev, _ts: Date.now(), layers, displayOrder };
+          return recordSnapshot({ ...prev, layers, displayOrder });
         }
         const moved = layers.splice(fromIdx, 1);
         const adjusted = toIndex > fromIdx ? toIndex - 1 : toIndex;
         layers.splice(adjusted, 0, moved[0]);
-        return { ...prev, _ts: Date.now(), layers, displayOrder };
+        return recordSnapshot({ ...prev, layers, displayOrder });
       });
     },
-    [],
+    [recordSnapshot],
   );
 
   const reorderDisplayItem = useCallback(
@@ -337,10 +354,10 @@ export function useCanvasState() {
         const [moved] = order.splice(fromIdx, 1);
         const adjusted = toIndex > fromIdx ? toIndex - 1 : toIndex;
         order.splice(adjusted, 0, moved);
-        return { ...prev, _ts: Date.now(), displayOrder: order };
+        return recordSnapshot({ ...prev, displayOrder: order });
       });
     },
-    [],
+    [recordSnapshot],
   );
 
   const toggleLayerSelection = useCallback((id: string) => {
@@ -512,8 +529,8 @@ export function useCanvasState() {
   );
 
   const setDocumentBgColor = useCallback((color: string) => {
-    setState((prev) => ({ ...prev, documentBgColor: color }));
-  }, []);
+    setState((prev) => recordSnapshot({ ...prev, documentBgColor: color }));
+  }, [recordSnapshot]);
 
   // ── Snap to grid ──────────────────────────────────────────────────────────
 
@@ -590,7 +607,7 @@ export function useCanvasState() {
 
   const moveImage = useCallback(
     (layerId: string, imageId: string, x: number, y: number) => {
-      setState((prev) => ({
+      setState((prev) => recordSnapshot({
         ...prev,
         layers: prev.layers.map((l) =>
           l.id !== layerId
@@ -606,7 +623,7 @@ export function useCanvasState() {
         ),
       }));
     },
-    [],
+    [recordSnapshot],
   );
 
   // ── Strokes ───────────────────────────────────────────────────────────────
@@ -745,10 +762,25 @@ export function useCanvasState() {
     setState((prev) => {
       if (prev.historyIndex <= 0) return prev;
       const newIndex = prev.historyIndex - 1;
+      const snapshot = parseSnapshot(prev.history[newIndex]);
+      // If the user's current active layer no longer exists in the
+      // restored document (e.g. undo of a layer deletion), fall back
+      // to the last layer or null.
+      const layers = snapshot.layers ?? prev.layers;
+      const activeLayerId =
+        layers.some((l) => l.id === prev.activeLayerId)
+          ? prev.activeLayerId
+          : layers.at(-1)?.id ?? null;
+      const selectedLayerIds = activeLayerId !== null
+        ? [activeLayerId]
+        : ([] as string[]);
       return {
         ...prev,
-        ...parseSnapshot(prev.history[newIndex]),
+        ...snapshot,
+        activeLayerId,
+        selectedLayerIds,
         historyIndex: newIndex,
+        _ts: Date.now(),
       };
     });
   }, []);
@@ -757,10 +789,22 @@ export function useCanvasState() {
     setState((prev) => {
       if (prev.historyIndex >= prev.history.length - 1) return prev;
       const newIndex = prev.historyIndex + 1;
+      const snapshot = parseSnapshot(prev.history[newIndex]);
+      const layers = snapshot.layers ?? prev.layers;
+      const activeLayerId =
+        layers.some((l) => l.id === prev.activeLayerId)
+          ? prev.activeLayerId
+          : layers.at(-1)?.id ?? null;
+      const selectedLayerIds = activeLayerId !== null
+        ? [activeLayerId]
+        : ([] as string[]);
       return {
         ...prev,
-        ...parseSnapshot(prev.history[newIndex]),
+        ...snapshot,
+        activeLayerId,
+        selectedLayerIds,
         historyIndex: newIndex,
+        _ts: Date.now(),
       };
     });
   }, []);

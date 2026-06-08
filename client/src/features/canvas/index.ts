@@ -11,6 +11,9 @@ export type {
 export { useCanvasDocument } from "./useCanvasDocument";
 export { useCanvasSync } from "./useCanvasSync";
 export type { UseCanvasSyncReturn } from "./useCanvasSync";
+export type { LiveStrokeMessage, StrokeEndMessage } from "./canvasSyncTypes";
+export { useGhostStrokes } from "./useGhostStrokes";
+export type { UseGhostStrokesReturn, GhostStroke } from "./useGhostStrokes";
 export { CanvasProvider, useCanvasContext } from "./CanvasContext";
 export type { CanvasContextValue } from "./CanvasContext";
 export { default as CanvasStage } from "./CanvasStage";

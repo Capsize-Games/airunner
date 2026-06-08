@@ -1,18 +1,46 @@
 import {
   useRef, useCallback, useEffect, useState, forwardRef,
-  useImperativeHandle, useLayoutEffect,
+  useImperativeHandle, useLayoutEffect, useMemo,
 } from "react";
-import { Stage, Layer, Rect, Shape, Text, Circle } from "react-konva";
+import { Stage, Layer, Rect, Shape, Text, Circle, Line } from "react-konva";
 import Konva from "konva";
 import CanvasLayerRenderer from "./CanvasLayer";
 import ActiveGridArea from "./ActiveGridArea";
 import MaskLayer from "./MaskLayer";
 import type {
   CanvasLayer, ActiveGridArea as ActiveGridAreaType,
-  StrokeNode, ActiveTool,
+  StrokeNode, ActiveTool, LayerGroup,
 } from "./useCanvasState";
+import type { LiveStrokeMessage, StrokeEndMessage } from "./canvasSyncTypes";
 import { getCursor } from "./cursorUtils";
 import CanvasBackground from "./CanvasBackground";
+
+// ── Drawing helpers (shared with DrawingLayer) ─────────────────────────
+const INTERP_THRESHOLD = 3;
+
+function lerp(
+  x1: number, y1: number, x2: number, y2: number, t: number,
+): { x: number; y: number } {
+  return { x: x1 + (x2 - x1) * t, y: y1 + (y2 - y1) * t };
+}
+
+function clampToDoc(
+  x: number, y: number, w: number, h: number,
+  inset: number, offsetX = 0, offsetY = 0,
+): { x: number; y: number } {
+  return {
+    x: Math.max(inset - offsetX, Math.min(w - inset - offsetX, x)),
+    y: Math.max(inset - offsetY, Math.min(h - inset - offsetY, y)),
+  };
+}
+
+function getCanvasPosFromStage(stage: Konva.Stage | null) {
+  if (!stage) return null;
+  const raw = stage.getPointerPosition();
+  if (!raw) return null;
+  const t = stage.getAbsoluteTransform().copy().invert();
+  return t.point(raw);
+}
 
 export interface CanvasStageHandle {
   zoomIn: () => void;
@@ -29,6 +57,8 @@ interface CanvasStageProps {
   documentHeight: number;
   documentBgColor: string;
   layers: CanvasLayer[];
+  layerGroups: LayerGroup[];
+  displayOrder: string[];
   activeLayerId: string | null;
   activeGridArea: ActiveGridAreaType;
   activeTool: ActiveTool;
@@ -52,6 +82,9 @@ interface CanvasStageProps {
   gridLayerRef: React.RefObject<Konva.Layer>;
   maskLayerRef: React.RefObject<Konva.Layer>;
   stageRef: React.RefObject<Konva.Stage>;
+  ghostLayerRef: React.RefObject<Konva.Layer | null>;
+  sendLiveStroke?: (msg: LiveStrokeMessage) => void;
+  sendStrokeEnd?: (msg: StrokeEndMessage) => void;
 }
 
 const GRID_SIZE = 16;
@@ -62,6 +95,8 @@ const CanvasStage = forwardRef<CanvasStageHandle, CanvasStageProps>(
     documentHeight,
     documentBgColor,
     layers,
+    layerGroups,
+    displayOrder,
     activeLayerId,
     activeGridArea,
     activeTool,
@@ -85,6 +120,9 @@ const CanvasStage = forwardRef<CanvasStageHandle, CanvasStageProps>(
     gridLayerRef,
     maskLayerRef,
     stageRef,
+    ghostLayerRef,
+    sendLiveStroke,
+    sendStrokeEnd,
   }, ref) {
     const isPanning = useRef(false);
     const lastPointerPos = useRef({ x: 0, y: 0 });
@@ -100,6 +138,52 @@ const CanvasStage = forwardRef<CanvasStageHandle, CanvasStageProps>(
       x: number; y: number; width: number; height: number;
     } | null>(null);
     const [stageSize, setStageSize] = useState({ width: 800, height: 600 });
+
+    // ── Session identity (stable for tab lifetime) ────────────────────
+    const sessionId = useRef(crypto.randomUUID());
+
+    // ── Live stroke sync state ────────────────────────────────────────
+    const liveStrokeId = useRef<string>("");
+    const lastSentCount = useRef(0);
+    const liveThrottleRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    // ── Drawing overlay state (topmost layer for brush/eraser) ────────
+    const isDrawingOverlay = useRef(false);
+    const drawingPoints = useRef<number[]>([]);
+    // The live-preview Line lives inside the active CanvasLayer's offset
+    // <Group> (rendered by DrawingLayer) so it follows layer translations.
+    // Access it through a global ref set by DrawingLayer's ref callback.
+    const getLiveStroke = (): Konva.Line | null =>
+      (window as unknown as Record<string, Konva.Line | undefined>)
+        .__airunnerLiveStrokeRef ?? null;
+
+    // Derive ordered layer list from displayOrder so the canvas always
+    // respects the same stacking order as the layers sidebar.
+    const orderedLayers = useMemo(() => {
+      const result: CanvasLayer[] = [];
+      const seen = new Set<string>();
+      // First pass: follow displayOrder (group IDs → children; layer IDs → layer)
+      for (const id of displayOrder) {
+        const group = layerGroups.find((g) => g.id === id);
+        if (group) {
+          const children = layers.filter((l) => l.parentGroupId === id);
+          for (const child of children) {
+            if (!seen.has(child.id)) { result.push(child); seen.add(child.id); }
+          }
+          continue;
+        }
+        const layer = layers.find((l) => l.id === id);
+        if (layer && !seen.has(layer.id)) {
+          result.push(layer);
+          seen.add(layer.id);
+        }
+      }
+      // Second pass: catch any layers not referenced in displayOrder
+      for (const layer of layers) {
+        if (!seen.has(layer.id)) { result.push(layer); seen.add(layer.id); }
+      }
+      return result;
+    }, [displayOrder, layerGroups, layers]);
 
     // Fill stage to container and zoom-to-fit on first mount
     useLayoutEffect(() => {
@@ -444,6 +528,16 @@ const CanvasStage = forwardRef<CanvasStageHandle, CanvasStageProps>(
 
     useEffect(() => {
       const onKey = (e: KeyboardEvent) => {
+        const target = e.target as HTMLElement;
+        const tag = target.tagName;
+        if (
+          tag === "INPUT" ||
+          tag === "TEXTAREA" ||
+          tag === "SELECT" ||
+          target.isContentEditable
+        ) {
+          return;
+        }
         if (
           (e.ctrlKey || e.metaKey) && e.key === "z" && !e.shiftKey
         ) {
@@ -481,12 +575,149 @@ const CanvasStage = forwardRef<CanvasStageHandle, CanvasStageProps>(
         }
         for (let y = 0; y <= documentHeight; y += GRID_SIZE) {
           native.moveTo(0, y);
-          native.lineTo(documentWidth, y);
+          native.lineTo(documentHeight, y);
         }
         native.stroke();
       },
       [documentWidth, documentHeight],
     );
+
+    // ── Drawing overlay handlers (brush/eraser) ───────────────────────
+
+    const activeLayer = useMemo(
+      () => layers.find((l) => l.id === activeLayerId) ?? null,
+      [layers, activeLayerId],
+    );
+
+    const isDrawingTool = activeTool === "brush" || activeTool === "eraser";
+    const drawingOffsetX = activeLayer?.offsetX ?? 0;
+    const drawingOffsetY = activeLayer?.offsetY ?? 0;
+
+    const handleOverlayPointerDown = useCallback(
+      (e: Konva.KonvaEventObject<PointerEvent>) => {
+        if (e.evt.button !== 0) return;
+        if (!activeLayerId || !isDrawingTool) return;
+        const pos = getCanvasPosFromStage(stageRef.current);
+        if (!pos) return;
+        const local = { x: pos.x - drawingOffsetX, y: pos.y - drawingOffsetY };
+        const clamped = clampToDoc(
+          local.x, local.y, documentWidth, documentHeight,
+          0, drawingOffsetX, drawingOffsetY,
+        );
+        isDrawingOverlay.current = true;
+        drawingPoints.current = [clamped.x, clamped.y];
+        liveStrokeId.current = crypto.randomUUID();
+        lastSentCount.current = 0;
+        if (getLiveStroke()) {
+          getLiveStroke().points([clamped.x, clamped.y]);
+          getLiveStroke().getLayer()?.batchDraw();
+        }
+      },
+      [activeLayerId, isDrawingTool, brushSize, documentWidth, documentHeight,
+       drawingOffsetX, drawingOffsetY],
+    );
+
+    const handleOverlayPointerMove = useCallback(
+      (e: Konva.KonvaEventObject<PointerEvent>) => {
+        if (!isDrawingOverlay.current) return;
+        const pos = getCanvasPosFromStage(stageRef.current);
+        if (!pos) return;
+        const local = { x: pos.x - drawingOffsetX, y: pos.y - drawingOffsetY };
+        const clamped = clampToDoc(
+          local.x, local.y, documentWidth, documentHeight,
+          0, drawingOffsetX, drawingOffsetY,
+        );
+        const pts = drawingPoints.current;
+        if (pts.length >= 2) {
+          const px = pts[pts.length - 2];
+          const py = pts[pts.length - 1];
+          const dx = clamped.x - px;
+          const dy = clamped.y - py;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist > INTERP_THRESHOLD) {
+            const steps = Math.floor(dist / INTERP_THRESHOLD);
+            for (let i = 1; i <= steps; i++) {
+              const t = i / (steps + 1);
+              const ip = lerp(px, py, clamped.x, clamped.y, t);
+              pts.push(ip.x, ip.y);
+            }
+          }
+        }
+        pts.push(clamped.x, clamped.y);
+        if (getLiveStroke()) {
+          getLiveStroke().points([...pts]);
+          getLiveStroke().getLayer()?.batchDraw();
+        }
+
+        // ── Throttled live-stroke delta send (80 ms) ─────────────
+        if (!liveThrottleRef.current && sendLiveStroke && activeLayerId) {
+          liveThrottleRef.current = setTimeout(() => {
+            liveThrottleRef.current = null;
+            const currentPts = drawingPoints.current;
+            const delta = currentPts.slice(lastSentCount.current);
+            if (delta.length > 0) {
+              lastSentCount.current = currentPts.length;
+              sendLiveStroke({
+                type: "stroke:live",
+                sessionId: sessionId.current,
+                layerId: activeLayerId,
+                strokeId: liveStrokeId.current,
+                tool: activeTool as "brush" | "eraser",
+                color: brushColor,
+                strokeWidth: brushSize,
+                delta,
+              });
+            }
+          }, 80);
+        }
+      },
+      [brushSize, documentWidth, documentHeight, drawingOffsetX, drawingOffsetY,
+       sendLiveStroke, activeLayerId, activeTool, brushColor],
+    );
+
+    const handleOverlayPointerUp = useCallback(() => {
+      if (!isDrawingOverlay.current) return;
+      isDrawingOverlay.current = false;
+
+      // Cancel any pending live-stroke flush.
+      if (liveThrottleRef.current) {
+        clearTimeout(liveThrottleRef.current);
+        liveThrottleRef.current = null;
+      }
+
+      // Send stroke:end so remote tabs discard the ghost.
+      if (sendStrokeEnd) {
+        sendStrokeEnd({
+          type: "stroke:end",
+          sessionId: sessionId.current,
+          strokeId: liveStrokeId.current,
+        });
+      }
+      lastSentCount.current = 0;
+
+      if (getLiveStroke()) {
+        getLiveStroke().points([]);
+        getLiveStroke().getLayer()?.batchDraw();
+      }
+      if (drawingPoints.current.length < 4) {
+        drawingPoints.current = [];
+        return;
+      }
+      onAddStroke({
+        points: [...drawingPoints.current],
+        color: activeTool === "eraser" ? "#000000" : brushColor,
+        strokeWidth: brushSize,
+        tool: activeTool as "brush" | "eraser",
+      });
+      drawingPoints.current = [];
+    }, [activeTool, brushSize, brushColor, onAddStroke, sendStrokeEnd]);
+
+    // Catch pointerup anywhere in the browser window — Konva only fires
+    // onPointerUp when the pointer is over the Stage/Canvas at release.
+    useEffect(() => {
+      window.addEventListener("pointerup", handleOverlayPointerUp);
+      return () => window.removeEventListener("pointerup", handleOverlayPointerUp);
+    }, [handleOverlayPointerUp]);
 
     return (
       <div
@@ -524,8 +755,9 @@ const CanvasStage = forwardRef<CanvasStageHandle, CanvasStageProps>(
             documentBgColor={documentBgColor}
           />
 
-          {/* Content layers */}
-          {layers.map((layer, index) => {
+          {/* Content layers — rendered in displayOrder so canvas stacking
+              always matches the layers sidebar */}
+          {orderedLayers.map((layer, index) => {
             const isMaskTarget =
               layer.id === activeLayerId &&
               Array.isArray(layer.maskStrokes) &&
@@ -552,6 +784,34 @@ const CanvasStage = forwardRef<CanvasStageHandle, CanvasStageProps>(
             );
           })}
 
+          {/* Drawing overlay — sits ABOVE all content layers so pointer
+              events always reach the hit area, even when shapes in other
+              layers are under the cursor.  Only interactive for brush/
+              eraser tools. */}
+          {isDrawingTool && activeLayerId && (
+            <Layer listening={true}>
+              <Rect
+                x={-50000}
+                y={-50000}
+                width={100000}
+                height={100000}
+                fill="transparent"
+                onPointerDown={handleOverlayPointerDown}
+                onPointerMove={handleOverlayPointerMove}
+                onPointerUp={handleOverlayPointerUp}
+              />
+              <Line
+                points={[]}
+                stroke={activeTool === "eraser" ? "#000000" : brushColor}
+                strokeWidth={brushSize}
+                lineCap="round"
+                lineJoin="round"
+                globalCompositeOperation={activeTool === "eraser" ? "destination-out" : "source-over"}
+                listening={false}
+              />
+            </Layer>
+          )}
+
           {/* Pixel grid */}
           <Layer listening={false} visible={showGrid}>
             <Shape sceneFunc={gridSceneFunc} />
@@ -559,6 +819,10 @@ const CanvasStage = forwardRef<CanvasStageHandle, CanvasStageProps>(
 
           {/* Active Grid Area — hidden; ref kept for compatibility */}
           <Layer ref={gridLayerRef} listening={false} visible={false} />
+
+          {/* Ghost strokes — imperatively managed by useGhostStrokes.
+              Lives above content layers and below the brush indicator. */}
+          <Layer ref={ghostLayerRef} listening={false} />
 
           {/* Mask layer — routes to per-layer mask when active layer has one */}
           {activeTool === "mask" && (() => {

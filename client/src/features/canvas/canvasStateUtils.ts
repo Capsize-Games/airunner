@@ -71,17 +71,17 @@ export const serialize = (state: CanvasState): string =>
   JSON.stringify({
     _ts: state._ts,
     layers: state.layers,
-    activeLayerId: state.activeLayerId,
-    selectedLayerIds: state.selectedLayerIds,
+    layerGroups: state.layerGroups,
+    displayOrder: state.displayOrder,
     activeGridArea: state.activeGridArea,
-    activeTool: state.activeTool,
-    brushSize: state.brushSize,
-    brushColor: state.brushColor,
     maskStrokes: state.maskStrokes,
     documentWidth: state.documentWidth,
     documentHeight: state.documentHeight,
     documentBgColor: state.documentBgColor,
-    snapToGrid: state.snapToGrid,
+    // NOTE: activeTool, brushSize, brushColor, snapToGrid, activeLayerId,
+    // and selectedLayerIds are deliberately excluded from history snapshots
+    // so undo/redo only restores document content – never the user's
+    // current tool, brush settings, layer selection, or grid preference.
   });
 
 export const defaultState = (): CanvasState => {

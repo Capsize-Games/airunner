@@ -1,5 +1,6 @@
 import { useEffect, useRef, useCallback, useState } from "react";
 import { wsHost } from "../../api/client-base";
+import type { LiveStrokeMessage, StrokeEndMessage } from "./canvasSyncTypes";
 
 const WS_RECONNECT_DELAY = 1000;
 const WS_MAX_RECONNECT_DELAY = 10_000;
@@ -12,6 +13,10 @@ function wsUrl(path: string): string {
 export interface UseCanvasSyncOptions {
   /** Called when the server sends the full document (on connect). */
   onDocument: (json: string | null) => void;
+  /** Called when a remote session sends a live stroke delta. */
+  onLiveStroke?: (msg: LiveStrokeMessage) => void;
+  /** Called when a remote session ends its active stroke. */
+  onStrokeEnd?: (msg: StrokeEndMessage) => void;
 }
 
 export interface UseCanvasSyncReturn {
@@ -19,6 +24,10 @@ export interface UseCanvasSyncReturn {
   connected: boolean;
   /** Send a canvas document snapshot to the server instantly. */
   send: (document: string) => void;
+  /** Send a live-stroke delta to the server for relay. */
+  sendLiveStroke: (msg: LiveStrokeMessage) => void;
+  /** Send a stroke-end notification to the server for relay. */
+  sendStrokeEnd: (msg: StrokeEndMessage) => void;
 }
 
 /**
@@ -26,16 +35,23 @@ export interface UseCanvasSyncReturn {
  *
  * - Connects on mount, reconnects on disconnect.
  * - Sends document snapshots immediately (no debounce).
+ * - Relays live-stroke deltas and stroke-end messages without persistence.
  * - Calls `onDocument` when the server pushes the stored document.
  */
 export function useCanvasSync({
   onDocument,
+  onLiveStroke,
+  onStrokeEnd,
 }: UseCanvasSyncOptions): UseCanvasSyncReturn {
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [connected, setConnected] = useState(false);
   const onDocumentRef = useRef(onDocument);
   onDocumentRef.current = onDocument;
+  const onLiveStrokeRef = useRef(onLiveStroke);
+  onLiveStrokeRef.current = onLiveStroke;
+  const onStrokeEndRef = useRef(onStrokeEnd);
+  onStrokeEndRef.current = onStrokeEnd;
 
   // Accumulator: queue messages while connecting so nothing is lost.
   const queueRef = useRef<string[]>([]);
@@ -45,7 +61,7 @@ export function useCanvasSync({
       ws.send(msg);
       return true;
     }
-    // Queue for later delivery.
+    // Queue for later delivery (only for document messages).
     queueRef.current.push(msg);
     return false;
   }, []);
@@ -105,6 +121,10 @@ export function useCanvasSync({
           const data = JSON.parse(event.data);
           if (data.type === "document") {
             onDocumentRef.current(data.document ?? null);
+          } else if (data.type === "stroke:live") {
+            onLiveStrokeRef.current?.(data);
+          } else if (data.type === "stroke:end") {
+            onStrokeEndRef.current?.(data);
           }
         } catch {
           // Malformed message — ignore.
@@ -150,5 +170,22 @@ export function useCanvasSync({
     [sendImmediate],
   );
 
-  return { connected, send };
+  const sendLiveStroke = useCallback(
+    (msg: LiveStrokeMessage) => {
+      const ws = wsRef.current;
+      if (ws?.readyState === WebSocket.OPEN) ws.send(JSON.stringify(msg));
+      // Drop if disconnected — stale live-stroke deltas are meaningless on reconnect.
+    },
+    [],
+  );
+
+  const sendStrokeEnd = useCallback(
+    (msg: StrokeEndMessage) => {
+      const ws = wsRef.current;
+      if (ws?.readyState === WebSocket.OPEN) ws.send(JSON.stringify(msg));
+    },
+    [],
+  );
+
+  return { connected, send, sendLiveStroke, sendStrokeEnd };
 }
