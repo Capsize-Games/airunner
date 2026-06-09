@@ -51,7 +51,7 @@ export default function NewLayerModal({
       </Modal.Header>
       <Modal.Body style={{ color: "var(--theme-text)" }}>
         <Form.Group className="mb-2">
-          <Form.Label style={{ color: "var(--theme-text-secondary)", fontSize: 12 }}>
+          <Form.Label className="text-theme-secondary" style={{ fontSize: 12 }}>
             Name
           </Form.Label>
           <Form.Control
@@ -67,7 +67,7 @@ export default function NewLayerModal({
           />
         </Form.Group>
         <Form.Group className="mb-2">
-          <Form.Label style={{ color: "var(--theme-text-secondary)", fontSize: 12 }}>
+          <Form.Label className="text-theme-secondary" style={{ fontSize: 12 }}>
             Opacity
           </Form.Label>
           <div className="d-flex align-items-center gap-2">
@@ -75,7 +75,7 @@ export default function NewLayerModal({
               min={0} max={1} step={0.01}
               value={opacity}
               onChange={(e) => setOpacity(Number(e.target.value))}
-              style={{ flexGrow: 1 }}
+              className="flex-grow-1"
             />
             <span style={{ fontSize: 11, fontFamily: "monospace", color: "rgba(255,255,255,0.5)", width: 32, textAlign: "right" }}>
               {Math.round(opacity * 100)}%
@@ -83,7 +83,7 @@ export default function NewLayerModal({
           </div>
         </Form.Group>
         <Form.Group className="mb-1">
-          <Form.Label style={{ color: "var(--theme-text-secondary)", fontSize: 12 }}>
+          <Form.Label className="text-theme-secondary" style={{ fontSize: 12 }}>
             Fill Color
           </Form.Label>
           <div className="d-flex flex-wrap gap-2">
@@ -112,7 +112,7 @@ export default function NewLayerModal({
                 {p.label}
               </button>
             ))}
-            <label style={{ display: "flex", alignItems: "center", gap: 4, cursor: "pointer" }}>
+            <label className="d-flex align-items-center" style={{ gap: 4, cursor: "pointer" }}>
               <div
                 style={{
                   width: 24,
@@ -125,7 +125,7 @@ export default function NewLayerModal({
                   cursor: "pointer",
                 }}
               />
-              <span style={{ fontSize: 11, color: "var(--theme-text-secondary)" }}>
+              <span className="text-section-label">
                 Custom
               </span>
               <input

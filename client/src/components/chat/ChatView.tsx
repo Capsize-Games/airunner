@@ -143,8 +143,7 @@ export default function ChatView({
       )}
 
       <div
-        className="chat-messages p-2"
-        style={{ flex: 1, minHeight: 0, overflow: "auto" }}
+        className="chat-messages p-2 flex-grow-1 min-h-0 overflow-auto"
       >
         {!loading && (
           <>

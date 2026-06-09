@@ -15,14 +15,8 @@ export default function ChatDocsRow({
 }: ChatDocsRowProps) {
   return (
     <div
-      style={{
-        display: "flex",
-        alignItems: "center",
-        padding: "3px 6px",
-        borderTop: "1px solid rgba(255,255,255,0.06)",
-        flexShrink: 0,
-        gap: 4,
-      }}
+      className="d-flex align-items-center flex-shrink-0 border-t-subtle"
+      style={{ padding: "3px 6px", gap: 4 }}
     >
       <button
         type="button"
@@ -63,7 +57,7 @@ export default function ChatDocsRow({
         </span>
       </button>
 
-      <span style={{ flex: 1 }} />
+      <span className="flex-grow-1" />
 
       <PanelIconBtn
         icon="history"

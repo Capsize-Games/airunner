@@ -32,18 +32,8 @@ export default function ToolBar({ onOpenSettings, onNewDocument }: ToolBarProps)
 
   return (
     <div
-      style={{
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        padding: "4px 8px",
-        background: "#161620",
-        borderBottom: "1px solid rgba(255,255,255,0.07)",
-        flexShrink: 0,
-        userSelect: "none",
-        zIndex: 100,
-        position: "relative",
-      }}
+      className="d-flex align-items-center justify-content-between flex-shrink-0 user-select-none position-relative border-b-subtle"
+      style={{ padding: "4px 8px", background: "#161620", zIndex: 100 }}
     >
       <button style={btn} onClick={onNewDocument} onMouseEnter={onEnter} onMouseLeave={onLeave}>
         <FilePlus size={13} strokeWidth={1.75} />

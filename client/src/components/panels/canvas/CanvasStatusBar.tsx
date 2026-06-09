@@ -68,10 +68,10 @@ export default function CanvasStatusBar({
       <span>{documentWidth} &times; {documentHeight}</span>
       {activeLayer && <span>Layer: {activeLayer.name}</span>}
 
-      <div style={{ flex: 1 }} />
+      <div className="flex-grow-1" />
 
       {/* Zoom controls */}
-      <div style={{ display: "flex", alignItems: "center", gap: 1 }}>
+      <div className="d-flex align-items-center" style={{ gap: 1 }}>
         <button style={btnStyle} title="Zoom out" onClick={onZoomOut}>
           <ZoomOut size={13} strokeWidth={1.75} />
         </button>

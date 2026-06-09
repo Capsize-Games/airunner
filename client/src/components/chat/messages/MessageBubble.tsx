@@ -88,8 +88,7 @@ export default function MessageBubble({
             }}
           >
             <div
-              className="d-flex align-items-center gap-1 p-1"
-              style={{ cursor: "pointer", userSelect: "none" }}
+              className="d-flex align-items-center gap-1 p-1 cursor-pointer user-select-none"
               onClick={() => setThinkingExpanded((e) => !e)}
               role="button"
             >

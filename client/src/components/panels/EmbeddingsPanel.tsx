@@ -93,20 +93,12 @@ export default function EmbeddingsPanel() {
   };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column" }}>
-      <div style={{
-        position: "sticky", top: 0,
-        flexShrink: 0,
-        display: "flex", alignItems: "center",
-        padding: "8px 12px 6px",
-        borderBottom: "1px solid var(--theme-border)",
-        background: "var(--theme-panel-bg)",
-        zIndex: 1,
-      }}>
-        <span style={{
-          fontSize: 10, fontWeight: 700, letterSpacing: "0.07em",
-          textTransform: "uppercase", color: "var(--theme-text-secondary)",
-        }}>
+    <div className="d-flex flex-column">
+      <div
+        className="sticky-top flex-shrink-0 d-flex align-items-center bg-theme-panel border-b-theme"
+        style={{ padding: "8px 12px 6px", zIndex: 1 }}
+      >
+        <span className="text-panel-label text-uppercase">
           Embeddings
         </span>
       </div>

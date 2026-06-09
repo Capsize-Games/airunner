@@ -19,24 +19,6 @@ const INIT_OPTIONS: { value: MaskFill | "alpha" | "transfer-alpha" | "grayscale"
   { value: "grayscale",     label: "Grayscale copy of layer" },
 ];
 
-const radioStyle: React.CSSProperties = {
-  display: "flex",
-  alignItems: "center",
-  gap: 7,
-  marginBottom: 5,
-  fontSize: 12,
-  color: "rgba(255,255,255,0.8)",
-  cursor: "pointer",
-};
-
-const labelStyle: React.CSSProperties = {
-  fontFamily: "monospace",
-  fontSize: 11,
-  color: "rgba(255,255,255,0.45)",
-  marginBottom: 2,
-  display: "block",
-};
-
 export default function NewLayerMaskModal({ show, layerName, onAdd, onHide }: Props) {
   const [init, setInit] = useState<string>("white");
   const [invert, setInvert] = useState(false);
@@ -48,26 +30,21 @@ export default function NewLayerMaskModal({ show, layerName, onAdd, onHide }: Pr
     setInvert(false);
   };
 
-  const panelStyle: React.CSSProperties = {
-    background: "#1e1e2e",
-    border: "none",
-  };
-
   return (
     <Modal show={show} onHide={onHide} size="sm" centered dialogClassName="layer-mask-modal">
-      <Modal.Header closeButton style={{ ...panelStyle, borderBottom: "1px solid rgba(255,255,255,0.1)", padding: "10px 16px" }}>
+      <Modal.Header closeButton className="layer-mask-panel" style={{ borderBottom: "1px solid rgba(255,255,255,0.1)", padding: "10px 16px" }}>
         <Modal.Title style={{ fontSize: 13, fontWeight: 600, color: "rgba(255,255,255,0.9)" }}>
           Add Layer Mask
         </Modal.Title>
       </Modal.Header>
-      <Modal.Body style={{ ...panelStyle, padding: "14px 16px" }}>
+      <Modal.Body className="layer-mask-panel" style={{ padding: "14px 16px" }}>
         <div style={{ marginBottom: 10 }}>
-          <span style={labelStyle}>Layer: {layerName}</span>
+          <span className="layer-mask-field-label">Layer: {layerName}</span>
         </div>
         <div style={{ marginBottom: 10 }}>
-          <span style={{ ...labelStyle, marginBottom: 8 }}>Initialize Layer Mask to:</span>
+          <span className="layer-mask-field-label" style={{ marginBottom: 8 }}>Initialize Layer Mask to:</span>
           {INIT_OPTIONS.map((opt) => (
-            <label key={opt.value} style={radioStyle}>
+            <label key={opt.value} className="layer-mask-radio-label">
               <input
                 type="radio"
                 name="maskInit"
@@ -80,7 +57,7 @@ export default function NewLayerMaskModal({ show, layerName, onAdd, onHide }: Pr
             </label>
           ))}
         </div>
-        <label style={{ ...radioStyle, marginTop: 4, borderTop: "1px solid rgba(255,255,255,0.07)", paddingTop: 10 }}>
+        <label className="layer-mask-radio-label" style={{ marginTop: 4, borderTop: "1px solid rgba(255,255,255,0.07)", paddingTop: 10 }}>
           <input
             type="checkbox"
             checked={invert}
@@ -90,7 +67,7 @@ export default function NewLayerMaskModal({ show, layerName, onAdd, onHide }: Pr
           Invert mask
         </label>
       </Modal.Body>
-      <Modal.Footer style={{ ...panelStyle, borderTop: "1px solid rgba(255,255,255,0.1)", padding: "8px 16px", gap: 6 }}>
+      <Modal.Footer className="layer-mask-panel" style={{ borderTop: "1px solid rgba(255,255,255,0.1)", padding: "8px 16px", gap: 6 }}>
         <Button variant="outline-secondary" size="sm" onClick={onHide} style={{ fontSize: 12 }}>
           Cancel
         </Button>

@@ -16,8 +16,7 @@ export default function ModelSelector({
   return (
     <Form.Group className="mb-2">
       <Form.Label
-        className="small"
-        style={{ color: "var(--theme-text-secondary)" }}
+        className="small text-theme-secondary"
       >
         Model
       </Form.Label>

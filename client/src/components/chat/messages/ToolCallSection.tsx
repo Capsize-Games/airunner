@@ -21,14 +21,13 @@ export default function ToolCallSection({
       }}
     >
       <div
-        className="d-flex align-items-center gap-1 p-1"
-        style={{ cursor: "pointer", userSelect: "none" }}
+        className="d-flex align-items-center gap-1 p-1 cursor-pointer user-select-none"
         onClick={() => setExpanded((e) => !e)}
         role="button"
       >
         <span>{expanded ? "▼" : "▶"}</span>
         <span>🔧</span>
-        <span style={{ fontSize: "0.75rem", color: "var(--theme-text-secondary)" }}>
+        <span className="text-theme-secondary" style={{ fontSize: "0.75rem" }}>
           Tool Call: {toolCall.functionName}
         </span>
       </div>

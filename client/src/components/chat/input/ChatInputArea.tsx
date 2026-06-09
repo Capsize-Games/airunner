@@ -70,35 +70,22 @@ export default function ChatInputArea({
 
       <div
         ref={inputAreaRef}
-        className="chat-input-area"
-        style={{
-          height: textareaH,
-          flexShrink: 0,
-          display: "flex",
-          flexDirection: "column",
-        }}
+        className="chat-input-area flex-shrink-0 d-flex flex-column"
+        style={{ height: textareaH }}
       >
         <div
-          style={{
-            flex: 1,
-            display: "flex",
-            flexDirection: "column",
-            border: "none",
-            borderRadius: 0,
-            background: "#1a1a2e",
-            minHeight: 0,
-          }}
+          className="flex-grow-1 d-flex flex-column min-h-0"
+          style={{ border: "none", borderRadius: 0, background: "#1a1a2e" }}
         >
           <textarea
+            className="flex-grow-1 min-h-0"
             style={{
               resize: "none",
-              flex: 1,
               background: "transparent",
               color: "var(--theme-text)",
               border: "none",
               outline: "none",
               padding: "8px 10px",
-              minHeight: 0,
               fontFamily: "inherit",
               fontSize: "inherit",
             }}

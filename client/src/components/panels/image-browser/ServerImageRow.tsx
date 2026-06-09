@@ -111,8 +111,7 @@ export default function ServerImageRow({
 
       {/* Info */}
       <div
-        className="ms-2 flex-grow-1 overflow-hidden d-flex flex-column"
-        style={{ minWidth: 0 }}
+        className="ms-2 flex-grow-1 overflow-hidden d-flex flex-column min-w-0"
       >
         <div className="d-flex justify-content-between align-items-start">
           {isEditing ? (
@@ -147,16 +146,11 @@ export default function ServerImageRow({
           {formatTimestamp(img.file_timestamp)}
         </div>
 
-        <div style={{ flex: 1 }} />
+        <div className="flex-grow-1" />
 
         <div
-          className="d-flex gap-2 mt-1"
-          style={{
-            borderTop: "1px solid var(--theme-border)",
-            paddingTop: 4,
-            marginTop: 4,
-            flexWrap: "wrap",
-          }}
+          className="d-flex gap-2 mt-1 border-t-theme flex-wrap"
+          style={{ paddingTop: 4, marginTop: 4 }}
         >
           <button
             type="button"

@@ -90,7 +90,7 @@ export default function CanvasSettingsModal({
       </Modal.Header>
       <Modal.Body style={{ color: "var(--theme-text)" }}>
         <Form.Group className="mb-3">
-          <Form.Label style={{ color: "var(--theme-text-secondary)" }}>
+          <Form.Label className="text-theme-secondary">
             Canvas Size
           </Form.Label>
           <div className="d-flex gap-2 align-items-center">
@@ -133,7 +133,7 @@ export default function CanvasSettingsModal({
         </Form.Group>
 
         <Form.Group className="mb-1">
-          <Form.Label style={{ color: "var(--theme-text-secondary)" }}>
+          <Form.Label className="text-theme-secondary">
             Background
           </Form.Label>
           <div className="d-flex flex-wrap gap-2">
@@ -162,7 +162,7 @@ export default function CanvasSettingsModal({
                 {p.label}
               </button>
             ))}
-            <label style={{ display: "flex", alignItems: "center", gap: 4, cursor: "pointer" }}>
+            <label className="d-flex align-items-center" style={{ gap: 4, cursor: "pointer" }}>
               <div
                 style={{
                   width: 24,
@@ -175,7 +175,7 @@ export default function CanvasSettingsModal({
                   cursor: "pointer",
                 }}
               />
-              <span style={{ fontSize: 11, color: "var(--theme-text-secondary)" }}>
+              <span className="text-section-label">
                 Custom
               </span>
               <input

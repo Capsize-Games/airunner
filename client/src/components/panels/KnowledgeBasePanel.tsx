@@ -105,31 +105,19 @@ export function KnowledgeBasePanel() {
   const activeDocs = documents.filter((d) => d.active).length;
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
+    <div className="d-flex flex-column h-100">
       {/* Sticky header */}
       <div
-        style={{
-          flexShrink: 0,
-          padding: "8px 12px 6px",
-          borderBottom: "1px solid var(--theme-border)",
-          background: "var(--theme-panel-bg)",
-        }}
+        className="flex-shrink-0 bg-theme-panel border-b-theme"
+        style={{ padding: "8px 12px 6px" }}
       >
-        <span
-          style={{
-            fontSize: 10,
-            fontWeight: 700,
-            letterSpacing: "0.07em",
-            textTransform: "uppercase",
-            color: "var(--theme-text-secondary)",
-          }}
-        >
+        <span className="text-panel-label text-uppercase">
           Knowledge Base
         </span>
       </div>
 
       {/* Scrollable content */}
-      <div style={{ flex: 1, overflowY: "auto", minHeight: 0 }}>
+      <div className="scroll-panel">
         {loading ? (
           <div className="p-3 text-center">
             <div className="spinner-border spinner-border-sm" role="status" />
@@ -165,15 +153,8 @@ export function KnowledgeBasePanel() {
 
       {/* Sticky footer — stats + progress + buttons */}
       <div
-        style={{
-          flexShrink: 0,
-          borderTop: "1px solid var(--theme-border)",
-          padding: "6px 10px 8px",
-          background: "var(--theme-panel-bg)",
-          display: "flex",
-          flexDirection: "column",
-          gap: 6,
-        }}
+        className="flex-shrink-0 border-t-theme bg-theme-panel d-flex flex-column"
+        style={{ padding: "6px 10px 8px", gap: 6 }}
       >
         {/* Stats row */}
         <div className="row g-2">

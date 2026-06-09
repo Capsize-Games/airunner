@@ -56,15 +56,14 @@ export default function StreamingBubble({
           }}
         >
           <div
-            className="d-flex align-items-center gap-1 p-1"
-            style={{ cursor: "pointer", userSelect: "none" }}
+            className="d-flex align-items-center gap-1 p-1 cursor-pointer user-select-none"
             onClick={() => setThinkingExpanded((e) => !e)}
             role="button"
           >
             <span>{thinkingExpanded ? "▼" : "▶"}</span>
             <span>🧠</span>
             <span
-              style={{ fontSize: "0.75rem", color: "var(--theme-text-secondary)" }}
+              className="text-theme-secondary" style={{ fontSize: "0.75rem" }}
             >
               Thinking
             </span>
@@ -102,7 +101,7 @@ export default function StreamingBubble({
           <div className="d-flex align-items-center gap-1 p-1">
             <span>🔧</span>
             <span
-              style={{ fontSize: "0.75rem", color: "var(--theme-text-secondary)" }}
+              className="text-theme-secondary" style={{ fontSize: "0.75rem" }}
             >
               Tool Call (streaming...)
             </span>

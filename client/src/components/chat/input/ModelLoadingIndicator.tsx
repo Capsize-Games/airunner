@@ -12,7 +12,7 @@ export default function ModelLoadingIndicator({ visible }: { visible: boolean })
     >
       <div className="d-flex align-items-center gap-2">
         <LucideIcon name="loader" size={16} />
-        <small style={{ color: "var(--theme-text-secondary)" }}>
+        <small className="text-theme-secondary">
           Loading model…
         </small>
       </div>

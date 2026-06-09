@@ -21,7 +21,7 @@ export default function CheckboxFields({
           type="switch"
           id={`llm-${f.key}`}
           label={
-            <span style={{ color: "var(--theme-text-secondary)" }}>
+            <span className="text-theme-secondary">
               {f.label}
             </span>
           }

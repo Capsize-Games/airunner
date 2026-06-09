@@ -23,7 +23,7 @@ export default function KBRow({
       </td>
       <td style={{ textAlign: "center" }}>
         <span
-          style={{ cursor: "pointer", display: "inline-block" }}
+          className="cursor-pointer d-inline-block"
           onClick={() => onToggle(doc.id)}
           title={
             doc.active

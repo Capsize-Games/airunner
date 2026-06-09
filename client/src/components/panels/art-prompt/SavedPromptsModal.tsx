@@ -42,27 +42,19 @@ export default function SavedPromptsPanel({ onLoad, onClose }: Props) {
   };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
+    <div className="d-flex flex-column h-100">
       {/* Sticky header */}
-      <div style={{
-        position: "sticky", top: 0,
-        flexShrink: 0,
-        display: "flex", alignItems: "center",
-        padding: "8px 12px 6px",
-        borderBottom: "1px solid var(--theme-border)",
-        background: "var(--theme-panel-bg)",
-        zIndex: 1,
-      }}>
-        <span style={{
-          fontSize: 10, fontWeight: 700, letterSpacing: "0.07em",
-          textTransform: "uppercase", color: "var(--theme-text-secondary)",
-        }}>
+      <div
+        className="sticky-top flex-shrink-0 d-flex align-items-center bg-theme-panel border-b-theme"
+        style={{ padding: "8px 12px 6px", zIndex: 1 }}
+      >
+        <span className="text-panel-label text-uppercase">
           Saved Prompts
         </span>
       </div>
 
       {/* Scrollable body */}
-      <div style={{ flex: 1, overflowY: "auto" }}>
+      <div className="overflow-y-auto flex-grow-1">
         {loading ? (
           <div style={{
             display: "flex", alignItems: "center", justifyContent: "center",
@@ -72,11 +64,7 @@ export default function SavedPromptsPanel({ onLoad, onClose }: Props) {
             Loading…
           </div>
         ) : prompts.length === 0 ? (
-          <div style={{
-            display: "flex", flexDirection: "column", alignItems: "center",
-            justifyContent: "center", padding: 40, gap: 8,
-            color: "var(--theme-text-secondary)",
-          }}>
+          <div className="d-flex flex-column align-items-center justify-content-center text-theme-secondary" style={{ padding: 40, gap: 8 }}>
             <span style={{ fontSize: 12 }}>No saved prompts yet.</span>
           </div>
         ) : (
@@ -89,7 +77,7 @@ export default function SavedPromptsPanel({ onLoad, onClose }: Props) {
                 borderBottom: "1px solid rgba(255,255,255,0.06)",
               }}
             >
-              <div style={{ flex: 1, minWidth: 0 }}>
+              <div className="flex-grow-1 min-w-0">
                 <div style={{
                   fontSize: 12, color: "var(--theme-text)", fontWeight: 500,
                   overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",

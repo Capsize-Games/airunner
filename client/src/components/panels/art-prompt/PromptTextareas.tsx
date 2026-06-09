@@ -26,7 +26,7 @@ export function PromptTextareas({
   onPromptChange, onSecondaryPromptChange, onNegativePromptChange, onSecondaryNegativePromptChange,
 }: Props) {
   return (
-    <div style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", minHeight: 0 }}>
+    <div className="scroll-panel d-flex flex-column">
       <textarea
         style={TEXTAREA_STYLE}
         value={prompt}

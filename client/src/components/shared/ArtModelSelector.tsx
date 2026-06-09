@@ -51,7 +51,7 @@ export default function ArtModelSelector({
   return (
     <div className="d-flex align-items-center gap-2">
       {loading && (
-        <Spinner animation="border" size="sm" style={{ color: "var(--theme-text-secondary)" }} />
+        <Spinner animation="border" size="sm" className="text-theme-secondary" />
       )}
       <select
         className="form-select form-select-sm"

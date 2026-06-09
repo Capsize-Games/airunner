@@ -113,11 +113,11 @@ export function ProviderPicker({
 
       {open && anchor && createPortal(
         <div
+          className="bg-theme-panel"
           style={{
             position: "fixed",
             left: anchor.left,
             bottom: anchor.bottom,
-            background: "var(--theme-panel-bg)",
             border: "1px solid rgba(255,255,255,0.14)",
             borderRadius: 6,
             padding: "4px 0",
@@ -176,14 +176,8 @@ export function ProviderPicker({
 
           {(isOllama || needsApiKey) && (
             <div
-              style={{
-                padding: "6px 10px 6px",
-                borderTop: "1px solid rgba(255,255,255,0.08)",
-                marginTop: 4,
-                display: "flex",
-                flexDirection: "column",
-                gap: 4,
-              }}
+              className="d-flex flex-column border-t-subtle"
+              style={{ padding: "6px 10px 6px", marginTop: 4, gap: 4 }}
             >
               {isOllama && (
                 <Form.Control
