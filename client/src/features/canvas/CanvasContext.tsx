@@ -8,6 +8,7 @@ import type {
   FilterConfig,
   CanvasState,
   ActiveTool,
+  MoveMode,
 } from "./useCanvasState";
 
 export interface CanvasContextValue {
@@ -22,6 +23,7 @@ export interface CanvasContextValue {
   activeLayer: CanvasLayer | null;
   activeGridArea: ActiveGridArea;
   activeTool: ActiveTool;
+  moveMode: MoveMode;
   brushSize: number;
   brushColor: string;
   maskStrokes: StrokeNode[];
@@ -47,6 +49,7 @@ export interface CanvasContextValue {
   moveLayerToGroup: (layerId: string, groupId: string | null, toIndex?: number) => void;
   reorderDisplayItem: (id: string, toIndex: number) => void;
   setActiveTool: (tool: ActiveTool) => void;
+  setMoveMode: (mode: MoveMode) => void;
   setActiveGridArea: (area: ActiveGridArea) => void;
   resetDocument: () => void;
   moveLayer: (id: string, x: number, y: number) => void;

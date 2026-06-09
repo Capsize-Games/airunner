@@ -15,6 +15,7 @@ import StageContent from "./stage/StageContent";
 import type { CanvasStageProps } from "./stage/types";
 import { getCursor } from "./cursorUtils";
 import { getCanvasPosFromStage } from "./stage/drawingHelpers";
+import { moveTool } from "./stage/moveTool";
 
 export type { CanvasStageHandle } from "./stage/types";
 
@@ -31,6 +32,8 @@ const CanvasStage = forwardRef<
     displayOrder,
     activeLayerId,
     activeTool,
+    moveMode,
+    selectedLayerIds,
     brushSize,
     brushColor,
     maskStrokes,
@@ -44,6 +47,7 @@ const CanvasStage = forwardRef<
     onUndo,
     onRedo,
     setActiveTool,
+    setActiveLayer,
     onZoomChange,
     isFitToView,
     isCenterView,
@@ -90,6 +94,18 @@ const CanvasStage = forwardRef<
   // ── Keyboard shortcuts ───────────────────────────────────────────────
   keyboardHook({ onUndo, onRedo, setActiveTool });
 
+  // ── Move tool (stage-level drag controller) ──────────────────────────
+  const isMoveActive = activeTool === "move";
+  const moveToolHandlers = moveTool({
+    stageRef,
+    moveMode,
+    selectedLayerIds,
+    layers,
+    snapToGrid,
+    onMoveLayer,
+    onSetActiveLayer: setActiveLayer,
+  });
+
   // ── Mouse panning ────────────────────────────────────────────────────
   const isPanning = useRef(false);
   const lastPointerPos = useRef({ x: 0, y: 0 });
@@ -123,7 +139,7 @@ const CanvasStage = forwardRef<
   const handleMouseDown = useCallback(
     (e: Konva.KonvaEventObject<MouseEvent>) => {
       if (e.evt.button === 1) {
-        e.evt.preventDefault(); // prevent browser autoscroll
+        e.evt.preventDefault();
         isPanning.current = true;
         const container = stageRef.current?.container();
         if (container) container.style.cursor = "grabbing";
@@ -133,6 +149,10 @@ const CanvasStage = forwardRef<
             x: pos.x,
             y: pos.y,
           };
+        return;
+      }
+      if (isMoveActive && e.evt.button === 0) {
+        moveToolHandlers.handleMoveMouseDown(e);
         return;
       }
       if (activeTool === "select" && e.evt.button === 0) {
@@ -148,11 +168,11 @@ const CanvasStage = forwardRef<
         }
       }
     },
-    [stageRef, activeTool, getCanvasPos],
+    [stageRef, activeTool, getCanvasPos, isMoveActive, moveToolHandlers],
   );
 
   const handleMouseMove = useCallback(
-    () => {
+    (e: Konva.KonvaEventObject<MouseEvent>) => {
       if (isPanning.current) {
         const stage = stageRef.current;
         if (!stage) return;
@@ -168,6 +188,10 @@ const CanvasStage = forwardRef<
           onCenterViewChangeRef.current(false);
         }
         lastPointerPos.current = { x: pos.x, y: pos.y };
+        return;
+      }
+      if (isMoveActive) {
+        moveToolHandlers.handleMoveMouseMove(e);
         return;
       }
       if (
@@ -187,36 +211,69 @@ const CanvasStage = forwardRef<
         }
       }
     },
-    [stageRef, activeTool, getCanvasPos],
+    [stageRef, activeTool, getCanvasPos, isMoveActive, moveToolHandlers],
   );
 
-  const handleMouseUp = useCallback(() => {
-    if (isPanning.current) {
-      isPanning.current = false;
-      const container = stageRef.current?.container();
-      if (container) {
-        container.style.cursor = getCursor(
-          activeTool,
-          layers.length > 0,
+  const handleMouseUp = useCallback(
+    (e: Konva.KonvaEventObject<MouseEvent>) => {
+      if (isPanning.current) {
+        isPanning.current = false;
+        const container = stageRef.current?.container();
+        if (container) {
+          container.style.cursor = getCursor(
+            activeTool,
+            layers.length > 0,
+          );
+        }
+      }
+      if (isMoveActive) {
+        moveToolHandlers.handleMoveMouseUp(e);
+        return;
+      }
+      if (activeTool === "select") {
+        selectionStartRef.current = null;
+      }
+    },
+    [stageRef, activeTool, layers.length, isMoveActive, moveToolHandlers],
+  );
+
+  // Catch pointerup / mouseup globally so panning, selection, and
+  // move-tool dragging stop even when the cursor leaves the Stage.
+  useEffect(() => {
+    const onGlobalUp = () => {
+      if (isPanning.current) {
+        isPanning.current = false;
+        const container = stageRef.current?.container();
+        if (container) {
+          container.style.cursor = getCursor(
+            activeTool,
+            layers.length > 0,
+          );
+        }
+      }
+      if (isMoveActive) {
+        moveToolHandlers.handleMoveMouseUp(
+          { evt: new MouseEvent("mouseup") } as Konva.KonvaEventObject<MouseEvent>,
         );
       }
-    }
-    if (activeTool === "select") {
-      selectionStartRef.current = null;
-    }
-  }, [stageRef, activeTool, layers.length]);
-
-  // Catch pointerup / mouseup globally so panning and selection
-  // stop even when the cursor leaves the Stage area.
-  useEffect(() => {
-    const onGlobalUp = () => handleMouseUp();
+      if (activeTool === "select") {
+        selectionStartRef.current = null;
+      }
+    };
     window.addEventListener("pointerup", onGlobalUp);
     window.addEventListener("mouseup", onGlobalUp);
     return () => {
       window.removeEventListener("pointerup", onGlobalUp);
       window.removeEventListener("mouseup", onGlobalUp);
     };
-  }, [handleMouseUp]);
+  }, [
+    handleMouseUp,
+    activeTool,
+    isMoveActive,
+    moveToolHandlers,
+    stageRef,
+    layers.length,
+  ]);
 
   return (
     <div
@@ -242,6 +299,7 @@ const CanvasStage = forwardRef<
         displayOrder={displayOrder}
         activeLayerId={activeLayerId}
         activeTool={activeTool}
+        moveMode={moveMode}
         brushSize={brushSize}
         brushColor={brushColor}
         maskStrokes={maskStrokes}

@@ -19,6 +19,7 @@ import CanvasStatusBar from "./canvas/CanvasStatusBar";
 import ArtPromptPanel from "./ArtPromptPanel";
 import CanvasToolPanel from "../../features/canvas/CanvasToolPanel";
 import BrushControls from "../../features/canvas/sidebar/BrushControls";
+import MoveControls from "../../features/canvas/sidebar/MoveControls";
 import { useCanvasImageDrop } from "./canvas/useCanvasImageDrop";
 
 const LS_LEFT_W = "airunner_left_panel_w";
@@ -206,6 +207,8 @@ export default function CanvasPanel() {
 
   const showBrushControls = !showImagePrompt &&
     (canvas.activeTool === "brush" || canvas.activeTool === "eraser");
+  const showMoveControls = !showImagePrompt &&
+    canvas.activeTool === "move";
 
   return (
     <div
@@ -257,6 +260,7 @@ export default function CanvasPanel() {
                 <div style={{ flex: 1, overflow: "hidden auto", display: "flex", flexDirection: "column" }}>
                   {showImagePrompt && <ArtPromptPanel visible={true} />}
                   {showBrushControls && <BrushControls />}
+                  {showMoveControls && <MoveControls />}
                 </div>
               </div>
 
@@ -308,6 +312,8 @@ export default function CanvasPanel() {
                 activeLayerId={canvas.activeLayerId}
                 activeGridArea={canvas.activeGridArea}
                 activeTool={canvas.activeTool}
+                moveMode={canvas.moveMode}
+                selectedLayerIds={canvas.selectedLayerIds}
                 brushSize={canvas.brushSize}
                 brushColor={canvas.brushColor}
                 maskStrokes={canvas.maskStrokes}
@@ -322,6 +328,7 @@ export default function CanvasPanel() {
                 onUndo={canvas.undo}
                 onRedo={canvas.redo}
                 setActiveTool={canvas.setActiveTool}
+                setActiveLayer={canvas.setActiveLayer}
                 onZoomChange={setZoom}
                 isFitToView={isFitToView}
                 isCenterView={isCenterView}

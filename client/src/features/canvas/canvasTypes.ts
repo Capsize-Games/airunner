@@ -59,6 +59,8 @@ export type ActiveTool =
   | "lasso" | "wand" | "crop" | "bucket" | "smudge"
   | "text" | "pipette" | "zoom";
 
+export type MoveMode = "pick" | "move-selected";
+
 export interface CanvasState {
   /** Monotonic timestamp (Date.now()) used to resolve localStorage vs server
    *  conflicts on reload.  The source with the higher _ts wins. */
@@ -76,6 +78,7 @@ export interface CanvasState {
   selectedLayerIds: string[];
   activeGridArea: ActiveGridArea;
   activeTool: ActiveTool;
+  moveMode: MoveMode;
   brushSize: number;
   brushColor: string;
   maskStrokes: StrokeNode[];

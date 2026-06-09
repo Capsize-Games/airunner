@@ -1,6 +1,6 @@
 // ── Canvas State Utilities ────────────────────────────────────────────────────
 import type { CanvasLayer, CanvasState, LayerGroup,
-  StrokeNode } from "./canvasTypes";
+  StrokeNode, MoveMode } from "./canvasTypes";
 
 // ── ID counter helpers ──────────────────────────────────────────────────────
 
@@ -113,6 +113,7 @@ export const defaultState = (): CanvasState => {
       x: 0, y: 0, width: DEFAULT_GRID_SIZE, height: DEFAULT_GRID_SIZE,
     },
     activeTool: "brush" as ActiveTool,
+    moveMode: "pick" as MoveMode,
     brushSize: 10,
     brushColor: "#ffffff",
     maskStrokes: [] as StrokeNode[],

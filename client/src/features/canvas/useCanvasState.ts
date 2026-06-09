@@ -5,6 +5,7 @@ export type {
   CanvasLayer,
   ActiveGridArea,
   ActiveTool,
+  MoveMode,
   ImageNode,
   StrokeNode,
   LayerGroup,
