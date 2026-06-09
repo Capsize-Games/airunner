@@ -1,0 +1,365 @@
+import { useState, useEffect, useCallback, useRef } from "react";
+import { updateSingleton, getArtModelOptions } from "../../../api/client";
+import type { ArtOptionsResponse } from "../../../api/client";
+import { createSavedPrompt } from "../../../api/art";
+import type { SavedPrompt } from "../../../api/art";
+import { saveToStorage, loadFromStorage } from "../art-model/ArtModelStorage";
+import { loadPromptData, savePromptData } from "./ArtPromptStorage";
+import { useCanvasContext } from "../../../features/canvas/CanvasContext";
+import { useArtWebSocket } from "../../../features/art/useArtWebSocket";
+import type { ArtPopup, ArtPanel } from "./ArtShared";
+
+export const ART_PANEL_DEFAULT = 300;
+export const ART_PANEL_MIN = 220;
+export const ART_PANEL_MAX = 520;
+export const LS_ART_W = "airunner_art_panel_w";
+export const LS_COLLAPSED = "canvas_art_panel_collapsed";
+
+type Phase = "idle" | "loading" | "completed" | "cancelled" | "failed";
+
+function saveNum(key: string, val: number) {
+  try { localStorage.setItem(key, String(val)); } catch {}
+}
+function loadNum(key: string, fallback: number): number {
+  try { const v = localStorage.getItem(key); return v !== null ? Number(v) : fallback; }
+  catch { return fallback; }
+}
+const ls = (key: string) => {
+  try { return localStorage.getItem(key) || ""; } catch { return ""; }
+};
+
+export function useArtPromptState() {
+  const initial = loadPromptData();
+
+  const [collapsed, setCollapsed] = useState(() => {
+    try { return localStorage.getItem(LS_COLLAPSED) === "true"; } catch { return false; }
+  });
+  const [artW, setArtW] = useState(() => loadNum(LS_ART_W, ART_PANEL_DEFAULT));
+  useEffect(() => { saveNum(LS_ART_W, artW); }, [artW]);
+
+  const [prompt, setPrompt] = useState(initial.prompt);
+  const [negativePrompt, setNegativePrompt] = useState(initial.negative_prompt);
+  const [secondaryPrompt, setSecondaryPrompt] = useState(initial.secondary_prompt);
+  const [secondaryNegativePrompt, setSecondaryNegativePrompt] = useState(initial.secondary_negative_prompt);
+
+  const [activeLoras, setActiveLoras] = useState<{ id: number; name: string }[]>([]);
+  const [activeEmbeddings, setActiveEmbeddings] = useState<{ id: number; name: string }[]>([]);
+
+  const [artOptions, setArtOptions] = useState<ArtOptionsResponse | null>(null);
+  const [version, setVersion] = useState(() => ls("airunner_art_version"));
+  const [modelPath, setModelPath] = useState(() => ls("airunner_art_model"));
+  const [scheduler, setScheduler] = useState(() => ls("airunner_art_scheduler"));
+  const [toolbarLoading, setToolbarLoading] = useState(true);
+
+  const [saving, setSaving] = useState(false);
+
+  const [openPopup, setOpenPopup] = useState<ArtPopup>(null);
+  const [openPanel, setOpenPanel] = useState<ArtPanel>(null);
+  const [artPanelAnchor, setArtPanelAnchor] = useState<{ left: number; bottom: number; width: number; height: number } | null>(null);
+  const toolbarRef = useRef<HTMLDivElement>(null);
+  const settingsBtnRef = useRef<HTMLDivElement>(null);
+  const [settingsAnchor, setSettingsAnchor] = useState<{ left: number; bottom: number } | null>(null);
+  const emittingRef = useRef(false);
+
+  const availableSchedulers = (artOptions?.versions?.find((v) => v.name === version)?.schedulers) ?? [];
+
+  const [genWidth, setGenWidth] = useState(() => loadFromStorage("gen_width", 512));
+  const [genHeight, setGenHeight] = useState(() => loadFromStorage("gen_height", 512));
+  const [nSamples, setNSamples] = useState(() => loadFromStorage("n_samples", 1));
+  const [imagesPerBatch, setImagesPerBatch] = useState(() => loadFromStorage("images_per_batch", 1));
+  const [steps, setSteps] = useState(() => loadFromStorage("steps", 20));
+  const [cfgScale, setCfgScale] = useState(() => loadFromStorage("cfg_scale", 7.5));
+
+  const [seed, setSeed] = useState(() => {
+    try {
+      const v = Number(localStorage.getItem("airunner_seed") || "0");
+      return v === -1 ? Math.floor(Math.random() * 2147483647) + 1 : v;
+    } catch { return 0; }
+  });
+  const [seedRandomized, setSeedRandomized] = useState(() => {
+    try { return Number(localStorage.getItem("airunner_seed") || "0") === -1; }
+    catch { return false; }
+  });
+
+  const [phase, setPhase] = useState<Phase>("idle");
+  const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  let canvasCtx: ReturnType<typeof useCanvasContext> | null = null;
+  try { canvasCtx = useCanvasContext(); } catch {}
+
+  const { generating, progress, generate: artGenerate, cancel: artCancel } = useArtWebSocket();
+
+  const isMultiPrompt = ls("airunner_art_version") !== "Z-Image Turbo";
+  const [, setVersionBump] = useState(0);
+
+  useEffect(() => {
+    const handler = () => setVersionBump((v) => v + 1);
+    window.addEventListener("art-version-changed", handler);
+    return () => window.removeEventListener("art-version-changed", handler);
+  }, []);
+
+  useEffect(() => {
+    if (phase === "completed" || phase === "cancelled" || phase === "failed") {
+      if (hideTimer.current) clearTimeout(hideTimer.current);
+      hideTimer.current = setTimeout(() => setPhase("idle"), 4000);
+    }
+    return () => { if (hideTimer.current) clearTimeout(hideTimer.current); };
+  }, [phase]);
+
+  useEffect(() => {
+    if (!openPopup) return;
+    const handler = (e: MouseEvent) => {
+      const target = e.target as Node;
+      if (settingsBtnRef.current?.contains(target)) return;
+      if (document.getElementById("art-settings-popup")?.contains(target)) return;
+      if (toolbarRef.current && !toolbarRef.current.contains(target))
+        setOpenPopup(null);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [openPopup]);
+
+  useEffect(() => {
+    if (!openPanel) {
+      setArtPanelAnchor(null);
+      return;
+    }
+    if (toolbarRef.current) {
+      const rect = toolbarRef.current.getBoundingClientRect();
+      setArtPanelAnchor({
+        left: rect.left,
+        bottom: window.innerHeight - rect.top,
+        width: Math.max(artW, 360),
+        height: Math.min(480, rect.top - 74),
+      });
+    }
+    const handler = (e: MouseEvent) => {
+      const target = e.target as Node;
+      const insideToolbar = toolbarRef.current?.contains(target);
+      const insidePopup = document.getElementById("art-panel-popup")?.contains(target);
+      if (!insideToolbar && !insidePopup) setOpenPanel(null);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [openPanel, artW]);
+
+  useEffect(() => {
+    getArtModelOptions().then(setArtOptions).catch(() => {}).finally(() => setToolbarLoading(false));
+  }, []);
+
+  useEffect(() => {
+    const handler = () => {
+      if (emittingRef.current) return;
+      setOpenPopup(null);
+      setOpenPanel(null);
+    };
+    window.addEventListener("art-overlay-opened", handler);
+    window.addEventListener("chat-picker-opened", handler);
+    return () => {
+      window.removeEventListener("art-overlay-opened", handler);
+      window.removeEventListener("chat-picker-opened", handler);
+    };
+  }, []);
+
+  const reloadActiveLoras = useCallback(async () => {
+    try {
+      const { listLoras } = await import("../../../api/client");
+      const data = await listLoras();
+      setActiveLoras((data.loras ?? []).filter((l) => l.enabled).map((l) => ({ id: l.id, name: l.name })));
+    } catch {}
+  }, []);
+
+  const reloadActiveEmbeddings = useCallback(async () => {
+    try {
+      const { listEmbeddings } = await import("../../../api/client");
+      const data = await listEmbeddings();
+      setActiveEmbeddings((data.embeddings ?? []).filter((e) => e.enabled).map((e) => ({ id: e.id, name: e.name })));
+    } catch {}
+  }, []);
+
+  useEffect(() => {
+    reloadActiveLoras();
+    const handler = () => reloadActiveLoras();
+    window.addEventListener("lora-changed", handler);
+    return () => window.removeEventListener("lora-changed", handler);
+  }, [reloadActiveLoras]);
+
+  useEffect(() => {
+    reloadActiveEmbeddings();
+    const handler = () => reloadActiveEmbeddings();
+    window.addEventListener("embedding-changed", handler);
+    return () => window.removeEventListener("embedding-changed", handler);
+  }, [reloadActiveEmbeddings]);
+
+  const persist = (updates: Record<string, string>) =>
+    savePromptData({ ...loadPromptData(), ...updates });
+
+  const persistGen = (updates: Record<string, unknown>) =>
+    updateSingleton("GeneratorSettings", updates).catch(() => {});
+
+  const handleVersion = (v: string) => {
+    setVersion(v); setModelPath(""); setScheduler("");
+    try { localStorage.setItem("airunner_art_version", v); } catch {}
+    updateSingleton("GeneratorSettings", { version: v, custom_path: "", scheduler: "" }).catch(() => {});
+    window.dispatchEvent(new CustomEvent("art-version-changed", { detail: v }));
+  };
+
+  const handleModel = (m: string) => {
+    setModelPath(m);
+    try { localStorage.setItem("airunner_art_model", m); } catch {}
+    updateSingleton("GeneratorSettings", { custom_path: m }).catch(() => {});
+    window.dispatchEvent(new CustomEvent("art-model-changed", { detail: m }));
+  };
+
+  const handleScheduler = (s: string) => {
+    setScheduler(s);
+    try { localStorage.setItem("airunner_art_scheduler", s); } catch {}
+    updateSingleton("GeneratorSettings", { scheduler: s }).catch(() => {});
+  };
+
+  const handleSeedChange = useCallback((v: number) => {
+    setSeed(v); setSeedRandomized(false);
+    try { localStorage.setItem("airunner_seed", String(v)); } catch {}
+    updateSingleton("GeneratorSettings", { seed: v }).catch(() => {});
+  }, []);
+
+  const handleToggleRandom = useCallback(() => {
+    if (seedRandomized) {
+      setSeedRandomized(false);
+      try { localStorage.setItem("airunner_seed", String(seed)); } catch {}
+      updateSingleton("GeneratorSettings", { seed }).catch(() => {});
+    } else {
+      const s = Math.floor(Math.random() * 2147483647) + 1;
+      setSeedRandomized(true); setSeed(s);
+      try { localStorage.setItem("airunner_seed", String(-1)); } catch {}
+      updateSingleton("GeneratorSettings", { seed: -1 }).catch(() => {});
+    }
+  }, [seed, seedRandomized]);
+
+  const onGenerate = useCallback(async () => {
+    if (!prompt.trim()) return;
+    setPhase("loading");
+    const lsNum = (k: string): number | undefined => {
+      try {
+        const v = localStorage.getItem(k);
+        if (v === null || v === "") return undefined;
+        const n = Number(v);
+        return isNaN(n) ? undefined : n;
+      } catch { return undefined; }
+    };
+    try {
+      const imageBase64 = await artGenerate({
+        prompt: prompt.trim(),
+        negativePrompt: negativePrompt?.trim() || undefined,
+        seed: lsNum("airunner_seed"),
+        artModel: ls("airunner_art_model") || undefined,
+        artVersion: ls("airunner_art_version") || undefined,
+        scheduler: ls("airunner_art_scheduler") || undefined,
+        width: genWidth,
+        height: genHeight,
+      });
+      setPhase("completed");
+      if (imageBase64 && canvasCtx) {
+        const docW = canvasCtx.documentWidth ?? genWidth;
+        const docH = canvasCtx.documentHeight ?? genHeight;
+        canvasCtx.placeImageOnNewLayer(
+          imageBase64,
+          Math.round((docW - genWidth) / 2),
+          Math.round((docH - genHeight) / 2),
+          genWidth, genHeight,
+        );
+      }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setPhase(msg === "Cancelled" ? "cancelled" : "failed");
+    }
+  }, [prompt, negativePrompt, genWidth, genHeight, canvasCtx, artGenerate]);
+
+  const onCancel = useCallback(() => artCancel(), [artCancel]);
+
+  const handleClearPrompts = () => {
+    setPrompt(""); setNegativePrompt(""); setSecondaryPrompt(""); setSecondaryNegativePrompt("");
+    persist({ prompt: "", negative_prompt: "", secondary_prompt: "", secondary_negative_prompt: "" });
+  };
+
+  const handleSavePrompt = async () => {
+    if (!prompt.trim()) return;
+    setSaving(true);
+    try {
+      await createSavedPrompt({ prompt, secondary_prompt: secondaryPrompt, negative_prompt: negativePrompt, secondary_negative_prompt: secondaryNegativePrompt });
+    } catch {} finally { setSaving(false); }
+  };
+
+  const handleLoadPrompt = (p: SavedPrompt) => {
+    setPrompt(p.prompt); setNegativePrompt(p.negative_prompt);
+    setSecondaryPrompt(p.secondary_prompt); setSecondaryNegativePrompt(p.secondary_negative_prompt);
+    persist({ prompt: p.prompt, negative_prompt: p.negative_prompt, secondary_prompt: p.secondary_prompt, secondary_negative_prompt: p.secondary_negative_prompt });
+  };
+
+  const collapseToStorage = (val: boolean) => {
+    setCollapsed(val);
+    try { localStorage.setItem(LS_COLLAPSED, String(val)); } catch {}
+  };
+
+  const togglePopup = (popup: NonNullable<ArtPopup>) => {
+    setOpenPanel(null);
+    setOpenPopup((prev) => {
+      const next = prev === popup ? null : popup;
+      if (next === "settings") {
+        emittingRef.current = true;
+        window.dispatchEvent(new Event("art-overlay-opened"));
+        emittingRef.current = false;
+        if (settingsBtnRef.current) {
+          const r = settingsBtnRef.current.getBoundingClientRect();
+          setSettingsAnchor({ left: r.left, bottom: window.innerHeight - r.top + 4 });
+        }
+      }
+      return next;
+    });
+  };
+
+  const togglePanel = (panel: NonNullable<ArtPanel>) => {
+    setOpenPopup(null);
+    setOpenPanel((prev) => {
+      const next = prev === panel ? null : panel;
+      if (next) {
+        emittingRef.current = true;
+        window.dispatchEvent(new Event("art-overlay-opened"));
+        emittingRef.current = false;
+      }
+      return next;
+    });
+  };
+
+  return {
+    collapsed, collapseToStorage,
+    artW, setArtW,
+    prompt, setPrompt,
+    negativePrompt, setNegativePrompt,
+    secondaryPrompt, setSecondaryPrompt,
+    secondaryNegativePrompt, setSecondaryNegativePrompt,
+    activeLoras, activeEmbeddings,
+    artOptions, version, modelPath, scheduler, toolbarLoading,
+    saving,
+    openPopup, openPanel, artPanelAnchor,
+    toolbarRef, settingsBtnRef,
+    settingsAnchor,
+    availableSchedulers,
+    genWidth, setGenWidth,
+    genHeight, setGenHeight,
+    nSamples, setNSamples,
+    imagesPerBatch, setImagesPerBatch,
+    steps, setSteps,
+    cfgScale, setCfgScale,
+    seed, seedRandomized,
+    phase,
+    generating, progress,
+    isMultiPrompt,
+    persist, persistGen,
+    handleVersion, handleModel, handleScheduler,
+    handleSeedChange, handleToggleRandom,
+    onGenerate, onCancel,
+    handleClearPrompts, handleSavePrompt, handleLoadPrompt,
+    togglePopup, togglePanel,
+  };
+}

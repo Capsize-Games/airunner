@@ -1,15 +1,6 @@
-/**
- * WebSocket hook for LLM chat streaming via ``/api/v1/llm/stream``.
- *
- * Usage::
- *
- *   const llm = useLLMWebSocket();
- *   llm.send(messages, { model: "..." });
- *   // llm.streaming, llm.streamBuffer, llm.thinkingBuffer, llm.error
- */
-
 import { useState, useRef, useCallback, useEffect } from "react";
 import type { Message, StreamChunk } from "../../types/api";
+import { handleWsMessage } from "./wsMessageHandler";
 
 // ---------------------------------------------------------------------------
 // WS URL resolver
@@ -119,73 +110,16 @@ export function useLLMWebSocket() {
 
       socket.onmessage = (event) => {
         if (gen !== connGenRef.current) return; // stale
-        try {
-          const data = JSON.parse(event.data) as {
-            type?: string;
-            content?: string;
-            done?: boolean;
-            error?: string;
-          };
-
-          if (data.type === "error") {
-            const msg = data.error ?? data.content ?? "LLM error";
-            setError(msg);
-            onErrorRef.current?.(msg);
-            setStreaming(false);
-            onDoneRef.current?.();
-            return;
-          }
-
-          if (data.type === "tool_status") {
-            const ev = data as unknown as ToolStatusEvent;
-            setActiveTools((prev) => {
-              const filtered = prev.filter((t) => t.tool_id !== ev.tool_id);
-              if (ev.status === "completed" || ev.status === "error") {
-                return filtered;
-              }
-              return [...filtered, ev];
-            });
-            return;
-          }
-
-          if (data.type === "thinking") {
-            setThinkingBuffer((prev) => prev + (data.content ?? ""));
-            const chunk: StreamChunk = {
-              token: data.content ?? "",
-              message_type: "thinking",
-              done: data.done ?? false,
-            };
-            onChunkRef.current?.(chunk);
-            if (data.done) {
-              // Only clear the thinking buffer — the response stream may
-              // still be in progress, so streamBuffer must not be touched here.
-              setThinkingBuffer("");
-            }
-            return;
-          }
-
-          // Regular chunk
-          const content = data.content ?? "";
-          setStreamBuffer((prev) => prev + content);
-          const chunk: StreamChunk = {
-            token: content,
-            done: data.done ?? false,
-          };
-          onChunkRef.current?.(chunk);
-
-          if (data.done) {
-            // Clear live buffers so the StreamingBubble doesn't
-            // linger after the turn completes.  The final content
-            // is now carried by the assistant Message in state.
-            setStreamBuffer("");
-            setThinkingBuffer("");
-            setActiveTools([]);
-            onDoneRef.current?.();
-            setStreaming(false);
-          }
-        } catch {
-          // ignore malformed
-        }
+        handleWsMessage(event.data as string, {
+          onChunk: onChunkRef.current,
+          onDone: onDoneRef.current,
+          onError: onErrorRef.current,
+          setError,
+          setStreaming,
+          setStreamBuffer,
+          setThinkingBuffer,
+          setActiveTools,
+        });
       };
 
       socket.onclose = (event) => {
