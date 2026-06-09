@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import { useDb } from "../db/DbContext";
 import type { Message } from "../types/api";
 import type { CachedMessage } from "../db/db";
@@ -38,10 +38,21 @@ export function useConversationMessages() {
   const db = useDb();
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(false);
+  // Tracks which conversation's load is authoritative. Set to null by
+  // cancelLoad() so any in-flight fetch discards its results instead of
+  // overwriting the current (e.g. freshly-cleared new conversation).
+  const pendingLoadId = useRef<number | null>(null);
+
+  const cancelLoad = useCallback(() => {
+    pendingLoadId.current = null;
+    setLoading(false);
+  }, []);
 
   const load = useCallback(async (conversationId: number) => {
+    pendingLoadId.current = conversationId;
     setLoading(true);
-    setMessages([]);
+
+    let hasLocalCache = false;
 
     if (db) {
       // Serve from cache first if available.
@@ -50,7 +61,10 @@ export function useConversationMessages() {
         .equals(conversationId)
         .sortBy("sortIndex");
 
+      if (pendingLoadId.current !== conversationId) return;
+
       if (cached.length > 0) {
+        hasLocalCache = true;
         setMessages(
           cached.map((m) => ({
             role: m.role,
@@ -64,9 +78,11 @@ export function useConversationMessages() {
 
     // Always fetch from server for the authoritative message list.
     try {
-      const { selectConversation } = await import("../api/client");
-      const session = await selectConversation(conversationId);
+      const { loadConversation } = await import("../api/client");
+      const session = await loadConversation(conversationId);
       const rawMsgs = session.messages ?? [];
+
+      if (pendingLoadId.current !== conversationId) return;
 
       // The server attaches `pre_tool_thinking` to the next assistant
       // message after a tool-call metadata row.  Use that if the direct
@@ -88,21 +104,27 @@ export function useConversationMessages() {
           };
         },
       );
-      setMessages(mapped);
 
-      // Persist to IndexedDB only when the server returned messages.
-      // If the server returns empty (e.g. conversation not yet synced),
-      // keep the existing local cache to avoid losing data.
-      if (db && rawMsgs.length > 0) {
-        const stored = rawMsgs.map((raw, i) =>
-          toStored(raw as Record<string, unknown>, conversationId, i),
-        );
-        await db.messages.bulkPut(stored);
+      // Only accept the server result if it actually returned messages.
+      // An empty array means the server hasn't persisted the conversation
+      // yet (messages are sent via WebSocket, not saved server-side).
+      // In that case, keep the locally cached messages visible.
+      if (rawMsgs.length > 0) {
+        setMessages(mapped);
+        if (db) {
+          const stored = rawMsgs.map((raw, i) =>
+            toStored(raw as Record<string, unknown>, conversationId, i),
+          );
+          await db.messages.bulkPut(stored);
+        }
+      } else if (!hasLocalCache) {
+        // Server returned nothing and we have no cache — clear the slate.
+        setMessages([]);
       }
     } catch {
       /* network unavailable — stale cache already shown */
     } finally {
-      setLoading(false);
+      if (pendingLoadId.current === conversationId) setLoading(false);
     }
   }, [db]);
 
@@ -147,6 +169,7 @@ export function useConversationMessages() {
     loading,
     setMessages,
     load,
+    cancelLoad,
     appendMessage,
     deleteMessagesAfter,
     clear,
