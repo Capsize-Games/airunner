@@ -1,5 +1,6 @@
 // ── Action Menu Item Components ─────────────────────────────────────────
 import type { MouseEvent } from "react";
+import LucideIcon from "../../shared/LucideIcon";
 import {
   menuItemStyle,
   checkboxItemStyle,
@@ -7,6 +8,7 @@ import {
   submenuWrapperStyle,
   checkMarkStyle,
   dividerStyle,
+  shortcutStyle,
 } from "./styles";
 import type { ActionMenuEvent } from "./events";
 import { dispatchMenuAction } from "./events";
@@ -17,6 +19,8 @@ export interface MenuAction {
   type: "action";
   label: string;
   action: ActionMenuEvent["type"];
+  icon?: string;
+  shortcut?: string;
 }
 
 export interface MenuCheckbox {
@@ -101,19 +105,36 @@ export function SubMenuItemRow({
   return (
     <button
       style={menuItemStyle}
-      onMouseEnter={(e: MouseEvent<HTMLButtonElement>) => {
+      onMouseEnter={(
+        e: MouseEvent<HTMLButtonElement>,
+      ) => {
         e.currentTarget.style.background =
           "rgba(99,153,255,0.12)";
       }}
-      onMouseLeave={(e: MouseEvent<HTMLButtonElement>) => {
-        e.currentTarget.style.background = "transparent";
+      onMouseLeave={(
+        e: MouseEvent<HTMLButtonElement>,
+      ) => {
+        e.currentTarget.style.background =
+          "transparent";
       }}
       onClick={() => {
         dispatchMenuAction({ type: entry.action });
         onClose();
       }}
     >
+      {entry.icon && (
+        <LucideIcon
+          name={entry.icon}
+          size={13}
+          className="text-theme-secondary"
+        />
+      )}
       <span>{entry.label}</span>
+      {entry.shortcut && (
+        <span style={shortcutStyle}>
+          {entry.shortcut}
+        </span>
+      )}
     </button>
   );
 }

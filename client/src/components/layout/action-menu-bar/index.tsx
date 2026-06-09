@@ -149,6 +149,25 @@ export default function ActionMenuBar() {
       ],
     },
     {
+      label: "Edit",
+      items: [
+        {
+          type: "action" as const,
+          label: "Undo",
+          action: "edit:undo",
+          icon: "undo-2",
+          shortcut: "Ctrl+Z",
+        },
+        {
+          type: "action" as const,
+          label: "Redo",
+          action: "edit:redo",
+          icon: "redo-2",
+          shortcut: "Ctrl+Y",
+        },
+      ],
+    },
+    {
       label: "View",
       items: [
         {

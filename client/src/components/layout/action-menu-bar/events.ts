@@ -3,6 +3,8 @@ import { useEffect, useRef } from "react";
 
 export type ActionMenuEvent =
   | { type: "file:new-document" }
+  | { type: "edit:undo" }
+  | { type: "edit:redo" }
   | { type: "view:toggle-chat" }
   | { type: "view:toggle-canvas" }
   | { type: "view:toggle-civitai" }

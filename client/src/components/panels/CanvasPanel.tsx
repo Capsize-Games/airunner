@@ -183,6 +183,12 @@ export default function CanvasPanel() {
           case "file:new-document":
             handleNewDocument();
             break;
+          case "edit:undo":
+            canvas.undo();
+            break;
+          case "edit:redo":
+            canvas.redo();
+            break;
           case "view:toggle-ruler":
             canvas.setRulerShowRuler(
               !canvas.rulerShowRuler,

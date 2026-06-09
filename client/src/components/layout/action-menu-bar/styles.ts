@@ -94,3 +94,11 @@ export const dividerStyle: CSSProperties = {
   background: "rgba(255,255,255,0.08)",
   margin: "3px 8px",
 };
+
+export const shortcutStyle: CSSProperties = {
+  marginLeft: "auto",
+  fontSize: 10,
+  color: "rgba(255,255,255,0.35)",
+  fontFamily: "monospace",
+  paddingLeft: 12,
+};
