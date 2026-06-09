@@ -194,6 +194,7 @@ export default function StageContent({
             brushSize={brushSize}
             brushColor={brushColor}
             snapToGrid={snapToGrid}
+            gridSize={gridSize}
             canvasWidth={documentWidth}
             canvasHeight={documentHeight}
             onStrokeComplete={

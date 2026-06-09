@@ -50,9 +50,9 @@ function layerIdFromDragGroup(group: Konva.Group): string | null {
   return name.startsWith(prefix) ? name.slice(prefix.length) : null;
 }
 
-/** Snap a value if snapping is enabled. */
-function snapVal(v: number, on: boolean): number {
-  return on ? Math.round(v / 16) * 16 : v;
+/** Snap a value to the grid if snapping is enabled. */
+function snapVal(v: number, on: boolean, gridSize: number): number {
+  return on ? Math.round(v / gridSize) * gridSize : v;
 }
 
 // ── Interface ────────────────────────────────────────────────────────────
@@ -63,6 +63,7 @@ export interface MoveToolParams {
   selectedLayerIds: string[];
   layers: CanvasLayer[];
   snapToGrid: boolean;
+  gridSize: number;
   onMoveLayer: (layerId: string, x: number, y: number) => void;
   onSetActiveLayer?: (layerId: string) => void;
 }
@@ -81,6 +82,7 @@ export function moveTool({
   selectedLayerIds,
   layers,
   snapToGrid,
+  gridSize,
   onMoveLayer,
   onSetActiveLayer,
 }: MoveToolParams): MoveToolHandlers {
@@ -238,8 +240,8 @@ export function moveTool({
 
       const groups = findDragGroups(targetLayerIds.current);
       for (const [id, group] of groups) {
-        const x = snapVal(group.x(), snapToGrid);
-        const y = snapVal(group.y(), snapToGrid);
+        const x = snapVal(group.x(), snapToGrid, gridSize);
+        const y = snapVal(group.y(), snapToGrid, gridSize);
         applyPosition(id, group, x, y);
         group.getLayer()?.batchDraw();
         // Only commit if position actually changed from stored state.
@@ -252,7 +254,7 @@ export function moveTool({
       targetLayerIds.current = [];
       initialPositions.current = new Map();
     },
-    [stageRef, snapToGrid, onMoveLayer, findDragGroups, applyPosition],
+    [stageRef, snapToGrid, gridSize, onMoveLayer, findDragGroups, applyPosition],
   );
 
   // ── Global pointerup to catch releases outside the Stage ───────────
@@ -262,8 +264,8 @@ export function moveTool({
       isDragging.current = false;
       const groups = findDragGroups(targetLayerIds.current);
       for (const [id, group] of groups) {
-        const x = snapVal(group.x(), snapToGrid);
-        const y = snapVal(group.y(), snapToGrid);
+        const x = snapVal(group.x(), snapToGrid, gridSize);
+        const y = snapVal(group.y(), snapToGrid, gridSize);
         applyPosition(id, group, x, y);
         group.getLayer()?.batchDraw();
         const init = initialPositions.current.get(id);
@@ -280,7 +282,7 @@ export function moveTool({
       window.removeEventListener("pointerup", onGlobalUp);
       window.removeEventListener("mouseup", onGlobalUp);
     };
-  }, [snapToGrid, onMoveLayer, findDragGroups, applyPosition]);
+  }, [snapToGrid, gridSize, onMoveLayer, findDragGroups, applyPosition]);
 
   return {
     handleMoveMouseDown,

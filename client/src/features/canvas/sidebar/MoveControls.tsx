@@ -72,6 +72,28 @@ export default function MoveControls() {
           {opt.label}
         </button>
       ))}
+
+      {/* ── Snap to grid ─────────────────────────────────────────────── */}
+      <div style={{
+        marginTop: 6,
+        paddingTop: 6,
+        borderTop: "1px solid rgba(255,255,255,0.08)",
+      }}>
+        <label style={{
+          display: "flex", alignItems: "center", gap: 6,
+          cursor: "pointer", userSelect: "none", padding: "2px 0",
+        }}>
+          <input
+            type="checkbox"
+            checked={canvas.snapToGrid}
+            onChange={(e) => canvas.setSnapToGrid(e.target.checked)}
+            style={{ margin: 0, cursor: "pointer", accentColor: "#6fa8ff" }}
+          />
+          <span style={{ fontSize: 11, color: "rgba(255,255,255,0.7)" }}>
+            Snap to Grid
+          </span>
+        </label>
+      </div>
     </div>
   );
 }

@@ -12,6 +12,7 @@ interface CanvasLayerProps {
   brushSize: number;
   brushColor: string;
   snapToGrid: boolean;
+  gridSize: number;
   canvasWidth: number;
   canvasHeight: number;
   onStrokeComplete: (stroke: Omit<StrokeNode, "id">) => void;
@@ -45,18 +46,21 @@ function applyKonvaFilters(group: Konva.Group, filters: CanvasLayerType["filters
   else group.clearCache();
 }
 
-const VIS_SNAP = 16;
-const snapVal = (v: number, on: boolean) => on ? Math.round(v / VIS_SNAP) * VIS_SNAP : v;
+/** Snap a value to the grid if snapping is enabled. */
+const snapVal = (v: number, on: boolean, gridSize: number) =>
+  on ? Math.round(v / gridSize) * gridSize : v;
 
 function LayerImage({
   node,
   isMovable,
   snapToGrid,
+  gridSize,
   onMove,
 }: {
   node: CanvasLayerType["images"][0];
   isMovable: boolean;
   snapToGrid: boolean;
+  gridSize: number;
   onMove: (x: number, y: number) => void;
 }) {
   const imageRef = useRef<Konva.Image>(null);
@@ -88,7 +92,7 @@ function LayerImage({
       image={imgElementRef.current ?? undefined}
       draggable={isMovable}
       onDragEnd={(e) => {
-        onMove(snapVal(e.target.x(), snapToGrid), snapVal(e.target.y(), snapToGrid));
+        onMove(snapVal(e.target.x(), snapToGrid, gridSize), snapVal(e.target.y(), snapToGrid, gridSize));
       }}
     />
   );
@@ -107,6 +111,7 @@ export default function CanvasLayerRenderer({
   brushSize,
   brushColor,
   snapToGrid,
+  gridSize,
   canvasWidth,
   canvasHeight,
   onStrokeComplete,
@@ -236,14 +241,14 @@ export default function CanvasLayerRenderer({
       isDragging.current = false;
       const group = dragGroupRef.current;
       if (!group) return;
-      const x = snapVal(group.x(), snapToGrid);
-      const y = snapVal(group.y(), snapToGrid);
+      const x = snapVal(group.x(), snapToGrid, gridSize);
+      const y = snapVal(group.y(), snapToGrid, gridSize);
       group.x(x);
       group.y(y);
       group.getLayer()?.batchDraw();
       onMoveLayer(layer.id, x, y);
     },
-    [isLayerMovable, snapToGrid, layer.id, onMoveLayer],
+    [isLayerMovable, snapToGrid, gridSize, layer.id, onMoveLayer],
   );
 
   // Catch pointerup globally so layer dragging stops even when
@@ -263,6 +268,7 @@ export default function CanvasLayerRenderer({
           node={img}
           isMovable={false}
           snapToGrid={snapToGrid}
+          gridSize={gridSize}
           onMove={(x, y) => onMoveImage(layer.id, img.id, x, y)}
         />
       ))}

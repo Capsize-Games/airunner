@@ -75,7 +75,7 @@ const CanvasStage = forwardRef<CanvasStageHandle, CanvasStageProps>(
     // ── Move tool ──────────────────────────────────────────────────────
     const isMoveActive = activeTool === "move";
     const moveToolHandlers = moveTool({
-      stageRef, moveMode, selectedLayerIds, layers, snapToGrid,
+      stageRef, moveMode, selectedLayerIds, layers, snapToGrid, gridSize,
       onMoveLayer, onSetActiveLayer: setActiveLayer,
     });
 
