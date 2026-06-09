@@ -6,7 +6,7 @@ import {
   MessageSquareHeart, MessageSquareText, Mic, Move, OctagonAlert,
   PanelRightOpen, Pencil, Play, Plus, Puzzle, RotateCcwSquare,
   ScanText, Settings, Settings2, SlidersHorizontal, Sparkles,
-  Speaker, SquareDashed, Trash, Upload,
+  Speaker, SquareDashed, Trash, Upload, User,
   type LucideIcon,
 } from "lucide-react";
 
@@ -61,6 +61,7 @@ const MAP: Record<string, LucideIcon> = {
   "square-dashed": SquareDashed,
   trash: Trash,
   upload: Upload,
+  user: User,
 };
 
 interface Props {

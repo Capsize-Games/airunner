@@ -66,7 +66,6 @@ export default function CanvasStatusBar({
       }}
     >
       <span>{documentWidth} &times; {documentHeight}</span>
-      <span>Grid: {gridWidth} &times; {gridHeight}</span>
       {activeLayer && <span>Layer: {activeLayer.name}</span>}
 
       <div style={{ flex: 1 }} />

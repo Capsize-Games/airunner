@@ -71,8 +71,43 @@ export default function MessageList({
   // ── When nothing at all is shown, render the placeholder ───────────
   if (messages.length === 0 && !isStreaming) {
     return (
-      <div className="text-muted text-center mt-5">
-        <p>Start a conversation by typing a message below.</p>
+      <div style={{
+        minHeight: "100%",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+      }}>
+        <div style={{
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          gap: 14,
+          padding: "36px 48px",
+          border: "1px solid rgba(255,255,255,0.10)",
+          borderRadius: 12,
+          background: "rgba(255,255,255,0.02)",
+        }}>
+          <div style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            width: 48,
+            height: 48,
+            borderRadius: "50%",
+            background: "rgba(255,255,255,0.06)",
+          }}>
+            <LucideIcon name="bot-message-square" size={24} />
+          </div>
+          <p style={{
+            margin: 0,
+            fontSize: "0.85rem",
+            color: "rgba(255,255,255,0.35)",
+            textAlign: "center",
+            lineHeight: 1.5,
+          }}>
+            Start a conversation by typing a message below.
+          </p>
+        </div>
       </div>
     );
   }
@@ -227,12 +262,23 @@ function StreamingBubble({
         border: "1px solid rgba(71,0,129,0.2)",
       }}
     >
-      <small
-        className="fw-bold d-block mb-1"
-        style={{ color: "var(--theme-text-secondary)" }}
-      >
-        AI
-      </small>
+      <div className="d-flex align-items-center gap-2 mb-1">
+        <div style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          width: 28,
+          height: 28,
+          borderRadius: "50%",
+          background: "rgba(255,255,255,0.08)",
+          flexShrink: 0,
+        }}>
+          <LucideIcon name="bot-message-square" size={16} />
+        </div>
+        <small className="fw-bold" style={{ color: "var(--theme-text-secondary)" }}>
+          AI
+        </small>
+      </div>
 
       {/* Thinking section */}
       {thinkingBuffer?.trim() && (
@@ -396,12 +442,23 @@ function MessageBubble({
             : "1px solid rgba(71,0,129,0.2)",
         }}
       >
-        <small
-          className="fw-bold d-block mb-1"
-          style={{ color: "var(--theme-text-secondary)" }}
-        >
-          {isUser ? "You" : "AI"}
-        </small>
+        <div className="d-flex align-items-center gap-2 mb-1">
+          <div style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            width: 28,
+            height: 28,
+            borderRadius: "50%",
+            background: "rgba(255,255,255,0.08)",
+            flexShrink: 0,
+          }}>
+            <LucideIcon name={isUser ? "user" : "bot-message-square"} size={16} />
+          </div>
+          <small className="fw-bold" style={{ color: "var(--theme-text-secondary)" }}>
+            {isUser ? "You" : "AI"}
+          </small>
+        </div>
 
         {/* Thinking section */}
         {hasThinking && (
@@ -565,7 +622,7 @@ function MessageBubble({
             </div>
           ) : (
             <div
-              className="d-flex justify-content-start align-items-center"
+              className="d-flex justify-content-end align-items-center"
               style={{ height: "100%" }}
             >
               <div
