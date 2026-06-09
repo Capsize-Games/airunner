@@ -29,6 +29,7 @@ import PipetteControls from "../../features/canvas/sidebar/PipetteControls";
 import ZoomControls from "../../features/canvas/sidebar/ZoomControls";
 import TextControls from "../../features/canvas/sidebar/TextControls";
 import GridControls from "../../features/canvas/sidebar/GridControls";
+import RulerControls from "../../features/canvas/sidebar/RulerControls";
 import { useCanvasImageDrop } from "./canvas/useCanvasImageDrop";
 
 const LS_LEFT_W = "airunner_left_panel_w";
@@ -49,6 +50,7 @@ const TOOL_LABELS: Record<string, string> = {
   brush:   "Brush",
   eraser:  "Eraser",
   grid:    "Grid",
+  ruler:   "Ruler",
 };
 
 let leftPanelDrag: { startX: number; startW: number; setW: (w: number) => void } | null = null;
@@ -221,6 +223,7 @@ export default function CanvasPanel() {
   const showZoomControls = !showImagePrompt && canvas.activeTool === "zoom";
   const showTextControls = !showImagePrompt && canvas.activeTool === "text";
   const showGridControls = !showImagePrompt && canvas.activeTool === "grid";
+  const showRulerControls = !showImagePrompt && canvas.activeTool === "ruler";
 
   return (
     <div
@@ -282,6 +285,7 @@ export default function CanvasPanel() {
                   {showZoomControls && <ZoomControls />}
                   {showTextControls && <TextControls />}
                   {showGridControls && <GridControls />}
+                  {showRulerControls && <RulerControls />}
                 </div>
               </div>
 
@@ -342,6 +346,7 @@ export default function CanvasPanel() {
                 showGrid={canvas.gridShowGrid}
                 gridSize={canvas.gridSize}
                 gridColor={canvas.gridColor}
+                showRuler={canvas.rulerShowRuler}
                 snapToGrid={canvas.snapToGrid}
                 onAddStroke={canvas.addStroke}
                 onMoveImage={canvas.moveImage}

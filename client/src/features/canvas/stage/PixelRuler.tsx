@@ -11,6 +11,7 @@ const RULER_SIZE = 24; // px — width of vertical ruler, height of horizontal
 interface Props {
   stageRef: React.RefObject<Konva.Stage>;
   stageSize: { width: number; height: number };
+  showRuler: boolean;
 }
 
 /** Choose a "nice" tick interval based on the current zoom. */
@@ -36,6 +37,7 @@ function minorInterval(major: number, pxPerDocPixel: number): number {
 export default function PixelRuler({
   stageRef,
   stageSize,
+  showRuler,
 }: Props) {
   const hCanvasRef = useRef<HTMLCanvasElement>(null);
   const vCanvasRef = useRef<HTMLCanvasElement>(null);
@@ -254,7 +256,7 @@ export default function PixelRuler({
           position: "absolute",
           top: 0,
           left: RULER_SIZE,
-          display: "block",
+          display: showRuler ? "block" : "none",
           pointerEvents: "none",
         }}
       />
@@ -265,7 +267,7 @@ export default function PixelRuler({
           position: "absolute",
           top: RULER_SIZE,
           left: 0,
-          display: "block",
+          display: showRuler ? "block" : "none",
           pointerEvents: "none",
         }}
       />
@@ -282,6 +284,7 @@ export default function PixelRuler({
           borderRight: "1px solid rgba(255,255,255,0.12)",
           borderBottom: "1px solid rgba(255,255,255,0.12)",
           pointerEvents: "none",
+          display: showRuler ? "block" : "none",
         }}
       />
     </>

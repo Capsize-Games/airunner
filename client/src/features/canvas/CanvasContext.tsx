@@ -131,6 +131,9 @@ export interface CanvasContextValue {
   setGridShowGrid: (value: boolean) => void;
   setGridSize: (value: number) => void;
   setGridColor: (value: string) => void;
+  // ── Ruler tool settings ─────────────────────────────────────────────
+  rulerShowRuler: boolean;
+  setRulerShowRuler: (value: boolean) => void;
   // ── Text tool settings ──────────────────────────────────────────────
   textFont: string;
   textSize: number;

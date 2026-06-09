@@ -2,7 +2,7 @@ import { MessageSquareHeart, FilePlus, Settings } from "lucide-react";
 import {
   Move, SquareDashed, Lasso, Wand, Crop,
   PaintBucket, Pointer, Type, Pipette, Search,
-  Brush, Eraser, Layers, Images, Grid3x3,
+  Brush, Eraser, Layers, Images, Grid3x3, Ruler,
 } from "lucide-react";
 import type { ActiveTool } from "./useCanvasState";
 
@@ -20,6 +20,7 @@ const TOOLS: { id: string; label: string; Icon: React.ComponentType<{ size?: num
   { id: "brush",   label: "Brush (B)",     Icon: Brush },
   { id: "eraser",  label: "Eraser (E)",    Icon: Eraser },
   { id: "grid",    label: "Grid",          Icon: Grid3x3 },
+  { id: "ruler",   label: "Ruler",         Icon: Ruler },
 ];
 
 interface Props {

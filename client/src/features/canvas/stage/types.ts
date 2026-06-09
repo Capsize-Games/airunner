@@ -41,6 +41,7 @@ export interface CanvasStageProps {
   showGrid: boolean;
   gridSize: number;
   gridColor: string;
+  showRuler: boolean;
   snapToGrid: boolean;
   onAddStroke: (
     stroke: Omit<StrokeNode, "id">,

@@ -112,6 +112,7 @@ export const defaultState = (): CanvasState => {
     gridShowGrid: true,
     gridSize: 64,
     gridColor: "#ffffff",
+    rulerShowRuler: true,
     activeGridArea: {
       x: 0, y: 0, width: DEFAULT_GRID_SIZE, height: DEFAULT_GRID_SIZE,
     },
@@ -213,6 +214,7 @@ function parseCanvasState(raw: string): CanvasState | null {
     parsed.gridShowGrid ??= true;
     parsed.gridSize ??= 64;
     parsed.gridColor ??= "#ffffff";
+    parsed.rulerShowRuler ??= true;
     parsed.zoomDirection ??= "in";
     advanceCountersFromState(parsed);
     return parsed;

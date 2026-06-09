@@ -42,7 +42,7 @@ const CanvasStage = forwardRef<CanvasStageHandle, CanvasStageProps>(
       layers, layerGroups, displayOrder, activeLayerId,
       activeTool, moveMode, selectedLayerIds,
       brushSize, brushColor, maskStrokes,
-      showGrid, gridSize, gridColor, snapToGrid,
+      showGrid, gridSize, gridColor, showRuler, snapToGrid,
       onAddStroke, onMoveImage, onMoveLayer,
       onAddMaskStroke, onAddLayerMaskStroke,
       onUndo, onRedo, setActiveTool, setActiveLayer,
@@ -377,6 +377,7 @@ const CanvasStage = forwardRef<CanvasStageHandle, CanvasStageProps>(
         <PixelRuler
           stageRef={stageRef}
           stageSize={stageSize}
+          showRuler={showRuler}
         />
       </div>
     );
