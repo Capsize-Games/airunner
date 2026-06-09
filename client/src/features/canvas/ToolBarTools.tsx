@@ -1,5 +1,5 @@
 import {
-  SquareDashed, Brush, Eraser, Move,
+  SquareDashed, Brush, Eraser, Move, LassoSelect,
 } from "lucide-react";
 import type { ActiveTool } from "./useCanvasState";
 
@@ -15,6 +15,7 @@ export const TOOLS: {
   }>;
 }[] = [
   { id: "select", label: "Select", key: "S", Icon: SquareDashed },
+  { id: "lasso",  label: "Lasso",  key: "L", Icon: LassoSelect },
   { id: "brush",  label: "Brush",  key: "B", Icon: Brush },
   { id: "eraser", label: "Eraser", key: "E", Icon: Eraser },
   { id: "move",   label: "Move",   key: "V", Icon: Move },

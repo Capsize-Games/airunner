@@ -32,8 +32,8 @@ export default function App() {
     conversationId,
     setConversationId,
   } = useLayoutPrefs();
+const [showSettings, setShowSettings] = useState(false);
 
-  const [showSettings, setShowSettings] = useState(false);
 
   const handleSelectConversation = useCallback(
     (id: number) => {
@@ -70,8 +70,14 @@ export default function App() {
             <Layout
               rightPanel={rightPanel}
               onRightPanel={(id: PanelId) => {
-                if (rightPanel !== id) setShowCanvas(true);
-                setRightPanel(rightPanel === id ? null : id);
+                if (rightPanel !== id) {
+                  setShowCanvas(true);
+                } else {
+                  setShowCanvas(false);
+                }
+                setRightPanel(
+                  rightPanel === id ? null : id,
+                );
               }}
               showChat={showChat}
               onToggleChat={() => setShowChat(!showChat)}

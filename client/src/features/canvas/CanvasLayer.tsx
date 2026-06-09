@@ -1,16 +1,18 @@
-import { useRef, useEffect, useLayoutEffect } from "react";
-import { Group, Image as KonvaImage, Layer, Line, Rect } from "react-konva";
+import { useRef, useEffect, useLayoutEffect, useCallback } from "react";
+import { Group, Image as KonvaImage, Layer, Line, Rect, Text } from "react-konva";
 import Konva from "konva";
-import type { CanvasLayer as CanvasLayerType, StrokeNode, ActiveTool } from "./useCanvasState";
+import type { CanvasLayer as CanvasLayerType, StrokeNode, ActiveTool, MoveMode } from "./useCanvasState";
 import DrawingLayer from "./DrawingLayer";
 
 interface CanvasLayerProps {
   layer: CanvasLayerType;
   isActive: boolean;
   activeTool: ActiveTool;
+  moveMode: MoveMode;
   brushSize: number;
   brushColor: string;
   snapToGrid: boolean;
+  gridSize: number;
   canvasWidth: number;
   canvasHeight: number;
   onStrokeComplete: (stroke: Omit<StrokeNode, "id">) => void;
@@ -44,18 +46,21 @@ function applyKonvaFilters(group: Konva.Group, filters: CanvasLayerType["filters
   else group.clearCache();
 }
 
-const VIS_SNAP = 16;
-const snapVal = (v: number, on: boolean) => on ? Math.round(v / VIS_SNAP) * VIS_SNAP : v;
+/** Snap a value to the grid if snapping is enabled. */
+const snapVal = (v: number, on: boolean, gridSize: number) =>
+  on ? Math.round(v / gridSize) * gridSize : v;
 
 function LayerImage({
   node,
   isMovable,
   snapToGrid,
+  gridSize,
   onMove,
 }: {
   node: CanvasLayerType["images"][0];
   isMovable: boolean;
   snapToGrid: boolean;
+  gridSize: number;
   onMove: (x: number, y: number) => void;
 }) {
   const imageRef = useRef<Konva.Image>(null);
@@ -87,61 +92,173 @@ function LayerImage({
       image={imgElementRef.current ?? undefined}
       draggable={isMovable}
       onDragEnd={(e) => {
-        onMove(snapVal(e.target.x(), snapToGrid), snapVal(e.target.y(), snapToGrid));
+        onMove(snapVal(e.target.x(), snapToGrid, gridSize), snapVal(e.target.y(), snapToGrid, gridSize));
       }}
     />
   );
+}
+
+/** Cache bounds matching the clip rectangle. */
+function clipCacheBounds(offsetX: number, offsetY: number, w: number, h: number) {
+  return { x: -offsetX, y: -offsetY, width: w, height: h, pixelRatio: 1 };
 }
 
 export default function CanvasLayerRenderer({
   layer,
   isActive,
   activeTool,
+  moveMode,
   brushSize,
   brushColor,
   snapToGrid,
+  gridSize,
   canvasWidth,
   canvasHeight,
   onStrokeComplete,
   onMoveImage,
   onMoveLayer,
 }: CanvasLayerProps) {
-  const outerGroupRef = useRef<Konva.Group>(null);   // wrapper for mask compositing (cached)
-  const contentGroupRef = useRef<Konva.Group>(null);  // layer content (filters applied here)
-  const maskGroupRef = useRef<Konva.Group>(null);     // mask bitmap (must be cached before outer group)
+  const layerRef = useRef<Konva.Layer>(null);
+  const outerGroupRef = useRef<Konva.Group>(null);
+  const contentGroupRef = useRef<Konva.Group>(null);
+  const dragGroupRef = useRef<Konva.Group>(null);
+  const maskGroupRef = useRef<Konva.Group>(null);
+  // Ref to the inner clipped Group (hasMask: outerGroupRef, no-mask: contentGroupRef).
+  const clippedGroupRef = useRef<Konva.Group | null>(null);
   const hasMask = Array.isArray(layer.maskStrokes);
 
   useEffect(() => {
     if (contentGroupRef.current) applyKonvaFilters(contentGroupRef.current, layer.filters);
   }, [layer.filters]);
 
-  // Re-cache both the mask group and outer group when mask or content changes.
-  // Mask group must be cached first so destination-in compositing works correctly:
-  // its isolated offscreen canvas (white with transparent holes) is then composited
-  // onto the outer group's cache via destination-in to clip the layer content.
+  // Stage-level move tool handles both "pick" and "move-selected"
+  // modes, so we disable the per-layer transparent overlay rect.
+  const isLayerMovable = false;
+
+  // ── Imperative Layer clip ─────────────────────────────────────────────
+  // react-konva may not reliably pass clip props through to the native
+  // Konva Layer node, so we set them directly via the ref.  The Layer
+  // clip is fixed in Stage space — it never moves, which is why the
+  // content slides underneath it during drag (the desired pan behavior).
+  useLayoutEffect(() => {
+    const l = layerRef.current;
+    if (l) {
+      l.clipX(0);
+      l.clipY(0);
+      l.clipWidth(canvasWidth);
+      l.clipHeight(canvasHeight);
+    }
+  }, [canvasWidth, canvasHeight]);
+
+  // ── mask compositing cache ─────────────────────────────────────────────
   useLayoutEffect(() => {
     if (!hasMask) return;
+    const bounds = clipCacheBounds(
+      layer.offsetX, layer.offsetY, canvasWidth, canvasHeight,
+    );
     requestAnimationFrame(() => {
-      const cacheBounds = {
-        x: -layer.offsetX,
-        y: -layer.offsetY,
-        width: canvasWidth,
-        height: canvasHeight,
-        pixelRatio: 1,
-      };
-      // Cache mask group first — creates the isolated white-with-holes bitmap.
       const maskG = maskGroupRef.current;
-      if (maskG) maskG.cache(cacheBounds);
-      // Cache outer group second — composites masked content into its own bitmap.
+      if (maskG) maskG.cache(bounds);
       const outerG = outerGroupRef.current;
-      if (!outerG) return;
-      outerG.cache(cacheBounds);
-      outerG.getLayer()?.batchDraw();
+      if (outerG) {
+        outerG.cache(bounds);
+        outerG.getLayer()?.batchDraw();
+      }
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hasMask, layer.maskStrokes, layer.maskFill, layer.images, layer.strokes, layer.offsetX, layer.offsetY, canvasWidth, canvasHeight]);
+  }, [hasMask, layer.maskStrokes, layer.maskFill, layer.images, layer.strokes, layer.filters, layer.offsetX, layer.offsetY, canvasWidth, canvasHeight]);
 
-  const isLayerMovable = activeTool === "move" && isActive;
+  // ── manual drag for move tool ──────────────────────────────────────────
+  // Konva's built-in draggable uses CSS transforms which bypass the
+  // Group-level clip property during drag.  We use manual pointer events
+  // to update position via group.x() / group.y() instead, and
+  // dynamically shift the inner Group's clipX / clipY so the clip
+  // window stays pinned at the Layer origin (0,0) while dragging.
+  const isDragging = useRef(false);
+  const dragStart = useRef({ x: 0, y: 0 });
+  const groupStart = useRef({ x: 0, y: 0 });
+
+  const handleLayerPointerDown = useCallback(
+    (e: Konva.KonvaEventObject<PointerEvent>) => {
+      if (!isLayerMovable) return;
+      // Only respond to left button — let middle/right button
+      // events pass through to the Stage for panning.
+      if (e.evt.button !== 0) return;
+      e.evt.stopPropagation();
+      e.evt.preventDefault();
+      const group = dragGroupRef.current;
+      if (!group) return;
+      const stage = group.getStage();
+      if (!stage) return;
+      const pos = stage.getPointerPosition();
+      if (!pos) return;
+
+      isDragging.current = true;
+      dragStart.current = { x: pos.x, y: pos.y };
+      groupStart.current = { x: group.x(), y: group.y() };
+    },
+    [isLayerMovable],
+  );
+
+  // During drag we simultaneously update the outer Group's position
+  // AND the inner Group's clip offsets.  Without the clip offset
+  // adjustment the clip window would shift with the Group, showing
+  // the same slice of content plus an empty gap — the user would
+  // not see the content "pan" within the viewport.
+  const handleLayerPointerMove = useCallback(
+    (e: Konva.KonvaEventObject<PointerEvent>) => {
+      if (!isDragging.current || !isLayerMovable) return;
+      e.evt.stopPropagation();
+      const group = dragGroupRef.current;
+      if (!group) return;
+      const stage = group.getStage();
+      if (!stage) return;
+      const pos = stage.getPointerPosition();
+      if (!pos) return;
+      const newX = groupStart.current.x + pos.x - dragStart.current.x;
+      const newY = groupStart.current.y + pos.y - dragStart.current.y;
+      group.x(newX);
+      group.y(newY);
+
+      // Counteract the Group's position change by shifting the
+      // inner Group's clip in the opposite direction so the clip
+      // stays fixed at (0,0) in Layer coordinates.
+      const clipped = clippedGroupRef.current;
+      if (clipped) {
+        clipped.clipX(-newX);
+        clipped.clipY(-newY);
+      }
+
+      group.getLayer()?.batchDraw();
+    },
+    [isLayerMovable],
+  );
+
+  const handleLayerPointerUp = useCallback(
+    (e?: Konva.KonvaEventObject<PointerEvent>) => {
+      if (!isDragging.current || !isLayerMovable) return;
+      if (e) e.evt.stopPropagation();
+      isDragging.current = false;
+      const group = dragGroupRef.current;
+      if (!group) return;
+      const x = snapVal(group.x(), snapToGrid, gridSize);
+      const y = snapVal(group.y(), snapToGrid, gridSize);
+      group.x(x);
+      group.y(y);
+      group.getLayer()?.batchDraw();
+      onMoveLayer(layer.id, x, y);
+    },
+    [isLayerMovable, snapToGrid, gridSize, layer.id, onMoveLayer],
+  );
+
+  // Catch pointerup globally so layer dragging stops even when
+  // the cursor leaves the canvas and releases outside.
+  useEffect(() => {
+    const onGlobalUp = () => handleLayerPointerUp();
+    window.addEventListener("pointerup", onGlobalUp);
+    return () =>
+      window.removeEventListener("pointerup", onGlobalUp);
+  }, [handleLayerPointerUp]);
 
   const contentChildren = (
     <>
@@ -151,6 +268,7 @@ export default function CanvasLayerRenderer({
           node={img}
           isMovable={false}
           snapToGrid={snapToGrid}
+          gridSize={gridSize}
           onMove={(x, y) => onMoveImage(layer.id, img.id, x, y)}
         />
       ))}
@@ -163,77 +281,113 @@ export default function CanvasLayerRenderer({
         opacity={layer.opacity}
         isActive={isActive}
       />
+      {layer.textNode && (
+        <Text
+          x={layer.textNode.x}
+          y={layer.textNode.y}
+          text={layer.textNode.text}
+          fontFamily={layer.textNode.fontFamily}
+          fontSize={layer.textNode.fontSize}
+          fill={layer.textNode.fill}
+          listening={false}
+        />
+      )}
     </>
   );
 
   return (
-    <Layer visible={layer.visible} opacity={layer.opacity}>
+    <Layer
+      ref={layerRef}
+      visible={layer.visible}
+      opacity={layer.opacity}
+      imageSmoothingEnabled={false}
+    >
       {hasMask ? (
-        <Group
-          ref={outerGroupRef}
-          x={layer.offsetX}
-          y={layer.offsetY}
-          clipX={-layer.offsetX}
-          clipY={-layer.offsetY}
-          clipWidth={canvasWidth}
-          clipHeight={canvasHeight}
-          draggable={isLayerMovable}
-          onDragEnd={(e) => {
-            const x = snapVal(e.target.x(), snapToGrid);
-            const y = snapVal(e.target.y(), snapToGrid);
-            e.target.x(x);
-            e.target.y(y);
-            onMoveLayer(layer.id, x, y);
-          }}
-        >
-          <Group ref={contentGroupRef}>
-            {contentChildren}
+        <Group ref={dragGroupRef} x={layer.offsetX} y={layer.offsetY} name={"layer-drag-" + layer.id}>
+          <Group
+            ref={(node) => {
+              outerGroupRef.current = node;
+              clippedGroupRef.current = node;
+            }}
+            name={"layer-clip-" + layer.id}
+            clipX={-layer.offsetX}
+            clipY={-layer.offsetY}
+            clipWidth={canvasWidth}
+            clipHeight={canvasHeight}
+          >
+            <Group ref={contentGroupRef}>
+              {contentChildren}
+            </Group>
+            <Group ref={maskGroupRef} globalCompositeOperation="destination-in" listening={false}>
+              {layer.maskFill !== "black" && (
+                <Rect
+                  x={-layer.offsetX}
+                  y={-layer.offsetY}
+                  width={canvasWidth}
+                  height={canvasHeight}
+                  fill="white"
+                />
+              )}
+              {layer.maskStrokes!.map((stroke) => (
+                <Line
+                  key={stroke.id}
+                  points={stroke.points}
+                  stroke={stroke.color}
+                  strokeWidth={stroke.strokeWidth}
+                  tension={0.5}
+                  lineCap="round"
+                  lineJoin="round"
+                  globalCompositeOperation={
+                    stroke.color === "#000000" ? "destination-out" : "source-over"
+                  }
+                />
+              ))}
+            </Group>
           </Group>
-          <Group ref={maskGroupRef} globalCompositeOperation="destination-in" listening={false}>
-            {layer.maskFill !== "black" && (
-              <Rect
-                x={-layer.offsetX}
-                y={-layer.offsetY}
-                width={canvasWidth}
-                height={canvasHeight}
-                fill="white"
-              />
-            )}
-            {layer.maskStrokes!.map((stroke) => (
-              <Line
-                key={stroke.id}
-                points={stroke.points}
-                stroke={stroke.color}
-                strokeWidth={stroke.strokeWidth}
-                tension={0.5}
-                lineCap="round"
-                lineJoin="round"
-                globalCompositeOperation={
-                  stroke.color === "#000000" ? "destination-out" : "source-over"
-                }
-              />
-            ))}
-          </Group>
+          {isLayerMovable && (
+            <Rect
+              x={-layer.offsetX}
+              y={-layer.offsetY}
+              width={canvasWidth}
+              height={canvasHeight}
+              fill="transparent"
+              listening={true}
+              style={{ cursor: "grab" }}
+              onPointerDown={handleLayerPointerDown}
+              onPointerMove={handleLayerPointerMove}
+              onPointerUp={handleLayerPointerUp}
+            />
+          )}
         </Group>
       ) : (
-        <Group
-          ref={contentGroupRef}
-          x={layer.offsetX}
-          y={layer.offsetY}
-          clipX={-layer.offsetX}
-          clipY={-layer.offsetY}
-          clipWidth={canvasWidth}
-          clipHeight={canvasHeight}
-          draggable={isLayerMovable}
-          onDragEnd={(e) => {
-            const x = snapVal(e.target.x(), snapToGrid);
-            const y = snapVal(e.target.y(), snapToGrid);
-            e.target.x(x);
-            e.target.y(y);
-            onMoveLayer(layer.id, x, y);
-          }}
-        >
-          {contentChildren}
+        <Group ref={dragGroupRef} x={layer.offsetX} y={layer.offsetY} name={"layer-drag-" + layer.id}>
+          <Group
+            ref={(node) => {
+              contentGroupRef.current = node;
+              clippedGroupRef.current = node;
+            }}
+            name={"layer-clip-" + layer.id}
+            clipX={-layer.offsetX}
+            clipY={-layer.offsetY}
+            clipWidth={canvasWidth}
+            clipHeight={canvasHeight}
+          >
+            {contentChildren}
+          </Group>
+          {isLayerMovable && (
+            <Rect
+              x={-layer.offsetX}
+              y={-layer.offsetY}
+              width={canvasWidth}
+              height={canvasHeight}
+              fill="transparent"
+              listening={true}
+              style={{ cursor: "grab" }}
+              onPointerDown={handleLayerPointerDown}
+              onPointerMove={handleLayerPointerMove}
+              onPointerUp={handleLayerPointerUp}
+            />
+          )}
         </Group>
       )}
     </Layer>

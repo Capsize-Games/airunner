@@ -1,6 +1,6 @@
 // ── Canvas Document Settings ────────────────────────────────────────────
 import { useCallback } from "react";
-import type { ActiveGridArea, ActiveTool } from "../canvasTypes";
+import type { ActiveGridArea, ActiveTool, MoveMode } from "../canvasTypes";
 import type { FilterConfig } from "../canvasTypes";
 import {
   snapTo8,
@@ -117,6 +117,13 @@ export function document(
     [setState],
   );
 
+  const setMoveMode = useCallback(
+    (mode: MoveMode) => {
+      setState((prev) => ({ ...prev, moveMode: mode }));
+    },
+    [setState],
+  );
+
   return {
     setActiveTool,
     setActiveGridArea,
@@ -126,5 +133,6 @@ export function document(
     setDocumentBgColor,
     setSnapToGrid,
     setLayerFilters,
+    setMoveMode,
   };
 }

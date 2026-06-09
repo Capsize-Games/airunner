@@ -16,8 +16,13 @@ export function getCursor(
   switch (tool) {
     case "select": return "crosshair";
     case "move":   return "grab";
+    case "lasso":  return "crosshair";
     case "brush":
     case "eraser":
-    case "mask":   return "crosshair";
+    case "mask":
+    case "smudge":
+    case "pipette": return "crosshair";
+    case "text":    return "text";
+    default:        return "default";
   }
 }

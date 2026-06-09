@@ -1,6 +1,7 @@
 // ── Layout ──────────────────────────────────────────────────────────────
 import {
   type ReactNode,
+  useCallback,
   useEffect,
   useRef,
   useState,
@@ -14,6 +15,7 @@ import { CanvasProvider } from "../../features/canvas";
 import WelcomeScreen from "./WelcomeScreen";
 import FooterStats from "./FooterStats";
 import LiveIndicator from "./LiveIndicator";
+import { useMenuAction } from "./action-menu-bar";
 
 const HANDLE_W = 4;
 const CHAT_MIN = 260;
@@ -135,6 +137,47 @@ export default function Layout({
     () => saveNum("airunner_chat_w", chatW),
     [chatW],
   );
+
+  // ── Respond to action-menu events ──────────────────────────────────
+  useMenuAction(
+    useCallback(
+      (action) => {
+        switch (action.type) {
+          case "view:toggle-chat":
+            onToggleChat();
+            break;
+          case "view:toggle-canvas":
+            onToggleCanvas();
+            break;
+          case "view:toggle-civitai":
+            onRightPanel("civitai_browser");
+            break;
+        }
+      },
+      [
+        onToggleChat,
+        onToggleCanvas,
+        onRightPanel,
+        rightPanel,
+      ],
+    ),
+  );
+
+  // Sync layout panel state back to the action menu bar
+  useEffect(() => {
+    window.dispatchEvent(
+      new CustomEvent("airunner:layout-state", {
+        detail: {
+          showChat,
+          showCanvas:
+            showCanvas &&
+            rightPanel !== "civitai_browser",
+          showCivitai:
+            rightPanel === "civitai_browser",
+        },
+      }),
+    );
+  }, [showChat, showCanvas, rightPanel]);
 
   const makeHandle = () => {
     const onDown = (e: React.MouseEvent) => {

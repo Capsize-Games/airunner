@@ -5,14 +5,13 @@ import type {
   ActiveGridArea,
   StrokeNode,
   ActiveTool,
+  MoveMode,
   LayerGroup,
 } from "../useCanvasState";
 import type {
   LiveStrokeMessage,
   StrokeEndMessage,
 } from "../canvasSyncTypes";
-
-export const GRID_SIZE = 16;
 
 export interface CanvasStageHandle {
   zoomIn: () => void;
@@ -36,8 +35,13 @@ export interface CanvasStageProps {
   activeTool: ActiveTool;
   brushSize: number;
   brushColor: string;
+  moveMode: MoveMode;
+  selectedLayerIds: string[];
   maskStrokes: StrokeNode[];
   showGrid: boolean;
+  gridSize: number;
+  gridColor: string;
+  showRuler: boolean;
   snapToGrid: boolean;
   onAddStroke: (
     stroke: Omit<StrokeNode, "id">,
@@ -64,9 +68,12 @@ export interface CanvasStageProps {
   onUndo: () => void;
   onRedo: () => void;
   setActiveTool: (tool: ActiveTool) => void;
+  setActiveLayer: (layerId: string) => void;
   onZoomChange: (zoom: number) => void;
-  zoomMode: "fit" | "locked";
-  onZoomModeChange: (mode: "fit" | "locked") => void;
+  isFitToView: boolean;
+  isCenterView: boolean;
+  onFitToViewChange: (v: boolean) => void;
+  onCenterViewChange: (v: boolean) => void;
   gridLayerRef: React.RefObject<Konva.Layer>;
   maskLayerRef: React.RefObject<Konva.Layer>;
   stageRef: React.RefObject<Konva.Stage>;

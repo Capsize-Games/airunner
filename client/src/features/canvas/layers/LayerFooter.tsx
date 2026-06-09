@@ -21,8 +21,12 @@ export default function LayerFooter({
 
   return (
     <div
-      className="d-flex align-items-center justify-content-start flex-shrink-0 border-t-subtle"
-      style={{ gap: 2, padding: "5px 8px" }}
+      className="d-flex align-items-center justify-content-start flex-shrink-0"
+      style={{
+        gap: 2, padding: "5px 8px",
+        borderTop: "1px solid rgba(255,255,255,0.07)",
+        background: "#161620",
+      }}
     >
       <IconBtn title="Add layer" onClick={onAddLayer}>
         <LayersPlus size={15} strokeWidth={1.75} />
