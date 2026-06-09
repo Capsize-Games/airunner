@@ -1,4 +1,4 @@
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, SquareMinus, SquarePlus } from "lucide-react";
 import { useCanvasContext } from "../CanvasContext";
 import type { LayerGroup } from "../useCanvasState";
 
@@ -76,21 +76,13 @@ export default function GroupRow({ group, drag }: Props) {
         </button>
 
         {group.expanded ? (
-          <svg viewBox="0 0 24 24" width={12} height={12}
+          <SquareMinus size={12} strokeWidth={1.75}
             style={{ marginRight: 4, flexShrink: 0, color: "rgba(var(--theme-text-rgb), 0.4)" }}
-          >
-            <path d="M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"
-              fill="none" stroke="currentColor" strokeWidth={1.75} />
-            <path d="M9 12h6" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" />
-          </svg>
+          />
         ) : (
-          <svg viewBox="0 0 24 24" width={12} height={12}
+          <SquarePlus size={12} strokeWidth={1.75}
             style={{ marginRight: 4, flexShrink: 0, color: "rgba(var(--theme-text-rgb), 0.4)" }}
-          >
-            <path d="M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"
-              fill="none" stroke="currentColor" strokeWidth={1.75} />
-            <path d="M9 12h6M12 9v6" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" />
-          </svg>
+          />
         )}
 
         <span style={{

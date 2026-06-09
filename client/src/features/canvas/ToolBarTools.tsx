@@ -1,31 +1,7 @@
 import {
-  SquareDashed, Brush, Eraser, Move,
+  SquareDashed, Brush, Eraser, Move, LassoSelect,
 } from "lucide-react";
 import type { ActiveTool } from "./useCanvasState";
-
-/** Inline SVG for the lasso (free-select) tool icon. */
-function LassoIcon({
-  size = 14,
-  strokeWidth = 1.75,
-}: {
-  size?: number; strokeWidth?: number;
-}) {
-  return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={strokeWidth}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M7 22C4.5 20.5 3 18 3 15c0-3.5 2.5-8 6-11C13 2 20 5 20 10c0 4-4 8-10 7-2 0-4-1-5-2.5" />
-      <circle cx="10" cy="17" r="1.5" />
-    </svg>
-  );
-}
 
 /**
  * Tool definitions consumed by the main ToolBar component.
@@ -39,7 +15,7 @@ export const TOOLS: {
   }>;
 }[] = [
   { id: "select", label: "Select", key: "S", Icon: SquareDashed },
-  { id: "lasso",  label: "Lasso",  key: "L", Icon: LassoIcon },
+  { id: "lasso",  label: "Lasso",  key: "L", Icon: LassoSelect },
   { id: "brush",  label: "Brush",  key: "B", Icon: Brush },
   { id: "eraser", label: "Eraser", key: "E", Icon: Eraser },
   { id: "move",   label: "Move",   key: "V", Icon: Move },
