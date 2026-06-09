@@ -21,12 +21,14 @@ import WandLayer from "./tools/wand/WandLayer";
 import CropLayer from "./tools/crop/CropLayer";
 import BucketLayer from "./tools/bucket/BucketLayer";
 import SmudgeLayer from "./tools/smudge/SmudgeLayer";
+import PipetteLayer from "./tools/pipette/PipetteLayer";
 import type { LassoRenderState } from "./tools/lasso/useLassoTool";
 import type { SelectRenderState } from "./tools/select/useSelectTool";
 import type { WandRenderState } from "./tools/wand/useWandTool";
 import type { CropRenderState } from "./tools/crop/useCropTool";
 import type { BucketRenderState } from "./tools/bucket/useBucketTool";
 import type { SmudgeRenderState } from "./tools/smudge/useSmudgeTool";
+import type { PipetteRenderState } from "./tools/pipette/usePipetteTool";
 import type {
   CanvasLayer,
   LayerGroup,
@@ -64,6 +66,7 @@ interface Props {
   cropRenderState: CropRenderState;
   bucketRenderState: BucketRenderState;
   smudgeRenderState: SmudgeRenderState;
+  pipetteRenderState: PipetteRenderState;
   cropOnRectChange: (
     x: number, y: number,
     width: number, height: number,
@@ -104,7 +107,8 @@ export default function StageContent({
   activeTool, moveMode, brushSize, brushColor, maskStrokes,
   showGrid, snapToGrid,
   lassoRenderState, selectRenderState, wandRenderState,
-  cropRenderState, bucketRenderState, smudgeRenderState, cropOnRectChange,
+  cropRenderState, bucketRenderState, smudgeRenderState,
+  pipetteRenderState, cropOnRectChange,
   showBrushIndicator, brushRadius, indicatorColor,
   brushRingRef, brushDotRef, brushIndicatorLayerRef,
   isDrawingTool,
@@ -284,6 +288,9 @@ export default function StageContent({
   <SmudgeLayer {...smudgeRenderState} />
 )}
 
+{activeTool === "pipette" && (
+  <PipetteLayer {...pipetteRenderState} />
+)}
 
     </Stage>
   );

@@ -117,6 +117,9 @@ export interface CanvasContextValue {
   // ── Smudge tool settings ─────────────────────────────────────────────
   smudgeSize: number;
   setSmudgeSize: (value: number) => void;
+  // ── Pipette (Color Picker) settings ──────────────────────────────────
+  pipetteTarget: "foreground" | "background";
+  setPipetteTarget: (value: "foreground" | "background") => void;
 }
 
 const CanvasContext = createContext<CanvasContextValue | null>(null);

@@ -96,6 +96,7 @@ export interface CanvasState {
   bucketAntialiasing: boolean;
   bucketThreshold: number; // 0–100
   smudgeSize: number; // 0–100
+  pipetteTarget: "foreground" | "background";
   maskStrokes: StrokeNode[];
   snapToGrid: boolean;
   cropX: number;

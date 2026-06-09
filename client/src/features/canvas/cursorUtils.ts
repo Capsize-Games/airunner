@@ -20,7 +20,8 @@ export function getCursor(
     case "brush":
     case "eraser":
     case "mask":
-    case "smudge": return "crosshair";
-    default:       return "default";
+    case "smudge":
+    case "pipette": return "crosshair";
+    default:        return "default";
   }
 }

@@ -27,6 +27,7 @@ import { wand as wandHook } from "./state/wand";
 import { bucket as bucketHook } from "./state/bucket";
 import { crop as cropHook } from "./state/crop";
 import { smudge as smudgeHook } from "./state/smudge";
+import { pipette as pipetteHook } from "./state/pipette";
 import { document as documentHook } from "./state/document";
 import { serialization as serializationHook } from "./state/serialization";
 
@@ -47,6 +48,7 @@ export function useCanvasState() {
   const bucketAPI = bucketHook(setters);
   const cropAPI = cropHook(setters);
   const smudgeAPI = smudgeHook(setters);
+  const pipetteAPI = pipetteHook(setters);
   const docAPI = documentHook(setters);
   const serializationAPI = serializationHook(state, setters);
 
@@ -75,6 +77,7 @@ export function useCanvasState() {
     ...bucketAPI,
     ...cropAPI,
     ...smudgeAPI,
+    ...pipetteAPI,
     ...docAPI,
     ...serializationAPI,
   };
