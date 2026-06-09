@@ -23,6 +23,8 @@ import { getCanvasPosFromStage } from "./stage/drawingHelpers";
 import { moveTool } from "./stage/moveTool";
 import { useLassoTool } from "./stage/tools/lasso/useLassoTool";
 import { useSelectTool } from "./stage/tools/select/useSelectTool";
+import { useWandTool } from "./stage/tools/wand/useWandTool";
+import { useCanvasContext } from "./CanvasContext";
 
 export type { CanvasStageHandle } from "./stage/types";
 
@@ -98,6 +100,34 @@ const CanvasStage = forwardRef<CanvasStageHandle, CanvasStageProps>(
       getCanvasPos,
     });
 
+    // Wand tool reads settings from canvas context
+    const wandCtx = useCanvasContext();
+    const wandSettingsRef = useRef({
+      antialiasing: wandCtx.wandAntialiasing,
+      featherEdges: wandCtx.wandFeatherEdges,
+      featherRadius: wandCtx.wandFeatherRadius,
+      selectTransparentAreas: wandCtx.wandSelectTransparentAreas,
+      sampleMerged: wandCtx.wandSampleMerged,
+      diagonalNeighbors: wandCtx.wandDiagonalNeighbors,
+      threshold: wandCtx.wandThreshold,
+    });
+    wandSettingsRef.current = {
+      antialiasing: wandCtx.wandAntialiasing,
+      featherEdges: wandCtx.wandFeatherEdges,
+      featherRadius: wandCtx.wandFeatherRadius,
+      selectTransparentAreas: wandCtx.wandSelectTransparentAreas,
+      sampleMerged: wandCtx.wandSampleMerged,
+      diagonalNeighbors: wandCtx.wandDiagonalNeighbors,
+      threshold: wandCtx.wandThreshold,
+    };
+
+    const wand = useWandTool({
+      isActive: activeTool === "wand",
+      getCanvasPos,
+      stageRef,
+      settingsRef: wandSettingsRef,
+    });
+
     // ── Unified mouse handlers ─────────────────────────────────────────
 
     const handleMouseDown = useCallback(
@@ -119,8 +149,9 @@ const CanvasStage = forwardRef<CanvasStageHandle, CanvasStageProps>(
         }
         if (lasso.onMouseDown(e))  return;
         if (select.onMouseDown(e)) return;
+        if (wand.onMouseDown(e))   return;
       },
-      [stageRef, isMoveActive, moveToolHandlers, lasso, select],
+      [stageRef, isMoveActive, moveToolHandlers, lasso, select, wand],
     );
 
     const handleMouseMove = useCallback(
@@ -139,9 +170,10 @@ const CanvasStage = forwardRef<CanvasStageHandle, CanvasStageProps>(
         }
         if (isMoveActive) { moveToolHandlers.handleMoveMouseMove(e); return; }
         if (lasso.onMouseMove(e))  return;
+        if (wand.onMouseMove(e))   return;
         select.onMouseMove(e);
       },
-      [stageRef, isMoveActive, moveToolHandlers, lasso, select],
+      [stageRef, isMoveActive, moveToolHandlers, lasso, select, wand],
     );
 
     const handleMouseUp = useCallback(
@@ -154,9 +186,10 @@ const CanvasStage = forwardRef<CanvasStageHandle, CanvasStageProps>(
         }
         if (isMoveActive) { moveToolHandlers.handleMoveMouseUp(e); return; }
         if (lasso.onMouseUp(e))  return;
+        if (wand.onMouseUp(e))   return;
         select.onMouseUp(e);
       },
-      [stageRef, activeTool, layers.length, isMoveActive, moveToolHandlers, lasso, select],
+      [stageRef, activeTool, layers.length, isMoveActive, moveToolHandlers, lasso, select, wand],
     );
 
     // Global up: only panning needs a CanvasStage-level handler now; each
@@ -207,6 +240,7 @@ const CanvasStage = forwardRef<CanvasStageHandle, CanvasStageProps>(
           // Tool render states
           lassoRenderState={lasso.renderState}
           selectRenderState={select.renderState}
+          wandRenderState={wand.renderState}
           // Drawing overlay
           showBrushIndicator={drawing.showBrushIndicator}
           brushRadius={drawing.brushRadius}

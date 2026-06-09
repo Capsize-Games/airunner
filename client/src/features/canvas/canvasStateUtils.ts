@@ -119,6 +119,13 @@ export const defaultState = (): CanvasState => {
     lassoAntialiasing: true,
     lassoFeatherEdges: false,
     lassoFeatherRadius: 10,
+    wandAntialiasing: true,
+    wandFeatherEdges: false,
+    wandFeatherRadius: 10,
+    wandSelectTransparentAreas: true,
+    wandSampleMerged: false,
+    wandDiagonalNeighbors: false,
+    wandThreshold: 15,
     maskStrokes: [] as StrokeNode[],
     snapToGrid: false,
   };
@@ -133,7 +140,7 @@ export const defaultState = (): CanvasState => {
 // ── Persistence ──────────────────────────────────────────────────────────────
 
 import type {
-  ActiveTool, FilterConfig, ImageNode, ActiveGridArea,
+  ActiveTool, FilterConfig, ImageNode,
 } from "./canvasTypes";
 import { getDb } from "../../db/db";
 
@@ -163,6 +170,17 @@ function parseCanvasState(raw: string): CanvasState | null {
     parsed.layers = parsed.layers.map(
       (l) => ({ ...l, parentGroupId: l.parentGroupId ?? null }),
     );
+    // Ensure tool settings added after initial release have defaults
+    parsed.lassoAntialiasing ??= true;
+    parsed.lassoFeatherEdges ??= false;
+    parsed.lassoFeatherRadius ??= 10;
+    parsed.wandAntialiasing ??= true;
+    parsed.wandFeatherEdges ??= false;
+    parsed.wandFeatherRadius ??= 10;
+    parsed.wandSelectTransparentAreas ??= true;
+    parsed.wandSampleMerged ??= false;
+    parsed.wandDiagonalNeighbors ??= false;
+    parsed.wandThreshold ??= 15;
     advanceCountersFromState(parsed);
     return parsed;
   } catch {

@@ -84,6 +84,13 @@ export interface CanvasState {
   lassoAntialiasing: boolean;
   lassoFeatherEdges: boolean;
   lassoFeatherRadius: number; // 0–100
+  wandAntialiasing: boolean;
+  wandFeatherEdges: boolean;
+  wandFeatherRadius: number; // 0–100
+  wandSelectTransparentAreas: boolean;
+  wandSampleMerged: boolean;
+  wandDiagonalNeighbors: boolean;
+  wandThreshold: number; // 0–100, mapped to RGBA distance
   maskStrokes: StrokeNode[];
   snapToGrid: boolean;
   history: string[];

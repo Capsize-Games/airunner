@@ -17,8 +17,10 @@ import CanvasBackground from "../CanvasBackground";
 import GridLayer from "./GridLayer";
 import LassoLayer from "./tools/lasso/LassoLayer";
 import SelectLayer from "./tools/select/SelectLayer";
+import WandLayer from "./tools/wand/WandLayer";
 import type { LassoRenderState } from "./tools/lasso/useLassoTool";
 import type { SelectRenderState } from "./tools/select/useSelectTool";
+import type { WandRenderState } from "./tools/wand/useWandTool";
 import type {
   CanvasLayer,
   LayerGroup,
@@ -52,6 +54,7 @@ interface Props {
   // ── Tool render states (one per tool with a visual overlay) ─────────────
   lassoRenderState: LassoRenderState;
   selectRenderState: SelectRenderState;
+  wandRenderState: WandRenderState;
   // ── Drawing overlay ──────────────────────────────────────────────────────
   showBrushIndicator: boolean;
   brushRadius: number;
@@ -87,7 +90,7 @@ export default function StageContent({
   layers, layerGroups, displayOrder, activeLayerId,
   activeTool, moveMode, brushSize, brushColor, maskStrokes,
   showGrid, snapToGrid,
-  lassoRenderState, selectRenderState,
+  lassoRenderState, selectRenderState, wandRenderState,
   showBrushIndicator, brushRadius, indicatorColor,
   brushRingRef, brushDotRef, brushIndicatorLayerRef,
   isDrawingTool,
@@ -245,6 +248,10 @@ export default function StageContent({
 
       {activeTool === "lasso" && (
         <LassoLayer {...lassoRenderState} />
+      )}
+
+      {activeTool === "wand" && (
+        <WandLayer {...wandRenderState} />
       )}
 
     </Stage>

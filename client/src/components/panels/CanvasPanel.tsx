@@ -21,6 +21,7 @@ import CanvasToolPanel from "../../features/canvas/CanvasToolPanel";
 import BrushControls from "../../features/canvas/sidebar/BrushControls";
 import MoveControls from "../../features/canvas/sidebar/MoveControls";
 import LassoControls from "../../features/canvas/sidebar/LassoControls";
+import WandControls from "../../features/canvas/sidebar/WandControls";
 import { useCanvasImageDrop } from "./canvas/useCanvasImageDrop";
 
 const LS_LEFT_W = "airunner_left_panel_w";
@@ -210,6 +211,7 @@ export default function CanvasPanel() {
     (canvas.activeTool === "brush" || canvas.activeTool === "eraser");
   const showMoveControls  = !showImagePrompt && canvas.activeTool === "move";
   const showLassoControls = !showImagePrompt && canvas.activeTool === "lasso";
+  const showWandControls  = !showImagePrompt && canvas.activeTool === "wand";
 
   return (
     <div
@@ -263,6 +265,7 @@ export default function CanvasPanel() {
                   {showBrushControls && <BrushControls />}
                   {showMoveControls && <MoveControls />}
                   {showLassoControls && <LassoControls />}
+                  {showWandControls && <WandControls />}
                 </div>
               </div>
 

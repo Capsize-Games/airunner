@@ -74,6 +74,28 @@ export interface CanvasContextValue {
   loadFromJSON: (json: string) => void;
   setBrushSize: (size: number) => void;
   setBrushColor: (color: string) => void;
+  // ── Wand tool settings ─────────────────────────────────────────────
+  wandAntialiasing: boolean;
+  wandFeatherEdges: boolean;
+  wandFeatherRadius: number;
+  wandSelectTransparentAreas: boolean;
+  wandSampleMerged: boolean;
+  wandDiagonalNeighbors: boolean;
+  wandThreshold: number;
+  setWandAntialiasing: (value: boolean) => void;
+  setWandFeatherEdges: (value: boolean) => void;
+  setWandFeatherRadius: (value: number) => void;
+  setWandSelectTransparentAreas: (value: boolean) => void;
+  setWandSampleMerged: (value: boolean) => void;
+  setWandDiagonalNeighbors: (value: boolean) => void;
+  setWandThreshold: (value: number) => void;
+  // ── Lasso tool settings (also exposed via context) ──────────────────
+  lassoAntialiasing: boolean;
+  lassoFeatherEdges: boolean;
+  lassoFeatherRadius: number;
+  setLassoAntialiasing: (value: boolean) => void;
+  setLassoFeatherEdges: (value: boolean) => void;
+  setLassoFeatherRadius: (value: number) => void;
 }
 
 const CanvasContext = createContext<CanvasContextValue | null>(null);
