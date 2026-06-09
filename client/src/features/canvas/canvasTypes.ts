@@ -67,7 +67,7 @@ export interface ActiveGridArea {
 export type ActiveTool =
   | "select" | "brush" | "eraser" | "mask" | "move"
   | "lasso" | "wand" | "crop" | "bucket" | "smudge"
-  | "text" | "pipette" | "zoom";
+  | "text" | "pipette" | "zoom" | "grid";
 
 export type ZoomDirection = "in" | "out";
 
@@ -118,6 +118,9 @@ export interface CanvasState {
   cropY: number;
   cropWidth: number;
   cropHeight: number;
+  gridShowGrid: boolean;
+  gridSize: number;
+  gridColor: string;
   zoomDirection: ZoomDirection;
   history: string[];
   historyIndex: number;

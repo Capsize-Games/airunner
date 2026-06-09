@@ -124,6 +124,13 @@ export interface CanvasContextValue {
   // ── Zoom tool settings ──────────────────────────────────────────────
   zoomDirection: "in" | "out";
   setZoomDirection: (value: "in" | "out") => void;
+  // ── Grid tool settings ──────────────────────────────────────────────
+  gridShowGrid: boolean;
+  gridSize: number;
+  gridColor: string;
+  setGridShowGrid: (value: boolean) => void;
+  setGridSize: (value: number) => void;
+  setGridColor: (value: string) => void;
   // ── Text tool settings ──────────────────────────────────────────────
   textFont: string;
   textSize: number;

@@ -29,6 +29,7 @@ import { crop as cropHook } from "./state/crop";
 import { smudge as smudgeHook } from "./state/smudge";
 import { pipette as pipetteHook } from "./state/pipette";
 import { zoom as zoomHook } from "./state/zoom";
+import { grid as gridHook } from "./state/grid";
 import { text as textHook } from "./state/text";
 import { document as documentHook } from "./state/document";
 import { serialization as serializationHook } from "./state/serialization";
@@ -52,6 +53,7 @@ export function useCanvasState() {
   const smudgeAPI = smudgeHook(setters);
   const pipetteAPI = pipetteHook(setters);
   const zoomAPI = zoomHook(setters);
+  const gridAPI = gridHook(setters);
   const textAPI = textHook(setters);
   const docAPI = documentHook(setters);
   const serializationAPI = serializationHook(state, setters);
@@ -83,6 +85,7 @@ export function useCanvasState() {
     ...smudgeAPI,
     ...pipetteAPI,
     ...zoomAPI,
+    ...gridAPI,
     ...textAPI,
     ...docAPI,
     ...serializationAPI,

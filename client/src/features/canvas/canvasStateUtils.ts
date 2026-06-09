@@ -109,6 +109,9 @@ export const defaultState = (): CanvasState => {
     displayOrder: [firstId],
     activeLayerId: firstId,
     selectedLayerIds: [firstId],
+    gridShowGrid: true,
+    gridSize: 64,
+    gridColor: "#ffffff",
     activeGridArea: {
       x: 0, y: 0, width: DEFAULT_GRID_SIZE, height: DEFAULT_GRID_SIZE,
     },
@@ -207,6 +210,9 @@ function parseCanvasState(raw: string): CanvasState | null {
     parsed.cropY ??= 0;
     parsed.cropWidth ??= 512;
     parsed.cropHeight ??= 512;
+    parsed.gridShowGrid ??= true;
+    parsed.gridSize ??= 64;
+    parsed.gridColor ??= "#ffffff";
     parsed.zoomDirection ??= "in";
     advanceCountersFromState(parsed);
     return parsed;

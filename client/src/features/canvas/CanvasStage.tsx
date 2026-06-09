@@ -42,7 +42,7 @@ const CanvasStage = forwardRef<CanvasStageHandle, CanvasStageProps>(
       layers, layerGroups, displayOrder, activeLayerId,
       activeTool, moveMode, selectedLayerIds,
       brushSize, brushColor, maskStrokes,
-      showGrid, snapToGrid,
+      showGrid, gridSize, gridColor, snapToGrid,
       onAddStroke, onMoveImage, onMoveLayer,
       onAddMaskStroke, onAddLayerMaskStroke,
       onUndo, onRedo, setActiveTool, setActiveLayer,
@@ -335,6 +335,8 @@ const CanvasStage = forwardRef<CanvasStageHandle, CanvasStageProps>(
           brushColor={brushColor}
           maskStrokes={maskStrokes}
           showGrid={showGrid}
+          gridSize={gridSize}
+          gridColor={gridColor}
           snapToGrid={snapToGrid}
           // Tool render states
           lassoRenderState={lasso.renderState}

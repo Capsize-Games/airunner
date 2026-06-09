@@ -13,8 +13,6 @@ import type {
   StrokeEndMessage,
 } from "../canvasSyncTypes";
 
-export const GRID_SIZE = 16;
-
 export interface CanvasStageHandle {
   zoomIn: () => void;
   zoomOut: () => void;
@@ -41,6 +39,8 @@ export interface CanvasStageProps {
   selectedLayerIds: string[];
   maskStrokes: StrokeNode[];
   showGrid: boolean;
+  gridSize: number;
+  gridColor: string;
   snapToGrid: boolean;
   onAddStroke: (
     stroke: Omit<StrokeNode, "id">,

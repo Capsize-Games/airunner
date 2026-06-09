@@ -28,6 +28,7 @@ import SmudgeControls from "../../features/canvas/sidebar/SmudgeControls";
 import PipetteControls from "../../features/canvas/sidebar/PipetteControls";
 import ZoomControls from "../../features/canvas/sidebar/ZoomControls";
 import TextControls from "../../features/canvas/sidebar/TextControls";
+import GridControls from "../../features/canvas/sidebar/GridControls";
 import { useCanvasImageDrop } from "./canvas/useCanvasImageDrop";
 
 const LS_LEFT_W = "airunner_left_panel_w";
@@ -47,6 +48,7 @@ const TOOL_LABELS: Record<string, string> = {
   zoom:    "Zoom",
   brush:   "Brush",
   eraser:  "Eraser",
+  grid:    "Grid",
 };
 
 let leftPanelDrag: { startX: number; startW: number; setW: (w: number) => void } | null = null;
@@ -83,9 +85,6 @@ export default function CanvasPanel() {
 
   const ghostStrokes = useGhostStrokes();
 
-  const [showGrid] = useState(() => {
-    try { return localStorage.getItem("canvas_show_grid") !== "false"; } catch { return true; }
-  });
   const [zoom, setZoom] = useState(1);
   const [isFitToView, setIsFitToView] = useState(() => {
     try { return localStorage.getItem("canvas_fit_to_view") !== "false"; } catch { return true; }
@@ -183,9 +182,6 @@ export default function CanvasPanel() {
   );
 
   useEffect(() => {
-    try { localStorage.setItem("canvas_show_grid", String(showGrid)); } catch { /* */ }
-  }, [showGrid]);
-  useEffect(() => {
     try { localStorage.setItem("canvas_grid_locked", String(gridLocked)); } catch { /* */ }
   }, [gridLocked]);
   useEffect(() => {
@@ -224,6 +220,7 @@ export default function CanvasPanel() {
   const showPipetteControls = !showImagePrompt && canvas.activeTool === "pipette";
   const showZoomControls = !showImagePrompt && canvas.activeTool === "zoom";
   const showTextControls = !showImagePrompt && canvas.activeTool === "text";
+  const showGridControls = !showImagePrompt && canvas.activeTool === "grid";
 
   return (
     <div
@@ -284,6 +281,7 @@ export default function CanvasPanel() {
                   {showPipetteControls && <PipetteControls />}
                   {showZoomControls && <ZoomControls />}
                   {showTextControls && <TextControls />}
+                  {showGridControls && <GridControls />}
                 </div>
               </div>
 
@@ -341,7 +339,9 @@ export default function CanvasPanel() {
                 brushSize={canvas.brushSize}
                 brushColor={canvas.brushColor}
                 maskStrokes={canvas.maskStrokes}
-                showGrid={showGrid}
+                showGrid={canvas.gridShowGrid}
+                gridSize={canvas.gridSize}
+                gridColor={canvas.gridColor}
                 snapToGrid={canvas.snapToGrid}
                 onAddStroke={canvas.addStroke}
                 onMoveImage={canvas.moveImage}

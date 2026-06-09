@@ -64,6 +64,8 @@ interface Props {
   brushColor: string;
   maskStrokes: StrokeNode[];
   showGrid: boolean;
+  gridSize: number;
+  gridColor: string;
   snapToGrid: boolean;
   // ── Tool render states (one per tool with a visual overlay) ─────────────
   lassoRenderState: LassoRenderState;
@@ -113,7 +115,7 @@ export default function StageContent({
   stageSize, zoom, documentWidth, documentHeight, documentBgColor,
   layers, layerGroups, displayOrder, activeLayerId,
   activeTool, moveMode, brushSize, brushColor, maskStrokes,
-  showGrid, snapToGrid,
+  showGrid, gridSize, gridColor, snapToGrid,
   lassoRenderState, selectRenderState, wandRenderState,
   cropRenderState, bucketRenderState, smudgeRenderState,
   pipetteRenderState, zoomToolRenderState, textToolRenderState,
@@ -220,7 +222,12 @@ export default function StageContent({
 
       {/* ── Grid ───────────────────────────────────────────────────────── */}
       <Layer listening={false} visible={showGrid}>
-        <GridLayer documentWidth={documentWidth} documentHeight={documentHeight} />
+        <GridLayer
+          documentWidth={documentWidth}
+          documentHeight={documentHeight}
+          gridSize={gridSize}
+          gridColor={gridColor}
+        />
       </Layer>
       <Layer ref={gridLayerRef}  listening={false} visible={false} />
       <Layer ref={ghostLayerRef} listening={false} />
