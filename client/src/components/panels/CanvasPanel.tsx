@@ -365,26 +365,25 @@ export default function CanvasPanel() {
                 sendStrokeEnd={canvasSync.sendStrokeEnd}
               />
             </div>
+            <CanvasStatusBar
+              documentWidth={canvas.documentWidth}
+              documentHeight={canvas.documentHeight}
+              zoom={zoom}
+              gridWidth={canvas.activeGridArea.width}
+              gridHeight={canvas.activeGridArea.height}
+              activeLayer={canvas.activeLayer}
+              isFitToView={isFitToView}
+              isCenterView={isCenterView}
+              onZoomOut={() => canvasHandleRef.current?.zoomOut()}
+              onZoomReset={() => canvasHandleRef.current?.zoomReset()}
+              onZoomIn={() => canvasHandleRef.current?.zoomIn()}
+              onCenterView={() => canvasHandleRef.current?.centerView()}
+              onFitView={() => canvasHandleRef.current?.fitView()}
+            />
           </div>
 
           <CanvasAssetsSidebar visible={assetTab !== null} activeTab={assetTab ?? "layers"} />
         </div>
-
-        <CanvasStatusBar
-          documentWidth={canvas.documentWidth}
-          documentHeight={canvas.documentHeight}
-          zoom={zoom}
-          gridWidth={canvas.activeGridArea.width}
-          gridHeight={canvas.activeGridArea.height}
-          activeLayer={canvas.activeLayer}
-          isFitToView={isFitToView}
-          isCenterView={isCenterView}
-          onZoomOut={() => canvasHandleRef.current?.zoomOut()}
-          onZoomReset={() => canvasHandleRef.current?.zoomReset()}
-          onZoomIn={() => canvasHandleRef.current?.zoomIn()}
-          onCenterView={() => canvasHandleRef.current?.centerView()}
-          onFitView={() => canvasHandleRef.current?.fitView()}
-        />
       </div>
 
       <CanvasSettingsModal
