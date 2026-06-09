@@ -1,70 +1,171 @@
+import { useState } from "react";
 import Spinner from "react-bootstrap/Spinner";
-import ListGroup from "react-bootstrap/ListGroup";
+import LucideIcon from "../shared/LucideIcon";
 import { useConversations } from "../../hooks/useConversations";
 
-// ── Chat History ──
 export function ChatHistoryPanel({
   onSelectConversation,
 }: {
   onSelectConversation: (id: number) => void;
 }) {
   const { conversations, loading, remove } = useConversations();
+  const [confirmDeleteAll, setConfirmDeleteAll] = useState(false);
+
+  const handleDeleteAll = () => {
+    conversations.forEach((c) => remove(c.id));
+    setConfirmDeleteAll(false);
+  };
 
   return (
-    <div className="p-2">
-      <div className="d-flex justify-content-between align-items-center mb-2">
-        <h6 className="text-muted mb-0">Chat History</h6>
-        <button
-          type="button"
-          className="btn btn-sm btn-outline-danger"
-          onClick={() => conversations.forEach((c) => remove(c.id))}
+    <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
+      {/* Sticky header */}
+      <div
+        style={{
+          flexShrink: 0,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          padding: "8px 12px 6px",
+          borderBottom: "1px solid var(--theme-border)",
+          background: "var(--theme-panel-bg)",
+          gap: 8,
+        }}
+      >
+        <span
+          style={{
+            fontSize: 10,
+            fontWeight: 700,
+            letterSpacing: "0.07em",
+            textTransform: "uppercase",
+            color: "var(--theme-text-secondary)",
+          }}
         >
-          Clear All
-        </button>
+          Chat History
+        </span>
+
+        {confirmDeleteAll ? (
+          <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+            <span style={{ fontSize: "0.7rem", color: "var(--theme-text-secondary)" }}>
+              Delete all?
+            </span>
+            <button
+              type="button"
+              onClick={handleDeleteAll}
+              style={{
+                fontSize: "0.7rem", padding: "1px 7px",
+                background: "var(--bs-danger)", color: "#fff",
+                border: "none", borderRadius: 4, cursor: "pointer",
+              }}
+            >
+              Yes
+            </button>
+            <button
+              type="button"
+              onClick={() => setConfirmDeleteAll(false)}
+              style={{
+                fontSize: "0.7rem", padding: "1px 7px",
+                background: "rgba(255,255,255,0.08)", color: "var(--theme-text)",
+                border: "none", borderRadius: 4, cursor: "pointer",
+              }}
+            >
+              No
+            </button>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setConfirmDeleteAll(true)}
+            disabled={conversations.length === 0}
+            style={{
+              display: "flex", alignItems: "center", gap: 4,
+              fontSize: "0.72rem", padding: "2px 8px",
+              background: "transparent",
+              color: conversations.length === 0 ? "rgba(255,255,255,0.2)" : "var(--bs-danger)",
+              border: `1px solid ${conversations.length === 0 ? "rgba(255,255,255,0.1)" : "rgba(220,53,69,0.4)"}`,
+              borderRadius: 4, cursor: conversations.length === 0 ? "default" : "pointer",
+            }}
+          >
+            <LucideIcon name="trash-2" size={11} />
+            Delete All
+          </button>
+        )}
       </div>
 
-      {loading ? (
-        <Spinner animation="border" size="sm" className="d-block mx-auto" />
-      ) : conversations.length === 0 ? (
-        <p className="text-muted small">
-          No conversations yet. Start a chat to create one.
-        </p>
-      ) : (
-        <ListGroup variant="flush">
-          {conversations.map((c) => (
-            <ListGroup.Item
+      {/* Scrollable list */}
+      <div style={{ flex: 1, overflowY: "auto", minHeight: 0 }}>
+        {loading ? (
+          <div className="p-3 text-center">
+            <Spinner animation="border" size="sm" />
+          </div>
+        ) : conversations.length === 0 ? (
+          <p className="text-muted small p-2">
+            No conversations yet. Start a chat to create one.
+          </p>
+        ) : (
+          conversations.map((c) => (
+            <div
               key={c.id}
-              action
-              active={c.current}
-              className="d-flex justify-content-between align-items-center py-1 px-2 bg-transparent"
               onClick={() => onSelectConversation(c.id)}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                padding: "6px 10px",
+                borderBottom: "1px solid rgba(255,255,255,0.04)",
+                cursor: "pointer",
+                background: c.current ? "rgba(13,110,253,0.10)" : "transparent",
+                borderLeft: c.current ? "2px solid var(--bs-primary)" : "2px solid transparent",
+              }}
+              onMouseEnter={(e) => {
+                if (!c.current)
+                  (e.currentTarget as HTMLDivElement).style.background = "rgba(255,255,255,0.05)";
+              }}
+              onMouseLeave={(e) => {
+                if (!c.current)
+                  (e.currentTarget as HTMLDivElement).style.background = "transparent";
+              }}
             >
-              <small className="text-truncate">
-                {c.title || `Chat #${c.id}`}
-              </small>
               <span
-                role="button"
-                tabIndex={0}
-                className="text-danger p-0 ms-1"
-                style={{ cursor: "pointer", fontSize: "0.875rem", lineHeight: 1 }}
+                style={{
+                  fontSize: "0.78rem",
+                  color: c.current ? "var(--bs-primary)" : "var(--theme-text)",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
+                  flex: 1,
+                  minWidth: 0,
+                }}
+              >
+                {c.title || `Chat #${c.id}`}
+              </span>
+              <button
+                type="button"
+                title="Delete conversation"
                 onClick={(e) => {
                   e.stopPropagation();
                   remove(c.id);
                 }}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.stopPropagation();
-                    remove(c.id);
-                  }
+                style={{
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  width: 22, height: 22, padding: 0, flexShrink: 0, marginLeft: 6,
+                  background: "transparent", border: "none", borderRadius: 4,
+                  color: "rgba(255,255,255,0.3)", cursor: "pointer",
                 }}
-                title="Delete"
+                onMouseEnter={(e) => {
+                  (e.currentTarget as HTMLButtonElement).style.color = "var(--bs-danger)";
+                  (e.currentTarget as HTMLButtonElement).style.background = "rgba(220,53,69,0.12)";
+                }}
+                onMouseLeave={(e) => {
+                  (e.currentTarget as HTMLButtonElement).style.color = "rgba(255,255,255,0.3)";
+                  (e.currentTarget as HTMLButtonElement).style.background = "transparent";
+                }}
               >
-                ✕
-              </span>
-            </ListGroup.Item>
-          ))}
-        </ListGroup>
-      )}
+                <LucideIcon name="trash-2" size={12} />
+              </button>
+            </div>
+          ))
+        )}
+      </div>
     </div>
   );
 }

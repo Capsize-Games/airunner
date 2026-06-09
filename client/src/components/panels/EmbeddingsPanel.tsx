@@ -93,32 +93,50 @@ export default function EmbeddingsPanel() {
   };
 
   return (
-    <div className="p-2">
-      {loading ? (
-        <Spinner animation="border" size="sm" className="d-block mx-auto" />
-      ) : items.length === 0 ? (
-        <p className="text-muted small">
-          No textual inversion embeddings found. Add embedding files to
-          your models directory and they will be detected automatically.
-        </p>
-      ) : (
-        <div className="embed-list">
-          {items.map((item) => (
-            <EmbeddingItem
-              key={item.id}
-              item={item}
-              onToggle={handleToggle}
-              onCopyWord={handleCopyWord}
-              onDeleteWord={handleDeleteWord}
-              onAddWords={handleAddWords}
-              onInputChange={(id, value) =>
-                setInputTexts((prev) => ({ ...prev, [id]: value }))
-              }
-              onInputKeyDown={handleInputKeyDown}
-            />
-          ))}
-        </div>
-      )}
+    <div style={{ display: "flex", flexDirection: "column" }}>
+      <div style={{
+        position: "sticky", top: 0,
+        flexShrink: 0,
+        display: "flex", alignItems: "center",
+        padding: "8px 12px 6px",
+        borderBottom: "1px solid var(--theme-border)",
+        background: "var(--theme-panel-bg)",
+        zIndex: 1,
+      }}>
+        <span style={{
+          fontSize: 10, fontWeight: 700, letterSpacing: "0.07em",
+          textTransform: "uppercase", color: "var(--theme-text-secondary)",
+        }}>
+          Embeddings
+        </span>
+      </div>
+      <div className="p-2">
+        {loading ? (
+          <Spinner animation="border" size="sm" className="d-block mx-auto" />
+        ) : items.length === 0 ? (
+          <p className="text-muted small">
+            No textual inversion embeddings found. Add embedding files to
+            your models directory and they will be detected automatically.
+          </p>
+        ) : (
+          <div className="embed-list">
+            {items.map((item) => (
+              <EmbeddingItem
+                key={item.id}
+                item={item}
+                onToggle={handleToggle}
+                onCopyWord={handleCopyWord}
+                onDeleteWord={handleDeleteWord}
+                onAddWords={handleAddWords}
+                onInputChange={(id, value) =>
+                  setInputTexts((prev) => ({ ...prev, [id]: value }))
+                }
+                onInputKeyDown={handleInputKeyDown}
+              />
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

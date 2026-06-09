@@ -1,5 +1,4 @@
 import { useState } from "react";
-import Spinner from "react-bootstrap/Spinner";
 import ProgressBar from "react-bootstrap/ProgressBar";
 import { BASE_URL } from "../../types/api";
 import KBRow from "./knowledge-base/KBRow";
@@ -8,7 +7,6 @@ import { useEventBus } from "../../features/events/useEventBus";
 import { EVENT_DOCUMENTS, EVENT_INDEX_PROGRESS } from "../../features/events/types";
 import { useKnowledgeBaseDocs } from "../../hooks/useKnowledgeBaseDocs";
 
-// ── Knowledge Base ──
 export function KnowledgeBasePanel() {
   const { docs, loading, reload, toggle } = useKnowledgeBaseDocs();
   const [indexing, setIndexing] = useState(false);
@@ -106,22 +104,38 @@ export function KnowledgeBasePanel() {
   const totalDocs = documents.length;
   const activeDocs = documents.filter((d) => d.active).length;
 
-  if (loading) {
-    return (
-      <div className="p-2">
-        <h6 className="text-muted mb-2">Knowledge Base</h6>
-        <Spinner animation="border" size="sm" className="d-block mx-auto" />
-      </div>
-    );
-  }
-
   return (
-    <div className="d-flex flex-column h-100 p-2">
-      <h6 className="text-muted mb-2">Knowledge Base</h6>
+    <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
+      {/* Sticky header */}
+      <div
+        style={{
+          flexShrink: 0,
+          padding: "8px 12px 6px",
+          borderBottom: "1px solid var(--theme-border)",
+          background: "var(--theme-panel-bg)",
+        }}
+      >
+        <span
+          style={{
+            fontSize: 10,
+            fontWeight: 700,
+            letterSpacing: "0.07em",
+            textTransform: "uppercase",
+            color: "var(--theme-text-secondary)",
+          }}
+        >
+          Knowledge Base
+        </span>
+      </div>
 
-      <div className="overflow-auto mb-2" style={{ flex: 1, minHeight: 0 }}>
-        {documents.length === 0 ? (
-          <p className="text-muted small">No documents loaded.</p>
+      {/* Scrollable content */}
+      <div style={{ flex: 1, overflowY: "auto", minHeight: 0 }}>
+        {loading ? (
+          <div className="p-3 text-center">
+            <div className="spinner-border spinner-border-sm" role="status" />
+          </div>
+        ) : documents.length === 0 ? (
+          <p className="text-muted small p-2">No documents loaded.</p>
         ) : (
           <table
             className="table table-sm table-dark mb-0"
@@ -149,80 +163,82 @@ export function KnowledgeBasePanel() {
         )}
       </div>
 
-      <div className="row g-2 mb-1 flex-shrink-0">
-        <div className="col-3">
-          <div className="stat-box">
-            <span className="stat-label">Total</span>
-            <span className="stat-value">{totalDocs}</span>
-          </div>
+      {/* Sticky footer — stats + progress + buttons */}
+      <div
+        style={{
+          flexShrink: 0,
+          borderTop: "1px solid var(--theme-border)",
+          padding: "6px 10px 8px",
+          background: "var(--theme-panel-bg)",
+          display: "flex",
+          flexDirection: "column",
+          gap: 6,
+        }}
+      >
+        {/* Stats row */}
+        <div className="row g-2">
+          {[
+            { label: "Total",   value: totalDocs,              color: undefined },
+            { label: "Active",  value: activeDocs,             color: "var(--bs-info)" },
+            { label: "Indexed", value: indexedDocs,            color: "var(--bs-success)" },
+            { label: "Pending", value: totalDocs - indexedDocs, color: "var(--bs-warning)" },
+          ].map(({ label, value, color }) => (
+            <div key={label} className="col-3">
+              <div className="stat-box">
+                <span className="stat-label">{label}</span>
+                <span className="stat-value" style={color ? { color } : undefined}>{value}</span>
+              </div>
+            </div>
+          ))}
         </div>
-        <div className="col-3">
-          <div className="stat-box">
-            <span className="stat-label">Active</span>
-            <span className="stat-value text-info">{activeDocs}</span>
-          </div>
-        </div>
-        <div className="col-3">
-          <div className="stat-box">
-            <span className="stat-label">Indexed</span>
-            <span className="stat-value text-success">{indexedDocs}</span>
-          </div>
-        </div>
-        <div className="col-3">
-          <div className="stat-box">
-            <span className="stat-label">Pending</span>
-            <span className="stat-value text-warning">
-              {totalDocs - indexedDocs}
-            </span>
-          </div>
-        </div>
-      </div>
 
-      <div className="d-flex align-items-center gap-1 flex-shrink-0">
-        <div className="flex-grow-1" style={{ position: "relative", height: 6 }}>
-          {modelLoading ? (
-            <div
-              style={{
-                height: 6,
-                borderRadius: 4,
-                background: "linear-gradient(90deg, transparent 0%, #0dcaf0 50%, transparent 100%)",
-                backgroundSize: "200% 100%",
-                animation: "indeterminate-bar 1.5s ease-in-out infinite",
-              }}
-            />
+        {/* Progress + action buttons */}
+        <div className="d-flex align-items-center gap-1">
+          <div className="flex-grow-1" style={{ position: "relative", height: 6 }}>
+            {modelLoading ? (
+              <div
+                style={{
+                  height: 6,
+                  borderRadius: 4,
+                  background: "linear-gradient(90deg, transparent 0%, #0dcaf0 50%, transparent 100%)",
+                  backgroundSize: "200% 100%",
+                  animation: "indeterminate-bar 1.5s ease-in-out infinite",
+                }}
+              />
+            ) : (
+              <ProgressBar
+                now={indexing ? progress : 0}
+                animated={indexing}
+                variant={indexing ? "info" : "secondary"}
+                style={{ height: 6 }}
+              />
+            )}
+          </div>
+          <button
+            className="icon-btn icon-btn-bordered"
+            title="Import document(s) into knowledge base"
+            onClick={handleImport}
+          >
+            <LucideIcon name="upload" size={16} />
+          </button>
+          {indexing ? (
+            <button
+              className="icon-btn icon-btn-bordered"
+              title="Cancel indexing"
+              onClick={handleCancel}
+            >
+              <LucideIcon name="circle-x" size={16} />
+            </button>
           ) : (
-            <ProgressBar
-              now={indexing ? progress : 0}
-              animated={indexing}
-              variant={indexing ? "info" : "secondary"}
-              style={{ height: 6 }}
-            />
+            <button
+              className="icon-btn icon-btn-bordered"
+              title="Index all documents"
+              onClick={handleIndex}
+            >
+              <LucideIcon name="database" size={16} />
+            </button>
           )}
         </div>
-        <button
-          className="icon-btn icon-btn-bordered"
-          title="Import document(s) into knowledge base"
-          onClick={handleImport}
-        >
-          <LucideIcon name="upload" size={16} />
-        </button>
-        {indexing ? (
-          <button
-            className="icon-btn icon-btn-bordered"
-            title="Cancel indexing"
-            onClick={handleCancel}
-          >
-            <LucideIcon name="circle-x" size={16} />
-          </button>
-        ) : (
-          <button
-            className="icon-btn icon-btn-bordered"
-            title="Index all documents"
-            onClick={handleIndex}
-          >
-            <LucideIcon name="database" size={16} />
-          </button>
-        )}
       </div>
     </div>
   );

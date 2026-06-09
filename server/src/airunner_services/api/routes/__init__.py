@@ -12,6 +12,7 @@ from airunner_services.api.routes import rpc_loras  # noqa: F401
 from airunner_services.api.routes import rpc_models  # noqa: F401
 from airunner_services.api.routes import rpc_privacy  # noqa: F401
 from airunner_services.api.routes import rpc_settings  # noqa: F401
+from airunner_services.api.routes import rpc_saved_prompts  # noqa: F401
 
 from airunner_services.api.routes.events import router as events_router
 

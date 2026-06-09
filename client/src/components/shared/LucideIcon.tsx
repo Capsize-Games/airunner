@@ -2,11 +2,11 @@ import {
   Activity, Book, BotMessageSquare, Brain,
   ChevronDown, ChevronLeft, ChevronRight, ChevronUp,
   CircleCheck, CircleStop, CircleX, Cloud, Copy, Database, DatabaseZap, Dices,
-  Drama, Eraser, Grid2x2Check, History, Image, Images, Info, Layers, LayersPlus, Loader,
+  Drama, Eraser, FolderOpen, Globe, Save, Grid2x2Check, History, Image, Images, Info, Layers, LayersPlus, Loader,
   MessageSquareHeart, MessageSquareText, Mic, Move, OctagonAlert,
   PanelRightOpen, Pencil, Play, Plus, Puzzle, RotateCcwSquare,
   ScanText, Settings, Settings2, SlidersHorizontal, Sparkles,
-  Speaker, SquareDashed, Trash, Upload,
+  Speaker, SquareDashed, Trash, Upload, User,
   type LucideIcon,
 } from "lucide-react";
 
@@ -30,6 +30,9 @@ const MAP: Record<string, LucideIcon> = {
   dices: Dices,
   drama: Drama,
   eraser: Eraser,
+  "folder-open": FolderOpen,
+  save: Save,
+  globe: Globe,
   "grid-2x2-check": Grid2x2Check,
   history: History,
   image: Image,
@@ -58,6 +61,7 @@ const MAP: Record<string, LucideIcon> = {
   "square-dashed": SquareDashed,
   trash: Trash,
   upload: Upload,
+  user: User,
 };
 
 interface Props {
