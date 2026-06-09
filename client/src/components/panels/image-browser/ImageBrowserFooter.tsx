@@ -18,7 +18,15 @@ export default function ImageBrowserFooter({
   if (total === 0) return null;
 
   return (
-    <div className="d-flex justify-content-between align-items-center mt-1">
+    <div
+      className="d-flex justify-content-between align-items-center"
+      style={{
+        padding: "5px 8px",
+        borderTop: "1px solid rgba(255,255,255,0.07)",
+        background: "#161620",
+        marginTop: 0,
+      }}
+    >
       <div>
         {confirmDeleteAll ? (
           <div className="d-flex gap-2 align-items-center">

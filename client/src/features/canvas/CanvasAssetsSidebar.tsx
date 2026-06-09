@@ -75,7 +75,7 @@ export default function CanvasAssetsSidebar({
     document.body.style.userSelect = "none";
     const onMove = (ev: MouseEvent) => {
       if (!dragging.current) return;
-      setWidth(Math.max(180, Math.min(500, startW.current - (ev.clientX - startX.current))));
+      setWidth(Math.max(260, Math.min(500, startW.current - (ev.clientX - startX.current))));
     };
     const onUp = () => {
       dragging.current = false;
@@ -104,10 +104,10 @@ export default function CanvasAssetsSidebar({
         onMouseLeave={(e) => { if (!dragging.current) (e.currentTarget as HTMLDivElement).style.background = "transparent"; }}
       />
 
-      <div className="flex-grow-1 d-flex flex-column overflow-hidden" style={{ background: "#181824", minWidth: 0 }}>
+      <div className="flex-grow-1 d-flex flex-column overflow-hidden" style={{ background: "#14141e", minWidth: 0 }}>
 
         {/* Tab bar */}
-        <div className="d-flex flex-shrink-0 border-b-subtle">
+        <div className="d-flex flex-shrink-0 border-b-subtle" style={{ background: "#161620" }}>
           {TABS.map((t) => (
             <button
               key={t.id}

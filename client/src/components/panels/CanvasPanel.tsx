@@ -292,6 +292,7 @@ export default function CanvasPanel() {
                 display: "flex", alignItems: "center", justifyContent: "space-between",
                 padding: "3px 6px",
                 borderTop: "1px solid rgba(255,255,255,0.07)",
+                background: "#161620",
                 flexShrink: 0,
               }}>
                 <button title="Reset tool presets" style={resetBtnStyle}>
