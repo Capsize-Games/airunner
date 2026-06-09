@@ -26,6 +26,7 @@ import { lasso as lassoHook } from "./state/lasso";
 import { wand as wandHook } from "./state/wand";
 import { bucket as bucketHook } from "./state/bucket";
 import { crop as cropHook } from "./state/crop";
+import { smudge as smudgeHook } from "./state/smudge";
 import { document as documentHook } from "./state/document";
 import { serialization as serializationHook } from "./state/serialization";
 
@@ -45,6 +46,7 @@ export function useCanvasState() {
   const wandAPI = wandHook(setters);
   const bucketAPI = bucketHook(setters);
   const cropAPI = cropHook(setters);
+  const smudgeAPI = smudgeHook(setters);
   const docAPI = documentHook(setters);
   const serializationAPI = serializationHook(state, setters);
 
@@ -72,6 +74,7 @@ export function useCanvasState() {
     ...wandAPI,
     ...bucketAPI,
     ...cropAPI,
+    ...smudgeAPI,
     ...docAPI,
     ...serializationAPI,
   };

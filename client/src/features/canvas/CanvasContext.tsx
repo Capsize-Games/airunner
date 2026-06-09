@@ -114,6 +114,9 @@ export interface CanvasContextValue {
   setCropY: (value: number) => void;
   setCropWidth: (value: number) => void;
   setCropHeight: (value: number) => void;
+  // ── Smudge tool settings ─────────────────────────────────────────────
+  smudgeSize: number;
+  setSmudgeSize: (value: number) => void;
 }
 
 const CanvasContext = createContext<CanvasContextValue | null>(null);

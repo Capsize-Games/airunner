@@ -130,6 +130,7 @@ export const defaultState = (): CanvasState => {
     bucketFillTransparentAreas: true,
     bucketAntialiasing: true,
     bucketThreshold: 15,
+    smudgeSize: 20,
     maskStrokes: [] as StrokeNode[],
     snapToGrid: false,
     cropX: 0,
@@ -193,6 +194,7 @@ function parseCanvasState(raw: string): CanvasState | null {
     parsed.bucketFillTransparentAreas ??= true;
     parsed.bucketAntialiasing ??= true;
     parsed.bucketThreshold ??= 15;
+    parsed.smudgeSize ??= 20;
     parsed.cropX ??= 0;
     parsed.cropY ??= 0;
     parsed.cropWidth ??= 512;

@@ -95,6 +95,7 @@ export interface CanvasState {
   bucketFillTransparentAreas: boolean;
   bucketAntialiasing: boolean;
   bucketThreshold: number; // 0–100
+  smudgeSize: number; // 0–100
   maskStrokes: StrokeNode[];
   snapToGrid: boolean;
   cropX: number;
