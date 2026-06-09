@@ -19,10 +19,12 @@ import LassoLayer from "./tools/lasso/LassoLayer";
 import SelectLayer from "./tools/select/SelectLayer";
 import WandLayer from "./tools/wand/WandLayer";
 import CropLayer from "./tools/crop/CropLayer";
+import BucketLayer from "./tools/bucket/BucketLayer";
 import type { LassoRenderState } from "./tools/lasso/useLassoTool";
 import type { SelectRenderState } from "./tools/select/useSelectTool";
 import type { WandRenderState } from "./tools/wand/useWandTool";
 import type { CropRenderState } from "./tools/crop/useCropTool";
+import type { BucketRenderState } from "./tools/bucket/useBucketTool";
 import type {
   CanvasLayer,
   LayerGroup,
@@ -58,6 +60,7 @@ interface Props {
   selectRenderState: SelectRenderState;
   wandRenderState: WandRenderState;
   cropRenderState: CropRenderState;
+  bucketRenderState: BucketRenderState;
   cropOnRectChange: (
     x: number, y: number,
     width: number, height: number,
@@ -98,7 +101,7 @@ export default function StageContent({
   activeTool, moveMode, brushSize, brushColor, maskStrokes,
   showGrid, snapToGrid,
   lassoRenderState, selectRenderState, wandRenderState,
-  cropRenderState, cropOnRectChange,
+  cropRenderState, bucketRenderState, cropOnRectChange,
   showBrushIndicator, brushRadius, indicatorColor,
   brushRingRef, brushDotRef, brushIndicatorLayerRef,
   isDrawingTool,
@@ -269,6 +272,10 @@ export default function StageContent({
           stageHeight={stageSize.height}
           onCropRectChange={cropOnRectChange}
         />
+      )}
+
+      {activeTool === "bucket" && (
+        <BucketLayer {...bucketRenderState} />
       )}
 
     </Stage>

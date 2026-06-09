@@ -11,6 +11,8 @@
 import { useState, useCallback, useEffect } from "react";
 import Konva from "konva";
 
+import { floodFillMask, thresholdToDistance } from "../shared/floodFill";
+
 // ── Public types ──────────────────────────────────────────────────────────
 
 export interface WandRenderState {
@@ -40,131 +42,6 @@ interface WandSettings {
   sampleMerged: boolean;
   diagonalNeighbors: boolean;
   threshold: number; // 0–100
-}
-
-// ── Flood-fill implementation ─────────────────────────────────────────────
-
-/**
- * Compute RGBA Euclidean distance between two pixels in an ImageData array.
- * Tolerance is the 0-100 slider value mapped to a 0-441.67 max distance
- * (sqrt(255^2 * 4) ≈ 441.67 for RGBA).  We scale linearly.
- */
-function colorDistance(
-  data: Uint8ClampedArray,
-  i1: number,
-  i2: number,
-): number {
-  const dr = data[i1] - data[i2];
-  const dg = data[i1 + 1] - data[i2 + 1];
-  const db = data[i1 + 2] - data[i2 + 2];
-  const da = data[i1 + 3] - data[i2 + 3];
-  return Math.sqrt(dr * dr + dg * dg + db * db + da * da);
-}
-
-/** Convert 0–100 threshold to an RGBA Euclidean distance threshold. */
-function thresholdToDistance(t: number): number {
-  // 0–100 maps to 0–441.67
-  return (t / 100) * Math.sqrt(255 * 255 * 4);
-}
-
-/**
- * Breadth-First Search flood fill returning a boolean mask (Uint8Array).
- *
- * @param imageData  Raw pixel data (width × height × 4).
- * @param startX     Click x in image-local coordinates.
- * @param startY     Click y in image-local coordinates.
- * @param tolerance  Max RGBA Euclidean distance for a pixel to be included.
- * @param diagonal   If true, use 8-connectivity; otherwise 4-connectivity.
- * @param selectTransparent  If true, treat alpha=0 clicks as valid.
- * @returns A Uint8Array of length width*height where 1 = selected.
- */
-function floodFill(
-  imageData: ImageData,
-  startX: number,
-  startY: number,
-  tolerance: number,
-  diagonal: boolean,
-  selectTransparent: boolean,
-): Uint8Array {
-  const { width, height, data } = imageData;
-  const size = width * height;
-  const mask = new Uint8Array(size);
-  const visited = new Uint8Array(size);
-
-  const sx = Math.round(startX);
-  const sy = Math.round(startY);
-
-  if (sx < 0 || sx >= width || sy < 0 || sy >= height) return mask;
-
-  const startIdx = (sy * width + sx) * 4;
-
-  // If the clicked pixel is fully transparent and selectTransparent is
-  // false, halt immediately — no selection.
-  if (data[startIdx + 3] === 0 && !selectTransparent) return mask;
-
-  // Queue for BFS
-  const queue = new Int32Array(size * 2);
-  let head = 0;
-  let tail = 0;
-
-  const startPixel = sy * width + sx;
-  visited[startPixel] = 1;
-  mask[startPixel] = 1;
-  queue[tail++] = sx;
-  queue[tail++] = sy;
-
-  // Neighbor offsets
-  const dx4 = [0, 1, 0, -1];
-  const dy4 = [-1, 0, 1, 0];
-  const dx8 = [0, 1, 1, 1, 0, -1, -1, -1];
-  const dy8 = [-1, -1, 0, 1, 1, 1, 0, -1];
-  const dx = diagonal ? dx8 : dx4;
-  const dy = diagonal ? dy8 : dy4;
-  const dirs = diagonal ? 8 : 4;
-
-  // For fully transparent click, treat matching alpha=0 as valid.
-  const clickedTransparent = data[startIdx + 3] === 0;
-
-  while (head < tail) {
-    const cx = queue[head++];
-    const cy = queue[head++];
-    for (let d = 0; d < dirs; d++) {
-      const nx = cx + dx[d];
-      const ny = cy + dy[d];
-
-      if (nx < 0 || nx >= width || ny < 0 || ny >= height) continue;
-
-      const np = ny * width + nx;
-      if (visited[np]) continue;
-      visited[np] = 1;
-
-      const ni = np * 4;
-
-      // Hard boundary: if selectTransparent is false, any alpha=0 pixel
-      // is a boundary.
-      if (!selectTransparent && data[ni + 3] === 0) continue;
-
-      if (clickedTransparent) {
-        // Clicked on transparent — match only other fully transparent pixels
-        if (data[ni + 3] !== 0) continue;
-        mask[np] = 1;
-        queue[tail++] = nx;
-        queue[tail++] = ny;
-      } else {
-        // Compare against the seed pixel, not the current BFS pixel.
-        // Comparing against the current pixel causes color drift, allowing
-        // the fill to traverse the entire image step-by-step.
-        const dist = colorDistance(data, startIdx, ni);
-        if (dist <= tolerance) {
-          mask[np] = 1;
-          queue[tail++] = nx;
-          queue[tail++] = ny;
-        }
-      }
-    }
-  }
-
-  return mask;
 }
 
 // ── Boundary extraction ───────────────────────────────────────────────────
@@ -386,11 +263,24 @@ export function useWandTool({
             localPoint.y < 0 || localPoint.y > imgH
           ) continue;
 
-          const imageEl = imageNode.image() as HTMLImageElement;
-          if (!imageEl || !imageEl.complete) continue;
+          // The source may be an <img> or an HTMLCanvasElement — the bucket
+          // fill tool replaces the source with a canvas, which has no
+          // `complete`/`naturalWidth`. Handle both so the wand keeps working
+          // after a fill.
+          const imageEl = imageNode.image() as
+            | HTMLImageElement
+            | HTMLCanvasElement;
+          if (!imageEl) continue;
+          if (imageEl instanceof HTMLImageElement && !imageEl.complete) continue;
 
-          const naturalW = imageEl.naturalWidth || imgW;
-          const naturalH = imageEl.naturalHeight || imgH;
+          const naturalW =
+            "naturalWidth" in imageEl
+              ? (imageEl as HTMLImageElement).naturalWidth || imgW
+              : imageEl.width || imgW;
+          const naturalH =
+            "naturalHeight" in imageEl
+              ? (imageEl as HTMLImageElement).naturalHeight || imgH
+              : imageEl.height || imgH;
 
           const imgCanvas = document.createElement("canvas");
           imgCanvas.width = naturalW;
@@ -423,13 +313,15 @@ export function useWandTool({
 
       // Run flood fill
       const tolerance = thresholdToDistance(settings.threshold);
-      const mask = floodFill(
+      const mask = floodFillMask(
         imageData,
         Math.round(localX),
         Math.round(localY),
         tolerance,
-        settings.diagonalNeighbors,
-        settings.selectTransparentAreas,
+        {
+          diagonal: settings.diagonalNeighbors,
+          matchTransparent: settings.selectTransparentAreas,
+        },
       );
 
       // Extract boundary

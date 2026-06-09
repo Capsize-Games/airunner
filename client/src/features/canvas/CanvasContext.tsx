@@ -89,6 +89,15 @@ export interface CanvasContextValue {
   setWandSampleMerged: (value: boolean) => void;
   setWandDiagonalNeighbors: (value: boolean) => void;
   setWandThreshold: (value: number) => void;
+  // ── Bucket tool settings ───────────────────────────────────────────
+  bucketColorSource: "foreground" | "background";
+  bucketFillTransparentAreas: boolean;
+  bucketAntialiasing: boolean;
+  bucketThreshold: number;
+  setBucketColorSource: (value: "foreground" | "background") => void;
+  setBucketFillTransparentAreas: (value: boolean) => void;
+  setBucketAntialiasing: (value: boolean) => void;
+  setBucketThreshold: (value: number) => void;
   // ── Lasso tool settings (also exposed via context) ──────────────────
   lassoAntialiasing: boolean;
   lassoFeatherEdges: boolean;

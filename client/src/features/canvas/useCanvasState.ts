@@ -24,6 +24,7 @@ import { history as historyHook } from "./state/history";
 import { brush as brushHook } from "./state/brush";
 import { lasso as lassoHook } from "./state/lasso";
 import { wand as wandHook } from "./state/wand";
+import { bucket as bucketHook } from "./state/bucket";
 import { crop as cropHook } from "./state/crop";
 import { document as documentHook } from "./state/document";
 import { serialization as serializationHook } from "./state/serialization";
@@ -42,6 +43,7 @@ export function useCanvasState() {
   const brushAPI = brushHook(setters);
   const lassoAPI = lassoHook(setters);
   const wandAPI = wandHook(setters);
+  const bucketAPI = bucketHook(setters);
   const cropAPI = cropHook(setters);
   const docAPI = documentHook(setters);
   const serializationAPI = serializationHook(state, setters);
@@ -68,6 +70,7 @@ export function useCanvasState() {
     ...brushAPI,
     ...lassoAPI,
     ...wandAPI,
+    ...bucketAPI,
     ...cropAPI,
     ...docAPI,
     ...serializationAPI,

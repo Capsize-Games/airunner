@@ -126,6 +126,10 @@ export const defaultState = (): CanvasState => {
     wandSampleMerged: false,
     wandDiagonalNeighbors: false,
     wandThreshold: 15,
+    bucketColorSource: "foreground" as const,
+    bucketFillTransparentAreas: true,
+    bucketAntialiasing: true,
+    bucketThreshold: 15,
     maskStrokes: [] as StrokeNode[],
     snapToGrid: false,
     cropX: 0,
@@ -185,6 +189,10 @@ function parseCanvasState(raw: string): CanvasState | null {
     parsed.wandSampleMerged ??= false;
     parsed.wandDiagonalNeighbors ??= false;
     parsed.wandThreshold ??= 15;
+    parsed.bucketColorSource ??= "foreground";
+    parsed.bucketFillTransparentAreas ??= true;
+    parsed.bucketAntialiasing ??= true;
+    parsed.bucketThreshold ??= 15;
     parsed.cropX ??= 0;
     parsed.cropY ??= 0;
     parsed.cropWidth ??= 512;

@@ -25,6 +25,7 @@ import { useLassoTool } from "./stage/tools/lasso/useLassoTool";
 import { useSelectTool } from "./stage/tools/select/useSelectTool";
 import { useWandTool } from "./stage/tools/wand/useWandTool";
 import { useCropTool } from "./stage/tools/crop/useCropTool";
+import { useBucketTool } from "./stage/tools/bucket/useBucketTool";
 import { useCanvasContext } from "./CanvasContext";
 
 export type { CanvasStageHandle } from "./stage/types";
@@ -135,6 +136,29 @@ const CanvasStage = forwardRef<CanvasStageHandle, CanvasStageProps>(
       stageRef,
     });
 
+    // Bucket tool reads settings from canvas context
+    const bucketSettingsRef = useRef({
+      colorSource: wandCtx.bucketColorSource as "foreground" | "background",
+      fillTransparentAreas: wandCtx.bucketFillTransparentAreas,
+      antialiasing: wandCtx.bucketAntialiasing,
+      threshold: wandCtx.bucketThreshold,
+    });
+    bucketSettingsRef.current = {
+      colorSource: wandCtx.bucketColorSource as "foreground" | "background",
+      fillTransparentAreas: wandCtx.bucketFillTransparentAreas,
+      antialiasing: wandCtx.bucketAntialiasing,
+      threshold: wandCtx.bucketThreshold,
+    };
+
+    const bucket = useBucketTool({
+      isActive: activeTool === "bucket",
+      getCanvasPos,
+      stageRef,
+      settingsRef: bucketSettingsRef,
+      foregroundColor: wandCtx.brushColor,
+      backgroundColor: wandCtx.documentBgColor,
+    });
+
     // ── Unified mouse handlers ─────────────────────────────────────────
 
     const handleMouseDown = useCallback(
@@ -158,8 +182,9 @@ const CanvasStage = forwardRef<CanvasStageHandle, CanvasStageProps>(
         if (select.onMouseDown(e)) return;
         if (wand.onMouseDown(e))   return;
         if (crop.onMouseDown(e))   return;
+        if (bucket.onMouseDown(e)) return;
       },
-      [stageRef, isMoveActive, moveToolHandlers, lasso, select, wand, crop],
+      [stageRef, isMoveActive, moveToolHandlers, lasso, select, wand, crop, bucket],
     );
 
     const handleMouseMove = useCallback(
@@ -180,9 +205,10 @@ const CanvasStage = forwardRef<CanvasStageHandle, CanvasStageProps>(
         if (lasso.onMouseMove(e))  return;
         if (wand.onMouseMove(e))   return;
         if (crop.onMouseMove(e))   return;
+        if (bucket.onMouseMove(e)) return;
         select.onMouseMove(e);
       },
-      [stageRef, isMoveActive, moveToolHandlers, lasso, select, wand, crop],
+      [stageRef, isMoveActive, moveToolHandlers, lasso, select, wand, crop, bucket],
     );
 
     const handleMouseUp = useCallback(
@@ -197,9 +223,10 @@ const CanvasStage = forwardRef<CanvasStageHandle, CanvasStageProps>(
         if (lasso.onMouseUp(e))  return;
         if (wand.onMouseUp(e))   return;
         if (crop.onMouseUp(e))   return;
+        if (bucket.onMouseUp(e)) return;
         select.onMouseUp(e);
       },
-      [stageRef, activeTool, layers.length, isMoveActive, moveToolHandlers, lasso, select, wand, crop],
+      [stageRef, activeTool, layers.length, isMoveActive, moveToolHandlers, lasso, select, wand, crop, bucket],
     );
 
     // Global up: only panning needs a CanvasStage-level handler now; each
@@ -253,6 +280,7 @@ const CanvasStage = forwardRef<CanvasStageHandle, CanvasStageProps>(
           wandRenderState={wand.renderState}
           cropRenderState={crop.renderState}
           cropOnRectChange={crop.onCropRectChange}
+          bucketRenderState={bucket.renderState}
           // Drawing overlay
           showBrushIndicator={drawing.showBrushIndicator}
           brushRadius={drawing.brushRadius}

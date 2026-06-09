@@ -91,6 +91,10 @@ export interface CanvasState {
   wandSampleMerged: boolean;
   wandDiagonalNeighbors: boolean;
   wandThreshold: number; // 0–100, mapped to RGBA distance
+  bucketColorSource: "foreground" | "background";
+  bucketFillTransparentAreas: boolean;
+  bucketAntialiasing: boolean;
+  bucketThreshold: number; // 0–100
   maskStrokes: StrokeNode[];
   snapToGrid: boolean;
   cropX: number;
