@@ -1,5 +1,5 @@
 import LucideIcon from "../../shared/LucideIcon";
-import { ToolbarIconBtn, type ArtPanel } from "./ArtShared";
+import { ToolbarIconBtn } from "./ArtShared";
 
 type Phase = "idle" | "loading" | "completed" | "cancelled" | "failed";
 
@@ -9,12 +9,9 @@ interface Props {
   phase: Phase;
   hasPrompt: boolean;
   saving: boolean;
-  activeLoras: { id: number; name: string }[];
-  activeEmbeddings: { id: number; name: string }[];
-  openPanel: ArtPanel;
   onClear: () => void;
   onSave: () => void;
-  onTogglePanel: (p: NonNullable<ArtPanel>) => void;
+  onToggleSavedPrompts: () => void;
   onGenerate: () => void;
   onCancel: () => void;
 }
@@ -27,8 +24,7 @@ function generateBg(phase: Phase, hasPrompt: boolean): string {
 
 export function PromptControls({
   generating, progress, phase, hasPrompt, saving,
-  activeLoras, activeEmbeddings, openPanel,
-  onClear, onSave, onTogglePanel, onGenerate, onCancel,
+  onClear, onSave, onToggleSavedPrompts, onGenerate, onCancel,
 }: Props) {
   return (
     <div style={{
@@ -37,34 +33,15 @@ export function PromptControls({
       display: "flex", alignItems: "center", gap: 2,
       flexShrink: 0,
     }}>
-      {/* Left: new / save / load / lora / embeddings */}
+      {/* Left: new / save / load */}
       <ToolbarIconBtn title="New prompt" onClick={onClear}>
         <LucideIcon name="plus" size={15} />
       </ToolbarIconBtn>
       <ToolbarIconBtn title="Save prompt" onClick={onSave} disabled={saving || !hasPrompt}>
         <LucideIcon name={saving ? "loader" : "save"} size={14} />
       </ToolbarIconBtn>
-      <ToolbarIconBtn title="Load saved prompts" onClick={() => onTogglePanel("savedPrompts")} active={openPanel === "savedPrompts"}>
+      <ToolbarIconBtn title="Load saved prompts" onClick={onToggleSavedPrompts}>
         <LucideIcon name="folder-open" size={14} />
-      </ToolbarIconBtn>
-
-      <div style={{ width: 1, height: 14, background: "rgba(255,255,255,0.12)", flexShrink: 0, margin: "0 2px" }} />
-
-      <ToolbarIconBtn
-        title={`LoRA${activeLoras.length > 0 ? ` (${activeLoras.length})` : ""}`}
-        onClick={() => onTogglePanel("lora")}
-        active={openPanel === "lora"}
-        badge={activeLoras.length > 0 ? activeLoras.length : undefined}
-      >
-        <LucideIcon name="puzzle" size={14} />
-      </ToolbarIconBtn>
-      <ToolbarIconBtn
-        title={`Embeddings${activeEmbeddings.length > 0 ? ` (${activeEmbeddings.length})` : ""}`}
-        onClick={() => onTogglePanel("embeddings")}
-        active={openPanel === "embeddings"}
-        badge={activeEmbeddings.length > 0 ? activeEmbeddings.length : undefined}
-      >
-        <LucideIcon name="scan-text" size={14} />
       </ToolbarIconBtn>
 
       <span style={{ flex: 1 }} />

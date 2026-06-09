@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { createPortal } from "react-dom";
 import Form from "react-bootstrap/Form";
 import LucideIcon from "../shared/LucideIcon";
 
@@ -31,31 +32,47 @@ export function ProviderPicker({
   onChangeApiBaseUrl,
 }: Props) {
   const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const btnRef = useRef<HTMLButtonElement>(null);
+  const [anchor, setAnchor] = useState<{ left: number; bottom: number } | null>(null);
 
   const openPicker = () => {
     setOpen((v) => {
-      if (!v) window.dispatchEvent(new Event("chat-picker-opened"));
-      return !v;
+      const next = !v;
+      if (next) {
+        window.dispatchEvent(new Event("chat-picker-opened"));
+        if (btnRef.current) {
+          const r = btnRef.current.getBoundingClientRect();
+          setAnchor({ left: r.left, bottom: window.innerHeight - r.top + 4 });
+        }
+      }
+      return next;
     });
   };
 
   useEffect(() => {
     if (!open) return;
     const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) setOpen(false);
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, [open]);
+
+  useEffect(() => {
+    const handler = () => setOpen(false);
+    window.addEventListener("art-overlay-opened", handler);
+    return () => window.removeEventListener("art-overlay-opened", handler);
+  }, []);
 
   const label = PROVIDERS.find((p) => p.value === value)?.label ?? value;
   const isOllama = value === "ollama";
   const needsApiKey = value === "openrouter" || value === "openai";
 
   return (
-    <div ref={ref} style={{ position: "relative", flexShrink: 0 }}>
+    <div ref={containerRef} style={{ position: "relative", flexShrink: 0 }}>
       <button
+        ref={btnRef}
         type="button"
         onClick={openPicker}
         title={statusDotTitle}
@@ -94,17 +111,17 @@ export function ProviderPicker({
         <LucideIcon name="chevrons-up-down" size={11} />
       </button>
 
-      {open && (
+      {open && anchor && createPortal(
         <div
           style={{
-            position: "absolute",
-            bottom: "calc(100% + 4px)",
-            left: 0,
+            position: "fixed",
+            left: anchor.left,
+            bottom: anchor.bottom,
             background: "var(--theme-panel-bg)",
             border: "1px solid rgba(255,255,255,0.14)",
             borderRadius: 6,
             padding: "4px 0",
-            zIndex: 1200,
+            zIndex: 1300,
             minWidth: 160,
             boxShadow: "0 4px 20px rgba(0,0,0,0.5)",
           }}
@@ -191,7 +208,8 @@ export function ProviderPicker({
               )}
             </div>
           )}
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

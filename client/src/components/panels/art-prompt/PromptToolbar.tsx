@@ -1,7 +1,6 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useId } from "react";
+import { createPortal } from "react-dom";
 import LucideIcon from "../../shared/LucideIcon";
-import { ToolbarIconBtn, POPUP_STYLE, type ArtPopup, type ArtSettingsData } from "./ArtShared";
-import { SettingsPopup } from "./SettingsPopup";
 
 const NUM_INPUT_STYLE: React.CSSProperties = {
   height: 24, background: "var(--theme-input-bg)",
@@ -22,31 +21,64 @@ interface Props {
   seedRandomized: boolean;
   genWidth: number;
   genHeight: number;
-  openPopup: ArtPopup;
-  settings: ArtSettingsData;
   onSeedChange: (v: number) => void;
   onToggleRandom: () => void;
   onWidthChange: (v: number) => void;
   onHeightChange: (v: number) => void;
-  onTogglePopup: (popup: NonNullable<ArtPopup>) => void;
 }
 
 export function PromptToolbar({
-  seed, seedRandomized, genWidth, genHeight, openPopup, settings,
-  onSeedChange, onToggleRandom, onWidthChange, onHeightChange, onTogglePopup,
+  seed, seedRandomized, genWidth, genHeight,
+  onSeedChange, onToggleRandom, onWidthChange, onHeightChange,
 }: Props) {
   const [showSize, setShowSize] = useState(false);
-  const sizeRef = useRef<HTMLDivElement>(null);
+  const sizeContainerRef = useRef<HTMLDivElement>(null);
+  const sizeBtnRef = useRef<HTMLButtonElement>(null);
+  const [sizeAnchor, setSizeAnchor] = useState<{ left: number; bottom: number } | null>(null);
+  const emittingRef = useRef(false);
 
   useEffect(() => {
     if (!showSize) return;
     const handler = (e: MouseEvent) => {
-      if (sizeRef.current && !sizeRef.current.contains(e.target as Node))
+      const target = e.target as Node;
+      const portalEl = document.getElementById(portalId);
+      if (portalEl?.contains(target)) return;
+      if (sizeContainerRef.current && !sizeContainerRef.current.contains(target))
         setShowSize(false);
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, [showSize]);
+
+  const portalId = useId();
+
+  // Close when other overlays open
+  useEffect(() => {
+    const handler = () => {
+      if (emittingRef.current) return;
+      setShowSize(false);
+    };
+    window.addEventListener("art-overlay-opened", handler);
+    window.addEventListener("chat-picker-opened", handler);
+    return () => {
+      window.removeEventListener("art-overlay-opened", handler);
+      window.removeEventListener("chat-picker-opened", handler);
+    };
+  }, []);
+
+  const handleSizeToggle = () => {
+    const next = !showSize;
+    setShowSize(next);
+    if (next) {
+      emittingRef.current = true;
+      window.dispatchEvent(new Event("art-overlay-opened"));
+      emittingRef.current = false;
+      if (sizeBtnRef.current) {
+        const r = sizeBtnRef.current.getBoundingClientRect();
+        setSizeAnchor({ left: r.left, bottom: window.innerHeight - r.top + 4 });
+      }
+    }
+  };
 
   return (
     <div style={{
@@ -55,24 +87,8 @@ export function PromptToolbar({
       borderTop: "1px solid rgba(255,255,255,0.08)",
       flexShrink: 0,
     }}>
-      {/* Settings button */}
-      <div style={{ position: "relative" }}>
-        <ToolbarIconBtn
-          title="Generation settings"
-          onClick={() => onTogglePopup("settings")}
-          active={openPopup === "settings"}
-        >
-          <LucideIcon name="settings-2" size={14} />
-        </ToolbarIconBtn>
-        {openPopup === "settings" && (
-          <div style={{ ...POPUP_STYLE, left: 0 }}>
-            <SettingsPopup {...settings} />
-          </div>
-        )}
-      </div>
-
-      {/* Seed affixed group */}
-      <div style={{ display: "flex", alignItems: "stretch" }}>
+      {/* Seed affixed group — expands to fill space */}
+      <div style={{ display: "flex", alignItems: "stretch", flex: 1, minWidth: 0 }}>
         <span style={{
           display: "flex", alignItems: "center", padding: "0 5px",
           fontSize: 9, fontWeight: 700, letterSpacing: "0.07em",
@@ -89,7 +105,7 @@ export function PromptToolbar({
           value={seed} readOnly={seedRandomized}
           onChange={(e) => { const v = Number(e.target.value); if (!isNaN(v)) onSeedChange(v); }}
           style={{
-            ...NUM_INPUT_STYLE, width: "calc(10ch + 10px)",
+            ...NUM_INPUT_STYLE, flex: 1, minWidth: 0,
             borderRadius: 0, borderRight: "none",
             color: seedRandomized ? "rgba(255,255,255,0.3)" : "var(--theme-text)",
           }}
@@ -113,10 +129,11 @@ export function PromptToolbar({
       </div>
 
       {/* Size picker */}
-      <div ref={sizeRef} style={{ position: "relative" }}>
+      <div ref={sizeContainerRef} style={{ position: "relative" }}>
         <button
+          ref={sizeBtnRef}
           type="button"
-          onClick={() => setShowSize((v) => !v)}
+          onClick={handleSizeToggle}
           style={{
             background: showSize ? "rgba(255,255,255,0.08)" : "transparent",
             border: "1px solid rgba(255,255,255,0.12)",
@@ -129,16 +146,16 @@ export function PromptToolbar({
         >
           {genWidth}×{genHeight}
         </button>
-        {showSize && (
-          <div style={{
-            position: "absolute", bottom: "calc(100% + 4px)", left: 0,
+        {showSize && sizeAnchor && createPortal(
+          <div id={portalId} style={{
+            position: "fixed", left: sizeAnchor.left, bottom: sizeAnchor.bottom,
             background: "var(--theme-panel-bg)",
             border: "1px solid rgba(255,255,255,0.14)",
             borderRadius: 6,
             boxShadow: "0 4px 20px rgba(0,0,0,0.5)",
             padding: "10px 12px",
             display: "flex", flexDirection: "column", gap: 8,
-            zIndex: 1200,
+            zIndex: 1300,
           }}>
             <div style={{
               fontSize: 9, fontWeight: 700, letterSpacing: "0.07em",
@@ -163,7 +180,8 @@ export function PromptToolbar({
                 style={NUM_INPUT_STYLE_SM}
               />
             </div>
-          </div>
+          </div>,
+          document.body
         )}
       </div>
     </div>

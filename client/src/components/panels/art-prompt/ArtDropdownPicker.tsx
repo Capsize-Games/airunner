@@ -1,4 +1,5 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useId } from "react";
+import { createPortal } from "react-dom";
 import LucideIcon from "../../shared/LucideIcon";
 
 interface Props {
@@ -17,28 +18,66 @@ export function ArtDropdownPicker({
   disabled,
 }: Props) {
   const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const btnRef = useRef<HTMLButtonElement>(null);
+  const [anchor, setAnchor] = useState<{ left: number; bottom: number; width: number } | null>(null);
+  const emittingRef = useRef(false);
 
   useEffect(() => {
     if (!open) return;
     const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+      const target = e.target as Node;
+      const portalEl = document.getElementById(portalId);
+      if (portalEl?.contains(target)) return;
+      if (containerRef.current && !containerRef.current.contains(target)) setOpen(false);
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, [open]);
+
+  const portalId = useId();
+
+  // Close when other overlays open
+  useEffect(() => {
+    const handler = () => {
+      if (emittingRef.current) return;
+      setOpen(false);
+    };
+    window.addEventListener("art-overlay-opened", handler);
+    window.addEventListener("chat-picker-opened", handler);
+    return () => {
+      window.removeEventListener("art-overlay-opened", handler);
+      window.removeEventListener("chat-picker-opened", handler);
+    };
+  }, []);
 
   const rawLabel = options.find((o) => o.value === value)?.label ?? (value || placeholder);
   const label = rawLabel === placeholder
     ? rawLabel
     : (rawLabel.split("/").pop() ?? rawLabel).replace(/\.(gguf|bin|safetensors|pt|pth|ckpt|pkl|model|safetensor)$/i, "");
 
+  const handleToggle = () => {
+    if (disabled) return;
+    const next = !open;
+    setOpen(next);
+    if (next) {
+      emittingRef.current = true;
+      window.dispatchEvent(new Event("art-overlay-opened"));
+      emittingRef.current = false;
+      if (btnRef.current) {
+        const r = btnRef.current.getBoundingClientRect();
+        setAnchor({ left: r.left, bottom: window.innerHeight - r.top + 4, width: r.width });
+      }
+    }
+  };
+
   return (
-    <div ref={ref} style={{ position: "relative", flex: "1 1 0%", minWidth: 0 }}>
+    <div ref={containerRef} style={{ position: "relative", flex: "1 1 0%", minWidth: 0 }}>
       <button
+        ref={btnRef}
         type="button"
         disabled={disabled}
-        onClick={() => setOpen((v) => !v)}
+        onClick={handleToggle}
         title={label}
         style={{
           display: "flex",
@@ -78,18 +117,19 @@ export function ArtDropdownPicker({
         <LucideIcon name="chevrons-up-down" size={11} />
       </button>
 
-      {open && !disabled && (
+      {open && !disabled && anchor && createPortal(
         <div
+          id={portalId}
           style={{
-            position: "absolute",
-            bottom: "calc(100% + 4px)",
-            left: 0,
-            minWidth: 160,
+            position: "fixed",
+            left: anchor.left,
+            bottom: anchor.bottom,
+            minWidth: Math.max(anchor.width, 160),
             maxWidth: 280,
             background: "var(--theme-panel-bg)",
             border: "1px solid rgba(255,255,255,0.14)",
             borderRadius: 6,
-            zIndex: 1200,
+            zIndex: 1300,
             boxShadow: "0 4px 20px rgba(0,0,0,0.5)",
             maxHeight: 240,
             overflowY: "auto",
@@ -153,7 +193,8 @@ export function ArtDropdownPicker({
               </button>
             ))
           )}
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

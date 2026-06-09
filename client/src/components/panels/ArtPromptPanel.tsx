@@ -1,6 +1,7 @@
 import {
   useState, useEffect, useCallback, useRef, Fragment,
 } from "react";
+import { createPortal } from "react-dom";
 import { updateSingleton, getArtModelOptions } from "../../api/client";
 import type { ArtOptionsResponse } from "../../api/client";
 import { createSavedPrompt } from "../../api/art";
@@ -15,7 +16,8 @@ import { PromptTextareas } from "./art-prompt/PromptTextareas";
 import { PromptToolbar } from "./art-prompt/PromptToolbar";
 import { ModelRows } from "./art-prompt/ModelRows";
 import { PromptControls } from "./art-prompt/PromptControls";
-import type { ArtPopup, ArtPanel } from "./art-prompt/ArtShared";
+import { ToolbarIconBtn, type ArtPopup, type ArtPanel } from "./art-prompt/ArtShared";
+import { SettingsPopup } from "./art-prompt/SettingsPopup";
 import LoraPanel from "./LoraPanel";
 import EmbeddingsPanel from "./EmbeddingsPanel";
 
@@ -95,11 +97,14 @@ export default function ArtPromptPanel() {
   const [openPanel, setOpenPanel] = useState<ArtPanel>(null);
   const [artPanelAnchor, setArtPanelAnchor] = useState<{ left: number; bottom: number; width: number; height: number } | null>(null);
   const toolbarRef = useRef<HTMLDivElement>(null);
+  const settingsBtnRef = useRef<HTMLDivElement>(null);
+  const [settingsAnchor, setSettingsAnchor] = useState<{ left: number; bottom: number } | null>(null);
+  const emittingRef = useRef(false);
 
   const availableSchedulers = (artOptions?.versions?.find((v) => v.name === version)?.schedulers) ?? [];
 
-  const [genWidth, setGenWidth] = useState(512);
-  const [genHeight, setGenHeight] = useState(512);
+  const [genWidth, setGenWidth] = useState(() => loadFromStorage("gen_width", 512));
+  const [genHeight, setGenHeight] = useState(() => loadFromStorage("gen_height", 512));
   const [nSamples, setNSamples] = useState(() => loadFromStorage("n_samples", 1));
   const [imagesPerBatch, setImagesPerBatch] = useState(() => loadFromStorage("images_per_batch", 1));
   const [steps, setSteps] = useState(() => loadFromStorage("steps", 20));
@@ -144,7 +149,10 @@ export default function ArtPromptPanel() {
   useEffect(() => {
     if (!openPopup) return;
     const handler = (e: MouseEvent) => {
-      if (toolbarRef.current && !toolbarRef.current.contains(e.target as Node))
+      const target = e.target as Node;
+      if (settingsBtnRef.current?.contains(target)) return;
+      if (document.getElementById("art-settings-popup")?.contains(target)) return;
+      if (toolbarRef.current && !toolbarRef.current.contains(target))
         setOpenPopup(null);
     };
     document.addEventListener("mousedown", handler);
@@ -177,6 +185,21 @@ export default function ArtPromptPanel() {
 
   useEffect(() => {
     getArtModelOptions().then(setArtOptions).catch(() => {}).finally(() => setToolbarLoading(false));
+  }, []);
+
+  // Close popups/panels when other overlays open
+  useEffect(() => {
+    const handler = () => {
+      if (emittingRef.current) return;
+      setOpenPopup(null);
+      setOpenPanel(null);
+    };
+    window.addEventListener("art-overlay-opened", handler);
+    window.addEventListener("chat-picker-opened", handler);
+    return () => {
+      window.removeEventListener("art-overlay-opened", handler);
+      window.removeEventListener("chat-picker-opened", handler);
+    };
   }, []);
 
   const reloadActiveLoras = useCallback(async () => {
@@ -321,12 +344,32 @@ export default function ArtPromptPanel() {
 
   const togglePopup = (popup: NonNullable<ArtPopup>) => {
     setOpenPanel(null);
-    setOpenPopup((prev) => (prev === popup ? null : popup));
+    setOpenPopup((prev) => {
+      const next = prev === popup ? null : popup;
+      if (next === "settings") {
+        emittingRef.current = true;
+        window.dispatchEvent(new Event("art-overlay-opened"));
+        emittingRef.current = false;
+        if (settingsBtnRef.current) {
+          const r = settingsBtnRef.current.getBoundingClientRect();
+          setSettingsAnchor({ left: r.left, bottom: window.innerHeight - r.top + 4 });
+        }
+      }
+      return next;
+    });
   };
 
   const togglePanel = (panel: NonNullable<ArtPanel>) => {
     setOpenPopup(null);
-    setOpenPanel((prev) => (prev === panel ? null : panel));
+    setOpenPanel((prev) => {
+      const next = prev === panel ? null : panel;
+      if (next) {
+        emittingRef.current = true;
+        window.dispatchEvent(new Event("art-overlay-opened"));
+        emittingRef.current = false;
+      }
+      return next;
+    });
   };
 
   if (collapsed) {
@@ -390,6 +433,70 @@ export default function ArtPromptPanel() {
               onSecondaryNegativePromptChange={(v) => { setSecondaryNegativePrompt(v); persist({ secondary_negative_prompt: v }); }}
             />
 
+            {/* Settings row */}
+            <div style={{
+              display: "flex", alignItems: "center", gap: 4,
+              padding: "2px 6px",
+              borderTop: "1px solid rgba(255,255,255,0.08)",
+              flexShrink: 0,
+            }}>
+              <div ref={settingsBtnRef}>
+                <ToolbarIconBtn
+                  title="Generation settings"
+                  onClick={() => togglePopup("settings")}
+                  active={openPopup === "settings"}
+                >
+                  <LucideIcon name="settings-2" size={14} />
+                </ToolbarIconBtn>
+              </div>
+              {openPopup === "settings" && settingsAnchor && createPortal(
+                <div id="art-settings-popup" style={{
+                  position: "fixed",
+                  left: settingsAnchor.left,
+                  bottom: settingsAnchor.bottom,
+                  background: "var(--theme-panel-bg)",
+                  border: "1px solid rgba(255,255,255,0.14)",
+                  borderRadius: 6,
+                  zIndex: 1300,
+                  boxShadow: "0 4px 20px rgba(0,0,0,0.5)",
+                  maxHeight: 400,
+                  overflowY: "auto",
+                  minWidth: 260,
+                }}>
+                  <SettingsPopup
+                    steps={steps}
+                    cfgScale={cfgScale}
+                    nSamples={nSamples}
+                    imagesPerBatch={imagesPerBatch}
+                    onStepsChange={(v) => { setSteps(v); saveToStorage("steps", v); persistGen({ steps: v }); }}
+                    onCfgScaleChange={(v) => { setCfgScale(v); saveToStorage("cfg_scale", v); persistGen({ cfg_scale: v }); }}
+                    onNSamplesChange={(v) => { setNSamples(v); saveToStorage("n_samples", v); persistGen({ n_samples: v }); }}
+                    onImagesPerBatchChange={(v) => { setImagesPerBatch(v); saveToStorage("images_per_batch", v); persistGen({ images_per_batch: v }); }}
+                  />
+                </div>,
+                document.body
+              )}
+
+              <span style={{ flex: 1 }} />
+
+              <ToolbarIconBtn
+                title={`LoRA${activeLoras.length > 0 ? ` (${activeLoras.length})` : ""}`}
+                onClick={() => togglePanel("lora")}
+                active={openPanel === "lora"}
+                badge={activeLoras.length > 0 ? activeLoras.length : undefined}
+              >
+                <LucideIcon name="puzzle" size={14} />
+              </ToolbarIconBtn>
+              <ToolbarIconBtn
+                title={`Embeddings${activeEmbeddings.length > 0 ? ` (${activeEmbeddings.length})` : ""}`}
+                onClick={() => togglePanel("embeddings")}
+                active={openPanel === "embeddings"}
+                badge={activeEmbeddings.length > 0 ? activeEmbeddings.length : undefined}
+              >
+                <LucideIcon name="scan-text" size={14} />
+              </ToolbarIconBtn>
+            </div>
+
             <ModelRows
               version={version}
               modelPath={modelPath}
@@ -409,19 +516,10 @@ export default function ArtPromptPanel() {
                 seedRandomized={seedRandomized}
                 genWidth={genWidth}
                 genHeight={genHeight}
-                openPopup={openPopup}
                 onSeedChange={handleSeedChange}
                 onToggleRandom={handleToggleRandom}
-                onWidthChange={setGenWidth}
-                onHeightChange={setGenHeight}
-                onTogglePopup={togglePopup}
-                settings={{
-                  steps, cfgScale, nSamples, imagesPerBatch,
-                  onStepsChange: (v) => { setSteps(v); saveToStorage("steps", v); persistGen({ steps: v }); },
-                  onCfgScaleChange: (v) => { setCfgScale(v); saveToStorage("cfg_scale", v); persistGen({ cfg_scale: v }); },
-                  onNSamplesChange: (v) => { setNSamples(v); saveToStorage("n_samples", v); persistGen({ n_samples: v }); },
-                  onImagesPerBatchChange: (v) => { setImagesPerBatch(v); saveToStorage("images_per_batch", v); persistGen({ images_per_batch: v }); },
-                }}
+                onWidthChange={(v) => { setGenWidth(v); saveToStorage("gen_width", v); persistGen({ width: v }); }}
+                onHeightChange={(v) => { setGenHeight(v); saveToStorage("gen_height", v); persistGen({ height: v }); }}
               />
               <PromptControls
                 generating={generating}
@@ -429,12 +527,9 @@ export default function ArtPromptPanel() {
                 phase={phase}
                 hasPrompt={!!prompt.trim()}
                 saving={saving}
-                activeLoras={activeLoras}
-                activeEmbeddings={activeEmbeddings}
-                openPanel={openPanel}
                 onClear={handleClearPrompts}
                 onSave={handleSavePrompt}
-                onTogglePanel={togglePanel}
+                onToggleSavedPrompts={() => togglePanel("savedPrompts")}
                 onGenerate={onGenerate}
                 onCancel={onCancel}
               />
