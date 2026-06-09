@@ -81,6 +81,9 @@ export interface CanvasState {
   moveMode: MoveMode;
   brushSize: number;
   brushColor: string;
+  lassoAntialiasing: boolean;
+  lassoFeatherEdges: boolean;
+  lassoFeatherRadius: number; // 0–100
   maskStrokes: StrokeNode[];
   snapToGrid: boolean;
   history: string[];

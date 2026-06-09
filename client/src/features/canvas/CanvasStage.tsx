@@ -1,11 +1,16 @@
-// ── Canvas Stage ────────────────────────────────────────────────────────
-// Composer: orchestrates zoom, keyboard, drawing overlay hooks, and
-// delegates rendering to CanvasStageContent.
+// ── Canvas Stage ────────────────────────────────────────────────────────────
+// Orchestrates zoom, keyboard, drawing overlay hooks, and per-tool hooks.
+// All tool-specific interaction logic lives in stage/tools/<tool>/.
+// Rendering is fully delegated to StageContent.
 //
-// Exports:
-//   CanvasStageHandle, CanvasStage (default), CanvasStageProps (from types)
+// To add a new tool:
+//   1. Create stage/tools/<tool>/use<Tool>Tool.ts  (interaction hook)
+//   2. Create stage/tools/<tool>/<Tool>Layer.tsx   (Konva rendering)
+//   3. Call the hook here and wire onMouseDown/Move/Up into the chain below
+//   4. Pass renderState to StageContent → render <ToolLayer> there
+//   See client/src/features/canvas/CANVAS_TOOL_PATTERN.md for full details.
 
-import { useRef, useCallback, useState, forwardRef, useEffect } from "react";
+import { useRef, useCallback, useEffect, forwardRef } from "react";
 import Konva from "konva";
 import type { CanvasStageHandle } from "./stage/types";
 import { zoom as zoomHook } from "./stage/zoom";
@@ -16,331 +21,220 @@ import type { CanvasStageProps } from "./stage/types";
 import { getCursor } from "./cursorUtils";
 import { getCanvasPosFromStage } from "./stage/drawingHelpers";
 import { moveTool } from "./stage/moveTool";
+import { useLassoTool } from "./stage/tools/lasso/useLassoTool";
+import { useSelectTool } from "./stage/tools/select/useSelectTool";
 
 export type { CanvasStageHandle } from "./stage/types";
 
-const CanvasStage = forwardRef<
-  CanvasStageHandle,
-  CanvasStageProps
->(function CanvasStage(props, ref) {
-  const {
-    documentWidth,
-    documentHeight,
-    documentBgColor,
-    layers,
-    layerGroups,
-    displayOrder,
-    activeLayerId,
-    activeTool,
-    moveMode,
-    selectedLayerIds,
-    brushSize,
-    brushColor,
-    maskStrokes,
-    showGrid,
-    snapToGrid,
-    onAddStroke,
-    onMoveImage,
-    onMoveLayer,
-    onAddMaskStroke,
-    onAddLayerMaskStroke,
-    onUndo,
-    onRedo,
-    setActiveTool,
-    setActiveLayer,
-    onZoomChange,
-    isFitToView,
-    isCenterView,
-    onFitToViewChange,
-    onCenterViewChange,
-    gridLayerRef,
-    maskLayerRef,
-    stageRef,
-    ghostLayerRef,
-    sendLiveStroke,
-    sendStrokeEnd,
-  } = props;
+const CanvasStage = forwardRef<CanvasStageHandle, CanvasStageProps>(
+  function CanvasStage(props, ref) {
+    const {
+      documentWidth, documentHeight, documentBgColor,
+      layers, layerGroups, displayOrder, activeLayerId,
+      activeTool, moveMode, selectedLayerIds,
+      brushSize, brushColor, maskStrokes,
+      showGrid, snapToGrid,
+      onAddStroke, onMoveImage, onMoveLayer,
+      onAddMaskStroke, onAddLayerMaskStroke,
+      onUndo, onRedo, setActiveTool, setActiveLayer,
+      onZoomChange, isFitToView, isCenterView,
+      onFitToViewChange, onCenterViewChange,
+      gridLayerRef, maskLayerRef, stageRef, ghostLayerRef,
+      sendLiveStroke, sendStrokeEnd,
+    } = props;
 
-  // ── Zoom + resize ────────────────────────────────────────────────────
-  const containerRef = useRef<HTMLDivElement>(null);
-  const { zoom, stageSize, handleWheel } = zoomHook({
-    stageRef,
-    containerRef,
-    documentWidth,
-    documentHeight,
-    onZoomChange,
-    isFitToView,
-    isCenterView,
-    onFitToViewChange,
-    onCenterViewChange,
-    handleRef: ref,
-  });
-  // ── Drawing overlay ──────────────────────────────────────────────────
-  const drawing = drawingOverlayHook({
-    stageRef,
-    layers,
-    activeLayerId,
-    activeTool,
-    brushSize,
-    brushColor,
-    documentWidth,
-    documentHeight,
-    zoom,
-    onAddStroke,
-    sendLiveStroke,
-    sendStrokeEnd,
-  });
+    // ── Zoom + resize ──────────────────────────────────────────────────
+    const containerRef = useRef<HTMLDivElement>(null);
+    const { zoom, stageSize, handleWheel } = zoomHook({
+      stageRef, containerRef,
+      documentWidth, documentHeight,
+      onZoomChange, isFitToView, isCenterView,
+      onFitToViewChange, onCenterViewChange,
+      handleRef: ref,
+    });
 
-  // ── Keyboard shortcuts ───────────────────────────────────────────────
-  keyboardHook({ onUndo, onRedo, setActiveTool });
+    // ── Drawing overlay ────────────────────────────────────────────────
+    const drawing = drawingOverlayHook({
+      stageRef, layers, activeLayerId, activeTool,
+      brushSize, brushColor, documentWidth, documentHeight,
+      zoom, onAddStroke, sendLiveStroke, sendStrokeEnd,
+    });
 
-  // ── Move tool (stage-level drag controller) ──────────────────────────
-  const isMoveActive = activeTool === "move";
-  const moveToolHandlers = moveTool({
-    stageRef,
-    moveMode,
-    selectedLayerIds,
-    layers,
-    snapToGrid,
-    onMoveLayer,
-    onSetActiveLayer: setActiveLayer,
-  });
+    // ── Keyboard shortcuts ─────────────────────────────────────────────
+    keyboardHook({ onUndo, onRedo, setActiveTool });
 
-  // ── Mouse panning ────────────────────────────────────────────────────
-  const isPanning = useRef(false);
-  const lastPointerPos = useRef({ x: 0, y: 0 });
-  const isCenterViewRef = useRef(isCenterView);
-  const onCenterViewChangeRef = useRef(onCenterViewChange);
+    // ── Move tool ──────────────────────────────────────────────────────
+    const isMoveActive = activeTool === "move";
+    const moveToolHandlers = moveTool({
+      stageRef, moveMode, selectedLayerIds, layers, snapToGrid,
+      onMoveLayer, onSetActiveLayer: setActiveLayer,
+    });
 
-  useEffect(() => {
-    isCenterViewRef.current = isCenterView;
-  }, [isCenterView]);
-  useEffect(() => {
-    onCenterViewChangeRef.current = onCenterViewChange;
-  }, [onCenterViewChange]);
+    // ── Middle-mouse panning ───────────────────────────────────────────
+    const isPanning       = useRef(false);
+    const lastPointerPos  = useRef({ x: 0, y: 0 });
+    const isCenterViewRef = useRef(isCenterView);
+    const onCenterViewChangeRef = useRef(onCenterViewChange);
+    useEffect(() => { isCenterViewRef.current = isCenterView; },        [isCenterView]);
+    useEffect(() => { onCenterViewChangeRef.current = onCenterViewChange; }, [onCenterViewChange]);
 
-  // ── Selection rect ───────────────────────────────────────────────────
-  const selectionStartRef = useRef<{
-    x: number;
-    y: number;
-  } | null>(null);
-  const [selectionRect, setSelectionRect] = useState<{
-    x: number;
-    y: number;
-    width: number;
-    height: number;
-  } | null>(null);
+    // ── Canvas-space position helper ───────────────────────────────────
+    const getCanvasPos = useCallback(
+      () => getCanvasPosFromStage(stageRef.current),
+      [stageRef],
+    );
 
-  const getCanvasPos = useCallback(
-    () => getCanvasPosFromStage(stageRef.current),
-    [stageRef],
-  );
+    // ── Per-tool hooks ─────────────────────────────────────────────────
+    // Each hook manages its own state, global-up listener, and key handlers.
+    // onMouseDown/Move/Up return true when they consume the event.
+    const lasso  = useLassoTool({
+      isActive: activeTool === "lasso",
+      getCanvasPos,
+      stageRef,
+    });
 
-  const handleMouseDown = useCallback(
-    (e: Konva.KonvaEventObject<MouseEvent>) => {
-      if (e.evt.button === 1) {
-        e.evt.preventDefault();
-        isPanning.current = true;
-        const container = stageRef.current?.container();
-        if (container) container.style.cursor = "grabbing";
-        const pos = stageRef.current?.getPointerPosition();
-        if (pos)
-          lastPointerPos.current = {
-            x: pos.x,
-            y: pos.y,
-          };
-        return;
-      }
-      if (isMoveActive && e.evt.button === 0) {
-        moveToolHandlers.handleMoveMouseDown(e);
-        return;
-      }
-      if (activeTool === "select" && e.evt.button === 0) {
-        const pos = getCanvasPos();
-        if (pos) {
-          selectionStartRef.current = pos;
-          setSelectionRect({
-            x: pos.x,
-            y: pos.y,
-            width: 0,
-            height: 0,
-          });
+    const select = useSelectTool({
+      isActive: activeTool === "select",
+      getCanvasPos,
+    });
+
+    // ── Unified mouse handlers ─────────────────────────────────────────
+
+    const handleMouseDown = useCallback(
+      (e: Konva.KonvaEventObject<MouseEvent>) => {
+        // Middle-button panning (any tool)
+        if (e.evt.button === 1) {
+          e.evt.preventDefault();
+          isPanning.current = true;
+          const container = stageRef.current?.container();
+          if (container) container.style.cursor = "grabbing";
+          const pos = stageRef.current?.getPointerPosition();
+          if (pos) lastPointerPos.current = { x: pos.x, y: pos.y };
+          return;
         }
-      }
-    },
-    [stageRef, activeTool, getCanvasPos, isMoveActive, moveToolHandlers],
-  );
-
-  const handleMouseMove = useCallback(
-    (e: Konva.KonvaEventObject<MouseEvent>) => {
-      if (isPanning.current) {
-        const stage = stageRef.current;
-        if (!stage) return;
-        const pos = stage.getPointerPosition();
-        if (!pos) return;
-        const dx = pos.x - lastPointerPos.current.x;
-        const dy = pos.y - lastPointerPos.current.y;
-        stage.position({
-          x: stage.x() + dx,
-          y: stage.y() + dy,
-        });
-        if (isCenterViewRef.current) {
-          onCenterViewChangeRef.current(false);
+        // Tool chain — first match wins
+        if (isMoveActive && e.evt.button === 0) {
+          moveToolHandlers.handleMoveMouseDown(e);
+          return;
         }
-        lastPointerPos.current = { x: pos.x, y: pos.y };
-        return;
-      }
-      if (isMoveActive) {
-        moveToolHandlers.handleMoveMouseMove(e);
-        return;
-      }
-      if (
-        activeTool === "select" &&
-        selectionStartRef.current
-      ) {
-        const pos = getCanvasPos();
-        if (pos) {
-          const sx = selectionStartRef.current.x;
-          const sy = selectionStartRef.current.y;
-          setSelectionRect({
-            x: Math.min(sx, pos.x),
-            y: Math.min(sy, pos.y),
-            width: Math.abs(pos.x - sx),
-            height: Math.abs(pos.y - sy),
-          });
-        }
-      }
-    },
-    [stageRef, activeTool, getCanvasPos, isMoveActive, moveToolHandlers],
-  );
+        if (lasso.onMouseDown(e))  return;
+        if (select.onMouseDown(e)) return;
+      },
+      [stageRef, isMoveActive, moveToolHandlers, lasso, select],
+    );
 
-  const handleMouseUp = useCallback(
-    (e: Konva.KonvaEventObject<MouseEvent>) => {
-      if (isPanning.current) {
+    const handleMouseMove = useCallback(
+      (e: Konva.KonvaEventObject<MouseEvent>) => {
+        if (isPanning.current) {
+          const stage = stageRef.current;
+          if (!stage) return;
+          const pos = stage.getPointerPosition();
+          if (!pos) return;
+          const dx = pos.x - lastPointerPos.current.x;
+          const dy = pos.y - lastPointerPos.current.y;
+          stage.position({ x: stage.x() + dx, y: stage.y() + dy });
+          if (isCenterViewRef.current) onCenterViewChangeRef.current(false);
+          lastPointerPos.current = { x: pos.x, y: pos.y };
+          return;
+        }
+        if (isMoveActive) { moveToolHandlers.handleMoveMouseMove(e); return; }
+        if (lasso.onMouseMove(e))  return;
+        select.onMouseMove(e);
+      },
+      [stageRef, isMoveActive, moveToolHandlers, lasso, select],
+    );
+
+    const handleMouseUp = useCallback(
+      (e: Konva.KonvaEventObject<MouseEvent>) => {
+        if (isPanning.current) {
+          isPanning.current = false;
+          const container = stageRef.current?.container();
+          if (container)
+            container.style.cursor = getCursor(activeTool, layers.length > 0);
+        }
+        if (isMoveActive) { moveToolHandlers.handleMoveMouseUp(e); return; }
+        if (lasso.onMouseUp(e))  return;
+        select.onMouseUp(e);
+      },
+      [stageRef, activeTool, layers.length, isMoveActive, moveToolHandlers, lasso, select],
+    );
+
+    // Global up: only panning needs a CanvasStage-level handler now; each
+    // tool hook manages its own global listener internally.
+    useEffect(() => {
+      const onGlobalUp = () => {
+        if (!isPanning.current) return;
         isPanning.current = false;
         const container = stageRef.current?.container();
-        if (container) {
-          container.style.cursor = getCursor(
-            activeTool,
-            layers.length > 0,
-          );
-        }
-      }
-      if (isMoveActive) {
-        moveToolHandlers.handleMoveMouseUp(e);
-        return;
-      }
-      if (activeTool === "select") {
-        selectionStartRef.current = null;
-      }
-    },
-    [stageRef, activeTool, layers.length, isMoveActive, moveToolHandlers],
-  );
+        if (container)
+          container.style.cursor = getCursor(activeTool, layers.length > 0);
+      };
+      window.addEventListener("pointerup", onGlobalUp);
+      window.addEventListener("mouseup",   onGlobalUp);
+      return () => {
+        window.removeEventListener("pointerup", onGlobalUp);
+        window.removeEventListener("mouseup",   onGlobalUp);
+      };
+    }, [stageRef, activeTool, layers.length]);
 
-  // Catch pointerup / mouseup globally so panning, selection, and
-  // move-tool dragging stop even when the cursor leaves the Stage.
-  useEffect(() => {
-    const onGlobalUp = () => {
-      if (isPanning.current) {
-        isPanning.current = false;
-        const container = stageRef.current?.container();
-        if (container) {
-          container.style.cursor = getCursor(
-            activeTool,
-            layers.length > 0,
-          );
-        }
-      }
-      if (isMoveActive) {
-        moveToolHandlers.handleMoveMouseUp(
-          { evt: new MouseEvent("mouseup") } as Konva.KonvaEventObject<MouseEvent>,
-        );
-      }
-      if (activeTool === "select") {
-        selectionStartRef.current = null;
-      }
-    };
-    window.addEventListener("pointerup", onGlobalUp);
-    window.addEventListener("mouseup", onGlobalUp);
-    return () => {
-      window.removeEventListener("pointerup", onGlobalUp);
-      window.removeEventListener("mouseup", onGlobalUp);
-    };
-  }, [
-    handleMouseUp,
-    activeTool,
-    isMoveActive,
-    moveToolHandlers,
-    stageRef,
-    layers.length,
-  ]);
+    // ── Render ─────────────────────────────────────────────────────────
 
-  return (
-    <div
-      ref={containerRef}
-      style={{
-        width: "100%",
-        height: "100%",
-        background: "#1e1e2e",
-        overflow: "hidden",
-      }}
-    >
-      <StageContent
-        stageRef={stageRef}
-        gridLayerRef={gridLayerRef}
-        maskLayerRef={maskLayerRef}
-        ghostLayerRef={ghostLayerRef}
-        stageSize={stageSize}
-        documentWidth={documentWidth}
-        documentHeight={documentHeight}
-        documentBgColor={documentBgColor}
-        layers={layers}
-        layerGroups={layerGroups}
-        displayOrder={displayOrder}
-        activeLayerId={activeLayerId}
-        activeTool={activeTool}
-        moveMode={moveMode}
-        brushSize={brushSize}
-        brushColor={brushColor}
-        maskStrokes={maskStrokes}
-        showGrid={showGrid}
-        snapToGrid={snapToGrid}
-        selectionRect={selectionRect}
-        showBrushIndicator={drawing.showBrushIndicator}
-        brushRadius={drawing.brushRadius}
-        indicatorColor={drawing.indicatorColor}
-        brushRingRef={drawing.brushRingRef}
-        brushDotRef={drawing.brushDotRef}
-        brushIndicatorLayerRef={
-          drawing.brushIndicatorLayerRef
-        }
-        isDrawingTool={drawing.isDrawingTool}
-        drawingOffsetX={drawing.drawingOffsetX}
-        drawingOffsetY={drawing.drawingOffsetY}
-        handleWheel={handleWheel}
-        handleMouseDown={handleMouseDown}
-        handleMouseMove={handleMouseMove}
-        handleMouseUp={handleMouseUp}
-        handleOverlayPointerDown={
-          drawing.handleOverlayPointerDown
-        }
-        handleOverlayPointerMove={
-          drawing.handleOverlayPointerMove
-        }
-        handleOverlayPointerUp={
-          drawing.handleOverlayPointerUp
-        }
-        updateBrushIndicator={
-          drawing.updateBrushIndicator
-        }
-        onAddStroke={onAddStroke}
-        onMoveImage={onMoveImage}
-        onMoveLayer={onMoveLayer}
-        onAddMaskStroke={onAddMaskStroke}
-        onAddLayerMaskStroke={onAddLayerMaskStroke}
-      />
-    </div>
-  );
-});
+    return (
+      <div
+        ref={containerRef}
+        style={{ width: "100%", height: "100%", background: "#1e1e2e", overflow: "hidden" }}
+      >
+        <StageContent
+          stageRef={stageRef}
+          gridLayerRef={gridLayerRef}
+          maskLayerRef={maskLayerRef}
+          ghostLayerRef={ghostLayerRef}
+          stageSize={stageSize}
+          documentWidth={documentWidth}
+          documentHeight={documentHeight}
+          documentBgColor={documentBgColor}
+          layers={layers}
+          layerGroups={layerGroups}
+          displayOrder={displayOrder}
+          activeLayerId={activeLayerId}
+          activeTool={activeTool}
+          moveMode={moveMode}
+          brushSize={brushSize}
+          brushColor={brushColor}
+          maskStrokes={maskStrokes}
+          showGrid={showGrid}
+          snapToGrid={snapToGrid}
+          // Tool render states
+          lassoRenderState={lasso.renderState}
+          selectRenderState={select.renderState}
+          // Drawing overlay
+          showBrushIndicator={drawing.showBrushIndicator}
+          brushRadius={drawing.brushRadius}
+          indicatorColor={drawing.indicatorColor}
+          brushRingRef={drawing.brushRingRef}
+          brushDotRef={drawing.brushDotRef}
+          brushIndicatorLayerRef={drawing.brushIndicatorLayerRef}
+          isDrawingTool={drawing.isDrawingTool}
+          drawingOffsetX={drawing.drawingOffsetX}
+          drawingOffsetY={drawing.drawingOffsetY}
+          // Handlers
+          handleWheel={handleWheel}
+          handleMouseDown={handleMouseDown}
+          handleMouseMove={handleMouseMove}
+          handleMouseUp={handleMouseUp}
+          handleOverlayPointerDown={drawing.handleOverlayPointerDown}
+          handleOverlayPointerMove={drawing.handleOverlayPointerMove}
+          handleOverlayPointerUp={drawing.handleOverlayPointerUp}
+          updateBrushIndicator={drawing.updateBrushIndicator}
+          onAddStroke={onAddStroke}
+          onMoveImage={onMoveImage}
+          onMoveLayer={onMoveLayer}
+          onAddMaskStroke={onAddMaskStroke}
+          onAddLayerMaskStroke={onAddLayerMaskStroke}
+        />
+      </div>
+    );
+  },
+);
 
 export default CanvasStage;

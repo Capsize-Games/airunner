@@ -22,6 +22,7 @@ import { strokes as strokesHook } from "./state/strokes";
 import { masks as masksHook } from "./state/masks";
 import { history as historyHook } from "./state/history";
 import { brush as brushHook } from "./state/brush";
+import { lasso as lassoHook } from "./state/lasso";
 import { document as documentHook } from "./state/document";
 import { serialization as serializationHook } from "./state/serialization";
 
@@ -37,6 +38,7 @@ export function useCanvasState() {
   const maskAPI = masksHook(setters);
   const historyAPI = historyHook(setters);
   const brushAPI = brushHook(setters);
+  const lassoAPI = lassoHook(setters);
   const docAPI = documentHook(setters);
   const serializationAPI = serializationHook(state, setters);
 
@@ -60,6 +62,7 @@ export function useCanvasState() {
     ...maskAPI,
     ...historyAPI,
     ...brushAPI,
+    ...lassoAPI,
     ...docAPI,
     ...serializationAPI,
   };

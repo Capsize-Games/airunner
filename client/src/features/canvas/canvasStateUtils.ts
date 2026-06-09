@@ -116,6 +116,9 @@ export const defaultState = (): CanvasState => {
     moveMode: "pick" as MoveMode,
     brushSize: 10,
     brushColor: "#ffffff",
+    lassoAntialiasing: true,
+    lassoFeatherEdges: false,
+    lassoFeatherRadius: 10,
     maskStrokes: [] as StrokeNode[],
     snapToGrid: false,
   };
