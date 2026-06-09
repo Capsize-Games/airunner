@@ -114,9 +114,9 @@ export default function CanvasToolPanel({
       {/* Row 1: header — new doc left, settings right */}
       <div style={{
         display: "flex", alignItems: "center", justifyContent: "space-between",
-        paddingBottom: 4,
+        padding: "0 6px 4px 6px",
+        margin: "0 -6px 2px -6px",
         borderBottom: "1px solid rgba(255,255,255,0.07)",
-        marginBottom: 2,
       }}>
         {iconBtn("New Document", FilePlus, onNewDocument)}
         {iconBtn("Canvas Settings", Settings, onOpenSettings)}
@@ -131,9 +131,10 @@ export default function CanvasToolPanel({
       {/* Row 3: layer / image browser toggles */}
       <div style={{
         display: "flex", alignItems: "center", gap: 2,
-        paddingTop: 4,
+        padding: "4px 6px",
+        margin: "2px -6px",
         borderTop: "1px solid rgba(255,255,255,0.07)",
-        marginTop: 2,
+        borderBottom: "1px solid rgba(255,255,255,0.07)",
       }}>
         {toggleBtn(activeAssetTab === "layers", Layers, "Layers Panel", onToggleLayers)}
         {toggleBtn(activeAssetTab === "images", Images, "Images Panel", onToggleImages)}
