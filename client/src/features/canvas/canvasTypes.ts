@@ -22,6 +22,15 @@ export interface StrokeNode {
   tool: "brush" | "eraser";
 }
 
+export interface TextNodeData {
+  text: string;
+  x: number;
+  y: number;
+  fontFamily: string;
+  fontSize: number;
+  fill: string;
+}
+
 export interface CanvasLayer {
   id: string;
   name: string;
@@ -37,6 +46,7 @@ export interface CanvasLayer {
   maskStrokes?: StrokeNode[] | null; // null/undefined = no mask; array = mask exists (white = show, black = hide)
   maskFill?: "white" | "black";      // background of the mask: white = fully visible, black = fully hidden
   maskTarget?: "content" | "mask";   // which target receives strokes (default "content")
+  textNode?: TextNodeData;           // text tool output — one text node per layer
 }
 
 export interface LayerGroup {
@@ -99,6 +109,9 @@ export interface CanvasState {
   bucketThreshold: number; // 0–100
   smudgeSize: number; // 0–100
   pipetteTarget: "foreground" | "background";
+  textFont: string;
+  textSize: number;
+  textColor: string;
   maskStrokes: StrokeNode[];
   snapToGrid: boolean;
   cropX: number;

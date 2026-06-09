@@ -29,6 +29,7 @@ import { useBucketTool } from "./stage/tools/bucket/useBucketTool";
 import { useSmudgeTool } from "./stage/tools/smudge/useSmudgeTool";
 import { usePipetteTool } from "./stage/tools/pipette/usePipetteTool";
 import { useZoomTool } from "./stage/tools/zoom/useZoomTool";
+import { useTextTool } from "./stage/tools/text/useTextTool";
 import { useCanvasContext } from "./CanvasContext";
 
 export type { CanvasStageHandle } from "./stage/types";
@@ -192,6 +193,20 @@ const CanvasStage = forwardRef<CanvasStageHandle, CanvasStageProps>(
       ),
     });
 
+    const textTool = useTextTool({
+      isActive: activeTool === "text",
+      getCanvasPos,
+      stageRef,
+      textFont: wandCtx.textFont,
+      textSize: wandCtx.textSize,
+      textColor: wandCtx.textColor,
+      layers: wandCtx.layers,
+      addLayer: wandCtx.addLayer,
+      renameLayer: wandCtx.renameLayer,
+      deleteLayer: wandCtx.deleteLayer,
+      setTextNode: wandCtx.setTextNode,
+    });
+
     // ── Unified mouse handlers ─────────────────────────────────────────
 
     const handleMouseDown = useCallback(
@@ -219,8 +234,9 @@ const CanvasStage = forwardRef<CanvasStageHandle, CanvasStageProps>(
         if (smudge.onMouseDown(e)) return;
         if (pipette.onMouseDown(e)) return;
         if (zoomTool.onMouseDown(e)) return;
+        if (textTool.onMouseDown(e)) return;
       },
-      [stageRef, isMoveActive, moveToolHandlers, lasso, select, wand, crop, bucket, smudge, pipette, zoomTool],
+      [stageRef, isMoveActive, moveToolHandlers, lasso, select, wand, crop, bucket, smudge, pipette, zoomTool, textTool],
     );
 
     const handleMouseMove = useCallback(
@@ -245,9 +261,10 @@ const CanvasStage = forwardRef<CanvasStageHandle, CanvasStageProps>(
         if (smudge.onMouseMove(e)) return;
         if (pipette.onMouseMove(e)) return;
         if (zoomTool.onMouseMove(e)) return;
+        if (textTool.onMouseMove(e)) return;
         select.onMouseMove(e);
       },
-      [stageRef, isMoveActive, moveToolHandlers, lasso, select, wand, crop, bucket, smudge, pipette, zoomTool],
+      [stageRef, isMoveActive, moveToolHandlers, lasso, select, wand, crop, bucket, smudge, pipette, zoomTool, textTool],
     );
 
     const handleMouseUp = useCallback(
@@ -266,9 +283,10 @@ const CanvasStage = forwardRef<CanvasStageHandle, CanvasStageProps>(
         if (smudge.onMouseUp(e)) return;
         if (pipette.onMouseUp(e)) return;
         if (zoomTool.onMouseUp(e)) return;
+        if (textTool.onMouseUp(e)) return;
         select.onMouseUp(e);
       },
-      [stageRef, activeTool, layers.length, isMoveActive, moveToolHandlers, lasso, select, wand, crop, bucket, smudge, pipette, zoomTool],
+      [stageRef, activeTool, layers.length, isMoveActive, moveToolHandlers, lasso, select, wand, crop, bucket, smudge, pipette, zoomTool, textTool],
     );
 
     // Global up: only panning needs a CanvasStage-level handler now; each
@@ -327,6 +345,7 @@ const CanvasStage = forwardRef<CanvasStageHandle, CanvasStageProps>(
           smudgeRenderState={smudge.renderState}
           pipetteRenderState={pipette.renderState}
           zoomToolRenderState={zoomTool.renderState}
+          textToolRenderState={textTool.renderState}
           // Drawing overlay
           showBrushIndicator={drawing.showBrushIndicator}
           brushRadius={drawing.brushRadius}

@@ -132,6 +132,9 @@ export const defaultState = (): CanvasState => {
     bucketThreshold: 15,
     smudgeSize: 20,
     pipetteTarget: "foreground" as const,
+    textFont: "Arial",
+    textSize: 24,
+    textColor: "#ffffff",
     maskStrokes: [] as StrokeNode[],
     snapToGrid: false,
     cropX: 0,
@@ -197,6 +200,9 @@ function parseCanvasState(raw: string): CanvasState | null {
     parsed.bucketThreshold ??= 15;
     parsed.smudgeSize ??= 20;
     parsed.pipetteTarget ??= "foreground";
+    parsed.textFont ??= "Arial";
+    parsed.textSize ??= 24;
+    parsed.textColor ??= "#ffffff";
     parsed.cropX ??= 0;
     parsed.cropY ??= 0;
     parsed.cropWidth ??= 512;

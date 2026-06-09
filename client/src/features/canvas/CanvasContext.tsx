@@ -10,6 +10,7 @@ import type {
   ActiveTool,
   MoveMode,
 } from "./useCanvasState";
+import type { TextNodeData } from "./canvasTypes";
 
 export interface CanvasContextValue {
   documentWidth: number;
@@ -123,6 +124,15 @@ export interface CanvasContextValue {
   // ── Zoom tool settings ──────────────────────────────────────────────
   zoomDirection: "in" | "out";
   setZoomDirection: (value: "in" | "out") => void;
+  // ── Text tool settings ──────────────────────────────────────────────
+  textFont: string;
+  textSize: number;
+  textColor: string;
+  setTextFont: (value: string) => void;
+  setTextSize: (value: number) => void;
+  setTextColor: (value: string) => void;
+  // ── Text tool layer management ──────────────────────────────────────
+  setTextNode: (layerId: string, textNode: TextNodeData) => void;
 }
 
 const CanvasContext = createContext<CanvasContextValue | null>(null);

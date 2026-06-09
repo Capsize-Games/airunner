@@ -1,5 +1,5 @@
 import { useRef, useEffect, useLayoutEffect, useCallback } from "react";
-import { Group, Image as KonvaImage, Layer, Line, Rect } from "react-konva";
+import { Group, Image as KonvaImage, Layer, Line, Rect, Text } from "react-konva";
 import Konva from "konva";
 import type { CanvasLayer as CanvasLayerType, StrokeNode, ActiveTool, MoveMode } from "./useCanvasState";
 import DrawingLayer from "./DrawingLayer";
@@ -275,6 +275,17 @@ export default function CanvasLayerRenderer({
         opacity={layer.opacity}
         isActive={isActive}
       />
+      {layer.textNode && (
+        <Text
+          x={layer.textNode.x}
+          y={layer.textNode.y}
+          text={layer.textNode.text}
+          fontFamily={layer.textNode.fontFamily}
+          fontSize={layer.textNode.fontSize}
+          fill={layer.textNode.fill}
+          listening={false}
+        />
+      )}
     </>
   );
 
