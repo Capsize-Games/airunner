@@ -18,9 +18,11 @@ import GridLayer from "./GridLayer";
 import LassoLayer from "./tools/lasso/LassoLayer";
 import SelectLayer from "./tools/select/SelectLayer";
 import WandLayer from "./tools/wand/WandLayer";
+import CropLayer from "./tools/crop/CropLayer";
 import type { LassoRenderState } from "./tools/lasso/useLassoTool";
 import type { SelectRenderState } from "./tools/select/useSelectTool";
 import type { WandRenderState } from "./tools/wand/useWandTool";
+import type { CropRenderState } from "./tools/crop/useCropTool";
 import type {
   CanvasLayer,
   LayerGroup,
@@ -55,6 +57,11 @@ interface Props {
   lassoRenderState: LassoRenderState;
   selectRenderState: SelectRenderState;
   wandRenderState: WandRenderState;
+  cropRenderState: CropRenderState;
+  cropOnRectChange: (
+    x: number, y: number,
+    width: number, height: number,
+  ) => void;
   // ── Drawing overlay ──────────────────────────────────────────────────────
   showBrushIndicator: boolean;
   brushRadius: number;
@@ -91,6 +98,7 @@ export default function StageContent({
   activeTool, moveMode, brushSize, brushColor, maskStrokes,
   showGrid, snapToGrid,
   lassoRenderState, selectRenderState, wandRenderState,
+  cropRenderState, cropOnRectChange,
   showBrushIndicator, brushRadius, indicatorColor,
   brushRingRef, brushDotRef, brushIndicatorLayerRef,
   isDrawingTool,
@@ -252,6 +260,15 @@ export default function StageContent({
 
       {activeTool === "wand" && (
         <WandLayer {...wandRenderState} />
+      )}
+
+      {activeTool === "crop" && (
+        <CropLayer
+          {...cropRenderState}
+          stageWidth={stageSize.width}
+          stageHeight={stageSize.height}
+          onCropRectChange={cropOnRectChange}
+        />
       )}
 
     </Stage>

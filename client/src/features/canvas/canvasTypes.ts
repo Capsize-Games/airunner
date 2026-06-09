@@ -93,6 +93,10 @@ export interface CanvasState {
   wandThreshold: number; // 0–100, mapped to RGBA distance
   maskStrokes: StrokeNode[];
   snapToGrid: boolean;
+  cropX: number;
+  cropY: number;
+  cropWidth: number;
+  cropHeight: number;
   history: string[];
   historyIndex: number;
 }

@@ -24,6 +24,7 @@ import { moveTool } from "./stage/moveTool";
 import { useLassoTool } from "./stage/tools/lasso/useLassoTool";
 import { useSelectTool } from "./stage/tools/select/useSelectTool";
 import { useWandTool } from "./stage/tools/wand/useWandTool";
+import { useCropTool } from "./stage/tools/crop/useCropTool";
 import { useCanvasContext } from "./CanvasContext";
 
 export type { CanvasStageHandle } from "./stage/types";
@@ -128,6 +129,12 @@ const CanvasStage = forwardRef<CanvasStageHandle, CanvasStageProps>(
       settingsRef: wandSettingsRef,
     });
 
+    const crop = useCropTool({
+      isActive: activeTool === "crop",
+      getCanvasPos,
+      stageRef,
+    });
+
     // ── Unified mouse handlers ─────────────────────────────────────────
 
     const handleMouseDown = useCallback(
@@ -150,8 +157,9 @@ const CanvasStage = forwardRef<CanvasStageHandle, CanvasStageProps>(
         if (lasso.onMouseDown(e))  return;
         if (select.onMouseDown(e)) return;
         if (wand.onMouseDown(e))   return;
+        if (crop.onMouseDown(e))   return;
       },
-      [stageRef, isMoveActive, moveToolHandlers, lasso, select, wand],
+      [stageRef, isMoveActive, moveToolHandlers, lasso, select, wand, crop],
     );
 
     const handleMouseMove = useCallback(
@@ -171,9 +179,10 @@ const CanvasStage = forwardRef<CanvasStageHandle, CanvasStageProps>(
         if (isMoveActive) { moveToolHandlers.handleMoveMouseMove(e); return; }
         if (lasso.onMouseMove(e))  return;
         if (wand.onMouseMove(e))   return;
+        if (crop.onMouseMove(e))   return;
         select.onMouseMove(e);
       },
-      [stageRef, isMoveActive, moveToolHandlers, lasso, select, wand],
+      [stageRef, isMoveActive, moveToolHandlers, lasso, select, wand, crop],
     );
 
     const handleMouseUp = useCallback(
@@ -187,9 +196,10 @@ const CanvasStage = forwardRef<CanvasStageHandle, CanvasStageProps>(
         if (isMoveActive) { moveToolHandlers.handleMoveMouseUp(e); return; }
         if (lasso.onMouseUp(e))  return;
         if (wand.onMouseUp(e))   return;
+        if (crop.onMouseUp(e))   return;
         select.onMouseUp(e);
       },
-      [stageRef, activeTool, layers.length, isMoveActive, moveToolHandlers, lasso, select, wand],
+      [stageRef, activeTool, layers.length, isMoveActive, moveToolHandlers, lasso, select, wand, crop],
     );
 
     // Global up: only panning needs a CanvasStage-level handler now; each
@@ -241,6 +251,8 @@ const CanvasStage = forwardRef<CanvasStageHandle, CanvasStageProps>(
           lassoRenderState={lasso.renderState}
           selectRenderState={select.renderState}
           wandRenderState={wand.renderState}
+          cropRenderState={crop.renderState}
+          cropOnRectChange={crop.onCropRectChange}
           // Drawing overlay
           showBrushIndicator={drawing.showBrushIndicator}
           brushRadius={drawing.brushRadius}

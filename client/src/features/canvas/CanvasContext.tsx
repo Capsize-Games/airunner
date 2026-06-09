@@ -96,6 +96,15 @@ export interface CanvasContextValue {
   setLassoAntialiasing: (value: boolean) => void;
   setLassoFeatherEdges: (value: boolean) => void;
   setLassoFeatherRadius: (value: number) => void;
+  // ── Crop tool settings ─────────────────────────────────────────────
+  cropX: number;
+  cropY: number;
+  cropWidth: number;
+  cropHeight: number;
+  setCropX: (value: number) => void;
+  setCropY: (value: number) => void;
+  setCropWidth: (value: number) => void;
+  setCropHeight: (value: number) => void;
 }
 
 const CanvasContext = createContext<CanvasContextValue | null>(null);

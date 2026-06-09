@@ -128,6 +128,10 @@ export const defaultState = (): CanvasState => {
     wandThreshold: 15,
     maskStrokes: [] as StrokeNode[],
     snapToGrid: false,
+    cropX: 0,
+    cropY: 0,
+    cropWidth: 512,
+    cropHeight: 512,
   };
   const initialSnapshot = JSON.stringify(base);
   return {
@@ -181,6 +185,10 @@ function parseCanvasState(raw: string): CanvasState | null {
     parsed.wandSampleMerged ??= false;
     parsed.wandDiagonalNeighbors ??= false;
     parsed.wandThreshold ??= 15;
+    parsed.cropX ??= 0;
+    parsed.cropY ??= 0;
+    parsed.cropWidth ??= 512;
+    parsed.cropHeight ??= 512;
     advanceCountersFromState(parsed);
     return parsed;
   } catch {
