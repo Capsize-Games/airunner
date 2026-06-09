@@ -5,7 +5,7 @@
 // Exports:
 //   CanvasStageHandle, CanvasStage (default), CanvasStageProps (from types)
 
-import { useRef, useCallback, useState, forwardRef } from "react";
+import { useRef, useCallback, useState, forwardRef, useEffect } from "react";
 import Konva from "konva";
 import type { CanvasStageHandle } from "./stage/types";
 import { zoom as zoomHook } from "./stage/zoom";
@@ -45,8 +45,10 @@ const CanvasStage = forwardRef<
     onRedo,
     setActiveTool,
     onZoomChange,
-    zoomMode,
-    onZoomModeChange,
+    isFitToView,
+    isCenterView,
+    onFitToViewChange,
+    onCenterViewChange,
     gridLayerRef,
     maskLayerRef,
     stageRef,
@@ -63,8 +65,10 @@ const CanvasStage = forwardRef<
     documentWidth,
     documentHeight,
     onZoomChange,
-    zoomMode,
-    onZoomModeChange,
+    isFitToView,
+    isCenterView,
+    onFitToViewChange,
+    onCenterViewChange,
     handleRef: ref,
   });
   // ── Drawing overlay ──────────────────────────────────────────────────
@@ -89,6 +93,15 @@ const CanvasStage = forwardRef<
   // ── Mouse panning ────────────────────────────────────────────────────
   const isPanning = useRef(false);
   const lastPointerPos = useRef({ x: 0, y: 0 });
+  const isCenterViewRef = useRef(isCenterView);
+  const onCenterViewChangeRef = useRef(onCenterViewChange);
+
+  useEffect(() => {
+    isCenterViewRef.current = isCenterView;
+  }, [isCenterView]);
+  useEffect(() => {
+    onCenterViewChangeRef.current = onCenterViewChange;
+  }, [onCenterViewChange]);
 
   // ── Selection rect ───────────────────────────────────────────────────
   const selectionStartRef = useRef<{
@@ -110,6 +123,7 @@ const CanvasStage = forwardRef<
   const handleMouseDown = useCallback(
     (e: Konva.KonvaEventObject<MouseEvent>) => {
       if (e.evt.button === 1) {
+        e.evt.preventDefault(); // prevent browser autoscroll
         isPanning.current = true;
         const container = stageRef.current?.container();
         if (container) container.style.cursor = "grabbing";
@@ -150,6 +164,9 @@ const CanvasStage = forwardRef<
           x: stage.x() + dx,
           y: stage.y() + dy,
         });
+        if (isCenterViewRef.current) {
+          onCenterViewChangeRef.current(false);
+        }
         lastPointerPos.current = { x: pos.x, y: pos.y };
         return;
       }
@@ -188,6 +205,18 @@ const CanvasStage = forwardRef<
       selectionStartRef.current = null;
     }
   }, [stageRef, activeTool, layers.length]);
+
+  // Catch pointerup / mouseup globally so panning and selection
+  // stop even when the cursor leaves the Stage area.
+  useEffect(() => {
+    const onGlobalUp = () => handleMouseUp();
+    window.addEventListener("pointerup", onGlobalUp);
+    window.addEventListener("mouseup", onGlobalUp);
+    return () => {
+      window.removeEventListener("pointerup", onGlobalUp);
+      window.removeEventListener("mouseup", onGlobalUp);
+    };
+  }, [handleMouseUp]);
 
   return (
     <div

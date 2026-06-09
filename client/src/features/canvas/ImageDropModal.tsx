@@ -1,7 +1,7 @@
 import Modal from "react-bootstrap/Modal";
 import Button from "react-bootstrap/Button";
 
-export type DropResizeMode = "none" | "fit-grid" | "fit-canvas";
+export type DropResizeMode = "none" | "fit-canvas";
 
 interface ImageDropModalProps {
   show: boolean;
@@ -41,7 +41,6 @@ export default function ImageDropModal({
 
   const options: { mode: DropResizeMode; label: string; detail: string }[] = [
     { mode: "none",       label: "Original size",        detail: `${naturalW} × ${naturalH}` },
-    { mode: "fit-grid",   label: "Fit to Active Grid",   detail: `→ ${fitGrid.w} × ${fitGrid.h}` },
     { mode: "fit-canvas", label: "Fit to Canvas",        detail: `→ ${fitCanvas.w} × ${fitCanvas.h}` },
   ];
 

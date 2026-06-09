@@ -142,6 +142,10 @@ function parseCanvasState(raw: string): CanvasState | null {
     const parsed = JSON.parse(raw) as CanvasState;
     if (!Array.isArray(parsed.layers)) return null;
     parsed.layerGroups ??= [];
+    // The persistable form (used by documentString) strips history;
+    // ensure defaults are present so pushHistory / undo don't crash.
+    parsed.history ??= [];
+    parsed.historyIndex ??= -1;
     if (
       !Array.isArray(parsed.displayOrder) ||
       parsed.displayOrder.length === 0

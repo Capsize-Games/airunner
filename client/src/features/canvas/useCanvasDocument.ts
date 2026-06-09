@@ -55,15 +55,25 @@ export function useCanvasDocument({
     const handler = () => {
       const doc = latestDocRef.current;
       if (!doc) return;
+      // Persist to localStorage synchronously on unload
+      // so the next page load picks up the latest state
+      // immediately (before any async server fetch resolves).
+      try {
+        localStorage.setItem("airunner_canvas_state", doc);
+      } catch {
+        /* quota */
+      }
       try {
         fetch("/api/v1/canvas/document", {
           method: "PUT",
           headers: { "Content-Type": "application/json", ...getRequestHeaders() },
           body: JSON.stringify({ document: doc }),
           keepalive: true,
+        }).catch(() => {
+          // Best-effort — swallow network errors during unload.
         });
       } catch {
-        // Best-effort — swallow any errors during unload.
+        // Best-effort — swallow sync errors during unload.
       }
     };
     window.addEventListener("beforeunload", handler);

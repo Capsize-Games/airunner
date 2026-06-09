@@ -18,8 +18,10 @@ interface Params {
   documentWidth: number;
   documentHeight: number;
   onZoomChange: (zoom: number) => void;
-  zoomMode: "fit" | "locked";
-  onZoomModeChange: (mode: "fit" | "locked") => void;
+  isFitToView: boolean;
+  isCenterView: boolean;
+  onFitToViewChange: (v: boolean) => void;
+  onCenterViewChange: (v: boolean) => void;
   handleRef: React.ForwardedRef<CanvasStageHandle>;
 }
 
@@ -31,23 +33,45 @@ export function zoom({
   documentWidth,
   documentHeight,
   onZoomChange,
-  zoomMode,
-  onZoomModeChange,
+  isFitToView,
+  isCenterView,
+  onFitToViewChange,
+  onCenterViewChange,
   handleRef,
 }: Params) {
   const [zoom, setZoom] = useState(1);
   const [stageSize, setStageSize] = useState({ width: 800, height: 600 });
-  const zoomModeRef = useRef(zoomMode);
-  const onZoomModeChangeRef = useRef(onZoomModeChange);
+  const isFitToViewRef = useRef(isFitToView);
+  const isCenterViewRef = useRef(isCenterView);
+  const onFitToViewChangeRef = useRef(onFitToViewChange);
+  const onCenterViewChangeRef = useRef(onCenterViewChange);
   const lastPointerPos = useRef({ x: 0, y: 0 });
   const lastTouchDist = useRef(0);
 
   useEffect(() => {
-    zoomModeRef.current = zoomMode;
-  }, [zoomMode]);
+    isFitToViewRef.current = isFitToView;
+  }, [isFitToView]);
   useEffect(() => {
-    onZoomModeChangeRef.current = onZoomModeChange;
-  }, [onZoomModeChange]);
+    isCenterViewRef.current = isCenterView;
+  }, [isCenterView]);
+  useEffect(() => {
+    onFitToViewChangeRef.current = onFitToViewChange;
+  }, [onFitToViewChange]);
+  useEffect(() => {
+    onCenterViewChangeRef.current = onCenterViewChange;
+  }, [onCenterViewChange]);
+
+  // ── Helper: center stage at current scale ─────────────────────────────
+  const centerStageAtScale = useCallback(
+    (stage: Konva.Stage, container: HTMLDivElement) => {
+      const scale = stage.scaleX();
+      stage.position({
+        x: (container.clientWidth - documentWidth * scale) / 2,
+        y: (container.clientHeight - documentHeight * scale) / 2,
+      });
+    },
+    [documentWidth, documentHeight],
+  );
 
   // ── Fit on first mount + ResizeObserver ───────────────────────────────
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -59,7 +83,7 @@ export function zoom({
       setStageSize({ width, height });
       const stage = stageRef.current;
       if (!stage) return;
-      if (zoomModeRef.current === "fit") {
+      if (isFitToViewRef.current) {
         const fitScale = Math.min(
           (width - PADDING) / Math.max(documentWidth, 1),
           (height - PADDING) / Math.max(documentHeight, 1),
@@ -68,15 +92,14 @@ export function zoom({
         stage.scale({ x: fitScale, y: fitScale });
         setZoom(fitScale);
         onZoomChange(fitScale);
-        stage.position({
-          x: (width - documentWidth * fitScale) / 2,
-          y: (height - documentHeight * fitScale) / 2,
-        });
+        centerStageAtScale(stage, container);
+      } else if (isCenterViewRef.current) {
+        centerStageAtScale(stage, container);
       }
     });
     observer.observe(container);
     return () => observer.disconnect();
-  }, [stageRef, documentWidth, documentHeight, onZoomChange]);
+  }, [stageRef, documentWidth, documentHeight, onZoomChange, centerStageAtScale]);
 
   // ── Imperative handle ─────────────────────────────────────────────────
   useImperativeHandle(
@@ -85,65 +108,66 @@ export function zoom({
       zoomIn: () => {
         const stage = stageRef.current;
         if (!stage) return;
-        const newScale = Math.min(
-          stage.scaleX() * 1.25,
-          20,
-        );
+        const newScale = Math.min(stage.scaleX() * 1.25, 20);
         stage.scale({ x: newScale, y: newScale });
         setZoom(newScale);
         onZoomChange(newScale);
-        onZoomModeChange("locked");
+        onFitToViewChange(false);
+        if (isCenterViewRef.current) {
+          const c = containerRef.current;
+          if (c) centerStageAtScale(stage, c);
+        }
       },
       zoomOut: () => {
         const stage = stageRef.current;
         if (!stage) return;
-        const newScale = Math.max(
-          stage.scaleX() / 1.25,
-          0.05,
-        );
+        const newScale = Math.max(stage.scaleX() / 1.25, 0.05);
         stage.scale({ x: newScale, y: newScale });
         setZoom(newScale);
         onZoomChange(newScale);
-        onZoomModeChange("locked");
+        onFitToViewChange(false);
+        if (isCenterViewRef.current) {
+          const c = containerRef.current;
+          if (c) centerStageAtScale(stage, c);
+        }
       },
       zoomReset: () => {
         const stage = stageRef.current;
         const container = containerRef.current;
         if (!stage) return;
         stage.scale({ x: 1, y: 1 });
-        stage.position({
-          x: container
-            ? (container.clientWidth - documentWidth) / 2
-            : 0,
-          y: container
-            ? (container.clientHeight - documentHeight) /
-                2
-            : 0,
-        });
         setZoom(1);
         onZoomChange(1);
-        onZoomModeChange("locked");
+        onFitToViewChange(false);
+        if (isCenterViewRef.current && container) {
+          centerStageAtScale(stage, container);
+        } else if (container) {
+          stage.position({
+            x: (container.clientWidth - documentWidth) / 2,
+            y: (container.clientHeight - documentHeight) / 2,
+          });
+        }
       },
       centerView: () => {
         const stage = stageRef.current;
         const container = containerRef.current;
         if (!stage || !container) return;
-        const scale = stage.scaleX();
-        stage.position({
-          x:
-            (container.clientWidth -
-              documentWidth * scale) /
-            2,
-          y:
-            (container.clientHeight -
-              documentHeight * scale) /
-            2,
-        });
+        if (isCenterViewRef.current) {
+          onCenterViewChange(false);
+        } else {
+          centerStageAtScale(stage, container);
+          onCenterViewChange(true);
+        }
       },
       fitView: () => {
         const stage = stageRef.current;
         const container = containerRef.current;
         if (!stage || !container) return;
+        // Toggle: if already fit-to-view, turn it off.
+        if (isFitToViewRef.current) {
+          onFitToViewChange(false);
+          return;
+        }
         const width = container.clientWidth;
         const height = container.clientHeight;
         const fitScale = Math.min(
@@ -153,24 +177,26 @@ export function zoom({
         );
         stage.scale({ x: fitScale, y: fitScale });
         stage.position({
-          x:
-            (width - documentWidth * fitScale) / 2,
-          y:
-            (height - documentHeight * fitScale) / 2,
+          x: (width - documentWidth * fitScale) / 2,
+          y: (height - documentHeight * fitScale) / 2,
         });
         setZoom(fitScale);
         onZoomChange(fitScale);
-        onZoomModeChange("fit");
+        onFitToViewChange(true);
+        // Leave center-view state alone — the two toggles are independent.
       },
       getZoom: () => stageRef.current?.scaleX() ?? 1,
       getStage: () => stageRef.current,
     }),
     [
       stageRef,
+      containerRef,
       documentWidth,
       documentHeight,
       onZoomChange,
-      onZoomModeChange,
+      centerStageAtScale,
+      onFitToViewChange,
+      onCenterViewChange,
     ],
   );
 
@@ -179,6 +205,7 @@ export function zoom({
     (e: Konva.KonvaEventObject<WheelEvent>) => {
       e.evt.preventDefault();
       const stage = stageRef.current;
+      const container = containerRef.current;
       if (!stage) return;
       const scaleBy = 1.08;
       const oldScale = stage.scaleX();
@@ -188,24 +215,29 @@ export function zoom({
         e.evt.deltaY < 0
           ? oldScale * scaleBy
           : oldScale / scaleBy;
-      const clampedScale = Math.max(
-        0.05,
-        Math.min(newScale, 20),
-      );
-      const mousePointTo = {
-        x: (pointer.x - stage.x()) / oldScale,
-        y: (pointer.y - stage.y()) / oldScale,
-      };
-      stage.scale({ x: clampedScale, y: clampedScale });
-      stage.position({
-        x: pointer.x - mousePointTo.x * clampedScale,
-        y: pointer.y - mousePointTo.y * clampedScale,
-      });
-      setZoom(clampedScale);
-      onZoomChange(clampedScale);
-      onZoomModeChangeRef.current("locked");
+      const clampedScale = Math.max(0.05, Math.min(newScale, 20));
+      const centerMode = isCenterViewRef.current;
+      onFitToViewChangeRef.current(false);
+      if (centerMode && container) {
+        stage.scale({ x: clampedScale, y: clampedScale });
+        setZoom(clampedScale);
+        onZoomChange(clampedScale);
+        centerStageAtScale(stage, container);
+      } else {
+        const mousePointTo = {
+          x: (pointer.x - stage.x()) / oldScale,
+          y: (pointer.y - stage.y()) / oldScale,
+        };
+        stage.scale({ x: clampedScale, y: clampedScale });
+        stage.position({
+          x: pointer.x - mousePointTo.x * clampedScale,
+          y: pointer.y - mousePointTo.y * clampedScale,
+        });
+        setZoom(clampedScale);
+        onZoomChange(clampedScale);
+      }
     },
-    [stageRef, onZoomChange],
+    [stageRef, onZoomChange, centerStageAtScale],
   );
 
   // ── Multi-touch pinch/pan ─────────────────────────────────────────────
@@ -242,22 +274,35 @@ export function zoom({
       );
       const stage = stageRef.current;
       if (!stage) return;
+      const isPanning = Math.abs(dx) > 0 || Math.abs(dy) > 0;
       if (lastTouchDist.current > 0) {
         const pinchRatio = dist / lastTouchDist.current;
         if (Math.abs(pinchRatio - 1) > 0.03) {
           const newScale = Math.max(
             0.05,
-            Math.min(
-              stage.scaleX() * pinchRatio,
-              20,
-            ),
+            Math.min(stage.scaleX() * pinchRatio, 20),
           );
           stage.scale({ x: newScale, y: newScale });
           setZoom(newScale);
           onZoomChange(newScale);
-          onZoomModeChangeRef.current("locked");
+          // Pinch zoom disables fit-to-view
+          onFitToViewChangeRef.current(false);
+          if (isCenterViewRef.current) {
+            const c = container;
+            const s = stage;
+            const scale = s.scaleX();
+            s.position({
+              x: (c.clientWidth - documentWidth * scale) / 2,
+              y: (c.clientHeight - documentHeight * scale) / 2,
+            });
+          }
           lastTouchDist.current = dist;
+          return;
         }
+      }
+      // Pure pan — if centered, switch it off
+      if (isPanning && isCenterViewRef.current) {
+        onCenterViewChangeRef.current(false);
       }
       stage.position({
         x: stage.x() + dx,
@@ -268,19 +313,15 @@ export function zoom({
     const onEnd = () => {
       lastTouchDist.current = 0;
     };
-    container.addEventListener("touchstart", onStart, {
-      passive: false,
-    });
-    container.addEventListener("touchmove", onMove, {
-      passive: false,
-    });
+    container.addEventListener("touchstart", onStart, { passive: false });
+    container.addEventListener("touchmove", onMove, { passive: false });
     container.addEventListener("touchend", onEnd);
     return () => {
       container.removeEventListener("touchstart", onStart);
       container.removeEventListener("touchmove", onMove);
       container.removeEventListener("touchend", onEnd);
     };
-  }, [stageRef, onZoomChange]);
+  }, [stageRef, onZoomChange, documentWidth, centerStageAtScale]);
 
   return { zoom, setZoom, stageSize, handleWheel };
 }

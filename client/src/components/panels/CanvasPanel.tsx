@@ -38,7 +38,8 @@ export default function CanvasPanel() {
     }
   });
   const [zoom, setZoom] = useState(1);
-  const [zoomMode, setZoomMode] = useState<"fit" | "locked">("fit");
+  const [isFitToView, setIsFitToView] = useState(true);
+  const [isCenterView, setIsCenterView] = useState(false);
   const [gridLocked] = useState(() => {
     try {
       return localStorage.getItem("canvas_grid_locked") === "true";
@@ -85,11 +86,12 @@ export default function CanvasPanel() {
     handleDragOver,
     handleDrop,
     queueDrop,
+    viewportCenter,
     useCanvasPlaceImage,
   } = useCanvasImageDrop(stageRef);
 
   // Listen for the "canvas-place-image" event fired by ServerImageRow
-  useCanvasPlaceImage(queueDrop);
+  useCanvasPlaceImage(queueDrop, viewportCenter);
 
   const handleDropConfirm = useCallback(
     (mode: DropResizeMode) => {
@@ -97,16 +99,7 @@ export default function CanvasPanel() {
       const { base64, x, y, naturalW, naturalH } = pendingDrop;
       let w = naturalW;
       let h = naturalH;
-      if (mode === "fit-grid") {
-        const fit = fitDimensions(
-          naturalW,
-          naturalH,
-          canvas.activeGridArea.width,
-          canvas.activeGridArea.height,
-        );
-        w = fit.w;
-        h = fit.h;
-      } else if (mode === "fit-canvas") {
+      if (mode === "fit-canvas") {
         const fit = fitDimensions(
           naturalW,
           naturalH,
@@ -223,8 +216,10 @@ export default function CanvasPanel() {
                 onRedo={canvas.redo}
                 setActiveTool={canvas.setActiveTool}
                 onZoomChange={setZoom}
-                zoomMode={zoomMode}
-                onZoomModeChange={setZoomMode}
+                isFitToView={isFitToView}
+                isCenterView={isCenterView}
+                onFitToViewChange={setIsFitToView}
+                onCenterViewChange={setIsCenterView}
                 gridLayerRef={gridLayerRef}
                 maskLayerRef={maskLayerRef}
                 stageRef={stageRef}
@@ -245,7 +240,8 @@ export default function CanvasPanel() {
           gridWidth={canvas.activeGridArea.width}
           gridHeight={canvas.activeGridArea.height}
           activeLayer={canvas.activeLayer}
-          zoomMode={zoomMode}
+          isFitToView={isFitToView}
+          isCenterView={isCenterView}
           onZoomOut={() => canvasHandleRef.current?.zoomOut()}
           onZoomReset={() => canvasHandleRef.current?.zoomReset()}
           onZoomIn={() => canvasHandleRef.current?.zoomIn()}

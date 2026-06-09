@@ -20,7 +20,7 @@ import type {
 import { getCursor } from "../cursorUtils";
 import {
   lerp,
-  clampToDoc,
+  clipPointsToRect,
   getCanvasPosFromStage,
   INTERP_THRESHOLD,
 } from "./drawingHelpers";
@@ -173,33 +173,17 @@ export function drawingOverlay({
         x: pos.x - drawingOffsetX,
         y: pos.y - drawingOffsetY,
       };
-      const clamped = clampToDoc(
-        local.x,
-        local.y,
-        documentWidth,
-        documentHeight,
-        0,
-        drawingOffsetX,
-        drawingOffsetY,
-      );
       isDrawingOverlay.current = true;
-      drawingPoints.current = [clamped.x, clamped.y];
+      drawingPoints.current = [local.x, local.y];
       liveStrokeId.current = crypto.randomUUID();
       lastSentCount.current = 0;
       const liveStroke = getLiveStroke();
       if (liveStroke) {
-        liveStroke.points([clamped.x, clamped.y]);
+        liveStroke.points([local.x, local.y]);
         liveStroke.getLayer()?.batchDraw();
       }
     },
-    [
-      activeLayerId,
-      isDrawingTool,
-      documentWidth,
-      documentHeight,
-      drawingOffsetX,
-      drawingOffsetY,
-    ],
+    [activeLayerId, isDrawingTool],
   );
 
   const handleOverlayPointerMove = useCallback(
@@ -213,21 +197,12 @@ export function drawingOverlay({
         x: pos.x - drawingOffsetX,
         y: pos.y - drawingOffsetY,
       };
-      const clamped = clampToDoc(
-        local.x,
-        local.y,
-        documentWidth,
-        documentHeight,
-        0,
-        drawingOffsetX,
-        drawingOffsetY,
-      );
       const pts = drawingPoints.current;
       if (pts.length >= 2) {
         const px = pts[pts.length - 2];
         const py = pts[pts.length - 1];
-        const dx = clamped.x - px;
-        const dy = clamped.y - py;
+        const dx = local.x - px;
+        const dy = local.y - py;
         const dist = Math.sqrt(dx * dx + dy * dy);
         if (dist > INTERP_THRESHOLD) {
           const steps = Math.floor(
@@ -238,15 +213,15 @@ export function drawingOverlay({
             const ip = lerp(
               px,
               py,
-              clamped.x,
-              clamped.y,
+              local.x,
+              local.y,
               t,
             );
             pts.push(ip.x, ip.y);
           }
         }
       }
-      pts.push(clamped.x, clamped.y);
+      pts.push(local.x, local.y);
       const liveStroke2 = getLiveStroke();
       if (liveStroke2) {
         liveStroke2.points([...pts]);
@@ -322,18 +297,31 @@ export function drawingOverlay({
       drawingPoints.current = [];
       return;
     }
-    onAddStroke({
-      points: [...drawingPoints.current],
-      color:
-        activeTool === "eraser" ? "#000000" : brushColor,
-      strokeWidth: brushSize,
-      tool: activeTool as "brush" | "eraser",
-    });
+    // Clip the stroke to the document bounds — discard any portion
+    // that was drawn outside the canvas area.
+    const clipped = clipPointsToRect(
+      drawingPoints.current,
+      0,
+      0,
+      documentWidth,
+      documentHeight,
+    );
+    if (clipped.length >= 4) {
+      onAddStroke({
+        points: clipped,
+        color:
+          activeTool === "eraser" ? "#000000" : brushColor,
+        strokeWidth: brushSize,
+        tool: activeTool as "brush" | "eraser",
+      });
+    }
     drawingPoints.current = [];
   }, [
     activeTool,
     brushSize,
     brushColor,
+    documentWidth,
+    documentHeight,
     onAddStroke,
     sendStrokeEnd,
   ]);

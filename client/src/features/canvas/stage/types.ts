@@ -65,8 +65,10 @@ export interface CanvasStageProps {
   onRedo: () => void;
   setActiveTool: (tool: ActiveTool) => void;
   onZoomChange: (zoom: number) => void;
-  zoomMode: "fit" | "locked";
-  onZoomModeChange: (mode: "fit" | "locked") => void;
+  isFitToView: boolean;
+  isCenterView: boolean;
+  onFitToViewChange: (v: boolean) => void;
+  onCenterViewChange: (v: boolean) => void;
   gridLayerRef: React.RefObject<Konva.Layer>;
   maskLayerRef: React.RefObject<Konva.Layer>;
   stageRef: React.RefObject<Konva.Stage>;

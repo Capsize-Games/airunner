@@ -27,6 +27,19 @@ export function useCanvasImageDrop(
     [stageRef],
   );
 
+  /** Calculate the center of the viewport in canvas coordinates. */
+  const viewportCenter = useCallback(() => {
+    const stage = stageRef.current;
+    if (!stage) return { x: 0, y: 0 };
+    const container = stage.container();
+    const rect = container.getBoundingClientRect();
+    const scale = stage.scaleX();
+    return {
+      x: (rect.width / 2 - stage.x()) / scale,
+      y: (rect.height / 2 - stage.y()) / scale,
+    };
+  }, [stageRef]);
+
   const queueDrop = useCallback(
     (dataUrl: string, x: number, y: number) => {
       const img = new Image();
@@ -70,7 +83,8 @@ export function useCanvasImageDrop(
   const handleDrop = useCallback(
     (e: React.DragEvent<HTMLDivElement>) => {
       e.preventDefault();
-      const { x, y } = canvasDropPos(e.clientX, e.clientY);
+      // Always center dropped images in the viewport
+      const { x, y } = viewportCenter();
 
       const file = e.dataTransfer.files[0];
       if (file) {
@@ -121,14 +135,14 @@ export function useCanvasImageDrop(
           });
       }
     },
-    [canvasDropPos, queueDrop, isImageFile],
+    [viewportCenter, queueDrop, isImageFile],
   );
 
   const handleDropConfirm = useCallback(
     (
       mode: DropResizeMode,
       pendingDrop: PendingDrop,
-      activeGridArea: { width: number; height: number },
+      _activeGridArea: { width: number; height: number },
       documentWidth: number,
       documentHeight: number,
       placeImageFn: (
@@ -142,16 +156,7 @@ export function useCanvasImageDrop(
       const { base64, x, y, naturalW, naturalH } = pendingDrop;
       let w = naturalW;
       let h = naturalH;
-      if (mode === "fit-grid") {
-        const fit = fitDimensions(
-          naturalW,
-          naturalH,
-          activeGridArea.width,
-          activeGridArea.height,
-        );
-        w = fit.w;
-        h = fit.h;
-      } else if (mode === "fit-canvas") {
+      if (mode === "fit-canvas") {
         const fit = fitDimensions(
           naturalW,
           naturalH,
@@ -174,7 +179,10 @@ export function useCanvasImageDrop(
   );
 
   /** Listen for the "canvas-place-image" event fired by ServerImageRow */
-  const useCanvasPlaceImage = (queueDropFn: typeof queueDrop) => {
+  const useCanvasPlaceImage = (
+    queueDropFn: typeof queueDrop,
+    getCenter?: () => { x: number; y: number },
+  ) => {
     useEffect(() => {
       const handler = (e: Event) => {
         const { imageUrl } = (
@@ -187,7 +195,12 @@ export function useCanvasImageDrop(
             const reader = new FileReader();
             reader.onload = (ev) => {
               const dataUrl = ev.target?.result as string;
-              if (dataUrl) queueDropFn(dataUrl, 0, 0);
+              if (dataUrl) {
+                const center = getCenter
+                  ? getCenter()
+                  : { x: 0, y: 0 };
+                queueDropFn(dataUrl, center.x, center.y);
+              }
             };
             reader.readAsDataURL(blob);
           })
@@ -198,7 +211,7 @@ export function useCanvasImageDrop(
       window.addEventListener("canvas-place-image", handler);
       return () =>
         window.removeEventListener("canvas-place-image", handler);
-    }, [queueDropFn]);
+    }, [queueDropFn, getCenter]);
   };
 
   return {
@@ -206,6 +219,7 @@ export function useCanvasImageDrop(
     showDropModal,
     setShowDropModal,
     canvasDropPos,
+    viewportCenter,
     queueDrop,
     handleDragOver,
     isImageFile,

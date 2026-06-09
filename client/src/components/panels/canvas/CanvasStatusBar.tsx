@@ -26,7 +26,8 @@ export interface CanvasStatusBarProps {
   gridWidth: number;
   gridHeight: number;
   activeLayer: CanvasLayer | null;
-  zoomMode: "fit" | "locked";
+  isFitToView: boolean;
+  isCenterView: boolean;
   onZoomOut: () => void;
   onZoomReset: () => void;
   onZoomIn: () => void;
@@ -41,7 +42,8 @@ export default function CanvasStatusBar({
   gridWidth,
   gridHeight,
   activeLayer,
-  zoomMode,
+  isFitToView,
+  isCenterView,
   onZoomOut,
   onZoomReset,
   onZoomIn,
@@ -97,12 +99,16 @@ export default function CanvasStatusBar({
         <button style={btnStyle} title="Zoom in" onClick={onZoomIn}>
           <ZoomIn size={13} strokeWidth={1.75} />
         </button>
-        <button style={btnStyle} title="Center view" onClick={onCenterView}>
+        <button
+          style={isCenterView ? btnActiveStyle : btnStyle}
+          title={isCenterView ? "Center view (active)" : "Center view"}
+          onClick={onCenterView}
+        >
           <Crosshair size={13} strokeWidth={1.75} />
         </button>
         <button
-          style={zoomMode === "fit" ? btnActiveStyle : btnStyle}
-          title={zoomMode === "fit" ? "Fit to view (active)" : "Fit to view"}
+          style={isFitToView ? btnActiveStyle : btnStyle}
+          title={isFitToView ? "Fit to view (active)" : "Fit to view"}
           onClick={onFitView}
         >
           <Expand size={13} strokeWidth={1.75} />
