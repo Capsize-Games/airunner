@@ -1,4 +1,9 @@
-import { useRef, useState, useCallback, useEffect } from "react";
+import {
+  useRef,
+  useState,
+  useCallback,
+  useEffect,
+} from "react";
 import Konva from "konva";
 import { RefreshCcw, RefreshCcwDot } from "lucide-react";
 import {
@@ -31,6 +36,7 @@ import TextControls from "../../features/canvas/sidebar/TextControls";
 import GridControls from "../../features/canvas/sidebar/GridControls";
 import RulerControls from "../../features/canvas/sidebar/RulerControls";
 import { useCanvasImageDrop } from "./canvas/useCanvasImageDrop";
+import { useMenuAction } from "../layout/action-menu-bar";
 
 const LS_LEFT_W = "airunner_left_panel_w";
 const LEFT_PANEL_MIN = 220;
@@ -164,7 +170,47 @@ export default function CanvasPanel() {
     [pendingDrop, canvas],
   );
 
-  const handleNewDocument = useCallback(() => setShowNewDocModal(true), []);
+  const handleNewDocument = useCallback(
+    () => setShowNewDocModal(true),
+    [],
+  );
+
+  // ── Respond to action-menu events ──────────────────────────────────
+  useMenuAction(
+    useCallback(
+      (action) => {
+        switch (action.type) {
+          case "file:new-document":
+            handleNewDocument();
+            break;
+          case "view:toggle-ruler":
+            canvas.setRulerShowRuler(
+              !canvas.rulerShowRuler,
+            );
+            break;
+          case "view:toggle-grid":
+            canvas.setGridShowGrid(
+              !canvas.gridShowGrid,
+            );
+            break;
+        }
+      },
+      [canvas, handleNewDocument],
+    ),
+  );
+
+  // Sync ruler/grid state back to the action menu bar whenever it
+  // changes (e.g. user toggles from the sidebar).
+  useEffect(() => {
+    window.dispatchEvent(
+      new CustomEvent("airunner:canvas-state", {
+        detail: {
+          rulerShowRuler: canvas.rulerShowRuler,
+          gridShowGrid: canvas.gridShowGrid,
+        },
+      }),
+    );
+  }, [canvas.rulerShowRuler, canvas.gridShowGrid]);
 
   const handleNewDocumentConfirm = useCallback(
     (w: number, h: number, bg: string) => {
