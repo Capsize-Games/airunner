@@ -66,6 +66,7 @@ export default function MessageBubble({
       <div
         className="p-2 rounded w-100"
         style={{
+          position: "relative",
           whiteSpace: "pre-wrap",
           background: isUser
             ? "rgba(0,132,185,0.15)"
@@ -186,16 +187,16 @@ export default function MessageBubble({
             ) : null}
           </div>
         )}
-      </div>
 
-      <MessageActions
-        isUser={isUser}
-        isEditing={isEditing}
-        onCopy={handleCopy}
-        onEdit={handleEditClick}
-        onDelete={handleDelete}
-        onPlay={handlePlay}
-      />
+        <MessageActions
+          isUser={isUser}
+          isEditing={isEditing}
+          onCopy={handleCopy}
+          onEdit={handleEditClick}
+          onDelete={handleDelete}
+          onPlay={handlePlay}
+        />
+      </div>
     </div>
   );
 }
