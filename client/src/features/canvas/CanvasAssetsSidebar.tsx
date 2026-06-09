@@ -89,21 +89,22 @@ export default function CanvasAssetsSidebar() {
   }
 
   return (
-    <div style={{ width, flexShrink: 0, display: "flex", flexDirection: "row", overflow: "hidden" }}>
+    <div className="flex-shrink-0 d-flex overflow-hidden" style={{ width }}>
       {/* Resize handle */}
       <div
         onMouseDown={handleResizeMouseDown}
-        style={{ width: 4, cursor: "col-resize", flexShrink: 0, background: "transparent", transition: "background 0.15s" }}
+        className="flex-shrink-0"
+        style={{ width: 4, cursor: "col-resize", background: "transparent", transition: "background 0.15s" }}
         onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.background = "rgba(99,153,255,0.3)"; }}
         onMouseLeave={(e) => { if (!dragging.current) (e.currentTarget as HTMLDivElement).style.background = "transparent"; }}
       />
 
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", background: "#181824", overflow: "hidden", minWidth: 0 }}>
+      <div className="flex-grow-1 d-flex flex-column overflow-hidden" style={{ background: "#181824", minWidth: 0 }}>
         {/* Header */}
-        <div style={{
-          display: "flex", alignItems: "center", justifyContent: "flex-end",
-          flexShrink: 0, borderBottom: "1px solid rgba(255,255,255,0.07)", padding: "2px 4px",
-        }}>
+        <div
+          className="d-flex align-items-center justify-content-end flex-shrink-0 border-b-subtle"
+          style={{ padding: "2px 4px" }}
+        >
           <span style={{ flex: 1, fontSize: 10, fontWeight: 600, color: "rgba(255,255,255,0.25)", letterSpacing: "0.06em", paddingLeft: 4 }}>
             ASSETS
           </span>
@@ -116,7 +117,7 @@ export default function CanvasAssetsSidebar() {
         <BrushControls />
 
         {/* Tab bar */}
-        <div style={{ display: "flex", flexShrink: 0, borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
+        <div className="d-flex flex-shrink-0 border-b-subtle">
           {TABS.map((t) => (
             <button
               key={t.id}
@@ -135,7 +136,7 @@ export default function CanvasAssetsSidebar() {
           ))}
         </div>
 
-        <div style={{ flex: 1, overflow: "hidden", minHeight: 0, display: "flex", flexDirection: "column" }}>
+        <div className="flex-grow-1 overflow-hidden d-flex flex-column min-h-0">
           {tab === "layers" ? <CanvasLayersSidebar /> : <ImageBrowserPanel />}
         </div>
       </div>

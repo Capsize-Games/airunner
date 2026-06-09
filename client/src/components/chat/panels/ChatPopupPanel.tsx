@@ -25,6 +25,7 @@ export default function ChatPopupPanel({
   return (
     <div
       id="chat-panel-popup"
+      className="bg-theme-panel d-flex flex-column overflow-hidden"
       style={{
         position: "fixed",
         left: popupAnchor.left,
@@ -32,13 +33,9 @@ export default function ChatPopupPanel({
         width: Math.max(popupAnchor.width, 360),
         height: popupAnchor.height,
         zIndex: 1300,
-        background: "var(--theme-panel-bg)",
         border: "1px solid rgba(255,255,255,0.14)",
         borderRadius: 0,
         boxShadow: "4px -4px 24px rgba(0,0,0,0.7)",
-        display: "flex",
-        flexDirection: "column",
-        overflow: "hidden",
       }}
     >
       {openPanel === "knowledge" && <KnowledgeBasePanel />}

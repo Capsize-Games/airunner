@@ -15,8 +15,7 @@ export default function PromptInput({
 }) {
   return (
     <Form.Group
-      className="flex-grow-1 d-flex flex-column"
-      style={{ minHeight: 0 }}
+      className="flex-grow-1 d-flex flex-column min-h-0"
     >
       {label ? (
         <div
@@ -39,10 +38,9 @@ export default function PromptInput({
       ) : null}
       <Form.Control
         as="textarea"
-        className="flex-grow-1"
+        className="flex-grow-1 min-h-0"
         style={{
           resize: "none",
-          minHeight: 0,
           width: "100%",
           ...(label
             ? { borderTopLeftRadius: 0, borderTopRightRadius: 0 }

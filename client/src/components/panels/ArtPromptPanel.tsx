@@ -45,15 +45,14 @@ export default function ArtPromptPanel() {
 
   if (s.collapsed) {
     return (
-      <div style={{
-        width: 32, flexShrink: 0, display: "flex", flexDirection: "column",
-        alignItems: "center", background: "var(--theme-panel-bg)",
-        borderRight: "1px solid var(--separator-color)", padding: "4px 0", gap: 2, overflow: "hidden",
-      }}>
+      <div
+        className="flex-shrink-0 d-flex flex-column align-items-center bg-theme-panel overflow-hidden"
+        style={{ width: 32, borderRight: "1px solid var(--separator-color)", padding: "4px 0", gap: 2 }}
+      >
         <button style={railBtnStyle} title="Expand art panel" onClick={() => s.collapseToStorage(false)}>
           <LucideIcon name="chevron-right" size={14} />
         </button>
-        <div style={{ width: "60%", height: 1, background: "rgba(255,255,255,0.07)", margin: "2px 0" }} />
+        <div className="sep-h" />
         <button style={railBtnStyle} title="Prompt" onClick={() => s.collapseToStorage(false)}>
           <LucideIcon name="message-square-heart" size={14} />
         </button>
@@ -63,11 +62,8 @@ export default function ArtPromptPanel() {
 
   return (
     <Fragment>
-      <div style={{ width: s.artW, flexShrink: 0, display: "flex", flexDirection: "column", overflow: "hidden" }}>
-        <div style={{
-          display: "flex", alignItems: "center", flexShrink: 0,
-          borderBottom: "1px solid var(--theme-border)", padding: "2px 4px",
-        }}>
+      <div className="flex-shrink-0 d-flex flex-column overflow-hidden" style={{ width: s.artW }}>
+        <div className="d-flex align-items-center flex-shrink-0 border-b-theme" style={{ padding: "2px 4px" }}>
           <button
             type="button" onClick={() => s.collapseToStorage(true)} title="Collapse art panel"
             style={{ ...railBtnStyle, width: 24, height: 24, color: "var(--theme-text-secondary)", flexShrink: 0 }}
@@ -80,12 +76,7 @@ export default function ArtPromptPanel() {
         </div>
 
         <div className="d-flex flex-column flex-grow-1 overflow-hidden">
-          <div style={{
-            flex: 1, display: "flex", flexDirection: "column",
-            border: "none", borderRadius: 0,
-            background: "var(--theme-input-bg)",
-            overflow: "hidden", minHeight: 0,
-          }}>
+          <div className="flex-grow-1 d-flex flex-column bg-theme-input overflow-hidden min-h-0" style={{ border: "none", borderRadius: 0 }}>
             <PromptTextareas
               prompt={s.prompt}
               secondaryPrompt={s.secondaryPrompt}
@@ -115,17 +106,15 @@ export default function ArtPromptPanel() {
                 </ToolbarIconBtn>
               </div>
               {s.openPopup === "settings" && s.settingsAnchor && createPortal(
-                <div id="art-settings-popup" style={{
+                <div id="art-settings-popup" className="bg-theme-panel overflow-y-auto" style={{
                   position: "fixed",
                   left: s.settingsAnchor.left,
                   bottom: s.settingsAnchor.bottom,
-                  background: "var(--theme-panel-bg)",
                   border: "1px solid rgba(255,255,255,0.14)",
                   borderRadius: 6,
                   zIndex: 1300,
                   boxShadow: "0 4px 20px rgba(0,0,0,0.5)",
                   maxHeight: 400,
-                  overflowY: "auto",
                   minWidth: 260,
                 }}>
                   <SettingsPopup
@@ -142,7 +131,7 @@ export default function ArtPromptPanel() {
                 document.body
               )}
 
-              <span style={{ flex: 1 }} />
+              <span className="flex-grow-1" />
 
               <ToolbarIconBtn
                 title={`LoRA${s.activeLoras.length > 0 ? ` (${s.activeLoras.length})` : ""}`}
@@ -174,7 +163,7 @@ export default function ArtPromptPanel() {
               onSchedulerChange={s.handleScheduler}
             />
 
-            <div ref={s.toolbarRef} style={{ flexShrink: 0, display: "flex", flexDirection: "column" }}>
+            <div ref={s.toolbarRef} className="flex-shrink-0 d-flex flex-column">
               <PromptToolbar
                 seed={s.seed}
                 seedRandomized={s.seedRandomized}
@@ -215,6 +204,7 @@ export default function ArtPromptPanel() {
       {s.openPanel && s.artPanelAnchor && (
         <div
           id="art-panel-popup"
+          className="bg-theme-panel d-flex flex-column overflow-hidden"
           style={{
             position: "fixed",
             left: s.artPanelAnchor.left,
@@ -222,13 +212,9 @@ export default function ArtPromptPanel() {
             width: s.artPanelAnchor.width,
             height: s.artPanelAnchor.height,
             zIndex: 1300,
-            background: "var(--theme-panel-bg)",
             border: "1px solid rgba(255,255,255,0.14)",
             borderRadius: 0,
             boxShadow: "4px -4px 24px rgba(0,0,0,0.7)",
-            display: "flex",
-            flexDirection: "column",
-            overflow: "hidden",
           }}
         >
           {s.openPanel === "lora" && <LoraPanel />}

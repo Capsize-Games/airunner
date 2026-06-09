@@ -77,7 +77,7 @@ export default function DownloadTray() {
             fontSize: 11,
           }}
         >
-          <div style={{ flex: 1, minWidth: 0 }}>
+          <div className="flex-grow-1 min-w-0">
             <div className="text-truncate" style={{ color: "#ccc" }}>
               {job.modelName || job.label}
             </div>

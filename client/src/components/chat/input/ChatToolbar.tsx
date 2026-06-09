@@ -27,14 +27,8 @@ export default function ChatToolbar({
 }: ChatToolbarProps) {
   return (
     <div
-      style={{
-        display: "flex",
-        alignItems: "center",
-        gap: 2,
-        padding: "3px 4px",
-        borderTop: "1px solid rgba(255,255,255,0.08)",
-        flexShrink: 0,
-      }}
+      className="d-flex align-items-center flex-shrink-0 border-t-subtle"
+      style={{ gap: 2, padding: "3px 4px" }}
     >
       <button
         type="button"

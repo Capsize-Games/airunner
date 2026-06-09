@@ -44,7 +44,7 @@ export function PromptControls({
         <LucideIcon name="folder-open" size={14} />
       </ToolbarIconBtn>
 
-      <span style={{ flex: 1 }} />
+      <span className="flex-grow-1" />
 
       {/* Right: generate / cancel */}
       {generating ? (

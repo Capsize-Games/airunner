@@ -63,7 +63,7 @@ export default function ToolBarGrid({
       }}>
         Grid
       </span>
-      <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
+      <div className="d-flex align-items-center" style={{ gap: 3 }}>
         <span style={{ fontSize: 10, color: "rgba(var(--theme-text-rgb), 0.4)" }}>
           W
         </span>

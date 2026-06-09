@@ -88,7 +88,7 @@ export function PromptToolbar({
       flexShrink: 0,
     }}>
       {/* Seed affixed group — expands to fill space */}
-      <div style={{ display: "flex", alignItems: "stretch", flex: 1, minWidth: 0 }}>
+      <div className="d-flex align-items-stretch flex-grow-1 min-w-0">
         <span style={{
           display: "flex", alignItems: "center", padding: "0 5px",
           fontSize: 9, fontWeight: 700, letterSpacing: "0.07em",
@@ -129,7 +129,7 @@ export function PromptToolbar({
       </div>
 
       {/* Size picker */}
-      <div ref={sizeContainerRef} style={{ position: "relative" }}>
+      <div ref={sizeContainerRef} className="position-relative">
         <button
           ref={sizeBtnRef}
           type="button"
@@ -147,14 +147,13 @@ export function PromptToolbar({
           {genWidth}×{genHeight}
         </button>
         {showSize && sizeAnchor && createPortal(
-          <div id={portalId} style={{
+          <div id={portalId} className="d-flex flex-column bg-theme-panel" style={{
             position: "fixed", left: sizeAnchor.left, bottom: sizeAnchor.bottom,
-            background: "var(--theme-panel-bg)",
             border: "1px solid rgba(255,255,255,0.14)",
             borderRadius: 6,
             boxShadow: "0 4px 20px rgba(0,0,0,0.5)",
             padding: "10px 12px",
-            display: "flex", flexDirection: "column", gap: 8,
+            gap: 8,
             zIndex: 1300,
           }}>
             <div style={{
@@ -162,7 +161,7 @@ export function PromptToolbar({
               textTransform: "uppercase", color: "var(--theme-text-secondary)",
               opacity: 0.6, marginBottom: 6,
             }}>Image Size</div>
-            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <div className="d-flex align-items-center" style={{ gap: 6 }}>
               <span style={{ fontSize: 9, color: "var(--theme-text-secondary)", width: 10, flexShrink: 0 }}>W</span>
               <input
                 type="number" className="art-no-spin"
@@ -171,7 +170,7 @@ export function PromptToolbar({
                 style={NUM_INPUT_STYLE_SM}
               />
             </div>
-            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <div className="d-flex align-items-center" style={{ gap: 6 }}>
               <span style={{ fontSize: 9, color: "var(--theme-text-secondary)", width: 10, flexShrink: 0 }}>H</span>
               <input
                 type="number" className="art-no-spin"

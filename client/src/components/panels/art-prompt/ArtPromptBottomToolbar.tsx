@@ -24,12 +24,8 @@ export default function ArtPromptBottomToolbar() {
 
   return (
     <div
-      style={{
-        background: "var(--theme-panel-bg)",
-        borderTop: "1px solid rgba(255,255,255,0.07)",
-        flexShrink: 0,
-        padding: "4px 8px",
-      }}
+      className="bg-theme-panel flex-shrink-0 border-t-subtle"
+      style={{ padding: "4px 8px" }}
     >
       <ArtModelSliders
         nSamples={nSamples}

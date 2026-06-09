@@ -21,15 +21,8 @@ export default function LayerFooter({
 
   return (
     <div
-      style={{
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "flex-start",
-        gap: 2,
-        padding: "5px 8px",
-        borderTop: "1px solid rgba(255,255,255,0.07)",
-        flexShrink: 0,
-      }}
+      className="d-flex align-items-center justify-content-start flex-shrink-0 border-t-subtle"
+      style={{ gap: 2, padding: "5px 8px" }}
     >
       <IconBtn title="Add layer" onClick={onAddLayer}>
         <LayersPlus size={15} strokeWidth={1.75} />
@@ -83,7 +76,7 @@ export default function LayerFooter({
         </IconBtn>
       )}
 
-      <div style={{ flex: 1 }} />
+      <div className="flex-grow-1" />
 
       <IconBtn
         title="Delete selected"

@@ -11,15 +11,10 @@ interface OpacitySliderProps {
 export default function OpacitySlider({ value, onChange }: OpacitySliderProps) {
   return (
     <div
-      style={{
-        padding: "4px 8px 6px",
-        borderBottom: "1px solid rgba(255,255,255,0.07)",
-        flexShrink: 0,
-      }}
+      className="flex-shrink-0 border-b-subtle"
+      style={{ padding: "4px 8px 6px" }}
     >
-      <div style={{
-        display: "flex", alignItems: "center", gap: 6,
-      }}>
+      <div className="d-flex align-items-center" style={{ gap: 6 }}>
         <span style={{
           fontSize: 10, fontFamily: "monospace",
           color: "rgba(255,255,255,0.35)", flexShrink: 0, width: 28,

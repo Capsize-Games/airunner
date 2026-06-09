@@ -23,7 +23,7 @@ export default function MessageAvatar({
       >
         <LucideIcon name={isUser ? "user" : "bot-message-square"} size={16} />
       </div>
-      <small className="fw-bold" style={{ color: "var(--theme-text-secondary)" }}>
+      <small className="fw-bold text-theme-secondary">
         {label}
       </small>
     </div>

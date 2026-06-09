@@ -112,8 +112,8 @@ export default function ModelSelector() {
 
   return (
     <div
-      className="d-flex align-items-center"
-      style={{ minWidth: 0, flex: "1 1 0%", gap: 0 }}
+      className="d-flex align-items-center min-w-0"
+      style={{ flex: "1 1 0%", gap: 0 }}
     >
       <ProviderPicker
         value={modelService}

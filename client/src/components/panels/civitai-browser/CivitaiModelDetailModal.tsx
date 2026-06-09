@@ -165,10 +165,7 @@ export default function CivitaiModelDetailModal({
 
   return (
     <div
-      style={{
-        position: "fixed", inset: 0, background: "rgba(0,0,0,0.8)",
-        zIndex: 1100, display: "flex", alignItems: "center", justifyContent: "center",
-      }}
+      className="image-preview-backdrop"
       onClick={onClose}
     >
       <div
@@ -194,12 +191,10 @@ export default function CivitaiModelDetailModal({
         </button>
 
         {/* ── Left column: preview + thumbnails ── */}
-        <div style={{ flex: "0 0 340px", display: "flex", flexDirection: "column", gap: 8 }}>
+        <div className="d-flex flex-column flex-shrink-0" style={{ width: 340, gap: 8 }}>
           <div
-            style={{
-              flex: 1, display: "flex", alignItems: "center", justifyContent: "center",
-              background: "rgba(0,0,0,0.2)", borderRadius: 4, minHeight: 0,
-            }}
+            className="flex-grow-1 d-flex align-items-center justify-content-center min-h-0"
+            style={{ background: "rgba(0,0,0,0.2)", borderRadius: 4 }}
           >
             {previewUrl || livePreviewBase64 ? (
               <CivitaiImage
@@ -216,7 +211,7 @@ export default function CivitaiModelDetailModal({
 
           {/* Thumbnails below preview */}
           {(selectedVersion?.images ?? []).length > 0 && (
-            <div style={{ flexShrink: 0, display: "flex", gap: 4, flexWrap: "wrap" }}>
+            <div className="flex-shrink-0 d-flex flex-wrap" style={{ gap: 4 }}>
               {(selectedVersion?.images ?? [])
                 .filter((img) => img.nsfw !== "X")
                 .slice(0, 8)
@@ -243,9 +238,9 @@ export default function CivitaiModelDetailModal({
         </div>
 
         {/* ── Right column: info + selects + buttons ── */}
-        <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 6, overflow: "hidden" }}>
+        <div className="flex-grow-1 d-flex flex-column overflow-hidden" style={{ gap: 6 }}>
           {/* Header */}
-          <div style={{ flexShrink: 0 }}>
+          <div className="flex-shrink-0">
             <div style={{ fontWeight: 700, fontSize: 14, color: "#fff", marginBottom: 1 }}>
               {model.name}
             </div>
@@ -253,7 +248,7 @@ export default function CivitaiModelDetailModal({
               {model.creator ?? "Unknown"}
               {model.type ? ` · ${model.type}` : ""}
             </div>
-            <div style={{ display: "flex", gap: 8, fontSize: 10, color: "#888", marginTop: 2 }}>
+            <div className="d-flex" style={{ gap: 8, fontSize: 10, color: "#888", marginTop: 2 }}>
               <span>⬇ {stats.downloadCount ?? 0}</span>
               <span>★ {stats.favoriteCount ?? 0}</span>
               <span>💬 {stats.commentCount ?? 0}</span>
@@ -262,7 +257,7 @@ export default function CivitaiModelDetailModal({
 
           {/* License badges */}
           {model && (
-            <div style={{ display: "flex", gap: 3, flexWrap: "wrap", flexShrink: 0 }}>
+            <div className="d-flex flex-wrap flex-shrink-0" style={{ gap: 3 }}>
               {model.allowNoCredit === true && <span title="Use without credit" style={{ fontSize: 13, cursor: "help" }}>🙏</span>}
               {model.allowCommercialUse === "Commercial" && <span title="Commercial use allowed" style={{ fontSize: 13, cursor: "help" }}>💰</span>}
               {model.allowCommercialUse === "Non-Commercial" && <span title="Non-commercial only" style={{ fontSize: 13, cursor: "help" }}>🚫💰</span>}
@@ -274,17 +269,14 @@ export default function CivitaiModelDetailModal({
 
           {/* Scrollable description */}
           <div
-            className="civitai-model-description scrollable-modal-content"
-            style={{
-              flex: 1, overflowY: "auto", minHeight: 0, height: 0,
-              fontSize: 10, color: "#999", lineHeight: 1.4,
-            }}
+            className="civitai-model-description scrollable-modal-content scroll-panel"
+            style={{ height: 0, fontSize: 10, color: "#999", lineHeight: 1.4 }}
           >
             {desc || "No description available."}
           </div>
 
           {/* Version / File selects (anchored to bottom) */}
-          <div style={{ flexShrink: 0 }}>
+          <div className="flex-shrink-0">
             {versions.length > 0 && (
               <div style={{ marginBottom: 4 }}>
                 <div style={{ color: "#aaa", fontSize: 10, marginBottom: 1 }}>Version</div>
@@ -329,7 +321,7 @@ export default function CivitaiModelDetailModal({
           </div>
 
           {/* Action buttons */}
-          <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
+          <div className="d-flex flex-shrink-0" style={{ gap: 6 }}>
             <DownloadButton
               selectedFile={selectedFile}
               downloads={downloads}

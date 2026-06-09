@@ -13,7 +13,7 @@ export function LLMSettingsPanel() {
 
   if (s.loading) {
     return (
-      <div className="p-2 small" style={{ color: "var(--theme-text-secondary)" }}>
+      <div className="p-2 small text-theme-secondary">
         Loading...
       </div>
     );
@@ -21,7 +21,7 @@ export function LLMSettingsPanel() {
 
   return (
     <div className="p-2">
-      <h6 style={{ color: "var(--theme-text-secondary)" }} className="mb-2">LLM Settings</h6>
+      <h6 className="text-theme-secondary mb-2">LLM Settings</h6>
       <ModelSelector />
 
       <div className="p-2 mt-2" style={{ border: "1px solid #333", borderRadius: 6 }}>
@@ -29,7 +29,7 @@ export function LLMSettingsPanel() {
           type="switch"
           id="llm-override-toggle"
           label={
-            <span style={{ color: "var(--theme-text-secondary)", fontWeight: 600 }}>
+            <span className="text-theme-secondary fw-semibold">
               Override LLM Settings
             </span>
           }
@@ -77,7 +77,7 @@ export function LLMSettingsPanel() {
                     className="btn btn-sm btn-outline-secondary flex-fill"
                     onClick={s.resetToDefaults}
                     title="Reset the current preset to its default values"
-                    style={{ color: "var(--theme-text-secondary)", borderColor: "#444" }}
+                    className="text-theme-secondary" style={{ borderColor: "#444" }}
                   >
                     <LucideIcon name="rotate-ccw-square" size={14} className="me-1" />
                     Reset {s.selectedPreset}
@@ -87,7 +87,7 @@ export function LLMSettingsPanel() {
                     className="btn btn-sm btn-outline-secondary flex-fill"
                     onClick={s.resetAllToDefaults}
                     title="Reset all presets to their default values"
-                    style={{ color: "var(--theme-text-secondary)", borderColor: "#444" }}
+                    className="text-theme-secondary" style={{ borderColor: "#444" }}
                   >
                     <LucideIcon name="rotate-ccw-square" size={14} className="me-1" />
                     Reset All

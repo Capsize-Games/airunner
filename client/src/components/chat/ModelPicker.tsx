@@ -55,7 +55,7 @@ export function ModelPicker({
   );
 
   return (
-    <div ref={ref} style={{ position: "relative", flex: "1 1 0%", minWidth: 0 }}>
+    <div ref={ref} className="min-w-0" style={{ position: "relative", flex: "1 1 0%" }}>
       <button
         type="button"
         onClick={openPicker}
@@ -97,31 +97,23 @@ export function ModelPicker({
 
       {open && (
         <div
+          className="d-flex flex-column bg-theme-panel"
           style={{
             position: "absolute",
             bottom: "calc(100% + 4px)",
             left: 0,
             minWidth: 220,
             maxWidth: 340,
-            background: "var(--theme-panel-bg)",
             border: "1px solid rgba(255,255,255,0.14)",
             borderRadius: 6,
             zIndex: 1200,
             boxShadow: "0 4px 20px rgba(0,0,0,0.5)",
-            display: "flex",
-            flexDirection: "column",
             maxHeight: 300,
           }}
         >
           {isLocal ? (
             <>
-              <div
-                style={{
-                  padding: "6px 8px",
-                  borderBottom: "1px solid rgba(255,255,255,0.08)",
-                  flexShrink: 0,
-                }}
-              >
+              <div className="flex-shrink-0 border-b-subtle" style={{ padding: "6px 8px" }}>
                 <Form.Control
                   size="sm"
                   value={query}
@@ -131,7 +123,7 @@ export function ModelPicker({
                   autoFocus
                 />
               </div>
-              <div style={{ overflowY: "auto", flex: 1 }}>
+              <div className="overflow-y-auto flex-grow-1">
                 {filtered.length === 0 && (
                   <div
                     style={{

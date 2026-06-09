@@ -166,7 +166,7 @@ export default function LayerRow({
           </span>
         )}
 
-        <span style={{ fontSize: 10, fontFamily: "monospace", color: "rgba(var(--theme-text-rgb), 0.3)", flexShrink: 0 }}>
+        <span className="text-mono-stat flex-shrink-0">
           {Math.round(layer.opacity * 100)}%
         </span>
       </div>

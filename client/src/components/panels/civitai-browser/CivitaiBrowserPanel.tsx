@@ -45,7 +45,7 @@ export default function CivitaiBrowserPanel() {
         onModelTypeChange={setModelType}
       />
 
-      <div ref={search.resultsRef} className="overflow-auto" style={{ flex: 1, minHeight: 0 }}>
+      <div ref={search.resultsRef} className="overflow-auto flex-grow-1 min-h-0">
         {search.results.map((item) => (
           <CivitaiResultCard
             key={item.id}

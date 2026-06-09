@@ -2,19 +2,10 @@ import LucideIcon from "../../shared/LucideIcon";
 
 export default function EmptyPlaceholder() {
   return (
-    <div
-      style={{
-        minHeight: "100%",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-      }}
-    >
+    <div className="d-flex align-items-center justify-content-center" style={{ minHeight: "100%" }}>
       <div
+        className="d-flex flex-column align-items-center"
         style={{
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
           gap: 14,
           padding: "36px 10px",
           maxWidth: "150px",
@@ -24,15 +15,8 @@ export default function EmptyPlaceholder() {
         }}
       >
         <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            width: 48,
-            height: 48,
-            borderRadius: "50%",
-            background: "rgba(255,255,255,0.06)",
-          }}
+          className="d-flex align-items-center justify-content-center"
+          style={{ width: 48, height: 48, borderRadius: "50%", background: "rgba(255,255,255,0.06)" }}
         >
           <LucideIcon name="bot-message-square" size={24} />
         </div>

@@ -36,34 +36,34 @@ export default function ImagePreviewModal({
 
   return (
     <div
-      style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.8)", zIndex: 1100, display: "flex", alignItems: "center", justifyContent: "center" }}
+      className="image-preview-backdrop"
       onClick={onClose}
     >
       <div
-        style={{ position: "relative", display: "flex", gap: 16, padding: 12, paddingTop: 44, maxHeight: "85vh", maxWidth: "90vw", border: "1px solid rgba(255,255,255,0.2)", borderRadius: 4, overflow: "hidden" }}
+        className="image-preview-container"
         onClick={(e) => e.stopPropagation()}
       >
         <button
           onClick={onClose}
-          style={{ position: "absolute", top: 8, right: 8, background: "rgba(0,0,0,0.5)", border: "1px solid rgba(255,255,255,0.3)", color: "#fff", fontSize: 18, cursor: "pointer", lineHeight: 1, width: 30, height: 30, borderRadius: 4, display: "flex", alignItems: "center", justifyContent: "center" }}
+          className="image-preview-close"
           title="Close (Esc)"
         >
           ✕
         </button>
 
-        <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <div className="flex-grow-1 d-flex align-items-center justify-content-center">
           <img src={imageBlobUrl ?? undefined} alt={currentImg.id} style={{ maxWidth: "100%", maxHeight: "80vh", objectFit: "contain" }} />
         </div>
 
-        <div style={{ width: 360, maxHeight: "80vh", display: "flex", flexDirection: "column", color: "#ccc" }}>
-          <div style={{ marginBottom: 8, flexShrink: 0 }}>
+        <div className="d-flex flex-column flex-shrink-0" style={{ width: 360, maxHeight: "80vh", color: "#ccc" }}>
+          <div className="flex-shrink-0" style={{ marginBottom: 8 }}>
             <div style={{ fontWeight: 600, fontSize: 13, color: "#fff" }}>{currentImg.id}</div>
             <div style={{ fontSize: 11, color: "#aaa", marginTop: 2 }}>
               {formatTimestamp(currentImg.file_timestamp)} · {formatFileSize(currentImg.file_size)}
             </div>
           </div>
 
-          <div style={{ flex: 1, overflowY: "auto", minHeight: 0 }}>
+          <div className="scroll-panel">
             <MetadataTable img={currentImg} />
           </div>
 

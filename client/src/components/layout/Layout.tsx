@@ -176,12 +176,7 @@ export default function Layout({
         {/* ── Panels container ── */}
         <div
           ref={panelsRef}
-          style={{
-            flex: 1,
-            display: "flex",
-            overflow: "hidden",
-            minWidth: 0,
-          }}
+          className="flex-grow-1 d-flex overflow-hidden min-w-0"
         >
           {/* Chat */}
           {showChat && (
@@ -210,11 +205,7 @@ export default function Layout({
           {/* Main content */}
           {showCanvas && (
             <div
-              style={{
-                flex: 1,
-                minWidth: 0,
-                overflow: "hidden",
-              }}
+              className="flex-grow-1 overflow-hidden min-w-0"
             >
               {rightPanel === "civitai_browser" ? (
                 <CivitaiBrowserPanel />
@@ -242,24 +233,16 @@ export default function Layout({
       <DownloadTray />
 
       <div
-        className="footer-bar"
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          padding: "0 12px",
-        }}
+        className="footer-bar d-flex justify-content-between align-items-center"
+        style={{ padding: "0 12px" }}
       >
         <span>
           &copy; {new Date().getFullYear()} Capsize
           LLC &mdash; All rights reserved.
         </span>
         <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 12,
-          }}
+          className="d-flex align-items-center"
+          style={{ gap: 12 }}
         >
           <FooterStats />
           <LiveIndicator />

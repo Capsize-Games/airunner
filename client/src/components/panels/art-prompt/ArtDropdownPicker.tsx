@@ -72,7 +72,7 @@ export function ArtDropdownPicker({
   };
 
   return (
-    <div ref={containerRef} style={{ position: "relative", flex: "1 1 0%", minWidth: 0 }}>
+    <div ref={containerRef} className="min-w-0" style={{ position: "relative", flex: "1 1 0%" }}>
       <button
         ref={btnRef}
         type="button"
@@ -120,19 +120,18 @@ export function ArtDropdownPicker({
       {open && !disabled && anchor && createPortal(
         <div
           id={portalId}
+          className="bg-theme-panel overflow-y-auto"
           style={{
             position: "fixed",
             left: anchor.left,
             bottom: anchor.bottom,
             minWidth: Math.max(anchor.width, 160),
             maxWidth: 280,
-            background: "var(--theme-panel-bg)",
             border: "1px solid rgba(255,255,255,0.14)",
             borderRadius: 6,
             zIndex: 1300,
             boxShadow: "0 4px 20px rgba(0,0,0,0.5)",
             maxHeight: 240,
-            overflowY: "auto",
           }}
         >
           {options.length === 0 ? (

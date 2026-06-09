@@ -164,7 +164,7 @@ export default function CanvasPanel() {
         <div
           className="spinner-border spinner-border-sm"
           role="status"
-          style={{ color: "var(--theme-text-secondary)" }}
+          className="text-theme-secondary"
         />
       </div>
     );
@@ -184,24 +184,19 @@ export default function CanvasPanel() {
 
       {/* Canvas viewport + layers sidebar */}
       <div
-        className="flex-grow-1 d-flex flex-column overflow-hidden"
-        style={{ minWidth: 0, minHeight: 0 }}
+        className="flex-grow-1 d-flex flex-column overflow-hidden min-w-0 min-h-0"
       >
         <div
-          className="flex-grow-1 d-flex flex-row overflow-hidden"
-          style={{ minHeight: 0 }}
+          className="flex-grow-1 d-flex flex-row overflow-hidden min-h-0"
         >
           <ArtPromptPanel />
           <div
-            className="flex-grow-1 overflow-hidden"
-            style={{
-              background: "#0a0a0f", position: "relative",
-              display: "flex", flexDirection: "column",
-            }}
+            className="flex-grow-1 overflow-hidden position-relative d-flex flex-column"
+            style={{ background: "#0a0a0f" }}
             onDragOver={handleDragOver}
             onDrop={handleDrop}
           >
-            <div style={{ flex: 1, minHeight: 0, overflow: "hidden" }}>
+            <div className="flex-grow-1 min-h-0 overflow-hidden">
               <CanvasStage
                 ref={canvasHandleRef}
                 documentWidth={canvas.documentWidth}

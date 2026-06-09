@@ -64,17 +64,8 @@ export default function ArtPromptToolbar() {
 
   return (
     <div
-      style={{
-        display: "flex",
-        alignItems: "center",
-        flexWrap: "wrap",
-        gap: 4,
-        padding: "4px 0",
-        borderTop: "1px solid rgba(255,255,255,0.07)",
-        borderBottom: "1px solid rgba(255,255,255,0.07)",
-        marginBottom: 4,
-        flexShrink: 0,
-      }}
+      className="d-flex align-items-center flex-wrap flex-shrink-0 border-t-subtle border-b-subtle"
+      style={{ gap: 4, padding: "4px 0", marginBottom: 4 }}
     >
       {loading && (
         <div

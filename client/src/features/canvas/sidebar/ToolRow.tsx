@@ -30,11 +30,10 @@ const iconBtnStyle: React.CSSProperties = {
 export default function ToolRow() {
   const canvas = useCanvasContext();
   return (
-    <div style={{
-      display: "flex", alignItems: "center", flexShrink: 0,
-      borderBottom: "1px solid rgba(255,255,255,0.07)",
-      padding: "4px 6px", gap: 2,
-    }}>
+    <div
+      className="d-flex align-items-center flex-shrink-0 border-b-subtle"
+      style={{ padding: "4px 6px", gap: 2 }}
+    >
       {TOOLS.map(({ id, label, Icon }) => (
         <button
           key={id}
@@ -45,7 +44,7 @@ export default function ToolRow() {
           <Icon size={14} strokeWidth={1.75} />
         </button>
       ))}
-      <div style={{ width: 1, height: 18, background: "rgba(255,255,255,0.1)", margin: "0 3px", flexShrink: 0 }} />
+      <div className="sep-v" />
       <button title="Undo (Ctrl+Z)" style={iconBtnStyle} onClick={canvas.undo}>
         <Undo2 size={13} strokeWidth={1.75} />
       </button>

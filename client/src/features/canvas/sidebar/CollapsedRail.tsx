@@ -21,16 +21,14 @@ interface Props {
 
 export default function CollapsedRail({ activeTab, onExpand }: Props) {
   return (
-    <div style={{
-      width: 32, flexShrink: 0, display: "flex", flexDirection: "column",
-      alignItems: "center", background: "#181824",
-      borderLeft: "1px solid rgba(255,255,255,0.07)",
-      padding: "4px 0", gap: 2, overflow: "hidden",
-    }}>
+    <div
+      className="flex-shrink-0 d-flex flex-column align-items-center overflow-hidden"
+      style={{ width: 32, background: "#181824", borderLeft: "1px solid rgba(255,255,255,0.07)", padding: "4px 0", gap: 2 }}
+    >
       <button style={railBtnStyle} title="Expand panel" onClick={() => onExpand()}>
         <LucideIcon name="chevron-left" size={14} />
       </button>
-      <div style={{ width: "60%", height: 1, background: "rgba(255,255,255,0.07)", margin: "2px 0" }} />
+      <div className="sep-h" />
       {TABS.map((t) => (
         <button
           key={t.id}

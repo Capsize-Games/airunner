@@ -17,35 +17,19 @@ export function ChatHistoryPanel({
   };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
+    <div className="d-flex flex-column h-100">
       {/* Sticky header */}
       <div
-        style={{
-          flexShrink: 0,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          padding: "8px 12px 6px",
-          borderBottom: "1px solid var(--theme-border)",
-          background: "var(--theme-panel-bg)",
-          gap: 8,
-        }}
+        className="flex-shrink-0 d-flex align-items-center justify-content-between bg-theme-panel border-b-theme"
+        style={{ padding: "8px 12px 6px", gap: 8 }}
       >
-        <span
-          style={{
-            fontSize: 10,
-            fontWeight: 700,
-            letterSpacing: "0.07em",
-            textTransform: "uppercase",
-            color: "var(--theme-text-secondary)",
-          }}
-        >
+        <span className="text-panel-label text-uppercase">
           Chat History
         </span>
 
         {confirmDeleteAll ? (
-          <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-            <span style={{ fontSize: "0.7rem", color: "var(--theme-text-secondary)" }}>
+          <div className="d-flex align-items-center" style={{ gap: 4 }}>
+            <span className="text-theme-secondary" style={{ fontSize: "0.7rem" }}>
               Delete all?
             </span>
             <button
@@ -92,7 +76,7 @@ export function ChatHistoryPanel({
       </div>
 
       {/* Scrollable list */}
-      <div style={{ flex: 1, overflowY: "auto", minHeight: 0 }}>
+      <div className="scroll-panel">
         {loading ? (
           <div className="p-3 text-center">
             <Spinner animation="border" size="sm" />

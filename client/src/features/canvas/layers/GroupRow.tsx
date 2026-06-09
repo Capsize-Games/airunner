@@ -101,10 +101,7 @@ export default function GroupRow({ group, drag }: Props) {
         }}>
           {group.name}
         </span>
-        <span style={{
-          fontSize: 10, fontFamily: "monospace",
-          color: "rgba(var(--theme-text-rgb), 0.3)", flexShrink: 0, marginLeft: 4,
-        }}>
+        <span className="text-mono-stat flex-shrink-0" style={{ marginLeft: 4 }}>
           {Math.round(group.opacity * 100)}%
         </span>
       </div>

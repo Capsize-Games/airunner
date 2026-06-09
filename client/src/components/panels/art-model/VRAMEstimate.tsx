@@ -9,7 +9,7 @@ export default function VRAMEstimate({
 
   return (
     <div className="mt-2 mb-2">
-      <small style={{ color: "var(--theme-text-secondary)" }}>
+      <small className="text-theme-secondary">
         Estimated VRAM: {vramGb.toFixed(1)} GB
       </small>
       <ProgressBar

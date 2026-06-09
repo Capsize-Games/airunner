@@ -12,19 +12,19 @@ export default function ConversationSection({
 }: Props) {
   return (
     <div className="p-2 mt-2" style={{ border: "1px solid #333", borderRadius: 6 }}>
-      <span style={{ color: "var(--theme-text-secondary)", fontWeight: 600, fontSize: "0.85rem", display: "block", marginBottom: 8 }}>
+      <span className="text-theme-secondary d-block" style={{ fontWeight: 600, fontSize: "0.85rem", marginBottom: 8 }}>
         Conversation Summarization
       </span>
       <Form.Check
         type="switch"
         id="llm-perform-summary"
-        label={<span style={{ color: "var(--theme-text-secondary)" }}>Auto-summarize long conversations</span>}
+        label={<span className="text-theme-secondary">Auto-summarize long conversations</span>}
         checked={performConversationSummary}
         onChange={(e) => onSummaryToggle(e.target.checked)}
       />
       {performConversationSummary && (
         <Form.Group className="mt-2">
-          <Form.Label style={{ color: "var(--theme-text-secondary)", fontSize: "0.8rem" }}>
+          <Form.Label className="text-theme-secondary" style={{ fontSize: "0.8rem" }}>
             Summarize after <strong>{summarizeAfterNTurns}</strong> conversation turns
           </Form.Label>
           <Form.Range

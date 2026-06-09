@@ -7,14 +7,15 @@ export default function BrushControls() {
   const brushActive = canvas.activeTool === "brush" || canvas.activeTool === "eraser";
 
   return (
-    <div style={{
-      display: "flex", alignItems: "center", gap: 6,
-      padding: "5px 8px", flexShrink: 0,
-      borderBottom: "1px solid rgba(255,255,255,0.07)",
-      opacity: brushActive ? 1 : 0.35,
-      pointerEvents: brushActive ? "auto" : "none",
-    }}>
-      <label title="Brush color" style={{ cursor: "pointer", flexShrink: 0, position: "relative" }}>
+    <div
+      className="d-flex align-items-center flex-shrink-0 border-b-subtle"
+      style={{
+        gap: 6, padding: "5px 8px",
+        opacity: brushActive ? 1 : 0.35,
+        pointerEvents: brushActive ? "auto" : "none",
+      }}
+    >
+      <label title="Brush color" className="cursor-pointer flex-shrink-0 position-relative">
         <div style={{
           width: 20, height: 20, borderRadius: 4,
           background: canvas.brushColor,
@@ -34,7 +35,7 @@ export default function BrushControls() {
         type="range" min={1} max={200} step={1}
         value={canvas.brushSize}
         onChange={(e) => canvas.setBrushSize(Number(e.target.value))}
-        style={{ flex: 1, minWidth: 0 }}
+        className="flex-grow-1 min-w-0"
         title={`Brush size: ${canvas.brushSize}px`}
       />
 

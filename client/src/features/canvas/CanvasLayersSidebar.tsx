@@ -152,10 +152,10 @@ export default function CanvasLayersSidebar() {
   };
 
   return (
-    <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", minWidth: 0 }}>
+    <div className="flex-grow-1 d-flex flex-column overflow-hidden min-w-0">
       <OpacitySlider value={activeOpacity} onChange={handleOpacityChange} />
 
-      <div style={{ flexGrow: 1, overflowY: "auto", minHeight: 0 }}>
+      <div className="scroll-panel">
         {renderItems.map((item, idx) => {
           if (item.type === "layer") {
             const dragState: DragState = {

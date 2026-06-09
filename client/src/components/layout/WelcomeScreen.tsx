@@ -43,25 +43,12 @@ export default function WelcomeScreen({
 
   return (
     <div
-      style={{
-        flex: 1,
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
-        gap: 24,
-        color: "var(--theme-text-secondary)",
-        userSelect: "none",
-        padding: "40px 24px",
-      }}
+      className="flex-grow-1 d-flex flex-column align-items-center justify-content-center text-theme-secondary user-select-none"
+      style={{ gap: 24, padding: "40px 24px" }}
     >
       <div
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          gap: 12,
-        }}
+        className="d-flex flex-column align-items-center"
+        style={{ gap: 12 }}
       >
         <img
           src="/favicon.svg"
@@ -98,13 +85,8 @@ export default function WelcomeScreen({
       </div>
 
       <div
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          gap: 8,
-          width: "100%",
-          maxWidth: 340,
-        }}
+        className="d-flex flex-column w-100"
+        style={{ gap: 8, maxWidth: 340 }}
       >
         {items.map(({ key, icon, label, hint, onClick }) => (
           <button
@@ -146,13 +128,7 @@ export default function WelcomeScreen({
             >
               <LucideIcon name={icon} size={20} />
             </span>
-            <div
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                gap: 2,
-              }}
-            >
+            <div className="d-flex flex-column" style={{ gap: 2 }}>
               <span
                 style={{
                   fontSize: 13,

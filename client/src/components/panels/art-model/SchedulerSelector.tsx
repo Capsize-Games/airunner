@@ -16,8 +16,7 @@ export default function SchedulerSelector({
   return (
     <Form.Group className="mb-2">
       <Form.Label
-        className="small"
-        style={{ color: "var(--theme-text-secondary)" }}
+        className="small text-theme-secondary"
       >
         Scheduler
       </Form.Label>

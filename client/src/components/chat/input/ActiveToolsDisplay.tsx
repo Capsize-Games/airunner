@@ -6,11 +6,11 @@ export default function ActiveToolsDisplay({
   if (activeTools.length === 0) return null;
   return (
     <div
+      className="border-t-subtle"
       style={{
         padding: "2px 10px",
         fontSize: "0.72rem",
         color: "var(--bs-info)",
-        borderTop: "1px solid rgba(255,255,255,0.06)",
         background: "rgba(13,202,240,0.04)",
       }}
     >
