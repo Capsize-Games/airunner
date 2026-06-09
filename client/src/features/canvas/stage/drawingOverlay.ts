@@ -34,7 +34,6 @@ interface Params {
   brushColor: string;
   documentWidth: number;
   documentHeight: number;
-  zoom: number;
   onAddStroke: (
     stroke: Omit<StrokeNode, "id">,
   ) => void;
@@ -61,7 +60,6 @@ export function drawingOverlay({
   brushColor,
   documentWidth,
   documentHeight,
-  zoom,
   onAddStroke,
   sendLiveStroke,
   sendStrokeEnd,
@@ -88,7 +86,10 @@ export function drawingOverlay({
     activeTool === "brush" || activeTool === "eraser";
   const showBrushIndicator =
     isDrawingTool || activeTool === "mask";
-  const brushRadius = (brushSize * zoom) / 2;
+  // Radius in document units. The brush indicator renders inside a
+  // zoom-scaled layer, which applies the zoom for us — multiplying by zoom
+  // here too would scale the cursor quadratically.
+  const brushRadius = brushSize / 2;
   const indicatorColor =
     activeTool === "eraser"
       ? "rgba(200,200,200,0.8)"

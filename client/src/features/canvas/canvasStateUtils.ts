@@ -201,6 +201,7 @@ function parseCanvasState(raw: string): CanvasState | null {
     parsed.cropY ??= 0;
     parsed.cropWidth ??= 512;
     parsed.cropHeight ??= 512;
+    parsed.zoomDirection ??= "in";
     advanceCountersFromState(parsed);
     return parsed;
   } catch {

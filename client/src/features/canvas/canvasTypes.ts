@@ -59,6 +59,8 @@ export type ActiveTool =
   | "lasso" | "wand" | "crop" | "bucket" | "smudge"
   | "text" | "pipette" | "zoom";
 
+export type ZoomDirection = "in" | "out";
+
 export type MoveMode = "pick" | "move-selected";
 
 export interface CanvasState {
@@ -103,6 +105,7 @@ export interface CanvasState {
   cropY: number;
   cropWidth: number;
   cropHeight: number;
+  zoomDirection: ZoomDirection;
   history: string[];
   historyIndex: number;
 }

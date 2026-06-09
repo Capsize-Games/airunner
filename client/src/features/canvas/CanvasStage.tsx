@@ -28,6 +28,7 @@ import { useCropTool } from "./stage/tools/crop/useCropTool";
 import { useBucketTool } from "./stage/tools/bucket/useBucketTool";
 import { useSmudgeTool } from "./stage/tools/smudge/useSmudgeTool";
 import { usePipetteTool } from "./stage/tools/pipette/usePipetteTool";
+import { useZoomTool } from "./stage/tools/zoom/useZoomTool";
 import { useCanvasContext } from "./CanvasContext";
 
 export type { CanvasStageHandle } from "./stage/types";
@@ -51,7 +52,7 @@ const CanvasStage = forwardRef<CanvasStageHandle, CanvasStageProps>(
 
     // ── Zoom + resize ──────────────────────────────────────────────────
     const containerRef = useRef<HTMLDivElement>(null);
-    const { zoom, stageSize, handleWheel } = zoomHook({
+    const { zoom, setZoom, stageSize, handleWheel } = zoomHook({
       stageRef, containerRef,
       documentWidth, documentHeight,
       onZoomChange, isFitToView, isCenterView,
@@ -63,7 +64,7 @@ const CanvasStage = forwardRef<CanvasStageHandle, CanvasStageProps>(
     const drawing = drawingOverlayHook({
       stageRef, layers, activeLayerId, activeTool,
       brushSize, brushColor, documentWidth, documentHeight,
-      zoom, onAddStroke, sendLiveStroke, sendStrokeEnd,
+      onAddStroke, sendLiveStroke, sendStrokeEnd,
     });
 
     // ── Keyboard shortcuts ─────────────────────────────────────────────
@@ -176,6 +177,21 @@ const CanvasStage = forwardRef<CanvasStageHandle, CanvasStageProps>(
       onSetBackgroundColor: wandCtx.setDocumentBgColor,
     });
 
+    const zoomTool = useZoomTool({
+      isActive: activeTool === "zoom",
+      getCanvasPos,
+      stageRef,
+      zoomDirection: wandCtx.zoomDirection,
+      onZoomApplied: useCallback(
+        (scale: number) => {
+          setZoom(scale);
+          onZoomChange(scale);
+          onFitToViewChange(false);
+        },
+        [setZoom, onZoomChange, onFitToViewChange],
+      ),
+    });
+
     // ── Unified mouse handlers ─────────────────────────────────────────
 
     const handleMouseDown = useCallback(
@@ -202,8 +218,9 @@ const CanvasStage = forwardRef<CanvasStageHandle, CanvasStageProps>(
         if (bucket.onMouseDown(e)) return;
         if (smudge.onMouseDown(e)) return;
         if (pipette.onMouseDown(e)) return;
+        if (zoomTool.onMouseDown(e)) return;
       },
-      [stageRef, isMoveActive, moveToolHandlers, lasso, select, wand, crop, bucket, smudge, pipette],
+      [stageRef, isMoveActive, moveToolHandlers, lasso, select, wand, crop, bucket, smudge, pipette, zoomTool],
     );
 
     const handleMouseMove = useCallback(
@@ -227,9 +244,10 @@ const CanvasStage = forwardRef<CanvasStageHandle, CanvasStageProps>(
         if (bucket.onMouseMove(e)) return;
         if (smudge.onMouseMove(e)) return;
         if (pipette.onMouseMove(e)) return;
+        if (zoomTool.onMouseMove(e)) return;
         select.onMouseMove(e);
       },
-      [stageRef, isMoveActive, moveToolHandlers, lasso, select, wand, crop, bucket, smudge, pipette],
+      [stageRef, isMoveActive, moveToolHandlers, lasso, select, wand, crop, bucket, smudge, pipette, zoomTool],
     );
 
     const handleMouseUp = useCallback(
@@ -247,9 +265,10 @@ const CanvasStage = forwardRef<CanvasStageHandle, CanvasStageProps>(
         if (bucket.onMouseUp(e)) return;
         if (smudge.onMouseUp(e)) return;
         if (pipette.onMouseUp(e)) return;
+        if (zoomTool.onMouseUp(e)) return;
         select.onMouseUp(e);
       },
-      [stageRef, activeTool, layers.length, isMoveActive, moveToolHandlers, lasso, select, wand, crop, bucket, smudge, pipette],
+      [stageRef, activeTool, layers.length, isMoveActive, moveToolHandlers, lasso, select, wand, crop, bucket, smudge, pipette, zoomTool],
     );
 
     // Global up: only panning needs a CanvasStage-level handler now; each
@@ -283,6 +302,7 @@ const CanvasStage = forwardRef<CanvasStageHandle, CanvasStageProps>(
           maskLayerRef={maskLayerRef}
           ghostLayerRef={ghostLayerRef}
           stageSize={stageSize}
+          zoom={zoom}
           documentWidth={documentWidth}
           documentHeight={documentHeight}
           documentBgColor={documentBgColor}
@@ -306,6 +326,7 @@ const CanvasStage = forwardRef<CanvasStageHandle, CanvasStageProps>(
           bucketRenderState={bucket.renderState}
           smudgeRenderState={smudge.renderState}
           pipetteRenderState={pipette.renderState}
+          zoomToolRenderState={zoomTool.renderState}
           // Drawing overlay
           showBrushIndicator={drawing.showBrushIndicator}
           brushRadius={drawing.brushRadius}

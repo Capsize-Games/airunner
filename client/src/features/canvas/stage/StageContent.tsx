@@ -22,6 +22,7 @@ import CropLayer from "./tools/crop/CropLayer";
 import BucketLayer from "./tools/bucket/BucketLayer";
 import SmudgeLayer from "./tools/smudge/SmudgeLayer";
 import PipetteLayer from "./tools/pipette/PipetteLayer";
+import ZoomLayer from "./tools/zoom/ZoomLayer";
 import type { LassoRenderState } from "./tools/lasso/useLassoTool";
 import type { SelectRenderState } from "./tools/select/useSelectTool";
 import type { WandRenderState } from "./tools/wand/useWandTool";
@@ -29,6 +30,7 @@ import type { CropRenderState } from "./tools/crop/useCropTool";
 import type { BucketRenderState } from "./tools/bucket/useBucketTool";
 import type { SmudgeRenderState } from "./tools/smudge/useSmudgeTool";
 import type { PipetteRenderState } from "./tools/pipette/usePipetteTool";
+import type { ZoomRenderState } from "./tools/zoom/useZoomTool";
 import type {
   CanvasLayer,
   LayerGroup,
@@ -45,6 +47,8 @@ interface Props {
   maskLayerRef: React.RefObject<Konva.Layer>;
   ghostLayerRef: React.RefObject<Konva.Layer | null>;
   stageSize: { width: number; height: number };
+  /** Current stage zoom — used to keep UI chrome a constant on-screen size. */
+  zoom: number;
   documentWidth: number;
   documentHeight: number;
   documentBgColor: string;
@@ -67,6 +71,7 @@ interface Props {
   bucketRenderState: BucketRenderState;
   smudgeRenderState: SmudgeRenderState;
   pipetteRenderState: PipetteRenderState;
+  zoomToolRenderState: ZoomRenderState;
   cropOnRectChange: (
     x: number, y: number,
     width: number, height: number,
@@ -102,13 +107,13 @@ interface Props {
 
 export default function StageContent({
   stageRef, gridLayerRef, maskLayerRef, ghostLayerRef,
-  stageSize, documentWidth, documentHeight, documentBgColor,
+  stageSize, zoom, documentWidth, documentHeight, documentBgColor,
   layers, layerGroups, displayOrder, activeLayerId,
   activeTool, moveMode, brushSize, brushColor, maskStrokes,
   showGrid, snapToGrid,
   lassoRenderState, selectRenderState, wandRenderState,
   cropRenderState, bucketRenderState, smudgeRenderState,
-  pipetteRenderState, cropOnRectChange,
+  pipetteRenderState, zoomToolRenderState, cropOnRectChange,
   showBrushIndicator, brushRadius, indicatorColor,
   brushRingRef, brushDotRef, brushIndicatorLayerRef,
   isDrawingTool,
@@ -249,10 +254,18 @@ export default function StageContent({
             radius={brushRadius}
             fill="transparent"
             stroke={indicatorColor}
-            strokeWidth={2 / (brushRadius > 0 ? 1 : 1)}
+            strokeWidth={2}
+            strokeScaleEnabled={false}
             visible={false}
           />
-          <Circle ref={brushDotRef} radius={1.5} fill={indicatorColor} visible={false} />
+          {/* Center dot — a fixed-size pointer marker (divide by zoom so the
+              layer's scale leaves it constant on screen). */}
+          <Circle
+            ref={brushDotRef}
+            radius={1.5 / zoom}
+            fill={indicatorColor}
+            visible={false}
+          />
         </Layer>
       )}
 
@@ -261,11 +274,11 @@ export default function StageContent({
       {/* Add new tools here following the same pattern.                   */}
 
       {activeTool === "select" && (
-        <SelectLayer {...selectRenderState} />
+        <SelectLayer {...selectRenderState} zoom={zoom} />
       )}
 
       {activeTool === "lasso" && (
-        <LassoLayer {...lassoRenderState} />
+        <LassoLayer {...lassoRenderState} zoom={zoom} />
       )}
 
       {activeTool === "wand" && (
@@ -290,6 +303,10 @@ export default function StageContent({
 
 {activeTool === "pipette" && (
   <PipetteLayer {...pipetteRenderState} />
+)}
+
+{activeTool === "zoom" && (
+  <ZoomLayer {...zoomToolRenderState} />
 )}
 
     </Stage>

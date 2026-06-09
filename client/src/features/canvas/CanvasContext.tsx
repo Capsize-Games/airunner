@@ -120,6 +120,9 @@ export interface CanvasContextValue {
   // ── Pipette (Color Picker) settings ──────────────────────────────────
   pipetteTarget: "foreground" | "background";
   setPipetteTarget: (value: "foreground" | "background") => void;
+  // ── Zoom tool settings ──────────────────────────────────────────────
+  zoomDirection: "in" | "out";
+  setZoomDirection: (value: "in" | "out") => void;
 }
 
 const CanvasContext = createContext<CanvasContextValue | null>(null);

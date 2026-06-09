@@ -10,7 +10,10 @@
 import { Layer, Line, Circle } from "react-konva";
 import type { LassoRenderState } from "./useLassoTool";
 
-interface Props extends LassoRenderState {}
+interface Props extends LassoRenderState {
+  /** Current stage zoom — keeps handle/cursor circles a constant screen size. */
+  zoom: number;
+}
 
 export default function LassoLayer({
   points,
@@ -18,6 +21,7 @@ export default function LassoLayer({
   anchors,
   cursorPos,
   isClosed,
+  zoom,
 }: Props) {
   const hasAnchors  = anchors.length > 0;
   const lastAnchor  = hasAnchors ? anchors[anchors.length - 1] : null;
@@ -62,6 +66,7 @@ export default function LassoLayer({
           strokeWidth={1.5}
           dash={isClosed ? undefined : [5, 5]}
           fill={isClosed ? "rgba(99,153,255,0.12)" : undefined}
+          strokeScaleEnabled={false}
         />
       )}
 
@@ -73,6 +78,7 @@ export default function LassoLayer({
           stroke="#6399ff"
           strokeWidth={1.5}
           dash={[4, 4]}
+          strokeScaleEnabled={false}
         />
       )}
 
@@ -84,6 +90,7 @@ export default function LassoLayer({
           strokeWidth={1}
           dash={[3, 4]}
           opacity={0.55}
+          strokeScaleEnabled={false}
         />
       )}
 
@@ -92,7 +99,7 @@ export default function LassoLayer({
         <Circle
           x={cursorPos.x}
           y={cursorPos.y}
-          radius={3}
+          radius={3 / zoom}
           fill="#6399ff"
           opacity={0.6}
         />
@@ -107,11 +114,12 @@ export default function LassoLayer({
             key={i}
             x={a.x}
             y={a.y}
-            radius={highlight ? 6 : isClosed ? 5 : 3.5}
+            radius={(highlight ? 6 : isClosed ? 5 : 3.5) / zoom}
             fill={isFirst ? "#6399ff" : "#fff"}
             stroke={highlight ? "#fff" : "#6399ff"}
             strokeWidth={1.5}
             opacity={highlight ? 0.9 : 1}
+            strokeScaleEnabled={false}
           />
         );
       })}

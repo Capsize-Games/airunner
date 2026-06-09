@@ -28,6 +28,7 @@ export default function WandLayer({
           dashOffset={dashOffset}
           lineCap="round"
           lineJoin="round"
+          strokeScaleEnabled={false}
         />
       )}
       {/* Selection outline — blue dashed "marching ants" */}
@@ -43,6 +44,7 @@ export default function WandLayer({
           dashOffset={dashOffset}
           lineCap="round"
           lineJoin="round"
+          strokeScaleEnabled={false}
         />
       )}
     </Layer>

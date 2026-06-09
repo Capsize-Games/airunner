@@ -136,6 +136,7 @@ export default function CropLayer({
             stroke="#6399ff"
             strokeWidth={1}
             dash={[5, 3]}
+            strokeScaleEnabled={false}
             draggable
             onTransform={handleTransform}
             onDragMove={handleDragMove}
@@ -177,6 +178,7 @@ export default function CropLayer({
           stroke="#6399ff"
           strokeWidth={1}
           dash={[5, 3]}
+          strokeScaleEnabled={false}
           listening={false}
         />
       )}

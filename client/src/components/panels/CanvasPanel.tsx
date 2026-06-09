@@ -26,6 +26,7 @@ import CropControls from "../../features/canvas/sidebar/CropControls";
 import BucketControls from "../../features/canvas/sidebar/BucketControls";
 import SmudgeControls from "../../features/canvas/sidebar/SmudgeControls";
 import PipetteControls from "../../features/canvas/sidebar/PipetteControls";
+import ZoomControls from "../../features/canvas/sidebar/ZoomControls";
 import { useCanvasImageDrop } from "./canvas/useCanvasImageDrop";
 
 const LS_LEFT_W = "airunner_left_panel_w";
@@ -220,6 +221,7 @@ export default function CanvasPanel() {
   const showBucketControls = !showImagePrompt && canvas.activeTool === "bucket";
   const showSmudgeControls = !showImagePrompt && canvas.activeTool === "smudge";
   const showPipetteControls = !showImagePrompt && canvas.activeTool === "pipette";
+  const showZoomControls = !showImagePrompt && canvas.activeTool === "zoom";
 
   return (
     <div
@@ -278,6 +280,7 @@ export default function CanvasPanel() {
                   {showBucketControls && <BucketControls />}
                   {showSmudgeControls && <SmudgeControls />}
                   {showPipetteControls && <PipetteControls />}
+                  {showZoomControls && <ZoomControls />}
                 </div>
               </div>
 

@@ -279,7 +279,12 @@ export default function CanvasLayerRenderer({
   );
 
   return (
-    <Layer ref={layerRef} visible={layer.visible} opacity={layer.opacity}>
+    <Layer
+      ref={layerRef}
+      visible={layer.visible}
+      opacity={layer.opacity}
+      imageSmoothingEnabled={false}
+    >
       {hasMask ? (
         <Group ref={dragGroupRef} x={layer.offsetX} y={layer.offsetY} name={"layer-drag-" + layer.id}>
           <Group

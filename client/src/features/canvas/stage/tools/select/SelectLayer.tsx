@@ -5,9 +5,12 @@
 import { Layer, Rect, Text } from "react-konva";
 import type { SelectRenderState } from "./useSelectTool";
 
-interface Props extends SelectRenderState {}
+interface Props extends SelectRenderState {
+  /** Current stage zoom — keeps the size readout a constant on-screen size. */
+  zoom: number;
+}
 
-export default function SelectLayer({ rect }: Props) {
+export default function SelectLayer({ rect, zoom }: Props) {
   if (!rect) return null;
 
   return (
@@ -22,16 +25,17 @@ export default function SelectLayer({ rect }: Props) {
           stroke="#6399ff"
           strokeWidth={1}
           dash={[5, 3]}
+          strokeScaleEnabled={false}
         />
       </Layer>
 
       {rect.width > 10 && rect.height > 10 && (
         <Layer listening={false}>
           <Text
-            x={rect.x + 4}
-            y={rect.y + rect.height + 5}
+            x={rect.x + 4 / zoom}
+            y={rect.y + rect.height + 5 / zoom}
             text={`${Math.round(rect.width)} × ${Math.round(rect.height)}`}
-            fontSize={10}
+            fontSize={10 / zoom}
             fill="#6399ff"
             fontFamily="monospace"
           />
