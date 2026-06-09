@@ -17,6 +17,7 @@ import { zoom as zoomHook } from "./stage/zoom";
 import { keyboard as keyboardHook } from "./stage/keyboard";
 import { drawingOverlay as drawingOverlayHook } from "./stage/drawingOverlay";
 import StageContent from "./stage/StageContent";
+import PixelRuler from "./stage/PixelRuler";
 import type { CanvasStageProps } from "./stage/types";
 import { getCursor } from "./cursorUtils";
 import { getCanvasPosFromStage } from "./stage/drawingHelpers";
@@ -312,7 +313,7 @@ const CanvasStage = forwardRef<CanvasStageHandle, CanvasStageProps>(
     return (
       <div
         ref={containerRef}
-        style={{ width: "100%", height: "100%", background: "#1e1e2e", overflow: "hidden" }}
+        style={{ width: "100%", height: "100%", background: "#1e1e2e", overflow: "hidden", position: "relative" }}
       >
         <StageContent
           stageRef={stageRef}
@@ -370,6 +371,10 @@ const CanvasStage = forwardRef<CanvasStageHandle, CanvasStageProps>(
           onMoveLayer={onMoveLayer}
           onAddMaskStroke={onAddMaskStroke}
           onAddLayerMaskStroke={onAddLayerMaskStroke}
+        />
+        <PixelRuler
+          stageRef={stageRef}
+          stageSize={stageSize}
         />
       </div>
     );
