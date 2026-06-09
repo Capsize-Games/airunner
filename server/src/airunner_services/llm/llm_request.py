@@ -189,6 +189,8 @@ class LLMRequest:
         else:
             llm_settings = LLMGeneratorSettings.objects.first()
 
+        # override_parameters is always False — client-side LLM settings UI was removed.
+        # Generation parameters come from server-managed chatbot presets only.
         if llm_settings.override_parameters:
             request = cls.from_values(
                 do_sample=llm_settings.do_sample,

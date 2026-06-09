@@ -6,26 +6,18 @@ export function LeftIconBar({
   showChat,
   showCanvas,
   rightPanel,
-  ttsOn,
-  sttOn,
   onToggleChat,
   onToggleCanvas,
   onRightPanel,
-  onToggleTts,
-  onToggleStt,
   onOpenSettings,
   bottomSlot,
 }: {
   showChat: boolean;
   showCanvas: boolean;
   rightPanel: PanelId | null;
-  ttsOn: boolean;
-  sttOn: boolean;
   onToggleChat: () => void;
   onToggleCanvas: () => void;
   onRightPanel: (id: PanelId) => void;
-  onToggleTts: () => void;
-  onToggleStt: () => void;
   onOpenSettings: () => void;
   bottomSlot?: React.ReactNode;
 }) {
@@ -57,29 +49,11 @@ export function LeftIconBar({
         onClick={() => onRightPanel("civitai_browser")}
         title="CivitAI Browser"
       >
-        <LucideIcon name="cloud" size={18} />
+        <LucideIcon name="globe" size={18} />
         <span className="icon-bar-label">CivitAI</span>
       </button>
 
       <div className="flex-spacer" />
-
-      <button
-        className={ttsOn ? "active" : ""}
-        onClick={onToggleTts}
-        title="Text to Speech"
-      >
-        <LucideIcon name="speaker" size={18} />
-        <span className="icon-bar-label">TTS</span>
-      </button>
-
-      <button
-        className={sttOn ? "active" : ""}
-        onClick={onToggleStt}
-        title="Speech to Text"
-      >
-        <LucideIcon name="mic" size={18} />
-        <span className="icon-bar-label">STT</span>
-      </button>
 
       <button onClick={onOpenSettings} title="Settings">
         <LucideIcon name="settings" size={18} />

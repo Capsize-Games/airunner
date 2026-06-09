@@ -35,3 +35,27 @@ export async function getBootstrap() {
     "GET", "/api/v1/art/bootstrap",
   );
 }
+
+export interface SavedPrompt {
+  id: number;
+  prompt: string;
+  secondary_prompt: string;
+  negative_prompt: string;
+  secondary_negative_prompt: string;
+}
+
+export async function listSavedPrompts(): Promise<{ prompts: SavedPrompt[] }> {
+  return request<{ prompts: SavedPrompt[] }>("GET", "/api/v1/art/saved-prompts");
+}
+
+export async function createSavedPrompt(
+  data: Omit<SavedPrompt, "id">,
+): Promise<SavedPrompt> {
+  return request<SavedPrompt>(
+    "POST", "/api/v1/art/saved-prompts", data as unknown as JsonObject,
+  );
+}
+
+export async function deleteSavedPrompt(id: number): Promise<void> {
+  await request<void>("DELETE", `/api/v1/art/saved-prompts/${id}`);
+}

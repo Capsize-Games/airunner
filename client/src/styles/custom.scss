@@ -338,7 +338,7 @@ html, body, #root {
 .chat-messages { flex: 1; overflow-y: auto; padding: 8px; }
 .chat-input-area {
   border-top: 1px solid var(--separator-color);
-  padding: 8px; background: var(--theme-bg-secondary);
+  padding: 0px; background: var(--theme-bg-secondary);
 }
 .chat-input-area textarea,
 .chat-input-area select,

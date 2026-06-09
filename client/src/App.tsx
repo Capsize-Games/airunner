@@ -83,10 +83,6 @@ export default function App() {
                   setShowCanvas(!showCanvas);
                 }
               }}
-              ttsOn={ttsOn}
-              onToggleTts={() => setTtsOn(!ttsOn)}
-              sttOn={sttOn}
-              onToggleStt={() => setSttOn(!sttOn)}
               onOpenSettings={() => setShowSettings(true)}
               onSelectConversation={handleSelectConversation}
               bottomBarSlot={extensionBottomBarItems}
@@ -94,6 +90,10 @@ export default function App() {
               {showChat && <ChatView
                 conversationId={conversationId}
                 onSelectConversation={handleSelectConversation}
+                ttsOn={ttsOn}
+                onToggleTts={() => setTtsOn(!ttsOn)}
+                sttOn={sttOn}
+                onToggleStt={() => setSttOn(!sttOn)}
               />}
             </Layout>
           }

@@ -104,32 +104,50 @@ export default function LoraPanel() {
   };
 
   return (
-    <div className="p-2">
-      {loading ? (
-        <Spinner animation="border" size="sm" className="d-block mx-auto" />
-      ) : items.length === 0 ? (
-        <p className="text-muted small">
-          No LoRA models found. Add .safetensors files to your models directory.
-        </p>
-      ) : (
-        <div className="lora-list">
-          {items.map((item) => (
-            <LoraItem
-              key={item.id}
-              item={item}
-              onToggle={handleToggle}
-              onWeightChange={handleWeightChange}
-              onCopyWord={handleCopyWord}
-              onDeleteWord={handleDeleteWord}
-              onAddWords={handleAddWords}
-              onInputChange={(id, value) =>
-                setInputTexts((prev) => ({ ...prev, [id]: value }))
-              }
-              onInputKeyDown={handleInputKeyDown}
-            />
-          ))}
-        </div>
-      )}
+    <div style={{ display: "flex", flexDirection: "column" }}>
+      <div style={{
+        position: "sticky", top: 0,
+        flexShrink: 0,
+        display: "flex", alignItems: "center",
+        padding: "8px 12px 6px",
+        borderBottom: "1px solid var(--theme-border)",
+        background: "var(--theme-panel-bg)",
+        zIndex: 1,
+      }}>
+        <span style={{
+          fontSize: 10, fontWeight: 700, letterSpacing: "0.07em",
+          textTransform: "uppercase", color: "var(--theme-text-secondary)",
+        }}>
+          LoRA
+        </span>
+      </div>
+      <div className="p-2">
+        {loading ? (
+          <Spinner animation="border" size="sm" className="d-block mx-auto" />
+        ) : items.length === 0 ? (
+          <p className="text-muted small">
+            No LoRA models found. Add .safetensors files to your models directory.
+          </p>
+        ) : (
+          <div className="lora-list">
+            {items.map((item) => (
+              <LoraItem
+                key={item.id}
+                item={item}
+                onToggle={handleToggle}
+                onWeightChange={handleWeightChange}
+                onCopyWord={handleCopyWord}
+                onDeleteWord={handleDeleteWord}
+                onAddWords={handleAddWords}
+                onInputChange={(id, value) =>
+                  setInputTexts((prev) => ({ ...prev, [id]: value }))
+                }
+                onInputKeyDown={handleInputKeyDown}
+              />
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
