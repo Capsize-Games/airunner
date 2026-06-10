@@ -33,7 +33,7 @@ def _drop_columns_if_present(
     targets = [name for name in column_names if name in existing]
     if not targets:
         return
-    recreate = "always" if op.get_bind().dialect.name == "sqlite" else "auto"
+    recreate = "auto"
     with op.batch_alter_table(table_name, recreate=recreate) as batch_op:
         for name in targets:
             batch_op.drop_column(name)

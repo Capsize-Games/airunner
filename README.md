@@ -111,34 +111,19 @@ tagged with a `v*` version.  Look for artifacts named:
 
 ### How it works
 
-```
-Electron app
-├── main process (Node.js)
-│   ├── Spawns the embedded Python backend as a child process
-│   ├── Polls GET /health until the backend is ready
-│   ├── Loads the React frontend once the backend is healthy
-│   └── Kills the backend on app quit
-└── renderer process
-    └── Loads http://localhost:8080 (served by the Python backend)
+AI Runner is a web application with a Python backend (FastAPI) serving
+a React frontend and API endpoints.
 
-electron/resources/
-├── python/     ← embedded CPython 3.13 + all pip dependencies + CUDA native libs
-└── web/        ← compiled React frontend (client/dist/)
-```
+- **Backend:** Python FastAPI server on `localhost:8080`
+- **Frontend:** React SPA built with Vite, served by the backend
+- **Database:** PostgreSQL (required)
 
-### Building from source (for maintainers)
+### Running in development
 
 ```bash
-# Linux
-./package/build_bundle.sh
-
-# Windows (PowerShell)
-.\package\build_bundle.ps1
+# Start the backend and frontend
+./scripts/run_web.sh
 ```
-
-Prerequisites on the build host: CUDA toolkit 12.x, CMake ≥ 3.24,
-Node.js ≥ 20, and a C++ compiler.  These are **not** required on the
-end user's machine.
 
 ---
 

@@ -10,7 +10,6 @@ from typing import Sequence, Union
 
 from alembic import op
 import sqlalchemy as sa
-from sqlalchemy.dialects import sqlite
 from airunner_services.database.db import safe_alter_column, drop_table
 from airunner_services.database.models.llm_generator_settings import (
     LLMGeneratorSettings,
@@ -56,9 +55,9 @@ def downgrade() -> None:
         sa.Column("adapter_path", sa.VARCHAR(), nullable=True),
         sa.Column("date_added", sa.DATETIME(), nullable=True),
         sa.Column("last_trained", sa.DATETIME(), nullable=True),
-        sa.Column("files_used", sqlite.JSON(), nullable=True),
-        sa.Column("settings", sqlite.JSON(), nullable=True),
-        sa.Column("tags", sqlite.JSON(), nullable=True),
+        sa.Column("files_used", sa.JSON(), nullable=True),
+        sa.Column("settings", sa.JSON(), nullable=True),
+        sa.Column("tags", sa.JSON(), nullable=True),
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint("name"),
     )

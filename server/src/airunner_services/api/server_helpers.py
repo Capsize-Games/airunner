@@ -100,19 +100,3 @@ def _start_all_watchers() -> None:
     _mdl()
 
 
-def _mount_static_files(app: FastAPI) -> None:
-    from .server import logger
-
-    static_dir = (os.environ.get("AIRUNNER_STATIC_DIR") or "").strip()
-    if not static_dir:
-        return
-    resolved = os.path.abspath(static_dir)
-    if not os.path.isfile(os.path.join(resolved, "index.html")):
-        logger.warning(
-            "AIRUNNER_STATIC_DIR=%s does not contain index.html", resolved
-        )
-        return
-    logger.info(
-        "Bundle mode detected — serving React frontend from %s", resolved
-    )
-    app.mount("/", StaticFiles(directory=resolved, html=True), name="web")

@@ -12,7 +12,7 @@ def create_foreign_key(
     ondelete: str | None = None,
     onupdate: str | None = None,
 ) -> None:
-    """Create one foreign key with SQLite-safe batch mode behavior."""
+    """Create one foreign key."""
     from alembic import op
 
     dialect_name = getattr(getattr(op.get_bind(), "dialect", None), "name", "")
@@ -21,20 +21,6 @@ def create_foreign_key(
             f"fk_{cls.__tablename__}_{'_'.join(local_cols)}_"
             f"{referent_table}_{'_'.join(remote_cols)}"
         )
-
-    if dialect_name == "sqlite":
-        with op.batch_alter_table(
-            cls.__tablename__, recreate="always"
-        ) as batch_op:
-            batch_op.create_foreign_key(
-                constraint_name,
-                referent_table,
-                local_cols,
-                remote_cols,
-                ondelete=ondelete,
-                onupdate=onupdate,
-            )
-        return
 
     op.create_foreign_key(
         constraint_name,

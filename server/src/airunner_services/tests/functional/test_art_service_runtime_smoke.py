@@ -47,7 +47,10 @@ def _configure_test_database(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> str:
-    db_url = f"sqlite:///{tmp_path / 'art-service-runtime.sqlite'}"
+    db_url = os.environ.get(
+        "AIRUNNER_TEST_DATABASE_URL",
+        "postgresql://airunner:@localhost:5432/airunner_test",
+    )
     monkeypatch.setenv("AIRUNNER_DATABASE_URL", db_url)
     monkeypatch.setenv("AIRUNNER_DISABLE_DB_SETUP_CACHE", "1")
     monkeypatch.setenv("AIRUNNER_KNOWLEDGE_ON", "0")
@@ -142,7 +145,10 @@ def _run_runtime_probe(
     scheduler: str,
     prompt: str,
 ) -> dict[str, object]:
-    db_url = f"sqlite:///{tmp_path / 'art-service-runtime-probe.sqlite'}"
+    db_url = os.environ.get(
+        "AIRUNNER_TEST_DATABASE_URL",
+        "postgresql://airunner:@localhost:5432/airunner_test",
+    )
     output_root = tmp_path / "probe-generated-images"
     output_root.mkdir(parents=True, exist_ok=True)
 

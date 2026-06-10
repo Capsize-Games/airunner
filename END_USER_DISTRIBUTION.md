@@ -71,8 +71,8 @@ The installer should create a single desktop entry and a single primary
 
 ## Current Implementation
 
-The no-Python end-user distribution delivery has been superseded by the
-Electron-based bundling system. The `native/` package has been removed;
+The no-Python end-user distribution delivery is handled by the
+web-based deployment. The `native/` package has been removed;
 `scripts/build_airunner_launcher.sh` remains for dev workflows.
 
 The bundle layout currently stages:

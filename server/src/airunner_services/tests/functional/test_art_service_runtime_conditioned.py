@@ -87,7 +87,10 @@ def _run_runtime_probe(
     strength: float | None = None,
     active_rect: dict[str, int] | None = None,
 ) -> dict[str, object]:
-    db_url = f"sqlite:///{tmp_path / 'art-service-runtime-probe.sqlite'}"
+    db_url = os.environ.get(
+        "AIRUNNER_TEST_DATABASE_URL",
+        "postgresql://airunner:@localhost:5432/airunner_test",
+    )
     output_root = tmp_path / "probe-generated-images"
     output_root.mkdir(parents=True, exist_ok=True)
 

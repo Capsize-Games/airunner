@@ -50,16 +50,6 @@ def _extract_search_path_schema(db_url: str) -> str | None:
         return None
 
 
-def _ensure_sqlite_parent_dir(db_url: str) -> None:
-    if not db_url.startswith("sqlite:///"):
-        return
-
-    db_path = db_url.replace("sqlite:///", "", 1)
-    db_dir = os.path.dirname(db_path)
-    if db_dir:
-        _ensure_private_directory(db_dir)
-
-
 def _use_setup_cache() -> bool:
     """Return whether repeated setup calls should be skipped."""
     return os.environ.get("AIRUNNER_DISABLE_DB_SETUP_CACHE", "0") != "1"
@@ -316,44 +306,8 @@ def _env_is_truthy(name: str) -> bool:
     }
 
 
-def _enforce_db_policy(target_db_url: str) -> None:
-    """Fail fast on misconfigurations that silently break isolation.
-
-    Gated behind ``AIRUNNER_REQUIRE_POSTGRES`` so the open-core desktop
-    app (which legitimately runs on SQLite) is never affected.  Server
-    deployments set the flag to guarantee nothing falls back to SQLite or
-    to an unintended single-tenant database.
-    """
-    if not _env_is_truthy("AIRUNNER_REQUIRE_POSTGRES"):
-        return
-
-    url = (target_db_url or "").lower()
-    is_postgres = url.startswith("postgresql") or url.startswith("postgres")
-    if not is_postgres:
-        raise RuntimeError(
-            "AIRUNNER_REQUIRE_POSTGRES=1 but the resolved database URL is not "
-            f"PostgreSQL: {target_db_url!r}. Set AIRUNNER_DATABASE_URL (or "
-            "AIRUNNER_DATABASE_BACKEND=postgresql with AIRUNNER_POSTGRES_*) to "
-            "a PostgreSQL instance."
-        )
-
-    from airunner_services.database.session import (  # noqa: PLC0415
-        _tenancy_mode,
-    )
-
-    if _tenancy_mode() == "single":
-        raise RuntimeError(
-            "AIRUNNER_REQUIRE_POSTGRES=1 with single-tenant mode: per-user "
-            "schema isolation would be OFF and every user would share one "
-            "namespace. Set AIRUNNER_DB_TENANCY=multi (or DB_TENANCY_MODE="
-            "'multi')."
-        )
-
-
 def setup_database(db_url: str | None = None):
     target_db_url = db_url or _default_db_url()
-    _enforce_db_policy(target_db_url)
-    _ensure_sqlite_parent_dir(target_db_url)
 
     if _use_setup_cache() and target_db_url in _COMPLETED_SETUP_URLS:
         return

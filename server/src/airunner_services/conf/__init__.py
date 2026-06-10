@@ -116,27 +116,15 @@ class LazySettings:
     # Computed helpers
     # ------------------------------------------------------------------
     def _build_db_url(self) -> str:
-        # An explicit URL (AIRUNNER_DATABASE_URL / DATABASE_URL) always wins
-        # so operators can point at an existing database without juggling
-        # the POSTGRES_* parts.
         explicit = str(self._store.get("DATABASE_URL", "") or "").strip()
         if explicit:
             return explicit
-        backend = self._store.get("DATABASE_BACKEND", "sqlite")
-        if backend == "postgresql":
-            user = self._store.get("POSTGRES_USER", "airunner")
-            password = self._store.get("POSTGRES_PASSWORD", "")
-            host = self._store.get("POSTGRES_HOST", "localhost")
-            port = self._store.get("POSTGRES_PORT", 5432)
-            db = self._store.get("POSTGRES_DB", "airunner")
-            return f"postgresql://{user}:{password}" f"@{host}:{port}/{db}"
-        # SQLite
-        base = self._store.get("AIRUNNER_BASE_PATH", "~/.local/share/airunner")
-        base = os.path.expanduser(base)
-        db_name = self._store.get("SQLITE_DB_NAME", "airunner.db")
-        db_dir = os.path.join(base, "data")
-        os.makedirs(db_dir, exist_ok=True)
-        return f"sqlite:///{os.path.join(db_dir, db_name)}"
+        user = self._store.get("POSTGRES_USER", "airunner")
+        password = self._store.get("POSTGRES_PASSWORD", "")
+        host = self._store.get("POSTGRES_HOST", "localhost")
+        port = self._store.get("POSTGRES_PORT", 5432)
+        db = self._store.get("POSTGRES_DB", "airunner")
+        return f"postgresql://{user}:{password}" f"@{host}:{port}/{db}"
 
     # ------------------------------------------------------------------
     # Attributes

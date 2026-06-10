@@ -1,4 +1,4 @@
-"""Canonical database session management.
+"""Canonical database session management — PostgreSQL only.
 
 Provides ``session_scope()`` and engine helpers used by the real
 ORM layer (``RealBaseManager``).  The api layer uses these
@@ -29,8 +29,6 @@ def _db_url() -> str:
 
 
 def _tenancy_mode() -> str:
-    # Env var wins (AIRUNNER_DB_TENANCY); otherwise fall back to the
-    # DB_TENANCY_MODE setting (the production preset sets it to "multi").
     env_value = (os.environ.get("AIRUNNER_DB_TENANCY") or "").strip()
     if env_value:
         return env_value.lower()
@@ -87,15 +85,6 @@ _public_engine = None
 _public_engine_url: str | None = None
 
 
-def _ensure_sqlite_parent_dir(url: str) -> None:
-    if not url.startswith("sqlite:///"):
-        return
-    db_path = url.replace("sqlite:///", "", 1)
-    db_dir = os.path.dirname(db_path)
-    if db_dir:
-        os.makedirs(db_dir, exist_ok=True)
-
-
 def _ensure_tenant_ready(tenant: str) -> None:
     if _tenancy_mode() == "single":
         return
@@ -131,8 +120,6 @@ def _get_engine(tenant: str):
         engine_key = "__shared__"
 
     if engine_key not in _engines:
-        _ensure_sqlite_parent_dir(db_url)
-
         pool_size = int(os.environ.get("AIRUNNER_DB_POOL_SIZE", "20"))
         max_overflow = int(os.environ.get("AIRUNNER_DB_MAX_OVERFLOW", "40"))
         pool_timeout = int(os.environ.get("AIRUNNER_DB_POOL_TIMEOUT", "60"))
@@ -208,7 +195,6 @@ def _get_public_engine():
                 _public_engine.dispose()
             except Exception:
                 pass
-        _ensure_sqlite_parent_dir(db_url)
         _public_engine = create_configured_engine(
             db_url,
             pool_pre_ping=True,
