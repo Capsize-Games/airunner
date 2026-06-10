@@ -36,6 +36,9 @@ WORKDIR /app
 # Copy the service source and install it editable. The BuildKit pip cache mount
 # keeps the (large) wheel downloads — torch, etc. — across rebuilds so editing
 # code never re-downloads dependencies.
+# README.md is needed at build time — package_metadata.py reads it from
+# the repo root to populate the package's long_description.
+COPY README.md ./
 COPY server ./server
 RUN --mount=type=cache,target=/root/.cache/pip \
     pip install -e "./server[${EXTRAS}]"

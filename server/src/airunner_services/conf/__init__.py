@@ -97,8 +97,6 @@ class LazySettings:
         # 3. Preset overlay
         _apply_preset(self._store)
 
-        # 4. Extension defaults — applied lazily after extensions load
-
         # 4. Normalise string-typed extension list
         raw = self._store.get("EXTENSIONS")
         if isinstance(raw, str):
@@ -124,7 +122,8 @@ class LazySettings:
         host = self._store.get("POSTGRES_HOST", "localhost")
         port = self._store.get("POSTGRES_PORT", 5432)
         db = self._store.get("POSTGRES_DB", "airunner")
-        return f"postgresql://{user}:{password}" f"@{host}:{port}/{db}"
+        # Use psycopg v3 driver (installed via psycopg[binary]).
+        return f"postgresql+psycopg://{user}:{password}" f"@{host}:{port}/{db}"
 
     # ------------------------------------------------------------------
     # Attributes

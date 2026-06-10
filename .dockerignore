@@ -28,9 +28,6 @@ client/node_modules/
 client/dist/
 package/
 
-# Desktop / packaging artifacts (stripped, but keep context lean)
-electron/
-
 # Local data, models, logs, secrets
 logs/
 models/
