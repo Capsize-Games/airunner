@@ -178,7 +178,14 @@ async def unload_model(
 
     if any(
         keyword in model_type_lower
-        for keyword in ("art", "sd", "stablediffusion", "z-image", "turbo")
+        for keyword in (
+            "art",
+            "sd",
+            "stablediffusion",
+            "z-image",
+            "turbo",
+            "text_to_image",
+        )
     ):
         from .art_runtime_control import (  # noqa: PLC0415
             build_control_request,

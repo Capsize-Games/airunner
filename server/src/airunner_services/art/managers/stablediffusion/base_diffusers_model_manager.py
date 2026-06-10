@@ -30,6 +30,7 @@ from airunner_services.art.managers.stablediffusion.mixins import (
     SDImageGenerationMixin,
 )
 from airunner_services.model_management import ModelResourceManager
+from airunner_services.model_management.types import ModelState
 
 
 class BaseDiffusersModelManager(
@@ -78,6 +79,7 @@ class BaseDiffusersModelManager(
         self.do_change_scheduler: bool = False
         self._resolved_model_version: Optional[str] = None
         self._image_request = None
+        self._loaded_model_path: Optional[str] = None
         self._controlnet_model = None
         self._controlnet: Optional[Any] = None
         self._controlnet_processor: Any = None
@@ -338,6 +340,7 @@ class BaseDiffusersModelManager(
         self._load_compel()
         self._make_memory_efficient()
         self._finalize_load_stable_diffusion()
+        self._loaded_model_path = self.model_path
         resource_manager.model_loaded(self.model_path, "text_to_image")
 
     def load_controlnet(self):
@@ -379,7 +382,17 @@ class BaseDiffusersModelManager(
         ):
             self.interrupt_image_generation()
             self.requested_action = ModelAction.CLEAR
-        self.change_model_status(self.model_type, ModelStatus.LOADING)
+        # Mark the resource-manager entry as UNLOADING so the active-models
+        # list reflects the in-progress unload (yellow) instead of staying
+        # "loaded" until cleanup completes at the end of this method.
+        unloading_model_path = self.model_path or self._loaded_model_path
+        if unloading_model_path:
+            ModelResourceManager().set_model_state(
+                unloading_model_path,
+                ModelState.UNLOADING,
+                "text_to_image",
+            )
+        self.change_model_status(self.model_type, ModelStatus.UNLOADING)
 
         # Unload lightweight components first
         self._unload_deep_cache()
@@ -413,12 +426,13 @@ class BaseDiffusersModelManager(
         # Final memory clear to ensure everything is released
         clear_memory(self._device_index)
 
-        model_path = self.model_path
+        model_path = self.model_path or self._loaded_model_path
         if model_path:
             ModelResourceManager().cleanup_model(
                 model_path,
                 "text_to_image",
             )
+        self._loaded_model_path = None
 
         self.change_model_status(self.model_type, ModelStatus.UNLOADED)
 

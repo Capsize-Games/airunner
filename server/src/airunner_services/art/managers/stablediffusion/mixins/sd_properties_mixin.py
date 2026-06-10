@@ -407,7 +407,9 @@ class SDPropertiesMixin:
         Returns:
             Optional expanded path string if custom path is valid.
         """
-        path_value = self.image_request.custom_path
+        path_value = (
+            self.image_request.custom_path if self.image_request else None
+        )
         if path_value is not None and path_value != "":
             expanded_path = os.path.expanduser(path_value)
             if os.path.exists(expanded_path):

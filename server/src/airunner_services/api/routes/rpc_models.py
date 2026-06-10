@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from typing import Any
 
 from airunner_services.api.routes.events import _rpc_register
@@ -84,6 +85,72 @@ async def _rpc_models_unload(body: dict, **kwargs: Any) -> dict[str, Any]:
             SignalCode.LLM_UNLOAD_SIGNAL,
             {},
         )
+        return {"status": 200, "body": {"status": "accepted"}}
+    if any(
+        keyword in model_type_lower
+        for keyword in (
+            "art",
+            "sd",
+            "stablediffusion",
+            "z-image",
+            "turbo",
+            "text_to_image",
+        )
+    ):
+        ws = kwargs.get("ws")
+        if ws is not None:
+            from fastapi import Request as FastAPIRequest  # noqa: PLC0415
+            from airunner_services.api.routes.art_runtime_registry import (  # noqa: PLC0415
+                require_runtime_registry,
+                resolve_art_client,
+            )
+            from airunner_services.ipc.messages import (  # noqa: PLC0415
+                RequestEnvelope,
+            )
+            from airunner_services.runtimes.contracts import (  # noqa: PLC0415
+                RuntimeAction,
+                RuntimeKind,
+            )
+
+            async def _fire_art_unload():
+                try:
+                    mock_req = FastAPIRequest(
+                        {
+                            "type": "http",
+                            "app": getattr(ws, "app", None),
+                        }
+                    )
+                    client = resolve_art_client(
+                        require_runtime_registry(mock_req),
+                    )
+                    envelope = RequestEnvelope(
+                        request_id="unload",
+                        runtime=RuntimeKind.ART,
+                        action=RuntimeAction.UNLOAD_MODEL,
+                        payload={},
+                        metadata={},
+                    )
+                    await asyncio.to_thread(client.invoke, envelope)
+                except Exception as exc:
+                    logger.warning(
+                        "Background art unload failed: %s",
+                        exc,
+                    )
+                SignalMediator().emit_signal(
+                    SignalCode.MODEL_STATUS_CHANGED_SIGNAL,
+                    {
+                        "model_id": model_id,
+                        "model_type": model_type or "art",
+                        "status": "unloaded",
+                    },
+                )
+
+            asyncio.create_task(_fire_art_unload())
+            logger.info(
+                "Unload requested for art model %s (type=%s)",
+                model_id,
+                model_type,
+            )
         return {"status": 200, "body": {"status": "accepted"}}
     return {"status": 200, "body": {"status": "accepted"}}
 

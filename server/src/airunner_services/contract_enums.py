@@ -300,6 +300,7 @@ class ModelStatus(Enum):
     LOADED = "Loaded"
     READY = "Ready"
     LOADING = "Loading"
+    UNLOADING = "Unloading"
     FAILED = "Failed"
 
 

@@ -13,8 +13,8 @@ export function useStatsPanel() {
   const [hw, setHw] = useState<HardwareProfile | null>(null);
   const [models, setModels] = useState<ActiveModelInfo[]>([]);
   const [slots, setSlots] = useState<ModelSlot[]>([]);
+  const [unloadingSlots, setUnloadingSlots] = useState<Set<string>>(new Set());
   const mountedRef = useRef(true);
-  const unloadingRef = useRef<Set<string>>(new Set());
   const loadingRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
@@ -87,32 +87,79 @@ export function useStatsPanel() {
   }, [fetchHw]);
 
   const handleUnload = useCallback((m: ActiveModelInfo, slotType: string) => {
-    const key = m.model_id || m.model_type;
-    if (unloadingRef.current.has(key)) return;
-    unloadingRef.current.add(key);
+    if (unloadingSlots.has(slotType)) return;
+    // Optimistically flip the slot to "unloading" so the indicator is
+    // instant on click rather than waiting for the server round-trip.
+    setUnloadingSlots((prev) => new Set(prev).add(slotType));
     loadingRef.current.delete(slotType);
     unloadModel(m.model_id, m.model_type).catch(() => {});
-    setTimeout(() => unloadingRef.current.delete(key), 2000);
-  }, []);
+    // Safety net: clear the optimistic flag if the unload never completes.
+    setTimeout(() => {
+      setUnloadingSlots((prev) => {
+        if (!prev.has(slotType)) return prev;
+        const next = new Set(prev);
+        next.delete(slotType);
+        return next;
+      });
+    }, 15000);
+  }, [unloadingSlots]);
 
   const handleLoad = useCallback((type: string, id: string) => {
     loadingRef.current.add(type);
     loadModel(id, type).catch(() => {});
   }, []);
 
+  const findModelIn = useCallback(
+    (list: ActiveModelInfo[], type: string): ActiveModelInfo | undefined => {
+      const prefixes = type === "art" ? [type, "text_to_image"] : [type];
+      return list.find((m) =>
+        prefixes.some((prefix) =>
+          m.model_type.toLowerCase().startsWith(prefix),
+        ),
+      );
+    },
+    [],
+  );
+
+  // Clear the optimistic "unloading" flag once the server reports the model
+  // gone (removed from the active list) or unloaded.
+  useEffect(() => {
+    setUnloadingSlots((prev) => {
+      if (prev.size === 0) return prev;
+      const next = new Set(prev);
+      for (const type of prev) {
+        const m = findModelIn(models, type);
+        if (!m || m.status === "unloaded") next.delete(type);
+      }
+      return next.size === prev.size ? prev : next;
+    });
+  }, [models, findModelIn]);
+
   const findModel = useCallback(
-    (type: string): ActiveModelInfo | undefined =>
-      models.find((m) => m.model_type.toLowerCase().startsWith(type)),
+    (type: string): ActiveModelInfo | undefined => {
+      // The art/SD model is registered with model_type "text_to_image"
+      // in BaseDiffusersModelManager, so match both "art" and
+      // "text_to_image" when looking up the "art" slot.
+      const prefixes = type === "art"
+        ? [type, "text_to_image"]
+        : [type];
+      return models.find((m) =>
+        prefixes.some((prefix) =>
+          m.model_type.toLowerCase().startsWith(prefix),
+        ),
+      );
+    },
     [models],
   );
 
   const statusColor = (status: string) => {
     switch (status) {
       case "loaded": return "var(--bs-success)";
-      case "loading": return "var(--bs-warning)";
+      case "loading":
+      case "unloading": return "var(--bs-warning)";
       default: return "var(--bs-danger)";
     }
   };
 
-  return { hw, slots, models, loadingRef, findModel, statusColor, handleLoad, handleUnload };
+  return { hw, slots, models, loadingRef, unloadingSlots, findModel, statusColor, handleLoad, handleUnload };
 }
