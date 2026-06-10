@@ -100,3 +100,22 @@ def _start_all_watchers() -> None:
     _mdl()
 
 
+def _mount_static_files(app: FastAPI) -> None:
+    """Serve the built client SPA from the app when a build is present.
+
+    Optional and guarded: in containerised deployments the SPA is served by
+    the edge proxy (Caddy) and in local dev by the Vite dev server, so there
+    is usually no build directory and this is a no-op. Set
+    ``AIRUNNER_STATIC_DIR`` to serve a build directly from the API process.
+
+    Mounted last (after API routes) at ``/`` with ``html=True`` so client-side
+    routing falls back to ``index.html`` while ``/api/*`` routes still win.
+    """
+    static_dir = os.environ.get("AIRUNNER_STATIC_DIR", "").strip()
+    if not static_dir or not os.path.isdir(static_dir):
+        return
+    app.mount(
+        "/",
+        StaticFiles(directory=static_dir, html=True),
+        name="static",
+    )

@@ -1,0 +1,26 @@
+# ---------------------------------------------------------------------------
+# GPU override for the dev stack. Gives the server container the host NVIDIA
+# GPU(s) so local model inference (Stable Diffusion, llama.cpp, STT/TTS) runs
+# in Docker exactly as it does bare-metal.
+#
+#   docker compose -f docker-compose.yml -f docker-compose.gpu.yml up
+#
+# Requires on the host:
+#   - NVIDIA driver
+#   - nvidia-container-toolkit  (https://github.com/NVIDIA/nvidia-container-toolkit)
+#
+# torch's Linux wheels bundle the CUDA runtime, so no CUDA base image is needed.
+# ---------------------------------------------------------------------------
+
+services:
+  server:
+    environment:
+      NVIDIA_VISIBLE_DEVICES: all
+      NVIDIA_DRIVER_CAPABILITIES: compute,utility
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]

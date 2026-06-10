@@ -1,0 +1,53 @@
+# ---------------------------------------------------------------------------
+# Docker build context excludes.
+#
+# IMPORTANT (open-core boundary): `extensions/` is a SEPARATE, PRIVATE repo
+# checked out inside this tree. It is NOT excluded here, because the private
+# production image (extensions/docker/Dockerfile.prod) deliberately COPYs it
+# in. The boundary is instead enforced by COPY discipline: the PUBLIC dev
+# image (docker/Dockerfile) only `COPY server` and never copies extensions —
+# they are bind-mounted at runtime — so no image published from this repo ever
+# contains private extension code.
+# ---------------------------------------------------------------------------
+
+# Python
+venv/
+.venv/
+**/__pycache__/
+**/*.pyc
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+*.egg-info/
+build/
+dist/
+
+# Node / client
+node_modules/
+client/node_modules/
+client/dist/
+package/
+
+# Desktop / packaging artifacts (stripped, but keep context lean)
+electron/
+
+# Local data, models, logs, secrets
+logs/
+models/
+*.db
+*.sqlite*
+.env
+.env.*
+!.env.docker.example
+
+# VCS / IDE / misc
+.git/
+.github/
+.roo/
+.claude/
+airunner.wiki/
+images/
+qa/
+plans/
+# NB: do NOT exclude *.md — server/package_metadata.py reads server/README.md
+# at install time, and extension docs ship alongside their code.

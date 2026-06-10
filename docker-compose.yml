@@ -1,0 +1,87 @@
+# ---------------------------------------------------------------------------
+# AI Runner — local DEVELOPMENT stack (open-core).
+#
+#   docker compose up                 # full stack (server is CPU here)
+#   docker compose --profile client up # also run the Vite dev server
+#   ./scripts/docker.sh up            # convenience wrapper (auto-detects GPU)
+#
+# GPU: add the override to give the server the host GPU(s):
+#   docker compose -f docker-compose.yml -f docker-compose.gpu.yml up
+# (requires the NVIDIA driver + nvidia-container-toolkit on the host).
+#
+# Source is bind-mounted for live reload. Private extensions are bind-mounted
+# from ./extensions and enabled via AIRUNNER_EXTENSIONS in your .env — they are
+# never baked into this image.
+# ---------------------------------------------------------------------------
+
+services:
+  db:
+    image: postgres:16-bookworm
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-airunner}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-airunner}
+      POSTGRES_DB: ${POSTGRES_DB:-airunner}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - airunner_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-airunner} -d ${POSTGRES_DB:-airunner}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  server:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+      args:
+        EXTRAS: ${AIRUNNER_DOCKER_EXTRAS:-server}
+    env_file:
+      - .env
+    environment:
+      # Point the app at the compose database (overrides any localhost URL in .env).
+      AIRUNNER_DATABASE_URL: postgresql://${POSTGRES_USER:-airunner}:${POSTGRES_PASSWORD:-airunner}@db:5432/${POSTGRES_DB:-airunner}
+      AIRUNNER_DB_TENANCY: ${AIRUNNER_DB_TENANCY:-multi}
+      AIRUNNER_REQUIRE_POSTGRES: "1"
+      # airunner_services (editable) + repo root so `extensions.*` imports resolve.
+      PYTHONPATH: /app/server/src:/app
+      DEV_ENV: "1"
+    volumes:
+      # NB: we deliberately do NOT mount .env into the container. compose reads
+      # it via env_file and injects the values as real env vars; mounting the
+      # file would let settings.py's load_dotenv(override=True) clobber the
+      # compose-set AIRUNNER_DATABASE_URL (db host) with the host's localhost URL.
+      - ./server:/app/server
+      - ./extensions:/app/extensions
+      - airunner_data:/data
+      # Hugging Face / model cache shared with the host to avoid re-downloads.
+      - ${HF_HOME:-~/.cache/huggingface}:/data/huggingface
+    ports:
+      - "${AIRUNNER_HTTP_PORT:-8080}:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # Vite dev server. Opt-in via `--profile client` (many devs run it on the host).
+  client:
+    image: node:22-bookworm-slim
+    working_dir: /app/client
+    profiles: ["client"]
+    command: sh -c "npm install && npm run dev -- --host 0.0.0.0"
+    env_file:
+      - .env
+    volumes:
+      - ./client:/app/client
+      - ./extensions:/app/extensions
+    ports:
+      - "${VITE_PORT:-5173}:5173"
+    depends_on:
+      - server
+    restart: unless-stopped
+
+volumes:
+  airunner_pgdata:
+  airunner_data:
