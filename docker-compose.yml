@@ -49,6 +49,10 @@ services:
       # airunner_services (editable) + repo root so `extensions.*` imports resolve.
       PYTHONPATH: /app/server/src:/app
       DEV_ENV: "1"
+      # Point Hugging Face at the mounted cache (the volume above binds the
+      # host HF cache here). Without this, HF_HOME from .env can arrive with an
+      # unexpanded "~" and downloads land in a bogus literal "~" directory.
+      HF_HOME: /data/huggingface
     volumes:
       # NB: we deliberately do NOT mount .env into the container. compose reads
       # it via env_file and injects the values as real env vars; mounting the
@@ -56,7 +60,11 @@ services:
       # compose-set AIRUNNER_DATABASE_URL (db host) with the host's localhost URL.
       - ./server:/app/server
       - ./extensions:/app/extensions
-      - airunner_data:/data
+      # Model/data dir. Defaults to the named volume (isolated, survives
+      # `down` but not `down -v`). Set AIRUNNER_DATA_DIR to a host path to
+      # reuse an existing AI Runner home (e.g. ~/.local/share/airunner) so the
+      # container sees already-downloaded models and persists outside Docker.
+      - ${AIRUNNER_DATA_DIR:-airunner_data}:/data
       # Hugging Face / model cache shared with the host to avoid re-downloads.
       - ${HF_HOME:-~/.cache/huggingface}:/data/huggingface
     ports:

@@ -1,9 +1,6 @@
 """Text generation functionality for LLM models."""
 
-import random
 from typing import Any, Dict, Optional
-
-import torch
 
 from airunner_services.contract_enums import LLMActionType
 from airunner_services.llm.managers.mixins.generation_execution_support import (
@@ -74,17 +71,3 @@ class GenerationMixin:
             None,
         )
 
-    def _do_set_seed(self) -> None:
-        """Set random seeds for deterministic generation."""
-        if self.llm_generator_settings.override_parameters:
-            seed = self.llm_generator_settings.seed
-            random_seed = self.llm_generator_settings.random_seed
-        else:
-            seed = self.chatbot.seed
-            random_seed = self.chatbot.random_seed
-
-        if not random_seed:
-            torch.manual_seed(seed)
-            random.seed(seed)
-            if torch.cuda.is_available():
-                torch.cuda.manual_seed_all(seed)

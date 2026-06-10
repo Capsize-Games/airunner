@@ -71,7 +71,6 @@ class RequestHandlingMixin:
         if request_settings_changed:
             self.unload()
 
-        self._do_set_seed()
         self.load()
 
         request_tool_defaults = self._request_tool_defaults(data)

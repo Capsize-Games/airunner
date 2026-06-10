@@ -22,11 +22,52 @@ cd "${ROOT_DIR}"
 
 COMPOSE=(docker compose -f docker-compose.yml)
 
-# Layer the GPU override in automatically when an NVIDIA GPU is visible,
-# unless explicitly disabled with AIRUNNER_NO_GPU=1.
-if [[ "${AIRUNNER_NO_GPU:-0}" != "1" ]] && command -v nvidia-smi >/dev/null 2>&1 && nvidia-smi >/dev/null 2>&1; then
-    COMPOSE+=(-f docker-compose.gpu.yml)
-    GPU_NOTE="(GPU enabled)"
+# An NVIDIA GPU is present and the driver is loaded? Detect via several
+# signals, since `nvidia-smi` is not always on PATH even when the driver and
+# device nodes exist (e.g. open-kernel-module installs).
+host_has_nvidia_gpu() {
+    { command -v nvidia-smi >/dev/null 2>&1 && nvidia-smi >/dev/null 2>&1; } && return 0
+    [[ -e /dev/nvidia0 ]] && return 0               # driver device node
+    [[ -f /proc/driver/nvidia/version ]] && return 0 # kernel module loaded
+    return 1
+}
+
+# Can Docker actually pass a GPU through? Requires nvidia-container-toolkit,
+# which registers the `nvidia` runtime / CDI with the Docker daemon.
+docker_gpu_ready() {
+    docker info 2>/dev/null | grep -qiE '(^| )nvidia' && return 0
+    command -v nvidia-ctk >/dev/null 2>&1 && return 0
+    return 1
+}
+
+# Layer the GPU override in automatically, unless explicitly disabled with
+# AIRUNNER_NO_GPU=1. If a GPU exists but Docker can't reach it, say so loudly
+# and fall back to CPU instead of either silently degrading or hard-failing.
+if [[ "${AIRUNNER_NO_GPU:-0}" == "1" ]]; then
+    GPU_NOTE="(CPU only — AIRUNNER_NO_GPU=1)"
+elif host_has_nvidia_gpu; then
+    if docker_gpu_ready; then
+        COMPOSE+=(-f docker-compose.gpu.yml)
+        GPU_NOTE="(GPU enabled)"
+    else
+        GPU_NOTE="(CPU only)"
+        cat >&2 <<'WARN'
+[docker.sh] An NVIDIA GPU is present but Docker cannot access it — the
+           nvidia-container-toolkit is not installed/configured, so the GPU
+           override was skipped and the stack will run on CPU.
+
+           To enable GPU (Debian/Ubuntu host):
+             curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey \
+               | sudo gpg --dearmor -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg
+             curl -fsSL https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-container-toolkit.list \
+               | sed 's#deb https://#deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg] https://#' \
+               | sudo tee /etc/apt/sources.list.d/nvidia-container-toolkit.list
+             sudo apt-get update && sudo apt-get install -y nvidia-container-toolkit
+             sudo nvidia-ctk runtime configure --runtime=docker && sudo systemctl restart docker
+
+           Then re-run this command. See docker/README.md (GPU section).
+WARN
+    fi
 else
     GPU_NOTE="(CPU only)"
 fi

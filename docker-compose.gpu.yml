@@ -14,9 +14,23 @@
 
 services:
   server:
+    build:
+      args:
+        # Compile llama-cpp-python with CUDA so GGUF LLM inference uses the GPU
+        # (the default PyPI wheel is CPU-only).  Adds a one-time build step
+        # unless a pre-built wheel image is available on GHCR.
+        AIRUNNER_LLAMA_CUDA: "1"
+        # Wheel source: "1" = pull pre-built from GHCR (fast, default).
+        # "local" = compile from source in a builder stage (slow, for offline).
+        LLAMA_WHEEL_SOURCE: "${LLAMA_WHEEL_SOURCE:-1}"
+        # Deps source: "0" = pull pre-installed deps from GHCR (fast, default).
+        # "1" = pip install everything from scratch (slow, for dep changes).
+        BUILD_DEPS_LOCAL: "${BUILD_DEPS_LOCAL:-0}"
     environment:
       NVIDIA_VISIBLE_DEVICES: all
       NVIDIA_DRIVER_CAPABILITIES: compute,utility
+      # Offload all GGUF layers to the GPU by default (overridable per model).
+      AIRUNNER_GGUF_N_GPU_LAYERS: "-1"
     deploy:
       resources:
         reservations:
