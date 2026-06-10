@@ -39,7 +39,10 @@ deadline = time.time() + int(os.environ.get("AIRUNNER_DB_WAIT_TIMEOUT", "60"))
 last_err = None
 while time.time() < deadline:
     try:
-        with psycopg.connect(url, connect_timeout=3):
+        # psycopg v3's connect() does not understand the SQLAlchemy-specific
+        # "+driver" suffix (e.g. postgresql+psycopg://).  Strip it here.
+        _sanitized = url.replace("+psycopg", "", 1) if "+psycopg" in url else url
+        with psycopg.connect(_sanitized, connect_timeout=3):
             print("[entrypoint] PostgreSQL is ready.")
             break
     except Exception as exc:  # noqa: BLE001

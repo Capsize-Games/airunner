@@ -42,7 +42,8 @@ services:
       - .env
     environment:
       # Point the app at the compose database (overrides any localhost URL in .env).
-      AIRUNNER_DATABASE_URL: postgresql://${POSTGRES_USER:-airunner}:${POSTGRES_PASSWORD:-airunner}@db:5432/${POSTGRES_DB:-airunner}
+      # Use psycopg v3 driver (installed via psycopg[binary]).
+      AIRUNNER_DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-airunner}:${POSTGRES_PASSWORD:-airunner}@db:5432/${POSTGRES_DB:-airunner}
       AIRUNNER_DB_TENANCY: ${AIRUNNER_DB_TENANCY:-multi}
       AIRUNNER_REQUIRE_POSTGRES: "1"
       # airunner_services (editable) + repo root so `extensions.*` imports resolve.

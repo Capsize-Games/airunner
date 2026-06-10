@@ -42,11 +42,10 @@ def _get_log_level_from_env() -> int:
     """Get the configured log level from the environment."""
     log_level_str = os.environ.get("AIRUNNER_LOG_LEVEL")
     if log_level_str is None:
-        numeric_level = AIRUNNER_LOG_LEVEL
-        level_name = logging.getLevelName(numeric_level)
-        if level_name.startswith("Level"):
-            return logging.DEBUG
-        return numeric_level
+        log_level_setting = AIRUNNER_LOG_LEVEL
+        if isinstance(log_level_setting, str):
+            return getattr(logging, log_level_setting.upper(), logging.DEBUG)
+        return log_level_setting
 
     try:
         return int(log_level_str)
@@ -120,26 +119,8 @@ def _setup_file_logging(
     _create_file_handler(log_file, log_level, formatter, root_logger)
 
 
-def configure_service_logging() -> None:
-    """Configure root logging for daemon and service execution."""
-    log_level = _get_log_level_from_env()
-    root_logger = logging.getLogger()
-    root_logger.setLevel(log_level)
-    root_logger.handlers.clear()
-
-    formatter = logging.Formatter(
-        "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-        datefmt="%Y-%m-%d %H:%M:%S",
-    )
-
-    stdout_handler = logging.StreamHandler(sys.stdout)
-    stdout_handler.setLevel(log_level)
-    stdout_handler.setFormatter(formatter)
-    stdout_handler.addFilter(LogHygieneFilter())
-    root_logger.addHandler(stdout_handler)
-
-    _setup_file_logging(root_logger, log_level, formatter)
-
+def _clean_orphan_loggers(root_logger: logging.Logger, log_level: int) -> None:
+    """Reset third-party loggers to propagate and match the root level."""
     try:
         for logger_obj in list(logging.root.manager.loggerDict.values()):
             if not isinstance(logger_obj, logging.Logger):
@@ -159,6 +140,27 @@ def configure_service_logging() -> None:
     except Exception:
         pass
 
+
+def configure_service_logging() -> None:
+    """Configure root logging for daemon and service execution."""
+    log_level = _get_log_level_from_env()
+    root_logger = logging.getLogger()
+    root_logger.setLevel(log_level)
+    root_logger.handlers.clear()
+
+    formatter = logging.Formatter(
+        "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S",
+    )
+
+    stdout_handler = logging.StreamHandler(sys.stdout)
+    stdout_handler.setLevel(log_level)
+    stdout_handler.setFormatter(formatter)
+    stdout_handler.addFilter(LogHygieneFilter())
+    root_logger.addHandler(stdout_handler)
+
+    _setup_file_logging(root_logger, log_level, formatter)
+    _clean_orphan_loggers(root_logger, log_level)
     configure_noisy_loggers()
     root_logger.info(
         "Logging configured at %s level",
