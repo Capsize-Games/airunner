@@ -72,6 +72,9 @@ services:
     working_dir: /app/client
     profiles: ["client"]
     command: sh -c "npm install && npm run dev -- --host 0.0.0.0"
+    environment:
+      # Proxy API requests to the server container on the Docker network.
+      VITE_API_PROXY_TARGET: http://server:8080
     env_file:
       - .env
     volumes:
