@@ -111,6 +111,7 @@ export default function ChatView({
   const { handleScroll } = useAutoScroll(
     messagesContainerRef,
     llm.streaming,
+    loading,
     [messages, llm.streamBuffer, llm.thinkingBuffer],
   );
 

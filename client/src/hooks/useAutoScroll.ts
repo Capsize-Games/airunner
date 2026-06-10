@@ -4,24 +4,28 @@ import { useEffect, useRef, useCallback } from "react";
  * Smart auto-scroll hook that mimics the scroll behavior of Claude, Gemini,
  * and ChatGPT:
  *
- * 1. When streaming starts (user submits), always scroll to bottom.
- * 2. As new tokens stream in, auto-scroll only if the user is already
+ * 1. On initial load / page reload, scroll to the bottom.
+ * 2. When streaming starts (user submits), always scroll to bottom.
+ * 3. As new tokens stream in, auto-scroll only if the user is already
  *    near the bottom of the container.
- * 3. If the user scrolls up during streaming, auto-scroll is paused.
- * 4. If the user scrolls back to the bottom, auto-scroll resumes.
+ * 4. If the user scrolls up during streaming, auto-scroll is paused.
+ * 5. If the user scrolls back to the bottom, auto-scroll resumes.
  *
  * @param containerRef - React ref to the scrollable DOM element.
  * @param isStreaming  - Whether the LLM is currently streaming a response.
+ * @param isLoading    - Whether messages are still being loaded.
  * @param deps         - Additional values that should trigger an auto-scroll
  *                       check when they change (e.g. streamBuffer).
  */
 export function useAutoScroll(
   containerRef: React.RefObject<HTMLDivElement | null>,
   isStreaming: boolean,
+  isLoading: boolean,
   deps: unknown[],
 ) {
   const userScrolledAwayRef = useRef(false);
   const wasStreamingRef = useRef(isStreaming);
+  const wasLoadingRef = useRef(isLoading);
 
   /** Returns true when the user is within 40 px of the bottom. */
   const isAtBottom = useCallback(() => {
@@ -42,6 +46,15 @@ export function useAutoScroll(
   const handleScroll = useCallback(() => {
     userScrolledAwayRef.current = !isAtBottom();
   }, [isAtBottom]);
+
+  // ── On initial load complete → scroll to bottom ─────────────────
+  useEffect(() => {
+    if (wasLoadingRef.current && !isLoading) {
+      userScrolledAwayRef.current = false;
+      scrollToBottom();
+    }
+    wasLoadingRef.current = isLoading;
+  }, [isLoading, scrollToBottom]);
 
   // ── On streaming start → always scroll to bottom ────────────────
   useEffect(() => {
