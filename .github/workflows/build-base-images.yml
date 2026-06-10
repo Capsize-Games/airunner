@@ -58,8 +58,6 @@ jobs:
             LLAMA_CPP_VERSION=${{ steps.version.outputs.version }}
           tags: ${{ env.REGISTRY }}/${{ github.repository }}/llama-cuda-builder:v${{ steps.version.outputs.version }}
           push: ${{ github.event_name != 'pull_request' && (github.event.inputs.push_images || true) }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
 
   # Build and (optionally) push the frozen server-deps image.
   deps:
@@ -90,5 +88,3 @@ jobs:
           file: docker/deps.Dockerfile
           tags: ${{ env.REGISTRY }}/${{ github.repository }}/server-deps:py${{ steps.pyver.outputs.python }}
           push: ${{ github.event_name != 'pull_request' && (github.event.inputs.push_images || true) }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
