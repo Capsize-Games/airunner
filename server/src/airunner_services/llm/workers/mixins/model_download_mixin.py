@@ -289,12 +289,58 @@ class ModelDownloadMixin:
                 gguf_filename=gguf_filename if is_gguf else None,
             )
 
+            # Enrich job metadata so client status endpoint returns display info.
+            job_service._tracker.update_metadata_sync(
+                job_id,
+                {
+                    "model_name": model_name,
+                    "repo_id": repo_id,
+                    "model_type": download_model_type,
+                },
+            )
+
+            # Broadcast job start so the client DownloadTray shows it.
+            try:
+                from airunner_services.api.routes.events_bus import (
+                    WsEventBus,
+                )
+                from datetime import datetime as _dt
+
+                WsEventBus().broadcast(
+                    "downloads",
+                    {
+                        "type": "started",
+                        "job_id": job_id,
+                        "repo_id": repo_id,
+                        "model_name": model_name,
+                        "model_type": download_model_type,
+                        "started_at": _dt.now().isoformat(),
+                    },
+                )
+            except Exception:
+                self.logger.exception(
+                    "Failed to broadcast download start event"
+                )
+
+            # Throttle progress broadcasts to avoid flooding the event bus.
+            _last_broadcast_progress = -99.0
+
             while True:
                 job = job_service.get_status_sync(job_id)
                 if job is None:
                     raise RuntimeError("Download job not found")
 
                 progress.on_progress_updated({"progress": job.progress})
+
+                # Emit periodic progress events so the client progress bar
+                # updates smoothly (useDownloadProgress relies on these).
+                if job.progress - _last_broadcast_progress >= 1.0:
+                    _last_broadcast_progress = job.progress
+                    self._broadcast_download_event(
+                        "progress",
+                        job_id,
+                        progress=job.progress,
+                    )
 
                 if job.status is JobStatus.COMPLETED:
                     result = job.result or {}
@@ -305,6 +351,7 @@ class ModelDownloadMixin:
                         "model_type": download_model_type,
                     }
                     progress.on_download_complete(complete_data)
+                    self._broadcast_download_event("completed", job_id)
                     self.on_huggingface_download_complete_signal(complete_data)
                     self._download_dialog_showing = False
                     return True
@@ -313,12 +360,19 @@ class ModelDownloadMixin:
                     error = job.error or "Download failed"
                     progress.on_download_failed({"error": error})
                     self.logger.error(f"Download failed: {error}")
+                    self._broadcast_download_event(
+                        "error", job_id, error=error
+                    )
                     self._download_dialog_showing = False
                     return False
 
                 if job.status is JobStatus.CANCELLED:
                     progress.on_download_failed(
                         {"error": "Download cancelled"}
+                    )
+                    self._broadcast_download_event(
+                        "cancelled",
+                        job_id,
                     )
                     self._download_dialog_showing = False
                     return False
@@ -329,6 +383,32 @@ class ModelDownloadMixin:
             self.logger.error(f"Error during download: {exc}")
             self._download_dialog_showing = False
             return False
+
+    @staticmethod
+    def _broadcast_download_event(
+        event_type: str,
+        job_id: str,
+        error: Optional[str] = None,
+        progress: Optional[float] = None,
+    ) -> None:
+        """Broadcast one download lifecycle event to WebSocket clients."""
+        try:
+            from airunner_services.api.routes.events_bus import (
+                WsEventBus,
+            )
+
+            payload: dict = {
+                "type": event_type,
+                "job_id": job_id,
+            }
+            if error is not None:
+                payload["error"] = error
+            if progress is not None:
+                payload["progress"] = progress
+                payload["status"] = "running"
+            WsEventBus().broadcast("downloads", payload)
+        except Exception:
+            pass
 
     def _get_model_info(self, repo_id: str) -> Optional[Dict]:
         """Return model metadata for one repository id."""
