@@ -53,5 +53,11 @@ case "${cmd}" in
                 python -c "import sys; sys.path.insert(0,'/app/server/src'); from airunner_services.database.setup_database import setup_database; setup_database()" ;;
     shell)   exec "${COMPOSE[@]}" exec server bash ;;
     psql)    exec "${COMPOSE[@]}" exec db psql -U "${POSTGRES_USER:-airunner}" -d "${POSTGRES_DB:-airunner}" ;;
+    auth)    # Account management for the auth extension, e.g.:
+             #   ./scripts/docker.sh auth create-user --email a@b.c \
+             #       --username admin --password 'secret123' --superuser
+             #   ./scripts/docker.sh auth list
+             exec "${COMPOSE[@]}" exec server \
+                python -m extensions.auth.server.manage "$@" ;;
     *)       exec "${COMPOSE[@]}" "${cmd}" "$@" ;;
 esac

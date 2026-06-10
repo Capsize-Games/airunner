@@ -55,6 +55,25 @@ PY
 fi
 
 # ---------------------------------------------------------------------------
+# 1b. Install dependencies for bind-mounted extensions (dev only).
+#
+# The dev image (open-core) installs only the core `server` package; the
+# private extensions/ tree is bind-mounted at runtime and is NOT in the build
+# context, so its third-party deps (slowapi, pyjwt, …) are not present. Without
+# them, the extension loader silently swallows the ModuleNotFoundError and the
+# extension's routes never register (e.g. /api/v1/auth/* → 404). Install them
+# here when extensions are enabled and a pinned requirements file is mounted.
+# In the prod image these are already baked in, so pip is a fast no-op.
+# ---------------------------------------------------------------------------
+EXT_REQS="/app/extensions/docker/requirements-prod.txt"
+if [[ "${AIRUNNER_SKIP_EXT_DEPS:-0}" != "1" \
+      && -n "${AIRUNNER_EXTENSIONS:-}" \
+      && -f "${EXT_REQS}" ]]; then
+    log "Installing bind-mounted extension dependencies..."
+    pip install --no-input -r "${EXT_REQS}"
+fi
+
+# ---------------------------------------------------------------------------
 # 2. Apply migrations (core + extensions).
 #
 # setup_database() also runs on server boot, but doing it here makes failures

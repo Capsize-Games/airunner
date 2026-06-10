@@ -60,6 +60,12 @@ def register_routes(app: FastAPI) -> None:
         canvas_ws_router,
         images_router,
     ) = _collect_routers()
+    # Mount health at the root as well as under /api/v1. The daemon supervisor
+    # readiness probe, eval client/fixtures, and the auth middleware whitelist
+    # all hit the bare "/health" path; without the root mount the supervisor
+    # never sees the daemon become ready, times out, and the container
+    # restart-loops (intermittent ECONNREFUSED for clients).
+    app.include_router(health_router, tags=["health"])
     app.include_router(health_router, prefix="/api/v1", tags=["health"])
     app.include_router(events_router, prefix="/api/v1", tags=["events"])
     app.include_router(art_ws_router, prefix="/api/v1/art", tags=["art"])
