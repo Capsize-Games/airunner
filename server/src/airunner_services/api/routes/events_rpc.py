@@ -5,6 +5,7 @@ from __future__ import annotations
 import re
 import threading
 from typing import Any, Callable
+from urllib.parse import parse_qs, urlsplit
 
 from fastapi import WebSocket
 
@@ -76,7 +77,17 @@ async def _dispatch_rpc(
     websocket: WebSocket,
 ) -> dict[str, Any]:
     """Dispatch an RPC message to the registered handler."""
-    clean_path = path.split("?")[0]
+    split = urlsplit(path)
+    clean_path = split.path
+    # Merge query-string params into the body so handlers can read params
+    # the client passes in the URL (e.g. ?conversation_id=11). The client
+    # sends these in the query string with an empty body, so without this
+    # merge the handler would never see them. Body values take precedence.
+    merged_body: dict[str, Any] = dict(body or {})
+    if split.query:
+        for key, values in parse_qs(split.query).items():
+            if key not in merged_body:
+                merged_body[key] = values[0] if len(values) == 1 else values
     handler_entry, path_params = _find_rpc_handler(method.upper(), clean_path)
     if handler_entry is None:
         return {
@@ -84,7 +95,7 @@ async def _dispatch_rpc(
             "body": {"error": f"Not found: {method} {path}"},
         }
     try:
-        kw: dict[str, Any] = {"body": body or {}, "ws": websocket}
+        kw: dict[str, Any] = {"body": merged_body, "ws": websocket}
         if path_params:
             kw["path_params"] = path_params
         result = await handler_entry(**kw)

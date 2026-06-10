@@ -1,6 +1,5 @@
+import { useState, useCallback } from "react";
 import LucideIcon from "../../shared/LucideIcon";
-
-const BTN_GROUP_HEIGHT = 28;
 
 interface MessageActionsProps {
   isUser: boolean;
@@ -19,33 +18,38 @@ export default function MessageActions({
   onDelete,
   onPlay,
 }: MessageActionsProps) {
+  const [copied, setCopied] = useState(false);
+
   if (isEditing) return null;
 
+  const handleCopy = useCallback(() => {
+    onCopy();
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1400);
+  }, [onCopy]);
+
   return (
-    <div
-      className="message-actions"
-      style={{ height: BTN_GROUP_HEIGHT, visibility: "hidden" }}
-    >
-      {isUser ? (
-        <div
-          className="d-flex justify-content-end align-items-center"
-          style={{ height: "100%" }}
-        >
-          <div
-            className="d-flex gap-1"
-            style={{
-              background: "rgba(0,0,0,0.4)",
-              borderRadius: 4,
-              padding: "2px 4px",
-            }}
+    <div className="message-actions">
+      <div
+        className="d-flex gap-1"
+        style={{
+          background: "rgba(0,0,0,0.4)",
+          borderRadius: 4,
+          padding: "2px 4px",
+        }}
+      >
+        <div className="message-action-btn-wrapper">
+          <button
+            className="message-action-btn"
+            onClick={handleCopy}
+            title="Copy message"
           >
-            <button
-              className="message-action-btn"
-              onClick={onCopy}
-              title="Copy message"
-            >
-              <LucideIcon name="copy" size={14} />
-            </button>
+            <LucideIcon name="copy" size={14} />
+          </button>
+          {copied && <span className="copy-toast">Copied!</span>}
+        </div>
+        {isUser ? (
+          <>
             <button
               className="message-action-btn"
               onClick={onEdit}
@@ -60,38 +64,17 @@ export default function MessageActions({
             >
               <LucideIcon name="trash" size={14} />
             </button>
-          </div>
-        </div>
-      ) : (
-        <div
-          className="d-flex justify-content-end align-items-center"
-          style={{ height: "100%" }}
-        >
-          <div
-            className="d-flex gap-1"
-            style={{
-              background: "rgba(0,0,0,0.4)",
-              borderRadius: 4,
-              padding: "2px 4px",
-            }}
+          </>
+        ) : (
+          <button
+            className="message-action-btn"
+            onClick={onPlay}
+            title="Play via TTS"
           >
-            <button
-              className="message-action-btn"
-              onClick={onCopy}
-              title="Copy message"
-            >
-              <LucideIcon name="copy" size={14} />
-            </button>
-            <button
-              className="message-action-btn"
-              onClick={onPlay}
-              title="Play via TTS"
-            >
-              <LucideIcon name="play" size={14} />
-            </button>
-          </div>
-        </div>
-      )}
+            <LucideIcon name="play" size={14} />
+          </button>
+        )}
+      </div>
     </div>
   );
 }

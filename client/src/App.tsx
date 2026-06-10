@@ -36,7 +36,7 @@ const [showSettings, setShowSettings] = useState(false);
 
 
   const handleSelectConversation = useCallback(
-    (id: number) => {
+    (id: number | null) => {
       setConversationId(id);
     },
     [setConversationId],

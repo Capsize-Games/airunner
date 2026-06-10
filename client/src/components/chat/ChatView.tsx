@@ -1,4 +1,5 @@
 import { useEffect, useRef, useMemo } from "react";
+import { useAutoScroll } from "../../hooks/useAutoScroll";
 import Alert from "react-bootstrap/Alert";
 import { useLLMWebSocket } from "../../features/llm/useLLMWebSocket";
 import { useConversationMessages } from "../../hooks/useConversationMessages";
@@ -23,7 +24,7 @@ export default function ChatView({
   onToggleStt,
 }: {
   conversationId: number | null;
-  onSelectConversation?: (id: number) => void;
+  onSelectConversation?: (id: number | null) => void;
   ttsOn?: boolean;
   sttOn?: boolean;
   onToggleTts?: () => void;
@@ -40,6 +41,7 @@ export default function ChatView({
     useConversationMessages();
   const { docs: kbDocs, reload: reloadDocs } = useKnowledgeBaseDocs();
   const llm = useLLMWebSocket();
+  const messagesContainerRef = useRef<HTMLDivElement | null>(null);
 
   const conversationIdRef = useRef<number | null>(conversationId);
   const loadedConvRef = useRef<number | null>(null);
@@ -105,6 +107,14 @@ export default function ChatView({
     doInference,
   });
 
+  // ── Auto-scroll ─────────────────────────────────────────────────────────────
+  const { handleScroll } = useAutoScroll(
+    messagesContainerRef,
+    llm.streaming,
+    loading,
+    [messages, llm.streamBuffer, llm.thinkingBuffer],
+  );
+
   // ── Drag-and-drop RAG docs ─────────────────────────────────────────────────
   const handleDragOver = (e: React.DragEvent) => {
     if (e.dataTransfer.types.includes("application/x-airunner-doc-id")) {
@@ -144,6 +154,8 @@ export default function ChatView({
 
       <div
         className="chat-messages p-2 flex-grow-1 min-h-0 overflow-auto"
+        ref={messagesContainerRef}
+        onScroll={handleScroll}
       >
         {!loading && (
           <>

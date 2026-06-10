@@ -120,6 +120,6 @@ def _drop_column_if_present(
     """Drop one named column when the target table still has it."""
     if not _has_column(inspector, table_name, column_name):
         return
-    recreate = "always" if op.get_bind().dialect.name == "sqlite" else "auto"
+    recreate = "auto"
     with op.batch_alter_table(table_name, recreate=recreate) as batch_op:
         batch_op.drop_column(column_name)

@@ -35,7 +35,7 @@ def _drop_retired_columns_if_present() -> None:
     if not targets:
         return
 
-    recreate = "always" if op.get_bind().dialect.name == "sqlite" else "auto"
+    recreate = "auto"
     with op.batch_alter_table(
         "llm_generator_settings",
         recreate=recreate,

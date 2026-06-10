@@ -159,7 +159,6 @@ export const defaultState = (): CanvasState => {
 import type {
   ActiveTool, FilterConfig, ImageNode,
 } from "./canvasTypes";
-import { getDb } from "../../db/db";
 
 const CANVAS_DOC_ID = "default";
 const LEGACY_STORAGE_KEY = "airunner_canvas_state";
@@ -238,42 +237,15 @@ export function loadPersistedState(): CanvasState | null {
 }
 
 /**
- * Load canvas state from IndexedDB asynchronously.
- * Returns null on cache miss or when IndexedDB is unavailable.
- */
-export async function loadPersistedStateAsync(): Promise<CanvasState | null> {
-  const db = getDb();
-  if (!db) return null;
-  try {
-    const record = await db.canvasDocuments.get(CANVAS_DOC_ID);
-    if (!record) return null;
-    return parseCanvasState(record.documentJson);
-  } catch {
-    return null;
-  }
-}
-
-/**
- * Persist canvas state to IndexedDB (primary) and keep localStorage in sync
- * as a fallback for the synchronous first-render load.
+ * Persist canvas state to localStorage synchronously.
  */
 export async function persistStateAsync(state: CanvasState): Promise<void> {
-  const json = JSON.stringify(state);
-
-  // Keep localStorage in sync for synchronous first-render load.
   try {
-    localStorage.setItem(LEGACY_STORAGE_KEY, json);
+    localStorage.setItem(
+      LEGACY_STORAGE_KEY,
+      JSON.stringify(state),
+    );
   } catch { /* quota */ }
-
-  const db = getDb();
-  if (!db) return;
-  try {
-    await db.canvasDocuments.put({
-      id: CANVAS_DOC_ID,
-      documentJson: json,
-      updatedAt: state._ts,
-    });
-  } catch { /* quota or unavailable */ }
 }
 
 /**
@@ -286,9 +258,6 @@ export function persistStateSync(state: CanvasState): void {
   } catch { /* quota */ }
 }
 
-/** Kept for callers that still use the synchronous form (canvas WebSocket). */
 export function persistState(state: CanvasState): void {
   persistStateSync(state);
-  // Fire-and-forget async write.
-  persistStateAsync(state).catch(() => {});
 }

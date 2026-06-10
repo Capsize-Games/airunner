@@ -22,10 +22,6 @@ DEBUG = True
 AIRUNNER_VERSION = "5.0.0"
 
 # ---- Database ----
-DATABASE_BACKEND = "sqlite"
-SQLITE_DB_NAME = (
-    "airunner.dev.db" if DEPLOYMENT_MODE == "development" else "airunner.db"
-)
 POSTGRES_HOST = "localhost"
 POSTGRES_PORT = 5432
 POSTGRES_DB = "airunner"

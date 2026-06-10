@@ -227,9 +227,6 @@ def set_default(cls, column_name: str, default_value: Any) -> None:
     )
 
 
-def _dialect_name() -> str:
-    """Return the active Alembic dialect name."""
-    return getattr(getattr(op.get_bind(), "dialect", None), "name", "")
 
 
 def create_unique_constraint(
@@ -240,13 +237,7 @@ def create_unique_constraint(
     """Create one unique constraint on one mapped table."""
     table_name = cls.__tablename__
     try:
-        if _dialect_name() == "sqlite":
-            with op.batch_alter_table(
-                table_name, recreate="always"
-            ) as batch_op:
-                batch_op.create_unique_constraint(constraint_name, columns)
-        else:
-            op.create_unique_constraint(constraint_name, table_name, columns)
+        op.create_unique_constraint(constraint_name, table_name, columns)
         logger.info(
             "Unique constraint '%s' created on table '%s' for columns %s.",
             constraint_name,
@@ -260,8 +251,6 @@ def create_unique_constraint(
             table_name,
             exc,
         )
-    except NotImplementedError as exc:
-        logger.error("SQLite limitation: %s", exc)
 
 
 def drop_constraint(
@@ -272,20 +261,11 @@ def drop_constraint(
     """Drop one named constraint from one mapped table."""
     table_name = cls.__tablename__
     try:
-        if _dialect_name() == "sqlite":
-            with op.batch_alter_table(
-                table_name, recreate="always"
-            ) as batch_op:
-                batch_op.drop_constraint(
-                    constraint_name,
-                    type_=constraint_type,
-                )
-        else:
-            op.drop_constraint(
-                constraint_name,
-                table_name,
-                type_=constraint_type,
-            )
+        op.drop_constraint(
+            constraint_name,
+            table_name,
+            type_=constraint_type,
+        )
         logger.info(
             "Constraint '%s' of type '%s' dropped from table '%s'.",
             constraint_name,
@@ -299,8 +279,6 @@ def drop_constraint(
             table_name,
             exc,
         )
-    except NotImplementedError as exc:
-        logger.error("SQLite limitation: %s", exc)
 
 
 __all__ = [

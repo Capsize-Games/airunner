@@ -25,7 +25,6 @@ CORE_REQUIREMENTS = [
     "pydantic>=2.7,<3.0",
     "nltk>=3.9.1",
     "alembic==1.13.2",
-    "aiosqlite==0.21.0",
     "sqlalchemy==2.0.38",
     "psycopg[binary]>=3.2.0",
     "etils[epath]==1.12.2",

@@ -50,16 +50,6 @@ def _extract_search_path_schema(db_url: str) -> str | None:
         return None
 
 
-def _ensure_sqlite_parent_dir(db_url: str) -> None:
-    if not db_url.startswith("sqlite:///"):
-        return
-
-    db_path = db_url.replace("sqlite:///", "", 1)
-    db_dir = os.path.dirname(db_path)
-    if db_dir:
-        _ensure_private_directory(db_dir)
-
-
 def _use_setup_cache() -> bool:
     """Return whether repeated setup calls should be skipped."""
     return os.environ.get("AIRUNNER_DISABLE_DB_SETUP_CACHE", "0") != "1"
@@ -88,8 +78,12 @@ def _migration_signature(
             continue
         for migration_file in sorted(version_dir.glob("*.py")):
             stat = migration_file.stat()
-            relative_path = migration_file.relative_to(base)
-            parts.append(f"{relative_path}:{stat.st_mtime_ns}:{stat.st_size}")
+            try:
+                key = migration_file.relative_to(base)
+            except ValueError:
+                # Extension migrations live outside the core base dir.
+                key = migration_file.resolve()
+            parts.append(f"{key}:{stat.st_mtime_ns}:{stat.st_size}")
     return "|".join(parts)
 
 
@@ -270,7 +264,7 @@ def _append_extension_migration_paths(version_locations: list[Path]) -> None:
     for ext_path in get_extension_migration_paths():
         versions_dir = ext_path / "versions"
         if versions_dir.is_dir():
-            version_locations.append(ext_path)
+            version_locations.append(versions_dir)
 
 
 def _setup_public_schema_tables(target_db_url: str) -> None:
@@ -303,9 +297,17 @@ def _setup_public_schema_tables(target_db_url: str) -> None:
         engine.dispose()
 
 
+def _env_is_truthy(name: str) -> bool:
+    return (os.environ.get(name, "") or "").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
 def setup_database(db_url: str | None = None):
     target_db_url = db_url or _default_db_url()
-    _ensure_sqlite_parent_dir(target_db_url)
 
     if _use_setup_cache() and target_db_url in _COMPLETED_SETUP_URLS:
         return
@@ -371,18 +373,13 @@ def setup_database(db_url: str | None = None):
         if db_url:
             schema = _extract_search_path_schema(db_url)
             if schema:
-                prefix = (
-                    os.environ.get("AIRUNNER_TENANT_SCHEMA_PREFIX")
-                    or "tenant_"
-                )
-                raw_tenant = (
-                    schema[len(prefix) :]
-                    if schema.startswith(prefix)
-                    else schema
-                )
                 try:
-                    from airunner_services.data.tenant import set_tenant_key
+                    from airunner_services.data.tenant import (
+                        set_tenant_key,
+                        tenant_key_from_schema,
+                    )
 
+                    raw_tenant = tenant_key_from_schema(schema)
                     tenant_token = set_tenant_key(raw_tenant)
                 except Exception:
                     tenant_token = None

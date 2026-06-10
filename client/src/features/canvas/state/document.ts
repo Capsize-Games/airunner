@@ -39,13 +39,6 @@ export function document(
     } catch {
       /* noop */
     }
-    import("../../../db/db")
-      .then(({ getDb }) => {
-        getDb()
-          ?.canvasDocuments.delete("default")
-          .catch(() => {});
-      })
-      .catch(() => {});
     setState((prev) => ({
       ...defaultState(),
       _ts: Date.now(),
