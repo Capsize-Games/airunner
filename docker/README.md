@@ -88,6 +88,40 @@ the site footer's hardware stats appear (they're hidden when VRAM reads 0).
 
 For a lighter, API-only image without torch, build with `AIRUNNER_DOCKER_EXTRAS=core`.
 
+## Model data & persistence
+
+The app's "base path" (models, art output, runtime config, caches) lives at
+`/data` in the container. **By default that's a Docker named volume**
+(`airunner_data`):
+
+```bash
+docker volume inspect airunner_airunner_data   # where it lives on the host
+docker compose down       # KEEPS the volume (and your models)
+docker compose down -v    # DESTROYS it (models, art, runtime state)
+```
+
+A fresh named volume is empty, so the first LLM/art request will try to
+**download** the model. To reuse models you already have — and keep data on the
+host, safe from any Docker teardown — point `AIRUNNER_DATA_DIR` at an existing
+AI Runner home in your `.env`:
+
+```bash
+# .env
+AIRUNNER_DATA_DIR=/home/youruser/.local/share/airunner
+```
+
+That bind-mounts your real AI Runner directory to `/data`, so the container
+immediately sees `text/models/llm/causallm/…` etc. Bind mounts are **never**
+removed by `docker compose down -v`, so your `~/.local/share/airunner` is safe.
+
+Caveats:
+- The container runs as **root**, so models it *downloads* into a host bind dir
+  are root-owned. Reusing already-downloaded (user-owned) models is read-only
+  and unaffected; only newly downloaded files get root ownership.
+- The Hugging Face cache is mounted separately at `/data/huggingface` from
+  `HF_HOME`, and `HF_HOME` is set to `/data/huggingface` inside the container so
+  HF downloads land in that shared cache (not a stray `~` directory).
+
 ## Extensions & the open-core boundary
 
 `extensions/` is a **separate private repo** checked out inside this tree. It is
@@ -111,4 +145,6 @@ docker compose down -v        # also delete the database volume
 - `AIRUNNER_REQUIRE_POSTGRES=1` is set for containers — the server refuses to
   fall back to SQLite, matching production.
 - The Hugging Face cache is mounted from `HF_HOME` so models aren't
-  re-downloaded on every rebuild.
+  re-downloaded on every rebuild (see "Model data & persistence" above).
+- Model/base-path data persistence and reusing an existing AI Runner home are
+  covered in "Model data & persistence" above.

@@ -155,7 +155,7 @@ async def _cleanup_ws(
     drain_task.cancel()
     try:
         await drain_task
-    except Exception:
+    except (Exception, asyncio.CancelledError):
         pass
     bus.remove(subscriber)
     try:

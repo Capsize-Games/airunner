@@ -337,7 +337,6 @@ class OpenrouterMistralRequest(LLMRequest):
 
     max_tokens: int = 256
     temperature: float = 0.1
-    seed: int = 42
     top_p: float = 0.9
     top_k: int = 20
     frequency_penalty: float = 0
@@ -353,7 +352,6 @@ class OpenrouterMistralRequest(LLMRequest):
         return {
             "max_tokens": self.max_tokens,
             "temperature": _clamp_generation_value(self.temperature),
-            "seed": self.seed,
             "top_p": _clamp_generation_value(self.top_p),
             "top_k": self.top_k,
             "frequency_penalty": _clamp_generation_value(
