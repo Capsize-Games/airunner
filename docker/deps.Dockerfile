@@ -28,5 +28,7 @@ COPY server ./server
 
 # Install all server[server] deps.  Includes llama-cpp-python (CPU) which is
 # replaced with the CUDA wheel at image build time when AIRUNNER_LLAMA_CUDA=1.
-RUN --mount=type=cache,target=/root/.cache/pip \
-    pip install "./server[server]"
+# Using --no-cache-dir because BuildKit cache mounts behave differently across
+# buildx drivers; the image is rebuilt infrequently enough that warm-cache
+# benefit is marginal.
+RUN pip install --no-cache-dir "./server[server]"
