@@ -235,7 +235,10 @@ install_llama_cpp_cuda() {
     fi
 
     log_info 'NVIDIA GPU detected — rebuilding llama-cpp-python with CUDA support'
-    CMAKE_ARGS="-DGGML_CUDA=on -DCMAKE_CUDA_ARCHITECTURES=89;90" \
+    # GGML_NATIVE=OFF avoids -march=native baking in CPU instructions the
+    # target host may lack (e.g. AVX-512 on a build box vs AVX2-only Ryzen),
+    # which causes SIGILL on model load. Add sm_120 (Blackwell) too.
+    CMAKE_ARGS="-DGGML_CUDA=on -DCMAKE_CUDA_ARCHITECTURES=89;90;120 -DGGML_NATIVE=OFF -DGGML_AVX=ON -DGGML_AVX2=ON -DGGML_FMA=ON -DGGML_F16C=ON" \
         "$venv_python" -m pip install \
         --force-reinstall \
         --no-cache-dir \

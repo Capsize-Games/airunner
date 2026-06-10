@@ -9,7 +9,7 @@ const panelStyle: React.CSSProperties = {
 };
 
 export default function StatsPanel() {
-  const { hw, slots, loadingRef, findModel, statusColor, handleLoad, handleUnload } = useStatsPanel();
+  const { hw, slots, loadingRef, unloadingSlots, findModel, statusColor, handleLoad, handleUnload } = useStatsPanel();
 
   if (!hw) {
     return (
@@ -48,6 +48,7 @@ export default function StatsPanel() {
       <ModelSlotList
         slots={slots}
         loadingRef={loadingRef}
+        unloadingSlots={unloadingSlots}
         findModel={findModel}
         statusColor={statusColor}
         onLoad={handleLoad}

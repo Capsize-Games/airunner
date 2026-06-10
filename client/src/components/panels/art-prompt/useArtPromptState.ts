@@ -73,7 +73,19 @@ export function useArtPromptState() {
   const [seed, setSeed] = useState(() => {
     try {
       const v = Number(localStorage.getItem("airunner_seed") || "0");
-      return v === -1 ? Math.floor(Math.random() * 2147483647) + 1 : v;
+      if (v === -1) {
+        // Random mode was on before reload — restore the saved seed
+        // rather than generating a fresh random number.
+        const saved = localStorage.getItem("airunner_seed_saved");
+        if (saved !== null) {
+          const n = Number(saved);
+          if (!isNaN(n)) return n;
+        }
+        // No saved seed available (e.g. first load after update) —
+        // default to 0 instead of returning the -1 sentinel.
+        return 0;
+      }
+      return v;
     } catch { return 0; }
   });
   const [seedRandomized, setSeedRandomized] = useState(() => {
@@ -225,12 +237,16 @@ export function useArtPromptState() {
 
   const handleToggleRandom = useCallback(() => {
     if (seedRandomized) {
+      // Turning OFF random: persist the current seed so it's reused
       setSeedRandomized(false);
       try { localStorage.setItem("airunner_seed", String(seed)); } catch {}
       updateSingleton("GeneratorSettings", { seed }).catch(() => {});
     } else {
-      const s = Math.floor(Math.random() * 2147483647) + 1;
-      setSeedRandomized(true); setSeed(s);
+      // Turning ON random: persist the current seed so it survives
+      // page reload, then mark as randomized. The actual randomization
+      // happens at submit time.
+      try { localStorage.setItem("airunner_seed_saved", String(seed)); } catch {}
+      setSeedRandomized(true);
       try { localStorage.setItem("airunner_seed", String(-1)); } catch {}
       updateSingleton("GeneratorSettings", { seed: -1 }).catch(() => {});
     }
@@ -239,19 +255,24 @@ export function useArtPromptState() {
   const onGenerate = useCallback(async () => {
     if (!prompt.trim()) return;
     setPhase("loading");
-    const lsNum = (k: string): number | undefined => {
-      try {
-        const v = localStorage.getItem(k);
-        if (v === null || v === "") return undefined;
-        const n = Number(v);
-        return isNaN(n) ? undefined : n;
-      } catch { return undefined; }
-    };
+    // If random seed is enabled, generate a fresh seed right before
+    // the request so each submission gets a new random value.
+    // Update state + localStorage so the UI reflects the used seed.
+    const effectiveSeed: number | undefined = seedRandomized
+      ? Math.floor(Math.random() * 2147483647) + 1
+      : seed;
+    if (seedRandomized && effectiveSeed !== undefined) {
+      setSeed(effectiveSeed);
+      // Keep the -1 sentinel in "airunner_seed" so the randomized toggle
+      // is restored as ON after a reload. Persist the actual value used in
+      // "airunner_seed_saved" only (used to display/reuse the seed).
+      try { localStorage.setItem("airunner_seed_saved", String(effectiveSeed)); } catch {}
+    }
     try {
       const imageBase64 = await artGenerate({
         prompt: prompt.trim(),
         negativePrompt: negativePrompt?.trim() || undefined,
-        seed: lsNum("airunner_seed"),
+        seed: effectiveSeed,
         artModel: ls("airunner_art_model") || undefined,
         artVersion: ls("airunner_art_version") || undefined,
         scheduler: ls("airunner_art_scheduler") || undefined,
@@ -273,7 +294,7 @@ export function useArtPromptState() {
       const msg = err instanceof Error ? err.message : String(err);
       setPhase(msg === "Cancelled" ? "cancelled" : "failed");
     }
-  }, [prompt, negativePrompt, genWidth, genHeight, canvasCtx, artGenerate]);
+  }, [prompt, negativePrompt, genWidth, genHeight, canvasCtx, artGenerate, seed, seedRandomized]);
 
   const onCancel = useCallback(() => artCancel(), [artCancel]);
 

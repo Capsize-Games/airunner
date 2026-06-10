@@ -17,6 +17,11 @@
 ARG AIRUNNER_LLAMA_CUDA=0
 # Keep in sync with scripts/install.sh's pinned version.
 ARG LLAMA_CPP_VERSION=0.3.26
+# Build revision for the GHCR llama-cuda-builder image. Bump this (and the
+# matching value in .github/workflows/build-base-images.yml) whenever the
+# builder's compile flags change but LLAMA_CPP_VERSION stays the same, so the
+# GHCR tag changes and stale local/CI caches don't serve the old wheel.
+ARG LLAMA_BUILDER_REV=2
 # Wheel source: "1" = pull from GHCR (fast, default).  "local" = compile
 # from source (slow, for offline / CI without registry access).
 ARG LLAMA_WHEEL_SOURCE=1
@@ -28,7 +33,7 @@ ARG BUILD_DEPS_LOCAL=0
 
 # Pre-built CUDA wheel image on GHCR.  Built from docker/builder.Dockerfile
 # and pushed by .github/workflows/build-base-images.yml on version bumps.
-FROM ghcr.io/capsize-games/airunner/llama-cuda-builder:v${LLAMA_CPP_VERSION} AS llama-cuda-1
+FROM ghcr.io/capsize-games/airunner/llama-cuda-builder:v${LLAMA_CPP_VERSION}-${LLAMA_BUILDER_REV} AS llama-cuda-1
 
 # Local fallback: compile llama-cpp-python with CUDA from source.  Identical
 # to docker/builder.Dockerfile — kept inline so --build-arg
@@ -60,7 +65,11 @@ RUN set -e \
     && ln -sf "${STUB}" /usr/lib/x86_64-linux-gnu/libcuda.so.1 \
     && ldconfig \
     && ldconfig -p | grep -q libcuda.so.1 \
-    && CMAKE_ARGS="-DGGML_CUDA=on -DCMAKE_CUDA_ARCHITECTURES=89;90;120" \
+    # GGML_NATIVE=OFF avoids baking in the build host's CPU instructions
+    # (e.g. AVX-512). Hosts without them (AMD Ryzen has AVX2 but no AVX-512)
+    # otherwise crash with SIGILL on model load. Target a portable AVX2 set.
+    && CMAKE_ARGS="-DGGML_CUDA=on -DCMAKE_CUDA_ARCHITECTURES=89;90;120 \
+-DGGML_NATIVE=OFF -DGGML_AVX=ON -DGGML_AVX2=ON -DGGML_FMA=ON -DGGML_F16C=ON" \
        pip wheel --no-cache-dir --no-deps -w /wheels \
         "llama-cpp-python==${LLAMA_CPP_VERSION}"
 

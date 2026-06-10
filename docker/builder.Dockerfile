@@ -57,7 +57,13 @@ RUN set -e \
     && ln -sf "${STUB}" /usr/lib/x86_64-linux-gnu/libcuda.so.1 \
     && ldconfig \
     && ldconfig -p | grep -q libcuda.so.1 \
-    && CMAKE_ARGS="-DGGML_CUDA=on -DCMAKE_CUDA_ARCHITECTURES=89;90;120" \
+    # GGML_NATIVE=OFF disables -march=native so the wheel does not bake in
+    # the CI builder's CPU instructions (e.g. AVX-512). Without this, hosts
+    # that lack those instructions (e.g. AMD Ryzen, which has AVX2 but no
+    # AVX-512) crash with SIGILL ("Illegal instruction") on model load. We
+    # target a portable AVX2 baseline that all modern x86-64 CPUs support.
+    && CMAKE_ARGS="-DGGML_CUDA=on -DCMAKE_CUDA_ARCHITECTURES=89;90;120 \
+-DGGML_NATIVE=OFF -DGGML_AVX=ON -DGGML_AVX2=ON -DGGML_FMA=ON -DGGML_F16C=ON" \
        pip wheel --no-cache-dir --no-deps -w /wheels \
         "llama-cpp-python==${LLAMA_CPP_VERSION}"
 

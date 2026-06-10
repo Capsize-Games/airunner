@@ -220,6 +220,18 @@ class ZImageGenerationMixin:
         except Exception as e:
             self.logger.warning(f"Error during hook removal: {e}")
 
+        # Native FP8 pipelines keep their transformer / text encoder / VAE on
+        # an inner object that is only released via an explicit unload(). The
+        # native pipeline and its helpers form reference cycles, so deleting
+        # the wrapper and relying on __del__/gc leaves those (largest) models
+        # resident in VRAM. Call unload() directly so the memory is freed
+        # deterministically.
+        if hasattr(self._pipe, "unload"):
+            try:
+                self._pipe.unload()
+            except Exception as e:
+                self.logger.warning(f"Error during pipe.unload(): {e}")
+
         # Delete the pipeline itself
         try:
             del self._pipe

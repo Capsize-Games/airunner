@@ -112,7 +112,9 @@ export default function CanvasPanel() {
   });
   const [showSettings, setShowSettings] = useState(false);
   const [showNewDocModal, setShowNewDocModal] = useState(false);
-  const [showImagePrompt, setShowImagePrompt] = useState(false);
+  const [showImagePrompt, setShowImagePrompt] = useState(() => {
+    try { return localStorage.getItem("canvas_show_image_prompt") === "true"; } catch { return false; }
+  });
   const [leftPanelW, setLeftPanelW] = useState(() => {
     try { const v = localStorage.getItem(LS_LEFT_W); return v ? Number(v) : 300; } catch { return 300; }
   });
@@ -250,6 +252,9 @@ export default function CanvasPanel() {
   useEffect(() => {
     try { localStorage.setItem(LS_LEFT_W, String(leftPanelW)); } catch { /* */ }
   }, [leftPanelW]);
+  useEffect(() => {
+    try { localStorage.setItem("canvas_show_image_prompt", String(showImagePrompt)); } catch { /* */ }
+  }, [showImagePrompt]);
 
   if (!isLoaded) {
     return (

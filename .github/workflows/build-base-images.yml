@@ -20,6 +20,11 @@ permissions:
 env:
   REGISTRY: ghcr.io
   IMAGE_REPO: capsize-games/airunner
+  # Build revision for the llama-cuda-builder image. Bump this (and the
+  # matching LLAMA_BUILDER_REV in docker/Dockerfile) whenever the builder's
+  # compile flags change but the llama-cpp-python version does not, so the
+  # GHCR tag changes and stale caches don't serve the old wheel.
+  LLAMA_BUILDER_REV: "2"
 
 jobs:
   # Build and (optionally) push the CUDA llama-cpp-python wheel image.
@@ -51,7 +56,7 @@ jobs:
           file: docker/builder.Dockerfile
           build-args: |
             LLAMA_CPP_VERSION=${{ steps.version.outputs.version }}
-          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_REPO }}/llama-cuda-builder:v${{ steps.version.outputs.version }}
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_REPO }}/llama-cuda-builder:v${{ steps.version.outputs.version }}-${{ env.LLAMA_BUILDER_REV }}
           push: ${{ github.event_name == 'push' || github.event.inputs.push_images }}
 
   # Build and (optionally) push the frozen server-deps image.

@@ -5,6 +5,7 @@ import type { ModelSlot } from "./useStatsPanel";
 interface Props {
   slots: ModelSlot[];
   loadingRef: React.MutableRefObject<Set<string>>;
+  unloadingSlots: Set<string>;
   findModel: (type: string) => ActiveModelInfo | undefined;
   statusColor: (status: string) => string;
   onLoad: (type: string, id: string) => void;
@@ -12,14 +13,15 @@ interface Props {
 }
 
 export default function ModelSlotList({
-  slots, loadingRef, findModel, statusColor, onLoad, onUnload,
+  slots, loadingRef, unloadingSlots, findModel, statusColor, onLoad, onUnload,
 }: Props) {
   return (
     <div className="mt-2">
       <small className="text-muted d-block mb-1">Models</small>
       {slots.map(({ type, label, name, canLoad }) => {
         const m = findModel(type);
-        const status = m?.status ?? "unloaded";
+        const isUnloading = unloadingSlots.has(type) || m?.status === "unloading";
+        const status = isUnloading ? "unloading" : (m?.status ?? "unloaded");
         return (
           <div
             key={type}
@@ -34,7 +36,7 @@ export default function ModelSlotList({
               }} />
               {label}: {name || "none"}
             </span>
-            {status === "loading" || (status !== "loaded" && loadingRef.current.has(type)) ? (
+            {status === "loading" || status === "unloading" || (status !== "loaded" && loadingRef.current.has(type)) ? (
               <span style={{ display: "flex", opacity: 0.5 }}>
                 <LucideIcon name="loader" size={14} />
               </span>

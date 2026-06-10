@@ -46,6 +46,7 @@ from airunner_services.utils.application.enum_resolver import (
 )
 from airunner_services.utils.application.enum_resolver import signal_code_proxy
 from airunner_services.utils.memory import apply_cudnn_benchmark
+from airunner_services.art.runtime_memory import clear_memory
 from airunner_services.workers.worker import QueueType, Worker
 
 ModelAction = model_action_type()
@@ -61,6 +62,7 @@ class SDWorker(Worker):
         self.signal_handlers = {
             SignalCode.DO_GENERATE_SIGNAL: self.on_do_generate_signal,
             SignalCode.SD_LOAD_SIGNAL: self.on_load_art_signal,
+            SignalCode.SD_UNLOAD_SIGNAL: self.on_unload_art_signal,
             SignalCode.INTERRUPT_IMAGE_GENERATION_SIGNAL: (
                 self.on_interrupt_image_generation_signal
             ),
@@ -180,6 +182,15 @@ class SDWorker(Worker):
         self.add_to_queue(
             {
                 "action": ModelAction.LOAD,
+                "type": ModelType.SD,
+                "data": data,
+            }
+        )
+
+    def on_unload_art_signal(self, data: Dict = None):
+        self.add_to_queue(
+            {
+                "action": ModelAction.UNLOAD,
                 "type": ModelType.SD,
                 "data": data,
             }
@@ -461,6 +472,14 @@ class SDWorker(Worker):
                 self._x4_upscaler = None
 
             self._clear_loaded_model_signature()
+
+            # Drop the last strong reference to the unloaded manager and
+            # return the freed device memory to the driver. unload() empties
+            # the cache while the manager (compel, generator, etc.) is still
+            # alive, so without this final clear the GPU memory those held is
+            # not released back to the OS/NVML until the next allocation.
+            del manager_ref
+            clear_memory()
 
         if data:
             callback = data.get("callback", None)
