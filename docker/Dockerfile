@@ -104,7 +104,12 @@ ENV PYTHONUNBUFFERED=1 \
     DEV_ENV=1 \
     # Let the (optionally CUDA-built) llama-cpp-python find the CUDA 13 runtime
     # libs that torch's cu130 wheels ship — avoids needing CUDA in this image.
-    LD_LIBRARY_PATH=/usr/local/lib/python3.13/site-packages/nvidia/cu13/lib
+    LD_LIBRARY_PATH=/usr/local/lib/python3.13/site-packages/nvidia/cu13/lib \
+    # Force bitsandbytes to use the CUDA 13.0 backend.  Without this it
+    # auto-detects CPU at install time (no GPU during docker build) and
+    # caches that choice, causing "undefined symbol: cquantize_blockwise_bf16_nf4"
+    # at runtime when the text encoder tries to use 4-bit quantization.
+    BNB_CUDA_VERSION=130
 
 # When building from the slim Python image (BUILD_DEPS_LOCAL=1), install system
 # libraries and pip deps.  When using the pre-built base (BUILD_DEPS_LOCAL=0),
