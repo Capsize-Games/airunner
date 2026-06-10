@@ -88,8 +88,12 @@ def _migration_signature(
             continue
         for migration_file in sorted(version_dir.glob("*.py")):
             stat = migration_file.stat()
-            relative_path = migration_file.relative_to(base)
-            parts.append(f"{relative_path}:{stat.st_mtime_ns}:{stat.st_size}")
+            try:
+                key = migration_file.relative_to(base)
+            except ValueError:
+                # Extension migrations live outside the core base dir.
+                key = migration_file.resolve()
+            parts.append(f"{key}:{stat.st_mtime_ns}:{stat.st_size}")
     return "|".join(parts)
 
 
@@ -270,7 +274,7 @@ def _append_extension_migration_paths(version_locations: list[Path]) -> None:
     for ext_path in get_extension_migration_paths():
         versions_dir = ext_path / "versions"
         if versions_dir.is_dir():
-            version_locations.append(ext_path)
+            version_locations.append(versions_dir)
 
 
 def _setup_public_schema_tables(target_db_url: str) -> None:
@@ -303,8 +307,52 @@ def _setup_public_schema_tables(target_db_url: str) -> None:
         engine.dispose()
 
 
+def _env_is_truthy(name: str) -> bool:
+    return (os.environ.get(name, "") or "").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+def _enforce_db_policy(target_db_url: str) -> None:
+    """Fail fast on misconfigurations that silently break isolation.
+
+    Gated behind ``AIRUNNER_REQUIRE_POSTGRES`` so the open-core desktop
+    app (which legitimately runs on SQLite) is never affected.  Server
+    deployments set the flag to guarantee nothing falls back to SQLite or
+    to an unintended single-tenant database.
+    """
+    if not _env_is_truthy("AIRUNNER_REQUIRE_POSTGRES"):
+        return
+
+    url = (target_db_url or "").lower()
+    is_postgres = url.startswith("postgresql") or url.startswith("postgres")
+    if not is_postgres:
+        raise RuntimeError(
+            "AIRUNNER_REQUIRE_POSTGRES=1 but the resolved database URL is not "
+            f"PostgreSQL: {target_db_url!r}. Set AIRUNNER_DATABASE_URL (or "
+            "AIRUNNER_DATABASE_BACKEND=postgresql with AIRUNNER_POSTGRES_*) to "
+            "a PostgreSQL instance."
+        )
+
+    from airunner_services.database.session import (  # noqa: PLC0415
+        _tenancy_mode,
+    )
+
+    if _tenancy_mode() == "single":
+        raise RuntimeError(
+            "AIRUNNER_REQUIRE_POSTGRES=1 with single-tenant mode: per-user "
+            "schema isolation would be OFF and every user would share one "
+            "namespace. Set AIRUNNER_DB_TENANCY=multi (or DB_TENANCY_MODE="
+            "'multi')."
+        )
+
+
 def setup_database(db_url: str | None = None):
     target_db_url = db_url or _default_db_url()
+    _enforce_db_policy(target_db_url)
     _ensure_sqlite_parent_dir(target_db_url)
 
     if _use_setup_cache() and target_db_url in _COMPLETED_SETUP_URLS:
@@ -371,18 +419,13 @@ def setup_database(db_url: str | None = None):
         if db_url:
             schema = _extract_search_path_schema(db_url)
             if schema:
-                prefix = (
-                    os.environ.get("AIRUNNER_TENANT_SCHEMA_PREFIX")
-                    or "tenant_"
-                )
-                raw_tenant = (
-                    schema[len(prefix) :]
-                    if schema.startswith(prefix)
-                    else schema
-                )
                 try:
-                    from airunner_services.data.tenant import set_tenant_key
+                    from airunner_services.data.tenant import (
+                        set_tenant_key,
+                        tenant_key_from_schema,
+                    )
 
+                    raw_tenant = tenant_key_from_schema(schema)
                     tenant_token = set_tenant_key(raw_tenant)
                 except Exception:
                     tenant_token = None

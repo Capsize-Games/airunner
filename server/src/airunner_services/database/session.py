@@ -29,11 +29,13 @@ def _db_url() -> str:
 
 
 def _tenancy_mode() -> str:
-    return (
-        (os.environ.get("AIRUNNER_DB_TENANCY", "single") or "single")
-        .strip()
-        .lower()
-    )
+    # Env var wins (AIRUNNER_DB_TENANCY); otherwise fall back to the
+    # DB_TENANCY_MODE setting (the production preset sets it to "multi").
+    env_value = (os.environ.get("AIRUNNER_DB_TENANCY") or "").strip()
+    if env_value:
+        return env_value.lower()
+    setting = str(getattr(_settings, "DB_TENANCY_MODE", "") or "").strip()
+    return (setting or "single").lower()
 
 
 def _is_postgres(url: str) -> bool:
@@ -81,6 +83,8 @@ def _tenant_db_url(base_url: str, tenant_schema: str) -> str:
 _engines: dict[str, object] = {}
 _sessions: dict[str, scoped_session] = {}
 _migrated_tenants: set[str] = set()
+_public_engine = None
+_public_engine_url: str | None = None
 
 
 def _ensure_sqlite_parent_dir(url: str) -> None:
@@ -179,6 +183,39 @@ def reset_engine():
     _engines = {}
     _migrated_tenants = set()
 
+    global _public_engine, _public_engine_url
+    if _public_engine is not None:
+        try:
+            _public_engine.dispose()
+        except Exception:
+            pass
+    _public_engine = None
+    _public_engine_url = None
+
+
+def _get_public_engine():
+    """Return a cached engine bound to the **public** schema.
+
+    Built once per database URL and reused; creating a fresh engine (and
+    therefore a fresh connection pool) on every ``public_session_scope``
+    call leaks connections under load.
+    """
+    global _public_engine, _public_engine_url
+    db_url = _db_url()
+    if _public_engine is None or _public_engine_url != db_url:
+        if _public_engine is not None:
+            try:
+                _public_engine.dispose()
+            except Exception:
+                pass
+        _ensure_sqlite_parent_dir(db_url)
+        _public_engine = create_configured_engine(
+            db_url,
+            pool_pre_ping=True,
+        )
+        _public_engine_url = db_url
+    return _public_engine
+
 
 @contextmanager
 def session_scope():
@@ -208,9 +245,7 @@ def session_scope():
 @contextmanager
 def public_session_scope():
     """Transactional scope for the **public** schema — bypasses tenants."""
-    Session = scoped_session(
-        sessionmaker(bind=create_configured_engine(_db_url()))
-    )
+    Session = scoped_session(sessionmaker(bind=_get_public_engine()))
     session = Session()
     try:
         yield session
