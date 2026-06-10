@@ -9,7 +9,7 @@ interface UseChatInferenceParams {
   setMessages: Dispatch<SetStateAction<Message[]>>;
   appendMessage: (convId: number, msg: Message, index: number) => Promise<void>;
   cancelLoad: () => void;
-  onSelectConversation?: (id: number) => void;
+  onSelectConversation?: (id: number | null) => void;
   conversationIdRef: MutableRefObject<number | null>;
   loadedConvRef: MutableRefObject<number | null>;
   modelPathRef: MutableRefObject<string>;
@@ -151,7 +151,14 @@ export function useChatInference({
       loadedConvRef.current = newId;
       onSelectConversation?.(newId);
     } catch {
+      // Creation failed (daemon/WebSocket unavailable). Reset to a blank
+      // slate AND clear the persisted conversation id; otherwise the old id
+      // is left in localStorage and a reload reloads the previous
+      // conversation from history.
+      conversationIdRef.current = null;
+      loadedConvRef.current = null;
       setMessages([]);
+      onSelectConversation?.(null);
     }
   }, [setMessages, cancelLoad, onSelectConversation, conversationIdRef, loadedConvRef]);
 

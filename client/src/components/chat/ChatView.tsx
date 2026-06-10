@@ -24,7 +24,7 @@ export default function ChatView({
   onToggleStt,
 }: {
   conversationId: number | null;
-  onSelectConversation?: (id: number) => void;
+  onSelectConversation?: (id: number | null) => void;
   ttsOn?: boolean;
   sttOn?: boolean;
   onToggleTts?: () => void;
