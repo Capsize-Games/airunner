@@ -33,7 +33,7 @@ export function document(
     [setState],
   );
 
-  const resetDocument = useCallback(() => {
+  const resetDocument = useCallback((fillColor?: string) => {
     try {
       localStorage.removeItem("airunner_canvas_state");
     } catch {
@@ -44,9 +44,12 @@ export function document(
     // active tool, etc.) so creating a new document doesn't wipe them.
     setState((prev) => {
       const fresh = defaultState();
+      const layers = fillColor
+        ? fresh.layers.map((l) => ({ ...l, fillColor }))
+        : fresh.layers;
       return {
         ...prev,
-        layers: fresh.layers,
+        layers,
         layerGroups: fresh.layerGroups,
         displayOrder: fresh.displayOrder,
         activeLayerId: fresh.activeLayerId,

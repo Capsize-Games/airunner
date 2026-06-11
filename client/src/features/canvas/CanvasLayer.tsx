@@ -259,8 +259,22 @@ export default function CanvasLayerRenderer({
       window.removeEventListener("pointerup", onGlobalUp);
   }, [handleLayerPointerUp]);
 
+  const fillRect = layer.fillColor && layer.fillColor !== "transparent"
+    ? (
+      <Rect
+        x={-layer.offsetX}
+        y={-layer.offsetY}
+        width={canvasWidth}
+        height={canvasHeight}
+        fill={layer.fillColor}
+        listening={false}
+      />
+    )
+    : null;
+
   const contentChildren = (
     <>
+      {fillRect}
       {layer.images.map((img) => (
         <LayerImage
           key={img.id}

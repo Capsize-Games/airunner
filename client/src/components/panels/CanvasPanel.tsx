@@ -224,7 +224,7 @@ export default function CanvasPanel() {
 
   const handleNewDocumentConfirm = useCallback(
     (w: number, h: number, bg: string) => {
-      canvas.resetDocument();
+      canvas.resetDocument(bg);
       canvas.setDocumentSize(w, h);
       canvas.setDocumentBgColor(bg);
     },

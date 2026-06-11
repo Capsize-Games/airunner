@@ -31,11 +31,12 @@ export interface CanvasContextValue {
   maskStrokes: StrokeNode[];
   snapToGrid: boolean;
 
-  addLayer: (name?: string, opacity?: number) => void;
+  addLayer: (name?: string, opacity?: number, fillColor?: string) => void;
   deleteLayer: (id: string) => void;
   renameLayer: (id: string, name: string) => void;
   setLayerVisible: (id: string, visible: boolean) => void;
   setLayerOpacity: (id: string, opacity: number) => void;
+  setLayerFillColor: (id: string, fillColor: string) => void;
   reorderLayer: (id: string, direction: "up" | "down") => void;
   reorderLayerToIndex: (id: string, toIndex: number) => void;
   setActiveLayer: (id: string) => void;
@@ -58,7 +59,7 @@ export interface CanvasContextValue {
   setActiveTool: (tool: ActiveTool) => void;
   setMoveMode: (mode: MoveMode) => void;
   setActiveGridArea: (area: ActiveGridArea) => void;
-  resetDocument: () => void;
+  resetDocument: (fillColor?: string) => void;
   moveLayer: (id: string, x: number, y: number) => void;
   setDocumentSize: (width: number, height: number) => void;
   setDocumentBgColor: (color: string) => void;

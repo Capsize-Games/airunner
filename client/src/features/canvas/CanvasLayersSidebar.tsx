@@ -204,7 +204,7 @@ export default function CanvasLayersSidebar() {
         show={showNewLayer}
         layerIndex={canvas.layers.length + 1}
         defaultName={canvas.activeLayer?.name === "Background" ? "Layer" : (canvas.activeLayer?.name ?? "Layer")}
-        onConfirm={(name, opacity) => canvas.addLayer(name, opacity)}
+        onConfirm={(name, opacity, fillColor) => canvas.addLayer(name, opacity, fillColor)}
         onHide={() => setShowNewLayer(false)}
       />
       <NewLayerMaskModal
