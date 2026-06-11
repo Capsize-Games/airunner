@@ -117,6 +117,9 @@ export default function CanvasPanel() {
   const [showImagePrompt, setShowImagePrompt] = useState(() => {
     try { return localStorage.getItem("canvas_show_image_prompt") === "true"; } catch { return false; }
   });
+  const [showCanvasTools, setShowCanvasTools] = useState(() => {
+    try { return localStorage.getItem("canvas_show_canvas_tools") !== "false"; } catch { return true; }
+  });
   const [leftPanelW, setLeftPanelW] = useState(() => {
     try { const v = localStorage.getItem(LS_LEFT_W); return v ? Number(v) : 300; } catch { return 300; }
   });
@@ -260,6 +263,9 @@ export default function CanvasPanel() {
   useEffect(() => {
     try { localStorage.setItem("canvas_show_image_prompt", String(showImagePrompt)); } catch { /* */ }
   }, [showImagePrompt]);
+  useEffect(() => {
+    try { localStorage.setItem("canvas_show_canvas_tools", String(showCanvasTools)); } catch { /* */ }
+  }, [showCanvasTools]);
 
   if (!isLoaded) {
     return (
@@ -313,11 +319,16 @@ export default function CanvasPanel() {
                   canvas.setActiveTool(tool);
                   setShowImagePrompt(false);
                 }}
-                activeAssetTab={assetTab}
-                onToggleLayers={() => setAssetTab((t) => t === "layers" ? null : "layers")}
-                onToggleImages={() => setAssetTab((t) => t === "images" ? null : "images")}
                 showImagePrompt={showImagePrompt}
-                onToggleImagePrompt={() => setShowImagePrompt((v) => !v)}
+                onToggleImagePrompt={() => {
+                  setShowImagePrompt((v) => !v);
+                  setShowCanvasTools(false);
+                }}
+                showCanvasTools={showCanvasTools}
+                onToggleCanvasTools={() => {
+                  setShowCanvasTools((v) => !v);
+                  setShowImagePrompt(false);
+                }}
               />
 
               {/* Tool settings section */}

@@ -35,6 +35,24 @@ export default function ArtPromptPanel({
     } catch {}
   }, [showInfo]);
 
+  // Listen for palette-toolbar actions dispatched from CanvasToolPanel
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const action = (e as CustomEvent).detail as string;
+      switch (action) {
+        case "modelOptions": o.toggleModelOptions(); break;
+        case "embeddings":   s.togglePanel("embeddings"); break;
+        case "lora":         s.togglePanel("lora"); break;
+        case "settings":     s.togglePopup("settings"); break;
+        case "seed":         s.handleToggleRandom(); break;
+        case "genType":      o.toggleGenType(); break;
+        case "imageSize":    o.toggleSize(); break;
+      }
+    };
+    window.addEventListener("art:action", handler);
+    return () => window.removeEventListener("art:action", handler);
+  }, [s, o]);
+
   if (!visible) return null;
 
   return (

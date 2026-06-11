@@ -1,9 +1,10 @@
-import { MessageSquareHeart } from "lucide-react";
+import { MessageSquareHeart, Wrench } from "lucide-react";
 import {
   Move, SquareDashed, Lasso, Wand, Crop,
   PaintBucket, Pointer, Type, Pipette, Search,
-  Brush, Eraser, Layers, Images, Grid3x3, Ruler,
+  Brush, Eraser, Grid3x3, Ruler,
 } from "lucide-react";
+import LucideIcon from "../../components/shared/LucideIcon";
 import type { ActiveTool } from "./useCanvasState";
 
 const TOOLS: { id: string; label: string; Icon: React.ComponentType<{ size?: number; strokeWidth?: number }> }[] = [
@@ -26,11 +27,10 @@ const TOOLS: { id: string; label: string; Icon: React.ComponentType<{ size?: num
 interface Props {
   activeTool: ActiveTool;
   onToolChange: (tool: ActiveTool) => void;
-  activeAssetTab: "layers" | "images" | null;
-  onToggleLayers: () => void;
-  onToggleImages: () => void;
   showImagePrompt: boolean;
   onToggleImagePrompt: () => void;
+  showCanvasTools: boolean;
+  onToggleCanvasTools: () => void;
 }
 
 const btn: React.CSSProperties = {
@@ -45,11 +45,10 @@ const btn: React.CSSProperties = {
 export default function CanvasToolPanel({
   activeTool,
   onToolChange,
-  activeAssetTab,
-  onToggleLayers,
-  onToggleImages,
   showImagePrompt,
   onToggleImagePrompt,
+  showCanvasTools,
+  onToggleCanvasTools,
 }: Props) {
   const onBtnEnter = (e: React.MouseEvent<HTMLButtonElement>) => {
     const bg = e.currentTarget.style.background;
@@ -131,23 +130,67 @@ export default function CanvasToolPanel({
         userSelect: "none", flexShrink: 0,
       }}
     >
-      {/* Row 1: image-prompt toggle + all canvas tools */}
-      <div style={{ display: "flex", alignItems: "center", gap: 2, flexWrap: "wrap" }}>
+      {/* ── Palette toggle buttons ────────────────────────────────────
+       * These two buttons switch between showing the image prompt or the
+       * canvas tool palette. Only one can be active at a time. */}
+      <div style={{ display: "flex", alignItems: "center", gap: 2, padding: "4px 6px", margin: "0 -6px 2px", borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
         {toggleBtn(showImagePrompt, MessageSquareHeart, "Toggle Image Prompt", onToggleImagePrompt)}
-        {TOOLS.map((t) => toolBtn(t.id, t.Icon))}
+        {toggleBtn(showCanvasTools, Wrench, "Canvas Tools", onToggleCanvasTools)}
       </div>
 
-      {/* Row 3: layer / image browser toggles */}
-      <div style={{
-        display: "flex", alignItems: "center", gap: 2,
-        padding: "4px 6px",
-        margin: "2px -6px",
-        borderTop: "1px solid rgba(255,255,255,0.07)",
-        borderBottom: "1px solid rgba(255,255,255,0.07)",
-      }}>
-        {toggleBtn(activeAssetTab === "layers", Layers, "Layers Panel", onToggleLayers)}
-        {toggleBtn(activeAssetTab === "images", Images, "Images Panel", onToggleImages)}
-      </div>
+      {/* ── Art prompt palette ────────────────────────────────────────
+       * Shown only when the image-prompt palette is active. These
+       * buttons mirror the toolbar at the bottom of the chat prompt.
+       * Each dispatches a custom event that ArtPromptPanel listens for
+       * to open the corresponding settings panel/popup. */}
+      {showImagePrompt && (
+        <div style={{ display: "flex", alignItems: "center", gap: 2, flexWrap: "wrap", padding: "4px 6px", margin: "0 -6px", borderBottom: "1px solid rgba(255,255,255,0.07)", background: "#12121c" }}>
+          <button key="art-model-options" title="Art model options" style={btn}
+            onMouseEnter={onBtnEnter} onMouseLeave={onBtnLeave}
+            onClick={() => window.dispatchEvent(new CustomEvent("art:action", { detail: "modelOptions" }))}>
+            <LucideIcon name="sparkles" size={14} />
+          </button>
+          <button key="embeddings" title="Embeddings" style={btn}
+            onMouseEnter={onBtnEnter} onMouseLeave={onBtnLeave}
+            onClick={() => window.dispatchEvent(new CustomEvent("art:action", { detail: "embeddings" }))}>
+            <LucideIcon name="scan-text" size={14} />
+          </button>
+          <button key="lora" title="LoRA" style={btn}
+            onMouseEnter={onBtnEnter} onMouseLeave={onBtnLeave}
+            onClick={() => window.dispatchEvent(new CustomEvent("art:action", { detail: "lora" }))}>
+            <LucideIcon name="puzzle" size={14} />
+          </button>
+          <button key="gen-settings" title="Generation settings" style={btn}
+            onMouseEnter={onBtnEnter} onMouseLeave={onBtnLeave}
+            onClick={() => window.dispatchEvent(new CustomEvent("art:action", { detail: "settings" }))}>
+            <LucideIcon name="settings-2" size={14} />
+          </button>
+          <button key="seed" title="Seed randomization" style={btn}
+            onMouseEnter={onBtnEnter} onMouseLeave={onBtnLeave}
+            onClick={() => window.dispatchEvent(new CustomEvent("art:action", { detail: "seed" }))}>
+            <LucideIcon name="shuffle" size={14} />
+          </button>
+          <button key="gen-type" title="Generation type" style={btn}
+            onMouseEnter={onBtnEnter} onMouseLeave={onBtnLeave}
+            onClick={() => window.dispatchEvent(new CustomEvent("art:action", { detail: "genType" }))}>
+            <LucideIcon name="image-plus" size={14} />
+          </button>
+          <button key="image-size" title="Image size" style={btn}
+            onMouseEnter={onBtnEnter} onMouseLeave={onBtnLeave}
+            onClick={() => window.dispatchEvent(new CustomEvent("art:action", { detail: "imageSize" }))}>
+            <LucideIcon name="ruler-dimension-line" size={14} />
+          </button>
+        </div>
+      )}
+
+      {/* ── Palette of tools ──────────────────────────────────────────
+       * Shown only when the canvas-tools palette is active. Each button
+       * selects a drawing/editing mode (move, brush, eraser, etc.). */}
+      {showCanvasTools && (
+        <div style={{ display: "flex", alignItems: "center", gap: 2, flexWrap: "wrap", padding: "4px 6px", margin: "0 -6px", borderBottom: "1px solid rgba(255,255,255,0.07)", background: "#12121c" }}>
+          {TOOLS.map((t) => toolBtn(t.id, t.Icon))}
+        </div>
+      )}
     </div>
   );
 }
