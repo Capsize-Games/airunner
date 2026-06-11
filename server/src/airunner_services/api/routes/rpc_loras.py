@@ -62,6 +62,7 @@ async def _rpc_loras_update(body: dict, **kw: Any) -> dict[str, Any]:
                 "body": {
                     "id": item.id,
                     "name": item.name or "",
+                    "path": item.path or "",
                     "enabled": bool(item.enabled),
                     "trigger_words": item.trigger_words or [],
                     "weight": float(item.weight) if item.weight else 1.0,

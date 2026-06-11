@@ -18,10 +18,9 @@ export async function updateEmbedding(
   embeddingId: number,
   props: { enabled?: boolean; trigger_words?: string },
 ) {
-  const params = new URLSearchParams();
-  if (props.enabled !== undefined) params.set("enabled", String(props.enabled));
-  if (props.trigger_words !== undefined) params.set("trigger_words", props.trigger_words);
   return request<EmbeddingInfo>(
-    "PATCH", `/api/v1/art/embeddings/${embeddingId}?${params.toString()}`,
+    "PATCH",
+    `/api/v1/art/embeddings/${embeddingId}`,
+    props as Record<string, unknown>,
   );
 }

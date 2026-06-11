@@ -48,9 +48,14 @@ export default function EmbeddingsPanel() {
     try {
       const { updateEmbedding } = await import("../../api/client");
       const updated = await updateEmbedding(id, { enabled });
+      if (!updated || typeof updated.enabled !== "boolean") {
+        console.warn("[EmbeddingsPanel] updateEmbedding returned unexpected data:", updated);
+      }
       await patchEmbedding(updated);
       window.dispatchEvent(new CustomEvent("embedding-changed", { detail: { id, enabled } }));
-    } catch { /* */ }
+    } catch (err) {
+      console.error("[EmbeddingsPanel] handleToggle error:", err);
+    }
   };
 
   const handleCopyWord = (word: string) => {
