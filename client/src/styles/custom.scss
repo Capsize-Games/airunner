@@ -3,9 +3,10 @@
 /* ── Theme CSS variables ── */
 :root,
 [data-theme="dark"] {
-  --theme-bg: #1a1a2e;
-  --theme-bg-secondary: #12121e;
-  --theme-bg-tertiary: #16162a;
+  /* Elevation ramp (recessed → raised): input wells < body < panels < chrome */
+  --theme-bg: #16162a;          /* app body / content backdrop */
+  --theme-bg-secondary: #232340; /* chrome: top bar, footer, icon bar */
+  --theme-bg-tertiary: #1c1c30;
   --theme-text: #c8c8c8;
   --theme-text-rgb: 200, 200, 200;
   --theme-text-secondary: #a0a0a8;
@@ -14,8 +15,8 @@
   --theme-primary: #0084b9;
   --theme-primary-rgb: 0, 132, 185;
   --theme-separator: #444;
-  --theme-panel-bg: #16162a;
-  --theme-input-bg: #1a1a2e;
+  --theme-panel-bg: #1c1c30;    /* raised panel surfaces */
+  --theme-input-bg: #0e0e1c;    /* recessed input wells */
   --theme-input-border: #333;
   --theme-placeholder: #666;
 }
@@ -33,7 +34,7 @@
   --theme-primary-rgb: 0, 122, 204;
   --theme-separator: #b0b0b0;
   --theme-panel-bg: #ffffff;
-  --theme-input-bg: #ffffff;
+  --theme-input-bg: #e9e9ef;
   --theme-input-border: #aaa;
   --theme-placeholder: #999;
 }
@@ -820,7 +821,7 @@ input::placeholder, textarea::placeholder {
 .bg-theme-panel { background: var(--theme-panel-bg); }
 .bg-theme-input { background: var(--theme-input-bg); }
 .bg-theme-secondary { background: var(--theme-bg-secondary); }
-.prompt-textarea-bg { background: var(--theme-bg-secondary); border-radius: 4px; }
+.prompt-textarea-bg { background: var(--theme-input-bg); border-radius: 4px; }
 
 /* ── Theme color utilities ── */
 .text-theme-secondary { color: var(--theme-text-secondary); }

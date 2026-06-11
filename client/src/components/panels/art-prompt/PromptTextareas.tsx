@@ -27,7 +27,7 @@ const COLLAPSED_STYLE: React.CSSProperties = {
   background: "transparent", color: "var(--theme-text)",
   border: "none", outline: "none",
   padding: "0 10px 8px", fontFamily: "inherit", fontSize: "inherit",
-  opacity: 0.5, cursor: "text",
+  opacity: 0.85, cursor: "text",
 };
 
 type FieldKey = "prompt" | "secondaryPrompt" | "negativePrompt" | "secondaryNegativePrompt";

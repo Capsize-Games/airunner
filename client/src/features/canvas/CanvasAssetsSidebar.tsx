@@ -121,10 +121,7 @@ export default function CanvasAssetsSidebar({
       {/* Resize handle */}
       <div
         onMouseDown={handleResizeMouseDown}
-        className="flex-shrink-0"
-        style={{ width: 4, cursor: "col-resize", background: "transparent", transition: "background 0.15s" }}
-        onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.background = "rgba(99,153,255,0.3)"; }}
-        onMouseLeave={(e) => { if (!dragging.current) (e.currentTarget as HTMLDivElement).style.background = "transparent"; }}
+        className="resize-handle"
       />
 
       <div className="flex-grow-1 d-flex flex-column overflow-hidden" style={{ background: "#14141e", minWidth: 0 }}>

@@ -50,7 +50,7 @@ export default function ArtPromptPanel({
       <div className="flex-grow-1 d-flex flex-column overflow-hidden w-100">
         <div className="d-flex flex-column flex-grow-1 overflow-hidden">
           <div
-            className="flex-grow-1 d-flex flex-column bg-theme-input overflow-hidden min-h-0"
+            className="flex-grow-1 d-flex flex-column bg-theme-panel overflow-hidden min-h-0"
             style={{ border: "none", borderRadius: 0 }}
           >
             {/* ── Tool options section ──────────────────────────────────
