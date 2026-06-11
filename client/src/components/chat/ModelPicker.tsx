@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { createPortal } from "react-dom";
 import Form from "react-bootstrap/Form";
 import LucideIcon from "../shared/LucideIcon";
 
@@ -19,19 +20,28 @@ export function ModelPicker({
 }: Props) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
-  const ref = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const btnRef = useRef<HTMLButtonElement>(null);
+  const [anchor, setAnchor] = useState<{ left: number; bottom: number } | null>(null);
 
   const openPicker = () => {
     setOpen((v) => {
-      if (!v) window.dispatchEvent(new Event("chat-picker-opened"));
-      return !v;
+      const next = !v;
+      if (next) {
+        window.dispatchEvent(new Event("chat-picker-opened"));
+        if (btnRef.current) {
+          const r = btnRef.current.getBoundingClientRect();
+          setAnchor({ left: r.left, bottom: window.innerHeight - r.top + 4 });
+        }
+      }
+      return next;
     });
   };
 
   useEffect(() => {
     if (!open) return;
     const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
         setOpen(false);
         setQuery("");
       }
@@ -39,6 +49,12 @@ export function ModelPicker({
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, [open]);
+
+  useEffect(() => {
+    const handler = () => setOpen(false);
+    window.addEventListener("art-overlay-opened", handler);
+    return () => window.removeEventListener("art-overlay-opened", handler);
+  }, []);
 
   const stripPathAndExt = (s: string) =>
     (s.split("/").pop() ?? s).replace(/\.(gguf|bin|safetensors|pt|pth|ckpt|pkl|model)$/i, "");
@@ -55,8 +71,9 @@ export function ModelPicker({
   );
 
   return (
-    <div ref={ref} className="min-w-0" style={{ position: "relative", flex: "1 1 0%" }}>
+    <div ref={containerRef} className="min-w-0" style={{ flex: "1 1 0%" }}>
       <button
+        ref={btnRef}
         type="button"
         onClick={openPicker}
         title={value || "Select model"}
@@ -73,6 +90,7 @@ export function ModelPicker({
           color: value ? "var(--theme-text)" : "rgba(255,255,255,0.35)",
           fontSize: "0.75rem",
           overflow: "hidden",
+          width: "100%",
         }}
         onMouseEnter={(e) =>
           ((e.currentTarget as HTMLButtonElement).style.background =
@@ -92,21 +110,21 @@ export function ModelPicker({
         >
           {displayLabel}
         </span>
-        <LucideIcon name="chevrons-up-down" size={11} style={{ flexShrink: 0 }} />
+        <LucideIcon name="chevrons-up-down" size={11} />
       </button>
 
-      {open && (
+      {open && anchor && createPortal(
         <div
           className="d-flex flex-column bg-theme-panel"
           style={{
-            position: "absolute",
-            bottom: "calc(100% + 4px)",
-            left: 0,
+            position: "fixed",
+            left: anchor.left,
+            bottom: anchor.bottom,
             minWidth: 220,
             maxWidth: 340,
             border: "1px solid rgba(255,255,255,0.14)",
             borderRadius: 6,
-            zIndex: 1200,
+            zIndex: 1300,
             boxShadow: "0 4px 20px rgba(0,0,0,0.5)",
             maxHeight: 300,
           }}
@@ -198,7 +216,8 @@ export function ModelPicker({
               />
             </div>
           )}
-        </div>
+        </div>,
+        document.body,
       )}
     </div>
   );
