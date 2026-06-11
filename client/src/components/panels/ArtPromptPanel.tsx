@@ -81,24 +81,85 @@ export default function ArtPromptPanel({ visible = true }: { visible?: boolean }
                 document.body
               )}
 
-              <span className="flex-grow-1" />
+              {s.openPopup === "promptSettings" && s.promptSettingsAnchor && createPortal(
+                <div
+                  id="art-prompt-settings-popup"
+                  className="bg-theme-panel"
+                  style={{
+                    position: "fixed",
+                    left: s.promptSettingsAnchor.left,
+                    bottom: s.promptSettingsAnchor.bottom,
+                    border: "1px solid rgba(255,255,255,0.14)",
+                    borderRadius: 6,
+                    zIndex: 1300,
+                    boxShadow: "0 4px 20px rgba(0,0,0,0.5)",
+                    minWidth: 180,
+                    overflow: "hidden",
+                  }}
+                  onMouseDown={(e) => e.stopPropagation()}
+                >
+                  {/* New Prompt */}
+                  <button
+                    type="button"
+                    onClick={() => { s.handleClearPrompts(); s.togglePopup("promptSettings"); }}
+                    style={{
+                      display: "flex", alignItems: "center", gap: 8,
+                      width: "100%", padding: "8px 12px",
+                      border: "none", background: "transparent",
+                      color: "var(--theme-text)", cursor: "pointer",
+                      fontSize: "0.8rem",
+                    }}
+                    onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.06)"; }}
+                    onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "transparent"; }}
+                  >
+                    <LucideIcon name="message-square-plus" size={14} />
+                    <span>New Prompt</span>
+                  </button>
 
-              <ToolbarIconBtn
-                title={`LoRA${s.activeLoras.length > 0 ? ` (${s.activeLoras.length})` : ""}`}
-                onClick={() => s.togglePanel("lora")}
-                active={s.openPanel === "lora"}
-                badge={s.activeLoras.length > 0 ? s.activeLoras.length : undefined}
-              >
-                <LucideIcon name="puzzle" size={14} />
-              </ToolbarIconBtn>
-              <ToolbarIconBtn
-                title={`Embeddings${s.activeEmbeddings.length > 0 ? ` (${s.activeEmbeddings.length})` : ""}`}
-                onClick={() => s.togglePanel("embeddings")}
-                active={s.openPanel === "embeddings"}
-                badge={s.activeEmbeddings.length > 0 ? s.activeEmbeddings.length : undefined}
-              >
-                <LucideIcon name="scan-text" size={14} />
-              </ToolbarIconBtn>
+                  {/* Save Prompt */}
+                  <button
+                    type="button"
+                    onClick={() => { s.handleSavePrompt(); s.togglePopup("promptSettings"); }}
+                    disabled={s.saving || !s.prompt.trim()}
+                    style={{
+                      display: "flex", alignItems: "center", gap: 8,
+                      width: "100%", padding: "8px 12px",
+                      border: "none", background: "transparent",
+                      color: "var(--theme-text)", cursor: s.saving || !s.prompt.trim() ? "default" : "pointer",
+                      fontSize: "0.8rem", opacity: s.saving || !s.prompt.trim() ? 0.4 : 1,
+                    }}
+                    onMouseEnter={(e) => {
+                      if (!(s.saving || !s.prompt.trim()))
+                        (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.06)";
+                    }}
+                    onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "transparent"; }}
+                  >
+                    <LucideIcon name={s.saving ? "loader" : "save"} size={14} />
+                    <span>Save Prompt</span>
+                  </button>
+
+                  {/* Load saved prompts */}
+                  <button
+                    type="button"
+                    onClick={() => { s.togglePanel("savedPrompts"); s.togglePopup("promptSettings"); }}
+                    style={{
+                      display: "flex", alignItems: "center", gap: 8,
+                      width: "100%", padding: "8px 12px",
+                      border: "none", background: "transparent",
+                      color: "var(--theme-text)", cursor: "pointer",
+                      fontSize: "0.8rem",
+                      borderTop: "1px solid rgba(255,255,255,0.08)",
+                    }}
+                    onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.06)"; }}
+                    onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "transparent"; }}
+                  >
+                    <LucideIcon name="folder-open" size={14} />
+                    <span>Load saved prompts</span>
+                  </button>
+                </div>,
+                document.body
+              )}
+
             </div>
 
             <ModelRows
@@ -124,15 +185,25 @@ export default function ArtPromptPanel({ visible = true }: { visible?: boolean }
                 onWidthChange={(v) => { s.setGenWidth(v); saveToStorage("gen_width", v); s.persistGen({ width: v }); }}
                 onHeightChange={(v) => { s.setGenHeight(v); saveToStorage("gen_height", v); s.persistGen({ height: v }); }}
               />
-              <PromptControls
+              <PromptControls ref={s.controlsRef}
                 generating={s.generating}
                 progress={s.progress}
                 phase={s.phase}
                 hasPrompt={!!s.prompt.trim()}
                 saving={s.saving}
+                promptPopupOpen={s.openPopup === "promptSettings"}
+                promptBtnRef={s.promptBtnRef}
+                activeLoras={s.activeLoras}
+                activeEmbeddings={s.activeEmbeddings}
+                isMultiPrompt={s.isMultiPrompt}
+                loraPanelOpen={s.openPanel === "lora"}
+                embeddingsPanelOpen={s.openPanel === "embeddings"}
                 onClear={s.handleClearPrompts}
                 onSave={s.handleSavePrompt}
                 onToggleSavedPrompts={() => s.togglePanel("savedPrompts")}
+                onTogglePromptPopup={() => s.togglePopup("promptSettings")}
+                onToggleLora={() => s.togglePanel("lora")}
+                onToggleEmbeddings={() => s.togglePanel("embeddings")}
                 onGenerate={s.onGenerate}
                 onCancel={s.onCancel}
               />

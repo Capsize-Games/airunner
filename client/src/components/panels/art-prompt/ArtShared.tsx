@@ -27,7 +27,7 @@ if (typeof document !== "undefined") {
   }
 }
 
-export type ArtPopup = "settings" | null;
+export type ArtPopup = "settings" | "promptSettings" | null;
 export type ArtPanel = "lora" | "embeddings" | "savedPrompts" | null;
 
 export interface ArtSettingsData {

@@ -57,8 +57,11 @@ export function useArtPromptState() {
   const [openPanel, setOpenPanel] = useState<ArtPanel>(null);
   const [artPanelAnchor, setArtPanelAnchor] = useState<{ left: number; bottom: number; width: number; height: number } | null>(null);
   const toolbarRef = useRef<HTMLDivElement>(null);
+  const controlsRef = useRef<HTMLDivElement>(null);
   const settingsBtnRef = useRef<HTMLDivElement>(null);
+  const promptBtnRef = useRef<HTMLDivElement>(null);
   const [settingsAnchor, setSettingsAnchor] = useState<{ left: number; bottom: number } | null>(null);
+  const [promptSettingsAnchor, setPromptSettingsAnchor] = useState<{ left: number; bottom: number } | null>(null);
   const emittingRef = useRef(false);
 
   const availableSchedulers = (artOptions?.versions?.find((v) => v.name === version)?.schedulers) ?? [];
@@ -123,7 +126,9 @@ export function useArtPromptState() {
     const handler = (e: MouseEvent) => {
       const target = e.target as Node;
       if (settingsBtnRef.current?.contains(target)) return;
+      if (promptBtnRef.current?.contains(target)) return;
       if (document.getElementById("art-settings-popup")?.contains(target)) return;
+      if (document.getElementById("art-prompt-settings-popup")?.contains(target)) return;
       if (toolbarRef.current && !toolbarRef.current.contains(target))
         setOpenPopup(null);
     };
@@ -136,8 +141,9 @@ export function useArtPromptState() {
       setArtPanelAnchor(null);
       return;
     }
-    if (toolbarRef.current) {
-      const rect = toolbarRef.current.getBoundingClientRect();
+    const anchorRef = controlsRef.current ?? toolbarRef.current;
+    if (anchorRef) {
+      const rect = anchorRef.getBoundingClientRect();
       setArtPanelAnchor({
         left: rect.left,
         bottom: window.innerHeight - rect.top,
@@ -334,6 +340,14 @@ export function useArtPromptState() {
           const r = settingsBtnRef.current.getBoundingClientRect();
           setSettingsAnchor({ left: r.left, bottom: window.innerHeight - r.top + 4 });
         }
+      } else if (next === "promptSettings") {
+        emittingRef.current = true;
+        window.dispatchEvent(new Event("art-overlay-opened"));
+        emittingRef.current = false;
+        if (promptBtnRef.current) {
+          const r = promptBtnRef.current.getBoundingClientRect();
+          setPromptSettingsAnchor({ left: r.left, bottom: window.innerHeight - r.top + 4 });
+        }
       }
       return next;
     });
@@ -363,8 +377,8 @@ export function useArtPromptState() {
     artOptions, version, modelPath, scheduler, toolbarLoading,
     saving,
     openPopup, openPanel, artPanelAnchor,
-    toolbarRef, settingsBtnRef,
-    settingsAnchor,
+    toolbarRef, controlsRef, settingsBtnRef, promptBtnRef,
+    settingsAnchor, promptSettingsAnchor,
     availableSchedulers,
     genWidth, setGenWidth,
     genHeight, setGenHeight,
