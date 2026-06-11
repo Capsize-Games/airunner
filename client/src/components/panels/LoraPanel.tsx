@@ -21,7 +21,11 @@ function getVersion(): string {
   catch { return ""; }
 }
 
-export default function LoraPanel() {
+export default function LoraPanel({
+  hideHeader = false,
+}: {
+  hideHeader?: boolean;
+}) {
   const { loras, loading, sync, patchLora } = useLoras();
   const [inputTexts, setInputTexts] = useState<Record<number, string>>({});
   const [copiedIndex, setCopiedIndex] = useState<string | null>(null);
@@ -105,14 +109,16 @@ export default function LoraPanel() {
 
   return (
     <div className="d-flex flex-column">
-      <div
-        className="sticky-top flex-shrink-0 d-flex align-items-center bg-theme-panel border-b-theme"
-        style={{ padding: "8px 12px 6px", zIndex: 1 }}
-      >
-        <span className="text-panel-label text-uppercase">
-          LoRA
-        </span>
-      </div>
+      {!hideHeader && (
+        <div
+          className="sticky-top flex-shrink-0 d-flex align-items-center bg-theme-panel border-b-theme"
+          style={{ padding: "8px 12px 6px", zIndex: 1 }}
+        >
+          <span className="text-panel-label text-uppercase">
+            LoRA
+          </span>
+        </div>
+      )}
       <div className="p-2">
         {loading ? (
           <Spinner animation="border" size="sm" className="d-block mx-auto" />

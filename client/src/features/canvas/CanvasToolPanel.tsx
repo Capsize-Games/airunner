@@ -31,6 +31,8 @@ interface Props {
   onToggleImagePrompt: () => void;
   showCanvasTools: boolean;
   onToggleCanvasTools: () => void;
+  activeArtAction: string | null;
+  onArtAction: (action: string | null) => void;
 }
 
 const btn: React.CSSProperties = {
@@ -49,6 +51,8 @@ export default function CanvasToolPanel({
   onToggleImagePrompt,
   showCanvasTools,
   onToggleCanvasTools,
+  activeArtAction,
+  onArtAction,
 }: Props) {
   const onBtnEnter = (e: React.MouseEvent<HTMLButtonElement>) => {
     const bg = e.currentTarget.style.background;
@@ -141,45 +145,37 @@ export default function CanvasToolPanel({
       {/* ── Art prompt palette ────────────────────────────────────────
        * Shown only when the image-prompt palette is active. These
        * buttons mirror the toolbar at the bottom of the chat prompt.
-       * Each dispatches a custom event that ArtPromptPanel listens for
-       * to open the corresponding settings panel/popup. */}
+       * Each toggles inline settings in the tool panel below. */}
       {showImagePrompt && (
         <div style={{ display: "flex", alignItems: "center", gap: 2, flexWrap: "wrap", padding: "4px 6px", margin: "0 -6px", borderBottom: "1px solid rgba(255,255,255,0.07)", background: "#12121c" }}>
-          <button key="art-model-options" title="Art model options" style={btn}
-            onMouseEnter={onBtnEnter} onMouseLeave={onBtnLeave}
-            onClick={() => window.dispatchEvent(new CustomEvent("art:action", { detail: "modelOptions" }))}>
-            <LucideIcon name="sparkles" size={14} />
-          </button>
-          <button key="embeddings" title="Embeddings" style={btn}
-            onMouseEnter={onBtnEnter} onMouseLeave={onBtnLeave}
-            onClick={() => window.dispatchEvent(new CustomEvent("art:action", { detail: "embeddings" }))}>
-            <LucideIcon name="scan-text" size={14} />
-          </button>
-          <button key="lora" title="LoRA" style={btn}
-            onMouseEnter={onBtnEnter} onMouseLeave={onBtnLeave}
-            onClick={() => window.dispatchEvent(new CustomEvent("art:action", { detail: "lora" }))}>
-            <LucideIcon name="puzzle" size={14} />
-          </button>
-          <button key="gen-settings" title="Generation settings" style={btn}
-            onMouseEnter={onBtnEnter} onMouseLeave={onBtnLeave}
-            onClick={() => window.dispatchEvent(new CustomEvent("art:action", { detail: "settings" }))}>
-            <LucideIcon name="settings-2" size={14} />
-          </button>
-          <button key="seed" title="Seed randomization" style={btn}
-            onMouseEnter={onBtnEnter} onMouseLeave={onBtnLeave}
-            onClick={() => window.dispatchEvent(new CustomEvent("art:action", { detail: "seed" }))}>
-            <LucideIcon name="shuffle" size={14} />
-          </button>
-          <button key="gen-type" title="Generation type" style={btn}
-            onMouseEnter={onBtnEnter} onMouseLeave={onBtnLeave}
-            onClick={() => window.dispatchEvent(new CustomEvent("art:action", { detail: "genType" }))}>
-            <LucideIcon name="image-plus" size={14} />
-          </button>
-          <button key="image-size" title="Image size" style={btn}
-            onMouseEnter={onBtnEnter} onMouseLeave={onBtnLeave}
-            onClick={() => window.dispatchEvent(new CustomEvent("art:action", { detail: "imageSize" }))}>
-            <LucideIcon name="ruler-dimension-line" size={14} />
-          </button>
+          {[
+            { id: "modelOptions", name: "sparkles",    title: "Art model options" },
+            { id: "embeddings",   name: "scan-text",   title: "Embeddings" },
+            { id: "lora",         name: "puzzle",      title: "LoRA" },
+            { id: "settings",     name: "settings-2",  title: "Generation settings" },
+            { id: "seed",         name: "shuffle",     title: "Seed randomization" },
+            { id: "genType",      name: "image-plus",  title: "Generation type" },
+            { id: "imageSize",    name: "ruler-dimension-line", title: "Image size" },
+          ].map((item) => {
+            const isActive = activeArtAction === item.id;
+            return (
+              <button
+                key={item.id}
+                title={item.title}
+                onClick={() => onArtAction(isActive ? null : item.id)}
+                onMouseEnter={onBtnEnter}
+                onMouseLeave={onBtnLeave}
+                style={{
+                  ...btn,
+                  background: isActive ? "rgba(99,153,255,0.22)" : "transparent",
+                  color: isActive ? "var(--bs-primary)" : "rgba(255,255,255,0.35)",
+                  boxShadow: isActive ? "inset 0 0 0 1.5px rgba(99,153,255,0.55)" : "none",
+                }}
+              >
+                <LucideIcon name={item.name} size={14} />
+              </button>
+            );
+          })}
         </div>
       )}
 
