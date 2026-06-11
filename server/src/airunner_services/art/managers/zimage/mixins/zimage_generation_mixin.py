@@ -1,10 +1,12 @@
 """Z-Image generation mixin for preparing and running generation."""
 
 import gc
+import logging
 from typing import Dict, Any
 import torch
 from airunner_services.application_exceptions import InterruptedException
 from airunner_services.art.runtime_memory import clear_memory
+from airunner_services.settings import AIRUNNER_CUDA_OUT_OF_MEMORY_MESSAGE
 from airunner_services.art.schedulers.flow_match_scheduler_factory import (
     is_flow_match_scheduler,
     create_flow_match_scheduler,
@@ -359,8 +361,27 @@ class ZImageGenerationMixin:
                 if self.do_interrupt_image_generation:
                     raise InterruptedException()
 
-                # Run pipeline
-                pipeline_output = self._pipe(**data)
+                # Run pipeline - catch OOM here directly
+                try:
+                    pipeline_output = self._pipe(**data)
+                except (torch.cuda.OutOfMemoryError, RuntimeError) as exc:
+                    error_str = str(exc).lower()
+                    if "out of memory" in error_str or isinstance(
+                        exc, torch.cuda.OutOfMemoryError
+                    ):
+                        logger = getattr(self, "logger", None)
+                        if logger is not None:
+                            logger.error(
+                                "Z-Image OOM during pipeline inference"
+                            )
+                        # Clear GPU memory
+                        gc.collect()
+                        if torch.cuda.is_available():
+                            torch.cuda.empty_cache()
+                        # Yield empty result — the callback in _generate
+                        # will handle the error message via the existing
+                        # exception handlers.
+                        raise
 
                 # Convert pipeline output to dict format expected by base class
                 results = {"images": pipeline_output.images}

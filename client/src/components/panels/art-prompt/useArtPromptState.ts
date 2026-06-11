@@ -131,6 +131,7 @@ export function useArtPromptState() {
   });
 
   const [phase, setPhase] = useState<Phase>("idle");
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   let canvasCtx: ReturnType<typeof useCanvasContext> | null = null;
@@ -150,7 +151,10 @@ export function useArtPromptState() {
   useEffect(() => {
     if (phase === "completed" || phase === "cancelled" || phase === "failed") {
       if (hideTimer.current) clearTimeout(hideTimer.current);
-      hideTimer.current = setTimeout(() => setPhase("idle"), 4000);
+      hideTimer.current = setTimeout(() => {
+        setPhase("idle");
+        setErrorMessage(null);
+      }, 4000);
     }
     return () => { if (hideTimer.current) clearTimeout(hideTimer.current); };
   }, [phase]);
@@ -433,6 +437,7 @@ export function useArtPromptState() {
   const onGenerate = useCallback(async () => {
     if (!prompt.trim()) return;
     setPhase("loading");
+    setErrorMessage(null);
     // If random seed is enabled, generate a fresh seed right before
     // the request so each submission gets a new random value.
     // Update state + localStorage so the UI reflects the used seed.
@@ -471,6 +476,9 @@ export function useArtPromptState() {
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       setPhase(msg === "Cancelled" ? "cancelled" : "failed");
+      if (msg !== "Cancelled") {
+        setErrorMessage(msg);
+      }
     }
   }, [prompt, negativePrompt, genWidth, genHeight, canvasCtx, artGenerate, seed, seedRandomized]);
 
@@ -560,6 +568,8 @@ export function useArtPromptState() {
     cfgScale, setCfgScale,
     seed, seedRandomized,
     phase,
+    errorMessage,
+    setErrorMessage,
     generating, progress,
     isMultiPrompt,
     persist, persistGen,

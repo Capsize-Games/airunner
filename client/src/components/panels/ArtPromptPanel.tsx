@@ -1,4 +1,5 @@
 import { Fragment, useState, useEffect } from "react";
+import { Alert } from "react-bootstrap";
 import { PromptTextareas } from "./art-prompt/PromptTextareas";
 import { PromptControls } from "./art-prompt/PromptControls";
 import { useArtPromptState } from "./art-prompt/useArtPromptState";
@@ -168,6 +169,29 @@ export default function ArtPromptPanel({
                 toggleGenType={o.toggleGenType}
                 closeGenType={o.closeGenType}
               />
+            )}
+
+            {s.errorMessage && (
+              <div
+                style={{
+                  padding: "0 6px 4px",
+                  flexShrink: 0,
+                }}
+              >
+                <Alert
+                  variant="danger"
+                  dismissible
+                  style={{
+                    margin: 0,
+                    padding: "4px 8px",
+                    fontSize: "0.75rem",
+                    lineHeight: 1.3,
+                  }}
+                  onClose={() => s.setErrorMessage(null)}
+                >
+                  {s.errorMessage}
+                </Alert>
+              </div>
             )}
 
             <div
