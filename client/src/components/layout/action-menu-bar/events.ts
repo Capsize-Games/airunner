@@ -9,6 +9,7 @@ export type ActionMenuEvent =
   | { type: "edit:copy" }
   | { type: "edit:paste" }
   | { type: "edit:delete" }
+  | { type: "edit:preferences" }
   | { type: "select:all" }
   | { type: "select:none" }
   | { type: "view:toggle-chat" }

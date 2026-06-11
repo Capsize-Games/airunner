@@ -192,6 +192,14 @@ export default function ActionMenuBar() {
           shortcut: "Del",
           disabled: !showCanvas,
         },
+        { type: "divider" as const },
+        {
+          type: "action" as const,
+          label: "Canvas settings",
+          action: "edit:preferences",
+          icon: "settings",
+          disabled: !showCanvas,
+        },
       ],
     },
     {

@@ -193,6 +193,9 @@ export default function CanvasPanel() {
           case "edit:redo":
             canvas.redo();
             break;
+          case "edit:preferences":
+            setShowSettings(true);
+            break;
           case "view:toggle-ruler":
             canvas.setRulerShowRuler(
               !canvas.rulerShowRuler,
@@ -310,8 +313,6 @@ export default function CanvasPanel() {
                   canvas.setActiveTool(tool);
                   setShowImagePrompt(false);
                 }}
-                onNewDocument={handleNewDocument}
-                onOpenSettings={() => setShowSettings(true)}
                 activeAssetTab={assetTab}
                 onToggleLayers={() => setAssetTab((t) => t === "layers" ? null : "layers")}
                 onToggleImages={() => setAssetTab((t) => t === "images" ? null : "images")}

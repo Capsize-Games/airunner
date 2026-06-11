@@ -1,4 +1,4 @@
-import { MessageSquareHeart, FilePlus, Settings } from "lucide-react";
+import { MessageSquareHeart } from "lucide-react";
 import {
   Move, SquareDashed, Lasso, Wand, Crop,
   PaintBucket, Pointer, Type, Pipette, Search,
@@ -26,8 +26,6 @@ const TOOLS: { id: string; label: string; Icon: React.ComponentType<{ size?: num
 interface Props {
   activeTool: ActiveTool;
   onToolChange: (tool: ActiveTool) => void;
-  onNewDocument: () => void;
-  onOpenSettings: () => void;
   activeAssetTab: "layers" | "images" | null;
   onToggleLayers: () => void;
   onToggleImages: () => void;
@@ -47,8 +45,6 @@ const btn: React.CSSProperties = {
 export default function CanvasToolPanel({
   activeTool,
   onToolChange,
-  onNewDocument,
-  onOpenSettings,
   activeAssetTab,
   onToggleLayers,
   onToggleImages,
@@ -135,18 +131,7 @@ export default function CanvasToolPanel({
         userSelect: "none", flexShrink: 0,
       }}
     >
-      {/* Row 1: header — new doc left, settings right */}
-      <div style={{
-        display: "flex", alignItems: "center", justifyContent: "space-between",
-        padding: "0 6px 4px 6px",
-        margin: "0 -6px 2px -6px",
-        borderBottom: "1px solid rgba(255,255,255,0.07)",
-      }}>
-        {iconBtn("New Document", FilePlus, onNewDocument)}
-        {iconBtn("Canvas Settings", Settings, onOpenSettings)}
-      </div>
-
-      {/* Row 2: image-prompt toggle + all canvas tools */}
+      {/* Row 1: image-prompt toggle + all canvas tools */}
       <div style={{ display: "flex", alignItems: "center", gap: 2, flexWrap: "wrap" }}>
         {toggleBtn(showImagePrompt, MessageSquareHeart, "Toggle Image Prompt", onToggleImagePrompt)}
         {TOOLS.map((t) => toolBtn(t.id, t.Icon))}

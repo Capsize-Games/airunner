@@ -143,14 +143,16 @@ export function SubMenuItemRow({
         onClose();
       }}
     >
-      {entry.icon && (
-        <LucideIcon
-          name={entry.icon}
-          size={13}
-          className="text-theme-secondary"
-        />
-      )}
-      <span>{entry.label}</span>
+      <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
+        {entry.icon && (
+          <LucideIcon
+            name={entry.icon}
+            size={13}
+            className="text-theme-secondary"
+          />
+        )}
+        <span>{entry.label}</span>
+      </span>
       {entry.shortcut && (
         <span style={shortcutStyle}>
           {entry.shortcut}
