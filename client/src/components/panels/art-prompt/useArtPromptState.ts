@@ -493,7 +493,13 @@ export function useArtPromptState() {
     if (!prompt.trim()) return;
     setSaving(true);
     try {
-      await createSavedPrompt({ prompt, secondary_prompt: secondaryPrompt, negative_prompt: negativePrompt, secondary_negative_prompt: secondaryNegativePrompt });
+      await createSavedPrompt({
+        version: version || undefined,
+        prompt,
+        secondary_prompt: secondaryPrompt,
+        negative_prompt: negativePrompt,
+        secondary_negative_prompt: secondaryNegativePrompt,
+      });
     } catch {} finally { setSaving(false); }
   };
 

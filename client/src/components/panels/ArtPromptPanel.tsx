@@ -328,6 +328,7 @@ export default function ArtPromptPanel({
       <ArtPanelPopup
         openPanel={s.openPanel === "savedPrompts" ? "savedPrompts" : null}
         anchor={s.artPanelAnchor}
+        version={s.version}
         onLoadPrompt={s.handleLoadPrompt}
         onCloseSavedPrompts={() =>
           s.togglePanel("savedPrompts")

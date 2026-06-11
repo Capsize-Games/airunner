@@ -7,11 +7,16 @@ import {
 import LucideIcon from "../../shared/LucideIcon";
 
 interface Props {
+  version: string;
   onLoad: (p: SavedPrompt) => void;
   onClose: () => void;
 }
 
-export default function SavedPromptsPanel({ onLoad, onClose }: Props) {
+export default function SavedPromptsPanel({
+  version,
+  onLoad,
+  onClose,
+}: Props) {
   const [prompts, setPrompts] = useState<SavedPrompt[]>([]);
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState<number | null>(null);
@@ -19,14 +24,14 @@ export default function SavedPromptsPanel({ onLoad, onClose }: Props) {
   const reload = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await listSavedPrompts();
+      const data = await listSavedPrompts(version || undefined);
       setPrompts(data.prompts ?? []);
     } catch {
       setPrompts([]);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [version]);
 
   useEffect(() => { reload(); }, [reload]);
 
