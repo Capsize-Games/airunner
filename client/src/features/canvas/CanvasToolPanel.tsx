@@ -55,6 +55,23 @@ export default function CanvasToolPanel({
   showImagePrompt,
   onToggleImagePrompt,
 }: Props) {
+  const onBtnEnter = (e: React.MouseEvent<HTMLButtonElement>) => {
+    const bg = e.currentTarget.style.background;
+    // Only apply hover if not already in an active/blue state
+    if (!bg.includes("rgba(99,153,255")) {
+      e.currentTarget.style.background = "rgba(255,255,255,0.08)";
+      e.currentTarget.style.color = "rgba(255,255,255,0.85)";
+    }
+  };
+
+  const onBtnLeave = (e: React.MouseEvent<HTMLButtonElement>) => {
+    const bg = e.currentTarget.style.background;
+    if (!bg.includes("rgba(99,153,255")) {
+      e.currentTarget.style.background = "transparent";
+      e.currentTarget.style.color = "rgba(255,255,255,0.5)";
+    }
+  };
+
   const toolBtn = (id: string, Icon: React.ComponentType<{ size?: number; strokeWidth?: number }>) => {
     const isActive = !showImagePrompt && activeTool === id;
     return (
@@ -62,6 +79,8 @@ export default function CanvasToolPanel({
         key={id}
         title={TOOLS.find((t) => t.id === id)?.label ?? id}
         onClick={() => onToolChange(id as ActiveTool)}
+        onMouseEnter={onBtnEnter}
+        onMouseLeave={onBtnLeave}
         style={{
           ...btn,
           background: isActive ? "rgba(99,153,255,0.22)" : "transparent",
@@ -79,7 +98,8 @@ export default function CanvasToolPanel({
     Icon: React.ComponentType<{ size?: number; strokeWidth?: number }>,
     onClick: () => void,
   ) => (
-    <button key={title} title={title} onClick={onClick} style={btn}>
+    <button key={title} title={title} onClick={onClick} style={btn}
+      onMouseEnter={onBtnEnter} onMouseLeave={onBtnLeave}>
       <Icon size={14} strokeWidth={1.75} />
     </button>
   );
@@ -94,6 +114,8 @@ export default function CanvasToolPanel({
       key={title}
       title={title}
       onClick={onClick}
+      onMouseEnter={onBtnEnter}
+      onMouseLeave={onBtnLeave}
       style={{
         ...btn,
         background: active ? "rgba(99,153,255,0.22)" : "transparent",

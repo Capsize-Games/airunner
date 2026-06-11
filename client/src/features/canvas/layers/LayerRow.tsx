@@ -98,6 +98,17 @@ export default function LayerRow({
             flexShrink: 0, cursor: "pointer",
             color: layer.visible ? "rgba(var(--theme-text-rgb), 0.55)" : "rgba(var(--theme-text-rgb), 0.2)",
             display: "flex", alignItems: "center",
+            borderRadius: 3, transition: "background 0.1s, color 0.1s",
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = "rgba(255,255,255,0.08)";
+            e.currentTarget.style.color = "rgba(var(--theme-text-rgb), 0.85)";
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = "none";
+            e.currentTarget.style.color = layer.visible
+              ? "rgba(var(--theme-text-rgb), 0.55)"
+              : "rgba(var(--theme-text-rgb), 0.2)";
           }}
         >
           {layer.visible ? <Eye size={13} strokeWidth={1.75} /> : <EyeOff size={13} strokeWidth={1.75} />}

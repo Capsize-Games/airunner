@@ -360,6 +360,14 @@ export default function CanvasPanel() {
                   title="Reset tool presets"
                   style={resetBtnStyle}
                   onClick={() => canvas.resetToolPresets(canvas.activeTool)}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = "rgba(255,255,255,0.08)";
+                    e.currentTarget.style.color = "rgba(255,255,255,0.8)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = "transparent";
+                    e.currentTarget.style.color = "rgba(255,255,255,0.35)";
+                  }}
                 >
                   <RefreshCcw size={13} strokeWidth={1.75} />
                 </button>
@@ -367,6 +375,14 @@ export default function CanvasPanel() {
                   title="Reset all tool presets"
                   style={resetBtnStyle}
                   onClick={() => canvas.resetAllToolPresets()}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = "rgba(255,255,255,0.08)";
+                    e.currentTarget.style.color = "rgba(255,255,255,0.8)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = "transparent";
+                    e.currentTarget.style.color = "rgba(255,255,255,0.35)";
+                  }}
                 >
                   <RefreshCcwDot size={13} strokeWidth={1.75} />
                 </button>
