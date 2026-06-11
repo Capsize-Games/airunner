@@ -1,17 +1,17 @@
-import { useState } from "react";
+import { useEffect, useRef } from "react";
 import ProgressBar from "react-bootstrap/ProgressBar";
-import { BASE_URL } from "../../types/api";
 import KBRow from "./knowledge-base/KBRow";
 import LucideIcon from "../shared/LucideIcon";
 import { useEventBus } from "../../features/events/useEventBus";
 import { EVENT_DOCUMENTS, EVENT_INDEX_PROGRESS } from "../../features/events/types";
 import { useKnowledgeBaseDocs } from "../../hooks/useKnowledgeBaseDocs";
+import { useLocalStorage } from "../../hooks/useLocalStorage";
 
 export function KnowledgeBasePanel() {
   const { docs, loading, reload, toggle } = useKnowledgeBaseDocs();
-  const [indexing, setIndexing] = useState(false);
-  const [modelLoading, setModelLoading] = useState(false);
-  const [progress, setProgress] = useState(0);
+  const [indexing, setIndexing] = useLocalStorage("kb_indexing", false);
+  const [modelLoading, setModelLoading] = useLocalStorage("kb_model_loading", false);
+  const [progress, setProgress] = useLocalStorage("kb_progress", 0);
 
   const documents = docs.map((d) => ({
     id: d.id,
@@ -19,6 +19,21 @@ export function KnowledgeBasePanel() {
     active: d.active,
     indexed: d.indexed,
   }));
+
+  // Recover state when panel remounts mid-indexing (e.g. panel was
+  // closed and reopened, or browser was reloaded).  If the document
+  // list has loaded and every document is already indexed, indexing
+  // completed while the panel was unmounted — clear the progress.
+  const recoveredRef = useRef(false);
+  useEffect(() => {
+    if (!indexing || loading || recoveredRef.current) return;
+    recoveredRef.current = true;
+    setModelLoading(false);
+    if (documents.length > 0 && documents.every((d) => d.indexed)) {
+      setIndexing(false);
+      setProgress(0);
+    }
+  }, [indexing, loading, documents, setIndexing, setModelLoading, setProgress]);
 
   useEventBus([EVENT_DOCUMENTS], (_event, data) => {
     const payload = data as { type?: string };
@@ -80,9 +95,8 @@ export function KnowledgeBasePanel() {
     setProgress(0);
     await new Promise((r) => setTimeout(r, 0));
     try {
-      await fetch(`${BASE_URL}/api/v1/knowledge-base/documents/index-all`, {
-        method: "POST",
-      });
+      const { indexAllDocuments } = await import("../../api/client");
+      await indexAllDocuments();
     } catch {
       setIndexing(false);
       setModelLoading(false);
@@ -93,10 +107,8 @@ export function KnowledgeBasePanel() {
     setIndexing(false);
     setProgress(0);
     try {
-      await fetch(
-        `${BASE_URL}/api/v1/knowledge-base/documents/index-cancel`,
-        { method: "POST" },
-      );
+      const { cancelIndexing } = await import("../../api/client");
+      await cancelIndexing();
     } catch { /* */ }
   };
 

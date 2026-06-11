@@ -17,6 +17,8 @@ import { coreState } from "./state/coreState";
 import { layers as layersHook } from "./state/layers";
 import { groups as groupsHook } from "./state/groups";
 import { selection as selectionHook } from "./state/selection";
+import { selectionMask as selectionMaskHook } from "./state/selectionMask";
+import { presets as presetsHook } from "./state/presets";
 import { images as imagesHook } from "./state/images";
 import { strokes as strokesHook } from "./state/strokes";
 import { masks as masksHook } from "./state/masks";
@@ -42,6 +44,8 @@ export function useCanvasState() {
   const layerAPI = layersHook(setters);
   const groupAPI = groupsHook(setters);
   const selectionAPI = selectionHook(setters);
+  const selectionMaskAPI = selectionMaskHook(setters);
+  const presetsAPI = presetsHook(setters);
   const imageAPI = imagesHook(setters);
   const strokeAPI = strokesHook(setters);
   const maskAPI = masksHook(setters);
@@ -75,6 +79,8 @@ export function useCanvasState() {
     ...layerAPI,
     ...groupAPI,
     ...selectionAPI,
+    ...selectionMaskAPI,
+    ...presetsAPI,
     ...imageAPI,
     ...strokeAPI,
     ...maskAPI,

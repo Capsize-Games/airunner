@@ -8,7 +8,7 @@ export function layers(
   { setState, recordSnapshot }: CanvasSetters,
 ) {
   const addLayer = useCallback(
-    (name?: string, opacity?: number) => {
+    (name?: string, opacity?: number, fillColor?: string) => {
       setState((prev) => {
         const newLayer: CanvasLayer = {
           id: nextLayerId(),
@@ -21,7 +21,7 @@ export function layers(
           offsetX: 0,
           offsetY: 0,
           parentGroupId: null,
-          fillColor: undefined,
+          fillColor,
         };
         return recordSnapshot({
           ...prev,
@@ -147,6 +147,20 @@ export function layers(
     [setState, recordSnapshot],
   );
 
+  const setLayerFillColor = useCallback(
+    (id: string, fillColor: string) => {
+      setState((prev) =>
+        recordSnapshot({
+          ...prev,
+          layers: prev.layers.map((l) =>
+            l.id === id ? { ...l, fillColor } : l,
+          ),
+        }),
+      );
+    },
+    [setState, recordSnapshot],
+  );
+
   return {
     addLayer,
     deleteLayer,
@@ -154,5 +168,6 @@ export function layers(
     setLayerVisible,
     setLayerOpacity,
     reorderLayer,
+    setLayerFillColor,
   };
 }

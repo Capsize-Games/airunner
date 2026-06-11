@@ -8,6 +8,8 @@ interface CanvasBackgroundProps {
   documentWidth: number;
   documentHeight: number;
   documentBgColor: string;
+  /** When true, forces a transparent checkerboard regardless of documentBgColor. */
+  hasLayers: boolean;
 }
 
 /**
@@ -19,6 +21,7 @@ export default function CanvasBackground({
   documentWidth,
   documentHeight,
   documentBgColor,
+  hasLayers,
 }: CanvasBackgroundProps) {
   const checkerSceneFunc = useCallback(
     (ctx: Konva.Context) => {
@@ -43,11 +46,11 @@ export default function CanvasBackground({
     [documentWidth, documentHeight],
   );
 
-  const isTransparentBg = documentBgColor === "transparent";
+  const showCheckerboard = !hasLayers || documentBgColor === "transparent";
 
   return (
     <Layer listening={false}>
-      {isTransparentBg ? (
+      {showCheckerboard ? (
         <Shape sceneFunc={checkerSceneFunc} />
       ) : (
         <Rect

@@ -11,6 +11,7 @@ import { useState, useCallback, useEffect } from "react";
 import Konva from "konva";
 
 import { floodFillMask, thresholdToDistance } from "../shared/floodFill";
+import type { CanvasLayer } from "../../../canvasTypes";
 
 // ── Public types ──────────────────────────────────────────────────────────
 
@@ -163,6 +164,8 @@ export function useBucketTool({
   settingsRef,
   foregroundColor,
   backgroundColor,
+  layers,
+  updateImageSrc,
 }: {
   isActive: boolean;
   getCanvasPos: () => { x: number; y: number } | null;
@@ -170,6 +173,8 @@ export function useBucketTool({
   settingsRef: { current: BucketSettings };
   foregroundColor: string;
   backgroundColor: string;
+  layers: CanvasLayer[];
+  updateImageSrc: (layerId: string, imageId: string, src: string) => void;
 }): UseBucketToolReturn {
   // The bucket tool has no persistent visual overlay
   const [renderState] = useState<BucketRenderState>({});
@@ -296,9 +301,18 @@ export function useBucketTool({
       if (!writeCtx) return true;
       writeCtx.putImageData(imageData, 0, 0);
 
-      // Update the Konva.Image's image source
+      // Update the Konva.Image's image source for immediate feedback…
       targetImage.image(writeCanvas);
       targetImage.getLayer()?.batchDraw();
+
+      // …and persist it to the layer model so the fill survives a reload.
+      const imageId = targetImage.id();
+      const owner = layers.find((l) =>
+        l.images.some((im) => im.id === imageId),
+      );
+      if (owner) {
+        updateImageSrc(owner.id, imageId, writeCanvas.toDataURL("image/png"));
+      }
 
       return true;
     },
@@ -309,6 +323,8 @@ export function useBucketTool({
       settingsRef,
       foregroundColor,
       backgroundColor,
+      layers,
+      updateImageSrc,
     ],
   );
 

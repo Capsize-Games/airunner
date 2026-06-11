@@ -209,8 +209,9 @@ export function moveTool({
       const pos = stage.getPointerPosition();
       if (!pos) return;
 
-      const dx = pos.x - dragStart.current.x;
-      const dy = pos.y - dragStart.current.y;
+      const scale = stage.scaleX();
+      const dx = (pos.x - dragStart.current.x) / scale;
+      const dy = (pos.y - dragStart.current.y) / scale;
 
       const groups = findDragGroups(targetLayerIds.current);
       for (const [id, group] of groups) {

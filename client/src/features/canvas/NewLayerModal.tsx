@@ -107,6 +107,15 @@ export default function NewLayerModal({
                   fontSize: 11,
                   cursor: "pointer",
                   minWidth: 80,
+                  transition: "border-color 0.1s, opacity 0.1s",
+                }}
+                onMouseEnter={(e) => {
+                  if (fillColor !== p.value)
+                    e.currentTarget.style.borderColor = "rgba(99,153,255,0.5)";
+                }}
+                onMouseLeave={(e) => {
+                  if (fillColor !== p.value)
+                    e.currentTarget.style.borderColor = "var(--theme-border)";
                 }}
               >
                 {p.label}

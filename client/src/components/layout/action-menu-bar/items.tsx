@@ -21,6 +21,7 @@ export interface MenuAction {
   action: ActionMenuEvent["type"];
   icon?: string;
   shortcut?: string;
+  disabled?: boolean;
 }
 
 export interface MenuCheckbox {
@@ -29,6 +30,7 @@ export interface MenuCheckbox {
   action: ActionMenuEvent["type"];
   checked: boolean;
   onToggle: () => void;
+  disabled?: boolean;
 }
 
 export interface MenuSubmenu {
@@ -75,23 +77,34 @@ export function SubMenuItemRow({
     return <div style={dividerStyle} />;
   }
 
+  const isDisabled =
+    "disabled" in entry ? entry.disabled : false;
+
   if (entry.type === "checkbox") {
     return (
       <button
-        style={checkboxItemStyle}
+        disabled={isDisabled}
+        style={{
+          ...checkboxItemStyle,
+          opacity: isDisabled ? 0.4 : 1,
+          cursor: isDisabled ? "default" : "pointer",
+        }}
         onMouseEnter={(
           e: MouseEvent<HTMLButtonElement>,
         ) => {
+          if (isDisabled) return;
           e.currentTarget.style.background =
             "rgba(99,153,255,0.12)";
         }}
         onMouseLeave={(
           e: MouseEvent<HTMLButtonElement>,
         ) => {
+          if (isDisabled) return;
           e.currentTarget.style.background =
             "transparent";
         }}
         onClick={() => {
+          if (isDisabled) return;
           entry.onToggle();
           onClose();
         }}
@@ -104,32 +117,42 @@ export function SubMenuItemRow({
 
   return (
     <button
-      style={menuItemStyle}
+      disabled={isDisabled}
+      style={{
+        ...menuItemStyle,
+        opacity: isDisabled ? 0.4 : 1,
+        cursor: isDisabled ? "default" : "pointer",
+      }}
       onMouseEnter={(
         e: MouseEvent<HTMLButtonElement>,
       ) => {
+        if (isDisabled) return;
         e.currentTarget.style.background =
           "rgba(99,153,255,0.12)";
       }}
       onMouseLeave={(
         e: MouseEvent<HTMLButtonElement>,
       ) => {
+        if (isDisabled) return;
         e.currentTarget.style.background =
           "transparent";
       }}
       onClick={() => {
+        if (isDisabled) return;
         dispatchMenuAction({ type: entry.action });
         onClose();
       }}
     >
-      {entry.icon && (
-        <LucideIcon
-          name={entry.icon}
-          size={13}
-          className="text-theme-secondary"
-        />
-      )}
-      <span>{entry.label}</span>
+      <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
+        {entry.icon && (
+          <LucideIcon
+            name={entry.icon}
+            size={13}
+            className="text-theme-secondary"
+          />
+        )}
+        <span>{entry.label}</span>
+      </span>
       {entry.shortcut && (
         <span style={shortcutStyle}>
           {entry.shortcut}

@@ -108,22 +108,33 @@ export default function CanvasAssetsSidebar({
 
         {/* Tab bar */}
         <div className="d-flex flex-shrink-0 border-b-subtle" style={{ background: "#161620" }}>
-          {TABS.map((t) => (
-            <button
-              key={t.id}
-              type="button"
-              onClick={() => setTab(t.id)}
-              style={{
-                ...tabBtnBase,
-                background: tab === t.id ? "var(--theme-panel-bg)" : "transparent",
-                borderBottom: tab === t.id ? "2px solid var(--bs-primary)" : "2px solid transparent",
-                color: tab === t.id ? "var(--bs-primary)" : "rgba(255,255,255,0.45)",
-              }}
-            >
-              <LucideIcon name={t.icon} size={12} />
-              {t.label}
-            </button>
-          ))}
+          {TABS.map((t) => {
+            const isActive = tab === t.id;
+            return (
+              <button
+                key={t.id}
+                type="button"
+                onClick={() => setTab(t.id)}
+                style={{
+                  ...tabBtnBase,
+                  background: isActive ? "var(--theme-panel-bg)" : "transparent",
+                  borderBottom: isActive ? "2px solid var(--bs-primary)" : "2px solid transparent",
+                  color: isActive ? "var(--bs-primary)" : "rgba(255,255,255,0.45)",
+                }}
+                onMouseEnter={(e) => {
+                  if (!isActive)
+                    e.currentTarget.style.background = "rgba(255,255,255,0.05)";
+                }}
+                onMouseLeave={(e) => {
+                  if (!isActive)
+                    e.currentTarget.style.background = "transparent";
+                }}
+              >
+                <LucideIcon name={t.icon} size={12} />
+                {t.label}
+              </button>
+            );
+          })}
         </div>
 
         <div className="flex-grow-1 overflow-hidden d-flex flex-column min-h-0">

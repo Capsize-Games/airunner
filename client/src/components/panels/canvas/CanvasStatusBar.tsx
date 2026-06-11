@@ -12,12 +12,29 @@ const btnStyle: React.CSSProperties = {
   height: 20,
   borderRadius: 3,
   flexShrink: 0,
+  transition: "background 0.1s, color 0.1s",
 };
 
 const btnActiveStyle: React.CSSProperties = {
   ...btnStyle,
   color: "var(--bs-primary)",
 };
+
+function onFooterBtnEnter(e: React.MouseEvent<HTMLButtonElement>) {
+  const bg = e.currentTarget.style.background;
+  if (!bg.includes("bs-primary") && !bg.includes("rgba(99,153,255")) {
+    e.currentTarget.style.background = "rgba(255,255,255,0.08)";
+    e.currentTarget.style.color = "rgba(255,255,255,0.85)";
+  }
+}
+
+function onFooterBtnLeave(e: React.MouseEvent<HTMLButtonElement>) {
+  const bg = e.currentTarget.style.background;
+  if (!bg.includes("bs-primary") && !bg.includes("rgba(99,153,255")) {
+    e.currentTarget.style.background = "none";
+    e.currentTarget.style.color = "rgba(255,255,255,0.4)";
+  }
+}
 
 export interface CanvasStatusBarProps {
   documentWidth: number;
@@ -74,7 +91,8 @@ export default function CanvasStatusBar({
 
       {/* Zoom controls */}
       <div className="d-flex align-items-center" style={{ gap: 1 }}>
-        <button style={btnStyle} title="Zoom out" onClick={onZoomOut}>
+        <button style={btnStyle} title="Zoom out" onClick={onZoomOut}
+          onMouseEnter={onFooterBtnEnter} onMouseLeave={onFooterBtnLeave}>
           <ZoomOut size={13} strokeWidth={1.75} />
         </button>
         <button
@@ -90,19 +108,33 @@ export default function CanvasStatusBar({
             cursor: "pointer",
             flexShrink: 0,
             whiteSpace: "nowrap",
+            transition: "background 0.1s, border-color 0.1s, color 0.1s",
           }}
           title="Reset zoom to 100%"
           onClick={onZoomReset}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = "rgba(255,255,255,0.08)";
+            e.currentTarget.style.borderColor = "rgba(255,255,255,0.3)";
+            e.currentTarget.style.color = "rgba(255,255,255,0.9)";
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = "transparent";
+            e.currentTarget.style.borderColor = "rgba(255,255,255,0.1)";
+            e.currentTarget.style.color = "rgba(255,255,255,0.5)";
+          }}
         >
           {zoomPct}
         </button>
-        <button style={btnStyle} title="Zoom in" onClick={onZoomIn}>
+        <button style={btnStyle} title="Zoom in" onClick={onZoomIn}
+          onMouseEnter={onFooterBtnEnter} onMouseLeave={onFooterBtnLeave}>
           <ZoomIn size={13} strokeWidth={1.75} />
         </button>
         <button
           style={isCenterView ? btnActiveStyle : btnStyle}
           title={isCenterView ? "Center view (active)" : "Center view"}
           onClick={onCenterView}
+          onMouseEnter={onFooterBtnEnter}
+          onMouseLeave={onFooterBtnLeave}
         >
           <Crosshair size={13} strokeWidth={1.75} />
         </button>
@@ -110,6 +142,8 @@ export default function CanvasStatusBar({
           style={isFitToView ? btnActiveStyle : btnStyle}
           title={isFitToView ? "Fit to view (active)" : "Fit to view"}
           onClick={onFitView}
+          onMouseEnter={onFooterBtnEnter}
+          onMouseLeave={onFooterBtnLeave}
         >
           <Expand size={13} strokeWidth={1.75} />
         </button>

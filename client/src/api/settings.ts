@@ -86,6 +86,18 @@ export async function toggleDocumentActive(docId: number) {
   );
 }
 
+export async function indexAllDocuments() {
+  return request<{ status: string }>(
+    "POST", "/api/v1/knowledge-base/documents/index-all",
+  );
+}
+
+export async function cancelIndexing() {
+  return request<{ status: string }>(
+    "POST", "/api/v1/knowledge-base/documents/index-cancel",
+  );
+}
+
 // ── Privacy ──
 export async function getPrivacySettings() {
   return request<{ services: Record<string, boolean> }>(

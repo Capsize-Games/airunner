@@ -29,7 +29,6 @@ class RAGPropertiesMixin:
                     "model_type": "embedding",
                     "model_id": "intfloat/e5-large",
                     "status": status,
-                    "path": "",
                 },
             )
 

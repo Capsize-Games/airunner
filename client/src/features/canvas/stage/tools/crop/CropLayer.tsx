@@ -15,8 +15,10 @@ import type { CropRenderState } from "./useCropTool";
 // ── Props ─────────────────────────────────────────────────────────────────
 
 interface Props extends CropRenderState {
-  stageWidth: number;
-  stageHeight: number;
+  /** Document (canvas) dimensions in canvas-space — the overlay is clipped
+      to these so it never spills outside the canvas. */
+  documentWidth: number;
+  documentHeight: number;
   onCropRectChange: (
     x: number, y: number,
     width: number, height: number,
@@ -28,7 +30,7 @@ interface Props extends CropRenderState {
 export default function CropLayer({
   cropX, cropY, cropWidth, cropHeight,
   isAdjusting,
-  stageWidth, stageHeight,
+  documentWidth, documentHeight,
   onCropRectChange,
 }: Props) {
   const transformerRef = useRef<Konva.Transformer | null>(null);
@@ -84,9 +86,12 @@ export default function CropLayer({
   const overlaySceneFunc = useCallback(
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     (ctx: Konva.Context, shape: Konva.Shape) => {
-      const w = stageWidth;
-      const h = stageHeight;
-      // Draw the full dark overlay
+      // Coordinates here are canvas-space (the Stage transform handles
+      // zoom/pan), so the overlay must span the document — not the stage
+      // pixel size — to stay clipped to the canvas.
+      const w = documentWidth;
+      const h = documentHeight;
+      // Draw the dark overlay across the whole document
       ctx.beginPath();
       ctx.fillStyle = "rgba(0, 0, 0, 0.5)";
       ctx.fillRect(0, 0, w, h);
@@ -103,28 +108,29 @@ export default function CropLayer({
       // Reset composite operation
       ctx.globalCompositeOperation = "source-over";
     },
-    [stageWidth, stageHeight, cropX, cropY, cropWidth, cropHeight],
+    [documentWidth, documentHeight, cropX, cropY, cropWidth, cropHeight],
   );
 
-  // Nothing to show if crop rect is zero-sized
-  const nothingVisible = cropWidth < 1 || cropHeight < 1;
+  // A crop rectangle only exists once the user has drawn one (non-zero size).
+  const hasCrop = cropWidth >= 1 && cropHeight >= 1;
 
   return (
     <Layer listening={false}>
-      {/* Dark overlay with crop cutout */}
-      {!nothingVisible && (
+      {/* Dark overlay with crop cutout — only shown once the user has actually
+          drawn a crop rectangle. */}
+      {hasCrop && (
         <Shape
           x={0}
           y={0}
-          width={stageWidth}
-          height={stageHeight}
+          width={documentWidth}
+          height={documentHeight}
           sceneFunc={overlaySceneFunc}
           listening={false}
         />
       )}
 
       {/* Interactive crop layer (handles Transformer drag/resize) */}
-      {!nothingVisible && isAdjusting && (
+      {hasCrop && isAdjusting && (
         <Layer listening={true}>
           <Rect
             ref={cropRectRef}
@@ -168,7 +174,7 @@ export default function CropLayer({
       )}
 
       {/* When still drawing, show a dashed outline without handles */}
-      {!nothingVisible && !isAdjusting && (
+      {hasCrop && !isAdjusting && (
         <Rect
           x={cropX}
           y={cropY}

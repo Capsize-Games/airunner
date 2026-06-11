@@ -38,6 +38,7 @@ SignalCode = signal_code_proxy(
         "RAG_INDEXING_PROGRESS": "rag_indexing_progress_signal",
         "RAG_INDEXING_COMPLETE": "rag_indexing_complete_signal",
         "RAG_INDEX_CANCEL": "rag_index_cancel_signal",
+        "RAG_LOAD_EMBEDDING": "rag_load_embedding_signal",
     }
 )
 
@@ -59,12 +60,8 @@ class LLMGenerateWorker(
             SignalCode.LLM_CLEAR_HISTORY_SIGNAL: (
                 self.on_llm_clear_history_signal
             ),
-            SignalCode.LLM_UNLOAD_SIGNAL: (
-                self.on_llm_on_unload_signal
-            ),
-            SignalCode.LLM_LOAD_SIGNAL: (
-                self.on_llm_load_model_signal
-            ),
+            SignalCode.LLM_UNLOAD_SIGNAL: (self.on_llm_on_unload_signal),
+            SignalCode.LLM_LOAD_SIGNAL: (self.on_llm_load_model_signal),
             SignalCode.RAG_INDEX_ALL_DOCUMENTS: (
                 self.on_rag_index_all_documents_signal
             ),
@@ -78,6 +75,7 @@ class LLMGenerateWorker(
                 self.on_rag_indexing_complete_signal
             ),
             SignalCode.RAG_INDEX_CANCEL: (self.on_rag_index_cancel_signal),
+            SignalCode.RAG_LOAD_EMBEDDING: (self.on_rag_load_embedding_signal),
         }
         self._model_manager: Optional[LLMModelManager] = None
         self._model_manager_lock = threading.Lock()
@@ -138,23 +136,35 @@ class LLMGenerateWorker(
             if self._model_manager is None:
                 self._model_manager = LLMModelManager()
 
-                db_api_key = getattr(self.llm_generator_settings, "api_key", None) or None
-                db_api_base_url = getattr(self.llm_generator_settings, "api_base_url", None) or None
+                db_api_key = (
+                    getattr(self.llm_generator_settings, "api_key", None)
+                    or None
+                )
+                db_api_base_url = (
+                    getattr(self.llm_generator_settings, "api_base_url", None)
+                    or None
+                )
                 if self.use_openrouter:
                     self._model_manager.llm_settings.use_local_llm = False
                     self._model_manager.llm_settings.use_openrouter = True
                     if db_api_key:
-                        self._model_manager.llm_settings.openrouter_api_key = db_api_key
+                        self._model_manager.llm_settings.openrouter_api_key = (
+                            db_api_key
+                        )
                 elif self.use_ollama:
                     self._model_manager.llm_settings.use_local_llm = False
                     self._model_manager.llm_settings.use_ollama = True
                     if db_api_base_url:
-                        self._model_manager.llm_settings.ollama_base_url = db_api_base_url
+                        self._model_manager.llm_settings.ollama_base_url = (
+                            db_api_base_url
+                        )
                 elif self.use_openai:
                     self._model_manager.llm_settings.use_local_llm = False
                     self._model_manager.llm_settings.use_openai = True
                     if db_api_key:
-                        self._model_manager.llm_settings.openai_api_key = db_api_key
+                        self._model_manager.llm_settings.openai_api_key = (
+                            db_api_key
+                        )
                 else:
                     self._model_manager.llm_settings.use_local_llm = True
 

@@ -61,7 +61,7 @@ export default function ChatToolbar({
             "transparent";
         }}
       >
-        <LucideIcon name="plus" size={15} />
+        <LucideIcon name="message-circle-plus" size={15} />
       </button>
 
       <span

@@ -82,10 +82,11 @@ export function drawingOverlay({
   const brushIndicatorLayerRef =
     useRef<Konva.Layer | null>(null);
 
+  const hasLayers = layers.length > 0;
   const isDrawingTool =
     activeTool === "brush" || activeTool === "eraser";
   const showBrushIndicator =
-    isDrawingTool || activeTool === "mask";
+    hasLayers && (isDrawingTool || activeTool === "mask");
   // Radius in document units. The brush indicator renders inside a
   // zoom-scaled layer, which applies the zoom for us — multiplying by zoom
   // here too would scale the cursor quadratically.

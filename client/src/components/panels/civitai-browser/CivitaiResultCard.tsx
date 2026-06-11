@@ -38,6 +38,15 @@ export default function CivitaiResultCard({
           : "transparent",
         borderRadius: 4,
         borderLeft: selected ? "2px solid var(--bs-primary)" : "2px solid transparent",
+        transition: "background 0.1s",
+      }}
+      onMouseEnter={(e) => {
+        if (!selected)
+          (e.currentTarget as HTMLDivElement).style.background = "rgba(255,255,255,0.04)";
+      }}
+      onMouseLeave={(e) => {
+        if (!selected)
+          (e.currentTarget as HTMLDivElement).style.background = "transparent";
       }}
     >
       <div style={{ flexShrink: 0, width: 40, height: 40 }}>

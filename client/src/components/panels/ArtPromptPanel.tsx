@@ -1,32 +1,49 @@
-import { Fragment } from "react";
-import { createPortal } from "react-dom";
-import { saveToStorage } from "./art-model/ArtModelStorage";
-import SavedPromptsPanel from "./art-prompt/SavedPromptsModal";
-import LucideIcon from "../shared/LucideIcon";
+import { Fragment, useState, useEffect } from "react";
 import { PromptTextareas } from "./art-prompt/PromptTextareas";
-import { PromptToolbar } from "./art-prompt/PromptToolbar";
-import { ModelRows } from "./art-prompt/ModelRows";
 import { PromptControls } from "./art-prompt/PromptControls";
-import { ToolbarIconBtn } from "./art-prompt/ArtShared";
-import { SettingsPopup } from "./art-prompt/SettingsPopup";
-import LoraPanel from "./LoraPanel";
-import EmbeddingsPanel from "./EmbeddingsPanel";
 import { useArtPromptState } from "./art-prompt/useArtPromptState";
+import { useArtOverlays } from "./art-prompt/useArtOverlays";
+import GenerationInfoPanel from "./art-prompt/GenerationInfoPanel";
+import ToolbarRow from "./art-prompt/ToolbarRow";
+import InfoDropdownPopup from "./art-prompt/InfoDropdownPopup";
+import ArtPanelPopup from "./art-prompt/ArtPanelPopup";
 
 // side-effect: injects CSS for sliders / number spinners
 import "./art-prompt/ArtShared";
 
-export default function ArtPromptPanel({ visible = true }: { visible?: boolean }) {
+export default function ArtPromptPanel({
+  visible = true,
+}: {
+  visible?: boolean;
+}) {
   const s = useArtPromptState();
+  const o = useArtOverlays();
+
+  const [showInfo, setShowInfo] = useState(() => {
+    try {
+      return (
+        localStorage.getItem("airunner_show_gen_info") !== "false"
+      );
+    } catch {
+      return true;
+    }
+  });
+  useEffect(() => {
+    try {
+      localStorage.setItem("airunner_show_gen_info", String(showInfo));
+    } catch {}
+  }, [showInfo]);
 
   if (!visible) return null;
 
   return (
     <Fragment>
       <div className="flex-grow-1 d-flex flex-column overflow-hidden w-100">
-
         <div className="d-flex flex-column flex-grow-1 overflow-hidden">
-          <div className="flex-grow-1 d-flex flex-column bg-theme-input overflow-hidden min-h-0" style={{ border: "none", borderRadius: 0 }}>
+          <div
+            className="flex-grow-1 d-flex flex-column bg-theme-input overflow-hidden min-h-0"
+            style={{ border: "none", borderRadius: 0 }}
+          >
             <PromptTextareas
               prompt={s.prompt}
               secondaryPrompt={s.secondaryPrompt}
@@ -34,105 +51,161 @@ export default function ArtPromptPanel({ visible = true }: { visible?: boolean }
               secondaryNegativePrompt={s.secondaryNegativePrompt}
               isMultiPrompt={s.isMultiPrompt}
               generating={s.generating}
-              onPromptChange={(v) => { s.setPrompt(v); s.persist({ prompt: v }); }}
-              onSecondaryPromptChange={(v) => { s.setSecondaryPrompt(v); s.persist({ secondary_prompt: v }); }}
-              onNegativePromptChange={(v) => { s.setNegativePrompt(v); s.persist({ negative_prompt: v }); }}
-              onSecondaryNegativePromptChange={(v) => { s.setSecondaryNegativePrompt(v); s.persist({ secondary_negative_prompt: v }); }}
+              onPromptChange={(v) => {
+                s.setPrompt(v);
+                s.persist({ prompt: v });
+              }}
+              onSecondaryPromptChange={(v) => {
+                s.setSecondaryPrompt(v);
+                s.persist({ secondary_prompt: v });
+              }}
+              onNegativePromptChange={(v) => {
+                s.setNegativePrompt(v);
+                s.persist({ negative_prompt: v });
+              }}
+              onSecondaryNegativePromptChange={(v) => {
+                s.setSecondaryNegativePrompt(v);
+                s.persist({ secondary_negative_prompt: v });
+              }}
             />
 
-            <div style={{
-              display: "flex", alignItems: "center", gap: 4,
-              padding: "2px 6px",
-              borderTop: "1px solid rgba(255,255,255,0.08)",
-              flexShrink: 0,
-            }}>
-              <div ref={s.settingsBtnRef}>
-                <ToolbarIconBtn
-                  title="Generation settings"
-                  onClick={() => s.togglePopup("settings")}
-                  active={s.openPopup === "settings"}
-                >
-                  <LucideIcon name="settings-2" size={14} />
-                </ToolbarIconBtn>
-              </div>
-              {s.openPopup === "settings" && s.settingsAnchor && createPortal(
-                <div id="art-settings-popup" className="bg-theme-panel overflow-y-auto" style={{
-                  position: "fixed",
-                  left: s.settingsAnchor.left,
-                  bottom: s.settingsAnchor.bottom,
-                  border: "1px solid rgba(255,255,255,0.14)",
-                  borderRadius: 6,
-                  zIndex: 1300,
-                  boxShadow: "0 4px 20px rgba(0,0,0,0.5)",
-                  maxHeight: 400,
-                  minWidth: 260,
-                }}>
-                  <SettingsPopup
-                    steps={s.steps}
-                    cfgScale={s.cfgScale}
-                    nSamples={s.nSamples}
-                    imagesPerBatch={s.imagesPerBatch}
-                    onStepsChange={(v) => { s.setSteps(v); saveToStorage("steps", v); s.persistGen({ steps: v }); }}
-                    onCfgScaleChange={(v) => { s.setCfgScale(v); saveToStorage("cfg_scale", v); s.persistGen({ cfg_scale: v }); }}
-                    onNSamplesChange={(v) => { s.setNSamples(v); saveToStorage("n_samples", v); s.persistGen({ n_samples: v }); }}
-                    onImagesPerBatchChange={(v) => { s.setImagesPerBatch(v); saveToStorage("images_per_batch", v); s.persistGen({ images_per_batch: v }); }}
-                  />
-                </div>,
-                document.body
-              )}
-
-              <span className="flex-grow-1" />
-
-              <ToolbarIconBtn
-                title={`LoRA${s.activeLoras.length > 0 ? ` (${s.activeLoras.length})` : ""}`}
-                onClick={() => s.togglePanel("lora")}
-                active={s.openPanel === "lora"}
-                badge={s.activeLoras.length > 0 ? s.activeLoras.length : undefined}
-              >
-                <LucideIcon name="puzzle" size={14} />
-              </ToolbarIconBtn>
-              <ToolbarIconBtn
-                title={`Embeddings${s.activeEmbeddings.length > 0 ? ` (${s.activeEmbeddings.length})` : ""}`}
-                onClick={() => s.togglePanel("embeddings")}
-                active={s.openPanel === "embeddings"}
-                badge={s.activeEmbeddings.length > 0 ? s.activeEmbeddings.length : undefined}
-              >
-                <LucideIcon name="scan-text" size={14} />
-              </ToolbarIconBtn>
-            </div>
-
-            <ModelRows
+            <GenerationInfoPanel
+              showInfo={showInfo}
+              onToggleShowInfo={() => setShowInfo((v) => !v)}
               version={s.version}
               modelPath={s.modelPath}
               scheduler={s.scheduler}
-              schedulerOptions={s.availableSchedulers}
-              loading={s.toolbarLoading}
+              steps={s.steps}
+              cfgScale={s.cfgScale}
+              nSamples={s.nSamples}
+              imagesPerBatch={s.imagesPerBatch}
+              generationType={s.generationType}
+              seed={s.seed}
+              seedRandomized={s.seedRandomized}
+              genWidth={s.genWidth}
+              genHeight={s.genHeight}
+              activeLoras={s.activeLoras}
+              activeEmbeddings={s.activeEmbeddings}
+              isMultiPrompt={s.isMultiPrompt}
               artOptions={s.artOptions}
               onVersionChange={s.handleVersion}
               onModelChange={s.handleModel}
               onSchedulerChange={s.handleScheduler}
+              onStepsChange={s.setSteps}
+              onCfgScaleChange={s.setCfgScale}
+              onNSamplesChange={s.setNSamples}
+              onImagesPerBatchChange={s.setImagesPerBatch}
+              onGenerationTypeChange={s.setGenerationType}
+              onSeedChange={s.handleSeedChange}
+              onToggleRandom={s.handleToggleRandom}
+              onGenWidthChange={s.setGenWidth}
+              onGenHeightChange={s.setGenHeight}
+              onToggleLoraPanel={() => s.togglePanel("lora")}
+              onToggleEmbeddingsPanel={() =>
+                s.togglePanel("embeddings")
+              }
+              persistGen={s.persistGen}
+              openDropdown={o.openDropdown}
             />
 
-            <div ref={s.toolbarRef} className="flex-shrink-0 d-flex flex-column">
-              <PromptToolbar
-                seed={s.seed}
+            {!showInfo && (
+              <ToolbarRow
+                version={s.version}
+                modelPath={s.modelPath}
+                scheduler={s.scheduler}
+                artOptions={s.artOptions}
+                availableSchedulers={s.availableSchedulers}
+                activeLoras={s.activeLoras}
+                activeEmbeddings={s.activeEmbeddings}
+                isMultiPrompt={s.isMultiPrompt}
                 seedRandomized={s.seedRandomized}
+                saving={s.saving}
+                steps={s.steps}
+                cfgScale={s.cfgScale}
+                nSamples={s.nSamples}
+                imagesPerBatch={s.imagesPerBatch}
                 genWidth={s.genWidth}
                 genHeight={s.genHeight}
-                onSeedChange={s.handleSeedChange}
+                generationType={s.generationType}
+                openPopup={s.openPopup}
+                openPanel={s.openPanel}
+                settingsAnchor={s.settingsAnchor}
+                promptSettingsAnchor={s.promptSettingsAnchor}
+                settingsBtnRef={s.settingsBtnRef}
+                prompt={s.prompt}
+                onVersionChange={s.handleVersion}
+                onModelChange={s.handleModel}
+                onSchedulerChange={s.handleScheduler}
                 onToggleRandom={s.handleToggleRandom}
-                onWidthChange={(v) => { s.setGenWidth(v); saveToStorage("gen_width", v); s.persistGen({ width: v }); }}
-                onHeightChange={(v) => { s.setGenHeight(v); saveToStorage("gen_height", v); s.persistGen({ height: v }); }}
+                onTogglePanel={(panel: string) =>
+                  s.togglePanel(panel as "lora" | "embeddings" | "savedPrompts")
+                }
+                onTogglePopup={(popup: string) =>
+                  s.togglePopup(popup as "settings" | "promptSettings")
+                }
+                onClearPrompts={s.handleClearPrompts}
+                onSavePrompt={s.handleSavePrompt}
+                onSetGenerationType={s.setGenerationType}
+                onWidthChange={s.setGenWidth}
+                onHeightChange={s.setGenHeight}
+                onStepsChange={s.setSteps}
+                onCfgScaleChange={s.setCfgScale}
+                onNSamplesChange={s.setNSamples}
+                onImagesPerBatchChange={s.setImagesPerBatch}
+                persistGen={s.persistGen}
+                showModelOptions={o.showModelOptions}
+                modelOptionsBtnRef={o.modelOptionsBtnRef}
+                modelOptionsAnchor={o.modelOptionsAnchor}
+                showSize={o.showSize}
+                sizeBtnRef={o.sizeBtnRef}
+                sizeAnchor={o.sizeAnchor}
+                showGenType={o.showGenType}
+                genTypeBtnRef={o.genTypeBtnRef}
+                genTypeAnchor={o.genTypeAnchor}
+                sizePortalId={o.sizePortalId}
+                toggleModelOptions={o.toggleModelOptions}
+                toggleSize={o.toggleSize}
+                toggleGenType={o.toggleGenType}
+                closeGenType={o.closeGenType}
               />
+            )}
+
+            <div
+              ref={s.toolbarRef}
+              className="flex-shrink-0 d-flex flex-column"
+            >
               <PromptControls
+                ref={s.controlsRef}
                 generating={s.generating}
                 progress={s.progress}
                 phase={s.phase}
                 hasPrompt={!!s.prompt.trim()}
                 saving={s.saving}
+                promptPopupOpen={
+                  s.openPopup === "promptSettings"
+                }
+                promptBtnRef={s.promptBtnRef}
+                activeLoras={s.activeLoras}
+                activeEmbeddings={s.activeEmbeddings}
+                isMultiPrompt={s.isMultiPrompt}
+                loraPanelOpen={s.openPanel === "lora"}
+                embeddingsPanelOpen={
+                  s.openPanel === "embeddings"
+                }
+                seedRandomized={s.seedRandomized}
                 onClear={s.handleClearPrompts}
                 onSave={s.handleSavePrompt}
-                onToggleSavedPrompts={() => s.togglePanel("savedPrompts")}
+                onToggleSavedPrompts={() =>
+                  s.togglePanel("savedPrompts")
+                }
+                onTogglePromptPopup={() =>
+                  s.togglePopup("promptSettings")
+                }
+                onToggleLora={() => s.togglePanel("lora")}
+                onToggleEmbeddings={() =>
+                  s.togglePanel("embeddings")
+                }
+                onToggleRandom={s.handleToggleRandom}
                 onGenerate={s.onGenerate}
                 onCancel={s.onCancel}
               />
@@ -141,32 +214,30 @@ export default function ArtPromptPanel({ visible = true }: { visible?: boolean }
         </div>
       </div>
 
-      {s.openPanel && s.artPanelAnchor && (
-        <div
-          id="art-panel-popup"
-          className="bg-theme-panel d-flex flex-column overflow-hidden"
-          style={{
-            position: "fixed",
-            left: s.artPanelAnchor.left,
-            bottom: s.artPanelAnchor.bottom,
-            width: s.artPanelAnchor.width,
-            height: s.artPanelAnchor.height,
-            zIndex: 1300,
-            border: "1px solid rgba(255,255,255,0.14)",
-            borderRadius: 0,
-            boxShadow: "4px -4px 24px rgba(0,0,0,0.7)",
-          }}
-        >
-          {s.openPanel === "lora" && <LoraPanel />}
-          {s.openPanel === "embeddings" && <EmbeddingsPanel />}
-          {s.openPanel === "savedPrompts" && (
-            <SavedPromptsPanel
-              onLoad={s.handleLoadPrompt}
-              onClose={() => s.togglePanel("savedPrompts")}
-            />
-          )}
-        </div>
-      )}
+      <InfoDropdownPopup
+        field={o.dropdownField}
+        anchor={o.dropdownAnchor}
+        version={s.version}
+        modelPath={s.modelPath}
+        scheduler={s.scheduler}
+        generationType={s.generationType}
+        artOptions={s.artOptions}
+        availableSchedulers={s.availableSchedulers}
+        onSelectVersion={s.handleVersion}
+        onSelectModel={s.handleModel}
+        onSelectScheduler={s.handleScheduler}
+        onSelectGenType={s.setGenerationType}
+        onClose={o.closeDropdown}
+      />
+
+      <ArtPanelPopup
+        openPanel={s.openPanel}
+        anchor={s.artPanelAnchor}
+        onLoadPrompt={s.handleLoadPrompt}
+        onCloseSavedPrompts={() =>
+          s.togglePanel("savedPrompts")
+        }
+      />
     </Fragment>
   );
 }

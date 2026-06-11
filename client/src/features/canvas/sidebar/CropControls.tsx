@@ -83,11 +83,9 @@ export default function CropControls() {
         />
         <input
           type="number"
-          min={0}
-          max={canvas.documentWidth}
-          step={1}
           value={canvas.cropX}
-          onChange={(e) =>
+          onChange={(e) => canvas.setCropX(Number(e.target.value))}
+          onBlur={(e) =>
             canvas.setCropX(
               Math.max(0, Math.min(canvas.documentWidth, Number(e.target.value))),
             )
@@ -110,11 +108,9 @@ export default function CropControls() {
         />
         <input
           type="number"
-          min={0}
-          max={canvas.documentHeight}
-          step={1}
           value={canvas.cropY}
-          onChange={(e) =>
+          onChange={(e) => canvas.setCropY(Number(e.target.value))}
+          onBlur={(e) =>
             canvas.setCropY(
               Math.max(0, Math.min(canvas.documentHeight, Number(e.target.value))),
             )
@@ -142,11 +138,9 @@ export default function CropControls() {
         />
         <input
           type="number"
-          min={1}
-          max={canvas.documentWidth}
-          step={1}
           value={canvas.cropWidth}
-          onChange={(e) =>
+          onChange={(e) => canvas.setCropWidth(Number(e.target.value))}
+          onBlur={(e) =>
             canvas.setCropWidth(
               Math.max(1, Math.min(canvas.documentWidth, Number(e.target.value))),
             )
@@ -169,11 +163,9 @@ export default function CropControls() {
         />
         <input
           type="number"
-          min={1}
-          max={canvas.documentHeight}
-          step={1}
           value={canvas.cropHeight}
-          onChange={(e) =>
+          onChange={(e) => canvas.setCropHeight(Number(e.target.value))}
+          onBlur={(e) =>
             canvas.setCropHeight(
               Math.max(1, Math.min(canvas.documentHeight, Number(e.target.value))),
             )

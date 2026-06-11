@@ -5,7 +5,7 @@ import type {
   CanvasLayer,
   LayerGroup,
 } from "../canvasTypes";
-import { advanceCountersFromState } from "../canvasStateUtils";
+import { advanceCountersFromState, serialize } from "../canvasStateUtils";
 import type { CanvasSetters } from "./types";
 
 /** Serialization helpers extracted from the monolithic hook. */
@@ -49,7 +49,7 @@ export function serialization(
               .map((l: CanvasLayer) => l.id);
             displayOrder = [...groupIds, ...ungroupedIds];
           }
-          return {
+          const next: CanvasState = {
             ...prev,
             _ts: Math.max(prev._ts, incomingTs),
             displayOrder,
@@ -86,7 +86,21 @@ export function serialization(
               data.documentBgColor ?? prev.documentBgColor,
             snapToGrid:
               data.snapToGrid ?? prev.snapToGrid,
+            selection: data.selection ?? prev.selection ?? null,
           };
+
+          // A strictly newer document replaced the content (e.g. edited in
+          // another tab/client) → start a fresh baseline. For an equal/unknown
+          // timestamp keep the existing history (which may have just been
+          // restored from localStorage on reload), seeding a baseline only if
+          // none exists. This preserves undo/redo across reloads.
+          if (incomingTs > prev._ts) {
+            return { ...next, history: [serialize(next)], historyIndex: 0 };
+          }
+          if (!Array.isArray(next.history) || next.history.length === 0) {
+            return { ...next, history: [serialize(next)], historyIndex: 0 };
+          }
+          return next;
         });
       } catch {
         /* ignore */

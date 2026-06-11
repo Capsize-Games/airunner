@@ -1,4 +1,4 @@
-import { MessageSquareHeart, FilePlus, Settings } from "lucide-react";
+import { MessageSquareHeart } from "lucide-react";
 import {
   Move, SquareDashed, Lasso, Wand, Crop,
   PaintBucket, Pointer, Type, Pipette, Search,
@@ -26,8 +26,6 @@ const TOOLS: { id: string; label: string; Icon: React.ComponentType<{ size?: num
 interface Props {
   activeTool: ActiveTool;
   onToolChange: (tool: ActiveTool) => void;
-  onNewDocument: () => void;
-  onOpenSettings: () => void;
   activeAssetTab: "layers" | "images" | null;
   onToggleLayers: () => void;
   onToggleImages: () => void;
@@ -47,14 +45,29 @@ const btn: React.CSSProperties = {
 export default function CanvasToolPanel({
   activeTool,
   onToolChange,
-  onNewDocument,
-  onOpenSettings,
   activeAssetTab,
   onToggleLayers,
   onToggleImages,
   showImagePrompt,
   onToggleImagePrompt,
 }: Props) {
+  const onBtnEnter = (e: React.MouseEvent<HTMLButtonElement>) => {
+    const bg = e.currentTarget.style.background;
+    // Only apply hover if not already in an active/blue state
+    if (!bg.includes("rgba(99,153,255")) {
+      e.currentTarget.style.background = "rgba(255,255,255,0.08)";
+      e.currentTarget.style.color = "rgba(255,255,255,0.85)";
+    }
+  };
+
+  const onBtnLeave = (e: React.MouseEvent<HTMLButtonElement>) => {
+    const bg = e.currentTarget.style.background;
+    if (!bg.includes("rgba(99,153,255")) {
+      e.currentTarget.style.background = "transparent";
+      e.currentTarget.style.color = "rgba(255,255,255,0.5)";
+    }
+  };
+
   const toolBtn = (id: string, Icon: React.ComponentType<{ size?: number; strokeWidth?: number }>) => {
     const isActive = !showImagePrompt && activeTool === id;
     return (
@@ -62,6 +75,8 @@ export default function CanvasToolPanel({
         key={id}
         title={TOOLS.find((t) => t.id === id)?.label ?? id}
         onClick={() => onToolChange(id as ActiveTool)}
+        onMouseEnter={onBtnEnter}
+        onMouseLeave={onBtnLeave}
         style={{
           ...btn,
           background: isActive ? "rgba(99,153,255,0.22)" : "transparent",
@@ -79,7 +94,8 @@ export default function CanvasToolPanel({
     Icon: React.ComponentType<{ size?: number; strokeWidth?: number }>,
     onClick: () => void,
   ) => (
-    <button key={title} title={title} onClick={onClick} style={btn}>
+    <button key={title} title={title} onClick={onClick} style={btn}
+      onMouseEnter={onBtnEnter} onMouseLeave={onBtnLeave}>
       <Icon size={14} strokeWidth={1.75} />
     </button>
   );
@@ -94,6 +110,8 @@ export default function CanvasToolPanel({
       key={title}
       title={title}
       onClick={onClick}
+      onMouseEnter={onBtnEnter}
+      onMouseLeave={onBtnLeave}
       style={{
         ...btn,
         background: active ? "rgba(99,153,255,0.22)" : "transparent",
@@ -113,18 +131,7 @@ export default function CanvasToolPanel({
         userSelect: "none", flexShrink: 0,
       }}
     >
-      {/* Row 1: header — new doc left, settings right */}
-      <div style={{
-        display: "flex", alignItems: "center", justifyContent: "space-between",
-        padding: "0 6px 4px 6px",
-        margin: "0 -6px 2px -6px",
-        borderBottom: "1px solid rgba(255,255,255,0.07)",
-      }}>
-        {iconBtn("New Document", FilePlus, onNewDocument)}
-        {iconBtn("Canvas Settings", Settings, onOpenSettings)}
-      </div>
-
-      {/* Row 2: image-prompt toggle + all canvas tools */}
+      {/* Row 1: image-prompt toggle + all canvas tools */}
       <div style={{ display: "flex", alignItems: "center", gap: 2, flexWrap: "wrap" }}>
         {toggleBtn(showImagePrompt, MessageSquareHeart, "Toggle Image Prompt", onToggleImagePrompt)}
         {TOOLS.map((t) => toolBtn(t.id, t.Icon))}

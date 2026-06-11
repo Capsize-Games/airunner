@@ -16,9 +16,11 @@ interface DragProps {
 interface Props {
   group: LayerGroup;
   drag: DragProps;
+  isSelected: boolean;
+  onContextMenu: (x: number, y: number, id: string) => void;
 }
 
-export default function GroupRow({ group, drag }: Props) {
+export default function GroupRow({ group, drag, isSelected, onContextMenu }: Props) {
   const canvas = useCanvasContext();
   const isDragOver = drag.dragOverId === group.id;
   const dropAbove = isDragOver && drag.dragPosition === "above";
@@ -45,7 +47,14 @@ export default function GroupRow({ group, drag }: Props) {
       {dropAbove && <div style={{ height: 2, background: "#6399ff", margin: "0 4px" }} />}
       <div
         draggable
-        onClick={() => canvas.toggleGroupExpanded(group.id)}
+        onClick={(e) => {
+          if (e.ctrlKey || e.metaKey) {
+            canvas.toggleLayerSelection(group.id);
+          } else {
+            canvas.setActiveLayer(group.id);
+          }
+        }}
+        onContextMenu={(e) => { e.preventDefault(); onContextMenu(e.clientX, e.clientY, group.id); }}
         onDragStart={(e) => drag.onDragStart(group.id, e)}
         onDragOver={(e) => drag.onDragOver(group.id, e)}
         onDragLeave={drag.onDragLeave}
@@ -58,8 +67,21 @@ export default function GroupRow({ group, drag }: Props) {
           padding: "0 6px 0 4px",
           height: 28,
           cursor: "default",
-          background: isDragOver ? "rgba(99,153,255,0.12)" : "rgba(255,255,255,0.03)",
+          background: isSelected
+            ? "rgba(99,153,255,0.08)"
+            : isDragOver
+              ? "rgba(99,153,255,0.12)"
+              : "rgba(255,255,255,0.03)",
+          borderLeft: `2px solid ${isSelected ? "#6399ff" : "transparent"}`,
           userSelect: "none",
+        }}
+        onMouseEnter={(e) => {
+          if (!isSelected && drag.dragOverId !== group.id)
+            (e.currentTarget as HTMLDivElement).style.background = "rgba(255,255,255,0.06)";
+        }}
+        onMouseLeave={(e) => {
+          if (!isSelected && drag.dragOverId !== group.id)
+            (e.currentTarget as HTMLDivElement).style.background = "rgba(255,255,255,0.03)";
         }}
       >
         <button
@@ -70,20 +92,45 @@ export default function GroupRow({ group, drag }: Props) {
             marginRight: 4, flexShrink: 0, cursor: "pointer",
             color: group.visible ? "rgba(var(--theme-text-rgb), 0.55)" : "rgba(var(--theme-text-rgb), 0.2)",
             display: "flex", alignItems: "center",
+            borderRadius: 3, transition: "background 0.1s, color 0.1s",
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = "rgba(255,255,255,0.08)";
+            e.currentTarget.style.color = "rgba(var(--theme-text-rgb), 0.85)";
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = "none";
+            e.currentTarget.style.color = group.visible
+              ? "rgba(var(--theme-text-rgb), 0.55)"
+              : "rgba(var(--theme-text-rgb), 0.2)";
           }}
         >
           {group.visible ? <Eye size={13} strokeWidth={1.75} /> : <EyeOff size={13} strokeWidth={1.75} />}
         </button>
 
-        {group.expanded ? (
-          <SquareMinus size={12} strokeWidth={1.75}
-            style={{ marginRight: 4, flexShrink: 0, color: "rgba(var(--theme-text-rgb), 0.4)" }}
-          />
-        ) : (
-          <SquarePlus size={12} strokeWidth={1.75}
-            style={{ marginRight: 4, flexShrink: 0, color: "rgba(var(--theme-text-rgb), 0.4)" }}
-          />
-        )}
+        <button
+          title={group.expanded ? "Collapse group" : "Expand group"}
+          onClick={(e) => { e.stopPropagation(); canvas.toggleGroupExpanded(group.id); }}
+          style={{
+            background: "none", border: "none", padding: 0,
+            marginRight: 4, flexShrink: 0, cursor: "pointer",
+            color: "rgba(var(--theme-text-rgb), 0.4)",
+            display: "flex", alignItems: "center",
+            borderRadius: 3, transition: "background 0.1s",
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = "rgba(255,255,255,0.08)";
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = "none";
+          }}
+        >
+          {group.expanded ? (
+            <SquareMinus size={12} strokeWidth={1.75} />
+          ) : (
+            <SquarePlus size={12} strokeWidth={1.75} />
+          )}
+        </button>
 
         <span style={{
           flexGrow: 1, minWidth: 0, overflow: "hidden",

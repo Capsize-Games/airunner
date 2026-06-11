@@ -60,10 +60,12 @@ export function useCropTool({
   const resetCrop = useCallback(() => {
     startRef.current = null;
     setIsAdjusting(false);
+    // No default selection — zero size keeps the overlay hidden until the
+    // user actually draws a crop rectangle.
     canvas.setCropX(0);
     canvas.setCropY(0);
-    canvas.setCropWidth(512);
-    canvas.setCropHeight(512);
+    canvas.setCropWidth(0);
+    canvas.setCropHeight(0);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -96,8 +98,8 @@ export function useCropTool({
     // Clear the crop rect and switch back to select
     canvas.setCropX(0);
     canvas.setCropY(0);
-    canvas.setCropWidth(512);
-    canvas.setCropHeight(512);
+    canvas.setCropWidth(0);
+    canvas.setCropHeight(0);
     canvas.setActiveTool("select");
   }, [canvas]);
 
@@ -154,13 +156,14 @@ export function useCropTool({
       const pos = getCanvasPos();
       if (!pos) return true;
 
-      // Start drawing a new crop rectangle
+      // Start drawing a new crop rectangle. Size stays 0 until the pointer
+      // actually moves — a bare click should not create a crop.
       startRef.current = { x: pos.x, y: pos.y };
       setIsAdjusting(false);
       canvas.setCropX(pos.x);
       canvas.setCropY(pos.y);
-      canvas.setCropWidth(1);
-      canvas.setCropHeight(1);
+      canvas.setCropWidth(0);
+      canvas.setCropHeight(0);
       return true;
     },
     [isActive, getCanvasPos, canvas],
@@ -202,12 +205,16 @@ export function useCropTool({
 
       startRef.current = null;
 
-      // Only transition to adjusting if the rect is sizable
+      // Only keep the crop if the drag produced a sizable rect; otherwise a
+      // click (or tiny drag) clears it back to nothing.
       if (
         canvas.cropWidth >= MIN_SIZE &&
         canvas.cropHeight >= MIN_SIZE
       ) {
         setIsAdjusting(true);
+      } else {
+        canvas.setCropWidth(0);
+        canvas.setCropHeight(0);
       }
 
       return true;

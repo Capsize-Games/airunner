@@ -69,13 +69,14 @@ export default function ToolBarGrid({
         </span>
         <input
           type="number"
-          min={8}
-          step={8}
           value={activeGridArea.width}
           onChange={(e) => {
-            const w = Math.max(
-              8, Math.round(Number(e.target.value) / 8) * 8,
-            );
+            const w = Number(e.target.value);
+            const h = gridLocked ? w : activeGridArea.height;
+            onSetGridArea({ ...activeGridArea, width: w, height: h });
+          }}
+          onBlur={(e) => {
+            const w = Math.max(8, Math.round(Number(e.target.value) / 8) * 8);
             const h = gridLocked ? w : activeGridArea.height;
             onSetGridArea({ ...activeGridArea, width: w, height: h });
           }}
@@ -100,13 +101,14 @@ export default function ToolBarGrid({
         </span>
         <input
           type="number"
-          min={8}
-          step={8}
           value={activeGridArea.height}
           onChange={(e) => {
-            const h = Math.max(
-              8, Math.round(Number(e.target.value) / 8) * 8,
-            );
+            const h = Number(e.target.value);
+            const w = gridLocked ? h : activeGridArea.width;
+            onSetGridArea({ ...activeGridArea, width: w, height: h });
+          }}
+          onBlur={(e) => {
+            const h = Math.max(8, Math.round(Number(e.target.value) / 8) * 8);
             const w = gridLocked ? h : activeGridArea.width;
             onSetGridArea({ ...activeGridArea, width: w, height: h });
           }}

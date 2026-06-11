@@ -27,6 +27,19 @@ function loadNum(key: string, fallback: number): number {
 const ls = (key: string) => {
   try { return localStorage.getItem(key) || ""; } catch { return ""; }
 };
+const verModelKey = (v: string) => `airunner_art_model_${v}`;
+const verSchedulerKey = (v: string) => `airunner_art_scheduler_${v}`;
+
+/** Variant versions whose LoRA/embedding files are stored under the base version's directory. */
+const VARIANT_BASE: Record<string, string> = {
+  "SDXL Lightning": "SDXL 1.0",
+  "SDXL Hyper": "SDXL 1.0",
+};
+
+/** Resolve the directory name used for LoRA/embedding path filtering for a version. */
+function baseDirForVersion(v: string): string {
+  return VARIANT_BASE[v] || v;
+}
 
 export function useArtPromptState() {
   const initial = loadPromptData();
@@ -36,6 +49,13 @@ export function useArtPromptState() {
   });
   const [artW, setArtW] = useState(() => loadNum(LS_ART_W, ART_PANEL_DEFAULT));
   useEffect(() => { saveNum(LS_ART_W, artW); }, [artW]);
+
+  const [generationType, setGenerationType] = useState<"txt2img" | "img2img">(
+    () => {
+      try { return (localStorage.getItem("airunner_gen_type") as "txt2img" | "img2img") || "txt2img"; }
+      catch { return "txt2img"; }
+    }
+  );
 
   const [prompt, setPrompt] = useState(initial.prompt);
   const [negativePrompt, setNegativePrompt] = useState(initial.negative_prompt);
@@ -47,8 +67,22 @@ export function useArtPromptState() {
 
   const [artOptions, setArtOptions] = useState<ArtOptionsResponse | null>(null);
   const [version, setVersion] = useState(() => ls("airunner_art_version"));
-  const [modelPath, setModelPath] = useState(() => ls("airunner_art_model"));
-  const [scheduler, setScheduler] = useState(() => ls("airunner_art_scheduler"));
+  const [modelPath, setModelPath] = useState(() => {
+    const v = ls("airunner_art_version");
+    if (v) {
+      const saved = ls(verModelKey(v));
+      if (saved) return saved;
+    }
+    return ls("airunner_art_model");
+  });
+  const [scheduler, setScheduler] = useState(() => {
+    const v = ls("airunner_art_version");
+    if (v) {
+      const saved = ls(verSchedulerKey(v));
+      if (saved) return saved;
+    }
+    return ls("airunner_art_scheduler");
+  });
   const [toolbarLoading, setToolbarLoading] = useState(true);
 
   const [saving, setSaving] = useState(false);
@@ -57,8 +91,11 @@ export function useArtPromptState() {
   const [openPanel, setOpenPanel] = useState<ArtPanel>(null);
   const [artPanelAnchor, setArtPanelAnchor] = useState<{ left: number; bottom: number; width: number; height: number } | null>(null);
   const toolbarRef = useRef<HTMLDivElement>(null);
+  const controlsRef = useRef<HTMLDivElement>(null);
   const settingsBtnRef = useRef<HTMLDivElement>(null);
+  const promptBtnRef = useRef<HTMLDivElement>(null);
   const [settingsAnchor, setSettingsAnchor] = useState<{ left: number; bottom: number } | null>(null);
+  const [promptSettingsAnchor, setPromptSettingsAnchor] = useState<{ left: number; bottom: number } | null>(null);
   const emittingRef = useRef(false);
 
   const availableSchedulers = (artOptions?.versions?.find((v) => v.name === version)?.schedulers) ?? [];
@@ -123,7 +160,9 @@ export function useArtPromptState() {
     const handler = (e: MouseEvent) => {
       const target = e.target as Node;
       if (settingsBtnRef.current?.contains(target)) return;
+      if (promptBtnRef.current?.contains(target)) return;
       if (document.getElementById("art-settings-popup")?.contains(target)) return;
+      if (document.getElementById("art-prompt-settings-popup")?.contains(target)) return;
       if (toolbarRef.current && !toolbarRef.current.contains(target))
         setOpenPopup(null);
     };
@@ -136,8 +175,9 @@ export function useArtPromptState() {
       setArtPanelAnchor(null);
       return;
     }
-    if (toolbarRef.current) {
-      const rect = toolbarRef.current.getBoundingClientRect();
+    const anchorRef = controlsRef.current ?? toolbarRef.current;
+    if (anchorRef) {
+      const rect = anchorRef.getBoundingClientRect();
       setArtPanelAnchor({
         left: rect.left,
         bottom: window.innerHeight - rect.top,
@@ -209,16 +249,151 @@ export function useArtPromptState() {
   const persistGen = (updates: Record<string, unknown>) =>
     updateSingleton("GeneratorSettings", updates).catch(() => {});
 
-  const handleVersion = (v: string) => {
-    setVersion(v); setModelPath(""); setScheduler("");
+  const handleVersion = async (v: string) => {
+    // 1. Save current version's enabled LoRA/embedding IDs, then disable them
+    if (version && version !== v) {
+      try {
+        localStorage.setItem(
+          `airunner_enabled_loras_${version}`,
+          JSON.stringify(activeLoras.map((l) => l.id)),
+        );
+        localStorage.setItem(
+          `airunner_enabled_embeddings_${version}`,
+          JSON.stringify(activeEmbeddings.map((e) => e.id)),
+        );
+      } catch {}
+
+      // Disable all currently enabled LoRAs and embeddings
+      const disablePromises: Promise<unknown>[] = [];
+      for (const lora of activeLoras) {
+        disablePromises.push(
+          (async () => {
+            try {
+              const { updateLora } = await import("../../../api/client");
+              await updateLora(lora.id, { enabled: false });
+            } catch { /* item may have been deleted */ }
+          })(),
+        );
+      }
+      for (const emb of activeEmbeddings) {
+        disablePromises.push(
+          (async () => {
+            try {
+              const { updateEmbedding } = await import("../../../api/client");
+              await updateEmbedding(emb.id, { enabled: false });
+            } catch { /* item may have been deleted */ }
+          })(),
+        );
+      }
+      await Promise.all(disablePromises);
+    }
+
+    // 2. Save current model/scheduler under the old version before switching
+    if (version) {
+      try { localStorage.setItem(verModelKey(version), modelPath); } catch {}
+      try { localStorage.setItem(verSchedulerKey(version), scheduler); } catch {}
+    }
+
+    // 3. Load saved settings for the new version (if any)
+    const savedModel = (() => {
+      const m = ls(verModelKey(v));
+      if (m) return m;
+      return "";
+    })();
+    const savedScheduler = (() => {
+      const s = ls(verSchedulerKey(v));
+      if (s) return s;
+      return "";
+    })();
+
+    // 4. Switch version immediately
+    setVersion(v);
+    setModelPath(savedModel);
+    setScheduler(savedScheduler);
+
     try { localStorage.setItem("airunner_art_version", v); } catch {}
-    updateSingleton("GeneratorSettings", { version: v, custom_path: "", scheduler: "" }).catch(() => {});
+    try { localStorage.setItem("airunner_art_model", savedModel); } catch {}
+    try { localStorage.setItem("airunner_art_scheduler", savedScheduler); } catch {}
+
+    updateSingleton("GeneratorSettings", {
+      version: v,
+      custom_path: savedModel,
+      scheduler: savedScheduler,
+    }).catch(() => {});
     window.dispatchEvent(new CustomEvent("art-version-changed", { detail: v }));
+
+    // 5. Restore the new version's previously-enabled LoRAs/embeddings
+    const prevLoraIds: number[] = (() => {
+      try {
+        const raw = localStorage.getItem(`airunner_enabled_loras_${v}`);
+        return raw ? (JSON.parse(raw) as number[]) : [];
+      } catch { return []; }
+    })();
+    const prevEmbIds: number[] = (() => {
+      try {
+        const raw = localStorage.getItem(`airunner_enabled_embeddings_${v}`);
+        return raw ? (JSON.parse(raw) as number[]) : [];
+      } catch { return []; }
+    })();
+
+    if (prevLoraIds.length > 0 || prevEmbIds.length > 0) {
+      try {
+        const { listLoras, listEmbeddings } = await import("../../../api/client");
+        const [loraData, embData] = await Promise.all([
+          listLoras(),
+          listEmbeddings(),
+        ]);
+
+        const baseDir = baseDirForVersion(v);
+
+        const lorasToRestore = (loraData.loras ?? [])
+          .filter(
+            (l) =>
+              prevLoraIds.includes(l.id) &&
+              (l.path || "").includes(`/${baseDir}/`),
+          );
+        const embsToRestore = (embData.embeddings ?? [])
+          .filter(
+            (e) =>
+              prevEmbIds.includes(e.id) &&
+              (e.path || "").includes(`/${baseDir}/`),
+          );
+
+        const restorePromises: Promise<unknown>[] = [
+          ...lorasToRestore.map((l) =>
+            (async () => {
+              try {
+                const { updateLora } = await import("../../../api/client");
+                await updateLora(l.id, { enabled: true });
+              } catch { /* */ }
+            })(),
+          ),
+          ...embsToRestore.map((e) =>
+            (async () => {
+              try {
+                const { updateEmbedding } = await import("../../../api/client");
+                await updateEmbedding(e.id, { enabled: true });
+              } catch { /* */ }
+            })(),
+          ),
+        ];
+
+        await Promise.all(restorePromises);
+      } catch { /* */ }
+    }
+
+    // Always refresh badge state after version switch, regardless of
+    // whether there were previous items to restore.
+    window.dispatchEvent(new CustomEvent("lora-changed"));
+    window.dispatchEvent(new CustomEvent("embedding-changed"));
   };
 
   const handleModel = (m: string) => {
     setModelPath(m);
     try { localStorage.setItem("airunner_art_model", m); } catch {}
+    if (version) {
+      try { localStorage.setItem(verModelKey(version), m); } catch {}
+    }
     updateSingleton("GeneratorSettings", { custom_path: m }).catch(() => {});
     window.dispatchEvent(new CustomEvent("art-model-changed", { detail: m }));
   };
@@ -226,6 +401,9 @@ export function useArtPromptState() {
   const handleScheduler = (s: string) => {
     setScheduler(s);
     try { localStorage.setItem("airunner_art_scheduler", s); } catch {}
+    if (version) {
+      try { localStorage.setItem(verSchedulerKey(version), s); } catch {}
+    }
     updateSingleton("GeneratorSettings", { scheduler: s }).catch(() => {});
   };
 
@@ -334,6 +512,14 @@ export function useArtPromptState() {
           const r = settingsBtnRef.current.getBoundingClientRect();
           setSettingsAnchor({ left: r.left, bottom: window.innerHeight - r.top + 4 });
         }
+      } else if (next === "promptSettings") {
+        emittingRef.current = true;
+        window.dispatchEvent(new Event("art-overlay-opened"));
+        emittingRef.current = false;
+        if (promptBtnRef.current) {
+          const r = promptBtnRef.current.getBoundingClientRect();
+          setPromptSettingsAnchor({ left: r.left, bottom: window.innerHeight - r.top + 4 });
+        }
       }
       return next;
     });
@@ -363,8 +549,8 @@ export function useArtPromptState() {
     artOptions, version, modelPath, scheduler, toolbarLoading,
     saving,
     openPopup, openPanel, artPanelAnchor,
-    toolbarRef, settingsBtnRef,
-    settingsAnchor,
+    toolbarRef, controlsRef, settingsBtnRef, promptBtnRef,
+    settingsAnchor, promptSettingsAnchor,
     availableSchedulers,
     genWidth, setGenWidth,
     genHeight, setGenHeight,
@@ -380,6 +566,7 @@ export function useArtPromptState() {
     handleVersion, handleModel, handleScheduler,
     handleSeedChange, handleToggleRandom,
     onGenerate, onCancel,
+    generationType, setGenerationType,
     handleClearPrompts, handleSavePrompt, handleLoadPrompt,
     togglePopup, togglePanel,
   };

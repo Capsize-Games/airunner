@@ -57,13 +57,23 @@ export default function CanvasSettingsModal({
   const aspect = documentWidth / documentHeight;
 
   const handleWChange = (val: number) => {
-    const clamped = Math.max(8, val);
+    setW(val);
+    if (aspectLocked && val > 0) setH(Math.round(val / aspect));
+  };
+
+  const handleHChange = (val: number) => {
+    setH(val);
+    if (aspectLocked && val > 0) setW(Math.round(val * aspect));
+  };
+
+  const handleWBlur = () => {
+    const clamped = Math.max(8, w);
     setW(clamped);
     if (aspectLocked) setH(Math.max(8, Math.round(clamped / aspect)));
   };
 
-  const handleHChange = (val: number) => {
-    const clamped = Math.max(8, val);
+  const handleHBlur = () => {
+    const clamped = Math.max(8, h);
     setH(clamped);
     if (aspectLocked) setW(Math.max(8, Math.round(clamped * aspect)));
   };
@@ -98,10 +108,9 @@ export default function CanvasSettingsModal({
               <span style={{ fontSize: 12, color: "var(--theme-text-secondary)" }}>W</span>
               <Form.Control
                 type="number"
-                min={8}
-                step={8}
                 value={w}
                 onChange={(e) => handleWChange(Number(e.target.value))}
+                onBlur={handleWBlur}
                 size="sm"
                 style={inputStyle}
               />
@@ -121,10 +130,9 @@ export default function CanvasSettingsModal({
               <span style={{ fontSize: 12, color: "var(--theme-text-secondary)" }}>H</span>
               <Form.Control
                 type="number"
-                min={8}
-                step={8}
                 value={h}
                 onChange={(e) => handleHChange(Number(e.target.value))}
+                onBlur={handleHBlur}
                 size="sm"
                 style={inputStyle}
               />

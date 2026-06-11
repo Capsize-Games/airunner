@@ -225,10 +225,10 @@ export function useLassoTool({
         // First anchor, non-drag click → should close (decided on mouseup)
         closePendingRef.current =
           !isClosedRef.current && nearIdx === 0 && anchorsRef.current.length >= 2;
-        // Straighten path so anchor moves produce clean segments
-        const flat = anchorsRef.current.flatMap((a) => [a.x, a.y]);
-        pointsRef.current = flat;
-        setPoints([...flat]);
+        // NOTE: do not straighten the path here — that would discard freehand
+        // points captured between anchors (e.g. when clicking anchor-0 to
+        // close). Straightening only happens once an actual anchor drag begins
+        // (see onMouseMove), which is the only case where it's intended.
         return true;
       }
 

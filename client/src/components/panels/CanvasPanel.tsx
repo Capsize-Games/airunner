@@ -104,6 +104,8 @@ export default function CanvasPanel() {
     try {
       const v = localStorage.getItem("canvas_asset_tab");
       if (v === "layers" || v === "images") return v;
+      // "none" is the persisted hidden state — keep the panel closed on reload.
+      if (v === "none") return null;
       return localStorage.getItem("canvas_show_assets") !== "false" ? "layers" : null;
     } catch { return "layers"; }
   });
@@ -191,6 +193,9 @@ export default function CanvasPanel() {
           case "edit:redo":
             canvas.redo();
             break;
+          case "edit:preferences":
+            setShowSettings(true);
+            break;
           case "view:toggle-ruler":
             canvas.setRulerShowRuler(
               !canvas.rulerShowRuler,
@@ -222,7 +227,7 @@ export default function CanvasPanel() {
 
   const handleNewDocumentConfirm = useCallback(
     (w: number, h: number, bg: string) => {
-      canvas.resetDocument();
+      canvas.resetDocument(bg);
       canvas.setDocumentSize(w, h);
       canvas.setDocumentBgColor(bg);
     },
@@ -308,8 +313,6 @@ export default function CanvasPanel() {
                   canvas.setActiveTool(tool);
                   setShowImagePrompt(false);
                 }}
-                onNewDocument={handleNewDocument}
-                onOpenSettings={() => setShowSettings(true)}
                 activeAssetTab={assetTab}
                 onToggleLayers={() => setAssetTab((t) => t === "layers" ? null : "layers")}
                 onToggleImages={() => setAssetTab((t) => t === "images" ? null : "images")}
@@ -354,10 +357,34 @@ export default function CanvasPanel() {
                 background: "#161620",
                 flexShrink: 0,
               }}>
-                <button title="Reset tool presets" style={resetBtnStyle}>
+                <button
+                  title="Reset tool presets"
+                  style={resetBtnStyle}
+                  onClick={() => canvas.resetToolPresets(canvas.activeTool)}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = "rgba(255,255,255,0.08)";
+                    e.currentTarget.style.color = "rgba(255,255,255,0.8)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = "transparent";
+                    e.currentTarget.style.color = "rgba(255,255,255,0.35)";
+                  }}
+                >
                   <RefreshCcw size={13} strokeWidth={1.75} />
                 </button>
-                <button title="Reset all tool presets" style={resetBtnStyle}>
+                <button
+                  title="Reset all tool presets"
+                  style={resetBtnStyle}
+                  onClick={() => canvas.resetAllToolPresets()}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = "rgba(255,255,255,0.08)";
+                    e.currentTarget.style.color = "rgba(255,255,255,0.8)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = "transparent";
+                    e.currentTarget.style.color = "rgba(255,255,255,0.35)";
+                  }}
+                >
                   <RefreshCcwDot size={13} strokeWidth={1.75} />
                 </button>
               </div>

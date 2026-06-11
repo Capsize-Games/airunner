@@ -63,6 +63,7 @@ async def _rpc_embeddings_update(body: dict, **kw: Any) -> dict[str, Any]:
                 "body": {
                     "id": item.id,
                     "name": item.name or "",
+                    "path": item.path or "",
                     "enabled": bool(item.enabled),
                     "trigger_words": item.trigger_words or [],
                 },

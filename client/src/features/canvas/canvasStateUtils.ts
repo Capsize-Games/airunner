@@ -109,6 +109,7 @@ export const defaultState = (): CanvasState => {
     displayOrder: [firstId],
     activeLayerId: firstId,
     selectedLayerIds: [firstId],
+    selection: null,
     gridShowGrid: true,
     gridSize: 64,
     gridColor: "#ffffff",
@@ -169,10 +170,21 @@ function parseCanvasState(raw: string): CanvasState | null {
     const parsed = JSON.parse(raw) as CanvasState;
     if (!Array.isArray(parsed.layers)) return null;
     parsed.layerGroups ??= [];
-    // The persistable form (used by documentString) strips history;
-    // ensure defaults are present so pushHistory / undo don't crash.
-    parsed.history ??= [];
-    parsed.historyIndex ??= -1;
+    parsed.selection ??= null;
+    // The persistable form (used by documentString) strips history. When no
+    // usable history survived (e.g. localStorage quota dropped it, or a lean
+    // server doc was loaded), seed a baseline snapshot of the loaded document
+    // so the very first edit after load is undoable (back to this document).
+    if (!Array.isArray(parsed.history) || parsed.history.length === 0) {
+      parsed.history = [serialize(parsed)];
+      parsed.historyIndex = 0;
+    } else if (
+      typeof parsed.historyIndex !== "number" ||
+      parsed.historyIndex < 0 ||
+      parsed.historyIndex >= parsed.history.length
+    ) {
+      parsed.historyIndex = parsed.history.length - 1;
+    }
     if (
       !Array.isArray(parsed.displayOrder) ||
       parsed.displayOrder.length === 0
@@ -241,9 +253,12 @@ export function loadPersistedState(): CanvasState | null {
  */
 export async function persistStateAsync(state: CanvasState): Promise<void> {
   try {
+    const { history, historyIndex, ...rest } = state;
+    void history;
+    void historyIndex;
     localStorage.setItem(
       LEGACY_STORAGE_KEY,
-      JSON.stringify(state),
+      JSON.stringify(rest),
     );
   } catch { /* quota */ }
 }
@@ -254,7 +269,13 @@ export async function persistStateAsync(state: CanvasState): Promise<void> {
  */
 export function persistStateSync(state: CanvasState): void {
   try {
-    localStorage.setItem(LEGACY_STORAGE_KEY, JSON.stringify(state));
+    // Persist the document WITHOUT history: snapshots embed base64 image data
+    // and would exceed the localStorage quota. The undo history is persisted
+    // separately in IndexedDB (see canvasHistoryDB) which has a large quota.
+    const { history, historyIndex, ...rest } = state;
+    void history;
+    void historyIndex;
+    localStorage.setItem(LEGACY_STORAGE_KEY, JSON.stringify(rest));
   } catch { /* quota */ }
 }
 

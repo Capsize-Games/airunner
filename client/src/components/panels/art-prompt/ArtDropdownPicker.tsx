@@ -121,6 +121,7 @@ export function ArtDropdownPicker({
         <div
           id={portalId}
           className="bg-theme-panel overflow-y-auto"
+          data-dropdown-portal=""
           style={{
             position: "fixed",
             left: anchor.left,

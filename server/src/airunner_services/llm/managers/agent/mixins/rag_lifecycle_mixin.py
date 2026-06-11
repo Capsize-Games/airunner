@@ -123,6 +123,10 @@ class RAGLifecycleMixin:
                     self.logger.warning("Error deleting embedding: %s", e)
             self._embedding = None
             self._text_splitter = None
+            # Allow RAG to re-initialize (and reload the embedding) the next
+            # time it is needed; otherwise ``_setup_rag`` early-returns
+            # forever because it still thinks RAG is initialized.
+            self._rag_initialized = False
 
             # Force garbage collection
             gc.collect()

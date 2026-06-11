@@ -181,6 +181,8 @@ export default function CanvasLayersSidebar() {
             <GroupRow
               key={item.group.id ?? `group-${idx}`}
               group={item.group}
+              isSelected={canvas.selectedLayerIds.includes(item.group.id)}
+              onContextMenu={(x, y, id) => setContextMenu({ x, y, layerId: id })}
               drag={{
                 dragOverId, dragPosition, dragSourceId,
                 onDragStart, onDragOver, onDragLeave, onDragEnd,
@@ -204,7 +206,7 @@ export default function CanvasLayersSidebar() {
         show={showNewLayer}
         layerIndex={canvas.layers.length + 1}
         defaultName={canvas.activeLayer?.name === "Background" ? "Layer" : (canvas.activeLayer?.name ?? "Layer")}
-        onConfirm={(name, opacity) => canvas.addLayer(name, opacity)}
+        onConfirm={(name, opacity, fillColor) => canvas.addLayer(name, opacity, fillColor)}
         onHide={() => setShowNewLayer(false)}
       />
       <NewLayerMaskModal

@@ -26,13 +26,23 @@ export interface UseSelectToolReturn {
 export function useSelectTool({
   isActive,
   getCanvasPos,
+  onCommitSelection,
 }: {
   isActive: boolean;
   getCanvasPos: () => { x: number; y: number } | null;
+  /** Commit the finished marquee to the shared selection (empty = deselect). */
+  onCommitSelection: (points: number[]) => void;
 }): UseSelectToolReturn {
 
-  const [rect, setRect] = useState<SelectRenderState["rect"]>(null);
+  const [rect, setRectState] = useState<SelectRenderState["rect"]>(null);
+  const rectRef = useRef<SelectRenderState["rect"]>(null);
   const startRef = useRef<{ x: number; y: number } | null>(null);
+
+  // Keep state and ref in lockstep so mouseup reads the latest rect.
+  const setRect = useCallback((r: SelectRenderState["rect"]) => {
+    rectRef.current = r;
+    setRectState(r);
+  }, []);
 
   // Clear when tool is deactivated
   useEffect(() => {
@@ -40,7 +50,7 @@ export function useSelectTool({
       setRect(null);
       startRef.current = null;
     }
-  }, [isActive]);
+  }, [isActive, setRect]);
 
   // Global up — catches releases outside the Stage
   useEffect(() => {
@@ -62,7 +72,7 @@ export function useSelectTool({
       setRect({ x: pos.x, y: pos.y, width: 0, height: 0 });
       return true;
     },
-    [isActive, getCanvasPos],
+    [isActive, getCanvasPos, setRect],
   );
 
   const onMouseMove = useCallback(
@@ -81,16 +91,31 @@ export function useSelectTool({
       });
       return true;
     },
-    [isActive, getCanvasPos],
+    [isActive, getCanvasPos, setRect],
   );
 
   const onMouseUp = useCallback(
     (_e: Konva.KonvaEventObject<MouseEvent>): boolean => {
       if (!isActive) return false;
       startRef.current = null;
+      const r = rectRef.current;
+      if (r && r.width >= 1 && r.height >= 1) {
+        // Commit the marquee as a 4-corner polygon, then drop the local rect
+        // so only the shared marching-ants overlay renders.
+        onCommitSelection([
+          r.x, r.y,
+          r.x + r.width, r.y,
+          r.x + r.width, r.y + r.height,
+          r.x, r.y + r.height,
+        ]);
+      } else {
+        // A click without a drag deselects (GIMP behaviour).
+        onCommitSelection([]);
+      }
+      setRect(null);
       return true;
     },
-    [isActive],
+    [isActive, onCommitSelection, setRect],
   );
 
   return {

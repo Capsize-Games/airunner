@@ -1,4 +1,4 @@
-import { useRef, useEffect, useLayoutEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useLayoutEffect, useCallback } from "react";
 import { Group, Image as KonvaImage, Layer, Line, Rect, Text } from "react-konva";
 import Konva from "konva";
 import type { CanvasLayer as CanvasLayerType, StrokeNode, ActiveTool, MoveMode } from "./useCanvasState";
@@ -63,33 +63,32 @@ function LayerImage({
   gridSize: number;
   onMove: (x: number, y: number) => void;
 }) {
-  const imageRef = useRef<Konva.Image>(null);
-  const imgElementRef = useRef<HTMLImageElement | null>(null);
-  const loadedRef = useRef(false);
+  const [imgEl, setImgEl] = useState<HTMLImageElement | null>(null);
 
+  // Reload whenever the source changes (e.g. after a cut/delete/fill rewrites
+  // the image pixels). Storing the element in state lets react-konva update
+  // the node declaratively; the cancel guard drops a stale onload from a
+  // superseded src.
   useEffect(() => {
-    if (loadedRef.current) return;
-    loadedRef.current = true;
+    let cancelled = false;
     const img = new window.Image();
     img.src = node.src;
     img.onload = () => {
-      imgElementRef.current = img;
-      if (imageRef.current) {
-        imageRef.current.image(img);
-        imageRef.current.getLayer()?.batchDraw();
-      }
+      if (!cancelled) setImgEl(img);
+    };
+    return () => {
+      cancelled = true;
     };
   }, [node.src]);
 
   return (
     <KonvaImage
-      ref={imageRef}
       id={node.id}
       x={node.x}
       y={node.y}
       width={node.width}
       height={node.height}
-      image={imgElementRef.current ?? undefined}
+      image={imgEl ?? undefined}
       draggable={isMovable}
       onDragEnd={(e) => {
         onMove(snapVal(e.target.x(), snapToGrid, gridSize), snapVal(e.target.y(), snapToGrid, gridSize));
@@ -260,8 +259,22 @@ export default function CanvasLayerRenderer({
       window.removeEventListener("pointerup", onGlobalUp);
   }, [handleLayerPointerUp]);
 
+  const fillRect = layer.fillColor && layer.fillColor !== "transparent"
+    ? (
+      <Rect
+        x={-layer.offsetX}
+        y={-layer.offsetY}
+        width={canvasWidth}
+        height={canvasHeight}
+        fill={layer.fillColor}
+        listening={false}
+      />
+    )
+    : null;
+
   const contentChildren = (
     <>
+      {fillRect}
       {layer.images.map((img) => (
         <LayerImage
           key={img.id}

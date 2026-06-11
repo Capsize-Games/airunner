@@ -71,11 +71,9 @@ export default function SmudgeControls() {
         />
         <input
           type="number"
-          min={0}
-          max={100}
-          step={0.5}
           value={canvas.smudgeSize}
-          onChange={(e) =>
+          onChange={(e) => canvas.setSmudgeSize(Number(e.target.value))}
+          onBlur={(e) =>
             canvas.setSmudgeSize(
               Math.max(0, Math.min(100, Number(e.target.value))),
             )

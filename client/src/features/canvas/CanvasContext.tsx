@@ -10,7 +10,7 @@ import type {
   ActiveTool,
   MoveMode,
 } from "./useCanvasState";
-import type { TextNodeData } from "./canvasTypes";
+import type { TextNodeData, SelectionData } from "./canvasTypes";
 
 export interface CanvasContextValue {
   documentWidth: number;
@@ -21,6 +21,7 @@ export interface CanvasContextValue {
   displayOrder: string[];
   activeLayerId: string | null;
   selectedLayerIds: string[];
+  selection: SelectionData | null;
   activeLayer: CanvasLayer | null;
   activeGridArea: ActiveGridArea;
   activeTool: ActiveTool;
@@ -30,14 +31,20 @@ export interface CanvasContextValue {
   maskStrokes: StrokeNode[];
   snapToGrid: boolean;
 
-  addLayer: (name?: string, opacity?: number) => void;
+  addLayer: (name?: string, opacity?: number, fillColor?: string) => void;
   deleteLayer: (id: string) => void;
   renameLayer: (id: string, name: string) => void;
   setLayerVisible: (id: string, visible: boolean) => void;
   setLayerOpacity: (id: string, opacity: number) => void;
+  setLayerFillColor: (id: string, fillColor: string) => void;
   reorderLayer: (id: string, direction: "up" | "down") => void;
   reorderLayerToIndex: (id: string, toIndex: number) => void;
   setActiveLayer: (id: string) => void;
+  setSelection: (points: number[], feather?: number, antialias?: boolean) => void;
+  clearSelection: () => void;
+  selectAll: () => void;
+  resetToolPresets: (tool: ActiveTool) => void;
+  resetAllToolPresets: () => void;
   toggleLayerSelection: (id: string) => void;
   mergeSelectedLayers: () => void;
   selectLayerRange: (id: string) => void;
@@ -52,7 +59,7 @@ export interface CanvasContextValue {
   setActiveTool: (tool: ActiveTool) => void;
   setMoveMode: (mode: MoveMode) => void;
   setActiveGridArea: (area: ActiveGridArea) => void;
-  resetDocument: () => void;
+  resetDocument: (fillColor?: string) => void;
   moveLayer: (id: string, x: number, y: number) => void;
   setDocumentSize: (width: number, height: number) => void;
   setDocumentBgColor: (color: string) => void;
@@ -60,6 +67,7 @@ export interface CanvasContextValue {
   placeImageOnNewLayer: (base64: string, x: number, y: number, width: number, height: number) => void;
   placeImage: (base64: string, x: number, y: number, width: number, height: number) => void;
   moveImage: (layerId: string, imageId: string, x: number, y: number) => void;
+  updateImageSrc: (layerId: string, imageId: string, src: string) => void;
   addStroke: (stroke: Omit<StrokeNode, "id">) => void;
   addMaskStroke: (stroke: Omit<StrokeNode, "id">) => void;
   clearMask: () => void;

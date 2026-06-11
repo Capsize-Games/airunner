@@ -31,6 +31,7 @@ import { useSmudgeTool } from "./stage/tools/smudge/useSmudgeTool";
 import { usePipetteTool } from "./stage/tools/pipette/usePipetteTool";
 import { useZoomTool } from "./stage/tools/zoom/useZoomTool";
 import { useTextTool } from "./stage/tools/text/useTextTool";
+import { useClipboard } from "./stage/tools/shared/useClipboard";
 import { useCanvasContext } from "./CanvasContext";
 
 export type { CanvasStageHandle } from "./stage/types";
@@ -102,13 +103,15 @@ const CanvasStage = forwardRef<CanvasStageHandle, CanvasStageProps>(
       stageRef,
     });
 
+    const wandCtx = useCanvasContext();
+
     const select = useSelectTool({
       isActive: activeTool === "select",
       getCanvasPos,
+      onCommitSelection: wandCtx.setSelection,
     });
 
     // Wand tool reads settings from canvas context
-    const wandCtx = useCanvasContext();
     const wandSettingsRef = useRef({
       antialiasing: wandCtx.wandAntialiasing,
       featherEdges: wandCtx.wandFeatherEdges,
@@ -133,6 +136,9 @@ const CanvasStage = forwardRef<CanvasStageHandle, CanvasStageProps>(
       getCanvasPos,
       stageRef,
       settingsRef: wandSettingsRef,
+      documentWidth,
+      documentHeight,
+      onCommitSelection: wandCtx.setSelection,
     });
 
     const crop = useCropTool({
@@ -162,6 +168,8 @@ const CanvasStage = forwardRef<CanvasStageHandle, CanvasStageProps>(
       settingsRef: bucketSettingsRef,
       foregroundColor: wandCtx.brushColor,
       backgroundColor: wandCtx.documentBgColor,
+      layers: wandCtx.layers,
+      updateImageSrc: wandCtx.updateImageSrc,
     });
 
     const smudge = useSmudgeTool({
@@ -206,6 +214,32 @@ const CanvasStage = forwardRef<CanvasStageHandle, CanvasStageProps>(
       renameLayer: wandCtx.renameLayer,
       deleteLayer: wandCtx.deleteLayer,
       setTextNode: wandCtx.setTextNode,
+      setActiveLayer,
+    });
+
+    // Commit the free-select (lasso) polygon to the shared selection on close.
+    const lassoClosed = lasso.renderState.isClosed;
+    const lassoPoints = lasso.renderState.points;
+    useEffect(() => {
+      if (lassoClosed && lassoPoints.length >= 6) {
+        wandCtx.setSelection(
+          lassoPoints,
+          wandCtx.lassoFeatherEdges ? wandCtx.lassoFeatherRadius : 0,
+          wandCtx.lassoAntialiasing,
+        );
+      }
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [lassoClosed]);
+
+    // ── Selection clipboard (delete / cut / copy / paste) ──────────────
+    useClipboard({
+      layers: wandCtx.layers,
+      activeLayerId: wandCtx.activeLayerId,
+      selection: wandCtx.selection,
+      clearSelection: wandCtx.clearSelection,
+      selectAll: wandCtx.selectAll,
+      placeImageOnNewLayer: wandCtx.placeImageOnNewLayer,
+      updateImageSrc: wandCtx.updateImageSrc,
     });
 
     // ── Unified mouse handlers ─────────────────────────────────────────
@@ -338,6 +372,7 @@ const CanvasStage = forwardRef<CanvasStageHandle, CanvasStageProps>(
           gridSize={gridSize}
           gridColor={gridColor}
           snapToGrid={snapToGrid}
+          selection={wandCtx.selection}
           // Tool render states
           lassoRenderState={lasso.renderState}
           selectRenderState={select.renderState}
