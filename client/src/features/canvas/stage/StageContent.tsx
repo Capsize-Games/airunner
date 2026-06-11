@@ -181,6 +181,7 @@ export default function StageContent({
         documentWidth={documentWidth}
         documentHeight={documentHeight}
         documentBgColor={documentBgColor}
+        hasLayers={layers.length > 0}
       />
 
       {/* ── Canvas layers ──────────────────────────────────────────────── */}

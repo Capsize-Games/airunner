@@ -8,9 +8,7 @@ export function getCursor(
   tool: ActiveTool,
   hasLayers: boolean,
 ): string {
-  if (!hasLayers &&
-    (tool === "brush" || tool === "eraser" || tool === "mask")
-  ) {
+  if (!hasLayers) {
     return "not-allowed";
   }
   switch (tool) {
