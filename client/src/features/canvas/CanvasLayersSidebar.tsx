@@ -181,6 +181,8 @@ export default function CanvasLayersSidebar() {
             <GroupRow
               key={item.group.id ?? `group-${idx}`}
               group={item.group}
+              isSelected={canvas.selectedLayerIds.includes(item.group.id)}
+              onContextMenu={(x, y, id) => setContextMenu({ x, y, layerId: id })}
               drag={{
                 dragOverId, dragPosition, dragSourceId,
                 onDragStart, onDragOver, onDragLeave, onDragEnd,
