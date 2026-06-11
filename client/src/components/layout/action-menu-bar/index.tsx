@@ -133,15 +133,10 @@ export default function ActionMenuBar() {
       label: "File",
       items: [
         {
-          type: "submenu" as const,
-          label: "Canvas",
-          items: [
-            {
-              type: "action" as const,
-              label: "New",
-              action: "file:new-document",
-            },
-          ],
+          type: "action" as const,
+          label: "New Canvas",
+          action: "file:new-document",
+          disabled: !showCanvas,
         },
       ],
     },
@@ -154,6 +149,7 @@ export default function ActionMenuBar() {
           action: "edit:undo",
           icon: "undo-2",
           shortcut: "Ctrl+Z",
+          disabled: !showCanvas,
         },
         {
           type: "action" as const,
@@ -161,6 +157,7 @@ export default function ActionMenuBar() {
           action: "edit:redo",
           icon: "redo-2",
           shortcut: "Ctrl+Y",
+          disabled: !showCanvas,
         },
         { type: "divider" as const },
         {
@@ -169,6 +166,7 @@ export default function ActionMenuBar() {
           action: "edit:cut",
           icon: "scissors",
           shortcut: "Ctrl+X",
+          disabled: !showCanvas,
         },
         {
           type: "action" as const,
@@ -176,6 +174,7 @@ export default function ActionMenuBar() {
           action: "edit:copy",
           icon: "copy",
           shortcut: "Ctrl+C",
+          disabled: !showCanvas,
         },
         {
           type: "action" as const,
@@ -183,6 +182,7 @@ export default function ActionMenuBar() {
           action: "edit:paste",
           icon: "clipboard",
           shortcut: "Ctrl+P",
+          disabled: !showCanvas,
         },
         {
           type: "action" as const,
@@ -190,6 +190,7 @@ export default function ActionMenuBar() {
           action: "edit:delete",
           icon: "trash-2",
           shortcut: "Del",
+          disabled: !showCanvas,
         },
       ],
     },
@@ -201,12 +202,14 @@ export default function ActionMenuBar() {
           label: "All",
           action: "select:all",
           shortcut: "Ctrl+A",
+          disabled: !showCanvas,
         },
         {
           type: "action" as const,
           label: "None",
           action: "select:none",
           shortcut: "Ctrl+Shift+A",
+          disabled: !showCanvas,
         },
       ],
     },
@@ -263,6 +266,7 @@ export default function ActionMenuBar() {
               type: "view:toggle-ruler",
             });
           },
+          disabled: !showCanvas,
         },
         {
           type: "checkbox" as const,
@@ -276,6 +280,7 @@ export default function ActionMenuBar() {
               type: "view:toggle-grid",
             });
           },
+          disabled: !showCanvas,
         },
       ],
     },
