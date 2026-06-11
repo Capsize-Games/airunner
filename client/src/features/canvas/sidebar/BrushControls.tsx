@@ -40,9 +40,10 @@ export default function BrushControls() {
       />
 
       <input
-        type="number" min={1} max={200}
+        type="number"
         value={canvas.brushSize}
-        onChange={(e) => canvas.setBrushSize(Math.max(1, Math.min(200, Number(e.target.value))))}
+        onChange={(e) => canvas.setBrushSize(Number(e.target.value))}
+        onBlur={(e) => canvas.setBrushSize(Math.max(1, Math.min(200, Number(e.target.value))))}
         style={{
           width: 38, background: "rgba(0,0,0,0.4)",
           border: "1px solid rgba(255,255,255,0.12)", borderRadius: 4,

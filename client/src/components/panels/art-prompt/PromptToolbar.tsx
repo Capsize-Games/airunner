@@ -165,8 +165,9 @@ export function PromptToolbar({
               <span style={{ fontSize: 9, color: "var(--theme-text-secondary)", width: 10, flexShrink: 0 }}>W</span>
               <input
                 type="number" className="art-no-spin"
-                min={64} max={2048} step={64} value={genWidth}
-                onChange={(e) => onWidthChange(Math.max(64, Math.min(2048, Number(e.target.value))))}
+                value={genWidth}
+                onChange={(e) => onWidthChange(Number(e.target.value))}
+                onBlur={(e) => onWidthChange(Math.max(64, Math.min(2048, Number(e.target.value))))}
                 style={NUM_INPUT_STYLE_SM}
               />
             </div>
@@ -174,8 +175,9 @@ export function PromptToolbar({
               <span style={{ fontSize: 9, color: "var(--theme-text-secondary)", width: 10, flexShrink: 0 }}>H</span>
               <input
                 type="number" className="art-no-spin"
-                min={64} max={2048} step={64} value={genHeight}
-                onChange={(e) => onHeightChange(Math.max(64, Math.min(2048, Number(e.target.value))))}
+                value={genHeight}
+                onChange={(e) => onHeightChange(Number(e.target.value))}
+                onBlur={(e) => onHeightChange(Math.max(64, Math.min(2048, Number(e.target.value))))}
                 style={NUM_INPUT_STYLE_SM}
               />
             </div>

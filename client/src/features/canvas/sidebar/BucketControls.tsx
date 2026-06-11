@@ -165,11 +165,9 @@ export default function BucketControls() {
         />
         <input
           type="number"
-          min={0}
-          max={100}
-          step={0.5}
           value={canvas.bucketThreshold}
-          onChange={(e) =>
+          onChange={(e) => canvas.setBucketThreshold(Number(e.target.value))}
+          onBlur={(e) =>
             canvas.setBucketThreshold(
               Math.max(0, Math.min(100, Number(e.target.value))),
             )

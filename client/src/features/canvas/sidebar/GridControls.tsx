@@ -72,11 +72,9 @@ export default function GridControls() {
         />
         <input
           type="number"
-          min={8}
-          max={512}
-          step={8}
           value={canvas.gridSize}
-          onChange={(e) =>
+          onChange={(e) => canvas.setGridSize(Number(e.target.value))}
+          onBlur={(e) =>
             canvas.setGridSize(
               Math.max(8, Math.min(512, Number(e.target.value))),
             )

@@ -101,11 +101,9 @@ export default function LassoControls() {
           />
           <input
             type="number"
-            min={0}
-            max={100}
-            step={0.5}
             value={canvas.lassoFeatherRadius}
-            onChange={(e) =>
+            onChange={(e) => canvas.setLassoFeatherRadius(Number(e.target.value))}
+            onBlur={(e) =>
               canvas.setLassoFeatherRadius(
                 Math.max(0, Math.min(100, Number(e.target.value))),
               )

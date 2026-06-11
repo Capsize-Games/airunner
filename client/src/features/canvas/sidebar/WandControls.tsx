@@ -101,11 +101,9 @@ export default function WandControls() {
           />
           <input
             type="number"
-            min={0}
-            max={100}
-            step={0.5}
             value={canvas.wandFeatherRadius}
-            onChange={(e) =>
+            onChange={(e) => canvas.setWandFeatherRadius(Number(e.target.value))}
+            onBlur={(e) =>
               canvas.setWandFeatherRadius(
                 Math.max(0, Math.min(100, Number(e.target.value))),
               )
@@ -173,11 +171,9 @@ export default function WandControls() {
         />
         <input
           type="number"
-          min={0}
-          max={100}
-          step={0.5}
           value={canvas.wandThreshold}
-          onChange={(e) =>
+          onChange={(e) => canvas.setWandThreshold(Number(e.target.value))}
+          onBlur={(e) =>
             canvas.setWandThreshold(
               Math.max(0, Math.min(100, Number(e.target.value))),
             )

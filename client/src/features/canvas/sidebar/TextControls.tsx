@@ -115,12 +115,14 @@ export default function TextControls() {
           <input
             type="number"
             style={numberInputStyle}
-            min={1}
-            max={512}
             value={canvas.textSize}
             onChange={(e) => {
               const v = parseInt(e.target.value, 10);
               if (!isNaN(v)) canvas.setTextSize(v);
+            }}
+            onBlur={(e) => {
+              const v = parseInt(e.target.value, 10);
+              if (!isNaN(v)) canvas.setTextSize(Math.max(1, v));
             }}
           />
           <span style={{ fontSize: 11, color: "rgba(255,255,255,0.35)" }}>
