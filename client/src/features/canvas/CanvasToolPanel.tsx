@@ -1,4 +1,4 @@
-import { MessageSquareHeart, Wrench } from "lucide-react";
+import { MessageSquareHeart, Palette } from "lucide-react";
 import {
   Move, SquareDashed, Lasso, Wand, Crop,
   PaintBucket, Pointer, Type, Pipette, Search,
@@ -139,7 +139,7 @@ export default function CanvasToolPanel({
        * canvas tool palette. Only one can be active at a time. */}
       <div style={{ display: "flex", alignItems: "center", gap: 2, padding: "4px 6px", margin: "0 -6px 2px", borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
         {toggleBtn(showImagePrompt, MessageSquareHeart, "Toggle Image Prompt", onToggleImagePrompt)}
-        {toggleBtn(showCanvasTools, Wrench, "Canvas Tools", onToggleCanvasTools)}
+        {toggleBtn(showCanvasTools, Palette, "Canvas Tools", onToggleCanvasTools)}
       </div>
 
       {/* ── Art prompt palette ────────────────────────────────────────

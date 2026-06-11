@@ -340,12 +340,14 @@ export default function CanvasPanel() {
                 }}
                 showImagePrompt={showImagePrompt}
                 onToggleImagePrompt={() => {
-                  setShowImagePrompt((v) => !v);
+                  if (showImagePrompt) return; // can't untoggle
+                  setShowImagePrompt(true);
                   setShowCanvasTools(false);
                 }}
                 showCanvasTools={showCanvasTools}
                 onToggleCanvasTools={() => {
-                  setShowCanvasTools((v) => !v);
+                  if (showCanvasTools) return; // can't untoggle
+                  setShowCanvasTools(true);
                   setShowImagePrompt(false);
                 }}
                 activeArtAction={activeArtAction}
