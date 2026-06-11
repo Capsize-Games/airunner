@@ -30,6 +30,17 @@ const ls = (key: string) => {
 const verModelKey = (v: string) => `airunner_art_model_${v}`;
 const verSchedulerKey = (v: string) => `airunner_art_scheduler_${v}`;
 
+/** Variant versions whose LoRA/embedding files are stored under the base version's directory. */
+const VARIANT_BASE: Record<string, string> = {
+  "SDXL Lightning": "SDXL 1.0",
+  "SDXL Hyper": "SDXL 1.0",
+};
+
+/** Resolve the directory name used for LoRA/embedding path filtering for a version. */
+function baseDirForVersion(v: string): string {
+  return VARIANT_BASE[v] || v;
+}
+
 export function useArtPromptState() {
   const initial = loadPromptData();
 
@@ -231,13 +242,52 @@ export function useArtPromptState() {
   const persistGen = (updates: Record<string, unknown>) =>
     updateSingleton("GeneratorSettings", updates).catch(() => {});
 
-  const handleVersion = (v: string) => {
-    // Save current model/scheduler under the old version before switching
+  const handleVersion = async (v: string) => {
+    // 1. Save current version's enabled LoRA/embedding IDs, then disable them
+    if (version && version !== v) {
+      try {
+        localStorage.setItem(
+          `airunner_enabled_loras_${version}`,
+          JSON.stringify(activeLoras.map((l) => l.id)),
+        );
+        localStorage.setItem(
+          `airunner_enabled_embeddings_${version}`,
+          JSON.stringify(activeEmbeddings.map((e) => e.id)),
+        );
+      } catch {}
+
+      // Disable all currently enabled LoRAs and embeddings
+      const disablePromises: Promise<unknown>[] = [];
+      for (const lora of activeLoras) {
+        disablePromises.push(
+          (async () => {
+            try {
+              const { updateLora } = await import("../../../api/client");
+              await updateLora(lora.id, { enabled: false });
+            } catch { /* item may have been deleted */ }
+          })(),
+        );
+      }
+      for (const emb of activeEmbeddings) {
+        disablePromises.push(
+          (async () => {
+            try {
+              const { updateEmbedding } = await import("../../../api/client");
+              await updateEmbedding(emb.id, { enabled: false });
+            } catch { /* item may have been deleted */ }
+          })(),
+        );
+      }
+      await Promise.all(disablePromises);
+    }
+
+    // 2. Save current model/scheduler under the old version before switching
     if (version) {
       try { localStorage.setItem(verModelKey(version), modelPath); } catch {}
       try { localStorage.setItem(verSchedulerKey(version), scheduler); } catch {}
     }
-    // Load saved settings for the new version (if any)
+
+    // 3. Load saved settings for the new version (if any)
     const savedModel = (() => {
       const m = ls(verModelKey(v));
       if (m) return m;
@@ -249,6 +299,7 @@ export function useArtPromptState() {
       return "";
     })();
 
+    // 4. Switch version immediately
     setVersion(v);
     setModelPath(savedModel);
     setScheduler(savedScheduler);
@@ -263,6 +314,71 @@ export function useArtPromptState() {
       scheduler: savedScheduler,
     }).catch(() => {});
     window.dispatchEvent(new CustomEvent("art-version-changed", { detail: v }));
+
+    // 5. Restore the new version's previously-enabled LoRAs/embeddings
+    const prevLoraIds: number[] = (() => {
+      try {
+        const raw = localStorage.getItem(`airunner_enabled_loras_${v}`);
+        return raw ? (JSON.parse(raw) as number[]) : [];
+      } catch { return []; }
+    })();
+    const prevEmbIds: number[] = (() => {
+      try {
+        const raw = localStorage.getItem(`airunner_enabled_embeddings_${v}`);
+        return raw ? (JSON.parse(raw) as number[]) : [];
+      } catch { return []; }
+    })();
+
+    if (prevLoraIds.length > 0 || prevEmbIds.length > 0) {
+      try {
+        const { listLoras, listEmbeddings } = await import("../../../api/client");
+        const [loraData, embData] = await Promise.all([
+          listLoras(),
+          listEmbeddings(),
+        ]);
+
+        const baseDir = baseDirForVersion(v);
+
+        const lorasToRestore = (loraData.loras ?? [])
+          .filter(
+            (l) =>
+              prevLoraIds.includes(l.id) &&
+              (l.path || "").includes(`/${baseDir}/`),
+          );
+        const embsToRestore = (embData.embeddings ?? [])
+          .filter(
+            (e) =>
+              prevEmbIds.includes(e.id) &&
+              (e.path || "").includes(`/${baseDir}/`),
+          );
+
+        const restorePromises: Promise<unknown>[] = [
+          ...lorasToRestore.map((l) =>
+            (async () => {
+              try {
+                const { updateLora } = await import("../../../api/client");
+                await updateLora(l.id, { enabled: true });
+              } catch { /* */ }
+            })(),
+          ),
+          ...embsToRestore.map((e) =>
+            (async () => {
+              try {
+                const { updateEmbedding } = await import("../../../api/client");
+                await updateEmbedding(e.id, { enabled: true });
+              } catch { /* */ }
+            })(),
+          ),
+        ];
+
+        await Promise.all(restorePromises);
+      } catch { /* */ }
+    }
+
+    // Always refresh badge state after version switch, regardless of
+    // whether there were previous items to restore.
+    window.dispatchEvent(new CustomEvent("lora-changed"));
+    window.dispatchEvent(new CustomEvent("embedding-changed"));
   };
 
   const handleModel = (m: string) => {
