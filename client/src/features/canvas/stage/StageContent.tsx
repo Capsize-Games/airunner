@@ -19,6 +19,7 @@ import LassoLayer from "./tools/lasso/LassoLayer";
 import SelectLayer from "./tools/select/SelectLayer";
 import WandLayer from "./tools/wand/WandLayer";
 import CropLayer from "./tools/crop/CropLayer";
+import SelectionOverlay from "./SelectionOverlay";
 import BucketLayer from "./tools/bucket/BucketLayer";
 import SmudgeLayer from "./tools/smudge/SmudgeLayer";
 import PipetteLayer from "./tools/pipette/PipetteLayer";
@@ -40,6 +41,7 @@ import type {
   StrokeNode,
   MoveMode,
 } from "../useCanvasState";
+import type { SelectionData } from "../canvasTypes";
 
 // ── Props ─────────────────────────────────────────────────────────────────────
 
@@ -67,6 +69,8 @@ interface Props {
   gridSize: number;
   gridColor: string;
   snapToGrid: boolean;
+  /** Committed, tool-independent selection (drives the marching-ants overlay). */
+  selection: SelectionData | null;
   // ── Tool render states (one per tool with a visual overlay) ─────────────
   lassoRenderState: LassoRenderState;
   selectRenderState: SelectRenderState;
@@ -116,6 +120,7 @@ export default function StageContent({
   layers, layerGroups, displayOrder, activeLayerId,
   activeTool, moveMode, brushSize, brushColor, maskStrokes,
   showGrid, gridSize, gridColor, snapToGrid,
+  selection,
   lassoRenderState, selectRenderState, wandRenderState,
   cropRenderState, bucketRenderState, smudgeRenderState,
   pipetteRenderState, zoomToolRenderState, textToolRenderState,
@@ -300,11 +305,14 @@ export default function StageContent({
       {activeTool === "crop" && (
         <CropLayer
           {...cropRenderState}
-          stageWidth={stageSize.width}
-          stageHeight={stageSize.height}
+          documentWidth={documentWidth}
+          documentHeight={documentHeight}
           onCropRectChange={cropOnRectChange}
         />
       )}
+
+      {/* Persistent selection (marching ants) — visible under every tool. */}
+      <SelectionOverlay selection={selection} />
 {activeTool === "bucket" && (
   <BucketLayer {...bucketRenderState} />
 )}

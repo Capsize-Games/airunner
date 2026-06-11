@@ -104,6 +104,8 @@ export default function CanvasPanel() {
     try {
       const v = localStorage.getItem("canvas_asset_tab");
       if (v === "layers" || v === "images") return v;
+      // "none" is the persisted hidden state — keep the panel closed on reload.
+      if (v === "none") return null;
       return localStorage.getItem("canvas_show_assets") !== "false" ? "layers" : null;
     } catch { return "layers"; }
   });
@@ -354,10 +356,18 @@ export default function CanvasPanel() {
                 background: "#161620",
                 flexShrink: 0,
               }}>
-                <button title="Reset tool presets" style={resetBtnStyle}>
+                <button
+                  title="Reset tool presets"
+                  style={resetBtnStyle}
+                  onClick={() => canvas.resetToolPresets(canvas.activeTool)}
+                >
                   <RefreshCcw size={13} strokeWidth={1.75} />
                 </button>
-                <button title="Reset all tool presets" style={resetBtnStyle}>
+                <button
+                  title="Reset all tool presets"
+                  style={resetBtnStyle}
+                  onClick={() => canvas.resetAllToolPresets()}
+                >
                   <RefreshCcwDot size={13} strokeWidth={1.75} />
                 </button>
               </div>

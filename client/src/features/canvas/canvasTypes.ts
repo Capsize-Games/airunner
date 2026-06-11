@@ -64,6 +64,21 @@ export interface ActiveGridArea {
   height: number;
 }
 
+/** A committed, tool-independent selection in document space. Produced by the
+ *  rectangular-select, fuzzy-select (wand) and free-select (lasso) tools and
+ *  consumed by the clipboard, Select menu, and the persistent marching-ants
+ *  overlay. Persists across tool switches and reloads. */
+export interface SelectionData {
+  /** Closed polygon outline, flat [x,y,...] in document coordinates. */
+  points: number[];
+  /** Axis-aligned bounding box of the polygon. */
+  bounds: { x: number; y: number; width: number; height: number };
+  /** Feather radius in document px (0 = hard edge). */
+  feather: number;
+  /** Whether the selection edges are antialiased. */
+  antialias: boolean;
+}
+
 export type ActiveTool =
   | "select" | "brush" | "eraser" | "mask" | "move"
   | "lasso" | "wand" | "crop" | "bucket" | "smudge"
@@ -88,6 +103,8 @@ export interface CanvasState {
   displayOrder: string[];
   activeLayerId: string | null;
   selectedLayerIds: string[];
+  /** Active document-space selection (null = nothing selected). */
+  selection: SelectionData | null;
   activeGridArea: ActiveGridArea;
   activeTool: ActiveTool;
   moveMode: MoveMode;

@@ -5,6 +5,12 @@ export type ActionMenuEvent =
   | { type: "file:new-document" }
   | { type: "edit:undo" }
   | { type: "edit:redo" }
+  | { type: "edit:cut" }
+  | { type: "edit:copy" }
+  | { type: "edit:paste" }
+  | { type: "edit:delete" }
+  | { type: "select:all" }
+  | { type: "select:none" }
   | { type: "view:toggle-chat" }
   | { type: "view:toggle-canvas" }
   | { type: "view:toggle-civitai" }
@@ -28,7 +34,9 @@ export function useMenuAction(
   handler: (action: ActionMenuEvent) => void,
 ): void {
   const handlerRef = useRef(handler);
-  handlerRef.current = handler;
+  useEffect(() => {
+    handlerRef.current = handler;
+  }, [handler]);
 
   useEffect(() => {
     const listener = (e: Event) => {

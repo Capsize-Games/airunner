@@ -4,6 +4,7 @@
 
 import { Layer, Rect, Text } from "react-konva";
 import type { SelectRenderState } from "./useSelectTool";
+import { useMarchingAnts } from "../shared/useMarchingAnts";
 
 interface Props extends SelectRenderState {
   /** Current stage zoom — keeps the size readout a constant on-screen size. */
@@ -11,6 +12,9 @@ interface Props extends SelectRenderState {
 }
 
 export default function SelectLayer({ rect, zoom }: Props) {
+  // Animated dash offset — the "marching ants" effect.
+  const dashOffset = useMarchingAnts();
+
   if (!rect) return null;
 
   return (
@@ -25,6 +29,7 @@ export default function SelectLayer({ rect, zoom }: Props) {
           stroke="#6399ff"
           strokeWidth={1}
           dash={[5, 3]}
+          dashOffset={dashOffset}
           strokeScaleEnabled={false}
         />
       </Layer>

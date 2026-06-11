@@ -38,6 +38,7 @@ export interface TextToolProps {
   renameLayer: (id: string, name: string) => void;
   deleteLayer: (id: string) => void;
   setTextNode: (layerId: string, textNode: TextNodeData) => void;
+  setActiveLayer: (id: string) => void;
 }
 
 // ── Constants ─────────────────────────────────────────────────────────────
@@ -79,6 +80,35 @@ function fitTextarea(el: HTMLTextAreaElement): void {
   el.style.width = `${Math.max(20, el.scrollWidth + 8)}px`;
 }
 
+/** The font/colour of a text node currently being edited. */
+interface EditStyle {
+  fontFamily: string;
+  fontSize: number;
+  fill: string;
+}
+
+// Reusable offscreen canvas for measuring text dimensions (hit-testing).
+let measureCanvas: HTMLCanvasElement | null = null;
+
+/** Measure the rendered size of a text block for click hit-testing. */
+function measureText(
+  text: string,
+  fontFamily: string,
+  fontSize: number,
+): { width: number; height: number } {
+  if (!measureCanvas) measureCanvas = document.createElement("canvas");
+  const ctx = measureCanvas.getContext("2d");
+  const lines = text.split("\n");
+  if (!ctx) return { width: 0, height: lines.length * fontSize };
+  ctx.font = `${fontSize}px ${fontFamily}`;
+  let width = 0;
+  for (const line of lines) {
+    width = Math.max(width, ctx.measureText(line).width);
+  }
+  // Konva.Text default lineHeight is 1; pad slightly for a forgiving target.
+  return { width, height: lines.length * fontSize * 1.2 };
+}
+
 // ── Main hook ─────────────────────────────────────────────────────────────
 
 export function useTextTool({
@@ -93,6 +123,7 @@ export function useTextTool({
   renameLayer,
   deleteLayer,
   setTextNode,
+  setActiveLayer,
 }: TextToolProps): UseTextToolReturn {
   const [activeTextLayerId, setActiveTextLayerId] = useState<string | null>(
     null,
@@ -102,6 +133,13 @@ export function useTextTool({
   const editingLayerIdRef = useRef<string | null>(null);
   const editingLayerCreatedRef = useRef(false);
   const editingPosRef = useRef({ x: 0, y: 0 });
+  // Style of the node currently being edited — tool defaults for brand-new
+  // text, or the existing node's own style when editing in place.
+  const editStyleRef = useRef<EditStyle>({
+    fontFamily: textFont,
+    fontSize: textSize,
+    fill: textColor,
+  });
   const settingsRef = useRef({ textFont, textSize, textColor });
   useEffect(() => {
     settingsRef.current = { textFont, textSize, textColor };
@@ -127,16 +165,16 @@ export function useTextTool({
       if (!ta) return;
 
       const pos = editingPosRef.current;
-      const s = settingsRef.current;
+      const s = editStyleRef.current;
       const text = ta.value;
 
       setTextNode(layerId, {
         text,
         x: pos.x,
         y: pos.y,
-        fontFamily: s.textFont,
-        fontSize: s.textSize,
-        fill: s.textColor,
+        fontFamily: s.fontFamily,
+        fontSize: s.fontSize,
+        fill: s.fill,
       });
 
       const name = text.trim()
@@ -171,13 +209,15 @@ export function useTextTool({
       initialText: string,
       x: number,
       y: number,
+      style: EditStyle,
     ) => {
       removeTextarea();
 
       const stage = stageRef.current;
       if (!stage) return;
 
-      const s = settingsRef.current;
+      editStyleRef.current = style;
+      const s = style;
       const container = stage.container();
       const parentEl = container.parentElement ?? document.body;
 
@@ -188,9 +228,9 @@ export function useTextTool({
       const absPos = stage.getAbsoluteTransform().point({ x, y });
       ta.style.left = `${absPos.x}px`;
       ta.style.top = `${absPos.y}px`;
-      ta.style.fontSize = `${s.textSize}px`;
-      ta.style.fontFamily = s.textFont;
-      ta.style.color = s.textColor;
+      ta.style.fontSize = `${s.fontSize}px`;
+      ta.style.fontFamily = s.fontFamily;
+      ta.style.color = s.fill;
       ta.value = initialText;
 
       ta.addEventListener("input", () => {
@@ -199,9 +239,9 @@ export function useTextTool({
           text: ta.value,
           x,
           y,
-          fontFamily: s.textFont,
-          fontSize: s.textSize,
-          fill: s.textColor,
+          fontFamily: s.fontFamily,
+          fontSize: s.fontSize,
+          fill: s.fill,
         });
       });
 
@@ -261,7 +301,11 @@ export function useTextTool({
             });
             editingLayerCreatedRef.current = false;
             setActiveTextLayerId(candidate.id);
-            showTextarea(candidate.id, "", x, y);
+            showTextarea(candidate.id, "", x, y, {
+              fontFamily: s.textFont,
+              fontSize: s.textSize,
+              fill: s.textColor,
+            });
           }
           return;
         }
@@ -276,7 +320,11 @@ export function useTextTool({
         });
         editingLayerCreatedRef.current = true;
         setActiveTextLayerId(newLayer.id);
-        showTextarea(newLayer.id, "", x, y);
+        showTextarea(newLayer.id, "", x, y, {
+          fontFamily: s.textFont,
+          fontSize: s.textSize,
+          fill: s.textColor,
+        });
 
         // Batch draw the stage to show the new layer
         stageRef.current?.batchDraw();
@@ -288,6 +336,52 @@ export function useTextTool({
       showTextarea,
       stageRef,
     ],
+  );
+
+  // ── Edit an existing text node in place ───────────────────────────────
+  const editExistingText = useCallback(
+    (layer: CanvasLayer) => {
+      const node = layer.textNode;
+      if (!node) return;
+      setActiveLayer(layer.id);
+      // Editing an existing layer — never delete it on cancel.
+      editingLayerCreatedRef.current = false;
+      setActiveTextLayerId(layer.id);
+      showTextarea(layer.id, node.text, node.x, node.y, {
+        fontFamily: node.fontFamily,
+        fontSize: node.fontSize,
+        fill: node.fill,
+      });
+    },
+    [setActiveLayer, showTextarea],
+  );
+
+  // ── Find the topmost text node under a document-space point ───────────
+  const findTextLayerAt = useCallback(
+    (x: number, y: number): CanvasLayer | null => {
+      const ls = layersRef.current;
+      // Later layers render on top → search from the end.
+      for (let i = ls.length - 1; i >= 0; i--) {
+        const l = ls[i];
+        if (!l.visible || !l.textNode || !l.textNode.text) continue;
+        const { width, height } = measureText(
+          l.textNode.text,
+          l.textNode.fontFamily,
+          l.textNode.fontSize,
+        );
+        const nx = l.offsetX + l.textNode.x;
+        const ny = l.offsetY + l.textNode.y;
+        const pad = 4;
+        if (
+          x >= nx - pad && x <= nx + width + pad &&
+          y >= ny - pad && y <= ny + height + pad
+        ) {
+          return l;
+        }
+      }
+      return null;
+    },
+    [],
   );
 
   // ── Reset when deactivated ────────────────────────────────────────────
@@ -336,10 +430,16 @@ export function useTextTool({
       const pos = getCanvasPos();
       if (!pos) return true;
 
-      startNewText(pos.x, pos.y);
+      // Clicking on existing text edits it in place; otherwise start new text.
+      const existing = findTextLayerAt(pos.x, pos.y);
+      if (existing) {
+        editExistingText(existing);
+      } else {
+        startNewText(pos.x, pos.y);
+      }
       return true;
     },
-    [isActive, getCanvasPos, commit, cancel, startNewText],
+    [isActive, getCanvasPos, commit, cancel, startNewText, findTextLayerAt, editExistingText],
   );
 
   const onMouseMove = useCallback((): boolean => false, []);

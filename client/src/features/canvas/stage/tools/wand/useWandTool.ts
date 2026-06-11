@@ -147,11 +147,22 @@ export function useWandTool({
   getCanvasPos,
   stageRef,
   settingsRef,
+  documentWidth,
+  documentHeight,
+  onCommitSelection,
 }: {
   isActive: boolean;
   getCanvasPos: () => { x: number; y: number } | null;
   stageRef: React.RefObject<Konva.Stage>;
   settingsRef: { current: WandSettings };
+  /** Canvas (document) size — the selection is clipped to these bounds so
+      image pixels dragged outside the viewport are never selected. */
+  documentWidth: number;
+  documentHeight: number;
+  /** Commit the computed boundary to the shared selection (empty = deselect). */
+  onCommitSelection: (
+    points: number[], feather: number, antialias: boolean,
+  ) => void;
 }): UseWandToolReturn {
   // ── React state (drives re-renders) ─────────────────────────────────
   const [boundaryPoints, setBoundaryPoints] = useState<number[]>([]);
@@ -324,6 +335,19 @@ export function useWandTool({
         },
       );
 
+      // Clip the mask to the document (canvas viewport). Image pixels that
+      // have been dragged outside the canvas map to document coordinates
+      // outside [0,documentWidth]×[0,documentHeight] and must be dropped from
+      // the selection.
+      clipMaskToDocument(
+        mask,
+        imageData.width,
+        imageData.height,
+        toDocument,
+        documentWidth,
+        documentHeight,
+      );
+
       // Extract boundary
       const boundary = traceBoundary(mask, imageData.width, imageData.height);
 
@@ -368,9 +392,24 @@ export function useWandTool({
       setSelectionBounds(docBounds);
       setHasSelection(boundary.length > 0);
 
+      // Commit to the shared, tool-independent selection so it persists across
+      // tool switches and drives the clipboard + marching-ants overlay.
+      if (boundary.length >= 6) {
+        onCommitSelection(
+          docBoundary,
+          settings.featherEdges ? settings.featherRadius : 0,
+          settings.antialiasing,
+        );
+      } else {
+        onCommitSelection([], 0, true);
+      }
+
       return true;
     },
-    [isActive, getCanvasPos, stageRef, settingsRef],
+    [
+      isActive, getCanvasPos, stageRef, settingsRef,
+      documentWidth, documentHeight, onCommitSelection,
+    ],
   );
 
   const onMouseMove = useCallback(
@@ -400,6 +439,48 @@ export function useWandTool({
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────
+
+/**
+ * Zero out every mask pixel whose document-space position falls outside the
+ * canvas (document) bounds. `toDocument` is affine, so we derive its six
+ * coefficients from three sample points and apply them inline — avoiding a
+ * per-pixel object allocation.
+ */
+function clipMaskToDocument(
+  mask: Uint8Array,
+  width: number,
+  height: number,
+  toDocument: (x: number, y: number) => { x: number; y: number },
+  documentWidth: number,
+  documentHeight: number,
+): void {
+  const o = toDocument(0, 0);
+  const ux = toDocument(1, 0);
+  const uy = toDocument(0, 1);
+  const a = ux.x - o.x; // ∂docX/∂x
+  const b = ux.y - o.y; // ∂docY/∂x
+  const c = uy.x - o.x; // ∂docX/∂y
+  const d = uy.y - o.y; // ∂docY/∂y
+  const e = o.x;
+  const f = o.y;
+
+  for (let y = 0; y < height; y++) {
+    const rowDocX = c * y + e;
+    const rowDocY = d * y + f;
+    for (let x = 0; x < width; x++) {
+      const idx = y * width + x;
+      if (!mask[idx]) continue;
+      const docX = a * x + rowDocX;
+      const docY = b * x + rowDocY;
+      if (
+        docX < 0 || docX > documentWidth ||
+        docY < 0 || docY > documentHeight
+      ) {
+        mask[idx] = 0;
+      }
+    }
+  }
+}
 
 function computeBounds(
   mask: Uint8Array,

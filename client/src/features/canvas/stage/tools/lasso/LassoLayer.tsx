@@ -23,6 +23,11 @@ export default function LassoLayer({
   isClosed,
   zoom,
 }: Props) {
+  // Once closed, the committed selection is rendered by the shared
+  // SelectionOverlay (persistent marching ants). This layer only draws the
+  // in-progress path while the user is still building it.
+  if (isClosed) return null;
+
   const hasAnchors  = anchors.length > 0;
   const lastAnchor  = hasAnchors ? anchors[anchors.length - 1] : null;
   const firstAnchor = hasAnchors ? anchors[0] : null;

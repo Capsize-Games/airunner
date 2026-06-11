@@ -17,10 +17,7 @@ import {
   menuBtnActiveStyle,
   dropdownStyle,
 } from "./styles";
-import {
-  dispatchMenuAction,
-  useMenuAction,
-} from "./events";
+import { dispatchMenuAction } from "./events";
 import {
   MenuItemRow,
   type MenuGroup,
@@ -164,6 +161,52 @@ export default function ActionMenuBar() {
           action: "edit:redo",
           icon: "redo-2",
           shortcut: "Ctrl+Y",
+        },
+        { type: "divider" as const },
+        {
+          type: "action" as const,
+          label: "Cut",
+          action: "edit:cut",
+          icon: "scissors",
+          shortcut: "Ctrl+X",
+        },
+        {
+          type: "action" as const,
+          label: "Copy",
+          action: "edit:copy",
+          icon: "copy",
+          shortcut: "Ctrl+C",
+        },
+        {
+          type: "action" as const,
+          label: "Paste",
+          action: "edit:paste",
+          icon: "clipboard",
+          shortcut: "Ctrl+P",
+        },
+        {
+          type: "action" as const,
+          label: "Delete",
+          action: "edit:delete",
+          icon: "trash-2",
+          shortcut: "Del",
+        },
+      ],
+    },
+    {
+      label: "Select",
+      items: [
+        {
+          type: "action" as const,
+          label: "All",
+          action: "select:all",
+          shortcut: "Ctrl+A",
+        },
+        {
+          type: "action" as const,
+          label: "None",
+          action: "select:none",
+          shortcut: "Ctrl+Shift+A",
         },
       ],
     },

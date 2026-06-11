@@ -27,7 +27,8 @@ export function crop({ setState }: CanvasSetters) {
     (value: number) => {
       setState((prev) => ({
         ...prev,
-        cropWidth: Math.max(1, Math.round(value)),
+        // 0 means "no crop drawn yet"; otherwise round to a whole pixel.
+        cropWidth: Math.max(0, Math.round(value)),
       }));
     },
     [setState],
@@ -37,7 +38,7 @@ export function crop({ setState }: CanvasSetters) {
     (value: number) => {
       setState((prev) => ({
         ...prev,
-        cropHeight: Math.max(1, Math.round(value)),
+        cropHeight: Math.max(0, Math.round(value)),
       }));
     },
     [setState],

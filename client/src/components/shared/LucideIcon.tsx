@@ -5,8 +5,8 @@ import {
   Drama, Eraser, FolderOpen, Globe, Save, Grid2x2Check, History, Image, Images, Info, Layers, LayersPlus, Loader,
   MessageSquareHeart, MessageSquareText, Mic, Move, OctagonAlert,
   PanelRightOpen, Pencil, Play, Plus, Puzzle, RotateCcwSquare,
-  ScanText, Settings, Settings2, SlidersHorizontal, Sparkles,
-  Speaker, SquareDashed, Trash, Upload, User,
+  ScanText, Scissors, Clipboard, Settings, Settings2, SlidersHorizontal, Sparkles,
+  Speaker, SquareDashed, Trash, Trash2, Undo2, Redo2, Upload, User,
   type LucideIcon,
 } from "lucide-react";
 
@@ -53,6 +53,11 @@ const MAP: Record<string, LucideIcon> = {
   puzzle: Puzzle,
   "rotate-ccw-square": RotateCcwSquare,
   "scan-text": ScanText,
+  scissors: Scissors,
+  clipboard: Clipboard,
+  "trash-2": Trash2,
+  "undo-2": Undo2,
+  "redo-2": Redo2,
   settings: Settings,
   "settings-2": Settings2,
   "sliders-horizontal": SlidersHorizontal,

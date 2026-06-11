@@ -39,12 +39,29 @@ export function document(
     } catch {
       /* noop */
     }
-    setState((prev) => ({
-      ...defaultState(),
-      _ts: Date.now(),
-      brushSize: prev.brushSize,
-      brushColor: prev.brushColor,
-    }));
+    // Reset only document *content* — keep all tool settings and view
+    // preferences (wand/lasso/bucket options, grid/ruler visibility, brush,
+    // active tool, etc.) so creating a new document doesn't wipe them.
+    setState((prev) => {
+      const fresh = defaultState();
+      return {
+        ...prev,
+        layers: fresh.layers,
+        layerGroups: fresh.layerGroups,
+        displayOrder: fresh.displayOrder,
+        activeLayerId: fresh.activeLayerId,
+        selectedLayerIds: fresh.selectedLayerIds,
+        selection: null,
+        maskStrokes: [],
+        documentWidth: fresh.documentWidth,
+        documentHeight: fresh.documentHeight,
+        documentBgColor: fresh.documentBgColor,
+        activeGridArea: fresh.activeGridArea,
+        history: fresh.history,
+        historyIndex: fresh.historyIndex,
+        _ts: Date.now(),
+      };
+    });
   }, [setState]);
 
   const moveLayer = useCallback(

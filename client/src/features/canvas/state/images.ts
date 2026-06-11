@@ -116,5 +116,26 @@ export function images(
     [setState, recordSnapshot],
   );
 
-  return { placeImageOnNewLayer, placeImage, moveImage };
+  const updateImageSrc = useCallback(
+    (layerId: string, imageId: string, src: string) => {
+      setState((prev) =>
+        recordSnapshot({
+          ...prev,
+          layers: prev.layers.map((l) =>
+            l.id !== layerId
+              ? l
+              : {
+                  ...l,
+                  images: l.images.map((img) =>
+                    img.id === imageId ? { ...img, src } : img,
+                  ),
+                },
+          ),
+        }),
+      );
+    },
+    [setState, recordSnapshot],
+  );
+
+  return { placeImageOnNewLayer, placeImage, moveImage, updateImageSrc };
 }
