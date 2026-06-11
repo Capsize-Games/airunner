@@ -6,6 +6,7 @@ import {
 } from "react";
 import Konva from "konva";
 import { RefreshCcw, RefreshCcwDot } from "lucide-react";
+import LucideIcon from "../shared/LucideIcon";
 import {
   useCanvasContext,
   useCanvasDocument,
@@ -39,6 +40,7 @@ import { useCanvasImageDrop } from "./canvas/useCanvasImageDrop";
 import { useMenuAction } from "../layout/action-menu-bar";
 
 const LS_LEFT_W = "airunner_left_panel_w";
+const LS_LEFT_COLLAPSED = "airunner_left_panel_collapsed";
 const LEFT_PANEL_MIN = 220;
 const LEFT_PANEL_MAX = 560;
 
@@ -128,6 +130,9 @@ export default function CanvasPanel() {
   });
   const [leftPanelW, setLeftPanelW] = useState(() => {
     try { const v = localStorage.getItem(LS_LEFT_W); return v ? Number(v) : 300; } catch { return 300; }
+  });
+  const [leftPanelCollapsed, setLeftPanelCollapsed] = useState(() => {
+    try { return localStorage.getItem(LS_LEFT_COLLAPSED) === "true"; } catch { return false; }
   });
 
   const canvasSync = useCanvasSync({
@@ -267,6 +272,9 @@ export default function CanvasPanel() {
     try { localStorage.setItem(LS_LEFT_W, String(leftPanelW)); } catch { /* */ }
   }, [leftPanelW]);
   useEffect(() => {
+    try { localStorage.setItem(LS_LEFT_COLLAPSED, String(leftPanelCollapsed)); } catch { /* */ }
+  }, [leftPanelCollapsed]);
+  useEffect(() => {
     try { localStorage.setItem("canvas_show_image_prompt", String(showImagePrompt)); } catch { /* */ }
   }, [showImagePrompt]);
   useEffect(() => {
@@ -320,124 +328,225 @@ export default function CanvasPanel() {
       <div className="flex-grow-1 d-flex flex-column overflow-hidden min-w-0 min-h-0">
         <div className="flex-grow-1 d-flex flex-row overflow-hidden min-h-0">
 
-          {/* ── Left panel ─────────────────────────────────────────────── */}
-          <div
-            style={{
-              display: "flex", flexDirection: "row",
-              flexShrink: 0, width: leftPanelW,
-              background: "#14141e",
-              borderRight: "1px solid rgba(255,255,255,0.07)",
-              overflow: "hidden",
-            }}
-          >
-            <div style={{ display: "flex", flexDirection: "column", flex: 1, overflow: "hidden" }}>
+          {/* ── Left panel (collapsible) ──────────────────────────────────── */}
+          {leftPanelCollapsed ? (
+            /* Collapsed rail — thin bar with expand chevron + tab icons */
+            <div
+              className="flex-shrink-0 d-flex overflow-hidden"
+              style={{ width: 36, borderRight: "1px solid rgba(255,255,255,0.07)" }}
+            >
+              <div
+                className="flex-shrink-0 d-flex flex-column align-items-center overflow-hidden"
+                style={{ width: 32, background: "#181824", padding: "4px 0", gap: 2 }}
+              >
+                <button
+                  title="Expand panel"
+                  style={{
+                    background: "none", border: "none", cursor: "pointer",
+                    color: "rgba(255,255,255,0.4)", padding: 0,
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    borderRadius: 4, width: 28, height: 28, flexShrink: 0,
+                    transition: "background 0.1s, color 0.1s",
+                  }}
+                  onClick={() => setLeftPanelCollapsed(false)}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = "rgba(255,255,255,0.08)";
+                    e.currentTarget.style.color = "rgba(255,255,255,0.85)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = "none";
+                    e.currentTarget.style.color = "rgba(255,255,255,0.4)";
+                  }}
+                >
+                  <LucideIcon name="chevron-right" size={14} />
+                </button>
 
-              <CanvasToolPanel
-                activeTool={canvas.activeTool}
-                onToolChange={(tool) => {
-                  canvas.setActiveTool(tool);
-                  setShowImagePrompt(false);
-                }}
-                showImagePrompt={showImagePrompt}
-                onToggleImagePrompt={() => {
-                  if (showImagePrompt) return; // can't untoggle
-                  setShowImagePrompt(true);
-                  setShowCanvasTools(false);
-                }}
-                showCanvasTools={showCanvasTools}
-                onToggleCanvasTools={() => {
-                  if (showCanvasTools) return; // can't untoggle
-                  setShowCanvasTools(true);
-                  setShowImagePrompt(false);
-                }}
-                activeArtAction={activeArtAction}
-                onArtAction={(action) => {
-                  setActiveArtAction((prev) => prev === action ? null : action);
-                }}
-              />
+                <div className="sep-h" style={{ width: 20, height: 1, background: "rgba(255,255,255,0.08)", margin: "2px 0", flexShrink: 0 }} />
 
-              {/* Tool settings section */}
+                {/* Tab indicator — Image Prompt */}
+                <button
+                  title="Image Prompt"
+                  style={{
+                    background: "none", border: "none", cursor: "pointer",
+                    color: showImagePrompt ? "var(--bs-primary)" : "rgba(255,255,255,0.4)", padding: 0,
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    borderRadius: 4, width: 28, height: 28, flexShrink: 0,
+                    transition: "background 0.1s, color 0.1s",
+                  }}
+                  onClick={() => {
+                    setShowImagePrompt(true);
+                    setShowCanvasTools(false);
+                    setLeftPanelCollapsed(false);
+                  }}
+                  onMouseEnter={(e) => {
+                    if (e.currentTarget.style.color !== "var(--bs-primary)") {
+                      e.currentTarget.style.background = "rgba(255,255,255,0.08)";
+                      e.currentTarget.style.color = "rgba(255,255,255,0.85)";
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (e.currentTarget.style.color !== "var(--bs-primary)") {
+                      e.currentTarget.style.background = "none";
+                      e.currentTarget.style.color = "rgba(255,255,255,0.4)";
+                    }
+                  }}
+                >
+                  <LucideIcon name="message-square-heart" size={14} />
+                </button>
+
+                {/* Tab indicator — Canvas Tools */}
+                <button
+                  title="Canvas Tools"
+                  style={{
+                    background: "none", border: "none", cursor: "pointer",
+                    color: showCanvasTools ? "var(--bs-primary)" : "rgba(255,255,255,0.4)", padding: 0,
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    borderRadius: 4, width: 28, height: 28, flexShrink: 0,
+                    transition: "background 0.1s, color 0.1s",
+                  }}
+                  onClick={() => {
+                    setShowCanvasTools(true);
+                    setShowImagePrompt(false);
+                    setLeftPanelCollapsed(false);
+                  }}
+                  onMouseEnter={(e) => {
+                    if (e.currentTarget.style.color !== "var(--bs-primary)") {
+                      e.currentTarget.style.background = "rgba(255,255,255,0.08)";
+                      e.currentTarget.style.color = "rgba(255,255,255,0.85)";
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (e.currentTarget.style.color !== "var(--bs-primary)") {
+                      e.currentTarget.style.background = "none";
+                      e.currentTarget.style.color = "rgba(255,255,255,0.4)";
+                    }
+                  }}
+                >
+                  <LucideIcon name="palette" size={14} />
+                </button>
+              </div>
+            </div>
+          ) : (
+            /* Expanded panel */
+            <div
+              style={{
+                display: "flex", flexDirection: "row",
+                flexShrink: 0, width: leftPanelW,
+                background: "#14141e",
+                borderRight: "1px solid rgba(255,255,255,0.07)",
+                overflow: "hidden",
+              }}
+            >
               <div style={{ display: "flex", flexDirection: "column", flex: 1, overflow: "hidden" }}>
+
+                <CanvasToolPanel
+                  activeTool={canvas.activeTool}
+                  onToolChange={(tool) => {
+                    canvas.setActiveTool(tool);
+                    setShowImagePrompt(false);
+                  }}
+                  showImagePrompt={showImagePrompt}
+                  onToggleImagePrompt={() => {
+                    if (showImagePrompt) return; // can't untoggle
+                    setShowImagePrompt(true);
+                    setShowCanvasTools(false);
+                  }}
+                  showCanvasTools={showCanvasTools}
+                  onToggleCanvasTools={() => {
+                    if (showCanvasTools) return; // can't untoggle
+                    setShowCanvasTools(true);
+                    setShowImagePrompt(false);
+                  }}
+                  activeArtAction={activeArtAction}
+                  onArtAction={(action) => {
+                    setActiveArtAction((prev) => prev === action ? null : action);
+                  }}
+                  onCollapse={() => setLeftPanelCollapsed(true)}
+                />
+
+                {/* Tool settings section */}
+                <div style={{ display: "flex", flexDirection: "column", flex: 1, overflow: "hidden" }}>
+                  <div style={{
+                    padding: "4px 8px",
+                    fontSize: 10, fontWeight: 600,
+                    letterSpacing: "0.08em", textTransform: "uppercase",
+                    color: "rgba(255,255,255,0.4)",
+                    borderBottom: "1px solid rgba(255,255,255,0.07)",
+                    flexShrink: 0,
+                  }}>
+                    {toolSettingsLabel}
+                  </div>
+                  <div style={{ flex: 1, overflow: "hidden auto", display: "flex", flexDirection: "column" }}>
+                    {showImagePrompt && <ArtPromptPanel visible={true} activeArtAction={activeArtAction} />}
+                    {showBrushControls && <BrushControls />}
+                    {showMoveControls && <MoveControls />}
+                    {showLassoControls && <LassoControls />}
+                    {showWandControls && <WandControls />}
+                    {showCropControls && <CropControls />}
+                    {showBucketControls && <BucketControls />}
+                    {showSmudgeControls && <SmudgeControls />}
+                    {showPipetteControls && <PipetteControls />}
+                    {showZoomControls && <ZoomControls />}
+                    {showTextControls && <TextControls />}
+                    {showGridControls && <GridControls />}
+                    {showRulerControls && <RulerControls />}
+                  </div>
+                </div>
+
+                {/* Bottom row: reset presets */}
                 <div style={{
-                  padding: "4px 8px",
-                  fontSize: 10, fontWeight: 600,
-                  letterSpacing: "0.08em", textTransform: "uppercase",
-                  color: "rgba(255,255,255,0.4)",
-                  borderBottom: "1px solid rgba(255,255,255,0.07)",
+                  display: "flex", alignItems: "center", justifyContent: "space-between",
+                  padding: "3px 6px",
+                  borderTop: "1px solid rgba(255,255,255,0.07)",
+                  background: "#161620",
                   flexShrink: 0,
                 }}>
-                  {toolSettingsLabel}
+                  <button
+                    title="Reset tool presets"
+                    style={resetBtnStyle}
+                    onClick={() => canvas.resetToolPresets(canvas.activeTool)}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = "rgba(255,255,255,0.08)";
+                      e.currentTarget.style.color = "rgba(255,255,255,0.8)";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = "transparent";
+                      e.currentTarget.style.color = "rgba(255,255,255,0.35)";
+                    }}
+                  >
+                    <RefreshCcw size={13} strokeWidth={1.75} />
+                  </button>
+                  <button
+                    title="Reset all tool presets"
+                    style={resetBtnStyle}
+                    onClick={() => canvas.resetAllToolPresets()}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = "rgba(255,255,255,0.08)";
+                      e.currentTarget.style.color = "rgba(255,255,255,0.8)";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = "transparent";
+                      e.currentTarget.style.color = "rgba(255,255,255,0.35)";
+                    }}
+                  >
+                    <RefreshCcwDot size={13} strokeWidth={1.75} />
+                  </button>
                 </div>
-                <div style={{ flex: 1, overflow: "hidden auto", display: "flex", flexDirection: "column" }}>
-                  {showImagePrompt && <ArtPromptPanel visible={true} activeArtAction={activeArtAction} />}
-                  {showBrushControls && <BrushControls />}
-                  {showMoveControls && <MoveControls />}
-                  {showLassoControls && <LassoControls />}
-                  {showWandControls && <WandControls />}
-                  {showCropControls && <CropControls />}
-                  {showBucketControls && <BucketControls />}
-                  {showSmudgeControls && <SmudgeControls />}
-                  {showPipetteControls && <PipetteControls />}
-                  {showZoomControls && <ZoomControls />}
-                  {showTextControls && <TextControls />}
-                  {showGridControls && <GridControls />}
-                  {showRulerControls && <RulerControls />}
-                </div>
+
               </div>
 
-              {/* Bottom row: reset presets */}
-              <div style={{
-                display: "flex", alignItems: "center", justifyContent: "space-between",
-                padding: "3px 6px",
-                borderTop: "1px solid rgba(255,255,255,0.07)",
-                background: "#161620",
-                flexShrink: 0,
-              }}>
-                <button
-                  title="Reset tool presets"
-                  style={resetBtnStyle}
-                  onClick={() => canvas.resetToolPresets(canvas.activeTool)}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.background = "rgba(255,255,255,0.08)";
-                    e.currentTarget.style.color = "rgba(255,255,255,0.8)";
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.background = "transparent";
-                    e.currentTarget.style.color = "rgba(255,255,255,0.35)";
-                  }}
-                >
-                  <RefreshCcw size={13} strokeWidth={1.75} />
-                </button>
-                <button
-                  title="Reset all tool presets"
-                  style={resetBtnStyle}
-                  onClick={() => canvas.resetAllToolPresets()}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.background = "rgba(255,255,255,0.08)";
-                    e.currentTarget.style.color = "rgba(255,255,255,0.8)";
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.background = "transparent";
-                    e.currentTarget.style.color = "rgba(255,255,255,0.35)";
-                  }}
-                >
-                  <RefreshCcwDot size={13} strokeWidth={1.75} />
-                </button>
-              </div>
-
+              {/* Resize handle on right edge of left panel */}
+              <div
+                className="resize-handle"
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  leftPanelDrag = { startX: e.clientX, startW: leftPanelW, setW: setLeftPanelW };
+                  document.body.style.cursor = "col-resize";
+                  document.body.style.userSelect = "none";
+                }}
+              />
             </div>
-
-            {/* Resize handle on right edge of left panel */}
-            <div
-              className="resize-handle"
-              onMouseDown={(e) => {
-                e.preventDefault();
-                leftPanelDrag = { startX: e.clientX, startW: leftPanelW, setW: setLeftPanelW };
-                document.body.style.cursor = "col-resize";
-                document.body.style.userSelect = "none";
-              }}
-            />
-          </div>
+          )}
 
           {/* ── Canvas viewport ─────────────────────────────────────────── */}
           <div

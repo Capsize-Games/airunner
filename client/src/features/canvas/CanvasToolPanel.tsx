@@ -1,8 +1,7 @@
-import { MessageSquareHeart, Palette } from "lucide-react";
 import {
   Move, SquareDashed, Lasso, Wand, Crop,
   PaintBucket, Pointer, Type, Pipette, Search,
-  Brush, Eraser, Grid3x3, Ruler,
+  Brush, Eraser, Grid3x3, Ruler, MessageSquareHeart, Palette,
 } from "lucide-react";
 import LucideIcon from "../../components/shared/LucideIcon";
 import type { ActiveTool } from "./useCanvasState";
@@ -33,6 +32,7 @@ interface Props {
   onToggleCanvasTools: () => void;
   activeArtAction: string | null;
   onArtAction: (action: string | null) => void;
+  onCollapse?: () => void;
 }
 
 const btn: React.CSSProperties = {
@@ -53,6 +53,7 @@ export default function CanvasToolPanel({
   onToggleCanvasTools,
   activeArtAction,
   onArtAction,
+  onCollapse,
 }: Props) {
   const onBtnEnter = (e: React.MouseEvent<HTMLButtonElement>) => {
     const bg = e.currentTarget.style.background;
@@ -126,6 +127,24 @@ export default function CanvasToolPanel({
     </button>
   );
 
+  const tabBtnBase: React.CSSProperties = {
+    flex: 1, padding: "5px 4px", background: "transparent", border: "none",
+    fontSize: 11, cursor: "pointer", display: "flex", alignItems: "center",
+    justifyContent: "center", gap: 4, transition: "color 0.15s, border-color 0.15s",
+  };
+
+  const collapseBtnStyle: React.CSSProperties = {
+    background: "none", border: "none", cursor: "pointer",
+    padding: "5px 6px", color: "rgba(255,255,255,0.35)",
+    display: "flex", alignItems: "center", justifyContent: "center",
+    transition: "color 0.15s",
+  };
+
+  const TABS: { id: string; active: boolean; icon: React.ComponentType<{ size?: number; strokeWidth?: number }>; title: string; onClick: () => void }[] = [
+    { id: "image-prompt", active: showImagePrompt, icon: MessageSquareHeart, title: "Image Prompt", onClick: onToggleImagePrompt },
+    { id: "canvas-tools", active: showCanvasTools, icon: Palette, title: "Canvas Tools", onClick: onToggleCanvasTools },
+  ];
+
   return (
     <div
       style={{
@@ -134,12 +153,44 @@ export default function CanvasToolPanel({
         userSelect: "none", flexShrink: 0,
       }}
     >
-      {/* ── Palette toggle buttons ────────────────────────────────────
-       * These two buttons switch between showing the image prompt or the
-       * canvas tool palette. Only one can be active at a time. */}
-      <div style={{ display: "flex", alignItems: "center", gap: 2, padding: "4px 6px", margin: "0 -6px 2px", borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
-        {toggleBtn(showImagePrompt, MessageSquareHeart, "Toggle Image Prompt", onToggleImagePrompt)}
-        {toggleBtn(showCanvasTools, Palette, "Canvas Tools", onToggleCanvasTools)}
+      {/* ── Tab bar with collapse chevron ─────────────────────────────
+       * Collapse chevron on the left, then palette toggle tabs styled
+       * to match the right panel tab appearance. */}
+      <div className="d-flex flex-shrink-0" style={{ background: "#161620", margin: "0 -6px", borderBottom: "1px solid rgba(255,255,255,0.07)", gap: 0 }}>
+        <button
+          type="button"
+          title="Collapse panel"
+          onClick={onCollapse}
+          style={collapseBtnStyle}
+          onMouseEnter={(e) => { e.currentTarget.style.color = "rgba(255,255,255,0.85)"; }}
+          onMouseLeave={(e) => { e.currentTarget.style.color = "rgba(255,255,255,0.35)"; }}
+        >
+          <LucideIcon name="chevron-left" size={12} />
+        </button>
+        {TABS.map((t) => (
+          <button
+            key={t.id}
+            type="button"
+            title={t.title}
+            onClick={t.onClick}
+            style={{
+              ...tabBtnBase,
+              background: t.active ? "var(--theme-panel-bg)" : "transparent",
+              borderBottom: t.active ? "2px solid var(--bs-primary)" : "2px solid transparent",
+              color: t.active ? "var(--bs-primary)" : "rgba(255,255,255,0.45)",
+            }}
+            onMouseEnter={(e) => {
+              if (!t.active)
+                e.currentTarget.style.background = "rgba(255,255,255,0.05)";
+            }}
+            onMouseLeave={(e) => {
+              if (!t.active)
+                e.currentTarget.style.background = "transparent";
+            }}
+          >
+            <t.icon size={12} strokeWidth={1.75} />
+          </button>
+        ))}
       </div>
 
       {/* ── Art prompt palette ────────────────────────────────────────
