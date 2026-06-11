@@ -50,9 +50,9 @@ export function useArtPromptState() {
   const [artW, setArtW] = useState(() => loadNum(LS_ART_W, ART_PANEL_DEFAULT));
   useEffect(() => { saveNum(LS_ART_W, artW); }, [artW]);
 
-  const [generationType, setGenerationType] = useState<"txt2img" | "img2img">(
+  const [generationType, setGenerationType] = useState<"txt2img" | "img2img" | "inpaint">(
     () => {
-      try { return (localStorage.getItem("airunner_gen_type") as "txt2img" | "img2img") || "txt2img"; }
+      try { return (localStorage.getItem("airunner_gen_type") as "txt2img" | "img2img" | "inpaint") || "txt2img"; }
       catch { return "txt2img"; }
     }
   );

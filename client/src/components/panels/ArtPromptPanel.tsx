@@ -21,12 +21,21 @@ import "./art-prompt/ArtShared";
 export default function ArtPromptPanel({
   visible = true,
   activeArtAction = null,
+  generationType: externalGenerationType,
+  onGenerationTypeChange: externalOnGenerationTypeChange,
 }: {
   visible?: boolean;
   activeArtAction?: string | null;
+  generationType?: "txt2img" | "img2img" | "inpaint";
+  onGenerationTypeChange?: (v: "txt2img" | "img2img" | "inpaint") => void;
 }) {
   const s = useArtPromptState();
   const o = useArtOverlays();
+
+  // Use external generationType props when provided (e.g. from CanvasPanel),
+  // otherwise fall back to the internal state from useArtPromptState.
+  const genType = externalGenerationType ?? s.generationType;
+  const onGenTypeChange = externalOnGenerationTypeChange ?? s.setGenerationType;
 
   const [showInfo, setShowInfo] = useState(() => {
     try {
@@ -142,16 +151,6 @@ export default function ArtPromptPanel({
                       </div>
                     </div>
                   )}
-                  {activeArtAction === "genType" && (
-                    <div className="d-flex flex-column" style={{ gap: 2, padding: "4px 2px" }}>
-                      <button type="button" onClick={() => s.setGenerationType("txt2img")}
-                        style={{ display: "flex", flexDirection: "column", gap: 1, width: "100%", padding: "4px 10px", border: "none", background: s.generationType === "txt2img" ? "rgba(var(--theme-primary-rgb), 0.10)" : "transparent", cursor: "pointer", textAlign: "left", color: s.generationType === "txt2img" ? "var(--bs-primary)" : "var(--theme-text)", fontSize: "0.75rem", borderLeft: s.generationType === "txt2img" ? "2px solid var(--bs-primary)" : "2px solid transparent", borderRadius: 2 }}
-                      >Text-to-image</button>
-                      <button type="button" onClick={() => s.setGenerationType("img2img")}
-                        style={{ display: "flex", flexDirection: "column", gap: 1, width: "100%", padding: "4px 10px", border: "none", background: s.generationType === "img2img" ? "rgba(var(--theme-primary-rgb), 0.10)" : "transparent", cursor: "pointer", textAlign: "left", color: s.generationType === "img2img" ? "var(--bs-primary)" : "var(--theme-text)", fontSize: "0.75rem", borderLeft: s.generationType === "img2img" ? "2px solid var(--bs-primary)" : "2px solid transparent", borderRadius: 2 }}
-                      >Image-to-image</button>
-                    </div>
-                  )}
                   {activeArtAction === "imageSize" && (
                     <div style={{ padding: "6px 4px" }}>
                       <div className="d-flex flex-column" style={{ gap: 6 }}>
@@ -213,7 +212,7 @@ export default function ArtPromptPanel({
               cfgScale={s.cfgScale}
               nSamples={s.nSamples}
               imagesPerBatch={s.imagesPerBatch}
-              generationType={s.generationType}
+              generationType={genType}
               seed={s.seed}
               seedRandomized={s.seedRandomized}
               genWidth={s.genWidth}
@@ -229,7 +228,7 @@ export default function ArtPromptPanel({
               onCfgScaleChange={s.setCfgScale}
               onNSamplesChange={s.setNSamples}
               onImagesPerBatchChange={s.setImagesPerBatch}
-              onGenerationTypeChange={s.setGenerationType}
+              onGenerationTypeChange={onGenTypeChange}
               onSeedChange={s.handleSeedChange}
               onToggleRandom={s.handleToggleRandom}
               onGenWidthChange={s.setGenWidth}
@@ -315,13 +314,13 @@ export default function ArtPromptPanel({
         version={s.version}
         modelPath={s.modelPath}
         scheduler={s.scheduler}
-        generationType={s.generationType}
+        generationType={genType}
         artOptions={s.artOptions}
         availableSchedulers={s.availableSchedulers}
         onSelectVersion={s.handleVersion}
         onSelectModel={s.handleModel}
         onSelectScheduler={s.handleScheduler}
-        onSelectGenType={s.setGenerationType}
+        onSelectGenType={onGenTypeChange}
         onClose={o.closeDropdown}
       />
 

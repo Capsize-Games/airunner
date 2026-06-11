@@ -23,6 +23,8 @@ const TOOLS: { id: string; label: string; Icon: React.ComponentType<{ size?: num
   { id: "ruler",   label: "Ruler",         Icon: Ruler },
 ];
 
+type GenType = "txt2img" | "img2img" | "inpaint";
+
 interface Props {
   activeTool: ActiveTool;
   onToolChange: (tool: ActiveTool) => void;
@@ -32,6 +34,8 @@ interface Props {
   onToggleCanvasTools: () => void;
   activeArtAction: string | null;
   onArtAction: (action: string | null) => void;
+  generationType: GenType;
+  onGenerationTypeChange: (v: GenType) => void;
   onCollapse?: () => void;
 }
 
@@ -53,6 +57,8 @@ export default function CanvasToolPanel({
   onToggleCanvasTools,
   activeArtAction,
   onArtAction,
+  generationType,
+  onGenerationTypeChange,
   onCollapse,
 }: Props) {
   const onBtnEnter = (e: React.MouseEvent<HTMLButtonElement>) => {
@@ -193,10 +199,45 @@ export default function CanvasToolPanel({
         ))}
       </div>
 
+      {/* ── Generation type toggle row ─────────────────────────────────
+       * Shown above the art prompt palette. Three mutually exclusive
+       * toggle buttons: txt-to-img, img-to-img, inpaint. */}
+      {showImagePrompt && (
+        <div style={{ display: "flex", alignItems: "center", gap: 2, padding: "4px 6px", margin: "0 -6px", borderBottom: "1px solid rgba(255,255,255,0.07)", background: "#12121c" }}>
+          {([
+            { id: "txt2img" as GenType, title: "Txt-to-img" },
+            { id: "img2img" as GenType, title: "Img-to-img" },
+            { id: "inpaint" as GenType, title: "Inpaint" },
+          ] as { id: GenType; title: string }[]).map(({ id, title }) => {
+            const active = generationType === id;
+            return (
+              <button
+                key={id}
+                title={title}
+                onClick={() => onGenerationTypeChange(id)}
+                onMouseEnter={onBtnEnter}
+                onMouseLeave={onBtnLeave}
+                style={{
+                  ...btn,
+                  background: active ? "rgba(99,153,255,0.22)" : "transparent",
+                  color: active ? "var(--bs-primary)" : "rgba(255,255,255,0.35)",
+                  boxShadow: active ? "inset 0 0 0 1.5px rgba(99,153,255,0.55)" : "none",
+                  width: "auto", height: 26,
+                  padding: "0 8px",
+                }}
+              >
+                <span style={{ whiteSpace: "nowrap", fontSize: 9, fontWeight: 600, letterSpacing: "0.03em", fontVariant: "small-caps" }}>
+                  {title}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      )}
+
       {/* ── Art prompt palette ────────────────────────────────────────
-       * Shown only when the image-prompt palette is active. These
-       * buttons mirror the toolbar at the bottom of the chat prompt.
-       * Each toggles inline settings in the tool panel below. */}
+       * Shown below the gen-type row. Each toggles inline settings in
+       * the tool panel. */}
       {showImagePrompt && (
         <div style={{ display: "flex", alignItems: "center", gap: 2, flexWrap: "wrap", padding: "4px 6px", margin: "0 -6px", borderBottom: "1px solid rgba(255,255,255,0.07)", background: "#12121c" }}>
           {[
@@ -205,7 +246,6 @@ export default function CanvasToolPanel({
             { id: "lora",         name: "puzzle",      title: "LoRA" },
             { id: "settings",     name: "settings-2",  title: "Generation settings" },
             { id: "seed",         name: "shuffle",     title: "Seed randomization" },
-            { id: "genType",      name: "image-plus",  title: "Generation type" },
             { id: "imageSize",    name: "ruler-dimension-line", title: "Image size" },
           ].map((item) => {
             const isActive = activeArtAction === item.id;

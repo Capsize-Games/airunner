@@ -116,6 +116,10 @@ export default function CanvasPanel() {
   });
   const [showSettings, setShowSettings] = useState(false);
   const [showNewDocModal, setShowNewDocModal] = useState(false);
+  const [generationType, setGenerationType] = useState<"txt2img" | "img2img" | "inpaint">(() => {
+    try { return (localStorage.getItem("canvas_gen_type") as "txt2img" | "img2img" | "inpaint") || "txt2img"; }
+    catch { return "txt2img"; }
+  });
   const [showImagePrompt, setShowImagePrompt] = useState(() => {
     try { return localStorage.getItem("canvas_show_image_prompt") === "true"; } catch { return false; }
   });
@@ -283,6 +287,9 @@ export default function CanvasPanel() {
   useEffect(() => {
     try { localStorage.setItem("canvas_active_art_action", activeArtAction ?? ""); } catch { /* */ }
   }, [activeArtAction]);
+  useEffect(() => {
+    try { localStorage.setItem("canvas_gen_type", generationType); } catch { /* */ }
+  }, [generationType]);
 
   if (!isLoaded) {
     return (
@@ -298,7 +305,6 @@ export default function CanvasPanel() {
     lora: "LoRA",
     settings: "Generator Settings",
     seed: "Seed",
-    genType: "Generation Type",
     imageSize: "Image Size",
   };
 
@@ -461,6 +467,8 @@ export default function CanvasPanel() {
                   onArtAction={(action) => {
                     setActiveArtAction((prev) => prev === action ? null : action);
                   }}
+                  generationType={generationType}
+                  onGenerationTypeChange={setGenerationType}
                   onCollapse={() => setLeftPanelCollapsed(true)}
                 />
 
@@ -477,7 +485,7 @@ export default function CanvasPanel() {
                     {toolSettingsLabel}
                   </div>
                   <div style={{ flex: 1, overflow: "hidden auto", display: "flex", flexDirection: "column" }}>
-                    {showImagePrompt && <ArtPromptPanel visible={true} activeArtAction={activeArtAction} />}
+                    {showImagePrompt && <ArtPromptPanel visible={true} activeArtAction={activeArtAction} generationType={generationType} onGenerationTypeChange={setGenerationType} />}
                     {showBrushControls && <BrushControls />}
                     {showMoveControls && <MoveControls />}
                     {showLassoControls && <LassoControls />}
