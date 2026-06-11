@@ -27,6 +27,8 @@ function loadNum(key: string, fallback: number): number {
 const ls = (key: string) => {
   try { return localStorage.getItem(key) || ""; } catch { return ""; }
 };
+const verModelKey = (v: string) => `airunner_art_model_${v}`;
+const verSchedulerKey = (v: string) => `airunner_art_scheduler_${v}`;
 
 export function useArtPromptState() {
   const initial = loadPromptData();
@@ -47,8 +49,22 @@ export function useArtPromptState() {
 
   const [artOptions, setArtOptions] = useState<ArtOptionsResponse | null>(null);
   const [version, setVersion] = useState(() => ls("airunner_art_version"));
-  const [modelPath, setModelPath] = useState(() => ls("airunner_art_model"));
-  const [scheduler, setScheduler] = useState(() => ls("airunner_art_scheduler"));
+  const [modelPath, setModelPath] = useState(() => {
+    const v = ls("airunner_art_version");
+    if (v) {
+      const saved = ls(verModelKey(v));
+      if (saved) return saved;
+    }
+    return ls("airunner_art_model");
+  });
+  const [scheduler, setScheduler] = useState(() => {
+    const v = ls("airunner_art_version");
+    if (v) {
+      const saved = ls(verSchedulerKey(v));
+      if (saved) return saved;
+    }
+    return ls("airunner_art_scheduler");
+  });
   const [toolbarLoading, setToolbarLoading] = useState(true);
 
   const [saving, setSaving] = useState(false);
@@ -216,15 +232,45 @@ export function useArtPromptState() {
     updateSingleton("GeneratorSettings", updates).catch(() => {});
 
   const handleVersion = (v: string) => {
-    setVersion(v); setModelPath(""); setScheduler("");
+    // Save current model/scheduler under the old version before switching
+    if (version) {
+      try { localStorage.setItem(verModelKey(version), modelPath); } catch {}
+      try { localStorage.setItem(verSchedulerKey(version), scheduler); } catch {}
+    }
+    // Load saved settings for the new version (if any)
+    const savedModel = (() => {
+      const m = ls(verModelKey(v));
+      if (m) return m;
+      return "";
+    })();
+    const savedScheduler = (() => {
+      const s = ls(verSchedulerKey(v));
+      if (s) return s;
+      return "";
+    })();
+
+    setVersion(v);
+    setModelPath(savedModel);
+    setScheduler(savedScheduler);
+
     try { localStorage.setItem("airunner_art_version", v); } catch {}
-    updateSingleton("GeneratorSettings", { version: v, custom_path: "", scheduler: "" }).catch(() => {});
+    try { localStorage.setItem("airunner_art_model", savedModel); } catch {}
+    try { localStorage.setItem("airunner_art_scheduler", savedScheduler); } catch {}
+
+    updateSingleton("GeneratorSettings", {
+      version: v,
+      custom_path: savedModel,
+      scheduler: savedScheduler,
+    }).catch(() => {});
     window.dispatchEvent(new CustomEvent("art-version-changed", { detail: v }));
   };
 
   const handleModel = (m: string) => {
     setModelPath(m);
     try { localStorage.setItem("airunner_art_model", m); } catch {}
+    if (version) {
+      try { localStorage.setItem(verModelKey(version), m); } catch {}
+    }
     updateSingleton("GeneratorSettings", { custom_path: m }).catch(() => {});
     window.dispatchEvent(new CustomEvent("art-model-changed", { detail: m }));
   };
@@ -232,6 +278,9 @@ export function useArtPromptState() {
   const handleScheduler = (s: string) => {
     setScheduler(s);
     try { localStorage.setItem("airunner_art_scheduler", s); } catch {}
+    if (version) {
+      try { localStorage.setItem(verSchedulerKey(version), s); } catch {}
+    }
     updateSingleton("GeneratorSettings", { scheduler: s }).catch(() => {});
   };
 
