@@ -6,6 +6,7 @@ import type { SavedPrompt } from "../../../api/art";
 import { saveToStorage, loadFromStorage } from "../art-model/ArtModelStorage";
 import { loadPromptData, savePromptData } from "./ArtPromptStorage";
 import { useCanvasContext } from "../../../features/canvas/CanvasContext";
+import { renderVisibleComposite } from "../../../features/canvas/compositeCanvas";
 import { useArtWebSocket } from "../../../features/art/useArtWebSocket";
 import type { ArtPopup, ArtPanel } from "./ArtShared";
 
@@ -106,6 +107,18 @@ export function useArtPromptState() {
   const [imagesPerBatch, setImagesPerBatch] = useState(() => loadFromStorage("images_per_batch", 1));
   const [steps, setSteps] = useState(() => loadFromStorage("steps", 20));
   const [cfgScale, setCfgScale] = useState(() => loadFromStorage("cfg_scale", 7.5));
+
+  // img2img denoise strength / inpaint mask feather, both 0–1.
+  const [strength, setStrengthState] = useState(() => loadNum("airunner_img2img_strength", 0.75));
+  const [feather, setFeatherState] = useState(() => loadNum("airunner_inpaint_feather", 0));
+  const setStrength = useCallback((v: number) => {
+    setStrengthState(v);
+    saveNum("airunner_img2img_strength", v);
+  }, []);
+  const setFeather = useCallback((v: number) => {
+    setFeatherState(v);
+    saveNum("airunner_inpaint_feather", v);
+  }, []);
 
   const [seed, setSeed] = useState(() => {
     try {
@@ -434,8 +447,11 @@ export function useArtPromptState() {
     }
   }, [seed, seedRandomized]);
 
-  const onGenerate = useCallback(async () => {
+  const onGenerate = useCallback(async (opts?: {
+    generationType?: "txt2img" | "img2img" | "inpaint";
+  }) => {
     if (!prompt.trim()) return;
+    const genType = opts?.generationType ?? generationType;
     setPhase("loading");
     setErrorMessage(null);
     // If random seed is enabled, generate a fresh seed right before
@@ -451,6 +467,24 @@ export function useArtPromptState() {
       // "airunner_seed_saved" only (used to display/reuse the seed).
       try { localStorage.setItem("airunner_seed_saved", String(effectiveSeed)); } catch {}
     }
+    // For img2img, composite the visible layers into the init image that
+    // conditions generation. Strip the data: prefix — the daemon decodes raw
+    // base64. Inpaint also needs a mask, which isn't wired yet, so it falls
+    // through to plain txt2img for now.
+    let imageB64: string | undefined;
+    if (genType === "img2img" && canvasCtx) {
+      const composite = await renderVisibleComposite({
+        layers: canvasCtx.layers,
+        layerGroups: canvasCtx.layerGroups,
+        displayOrder: canvasCtx.displayOrder,
+        documentWidth: canvasCtx.documentWidth,
+        documentHeight: canvasCtx.documentHeight,
+      });
+      if (composite) {
+        imageB64 = composite.toDataURL("image/png").split(",")[1];
+      }
+    }
+
     try {
       const imageBase64 = await artGenerate({
         prompt: prompt.trim(),
@@ -461,6 +495,9 @@ export function useArtPromptState() {
         scheduler: ls("airunner_art_scheduler") || undefined,
         width: genWidth,
         height: genHeight,
+        ...(imageB64
+          ? { pipeline: "img2img", imageB64, strength }
+          : {}),
       });
       setPhase("completed");
       if (imageBase64 && canvasCtx) {
@@ -480,7 +517,7 @@ export function useArtPromptState() {
         setErrorMessage(msg);
       }
     }
-  }, [prompt, negativePrompt, genWidth, genHeight, canvasCtx, artGenerate, seed, seedRandomized]);
+  }, [prompt, negativePrompt, genWidth, genHeight, canvasCtx, artGenerate, seed, seedRandomized, generationType, strength]);
 
   const onCancel = useCallback(() => artCancel(), [artCancel]);
 
@@ -572,6 +609,8 @@ export function useArtPromptState() {
     imagesPerBatch, setImagesPerBatch,
     steps, setSteps,
     cfgScale, setCfgScale,
+    strength, setStrength,
+    feather, setFeather,
     seed, seedRandomized,
     phase,
     errorMessage,

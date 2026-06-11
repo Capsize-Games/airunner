@@ -14,6 +14,7 @@ import { SettingsPopup } from "./art-prompt/SettingsPopup";
 import { ArtDropdownPicker } from "./art-prompt/ArtDropdownPicker";
 import { saveToStorage } from "./art-model/ArtModelStorage";
 import LucideIcon from "../shared/LucideIcon";
+import SourceImagePanel from "./art-prompt/SourceImagePanel";
 
 // side-effect: injects CSS for sliders / number spinners
 import "./art-prompt/ArtShared";
@@ -177,6 +178,19 @@ export default function ArtPromptPanel({
               )}
             </div>
 
+            {/* ── Source image panel (img2img / inpaint) ─────────────
+             * Shown only when generation type is img2img or inpaint.
+             * Displays the active layer's image as the source. */}
+            {(genType === "img2img" || genType === "inpaint") && (
+              <SourceImagePanel
+                generationType={genType}
+                strength={s.strength}
+                onStrengthChange={s.setStrength}
+                feather={s.feather}
+                onFeatherChange={s.setFeather}
+              />
+            )}
+
             <PromptTextareas
               prompt={s.prompt}
               secondaryPrompt={s.secondaryPrompt}
@@ -300,7 +314,7 @@ export default function ArtPromptPanel({
                   s.togglePanel("embeddings")
                 }
                 onToggleRandom={s.handleToggleRandom}
-                onGenerate={s.onGenerate}
+                onGenerate={() => s.onGenerate({ generationType: genType })}
                 onCancel={s.onCancel}
               />
             </div>
