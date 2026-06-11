@@ -1,4 +1,5 @@
 import { Fragment, useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { Alert } from "react-bootstrap";
 import { PromptTextareas } from "./art-prompt/PromptTextareas";
 import { PromptControls } from "./art-prompt/PromptControls";
@@ -332,6 +333,89 @@ export default function ArtPromptPanel({
           s.togglePanel("savedPrompts")
         }
       />
+
+      {/* ── Prompt settings popup ────────────────────────────────────
+       * Rendered via portal above the prompt-settings button in
+       * PromptControls. Shows New Prompt / Save Prompt / Load saved
+       * prompts actions. */}
+      {s.openPopup === "promptSettings" && s.promptSettingsAnchor && createPortal(
+        <div
+          id="art-prompt-settings-popup"
+          className="bg-theme-panel"
+          style={{
+            position: "fixed",
+            left: s.promptSettingsAnchor.left,
+            bottom: s.promptSettingsAnchor.bottom,
+            border: "1px solid rgba(255,255,255,0.14)",
+            borderRadius: 6,
+            zIndex: 1300,
+            boxShadow: "0 4px 20px rgba(0,0,0,0.5)",
+            minWidth: 180,
+            overflow: "hidden",
+          }}
+          onMouseDown={(e) => e.stopPropagation()}
+        >
+          {/* New Prompt */}
+          <button
+            type="button"
+            onClick={() => { s.handleClearPrompts(); s.togglePopup("promptSettings"); }}
+            style={{
+              display: "flex", alignItems: "center", gap: 8,
+              width: "100%", padding: "8px 12px",
+              border: "none", background: "transparent",
+              color: "var(--theme-text)", cursor: "pointer",
+              fontSize: "0.8rem",
+            }}
+            onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.06)"; }}
+            onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "transparent"; }}
+          >
+            <LucideIcon name="message-square-plus" size={14} />
+            <span>New Prompt</span>
+          </button>
+
+          {/* Save Prompt */}
+          <button
+            type="button"
+            onClick={() => { s.handleSavePrompt(); s.togglePopup("promptSettings"); }}
+            disabled={s.saving || !s.prompt.trim()}
+            style={{
+              display: "flex", alignItems: "center", gap: 8,
+              width: "100%", padding: "8px 12px",
+              border: "none", background: "transparent",
+              color: "var(--theme-text)", cursor: s.saving || !s.prompt.trim() ? "default" : "pointer",
+              fontSize: "0.8rem", opacity: s.saving || !s.prompt.trim() ? 0.4 : 1,
+            }}
+            onMouseEnter={(e) => {
+              if (!(s.saving || !s.prompt.trim()))
+                (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.06)";
+            }}
+            onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "transparent"; }}
+          >
+            <LucideIcon name={s.saving ? "loader" : "save"} size={14} />
+            <span>Save Prompt</span>
+          </button>
+
+          {/* Load saved prompts */}
+          <button
+            type="button"
+            onClick={() => { s.togglePanel("savedPrompts"); s.togglePopup("promptSettings"); }}
+            style={{
+              display: "flex", alignItems: "center", gap: 8,
+              width: "100%", padding: "8px 12px",
+              border: "none", background: "transparent",
+              color: "var(--theme-text)", cursor: "pointer",
+              fontSize: "0.8rem",
+              borderTop: "1px solid rgba(255,255,255,0.08)",
+            }}
+            onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.06)"; }}
+            onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "transparent"; }}
+          >
+            <LucideIcon name="folder-open" size={14} />
+            <span>Load saved prompts</span>
+          </button>
+        </div>,
+        document.body,
+      )}
     </Fragment>
   );
 }
