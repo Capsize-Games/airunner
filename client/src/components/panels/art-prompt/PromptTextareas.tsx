@@ -64,23 +64,25 @@ export function PromptTextareas({
         return (
           <div key={f.key} className="d-flex flex-column" style={{ flex: isActive ? 1 : "0 0 auto" }}>
             <PromptDivider label={f.label} />
-            {isActive ? (
-              <textarea
-                ref={textareaRef}
-                style={TEXTAREA_STYLE}
-                value={f.value}
-                onChange={(e) => f.onChange(e.target.value)}
-                placeholder={f.placeholder}
-                disabled={generating}
-              />
-            ) : (
-              <div
-                style={COLLAPSED_STYLE}
-                onClick={() => setActiveField(f.key)}
-              >
-                {f.value || f.placeholder}
-              </div>
-            )}
+            <div className="prompt-textarea-bg" style={{ flex: isActive ? 1 : "0 0 auto" }}>
+              {isActive ? (
+                <textarea
+                  ref={textareaRef}
+                  style={TEXTAREA_STYLE}
+                  value={f.value}
+                  onChange={(e) => f.onChange(e.target.value)}
+                  placeholder={f.placeholder}
+                  disabled={generating}
+                />
+              ) : (
+                <div
+                  style={COLLAPSED_STYLE}
+                  onClick={() => setActiveField(f.key)}
+                >
+                  {f.value || f.placeholder}
+                </div>
+              )}
+            </div>
           </div>
         );
       })}

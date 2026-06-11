@@ -73,30 +73,32 @@ export default function ChatInputArea({
         className="chat-input-area flex-shrink-0 d-flex flex-column"
         style={{ height: textareaH }}
       >
-        <div
-          className="flex-grow-1 d-flex flex-column min-h-0"
-          style={{ border: "none", borderRadius: 0, background: "#1a1a2e" }}
-        >
-          <textarea
-            className="flex-grow-1 min-h-0"
-            style={{
-              resize: "none",
-              background: "transparent",
-              color: "var(--theme-text)",
-              border: "none",
-              outline: "none",
-              padding: "8px 10px",
-              fontFamily: "inherit",
-              fontSize: "inherit",
-            }}
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="Type a message..."
-            disabled={llm.streaming}
-          />
+        <div className="flex-grow-1 d-flex flex-column min-h-0">
+          <div
+            className="d-flex flex-column min-h-0 prompt-textarea-bg"
+            style={{ flex: 1, minHeight: 0 }}
+          >
+            <textarea
+              className="flex-grow-1 min-h-0"
+              style={{
+                resize: "none",
+                background: "transparent",
+                color: "var(--theme-text)",
+                border: "none",
+                outline: "none",
+                padding: "8px 10px",
+                fontFamily: "inherit",
+                fontSize: "inherit",
+              }}
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder="Type a message..."
+              disabled={llm.streaming}
+            />
 
-          <ActiveToolsDisplay activeTools={llm.activeTools} />
+            <ActiveToolsDisplay activeTools={llm.activeTools} />
+          </div>
 
           <ChatDocsRow
             openPanel={openPanel}
