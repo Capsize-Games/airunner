@@ -27,6 +27,11 @@ export function PromptTextareas({
 }: Props) {
   return (
     <div className="scroll-panel d-flex flex-column">
+      {isMultiPrompt ? (
+        <PromptDivider label="Prompt 1" />
+      ) : (
+        <PromptDivider label="Prompt" />
+      )}
       <textarea
         style={TEXTAREA_STYLE}
         value={prompt}

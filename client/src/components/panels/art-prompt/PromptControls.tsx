@@ -17,12 +17,14 @@ interface Props {
   isMultiPrompt: boolean;
   loraPanelOpen: boolean;
   embeddingsPanelOpen: boolean;
+  seedRandomized: boolean;
   onClear: () => void;
   onSave: () => void;
   onToggleSavedPrompts: () => void;
   onTogglePromptPopup: () => void;
   onToggleLora: () => void;
   onToggleEmbeddings: () => void;
+  onToggleRandom: () => void;
   onGenerate: () => void;
   onCancel: () => void;
 }
@@ -37,9 +39,9 @@ export const PromptControls = forwardRef<HTMLDivElement, Props>(function PromptC
   generating, progress, phase, hasPrompt, saving,
   promptPopupOpen, promptBtnRef,
   activeLoras, activeEmbeddings, isMultiPrompt,
-  loraPanelOpen, embeddingsPanelOpen,
+  loraPanelOpen, embeddingsPanelOpen, seedRandomized,
   onClear, onSave, onToggleSavedPrompts, onTogglePromptPopup,
-  onToggleLora, onToggleEmbeddings,
+  onToggleLora, onToggleEmbeddings, onToggleRandom,
   onGenerate, onCancel,
 }, ref) {
   return (
@@ -61,28 +63,6 @@ export const PromptControls = forwardRef<HTMLDivElement, Props>(function PromptC
       </div>
 
       <span className="flex-grow-1" />
-
-      {/* LoRA (always shown when applicable) */}
-      <ToolbarIconBtn
-        title={`LoRA${activeLoras.length > 0 ? ` (${activeLoras.length})` : ""}`}
-        onClick={onToggleLora}
-        active={loraPanelOpen}
-        badge={activeLoras.length > 0 ? activeLoras.length : undefined}
-      >
-        <LucideIcon name="puzzle" size={14} />
-      </ToolbarIconBtn>
-
-      {/* Embeddings (hidden when Z-Image Turbo is selected) */}
-      {isMultiPrompt && (
-        <ToolbarIconBtn
-          title={`Embeddings${activeEmbeddings.length > 0 ? ` (${activeEmbeddings.length})` : ""}`}
-          onClick={onToggleEmbeddings}
-          active={embeddingsPanelOpen}
-          badge={activeEmbeddings.length > 0 ? activeEmbeddings.length : undefined}
-        >
-          <LucideIcon name="scan-text" size={14} />
-        </ToolbarIconBtn>
-      )}
 
       {/* Right: generate / cancel */}
       {generating ? (

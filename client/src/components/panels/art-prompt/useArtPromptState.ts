@@ -50,6 +50,13 @@ export function useArtPromptState() {
   const [artW, setArtW] = useState(() => loadNum(LS_ART_W, ART_PANEL_DEFAULT));
   useEffect(() => { saveNum(LS_ART_W, artW); }, [artW]);
 
+  const [generationType, setGenerationType] = useState<"txt2img" | "img2img">(
+    () => {
+      try { return (localStorage.getItem("airunner_gen_type") as "txt2img" | "img2img") || "txt2img"; }
+      catch { return "txt2img"; }
+    }
+  );
+
   const [prompt, setPrompt] = useState(initial.prompt);
   const [negativePrompt, setNegativePrompt] = useState(initial.negative_prompt);
   const [secondaryPrompt, setSecondaryPrompt] = useState(initial.secondary_prompt);
@@ -559,6 +566,7 @@ export function useArtPromptState() {
     handleVersion, handleModel, handleScheduler,
     handleSeedChange, handleToggleRandom,
     onGenerate, onCancel,
+    generationType, setGenerationType,
     handleClearPrompts, handleSavePrompt, handleLoadPrompt,
     togglePopup, togglePanel,
   };
