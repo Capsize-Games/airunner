@@ -106,9 +106,15 @@ async function drawLayerContent(
     ctx.fillRect(-layer.offsetX, -layer.offsetY, docW, docH);
   }
 
-  for (const img of layer.images) {
-    const el = await loadImage(img.src);
-    if (el) ctx.drawImage(el, img.x, img.y, img.width, img.height);
+  const loaded = await Promise.all(
+    layer.images.map((img) => loadImage(img.src)),
+  );
+  for (let i = 0; i < layer.images.length; i++) {
+    const el = loaded[i];
+    if (el) {
+      const img = layer.images[i];
+      ctx.drawImage(el, img.x, img.y, img.width, img.height);
+    }
   }
 
   for (const stroke of layer.strokes) drawStroke(ctx, stroke);
