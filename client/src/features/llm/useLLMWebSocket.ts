@@ -7,10 +7,19 @@ import { handleWsMessage } from "./wsMessageHandler";
 // ---------------------------------------------------------------------------
 
 import { wsHost } from "../../api/client-base";
+import { getRequestHeaders } from "virtual:extensions";
 
 function wsUrl(): string {
   const proto = location.protocol === "https:" ? "wss" : "ws";
-  return `${proto}://${wsHost()}/api/v1/llm/stream`;
+  const base = `${proto}://${wsHost()}/api/v1/llm/stream`;
+  // WS upgrades can't set custom headers, so the auth token (used to
+  // resolve the caller's tenant on the server) must travel in the query
+  // string. Without it the server falls back to the anonymous schema and
+  // every generated conversation/message is persisted to `tenant_anonymous`
+  // instead of the signed-in account's schema. See ws_tenant.py.
+  const authHeader = getRequestHeaders()["Authorization"];
+  const token = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null;
+  return token ? `${base}?token=${encodeURIComponent(token)}` : base;
 }
 
 // ---------------------------------------------------------------------------

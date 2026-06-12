@@ -138,6 +138,15 @@ export default function ActionMenuBar() {
           action: "file:new-document",
           disabled: !showCanvas,
         },
+        { type: "divider" as const },
+        {
+          type: "action" as const,
+          label: "Export...",
+          action: "file:export",
+          icon: "download",
+          shortcut: "Ctrl+E",
+          disabled: !showCanvas,
+        },
       ],
     },
     {

@@ -89,13 +89,14 @@ export default function ModelSelector() {
     }
   }, []);
 
+  // Fetch once on mount for the initial state; after that rely entirely on
+  // the server's pushed `model_status` events rather than polling. Polling
+  // hammered /api/v1/models/active several times a second on every client.
   useEffect(() => {
     fetchModelStatus();
-    const id = setInterval(fetchModelStatus, 300);
-    return () => clearInterval(id);
   }, [fetchModelStatus]);
 
-  // Model-status events fire frequently while a model loads/runs. Only
+  // Model-status events fire whenever a model loads/unloads/fails. Only
   // refresh the status dot here — re-fetching settings would clobber a
   // selection the user just made before its write is visible.
   useEventBus([EVENT_MODEL_STATUS], () => {

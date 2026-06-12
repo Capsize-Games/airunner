@@ -1,19 +1,18 @@
 // ── Live Indicator ──────────────────────────────────────────────────────
 import { useState, useEffect } from "react";
-import { isWsConnected } from "../../features/api/WsApiClient";
+import {
+  isWsConnected,
+  onWsConnectionChange,
+} from "../../features/api/WsApiClient";
 
 export default function LiveIndicator() {
   const [connected, setConnected] =
     useState(isWsConnected);
   useEffect(() => {
-    let canceled = false;
-    const id = setInterval(() => {
-      if (!canceled) setConnected(isWsConnected());
-    }, 1000);
-    return () => {
-      canceled = true;
-      clearInterval(id);
-    };
+    // Sync once in case the state changed between render and effect, then
+    // update on pushed connect/disconnect transitions (no polling).
+    setConnected(isWsConnected());
+    return onWsConnectionChange(setConnected);
   }, []);
   return (
     <span

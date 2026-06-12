@@ -17,11 +17,15 @@ import { getRequestHeaders } from "virtual:extensions";
 // WS URL resolver
 // ---------------------------------------------------------------------------
 
+function currentToken(): string | null {
+  const authHeader = getRequestHeaders()["Authorization"];
+  return authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null;
+}
+
 function wsUrl(): string {
   const proto = location.protocol === "https:" ? "wss" : "ws";
   const base = `${proto}://${wsHost()}/api/v1/events`;
-  const authHeader = getRequestHeaders()["Authorization"];
-  const token = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null;
+  const token = currentToken();
   return token ? `${base}?token=${encodeURIComponent(token)}` : base;
 }
 
@@ -46,6 +50,11 @@ let _reconnectTimer: ReturnType<typeof setTimeout> | null = null;
 let _mountCount = 0;
 let _connecting = false;
 let _connGen = 0;
+// The auth token the live socket was opened with. The server binds the
+// tenant at connection time (token travels in the URL query string), so a
+// token change — e.g. an SPA login that doesn't reload the page — requires a
+// fresh connection for subsequent RPCs to run under the new identity.
+let _connectedToken: string | null = null;
 
 // Event callbacks: event type → Set of callbacks
 const _eventCallbacks = new Map<string, Set<EventBusCallback>>();
@@ -55,6 +64,22 @@ const _subscribedEvents = new Set<string>();
 
 // Pending RPC requests: request ID → PendingRpc
 const _pendingRpc = new Map<string, PendingRpc>();
+
+// Connection-state listeners (e.g. the "Live"/"Reconnecting" indicator) —
+// notified on transitions so the UI updates instantly instead of polling.
+const _connectionListeners = new Set<(connected: boolean) => void>();
+
+function _setConnected(value: boolean): void {
+  if (_connected === value) return;
+  _connected = value;
+  for (const cb of _connectionListeners) {
+    try {
+      cb(value);
+    } catch {
+      /* a listener error must not break others */
+    }
+  }
+}
 
 // Messages queued while WS is connecting
 const _sendQueue: Record<string, unknown>[] = [];
@@ -89,6 +114,40 @@ function _unsubscribeEvents(events: string[]): void {
   _send({ type: "unsubscribe", events: active });
 }
 
+/**
+ * Reconnect if the auth token has changed since the socket was opened.
+ *
+ * The tenant is bound to the connection (token in the URL), so after a
+ * login/logout that doesn't reload the page the existing socket would keep
+ * issuing RPCs under the previous (often anonymous) identity. Called before
+ * every RPC / event subscription so the next request uses the live token.
+ */
+function _ensureAuthFresh(): void {
+  if (currentToken() === _connectedToken) return;
+  _connGen++; // invalidate any callbacks from the stale socket
+  if (_ws) {
+    _ws.onopen = null;
+    _ws.onmessage = null;
+    _ws.onclose = null;
+    _ws.onerror = null;
+    try {
+      _ws.close();
+    } catch {
+      /* ignore */
+    }
+    _ws = null;
+  }
+  // Fail any in-flight RPCs from the old identity so they don't hang; the
+  // tearing-down socket's onclose was detached above and won't reject them.
+  for (const [id, pending] of _pendingRpc) {
+    _pendingRpc.delete(id);
+    pending.reject(new Error("Reconnecting after auth change"));
+  }
+  _setConnected(false);
+  _connecting = false;
+  _connect();
+}
+
 function _reconnect(): void {
   if (_reconnectTimer) {
     clearTimeout(_reconnectTimer);
@@ -115,6 +174,7 @@ function _connect(): void {
 
   _connecting = true;
   const gen = ++_connGen;
+  _connectedToken = currentToken();
 
   try {
     const socket = new WebSocket(wsUrl());
@@ -123,7 +183,7 @@ function _connect(): void {
     socket.onopen = () => {
       if (gen !== _connGen) return; // stale — a newer socket took over
       _connecting = false;
-      _connected = true;
+      _setConnected(true);
       // Re-subscribe all currently tracked event types
       const events = [..._subscribedEvents];
       if (events.length > 0) {
@@ -201,7 +261,7 @@ function _connect(): void {
       if (gen !== _connGen) return; // stale
       _connecting = false;
       _ws = null;
-      _connected = false;
+      _setConnected(false);
       // Reject all pending RPCs
       for (const [id, pending] of _pendingRpc) {
         _pendingRpc.delete(id);
@@ -252,7 +312,7 @@ function _disconnect(): void {
     _ws = null;
   }
   _connecting = false;
-  _connected = false;
+  _setConnected(false);
   // Reject all pending RPCs
   for (const [id, pending] of _pendingRpc) {
     _pendingRpc.delete(id);
@@ -277,6 +337,20 @@ export function isWsConnected(): boolean {
 }
 
 /**
+ * Subscribe to WebSocket connection-state transitions. The callback fires
+ * with the new state on every connect/disconnect. Returns an unsubscribe
+ * function. Lets the UI react instantly instead of polling `isWsConnected`.
+ */
+export function onWsConnectionChange(
+  cb: (connected: boolean) => void,
+): () => void {
+  _connectionListeners.add(cb);
+  return () => {
+    _connectionListeners.delete(cb);
+  };
+}
+
+/**
  * Send an RPC request and wait for the JSON response.
  * Replaces the old `fetch()`-based request() in client-base.ts.
  */
@@ -286,6 +360,7 @@ export function rpcRequest<T>(
   body?: Record<string, unknown>,
 ): Promise<T> {
   return new Promise((resolve, reject) => {
+    _ensureAuthFresh();
     const id = _nextRpcId();
     _pendingRpc.set(id, {
       resolve: resolve as (value: unknown) => void,
@@ -311,6 +386,7 @@ export function rpcRequestBlob(
   body?: Record<string, unknown>,
 ): Promise<Blob> {
   return new Promise((resolve, reject) => {
+    _ensureAuthFresh();
     const id = _nextRpcId();
     _pendingRpc.set(id, {
       resolve: resolve as (value: unknown) => void,
@@ -339,6 +415,7 @@ export function registerEventCallbacks(
 ): void {
   _mountCount++;
 
+  _ensureAuthFresh();
   if (_mountCount === 1) _connect();
 
   for (const event of events) {

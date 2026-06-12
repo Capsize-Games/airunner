@@ -167,19 +167,28 @@ def _append_system_message(
 def _convert_ai_message(adapter: Any, message: AIMessage) -> Dict[str, Any]:
     """Convert one assistant message to llama-cpp format.
 
-    Tool calls are excluded — the LangGraph workflow handles tool execution,
-    and custom XML-format tool calls crash the Qwen HF chat template.
+    GPT-OSS models render tool calls through the Harmony prompt, so
+    tool_calls are excluded from the raw message dict for that path.
+    For native tool calling (chatml), tool_calls must be present in
+    the converted message so llama.cpp's chat template can format the
+    full assistant/tool exchange correctly.
     """
     content = message.content or ""
-    if adapter._uses_gpt_oss_parser():
-        tc = convert_langchain_tool_calls(
-            getattr(message, "tool_calls", []) or []
-        )
-        if tc and not content:
-            content = str(
-                message.additional_kwargs.get("thinking_content") or ""
-            )
-    return {"role": "assistant", "content": content}
+    msg: Dict[str, Any] = {"role": "assistant", "content": content}
+    tool_calls = getattr(message, "tool_calls", []) or []
+    if tool_calls:
+        if adapter._uses_gpt_oss_parser():
+            tc = convert_langchain_tool_calls(tool_calls)
+            if tc and not content:
+                content = str(
+                    message.additional_kwargs.get("thinking_content") or ""
+                )
+                msg["content"] = content
+        else:
+            converted = convert_langchain_tool_calls(tool_calls)
+            if converted:
+                msg["tool_calls"] = converted
+    return msg
 
 
 def _convert_tool_message(

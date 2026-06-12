@@ -194,6 +194,79 @@ export default function CanvasPanel() {
     [],
   );
 
+  // ── Export the visible canvas as a PNG file ────────────────────────
+  const handleExport = useCallback(async () => {
+    const w = canvas.documentWidth;
+    const h = canvas.documentHeight;
+    if (w <= 0 || h <= 0) return;
+
+    // Reuse the existing off-screen compositor so every visible layer,
+    // stroke, text node and opacity is faithfully flattened.
+    const { renderVisibleComposite } = await import(
+      "../../features/canvas/compositeCanvas"
+    );
+    const out = await renderVisibleComposite({
+      layers: canvas.layers,
+      layerGroups: canvas.layerGroups,
+      displayOrder: canvas.displayOrder,
+      documentWidth: w,
+      documentHeight: h,
+    });
+    if (!out) return;
+
+    // Convert to PNG blob
+    const blob: Blob = await new Promise((resolve, reject) => {
+      out.toBlob((b) => {
+        if (b) resolve(b);
+        else reject(new Error("Failed to create PNG blob"));
+      }, "image/png");
+    });
+
+    const fileName = `canvas-export-${Date.now()}.png`;
+
+    // Prefer the File System Access API (Chromium) for a native save
+    // dialog; fall back to <a download> for all other browsers.
+    if ("showSaveFilePicker" in window) {
+      try {
+        const handle = await (
+          window as Window &
+            typeof globalThis
+        ).showSaveFilePicker({
+          suggestedName: fileName,
+          types: [
+            {
+              description: "PNG Image",
+              accept: { "image/png": [".png"] },
+            },
+          ],
+        });
+        const writable = await handle.createWritable();
+        await writable.write(blob);
+        await writable.close();
+        return;
+      } catch (err: unknown) {
+        // User cancelled – silently abort
+        if (
+          err instanceof DOMException &&
+          err.name === "AbortError"
+        ) {
+          return;
+        }
+        // API unavailable or other error – fall through to fallback
+      }
+    }
+
+    // Fallback: trigger an immediate download for non-Chromium browsers
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = fileName;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }, [canvas.documentWidth, canvas.documentHeight, canvas.layers, canvas.layerGroups, canvas.displayOrder]);
+
   // ── Respond to action-menu events ──────────────────────────────────
   useMenuAction(
     useCallback(
@@ -201,6 +274,9 @@ export default function CanvasPanel() {
         switch (action.type) {
           case "file:new-document":
             handleNewDocument();
+            break;
+          case "file:export":
+            handleExport();
             break;
           case "edit:undo":
             canvas.undo();
@@ -223,7 +299,7 @@ export default function CanvasPanel() {
             break;
         }
       },
-      [canvas, handleNewDocument],
+      [canvas, handleNewDocument, handleExport],
     ),
   );
 

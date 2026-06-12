@@ -95,9 +95,14 @@ export function useChatInference({
       try {
         const { createConversation } = await import("../api/client");
         const result = await createConversation();
-        conversationIdRef.current = result.conversation_id;
-        onSelectConversation?.(result.conversation_id);
-        loadedConvRef.current = result.conversation_id;
+        if (result.conversation_id) {
+          conversationIdRef.current = result.conversation_id;
+          onSelectConversation?.(result.conversation_id);
+          loadedConvRef.current = result.conversation_id;
+        }
+        // If conversation_id is null/undefined, the server created the
+        // conversation record but couldn't return a valid ID (e.g. chatbot
+        // creation failed). Fall through so messages stay local-only.
       } catch {
         // Proceed without a conversation ID; history won't survive a reload.
       }
@@ -148,10 +153,19 @@ export function useChatInference({
       const { createConversation } = await import("../api/client");
       const result = await createConversation();
       const newId = result.conversation_id;
-      conversationIdRef.current = newId;
+      if (newId) {
+        conversationIdRef.current = newId;
+        loadedConvRef.current = newId;
+        onSelectConversation?.(newId);
+      } else {
+        // Server responded but couldn't produce a valid ID (e.g. chatbot
+        // creation failed). Clear persisted state so a stale conversation
+        // isn't accidentally reused.
+        conversationIdRef.current = null;
+        loadedConvRef.current = null;
+        onSelectConversation?.(null);
+      }
       setMessages([]);
-      loadedConvRef.current = newId;
-      onSelectConversation?.(newId);
     } catch {
       // Creation failed (daemon/WebSocket unavailable). Reset to a blank
       // slate AND clear the persisted conversation id; otherwise the old id

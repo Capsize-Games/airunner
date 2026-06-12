@@ -3,6 +3,7 @@ import { useEffect, useRef } from "react";
 
 export type ActionMenuEvent =
   | { type: "file:new-document" }
+  | { type: "file:export" }
   | { type: "edit:undo" }
   | { type: "edit:redo" }
   | { type: "edit:cut" }

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import os
 from contextlib import asynccontextmanager
 from ipaddress import ip_address
@@ -82,8 +83,20 @@ def is_loopback_request(request: Request) -> bool:
 async def lifespan(app: FastAPI):
     """Lifespan context manager for startup/shutdown tasks."""
     logger.info("FastAPI server starting...")
-    yield
-    logger.info("FastAPI server shutting down...")
+    from airunner_services.api.routes.hardware_broadcast import (
+        start_hardware_broadcast,
+    )
+
+    hardware_task = start_hardware_broadcast()
+    try:
+        yield
+    finally:
+        logger.info("FastAPI server shutting down...")
+        hardware_task.cancel()
+        try:
+            await hardware_task
+        except (asyncio.CancelledError, Exception):
+            pass
 
 
 def _default_allowed_origins() -> list[str]:

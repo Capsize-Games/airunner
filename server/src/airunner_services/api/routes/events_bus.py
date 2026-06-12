@@ -135,6 +135,16 @@ class WsEventBus:
                 self._subscribers[et].discard(subscriber)
             subscriber.subscriptions.clear()
 
+    def subscriber_count(self, event_type: str) -> int:
+        """Return how many connections are subscribed to *event_type*.
+
+        Lets server-driven producers (e.g. the periodic hardware-stats
+        broadcaster) stay idle while no client is listening instead of
+        doing work whose result nobody would receive.
+        """
+        with self._lock:
+            return len(self._subscribers.get(event_type, ()))
+
     # ── Broadcast ────────────────────────────────────────────────────────
 
     def _cleanup_dead(self, dead: list[_WsSubscriber]) -> None:

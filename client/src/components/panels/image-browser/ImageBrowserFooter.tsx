@@ -43,11 +43,12 @@ export default function ImageBrowserFooter({
         ) : (
           <button
             type="button"
-            className="btn-text-danger"
+            className="icon-btn"
             onClick={onConfirmDeleteAll}
             title="Delete all images for this date"
           >
-            Delete All
+            <LucideIcon name="trash" size={13} />
+            <span className="ms-1 small">Delete All</span>
           </button>
         )}
       </div>

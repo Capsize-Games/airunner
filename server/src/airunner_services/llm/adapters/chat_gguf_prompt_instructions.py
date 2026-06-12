@@ -179,20 +179,30 @@ def apply_thinking_directive(
     adapter: Any,
     converted: List[Dict[str, Any]],
 ) -> None:
-    """Prefix the final Qwen3 user turn with a /think or /no_think directive.
+    """Inject a /think or /no_think directive into the first Qwen3 user turn.
 
     Qwen3.5 models use ``/think`` to enter deep-reasoning mode and
     ``/no_think`` to stay in shallow mode.  The adapter's
-    ``enable_thinking`` flag controls which directive is prepended.
+    ``enable_thinking`` flag controls which directive is used.
 
-    The model identity is resolved through ``model_path`` first, then
-    falls back to the detected chat format (``chatml`` for all Qwen
-    models) so the hash-based path assignments still match.
+    The directive is only injected on the first turn (when the
+    conversation has no assistant messages yet).  Re-injecting it on
+    later turns — even on the most recent user message — produces a
+    prompt where one user message carries the directive and earlier
+    ones do not, which confuses the chatml template and causes the
+    model to emit zero-length responses.
     """
     # Resolve the model identity for Qwen3 detection.
     model_path_lower = str(adapter.model_path).lower()
     chat_format = getattr(adapter, "_detected_format", None) or ""
     if "qwen3" not in model_path_lower and chat_format != "chatml":
+        return
+
+    # Only inject on the first turn (no assistant messages yet).
+    has_assistant = any(
+        msg.get("role") == "assistant" for msg in converted
+    )
+    if has_assistant:
         return
 
     for message in reversed(converted):

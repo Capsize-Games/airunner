@@ -230,6 +230,14 @@ class DatabaseCheckpointSaver(BaseCheckpointSaver):
 
             if thread_id and thread_id in self._checkpoint_state:
                 state = self._checkpoint_state[thread_id]
+                self.logger.info(
+                    "[DIAG get_tuple in-mem] thread=%s msgs=%s",
+                    thread_id,
+                    [
+                        (type(m).__name__, len(str(getattr(m, "content", "") or "")))
+                        for m in state["messages"]
+                    ],
+                )
                 trimmed = self._trim_messages(state["messages"])
                 checkpoint_data = state["checkpoint"]
                 if trimmed is not state["messages"]:
@@ -247,7 +255,6 @@ class DatabaseCheckpointSaver(BaseCheckpointSaver):
 
             # Fallback: Load from database (may not have ToolMessages)
             messages = self.message_history.messages
-
             if not messages:
                 return None
 

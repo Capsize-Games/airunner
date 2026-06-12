@@ -1,6 +1,9 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { getHardwareProfile, unloadModel, loadModel, getSingleton } from "../../../api/client";
-import type { HardwareProfile, ActiveModelInfo } from "../../../api/client";
+import type { ActiveModelInfo } from "../../../api/client";
+import type { HardwareProfile } from "../../../types/api";
+import { useEventBus } from "../../../features/events/useEventBus";
+import { EVENT_MODEL_STATUS, EVENT_HARDWARE } from "../../../features/events/types";
 
 export interface ModelSlot {
   type: string;
@@ -79,16 +82,27 @@ export function useStatsPanel() {
   const fetchHw = useCallback(async () => {
     try {
       const data = await getHardwareProfile();
-      if (mountedRef.current) { setHw(data); fetchActiveModels(); }
+      if (mountedRef.current) setHw(data);
     } catch { /* endpoint may be unavailable */ }
-  }, [fetchActiveModels]);
+  }, []);
 
+  // One fetch on mount for an immediate readout; thereafter both feeds are
+  // server-pushed: `hardware` (sampled server-side and broadcast) for live
+  // VRAM/RAM, and `model_status` for the active-models list. No polling.
   useEffect(() => {
     mountedRef.current = true;
     fetchHw();
-    const id = setInterval(fetchHw, 100);
-    return () => { mountedRef.current = false; clearInterval(id); };
-  }, [fetchHw]);
+    fetchActiveModels();
+    return () => { mountedRef.current = false; };
+  }, [fetchHw, fetchActiveModels]);
+
+  useEventBus([EVENT_HARDWARE], (_event, data) => {
+    if (mountedRef.current) setHw(data as HardwareProfile);
+  });
+
+  useEventBus([EVENT_MODEL_STATUS], () => {
+    fetchActiveModels();
+  });
 
   const handleUnload = useCallback((m: ActiveModelInfo, slotType: string) => {
     if (unloadingSlots.has(slotType)) return;

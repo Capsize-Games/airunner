@@ -1,6 +1,8 @@
 // ── Footer Stats ────────────────────────────────────────────────────────
 import { useState, useEffect, lazy, Suspense } from "react";
 import type { HardwareProfile } from "../../types/api";
+import { useEventBus } from "../../features/events/useEventBus";
+import { EVENT_HARDWARE } from "../../features/events/types";
 
 const StatsPanel = lazy(() => import("../panels/StatsPanel"));
 
@@ -8,26 +10,28 @@ export default function FooterStats() {
   const [hw, setHw] = useState<HardwareProfile | null>(null);
   const [showDetail, setShowDetail] = useState(false);
 
+  // One fetch on mount for an immediate readout; after that the server
+  // pushes `hardware` events (sampled once server-side and broadcast to all
+  // clients) instead of every client polling the endpoint.
   useEffect(() => {
     let canceled = false;
-    const poll = async () => {
+    (async () => {
       try {
-        const { getHardwareProfile } = await import(
-          "../../api/client"
-        );
+        const { getHardwareProfile } = await import("../../api/client");
         const data = await getHardwareProfile();
         if (!canceled) setHw(data);
       } catch {
         /* server may be unavailable */
       }
-    };
-    poll();
-    const id = setInterval(poll, 2000);
+    })();
     return () => {
       canceled = true;
-      clearInterval(id);
     };
   }, []);
+
+  useEventBus([EVENT_HARDWARE], (_event, data) => {
+    setHw(data as HardwareProfile);
+  });
 
   if (!hw || hw.total_vram_gb === 0) return null;
 
