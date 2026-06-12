@@ -120,7 +120,11 @@ export function ChatHistoryPanel({
                   minWidth: 0,
                 }}
               >
-                {c.title || `Chat #${c.id}`}
+                {c.first_user_message
+                  ? c.first_user_message.length > 56
+                    ? `${c.first_user_message.slice(0, 56)}…`
+                    : c.first_user_message
+                  : c.title || `Chat #${c.id}`}
               </span>
               <button
                 type="button"

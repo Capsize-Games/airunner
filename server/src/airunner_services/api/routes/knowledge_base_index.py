@@ -131,6 +131,14 @@ def _register_signal_handlers(app_instance) -> None:
             }
         )
 
+    def on_document_indexed(data: dict) -> None:
+        """Notify the frontend that one document has been indexed.
+
+        Broadcasts a reload event on the documents channel so
+        the Knowledge Base panel updates in real time without polling.
+        """
+        WsEventBus().broadcast("documents", {"type": "reload"})
+
     def on_error(data: dict) -> None:
         _notify_index_subscribers(
             {
@@ -149,8 +157,12 @@ def _register_signal_handlers(app_instance) -> None:
             SignalCode.RAG_INDEXING_COMPLETE,
             on_complete,
         )
+        signal_mediator.register(
+            SignalCode.DOCUMENT_INDEXED,
+            on_document_indexed,
+        )
         logger.info(
-            "Registered indexing progress SSE bridge handlers",
+            "Registered indexing bridge handlers (progress, complete, document_indexed)",
         )
     except Exception as exc:
         logger.warning(

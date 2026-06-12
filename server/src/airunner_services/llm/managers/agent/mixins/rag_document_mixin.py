@@ -20,10 +20,19 @@ from airunner_services.database.models.document import (
 class RAGDocumentMixin:
     """Mixin for RAG document database operations."""
 
-    def _get_unindexed_documents(self) -> List[DBDocument]:
+    def _get_unindexed_documents(
+        self,
+        force: bool = False,
+    ) -> List[DBDocument]:
         """Get list of documents that need to be indexed.
 
         Checks both indexed flag and file hash to detect changes.
+        When ``force`` is True, all existing documents are returned
+        regardless of their indexed status, which enables a full
+        re-index of the entire knowledge base.
+
+        Args:
+            force: If True, return all documents regardless of status
 
         Returns:
             List of DBDocument instances that need indexing
@@ -34,6 +43,10 @@ class RAGDocumentMixin:
 
             for doc in all_docs:
                 if not os.path.exists(doc.path):
+                    continue
+
+                if force:
+                    unindexed.append(doc)
                     continue
 
                 if not doc.indexed:

@@ -18,6 +18,14 @@ from airunner_services.llm.thinking_parser import (
 from airunner_services.database.models.conversation import Conversation
 
 
+def _extract_first_user_message(raw_messages: list) -> str:
+    """Return the first user-role message content, or empty string."""
+    for msg in raw_messages:
+        if isinstance(msg, dict) and msg.get("role") == "user":
+            return str(msg.get("content", "") or "")
+    return ""
+
+
 def format_conversation_payload(
     conversation: Conversation,
     summary: str,
@@ -40,6 +48,7 @@ def format_conversation_payload(
         "user_id": getattr(conversation, "user_id", None),
         "user_name": str(getattr(conversation, "user_name", "") or ""),
         "message_count": len(raw_messages),
+        "first_user_message": _extract_first_user_message(raw_messages),
         "user_data": dict(getattr(conversation, "user_data", None) or {}),
     }
 

@@ -80,8 +80,41 @@ def _chat_formatter_response(
     messages: list[dict[str, Any]],
     kwargs: dict[str, Any],
 ) -> Any:
-    """Return one llama.cpp chat formatter response from an HF tokenizer."""
+    """Return one llama.cpp chat formatter response from an HF tokenizer.
+
+    Parse any JSON-string ``arguments`` in tool-call entries before
+    forwarding ``messages`` and ``kwargs`` to ``apply_chat_template``.
+    The Qwen 3.5 template does ``tool_call.arguments|items`` which
+    requires a dict, but OpenAI-compatible tool calls ship
+    ``arguments`` as a JSON string.
+    """
+    import json
+
     tokenizer.use_default_system_prompt = False
+
+    # Parse JSON-string arguments in tool_calls to dicts before rendering.
+    for msg in messages:
+        tool_calls = msg.get("tool_calls")
+        if isinstance(tool_calls, list):
+            for tc in tool_calls:
+                if isinstance(tc, dict):
+                    # {"function": {"arguments": "…"}} format (OpenAI)
+                    func = tc.get("function")
+                    if isinstance(func, dict) and isinstance(
+                        func.get("arguments"), str
+                    ):
+                        try:
+                            func["arguments"] = json.loads(func["arguments"])
+                        except (json.JSONDecodeError, TypeError):
+                            pass
+                    # {"arguments": "…"} format (after template
+                    # reassignment)
+                    elif isinstance(tc.get("arguments"), str):
+                        try:
+                            tc["arguments"] = json.loads(tc["arguments"])
+                        except (json.JSONDecodeError, TypeError):
+                            pass
+
     prompt = tokenizer.apply_chat_template(
         messages,
         tokenize=False,

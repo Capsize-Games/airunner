@@ -170,10 +170,15 @@ class RAGIndexingMixin:
             pass
         return success
 
-    def index_all_documents(self) -> bool:
+    def index_all_documents(self, force: bool = False) -> bool:
         """Manually index all documents with progress reporting.
 
         Uses per-document architecture for scalability.
+
+        Args:
+            force: If True, re-index all documents regardless of
+                their current indexed status. Defaults to False,
+                which only indexes unindexed or changed documents.
 
         Returns:
             True if indexing succeeded, False otherwise
@@ -195,11 +200,14 @@ class RAGIndexingMixin:
                 },
             )
 
-            # Get all unindexed documents
-            self.logger.info("Getting list of unindexed documents...")
-            unindexed_docs = self._get_unindexed_documents()
+            # Get all unindexed documents (or all when force=True)
+            self.logger.info(
+                "Getting list of %sdocuments...",
+                "" if not force else "ALL ",
+            )
+            unindexed_docs = self._get_unindexed_documents(force=force)
             total_docs = len(unindexed_docs)
-            self.logger.info("Found %s unindexed documents", total_docs)
+            self.logger.info("Found %s document(s) to index", total_docs)
 
             if total_docs == 0:
                 self.logger.info("No documents need indexing")
@@ -266,6 +274,12 @@ class RAGIndexingMixin:
                 # Index the document
                 if self._index_single_document(db_doc):
                     success_count += 1
+                    # Notify listeners so the frontend can update in
+                    # real time (no polling required).
+                    self.emit_signal(
+                        SignalCode.DOCUMENT_INDEXED,
+                        {"path": db_doc.path},
+                    )
 
             # Emit completion
             self._cache_validated = True

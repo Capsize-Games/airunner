@@ -41,6 +41,49 @@ class ToolExecutionMixin:
             self._forced_tool_policy = helper
         return helper
 
+    @staticmethod
+    def _ensure_runtime_compat() -> None:
+        """Inject missing ExecutionInfo / ServerInfo into langgraph.runtime.
+
+        langgraph 1.0.10–1.1.0 ship prebuilt/tool_node.py that imports
+        ``ExecutionInfo`` and ``ServerInfo`` from ``langgraph.runtime``,
+        but ``runtime.py`` does not define them.  The same versions also
+        access ``runtime.execution_info`` / ``runtime.server_info`` on
+        ``Runtime`` instances, but ``Runtime`` (a frozen+slots dataclass)
+        lacks those fields.  This shim adds stub classes **and** injects
+        class-level defaults on ``Runtime`` so both the import and the
+        runtime attribute access succeed.
+        """
+        import importlib
+        import sys
+
+        runtime_mod = sys.modules.get("langgraph.runtime")
+        if runtime_mod is None:
+            runtime_mod = importlib.import_module("langgraph.runtime")
+
+        # --- Module-level stubs for ``from langgraph.runtime import …`` ---
+        if not hasattr(runtime_mod, "ExecutionInfo"):
+
+            class ExecutionInfo:
+                """Stub for langgraph.runtime.ExecutionInfo."""
+
+            runtime_mod.ExecutionInfo = ExecutionInfo
+
+        if not hasattr(runtime_mod, "ServerInfo"):
+
+            class ServerInfo:
+                """Stub for langgraph.runtime.ServerInfo."""
+
+            runtime_mod.ServerInfo = ServerInfo
+
+        # --- Class-level defaults on Runtime (frozen+slots dataclass) ---
+        runtime_cls = getattr(runtime_mod, "Runtime", None)
+        if runtime_cls is not None:
+            if not hasattr(runtime_cls, "execution_info"):
+                runtime_cls.execution_info = None
+            if not hasattr(runtime_cls, "server_info"):
+                runtime_cls.server_info = None
+
     def _execute_tools_with_status(
         self, state: "WorkflowState"
     ) -> "WorkflowState":
@@ -58,6 +101,7 @@ class ToolExecutionMixin:
         Returns:
             Updated workflow state with tool results
         """
+        self._ensure_runtime_compat()
         from langgraph.prebuilt import ToolNode
 
         # Get the last AIMessage which contains tool_calls

@@ -86,9 +86,10 @@ export async function toggleDocumentActive(docId: number) {
   );
 }
 
-export async function indexAllDocuments() {
+export async function indexAllDocuments(force = false) {
   return request<{ status: string }>(
     "POST", "/api/v1/knowledge-base/documents/index-all",
+    { force },
   );
 }
 

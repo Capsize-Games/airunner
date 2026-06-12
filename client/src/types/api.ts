@@ -22,6 +22,7 @@ export interface Conversation {
   title: string;
   current: boolean;
   messages?: Message[];
+  first_user_message?: string;
   created_at: string;
   updated_at: string;
 }

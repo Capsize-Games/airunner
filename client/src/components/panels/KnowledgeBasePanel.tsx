@@ -96,7 +96,7 @@ export function KnowledgeBasePanel() {
     await new Promise((r) => setTimeout(r, 0));
     try {
       const { indexAllDocuments } = await import("../../api/client");
-      await indexAllDocuments();
+      await indexAllDocuments(true);
     } catch {
       setIndexing(false);
       setModelLoading(false);

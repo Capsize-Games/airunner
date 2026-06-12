@@ -72,15 +72,21 @@ async def _rpc_kb_toggle_active(body: dict, **kwargs: Any) -> dict[str, Any]:
 
 @_rpc_register("POST", "/api/v1/knowledge-base/documents/index-all")
 async def _rpc_kb_index_all(body: dict, **kwargs: Any) -> dict[str, Any]:
-    """Trigger indexing of all documents."""
+    """Trigger indexing of all documents.
+
+    Accepts an optional ``force`` flag in the request body.  When
+    ``force`` is True documents are re-indexed regardless of their
+    current indexed status.
+    """
     from airunner_services.contract_enums import SignalCode
     from airunner_services.utils.application.signal_mediator import (
         SignalMediator,
     )
 
+    force = bool(body.get("force", False)) if body else False
     SignalMediator().emit_signal(
         SignalCode.RAG_INDEX_ALL_DOCUMENTS,
-        {},
+        {"force": force},
     )
     return {"status": 200, "body": {"status": "started"}}
 
