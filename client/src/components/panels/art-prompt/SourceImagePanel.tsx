@@ -142,19 +142,22 @@ export default function SourceImagePanel({
         style={{
           display: "flex",
           alignItems: "center",
-          gap: 5,
-          padding: "4px 8px",
-          fontSize: 9,
-          fontWeight: 700,
-          letterSpacing: "0.07em",
-          textTransform: "uppercase",
-          color: "var(--theme-text-secondary)",
-          opacity: 0.6,
-          background: "#12121c",
+          gap: 6,
+          padding: "3px 10px",
+          borderTop: "1px solid rgba(255,255,255,0.08)",
+          background: "rgba(var(--theme-text-rgb), 0.03)",
+          flexShrink: 0,
         }}
       >
-        <LucideIcon name={isInpaint ? "layers" : "image"} size={9} />
-        {headerLabel}
+        <span
+          style={{
+            fontSize: 9, fontWeight: 700, letterSpacing: "0.07em",
+            textTransform: "uppercase", color: "var(--theme-text-secondary)",
+            opacity: 0.6,
+          }}
+        >
+          {headerLabel}
+        </span>
       </div>
 
       {/* Source image preview */}

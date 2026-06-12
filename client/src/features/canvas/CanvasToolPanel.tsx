@@ -110,7 +110,8 @@ export default function CanvasToolPanel({
   return (
     <div
       style={{
-        display: "flex", flexDirection: "column", gap: 2, padding: "4px 6px",
+        display: "flex", flexDirection: "column", gap: 2,
+        padding: "0 6px 0",
         background: "#161620",
         userSelect: "none", flexShrink: 0,
       }}
@@ -150,7 +151,7 @@ export default function CanvasToolPanel({
                 e.currentTarget.style.background = "transparent";
             }}
           >
-            <t.icon size={12} strokeWidth={1.75} />
+            <t.icon size={16} strokeWidth={1.75} />
           </button>
         ))}
       </div>

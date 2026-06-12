@@ -450,16 +450,6 @@ export default function CanvasPanel() {
 
                 {/* Tool settings section */}
                 <div style={{ display: "flex", flexDirection: "column", flex: 1, overflow: "hidden" }}>
-                  <div style={{
-                    padding: "4px 8px",
-                    fontSize: 10, fontWeight: 600,
-                    letterSpacing: "0.08em", textTransform: "uppercase",
-                    color: "rgba(255,255,255,0.4)",
-                    borderBottom: "1px solid rgba(255,255,255,0.07)",
-                    flexShrink: 0,
-                  }}>
-                    {toolSettingsLabel}
-                  </div>
                   <div style={{ flex: 1, overflow: "hidden auto", display: "flex", flexDirection: "column" }}>
                     {showImagePrompt && <ArtPromptPanel visible={true} generationType={generationType} onGenerationTypeChange={setGenerationType} />}
                     {showBrushControls && <BrushControls />}
@@ -477,7 +467,8 @@ export default function CanvasPanel() {
                   </div>
                 </div>
 
-                {/* Bottom row: reset presets */}
+                {/* Bottom row: reset presets — only for canvas tools tab */}
+                {showCanvasTools && (
                 <div style={{
                   display: "flex", alignItems: "center", justifyContent: "space-between",
                   padding: "3px 6px",
@@ -516,6 +507,7 @@ export default function CanvasPanel() {
                     <RefreshCcwDot size={13} strokeWidth={1.75} />
                   </button>
                 </div>
+                )}
 
               </div>
 
