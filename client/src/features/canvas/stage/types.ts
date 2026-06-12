@@ -38,6 +38,10 @@ export interface CanvasStageProps {
   moveMode: MoveMode;
   selectedLayerIds: string[];
   maskStrokes: StrokeNode[];
+  inpaintMaskStrokes: StrokeNode[];
+  /** Current generation type — drives the active generation area + inpaint mask
+   *  overlays. Undefined outside the image-generation canvas. */
+  generationType?: "txt2img" | "img2img" | "inpaint";
   showGrid: boolean;
   gridSize: number;
   gridColor: string;
@@ -62,6 +66,9 @@ export interface CanvasStageProps {
   ) => void;
   onAddLayerMaskStroke: (
     layerId: string,
+    stroke: Omit<StrokeNode, "id">,
+  ) => void;
+  onAddInpaintMaskStroke: (
     stroke: Omit<StrokeNode, "id">,
   ) => void;
   setActiveGridArea: (area: ActiveGridArea) => void;

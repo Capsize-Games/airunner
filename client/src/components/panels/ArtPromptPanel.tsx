@@ -30,7 +30,7 @@ export default function ArtPromptPanel({
   generationType?: "txt2img" | "img2img" | "inpaint";
   onGenerationTypeChange?: (v: "txt2img" | "img2img" | "inpaint") => void;
 }) {
-  const s = useArtPromptState();
+  const s = useArtPromptState({ generationType: externalGenerationType });
   const o = useArtOverlays();
 
   // Use external generationType props when provided (e.g. from CanvasPanel),
@@ -314,7 +314,7 @@ export default function ArtPromptPanel({
                   s.togglePanel("embeddings")
                 }
                 onToggleRandom={s.handleToggleRandom}
-                onGenerate={() => s.onGenerate({ generationType: genType })}
+                onGenerate={s.onGenerate}
                 onCancel={s.onCancel}
               />
             </div>

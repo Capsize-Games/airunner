@@ -3,10 +3,26 @@ import { updateSingleton, getArtModelOptions } from "../../../api/client";
 import type { ArtOptionsResponse } from "../../../api/client";
 import { createSavedPrompt } from "../../../api/art";
 import type { SavedPrompt } from "../../../api/art";
-import { saveToStorage, loadFromStorage } from "../art-model/ArtModelStorage";
+import { loadFromStorage } from "../art-model/ArtModelStorage";
 import { loadPromptData, savePromptData } from "./ArtPromptStorage";
 import { useCanvasContext } from "../../../features/canvas/CanvasContext";
-import { renderVisibleComposite } from "../../../features/canvas/compositeCanvas";
+import {
+  renderVisibleComposite,
+  cropToRect,
+  renderInpaintMask,
+  renderInpaintAlphaMask,
+  compositeInpaintResult,
+} from "../../../features/canvas/compositeCanvas";
+
+/** Decode a data-URL into an HTMLImageElement (null on error). */
+function loadDataUrlImage(src: string): Promise<HTMLImageElement | null> {
+  return new Promise((resolve) => {
+    const el = new window.Image();
+    el.onload = () => resolve(el);
+    el.onerror = () => resolve(null);
+    el.src = src;
+  });
+}
 import { useArtWebSocket } from "../../../features/art/useArtWebSocket";
 import type { ArtPopup, ArtPanel } from "./ArtShared";
 
@@ -42,7 +58,10 @@ function baseDirForVersion(v: string): string {
   return VARIANT_BASE[v] || v;
 }
 
-export function useArtPromptState() {
+export function useArtPromptState(opts?: {
+  /** Effective generation type when driven externally (e.g. CanvasPanel). */
+  generationType?: "txt2img" | "img2img" | "inpaint";
+}) {
   const initial = loadPromptData();
 
   const [collapsed, setCollapsed] = useState(() => {
@@ -149,6 +168,64 @@ export function useArtPromptState() {
 
   let canvasCtx: ReturnType<typeof useCanvasContext> | null = null;
   try { canvasCtx = useCanvasContext(); } catch {}
+
+  // ── Effective generation size ───────────────────────────────────────────
+  // For img2img / inpaint the active generation area *is* the generation size:
+  // its width/height drive the request and the size controls edit it (clamped
+  // to the canvas). txt2img keeps its own genWidth/genHeight.
+  const effGenType = opts?.generationType ?? generationType;
+  const isAreaMode =
+    (effGenType === "img2img" || effGenType === "inpaint") && !!canvasCtx;
+  const area = canvasCtx?.activeGridArea ?? null;
+  const effGenWidth = isAreaMode && area ? area.width : genWidth;
+  const effGenHeight = isAreaMode && area ? area.height : genHeight;
+
+  const setEffGenWidth = useCallback((w: number) => {
+    if (isAreaMode && canvasCtx && area) {
+      const cw = canvasCtx.documentWidth;
+      const ch = canvasCtx.documentHeight;
+      const nw = Math.min(Math.max(8, w), cw);
+      const nx = Math.min(area.x, Math.max(0, cw - nw));
+      canvasCtx.setActiveGridArea({ ...area, x: nx, width: nw, height: Math.min(area.height, ch) });
+    } else {
+      setGenWidth(w);
+    }
+  }, [isAreaMode, canvasCtx, area]);
+
+  const setEffGenHeight = useCallback((h: number) => {
+    if (isAreaMode && canvasCtx && area) {
+      const cw = canvasCtx.documentWidth;
+      const ch = canvasCtx.documentHeight;
+      const nh = Math.min(Math.max(8, h), ch);
+      const ny = Math.min(area.y, Math.max(0, ch - nh));
+      canvasCtx.setActiveGridArea({ ...area, y: ny, height: nh, width: Math.min(area.width, cw) });
+    } else {
+      setGenHeight(h);
+    }
+  }, [isAreaMode, canvasCtx, area]);
+
+  // Seed the generation area from the chosen size (clamped + centered) when
+  // switching *into* area mode mid-session, so it lines up with the last
+  // txt2img size. Initialised to the first-render value so a reload that starts
+  // in img2img/inpaint keeps the persisted area instead of recentering it.
+  const prevAreaMode = useRef(isAreaMode);
+  useEffect(() => {
+    if (isAreaMode && canvasCtx && !prevAreaMode.current) {
+      const cw = canvasCtx.documentWidth;
+      const ch = canvasCtx.documentHeight;
+      const w = Math.min(genWidth, cw);
+      const h = Math.min(genHeight, ch);
+      canvasCtx.setActiveGridArea({
+        width: w,
+        height: h,
+        x: Math.round((cw - w) / 2),
+        y: Math.round((ch - h) / 2),
+      });
+    }
+    prevAreaMode.current = isAreaMode;
+    // genWidth/genHeight intentionally excluded: only re-seed on mode entry.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAreaMode, canvasCtx]);
 
   const { generating, progress, generate: artGenerate, cancel: artCancel } = useArtWebSocket();
 
@@ -447,11 +524,9 @@ export function useArtPromptState() {
     }
   }, [seed, seedRandomized]);
 
-  const onGenerate = useCallback(async (opts?: {
-    generationType?: "txt2img" | "img2img" | "inpaint";
-  }) => {
+  const onGenerate = useCallback(async () => {
     if (!prompt.trim()) return;
-    const genType = opts?.generationType ?? generationType;
+    const genType = effGenType;
     setPhase("loading");
     setErrorMessage(null);
     // If random seed is enabled, generate a fresh seed right before
@@ -467,12 +542,22 @@ export function useArtPromptState() {
       // "airunner_seed_saved" only (used to display/reuse the seed).
       try { localStorage.setItem("airunner_seed_saved", String(effectiveSeed)); } catch {}
     }
-    // For img2img, composite the visible layers into the init image that
-    // conditions generation. Strip the data: prefix — the daemon decodes raw
-    // base64. Inpaint also needs a mask, which isn't wired yet, so it falls
-    // through to plain txt2img for now.
+
+    // For img2img / inpaint, the active generation area is both the output size
+    // and the capture/placement region. Composite the visible layers, crop to
+    // the area, and (for inpaint) build a white-on-black mask from the magenta
+    // strokes. The daemon decodes raw base64, so the data: prefix is stripped.
+    const isImageMode =
+      (genType === "img2img" || genType === "inpaint") && !!canvasCtx && !!area;
+    let outWidth = effGenWidth;
+    let outHeight = effGenHeight;
     let imageB64: string | undefined;
-    if (genType === "img2img" && canvasCtx) {
+    let maskB64: string | undefined;
+    // Kept for inpaint result compositing.
+    let originalCrop: HTMLCanvasElement | undefined;
+    if (isImageMode && canvasCtx && area) {
+      outWidth = area.width;
+      outHeight = area.height;
       const composite = await renderVisibleComposite({
         layers: canvasCtx.layers,
         layerGroups: canvasCtx.layerGroups,
@@ -481,7 +566,12 @@ export function useArtPromptState() {
         documentHeight: canvasCtx.documentHeight,
       });
       if (composite) {
-        imageB64 = composite.toDataURL("image/png").split(",")[1];
+        originalCrop = cropToRect(composite, area);
+        imageB64 = originalCrop.toDataURL("image/png").split(",")[1];
+      }
+      if (genType === "inpaint") {
+        const mask = renderInpaintMask(canvasCtx.inpaintMaskStrokes, area, feather);
+        maskB64 = mask.toDataURL("image/png").split(",")[1];
       }
     }
 
@@ -493,22 +583,43 @@ export function useArtPromptState() {
         artModel: ls("airunner_art_model") || undefined,
         artVersion: ls("airunner_art_version") || undefined,
         scheduler: ls("airunner_art_scheduler") || undefined,
-        width: genWidth,
-        height: genHeight,
+        width: outWidth,
+        height: outHeight,
         ...(imageB64
-          ? { pipeline: "img2img", imageB64, strength }
+          ? { pipeline: genType, imageB64, strength }
           : {}),
+        ...(maskB64 ? { maskB64 } : {}),
       });
       setPhase("completed");
       if (imageBase64 && canvasCtx) {
-        const docW = canvasCtx.documentWidth ?? genWidth;
-        const docH = canvasCtx.documentHeight ?? genHeight;
-        canvasCtx.placeImageOnNewLayer(
-          imageBase64,
-          Math.round((docW - genWidth) / 2),
-          Math.round((docH - genHeight) / 2),
-          genWidth, genHeight,
-        );
+        if (isImageMode && area) {
+          // For inpaint, composite the result so only the masked region
+          // replaces the original — unmasked pixels are preserved exactly,
+          // regardless of how the backend pipeline behaved.
+          let placed = `data:image/png;base64,${imageBase64}`;
+          if (genType === "inpaint" && originalCrop) {
+            const gen = await loadDataUrlImage(placed);
+            if (gen) {
+              const alpha = renderInpaintAlphaMask(
+                canvasCtx.inpaintMaskStrokes, area, feather,
+              );
+              placed = compositeInpaintResult(originalCrop, gen, alpha)
+                .toDataURL("image/png");
+            }
+          }
+          canvasCtx.placeImageOnNewLayer(
+            placed, area.x, area.y, area.width, area.height,
+          );
+        } else {
+          const docW = canvasCtx.documentWidth ?? outWidth;
+          const docH = canvasCtx.documentHeight ?? outHeight;
+          canvasCtx.placeImageOnNewLayer(
+            imageBase64,
+            Math.round((docW - outWidth) / 2),
+            Math.round((docH - outHeight) / 2),
+            outWidth, outHeight,
+          );
+        }
       }
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
@@ -517,7 +628,7 @@ export function useArtPromptState() {
         setErrorMessage(msg);
       }
     }
-  }, [prompt, negativePrompt, genWidth, genHeight, canvasCtx, artGenerate, seed, seedRandomized, generationType, strength]);
+  }, [prompt, negativePrompt, effGenWidth, effGenHeight, canvasCtx, area, artGenerate, seed, seedRandomized, effGenType, strength, feather]);
 
   const onCancel = useCallback(() => artCancel(), [artCancel]);
 
@@ -603,8 +714,8 @@ export function useArtPromptState() {
     toolbarRef, controlsRef, settingsBtnRef, promptBtnRef,
     settingsAnchor, promptSettingsAnchor,
     availableSchedulers,
-    genWidth, setGenWidth,
-    genHeight, setGenHeight,
+    genWidth: effGenWidth, setGenWidth: setEffGenWidth,
+    genHeight: effGenHeight, setGenHeight: setEffGenHeight,
     nSamples, setNSamples,
     imagesPerBatch, setImagesPerBatch,
     steps, setSteps,

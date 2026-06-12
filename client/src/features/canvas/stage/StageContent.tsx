@@ -13,6 +13,8 @@ import { Stage, Layer, Rect, Circle } from "react-konva";
 import Konva from "konva";
 import CanvasLayerRenderer from "../CanvasLayer";
 import MaskLayer from "../MaskLayer";
+import InpaintMaskLayer from "../InpaintMaskLayer";
+import ActiveGridArea from "../ActiveGridArea";
 import CanvasBackground from "../CanvasBackground";
 import GridLayer from "./GridLayer";
 import LassoLayer from "./tools/lasso/LassoLayer";
@@ -40,6 +42,7 @@ import type {
   ActiveTool,
   StrokeNode,
   MoveMode,
+  ActiveGridArea as ActiveGridAreaType,
 } from "../useCanvasState";
 import type { SelectionData } from "../canvasTypes";
 
@@ -65,6 +68,10 @@ interface Props {
   brushSize: number;
   brushColor: string;
   maskStrokes: StrokeNode[];
+  inpaintMaskStrokes: StrokeNode[];
+  generationType?: "txt2img" | "img2img" | "inpaint";
+  activeGridArea: ActiveGridAreaType;
+  setActiveGridArea: (area: ActiveGridAreaType) => void;
   showGrid: boolean;
   gridSize: number;
   gridColor: string;
@@ -110,6 +117,7 @@ interface Props {
   onMoveLayer:         (layerId: string, x: number, y: number) => void;
   onAddMaskStroke:     (stroke: Omit<StrokeNode, "id">) => void;
   onAddLayerMaskStroke:(layerId: string, stroke: Omit<StrokeNode, "id">) => void;
+  onAddInpaintMaskStroke:(stroke: Omit<StrokeNode, "id">) => void;
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -119,6 +127,7 @@ export default function StageContent({
   stageSize, zoom, documentWidth, documentHeight, documentBgColor,
   layers, layerGroups, displayOrder, activeLayerId,
   activeTool, moveMode, brushSize, brushColor, maskStrokes,
+  inpaintMaskStrokes, generationType, activeGridArea, setActiveGridArea,
   showGrid, gridSize, gridColor, snapToGrid,
   selection,
   lassoRenderState, selectRenderState, wandRenderState,
@@ -132,6 +141,7 @@ export default function StageContent({
   handleOverlayPointerDown, handleOverlayPointerMove, handleOverlayPointerUp,
   updateBrushIndicator,
   onAddStroke, onMoveImage, onMoveLayer, onAddMaskStroke, onAddLayerMaskStroke,
+  onAddInpaintMaskStroke,
 }: Props) {
 
   // Flatten displayOrder into an ordered CanvasLayer list
@@ -263,6 +273,39 @@ export default function StageContent({
           </Layer>
         );
       })()}
+
+      {/* ── Inpaint mask (magenta) ─────────────────────────────────────── */}
+      {generationType === "inpaint" && (
+        <Layer>
+          <InpaintMaskLayer
+            strokes={inpaintMaskStrokes}
+            brushSize={brushSize}
+            drawingEnabled={
+              activeTool === "inpaint-mask" || activeTool === "inpaint-eraser"
+            }
+            eraser={activeTool === "inpaint-eraser"}
+            documentWidth={documentWidth}
+            documentHeight={documentHeight}
+            onStrokeComplete={onAddInpaintMaskStroke}
+          />
+        </Layer>
+      )}
+
+      {/* ── Active generation area (img2img / inpaint) ─────────────────── */}
+      {(generationType === "img2img" || generationType === "inpaint") && (
+        <Layer>
+          <ActiveGridArea
+            area={activeGridArea}
+            documentWidth={documentWidth}
+            documentHeight={documentHeight}
+            onChange={setActiveGridArea}
+            snapToGrid={snapToGrid}
+            // Draggable/resizable only with the dedicated grid-area tool so it
+            // never blocks the move tool, mask brush, or other drawing tools.
+            interactive={activeTool === "grid-area"}
+          />
+        </Layer>
+      )}
 
       {/* ── Brush / eraser indicator ────────────────────────────────────── */}
       {showBrushIndicator && (

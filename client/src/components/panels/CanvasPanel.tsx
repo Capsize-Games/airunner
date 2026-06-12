@@ -580,6 +580,8 @@ export default function CanvasPanel() {
                 brushSize={canvas.brushSize}
                 brushColor={canvas.brushColor}
                 maskStrokes={canvas.maskStrokes}
+                inpaintMaskStrokes={canvas.inpaintMaskStrokes}
+                generationType={generationType}
                 showGrid={canvas.gridShowGrid}
                 gridSize={canvas.gridSize}
                 gridColor={canvas.gridColor}
@@ -590,6 +592,7 @@ export default function CanvasPanel() {
                 onMoveLayer={canvas.moveLayer}
                 onAddMaskStroke={canvas.addMaskStroke}
                 onAddLayerMaskStroke={canvas.addLayerMaskStroke}
+                onAddInpaintMaskStroke={canvas.addInpaintMaskStroke}
                 setActiveGridArea={canvas.setActiveGridArea}
                 onUndo={canvas.undo}
                 onRedo={canvas.redo}

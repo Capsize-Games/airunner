@@ -205,8 +205,8 @@ export default function CanvasToolPanel({
       {showImagePrompt && (
         <div style={{ display: "flex", alignItems: "center", gap: 2, padding: "4px 6px", margin: "0 -6px", borderBottom: "1px solid rgba(255,255,255,0.07)", background: "#12121c" }}>
           {([
-            { id: "txt2img" as GenType, title: "TXT-TO-IMG" },
-            { id: "img2img" as GenType, title: "IMG-TO-IMG" },
+            { id: "txt2img" as GenType, title: "TXT2IMG" },
+            { id: "img2img" as GenType, title: "IMG2IMG" },
             { id: "inpaint" as GenType, title: "INPAINT" },
           ] as { id: GenType; title: string }[]).map(({ id, title }) => {
             const active = generationType === id;

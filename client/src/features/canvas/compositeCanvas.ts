@@ -6,6 +6,13 @@
 
 import type { CanvasLayer, LayerGroup, StrokeNode } from "./canvasTypes";
 
+export interface Rect {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
 export interface CompositeState {
   layers: CanvasLayer[];
   layerGroups: LayerGroup[];
@@ -150,6 +157,148 @@ export async function renderVisibleComposite(
     octx.globalAlpha = 1;
   }
 
+  return out;
+}
+
+/**
+ * Return a new canvas containing only the given rect of `source`. Used to lock
+ * the img2img / inpaint source to the active generation area.
+ */
+export function cropToRect(
+  source: HTMLCanvasElement,
+  rect: Rect,
+): HTMLCanvasElement {
+  const out = window.document.createElement("canvas");
+  out.width = Math.max(1, Math.round(rect.width));
+  out.height = Math.max(1, Math.round(rect.height));
+  const ctx = out.getContext("2d");
+  if (ctx) {
+    ctx.drawImage(
+      source,
+      rect.x, rect.y, out.width, out.height,
+      0, 0, out.width, out.height,
+    );
+  }
+  return out;
+}
+
+/**
+ * Build the server-facing inpaint mask for one generation area: a white-on-black
+ * canvas (white = the region to regenerate) the size of `rect`, with strokes
+ * translated into area-local space. `feather` (0–1) softens the mask edges.
+ */
+export function renderInpaintMask(
+  strokes: StrokeNode[],
+  rect: Rect,
+  feather = 0,
+): HTMLCanvasElement {
+  const w = Math.max(1, Math.round(rect.width));
+  const h = Math.max(1, Math.round(rect.height));
+  const out = window.document.createElement("canvas");
+  out.width = w;
+  out.height = h;
+  const ctx = out.getContext("2d");
+  if (!ctx) return out;
+
+  ctx.fillStyle = "#000000";
+  ctx.fillRect(0, 0, w, h);
+
+  // Feather maps to a blur radius applied to the white strokes.
+  const blurPx = Math.round(feather * 48);
+  if (blurPx > 0) ctx.filter = `blur(${blurPx}px)`;
+
+  ctx.strokeStyle = "#ffffff";
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+  ctx.translate(-rect.x, -rect.y);
+  for (const stroke of strokes) {
+    const pts = stroke.points;
+    if (pts.length < 4) continue;
+    // Eraser strokes cut the white mask back out (the server reads dropped
+    // alpha as black on RGB conversion).
+    ctx.globalCompositeOperation =
+      stroke.tool === "eraser" ? "destination-out" : "source-over";
+    ctx.beginPath();
+    ctx.lineWidth = stroke.strokeWidth;
+    ctx.moveTo(pts[0], pts[1]);
+    for (let i = 2; i < pts.length; i += 2) ctx.lineTo(pts[i], pts[i + 1]);
+    ctx.stroke();
+  }
+
+  return out;
+}
+
+/**
+ * Build an *alpha* mask for the generation area: a transparent canvas with the
+ * masked region painted opaque (feathered). Used to composite the inpaint
+ * result so only the masked region replaces the original.
+ */
+export function renderInpaintAlphaMask(
+  strokes: StrokeNode[],
+  rect: Rect,
+  feather = 0,
+): HTMLCanvasElement {
+  const w = Math.max(1, Math.round(rect.width));
+  const h = Math.max(1, Math.round(rect.height));
+  const out = window.document.createElement("canvas");
+  out.width = w;
+  out.height = h;
+  const ctx = out.getContext("2d");
+  if (!ctx) return out;
+
+  const blurPx = Math.round(feather * 48);
+  if (blurPx > 0) ctx.filter = `blur(${blurPx}px)`;
+  ctx.strokeStyle = "#ffffff";
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+  ctx.translate(-rect.x, -rect.y);
+  for (const stroke of strokes) {
+    const pts = stroke.points;
+    if (pts.length < 4) continue;
+    ctx.globalCompositeOperation =
+      stroke.tool === "eraser" ? "destination-out" : "source-over";
+    ctx.beginPath();
+    ctx.lineWidth = stroke.strokeWidth;
+    ctx.moveTo(pts[0], pts[1]);
+    for (let i = 2; i < pts.length; i += 2) ctx.lineTo(pts[i], pts[i + 1]);
+    ctx.stroke();
+  }
+  return out;
+}
+
+/**
+ * Composite an inpaint result back onto the original: keep the original
+ * everywhere, and overlay the generated image only where `alphaMask` is opaque
+ * (the masked region). Guarantees unmasked pixels are preserved regardless of
+ * how the backend pipeline behaved. `generated` is scaled to the area size.
+ */
+export function compositeInpaintResult(
+  original: HTMLCanvasElement,
+  generated: HTMLImageElement | HTMLCanvasElement,
+  alphaMask: HTMLCanvasElement,
+): HTMLCanvasElement {
+  const w = original.width;
+  const h = original.height;
+
+  // Generated image clipped to the masked region.
+  const masked = window.document.createElement("canvas");
+  masked.width = w;
+  masked.height = h;
+  const mctx = masked.getContext("2d");
+  if (mctx) {
+    mctx.drawImage(generated, 0, 0, w, h);
+    mctx.globalCompositeOperation = "destination-in";
+    mctx.drawImage(alphaMask, 0, 0);
+  }
+
+  const out = window.document.createElement("canvas");
+  out.width = w;
+  out.height = h;
+  const octx = out.getContext("2d");
+  if (octx) {
+    octx.drawImage(original, 0, 0);
+    octx.drawImage(masked, 0, 0);
+  }
   return out;
 }
 

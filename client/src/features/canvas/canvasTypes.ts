@@ -82,7 +82,8 @@ export interface SelectionData {
 export type ActiveTool =
   | "select" | "brush" | "eraser" | "mask" | "move"
   | "lasso" | "wand" | "crop" | "bucket" | "smudge"
-  | "text" | "pipette" | "zoom" | "grid" | "ruler";
+  | "text" | "pipette" | "zoom" | "grid" | "ruler"
+  | "inpaint-mask" | "inpaint-eraser" | "grid-area";
 
 export type ZoomDirection = "in" | "out";
 
@@ -130,6 +131,10 @@ export interface CanvasState {
   textSize: number;
   textColor: string;
   maskStrokes: StrokeNode[];
+  /** Inpaint mask strokes (document space). Rendered magenta in the UI; sent to
+   *  the server as a white-on-black mask. Separate from layer/selection masks
+   *  because img2img & inpaint composite all visible layers, not one layer. */
+  inpaintMaskStrokes: StrokeNode[];
   snapToGrid: boolean;
   cropX: number;
   cropY: number;

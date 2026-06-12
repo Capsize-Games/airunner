@@ -74,5 +74,46 @@ export function strokes(
     });
   }, [setState]);
 
-  return { addStroke, addMaskStroke, clearMask };
+  const addInpaintMaskStroke = useCallback(
+    (stroke: Omit<StrokeNode, "id">) => {
+      setState((prev) => {
+        const newStroke: StrokeNode = {
+          ...stroke,
+          id: nextStrokeId(),
+        };
+        const next = {
+          ...prev,
+          _ts: Date.now(),
+          inpaintMaskStrokes: [...prev.inpaintMaskStrokes, newStroke],
+        };
+        const { history, historyIndex } = pushHistory(
+          prev.history,
+          prev.historyIndex,
+          serialize(next),
+        );
+        return { ...next, history, historyIndex };
+      });
+    },
+    [setState],
+  );
+
+  const clearInpaintMask = useCallback(() => {
+    setState((prev) => {
+      const next = { ...prev, inpaintMaskStrokes: [] };
+      const { history, historyIndex } = pushHistory(
+        prev.history,
+        prev.historyIndex,
+        serialize(next),
+      );
+      return { ...next, history, historyIndex };
+    });
+  }, [setState]);
+
+  return {
+    addStroke,
+    addMaskStroke,
+    clearMask,
+    addInpaintMaskStroke,
+    clearInpaintMask,
+  };
 }
