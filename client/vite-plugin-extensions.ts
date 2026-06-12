@@ -67,6 +67,14 @@ export function extensionLoaderPlugin(): Plugin {
     load(id) {
       if (id !== RESOLVED_VIRTUAL_MODULE_ID) return null;
 
+      // Watch the extensions directory and .env so the virtual module
+      // is regenerated when extensions are added/removed or config changes.
+      this.addWatchFile(path.join(EXTENSIONS_DIR));
+      const envPath = path.resolve(__dirname, "..", ".env");
+      if (fs.existsSync(envPath)) {
+        this.addWatchFile(envPath);
+      }
+
       // Try AIRUNNER_EXTENSIONS first, fall back to auto-scan
       let extNames = parseExtensionNames();
       if (extNames.length === 0) {
@@ -79,6 +87,7 @@ export function extensionLoaderPlugin(): Plugin {
       const routeElements: string[] = [];
       const providers: string[] = [];
       const headerGetters: string[] = [];
+      const bottomBarIndices: number[] = [];
 
       extNames.forEach((name, i) => {
         const clientDir = path.join(EXTENSIONS_DIR, name, "client");
@@ -106,6 +115,7 @@ export function extensionLoaderPlugin(): Plugin {
           imports.push(
             `import { BottomBar as Ext${i}BottomBar } from "@extensions/${name}/client/BottomBar";`,
           );
+          bottomBarIndices.push(i);
         }
 
         const headersPath = path.join(clientDir, "headers.ts");
@@ -118,15 +128,11 @@ export function extensionLoaderPlugin(): Plugin {
       });
 
       const bottomBarName =
-        extNames.length > 0
-          ? extNames
-              .map(
-                (_, i) =>
-                  `Ext${i}BottomBar !== undefined ? /* @__PURE__ */React.createElement(Ext${i}BottomBar) : null`,
-              )
-              .filter(Boolean)
-              .join("")
-          : "null";
+        bottomBarIndices.length === 0
+          ? "null"
+          : bottomBarIndices.length === 1
+            ? `/* @__PURE__ */React.createElement(Ext${bottomBarIndices[0]}BottomBar)`
+            : `/* @__PURE__ */React.createElement(React.Fragment, null, ${bottomBarIndices.map((i) => `/* @__PURE__ */React.createElement(Ext${i}BottomBar)`).join(", ")})`;
 
       const headerGetterBody =
         headerGetters.length > 0
