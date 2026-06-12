@@ -443,7 +443,6 @@ def _build_daemon_client(config_path: Path):
     from airunner_services.runtimes.bundle_layout import (
         build_linux_bundle_layout,
     )
-    from airunner_services.settings import DEV_ENV
 
     bundle_layout = build_linux_bundle_layout()
 
@@ -457,7 +456,7 @@ def _build_daemon_client(config_path: Path):
         config_path=config_path,
         launcher=launcher,
         auto_start=False,
-        detect_stale_dev_daemon=DEV_ENV,
+        detect_stale_dev_daemon=False,
     )
 
 
@@ -484,7 +483,10 @@ def _monitor_managed_daemon(client, logger) -> int:
     logger.info("Managed daemon ready at %s", client.base_url)
     logger.info("Press Ctrl+C to stop the managed daemon.")
     while True:
-        client.health_check()
+        payload = client._healthcheck_payload()
+        if payload is None:
+            logger.error("Daemon became unavailable")
+            return 1
         time.sleep(1)
 
 
