@@ -248,10 +248,13 @@ class LocalFallbackArtClient(_SignalRuntimeClient):
             image_queue.put(result)
 
         if progress_callback is not None:
+            # Report 0 while dispatching/loading the model so the client keeps
+            # showing its indeterminate animation. Real progress (> 0) is only
+            # emitted once diffusion steps begin via SD_PROGRESS_SIGNAL.
             progress_callback(
                 {
                     "status": "running",
-                    "progress": 1.0,
+                    "progress": 0.0,
                     "phase": "dispatch",
                 }
             )

@@ -21,6 +21,7 @@ export function ModelPicker({
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const containerRef = useRef<HTMLDivElement>(null);
+  const popupRef = useRef<HTMLDivElement>(null);
   const btnRef = useRef<HTMLButtonElement>(null);
   const [anchor, setAnchor] = useState<{ left: number; bottom: number } | null>(null);
 
@@ -41,10 +42,15 @@ export function ModelPicker({
   useEffect(() => {
     if (!open) return;
     const handler = (e: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
-        setOpen(false);
-        setQuery("");
-      }
+      const target = e.target as Node;
+      // The popup is portaled to document.body, so it is NOT a DOM
+      // descendant of containerRef — check it separately, otherwise a click
+      // on an option is treated as "outside", closes the menu on mousedown,
+      // and the option's onClick never fires.
+      if (containerRef.current?.contains(target)) return;
+      if (popupRef.current?.contains(target)) return;
+      setOpen(false);
+      setQuery("");
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
@@ -115,6 +121,7 @@ export function ModelPicker({
 
       {open && anchor && createPortal(
         <div
+          ref={popupRef}
           className="d-flex flex-column bg-theme-panel"
           style={{
             position: "fixed",

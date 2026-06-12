@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import {
   getSingleton,
   updateSingleton,
@@ -37,6 +37,10 @@ export default function ModelSelector() {
     { label: string; value: string }[]
   >([]);
   const [loading, setLoading] = useState(true);
+  // Set when *this* component persists a change, so its own
+  // MODEL_CHANGED_EVENT echo doesn't re-fetch and clobber the value the
+  // user just picked with a (possibly stale) server read.
+  const suppressNextFetchRef = useRef(false);
 
   const isLocal = modelService === "local";
   const isOllama = modelService === "ollama";
@@ -58,7 +62,15 @@ export default function ModelSelector() {
 
   useEffect(() => {
     fetchSettings();
-    const handler = () => fetchSettings();
+    const handler = () => {
+      // Ignore the echo from our own persist — local state is already
+      // authoritative for the value the user just selected.
+      if (suppressNextFetchRef.current) {
+        suppressNextFetchRef.current = false;
+        return;
+      }
+      fetchSettings();
+    };
     window.addEventListener(MODEL_CHANGED_EVENT, handler);
     return () => window.removeEventListener(MODEL_CHANGED_EVENT, handler);
   }, [fetchSettings]);
@@ -83,8 +95,10 @@ export default function ModelSelector() {
     return () => clearInterval(id);
   }, [fetchModelStatus]);
 
+  // Model-status events fire frequently while a model loads/runs. Only
+  // refresh the status dot here — re-fetching settings would clobber a
+  // selection the user just made before its write is visible.
   useEventBus([EVENT_MODEL_STATUS], () => {
-    fetchSettings();
     fetchModelStatus();
   });
 
@@ -103,6 +117,9 @@ export default function ModelSelector() {
   const persist = (updates: Record<string, unknown>) => {
     updateSingleton("LLMGeneratorSettings", updates)
       .then(() => {
+        // Notify other consumers (e.g. useChatModelPath) without making
+        // our own listener re-fetch and revert the just-set value.
+        suppressNextFetchRef.current = true;
         window.dispatchEvent(new CustomEvent(MODEL_CHANGED_EVENT));
       })
       .catch(() => {});

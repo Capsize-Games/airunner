@@ -69,7 +69,18 @@ export function PromptTextareas({
         return (
           <div key={f.key} className="d-flex flex-column" style={{ flex: isActive ? 1 : "0 0 auto" }}>
             <PromptDivider label={f.label} />
-            <div className="prompt-textarea-bg" style={{ flex: isActive ? 1 : "0 0 auto" }}>
+            <div
+              className="prompt-textarea-bg"
+              style={{
+                flex: isActive ? 1 : "0 0 auto",
+                ...(isActive ? { display: "flex", flexDirection: "column", cursor: "text" } : {}),
+              }}
+              onClick={() => {
+                if (isActive && textareaRef.current) {
+                  textareaRef.current.focus();
+                }
+              }}
+            >
               {isActive ? (
                 <textarea
                   ref={textareaRef}

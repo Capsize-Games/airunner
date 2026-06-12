@@ -326,8 +326,13 @@ class SDWorker(Worker):
             )
         new_version = StableDiffusionVersion(version)
         if new_version is not self.version:
+            # Switching versions uses a *different* manager instance (e.g.
+            # Z-Image → SDXL). Fully unload the current version's pipeline
+            # first, otherwise its weights stay resident in VRAM and loading
+            # the new version OOMs. (Within-version model changes reuse the
+            # same manager and unload via reload(), so they're unaffected.)
+            self.unload_model_manager()
             self.version = new_version
-            self._model_manager = None
         return data
 
     def load_model_manager(self, data: Dict = None):

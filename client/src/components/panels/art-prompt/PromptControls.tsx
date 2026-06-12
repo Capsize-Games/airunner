@@ -62,7 +62,34 @@ export const PromptControls = forwardRef<HTMLDivElement, Props>(function PromptC
         </ToolbarIconBtn>
       </div>
 
-      <span className="flex-grow-1" />
+      {/* Center: progress bar */}
+      <div className="flex-grow-1" style={{ padding: "0 4px" }}>
+        {(() => {
+          // Indeterminate while the model loads / before the first server
+          // progress tick; switches to a determinate fill once progress > 0.
+          const active = phase === "loading" || generating;
+          const indeterminate = active && progress === 0;
+          return (
+            <div
+              className="art-progress-track"
+              style={{
+                height: 8,
+                borderRadius: 4,
+                background: "rgba(255,255,255,0.1)",
+              }}
+            >
+              {indeterminate ? (
+                <div className="art-progress-fill art-progress-fill--indeterminate" />
+              ) : (
+                <div
+                  className="art-progress-fill art-progress-fill--determinate"
+                  style={{ width: active ? `${progress}%` : "0%" }}
+                />
+              )}
+            </div>
+          );
+        })()}
+      </div>
 
       {/* Right: generate / cancel */}
       {generating ? (

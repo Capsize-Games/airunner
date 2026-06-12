@@ -298,7 +298,11 @@ async def _handle_generate(
     # Create the job ID first so cancel can use it immediately.
     tracker = JobTracker()
     job_id = await tracker.create_job(metadata={})
-    await tracker.update_progress(job_id, 1.0, JobState.RUNNING)
+    # Keep progress at 0 while the model loads — the client renders an
+    # indeterminate animation until the first real inference step arrives
+    # (progress > 0). Reporting a non-zero value here would end the
+    # indeterminate phase prematurely.
+    await tracker.update_progress(job_id, 0.0, JobState.RUNNING)
     msg["_id"] = job_id
 
     # Fire generation as a background task — does not block the WS loop.

@@ -597,6 +597,9 @@ export function useArtPromptState(opts?: {
         scheduler: ls("airunner_art_scheduler") || undefined,
         width: outWidth,
         height: outHeight,
+        steps,
+        cfgScale,
+        numImages: nSamples,
         ...(imageB64
           ? { pipeline: genType, imageB64, strength }
           : {}),
@@ -640,7 +643,7 @@ export function useArtPromptState(opts?: {
         setErrorMessage(msg);
       }
     }
-  }, [prompt, negativePrompt, effGenWidth, effGenHeight, canvasCtx, area, artGenerate, seed, seedRandomized, effGenType, strength, feather]);
+  }, [prompt, negativePrompt, effGenWidth, effGenHeight, canvasCtx, area, artGenerate, seed, seedRandomized, effGenType, strength, feather, steps, cfgScale, nSamples]);
 
   const onCancel = useCallback(() => artCancel(), [artCancel]);
 

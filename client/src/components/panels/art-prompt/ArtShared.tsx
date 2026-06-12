@@ -15,6 +15,22 @@ const ART_PROMPT_CSS = `
     width: 10px; height: 10px; border-radius: 50%;
     background: var(--bs-primary); cursor: pointer; border: none;
   }
+  /* Indeterminate art-generation progress bar (model loading) */
+  .art-progress-track { position: relative; overflow: hidden; }
+  .art-progress-fill {
+    height: 100%; border-radius: inherit;
+    background: var(--bs-info);
+  }
+  .art-progress-fill--determinate { transition: width 0.2s linear; }
+  .art-progress-fill--indeterminate {
+    position: absolute; top: 0; left: 0;
+    width: 40%; border-radius: inherit;
+    animation: art-progress-indeterminate 1.1s ease-in-out infinite;
+  }
+  @keyframes art-progress-indeterminate {
+    0%   { left: -40%; }
+    100% { left: 100%; }
+  }
 `;
 
 if (typeof document !== "undefined") {
