@@ -4,6 +4,8 @@ import {
   useCallback,
   useEffect,
 } from "react";
+import { removeBackground } from "../../api/art";
+import { renderVisibleComposite } from "../../features/canvas/compositeCanvas";
 import Konva from "konva";
 import { RefreshCcw, RefreshCcwDot } from "lucide-react";
 import LucideIcon from "../shared/LucideIcon";
@@ -487,6 +489,28 @@ export default function CanvasPanel() {
                           type="button"
                           className="btn btn-primary btn-sm"
                           style={{ fontSize: 12, padding: "4px 16px" }}
+                          onClick={async () => {
+                            const composite = await renderVisibleComposite({
+                              layers: canvas.layers,
+                              layerGroups: canvas.layerGroups,
+                              displayOrder: canvas.displayOrder,
+                              documentWidth: canvas.documentWidth,
+                              documentHeight: canvas.documentHeight,
+                            });
+                            if (!composite) return;
+                            const rawB64 = composite.toDataURL("image/png").split(",")[1];
+                            try {
+                              const resultB64 = await removeBackground(rawB64);
+                              canvas.placeImageOnNewLayer(
+                                `data:image/png;base64,${resultB64}`,
+                                0, 0,
+                                canvas.documentWidth,
+                                canvas.documentHeight,
+                              );
+                            } catch (err) {
+                              console.error("Background removal failed:", err);
+                            }
+                          }}
                         >
                           Remove background
                         </button>

@@ -1,4 +1,4 @@
-"""RPC handlers: art options + bootstrap."""
+"""RPC handlers: art options + bootstrap + remove-background."""
 
 from __future__ import annotations
 
@@ -80,6 +80,40 @@ async def _rpc_art_options(body: dict, **kw: Any) -> dict[str, Any]:
             exc,
         )
         return {"status": 200, "body": {"versions": [], "precisions": []}}
+
+
+@_rpc_register("POST", "/api/v1/art/remove-background")
+async def _rpc_art_remove_background(
+    body: dict, **kw: Any
+) -> dict[str, Any]:
+    """Proxy background-removal request to the daemon.
+
+    Expects ``{"image_b64": "..."}`` in the body. Forwards it to the
+    daemon's ``POST /api/v1/art/remove-background`` endpoint and returns
+    the resulting PNG bytes as a base64-encoded string.
+    """
+    import base64
+    import requests
+
+    image_b64 = (body or {}).get("image_b64", "")
+    if not image_b64:
+        return {"status": 400, "body": {"error": "Missing image_b64"}}
+    try:
+        daemon_base = "http://127.0.0.1:8188"
+        resp = requests.post(
+            f"{daemon_base}/api/v1/art/remove-background",
+            json={"image_b64": image_b64},
+            timeout=120,
+        )
+        resp.raise_for_status()
+        result_b64 = base64.b64encode(resp.content).decode("ascii")
+        return {
+            "status": 200,
+            "body": {"image_b64": result_b64},
+        }
+    except Exception as exc:
+        logger.exception("Background removal failed: %s", exc)
+        return {"status": 500, "body": {"error": str(exc)}}
 
 
 @_rpc_register("GET", "/api/v1/art/bootstrap")
