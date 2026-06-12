@@ -94,7 +94,6 @@ export default function ChatInputArea({
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder="Type a message..."
-              disabled={llm.streaming}
             />
 
             <ActiveToolsDisplay activeTools={llm.activeTools} />

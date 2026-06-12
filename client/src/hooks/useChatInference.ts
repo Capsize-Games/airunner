@@ -133,10 +133,12 @@ export function useChatInference({
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
       if (e.key === "Enter" && !e.shiftKey) {
         e.preventDefault();
-        handleSend();
+        if (!llm.streaming) {
+          handleSend();
+        }
       }
     },
-    [handleSend],
+    [handleSend, llm.streaming],
   );
 
   const handleNewConversation = useCallback(async () => {

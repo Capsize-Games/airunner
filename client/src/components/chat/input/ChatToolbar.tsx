@@ -114,6 +114,7 @@ export default function ChatToolbar({
         <button
           type="button"
           onClick={handleSend}
+          onMouseDown={(e) => e.preventDefault()}
           disabled={!input.trim()}
           title="Send message"
           style={{
