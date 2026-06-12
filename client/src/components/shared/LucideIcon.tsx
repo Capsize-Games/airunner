@@ -1,6 +1,6 @@
 import {
   Activity, Book, BotMessageSquare, Brain,
-  ChevronDown, ChevronLeft, ChevronRight, ChevronUp,
+  ChevronDown, ChevronLeft, ChevronRight, ChevronUp, ChevronsUpDown,
   Check, CircleCheck, CircleDot, CircleStop, CircleX, Cloud, Copy, Database, DatabaseZap, Dices,
   Drama, Eraser, FolderOpen, Globe, ImagePlus, Save, Grid2x2Check, History, Image, Images, Info, Layers, LayersPlus, Loader,
   MessageCirclePlus, MessageSquare, MessageSquareHeart, MessageSquarePlus, MessageSquareText,
@@ -22,6 +22,7 @@ const MAP: Record<string, LucideIcon> = {
   "chevron-left": ChevronLeft,
   "chevron-right": ChevronRight,
   "chevron-up": ChevronUp,
+  "chevrons-up-down": ChevronsUpDown,
   check: Check,
   "circle-check": CircleCheck,
   "circle-dot": CircleDot,
