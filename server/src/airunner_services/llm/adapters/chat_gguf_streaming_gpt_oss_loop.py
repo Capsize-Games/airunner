@@ -54,11 +54,10 @@ def _yield_raw_gpt_oss_deltas(
         if not (raw_text := _completion_text(chunk)):
             continue
         full_content.append(raw_text)
-        saw_visible_text = saw_visible_text or (
-            yield from _yield_raw_gpt_oss_delta(
-                parser, raw_text, forced_tool_name, run_manager
-            )
+        chunk_visible = yield from _yield_raw_gpt_oss_delta(
+            parser, raw_text, forced_tool_name, run_manager
         )
+        saw_visible_text = saw_visible_text or chunk_visible
     return (
         _completed_raw_text(
             adapter, completion_kwargs, full_content, forced_tool_name

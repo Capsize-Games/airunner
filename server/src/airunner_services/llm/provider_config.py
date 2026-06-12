@@ -73,7 +73,11 @@ class LLMProviderConfig:
             "description": "GPT-OSS 20B GGUF for local llama.cpp code and reasoning workloads",
             "gguf_repo_id": "unsloth/gpt-oss-20b-GGUF",
             "gguf_filename": "gpt-oss-20b-F16.gguf",
-            "gguf_default_n_ctx": 4096,
+            # 4096 is too small for a verbose reasoning model — its
+            # chain-of-thought plus the Harmony preamble exhausts the window
+            # within a few turns and truncates answers. 8192 gives headroom
+            # while keeping the KV cache modest. Raise further if VRAM allows.
+            "gguf_default_n_ctx": 8192,
             "gguf_default_n_batch": 256,
             "local_storage_subdir": "gpt_oss",
             "aliases": [
@@ -84,7 +88,7 @@ class LLMProviderConfig:
             ],
             "gguf_runtime_profiles": {
                 "default": {
-                    "n_ctx": 4096,
+                    "n_ctx": 8192,
                     "n_batch": 256,
                 },
                 "combined_tts": {

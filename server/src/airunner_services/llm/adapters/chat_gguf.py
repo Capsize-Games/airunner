@@ -125,8 +125,7 @@ class ChatGGUF(
         """Return True when GPT-OSS should use raw Harmony prompting."""
         return (
             self._uses_gpt_oss_parser()
-            and self.tool_calling_mode == "react"
-            and bool(self.tools)
+            and self.tool_choice != "none"
             and hasattr(self._llama, "create_completion")
         )
 

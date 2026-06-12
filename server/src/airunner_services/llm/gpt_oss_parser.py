@@ -1,8 +1,11 @@
 """Helpers for parsing GPT-OSS Harmony channel output."""
 
 import json
+import logging
 import re
 from dataclasses import dataclass
+
+_logger = logging.getLogger(__name__)
 
 START_TOKEN = "<|start|>"
 CHANNEL_TOKEN = "<|channel|>"
@@ -253,8 +256,7 @@ class GPTOSSStreamParser:
             return False
         channel, recipient = _parse_header_section(value)
         self.current_channel = channel
-        if recipient:
-            self.current_recipient = recipient
+        self.current_recipient = recipient
         self.buffer = remainder
         self.state = "control"
         return True
@@ -292,6 +294,26 @@ class GPTOSSStreamParser:
             delta.analysis_text += value
         elif self.current_channel == "final" or not self.current_channel:
             delta.final_text += value
+        elif self.current_channel == "commentary" and not self.current_recipient:
+            # gpt-oss often emits user-facing text in the commentary channel
+            # (notably when it deliberates about using a tool, e.g. "what time
+            # is it?"). Commentary WITH a recipient (``to=functions.x``) is a
+            # tool call handled separately, so only surface recipient-less
+            # commentary as visible content — otherwise the real answer is
+            # silently dropped and only the stub "final" channel survives.
+            delta.final_text += value
+        elif value.strip():
+            # Log silently-dropped content (tool-call payloads, non-assistant,
+            # or commentary with recipient) so we can verify correct routing.
+            _logger.debug(
+                "GPT-OSS parser dropped content: role=%s channel=%s "
+                "recipient=%r len=%d preview=%.80r",
+                self.current_role,
+                self.current_channel or "<none>",
+                self.current_recipient or None,
+                len(value),
+                value,
+            )
 
 
 def parse_gpt_oss_response(raw_response: str) -> GPTOSSParseResult:

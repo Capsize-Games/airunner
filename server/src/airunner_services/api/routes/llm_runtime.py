@@ -5,7 +5,7 @@ from __future__ import annotations
 import asyncio
 import os
 from pathlib import Path
-from typing import Any, Iterable, List, Optional
+from typing import Any, Iterable, Iterator, List, Optional
 
 # Documents must reside under this root to be eligible for RAG injection.
 # Prevents path-traversal attacks where a tampered DB entry points to /etc/passwd etc.
@@ -161,9 +161,25 @@ async def run_runtime_action(
     raise_for_runtime_error(response)
 
 
-async def next_stream_delta(iterator: Iterable[StreamDelta]) -> StreamDelta:
+_SENTINEL = object()
+
+
+def _next_item(iterator: Iterator) -> Any:
+    """Return the next item from *iterator* or _SENTINEL when exhausted.
+
+    This wrapper exists so ``StopIteration`` is never raised inside
+    ``asyncio.to_thread`` — raising it into a ``Future`` on Python ≥ 3.13
+    produces a ``RuntimeError``.
+    """
+    return next(iterator, _SENTINEL)
+
+
+async def next_stream_delta(iterator: Iterator) -> StreamDelta:
     """Read one runtime stream delta without blocking the event loop."""
-    return await asyncio.to_thread(next, iterator)
+    result = await asyncio.to_thread(_next_item, iterator)
+    if result is _SENTINEL:
+        raise StopIteration
+    return result
 
 
 async def stream_runtime(client: RuntimeClient, envelope: RequestEnvelope):

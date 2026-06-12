@@ -91,7 +91,19 @@ PY
 fi
 
 # ---------------------------------------------------------------------------
-# 3. Hand off to the requested command.
+# 3. Dev reload (optional).  When AIRUNNER_DEV_RELOAD=1, wrap the server
+#    command with the watchdog-based reloader so Python source file changes
+#    trigger an automatic restart.
+# ---------------------------------------------------------------------------
+if [[ "${AIRUNNER_DEV_RELOAD:-0}" == "1" ]]; then
+    log "Dev reload ENABLED — server will restart on source changes."
+    log "Watch paths: ${AIRUNNER_DEV_RELOAD_PATHS:-/app/server/src}"
+    log "Debounce interval: ${AIRUNNER_DEV_RELOAD_DEBOUNCE:-1.0}s"
+    exec python -m airunner_services.dev_reload "$@"
+fi
+
+# ---------------------------------------------------------------------------
+# 4. Hand off to the requested command.
 # ---------------------------------------------------------------------------
 log "Starting: $*"
 exec "$@"
