@@ -2,8 +2,12 @@
 
 from __future__ import annotations
 
+import base64
 import logging
+from io import BytesIO
 from typing import Any
+
+from PIL import Image
 
 from airunner_services.api.routes.events import _rpc_register
 
@@ -86,27 +90,25 @@ async def _rpc_art_options(body: dict, **kw: Any) -> dict[str, Any]:
 async def _rpc_art_remove_background(
     body: dict, **kw: Any
 ) -> dict[str, Any]:
-    """Proxy background-removal request to the daemon.
+    """Remove the background from a base64-encoded PNG image.
 
-    Expects ``{"image_b64": "..."}`` in the body. Forwards it to the
-    daemon's ``POST /api/v1/art/remove-background`` endpoint and returns
-    the resulting PNG bytes as a base64-encoded string.
+    Expects ``{"image_b64": "..."}`` in the body. Decodes the PNG,
+    runs it through the RMBG model, and returns the result as base64.
     """
-    import base64
-    import requests
-
     image_b64 = (body or {}).get("image_b64", "")
     if not image_b64:
         return {"status": 400, "body": {"error": "Missing image_b64"}}
     try:
-        daemon_base = "http://127.0.0.1:8188"
-        resp = requests.post(
-            f"{daemon_base}/api/v1/art/remove-background",
-            json={"image_b64": image_b64},
-            timeout=120,
-        )
-        resp.raise_for_status()
-        result_b64 = base64.b64encode(resp.content).decode("ascii")
+        raw_bytes = base64.b64decode(image_b64)
+        image = Image.open(BytesIO(raw_bytes)).convert("RGBA")
+
+        from airunner_services.art.managers.rmbg import RMBGModelManager
+
+        manager = RMBGModelManager()
+        result_image = manager.remove_background(image)
+        buf = BytesIO()
+        result_image.save(buf, format="PNG")
+        result_b64 = base64.b64encode(buf.getvalue()).decode("ascii")
         return {
             "status": 200,
             "body": {"image_b64": result_b64},
