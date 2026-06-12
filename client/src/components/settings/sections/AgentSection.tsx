@@ -1,11 +1,12 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Form from "react-bootstrap/Form";
 import Spinner from "react-bootstrap/Spinner";
 import {
   queryFirstResource,
   updateResource,
 } from "../../../api/client";
-import type { ResourceRecord } from "../../../types/api";
+import { request } from "../../../api/client-base";
+import type { ResourceRecord, JsonObject } from "../../../types/api";
 import AgentTextareas from "./agent/AgentTextareas";
 
 const GENDER_OPTIONS = ["Male", "Female"];
@@ -82,6 +83,21 @@ export default function AgentSection() {
     else if (key === "guardrailsPrompt") setGuardrailsPrompt(value);
   }
 
+  const handleResetDefaults = useCallback(async () => {
+    if (!selectedId) return;
+    try {
+      const res = await request<JsonObject>(
+        "POST",
+        `/api/v1/settings/resources/Chatbot/${selectedId}/reset-defaults`,
+      );
+      if (res) {
+        applyRecord(res as ResourceRecord);
+      }
+    } catch {
+      // ignore
+    }
+  }, [selectedId]);
+
   if (loading) {
     return (
       <div className="text-center py-4">
@@ -92,7 +108,16 @@ export default function AgentSection() {
 
   return (
     <div>
-      <h6 className="mb-3">Agent Preferences</h6>
+      <div className="d-flex justify-content-between align-items-center mb-3">
+        <h6 className="mb-0">Agent Preferences</h6>
+        <button
+          className="btn btn-outline-danger btn-sm"
+          onClick={handleResetDefaults}
+          title="Reset all agent preferences to their default values"
+        >
+          Reset to Defaults
+        </button>
+      </div>
 
       <div className="mb-3">
         <Form.Group className="mb-2">

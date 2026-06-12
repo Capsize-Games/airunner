@@ -12,6 +12,8 @@ export default function MessageList({
   onSubmitEdit,
   onCopyMessage,
   onPlayMessage,
+  botName,
+  userName,
 }: {
   messages: Message[];
   streamBuffer?: string;
@@ -20,6 +22,8 @@ export default function MessageList({
   onSubmitEdit?: (index: number, newContent: string) => void;
   onCopyMessage?: (content: string) => void;
   onPlayMessage?: (content: string) => void;
+  botName?: string;
+  userName?: string;
 }) {
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [editContent, setEditContent] = useState("");
@@ -78,12 +82,15 @@ export default function MessageList({
           onDelete={onDeleteMessage}
           onCopy={onCopyMessage}
           onPlay={onPlayMessage}
+          botName={botName}
+          userName={userName}
         />
       ))}
       {isStreaming && (
         <StreamingBubble
           thinkingBuffer={thinkingBuffer}
           streamBuffer={streamBuffer}
+          botName={botName}
         />
       )}
     </div>

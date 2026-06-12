@@ -12,11 +12,13 @@ import ToolCallSection from "./ToolCallSection";
 interface StreamingBubbleProps {
   thinkingBuffer?: string;
   streamBuffer?: string;
+  botName?: string;
 }
 
 export default function StreamingBubble({
   thinkingBuffer,
   streamBuffer,
+  botName = "AI",
 }: StreamingBubbleProps) {
   const [thinkingExpanded, setThinkingExpanded] = useState(true);
 
@@ -43,7 +45,7 @@ export default function StreamingBubble({
         border: "1px solid rgba(71,0,129,0.2)",
       }}
     >
-      <MessageAvatar isUser={false} label="AI" />
+      <MessageAvatar isUser={false} label={botName} />
 
       {thinkingBuffer?.trim() && (
         <div

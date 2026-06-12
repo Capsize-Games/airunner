@@ -10,6 +10,7 @@ import { useChatTextareaResize } from "../../hooks/useChatTextareaResize";
 import { useChatModelPath } from "../../hooks/useChatModelPath";
 import { useChatInference } from "../../hooks/useChatInference";
 import { useChatMessageActions } from "../../hooks/useChatMessageActions";
+import { useChatNames } from "../../hooks/useChatNames";
 import MessageList from "./MessageList";
 import ModelLoadingIndicator from "./input/ModelLoadingIndicator";
 import ChatInputArea from "./input/ChatInputArea";
@@ -37,6 +38,7 @@ export default function ChatView({
   const { textareaH, textareaDrag, handleTextareaResize } =
     useChatTextareaResize();
   const { modelPathRef } = useChatModelPath();
+  const { botName, userName } = useChatNames();
   const { messages, loading, setMessages, load, cancelLoad, appendMessage, deleteMessagesAfter } =
     useConversationMessages();
   const { docs: kbDocs, reload: reloadDocs } = useKnowledgeBaseDocs();
@@ -167,6 +169,8 @@ export default function ChatView({
               onSubmitEdit={handleSubmitEdit}
               onCopyMessage={handleCopyMessage}
               onPlayMessage={handlePlayMessage}
+              botName={botName}
+              userName={userName}
             />
             <ModelLoadingIndicator
               visible={isModelLoading && messages.length > 0}

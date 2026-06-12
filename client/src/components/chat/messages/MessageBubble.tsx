@@ -20,6 +20,8 @@ interface MessageBubbleProps {
   onDelete?: (index: number) => void;
   onCopy?: (content: string) => void;
   onPlay?: (content: string) => void;
+  botName?: string;
+  userName?: string;
 }
 
 export default function MessageBubble({
@@ -35,6 +37,8 @@ export default function MessageBubble({
   onDelete,
   onCopy,
   onPlay,
+  botName = "AI",
+  userName = "You",
 }: MessageBubbleProps) {
   const isUser = message.role === "user";
   const [thinkingExpanded, setThinkingExpanded] = useState(false);
@@ -76,7 +80,7 @@ export default function MessageBubble({
             : "1px solid rgba(71,0,129,0.2)",
         }}
       >
-        <MessageAvatar isUser={isUser} label={isUser ? "You" : "AI"} />
+        <MessageAvatar isUser={isUser} label={isUser ? userName : botName} />
 
         {hasThinking && (
           <div
