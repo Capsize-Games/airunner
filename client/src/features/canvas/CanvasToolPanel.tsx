@@ -2,6 +2,7 @@ import {
   Move, SquareDashed, Lasso, Wand, Crop,
   PaintBucket, Pointer, Type, Pipette, Search,
   Brush, Eraser, Grid3x3, Ruler, MessageSquareHeart, Palette,
+  ImageOff,
 } from "lucide-react";
 import LucideIcon from "../../components/shared/LucideIcon";
 import type { ActiveTool } from "./useCanvasState";
@@ -21,6 +22,7 @@ const TOOLS: { id: string; label: string; Icon: React.ComponentType<{ size?: num
   { id: "eraser",  label: "Eraser (E)",    Icon: Eraser },
   { id: "grid",    label: "Grid",          Icon: Grid3x3 },
   { id: "ruler",   label: "Ruler",         Icon: Ruler },
+  { id: "remove-bg", label: "Remove Background", Icon: ImageOff },
 ];
 
 interface Props {
@@ -165,6 +167,7 @@ export default function CanvasToolPanel({
           {TOOLS.map((t) => toolBtn(t.id, t.Icon))}
         </div>
       )}
+
     </div>
   );
 }

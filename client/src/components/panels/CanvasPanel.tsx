@@ -307,6 +307,7 @@ export default function CanvasPanel() {
   const showTextControls = !showImagePrompt && canvas.activeTool === "text";
   const showGridControls = !showImagePrompt && canvas.activeTool === "grid";
   const showRulerControls = !showImagePrompt && canvas.activeTool === "ruler";
+  const showRemoveBg = !showImagePrompt && canvas.activeTool === "remove-bg";
 
   return (
     <div
@@ -450,6 +451,22 @@ export default function CanvasPanel() {
 
                 {/* Tool settings section */}
                 <div style={{ display: "flex", flexDirection: "column", flex: 1, overflow: "hidden" }}>
+                  <div style={{
+                    display: "flex", alignItems: "center", gap: 6,
+                    padding: "3px 10px",
+                    borderTop: "1px solid rgba(255,255,255,0.08)",
+                    background: "rgba(255,255,255,0.04)",
+                    flexShrink: 0,
+                  }}>
+                    <span style={{
+                      fontSize: 10, fontWeight: 600,
+                      letterSpacing: "0.08em", textTransform: "uppercase",
+                      color: "var(--theme-text-secondary)",
+                      opacity: 0.6,
+                    }}>
+                      {toolSettingsLabel}
+                    </span>
+                  </div>
                   <div style={{ flex: 1, overflow: "hidden auto", display: "flex", flexDirection: "column" }}>
                     {showImagePrompt && <ArtPromptPanel visible={true} generationType={generationType} onGenerationTypeChange={setGenerationType} />}
                     {showBrushControls && <BrushControls />}
@@ -464,6 +481,17 @@ export default function CanvasPanel() {
                     {showTextControls && <TextControls />}
                     {showGridControls && <GridControls />}
                     {showRulerControls && <RulerControls />}
+                    {showRemoveBg && (
+                      <div style={{ padding: "8px", display: "flex", justifyContent: "center" }}>
+                        <button
+                          type="button"
+                          className="btn btn-primary btn-sm"
+                          style={{ fontSize: 12, padding: "4px 16px" }}
+                        >
+                          Remove background
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
 
