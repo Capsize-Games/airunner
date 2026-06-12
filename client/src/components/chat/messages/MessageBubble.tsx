@@ -71,7 +71,6 @@ export default function MessageBubble({
         className="p-2 rounded w-100"
         style={{
           position: "relative",
-          whiteSpace: "pre-wrap",
           background: isUser
             ? "rgba(0,132,185,0.15)"
             : "rgba(71,0,129,0.15)",

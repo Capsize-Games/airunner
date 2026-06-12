@@ -504,6 +504,9 @@ input::placeholder, textarea::placeholder {
 
 /* -- Message action buttons (copy, edit, delete, play) -- */
 .message-bubble { position: relative; margin-bottom: 5px; }
+.message-bubble li p {
+  margin-bottom: 0;
+}
 .message-actions {
   position: absolute;
   bottom: 4px;
