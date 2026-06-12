@@ -22,32 +22,132 @@
 
 import { useRef, useCallback, useEffect } from "react";
 import Konva from "konva";
-import type { MoveMode } from "../canvasTypes";
-import type { CanvasLayer } from "../canvasTypes";
+import type { MoveMode, CanvasLayer, LayerGroup } from "../canvasTypes";
 
 // ── Helpers ──────────────────────────────────────────────────────────────
 
-/** Walk up the Konva node tree to find the drag-group for a layer. */
-function findLayerDragGroup(
-  shape: Konva.Shape,
-): Konva.Group | null {
-  let node: Konva.Node | null = shape;
-  while (node) {
-    const name = node.name();
-    if (name && name.startsWith("layer-drag-")) {
-      return node as Konva.Group;
-    }
-    node = node.getParent();
+/**
+ * Sample the alpha of a loaded HTMLImageElement at pixel (localX, localY)
+ * within its display bounds (displayW × displayH). Returns 0–255.
+ */
+function sampleImageAlpha(
+  imgEl: HTMLImageElement,
+  localX: number,
+  localY: number,
+  displayW: number,
+  displayH: number,
+): number {
+  try {
+    const srcX = (localX / displayW) * imgEl.naturalWidth;
+    const srcY = (localY / displayH) * imgEl.naturalHeight;
+    const tmp = document.createElement("canvas");
+    tmp.width = 1;
+    tmp.height = 1;
+    const ctx = tmp.getContext("2d");
+    if (!ctx) return 0;
+    ctx.drawImage(imgEl, srcX, srcY, 1, 1, 0, 0, 1, 1);
+    return ctx.getImageData(0, 0, 1, 1).data[3];
+  } catch {
+    return 0;
   }
-  return null;
 }
 
-/** Extract the layerId from a drag-group name (e.g. "layer-drag-layer_3"). */
-function layerIdFromDragGroup(group: Konva.Group): string | null {
-  const name = group.name();
-  if (!name) return null;
-  const prefix = "layer-drag-";
-  return name.startsWith(prefix) ? name.slice(prefix.length) : null;
+/**
+ * Returns ordered visible layer IDs bottom-to-top, matching the compositing
+ * order of StageContent (same logic as orderVisibleLayers in compositeCanvas).
+ */
+function orderedVisibleIds(
+  displayOrder: string[],
+  layers: CanvasLayer[],
+  layerGroups: LayerGroup[],
+): string[] {
+  const groupVisible = (id: string | null | undefined): boolean => {
+    if (!id) return true;
+    const g = layerGroups.find((grp) => grp.id === id);
+    return g ? g.visible : true;
+  };
+  const result: string[] = [];
+  const seen = new Set<string>();
+  const push = (layer: CanvasLayer) => {
+    if (seen.has(layer.id)) return;
+    seen.add(layer.id);
+    if (layer.visible && groupVisible(layer.parentGroupId)) result.push(layer.id);
+  };
+  for (const id of displayOrder) {
+    const grp = layerGroups.find((g) => g.id === id);
+    if (grp) {
+      layers.filter((l) => l.parentGroupId === id).forEach(push);
+      continue;
+    }
+    const layer = layers.find((l) => l.id === id);
+    if (layer) push(layer);
+  }
+  layers.forEach(push);
+  return result;
+}
+
+/**
+ * Transparency-aware layer pick. Iterates visible layers from top to bottom
+ * and returns the first layer ID that has a non-transparent pixel at `stagePos`.
+ *
+ * For image nodes: samples the actual loaded HTMLImageElement alpha channel.
+ * For strokes / fills / text: delegates to Konva's built-in hit detection and
+ * checks whether the hit shape belongs to that layer's drag group.
+ */
+function pickLayerAtPos(
+  stage: Konva.Stage,
+  layers: CanvasLayer[],
+  layerGroups: LayerGroup[],
+  displayOrder: string[],
+  stagePos: { x: number; y: number },
+): string | null {
+  const scale = stage.scaleX();
+  const worldX = (stagePos.x - stage.x()) / scale;
+  const worldY = (stagePos.y - stage.y()) / scale;
+
+  // Pre-compute Konva hit shape for stroke/fill/text layers (cheap, not for images).
+  const hitShape = stage.getIntersection(stagePos);
+
+  // Top-to-bottom = reverse of the bottom-to-top display order.
+  const bottomToTop = orderedVisibleIds(displayOrder, layers, layerGroups);
+  for (let i = bottomToTop.length - 1; i >= 0; i--) {
+    const layerId = bottomToTop[i];
+    const layer = layers.find((l) => l.id === layerId);
+    if (!layer) continue;
+
+    const dragGroup = stage.findOne<Konva.Group>(`.layer-drag-${layerId}`);
+    if (!dragGroup) continue;
+
+    const gx = dragGroup.x();
+    const gy = dragGroup.y();
+
+    // ── Image pixel sampling ─────────────────────────────────────────
+    if (layer.images.length > 0) {
+      const imgNodes = dragGroup.find<Konva.Image>("Image");
+      for (const imgNode of imgNodes) {
+        const nx = gx + imgNode.x();
+        const ny = gy + imgNode.y();
+        const nw = imgNode.width();
+        const nh = imgNode.height();
+        if (worldX < nx || worldX >= nx + nw || worldY < ny || worldY >= ny + nh) continue;
+        const imgEl = imgNode.image() as HTMLImageElement | null;
+        if (!imgEl || !imgEl.complete) return layerId; // treat unloaded as opaque
+        const alpha = sampleImageAlpha(imgEl, worldX - nx, worldY - ny, nw, nh);
+        if (alpha > 10) return layerId;
+      }
+    }
+
+    // ── Stroke / fill / text: use Konva's hit detection ─────────────
+    if ((layer.strokes.length > 0 || layer.fillColor || layer.textNode) && hitShape) {
+      let node: Konva.Node | null = hitShape;
+      while (node) {
+        if (node === dragGroup) return layerId;
+        node = node.getParent();
+      }
+    }
+  }
+
+  return null;
 }
 
 /** Snap a value to the grid if snapping is enabled. */
@@ -62,6 +162,8 @@ export interface MoveToolParams {
   moveMode: MoveMode;
   selectedLayerIds: string[];
   layers: CanvasLayer[];
+  layerGroups: LayerGroup[];
+  displayOrder: string[];
   snapToGrid: boolean;
   gridSize: number;
   onMoveLayer: (layerId: string, x: number, y: number) => void;
@@ -81,6 +183,8 @@ export function moveTool({
   moveMode,
   selectedLayerIds,
   layers,
+  layerGroups,
+  displayOrder,
   snapToGrid,
   gridSize,
   onMoveLayer,
@@ -155,17 +259,11 @@ export function moveTool({
       let ids: string[] = [];
 
       if (moveMode === "pick") {
-        // Find the topmost visible shape at pointer position.
-        const shape = stage.getIntersection(pos);
-        if (!shape) return; // clicked on empty area – nothing to move
+        // Transparency-aware pick: iterate layers top-to-bottom and sample
+        // actual pixel alpha so transparent areas of upper layers are ignored.
+        const layerId = pickLayerAtPos(stage, layers, layerGroups, displayOrder, pos);
+        if (!layerId) return; // clicked on fully transparent / empty area
 
-        // Walk up to find the drag-group for this shape's layer.
-        const dragGroup = findLayerDragGroup(shape);
-        if (!dragGroup) return;
-        const layerId = layerIdFromDragGroup(dragGroup);
-        if (!layerId) return;
-
-        // Make this the active layer so the UI reflects the pick.
         onSetActiveLayer?.(layerId);
         ids = [layerId];
       } else {
@@ -195,6 +293,8 @@ export function moveTool({
       moveMode,
       selectedLayerIds,
       layers,
+      layerGroups,
+      displayOrder,
       findDragGroups,
       onSetActiveLayer,
     ],

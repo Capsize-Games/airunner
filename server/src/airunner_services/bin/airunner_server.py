@@ -75,7 +75,7 @@ Examples:
 
 Important:
     Quote any model path that contains spaces, such as
-    "/home/joe/.local/share/airunner/art/models/Z-Image Turbo/txt2img/model.safetensors".
+    "~/.local/share/airunner/art/models/Z-Image Turbo/txt2img/model.safetensors".
 """
 
 import argparse

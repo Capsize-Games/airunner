@@ -236,6 +236,18 @@ async def unload_model(
             "message": "Art model unload requested",
         }
 
+    if "rmbg" in model_type_lower:
+        from .rpc_art import unload_rmbg  # noqa: PLC0415
+
+        unload_rmbg()
+        logger.info(
+            "Unload requested for RMBG model %s", request.model_id
+        )
+        return {
+            "status": "accepted",
+            "message": "RMBG model unload requested",
+        }
+
     logger.info(
         "Unload requested for model %s (type=%s) – no handler",
         request.model_id,

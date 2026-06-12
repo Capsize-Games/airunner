@@ -5,7 +5,7 @@ import {
   useEffect,
 } from "react";
 import { removeBackground } from "../../api/art";
-import { renderVisibleComposite } from "../../features/canvas/compositeCanvas";
+import { renderSingleLayer } from "../../features/canvas/compositeCanvas";
 import Konva from "konva";
 import { RefreshCcw, RefreshCcwDot } from "lucide-react";
 import LucideIcon from "../shared/LucideIcon";
@@ -117,6 +117,7 @@ export default function CanvasPanel() {
     try { return localStorage.getItem("canvas_grid_locked") === "true"; } catch { return false; }
   });
   const [showSettings, setShowSettings] = useState(false);
+  const [isRemovingBg, setIsRemovingBg] = useState(false);
   const [showNewDocModal, setShowNewDocModal] = useState(false);
   const [generationType, setGenerationType] = useState<"txt2img" | "img2img" | "inpaint">(() => {
     try { return (localStorage.getItem("canvas_gen_type") as "txt2img" | "img2img" | "inpaint") || "txt2img"; }
@@ -488,30 +489,46 @@ export default function CanvasPanel() {
                         <button
                           type="button"
                           className="btn btn-primary btn-sm"
-                          style={{ fontSize: 12, padding: "4px 16px" }}
+                          style={{ fontSize: 12, padding: "4px 16px", display: "flex", alignItems: "center", gap: 6 }}
+                          disabled={isRemovingBg}
                           onClick={async () => {
-                            const composite = await renderVisibleComposite({
-                              layers: canvas.layers,
-                              layerGroups: canvas.layerGroups,
-                              displayOrder: canvas.displayOrder,
-                              documentWidth: canvas.documentWidth,
-                              documentHeight: canvas.documentHeight,
-                            });
-                            if (!composite) return;
-                            const rawB64 = composite.toDataURL("image/png").split(",")[1];
+                            setIsRemovingBg(true);
                             try {
-                              const resultB64 = await removeBackground(rawB64);
-                              canvas.placeImageOnNewLayer(
-                                `data:image/png;base64,${resultB64}`,
-                                0, 0,
-                                canvas.documentWidth,
-                                canvas.documentHeight,
+                              const selectedLayers = canvas.layers.filter(
+                                (l) => canvas.selectedLayerIds.includes(l.id),
                               );
+                              if (selectedLayers.length === 0) return;
+                              const updates: Array<{ layerId: string; base64: string; x: number; y: number; width: number; height: number }> = [];
+                              for (const layer of selectedLayers) {
+                                const layerCanvas = await renderSingleLayer(
+                                  layer,
+                                  canvas.documentWidth,
+                                  canvas.documentHeight,
+                                );
+                                if (!layerCanvas) continue;
+                                const rawB64 = layerCanvas.toDataURL("image/png").split(",")[1];
+                                const resultB64 = await removeBackground(rawB64);
+                                updates.push({
+                                  layerId: layer.id,
+                                  base64: `data:image/png;base64,${resultB64}`,
+                                  x: 0, y: 0,
+                                  width: canvas.documentWidth,
+                                  height: canvas.documentHeight,
+                                });
+                              }
+                              if (updates.length > 0) {
+                                canvas.replaceLayersImages(updates);
+                              }
                             } catch (err) {
                               console.error("Background removal failed:", err);
+                            } finally {
+                              setIsRemovingBg(false);
                             }
                           }}
                         >
+                          {isRemovingBg && (
+                            <span className="spinner-border spinner-border-sm" role="status" style={{ width: 12, height: 12, borderWidth: 2 }} />
+                          )}
                           Remove background
                         </button>
                       </div>

@@ -94,17 +94,27 @@ class LazySettings:
                 # uses the prefixed name like AIRUNNER_BASE_PATH).
                 self._store[stripped] = _coerce_value(key, value)
 
-        # 3. Preset overlay
+        # 3. Recompute path-derived settings when AIRUNNER_BASE_PATH was
+        # overridden by an env var. MODELS_DIR is computed at module import
+        # time in default_settings using the default base path, so it must be
+        # recalculated whenever AIRUNNER_BASE_PATH changes.
+        base_path = self._store.get("AIRUNNER_BASE_PATH")
+        if base_path:
+            import os as _os  # noqa: PLC0415
+            self._store["MODELS_DIR"] = _os.path.join(base_path, "models")
+            self._store["AIRUNNER_USER_DATA_PATH"] = base_path
+
+        # 4. Preset overlay
         _apply_preset(self._store)
 
-        # 4. Normalise string-typed extension list
+        # 5. Normalise string-typed extension list
         raw = self._store.get("EXTENSIONS")
         if isinstance(raw, str):
             self._store["EXTENSIONS"] = [
                 s.strip() for s in raw.split(",") if s.strip()
             ]
 
-        # 5. Computed values
+        # 6. Computed values
         self._store["DATABASE_URL"] = self._build_db_url()
         self._store["AIRUNNER_DB_URL"] = self._store["DATABASE_URL"]
 

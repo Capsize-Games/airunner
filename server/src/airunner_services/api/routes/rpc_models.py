@@ -152,6 +152,13 @@ async def _rpc_models_unload(body: dict, **kwargs: Any) -> dict[str, Any]:
                 model_type,
             )
         return {"status": 200, "body": {"status": "accepted"}}
+    if "rmbg" in model_type_lower:
+        from airunner_services.api.routes.rpc_art import unload_rmbg  # noqa: PLC0415
+
+        unload_rmbg()
+        logger.info("Unload requested for RMBG model %s", model_id)
+        return {"status": 200, "body": {"status": "accepted"}}
+
     return {"status": 200, "body": {"status": "accepted"}}
 
 
