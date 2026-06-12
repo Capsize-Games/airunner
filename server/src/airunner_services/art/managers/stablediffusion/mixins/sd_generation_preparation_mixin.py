@@ -350,7 +350,16 @@ class SDGenerationPreparationMixin:
         """
         Set random seed for deterministic generation.
 
-        Uses seed from current image request.
+        Uses seed from current image request. Seeds both the dedicated
+        generator (used for the initial latent noise) *and* the global
+        torch RNG, so schedulers that draw per-step stochastic noise
+        (SDE / ancestral variants) reproduce identical results for a
+        fixed seed instead of varying every run.
         """
-        seed = self.image_request.seed
+        import torch
+
+        seed = int(self.image_request.seed)
         self.generator.manual_seed(seed)
+        torch.manual_seed(seed)
+        if torch.cuda.is_available():
+            torch.cuda.manual_seed_all(seed)

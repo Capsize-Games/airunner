@@ -111,6 +111,7 @@ export function useArtPromptState(opts?: {
   const [openPanel, setOpenPanel] = useState<ArtPanel>(null);
   const [artPanelAnchor, setArtPanelAnchor] = useState<{ left: number; bottom: number; width: number; height: number } | null>(null);
   const toolbarRef = useRef<HTMLDivElement>(null);
+  const panelAnchorOverrideRef = useRef<DOMRect | null>(null);
   const controlsRef = useRef<HTMLDivElement>(null);
   const settingsBtnRef = useRef<HTMLDivElement>(null);
   const promptBtnRef = useRef<HTMLDivElement>(null);
@@ -269,15 +270,26 @@ export function useArtPromptState(opts?: {
       setArtPanelAnchor(null);
       return;
     }
-    const anchorRef = controlsRef.current ?? toolbarRef.current;
-    if (anchorRef) {
-      const rect = anchorRef.getBoundingClientRect();
+    const anchorOverride = panelAnchorOverrideRef.current;
+    if (anchorOverride) {
+      panelAnchorOverrideRef.current = null;
       setArtPanelAnchor({
-        left: rect.left,
-        bottom: window.innerHeight - rect.top,
-        width: Math.max(artW, 360),
-        height: Math.min(480, rect.top - 74),
+        left: anchorOverride.left,
+        bottom: window.innerHeight - anchorOverride.top + 4,
+        width: 360,
+        height: 400,
       });
+    } else {
+      const anchorRef = controlsRef.current ?? toolbarRef.current;
+      if (anchorRef) {
+        const rect = anchorRef.getBoundingClientRect();
+        setArtPanelAnchor({
+          left: rect.left,
+          bottom: window.innerHeight - rect.top,
+          width: Math.max(artW, 360),
+          height: Math.min(480, rect.top - 74),
+        });
+      }
     }
     const handler = (e: MouseEvent) => {
       const target = e.target as Node;
@@ -585,6 +597,9 @@ export function useArtPromptState(opts?: {
         scheduler: ls("airunner_art_scheduler") || undefined,
         width: outWidth,
         height: outHeight,
+        steps,
+        cfgScale,
+        numImages: nSamples,
         ...(imageB64
           ? { pipeline: genType, imageB64, strength }
           : {}),
@@ -628,7 +643,7 @@ export function useArtPromptState(opts?: {
         setErrorMessage(msg);
       }
     }
-  }, [prompt, negativePrompt, effGenWidth, effGenHeight, canvasCtx, area, artGenerate, seed, seedRandomized, effGenType, strength, feather]);
+  }, [prompt, negativePrompt, effGenWidth, effGenHeight, canvasCtx, area, artGenerate, seed, seedRandomized, effGenType, strength, feather, steps, cfgScale, nSamples]);
 
   const onCancel = useCallback(() => artCancel(), [artCancel]);
 
@@ -687,8 +702,9 @@ export function useArtPromptState(opts?: {
     });
   };
 
-  const togglePanel = (panel: NonNullable<ArtPanel>) => {
+  const togglePanel = (panel: NonNullable<ArtPanel>, anchorRect?: DOMRect) => {
     setOpenPopup(null);
+    panelAnchorOverrideRef.current = anchorRect ?? null;
     setOpenPanel((prev) => {
       const next = prev === panel ? null : panel;
       if (next) {

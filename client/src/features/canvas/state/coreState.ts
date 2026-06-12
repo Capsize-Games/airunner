@@ -7,6 +7,8 @@ import {
   defaultState,
   loadPersistedState,
   persistStateSync,
+  persistImagesToDB,
+  mergeStoredImages,
   serialize,
   pushHistory,
 } from "../canvasStateUtils";
@@ -21,11 +23,18 @@ export function coreState(): {
     () => loadPersistedState() ?? defaultState(),
   );
 
-  // Persist the document to localStorage immediately, and mirror the (larger)
-  // undo history to IndexedDB on a short debounce.
+  // Flag to suppress persistStateSync + persistImagesToDB during image
+  // restoration so we don't trigger an infinite loop.
+  const restoringImagesRef = useRef(false);
+
+  // Persist the document to localStorage immediately (images already
+  // stripped), and mirror images to IndexedDB asynchronously.
   const histTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
     persistStateSync(state);
+    if (!restoringImagesRef.current) {
+      void persistImagesToDB(state);
+    }
     if (histTimer.current) clearTimeout(histTimer.current);
     const ts = state._ts;
     const history = state.history;
@@ -35,15 +44,39 @@ export function coreState(): {
     }, 300);
   }, [state]);
 
+  // One-time restore of layer images from IndexedDB on mount. Must run
+  // before the history restore so the document state is complete when
+  // undo snapshots are seeded.
+  const imagesRestoredRef = useRef(false);
+  useEffect(() => {
+    let cancelled = false;
+    void mergeStoredImages(state).then((merged) => {
+      if (cancelled || imagesRestoredRef.current) return;
+      imagesRestoredRef.current = true;
+      if (merged === state) return; // no images to restore
+      restoringImagesRef.current = true;
+      setState(merged);
+      // Reset the flag on the next tick so subsequent edits persist normally.
+      setTimeout(() => {
+        restoringImagesRef.current = false;
+      }, 0);
+    });
+    return () => {
+      cancelled = true;
+    };
+    // Only run on mount — `state` in the closure is the initial state.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // One-time restore of the undo history from IndexedDB on mount. Only applied
   // when its timestamp still matches the loaded document (so it's never applied
   // to a different/newer doc) and the user hasn't started editing yet.
-  const restoredRef = useRef(false);
+  const historyRestoredRef = useRef(false);
   useEffect(() => {
     let cancelled = false;
     void loadHistoryDB().then((rec) => {
-      if (cancelled || restoredRef.current || !rec) return;
-      restoredRef.current = true;
+      if (cancelled || historyRestoredRef.current || !rec) return;
+      historyRestoredRef.current = true;
       setState((prev) => {
         if (prev._ts !== rec.ts) return prev; // doc moved on → history is stale
         if (prev.historyIndex !== 0 || prev.history.length > 1) return prev; // already edited

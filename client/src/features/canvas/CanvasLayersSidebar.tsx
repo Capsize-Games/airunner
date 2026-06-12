@@ -153,12 +153,6 @@ export default function CanvasLayersSidebar() {
 
   return (
     <div className="flex-grow-1 d-flex flex-column overflow-hidden min-w-0">
-      <div
-        className="flex-shrink-0 px-2 py-1"
-        style={{ fontSize: 11, fontWeight: 600, color: "rgba(255,255,255,0.5)", letterSpacing: "0.5px", textTransform: "uppercase", borderBottom: "1px solid rgba(255,255,255,0.07)" }}
-      >
-        Layers
-      </div>
       <OpacitySlider value={activeOpacity} onChange={handleOpacityChange} />
 
       <div className="scroll-panel">

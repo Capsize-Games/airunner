@@ -2,8 +2,7 @@ import { useState } from "react";
 import { saveToStorage } from "../art-model/ArtModelStorage";
 import LucideIcon from "../../shared/LucideIcon";
 import InfoItem from "./InfoItem";
-import InlineNumberInput from "./InlineNumberInput";
-import InlineSizeEditor from "./InlineSizeEditor";
+import SliderWithSpinbox from "../SliderWithSpinbox";
 import SeedInfoRow from "./SeedInfoRow";
 import type { ArtOptionsResponse } from "../../../api/client";
 
@@ -38,10 +37,11 @@ interface GenerationInfoPanelProps {
   onToggleRandom: () => void;
   onGenWidthChange: (v: number) => void;
   onGenHeightChange: (v: number) => void;
-  onToggleLoraPanel: () => void;
-  onToggleEmbeddingsPanel: () => void;
+  onToggleLoraPanel: (anchorRect: DOMRect) => void;
+  onToggleEmbeddingsPanel: (anchorRect: DOMRect) => void;
   persistGen: (updates: Record<string, unknown>) => void;
   openDropdown: (field: string, anchorRect: DOMRect) => void;
+  toggleGenSize: (anchorRect?: DOMRect) => void;
 }
 
 export default function GenerationInfoPanel(
@@ -57,7 +57,7 @@ export default function GenerationInfoPanel(
     onImagesPerBatchChange, onSeedChange, onToggleRandom,
     onGenWidthChange, onGenHeightChange,
     onToggleLoraPanel, onToggleEmbeddingsPanel,
-    persistGen, openDropdown,
+    persistGen, openDropdown, toggleGenSize,
   } = props;
 
   const [focusedField, setFocusedField] = useState<string | null>(null);
@@ -89,48 +89,45 @@ export default function GenerationInfoPanel(
         }}
       >
         <LucideIcon name={showInfo ? "chevron-down" : "chevron-right"} size={10} />
-        <span>Generation Info</span>
+        <span>Generation Settings</span>
       </button>
       {showInfo && (
         <div style={{ display: "flex", flexDirection: "column" }}>
           <InfoItem icon="sparkles" label="Model Version" value={version || "—"}
+            onMouseDown={(e) => e.stopPropagation()}
             onClick={(e) => openDropdown("version", rectLabel(e.currentTarget as HTMLElement))} />
           <InfoItem icon="sparkles" label="Model"
             value={modelPath ? (modelPath.split("/").pop()?.replace(/\.(gguf|bin|safetensors|pt|pth|ckpt|pkl|model)$/i, "") || modelPath) : "—"}
+            onMouseDown={(e) => e.stopPropagation()}
             onClick={(e) => openDropdown("model", rectLabel(e.currentTarget as HTMLElement))} />
           <InfoItem icon="sparkles" label="Scheduler" value={scheduler || "—"}
+            onMouseDown={(e) => e.stopPropagation()}
             onClick={(e) => openDropdown("scheduler", rectLabel(e.currentTarget as HTMLElement))} />
 
-          <InfoItem icon="settings-2" label="Steps" value={String(steps)}
-            editing={focusedField === "steps"}
-            onClick={() => toggleFocused("steps")}
-            editor={<InlineNumberInput value={steps} min={1} max={150}
-              onChange={(v) => { onStepsChange(v); saveToStorage("steps", v); persistGen({ steps: v }); }}
-              onClose={() => setFocusedField(null)} />} />
-
-          <InfoItem icon="settings-2" label="CFG" value={String(cfgScale)}
-            editing={focusedField === "cfg"}
-            onClick={() => toggleFocused("cfg")}
-            editor={<InlineNumberInput value={cfgScale} min={1} max={30} step={0.1} float
-              onChange={(v) => { onCfgScaleChange(v); saveToStorage("cfg_scale", v); persistGen({ cfg_scale: v }); }}
-              onClose={() => setFocusedField(null)} />} />
-
-          <InfoItem icon="settings-2" label="Samples" value={String(nSamples)}
-            editing={focusedField === "samples"}
-            onClick={() => toggleFocused("samples")}
-            editor={<InlineNumberInput value={nSamples} min={1} max={1000}
-              onChange={(v) => { onNSamplesChange(v); saveToStorage("n_samples", v); persistGen({ n_samples: v }); }}
-              onClose={() => setFocusedField(null)} />} />
-
-          <InfoItem icon="settings-2" label="Batch" value={String(imagesPerBatch)}
-            editing={focusedField === "batch"}
-            onClick={() => toggleFocused("batch")}
-            editor={<InlineNumberInput value={imagesPerBatch} min={1} max={6}
-              onChange={(v) => { onImagesPerBatchChange(v); saveToStorage("images_per_batch", v); persistGen({ images_per_batch: v }); }}
-              onClose={() => setFocusedField(null)} />} />
+          <InfoItem icon="settings-2" label="Steps"
+            editing={true}
+            editor={<SliderWithSpinbox label="" value={steps} hideLabel
+              min={1} max={150} step={1}
+              onChange={(v) => { onStepsChange(v); saveToStorage("steps", v); persistGen({ steps: v }); }} />} />
+          <InfoItem icon="settings-2" label="CFG"
+            editing={true}
+            editor={<SliderWithSpinbox label="" value={cfgScale} hideLabel
+              min={1} max={30} step={0.1} displayAsFloat
+              onChange={(v) => { onCfgScaleChange(v); saveToStorage("cfg_scale", v); persistGen({ cfg_scale: v }); }} />} />
+          <InfoItem icon="settings-2" label="Samples"
+            editing={true}
+            editor={<SliderWithSpinbox label="" value={nSamples} hideLabel
+              min={1} max={1000} step={1}
+              onChange={(v) => { onNSamplesChange(v); saveToStorage("n_samples", v); persistGen({ n_samples: v }); }} />} />
+          <InfoItem icon="settings-2" label="Batch"
+            editing={true}
+            editor={<SliderWithSpinbox label="" value={imagesPerBatch} hideLabel
+              min={1} max={6} step={1}
+              onChange={(v) => { onImagesPerBatchChange(v); saveToStorage("images_per_batch", v); persistGen({ images_per_batch: v }); }} />} />
 
           <InfoItem icon="image-plus" label="Gen type"
             value={generationType === "txt2img" ? "Text-to-image" : generationType === "img2img" ? "Image-to-image" : "Inpaint"}
+            onMouseDown={(e) => e.stopPropagation()}
             onClick={(e) => openDropdown("gentype", rectLabel(e.currentTarget as HTMLElement))} />
 
           <SeedInfoRow
@@ -143,20 +140,18 @@ export default function GenerationInfoPanel(
 
           <InfoItem icon="ruler-dimension-line" label="Size"
             value={`${genWidth}×${genHeight}`}
-            editing={focusedField === "size"}
-            onClick={() => toggleFocused("size")}
-            editor={<InlineSizeEditor w={genWidth} h={genHeight}
-              onWChange={(v) => { onGenWidthChange(v); saveToStorage("gen_width", v); persistGen({ width: v }); }}
-              onHChange={(v) => { onGenHeightChange(v); saveToStorage("gen_height", v); persistGen({ height: v }); }}
-              onClose={() => setFocusedField(null)} />} />
+            onMouseDown={(e) => e.stopPropagation()}
+            onClick={(e) => toggleGenSize(rectLabel(e.currentTarget as HTMLElement))} />
 
           <InfoItem icon="puzzle" label="LoRA"
             value={`${activeLoras.length} LoRA enabled`}
-            onClick={onToggleLoraPanel} />
+            onMouseDown={(e) => e.stopPropagation()}
+            onClick={(e) => onToggleLoraPanel(rectLabel(e.currentTarget as HTMLElement))} />
 
           <InfoItem icon="scan-text" label="Embeddings"
             value={isMultiPrompt ? `${activeEmbeddings.length} Embeddings enabled` : "Embeddings unavailable for Z-Image"}
-            onClick={isMultiPrompt ? onToggleEmbeddingsPanel : undefined} />
+            onMouseDown={(e) => e.stopPropagation()}
+            onClick={isMultiPrompt ? (e) => onToggleEmbeddingsPanel(rectLabel(e.currentTarget as HTMLElement)) : undefined} />
         </div>
       )}
     </div>

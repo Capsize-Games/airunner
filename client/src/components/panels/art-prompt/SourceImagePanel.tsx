@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { SquareDashed, Brush, Eraser, Trash2 } from "lucide-react";
 import LucideIcon from "../../shared/LucideIcon";
+import SliderWithSpinbox from "../SliderWithSpinbox";
 import { useCanvasContext } from "../../../features/canvas";
 import {
   renderVisibleComposite,
@@ -111,59 +112,6 @@ export default function SourceImagePanel({
     boxShadow: active ? `inset 0 0 0 1.5px ${accent}88` : "none",
   });
 
-  const slider = (
-    label: string,
-    value: number,
-    onChange: (v: number) => void,
-  ) => (
-    <div
-      key={label}
-      style={{
-        display: "flex",
-        alignItems: "center",
-        gap: 8,
-        padding: "6px 8px",
-        background: "#0e0e16",
-        minWidth: 0,
-      }}
-    >
-      <span
-        style={{
-          fontSize: 9,
-          fontWeight: 700,
-          letterSpacing: "0.07em",
-          textTransform: "uppercase",
-          color: "var(--theme-text-secondary)",
-          opacity: 0.6,
-          flexShrink: 0,
-        }}
-      >
-        {label}
-      </span>
-      <input
-        type="range"
-        min={0}
-        max={1}
-        step={0.01}
-        value={value}
-        onChange={(e) => onChange(Number(e.target.value))}
-        style={{ flex: 1, minWidth: 0 }}
-      />
-      <span
-        style={{
-          fontSize: 10,
-          fontVariantNumeric: "tabular-nums",
-          color: "var(--theme-text-secondary)",
-          minWidth: 28,
-          flexShrink: 0,
-          textAlign: "right",
-        }}
-      >
-        {value.toFixed(2)}
-      </span>
-    </div>
-  );
-
   const toolBtn = (
     tool: "grid-area" | "inpaint-mask" | "inpaint-eraser",
     Icon: React.ComponentType<{ size?: number; strokeWidth?: number }>,
@@ -194,19 +142,22 @@ export default function SourceImagePanel({
         style={{
           display: "flex",
           alignItems: "center",
-          gap: 5,
-          padding: "4px 8px",
-          fontSize: 9,
-          fontWeight: 700,
-          letterSpacing: "0.07em",
-          textTransform: "uppercase",
-          color: "var(--theme-text-secondary)",
-          opacity: 0.6,
-          background: "#12121c",
+          gap: 6,
+          padding: "3px 10px",
+          borderTop: "1px solid rgba(255,255,255,0.08)",
+          background: "rgba(var(--theme-text-rgb), 0.03)",
+          flexShrink: 0,
         }}
       >
-        <LucideIcon name={isInpaint ? "layers" : "image"} size={9} />
-        {headerLabel}
+        <span
+          style={{
+            fontSize: 9, fontWeight: 700, letterSpacing: "0.07em",
+            textTransform: "uppercase", color: "var(--theme-text-secondary)",
+            opacity: 0.6,
+          }}
+        >
+          {headerLabel}
+        </span>
       </div>
 
       {/* Source image preview */}
@@ -246,8 +197,14 @@ export default function SourceImagePanel({
       </div>
 
       {/* Strength (img2img + inpaint) and Feather (inpaint only) sliders */}
-      {slider("Strength", strength, onStrengthChange)}
-      {isInpaint && slider("Feather", feather, onFeatherChange)}
+      <div style={{ padding: "6px 8px", background: "#0e0e16", display: "flex", flexDirection: "column", gap: 4 }}>
+        <SliderWithSpinbox label="Strength" value={strength}
+          min={0} max={1} step={0.01} displayAsFloat labelWidth={80}
+          onChange={onStrengthChange} />
+        {isInpaint && <SliderWithSpinbox label="Feather" value={feather}
+          min={0} max={1} step={0.01} displayAsFloat labelWidth={80}
+          onChange={onFeatherChange} />}
+      </div>
 
       {/* Tool row: active generation area, mask brush, mask eraser, clear. */}
       <div

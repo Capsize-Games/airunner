@@ -53,6 +53,10 @@ services:
       # host HF cache here). Without this, HF_HOME from .env can arrive with an
       # unexpanded "~" and downloads land in a bogus literal "~" directory.
       HF_HOME: /data/huggingface
+      # The data volume is mounted at /data — tell the app to use it for
+      # model resolution (otherwise it defaults to ~/.local/share/airunner).
+      AIRUNNER_BASE_PATH: /data
+      AIRUNNER_USER_DATA_PATH: /data
     volumes:
       # NB: we deliberately do NOT mount .env into the container. compose reads
       # it via env_file and injects the values as real env vars; mounting the

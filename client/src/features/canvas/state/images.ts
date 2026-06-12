@@ -137,5 +137,74 @@ export function images(
     [setState, recordSnapshot],
   );
 
-  return { placeImageOnNewLayer, placeImage, moveImage, updateImageSrc };
+  const replaceActiveLayerImages = useCallback(
+    (
+      base64: string,
+      x: number,
+      y: number,
+      width: number,
+      height: number,
+    ) => {
+      setState((prev) => {
+        const activeIdx = prev.layers.findIndex(
+          (l) => l.id === prev.activeLayerId,
+        );
+        if (activeIdx === -1) return prev;
+        const newImage: ImageNode = {
+          id: nextImageId(),
+          x,
+          y,
+          width,
+          height,
+          src: base64.startsWith("data:")
+            ? base64
+            : `data:image/png;base64,${base64}`,
+        };
+        const layers = prev.layers.map((l, i) =>
+          i === activeIdx
+            ? { ...l, images: [newImage], strokes: [] }
+            : l,
+        );
+        return recordSnapshot({ ...prev, layers });
+      });
+    },
+    [setState, recordSnapshot],
+  );
+
+  const replaceLayersImages = useCallback(
+    (
+      updates: Array<{
+        layerId: string;
+        base64: string;
+        x: number;
+        y: number;
+        width: number;
+        height: number;
+      }>,
+    ) => {
+      if (updates.length === 0) return;
+      setState((prev) => {
+        const updateMap = new Map(updates.map((u) => [u.layerId, u]));
+        const layers = prev.layers.map((l) => {
+          const u = updateMap.get(l.id);
+          if (!u) return l;
+          const newImage: ImageNode = {
+            id: nextImageId(),
+            x: u.x,
+            y: u.y,
+            width: u.width,
+            height: u.height,
+            src: u.base64.startsWith("data:")
+              ? u.base64
+              : `data:image/png;base64,${u.base64}`,
+          };
+          return { ...l, images: [newImage], strokes: [] };
+        });
+        return recordSnapshot({ ...prev, layers });
+      });
+    },
+    [setState, recordSnapshot],
+  );
+
+  return { placeImageOnNewLayer, placeImage, moveImage, updateImageSrc, replaceActiveLayerImages, replaceLayersImages };
 }

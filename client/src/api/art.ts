@@ -16,6 +16,16 @@ export async function getArtModelOptions(): Promise<ArtOptionsResponse> {
   return request<ArtOptionsResponse>("GET", "/api/v1/art/options");
 }
 
+export async function removeBackground(
+  imageB64: string,
+): Promise<string> {
+  const result = await request<{ image_b64: string }>(
+    "POST", "/api/v1/art/remove-background",
+    { image_b64: imageB64 } as unknown as JsonObject,
+  );
+  return result.image_b64;
+}
+
 export async function startArtGeneration(
   params: import("../types/api").ArtGenerateRequest,
 ) {

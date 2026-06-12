@@ -155,6 +155,46 @@ export function useArtOverlays() {
       window.removeEventListener("art-overlay-opened", handler);
   }, []);
 
+  // ── GenInfo size popup ──
+  const genSizePortalId = "art-gen-size-popup";
+  const [showGenSize, setShowGenSize] = useState(false);
+  const [genSizeAnchor, setGenSizeAnchor] = useState<AnchorPoint | null>(
+    null,
+  );
+
+  useEffect(() => {
+    if (!showGenSize) return;
+    const handler = (e: MouseEvent) => {
+      const target = e.target as Node;
+      const portalEl = document.getElementById(genSizePortalId);
+      if (portalEl?.contains(target)) return;
+      setShowGenSize(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [showGenSize]);
+
+  useEffect(() => {
+    const handler = () => setShowGenSize(false);
+    window.addEventListener("art-overlay-opened", handler);
+    return () =>
+      window.removeEventListener("art-overlay-opened", handler);
+  }, []);
+
+  const toggleGenSize = useCallback(
+    (anchorRect?: DOMRect) => {
+      const next = !showGenSize;
+      setShowGenSize(next);
+      if (next && anchorRect) {
+        setGenSizeAnchor({
+          left: anchorRect.left + 110,
+          bottom: window.innerHeight - anchorRect.top + 4,
+        });
+      }
+    },
+    [showGenSize],
+  );
+
   // ── Toggle helpers ──
   const toggleModelOptions = useCallback(() => {
     const next = !showModelOptions;
@@ -204,6 +244,11 @@ export function useArtOverlays() {
 
   const openDropdown = useCallback(
     (field: string, anchorRect: DOMRect) => {
+      // Toggle: if the same field is already open, close it.
+      if (dropdownField === field) {
+        setDropdownField(null);
+        return;
+      }
       dropdownEmittingRef.current = true;
       window.dispatchEvent(new Event("art-overlay-opened"));
       dropdownEmittingRef.current = false;
@@ -214,7 +259,7 @@ export function useArtOverlays() {
       });
       setDropdownField(field);
     },
-    [],
+    [dropdownField],
   );
 
   const closeDropdown = useCallback(
@@ -237,9 +282,13 @@ export function useArtOverlays() {
     genTypeAnchor,
     dropdownField,
     dropdownAnchor,
+    showGenSize,
+    genSizeAnchor,
+    genSizePortalId,
     toggleModelOptions,
     toggleSize,
     toggleGenType,
+    toggleGenSize,
     openDropdown,
     closeDropdown,
     closeGenType,

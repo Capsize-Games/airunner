@@ -283,13 +283,32 @@ class SDImageGenerationMixin:
 
         Args:
             _pipe: Pipeline instance.
-            _i: Current step index.
+            _i: Current step index (0-based).
             _t: Current timestep.
             callback_kwargs: Additional callback parameters.
 
         Returns:
             Updated callback_kwargs.
+
+        Emits SD_PROGRESS_SIGNAL so the UI can show real per-step progress.
+        The actual run length is read from the pipeline (``num_timesteps``)
+        when available — for img2img/inpaint this is fewer than the requested
+        steps — falling back to the requested step count.
         """
+        try:
+            total = int(getattr(_pipe, "num_timesteps", 0) or 0)
+            if total <= 0 and self.image_request is not None:
+                total = int(getattr(self.image_request, "steps", 0) or 0)
+            if total > 0:
+                from airunner_services.contract_enums import SignalCode
+
+                self.emit_signal(
+                    SignalCode.SD_PROGRESS_SIGNAL,
+                    {"step": int(_i) + 1, "total": total},
+                )
+        except Exception:
+            # Progress reporting must never interrupt generation.
+            pass
         return callback_kwargs
 
     def _interrupt_callback(self, _pipe, _i, _t, callback_kwargs):

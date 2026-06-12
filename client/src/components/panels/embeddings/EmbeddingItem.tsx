@@ -52,7 +52,7 @@ export default function EmbeddingItem({
         </span>
       </div>
 
-      {item.trigger_words.length > 0 && (
+      {Array.isArray(item.trigger_words) && item.trigger_words.length > 0 && (
         <div className="d-flex flex-wrap gap-1 mb-1">
           {item.trigger_words.map((word) => (
             <span

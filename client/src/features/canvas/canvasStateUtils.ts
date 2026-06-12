@@ -162,6 +162,7 @@ export const defaultState = (): CanvasState => {
 import type {
   ActiveTool, FilterConfig, ImageNode,
 } from "./canvasTypes";
+import { saveLayerImages, loadLayerImages } from "./canvasImageDB";
 
 const CANVAS_DOC_ID = "default";
 const LEGACY_STORAGE_KEY = "airunner_canvas_state";
@@ -238,8 +239,48 @@ function parseCanvasState(raw: string): CanvasState | null {
 }
 
 /**
- * Load canvas state synchronously from localStorage (legacy fallback used on
- * first render before IndexedDB is ready).
+ * Build a key for an image in IndexedDB using its layer and image id.
+ * Format: "layerId::imageId"
+ */
+function imageKey(layerId: string, imageId: string): string {
+  return `${layerId}::${imageId}`;
+}
+
+/**
+ * Extract all image src data from a CanvasState into an array of
+ * { key, src } entries for IndexedDB storage.
+ */
+export function extractLayerImages(
+  state: CanvasState,
+): Array<{ key: string; src: string }> {
+  const entries: Array<{ key: string; src: string }> = [];
+  for (const layer of state.layers) {
+    for (const img of layer.images) {
+      if (img.src && img.src.length > 0) {
+        entries.push({ key: imageKey(layer.id, img.id), src: img.src });
+      }
+    }
+  }
+  return entries;
+}
+
+/**
+ * Strip image src data from all layers, returning a shallow copy of the
+ * state suitable for localStorage (small, no base64 blobs).
+ */
+function stripImages(state: CanvasState): CanvasState {
+  return {
+    ...state,
+    layers: state.layers.map((l) => ({
+      ...l,
+      images: l.images.map((img) => ({ ...img, src: "" })),
+    })),
+  };
+}
+
+/**
+ * Load canvas state synchronously from localStorage. Returns state WITHOUT
+ * image src data — images must be restored via mergeStoredImages().
  */
 export function loadPersistedState(): CanvasState | null {
   try {
@@ -252,30 +293,61 @@ export function loadPersistedState(): CanvasState | null {
 }
 
 /**
- * Persist canvas state to localStorage synchronously.
+ * Merge image data loaded from IndexedDB back into a CanvasState. Returns a
+ * new state with images restored. If no images were stored, returns the
+ * original state unchanged.
+ */
+export async function mergeStoredImages(
+  state: CanvasState,
+): Promise<CanvasState> {
+  const imageMap = await loadLayerImages();
+  if (imageMap.size === 0) return state;
+  return {
+    ...state,
+    layers: state.layers.map((l) => ({
+      ...l,
+      images: l.images.map((img) => {
+        const key = imageKey(l.id, img.id);
+        const src = imageMap.get(key);
+        return src ? { ...img, src } : img;
+      }),
+    })),
+  };
+}
+
+/**
+ * Persist all layer images to IndexedDB asynchronously. Call after
+ * persistStateSync so images survive even when localStorage quota is exceeded.
+ */
+export async function persistImagesToDB(state: CanvasState): Promise<void> {
+  const entries = extractLayerImages(state);
+  if (entries.length > 0) {
+    await saveLayerImages(entries);
+  }
+}
+
+/**
+ * Persist canvas state to localStorage asynchronously.
  */
 export async function persistStateAsync(state: CanvasState): Promise<void> {
+  const stripped = stripImages(state);
   try {
-    const { history, historyIndex, ...rest } = state;
+    const { history, historyIndex, ...rest } = stripped;
     void history;
     void historyIndex;
-    localStorage.setItem(
-      LEGACY_STORAGE_KEY,
-      JSON.stringify(rest),
-    );
+    localStorage.setItem(LEGACY_STORAGE_KEY, JSON.stringify(rest));
   } catch { /* quota */ }
 }
 
 /**
- * Write only to localStorage synchronously. Use this for the immediate
- * write so a fast page reload never loses the latest state.
+ * Write only to localStorage synchronously. Images are stripped before
+ * writing so the payload stays small. Image data is persisted separately
+ * to IndexedDB (call persistImagesToDB after this).
  */
 export function persistStateSync(state: CanvasState): void {
+  const stripped = stripImages(state);
   try {
-    // Persist the document WITHOUT history: snapshots embed base64 image data
-    // and would exceed the localStorage quota. The undo history is persisted
-    // separately in IndexedDB (see canvasHistoryDB) which has a large quota.
-    const { history, historyIndex, ...rest } = state;
+    const { history, historyIndex, ...rest } = stripped;
     void history;
     void historyIndex;
     localStorage.setItem(LEGACY_STORAGE_KEY, JSON.stringify(rest));

@@ -83,7 +83,7 @@ export type ActiveTool =
   | "select" | "brush" | "eraser" | "mask" | "move"
   | "lasso" | "wand" | "crop" | "bucket" | "smudge"
   | "text" | "pipette" | "zoom" | "grid" | "ruler"
-  | "inpaint-mask" | "inpaint-eraser" | "grid-area";
+  | "inpaint-mask" | "inpaint-eraser" | "grid-area" | "remove-bg";
 
 export type ZoomDirection = "in" | "out";
 

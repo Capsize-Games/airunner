@@ -70,6 +70,8 @@ export interface CanvasContextValue {
   setSnapToGrid: (on: boolean) => void;
   placeImageOnNewLayer: (base64: string, x: number, y: number, width: number, height: number) => void;
   placeImage: (base64: string, x: number, y: number, width: number, height: number) => void;
+  replaceActiveLayerImages: (base64: string, x: number, y: number, width: number, height: number) => void;
+  replaceLayersImages: (updates: Array<{ layerId: string; base64: string; x: number; y: number; width: number; height: number }>) => void;
   moveImage: (layerId: string, imageId: string, x: number, y: number) => void;
   updateImageSrc: (layerId: string, imageId: string, src: string) => void;
   addStroke: (stroke: Omit<StrokeNode, "id">) => void;

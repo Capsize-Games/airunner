@@ -52,6 +52,30 @@ FLOW_MATCH_SCHEDULER_CONFIG: Dict[str, Dict[str, Any]] = {
 FLOW_MATCH_SCHEDULER_NAMES = list(FLOW_MATCH_SCHEDULER_CONFIG.keys())
 
 
+def _filter_supported_kwargs(
+    scheduler_class: type,
+    config: Dict[str, Any],
+) -> Dict[str, Any]:
+    """Drop config keys the scheduler's __init__ doesn't accept.
+
+    Diffusers schedulers validate their constructor signature (via the
+    ``register_to_config`` decorator) and raise on unexpected kwargs. If the
+    signature exposes ``**kwargs`` we keep everything; otherwise we keep only
+    the named parameters.
+    """
+    import inspect
+
+    try:
+        params = inspect.signature(scheduler_class.__init__).parameters
+    except (TypeError, ValueError):
+        return config
+    if any(
+        p.kind is inspect.Parameter.VAR_KEYWORD for p in params.values()
+    ):
+        return config
+    return {k: v for k, v in config.items() if k in params}
+
+
 def is_flow_match_scheduler(scheduler_name: str) -> bool:
     """Check if a scheduler name is a flow-match scheduler.
 
@@ -119,11 +143,16 @@ def create_flow_match_scheduler(
         final_config = dict(base_config)
         final_config.update(config_overrides)
         final_config.update(kwargs)
+        # from_config() tolerates keys the scheduler doesn't accept.
         scheduler = scheduler_class.from_config(final_config)
     else:
-        # Create with default config + overrides
+        # Create with default config + overrides. Unlike from_config(),
+        # direct construction rejects unknown kwargs (e.g.
+        # FlowMatchLCMScheduler has no `stochastic_sampling` arg), so drop
+        # any override the target class doesn't accept before constructing.
         final_config = dict(config_overrides)
         final_config.update(kwargs)
+        final_config = _filter_supported_kwargs(scheduler_class, final_config)
         scheduler = scheduler_class(**final_config)
 
     # Ensure override flags are definitely applied even if from_config drops them

@@ -96,7 +96,8 @@ export default function LayerThumbnail({
 
     ctx.restore();
 
-    // Async image drawing for content thumbnails
+    // Async image drawing for content thumbnails — load all images in
+    // parallel so layers with many images render at the same time.
     if (type === "content" && layer.images.length > 0) {
       (async () => {
         const canvas = ref.current;
@@ -109,13 +110,22 @@ export default function LayerThumbnail({
         ctx2.beginPath();
         ctx2.rect(0, 0, docWidth, docHeight);
         ctx2.clip();
-        for (const img of layer.images) {
-          await new Promise<void>((res) => {
+        const loadOne = (src: string): Promise<HTMLImageElement | null> =>
+          new Promise((resolve) => {
             const el = new window.Image();
-            el.onload = () => { ctx2.drawImage(el, img.x, img.y, img.width, img.height); res(); };
-            el.onerror = () => res();
-            el.src = img.src;
+            el.onload = () => resolve(el);
+            el.onerror = () => resolve(null);
+            el.src = src;
           });
+        const loaded = await Promise.all(
+          layer.images.map((img) => loadOne(img.src)),
+        );
+        for (let i = 0; i < layer.images.length; i++) {
+          const img = layer.images[i];
+          const el = loaded[i];
+          if (el) {
+            ctx2.drawImage(el, img.x, img.y, img.width, img.height);
+          }
         }
         ctx2.restore();
       })();

@@ -80,9 +80,9 @@ export function useCanvasSync({
   useEffect(() => {
     let stopped = false;
 
-    // Delay initial connection so the server has time to accept WebSocket
-    // upgrades during page load, avoiding noisy console errors.
-    const connect = (delay = 1000) => {
+    // Brief delay to let the server finish accepting WebSocket upgrades
+    // during page load, avoiding noisy console errors.
+    const connect = (delay = 100) => {
       if (stopped) return;
 
       if (reconnectTimer.current) {

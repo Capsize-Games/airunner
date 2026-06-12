@@ -63,15 +63,6 @@ class ModelSpec:
 # Maps model paths to their specifications
 MODEL_REGISTRY: Dict[str, ModelSpec] = {
     # Primary Conversational Models (tool-calling capable)
-    "Qwen/Qwen2.5-7B-Instruct": ModelSpec(
-        model_path="Qwen/Qwen2.5-7B-Instruct",
-        capabilities=[ModelCapability.PRIMARY_CONVERSATION],
-        max_context=32768,
-        supports_function_calling=True,  # Has good prompt-based tool calling
-        quantization="4bit",
-        gpu_memory_gb=5.0,
-        priority=100,
-    ),
     "Qwen/Qwen3.5-9B": ModelSpec(
         model_path="Qwen/Qwen3.5-9B",
         capabilities=[
@@ -97,44 +88,6 @@ MODEL_REGISTRY: Dict[str, ModelSpec] = {
         quantization="gguf",
         gpu_memory_gb=14.0,
         priority=92,
-    ),
-    # Specialized Small Models (2-3B for specific tasks)
-    "Qwen/Qwen2.5-3B-Instruct": ModelSpec(
-        model_path="Qwen/Qwen2.5-3B-Instruct",
-        capabilities=[
-            ModelCapability.PROMPT_ENHANCEMENT,
-            ModelCapability.SUMMARIZATION,
-            ModelCapability.TRANSLATION,
-        ],
-        max_context=32768,
-        supports_function_calling=False,
-        quantization="4bit",
-        gpu_memory_gb=2.0,
-        priority=80,
-    ),
-    "Qwen/Qwen2.5-Coder-7B-Instruct": ModelSpec(
-        model_path="Qwen/Qwen2.5-Coder-7B-Instruct",
-        capabilities=[
-            ModelCapability.CODE_GENERATION,
-            ModelCapability.CODE_EDITING,
-        ],
-        max_context=32768,
-        supports_function_calling=False,
-        quantization="4bit",
-        gpu_memory_gb=4.5,
-        priority=85,
-    ),
-    "deepseek-ai/deepseek-coder-6.7b-instruct": ModelSpec(
-        model_path="deepseek-ai/deepseek-coder-6.7b-instruct",
-        capabilities=[
-            ModelCapability.CODE_GENERATION,
-            ModelCapability.CODE_EDITING,
-        ],
-        max_context=16384,
-        supports_function_calling=False,
-        quantization="4bit",
-        gpu_memory_gb=4.0,
-        priority=75,
     ),
 }
 

@@ -53,6 +53,7 @@ export function useStatsPanel() {
           { type: "stt", label: "STT", name: sttName || "none", canLoad: !!sttName },
           { type: "tts", label: "TTS", name: ttsName, canLoad: useOpenVoice },
           { type: "embedding", label: "Embedding", name: "e5-large", canLoad: true },
+          { type: "rmbg", label: "RMBG", name: "RMBG-2.0", canLoad: false },
         ]);
       } catch {
         setSlots([
@@ -61,6 +62,7 @@ export function useStatsPanel() {
           { type: "stt", label: "STT", name: "", canLoad: false },
           { type: "tts", label: "TTS", name: "", canLoad: false },
           { type: "embedding", label: "Embedding", name: "e5-large", canLoad: true },
+          { type: "rmbg", label: "RMBG", name: "RMBG-2.0", canLoad: false },
         ]);
       }
     })();

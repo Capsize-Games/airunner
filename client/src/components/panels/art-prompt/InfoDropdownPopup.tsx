@@ -72,7 +72,7 @@ export default function InfoDropdownPopup({
         <>
           {genTypeBtn("txt2img", generationType, onSelectGenType, onClose)}
           {genTypeBtn("img2img", generationType, onSelectGenType, onClose)}
-          {genTypeBtn("inpaint", generationType, onSelectGenType, onClose)}
+          {version !== "Z-Image Turbo" && genTypeBtn("inpaint", generationType, onSelectGenType, onClose)}
         </>
       ) : (
         (() => {

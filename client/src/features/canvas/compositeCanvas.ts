@@ -92,7 +92,7 @@ function drawStroke(ctx: CanvasRenderingContext2D, stroke: StrokeNode) {
  * opacity; this renders the layer at full opacity so eraser strokes only cut
  * into that layer's own pixels.
  */
-async function drawLayerContent(
+export async function drawLayerContent(
   ctx: CanvasRenderingContext2D,
   layer: CanvasLayer,
   docW: number,
@@ -106,9 +106,15 @@ async function drawLayerContent(
     ctx.fillRect(-layer.offsetX, -layer.offsetY, docW, docH);
   }
 
-  for (const img of layer.images) {
-    const el = await loadImage(img.src);
-    if (el) ctx.drawImage(el, img.x, img.y, img.width, img.height);
+  const loaded = await Promise.all(
+    layer.images.map((img) => loadImage(img.src)),
+  );
+  for (let i = 0; i < layer.images.length; i++) {
+    const el = loaded[i];
+    if (el) {
+      const img = layer.images[i];
+      ctx.drawImage(el, img.x, img.y, img.width, img.height);
+    }
   }
 
   for (const stroke of layer.strokes) drawStroke(ctx, stroke);
@@ -157,6 +163,25 @@ export async function renderVisibleComposite(
     octx.globalAlpha = 1;
   }
 
+  return out;
+}
+
+/**
+ * Render a single layer's content onto a document-sized canvas and return it.
+ * Returns null when the document has no size.
+ */
+export async function renderSingleLayer(
+  layer: CanvasLayer,
+  docW: number,
+  docH: number,
+): Promise<HTMLCanvasElement | null> {
+  if (docW <= 0 || docH <= 0) return null;
+  const out = window.document.createElement("canvas");
+  out.width = docW;
+  out.height = docH;
+  const ctx = out.getContext("2d");
+  if (!ctx) return null;
+  await drawLayerContent(ctx, layer, docW, docH);
   return out;
 }
 

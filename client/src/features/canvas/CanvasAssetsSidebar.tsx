@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from "react";
-import LucideIcon from "../../components/shared/LucideIcon";
+import { Layers, Image, ChevronRight } from "lucide-react";
 import CanvasLayersSidebar from "./CanvasLayersSidebar";
 import ImageBrowserPanel from "../../components/panels/ImageBrowserPanel";
 import CollapsedRail, { type AssetTab } from "./sidebar/CollapsedRail";
@@ -9,9 +9,9 @@ const LS_TAB          = "airunner_assets_sidebar_tab";
 const LS_COLLAPSED    = "airunner_assets_sidebar_collapsed";
 const LS_PARENT_TAB   = "canvas_asset_tab";
 
-const TABS: { id: AssetTab; icon: string; label: string }[] = [
-  { id: "layers", icon: "layers", label: "Layers" },
-  { id: "images", icon: "images", label: "Images" },
+const TABS: { id: AssetTab; icon: React.ComponentType<{ size?: number }>; label: string }[] = [
+  { id: "layers", icon: Layers, label: "Layers" },
+  { id: "images", icon: Image, label: "Images" },
 ];
 
 const railBtnStyle: React.CSSProperties = {
@@ -150,7 +150,7 @@ export default function CanvasAssetsSidebar({
                     e.currentTarget.style.background = "transparent";
                 }}
               >
-                <LucideIcon name={t.icon} size={12} />
+                <t.icon size={16} />
               </button>
             );
           })}
@@ -163,7 +163,7 @@ export default function CanvasAssetsSidebar({
             onMouseEnter={(e) => { e.currentTarget.style.color = "rgba(255,255,255,0.85)"; }}
             onMouseLeave={(e) => { e.currentTarget.style.color = "rgba(255,255,255,0.35)"; }}
           >
-            <LucideIcon name="chevron-right" size={12} />
+            <ChevronRight size={16} />
           </button>
         </div>
 

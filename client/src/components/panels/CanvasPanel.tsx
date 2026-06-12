@@ -4,6 +4,8 @@ import {
   useCallback,
   useEffect,
 } from "react";
+import { removeBackground } from "../../api/art";
+import { renderSingleLayer } from "../../features/canvas/compositeCanvas";
 import Konva from "konva";
 import { RefreshCcw, RefreshCcwDot } from "lucide-react";
 import LucideIcon from "../shared/LucideIcon";
@@ -115,6 +117,7 @@ export default function CanvasPanel() {
     try { return localStorage.getItem("canvas_grid_locked") === "true"; } catch { return false; }
   });
   const [showSettings, setShowSettings] = useState(false);
+  const [isRemovingBg, setIsRemovingBg] = useState(false);
   const [showNewDocModal, setShowNewDocModal] = useState(false);
   const [generationType, setGenerationType] = useState<"txt2img" | "img2img" | "inpaint">(() => {
     try { return (localStorage.getItem("canvas_gen_type") as "txt2img" | "img2img" | "inpaint") || "txt2img"; }
@@ -125,12 +128,6 @@ export default function CanvasPanel() {
   });
   const [showCanvasTools, setShowCanvasTools] = useState(() => {
     try { return localStorage.getItem("canvas_show_canvas_tools") !== "false"; } catch { return true; }
-  });
-  const [activeArtAction, setActiveArtAction] = useState<string | null>(() => {
-    try {
-      const v = localStorage.getItem("canvas_active_art_action");
-      return v || null;
-    } catch { return null; }
   });
   const [leftPanelW, setLeftPanelW] = useState(() => {
     try { const v = localStorage.getItem(LS_LEFT_W); return v ? Number(v) : 300; } catch { return 300; }
@@ -285,9 +282,6 @@ export default function CanvasPanel() {
     try { localStorage.setItem("canvas_show_canvas_tools", String(showCanvasTools)); } catch { /* */ }
   }, [showCanvasTools]);
   useEffect(() => {
-    try { localStorage.setItem("canvas_active_art_action", activeArtAction ?? ""); } catch { /* */ }
-  }, [activeArtAction]);
-  useEffect(() => {
     try { localStorage.setItem("canvas_gen_type", generationType); } catch { /* */ }
   }, [generationType]);
 
@@ -299,17 +293,8 @@ export default function CanvasPanel() {
     );
   }
 
-  const ART_ACTION_LABELS: Record<string, string> = {
-    modelOptions: "Art Model",
-    embeddings: "Embeddings",
-    lora: "LoRA",
-    settings: "Generator Settings",
-    seed: "Seed",
-    imageSize: "Image Size",
-  };
-
   const toolSettingsLabel = showImagePrompt
-    ? (activeArtAction ? ART_ACTION_LABELS[activeArtAction] ?? activeArtAction : "Image Prompt")
+    ? "Image Prompt"
     : (TOOL_LABELS[canvas.activeTool] ?? canvas.activeTool);
 
   const showBrushControls = !showImagePrompt &&
@@ -325,6 +310,7 @@ export default function CanvasPanel() {
   const showTextControls = !showImagePrompt && canvas.activeTool === "text";
   const showGridControls = !showImagePrompt && canvas.activeTool === "grid";
   const showRulerControls = !showImagePrompt && canvas.activeTool === "ruler";
+  const showRemoveBg = !showImagePrompt && canvas.activeTool === "remove-bg";
 
   return (
     <div
@@ -463,27 +449,29 @@ export default function CanvasPanel() {
                     setShowCanvasTools(true);
                     setShowImagePrompt(false);
                   }}
-                  activeArtAction={activeArtAction}
-                  onArtAction={(action) => {
-                    setActiveArtAction((prev) => prev === action ? null : action);
-                  }}
                   onCollapse={() => setLeftPanelCollapsed(true)}
                 />
 
                 {/* Tool settings section */}
                 <div style={{ display: "flex", flexDirection: "column", flex: 1, overflow: "hidden" }}>
                   <div style={{
-                    padding: "4px 8px",
-                    fontSize: 10, fontWeight: 600,
-                    letterSpacing: "0.08em", textTransform: "uppercase",
-                    color: "rgba(255,255,255,0.4)",
-                    borderBottom: "1px solid rgba(255,255,255,0.07)",
+                    display: "flex", alignItems: "center", gap: 6,
+                    padding: "3px 10px",
+                    borderTop: "1px solid rgba(255,255,255,0.08)",
+                    background: "rgba(255,255,255,0.04)",
                     flexShrink: 0,
                   }}>
-                    {toolSettingsLabel}
+                    <span style={{
+                      fontSize: 10, fontWeight: 600,
+                      letterSpacing: "0.08em", textTransform: "uppercase",
+                      color: "var(--theme-text-secondary)",
+                      opacity: 0.6,
+                    }}>
+                      {toolSettingsLabel}
+                    </span>
                   </div>
                   <div style={{ flex: 1, overflow: "hidden auto", display: "flex", flexDirection: "column" }}>
-                    {showImagePrompt && <ArtPromptPanel visible={true} activeArtAction={activeArtAction} generationType={generationType} onGenerationTypeChange={setGenerationType} />}
+                    {showImagePrompt && <ArtPromptPanel visible={true} generationType={generationType} onGenerationTypeChange={setGenerationType} />}
                     {showBrushControls && <BrushControls />}
                     {showMoveControls && <MoveControls />}
                     {showLassoControls && <LassoControls />}
@@ -496,10 +484,60 @@ export default function CanvasPanel() {
                     {showTextControls && <TextControls />}
                     {showGridControls && <GridControls />}
                     {showRulerControls && <RulerControls />}
+                    {showRemoveBg && (
+                      <div style={{ padding: "8px", display: "flex", justifyContent: "center" }}>
+                        <button
+                          type="button"
+                          className="btn btn-primary btn-sm"
+                          style={{ fontSize: 12, padding: "4px 16px", display: "flex", alignItems: "center", gap: 6 }}
+                          disabled={isRemovingBg}
+                          onClick={async () => {
+                            setIsRemovingBg(true);
+                            try {
+                              const selectedLayers = canvas.layers.filter(
+                                (l) => canvas.selectedLayerIds.includes(l.id),
+                              );
+                              if (selectedLayers.length === 0) return;
+                              const updates: Array<{ layerId: string; base64: string; x: number; y: number; width: number; height: number }> = [];
+                              for (const layer of selectedLayers) {
+                                const layerCanvas = await renderSingleLayer(
+                                  layer,
+                                  canvas.documentWidth,
+                                  canvas.documentHeight,
+                                );
+                                if (!layerCanvas) continue;
+                                const rawB64 = layerCanvas.toDataURL("image/png").split(",")[1];
+                                const resultB64 = await removeBackground(rawB64);
+                                updates.push({
+                                  layerId: layer.id,
+                                  base64: `data:image/png;base64,${resultB64}`,
+                                  x: 0, y: 0,
+                                  width: canvas.documentWidth,
+                                  height: canvas.documentHeight,
+                                });
+                              }
+                              if (updates.length > 0) {
+                                canvas.replaceLayersImages(updates);
+                              }
+                            } catch (err) {
+                              console.error("Background removal failed:", err);
+                            } finally {
+                              setIsRemovingBg(false);
+                            }
+                          }}
+                        >
+                          {isRemovingBg && (
+                            <span className="spinner-border spinner-border-sm" role="status" style={{ width: 12, height: 12, borderWidth: 2 }} />
+                          )}
+                          Remove background
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
 
-                {/* Bottom row: reset presets */}
+                {/* Bottom row: reset presets — only for canvas tools tab */}
+                {showCanvasTools && (
                 <div style={{
                   display: "flex", alignItems: "center", justifyContent: "space-between",
                   padding: "3px 6px",
@@ -538,6 +576,7 @@ export default function CanvasPanel() {
                     <RefreshCcwDot size={13} strokeWidth={1.75} />
                   </button>
                 </div>
+                )}
 
               </div>
 
