@@ -8,25 +8,20 @@ import { useArtOverlays } from "./art-prompt/useArtOverlays";
 import GenerationInfoPanel from "./art-prompt/GenerationInfoPanel";
 import InfoDropdownPopup from "./art-prompt/InfoDropdownPopup";
 import ArtPanelPopup from "./art-prompt/ArtPanelPopup";
-import LoraPanel from "./LoraPanel";
-import EmbeddingsPanel from "./EmbeddingsPanel";
-import { SettingsPopup } from "./art-prompt/SettingsPopup";
-import { ArtDropdownPicker } from "./art-prompt/ArtDropdownPicker";
 import { saveToStorage } from "./art-model/ArtModelStorage";
 import LucideIcon from "../shared/LucideIcon";
 import SourceImagePanel from "./art-prompt/SourceImagePanel";
+import SizePopup from "./art-prompt/SizePopup";
 
 // side-effect: injects CSS for sliders / number spinners
 import "./art-prompt/ArtShared";
 
 export default function ArtPromptPanel({
   visible = true,
-  activeArtAction = null,
   generationType: externalGenerationType,
   onGenerationTypeChange: externalOnGenerationTypeChange,
 }: {
   visible?: boolean;
-  activeArtAction?: string | null;
   generationType?: "txt2img" | "img2img" | "inpaint";
   onGenerationTypeChange?: (v: "txt2img" | "img2img" | "inpaint") => void;
 }) {
@@ -63,120 +58,6 @@ export default function ArtPromptPanel({
             className="flex-grow-1 d-flex flex-column bg-theme-panel overflow-hidden min-h-0"
             style={{ border: "none", borderRadius: 0 }}
           >
-            {/* ── Tool options section ──────────────────────────────────
-             * Always present. Shows inline settings when a palette
-             * button is active; empty otherwise. */}
-            <div className="flex-shrink-0" style={{ borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
-              {activeArtAction && (
-                <div className="overflow-y-auto" style={{ padding: "6px 8px", maxHeight: 260 }}>
-                  {activeArtAction === "modelOptions" && (
-                    <div className="d-flex flex-column" style={{ gap: 6, padding: "2px 4px" }}>
-                      <div className="d-flex flex-column" style={{ gap: 8 }}>
-                        <div className="d-flex flex-column" style={{ gap: 2 }}>
-                          <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 9, fontWeight: 700, letterSpacing: "0.07em", textTransform: "uppercase", color: "var(--theme-text-secondary)", opacity: 0.6 }}>
-                            <LucideIcon name="circle-dot" size={9} /> Version
-                          </div>
-                          <ArtDropdownPicker value={s.version} placeholder="Choose version…"
-                            options={s.artOptions?.versions?.map((v: { name: string }) => ({ label: v.name, value: v.name })) ?? []}
-                            onChange={s.handleVersion}
-                          />
-                        </div>
-                        <div className="d-flex flex-column" style={{ gap: 2 }}>
-                          <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 9, fontWeight: 700, letterSpacing: "0.07em", textTransform: "uppercase", color: "var(--theme-text-secondary)", opacity: 0.6 }}>
-                            <LucideIcon name="circle-dot" size={9} /> Model
-                          </div>
-                          <ArtDropdownPicker value={s.modelPath} placeholder="Choose model…"
-                            options={s.artOptions?.versions?.find((v: { name: string }) => v.name === s.version)?.models ?? []}
-                            onChange={s.handleModel} disabled={!s.version}
-                          />
-                        </div>
-                        <div className="d-flex flex-column" style={{ gap: 2 }}>
-                          <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 9, fontWeight: 700, letterSpacing: "0.07em", textTransform: "uppercase", color: "var(--theme-text-secondary)", opacity: 0.6 }}>
-                            <LucideIcon name="circle-dot" size={9} /> Scheduler
-                          </div>
-                          <ArtDropdownPicker value={s.scheduler} placeholder="Choose scheduler…"
-                            options={s.availableSchedulers}
-                            onChange={s.handleScheduler} disabled={!s.version || s.availableSchedulers.length === 0}
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                  {activeArtAction === "embeddings" && <EmbeddingsPanel hideHeader />}
-                  {activeArtAction === "lora" && <LoraPanel hideHeader />}
-                  {activeArtAction === "settings" && (
-                    <div>
-                      <SettingsPopup
-                        hideHeader
-                        steps={s.steps} cfgScale={s.cfgScale} nSamples={s.nSamples} imagesPerBatch={s.imagesPerBatch}
-                        onStepsChange={(v) => { s.setSteps(v); s.persistGen({ steps: v }); }}
-                        onCfgScaleChange={(v) => { s.setCfgScale(v); s.persistGen({ cfg_scale: v }); }}
-                        onNSamplesChange={(v) => { s.setNSamples(v); s.persistGen({ n_samples: v }); }}
-                        onImagesPerBatchChange={(v) => { s.setImagesPerBatch(v); s.persistGen({ images_per_batch: v }); }}
-                      />
-                    </div>
-                  )}
-                  {activeArtAction === "seed" && (
-                    <div style={{ padding: "6px 4px" }}>
-                      <div className="d-flex align-items-center" style={{ gap: 6 }}>
-                        <button
-                          type="button"
-                          title={s.seedRandomized ? "Switch to fixed seed" : "Switch to random seed"}
-                          onClick={s.handleToggleRandom}
-                          style={{
-                            display: "flex", alignItems: "center", justifyContent: "center",
-                            width: 28, height: 24, padding: 0,
-                            background: s.seedRandomized ? "rgba(99,153,255,0.22)" : "transparent",
-                            border: "none", borderRadius: 4, cursor: "pointer",
-                            color: s.seedRandomized ? "var(--bs-primary)" : "rgba(255,255,255,0.45)",
-                          }}
-                        >
-                          <LucideIcon name="shuffle" size={12} />
-                        </button>
-                        <input
-                          type="number"
-                          className="art-no-spin"
-                          value={s.seedRandomized ? "" : s.seed}
-                          placeholder={s.seedRandomized ? "Random" : String(s.seed)}
-                          disabled={s.seedRandomized}
-                          onChange={(e) => s.handleSeedChange(Number(e.target.value))}
-                          style={{
-                            flex: 1, height: 24,
-                            background: "var(--theme-input-bg)",
-                            border: "1px solid rgba(255,255,255,0.12)",
-                            borderRadius: 4, color: "var(--theme-text)",
-                            fontSize: 11, padding: "0 6px",
-                            opacity: s.seedRandomized ? 0.5 : 1,
-                          }}
-                        />
-                      </div>
-                    </div>
-                  )}
-                  {activeArtAction === "imageSize" && (
-                    <div style={{ padding: "6px 4px" }}>
-                      <div className="d-flex flex-column" style={{ gap: 6 }}>
-                        <div className="d-flex align-items-center" style={{ gap: 6 }}>
-                          <span style={{ fontSize: 9, color: "var(--theme-text-secondary)", width: 10, flexShrink: 0 }}>W</span>
-                          <input type="number" className="art-no-spin" value={s.genWidth}
-                            onChange={(e) => s.setGenWidth(Number(e.target.value))}
-                            onBlur={(e) => { const v = Math.max(64, Math.min(2048, Number(e.target.value))); s.setGenWidth(v); saveToStorage("gen_width", v); s.persistGen({ width: v }); }}
-                            style={{ height: 22, background: "var(--theme-input-bg)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 4, color: "var(--theme-text)", fontSize: 10, textAlign: "center", padding: "0 2px", width: 72 }}
-                          />
-                        </div>
-                        <div className="d-flex align-items-center" style={{ gap: 6 }}>
-                          <span style={{ fontSize: 9, color: "var(--theme-text-secondary)", width: 10, flexShrink: 0 }}>H</span>
-                          <input type="number" className="art-no-spin" value={s.genHeight}
-                            onChange={(e) => s.setGenHeight(Number(e.target.value))}
-                            onBlur={(e) => { const v = Math.max(64, Math.min(2048, Number(e.target.value))); s.setGenHeight(v); saveToStorage("gen_height", v); s.persistGen({ height: v }); }}
-                            style={{ height: 22, background: "var(--theme-input-bg)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 4, color: "var(--theme-text)", fontSize: 10, textAlign: "center", padding: "0 2px", width: 72 }}
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
 
             <PromptTextareas
               prompt={s.prompt}
@@ -202,6 +83,18 @@ export default function ArtPromptPanel({
                 s.persist({ secondary_negative_prompt: v });
               }}
             />
+
+            {/* ── Source image panel (img2img / inpaint) ─────────────
+             * Shown only when generation type is img2img or inpaint. */}
+            {(genType === "img2img" || genType === "inpaint") && (
+              <SourceImagePanel
+                generationType={genType}
+                strength={s.strength}
+                onStrengthChange={s.setStrength}
+                feather={s.feather}
+                onFeatherChange={s.setFeather}
+              />
+            )}
 
             <GenerationInfoPanel
               showInfo={showInfo}
@@ -234,83 +127,15 @@ export default function ArtPromptPanel({
               onToggleRandom={s.handleToggleRandom}
               onGenWidthChange={s.setGenWidth}
               onGenHeightChange={s.setGenHeight}
-              onToggleLoraPanel={() => s.togglePanel("lora")}
-              onToggleEmbeddingsPanel={() =>
-                s.togglePanel("embeddings")
+              onToggleLoraPanel={(anchorRect) => s.togglePanel("lora", anchorRect)}
+              onToggleEmbeddingsPanel={(anchorRect) =>
+                s.togglePanel("embeddings", anchorRect)
               }
               persistGen={s.persistGen}
               openDropdown={o.openDropdown}
+              toggleGenSize={o.toggleGenSize}
             />
 
-            {/* ── Generation type toggle row ───────────────────────────
-             * Three mutually exclusive toggle buttons: txt-to-img,
-             * img-to-img, inpaint (hidden for Z-Image since Z-Image
-             * does not support inpaint). */}
-            {(() => {
-              const isZImage = s.version === "Z-Image Turbo";
-              // If Z-Image is active and gen type is inpaint, switch to
-              // txt2img since inpaint is unavailable for Z-Image.
-              if (isZImage && genType === "inpaint") {
-                onGenTypeChange("txt2img");
-              }
-              return null;
-            })()}
-            <div style={{ display: "flex", alignItems: "center", gap: 2, padding: "4px 6px", margin: "0 -6px", borderBottom: "1px solid rgba(255,255,255,0.07)", background: "#12121c" }}>
-              {([
-                { id: "txt2img" as const, title: "TXT2IMG" },
-                { id: "img2img" as const, title: "IMG2IMG" },
-                ...(s.version !== "Z-Image Turbo"
-                  ? [{ id: "inpaint" as const, title: "INPAINT" }]
-                  : []),
-              ] as { id: "txt2img" | "img2img" | "inpaint"; title: string }[]).map(({ id, title }) => {
-                const active = genType === id;
-                return (
-                  <button
-                    key={id}
-                    title={title}
-                    onClick={() => onGenTypeChange(id)}
-                    onMouseEnter={(e) => {
-                      const bg = e.currentTarget.style.background;
-                      if (!bg.includes("rgba(99,153,255"))
-                        e.currentTarget.style.background = "rgba(255,255,255,0.08)";
-                    }}
-                    onMouseLeave={(e) => {
-                      const bg = e.currentTarget.style.background;
-                      if (!bg.includes("rgba(99,153,255"))
-                        e.currentTarget.style.background = "transparent";
-                    }}
-                    style={{
-                      display: "flex", alignItems: "center", justifyContent: "center",
-                      width: "auto", height: 26, padding: "0 8px",
-                      background: active ? "rgba(99,153,255,0.22)" : "transparent",
-                      border: "none", borderRadius: 4, cursor: "pointer", flexShrink: 0,
-                      color: active ? "var(--bs-primary)" : "rgba(255,255,255,0.35)",
-                      boxShadow: active ? "inset 0 0 0 1.5px rgba(99,153,255,0.55)" : "none",
-                      transition: "background 0.1s, color 0.1s",
-                    }}
-                  >
-                    <span style={{ whiteSpace: "nowrap", fontSize: 9, fontWeight: 600, letterSpacing: "0.03em", fontVariant: "small-caps" }}>
-                      {title}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-
-            {/* ── Source image panel (img2img / inpaint) ─────────────
-             * Shown only when generation type is img2img or inpaint.
-             * Displays the active layer's image as the source image
-             * preview. Placed below the gen type row, above the
-             * submit row. */}
-            {(genType === "img2img" || genType === "inpaint") && (
-              <SourceImagePanel
-                generationType={genType}
-                strength={s.strength}
-                onStrengthChange={s.setStrength}
-                feather={s.feather}
-                onFeatherChange={s.setFeather}
-              />
-            )}
 
             {s.errorMessage && (
               <div
@@ -396,7 +221,7 @@ export default function ArtPromptPanel({
       />
 
       <ArtPanelPopup
-        openPanel={s.openPanel === "savedPrompts" ? "savedPrompts" : null}
+        openPanel={s.openPanel}
         anchor={s.artPanelAnchor}
         version={s.version}
         onLoadPrompt={s.handleLoadPrompt}
@@ -486,6 +311,17 @@ export default function ArtPromptPanel({
           </button>
         </div>,
         document.body,
+      )}
+      {o.showGenSize && (
+        <SizePopup
+          anchor={o.genSizeAnchor}
+          portalId={o.genSizePortalId}
+          genWidth={s.genWidth}
+          genHeight={s.genHeight}
+          onWidthChange={(v) => { s.setGenWidth(v); saveToStorage("gen_width", v); s.persistGen({ width: v }); }}
+          onHeightChange={(v) => { s.setGenHeight(v); saveToStorage("gen_height", v); s.persistGen({ height: v }); }}
+          persistGen={s.persistGen}
+        />
       )}
     </Fragment>
   );

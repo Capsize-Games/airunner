@@ -1,5 +1,6 @@
-import { useState, useRef, useEffect } from "react";
+import { useRef, useEffect } from "react";
 import { PromptDivider } from "./ArtShared";
+import { useLocalStorage } from "../../../hooks/useLocalStorage";
 
 interface Props {
   prompt: string;
@@ -37,7 +38,10 @@ export function PromptTextareas({
   isMultiPrompt, generating,
   onPromptChange, onSecondaryPromptChange, onNegativePromptChange, onSecondaryNegativePromptChange,
 }: Props) {
-  const [activeField, setActiveField] = useState<FieldKey | null>(null);
+  const [activeField, setActiveField] = useLocalStorage<FieldKey>(
+    "airunner_active_prompt_field",
+    "prompt" as FieldKey,
+  );
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
@@ -60,7 +64,8 @@ export function PromptTextareas({
   return (
     <div className="scroll-panel d-flex flex-column">
       {fields.map((f) => {
-        const isActive = activeField === f.key;
+        const isSingle = !isMultiPrompt;
+        const isActive = isSingle || activeField === f.key;
         return (
           <div key={f.key} className="d-flex flex-column" style={{ flex: isActive ? 1 : "0 0 auto" }}>
             <PromptDivider label={f.label} />
@@ -78,6 +83,7 @@ export function PromptTextareas({
                 <div
                   style={COLLAPSED_STYLE}
                   onClick={() => setActiveField(f.key)}
+                  title="Click to expand"
                 >
                   {f.value || f.placeholder}
                 </div>

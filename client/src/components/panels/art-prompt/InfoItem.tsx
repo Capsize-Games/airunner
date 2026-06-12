@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import type { ReactNode, MouseEvent } from "react";
 import LucideIcon from "../../shared/LucideIcon";
 
 export default function InfoItem({
@@ -8,6 +8,7 @@ export default function InfoItem({
   editing,
   dimmed,
   onClick,
+  onMouseDown,
   children,
   editor,
 }: {
@@ -16,13 +17,15 @@ export default function InfoItem({
   icon?: string;
   editing?: boolean;
   dimmed?: boolean;
-  onClick?: (e: React.MouseEvent) => void;
+  onClick?: (e: MouseEvent) => void;
+  onMouseDown?: (e: MouseEvent) => void;
   children?: ReactNode;
   editor?: ReactNode;
 }) {
   return (
     <div
       onClick={onClick}
+      onMouseDown={onMouseDown}
       style={{
         display: "flex",
         alignItems: "center",

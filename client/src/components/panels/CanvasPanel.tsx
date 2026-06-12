@@ -126,12 +126,6 @@ export default function CanvasPanel() {
   const [showCanvasTools, setShowCanvasTools] = useState(() => {
     try { return localStorage.getItem("canvas_show_canvas_tools") !== "false"; } catch { return true; }
   });
-  const [activeArtAction, setActiveArtAction] = useState<string | null>(() => {
-    try {
-      const v = localStorage.getItem("canvas_active_art_action");
-      return v || null;
-    } catch { return null; }
-  });
   const [leftPanelW, setLeftPanelW] = useState(() => {
     try { const v = localStorage.getItem(LS_LEFT_W); return v ? Number(v) : 300; } catch { return 300; }
   });
@@ -285,9 +279,6 @@ export default function CanvasPanel() {
     try { localStorage.setItem("canvas_show_canvas_tools", String(showCanvasTools)); } catch { /* */ }
   }, [showCanvasTools]);
   useEffect(() => {
-    try { localStorage.setItem("canvas_active_art_action", activeArtAction ?? ""); } catch { /* */ }
-  }, [activeArtAction]);
-  useEffect(() => {
     try { localStorage.setItem("canvas_gen_type", generationType); } catch { /* */ }
   }, [generationType]);
 
@@ -299,17 +290,8 @@ export default function CanvasPanel() {
     );
   }
 
-  const ART_ACTION_LABELS: Record<string, string> = {
-    modelOptions: "Art Model",
-    embeddings: "Embeddings",
-    lora: "LoRA",
-    settings: "Generator Settings",
-    seed: "Seed",
-    imageSize: "Image Size",
-  };
-
   const toolSettingsLabel = showImagePrompt
-    ? (activeArtAction ? ART_ACTION_LABELS[activeArtAction] ?? activeArtAction : "Image Prompt")
+    ? "Image Prompt"
     : (TOOL_LABELS[canvas.activeTool] ?? canvas.activeTool);
 
   const showBrushControls = !showImagePrompt &&
@@ -463,10 +445,6 @@ export default function CanvasPanel() {
                     setShowCanvasTools(true);
                     setShowImagePrompt(false);
                   }}
-                  activeArtAction={activeArtAction}
-                  onArtAction={(action) => {
-                    setActiveArtAction((prev) => prev === action ? null : action);
-                  }}
                   onCollapse={() => setLeftPanelCollapsed(true)}
                 />
 
@@ -483,7 +461,7 @@ export default function CanvasPanel() {
                     {toolSettingsLabel}
                   </div>
                   <div style={{ flex: 1, overflow: "hidden auto", display: "flex", flexDirection: "column" }}>
-                    {showImagePrompt && <ArtPromptPanel visible={true} activeArtAction={activeArtAction} generationType={generationType} onGenerationTypeChange={setGenerationType} />}
+                    {showImagePrompt && <ArtPromptPanel visible={true} generationType={generationType} onGenerationTypeChange={setGenerationType} />}
                     {showBrushControls && <BrushControls />}
                     {showMoveControls && <MoveControls />}
                     {showLassoControls && <LassoControls />}

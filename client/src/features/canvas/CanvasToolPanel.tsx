@@ -30,8 +30,6 @@ interface Props {
   onToggleImagePrompt: () => void;
   showCanvasTools: boolean;
   onToggleCanvasTools: () => void;
-  activeArtAction: string | null;
-  onArtAction: (action: string | null) => void;
   onCollapse?: () => void;
 }
 
@@ -51,8 +49,6 @@ export default function CanvasToolPanel({
   onToggleImagePrompt,
   showCanvasTools,
   onToggleCanvasTools,
-  activeArtAction,
-  onArtAction,
   onCollapse,
 }: Props) {
   const onBtnEnter = (e: React.MouseEvent<HTMLButtonElement>) => {
@@ -159,40 +155,6 @@ export default function CanvasToolPanel({
         ))}
       </div>
 
-      {/* ── Art prompt palette ────────────────────────────────────────
-       * Shown below the gen-type row. Each toggles inline settings in
-       * the tool panel. */}
-      {showImagePrompt && (
-        <div style={{ display: "flex", alignItems: "center", gap: 2, flexWrap: "wrap", padding: "4px 6px", margin: "0 -6px", borderBottom: "1px solid rgba(255,255,255,0.07)", background: "#12121c" }}>
-          {[
-            { id: "modelOptions", name: "sparkles",    title: "Art model options" },
-            { id: "embeddings",   name: "scan-text",   title: "Embeddings" },
-            { id: "lora",         name: "puzzle",      title: "LoRA" },
-            { id: "settings",     name: "settings-2",  title: "Generation settings" },
-            { id: "seed",         name: "shuffle",     title: "Seed randomization" },
-            { id: "imageSize",    name: "ruler-dimension-line", title: "Image size" },
-          ].map((item) => {
-            const isActive = activeArtAction === item.id;
-            return (
-              <button
-                key={item.id}
-                title={item.title}
-                onClick={() => onArtAction(isActive ? null : item.id)}
-                onMouseEnter={onBtnEnter}
-                onMouseLeave={onBtnLeave}
-                style={{
-                  ...btn,
-                  background: isActive ? "rgba(99,153,255,0.22)" : "transparent",
-                  color: isActive ? "var(--bs-primary)" : "rgba(255,255,255,0.35)",
-                  boxShadow: isActive ? "inset 0 0 0 1.5px rgba(99,153,255,0.55)" : "none",
-                }}
-              >
-                <LucideIcon name={item.name} size={14} />
-              </button>
-            );
-          })}
-        </div>
-      )}
 
       {/* ── Palette of tools ──────────────────────────────────────────
        * Shown only when the canvas-tools palette is active. Each button

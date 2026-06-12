@@ -13,10 +13,12 @@ interface SliderWithSpinboxProps {
   defaultValue?: number;
   /** Fixed pixel width for the label column so sibling sliders align. */
   labelWidth?: number;
+  /** When true, the label column is hidden entirely. */
+  hideLabel?: boolean;
   onChange: (value: number) => void;
 }
 
-const ITEM_H = 30;
+const ITEM_H = 26;
 
 export default function SliderWithSpinbox({
   label,
@@ -27,6 +29,7 @@ export default function SliderWithSpinbox({
   displayAsFloat = false,
   defaultValue,
   labelWidth,
+  hideLabel = false,
   onChange,
 }: SliderWithSpinboxProps) {
   const [hovered, setHovered] = useState(false);
@@ -45,27 +48,29 @@ export default function SliderWithSpinbox({
   return (
     <div className="d-flex align-items-center" style={{ height: ITEM_H }}>
         {/* Label — attached left */}
-        <span
-          style={{
-            background: bgColor,
-            border: `1px solid ${borderColor}`,
-            borderTopLeftRadius: 4,
-            borderBottomLeftRadius: 4,
-            borderTopRightRadius: 0,
-            borderBottomRightRadius: 0,
-            padding: "0 6px",
-            fontSize: 11,
-            color: "var(--theme-text-secondary)",
-            lineHeight: `${ITEM_H}px`,
-            height: ITEM_H,
-            flexShrink: 0,
-            whiteSpace: "nowrap",
-            boxSizing: "border-box",
-            ...(labelWidth !== undefined && { width: labelWidth, minWidth: labelWidth }),
-          }}
-        >
-          {label}
-        </span>
+        {!hideLabel && (
+          <span
+            style={{
+              background: bgColor,
+              border: `1px solid ${borderColor}`,
+              borderTopLeftRadius: 4,
+              borderBottomLeftRadius: 4,
+              borderTopRightRadius: 0,
+              borderBottomRightRadius: 0,
+              padding: "0 6px",
+              fontSize: 11,
+              color: "var(--theme-text-secondary)",
+              lineHeight: `${ITEM_H}px`,
+              height: ITEM_H,
+              flexShrink: 0,
+              whiteSpace: "nowrap",
+              boxSizing: "border-box",
+              ...(labelWidth !== undefined && { width: labelWidth, minWidth: labelWidth }),
+            }}
+          >
+            {label}
+          </span>
+        )}
 
         {/* Range slider — attached middle */}
         <div
