@@ -38,14 +38,21 @@ export async function getBootstrap() {
 
 export interface SavedPrompt {
   id: number;
+  version?: string;
   prompt: string;
   secondary_prompt: string;
   negative_prompt: string;
   secondary_negative_prompt: string;
 }
 
-export async function listSavedPrompts(): Promise<{ prompts: SavedPrompt[] }> {
-  return request<{ prompts: SavedPrompt[] }>("GET", "/api/v1/art/saved-prompts");
+export async function listSavedPrompts(
+  version?: string,
+): Promise<{ prompts: SavedPrompt[] }> {
+  const params: Record<string, unknown> = {};
+  if (version) params.version = version;
+  return request<{ prompts: SavedPrompt[] }>(
+    "GET", "/api/v1/art/saved-prompts", params as unknown as JsonObject,
+  );
 }
 
 export async function createSavedPrompt(

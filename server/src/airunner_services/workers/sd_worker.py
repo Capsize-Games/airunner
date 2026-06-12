@@ -44,6 +44,7 @@ from airunner_services.art.managers.stablediffusion.image_response import (
 from airunner_services.utils.application.enum_resolver import (
     model_action_type,
 )
+from airunner_services.settings import AIRUNNER_CUDA_OUT_OF_MEMORY_MESSAGE
 from airunner_services.utils.application.enum_resolver import signal_code_proxy
 from airunner_services.utils.memory import apply_cudnn_benchmark
 from airunner_services.art.runtime_memory import clear_memory
@@ -872,12 +873,26 @@ class SDWorker(Worker):
                     f"Unexpected error: {error_message}\n{traceback_text}"
                 )
                 image_request = message.get("image_request", None)
-                failure_message = (
-                    "An unexpected error occurred during image generation. "
-                    "Please check logs."
+                # Detect out-of-memory errors and provide a clear message
+                oom_keywords = ("out of memory", "cuda out of memory")
+                is_oom = (
+                    isinstance(error, torch.cuda.OutOfMemoryError)
+                    or any(
+                        kw in error_message.lower()
+                        for kw in oom_keywords
+                    )
                 )
+                if is_oom:
+                    failure_message = AIRUNNER_CUDA_OUT_OF_MEMORY_MESSAGE
+                else:
+                    failure_message = (
+                        "An unexpected error occurred during image "
+                        "generation. Please check logs."
+                    )
                 if image_request is not None and image_request.callback:
                     image_request.callback(failure_message)
+                # Also emit the OOM as a missing-models alert so the
+                # event system forwards it to subscribed WebSocket clients.
                 self.send_missing_model_alert(failure_message)
             finally:
                 self._is_generating = False

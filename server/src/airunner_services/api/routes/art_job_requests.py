@@ -48,7 +48,9 @@ def build_request_metadata(request: GenerationRequest) -> dict:
     if request.image_b64:
         metadata["image_b64"] = request.image_b64
     if request.mask_image_b64:
-        metadata["mask_image_b64"] = request.mask_image_b64
+        # Runtime reads the mask under the "mask_b64" key (see
+        # _resolve_art_request_mask); keep this aligned with it.
+        metadata["mask_b64"] = request.mask_image_b64
     if request.skip_auto_export:
         metadata["skip_auto_export"] = True
     return metadata

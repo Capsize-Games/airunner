@@ -22,6 +22,14 @@ export interface ArtGenerateParams {
   scheduler?: string;
   width?: number;
   height?: number;
+  /** "txt2img" | "img2img" | "inpaint" — drives the pipeline on the daemon. */
+  pipeline?: string;
+  /** Init/source image for img2img & inpaint, raw base64 (no data: prefix). */
+  imageB64?: string;
+  /** Mask image for inpaint, raw base64 (no data: prefix). */
+  maskB64?: string;
+  /** Denoise strength for img2img, 0–1. */
+  strength?: number;
   onComplete?: (imageBase64: string) => void;
 }
 
@@ -187,6 +195,14 @@ export function useArtWebSocket() {
           scheduler: params.scheduler,
           width: params.width,
           height: params.height,
+          // img2img / inpaint conditioning. Omitted keys default to txt2img
+          // behaviour on the daemon side.
+          ...(params.pipeline ? { pipeline: params.pipeline } : {}),
+          ...(params.imageB64 ? { image_b64: params.imageB64 } : {}),
+          ...(params.maskB64 ? { mask_b64: params.maskB64 } : {}),
+          ...(params.strength !== undefined
+            ? { strength: params.strength }
+            : {}),
         });
       });
     },

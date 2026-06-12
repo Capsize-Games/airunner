@@ -29,7 +29,11 @@ export interface CanvasContextValue {
   brushSize: number;
   brushColor: string;
   maskStrokes: StrokeNode[];
+  inpaintMaskStrokes: StrokeNode[];
   snapToGrid: boolean;
+
+  addInpaintMaskStroke: (stroke: Omit<StrokeNode, "id">) => void;
+  clearInpaintMask: () => void;
 
   addLayer: (name?: string, opacity?: number, fillColor?: string) => void;
   deleteLayer: (id: string) => void;

@@ -2,11 +2,12 @@ import { useState, useCallback, useRef, useEffect } from "react";
 import LucideIcon from "../../components/shared/LucideIcon";
 import CanvasLayersSidebar from "./CanvasLayersSidebar";
 import ImageBrowserPanel from "../../components/panels/ImageBrowserPanel";
-import type { AssetTab } from "./sidebar/CollapsedRail";
+import CollapsedRail, { type AssetTab } from "./sidebar/CollapsedRail";
 
-const LS_W         = "airunner_assets_sidebar_w";
-const LS_TAB       = "airunner_assets_sidebar_tab";
-const LS_COLLAPSED = "airunner_assets_sidebar_collapsed";
+const LS_W            = "airunner_assets_sidebar_w";
+const LS_TAB          = "airunner_assets_sidebar_tab";
+const LS_COLLAPSED    = "airunner_assets_sidebar_collapsed";
+const LS_PARENT_TAB   = "canvas_asset_tab";
 
 const TABS: { id: AssetTab; icon: string; label: string }[] = [
   { id: "layers", icon: "layers", label: "Layers" },
@@ -49,6 +50,11 @@ export default function CanvasAssetsSidebar({
     catch { return "layers"; }
   });
 
+  const handleTabChange = useCallback((newTab: AssetTab) => {
+    setTab(newTab);
+    try { localStorage.setItem(LS_PARENT_TAB, newTab); } catch { /* */ }
+  }, []);
+
   useEffect(() => {
     if (activeTab) setTab(activeTab);
   }, [activeTab]);
@@ -89,19 +95,33 @@ export default function CanvasAssetsSidebar({
   }, [width]);
 
   const expand = (toTab?: AssetTab) => {
-    if (toTab) setTab(toTab);
+    if (toTab) handleTabChange(toTab);
     setCollapsed(false);
   };
+
+  const collapseBtnStyle: React.CSSProperties = {
+    background: "none", border: "none", cursor: "pointer",
+    padding: "5px 6px", color: "rgba(255,255,255,0.35)",
+    display: "flex", alignItems: "center", justifyContent: "center",
+    transition: "color 0.15s",
+  };
+
+  if (collapsed) {
+    return (
+      <div className="flex-shrink-0 d-flex overflow-hidden" style={{ width: 36 }}>
+        {/* Resize handle (kept for visual consistency, non-interactive when collapsed) */}
+        <div className="flex-shrink-0" style={{ width: 4, background: "transparent" }} />
+        <CollapsedRail activeTab={tab} onExpand={expand} />
+      </div>
+    );
+  }
 
   return (
     <div className="flex-shrink-0 d-flex overflow-hidden" style={{ width }}>
       {/* Resize handle */}
       <div
         onMouseDown={handleResizeMouseDown}
-        className="flex-shrink-0"
-        style={{ width: 4, cursor: "col-resize", background: "transparent", transition: "background 0.15s" }}
-        onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.background = "rgba(99,153,255,0.3)"; }}
-        onMouseLeave={(e) => { if (!dragging.current) (e.currentTarget as HTMLDivElement).style.background = "transparent"; }}
+        className="resize-handle"
       />
 
       <div className="flex-grow-1 d-flex flex-column overflow-hidden" style={{ background: "#14141e", minWidth: 0 }}>
@@ -114,7 +134,7 @@ export default function CanvasAssetsSidebar({
               <button
                 key={t.id}
                 type="button"
-                onClick={() => setTab(t.id)}
+                onClick={() => handleTabChange(t.id)}
                 style={{
                   ...tabBtnBase,
                   background: isActive ? "var(--theme-panel-bg)" : "transparent",
@@ -131,10 +151,20 @@ export default function CanvasAssetsSidebar({
                 }}
               >
                 <LucideIcon name={t.icon} size={12} />
-                {t.label}
               </button>
             );
           })}
+          {/* Collapse chevron */}
+          <button
+            type="button"
+            title="Collapse panel"
+            onClick={() => setCollapsed(true)}
+            style={collapseBtnStyle}
+            onMouseEnter={(e) => { e.currentTarget.style.color = "rgba(255,255,255,0.85)"; }}
+            onMouseLeave={(e) => { e.currentTarget.style.color = "rgba(255,255,255,0.35)"; }}
+          >
+            <LucideIcon name="chevron-right" size={12} />
+          </button>
         </div>
 
         <div className="flex-grow-1 overflow-hidden d-flex flex-column min-h-0">

@@ -17,7 +17,7 @@ interface GenerationInfoPanelProps {
   cfgScale: number;
   nSamples: number;
   imagesPerBatch: number;
-  generationType: "txt2img" | "img2img";
+  generationType: "txt2img" | "img2img" | "inpaint";
   seed: number;
   seedRandomized: boolean;
   genWidth: number;
@@ -33,7 +33,7 @@ interface GenerationInfoPanelProps {
   onCfgScaleChange: (v: number) => void;
   onNSamplesChange: (v: number) => void;
   onImagesPerBatchChange: (v: number) => void;
-  onGenerationTypeChange: (v: "txt2img" | "img2img") => void;
+  onGenerationTypeChange: (v: "txt2img" | "img2img" | "inpaint") => void;
   onSeedChange: (v: number) => void;
   onToggleRandom: () => void;
   onGenWidthChange: (v: number) => void;
@@ -130,7 +130,7 @@ export default function GenerationInfoPanel(
               onClose={() => setFocusedField(null)} />} />
 
           <InfoItem icon="image-plus" label="Gen type"
-            value={generationType === "txt2img" ? "Text-to-image" : "Image-to-image"}
+            value={generationType === "txt2img" ? "Text-to-image" : generationType === "img2img" ? "Image-to-image" : "Inpaint"}
             onClick={(e) => openDropdown("gentype", rectLabel(e.currentTarget as HTMLElement))} />
 
           <SeedInfoRow

@@ -13,14 +13,20 @@ async def _rpc_saved_prompts_list(body: dict, **kw: Any) -> dict[str, Any]:
         from airunner_services.database.models.saved_prompt import SavedPrompt
         from airunner_services.database.session import session_scope
 
+        version_filter = (body or {}).get("version") or None
+
         with session_scope() as session:
-            items = session.query(SavedPrompt).all()
+            query = session.query(SavedPrompt)
+            if version_filter:
+                query = query.filter(SavedPrompt.version == version_filter)
+            items = query.all()
             return {
                 "status": 200,
                 "body": {
                     "prompts": [
                         {
                             "id": item.id,
+                            "version": item.version or "",
                             "prompt": item.prompt or "",
                             "secondary_prompt": item.secondary_prompt or "",
                             "negative_prompt": item.negative_prompt or "",
@@ -43,6 +49,7 @@ async def _rpc_saved_prompts_create(body: dict, **kw: Any) -> dict[str, Any]:
 
         with session_scope() as session:
             item = SavedPrompt(
+                version=body.get("version") or None,
                 prompt=body.get("prompt", ""),
                 secondary_prompt=body.get("secondary_prompt", ""),
                 negative_prompt=body.get("negative_prompt", ""),
@@ -57,6 +64,7 @@ async def _rpc_saved_prompts_create(body: dict, **kw: Any) -> dict[str, Any]:
                 "status": 201,
                 "body": {
                     "id": item.id,
+                    "version": item.version or "",
                     "prompt": item.prompt or "",
                     "secondary_prompt": item.secondary_prompt or "",
                     "negative_prompt": item.negative_prompt or "",

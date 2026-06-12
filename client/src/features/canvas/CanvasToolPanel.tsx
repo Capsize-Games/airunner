@@ -1,9 +1,9 @@
-import { MessageSquareHeart } from "lucide-react";
 import {
   Move, SquareDashed, Lasso, Wand, Crop,
   PaintBucket, Pointer, Type, Pipette, Search,
-  Brush, Eraser, Layers, Images, Grid3x3, Ruler,
+  Brush, Eraser, Grid3x3, Ruler, MessageSquareHeart, Palette,
 } from "lucide-react";
+import LucideIcon from "../../components/shared/LucideIcon";
 import type { ActiveTool } from "./useCanvasState";
 
 const TOOLS: { id: string; label: string; Icon: React.ComponentType<{ size?: number; strokeWidth?: number }> }[] = [
@@ -26,11 +26,13 @@ const TOOLS: { id: string; label: string; Icon: React.ComponentType<{ size?: num
 interface Props {
   activeTool: ActiveTool;
   onToolChange: (tool: ActiveTool) => void;
-  activeAssetTab: "layers" | "images" | null;
-  onToggleLayers: () => void;
-  onToggleImages: () => void;
   showImagePrompt: boolean;
   onToggleImagePrompt: () => void;
+  showCanvasTools: boolean;
+  onToggleCanvasTools: () => void;
+  activeArtAction: string | null;
+  onArtAction: (action: string | null) => void;
+  onCollapse?: () => void;
 }
 
 const btn: React.CSSProperties = {
@@ -45,11 +47,13 @@ const btn: React.CSSProperties = {
 export default function CanvasToolPanel({
   activeTool,
   onToolChange,
-  activeAssetTab,
-  onToggleLayers,
-  onToggleImages,
   showImagePrompt,
   onToggleImagePrompt,
+  showCanvasTools,
+  onToggleCanvasTools,
+  activeArtAction,
+  onArtAction,
+  onCollapse,
 }: Props) {
   const onBtnEnter = (e: React.MouseEvent<HTMLButtonElement>) => {
     const bg = e.currentTarget.style.background;
@@ -89,39 +93,23 @@ export default function CanvasToolPanel({
     );
   };
 
-  const iconBtn = (
-    title: string,
-    Icon: React.ComponentType<{ size?: number; strokeWidth?: number }>,
-    onClick: () => void,
-  ) => (
-    <button key={title} title={title} onClick={onClick} style={btn}
-      onMouseEnter={onBtnEnter} onMouseLeave={onBtnLeave}>
-      <Icon size={14} strokeWidth={1.75} />
-    </button>
-  );
+  const tabBtnBase: React.CSSProperties = {
+    flex: 1, padding: "5px 4px", background: "transparent", border: "none",
+    fontSize: 11, cursor: "pointer", display: "flex", alignItems: "center",
+    justifyContent: "center", gap: 4, transition: "color 0.15s, border-color 0.15s",
+  };
 
-  const toggleBtn = (
-    active: boolean,
-    Icon: React.ComponentType<{ size?: number; strokeWidth?: number }>,
-    title: string,
-    onClick: () => void,
-  ) => (
-    <button
-      key={title}
-      title={title}
-      onClick={onClick}
-      onMouseEnter={onBtnEnter}
-      onMouseLeave={onBtnLeave}
-      style={{
-        ...btn,
-        background: active ? "rgba(99,153,255,0.22)" : "transparent",
-        color: active ? "var(--bs-primary)" : "rgba(255,255,255,0.35)",
-        boxShadow: active ? "inset 0 0 0 1.5px rgba(99,153,255,0.55)" : "none",
-      }}
-    >
-      <Icon size={14} strokeWidth={1.75} />
-    </button>
-  );
+  const collapseBtnStyle: React.CSSProperties = {
+    background: "none", border: "none", cursor: "pointer",
+    padding: "5px 6px", color: "rgba(255,255,255,0.35)",
+    display: "flex", alignItems: "center", justifyContent: "center",
+    transition: "color 0.15s",
+  };
+
+  const TABS: { id: string; active: boolean; icon: React.ComponentType<{ size?: number; strokeWidth?: number }>; title: string; onClick: () => void }[] = [
+    { id: "image-prompt", active: showImagePrompt, icon: MessageSquareHeart, title: "Image Prompt", onClick: onToggleImagePrompt },
+    { id: "canvas-tools", active: showCanvasTools, icon: Palette, title: "Canvas Tools", onClick: onToggleCanvasTools },
+  ];
 
   return (
     <div
@@ -131,23 +119,89 @@ export default function CanvasToolPanel({
         userSelect: "none", flexShrink: 0,
       }}
     >
-      {/* Row 1: image-prompt toggle + all canvas tools */}
-      <div style={{ display: "flex", alignItems: "center", gap: 2, flexWrap: "wrap" }}>
-        {toggleBtn(showImagePrompt, MessageSquareHeart, "Toggle Image Prompt", onToggleImagePrompt)}
-        {TOOLS.map((t) => toolBtn(t.id, t.Icon))}
+      {/* ── Tab bar with collapse chevron ─────────────────────────────
+       * Collapse chevron on the left, then palette toggle tabs styled
+       * to match the right panel tab appearance. */}
+      <div className="d-flex flex-shrink-0" style={{ background: "#161620", margin: "0 -6px", borderBottom: "1px solid rgba(255,255,255,0.07)", gap: 0 }}>
+        <button
+          type="button"
+          title="Collapse panel"
+          onClick={onCollapse}
+          style={collapseBtnStyle}
+          onMouseEnter={(e) => { e.currentTarget.style.color = "rgba(255,255,255,0.85)"; }}
+          onMouseLeave={(e) => { e.currentTarget.style.color = "rgba(255,255,255,0.35)"; }}
+        >
+          <LucideIcon name="chevron-left" size={12} />
+        </button>
+        {TABS.map((t) => (
+          <button
+            key={t.id}
+            type="button"
+            title={t.title}
+            onClick={t.onClick}
+            style={{
+              ...tabBtnBase,
+              background: t.active ? "var(--theme-panel-bg)" : "transparent",
+              borderBottom: t.active ? "2px solid var(--bs-primary)" : "2px solid transparent",
+              color: t.active ? "var(--bs-primary)" : "rgba(255,255,255,0.45)",
+            }}
+            onMouseEnter={(e) => {
+              if (!t.active)
+                e.currentTarget.style.background = "rgba(255,255,255,0.05)";
+            }}
+            onMouseLeave={(e) => {
+              if (!t.active)
+                e.currentTarget.style.background = "transparent";
+            }}
+          >
+            <t.icon size={12} strokeWidth={1.75} />
+          </button>
+        ))}
       </div>
 
-      {/* Row 3: layer / image browser toggles */}
-      <div style={{
-        display: "flex", alignItems: "center", gap: 2,
-        padding: "4px 6px",
-        margin: "2px -6px",
-        borderTop: "1px solid rgba(255,255,255,0.07)",
-        borderBottom: "1px solid rgba(255,255,255,0.07)",
-      }}>
-        {toggleBtn(activeAssetTab === "layers", Layers, "Layers Panel", onToggleLayers)}
-        {toggleBtn(activeAssetTab === "images", Images, "Images Panel", onToggleImages)}
-      </div>
+      {/* ── Art prompt palette ────────────────────────────────────────
+       * Shown below the gen-type row. Each toggles inline settings in
+       * the tool panel. */}
+      {showImagePrompt && (
+        <div style={{ display: "flex", alignItems: "center", gap: 2, flexWrap: "wrap", padding: "4px 6px", margin: "0 -6px", borderBottom: "1px solid rgba(255,255,255,0.07)", background: "#12121c" }}>
+          {[
+            { id: "modelOptions", name: "sparkles",    title: "Art model options" },
+            { id: "embeddings",   name: "scan-text",   title: "Embeddings" },
+            { id: "lora",         name: "puzzle",      title: "LoRA" },
+            { id: "settings",     name: "settings-2",  title: "Generation settings" },
+            { id: "seed",         name: "shuffle",     title: "Seed randomization" },
+            { id: "imageSize",    name: "ruler-dimension-line", title: "Image size" },
+          ].map((item) => {
+            const isActive = activeArtAction === item.id;
+            return (
+              <button
+                key={item.id}
+                title={item.title}
+                onClick={() => onArtAction(isActive ? null : item.id)}
+                onMouseEnter={onBtnEnter}
+                onMouseLeave={onBtnLeave}
+                style={{
+                  ...btn,
+                  background: isActive ? "rgba(99,153,255,0.22)" : "transparent",
+                  color: isActive ? "var(--bs-primary)" : "rgba(255,255,255,0.35)",
+                  boxShadow: isActive ? "inset 0 0 0 1.5px rgba(99,153,255,0.55)" : "none",
+                }}
+              >
+                <LucideIcon name={item.name} size={14} />
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      {/* ── Palette of tools ──────────────────────────────────────────
+       * Shown only when the canvas-tools palette is active. Each button
+       * selects a drawing/editing mode (move, brush, eraser, etc.). */}
+      {showCanvasTools && (
+        <div style={{ display: "flex", alignItems: "center", gap: 2, flexWrap: "wrap", padding: "4px 6px", margin: "0 -6px", borderBottom: "1px solid rgba(255,255,255,0.07)", background: "#12121c" }}>
+          {TOOLS.map((t) => toolBtn(t.id, t.Icon))}
+        </div>
+      )}
     </div>
   );
 }

@@ -43,9 +43,11 @@ const CanvasStage = forwardRef<CanvasStageHandle, CanvasStageProps>(
       layers, layerGroups, displayOrder, activeLayerId,
       activeTool, moveMode, selectedLayerIds,
       brushSize, brushColor, maskStrokes,
+      inpaintMaskStrokes, generationType,
+      activeGridArea, setActiveGridArea,
       showGrid, gridSize, gridColor, showRuler, snapToGrid,
       onAddStroke, onMoveImage, onMoveLayer,
-      onAddMaskStroke, onAddLayerMaskStroke,
+      onAddMaskStroke, onAddLayerMaskStroke, onAddInpaintMaskStroke,
       onUndo, onRedo, setActiveTool, setActiveLayer,
       onZoomChange, isFitToView, isCenterView,
       onFitToViewChange, onCenterViewChange,
@@ -368,6 +370,10 @@ const CanvasStage = forwardRef<CanvasStageHandle, CanvasStageProps>(
           brushSize={brushSize}
           brushColor={brushColor}
           maskStrokes={maskStrokes}
+          inpaintMaskStrokes={inpaintMaskStrokes}
+          generationType={generationType}
+          activeGridArea={activeGridArea}
+          setActiveGridArea={setActiveGridArea}
           showGrid={showGrid}
           gridSize={gridSize}
           gridColor={gridColor}
@@ -408,6 +414,7 @@ const CanvasStage = forwardRef<CanvasStageHandle, CanvasStageProps>(
           onMoveLayer={onMoveLayer}
           onAddMaskStroke={onAddMaskStroke}
           onAddLayerMaskStroke={onAddLayerMaskStroke}
+          onAddInpaintMaskStroke={onAddInpaintMaskStroke}
         />
         <PixelRuler
           stageRef={stageRef}

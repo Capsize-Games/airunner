@@ -7,27 +7,29 @@ interface InfoDropdownPopupProps {
   version: string;
   modelPath: string;
   scheduler: string;
-  generationType: "txt2img" | "img2img";
+  generationType: "txt2img" | "img2img" | "inpaint";
   artOptions: ArtOptionsResponse | null;
   availableSchedulers: { label: string; value: string }[];
   onSelectVersion: (v: string) => void;
   onSelectModel: (m: string) => void;
   onSelectScheduler: (s: string) => void;
-  onSelectGenType: (v: "txt2img" | "img2img") => void;
+  onSelectGenType: (v: "txt2img" | "img2img" | "inpaint") => void;
   onClose: () => void;
 }
 
 function genTypeBtn(
-  type: "txt2img" | "img2img",
-  current: "txt2img" | "img2img",
-  onSelect: (v: "txt2img" | "img2img") => void,
+  type: "txt2img" | "img2img" | "inpaint",
+  current: "txt2img" | "img2img" | "inpaint",
+  onSelect: (v: "txt2img" | "img2img" | "inpaint") => void,
   onClose: () => void,
 ) {
   const active = type === current;
-  const label = type === "txt2img" ? "Text-to-image" : "Image-to-image";
+  const label = type === "txt2img" ? "Text-to-image" : type === "img2img" ? "Image-to-image" : "Inpaint";
   const desc = type === "txt2img"
     ? "Generate from a text description alone"
-    : "Transform an existing image with a text prompt";
+    : type === "img2img"
+      ? "Transform an existing image with a text prompt"
+      : "Edit specific areas of an image using a mask";
   return (
     <button type="button"
       onClick={() => { onSelect(type); onClose(); }}
@@ -70,6 +72,7 @@ export default function InfoDropdownPopup({
         <>
           {genTypeBtn("txt2img", generationType, onSelectGenType, onClose)}
           {genTypeBtn("img2img", generationType, onSelectGenType, onClose)}
+          {genTypeBtn("inpaint", generationType, onSelectGenType, onClose)}
         </>
       ) : (
         (() => {

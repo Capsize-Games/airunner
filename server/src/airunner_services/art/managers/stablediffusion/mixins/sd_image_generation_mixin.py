@@ -206,6 +206,21 @@ class SDImageGenerationMixin:
             self.logger.debug("Image generation interrupted")
             self._current_state = HandlerState.READY
             self.do_interrupt_image_generation = False
+        except Exception as oom_err:
+            if _is_out_of_memory_error(oom_err):
+                error_message = AIRUNNER_CUDA_OUT_OF_MEMORY_MESSAGE
+                self.logger.error(
+                    "SDWorker: out of memory error during generation"
+                )
+                if (
+                    self.image_request
+                    and self.image_request.callback
+                ):
+                    self.image_request.callback(error_message)
+                self._current_state = HandlerState.READY
+                clear_memory()
+            else:
+                raise
 
         clear_memory()
 

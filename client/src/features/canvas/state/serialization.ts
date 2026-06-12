@@ -78,6 +78,7 @@ export function serialization(
             brushColor:
               data.brushColor || prev.brushColor,
             maskStrokes: data.maskStrokes || [],
+            inpaintMaskStrokes: data.inpaintMaskStrokes || [],
             documentWidth:
               data.documentWidth ?? prev.documentWidth,
             documentHeight:

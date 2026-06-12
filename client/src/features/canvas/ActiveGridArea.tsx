@@ -10,6 +10,9 @@ interface ActiveGridAreaProps {
   documentHeight: number;
   onChange: (area: ActiveGridAreaType) => void;
   snapToGrid?: boolean;
+  /** When false the area is display-only (no drag/resize, passes pointer events
+   *  through) so it doesn't block drawing tools. */
+  interactive?: boolean;
 }
 
 const MIN_SNAP = 8;   // generation constraint — always applied
@@ -21,17 +24,19 @@ export default function ActiveGridArea({
   documentHeight,
   onChange,
   snapToGrid = false,
+  interactive = true,
 }: ActiveGridAreaProps) {
   const rectRef = useRef<Konva.Rect>(null);
   const trRef = useRef<Konva.Transformer>(null);
 
-  // Attach Transformer to Rect
+  // Attach Transformer to Rect (only while interactive — the Transformer is
+  // unmounted otherwise).
   useEffect(() => {
-    if (rectRef.current && trRef.current) {
+    if (interactive && rectRef.current && trRef.current) {
       trRef.current.nodes([rectRef.current]);
       trRef.current.getLayer()?.batchDraw();
     }
-  }, []);
+  }, [interactive]);
 
   // Snap to 16px visual grid when enabled, otherwise fine 8px constraint
   const snap = (val: number) =>
@@ -56,10 +61,12 @@ export default function ActiveGridArea({
     const scaleY = node.scaleY();
     node.scaleX(1);
     node.scaleY(1);
-    const nx = snap(node.x());
-    const ny = snap(node.y());
-    const nw = Math.max(MIN_SNAP, snap(node.width()  * scaleX));
-    const nh = Math.max(MIN_SNAP, snap(node.height() * scaleY));
+    // node.x()/width() are in document space (the layer carries the zoom), so
+    // clamp here rather than in boundBoxFunc (which works in screen space).
+    const nw = Math.min(documentWidth, Math.max(MIN_SNAP, snap(node.width() * scaleX)));
+    const nh = Math.min(documentHeight, Math.max(MIN_SNAP, snap(node.height() * scaleY)));
+    const nx = clamp(snap(node.x()), 0, documentWidth - nw);
+    const ny = clamp(snap(node.y()), 0, documentHeight - nh);
     node.x(nx); node.y(ny); node.width(nw); node.height(nh);
     onChange({ x: nx, y: ny, width: nw, height: nh });
   };
@@ -78,28 +85,33 @@ export default function ActiveGridArea({
         stroke="#5599ff"
         strokeWidth={1.5}
         dash={[6, 3]}
-        draggable
+        listening={interactive}
+        draggable={interactive}
         onDragEnd={handleDragEnd}
         onTransformEnd={handleTransformEnd}
       />
-      <Transformer
-        ref={trRef}
-        rotateEnabled={false}
-        keepRatio={false}
-        anchorSize={8}
-        anchorFill="#5599ff"
-        anchorStroke="#ffffff"
-        anchorCornerRadius={2}
-        borderStroke="#5599ff"
-        borderDash={[4, 2]}
-        boundBoxFunc={(_, newBox) => ({
-          ...newBox,
-          x: clamp(newBox.x, 0, documentWidth - newBox.width),
-          y: clamp(newBox.y, 0, documentHeight - newBox.height),
-          width: clamp(newBox.width, MIN_SNAP, documentWidth - newBox.x),
-          height: clamp(newBox.height, MIN_SNAP, documentHeight - newBox.y),
-        })}
-      />
+      {interactive && (
+        <Transformer
+          ref={trRef}
+          rotateEnabled={false}
+          keepRatio={false}
+          anchorSize={8}
+          anchorFill="#5599ff"
+          anchorStroke="#ffffff"
+          anchorCornerRadius={2}
+          borderStroke="#5599ff"
+          borderDash={[4, 2]}
+          boundBoxFunc={(oldBox, newBox) => {
+            // newBox is in absolute (screen) coordinates; only guard against
+            // collapse/inversion. Document-bounds clamping + snapping happen in
+            // handleTransformEnd using local coordinates.
+            if (newBox.width < MIN_SNAP || newBox.height < MIN_SNAP) {
+              return oldBox;
+            }
+            return newBox;
+          }}
+        />
+      )}
       <Text
         x={area.x + 4}
         y={area.y + area.height + 6}

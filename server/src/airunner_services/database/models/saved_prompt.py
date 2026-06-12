@@ -11,6 +11,7 @@ class SavedPrompt(BaseModel):
     __tablename__ = "saved_prompts"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
+    version = Column(String(64), nullable=True)
     prompt = Column(String, nullable=True)
     secondary_prompt = Column(String, nullable=True)
     negative_prompt = Column(String, nullable=True)

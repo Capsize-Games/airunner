@@ -75,6 +75,7 @@ export const serialize = (state: CanvasState): string =>
     displayOrder: state.displayOrder,
     activeGridArea: state.activeGridArea,
     maskStrokes: state.maskStrokes,
+    inpaintMaskStrokes: state.inpaintMaskStrokes,
     documentWidth: state.documentWidth,
     documentHeight: state.documentHeight,
     documentBgColor: state.documentBgColor,
@@ -141,6 +142,7 @@ export const defaultState = (): CanvasState => {
     textSize: 24,
     textColor: "#ffffff",
     maskStrokes: [] as StrokeNode[],
+    inpaintMaskStrokes: [] as StrokeNode[],
     snapToGrid: false,
     cropX: 0,
     cropY: 0,
@@ -222,6 +224,7 @@ function parseCanvasState(raw: string): CanvasState | null {
     parsed.cropY ??= 0;
     parsed.cropWidth ??= 512;
     parsed.cropHeight ??= 512;
+    parsed.inpaintMaskStrokes ??= [];
     parsed.gridShowGrid ??= true;
     parsed.gridSize ??= 64;
     parsed.gridColor ??= "#ffffff";

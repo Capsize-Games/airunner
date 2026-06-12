@@ -1,23 +1,42 @@
 import { Fragment, useState, useEffect } from "react";
+import { createPortal } from "react-dom";
+import { Alert } from "react-bootstrap";
 import { PromptTextareas } from "./art-prompt/PromptTextareas";
 import { PromptControls } from "./art-prompt/PromptControls";
 import { useArtPromptState } from "./art-prompt/useArtPromptState";
 import { useArtOverlays } from "./art-prompt/useArtOverlays";
 import GenerationInfoPanel from "./art-prompt/GenerationInfoPanel";
-import ToolbarRow from "./art-prompt/ToolbarRow";
 import InfoDropdownPopup from "./art-prompt/InfoDropdownPopup";
 import ArtPanelPopup from "./art-prompt/ArtPanelPopup";
+import LoraPanel from "./LoraPanel";
+import EmbeddingsPanel from "./EmbeddingsPanel";
+import { SettingsPopup } from "./art-prompt/SettingsPopup";
+import { ArtDropdownPicker } from "./art-prompt/ArtDropdownPicker";
+import { saveToStorage } from "./art-model/ArtModelStorage";
+import LucideIcon from "../shared/LucideIcon";
+import SourceImagePanel from "./art-prompt/SourceImagePanel";
 
 // side-effect: injects CSS for sliders / number spinners
 import "./art-prompt/ArtShared";
 
 export default function ArtPromptPanel({
   visible = true,
+  activeArtAction = null,
+  generationType: externalGenerationType,
+  onGenerationTypeChange: externalOnGenerationTypeChange,
 }: {
   visible?: boolean;
+  activeArtAction?: string | null;
+  generationType?: "txt2img" | "img2img" | "inpaint";
+  onGenerationTypeChange?: (v: "txt2img" | "img2img" | "inpaint") => void;
 }) {
-  const s = useArtPromptState();
+  const s = useArtPromptState({ generationType: externalGenerationType });
   const o = useArtOverlays();
+
+  // Use external generationType props when provided (e.g. from CanvasPanel),
+  // otherwise fall back to the internal state from useArtPromptState.
+  const genType = externalGenerationType ?? s.generationType;
+  const onGenTypeChange = externalOnGenerationTypeChange ?? s.setGenerationType;
 
   const [showInfo, setShowInfo] = useState(() => {
     try {
@@ -41,9 +60,124 @@ export default function ArtPromptPanel({
       <div className="flex-grow-1 d-flex flex-column overflow-hidden w-100">
         <div className="d-flex flex-column flex-grow-1 overflow-hidden">
           <div
-            className="flex-grow-1 d-flex flex-column bg-theme-input overflow-hidden min-h-0"
+            className="flex-grow-1 d-flex flex-column bg-theme-panel overflow-hidden min-h-0"
             style={{ border: "none", borderRadius: 0 }}
           >
+            {/* ── Tool options section ──────────────────────────────────
+             * Always present. Shows inline settings when a palette
+             * button is active; empty otherwise. */}
+            <div className="flex-shrink-0" style={{ borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
+              {activeArtAction && (
+                <div className="overflow-y-auto" style={{ padding: "6px 8px", maxHeight: 260 }}>
+                  {activeArtAction === "modelOptions" && (
+                    <div className="d-flex flex-column" style={{ gap: 6, padding: "2px 4px" }}>
+                      <div className="d-flex flex-column" style={{ gap: 8 }}>
+                        <div className="d-flex flex-column" style={{ gap: 2 }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 9, fontWeight: 700, letterSpacing: "0.07em", textTransform: "uppercase", color: "var(--theme-text-secondary)", opacity: 0.6 }}>
+                            <LucideIcon name="circle-dot" size={9} /> Version
+                          </div>
+                          <ArtDropdownPicker value={s.version} placeholder="Choose version…"
+                            options={s.artOptions?.versions?.map((v: { name: string }) => ({ label: v.name, value: v.name })) ?? []}
+                            onChange={s.handleVersion}
+                          />
+                        </div>
+                        <div className="d-flex flex-column" style={{ gap: 2 }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 9, fontWeight: 700, letterSpacing: "0.07em", textTransform: "uppercase", color: "var(--theme-text-secondary)", opacity: 0.6 }}>
+                            <LucideIcon name="circle-dot" size={9} /> Model
+                          </div>
+                          <ArtDropdownPicker value={s.modelPath} placeholder="Choose model…"
+                            options={s.artOptions?.versions?.find((v: { name: string }) => v.name === s.version)?.models ?? []}
+                            onChange={s.handleModel} disabled={!s.version}
+                          />
+                        </div>
+                        <div className="d-flex flex-column" style={{ gap: 2 }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 9, fontWeight: 700, letterSpacing: "0.07em", textTransform: "uppercase", color: "var(--theme-text-secondary)", opacity: 0.6 }}>
+                            <LucideIcon name="circle-dot" size={9} /> Scheduler
+                          </div>
+                          <ArtDropdownPicker value={s.scheduler} placeholder="Choose scheduler…"
+                            options={s.availableSchedulers}
+                            onChange={s.handleScheduler} disabled={!s.version || s.availableSchedulers.length === 0}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  {activeArtAction === "embeddings" && <EmbeddingsPanel hideHeader />}
+                  {activeArtAction === "lora" && <LoraPanel hideHeader />}
+                  {activeArtAction === "settings" && (
+                    <div>
+                      <SettingsPopup
+                        hideHeader
+                        steps={s.steps} cfgScale={s.cfgScale} nSamples={s.nSamples} imagesPerBatch={s.imagesPerBatch}
+                        onStepsChange={(v) => { s.setSteps(v); s.persistGen({ steps: v }); }}
+                        onCfgScaleChange={(v) => { s.setCfgScale(v); s.persistGen({ cfg_scale: v }); }}
+                        onNSamplesChange={(v) => { s.setNSamples(v); s.persistGen({ n_samples: v }); }}
+                        onImagesPerBatchChange={(v) => { s.setImagesPerBatch(v); s.persistGen({ images_per_batch: v }); }}
+                      />
+                    </div>
+                  )}
+                  {activeArtAction === "seed" && (
+                    <div style={{ padding: "6px 4px" }}>
+                      <div className="d-flex align-items-center" style={{ gap: 6 }}>
+                        <button
+                          type="button"
+                          title={s.seedRandomized ? "Switch to fixed seed" : "Switch to random seed"}
+                          onClick={s.handleToggleRandom}
+                          style={{
+                            display: "flex", alignItems: "center", justifyContent: "center",
+                            width: 28, height: 24, padding: 0,
+                            background: s.seedRandomized ? "rgba(99,153,255,0.22)" : "transparent",
+                            border: "none", borderRadius: 4, cursor: "pointer",
+                            color: s.seedRandomized ? "var(--bs-primary)" : "rgba(255,255,255,0.45)",
+                          }}
+                        >
+                          <LucideIcon name="shuffle" size={12} />
+                        </button>
+                        <input
+                          type="number"
+                          className="art-no-spin"
+                          value={s.seedRandomized ? "" : s.seed}
+                          placeholder={s.seedRandomized ? "Random" : String(s.seed)}
+                          disabled={s.seedRandomized}
+                          onChange={(e) => s.handleSeedChange(Number(e.target.value))}
+                          style={{
+                            flex: 1, height: 24,
+                            background: "var(--theme-input-bg)",
+                            border: "1px solid rgba(255,255,255,0.12)",
+                            borderRadius: 4, color: "var(--theme-text)",
+                            fontSize: 11, padding: "0 6px",
+                            opacity: s.seedRandomized ? 0.5 : 1,
+                          }}
+                        />
+                      </div>
+                    </div>
+                  )}
+                  {activeArtAction === "imageSize" && (
+                    <div style={{ padding: "6px 4px" }}>
+                      <div className="d-flex flex-column" style={{ gap: 6 }}>
+                        <div className="d-flex align-items-center" style={{ gap: 6 }}>
+                          <span style={{ fontSize: 9, color: "var(--theme-text-secondary)", width: 10, flexShrink: 0 }}>W</span>
+                          <input type="number" className="art-no-spin" value={s.genWidth}
+                            onChange={(e) => s.setGenWidth(Number(e.target.value))}
+                            onBlur={(e) => { const v = Math.max(64, Math.min(2048, Number(e.target.value))); s.setGenWidth(v); saveToStorage("gen_width", v); s.persistGen({ width: v }); }}
+                            style={{ height: 22, background: "var(--theme-input-bg)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 4, color: "var(--theme-text)", fontSize: 10, textAlign: "center", padding: "0 2px", width: 72 }}
+                          />
+                        </div>
+                        <div className="d-flex align-items-center" style={{ gap: 6 }}>
+                          <span style={{ fontSize: 9, color: "var(--theme-text-secondary)", width: 10, flexShrink: 0 }}>H</span>
+                          <input type="number" className="art-no-spin" value={s.genHeight}
+                            onChange={(e) => s.setGenHeight(Number(e.target.value))}
+                            onBlur={(e) => { const v = Math.max(64, Math.min(2048, Number(e.target.value))); s.setGenHeight(v); saveToStorage("gen_height", v); s.persistGen({ height: v }); }}
+                            style={{ height: 22, background: "var(--theme-input-bg)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 4, color: "var(--theme-text)", fontSize: 10, textAlign: "center", padding: "0 2px", width: 72 }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
             <PromptTextareas
               prompt={s.prompt}
               secondaryPrompt={s.secondaryPrompt}
@@ -79,7 +213,7 @@ export default function ArtPromptPanel({
               cfgScale={s.cfgScale}
               nSamples={s.nSamples}
               imagesPerBatch={s.imagesPerBatch}
-              generationType={s.generationType}
+              generationType={genType}
               seed={s.seed}
               seedRandomized={s.seedRandomized}
               genWidth={s.genWidth}
@@ -95,7 +229,7 @@ export default function ArtPromptPanel({
               onCfgScaleChange={s.setCfgScale}
               onNSamplesChange={s.setNSamples}
               onImagesPerBatchChange={s.setImagesPerBatch}
-              onGenerationTypeChange={s.setGenerationType}
+              onGenerationTypeChange={onGenTypeChange}
               onSeedChange={s.handleSeedChange}
               onToggleRandom={s.handleToggleRandom}
               onGenWidthChange={s.setGenWidth}
@@ -108,66 +242,97 @@ export default function ArtPromptPanel({
               openDropdown={o.openDropdown}
             />
 
-            {!showInfo && (
-              <ToolbarRow
-                version={s.version}
-                modelPath={s.modelPath}
-                scheduler={s.scheduler}
-                artOptions={s.artOptions}
-                availableSchedulers={s.availableSchedulers}
-                activeLoras={s.activeLoras}
-                activeEmbeddings={s.activeEmbeddings}
-                isMultiPrompt={s.isMultiPrompt}
-                seedRandomized={s.seedRandomized}
-                saving={s.saving}
-                steps={s.steps}
-                cfgScale={s.cfgScale}
-                nSamples={s.nSamples}
-                imagesPerBatch={s.imagesPerBatch}
-                genWidth={s.genWidth}
-                genHeight={s.genHeight}
-                generationType={s.generationType}
-                openPopup={s.openPopup}
-                openPanel={s.openPanel}
-                settingsAnchor={s.settingsAnchor}
-                promptSettingsAnchor={s.promptSettingsAnchor}
-                settingsBtnRef={s.settingsBtnRef}
-                prompt={s.prompt}
-                onVersionChange={s.handleVersion}
-                onModelChange={s.handleModel}
-                onSchedulerChange={s.handleScheduler}
-                onToggleRandom={s.handleToggleRandom}
-                onTogglePanel={(panel: string) =>
-                  s.togglePanel(panel as "lora" | "embeddings" | "savedPrompts")
-                }
-                onTogglePopup={(popup: string) =>
-                  s.togglePopup(popup as "settings" | "promptSettings")
-                }
-                onClearPrompts={s.handleClearPrompts}
-                onSavePrompt={s.handleSavePrompt}
-                onSetGenerationType={s.setGenerationType}
-                onWidthChange={s.setGenWidth}
-                onHeightChange={s.setGenHeight}
-                onStepsChange={s.setSteps}
-                onCfgScaleChange={s.setCfgScale}
-                onNSamplesChange={s.setNSamples}
-                onImagesPerBatchChange={s.setImagesPerBatch}
-                persistGen={s.persistGen}
-                showModelOptions={o.showModelOptions}
-                modelOptionsBtnRef={o.modelOptionsBtnRef}
-                modelOptionsAnchor={o.modelOptionsAnchor}
-                showSize={o.showSize}
-                sizeBtnRef={o.sizeBtnRef}
-                sizeAnchor={o.sizeAnchor}
-                showGenType={o.showGenType}
-                genTypeBtnRef={o.genTypeBtnRef}
-                genTypeAnchor={o.genTypeAnchor}
-                sizePortalId={o.sizePortalId}
-                toggleModelOptions={o.toggleModelOptions}
-                toggleSize={o.toggleSize}
-                toggleGenType={o.toggleGenType}
-                closeGenType={o.closeGenType}
+            {/* ── Generation type toggle row ───────────────────────────
+             * Three mutually exclusive toggle buttons: txt-to-img,
+             * img-to-img, inpaint (hidden for Z-Image since Z-Image
+             * does not support inpaint). */}
+            {(() => {
+              const isZImage = s.version === "Z-Image Turbo";
+              // If Z-Image is active and gen type is inpaint, switch to
+              // txt2img since inpaint is unavailable for Z-Image.
+              if (isZImage && genType === "inpaint") {
+                onGenTypeChange("txt2img");
+              }
+              return null;
+            })()}
+            <div style={{ display: "flex", alignItems: "center", gap: 2, padding: "4px 6px", margin: "0 -6px", borderBottom: "1px solid rgba(255,255,255,0.07)", background: "#12121c" }}>
+              {([
+                { id: "txt2img" as const, title: "TXT2IMG" },
+                { id: "img2img" as const, title: "IMG2IMG" },
+                ...(s.version !== "Z-Image Turbo"
+                  ? [{ id: "inpaint" as const, title: "INPAINT" }]
+                  : []),
+              ] as { id: "txt2img" | "img2img" | "inpaint"; title: string }[]).map(({ id, title }) => {
+                const active = genType === id;
+                return (
+                  <button
+                    key={id}
+                    title={title}
+                    onClick={() => onGenTypeChange(id)}
+                    onMouseEnter={(e) => {
+                      const bg = e.currentTarget.style.background;
+                      if (!bg.includes("rgba(99,153,255"))
+                        e.currentTarget.style.background = "rgba(255,255,255,0.08)";
+                    }}
+                    onMouseLeave={(e) => {
+                      const bg = e.currentTarget.style.background;
+                      if (!bg.includes("rgba(99,153,255"))
+                        e.currentTarget.style.background = "transparent";
+                    }}
+                    style={{
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      width: "auto", height: 26, padding: "0 8px",
+                      background: active ? "rgba(99,153,255,0.22)" : "transparent",
+                      border: "none", borderRadius: 4, cursor: "pointer", flexShrink: 0,
+                      color: active ? "var(--bs-primary)" : "rgba(255,255,255,0.35)",
+                      boxShadow: active ? "inset 0 0 0 1.5px rgba(99,153,255,0.55)" : "none",
+                      transition: "background 0.1s, color 0.1s",
+                    }}
+                  >
+                    <span style={{ whiteSpace: "nowrap", fontSize: 9, fontWeight: 600, letterSpacing: "0.03em", fontVariant: "small-caps" }}>
+                      {title}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* ── Source image panel (img2img / inpaint) ─────────────
+             * Shown only when generation type is img2img or inpaint.
+             * Displays the active layer's image as the source image
+             * preview. Placed below the gen type row, above the
+             * submit row. */}
+            {(genType === "img2img" || genType === "inpaint") && (
+              <SourceImagePanel
+                generationType={genType}
+                strength={s.strength}
+                onStrengthChange={s.setStrength}
+                feather={s.feather}
+                onFeatherChange={s.setFeather}
               />
+            )}
+
+            {s.errorMessage && (
+              <div
+                style={{
+                  padding: "0 6px 4px",
+                  flexShrink: 0,
+                }}
+              >
+                <Alert
+                  variant="danger"
+                  dismissible
+                  style={{
+                    margin: 0,
+                    padding: "4px 8px",
+                    fontSize: "0.75rem",
+                    lineHeight: 1.3,
+                  }}
+                  onClose={() => s.setErrorMessage(null)}
+                >
+                  {s.errorMessage}
+                </Alert>
+              </div>
             )}
 
             <div
@@ -220,24 +385,108 @@ export default function ArtPromptPanel({
         version={s.version}
         modelPath={s.modelPath}
         scheduler={s.scheduler}
-        generationType={s.generationType}
+        generationType={genType}
         artOptions={s.artOptions}
         availableSchedulers={s.availableSchedulers}
         onSelectVersion={s.handleVersion}
         onSelectModel={s.handleModel}
         onSelectScheduler={s.handleScheduler}
-        onSelectGenType={s.setGenerationType}
+        onSelectGenType={onGenTypeChange}
         onClose={o.closeDropdown}
       />
 
       <ArtPanelPopup
-        openPanel={s.openPanel}
+        openPanel={s.openPanel === "savedPrompts" ? "savedPrompts" : null}
         anchor={s.artPanelAnchor}
+        version={s.version}
         onLoadPrompt={s.handleLoadPrompt}
         onCloseSavedPrompts={() =>
           s.togglePanel("savedPrompts")
         }
       />
+
+      {/* ── Prompt settings popup ────────────────────────────────────
+       * Rendered via portal above the prompt-settings button in
+       * PromptControls. Shows New Prompt / Save Prompt / Load saved
+       * prompts actions. */}
+      {s.openPopup === "promptSettings" && s.promptSettingsAnchor && createPortal(
+        <div
+          id="art-prompt-settings-popup"
+          className="bg-theme-panel"
+          style={{
+            position: "fixed",
+            left: s.promptSettingsAnchor.left,
+            bottom: s.promptSettingsAnchor.bottom,
+            border: "1px solid rgba(255,255,255,0.14)",
+            borderRadius: 6,
+            zIndex: 1300,
+            boxShadow: "0 4px 20px rgba(0,0,0,0.5)",
+            minWidth: 180,
+            overflow: "hidden",
+          }}
+          onMouseDown={(e) => e.stopPropagation()}
+        >
+          {/* New Prompt */}
+          <button
+            type="button"
+            onClick={() => { s.handleClearPrompts(); s.togglePopup("promptSettings"); }}
+            style={{
+              display: "flex", alignItems: "center", gap: 8,
+              width: "100%", padding: "8px 12px",
+              border: "none", background: "transparent",
+              color: "var(--theme-text)", cursor: "pointer",
+              fontSize: "0.8rem",
+            }}
+            onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.06)"; }}
+            onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "transparent"; }}
+          >
+            <LucideIcon name="message-square-plus" size={14} />
+            <span>New Prompt</span>
+          </button>
+
+          {/* Save Prompt */}
+          <button
+            type="button"
+            onClick={() => { s.handleSavePrompt(); s.togglePopup("promptSettings"); }}
+            disabled={s.saving || !s.prompt.trim()}
+            style={{
+              display: "flex", alignItems: "center", gap: 8,
+              width: "100%", padding: "8px 12px",
+              border: "none", background: "transparent",
+              color: "var(--theme-text)", cursor: s.saving || !s.prompt.trim() ? "default" : "pointer",
+              fontSize: "0.8rem", opacity: s.saving || !s.prompt.trim() ? 0.4 : 1,
+            }}
+            onMouseEnter={(e) => {
+              if (!(s.saving || !s.prompt.trim()))
+                (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.06)";
+            }}
+            onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "transparent"; }}
+          >
+            <LucideIcon name={s.saving ? "loader" : "save"} size={14} />
+            <span>Save Prompt</span>
+          </button>
+
+          {/* Load saved prompts */}
+          <button
+            type="button"
+            onClick={() => { s.togglePanel("savedPrompts"); s.togglePopup("promptSettings"); }}
+            style={{
+              display: "flex", alignItems: "center", gap: 8,
+              width: "100%", padding: "8px 12px",
+              border: "none", background: "transparent",
+              color: "var(--theme-text)", cursor: "pointer",
+              fontSize: "0.8rem",
+              borderTop: "1px solid rgba(255,255,255,0.08)",
+            }}
+            onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.06)"; }}
+            onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "transparent"; }}
+          >
+            <LucideIcon name="folder-open" size={14} />
+            <span>Load saved prompts</span>
+          </button>
+        </div>,
+        document.body,
+      )}
     </Fragment>
   );
 }

@@ -12,6 +12,7 @@ interface ArtPanelPopupProps {
     width: number;
     height: number;
   } | null;
+  version: string;
   onLoadPrompt: (p: SavedPrompt) => void;
   onCloseSavedPrompts: () => void;
 }
@@ -19,6 +20,7 @@ interface ArtPanelPopupProps {
 export default function ArtPanelPopup({
   openPanel,
   anchor,
+  version,
   onLoadPrompt,
   onCloseSavedPrompts,
 }: ArtPanelPopupProps) {
@@ -44,6 +46,7 @@ export default function ArtPanelPopup({
       {openPanel === "embeddings" && <EmbeddingsPanel />}
       {openPanel === "savedPrompts" && (
         <SavedPromptsPanel
+          version={version}
           onLoad={onLoadPrompt}
           onClose={onCloseSavedPrompts}
         />

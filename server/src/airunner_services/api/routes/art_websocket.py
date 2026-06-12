@@ -127,6 +127,15 @@ async def _run_generation(
         model=str(msg.get("model")) if msg.get("model") else None,
         version=str(msg.get("version")) if msg.get("version") else None,
         scheduler=str(msg.get("scheduler")) if msg.get("scheduler") else None,
+        # img2img / inpaint conditioning. Defaults keep txt2img behaviour.
+        pipeline=str(msg.get("pipeline")) if msg.get("pipeline") else None,
+        strength=(
+            float(msg["strength"]) if msg.get("strength") is not None else None
+        ),
+        image_b64=str(msg.get("image_b64")) if msg.get("image_b64") else None,
+        mask_image_b64=(
+            str(msg.get("mask_b64")) if msg.get("mask_b64") else None
+        ),
     )
 
     msg_id = msg.get("_id", job_id)
