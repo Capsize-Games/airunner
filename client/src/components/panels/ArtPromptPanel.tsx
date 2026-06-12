@@ -178,19 +178,6 @@ export default function ArtPromptPanel({
               )}
             </div>
 
-            {/* ── Source image panel (img2img / inpaint) ─────────────
-             * Shown only when generation type is img2img or inpaint.
-             * Displays the active layer's image as the source. */}
-            {(genType === "img2img" || genType === "inpaint") && (
-              <SourceImagePanel
-                generationType={genType}
-                strength={s.strength}
-                onStrengthChange={s.setStrength}
-                feather={s.feather}
-                onFeatherChange={s.setFeather}
-              />
-            )}
-
             <PromptTextareas
               prompt={s.prompt}
               secondaryPrompt={s.secondaryPrompt}
@@ -254,6 +241,76 @@ export default function ArtPromptPanel({
               persistGen={s.persistGen}
               openDropdown={o.openDropdown}
             />
+
+            {/* ── Generation type toggle row ───────────────────────────
+             * Three mutually exclusive toggle buttons: txt-to-img,
+             * img-to-img, inpaint (hidden for Z-Image since Z-Image
+             * does not support inpaint). */}
+            {(() => {
+              const isZImage = s.version === "Z-Image Turbo";
+              // If Z-Image is active and gen type is inpaint, switch to
+              // txt2img since inpaint is unavailable for Z-Image.
+              if (isZImage && genType === "inpaint") {
+                onGenTypeChange("txt2img");
+              }
+              return null;
+            })()}
+            <div style={{ display: "flex", alignItems: "center", gap: 2, padding: "4px 6px", margin: "0 -6px", borderBottom: "1px solid rgba(255,255,255,0.07)", background: "#12121c" }}>
+              {([
+                { id: "txt2img" as const, title: "TXT2IMG" },
+                { id: "img2img" as const, title: "IMG2IMG" },
+                ...(s.version !== "Z-Image Turbo"
+                  ? [{ id: "inpaint" as const, title: "INPAINT" }]
+                  : []),
+              ] as { id: "txt2img" | "img2img" | "inpaint"; title: string }[]).map(({ id, title }) => {
+                const active = genType === id;
+                return (
+                  <button
+                    key={id}
+                    title={title}
+                    onClick={() => onGenTypeChange(id)}
+                    onMouseEnter={(e) => {
+                      const bg = e.currentTarget.style.background;
+                      if (!bg.includes("rgba(99,153,255"))
+                        e.currentTarget.style.background = "rgba(255,255,255,0.08)";
+                    }}
+                    onMouseLeave={(e) => {
+                      const bg = e.currentTarget.style.background;
+                      if (!bg.includes("rgba(99,153,255"))
+                        e.currentTarget.style.background = "transparent";
+                    }}
+                    style={{
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      width: "auto", height: 26, padding: "0 8px",
+                      background: active ? "rgba(99,153,255,0.22)" : "transparent",
+                      border: "none", borderRadius: 4, cursor: "pointer", flexShrink: 0,
+                      color: active ? "var(--bs-primary)" : "rgba(255,255,255,0.35)",
+                      boxShadow: active ? "inset 0 0 0 1.5px rgba(99,153,255,0.55)" : "none",
+                      transition: "background 0.1s, color 0.1s",
+                    }}
+                  >
+                    <span style={{ whiteSpace: "nowrap", fontSize: 9, fontWeight: 600, letterSpacing: "0.03em", fontVariant: "small-caps" }}>
+                      {title}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* ── Source image panel (img2img / inpaint) ─────────────
+             * Shown only when generation type is img2img or inpaint.
+             * Displays the active layer's image as the source image
+             * preview. Placed below the gen type row, above the
+             * submit row. */}
+            {(genType === "img2img" || genType === "inpaint") && (
+              <SourceImagePanel
+                generationType={genType}
+                strength={s.strength}
+                onStrengthChange={s.setStrength}
+                feather={s.feather}
+                onFeatherChange={s.setFeather}
+              />
+            )}
 
             {s.errorMessage && (
               <div

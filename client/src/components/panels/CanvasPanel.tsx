@@ -467,8 +467,6 @@ export default function CanvasPanel() {
                   onArtAction={(action) => {
                     setActiveArtAction((prev) => prev === action ? null : action);
                   }}
-                  generationType={generationType}
-                  onGenerationTypeChange={setGenerationType}
                   onCollapse={() => setLeftPanelCollapsed(true)}
                 />
 

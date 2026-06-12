@@ -23,8 +23,6 @@ const TOOLS: { id: string; label: string; Icon: React.ComponentType<{ size?: num
   { id: "ruler",   label: "Ruler",         Icon: Ruler },
 ];
 
-type GenType = "txt2img" | "img2img" | "inpaint";
-
 interface Props {
   activeTool: ActiveTool;
   onToolChange: (tool: ActiveTool) => void;
@@ -34,8 +32,6 @@ interface Props {
   onToggleCanvasTools: () => void;
   activeArtAction: string | null;
   onArtAction: (action: string | null) => void;
-  generationType: GenType;
-  onGenerationTypeChange: (v: GenType) => void;
   onCollapse?: () => void;
 }
 
@@ -57,8 +53,6 @@ export default function CanvasToolPanel({
   onToggleCanvasTools,
   activeArtAction,
   onArtAction,
-  generationType,
-  onGenerationTypeChange,
   onCollapse,
 }: Props) {
   const onBtnEnter = (e: React.MouseEvent<HTMLButtonElement>) => {
@@ -98,40 +92,6 @@ export default function CanvasToolPanel({
       </button>
     );
   };
-
-  const iconBtn = (
-    title: string,
-    Icon: React.ComponentType<{ size?: number; strokeWidth?: number }>,
-    onClick: () => void,
-  ) => (
-    <button key={title} title={title} onClick={onClick} style={btn}
-      onMouseEnter={onBtnEnter} onMouseLeave={onBtnLeave}>
-      <Icon size={14} strokeWidth={1.75} />
-    </button>
-  );
-
-  const toggleBtn = (
-    active: boolean,
-    Icon: React.ComponentType<{ size?: number; strokeWidth?: number }>,
-    title: string,
-    onClick: () => void,
-  ) => (
-    <button
-      key={title}
-      title={title}
-      onClick={onClick}
-      onMouseEnter={onBtnEnter}
-      onMouseLeave={onBtnLeave}
-      style={{
-        ...btn,
-        background: active ? "rgba(99,153,255,0.22)" : "transparent",
-        color: active ? "var(--bs-primary)" : "rgba(255,255,255,0.35)",
-        boxShadow: active ? "inset 0 0 0 1.5px rgba(99,153,255,0.55)" : "none",
-      }}
-    >
-      <Icon size={14} strokeWidth={1.75} />
-    </button>
-  );
 
   const tabBtnBase: React.CSSProperties = {
     flex: 1, padding: "5px 4px", background: "transparent", border: "none",
@@ -198,42 +158,6 @@ export default function CanvasToolPanel({
           </button>
         ))}
       </div>
-
-      {/* ── Generation type toggle row ─────────────────────────────────
-       * Shown above the art prompt palette. Three mutually exclusive
-       * toggle buttons: txt-to-img, img-to-img, inpaint. */}
-      {showImagePrompt && (
-        <div style={{ display: "flex", alignItems: "center", gap: 2, padding: "4px 6px", margin: "0 -6px", borderBottom: "1px solid rgba(255,255,255,0.07)", background: "#12121c" }}>
-          {([
-            { id: "txt2img" as GenType, title: "TXT2IMG" },
-            { id: "img2img" as GenType, title: "IMG2IMG" },
-            { id: "inpaint" as GenType, title: "INPAINT" },
-          ] as { id: GenType; title: string }[]).map(({ id, title }) => {
-            const active = generationType === id;
-            return (
-              <button
-                key={id}
-                title={title}
-                onClick={() => onGenerationTypeChange(id)}
-                onMouseEnter={onBtnEnter}
-                onMouseLeave={onBtnLeave}
-                style={{
-                  ...btn,
-                  background: active ? "rgba(99,153,255,0.22)" : "transparent",
-                  color: active ? "var(--bs-primary)" : "rgba(255,255,255,0.35)",
-                  boxShadow: active ? "inset 0 0 0 1.5px rgba(99,153,255,0.55)" : "none",
-                  width: "auto", height: 26,
-                  padding: "0 8px",
-                }}
-              >
-                <span style={{ whiteSpace: "nowrap", fontSize: 9, fontWeight: 600, letterSpacing: "0.03em", fontVariant: "small-caps" }}>
-                  {title}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-      )}
 
       {/* ── Art prompt palette ────────────────────────────────────────
        * Shown below the gen-type row. Each toggles inline settings in
