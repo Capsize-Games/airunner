@@ -167,19 +167,26 @@ async def _cleanup_ws(
 @router.websocket("/events")
 async def unified_events(websocket: WebSocket) -> None:
     """WebSocket endpoint for real-time events + RPC request/response."""
-    await websocket.accept()
-    bus = WsEventBus()
-    subscriber = _WsSubscriber(websocket)
-    drain_task = asyncio.create_task(subscriber.drain_loop())
+    from airunner_services.api.ws_tenant import ws_tenant_scope
 
-    try:
-        while True:
-            raw = await websocket.receive_json()
-            await _handle_ws_message(raw, websocket, subscriber, bus)
-    except Exception:
-        pass
-    finally:
-        await _cleanup_ws(subscriber, drain_task, bus, websocket)
+    await websocket.accept()
+    # WS upgrades bypass the HTTP auth middleware, so the JWT→tenant context
+    # is established here for the life of the socket. Without it, RPC calls
+    # made over this channel (conversation list/select, etc.) query the
+    # anonymous schema regardless of the signed-in account.
+    with ws_tenant_scope(websocket):
+        bus = WsEventBus()
+        subscriber = _WsSubscriber(websocket)
+        drain_task = asyncio.create_task(subscriber.drain_loop())
+
+        try:
+            while True:
+                raw = await websocket.receive_json()
+                await _handle_ws_message(raw, websocket, subscriber, bus)
+        except Exception:
+            pass
+        finally:
+            await _cleanup_ws(subscriber, drain_task, bus, websocket)
 
 
 # ── Re-export for backward compatibility ─────────────────────────────────

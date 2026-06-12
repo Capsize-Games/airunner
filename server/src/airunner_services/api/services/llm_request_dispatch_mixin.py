@@ -145,9 +145,16 @@ class LLMRequestDispatchMixin:
         node_id: Optional[str],
     ) -> dict[str, Any]:
         """Return one local-worker signal payload for an LLM request."""
+        from airunner_services.data.tenant import get_tenant_key
+
         data = {
             "llm_request": True,
             "request_id": request_id,
+            # Capture the active tenant here, while we are still on the
+            # request's context. The LLMGenerateWorker processes this in a
+            # separate long-lived thread that does not inherit context vars,
+            # so it re-applies this key before persisting the conversation.
+            "tenant_key": get_tenant_key(),
             "request_data": {
                 "action": action,
                 "prompt": prompt,

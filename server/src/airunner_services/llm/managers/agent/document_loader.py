@@ -50,14 +50,62 @@ def load_documents_from_file(
     file_path: str,
     metadata_loader: Optional[MetadataLoader] = None,
 ) -> list[Document]:
-    """Load documents for a single file path."""
-    if not os.path.exists(file_path):
-        return []
+    """Load documents for a single file path.
 
-    metadata = _resolve_metadata(file_path, metadata_loader)
-    extension = os.path.splitext(file_path)[1].lower()
-    loader = _FILE_LOADERS.get(extension, _load_text_document)
-    return loader(file_path, metadata)
+    ``file_path`` may be a local filesystem path (dev) or a storage-backend
+    key (object storage / uploaded docs). Keys are materialised to a local
+    temp file for reading; metadata keeps the original path/key.
+    """
+    real_path, cleanup = _materialize_local(file_path)
+    try:
+        if not real_path or not os.path.exists(real_path):
+            return []
+        metadata = _resolve_metadata(file_path, metadata_loader)
+        extension = os.path.splitext(file_path)[1].lower()
+        loader = _FILE_LOADERS.get(extension, _load_text_document)
+        return loader(real_path, metadata)
+    finally:
+        cleanup()
+
+
+def _materialize_local(file_path: str):
+    """Return ``(local_path, cleanup)`` for a path or storage-backend key.
+
+    No-op for paths that already exist on disk (local/dev). For object
+    storage keys, downloads to a temp file and returns a cleanup callable.
+    """
+
+    def _noop() -> None:
+        return None
+
+    if os.path.exists(file_path):
+        return file_path, _noop
+    try:
+        from airunner_services.storage.backends import get_storage_backend
+
+        backend = get_storage_backend()
+        existing = backend.local_path(file_path)
+        if existing:
+            return existing, _noop
+        if backend.exists(file_path):
+            import tempfile
+
+            data = backend.open(file_path)
+            suffix = os.path.splitext(file_path)[1]
+            tmp = tempfile.NamedTemporaryFile(delete=False, suffix=suffix)
+            tmp.write(data)
+            tmp.close()
+
+            def _cleanup() -> None:
+                try:
+                    os.unlink(tmp.name)
+                except OSError:
+                    pass
+
+            return tmp.name, _cleanup
+    except Exception:
+        pass
+    return file_path, _noop
 
 
 def extract_text_from_file(file_path: str) -> Optional[str]:

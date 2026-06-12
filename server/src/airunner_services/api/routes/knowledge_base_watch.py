@@ -137,36 +137,42 @@ def _remove_stale_documents(session, stale_paths: set[str]) -> None:
         ).delete(synchronize_session="fetch")
 
 
-def _sync_document_db(
-    disk_files: set[Path],
-) -> None:
-    """Sync the Document table with files on disk."""
-    from airunner_services.database.session import session_scope
+def sync_documents(session) -> None:
+    """Sync the Document table for the CURRENT tenant with files on disk.
 
-    with session_scope() as session:
-        disk_paths, existing_paths = _collect_existing_paths(session)
-        new_paths = disk_paths - existing_paths
-        stale_paths = existing_paths - disk_paths
+    Runs inside the caller's (tenant-scoped) ``session`` so documents are
+    registered into the right schema — this is what makes the knowledge
+    base panel reflect the on-disk folder per account. Previously the only
+    sync ran in a tenant-less startup thread, which registered everything
+    into ``tenant_anonymous`` where no authenticated client could see it.
 
-        _add_new_documents(session, new_paths)
-        _remove_stale_documents(session, stale_paths)
+    No-op when filesystem ingestion is disabled (the production storage
+    extension switches to upload-only / S3). The caller owns the
+    transaction; this flushes but does not commit.
+    """
+    from airunner_services.storage import filesystem_ingestion_enabled
 
-        if new_paths or stale_paths:
-            session.commit()
-            logger.info(
-                "KB sync: added %d, removed %d document(s)",
-                len(new_paths),
-                len(stale_paths),
-            )
+    if not filesystem_ingestion_enabled():
+        return
 
-
-def _scan_and_sync() -> None:
-    """Scan KB directories and sync the Document table with the filesystem."""
     dirs = _discover_kb_dirs()
     if not dirs:
         return
-    disk_files = _collect_disk_files(dirs)
-    _sync_document_db(disk_files)
+
+    disk_paths, existing_paths = _collect_existing_paths(session)
+    new_paths = disk_paths - existing_paths
+    stale_paths = existing_paths - disk_paths
+
+    _add_new_documents(session, new_paths)
+    _remove_stale_documents(session, stale_paths)
+
+    if new_paths or stale_paths:
+        session.flush()
+        logger.info(
+            "KB sync (tenant): added %d, removed %d document(s)",
+            len(new_paths),
+            len(stale_paths),
+        )
 
 
 def _setup_observer(dirs: list[Path]) -> _Observer:
@@ -182,13 +188,24 @@ def _setup_observer(dirs: list[Path]) -> _Observer:
 
 
 def _start_watcher() -> None:
-    """Start the background ``watchdog`` observer (idempotent)."""
+    """Start the background ``watchdog`` observer (idempotent).
+
+    Disabled entirely when filesystem ingestion is off (production storage
+    extension / object storage). The startup folder→DB scan was removed:
+    syncing now happens per-request in the tenant's schema (see
+    :func:`sync_documents`) instead of in this tenant-less thread, which
+    used to register every document into ``tenant_anonymous``.
+    """
+    from airunner_services.storage import filesystem_ingestion_enabled
+
     global _watcher_started, _watcher_observer
     if _watcher_started:
         return
+    if not filesystem_ingestion_enabled():
+        logger.info("Filesystem ingestion disabled — KB watcher not started.")
+        return
     _watcher_started = True
 
-    _scan_and_sync()
     dirs = _discover_kb_dirs()
     if not dirs:
         logger.info(

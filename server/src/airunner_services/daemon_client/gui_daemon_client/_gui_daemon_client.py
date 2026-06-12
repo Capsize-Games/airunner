@@ -939,6 +939,11 @@ class GuiDaemonClient:
         if not self.ensure_connected(auto_start=auto_start):
             raise RuntimeError(self._last_error or "daemon unavailable")
 
+        # Forward the active tenant so the (loopback) daemon scopes its DB
+        # work to the caller's schema. The daemon's tenant middleware honors
+        # ``x-tenant-key`` on loopback requests.
+        headers = self._with_tenant_header(headers)
+
         try:
             response = self._session.request(
                 method,
@@ -958,6 +963,20 @@ class GuiDaemonClient:
                 DaemonConnectionState.DISCONNECTED, self._last_error
             )
             raise RuntimeError(self._last_error) from exc
+
+    @staticmethod
+    def _with_tenant_header(
+        headers: Optional[Dict[str, str]],
+    ) -> Optional[Dict[str, str]]:
+        """Return headers augmented with the active tenant key, if any."""
+        from airunner_services.data.tenant import get_tenant_key
+
+        tenant_key = get_tenant_key()
+        if not tenant_key:
+            return headers
+        merged = dict(headers or {})
+        merged.setdefault("x-tenant-key", tenant_key)
+        return merged
 
     def _runtime_action(
         self,

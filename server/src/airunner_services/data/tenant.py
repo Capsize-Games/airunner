@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import os
 import re
 from contextvars import ContextVar, Token
@@ -30,6 +31,22 @@ def reset_tenant_key(token: Token[str | None]) -> None:
 def get_tenant_key() -> str | None:
     """Return the current tenant key if one is active."""
     return _tenant_key.get()
+
+
+@contextlib.contextmanager
+def tenant_scope(key: str | None):
+    """Activate one tenant key for the duration of a block.
+
+    Always restores the previous key on exit — including when ``key`` is
+    ``None`` — so the contextvar cannot leak across reused threads (e.g.
+    the long-lived ``LLMGenerateWorker`` queue thread that processes work
+    for many tenants in sequence).
+    """
+    token = set_tenant_key(key)
+    try:
+        yield
+    finally:
+        reset_tenant_key(token)
 
 
 def get_tenant_schema_prefix() -> str:
@@ -96,6 +113,7 @@ __all__ = [
     "reset_tenant_schema_prefix",
     "set_tenant_key",
     "set_tenant_schema_prefix",
+    "tenant_scope",
     "tenant_schema_for_key",
     "tenant_key_from_schema",
 ]

@@ -450,7 +450,24 @@ class LLMGenerateWorker(
             self._load_llm_thread()
 
     def handle_message(self, message: Dict) -> None:
-        """Process queued messages for LLM generation."""
+        """Process queued messages for LLM generation.
+
+        Runs on the worker's own thread, which does not inherit the
+        request context vars. Re-apply the tenant captured at dispatch
+        time so conversation persistence targets the caller's schema
+        instead of the anonymous one. ``tenant_scope`` always restores
+        the previous key, preventing leakage between tenants on this
+        long-lived thread.
+        """
+        from airunner_services.data.tenant import tenant_scope
+
+        with tenant_scope(
+            message.get("tenant_key") if isinstance(message, dict) else None
+        ):
+            self._handle_message(message)
+
+    def _handle_message(self, message: Dict) -> None:
+        """Dispatch one queued worker payload (tenant context applied)."""
         message_type = message.get("_message_type")
         if message_type == "llm_load":
             self.on_llm_load_model_signal(message.get("data", {}))

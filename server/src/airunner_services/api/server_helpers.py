@@ -73,8 +73,16 @@ def _setup_signal_bridges(app_instance: Any) -> None:
 
 
 def _register_watchers(app_instance: Any) -> None:
-    """Start file-system watchers — images, loras, models."""
+    """Start file-system watchers — images, loras, models, kb, embeddings.
+
+    Skipped entirely when filesystem ingestion is disabled (the
+    object_storage extension switches the app to upload-only / S3 mode).
+    """
     if app_instance is None:
+        return
+    from airunner_services.storage import filesystem_ingestion_enabled
+
+    if not filesystem_ingestion_enabled():
         return
     _start_all_watchers()
 

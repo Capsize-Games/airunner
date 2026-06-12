@@ -69,17 +69,24 @@ def _default_watch_paths() -> list[Path]:
     """Return the list of directories to watch for changes.
 
     Respects ``AIRUNNER_DEV_RELOAD_PATHS`` (colon-separated) when set;
-    otherwise defaults to ``/app/server/src`` (Docker dev container)
-    falling back to the ``server/src`` relative to the repo root.
+    otherwise defaults to ``/app/server/src`` and ``/app/extensions``
+    (Docker dev container bind-mounts), falling back to the
+    ``server/src`` relative to the repo root.
     """
     env_paths = os.environ.get("AIRUNNER_DEV_RELOAD_PATHS", "").strip()
     if env_paths:
         return [Path(p) for p in env_paths.split(":") if p]
 
-    # Default: the bind-mounted source inside the Docker dev container.
-    docker_src = Path("/app/server/src")
-    if docker_src.is_dir():
-        return [docker_src]
+    # Default: bind-mounted source directories inside the Docker dev
+    # container.  Extensions live at /app/extensions (docker-compose
+    # bind-mounts ./extensions there).
+    paths: list[Path] = []
+    for candidate in ("/app/server/src", "/app/extensions"):
+        p = Path(candidate)
+        if p.is_dir():
+            paths.append(p)
+    if paths:
+        return paths
 
     # Bare-metal fallback: resolve relative to this file's location.
     this_file = Path(__file__).resolve()

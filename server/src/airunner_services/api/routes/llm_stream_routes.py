@@ -6,6 +6,7 @@ import asyncio
 
 from fastapi import APIRouter, HTTPException, WebSocket, WebSocketDisconnect
 
+from airunner_services.api.ws_tenant import ws_tenant_scope
 from airunner_services.settings import AIRUNNER_LOG_LEVEL
 from airunner_services.utils.application import get_logger
 
@@ -33,79 +34,88 @@ async def _stream_to_socket(client, websocket: WebSocket, envelope) -> None:
 async def websocket_chat(websocket: WebSocket):
     """Stream chat responses from the runtime-backed local LLM."""
     await websocket.accept()
-    try:
-        client = resolve_llm_client(
-            require_websocket_runtime_registry(websocket)
+    # Activate the caller's tenant for the life of the socket so generated
+    # conversations are persisted to their schema rather than the anonymous
+    # one. WS upgrades skip the HTTP auth middleware, so this must be done
+    # here. See airunner_services.api.ws_tenant.
+    with ws_tenant_scope(websocket):
+        try:
+            client = resolve_llm_client(
+                require_websocket_runtime_registry(websocket)
+            )
+            await _chat_loop(client, websocket)
+        except WebSocketDisconnect:
+            logger.info("WebSocket connection closed")
+        except HTTPException as exc:
+            await websocket.send_json(
+                {"type": "error", "content": exc.detail, "done": True}
+            )
+        except Exception as exc:
+            logger.error("WebSocket error: %s", exc)
+            await websocket.send_json(
+                {
+                    "type": "error",
+                    "content": f"Server error: {str(exc)}",
+                    "done": True,
+                }
+            )
+
+
+async def _chat_loop(client, websocket: WebSocket) -> None:
+    """Process chat messages until the socket closes."""
+    while True:
+        data = await websocket.receive_json()
+
+        # Handle cancel for any previously running stream (belt-and-suspenders;
+        # the concurrent cancel below is the primary mechanism).
+        if data.get("type") == "cancel":
+            continue
+
+        has_content = bool(str(data.get("message", "")).strip()) or bool(
+            data.get("messages")
         )
-        while True:
-            data = await websocket.receive_json()
-
-            # Handle cancel for any previously running stream (belt-and-suspenders;
-            # the concurrent cancel below is the primary mechanism).
-            if data.get("type") == "cancel":
-                continue
-
-            has_content = bool(str(data.get("message", "")).strip()) or bool(
-                data.get("messages")
+        if not has_content:
+            await websocket.send_json(
+                {"type": "error", "content": "No message provided"}
             )
-            if not has_content:
-                await websocket.send_json(
-                    {"type": "error", "content": "No message provided"}
-                )
-                continue
+            continue
 
-            stream_task: asyncio.Task = asyncio.create_task(
-                _stream_to_socket(client, websocket, websocket_envelope(data))
-            )
-            # Race the stream against an incoming cancel message so the client
-            # can abort mid-generation without waiting for the full response.
-            cancel_task: asyncio.Task = asyncio.create_task(
-                websocket.receive_json()
-            )
+        stream_task: asyncio.Task = asyncio.create_task(
+            _stream_to_socket(client, websocket, websocket_envelope(data))
+        )
+        # Race the stream against an incoming cancel message so the client
+        # can abort mid-generation without waiting for the full response.
+        cancel_task: asyncio.Task = asyncio.create_task(
+            websocket.receive_json()
+        )
 
-            done, pending = await asyncio.wait(
-                {stream_task, cancel_task},
-                return_when=asyncio.FIRST_COMPLETED,
-            )
+        done, pending = await asyncio.wait(
+            {stream_task, cancel_task},
+            return_when=asyncio.FIRST_COMPLETED,
+        )
 
-            if cancel_task in done and not cancel_task.cancelled():
-                incoming = cancel_task.result()
-                if incoming.get("type") == "cancel":
-                    stream_task.cancel()
-                    try:
-                        await stream_task
-                    except (asyncio.CancelledError, Exception):
-                        pass
-                    await websocket.send_json({"type": "done", "done": True})
-                else:
-                    # Non-cancel message arrived during streaming — wait for
-                    # the current stream to finish, then process it next turn.
-                    for t in pending:
-                        t.cancel()
-                        try:
-                            await t
-                        except (asyncio.CancelledError, Exception):
-                            pass
-            else:
-                # Stream completed before any cancel arrived.
-                cancel_task.cancel()
+        if cancel_task in done and not cancel_task.cancelled():
+            incoming = cancel_task.result()
+            if incoming.get("type") == "cancel":
+                stream_task.cancel()
                 try:
-                    await cancel_task
+                    await stream_task
                 except (asyncio.CancelledError, Exception):
                     pass
-
-    except WebSocketDisconnect:
-        logger.info("WebSocket connection closed")
-    except HTTPException as exc:
-        await websocket.send_json(
-            {"type": "error", "content": exc.detail, "done": True}
-        )
-    except Exception as exc:
-        logger.error("WebSocket error: %s", exc)
-        await websocket.send_json(
-            {
-                "type": "error",
-                "content": f"Server error: {str(exc)}",
-                "done": True,
-            }
-        )
+                await websocket.send_json({"type": "done", "done": True})
+            else:
+                # Non-cancel message arrived during streaming — wait for
+                # the current stream to finish, then process it next turn.
+                for t in pending:
+                    t.cancel()
+                    try:
+                        await t
+                    except (asyncio.CancelledError, Exception):
+                        pass
+        else:
+            # Stream completed before any cancel arrived.
+            cancel_task.cancel()
+            try:
+                await cancel_task
+            except (asyncio.CancelledError, Exception):
+                pass

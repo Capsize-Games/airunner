@@ -10,12 +10,22 @@ from airunner_services.api.routes.events import _rpc_register
 
 @_rpc_register("GET", "/api/v1/knowledge-base/documents")
 async def _rpc_kb_documents(body: dict, **kwargs: Any) -> dict[str, Any]:
-    """List all knowledge base documents."""
+    """List all knowledge base documents.
+
+    Syncs the on-disk knowledge-base folder into the *current tenant's*
+    Document table first, so the panel reflects the local folder per
+    account in dev. In production (filesystem ingestion disabled) the sync
+    is a no-op and only uploaded documents are returned.
+    """
     try:
+        from airunner_services.api.routes.knowledge_base_watch import (
+            sync_documents,
+        )
         from airunner_services.database.models.document import Document
         from airunner_services.database.session import session_scope
 
         with session_scope() as session:
+            sync_documents(session)
             docs = session.query(Document).all()
             documents = [
                 {

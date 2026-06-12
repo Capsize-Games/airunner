@@ -171,10 +171,13 @@ def create_app(
     app.state.lifecycle_service = None
     _setup_registry_and_lifecycle(app, app_instance)
     _setup_signal_bridges(app_instance)
-    _register_watchers(app_instance)
     update_api_key_config()
     _setup_cors(app, allowed_origins, enable_cors)
+    # Load extensions before starting watchers: the object_storage extension's
+    # ready() hook disables filesystem ingestion, and _register_watchers must
+    # observe that to skip starting the directory watchers in prod.
     _load_and_apply_extensions(app)
+    _register_watchers(app_instance)
     register_middleware(app)
     register_routes(app)
     _mount_static_files(app)

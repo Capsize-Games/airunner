@@ -50,10 +50,10 @@ services:
       PYTHONPATH: /app/server/src:/app
       DEV_ENV: "1"
       # Set to "1" to enable watchdog-based auto-reload.
-      # The server restarts automatically when Python source files change.
+      # The server restarts automatically when Python source files change
+      # in /app/server/src and /app/extensions (bind-mounted host dirs).
       AIRUNNER_DEV_RELOAD: ${AIRUNNER_DEV_RELOAD:-0}
-      # Optional: colon-separated list of additional directories to watch.
-      # Defaults to /app/server/src inside the container.
+      # Optional: colon-separated override for watch directories.
       # AIRUNNER_DEV_RELOAD_PATHS: /app/server/src:/app/extensions
       # Optional: debounce interval in seconds (default: 1.0).
       # AIRUNNER_DEV_RELOAD_DEBOUNCE: "1.0"
