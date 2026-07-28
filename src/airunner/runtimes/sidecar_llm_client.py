@@ -179,7 +179,10 @@ class SidecarLLMClient(RuntimeClient):
     ) -> dict[str, Any]:
         """Convert a neutral invocation into the sidecar JSON payload."""
         payload = {
-            "messages": [message.model_dump() for message in invocation.messages],
+            "messages": [
+                message.model_dump(exclude_none=True)
+                for message in invocation.messages
+            ],
             "stream": stream,
             "temperature": invocation.temperature,
         }

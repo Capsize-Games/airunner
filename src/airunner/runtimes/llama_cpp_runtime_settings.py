@@ -42,6 +42,12 @@ def _env_float(name: str, default: float) -> float:
         return default
 
 
+def _env_optional_str(name: str) -> Optional[str]:
+    """Return a stripped environment value, or None when unset/blank."""
+    value = os.environ.get(name, "").strip()
+    return value or None
+
+
 def _load_llm_settings() -> Any:
     """Return persisted LLM settings when the database is available."""
     try:
@@ -179,10 +185,13 @@ class LlamaCppRuntimeSettings:
     n_ctx: int
     n_gpu_layers: int
     startup_timeout_seconds: float
+    remote_base_url: Optional[str] = None
 
     @property
     def endpoint(self) -> str:
-        """Return the HTTP endpoint exposed by the sidecar."""
+        """Return the HTTP endpoint for the sidecar or a configured remote server."""
+        if self.remote_base_url:
+            return self.remote_base_url.rstrip("/")
         return f"http://{self.host}:{self.port}"
 
 
@@ -216,4 +225,5 @@ def resolve_llama_cpp_runtime_settings() -> LlamaCppRuntimeSettings:
             "AIRUNNER_LLAMA_STARTUP_TIMEOUT",
             DEFAULT_STARTUP_TIMEOUT_SECONDS,
         ),
+        remote_base_url=_env_optional_str("AIRUNNER_LLAMA_REMOTE_BASE_URL"),
     )

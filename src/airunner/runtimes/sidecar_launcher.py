@@ -47,6 +47,11 @@ class SidecarLauncher:
         return self.settings.endpoint
 
     @property
+    def is_remote(self) -> bool:
+        """Return True when a remote llama.cpp endpoint is configured."""
+        return bool(self.settings.remote_base_url)
+
+    @property
     def last_error(self) -> str:
         """Return the last launcher error message when one exists."""
         return self._last_error
@@ -69,15 +74,20 @@ class SidecarLauncher:
         ]
 
     def start(self) -> None:
-        """Start the sidecar and wait until its health endpoint responds."""
+        """Start the sidecar, or confirm a configured remote server is up."""
         if self.is_ready():
             return
         self._last_error = ""
+        if self.is_remote:
+            self._wait_until_remote_ready()
+            return
         self._spawn_if_needed()
         self._wait_until_ready()
 
     def stop(self) -> None:
         """Stop the managed process when one is running."""
+        if self.is_remote:
+            return
         process = self._process
         self._process = None
         try:
@@ -93,7 +103,9 @@ class SidecarLauncher:
             self._close_log_handle()
 
     def is_running(self) -> bool:
-        """Return True when the subprocess is still alive."""
+        """Return True when the subprocess is alive, or always for a remote server."""
+        if self.is_remote:
+            return True
         return self._process is not None and self._process.poll() is None
 
     def is_ready(self) -> bool:
@@ -110,6 +122,12 @@ class SidecarLauncher:
         """Return the runtime health state exposed to AIRunner."""
         if self.is_ready():
             return RuntimeHealthStatus.READY, "ready"
+        if self.is_remote:
+            message = (
+                self._last_error
+                or f"Remote endpoint {self.endpoint} is not reachable"
+            )
+            return RuntimeHealthStatus.FAILED, message
         if self.is_running():
             return RuntimeHealthStatus.STARTING, "starting"
         if self._process is not None and self._process.poll() is not None:
@@ -166,6 +184,20 @@ class SidecarLauncher:
 
         self.stop()
         self._last_error = "Timed out waiting for llama.cpp to become ready"
+        raise RuntimeError(self._last_error)
+
+    def _wait_until_remote_ready(self) -> None:
+        """Poll a configured remote endpoint until it responds or times out."""
+        deadline = self._time_fn() + self.settings.startup_timeout_seconds
+        while self._time_fn() < deadline:
+            if self.is_ready():
+                return
+            self._sleep(0.1)
+
+        self._last_error = (
+            f"Timed out waiting for remote endpoint {self.endpoint} "
+            "to become ready"
+        )
         raise RuntimeError(self._last_error)
 
     def _health_url(self) -> str:

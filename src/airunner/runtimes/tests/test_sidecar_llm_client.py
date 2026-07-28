@@ -138,6 +138,7 @@ def test_invoke_wraps_chat_completion_response():
 
     assert launcher.started == 1
     assert opened[0]["messages"][0]["content"] == "Say hello"
+    assert "name" not in opened[0]["messages"][0]
     assert response.payload["content"] == "hello"
     assert response.payload["usage"]["total_tokens"] == 7
 
