@@ -139,6 +139,10 @@ start_services() {
     export AIRUNNER_SD_ON=1
     export AIRUNNER_LOG_LEVEL="${AIRUNNER_LOG_LEVEL:-INFO}"
     export AIRUNNER_DISABLE_STALE_DAEMON_CHECK=1
+    # NLTK's CWD-hijacking guard misfires here because the dev venv is nested
+    # inside the repo root (the daemon's CWD), so its own site-packages look
+    # like an untrusted CWD import. See venv/.../nltk/inisec.py for detail.
+    export NLTK_DISABLE_IMPORT_SECURITY=1
     export PYTHONPATH="${ROOT_DIR}/services/src:${ROOT_DIR}/src:${ROOT_DIR}/native/src${PYTHONPATH:+:${PYTHONPATH}}"
     export PATH="${DEV_VENV_BIN}:${SIDECAR_BIN_DIR}${PATH:+:${PATH}}"
 

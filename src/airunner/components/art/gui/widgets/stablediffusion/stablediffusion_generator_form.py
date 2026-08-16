@@ -358,7 +358,7 @@ class StableDiffusionGeneratorForm(BaseWidget):
         self.save_prompt_containers_to_settings()
 
     def on_application_settings_changed(self, data: Dict):
-        if data.get("setting_name") == "generator_settings":
+        if data.get("setting_name") == "GeneratorSettings":
             self.on_widget_element_changed(data)
             # if data.get("column_name") in ("use_compel",):
             #     self._toggle_compel_form_elements(data.get("value", True))

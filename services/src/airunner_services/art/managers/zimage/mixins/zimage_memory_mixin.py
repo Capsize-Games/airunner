@@ -216,17 +216,28 @@ class ZImageMemoryMixin:
         the image in smaller chunks. This is critical for avoiding OOM on
         16GB cards when using 8-bit quantization.
         """
+        vae = getattr(self._pipe, "vae", None)
+
         try:
             if hasattr(self._pipe, "enable_vae_slicing"):
                 self._pipe.enable_vae_slicing()
                 self.logger.debug("Enabled VAE slicing")
+            elif vae is not None and hasattr(vae, "enable_slicing"):
+                # Native pipelines (e.g. Z-Image's NativePipelineWrapper)
+                # don't expose the pipeline-level convenience method, but
+                # the underlying AutoencoderKL supports it directly.
+                vae.enable_slicing()
+                self.logger.debug("Enabled VAE slicing (direct)")
         except Exception as e:
             self.logger.debug(f"Could not enable VAE slicing: {e}")
-        
+
         try:
             if hasattr(self._pipe, "enable_vae_tiling"):
                 self._pipe.enable_vae_tiling()
                 self.logger.debug("Enabled VAE tiling")
+            elif vae is not None and hasattr(vae, "enable_tiling"):
+                vae.enable_tiling()
+                self.logger.debug("Enabled VAE tiling (direct)")
         except Exception as e:
             self.logger.debug(f"Could not enable VAE tiling: {e}")
 

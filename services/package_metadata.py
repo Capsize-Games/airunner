@@ -42,9 +42,9 @@ ML_RUNTIME_REQUIREMENTS = [
     "torch",
     "torchvision",
     "torchaudio",
-    "accelerate==1.7.0",
+    "accelerate==1.14.0",
     "huggingface-hub>=1.5.0,<2.0",
-    "tokenizers==0.22.0",
+    "tokenizers==0.22.2",
     "optimum==1.25.1",
 ]
 
@@ -53,10 +53,10 @@ NVIDIA_REQUIREMENTS = ["nvidia-cuda-runtime"]
 HUGGINGFACE_REQUIREMENTS = [
     "diffusers==0.38.0",
     "controlnet_aux==0.0.10",
-    "safetensors==0.6.2",
+    "safetensors==0.8.0",
     "kornia",
     "timm",
-    "compel==2.1.1",
+    "compel==2.4.0",
     "transformers==5.8.1",
     "datasets==4.0.0",
 ]
@@ -69,8 +69,8 @@ ART_REQUIREMENTS = [
 
 LLM_NATIVE_REQUIREMENTS = [
     "llama-cpp-python==0.3.21",
-    "bitsandbytes==0.45.5",
-    "sentence_transformers==3.4.1",
+    "bitsandbytes==0.46.1",
+    "sentence_transformers==5.6.1",
     "cryptography==46.0.7",
     "sumy==0.11.0",
     "sentencepiece==0.2.1",
@@ -81,7 +81,7 @@ LLM_NATIVE_REQUIREMENTS = [
     "rank-bm25>=0.2.2",
     "llama-cloud==0.1.23",
     "langchain-core==1.3.3",
-    "langchain-huggingface==1.0.0",
+    "langchain-huggingface==1.2.2",
     "langgraph==1.0.10",
     "langsmith>=0.8.0",
     "langchain-ollama==1.0.0",

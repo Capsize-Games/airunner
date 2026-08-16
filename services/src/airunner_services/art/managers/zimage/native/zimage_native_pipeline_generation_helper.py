@@ -2,10 +2,14 @@
 
 from __future__ import annotations
 
+import gc
+import logging
 from typing import Any, Callable, List, Optional, Tuple, Union
 
 import torch
 from PIL import Image
+
+logger = logging.getLogger(__name__)
 
 from airunner_services.art.managers.zimage.native.zimage_native_pipeline_sampling_helper import (
     ZImageNativePipelineSamplingHelper,
@@ -39,6 +43,7 @@ class ZImageNativePipelineGenerationHelper:
     ) -> Union[torch.Tensor, List[Image.Image]]:
         """Generate images from prompts or an input image."""
         self._validate_generation_inputs(num_inference_steps, image, strength)
+        self._prepare_transformer_for_denoising()
         is_img2img = image is not None
         batch_size, prompt_embeds, negative_embeds, attention_mask = (
             self._prepare_prompt_conditioning(
@@ -74,7 +79,36 @@ class ZImageNativePipelineGenerationHelper:
             callback,
             callback_steps,
         )
+        self._release_transformer_after_denoising()
         return self._sampling_helper.decode_output(latents, output_type)
+
+    def _prepare_transformer_for_denoising(self) -> None:
+        """Move the transformer back to the active device if offloaded."""
+        if not self._owner.cpu_offload_enabled:
+            return
+        transformer = self._owner.transformer
+        if transformer is None:
+            return
+        current_device = next(transformer.parameters()).device
+        if current_device.type == "cpu":
+            logger.debug("Moving transformer back to %s for denoising", self._owner.device)
+            transformer.to(self._owner.device)
+
+    def _release_transformer_after_denoising(self) -> None:
+        """Free transformer GPU memory once denoising is complete.
+
+        Frees VRAM ahead of the VAE decode step, which otherwise competes
+        with the resident transformer for the last available memory.
+        """
+        if not self._owner.cpu_offload_enabled:
+            return
+        transformer = self._owner.transformer
+        if transformer is None:
+            return
+        transformer.to("cpu")
+        gc.collect()
+        torch.cuda.empty_cache()
+        logger.debug("Offloaded transformer to CPU after denoising")
 
     def _validate_generation_inputs(
         self,

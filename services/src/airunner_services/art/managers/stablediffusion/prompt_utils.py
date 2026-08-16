@@ -5,13 +5,13 @@ Follows project standards: docstrings, type hints, logging.
 """
 
 from typing import Optional
-from airunner.components.art.managers.stablediffusion.prompt_weight_bridge import (
+from airunner_services.art.managers.stablediffusion.prompt_weight_bridge import (
     PromptWeightBridge,
 )
-from airunner.settings import (
+from airunner_services.settings import (
     AIRUNNER_LOG_LEVEL,
 )
-from airunner.utils.application import get_logger
+from airunner_services.utils.application import get_logger
 
 logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 

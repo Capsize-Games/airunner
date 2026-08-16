@@ -139,7 +139,7 @@ install_torch_stack() {
             ;;
     esac
 
-    "$python_bin" -m pip install \
-        torch torchvision torchaudio \
+    "$python_bin" -m pip install --force-reinstall \
+        torch torchvision torchaudio torchcodec \
         --index-url "$index_url"
 }

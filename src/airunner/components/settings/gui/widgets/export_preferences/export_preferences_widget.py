@@ -83,10 +83,18 @@ class ExportPreferencesWidget(BaseWidget):
             self.metadata_settings.image_export_metadata_version is True
         )
         self.ui.metadata_lora.setChecked(
-            self.metadata_settings.image_export_metadata_lora is True
+            getattr(
+                self.metadata_settings, "image_export_metadata_lora", False
+            )
+            is True
         )
         self.ui.metadata_embeddings.setChecked(
-            self.metadata_settings.image_export_metadata_embeddings is True
+            getattr(
+                self.metadata_settings,
+                "image_export_metadata_embeddings",
+                False,
+            )
+            is True
         )
         self.ui.metadata_timestamp.setChecked(
             self.metadata_settings.image_export_metadata_timestamp is True
@@ -163,10 +171,14 @@ class ExportPreferencesWidget(BaseWidget):
         self.update_metadata_settings(image_export_metadata_version=val)
 
     def action_toggled_lora(self, val):
-        self.update_metadata_settings(image_export_metadata_lora=val)
+        # image_export_metadata_lora was retired from MetadataSettings
+        # (adapter schema removal); nothing to persist.
+        pass
 
     def action_toggled_embeddings(self, val):
-        self.update_metadata_settings(image_export_metadata_embeddings=val)
+        # image_export_metadata_embeddings was retired from MetadataSettings
+        # (adapter schema removal); nothing to persist.
+        pass
 
     def action_toggled_timestamp(self, val):
         self.update_metadata_settings(image_export_metadata_timestamp=val)

@@ -11,16 +11,6 @@ from typing import Sequence, Union
 from alembic import op
 
 from airunner_services.database.base import Base
-from airunner_model.db.bootstrap import (
-    set_default_ai_models,
-    set_default_schedulers,
-    set_default_shortcut_keys,
-    set_default_prompt_templates,
-    set_default_controlnet_models,
-    set_default_font_settings,
-    set_default_pipeline_values,
-    set_image_filter_settings,
-)
 
 
 # revision identifiers, used by Alembic.
@@ -33,14 +23,6 @@ depends_on: Union[str, Sequence[str], None] = None
 def upgrade() -> None:
     # Create tables using models
     Base.metadata.create_all(bind=op.get_bind())
-    set_default_ai_models()
-    set_default_schedulers()
-    set_default_shortcut_keys()
-    set_default_prompt_templates()
-    set_default_controlnet_models()
-    set_default_font_settings()
-    set_default_pipeline_values()
-    set_image_filter_settings()
 
 
 def downgrade() -> None:

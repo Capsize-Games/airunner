@@ -96,6 +96,17 @@ class ZImageNativePipeline:
         self.is_fp8 = False
         self.hf_device_map = None
         self._loaded_components: List[str] = []
+        self.cpu_offload_enabled = False
+
+    def enable_cpu_offload(self, gpu_id: Optional[int] = None) -> None:
+        """Enable transformer CPU offload between denoising and VAE decode.
+
+        The transformer is moved to CPU right after the denoising loop
+        finishes and back to the active device before the next call's
+        denoising loop starts, freeing VRAM for the VAE decode step.
+        """
+        del gpu_id
+        self.cpu_offload_enabled = True
 
     def _get_prompt_helper(self) -> ZImageNativePipelinePromptHelper:
         """Return the cached prompt-conditioning helper."""

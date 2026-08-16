@@ -117,14 +117,10 @@ install_packages() {
     case "$role" in
         daemon)
             "$venv_python" -m pip install \
-                "$ROOT_DIR/model" \
-                "$ROOT_DIR/api" \
                 "$ROOT_DIR/services[$service_profile]"
             ;;
         gui-client)
             "$venv_python" -m pip install \
-                "$ROOT_DIR/model" \
-                "$ROOT_DIR/api" \
                 "$ROOT_DIR/services[$service_profile]" \
                 "$ROOT_DIR"
             ;;

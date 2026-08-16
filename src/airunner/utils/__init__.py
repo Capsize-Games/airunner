@@ -1,6 +1,5 @@
 __all__ = [
     "create_worker",
-    "get_version",
     "open_file_path",
     "parse_template",
     "get_platform_name",
@@ -25,10 +24,6 @@ def __getattr__(name):
         from .application.create_worker import create_worker
 
         return create_worker
-    elif name == "get_version":
-        from .application.get_version import get_version
-
-        return get_version
     elif name == "open_file_path":
         from .os.open_file_path import open_file_path
 

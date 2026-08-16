@@ -1,6 +1,5 @@
 from airunner.utils.application.create_worker import create_worker
 from airunner.utils.application.get_logger import get_logger
-from airunner.utils.application.get_version import get_version
 from airunner.utils.application.mediator_mixin import MediatorMixin
 from airunner.utils.application.platform_info import (
     get_platform_name,
@@ -20,7 +19,6 @@ from airunner.utils.application.ui_loader import (
 __all__ = [
     "create_worker",
     "get_logger",
-    "get_version",
     "MediatorMixin",
     "SignalMediator",
     "get_platform_name",
