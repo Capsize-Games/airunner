@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Dict, List, Optional
 
-from airunner_services.contract_enums import GeneratorSection
+from airunner_common.contract_enums import GeneratorSection
 from airunner_services.api.api_service_base import APIServiceBase
 from airunner_services.model_management import ModelResourceManager, ModelState
 from airunner_services.utils.application.enum_resolver import signal_code_proxy

@@ -8,7 +8,7 @@ import time
 import uuid
 from typing import Any, Callable
 
-from airunner_services.contract_enums import LLMActionType
+from airunner_common.contract_enums import LLMActionType
 
 from airunner_services.api.legacy_openai_helpers import (
     build_usage,

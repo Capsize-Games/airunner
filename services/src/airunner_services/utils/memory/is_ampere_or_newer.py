@@ -1,6 +1,6 @@
 import torch
 
-from airunner_services.settings import AIRUNNER_DISABLE_FLASH_ATTENTION
+from airunner_common.settings import AIRUNNER_DISABLE_FLASH_ATTENTION
 
 
 def is_ampere_or_newer(device: int) -> bool:

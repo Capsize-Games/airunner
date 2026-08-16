@@ -33,7 +33,7 @@ for _path in (
         sys.path.append(_path_str)
 
 from airunner_services.llm.provider_config import LLMProviderConfig
-from airunner_services.settings import AIRUNNER_BASE_PATH
+from airunner_common.settings import AIRUNNER_BASE_PATH
 
 
 BUNDLED_REFERENCE_SPEAKER = (

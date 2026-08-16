@@ -10,10 +10,10 @@ from typing import Optional
 
 import torch
 
-from airunner_services.settings import AIRUNNER_MEM_LLM_DEVICE
-from airunner_services.settings import AIRUNNER_MEM_SD_DEVICE
-from airunner_services.settings import AIRUNNER_MEM_STT_DEVICE
-from airunner_services.settings import AIRUNNER_MEM_TTS_DEVICE
+from airunner_common.settings import AIRUNNER_MEM_LLM_DEVICE
+from airunner_common.settings import AIRUNNER_MEM_SD_DEVICE
+from airunner_common.settings import AIRUNNER_MEM_STT_DEVICE
+from airunner_common.settings import AIRUNNER_MEM_TTS_DEVICE
 from airunner_services.utils.application import get_torch_device
 from airunner_services.utils.application import MediatorMixin
 from airunner_services.utils.application import RuntimeContextMixin

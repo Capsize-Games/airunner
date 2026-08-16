@@ -9,7 +9,7 @@ from airunner_services.database.models.generator_settings import (
 )
 from airunner_services.database.models.path_settings import PathSettings
 from airunner_services.database.session import session_scope
-from airunner_services.settings import AIRUNNER_ART_MODEL_PATH
+from airunner_common.settings import AIRUNNER_ART_MODEL_PATH
 
 _DEFAULT_BASE_PATH = Path(
     os.path.expanduser(os.path.join("~", ".local", "share", "airunner"))

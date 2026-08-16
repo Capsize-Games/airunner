@@ -21,9 +21,9 @@ def _load_checkout_version() -> str:
     for candidate in current.parents:
         if not (candidate / "pyproject.toml").exists():
             continue
-        module_path = candidate / "services" / "package_metadata.py"
+        module_path = candidate / "shared" / "airunner_common" / "package_metadata.py"
         spec = spec_from_file_location(
-            "airunner_services_package_metadata",
+            "airunner_common_package_metadata",
             module_path,
         )
         if spec is None or spec.loader is None:

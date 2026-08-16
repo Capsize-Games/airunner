@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import Dict, Set, Any
 
 from airunner_services.download_temp_cleanup import cleanup_stale_download_dir
-from airunner_services.contract_enums import SignalCode
+from airunner_common.contract_enums import SignalCode
 from airunner_services.utils.application.log_hygiene import (
     summarize_mapping_keys,
 )

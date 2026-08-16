@@ -13,7 +13,7 @@ from pathlib import Path
 from typing import Annotated, Any, List
 
 from airunner_services.llm.core.tool_registry import tool, ToolCategory
-from airunner_services.settings import AIRUNNER_LOG_LEVEL
+from airunner_common.settings import AIRUNNER_LOG_LEVEL
 from airunner_services.utils.application import get_logger
 
 logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)

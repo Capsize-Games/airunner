@@ -270,7 +270,7 @@ def _validate_host_binding(args: argparse.Namespace) -> bool:
 
 def _configure_environment(args: argparse.Namespace, port: int) -> None:
     """Set headless environment variables inherited by the daemon."""
-    from airunner_native.linux_bundle_layout import build_linux_bundle_layout
+    from airunner_common.linux_bundle_layout import build_linux_bundle_layout
 
     bundle_layout = build_linux_bundle_layout()
     os.environ.setdefault("AIRUNNER_HEADLESS", "1")
@@ -335,9 +335,9 @@ def _set_service_env(
 
 def _configure_logging():
     """Configure supervisor logging and return the logger and level."""
-    from airunner_services.settings import AIRUNNER_LOG_LEVEL
+    from airunner_common.settings import AIRUNNER_LOG_LEVEL
     from airunner_services.utils.application import get_logger
-    from airunner_services.utils.application.logging_utils import (
+    from airunner_common.logging_utils import (
         configure_headless_logging,
     )
 
@@ -439,8 +439,8 @@ def _build_daemon_client(config_path: Path):
     from airunner_services.daemon_client.gui_daemon_client import (
         GuiDaemonClient,
     )
-    from airunner_native.linux_bundle_layout import build_linux_bundle_layout
-    from airunner_services.settings import DEV_ENV
+    from airunner_common.linux_bundle_layout import build_linux_bundle_layout
+    from airunner_common.settings import DEV_ENV
 
     bundle_layout = build_linux_bundle_layout()
 

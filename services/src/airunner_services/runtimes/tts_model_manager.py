@@ -6,10 +6,10 @@ import os
 from typing import Any
 from typing import Optional
 
-from airunner_services.contract_enums import ModelStatus
-from airunner_services.contract_enums import ModelType
-from airunner_services.settings import AIRUNNER_BASE_PATH
-from airunner_services.settings import AIRUNNER_LOG_LEVEL
+from airunner_common.contract_enums import ModelStatus
+from airunner_common.contract_enums import ModelType
+from airunner_common.settings import AIRUNNER_BASE_PATH
+from airunner_common.settings import AIRUNNER_LOG_LEVEL
 from airunner_services.database.models.application_settings import (
     ApplicationSettings,
 )

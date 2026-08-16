@@ -5,7 +5,7 @@ from __future__ import annotations
 import base64
 from typing import Any, Optional
 
-from airunner_services.settings import AIRUNNER_LOG_LEVEL
+from airunner_common.settings import AIRUNNER_LOG_LEVEL
 from airunner_services.ipc.messages import EnvelopeStatus, RequestEnvelope
 from airunner_services.runtimes.contracts import RuntimeAction, RuntimeKind
 from airunner_services.runtimes.stt_executor import STTExecutor

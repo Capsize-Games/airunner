@@ -10,7 +10,7 @@ from transformers.utils.quantization_config import (
     GPTQConfig,
 )
 
-from airunner_services.settings import AIRUNNER_LOCAL_FILES_ONLY
+from airunner_common.settings import AIRUNNER_LOCAL_FILES_ONLY
 from airunner_services.llm.quantization_policy import (
     create_bitsandbytes_config,
     resolve_quantization_dtype,

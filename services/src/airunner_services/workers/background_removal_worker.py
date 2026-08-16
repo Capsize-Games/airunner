@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from airunner_services.contract_enums import ModelStatus, ModelType, SignalCode
+from airunner_common.contract_enums import ModelStatus, ModelType, SignalCode
 from airunner_services.database.models.drawingpad_settings import (
     DrawingPadSettings,
 )

@@ -5,7 +5,7 @@ from typing import Optional
 from airunner.components.model_management.hardware_profiler import (
     HardwareProfile,
 )
-from airunner.settings import AIRUNNER_LOG_LEVEL
+from airunner_common.settings import AIRUNNER_LOG_LEVEL
 from airunner.utils.application import get_logger
 
 

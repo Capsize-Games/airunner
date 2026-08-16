@@ -6,7 +6,7 @@ import os
 import os.path
 from pathlib import Path
 
-from airunner_startup_env import (
+from airunner_common.startup_env import (
     configure_early_torch_allocator_environment,
 )
 
@@ -18,7 +18,7 @@ from PySide6.QtGui import QWindow
 
 from airunner.utils.application import get_logger
 from airunner.utils.application.log_hygiene import summarize_text
-from airunner.settings import (
+from airunner_common.settings import (
     AIRUNNER_LOG_LEVEL,
     AIRUNNER_USER_DATA_PATH,
     LOCAL_SERVER_PORT,

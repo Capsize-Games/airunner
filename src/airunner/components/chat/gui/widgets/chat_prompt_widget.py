@@ -58,7 +58,7 @@ from airunner.components.llm.managers.llm_request import LLMRequest
 from airunner.components.llm.workers.llm_response_worker import (
     LLMResponseWorker,
 )
-from airunner.settings import (
+from airunner_common.settings import (
     AIRUNNER_ART_ENABLED,
     AIRUNNER_LOG_LEVEL,
     RETIRED_SLASH_COMMANDS,

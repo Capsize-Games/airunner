@@ -12,7 +12,7 @@ from airunner_services.llm.managers.batch_request_manager import (
     BatchRequest,
     BatchResponse,
 )
-from airunner_services.settings import AIRUNNER_LOG_LEVEL
+from airunner_common.settings import AIRUNNER_LOG_LEVEL
 from airunner_services.utils.application import get_logger
 
 

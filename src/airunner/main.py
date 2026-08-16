@@ -15,7 +15,7 @@ import sys
 import time
 import warnings
 
-from airunner_startup_env import (
+from airunner_common.startup_env import (
     configure_early_torch_allocator_environment,
 )
 
@@ -41,7 +41,7 @@ def configure_startup_warning_filters() -> None:
 
 configure_startup_warning_filters()
 
-from airunner.settings import AIRUNNER_DISABLE_FACEHUGGERSHIELD
+from airunner_common.settings import AIRUNNER_DISABLE_FACEHUGGERSHIELD
 
 from airunner.qt_runtime_env import configure_early_qt_environment
 
@@ -137,7 +137,7 @@ os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
 # Initialize the logger
 import logging
 
-from airunner.utils.application.logging_utils import (
+from airunner_common.logging_utils import (
     configure_noisy_loggers,
 )
 
@@ -167,7 +167,7 @@ def initialize_loggers():
 initialize_loggers()
 
 import sys
-from airunner.settings import (
+from airunner_common.settings import (
     AIRUNNER_BASE_PATH,
     AIRUNNER_LOG_FILE,
     AIRUNNER_SAVE_LOG_TO_FILE,

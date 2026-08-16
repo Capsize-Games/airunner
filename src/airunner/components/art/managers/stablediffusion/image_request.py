@@ -3,7 +3,7 @@ from dataclasses import dataclass, asdict
 
 from PIL import Image
 
-from airunner.settings import AIRUNNER_DEFAULT_SCHEDULER
+from airunner_common.settings import AIRUNNER_DEFAULT_SCHEDULER
 from airunner.enums import (
     DEFAULT_ART_VERSION,
     DEFAULT_IMAGE_GENERATOR,

@@ -34,7 +34,7 @@ from airunner_services.llm.managers.mixins import (
 	ToolFilteringMixin,
 	ValidationMixin,
 )
-from airunner_services.contract_enums import ModelStatus, ModelType
+from airunner_common.contract_enums import ModelStatus, ModelType
 from airunner_services.conversations.conversation_history_manager import (
 	ConversationHistoryManager,
 )

@@ -13,7 +13,7 @@ from PIL.Image import Image
 from airunner_services.art.managers.stablediffusion.noise_sampler import (
     DeterministicSDENoiseSampler,
 )
-from airunner_services.settings import AIRUNNER_MIN_NUM_INFERENCE_STEPS_IMG2IMG
+from airunner_common.settings import AIRUNNER_MIN_NUM_INFERENCE_STEPS_IMG2IMG
 from airunner_services.utils.image import convert_image_to_binary
 
 

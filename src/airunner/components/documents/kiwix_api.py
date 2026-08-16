@@ -9,7 +9,7 @@ from typing import List, Dict, Optional
 import requests
 import xml.etree.ElementTree as ET
 
-from airunner.settings import AIRUNNER_LOG_LEVEL
+from airunner_common.settings import AIRUNNER_LOG_LEVEL
 from airunner.utils.application import get_logger
 
 logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)

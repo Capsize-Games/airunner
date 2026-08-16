@@ -8,7 +8,7 @@ from typing import Optional
 from airunner_services.art.managers.stablediffusion.prompt_weight_bridge import (
     PromptWeightBridge,
 )
-from airunner_services.settings import (
+from airunner_common.settings import (
     AIRUNNER_LOG_LEVEL,
 )
 from airunner_services.utils.application import get_logger

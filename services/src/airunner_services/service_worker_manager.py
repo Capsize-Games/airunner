@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any, Callable, Optional
 
-from airunner_services.contract_enums import ModelStatus
+from airunner_common.contract_enums import ModelStatus
 from airunner_services.utils.application.create_worker import create_worker
 
 WorkerFactory = Callable[[type[Any]], Any]

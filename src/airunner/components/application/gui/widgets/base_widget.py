@@ -24,7 +24,7 @@ from airunner.gui.styles.styles_mixin import StylesMixin
 from airunner.components.application.gui.windows.main.settings_mixin import (
     SettingsMixin,
 )
-from airunner.settings import (
+from airunner_common.settings import (
     CONTENT_WIDGETS_BASE_PATH,
 )
 from airunner.utils.application.mediator_mixin import MediatorMixin

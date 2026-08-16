@@ -15,7 +15,7 @@ from fastapi import (
 
 from airunner_services.ipc.messages import EnvelopeStatus, RequestEnvelope
 from airunner_services.runtimes.contracts import RuntimeAction, RuntimeKind
-from airunner_services.settings import AIRUNNER_LOG_LEVEL
+from airunner_common.settings import AIRUNNER_LOG_LEVEL
 from airunner_services.utils.application import get_logger
 
 from .stt_helpers import (
@@ -140,7 +140,7 @@ async def websocket_transcription(websocket: WebSocket):
         from airunner_services.api.services.stt_services import (
             STTAPIService,
         )
-        from airunner_services.contract_enums import SignalCode
+        from airunner_common.contract_enums import SignalCode
         from airunner_services.utils.application.signal_mediator import (
             SignalMediator,
         )

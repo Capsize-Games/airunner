@@ -5,7 +5,7 @@ import time
 import threading
 from typing import Dict, Optional
 
-from airunner_services.contract_enums import ModelStatus, ModelType
+from airunner_common.contract_enums import ModelStatus, ModelType
 from airunner_services.llm.llm_response import LLMResponse
 from airunner_services.llm.provider_config import LLMProviderConfig
 from airunner_services.utils.application.enum_resolver import signal_code_proxy

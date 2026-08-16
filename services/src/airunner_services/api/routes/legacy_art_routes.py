@@ -7,7 +7,7 @@ from typing import Any, Callable
 
 from fastapi import APIRouter, HTTPException, Request
 
-from airunner_services.contract_enums import SignalCode
+from airunner_common.contract_enums import SignalCode
 from airunner_services.utils.application.signal_mediator import SignalMediator
 
 from .legacy_common import get_airunner_app

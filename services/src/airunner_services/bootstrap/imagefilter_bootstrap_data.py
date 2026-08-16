@@ -1,6 +1,6 @@
 """Service-owned bootstrap rows for image-filter metadata."""
 
-from airunner_services.settings import AIRUNNER_ART_ENABLED
+from airunner_common.settings import AIRUNNER_ART_ENABLED
 
 
 imagefilter_bootstrap_data = {

@@ -2,7 +2,7 @@
 
 from typing import Any, Dict, Optional
 
-from airunner_services.contract_enums import LLMActionType
+from airunner_common.contract_enums import LLMActionType
 from airunner_services.llm.llm_request import LLMRequest
 
 from .legacy_contracts import LegacyLLMGenerateRequest

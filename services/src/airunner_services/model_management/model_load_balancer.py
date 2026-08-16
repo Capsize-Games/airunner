@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import List, Optional
 
-from airunner_services.contract_enums import ModelType, SignalCode, ModelStatus
+from airunner_common.contract_enums import ModelType, SignalCode, ModelStatus
 from airunner_services.utils.application.mediator_mixin import MediatorMixin
 from airunner_services.utils.memory.gpu_memory_stats import (
     gpu_memory_stats,

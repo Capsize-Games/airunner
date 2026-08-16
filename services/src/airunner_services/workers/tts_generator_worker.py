@@ -9,14 +9,14 @@ from uuid import uuid4
 
 import soundfile as sf
 
-from airunner_services.contract_enums import (
+from airunner_common.contract_enums import (
 	LLMActionType,
 	ModelStatus,
 	ModelType,
 	TTSModel,
 )
-from airunner_services.settings import AIRUNNER_TTS_MODEL_TYPE
-from airunner_services.settings import AIRUNNER_TTS_ON
+from airunner_common.settings import AIRUNNER_TTS_MODEL_TYPE
+from airunner_common.settings import AIRUNNER_TTS_ON
 from airunner_services.utils.text.formatter_extended import FormatterExtended
 from airunner_services.llm.stream_text import combine_stream_chunks
 from airunner_services.llm.thinking_parser import (

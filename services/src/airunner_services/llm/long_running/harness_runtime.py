@@ -9,7 +9,7 @@ from airunner_services.llm.long_running.runtime_components import (
     build_runtime_components,
     build_session_agent,
 )
-from airunner_services.settings import AIRUNNER_LOG_LEVEL
+from airunner_common.settings import AIRUNNER_LOG_LEVEL
 from airunner_services.utils.application import get_logger
 
 

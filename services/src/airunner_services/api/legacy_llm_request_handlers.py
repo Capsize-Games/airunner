@@ -5,7 +5,7 @@ from __future__ import annotations
 import uuid
 from typing import Any, Callable
 
-from airunner_services.contract_enums import LLMActionType
+from airunner_common.contract_enums import LLMActionType
 from airunner_services.llm.llm_request import LLMRequest
 
 from airunner_services.api.legacy_llm_response_handlers import (

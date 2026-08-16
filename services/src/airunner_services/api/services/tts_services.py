@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from airunner_services.contract_enums import SignalCode
+from airunner_common.contract_enums import SignalCode
 from airunner_services.api.api_service_base import APIServiceBase
 
 

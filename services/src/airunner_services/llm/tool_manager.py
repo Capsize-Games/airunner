@@ -13,7 +13,7 @@ from airunner_services.llm.managers.tools import (
     ImageTools,
     SystemTools,
 )
-from airunner_services.contract_enums import LLMActionType
+from airunner_common.contract_enums import LLMActionType
 from airunner_services.llm_workflow_events import (
     build_llm_tool_action_handler,
 )

@@ -12,7 +12,7 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Qt
 
 from airunner.daemon_client.resource_store import get_resource_store
-from airunner.settings import AIRUNNER_LOG_LEVEL
+from airunner_common.settings import AIRUNNER_LOG_LEVEL
 from airunner.utils.application import get_logger
 
 

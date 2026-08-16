@@ -11,7 +11,7 @@ from typing import Any, Dict
 from diffusers import StableDiffusionUpscalePipeline
 
 from airunner_services.art.runtime_enums import ModelStatus, ModelType
-from airunner_services.settings import AIRUNNER_LOCAL_FILES_ONLY
+from airunner_common.settings import AIRUNNER_LOCAL_FILES_ONLY
 
 
 class X4PipelineSetupMixin:

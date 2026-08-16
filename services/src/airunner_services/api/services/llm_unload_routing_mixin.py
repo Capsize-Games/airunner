@@ -5,7 +5,7 @@ from __future__ import annotations
 import threading
 from typing import Optional
 
-from airunner_services.contract_enums import ModelStatus
+from airunner_common.contract_enums import ModelStatus
 from airunner_services.utils.application.enum_resolver import signal_code_proxy
 
 SignalCode = signal_code_proxy()

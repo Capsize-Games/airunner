@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from airunner_services.settings import AIRUNNER_LOG_LEVEL
+from airunner_common.settings import AIRUNNER_LOG_LEVEL
 from airunner_services.database.models.path_settings import PathSettings
 from airunner_services.llm_workflow_events import (
     build_llm_tool_action_handler,

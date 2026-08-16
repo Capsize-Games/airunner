@@ -9,11 +9,11 @@ from typing import Dict, Optional
 from airunner_services.llm.workers.mixins import ModelDownloadMixin
 from airunner_services.llm.workers.mixins import QuantizationMixin
 from airunner_services.llm.workers.mixins import RAGIndexingMixin
-from airunner_services.contract_enums import LLMActionType
-from airunner_services.contract_enums import ModelService
-from airunner_services.contract_enums import ModelStatus
-from airunner_services.contract_enums import ModelType
-from airunner_services.settings import AIRUNNER_LLM_ON
+from airunner_common.contract_enums import LLMActionType
+from airunner_common.contract_enums import ModelService
+from airunner_common.contract_enums import ModelStatus
+from airunner_common.contract_enums import ModelType
+from airunner_common.settings import AIRUNNER_LLM_ON
 from airunner_services.llm.llm_response import LLMResponse
 from airunner_services.model_management.llm_model_manager import (
 	LLMModelManager,

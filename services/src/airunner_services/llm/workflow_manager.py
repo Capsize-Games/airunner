@@ -28,7 +28,7 @@ from airunner_services.llm.managers.mixins.tool_management_mixin import (
 from airunner_services.llm.managers.mixins.workflow_building_mixin import (
     WorkflowBuildingMixin,
 )
-from airunner_services.settings import AIRUNNER_LOG_LEVEL
+from airunner_common.settings import AIRUNNER_LOG_LEVEL
 from airunner_services.llm_workflow_events import (
     LLMWorkflowEventSink,
     build_llm_workflow_event_sink,

@@ -13,7 +13,7 @@ from queue import Queue, Empty
 from typing import Dict, Any, Optional, Callable, List
 from uuid import uuid4
 
-from airunner_services.settings import AIRUNNER_LOG_LEVEL
+from airunner_common.settings import AIRUNNER_LOG_LEVEL
 from airunner_services.utils.application import get_logger
 
 

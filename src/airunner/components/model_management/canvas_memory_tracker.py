@@ -6,7 +6,7 @@ Estimates VRAM and RAM usage by canvas undo/redo history.
 
 from typing import TYPE_CHECKING
 
-from airunner.settings import AIRUNNER_LOG_LEVEL
+from airunner_common.settings import AIRUNNER_LOG_LEVEL
 from airunner.utils.application import get_logger
 
 if TYPE_CHECKING:

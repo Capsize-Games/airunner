@@ -7,8 +7,8 @@ from typing import Any, Dict, List, Optional
 from fastapi import APIRouter, Request
 from pydantic import BaseModel, Field
 
-from airunner_services.dev_build_token import current_dev_build_token
-from airunner_services.settings import AIRUNNER_VERSION
+from airunner_common.dev_build_token import current_dev_build_token
+from airunner_common.settings import AIRUNNER_VERSION
 
 
 router = APIRouter()

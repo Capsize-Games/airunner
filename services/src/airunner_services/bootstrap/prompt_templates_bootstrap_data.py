@@ -1,6 +1,6 @@
 """Service-owned bootstrap rows for prompt templates."""
 
-from airunner_services.settings import (
+from airunner_common.settings import (
     AIRUNNER_DEFAULT_APPLICATION_COMMAND_SYSTEM_PROMPT,
     AIRUNNER_DEFAULT_CHATBOT_GUARDRAILS_PROMPT,
     AIRUNNER_DEFAULT_CHATBOT_SYSTEM_PROMPT,

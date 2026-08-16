@@ -20,7 +20,7 @@ from airunner_services.url_safety import (
     SSRFBlocked,
     validate_url_for_fetch,
 )
-from airunner_services.settings import AIRUNNER_LOG_LEVEL
+from airunner_common.settings import AIRUNNER_LOG_LEVEL
 from airunner_services.utils.application import get_logger
 from airunner_services.utils.application.log_hygiene import fingerprint_value
 
@@ -103,7 +103,7 @@ def intelligent_crawl(
                 from airunner_services.llm.llm_request import (
                     LLMRequest,
                 )
-                from airunner_services.contract_enums import LLMActionType
+                from airunner_common.contract_enums import LLMActionType
                 from airunner_services.utils.application.signal_mediator import (
                     SignalMediator,
                 )

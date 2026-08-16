@@ -3,8 +3,8 @@
 from sqlalchemy import BigInteger, Boolean, Column, Integer, String
 
 from airunner_services.database.base import BaseModel
-from airunner_services.settings import AIRUNNER_DEFAULT_LLM_HF_PATH
-from airunner_services.contract_enums import ModelService
+from airunner_common.settings import AIRUNNER_DEFAULT_LLM_HF_PATH
+from airunner_common.contract_enums import ModelService
 
 
 class LLMGeneratorSettings(BaseModel):

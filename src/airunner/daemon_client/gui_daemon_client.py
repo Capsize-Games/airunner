@@ -21,7 +21,7 @@ from airunner.daemon_client.downloads_mixin import DownloadsClientMixin
 from airunner.daemon_client.llm_mixin import LLMClientMixin
 from airunner.daemon_client.runtime_mixin import RuntimeClientMixin
 from airunner.enums import SignalCode
-from airunner.settings import AIRUNNER_LOG_LEVEL
+from airunner_common.settings import AIRUNNER_LOG_LEVEL
 from airunner.utils.application import get_logger
 
 

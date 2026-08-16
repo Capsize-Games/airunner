@@ -34,7 +34,7 @@ from airunner_services.art.runtime_enums import (
     ModelType,
     StableDiffusionVersion,
 )
-from airunner_services.settings import (
+from airunner_common.settings import (
     AIRUNNER_MEM_SD_DEVICE,
 )
 from airunner_services.utils.application import get_torch_device

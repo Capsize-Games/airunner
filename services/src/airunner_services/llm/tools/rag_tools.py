@@ -12,8 +12,8 @@ from airunner_services.llm.core.tool_registry import tool, ToolCategory
 from airunner_services.database.models.document import Document
 from airunner_services.database.models.path_settings import PathSettings
 from airunner_services.database.session import session_scope
-from airunner_services.contract_enums import SignalCode
-from airunner_services.settings import AIRUNNER_LOG_LEVEL
+from airunner_common.contract_enums import SignalCode
+from airunner_common.settings import AIRUNNER_LOG_LEVEL
 from airunner_services.utils.application import get_logger
 from airunner_services.utils.application.log_hygiene import summarize_text
 

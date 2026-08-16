@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any, Protocol, runtime_checkable
 
-from airunner_services.contract_enums import SignalCode
+from airunner_common.contract_enums import SignalCode
 
 
 @runtime_checkable

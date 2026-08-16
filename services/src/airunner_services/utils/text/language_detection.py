@@ -7,7 +7,7 @@ import re
 from lingua import Language
 from lingua import LanguageDetectorBuilder
 
-from airunner_services.contract_enums import AvailableLanguage
+from airunner_common.contract_enums import AvailableLanguage
 
 
 _DETECTOR = LanguageDetectorBuilder.from_languages(

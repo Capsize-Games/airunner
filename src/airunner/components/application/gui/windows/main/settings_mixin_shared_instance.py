@@ -1,7 +1,7 @@
 from typing import Any, Dict, List, Optional
 
 from airunner.utils.application.get_logger import get_logger
-from airunner.settings import AIRUNNER_LOG_LEVEL
+from airunner_common.settings import AIRUNNER_LOG_LEVEL
 
 
 class SettingsMixinSharedInstance:

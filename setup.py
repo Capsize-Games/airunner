@@ -15,6 +15,7 @@ GUI_REQUIREMENTS = [
     "PySide6==6.9.0",
     "PySide6_Addons==6.9.0",
     "PySide6_Essentials==6.9.0",
+    f"airunner-common=={VERSION}",
     FACEHUGGERSHIELD_REQUIREMENT,
 ]
 
@@ -43,7 +44,6 @@ setup(
     author_email="contact@capsizegames.com",
     url="https://github.com/Capsize-Games/airunner",
     package_dir={"": "src", "scripts": "."},
-    py_modules=["airunner_startup_env"],
     packages=find_packages("src") + ["scripts"],
     python_requires=">=3.13.3",
     install_requires=GUI_REQUIREMENTS,

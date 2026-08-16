@@ -5,7 +5,7 @@ import numpy as np
 from PySide6.QtCore import QThread
 
 from airunner.enums import SignalCode, ModelStatus, ModelType
-from airunner.settings import AIRUNNER_SLEEP_TIME_IN_MS
+from airunner_common.settings import AIRUNNER_SLEEP_TIME_IN_MS
 from airunner.components.application.workers.worker import Worker
 
 

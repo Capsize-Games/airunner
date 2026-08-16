@@ -3,7 +3,7 @@
 from typing import Dict, List, Optional, Any
 from datetime import datetime
 from airunner_services.agents.expert_agent import ExpertAgent
-from airunner_services.settings import AIRUNNER_LOG_LEVEL
+from airunner_common.settings import AIRUNNER_LOG_LEVEL
 from airunner_services.utils.application import get_logger
 from airunner_services.utils.application.log_hygiene import summarize_text
 

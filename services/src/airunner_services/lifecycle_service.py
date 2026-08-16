@@ -6,8 +6,8 @@ import os
 import time
 from typing import Any, Callable, Optional
 
-from airunner_services.contract_enums import ModelService, ModelStatus, SignalCode
-from airunner_services.settings import AIRUNNER_DEFAULT_LLM_HF_PATH, AIRUNNER_LOG_LEVEL
+from airunner_common.contract_enums import ModelService, ModelStatus, SignalCode
+from airunner_common.settings import AIRUNNER_DEFAULT_LLM_HF_PATH, AIRUNNER_LOG_LEVEL
 from airunner_services.utils.application import get_logger
 from airunner_services.utils.application.create_worker import create_worker
 from airunner_services.utils.application.log_hygiene import fingerprint_value
@@ -221,7 +221,7 @@ class CoreLifecycleService:
     def _log_preload_environment(self) -> None:
         """Log best-effort preload environment diagnostics."""
         try:
-            from airunner_services.settings import AIRUNNER_DB_URL, DEV_ENV
+            from airunner_common.settings import AIRUNNER_DB_URL, DEV_ENV
 
             self._log_debug(
                 "Preload environment diagnostics: db_url_present=%s "

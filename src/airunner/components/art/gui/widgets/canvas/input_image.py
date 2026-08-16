@@ -7,7 +7,7 @@ from PySide6.QtCore import Slot, Qt
 from PySide6.QtWidgets import QFileDialog
 from PySide6.QtGui import QPainter
 
-from airunner.settings import AIRUNNER_VALID_IMAGE_FILES
+from airunner_common.settings import AIRUNNER_VALID_IMAGE_FILES
 from airunner.utils.image import (
     convert_binary_to_image,
     convert_image_to_binary,

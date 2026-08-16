@@ -9,7 +9,7 @@ import mimetypes
 import json
 import functools
 
-from airunner.settings import (
+from airunner_common.settings import (
     AIRUNNER_LOG_LEVEL,
     LOCAL_SERVER_PORT,
     LOCAL_SERVER_HOST,

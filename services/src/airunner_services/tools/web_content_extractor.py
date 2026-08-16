@@ -11,7 +11,7 @@ from sumy.parsers.plaintext import PlaintextParser
 from sumy.nlp.tokenizers import Tokenizer
 from sumy.summarizers.lsa import LsaSummarizer
 
-from airunner_services.settings import (
+from airunner_common.settings import (
     AIRUNNER_BASE_PATH,
     AIRUNNER_LOG_LEVEL,
     AIRUNNER_SCRAPER_BLACKLIST,

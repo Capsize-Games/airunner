@@ -3,11 +3,11 @@
 from pathlib import Path
 from typing import Optional
 
-from airunner_services.contract_enums import StableDiffusionVersion
+from airunner_common.contract_enums import StableDiffusionVersion
 from airunner_services.database.models.generator_settings import (
     GeneratorSettings,
 )
-from airunner_services.settings import AIRUNNER_ART_MODEL_VERSION
+from airunner_common.settings import AIRUNNER_ART_MODEL_VERSION
 
 from .art_model_resolution import (
     art_model_base_dir,

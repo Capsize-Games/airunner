@@ -11,7 +11,7 @@ from PySide6.QtWidgets import QApplication
 from airunner.enums import SignalCode
 from airunner.daemon_client.resource_store import GuiResourceStore
 from airunner.utils.application.get_logger import get_logger
-from airunner.settings import AIRUNNER_LOG_LEVEL
+from airunner_common.settings import AIRUNNER_LOG_LEVEL
 from airunner.components.application.gui.windows.main.settings_mixin_shared_instance import (
     SettingsMixinSharedInstance,
 )

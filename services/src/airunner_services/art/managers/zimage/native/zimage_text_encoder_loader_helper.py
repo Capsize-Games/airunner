@@ -18,7 +18,7 @@ from transformers import AutoConfig, AutoModel, BitsAndBytesConfig
 from airunner_services.art.managers.zimage.native.zimage_tokenizer import (
     ZImageTokenizer,
 )
-from airunner_services.settings import AIRUNNER_BASE_PATH
+from airunner_common.settings import AIRUNNER_BASE_PATH
 
 logger = logging.getLogger(__name__)
 

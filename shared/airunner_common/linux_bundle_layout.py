@@ -83,10 +83,10 @@ def _resolve_python_executable(
     """Resolve the Python executable used for this bundle."""
     candidates = [
         python_executable,
+        os.environ.get("AIRUNNER_PYTHON"),
         bundle_root / "venv" / "bin" / "python",
         bundle_root / ".venv" / "bin" / "python",
         bundle_root / "bin" / "python",
-        os.environ.get("AIRUNNER_PYTHON"),
         Path(sys.executable),
     ]
     for candidate in candidates:
@@ -129,11 +129,19 @@ def _absolute_path(candidate: Path | str) -> Path:
 
 
 def _looks_like_bundle_root(candidate_root: Path) -> bool:
-    """Return True when a directory looks like an AIRunner bundle root."""
+    """Return True when a directory looks like an AIRunner bundle root.
+
+    Accepts both the flat layout (``src/airunner`` at the root) and the
+    native bundle layout (``gui/src/airunner`` at the root, or both
+    ``bin/airunner-headless`` and ``bin/airunner-daemon``). These two checks
+    had drifted across the src and native copies; both are valid bundle
+    layouts, so the canonical helper accepts either.
+    """
     gui_root = candidate_root / "gui" / "src" / "airunner"
     return any(
         (
             (candidate_root / "deployment" / "systemd").exists(),
+            (candidate_root / "src" / "airunner").exists(),
             gui_root.exists(),
             (
                 (candidate_root / "bin" / "airunner-headless").exists()
@@ -141,3 +149,11 @@ def _looks_like_bundle_root(candidate_root: Path) -> bool:
             ),
         )
     )
+
+
+__all__ = [
+    "DEFAULT_SYSTEM_PATH",
+    "KNOWN_VENV_DIRS",
+    "LinuxBundleLayout",
+    "build_linux_bundle_layout",
+]

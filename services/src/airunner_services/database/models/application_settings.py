@@ -3,7 +3,7 @@
 from sqlalchemy import Column, Integer, String, Boolean
 
 from airunner_services.database.base import BaseModel
-from airunner_services.contract_enums import (
+from airunner_common.contract_enums import (
     DEFAULT_IMAGE_GENERATOR,
     AvailableLanguage,
     GeneratorSection,

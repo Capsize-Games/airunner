@@ -19,12 +19,12 @@ from airunner_services.model_management.x4_upscale_manager import (
 from airunner_services.model_management.zimage_model_manager import (
 	ZImageModelManager,
 )
-from airunner_services.contract_enums import EngineResponseCode
-from airunner_services.contract_enums import GeneratorSection
-from airunner_services.contract_enums import ModelStatus
-from airunner_services.contract_enums import ModelType
-from airunner_services.contract_enums import StableDiffusionVersion
-from airunner_services.contract_enums import normalize_art_version
+from airunner_common.contract_enums import EngineResponseCode
+from airunner_common.contract_enums import GeneratorSection
+from airunner_common.contract_enums import ModelStatus
+from airunner_common.contract_enums import ModelType
+from airunner_common.contract_enums import StableDiffusionVersion
+from airunner_common.contract_enums import normalize_art_version
 from airunner_services.utils.image import convert_image_to_binary
 from airunner_services.application_exceptions import PipeNotLoadedException
 from airunner_services.database.models import AIModels

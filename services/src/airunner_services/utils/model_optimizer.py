@@ -33,7 +33,7 @@ from pathlib import Path
 from typing import Optional, Tuple, Literal
 from enum import Enum
 
-from airunner_services.settings import AIRUNNER_LOG_LEVEL
+from airunner_common.settings import AIRUNNER_LOG_LEVEL
 from airunner_services.utils.application import get_logger
 
 

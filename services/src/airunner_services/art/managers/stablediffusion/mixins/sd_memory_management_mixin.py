@@ -14,7 +14,7 @@ from diffusers.models.attention_processor import (
     AttnProcessor2_0,
 )
 
-from airunner_services.settings import (
+from airunner_common.settings import (
     AIRUNNER_MEM_USE_LAST_CHANNELS,
     AIRUNNER_MEM_USE_ENABLE_VAE_SLICING,
     AIRUNNER_MEM_USE_ATTENTION_SLICING,

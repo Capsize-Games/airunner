@@ -13,7 +13,7 @@ from airunner_services.llm.thinking_parser import (
     normalize_thinking_content,
     strip_stored_thinking_prefix,
 )
-from airunner_services.settings import AIRUNNER_LOG_LEVEL
+from airunner_common.settings import AIRUNNER_LOG_LEVEL
 from airunner_services.utils.application import get_logger
 from airunner_services.database.models.conversation import Conversation
 

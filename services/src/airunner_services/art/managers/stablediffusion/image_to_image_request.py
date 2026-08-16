@@ -1,7 +1,7 @@
 from typing import Any
 from dataclasses import dataclass
 
-from airunner_services.settings import AIRUNNER_LOG_LEVEL
+from airunner_common.settings import AIRUNNER_LOG_LEVEL
 from airunner_services.utils.application import get_logger
 
 

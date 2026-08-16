@@ -7,8 +7,8 @@ import torch
 from transformers import CLIPImageProcessor
 from diffusers.pipelines.stable_diffusion import StableDiffusionSafetyChecker
 
-from airunner_services.contract_enums import ModelStatus, ModelType, SignalCode
-from airunner_services.settings import AIRUNNER_LOCAL_FILES_ONLY
+from airunner_common.contract_enums import ModelStatus, ModelType, SignalCode
+from airunner_common.settings import AIRUNNER_LOCAL_FILES_ONLY
 from airunner_services.utils.memory import clear_memory
 from airunner_services.workers.worker import Worker
 

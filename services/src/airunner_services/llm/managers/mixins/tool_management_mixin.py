@@ -5,7 +5,7 @@ Handles tool binding, compact schema generation, and tool configuration.
 
 from typing import List, Callable
 
-from airunner_services.settings import AIRUNNER_LOG_LEVEL
+from airunner_common.settings import AIRUNNER_LOG_LEVEL
 from airunner_services.utils.application import get_logger
 
 

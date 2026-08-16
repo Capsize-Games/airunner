@@ -15,7 +15,7 @@ from PIL import Image
 from safetensors.torch import load_file
 from torchvision import transforms
 
-from airunner_services.settings import MODELS_DIR
+from airunner_common.settings import MODELS_DIR
 from airunner_services.utils.image.convert_image_to_binary import (
     convert_image_to_binary,
 )

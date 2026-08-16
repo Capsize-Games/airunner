@@ -9,7 +9,7 @@ from airunner.daemon_client.conversation_client import (
     ConversationDaemonClient,
 )
 from airunner.daemon_client.gui_daemon_client import GuiDaemonClient
-from airunner.settings import AIRUNNER_LOG_LEVEL
+from airunner_common.settings import AIRUNNER_LOG_LEVEL
 from airunner.utils.application import get_logger
 
 

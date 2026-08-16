@@ -4,7 +4,7 @@ from typing import Any, Dict, List, Optional
 
 from langchain_core.language_models.chat_models import BaseChatModel
 
-from airunner_services.settings import AIRUNNER_LOG_LEVEL
+from airunner_common.settings import AIRUNNER_LOG_LEVEL
 from airunner_services.llm.adapters.chat_gguf_execution_mixin import (
     ChatGGUFExecutionMixin,
 )

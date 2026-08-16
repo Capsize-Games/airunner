@@ -7,7 +7,7 @@ from typing import Any, Dict, Optional
 
 import torch
 
-from airunner_services.contract_enums import LLMActionType
+from airunner_common.contract_enums import LLMActionType
 from airunner_services.llm.llm_request import LLMRequest
 from airunner_services.llm.managers.mixins.generation_model_support import (
     ensure_workflow_manager_ready,

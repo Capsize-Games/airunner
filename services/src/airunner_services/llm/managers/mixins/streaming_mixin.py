@@ -9,7 +9,7 @@ from typing import Optional, Dict, Any
 
 from langchain_core.messages import HumanMessage, AIMessage
 
-from airunner_services.settings import AIRUNNER_LOG_LEVEL
+from airunner_common.settings import AIRUNNER_LOG_LEVEL
 from airunner_services.utils.application import get_logger
 
 

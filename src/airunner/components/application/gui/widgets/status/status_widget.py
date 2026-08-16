@@ -6,7 +6,7 @@ from airunner.components.application.gui.widgets.base_widget import BaseWidget
 from airunner.components.application.gui.widgets.status.templates.status_ui import (
     Ui_status_widget,
 )
-from airunner.settings import AIRUNNER_ART_ENABLED
+from airunner_common.settings import AIRUNNER_ART_ENABLED
 
 
 class StatusWidget(BaseWidget):

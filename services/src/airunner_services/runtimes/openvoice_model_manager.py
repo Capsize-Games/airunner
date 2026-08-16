@@ -5,13 +5,13 @@ from pathlib import Path
 from time import perf_counter
 import torch
 
-from airunner_services.contract_enums import (
+from airunner_common.contract_enums import (
     ModelType,
     ModelStatus,
     AvailableLanguage,
     SignalCode,
 )
-from airunner_services.settings import AIRUNNER_BASE_PATH
+from airunner_common.settings import AIRUNNER_BASE_PATH
 from airunner_services.requests.tts_request import OpenVoiceTTSRequest
 from airunner_services.requests.tts_request import TTSRequest
 from airunner_services.runtimes.tts_model_manager import TTSModelManager

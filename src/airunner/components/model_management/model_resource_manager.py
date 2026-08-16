@@ -22,7 +22,7 @@ from airunner.components.model_management.mixins import (
     ModelSelectionMixin,
     ModelLoadingMixin,
 )
-from airunner.settings import AIRUNNER_LOG_LEVEL
+from airunner_common.settings import AIRUNNER_LOG_LEVEL
 from airunner.utils.application import get_logger
 from airunner.utils.application.signal_mediator import SignalMediator
 from airunner.components.model_management.canvas_memory_tracker import (

@@ -6,7 +6,7 @@ from airunner_services.model_management._base_model_resource_manager import (
     ModelResourceManager as _ModelResourceManager,
 )
 from airunner_services.model_management.types import ModelState
-from airunner_services.settings import AIRUNNER_LOG_LEVEL
+from airunner_common.settings import AIRUNNER_LOG_LEVEL
 from airunner_services.model_management.mixins.model_loading_mixin import (
     unload_service_model_for_swap,
     offload_service_model,

@@ -96,12 +96,12 @@ def _build_art_service() -> Any:
 
 def _resolve_art_request_version(metadata: dict[str, Any]) -> str:
     """Return the model version carried by one art invocation."""
-    from airunner_services.contract_enums import normalize_art_version
+    from airunner_common.contract_enums import normalize_art_version
 
     version = str(metadata.get("version") or "").strip()
     if version:
         return normalize_art_version(version)
-    from airunner_services.contract_enums import DEFAULT_ART_VERSION
+    from airunner_common.contract_enums import DEFAULT_ART_VERSION
 
     return DEFAULT_ART_VERSION.value
 
@@ -112,7 +112,7 @@ def _resolve_art_request_scheduler(metadata: dict[str, Any]) -> str:
     if scheduler:
         return scheduler
 
-    from airunner_services.settings import AIRUNNER_DEFAULT_SCHEDULER
+    from airunner_common.settings import AIRUNNER_DEFAULT_SCHEDULER
 
     return AIRUNNER_DEFAULT_SCHEDULER
 
@@ -127,7 +127,7 @@ def _resolve_art_pipeline_action(metadata: dict[str, Any]) -> str:
 
 def _resolve_art_generator_section(metadata: dict[str, Any]) -> Any:
     """Return the requested generator section for one art job."""
-    from airunner_services.contract_enums import GeneratorSection
+    from airunner_common.contract_enums import GeneratorSection
 
     pipeline_action = _resolve_art_pipeline_action(metadata)
     try:
@@ -225,14 +225,14 @@ def _build_llm_request(invocation: LLMInvocationRequest) -> Any:
 
 def _resolve_model_type(name: str) -> Any:
     """Resolve a model type lazily to avoid eager imports."""
-    from airunner_services.contract_enums import ModelType
+    from airunner_common.contract_enums import ModelType
 
     return getattr(ModelType, name)
 
 
 def _model_health_status(model_status: Any) -> RuntimeHealthStatus:
     """Translate application model status into runtime health status."""
-    from airunner_services.contract_enums import ModelStatus
+    from airunner_common.contract_enums import ModelStatus
 
     status_map = {
         None: RuntimeHealthStatus.UNKNOWN,
@@ -343,7 +343,7 @@ class _SignalRuntimeClient(RuntimeClient):
         action_name: str,
     ) -> ResponseEnvelope:
         """Emit a control signal and wait for the matching model status."""
-        from airunner_services.contract_enums import ModelStatus, SignalCode
+        from airunner_common.contract_enums import ModelStatus, SignalCode
 
         status_queue: Queue[Any] = Queue()
 
@@ -486,7 +486,7 @@ class LocalFallbackLLMClient(_SignalRuntimeClient):
 
     def _load_model(self, request_id: str) -> ResponseEnvelope:
         """Load the local LLM through the current signal graph."""
-        from airunner_services.contract_enums import ModelStatus, SignalCode
+        from airunner_common.contract_enums import ModelStatus, SignalCode
 
         return self._wait_for_model_status(
             request_id,
@@ -500,7 +500,7 @@ class LocalFallbackLLMClient(_SignalRuntimeClient):
 
     def _unload_model(self, request_id: str) -> ResponseEnvelope:
         """Unload the local LLM through the current signal graph."""
-        from airunner_services.contract_enums import ModelStatus, SignalCode
+        from airunner_common.contract_enums import ModelStatus, SignalCode
 
         return self._wait_for_model_status(
             request_id,
@@ -639,7 +639,7 @@ class LocalFallbackLLMClient(_SignalRuntimeClient):
     @staticmethod
     def _resolve_action() -> Any:
         """Resolve the legacy action enum lazily."""
-        from airunner_services.contract_enums import LLMActionType
+        from airunner_common.contract_enums import LLMActionType
 
         return LLMActionType.CHAT
 
@@ -704,7 +704,7 @@ class LocalFallbackSTTClient(_SignalRuntimeClient):
 
     def cancel(self, request_id: str) -> ResponseEnvelope:
         """Interrupt an STT request on a best-effort basis."""
-        from airunner_services.contract_enums import SignalCode
+        from airunner_common.contract_enums import SignalCode
 
         self._emit_signal(SignalCode.INTERRUPT_PROCESS_SIGNAL, {})
         return ResponseEnvelope(
@@ -715,7 +715,7 @@ class LocalFallbackSTTClient(_SignalRuntimeClient):
 
     def _load_model(self, request_id: str) -> ResponseEnvelope:
         """Load the local STT model."""
-        from airunner_services.contract_enums import ModelStatus, SignalCode
+        from airunner_common.contract_enums import ModelStatus, SignalCode
 
         return self._wait_for_model_status(
             request_id,
@@ -729,7 +729,7 @@ class LocalFallbackSTTClient(_SignalRuntimeClient):
 
     def _unload_model(self, request_id: str) -> ResponseEnvelope:
         """Unload the local STT model."""
-        from airunner_services.contract_enums import ModelStatus, SignalCode
+        from airunner_common.contract_enums import ModelStatus, SignalCode
 
         return self._wait_for_model_status(
             request_id,
@@ -743,7 +743,7 @@ class LocalFallbackSTTClient(_SignalRuntimeClient):
 
     def _transcribe(self, request: RequestEnvelope) -> ResponseEnvelope:
         """Run a transcription request through the working response signal."""
-        from airunner_services.contract_enums import SignalCode
+        from airunner_common.contract_enums import SignalCode
 
         invocation = STTInvocationRequest.model_validate(request.payload)
         try:
@@ -892,7 +892,7 @@ class LocalFallbackTTSClient(_SignalRuntimeClient):
 
     def cancel(self, request_id: str) -> ResponseEnvelope:
         """Interrupt queued or active TTS playback on a best-effort basis."""
-        from airunner_services.contract_enums import SignalCode
+        from airunner_common.contract_enums import SignalCode
 
         self._emit_signal(SignalCode.INTERRUPT_PROCESS_SIGNAL, {})
         return ResponseEnvelope(
@@ -903,7 +903,7 @@ class LocalFallbackTTSClient(_SignalRuntimeClient):
 
     def _load_model(self, request_id: str) -> ResponseEnvelope:
         """Enable and load the local TTS model."""
-        from airunner_services.contract_enums import ModelStatus, SignalCode
+        from airunner_common.contract_enums import ModelStatus, SignalCode
 
         worker = self._headless_tts_worker()
         if worker is not None:
@@ -954,7 +954,7 @@ class LocalFallbackTTSClient(_SignalRuntimeClient):
 
     def _unload_model(self, request_id: str) -> ResponseEnvelope:
         """Disable and unload the local TTS model."""
-        from airunner_services.contract_enums import ModelStatus, SignalCode
+        from airunner_common.contract_enums import ModelStatus, SignalCode
 
         worker = self._headless_tts_worker()
         if worker is not None:
@@ -1034,7 +1034,7 @@ class LocalFallbackTTSClient(_SignalRuntimeClient):
 
     def _tts_manager(self, worker):
         """Return one loaded TTS manager from the headless worker."""
-        from airunner_services.contract_enums import ModelStatus
+        from airunner_common.contract_enums import ModelStatus
 
         if worker is None:
             return None
@@ -1059,7 +1059,7 @@ class LocalFallbackTTSClient(_SignalRuntimeClient):
         from airunner_services.requests.tts_request import (
             OpenVoiceTTSRequest,
         )
-        from airunner_services.contract_enums import TTSModel
+        from airunner_common.contract_enums import TTSModel
 
         if self._tts_model_type(invocation, worker) != (
             TTSModel.OPENVOICE.value.lower()
@@ -1106,7 +1106,7 @@ class LocalFallbackTTSClient(_SignalRuntimeClient):
         if hasattr(self._signal_source, "play_audio"):
             self._signal_source.play_audio(text)
             return
-        from airunner_services.contract_enums import SignalCode
+        from airunner_common.contract_enums import SignalCode
 
         self._emit_signal(
             SignalCode.TTS_QUEUE_SIGNAL,
@@ -1184,7 +1184,7 @@ class LocalFallbackArtClient(_SignalRuntimeClient):
 
     def cancel(self, request_id: str) -> ResponseEnvelope:
         """Interrupt active art generation on a best-effort basis."""
-        from airunner_services.contract_enums import SignalCode
+        from airunner_common.contract_enums import SignalCode
 
         self._emit_signal(SignalCode.INTERRUPT_IMAGE_GENERATION_SIGNAL, {})
         return ResponseEnvelope(
@@ -1195,7 +1195,7 @@ class LocalFallbackArtClient(_SignalRuntimeClient):
 
     def _unload_model(self, request: RequestEnvelope) -> ResponseEnvelope:
         """Unload the current art pipeline or one supported component."""
-        from airunner_services.contract_enums import ModelStatus, SignalCode
+        from airunner_common.contract_enums import ModelStatus, SignalCode
 
         component = self._art_component(request)
         if component == "rmbg":
@@ -1313,7 +1313,7 @@ class LocalFallbackArtClient(_SignalRuntimeClient):
         from airunner_services.art.managers.stablediffusion.image_request import (
             ImageRequest,
         )
-        from airunner_services.contract_enums import SignalCode
+        from airunner_common.contract_enums import SignalCode
 
         invocation = ArtInvocationRequest.model_validate(request.payload)
         metadata = invocation.metadata

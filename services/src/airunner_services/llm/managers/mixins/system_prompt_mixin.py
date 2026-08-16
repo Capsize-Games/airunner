@@ -2,7 +2,7 @@
 
 from typing import List, Optional
 
-from airunner_services.contract_enums import LLMActionType
+from airunner_common.contract_enums import LLMActionType
 from airunner_services.llm.managers.mixins.system_prompt_actions import (
     get_force_tool_instruction,
     get_system_prompt_for_action,

@@ -13,7 +13,7 @@ import traceback
 import shutil
 from pathlib import Path
 
-from airunner_startup_env import (
+from airunner_common.startup_env import (
     configure_early_torch_allocator_environment,
 )
 
@@ -21,9 +21,9 @@ from airunner_startup_env import (
 configure_early_torch_allocator_environment()
 
 from airunner.daemon_client.resource_store import get_resource_store
-from airunner.settings import AIRUNNER_BASE_PATH, AIRUNNER_LOG_LEVEL, LOCAL_SERVER_HOST
+from airunner_common.settings import AIRUNNER_BASE_PATH, AIRUNNER_LOG_LEVEL, LOCAL_SERVER_HOST
 from airunner.utils.application import get_logger
-from airunner.utils.application.logging_utils import (
+from airunner_common.logging_utils import (
     configure_noisy_loggers,
 )
 

@@ -9,7 +9,7 @@ import requests
 from PySide6.QtCore import Signal
 from airunner.enums import SignalCode
 from airunner.components.application.workers.worker import Worker
-from airunner.settings import DEFAULT_HF_ENDPOINT
+from airunner_common.settings import DEFAULT_HF_ENDPOINT
 
 
 class DownloadWorker(Worker):

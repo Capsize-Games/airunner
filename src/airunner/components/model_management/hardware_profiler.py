@@ -11,7 +11,7 @@ import platform
 import psutil
 
 from airunner.daemon_client.runtime_mixin import HardwareProfile
-from airunner.settings import AIRUNNER_LOG_LEVEL
+from airunner_common.settings import AIRUNNER_LOG_LEVEL
 from airunner.utils.application import get_logger
 
 

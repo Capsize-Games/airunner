@@ -2,7 +2,7 @@
 
 from sqlalchemy import Column, Integer, String
 
-from airunner_services.settings import (
+from airunner_common.settings import (
     AIRUNNER_DEFAULT_BRUSH_PRIMARY_COLOR,
     AIRUNNER_DEFAULT_BRUSH_SECONDARY_COLOR,
 )

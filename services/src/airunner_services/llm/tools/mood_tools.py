@@ -7,7 +7,7 @@ Tools for tracking and updating the chatbot's emotional state.
 from typing import Annotated, Any
 
 from airunner_services.llm.core.tool_registry import tool, ToolCategory
-from airunner_services.contract_enums import SignalCode
+from airunner_common.contract_enums import SignalCode
 
 
 @tool(

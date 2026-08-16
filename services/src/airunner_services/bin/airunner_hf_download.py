@@ -338,7 +338,7 @@ def download_model(
     
     # Determine output directory
     if output_dir is None:
-        from airunner_services.settings import MODELS_DIR
+        from airunner_common.settings import MODELS_DIR
         if model_type == "llm":
             output_dir = os.path.join(
                 MODELS_DIR,
@@ -451,7 +451,7 @@ def get_downloaded_models() -> Dict[str, List[Dict]]:
     Returns:
         Dictionary with model types as keys and lists of downloaded model info as values
     """
-    from airunner_services.settings import MODELS_DIR
+    from airunner_common.settings import MODELS_DIR
     
     downloaded = {
         "llm": [],
@@ -656,7 +656,7 @@ def delete_model(model_name: str, force: bool = False) -> bool:
     """
     import shutil
 
-    from airunner_services.settings import MODELS_DIR
+    from airunner_common.settings import MODELS_DIR
     
     downloaded = get_downloaded_models()
     

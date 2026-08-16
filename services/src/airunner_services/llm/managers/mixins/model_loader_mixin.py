@@ -20,7 +20,7 @@ from transformers import (
     BitsAndBytesConfig,
 )
 
-from airunner_services.settings import AIRUNNER_LOCAL_FILES_ONLY
+from airunner_common.settings import AIRUNNER_LOCAL_FILES_ONLY
 from airunner_services.utils.memory.clear_memory import clear_memory
 from airunner_services.utils.memory.gpu_memory_stats import gpu_memory_stats
 from airunner_services.llm.config.provider_config import LLMProviderConfig

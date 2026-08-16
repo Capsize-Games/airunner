@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Optional
 
-from airunner_services.settings import AIRUNNER_BASE_PATH
+from airunner_common.settings import AIRUNNER_BASE_PATH
 
 from airunner_services.runtimes.bundled_runtime_paths import (
     resolve_runtime_executable,

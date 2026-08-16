@@ -17,7 +17,7 @@ import threading
 import time
 from pathlib import Path
 
-from airunner_services.startup_env import (
+from airunner_common.startup_env import (
     configure_early_torch_allocator_environment,
 )
 
@@ -43,7 +43,7 @@ from airunner_services.app import ServiceApp
 from airunner_services.model_management.model_resource_manager import (
     ModelResourceManager,
 )
-from airunner_services.settings import AIRUNNER_LOG_LEVEL
+from airunner_common.settings import AIRUNNER_LOG_LEVEL
 from airunner_services.utils.application import get_logger
 
 logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)

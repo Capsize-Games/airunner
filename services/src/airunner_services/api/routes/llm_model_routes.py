@@ -13,7 +13,7 @@ from airunner_services.database.models.path_settings import PathSettings
 from airunner_services.llm.provider_config import LLMProviderConfig
 from airunner_services.model_management.model_registry import ModelRegistry
 from airunner_services.runtimes.contracts import RuntimeAction
-from airunner_services.settings import AIRUNNER_BASE_PATH, AIRUNNER_LOG_LEVEL
+from airunner_common.settings import AIRUNNER_BASE_PATH, AIRUNNER_LOG_LEVEL
 from airunner_services.utils.application import get_logger
 
 from .llm_contracts import ModelInfo, ModelLoadRequest

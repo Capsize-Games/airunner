@@ -11,7 +11,7 @@ Based on the openevals pattern but adapted for AI Runner's architecture.
 import re
 from typing import Dict, Any, Optional
 from airunner_services.eval.judge_providers import JudgeClient
-from airunner_services.settings import AIRUNNER_LOG_LEVEL
+from airunner_common.settings import AIRUNNER_LOG_LEVEL
 from airunner_services.utils.application import get_logger
 
 

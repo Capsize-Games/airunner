@@ -57,7 +57,7 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtGui import QIcon
 
-from airunner.settings import (
+from airunner_common.settings import (
     AIRUNNER_STATUS_ERROR_COLOR,
     AIRUNNER_STATUS_NORMAL_COLOR_LIGHT,
     AIRUNNER_STATUS_NORMAL_COLOR_DARK,
@@ -356,7 +356,7 @@ class MainWindow(
 
     @property
     def version(self):
-        from airunner.settings import AIRUNNER_VERSION
+        from airunner_common.settings import AIRUNNER_VERSION
         return f"v{AIRUNNER_VERSION}"
 
     @property
@@ -2860,7 +2860,7 @@ class MainWindow(
 
     def _configured_stt_resource_model_id(self) -> str:
         """Return the label used for one STT runtime row."""
-        from airunner.settings import AIRUNNER_DEFAULT_STT_HF_PATH
+        from airunner_common.settings import AIRUNNER_DEFAULT_STT_HF_PATH
 
         settings = getattr(self, "path_settings", None)
         base_path = str(getattr(settings, "stt_model_path", "") or "")

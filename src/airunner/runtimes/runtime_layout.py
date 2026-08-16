@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
 
-from airunner.settings import AIRUNNER_BASE_PATH
+from airunner_common.settings import AIRUNNER_BASE_PATH
 
 from airunner.runtimes.runtime_bind_host import resolve_runtime_bind_host
 

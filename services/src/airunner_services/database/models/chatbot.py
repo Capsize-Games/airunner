@@ -12,8 +12,8 @@ from sqlalchemy import (
 from sqlalchemy.orm import relationship
 
 from airunner_services.database.base import BaseModel
-from airunner_services.contract_enums import Gender
-from airunner_services.settings import (
+from airunner_common.contract_enums import Gender
+from airunner_common.settings import (
     AIRUNNER_DEFAULT_CHATBOT_GUARDRAILS_PROMPT,
     AIRUNNER_DEFAULT_CHATBOT_SYSTEM_PROMPT,
     AIRUNNER_DEFAULT_LLM_HF_PATH,

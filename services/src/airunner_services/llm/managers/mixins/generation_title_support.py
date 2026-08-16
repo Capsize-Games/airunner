@@ -6,7 +6,7 @@ from typing import Any, Optional
 
 from langchain_core.messages import HumanMessage, SystemMessage
 
-from airunner_services.contract_enums import SignalCode
+from airunner_common.contract_enums import SignalCode
 from airunner_services.database.models.conversation import Conversation
 
 

@@ -20,9 +20,9 @@ from PySide6.QtWidgets import QApplication
 from airunner.components.splash_screen.splash_screen import SplashScreen
 from airunner.enums import SignalCode
 from airunner.qt_runtime_env import configure_early_qt_environment
-from airunner.settings import AIRUNNER_BUG_REPORT_LINK
-from airunner.settings import MATHJAX_VERSION
-from airunner.settings import QTWEBENGINE_REMOTE_DEBUGGING
+from airunner_common.settings import AIRUNNER_BUG_REPORT_LINK
+from airunner_common.settings import MATHJAX_VERSION
+from airunner_common.settings import QTWEBENGINE_REMOTE_DEBUGGING
 from airunner.utils.settings import get_qsettings
 
 _QT_RUNTIME_PREPARED = False

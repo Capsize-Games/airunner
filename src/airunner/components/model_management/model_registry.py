@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Dict, List, Optional
 
-from airunner.settings import AIRUNNER_LOG_LEVEL
+from airunner_common.settings import AIRUNNER_LOG_LEVEL
 from airunner.utils.application import get_logger
 
 

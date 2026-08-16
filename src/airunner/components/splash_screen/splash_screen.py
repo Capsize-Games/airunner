@@ -2,7 +2,7 @@ from PySide6.QtWidgets import QSplashScreen, QApplication
 from PySide6.QtGui import QPixmap, QGuiApplication, QPainter, QFont, QColor
 from PySide6.QtCore import Qt as QtCoreQt
 
-from airunner.settings import AIRUNNER_VERSION, AIRUNNER_DONATION_WALLET
+from airunner_common.settings import AIRUNNER_VERSION, AIRUNNER_DONATION_WALLET
 
 
 class SplashScreen(QSplashScreen):

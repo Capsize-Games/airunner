@@ -11,7 +11,7 @@ from typing import Dict
 
 import torch
 from airunner_services.art.runtime_enums import GeneratorSection, ModelStatus
-from airunner_services.settings import AIRUNNER_ADD_WATER_MARK
+from airunner_common.settings import AIRUNNER_ADD_WATER_MARK
 from airunner_services.art.runtime_memory import clear_memory
 
 

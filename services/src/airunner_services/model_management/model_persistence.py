@@ -3,7 +3,7 @@
 import os
 from typing import Any, Dict
 
-from airunner_services.settings import AIRUNNER_LOG_LEVEL
+from airunner_common.settings import AIRUNNER_LOG_LEVEL
 from airunner_services.database.session import session_scope
 from airunner_services.utils.application import get_logger
 

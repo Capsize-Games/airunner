@@ -10,7 +10,7 @@ from typing import Sequence, Union
 from alembic import op
 import sqlalchemy as sa
 
-from airunner_services.contract_enums import Scheduler
+from airunner_common.contract_enums import Scheduler
 
 
 # revision identifiers, used by Alembic.

@@ -5,8 +5,8 @@ import threading
 from pathlib import Path
 import requests
 
-from airunner_services.contract_enums import SignalCode
-from airunner_services.settings import AIRUNNER_BASE_PATH, MODELS_DIR
+from airunner_common.contract_enums import SignalCode
+from airunner_common.settings import AIRUNNER_BASE_PATH, MODELS_DIR
 from airunner_services.art.managers.zimage.zimage_bundle_requirements import (
     find_active_checkpoint,
     get_active_zimage_load_mode,

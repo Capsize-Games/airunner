@@ -6,7 +6,7 @@ state logging for the LLM model manager.
 
 from typing import TYPE_CHECKING
 
-from airunner_services.contract_enums import SignalCode, ModelType, ModelStatus, LLMActionType
+from airunner_common.contract_enums import SignalCode, ModelType, ModelStatus, LLMActionType
 from airunner_services.llm.llm_response import LLMResponse
 
 if TYPE_CHECKING:

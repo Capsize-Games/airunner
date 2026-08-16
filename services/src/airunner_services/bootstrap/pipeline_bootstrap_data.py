@@ -1,6 +1,6 @@
 """Service-owned bootstrap rows for pipeline metadata."""
 
-from airunner_services.settings import AIRUNNER_ART_ENABLED
+from airunner_common.settings import AIRUNNER_ART_ENABLED
 
 
 art_pipline_data = [

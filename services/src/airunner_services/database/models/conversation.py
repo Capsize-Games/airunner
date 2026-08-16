@@ -17,7 +17,7 @@ from sqlalchemy import (
 from sqlalchemy.orm import relationship
 
 from airunner_services.database.base import BaseModel
-from airunner_services.settings import AIRUNNER_LOG_LEVEL
+from airunner_common.settings import AIRUNNER_LOG_LEVEL
 from airunner_services.utils.application.get_logger import get_logger
 from airunner_services.database.models.chatbot import Chatbot
 from airunner_services.database.models.summary import Summary

@@ -7,7 +7,7 @@ import torch
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
-from airunner_services.settings import AIRUNNER_LOCAL_FILES_ONLY
+from airunner_common.settings import AIRUNNER_LOCAL_FILES_ONLY
 
 
 class RAGPropertiesMixin:
@@ -226,7 +226,7 @@ class RAGPropertiesMixin:
         from airunner_services.database.bootstrap.llm_file_bootstrap_data import (
             LLM_FILE_BOOTSTRAP_DATA,
         )
-        from airunner_services.contract_enums import SignalCode
+        from airunner_common.contract_enums import SignalCode
 
         if not hasattr(self, "_embedding_download_pending"):
             self._embedding_download_pending = False
@@ -313,7 +313,7 @@ class RAGPropertiesMixin:
             self._embedding_download_pending = False
             # Unregister this handler
             if hasattr(self, "unregister"):
-                from airunner_services.contract_enums import SignalCode
+                from airunner_common.contract_enums import SignalCode
 
                 self.unregister(
                     SignalCode.HUGGINGFACE_DOWNLOAD_COMPLETE,

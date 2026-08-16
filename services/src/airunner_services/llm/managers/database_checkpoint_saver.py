@@ -15,7 +15,7 @@ from langchain_core.runnables import RunnableConfig
 from airunner_services.llm.managers.database_chat_message_history import (
     DatabaseChatMessageHistory,
 )
-from airunner_services.settings import AIRUNNER_LOG_LEVEL
+from airunner_common.settings import AIRUNNER_LOG_LEVEL
 from airunner_services.utils.application import get_logger
 
 

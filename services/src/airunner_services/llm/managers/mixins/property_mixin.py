@@ -226,7 +226,7 @@ class PropertyMixin:
         # Handle empty/None model_path by falling back to default
         # Empty string check is important for existing DB records
         if not model_path or (isinstance(model_path, str) and model_path.strip() == ""):
-            from airunner_services.settings import AIRUNNER_DEFAULT_LLM_HF_PATH
+            from airunner_common.settings import AIRUNNER_DEFAULT_LLM_HF_PATH
             model_path = AIRUNNER_DEFAULT_LLM_HF_PATH
             self.logger.info("No model path configured, using default LLM model")
             

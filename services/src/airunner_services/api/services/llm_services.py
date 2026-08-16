@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Optional
 
-from airunner_services.contract_enums import LLMActionType
+from airunner_common.contract_enums import LLMActionType
 from airunner_services.api.api_service_base import APIServiceBase
 from airunner_services.api.services.llm_conversation_service_mixin import (
 	LLMConversationServiceMixin,

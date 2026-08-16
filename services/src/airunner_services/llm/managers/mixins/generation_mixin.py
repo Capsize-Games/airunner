@@ -5,7 +5,7 @@ from typing import Any, Dict, Optional
 
 import torch
 
-from airunner_services.contract_enums import LLMActionType
+from airunner_common.contract_enums import LLMActionType
 from airunner_services.llm.managers.mixins.generation_execution_support import (
     do_generate,
 )

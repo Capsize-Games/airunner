@@ -1,6 +1,6 @@
 import os
 from PySide6.QtCore import QSettings
-from airunner.settings import (
+from airunner_common.settings import (
     AIRUNNER_BASE_PATH,
 )
 

@@ -1,4 +1,4 @@
-from airunner.settings import AIRUNNER_DEFAULT_LLM_HF_PATH
+from airunner_common.settings import AIRUNNER_DEFAULT_LLM_HF_PATH
 from airunner.components.downloader.gui.windows.download_wizard.download_thread import DownloadThread
 from airunner.components.downloader.gui.windows.download_wizard.download_wizard_page import (
     DownloadWizardPage,

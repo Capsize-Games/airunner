@@ -14,7 +14,7 @@ from airunner.enums import LANGUAGE_TO_LOCALE_MAP
 from airunner.enums import LOCALE_TO_LANGUAGE_MAP
 from airunner.enums import AvailableLanguage
 from airunner.enums import SignalCode
-from airunner.settings import AIRUNNER_DISABLE_SETUP_WIZARD
+from airunner_common.settings import AIRUNNER_DISABLE_SETUP_WIZARD
 
 
 class LocalizationMixin:

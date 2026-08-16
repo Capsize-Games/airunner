@@ -10,7 +10,7 @@ from typing import Protocol
 import requests
 
 from airunner_services.eval.client import AIRunnerClient
-from airunner_services.settings import AIRUNNER_LLM_OPENROUTER_MODEL
+from airunner_common.settings import AIRUNNER_LLM_OPENROUTER_MODEL
 
 
 JUDGE_SERVICE_ENV = "AIRUNNER_TEST_JUDGE_SERVICE"

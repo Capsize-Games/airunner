@@ -6,7 +6,7 @@ from typing import Any
 
 from langchain_core.messages import SystemMessage
 
-from airunner_services.settings import AIRUNNER_LOG_LEVEL
+from airunner_common.settings import AIRUNNER_LOG_LEVEL
 from airunner_services.utils.application import get_logger
 from airunner_services.llm.long_running.session_agent_state import (
     SESSION_SYSTEM_PROMPT,

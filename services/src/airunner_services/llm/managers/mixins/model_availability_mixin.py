@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 
 from airunner_services.llm.adapters import is_gguf_model
 from airunner_services.llm.config.provider_config import LLMProviderConfig
-from airunner_services.contract_enums import ModelType, ModelStatus, SignalCode
+from airunner_common.contract_enums import ModelType, ModelStatus, SignalCode
 
 if TYPE_CHECKING:
     from airunner_services.model_management.llm_model_manager import (

@@ -21,7 +21,7 @@ from airunner_services.art.managers.stablediffusion import prompt_utils
 from airunner_services.art.managers.stablediffusion.base_diffusers_model_manager import (
     BaseDiffusersModelManager,
 )
-from airunner_services.contract_enums import StableDiffusionVersion
+from airunner_common.contract_enums import StableDiffusionVersion
 from airunner_services.utils.memory.clear_memory import clear_memory
 
 

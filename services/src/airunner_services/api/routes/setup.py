@@ -21,7 +21,7 @@ from pydantic import BaseModel
 from airunner_services.bootstrap.model_bootstrap_data import (
     model_bootstrap_data,
 )
-from airunner_services.settings import AIRUNNER_BASE_PATH
+from airunner_common.settings import AIRUNNER_BASE_PATH
 
 router = APIRouter()
 logger = logging.getLogger(__name__)

@@ -11,7 +11,7 @@ from airunner_services.llm.long_running.harness_autonomous_iteration import (
 from airunner_services.llm.long_running.harness_autonomous_results import (
     incomplete_result,
 )
-from airunner_services.settings import AIRUNNER_LOG_LEVEL
+from airunner_common.settings import AIRUNNER_LOG_LEVEL
 from airunner_services.utils.application import get_logger
 
 

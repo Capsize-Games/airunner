@@ -36,7 +36,7 @@ from airunner.components.art.gui.widgets.canvas.mixins import (
     CanvasGenerationMixin,
 )
 from airunner.utils.application.mediator_mixin import MediatorMixin
-from airunner.settings import (
+from airunner_common.settings import (
     AIRUNNER_CUDA_OUT_OF_MEMORY_MESSAGE,
 )
 from airunner.components.application.gui.windows.main.settings_mixin import (

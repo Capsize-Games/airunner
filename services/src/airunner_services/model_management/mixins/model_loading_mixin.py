@@ -8,7 +8,7 @@ from typing import Any
 from airunner_services.model_management.mixins._base_model_loading_mixin import (
     ModelLoadingMixin as _ModelLoadingMixin,
 )
-from airunner_services.contract_enums import SignalCode
+from airunner_common.contract_enums import SignalCode
 
 
 def unload_service_model_for_swap(

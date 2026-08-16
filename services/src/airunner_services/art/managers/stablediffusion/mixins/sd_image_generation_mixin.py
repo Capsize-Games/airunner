@@ -20,7 +20,7 @@ from airunner_services.art.runtime_enums import (
     HandlerState,
     EngineResponseCode,
 )
-from airunner_services.settings import AIRUNNER_CUDA_OUT_OF_MEMORY_MESSAGE
+from airunner_common.settings import AIRUNNER_CUDA_OUT_OF_MEMORY_MESSAGE
 from airunner_services.art.runtime_memory import clear_memory
 
 

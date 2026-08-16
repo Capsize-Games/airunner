@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 import os
 from typing import Any, List, Optional
 
-from airunner_services.contract_enums import LLMActionType
+from airunner_common.contract_enums import LLMActionType
 from airunner_services.llm.core.tool_registry import ToolCategory
 from airunner_services.llm.managers.tool_selection_plan import (
     ToolSelectionPlan,

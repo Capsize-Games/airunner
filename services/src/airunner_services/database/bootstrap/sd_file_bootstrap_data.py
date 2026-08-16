@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from airunner_services.settings import AIRUNNER_ART_ENABLED
+from airunner_common.settings import AIRUNNER_ART_ENABLED
 
 
 SD_FILE_BOOTSTRAP_DATA = {

@@ -13,7 +13,7 @@ import pandas as pd
 from fastapi import APIRouter
 from pydantic import BaseModel
 
-from airunner_services.settings import AIRUNNER_BASE_PATH
+from airunner_common.settings import AIRUNNER_BASE_PATH
 
 router = APIRouter()
 logger = logging.getLogger(__name__)

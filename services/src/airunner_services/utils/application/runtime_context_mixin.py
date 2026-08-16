@@ -6,7 +6,7 @@ import os
 from types import SimpleNamespace
 from typing import Any, Optional, TypeVar
 
-from airunner_services.contract_enums import SignalCode
+from airunner_common.contract_enums import SignalCode
 from airunner_services.database.models.application_settings import (
     ApplicationSettings,
 )

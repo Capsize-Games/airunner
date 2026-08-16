@@ -4,7 +4,7 @@ from airunner.components.application.gui.widgets.base_widget import BaseWidget
 from airunner.components.stt.gui.widgets.templates.whisper_settings_ui import (
     Ui_whisper_settings,
 )
-from airunner.settings import LANGUAGES
+from airunner_common.settings import LANGUAGES
 
 
 class WhisperSettingsWidget(BaseWidget):

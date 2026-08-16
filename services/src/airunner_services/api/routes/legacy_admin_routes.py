@@ -4,7 +4,7 @@ from typing import Any, Dict, Optional
 
 from fastapi import APIRouter, Request
 
-from airunner_services.contract_enums import SignalCode
+from airunner_common.contract_enums import SignalCode
 from airunner_services.utils.application.signal_mediator import SignalMediator
 
 from .legacy_common import queue_service_llm_unload, schedule_process_shutdown

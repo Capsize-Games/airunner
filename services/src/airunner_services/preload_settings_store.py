@@ -10,8 +10,8 @@ from airunner_services.database.models.llm_generator_settings import (
     LLMGeneratorSettings,
 )
 from airunner_services.database.session import session_scope
-from airunner_services.contract_enums import ModelService
-from airunner_services.settings import AIRUNNER_DEFAULT_LLM_HF_PATH
+from airunner_common.contract_enums import ModelService
+from airunner_common.settings import AIRUNNER_DEFAULT_LLM_HF_PATH
 from airunner_services.utils.application.log_hygiene import fingerprint_value
 
 SessionFactory = Callable[[], Any]

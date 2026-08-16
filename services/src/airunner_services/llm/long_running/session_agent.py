@@ -32,7 +32,7 @@ from airunner_services.llm.long_running.session_agent_state import (
 from airunner_services.llm.long_running.session_agent_verification import (
     verification_node,
 )
-from airunner_services.settings import AIRUNNER_LOG_LEVEL
+from airunner_common.settings import AIRUNNER_LOG_LEVEL
 from airunner_services.utils.application import get_logger
 
 

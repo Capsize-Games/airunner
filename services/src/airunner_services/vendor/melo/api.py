@@ -6,7 +6,7 @@ import torch.nn as nn
 from tqdm import tqdm
 import torch
 from typing import Dict, Optional
-from airunner_services.contract_enums import AvailableLanguage
+from airunner_common.contract_enums import AvailableLanguage
 from airunner_services.utils.memory.clear_memory import clear_memory
 from airunner_services.vendor.melo import utils
 from airunner_services.vendor.melo.models import SynthesizerTrn

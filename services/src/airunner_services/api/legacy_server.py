@@ -99,8 +99,8 @@ from airunner_services.art.managers.stablediffusion.image_request import (
 from airunner_services.art.managers.stablediffusion.image_response import (
     ImageResponse,
 )
-from airunner_services.contract_enums import LLMActionType, SignalCode, EngineResponseCode
-from airunner_services.settings import AIRUNNER_LOG_LEVEL
+from airunner_common.contract_enums import LLMActionType, SignalCode, EngineResponseCode
+from airunner_common.settings import AIRUNNER_LOG_LEVEL
 from airunner_services.app.service_app import ServiceApp
 from airunner_services.utils.application.get_logger import get_logger
 from airunner_services.utils.application.log_hygiene import summarize_text
@@ -271,7 +271,7 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
     @staticmethod
     def _llm_loaded_from_balancer(api) -> bool:
         """Return True when runtime state already reports one loaded LLM."""
-        from airunner_services.contract_enums import ModelType
+        from airunner_common.contract_enums import ModelType
 
         balancer = getattr(api, "model_load_balancer", None)
         if balancer is None:
@@ -287,7 +287,7 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
     @staticmethod
     def _llm_loaded_from_worker(api) -> bool:
         """Return True when the local worker already has an LLM ready."""
-        from airunner_services.contract_enums import ModelStatus
+        from airunner_common.contract_enums import ModelStatus
 
         worker_manager = getattr(api, "_worker_manager", None)
         if not worker_manager:
@@ -337,7 +337,7 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
         self.logger.info("Auto-loading LLM model")
         
         # Import SignalCode here to avoid circular imports
-        from airunner_services.contract_enums import SignalCode
+        from airunner_common.contract_enums import SignalCode
         
         # Emit load signal
         api.emit_signal(
@@ -446,7 +446,7 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
         
         self.logger.info("Auto-loading art model")
         
-        from airunner_services.contract_enums import SignalCode
+        from airunner_common.contract_enums import SignalCode
         api.emit_signal(SignalCode.SD_LOAD_SIGNAL, {"model_path": art_model_path})
         
         # Wait for model to load

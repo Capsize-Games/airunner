@@ -13,7 +13,7 @@ from airunner_services.llm.long_running.harness_project_state import (
     pause_project,
     revert_to_checkpoint,
 )
-from airunner_services.settings import AIRUNNER_LOG_LEVEL
+from airunner_common.settings import AIRUNNER_LOG_LEVEL
 from airunner_services.utils.application import get_logger
 
 

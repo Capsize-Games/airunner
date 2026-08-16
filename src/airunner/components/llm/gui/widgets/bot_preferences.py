@@ -8,7 +8,7 @@ from airunner.components.llm.gui.widgets.document_widget import DocumentWidget
 from airunner.components.llm.gui.widgets.templates.bot_preferences_ui import (
     Ui_bot_preferences,
 )
-from airunner.settings import (
+from airunner_common.settings import (
     AIRUNNER_DEFAULT_CHATBOT_GUARDRAILS_PROMPT,
     AIRUNNER_DEFAULT_CHATBOT_SYSTEM_PROMPT,
 )

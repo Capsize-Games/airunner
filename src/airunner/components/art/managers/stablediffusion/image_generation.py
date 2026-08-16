@@ -6,7 +6,7 @@ Follows project standards: docstrings, type hints, logging.
 
 from typing import Any, List, Optional
 from PIL import Image
-from airunner.settings import AIRUNNER_LOG_LEVEL
+from airunner_common.settings import AIRUNNER_LOG_LEVEL
 from airunner.utils.application import get_logger
 from airunner.utils.image import export_images
 

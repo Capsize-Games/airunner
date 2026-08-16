@@ -25,7 +25,7 @@ from airunner_services.art.managers.stablediffusion.x4_upscale_mixins import (
     X4UpscalingTilingMixin,
     X4UtilityMixin,
 )
-from airunner_services.contract_enums import ModelType
+from airunner_common.contract_enums import ModelType
 from airunner_services.utils.application.enum_resolver import (
     signal_code_member,
 )

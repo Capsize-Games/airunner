@@ -6,7 +6,7 @@ from typing import Callable, Dict, List, Optional
 
 import requests
 
-from airunner_services.settings import AIRUNNER_BASE_PATH
+from airunner_common.settings import AIRUNNER_BASE_PATH
 from airunner_services.config.local_settings_store import get_setting
 
 

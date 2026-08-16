@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from airunner_services.contract_enums import LLMActionType
+from airunner_common.contract_enums import LLMActionType
 
 
 ACTION_MODE_PROMPTS = {

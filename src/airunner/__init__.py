@@ -7,7 +7,7 @@ import importlib.metadata as importlib_metadata
 import os
 import warnings
 
-from airunner_startup_env import (
+from airunner_common.startup_env import (
 	configure_early_torch_allocator_environment,
 )
 

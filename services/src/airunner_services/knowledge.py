@@ -6,7 +6,7 @@ from datetime import date
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
-from airunner_services.settings import AIRUNNER_BASE_PATH, AIRUNNER_LOG_LEVEL
+from airunner_common.settings import AIRUNNER_BASE_PATH, AIRUNNER_LOG_LEVEL
 from airunner_services.data.tenant import get_tenant_key
 from airunner_services.utils.application.get_logger import get_logger
 from airunner_services.utils.application.log_hygiene import summarize_text

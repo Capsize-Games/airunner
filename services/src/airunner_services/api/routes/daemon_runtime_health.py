@@ -6,7 +6,7 @@ from typing import Any
 
 from fastapi import Request
 
-from airunner_services.contract_enums import ModelStatus
+from airunner_common.contract_enums import ModelStatus
 from airunner_services.database.models.llm_generator_settings import (
     LLMGeneratorSettings,
 )

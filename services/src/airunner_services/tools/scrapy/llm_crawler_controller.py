@@ -9,7 +9,7 @@ import json
 from typing import Dict, List, Any, Callable
 from dataclasses import dataclass
 
-from airunner_services.settings import AIRUNNER_LOG_LEVEL
+from airunner_common.settings import AIRUNNER_LOG_LEVEL
 from airunner_services.utils.application import get_logger
 from airunner_services.utils.application.log_hygiene import summarize_text
 

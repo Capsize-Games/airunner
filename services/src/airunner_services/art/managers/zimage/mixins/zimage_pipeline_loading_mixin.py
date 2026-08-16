@@ -27,7 +27,7 @@ from airunner_services.art.managers.zimage.native import (
 import torch
 from safetensors import safe_open
 
-from airunner_services.settings import AIRUNNER_LOCAL_FILES_ONLY
+from airunner_common.settings import AIRUNNER_LOCAL_FILES_ONLY
 from airunner_services.art.runtime_enums import SignalCode
 from airunner_services.art.utils.model_file_checker import ModelFileChecker
 from airunner_services.art.managers.zimage.zimage_bundle_requirements import (

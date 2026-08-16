@@ -17,7 +17,7 @@ from diffusers.pipelines.stable_diffusion import StableDiffusionSafetyChecker
 from airunner_services.database.models.schedulers import Schedulers
 from airunner_services.art.managers.stablediffusion import model_loader
 from airunner_services.art.runtime_enums import ModelStatus, ModelType
-from airunner_services.settings import AIRUNNER_LOCAL_FILES_ONLY
+from airunner_common.settings import AIRUNNER_LOCAL_FILES_ONLY
 
 
 class SDModelLoadingMixin:

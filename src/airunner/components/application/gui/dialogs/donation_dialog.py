@@ -16,7 +16,7 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Qt, QSettings
 from PySide6.QtGui import QFont
 
-from airunner.settings import AIRUNNER_DONATION_WALLET
+from airunner_common.settings import AIRUNNER_DONATION_WALLET
 
 
 class DonationDialog(QDialog):

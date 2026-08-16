@@ -7,7 +7,7 @@ from typing import Dict, List, Optional
 from langchain_core.messages import BaseMessage
 
 from airunner_services.llm.tool_call_identity import tool_call_identity_key
-from airunner_services.settings import AIRUNNER_LLM_DUPLICATE_TOOL_CALL_WINDOW
+from airunner_common.settings import AIRUNNER_LLM_DUPLICATE_TOOL_CALL_WINDOW
 
 
 class NodeRoutingDebugHelper:

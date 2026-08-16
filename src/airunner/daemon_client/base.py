@@ -10,7 +10,7 @@ from typing import Any, Callable, Dict, Optional
 import requests
 
 from airunner.runtimes.daemon_config import DaemonConfig
-from airunner.settings import AIRUNNER_LOG_LEVEL
+from airunner_common.settings import AIRUNNER_LOG_LEVEL
 from airunner.utils.application import get_logger
 
 

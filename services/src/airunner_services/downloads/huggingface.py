@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from typing import Any, Optional
 
 from airunner_services.llm.provider_config import LLMProviderConfig
-from airunner_services.settings import AIRUNNER_BASE_PATH
+from airunner_common.settings import AIRUNNER_BASE_PATH
 
 _LLM_DOWNLOAD_TYPES = {"gguf", "llm"}
 

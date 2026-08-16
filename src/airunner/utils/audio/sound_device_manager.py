@@ -1,7 +1,7 @@
 from importlib import import_module
 from typing import Optional, Dict, Any
 import numpy as np
-from airunner.settings import AIRUNNER_LOG_LEVEL
+from airunner_common.settings import AIRUNNER_LOG_LEVEL
 from airunner.utils.application import get_logger
 
 

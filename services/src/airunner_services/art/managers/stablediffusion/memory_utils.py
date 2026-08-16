@@ -9,7 +9,7 @@ import torch
 from airunner_services.model_management.hardware_profiler import (
     HardwareProfiler,
 )
-from airunner_services.settings import AIRUNNER_LOG_LEVEL
+from airunner_common.settings import AIRUNNER_LOG_LEVEL
 from airunner_services.utils.application import get_logger
 
 logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)

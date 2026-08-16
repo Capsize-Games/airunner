@@ -5,7 +5,7 @@ from __future__ import annotations
 import os
 from typing import Any, Dict, Optional
 
-from airunner_services.contract_enums import ModelStatus, ModelType
+from airunner_common.contract_enums import ModelStatus, ModelType
 
 def invalid_model_path_response(owner) -> Optional[Dict[str, Any]]:
     """Return an error payload when the configured model path is invalid."""

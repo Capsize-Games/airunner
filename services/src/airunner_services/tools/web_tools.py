@@ -5,7 +5,7 @@ import time
 from typing import Annotated
 
 from airunner_services.llm.core.tool_registry import ToolCategory, tool
-from airunner_services.settings import AIRUNNER_LOG_LEVEL
+from airunner_common.settings import AIRUNNER_LOG_LEVEL
 from airunner_services.downloads.policy import is_duckduckgo_allowed
 from airunner_services.utils.application.get_logger import get_logger
 from airunner_services.utils.application.log_hygiene import (

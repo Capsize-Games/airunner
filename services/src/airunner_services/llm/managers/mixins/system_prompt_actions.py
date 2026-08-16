@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import List, Optional
 
-from airunner_services.contract_enums import LLMActionType
+from airunner_common.contract_enums import LLMActionType
 from airunner_services.llm.managers.mixins.system_prompt_action_text import (
     ACTION_MODE_PROMPTS,
     FORCE_TOOL_INSTRUCTIONS,

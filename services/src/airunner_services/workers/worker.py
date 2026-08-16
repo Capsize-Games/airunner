@@ -8,8 +8,8 @@ from abc import abstractmethod
 from enum import Enum
 from typing import Any
 
-from airunner_services.contract_enums import SignalCode
-from airunner_services.settings import AIRUNNER_SLEEP_TIME_IN_MS
+from airunner_common.contract_enums import SignalCode
+from airunner_common.settings import AIRUNNER_SLEEP_TIME_IN_MS
 from airunner_services.utils.application import get_logger
 from airunner_services.utils.application import MediatorMixin
 from airunner_services.utils.application.runtime_context_mixin import (

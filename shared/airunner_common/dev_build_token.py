@@ -14,7 +14,7 @@ _cached_token: Optional[str] = None
 
 # Only scan meaningful source roots instead of the whole repo, which keeps
 # the scan fast and excludes docs, packaging and build artifacts.
-_SOURCE_SUBDIRS = ("src", "services/src", "native/src")
+_SOURCE_SUBDIRS = ("src", "services/src", "native/src", "shared")
 _CACHE_DIR_NAME = "build"
 _CACHE_FILE_NAME = "dev_build_token.cache"
 
@@ -116,3 +116,6 @@ def _write_disk_cache(repo_root: Path, token: Optional[str]) -> None:
         cache_path.write_text(token, encoding="utf-8")
     except OSError:
         return
+
+
+__all__ = ["current_dev_build_token"]

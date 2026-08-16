@@ -1,4 +1,4 @@
-from airunner.settings import AIRUNNER_DEFAULT_LLM_HF_PATH
+from airunner_common.settings import AIRUNNER_DEFAULT_LLM_HF_PATH
 
 
 def parse_template(template: dict) -> str:

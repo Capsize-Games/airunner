@@ -1,6 +1,6 @@
 """Service-owned bootstrap metadata for built-in model records."""
 
-from airunner_services.settings import AIRUNNER_ART_ENABLED
+from airunner_common.settings import AIRUNNER_ART_ENABLED
 
 
 ai_art_models = [

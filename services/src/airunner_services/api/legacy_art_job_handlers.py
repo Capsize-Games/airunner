@@ -13,7 +13,7 @@ from typing import Any
 from airunner_services.art.managers.stablediffusion.image_response import (
     ImageResponse,
 )
-from airunner_services.contract_enums import SignalCode
+from airunner_common.contract_enums import SignalCode
 
 
 def handle_art_v1_generate(

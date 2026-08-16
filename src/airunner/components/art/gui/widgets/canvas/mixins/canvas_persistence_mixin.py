@@ -11,7 +11,7 @@ from PIL import Image
 from PySide6.QtWidgets import QFileDialog
 from PySide6.QtCore import Slot
 from airunner.utils.image import export_image
-from airunner.settings import AIRUNNER_VALID_IMAGE_FILES
+from airunner_common.settings import AIRUNNER_VALID_IMAGE_FILES
 from airunner.utils.image.dispatch_persist_result import (
     dispatch_persist_result,
 )

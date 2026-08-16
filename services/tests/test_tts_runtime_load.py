@@ -20,7 +20,7 @@ for _path in (
         sys.path.append(_path_str)
 
 
-from airunner_services.contract_enums import ModelStatus
+from airunner_common.contract_enums import ModelStatus
 from airunner_services.runtimes.contracts import RuntimeKind, RuntimeMode
 from airunner_services.runtimes.local_fallback import LocalFallbackTTSClient
 from airunner_services.runtimes.registry import RuntimeRegistry, RuntimeRoute

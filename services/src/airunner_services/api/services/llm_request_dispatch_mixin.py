@@ -7,7 +7,7 @@ import uuid
 from typing import Any, Callable, Optional
 
 from airunner_services.daemon_connection_state import DaemonConnectionState
-from airunner_services.contract_enums import LLMActionType
+from airunner_common.contract_enums import LLMActionType
 from airunner_services.llm.llm_request import LLMRequest
 from airunner_services.utils.application.enum_resolver import signal_code_proxy
 

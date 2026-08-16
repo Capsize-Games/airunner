@@ -18,9 +18,9 @@ from airunner_services.lifecycle_service import CoreLifecycleService
 from airunner_services.utils.application.runtime_primitives import (
     QCoreApplication,
 )
-from airunner_services.settings import AIRUNNER_HEADLESS_SERVER_HOST
-from airunner_services.settings import AIRUNNER_HEADLESS_SERVER_PORT
-from airunner_services.settings import AIRUNNER_USER_DATA_PATH
+from airunner_common.settings import AIRUNNER_HEADLESS_SERVER_HOST
+from airunner_common.settings import AIRUNNER_HEADLESS_SERVER_PORT
+from airunner_common.settings import AIRUNNER_USER_DATA_PATH
 
 if TYPE_CHECKING:
     from airunner_services.api.services.art_services import ARTAPIService

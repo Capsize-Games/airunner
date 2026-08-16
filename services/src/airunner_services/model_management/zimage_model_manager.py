@@ -31,7 +31,7 @@ from airunner_services.art.schedulers.flow_match_scheduler_factory import (
     create_flow_match_scheduler,
     is_flow_match_scheduler,
 )
-from airunner_services.contract_enums import ModelStatus, ModelType, Scheduler
+from airunner_common.contract_enums import ModelStatus, ModelType, Scheduler
 
 
 class ZImageModelManager(

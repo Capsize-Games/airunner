@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import List, Optional
 
-from airunner_services.contract_enums import LLMActionType
+from airunner_common.contract_enums import LLMActionType
 from airunner_services.llm.core.tool_registry import ToolCategory
 from airunner_services.llm.managers.mixins.system_prompt_mood import (
     get_current_mood,

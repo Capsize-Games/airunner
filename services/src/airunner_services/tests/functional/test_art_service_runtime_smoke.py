@@ -35,7 +35,7 @@ from airunner_services.database.models.generator_settings import GeneratorSettin
 from airunner_services.database.models.path_settings import PathSettings
 from airunner_services.database.setup_database import setup_database
 from airunner_services.app.service_app import ServiceApp
-from airunner_services.contract_enums import Scheduler, StableDiffusionVersion
+from airunner_common.contract_enums import Scheduler, StableDiffusionVersion
 from airunner_services.runtimes.local_fallback import LocalFallbackArtClient
 
 

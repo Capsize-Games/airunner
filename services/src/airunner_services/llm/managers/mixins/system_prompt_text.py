@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Set
 
-from airunner_services.contract_enums import LLMActionType
+from airunner_common.contract_enums import LLMActionType
 
 
 CONVERSATIONAL_ACTIONS: Set[LLMActionType] = {

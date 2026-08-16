@@ -13,8 +13,8 @@ from typing import Optional, Any
 from dataclasses import replace
 
 from airunner_services.llm.llm_request import LLMRequest
-from airunner_services.contract_enums import LLMActionType
-from airunner_services.settings import AIRUNNER_LOG_LEVEL
+from airunner_common.contract_enums import LLMActionType
+from airunner_common.settings import AIRUNNER_LOG_LEVEL
 from airunner_services.utils.application import get_logger
 
 

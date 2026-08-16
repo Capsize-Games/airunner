@@ -5,12 +5,12 @@ from typing import Dict, List, Optional
 
 from PIL import Image
 
-from airunner_services.contract_enums import (
+from airunner_common.contract_enums import (
     DEFAULT_ART_VERSION,
     DEFAULT_IMAGE_GENERATOR,
     GeneratorSection,
 )
-from airunner_services.settings import AIRUNNER_DEFAULT_SCHEDULER
+from airunner_common.settings import AIRUNNER_DEFAULT_SCHEDULER
 
 
 @dataclass

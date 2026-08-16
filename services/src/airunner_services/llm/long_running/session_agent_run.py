@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from airunner_services.settings import AIRUNNER_LOG_LEVEL
+from airunner_common.settings import AIRUNNER_LOG_LEVEL
 from airunner_services.utils.application import get_logger
 from airunner_services.llm.long_running.session_agent_state import (
     SessionPhase,

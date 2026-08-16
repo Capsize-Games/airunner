@@ -6,7 +6,7 @@ from typing import Optional
 
 from fastapi import APIRouter, HTTPException, Request
 
-from airunner_services.settings import AIRUNNER_LOG_LEVEL
+from airunner_common.settings import AIRUNNER_LOG_LEVEL
 from airunner_services.utils.application import get_logger
 from airunner_services.utils.job_tracker import (
     JobStatus as JobState,

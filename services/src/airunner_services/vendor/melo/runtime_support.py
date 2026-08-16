@@ -4,7 +4,7 @@ import os
 from pathlib import Path
 from typing import Optional
 
-from airunner_services.settings import AIRUNNER_BASE_PATH
+from airunner_common.settings import AIRUNNER_BASE_PATH
 from airunner_services.utils.application import get_logger
 
 

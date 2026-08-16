@@ -6,7 +6,7 @@ import re
 from sqlalchemy import Column, Integer, String
 
 from airunner_services.database.base import BaseModel
-from airunner_services.settings import AIRUNNER_BASE_PATH
+from airunner_common.settings import AIRUNNER_BASE_PATH
 
 
 def _resolve_path(stored_path: str) -> str:

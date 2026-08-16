@@ -5,8 +5,8 @@ from __future__ import annotations
 from enum import Enum, auto
 from typing import Any, Mapping
 
-from airunner_services.contract_enums import LLMActionType as SharedLLMActionType
-from airunner_services.contract_enums import SignalCode as SharedSignalCode
+from airunner_common.contract_enums import LLMActionType as SharedLLMActionType
+from airunner_common.contract_enums import SignalCode as SharedSignalCode
 
 
 _SERVICE_SIGNAL_DEFAULTS: dict[str, str] = {

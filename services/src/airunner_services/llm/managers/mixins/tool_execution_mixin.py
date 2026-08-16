@@ -10,7 +10,7 @@ from typing import Optional, TYPE_CHECKING
 from airunner_services.llm.managers.forced_tool_execution_policy import (
     ForcedToolExecutionPolicy,
 )
-from airunner_services.settings import AIRUNNER_LOG_LEVEL
+from airunner_common.settings import AIRUNNER_LOG_LEVEL
 from airunner_services.utils.application import get_logger
 from airunner_services.utils.application.log_hygiene import summarize_text
 from airunner_services.llm_workflow_events import (

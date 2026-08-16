@@ -80,10 +80,10 @@ stop_unmanaged_port_holder() {
 }
 
 current_dev_build_token() {
-    PYTHONPATH="${ROOT_DIR}/services/src:${ROOT_DIR}/src:${ROOT_DIR}/native/src${PYTHONPATH:+:${PYTHONPATH}}" \
+    PYTHONPATH="${ROOT_DIR}/services/src:${ROOT_DIR}/src:${ROOT_DIR}/native/src:${ROOT_DIR}/shared${PYTHONPATH:+:${PYTHONPATH}}" \
     DEV_ENV=1 \
     "${DEV_VENV_BIN}/python" - <<'PY'
-from airunner_services.dev_build_token import current_dev_build_token
+from airunner_common.dev_build_token import current_dev_build_token
 
 print(current_dev_build_token() or "")
 PY
@@ -214,7 +214,7 @@ start_services() {
     # inside the repo root (the daemon's CWD), so its own site-packages look
     # like an untrusted CWD import. See venv/.../nltk/inisec.py for detail.
     export NLTK_DISABLE_IMPORT_SECURITY=1
-    export PYTHONPATH="${ROOT_DIR}/services/src:${ROOT_DIR}/src:${ROOT_DIR}/native/src${PYTHONPATH:+:${PYTHONPATH}}"
+    export PYTHONPATH="${ROOT_DIR}/services/src:${ROOT_DIR}/src:${ROOT_DIR}/native/src:${ROOT_DIR}/shared${PYTHONPATH:+:${PYTHONPATH}}"
     export PATH="${DEV_VENV_BIN}:${SIDECAR_BIN_DIR}${PATH:+:${PATH}}"
 
     if [[ -x "${SIDECAR_BIN_DIR}/llama-server" ]]; then

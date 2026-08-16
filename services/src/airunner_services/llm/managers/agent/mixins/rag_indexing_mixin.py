@@ -15,7 +15,7 @@ from airunner_services.llm.managers.agent.vector_index import (
 from airunner_services.database.models.document import (
     Document as DBDocument,
 )
-from airunner_services.contract_enums import SignalCode
+from airunner_common.contract_enums import SignalCode
 
 
 class RAGIndexingMixin:

@@ -5,8 +5,8 @@ from typing import Optional
 
 from fastapi import HTTPException, Request
 
-from airunner_services.contract_enums import ModelStatus
-from airunner_services.settings import AIRUNNER_LOG_LEVEL
+from airunner_common.contract_enums import ModelStatus
+from airunner_common.settings import AIRUNNER_LOG_LEVEL
 from airunner_services.utils.application import get_logger
 
 logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)

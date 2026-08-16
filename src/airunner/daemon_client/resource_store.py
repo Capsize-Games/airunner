@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
-from airunner.contract_enums import AvailableLanguage, CanvasToolName
-from airunner.contract_enums import GeneratorSection
+from airunner_common.contract_enums import AvailableLanguage, CanvasToolName
+from airunner_common.contract_enums import GeneratorSection
 
 if TYPE_CHECKING:
     from airunner.daemon_client.gui_daemon_client import GuiDaemonClient

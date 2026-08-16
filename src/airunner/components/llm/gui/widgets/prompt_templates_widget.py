@@ -1,6 +1,6 @@
 from PySide6.QtCore import Slot
 
-from airunner.settings import (
+from airunner_common.settings import (
     AIRUNNER_DEFAULT_IMAGE_SYSTEM_PROMPT,
     AIRUNNER_DEFAULT_APPLICATION_COMMAND_SYSTEM_PROMPT,
     AIRUNNER_DEFAULT_UPDATE_MOOD_SYSTEM_PROMPT,

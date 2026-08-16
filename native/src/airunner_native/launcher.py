@@ -16,7 +16,7 @@ import traceback
 from pathlib import Path
 from typing import Optional, Sequence
 
-from airunner_native.startup_env import (
+from airunner_common.startup_env import (
     configure_early_torch_allocator_environment,
 )
 from airunner_native.repo_paths import resolve_gui_source_root
@@ -25,12 +25,12 @@ from airunner_native.repo_paths import resolve_repo_root
 
 configure_early_torch_allocator_environment()
 
-from airunner_native.settings import AIRUNNER_BASE_PATH
-from airunner_native.settings import AIRUNNER_DISABLE_FACEHUGGERSHIELD
-from airunner_native.settings import AIRUNNER_LOG_LEVEL
-from airunner_native.settings import LOCAL_SERVER_HOST
+from airunner_common.settings import AIRUNNER_BASE_PATH
+from airunner_common.settings import AIRUNNER_DISABLE_FACEHUGGERSHIELD
+from airunner_common.settings import AIRUNNER_LOG_LEVEL
+from airunner_common.settings import LOCAL_SERVER_HOST
 from airunner_services.utils.application.get_logger import get_logger
-from airunner_services.utils.application.logging_utils import (
+from airunner_common.logging_utils import (
     configure_noisy_loggers,
 )
 

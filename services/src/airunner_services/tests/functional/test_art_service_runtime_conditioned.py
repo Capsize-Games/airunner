@@ -30,7 +30,7 @@ for _path in (
         sys.path.append(_path_str)
 
 
-from airunner_services.contract_enums import Scheduler, StableDiffusionVersion
+from airunner_common.contract_enums import Scheduler, StableDiffusionVersion
 
 
 _PROBE_RESULT_PREFIX = "ART_RUNTIME_RESULT:"

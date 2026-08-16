@@ -16,7 +16,7 @@ from airunner.components.art.data.canvas_layer_records import (
     update_layer_setting,
 )
 from airunner.daemon_client.resource_store import get_resource_store
-from airunner.settings import AIRUNNER_LOG_LEVEL
+from airunner_common.settings import AIRUNNER_LOG_LEVEL
 from airunner.utils.application import get_logger
 from airunner.utils.image import convert_binary_to_image, convert_image_to_binary
 

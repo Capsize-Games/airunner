@@ -14,7 +14,7 @@ from airunner_services.art.managers.stablediffusion.image_response import (
 from airunner_services.art.managers.stablediffusion.image_request import (
     ImageRequest,
 )
-from airunner_services.contract_enums import GeneratorSection, SignalCode
+from airunner_common.contract_enums import GeneratorSection, SignalCode
 
 
 def handle_art(

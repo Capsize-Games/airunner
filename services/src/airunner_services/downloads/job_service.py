@@ -17,7 +17,7 @@ try:
 except ImportError:
     nltk = None
 
-from airunner_services.settings import MODELS_DIR
+from airunner_common.settings import MODELS_DIR
 from airunner_services.config.local_settings_store import get_setting
 from airunner_services.downloads.civitai import (
     fetch_model_info_for_url,
@@ -29,7 +29,7 @@ from airunner_services.downloads.huggingface import (
     HuggingFaceDownloadRequest,
     prepare_huggingface_download_request,
 )
-from airunner_services.contract_enums import SignalCode as WorkerSignalCode
+from airunner_common.contract_enums import SignalCode as WorkerSignalCode
 from airunner_services.downloads.huggingface_download_worker import (
     HuggingFaceDownloadWorker as ServiceHuggingFaceDownloadWorker,
 )

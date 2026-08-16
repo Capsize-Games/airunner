@@ -3,7 +3,7 @@
 from dataclasses import dataclass
 from typing import Annotated
 
-from airunner_services.contract_enums import AvailableLanguage
+from airunner_common.contract_enums import AvailableLanguage
 
 
 @dataclass

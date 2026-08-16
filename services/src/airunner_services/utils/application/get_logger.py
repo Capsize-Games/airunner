@@ -7,7 +7,7 @@ import os
 import threading
 from typing import Optional
 
-from airunner_services.settings import AIRUNNER_BASE_PATH, AIRUNNER_LOG_LEVEL
+from airunner_common.settings import AIRUNNER_BASE_PATH, AIRUNNER_LOG_LEVEL
 from airunner_services.utils.application.log_hygiene import LogHygieneFilter
 
 

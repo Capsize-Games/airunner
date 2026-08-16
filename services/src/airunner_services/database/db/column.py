@@ -7,7 +7,7 @@ from typing import Any, Optional
 from alembic import op
 import sqlalchemy as sa
 
-from airunner_services.settings import AIRUNNER_LOG_LEVEL
+from airunner_common.settings import AIRUNNER_LOG_LEVEL
 from airunner_services.utils.application import get_logger
 from airunner_services.database.db.engine import get_inspector
 

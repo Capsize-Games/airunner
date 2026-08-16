@@ -40,7 +40,7 @@ from airunner.components.art.gui.widgets.stablediffusion.templates.stable_diffus
 from airunner.components.application.gui.windows.main.pipeline_mixin import (
     PipelineMixin,
 )
-from airunner.settings import AIRUNNER_ART_ENABLED
+from airunner_common.settings import AIRUNNER_ART_ENABLED
 from airunner.utils.settings.get_qsettings import get_qsettings
 import threading
 import os

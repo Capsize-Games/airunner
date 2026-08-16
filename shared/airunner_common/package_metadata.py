@@ -1,4 +1,10 @@
-"""Canonical build metadata for the service package surface."""
+"""Canonical build metadata for every AIRunner package surface.
+
+This module is the single source of truth for package versions, shared
+requirements and console-script entry points. The ``services`` and ``native``
+package surfaces both read their ``setuptools`` metadata from here so the two
+can no longer drift from each other (architecture audit finding O1).
+"""
 
 from __future__ import annotations
 
@@ -15,10 +21,30 @@ FACEHUGGERSHIELD_REQUIREMENT = (
     "archive/refs/tags/v1.0.0.tar.gz"
 )
 
+# The shared package lives at <repo>/shared/airunner_common, so the repo root
+# is two parents up (``shared`` and the repo root itself).
 README = (
-    Path(__file__).resolve().parents[1] / "README.md"
+    Path(__file__).resolve().parents[2] / "README.md"
 ).read_text(encoding="utf-8")
 
+DEVELOPMENT_REQUIREMENTS = [
+    "pytest",
+    "pytest-timeout",
+    "responses>=0.25.0",
+    "coverage==7.8.0",
+    "black==26.3.1",
+    "pyinstaller==6.12.0",
+    "flake8==7.2.0",
+    "mypy==1.16.0",
+    "autoflake==2.3.1",
+    "pandas>=2.0.0",
+    "pyarrow>=14.0.0",
+    "tqdm>=4.0.0",
+]
+
+# ---------------------------------------------------------------------------
+# Services package surface
+# ---------------------------------------------------------------------------
 CORE_REQUIREMENTS = [
     "numpy==2.2.5",
     "packaging>=24.0",
@@ -169,21 +195,6 @@ COMPUTER_USE_REQUIREMENTS = [
 
 SYSTEM_DEP_EXTRAS = {"openvoice_jp", "openvoice_kr"}
 
-DEVELOPMENT_REQUIREMENTS = [
-    "pytest",
-    "pytest-timeout",
-    "responses>=0.25.0",
-    "coverage==7.8.0",
-    "black==26.3.1",
-    "pyinstaller==6.12.0",
-    "flake8==7.2.0",
-    "mypy==1.16.0",
-    "autoflake==2.3.1",
-    "pandas>=2.0.0",
-    "pyarrow>=14.0.0",
-    "tqdm>=4.0.0",
-]
-
 SERVICE_CONSOLE_SCRIPTS = [
     "airunner-daemon=airunner_services.daemon:main",
     "airunner-headless=airunner_services.bin.airunner_headless:main",
@@ -195,6 +206,19 @@ SERVICE_CONSOLE_SCRIPTS = [
     "airunner_services.bin.airunner_civitai_download:main",
 ]
 
+# ---------------------------------------------------------------------------
+# Native package surface
+# ---------------------------------------------------------------------------
+NATIVE_CONSOLE_SCRIPTS = [
+    "airunner=airunner_native.launcher:main",
+]
+
+NATIVE_BASE_REQUIREMENTS = [
+    f"airunner-common=={VERSION}",
+    f"airunner-services=={VERSION}",
+    FACEHUGGERSHIELD_REQUIREMENT,
+]
+
 
 def unique_requirements(*groups: list[str]) -> list[str]:
     """Return one stable dependency list with duplicates removed."""
@@ -202,6 +226,8 @@ def unique_requirements(*groups: list[str]) -> list[str]:
     for group in groups:
         dependencies.extend(group)
     return list(dict.fromkeys(dependencies))
+
+
 def _base_extras_require() -> dict[str, list[str]]:
     """Return the non-aggregate service extras."""
     return {
@@ -318,16 +344,17 @@ def _aggregate_extras_require(
     }
 
 
-def build_extras_require() -> dict[str, list[str]]:
+def build_services_extras_require() -> dict[str, list[str]]:
     """Return the extras map for the service package surface."""
     extras_require = _base_extras_require()
     extras_require.update(_aggregate_extras_require(extras_require))
     return extras_require
 
 
-def build_setup_kwargs(*, package_source_dir: str) -> dict[str, Any]:
+def build_services_setup_kwargs(*, package_source_dir: str) -> dict[str, Any]:
     """Return the setuptools metadata for the service package surface."""
     install_requires = [
+        f"airunner-common=={VERSION}",
         FACEHUGGERSHIELD_REQUIREMENT,
         *CORE_REQUIREMENTS,
     ]
@@ -345,7 +372,7 @@ def build_setup_kwargs(*, package_source_dir: str) -> dict[str, Any]:
         "packages": find_packages(package_source_dir),
         "python_requires": ">=3.13.3",
         "install_requires": install_requires,
-        "extras_require": build_extras_require(),
+        "extras_require": build_services_extras_require(),
         "package_data": {
             "airunner_services": [
                 "assets/reference_speakers/*.wav",
@@ -363,4 +390,68 @@ def build_setup_kwargs(*, package_source_dir: str) -> dict[str, Any]:
     }
 
 
-__all__ = ["SERVICE_CONSOLE_SCRIPTS", "VERSION", "build_setup_kwargs"]
+def build_native_extras_require() -> dict[str, list[str]]:
+    """Return optional extras for the native package surface."""
+    gui_requirements = [f"airunner=={VERSION}"]
+    return {
+        "development": DEVELOPMENT_REQUIREMENTS,
+        "dev": DEVELOPMENT_REQUIREMENTS,
+        "gui": gui_requirements,
+        "desktop": gui_requirements,
+    }
+
+
+def build_native_setup_kwargs(*, package_source_dir: str) -> dict[str, Any]:
+    """Return the setuptools metadata for the native package surface."""
+    return {
+        "name": "airunner-native",
+        "version": VERSION,
+        "author": "Capsize LLC",
+        "description": "AIRunner native launcher and bundle tooling",
+        "long_description": README,
+        "long_description_content_type": "text/markdown",
+        "license": "Apache-2.0",
+        "author_email": "contact@capsizegames.com",
+        "url": "https://github.com/Capsize-Games/airunner",
+        "package_dir": {"": package_source_dir},
+        "packages": find_packages(package_source_dir),
+        "python_requires": ">=3.13.3",
+        "install_requires": NATIVE_BASE_REQUIREMENTS,
+        "extras_require": build_native_extras_require(),
+        "include_package_data": True,
+        "entry_points": {"console_scripts": NATIVE_CONSOLE_SCRIPTS},
+    }
+
+
+__all__ = [
+    "ART_REQUIREMENTS",
+    "COMPUTER_USE_REQUIREMENTS",
+    "CORE_REQUIREMENTS",
+    "DEVELOPMENT_REQUIREMENTS",
+    "FACEHUGGERSHIELD_REQUIREMENT",
+    "GRUUT_SUPPORT_REQUIREMENTS",
+    "HUGGINGFACE_REQUIREMENTS",
+    "LLM_NATIVE_REQUIREMENTS",
+    "LLM_WEATHER_REQUIREMENTS",
+    "MELOTTS_REQUIREMENTS",
+    "ML_RUNTIME_REQUIREMENTS",
+    "NATIVE_BASE_REQUIREMENTS",
+    "NATIVE_CONSOLE_SCRIPTS",
+    "NVIDIA_REQUIREMENTS",
+    "OPENVOICE_CN_REQUIREMENTS",
+    "OPENVOICE_JP_REQUIREMENTS",
+    "OPENVOICE_KR_REQUIREMENTS",
+    "OPENVOICE_REQUIREMENTS",
+    "OPENVOICE_TW_REQUIREMENTS",
+    "SEARCH_REQUIREMENTS",
+    "SERVICE_CONSOLE_SCRIPTS",
+    "STT_NATIVE_REQUIREMENTS",
+    "SYSTEM_DEP_EXTRAS",
+    "TTS_REQUIREMENTS",
+    "VERSION",
+    "build_native_extras_require",
+    "build_native_setup_kwargs",
+    "build_services_extras_require",
+    "build_services_setup_kwargs",
+    "unique_requirements",
+]

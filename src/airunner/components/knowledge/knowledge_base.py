@@ -16,7 +16,7 @@ from pathlib import Path
 from typing import Optional, List, Dict, Tuple
 import threading
 
-from airunner.settings import AIRUNNER_BASE_PATH, AIRUNNER_LOG_LEVEL
+from airunner_common.settings import AIRUNNER_BASE_PATH, AIRUNNER_LOG_LEVEL
 from airunner.utils.application import get_logger
 from airunner.utils.application.log_hygiene import summarize_text
 

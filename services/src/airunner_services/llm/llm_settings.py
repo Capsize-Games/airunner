@@ -11,7 +11,7 @@ if os.environ.get("DEV_ENV", "1") == "1":
     except ImportError:
         pass
 
-from airunner_services.settings import (
+from airunner_common.settings import (
     AIRUNNER_LLM_AGENT_MAX_FUNCTION_CALLS,
     AIRUNNER_LLM_AGENT_SUMMARIZE_AFTER_N_TURNS,
     AIRUNNER_LLM_AGENT_UPDATE_MOOD_AFTER_N_TURNS,
