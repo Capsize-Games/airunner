@@ -10,7 +10,7 @@ import urllib.request
 import zipfile
 import shutil
 
-from airunner.settings import MATHJAX_VERSION
+from airunner_common.settings import MATHJAX_VERSION
 from airunner.utils.zip_utils import safe_extract_zip
 
 # Correct MathJax release asset (contains es5/tex-mml-chtml.js)
