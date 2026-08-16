@@ -31,6 +31,54 @@ daemon_running() {
     return 1
 }
 
+pid_listening_on_port() {
+    ss -tlnp 2>/dev/null | \
+        sed -nE "s/^.*(127\.0\.0\.1|0\.0\.0\.0|\[::\]|\*):${DAEMON_PORT} .*pid=([0-9]+).*/\2/p" | \
+        sort -u | head -n1
+}
+
+force_stop_pid() {
+    local pid="$1"
+    if [[ -z "${pid}" ]]; then
+        return 1
+    fi
+
+    kill "${pid}" 2>/dev/null || true
+    local deadline=$((SECONDS + 10))
+    while (( SECONDS < deadline )); do
+        if ! kill -0 "${pid}" 2>/dev/null; then
+            return 0
+        fi
+        sleep 0.5
+    done
+
+    kill -9 "${pid}" 2>/dev/null || true
+    deadline=$((SECONDS + 5))
+    while (( SECONDS < deadline )); do
+        if ! kill -0 "${pid}" 2>/dev/null; then
+            return 0
+        fi
+        sleep 0.5
+    done
+
+    return 1
+}
+
+stop_unmanaged_port_holder() {
+    local holder_pid
+    holder_pid="$(pid_listening_on_port)"
+    if [[ -z "${holder_pid}" || "${holder_pid}" == "$$" ]]; then
+        return
+    fi
+    echo "Port ${DAEMON_PORT} is still held by PID ${holder_pid}; stopping stale daemon."
+    if force_stop_pid "${holder_pid}"; then
+        echo "Stopped stale daemon holding port ${DAEMON_PORT}."
+    else
+        echo "WARNING: could not stop PID ${holder_pid} holding port ${DAEMON_PORT}." >&2
+    fi
+    rm -f "${PID_FILE}"
+}
+
 current_dev_build_token() {
     PYTHONPATH="${ROOT_DIR}/services/src:${ROOT_DIR}/src:${ROOT_DIR}/native/src${PYTHONPATH:+:${PYTHONPATH}}" \
     DEV_ENV=1 \
@@ -67,6 +115,11 @@ stop_running_daemon() {
 
     local pid
     pid="$(head -n1 "${PID_FILE}")"
+    if ! kill -0 "${pid}" 2>/dev/null; then
+        rm -f "${PID_FILE}"
+        return
+    fi
+
     curl -s --max-time 2 -X POST \
         "http://localhost:${DAEMON_PORT}/admin/shutdown" \
         >/dev/null 2>&1 || true
@@ -80,7 +133,20 @@ stop_running_daemon() {
         sleep 0.5
     done
 
+    # Escalate: SIGTERM first, then SIGKILL for wedged daemons whose
+    # event loop ignores SIGTERM while still holding the daemon port.
     kill "${pid}" 2>/dev/null || true
+    deadline=$((SECONDS + 10))
+    while (( SECONDS < deadline )); do
+        if ! kill -0 "${pid}" 2>/dev/null; then
+            rm -f "${PID_FILE}"
+            return
+        fi
+        sleep 0.5
+    done
+
+    echo "Daemon (PID ${pid}) did not stop after SIGTERM; forcing stop."
+    kill -9 "${pid}" 2>/dev/null || true
     deadline=$((SECONDS + 5))
     while (( SECONDS < deadline )); do
         if ! kill -0 "${pid}" 2>/dev/null; then
@@ -125,6 +191,11 @@ start_services() {
             return
         fi
     fi
+
+    # A wedged daemon can survive SIGTERM while still holding the daemon
+    # port. Stop any such leftover before launching a fresh instance so
+    # the new daemon does not fail with "address already in use".
+    stop_unmanaged_port_holder
 
     if daemon_running; then
         echo "Daemon already running (PID $(head -n1 "${PID_FILE}"))"

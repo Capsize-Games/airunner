@@ -27,6 +27,7 @@ from airunner.components.application.gui.windows.main.settings_mixin import (
 )
 from airunner.components.data.bootstrap_service import (
     get_model_bootstrap_data,
+    get_openvoice_files,
 )
 from airunner.components.data.bootstrap_service import (
     get_controlnet_bootstrap_data,

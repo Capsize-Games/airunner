@@ -95,24 +95,16 @@ flowchart LR
 ## 💾 Installation
 
 Current status:
-The hybrid-runtime branch completed the runtime refactor, and AIRunner now
-has embedded-Python bundle builders and installer packagers.
+AIRunner runs as a Python application with two install paths.
 
-Choose one of the three primary install modes:
+Choose one of the two primary install modes:
 
 | Install mode | Best for | Primary command |
 |--------------|----------|-----------------|
-| `single-package` | End users installing a prebuilt desktop bundle | `./install.sh --bundle-archive ...` |
 | `dev` | Contributors working from a repo checkout | `./scripts/install.sh` |
 | `distributed` | Operators separating daemon and GUI-client installs | `./deployment/install_distributed.sh --role ...` |
 
-1. `single-package` for end users who want one local desktop install with
-  embedded Python and bundled native runtimes.
-  ```bash
-  ./install.sh --bundle-archive dist/airunner-<version>-linux-desktop-bundle.tar.gz
-  ```
-
-2. `dev` for contributors working from this repo checkout.
+1. `dev` for contributors working from this repo checkout.
   This reuses `./venv` by default, installs the Python packages in editable
   mode, and builds the pinned `llama.cpp` and `whisper.cpp` sidecars under
   `build/runtime-sidecars/linux/`.
@@ -125,22 +117,15 @@ Choose one of the three primary install modes:
   `--refresh-deps` when you want a full dependency refresh, and add
   `--sidecars-cuda` when you want CUDA-enabled native sidecars.
 
-3. `distributed` for operators who want the daemon and GUI client installed
+2. `distributed` for operators who want the daemon and GUI client installed
   separately, including split-machine setups.
   ```bash
   ./deployment/install_distributed.sh --role daemon
   ./deployment/install_distributed.sh --role gui-client
   ```
 
-Build and packaging commands:
-- Linux staged bundle archive: `./scripts/build_airunner_bundle.sh`
-- Linux AppImage wrapper: `./scripts/package_linux_appimage.sh`
-- Windows bundle staging: `python -m airunner_native.bin.build_end_user_bundle`
-- Windows NSIS installer: `pwsh ./scripts/package_windows_nsis.ps1`
-
 The manual and Docker paths below are still useful developer/operator
-installation flows. The bundled end-user packaging contract is summarized in
-[END_USER_DISTRIBUTION.md](./END_USER_DISTRIBUTION.md).
+installation flows.
 
 ### Docker (Recommended)
 
@@ -277,10 +262,8 @@ foundation, LLM cutover, STT isolation, art/TTS isolation, then packaging,
 bundles, CI, and rollout hardening. The phase order, rollout gates, and full
 issue-tree checklist live in [HYBRID_RUNTIME_MIGRATION.md](./HYBRID_RUNTIME_MIGRATION.md).
 
-That migration is the runtime architecture foundation. AIRunner now also
-includes the no-system-Python distribution layer with one primary
-`airunner` entry point, described in
-[END_USER_DISTRIBUTION.md](./END_USER_DISTRIBUTION.md).
+AIRunner ships as a Python application with one primary `airunner` entry
+point.
 
 ---
 

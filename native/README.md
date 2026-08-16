@@ -1,36 +1,34 @@
 # Native
 
-The `native/` package owns AIRunner's launcher, bundle assembly, and the
-installer-facing logic that turns the Python packages and sidecars into a
-deliverable desktop application.
+The `native/` package owns AIRunner's Python launcher entry point, runtime
+layout helpers, and the pinned `llama.cpp` / `whisper.cpp` sidecar support.
+
+AIRunner is a Python application. There is no compiled C++ launcher and no
+bundle/installer packaging; the desktop app runs directly from the installed
+Python packages.
 
 ```mermaid
 flowchart LR
-	Bundle[bundle archive or install root] --> Native[native/ launcher]
-	Native --> GUI[src/ desktop app]
-	Native --> Services[services/ daemon entry points]
-	Native --> Sidecars[llama.cpp and whisper.cpp sidecars]
-	Native --> Data[(embedded Python and runtime layout)]
+	Python[airunner_native launcher] --> GUI[src/ desktop app]
+	Python --> Services[services/ daemon entry points]
+	Services --> Sidecars[llama.cpp and whisper.cpp sidecars]
+	Python --> RuntimeLayout[runtime layout helpers]
 ```
 
 ## What This Package Owns
 
 - the `airunner` launcher entry point provided by `airunner_native`
-- end-user bundle assembly and runtime layout helpers
-- installer-facing bootstrap logic for bundled desktop delivery
+- repo and runtime layout helpers (`repo_paths`, `linux_bundle_layout`)
+- startup environment and early torch/allocator configuration
 - repo-local support for pinned `llama.cpp` and `whisper.cpp` sidecars
 
 Importable native code lives under `native/src/airunner_native/`.
 
 ## Installation
 
-AIRunner supports three installer paths, and `native/` is involved in all
-of them:
+AIRunner is installed as Python packages:
 
 ```bash
-# single-package end-user install
-./install.sh --bundle-archive dist/airunner-<version>-linux-desktop-bundle.tar.gz
-
 # repo-local developer install
 ./scripts/install.sh
 
@@ -53,8 +51,9 @@ pip install -e ./native[development]
 
 ## Test Running
 
-Native changes are validated through installer and launcher smoke checks plus
-the daemon-backed functional suites that consume the built sidecars:
+Native changes are validated through the launcher smoke path (the Python
+launcher entry point) plus the daemon-backed functional suites that consume
+the built sidecars:
 
 ```bash
 ./scripts/install.sh --help

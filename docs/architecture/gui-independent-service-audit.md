@@ -44,14 +44,10 @@ but the higher-level orchestration layer is split:
 
 ### Current packaging direction
 
-- The repo already targets a native launcher plus bundled Python, not a
-  pure native application rewrite. That is spelled out in
-  [END_USER_DISTRIBUTION.md](END_USER_DISTRIBUTION.md),
-  [native/airunner_launcher/CONTRACT.md](native/airunner_launcher/CONTRACT.md),
-  and
-  [native/airunner_launcher/README.md](native/airunner_launcher/README.md).
-- The current launcher boundary is intentionally narrow: native code boots
-  Python, while Python still owns runtime clients and sidecar supervision.
+- AIRunner is delivered as a Python application. The Python launcher entry
+  point boots the desktop app while Python owns the daemon, runtime clients,
+  and sidecar supervision. There is no compiled C++ launcher or bundled
+  installer distribution.
 
 ## Closest Existing Foundation
 
@@ -219,10 +215,8 @@ client-owned pieces:
 
 ### Already aligned with the target
 
-- A native launcher plus bundled Python is already the intended product shape
-  in [END_USER_DISTRIBUTION.md](END_USER_DISTRIBUTION.md).
-- Windows packaging already creates a standard installer and uninstaller in
-  [packaging/windows/airunner.nsi](packaging/windows/airunner.nsi).
+- The product is delivered as a Python application with a Python launcher
+  entry point; there is no compiled launcher or bundled installer.
 - Linux headless deployment already expects a separated bundle root and data
   root in [deployment/systemd/README.md](deployment/systemd/README.md).
 

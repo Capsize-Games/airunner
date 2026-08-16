@@ -21,16 +21,13 @@ run_step() {
     "$@" || fail "${label} failed (exit code $?)"
 }
 
-# 1. Build the native launcher
-run_step "Building native launcher" "${DEV_DIR}/build.sh" "$@"
-
-# 2. Start services (daemon + API)
+# 1. Start services (daemon + API)
 run_step "Starting services" "${DEV_DIR}/run_services.sh"
 
-# 3. Health check
+# 2. Health check
 run_step "Testing services" "${DEV_DIR}/test_services.sh"
 
-# 4. Launch GUI
+# 3. Launch GUI
 echo ""
 echo -e "${GREEN}=== Launching GUI ===${NC}"
 echo "Services are running. GUI will auto-connect to daemon on port 8188."

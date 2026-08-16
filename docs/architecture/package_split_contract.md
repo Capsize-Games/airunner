@@ -93,9 +93,8 @@ Do not treat their directory placement as package ownership.
 AIRunner currently supports three install modes and each one should remain
 documented and working:
 
-1. `single-package` for prebuilt desktop bundles
-2. `dev` for repo-local editable development installs
-3. `distributed` for separate daemon and GUI-client installs
+1. `dev` for repo-local editable development installs
+2. `distributed` for separate daemon and GUI-client installs
 
 Changes that affect installer scripts, bundle layout, or sidecar
 resolution should update the package README files and the root README at

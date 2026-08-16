@@ -21,8 +21,6 @@ README = (
 
 NATIVE_CONSOLE_SCRIPTS = [
     "airunner=airunner_native.launcher:main",
-    "airunner-build-end-user-bundle="
-    "airunner_native.bin.build_end_user_bundle:main",
 ]
 
 DEVELOPMENT_REQUIREMENTS = [
@@ -31,7 +29,6 @@ DEVELOPMENT_REQUIREMENTS = [
     "responses>=0.25.0",
     "coverage==7.8.0",
     "black==26.3.1",
-    "pyinstaller==6.12.0",
     "flake8==7.2.0",
     "mypy==1.16.0",
     "autoflake==2.3.1",

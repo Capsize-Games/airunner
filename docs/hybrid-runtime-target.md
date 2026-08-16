@@ -34,10 +34,8 @@ Engineering requirement:
 AIRunner currently supports three installation or delivery modes while this
 runtime target is being productized:
 
-1. `single-package` for a prebuilt desktop bundle with embedded Python and
-  bundled native runtimes
-2. `dev` for repo-local editable installs driven by `./scripts/install.sh`
-3. `distributed` for separate daemon and GUI-client installs driven by
+1. `dev` for repo-local editable installs driven by `./scripts/install.sh`
+2. `distributed` for separate daemon and GUI-client installs driven by
   `./deployment/install_distributed.sh`
 
 Those modes share the same package split:

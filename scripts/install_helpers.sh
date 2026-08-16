@@ -117,6 +117,11 @@ install_torch_stack() {
             return 0
             ;;
         auto)
+            if "$python_bin" -c 'import torch' >/dev/null 2>&1; then
+                log_info 'torch already installed; skipping reinstall'
+                log_info 'Use --torch cpu|cuda to force a specific wheel set'
+                return 0
+            fi
             if command_exists nvidia-smi; then
                 index_url='https://download.pytorch.org/whl/cu128'
                 log_info 'Installing torch with CUDA wheels'

@@ -34,8 +34,6 @@ def _looks_like_repo_root(candidate: Path) -> bool:
     """Return True when one directory looks like the repo root."""
     if not (candidate / "pyproject.toml").exists():
         return False
-    if not (candidate / "native" / "embedded_python").exists():
-        return False
     return any(
         _looks_like_gui_project_root(project_root)
         for project_root in (candidate / "gui", candidate)
