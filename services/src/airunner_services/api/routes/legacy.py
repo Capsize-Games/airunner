@@ -21,6 +21,9 @@ from .legacy_contracts import (
     LegacyLLMGenerateRequest,
 )
 from .legacy_llm_routes import router as llm_router
+from .legacy_native_compat import router as native_router
+from .legacy_ollama_compat import router as ollama_router
+from .legacy_openai_compat import router as openai_router
 from .legacy_status_routes import router as status_router
 
 router = APIRouter()
@@ -28,6 +31,9 @@ router.include_router(status_router)
 router.include_router(llm_router)
 router.include_router(art_router)
 router.include_router(admin_router)
+router.include_router(native_router)
+router.include_router(ollama_router)
+router.include_router(openai_router)
 
 __all__ = [
     "LegacyArtRequest",
