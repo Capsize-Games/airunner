@@ -826,8 +826,14 @@ class BrushScene(CustomScene):
         ):
             self._create_mask_image()
         if self.is_brush_or_eraser:
-            self._pending_brush_history_layer = self._add_image_to_undo()
+            # Resolve the stroke target first so the history transaction
+            # is keyed on the exact layer the stroke will land on (the
+            # resolved _stroke_target_layer_id, including the lowest-id
+            # fallback), keeping press and release on the same layer.
             self._start_stroke_buffer()
+            self._pending_brush_history_layer = self._add_image_to_undo(
+                layer_id=self._stroke_target_layer_id
+            )
         self._rebind_active_painter()
         return
 
@@ -913,6 +919,16 @@ class BrushScene(CustomScene):
                         current_layer_id = get_layer_id()
                     except Exception:
                         current_layer_id = None
+
+                # The stroke target is the authoritative layer that was
+                # painted.  On a fresh canvas the selected layer id may
+                # not be resolvable yet even though the stroke landed on
+                # a real layer (the lowest-id fallback); in that case
+                # treat the target as the current layer so the in-memory
+                # caches stay in sync with the layer record that was
+                # actually written below.
+                if current_layer_id is None:
+                    current_layer_id = target_layer_id
 
                 if current_layer_id == target_layer_id:
                     self.current_active_image = pil_image

@@ -96,6 +96,7 @@ class CanvasWidget(BaseWidget):
             SignalCode.APPLICATION_ACTIVE_GRID_AREA_UPDATED: (
                 self.on_active_grid_area_updated_signal
             ),
+            SignalCode.HISTORY_UPDATED: self.on_history_updated_signal,
             SignalCode.SAVE_STATE: self.save_state,
         }
         self._initialized: bool = False
@@ -103,6 +104,13 @@ class CanvasWidget(BaseWidget):
         self._centered_canvas_restore_scheduled = False
         super().__init__(*args, **kwargs)
         self._configure_canvas_shortcuts()
+
+        # History is empty at startup; undo/redo stay disabled until a
+        # HISTORY_UPDATED signal reports a non-empty undo/redo stack.
+        if hasattr(self.ui, "undo_button"):
+            self.ui.undo_button.setEnabled(False)
+        if hasattr(self.ui, "redo_button"):
+            self.ui.redo_button.setEnabled(False)
 
         show_grid = self.grid_settings.show_grid
 
@@ -483,6 +491,19 @@ class CanvasWidget(BaseWidget):
     def on_redo_button_clicked(self) -> None:
         """Handle redo button click to redo last undone action."""
         self.api.art.canvas.redo()
+
+    def on_history_updated_signal(self, data: Dict) -> None:
+        """Enable/disable the undo/redo buttons based on history depth.
+
+        Args:
+            data: Dict with "undo" and "redo" history counts.
+        """
+        undo_count = int(data.get("undo", 0) or 0)
+        redo_count = int(data.get("redo", 0) or 0)
+        if hasattr(self.ui, "undo_button"):
+            self.ui.undo_button.setEnabled(undo_count > 0)
+        if hasattr(self.ui, "redo_button"):
+            self.ui.redo_button.setEnabled(redo_count > 0)
 
     @Slot()
     def on_new_button_clicked(self) -> None:

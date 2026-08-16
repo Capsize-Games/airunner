@@ -3,6 +3,7 @@
 from typing import Dict, Any, Optional
 from dataclasses import asdict, is_dataclass
 from PySide6.QtCore import QPointF, QTimer
+from PySide6.QtWidgets import QApplication, QGraphicsView
 from PIL import ImageQt
 
 from airunner.components.art.data.canvas_layer_records import (
@@ -24,6 +25,11 @@ class CanvasHistoryMixin:
 
     def on_action_undo_signal(self) -> None:
         """Handle undo action signal."""
+        # UNDO_SIGNAL is broadcast to every registered scene; only the
+        # active canvas should service it, otherwise a single undo click
+        # pops from every non-empty scene history.
+        if not self._is_active_history_scene():
+            return
         if not self.undo_history:
             return
         entry = self.undo_history.pop()
@@ -39,6 +45,11 @@ class CanvasHistoryMixin:
 
     def on_action_redo_signal(self) -> None:
         """Handle redo action signal."""
+        # See on_action_undo_signal: REDO_SIGNAL is also broadcast to
+        # every registered scene and must only be serviced by the active
+        # canvas.
+        if not self._is_active_history_scene():
+            return
         if not self.redo_history:
             return
         entry = self.redo_history.pop()
@@ -83,19 +94,26 @@ class CanvasHistoryMixin:
         """Capture current state of a layer for history.
 
         Args:
-            layer_id: ID of layer to capture, None for global.
+            layer_id: ID of layer to capture, None to resolve the layer
+                from the current stroke target/selection before reading
+                its per-layer record (falling back to the global drawing
+                pad record only when no layer can be resolved).
 
         Returns:
             Dict with layer state.
         """
-        if layer_id is None:
-            settings = self.drawing_pad_settings
-        else:
+        resolved_layer_id = layer_id
+        if resolved_layer_id is None:
+            resolved_layer_id = self._resolve_history_target_layer_id()
+
+        if resolved_layer_id is not None:
             settings = ensure_layer_setting(
                 "DrawingPadSettings",
-                layer_id,
+                resolved_layer_id,
                 store=self.resource_store,
             )
+        else:
+            settings = self.drawing_pad_settings
 
         if settings is None:
             return {"image": None, "mask": None, "x_pos": 0, "y_pos": 0}
@@ -106,7 +124,7 @@ class CanvasHistoryMixin:
         except Exception:
             current_selected = None
 
-        if layer_id is None or layer_id == current_selected:
+        if resolved_layer_id is None or resolved_layer_id == current_selected:
             if getattr(self, "_pending_image_binary", None) is not None:
                 image_val = self._pending_image_binary
             elif (
@@ -318,6 +336,111 @@ class CanvasHistoryMixin:
         if self.api and hasattr(self.api, "art"):
             self.api.art.canvas.clear_history()
 
+    def _resolve_history_target_layer_id(self) -> Optional[int]:
+        """Resolve the layer id a brush stroke will be painted onto.
+
+        Mirrors the stroke-target resolution performed at press time in
+        ``_start_stroke_buffer`` (``_resolve_layer_canvas_item`` with the
+        lowest-id fallback when the active layer item is unavailable) so
+        the history transaction is keyed on the same layer the stroke
+        actually lands on.  Falls back to the current selected layer id
+        only when no layer item could be resolved.
+
+        Returns:
+            Resolved layer id, or None when no layer exists at all.
+        """
+        resolve_item = getattr(self, "_resolve_layer_canvas_item", None)
+        if callable(resolve_item):
+            try:
+                layer_item = resolve_item()
+            except Exception:
+                layer_item = None
+            if layer_item is not None:
+                layer_id = getattr(layer_item, "layer_id", None)
+                if isinstance(layer_id, int):
+                    return layer_id
+
+        try:
+            selected = self._get_current_selected_layer_id()
+        except Exception:
+            selected = None
+
+        layer_items = getattr(self, "_layer_items", None)
+        if isinstance(layer_items, dict):
+            # A saved selection may point at a layer that no longer has a
+            # graphics item (stale selected_layer_id or async layer init);
+            # never key history on such an id.  Prefer the lowest-id item,
+            # matching the stroke-target fallback at press time.
+            if isinstance(selected, int) and selected in layer_items:
+                return selected
+            for layer_id in sorted(layer_items):
+                if layer_items.get(layer_id) is not None:
+                    return layer_id
+            return None
+        if isinstance(selected, int):
+            return selected
+        return None
+
+    def _is_active_history_scene(self) -> bool:
+        """Return whether this scene is the active canvas for undo/redo.
+
+        UNDO_SIGNAL/REDO_SIGNAL are broadcast to every registered scene,
+        so each scene must ignore the signal unless it is the active
+        canvas.  A scene is active when its view currently holds keyboard
+        focus, or when no canvas view has focus and the scene is hosted
+        by the primary CanvasWidget's canvas_container.
+
+        Returns:
+            True when this scene should service undo/redo.
+        """
+        if not self.views():
+            return False
+
+        view = getattr(self, "parent", None)
+        if view is None or callable(view) or not isinstance(
+            view, QGraphicsView
+        ):
+            views = self.views()
+            view = views[0] if views else None
+        if view is None:
+            return False
+
+        focus_widget = None
+        try:
+            focus_widget = QApplication.focusWidget()
+        except (AttributeError, RuntimeError):
+            focus_widget = None
+
+        if focus_widget is not None:
+            # Walk up from the focused widget to find its canvas view.
+            node = focus_widget
+            while node is not None:
+                if isinstance(node, QGraphicsView):
+                    return node is view
+                node = (
+                    node.parentWidget()
+                    if hasattr(node, "parentWidget")
+                    else None
+                )
+
+        # No canvas view holds focus (e.g. a toolbar button was clicked);
+        # fall back to the primary CanvasWidget canvas scene.
+        widget = view
+        while widget is not None:
+            if widget.__class__.__name__ == "CanvasWidget":
+                container = getattr(
+                    getattr(widget, "ui", None), "canvas_container", None
+                )
+                if container is not None:
+                    return container is view
+                return False
+            widget = (
+                widget.parentWidget()
+                if hasattr(widget, "parentWidget")
+                else None
+            )
+        return False
+
     def _add_image_to_undo(
         self,
         layer_id: Optional[int] = None,
@@ -326,16 +449,21 @@ class CanvasHistoryMixin:
         """Add image change to undo history.
 
         Args:
-            layer_id: ID of layer, None for current.
+            layer_id: ID of layer, None for current stroke target.
             change_type: Type of change.
 
         Returns:
-            Target layer ID used.
+            Target layer ID used, or None when no layer could be resolved
+            (in which case no history transaction is started).
         """
         target_layer_id = layer_id
+        if not isinstance(target_layer_id, int):
+            target_layer_id = self._resolve_history_target_layer_id()
         if target_layer_id is None:
-            target_layer_id = self._get_current_selected_layer_id()
-        elif not isinstance(target_layer_id, int):
-            target_layer_id = self._get_current_selected_layer_id()
+            # No layer item could be resolved; there is nothing to key the
+            # transaction on.  Skip history instead of capturing the
+            # global (layer-less) drawing pad record, which can never
+            # match the layer a stroke is written to.
+            return None
         self._begin_layer_history_transaction(target_layer_id, change_type)
         return target_layer_id
