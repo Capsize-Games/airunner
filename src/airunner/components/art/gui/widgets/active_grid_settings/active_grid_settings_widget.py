@@ -1,5 +1,6 @@
 from PySide6.QtWidgets import QColorDialog
 from airunner.enums import SignalCode
+from airunner.utils.settings.client_settings import is_maximized as client_is_maximized
 from airunner.components.art.gui.widgets.active_grid_settings.templates.active_grid_settings_ui import (
     Ui_active_grid_settings_widget,
 )
@@ -18,7 +19,7 @@ class ActiveGridSettingsWidget(BaseWidget):
         }
         super().__init__(*args, **kwargs)
         self.ui.width_slider_widget.setProperty(
-            "current_value", self.application_settings.is_maximized
+            "current_value", client_is_maximized()
         )
         self.ui.height_slider_widget.setProperty(
             "current_value", self.application_settings.working_height

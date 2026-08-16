@@ -20,6 +20,10 @@ if QCoreApplication.instance() is None:
     )
 
 from airunner.enums import CanvasToolName, TemplateName
+from airunner.utils.settings.client_settings import (
+    current_tool as client_current_tool,
+    is_dark as client_is_dark,
+)
 from airunner.gui.styles.styles_mixin import StylesMixin
 from airunner.components.application.gui.windows.main.settings_mixin import (
     SettingsMixin,
@@ -186,11 +190,11 @@ class BaseWidget(AbstractBaseWidget):
 
     @property
     def current_tool(self) -> CanvasToolName:
-        return CanvasToolName(self.application_settings.current_tool)
+        return CanvasToolName(client_current_tool() or "brush")
 
     @property
     def is_dark(self) -> bool:
-        return self.application_settings.dark_mode_enabled
+        return client_is_dark()
 
     def initialize_ui(self):
         """

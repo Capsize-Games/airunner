@@ -12,6 +12,7 @@ from airunner.components.application.gui.windows.main.settings_mixin import (
     SettingsMixin,
 )
 from airunner.utils.settings import get_qsettings
+from airunner.utils.settings.client_settings import current_tool as client_current_tool
 from airunner.components.art.data.canvas_layer_records import (
     ensure_layer_setting,
 )
@@ -64,7 +65,7 @@ class DraggablePixmap(
 
     @property
     def current_tool(self):
-        val = self.application_settings.current_tool
+        val = client_current_tool()
         try:
             return CanvasToolName(val) if val is not None else None
         except ValueError:

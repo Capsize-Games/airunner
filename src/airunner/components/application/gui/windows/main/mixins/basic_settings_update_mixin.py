@@ -2,6 +2,11 @@
 
 from typing import Any, Dict, Optional
 
+from airunner.utils.settings.client_settings import (
+    CLIENT_LOCAL_SETTINGS,
+    set_client_setting,
+)
+
 
 class BasicSettingsUpdateMixin:
     """Mixin for updating non-layer-specific settings."""
@@ -9,10 +14,28 @@ class BasicSettingsUpdateMixin:
     def update_application_settings(self, **settings_dict):
         """Update application settings.
 
+        Client-local fields (theme, wizard/agreement flags, canvas tool,
+        window state) are persisted to QSettings; service-owned fields
+        continue through the daemon ``ApplicationSettings`` resource.
+
         Args:
             **settings_dict: Settings to update as keyword arguments.
         """
-        self.update_settings("ApplicationSettings", settings_dict)
+        client_keys = set(CLIENT_LOCAL_SETTINGS)
+        client_updates = {
+            name: value
+            for name, value in settings_dict.items()
+            if name in client_keys
+        }
+        db_updates = {
+            name: value
+            for name, value in settings_dict.items()
+            if name not in client_keys
+        }
+        for name, value in client_updates.items():
+            set_client_setting(name, value)
+        if db_updates:
+            self.update_settings("ApplicationSettings", db_updates)
 
     def update_espeak_settings(self, **settings_dict):
         """Update eSpeak TTS settings.

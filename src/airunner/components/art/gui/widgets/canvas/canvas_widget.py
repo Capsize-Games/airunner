@@ -259,11 +259,8 @@ class CanvasWidget(BaseWidget):
         Returns:
             The active CanvasToolName, or None if no tool is active.
         """
-        return (
-            None
-            if self.application_settings.current_tool is None
-            else CanvasToolName(self.application_settings.current_tool)
-        )
+        tool = client_current_tool()
+        return CanvasToolName(tool) if tool is not None else None
 
     @property
     def image_pivot_point(self) -> QPoint:

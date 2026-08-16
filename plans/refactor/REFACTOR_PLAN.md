@@ -43,6 +43,33 @@ Gate for round 3: 201 and 202 merged and green.
 - Stop a runaway group: headlesscode orchestrate stop --repo /home/joe/Projects/airunnerdesktop --group <name>
 - Live dashboard: headlesscode dashboard --port 4390 --repo /home/joe/Projects/airunnerdesktop
 
+## Canonical settings store (issue 301 resolution)
+
+The settings-store ambiguity is resolved as follows; new settings must follow
+this split:
+
+- **QSettings (client-local)**: theme and appearance (`dark_mode_enabled`,
+  `override_system_theme`), window and tab state (`is_maximized`), canvas-tool
+  and layer defaults (`current_tool`, `current_layer_index`,
+  `generator_section`), setup-wizard and agreement completion flags
+  (`run_setup_wizard`, `download_wizard_completed`, the four agreement
+  checks), `FontSetting`, and `gui_language`. The GUI reads/writes these via
+  `src/airunner/utils/settings/client_settings.py`, which is backed by
+  `AIRUNNER_BASE_PATH/config/settings.ini` (see `get_qsettings`). The alembic
+  migration `move_client_local_application_settings_to_qsettings` owns the
+  database-side move; the field list in `CLIENT_LOCAL_SETTINGS` mirrors it.
+- **Service database (daemon-owned)**: runtime paths (`PathSettings`), LLM
+  generation settings, RAG settings, service enablement and daemon bind
+  settings (`sd_enabled`, `llm_enabled`, `tts_enabled`, `stt_enabled`,
+  `http_server_enabled`, `http_server_host`, `http_server_port`),
+  conversations, chatbots, summaries, and user data.
+- **Environment constants**: process-level knobs only (ports, toggles that
+  must be fixed at process start), never user preferences.
+
+GUI code must not read client-local fields from the daemon `ApplicationSettings`
+resource; `BasicSettingsUpdateMixin.update_application_settings` routes
+client-local keys to QSettings automatically.
+
 ## File ownership (avoid cross-group merge conflicts)
 - 101: settings.py, startup_env, dev_build_token, linux_bundle_layout, contract_enums, package_metadata across src/, services/, native/, plus setup.py wiring and all importers of those modules.
 - 102: src/airunner/daemon_client/* and services/src/airunner_services/daemon_client/* plus their importers (app.py, launcher.py, main_window.py, worker_manager.py).

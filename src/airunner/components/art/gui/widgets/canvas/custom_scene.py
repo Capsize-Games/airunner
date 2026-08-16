@@ -14,6 +14,7 @@ from airunner.components.art.data.canvas_layer_records import (
 )
 
 from airunner.enums import CanvasToolName, EngineResponseCode
+from airunner.utils.settings.client_settings import current_tool as client_current_tool
 from airunner.components.art.gui.widgets.canvas.mixins import (
     CanvasImageConversionMixin,
     CanvasSurfaceManagementMixin,
@@ -112,11 +113,8 @@ class CustomScene(
         Returns:
             The active CanvasToolName, or None if no tool is active.
         """
-        return (
-            None
-            if self.application_settings.current_tool is None
-            else CanvasToolName(self.application_settings.current_tool)
-        )
+        tool = client_current_tool()
+        return CanvasToolName(tool) if tool is not None else None
 
     @property
     def settings_key(self) -> str:
