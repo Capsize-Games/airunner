@@ -19,6 +19,7 @@ from airunner_services.llm.llm_request import LLMRequest
 from airunner_services.daemon_connection_state import (
     DaemonConnectionState,
 )
+from airunner_services.daemon_client.gui_bridge_mixin import GuiBridgeMixin
 from airunner_services.daemon_client.launcher import DaemonLauncher
 from airunner_services.dev_build_token import current_dev_build_token
 from airunner_services.contract_enums import LLMActionType
@@ -29,7 +30,7 @@ StateCallback = Callable[[DaemonConnectionState, str], None]
 _ART_JOB_POLL_INTERVAL_SECONDS = 0.10
 
 
-class GuiDaemonClient:
+class GuiDaemonClient(GuiBridgeMixin):
     """Start, connect to, and communicate with the local daemon."""
 
     def __init__(
@@ -44,6 +45,9 @@ class GuiDaemonClient:
         request_timeout_seconds: float = 30.0,
         detect_stale_dev_daemon: bool = False,
         state_callback: Optional[StateCallback] = None,
+        signal_emitter: Optional[
+            Callable[[Any, Dict[str, Any]], None]
+        ] = None,
         time_fn: Callable[[], float] = time.monotonic,
         sleep: Callable[[float], None] = time.sleep,
     ) -> None:
@@ -63,6 +67,7 @@ class GuiDaemonClient:
         self._dev_build_token_checked_at = 0.0
         self._cached_dev_build_token: Optional[str] = None
         self._missing_dev_build_token_logged = False
+        self._emit = signal_emitter or self._noop_emitter
         self.logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 
     @property
