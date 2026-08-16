@@ -13,7 +13,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 import threading
 import time
 import uuid
-from typing import Any, Dict, Optional
+from typing import Any
 
 from fastapi import APIRouter, HTTPException, Request
 
@@ -24,6 +24,7 @@ from airunner_services.runtimes.contracts import RuntimeAction, RuntimeKind
 from airunner_services.settings import AIRUNNER_LOG_LEVEL
 from airunner_services.utils.application import get_logger
 
+from .legacy_contracts import LegacyLLMGenerateRequest
 from .legacy_llm_compat import get_airunner_app
 from .legacy_llm_helpers import build_llm_request, parse_action
 from .legacy_llm_routes import legacy_llm_generate
@@ -42,7 +43,7 @@ logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 
 
 @router.post("/llm")
-def legacy_llm_alias(body, req: Request):
+def legacy_llm_alias(body: LegacyLLMGenerateRequest, req: Request):
     """Alias the native LLM endpoint onto the legacy generate handler."""
     return legacy_llm_generate(body, req)
 
