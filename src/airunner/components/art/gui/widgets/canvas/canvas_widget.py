@@ -14,6 +14,7 @@ from PySide6.QtGui import QKeySequence, QShortcut
 
 from airunner.gui.cursors.circle_brush import circle_cursor
 from airunner.enums import SignalCode, CanvasToolName
+from airunner.utils.settings.client_settings import current_tool as client_current_tool
 from airunner.components.application.gui.widgets.base_widget import BaseWidget
 from airunner.components.art.data.canvas_layer_records import (
     create_canvas_layer,

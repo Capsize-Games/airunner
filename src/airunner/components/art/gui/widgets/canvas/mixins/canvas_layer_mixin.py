@@ -295,6 +295,18 @@ class CanvasLayerMixin:
             return None
         return qimage
 
+    def _blank_document_surface(self):
+        """Return a blank transparent surface sized to the current document.
+
+        Used to materialize a drawable layer item when a layer has no
+        persisted image yet (e.g., a freshly-created or restored blank layer).
+        """
+        view = self.views()[0] if self.views() else None
+        if view is not None and hasattr(view, "document_size"):
+            width, height = view.document_size()
+            return self._create_blank_surface(int(width), int(height))
+        return self._create_blank_surface()
+
     def _update_existing_layer_item(self, layer_id: int, data: Dict) -> None:
         """Update properties of existing layer item.
 
@@ -333,10 +345,10 @@ class CanvasLayerMixin:
 
         image = self._load_layer_image(layer_id)
         if image is None:
-            return
-
-        qimage = self._convert_layer_image_to_qimage(image)
-        if qimage is None:
+            qimage = self._blank_document_surface()
+        else:
+            qimage = self._convert_layer_image_to_qimage(image)
+        if qimage is None or qimage.isNull():
             return
 
         item = LayerImageItem(

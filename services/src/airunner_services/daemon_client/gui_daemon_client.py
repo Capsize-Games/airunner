@@ -22,7 +22,7 @@ from airunner_services.daemon_connection_state import (
 from airunner_services.daemon_client.gui_bridge_mixin import GuiBridgeMixin
 from airunner_services.daemon_client.launcher import DaemonLauncher
 from airunner_common.dev_build_token import current_dev_build_token
-from airunner_common.contract_enums import LLMActionType
+from airunner_common.contract_enums import LLMActionType, SignalCode
 from airunner_common.settings import AIRUNNER_LOG_LEVEL
 from airunner_services.utils.application import get_logger
 
@@ -782,6 +782,85 @@ class GuiDaemonClient(GuiBridgeMixin):
             auto_start=auto_start,
         )
         return response.json()
+
+    # ------------------------------------------------------------------
+    # Signal adapter handlers
+    # ------------------------------------------------------------------
+
+    @property
+    def signal_handlers(
+        self,
+    ) -> Dict[Any, Callable[[Dict[str, Any]], None]]:
+        """Return the signal-to-API handler mapping."""
+        return {
+            SignalCode.DO_GENERATE_SIGNAL: self._on_do_generate,
+            SignalCode.AUDIO_CAPTURE_WORKER_RESPONSE_SIGNAL: (
+                self._on_stt_transcribe
+            ),
+            SignalCode.INTERRUPT_IMAGE_GENERATION_SIGNAL: (
+                self._on_interrupt_image_generation
+            ),
+            SignalCode.INTERRUPT_PROCESS_SIGNAL: (
+                self._on_interrupt_process
+            ),
+            SignalCode.SD_LOAD_SIGNAL: self._on_load_art,
+            SignalCode.SD_UNLOAD_SIGNAL: self._on_unload_art,
+            SignalCode.LLM_LOAD_SIGNAL: self._on_llm_load,
+            SignalCode.LLM_UNLOAD_SIGNAL: self._on_llm_unload,
+            SignalCode.STT_LOAD_SIGNAL: self._on_stt_load,
+            SignalCode.STT_UNLOAD_SIGNAL: self._on_stt_unload,
+        }
+
+    def _on_do_generate(self, data: Dict[str, Any]) -> None:
+        self.logger.debug("Routing DO_GENERATE_SIGNAL to daemon")
+        self.generate_image_async(data)
+
+    def _on_interrupt_image_generation(
+        self, data: Dict[str, Any]
+    ) -> None:
+        job_id = data.get("job_id", "")
+        if job_id:
+            self.cancel_generation(job_id)
+
+    def _on_interrupt_process(self, _data: Dict[str, Any]) -> None:
+        self.interrupt_llm()
+
+    def _on_stt_transcribe(self, data: Dict[str, Any]) -> None:
+        audio_bytes = data.get("audio_bytes")
+        if audio_bytes:
+            result = self.transcribe_audio(
+                audio_bytes,
+                mime_type=str(
+                    data.get("mime_type") or "application/octet-stream",
+                ),
+            )
+            transcription = str(result.get("text", "") or "")
+            if transcription:
+                self._emit(
+                    SignalCode.AUDIO_PROCESSOR_RESPONSE_SIGNAL,
+                    {
+                        "transcription": transcription,
+                        "language": result.get("language"),
+                    },
+                )
+
+    def _on_load_art(self, _data: Dict[str, Any]) -> None:
+        self.load_runtime("art", deployment_mode="sidecar")
+
+    def _on_unload_art(self, _data: Dict[str, Any]) -> None:
+        self.unload_runtime("art", deployment_mode="sidecar")
+
+    def _on_llm_load(self, _data: Dict[str, Any]) -> None:
+        self.load_runtime("llm")
+
+    def _on_llm_unload(self, _data: Dict[str, Any]) -> None:
+        self.unload_runtime("llm")
+
+    def _on_stt_load(self, _data: Dict[str, Any]) -> None:
+        self.load_runtime("stt", deployment_mode="sidecar")
+
+    def _on_stt_unload(self, _data: Dict[str, Any]) -> None:
+        self.unload_runtime("stt", deployment_mode="sidecar")
 
     def _resolved_auto_start(self, auto_start: Optional[bool]) -> bool:
         """Return the effective auto-start behavior for this call."""
