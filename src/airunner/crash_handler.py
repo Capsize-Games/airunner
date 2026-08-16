@@ -83,17 +83,26 @@ def _show_one_time_error_dialog(summary: str) -> None:
         pass
 
 
-def _excepthook(exc_type, exc_value, exc_tb) -> None:
-    if exc_type is not None and issubclass(exc_type, KeyboardInterrupt):
-        sys.__excepthook__(exc_type, exc_value, exc_tb)
-        return
+def report_uncaught_exception(exc_type, exc_value, exc_tb) -> None:
+    """Append an uncaught exception to the GUI log and show the dialog.
 
+    Public so application startup code (``UIRuntimeMixin``) can preserve
+    the crash capture when it installs its own ``sys.excepthook``.
+    """
     formatted = "".join(
         traceback.format_exception(exc_type, exc_value, exc_tb)
     )
     _append_to_gui_log(formatted)
     summary = f"{getattr(exc_type, '__name__', exc_type)}: {exc_value}"
     _show_one_time_error_dialog(summary)
+
+
+def _excepthook(exc_type, exc_value, exc_tb) -> None:
+    if exc_type is not None and issubclass(exc_type, KeyboardInterrupt):
+        sys.__excepthook__(exc_type, exc_value, exc_tb)
+        return
+
+    report_uncaught_exception(exc_type, exc_value, exc_tb)
     sys.__excepthook__(exc_type, exc_value, exc_tb)
 
 
@@ -113,8 +122,16 @@ def _unraisablehook(unraisable) -> None:
         sys.__unraisablehook__(unraisable)
 
 
-def install_crash_handlers(log_dir: Optional[str] = None) -> None:
-    """Install global crash capture before any Qt code runs."""
+def install_faulthandler(log_dir: Optional[str] = None) -> str:
+    """Enable faulthandler with the on-disk fault log.
+
+    Re-enabling faulthandler later (for example the bare
+    ``faulthandler.enable()`` in ``airunner.main``) resets the output
+    stream, so this helper must be called again after any such reset to
+    keep native-level faults landing in ``faulthandler.log``.
+
+    Returns the fault-log path used.
+    """
     global _fault_log_handle
 
     if log_dir is None:
@@ -123,18 +140,37 @@ def install_crash_handlers(log_dir: Optional[str] = None) -> None:
         log_dir = os.path.abspath(os.path.expanduser(log_dir))
     os.makedirs(log_dir, exist_ok=True)
 
-    _CONFIG["gui_log_path"] = os.path.join(log_dir, _GUI_LOG_FILENAME)
-    _CONFIG["fault_log_path"] = os.path.join(log_dir, _FAULT_LOG_FILENAME)
+    fault_log_path = os.path.join(log_dir, _FAULT_LOG_FILENAME)
+    _CONFIG["fault_log_path"] = fault_log_path
 
     if _fault_log_handle is not None:
         try:
             _fault_log_handle.close()
         except Exception:
             pass
-    _fault_log_handle = open(
-        _CONFIG["fault_log_path"], "a", encoding="utf-8"
-    )
+    _fault_log_handle = open(fault_log_path, "a", encoding="utf-8")
     faulthandler.enable(file=_fault_log_handle)
+    return fault_log_path
+
+
+def install_crash_handlers(log_dir: Optional[str] = None) -> None:
+    """Install global crash capture before any Qt code runs.
+
+    Safe to call more than once: later calls re-apply the exception and
+    unraisable hooks and re-point faulthandler at the log file. This
+    matters because the application startup path (``UIRuntimeMixin``)
+    replaces ``sys.excepthook`` with its own handler after the launcher
+    installs this one; a second call re-arms the on-disk capture.
+    """
+    if log_dir is None:
+        log_dir = _default_log_dir()
+    else:
+        log_dir = os.path.abspath(os.path.expanduser(log_dir))
+    os.makedirs(log_dir, exist_ok=True)
+
+    _CONFIG["gui_log_path"] = os.path.join(log_dir, _GUI_LOG_FILENAME)
+
+    install_faulthandler(log_dir=log_dir)
 
     sys.excepthook = _excepthook
     sys.unraisablehook = _unraisablehook

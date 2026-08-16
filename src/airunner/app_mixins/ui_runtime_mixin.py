@@ -224,14 +224,34 @@ class UIRuntimeMixin:
         self.update_splash_message(self.splash, message[4])
 
     def exception_handler(self, exctype, value, tb):
-        # Prints the exact file, line number, and function call stack
+        # Prints the exact file, line number, and function call stack.
+        # Also forwards to the launcher crash capture so the full
+        # traceback lands in ~/.local/share/airunner/logs/gui.log and
+        # the one-time error dialog can be shown (issue #105).
         traceback.print_exception(exctype, value, tb)
+        try:
+            from airunner.crash_handler import report_uncaught_exception
+
+            report_uncaught_exception(exctype, value, tb)
+        except Exception:
+            pass
         sys.exit(1)
 
     def start(self) -> None:
-        sys.excepthook = self.exception_handler
-
         """Initialize QApplication and OpenGL state for GUI mode."""
+        sys.excepthook = self.exception_handler
+        # Preserve the launcher-installed crash capture. The GUI flow
+        # replaces sys.excepthook with exception_handler above, so re-arm
+        # the crash handlers (idempotent) to keep the on-disk log and
+        # one-time dialog active for the rest of startup and the event
+        # loop (issue #105).
+        try:
+            from airunner.crash_handler import install_crash_handlers
+
+            install_crash_handlers()
+        except Exception:
+            pass
+
         signal.signal(signal.SIGINT, self.signal_handler)
         prepare_qt_runtime()
 
