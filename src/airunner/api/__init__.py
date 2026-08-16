@@ -5,10 +5,8 @@ The bridge and signal adapter functionality is now part of
 re-export layer.
 """
 
-from airunner.daemon_client.gui_daemon_client import (
-    APIBridgeError,
-    GuiDaemonClient,
-)
+from airunner_services.daemon_client.gui_bridge_mixin import APIBridgeError
+from airunner_services.daemon_client.gui_daemon_client import GuiDaemonClient
 
 __all__ = [
     "APIBridgeError",

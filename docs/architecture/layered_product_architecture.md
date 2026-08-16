@@ -7,12 +7,14 @@ ownership boundaries between the split packages.
 
 ```mermaid
 flowchart LR
-    User[User] --> Native[native/ launcher and installers]
+    User[User] --> Native[native/ launcher and bundle helpers]
     Native --> GUI[src/ desktop client]
     Native --> Daemon[services/ headless daemon]
-    Daemon --> Model[model/ shared contracts and runtime helpers]
+    GUI --> Daemon
     Native --> Sidecars[llama.cpp and whisper.cpp sidecars]
     Daemon --> Sidecars
+    GUI --> Scripts[scripts/ tooling]
+    Daemon --> Scripts
     GUI --> Data[(AIRUNNER_BASE_PATH)]
     Daemon --> Data
 ```
@@ -21,10 +23,15 @@ flowchart LR
 
 | Package | Owns | Does not own |
 |---------|------|--------------|
-| `services/` | daemon entry points, FastAPI server, WebSocket endpoints, runtime registry, downloads, persistence, migrations, domain state routes, modality orchestration | desktop-only widget behavior and client-local preferences |
-| `model/` | shared runtime contracts, transport-neutral runtime envelopes, shared model classes, runtime helpers | transport-specific HTTP route ownership, persistence bridges, and GUI surfaces |
-| `src/` | desktop app, daemon clients, widgets, GUI workflow surfaces | headless daemon ownership, local database bootstrap, and bundle assembly |
-| `native/` | launcher, bundle layout, installer-facing tooling, sidecar build integration | modality orchestration and GUI widget logic |
+| `services/` | daemon entry points, FastAPI server, WebSocket endpoints, runtime registry, downloads, persistence, migrations, domain state routes, modality orchestration, and the canonical daemon HTTP client | desktop-only widget behavior and client-local preferences |
+| `src/` | desktop app, GUI widgets, GUI workflow surfaces, and the thin `airunner.daemon_client` re-export layer over the service-owned client | headless daemon ownership, local database bootstrap, and bundle assembly |
+| `native/` | Python launcher entry point, runtime layout helpers, startup environment configuration, and sidecar build integration | modality orchestration and GUI widget logic |
+| `scripts/` | developer tooling: test runner, UI build, install helpers, and quality reports | runtime product behavior |
+
+The top-level `api/` and `model/` packages from earlier split-plan documents
+no longer exist. Shared runtime contracts and enums live in
+`airunner_services.contract_enums`, and the canonical daemon client lives in
+`airunner_services.daemon_client`.
 
 ## Runtime Paths
 
@@ -33,31 +40,28 @@ flowchart LR
 1. `native/` launches the packaged or checkout application.
 2. `src/` renders the GUI and talks to the daemon through the service-owned HTTP or WebSocket API surface.
 3. `services/` owns the headless daemon, runtime routing, and service-backed state operations such as `/api/v1/state/<domain>/<ModelName>`.
-4. `model/` supplies shared contracts and runtime settings.
-5. Native sidecars such as `llama.cpp` and `whisper.cpp` are supervised
+4. Native sidecars such as `llama.cpp` and `whisper.cpp` are supervised
    from the daemon path.
 
 ### Headless path
 
 1. `services/` starts the daemon directly.
 2. `services/` owns the daemon HTTP/WebSocket surface directly.
-3. `model/` provides shared contract and runtime helpers.
-4. Optional sidecars are launched through the runtime registry.
+3. Optional sidecars are launched through the runtime registry.
 
-### Bundled product path
+### Installed product path
 
-1. `native/` builds or installs the bundle.
-2. `src/`, `services/`, `model/`, and `native/` are installed into the
-   bundled environment.
+1. `native/` provides the launcher entry point and bundle layout helpers.
+2. `src/` and `services/` are installed as Python packages.
 3. The launcher resolves the runtime layout and bundled sidecars.
 
 ## Transitional Boundaries
 
 The split is real, but not fully complete yet.
 
-- Some runtime helpers still straddle `services/` and `model/`.
-- GUI-to-daemon handoff code remains in `src/` while transport-neutral
-   runtime contracts continue to consolidate under `model/`.
+- Some runtime helpers still straddle `services/` and `src/`.
+- GUI-to-daemon handoff code remains in `src/` while the canonical
+   daemon client and wire format stay in `services/`.
 - The old generic model bridge and GUI-side database bootstrap have been
    removed in favor of domain-scoped daemon state clients.
 

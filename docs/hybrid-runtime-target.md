@@ -31,7 +31,7 @@ Engineering requirement:
 
 ## Current Delivery Modes
 
-AIRunner currently supports three installation or delivery modes while this
+AIRunner currently supports two installation or delivery modes while this
 runtime target is being productized:
 
 1. `dev` for repo-local editable installs driven by `./scripts/install.sh`
@@ -40,7 +40,8 @@ runtime target is being productized:
 
 Those modes share the same package split:
 
-- `native/` owns launcher and installer surfaces
+- `native/` owns the Python launcher entry point and bundle layout helpers
 - `src/` owns the desktop client
 - `services/` owns the daemon and orchestration layer
-- `api/` and `model/` provide the shared contract surfaces
+- `scripts/` owns developer tooling such as the test runner, UI build, and
+  quality reports

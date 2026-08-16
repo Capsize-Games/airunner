@@ -340,4 +340,4 @@ auto_assign_models(max_vram=8)
 - `model_capabilities.py` - Model registry
 - `llm_model_manager.py` - Model loading implementation
 - `image_tools.py` - Example tool using specialized models
-- `../api/README.md` - API documentation
+- `../../../../../docs/architecture/layered_product_architecture.md` - Architecture overview

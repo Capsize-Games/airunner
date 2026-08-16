@@ -13,6 +13,7 @@ flowchart LR
 	Python --> Services[services/ daemon entry points]
 	Services --> Sidecars[llama.cpp and whisper.cpp sidecars]
 	Python --> RuntimeLayout[runtime layout helpers]
+	Python --> Scripts[scripts/ tooling]
 ```
 
 ## What This Package Owns
@@ -23,6 +24,11 @@ flowchart LR
 - repo-local support for pinned `llama.cpp` and `whisper.cpp` sidecars
 
 Importable native code lives under `native/src/airunner_native/`.
+
+The architecture audit and package map are tracked in
+[docs/architecture/architecture-complexity-audit.md](../docs/architecture/architecture-complexity-audit.md)
+and
+[docs/architecture/layered_product_architecture.md](../docs/architecture/layered_product_architecture.md).
 
 ## Installation
 
@@ -44,7 +50,6 @@ stack first and then install `native/` in editable mode:
 python -m venv venv
 source venv/bin/activate
 pip install --upgrade pip setuptools wheel
-pip install -e ./model
 pip install -e ./services
 pip install -e ./native[development]
 ```

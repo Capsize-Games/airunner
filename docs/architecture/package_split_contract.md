@@ -7,26 +7,32 @@ how to validate changes without blurring those boundaries again.
 
 | Package | Primary ownership |
 |---------|-------------------|
-| `services/` | daemon routes, HTTP/WebSocket API surface, lifecycle, runtime orchestration, downloads, persistence |
-| `model/` | shared runtime contracts, transport-neutral envelopes, settings, ORM models, runtime helpers |
-| `src/` | desktop UI, daemon clients, user workflow surfaces |
-| `native/` | launcher, bundle assembly, install or distribution tooling |
+| `services/` | daemon routes, HTTP/WebSocket API surface, lifecycle, runtime orchestration, downloads, persistence, and the canonical daemon HTTP client |
+| `src/` | desktop UI, GUI workflow surfaces, and the thin `airunner.daemon_client` re-export layer |
+| `native/` | Python launcher entry point, runtime layout helpers, startup environment configuration, and sidecar support |
+| `scripts/` | developer tooling: test runner, UI build, install helpers, and quality reports |
+
+The top-level `api/` and `model/` packages from earlier split-plan documents
+no longer exist in the tree. Shared runtime contracts and enums live in
+`airunner_services.contract_enums`.
 
 ## Boundary Examples
 
 - CivitAI browse, search, model-detail fetches, and download jobs belong to
 	`services/`.
-- `src/` owns the desktop browser popup, daemon client calls, worker polling,
-	and local thumbnail presentation.
+- `src/` owns the desktop browser popup, GUI widgets, worker polling, and
+	local thumbnail presentation.
+- The desktop daemon client is a thin re-export of
+	`airunner_services.daemon_client`, so the wire format stays in one place.
 - GUI code may cache preview images through the shared URL-safety helpers in
-	`model/`, but GUI code should not stream provider model downloads directly.
+	`services/`, but GUI code should not stream provider model downloads directly.
 
 ## Validation Matrix
 
 ### `services/`
 
-Use these when changing daemon routes, workers, runtime routing, or
-service-owned orchestration.
+Use these when changing daemon routes, workers, runtime routing, the
+daemon HTTP client, or service-owned orchestration.
 
 ```bash
 ./venv/bin/python scripts/run_tests.py --llm-runtime-smoke
@@ -37,17 +43,6 @@ service-owned orchestration.
 
 Pair those with the relevant functional suite in `services/tests/` whenever the
 change affects real daemon behavior.
-
-### `model/`
-
-Use consumer-facing validations because the model package is shared across
-all higher layers.
-
-```bash
-./venv/bin/python -m pytest services/tests/test_tts_runtime_load.py -v
-./venv/bin/python -m pytest services/tests/test_stt_transcribe_functional.py -v --timeout=1200
-./venv/bin/python -m pytest services/tests/test_llm_functional.py -v --timeout=900
-```
 
 ### `src/`
 
@@ -62,8 +57,8 @@ for real desktop-to-daemon behavior.
 
 ### `native/`
 
-Use installer or launcher smoke checks and the functional suites that rely
-on bundled sidecars.
+Use launcher smoke checks and the functional suites that rely on bundled
+sidecars.
 
 ```bash
 ./scripts/install.sh --help
@@ -73,10 +68,20 @@ on bundled sidecars.
 ./venv/bin/python -m pytest services/tests/test_stt_transcribe_functional.py -v --timeout=1200
 ```
 
+### `scripts/`
+
+Use the tooling itself as its smoke surface, since it is not part of the
+runtime product.
+
+```bash
+./venv/bin/python scripts/run_tests.py --unit
+./venv/bin/python scripts/run_tests.py --help
+```
+
 ## Functional Test Placement
 
 Most real end-to-end tests live in `services/tests/` even when the primary code
-under test belongs to `services/`, `model/`, `src/`, or `native/`.
+under test belongs to `services/`, `src/`, or `native/`.
 
 That is intentional. Those tests validate the composed product boundary:
 
@@ -90,7 +95,7 @@ Do not treat their directory placement as package ownership.
 
 ## Installer Contract
 
-AIRunner currently supports three install modes and each one should remain
+AIRunner currently supports two install modes and each one should remain
 documented and working:
 
 1. `dev` for repo-local editable development installs

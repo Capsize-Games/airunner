@@ -8,11 +8,11 @@ coordinate LLM, STT, TTS, and art workloads.
 ```mermaid
 flowchart LR
     GUI[src/ GUI client] --> Daemon[services/ daemon routes]
-    API[api/ transport contracts] --> Daemon
     Daemon --> Registry[runtime registry]
-    Registry --> Model[model/ shared runtime helpers]
+    Daemon --> Client[canonical daemon HTTP client]
     Registry --> Sidecars[llama.cpp or whisper.cpp sidecars]
     Daemon --> Data[(AIRUNNER_BASE_PATH)]
+    Daemon --> Scripts[scripts/ tooling]
 ```
 
 ## What This Package Owns
@@ -21,13 +21,18 @@ flowchart LR
 - runtime routing, runtime load or unload control, and health checks
 - service-level downloads, migrations, persistence, and settings
 - orchestration for daemon-backed LLM, TTS, STT, and art requests
+- the canonical daemon HTTP client (`airunner_services.daemon_client`),
+  which the desktop client imports through the thin `airunner.daemon_client`
+  re-export layer
 
 Importable service code lives under `services/src/airunner_services/`.
 
 The package split contract is documented in
 [docs/architecture/package_split_contract.md](../docs/architecture/package_split_contract.md),
-and the package map lives in
-[docs/architecture/layered_product_architecture.md](../docs/architecture/layered_product_architecture.md).
+the package map lives in
+[docs/architecture/layered_product_architecture.md](../docs/architecture/layered_product_architecture.md),
+and the architecture audit is tracked in
+[docs/architecture/architecture-complexity-audit.md](../docs/architecture/architecture-complexity-audit.md).
 
 ## Installation
 
@@ -46,7 +51,6 @@ service extra that matches the workload you are validating:
 python -m venv venv
 source venv/bin/activate
 pip install --upgrade pip setuptools wheel
-pip install -e ./model
 pip install -e './services[headless,development]'
 ```
 
