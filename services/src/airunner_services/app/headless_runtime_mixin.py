@@ -161,7 +161,7 @@ class HeadlessRuntimeMixin:
         self.app.api = self
         self.logger.info("Qt Core event loop initialized (headless mode)")
 
-        from airunner_services.api.legacy_server import set_api
+        from airunner_services.api.runtime import set_api
 
         set_api(self)
         self._ensure_headless_api_services()

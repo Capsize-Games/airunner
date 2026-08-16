@@ -208,7 +208,7 @@ class ServiceApp(HeadlessRuntimeMixin, MediatorMixin):
     def signal_handler(_signal: int, _frame: object) -> None:
         """Handle SIGINT and SIGTERM without abrupt process exit."""
         try:
-            from airunner_services.api.legacy_server import get_api
+            from airunner_services.api.runtime import get_api
 
             api = get_api(create_if_missing=False)
             if api is not None:

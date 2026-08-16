@@ -13,7 +13,7 @@ def api_from_qt_application() -> Any:
 def peek_registered_api() -> Any:
     """Return the registered service API without creating one."""
     try:
-        from airunner_services.api.legacy_server import get_api
+        from airunner_services.api.runtime import get_api
 
         return get_api(create_if_missing=False)
     except Exception:

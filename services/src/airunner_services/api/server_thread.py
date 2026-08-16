@@ -12,12 +12,12 @@ import os
 
 import uvicorn
 
+from airunner_services.api.runtime import get_api
 from airunner_services.api.server import (
     access_logs_enabled,
     create_app,
     is_loopback_host,
 )
-from airunner_services.api.legacy_server import get_api
 from airunner_services.settings import AIRUNNER_LOG_LEVEL
 from airunner_services.utils.application import get_logger
 from airunner_services.settings import (

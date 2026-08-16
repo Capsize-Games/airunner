@@ -235,7 +235,7 @@ def _stop_worker(worker) -> None:
 
 
 def _cleanup_service_app(app: ServiceApp) -> None:
-    from airunner_services.api.legacy_server import set_api
+    from airunner_services.api.runtime import set_api
 
     worker_manager = getattr(app, "_worker_manager", None)
     if worker_manager is not None:
