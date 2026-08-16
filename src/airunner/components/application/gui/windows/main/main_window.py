@@ -48,9 +48,6 @@ from airunner.gui.styles.styles_mixin import StylesMixin
 from airunner.components.application.gui.windows.main.ai_model_mixin import (
     AIModelMixin,
 )
-from airunner.components.application.gui.windows.main.pipeline_mixin import (
-    PipelineMixin,
-)
 from airunner.utils.application import create_worker
 from airunner.utils.application.gui_probe import maybe_create_gui_probe_controller
 from airunner.utils.application.mediator_mixin import MediatorMixin
@@ -74,7 +71,6 @@ class MainWindow(
     MediatorMixin,
     SettingsMixin,
     StylesMixin,
-    PipelineMixin,
     AIModelMixin,
     QMainWindow,
 ):

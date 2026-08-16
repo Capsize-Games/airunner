@@ -105,7 +105,6 @@ class SettingsController:
             self._bind_worker(cls) for cls in self._WORKER_CLASSES
         ]
         self._selected_layer_ids: set[int] = set()
-        self._qsettings_cache: Any = None
         self._register_layer_selection_handler()
 
     def _bind_worker(self, cls: Type[Any]) -> Any:
