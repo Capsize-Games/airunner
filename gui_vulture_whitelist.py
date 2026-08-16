@@ -198,10 +198,10 @@ src/airunner/components/tts/workers/tts_generator_worker.py:{_llm_spoken_visible
 src/airunner/components/tts/workers/tts_vocalizer_worker.py:{handle_speech, reader_mode_active}
 src/airunner/daemon_client/gui_daemon_client.py:{health_check}
 src/airunner/daemon_client/resource_store.py:{is_layer_resource}
-src/airunner/dev_build_token.py:{current_dev_build_token}
+shared/airunner_common/dev_build_token.py:{current_dev_build_token}
 src/airunner/enums.py:{CodeOperationType, Controlnet, FilterType, HandlerState, QualityEffects, Quantize}
 src/airunner/gui/utils/ui_dispatcher.py:{test_hello_world_window}
-src/airunner/linux_bundle_layout.py:{build_linux_bundle_layout, daemon_executable, path_environment}
+shared/airunner_common/linux_bundle_layout.py:{build_linux_bundle_layout, daemon_executable, path_environment}
 src/airunner/qt_runtime_env.py:{prefers_software_qt_rendering}
 src/airunner/runtime_layout.py:{as_environment, ensure_exists}
 src/airunner/runtimes/runtime_layout.py:{as_environment, ensure_exists}
