@@ -13,7 +13,7 @@ import threading
 from dataclasses import dataclass
 from typing import Any, Callable, Dict, Optional
 
-from airunner_services.contract_enums import SignalCode
+from airunner_common.contract_enums import SignalCode
 
 
 class APIBridgeError(RuntimeError):

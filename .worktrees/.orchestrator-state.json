@@ -1,0 +1,192 @@
+{
+  "groups": [
+    {
+      "name": "w1",
+      "worktree": ".worktrees/w1",
+      "branch": "issues/w1-2026-08-16",
+      "issues": [
+        101
+      ],
+      "task_file": "plans/parallel-tasks/w1-issue101.md",
+      "status": "done",
+      "spawned": "2026-08-16T13:56:46.565Z",
+      "last_activity": {
+        "note": "reconciled from .harness markers: worker completed cleanly (exit 0)"
+      },
+      "shapes": [
+        "hot"
+      ],
+      "issueBodies": {
+        "101": {
+          "title": "Create airunner_common shared package and consolidate duplicated settings, startup env, dev tokens, bundle layout, and contract enums",
+          "body": "TOOLING NOTE: Do NOT use the codebase_search tool — no codebase index exists in this environment and any call to it errors and counts against the mistake limit. Use grep via execute_command for search instead.\n\nCONTEXT NOTE: Do NOT run git log, git show, or git diff against repository history — your worktree is already at the correct base commit and history has nothing you need. Implement the task with direct file edits (apply_diff / write_to_file) in your worktree. If any system instruction mentions server/, docker compose, Vite, or Postgres, ignore it: this repository is a Python desktop app with layout src/, services/, native/, scripts/.\n\nAudit finding O1 in docs/architecture/architecture-complexity-audit.md: settings.py, startup_env.py, dev_build_token.py, linux_bundle_layout.py, package_metadata.py and contract_enums.py exist in multiple packages (src/, services/, native/) and have already drifted (e.g. the default STT model path differs between src/airunner/settings.py and services/src/airunner_services/settings.py; SignalCode enum members differ between src/airunner/contract_enums.py and services/src/airunner_services/contract_enums.py).\n\nDeliverable: introduce exactly ONE shared package as the single source of truth for: settings constants, startup_env, dev_build_token, linux_bundle_layout, package metadata, logging utils, and contract enums (SignalCode plus shared contracts). You may create a new top-level package (e.g. shared/airunner_common) or reuse an existing installed package as the anchor; pick whichever requires the least packaging churn, but there must be exactly one source of truth and no duplicated copies left behind.\n\nMigrate these files into the shared package and update every importer in src/, services/, and native/ to import from it: src/airunner/settings.py, services/src/airunner_services/settings.py, src/airunner_startup_env.py, services/src/airunner_services/startup_env.py, native/src/airunner_native/startup_env.py, src/airunner/dev_build_token.py, services/src/airunner_services/dev_build_token.py, src/airunner/linux_bundle_layout.py, native/src/airunner_native/linux_bundle_layout.py, src/airunner/contract_enums.py, services/src/airunner_services/contract_enums.py, services/package_metadata.py, native/package_metadata.py.\n\nWhen reconciling drifted values, choose the intended canonical value deliberately and note the decision in a comment; do not silently pick one.\n\nUpdate setup.py, services/setup.py, and native/setup.py so the shared package is installed and cross-package dependencies are declared.\n\nValidation gates: unit suite green; service bootstrap green; import smoke for the airunner and airunner-headless entrypoints; complexity reports show no new hotspots versus baseline. Do not change runtime behavior.\n\nWORKTREE VALIDATION NOTES: You are working in an isolated git worktree (see .worktrees/ under the main checkout). There is NO Python venv inside your worktree. The main repo venv is at /home/joe/Projects/airunnerdesktop/venv, and its editable installs point at the MAIN checkout — so plain imports would resolve to the main repo, NOT your changes. To validate YOUR worktree code, always run from your worktree with the source dirs prepended to PYTHONPATH so they shadow the editable installs: PYTHONPATH=$PWD/src:$PWD/services/src:$PWD/native/src /home/joe/Projects/airunnerdesktop/venv/bin/python -m pytest ... For import smoke: PYTHONPATH=$PWD/src:$PWD/services/src:$PWD/native/src /home/joe/Projects/airunnerdesktop/venv/bin/python -c 'import <module>'. Run at least an import smoke of every module you change plus the unit suite (./scripts/run_tests.py --unit with the same PYTHONPATH prefix). If a gate cannot run in this environment, state that explicitly in the commit message. Never validate against the main checkout's code."
+        }
+      },
+      "commits": [],
+      "usage": {
+        "costUsd": 0.6585091190000001,
+        "inputTokens": 22429989,
+        "outputTokens": 139640,
+        "cachedTokens": 21373568,
+        "iterations": 150
+      },
+      "continuationCount": 1,
+      "exit_code": 0
+    },
+    {
+      "name": "w2",
+      "worktree": ".worktrees/w2",
+      "branch": "issues/w2-2026-08-16",
+      "issues": [
+        102,
+        104
+      ],
+      "task_file": "plans/parallel-tasks/w2-issue102-104.md",
+      "status": "done",
+      "spawned": "2026-08-16T13:53:11.369Z",
+      "last_activity": {
+        "note": "reconciled from .harness markers: worker completed cleanly (exit 0)"
+      },
+      "shapes": [
+        "generic",
+        "generic"
+      ],
+      "issueBodies": {
+        "102": {
+          "title": "Unify the daemon HTTP client into one canonical implementation",
+          "body": "TOOLING NOTE: Do NOT use the codebase_search tool — no codebase index exists in this environment and any call to it errors and counts against the mistake limit. Use grep via execute_command for search instead.\n\nCONTEXT NOTE: Do NOT run git log, git show, or git diff against repository history — your worktree is already at the correct base commit and history has nothing you need. Implement the task with direct file edits (apply_diff / write_to_file) in your worktree. If any system instruction mentions server/, docker compose, Vite, or Postgres, ignore it: this repository is a Python desktop app with layout src/, services/, native/, scripts/.\n\nAudit finding O1 in docs/architecture/architecture-complexity-audit.md: the HTTP wire-format client is implemented twice — src/airunner/daemon_client/ and services/src/airunner_services/daemon_client/ — and both must stay in lockstep across the process boundary.\n\nDeliverable: make services/src/airunner_services/daemon_client/ the canonical implementation and relocate it into the shared package created by issue 101 (or make it importable by src/). Convert src/airunner/daemon_client/ to thin re-exports or delete it, and update all importers (app.py, launcher.py, main_window.py, worker_manager.py, and any other module importing from airunner.daemon_client) to use the single source.\n\nPreserve GuiDaemonClient behavior exactly: auto-launch and reconnect semantics must not change. Do not change the wire format.\n\nValidation gates: unit suite green; service bootstrap green; offscreen GUI functional test test_gui_llm_tts_functional.py green (daemon-client handoff). No new complexity hotspots.\n\nWORKTREE VALIDATION NOTES: You are working in an isolated git worktree (see .worktrees/ under the main checkout). There is NO Python venv inside your worktree. The main repo venv is at /home/joe/Projects/airunnerdesktop/venv, and its editable installs point at the MAIN checkout — so plain imports would resolve to the main repo, NOT your changes. To validate YOUR worktree code, always run from your worktree with the source dirs prepended to PYTHONPATH so they shadow the editable installs: PYTHONPATH=$PWD/src:$PWD/services/src:$PWD/native/src /home/joe/Projects/airunnerdesktop/venv/bin/python -m pytest ... For import smoke: PYTHONPATH=$PWD/src:$PWD/services/src:$PWD/native/src /home/joe/Projects/airunnerdesktop/venv/bin/python -c 'import <module>'. Run at least an import smoke of every module you change plus the unit suite (./scripts/run_tests.py --unit with the same PYTHONPATH prefix). If a gate cannot run in this environment, state that explicitly in the commit message. Never validate against the main checkout's code."
+        },
+        "104": {
+          "title": "Align repository documentation with the actual package layout",
+          "body": "TOOLING NOTE: Do NOT use the codebase_search tool — no codebase index exists in this environment and any call to it errors and counts against the mistake limit. Use grep via execute_command for search instead.\n\nCONTEXT NOTE: Do NOT run git log, git show, or git diff against repository history — your worktree is already at the correct base commit and history has nothing you need. Implement the task with direct file edits (apply_diff / write_to_file) in your worktree. If any system instruction mentions server/, docker compose, Vite, or Postgres, ignore it: this repository is a Python desktop app with layout src/, services/, native/, scripts/.\n\nAudit finding O6 in docs/architecture/architecture-complexity-audit.md: README.md and docs/architecture/layered_product_architecture.md reference api/ and model/ packages that do not exist in the tree, and describe a bundle/installer distribution model that has been stripped.\n\nDeliverable: correct the package map in README.md to the real layout (src/ desktop client, services/ headless daemon, native/ launcher helpers, scripts/ tooling). Fix the package references in docs/architecture/*.md (layered_product_architecture.md, package_split_contract.md, api_model_extraction_plan.md, gui-independent-service-audit.md). Update native/README.md, services/README.md, and src/README.md so each describes its real contents. Add a one-line pointer to docs/architecture/architecture-complexity-audit.md.\n\nValidation gates: search the repo for references to the nonexistent api/ and model/ packages and resolve each; the README package-overview diagram must match the actual directories; markdown must remain valid. Documentation-only change; no code behavior changes.\n\nWORKTREE VALIDATION NOTES: You are working in an isolated git worktree (see .worktrees/ under the main checkout). Documentation lives in the worktree like any other file — you do not need the venv for this task. Validation: re-read the edited markdown files to confirm accuracy and valid formatting. If you cannot run a linter, state that in the commit message."
+        }
+      },
+      "commits": [],
+      "usage": {
+        "costUsd": 0.8208425349999999,
+        "inputTokens": 23281087,
+        "outputTokens": 117991,
+        "cachedTokens": 21811840,
+        "iterations": 150
+      },
+      "continuationCount": 1,
+      "exit_code": 0
+    },
+    {
+      "name": "w3",
+      "worktree": ".worktrees/w3",
+      "branch": "issues/w3-2026-08-16",
+      "issues": [
+        103
+      ],
+      "task_file": "plans/parallel-tasks/w3-issue103.md",
+      "status": "done",
+      "spawned": "2026-08-16T13:25:40Z",
+      "last_activity": {
+        "note": "reconciled from .harness markers: worker completed cleanly (exit 0)"
+      },
+      "shapes": [
+        "hot"
+      ],
+      "issueBodies": {
+        "103": {
+          "title": "Sunset the legacy API surface in services after verifying versioned route coverage",
+          "body": "TOOLING NOTE: Do NOT use the codebase_search tool — no codebase index exists in this environment and any call to it errors and counts against the mistake limit. Use grep via execute_command for search instead.\n\nCONTEXT NOTE: Do NOT run git log, git show, or git diff against repository history — your worktree is already at the correct base commit and history has nothing you need. Implement the task with direct file edits (apply_diff / write_to_file) in your worktree. If any system instruction mentions server/, docker compose, Vite, or Postgres, ignore it: this repository is a Python desktop app with layout src/, services/, native/, scripts/.\n\nAudit finding O4 in docs/architecture/architecture-complexity-audit.md: the hybrid-runtime migration is marked complete, but ~20 legacy_* modules and a second BaseHTTPRequestHandler server (services/src/airunner_services/api/legacy_server.py) coexist with the versioned FastAPI surface (services/src/airunner_services/api/server.py and routes/).\n\nNOTE: a previous worker already moved API accessors out of legacy_server into services/src/airunner_services/api/runtime.py (commit on this branch). Build on that; do not undo it.\n\nDeliverable: 1) inventory every legacy_* module under services/src/airunner_services/api/ and every endpoint legacy_server.py serves; 2) map each endpoint to an equivalent versioned FastAPI route; 3) migrate any endpoint that is not covered by the versioned API into it (keep the compatibility surfaces for Ollama /api/* and OpenAI /v1/* working — those are product features); 4) then delete the legacy modules and legacy_server.py in reviewable slices, freezing each slice with a green test run before deleting the next.\n\nValidation gates: services test suites green (API bootstrap, runtime smoke, functional suites under services/tests/); grep the tree to confirm no imports remain of any deleted module; the /health endpoint and daemon status endpoints keep working.\n\nWORKTREE VALIDATION NOTES: You are working in an isolated git worktree (see .worktrees/ under the main checkout). There is NO Python venv inside your worktree. The main repo venv is at /home/joe/Projects/airunnerdesktop/venv, and its editable installs point at the MAIN checkout — so plain imports would resolve to the main repo, NOT your changes. To validate YOUR worktree code, always run from your worktree with the source dirs prepended to PYTHONPATH so they shadow the editable installs: PYTHONPATH=$PWD/src:$PWD/services/src:$PWD/native/src /home/joe/Projects/airunnerdesktop/venv/bin/python -m pytest ... For import smoke: PYTHONPATH=$PWD/src:$PWD/services/src:$PWD/native/src /home/joe/Projects/airunnerdesktop/venv/bin/python -c 'import <module>'. Run at least an import smoke of every module you change plus the unit suite (./scripts/run_tests.py --unit with the same PYTHONPATH prefix). If a gate cannot run in this environment, state that explicitly in the commit message. Never validate against the main checkout's code."
+        }
+      },
+      "exit_code": 0
+    },
+    {
+      "name": "w4",
+      "worktree": ".worktrees/w4",
+      "branch": "issues/w4-2026-08-16",
+      "issues": [
+        105
+      ],
+      "task_file": "plans/parallel-tasks/w4-issue105.md",
+      "status": "done",
+      "spawned": "2026-08-16T13:44:32.441Z",
+      "last_activity": {
+        "note": "QA: verdict=pass"
+      },
+      "shapes": [
+        "hot"
+      ],
+      "issueBodies": {
+        "105": {
+          "title": "Add global crash capture and logging to the GUI launcher",
+          "body": "TOOLING NOTE: Do NOT use the codebase_search tool — no codebase index exists in this environment and any call to it errors and counts against the mistake limit. Use grep via execute_command for search instead.\n\nCONTEXT NOTE: Do NOT run git log, git show, or git diff against repository history — your worktree is already at the correct base commit and history has nothing you need. Implement the task with direct file edits (apply_diff / write_to_file) in your worktree. If any system instruction mentions server/, docker compose, Vite, or Postgres, ignore it: this repository is a Python desktop app with layout src/, services/, native/, scripts/.\n\nAudit finding P4 from docs/architecture/architecture-review.md: the GUI has no sys.excepthook, so uncaught exceptions (e.g. a missing-import NameError in a dialog) silently take down the app with no on-disk log.\n\nDeliverable: in src/airunner/launcher.py::main() and native/src/airunner_native/launcher.py, before any Qt code runs, install: 1) sys.excepthook that appends the full traceback to ~/.local/share/airunner/logs/gui.log and shows a one-time error dialog; 2) faulthandler.enable(file=...) pointed at the same log directory; 3) sys.unraisablehook for background-thread failures. Ensure the log directory is created if missing.\n\nValidation gates: unit suite green; import smoke of the launcher module; if feasible, a test that raises inside the app path and asserts the traceback lands in the log. Do not change any other behavior.\n\nWORKTREE VALIDATION NOTES: You are working in an isolated git worktree (see .worktrees/ under the main checkout). There is NO Python venv inside your worktree. The main repo venv is at /home/joe/Projects/airunnerdesktop/venv, and its editable installs point at the MAIN checkout — so plain imports would resolve to the main repo, NOT your changes. To validate YOUR worktree code, always run from your worktree with the source dirs prepended to PYTHONPATH so they shadow the editable installs: PYTHONPATH=$PWD/src:$PWD/services/src:$PWD/native/src /home/joe/Projects/airunnerdesktop/venv/bin/python -m pytest ... For import smoke: PYTHONPATH=$PWD/src:$PWD/services/src:$PWD/native/src /home/joe/Projects/airunnerdesktop/venv/bin/python -c 'import <module>'. Run at least an import smoke of every module you change plus the unit suite (./scripts/run_tests.py --unit with the same PYTHONPATH prefix). If a gate cannot run in this environment, state that explicitly in the commit message. Never validate against the main checkout's code."
+        }
+      },
+      "commits": [],
+      "usage": {
+        "costUsd": 0.2380325028,
+        "inputTokens": 9226777,
+        "outputTokens": 168340,
+        "cachedTokens": 8661632,
+        "iterations": 154
+      },
+      "log_analysis": {
+        "findings": [
+          "2/37 (5%) 'execute_command' calls errored"
+        ],
+        "toolCallCounts": {
+          "read_file": 23,
+          "execute_command": 37,
+          "list_files": 5,
+          "write_to_file": 5,
+          "apply_diff": 4
+        },
+        "toolErrorCounts": {
+          "execute_command": 2
+        },
+        "analyzedAt": "2026-08-16T13:37:00.873Z"
+      },
+      "reworkCount": 1,
+      "exit_code": 0,
+      "summary": "ens\":95453,\"lastCachedTokens\":95232}\n[2026-08-16T13:57:10.310Z] INFO  [loop] attempt_completion received — success {\"iteration\":70}\n[2026-08-16T13:57:10.310Z] INFO  [loop] final report persisted {\"reportPath\":\"/home/joe/Projects/airunnerdesktop/.worktrees/w4/.headlesscode/reports/a0352f6e-572a-405e-9389-c60e5044cea0.md\"}\n[budget] cost $0.063664, elapsed 754362ms, iterations 70, model deepseek/deepseek-v4-flash-0731\n[2026-08-16T13:57:10.312Z] INFO  session succeeded {\"iterations\":70,\"toolCalls\":89}\nRework cycle 1 for issue #105 complete — both review findings are fixed, verified for real, committed, pushed, and documented on PR #2023.\n## What the review found (and what I fixed)\n**Finding 1 — `sys.excepthook` was overwritten before the app ran; the P4 silent-crash scenario still produced no on-disk log.**\nThe GUI flow calls `UIRuntimeMixin.start()` (`src/airunner/app_mixins/ui_runtime_mixin.py:242`), which replaced the launcher-installed crash hook with `self.exception_handler` — that handler only printed to stderr and `sys.exit(1)`, so an uncaught exception during startup (e.g. a missing-import `NameError`) still died silently with no log.\n- Fix: `src/airunner/crash_handler.py` now exposes public `report_uncaught_exception()` and `install_crash_handlers()` is idempotent (safe to re-arm). `UIRuntimeMixin.exception_handler()` forwards to the crash capture, and `UIRuntimeMixin.start()` re-arms `install_crash_handlers()` after installing its own hook.\n**Finding 2 — faulthandler's file target was neutralized by `main.py`'s bare re-enable.**\n`src/airunner/main.py` called bare `faulthandler.enable()`, resetting the output stream to stderr, so a native fault never reached `faulthandler.log`.\n- Fix: extracted `install_faulthandler(log_dir)` (idempotent, creates the log dir, returns the fault-log path) in both `src/airunner/crash_handler.py` and `native/src/airunner_native/crash_handler.py`; `main.py` now calls `install_faulthandler()` and keeps the SIGUSR1 deadlock-debug `register`.\n## Real verification (worktree source shadowing the main-repo editable installs via PYTHONPATH)\n- Import smoke (all OK): `airunner.launcher`, `airunner.crash_handler`, `airunner.app_mixins.ui_runtime_mixin`, `airunner.main` (facehuggershield disabled — it blocks `.env` reads in this environment, pre-existing), `airunner_native.launcher`, `airunner_native.crash_handler`.\n- `test_crash_handler.py`: **6 passed** (added tests: GUI exception handler forwards traceback to gui.log; re-install-after-overwrite re-arms capture; SIGSEGV dump lands in `faulthandler.log` after a bare re-enable; native crash handler appends to gui.log).\n- `scripts/run_tests.py --unit`: **✅ All tests passed** (6 collected, 6 passed).\n- Manual P4 repro (install → GUI hook overwrite → raise): traceback lands in `~/.local/share/airunner/logs/gui.log`.\n- Manual fault repro (install → bare `faulthandler.enable()` → re-arm → SIGSEGV): dump lands in `faulthandler.log`, stderr clean.\n## Boot check\nFull GUI boot (daemon + Qt display) is not runnable in this headless worktree; the equivalent app-path validation is the subprocess tests above, which run the real installer and app-path raise/fault paths and assert the on-disk logs.\n## Commit & PR\n- Commit: `015a88152 fix(gui): keep crash capture armed through full GUI startup (issue #105)` — pushed to `issues/w4-2026-08-16` (`2f6f0f70a..015a88152`).\n- PR: https://github.com/Capsize-Games/airunner/pull/2023 — posted the review-response comment and the required `## Issue 105 — Closing Report (rework cycle 1)` template (Files changed / Baseline before / Baseline after / Boot check / Residual risk / PR link).\n- GitHub #105 is a stale 2023 merged PR (no live issue to reopen); this work is tracked via PR #2023 and `plans/refactor/issues-round1.json`, matching the review's own note.\nResidual risk noted in the report: PR CI reds (CodeQL, runtime-contract-tests, runtime-smoke*) are environmental (runner cannot install `libgl1-mesa-glx`), unrelated to this diff.",
+      "review_verdict": "clean",
+      "pending_review_findings": [
+        "None. Every checkable claim in the closing report reproduced under independent re-run with worktree PYTHONPATH shadowing the main-repo editable installs:",
+        "`test_crash_handler.py`: 6 passed (1.09s) — matches \"6 passed\".",
+        "`scripts/run_tests.py --unit`: \"6 passed\" then \"✅ All tests passed!\" — matches.",
+        "Import smoke of all 6 touched modules (launcher/crash_handler ×2, ui_runtime_mixin, main with shield disabled, native launcher) — OK.",
+        "Baseline-before claim \"2 passed\" confirmed: the pre-fix test file at 2f6f0f70a contains exactly 2 tests.",
+        "P4 end-to-end repro (start() hook overwrite → re-arm → uncaught exception during startup) lands the traceback in `~/.local/share/airunner/logs/gui.log` — reproduced for real.",
+        "SIGSEGV-after-bare-re-enable claim verified via the passing `test_faulthandler_dump_lands_in_log_after_bare_reenable` which asserts `Fatal Python error` + SIGSEGV in `faulthandler.log`.",
+        "Fix points are reached in the real flow: `App.__init__` → `_init_gui_mode()` (app.py:105/434) → `_start_local_http_server()` (app.py:458) → `UIRuntimeMixin.start()` (ui_runtime_mixin.py:240), which re-arms `install_crash_handlers()`; `main.py:273` calls `install_faulthandler()` instead of bare `faulthandler.enable()`. Grep confirms no other excepthook/faulthandler resets remain.",
+        "CI reds are environmental, verified from job logs: runtime-contract-tests and all runtime-smoke jobs fail at `apt-get install libgl1-mesa-glx` (\"Package 'libgl1-mesa-glx' has no installation candidate\", exit 100) before any code runs. CodeQL annotations all point to files outside this diff (conversation.js, vram.py, text_preprocessing.py, korean.py, tts_preprocessing.py, civitai.py, file_policy.py); none touch the #105 files.",
+        "`#105` is confirmed to be a stale 2023 merged PR (closedAt 2023-04-17), so this work is correctly tracked via PR #2023; there is no live issue to reopen.",
+        "Verification comment posted to PR #2023 (issuecomment-5307808992). Nothing reopened; PR left unmerged."
+      ],
+      "reviewed_at": "2026-08-16T14:01:12.243Z",
+      "review_report": "/home/joe/Projects/airunnerdesktop/.worktrees/w4/.headlesscode/reports/eb5f457f-d7b6-40e9-ad36-4c09473f81c5.md",
+      "qa": {
+        "status": "done",
+        "verdict": "pass",
+        "evidence": "### 1. Environment\nThe repo's venv (`/home/joe/Projects/airunnerdesktop/venv`, Python 3.13.5, pytest 9.1.1, PySide6 6.9.0, airunner 6.0.0) has an editable install pointing at the MAIN repo on a different branch (`pyside6-desktop`, no crash_handler). I shadowed it with the worktree's source via PYTHONPATH (same approach the commit's own validation used):\n\n```\n$ export PYTHONPATH=<worktree>/src:<worktree>/native/src\n$ python -c \"import airunner.crash_handler, airunner_native.crash_handler, ...\"\nairunner at:        .../worktrees/w4/src/airunner/__init__.py\ncrash_handler at:   .../worktrees/w4/src/airunner/crash_handler.py\nairunner_native at: .../worktrees/w4/native/src/airunner_native/__init__.py\nUIRuntimeMixin imported OK / main imported OK\n```",
+        "report": "/home/joe/Projects/airunnerdesktop/.worktrees/w4/.headlesscode/reports/b7d88bd0-0de7-4e50-aa4d-4b130fab0496.md",
+        "updated": "2026-08-16T14:13:07.172Z"
+      },
+      "cost_recorded": "2026-08-16T14:13:07.177Z"
+    }
+  ],
+  "updated": "2026-08-16T14:13:07.177Z",
+  "batch": "round1-consolidation-v3",
+  "preflight": {
+    "status": "ok",
+    "model": "deepseek/deepseek-v4-flash-0731",
+    "baseUrl": "https://openrouter.ai",
+    "line": "deepseek/deepseek-v4-flash-0731 (pinned to provider \"deepseek\"): all clear — 1-token probe OK in 1189ms (probe ≈ $0.000012); estimated round cost ≈ $0.785 (4 worker session(s), order-of-magnitude)",
+    "latencyMs": 1189,
+    "probeCostUsd": 0.000012040000000000002,
+    "roundCostEstimateUsd": 0.7846272
+  },
+  "totalUsage": {
+    "costUsd": 1.7173841568000001,
+    "inputTokens": 54937853,
+    "outputTokens": 425971,
+    "cachedTokens": 51847040,
+    "iterations": 454
+  }
+}

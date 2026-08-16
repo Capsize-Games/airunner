@@ -17,11 +17,11 @@ from typing import Any
 
 from fastapi import APIRouter, HTTPException, Request
 
-from airunner_services.contract_enums import LLMActionType
+from airunner_common.contract_enums import LLMActionType
 from airunner_services.ipc.messages import EnvelopeStatus, RequestEnvelope
 from airunner_services.llm.llm_request import LLMRequest
 from airunner_services.runtimes.contracts import RuntimeAction, RuntimeKind
-from airunner_services.settings import AIRUNNER_LOG_LEVEL
+from airunner_common.settings import AIRUNNER_LOG_LEVEL
 from airunner_services.utils.application import get_logger
 
 from .legacy_contracts import LegacyLLMGenerateRequest
