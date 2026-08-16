@@ -115,14 +115,6 @@ class LLMAPIService(APIServiceBase):
             mediator = SignalMediator()
             mediator.register_pending_request(resolved_request_id, callback)
 
-        # Keep the daemon path aligned with the local request lifecycle so the
-        # conversation view can append the user prompt and initialize the chat
-        # surface before streamed daemon tokens arrive.
-        self.emit_signal(
-            SignalCode.LLM_TEXT_GENERATE_REQUEST_SIGNAL,
-            data,
-        )
-
         if self._send_request_via_daemon(
             prompt,
             llm_request,

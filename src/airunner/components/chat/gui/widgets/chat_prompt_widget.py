@@ -48,7 +48,6 @@ from airunner.enums import (
     ModelStatus,
     ModelService,
 )
-from airunner.utils.application.log_hygiene import summarize_mapping_keys
 from airunner.components.application.gui.widgets.base_widget import BaseWidget
 from airunner.components.conversations.conversation_history_manager import (
     ConversationHistoryManager,
@@ -125,7 +124,6 @@ class ChatPromptWidget(BaseWidget):
             SignalCode.AUDIO_PROCESSOR_RESPONSE_SIGNAL: self.on_hear_signal,
             SignalCode.MODEL_STATUS_CHANGED_SIGNAL: self.on_model_status_changed_signal,
             SignalCode.LLM_TEXT_STREAMED_SIGNAL: self.on_add_bot_message_to_conversation,
-            SignalCode.LLM_TEXT_GENERATE_REQUEST_SIGNAL: self.on_llm_text_generate_request_signal,
             SignalCode.LLM_MODEL_CHANGED: self.on_llm_model_changed,
             SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL: self.on_application_settings_changed,
             SignalCode.APPLICATION_MAIN_WINDOW_LOADED_SIGNAL: self.on_main_window_loaded_signal,
@@ -1640,15 +1638,6 @@ class ChatPromptWidget(BaseWidget):
 
         if getattr(llm_response, "is_end_of_message", False):
             self.enable_generate()
-
-    def on_llm_text_generate_request_signal(self, data: Dict):
-        """Handle LLM text generate request signal - user message is being sent."""
-        self.logger.debug(
-            "LLM_TEXT_GENERATE_REQUEST_SIGNAL received (%s)",
-            summarize_mapping_keys(data, label="request"),
-        )
-        # The ConversationWidget should handle displaying the message
-        # This handler is just for logging/debugging
 
     def load_conversation(self, conversation_id: int = None):
         """Load a conversation and synchronize with ConversationWidget."""

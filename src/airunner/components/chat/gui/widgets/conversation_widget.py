@@ -75,7 +75,6 @@ class ConversationWidget(BaseWidget):
             SignalCode.MOOD_SUMMARY_UPDATE_STARTED: self._handle_mood_summary_update_started,
             SignalCode.BOT_MOOD_UPDATED: self.on_bot_mood_updated_signal,
             SignalCode.CHATBOT_CHANGED: self.on_chatbot_changed,
-            SignalCode.LLM_TEXT_GENERATE_REQUEST_SIGNAL: self.on_llm_request_text_generate_signal,
             SignalCode.LLM_TOOL_STATUS_SIGNAL: self.on_tool_status_update,
             SignalCode.LLM_THINKING_SIGNAL: self.on_thinking_update,
         }
@@ -1059,20 +1058,6 @@ class ConversationWidget(BaseWidget):
                 self._streamed_messages
             )
             self.set_conversation(self._streamed_messages)
-
-    def on_llm_request_text_generate_signal(self, data):
-        """
-        Handle the LLM request text generation signal.
-        """
-        request_data = data.get("request_data", {})
-        prompt = request_data.get("prompt", "")
-        request_id = data.get("request_id") or request_data.get(
-            "request_id"
-        )
-        self.append_user_message_for_request(
-            prompt,
-            request_id=request_id,
-        )
 
     def on_tool_status_update(self, data: Dict[str, Any]):
         """Handle tool status updates and display them in the UI.
