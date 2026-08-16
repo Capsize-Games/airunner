@@ -58,25 +58,24 @@ subscription. Everything runs on your hardware.
 
 ```mermaid
 flowchart LR
-  User[User] --> Native[native/ launcher and installers]
+  User[User] --> Native[native/ launcher and bundle helpers]
   Native --> GUI[src/ desktop client]
   Native --> Daemon[services/ headless daemon]
-  GUI --> API[api/ transport contracts]
-  Daemon --> API
-  Daemon --> Model[model/ shared contracts and runtime helpers]
+  GUI --> Daemon
   Native --> Sidecars[llama.cpp and whisper.cpp sidecars]
   Daemon --> Sidecars
+  GUI --> Scripts[scripts/ tooling]
+  Daemon --> Scripts
   GUI --> Data[(AIRUNNER_BASE_PATH)]
   Daemon --> Data
 ```
 
 | Package | Role |
 |---------|------|
-| [api](api/README.md) | Shared transport contracts, messages, and thin API bootstrap adapters |
+| [src](src/README.md) | Desktop GUI client, daemon client bridge, widgets, and application entry points |
 | [services](services/README.md) | Headless daemon, FastAPI server, runtime registry, orchestration, downloads, and persistence |
-| [model](model/README.md) | Shared runtime contracts, settings, ORM models, and runtime helpers |
-| [src](src/README.md) | Desktop GUI client, daemon bridge, widgets, and application entry points |
-| [native](native/README.md) | Launcher, bundle assembly, native sidecar integration, and installer tooling |
+| [native](native/README.md) | Python launcher entry point, runtime layout helpers, and native sidecar support |
+| [scripts](scripts/README.md) | Developer tooling: test runner, UI build, install helpers, and quality reports |
 
 ---
 
@@ -637,11 +636,12 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) and the [Development Wiki](https://github
 - [LLM Flow](docs/llm-flow.md)
 - [Document RAG Flow](docs/document-rag-flow.md)
 - [Systemd Distributed Deployment](deployment/systemd/README.md)
+- [Architecture Complexity Audit](docs/architecture/architecture-complexity-audit.md)
 - [API Service Layer](src/airunner/components/application/api/README.md)
 - [Services Package README](services/README.md)
-- [Model Package README](model/README.md)
 - [Src Package README](src/README.md)
 - [Native Package README](native/README.md)
+- [Scripts README](scripts/README.md)
 
 ---
 

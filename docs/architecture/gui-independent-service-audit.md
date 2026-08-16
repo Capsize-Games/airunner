@@ -21,26 +21,26 @@ but the higher-level orchestration layer is split:
 ### Headless and service-capable foundations
 
 - The runtime registry and sidecar clients are explicit in
-  [src/airunner/runtimes/bootstrap.py](src/airunner/runtimes/bootstrap.py),
-  [src/airunner/runtimes/sidecar_llm_client.py](src/airunner/runtimes/sidecar_llm_client.py),
-  [src/airunner/runtimes/sidecar_stt_client.py](src/airunner/runtimes/sidecar_stt_client.py),
-  [src/airunner/runtimes/sidecar_tts_client.py](src/airunner/runtimes/sidecar_tts_client.py),
+  [services/src/airunner_services/runtimes/bootstrap.py](../../services/src/airunner_services/runtimes/bootstrap.py),
+  [services/src/airunner_services/runtimes/sidecar_llm_client.py](../../services/src/airunner_services/runtimes/sidecar_llm_client.py),
+  [services/src/airunner_services/runtimes/sidecar_stt_client.py](../../services/src/airunner_services/runtimes/sidecar_stt_client.py),
+  [services/src/airunner_services/runtimes/sidecar_tts_client.py](../../services/src/airunner_services/runtimes/sidecar_tts_client.py),
   and
-  [src/airunner/runtimes/sidecar_art_client.py](src/airunner/runtimes/sidecar_art_client.py).
+  [services/src/airunner_services/runtimes/sidecar_art_client.py](../../services/src/airunner_services/runtimes/sidecar_art_client.py).
 - Headless bootstrap exists in
-  [src/airunner/app_mixins/headless_runtime_mixin.py](src/airunner/app_mixins/headless_runtime_mixin.py).
+  [services/src/airunner_services/app/headless_runtime_mixin.py](../../services/src/airunner_services/app/headless_runtime_mixin.py).
 - The daemon and HTTP API already exist, with explicit runtime-route usage
   for art, TTS, and STT in
-  [src/airunner/api/routes/art.py](src/airunner/api/routes/art.py#L156),
-  [src/airunner/api/routes/tts.py](src/airunner/api/routes/tts.py#L83),
+  [services/src/airunner_services/api/routes/art.py](../../services/src/airunner_services/api/routes/art.py),
+  [services/src/airunner_services/api/routes/tts.py](../../services/src/airunner_services/api/routes/tts.py),
   and
-  [src/airunner/api/routes/stt.py](src/airunner/api/routes/stt.py#L69).
+  [services/src/airunner_services/api/routes/stt.py](../../services/src/airunner_services/api/routes/stt.py).
 - Conversations, chatbots, user data, and LLM settings are already stored
   in SQLite via SQLAlchemy models such as
-  [src/airunner/components/llm/data/conversation.py](src/airunner/components/llm/data/conversation.py),
-  [src/airunner/components/llm/data/chatbot.py](src/airunner/components/llm/data/chatbot.py),
+  [services/src/airunner_services/database/models/conversation.py](../../services/src/airunner_services/database/models/conversation.py),
+  [services/src/airunner_services/database/models/chatbot.py](../../services/src/airunner_services/database/models/chatbot.py),
   and
-  [src/airunner/components/llm/data/llm_generator_settings.py](src/airunner/components/llm/data/llm_generator_settings.py).
+  [services/src/airunner_services/database/models/llm_generator_settings.py](../../services/src/airunner_services/database/models/llm_generator_settings.py).
 
 ### Current packaging direction
 
@@ -72,18 +72,18 @@ This is the main architectural blocker.
 
 - `CoreLifecycleService` imports and instantiates `WorkerManager` from the
   GUI package in
-  [src/airunner/services/lifecycle_service.py](src/airunner/services/lifecycle_service.py#L11)
+  [services/src/airunner_services/lifecycle_service.py](../../services/src/airunner_services/lifecycle_service.py)
   and
-  [src/airunner/services/lifecycle_service.py](src/airunner/services/lifecycle_service.py#L40).
+  [services/src/airunner_services/lifecycle_service.py](../../services/src/airunner_services/lifecycle_service.py).
 - `LLMGenerateWorker` still owns request orchestration and model-manager
   coordination in
-  [src/airunner/components/llm/workers/llm_generate_worker.py](src/airunner/components/llm/workers/llm_generate_worker.py).
+  [services/src/airunner_services/workers/llm_generate_worker.py](../../services/src/airunner_services/workers/llm_generate_worker.py).
 - `WorkflowManager` still accepts a `signal_emitter` in
-  [src/airunner/components/llm/managers/workflow_manager.py](src/airunner/components/llm/managers/workflow_manager.py#L62)
+  [services/src/airunner_services/llm/workflow_manager.py](../../services/src/airunner_services/llm/workflow_manager.py)
   and uses signal-driven mixins.
 - `ToolExecutionMixin` still emits tool-status and related workflow events
   through the global API signal path in
-  [src/airunner/components/llm/managers/mixins/tool_execution_mixin.py](src/airunner/components/llm/managers/mixins/tool_execution_mixin.py).
+  [services/src/airunner_services/llm/managers/mixins/tool_execution_mixin.py](../../services/src/airunner_services/llm/managers/mixins/tool_execution_mixin.py).
 
 The result is that the LLM sidecar is currently only inference. The higher
 level agent, tool routing, workflow execution, and conversation loading are
@@ -92,7 +92,7 @@ still Python-side and still bound to the worker graph.
 ### 2. Legacy daemon LLM endpoints still reach into workers directly
 
 - The compatibility route in
-  [src/airunner/api/routes/legacy.py](src/airunner/api/routes/legacy.py#L51)
+  [services/src/airunner_services/api/routes/legacy.py](../../services/src/airunner_services/api/routes/legacy.py)
   grabs `_worker_manager` and the live LLM worker directly.
 
 That is the opposite of the desired target, where the GUI would be a client
@@ -102,42 +102,45 @@ of a service and not the owner of the service implementation.
 
 - `LLMAPIService.load_conversation()` emits
   `QUEUE_LOAD_CONVERSATION` in
-  [src/airunner/components/llm/api/llm_services.py](src/airunner/components/llm/api/llm_services.py#L163).
+  [src/airunner/components/llm/api/llm_services.py](../../src/airunner/components/llm/api/llm_services.py#L163).
 - Conversation tools still call `agent.load_conversation(...)` in
-  [src/airunner/components/llm/tools/conversation_tools.py](src/airunner/components/llm/tools/conversation_tools.py#L48).
+  [services/src/airunner_services/llm/tools/conversation_tools.py](../../services/src/airunner_services/llm/tools/conversation_tools.py).
 - GUI conversation widgets consume that signal in
-  [src/airunner/components/chat/gui/widgets/conversation_widget.py](src/airunner/components/chat/gui/widgets/conversation_widget.py#L225)
+  [src/airunner/components/chat/gui/widgets/conversation_widget.py](../../src/airunner/components/chat/gui/widgets/conversation_widget.py)
   and
-  [src/airunner/components/chat/gui/widgets/chat_prompt_widget.py](src/airunner/components/chat/gui/widgets/chat_prompt_widget.py#L1489).
+  [src/airunner/components/chat/gui/widgets/chat_prompt_widget.py](../../src/airunner/components/chat/gui/widgets/chat_prompt_widget.py).
 
 The persistence is service-capable, but the load-and-activate behavior is
 still a GUI interaction pattern rather than a service API.
 
-### 4. STT is still split between local faster-whisper and whisper.cpp
+### 4. STT routes through the daemon runtime registry
 
-- The local worker path still instantiates `WhisperLocalExecutor` in
-  [src/airunner/components/stt/workers/audio_processor_worker.py](src/airunner/components/stt/workers/audio_processor_worker.py#L30).
-- That executor still uses `faster-whisper` in
-  [src/airunner/components/stt/executors/whisper_local_executor.py](src/airunner/components/stt/executors/whisper_local_executor.py#L125).
-- The sidecar runtime path already exists through
-  [src/airunner/runtimes/sidecar_stt_client.py](src/airunner/runtimes/sidecar_stt_client.py)
-  and
-  [src/airunner/runtimes/sidecar_stt_launcher.py](src/airunner/runtimes/sidecar_stt_launcher.py).
+- STT transcription is daemon-backed through the shared runtime registry
+  executor in
+  [services/src/airunner_services/runtimes/runtime_registry_stt_executor.py](../../services/src/airunner_services/runtimes/runtime_registry_stt_executor.py),
+  which implements the `STTExecutor` boundary in
+  [services/src/airunner_services/runtimes/stt_executor.py](../../services/src/airunner_services/runtimes/stt_executor.py).
+- The daemon STT route is owned by
+  [services/src/airunner_services/api/routes/stt.py](../../services/src/airunner_services/api/routes/stt.py).
+- GUI audio capture still runs client-side in
+  [src/airunner/components/stt/workers/audio_capture_worker.py](../../src/airunner/components/stt/workers/audio_capture_worker.py),
+  sending captured audio to the daemon for transcription.
 
-So the repo is not yet standardized on a single STT service boundary.
+The earlier split between a local faster-whisper executor and the whisper.cpp
+sidecar has been collapsed into the registry-backed daemon STT path.
 
 ### 5. Art is only partially unified as a service
 
 - Art generation has an explicit sidecar path in
-  [src/airunner/api/routes/art.py](src/airunner/api/routes/art.py#L156).
+  [services/src/airunner_services/api/routes/art.py](../../services/src/airunner_services/api/routes/art.py).
 - RMBG and safety checker still exist as in-process workers through
-  [src/airunner/components/art/workers/background_removal_worker.py](src/airunner/components/art/workers/background_removal_worker.py)
+  [services/src/airunner_services/workers/background_removal_worker.py](../../services/src/airunner_services/workers/background_removal_worker.py)
   and
-  [src/airunner/components/art/workers/safety_checker_worker.py](src/airunner/components/art/workers/safety_checker_worker.py).
+  [services/src/airunner_services/workers/safety_checker_worker.py](../../services/src/airunner_services/workers/safety_checker_worker.py).
 - GUI worker ownership remains visible in
-  [src/airunner/components/application/gui/windows/main/worker_manager.py](src/airunner/components/application/gui/windows/main/worker_manager.py#L120)
+  [src/airunner/components/application/gui/windows/main/worker_manager.py](../../src/airunner/components/application/gui/windows/main/worker_manager.py)
   and
-  [src/airunner/components/application/gui/windows/main/worker_manager.py](src/airunner/components/application/gui/windows/main/worker_manager.py#L258).
+  [src/airunner/components/application/gui/windows/main/worker_manager.py](../../src/airunner/components/application/gui/windows/main/worker_manager.py).
 
 That means AIRunner does not yet have a single art service boundary that
 owns diffusion, safety checking, and background removal together.
@@ -149,14 +152,14 @@ owns diffusion, safety checking, and background removal together.
 This boundary is mostly right today.
 
 - Window geometry and fullscreen state are already in QSettings through
-  [src/airunner/components/application/gui/windows/main/main_window.py](src/airunner/components/application/gui/windows/main/main_window.py#L1403)
+  [src/airunner/components/application/gui/windows/main/main_window.py](../../src/airunner/components/application/gui/windows/main/main_window.py#L1403)
   and
-  [src/airunner/components/application/gui/windows/main/mixins/settings_property_mixin.py](src/airunner/components/application/gui/windows/main/mixins/settings_property_mixin.py#L71).
+  [src/airunner/components/application/gui/windows/main/mixins/settings_property_mixin.py](../../src/airunner/components/application/gui/windows/main/mixins/settings_property_mixin.py#L71).
 - GUI-only prompt-container and widget state already use QSettings in
-  [src/airunner/components/art/gui/widgets/stablediffusion/stablediffusion_generator_form.py](src/airunner/components/art/gui/widgets/stablediffusion/stablediffusion_generator_form.py#L862)
+  [src/airunner/components/art/gui/widgets/stablediffusion/stablediffusion_generator_form.py](../../src/airunner/components/art/gui/widgets/stablediffusion/stablediffusion_generator_form.py#L862)
   and related widgets.
 - The QSettings backend is already centralized under the AIRunner data root in
-  [src/airunner/utils/settings/get_qsettings.py](src/airunner/utils/settings/get_qsettings.py).
+  [src/airunner/utils/settings/get_qsettings.py](../../src/airunner/utils/settings/get_qsettings.py).
 
 ### What should stay in the service database
 
@@ -165,13 +168,13 @@ an explicit service configuration layer, not to QSettings:
 
 - conversations, chatbots, summaries, user data
 - runtime paths in
-  [src/airunner/components/settings/data/path_settings.py](src/airunner/components/settings/data/path_settings.py)
+  [services/src/airunner_services/database/models/path_settings.py](../../services/src/airunner_services/database/models/path_settings.py)
 - LLM generation settings in
-  [src/airunner/components/llm/data/llm_generator_settings.py](src/airunner/components/llm/data/llm_generator_settings.py)
+  [services/src/airunner_services/database/models/llm_generator_settings.py](../../services/src/airunner_services/database/models/llm_generator_settings.py)
 - RAG settings in
-  [src/airunner/components/llm/data/rag_settings.py](src/airunner/components/llm/data/rag_settings.py)
+  [services/src/airunner_services/database/models/rag_settings.py](../../services/src/airunner_services/database/models/rag_settings.py)
 - service enablement and daemon bind settings in
-  [src/airunner/components/settings/data/application_settings.py](src/airunner/components/settings/data/application_settings.py)
+  [services/src/airunner_services/database/models/application_settings.py](../../services/src/airunner_services/database/models/application_settings.py)
   such as `sd_enabled`, `llm_enabled`, `tts_enabled`, `stt_enabled`,
   `http_server_enabled`, `http_server_host`, and `http_server_port`
 
@@ -181,15 +184,15 @@ These fields look GUI-specific or client-specific rather than service-owned:
 
 - `dark_mode_enabled`, `override_system_theme`, `is_maximized`,
   `current_tool`, `current_layer_index`, and likely `generator_section` in
-  [src/airunner/components/settings/data/application_settings.py](src/airunner/components/settings/data/application_settings.py)
+  [services/src/airunner_services/database/models/application_settings.py](../../services/src/airunner_services/database/models/application_settings.py)
 - setup and agreement flow flags such as `run_setup_wizard`,
   `download_wizard_completed`, `stable_diffusion_agreement_checked`,
   `airunner_agreement_checked`, `user_agreement_checked`, and
   `age_agreement_checked` in the same table
 - `FontSetting` in
-  [src/airunner/components/settings/data/font_setting.py](src/airunner/components/settings/data/font_setting.py)
+  [services/src/airunner_services/database/models/font_setting.py](../../services/src/airunner_services/database/models/font_setting.py)
 - GUI language in
-  [src/airunner/components/settings/data/language_settings.py](src/airunner/components/settings/data/language_settings.py)
+  [services/src/airunner_services/database/models/language_settings.py](../../services/src/airunner_services/database/models/language_settings.py)
   for `gui_language`
 
 These are poor fits for shared service state because different clients could
@@ -203,11 +206,11 @@ client-owned pieces:
 - `LanguageSettings`: `gui_language` is client-side, while user-facing or
   chatbot-facing language defaults may remain service-level.
 - `SoundSettings` in
-  [src/airunner/components/settings/data/sound_settings.py](src/airunner/components/settings/data/sound_settings.py)
+  [services/src/airunner_services/database/models/sound_settings.py](../../services/src/airunner_services/database/models/sound_settings.py)
   are currently global SQLite rows, but playback and recording device choice
   are often client-local concerns rather than shared modality state.
 - `current_image_generator` in
-  [src/airunner/components/settings/data/application_settings.py](src/airunner/components/settings/data/application_settings.py)
+  [services/src/airunner_services/database/models/application_settings.py](../../services/src/airunner_services/database/models/application_settings.py)
   currently acts like a global default. In a multi-client architecture that
   should be explicit in the request or stored as client preference.
 
@@ -218,12 +221,12 @@ client-owned pieces:
 - The product is delivered as a Python application with a Python launcher
   entry point; there is no compiled launcher or bundled installer.
 - Linux headless deployment already expects a separated bundle root and data
-  root in [deployment/systemd/README.md](deployment/systemd/README.md).
+  root in [deployment/systemd/README.md](../../deployment/systemd/README.md).
 
 ### Not yet aligned with the target
 
 - The Linux uninstall flow intentionally leaves the shared data directory in
-  place, as shown in [install.sh](install.sh#L515).
+  place, as shown in [scripts/install.sh](../../scripts/install.sh).
 - The current Windows uninstaller removes the install tree but does not yet
   explicitly remove a user data root comparable to `~/.local/share/airunner`.
 - The native launcher is not yet the owner of sidecar supervision; Python
