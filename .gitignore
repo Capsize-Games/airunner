@@ -91,3 +91,4 @@ reports/*
 plans
 facehuggershield
 logs
+.worktrees/
