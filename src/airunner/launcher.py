@@ -22,6 +22,7 @@ configure_early_torch_allocator_environment()
 
 from airunner.daemon_client.resource_store import get_resource_store
 from airunner_common.settings import AIRUNNER_BASE_PATH, AIRUNNER_LOG_LEVEL, LOCAL_SERVER_HOST
+from airunner.crash_handler import install_crash_handlers
 from airunner.utils.application import get_logger
 from airunner_common.logging_utils import (
     configure_noisy_loggers,
@@ -449,6 +450,7 @@ def _update_splash(splash, message):
 
 
 def main():
+    install_crash_handlers()
     startup_started_at = float(
         os.environ.setdefault(
             "AIRUNNER_PROCESS_START_TIME",

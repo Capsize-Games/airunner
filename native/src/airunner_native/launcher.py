@@ -29,6 +29,7 @@ from airunner_common.settings import AIRUNNER_BASE_PATH
 from airunner_common.settings import AIRUNNER_DISABLE_FACEHUGGERSHIELD
 from airunner_common.settings import AIRUNNER_LOG_LEVEL
 from airunner_common.settings import LOCAL_SERVER_HOST
+from airunner_native.crash_handler import install_crash_handlers
 from airunner_services.utils.application.get_logger import get_logger
 from airunner_common.logging_utils import (
     configure_noisy_loggers,
@@ -684,6 +685,7 @@ def _run_desktop_launcher(startup_started_at: float) -> int:
 
 def main(argv: Optional[Sequence[str]] = None) -> int:
     """Dispatch to the headless or desktop launcher flow."""
+    install_crash_handlers()
     startup_started_at = float(
         os.environ.setdefault(
             "AIRUNNER_PROCESS_START_TIME",

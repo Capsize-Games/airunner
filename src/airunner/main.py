@@ -261,9 +261,16 @@ def main():
     # When the GUI freezes, send SIGUSR1 to the Python GUI process:
     #   GUI_PID="$(pgrep -n -f 'python.*-m airunner\.launcher')"
     #   kill -SIGUSR1 "$GUI_PID"
+    #
+    # Re-point faulthandler at the on-disk fault log: a bare
+    # faulthandler.enable() would reset the output stream installed by
+    # the launcher's crash handler and dump native faults to stderr.
     import faulthandler
     import signal
-    faulthandler.enable()
+
+    from airunner.crash_handler import install_faulthandler
+
+    install_faulthandler()
     faulthandler.register(signal.SIGUSR1, all_threads=True,
                           chain=False)
 
