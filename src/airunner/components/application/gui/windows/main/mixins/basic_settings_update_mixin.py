@@ -228,19 +228,6 @@ class BasicSettingsUpdateMixin:
             if key != "_sa_instance_state":
                 setattr(target, key, getattr(source, key))
 
-    def _notify_setting_updated(
-        self, table_name: Optional[str], column_name: Optional[str], value: Any
-    ) -> None:
-        """Notify that a setting was updated.
-
-        Args:
-            table_name: Database table name.
-            column_name: Column name.
-            value: New value.
-        """
-        # Placeholder for actual notification implementation
-        # This would be __settings_updated in the original class
-
     @staticmethod
     def _record_values(record: Any) -> Dict[str, Any]:
         values = getattr(record, "to_dict", lambda: dict(record.__dict__))()

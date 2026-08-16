@@ -318,13 +318,3 @@ class ModelManagementMixin:
             resource_name,
             order_by=[{"field": "id", "direction": "desc"}],
         )
-
-    def _notify_setting_updated(self, table_name, column_name, val) -> None:
-        """Notify that a setting was updated.
-
-        Args:
-            table_name: Table name.
-            column_name: Column name.
-            val: New value.
-        """
-        # Placeholder for actual notification implementation

@@ -177,16 +177,3 @@ class LayerSettingsUpdateMixin:
             self._notify_setting_updated(
                 resource_name, name, value
             )
-
-    def _notify_setting_updated(
-        self, table_name: str, column_name: str, value: Any
-    ) -> None:
-        """Notify that a setting was updated.
-
-        Args:
-            table_name: Database table name.
-            column_name: Column name.
-            value: New value.
-        """
-        # Placeholder for actual notification implementation
-        # This would be __settings_updated in the original class
