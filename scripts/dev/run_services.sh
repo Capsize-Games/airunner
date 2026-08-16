@@ -95,7 +95,7 @@ running_dev_build_token() {
     if [[ -z "${health_payload}" ]]; then
         return
     fi
-    printf '%s' "${health_payload}" | "${DEV_VENV_BIN}/python" - <<'PY'
+    "${DEV_VENV_BIN}/python" -c '
 import json
 import sys
 
@@ -105,7 +105,7 @@ except Exception:
     print("")
 else:
     print(str(payload.get("dev_build_token") or ""))
-PY
+' <<<"${health_payload}"
 }
 
 stop_running_daemon() {

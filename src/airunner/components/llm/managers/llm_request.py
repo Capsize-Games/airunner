@@ -1,7 +1,7 @@
 from dataclasses import dataclass, asdict, field
 from typing import Optional, Dict, List, Any
 
-from llama_cloud import MessageRole
+from airunner.enums import MessageRole
 
 from airunner.daemon_client.resource_store import get_resource_store
 from airunner.components.llm.config.generation_presets import (

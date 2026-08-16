@@ -45,12 +45,21 @@ class RuntimeAction(str, Enum):
 
 
 class MessageRole(str, Enum):
-    """LLM message roles shared by API and runtime requests."""
+    """LLM message roles shared by API and runtime requests.
+
+    Values match llama_cloud.MessageRole exactly (including DEVELOPER,
+    FUNCTION, CHATBOT and MODEL) so wire/serialization compatibility is
+    preserved without importing the llama_cloud SDK on the daemon path.
+    """
 
     SYSTEM = "system"
+    DEVELOPER = "developer"
     USER = "user"
     ASSISTANT = "assistant"
+    FUNCTION = "function"
     TOOL = "tool"
+    CHATBOT = "chatbot"
+    MODEL = "model"
 
 
 class ChatMessage(BaseModel):

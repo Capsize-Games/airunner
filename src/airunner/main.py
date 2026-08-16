@@ -218,20 +218,6 @@ if AIRUNNER_SAVE_LOG_TO_FILE and not DEV_ENV:
         pass
 
 ################################################################
-# Import torch only after the allocator environment is configured.
-################################################################
-import torch
-
-torch.hub.set_dir(
-    os.environ.get(
-        "TORCH_HOME",
-        os.path.join(
-            os.path.expanduser("~"), ".local/share/airunner/torch/hub"
-        ),
-    )
-)
-
-################################################################
 # Import the main application class for AI Runner.
 ################################################################
 from airunner.components.application.api.api import API
@@ -245,8 +231,31 @@ _launcher_splash = None
 _launcher_app = None
 
 
+def _configure_torch_hub_dir() -> None:
+    """Import torch and configure its hub cache directory.
+
+    Imported lazily inside main() because the app import chain does not
+    need torch at import time (torch costs ~0.8s to import). The allocator
+    environment is already configured by
+    configure_early_torch_allocator_environment() at module import, so this
+    still runs after that setup and before any model load.
+    """
+    import torch
+
+    torch.hub.set_dir(
+        os.environ.get(
+            "TORCH_HOME",
+            os.path.join(
+                os.path.expanduser("~"), ".local/share/airunner/torch/hub"
+            ),
+        )
+    )
+
+
 def main():
     global _launcher_splash, _launcher_app
+
+    _configure_torch_hub_dir()
 
     # Enable faulthandler for debugging deadlocks.
     # When the GUI freezes, send SIGUSR1 to the Python GUI process:

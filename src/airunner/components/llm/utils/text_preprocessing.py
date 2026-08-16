@@ -3,7 +3,6 @@ Utility functions for preprocessing text before speech synthesis.
 """
 
 import re
-import inflect
 
 
 def prepare_text_for_tts(text: str) -> str:
@@ -81,6 +80,8 @@ def strip_emoji_characters(text: str) -> str:
 
 def replace_numbers_with_words(text: str) -> str:
     """Convert numeric digits to their word equivalents."""
+    import inflect  # imported lazily: inflect costs ~1.2s at import time
+
     p = inflect.engine()
 
     # Handle time formats separately

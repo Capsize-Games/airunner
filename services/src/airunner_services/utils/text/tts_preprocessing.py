@@ -4,8 +4,6 @@ from __future__ import annotations
 
 import re
 
-import inflect
-
 
 def prepare_text_for_tts(text: str) -> str:
     """Normalize text into a form that synthesizes cleanly."""
@@ -57,6 +55,8 @@ def strip_emoji_characters(text: str) -> str:
 
 def replace_numbers_with_words(text: str) -> str:
     """Convert numeric text into a more speakable word form."""
+    import inflect  # imported lazily: inflect costs ~1.2s at import time
+
     engine = inflect.engine()
 
     def format_time_with_meridiem(match: re.Match[str]) -> str:

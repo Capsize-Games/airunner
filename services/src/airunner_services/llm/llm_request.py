@@ -3,7 +3,7 @@
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
 
-from llama_cloud import MessageRole  # type: ignore[import-untyped]
+from airunner_services.runtimes.contracts import MessageRole
 
 from airunner_services.database.models.chatbot import (  # type: ignore[import-untyped]
     Chatbot,

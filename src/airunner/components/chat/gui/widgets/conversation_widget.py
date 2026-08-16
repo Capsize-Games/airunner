@@ -7,13 +7,12 @@ from PySide6.QtCore import QTimer, Slot, Qt
 from PySide6.QtWidgets import QApplication, QLabel
 from PySide6.QtWebChannel import QWebChannel
 from PySide6.QtWebEngineWidgets import QWebEngineView
-from llama_cloud import MessageRole
 
 from airunner.components.conversations.conversation_history_manager import (
     ConversationHistoryManager,
 )
 from airunner.components.llm.gui.widgets.loading_widget import LoadingWidget
-from airunner.enums import SignalCode, TemplateName
+from airunner.enums import MessageRole, SignalCode, TemplateName
 from airunner.components.llm.gui.widgets.contentwidgets import (
     ChatBridge,
     ConversationWebEnginePage,

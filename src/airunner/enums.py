@@ -4,6 +4,24 @@ from PySide6.QtCore import QLocale
 import os
 
 
+class MessageRole(str, Enum):
+    """LLM message roles, matching llama_cloud.MessageRole values.
+
+    Kept local so the GUI import chain does not pull in the full
+    llama_cloud SDK (~320ms cumulative at import time). Values match
+    llama_cloud exactly for wire/serialization compatibility.
+    """
+
+    SYSTEM = "system"
+    DEVELOPER = "developer"
+    USER = "user"
+    ASSISTANT = "assistant"
+    FUNCTION = "function"
+    TOOL = "tool"
+    CHATBOT = "chatbot"
+    MODEL = "model"
+
+
 class WorkerState(Enum):
     RUNNING = 100
     PAUSED = 200

@@ -15,9 +15,6 @@ from sqlalchemy import (
 	Text,
 )
 from sqlalchemy.orm import relationship
-from sumy.nlp.tokenizers import Tokenizer
-from sumy.parsers.plaintext import PlaintextParser
-from sumy.summarizers.lex_rank import LexRankSummarizer
 
 from airunner_services.database.base import BaseModel
 from airunner_services.settings import AIRUNNER_LOG_LEVEL
@@ -80,6 +77,12 @@ class Conversation(BaseModel):
 
 	def summarize(self) -> str:
 		"""Generate a one-sentence summary of the conversation."""
+		# Imported lazily: sumy pulls in nltk/sklearn/scipy/pandas, which
+		# costs ~1.1s+ on the daemon import path when loaded eagerly.
+		from sumy.nlp.tokenizers import Tokenizer
+		from sumy.parsers.plaintext import PlaintextParser
+		from sumy.summarizers.lex_rank import LexRankSummarizer
+
 		messages = self.formatted_messages
 		if messages != "":
 			parser = PlaintextParser.from_string(

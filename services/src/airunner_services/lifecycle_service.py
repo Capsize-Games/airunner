@@ -254,7 +254,12 @@ class CoreLifecycleService:
             SignalCode.LLM_LOAD_SIGNAL,
             {"model_path": model_path},
         )
-        time.sleep(5)
+        # The old fixed 5s sleep blocked daemon startup (and therefore the
+        # /health endpoint) without waiting for model readiness - the model
+        # itself takes 30-60s to load and is dispatched asynchronously to a
+        # worker. Keep only a short grace period so the background dispatch
+        # is initiated before the API server comes up.
+        time.sleep(0.5)
         self.logger.info("Model loading initiated in background")
 
     def _loaded_model_names(self) -> list[str]:
