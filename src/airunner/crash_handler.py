@@ -14,7 +14,7 @@ import threading
 import traceback
 from typing import Optional, TextIO
 
-from airunner.settings import AIRUNNER_BASE_PATH
+from airunner_common.settings import AIRUNNER_BASE_PATH
 
 _GUI_LOG_FILENAME = "gui.log"
 _FAULT_LOG_FILENAME = "faulthandler.log"
