@@ -181,11 +181,80 @@ def _load_llama_runtime_instance(
     llama_cls: Any,
     llama_kwargs: dict[str, Any],
 ) -> None:
-    """Load llama.cpp and normalize common GGUF runtime failures."""
+    """Load llama.cpp, retrying with reduced GPU offload when needed."""
     try:
-        load_llama_with_context_fallback(adapter, llama_cls, llama_kwargs)
+        _load_llama_with_gpu_offload_fallback(
+            adapter,
+            llama_cls,
+            llama_kwargs,
+        )
     except Exception as exc:
         _raise_normalized_runtime_error(adapter, exc)
+
+
+def _load_llama_with_gpu_offload_fallback(
+    adapter: Any,
+    llama_cls: Any,
+    llama_kwargs: dict[str, Any],
+) -> None:
+    """Load llama.cpp and retry with fewer GPU layers on allocation failure.
+
+    Full GPU offload (n_gpu_layers=-1) can fail when the model does not fit
+    in available VRAM. llama.cpp reports this as a generic "Failed to load
+    model from file" error, so we retry with progressively fewer offloaded
+    layers and finally with CPU-only loading before giving up.
+    """
+    attempted_n_gpu_layers = getattr(adapter, "n_gpu_layers", -1)
+    for n_gpu_layers in _gpu_layer_retry_sequence(adapter):
+        if n_gpu_layers != attempted_n_gpu_layers:
+            adapter.logger.warning(
+                "Failed to load GGUF model with n_gpu_layers=%s; "
+                "retrying with n_gpu_layers=%s",
+                attempted_n_gpu_layers,
+                n_gpu_layers,
+            )
+        adapter.n_gpu_layers = n_gpu_layers
+        llama_kwargs["n_gpu_layers"] = n_gpu_layers
+        try:
+            load_llama_with_context_fallback(adapter, llama_cls, llama_kwargs)
+            if n_gpu_layers != attempted_n_gpu_layers:
+                adapter.logger.warning(
+                    "GGUF model loaded with reduced GPU offload "
+                    "(n_gpu_layers=%s)",
+                    n_gpu_layers,
+                )
+            return
+        except Exception as exc:
+            if not _should_retry_fewer_gpu_layers(exc, n_gpu_layers):
+                raise
+
+
+def _gpu_layer_retry_sequence(adapter: Any) -> tuple[int, ...]:
+    """Return candidate GPU offload counts for VRAM-constrained retries."""
+    configured = int(getattr(adapter, "n_gpu_layers", -1))
+    if configured == 0:
+        return (0,)
+    candidates: list[int] = [configured]
+    for candidate in (24, 16, 12, 8, 4, 0):
+        if configured > 0 and candidate >= configured:
+            continue
+        candidates.append(candidate)
+    return tuple(dict.fromkeys(candidates))
+
+
+def _should_retry_fewer_gpu_layers(exc: Exception, n_gpu_layers: int) -> bool:
+    """Return True when one reduced GPU offload retry should be attempted."""
+    if n_gpu_layers == 0:
+        return False
+    error_msg = str(exc).lower()
+    return (
+        "failed to load model" in error_msg
+        or "out of memory" in error_msg
+        or "unable to allocate" in error_msg
+        or "failed to allocate" in error_msg
+        or "not enough memory" in error_msg
+        or "cuda" in error_msg
+    )
 
 
 def _raise_normalized_runtime_error(adapter: Any, exc: Exception) -> None:
@@ -198,10 +267,17 @@ def _raise_normalized_runtime_error(adapter: Any, exc: Exception) -> None:
             adapter.model_path,
         ) from exc
     if "failed to load model" in error_msg:
+        vram_hint = ""
+        if getattr(adapter, "n_gpu_layers", 0) != 0:
+            vram_hint = (
+                " GPU offload was requested (n_gpu_layers="
+                f"{adapter.n_gpu_layers}); the model may exceed available "
+                "VRAM. Reduce n_gpu_layers or disable GPU offload."
+            )
         raise RuntimeError(
             f"Failed to load GGUF model from {adapter.model_path}: {exc}. "
             "This may be due to an unsupported model architecture or "
-            "corrupted file."
+            f"corrupted file.{vram_hint}"
         ) from exc
     raise exc
 

@@ -77,6 +77,9 @@ class LLMGenerateWorker(
 			SignalCode.RAG_INDEX_CANCEL: (
 				self.on_rag_index_cancel_signal
 			),
+			SignalCode.LLM_MODEL_DOWNLOAD_REQUIRED: (
+				self.on_llm_model_download_required_signal
+			),
 		}
 		self._model_manager: Optional[LLMModelManager] = None
 		self._model_manager_lock = threading.Lock()
@@ -508,6 +511,46 @@ class LLMGenerateWorker(
 					"Request failed while model download is still pending; "
 					"keeping pending request for automatic retry"
 				)
+				try:
+					request_id = message.get("request_id")
+					action = None
+					try:
+						action = message.get("request_data", {}).get("action")
+					except Exception:
+						action = None
+					action_val = (
+						action
+						if isinstance(action, LLMActionType)
+						else LLMActionType.CHAT
+					)
+					model_name = "the configured model"
+					try:
+						if self.model_manager:
+							model_name = (
+								self.model_manager.model_name or model_name
+							)
+					except Exception:
+						pass
+					response = LLMResponse(
+						message=(
+							f"The LLM model ({model_name}) is not available "
+							"and a download is in progress. Your request is "
+							"queued and will run automatically once the "
+							"model download completes."
+						),
+						is_first_message=True,
+						is_end_of_message=True,
+						sequence_number=0,
+						action=action_val,
+						request_id=request_id,
+						is_system_message=True,
+					)
+					self.emit_signal(
+						SignalCode.LLM_TEXT_STREAMED_SIGNAL,
+						{"response": response, "request_id": request_id},
+					)
+				except Exception:
+					pass
 			else:
 				self._pending_llm_request = None
 				self.logger.info(

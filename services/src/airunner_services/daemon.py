@@ -30,6 +30,12 @@ def _configure_daemon_environment() -> None:
         "QT_LOGGING_RULES",
         "*.debug=false;qt.qpa.*=false",
     )
+    # nltk >= 3.10 installs an import-security finder that blocks any
+    # nltk-initiated import resolving under the process CWD. When the venv
+    # lives inside the project root (site-packages is under the CWD) this is
+    # a false positive that aborts daemon startup. Use nltk's official
+    # escape hatch; the finder is only installed when this is unset.
+    os.environ.setdefault("NLTK_DISABLE_IMPORT_SECURITY", "1")
     configure_early_torch_allocator_environment()
 
 

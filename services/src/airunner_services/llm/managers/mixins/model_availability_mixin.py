@@ -285,7 +285,13 @@ class ModelAvailabilityMixin:
         )
 
     def _handle_missing_model(self: "LLMModelManager") -> None:
-        """Handle a missing model by triggering download once."""
+        """Handle a missing model by failing status and triggering download."""
         if self.model_status[ModelType.LLM] != ModelStatus.FAILED:
-            self._trigger_model_download()
             self.change_model_status(ModelType.LLM, ModelStatus.FAILED)
+        # Always attempt the download trigger. Once the status is FAILED it
+        # stays FAILED across requests, so gating on status here would stop
+        # the download from ever being (re)attempted after a first failure.
+        # The download worker dedupes in-flight downloads via its own guard,
+        # so re-emitting on later requests safely retries a failed or
+        # never-started download instead of leaving requests pending forever.
+        self._trigger_model_download()

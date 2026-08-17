@@ -77,6 +77,25 @@ class HeadlessDownloadProgress:
                 flush=True,
             )
 
+        if progress >= 100:
+            if self._tqdm:
+                self._tqdm.write(f"Download complete: {self.model_name}")
+            else:
+                print(f"\n[Download] Complete: {self.model_name}")
+
+        self._completed.set()
+
+    def on_download_complete(self, data: Dict) -> None:
+        """Mark one headless download as complete."""
+        with self._lock:
+            for bar in self._file_bars.values():
+                bar.close()
+            self._file_bars.clear()
+
+            if self._overall_bar:
+                self._overall_bar.close()
+                self._overall_bar = None
+
         if self._tqdm:
             self._tqdm.write(f"Download complete: {self.model_name}")
         else:
@@ -201,12 +220,24 @@ class ModelDownloadMixin:
             self.logger.error("Unable to show GUI download dialog")
             return
 
-        self._download_headless(
-            model_info,
-            model_path,
-            repo_id,
-            data.get("missing_files"),
-        )
+        # Run the headless download off-thread. The download-required
+        # signal can be emitted synchronously from the request path (model
+        # load), so blocking here would stall request handling and cause
+        # re-entrant generation once the download completes. The completion
+        # handler loads the model and retries any pending request on this
+        # background thread instead.
+        self._download_dialog_showing = True
+        threading.Thread(
+            target=self._download_headless,
+            args=(
+                model_info,
+                model_path,
+                repo_id,
+                data.get("missing_files"),
+            ),
+            daemon=True,
+            name="llm-headless-download",
+        ).start()
 
     def _has_download_ui_delegate(self) -> bool:
         """Return whether one GUI delegate is available for downloads."""

@@ -77,6 +77,12 @@ class DaemonLauncher:
         environment.update(runtime_layout.as_environment(self.config_path))
         environment.pop("AIRUNNER_ART_SIDECAR_PROCESS", None)
         environment.pop("AIRUNNER_TTS_SIDECAR_PROCESS", None)
+        # Mirror the GUI's dev/prod mode into the daemon. The GUI entry point
+        # defaults to dev mode (DEV_ENV=1) while the daemon's shared settings
+        # default to production (DEV_ENV=0), which makes the daemon open the
+        # empty airunner.db instead of the populated airunner.dev.db and
+        # causes 500s on every persistence endpoint.
+        environment.setdefault("DEV_ENV", os.environ.get("DEV_ENV", "1"))
         environment.setdefault("AIRUNNER_HEADLESS", "1")
         environment.setdefault(
             "AIRUNNER_BUNDLE_ROOT",
