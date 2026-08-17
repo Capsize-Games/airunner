@@ -21,6 +21,9 @@ from airunner_services.daemon_connection_state import (
 )
 from airunner_services.daemon_client.gui_bridge_mixin import GuiBridgeMixin
 from airunner_services.daemon_client.launcher import DaemonLauncher
+from airunner_services.api.loopback_token import (
+    get_or_create_loopback_token,
+)
 from airunner_common.dev_build_token import current_dev_build_token
 from airunner_common.contract_enums import LLMActionType, SignalCode
 from airunner_common.settings import AIRUNNER_LOG_LEVEL
@@ -64,6 +67,7 @@ class GuiDaemonClient(GuiBridgeMixin):
         self._sleep = sleep
         self._state = DaemonConnectionState.NOT_STARTED
         self._last_error = ""
+        self._loopback_token = get_or_create_loopback_token()
         self._dev_build_token_checked_at = 0.0
         self._cached_dev_build_token: Optional[str] = None
         self._missing_dev_build_token_logged = False
@@ -905,6 +909,7 @@ class GuiDaemonClient(GuiBridgeMixin):
             response = self._session.request(
                 "GET",
                 f"{self.base_url}/health",
+                headers=self._loopback_headers(),
                 timeout=timeout_seconds,
             )
             response.raise_for_status()
@@ -912,6 +917,10 @@ class GuiDaemonClient(GuiBridgeMixin):
         except requests.RequestException as exc:
             self._last_error = str(exc)
             return None
+
+    def _loopback_headers(self) -> Dict[str, str]:
+        """Return the per-user loopback token header for daemon requests."""
+        return {"X-Airunner-Token": self._loopback_token}
 
     def _expected_dev_build_token(self) -> Optional[str]:
         """Return the current expected dev build token for this client."""
@@ -965,6 +974,7 @@ class GuiDaemonClient(GuiBridgeMixin):
             response = self._session.request(
                 "POST",
                 f"{self.base_url}/admin/shutdown",
+                headers=self._loopback_headers(),
                 timeout=5,
             )
             response.raise_for_status()
@@ -1019,13 +1029,16 @@ class GuiDaemonClient(GuiBridgeMixin):
         if not self.ensure_connected(auto_start=auto_start):
             raise RuntimeError(self._last_error or "daemon unavailable")
 
+        request_headers = self._loopback_headers()
+        if headers:
+            request_headers.update(headers)
         try:
             response = self._session.request(
                 method,
                 f"{self.base_url}{path}",
                 json=json_payload,
                 files=files,
-                headers=headers,
+                headers=request_headers,
                 stream=stream,
                 timeout=timeout_seconds or self._request_timeout_seconds,
             )

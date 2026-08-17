@@ -299,10 +299,9 @@ class UIRuntimeMixin:
 
     def _post_splash_startup(self):
         """Continue startup after the splash screen is visible."""
-        import sys
-        print("[DEBUG] _post_splash_startup called", file=sys.stderr)
+        self.logger.debug("_post_splash_startup called")
         self.show_main_application(self.app)
-        print("[DEBUG] show_main_application returned", file=sys.stderr)
+        self.logger.debug("show_main_application returned")
 
     @staticmethod
     def signal_handler(_signal: int, _frame: object) -> None:

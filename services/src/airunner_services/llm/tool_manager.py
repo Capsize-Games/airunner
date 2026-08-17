@@ -222,6 +222,14 @@ class ToolManager(
 
     def _compile_custom_tool(self, tool_record) -> Optional[Callable]:
         """Compile one custom tool from its database record."""
+        # Fail closed: never compile/execute a tool whose code has not been
+        # through an actual safety validation pass.
+        if not getattr(tool_record, "safety_validated", False):
+            raise PermissionError(
+                "Refusing to compile tool "
+                f"'{getattr(tool_record, 'name', '?')}': "
+                "safety_validated is not True"
+            )
         try:
             from langchain_core.tools import tool
             from airunner_services.llm.core.code_sandbox import (

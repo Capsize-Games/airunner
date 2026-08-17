@@ -10,6 +10,9 @@ from urllib.parse import urlencode
 
 import requests
 
+from airunner_services.api.loopback_token import (
+	get_or_create_loopback_token,
+)
 from airunner_services.runtimes.contracts import RuntimeAction
 from airunner_services.runtimes.contracts import RuntimeDescriptor
 from airunner_services.runtimes.contracts import RuntimeHealth
@@ -368,6 +371,10 @@ class SidecarTTSClient(RuntimeClient):
 			return RuntimeHealthStatus.READY
 		return RuntimeHealthStatus.UNKNOWN
 
+	def _loopback_headers(self) -> dict[str, str]:
+		"""Return the per-user loopback token header for sidecar requests."""
+		return {"X-Airunner-Token": get_or_create_loopback_token()}
+
 	def _request(
 		self,
 		method: str,
@@ -383,6 +390,7 @@ class SidecarTTSClient(RuntimeClient):
 				method,
 				url,
 				json=json_payload,
+				headers=self._loopback_headers(),
 				timeout=(
 					self._settings.request_timeout_seconds
 					if timeout_seconds is None

@@ -22,6 +22,9 @@ from airunner_services.runtimes.art_daemon_runtime_settings import (
 	ArtDaemonRuntimeSettings,
 	resolve_art_daemon_runtime_settings,
 )
+from airunner_services.api.loopback_token import (
+	get_or_create_loopback_token,
+)
 from airunner_services.runtimes.base import RuntimeClient
 from airunner_services.runtimes.message_envelopes import load_message_types
 from airunner_services.runtimes.registry import RuntimeRegistry
@@ -177,12 +180,20 @@ class SidecarArtClient(RuntimeClient):
 			return bool(self._active_jobs)
 
 	def _fallback_model_status(self) -> Optional[str]:
-		"""Return the best local model status when `/health` is unavailable."""
+		"""Return the best local model status when `/health` is unavailable.
+
+		An idle sidecar (no tracked jobs) must never report the stale
+		``loading`` value cached from a previous job: the sidecar is healthy
+		and doing nothing, so ``loaded`` (when previously confirmed) or
+		``unloaded`` is the truthful status.
+		"""
 		if self._has_active_jobs():
 			if self._last_known_model_status in {"loaded", "ready"}:
 				return "loaded"
 			return "loading"
-		return self._last_known_model_status or None
+		if self._last_known_model_status in {"loaded", "ready"}:
+			return "loaded"
+		return "unloaded"
 
 	def _remember_model_status(self, model_status: str) -> str:
 		"""Store one normalized model status observed from the sidecar."""
@@ -196,6 +207,9 @@ class SidecarArtClient(RuntimeClient):
 		normalized_status = str(status or "").strip().lower()
 		if normalized_status in {"completed"}:
 			self._remember_model_status("loaded")
+			return
+		if normalized_status in {"failed", "cancelled", "canceled"}:
+			self._remember_model_status("unloaded")
 			return
 		if normalized_status == "running":
 			if progress > 1.0:
@@ -217,6 +231,7 @@ class SidecarArtClient(RuntimeClient):
 			response = self._session.request(
 				"GET",
 				url,
+				headers=self._loopback_headers(),
 				timeout=self._settings.request_timeout_seconds,
 			)
 			response.raise_for_status()
@@ -260,6 +275,7 @@ class SidecarArtClient(RuntimeClient):
 		try:
 			with self._invoke_lock:
 				self._ensure_launcher(self._settings)
+				self._last_known_model_status = None
 				self._require_launcher().start()
 		except RuntimeError as exc:
 			return self._failure_response(
@@ -362,6 +378,13 @@ class SidecarArtClient(RuntimeClient):
 					job_id,
 					progress_callback,
 				)
+				# Reconcile the cached model status at the completion boundary
+				# so a failed/timed-out job can never leave the daemon stuck
+				# reporting "loading" for an idle sidecar.
+				if status is messages.EnvelopeStatus.SUCCEEDED:
+					self._remember_model_status("loaded")
+				else:
+					self._remember_model_status("unloaded")
 			except RuntimeError as exc:
 				return self._runtime_error_response(request.request_id, str(exc))
 			finally:
@@ -514,6 +537,10 @@ class SidecarArtClient(RuntimeClient):
 			"image_count": 1,
 		}
 
+	def _loopback_headers(self) -> dict[str, str]:
+		"""Return the per-user loopback token header for sidecar requests."""
+		return {"X-Airunner-Token": get_or_create_loopback_token()}
+
 	def _request(
 		self,
 		method: str,
@@ -529,6 +556,7 @@ class SidecarArtClient(RuntimeClient):
 				method,
 				url,
 				json=json_payload,
+				headers=self._loopback_headers(),
 				timeout=self._settings.request_timeout_seconds,
 			)
 			response.raise_for_status()

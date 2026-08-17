@@ -87,14 +87,14 @@ def resolve_art_model_version() -> str:
 
 
 def resolve_zimage_txt2img_dir() -> str:
-    """Return the txt2img directory for Z-Image models."""
-    base_path = service_base_path()
-    candidates = [
-        base_path / "art" / "models" / "Z-Image Turbo" / "txt2img",
-        Path("/home/airunner/.local/share/airunner/art/models/Z-Image Turbo/txt2img"),
-        Path("/home/joe/.local/share/airunner/art/models/Z-Image Turbo/txt2img"),
-    ]
-    for candidate in candidates:
-        if candidate.expanduser().is_dir():
-            return str(candidate.expanduser())
+    """Return the txt2img directory for Z-Image models.
+
+    The directory is derived from the configured service base path so the
+    route stays relocatable across machines and containers.
+    """
+    candidate = (
+        service_base_path() / "art" / "models" / "Z-Image Turbo" / "txt2img"
+    )
+    if candidate.expanduser().is_dir():
+        return str(candidate.expanduser())
     return ""

@@ -24,9 +24,10 @@ import sys
 from dotenv import load_dotenv
 
 from airunner_common.contract_enums import Scheduler
+from airunner_common.package_metadata import VERSION as AIRUNNER_VERSION
 
 
-if os.environ.get("DEV_ENV", "1") == "1":
+if os.environ.get("DEV_ENV", "0") == "1":
     load_dotenv(override=True)
 
 
@@ -45,13 +46,16 @@ def _env_optional_bool(name: str) -> bool | None:
 
 python_venv_dir = os.path.dirname(sys.executable)
 
-# Application version
-AIRUNNER_VERSION = "5.0.0"
+# Application version (single-sourced from package_metadata, issue #2049)
+# AIRUNNER_VERSION is imported above from airunner_common.package_metadata.
 
 # Donation wallet address
 AIRUNNER_DONATION_WALLET = "0x02030569e866e22C9991f55Db0445eeAd2d646c8"
 
-DEV_ENV = os.environ.get("DEV_ENV", "1") == "1"
+# Default to production (DEV_ENV=0) so a packaged install never lets a stray
+# .env override real environment variables. Dev workflows set DEV_ENV=1 via
+# scripts/dev/run_gui.sh / run_services.sh (issue #2053).
+DEV_ENV = os.environ.get("DEV_ENV", "0") == "1"
 
 NLTK_DOWNLOAD_DIR = os.path.join(
     python_venv_dir,
@@ -487,7 +491,7 @@ SLASH_COMMANDS = {
     },
 }
 
-AIRUNNER_SCRAPER_BLACKLIST = []
+AIRUNNER_SCRAPER_BLACKLIST: list[str] = []
 
 
 def _build_default_db_url() -> str:

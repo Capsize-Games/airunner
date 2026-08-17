@@ -92,6 +92,51 @@ def _sanitize_log_args(args: Any) -> Any:
     return _sanitize_log_value(args)
 
 
+def summarize_text(text: str | None, *, label: str = "text") -> str:
+    """Return one length-only summary for one text payload."""
+    if not text:
+        return f"{label}_chars=0"
+    return f"{label}_chars={len(text)}"
+
+
+def summarize_mapping_keys(
+    value: Any,
+    *,
+    label: str = "data",
+    max_keys: int = 8,
+) -> str:
+    """Return one key-only summary for one mapping payload."""
+    return _summarize_mapping_keys(
+        value,
+        label=label,
+        max_keys=max_keys,
+    )
+
+
+def fingerprint_value(
+    value: str | None,
+    *,
+    label: str = "value",
+) -> str:
+    """Return one stable fingerprint for one string without logging it."""
+    return _fingerprint_value(value, label=label)
+
+
+def sanitize_log_text(text: str) -> str:
+    """Redact URLs and filesystem paths from one log string."""
+    return _sanitize_log_text(text)
+
+
+def sanitize_log_value(value: Any) -> Any:
+    """Sanitize one log value while preserving basic formatting."""
+    return _sanitize_log_value(value)
+
+
+def sanitize_log_args(args: Any) -> Any:
+    """Sanitize one logging args payload."""
+    return _sanitize_log_args(args)
+
+
 class LogHygieneFilter(logging.Filter):
     """Filter log records so common sensitive values do not leak by default."""
 
@@ -341,5 +386,11 @@ __all__ = [
     "LogHygieneFilter",
     "configure_headless_logging",
     "configure_noisy_loggers",
+    "fingerprint_value",
     "log_method_entry_exit",
+    "sanitize_log_args",
+    "sanitize_log_text",
+    "sanitize_log_value",
+    "summarize_mapping_keys",
+    "summarize_text",
 ]

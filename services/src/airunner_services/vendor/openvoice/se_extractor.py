@@ -23,9 +23,19 @@ def _load_cached_speaker_embedding(se_path, device):
     """Load one cached speaker embedding when it exists."""
     if not os.path.exists(se_path):
         return None
+    if not str(se_path).endswith(".safetensors"):
+        logger.warning(
+            "Loading non-safetensors speaker embedding from %s; "
+            "only load embeddings from trusted sources.",
+            se_path,
+        )
     start = perf_counter()
     try:
-        embedding = torch.load(se_path, map_location=torch.device(device))
+        embedding = torch.load(
+            se_path,
+            map_location=torch.device(device),
+            weights_only=True,
+        )
     except Exception as error:
         logger.warning(
             f"Failed to load cached speaker embedding {se_path}: {error}"

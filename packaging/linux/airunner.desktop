@@ -1,3 +1,19 @@
+# AI Runner desktop launcher.
+#
+# Requirements (documented per issue #2063):
+#   * `airunner` must be a real console script on PATH. It is registered by
+#     the GUI package (src/airunner setup.py entry points) and installed into
+#     the bundle's bin directory (e.g. <install>/venv/bin/airunner). Install
+#     the GUI package before using this launcher, or `Exec=airunner` will
+#     fail to start.
+#   * The icon is looked up by name (`Icon=airunner`) through the standard
+#     freedesktop icon theme search path. Install the bundled icon to one of
+#     those locations, for example:
+#         sudo install -Dm644 src/airunner/gui/images/icon64x64.png \
+#             /usr/share/icons/hicolor/64x64/apps/airunner.png
+#     (or use ~/.local/share/icons/hicolor/64x64/apps/airunner.png for a
+#     user-only install). Until the icon is installed, desktop environments
+#     will fall back to a generic icon.
 [Desktop Entry]
 Type=Application
 Name=AIRunner

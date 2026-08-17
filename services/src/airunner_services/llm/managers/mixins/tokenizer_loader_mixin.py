@@ -59,7 +59,12 @@ class TokenizerLoaderMixin:
 
         Used when standard loading fails. Falls back to slow tokenizer
         if KeyError occurs (tokenizer class not in mapping).
-        
+
+        NOTE: ``trust_remote_code=True`` here is a scoped fallback that only
+        runs after a ``trust_remote_code=False`` attempt failed. It loads
+        tokenizer code from the model repo, which executes untrusted Python,
+        so it is intentionally a last resort rather than the default.
+
         Args:
             extra_kwargs: Additional kwargs to pass to from_pretrained.
         """
@@ -67,6 +72,8 @@ class TokenizerLoaderMixin:
             extra_kwargs = {}
         self.logger.info("Retrying with trust_remote_code=True")
         try:
+            # Scoped fallback: tokenizers without a registered class require
+            # their custom code; prefer failure over silent misconfiguration.
             self._tokenizer = AutoTokenizer.from_pretrained(
                 self.model_path,
                 local_files_only=AIRUNNER_LOCAL_FILES_ONLY,
@@ -95,6 +102,8 @@ class TokenizerLoaderMixin:
         if extra_kwargs is None:
             extra_kwargs = {}
         self.logger.info("Trying with use_fast=False to use slow tokenizer")
+        # Scoped fallback (see _load_tokenizer_with_trust_remote_code): only
+        # reached after the trusted=False attempt failed.
         self._tokenizer = AutoTokenizer.from_pretrained(
             self.model_path,
             local_files_only=AIRUNNER_LOCAL_FILES_ONLY,
@@ -126,6 +135,9 @@ class TokenizerLoaderMixin:
         Returns:
             AutoConfig object with model configuration.
         """
+        # Config load for tokenizer resolution. Custom architectures need
+        # their remote code to build the correct tokenizer class; this is a
+        # scoped necessity for loading locally configured tokenizers.
         config = AutoConfig.from_pretrained(
             self.model_path,
             local_files_only=AIRUNNER_LOCAL_FILES_ONLY,

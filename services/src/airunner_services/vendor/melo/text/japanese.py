@@ -2,7 +2,6 @@ import re
 import unicodedata
 
 from airunner_services.vendor.melo.text import symbols
-import pdb
 from pykakasi import kakasi
 from num2words import num2words
 from airunner_services.vendor.melo.text.japanese_settings import (
@@ -104,8 +103,13 @@ class Japanese(LanguageBase):
             if yomi:
                 try:
                     res.append(yomi.split(",")[6])
-                except:
-                    pdb.set_trace()
+                except Exception as exc:
+                    self.logger.warning(
+                        "Failed to parse yomi reading for %r (%r): %s",
+                        word,
+                        yomi,
+                        exc,
+                    )
             else:
                 if word in _SYMBOL_TOKENS:
                     res.append(word)

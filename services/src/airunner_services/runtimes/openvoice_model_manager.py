@@ -174,9 +174,16 @@ class OpenVoiceModelManager(TTSModelManager, metaclass=ABCMeta):
                     self._openvoice_model_root,
                     "checkpoints_v2/base_speakers/ses/en-newest.pth",
                 )
+            if not str(path).endswith(".safetensors"):
+                self.logger.warning(
+                    "Loading non-safetensors speaker embedding from %s; "
+                    "only load embeddings from trusted sources.",
+                    path,
+                )
             self._source_se = torch.load(
                 path,
                 map_location=self.device,
+                weights_only=True,
             )
         return self._source_se
 

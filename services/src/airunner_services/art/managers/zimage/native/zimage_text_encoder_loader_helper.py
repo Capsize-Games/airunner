@@ -126,7 +126,12 @@ class ZImageTextEncoderLoaderHelper:
                     "Loading cached %s text encoder weights",
                     self._owner.quantization,
                 )
-            config = AutoConfig.from_pretrained(load_path, trust_remote_code=True)
+            # trust_remote_code is intentionally disabled: AIRunner never
+            # executes remote code shipped inside a downloaded model repo.
+            # Z-Image is a first-party architecture loaded from local paths.
+            config = AutoConfig.from_pretrained(
+                load_path, trust_remote_code=False
+            )
             transformers_weights = _resolve_transformers_weights_override(load_path)
             if transformers_weights is not None:
                 config.transformers_weights = transformers_weights
@@ -137,7 +142,8 @@ class ZImageTextEncoderLoaderHelper:
                 "quantization_config": quantization_config,
                 "dtype": self._owner.dtype,
                 "device_map": device_map,
-                "trust_remote_code": True,
+                "trust_remote_code": False,
+                "use_safetensors": True,
             }
             if device_map is not None and self._owner._max_memory is not None:
                 load_kwargs["max_memory"] = self._owner._max_memory

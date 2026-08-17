@@ -29,9 +29,10 @@ class HardwareProfile:
     total_ram_gb: float
     available_ram_gb: float
     cuda_available: bool
-    device_name: str | None
-    cpu_count: int
-    platform: str
+    cuda_compute_capability: tuple[int, int] | None = None
+    device_name: str | None = None
+    cpu_count: int = 0
+    platform: str = ""
 
 
 class GuiBridgeMixin:
@@ -149,12 +150,18 @@ class GuiBridgeMixin:
         """Return the host hardware profile from the daemon."""
         response = self._request("GET", "/api/v1/daemon/hardware")
         payload = response.json()
+        capability = payload.get("cuda_compute_capability")
+        if isinstance(capability, (list, tuple)) and len(capability) >= 2:
+            capability_tuple = (int(capability[0]), int(capability[1]))
+        else:
+            capability_tuple = None
         return HardwareProfile(
             total_vram_gb=float(payload["total_vram_gb"]),
             available_vram_gb=float(payload["available_vram_gb"]),
             total_ram_gb=float(payload["total_ram_gb"]),
             available_ram_gb=float(payload["available_ram_gb"]),
             cuda_available=bool(payload["cuda_available"]),
+            cuda_compute_capability=capability_tuple,
             device_name=payload.get("device_name"),
             cpu_count=int(payload["cpu_count"]),
             platform=str(payload.get("platform", "")),

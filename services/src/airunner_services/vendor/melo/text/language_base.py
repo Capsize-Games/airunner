@@ -1,7 +1,6 @@
 import pickle
 import torch
 import os
-from g2p_en import G2p
 
 from transformers import AutoTokenizer, AutoModelForMaskedLM
 from airunner_common.settings import AIRUNNER_BASE_PATH
@@ -19,6 +18,47 @@ def _melo_cache_path() -> str:
         "melo",
         "cmudict_cache.pickle",
     )
+
+
+class _SafeG2PUnpickler(pickle.Unpickler):
+    """Unpickler that only permits primitive container types.
+
+    The Melo g2p cache is a plain ``dict[str, list[list[str]]]``. Restricting
+    ``find_class`` to primitive builtins prevents arbitrary code execution
+    from a tampered cache file (GitHub issue #2031).
+    """
+
+    _SAFE_TYPES = {
+        "str",
+        "int",
+        "float",
+        "bool",
+        "bytes",
+        "list",
+        "tuple",
+        "dict",
+        "set",
+        "frozenset",
+        "NoneType",
+        "object",
+    }
+
+    def find_class(self, module, name):
+        if module == "builtins" and name in self._SAFE_TYPES:
+            return super().find_class(module, name)
+        raise pickle.UnpicklingError(f"blocked pickled type: {module}.{name}")
+
+
+def _load_g2p_cache_safe(cache_path: str):
+    """Return the cached g2p dict or None when the cache is unsafe or invalid."""
+    try:
+        with open(cache_path, "rb") as handle:
+            value = _SafeG2PUnpickler(handle).load()
+    except Exception:
+        return None
+    if not isinstance(value, dict):
+        return None
+    return value
 
 
 class LanguageBase:
@@ -91,8 +131,21 @@ class LanguageBase:
 
     @property
     def call(self):
-        if self._g2p is None:
-            self._g2p = G2p()
+        if getattr(self, "_g2p", None) is None:
+            try:
+                # g2p_en is an optional runtime-only dependency. Import it
+                # lazily so module import (and test collection) never depends
+                # on the uninstallable TensorFlow 1.x-era g2p_en package; only
+                # English TTS synthesis paths exercise this fallback.
+                from g2p_en import G2p
+
+                self._g2p = G2p()
+            except (ImportError, OSError) as exc:  # pragma: no cover - env guard
+                self.logger.warning(
+                    "g2p_en unavailable (%s); English g2p fallback disabled",
+                    exc,
+                )
+                self._g2p = None
         return self._g2p
 
     @property
@@ -113,11 +166,19 @@ class LanguageBase:
         self,
     ):
         if os.path.exists(self.cache_path):
-            with open(self.cache_path, "rb") as pickle_file:
-                g2p_dict = pickle.load(pickle_file)
-        else:
-            g2p_dict = self.read_dict()
-            self.cache_dict(g2p_dict, self.cache_path)
+            g2p_dict = _load_g2p_cache_safe(self.cache_path)
+            if g2p_dict is not None:
+                return g2p_dict
+            # The cache file is missing, tampered with, or not a plain dict;
+            # regenerate it from the packaged dictionary instead of loading
+            # an untrusted pickle (GitHub issue #2031).
+            if self.logger is not None:
+                self.logger.warning(
+                    "Refusing to load untrusted g2p cache %s; regenerating.",
+                    self.cache_path,
+                )
+        g2p_dict = self.read_dict()
+        self.cache_dict(g2p_dict, self.cache_path)
 
         return g2p_dict
 

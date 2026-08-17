@@ -32,6 +32,30 @@ def _is_ip_disallowed(ip: ipaddress._BaseAddress) -> bool:
     return not bool(ip.is_global)
 
 
+def _allowed_host_set() -> frozenset[str]:
+    """Return the env-configured SSRF host/IP allow-list.
+
+    Operators may set ``AIRUNNER_SSRF_ALLOWED_HOSTS`` to a comma-separated
+    list of hostnames and/or IP literals (for example legitimate intranet
+    mirrors) that are exempt from the private/link-local IP rejection rules.
+    """
+    raw = os.environ.get("AIRUNNER_SSRF_ALLOWED_HOSTS", "").strip()
+    return frozenset(host.strip().lower() for host in raw.split(",") if host.strip())
+
+
+def _host_is_allowed(
+    hostname: str,
+    ips: set[ipaddress._BaseAddress],
+) -> bool:
+    """Return True when one hostname or any of its IPs is allow-listed."""
+    allowed = _allowed_host_set()
+    if not allowed:
+        return False
+    if hostname.strip().lower() in allowed:
+        return True
+    return any(str(ip) in allowed for ip in ips)
+
+
 def _resolve_host_ips(
     hostname: str,
     port: int,
@@ -88,6 +112,8 @@ def validate_url_for_fetch(url: str) -> None:
         ip = None
 
     if ip is not None:
+        if _host_is_allowed(hostname, {ip}):
+            return
         if _is_ip_disallowed(ip):
             raise SSRFBlocked("ip address not allowed")
         return
@@ -99,6 +125,9 @@ def validate_url_for_fetch(url: str) -> None:
 
     if not ips:
         raise SSRFBlocked("hostname could not be resolved")
+
+    if _host_is_allowed(hostname, ips):
+        return
 
     if any(_is_ip_disallowed(ip_address) for ip_address in ips):
         raise SSRFBlocked("hostname resolves to disallowed ip")

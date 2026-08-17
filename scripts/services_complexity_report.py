@@ -1,5 +1,10 @@
 #!/usr/bin/env python
-"""Generate Radon and Xenon complexity reports for services code."""
+"""Generate Radon and Xenon complexity reports for services code.
+
+The ``Thresholds`` values and the ``--max-*``/``--min-mi`` flags are advisory
+only: this report exists to surface hotspots for human review and is not
+enforced as a CI gate (issue #2052).
+"""
 
 from __future__ import annotations
 
@@ -22,6 +27,7 @@ from radon.raw import analyze
 DEFAULT_ROOT = Path("services/src/airunner_services")
 DEFAULT_OUTPUT = Path("build/services_complexity")
 DEFAULT_EXCLUDES = ("build", "dist", "vendor", "__pycache__")
+MAX_SOURCE_BYTES = 500_000
 RANKS = "ABCDEF"
 
 
@@ -65,10 +71,34 @@ def is_excluded(path: Path, root: Path, excludes: tuple[str, ...]) -> bool:
     return any(part in excludes for part in parts)
 
 
-def iter_python_files(root: Path, excludes: tuple[str, ...]) -> Iterable[Path]:
-    """Yield Python files below the selected root."""
+def _is_generated(path: Path) -> bool:
+    """Return ``True`` for auto-generated files that should be skipped.
+
+    This must stay identical to ``scripts/gui_complexity_report.py`` so both
+    reports measure the same source surface (issue #2052). ``*_rc.py`` covers
+    ``feather_rc.py`` and other compiled resource modules.
+    """
+    if path.stem.endswith("_ui"):
+        return True
+    if path.stem.endswith("_rc"):
+        return True
+    return False
+
+
+def iter_python_files(
+    root: Path, excludes: tuple[str, ...],
+) -> Iterable[Path]:
+    """Yield Python files below the selected root.
+
+    Skips ``*_ui.py`` and ``*_rc.py`` (auto-generated) files,
+    and files larger than ``MAX_SOURCE_BYTES``.
+    """
     for path in sorted(root.rglob("*.py")):
         if is_excluded(path, root, excludes):
+            continue
+        if _is_generated(path):
+            continue
+        if path.stat().st_size > MAX_SOURCE_BYTES:
             continue
         yield path
 

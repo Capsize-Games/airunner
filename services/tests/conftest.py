@@ -14,7 +14,10 @@ for _path in (
     _TEST_ROOT,
     _TEST_ROOT / "eval",
     _PROJECT_ROOT / "services" / "src",
-    _PROJECT_ROOT / "model" / "src",
+    # The shared package (airunner_common) lives under <repo>/shared and must
+    # be importable for the services test surface (issue #2056). The old
+    # "<repo>/model/src" entry was a phantom path and is removed.
+    _PROJECT_ROOT / "shared",
     _PROJECT_ROOT / "native" / "src",
     _PROJECT_ROOT / "src",
 ):

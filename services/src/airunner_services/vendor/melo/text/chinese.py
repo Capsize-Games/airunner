@@ -114,9 +114,9 @@ class Chinese(LanguageBase):
             seg_cut = self.tone_modifier.pre_merge_for_modify(seg_cut)
             for word, pos in seg_cut:
                 if pos == "eng":
-                    import pdb
-
-                    pdb.set_trace()
+                    # English tokens were already stripped above; skip any
+                    # that remain instead of dropping into a debugger.
+                    self.logger.warning("Skipping English token %r", word)
                     continue
                 sub_initials, sub_finals = self._get_initials_finals(word)
                 sub_finals = self.tone_modifier.modified_tone(

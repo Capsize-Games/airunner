@@ -31,6 +31,7 @@ from airunner_services.api.routes import (
     tts,
 )
 from airunner_services.api.routes import legacy as legacy_routes
+from airunner_services.api.loopback_token import get_or_create_loopback_token
 from airunner_services.data.tenant import reset_tenant_key, set_tenant_key
 from airunner_services.runtimes.bootstrap import build_runtime_registry
 
@@ -86,6 +87,16 @@ def is_loopback_request(request: Request) -> bool:
     if not client:
         return False
     return is_loopback_host(getattr(client, "host", ""))
+
+
+def _provided_bearer_or_api_key(request: Request, header_name: str) -> str:
+    """Return one auth credential from a header or Authorization bearer."""
+    provided = (request.headers.get(header_name) or "").strip()
+    if not provided:
+        auth = (request.headers.get("authorization") or "").strip()
+        if auth.lower().startswith("bearer "):
+            provided = auth.split(" ", 1)[-1].strip()
+    return provided
 
 
 @asynccontextmanager
@@ -161,6 +172,11 @@ def create_app(
     api_key = (os.environ.get("AIRUNNER_API_KEY") or "").strip()
     require_api_key = bool(api_key)
     insecure_no_auth = os.environ.get("AIRUNNER_INSECURE_NO_AUTH", "0") == "1"
+    if insecure_no_auth:
+        logger.warning(
+            "AIRUNNER_INSECURE_NO_AUTH is enabled: API authentication is "
+            "DISABLED. Do not expose this server to untrusted networks."
+        )
 
     allowed_env = (os.environ.get("AIRUNNER_ALLOWED_TENANT_KEYS") or "").strip()
     allowed_tenants = {t.strip() for t in allowed_env.split(",") if t.strip()}
@@ -208,27 +224,43 @@ def create_app(
         if path in {"/health", "/api/v1/health"}:
             return await call_next(request)
 
-        # When API key auth is disabled, default to loopback-only unless explicitly overridden.
-        if not require_api_key:
-            if path.startswith("/admin/"):
-                if is_loopback_request(request):
-                    return await call_next(request)
-                return JSONResponse(status_code=403, content={"error": "Forbidden"})
-
-            if not insecure_no_auth and not is_loopback_request(request):
-                return JSONResponse(status_code=401, content={"error": "Unauthorized"})
-
+        # When API key auth is enabled, require it for every endpoint except
+        # health (this is also the only auth accepted on non-loopback binds).
+        if require_api_key:
+            provided = _provided_bearer_or_api_key(request, "x-api-key")
+            if not provided or not secrets.compare_digest(
+                provided, api_key
+            ):
+                return JSONResponse(
+                    status_code=401, content={"error": "Unauthorized"}
+                )
             return await call_next(request)
 
-        # API key auth enabled: require auth for all endpoints except health.
-        provided = (request.headers.get("x-api-key") or "").strip()
-        if not provided:
-            auth = (request.headers.get("authorization") or "").strip()
-            if auth.lower().startswith("bearer "):
-                provided = auth.split(" ", 1)[-1].strip()
+        # No API key configured: loopback-only unless explicitly overridden.
+        if insecure_no_auth:
+            return await call_next(request)
 
-        if not provided or not secrets.compare_digest(provided, api_key):
-            return JSONResponse(status_code=401, content={"error": "Unauthorized"})
+        if not is_loopback_request(request):
+            if path.startswith("/admin/"):
+                return JSONResponse(
+                    status_code=403, content={"error": "Forbidden"}
+                )
+            return JSONResponse(
+                status_code=401, content={"error": "Unauthorized"}
+            )
+
+        # Loopback requests must present the per-user loopback token so a
+        # second local process cannot drive the daemon unauthenticated.
+        expected_token = get_or_create_loopback_token()
+        provided_token = _provided_bearer_or_api_key(
+            request, "x-airunner-token"
+        )
+        if not provided_token or not secrets.compare_digest(
+            provided_token, expected_token
+        ):
+            return JSONResponse(
+                status_code=401, content={"error": "Unauthorized"}
+            )
 
         return await call_next(request)
 

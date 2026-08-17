@@ -1,0 +1,3 @@
+[build-system]
+requires = ["setuptools>=80.9.0", "wheel", "airunner-common==6.0.0"]
+build-backend = "setuptools.build_meta"

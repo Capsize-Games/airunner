@@ -158,12 +158,23 @@ def _wait_for_health(port: int, process: subprocess.Popen, log_path: Path) -> No
     )
 
 
+def _loopback_auth_headers() -> dict[str, str]:
+    """Return the per-user loopback token header for daemon API calls."""
+    from airunner_services.api.loopback_token import (
+        get_or_create_loopback_token,
+    )
+
+    return {"X-Airunner-Token": get_or_create_loopback_token()}
+
+
 def _post_json(url: str, payload: dict[str, object]) -> tuple[int, bytes, str]:
     """POST one JSON payload and return status, body, and content type."""
+    headers = {"Content-Type": "application/json"}
+    headers.update(_loopback_auth_headers())
     request = urllib.request.Request(
         url,
         data=json.dumps(payload).encode("utf-8"),
-        headers={"Content-Type": "application/json"},
+        headers=headers,
     )
     try:
         with urllib.request.urlopen(request, timeout=60) as response:
@@ -182,7 +193,11 @@ def _post_json(url: str, payload: dict[str, object]) -> tuple[int, bytes, str]:
 
 def _get_json(url: str) -> tuple[int, dict[str, object]]:
     """Return the decoded JSON payload for one GET request."""
-    with urllib.request.urlopen(url, timeout=30) as response:
+    request = urllib.request.Request(
+        url,
+        headers=_loopback_auth_headers(),
+    )
+    with urllib.request.urlopen(request, timeout=30) as response:
         return int(response.status), json.loads(response.read().decode("utf-8"))
 
 

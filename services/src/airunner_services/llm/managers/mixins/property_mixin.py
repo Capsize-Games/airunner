@@ -196,7 +196,7 @@ class PropertyMixin:
             # - If the request provides an absolute/relative filesystem path
             #   (contains a path separator or points to a *.gguf), use it as-is
             #   and let the container path normalization below rewrite host paths
-            #   like /home/<user>/.local/share/airunner/... to the container base.
+            #   like ~/.local/share/airunner/... to the container base.
             requested = str(self.llm_request.model)
             resolved_model_id = LLMProviderConfig.resolve_model_id(
                 "local",
@@ -237,7 +237,7 @@ class PropertyMixin:
 
         model_path = os.path.expanduser(model_path)
 
-        # If a model path was persisted from a host user home (e.g. /home/<user>)
+        # If a model path was persisted from a host user home (e.g. ~/...)
         # but we're running in a container with a different base path, rewrite
         # it to the configured AIRunner data dir.
         try:

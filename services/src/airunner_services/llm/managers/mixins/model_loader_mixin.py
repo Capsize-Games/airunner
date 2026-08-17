@@ -117,10 +117,14 @@ class ModelLoaderMixin:
         }
 
     def _prepare_base_model_kwargs(self) -> Dict[str, Any]:
-        """Prepare base kwargs for model loading."""
+        """Prepare base kwargs for model loading.
+
+        ``trust_remote_code`` is disabled by default so AIRunner never
+        executes code shipped inside a downloaded model repo.
+        """
         model_kwargs = {
             "local_files_only": AIRUNNER_LOCAL_FILES_ONLY,
-            "trust_remote_code": True,
+            "trust_remote_code": False,
             "attn_implementation": self.attn_implementation,
             "use_cache": self.use_cache,
         }
@@ -361,10 +365,11 @@ class ModelLoaderMixin:
         Returns:
             Model configuration
         """
+        # Local pre-quantized config only; remote code execution is disabled.
         config = AutoConfig.from_pretrained(
             quantized_path,
             local_files_only=AIRUNNER_LOCAL_FILES_ONLY,
-            trust_remote_code=True,
+            trust_remote_code=False,
         )
         self._apply_context_settings(config)
         return config
@@ -402,10 +407,11 @@ class ModelLoaderMixin:
         Returns:
             Model configuration
         """
+        # Disable remote code execution for runtime-quantized model configs.
         config = AutoConfig.from_pretrained(
             self.model_path,
             local_files_only=AIRUNNER_LOCAL_FILES_ONLY,
-            trust_remote_code=True,
+            trust_remote_code=False,
         )
         self._apply_context_settings(config)
         return config

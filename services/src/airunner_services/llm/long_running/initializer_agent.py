@@ -48,7 +48,7 @@ class InitializerAgent:
         result = agent.initialize_project(
             name="My Web App",
             description="Build a chat application with user auth and real-time messaging",
-            working_directory="/home/user/projects/my-web-app"
+            working_directory="~/projects/my-web-app"
         )
         print(f"Created project {result['project_id']} with {result['feature_count']} features")
         ```

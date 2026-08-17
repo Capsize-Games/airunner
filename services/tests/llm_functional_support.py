@@ -177,6 +177,15 @@ def wait_for_log_text(
     )
 
 
+def loopback_auth_headers() -> dict[str, str]:
+    """Return the per-user loopback token header for daemon API calls."""
+    from airunner_services.api.loopback_token import (
+        get_or_create_loopback_token,
+    )
+
+    return {"X-Airunner-Token": get_or_create_loopback_token()}
+
+
 def post_json(
     url: str,
     payload: dict[str, object],
@@ -184,10 +193,12 @@ def post_json(
     timeout_seconds: float = 300.0,
 ) -> tuple[int, bytes, str]:
     """POST one JSON payload and return status, body, and content type."""
+    headers = {"Content-Type": "application/json"}
+    headers.update(loopback_auth_headers())
     request = urllib.request.Request(
         url,
         data=json.dumps(payload).encode("utf-8"),
-        headers={"Content-Type": "application/json"},
+        headers=headers,
     )
     try:
         with urllib.request.urlopen(request, timeout=timeout_seconds) as response:

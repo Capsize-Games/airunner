@@ -4,6 +4,10 @@ from typing import TYPE_CHECKING, Any, Dict, Optional
 
 from PySide6.QtWidgets import QDialog, QVBoxLayout
 from PySide6.QtCore import QObject
+# API subclasses App at class-definition time, so this import cannot be moved
+# into a method without breaking the class hierarchy. Importing airunner.app
+# does not import this module (verified: no cycle), so keeping it at module
+# scope is safe (issue #2053).
 from airunner.app import App
 from airunner.enums import (
     EngineResponseCode,

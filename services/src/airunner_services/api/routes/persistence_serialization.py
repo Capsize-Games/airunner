@@ -9,6 +9,13 @@ from typing import Any, Dict, List, Optional
 from sqlalchemy import DateTime, LargeBinary
 from sqlalchemy.inspection import inspect as sqlalchemy_inspect
 
+from airunner_services.database.secret_store import (
+    MODEL_SECRET_COLUMNS,
+    clear_secret,
+    retrieve_secret,
+    store_secret,
+)
+
 
 def _safe_value(value: Any, column_type: Any) -> Any:
     """Base64-encode large binary columns for JSON-safe transport."""
@@ -37,8 +44,21 @@ def serialize_record(
     *,
     eager_load: Optional[List[str]] = None,
 ) -> Dict[str, Any]:
-    """Serialize one ORM record for GUI model hydration."""
+    """Serialize one ORM record for GUI model hydration.
+
+    Credential columns are decrypted from the OS keyring (when available) so
+    the plaintext key is never persisted in the database.
+    """
     payload = column_payload(record)
+    secret_columns = MODEL_SECRET_COLUMNS.get(
+        type(record).__name__, set()
+    )
+    for secret_column in secret_columns:
+        if secret_column in payload:
+            payload[secret_column] = retrieve_secret(
+                secret_column,
+                str(payload[secret_column] or ""),
+            )
     mapper = sqlalchemy_inspect(type(record)).mapper
     for relationship_name in eager_load or []:
         if relationship_name not in mapper.relationships:
@@ -61,7 +81,12 @@ def normalized_values(
     model_cls: type[Any],
     values: Dict[str, Any],
 ) -> Dict[str, Any]:
-    """Convert serialized payload values into ORM-ready Python values."""
+    """Convert serialized payload values into ORM-ready Python values.
+
+    Credential columns are moved into the OS keyring; the database column
+    stores only a reference (or the plaintext fallback when no keyring
+    backend is available).
+    """
     mapper = sqlalchemy_inspect(model_cls).mapper
     column_types = {
         column.key: column.columns[0].type
@@ -77,4 +102,22 @@ def normalized_values(
             except ValueError:
                 pass
         normalized[key] = value
+
+    secret_columns = MODEL_SECRET_COLUMNS.get(
+        model_cls.__name__, set()
+    )
+    for secret_column in secret_columns:
+        if secret_column not in normalized:
+            continue
+        raw_value = normalized[secret_column]
+        if raw_value:
+            normalized[secret_column] = store_secret(
+                secret_column,
+                str(raw_value),
+            )
+        else:
+            normalized[secret_column] = clear_secret(
+                secret_column,
+                str(raw_value or ""),
+            )
     return normalized

@@ -4,13 +4,20 @@
 #   GUI mode:     docker compose run --rm airunner
 #   Headless mode: docker compose run --rm --service-ports airunner --headless
 #
-# X11 Setup (required for GUI mode):
-#   The container now runs as your user (via UID/GID), so X11 access works automatically.
-#   If you get X11 permission errors, run: xhost +SI:localuser:$USER
-#
 # Note: --service-ports is required for headless mode to expose port 8080
 #
 # This file uses relative paths so airunner can be located anywhere.
+#
+# Host user / X11 / PulseAudio configuration:
+#   The container runs as your host UID/GID so created files are owned by you.
+#   Compose cannot run `id -u` itself, so it interpolates the UID, GID,
+#   XDG_RUNTIME_DIR and XAUTHORITY environment variables and falls back to
+#   UID/GID 1000 only when they are unset. Desktop sessions usually export
+#   XAUTHORITY and XDG_RUNTIME_DIR already; if your UID is not 1000 (or the
+#   mounts below point at a missing path), copy .env.example to .env and set
+#   the four variables to your values:
+#     cp .env.example .env
+#   X11 access: if you get X11 permission errors, run: xhost +SI:localuser:$USER
 
 services:
   # Main AI Runner service - supports both GUI and headless modes
@@ -18,7 +25,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    # Run as host user to avoid file permission issues
+    # Run as host user to avoid file permission issues. UID/GID are taken from
+    # the environment (see .env.example); 1000 is only a last-resort fallback.
     user: "${UID:-1000}:${GID:-1000}"
     volumes:
       # Mount local airunner data folder (models, database, etc.)
@@ -29,13 +37,18 @@ services:
       - ./src:/app/src:ro
       # X11 socket for GUI display
       - /tmp/.X11-unix:/tmp/.X11-unix:rw
-      # X11 authorization (use XAUTHORITY env var or common locations)
-      - ${XAUTHORITY:-/run/user/1000/gdm/Xauthority}:/home/airunner/.Xauthority:ro
-      # PulseAudio for audio
-      - ${XDG_RUNTIME_DIR:-/run/user/1000}/pulse/native:/tmp/pulse/native:rw
+      # X11 authorization: prefer the XAUTHORITY env var; when unset derive
+      # the default path from the host UID instead of hardcoding user 1000.
+      - ${XAUTHORITY:-/run/user/${UID:-1000}/gdm/Xauthority}:/home/airunner/.Xauthority:ro
+      # PulseAudio for audio: prefer XDG_RUNTIME_DIR; when unset derive the
+      # runtime dir from the host UID (e.g. /run/user/$(id -u)) instead of
+      # hardcoding user 1000.
+      - ${XDG_RUNTIME_DIR:-/run/user/${UID:-1000}}/pulse/native:/tmp/pulse/native:rw
       - ~/.config/pulse/cookie:/tmp/pulse/cookie:ro
     ports:
-      - "8080:8080"
+      # Bind to loopback only by default; set e.g. "0.0.0.0:8080:8080" to
+      # expose the API on all interfaces (requires AIRUNNER_API_KEY).
+      - "127.0.0.1:8080:8080"
     deploy:
       resources:
         reservations:

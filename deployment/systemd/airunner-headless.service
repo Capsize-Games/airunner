@@ -32,7 +32,12 @@ Environment="PATH=__AIRUNNER_BIN_DIR__:/usr/local/sbin:/usr/local/bin:/usr/sbin:
 ExecStartPre=/bin/mkdir -p __AIRUNNER_RUNTIME_ROOT__ __AIRUNNER_RUNTIME_CONFIG_DIR__ __AIRUNNER_RUNTIME_LOG_DIR__ __AIRUNNER_RUNTIME_SOCKET_DIR__ __AIRUNNER_CACHE_DIR__ __AIRUNNER_MODEL_DIR__
 ExecStartPre=/bin/chmod 700 __AIRUNNER_RUNTIME_ROOT__ __AIRUNNER_RUNTIME_CONFIG_DIR__ __AIRUNNER_RUNTIME_LOG_DIR__ __AIRUNNER_RUNTIME_SOCKET_DIR__ __AIRUNNER_CACHE_DIR__ __AIRUNNER_MODEL_DIR__
 
-ExecStart=__AIRUNNER_PYTHON__ -m airunner.services.daemon --config __AIRUNNER_DAEMON_CONFIG__
+# The `airunner-headless` console script is registered by the services package
+# (SERVICE_CONSOLE_SCRIPTS: airunner-headless=airunner_services.bin.airunner_headless:main).
+# It launches/manages the daemon and honors --daemon-config (the daemon module's
+# equivalent --config flag is handled internally). Using the console script instead
+# of `python -m airunner.services.daemon` avoids referencing a non-existent module.
+ExecStart=__AIRUNNER_BIN_DIR__/airunner-headless --daemon-config __AIRUNNER_DAEMON_CONFIG__
 Restart=on-failure
 RestartSec=10
 TimeoutStopSec=30

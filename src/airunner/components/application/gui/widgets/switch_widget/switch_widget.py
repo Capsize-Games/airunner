@@ -143,4 +143,4 @@ if __name__ == "__main__":
     w = SwitchWidget()
     w.setProperty("backgroundColor", QColor("blue"))
     w.show()
-    sys.exit(app.exec_())
+    sys.exit(app.exec())

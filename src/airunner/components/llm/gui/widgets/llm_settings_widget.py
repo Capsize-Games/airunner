@@ -172,7 +172,7 @@ class LLMSettingsWidget(BaseWidget, AIModelMixin):
                         model_id=model_id,
                         model_path=model_path,
                     )
-                    print(f"  Setting model_path to: {model_path}")
+                    self.logger.info("Setting model_path to: %s", model_path)
                     self.ui.model_path.setText(model_path)
                     self.ui.model_path.setEnabled(False)
 

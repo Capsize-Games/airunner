@@ -365,7 +365,14 @@ def _planned_download_file(
 
 
 def _open_download(url: str, api_key: str) -> requests.Response:
-    """Open one download response, retrying 401s with token query auth."""
+    """Open one download response, retrying 401s with token query auth.
+
+    Every candidate URL (including the token retry URL) is validated against
+    the AIRunner SSRF policy before the request is issued.
+    """
+    from airunner_services.url_safety import validate_url_for_fetch
+
+    validate_url_for_fetch(url)
     response = requests.get(
         url,
         headers=_auth_headers(api_key),
@@ -378,6 +385,7 @@ def _open_download(url: str, api_key: str) -> requests.Response:
         return response
     response.close()
     retry_url = _url_with_token(url, api_key)
+    validate_url_for_fetch(retry_url)
     retry_response = requests.get(
         retry_url,
         stream=True,

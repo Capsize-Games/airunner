@@ -24,6 +24,7 @@ class HardwareProfileResponse(BaseModel):
     total_ram_gb: float
     available_ram_gb: float
     cuda_available: bool
+    cuda_compute_capability: tuple[int, int] | None = Field(default=None)
     device_name: str | None = Field(default=None)
     cpu_count: int
     platform: str
@@ -39,6 +40,7 @@ async def hardware_profile() -> HardwareProfileResponse:
         total_ram_gb=profile.total_ram_gb,
         available_ram_gb=profile.available_ram_gb,
         cuda_available=profile.cuda_available,
+        cuda_compute_capability=profile.cuda_compute_capability,
         device_name=profile.device_name,
         cpu_count=profile.cpu_count,
         platform=profile.platform,

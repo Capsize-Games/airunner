@@ -32,6 +32,8 @@ htmlcov
 network_access_attempts.log
 *.lprof
 .env*
+# Keep the committed compose env template (real .env files stay ignored).
+!.env.example
 
 # Documentation wiki checkout (separate git repo)
 airunner.wiki/

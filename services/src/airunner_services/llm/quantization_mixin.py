@@ -273,9 +273,11 @@ class QuantizationMixin:
         quant_config: Union[BitsAndBytesConfig, GPTQConfig],
     ) -> AutoModelForCausalLM:
         """Load a model using one quantization configuration."""
+        # trust_remote_code is disabled by default: never execute code
+        # shipped inside a downloaded model repo.
         model_kwargs = {
             "local_files_only": AIRUNNER_LOCAL_FILES_ONLY,
-            "trust_remote_code": True,
+            "trust_remote_code": False,
             "quantization_config": quant_config,
             "device_map": "auto",
         }

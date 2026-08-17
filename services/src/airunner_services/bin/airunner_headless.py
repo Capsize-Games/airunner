@@ -75,7 +75,7 @@ Examples:
 
 Important:
     Quote any model path that contains spaces, such as
-    "/home/joe/.local/share/airunner/art/models/Z-Image Turbo/txt2img/model.safetensors".
+    "~/.local/share/airunner/art/models/Z-Image Turbo/txt2img/model.safetensors".
 """
 
 import argparse
@@ -511,6 +511,24 @@ def _print_banner() -> None:
     print(BANNER)
 
 
+def _warn_insecure_no_auth() -> None:
+    """Emit a prominent warning when authentication is explicitly disabled."""
+    if os.environ.get("AIRUNNER_INSECURE_NO_AUTH", "0") != "1":
+        return
+    print(
+        "\n"
+        "=" * 72 + "\n"
+        "  WARNING: AIRUNNER_INSECURE_NO_AUTH is enabled.\n"
+        "  The API requires NO authentication and, if bound to a\n"
+        "  non-loopback address, is reachable by anyone who can\n"
+        "  connect to this host. Do not expose this instance to\n"
+        "  untrusted networks. This setting is NOT recommended.\n"
+        "=" * 72 + "\n",
+        file=sys.stderr,
+        flush=True,
+    )
+
+
 def main(argv: Optional[Sequence[str]] = None) -> int:
     """Run the daemon-backed headless CLI."""
     args = _build_parser().parse_args(argv)
@@ -519,6 +537,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
 
     port = _resolve_port(args)
     _configure_environment(args, port)
+    _warn_insecure_no_auth()
     _print_banner()
     logger, log_level = _configure_logging()
     _log_startup(logger, args, port, log_level)

@@ -71,6 +71,17 @@ class LLMTool(BaseModel):
 
         return True, "Code appears safe"
 
+    def validate_and_persist(self) -> tuple[bool, str]:
+        """Run safety validation and persist the result.
+
+        ``safety_validated`` is only ever set to True by an actual validation
+        pass; anything else is persisted as False (fail closed).
+        """
+        is_safe, message = self.validate_code_safety()
+        self.safety_validated = is_safe
+        self.save()
+        return is_safe, message
+
     def __repr__(self) -> str:
         """Return a readable representation for debug output."""
         return (
@@ -79,4 +90,13 @@ class LLMTool(BaseModel):
         )
 
 
-__all__ = ["LLMTool"]
+def validate_tool_code(code: str) -> tuple[bool, str]:
+    """Validate one tool code payload without persisting a record.
+
+    Provides a shared call site for the model's safety validation so GUI and
+    API save paths never bypass ``validate_code_safety``.
+    """
+    return LLMTool(code=code or "").validate_code_safety()
+
+
+__all__ = ["LLMTool", "validate_tool_code"]

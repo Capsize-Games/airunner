@@ -40,7 +40,11 @@ from airunner_services.llm.utils.model_downloader import (
 )
 from airunner_services.utils.job_tracker import JobState, JobStatus, JobTracker
 from airunner_services.utils.zip_utils import safe_extract_zip
-from airunner_services.runtimes.file_policy import normalize_local_path
+from airunner_services.runtimes.file_policy import (
+    PathPolicyError,
+    normalize_local_path,
+)
+from airunner_services.url_safety import validate_url_for_fetch
 
 
 class DownloadJobService:
@@ -183,18 +187,21 @@ class DownloadJobService:
         filename: str | None = None,
         extract_zip: bool = False,
     ) -> str:
-        """Create and start one generic URL download job."""
-        normalized_output_dir = normalize_local_path(
-            output_dir,
-            label="Download output directory",
-        )
-        resolved_filename = filename or _download_filename(url)
+        """Create and start one generic URL download job.
+
+        The URL is validated against the SSRF policy and both the output
+        directory and filename are constrained to safe local paths before a
+        job is queued.
+        """
+        validate_url_for_fetch(url)
+        resolved_output_dir = _resolve_safe_output_dir(output_dir)
+        resolved_filename = _safe_filename(filename or _download_filename(url))
         metadata = {"provider": "url", "url": url}
         return await self._start_job(
             metadata,
             self._run_url_download_job,
             url,
-            normalized_output_dir,
+            str(resolved_output_dir),
             resolved_filename,
             extract_zip,
         )
@@ -563,11 +570,24 @@ class DownloadJobService:
         filename: str,
         extract_zip: bool,
     ) -> None:
-        """Run one generic URL download, optionally extracting a ZIP."""
+        """Run one generic URL download, optionally extracting a ZIP.
+
+        The URL, output directory, and filename are re-validated inside the
+        worker thread as defense in depth; a job that fails validation is
+        failed instead of writing any file.
+        """
         self._update_job(job_id, 0.0, JobStatus.RUNNING)
-        output_root = Path(output_dir)
+        try:
+            validate_url_for_fetch(url)
+            output_root = _resolve_safe_output_dir(output_dir)
+            safe_filename = _safe_filename(filename)
+        except (ValueError, PathPolicyError) as exc:
+            self._fail_job(job_id, str(exc))
+            self._forget_job(job_id)
+            return
         output_root.mkdir(parents=True, exist_ok=True)
-        output_path = output_root / filename
+        output_path = output_root / safe_filename
+        filename = safe_filename
         self._record_log_message(job_id, f"Starting download: {filename}")
         last_progress = -1.0
 
@@ -755,6 +775,41 @@ def _coerce_progress(current: int, total: int) -> float:
     if total <= 0:
         return 0.0
     return max(0.0, min(99.0, (float(current) / float(total)) * 100.0))
+
+
+def _download_root() -> Path:
+    """Return the allowed root for generic URL downloads."""
+    root = os.environ.get("AIRUNNER_DOWNLOAD_ROOT", "").strip() or MODELS_DIR
+    return Path(os.path.expanduser(root)).resolve()
+
+
+def _resolve_safe_output_dir(output_dir: str) -> Path:
+    """Return one output directory resolved inside the allowed download root."""
+    candidate = Path(
+        os.path.expandvars(str(output_dir or "").strip())
+    ).expanduser()
+    candidate = candidate.resolve()
+    root = _download_root()
+    try:
+        candidate.relative_to(root)
+    except ValueError:
+        raise PathPolicyError(
+            f"Download output directory must be inside {root}"
+        ) from None
+    return candidate
+
+
+def _safe_filename(filename: str) -> str:
+    """Return one sanitized basename that cannot escape its output directory."""
+    raw = str(filename or "").strip()
+    if not raw or "\x00" in raw:
+        raise PathPolicyError("Download filename is not allowed")
+    base = os.path.basename(raw)
+    if not base or base in {".", ".."} or base != raw:
+        raise PathPolicyError("Download filename is not allowed")
+    if os.sep in base or (os.altsep and os.altsep in base):
+        raise PathPolicyError("Download filename is not allowed")
+    return base
 
 
 def _download_filename(url: str) -> str:

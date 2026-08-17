@@ -15,10 +15,14 @@ from setuptools import find_packages
 
 
 VERSION = "6.0.0"
+# Supply-chain hardening (issue #2036): the archive URL is hash-pinned so a
+# tampered or moved tag cannot be substituted. Digest computed from the
+# current v1.0.0 tarball (curl -sL <url> | sha256sum).
 FACEHUGGERSHIELD_REQUIREMENT = (
     "facehuggershield @ "
     "https://github.com/Capsize-Games/facehuggershield/"
     "archive/refs/tags/v1.0.0.tar.gz"
+    "#sha256=3430bb3363def8d0097a903ca106a4e944ff4a36f5a6fd374f06970090723482"
 )
 
 # The shared package lives at <repo>/shared/airunner_common, so the repo root
@@ -52,29 +56,42 @@ CORE_REQUIREMENTS = [
     "pydantic>=2.7,<3.0",
     "nltk>=3.9.1",
     "alembic==1.13.2",
-    "aiosqlite==0.21.0",
     "sqlalchemy==2.0.38",
-    "psycopg[binary]>=3.2.0",
-    "etils[epath]==1.12.2",
     "jinja2==3.1.6",
     "pyyaml==6.0.2",
     "python-dotenv==1.2.2",
     "fastapi==0.115.0",
     "python-multipart>=0.0.27",
     "uvicorn[standard]==0.34.0",
+    # Runtime deps declared in issue #2040 (previously undeclared).
+    # psutil: model_management/hardware_profiler.py and
+    #         llm/managers/tools/autonomous_control_insight_tools.py
+    # pandas: api/routes/geolocation.py, eval/mixins/loader_mixin.py,
+    #         utils/location/get_lat_lon.py (API route -> core)
+    "psutil>=5.9.0",
+    "pandas>=2.0.0",
 ]
 
+# PyTorch is pinned to the exact stable cu129 wheel line so it aligns with
+# the Docker base image nvidia/cuda:12.9.1-devel-ubuntu24.04 (issues #2036
+# and #2041). Install with:
+#     --index-url https://download.pytorch.org/whl/cu129
+# CPU fallback (documented): use the +cpu index instead:
+#     --index-url https://download.pytorch.org/whl/cpu
 ML_RUNTIME_REQUIREMENTS = [
-    "torch",
-    "torchvision",
-    "torchaudio",
+    "torch==2.13.0+cu129",
+    "torchvision==0.28.0+cu129",
+    "torchaudio==2.11.0+cu129",
     "accelerate==1.14.0",
     "huggingface-hub>=1.5.0,<2.0",
     "tokenizers==0.22.2",
     "optimum==1.25.1",
 ]
 
-NVIDIA_REQUIREMENTS = ["nvidia-cuda-runtime"]
+# Concrete CUDA runtime wheel pin (issue #2036). The bare
+# "nvidia-cuda-runtime" name is a moving meta-package; the cu12 wheel is
+# the concrete variant matching the Dockerfile's CUDA 12.9 base image.
+NVIDIA_REQUIREMENTS = ["nvidia-cuda-runtime-cu12==12.9.79"]
 
 HUGGINGFACE_REQUIREMENTS = [
     "diffusers==0.38.0",
@@ -115,21 +132,30 @@ LLM_NATIVE_REQUIREMENTS = [
     "EbookLib==0.19",
     "mobi==0.4.1",
     "pypdf>=5.6.0",
+    # Runtime dep declared in issue #2040 (previously undeclared):
+    # bs4 is used by llm/managers/agent/document_loader.py and
+    # llm/managers/agent/mixins/rag_lifecycle_mixin.py.
+    "beautifulsoup4>=4.12.0",
 ]
-
-STT_NATIVE_REQUIREMENTS = ["sounddevice==0.5.1"]
 
 LLM_WEATHER_REQUIREMENTS = [
     "requests-cache==1.2.1",
     "retry-requests==2.0.0",
     "openmeteo_requests==1.4.0",
+    # Runtime dep declared in issue #2040 (previously undeclared):
+    # openmeteo_sdk is imported by
+    # llm/managers/agent/weather_mixin.py.
+    "openmeteo_sdk>=1.22.0",
 ]
+
+STT_NATIVE_REQUIREMENTS = ["sounddevice==0.5.1"]
 
 TTS_REQUIREMENTS = [
     "inflect==7.5.0",
     "pycountry==24.6.1",
     "librosa==0.11.0",
-    "torchcodec>=0.8.0",
+    # Bound torchcodec to the pinned torch 2.13.x line (issue #2041).
+    "torchcodec>=0.8.0,<0.10",
 ]
 
 OPENVOICE_REQUIREMENTS = [
@@ -209,8 +235,11 @@ SERVICE_CONSOLE_SCRIPTS = [
 # ---------------------------------------------------------------------------
 # Native package surface
 # ---------------------------------------------------------------------------
+# Issue #2042: the GUI package owns the primary `airunner` console script
+# (setup.py entry_points). The native launcher is exposed as `airunner-native`
+# so installing airunner-native no longer shadows/duplicates the GUI command.
 NATIVE_CONSOLE_SCRIPTS = [
-    "airunner=airunner_native.launcher:main",
+    "airunner-native=airunner_native.launcher:main",
 ]
 
 NATIVE_BASE_REQUIREMENTS = [
@@ -365,7 +394,7 @@ def build_services_setup_kwargs(*, package_source_dir: str) -> dict[str, Any]:
         "description": "AIRunner headless service package",
         "long_description": README,
         "long_description_content_type": "text/markdown",
-        "license": "Apache-2.0",
+        "license": "GPL-3.0-only",
         "author_email": "contact@capsizegames.com",
         "url": "https://github.com/Capsize-Games/airunner",
         "package_dir": {"": package_source_dir},
@@ -410,7 +439,7 @@ def build_native_setup_kwargs(*, package_source_dir: str) -> dict[str, Any]:
         "description": "AIRunner native launcher and bundle tooling",
         "long_description": README,
         "long_description_content_type": "text/markdown",
-        "license": "Apache-2.0",
+        "license": "GPL-3.0-only",
         "author_email": "contact@capsizegames.com",
         "url": "https://github.com/Capsize-Games/airunner",
         "package_dir": {"": package_source_dir},

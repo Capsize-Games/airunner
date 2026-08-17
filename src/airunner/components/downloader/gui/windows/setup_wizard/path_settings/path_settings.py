@@ -36,7 +36,7 @@ class PathSettings(BaseWizard):
         file_dialog.setOption(QFileDialog.ShowDirsOnly)
         file_dialog.setDirectory(base_path)
         file_dialog.setModal(True)
-        file_dialog.exec_()
+        file_dialog.exec()
         selected_path = file_dialog.selectedFiles()
         if selected_path:
             self.ui.base_path.setText(selected_path[0])

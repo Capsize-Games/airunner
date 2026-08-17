@@ -16,7 +16,7 @@ setup(
     description="Shared foundation (settings, contracts, layout) for AIRunner packages",
     long_description=README,
     long_description_content_type="text/markdown",
-    license="Apache-2.0",
+    license="GPL-3.0-only",
     author_email="contact@capsizegames.com",
     url="https://github.com/Capsize-Games/airunner",
     package_dir={"": "."},

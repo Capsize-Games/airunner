@@ -26,26 +26,14 @@ logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 
 
 def _validate_tool_code_safety(code: str) -> tuple[bool, str]:
-    dangerous_imports = [
-        "os.system",
-        "subprocess",
-        "eval(",
-        "exec(",
-        "__import__",
-        "open(",
-        "rm ",
-        "shutil",
-    ]
+    """Delegate to the service-side validator (single source of truth).
 
-    code_lower = code.lower()
-    for dangerous in dangerous_imports:
-        if dangerous.lower() in code_lower:
-            return False, f"Dangerous operation detected: {dangerous}"
+    This guarantees the GUI save path exercises the same
+    ``validate_code_safety`` logic the daemon relies on.
+    """
+    from airunner_services.database.models.llm_tool import validate_tool_code
 
-    if "@tool" not in code:
-        return False, "Code must use @tool decorator"
-
-    return True, "Code appears safe"
+    return validate_tool_code(code)
 
 
 class LLMToolEditorWidget(QDialog, MediatorMixin):

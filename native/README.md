@@ -18,7 +18,8 @@ flowchart LR
 
 ## What This Package Owns
 
-- the `airunner` launcher entry point provided by `airunner_native`
+- the `airunner-native` launcher entry point provided by `airunner_native`
+  (the GUI package owns the primary `airunner` command; issue #2042)
 - repo and runtime layout helpers (`repo_paths`, `linux_bundle_layout`)
 - startup environment and early torch/allocator configuration
 - repo-local support for pinned `llama.cpp` and `whisper.cpp` sidecars

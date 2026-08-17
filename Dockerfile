@@ -6,7 +6,11 @@
 #   GUI mode:      docker compose run --rm airunner
 #   Headless mode: docker compose run --rm airunner --headless
 
-FROM nvidia/cuda:12.9.1-devel-ubuntu24.04
+# Base image pinned to the digest of the manifest list resolved for
+# nvidia/cuda:12.9.1-devel-ubuntu24.04 at the time of this change
+# (issue #2036). Verify/refresh with:
+#   docker buildx imagetools inspect nvidia/cuda:12.9.1-devel-ubuntu24.04
+FROM nvidia/cuda:12.9.1-devel-ubuntu24.04@sha256:020bc241a628776338f4d4053fed4c38f6f7f3d7eb5919fecb8de313bb8ba47c
 
 # Prevent interactive prompts
 ENV DEBIAN_FRONTEND=noninteractive
@@ -98,12 +102,31 @@ RUN set -e; \
 # Set working directory
 WORKDIR /app
 
-# Copy project files
+# Copy project files: the GUI package plus the local shared/services/native
+# packages it depends on (issue #2039).
 COPY setup.py pyproject.toml README.md ./
 COPY src/ ./src/
+COPY shared/ ./shared/
+COPY services/ ./services/
+COPY native/ ./native/
 
-# Install airunner with the selected dependency profiles.
-RUN python3.13 -m pip install -e ".[$AIRUNNER_INSTALL_PROFILES]"
+# Install each local package explicitly. The root `airunner` package has no
+# install profiles (its only extras are "analysis" and "ml"), so the previous
+# `pip install -e ".[$AIRUNNER_INSTALL_PROFILES]"` referenced non-existent
+# extras. "gui" is not a services extra either - it is the root GUI package
+# itself - so it is stripped from the services profile list.
+# --no-build-isolation is used for services/native because their setup.py
+# imports airunner_common at build time (issue #2038); ./shared is installed
+# first so the build can resolve it from the environment.
+RUN set -e; \
+    service_profiles="$(printf '%s' ",${AIRUNNER_INSTALL_PROFILES}," | sed 's/,gui,/,/g')"; \
+    service_profiles="${service_profiles#,}"; \
+    service_profiles="${service_profiles%,}"; \
+    python3.13 -m pip install -e ./shared && \
+    python3.13 -m pip install --no-build-isolation \
+        -e "./services[${service_profiles}]" && \
+    python3.13 -m pip install --no-build-isolation -e ./native && \
+    python3.13 -m pip install -e .
 
 # Create non-root user for running the container
 # docker-compose may override the runtime UID/GID; avoid hard-coding 1000 here
@@ -130,9 +153,13 @@ ENV AIRUNNER_DATA_DIR=/home/airunner/.local/share/airunner
 # Expose the API port (used in headless mode)
 EXPOSE 8080
 
-# Health check for headless mode (will fail gracefully in GUI mode)
+# Health check for headless mode: the /health endpoint is exempt from the
+# loopback X-Airunner-Token requirement (services api/server.py), so a plain
+# curl is sufficient. The check FAILS when the API is down (no `|| exit 0`);
+# in GUI mode there is no HTTP server on 8080, so the container is simply
+# reported unhealthy.
 HEALTHCHECK --interval=30s --timeout=10s --start-period=180s --retries=3 \
-    CMD curl -f http://localhost:8080/health || exit 0
+    CMD curl -f http://localhost:8080/health
 
 # Use entrypoint script to handle GUI vs headless
 ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]

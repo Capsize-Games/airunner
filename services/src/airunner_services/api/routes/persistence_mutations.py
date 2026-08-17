@@ -11,6 +11,30 @@ from .persistence_query import apply_eager_load
 from .persistence_serialization import normalized_values, serialize_record
 
 
+def _enforce_tool_safety(record: Any) -> None:
+    """Fail closed for LLMTool records: never trust a caller-supplied flag.
+
+    ``safety_validated`` may only be True after ``validate_code_safety``
+    actually passes; otherwise it is persisted as False (GitHub issue #2032).
+    """
+    from airunner_services.database.models.llm_tool import LLMTool
+
+    if not isinstance(record, LLMTool):
+        return
+    is_safe, _message = record.validate_code_safety()
+    record.safety_validated = is_safe
+
+
+def _enforce_tool_code_values(model_cls: type[Any], values: dict[str, Any]) -> None:
+    """Re-run tool validation when a bulk update touches tool code."""
+    from airunner_services.database.models.llm_tool import LLMTool
+
+    if model_cls is not LLMTool or "code" not in values:
+        return
+    is_safe, _message = LLMTool(code=values["code"]).validate_code_safety()
+    values["safety_validated"] = is_safe
+
+
 def create_record(
     model_cls: type[Any],
     body: PersistenceRequest,
@@ -18,6 +42,7 @@ def create_record(
     """Create one service-owned ORM record."""
     with session_scope() as session:
         result = model_cls(**normalized_values(model_cls, body.values))
+        _enforce_tool_safety(result)
         session.add(result)
         session.flush()
         session.refresh(result)
@@ -56,6 +81,7 @@ def merge_record(
     """Merge one detached ORM record into the service session."""
     with session_scope() as session:
         result = session.merge(model_cls(**normalized_values(model_cls, body.values)))
+        _enforce_tool_safety(result)
         session.flush()
         session.refresh(result)
         return PersistenceResponse(record=serialize_record(result))
@@ -73,6 +99,7 @@ def update_record(
             return PersistenceResponse(success=False)
         for key, value in normalized_values(model_cls, body.values).items():
             setattr(result, key, value)
+        _enforce_tool_safety(result)
         session.add(result)
         session.flush()
         return PersistenceResponse(success=True)
@@ -85,6 +112,7 @@ def update_by(
     """Bulk-update records matching one filter dict."""
     with session_scope() as session:
         values = normalized_values(model_cls, body.values)
+        _enforce_tool_code_values(model_cls, values)
         count = (
             session.query(model_cls)
             .filter_by(**body.filters)

@@ -1,5 +1,10 @@
 #!/usr/bin/env python
-"""Generate Radon and Xenon complexity reports for src/airunner GUI code."""
+"""Generate Radon and Xenon complexity reports for src/airunner GUI code.
+
+The ``Thresholds`` values and the ``--max-*``/``--min-mi`` flags are advisory
+only: this report exists to surface hotspots for human review and is not
+enforced as a CI gate (issue #2052).
+"""
 
 from __future__ import annotations
 

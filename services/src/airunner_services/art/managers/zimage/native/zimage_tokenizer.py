@@ -33,15 +33,17 @@ class ZImageTokenizer:
     def _load_tokenizer(self, tokenizer_path: str):
         """Load the Qwen tokenizer."""
         try:
+            # Qwen2.5 tokenizers are natively supported by transformers;
+            # remote code execution is intentionally disabled.
             if os.path.isdir(tokenizer_path):
                 self.tokenizer = AutoTokenizer.from_pretrained(
                     tokenizer_path,
-                    trust_remote_code=True,
+                    trust_remote_code=False,
                 )
             else:
                 self.tokenizer = AutoTokenizer.from_pretrained(
                     "Qwen/Qwen2.5-3B",
-                    trust_remote_code=True,
+                    trust_remote_code=False,
                 )
             logger.info("Loaded tokenizer from %s", tokenizer_path)
         except Exception as exc:

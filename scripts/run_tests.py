@@ -30,9 +30,12 @@ Note: Eval tests start a fresh daemon process inside the test harness.
 """
 
 import argparse
+import os
+import signal
 import subprocess
 import sys
 import time
+import urllib.request
 from pathlib import Path
 
 
@@ -90,42 +93,161 @@ def _build_pytest_env(skip_gui: bool = False) -> dict[str, str]:
     return env
 
 
+def _process_exists(pid: int) -> bool:
+    """Return whether one process id is still alive (portable POSIX probe)."""
+    if pid <= 0:
+        return False
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        return True
+    return True
+
+
+def _loopback_token() -> str:
+    """Return the per-user daemon loopback token, or "" when unavailable."""
+    try:
+        from airunner_services.api.loopback_token import (
+            get_or_create_loopback_token,
+        )
+
+        return get_or_create_loopback_token()
+    except Exception:
+        try:
+            from airunner_common.settings import AIRUNNER_BASE_PATH
+
+            token_path = (
+                Path(AIRUNNER_BASE_PATH) / "config" / "loopback_token"
+            )
+            return token_path.read_text(encoding="utf-8").strip()
+        except Exception:
+            return ""
+
+
+def _request_graceful_shutdown(pid: int, ports: list[int], token: str) -> bool:
+    """Ask one daemon to shut itself down via its /admin/shutdown endpoint.
+
+    Loopback auth (issue #2033) requires the ``X-Airunner-Token`` header;
+    without a token the request would 401, so we fall back to SIGTERM.
+    """
+    if not token:
+        return False
+    for port in ports:
+        try:
+            request = urllib.request.Request(
+                f"http://127.0.0.1:{port}/admin/shutdown",
+                method="POST",
+                headers={"X-Airunner-Token": token},
+            )
+            with urllib.request.urlopen(request, timeout=5):
+                return True
+        except Exception:
+            continue
+    return False
+
+
+def _wait_for_exit(pid: int, timeout_seconds: float = 5.0) -> bool:
+    """Poll until one process exits or the timeout elapses."""
+    deadline = time.monotonic() + timeout_seconds
+    while time.monotonic() < deadline:
+        if not _process_exists(pid):
+            return True
+        time.sleep(0.25)
+    return False
+
+
+def _terminate_with_sigterm(pid: int) -> None:
+    """Send SIGTERM (never SIGKILL) to one process id."""
+    try:
+        os.kill(pid, signal.SIGTERM)
+    except OSError:
+        pass
+
+
 def kill_stale_servers():
     """
-    Kill any stale airunner-headless processes from previous runs.
+    Gracefully shut down any stale airunner-headless processes.
 
-    This ensures we start with a clean state. Pytest fixtures will
-    start a fresh server for the test session.
+    This ensures we start with a clean state. Pytest fixtures will start a
+    fresh server for the test session.
+
+    Cleanup is graceful (issue #2056): first POST /admin/shutdown (with the
+    per-user loopback token) and wait, then fall back to SIGTERM only -- never
+    SIGKILL. Process discovery prefers ``psutil`` (a declared dependency of
+    both the GUI and services packages); ``pgrep -f`` is used only when
+    psutil is unavailable.
     """
     print("\n" + "=" * 80)
     print("Cleaning up stale server processes...")
     print("=" * 80)
 
-    # Find airunner-headless processes
     try:
-        result = subprocess.run(
-            ["pgrep", "-f", "airunner-headless"],
-            capture_output=True,
-            text=True,
-        )
+        import psutil
+    except ImportError:
+        psutil = None
 
-        if result.stdout.strip():
-            pids = result.stdout.strip().split("\n")
-            print(f"Found {len(pids)} stale process(es): {', '.join(pids)}")
+    pids: list[int] = []
+    if psutil is not None:
+        for proc in psutil.process_iter(["pid", "cmdline"]):
+            cmdline = " ".join(proc.info.get("cmdline") or [])
+            if "airunner-headless" in cmdline:
+                pids.append(proc.pid)
+    else:
+        # Portable fallback when psutil is not installed: pgrep + SIGTERM
+        # only (the old code used SIGKILL here, issue #2056).
+        try:
+            result = subprocess.run(
+                ["pgrep", "-f", "airunner-headless"],
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            pids = [
+                int(pid)
+                for pid in result.stdout.strip().split()
+                if pid.isdigit()
+            ]
+        except (FileNotFoundError, subprocess.SubprocessError):
+            pids = []
 
-            # Kill each process
-            for pid in pids:
-                subprocess.run(["kill", "-9", pid])
-                print(f"Killed process {pid}")
+    if not pids:
+        print("No stale processes found")
+        print()
+        return
 
-            # Give processes time to die
-            time.sleep(2)
-            print("✅ Cleaned up stale processes")
+    print(f"Found {len(pids)} stale process(es): {', '.join(map(str, pids))}")
+    token = _loopback_token()
+
+    for pid in pids:
+        ports: list[int] = []
+        if psutil is not None:
+            try:
+                proc = psutil.Process(pid)
+                ports = sorted(
+                    {
+                        conn.laddr.port
+                        for conn in proc.connections(kind="inet")
+                        if conn.status == "LISTEN"
+                    }
+                )
+            except (psutil.Error, AttributeError):
+                ports = []
+
+        if _request_graceful_shutdown(pid, ports, token):
+            if _wait_for_exit(pid):
+                print(f"Gracefully shut down process {pid}")
+                continue
+            print(f"Process {pid} did not exit after shutdown request")
+
+        _terminate_with_sigterm(pid)
+        if _wait_for_exit(pid):
+            print(f"Sent SIGTERM to process {pid}; exited cleanly")
         else:
-            print("No stale processes found")
-    except Exception as e:
-        print(f"Warning: Error checking for processes: {e}")
+            print(f"Warning: process {pid} still alive after SIGTERM")
 
+    print("✅ Cleaned up stale processes")
     print()
 
 

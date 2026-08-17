@@ -99,7 +99,17 @@ class TTS(nn.Module):
 
     @property
     def checkpoint_dict(self):
-        return torch.load(self.ckpt_path, map_location=self.device)
+        if not self.ckpt_path.endswith(".safetensors"):
+            print(
+                f"WARNING: loading non-safetensors checkpoint {self.ckpt_path}. "
+                "Only load checkpoints from trusted sources.",
+                flush=True,
+            )
+        return torch.load(
+            self.ckpt_path,
+            map_location=self.device,
+            weights_only=True,
+        )
 
     @property
     def model(self) -> SynthesizerTrn:

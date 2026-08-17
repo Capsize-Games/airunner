@@ -85,19 +85,50 @@ class MultiDirectoryCORSRequestHandler(SimpleHTTPRequestHandler):
         if _LOG_LOCAL_HTTP_ACCESS:
             super().log_message(format, *args)
 
+    def _lna_allowed_origin(self) -> str | None:
+        """Return the request Origin only when it is a loopback origin.
+
+        CORS is restricted to the local application origins
+        (``http://127.0.0.1`` / ``http://localhost`` on any port); any other
+        website is refused the CORS grant. The header echoes the origin
+        rather than using ``*`` so credentials are never exposed cross-site.
+        """
+        origin = (self.headers.get("Origin") or "").strip()
+        if not origin:
+            return None
+        try:
+            parsed = urllib.parse.urlparse(origin)
+        except ValueError:
+            return None
+        if parsed.scheme != "http":
+            return None
+        host = (parsed.hostname or "").strip().lower()
+        if host not in {"127.0.0.1", "localhost", "::1"}:
+            return None
+        return origin
+
     def _send_lna_cors_headers(self):
-        """Send LNA and CORS headers if lna_enabled, else do nothing (strict mode)."""
-        if self.lna_enabled:
-            self.send_header("Access-Control-Allow-Private-Network", "true")
-            self.send_header("Access-Control-Allow-Origin", "*")
-            self.send_header(
-                "Access-Control-Allow-Methods",
-                "GET, POST, OPTIONS, PUT, DELETE",
-            )
-            self.send_header(
-                "Access-Control-Allow-Headers",
-                "Content-Type, Authorization, X-Requested-With",
-            )
+        """Send LNA and CORS headers for allow-listed loopback origins.
+
+        ``Access-Control-Allow-Private-Network: true`` is kept (required for
+        Chromium Local Network Access) but is always paired with the
+        restricted origin; non-loopback websites never receive a CORS grant.
+        """
+        if not self.lna_enabled:
+            return
+        origin = self._lna_allowed_origin()
+        if origin is None:
+            return
+        self.send_header("Access-Control-Allow-Private-Network", "true")
+        self.send_header("Access-Control-Allow-Origin", origin)
+        self.send_header(
+            "Access-Control-Allow-Methods",
+            "GET, POST, OPTIONS, PUT, DELETE",
+        )
+        self.send_header(
+            "Access-Control-Allow-Headers",
+            "Content-Type, Authorization, X-Requested-With",
+        )
         # else: strict mode, do not send permissive headers
 
     def end_headers(self):
@@ -550,6 +581,13 @@ class LocalHttpServerThread(QThread):
         if self.directory:
             os.chdir(self.directory)
 
+        if self.lna_enabled:
+            logger.warning(
+                "Local Network Access (LNA) is enabled: the local HTTP "
+                "server sends CORS headers for loopback origins only "
+                "(http://127.0.0.1:* / http://localhost:*). Requests from "
+                "non-loopback websites will be refused the CORS grant."
+            )
         self._server = ReusableTCPServer(
             (LOCAL_SERVER_HOST, self.port), handler_class
         )

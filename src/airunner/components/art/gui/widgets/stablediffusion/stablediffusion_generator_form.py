@@ -1,4 +1,4 @@
-from typing import Dict
+from typing import Dict, Optional
 import json
 import re
 import time
@@ -10,6 +10,7 @@ from PySide6.QtCore import (
     QObject,
     Slot,
     QSettings,
+    QTimer,
 )
 from PySide6.QtWidgets import QApplication, QWidget
 
@@ -109,6 +110,10 @@ class StableDiffusionGeneratorForm(BaseWidget):
         ("circle", "infinite_images_button"),
     ]
     _splitters = ["generator_form_splitter"]
+    # Defense-in-depth: when a LOADING model status arrives with no backend
+    # progress at all, exit the loading state after this window so the UI can
+    # never pin the progress bar / disable generation indefinitely.
+    _LOADING_WATCHDOG_TIMEOUT_MS = 60_000
 
     def __init__(self, *args, **kwargs):
         self._pending_llm_image = None
@@ -137,6 +142,7 @@ class StableDiffusionGeneratorForm(BaseWidget):
         self._backend_progress_started = False
         self._waiting_for_backend_progress = False
         self._busy_progress_models = set()
+        self._loading_watchdog_timer: Optional[QTimer] = None
         self.thread = QThread()
         self.worker = SaveGeneratorSettingsWorker(parent=self)
         self.worker.moveToThread(self.thread)
@@ -724,6 +730,7 @@ class StableDiffusionGeneratorForm(BaseWidget):
 
         self._waiting_for_backend_progress = False
         self._backend_progress_started = True
+        self._clear_loading_watchdog()
 
         try:
             current = step / total
@@ -785,12 +792,14 @@ class StableDiffusionGeneratorForm(BaseWidget):
         if model is ModelType.SD:
             self.ui.generate_button.setEnabled(False)
             self.ui.interrupt_button.setEnabled(False)
+        self._arm_loading_watchdog()
 
     def _handle_idle_progress_model(self, model):
         self._progress_models().discard(model)
         if model is ModelType.SD:
             self.ui.generate_button.setEnabled(True)
             self.ui.interrupt_button.setEnabled(True)
+        self._clear_loading_watchdog()
         if self._waiting_for_backend_progress:
             return
         if getattr(self, "_generation_in_progress", False):
@@ -798,6 +807,41 @@ class StableDiffusionGeneratorForm(BaseWidget):
         if self._progress_models():
             return
         self._set_progress_bar_idle()
+
+    def _arm_loading_watchdog(self) -> None:
+        """Start the loading watchdog so the UI can never pin indefinitely."""
+        self._clear_loading_watchdog()
+        timer = QTimer(self)
+        timer.setSingleShot(True)
+        timer.setInterval(self._LOADING_WATCHDOG_TIMEOUT_MS)
+        timer.timeout.connect(self._on_loading_watchdog_timeout)
+        timer.start()
+        self._loading_watchdog_timer = timer
+
+    def _clear_loading_watchdog(self) -> None:
+        """Stop and drop the loading watchdog timer when one exists."""
+        timer = self._loading_watchdog_timer
+        self._loading_watchdog_timer = None
+        if timer is not None:
+            timer.stop()
+            timer.deleteLater()
+
+    def _on_loading_watchdog_timeout(self) -> None:
+        """Exit the loading state when the backend never reported progress.
+
+        Only fires when there is no generation activity at all: a generation
+        waiting for backend progress (``_waiting_for_backend_progress``) or an
+        in-flight generation is left untouched so legitimate long model loads
+        are never interrupted.  This is a defense-in-depth escape hatch for
+        the pinned-at-startup case where a stale LOADING status never clears.
+        """
+        self._clear_loading_watchdog()
+        if self._waiting_for_backend_progress:
+            return
+        if getattr(self, "_generation_in_progress", False):
+            return
+        for model in tuple(self._progress_models()):
+            self._handle_idle_progress_model(model)
 
     def on_model_status_changed_signal(self, data):
         model = data.get("model")
@@ -866,6 +910,7 @@ class StableDiffusionGeneratorForm(BaseWidget):
         self._generation_in_progress = False
         self._backend_progress_started = False
         self._waiting_for_backend_progress = False
+        self._clear_loading_watchdog()
         self._set_generation_button_visibility(False)
         progressbar = self.ui.progress_bar
         if not progressbar:

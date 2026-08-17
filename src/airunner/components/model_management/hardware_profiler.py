@@ -50,15 +50,23 @@ class HardwareProfiler:
             total_ram_gb=mem.total / (1024**3),
             available_ram_gb=mem.available / (1024**3),
             cuda_available=False,
+            cuda_compute_capability=None,
             device_name=None,
             cpu_count=psutil.cpu_count() or 1,
             platform=platform.system(),
         )
 
     def is_ampere_or_newer(self) -> bool:
-        """Return whether the GPU is Ampere or newer."""
+        """Return whether the GPU is Ampere or newer (compute capability >= 8).
+
+        The daemon reports ``cuda_compute_capability``; fall back to
+        ``cuda_available`` only when the daemon did not report a capability.
+        """
         profile = self.get_profile()
-        return profile.cuda_available  # simplified; full check is daemon-side
+        capability = profile.cuda_compute_capability
+        if capability is None:
+            return bool(profile.cuda_available)
+        return capability[0] >= 8
 
     def has_sufficient_vram(self, required_gb: float) -> bool:
         """Return whether enough VRAM is currently available."""

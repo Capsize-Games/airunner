@@ -6,7 +6,10 @@ from typing import List, Dict, Any, Optional
 from PySide6.QtCore import QTimer, Slot, Qt
 from PySide6.QtWidgets import QApplication, QLabel
 from PySide6.QtWebChannel import QWebChannel
-from PySide6.QtWebEngineWidgets import QWebEngineView
+# QtWebEngineWidgets is deprecated in PySide6 but QWebEngineView still lives
+# there and works (verified import). Switching to the recommended module is a
+# no-op for the same class; kept as-is to avoid churn (issue #2053).
+from PySide6.QtWebEngineWidgets import QWebEngineView  # noqa: F401  (deprecated module, still functional)
 
 from airunner.components.conversations.conversation_history_manager import (
     ConversationHistoryManager,

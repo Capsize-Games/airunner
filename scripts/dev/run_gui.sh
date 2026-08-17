@@ -13,8 +13,14 @@ fi
 
 echo "=== Starting AI Runner GUI ==="
 
+export DEV_ENV=1
 export AIRUNNER_LOG_LEVEL="${AIRUNNER_LOG_LEVEL:-INFO}"
-export AIRUNNER_DISABLE_STALE_DAEMON_CHECK=1
-export PYTHONPATH="${ROOT_DIR}/services/src:${ROOT_DIR}/src:${ROOT_DIR}/native/src${PYTHONPATH:+:${PYTHONPATH}}"
+# Stale-daemon self-healing was previously disabled, which masked daemons that
+# started before code tree changes (e.g. the shared/airunner_common package
+# consolidation) and thus carried a frozen sys.path without access to shared/.
+# Re-enabling the check lets the dev_build_token mismatch logic auto-restart
+# such daemons. See run_services.sh running_daemon_is_stale.
+# export AIRUNNER_DISABLE_STALE_DAEMON_CHECK=1
+export PYTHONPATH="${ROOT_DIR}/services/src:${ROOT_DIR}/src:${ROOT_DIR}/native/src:${ROOT_DIR}/shared${PYTHONPATH:+:${PYTHONPATH}}"
 
 exec "${DEV_VENV_PYTHON}" -m airunner.launcher "$@"

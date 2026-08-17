@@ -16,7 +16,7 @@ This module contains widgets for the chat UI, including the main chat prompt and
 ### How to Modify UI
 - Edit `.ui` files for layout/structure changes
 - Edit `conversation.css` for chat bubble and web content styling
-- Run `airunner-build-ui` after any `.ui` change
+- Run `python scripts/build_ui.py` (from a checkout) after any `.ui` change
 - Do **not** edit `*_ui.py` files directly
 
 ## Components
@@ -40,7 +40,8 @@ This module contains widgets for the chat UI, including the main chat prompt and
 
 - To add or delete messages, always use the provided methods on `ConversationWidget`.
 - Do not expose slots directly on QWidget subclasses; use QObject bridges for frontend-callable slots if needed.
-- For UI changes, edit the `.ui` files and run `airunner-build-ui`.
+- For UI changes, edit the `.ui` files and run `python scripts/build_ui.py`
+  (from a checkout).
 
 ## Safety & Best Practices
 

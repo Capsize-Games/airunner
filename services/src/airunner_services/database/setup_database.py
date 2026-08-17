@@ -59,6 +59,21 @@ def _ensure_sqlite_parent_dir(db_url: str) -> None:
         _ensure_private_directory(db_dir)
 
 
+def _restrict_sqlite_file_permissions(db_url: str) -> None:
+    """Best-effort chmod 0600 on the SQLite database file.
+
+    Defense in depth for API keys stored at rest: only the owning user may
+    read the database file.
+    """
+    if not db_url.startswith("sqlite:///"):
+        return
+    db_path = db_url.replace("sqlite:///", "", 1)
+    try:
+        os.chmod(db_path, 0o600)
+    except OSError:
+        pass
+
+
 def _use_setup_cache() -> bool:
     """Return whether repeated setup calls should be skipped."""
     return os.environ.get("AIRUNNER_DISABLE_DB_SETUP_CACHE", "0") != "1"
@@ -235,6 +250,7 @@ def setup_database(db_url: str | None = None):
     _ensure_sqlite_parent_dir(target_db_url)
 
     if _use_setup_cache() and target_db_url in _COMPLETED_SETUP_URLS:
+        _restrict_sqlite_file_permissions(target_db_url)
         return
 
     base = Path(os.path.dirname(os.path.realpath(__file__)))
@@ -270,6 +286,7 @@ def setup_database(db_url: str | None = None):
             base,
         ):
             _repair_application_schema(target_db_url)
+            _restrict_sqlite_file_permissions(target_db_url)
             if _use_setup_cache():
                 _COMPLETED_SETUP_URLS.add(target_db_url)
             return
@@ -319,6 +336,7 @@ def setup_database(db_url: str | None = None):
                 os.environ["AIRUNNER_MIGRATION_RUNNING"] = old_flag
 
         _repair_application_schema(target_db_url)
+        _restrict_sqlite_file_permissions(target_db_url)
 
         if _use_setup_cache():
             _COMPLETED_SETUP_URLS.add(target_db_url)

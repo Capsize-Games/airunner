@@ -24,10 +24,11 @@ python scripts/code_quality_report.py --path <touched-file-or-directory>
 python scripts/mypy_shortcut.py <touched-file-or-directory>
 ```
 
-The installed entry points in `setup.py` map to the same tools:
+The dev tools map to the same `scripts/` modules (dev console scripts are no
+longer installed as runtime entry points; issue #2044):
 
-- `airunner-quality-report`
-- `airunner-mypy`
+- `python scripts/code_quality_report.py`
+- `python scripts/mypy_shortcut.py`
 
 When the touched slice is broader than one file, scale from the file to
 the owning directory, then to `services/src/airunner_services/llm` only
@@ -39,7 +40,6 @@ when the narrower checks are already green.
 
 ```bash
 python scripts/services_complexity_report.py
-airunner-services-complexity-report
 ```
 
 Use that workflow for directory-wide hotspot discovery and issue drafting.

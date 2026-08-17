@@ -1,10 +1,20 @@
-"""Restricted builtins helpers for runtime execution."""
+"""Restricted builtins helpers for runtime execution.
+
+IMPORTANT: this module is NOT a security boundary on its own. Python's
+``exec`` cannot be safely sandboxed by removing builtins alone; a crafted
+tool can still reach ``object.__subclasses__`` or the import machinery.
+AIRunner treats this restricted-builtins namespace strictly as
+defense-in-depth. The actual gate that decides whether a custom tool may run
+at all is the ``safety_validated`` flag on the tool record (see
+``airunner_services.database.models.llm_tool.LLMTool`` and
+``ToolManager._load_custom_tools``).
+"""
 
 import builtins
 from typing import Any, Dict
 
 
-# Builtins that are safe to expose in the sandbox
+# Builtins that are safe to expose in the restricted namespace
 SAFE_BUILTINS = {
     # Core functions
     'abs', 'all', 'any', 'bin', 'bool', 'bytes', 'callable',

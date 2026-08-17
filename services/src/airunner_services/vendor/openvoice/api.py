@@ -31,8 +31,16 @@ class OpenVoiceBaseClass(object):
         self.device = device
 
     def load_ckpt(self, ckpt_path):
+        if not str(ckpt_path).endswith(".safetensors"):
+            print(
+                f"WARNING: loading non-safetensors checkpoint {ckpt_path}. "
+                "Only load checkpoints from trusted sources.",
+                flush=True,
+            )
         checkpoint_dict = torch.load(
-            ckpt_path, map_location=torch.device(self.device)
+            ckpt_path,
+            map_location=torch.device(self.device),
+            weights_only=True,
         )
         a, b = self.model.load_state_dict(
             checkpoint_dict["model"], strict=False

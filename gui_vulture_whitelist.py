@@ -1,15 +1,7 @@
 """Auto-generated GUI vulture whitelist."""
 src/airunner/__init__.py:{_torchao_version}
-src/airunner/api/api_bridge.py:{ensure_connected, is_connected}
 src/airunner/app_installer.py:{do_show_setup_wizard}
 src/airunner/app_mixins/ui_runtime_mixin.py:{is_running}
-src/airunner/components/agents/agent_registry.py:{get_agent_info, list_agents, list_agents_by_capability}
-src/airunner/components/agents/agent_router.py:{collaborate, route_task}
-src/airunner/components/agents/runtime/agent_run_record.py:{add_tool_call, channel_messages, compact}
-src/airunner/components/agents/runtime/meeting_deliverable_record.py:{mark_review}
-src/airunner/components/agents/runtime/meeting_run_record.py:{add_deliverable, add_item}
-src/airunner/components/agents/runtime/research_run_record.py:{add_evidence, add_source}
-src/airunner/components/agents/templates.py:{template_exists}
 src/airunner/components/application/api/api.py:{_initialize_app, clear_download_status, click_me_button, connect_signal, llm_model_download_progress, quit_application, send_image_request, set_download_progress, set_download_status, show_dynamic_ui, worker_response}
 src/airunner/components/application/data/__init__.py:{class_names, table_to_class}
 src/airunner/components/application/gui/dialogs/privacy_consent_dialog.py:{is_duckduckgo_allowed, is_openai_allowed, is_openrouter_allowed}

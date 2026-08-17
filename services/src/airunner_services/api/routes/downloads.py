@@ -90,12 +90,15 @@ async def start_url_download(
 ) -> DownloadJobAcceptedResponse:
     """Queue one generic URL download through the shared job service."""
     service = get_download_job_service(request)
-    job_id = await service.start_url_download(
-        payload.url,
-        output_dir=payload.output_dir,
-        filename=payload.filename,
-        extract_zip=payload.extract_zip,
-    )
+    try:
+        job_id = await service.start_url_download(
+            payload.url,
+            output_dir=payload.output_dir,
+            filename=payload.filename,
+            extract_zip=payload.extract_zip,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     return DownloadJobAcceptedResponse(job_id=job_id)
 
 

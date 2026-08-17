@@ -14,6 +14,7 @@ class ModelState(Enum):
     UNLOADED = "unloaded"
     LOADING = "loading"
     LOADED = "loaded"
+    LOADED_CPU = "loaded_cpu"  # Loaded on CPU (no CUDA available)
     UNLOADING = "unloading"
     BUSY = "busy"  # Actively generating/processing
 

@@ -109,6 +109,24 @@ sed -i \
     -e "s|__AIRUNNER_DAEMON_CONFIG__|$(escape_sed_replacement "$DAEMON_CONFIG")|g" \
     /etc/systemd/system/airunner-headless.service
 
+# Smoke test: verify the headless entry point actually exists in this bundle
+# (issue #2060). The previous ExecStart referenced `python -m
+# airunner.services.daemon`, which does not exist; the unit now execs the
+# `airunner-headless` console script, so fail fast if either is missing.
+echo -e "${YELLOW}Verifying headless entry point...${NC}"
+if [ ! -x "$BUNDLE_BIN_DIR/airunner-headless" ]; then
+    echo -e "${RED}Error: airunner-headless console script not found in $BUNDLE_BIN_DIR${NC}" >&2
+    echo "Expected the services package to install 'airunner-headless' into the bundle bin dir." >&2
+    exit 1
+fi
+if ! SMOKE_OUTPUT=$("$BUNDLE_PYTHON" -c "import airunner_services.daemon" 2>&1); then
+    echo -e "${RED}Error: 'airunner_services.daemon' could not be imported with $BUNDLE_PYTHON${NC}" >&2
+    echo "The systemd unit starts this daemon module; fix the services install before continuing." >&2
+    echo "$SMOKE_OUTPUT" >&2
+    exit 1
+fi
+echo -e "${GREEN}✓ airunner-headless entry point verified${NC}"
+
 # Ensure runtime directories exist and are owned by the service user
 mkdir -p "$DATA_DIR" "$RUNTIME_DIR" "$RUNTIME_CONFIG_DIR"
 mkdir -p "$RUNTIME_LOG_DIR" "$RUNTIME_SOCKET_DIR"

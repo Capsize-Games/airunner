@@ -78,35 +78,37 @@ def get_filter_by_name(filter_name: str) -> Optional[Any]:
         ImageFilter object or None
     """
     try:
-        print(f"[get_filter_by_name] Querying for filter: '{filter_name}'")
+        LOG.debug("Querying for filter: '%s'", filter_name)
         results = RESOURCE_STORE.query(
             "ImageFilter",
             filters={"name": filter_name},
         )
-        print(f"[get_filter_by_name] Query results type: {type(results)}")
-        print(
-            f"[get_filter_by_name] Query results length: {len(results) if results else 0}"
-        )
+        LOG.debug("Query results type: %s", type(results))
+        LOG.debug("Query results length: %s", len(results) if results else 0)
 
         # filter_by returns a list, not a query object
         result = results[0] if results else None
 
         if result:
-            print(
-                f"[get_filter_by_name] Found filter with name='{result.name}', id={result.id}"
+            LOG.debug(
+                "Found filter with name='%s', id=%s",
+                result.name,
+                result.id,
             )
         else:
             # Debug: Let's see what filters are actually in the database
             all_filters = RESOURCE_STORE.query("ImageFilter")
-            print(f"[get_filter_by_name] No filter found. All filters in DB:")
+            LOG.debug("No filter found. All filters in DB:")
             for f in all_filters:
-                print(
-                    f"  - id={f.id}, name='{f.name}', display_name='{f.display_name}'"
+                LOG.debug(
+                    "  - id=%s, name='%s', display_name='%s'",
+                    f.id,
+                    f.name,
+                    f.display_name,
                 )
         return result
-    except Exception as e:
-        print(f"[get_filter_by_name] EXCEPTION: {e}")
-        LOG.exception(f"Failed to get filter by name: {filter_name}")
+    except Exception as exc:
+        LOG.exception("Failed to get filter by name: %s (%s)", filter_name, exc)
         return None
 
 

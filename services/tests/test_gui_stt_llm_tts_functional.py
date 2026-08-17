@@ -36,8 +36,6 @@ from test_gui_llm_tts_functional import _seed_gui_settings
 from test_gui_llm_tts_functional import _stop_worker
 from test_gui_llm_tts_functional import _wait_until
 
-from airunner.api.api_bridge import APIBridge
-from airunner.api.signal_api_adapter import SignalAPIAdapter
 from airunner.components.application.gui.windows.main.worker_manager import (
     WorkerManager,
 )
@@ -219,11 +217,17 @@ def test_gui_stt_llm_and_tts_round_trip_without_audio_output(
                 daemon.log_path
             )
 
+            # The bridge/signal-adapter layers were consolidated into
+            # GuiDaemonClient itself (issue #2055): the daemon client now
+            # exposes ``signal_handlers`` and accepts a ``signal_emitter``,
+            # matching the wiring in src/airunner/app.py and main_window.py.
+            daemon_client = GuiDaemonClient(
+                config_path=_daemon_client_config(tmp_path, daemon.port),
+                signal_emitter=mediator.emit_signal,
+            )
             api = SimpleNamespace(
                 headless=False,
-                daemon_client=GuiDaemonClient(
-                    config_path=_daemon_client_config(tmp_path, daemon.port)
-                ),
+                daemon_client=daemon_client,
                 sounddevice_manager=fake_audio,
                 model_load_balancer=SimpleNamespace(
                     get_loaded_models=lambda: [],
@@ -231,19 +235,11 @@ def test_gui_stt_llm_and_tts_round_trip_without_audio_output(
                 ),
                 current_conversation_id=None,
             )
-            api.api_bridge = APIBridge(
-                api.daemon_client,
-                signal_emitter=mediator.emit_signal,
-            )
-            api.api_adapter = SignalAPIAdapter(
-                api.api_bridge,
-                emit_signal=mediator.emit_signal,
-            )
             qapp.api = api
 
             worker_manager = create_worker(
                 WorkerManager,
-                signal_api_adapter=api.api_adapter,
+                signal_api_adapter=daemon_client,
             )
             main_window = SimpleNamespace(worker_manager=worker_manager, api=api)
             api.main_window = main_window

@@ -115,9 +115,12 @@ class ServiceSettingsWidget(QWidget):
         # LNA Enabled
         self.lna_enabled_cb = QCheckBox("Enable LNA/CORS")
         self.lna_enabled_cb.setToolTip(
-            "Enable Local Network Access headers and permissive CORS "
-            "(required for external network access)"
+            "Enable Local Network Access headers for Chromium LNA "
+            "compliance. CORS grants are restricted to loopback origins "
+            "(http://127.0.0.1:* / http://localhost:*) only; non-loopback "
+            "websites are refused."
         )
+        self.lna_enabled_cb.toggled.connect(self._on_lna_toggled)
         server_layout.addRow("", self.lna_enabled_cb)
 
         server_group.setLayout(server_layout)
@@ -158,6 +161,23 @@ class ServiceSettingsWidget(QWidget):
         self.host_input.setEnabled(enabled)
         self.port_input.setEnabled(enabled)
         self.lna_enabled_cb.setEnabled(enabled)
+
+    @Slot(bool)
+    def _on_lna_toggled(self, enabled: bool):
+        """Show a visible warning when Local Network Access is enabled.
+
+        Args:
+            enabled: Whether LNA/CORS is enabled
+        """
+        if not enabled:
+            return
+        QMessageBox.information(
+            self,
+            "Local Network Access Enabled",
+            "LNA/CORS is enabled. CORS grants are restricted to loopback "
+            "origins (http://127.0.0.1:* / http://localhost:*) only; "
+            "requests from non-loopback websites will be refused.",
+        )
 
     @Slot()
     def _on_reset(self):

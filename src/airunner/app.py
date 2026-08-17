@@ -448,6 +448,12 @@ class App(
 
     def _start_local_http_server(self) -> None:
         self.logger.info("Starting local HTTP server for static assets.")
+        if LNA_ENABLED:
+            self.logger.warning(
+                "Local Network Access (LNA) is enabled: CORS is restricted "
+                "to loopback origins (http://127.0.0.1:* / "
+                "http://localhost:*); non-loopback websites are refused."
+            )
         self.http_server_thread = LocalHttpServerThread(
             directory=self.static_dir,
             additional_directories=self.static_search_dirs[1:],

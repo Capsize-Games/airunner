@@ -58,7 +58,7 @@ class ContextMenuMixin:
             # Create context menu with delete action
             menu = QMenu()
             delete_action = menu.addAction(self.tr("Delete"))
-            chosen = menu.exec_(event.globalPos())
+            chosen = menu.exec(event.globalPos())
 
             if chosen == delete_action:
                 # Find first deletable item (skip grid and active grid area)

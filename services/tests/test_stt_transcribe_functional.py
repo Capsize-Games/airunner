@@ -56,6 +56,15 @@ def _multipart_audio_body(
     return b"".join([header, payload, b"\r\n", f"--{boundary}--\r\n".encode("utf-8")])
 
 
+def _loopback_auth_headers() -> dict[str, str]:
+    """Return the per-user loopback token header for daemon API calls."""
+    from airunner_services.api.loopback_token import (
+        get_or_create_loopback_token,
+    )
+
+    return {"X-Airunner-Token": get_or_create_loopback_token()}
+
+
 def _post_audio(
     url: str,
     audio_path: Path,
@@ -65,6 +74,11 @@ def _post_audio(
 ) -> tuple[int, bytes, str]:
     """POST one multipart audio upload and return status, body, type."""
     boundary = f"airunner-stt-{uuid4().hex}"
+    headers = {
+        "Content-Type": f"multipart/form-data; boundary={boundary}",
+        "Accept": "application/json",
+    }
+    headers.update(_loopback_auth_headers())
     request = urllib.request.Request(
         url,
         data=_multipart_audio_body(
@@ -72,10 +86,7 @@ def _post_audio(
             audio_path,
             mime_type=mime_type,
         ),
-        headers={
-            "Content-Type": f"multipart/form-data; boundary={boundary}",
-            "Accept": "application/json",
-        },
+        headers=headers,
         method="POST",
     )
     try:
@@ -95,7 +106,11 @@ def _post_audio(
 
 def _get_json(url: str) -> tuple[int, dict[str, object]]:
     """Return the decoded JSON payload for one GET request."""
-    with urllib.request.urlopen(url, timeout=30) as response:
+    request = urllib.request.Request(
+        url,
+        headers=_loopback_auth_headers(),
+    )
+    with urllib.request.urlopen(request, timeout=30) as response:
         return int(response.status), json.loads(response.read().decode("utf-8"))
 
 

@@ -108,5 +108,6 @@ This module's local HTTP server (`local_http_server.py`) is LNA-compliant for Ch
 
 ## Development Notes
 
-- Do not edit `*_ui.py` files directly. Edit `.ui` files and run `airunner-build-ui` to regenerate.
+- Do not edit `*_ui.py` files directly. Edit `.ui` files and run
+  `python scripts/build_ui.py` (from a checkout) to regenerate.
 - For more details, see the main project [README](../../../README.md).

@@ -136,7 +136,9 @@ class RAGPropertiesMixin:
 
                 model_kwargs = {}
                 model_kwargs["device"] = device
-                model_kwargs["trust_remote_code"] = True
+                # intfloat/e5-large is natively supported; do not execute
+                # code shipped inside a downloaded model repo.
+                model_kwargs["trust_remote_code"] = False
                 model_kwargs["local_files_only"] = AIRUNNER_LOCAL_FILES_ONLY
 
                 self._embedding = HuggingFaceEmbeddings(

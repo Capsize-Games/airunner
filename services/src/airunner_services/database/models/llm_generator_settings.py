@@ -27,6 +27,9 @@ class LLMGeneratorSettings(BaseModel):
     )
     batch_size = Column(Integer, default=1)
     use_api = Column(Boolean, default=False)
+    # Stored in the OS keyring when available; this column holds only a
+    # keyring reference (plaintext fallback for headless environments with a
+    # logged warning, GitHub issue #2035).
     api_key = Column(String, nullable=True)
     api_model = Column(String, nullable=True)
     top_p = Column(Integer, default=950)

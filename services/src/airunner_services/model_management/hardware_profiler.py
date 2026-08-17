@@ -88,10 +88,10 @@ class HardwareProfiler:
 
 	def is_ampere_or_newer(self) -> bool:
 		"""Return whether the active GPU is Ampere or newer."""
-		capability = self._get_cuda_compute_capability()
-		if capability is None:
+		if not torch.cuda.is_available():
 			return False
-		return capability[0] >= 8
+		major, minor = torch.cuda.get_device_capability(0)
+		return (major, minor) >= (8, 0)
 
 	def has_sufficient_vram(self, required_gb: float) -> bool:
 		"""Return whether enough VRAM is currently available."""

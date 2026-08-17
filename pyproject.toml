@@ -2,6 +2,43 @@
 requires = ["setuptools>=80.9.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
+# ---------------------------------------------------------------------------
+# mypy configuration (issue #2052).
+#
+# Pragmatic, non-breaking baseline for the existing tree:
+#   - third-party packages without stubs are ignored
+#   - imported modules are checked in isolation (--follow-imports=skip style,
+#     matching scripts/mypy_shortcut.py) to keep per-file runs fast
+#   - warn_unused_ignores / check_untyped_defs keep new code honest without
+#     requiring a full strict migration
+# Target: graduate to stricter flags (disallow_untyped_defs, then strict) as
+# the tree's annotation coverage improves.
+# ---------------------------------------------------------------------------
+[tool.mypy]
+python_version = "3.13"
+plugins = []
+ignore_missing_imports = true
+# Suppress "Library stubs not installed" for third-party libs without bundled
+# types (e.g. PyYAML) - equivalent to the old --ignore-missing-imports
+# behavior on untyped-but-installed libraries.
+disable_error_code = ["import-untyped"]
+follow_imports = "skip"
+warn_unused_ignores = true
+check_untyped_defs = true
+disallow_untyped_defs = false
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_configs = true
+
+# Generated and vendored code is excluded from the strictness baseline; keep
+# per-module overrides here so the project config remains the single source.
+[[tool.mypy.overrides]]
+module = [
+    "airunner.feather_rc",
+    "airunner_services.vendor.*",
+]
+ignore_errors = true
+
 [tool.black]
 exclude = '.*_ui\.py$'
 line-length = 79
@@ -26,7 +63,14 @@ markers = [
     "benchmark: tests using standard benchmark datasets (GSM8K, MATH, HumanEval)",
     "code: tests for code generation capabilities",
 ]
-testpaths = ["src"]
+# Both the in-repo GUI suite (src) and the services-owned suite
+# (services/tests) are collected by a plain `pytest` run (issue #2056).
+# GUI tests run headless via QT_QPA_PLATFORM=offscreen (set in
+# src/airunner/conftest.py); on machines without a display that env var is
+# applied automatically, so collection stays safe. The canvas history test
+# that installs sys.modules stubs is guarded to skip in shared sessions
+# (issue #2055).
+testpaths = ["src", "services/tests"]
 # Disable parallel execution to prevent worker cleanup issues
 # Use serial execution for now until worker cleanup is fixed
 # -s disables output capturing for real-time feedback
