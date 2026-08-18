@@ -7,13 +7,25 @@ import logging
 from fastapi import APIRouter
 from pydantic import BaseModel, Field
 
-from airunner_services.model_management.hardware_profiler import (
-    HardwareProfiler,
-)
+# HardwareProfiler imports torch; the profiler is resolved lazily so the API
+# server can import in torch-free installs (issue #2054).
+_profiler: "HardwareProfiler | None" = None
+
+
+def _get_profiler() -> "HardwareProfiler":
+    """Return the process-wide hardware profiler, resolving it on first use."""
+    global _profiler
+    if _profiler is None:
+        from airunner_services.model_management.hardware_profiler import (
+            HardwareProfiler,
+        )
+
+        _profiler = HardwareProfiler()
+    return _profiler
+
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
-_profiler = HardwareProfiler()
 
 
 class HardwareProfileResponse(BaseModel):
@@ -33,7 +45,7 @@ class HardwareProfileResponse(BaseModel):
 @router.get("/hardware", response_model=HardwareProfileResponse)
 async def hardware_profile() -> HardwareProfileResponse:
     """Return the current hardware profile from the host machine."""
-    profile = _profiler.get_profile()
+    profile = _get_profiler().get_profile()
     return HardwareProfileResponse(
         total_vram_gb=profile.total_vram_gb,
         available_vram_gb=profile.available_vram_gb,

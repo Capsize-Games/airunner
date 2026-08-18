@@ -22,9 +22,6 @@ from airunner_services.utils.application.enum_resolver import (
 )
 from airunner_services.utils.application.enum_resolver import signal_code_proxy
 from airunner_services.utils.application.get_logger import get_logger
-from airunner_services.utils.application.get_torch_device import (
-    get_torch_device,
-)
 from airunner_services.utils.application.get_version import get_version
 from airunner_services.utils.application.mediator_mixin import (
     MediatorMixin,
@@ -75,4 +72,14 @@ def __getattr__(name: str):
         )
 
         return RuntimeContextMixin
+    if name == "get_torch_device":
+        # get_torch_device imports torch at module import time. The GUI
+        # package keeps torch optional, so importing the application utility
+        # package must not force a torch install. Resolve it lazily only when
+        # torch-dependent code actually calls it (issue #2037).
+        from airunner_services.utils.application.get_torch_device import (
+            get_torch_device,
+        )
+
+        return get_torch_device
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

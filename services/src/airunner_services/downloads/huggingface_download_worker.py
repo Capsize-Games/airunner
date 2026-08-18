@@ -7,11 +7,6 @@ import requests
 
 from airunner_common.contract_enums import SignalCode
 from airunner_common.settings import AIRUNNER_BASE_PATH, MODELS_DIR
-from airunner_services.art.managers.zimage.zimage_bundle_requirements import (
-    find_active_checkpoint,
-    get_active_zimage_load_mode,
-    get_downloadable_files_for_mode,
-)
 from airunner_services.bootstrap.model_bootstrap_data import (
     model_bootstrap_data,
 )
@@ -536,6 +531,14 @@ class HuggingFaceDownloadWorker(BaseDownloadWorker):
         """Return a lean bootstrap subset when an FP8 checkpoint already exists."""
         if not bootstrap_files:
             return bootstrap_files
+        # Imported lazily: zimage_bundle_requirements imports torch, and this
+        # module must stay importable in torch-free installs (issue #2054).
+        from airunner_services.art.managers.zimage.zimage_bundle_requirements import (
+            find_active_checkpoint,
+            get_active_zimage_load_mode,
+            get_downloadable_files_for_mode,
+        )
+
         checkpoint = find_active_checkpoint(output_dir)
         if checkpoint is None:
             return bootstrap_files
@@ -562,6 +565,14 @@ class HuggingFaceDownloadWorker(BaseDownloadWorker):
         """Drop Z-Image missing files that are not needed for the active load mode."""
         if not missing_files:
             return missing_files
+        # Imported lazily: zimage_bundle_requirements imports torch, and this
+        # module must stay importable in torch-free installs (issue #2054).
+        from airunner_services.art.managers.zimage.zimage_bundle_requirements import (
+            find_active_checkpoint,
+            get_active_zimage_load_mode,
+            get_downloadable_files_for_mode,
+        )
+
         checkpoint = find_active_checkpoint(output_dir)
         if checkpoint is None:
             return missing_files

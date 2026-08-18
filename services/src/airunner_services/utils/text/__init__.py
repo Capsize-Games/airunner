@@ -1,6 +1,5 @@
 """Service-owned text helpers."""
 
-from airunner_services.utils.text.language_detection import detect_language
 from airunner_services.utils.text.formatter import Formatter
 from airunner_services.utils.text.formatter_extended import (
 	FormatterExtended,
@@ -34,3 +33,18 @@ __all__ = [
 	"roman_to_int",
 	"strip_emoji_characters",
 ]
+
+
+def __getattr__(name: str):
+	"""Resolve optional text exports lazily.
+
+	``language_detection`` imports the optional ``lingua`` package at module
+	import time. Importing the text-helpers package (which the download
+	workers pull in) must not require lingua, so the language-detection
+	helpers resolve only when actually used (issue #2054).
+	"""
+	if name in {"detect_language", "strip_nonlinguistic_text"}:
+		from airunner_services.utils.text import language_detection
+
+		return getattr(language_detection, name)
+	raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

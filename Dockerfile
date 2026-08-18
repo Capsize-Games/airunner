@@ -121,13 +121,19 @@ COPY native/ ./native/
 # (issue #2038), so --no-build-isolation is no longer required; ./shared is
 # still installed first because services/native declare airunner-common as a
 # runtime dependency.
+# The services extras pin CUDA builds of torch (torch==2.13.0+cu129 etc.),
+# which are only published on the PyTorch CUDA index (download.pytorch.org),
+# not PyPI; the extra index is passed to the services install so the pinned
+# +cu129 wheels resolve inside the CUDA base image.
 RUN set -e; \
     service_profiles="$(printf '%s' ",${AIRUNNER_INSTALL_PROFILES}," | sed 's/,gui,/,/g')"; \
     service_profiles="${service_profiles#,}"; \
     service_profiles="${service_profiles%,}"; \
     python3.13 -m pip install -e ./shared; \
     if [ -n "${service_profiles}" ]; then \
-        python3.13 -m pip install -e "./services[${service_profiles}]"; \
+        python3.13 -m pip install \
+            --extra-index-url https://download.pytorch.org/whl/cu129 \
+            -e "./services[${service_profiles}]"; \
     else \
         python3.13 -m pip install -e ./services; \
     fi; \

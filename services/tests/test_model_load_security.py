@@ -13,6 +13,13 @@ import builtins
 import os
 import pickle
 
+import pytest
+
+# This suite exercises the melo TTS vendor, which imports torch at module
+# import time. Skip cleanly (rather than aborting collection) in torch-free
+# installs so the optional runtime-smoke suites can still run (issue #2054).
+pytest.importorskip("torch")
+
 from airunner_services.vendor.melo.text.language_base import (
     _load_g2p_cache_safe,
 )
