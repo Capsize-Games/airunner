@@ -106,6 +106,17 @@ def test_output_dir_rejects_relative_escape(tmp_path, monkeypatch) -> None:
         "http://0.0.0.0/x",
         "http://[fe80::1]/x",
         "http://[::ffff:127.0.0.1]/x",
+        # NAT64-embedded loopback/private IPv4 (RFC 6052 / RFC 8215). These
+        # prefixes report is_global=True, so they need an explicit check.
+        "http://[64:ff9b::7f00:1]/x",
+        "http://[64:ff9b::a00:1]/x",
+        "http://[64:ff9b::ac10:1]/x",
+        "http://[64:ff9b::c0a8:101]/x",
+        "http://[64:ff9b:1::7f00:1]/x",
+        # 6to4 relay anycast (deprecated, RFC 7526).
+        "http://192.88.99.1/x",
+        # Multicast is not a valid fetch target.
+        "http://224.0.0.1/x",
     ],
 )
 def test_validate_url_for_fetch_rejects_loopback_and_private(bad_url: str) -> None:
@@ -120,6 +131,12 @@ def test_validate_url_for_fetch_rejects_bad_scheme_and_userinfo() -> None:
         validate_url_for_fetch("ftp://example.com/x")
     with pytest.raises(SSRFBlocked):
         validate_url_for_fetch("http://user:pass@example.com/x")
+
+
+def test_validate_url_for_fetch_nat64_embedded_public_ip_allowed() -> None:
+    """A NAT64 prefix embedding a public IPv4 stays fetchable (no overblock)."""
+    # 64:ff9b::808:808 embeds 8.8.8.8, which is a global address.
+    validate_url_for_fetch("http://[64:ff9b::808:808]/x")
 
 
 def test_validate_url_for_fetch_allowlist_for_intranet_mirrors(

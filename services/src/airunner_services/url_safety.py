@@ -27,9 +27,38 @@ class SSRFBlocked(ValueError):
         return self.reason
 
 
+# NAT64 prefixes that embed an IPv4 address in the low 32 bits (RFC 6052
+# well-known prefix and RFC 8215 local-use prefix). ``ipaddress.is_global``
+# reports True for these prefixes because they are globally routed, even when
+# the embedded IPv4 is loopback/private -- so the embedded address must be
+# checked explicitly or ``http://[64:ff9b::7f00:1]/`` becomes a loopback
+# SSRF vector on NAT64 networks (issue #2029).
+_NAT64_EMBEDDING_PREFIXES = (
+    ipaddress.ip_network("64:ff9b::/96"),
+    ipaddress.ip_network("64:ff9b:1::/48"),
+)
+
+# Deprecated 6to4 relay anycast (RFC 7526). Legacy routers may still forward
+# these; treat the range as disallowed for outbound fetches.
+_6TO4_RELAY_ANYCAST = ipaddress.ip_network("192.88.99.0/24")
+
+
 def _is_ip_disallowed(ip: ipaddress._BaseAddress) -> bool:
     """Return True when one IP should be blocked for outbound fetches."""
-    return not bool(ip.is_global)
+    if not ip.is_global:
+        return True
+    # Multicast addresses are not routable fetch targets even though some
+    # multicast ranges report ``is_global`` True.
+    if ip.is_multicast:
+        return True
+    if isinstance(ip, ipaddress.IPv6Address) and any(
+        ip in prefix for prefix in _NAT64_EMBEDDING_PREFIXES
+    ):
+        embedded_ipv4 = ipaddress.ip_address(int(ip) & 0xFFFFFFFF)
+        return _is_ip_disallowed(embedded_ipv4)
+    if isinstance(ip, ipaddress.IPv4Address) and ip in _6TO4_RELAY_ANYCAST:
+        return True
+    return False
 
 
 def _allowed_host_set() -> frozenset[str]:
