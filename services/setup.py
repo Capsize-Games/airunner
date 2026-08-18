@@ -13,6 +13,13 @@ from setuptools import find_packages, setup
 
 VERSION = "6.0.0"
 
+# The project is GPL-3.0-only (issue #2058): the repo-root LICENSE file, every
+# ``license=`` metadata field and these PyPI classifiers must agree. Mirrored
+# from shared/airunner_common/package_metadata.py (LICENSE_CLASSIFIERS).
+LICENSE_CLASSIFIERS = [
+    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+]
+
 # Supply-chain hardening (issue #2036): the archive URL is hash-pinned so a
 # tampered or moved tag cannot be substituted. Digest computed from the
 # current v1.0.0 tarball (curl -sL <url> | sha256sum).
@@ -374,6 +381,7 @@ def build_services_setup_kwargs(*, package_source_dir: str) -> dict[str, object]
         "long_description": README,
         "long_description_content_type": "text/markdown",
         "license": "GPL-3.0-only",
+        "classifiers": LICENSE_CLASSIFIERS,
         "author_email": "contact@capsizegames.com",
         "url": "https://github.com/Capsize-Games/airunner",
         "package_dir": {"": package_source_dir},

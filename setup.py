@@ -19,6 +19,7 @@ sys.path.insert(0, str(_REPO_ROOT / "shared"))
 from airunner_common.package_metadata import (  # noqa: E402
     DEVELOPMENT_REQUIREMENTS,
     FACEHUGGERSHIELD_REQUIREMENT,
+    LICENSE_CLASSIFIERS,
     VERSION,
 )
 
@@ -106,6 +107,7 @@ setup(
     long_description_content_type="text/markdown",
     keywords="llm, pyside6, gui, local llm, stable diffusion, generative ai, local chatgpt, text-to-speech, speech-to-text, open source chatbot, python ai runner",
     license="GPL-3.0-only",
+    classifiers=LICENSE_CLASSIFIERS,
     author_email="contact@capsizegames.com",
     url="https://github.com/Capsize-Games/airunner",
     # The top-level scripts/ directory is developer tooling only and must not

@@ -4,6 +4,7 @@ from setuptools import setup
 
 from airunner_common.package_metadata import (
     FACEHUGGERSHIELD_REQUIREMENT,
+    LICENSE_CLASSIFIERS,
     README,
     VERSION,
 )
@@ -17,6 +18,7 @@ setup(
     long_description=README,
     long_description_content_type="text/markdown",
     license="GPL-3.0-only",
+    classifiers=LICENSE_CLASSIFIERS,
     author_email="contact@capsizegames.com",
     url="https://github.com/Capsize-Games/airunner",
     package_dir={"": "."},
