@@ -29,8 +29,21 @@ jobs:
           python -m pip install --upgrade pip
           pip install build
 
-      - name: Build package
-        run: python -m build
+      - name: Build packages
+        run: |
+          # Publish the full package surface documented in the README
+          # (issue #2061): airunner (GUI), airunner-services (headless
+          # daemon + runtimes), airunner-native (launcher) and airunner-common
+          # (shared foundation). airunner and airunner-native pin
+          # airunner-services==VERSION / airunner-common==VERSION, so all four
+          # must be published together or `pip install airunner` cannot
+          # resolve. Each invocation produces an sdist and a wheel in dist/;
+          # the publish step below uploads every artifact.
+          mkdir -p dist
+          python -m build --outdir dist shared
+          python -m build --outdir dist services
+          python -m build --outdir dist native
+          python -m build --outdir dist .
 
       - name: Upload Python distribution artifacts
         uses: actions/upload-artifact@v4

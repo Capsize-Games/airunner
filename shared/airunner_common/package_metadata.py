@@ -11,8 +11,6 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from setuptools import find_packages
-
 
 VERSION = "6.0.0"
 # Supply-chain hardening (issue #2036): the archive URL is hash-pinned so a
@@ -26,10 +24,25 @@ FACEHUGGERSHIELD_REQUIREMENT = (
 )
 
 # The shared package lives at <repo>/shared/airunner_common, so the repo root
-# is two parents up (``shared`` and the repo root itself).
-README = (
-    Path(__file__).resolve().parents[2] / "README.md"
-).read_text(encoding="utf-8")
+# is two parents up (``shared`` and the repo root itself) in a checkout. The
+# published sdist carries its own README.md at the sdist root (parents[1],
+# via shared/MANIFEST.in), and an installed wheel has no README at all, so
+# fall back instead of crashing at import time (issue #2061).
+def _resolve_readme() -> str:
+    module_dir = Path(__file__).resolve().parent
+    for candidate in (
+        module_dir.parents[2] / "README.md",  # repo checkout
+        module_dir.parents[1] / "README.md",  # sdist root
+    ):
+        if candidate.is_file():
+            return candidate.read_text(encoding="utf-8")
+    # Installed wheel: no README ships with the runtime package. The wheel's
+    # long_description was already baked from the sdist README at build time,
+    # so a short placeholder here is only a defensive fallback.
+    return "AI Runner shared foundation package."
+
+
+README = _resolve_readme()
 
 DEVELOPMENT_REQUIREMENTS = [
     "pytest",
@@ -249,6 +262,18 @@ NATIVE_BASE_REQUIREMENTS = [
 ]
 
 
+def _find_packages(package_source_dir: str) -> list[str]:
+    """Return the packages under a source dir without importing setuptools.
+
+    setuptools is a build-time dependency and must not be required at runtime
+    by the published airunner-common wheel (issue #2061), so ``find_packages``
+    is imported lazily inside this helper instead of at module level.
+    """
+    from setuptools import find_packages  # noqa: PLC0415  # build-time only
+
+    return find_packages(package_source_dir)
+
+
 def unique_requirements(*groups: list[str]) -> list[str]:
     """Return one stable dependency list with duplicates removed."""
     dependencies: list[str] = []
@@ -398,7 +423,11 @@ def build_services_setup_kwargs(*, package_source_dir: str) -> dict[str, Any]:
         "author_email": "contact@capsizegames.com",
         "url": "https://github.com/Capsize-Games/airunner",
         "package_dir": {"": package_source_dir},
-        "packages": find_packages(package_source_dir),
+        # Imported lazily: setuptools is a build-time dependency and must not
+        # be required at runtime by the published airunner-common wheel
+        # (issue #2061). No setup.py calls these helpers anymore (the
+        # services/native metadata is vendored statically, issue #2038).
+        "packages": _find_packages(package_source_dir),
         "python_requires": ">=3.13.3",
         "install_requires": install_requires,
         "extras_require": build_services_extras_require(),
@@ -443,7 +472,7 @@ def build_native_setup_kwargs(*, package_source_dir: str) -> dict[str, Any]:
         "author_email": "contact@capsizegames.com",
         "url": "https://github.com/Capsize-Games/airunner",
         "package_dir": {"": package_source_dir},
-        "packages": find_packages(package_source_dir),
+        "packages": _find_packages(package_source_dir),
         "python_requires": ">=3.13.3",
         "install_requires": NATIVE_BASE_REQUIREMENTS,
         "extras_require": build_native_extras_require(),
