@@ -21,6 +21,7 @@ from airunner_services.workers.llm_generate_worker import (
     LLMGenerateWorker,
     time as worker_time,
 )
+from airunner_services.workers.worker import QueueType
 
 _ENV_AUTO_UNLOAD = "AIRUNNER_LLM_AUTO_UNLOAD"
 _ENV_TIMEOUT = "AIRUNNER_LLM_INACTIVITY_TIMEOUT_SECONDS"
@@ -241,3 +242,84 @@ class TestTimerStart:
         worker.start_worker_thread()
 
         assert worker._inactivity_timer is None
+
+
+class TestLifecycleWiring:
+    """The timer starts through the real daemon bootstrap paths.
+
+    Regression coverage for issue #128 rework: no production code calls
+    ``start_worker_thread()`` - ``create_worker`` connects
+    ``worker_thread.started`` directly to ``worker.run()``, so the timer must
+    start from the worker's own ``run()`` and from
+    ``CoreLifecycleService.initialize()``.
+    """
+
+    def test_run_starts_inactivity_timer_when_enabled(self, monkeypatch) -> None:
+        """``run()`` (the real daemon entry point) starts the timer."""
+        monkeypatch.setenv(_ENV_AUTO_UNLOAD, "1")
+        worker = LLMGenerateWorker()
+        worker.queue_type = QueueType.NONE  # keep run() from looping forever
+
+        worker.run()
+
+        try:
+            assert isinstance(worker._inactivity_timer, QTimer)
+        finally:
+            if worker._inactivity_timer is not None:
+                worker._inactivity_timer.stop()
+
+    def test_run_skips_inactivity_timer_when_disabled(self, monkeypatch) -> None:
+        """``run()`` leaves the timer unstarted when auto-unload is off."""
+        monkeypatch.delenv(_ENV_AUTO_UNLOAD, raising=False)
+        worker = LLMGenerateWorker()
+        worker.queue_type = QueueType.NONE
+
+        worker.run()
+
+        assert worker._inactivity_timer is None
+
+    def test_start_inactivity_timer_is_idempotent(self, monkeypatch) -> None:
+        """A second start keeps the existing timer instead of stacking."""
+        monkeypatch.setenv(_ENV_AUTO_UNLOAD, "1")
+        worker = LLMGenerateWorker()
+
+        worker._start_inactivity_timer()
+        first_timer = worker._inactivity_timer
+        try:
+            worker._start_inactivity_timer()
+            assert worker._inactivity_timer is first_timer
+        finally:
+            if first_timer is not None:
+                first_timer.stop()
+
+    def test_create_worker_bootstrap_starts_inactivity_timer(
+        self, monkeypatch
+    ) -> None:
+        """The real ``create_worker`` bootstrap starts the timer on the worker."""
+        from airunner_services.utils.application.create_worker import (
+            create_worker,
+        )
+
+        monkeypatch.setenv(_ENV_AUTO_UNLOAD, "1")
+        worker = create_worker(LLMGenerateWorker)
+        try:
+            assert isinstance(worker._inactivity_timer, QTimer)
+        finally:
+            worker._inactivity_timer.stop()
+
+    def test_lifecycle_service_initialize_starts_inactivity_timer(
+        self, monkeypatch
+    ) -> None:
+        """The headless daemon lifecycle starts the timer on its worker."""
+        from airunner_services.lifecycle_service import CoreLifecycleService
+
+        monkeypatch.setenv(_ENV_AUTO_UNLOAD, "1")
+        lifecycle = CoreLifecycleService(signal_source=SimpleNamespace())
+        lifecycle.initialize()
+        worker = lifecycle.llm_generate_worker
+        try:
+            assert worker is not None
+            assert isinstance(worker._inactivity_timer, QTimer)
+        finally:
+            if worker is not None and worker._inactivity_timer is not None:
+                worker._inactivity_timer.stop()
