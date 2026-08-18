@@ -60,6 +60,8 @@ jobs:
             services/tests/test_legacy_api_surface.py \
             services/tests/test_loopback_auth.py \
             services/tests/test_secret_storage.py \
+            services/tests/test_native_package_isolation.py \
+            services/tests/test_zimage_model_dir_config.py \
             -v \
             --tb=short \
             --junitxml=runtime-contracts.xml
