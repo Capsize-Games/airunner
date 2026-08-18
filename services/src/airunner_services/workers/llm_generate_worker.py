@@ -95,8 +95,15 @@ class LLMGenerateWorker(
 
 		self._last_request_time: Optional[float] = None
 		self._inactivity_timer: Optional[object] = None
-		self._inactivity_timeout = 300
-		self._auto_unload_enabled = False
+		# The LAN daemon deployment unloads the local GGUF model after 10
+		# minutes of inactivity. Both knobs stay OFF/5-minutes by default so
+		# existing deployments behave identically unless they opt in.
+		self._inactivity_timeout = int(
+			os.environ.get("AIRUNNER_LLM_INACTIVITY_TIMEOUT_SECONDS", "300")
+		)
+		self._auto_unload_enabled = (
+			os.environ.get("AIRUNNER_LLM_AUTO_UNLOAD", "0") == "1"
+		)
 
 	@property
 	def use_openrouter(self) -> bool:
@@ -275,7 +282,10 @@ class LLMGenerateWorker(
 		self._inactivity_timer = QTimer()
 		self._inactivity_timer.timeout.connect(self._check_inactivity)
 		self._inactivity_timer.start(60000)
-		self.logger.info("LLM auto-unload timer started (5 minute timeout)")
+		self.logger.info(
+			"LLM auto-unload timer started "
+			f"({int(self._inactivity_timeout / 60)} minute timeout)"
+		)
 
 	def _check_inactivity(self) -> None:
 		"""Unload the model after extended inactivity when enabled."""
@@ -416,6 +426,8 @@ class LLMGenerateWorker(
 		"""Start the worker thread if LLM is enabled."""
 		if self.application_settings.llm_enabled or AIRUNNER_LLM_ON:
 			self._load_llm_thread()
+		if self._auto_unload_enabled:
+			self._start_inactivity_timer()
 
 	def handle_message(self, message: Dict) -> None:
 		"""Process queued messages for LLM generation."""
