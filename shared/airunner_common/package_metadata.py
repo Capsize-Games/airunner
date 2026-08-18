@@ -25,6 +25,14 @@ FACEHUGGERSHIELD_REQUIREMENT = (
     "#sha256=3430bb3363def8d0097a903ca106a4e944ff4a36f5a6fd374f06970090723482"
 )
 
+# The project is GPL-3.0-only (issue #2058): the repo-root LICENSE file, every
+# ``license=`` metadata field and these PyPI classifiers must agree. Vendored
+# MIT/Apache-2.0 components (melo, openvoice, z_image) are compatible with GPL
+# distribution; see THIRD_PARTY_NOTICES.md.
+LICENSE_CLASSIFIERS = [
+    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+]
+
 # The shared package lives at <repo>/shared/airunner_common, so the repo root
 # is two parents up (``shared`` and the repo root itself).
 README = (
@@ -395,6 +403,7 @@ def build_services_setup_kwargs(*, package_source_dir: str) -> dict[str, Any]:
         "long_description": README,
         "long_description_content_type": "text/markdown",
         "license": "GPL-3.0-only",
+        "classifiers": LICENSE_CLASSIFIERS,
         "author_email": "contact@capsizegames.com",
         "url": "https://github.com/Capsize-Games/airunner",
         "package_dir": {"": package_source_dir},
@@ -440,6 +449,7 @@ def build_native_setup_kwargs(*, package_source_dir: str) -> dict[str, Any]:
         "long_description": README,
         "long_description_content_type": "text/markdown",
         "license": "GPL-3.0-only",
+        "classifiers": LICENSE_CLASSIFIERS,
         "author_email": "contact@capsizegames.com",
         "url": "https://github.com/Capsize-Games/airunner",
         "package_dir": {"": package_source_dir},
@@ -460,6 +470,7 @@ __all__ = [
     "FACEHUGGERSHIELD_REQUIREMENT",
     "GRUUT_SUPPORT_REQUIREMENTS",
     "HUGGINGFACE_REQUIREMENTS",
+    "LICENSE_CLASSIFIERS",
     "LLM_NATIVE_REQUIREMENTS",
     "LLM_WEATHER_REQUIREMENTS",
     "MELOTTS_REQUIREMENTS",
