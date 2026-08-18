@@ -15,10 +15,15 @@ from unittest import mock
 import pytest
 
 from airunner_services.downloads.job_service import (
+    _assert_output_path_contained,
+    _resolve_safe_file_path,
     _resolve_safe_output_dir,
     _safe_filename,
 )
-from airunner_services.downloads.civitai import _open_download
+from airunner_services.downloads.civitai import (
+    _MAX_DOWNLOAD_REDIRECTS,
+    _open_download,
+)
 from airunner_services.runtimes.file_policy import PathPolicyError
 from airunner_services.url_safety import (
     SSRFBlocked,
@@ -99,6 +104,8 @@ def test_output_dir_rejects_relative_escape(tmp_path, monkeypatch) -> None:
         "http://192.168.1.1/x",
         "http://169.254.169.254/latest/meta-data/",
         "http://0.0.0.0/x",
+        "http://[fe80::1]/x",
+        "http://[::ffff:127.0.0.1]/x",
     ],
 )
 def test_validate_url_for_fetch_rejects_loopback_and_private(bad_url: str) -> None:
@@ -156,6 +163,23 @@ def test_validate_url_for_fetch_hostname_resolution(
         validate_url_for_fetch("https://example.com/path")
 
 
+def test_validate_url_for_fetch_rejects_obfuscated_loopback(
+    monkeypatch,
+) -> None:
+    """Decimal/octal hostnames that resolve to loopback are still blocked."""
+    import ipaddress
+
+    from airunner_services import url_safety
+
+    def _fake_resolve(hostname: str, port: int):
+        del hostname, port
+        return {ipaddress.ip_address("127.0.0.1")}
+
+    monkeypatch.setattr(url_safety, "_resolve_host_ips", _fake_resolve)
+    with pytest.raises(SSRFBlocked):
+        validate_url_for_fetch("http://2130706433/anything")
+
+
 # ---------------------------------------------------------------------------
 # civitai._open_download validates before fetching
 # ---------------------------------------------------------------------------
@@ -178,3 +202,163 @@ def test_open_download_accepts_public_url() -> None:
         result = _open_download("https://example.com/model.safetensors", api_key="")
         assert result is response
         get.assert_called_once()
+
+
+def test_open_download_rejects_redirect_to_private_target(monkeypatch) -> None:
+    """A public URL that redirects onto the metadata IP must be blocked."""
+    import ipaddress
+
+    from airunner_services import url_safety
+
+    def _fake_public_resolve(hostname: str, port: int):
+        del hostname, port
+        return {ipaddress.ip_address("93.184.216.34")}
+
+    monkeypatch.setattr(url_safety, "_resolve_host_ips", _fake_public_resolve)
+
+    redirect_response = mock.MagicMock()
+    redirect_response.status_code = 302
+    redirect_response.headers = {
+        "location": "http://169.254.169.254/latest/meta-data/",
+    }
+    final_response = mock.MagicMock()
+    final_response.status_code = 200
+
+    with mock.patch(
+        "airunner_services.downloads.civitai.requests.get",
+        side_effect=[redirect_response, final_response],
+    ) as get:
+        with pytest.raises(SSRFBlocked):
+            _open_download("https://attacker.example/model.bin", api_key="")
+    # The redirect target must never be requested.
+    assert get.call_count == 1
+
+
+def test_open_download_follows_redirect_when_target_is_public(monkeypatch) -> None:
+    """A public URL that redirects to another public URL still succeeds."""
+    import ipaddress
+
+    from airunner_services import url_safety
+
+    def _fake_public_resolve(hostname: str, port: int):
+        del hostname, port
+        return {ipaddress.ip_address("93.184.216.34")}
+
+    monkeypatch.setattr(url_safety, "_resolve_host_ips", _fake_public_resolve)
+
+    redirect_response = mock.MagicMock()
+    redirect_response.status_code = 302
+    redirect_response.headers = {"location": "https://cdn.example/model.bin"}
+    final_response = mock.MagicMock()
+    final_response.status_code = 200
+
+    with mock.patch(
+        "airunner_services.downloads.civitai.requests.get",
+        side_effect=[redirect_response, final_response],
+    ) as get:
+        result = _open_download("https://attacker.example/model.bin", api_key="")
+    assert result is final_response
+    assert get.call_count == 2
+
+
+def test_open_download_limits_redirects(monkeypatch) -> None:
+    """Redirect chains are capped to avoid open-redirect loops."""
+    import ipaddress
+
+    from airunner_services import url_safety
+
+    def _fake_public_resolve(hostname: str, port: int):
+        del hostname, port
+        return {ipaddress.ip_address("93.184.216.34")}
+
+    monkeypatch.setattr(url_safety, "_resolve_host_ips", _fake_public_resolve)
+
+    redirects = [
+        mock.MagicMock(
+            status_code=302,
+            headers={"location": f"https://cdn.example/hop-{index}.bin"},
+        )
+        for index in range(_MAX_DOWNLOAD_REDIRECTS + 1)
+    ]
+    final_response = mock.MagicMock()
+    final_response.status_code = 200
+
+    with mock.patch(
+        "airunner_services.downloads.civitai.requests.get",
+        side_effect=[*redirects, final_response],
+    ) as get:
+        with pytest.raises(SSRFBlocked):
+            _open_download("https://attacker.example/model.bin", api_key="")
+    assert get.call_count == _MAX_DOWNLOAD_REDIRECTS + 1
+
+
+# ---------------------------------------------------------------------------
+# Destination file path containment (arbitrary file write protection)
+# ---------------------------------------------------------------------------
+
+
+def test_resolve_safe_file_path_rejects_escape(tmp_path, monkeypatch) -> None:
+    monkeypatch.setenv("AIRUNNER_DOWNLOAD_ROOT", str(tmp_path / "models"))
+    root = tmp_path / "models"
+    root.mkdir(parents=True)
+
+    for bad_path in (
+        str(tmp_path / "outside" / "evil.sh"),
+        str(tmp_path / "etc" / "passwd"),
+        "/etc/passwd",
+        "/tmp/absolute.bin",
+    ):
+        with pytest.raises(PathPolicyError):
+            _resolve_safe_file_path(bad_path)
+
+
+def test_resolve_safe_file_path_rejects_traversal_and_empty() -> None:
+    for bad_path in ("", "..", ".", "../evil.sh", "sub/../escape.txt"):
+        with pytest.raises(PathPolicyError):
+            _resolve_safe_file_path(bad_path)
+
+
+def test_resolve_safe_file_path_accepts_inside_root(tmp_path, monkeypatch) -> None:
+    monkeypatch.setenv("AIRUNNER_DOWNLOAD_ROOT", str(tmp_path / "models"))
+    root = tmp_path / "models"
+    root.mkdir(parents=True)
+
+    inside = root / "art" / "models" / "civitai" / "weights.safetensors"
+    resolved = _resolve_safe_file_path(str(inside))
+    assert resolved == inside.resolve().as_posix()
+
+
+def test_resolve_safe_file_path_rejects_symlink_escape(tmp_path, monkeypatch) -> None:
+    monkeypatch.setenv("AIRUNNER_DOWNLOAD_ROOT", str(tmp_path / "models"))
+    root = tmp_path / "models"
+    outside = tmp_path / "outside"
+    root.mkdir(parents=True)
+    outside.mkdir(parents=True)
+    (root / "link").symlink_to(outside, target_is_directory=True)
+
+    with pytest.raises(PathPolicyError):
+        _resolve_safe_file_path(str(root / "link" / "evil.sh"))
+
+
+def test_assert_output_path_contained_rejects_symlink_escape(
+    tmp_path, monkeypatch
+) -> None:
+    monkeypatch.setenv("AIRUNNER_DOWNLOAD_ROOT", str(tmp_path / "models"))
+    root = tmp_path / "models"
+    outside = tmp_path / "outside"
+    root.mkdir(parents=True)
+    outside.mkdir(parents=True)
+    (root / "link").symlink_to(outside, target_is_directory=True)
+
+    with pytest.raises(PathPolicyError):
+        _assert_output_path_contained(root / "link" / "evil.sh")
+
+
+def test_resolve_safe_output_dir_rejects_empty(tmp_path, monkeypatch) -> None:
+    monkeypatch.setenv("AIRUNNER_DOWNLOAD_ROOT", str(tmp_path / "models"))
+    root = tmp_path / "models"
+    root.mkdir(parents=True)
+    with pytest.raises(PathPolicyError):
+        _resolve_safe_output_dir("")
+    with pytest.raises(PathPolicyError):
+        _resolve_safe_output_dir("   ")

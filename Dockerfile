@@ -110,22 +110,28 @@ COPY shared/ ./shared/
 COPY services/ ./services/
 COPY native/ ./native/
 
-# Install each local package explicitly. The root `airunner` package has no
-# install profiles (its only extras are "analysis" and "ml"), so the previous
+# Install each local package explicitly in dependency order
+# (shared -> services -> native -> GUI; issue #2039). The root `airunner`
+# package has no install profiles (its only extras are "analysis", "ml" and
+# "development"), so the previous
 # `pip install -e ".[$AIRUNNER_INSTALL_PROFILES]"` referenced non-existent
 # extras. "gui" is not a services extra either - it is the root GUI package
 # itself - so it is stripped from the services profile list.
-# --no-build-isolation is used for services/native because their setup.py
-# imports airunner_common at build time (issue #2038); ./shared is installed
-# first so the build can resolve it from the environment.
+# services/native setup.py no longer imports airunner_common at build time
+# (issue #2038), so --no-build-isolation is no longer required; ./shared is
+# still installed first because services/native declare airunner-common as a
+# runtime dependency.
 RUN set -e; \
     service_profiles="$(printf '%s' ",${AIRUNNER_INSTALL_PROFILES}," | sed 's/,gui,/,/g')"; \
     service_profiles="${service_profiles#,}"; \
     service_profiles="${service_profiles%,}"; \
-    python3.13 -m pip install -e ./shared && \
-    python3.13 -m pip install --no-build-isolation \
-        -e "./services[${service_profiles}]" && \
-    python3.13 -m pip install --no-build-isolation -e ./native && \
+    python3.13 -m pip install -e ./shared; \
+    if [ -n "${service_profiles}" ]; then \
+        python3.13 -m pip install -e "./services[${service_profiles}]"; \
+    else \
+        python3.13 -m pip install -e ./services; \
+    fi; \
+    python3.13 -m pip install -e ./native; \
     python3.13 -m pip install -e .
 
 # Create non-root user for running the container

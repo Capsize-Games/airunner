@@ -1,3 +1,6 @@
 [build-system]
-requires = ["setuptools>=80.9.0", "wheel", "airunner-common==6.0.0"]
+# native/setup.py no longer imports airunner_common at build time
+# (issue #2038), so an isolated build only needs setuptools+wheel from the
+# index; airunner-common is not published to PyPI and must not be fetched here.
+requires = ["setuptools>=80.9.0", "wheel"]
 build-backend = "setuptools.build_meta"

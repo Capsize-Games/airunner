@@ -1,5 +1,6 @@
 # Ignore virtual environments
 venv/
+venv_nvfp4/
 
 # Ignore git files
 .git

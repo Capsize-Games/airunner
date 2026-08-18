@@ -77,14 +77,18 @@ class _FilteredBuildPy(_build_py):
     """build_py that drops the in-package pytest harness (issue #2046).
 
     ``find_packages(exclude=...)`` removes whole packages (test_support,
-    *.tests) but cannot remove a bare module such as ``airunner/conftest.py``,
-    which setuptools otherwise ships as part of the ``airunner`` package. The
-    conftest is only used by pytest from a checkout and must not ship.
+    *.tests) but cannot remove bare ``conftest`` modules, which setuptools
+    otherwise ships as part of the ``airunner`` package. pytest's conftest
+    files are only used from a checkout and must not ship. The filter must
+    cover every subpackage (``airunner.*``): ``find_package_modules`` is
+    called once per package, so checking only ``package == "airunner"`` lets
+    nested conftests such as ``airunner/components/application/conftest.py``
+    leak into the wheel.
     """
 
     def find_package_modules(self, package: str, package_dir: str) -> list:
         modules = super().find_package_modules(package, package_dir)
-        if package == "airunner":
+        if package == "airunner" or package.startswith("airunner."):
             modules = [
                 (pkg, mod, path)
                 for pkg, mod, path in modules

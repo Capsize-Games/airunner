@@ -364,36 +364,63 @@ def _planned_download_file(
     }
 
 
+_MAX_DOWNLOAD_REDIRECTS = 3
+
+
 def _open_download(url: str, api_key: str) -> requests.Response:
     """Open one download response, retrying 401s with token query auth.
 
-    Every candidate URL (including the token retry URL) is validated against
-    the AIRunner SSRF policy before the request is issued.
+    Every candidate URL -- the original URL, each redirect hop, and the
+    token retry URL -- is validated against the AIRunner SSRF policy before
+    the request is issued. Redirects are followed manually (with a hard hop
+    cap) so a public URL can never redirect the downloader onto loopback or
+    private-network addresses (GitHub issue #2029).
     """
-    from airunner_services.url_safety import validate_url_for_fetch
-
-    validate_url_for_fetch(url)
-    response = requests.get(
-        url,
-        headers=_auth_headers(api_key),
-        stream=True,
-        allow_redirects=True,
-        timeout=30,
-    )
+    response = _get_streaming_response(url, api_key)
     if response.status_code != 401 or not api_key:
         response.raise_for_status()
         return response
     response.close()
     retry_url = _url_with_token(url, api_key)
-    validate_url_for_fetch(retry_url)
-    retry_response = requests.get(
-        retry_url,
-        stream=True,
-        allow_redirects=True,
-        timeout=30,
-    )
+    retry_response = _get_streaming_response(retry_url, api_key="")
     retry_response.raise_for_status()
     return retry_response
+
+
+def _get_streaming_response(url: str, api_key: str) -> requests.Response:
+    """Return one streamed response after validating every URL hop.
+
+    Redirect responses are not followed by ``requests``; each hop is
+    re-validated against the AIRunner SSRF policy before the next request is
+    issued, mirroring the guardrails in ``airunner_services.url_safety``.
+    """
+    from urllib.parse import urljoin
+
+    from airunner_services.url_safety import SSRFBlocked, validate_url_for_fetch
+
+    current = url
+    redirects_followed = 0
+    while True:
+        validate_url_for_fetch(current)
+        response = requests.get(
+            current,
+            headers=_auth_headers(api_key),
+            stream=True,
+            allow_redirects=False,
+            timeout=30,
+        )
+        if response.status_code in {301, 302, 303, 307, 308}:
+            location = response.headers.get("location")
+            response.close()
+            if not location:
+                response.raise_for_status()
+                raise ValueError("Redirect response missing Location header")
+            redirects_followed += 1
+            if redirects_followed > _MAX_DOWNLOAD_REDIRECTS:
+                raise SSRFBlocked("too many redirects")
+            current = urljoin(current, location)
+            continue
+        return response
 
 
 def _url_with_token(url: str, api_key: str) -> str:

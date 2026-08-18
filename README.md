@@ -237,10 +237,11 @@ installs.
    # `setuptools<82`; if you use one, `pip install "setuptools<82"` first.
    pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu129
    # airunner-common is not published, so install the local shared package
-   # first; the services build imports airunner_common.package_metadata, so use
-   # --no-build-isolation to build against this venv instead of an isolated env.
+   # first (services/native declare it as a runtime dependency). Their setup.py
+   # files no longer import airunner_common at build time (issue #2038), so
+   # --no-build-isolation is no longer required.
    pip install -e ./shared
-   pip install --no-build-isolation -e "./services[headless,development]"
+   pip install -e "./services[headless,development]"
    pip install -e ./native
    pip install -e .
    ```
@@ -363,7 +364,7 @@ AI Runner can run as a headless HTTP API server, enabling remote access to LLM, 
 ### Quick Start
 
 ```bash
-# Start with defaults (port 8188, LLM only)
+# Start with defaults (port 8080, LLM only)
 airunner-headless
 
 # Start with a specific LLM model
@@ -381,7 +382,7 @@ airunner-headless --no-preload
 | Option | Description |
 |--------|-------------|
 | `--host HOST` | Host address to bind to (default: `127.0.0.1`) |
-| `--port PORT` | Port to listen on (default: `8188`, or `11434` in ollama-mode) |
+| `--port PORT` | Port to listen on (default: `8080`, or `11434` in ollama-mode) |
 | `--ollama-mode` | Run as Ollama replacement on port 11434 |
 | `--insecure-no-auth` | Allow binding to non-loopback without `AIRUNNER_API_KEY` (not recommended) |
 | `--model, -m PATH` | Path to LLM model to load. Also enables the LLM service. Quote paths that contain spaces. |
@@ -417,7 +418,7 @@ airunner-headless --no-preload
 | `AIRUNNER_HEADLESS` | Set to `1` to run headless (daemon) mode without the GUI |
 | `AIRUNNER_DAEMON_CONFIG` | Path to a daemon YAML config file to load/override defaults |
 | `AIRUNNER_HTTP_HOST` | Host the headless daemon binds to (default: `127.0.0.1`) |
-| `AIRUNNER_HTTP_PORT` | Port the headless daemon listens on (daemon default: `8188`; the container publishes `8080` → daemon) |
+| `AIRUNNER_HTTP_PORT` | Port the headless API listens on (`airunner-headless` default: `8080`; the daemon-config default is `8188`; the container publishes `8080` → daemon) |
 | `AIRUNNER_LNA_ENABLED` | Set to `1` to enable LNA (local network access) mode for the local server |
 | `DEV_ENV` | Set to `1` to load a local `.env` file and use development defaults (default: `0`) |
 | `AIRUNNER_LOG_LEVEL` | Logging level: `DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL` (default: `INFO`) |
@@ -468,7 +469,7 @@ airunner-headless --no-preload
 ### Example: LLM Request
 
 ```bash
-curl -X POST http://localhost:8188/llm \
+curl -X POST http://localhost:8080/llm \
   -H "Content-Type: application/json" \
   -d '{
     "prompt": "What is the capital of France?",
@@ -482,7 +483,7 @@ curl -X POST http://localhost:8188/llm \
 
 ```bash
 # Requires: airunner-headless --enable-art
-curl -X POST http://localhost:8188/art \
+curl -X POST http://localhost:8080/art \
   -H "Content-Type: application/json" \
   -d '{
     "prompt": "A beautiful sunset over mountains",
@@ -499,7 +500,7 @@ curl -X POST http://localhost:8188/art \
 
 ```bash
 # Requires: airunner-headless --enable-tts
-curl -X POST http://localhost:8188/tts \
+curl -X POST http://localhost:8080/tts \
   -H "Content-Type: application/json" \
   -d '{"text": "Hello, world!"}'
 # Returns: {"status": "queued", "message": "Text queued for speech synthesis"}
@@ -511,7 +512,7 @@ curl -X POST http://localhost:8188/tts \
 ```bash
 # Requires: airunner-headless --enable-stt
 # Audio must be base64-encoded WAV (16kHz mono recommended)
-curl -X POST http://localhost:8188/stt \
+curl -X POST http://localhost:8080/stt \
   -H "Content-Type: application/json" \
   -d '{"audio": "UklGRi4AAABXQVZFZm10IBAAAAABAAEA..."}'
 # Returns: {"transcription": "Hello world", "status": "success"}

@@ -17,7 +17,7 @@ try:
 except ImportError:
     nltk = None
 
-from airunner_common.settings import MODELS_DIR
+from airunner_common.settings import AIRUNNER_BASE_PATH, MODELS_DIR
 from airunner_services.config.local_settings_store import get_setting
 from airunner_services.downloads.civitai import (
     fetch_model_info_for_url,
@@ -164,11 +164,13 @@ class DownloadJobService:
         file_size: int,
         api_key: str | None = None,
     ) -> str:
-        """Create and start one CivitAI single-file download job."""
-        normalized_output_path = normalize_local_path(
-            output_path,
-            label="Download file path",
-        )
+        """Create and start one CivitAI single-file download job.
+
+        The output file path is constrained to the approved download roots so
+        the endpoint cannot be used for arbitrary file writes (GitHub issue
+        #2029).
+        """
+        normalized_output_path = _resolve_safe_file_path(output_path)
         metadata = {"provider": "civitai", "url": url}
         return await self._start_job(
             metadata,
@@ -528,7 +530,12 @@ class DownloadJobService:
         file_size: int,
         api_key: str,
     ) -> None:
-        """Run one CivitAI file download inside a background thread."""
+        """Run one CivitAI file download inside a background thread.
+
+        The output file path is re-validated inside the worker thread as
+        defense in depth; a job that fails validation is failed instead of
+        writing any file.
+        """
         self._update_job(job_id, 0.0, JobStatus.RUNNING)
         progress = _civitai_progress_reporter(
             job_id,
@@ -537,6 +544,7 @@ class DownloadJobService:
             file_size,
         )
         try:
+            output_path = _resolve_safe_file_path(output_path)
             completed = download_civitai_file(
                 url,
                 output_path,
@@ -587,6 +595,12 @@ class DownloadJobService:
             return
         output_root.mkdir(parents=True, exist_ok=True)
         output_path = output_root / safe_filename
+        try:
+            _assert_output_path_contained(output_path)
+        except PathPolicyError as exc:
+            self._fail_job(job_id, str(exc))
+            self._forget_job(job_id)
+            return
         filename = safe_filename
         self._record_log_message(job_id, f"Starting download: {filename}")
         last_progress = -1.0
@@ -785,10 +799,10 @@ def _download_root() -> Path:
 
 def _resolve_safe_output_dir(output_dir: str) -> Path:
     """Return one output directory resolved inside the allowed download root."""
-    candidate = Path(
-        os.path.expandvars(str(output_dir or "").strip())
-    ).expanduser()
-    candidate = candidate.resolve()
+    raw = str(output_dir or "").strip()
+    if not raw:
+        raise PathPolicyError("Download output directory is required")
+    candidate = Path(os.path.expandvars(raw)).expanduser().resolve()
     root = _download_root()
     try:
         candidate.relative_to(root)
@@ -797,6 +811,66 @@ def _resolve_safe_output_dir(output_dir: str) -> Path:
             f"Download output directory must be inside {root}"
         ) from None
     return candidate
+
+
+def _resolve_safe_file_path(output_path: str) -> str:
+    """Return one resolved output file path constrained to approved roots.
+
+    The path is fully resolved (including any symlinks) and must stay inside
+    the configured download root or the shared art-models directory. The
+    final component must be a plain basename so a caller cannot redirect a
+    download onto an arbitrary file on disk (GitHub issue #2029).
+    """
+    raw = str(output_path or "").strip()
+    if not raw or "\x00" in raw:
+        raise PathPolicyError("Download file path is not allowed")
+    candidate = Path(os.path.expandvars(raw)).expanduser()
+    if not candidate.name or candidate.name in {".", ".."}:
+        raise PathPolicyError("Download file path is not allowed")
+    resolved = candidate.resolve()
+    if not _path_within_any_root(resolved):
+        raise PathPolicyError(
+            "Download file path must stay inside an approved directory"
+        )
+    return str(resolved)
+
+
+def _assert_output_path_contained(path: Path | str) -> Path:
+    """Return one realpath-resolved path verified inside an approved root.
+
+    Used as defense in depth before writing so a pre-existing symlink at the
+    final output path cannot redirect a download outside the approved roots.
+    """
+    resolved = Path(path).resolve()
+    if not _path_within_any_root(resolved):
+        raise PathPolicyError(
+            "Download path must stay inside an approved directory"
+        )
+    return resolved
+
+
+def _path_within_any_root(path: Path) -> bool:
+    """Return whether one resolved path lives inside an approved write root."""
+    return any(_path_within_root(path, root) for root in _write_roots())
+
+
+def _path_within_root(candidate: Path, root: Path) -> bool:
+    """Return whether one candidate path is inside one root path."""
+    try:
+        candidate.relative_to(root)
+        return True
+    except ValueError:
+        return False
+
+
+def _write_roots() -> list[Path]:
+    """Return the approved write roots for download outputs."""
+    roots = [_download_root()]
+    art_models_root = (
+        Path(os.path.expanduser(AIRUNNER_BASE_PATH)) / "art" / "models"
+    ).resolve()
+    roots.append(art_models_root)
+    return roots
 
 
 def _safe_filename(filename: str) -> str:

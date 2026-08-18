@@ -13,7 +13,6 @@ import logging
 import os
 from typing import Any
 
-import nltk
 from fastapi import APIRouter, Request
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
@@ -66,6 +65,21 @@ def _create_directories(base_path: str) -> list[str]:
 
 async def _install_nltk_data() -> list[str]:
     """Install required NLTK data packages."""
+    # Imported lazily: nltk >= 3.10 installs an import-security finder at
+    # import time that blocks CWD-resolved imports unless
+    # NLTK_DISABLE_IMPORT_SECURITY is set (see daemon.py). This routes module
+    # must stay importable without that env var so consumers and the test
+    # suite can import the API surface without NLTK side effects (issue
+    # #2055). nltk is a hard dependency of this package; mirror the graceful
+    # guard used by job_service.py.
+    try:
+        import nltk
+    except ImportError:  # pragma: no cover - nltk is a declared dependency
+        nltk = None
+    if nltk is None:
+        raise RuntimeError(
+            "nltk is not installed; it is required for the setup data install"
+        )
     packages = [
         "punkt",
         "punkt_tab",

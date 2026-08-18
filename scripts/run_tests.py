@@ -281,6 +281,24 @@ def run_command(cmd: list[str], description: str, env: dict = None) -> int:
     return result.returncode
 
 
+def _run_optional_smoke_suite(cmd: list[str], description: str) -> int:
+    """Run one optional runtime smoke suite; empty collection is a pass.
+
+    pytest exits 5 when no tests match the requested marker. The LLM/STT/art/
+    TTS runtime smoke suites are optional and their tests may not exist in
+    every checkout (issue #2055), so an empty collection is reported as a
+    skip-style notice instead of failing CI.
+    """
+    exit_code = run_command(cmd, description, env=_build_pytest_env())
+    if exit_code == 5:
+        print(
+            f"NOTE: {description}: no tests collected for the requested "
+            "marker; treating as pass (optional suite)."
+        )
+        return 0
+    return exit_code
+
+
 def run_unit_tests(component: str = None, verbose: bool = False) -> int:
     """
     Run unit tests.
@@ -455,11 +473,7 @@ def run_llm_runtime_smoke_tests(verbose: bool = False) -> int:
         cmd.append("--tb=short")
 
     cmd.extend(["--color=yes", "-ra"])
-    return run_command(
-        cmd,
-        "LLM runtime smoke tests",
-        env=_build_pytest_env(),
-    )
+    return _run_optional_smoke_suite(cmd, "LLM runtime smoke tests")
 
 
 def run_stt_runtime_smoke_tests(verbose: bool = False) -> int:
@@ -477,11 +491,7 @@ def run_stt_runtime_smoke_tests(verbose: bool = False) -> int:
         cmd.append("--tb=short")
 
     cmd.extend(["--color=yes", "-ra"])
-    return run_command(
-        cmd,
-        "STT runtime smoke tests",
-        env=_build_pytest_env(),
-    )
+    return _run_optional_smoke_suite(cmd, "STT runtime smoke tests")
 
 
 def run_art_runtime_smoke_tests(verbose: bool = False) -> int:
@@ -499,11 +509,7 @@ def run_art_runtime_smoke_tests(verbose: bool = False) -> int:
         cmd.append("--tb=short")
 
     cmd.extend(["--color=yes", "-ra"])
-    return run_command(
-        cmd,
-        "Art runtime smoke tests",
-        env=_build_pytest_env(),
-    )
+    return _run_optional_smoke_suite(cmd, "Art runtime smoke tests")
 
 
 def run_art_service_runtime_tests(verbose: bool = False) -> int:
@@ -543,11 +549,7 @@ def run_tts_runtime_smoke_tests(verbose: bool = False) -> int:
         cmd.append("--tb=short")
 
     cmd.extend(["--color=yes", "-ra"])
-    return run_command(
-        cmd,
-        "TTS runtime smoke tests",
-        env=_build_pytest_env(),
-    )
+    return _run_optional_smoke_suite(cmd, "TTS runtime smoke tests")
 
 
 def main():
