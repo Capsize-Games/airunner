@@ -30,9 +30,11 @@ FACEHUGGERSHIELD_REQUIREMENT = (
     "#sha256=3430bb3363def8d0097a903ca106a4e944ff4a36f5a6fd374f06970090723482"
 )
 
-# The repo root is one parent up from native/setup.py (mirrors the shared
-# package_metadata README which resolves from shared/airunner_common).
-README = (Path(__file__).resolve().parents[1] / "README.md").read_text(
+# Per-package README used as long_description (mirrors services/). The
+# repo-root README is not part of this package's sdist, so a wheel built from
+# the sdist would fail to resolve it (issue #2061); each published package
+# carries its own README.
+README = (Path(__file__).resolve().parent / "README.md").read_text(
     encoding="utf-8"
 )
 

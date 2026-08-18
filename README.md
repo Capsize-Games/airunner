@@ -236,10 +236,12 @@ installs.
    # (issue #2057). Older torch wheels (e.g. some 2.11.x) still declare
    # `setuptools<82`; if you use one, `pip install "setuptools<82"` first.
    pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu129
-   # airunner-common is not published, so install the local shared package
-   # first (services/native declare it as a runtime dependency). Their setup.py
-   # files no longer import airunner_common at build time (issue #2038), so
-   # --no-build-isolation is no longer required.
+   # Install the local shared package first so the editable installs below
+   # resolve airunner-common from this checkout (services/native declare it as
+   # a runtime dependency). Their setup.py files no longer import
+   # airunner_common at build time (issue #2038), so --no-build-isolation is
+   # no longer required. airunner-common is published to PyPI since issue
+   # #2061, but a repo checkout should stay self-contained.
    pip install -e ./shared
    pip install -e "./services[headless,development]"
    pip install -e ./native
