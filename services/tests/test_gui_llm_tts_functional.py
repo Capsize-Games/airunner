@@ -17,6 +17,13 @@ import pytest
 import yaml
 from PySide6.QtWidgets import QApplication
 
+# These daemon-backed functional suites exercise the GUI LLM/TTS stack, which
+# imports langchain-core, librosa and other optional heavy dependencies at
+# module import time. Skip cleanly in installs that lack the llm-native/tts
+# extras so the runtime-smoke/optional suites still collect (issue #2054).
+pytest.importorskip("langchain_core")
+pytest.importorskip("librosa")
+
 from llm_functional_support import BUNDLED_REFERENCE_SPEAKER
 from llm_functional_support import combined_llama_env_overrides
 from llm_functional_support import daemon_env

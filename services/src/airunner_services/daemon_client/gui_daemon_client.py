@@ -9,13 +9,13 @@ import signal
 import subprocess
 import time
 from pathlib import Path
+from typing import TYPE_CHECKING
 from typing import Any, Callable, Dict, Iterable, Optional
 from urllib.parse import urlencode
 
 import requests
 
 from airunner_services.runtimes.daemon_config import DaemonConfig
-from airunner_services.llm.llm_request import LLMRequest
 from airunner_services.daemon_connection_state import (
     DaemonConnectionState,
 )
@@ -27,7 +27,19 @@ from airunner_services.api.loopback_token import (
 from airunner_common.dev_build_token import current_dev_build_token
 from airunner_common.contract_enums import LLMActionType, SignalCode
 from airunner_common.settings import AIRUNNER_LOG_LEVEL
-from airunner_services.utils.application import get_logger
+
+if TYPE_CHECKING:
+    # The service-owned LLMRequest dataclass pulls in the database layer,
+    # which (transitively) imports torch at module import time. The GUI
+    # package deliberately keeps torch optional, so this import must stay
+    # lazy: daemon-client consumers only use duck-typed request objects
+    # (to_dict()/attributes), never the service class itself (issue #2037).
+    from airunner_services.llm.llm_request import LLMRequest
+
+# get_logger is imported from its leaf module (not the utils.application
+# package __init__) so that importing the daemon client does not transitively
+# import torch via the application utility package (issue #2037).
+from airunner_services.utils.application.get_logger import get_logger
 
 StateCallback = Callable[[DaemonConnectionState, str], None]
 _ART_JOB_POLL_INTERVAL_SECONDS = 0.10
@@ -678,7 +690,7 @@ class GuiDaemonClient(GuiBridgeMixin):
     def stream_llm_request(
         self,
         prompt: str,
-        llm_request: LLMRequest,
+        llm_request: "LLMRequest",
         action: LLMActionType,
         request_id: str,
         *,
@@ -1100,7 +1112,7 @@ class GuiDaemonClient(GuiBridgeMixin):
     @staticmethod
     def _llm_payload(
         prompt: str,
-        llm_request: LLMRequest,
+        llm_request: "LLMRequest",
         action: LLMActionType,
         *,
         search_hints: Optional[Dict[str, Any]],
@@ -1123,7 +1135,7 @@ class GuiDaemonClient(GuiBridgeMixin):
         return payload
 
     @staticmethod
-    def _llm_request_fields(llm_request: LLMRequest) -> Dict[str, Any]:
+    def _llm_request_fields(llm_request: "LLMRequest") -> Dict[str, Any]:
         """Return JSON-safe fields that the daemon legacy route understands."""
         payload = llm_request.to_dict()
         extra_fields = {

@@ -16,6 +16,12 @@ from unittest import mock
 
 import pytest
 
+# The tool manager pulls in the long-running agent stack, which imports
+# langgraph at module import time. Skip cleanly in installs that lack the
+# llm-native extras so the runtime-contract/optional suites still collect
+# (issue #2054).
+pytest.importorskip("langgraph")
+
 from airunner_services.api.routes.persistence_mutations import (
     _enforce_tool_code_values,
     _enforce_tool_safety,
