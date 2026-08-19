@@ -95,8 +95,15 @@ class LLMGenerateWorker(
 
 		self._last_request_time: Optional[float] = None
 		self._inactivity_timer: Optional[object] = None
-		self._inactivity_timeout = 300
-		self._auto_unload_enabled = False
+		# The LAN daemon deployment unloads the local GGUF model after 10
+		# minutes of inactivity. Both knobs stay OFF/5-minutes by default so
+		# existing deployments behave identically unless they opt in.
+		self._inactivity_timeout = int(
+			os.environ.get("AIRUNNER_LLM_INACTIVITY_TIMEOUT_SECONDS", "300")
+		)
+		self._auto_unload_enabled = (
+			os.environ.get("AIRUNNER_LLM_AUTO_UNLOAD", "0") == "1"
+		)
 
 	@property
 	def use_openrouter(self) -> bool:
@@ -271,11 +278,16 @@ class LLMGenerateWorker(
 		"""Start the inactivity monitoring timer when auto-unload is on."""
 		if not self._auto_unload_enabled:
 			return
+		if self._inactivity_timer is not None:
+			return
 
 		self._inactivity_timer = QTimer()
 		self._inactivity_timer.timeout.connect(self._check_inactivity)
 		self._inactivity_timer.start(60000)
-		self.logger.info("LLM auto-unload timer started (5 minute timeout)")
+		self.logger.info(
+			"LLM auto-unload timer started "
+			f"({int(self._inactivity_timeout / 60)} minute timeout)"
+		)
 
 	def _check_inactivity(self) -> None:
 		"""Unload the model after extended inactivity when enabled."""
@@ -305,6 +317,8 @@ class LLMGenerateWorker(
 		"""Unload the model and stop the worker during application shutdown."""
 		self.logger.debug("Quitting LLM")
 		self.running = False
+		if self._inactivity_timer is not None:
+			self._inactivity_timer.stop()
 		if self._model_manager:
 			self._model_manager.unload()
 		if self._llm_thread is not None:
@@ -413,9 +427,36 @@ class LLMGenerateWorker(
 			self.logger.error(f"Error in on_load_conversation: {error}")
 
 	def start_worker_thread(self) -> None:
-		"""Start the worker thread if LLM is enabled."""
+		"""Start the worker thread if LLM is enabled.
+
+		Kept as a legacy compatibility hook: the daemon bootstrap does not
+		call this method (``create_worker`` connects ``worker_thread.started``
+		directly to ``run()``), so the inactivity timer is also started from
+		``run()`` to guarantee it fires in real deployments.
+		"""
 		if self.application_settings.llm_enabled or AIRUNNER_LLM_ON:
 			self._load_llm_thread()
+		if self._auto_unload_enabled:
+			self._start_inactivity_timer()
+
+	def run(self) -> None:
+		"""Start the queue-processing loop and the inactivity timer.
+
+		``create_worker`` wires ``worker_thread.started.connect(self.run)``,
+		so this is the real daemon bootstrap entry point. Starting the idle
+		auto-unload timer here (instead of only in ``start_worker_thread``,
+		which no production code calls) is what makes the LAN-daemon 10-minute
+		auto-unload actually work. The timer is idempotent, so any extra call
+		from a compatibility path is harmless.
+		"""
+		self._start_inactivity_timer()
+		super().run()
+
+	def stop(self) -> None:
+		"""Stop the queue loop, the inactivity timer, and finish."""
+		if self._inactivity_timer is not None:
+			self._inactivity_timer.stop()
+		super().stop()
 
 	def handle_message(self, message: Dict) -> None:
 		"""Process queued messages for LLM generation."""
