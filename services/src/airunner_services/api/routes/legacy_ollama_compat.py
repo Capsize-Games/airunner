@@ -339,6 +339,7 @@ def _ollama_chat_request(
     system_prompt: str,
     tools: list[dict[str, Any]],
     think: Any = None,
+    tool_choice: Any = None,
 ) -> LLMRequest:
     """Build the LLMRequest used by Ollama chat endpoints."""
     llm_request = LLMRequest()
@@ -362,6 +363,7 @@ def _ollama_chat_request(
         # list = no internal tools) since request_handling_mixin's
         # client_tools branch takes over from here.
         llm_request.client_tools = tools
+        llm_request.client_tool_choice = tool_choice
     else:
         llm_request.tool_categories = []
     return llm_request
@@ -385,7 +387,11 @@ def ollama_chat(body: dict, req: Request):
     options = body.get("options", {})
     system_prompt, prompt = _chat_prompt_parts(messages)
     llm_request = _ollama_chat_request(
-        options, system_prompt, tools, body.get("think")
+        options,
+        system_prompt,
+        tools,
+        body.get("think"),
+        body.get("tool_choice"),
     )
     request_id = str(uuid.uuid4())
 

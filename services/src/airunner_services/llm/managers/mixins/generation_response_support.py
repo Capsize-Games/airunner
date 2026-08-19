@@ -216,8 +216,17 @@ def extract_final_tool_calls(
     graph has no "tools" node for those, so any tool_calls the model
     emits reach the final state unexecuted and must be surfaced to
     the API caller, who is expected to run them.
+
+    _stream_messages (generation_execution_support.py) deliberately
+    excludes any message carrying tool_calls from result["messages"]
+    — that filter assumes the internal agent's own "tools" node will
+    consume it — so this reads raw_messages instead, which keeps
+    everything the stream produced.
     """
-    final_messages = _final_ai_messages(result)
+    messages = result.get("raw_messages") or result.get("messages") or []
+    final_messages = [
+        message for message in messages if isinstance(message, AIMessage)
+    ]
     if not final_messages:
         return None
     raw_tool_calls = getattr(final_messages[-1], "tool_calls", None)

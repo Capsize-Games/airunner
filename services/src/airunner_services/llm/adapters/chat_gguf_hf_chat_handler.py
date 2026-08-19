@@ -76,6 +76,28 @@ def _format_messages_handler(tokenizer: Any) -> Any:
     return format_messages
 
 
+_AUTO_OPENED_THINK_SUFFIX = "<think>\n"
+
+
+def _strip_auto_opened_think_tag(prompt: str) -> str:
+    """Undo the template's auto-opened, unclosed ``<think>`` tag.
+
+    Qwen's own chat template auto-appends an *unclosed* "<think>\n"
+    right after the assistant turn-opener when thinking is enabled,
+    baking the open tag into the prompt instead of leaving the model
+    to generate it. Nothing downstream (node_streaming_thinking_helper)
+    watches the *prompt* for that tag — it only detects "<think>" as
+    it appears in the model's own generated output — so with the tag
+    pre-opened, thinking content is never recognized as such and
+    leaks into the visible answer verbatim. Stripping it here restores
+    the tag to being something the model generates itself, which the
+    streaming detector already handles correctly.
+    """
+    if prompt.endswith(_AUTO_OPENED_THINK_SUFFIX):
+        return prompt[: -len(_AUTO_OPENED_THINK_SUFFIX)]
+    return prompt
+
+
 def _chat_formatter_response(
     tokenizer: Any,
     messages: list[dict[str, Any]],
@@ -83,11 +105,19 @@ def _chat_formatter_response(
 ) -> Any:
     """Return one llama.cpp chat formatter response from an HF tokenizer."""
     tokenizer.use_default_system_prompt = False
+    # Without add_generation_prompt=True the rendered prompt is
+    # missing the trailing "<|im_start|>assistant\n" turn-opener that
+    # tells the model it's now its turn to respond. Plain chat mostly
+    # recovered from this by generating the missing opener itself,
+    # but combined with a long tool-list system prompt it reliably
+    # produced near-empty, degenerate completions.
+    kwargs.setdefault("add_generation_prompt", True)
     prompt = tokenizer.apply_chat_template(
         messages,
         tokenize=False,
         **kwargs,
     )
+    prompt = _strip_auto_opened_think_tag(prompt)
     return llama_chat_format.ChatFormatterResponse(
         prompt=prompt,
         stop=str(tokenizer.eos_token or ""),

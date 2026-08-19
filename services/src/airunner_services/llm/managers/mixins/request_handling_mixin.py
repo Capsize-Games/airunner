@@ -271,7 +271,10 @@ class RequestHandlingMixin:
             llm_request
         ) else None
         if client_tools and self._workflow_manager:
-            self._workflow_manager.bind_client_tools(client_tools)
+            self._workflow_manager.bind_client_tools(
+                client_tools,
+                tool_choice=getattr(llm_request, "client_tool_choice", None),
+            )
             llm_request.tool_categories = []
             llm_request.force_tool = None
             return True, [], system_prompt

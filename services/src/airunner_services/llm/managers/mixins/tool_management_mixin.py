@@ -3,7 +3,7 @@
 Handles tool binding, compact schema generation, and tool configuration.
 """
 
-from typing import List, Callable
+from typing import Any, List, Callable
 
 from airunner_common.settings import AIRUNNER_LOG_LEVEL
 from airunner_services.utils.application import get_logger
@@ -373,7 +373,11 @@ class ToolManagementMixin:
         self._initialize_model()  # Re-bind tools
         self._build_and_compile_workflow()
 
-    def bind_client_tools(self, tool_schemas: List[dict]) -> None:
+    def bind_client_tools(
+        self,
+        tool_schemas: List[dict],
+        tool_choice: Any = None,
+    ) -> None:
         """Bind one API caller's raw tool schemas for a single request.
 
         Unlike update_tools(), this keeps self._tools empty so the
@@ -384,11 +388,14 @@ class ToolManagementMixin:
         routed to server-side tool execution.
         """
         self.logger.debug(
-            "Binding %s client tool schema(s) for one request",
+            "Binding %s client tool schema(s) for one request "
+            "(tool_choice=%s)",
             len(tool_schemas),
+            tool_choice,
         )
         self._tools = []
         self._chat_model = self._original_chat_model.bind_tools(
-            tool_schemas
+            tool_schemas,
+            tool_choice=tool_choice,
         )
         self._build_and_compile_workflow()

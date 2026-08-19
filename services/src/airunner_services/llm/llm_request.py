@@ -74,6 +74,7 @@ class LLMRequest:
     # caller's client is expected to run them, exactly like a real
     # Ollama/OpenAI server.
     client_tools: Optional[List[Dict[str, Any]]] = None
+    client_tool_choice: Optional[Any] = None
     # True for the Ollama/OpenAI-compat API surfaces: serve the model
     # the way a real Ollama/OpenAI server does — the caller's messages
     # only, no default companion-chatbot persona, no augmentation
