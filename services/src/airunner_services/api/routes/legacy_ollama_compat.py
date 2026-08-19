@@ -321,17 +321,55 @@ def _collect_text(
 def _chat_prompt_parts(
     messages: list[dict[str, Any]],
 ) -> tuple[str, str]:
-    """Return the system prompt and latest user prompt from chat history."""
+    """Return the system prompt and a rendered multi-turn prompt.
+
+    `send_request` (see llm_request_dispatch_mixin.py) takes exactly one
+    `prompt` string per call and, in raw_mode, does NOT reload prior
+    turns from server-side conversation state — Ollama's wire protocol
+    is stateless-client-resends-everything, so there is no caller
+    session id to key that state on anyway. Earlier this function kept
+    only the system message and the LAST role:"user" message, silently
+    dropping every assistant tool_calls / tool-result turn the caller
+    sent — a multi-turn tool-calling loop (every real agentic harness)
+    would see the daemon "forget" it had already run a tool and repeat
+    the same action every turn. Fixed by rendering every non-system
+    message into one transcript, oldest-first, so the model can see
+    what it has already done.
+    """
     system_prompt = ""
-    last_user_content = ""
+    rendered_turns: List[str] = []
     for message in messages:
         role = message.get("role", "user")
-        content = message.get("content", "")
         if role == "system":
-            system_prompt = content
-        elif role == "user":
-            last_user_content = content
-    return system_prompt, last_user_content
+            system_prompt = message.get("content", "")
+            continue
+        rendered = _render_prompt_turn(message)
+        if rendered:
+            rendered_turns.append(rendered)
+    return system_prompt, "\n\n".join(rendered_turns)
+
+
+def _render_prompt_turn(message: dict[str, Any]) -> str:
+    """Render one non-system chat message into one transcript entry."""
+    role = message.get("role", "user")
+    content = (message.get("content") or "").strip()
+    if role == "assistant":
+        calls = message.get("tool_calls") or []
+        call_lines = [_render_tool_call(call) for call in calls]
+        parts = ([content] if content else []) + call_lines
+        return "\n".join(parts)
+    if role == "tool":
+        name = message.get("name") or "tool"
+        return f'[Result of "{name}"]: {content}'
+    return content
+
+
+def _render_tool_call(call: dict[str, Any]) -> str:
+    """Render one prior assistant tool call for the prompt transcript."""
+    function = call.get("function", {}) if isinstance(call, dict) else {}
+    name = function.get("name", "?")
+    arguments = function.get("arguments", {})
+    return f'[Called tool "{name}" with arguments {arguments}]'
 
 
 def _ollama_chat_request(

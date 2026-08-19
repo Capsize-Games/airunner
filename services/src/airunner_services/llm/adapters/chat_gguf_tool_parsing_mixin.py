@@ -120,7 +120,11 @@ class ChatGGUFToolParsingMixin:
             tool_call = self._parse_xml_tool_call_match(match)
             if tool_call is not None:
                 tool_calls.append(tool_call)
+        if not tool_calls:
+            tool_calls = self._parse_function_tag_tool_calls(content)
         cleaned = self._strip_xml_tool_calls(content)
+        if tool_calls:
+            cleaned = self._strip_function_tag_tool_calls(cleaned)
         return tool_calls, cleaned
 
     def _parse_xml_tool_call_match(
@@ -128,6 +132,13 @@ class ChatGGUFToolParsingMixin:
         match: str,
     ) -> Optional[Dict[str, Any]]:
         """Parse one XML-tagged tool-call payload."""
+        if match.strip().startswith("<function"):
+            # Qwen3-Coder's native tool-call body is NOT JSON — it's the
+            # <function=name><parameter=x>v</parameter></function> dialect
+            # handled separately by _parse_function_tag_tool_calls. Bail
+            # quietly instead of logging a spurious JSON-parse warning for
+            # every well-formed call this model makes.
+            return None
         try:
             call_data = json.loads(match.strip())
         except json.JSONDecodeError as error:
@@ -147,6 +158,63 @@ class ChatGGUFToolParsingMixin:
             "",
             content,
             flags=re.DOTALL,
+        ).strip()
+
+    def _parse_function_tag_tool_calls(
+        self,
+        content: str,
+    ) -> List[Dict[str, Any]]:
+        """Parse Qwen3-Coder's <function=name><parameter=x> dialect.
+
+        Verified live 2026-08-19 against Qwen3-Coder-30B-A3B-Instruct
+        (unsloth GGUF): the model's own embedded chat template instructs
+        it to reply with a `<function=name>` block nested inside
+        `<tool_call>` tags, NOT the `{"name": ..., "arguments": {...}}`
+        JSON body the sibling Qwen3.5 template uses. Deliberately matched
+        WITHOUT requiring the `<tool_call>` wrapper: observed live output
+        consistently drops the opening `<tool_call>` tag (closing tag
+        only) while the `<function>...</function>` body itself is
+        reliable, so anchoring on the wrapper would silently drop every
+        real call.
+        """
+        tool_calls: List[Dict[str, Any]] = []
+        pattern = r'<function=([^>]+)>\s*(.*?)\s*</function>'
+        for name, body in re.findall(pattern, content, re.DOTALL):
+            tool_calls.append({
+                "id": str(uuid.uuid4()),
+                "name": self._normalize_tool_value("name", name),
+                "args": self._parse_function_tag_parameters(body),
+                "type": "tool_call",
+            })
+        return tool_calls
+
+    def _parse_function_tag_parameters(self, body: str) -> Dict[str, Any]:
+        """Parse the <parameter=x>value</parameter> pairs inside a call.
+
+        Only the parameter NAME is space-normalized (it's always an
+        identifier, so quant-noise whitespace inside it is unambiguously
+        wrong). The value is left as-is — it can legitimately contain
+        whitespace, so silently "fixing" it would risk corrupting real
+        content instead of just the tool-call envelope.
+        """
+        params: Dict[str, Any] = {}
+        pattern = r'<parameter=([^>]+)>\s*(.*?)\s*</parameter>'
+        for name, value in re.findall(pattern, body, re.DOTALL):
+            params[self._normalize_tool_value("name", name)] = value
+        return params
+
+    def _strip_function_tag_tool_calls(self, content: str) -> str:
+        """Remove function-tag tool calls and any stray tool_call tags."""
+        without_calls = re.sub(
+            r'<function=[^>]+>\s*.*?\s*</function>',
+            "",
+            content,
+            flags=re.DOTALL,
+        )
+        return re.sub(
+            r'</?tool_call>',
+            "",
+            without_calls,
         ).strip()
 
     def _parse_react_tool_calls(
