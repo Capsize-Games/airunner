@@ -35,6 +35,7 @@ class ToolFilteringMixin:
         allow_thinking: bool = True,
         request_id: Optional[str] = None,
         auto_select: bool = False,
+        raw_mode: bool = False,
     ) -> ToolSelectionPlan:
         """Return the canonical tool-selection plan for one request."""
         selected_categories = None
@@ -70,6 +71,7 @@ class ToolFilteringMixin:
             return self._build_empty_tool_plan(
                 prompt,
                 resolved_force_tool,
+                raw_mode=raw_mode,
             )
 
         effective_categories = self._normalize_tool_categories(
@@ -226,9 +228,10 @@ class ToolFilteringMixin:
         self,
         prompt: str,
         force_tool: Optional[str],
+        raw_mode: bool = False,
     ) -> ToolSelectionPlan:
         """Return the plan for an explicit empty category selection."""
-        disable_always = (
+        disable_always = raw_mode or (
             os.environ.get("AIRUNNER_DISABLE_ALWAYS_TOOLS", "0") == "1"
         )
         if disable_always or self._is_simple_greeting_prompt(

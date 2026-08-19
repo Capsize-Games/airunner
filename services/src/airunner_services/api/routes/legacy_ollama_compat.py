@@ -309,6 +309,12 @@ def _collect_text(
         llm_request=llm_request,
         request_id=request_id,
         callback=callback,
+        # Ollama's API has no concept of TTS. Leaving this at its
+        # do_tts_reply=True default silently selects the
+        # "combined_tts" GGUF runtime profile for a plain text
+        # completion request, which uses different generation/stop
+        # handling than the "default" profile.
+        do_tts_reply=False,
     )
 
 
@@ -332,14 +338,22 @@ def _ollama_chat_request(
     options: dict[str, Any],
     system_prompt: str,
     tools: list[dict[str, Any]],
+    think: Any = None,
 ) -> LLMRequest:
     """Build the LLMRequest used by Ollama chat endpoints."""
     llm_request = LLMRequest()
     llm_request.temperature = options.get("temperature", 0.7)
     llm_request.max_new_tokens = options.get("num_predict", 2048)
+    # Serve the model the way a real Ollama server does: only the
+    # caller's own messages, no default companion-chatbot persona, no
+    # mood/datetime/style/memory injection, and no tool categories
+    # forced in behind the caller's back.
+    llm_request.raw_mode = True
     if system_prompt:
         llm_request.system_prompt = system_prompt
     llm_request.use_memory = False
+    if isinstance(think, bool):
+        llm_request.enable_thinking = think
     if tools:
         llm_request.tools = tools
         llm_request.tool_categories = None
@@ -365,7 +379,9 @@ def ollama_chat(body: dict, req: Request):
     stream = body.get("stream", True)
     options = body.get("options", {})
     system_prompt, prompt = _chat_prompt_parts(messages)
-    llm_request = _ollama_chat_request(options, system_prompt, tools)
+    llm_request = _ollama_chat_request(
+        options, system_prompt, tools, body.get("think")
+    )
     request_id = str(uuid.uuid4())
 
     if not stream:
@@ -386,9 +402,22 @@ def _ollama_chat_stream(app, prompt: str, model: str, llm_request: LLMRequest, r
         response = data.get("response")
         if not response:
             return
+        # "thinking"-type events carry the model's chain-of-thought, not
+        # the visible reply — including them (and, worse, treating a
+        # thinking-phase is_end_of_message as the whole response being
+        # done) truncates the reply right at the thinking/answer
+        # boundary, before the actual answer has even been generated.
+        if getattr(response, "message_type", None) == "thinking":
+            return
+        content = response.message
+        is_final = response.is_end_of_message
+        if is_final:
+            final_visible = getattr(response, "final_visible_message", None)
+            if final_visible:
+                content = final_visible
         message: dict[str, Any] = {
             "role": "assistant",
-            "content": response.message,
+            "content": content,
         }
         if getattr(response, "tool_calls", None):
             message["tool_calls"] = response.tool_calls
@@ -397,13 +426,11 @@ def _ollama_chat_stream(app, prompt: str, model: str, llm_request: LLMRequest, r
             "model": model,
             "created_at": _created_at(),
             "message": message,
-            "done": response.is_end_of_message,
+            "done": is_final,
         }
-        if response.is_end_of_message:
+        if is_final:
             payload.update(
-                _ollama_chat_timings(
-                    start_time, prompt, response.message, False
-                )
+                _ollama_chat_timings(start_time, prompt, content, False)
             )
             payload["done_reason"] = "stop"
             done.set()
@@ -438,10 +465,22 @@ def _ollama_chat_non_stream(app, prompt: str, model: str, llm_request: LLMReques
         response = data.get("response")
         if not response:
             return
-        complete_message.append(response.message)
+        # "thinking"-type events carry the model's chain-of-thought, not
+        # the visible reply — including them (and, worse, treating a
+        # thinking-phase is_end_of_message as the whole response being
+        # done) truncates the reply right at the thinking/answer
+        # boundary, before the actual answer has even been generated.
+        if getattr(response, "message_type", None) == "thinking":
+            return
+        if response.message:
+            complete_message.append(response.message)
         if getattr(response, "tool_calls", None):
             tool_calls_result.extend(response.tool_calls)
         if response.is_end_of_message:
+            final_visible = getattr(response, "final_visible_message", None)
+            if final_visible:
+                complete_message.clear()
+                complete_message.append(final_visible)
             done.set()
 
     try:

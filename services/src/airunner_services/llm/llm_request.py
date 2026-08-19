@@ -66,6 +66,13 @@ class LLMRequest:
     dtype: Optional[str] = None
     force_tool: Optional[str] = None
     images: Optional[List[Any]] = field(default_factory=list)
+    # True for the Ollama/OpenAI-compat API surfaces: serve the model
+    # the way a real Ollama/OpenAI server does — the caller's messages
+    # only, no default companion-chatbot persona, no augmentation
+    # (mood/datetime/style/memory), and no tool categories forced in
+    # regardless of what was requested. False (default) preserves the
+    # desktop app's own companion-chatbot behavior.
+    raw_mode: bool = False
 
     def to_generation_kwargs(self) -> Dict[str, Any]:
         """Convert one request into model-generation kwargs."""

@@ -107,7 +107,7 @@ def get_gguf_runtime_params(
 
     return {
         "max_tokens": getattr(chatbot, "max_new_tokens", 4096),
-        "temperature": getattr(chatbot, "temperature", 700) / 10000.0,
+        "temperature": getattr(chatbot, "temperature", 700) / 1000.0,
         "top_p": getattr(chatbot, "top_p", 900) / 1000.0,
         "top_k": getattr(chatbot, "top_k", 20),
         "repeat_penalty": getattr(
@@ -128,7 +128,7 @@ def get_provider_runtime_params(chatbot: Any) -> dict[str, Any]:
         }
 
     return {
-        "temperature": getattr(chatbot, "temperature", 700) / 10000.0,
+        "temperature": getattr(chatbot, "temperature", 700) / 1000.0,
         "max_tokens": getattr(chatbot, "max_new_tokens", 500),
     }
 
