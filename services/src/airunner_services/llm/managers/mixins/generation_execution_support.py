@@ -61,6 +61,7 @@ def run_generation_stream(
         owner._workflow_manager.set_thinking_callback(thinking_callback)
     if hasattr(owner._workflow_manager, "set_interrupted"):
         owner._workflow_manager.set_interrupted(False)
+    sampling_patch = _apply_raw_mode_sampling(owner, llm_request)
     try:
         return _stream_generation(
             owner,
@@ -70,12 +71,65 @@ def run_generation_stream(
             sequence_counter,
         )
     finally:
+        _restore_sampling(owner, sampling_patch)
         owner._workflow_manager.set_token_callback(None)
         if hasattr(owner._workflow_manager, "set_thinking_callback"):
             owner._workflow_manager.set_thinking_callback(None)
         owner._interrupted = False
         if hasattr(owner._workflow_manager, "set_interrupted"):
             owner._workflow_manager.set_interrupted(False)
+
+
+# Ollama/OpenAI-compat sampling defaults (llama.cpp community defaults),
+# used only when the caller's own request didn't specify a value. The
+# chat_model's own attributes otherwise carry whatever the *last loaded
+# chatbot's* persisted DB settings were — companion-chatbot-specific
+# tuning that has nothing to do with a bare API completion request, and
+# in practice can be untuned/degenerate (e.g. repeat_penalty=1.0, i.e.
+# off, causing verbatim repetition).
+_RAW_MODE_SAMPLING_DEFAULTS = {
+    "temperature": 0.7,
+    "top_p": 0.95,
+    "top_k": 40,
+    "min_p": 0.05,
+    "repeat_penalty": 1.1,
+}
+
+
+def _apply_raw_mode_sampling(
+    owner,
+    llm_request: Optional[Any],
+) -> Optional[Dict[str, Any]]:
+    """Temporarily override chat_model sampling for one raw-mode request."""
+    if not getattr(llm_request, "raw_mode", False):
+        return None
+    chat_model = getattr(owner, "_chat_model", None)
+    if chat_model is None:
+        return None
+    request_values = {
+        "temperature": getattr(llm_request, "temperature", None),
+        "top_p": getattr(llm_request, "top_p", None),
+        "top_k": getattr(llm_request, "top_k", None),
+        "repeat_penalty": getattr(llm_request, "repetition_penalty", None),
+    }
+    previous: Dict[str, Any] = {}
+    for attr, default in _RAW_MODE_SAMPLING_DEFAULTS.items():
+        if not hasattr(chat_model, attr):
+            continue
+        previous[attr] = getattr(chat_model, attr)
+        setattr(chat_model, attr, request_values.get(attr) or default)
+    return previous
+
+
+def _restore_sampling(owner, previous: Optional[Dict[str, Any]]) -> None:
+    """Restore chat_model sampling attributes after a raw-mode request."""
+    if not previous:
+        return
+    chat_model = getattr(owner, "_chat_model", None)
+    if chat_model is None:
+        return
+    for attr, value in previous.items():
+        setattr(chat_model, attr, value)
 
 
 def _stream_generation(
