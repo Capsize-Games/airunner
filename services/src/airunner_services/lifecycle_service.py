@@ -59,7 +59,6 @@ class CoreLifecycleService:
         self.worker_manager = self._worker_manager_factory()
         _ = self.llm_generate_worker
         self._register_rag_handler()
-        self._register_llm_load_handler()
         self.model_load_balancer = self._balancer_class(
             self.worker_manager,
             logger=getattr(self.signal_source, "logger", None),
@@ -203,29 +202,6 @@ class CoreLifecycleService:
         )
         if callable(register) and callable(handler):
             register(SignalCode.RAG_LOAD_DOCUMENTS, handler)
-
-    def _register_llm_load_handler(self) -> None:
-        """Register the daemon-side LLM load signal handler."""
-        register = getattr(self.signal_source, "register", None)
-        if not callable(register):
-            return
-        register(SignalCode.LLM_LOAD_SIGNAL, self._on_llm_load_signal)
-
-    def _on_llm_load_signal(self, data: Any) -> None:
-        """Dispatch one LLM load request through the lifecycle worker."""
-        self.logger.info("LLM_LOAD_SIGNAL received - dispatching model load")
-        worker = self.llm_generate_worker
-        if worker is None:
-            self.logger.error(
-                "Cannot load LLM: lifecycle worker is not initialized"
-            )
-            return
-        load = getattr(worker, "load", None)
-        if not callable(load):
-            self.logger.error("Cannot load LLM: worker has no load() method")
-            return
-        worker.load()
-        self.logger.info("LLM model load dispatched to worker")
 
     def _attach_state(self) -> None:
         """Expose lifecycle objects on the signal source for compatibility."""
