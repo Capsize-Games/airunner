@@ -397,6 +397,7 @@ def _ollama_chat_stream(app, prompt: str, model: str, llm_request: LLMRequest, r
     done = threading.Event()
     start_time = time.time()
     queue: List[bytes] = []
+    accumulated_response: List[str] = []
 
     def callback(data: dict[str, Any]) -> None:
         response = data.get("response")
@@ -409,12 +410,24 @@ def _ollama_chat_stream(app, prompt: str, model: str, llm_request: LLMRequest, r
         # boundary, before the actual answer has even been generated.
         if getattr(response, "message_type", None) == "thinking":
             return
-        content = response.message
         is_final = response.is_end_of_message
         if is_final:
-            final_visible = getattr(response, "final_visible_message", None)
-            if final_visible:
-                content = final_visible
+            # Ollama's streaming protocol treats every chunk's
+            # "content" as an incremental delta — the terminal
+            # done:true line carries an EMPTY content field, since
+            # everything was already delivered by prior chunks.
+            # Consumers that concatenate deltas (e.g. LangChain's
+            # ChatOllama) duplicate the whole answer if this line
+            # repeats it. final_visible_message is only used as a
+            # fallback when nothing was actually streamed.
+            content = (
+                "" if accumulated_response
+                else (getattr(response, "final_visible_message", None) or "")
+            )
+        else:
+            content = response.message
+            if content:
+                accumulated_response.append(content)
         message: dict[str, Any] = {
             "role": "assistant",
             "content": content,
@@ -429,8 +442,9 @@ def _ollama_chat_stream(app, prompt: str, model: str, llm_request: LLMRequest, r
             "done": is_final,
         }
         if is_final:
+            full_text = "".join(accumulated_response)
             payload.update(
-                _ollama_chat_timings(start_time, prompt, content, False)
+                _ollama_chat_timings(start_time, prompt, full_text, False)
             )
             payload["done_reason"] = "stop"
             done.set()

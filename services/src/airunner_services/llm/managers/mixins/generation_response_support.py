@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 import traceback
 from typing import Any, Dict, List, Optional
 
@@ -215,14 +216,13 @@ def _final_ai_messages(result: Dict[str, Any]) -> list[AIMessage]:
     ]
 
 
+_ASSISTANT_LABEL_RE = re.compile(r"^assistant[:\s]+", re.IGNORECASE)
+
+
 def _normalize_final_content(content: str) -> str:
     """Strip one leading assistant label from a final model reply."""
     normalized = (content or "").lstrip()
-    lowered = normalized.lower()
-    for prefix in ("assistant\n", "assistant:"):
-        if lowered.startswith(prefix):
-            return normalized[len(prefix):].lstrip()
-    return normalized
+    return _ASSISTANT_LABEL_RE.sub("", normalized, count=1)
 
 def extract_usage_tokens(
     result: Dict[str, Any],
