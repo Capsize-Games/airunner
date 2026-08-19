@@ -332,6 +332,7 @@ def _ollama_chat_request(
     options: dict[str, Any],
     system_prompt: str,
     tools: list[dict[str, Any]],
+    think: Any = None,
 ) -> LLMRequest:
     """Build the LLMRequest used by Ollama chat endpoints."""
     llm_request = LLMRequest()
@@ -340,6 +341,8 @@ def _ollama_chat_request(
     if system_prompt:
         llm_request.system_prompt = system_prompt
     llm_request.use_memory = False
+    if isinstance(think, bool):
+        llm_request.enable_thinking = think
     if tools:
         llm_request.tools = tools
         llm_request.tool_categories = None
@@ -365,7 +368,9 @@ def ollama_chat(body: dict, req: Request):
     stream = body.get("stream", True)
     options = body.get("options", {})
     system_prompt, prompt = _chat_prompt_parts(messages)
-    llm_request = _ollama_chat_request(options, system_prompt, tools)
+    llm_request = _ollama_chat_request(
+        options, system_prompt, tools, body.get("think")
+    )
     request_id = str(uuid.uuid4())
 
     if not stream:
