@@ -355,8 +355,13 @@ def _ollama_chat_request(
     if isinstance(think, bool):
         llm_request.enable_thinking = think
     if tools:
-        llm_request.tools = tools
-        llm_request.tool_categories = None
+        # Bind the caller's own tool schemas natively for one turn;
+        # any resulting tool_calls are returned unexecuted for the
+        # caller to run themselves (see WorkflowManager.bind_client_tools).
+        # tool_categories is left at its dataclass default (empty
+        # list = no internal tools) since request_handling_mixin's
+        # client_tools branch takes over from here.
+        llm_request.client_tools = tools
     else:
         llm_request.tool_categories = []
     return llm_request

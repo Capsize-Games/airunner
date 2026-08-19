@@ -66,6 +66,14 @@ class LLMRequest:
     dtype: Optional[str] = None
     force_tool: Optional[str] = None
     images: Optional[List[Any]] = field(default_factory=list)
+    # Raw OpenAI/Ollama-style tool schemas supplied by an external API
+    # caller (Ollama/OpenAI-compat "tools" request field). These are
+    # bound directly to the chat model for one native-function-calling
+    # turn; unlike the desktop app's own internal tool_categories, the
+    # resulting tool_calls are returned to the caller unexecuted — the
+    # caller's client is expected to run them, exactly like a real
+    # Ollama/OpenAI server.
+    client_tools: Optional[List[Dict[str, Any]]] = None
     # True for the Ollama/OpenAI-compat API surfaces: serve the model
     # the way a real Ollama/OpenAI server does — the caller's messages
     # only, no default companion-chatbot persona, no augmentation

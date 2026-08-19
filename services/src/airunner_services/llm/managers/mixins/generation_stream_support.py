@@ -3,6 +3,7 @@
 from airunner_services.llm.managers.mixins.generation_response_support import (
     executed_tools_from_workflow,
     extract_final_response,
+    extract_final_tool_calls,
     extract_usage_tokens,
     fallback_response_for_empty_result,
     handle_generation_error,

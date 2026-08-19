@@ -207,6 +207,33 @@ def extract_final_response(owner, result: Dict[str, Any]) -> str:
     owner.logger.info("Final AIMessage was empty")
     return ""
 
+def extract_final_tool_calls(
+    result: Dict[str, Any],
+) -> Optional[list[dict[str, Any]]]:
+    """Return the final AIMessage's native tool_calls in wire format.
+
+    Only used for client_tools requests (see bind_client_tools): the
+    graph has no "tools" node for those, so any tool_calls the model
+    emits reach the final state unexecuted and must be surfaced to
+    the API caller, who is expected to run them.
+    """
+    final_messages = _final_ai_messages(result)
+    if not final_messages:
+        return None
+    raw_tool_calls = getattr(final_messages[-1], "tool_calls", None)
+    if not raw_tool_calls:
+        return None
+    return [
+        {
+            "function": {
+                "name": call.get("name", ""),
+                "arguments": call.get("args", {}),
+            },
+        }
+        for call in raw_tool_calls
+    ]
+
+
 def _final_ai_messages(result: Dict[str, Any]) -> list[AIMessage]:
     """Return the final AI messages from one generation result."""
     if not result or "messages" not in result:

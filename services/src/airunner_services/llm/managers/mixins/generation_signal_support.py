@@ -138,6 +138,7 @@ def send_end_of_message(
     completion_tokens: Optional[int],
     total_tokens: Optional[int],
     final_visible_message: Optional[str] = None,
+    tool_calls: Optional[list] = None,
 ) -> None:
     """Emit the end-of-message chunk for one assistant response."""
     sequence_counter[0] += 1
@@ -153,6 +154,7 @@ def send_end_of_message(
             sequence_number=sequence_counter[0],
             request_id=getattr(owner, "_current_request_id", None),
             tools=executed_tools,
+            tool_calls=tool_calls,
             prompt_tokens=prompt_tokens,
             completion_tokens=completion_tokens,
             total_tokens=total_tokens,

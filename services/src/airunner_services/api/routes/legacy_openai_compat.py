@@ -195,7 +195,13 @@ def _build_openai_request(
     if enhanced_prompt:
         llm_request.system_prompt = enhanced_prompt
     llm_request.use_memory = False
-    llm_request.tool_categories = None if tools else []
+    # Caller-supplied tools are handled entirely via the prompt-
+    # injection + _parse_tool_calls_from_response mechanism above, not
+    # the desktop app's internal tool_categories system. Binding the
+    # internal 26-tool set here (tool_categories=None) confused the
+    # model into degenerate output when it was never told about those
+    # tools' existence via the (external-tools-only) prompt.
+    llm_request.tool_categories = []
     return llm_request
 
 

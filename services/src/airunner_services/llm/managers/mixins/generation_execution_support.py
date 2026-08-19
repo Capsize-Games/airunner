@@ -22,6 +22,7 @@ from airunner_services.llm.managers.mixins.generation_stream_support import (
     emit_visible_response,
     executed_tools_from_workflow,
     extract_final_response,
+    extract_final_tool_calls,
     extract_usage_tokens,
     fallback_response_for_empty_result,
     handle_generation_error,
@@ -278,6 +279,11 @@ def do_generate(
         llm_request,
         complete_response[0],
     )
+    client_tool_calls = (
+        extract_final_tool_calls(result)
+        if getattr(llm_request, "client_tools", None)
+        else None
+    )
     send_end_of_message(
         owner,
         llm_request,
@@ -287,6 +293,7 @@ def do_generate(
         completion_tokens,
         total_tokens,
         final_visible_message,
+        client_tool_calls,
     )
     if not getattr(llm_request, "raw_mode", False):
         # Ollama/OpenAI-compat callers get exactly what they asked for

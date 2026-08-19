@@ -372,3 +372,23 @@ class ToolManagementMixin:
         )
         self._initialize_model()  # Re-bind tools
         self._build_and_compile_workflow()
+
+    def bind_client_tools(self, tool_schemas: List[dict]) -> None:
+        """Bind one API caller's raw tool schemas for a single request.
+
+        Unlike update_tools(), this keeps self._tools empty so the
+        compiled graph has no "tools" node: caller-supplied schemas
+        (Ollama/OpenAI-compat "tools") describe tools the caller will
+        execute themselves, so the model must respond once and stop —
+        any tool_calls it emits are returned unexecuted rather than
+        routed to server-side tool execution.
+        """
+        self.logger.debug(
+            "Binding %s client tool schema(s) for one request",
+            len(tool_schemas),
+        )
+        self._tools = []
+        self._chat_model = self._original_chat_model.bind_tools(
+            tool_schemas
+        )
+        self._build_and_compile_workflow()

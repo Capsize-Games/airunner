@@ -267,6 +267,15 @@ class RequestHandlingMixin:
         prompt = data["request_data"]["prompt"]
         action = data["request_data"].get("action")
 
+        client_tools = getattr(llm_request, "client_tools", None) if (
+            llm_request
+        ) else None
+        if client_tools and self._workflow_manager:
+            self._workflow_manager.bind_client_tools(client_tools)
+            llm_request.tool_categories = []
+            llm_request.force_tool = None
+            return True, [], system_prompt
+
         if llm_request:
             selected_categories = getattr(llm_request, "tool_categories", None)
             allow_thinking = getattr(llm_request, "enable_thinking", None)

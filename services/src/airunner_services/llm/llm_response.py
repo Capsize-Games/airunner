@@ -23,6 +23,7 @@ class LLMResponse:
     sequence_number: int = 0
     request_id: Optional[str] = None
     tools: Optional[list] = None
+    tool_calls: Optional[list] = None
     is_system_message: bool = False
     prompt_tokens: Optional[int] = None
     completion_tokens: Optional[int] = None
