@@ -77,14 +77,6 @@ def _native_stream_state(
     # sent, producing degenerate output (immediate empty stop, or the
     # model continuing/duplicating a previous turn's text) even though
     # the newly rendered prompt itself is correct.
-    # This adapter's underlying Llama() context is long-lived and shared
-    # across many unrelated conversations/requests. Without an explicit
-    # reset, llama.cpp's internal KV-cache/prefix-matching state from a
-    # previous, unrelated prompt can desync from the new prompt being
-    # sent.
-    llama = getattr(adapter, "_llama", None)
-    if llama is not None and hasattr(llama, "reset"):
-        llama.reset()
     converted_messages = adapter._convert_messages(messages)
     adapter.logger.info("[ChatGGUF._stream] Converted %s messages", len(converted_messages))
     max_tokens = _stream_max_tokens(adapter, kwargs)

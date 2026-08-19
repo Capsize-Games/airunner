@@ -296,9 +296,17 @@ def _openai_chat_stream(
         response = data.get("response")
         if response is None:
             return
+        # "thinking"-type events carry the model's chain-of-thought, not
+        # the visible reply — including them (and, worse, treating a
+        # thinking-phase is_end_of_message as the whole response being
+        # done) truncates the reply right at the thinking/answer
+        # boundary, before the actual answer has even been generated.
+        if getattr(response, "message_type", None) == "thinking":
+            return
         accumulated_response.append(response.message)
         if response.is_end_of_message:
-            full_text = "".join(accumulated_response)
+            final_visible = getattr(response, "final_visible_message", None)
+            full_text = final_visible or "".join(accumulated_response)
             content, tool_calls = _parse_tool_calls_from_response(full_text, tools)
             if tool_calls:
                 queue.append(_sse_line(_tool_call_chunk(model, request_id, tool_calls)))
@@ -352,8 +360,20 @@ def _openai_chat_non_stream(
         response = data.get("response")
         if response is None:
             return
-        complete_message.append(response.message)
+        # "thinking"-type events carry the model's chain-of-thought, not
+        # the visible reply — including them (and, worse, treating a
+        # thinking-phase is_end_of_message as the whole response being
+        # done) truncates the reply right at the thinking/answer
+        # boundary, before the actual answer has even been generated.
+        if getattr(response, "message_type", None) == "thinking":
+            return
+        if response.message:
+            complete_message.append(response.message)
         if response.is_end_of_message:
+            final_visible = getattr(response, "final_visible_message", None)
+            if final_visible:
+                complete_message.clear()
+                complete_message.append(final_visible)
             done.set()
 
     try:
