@@ -62,6 +62,7 @@ jobs:
             services/tests/test_secret_storage.py \
             services/tests/test_native_package_isolation.py \
             services/tests/test_zimage_model_dir_config.py \
+            services/tests/test_third_party_notices.py \
             -v \
             --tb=short \
             --junitxml=runtime-contracts.xml

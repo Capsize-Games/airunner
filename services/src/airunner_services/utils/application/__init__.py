@@ -77,7 +77,11 @@ def __getattr__(name: str):
         # package keeps torch optional, so importing the application utility
         # package must not force a torch install. Resolve it lazily only when
         # torch-dependent code actually calls it (issue #2037).
-        from airunner_services.utils.application.get_torch_device import (
+        #
+        # The leaf module is named torch_device.py (not get_torch_device.py):
+        # a leaf whose basename equals the exported function would shadow the
+        # function on the parent package as soon as the leaf is imported.
+        from airunner_services.utils.application.torch_device import (
             get_torch_device,
         )
 

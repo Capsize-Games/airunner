@@ -59,6 +59,7 @@ class CoreLifecycleService:
         self.worker_manager = self._worker_manager_factory()
         _ = self.llm_generate_worker
         self._register_rag_handler()
+        self._register_llm_load_handler()
         self.model_load_balancer = self._balancer_class(
             self.worker_manager,
             logger=getattr(self.signal_source, "logger", None),
@@ -202,6 +203,34 @@ class CoreLifecycleService:
         )
         if callable(register) and callable(handler):
             register(SignalCode.RAG_LOAD_DOCUMENTS, handler)
+
+    def _register_llm_load_handler(self) -> None:
+        """Register the daemon-side LLM load signal handler."""
+        register = getattr(self.signal_source, "register", None)
+        if not callable(register):
+            return
+        register(SignalCode.LLM_LOAD_SIGNAL, self._on_llm_load_signal)
+
+    def _on_llm_load_signal(self, data: Any) -> None:
+        """Dispatch one LLM load request through the lifecycle worker."""
+        self.logger.info("LLM_LOAD_SIGNAL received - dispatching model load")
+        worker = self.llm_generate_worker
+        if worker is None:
+            self.logger.error(
+                "Cannot load LLM: lifecycle worker is not initialized"
+            )
+            return
+        # Access the lazy ``model_manager`` property first: the private
+        # ``_model_manager`` attribute is None on a cold start, and the
+        # worker's ``load()`` no-ops when it is unset. The property creates
+        # the ``LLMModelManager`` on first access and then ``load()`` drives
+        # the real model load, flipping status to LOADED.
+        model_manager = getattr(worker, "model_manager", None)
+        if model_manager is None:
+            self.logger.error("Cannot load LLM: no model manager available")
+            return
+        model_manager.load()
+        self.logger.info("LLM model load dispatched to worker")
 
     def _attach_state(self) -> None:
         """Expose lifecycle objects on the signal source for compatibility."""
