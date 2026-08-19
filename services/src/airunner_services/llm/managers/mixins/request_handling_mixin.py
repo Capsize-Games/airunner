@@ -280,6 +280,7 @@ class RequestHandlingMixin:
                 allow_thinking=bool(allow_thinking),
                 request_id=getattr(self, "_current_request_id", None),
                 auto_select=selected_categories is None,
+                raw_mode=getattr(llm_request, "raw_mode", False),
             )
             llm_request.tool_categories = plan.selected_categories
             llm_request.force_tool = plan.force_tool

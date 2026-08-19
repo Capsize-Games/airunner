@@ -51,7 +51,12 @@ def setup_generation_workflow(
 ) -> str:
     """Configure workflow prompts and tools for one generation request."""
     request_setup = build_workflow_request_setup(llm_request)
-    if system_prompt:
+    if getattr(llm_request, "raw_mode", False):
+        # Ollama/OpenAI-compat surface: serve the model like a real
+        # Ollama/OpenAI server would — exactly what the caller sent,
+        # no default persona, no mood/datetime/style/memory injection.
+        action_system_prompt = system_prompt or ""
+    elif system_prompt:
         action_system_prompt = owner._augment_custom_system_prompt(
             base_prompt=system_prompt,
             action=action,

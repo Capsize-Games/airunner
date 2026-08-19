@@ -309,6 +309,12 @@ def _collect_text(
         llm_request=llm_request,
         request_id=request_id,
         callback=callback,
+        # Ollama's API has no concept of TTS. Leaving this at its
+        # do_tts_reply=True default silently selects the
+        # "combined_tts" GGUF runtime profile for a plain text
+        # completion request, which uses different generation/stop
+        # handling than the "default" profile.
+        do_tts_reply=False,
     )
 
 
@@ -338,6 +344,11 @@ def _ollama_chat_request(
     llm_request = LLMRequest()
     llm_request.temperature = options.get("temperature", 0.7)
     llm_request.max_new_tokens = options.get("num_predict", 2048)
+    # Serve the model the way a real Ollama server does: only the
+    # caller's own messages, no default companion-chatbot persona, no
+    # mood/datetime/style/memory injection, and no tool categories
+    # forced in behind the caller's back.
+    llm_request.raw_mode = True
     if system_prompt:
         llm_request.system_prompt = system_prompt
     llm_request.use_memory = False

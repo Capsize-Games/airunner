@@ -234,7 +234,15 @@ def do_generate(
         total_tokens,
         final_visible_message,
     )
-    maybe_generate_conversation_title(owner)
+    if not getattr(llm_request, "raw_mode", False):
+        # Ollama/OpenAI-compat callers get exactly what they asked for
+        # and nothing else — no hidden side-effect LLM call they never
+        # requested. (This extra call also reuses the just-generated
+        # llama.cpp context without a reset, so the model tends to
+        # continue its previous turn's reasoning instead of producing
+        # an actual title — corrupting what should be a small,
+        # unrelated completion.)
+        maybe_generate_conversation_title(owner)
     return {"response": complete_response[0], "tools": executed_tools}
 
 
