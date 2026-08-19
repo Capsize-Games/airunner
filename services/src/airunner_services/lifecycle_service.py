@@ -220,11 +220,16 @@ class CoreLifecycleService:
                 "Cannot load LLM: lifecycle worker is not initialized"
             )
             return
-        load = getattr(worker, "load", None)
-        if not callable(load):
-            self.logger.error("Cannot load LLM: worker has no load() method")
+        # Access the lazy ``model_manager`` property first: the private
+        # ``_model_manager`` attribute is None on a cold start, and the
+        # worker's ``load()`` no-ops when it is unset. The property creates
+        # the ``LLMModelManager`` on first access and then ``load()`` drives
+        # the real model load, flipping status to LOADED.
+        model_manager = getattr(worker, "model_manager", None)
+        if model_manager is None:
+            self.logger.error("Cannot load LLM: no model manager available")
             return
-        worker.load()
+        model_manager.load()
         self.logger.info("LLM model load dispatched to worker")
 
     def _attach_state(self) -> None:

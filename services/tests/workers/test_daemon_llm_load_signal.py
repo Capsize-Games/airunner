@@ -5,7 +5,7 @@ performed by ``ensure_llm_model_loaded`` has a registered handler that
 dispatches the load through the lifecycle LLM worker, so the 120s poll in
 ``ensure_llm_model_loaded`` completes instead of timing out with 503.
 
-No real GGUF model is loaded - the worker's ``load()`` is stubbed.
+No real GGUF model is loaded - the worker's model manager is stubbed.
 """
 
 from __future__ import annotations
@@ -39,17 +39,43 @@ class _SignalSource:
         self._mediator.emit_signal(code, data)
 
 
-class _FakeWorker:
-    """Stand-in for the lifecycle-owned LLMGenerateWorker."""
+class _FakeModelManager:
+    """Stand-in for LLMModelManager exposing load() and model status."""
 
     def __init__(self) -> None:
         self.load_calls = 0
-        self._status = ModelStatus.UNLOADED
+        self.model_status = {ModelStatus.LOADED: ModelStatus.UNLOADED}
+        self._chat_model = None
 
     def load(self) -> None:
         """Record one load dispatch and mark the model loaded."""
         self.load_calls += 1
-        self._status = ModelStatus.LOADED
+        self._chat_model = object()
+
+
+class _FakeWorker:
+    """Stand-in for the lifecycle-owned LLMGenerateWorker.
+
+    Mirrors the real worker contract: the private ``_model_manager`` is None
+    until the lazy ``model_manager`` property is accessed (cold start), and
+    ``current_model_status`` reflects the manager state.
+    """
+
+    def __init__(self) -> None:
+        self._model_manager = None
+
+    @property
+    def model_manager(self) -> _FakeModelManager:
+        """Lazily create the model manager like the real worker."""
+        if self._model_manager is None:
+            self._model_manager = _FakeModelManager()
+        return self._model_manager
+
+    def current_model_status(self):
+        """Return the manager-reported LLM status."""
+        if self._model_manager is None:
+            return None
+        return self._model_manager.model_status[ModelStatus.LOADED]
 
 
 class _FakeWorkerManager:
@@ -86,16 +112,17 @@ def test_llm_load_signal_registered_by_lifecycle_initialize() -> None:
     assert len(mediator.signals[signal_key]) == 1
 
 
-def test_llm_load_signal_dispatches_worker_load() -> None:
-    """Emitting LLM_LOAD_SIGNAL invokes the worker's load() once."""
+def test_llm_load_signal_dispatches_model_manager_load() -> None:
+    """Emitting LLM_LOAD_SIGNAL invokes the model manager load() once."""
     _lifecycle, signal_source, worker = _build_lifecycle()
 
-    assert worker.load_calls == 0
+    assert worker._model_manager is None
     signal_source.emit_signal(
         SignalCode.LLM_LOAD_SIGNAL,
         {"model_path": "/fake/model.gguf"},
     )
-    assert worker.load_calls == 1
+    assert worker._model_manager is not None
+    assert worker._model_manager.load_calls == 1
 
 
 def test_ensure_llm_model_loaded_poll_completes_after_signal() -> None:
@@ -135,10 +162,8 @@ def test_ensure_llm_model_loaded_poll_completes_after_signal() -> None:
         return True, "/fake/model.gguf"
 
     def _loaded_with_status(app, lifecycle=None):
-        """Report loaded once the dispatch has flipped worker status."""
-        if worker._status in (ModelStatus.LOADED, ModelStatus.READY):
-            return True
-        return False
+        """Report loaded once the dispatch has created the manager."""
+        return worker._model_manager is not None
 
     with (
         patch.object(
@@ -157,4 +182,5 @@ def test_ensure_llm_model_loaded_poll_completes_after_signal() -> None:
         result = legacy_llm_compat.ensure_llm_model_loaded(req)
 
     assert result is fake_app
-    assert worker.load_calls == 1
+    assert worker._model_manager is not None
+    assert worker._model_manager.load_calls == 1
