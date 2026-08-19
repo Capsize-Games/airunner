@@ -6,7 +6,6 @@ from typing import Dict, List, Optional
 
 from langchain_core.messages import AIMessage, BaseMessage
 
-from airunner_services.llm.stream_text import combine_stream_chunks
 from airunner_services.llm.thinking_parser import strip_thinking_tags
 
 
@@ -118,12 +117,34 @@ class NodeResponseGenerationHelper:
             additional_kwargs = getattr(last_chunk_message, "additional_kwargs", {})
             if not collected_tool_calls:
                 tool_calls = getattr(last_chunk_message, "tool_calls", None) or []
-        visible_chunks = []
-        for chunk in streamed_content:
-            cleaned_chunk = strip_thinking_tags(chunk)
-            if cleaned_chunk:
-                visible_chunks.append(cleaned_chunk)
-        complete_content = combine_stream_chunks(visible_chunks)
+        # Plain concatenation, NOT combine_stream_chunks: these chunks come
+        # from llama.cpp's own native token detokenization (ChatGGUF's
+        # _stream), which already places any real inter-token space inside
+        # the chunk text itself (verified live 2026-08-19: raw llama-cpp-
+        # python chunks for "estimateTokensForText" are 'estimate'/'Tokens'/
+        # 'For'/'Text' with NO leading spaces, concatenating correctly with
+        # plain "+"). combine_stream_chunks' word-boundary heuristic (built
+        # for genuinely word-chunked sources like TTS token streams — see
+        # its other callers in tts_generator_worker.py) inserts a spurious
+        # space at every alnum-to-alnum chunk boundary, which is exactly a
+        # camelCase/underscore identifier split across multiple tokens —
+        # the single most common shape in code generation. This was the
+        # root cause of every "write _to _file" / "estimate Tokens For
+        # Text" style corruption observed live tonight, across multiple
+        # unrelated models (Qwen3.5-9B, Qwen3-Coder-30B-A3B,
+        # Qwen2.5-Coder-14B) — confirmed by bypassing this daemon's adapter
+        # code entirely and calling llama-cpp-python directly, which never
+        # reproduced the corruption.
+        #
+        # strip_thinking_tags runs ONCE on the fully-assembled text, not
+        # per-chunk: it unconditionally .strip()s its result, so calling it
+        # per-fragment ate every chunk's legitimate leading space (this was
+        # masked by combine_stream_chunks accidentally re-inserting a space
+        # at most real word boundaries — removing that heuristic without
+        # also fixing this exposed it as words-with-no-spaces-at-all). It
+        # also could never correctly match a <think>...</think> block that
+        # spans more than one streamed chunk.
+        complete_content = strip_thinking_tags("".join(streamed_content))
         if thinking_content:
             additional_kwargs = dict(additional_kwargs)
             additional_kwargs["thinking_content"] = thinking_content
