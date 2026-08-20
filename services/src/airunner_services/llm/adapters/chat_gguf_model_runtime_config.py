@@ -97,6 +97,21 @@ def _apply_optional_bool_overrides(tuning: dict[str, Any]) -> None:
     if op_offload_override is not None:
         tuning["op_offload"] = op_offload_override
 
+    # Diagnostic-only knob. RULED OUT as a fix for the hang documented at
+    # AIRUNNER_GGUF_KV_CACHE_TYPE above (2026-08-20): disabling flash_attn
+    # while type_k/type_v stay hardcoded to 8 (GGML_TYPE_Q8_0, in
+    # chat_gguf_model_loading.py's _build_llama_kwargs) makes
+    # llama_context creation fail outright at every n_ctx fallback level
+    # — llama.cpp requires flash_attn when the KV cache is quantized, so
+    # this is an invalid combination, not a real A/B against the hang.
+    # Kept as a knob (harmless when left unset) for whoever revisits this
+    # paired with AIRUNNER_GGUF_KV_CACHE_TYPE=1 (F16) instead — F16 alone
+    # was already tested and did not fix the hang, so that combination is
+    # a low-priority lead, not a confirmed candidate.
+    flash_attn_override = _get_bool_env("AIRUNNER_GGUF_FLASH_ATTN")
+    if flash_attn_override is not None:
+        tuning["flash_attn"] = flash_attn_override
+
 
 def format_llama_tuning(tuning: dict[str, Any]) -> str:
     """Format tuning fields for concise logging."""
@@ -108,6 +123,7 @@ def format_llama_tuning(tuning: dict[str, Any]) -> str:
         "offload_kqv",
         "op_offload",
         "last_n_tokens_size",
+        "flash_attn",
     ]
     return ", ".join(
         f"{key}={tuning[key]}" for key in keys if key in tuning

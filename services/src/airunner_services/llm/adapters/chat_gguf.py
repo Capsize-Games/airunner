@@ -116,7 +116,7 @@ class ChatGGUF(
             "last_n_tokens_size": tuning.get(
                 "last_n_tokens_size", self.last_n_tokens_size
             ),
-            "flash_attn": self.flash_attn,
+            "flash_attn": tuning.get("flash_attn", self.flash_attn),
             "offload_kqv": tuning.get("offload_kqv"),
             "op_offload": tuning.get("op_offload"),
         }
