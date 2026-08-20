@@ -110,14 +110,27 @@ def _gguf_chat_model_kwargs(
     gguf_params: dict[str, Any],
 ) -> dict[str, Any]:
     """Build GGUF chat model kwargs from local runtime state."""
-    return {
+    kwargs: dict[str, Any] = {
         "preferred_filename": model_info.get("gguf_filename"),
         "gguf_runtime_profile": gguf_runtime_profile,
         "enable_thinking": local_runtime.enable_thinking,
         "reasoning_effort": local_runtime.reasoning_effort,
         "tool_calling_mode": model_info.get("tool_calling_mode", "native"),
-        **gguf_params,
     }
+    # YaRN rope scaling: gated on BOTH the user's opt-in (local_runtime.use_yarn)
+    # AND the loaded model's own catalog metadata declaring it supports YaRN
+    # (a model that was never trained with YaRN-compatible RoPE would just
+    # produce garbage if scaled anyway). yarn_orig_ctx must be the model's
+    # real native/trained context length, not the requested n_ctx — see
+    # llama_kwargs_for_context in chat_gguf_model_runtime_config.py, which
+    # only engages scaling when the requested n_ctx exceeds this value.
+    if local_runtime.use_yarn and model_info.get("supports_yarn"):
+        native_ctx = model_info.get("native_context_length")
+        if native_ctx:
+            kwargs["use_yarn"] = True
+            kwargs["yarn_orig_ctx"] = native_ctx
+    kwargs.update(gguf_params)
+    return kwargs
 
 
 def _resolved_gguf_model_kwargs(

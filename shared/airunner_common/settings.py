@@ -275,6 +275,11 @@ AIRUNNER_LLM_OPENROUTER_MODEL = os.getenv(
 AIRUNNER_LLM_USE_WEATHER_PROMPT = _env_bool(
     "AIRUNNER_LLM_USE_WEATHER_PROMPT", "1"
 )
+# Unlike its dataclass siblings, LLMSettings.use_yarn previously had no env
+# override at all — a headless/CLI caller had no way to opt a model with
+# supports_yarn=True (e.g. gpt-oss-20b, native_context_length=4096) into
+# YaRN rope scaling for a requested n_ctx beyond its native window.
+AIRUNNER_LLM_USE_YARN = _env_bool("AIRUNNER_LLM_USE_YARN", "0")
 
 # Identity
 AIRUNNER_ORGANIZATION = os.environ.get("AIRUNNER_ORGANIZATION", "Capsize LLC")
@@ -561,6 +566,7 @@ __all__ = [
     "AIRUNNER_LLM_UPDATE_USER_DATA_ENABLED",
     "AIRUNNER_LLM_USE_CHATBOT_MOOD",
     "AIRUNNER_LLM_USE_WEATHER_PROMPT",
+    "AIRUNNER_LLM_USE_YARN",
     "AIRUNNER_LOCAL_FILES_ONLY",
     "AIRUNNER_LOG_FILE",
     "AIRUNNER_LOG_LEVEL",

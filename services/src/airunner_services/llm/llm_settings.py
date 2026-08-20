@@ -23,6 +23,7 @@ from airunner_common.settings import (
     AIRUNNER_LLM_UPDATE_USER_DATA_ENABLED,
     AIRUNNER_LLM_USE_CHATBOT_MOOD,
     AIRUNNER_LLM_USE_WEATHER_PROMPT,
+    AIRUNNER_LLM_USE_YARN,
 )
 
 
@@ -56,7 +57,7 @@ class LLMSettings:
     use_ollama: bool = False
     use_openai: bool = False
 
-    use_yarn: bool = False
+    use_yarn: bool = AIRUNNER_LLM_USE_YARN
     yarn_target_context: int = 0
 
     enable_thinking: bool = True

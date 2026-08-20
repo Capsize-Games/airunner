@@ -14,6 +14,7 @@ class LocalRuntimeConfig:
     quantization_bits: int
     enable_thinking: bool
     reasoning_effort: str
+    use_yarn: bool
     gguf_params: dict[str, Any]
 
 
@@ -73,6 +74,24 @@ def get_enable_thinking(
         if db_value is not None:
             return db_value
     return getattr(llm_settings, "enable_thinking", True)
+
+
+def get_use_yarn(
+    db_settings: Any,
+    llm_settings: Any,
+) -> bool:
+    """Resolve the effective YaRN-rope-scaling opt-in setting.
+
+    Only an OPT-IN: the actual scaling factor still requires the loaded
+    model's own catalog metadata (`supports_yarn` + `native_context_length`)
+    — see `_gguf_chat_model_kwargs` in chat_model_factory_creation_helper.py.
+    A model that doesn't support YaRN simply ignores this being true.
+    """
+    if db_settings is not None and hasattr(db_settings, "use_yarn"):
+        db_value = getattr(db_settings, "use_yarn", None)
+        if db_value is not None:
+            return bool(db_value)
+    return bool(getattr(llm_settings, "use_yarn", False))
 
 
 def get_reasoning_effort(
@@ -214,5 +233,6 @@ def build_local_runtime_config(
         quantization_bits=get_quantization_bits(db_settings),
         enable_thinking=get_enable_thinking(db_settings, llm_settings),
         reasoning_effort=get_reasoning_effort(db_settings, llm_settings),
+        use_yarn=get_use_yarn(db_settings, llm_settings),
         gguf_params=get_gguf_runtime_params(chatbot),
     )
