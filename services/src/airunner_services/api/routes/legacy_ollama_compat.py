@@ -518,7 +518,7 @@ def _ollama_chat_stream(app, prompt: str, model: str, llm_request: LLMRequest, r
         if is_final:
             full_text = "".join(accumulated_response)
             payload.update(
-                _ollama_chat_timings(start_time, prompt, full_text, False)
+                _ollama_chat_timings(start_time, prompt, full_text, True)
             )
             payload["done_reason"] = "stop"
             done.set()
