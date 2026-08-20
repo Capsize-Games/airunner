@@ -66,6 +66,26 @@ def _apply_optional_int_overrides(tuning: dict[str, Any]) -> None:
     if last_n_tokens_size_override is not None:
         tuning["last_n_tokens_size"] = last_n_tokens_size_override
 
+    # Diagnostic-only knob (2026-08-20, inconclusive — not yet confirmed to
+    # fix anything): type_k/type_v are hardcoded to 8 (GGML_TYPE_Q8_0, an
+    # 8-bit quantized KV cache) in chat_gguf_model_loading.py's
+    # _build_llama_kwargs. Investigating a reproducible generation hang
+    # (first stream chunk arrives, then the underlying llama.cpp
+    # generator's NEXT token pull blocks forever — confirmed to sit inside
+    # llama-cpp-python's own C-level generator, not this codebase's Python
+    # glue) that recurs once accumulated prompt context crosses ~4000
+    # tokens, independent of n_ctx and last_n_tokens_size (both already
+    # ruled out live). Q8_0 KV cache + flash_attn is a known combination
+    # with edge-case bugs in some llama.cpp versions/architectures — worth
+    # testing (set to 1 for GGML_TYPE_F16), but a clean A/B was never
+    # completed this session (trials kept dying to the identical-call
+    # guardrail before reaching the hang's context-size threshold). No
+    # default change — unset keeps today's exact behavior (8/8).
+    kv_cache_type_override = _get_int_env("AIRUNNER_GGUF_KV_CACHE_TYPE")
+    if kv_cache_type_override is not None:
+        tuning["type_k"] = kv_cache_type_override
+        tuning["type_v"] = kv_cache_type_override
+
 
 def _apply_optional_bool_overrides(tuning: dict[str, Any]) -> None:
     """Apply boolean runtime overrides to llama.cpp tuning."""

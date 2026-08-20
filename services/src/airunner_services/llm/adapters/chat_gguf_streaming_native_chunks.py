@@ -133,10 +133,49 @@ def _resolve_stream_tool_calls(
         native_tool_call_buffers,
     )
     if not tool_calls:
-        tool_calls, _ = adapter._extract_tool_calls(full_text)
+        # Fallback path only: llama.cpp's own grammar-constrained delta
+        # stream produced nothing, most often because the identical-
+        # consecutive-call guardrail (headlesscode's loop.ts) excluded this
+        # turn's repeated tool from the request — the grammar correctly
+        # refuses to emit a genuine tool_calls delta for it, but the model
+        # can still narrate the same call as free text (Qwen's chat
+        # template still describes the tool in its own prior-turn history),
+        # and this regex-based text extractor has no concept of which
+        # tools were actually offered. Verified live 2026-08-20: an
+        # excluded tool executed anyway via exactly this path. Filtered to
+        # the tools bound on THIS request/adapter instance (see
+        # ChatGGUFExecutionMixin.bind_tools — a fresh shallow copy per
+        # request, so `adapter.tools` here is never stale).
+        raw_calls, _ = adapter._extract_tool_calls(full_text)
+        tool_calls = _filter_tool_calls_to_bound_tools(adapter, raw_calls)
     if tool_calls or not gpt_oss_tool_calls:
         return tool_calls
     return gpt_oss_tool_calls
+
+
+def _filter_tool_calls_to_bound_tools(
+    adapter: Any,
+    tool_calls: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    """Drop any text-extracted call whose name was not actually offered."""
+    bound_tools = getattr(adapter, "tools", None)
+    if not bound_tools:
+        return tool_calls
+    allowed_names = {
+        (tool.get("function") or {}).get("name")
+        for tool in bound_tools
+        if isinstance(tool, dict)
+    }
+    kept = [call for call in tool_calls if call.get("name") in allowed_names]
+    dropped = len(tool_calls) - len(kept)
+    if dropped:
+        adapter.logger.warning(
+            "[ChatGGUF._stream] Dropped %s text-extracted tool call(s) "
+            "for tool(s) not offered on this request: %s",
+            dropped,
+            [call.get("name") for call in tool_calls if call.get("name") not in allowed_names],
+        )
+    return kept
 
 
 def _tool_call_chunk(tool_calls: Any) -> ChatGenerationChunk:
