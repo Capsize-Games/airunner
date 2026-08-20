@@ -104,7 +104,21 @@ def _apply_raw_mode_sampling(
     """Temporarily override chat_model sampling for one raw-mode request."""
     if not getattr(llm_request, "raw_mode", False):
         return None
-    chat_model = getattr(owner, "_chat_model", None)
+    # Read the WORKFLOW manager's chat_model, not owner's own — for any
+    # request carrying client tool schemas (every headlesscode/raw_mode
+    # request), request_handling_mixin's _prepare_request_tooling calls
+    # bind_client_tools() BEFORE this function runs, which reassigns
+    # WorkflowManager._chat_model to a fresh `_original_chat_model.
+    # bind_tools(...)` clone (tool_management_mixin.py). owner._chat_model
+    # is never reassigned by that call, so patching it here mutates an
+    # object generation never reads — verified live 2026-08-20 via py-spy:
+    # an explicit temperature=0 request still sampled at temp=1 even after
+    # fixing the separate falsy-zero bug below, because the patch was
+    # landing on the wrong object entirely.
+    workflow_manager = getattr(owner, "_workflow_manager", None)
+    chat_model = getattr(workflow_manager, "_chat_model", None)
+    if chat_model is None:
+        chat_model = getattr(owner, "_chat_model", None)
     if chat_model is None:
         return None
     request_values = {
@@ -118,7 +132,15 @@ def _apply_raw_mode_sampling(
         if not hasattr(chat_model, attr):
             continue
         previous[attr] = getattr(chat_model, attr)
-        setattr(chat_model, attr, request_values.get(attr) or default)
+        # `or default` would silently replace an explicit 0 (e.g.
+        # temperature=0 for deterministic decoding, which headlesscode
+        # always requests) with the raw-mode default, since 0 is falsy
+        # in Python — verified live 2026-08-20 via py-spy: a request
+        # sent with temperature=0 was actually sampled at temp=1 deep
+        # inside llama.cpp. `is not None` only falls back to the
+        # default when the caller genuinely didn't specify a value.
+        value = request_values.get(attr)
+        setattr(chat_model, attr, value if value is not None else default)
     return previous
 
 
