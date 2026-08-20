@@ -50,6 +50,15 @@ class ChatGGUF(
     top_k: int = 20
     min_p: float = 0.0
     repeat_penalty: float = 1.15
+    # llama-cpp-python's own default (64) only lets repeat_penalty see the
+    # last 64 tokens of context — far shorter than one agentic tool-call
+    # turn (chat-template wrapper + JSON args + tool result can easily run
+    # several hundred tokens), so a repeated tool call several turns back
+    # falls outside the penalty window entirely regardless of how high
+    # repeat_penalty itself is set. Widened so the penalty actually spans
+    # several recent turns. Construction-time only (llama-cpp-python has no
+    # per-request equivalent) — see resolve_llama_tuning.
+    last_n_tokens_size: int = 4096
     flash_attn: bool = True
     tools: Optional[List[Dict[str, Any]]] = None
     tool_choice: Optional[str] = None
@@ -104,6 +113,9 @@ class ChatGGUF(
             "n_ctx": self.n_ctx,
             "n_gpu_layers": self.n_gpu_layers,
             "n_batch": tuning.get("n_batch", self.n_batch),
+            "last_n_tokens_size": tuning.get(
+                "last_n_tokens_size", self.last_n_tokens_size
+            ),
             "flash_attn": self.flash_attn,
             "offload_kqv": tuning.get("offload_kqv"),
             "op_offload": tuning.get("op_offload"),

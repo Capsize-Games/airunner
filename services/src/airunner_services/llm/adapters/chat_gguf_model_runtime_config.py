@@ -33,6 +33,7 @@ def resolve_llama_tuning(adapter: Any) -> dict[str, Any]:
     tuning: dict[str, Any] = {
         "n_batch": adapter.n_batch,
         "offload_kqv": True,
+        "last_n_tokens_size": adapter.last_n_tokens_size,
     }
     _apply_optional_int_overrides(tuning)
     _apply_optional_bool_overrides(tuning)
@@ -59,6 +60,12 @@ def _apply_optional_int_overrides(tuning: dict[str, Any]) -> None:
     if n_threads_batch_override is not None:
         tuning["n_threads_batch"] = n_threads_batch_override
 
+    last_n_tokens_size_override = _get_int_env(
+        "AIRUNNER_GGUF_LAST_N_TOKENS_SIZE"
+    )
+    if last_n_tokens_size_override is not None:
+        tuning["last_n_tokens_size"] = last_n_tokens_size_override
+
 
 def _apply_optional_bool_overrides(tuning: dict[str, Any]) -> None:
     """Apply boolean runtime overrides to llama.cpp tuning."""
@@ -80,6 +87,7 @@ def format_llama_tuning(tuning: dict[str, Any]) -> str:
         "n_threads_batch",
         "offload_kqv",
         "op_offload",
+        "last_n_tokens_size",
     ]
     return ", ".join(
         f"{key}={tuning[key]}" for key in keys if key in tuning

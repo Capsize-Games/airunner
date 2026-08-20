@@ -383,6 +383,14 @@ def _ollama_chat_request(
     llm_request = LLMRequest()
     llm_request.temperature = options.get("temperature", 0.7)
     llm_request.max_new_tokens = options.get("num_predict", 2048)
+    # Per-request sampling override (headlesscode's identical-consecutive-
+    # call guardrail sends this once it detects a repeat streak, as an
+    # alternative to a text-only nudge — see loop.ts's
+    # DEFAULT_IDENTICAL_CALL_REPEAT_PENALTY_BOOST). Falls through to the
+    # LLMRequest dataclass default (1.15) when the caller doesn't send it,
+    # matching prior behavior exactly.
+    if "repeat_penalty" in options:
+        llm_request.repetition_penalty = options["repeat_penalty"]
     # Serve the model the way a real Ollama server does: only the
     # caller's own messages, no default companion-chatbot persona, no
     # mood/datetime/style/memory injection, and no tool categories
