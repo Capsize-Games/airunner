@@ -66,6 +66,22 @@ class NodeStreamingResponseHelper:
                 request_id,
                 event_sink,
             )
+            # Fallback for a <tool_call> block whose JSON never resolved
+            # into anything usable: without this, _filter_tool_markup's
+            # buffering means the model's entire response is silently
+            # gone (no visible text, no tool call), even though it wrote
+            # real, substantial output — the resulting AIMessage looks
+            # exactly like a genuine empty generation from the caller's
+            # perspective. Only applies when NOTHING else survived.
+            resolved_tool_calls = state.collected_tool_calls or (
+                getattr(state.last_chunk_message, "tool_calls", None) or []
+            )
+            if (
+                not state.streamed_content
+                and not resolved_tool_calls
+                and state.last_tool_call_raw_text
+            ):
+                state.streamed_content = [state.last_tool_call_raw_text]
             if state.streamed_content or state.last_chunk_message:
                 thinking_to_save = self._thinking_helper.thinking_to_save(state)
                 return self._owner._get_response_generation_helper().create_streamed_message(
@@ -173,6 +189,19 @@ class NodeStreamingResponseHelper:
             before_close, _, after_close = text.partition("</tool_call>")
             state.tool_call_tag_buffer.append(before_close)
             state.in_tool_call_tag = False
+            # Preserve the raw block before discarding the scratch buffer —
+            # whether this parses into a real tool call is decided much
+            # later (chat_gguf_streaming_native_chunks.py's
+            # _resolve_stream_tool_calls, after the whole stream ends), so
+            # this function can't yet know if it's about to erase the
+            # model's ENTIRE response with nothing to show for it. Verified
+            # live 2026-08-20: a malformed tool-call JSON produced a
+            # genuinely empty AIMessage (no content, no tool_calls) every
+            # time, even though the model wrote a real, substantial
+            # (1248-char) response — this buffer was simply discarded.
+            state.last_tool_call_raw_text = (
+                "<tool_call>" + "".join(state.tool_call_tag_buffer) + "</tool_call>"
+            )
             state.tool_call_tag_buffer = []
             text_to_stream = after_close if after_close.strip() else ""
         original_text = text_to_stream

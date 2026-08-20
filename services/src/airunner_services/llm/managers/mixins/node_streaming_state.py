@@ -27,3 +27,8 @@ class StreamingState:
     in_json_tool_call: bool = False
     json_brace_depth: int = 0
     has_streamed_content: bool = False
+    # Raw text of the most recently CLOSED <tool_call>...</tool_call>
+    # block, kept as a fallback for generate_streaming_response — see
+    # node_streaming_response_helper.py's doc comment on the fallback
+    # check for why this exists.
+    last_tool_call_raw_text: Optional[str] = None
