@@ -73,6 +73,12 @@ class CoreLifecycleService:
         """Preload the configured local LLM when enabled."""
         if os.environ.get("AIRUNNER_NO_PRELOAD") == "1":
             self._log_preload_disabled()
+            # Still resolve/persist a CLI/env model-path override into
+            # settings even when skipping the eager synchronous load,
+            # so the lazy first-request load doesn't fall back to
+            # whatever a shared settings DB last had persisted (e.g.
+            # by a different daemon sharing AIRUNNER_BASE_PATH).
+            self._resolve_preload_model_path()
             return
         self._log_preload_environment()
         model_path = self._resolve_preload_model_path()
