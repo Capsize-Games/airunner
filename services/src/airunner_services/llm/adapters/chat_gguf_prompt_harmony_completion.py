@@ -122,7 +122,13 @@ def prefilled_gpt_oss_tool_json_needs_continuation(
         return False
 
     try:
-        parsed = json.loads(json_text)
+        # strict=False: see chat_gguf_tool_parsing_mixin.py's
+        # _parse_json_tool_calls doc comment. Also fixes a false positive
+        # HERE specifically: a raw newline inside a complete tool call's
+        # string argument used to raise JSONDecodeError and get
+        # misdiagnosed as "needs continuation" (truncated) by the heuristics
+        # below, when the body was actually complete, just non-strict.
+        parsed = json.loads(json_text, strict=False)
     except json.JSONDecodeError as exc:
         error_text = str(exc).lower()
         if "unterminated string" in error_text:

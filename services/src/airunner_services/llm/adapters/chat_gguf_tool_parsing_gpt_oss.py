@@ -164,7 +164,10 @@ def parse_prefilled_gpt_oss_tool_call(
     if not tool_name or not json_text:
         return []
     try:
-        arguments = normalize_tool_payload(json.loads(json_text))
+        # strict=False: see chat_gguf_tool_parsing_mixin.py's
+        # _parse_json_tool_calls doc comment — a tool-call argument holding
+        # real code routinely contains raw newlines inside a JSON string.
+        arguments = normalize_tool_payload(json.loads(json_text, strict=False))
     except json.JSONDecodeError as exc:
         adapter.logger.warning(
             "Failed to parse prefilled GPT-OSS tool JSON for %s: %s",

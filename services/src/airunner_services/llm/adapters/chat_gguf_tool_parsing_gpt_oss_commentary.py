@@ -87,7 +87,10 @@ def _load_tool_arguments(
 ) -> Optional[Dict[str, Any]]:
     """Load one commentary tool-call argument body as JSON."""
     try:
-        arguments = json.loads(body)
+        # strict=False: see chat_gguf_tool_parsing_mixin.py's
+        # _parse_json_tool_calls doc comment — a tool-call argument holding
+        # real code routinely contains raw newlines inside a JSON string.
+        arguments = json.loads(body, strict=False)
     except json.JSONDecodeError as exc:
         adapter.logger.warning(
             "Failed to parse GPT-OSS Harmony tool call JSON for %s: %s",

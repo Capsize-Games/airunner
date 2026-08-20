@@ -45,7 +45,18 @@ class ChatGGUFToolParsingMixin:
         for match in re.finditer(pattern, content or "", re.DOTALL):
             json_str = match.group(0)
             try:
-                payload = self._normalize_tool_payload(json.loads(json_str))
+                # strict=False: a tool-call argument holding real source code
+                # (e.g. edit_file's new_string) routinely contains literal
+                # newlines inside a JSON string value. Strict JSON requires
+                # those escaped as \n; models frequently emit them raw.
+                # Verified live 2026-08-20: a genuine, complete edit_file
+                # call (425 streamed chunks, 1412 chars) was silently
+                # discarded — "Invalid control character" — and reported
+                # back as an empty reply, indistinguishable from the model
+                # generating nothing. strict=False accepts the same class
+                # of input json.loads already accepts unescaped elsewhere in
+                # this codebase; it does not affect well-formed input.
+                payload = self._normalize_tool_payload(json.loads(json_str, strict=False))
             except json.JSONDecodeError:
                 continue
             if not self._is_json_tool_payload(payload):
@@ -140,7 +151,10 @@ class ChatGGUFToolParsingMixin:
             # every well-formed call this model makes.
             return None
         try:
-            call_data = json.loads(match.strip())
+            # strict=False: see _parse_json_tool_calls's doc comment above —
+            # same raw-newline-in-a-string-argument issue, this is the
+            # fallback path that actually hit it live 2026-08-20.
+            call_data = json.loads(match.strip(), strict=False)
         except json.JSONDecodeError as error:
             self.logger.warning("Failed to parse tool call JSON: %s", error)
             return None
@@ -251,7 +265,7 @@ class ChatGGUFToolParsingMixin:
         if not isinstance(arguments, str):
             return arguments if isinstance(arguments, dict) else {}
         try:
-            parsed = json.loads(arguments) if arguments.strip() else {}
+            parsed = json.loads(arguments, strict=False) if arguments.strip() else {}
         except json.JSONDecodeError:
             self.logger.warning(
                 "Failed to parse native tool arguments for %s",

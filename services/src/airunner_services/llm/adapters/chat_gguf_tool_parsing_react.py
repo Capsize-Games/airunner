@@ -61,7 +61,10 @@ def _react_tool_args(
     if not normalized:
         return None
     try:
-        return json.loads(normalized)
+        # strict=False: see chat_gguf_tool_parsing_mixin.py's
+        # _parse_json_tool_calls doc comment — a tool-call argument holding
+        # real code routinely contains raw newlines inside a JSON string.
+        return json.loads(normalized, strict=False)
     except json.JSONDecodeError as error:
         snippet = normalized[:200].replace("\n", " ")
         adapter.logger.error(
