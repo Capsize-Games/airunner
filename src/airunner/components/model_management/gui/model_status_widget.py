@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import time
 
 import airunner.feather_rc  # noqa: F401
 
@@ -19,6 +20,10 @@ from PySide6.QtWidgets import (
 from airunner.components.icons.managers.icon_manager import IconManager
 from airunner.components.model_management.model_resource_manager import (
     ModelResourceManager,
+)
+from airunner.components.model_management.types import (
+    ActiveModelInfo,
+    ModelState,
 )
 from airunner.enums import SignalCode
 from airunner.utils.application.signal_mediator import SignalMediator
@@ -58,6 +63,9 @@ class ModelStatusWidget(QWidget):
         self.manager: ModelResourceManager | None = None
         self.icon_manager = IconManager([], self)
         self.signal_mediator = SignalMediator()
+        self._last_models_signature: tuple | None = None
+        self._fallback_rows: list = []
+        self._fallback_computed_at: float = 0.0
         self._setup_ui()
         self._start_refresh_timer()
 
@@ -121,7 +129,7 @@ class ModelStatusWidget(QWidget):
         """Start 1-second refresh timer."""
         self.timer = QTimer(self)
         self.timer.timeout.connect(self._update_status)
-        self.timer.start(10)
+        self.timer.start(1000)
 
     def _update_status(self):
         """Refresh all status displays."""
@@ -162,13 +170,34 @@ class ModelStatusWidget(QWidget):
                 )
 
     def _update_active_models(self):
-        """Update list of active models."""
+        """Update the list of active models without churning widgets."""
+        active_models = self._get_manager().get_active_models()
+        if not active_models:
+            active_models = self._configured_model_fallback()
+
+        signature = tuple(
+            (
+                str(getattr(model_info, "model_id", "") or ""),
+                str(getattr(model_info, "model_type", "") or ""),
+                str(
+                    getattr(getattr(model_info, "state", None), "value", "")
+                    or ""
+                ),
+                bool(getattr(model_info, "can_unload", False)),
+            )
+            for model_info in active_models
+        )
+        if signature == self._last_models_signature:
+            return
+        self._last_models_signature = signature
+        self._rebuild_models_list(active_models)
+
+    def _rebuild_models_list(self, active_models) -> None:
+        """Replace the active-models list with fresh rows."""
         while self.models_layout.count():
             child = self.models_layout.takeAt(0)
             if child.widget():
                 child.widget().deleteLater()
-
-        active_models = self._get_manager().get_active_models()
 
         if not active_models:
             no_models_label = QLabel("<i>No models loaded</i>")
@@ -178,6 +207,100 @@ class ModelStatusWidget(QWidget):
         for model_info in active_models:
             model_widget = self._create_model_entry(model_info)
             self.models_layout.addWidget(model_widget)
+
+    def _configured_model_fallback(self) -> list:
+        """Return configured models for enabled runtimes when tracking is empty.
+
+        Model states are normally mirrored from daemon runtime summaries. When
+        the shared resource manager has no tracked models (for example the
+        daemon summary metadata was unavailable), fall back to the configured
+        model for each enabled runtime so the stats panel still shows which
+        model is loaded.
+        """
+        now = time.monotonic()
+        if self._fallback_rows and now - self._fallback_computed_at < 5.0:
+            return self._fallback_rows
+
+        app_settings = self._settings_singleton("ApplicationSettings")
+        rows: list = []
+        if app_settings is not None:
+            runtimes = (
+                ("llm", "llm_enabled", self._configured_llm_model_id),
+                ("text_to_image", "sd_enabled", self._configured_sd_model_id),
+                ("tts", "tts_enabled", self._configured_tts_model_id),
+                ("stt", "stt_enabled", self._configured_stt_model_id),
+            )
+            for model_type, setting_name, resolver in runtimes:
+                if not getattr(app_settings, setting_name, False):
+                    continue
+                model_id = resolver()
+                if not model_id:
+                    continue
+                rows.append(
+                    ActiveModelInfo(
+                        model_id=model_id,
+                        model_type=model_type,
+                        state=ModelState.LOADED,
+                        vram_allocated_gb=0.0,
+                        ram_allocated_gb=0.0,
+                        can_unload=True,
+                    )
+                )
+
+        self._fallback_rows = rows
+        self._fallback_computed_at = now
+        return rows
+
+    @staticmethod
+    def _settings_singleton(name: str):
+        """Return one settings singleton record, or None when unavailable."""
+        try:
+            return get_resource_store().get_singleton(
+                name, create_if_missing=True
+            )
+        except Exception:
+            return None
+
+    def _configured_llm_model_id(self) -> str:
+        """Return the configured LLM model identifier for a fallback row."""
+        settings = self._settings_singleton("LLMGeneratorSettings")
+        for key in ("model_path", "model_id", "model_version"):
+            value = str(getattr(settings, key, "") or "").strip()
+            if value:
+                return value
+        return "LLM"
+
+    def _configured_sd_model_id(self) -> str:
+        """Return the configured art model identifier for a fallback row."""
+        settings = self._settings_singleton("GeneratorSettings")
+        if settings is not None:
+            aimodel = getattr(settings, "aimodel", None)
+            for value in (
+                getattr(aimodel, "path", ""),
+                getattr(settings, "custom_path", ""),
+                getattr(aimodel, "name", ""),
+                getattr(settings, "model_name", ""),
+            ):
+                resolved = str(value or "").strip()
+                if resolved:
+                    return resolved
+        return "SD"
+
+    def _configured_tts_model_id(self) -> str:
+        """Return the configured TTS model identifier for a fallback row."""
+        settings = self._settings_singleton("PathSettings")
+        value = str(getattr(settings, "tts_model_path", "") or "").strip()
+        if value:
+            return os.path.basename(value.rstrip("/\\")) or value
+        return "TTS"
+
+    def _configured_stt_model_id(self) -> str:
+        """Return the configured STT model identifier for a fallback row."""
+        settings = self._settings_singleton("PathSettings")
+        value = str(getattr(settings, "stt_model_path", "") or "").strip()
+        if value:
+            return os.path.basename(value.rstrip("/\\")) or value
+        return "STT"
 
     def _create_model_entry(self, model_info) -> QWidget:
         """Create a single model status entry."""

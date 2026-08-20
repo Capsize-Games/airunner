@@ -38,8 +38,12 @@ class RuntimeStatusController(RuntimeResourceMapper):
             status = client.daemon_runtime_status(
                 timeout_seconds=self._daemon_status_request_timeout_seconds,
             )
-        except RuntimeError:
-            pass
+        except Exception:
+            # A transient failure must not wedge the refresh flag: emit an
+            # empty snapshot so the next timer tick can retry. Without this the
+            # stats panel would stay stuck on "No models loaded" even though a
+            # model is consuming VRAM.
+            status = None
         self.daemon_runtime_status_ready.emit(status)
 
     def _on_daemon_runtime_status_ready(self, status: object) -> None:
