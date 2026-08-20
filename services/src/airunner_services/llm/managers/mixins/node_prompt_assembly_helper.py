@@ -65,14 +65,30 @@ class NodePromptAssemblyHelper:
         return {"messages": [response_message]}
 
     def trim_messages(self, messages: List[BaseMessage]) -> List[BaseMessage]:
-        """Trim message history to fit the configured context window."""
+        """Trim message history to fit the configured context window.
+
+        `allow_partial=True` (was `False`): with a single oversized message
+        — the shape every Ollama-compat raw_mode request takes, since
+        `_chat_prompt_parts` flattens the caller's ENTIRE conversation into
+        one HumanMessage — `allow_partial=False` cannot include even a
+        fragment of a message that alone exceeds `max_tokens`, and with no
+        other message to fall back to, `trim_messages` silently returns an
+        EMPTY list. Verified live 2026-08-20: this produced a request with
+        zero user turns (just the system prompt and tool definitions),
+        which explains a whole family of "empty reply" symptoms chased
+        earlier this session (identical-call exclusion just happens to
+        correlate with a conversation having grown long enough to trip
+        this, not cause it). `allow_partial=True` keeps the tail of an
+        oversized message instead of dropping it outright — strictly safer
+        for every caller, not just raw_mode ones.
+        """
         return trim_messages(
             messages,
             max_tokens=self._owner._max_history_tokens,
             strategy="last",
             token_counter=self._owner._token_counter,
             include_system=True,
-            allow_partial=False,
+            allow_partial=True,
             start_on="human",
         )
 
