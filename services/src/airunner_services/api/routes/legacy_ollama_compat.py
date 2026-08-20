@@ -338,6 +338,7 @@ def _chat_prompt_parts(
     """
     system_prompt = ""
     rendered_turns: List[str] = []
+    last_role = "user"
     for message in messages:
         role = message.get("role", "user")
         if role == "system":
@@ -346,6 +347,22 @@ def _chat_prompt_parts(
         rendered = _render_prompt_turn(message)
         if rendered:
             rendered_turns.append(rendered)
+            last_role = role
+    # A prompt that ends immediately after a raw tool result (e.g. a large
+    # file dump from read_file) trails off with no call-to-action — verified
+    # live 2026-08-20 against Qwen3-14B and gpt-oss-20b: a large tool result
+    # as the final turn reliably produced either a near-empty generation or a
+    # generic off-task reply (e.g. ask_followup_question with a question
+    # unrelated to the actual task), instead of continuing the task. Only
+    # added when the prompt actually ends on a tool result — every other
+    # ending (a fresh user turn, an assistant turn) already reads as "your
+    # turn now" without needing this.
+    if last_role == "tool":
+        rendered_turns.append(
+            "[Continue the task above using the tool result(s) just "
+            "shown. Decide your next concrete action now — call a tool, "
+            "or call attempt_completion if the task is genuinely done.]"
+        )
     return system_prompt, "\n\n".join(rendered_turns)
 
 
