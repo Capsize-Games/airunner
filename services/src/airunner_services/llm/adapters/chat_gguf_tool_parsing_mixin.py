@@ -133,7 +133,16 @@ class ChatGGUFToolParsingMixin:
                 tool_calls.append(tool_call)
         if not tool_calls:
             tool_calls = self._parse_function_tag_tool_calls(content)
-        cleaned = self._strip_xml_tool_calls(content)
+        # Only strip <tool_call> blocks once something inside them actually
+        # parsed — otherwise a malformed block (e.g. broken JSON) gets
+        # silently erased from the visible content with nothing left in its
+        # place, leaving the final AIMessage empty even though the model
+        # produced a real, substantial response. Verified live 2026-08-20:
+        # a 1248-char response failed JSON parsing ("Expecting value: line
+        # 1 column 90") and `cleaned` still came back empty because this
+        # stripped the whole block regardless of parse success — matches
+        # generation_response_support.py's "Final AIMessage was empty" log.
+        cleaned = self._strip_xml_tool_calls(content) if tool_calls else content
         if tool_calls:
             cleaned = self._strip_function_tag_tool_calls(cleaned)
         return tool_calls, cleaned
