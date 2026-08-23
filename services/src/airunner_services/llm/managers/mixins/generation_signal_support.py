@@ -5,7 +5,6 @@ from __future__ import annotations
 from typing import Any, List, Optional
 
 from airunner_services.llm.llm_response import LLMResponse
-from airunner_services.llm.stream_text import prepare_stream_chunk
 
 
 def current_assistant_turn_index(owner) -> int:
@@ -76,9 +75,6 @@ def create_streaming_callback(
             complete_response[0],
             token_text,
         )
-        if not token_text:
-            return
-        token_text = prepare_stream_chunk(complete_response[0], token_text)
         if not token_text:
             return
         complete_response[0] += token_text

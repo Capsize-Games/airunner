@@ -6,10 +6,6 @@ from dataclasses import dataclass, field
 from typing import List, Optional
 
 from airunner_services.llm.llm_response import LLMResponse
-from airunner_services.llm.stream_text import (
-    append_stream_text,
-    prepare_stream_chunk,
-)
 from airunner_services.llm.thinking_parser import (
     detect_thinking_close_tag,
     detect_thinking_open_tag,
@@ -153,21 +149,12 @@ class LLMDaemonStreamMixin:
             cleaned_part = strip_thinking_tags(part)
             if not cleaned_part:
                 continue
-            normalized_part = prepare_stream_chunk(
-                state.visible_text,
-                cleaned_part,
-            )
-            if not normalized_part:
-                continue
-            state.visible_text = append_stream_text(
-                state.visible_text,
-                cleaned_part,
-            )
+            state.visible_text += cleaned_part
             self.send_llm_text_streamed_signal(
                 self._build_visible_daemon_response(
                     chunk,
                     state=state,
-                    message=normalized_part,
+                    message=cleaned_part,
                     is_end_of_message=chunk_done and index == last_index,
                     request_id=request_id,
                     action=action,
