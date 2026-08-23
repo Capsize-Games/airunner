@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import os
 from typing import Any
 
@@ -71,9 +72,47 @@ def build_hf_chat_handler(adapter: Any, repo_id: str) -> Any | None:
 def _format_messages_handler(tokenizer: Any) -> Any:
     """Return a llama.cpp formatter callback for one HF tokenizer."""
     def format_messages(messages: list[dict[str, Any]], **kwargs: Any) -> Any:
-        return _chat_formatter_response(tokenizer, messages, kwargs)
+        return _chat_formatter_response(tokenizer, _normalize_tool_call_arguments(messages), kwargs)
 
     return format_messages
+
+
+def _normalize_tool_call_arguments(
+    messages: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    """Convert string tool-call arguments into dicts for Qwen chat templates.
+
+    Qwen3.5's HF chat template iterates ``tool_call.arguments|items`` in
+    Jinja, which requires a mapping. The adapter stores arguments as a JSON
+    string (the OpenAI-compatible shape), so ``apply_chat_template`` raises
+    "Can only get item pairs from a mapping" on any assistant turn that made
+    a tool call. Parse the JSON string into a dict here; when it is not
+    valid JSON (e.g. a raw partial dump), fall back to a dict of one
+    "raw" key so the template still renders the call.
+    """
+    normalized: list[dict[str, Any]] = []
+    for message in messages:
+        if message.get("role") != "assistant" or not message.get("tool_calls"):
+            normalized.append(message)
+            continue
+        tool_calls = []
+        for tool_call in message.get("tool_calls") or []:
+            function = dict(tool_call.get("function") or {})
+            arguments = function.get("arguments")
+            if isinstance(arguments, str):
+                try:
+                    parsed = json.loads(arguments)
+                except (TypeError, ValueError):
+                    parsed = None
+                if isinstance(parsed, dict):
+                    function["arguments"] = parsed
+                elif parsed is not None:
+                    function["arguments"] = {"value": parsed}
+                else:
+                    function["arguments"] = {"raw": arguments}
+            tool_calls.append({**tool_call, "function": function})
+        normalized.append({**message, "tool_calls": tool_calls})
+    return normalized
 
 
 _AUTO_OPENED_THINK_SUFFIX = "<think>\n"

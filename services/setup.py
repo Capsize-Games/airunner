@@ -130,6 +130,12 @@ LLM_NATIVE_REQUIREMENTS = [
     "langchain-core==1.3.3",
     "langchain-huggingface==1.2.2",
     "langgraph==1.0.10",
+    # langgraph-prebuilt must match the pinned langgraph core: 1.0.10+ of
+    # prebuilt imports ExecutionInfo/ServerInfo from langgraph.runtime,
+    # which only exists in core >=1.1.5. Installing prebuilt 1.0.13 against
+    # core 1.0.10 crashes the tool-calling path ("cannot import name
+    # 'ExecutionInfo'"), so keep the compatible 1.0.5 pairing.
+    "langgraph-prebuilt==1.0.5",
     "langsmith>=0.8.0",
     "langchain-ollama==1.0.0",
     "langchain-text-splitters==1.1.2",
