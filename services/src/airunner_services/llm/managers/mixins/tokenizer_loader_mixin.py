@@ -24,7 +24,8 @@ def _remote_code_allowed() -> bool:
     services settings accessor (never a raw sqlite connection). Fail closed:
     any error (missing row, no DB, unexpected exception) returns False, so a
     broken settings store can never silently enable remote code execution
-    (GitHub issue #2031).
+    (GitHub issue #2031). This is a read-only check: it never creates a
+    settings row as a side effect.
     """
     try:
         from airunner_services.database.models.application_settings import (
@@ -32,9 +33,6 @@ def _remote_code_allowed() -> bool:
         )
 
         settings = ApplicationSettings.objects.first()
-        if settings is not None:
-            return bool(getattr(settings, "trust_remote_code", False))
-        settings = ApplicationSettings.objects.get_or_create()
         if settings is not None:
             return bool(getattr(settings, "trust_remote_code", False))
     except Exception:

@@ -21,20 +21,6 @@ _BUILD_SYSTEM_FILES = (
     _PROJECT_ROOT / "native" / "pyproject.toml",
 )
 
-#: The ML runtime pin that drives the setuptools<82 constraint.
-_TORCH_PIN_RE = re.compile(r'torch\s*==\s*2\.(\d+)\.\d+')
-
-
-def _torch_major_minor() -> int | None:
-    """Return the pinned torch major.minor (e.g. 13 for 2.13.0) or None."""
-    metadata = (_PROJECT_ROOT / "shared" / "airunner_common" / "package_metadata.py")
-    source = metadata.read_text(encoding="utf-8")
-    match = _TORCH_PIN_RE.search(source)
-    if not match:
-        return None
-    return int(match.group(1))
-
-
 def test_build_system_setuptools_below_82() -> None:
     """Every build-system file must keep setuptools below 82 while torch is
     pinned below 2.14 (issue #2057)."""

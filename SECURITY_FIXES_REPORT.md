@@ -43,9 +43,9 @@ Lean CI venv `.venv-ci` built exactly as specified in the plan
 **Changes**
 
 1. `_remote_code_allowed()` (L20) reads `ApplicationSettings.trust_remote_code`
-   via `ApplicationSettings.objects.first()` / `get_or_create()`, wrapped in
-   try/except → `return False` (fail closed on missing row / no DB / error).
-   No raw sqlite connection.
+   via `ApplicationSettings.objects.first()` only (read-only; never creates a
+   settings row as a side effect), wrapped in try/except → `return False`
+   (fail closed on missing row / no DB / error). No raw sqlite connection.
 2. `_load_model_config` (L175): tries `trust_remote_code=False` first; only on
    exception **and** `_remote_code_allowed()` retries with `True` (L194). When
    the flag is off, the `False` attempt's exception propagates to the caller's

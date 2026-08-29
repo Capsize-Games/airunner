@@ -10,8 +10,6 @@ fails on any *other* drift.
 
 from __future__ import annotations
 
-import ast
-import re
 from pathlib import Path
 
 _REPO_ROOT = Path(__file__).resolve().parents[5]

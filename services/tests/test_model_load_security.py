@@ -272,12 +272,20 @@ def test_remote_code_allowed_false_by_default() -> None:
     """With no settings row / no opt-in, remote code must never be allowed."""
     _remote_code_allowed = _load_tokenizer_mixin()._remote_code_allowed
 
-    # No settings row (objects.first returns None, get_or_create raises).
+    # No settings row: first() returns None, get_or_create() must never be
+    # called (the check is read-only and must not create a settings row).
     with mock.patch.object(
         ApplicationSettings, "objects"
     ) as fake_objects:
         fake_objects.first.return_value = None
-        fake_objects.get_or_create.side_effect = RuntimeError("no db")
+        assert _remote_code_allowed() is False
+        fake_objects.get_or_create.assert_not_called()
+
+    # first() itself raising → fail closed.
+    with mock.patch.object(
+        ApplicationSettings, "objects"
+    ) as fake_objects:
+        fake_objects.first.side_effect = RuntimeError("no db")
         assert _remote_code_allowed() is False
 
     # Explicit False row.
