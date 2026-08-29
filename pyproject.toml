@@ -2,7 +2,7 @@
 # setuptools must stay <82: the pinned torch==2.13.0+cu129 wheel's runtime
 # metadata requires setuptools<82 (issue #2057). Bumping past 82 breaks
 # `pip check`; see services/tests/test_dependency_constraints.py.
-requires = ["setuptools>=80.9.0,<82", "wheel"]
+requires = ["setuptools>=84.0.0,<85", "wheel"]
 build-backend = "setuptools.build_meta"
 
 # ---------------------------------------------------------------------------
