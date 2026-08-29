@@ -341,6 +341,26 @@ last-commit, and a **Discord** badge linking to
 label (the `/discord/<id>` endpoint requires a numeric guild ID, not an
 invite code) so it always renders, and links to the invite.
 
+### Post-release fix: mingw-w64 compat shim (v6.0.3)
+
+The definitive CI run on `master` after the v6.0.2 merge **reproduced the
+exact issue**: the ubuntu-latest runner's mingw-w64 headers do not declare
+`THREAD_POWER_THROTTLING_*` even with `_WIN32_WINNT >= 0x0602`, so the
+Windows leg failed with "unknown type name 'THREAD_POWER_THROTTLING_STATE'".
+Upstream llama.cpp master has the same unguarded code — no upstream fix.
+
+Fix shipped as **v6.0.3**:
+- `native/runtime_sidecars/mingw_thread_power_throttling_compat.h` — layout-compatible fallback declaration, only active when the API macro is absent.
+- `scripts/build_runtime_sidecars.sh` — configure-time probe force-includes the compat header via `-include` only when the toolchain headers lack the API (newer toolchains unaffected).
+
+Verified:
+- Direct compile of the exact failing pattern with the compat header: passes.
+- Full local Windows sidecar build: succeeds.
+- **CI run [33256253459](https://github.com/Capsize-Games/airunner/actions/runs/33256253459) on master (v6.0.3): both `build-sidecars (linux)` and `build-sidecars (windows)` green.**
+
+The stale v6.0.2 tag (pin alone was insufficient) was removed; v6.0.3 is the
+"Latest" GitHub release.
+
 ### Reviewer nits (non-blocking, addressed)
 
 - `shared/airunner_common/get_logger.py` now exposes the shared log base path
