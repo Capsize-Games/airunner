@@ -146,7 +146,12 @@ LLM_NATIVE_REQUIREMENTS = [
     "llama-cloud==0.1.23",
     "langchain-core==1.3.3",
     "langchain-huggingface==1.2.2",
-    "langgraph==1.0.10",
+    # langgraph 1.0.8 is the newest 1.0.x that still permits
+    # langgraph-prebuilt 1.0.7; every prebuilt >=1.0.8 imports
+    # ExecutionInfo/ServerInfo from langgraph.runtime, which does not exist
+    # in the 1.0.x core (only >=1.2). langgraph 1.0.9/1.0.10 require
+    # prebuilt>=1.0.8, which makes the set unresolvable. See services/setup.py.
+    "langgraph==1.0.8",
     "langsmith>=0.8.0",
     "langchain-ollama==1.0.0",
     "langchain-text-splitters==1.1.2",

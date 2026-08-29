@@ -129,13 +129,15 @@ LLM_NATIVE_REQUIREMENTS = [
     "llama-cloud==0.1.23",
     "langchain-core==1.3.3",
     "langchain-huggingface==1.2.2",
-    "langgraph==1.0.10",
-    # langgraph-prebuilt must match the pinned langgraph core: 1.0.10+ of
-    # prebuilt imports ExecutionInfo/ServerInfo from langgraph.runtime,
-    # which only exists in core >=1.1.5. Installing prebuilt 1.0.13 against
-    # core 1.0.10 crashes the tool-calling path ("cannot import name
-    # 'ExecutionInfo'"), so keep the compatible 1.0.5 pairing.
-    "langgraph-prebuilt==1.0.5",
+    # langgraph-prebuilt >=1.0.8 imports ExecutionInfo/ServerInfo from
+    # langgraph.runtime, which only exists in langgraph core >=1.2. Against
+    # 1.0.x core that import crashes the tool-calling path ("cannot import
+    # name 'ExecutionInfo'"). langgraph 1.0.9/1.0.10 require prebuilt>=1.0.8,
+    # so the only self-consistent 1.0.x set is core 1.0.8 + prebuilt 1.0.7
+    # (1.0.8 still allows prebuilt>=1.0.7). Pinning core 1.0.10 + prebuilt
+    # 1.0.5 satisfied neither pip's resolver nor the runtime.
+    "langgraph==1.0.8",
+    "langgraph-prebuilt==1.0.7",
     "langsmith>=0.8.0",
     "langchain-ollama==1.0.0",
     "langchain-text-splitters==1.1.2",
