@@ -4,6 +4,10 @@ import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 from typing import List, Tuple, Optional, Any
 
+from airunner_services.utils.application.get_logger import get_logger
+
+logger = get_logger(__name__)
+
 
 def check_and_mark_nsfw_images(
     images: List[Image.Image],
@@ -53,7 +57,7 @@ def check_and_mark_nsfw_images(
 
     except Exception as e:
         # On error, return images unchanged
-        print(f"Error during NSFW checking: {e}")
+        logger.error("Error during NSFW checking: %s", e)
         return images, [False] * len(images)
 
 

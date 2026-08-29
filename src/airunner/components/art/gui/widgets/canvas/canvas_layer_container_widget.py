@@ -741,8 +741,10 @@ class CanvasLayerContainerWidget(BaseWidget, PipelineMixin):
             )
 
         except Exception as e:
-            print(
-                f"Error initializing default settings for layer {layer_id}: {e}"
+            self.logger.error(
+                "Error initializing default settings for layer %s: %s",
+                layer_id,
+                e,
             )
 
     def _document_origin(self) -> tuple[int, int]:

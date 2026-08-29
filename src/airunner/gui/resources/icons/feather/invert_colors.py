@@ -6,9 +6,9 @@ import traceback
 from xml.dom import minidom
 
 
-def debug_print(message):
+def debug_print(message):  # intentional CLI output
     """Print debug message with prefix"""
-    print(f"DEBUG: {message}")
+    print(f"DEBUG: {message}")  # intentional CLI output
 
 
 def invert_color(color):
@@ -93,7 +93,7 @@ def process_svg(input_path, output_path):
                     if color not in ["none", "transparent"]:
                         inverted = invert_color(color)
                         if inverted != color:
-                            debug_print(
+                            debug_print(  # intentional CLI output
                                 f"Inverting {attr}='{color}' to '{inverted}'"
                             )
                             element.setAttribute(attr, inverted)
@@ -116,7 +116,7 @@ def process_svg(input_path, output_path):
                         ]:
                             inverted = invert_color(value)
                             if inverted != value:
-                                debug_print(
+                                debug_print(  # intentional CLI output
                                     f"Inverting style {prop}:'{value}' to '{inverted}'"
                                 )
                                 new_style = new_style.replace(
@@ -131,24 +131,26 @@ def process_svg(input_path, output_path):
             # The prettify() adds extra whitespace but makes debugging easier
             f.write(dom.toxml())
 
-        debug_print(f"Successfully created {os.path.basename(output_path)}")
+        debug_print(  # intentional CLI output
+            f"Successfully created {os.path.basename(output_path)}"
+        )
         return True
 
     except Exception as e:
-        print(f"ERROR processing file: {e}")
-        traceback.print_exc()
+        print(f"ERROR processing file: {e}")  # intentional CLI output
+        traceback.print_exc()  # intentional CLI output
         return False
 
 
 if __name__ == "__main__":
     if len(sys.argv) != 3:
-        print("Usage: python invert_colors.py input.svg output.svg")
+        print("Usage: python invert_colors.py input.svg output.svg")  # intentional CLI output
         sys.exit(1)
 
     input_file = sys.argv[1]
     output_file = sys.argv[2]
 
-    debug_print(
+    debug_print(  # intentional CLI output
         f"Processing {os.path.basename(input_file)} → {os.path.basename(output_file)}"
     )
     success = process_svg(input_file, output_file)

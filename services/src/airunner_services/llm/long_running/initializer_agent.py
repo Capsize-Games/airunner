@@ -50,7 +50,11 @@ class InitializerAgent:
             description="Build a chat application with user auth and real-time messaging",
             working_directory="~/projects/my-web-app"
         )
-        print(f"Created project {result['project_id']} with {result['feature_count']} features")
+        logger.info(
+            "Created project %s with %s features",
+            result["project_id"],
+            result["feature_count"],
+        )
         ```
     """
 

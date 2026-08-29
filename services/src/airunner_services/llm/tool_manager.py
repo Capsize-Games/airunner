@@ -81,10 +81,11 @@ class ToolManager(
                     f"args={args} kwargs_keys={list(kwargs.keys())}"
                 )
             except Exception:
-                print(
-                    f"[TOOL WRAPPER] Invoking tool: {tool_info.name} "
-                    f"args={args} kwargs_keys={list(kwargs.keys())}",
-                    flush=True,
+                self.logger.debug(
+                    "[TOOL WRAPPER] Invoking tool: %s args=%s kwargs_keys=%s",
+                    tool_info.name,
+                    args,
+                    list(kwargs.keys()),
                 )
 
             if tool_info.requires_api:
@@ -118,10 +119,10 @@ class ToolManager(
                 try:
                     repr(result)[:2000]
                 except Exception:
-                    print(
-                        f"[TOOL WRAPPER] Tool {tool_info.name} returned: "
-                        f"{repr(result)[:2000]}",
-                        flush=True,
+                    self.logger.debug(
+                        "[TOOL WRAPPER] Tool %s returned: %s",
+                        tool_info.name,
+                        repr(result)[:2000],
                     )
                 return result
             except Exception as error:

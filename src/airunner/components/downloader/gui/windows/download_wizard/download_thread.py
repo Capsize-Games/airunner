@@ -1,5 +1,8 @@
 from PySide6.QtCore import QThread, Signal
+from airunner.utils.application.get_logger import get_logger
 from airunner.utils.network.huggingface_downloader import HuggingfaceDownloader
+
+logger = get_logger(__name__)
 
 
 class DownloadThread(QThread):
@@ -41,13 +44,12 @@ class DownloadThread(QThread):
                             requested_callback=self.progress_updated.emit,
                         )
                 else:
-                    print(
-                        "Skipping download for model with no files {}".format(
-                            model["name"]
-                        )
+                    logger.warning(
+                        "Skipping download for model with no files %s",
+                        model["name"],
                     )
             except Exception as e:
-                print(e)
+                logger.error("Download failed: %s", e)
                 continue
         self.download_finished.emit()
 

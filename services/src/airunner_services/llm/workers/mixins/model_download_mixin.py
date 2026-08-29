@@ -44,7 +44,7 @@ class HeadlessDownloadProgress:
             self._tqdm = tqdm
         except ImportError:
             self._tqdm = None
-            print("[Download] tqdm not installed, using simple output")
+            print("[Download] tqdm not installed, using simple output")  # intentional CLI output
 
     def on_log_updated(self, data: Dict) -> None:
         """Handle one download log message."""
@@ -52,7 +52,7 @@ class HeadlessDownloadProgress:
         if self._tqdm:
             self._tqdm.write(f"[Download] {message}")
         else:
-            print(f"[Download] {message}")
+            print(f"[Download] {message}")  # intentional CLI output
 
     def on_progress_updated(self, data: Dict) -> None:
         """Handle one overall download progress update."""
@@ -71,7 +71,7 @@ class HeadlessDownloadProgress:
             self._overall_bar.n = progress
             self._overall_bar.refresh()
         elif not self._tqdm:
-            print(
+            print(  # intentional CLI output
                 f"\r[Download] Overall progress: {progress:.1f}%",
                 end="",
                 flush=True,
@@ -81,7 +81,7 @@ class HeadlessDownloadProgress:
             if self._tqdm:
                 self._tqdm.write(f"Download complete: {self.model_name}")
             else:
-                print(f"\n[Download] Complete: {self.model_name}")
+                print(f"\n[Download] Complete: {self.model_name}")  # intentional CLI output
 
         self._completed.set()
 
@@ -99,7 +99,7 @@ class HeadlessDownloadProgress:
         if self._tqdm:
             self._tqdm.write(f"Download complete: {self.model_name}")
         else:
-            print(f"\n[Download] Complete: {self.model_name}")
+            print(f"\n[Download] Complete: {self.model_name}")  # intentional CLI output
 
         self._completed.set()
 
@@ -121,7 +121,7 @@ class HeadlessDownloadProgress:
         if self._tqdm:
             self._tqdm.write(f"Download failed: {error}")
         else:
-            print(f"\n[Download] Failed: {error}")
+            print(f"\n[Download] Failed: {error}")  # intentional CLI output
 
         self._completed.set()
 
@@ -296,9 +296,9 @@ class ModelDownloadMixin:
             model_name = f"{model_name} (GGUF)"
 
         self.logger.info(f"Starting headless download: {model_name}")
-        print(f"\n[Download] Model: {model_name}")
-        print(f"[Download] Repository: {repo_id}")
-        print(f"[Download] Destination: {model_path}\n")
+        print(f"\n[Download] Model: {model_name}")  # intentional CLI output
+        print(f"[Download] Repository: {repo_id}")  # intentional CLI output
+        print(f"[Download] Destination: {model_path}\n")  # intentional CLI output
 
         progress = HeadlessDownloadProgress(model_name, model_path)
         job_service = DownloadJobService()

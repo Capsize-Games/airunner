@@ -5,6 +5,9 @@ from PySide6.QtCore import QFile
 from PySide6.QtGui import QIcon, QPixmap
 
 from airunner.enums import TemplateName
+from airunner.utils.application.get_logger import get_logger
+
+logger = get_logger(__name__)
 from airunner.utils.settings import get_qsettings
 
 
@@ -100,7 +103,7 @@ class IconManager:
                                 dark_color_hex = value
                                 break
         except Exception as e:
-            print(f"Error reading variables.qss: {e}")
+            logger.warning("Error reading variables.qss: %s", e)
 
         # Fallback if not found
         if not dark_color_hex:

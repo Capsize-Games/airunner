@@ -5,7 +5,10 @@ from typing import Optional
 from PySide6.QtWidgets import QSplitter
 
 from airunner.enums import TemplateName
+from airunner.utils.application.get_logger import get_logger
 from airunner.utils.settings import get_qsettings
+
+logger = get_logger(__name__)
 
 
 class StylesMixin:
@@ -53,7 +56,7 @@ class StylesMixin:
         if self.icon_manager is not None:
             self.icon_manager.set_icons()
         else:
-            print("Icon manager not set, skipping icon update")
+            logger.warning("Icon manager not set, skipping icon update")
 
     def _toggle_splitter_section(
         self,

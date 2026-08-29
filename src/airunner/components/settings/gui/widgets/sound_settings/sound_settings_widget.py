@@ -6,6 +6,9 @@ from airunner.components.settings.gui.widgets.sound_settings.templates.sound_set
     Ui_SoundSettings,
 )
 from airunner.enums import SignalCode
+from airunner.utils.application.get_logger import get_logger
+
+logger = get_logger(__name__)
 
 
 def _sounddevice():
@@ -136,5 +139,5 @@ class SoundSettingsWidget(BaseWidget):
 
     def adjust_input_level(self, value):
         # Adjust the microphone input level
-        print(f"Input level adjusted to: {value}")
+        logger.debug("Input level adjusted to: %s", value)
         # Replace with actual logic to adjust microphone input level

@@ -6,6 +6,7 @@ import zipfile
 from PySide6.QtCore import QObject, QThread, Slot, Signal, QTimer
 from PySide6.QtWidgets import QWizard
 
+from airunner.utils.application.get_logger import get_logger
 from airunner.components.data.bootstrap_service import (
     get_model_bootstrap_data,
 )
@@ -38,6 +39,8 @@ from airunner.components.downloader.gui.windows.setup_wizard.base_wizard import 
 from airunner.components.downloader.gui.windows.setup_wizard.installation_settings.templates.install_page_ui import (
     Ui_install_page,
 )
+
+logger = get_logger(__name__)
 
 
 # Note: SD 1.5 ControlNet support has been deprecated in favor of
@@ -444,7 +447,7 @@ class InstallWorker(
                             requested_callback=self._safe_progress_emit,
                         )
                     except Exception as e:
-                        print(f"Error downloading {filename}: {e}")
+                        logger.error("Error downloading %s: %s", filename, e)
 
     def download_controlnet_processors(self):
         if not self.models_enabled["stable_diffusion"]:
@@ -472,7 +475,7 @@ class InstallWorker(
                     requested_callback=self._safe_progress_emit,
                 )
             except Exception as e:
-                print(f"Error downloading {filename}: {e}")
+                logger.error("Error downloading %s: %s", filename, e)
 
     def download_llms(self):
         if not self.models_enabled["llm"]:
@@ -526,7 +529,7 @@ class InstallWorker(
                         requested_callback=self._safe_progress_emit,
                     )
                 except Exception as e:
-                    print(f"Error downloading {filename}: {e}")
+                    logger.error("Error downloading %s: %s", filename, e)
 
     def download_stt(self):
         if not self.models_enabled["whisper"]:
@@ -557,7 +560,7 @@ class InstallWorker(
                         requested_callback=self._safe_progress_emit,
                     )
                 except Exception as e:
-                    print(f"Error downloading {filename}: {e}")
+                    logger.error("Error downloading %s: %s", filename, e)
 
     def download_tts(self):
         # OpenVoice is the primary TTS - no manual download needed for basic TTS
@@ -591,7 +594,7 @@ class InstallWorker(
                         requested_callback=self._safe_progress_emit,
                     )
                 except Exception as e:
-                    print(f"Error downloading {filename}: {e}")
+                    logger.error("Error downloading %s: %s", filename, e)
 
     def _download_file_with_progress(self, url, dest_path, label=None):
         """
@@ -1401,7 +1404,7 @@ class InstallPage(BaseWizard):
                     self.thread.wait()
 
             except Exception as e:
-                print(f"Error during thread cleanup: {e}")
+                logger.error("Error during thread cleanup: %s", e)
 
     def calculate_total_files(self):
         self.total_files = 0  # Reset counter

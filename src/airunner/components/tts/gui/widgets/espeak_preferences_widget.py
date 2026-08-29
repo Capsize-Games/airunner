@@ -7,7 +7,10 @@ from airunner.components.data.bootstrap_service import (
     get_espeak_settings_data,
 )
 from airunner.components.application.gui.widgets.base_widget import BaseWidget
+from airunner.utils.application.get_logger import get_logger
 import pycountry
+
+logger = get_logger(__name__)
 
 
 class EspeakPreferencesWidget(BaseWidget):
@@ -39,14 +42,14 @@ class EspeakPreferencesWidget(BaseWidget):
     def initialize_form(self):
         settings = self.resource_store.get("EspeakSettings", self._id)
         if settings is None:
-            print(f"Settings not found for ID: {self._id}")
+            logger.warning("Settings not found for ID: %s", self._id)
             return
 
         # Ensure required attributes exist in settings
         if not all(
             hasattr(settings, attr) for attr in ["rate", "volume", "pitch"]
         ):
-            print(f"Missing attributes in settings for ID: {self._id}")
+            logger.warning("Missing attributes in settings for ID: %s", self._id)
             return
 
         elements = [

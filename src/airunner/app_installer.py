@@ -11,6 +11,7 @@ from PySide6.QtWidgets import QApplication
 from airunner.components.downloader.gui.windows.setup_wizard.setup_wizard_window import (
     SetupWizardWindow,
 )
+from airunner.utils.application.get_logger import get_logger
 from airunner.utils.application.mediator_mixin import MediatorMixin
 from airunner.components.downloader.gui.windows.download_wizard.download_wizard_window import (
     DownloadWizardWindow,
@@ -18,6 +19,8 @@ from airunner.components.downloader.gui.windows.download_wizard.download_wizard_
 from airunner.components.application.gui.windows.main.settings_mixin import (
     SettingsMixin,
 )
+
+logger = get_logger(__name__)
 
 
 class AppInstaller(QObject, SettingsMixin, MediatorMixin):
@@ -77,7 +80,7 @@ class AppInstaller(QObject, SettingsMixin, MediatorMixin):
         self.wizard.exec()
 
         if self.wizard.canceled:
-            print("canceled")
+            logger.info("Setup wizard canceled")
             self.cancel()
             return
 
@@ -94,12 +97,12 @@ class AppInstaller(QObject, SettingsMixin, MediatorMixin):
         :param _frame:
         :return: None
         """
-        print("\nExiting...")
+        logger.info("\nExiting...")
         try:
             AppInstaller.quit()
             sys.exit(0)
         except Exception as e:
-            print(e)
+            logger.error("Error during exit: %s", e)
             sys.exit(0)
 
     def cancel(self):

@@ -2,6 +2,10 @@
 
 from transformers.generation.stopping_criteria import StoppingCriteria
 
+from airunner_services.utils.application.get_logger import get_logger
+
+logger = get_logger(__name__)
+
 
 class ExternalConditionStoppingCriteria(StoppingCriteria):
     """Stopping criteria that checks an external condition via a callable.
@@ -34,7 +38,7 @@ class ExternalConditionStoppingCriteria(StoppingCriteria):
         result = self.external_condition_callable()
         # Only log when True to avoid spam
         if result:
-            print(
-                f"[INTERRUPT] ExternalConditionStoppingCriteria: stopping generation!"
+            logger.warning(
+                "[INTERRUPT] ExternalConditionStoppingCriteria: stopping generation!"
             )
         return result

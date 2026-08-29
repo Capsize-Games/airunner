@@ -2,6 +2,10 @@ from typing import Optional
 import io
 from PIL import Image
 
+from airunner_services.utils.application.get_logger import get_logger
+
+logger = get_logger(__name__)
+
 # Simple in-memory buffer pool (very small) to reduce allocations for frequent conversions
 _PNG_BUFFER_POOL: list[io.BytesIO] = []
 _PNG_BUFFER_POOL_MAX = 4
@@ -26,8 +30,9 @@ def convert_image_to_binary(image: Image.Image) -> Optional[bytes]:
     if image is None:
         raise ValueError("Image is None")
     if not isinstance(image, Image.Image):
-        print(
-            f"convert_image_to_binary: Refusing to convert non-image type: {type(image)}"
+        logger.warning(
+            "convert_image_to_binary: Refusing to convert non-image type: %s",
+            type(image),
         )
         return None
 
@@ -38,7 +43,9 @@ def convert_image_to_binary(image: Image.Image) -> Optional[bytes]:
         image.save(buf, format="PNG", optimize=False)
         data = buf.getvalue()
     except AttributeError as e:
-        print(f"Something went wrong with image conversion to binary: {e}")
+        logger.error(
+            "Something went wrong with image conversion to binary: %s", e
+        )
         data = None
     finally:
         _release_buffer(buf)

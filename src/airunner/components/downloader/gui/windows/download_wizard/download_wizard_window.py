@@ -1,4 +1,5 @@
 from PySide6.QtWidgets import QWizard
+from airunner.utils.application.get_logger import get_logger
 from airunner.utils.application.mediator_mixin import MediatorMixin
 from airunner.components.application.gui.windows.main.settings_mixin import SettingsMixin
 from airunner.components.downloader.gui.windows.setup_wizard.installation_settings.install_failed_page import (
@@ -16,6 +17,8 @@ from airunner.components.downloader.gui.windows.setup_wizard.installation_settin
 from airunner.components.downloader.gui.windows.setup_wizard.path_settings.path_settings import (
     PathSettings,
 )
+
+logger = get_logger(__name__)
 
 
 class DownloadWizardWindow(
@@ -84,11 +87,11 @@ class DownloadWizardWindow(
             )
             self.setPage(2, self.install_page)
         except BaseException as e:
-            print(f"Exception creating InstallPage: {e}")
+            logger.error("Exception creating InstallPage: %s", e)
         try:
             self.setPage(3, InstallSuccessPage(self))
         except BaseException as e:
-            print(f"Exception creating InstallSuccessPage: {e}")
+            logger.error("Exception creating InstallSuccessPage: %s", e)
         failed = False
         if failed:
             self.setPage(1, InstallFailedPage(self))

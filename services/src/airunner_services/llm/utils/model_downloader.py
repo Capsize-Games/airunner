@@ -8,6 +8,9 @@ import requests
 
 from airunner_common.settings import AIRUNNER_BASE_PATH
 from airunner_services.config.local_settings_store import get_setting
+from airunner_services.utils.application.get_logger import get_logger
+
+logger = get_logger(__name__)
 
 
 class DownloadCancelledError(RuntimeError):
@@ -145,10 +148,10 @@ class HuggingFaceDownloader:
 
         # Check if file already exists
         if local_path.exists():
-            print(f"File already exists: {local_path}")
+            logger.info("File already exists: %s", local_path)
             return local_path
 
-        print(f"Downloading {filename} from {repo_id}...")
+        logger.info("Downloading %s from %s...", filename, repo_id)
 
         api_key = self._get_huggingface_api_key()
 
@@ -182,7 +185,7 @@ class HuggingFaceDownloader:
                         if progress_callback and total_size > 0:
                             progress_callback(downloaded, total_size)
 
-            print(f"Downloaded: {local_path}")
+            logger.info("Downloaded: %s", local_path)
             return local_path
 
         except DownloadCancelledError:
@@ -268,7 +271,9 @@ class HuggingFaceDownloader:
             files_to_download.append(filename)
 
         # Download files
-        print(f"Downloading {len(files_to_download)} files for {repo_id}...")
+        logger.info(
+            "Downloading %s files for %s...", len(files_to_download), repo_id
+        )
         for filename in files_to_download:
 
             def file_progress(downloaded, total):
@@ -284,7 +289,7 @@ class HuggingFaceDownloader:
                 cancel_callback,
             )
 
-        print(f"Model downloaded to: {local_dir}")
+        logger.info("Model downloaded to: %s", local_dir)
         return local_dir
 
     def download_gguf_model(
@@ -339,7 +344,7 @@ class HuggingFaceDownloader:
             cancel_callback,
         )
 
-        print(f"GGUF model downloaded to: {gguf_path}")
+        logger.info("GGUF model downloaded to: %s", gguf_path)
         return gguf_path
 
     @staticmethod
@@ -359,6 +364,6 @@ if __name__ == "__main__":
         repo_id="Qwen/Qwen3.5-9B",
         model_type="llm",
         include_patterns=["*.json"],
-        progress_callback=lambda f, d, t: print(f"{f}: {d}/{t} bytes"),
+        progress_callback=lambda f, d, t: print(f"{f}: {d}/{t} bytes"),  # intentional CLI output
     )
-    print(f"Model ready at: {model_path}")
+    print(f"Model ready at: {model_path}")  # intentional CLI output

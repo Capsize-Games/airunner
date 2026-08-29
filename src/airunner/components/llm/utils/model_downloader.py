@@ -11,7 +11,10 @@ from pathlib import Path
 from typing import List, Optional, Callable, Dict
 
 from airunner.components.application.gui.windows.main.settings_mixin import SettingsMixin
+from airunner.utils.application.get_logger import get_logger
 from airunner.utils.application.mediator_mixin import MediatorMixin
+
+logger = get_logger(__name__)
 
 
 class HuggingFaceDownloader(
@@ -151,10 +154,10 @@ class HuggingFaceDownloader(
 
         # Check if file already exists
         if local_path.exists():
-            print(f"File already exists: {local_path}")
+            logger.info("File already exists: %s", local_path)
             return local_path
 
-        print(f"Downloading {filename} from {repo_id}...")
+        logger.info("Downloading %s from %s...", filename, repo_id)
 
         # Get HuggingFace API token from settings
         from airunner.utils.settings.get_qsettings import get_qsettings
@@ -186,7 +189,7 @@ class HuggingFaceDownloader(
                         if progress_callback and total_size > 0:
                             progress_callback(downloaded, total_size)
 
-            print(f"Downloaded: {local_path}")
+            logger.info("Downloaded: %s", local_path)
             return local_path
 
         except Exception as e:
@@ -267,7 +270,9 @@ class HuggingFaceDownloader(
             files_to_download.append(filename)
 
         # Download files
-        print(f"Downloading {len(files_to_download)} files for {repo_id}...")
+        logger.info(
+            "Downloading %s files for %s...", len(files_to_download), repo_id
+        )
         for filename in files_to_download:
 
             def file_progress(downloaded, total):
@@ -282,7 +287,7 @@ class HuggingFaceDownloader(
                 file_progress,
             )
 
-        print(f"Model downloaded to: {local_dir}")
+        logger.info("Model downloaded to: %s", local_dir)
         return local_dir
 
     def download_gguf_model(
@@ -335,7 +340,7 @@ class HuggingFaceDownloader(
             file_progress,
         )
 
-        print(f"GGUF model downloaded to: {gguf_path}")
+        logger.info("GGUF model downloaded to: %s", gguf_path)
         return gguf_path
 
     @staticmethod
@@ -355,6 +360,6 @@ if __name__ == "__main__":
         repo_id="Qwen/Qwen3.5-9B",
         model_type="llm",
         include_patterns=["*.json"],
-        progress_callback=lambda f, d, t: print(f"{f}: {d}/{t} bytes"),
+        progress_callback=lambda f, d, t: print(f"{f}: {d}/{t} bytes"),  # intentional CLI output
     )
-    print(f"Model ready at: {model_path}")
+    print(f"Model ready at: {model_path}")  # intentional CLI output

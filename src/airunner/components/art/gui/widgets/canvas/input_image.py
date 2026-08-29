@@ -324,8 +324,9 @@ class InputImage(BaseWidget):
                 image = Image.open(file_path)
         except Exception as e:
             try:
-                print(
-                    f"Darklock user_override failed, falling back to normal operation: {e}"
+                self.logger.warning(
+                    "Darklock user_override failed, falling back to normal operation: %s",
+                    e,
                 )
             except Exception:
                 pass

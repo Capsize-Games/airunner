@@ -466,7 +466,7 @@ Now solve the problem:
             Dict with solution, code, result, success
         """
         if verbose:
-            print(f"🐍 Requesting Python code solution...")
+            logger.info("🐍 Requesting Python code solution...")
 
         code_prompt = self._create_code_prompt(prompt)
 
@@ -484,7 +484,7 @@ Now solve the problem:
             return self._create_no_code_result(solution_text, verbose)
 
         if verbose:
-            print(f"📝 Extracted code ({len(code)} chars)")
+            logger.info("📝 Extracted code (%s chars)", len(code))
 
         success, result, error = self.executor.execute(code)
 
@@ -506,7 +506,7 @@ Now solve the problem:
     ) -> Dict[str, Any]:
         """Create result when no code is found."""
         if verbose:
-            print(f"⚠️  No code block found in response")
+            logger.info("⚠️  No code block found in response")
         return {
             "success": False,
             "solution": solution_text,
@@ -522,9 +522,9 @@ Now solve the problem:
         if not verbose:
             return
         if success:
-            print(f"✅ Code executed successfully: result = {result}")
+            logger.info("✅ Code executed successfully: result = %s", result)
         else:
-            print(f"❌ Code execution failed: {error}")
+            logger.error("❌ Code execution failed: %s", error)
 
     def _simplify_result(self, result):
         """Attempt to simplify symbolic expressions to numeric values.
@@ -703,7 +703,7 @@ Answer:"""
 
             if attempt["is_correct"]:
                 if verbose:
-                    print(f"🎯 Solution verified on attempt {attempt_num}")
+                    logger.info("🎯 Solution verified on attempt %s", attempt_num)
                 break
 
         return self._create_verification_result(attempts)
@@ -718,7 +718,7 @@ Answer:"""
     ) -> Dict[str, Any]:
         """Try a single solution attempt with verification."""
         if verbose:
-            print(f"\n🔄 Attempt {attempt_num}/{self.max_attempts}")
+            logger.info("🔄 Attempt %s/%s", attempt_num, self.max_attempts)
 
         # Generate solution
         prev_verification = attempts[-1]["verification"] if attempts else ""
@@ -736,7 +736,7 @@ Answer:"""
         solution = response.get("text", "")
 
         if verbose:
-            print(f"💭 Solution: {solution[:200]}...")
+            logger.info("💭 Solution: %s...", solution[:200])
 
         # Verify solution
         is_correct, verification = self._verify_solution(
@@ -745,7 +745,7 @@ Answer:"""
 
         if verbose:
             status = "✅ VERIFIED" if is_correct else "❌ INCORRECT"
-            print(f"{status}: {verification[:150]}...")
+            logger.info("%s: %s...", status, verification[:150])
 
         return {
             "attempt": attempt_num,
@@ -781,7 +781,7 @@ Answer:"""
             return False
 
         if verbose:
-            print(f"✅ Code solution successful: {code_result['result']}")
+            logger.info("✅ Code solution successful: %s", code_result["result"])
         return True
 
     def _create_code_result_dict(
@@ -835,7 +835,7 @@ Answer:"""
             Dict with solution and metadata
         """
         if verbose:
-            print(f"🔬 Attempting hybrid solution: Code + Verification")
+            logger.info("🔬 Attempting hybrid solution: Code + Verification")
 
         code_result = self.solve_with_code(prompt, temperature, verbose)
 
@@ -843,7 +843,7 @@ Answer:"""
             return self._create_code_result_dict(code_result)
 
         if verbose:
-            print(f"⚠️  Code solution failed, trying verification loop...")
+            logger.info("⚠️  Code solution failed, trying verification loop...")
 
         verification_result = self.solve_with_verification(
             prompt, expected_answer, temperature, verbose

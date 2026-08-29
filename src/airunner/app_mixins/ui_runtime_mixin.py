@@ -20,10 +20,13 @@ from PySide6.QtWidgets import QApplication
 from airunner.components.splash_screen.splash_screen import SplashScreen
 from airunner.enums import SignalCode
 from airunner.qt_runtime_env import configure_early_qt_environment
+from airunner.utils.application.get_logger import get_logger
 from airunner_common.settings import AIRUNNER_BUG_REPORT_LINK
 from airunner_common.settings import MATHJAX_VERSION
 from airunner_common.settings import QTWEBENGINE_REMOTE_DEBUGGING
 from airunner.utils.settings import get_qsettings
+
+logger = get_logger(__name__)
 
 _QT_RUNTIME_PREPARED = False
 _CAPTURING_WEBENGINE_PAGE_CLASS = None
@@ -58,9 +61,9 @@ def _configure_qt_environment() -> None:
     ):
         os.environ.setdefault("QT_XCB_GL_INTEGRATION", "xcb_glx")
         if os.environ.get("QT_XCB_GL_INTEGRATION") == "xcb_glx":
-            print("X11 session detected - enabling GLX")
+            logger.debug("X11 session detected - enabling GLX")
     elif os.environ.get("WAYLAND_DISPLAY"):
-        print("Wayland session detected - using default EGL")
+        logger.debug("Wayland session detected - using default EGL")
 
 
 def _configure_qt_surface_format() -> None:
@@ -135,7 +138,7 @@ def _get_capturing_webengine_page_class():
                 "JSCONSOLE::: Level: "
                 f"{level}, Msg: {message}, Src: {sourceID}:{lineNumber}"
             )
-            print(log_message)
+            logger.debug(log_message)
             super().javaScriptConsoleMessage(
                 level,
                 message,
@@ -306,7 +309,7 @@ class UIRuntimeMixin:
     @staticmethod
     def signal_handler(_signal: int, _frame: object) -> None:
         """Handle SIGINT and SIGTERM without abrupt process exit."""
-        print("\nExiting...")
+        logger.info("\nExiting...")
         sys.stdout = sys.__stdout__
         sys.stderr = sys.__stderr__
 
@@ -430,28 +433,26 @@ class UIRuntimeMixin:
 
     def show_main_application(self, app: QApplication) -> None:
         """Show the main application window."""
-        import sys
-        print("[DEBUG] Resolving window class...", file=sys.stderr)
+        logger.debug("Resolving window class...")
         window_class = self.main_window_class_
         if not window_class:
-            print("[DEBUG] Importing MainWindow...", file=sys.stderr)
+            logger.debug("Importing MainWindow...")
             from airunner.components.application.gui.windows.main.main_window import (
                 MainWindow,
             )
-            print("[DEBUG] MainWindow imported", file=sys.stderr)
+            logger.debug("MainWindow imported")
 
             window_class = MainWindow
 
         try:
-            import sys
-            print("[DEBUG] Creating main window...", file=sys.stderr)
+            logger.debug("Creating main window...")
             self.update_splash_message(
                 self.splash,
                 "Initializing main window...",
             )
-            print("[DEBUG] Calling window_class...", file=sys.stderr)
+            logger.debug("Calling window_class...")
             window = window_class(app=self, **self.window_class_params)
-            print("[DEBUG] Main window created", file=sys.stderr)
+            logger.debug("Main window created")
             app.main_window = window
             # Art prewarm removed
             self._present_main_window(window, app)
@@ -465,7 +466,7 @@ class UIRuntimeMixin:
             self._log_gui_startup_time()
             self._schedule_main_window_loaded(window)
 
-            print(f"Qt Version: {qVersion()}")
+            logger.info(f"Qt Version: {qVersion()}")
             if hasattr(window, "ui"):
                 (
                     _qwebengine_page,
@@ -481,7 +482,7 @@ class UIRuntimeMixin:
                     if current_page and type(current_page).__name__ != (
                         "QWebEnginePage"
                     ):
-                        print(
+                        logger.debug(
                             "[App] Skipping page override for "
                             f"{attr}, already has custom page: "
                             f"{type(current_page)}"
@@ -499,11 +500,12 @@ class UIRuntimeMixin:
                         LocalContentCanAccessRemoteUrls,
                         True,
                     )
-                    print(f"[App] Setting CapturingWebEnginePage for {attr}")
+                    logger.debug(f"[App] Setting CapturingWebEnginePage for {attr}")
                     widget.setPage(capturing_page(widget))
         except Exception as exc:
-            traceback.print_exc()
-            print(exc)
+            logger.exception(
+                "Error initializing web engine page: %s", exc
+            )
             try:
                 self.cleanup()
             except Exception:
@@ -749,7 +751,7 @@ class UIRuntimeMixin:
         if os.path.exists(entry):
             return
 
-        print("MathJax not found, attempting to download and set up...")
+        logger.info("MathJax not found, attempting to download and set up...")
         try:
             env = os.environ.copy()
             env["MATHJAX_INSTALL_DIR"] = os.path.dirname(
@@ -768,7 +770,7 @@ class UIRuntimeMixin:
                 env=env,
             )
         except Exception as exc:
-            print("ERROR: MathJax setup failed:", exc)
+            logger.error("MathJax setup failed: %s", exc)
             raise RuntimeError(
                 "MathJax is required but could not be set up. See README.md "
                 "for instructions."

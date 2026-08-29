@@ -3,6 +3,10 @@ import io
 import PIL
 from PIL import Image
 
+from airunner_services.utils.application.get_logger import get_logger
+
+logger = get_logger(__name__)
+
 RAW_MAGIC = b"AIRAW1"
 PNG_MAGIC = b"\x89PNG\r\n\x1a\n"
 
@@ -160,18 +164,27 @@ def convert_binary_to_image(binary_data) -> Image:  # type: ignore[override]
         img.load()  # Force decode to raise early if corrupt
         return img
     except PIL.UnidentifiedImageError as e:
-        print(
-            f"[convert_binary_to_image] UnidentifiedImageError len={len(validated)} msg={e}"
+        logger.error(
+            "[convert_binary_to_image] UnidentifiedImageError len=%s msg=%s",
+            len(validated),
+            e,
         )
         return None
     except OSError as e:
         # This catches libpng errors and other image format errors
-        print(
-            f"[convert_binary_to_image] OSError (likely libpng/format issue) len={len(validated)} msg={e}"
+        logger.error(
+            "[convert_binary_to_image] OSError (likely libpng/format issue) "
+            "len=%s msg=%s",
+            len(validated),
+            e,
         )
         return None
     except Exception as e:
-        print(
-            f"[convert_binary_to_image] Generic decode failure len={len(validated)} msg={e} type={type(e).__name__}"
+        logger.error(
+            "[convert_binary_to_image] Generic decode failure len=%s msg=%s "
+            "type=%s",
+            len(validated),
+            e,
+            type(e).__name__,
         )
         return None
