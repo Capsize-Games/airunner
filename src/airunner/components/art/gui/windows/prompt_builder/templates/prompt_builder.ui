@@ -1,0 +1,511 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>prompt_builder</class>
+ <widget class="QDialog" name="prompt_builder">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>720</width>
+    <height>780</height>
+   </rect>
+  </property>
+  <property name="minimumSize">
+   <size>
+    <width>600</width>
+    <height>600</height>
+   </size>
+  </property>
+  <property name="windowTitle">
+   <string>Prompt Builder</string>
+  </property>
+  <layout class="QVBoxLayout" name="verticalLayout_root">
+   <item>
+    <layout class="QHBoxLayout" name="horizontalLayout_target">
+     <item>
+      <widget class="QLabel" name="label_target">
+       <property name="text">
+        <string>Target Model</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QComboBox" name="target_generator">
+       <item>
+        <property name="text">
+         <string>zimage</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>stablediffusion</string>
+        </property>
+       </item>
+      </widget>
+     </item>
+     <item>
+      <spacer name="horizontalSpacer_target">
+       <property name="orientation">
+        <enum>Qt::Orientation::Horizontal</enum>
+       </property>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>40</width>
+         <height>20</height>
+        </size>
+       </property>
+      </spacer>
+     </item>
+     <item>
+      <widget class="QCheckBox" name="randomize_checkbox">
+       <property name="text">
+        <string>Randomize unfilled slots</string>
+       </property>
+       <property name="checked">
+        <bool>true</bool>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QCheckBox" name="random_seed_checkbox">
+       <property name="text">
+        <string>Random seed</string>
+       </property>
+       <property name="checked">
+        <bool>true</bool>
+       </property>
+       <property name="toolTip">
+        <string>Use a fresh seed for every build so repeated generates differ. Uncheck to pin the seed below for reproducible prompts.</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QLabel" name="label_seed">
+       <property name="text">
+        <string>Seed</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QSpinBox" name="seed_spinbox">
+       <property name="maximum">
+        <number>2147483647</number>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <widget class="QScrollArea" name="scrollArea">
+     <property name="widgetResizable">
+      <bool>true</bool>
+     </property>
+     <widget class="QWidget" name="scrollAreaWidgetContents">
+      <property name="geometry">
+       <rect>
+        <x>0</x>
+        <y>0</y>
+        <width>688</width>
+        <height>480</height>
+       </rect>
+      </property>
+      <layout class="QVBoxLayout" name="verticalLayout_scroll">
+       <item>
+        <widget class="QGroupBox" name="groupBox_subject">
+         <property name="title">
+          <string>Subject</string>
+         </property>
+         <layout class="QGridLayout" name="gridLayout_subject">
+          <item row="0" column="0">
+           <widget class="QLabel" name="label_subject">
+            <property name="text">
+             <string>Subject</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="1">
+           <widget class="QComboBox" name="subject"/>
+          </item>
+          <item row="1" column="0">
+           <widget class="QLabel" name="label_age">
+            <property name="text">
+             <string>Age</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="1">
+           <widget class="QComboBox" name="attribute_age"/>
+          </item>
+          <item row="2" column="0">
+           <widget class="QLabel" name="label_skin">
+            <property name="text">
+             <string>Skin</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="1">
+           <widget class="QComboBox" name="attribute_skin"/>
+          </item>
+          <item row="3" column="0">
+           <widget class="QLabel" name="label_hair">
+            <property name="text">
+             <string>Hair</string>
+            </property>
+           </widget>
+          </item>
+          <item row="3" column="1">
+           <widget class="QComboBox" name="attribute_hair"/>
+          </item>
+          <item row="4" column="0">
+           <widget class="QLabel" name="label_wardrobe">
+            <property name="text">
+             <string>Wardrobe</string>
+            </property>
+           </widget>
+          </item>
+          <item row="4" column="1">
+           <widget class="QComboBox" name="attribute_wardrobe"/>
+          </item>
+          <item row="5" column="0">
+           <widget class="QLabel" name="label_expression">
+            <property name="text">
+             <string>Expression</string>
+            </property>
+           </widget>
+          </item>
+          <item row="5" column="1">
+           <widget class="QComboBox" name="attribute_expression"/>
+          </item>
+          <item row="6" column="0">
+           <widget class="QLabel" name="label_accessory">
+            <property name="text">
+             <string>Accessory</string>
+            </property>
+           </widget>
+          </item>
+          <item row="6" column="1">
+           <widget class="QComboBox" name="attribute_accessory"/>
+          </item>
+          <item row="7" column="0">
+           <widget class="QLabel" name="label_action">
+            <property name="text">
+             <string>Action</string>
+            </property>
+           </widget>
+          </item>
+          <item row="7" column="1">
+           <widget class="QComboBox" name="action"/>
+          </item>
+          <item row="8" column="0">
+           <widget class="QLabel" name="label_object">
+            <property name="text">
+             <string>Object</string>
+            </property>
+           </widget>
+          </item>
+          <item row="8" column="1">
+           <widget class="QComboBox" name="object"/>
+          </item>
+          <item row="9" column="0" colspan="2">
+           <widget class="QLineEdit" name="custom_subject">
+            <property name="placeholderText">
+             <string>Custom subject (overrides the dropdowns)</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item>
+        <widget class="QGroupBox" name="groupBox_scene">
+         <property name="title">
+          <string>Scene &amp; Environment</string>
+         </property>
+         <layout class="QGridLayout" name="gridLayout_scene">
+          <item row="0" column="0">
+           <widget class="QLabel" name="label_scene">
+            <property name="text">
+             <string>Location</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="1">
+           <widget class="QComboBox" name="scene"/>
+          </item>
+          <item row="1" column="0">
+           <widget class="QLabel" name="label_time_of_day">
+            <property name="text">
+             <string>Time of Day</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="1">
+           <widget class="QComboBox" name="time_of_day"/>
+          </item>
+          <item row="2" column="0">
+           <widget class="QLabel" name="label_weather">
+            <property name="text">
+             <string>Weather</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="1">
+           <widget class="QComboBox" name="weather"/>
+          </item>
+          <item row="3" column="0" colspan="2">
+           <widget class="QLineEdit" name="custom_scene">
+            <property name="placeholderText">
+             <string>Custom scene (overrides the dropdowns)</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item>
+        <widget class="QGroupBox" name="groupBox_composition">
+         <property name="title">
+          <string>Composition &amp; Framing</string>
+         </property>
+         <layout class="QGridLayout" name="gridLayout_composition">
+          <item row="0" column="0">
+           <widget class="QLabel" name="label_shot_type">
+            <property name="text">
+             <string>Shot Type</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="1">
+           <widget class="QComboBox" name="shot_type"/>
+          </item>
+          <item row="1" column="0">
+           <widget class="QLabel" name="label_lens">
+            <property name="text">
+             <string>Lens</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="1">
+           <widget class="QComboBox" name="lens"/>
+          </item>
+          <item row="2" column="0">
+           <widget class="QLabel" name="label_composition">
+            <property name="text">
+             <string>Composition</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="1">
+           <widget class="QComboBox" name="composition"/>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item>
+        <widget class="QGroupBox" name="groupBox_lighting">
+         <property name="title">
+          <string>Lighting</string>
+         </property>
+         <layout class="QGridLayout" name="gridLayout_lighting">
+          <item row="0" column="0">
+           <widget class="QLabel" name="label_lighting">
+            <property name="text">
+             <string>Lighting</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="1">
+           <widget class="QComboBox" name="lighting"/>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item>
+        <widget class="QGroupBox" name="groupBox_style">
+         <property name="title">
+          <string>Style &amp; Medium</string>
+         </property>
+         <layout class="QGridLayout" name="gridLayout_style">
+          <item row="0" column="0">
+           <widget class="QLabel" name="label_style_group">
+            <property name="text">
+             <string>Style Family</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="1">
+           <widget class="QComboBox" name="style_group"/>
+          </item>
+          <item row="1" column="0">
+           <widget class="QLabel" name="label_style_detail">
+            <property name="text">
+             <string>Style Detail</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="1">
+           <widget class="QComboBox" name="style_detail"/>
+          </item>
+          <item row="2" column="0">
+           <widget class="QLabel" name="label_color_palette">
+            <property name="text">
+             <string>Color Palette</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="1">
+           <widget class="QComboBox" name="color_palette"/>
+          </item>
+          <item row="3" column="0" colspan="2">
+           <widget class="QLineEdit" name="custom_style">
+            <property name="placeholderText">
+             <string>Custom style (appended to the style section)</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item>
+        <widget class="QGroupBox" name="groupBox_polish">
+         <property name="title">
+          <string>Constraints &amp; Polish</string>
+         </property>
+         <layout class="QGridLayout" name="gridLayout_polish">
+          <item row="0" column="0">
+           <widget class="QLabel" name="label_quality">
+            <property name="text">
+             <string>Quality Phrase</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="1">
+           <widget class="QComboBox" name="quality"/>
+          </item>
+          <item row="1" column="0">
+           <widget class="QLabel" name="label_custom_negative">
+            <property name="text">
+             <string>Custom Negative Terms</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="1">
+           <widget class="QLineEdit" name="custom_negative">
+            <property name="placeholderText">
+             <string>Extra negative terms (SDXL only, comma separated)</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item>
+        <widget class="QGroupBox" name="groupBox_prefix">
+         <property name="title">
+          <string>Prefix / Suffix</string>
+         </property>
+         <layout class="QHBoxLayout" name="horizontalLayout_prefix">
+          <item>
+           <widget class="QLineEdit" name="prefix">
+            <property name="placeholderText">
+             <string>Prefix</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QLineEdit" name="suffix">
+            <property name="placeholderText">
+             <string>Suffix</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+    </widget>
+   </item>
+   <item>
+    <widget class="QGroupBox" name="groupBox_preview">
+     <property name="title">
+      <string>Prompt Preview</string>
+     </property>
+     <layout class="QVBoxLayout" name="verticalLayout_preview">
+      <item>
+       <widget class="QPlainTextEdit" name="prompt_preview">
+        <property name="readOnly">
+         <bool>false</bool>
+        </property>
+        <property name="placeholderText">
+         <string>Generated prompt appears here...</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLabel" name="negative_prompt_label">
+        <property name="text">
+         <string>Negative Prompt (SDXL only)</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPlainTextEdit" name="negative_prompt_preview">
+        <property name="readOnly">
+         <bool>false</bool>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="horizontalLayout_buttons">
+     <item>
+      <widget class="QLabel" name="word_count_label">
+       <property name="text">
+        <string>0 words</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <spacer name="horizontalSpacer_buttons">
+       <property name="orientation">
+        <enum>Qt::Orientation::Horizontal</enum>
+       </property>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>40</width>
+         <height>20</height>
+        </size>
+       </property>
+      </spacer>
+     </item>
+     <item>
+      <widget class="QPushButton" name="randomize_button">
+       <property name="text">
+        <string>Randomize All</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="generate_button">
+       <property name="text">
+        <string>Generate Prompt</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="generate_image_button">
+       <property name="text">
+        <string>Generate Image</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

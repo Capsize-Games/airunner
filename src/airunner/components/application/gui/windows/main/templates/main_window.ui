@@ -1289,6 +1289,7 @@
        <normaloff>:/light/icons/feather/light/image.svg</normaloff>:/light/icons/feather/light/image.svg</iconset>
      </property>
      <addaction name="actionSafety_Checker"/>
+     <addaction name="actionPrompt_Builder"/>
      <addaction name="actionDownload_Model"/>
     </widget>
     <addaction name="menuStable_Diffusion"/>
@@ -1575,6 +1576,15 @@
    </property>
    <property name="text">
     <string>Download Model</string>
+   </property>
+  </action>
+  <action name="actionPrompt_Builder">
+   <property name="icon">
+    <iconset resource="../../../../../../gui/resources/feather.qrc">
+     <normaloff>:/light/icons/feather/light/edit-3.svg</normaloff>:/light/icons/feather/light/edit-3.svg</iconset>
+   </property>
+   <property name="text">
+    <string>Prompt Builder</string>
    </property>
   </action>
  </widget>

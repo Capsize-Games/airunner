@@ -58,6 +58,7 @@ class MainWindowBase:
         ("folder", "actionBrowse_AI_Runner_Path"),
         ("folder", "actionBrowse_Images_Path_2"),
         ("image", "menuStable_Diffusion"),
+        ("edit-3", "actionPrompt_Builder"),
         ("zap", "actionRun_setup_wizard_2"),
         ("external-link", "actionBug_report"),
         ("external-link", "actionReport_vulnerability"),

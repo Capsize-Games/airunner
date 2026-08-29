@@ -147,6 +147,15 @@ class ActionController(MenuController):
     def on_actionPrompt_Browser_triggered(self):
         PromptBrowser()
 
+    @Slot()
+    def on_actionPrompt_Builder_triggered(self):
+        """Open the madlibs-style Prompt Builder tool window."""
+        from airunner.components.art.gui.windows.prompt_builder.prompt_builder import (
+            PromptBuilder,
+        )
+
+        PromptBuilder()
+
     @Slot(bool)
     def on_speech_to_text_button_toggled(self, val: bool):
         if self._model_status[ModelType.STT] is ModelStatus.LOADING:
