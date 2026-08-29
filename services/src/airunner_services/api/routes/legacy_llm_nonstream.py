@@ -1,5 +1,6 @@
 """Non-streaming helpers for legacy LLM compatibility routes."""
 
+import logging
 import threading
 from typing import Any
 
@@ -7,6 +8,8 @@ from fastapi import HTTPException
 
 from .legacy_contracts import LegacyLLMGenerateRequest
 from .legacy_llm_helpers import send_legacy_llm_request, terminal_stream_message
+
+logger = logging.getLogger(__name__)
 
 
 def collect_callback(
@@ -59,7 +62,17 @@ def collect_non_stream_response(
             callback,
         )
     except Exception as exc:
-        raise HTTPException(status_code=500, detail=str(exc)) from exc
+        logger.error(
+            "Non-streaming LLM request failed (request_id=%s): %s",
+            request_id,
+            exc,
+            exc_info=True,
+        )
+        # Generic detail only; exception detail stays in the log
+        # (CodeQL py/stack-trace-exposure, GitHub issue #2079).
+        raise HTTPException(
+            status_code=500, detail="Request failed"
+        ) from exc
     if not done.wait(timeout=300):
         raise HTTPException(status_code=504, detail="Request timeout")
     final_turn = max(complete_by_turn.keys(), default=0)

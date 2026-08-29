@@ -35,7 +35,14 @@ def timeout_payload(action_str: str) -> dict:
 
 
 def error_payload(message: str, action_str: str) -> bytes:
-    """Return the NDJSON error line for one stream failure."""
+    """Return the NDJSON error line for one stream failure.
+
+    ``message`` must be a generic, non-sensitive string.  Callers log the
+    underlying exception server-side (with ``exc_info=True``) and must NOT
+    pass ``str(exc)`` here: raw exception text can embed filesystem paths
+    and other internals (CodeQL py/stack-trace-exposure, GitHub issue
+    #2079).
+    """
     body = JSONResponse(
         content={
             "message": message,

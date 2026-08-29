@@ -122,13 +122,19 @@ def _batch_results(app, prompts: list, action: LLMActionType, llm_request: LLMRe
                 responses.append(future.result())
             except Exception as error:
                 index = futures[future]
+                logger.warning(
+                    "Batch prompt %s failed: %s", index, error
+                )
                 responses.append(
                     {
                         "index": index,
                         "prompt": prompts[index],
                         "text": "",
                         "success": False,
-                        "error": str(error),
+                        # Generic message only; exception detail stays in
+                        # the server log (CodeQL py/stack-trace-exposure,
+                        # GitHub issue #2079).
+                        "error": "Request failed",
                         "duration": 0.0,
                     }
                 )

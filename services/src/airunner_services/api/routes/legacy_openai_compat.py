@@ -327,7 +327,9 @@ def _openai_chat_stream(
         _dispatch_request(app, prompt, llm_request, request_id, callback)
     except Exception as exc:
         logger.error("OpenAI chat stream error: %s", exc, exc_info=True)
-        yield _sse_line({"error": {"message": str(exc)}})
+        # Generic message only; the exception detail stays in the log
+        # (CodeQL py/stack-trace-exposure, GitHub issue #2079).
+        yield _sse_line({"error": {"message": "Request failed"}})
         return
 
     while not done.wait(timeout=0.25):
@@ -385,7 +387,12 @@ def _openai_chat_non_stream(
     try:
         _dispatch_request(app, prompt, llm_request, request_id, callback)
     except Exception as exc:
-        raise HTTPException(status_code=500, detail=str(exc)) from exc
+        logger.error("OpenAI chat error: %s", exc, exc_info=True)
+        # Generic detail only; exception detail stays in the log
+        # (CodeQL py/stack-trace-exposure, GitHub issue #2079).
+        raise HTTPException(
+            status_code=500, detail="Request failed"
+        ) from exc
 
     if not done.wait(timeout=300):
         raise HTTPException(status_code=504, detail="Request timeout")

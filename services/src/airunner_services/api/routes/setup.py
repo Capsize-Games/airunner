@@ -175,9 +175,11 @@ async def setup_install(
                 })
             except Exception as exc:
                 logger.warning("Failed to queue %s: %s", job["repo_id"], exc)
+                # Generic message only; the exception detail stays in the
+                # server log (CodeQL py/stack-trace-exposure, issue #2079).
                 yield _emit({
                     "status": "installing",
-                    "message": f"Failed: {job['repo_id']} — {exc}",
+                    "message": f"Failed: {job['repo_id']}",
                     "progress": 10 + int(85 * idx / max(total_jobs, 1)),
                 })
 

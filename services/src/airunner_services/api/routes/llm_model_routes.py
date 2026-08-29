@@ -90,10 +90,12 @@ async def list_models(_req: Request):
             )
         return models
     except Exception as exc:
-        logger.error(f"Error listing models: {exc}")
+        logger.error("Error listing models: %s", exc, exc_info=True)
+        # Generic detail only; exception detail stays in the log
+        # (CodeQL py/stack-trace-exposure, GitHub issue #2079).
         raise HTTPException(
             status_code=500,
-            detail=f"Error listing models: {str(exc)}",
+            detail="Error listing models",
         ) from exc
 
 

@@ -91,7 +91,9 @@ def _start_background_kickoff(
                 "request_id=%s",
                 request_id,
             )
-            q.put(error_payload(f"Error invoking LLM: {exc}", action_str))
+            # Generic message only; the exception detail stays in the log
+            # (CodeQL py/stack-trace-exposure, GitHub issue #2079).
+            q.put(error_payload("Error invoking LLM", action_str))
             done.set()
 
     threading.Thread(target=kickoff, daemon=True).start()

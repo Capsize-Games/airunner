@@ -11,7 +11,6 @@ from __future__ import annotations
 import json
 import os
 import random
-import re
 import threading
 import time
 import uuid
@@ -86,10 +85,27 @@ def model_family(name_lower: str) -> str:
 
 
 def parameter_size_from_name(name_lower: str) -> str:
-    """Return the inferred parameter size for a model name."""
-    size_match = re.search(r"(\d+\.?\d*)b", name_lower)
-    if size_match:
-        return f"{size_match.group(1).upper()}B"
+    """Return the inferred parameter size for a model name.
+
+    Uses a bounded, linear-time scan instead of a regex so an attacker who
+    controls the model name cannot drive polynomial backtracking
+    (CodeQL py/polynomial-redos, GitHub issue #2080).
+    """
+    digits: list[str] = []
+    seen_dot = False
+    for char in name_lower:
+        if char.isdigit():
+            digits.append(char)
+            continue
+        if char == "." and digits and not seen_dot:
+            digits.append(char)
+            seen_dot = True
+            continue
+        # A size token is "<digits>[.<digits>]" immediately followed by "b".
+        if char == "b" and digits:
+            return f"{''.join(digits).upper()}B"
+        digits = []
+        seen_dot = False
     return "8B"
 
 
@@ -528,9 +544,13 @@ def _ollama_chat_stream(app, prompt: str, model: str, llm_request: LLMRequest, r
         _collect_text(app, prompt, llm_request, request_id, callback)
     except Exception as exc:
         logger.error("Ollama chat error: %s", exc, exc_info=True)
+        # Generic message only; the exception detail stays in the log
+        # (CodeQL py/stack-trace-exposure, GitHub issue #2079).
         yield _ndjson_line(
             _ollama_chat_error(
-                model, {"role": "assistant", "content": ""}, str(exc)
+                model,
+                {"role": "assistant", "content": ""},
+                "Failed to generate response",
             )
         )
         return
@@ -574,7 +594,12 @@ def _ollama_chat_non_stream(app, prompt: str, model: str, llm_request: LLMReques
     try:
         _collect_text(app, prompt, llm_request, request_id, callback)
     except Exception as exc:
-        raise HTTPException(status_code=500, detail=str(exc)) from exc
+        logger.error("Ollama chat error: %s", exc, exc_info=True)
+        # Generic detail only; exception detail stays in the log
+        # (CodeQL py/stack-trace-exposure, GitHub issue #2079).
+        raise HTTPException(
+            status_code=500, detail="Failed to generate response"
+        ) from exc
 
     if not done.wait(timeout=300):
         raise HTTPException(status_code=504, detail="Request timeout")
@@ -680,7 +705,11 @@ def _ollama_generate_stream(app, prompt: str, model: str, llm_request: LLMReques
         _collect_text(app, prompt, llm_request, request_id, callback)
     except Exception as exc:
         logger.error("Ollama generate error: %s", exc, exc_info=True)
-        yield _ndjson_line(_ollama_generate_error(model, str(exc)))
+        # Generic message only; the exception detail stays in the log
+        # (CodeQL py/stack-trace-exposure, GitHub issue #2079).
+        yield _ndjson_line(
+            _ollama_generate_error(model, "Failed to generate response")
+        )
         return
 
     while not done.wait(timeout=0.25):
@@ -707,7 +736,12 @@ def _ollama_generate_non_stream(app, prompt: str, model: str, llm_request: LLMRe
     try:
         _collect_text(app, prompt, llm_request, request_id, callback)
     except Exception as exc:
-        raise HTTPException(status_code=500, detail=str(exc)) from exc
+        logger.error("Ollama generate error: %s", exc, exc_info=True)
+        # Generic detail only; exception detail stays in the log
+        # (CodeQL py/stack-trace-exposure, GitHub issue #2079).
+        raise HTTPException(
+            status_code=500, detail="Failed to generate response"
+        ) from exc
 
     if not done.wait(timeout=300):
         raise HTTPException(status_code=504, detail="Request timeout")

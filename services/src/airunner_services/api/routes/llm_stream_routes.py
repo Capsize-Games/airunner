@@ -44,11 +44,13 @@ async def websocket_chat(websocket: WebSocket):
             {"type": "error", "content": exc.detail, "done": True}
         )
     except Exception as exc:
-        logger.error(f"WebSocket error: {exc}")
+        logger.error("WebSocket error: %s", exc, exc_info=True)
         await websocket.send_json(
             {
                 "type": "error",
-                "content": f"Server error: {str(exc)}",
+                # Generic message only; exception detail stays in the log
+                # (CodeQL py/stack-trace-exposure, GitHub issue #2079).
+                "content": "Server error",
                 "done": True,
             }
         )
