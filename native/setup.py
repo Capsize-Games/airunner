@@ -11,7 +11,7 @@ from pathlib import Path
 
 from setuptools import find_packages, setup
 
-VERSION = "6.0.1"
+VERSION = "6.0.2"
 
 # The project is GPL-3.0-only (issue #2058): the repo-root LICENSE file, every
 # ``license=`` metadata field and these PyPI classifiers must agree. Mirrored
