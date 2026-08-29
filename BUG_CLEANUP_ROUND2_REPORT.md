@@ -11,7 +11,8 @@ Branch: `bug/close-audit-issues-round2` (off `master`, which is at `v6.0.1`).
 
 ```
 $ git log --oneline master..HEAD
-b3122bdff docs: add build, license, and community badges to README header
+65adffb4c refactor(logging): expose resolve_log_base_path as a public name
+41b3d3b50 docs: add build, license, and community badges to README header
 befc78a06 docs: add BUG_CLEANUP_ROUND2_REPORT for issues #2052, #2050, #2077
 7a4879e53 fix(sidecars): bump llama.cpp pin to mingw-safe revision; keep matrix legs independent
 e1807d82b refactor(logging): replace print() instrumentation with logger calls
@@ -332,13 +333,24 @@ Task 3 build tails: see §5 (Windows + Linux, both `llama-server`/`llama-server.
 ## 10. Post-report follow-up (maintainer request)
 
 After the round-2 implementation was handed back, the maintainer asked for a
-badge refresh on the README header. Commit `b3122bdff` replaced the single
+badge refresh on the README header. Commit `41b3d3b50` replaced the single
 badge line with a full row: build status (Hybrid Runtime CI), Native Runtime
 Sidecars, Docker Release, PyPI, Python 3.13, GPL-3.0 license (retained),
 last-commit, and a **Discord** badge linking to
 `https://discord.gg/7254Hkzc4T`. The Discord badge uses a static shields.io
 label (the `/discord/<id>` endpoint requires a numeric guild ID, not an
 invite code) so it always renders, and links to the invite.
+
+### Reviewer nits (non-blocking, addressed)
+
+- `shared/airunner_common/get_logger.py` now exposes the shared log base path
+  resolver as the **public** `resolve_log_base_path`; `logging_utils.py`
+  imports the public name instead of the private `_resolve_log_base_path`
+  (commit `65adffb4c`). The private `_resolve_log_base_path` wrapper inside
+  `logging_utils.py` is module-internal and intentionally stays private.
+- The `debug_print(` call-line markers in the feather CLI scripts are
+  harmless marker noise; the AST-based guard test handles them correctly.
+  No change made.
 
 ---
 
