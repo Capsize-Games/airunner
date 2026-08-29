@@ -3,7 +3,43 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 DAEMON_PORT="${AIRUNNER_DAEMON_PORT:-8188}"
+DEV_VENV="${AIRUNNER_DEV_VENV:-${ROOT_DIR}/venv}"
+DEV_VENV_BIN="${DEV_VENV}/bin"
 FAILURES=0
+
+# Loopback auth (issue #2033) requires the X-Airunner-Token header on every
+# non-health request. Without it the API middleware rejects the probe with 401
+# *before* routing, so a GET on a POST-only endpoint would never reach the route
+# that returns 405 "Method Not Allowed". Read the per-user token exactly like
+# scripts/run_tests.py and the GUI daemon client do.
+LOOPBACK_TOKEN=""
+if [[ -x "${DEV_VENV_BIN}/python" ]]; then
+    LOOPBACK_TOKEN="$(
+        PYTHONPATH="${ROOT_DIR}/services/src:${ROOT_DIR}/shared" \
+        "${DEV_VENV_BIN}/python" - <<'PY'
+try:
+    from airunner_services.api.loopback_token import (
+        get_or_create_loopback_token,
+    )
+    print(get_or_create_loopback_token() or "")
+except Exception:
+    try:
+        from airunner_common.settings import AIRUNNER_BASE_PATH
+        from pathlib import Path
+        token = (
+            Path(AIRUNNER_BASE_PATH) / "config" / "loopback_token"
+        ).read_text(encoding="utf-8").strip()
+        print(token)
+    except Exception:
+        print("")
+PY
+    )"
+fi
+
+AUTH_ARGS=()
+if [[ -n "${LOOPBACK_TOKEN}" ]]; then
+    AUTH_ARGS=(-H "X-Airunner-Token: ${LOOPBACK_TOKEN}")
+fi
 
 check() {
     local label="$1"
@@ -12,7 +48,7 @@ check() {
 
     echo -n "  ${label}: "
     local response
-    response="$(curl -s --max-time 3 "${url}" 2>/dev/null || true)"
+    response="$(curl -s --max-time 3 "${AUTH_ARGS[@]}" "${url}" 2>/dev/null || true)"
 
     if [[ -z "${response}" ]]; then
         echo "FAIL (no response)"
