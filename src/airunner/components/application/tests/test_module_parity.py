@@ -39,6 +39,18 @@ _IMPORT_NORMALIZATIONS = (
     ),
 )
 
+# runtimes/runtime_layout.py differs ONLY by its bind-host import path:
+#   GUI:      from airunner.runtimes.runtime_bind_host import ...
+#   services: from airunner_services.runtimes.runtime_bind_host import ...
+_LAYOUT_IMPORT_NORMALIZATIONS = (
+    (
+        "from airunner_services.runtimes.runtime_bind_host import "
+        "resolve_runtime_bind_host",
+        "from airunner.runtimes.runtime_bind_host import "
+        "resolve_runtime_bind_host",
+    ),
+)
+
 
 def _read(path: Path) -> str:
     return path.read_text(encoding="utf-8")
@@ -75,61 +87,67 @@ def test_daemon_config_identical_after_import_normalization() -> None:
     )
 
 
+def test_runtime_layout_identical_after_bind_host_normalization() -> None:
+    """runtimes/runtime_layout.py must be identical apart from the
+    runtime_bind_host import path (issue #2048)."""
+    gui = _read(
+        _REPO_ROOT / "src" / "airunner" / "runtimes" / "runtime_layout.py"
+    )
+    services = _read(
+        _REPO_ROOT
+        / "services"
+        / "src"
+        / "airunner_services"
+        / "config"
+        / "runtime_layout.py"
+    )
+    for source, replacement in _LAYOUT_IMPORT_NORMALIZATIONS:
+        services = services.replace(source, replacement)
+    assert gui == services, (
+        "runtimes/runtime_layout.py drifted beyond the documented "
+        "runtime_bind_host import path"
+    )
+
+
 # ---------------------------------------------------------------------------
-# url_safety.py — intentional SSRF allow-list divergence
+# url_safety.py — GUI is a thin re-export of the canonical services module
 # ---------------------------------------------------------------------------
-# The services copy adds an operator-configurable SSRF allow-list (functions
-# ``_allowed_host_set`` / ``_host_is_allowed`` plus two call sites in
-# ``validate_url_for_fetch``). Every OTHER line must stay identical.
+# The GUI copy was replaced by a re-export shim (issue #2048) so the two
+# cannot drift; the canonical services module owns the complete SSRF
+# blocklist including the operator-configurable allow-list helpers.
 _SSRF_HELPER_FUNCS = ("_allowed_host_set", "_host_is_allowed")
 
 
-def _strip_ssrf_allowlist(source: str) -> str:
-    """Return the services source with the documented SSRF block removed."""
-    tree = ast.parse(source)
-    lines = source.splitlines(keepends=True)
-    keep = [True] * len(lines)
-    for node in ast.walk(tree):
-        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and (
-            node.name in _SSRF_HELPER_FUNCS
-        ):
-            for index in range(node.lineno - 1, node.end_lineno):
-                keep[index] = False
-    text = "".join(line for line, kept in zip(lines, keep) if kept)
-    # Strip the two allow-list call sites:
-    #     if _host_is_allowed(hostname, {ip}):
-    #         return
-    text = re.sub(
-        r"\n[ \t]*if _host_is_allowed\([^)]*\):[ \t]*\n[ \t]*return[ \t]*",
-        "",
-        text,
+def test_url_safety_shim_re_exports_canonical() -> None:
+    """airunner.url_safety must be a thin re-export of the canonical
+    airunner_services.url_safety module (issue #2048)."""
+    from airunner.url_safety import (
+        SSRFBlocked,
+        safe_fetch_bytes,
+        safe_fetch_url,
+        validate_url_for_fetch,
     )
-    return text
-
-
-def _normalize(source: str) -> str:
-    """Normalize whitespace noise (trailing ws, blank-line runs)."""
-    source = re.sub(r"[ \t]+$", "", source)
-    source = re.sub(r"\n{3,}", "\n\n", source)
-    return source.strip()
-
-
-def test_url_safety_identical_except_ssrf_allowlist() -> None:
-    """GUI url_safety must match services minus the documented SSRF block."""
-    gui = _read(_REPO_ROOT / "src" / "airunner" / "url_safety.py")
-    services = _read(
-        _REPO_ROOT / "services" / "src" / "airunner_services" / "url_safety.py"
+    from airunner_services.url_safety import (
+        SSRFBlocked as ServicesSSRFBlocked,
     )
-    stripped = _strip_ssrf_allowlist(services)
-    assert _normalize(gui) == _normalize(stripped), (
-        "url_safety.py drifted beyond the intentional SSRF allow-list "
-        "addition (functions _allowed_host_set/_host_is_allowed and their "
-        "two call sites in validate_url_for_fetch)"
+    from airunner_services.url_safety import (
+        safe_fetch_bytes as services_safe_fetch_bytes,
     )
+    from airunner_services.url_safety import (
+        safe_fetch_url as services_safe_fetch_url,
+    )
+    from airunner_services.url_safety import (
+        validate_url_for_fetch as services_validate_url_for_fetch,
+    )
+
+    assert SSRFBlocked is ServicesSSRFBlocked
+    assert safe_fetch_bytes is services_safe_fetch_bytes
+    assert safe_fetch_url is services_safe_fetch_url
+    assert validate_url_for_fetch is services_validate_url_for_fetch
 
 
 def test_url_safety_services_still_has_ssrf_helpers() -> None:
-    """The intentional services-only SSRF helpers must remain present."""
+    """The canonical services SSRF helpers must remain present."""
     services = _read(
         _REPO_ROOT / "services" / "src" / "airunner_services" / "url_safety.py"
     )
