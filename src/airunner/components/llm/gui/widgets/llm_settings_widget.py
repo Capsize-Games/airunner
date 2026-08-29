@@ -100,6 +100,31 @@ class LLMSettingsWidget(BaseWidget, AIModelMixin):
         self.ui.quantization_layout.addWidget(self._runtime_precision_label)
         self.ui.quantization_layout.addWidget(self._runtime_precision_dropdown)
 
+        # Explicit opt-in for executing remote model-repo code (GitHub issue
+        # #2031). Default is off; enabling runs arbitrary Python shipped in a
+        # downloaded model repo, so it is surfaced as a visible, labeled
+        # control rather than hidden in a config file.
+        self._trust_remote_code_checkbox = QCheckBox(
+            "Trust remote code from model repos (unsafe — runs arbitrary Python)"
+        )
+        self._trust_remote_code_checkbox.setToolTip(
+            "Allow tokenizers/models that require trust_remote_code=True to "
+            "load code shipped inside the model repo. Only enable for models "
+            "you trust."
+        )
+        self._trust_remote_code_checkbox.setChecked(
+            bool(getattr(self.application_settings, "trust_remote_code", False))
+        )
+        self._trust_remote_code_checkbox.toggled.connect(
+            self.on_trust_remote_code_toggled
+        )
+        self.ui.quantization_layout.addWidget(self._trust_remote_code_checkbox)
+
+    @Slot(bool)
+    def on_trust_remote_code_toggled(self, val: bool):
+        """Persist the explicit remote-code opt-in."""
+        self.update_application_settings(trust_remote_code=val)
+
     def _hide_model_provider_controls(self) -> None:
         """Hide model and provider controls since they're now in chat prompt widget."""
         # Hide provider group box (contains model_service)

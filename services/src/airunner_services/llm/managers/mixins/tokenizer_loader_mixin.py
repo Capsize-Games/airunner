@@ -17,6 +17,31 @@ if TYPE_CHECKING:
     )
 
 
+def _remote_code_allowed() -> bool:
+    """Return True only when the user opted into remote model code.
+
+    Reads ``ApplicationSettings.trust_remote_code`` through the existing
+    services settings accessor (never a raw sqlite connection). Fail closed:
+    any error (missing row, no DB, unexpected exception) returns False, so a
+    broken settings store can never silently enable remote code execution
+    (GitHub issue #2031).
+    """
+    try:
+        from airunner_services.database.models.application_settings import (
+            ApplicationSettings,
+        )
+
+        settings = ApplicationSettings.objects.first()
+        if settings is not None:
+            return bool(getattr(settings, "trust_remote_code", False))
+        settings = ApplicationSettings.objects.get_or_create()
+        if settings is not None:
+            return bool(getattr(settings, "trust_remote_code", False))
+    except Exception:
+        return False
+    return False
+
+
 class TokenizerLoaderMixin:
     """Mixin for loading and configuring tokenizers.
 
@@ -63,13 +88,23 @@ class TokenizerLoaderMixin:
         NOTE: ``trust_remote_code=True`` here is a scoped fallback that only
         runs after a ``trust_remote_code=False`` attempt failed. It loads
         tokenizer code from the model repo, which executes untrusted Python,
-        so it is intentionally a last resort rather than the default.
+        so it is intentionally a last resort rather than the default. It is
+        additionally gated on an explicit user opt-in
+        (``ApplicationSettings.trust_remote_code``): without it the load
+        fails instead of executing remote code (GitHub issue #2031).
 
         Args:
             extra_kwargs: Additional kwargs to pass to from_pretrained.
         """
         if extra_kwargs is None:
             extra_kwargs = {}
+        if not _remote_code_allowed():
+            # Fail closed: never fall back to remote code without an explicit
+            # opt-in (trust_remote_code=False is the default).
+            raise RuntimeError(
+                "Model requires remote code; enable 'Trust remote code' "
+                "in settings to load it."
+            )
         self.logger.info("Retrying with trust_remote_code=True")
         try:
             # Scoped fallback: tokenizers without a registered class require
@@ -101,9 +136,17 @@ class TokenizerLoaderMixin:
         """
         if extra_kwargs is None:
             extra_kwargs = {}
+        if not _remote_code_allowed():
+            # Fail closed: never fall back to remote code without an explicit
+            # opt-in (trust_remote_code=False is the default).
+            raise RuntimeError(
+                "Model requires remote code; enable 'Trust remote code' "
+                "in settings to load it."
+            )
         self.logger.info("Trying with use_fast=False to use slow tokenizer")
         # Scoped fallback (see _load_tokenizer_with_trust_remote_code): only
-        # reached after the trusted=False attempt failed.
+        # reached after the trusted=False attempt failed AND the user
+        # explicitly opted into remote code (GitHub issue #2031).
         self._tokenizer = AutoTokenizer.from_pretrained(
             self.model_path,
             local_files_only=AIRUNNER_LOCAL_FILES_ONLY,
@@ -135,14 +178,27 @@ class TokenizerLoaderMixin:
         Returns:
             AutoConfig object with model configuration.
         """
-        # Config load for tokenizer resolution. Custom architectures need
-        # their remote code to build the correct tokenizer class; this is a
-        # scoped necessity for loading locally configured tokenizers.
-        config = AutoConfig.from_pretrained(
-            self.model_path,
-            local_files_only=AIRUNNER_LOCAL_FILES_ONLY,
-            trust_remote_code=True,
-        )
+        # Config load for tokenizer resolution. Try without remote code
+        # first; only retry with trust_remote_code=True when the first
+        # attempt failed AND the user explicitly opted in
+        # (ApplicationSettings.trust_remote_code, GitHub issue #2031). With
+        # the default opt-out the exception propagates to the caller's
+        # _handle_tokenizer_error instead of executing remote code.
+        try:
+            config = AutoConfig.from_pretrained(
+                self.model_path,
+                local_files_only=AIRUNNER_LOCAL_FILES_ONLY,
+                trust_remote_code=False,
+            )
+        except Exception:
+            if not _remote_code_allowed():
+                raise
+            config = AutoConfig.from_pretrained(
+                self.model_path,
+                local_files_only=AIRUNNER_LOCAL_FILES_ONLY,
+                # User opted in via ApplicationSettings.trust_remote_code.
+                trust_remote_code=True,
+            )
         # Align tokenizer limits with YaRN/target context if available
         if hasattr(self, "_apply_context_settings"):
             try:
