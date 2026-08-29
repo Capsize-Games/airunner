@@ -4,8 +4,16 @@ Proves:
 - A tool record without ``safety_validated=True`` is never compiled/executed.
 - ``_compile_custom_tool`` refuses unvalidated records even when called
   directly.
+- ``validate_code_safety`` is an AST analyzer: imports, dunder attribute
+  chains, denylisted builtins and module-root chains are rejected with
+  specific messages; benign tools and literal strings pass.
 - ``validate_code_safety`` now has real call sites (save path + shared
   helper), and only a passing validation yields ``safety_validated=True``.
+
+CI note (issue #2054 / security-coverage): the validator assertions run in
+the lean ``[development]`` install used by ``Hybrid Runtime CI``. Only the
+``ToolManager`` assertions, which need the langchain agent stack, are guarded
+by a scoped ``importorskip`` below.
 """
 
 from __future__ import annotations
@@ -16,21 +24,141 @@ from unittest import mock
 
 import pytest
 
-# The tool manager pulls in the long-running agent stack, which imports
-# langgraph at module import time. Skip cleanly in installs that lack the
-# llm-native extras so the runtime-contract/optional suites still collect
-# (issue #2054).
-pytest.importorskip("langgraph")
-
-from airunner_services.api.routes.persistence_mutations import (
-    _enforce_tool_code_values,
-    _enforce_tool_safety,
-)
 from airunner_services.database.models.llm_tool import (
     LLMTool,
     validate_tool_code,
 )
-from airunner_services.llm.tool_manager import ToolManager
+
+
+# ---------------------------------------------------------------------------
+# AST validator (pure stdlib — runs in the lean CI install)
+# ---------------------------------------------------------------------------
+
+
+def test_validate_ast_rejects_dunder_mro_chain() -> None:
+    code = (
+        "@tool\n"
+        "def f():\n"
+        "    return ().__class__.__mro__[1].__subclasses__()\n"
+    )
+    is_safe, message = validate_tool_code(code)
+    assert is_safe is False
+    assert "__class__" in message or "__subclasses__" in message
+
+
+def test_validate_ast_rejects_getattr_globals() -> None:
+    code = '@tool\ndef f():\n    return getattr(x, "__globals__")\n'
+    is_safe, message = validate_tool_code(code)
+    assert is_safe is False
+    assert "getattr" in message
+
+
+def test_validate_ast_rejects_import_statement() -> None:
+    code = "@tool\ndef f():\n    import os\n    return 1\n"
+    is_safe, message = validate_tool_code(code)
+    assert is_safe is False
+    assert "import" in message
+
+
+def test_validate_ast_rejects_from_import() -> None:
+    code = "@tool\ndef f():\n    from sys import modules\n    return 1\n"
+    is_safe, message = validate_tool_code(code)
+    assert is_safe is False
+    assert "import" in message
+
+
+def test_validate_ast_rejects_builtins_concat_eval() -> None:
+    code = '@tool\ndef f():\n    return __builtins__["ev"+"al"]("1")\n'
+    is_safe, message = validate_tool_code(code)
+    assert is_safe is False
+    assert "__builtins__" in message
+
+
+def test_validate_ast_rejects_breakpoint() -> None:
+    code = "@tool\ndef f():\n    breakpoint()\n"
+    is_safe, message = validate_tool_code(code)
+    assert is_safe is False
+    assert "breakpoint" in message
+
+
+def test_validate_ast_rejects_subprocess_module_root() -> None:
+    code = "@tool\ndef f():\n    import subprocess\n    return 1\n"
+    is_safe, message = validate_tool_code(code)
+    assert is_safe is False
+    assert "import" in message
+
+
+def test_validate_ast_accepts_benign_tool() -> None:
+    """A benign tool passes (the ``@tool`` decorator is injected into the
+    exec namespace by ToolManager, so no import is required — matching the
+    codebase's example tool fixtures)."""
+    code = (
+        "@tool\n"
+        "def add(a: int, b: int) -> int:\n"
+        '    """Add two numbers."""\n'
+        "    return a + b\n"
+    )
+    is_safe, message = validate_tool_code(code)
+    assert is_safe is True, message
+
+
+def test_validate_ast_accepts_literal_open_string() -> None:
+    """A literal string containing ``open(`` must not be rejected."""
+    code = (
+        "@tool\n"
+        "def f():\n"
+        '    """Opens the file (open(the file)) — not a call."""\n'
+        '    return "open(the file)"\n'
+    )
+    is_safe, message = validate_tool_code(code)
+    assert is_safe is True, message
+
+
+def test_validate_ast_requires_tool_decorator() -> None:
+    code = "def f():\n    return 1\n"
+    is_safe, message = validate_tool_code(code)
+    assert is_safe is False
+    assert "@tool" in message
+
+
+def test_validate_ast_rejects_syntax_error() -> None:
+    code = "@tool\ndef f(:\n"
+    is_safe, message = validate_tool_code(code)
+    assert is_safe is False
+    assert "syntax" in message.lower()
+
+
+def test_validate_ast_accepts_plain_math_tool() -> None:
+    """A benign tool that does arithmetic still passes."""
+    code = "@tool\ndef add(a: int, b: int) -> int:\n    return a + b\n"
+    is_safe, message = validate_tool_code(code)
+    assert is_safe is True, message
+
+
+# ---------------------------------------------------------------------------
+# ToolManager-level assertions (need the langchain agent stack)
+# ---------------------------------------------------------------------------
+
+# The tool manager pulls in the long-running agent stack, which imports
+# langgraph/langchain_core at module import time. Only the tests below need
+# it; everything above is lean-env runnable (issue #2054 / security coverage).
+# The imports are guarded so a lean install skips just these tests, not the
+# AST-validator assertions above.
+try:
+    from airunner_services.api.routes.persistence_mutations import (  # noqa: E402
+        _enforce_tool_code_values,
+        _enforce_tool_safety,
+    )
+    from airunner_services.llm.tool_manager import ToolManager  # noqa: E402
+
+    _TOOL_MANAGER_IMPORTS_OK = True
+except ImportError:  # pragma: no cover - lean install path
+    _TOOL_MANAGER_IMPORTS_OK = False
+
+_NEEDS_TOOL_MANAGER = pytest.mark.skipif(
+    not _TOOL_MANAGER_IMPORTS_OK,
+    reason="ToolManager tests need the llm-native agent stack",
+)
 
 
 def _fake_record(**overrides) -> SimpleNamespace:
@@ -46,6 +174,7 @@ def _fake_record(**overrides) -> SimpleNamespace:
     return SimpleNamespace(**values)
 
 
+@_NEEDS_TOOL_MANAGER
 def test_unvalidated_tool_is_never_compiled() -> None:
     manager = ToolManager(rag_manager=None)
     fake = _fake_record(safety_validated=False)
@@ -62,6 +191,7 @@ def test_unvalidated_tool_is_never_compiled() -> None:
     compile_spy.assert_not_called()
 
 
+@_NEEDS_TOOL_MANAGER
 def test_validated_tool_is_compiled() -> None:
     manager = ToolManager(rag_manager=None)
     fake = _fake_record(safety_validated=True)
@@ -79,12 +209,14 @@ def test_validated_tool_is_compiled() -> None:
     compile_spy.assert_called_once_with(fake)
 
 
+@_NEEDS_TOOL_MANAGER
 def test_compile_custom_tool_refuses_unvalidated_record() -> None:
     manager = ToolManager(rag_manager=None)
     with pytest.raises(PermissionError):
         manager._compile_custom_tool(_fake_record(safety_validated=False))
 
 
+@_NEEDS_TOOL_MANAGER
 def test_enforce_tool_safety_sets_flag_only_after_real_pass() -> None:
     unsafe = LLMTool(
         name="unsafe",
@@ -111,6 +243,7 @@ def test_enforce_tool_safety_sets_flag_only_after_real_pass() -> None:
     assert spoofed.safety_validated is False
 
 
+@_NEEDS_TOOL_MANAGER
 def test_enforce_tool_code_values_revalidates_bulk_updates() -> None:
     values = {
         "code": "@tool\ndef f():\n    import subprocess\n",
@@ -120,6 +253,7 @@ def test_enforce_tool_code_values_revalidates_bulk_updates() -> None:
     assert values["safety_validated"] is False
 
 
+@_NEEDS_TOOL_MANAGER
 def test_validate_tool_code_shared_helper() -> None:
     is_safe, _message = validate_tool_code(
         "@tool\ndef f():\n    return 'ok'\n"
@@ -133,6 +267,7 @@ def test_validate_tool_code_shared_helper() -> None:
     assert "os.system" in message or "rm" in message
 
 
+@_NEEDS_TOOL_MANAGER
 def test_persistence_mutations_have_real_validation_call_sites() -> None:
     """The daemon save path must invoke the safety enforcement helpers."""
     module_path = os.path.join(
