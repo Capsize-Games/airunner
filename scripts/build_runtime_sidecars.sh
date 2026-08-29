@@ -149,6 +149,26 @@ configure_platform() {
         -DCMAKE_CXX_COMPILER="$cxx"
     )
     BINARY_SUFFIX=".exe"
+
+    local compat_header="$ROOT_DIR/native/runtime_sidecars/mingw_thread_power_throttling_compat.h"
+    local probe_source="$WORK_ROOT/$TARGET_PLATFORM/thread_power_throttling_probe.c"
+    mkdir -p "$(dirname "$probe_source")"
+    cat > "$probe_source" <<'EOF'
+#include <windows.h>
+#ifndef THREAD_POWER_THROTTLING_CURRENT_VERSION
+#error missing_thread_power_throttling_api
+#endif
+EOF
+    if "$cc" -E -x c "$probe_source" -o /dev/null 2>/dev/null; then
+        # Toolchain headers declare the thread power-throttling API; nothing to do.
+        :
+    else
+        echo "MinGW headers lack THREAD_POWER_THROTTLING_*; force-including compat header"
+        CMAKE_PLATFORM_ARGS+=(
+            -DCMAKE_C_FLAGS="-include $compat_header"
+            -DCMAKE_CXX_FLAGS="-include $compat_header"
+        )
+    fi
 }
 
 clean_target() {
