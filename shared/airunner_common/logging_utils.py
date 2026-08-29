@@ -215,34 +215,19 @@ def _get_log_level_from_env() -> int:
         return logging.DEBUG
 
 
-def _default_log_base_path() -> str:
-    """Return the default directory used for AIRunner log files."""
-    if os.environ.get("AIRUNNER_FLATPAK") == "1":
-        xdg_data_home = os.environ.get(
-            "XDG_DATA_HOME",
-            os.path.expanduser("~/.local/share"),
-        )
-        return os.path.join(xdg_data_home, "airunner")
-    return AIRUNNER_BASE_PATH
-
-
 def _resolve_log_base_path() -> str:
     """Return the configured base path for persistent AIRunner logs.
 
-    When running inside the service process this prefers the user-configured
-    ``PathSettings.base_path``; the guarded import keeps the shared package
-    dependency-light for the GUI process.
+    Delegates to the injectable resolver in :mod:`airunner_common.get_logger`
+    so there is exactly one resolver state for both the root-logger setup here
+    and the per-logger ``get_logger`` file handler (issue #2050). The shared
+    package never imports ``airunner`` / ``airunner_services``; the services
+    process registers its ``PathSettings``-based resolver through
+    :func:`airunner_common.get_logger.set_log_base_path_resolver`.
     """
-    try:
-        from airunner_services.database.models.path_settings import PathSettings
+    from airunner_common.get_logger import _resolve_log_base_path as _shared
 
-        settings = PathSettings.objects.first()
-        base_path = getattr(settings, "base_path", None)
-        if base_path:
-            return os.path.expanduser(base_path)
-    except Exception:
-        pass
-    return os.path.expanduser(_default_log_base_path())
+    return _shared()
 
 
 def _get_log_file_path(root_logger: logging.Logger) -> Optional[str]:
