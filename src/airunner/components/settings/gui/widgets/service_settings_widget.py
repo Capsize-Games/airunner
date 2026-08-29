@@ -123,6 +123,21 @@ class ServiceSettingsWidget(QWidget):
         self.lna_enabled_cb.toggled.connect(self._on_lna_toggled)
         server_layout.addRow("", self.lna_enabled_cb)
 
+        # Persistent inline warning while LNA is enabled (issue #2034). This
+        # mirrors the QLabel + setStyleSheet pattern used by other settings
+        # widgets; no new styling infrastructure.
+        self.lna_warning_label = QLabel(
+            "Local Network Access is enabled. Other devices on your network "
+            "can reach AI Runner's local server. Only enable this on trusted "
+            "networks."
+        )
+        self.lna_warning_label.setWordWrap(True)
+        self.lna_warning_label.setStyleSheet(
+            "color: #b45309; font-weight: bold;"
+        )
+        self.lna_warning_label.setVisible(False)
+        server_layout.addRow("", self.lna_warning_label)
+
         server_group.setLayout(server_layout)
         layout.addWidget(server_group)
 
@@ -164,20 +179,12 @@ class ServiceSettingsWidget(QWidget):
 
     @Slot(bool)
     def _on_lna_toggled(self, enabled: bool):
-        """Show a visible warning when Local Network Access is enabled.
+        """Show or hide the persistent LNA warning label (issue #2034).
 
         Args:
             enabled: Whether LNA/CORS is enabled
         """
-        if not enabled:
-            return
-        QMessageBox.information(
-            self,
-            "Local Network Access Enabled",
-            "LNA/CORS is enabled. CORS grants are restricted to loopback "
-            "origins (http://127.0.0.1:* / http://localhost:*) only; "
-            "requests from non-loopback websites will be refused.",
-        )
+        self.lna_warning_label.setVisible(enabled)
 
     @Slot()
     def _on_reset(self):
@@ -261,4 +268,9 @@ class ServiceSettingsWidget(QWidget):
         )
         self.host_input.setText(settings.get("http_server_host", "127.0.0.1"))
         self.port_input.setValue(settings.get("http_server_port", 5005))
-        self.lna_enabled_cb.setChecked(settings.get("lna_enabled", False))
+        lna_enabled = settings.get("lna_enabled", False)
+        self.lna_enabled_cb.setChecked(lna_enabled)
+        # Sync the persistent warning on load too, so an already-enabled LNA
+        # shows it without requiring a toggle (issue #2034).
+        if hasattr(self, "lna_warning_label"):
+            self.lna_warning_label.setVisible(bool(lna_enabled))
