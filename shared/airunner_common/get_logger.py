@@ -62,7 +62,7 @@ def _default_log_base_path() -> str:
     return AIRUNNER_BASE_PATH
 
 
-def _resolve_log_base_path() -> str:
+def resolve_log_base_path() -> str:
     """Return the configured base path for persistent AIRunner logs."""
     if _log_base_path_resolver is not None:
         try:
@@ -103,7 +103,7 @@ def _configure_file_handler(
     try:
         log_file = os.environ.get(
             "AIRUNNER_LOG_FILE",
-            os.path.join(_resolve_log_base_path(), "airunner.log"),
+            os.path.join(resolve_log_base_path(), "airunner.log"),
         )
         log_dir = os.path.dirname(log_file)
         if log_dir:

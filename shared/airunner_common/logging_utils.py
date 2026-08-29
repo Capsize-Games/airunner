@@ -225,9 +225,9 @@ def _resolve_log_base_path() -> str:
     process registers its ``PathSettings``-based resolver through
     :func:`airunner_common.get_logger.set_log_base_path_resolver`.
     """
-    from airunner_common.get_logger import _resolve_log_base_path as _shared
+    from airunner_common.get_logger import resolve_log_base_path
 
-    return _shared()
+    return resolve_log_base_path()
 
 
 def _get_log_file_path(root_logger: logging.Logger) -> Optional[str]:
