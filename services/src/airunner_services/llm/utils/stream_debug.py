@@ -27,7 +27,7 @@ def print_stream_debug(scope: str, **fields: Any) -> None:
     rendered_fields = " ".join(
         f"{key}={value!r}" for key, value in fields.items()
     )
-    print(
+    print(  # intentional CLI output
         f"[AIRUNNER_STREAM_DEBUG][{scope}] {rendered_fields}",
         flush=True,
     )

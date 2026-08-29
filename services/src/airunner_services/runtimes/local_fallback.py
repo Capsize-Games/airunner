@@ -36,6 +36,9 @@ from airunner_services.runtimes.registry import RuntimeRegistry, RuntimeRoute
 from airunner_services.runtimes.art_daemon_runtime_settings import (
     resolve_art_daemon_runtime_settings,
 )
+from airunner_services.utils.application.get_logger import get_logger
+
+logger = get_logger(__name__)
 
 DEFAULT_PROVIDER = "local"
 ProgressCallback = Callable[[dict[str, Any]], None]
@@ -1371,19 +1374,19 @@ class LocalFallbackArtClient(_SignalRuntimeClient):
         # instantiated by ServiceWorkerManager; accessing it here
         # triggers creation and signal-handler registration so the
         # signal below is received.
-        print(
+        logger.info(
             "[LocalFallbackArtClient] Creating SD worker and emitting "
             f"DO_GENERATE_SIGNAL model={image_request.model_path!r} "
             f"version={image_request.version!r}"
         )
         sd_worker = self._headless_art_worker(create=True)
         if sd_worker is None:
-            print(
+            logger.error(
                 "[LocalFallbackArtClient] ERROR: SD worker could not "
                 "be created (worker_manager not found on signal_source)"
             )
         else:
-            print(
+            logger.info(
                 "[LocalFallbackArtClient] SD worker created: "
                 f"type={type(sd_worker).__name__}"
             )

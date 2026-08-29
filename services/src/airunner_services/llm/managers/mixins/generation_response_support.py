@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import re
-import traceback
 from typing import Any, Dict, List, Optional
 
 from langchain_core.messages import AIMessage
@@ -140,12 +139,12 @@ def handle_interrupted_generation(
 def handle_generation_error(owner, exc: Exception, llm_request: Optional[Any]) -> str:
     """Handle generation errors and emit the system error chunk."""
     owner.logger.error("Error during generation: %s", exc, exc_info=True)
-    print(f"[ERROR HANDLER] Exception type: {type(exc)}", flush=True)
-    print(f"[ERROR HANDLER] Exception message: {str(exc)}", flush=True)
-    print("[ERROR HANDLER] Full traceback:", flush=True)
-    traceback.print_exc()
+    owner.logger.error("[ERROR HANDLER] Exception type: %s", type(exc))
+    owner.logger.error("[ERROR HANDLER] Exception message: %s", str(exc))
     error_message = _generation_error_message(owner, exc)
-    print(f"[ERROR HANDLER] Error message to send: {error_message}", flush=True)
+    owner.logger.error(
+        "[ERROR HANDLER] Error message to send: %s", error_message
+    )
     owner.api.llm.send_llm_text_streamed_signal(
         LLMResponse(
             node_id=llm_request.node_id if llm_request else None,

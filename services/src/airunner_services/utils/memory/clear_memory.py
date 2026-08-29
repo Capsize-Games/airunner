@@ -5,10 +5,14 @@ from __future__ import annotations
 import gc
 from typing import Any
 
+from airunner_services.utils.application.get_logger import get_logger
+
 try:
     import torch
 except ImportError:  # pragma: no cover - optional dependency
     torch = None
+
+logger = get_logger(__name__)
 
 
 def _resolve_cuda_device(device: Any) -> int | None:
@@ -51,7 +55,7 @@ def clear_memory(device=0) -> None:
                 torch.cuda.reset_max_memory_cached(device=cuda_device)
             torch.cuda.synchronize(device=cuda_device)
         except RuntimeError:
-            print("Failed to clear memory")
+            logger.error("Failed to clear memory")
     gc.collect()
 
 

@@ -8,7 +8,14 @@ AI Runner is a private AI companion you shape — name, personality, voice, memo
 <img src="./images/art_interface.png" alt="AI Runner Logo" />
 
 
-[![PyPi](https://github.com/Capsize-Games/airunner/actions/workflows/pypi-dispatch.yml/badge.svg)](https://github.com/Capsize-Games/airunner/actions/workflows/pypi-dispatch.yml) ![GitHub last commit](https://img.shields.io/github/last-commit/Capsize-Games/airunner) [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
+[![Build](https://github.com/Capsize-Games/airunner/actions/workflows/eval-tests.yml/badge.svg)](https://github.com/Capsize-Games/airunner/actions/workflows/eval-tests.yml)
+[![Native Runtime Sidecars](https://github.com/Capsize-Games/airunner/actions/workflows/native-runtime-sidecars.yml/badge.svg)](https://github.com/Capsize-Games/airunner/actions/workflows/native-runtime-sidecars.yml)
+[![Docker Release](https://github.com/Capsize-Games/airunner/actions/workflows/docker-release.yml/badge.svg)](https://github.com/Capsize-Games/airunner/actions/workflows/docker-release.yml)
+[![PyPI](https://github.com/Capsize-Games/airunner/actions/workflows/pypi-dispatch.yml/badge.svg)](https://github.com/Capsize-Games/airunner/actions/workflows/pypi-dispatch.yml)
+[![Python 3.13](https://img.shields.io/badge/Python-3.13-blue.svg)](https://www.python.org/downloads/)
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
+[![GitHub last commit](https://img.shields.io/github/last-commit/Capsize-Games/airunner)](https://github.com/Capsize-Games/airunner/commits/master)
+[![Discord](https://img.shields.io/badge/Discord-Join%20the%20community-5865F2?logo=discord&logoColor=white)](https://discord.gg/7254Hkzc4T)
 
 [🐞 Report Bug](https://github.com/Capsize-Games/airunner/issues/new?template=bug_report.md) · [✨ Request Feature](https://github.com/Capsize-Games/airunner/issues/new?template=feature_request.md) · [🛡️ Report Vulnerability](https://github.com/Capsize-Games/airunner/issues/new?template=vulnerability_report.md) · [📖 Wiki](https://github.com/Capsize-Games/airunner/wiki)
 

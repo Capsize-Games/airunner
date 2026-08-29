@@ -130,7 +130,7 @@ class DocumentWorker(Worker):
         self._known_files = current_files
 
         if documents_added or documents_removed:
-            print("DOCUMENT COLLECTION HAS CHANGED")
+            self.logger.info("DOCUMENT COLLECTION HAS CHANGED")
             self.emit_signal(SignalCode.DOCUMENT_COLLECTION_CHANGED)
 
     def handle_message(self, message):

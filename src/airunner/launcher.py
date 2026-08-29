@@ -240,7 +240,7 @@ def generate_local_certs_if_needed(base_path):
     if not (os.path.exists(cert_file) and os.path.exists(key_file)):
         mkcert_path = shutil.which("mkcert")
         if mkcert_path:
-            print(
+            print(  # intentional CLI output
                 "Using mkcert to generate a trusted certificate for localhost..."
             )
             try:
@@ -258,11 +258,11 @@ def generate_local_certs_if_needed(base_path):
                     ],
                     check=True,
                 )
-                print(
+                print(  # intentional CLI output
                     f"Trusted certificate generated with mkcert: {cert_file}, {key_file}"
                 )
             except Exception as e:
-                print(
+                print(  # intentional CLI output
                     f"mkcert failed: {e}. Falling back to OpenSSL self-signed certificate."
                 )
                 subprocess.run(
@@ -284,11 +284,11 @@ def generate_local_certs_if_needed(base_path):
                     ],
                     check=True,
                 )
-                print(
+                print(  # intentional CLI output
                     f"Self-signed certificate generated: {cert_file}, {key_file}"
                 )
         else:
-            print(
+            print(  # intentional CLI output
                 "mkcert not found, falling back to OpenSSL self-signed certificate."
             )
             subprocess.run(
@@ -310,7 +310,7 @@ def generate_local_certs_if_needed(base_path):
                 ],
                 check=True,
             )
-            print(
+            print(  # intentional CLI output
                 f"Self-signed certificate generated: {cert_file}, {key_file}"
             )
     return cert_file, key_file

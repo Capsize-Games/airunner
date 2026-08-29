@@ -1033,7 +1033,7 @@ class ConversationWidget(BaseWidget):
 
     def on_bot_mood_updated_signal(self, data):
         """Handle live mood/emoji update for a message widget."""
-        print("TODO: BOT MOOD UPDATED")
+        self.logger.debug("TODO: BOT MOOD UPDATED")
 
     def flush_token_buffer(self):
         """

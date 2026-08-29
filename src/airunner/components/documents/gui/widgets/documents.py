@@ -179,7 +179,7 @@ class DocumentsWidget(BaseWidget):
         file_path = data.get("file_path")
         if file_path:
             # Implement your document open logic here
-            print(f"Open document: {file_path}")
+            self.logger.info("Open document: %s", file_path)
 
     def _filter_file_explorer_extensions(self):
         # Hide files that do not match allowed extensions

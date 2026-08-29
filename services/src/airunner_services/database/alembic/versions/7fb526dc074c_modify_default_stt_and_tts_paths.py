@@ -98,7 +98,7 @@ def update_path_values(stt_model_path, tts_model_path):
                 ),
                 {"stt": stt_model_path, "tts": tts_model_path, "id": path_id},
             )
-            print(f"Successfully updated path_settings with ID {path_id}")
+            print(f"Successfully updated path_settings with ID {path_id}")  # intentional CLI output
         except Exception as e:
-            print(f"Error updating path_settings with ID {path_id}: {str(e)}")
+            print(f"Error updating path_settings with ID {path_id}: {str(e)}")  # intentional CLI output
             raise

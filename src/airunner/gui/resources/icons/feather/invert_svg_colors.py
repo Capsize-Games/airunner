@@ -98,17 +98,17 @@ def process_svg(input_file, output_file):
             encoding="utf-8",
             xml_declaration=True,
         )
-        print(f"Successfully wrote inverted SVG to {output_file}")
+        print(f"Successfully wrote inverted SVG to {output_file}")  # intentional CLI output
         return True
 
     except Exception as e:
-        print(f"Error processing file: {e}")
+        print(f"Error processing file: {e}")  # intentional CLI output
         return False
 
 
 if __name__ == "__main__":
     if len(sys.argv) != 3:
-        print("Usage: python invert_svg_colors.py input.svg output.svg")
+        print("Usage: python invert_svg_colors.py input.svg output.svg")  # intentional CLI output
         sys.exit(1)
 
     success = process_svg(sys.argv[1], sys.argv[2])

@@ -3,6 +3,10 @@ import os
 import markdown
 from PIL import Image, ImageDraw, ImageFont
 
+from airunner_services.utils.application.get_logger import get_logger
+
+logger = get_logger(__name__)
+
 
 class Formatter:
     """
@@ -138,7 +142,7 @@ class Formatter:
             img.save(output_path)
             return output_path
         except Exception as e:
-            print(f"Error rendering plain text to image: {e}")
+            logger.error("Error rendering plain text to image: %s", e)
             return ""
 
     @staticmethod

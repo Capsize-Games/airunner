@@ -1,6 +1,9 @@
 from typing import List
 from PySide6.QtCore import Qt
+from airunner.utils.application.get_logger import get_logger
 from airunner.utils.settings import get_qsettings
+
+logger = get_logger(__name__)
 
 
 def load_splitter_settings(
@@ -47,8 +50,10 @@ def load_splitter_settings(
             try:
                 splitter.restoreState(splitter_state)
             except Exception as e:
-                print(
-                    f"Error restoring splitter state for {splitter_name}: {e}. Applying default sizes."
+                logger.warning(
+                    "Error restoring splitter state for %s: %s. Applying default sizes.",
+                    splitter_name,
+                    e,
                 )
                 splitter_state = None  # Mark as if no state was found to trigger default sizing
 
@@ -152,8 +157,11 @@ def load_splitter_settings(
                 try:
                     splitter.setSizes(sizes)
                 except Exception as e:
-                    print(
-                        f"Error setting default sizes for {splitter_name} with sizes {sizes}: {e}"
+                    logger.warning(
+                        "Error setting default sizes for %s with sizes %s: %s",
+                        splitter_name,
+                        sizes,
+                        e,
                     )
 
         # Store back the potentially modified splitter (already done by getattr earlier)

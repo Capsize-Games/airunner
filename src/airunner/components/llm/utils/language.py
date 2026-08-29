@@ -1,6 +1,9 @@
 from lingua import Language, LanguageDetectorBuilder
 from airunner.enums import AvailableLanguage
+from airunner.utils.application.get_logger import get_logger
 from airunner.utils.text.formatter_extended import FormatterExtended
+
+logger = get_logger(__name__)
 
 
 def detect_language(txt: str) -> str:
@@ -28,5 +31,7 @@ def detect_language(txt: str) -> str:
     try:
         return AvailableLanguage(name)
     except ValueError:
-        print(f"Language {name} not found in AvailableLanguage enum.")
+        logger.warning(
+            "Language %s not found in AvailableLanguage enum.", name
+        )
         return AvailableLanguage.EN

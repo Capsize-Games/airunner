@@ -560,8 +560,9 @@ def search_knowledge_base_documents(
                 logger.debug(
                     f"Attempting to on-demand index {len(to_index_files)} files"
                 )
-                print(
-                    f"DEBUG search_knowledge_base_documents: attempting to index {len(to_index_files)} files"
+                logger.debug(
+                    "search_knowledge_base_documents: attempting to index %s files",
+                    len(to_index_files),
                 )
                 rag_manager = getattr(api, "rag_manager", None)
                 if rag_manager and hasattr(

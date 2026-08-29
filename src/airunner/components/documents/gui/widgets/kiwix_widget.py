@@ -2,7 +2,6 @@ import hashlib
 import os
 import re
 import json
-import pprint
 import webbrowser
 import urllib.parse
 import datetime
@@ -188,8 +187,7 @@ class KiwixWidget(BaseWidget):
 
         try:
             zim_files = KiwixAPI.list_zim_files(language=lang, query=query)
-            self.logger.debug("Kiwix API search results:")
-            pprint.pprint(zim_files)
+            self.logger.debug("Kiwix API search results: %s", zim_files)
         except Exception as e:
             QMessageBox.critical(
                 self, "Kiwix", f"Failed to fetch ZIM list: {e}"

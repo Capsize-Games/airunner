@@ -66,7 +66,7 @@ class StreamingToneColorConverter(ToneColorConverter):
                 audio_src_path, sr=hps.data.sampling_rate
             )
         except ValueError as error:
-            print(f"Error: {error}")
+            self.logger.error("Error: %s", error)
             return None
 
         if audio is None or len(audio) == 0:

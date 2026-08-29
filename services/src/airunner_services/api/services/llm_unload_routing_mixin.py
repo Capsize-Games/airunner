@@ -7,6 +7,9 @@ from typing import Optional
 
 from airunner_common.contract_enums import ModelStatus
 from airunner_services.utils.application.enum_resolver import signal_code_proxy
+from airunner_services.utils.application.get_logger import get_logger
+
+logger = get_logger(__name__)
 
 SignalCode = signal_code_proxy()
 
@@ -24,7 +27,7 @@ class LLMUnloadRoutingMixin:
             except RuntimeError:
                 pass
 
-        print("[LLM INTERRUPT] Emitting INTERRUPT_PROCESS_SIGNAL")
+        logger.debug("[LLM INTERRUPT] Emitting INTERRUPT_PROCESS_SIGNAL")
         self.emit_signal(SignalCode.INTERRUPT_PROCESS_SIGNAL)
 
     def unload(self, data: Optional[dict] = None) -> None:

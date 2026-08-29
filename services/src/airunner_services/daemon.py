@@ -372,7 +372,9 @@ def main():
     if args.generate_config:
         config = DaemonConfig(args.config)
         config.save()
-        print(f"Generated default configuration: {config.config_path}")
+        print(  # intentional CLI output
+            f"Generated default configuration: {config.config_path}"
+        )
         sys.exit(0)
 
     config = DaemonConfig(args.config)

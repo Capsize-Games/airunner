@@ -66,7 +66,10 @@ from airunner.components.settings.gui.windows.settings.templates.airunner_settin
     Ui_airunner_settings,
 )
 from airunner.components.application.gui.windows.base_window import BaseWindow
+from airunner.utils.application.get_logger import get_logger
 from airunner.utils.settings import get_qsettings
+
+logger = get_logger(__name__)
 
 try:
     from airunner.components.settings.gui.widgets.sound_settings.sound_settings_widget import (
@@ -74,7 +77,7 @@ try:
     )
 except OSError as e:
     SoundSettingsWidget = None
-    print("Error loading sound settings widget:", e)
+    logger.warning("Error loading sound settings widget: %s", e)
 
 
 class HighlightDelegate(QStyledItemDelegate):

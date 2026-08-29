@@ -281,12 +281,12 @@ def print_gguf_stats(state_dict: dict) -> None:
         total_params += v.numel() if hasattr(v, "numel") else 0
 
     if gguf_params > 0:
-        print(f"\n=== GGUF Quantization Statistics ===")
-        print(f"Total parameters: {total_params:,}")
-        print(
+        print(f"\n=== GGUF Quantization Statistics ===")  # intentional CLI output
+        print(f"Total parameters: {total_params:,}")  # intentional CLI output
+        print(  # intentional CLI output
             f"GGUF parameters: {gguf_params:,} ({gguf_params/total_params*100:.1f}%)"
         )
-        print(f"\nQuantization types:")
+        print(f"\nQuantization types:")  # intentional CLI output
         for qtype, count in sorted(quant_counts.items()):
-            print(f"  {qtype}: {count} tensors")
-        print(f"=====================================\n")
+            print(f"  {qtype}: {count} tensors")  # intentional CLI output
+        print(f"=====================================\n")  # intentional CLI output

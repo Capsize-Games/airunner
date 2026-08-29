@@ -2,6 +2,10 @@
 
 import os
 
+from airunner_services.utils.application.get_logger import get_logger
+
+logger = get_logger(__name__)
+
 # Mistral native function calling support
 try:
     from mistral_common.tokens.tokenizers.mistral import MistralTokenizer
@@ -27,12 +31,12 @@ class TokenizationMixin:
             return
 
         if not self.model_path:
-            print("No model path provided for Mistral tokenizer")
+            logger.warning("No model path provided for Mistral tokenizer")
             return
 
         tekken_path = os.path.join(self.model_path, "tekken.json")
         if not os.path.exists(tekken_path):
-            print(f"tekken.json not found at {tekken_path}")
+            logger.warning("tekken.json not found at %s", tekken_path)
             return
 
         if not self._validate_special_tokens():
@@ -47,7 +51,7 @@ class TokenizationMixin:
             True if Mistral common library is available
         """
         if not MISTRAL_AVAILABLE:
-            print("Mistral common library not available")
+            logger.warning("Mistral common library not available")
             return False
         return True
 
@@ -78,17 +82,21 @@ class TokenizationMixin:
         Args:
             special_tokens: List of special tokens in tokenizer
         """
-        print("⚠ Mistral native function calling NOT supported by this model:")
-        print(
-            f"   → Uses {type(self.tokenizer).__name__} with only {len(special_tokens)} special tokens"
+        logger.warning(
+            "⚠ Mistral native function calling NOT supported by this model:"
         )
-        print(
+        logger.warning(
+            "   → Uses %s with only %s special tokens",
+            type(self.tokenizer).__name__,
+            len(special_tokens),
+        )
+        logger.warning(
             "   → Needs Mistral V3-Tekken tokenizer with function calling tokens"
         )
-        print(
+        logger.warning(
             "   → Quantized models often lose native function calling capability"
         )
-        print("   → Falling back to prompt-based tool calling")
+        logger.warning("   → Falling back to prompt-based tool calling")
 
     def _load_mistral_tokenizer(self, tekken_path: str) -> None:
         """Load Mistral tokenizer from tekken.json file.
@@ -99,9 +107,10 @@ class TokenizationMixin:
         try:
             self._mistral_tokenizer = MistralTokenizer.from_file(tekken_path)
             self.use_mistral_native = True
-            print(
-                f"✓ Mistral native function calling ENABLED for model at {self.model_path}"
+            logger.info(
+                "✓ Mistral native function calling ENABLED for model at %s",
+                self.model_path,
             )
         except Exception as e:
-            print(f"Failed to load Mistral tokenizer: {e}")
+            logger.error("Failed to load Mistral tokenizer: %s", e)
             self.use_mistral_native = False

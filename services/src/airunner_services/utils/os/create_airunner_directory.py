@@ -1,6 +1,9 @@
 import os
 
 from airunner_services.database.models.path_settings import PathSettings
+from airunner_services.utils.application.get_logger import get_logger
+
+logger = get_logger(__name__)
 
 
 def create_airunner_paths(path_settings: PathSettings):
@@ -18,7 +21,7 @@ def create_airunner_paths(path_settings: PathSettings):
     Returns:
     None
     """
-    print("Creating directories...")
+    logger.debug("Creating directories...")
     for attr in (
         "base_path",
         "documents_path",
@@ -42,6 +45,6 @@ def create_airunner_paths(path_settings: PathSettings):
                 except FileExistsError:
                     pass
         except PermissionError:
-            print(f"No permission to create directory at {path}")
+            logger.error("No permission to create directory at %s", path)
         except Exception as e:
-            print(f"Failed to create directory {path}: {e}")
+            logger.error("Failed to create directory %s: %s", path, e)

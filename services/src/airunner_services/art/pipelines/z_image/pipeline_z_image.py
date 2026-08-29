@@ -482,7 +482,7 @@ class ZImagePipeline(DiffusionPipeline, FromSingleFileMixin):
             sigmas_list = getattr(self.scheduler, "sigmas", None)
         except Exception as e:
             sigmas_list = None
-            print(f"Could not retrieve sigmas from scheduler: {e}")
+            logger.warning("Could not retrieve sigmas from scheduler: %s", e)
 
         # 6. CFG preparation
         if guidance_scale > 1.0:

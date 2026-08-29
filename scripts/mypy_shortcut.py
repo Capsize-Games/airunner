@@ -1,12 +1,13 @@
 """
 mypy_shortcut.py
 
-Entry point for the 'airunner-mypy' command. Runs mypy with recommended flags for the AI Runner project.
+Entry point for the 'airunner-mypy' command. Runs mypy against the project's
+``[tool.mypy]`` configuration in ``pyproject.toml`` (mypy discovers the config
+from the current working directory upward), so ``airunner-mypy <file>`` and a
+bare ``mypy <file>`` agree on every flag (issue #2052).
 
 Usage:
     airunner-mypy <filename>
-
-This will run mypy with --ignore-missing-imports and --follow-imports=skip for fast, reliable type checking.
 """
 
 import sys
@@ -26,8 +27,6 @@ def main():
         sys.executable,
         "-m",
         "mypy",
-        "--ignore-missing-imports",
-        "--follow-imports=skip",
         filename,
     ]
     try:

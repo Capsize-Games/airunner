@@ -35,8 +35,11 @@ from airunner_services.utils.application.enum_resolver import (
 	model_action_type,
 )
 from airunner_services.utils.application.enum_resolver import signal_code_proxy
+from airunner_services.utils.application.get_logger import get_logger
 from airunner_services.utils.memory import apply_cudnn_benchmark
 from airunner_services.workers.worker import QueueType, Worker
+
+logger = get_logger(__name__)
 
 
 ModelAction = model_action_type()
@@ -472,7 +475,7 @@ class SDWorker(Worker):
 
 	@staticmethod
 	def on_sd_cancel_signal(_data=None):
-		print("on_sd_cancel_signal")
+		logger.info("on_sd_cancel_signal")
 
 	def on_start_auto_image_generation_signal(self, _data=None):
 		pass
@@ -481,7 +484,7 @@ class SDWorker(Worker):
 		pass
 
 	def on_do_generate_signal(self, message: Dict):
-		print(
+		self.logger.debug(
 			"[SDWorker] on_do_generate_signal received, "
 			"queuing generate action"
 		)
@@ -595,7 +598,7 @@ class SDWorker(Worker):
 		image_request = message.get("image_request")
 		client = self._daemon_client()
 		path_label = "daemon" if client is not None else "local"
-		print(
+		self.logger.debug(
 			f"[SDWorker._generate_image] path={path_label} "
 			f"version={getattr(image_request, 'version', None)} "
 			f"model={getattr(image_request, 'model_path', None)}"
@@ -610,7 +613,9 @@ class SDWorker(Worker):
 		if client is not None:
 			self._generate_image_via_daemon(message)
 			return
-		print("[SDWorker._generate_image] Loading model manager locally")
+		self.logger.debug(
+			"[SDWorker._generate_image] Loading model manager locally"
+		)
 		message["callback"] = self._finalize_do_generate_signal
 		self.load_model_manager(message)
 

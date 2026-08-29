@@ -13,6 +13,9 @@ import requests
 from airunner_services.runtimes.contracts import ArtInvocationRequest
 from airunner_services.runtimes.contracts import RuntimeAction
 from airunner_services.runtimes.contracts import RuntimeDescriptor
+from airunner_services.utils.application.get_logger import get_logger
+
+logger = get_logger(__name__)
 from airunner_services.runtimes.contracts import RuntimeHealth
 from airunner_services.runtimes.contracts import RuntimeHealthStatus
 from airunner_services.runtimes.contracts import RuntimeKind
@@ -348,19 +351,19 @@ class SidecarArtClient(RuntimeClient):
 				settings = self._settings_for_invocation(invocation)
 				self._ensure_launcher(settings)
 				launcher = self._require_launcher()
-				print(
+				logger.info(
 					"[SidecarArtClient] Starting sidecar launcher "
 					f"(endpoint={launcher.endpoint})"
 				)
 				launcher.start()
-				print(
+				logger.info(
 					"[SidecarArtClient] Sidecar launcher ready, "
 					"submitting art job"
 				)
 				if self._last_known_model_status not in {"loaded", "ready"}:
 					self._remember_model_status("loading")
 				job_id = self._submit_job(invocation)
-				print(
+				logger.info(
 					"[SidecarArtClient] Art job submitted to sidecar: "
 					f"job_id={job_id}"
 				)

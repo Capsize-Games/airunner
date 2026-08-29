@@ -1,6 +1,10 @@
 from PySide6.QtCore import Qt, QObject
 from PySide6.QtWidgets import QColorDialog
 
+from airunner.utils.application.get_logger import get_logger
+
+logger = get_logger(__name__)
+
 
 class ColorPicker(QColorDialog):
     def __init__(self, *args, **kwargs):
@@ -25,7 +29,7 @@ class ColorPicker(QColorDialog):
                     item.widget().deleteLater()
             self.layout().addWidget(color_picker_widget)
         except Exception as e:
-            print(e)
+            logger.error("Error setting up color picker: %s", e)
 
     def delete_elements(self, widget):
         # iterate over all children in layout and print their label names
@@ -46,4 +50,4 @@ class ColorPicker(QColorDialog):
                     child.setObjectName("color_picker")
                 self.delete_elements(child)
         except Exception as e:
-            print(e)
+            logger.error("Error deleting color picker elements: %s", e)

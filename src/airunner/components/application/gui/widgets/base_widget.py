@@ -390,8 +390,10 @@ class BaseWidget(AbstractBaseWidget):
                 break
 
         if not template_dir:
-            print(
-                f"[BaseWidget] ERROR: Template {template_name} not found in any of {possible_dirs}"
+            self.logger.error(
+                "[BaseWidget] ERROR: Template %s not found in any of %s",
+                template_name,
+                possible_dirs,
             )
             return
 

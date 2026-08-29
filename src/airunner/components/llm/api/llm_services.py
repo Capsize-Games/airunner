@@ -10,6 +10,9 @@ from airunner.components.llm.utils.thinking_parser import (
 )
 from airunner.enums import SignalCode
 from airunner.enums import LLMActionType
+from airunner.utils.application.get_logger import get_logger
+
+logger = get_logger(__name__)
 from dataclasses import dataclass, field
 import threading
 import uuid
@@ -190,7 +193,7 @@ class LLMAPIService(APIServiceBase):
             except RuntimeError:
                 pass
 
-        print("[LLM INTERRUPT] Emitting INTERRUPT_PROCESS_SIGNAL")
+        logger.debug("[LLM INTERRUPT] Emitting INTERRUPT_PROCESS_SIGNAL")
         self.emit_signal(SignalCode.INTERRUPT_PROCESS_SIGNAL)
 
     def unload(self, data: Optional[dict] = None) -> None:
