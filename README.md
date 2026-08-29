@@ -193,7 +193,7 @@ installs.
 
    All of the runtime profiles above live on the `airunner-services` package.
    The desktop GUI ships in the root `airunner` package, which pulls in
-   `airunner-services==6.0.0` automatically (issue #2037). The optional
+   `airunner-services==6.0.1` automatically (issue #2037). The optional
    `airunner-native[gui]` extra provides the native launcher and bundle
    tooling.
 
@@ -210,7 +210,7 @@ installs.
    ```bash
    # torch family pinned to the CUDA 12.9 wheel line (issues #2036/#2041)
    pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu129
-   # Desktop GUI; pulls in airunner-services==6.0.0 automatically
+   # Desktop GUI; pulls in airunner-services==6.0.1 automatically
    pip install "airunner"
    # Model runtimes (LLM, STT, art, TTS); `headless` aggregates the four extras
    pip install "airunner-services[headless]"
