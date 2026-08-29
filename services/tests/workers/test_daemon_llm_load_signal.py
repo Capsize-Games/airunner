@@ -13,6 +13,13 @@ from __future__ import annotations
 import os
 from unittest.mock import patch
 
+import pytest
+
+# CoreLifecycleService pulls in the LLM runtime stack (torch et al.), which is
+# only installed with the llm-native extra. Skip cleanly on the lean
+# `development` CI install rather than erroring at collection time.
+pytest.importorskip("torch")
+
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 from airunner_common.contract_enums import ModelStatus, SignalCode

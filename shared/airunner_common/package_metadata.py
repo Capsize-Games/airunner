@@ -56,6 +56,9 @@ DEVELOPMENT_REQUIREMENTS = [
     "pytest",
     "pytest-timeout",
     "responses>=0.25.0",
+    # starlette/fastapi TestClient (services HTTP-surface tests) needs httpx;
+    # it is otherwise only pulled in transitively by the llm-native extra.
+    "httpx>=0.27",
     "coverage==7.8.0",
     "black==26.3.1",
     "pyinstaller==6.12.0",

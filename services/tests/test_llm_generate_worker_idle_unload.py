@@ -15,6 +15,11 @@ from unittest.mock import Mock
 
 import pytest
 
+# llm_generate_worker imports the LLM runtime stack (transformers et al.),
+# which is only present with the llm-native extra. Skip cleanly on the lean
+# `development` CI install rather than erroring at collection time.
+pytest.importorskip("transformers")
+
 from airunner_common.contract_enums import ModelStatus, ModelType
 from airunner_services.utils.application.runtime_primitives import QTimer
 from airunner_services.workers.llm_generate_worker import (
