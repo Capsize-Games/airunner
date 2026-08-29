@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import Any
 
 
-VERSION = "6.0.2"
+VERSION = "6.0.3"
 # Supply-chain hardening (issue #2036): the archive URL is hash-pinned so a
 # tampered or moved tag cannot be substituted. Digest computed from the
 # current v1.0.0 tarball (curl -sL <url> | sha256sum).
