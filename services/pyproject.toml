@@ -3,5 +3,7 @@
 # (issue #2038), so an isolated build only needs setuptools+wheel from the
 # index; airunner-common is not fetched into the isolated build environment
 # (all four packages are built and published together since issue #2061).
-requires = ["setuptools>=80.9.0", "wheel"]
+# setuptools must stay <82: the pinned torch==2.13.0+cu129 wheel's runtime
+# metadata requires setuptools<82 (issue #2057).
+requires = ["setuptools>=80.9.0,<82", "wheel"]
 build-backend = "setuptools.build_meta"
