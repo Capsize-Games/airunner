@@ -267,7 +267,9 @@ class GuiDaemonClient(GuiBridgeMixin):
         provider: str = "local",
         deployment_mode: str = "default",
         request_id: Optional[str] = None,
+        metadata: Optional[Dict[str, Any]] = None,
         auto_start: bool = False,
+        timeout_seconds: Optional[float] = None,
     ) -> Dict[str, Any]:
         """Cancel one runtime request through the daemon control API."""
         return self._runtime_action(
@@ -276,7 +278,9 @@ class GuiDaemonClient(GuiBridgeMixin):
             provider=provider,
             deployment_mode=deployment_mode,
             request_id=request_id,
+            metadata=metadata,
             auto_start=auto_start,
+            timeout_seconds=timeout_seconds,
         )
 
     def synthesize_tts(
