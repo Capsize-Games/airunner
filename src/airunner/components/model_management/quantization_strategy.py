@@ -68,7 +68,7 @@ class QuantizationStrategy:
             )
         else:
             return self._get_config_for_level(
-                QuantizationLevel.INT4, model_size_gb
+                QuantizationLevel.INT2, model_size_gb
             )
 
     def _get_config_for_level(
