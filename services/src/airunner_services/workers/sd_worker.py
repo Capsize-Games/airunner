@@ -27,6 +27,10 @@ from airunner_common.contract_enums import StableDiffusionVersion
 from airunner_common.contract_enums import normalize_art_version
 from airunner_services.utils.image import convert_image_to_binary
 from airunner_services.application_exceptions import PipeNotLoadedException
+from airunner_services.content_safety_gate import (
+	GENERIC_REJECTION_MESSAGE,
+	evaluate_prompt_fields,
+)
 from airunner_services.database.models import AIModels
 from airunner_services.database.models import GeneratorSettings
 from airunner_services.art.managers.stablediffusion.image_request import ImageRequest
@@ -594,8 +598,74 @@ class SDWorker(Worker):
 			if model_type is ModelType.SD:
 				self._generate_image(data)
 
+	def _content_safety_fields(self, image_request) -> Dict:
+		"""Return the generation text fields to gate for one request.
+
+		Falls back to ``generator_settings`` when no ``ImageRequest`` is
+		attached, mirroring the source ``_process_image_request`` uses.
+		"""
+		if image_request is None:
+			settings = getattr(self, "generator_settings", None)
+			return {
+				"prompt": getattr(settings, "prompt", None),
+				"negative_prompt": getattr(settings, "negative_prompt", None),
+				"second_prompt": getattr(settings, "second_prompt", None),
+				"second_negative_prompt": getattr(
+					settings, "second_negative_prompt", None
+				),
+			}
+		return {
+			"prompt": getattr(image_request, "prompt", None),
+			"negative_prompt": getattr(image_request, "negative_prompt", None),
+			"second_prompt": getattr(image_request, "second_prompt", None),
+			"second_negative_prompt": getattr(
+				image_request, "second_negative_prompt", None
+			),
+		}
+
+	def _reject_generation(self, image_request, reason: str) -> None:
+		"""Abort one request via the worker's existing generic error path.
+
+		Only a generic message and a generic reason code are emitted; the
+		request text and any matched term are never logged or surfaced.
+		"""
+		logger = getattr(self, "logger", None)
+		if logger is not None:
+			logger.warning(
+				"Art generation rejected by content safety policy "
+				"(reason=%s)",
+				reason,
+			)
+		self.handle_error(GENERIC_REJECTION_MESSAGE)
+		try:
+			self.emit_signal(
+				SignalCode.APPLICATION_STOP_SD_PROGRESS_BAR_SIGNAL,
+				{"do_clear": True},
+			)
+		except Exception:
+			pass
+		callback = getattr(image_request, "callback", None)
+		if callable(callback):
+			callback(GENERIC_REJECTION_MESSAGE)
+		api = getattr(self, "api", None)
+		if api is not None:
+			api.worker_response(
+				code=EngineResponseCode.ERROR,
+				message=GENERIC_REJECTION_MESSAGE,
+			)
+
 	def _generate_image(self, message: Dict):
 		image_request = message.get("image_request")
+		# Content-safety input gate: the shared signal-layer choke point for
+		# every signal-driven art request (GUI path and LLM image-tool path).
+		# Runs before daemon forwarding, tracker writes, or model loading so a
+		# rejected request has no side effects.
+		gate_result = evaluate_prompt_fields(
+			self._content_safety_fields(image_request)
+		)
+		if not gate_result.allowed:
+			self._reject_generation(image_request, gate_result.reason)
+			return
 		client = self._daemon_client()
 		path_label = "daemon" if client is not None else "local"
 		self.logger.debug(

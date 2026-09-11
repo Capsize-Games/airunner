@@ -404,6 +404,9 @@ def build_services_setup_kwargs(*, package_source_dir: str) -> dict[str, object]
                 "assets/reference_speakers/*.wav",
             ],
             "airunner_services.bin": ["*.sh"],
+            "airunner_services.content_safety": [
+                "data/*.dat",
+            ],
             "airunner_services.database": [
                 "alembic.ini",
                 "alembic/*.py",

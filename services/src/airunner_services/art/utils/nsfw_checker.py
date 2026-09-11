@@ -9,11 +9,33 @@ from airunner_services.utils.application.get_logger import get_logger
 logger = get_logger(__name__)
 
 
+def mark_images_as_blocked(
+    images: List[Image.Image],
+) -> Tuple[List[Image.Image], List[bool]]:
+    """Black out every image and flag it as blocked (fail-closed output).
+
+    Used when the output safety filter is enabled but cannot render a
+    verdict (model unavailable, or the check raised). Releasing the raw
+    image in that state would fail open, so the image is blacked out via
+    the same marker used for detections and every flag is ``True`` so
+    downstream export/return treats the batch as withheld.
+
+    Args:
+        images: List of PIL images to block.
+
+    Returns:
+        Tuple of (blocked_images, flags) where flags are all ``True``.
+    """
+    marked = [_mark_image_as_nsfw(image) for image in images]
+    return marked, [True] * len(images)
+
+
 def check_and_mark_nsfw_images(
     images: List[Image.Image],
     feature_extractor: Optional[Any],
     safety_checker: Optional[Any],
     device: str = "cuda",
+    fail_closed: bool = True,
 ) -> Tuple[List[Image.Image], List[bool]]:
     """Check images for NSFW content and mark detected images.
 
@@ -22,14 +44,28 @@ def check_and_mark_nsfw_images(
         feature_extractor: Feature extractor model for preprocessing
         safety_checker: Safety checker model for NSFW detection
         device: Device to run inference on ('cuda' or 'cpu')
+        fail_closed: When ``True`` (the default), a missing model or a
+            raised check blocks the batch instead of releasing raw images.
+            Callers that deliberately monitor without enforcing may pass
+            ``False`` to keep the legacy pass-through behavior.
 
     Returns:
         Tuple of (processed_images, nsfw_detected_flags)
         - processed_images: Images with NSFW watermark if detected
         - nsfw_detected_flags: List of booleans indicating NSFW detection
+
+    When ``fail_closed`` is ``True`` and the checker cannot run, every
+    image is blacked out and flagged ``True`` so the caller cannot leak
+    unchecked output. No prompt or image content is ever logged.
     """
     if not feature_extractor or not safety_checker:
-        # If models not loaded, return images unchanged with no detections
+        if fail_closed:
+            logger.warning(
+                "Content safety filter enabled but the checker model is "
+                "unavailable; blocking output (fail closed)"
+            )
+            return mark_images_as_blocked(images)
+        # Monitoring-only mode: return images unchanged with no detections.
         return images, [False] * len(images)
 
     try:
@@ -55,9 +91,21 @@ def check_and_mark_nsfw_images(
 
         return marked_images, has_nsfw_concepts
 
-    except Exception as e:
-        # On error, return images unchanged
-        logger.error("Error during NSFW checking: %s", e)
+    except Exception as exc:
+        # A raised check is an unknown verdict. When enforcing, block the
+        # batch rather than release images that were never inspected.
+        # Log only the exception TYPE: a checker's exception message could
+        # echo prompt/image payload, which must never reach the logs.
+        logger.error(
+            "Error during content-safety checking (%s)",
+            type(exc).__name__,
+        )
+        if fail_closed:
+            logger.warning(
+                "Content safety check could not complete; blocking output "
+                "(fail closed)"
+            )
+            return mark_images_as_blocked(images)
         return images, [False] * len(images)
 
 

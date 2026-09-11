@@ -15,6 +15,8 @@ in a repo checkout.
 - code-quality and reporting tooling (`code_quality_report.py`,
   `coverage_report.py`, the dead-code scanners and unused-import checkers,
   the complexity reports, `mypy_shortcut.py`, `security_audit.sh`)
+- the out-of-band content-safety policy generator
+  (`build_policy_terms.py`)
 - local dev orchestration under `scripts/dev/` (`run_services.sh`,
   `run_gui.sh`, `test_services.sh`, `stop_services.sh`)
 
@@ -35,6 +37,14 @@ Rebuild the UI assets after changing `.ui` or `.qrc` sources:
 
 ```bash
 ./venv/bin/python scripts/build_ui.py
+```
+
+Regenerate the content-safety policy data file from a plaintext term list
+kept outside the repository (the default input lives under the gitignored
+`tmp/` directory; never commit the plaintext list):
+
+```bash
+venv/bin/python scripts/build_policy_terms.py --input tmp/policy_terms_source.txt
 ```
 
 See `scripts/run_tests.py --help` for the full set of test targets.

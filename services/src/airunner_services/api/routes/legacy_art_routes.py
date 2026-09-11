@@ -8,6 +8,10 @@ from typing import Any, Callable
 from fastapi import APIRouter, HTTPException, Request
 
 from airunner_common.contract_enums import SignalCode
+from airunner_services.content_safety_gate import (
+    GENERIC_REJECTION_MESSAGE,
+    evaluate_prompt_fields,
+)
 from airunner_services.utils.application.signal_mediator import SignalMediator
 
 from .legacy_common import get_airunner_app
@@ -121,6 +125,20 @@ def _encode_images_as_base64(images: list[Any]) -> list[str]:
 @router.post("/art")
 def legacy_art_generate(body: LegacyArtRequest, req: Request):
     """Serve the legacy synchronous art endpoint."""
+    # Content-safety input gate: reject policy-matching prompt text before
+    # any signal is emitted, so this legacy entry point cannot bypass the
+    # gate that the versioned generation route applies.
+    gate_result = evaluate_prompt_fields(
+        {
+            "prompt": body.prompt,
+            "negative_prompt": body.negative_prompt,
+        }
+    )
+    if not gate_result.allowed:
+        raise HTTPException(
+            status_code=400,
+            detail=GENERIC_REJECTION_MESSAGE,
+        )
     _ = get_airunner_app(req)
     params = _resolve_legacy_art_params(body)
     (

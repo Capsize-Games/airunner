@@ -197,38 +197,66 @@ class BaseDiffusersModelManager(
         """
         Check images for NSFW content and mark detected images.
 
-        Wrapper around the nsfw_checker utility that integrates
-        safety checker functionality into the generation pipeline.
-        Gets the loaded models from the SafetyCheckerWorker singleton.
+        The single output-enforcement path: a thin wrapper around the
+        ``nsfw_checker`` utility that reads the checker models loaded onto
+        this model manager by ``_load_safety_checker``. No other worker or
+        helper applies the output filter.
 
         Args:
             images: List of PIL Images to check
 
         Returns:
             Tuple of (marked_images, nsfw_flags) where marked_images
-            contains black overlays on NSFW detections and nsfw_flags
-            is a list of booleans indicating which images were detected.
+            contains black overlays on SFW-filtered detections and
+            nsfw_flags is a list of booleans indicating which images were
+            detected. When the filter is enabled but cannot render a
+            verdict (model unavailable or the check raised), the batch is
+            blacked out and every flag is ``True`` so the raw image is
+            never released unchecked (fail closed).
         """
         if not self.use_safety_checker:
+            # Filter disabled: unchanged behavior, nothing is inspected.
             return images, [False] * len(images)
 
-        try:
-            if self._safety_checker is None or self._feature_extractor is None:
-                return images, [False] * len(images)
+        safety_checker = getattr(self, "_safety_checker", None)
+        feature_extractor = getattr(self, "_feature_extractor", None)
 
+        try:
             from airunner_services.art.utils.nsfw_checker import (
                 check_and_mark_nsfw_images,
+                mark_images_as_blocked,
             )
+
+            if safety_checker is None or feature_extractor is None:
+                # Enabled but unavailable: block rather than release raw
+                # output. Blackout + flags keeps the generation loop alive
+                # while withholding the unchecked image.
+                self.logger.warning(
+                    "Content safety filter enabled but the checker model is "
+                    "unavailable; blocking output (fail closed)"
+                )
+                return mark_images_as_blocked(images)
 
             return check_and_mark_nsfw_images(
                 images,
-                self._feature_extractor,
-                self._safety_checker,
+                feature_extractor,
+                safety_checker,
                 self._device,
+                fail_closed=True,
             )
-        except Exception as e:
-            self.logger.error(f"NSFW check failed: {e}")
-            return images, [False] * len(images)
+        except Exception as exc:
+            # Log only the exception TYPE: a checker's exception message
+            # could echo prompt/image payload, which must never reach logs.
+            self.logger.error(
+                "Content safety check could not run; blocking output "
+                "(fail closed) (%s)",
+                type(exc).__name__,
+            )
+            from airunner_services.art.utils.nsfw_checker import (
+                mark_images_as_blocked,
+            )
+
+            return mark_images_as_blocked(images)
 
     def reload(self):
         """Reload the model by unloading and loading again."""
@@ -486,7 +514,7 @@ class BaseDiffusersModelManager(
             import traceback
             self.logger.error(traceback.format_exc())
             return False
-        
+
         self.logger.debug(
             f"Loading pipe {pipeline_class} for {section}"
         )
@@ -498,7 +526,8 @@ class BaseDiffusersModelManager(
         except RuntimeError as e:
             error_msg = str(e)
             if "download triggered" in error_msg:
-                # Download was triggered, WorkerManager will handle retry via HUGGINGFACE_DOWNLOAD_COMPLETE
+                # Download was triggered; WorkerManager will handle the
+                # retry via HUGGINGFACE_DOWNLOAD_COMPLETE.
                 self.logger.info(f"Download triggered: {error_msg}")
                 self.change_model_status(self.model_type, ModelStatus.UNLOADED)
             else:

@@ -175,15 +175,17 @@ class ActionController(MenuController):
 
     @Slot(bool)
     def on_actionSafety_Checker_toggled(self, val: bool):
-        """Handle safety checker toggle action."""
+        """Handle safety checker toggle action.
+
+        Persisting ``nsfw_filter`` is the whole toggle: output enforcement is
+        owned by the art/daemon model manager (single enforcement path), which
+        reads this setting when it checks generated images. The former GUI
+        load/unload signals had no registered handler and are gone.
+        """
         if not val and not self._confirm_safety_checker_disabled():
             return
         self.update_application_settings(nsfw_filter=val)
         self.set_nsfw_filter_tooltip()
-        if val:
-            self.emit_signal(SignalCode.SAFETY_CHECKER_LOAD_SIGNAL, {})
-        else:
-            self.emit_signal(SignalCode.SAFETY_CHECKER_UNLOAD_SIGNAL, {})
 
     def _confirm_safety_checker_disabled(self) -> bool:
         """Confirm disabling the safety checker, honoring hide preference."""

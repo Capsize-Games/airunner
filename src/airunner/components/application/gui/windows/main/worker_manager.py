@@ -1231,52 +1231,6 @@ class WorkerManager(Worker):
         # Art runtime pre-warm disabled; models load on first generation
         pass
 
-    def on_safety_checker_load_signal(self, data):
-        # Safety checker now handled by daemon (future API)
-        pass
-        # Using add_to_queue ensures thread-safe message passing
-        # Safety checker worker removed; daemon migration pending
-
-    def on_safety_checker_unload_signal(self, data):
-        # Safety checker unload handled by daemon (future API)
-        if self._safety_checker_worker is not None:
-            self.safety_checker_worker.add_to_queue(
-                {"action": "unload", "data": data}
-            )
-
-    def _handle_image_generation_request(self, data):
-        """
-        Handle image generation request, ensuring safety checker is ready if needed.
-
-        Args:
-            data: Image generation request data
-        """
-        app_settings = self._get_or_create_application_settings()
-
-        # Check if safety checker is enabled
-        if not app_settings.nsfw_filter:
-            # Safety checker disabled, proceed immediately
-            self._proceed_with_generation(data)
-            return
-
-        # Safety checker is enabled, check if it's already loaded
-        safety_worker = self.safety_checker_worker
-        if (
-            safety_worker
-            and safety_worker.safety_checker is not None
-            and safety_worker.feature_extractor is not None
-        ):
-            # Already loaded, proceed immediately
-            self._proceed_with_generation(data)
-            return
-
-        # Safety checker needs to be loaded, store the request and trigger load
-        self.logger.info(
-            "Safety checker not ready, triggering load before generation"
-        )
-        self._pending_generation_request = data
-        self.emit_signal(SignalCode.SAFETY_CHECKER_LOAD_SIGNAL, {})
-
     def _get_or_create_application_settings(self):
         """Return ApplicationSettings for the current tenant.
 

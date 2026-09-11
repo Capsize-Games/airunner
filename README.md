@@ -642,6 +642,36 @@ mkcert -install
 
 ---
 
+## 🛡️ Content Safety
+
+AI Runner includes a best-effort content-safety filter for prohibited content.
+It is defense-in-depth, not a guarantee — see [SECURITY.md](SECURITY.md) for the
+full behavior.
+
+The policy data file
+[`services/src/airunner_services/content_safety/data/policy_terms.dat`](services/src/airunner_services/content_safety/data/policy_terms.dat)
+ships **empty by design** so that no policy terms are committed to the
+repository. With no policy data loaded, the input-side filter is inactive and
+prompts pass through.
+
+**Distributor responsibility:** anyone who packages or distributes the
+application must generate the policy list before distributing, so the shipped
+build includes it. Until then, the input-side filter is inactive.
+
+To generate the list, curate a plaintext terms list kept **outside** the
+repository (for example under the gitignored `tmp/` directory — do not commit
+it), then run:
+
+```bash
+venv/bin/python scripts/build_policy_terms.py --input tmp/policy_terms_source.txt
+```
+
+This writes only the hashed data file; include only that generated file in the
+distributed build. Operators can point at a different data file by setting the
+`AIRUNNER_CONTENT_SAFETY_DATA` environment variable.
+
+---
+
 ## 🧪 Testing
 
 ```bash

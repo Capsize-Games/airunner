@@ -1,3 +1,7 @@
 # The per-package README is used as long_description (issue #2061); it must
 # survive the sdist -> wheel phase of `python -m build`.
 include README.md
+
+# Hashed content-safety policy data (hash-only; ships empty in the public
+# repo, populated out of band). Must be present in sdist -> wheel builds.
+include src/airunner_services/content_safety/data/*.dat

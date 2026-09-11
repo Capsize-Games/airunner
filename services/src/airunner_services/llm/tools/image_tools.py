@@ -11,6 +11,10 @@ from typing import Annotated, Any, Optional
 from airunner_services.llm.core.tool_registry import tool, ToolCategory
 from airunner_services.llm.config.model_capabilities import ModelCapability
 from airunner_common.settings import AIRUNNER_LOG_LEVEL
+from airunner_services.content_safety_gate import (
+    GENERIC_REJECTION_MESSAGE,
+    evaluate_prompt_fields,
+)
 from airunner_services.utils.application import get_logger
 
 logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
@@ -182,6 +186,26 @@ def generate_image(
         # Model doesn't support second prompt - merge into main prompt
         logger.info(f"Model '{generator_name}' doesn't support second_prompt, merging into main prompt")
         prompt = f"{prompt}. {second_prompt}"
+
+    # Content-safety input gate: fail closed before the (potentially
+    # expensive) prompt-enhancement call and before dispatching to the
+    # daemon generation path. This is a defense-in-depth pre-check; the
+    # authoritative gate is the shared worker/route choke point.
+    gate_result = evaluate_prompt_fields(
+        {
+            "prompt": prompt,
+            "second_prompt": effective_second_prompt,
+        }
+    )
+    if not gate_result.allowed:
+        logger.warning(
+            "Image generation tool request rejected by content safety "
+            "policy (reason=%s)",
+            gate_result.reason,
+        )
+        return json.dumps(
+            {"status": "rejected", "message": GENERIC_REJECTION_MESSAGE}
+        )
 
     # Enhance prompts using specialized model
     logger.info(f"Generating image with {generator_name} ({width}x{height})")

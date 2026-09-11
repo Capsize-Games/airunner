@@ -7,6 +7,10 @@ from typing import Optional
 from fastapi import APIRouter, HTTPException, Request
 
 from airunner_common.settings import AIRUNNER_LOG_LEVEL
+from airunner_services.content_safety_gate import (
+    GENERIC_REJECTION_MESSAGE,
+    evaluate_prompt_fields,
+)
 from airunner_services.utils.application import get_logger
 from airunner_services.utils.job_tracker import (
     JobStatus as JobState,
@@ -41,6 +45,27 @@ async def create_generation_job(
     req: Request,
 ) -> str:
     """Create one tracked generation job and start its worker task."""
+    # Content-safety input gate: reject policy-matching prompt text before
+    # any side effect (LLM unload, job/tracker creation, model loading).
+    # This is the public HTTP boundary shared by the GUI daemon-forward path
+    # and by direct API/sidecar clients.
+    gate_result = evaluate_prompt_fields(
+        {
+            "prompt": request.prompt,
+            "negative_prompt": request.negative_prompt,
+        }
+    )
+    if not gate_result.allowed:
+        logger.warning(
+            "Art generation request rejected by content safety policy "
+            "(reason=%s)",
+            gate_result.reason,
+        )
+        raise HTTPException(
+            status_code=400,
+            detail=GENERIC_REJECTION_MESSAGE,
+        )
+
     # Art generation owns its own tracker lifecycle, but it still coordinates
     # with the daemon LLM so image work does not start while VRAM is occupied.
     await unload_llm_before_art(req, source="art_generate")

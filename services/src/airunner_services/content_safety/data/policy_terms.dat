@@ -1,0 +1,8 @@
+# Content safety policy data.
+#
+# Format: one lowercase hex SHA-256 digest per line (UTF-8). Blank lines and
+# lines starting with '#' are ignored; malformed lines are skipped.
+#
+# This public repository ships an empty set. The real hash set is generated
+# out of band by scripts/build_policy_terms.py from a plaintext list the
+# maintainer keeps outside the repository, and is never committed.

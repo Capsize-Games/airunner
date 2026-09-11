@@ -41,7 +41,6 @@ _UNLOAD_SIGNALS = {
     "ragembedding": SignalCode.RAG_UNLOAD_SIGNAL,
     "rmbg": SignalCode.RMBG_UNLOAD_SIGNAL,
     "rmbgmodel": SignalCode.RMBG_UNLOAD_SIGNAL,
-    "safetychecker": SignalCode.SAFETY_CHECKER_UNLOAD_SIGNAL,
     "sd": SignalCode.SD_UNLOAD_SIGNAL,
     "sdcontrolnet": SignalCode.CONTROLNET_UNLOAD_SIGNAL,
     "sdmodel": SignalCode.SD_UNLOAD_SIGNAL,
