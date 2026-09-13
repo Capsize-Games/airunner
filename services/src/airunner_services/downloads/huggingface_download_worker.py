@@ -1,8 +1,10 @@
 """Worker for HuggingFace model downloads using Python threading."""
 
+import hashlib
 import os
 import threading
 from pathlib import Path
+from typing import Optional
 import requests
 
 from airunner_common.contract_enums import SignalCode
@@ -45,6 +47,77 @@ class HuggingFaceDownloadWorker(BaseDownloadWorker):
     def _apply_post_download_patches(self, model_path: Path) -> None:
         """Run any post-download housekeeping required by one model."""
         del model_path
+
+    @staticmethod
+    def _resolve_bootstrap_revision(repo_id: str) -> str:
+        """Return the pinned revision for a curated repo_id, else "main".
+
+        model_bootstrap_data entries already declare a ``branch`` (e.g.
+        the SDXL Inpaint entry pins "fp16"), but nothing previously read
+        it — every download hardcoded ``resolve/main`` regardless. This
+        only stops ignoring a pin that was already declared; it does not
+        invent new pins for repos with no curated entry (custom models),
+        which continue to resolve "main" exactly as before (release
+        issue D01).
+        """
+        for model in model_bootstrap_data:
+            if model.get("path") == repo_id:
+                return model.get("branch") or "main"
+        return "main"
+
+    @staticmethod
+    def _file_sha256(path: Path) -> str:
+        """Return the hex SHA256 digest of a file, reading in chunks."""
+        hasher = hashlib.sha256()
+        with open(path, "rb") as handle:
+            for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+                hasher.update(chunk)
+        return hasher.hexdigest()
+
+    def _verify_and_finalize(
+        self,
+        *,
+        temp_path: Path,
+        final_path: Path,
+        filename: str,
+        expected_sha256: Optional[str],
+    ) -> bool:
+        """Verify an optional digest, then move temp_path into place.
+
+        A same-sized but corrupted (or tampered) file must not be loaded
+        just because its byte count matches (release issue D01): when a
+        digest is pinned, it is checked before the file is ever moved to
+        its final, loadable location. On mismatch the temp file is
+        deleted and the file is marked failed rather than silently used.
+        When no digest is pinned (the common case today — see
+        ``_resolve_bootstrap_revision``), this only performs the move,
+        preserving prior behavior for unverified/custom models.
+        """
+        if expected_sha256:
+            actual_sha256 = self._file_sha256(temp_path)
+            if actual_sha256.lower() != expected_sha256.lower():
+                self.logger.error(
+                    "Digest mismatch for %s: expected %s, got %s. "
+                    "Deleting corrupt download; it will not be loaded.",
+                    filename,
+                    expected_sha256,
+                    actual_sha256,
+                )
+                try:
+                    temp_path.unlink(missing_ok=True)
+                except Exception as exc:
+                    self.logger.warning(
+                        f"Failed to delete corrupt temp file {filename}: {exc}"
+                    )
+                self._mark_file_failed(filename)
+                return False
+
+        final_path.parent.mkdir(parents=True, exist_ok=True)
+        if final_path.exists():
+            final_path.unlink()
+        temp_path.rename(final_path)
+        self._mark_file_complete(filename)
+        return True
 
     @staticmethod
     def _resolve_art_download_context(
@@ -157,7 +230,12 @@ class HuggingFaceDownloadWorker(BaseDownloadWorker):
                     repo_id=repo_id,
                     prefer_pre_quantized=True,
                 )
-            self._download_gguf_model(repo_id, output_dir, gguf_filename)
+            self._download_gguf_model(
+                repo_id,
+                output_dir,
+                gguf_filename,
+                revision=self._resolve_bootstrap_revision(repo_id),
+            )
             return
 
         api_key = get_setting("huggingface/api_key", "")
@@ -472,6 +550,7 @@ class HuggingFaceDownloadWorker(BaseDownloadWorker):
         )
 
         # Start download threads
+        resolved_revision = self._resolve_bootstrap_revision(repo_id)
         for file_info in files_to_download:
             if self.is_cancelled:
                 return
@@ -497,6 +576,7 @@ class HuggingFaceDownloadWorker(BaseDownloadWorker):
                     model_path,
                     api_key,
                 ),
+                kwargs={"revision": resolved_revision},
                 daemon=True,
             )
             self._file_threads[filename] = thread
@@ -705,6 +785,8 @@ class HuggingFaceDownloadWorker(BaseDownloadWorker):
         repo_id: str,
         output_dir: str,
         gguf_filename: str,
+        revision: str = "main",
+        expected_sha256: Optional[str] = None,
     ):
         """Download a single GGUF model file from HuggingFace.
 
@@ -715,6 +797,10 @@ class HuggingFaceDownloadWorker(BaseDownloadWorker):
             repo_id: HuggingFace repository ID (e.g., "Qwen/Qwen3.5-9B-GGUF")
             output_dir: Directory to save the model
             gguf_filename: The .gguf file to download (e.g., "Qwen3.5-9B-Q4_K_M.gguf")
+            revision: Git revision/branch/tag to resolve the file against,
+                instead of always assuming "main" (release issue D01).
+            expected_sha256: Optional pinned digest; verified before the
+                file is moved into its final, loadable location.
         """
         api_key = get_setting("huggingface/api_key", "")
 
@@ -742,7 +828,7 @@ class HuggingFaceDownloadWorker(BaseDownloadWorker):
         )
 
         # Get file size from HuggingFace API
-        url = f"https://huggingface.co/{repo_id}/resolve/main/{gguf_filename}"
+        url = f"https://huggingface.co/{repo_id}/resolve/{revision}/{gguf_filename}"
         headers = {}
         if api_key:
             headers["Authorization"] = f"Bearer {api_key}"
@@ -778,6 +864,8 @@ class HuggingFaceDownloadWorker(BaseDownloadWorker):
                 "temp_dir": temp_dir,
                 "model_path": model_path,
                 "api_key": api_key,
+                "revision": revision,
+                "expected_sha256": expected_sha256,
             },
             daemon=True,
         )
@@ -802,6 +890,8 @@ class HuggingFaceDownloadWorker(BaseDownloadWorker):
         temp_dir: Path,
         model_path: Path,
         api_key: str,
+        revision: str = "main",
+        expected_sha256: Optional[str] = None,
     ):
         """Download a single file from HuggingFace (runs in Python thread).
 
@@ -814,16 +904,22 @@ class HuggingFaceDownloadWorker(BaseDownloadWorker):
             temp_dir: Temporary download directory
             model_path: Final model directory
             api_key: HuggingFace API key (optional)
+            revision: Git revision/branch/tag to resolve the file
+                against, instead of always assuming "main" (release
+                issue D01; see ``_resolve_bootstrap_revision``).
+            expected_sha256: Optional pinned digest; verified before the
+                file is moved into its final, loadable location, even
+                if its size already matches (release issue D01).
         """
         self.logger.info(f"[DOWNLOAD THREAD] Starting download for {filename} from {repo_id}")
-        
+
         temp_path = temp_dir / filename
         final_path = model_path / filename
 
         # Create parent directories for files in subdirectories
         temp_path.parent.mkdir(parents=True, exist_ok=True)
 
-        url = f"https://huggingface.co/{repo_id}/resolve/main/{filename}"
+        url = f"https://huggingface.co/{repo_id}/resolve/{revision}/{filename}"
         self.logger.debug(f"[DOWNLOAD THREAD] URL: {url}")
         
         headers = {}
@@ -844,16 +940,17 @@ class HuggingFaceDownloadWorker(BaseDownloadWorker):
                     f"Resuming download of {filename} from byte {existing_size}"
                 )
             elif existing_size >= file_size:
-                # File already complete in temp, just move it
+                # File already complete in temp; verify (if pinned) and move it
                 self.logger.info(
-                    f"Temp file {filename} already complete, moving to final location"
+                    f"Temp file {filename} already complete, verifying and moving to final location"
                 )
                 try:
-                    final_path.parent.mkdir(parents=True, exist_ok=True)
-                    if final_path.exists():
-                        final_path.unlink()
-                    temp_path.rename(final_path)
-                    self._mark_file_complete(filename)
+                    self._verify_and_finalize(
+                        temp_path=temp_path,
+                        final_path=final_path,
+                        filename=filename,
+                        expected_sha256=expected_sha256,
+                    )
                     return
                 except Exception as e:
                     self.logger.error(f"Failed to move complete temp file {filename}: {e}")
@@ -951,12 +1048,12 @@ class HuggingFaceDownloadWorker(BaseDownloadWorker):
                 self._mark_file_failed(filename)
                 return
 
-            final_path.parent.mkdir(parents=True, exist_ok=True)
-            if final_path.exists():
-                final_path.unlink()
-            temp_path.rename(final_path)
-
-            self._mark_file_complete(filename)
+            self._verify_and_finalize(
+                temp_path=temp_path,
+                final_path=final_path,
+                filename=filename,
+                expected_sha256=expected_sha256,
+            )
 
         except Exception as e:
             import traceback
