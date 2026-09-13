@@ -17,6 +17,7 @@ from airunner_services.tools.scrapy.llm_crawler_controller import (
     LLMCrawlerController,
 )
 from airunner_services.url_safety import (
+    OfflineModeBlocked,
     SSRFBlocked,
     validate_url_for_fetch,
 )
@@ -84,8 +85,8 @@ def intelligent_crawl(
 
     try:
         validate_url_for_fetch(start_url)
-    except SSRFBlocked as e:
-        return f"Error: start_url blocked by SSRF policy ({e})"
+    except (SSRFBlocked, OfflineModeBlocked) as e:
+        return f"Error: start_url blocked by fetch safety policy ({e})"
 
     # Validate parameters
     max_pages = max(1, min(max_pages, 20))  # Clamp to 1-20
