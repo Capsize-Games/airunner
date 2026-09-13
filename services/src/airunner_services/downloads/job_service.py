@@ -33,7 +33,10 @@ from airunner_common.contract_enums import SignalCode as WorkerSignalCode
 from airunner_services.downloads.huggingface_download_worker import (
     HuggingFaceDownloadWorker as ServiceHuggingFaceDownloadWorker,
 )
-from airunner_services.downloads.service import download_civitai_file
+from airunner_services.downloads.service import (
+    download_civitai_file,
+    require_provider_allowed,
+)
 from airunner_services.llm.utils.model_downloader import (
     DownloadCancelledError,
     HuggingFaceDownloader as SimpleHuggingFaceDownloader,
@@ -80,6 +83,7 @@ class DownloadJobService:
         prefer_pre_quantized: bool = True,
     ) -> str:
         """Create and start one HuggingFace download job."""
+        require_provider_allowed("huggingface")
         request = prepare_huggingface_download_request(
             repo_id=repo_id,
             model_type=model_type,
@@ -118,6 +122,7 @@ class DownloadJobService:
         output_dir: str,
     ) -> str:
         """Create and start one single-file HuggingFace download job."""
+        require_provider_allowed("huggingface")
         normalized_output_dir = normalize_local_path(
             output_dir,
             label="Download output directory",
@@ -143,6 +148,7 @@ class DownloadJobService:
         api_key: str | None = None,
     ) -> str:
         """Create and start one CivitAI model download job."""
+        require_provider_allowed("civitai")
         resolved_output_dir = normalize_local_path(
             output_dir or os.path.join(MODELS_DIR, "art/models/civitai"),
             label="Download output directory",
@@ -170,6 +176,7 @@ class DownloadJobService:
         the endpoint cannot be used for arbitrary file writes (GitHub issue
         #2029).
         """
+        require_provider_allowed("civitai")
         normalized_output_path = _resolve_safe_file_path(output_path)
         metadata = {"provider": "civitai", "url": url}
         return await self._start_job(

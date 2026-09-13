@@ -29,6 +29,17 @@ _PROVIDER_LABELS = {
 }
 
 
+class ProviderDownloadDisabled(ValueError):
+    """Raised when a network-requiring provider call is not allowed.
+
+    Covers both explicit per-service consent (privacy settings) and the
+    global offline-mode policy (release issues O01/O02) — the latter
+    already overrides the former inside ``is_service_allowed()``, so
+    the two are not distinguished here; ``provider_disabled_message()``
+    picks the accurate wording for whichever is actually the cause.
+    """
+
+
 def is_provider_download_allowed(provider: str) -> bool:
     """Return whether one download provider is enabled by policy."""
     return _provider_check(provider)()
@@ -36,12 +47,33 @@ def is_provider_download_allowed(provider: str) -> bool:
 
 def provider_disabled_message(provider: str) -> str:
     """Return the shared GUI warning text for one disabled provider."""
+    from airunner_services.url_safety import is_offline_mode
+
     provider_name = _provider_label(provider)
+    if is_offline_mode():
+        return (
+            f"{provider_name} downloads require an internet connection, "
+            "and offline mode is currently enabled.\n\n"
+            "You can allow external network access in Preferences > "
+            "Privacy & Security."
+        )
     return (
         f"{provider_name} downloads are disabled in privacy settings.\n\n"
         "You can enable them in Preferences > Privacy & Security > "
         "External Services."
     )
+
+
+def require_provider_allowed(provider: str) -> None:
+    """Raise an actionable error when one provider is not allowed.
+
+    Release issue O02: called before any tracker/thread/network side
+    effect for a user-triggered download or metadata lookup, so a
+    disabled provider fails immediately with a clear reason instead of
+    hanging or silently falling back.
+    """
+    if not is_provider_download_allowed(provider):
+        raise ProviderDownloadDisabled(provider_disabled_message(provider))
 
 
 def prepare_huggingface_download_payload(
@@ -70,6 +102,7 @@ def prepare_huggingface_download_payload(
 
 def fetch_civitai_model_info(url: str, api_key: str = "") -> dict[str, Any]:
     """Return one selected-version-aware CivitAI metadata payload."""
+    require_provider_allowed("civitai")
     return fetch_model_info_for_url(url, api_key)
 
 
@@ -83,6 +116,7 @@ def search_civitai_models(
     api_key: str = "",
 ) -> dict[str, Any]:
     """Return one filtered CivitAI model-search payload."""
+    require_provider_allowed("civitai")
     return search_models(
         query,
         base_models=base_models,
@@ -101,6 +135,7 @@ def fetch_civitai_browser_model_info(
     api_key: str = "",
 ) -> dict[str, Any]:
     """Return one filtered CivitAI model payload for the browser."""
+    require_provider_allowed("civitai")
     return fetch_browser_model_info(
         model_id,
         base_models=base_models,
@@ -111,6 +146,7 @@ def fetch_civitai_browser_model_info(
 
 def download_civitai_file(*args: Any, **kwargs: Any) -> bool:
     """Download one CivitAI file using the shared service implementation."""
+    require_provider_allowed("civitai")
     return civitai_download_file(*args, **kwargs)
 
 
