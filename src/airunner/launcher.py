@@ -64,19 +64,27 @@ def deep_merge(defaults, current):
     return merged
 
 
-def build_ui_if_needed():
-    """Build UI files only if necessary."""
-    ui_build_marker = os.path.join(COMPONENTS_PATH, "ui_build_marker")
-    if not os.path.exists(ui_build_marker):
-        try:
-            subprocess.run(
-                [sys.executable, "scripts/build_ui.py"],
-                check=True,
-            )
-            with open(ui_build_marker, "w") as marker:
-                marker.write("UI files built successfully.")
-        except Exception as e:
-            logger.warning(f"UI build step failed: {e}")
+def verify_ui_resources_available() -> None:
+    """Verify compiled Qt UI resources are present; never build them here.
+
+    Compilation happens at package-build time (``scripts/build_ui.py``,
+    invoked from ``setup.py``), never at application startup: an
+    installed, read-only package cannot write generated files next to
+    its own modules, and the launcher's current working directory has
+    no reliable relationship to a source checkout (the previous
+    implementation invoked ``scripts/build_ui.py`` via a path relative
+    to the CWD, which only ever worked when launched from a repo root,
+    and silently swallowed the failure otherwise).
+    """
+    try:
+        import airunner.gui.resources.feather_rc  # noqa: F401
+    except ImportError as exc:
+        raise RuntimeError(
+            "Required compiled Qt resource module "
+            "'airunner.gui.resources.feather_rc' is missing or failed to "
+            "import. Reinstall the airunner package; if developing from "
+            "a source checkout, run `python scripts/build_ui.py` first."
+        ) from exc
 
 
 # Optimize component settings registration by caching results
@@ -468,12 +476,12 @@ def main():
     # Show splash screen IMMEDIATELY before any heavy operations
     app, splash = _show_early_splash(existing_app=app)
     
-    # Build UI files first
-    _update_splash(splash, "Building UI files...")
+    # Verify compiled UI resources are present (never built at runtime).
+    _update_splash(splash, "Verifying UI resources...")
     build_ui_started_at = time.perf_counter()
-    build_ui_if_needed()
+    verify_ui_resources_available()
     logger.info(
-        "Startup phase build_ui completed in %.2fs",
+        "Startup phase verify_ui_resources completed in %.2fs",
         time.perf_counter() - build_ui_started_at,
     )
 
