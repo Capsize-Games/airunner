@@ -50,13 +50,20 @@ def test_defaults_are_accepted() -> None:
         ("steps", -5),
         ("num_images", 0),
         ("num_images", -1),
-        ("cfg_scale", 0),
         ("cfg_scale", -1.0),
     ],
 )
 def test_negative_or_zero_values_are_rejected(field, value) -> None:
     with pytest.raises(ValidationError):
         _make(**{field: value})
+
+
+def test_cfg_scale_zero_is_accepted() -> None:
+    """Z-Image Turbo is documented to work best with guidance_scale=0.0
+    (zimage_generation_mixin.py), so 0 must be a valid cfg_scale, unlike
+    the other fields above where zero is meaningless."""
+    request = _make(cfg_scale=0.0)
+    assert request.cfg_scale == 0.0
 
 
 @pytest.mark.parametrize(

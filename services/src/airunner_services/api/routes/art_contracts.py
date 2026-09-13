@@ -68,8 +68,11 @@ class GenerationRequest(BaseModel):
         le=_DEFAULT_CAPABILITIES.max_height,
     )
     steps: int = Field(default=20, ge=1, le=_max_steps())
+    # ge=0, not gt=0: Z-Image Turbo is documented to work best with
+    # guidance_scale=0.0 (see zimage_generation_mixin.py), so 0 is a real,
+    # supported value here rather than a meaningless edge case.
     cfg_scale: float = Field(
-        default=7.5, gt=0, le=100.0, allow_inf_nan=False
+        default=7.5, ge=0, le=100.0, allow_inf_nan=False
     )
     seed: Optional[int] = None
     num_images: int = Field(default=1, ge=1, le=_max_batch_size())
