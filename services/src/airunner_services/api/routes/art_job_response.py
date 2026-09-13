@@ -2,6 +2,7 @@
 
 import asyncio
 import base64
+from typing import List
 
 from airunner_services.ipc.messages import EnvelopeStatus, RequestEnvelope
 from airunner_services.runtimes.base import RuntimeClient
@@ -38,23 +39,35 @@ def response_error_detail(response: object) -> str:
     return getattr(error, "message", None) or "Art generation failed"
 
 
-def first_response_image(response: object) -> str:
-    """Return the first image payload from one art response."""
+def response_images(response: object) -> List[str]:
+    """Return every image payload from one art response, in batch order."""
     payload = getattr(response, "payload", None) or {}
     images = payload.get("images") or []
     if not images:
         raise ValueError("Art runtime returned no images")
-    return images[0]
+    return images
 
 
-def decode_response_image(response: object) -> bytes:
-    """Decode the first image payload from one art response."""
+def first_response_image(response: object) -> str:
+    """Return the first image payload from one art response."""
+    return response_images(response)[0]
+
+
+def decode_response_images(response: object) -> List[bytes]:
+    """Decode every image payload from one art response, in batch order."""
     try:
-        return base64.b64decode(first_response_image(response))
+        return [
+            base64.b64decode(image) for image in response_images(response)
+        ]
     except ValueError:
         raise
     except Exception as exc:
         raise ValueError(f"Invalid image payload: {exc}") from exc
+
+
+def decode_response_image(response: object) -> bytes:
+    """Decode the first image payload from one art response."""
+    return decode_response_images(response)[0]
 
 
 async def apply_art_response(
@@ -69,10 +82,17 @@ async def apply_art_response(
     if response_status_is(response, EnvelopeStatus.FAILED):
         await fail_art_job(tracker, job_id, response_error_detail(response))
         return
-    image_bytes = decode_response_image(response)
+    images_bytes = decode_response_images(response)
     if await job_cancelled(tracker, job_id):
         return
-    await tracker.complete_job(job_id, {"image_bytes": image_bytes})
+    # image_bytes (singular, first image) is kept for existing single-image
+    # callers of GET /result/{job_id}; images_bytes (every checked batch
+    # image) is the release-D03 addition consumed by the new indexed route
+    # and the updated Desktop consumer.
+    await tracker.complete_job(
+        job_id,
+        {"image_bytes": images_bytes[0], "images_bytes": images_bytes},
+    )
 
 
 async def run_art_job(

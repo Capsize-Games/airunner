@@ -39,6 +39,10 @@ class JobStatusResponse(BaseModel):
     status: str
     progress: float
     image_url: Optional[str] = None
+    # Number of images available once completed (release issue D03); a
+    # caller fetches each one from GET /result/{job_id}/{index}. 0 while
+    # the job has not completed yet.
+    image_count: int = 0
     error: Optional[str] = None
 
 
