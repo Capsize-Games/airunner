@@ -4,15 +4,17 @@ FastAPI server implementation for AI Runner.
 Provides REST and WebSocket endpoints for remote access to AI Runner's
 capabilities including LLM, art generation, TTS, and STT.
 """
-from typing import Optional, Any
+from typing import List, Optional, Any, Tuple
 from contextlib import asynccontextmanager
 import os
 import secrets
 from ipaddress import ip_address
+from urllib.parse import urlsplit
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from starlette.requests import HTTPConnection
 import uvicorn
 
 from airunner_common.settings import AIRUNNER_LOG_LEVEL
@@ -82,21 +84,87 @@ def is_loopback_host(host: str) -> bool:
         return False
 
 
-def is_loopback_request(request: Request) -> bool:
-    client = getattr(request, "client", None)
+def is_loopback_request(conn: HTTPConnection) -> bool:
+    client = getattr(conn, "client", None)
     if not client:
         return False
     return is_loopback_host(getattr(client, "host", ""))
 
 
-def _provided_bearer_or_api_key(request: Request, header_name: str) -> str:
+def _provided_bearer_or_api_key(conn: HTTPConnection, header_name: str) -> str:
     """Return one auth credential from a header or Authorization bearer."""
-    provided = (request.headers.get(header_name) or "").strip()
+    provided = (conn.headers.get(header_name) or "").strip()
     if not provided:
-        auth = (request.headers.get("authorization") or "").strip()
+        auth = (conn.headers.get("authorization") or "").strip()
         if auth.lower().startswith("bearer "):
             provided = auth.split(" ", 1)[-1].strip()
     return provided
+
+
+def authenticate_connection(
+    conn: HTTPConnection,
+    *,
+    api_key: str,
+    require_api_key: bool,
+    insecure_no_auth: bool,
+) -> Tuple[bool, int]:
+    """Apply the API-key/loopback-token policy to an HTTP or WebSocket conn.
+
+    Shared by the HTTP auth middleware and the LLM WebSocket route so both
+    surfaces enforce the identical policy instead of two hand-kept copies.
+    Returns ``(allowed, status_code)``; ``status_code`` is only meaningful
+    when ``allowed`` is False.
+    """
+    if require_api_key:
+        provided = _provided_bearer_or_api_key(conn, "x-api-key")
+        if not provided or not secrets.compare_digest(provided, api_key):
+            return False, 401
+        return True, 200
+
+    if insecure_no_auth:
+        return True, 200
+
+    if not is_loopback_request(conn):
+        return False, 401
+
+    expected_token = get_or_create_loopback_token()
+    provided_token = _provided_bearer_or_api_key(conn, "x-airunner-token")
+    if not provided_token or not secrets.compare_digest(
+        provided_token, expected_token
+    ):
+        return False, 401
+
+    return True, 200
+
+
+def is_allowed_origin(origin: str, allowed_origins: List[str]) -> bool:
+    """Match a WebSocket ``Origin`` header against an explicit allowlist.
+
+    Only exact ``scheme://host`` matches (optionally with a literal
+    ``:*`` suffix meaning "any port on this host") are accepted. This
+    deliberately avoids prefix/substring matching, which would also let
+    through unrelated hosts such as ``http://localhost.evil.example``.
+    """
+    if not origin:
+        return False
+    try:
+        parsed = urlsplit(origin)
+    except ValueError:
+        return False
+    if not parsed.scheme or not parsed.hostname:
+        return False
+    origin_host = f"{parsed.scheme}://{parsed.hostname}"
+
+    for pattern in allowed_origins or []:
+        if pattern == "*":
+            return True
+        if pattern.endswith(":*"):
+            if origin_host == pattern[: -len(":*")]:
+                return True
+            continue
+        if pattern == origin:
+            return True
+    return False
 
 
 @asynccontextmanager
@@ -224,56 +292,47 @@ def create_app(
         if path in {"/health", "/api/v1/health"}:
             return await call_next(request)
 
-        # When API key auth is enabled, require it for every endpoint except
-        # health (this is also the only auth accepted on non-loopback binds).
-        if require_api_key:
-            provided = _provided_bearer_or_api_key(request, "x-api-key")
-            if not provided or not secrets.compare_digest(
-                provided, api_key
+        # When API key auth is disabled, non-loopback requests to /admin/
+        # get a distinct 403 (vs. the generic 401 below); everything else
+        # follows the shared policy.
+        if not require_api_key and not insecure_no_auth:
+            if not is_loopback_request(request) and path.startswith(
+                "/admin/"
             ):
-                return JSONResponse(
-                    status_code=401, content={"error": "Unauthorized"}
-                )
-            return await call_next(request)
-
-        # No API key configured: loopback-only unless explicitly overridden.
-        if insecure_no_auth:
-            return await call_next(request)
-
-        if not is_loopback_request(request):
-            if path.startswith("/admin/"):
                 return JSONResponse(
                     status_code=403, content={"error": "Forbidden"}
                 )
-            return JSONResponse(
-                status_code=401, content={"error": "Unauthorized"}
-            )
 
-        # Loopback requests must present the per-user loopback token so a
-        # second local process cannot drive the daemon unauthenticated.
-        expected_token = get_or_create_loopback_token()
-        provided_token = _provided_bearer_or_api_key(
-            request, "x-airunner-token"
+        allowed, status_code = authenticate_connection(
+            request,
+            api_key=api_key,
+            require_api_key=require_api_key,
+            insecure_no_auth=insecure_no_auth,
         )
-        if not provided_token or not secrets.compare_digest(
-            provided_token, expected_token
-        ):
+        if not allowed:
             return JSONResponse(
-                status_code=401, content={"error": "Unauthorized"}
+                status_code=status_code, content={"error": "Unauthorized"}
             )
-
         return await call_next(request)
 
     # Configure CORS
-    if enable_cors:
-        if allowed_origins is None:
-            allowed_origins = [
-                "http://localhost",
-                "http://localhost:*",
-                "http://127.0.0.1",
-                "http://127.0.0.1:*",
-            ]
+    if allowed_origins is None:
+        allowed_origins = [
+            "http://localhost",
+            "http://localhost:*",
+            "http://127.0.0.1",
+            "http://127.0.0.1:*",
+        ]
 
+    # Stashed on app.state so the LLM WebSocket route (a separate ASGI
+    # scope that FastAPI/Starlette HTTP middleware never runs for) can
+    # apply the identical auth/origin policy before accepting a socket.
+    app.state.api_key = api_key
+    app.state.require_api_key = require_api_key
+    app.state.insecure_no_auth = insecure_no_auth
+    app.state.allowed_origins = allowed_origins
+
+    if enable_cors:
         app.add_middleware(
             CORSMiddleware,
             allow_origins=allowed_origins,
