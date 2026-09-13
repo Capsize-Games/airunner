@@ -97,6 +97,36 @@ class _FilteredBuildPy(_build_py):
             ]
         return modules
 
+    def run(self):
+        self._verify_generated_ui_resources()
+        super().run()
+
+    @staticmethod
+    def _verify_generated_ui_resources() -> None:
+        """Fail the build if compiled Qt UI/resource files are missing.
+
+        Compilation itself happens via ``scripts/build_ui.py`` (a
+        developer/CI step, run before ``python -m build``/``bdist_wheel``,
+        never at application startup — see ``airunner.launcher``). This
+        only verifies the checkout already has up-to-date generated
+        files before they get swept into the package (release issue P01).
+        """
+        scripts_dir = _REPO_ROOT / "scripts"
+        sys.path.insert(0, str(scripts_dir))
+        try:
+            from build_ui import verify_generated_resources
+        finally:
+            sys.path.remove(str(scripts_dir))
+
+        problems = verify_generated_resources(_REPO_ROOT / "src" / "airunner")
+        if problems:
+            raise RuntimeError(
+                "Cannot package airunner: generated Qt UI/resource files "
+                "are missing or stale. Run `python scripts/build_ui.py` "
+                "from a source checkout first. Problems:\n"
+                + "\n".join(f"  - {problem}" for problem in problems)
+            )
+
 
 setup(
     name="airunner",

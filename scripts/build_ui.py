@@ -15,6 +15,7 @@ import os
 import re
 import shutil
 import subprocess
+import sys
 from pathlib import Path
 
 from process_qss import build_all_theme_css, generate_resources, process_qss
@@ -101,7 +102,50 @@ def build_ui():
             print(f"Skipping {ui_file} as {ui_file_py} is up to date")
 
 
+def find_missing_generated_ui_files(base_path: Path) -> list[Path]:
+    """Return ``.ui`` files under base_path with no compiled ``_ui.py``.
+
+    Used to verify generated resources are present before packaging
+    (release issue P01); the application launcher never runs this at
+    startup, since compilation belongs at build time only.
+    """
+    return [
+        ui_file
+        for ui_file in sorted(base_path.glob("**/*.ui"))
+        if not ui_file.with_name(ui_file.stem + "_ui.py").exists()
+    ]
+
+
+def verify_generated_resources(base_path: Path) -> list[str]:
+    """Return a list of human-readable problems, empty when all clear.
+
+    Checks both the per-``.ui`` compiled companions and the compiled Qt
+    resource module (``feather_rc.py``) that ``generate_resources()``
+    produces.
+    """
+    problems = [
+        f"missing compiled UI module for {ui_file}"
+        for ui_file in find_missing_generated_ui_files(base_path)
+    ]
+    resource_module = base_path / "gui" / "resources" / "feather_rc.py"
+    if not resource_module.exists():
+        problems.append(f"missing compiled resource module {resource_module}")
+    return problems
+
+
 def main():
+    if "--check" in sys.argv:
+        base_path = Path(__file__).parent.parent / "src" / "airunner"
+        problems = verify_generated_resources(base_path)
+        if problems:
+            print("Generated UI/resource files are missing or stale:")
+            for problem in problems:
+                print(f"  - {problem}")
+            print("Run `python scripts/build_ui.py` (without --check) first.")
+            sys.exit(1)
+        print("All generated UI/resource files are present.")
+        return
+
     print("main() called in build_ui.py")
     build_ui()
     generate_resources()
