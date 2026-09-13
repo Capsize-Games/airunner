@@ -11,7 +11,11 @@ import scrapy
 from typing import Callable, Optional, Set, Dict, List
 
 from airunner_services.tools.web_content_extractor import WebContentExtractor
-from airunner_services.url_safety import SSRFBlocked, validate_url_for_fetch
+from airunner_services.url_safety import (
+    OfflineModeBlocked,
+    SSRFBlocked,
+    validate_url_for_fetch,
+)
 from airunner_common.settings import AIRUNNER_LOG_LEVEL
 from airunner_services.utils.application import get_logger
 from airunner_services.utils.application.log_hygiene import fingerprint_value
@@ -137,7 +141,7 @@ class LLMGuidedSpider(scrapy.Spider):
                     if link_url not in self.visited:
                         try:
                             validate_url_for_fetch(link_url)
-                        except SSRFBlocked as e:
+                        except (SSRFBlocked, OfflineModeBlocked) as e:
                             logger.warning(
                                 "Skipping blocked crawl URL (%s): %s",
                                 fingerprint_value(link_url, label="url"),

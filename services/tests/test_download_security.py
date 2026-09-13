@@ -14,6 +14,7 @@ from unittest import mock
 
 import pytest
 
+from airunner_common import settings as airunner_common_settings
 from airunner_services.downloads.job_service import (
     _assert_output_path_contained,
     _resolve_safe_file_path,
@@ -29,6 +30,17 @@ from airunner_services.url_safety import (
     SSRFBlocked,
     validate_url_for_fetch,
 )
+
+
+@pytest.fixture(autouse=True)
+def _online_mode_for_ssrf_tests(monkeypatch):
+    """This file exercises SSRF/path-safety validation specifically.
+
+    Force online mode so validate_url_for_fetch reaches those checks
+    instead of short-circuiting on the offline-by-default policy
+    (release issue O01); that policy has its own dedicated tests.
+    """
+    monkeypatch.setattr(airunner_common_settings, "AIRUNNER_OFFLINE_MODE", False)
 
 
 # ---------------------------------------------------------------------------

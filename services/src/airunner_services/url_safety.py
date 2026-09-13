@@ -16,15 +16,54 @@ from urllib.parse import urlparse
 
 import requests
 
+from airunner_common import settings as _airunner_settings
 
-@dataclass(frozen=True)
+
+@dataclass
 class SSRFBlocked(ValueError):
-    """Raised when one URL violates the SSRF safety policy."""
+    """Raised when one URL violates the SSRF safety policy.
+
+    Deliberately not ``frozen``: CPython's exception machinery assigns
+    ``__traceback__``/``__cause__``/``__context__`` onto a raised
+    exception as it propagates, and a nested generator-based context
+    manager's re-raise path (``contextlib``'s ``__exit__``) does this
+    explicitly. A frozen dataclass blocks that assignment and crashes
+    with ``FrozenInstanceError`` instead of propagating the original
+    error — found while adding ``OfflineModeBlocked`` below (release
+    issue O01), which hit this every time it propagated uncaught
+    through ``_fetch_body_and_encoding``'s nested ``with`` blocks.
+    """
 
     reason: str
 
     def __str__(self) -> str:  # pragma: no cover
         return self.reason
+
+
+@dataclass
+class OfflineModeBlocked(ValueError):
+    """Raised when an outbound fetch is attempted while offline mode is on.
+
+    Distinct from ``SSRFBlocked`` so a caller/test can tell "denied because
+    offline" apart from "denied because the target itself is unsafe"
+    (release issue O01). Not frozen, for the same reason as ``SSRFBlocked``.
+    """
+
+    reason: str
+
+    def __str__(self) -> str:  # pragma: no cover
+        return self.reason
+
+
+def is_offline_mode() -> bool:
+    """Return whether external (non-loopback) network egress is denied.
+
+    Reads ``airunner_common.settings.AIRUNNER_OFFLINE_MODE`` by attribute
+    lookup on every call (not a value captured at import time) so tests
+    and any future settings bridge can flip it without reimporting this
+    module.
+    """
+    return bool(_airunner_settings.AIRUNNER_OFFLINE_MODE)
 
 
 # NAT64 prefixes that embed an IPv4 address in the low 32 bits (RFC 6052
@@ -109,6 +148,11 @@ def _resolve_host_ips(
 
 def validate_url_for_fetch(url: str) -> None:
     """Validate one URL against the AIRunner fetch safety policy."""
+    if is_offline_mode():
+        raise OfflineModeBlocked(
+            "external network access is disabled while offline mode is on"
+        )
+
     raw = (url or "").strip()
     if not raw:
         raise SSRFBlocked("missing url")
@@ -287,7 +331,9 @@ def _read_response_body(
 
 
 __all__ = [
+    "OfflineModeBlocked",
     "SSRFBlocked",
+    "is_offline_mode",
     "safe_fetch_bytes",
     "safe_fetch_url",
     "validate_url_for_fetch",
