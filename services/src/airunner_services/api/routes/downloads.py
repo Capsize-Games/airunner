@@ -51,14 +51,17 @@ async def start_huggingface_download(
 ) -> DownloadJobAcceptedResponse:
     """Queue one HuggingFace download through the shared job service."""
     service = get_download_job_service(request)
-    job_id = await service.start_huggingface_download(
-        repo_id=payload.repo_id,
-        model_type=payload.model_type,
-        output_dir=payload.output_dir,
-        missing_files=payload.missing_files,
-        gguf_filename=payload.gguf_filename,
-        prefer_pre_quantized=payload.prefer_pre_quantized,
-    )
+    try:
+        job_id = await service.start_huggingface_download(
+            repo_id=payload.repo_id,
+            model_type=payload.model_type,
+            output_dir=payload.output_dir,
+            missing_files=payload.missing_files,
+            gguf_filename=payload.gguf_filename,
+            prefer_pre_quantized=payload.prefer_pre_quantized,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     return DownloadJobAcceptedResponse(job_id=job_id)
 
 
@@ -72,11 +75,14 @@ async def start_huggingface_file_download(
 ) -> DownloadJobAcceptedResponse:
     """Queue one single-file HuggingFace download job."""
     service = get_download_job_service(request)
-    job_id = await service.start_huggingface_file_download(
-        payload.repo_id,
-        payload.filename,
-        output_dir=payload.output_dir,
-    )
+    try:
+        job_id = await service.start_huggingface_file_download(
+            payload.repo_id,
+            payload.filename,
+            output_dir=payload.output_dir,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     return DownloadJobAcceptedResponse(job_id=job_id)
 
 
@@ -126,12 +132,15 @@ async def start_civitai_file_download(
 ) -> DownloadJobAcceptedResponse:
     """Queue one single-file CivitAI download job."""
     service = get_download_job_service(request)
-    job_id = await service.start_civitai_file_download(
-        payload.url,
-        output_path=payload.output_path,
-        file_size=payload.file_size,
-        api_key=payload.api_key,
-    )
+    try:
+        job_id = await service.start_civitai_file_download(
+            payload.url,
+            output_path=payload.output_path,
+            file_size=payload.file_size,
+            api_key=payload.api_key,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     return DownloadJobAcceptedResponse(job_id=job_id)
 
 
@@ -140,11 +149,14 @@ async def fetch_civitai_model_info_route(
     payload: CivitaiModelInfoRequest,
 ) -> dict[str, Any]:
     """Return one selected-version-aware CivitAI model payload."""
-    return await asyncio.to_thread(
-        fetch_civitai_model_info_service,
-        payload.url,
-        payload.api_key or "",
-    )
+    try:
+        return await asyncio.to_thread(
+            fetch_civitai_model_info_service,
+            payload.url,
+            payload.api_key or "",
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 @router.post("/civitai/models")
@@ -152,15 +164,18 @@ async def search_civitai_models_route(
     payload: CivitaiBrowserSearchRequest,
 ) -> dict[str, Any]:
     """Return one filtered CivitAI browser search payload."""
-    return await asyncio.to_thread(
-        search_civitai_models,
-        payload.query,
-        base_models=payload.base_models,
-        model_types=payload.model_types,
-        limit=payload.limit,
-        cursor=payload.cursor,
-        api_key=payload.api_key or "",
-    )
+    try:
+        return await asyncio.to_thread(
+            search_civitai_models,
+            payload.query,
+            base_models=payload.base_models,
+            model_types=payload.model_types,
+            limit=payload.limit,
+            cursor=payload.cursor,
+            api_key=payload.api_key or "",
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 @router.post("/civitai/model")

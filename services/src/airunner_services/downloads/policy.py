@@ -46,7 +46,18 @@ def privacy_consent_shown() -> bool:
 
 
 def is_service_allowed(key: str) -> bool:
-    """Return whether one external service is allowed by policy."""
+    """Return whether one external service is allowed by policy.
+
+    Offline mode (release issue O01) overrides any per-service consent:
+    with no explicit online opt-in, no external service is treated as
+    allowed regardless of what has been individually enabled in privacy
+    settings (release issue O02). Every ``is_*_allowed()`` helper below
+    goes through this one check.
+    """
+    from airunner_services.url_safety import is_offline_mode
+
+    if is_offline_mode():
+        return False
     return get_bool_setting(key, service_default(key))
 
 
