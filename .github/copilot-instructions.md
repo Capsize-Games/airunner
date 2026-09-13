@@ -2,10 +2,13 @@
 
 ## Testing Boundary
 
-- Do not run or launch the AI Runner application as part of normal task execution unless you are instructed to do so by the user.
+- Do not run or launch the AI Runner application as part of normal task execution unless explicitly requested by the user in the active ticket/release issue.
+- Do not run real models or perform GUI inference in ordinary coding sessions.
 - The user will always test runtime behavior manually.
 - Do not create or modify automated tests unless the user explicitly asks for test changes.
+- Regression checks explicitly required by the assigned release issue are authorized and may include documentation-scoped test additions/changes as specified by that issue.
 - When a change would normally be verified by launching the app, state that the user should verify it instead of starting the application.
+- Scope regression checks to those explicitly assigned in the active release issue.
 
 ## Code Style and Quality
 
@@ -18,8 +21,8 @@
 - Follow the PEP 8 style guide for Python code.
 - Use type hints to improve code readability and maintainability.
 - Include docstrings for all functions and classes to explain their purpose and usage.
-- When you need to check code quality, use the `src/airunner/bin/code_quality_report.py` script
-- When you need to check code coverage use the `src/airunner/bin/coverage_report.py` script
+- When you need to check code quality, use the `scripts/code_quality_report.py` script.
+- When you need to check code coverage use the `scripts/coverage_report.py` script.
 - Avoid multiple classes in a single file - we prefer one class per file for better organization and readability. Subdirectories are a good way to group related classes together while keeping each file focused and manageable.
 - Do not use inline import statements. All imports should be at the top of the file, grouped by standard library imports, third-party imports, and local application imports, in that order.
 
@@ -33,8 +36,8 @@
 
 - Never edit generated `*_ui.py` files directly.
 - Always edit the corresponding `.ui` template file instead.
-- Regenerate generated UI Python files with `src/airunner/bin/build_ui.py` after changing a `.ui` template.
-- Treat any direct `*_ui.py` edit as invalid because `src/airunner/bin/build_ui.py` will overwrite it.
+- Regenerate generated UI Python files with `scripts/build_ui.py` after changing a `.ui` template.
+- Treat any direct `*_ui.py` edit as invalid because `scripts/build_ui.py` will overwrite it.
 
 ## Security and Privacy Standards
 
@@ -42,7 +45,7 @@
 - Prefer structured summaries in logs over raw values. Log counts, sizes, IDs, hashes, timing, and state transitions instead of full content.
 - Reuse the existing log-hygiene utilities in `src/airunner/utils/application/log_hygiene.py` and keep sanitization active for both headless/root logging and wrapped GUI loggers.
 - Do not introduce fallback logging to shared temp locations such as `/tmp`. If file logging is unavailable, disable it cleanly instead of redirecting sensitive output to a broader filesystem scope.
-- Route any new remote fetch path through the existing URL safety layer in `src/airunner/components/tools/url_safety.py`. Do not add direct `requests` or similar network fetches for user-supplied URLs without the shared validation path.
-- Validate and normalize every user-controlled local path through the shared helpers in `src/airunner/utils/path_policy.py` before reading, persisting, or executing against it.
+- Route any new remote fetch path through the existing URL safety layer in `src/airunner/url_safety.py`. Do not add direct `requests` or similar network fetches for user-supplied URLs without the shared validation path.
+- Validate and normalize every user-controlled local path through the shared helpers in `src/airunner/runtimes/file_policy.py` before reading, persisting, or executing against it.
 - Keep persistent caches, logs, and other app-managed files inside `AIRUNNER_BASE_PATH` rather than package directories or generic temp directories.
 - Prefer least-privilege filesystem behavior for application data. When creating sensitive data directories, preserve private permissions where practical.
