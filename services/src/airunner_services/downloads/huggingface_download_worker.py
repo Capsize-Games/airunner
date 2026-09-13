@@ -95,13 +95,19 @@ class HuggingFaceDownloadWorker(BaseDownloadWorker):
 
     @classmethod
     def _read_stored_identity(cls, temp_path: Path) -> Optional[str]:
-        """Return the identity recorded for one temp file's prior attempt."""
+        """Return the identity recorded for one temp file's prior attempt.
+
+        Returns ``None`` only when no sidecar file exists at all, i.e.
+        this worker has never recorded an attempt for this temp file
+        (unknown provenance -- must not be trusted on resume; release
+        issue D02 review finding F3). An empty string is a real,
+        previously-recorded value meaning "the server provided no
+        identity header on that attempt", and is distinct from "nothing
+        was ever recorded".
+        """
         try:
-            return (
-                cls._identity_sidecar_path(temp_path).read_text(
-                    encoding="utf-8"
-                ).strip()
-                or None
+            return cls._identity_sidecar_path(temp_path).read_text(
+                encoding="utf-8"
             )
         except OSError:
             return None
@@ -110,16 +116,27 @@ class HuggingFaceDownloadWorker(BaseDownloadWorker):
     def _write_stored_identity(
         cls, temp_path: Path, identity: Optional[str]
     ) -> None:
-        """Persist (or clear) the server identity for one temp file."""
+        """Record one temp file's current attempt's server identity.
+
+        Always writes a sidecar file, even when ``identity`` is falsy:
+        the sidecar's mere presence is what lets ``_read_stored_identity``
+        distinguish "this worker started this download and the server
+        gave no identity header" (safe to keep trusting the same way on
+        a resume) from "no sidecar was ever written for this temp file"
+        (unknown provenance, must not be trusted -- see
+        ``_read_stored_identity``).
+        """
         sidecar = cls._identity_sidecar_path(temp_path)
-        if not identity:
-            try:
-                sidecar.unlink(missing_ok=True)
-            except OSError:
-                pass
-            return
         try:
-            sidecar.write_text(identity, encoding="utf-8")
+            sidecar.write_text(identity or "", encoding="utf-8")
+        except OSError:
+            pass
+
+    @classmethod
+    def _clear_stored_identity(cls, temp_path: Path) -> None:
+        """Remove one temp file's identity sidecar entirely."""
+        try:
+            cls._identity_sidecar_path(temp_path).unlink(missing_ok=True)
         except OSError:
             pass
 
@@ -136,10 +153,7 @@ class HuggingFaceDownloadWorker(BaseDownloadWorker):
             temp_path.unlink(missing_ok=True)
         except OSError:
             pass
-        try:
-            cls._identity_sidecar_path(temp_path).unlink(missing_ok=True)
-        except OSError:
-            pass
+        cls._clear_stored_identity(temp_path)
 
     @staticmethod
     def _content_range_start_matches(
@@ -198,7 +212,7 @@ class HuggingFaceDownloadWorker(BaseDownloadWorker):
         # process died between the two calls, a valid prior file was already
         # gone with nothing to replace it (release issue D02).
         os.replace(temp_path, final_path)
-        self._write_stored_identity(temp_path, None)  # clear the sidecar
+        self._clear_stored_identity(temp_path)
         self._mark_file_complete(filename)
         return True
 
@@ -1031,20 +1045,51 @@ class HuggingFaceDownloadWorker(BaseDownloadWorker):
                     f"Resuming download of {filename} from byte {existing_size}"
                 )
             elif file_size > 0 and existing_size >= file_size:
-                # File already complete in temp; verify (if pinned) and move it
+                # A same-sized temp file must not be promoted just
+                # because its byte count matches (release issue D02
+                # review finding F3): most models have no pinned digest
+                # (see _resolve_bootstrap_revision), so without a check
+                # here a stale or corrupted leftover temp file would be
+                # silently promoted with zero verification and zero
+                # network calls. A lightweight HEAD request confirms the
+                # file's identity against the server before trusting it.
                 self.logger.info(
-                    f"Temp file {filename} already complete, verifying and moving to final location"
+                    f"Temp file {filename} already appears complete; "
+                    "verifying identity before promoting"
                 )
                 try:
-                    self._verify_and_finalize(
-                        temp_path=temp_path,
-                        final_path=final_path,
-                        filename=filename,
-                        expected_sha256=expected_sha256,
+                    stored_identity = self._read_stored_identity(temp_path)
+                    head_response = requests.head(
+                        url, headers=headers, allow_redirects=True, timeout=30
                     )
-                    return
+                    head_response.raise_for_status()
+                    response_identity = self._response_identity(head_response)
+                    identity_confirmed = (
+                        stored_identity is not None
+                        and response_identity is not None
+                        and stored_identity == response_identity
+                    )
+                    if expected_sha256 or identity_confirmed:
+                        self._verify_and_finalize(
+                            temp_path=temp_path,
+                            final_path=final_path,
+                            filename=filename,
+                            expected_sha256=expected_sha256,
+                        )
+                        return
+                    self.logger.warning(
+                        "Could not confirm identity of already-complete "
+                        "temp file %s (stored=%r, current=%r); discarding "
+                        "and re-downloading instead of promoting it "
+                        "unverified",
+                        filename,
+                        stored_identity,
+                        response_identity,
+                    )
+                    self._discard_temp_file(temp_path)
+                    # Fall through to re-download from scratch.
                 except Exception as e:
-                    self.logger.error(f"Failed to move complete temp file {filename}: {e}")
+                    self.logger.error(f"Failed to verify complete temp file {filename}: {e}")
                     # Fall through to re-download
 
         try:
@@ -1070,10 +1115,15 @@ class HuggingFaceDownloadWorker(BaseDownloadWorker):
                             response_identity = self._response_identity(
                                 response
                             )
+                            # Fail closed, not open: a missing sidecar
+                            # (stored_identity is None) means this temp
+                            # file's provenance is unknown -- it must
+                            # never be trusted just because the current
+                            # response also lacks an identity header
+                            # (release issue D02 review finding F3).
                             identity_ok = (
-                                stored_identity is None
-                                or response_identity is None
-                                or stored_identity == response_identity
+                                stored_identity is not None
+                                and stored_identity == (response_identity or "")
                             )
                             if range_ok and identity_ok:
                                 self.logger.info(f"Server accepted range request for {filename}")

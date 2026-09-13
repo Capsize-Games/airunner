@@ -17,9 +17,17 @@ promoted safely:
 - Cancellation leaves the partial temp file in place (resumable) and
   never touches an existing valid destination file.
 - Promotion uses a single atomic os.replace(), not delete-then-rename.
+- A partial file with no recorded identity is never trusted just
+  because the current response also lacks an identity header (fail
+  closed, not open, on unknown provenance).
+- The "already complete" shortcut (existing temp size >= expected size)
+  verifies identity via a real network request before promoting; it
+  never promotes a same-sized stale/corrupt file with zero verification
+  and zero network calls, but still avoids a full re-download when
+  identity is confirmed to match.
 
-Uses only a fake requests.get transport (no real network) and tmp_path
-directories (no real model files).
+Uses only a fake requests.get/requests.head transport (no real network)
+and tmp_path directories (no real model files).
 """
 
 from __future__ import annotations
@@ -340,6 +348,117 @@ def test_cancellation_keeps_partial_temp_and_existing_destination(
     assert len(temp_dir.joinpath("model.bin").read_bytes()) > 0
     assert "model.bin" not in worker._completed_files
     assert "model.bin" not in worker._failed_files
+
+
+def test_no_recorded_identity_is_not_trusted_on_resume(worker, dirs) -> None:
+    """A partial file with no identity sidecar (unknown provenance) must
+    never be trusted just because Content-Range matches and the current
+    response also lacks an identity header -- both signals being
+    unavailable is not the same as being confirmed safe (release issue
+    D02 review finding F3: this used to fail open, splicing new bytes
+    onto the untrusted partial)."""
+    temp_dir, model_path = dirs
+    (temp_dir / "model.bin").write_bytes(b"OLD!")  # no .identity sidecar
+    real_content = b"REALDATA"  # same length as the spliced result would be
+
+    unsafe_206 = _FakeResponse(
+        status_code=206,
+        headers={"content-range": "bytes 4-7/8", "content-length": "4"},
+        chunks=[b"NEW!"],
+    )
+    fresh_full_response = _FakeResponse(
+        status_code=200,
+        headers={"content-length": str(len(real_content))},
+        chunks=_chunk_bytes(real_content),
+    )
+    with mock.patch(
+        f"{_MODULE}.requests.get",
+        side_effect=[unsafe_206, fresh_full_response],
+    ):
+        worker._download_file(
+            repo_id="org/repo",
+            filename="model.bin",
+            file_size=len(real_content),
+            temp_dir=temp_dir,
+            model_path=model_path,
+            api_key="",
+        )
+
+    # Must be the freshly re-fetched content, never the spliced
+    # b"OLD!NEW!" that fail-open behavior would have produced.
+    assert (model_path / "model.bin").read_bytes() == real_content
+
+
+def test_already_complete_shortcut_verifies_identity_before_promoting(
+    worker, dirs
+) -> None:
+    """A same-sized temp file with no recorded identity must not be
+    promoted with zero verification and zero network calls just because
+    its byte count matches file_size (release issue D02 review finding
+    F3)."""
+    temp_dir, model_path = dirs
+    (temp_dir / "model.bin").write_bytes(b"STALE123")  # 8 bytes, no sidecar
+    real_content = b"REALDATA"  # also 8 bytes, but genuinely different
+
+    head_response = _FakeResponse(status_code=200, headers={}, chunks=[])
+    fresh_full_response = _FakeResponse(
+        status_code=200,
+        headers={"content-length": str(len(real_content))},
+        chunks=_chunk_bytes(real_content),
+    )
+    with mock.patch(
+        f"{_MODULE}.requests.head", return_value=head_response
+    ) as mock_head, mock.patch(
+        f"{_MODULE}.requests.get", return_value=fresh_full_response
+    ) as mock_get:
+        worker._download_file(
+            repo_id="org/repo",
+            filename="model.bin",
+            file_size=len(real_content),
+            temp_dir=temp_dir,
+            model_path=model_path,
+            api_key="",
+        )
+
+    assert mock_head.called
+    assert mock_get.called
+    assert (model_path / "model.bin").read_bytes() == real_content
+
+
+def test_already_complete_shortcut_promotes_when_identity_matches(
+    worker, dirs
+) -> None:
+    """The already-complete shortcut still avoids a full re-download when
+    the temp file's recorded identity matches the server's current
+    identity -- the verification fix must not regress this optimization
+    into always re-downloading."""
+    temp_dir, model_path = dirs
+    content = b"GOODDATA"
+    (temp_dir / "model.bin").write_bytes(content)
+    (temp_dir / "model.bin.identity").write_text('"v1"', encoding="utf-8")
+
+    head_response = _FakeResponse(
+        status_code=200, headers={"etag": '"v1"'}, chunks=[]
+    )
+    with mock.patch(
+        f"{_MODULE}.requests.head", return_value=head_response
+    ), mock.patch(
+        f"{_MODULE}.requests.get",
+        side_effect=AssertionError(
+            "must not re-download when identity matches"
+        ),
+    ):
+        worker._download_file(
+            repo_id="org/repo",
+            filename="model.bin",
+            file_size=len(content),
+            temp_dir=temp_dir,
+            model_path=model_path,
+            api_key="",
+        )
+
+    assert (model_path / "model.bin").read_bytes() == content
+    assert "model.bin" in worker._completed_files
 
 
 def test_promotion_uses_atomic_replace_not_delete_then_rename(
