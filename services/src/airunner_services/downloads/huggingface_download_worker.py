@@ -2,6 +2,7 @@
 
 import hashlib
 import os
+import re
 import threading
 from pathlib import Path
 from typing import Optional
@@ -74,6 +75,99 @@ class HuggingFaceDownloadWorker(BaseDownloadWorker):
                 hasher.update(chunk)
         return hasher.hexdigest()
 
+    @staticmethod
+    def _identity_sidecar_path(temp_path: Path) -> Path:
+        """Return the sidecar path recording one temp file's server identity."""
+        return temp_path.with_name(temp_path.name + ".identity")
+
+    @staticmethod
+    def _response_identity(response: "requests.Response") -> Optional[str]:
+        """Return a stable identity string for one HTTP response's target.
+
+        Prefers ETag; Last-Modified is a reasonable fallback. Returns
+        None when a server provides neither, in which case identity
+        cannot be checked and resume proceeds on trust as before
+        (release issue D02).
+        """
+        return response.headers.get("etag") or response.headers.get(
+            "last-modified"
+        )
+
+    @classmethod
+    def _read_stored_identity(cls, temp_path: Path) -> Optional[str]:
+        """Return the identity recorded for one temp file's prior attempt.
+
+        Returns ``None`` only when no sidecar file exists at all, i.e.
+        this worker has never recorded an attempt for this temp file
+        (unknown provenance -- must not be trusted on resume; release
+        issue D02 review finding F3). An empty string is a real,
+        previously-recorded value meaning "the server provided no
+        identity header on that attempt", and is distinct from "nothing
+        was ever recorded".
+        """
+        try:
+            return cls._identity_sidecar_path(temp_path).read_text(
+                encoding="utf-8"
+            )
+        except OSError:
+            return None
+
+    @classmethod
+    def _write_stored_identity(
+        cls, temp_path: Path, identity: Optional[str]
+    ) -> None:
+        """Record one temp file's current attempt's server identity.
+
+        Always writes a sidecar file, even when ``identity`` is falsy:
+        the sidecar's mere presence is what lets ``_read_stored_identity``
+        distinguish "this worker started this download and the server
+        gave no identity header" (safe to keep trusting the same way on
+        a resume) from "no sidecar was ever written for this temp file"
+        (unknown provenance, must not be trusted -- see
+        ``_read_stored_identity``).
+        """
+        sidecar = cls._identity_sidecar_path(temp_path)
+        try:
+            sidecar.write_text(identity or "", encoding="utf-8")
+        except OSError:
+            pass
+
+    @classmethod
+    def _clear_stored_identity(cls, temp_path: Path) -> None:
+        """Remove one temp file's identity sidecar entirely."""
+        try:
+            cls._identity_sidecar_path(temp_path).unlink(missing_ok=True)
+        except OSError:
+            pass
+
+    @classmethod
+    def _discard_temp_file(cls, temp_path: Path) -> None:
+        """Delete one temp file and its identity sidecar, ignoring errors.
+
+        Used whenever a partial download can no longer be trusted (the
+        server's identity changed, or it returned an invalid partial
+        response) so a restart never appends new bytes onto stale ones
+        (release issue D02).
+        """
+        try:
+            temp_path.unlink(missing_ok=True)
+        except OSError:
+            pass
+        cls._clear_stored_identity(temp_path)
+
+    @staticmethod
+    def _content_range_start_matches(
+        content_range: str, expected_start: int
+    ) -> bool:
+        """Return whether a 206 response's Content-Range starts as expected.
+
+        A malformed or missing header is treated as not matching: a
+        caller cannot trust an unverifiable partial response to be the
+        continuation it asked for (release issue D02).
+        """
+        match = re.match(r"bytes\s+(\d+)-\d+/(?:\d+|\*)", content_range or "")
+        return bool(match) and int(match.group(1)) == expected_start
+
     def _verify_and_finalize(
         self,
         *,
@@ -104,7 +198,7 @@ class HuggingFaceDownloadWorker(BaseDownloadWorker):
                     actual_sha256,
                 )
                 try:
-                    temp_path.unlink(missing_ok=True)
+                    self._discard_temp_file(temp_path)
                 except Exception as exc:
                     self.logger.warning(
                         f"Failed to delete corrupt temp file {filename}: {exc}"
@@ -113,9 +207,12 @@ class HuggingFaceDownloadWorker(BaseDownloadWorker):
                 return False
 
         final_path.parent.mkdir(parents=True, exist_ok=True)
-        if final_path.exists():
-            final_path.unlink()
-        temp_path.rename(final_path)
+        # os.replace() atomically overwrites an existing destination in one
+        # step. The previous unlink-then-rename left a window where, if the
+        # process died between the two calls, a valid prior file was already
+        # gone with nothing to replace it (release issue D02).
+        os.replace(temp_path, final_path)
+        self._clear_stored_identity(temp_path)
         self._mark_file_complete(filename)
         return True
 
@@ -931,29 +1028,68 @@ class HuggingFaceDownloadWorker(BaseDownloadWorker):
         file_mode = "wb"
         if temp_path.exists():
             existing_size = temp_path.stat().st_size
-            if existing_size > 0 and existing_size < file_size:
-                # Attempt to resume from where we left off
+            if existing_size > 0 and (
+                file_size <= 0 or existing_size < file_size
+            ):
+                # Attempt to resume from where we left off. When file_size
+                # is unknown (<= 0, e.g. a failed HEAD request upstream) an
+                # existing temp file is never treated as already complete
+                # below -- an arbitrary partial file must never be promoted
+                # just because there was no expected size to compare against
+                # (release issue D02) -- so it is always resumed/re-verified
+                # against the server's own response instead.
                 resume_from = existing_size
                 file_mode = "ab"  # Append mode
                 headers["Range"] = f"bytes={existing_size}-"
                 self.logger.info(
                     f"Resuming download of {filename} from byte {existing_size}"
                 )
-            elif existing_size >= file_size:
-                # File already complete in temp; verify (if pinned) and move it
+            elif file_size > 0 and existing_size >= file_size:
+                # A same-sized temp file must not be promoted just
+                # because its byte count matches (release issue D02
+                # review finding F3): most models have no pinned digest
+                # (see _resolve_bootstrap_revision), so without a check
+                # here a stale or corrupted leftover temp file would be
+                # silently promoted with zero verification and zero
+                # network calls. A lightweight HEAD request confirms the
+                # file's identity against the server before trusting it.
                 self.logger.info(
-                    f"Temp file {filename} already complete, verifying and moving to final location"
+                    f"Temp file {filename} already appears complete; "
+                    "verifying identity before promoting"
                 )
                 try:
-                    self._verify_and_finalize(
-                        temp_path=temp_path,
-                        final_path=final_path,
-                        filename=filename,
-                        expected_sha256=expected_sha256,
+                    stored_identity = self._read_stored_identity(temp_path)
+                    head_response = requests.head(
+                        url, headers=headers, allow_redirects=True, timeout=30
                     )
-                    return
+                    head_response.raise_for_status()
+                    response_identity = self._response_identity(head_response)
+                    identity_confirmed = (
+                        stored_identity is not None
+                        and response_identity is not None
+                        and stored_identity == response_identity
+                    )
+                    if expected_sha256 or identity_confirmed:
+                        self._verify_and_finalize(
+                            temp_path=temp_path,
+                            final_path=final_path,
+                            filename=filename,
+                            expected_sha256=expected_sha256,
+                        )
+                        return
+                    self.logger.warning(
+                        "Could not confirm identity of already-complete "
+                        "temp file %s (stored=%r, current=%r); discarding "
+                        "and re-downloading instead of promoting it "
+                        "unverified",
+                        filename,
+                        stored_identity,
+                        response_identity,
+                    )
+                    self._discard_temp_file(temp_path)
+                    # Fall through to re-download from scratch.
                 except Exception as e:
-                    self.logger.error(f"Failed to move complete temp file {filename}: {e}")
+                    self.logger.error(f"Failed to verify complete temp file {filename}: {e}")
                     # Fall through to re-download
 
         try:
@@ -966,8 +1102,57 @@ class HuggingFaceDownloadWorker(BaseDownloadWorker):
                     # Check if server supports range requests
                     if resume_from > 0:
                         if response.status_code == 206:
-                            # Partial content - resume successful
-                            self.logger.info(f"Server accepted range request for {filename}")
+                            # Partial content: verify it is actually the
+                            # continuation of THIS temp file before trusting
+                            # it, not just any 206 (release issue D02).
+                            range_ok = self._content_range_start_matches(
+                                response.headers.get("content-range", ""),
+                                resume_from,
+                            )
+                            stored_identity = self._read_stored_identity(
+                                temp_path
+                            )
+                            response_identity = self._response_identity(
+                                response
+                            )
+                            # Fail closed, not open: a missing sidecar
+                            # (stored_identity is None) means this temp
+                            # file's provenance is unknown -- it must
+                            # never be trusted just because the current
+                            # response also lacks an identity header
+                            # (release issue D02 review finding F3).
+                            identity_ok = (
+                                stored_identity is not None
+                                and stored_identity == (response_identity or "")
+                            )
+                            if range_ok and identity_ok:
+                                self.logger.info(f"Server accepted range request for {filename}")
+                            elif request_attempts == 1:
+                                self.logger.warning(
+                                    "Unsafe 206 response for %s (range_ok=%s, "
+                                    "identity_ok=%s); deleting temp file and "
+                                    "restarting",
+                                    filename,
+                                    range_ok,
+                                    identity_ok,
+                                )
+                                self.emit_signal(
+                                    SignalCode.UPDATE_DOWNLOAD_LOG,
+                                    {
+                                        "message": f"Detected a changed or invalid partial download for {filename}. Restarting..."
+                                    },
+                                )
+                                self._discard_temp_file(temp_path)
+                                resume_from = 0
+                                file_mode = "wb"
+                                headers.pop("Range", None)
+                                continue
+                            else:
+                                raise RuntimeError(
+                                    f"Server returned an unsafe partial "
+                                    f"response for {filename} and retrying "
+                                    "did not resolve it"
+                                )
                         elif response.status_code == 200:
                             # Server doesn't support range requests, start over
                             self.logger.warning(
@@ -988,12 +1173,7 @@ class HuggingFaceDownloadWorker(BaseDownloadWorker):
                                     "message": f"Stale partial download detected for {filename}. Restarting that file..."
                                 },
                             )
-                            try:
-                                temp_path.unlink(missing_ok=True)
-                            except Exception as unlink_error:
-                                self.logger.warning(
-                                    f"Failed to delete stale temp file {filename}: {unlink_error}"
-                                )
+                            self._discard_temp_file(temp_path)
                             resume_from = 0
                             file_mode = "wb"
                             headers.pop("Range", None)
@@ -1002,6 +1182,15 @@ class HuggingFaceDownloadWorker(BaseDownloadWorker):
                             response.raise_for_status()
                     else:
                         response.raise_for_status()
+
+                    if resume_from == 0:
+                        # Record this attempt's server identity so a later
+                        # resume (even from a fresh worker/process) can tell
+                        # whether the upstream content has since changed
+                        # (release issue D02).
+                        self._write_stored_identity(
+                            temp_path, self._response_identity(response)
+                        )
 
                     content_length = response.headers.get("content-length")
                     if content_length:
