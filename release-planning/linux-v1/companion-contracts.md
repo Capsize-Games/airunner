@@ -12,7 +12,7 @@ Issue: https://github.com/Capsize-Games/airunner/issues/2118 (B01). Parent: http
 | `services/src/airunner_services/llm/companion/memory_repository.py` | `CompanionMemoryRepository` protocol + `TurnRecord`/`SessionRecord`/`FactRecord`, scoped by `ChatbotId`/`SessionId`. |
 | `services/src/airunner_services/llm/companion/scheduler.py` | `CompanionScheduler` protocol + `CompanionJobType` (one member per confirmed background capability) + `CompanionJobRequest`/`CompanionJobHandle`, idempotency-key-bearing. |
 | `services/src/airunner_services/llm/companion/tool_dispatch.py` | `CompanionToolDispatcher` protocol + `ToolDispatchRequest`/`ToolDispatchResult`, explicitly bridging to Desktop's existing `llm.core.tool_registry.ToolRegistry` rather than a new tool system. |
-| `services/src/airunner_services/llm/companion/inference.py` | `CompanionInferenceClient` protocol + `CompanionInferenceRequest`, explicitly bridging to Desktop's existing `runtimes.registry`/`runtimes.contracts.LLMInvocationRequest` rather than a new model-invocation path. |
+| `services/src/airunner_services/llm/companion/inference.py` | `CompanionInferenceClient` protocol (`stream`, `cancel`) + `CompanionInferenceRequest`, explicitly bridging to Desktop's existing `runtimes.registry`/`runtimes.contracts.LLMInvocationRequest` rather than a new model-invocation path. |
 
 All four Protocols are `@runtime_checkable` so a fake/test implementation can be asserted against them directly (`isinstance(fake, CompanionMemoryRepository)`), not just type-checked statically.
 
@@ -21,7 +21,7 @@ All four Protocols are `@runtime_checkable` so a fake/test implementation can be
 - `CancellationRequest` mirrors the existing `RuntimeAction.CANCEL`.
 - `CompanionInferenceClient` explicitly delegates to the existing `RuntimeRegistry`/`LLMInvocationRequest` — no new model-calling code path.
 - `CompanionToolDispatcher` explicitly delegates to the existing `ToolRegistry` (`@tool` decorator system) — no new tool-registration system. Desktop's registry already has `ToolCategory.MOOD` and `ToolCategory.KNOWLEDGE` categories, which is a good sign the companion port has a real landing spot rather than needing new taxonomy.
-- `TurnRecord`/`SessionRecord` field names match upstream `ConversationTurn`/`ChatSession` field-for-field (minus `user_id` — Desktop is single-user — and minus `conversation_id`/`embedding_enc`, since neither UwUchat nor Desktop has a multi-conversation concept, and B04 owns embeddings separately).
+- `TurnRecord`/`SessionRecord` field names match upstream `ConversationTurn`/`ChatSession` field-for-field (minus `user_id` — Desktop is single-user — and minus `embedding_enc`, since B04 owns embeddings separately). `conversation_id` is also dropped, but *not* because Desktop lacks a multi-conversation concept the way UwUchat does — Desktop actually has one (`src/airunner/components/conversations/`: `ConversationRecord`, `ConversationHistoryManager`) — whether a companion session/turn should map onto that existing model is an open question, not resolved here (see §4).
 
 ## 2. Worked example: one turn, a tool call, persistence, and a background follow-up
 
@@ -40,7 +40,19 @@ request = CompanionTurnRequest(
 #    rotation rule, or a Desktop-chosen threshold -- B02's call).
 session = memory_repo.get_or_start_session(request.chatbot_id)
 
-# 3. B10 composes the prompt: recent turns + facts + mood context,
+# 3. B02 persists the user's own turn immediately on receipt, before any
+#    inference happens: it must not be silently dropped from history
+#    just because it never came back out of an LLM. turn_index is
+#    repo-assigned (like turn_id), not computed by the caller, since a
+#    caller only ever sees a size-limited "recent turns" window, not a
+#    session's true monotonic turn count.
+user_turn = memory_repo.append_turn(TurnRecord(
+    chatbot_id=request.chatbot_id, session_id=session.session_id or 0,
+    role="user", content=request.message,
+    call_chain_id=request.call_chain_id,
+))
+
+# 4. B10 composes the prompt: recent turns + facts + mood context,
 #    trimmed to request.context_budget.
 recent_turns = memory_repo.get_recent_turns(
     request.chatbot_id, session.session_id, limit=request.context_budget.max_recent_turns
@@ -48,7 +60,7 @@ recent_turns = memory_repo.get_recent_turns(
 facts = memory_repo.get_facts(request.chatbot_id, limit=request.context_budget.max_facts)
 messages = compose_prompt(recent_turns, facts, request.message)  # B10
 
-# 4. B11's classifier (upstream-derived or Desktop-native -- unresolved,
+# 5. B11's classifier (upstream-derived or Desktop-native -- unresolved,
 #    see W01 gap) decides a tool call is warranted, then B11's dispatcher
 #    executes it through the existing ToolRegistry.
 tool_result = tool_dispatcher.dispatch(
@@ -57,7 +69,7 @@ tool_result = tool_dispatcher.dispatch(
 if tool_result.succeeded:
     messages.append(ChatMessage(role=MessageRole.TOOL, content=tool_result.content))
 
-# 5. B12's inference client streams the actual reply from the *local*
+# 6. B12's inference client streams the actual reply from the *local*
 #    Desktop LLM runtime (never a cloud provider by default -- O01/B12).
 inference_request = CompanionInferenceRequest(
     call_chain_id=request.call_chain_id, messages=messages,
@@ -68,16 +80,16 @@ async for event in inference_client.stream(inference_request):
     if event.final:
         break
 
-# 6. B02 persists the completed turn *before* any background follow-up
-#    starts (parent spec architecture decision #4: "Store completed
-#    turns before background memory work").
+# 7. B02 persists the completed assistant turn *before* any background
+#    follow-up starts (parent spec architecture decision #4: "Store
+#    completed turns before background memory work").
 turn = memory_repo.append_turn(TurnRecord(
-    chatbot_id=request.chatbot_id, session_id=session.session_id,
-    role="assistant", content=reply_text, turn_index=len(recent_turns),
+    chatbot_id=request.chatbot_id, session_id=session.session_id or 0,
+    role="assistant", content=reply_text,
     call_chain_id=request.call_chain_id,
 ))
 
-# 7. B06's scheduler fires bounded, idempotent background work -- fact
+# 8. B06's scheduler fires bounded, idempotent background work -- fact
 #    extraction now; mood/episodic/rolling-compression/curiosity later,
 #    at session-rotation, exactly as upstream schedules them (W01 §2/§3).
 scheduler.schedule(CompanionJobRequest(
@@ -87,7 +99,7 @@ scheduler.schedule(CompanionJobRequest(
 ))
 ```
 
-Cancellation: a caller sends `CancellationRequest(call_chain_id=request.call_chain_id)`; B12's inference client implementation is responsible for mapping that to the same `RuntimeAction.CANCEL` path any other in-flight runtime invocation already uses.
+Cancellation: a caller sends `CancellationRequest(call_chain_id=request.call_chain_id)` to `CompanionInferenceClient.cancel(...)`, whose implementation (B12) maps that to the same `RuntimeAction.CANCEL` path any other in-flight runtime invocation already uses.
 
 Errors: any step may raise `CompanionError(CompanionErrorCode(code=ERROR_..., detail=..., retryable=...))`. `detail` is caller-safe text (no turn/prompt content embedded), matching the S02 precedent of deterministic, content-free error codes on the existing LLM WebSocket.
 
@@ -117,7 +129,8 @@ Every capability confirmed in [W01](https://github.com/Capsize-Games/airunnerweb
 2. Does upstream's PII-masking-before-cloud-egress design still apply once local inference is the default? Not modeled in these contracts; would layer in front of `CompanionInferenceClient` for the explicit remote-provider mode only, if the owner decides it's needed.
 3. `world/curiosity_engine.py` vs `llm/curiosity_engine.py` — needs resolving before B15 implements `CompanionJobType.CURIOSITY`.
 4. Tool classification/selection's real implementation (`route_policy.py`/`tool_selection_plan.py`) was not located in W01 — B11 needs either a deeper upstream read or a Desktop-native design.
+5. Should a companion session/turn map onto Desktop's own existing multi-conversation model (`src/airunner/components/conversations/`: `ConversationRecord`, `ConversationHistoryManager`, `create_conversation`/`select_conversation`/`list_conversations`)? Unlike UwUchat (which has no such concept — W01 §2), Desktop already lets one chatbot have several conversations; `TurnRecord` currently drops `conversation_id` rather than assuming this away, but whether/how the two models reconcile is left for B02/B03 to decide.
 
 ## 5. Validation
 
-`services/tests/test_release_b01.py` confirms the `companion` package imports with zero Qt (`PySide6`/`PyQt`), `torch`, SQL driver (`sqlalchemy`/`psycopg`), or `redis` module pulled into `sys.modules`, and that a minimal fake implementation of each Protocol satisfies it via `isinstance()` (the `@runtime_checkable` contracts above). No runtime launch, model load, or database access was used to produce this design.
+`services/tests/test_release_b01.py` confirms, in a fresh subprocess (needed because the test file's own top-level imports already cache the package before any test body runs), that the `companion` package imports with zero Qt (`PySide6`/`PyQt`), `torch`, SQL driver (`sqlalchemy`/`psycopg`), or `redis` module pulled into `sys.modules`; that a minimal fake implementation of each Protocol satisfies it via `isinstance()` (the `@runtime_checkable` contracts above), including `CompanionInferenceClient.cancel`; and that the worked example below persists both the user's and the assistant's turns with a repository-assigned, monotonic `turn_index`. No runtime launch, model load, or database access was used to produce this design.

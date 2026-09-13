@@ -10,14 +10,18 @@ runtime path ``/api/v1/llm/stream`` and ``/api/v1/llm/generate`` already
 use, per the parent spec's "reuse existing Desktop inference" and B12's
 "route every companion pipeline through local inference by default."
 
-Nothing here talks to a cloud provider. W01 §2 confirms upstream is
-cloud-only for every pipeline stage today (OpenRouter); B12 exists
-specifically to invert that default for the Desktop port, so this
-contract's implementation must not default to a remote provider even
-though the interface itself does not forbid one being configured
-explicitly (the parent spec: "Explicit remote mode and optional online
-providers retain clear consent and authentication" — that consent/
-routing decision lives in B12's implementation, not this file).
+Nothing here talks to a cloud provider by default. Upstream defaults to
+a cloud provider (OpenRouter) for every text-generation pipeline stage,
+though it does support an env-driven local/LAN override
+(``AIRUNNER_LLM_PROVIDER``/``AIRUNNER_LLM_MODEL``, see W01 §2 as
+corrected) rather than being cloud-only with no local path at all. B12
+exists to make local inference the Desktop port's *default* (not merely
+an opt-in override as upstream has it), so this contract's
+implementation must not default to a remote provider even though the
+interface itself does not forbid one being configured explicitly (the
+parent spec: "Explicit remote mode and optional online providers retain
+clear consent and authentication" — that consent/routing decision lives
+in B12's implementation, not this file).
 """
 
 from __future__ import annotations
@@ -28,7 +32,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from airunner_services.runtimes.contracts import ChatMessage
 
-from .contracts import CallChainId, CompanionStreamEvent
+from .contracts import CallChainId, CancellationRequest, CompanionStreamEvent
 
 
 class CompanionInferenceRequest(BaseModel):
@@ -65,6 +69,19 @@ class CompanionInferenceClient(Protocol):
         """
         ...
         yield  # pragma: no cover - Protocol stub, never executed
+
+    async def cancel(self, request: CancellationRequest) -> None:
+        """Cancel one in-flight companion turn.
+
+        ``CancellationRequest`` (``contracts.py``) exists specifically to
+        be mapped here to the existing ``RuntimeAction.CANCEL`` path any
+        other in-flight runtime invocation already uses -- an
+        implementation (B12) resolves ``call_chain_id`` to the
+        underlying runtime invocation to cancel. Without this method on
+        the Protocol, ``CancellationRequest`` had no defined caller
+        (release issue B01 review finding F9).
+        """
+        ...
 
 
 __all__ = [

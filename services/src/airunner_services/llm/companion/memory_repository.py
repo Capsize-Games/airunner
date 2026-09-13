@@ -38,10 +38,24 @@ class TurnRecord(BaseModel):
     """One persisted conversation turn.
 
     Field names deliberately match upstream ``ConversationTurn``
-    (W01 §3) minus ``conversation_id``/``embedding_enc`` (no
-    multi-conversation concept on Desktop either — see the frozen
-    reference's §2 note that UwUchat itself has none — and no
-    separately-stored embedding column; B04 owns the embeddings index).
+    (W01 §3) minus ``embedding_enc`` (no separately-stored embedding
+    column; B04 owns the embeddings index) and minus
+    ``conversation_id``. Upstream UwUchat has no multi-conversation
+    concept (W01 §2), but Desktop *does* --
+    ``src/airunner/components/conversations/`` (``ConversationRecord``,
+    ``ConversationHistoryManager``) lets one chatbot have several
+    conversations. Whether a companion session/turn should map onto
+    that existing model, or remain a separate companion-specific
+    concept, is an open question left for B02/B03 (see
+    companion-contracts.md §4), not an erased assumption (release issue
+    B01 review finding F9).
+
+    ``turn_index`` is assigned by ``append_turn`` (like ``turn_id``),
+    not supplied by the caller: a caller composing a turn only sees a
+    windowed, size-limited "recent turns" list (see
+    ``get_recent_turns``' ``limit``), which is not a reliable source for
+    a session's true, monotonically increasing turn count once a
+    session has more turns than that window.
     """
 
     model_config = ConfigDict(extra="forbid")
@@ -51,7 +65,7 @@ class TurnRecord(BaseModel):
     session_id: SessionId
     role: str
     content: str
-    turn_index: int
+    turn_index: Optional[int] = None
     call_chain_id: CallChainId
 
 
@@ -111,7 +125,10 @@ class CompanionMemoryRepository(Protocol):
         ...
 
     def append_turn(self, turn: TurnRecord) -> TurnRecord:
-        """Persist one completed turn; returns it with ``turn_id`` set."""
+        """Persist one completed turn; returns it with ``turn_id`` and
+        ``turn_index`` set (the latter assigned from the session's true
+        total turn count, not merely a caller-visible recent-turns
+        window -- see ``TurnRecord``)."""
         ...
 
     def get_recent_turns(

@@ -19,6 +19,7 @@ fake satisfying a Protocol, never a real implementation.
 from __future__ import annotations
 
 import asyncio
+import subprocess
 import sys
 import uuid
 from typing import AsyncIterator, List
@@ -27,6 +28,7 @@ import pytest
 
 from airunner_services.llm.companion import (
     CallChainId,
+    CancellationRequest,
     ChatbotId,
     CompanionErrorCode,
     CompanionInferenceClient,
@@ -51,18 +53,32 @@ _FORBIDDEN_MODULE_MARKERS = ("pyside6", "pyqt", "torch", "sqlalchemy", "psycopg"
 
 
 def test_companion_package_import_is_free_of_qt_torch_and_sql_drivers() -> None:
-    before = set(sys.modules.keys())
-    import airunner_services.llm.companion  # noqa: F401
-
-    after = set(sys.modules.keys())
-    new_modules = after - before
-    hits = [
-        module
-        for module in new_modules
-        for marker in _FORBIDDEN_MODULE_MARKERS
-        if marker in module.lower()
-    ]
-    assert hits == []
+    """Must run in a fresh subprocess: this test *file's own* top-level
+    `from airunner_services.llm.companion import (...)` already fully
+    imports and caches the package in sys.modules at collection time,
+    before any test function body runs. An in-process before/after
+    sys.modules diff here is therefore always empty regardless of what
+    the package actually imports -- a prior version of this test was
+    tautological for exactly that reason and would pass even if a
+    companion submodule secretly imported PySide6 (release issue B01
+    review finding F9)."""
+    marker_list = ",".join(_FORBIDDEN_MODULE_MARKERS)
+    proc = subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            "import sys; before = set(sys.modules); "
+            "import airunner_services.llm.companion; "
+            "after = set(sys.modules); new = after - before; "
+            f"markers = {marker_list!r}.split(','); "
+            "hits = [m for m in new for mk in markers if mk in m.lower()]; "
+            "print(','.join(hits)); sys.exit(1 if hits else 0)",
+        ],
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    assert proc.returncode == 0, f"Forbidden modules loaded: {proc.stdout}"
 
 
 def test_companion_package_does_not_import_the_web_package() -> None:
@@ -97,7 +113,16 @@ class _FakeMemoryRepository:
         return session
 
     def append_turn(self, turn: TurnRecord) -> TurnRecord:
-        turn = turn.model_copy(update={"turn_id": len(self.turns) + 1})
+        # turn_index is repo-assigned from the session's true total turn
+        # count, not supplied by the caller (see TurnRecord's docstring):
+        # a caller only ever sees a windowed, size-limited recent-turns
+        # list, which is not a valid source for a monotonic index.
+        session_turn_count = sum(
+            1 for t in self.turns if t.session_id == turn.session_id
+        )
+        turn = turn.model_copy(
+            update={"turn_id": len(self.turns) + 1, "turn_index": session_turn_count}
+        )
         self.turns.append(turn)
         return turn
 
@@ -140,6 +165,9 @@ class _FakeToolDispatcher:
 
 
 class _FakeInferenceClient:
+    def __init__(self) -> None:
+        self.cancelled: List[CallChainId] = []
+
     async def stream(
         self, request: CompanionInferenceRequest
     ) -> AsyncIterator[CompanionStreamEvent]:
@@ -150,6 +178,9 @@ class _FakeInferenceClient:
                 delta_text=chunk,
                 final=(index == 2),
             )
+
+    async def cancel(self, request: CancellationRequest) -> None:
+        self.cancelled.append(request.call_chain_id)
 
 
 def test_fake_memory_repository_satisfies_protocol() -> None:
@@ -187,7 +218,24 @@ def test_worked_example_one_turn_tool_call_persistence_background_job() -> None:
     session = memory_repo.get_or_start_session(request.chatbot_id)
     assert session.chatbot_id == request.chatbot_id
 
-    # 2. Compose messages (stand-in for B10's real prompt composition).
+    # 2. Persist the user's own turn immediately on receipt, before any
+    #    inference happens: the user's message must not be silently
+    #    dropped from history just because it never came back out of an
+    #    LLM (release issue B01 review finding F9 -- the worked example
+    #    previously only ever persisted the assistant's reply).
+    user_turn = memory_repo.append_turn(
+        TurnRecord(
+            chatbot_id=request.chatbot_id,
+            session_id=session.session_id or 0,
+            role="user",
+            content=request.message,
+            call_chain_id=request.call_chain_id,
+        )
+    )
+    assert user_turn.turn_id is not None
+    assert user_turn.turn_index == 0
+
+    # 3. Compose messages (stand-in for B10's real prompt composition).
     recent_turns = memory_repo.get_recent_turns(
         request.chatbot_id,
         session.session_id,
@@ -196,11 +244,11 @@ def test_worked_example_one_turn_tool_call_persistence_background_job() -> None:
     facts = memory_repo.get_facts(
         request.chatbot_id, limit=request.context_budget.max_facts
     )
-    assert recent_turns == []
+    assert recent_turns == [user_turn]
     assert facts == []
     messages = [ChatMessage(role=MessageRole.USER, content=request.message)]
 
-    # 3. Tool dispatch.
+    # 4. Tool dispatch.
     assert "get_weather" in tool_dispatcher.available_tools(request.chatbot_id)
     tool_result = tool_dispatcher.dispatch(
         ToolDispatchRequest(
@@ -212,7 +260,7 @@ def test_worked_example_one_turn_tool_call_persistence_background_job() -> None:
     assert tool_result.succeeded
     messages.append(ChatMessage(role=MessageRole.TOOL, content=tool_result.content))
 
-    # 4. Inference (streamed).
+    # 5. Inference (streamed).
     inference_request = CompanionInferenceRequest(
         call_chain_id=request.call_chain_id, messages=messages
     )
@@ -228,22 +276,25 @@ def test_worked_example_one_turn_tool_call_persistence_background_job() -> None:
     reply_text = asyncio.run(_run_inference())
     assert reply_text == "Sounds lovely out."
 
-    # 5. Persist the completed turn BEFORE scheduling background work
-    #    (parent spec architecture decision #4).
+    # 6. Persist the completed assistant turn BEFORE scheduling background
+    #    work (parent spec architecture decision #4). turn_index is
+    #    repo-assigned, not computed from the caller-visible recent_turns
+    #    window (which could be shorter than the session's true turn
+    #    count once it exceeds context_budget.max_recent_turns).
     turn = memory_repo.append_turn(
         TurnRecord(
             chatbot_id=request.chatbot_id,
             session_id=session.session_id or 0,
             role="assistant",
             content=reply_text,
-            turn_index=len(recent_turns),
             call_chain_id=request.call_chain_id,
         )
     )
     assert turn.turn_id is not None
-    assert memory_repo.turns == [turn]
+    assert turn.turn_index == 1
+    assert memory_repo.turns == [user_turn, turn]
 
-    # 6. Schedule bounded background follow-up, keyed for idempotency.
+    # 7. Schedule bounded background follow-up, keyed for idempotency.
     handle = scheduler.schedule(
         CompanionJobRequest(
             job_type=CompanionJobType.FACT_EXTRACTION,
@@ -254,6 +305,19 @@ def test_worked_example_one_turn_tool_call_persistence_background_job() -> None:
     )
     assert handle.accepted
     assert scheduler.scheduled[0].job_type == CompanionJobType.FACT_EXTRACTION
+
+
+def test_inference_client_protocol_has_a_cancel_method() -> None:
+    """CancellationRequest (contracts.py) must have a defined caller on
+    the inference client Protocol -- without this, a request to cancel
+    an in-flight turn had no defined handler anywhere (release issue B01
+    review finding F9)."""
+    client = _FakeInferenceClient()
+    assert isinstance(client, CompanionInferenceClient)
+
+    call_chain_id = CallChainId(str(uuid.uuid4()))
+    asyncio.run(client.cancel(CancellationRequest(call_chain_id=call_chain_id)))
+    assert client.cancelled == [call_chain_id]
 
 
 def test_companion_error_carries_a_deterministic_code_not_free_text() -> None:
