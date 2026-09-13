@@ -3,10 +3,19 @@
 This package defines interfaces only, ported and mapped from the frozen
 UwUchat behavior inventory (W01:
 https://github.com/Capsize-Games/airunnerweb/blob/8157628a.../wiki/Desktop-Bot-Port-Reference.md).
-No business logic lives here; B02-B16 implement against these
-contracts. See ``release-planning/linux-v1/companion-contracts.md`` for
-the full capability-to-issue mapping and the worked example trace this
-issue's acceptance criteria require.
+See ``release-planning/linux-v1/companion-contracts.md`` for the full
+capability-to-issue mapping and the worked example trace this issue's
+acceptance criteria require.
+
+B02+ implementations (e.g. ``repository.py``'s ``SqlCompanionMemoryRepository``,
+release issue B02) live as submodules of this package per each ticket's
+read/change boundary, but are deliberately **not** re-exported here:
+this package's own import (``import airunner_services.llm.companion``)
+must stay free of Qt/torch/SQL-driver imports (see
+``services/tests/test_release_b01.py``), which a concrete,
+database-backed implementation cannot be. Import a submodule directly
+(``from airunner_services.llm.companion.repository import
+SqlCompanionMemoryRepository``) to use one.
 """
 
 from __future__ import annotations
