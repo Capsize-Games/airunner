@@ -389,6 +389,49 @@ def test_no_recorded_identity_is_not_trusted_on_resume(worker, dirs) -> None:
     assert (model_path / "model.bin").read_bytes() == real_content
 
 
+def test_previously_recorded_empty_identity_is_not_trusted_either(
+    worker, dirs
+) -> None:
+    """A sidecar that exists but recorded "no identity was available" on
+    a prior attempt (stored_identity == "") must not be treated as
+    matching a response that also lacks an identity header. Comparing
+    two empty values as equal was a second fail-open path, functionally
+    identical to the original bug, for any server that never sends
+    ETag/Last-Modified: the first attempt writes an empty sidecar
+    (rather than none at all), and every subsequent resume would then
+    be trusted regardless of whether the remote content actually
+    changed (second-review finding)."""
+    temp_dir, model_path = dirs
+    (temp_dir / "model.bin").write_bytes(b"OLD!")
+    (temp_dir / "model.bin.identity").write_text("", encoding="utf-8")
+    real_content = b"REALDATA"
+
+    unsafe_206 = _FakeResponse(
+        status_code=206,
+        headers={"content-range": "bytes 4-7/8", "content-length": "4"},
+        chunks=[b"NEW!"],
+    )
+    fresh_full_response = _FakeResponse(
+        status_code=200,
+        headers={"content-length": str(len(real_content))},
+        chunks=_chunk_bytes(real_content),
+    )
+    with mock.patch(
+        f"{_MODULE}.requests.get",
+        side_effect=[unsafe_206, fresh_full_response],
+    ):
+        worker._download_file(
+            repo_id="org/repo",
+            filename="model.bin",
+            file_size=len(real_content),
+            temp_dir=temp_dir,
+            model_path=model_path,
+            api_key="",
+        )
+
+    assert (model_path / "model.bin").read_bytes() == real_content
+
+
 def test_already_complete_shortcut_verifies_identity_before_promoting(
     worker, dirs
 ) -> None:

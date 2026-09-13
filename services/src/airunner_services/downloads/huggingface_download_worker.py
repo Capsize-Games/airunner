@@ -1115,15 +1115,22 @@ class HuggingFaceDownloadWorker(BaseDownloadWorker):
                             response_identity = self._response_identity(
                                 response
                             )
-                            # Fail closed, not open: a missing sidecar
-                            # (stored_identity is None) means this temp
-                            # file's provenance is unknown -- it must
-                            # never be trusted just because the current
-                            # response also lacks an identity header
-                            # (release issue D02 review finding F3).
-                            identity_ok = (
-                                stored_identity is not None
-                                and stored_identity == (response_identity or "")
+                            # Fail closed, not open: neither a missing
+                            # sidecar (stored_identity is None) nor a
+                            # sidecar that recorded "no identity was ever
+                            # available" (stored_identity == "") proves
+                            # anything about whether this response is a
+                            # genuine continuation. Both must be a real,
+                            # matching, non-empty identity value before a
+                            # resume is trusted -- comparing two empty
+                            # values as "equal" was a second fail-open
+                            # path, functionally identical to the
+                            # original bug, for any server that never
+                            # sends ETag/Last-Modified (release issue D02
+                            # second-review finding: "empty validators
+                            # are not a fail-closed identity check").
+                            identity_ok = bool(stored_identity) and (
+                                stored_identity == response_identity
                             )
                             if range_ok and identity_ok:
                                 self.logger.info(f"Server accepted range request for {filename}")
