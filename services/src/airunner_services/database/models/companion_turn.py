@@ -29,6 +29,15 @@ class CompanionTurn(BaseModel):
     the same ``call_chain_id``, so ``role`` must be part of the key --
     release issue B02's "repeated completion event is idempotent"
     acceptance criterion).
+
+    The unique constraint on ``(session_id, turn_index)`` is the
+    database-level backstop against the turn-index race under
+    concurrent writers: two concurrent completions for the same
+    session must never both compute and commit the same index (release
+    issue B02 second-review finding). ``append_turn`` catches the
+    resulting ``IntegrityError`` and retries with a freshly computed
+    index rather than relying on an application-level count alone,
+    which cannot serialize against a concurrent writer by itself.
     """
 
     __tablename__ = "companion_turns"
@@ -38,6 +47,11 @@ class CompanionTurn(BaseModel):
             "call_chain_id",
             "role",
             name="uq_companion_turns_chatbot_call_chain_role",
+        ),
+        UniqueConstraint(
+            "session_id",
+            "turn_index",
+            name="uq_companion_turns_session_turn_index",
         ),
     )
 

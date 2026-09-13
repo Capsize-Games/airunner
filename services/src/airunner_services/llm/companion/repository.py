@@ -13,7 +13,10 @@ implemented" for "saved".
 from __future__ import annotations
 
 from datetime import datetime, timedelta
-from typing import Callable, List
+from typing import Callable, List, Optional
+
+from sqlalchemy import func
+from sqlalchemy.exc import IntegrityError
 
 from airunner_services.database.models.companion_session import (
     CompanionSession,
@@ -23,6 +26,12 @@ from airunner_services.database.session import session_scope
 
 from .contracts import ChatbotId, SessionId
 from .memory_repository import FactRecord, SessionRecord, TurnRecord
+
+# Bounded so a persistent concurrent-writer storm fails loudly (an
+# unbounded retry loop would hang the caller) rather than looping
+# forever; five is generous headroom over the number of writers this
+# single-user desktop daemon plausibly runs at once.
+_MAX_APPEND_TURN_ATTEMPTS = 5
 
 # Upstream's characterized inactivity-gap rotation threshold (W01 §2): a
 # session is reused if the gap since its last message is under this many
@@ -59,9 +68,16 @@ class SqlCompanionMemoryRepository:
                 .order_by(CompanionSession.last_message_at.desc())
                 .first()
             )
+            # Upstream rotates only when the gap *exceeds* the threshold
+            # (pinned commit 8157628a..., llm/session_manager.py's
+            # _detect_gap: "> SESSION_GAP_HOURS"), so a gap exactly equal
+            # to the threshold still reuses the session. A strict "<"
+            # here would rotate one instant early, diverging from the
+            # characterized behavior at the boundary (release issue B02
+            # second-review finding).
             if (
                 latest is not None
-                and (now - latest.last_message_at) < self._session_gap
+                and (now - latest.last_message_at) <= self._session_gap
             ):
                 return _session_to_record(latest)
 
@@ -77,15 +93,7 @@ class SqlCompanionMemoryRepository:
 
     def append_turn(self, turn: TurnRecord) -> TurnRecord:
         with session_scope() as db:
-            existing = (
-                db.query(CompanionTurn)
-                .filter(
-                    CompanionTurn.chatbot_id == int(turn.chatbot_id),
-                    CompanionTurn.call_chain_id == str(turn.call_chain_id),
-                    CompanionTurn.role == turn.role,
-                )
-                .one_or_none()
-            )
+            existing = _find_existing_turn(db, turn)
             if existing is not None:
                 # Idempotent: this exact (chatbot, call_chain_id, role)
                 # completion was already recorded -- return the existing
@@ -107,47 +115,92 @@ class SqlCompanionMemoryRepository:
                     f"{turn.chatbot_id}"
                 )
 
-            next_index = (
-                db.query(CompanionTurn)
-                .filter(
-                    CompanionTurn.chatbot_id == int(turn.chatbot_id),
-                    CompanionTurn.session_id == int(turn.session_id),
-                )
-                .count()
-            )
             created_at = self._clock()
-            turn_row = CompanionTurn(
-                chatbot_id=int(turn.chatbot_id),
-                session_id=int(turn.session_id),
-                role=turn.role,
-                content=turn.content,
-                turn_index=next_index,
-                call_chain_id=str(turn.call_chain_id),
-                created_at=created_at,
+
+            # Concurrent writers can both pass the idempotency check
+            # above (neither has committed yet) and both compute the
+            # same next turn_index from a plain COUNT/MAX query -- that
+            # count alone cannot serialize against a writer racing it
+            # (release issue B02 second-review finding: "concurrent
+            # turns receive duplicate indexes"). The unique
+            # (session_id, turn_index) constraint on CompanionTurn is
+            # the actual backstop: attempt the insert inside a
+            # savepoint, and on a constraint violation, roll back just
+            # that savepoint and retry with a freshly computed index
+            # (or, if the loser turns out to be a genuine duplicate
+            # completion that another writer just committed, return
+            # that instead -- making concurrent duplicate delivery
+            # idempotent rather than an uncaught IntegrityError).
+            for _attempt in range(_MAX_APPEND_TURN_ATTEMPTS):
+                next_index = (
+                    db.query(func.coalesce(func.max(CompanionTurn.turn_index), -1))
+                    .filter(CompanionTurn.session_id == int(turn.session_id))
+                    .scalar()
+                    + 1
+                )
+                turn_row = CompanionTurn(
+                    chatbot_id=int(turn.chatbot_id),
+                    session_id=int(turn.session_id),
+                    role=turn.role,
+                    content=turn.content,
+                    turn_index=next_index,
+                    call_chain_id=str(turn.call_chain_id),
+                    created_at=created_at,
+                )
+                savepoint = db.begin_nested()
+                db.add(turn_row)
+                try:
+                    db.flush()
+                except IntegrityError:
+                    savepoint.rollback()
+                    winner = _find_existing_turn(db, turn)
+                    if winner is not None:
+                        # The concurrent writer committed this exact
+                        # completion event first -- idempotent return.
+                        return _turn_to_record(winner)
+                    # Otherwise it was purely a turn_index collision
+                    # with a *different* turn; retry with a fresh index.
+                    continue
+                else:
+                    # Same transaction as the insert above (session_scope
+                    # commits once, on exit): a completed turn and its
+                    # session's activity timestamp are never observed
+                    # out of sync.
+                    session_row.last_message_at = created_at
+                    db.flush()
+                    return _turn_to_record(turn_row)
+
+            raise RuntimeError(
+                f"Could not persist turn for chatbot {turn.chatbot_id} "
+                f"session {turn.session_id} after "
+                f"{_MAX_APPEND_TURN_ATTEMPTS} attempts (persistent "
+                "concurrent writers)"
             )
-            db.add(turn_row)
-            # Same transaction as the insert above (session_scope commits
-            # once, on exit): a completed turn and its session's activity
-            # timestamp are never observed out of sync.
-            session_row.last_message_at = created_at
-            db.flush()
-            return _turn_to_record(turn_row)
 
     def get_recent_turns(
         self, chatbot_id: ChatbotId, session_id: SessionId, *, limit: int
     ) -> List[TurnRecord]:
+        if limit <= 0:
+            return []
         with session_scope() as db:
+            # Push ordering/limit into SQL rather than loading the whole
+            # session transcript and slicing in Python: a long-running
+            # session's full history should never be pulled into memory
+            # just to serve a bounded "recent turns" request (release
+            # issue B02 second-review finding). Fetch the most recent
+            # `limit` rows newest-first, then reverse for the
+            # documented oldest-first return order.
             rows = (
                 db.query(CompanionTurn)
                 .filter(
                     CompanionTurn.chatbot_id == int(chatbot_id),
                     CompanionTurn.session_id == int(session_id),
                 )
-                .order_by(CompanionTurn.turn_index.asc())
+                .order_by(CompanionTurn.turn_index.desc())
+                .limit(limit)
                 .all()
             )
-            trimmed = rows[-limit:] if limit > 0 else []
-            return [_turn_to_record(row) for row in trimmed]
+            return [_turn_to_record(row) for row in reversed(rows)]
 
     def update_session_summary(self, session: SessionRecord) -> None:
         with session_scope() as db:
@@ -182,6 +235,22 @@ class SqlCompanionMemoryRepository:
             "Fact storage is not implemented yet -- see release issue B03 "
             "(CompanionMemoryRepository.upsert_fact)."
         )
+
+
+def _find_existing_turn(db, turn: TurnRecord) -> Optional[CompanionTurn]:
+    """Return the already-persisted row for this exact completion event,
+    if any -- the shared lookup behind both the fast-path idempotency
+    check and the post-conflict "who won the race" check in
+    ``append_turn``."""
+    return (
+        db.query(CompanionTurn)
+        .filter(
+            CompanionTurn.chatbot_id == int(turn.chatbot_id),
+            CompanionTurn.call_chain_id == str(turn.call_chain_id),
+            CompanionTurn.role == turn.role,
+        )
+        .one_or_none()
+    )
 
 
 def _session_to_record(row: CompanionSession) -> SessionRecord:

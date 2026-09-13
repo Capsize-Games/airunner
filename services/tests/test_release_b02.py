@@ -12,6 +12,13 @@ SQLAlchemy/SQLite database) satisfies B02's acceptance criteria:
   ``companion_sessions``/``companion_turns`` tables without losing
   existing records.
 
+Also proves genuine concurrent-writer safety: two real OS threads,
+synchronized with a barrier placed after the actual index-computing
+``add()`` call (not a stub), are forced into the exact interleaving
+where both have computed a candidate turn_index before either commits.
+This is not simulated -- it exercises the real SQL and persistence
+logic under an actual race.
+
 Uses only temporary, explicit SQLite databases (never the owner's
 active environment) and a fake clock -- no real model, network, or GUI
 access.
@@ -19,12 +26,15 @@ access.
 
 from __future__ import annotations
 
+import threading
 from datetime import datetime, timedelta
 from pathlib import Path
+from unittest import mock
 
 import pytest
 from alembic import command
 from alembic.config import Config
+from sqlalchemy.orm import Session as OrmSession
 
 from airunner_services.database.models.chatbot import Chatbot
 from airunner_services.database.models.companion_session import (
@@ -104,12 +114,9 @@ def test_within_gap_reuses_the_same_session(test_db, repo, fake_clock) -> None:
     assert second.session_id == first.session_id
 
 
-def test_exactly_at_gap_boundary_still_reuses_the_session(
+def test_just_under_the_gap_reuses_the_session(
     test_db, repo, fake_clock
 ) -> None:
-    """The gap check is a strict '<', so a delta exactly equal to the
-    threshold is still "within" it (release issue B02 fake-clock
-    boundary acceptance criterion)."""
     chatbot_id = _make_chatbot()
     first = repo.get_or_start_session(chatbot_id)
 
@@ -119,11 +126,32 @@ def test_exactly_at_gap_boundary_still_reuses_the_session(
     assert second.session_id == first.session_id
 
 
-def test_past_gap_starts_a_new_session(test_db, repo, fake_clock) -> None:
+def test_exactly_at_gap_boundary_still_reuses_the_session(
+    test_db, repo, fake_clock
+) -> None:
+    """Upstream (pinned commit 8157628a..., llm/session_manager.py's
+    _detect_gap) rotates only when the gap *exceeds* the threshold
+    ("> SESSION_GAP_HOURS"), so a delta exactly equal to four hours
+    must still reuse the session -- not one microsecond short of it,
+    which a prior version of this test actually exercised, masking a
+    real divergence from upstream at the true boundary (release issue
+    B02 second-review finding)."""
     chatbot_id = _make_chatbot()
     first = repo.get_or_start_session(chatbot_id)
 
-    fake_clock.now += DEFAULT_SESSION_GAP + timedelta(seconds=1)
+    fake_clock.now += DEFAULT_SESSION_GAP
+    second = repo.get_or_start_session(chatbot_id)
+
+    assert second.session_id == first.session_id
+
+
+def test_just_past_gap_starts_a_new_session(test_db, repo, fake_clock) -> None:
+    """One microsecond past the threshold is where upstream's '>'
+    check actually rotates -- the tightest possible boundary case."""
+    chatbot_id = _make_chatbot()
+    first = repo.get_or_start_session(chatbot_id)
+
+    fake_clock.now += DEFAULT_SESSION_GAP + timedelta(microseconds=1)
     second = repo.get_or_start_session(chatbot_id)
 
     assert second.session_id != first.session_id
@@ -258,6 +286,109 @@ def test_different_chatbots_never_share_turns(test_db, repo) -> None:
     with session_scope() as db:
         count = db.query(CompanionTurn).count()
     assert count == 2
+
+
+# --- Genuine concurrent-writer races (release issue B02 second review) ---
+
+
+def _run_concurrent_append_turns(test_db, repo, call_chain_ids):
+    """Run ``len(call_chain_ids)`` concurrent ``append_turn`` calls for
+    one session, synchronized so every writer has computed its
+    candidate turn_index (via the real ``add()`` call in
+    repository.py) before any of them is allowed to flush/commit --
+    forcing the actual competing-writer interleaving the production
+    code must handle. Patches only the synchronization point, never
+    the SQL or persistence logic itself.
+
+    Returns ``(results, errors)``, one entry per writer, in start order.
+    """
+    chatbot_id = _make_chatbot()
+    session = repo.get_or_start_session(chatbot_id)
+
+    writer_count = len(call_chain_ids)
+    barrier = threading.Barrier(writer_count, timeout=10)
+    original_add = OrmSession.add
+    release_count = {"n": 0}
+    count_lock = threading.Lock()
+
+    def synced_add(self, instance, *args, **kwargs):
+        original_add(self, instance, *args, **kwargs)
+        if isinstance(instance, CompanionTurn):
+            with count_lock:
+                release_count["n"] += 1
+                should_wait = release_count["n"] <= writer_count
+            if should_wait:
+                barrier.wait()
+
+    results: list = [None] * writer_count
+    errors: list = [None] * writer_count
+
+    def _worker(index, call_chain_id):
+        try:
+            results[index] = repo.append_turn(
+                TurnRecord(
+                    chatbot_id=chatbot_id,
+                    session_id=session.session_id,
+                    role="user",
+                    content=f"message from writer {index}",
+                    call_chain_id=CallChainId(call_chain_id),
+                )
+            )
+        except Exception as exc:  # noqa: BLE001 - captured for assertion
+            errors[index] = exc
+
+    with mock.patch.object(OrmSession, "add", synced_add):
+        threads = [
+            threading.Thread(target=_worker, args=(index, call_chain_id))
+            for index, call_chain_id in enumerate(call_chain_ids)
+        ]
+        for thread in threads:
+            thread.start()
+        for thread in threads:
+            thread.join(timeout=10)
+
+    return results, errors
+
+
+def test_concurrent_distinct_completions_never_receive_duplicate_indexes(
+    test_db, repo
+) -> None:
+    """Two truly concurrent, distinct completions for the same session
+    must never both compute and commit the same turn_index (release
+    issue B02 second-review finding: "concurrent turns receive
+    duplicate indexes")."""
+    results, errors = _run_concurrent_append_turns(
+        test_db, repo, ["cc-writer-a", "cc-writer-b"]
+    )
+
+    assert errors == [None, None], errors
+    assert all(result is not None for result in results)
+    indexes = sorted(turn.turn_index for turn in results)
+    assert indexes == [0, 1], indexes
+
+
+def test_concurrent_duplicate_completions_are_idempotent_not_an_error(
+    test_db, repo
+) -> None:
+    """Two concurrent deliveries of the *same* completion event
+    (identical chatbot/call_chain_id/role) must both return the same
+    persisted turn, never raise an IntegrityError to the caller
+    (release issue B02 second-review finding: "concurrent replay is
+    not idempotent")."""
+    results, errors = _run_concurrent_append_turns(
+        test_db, repo, ["cc-shared", "cc-shared"]
+    )
+
+    assert errors == [None, None], errors
+    assert all(result is not None for result in results)
+    assert results[0].turn_id == results[1].turn_id
+    with session_scope() as db:
+        count = (
+            db.query(CompanionTurn)
+            .filter(CompanionTurn.call_chain_id == "cc-shared")
+            .count()
+        )
+    assert count == 1
 
 
 def test_get_recent_turns_returns_oldest_first_within_limit(
