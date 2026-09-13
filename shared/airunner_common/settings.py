@@ -57,6 +57,14 @@ AIRUNNER_DONATION_WALLET = "0x02030569e866e22C9991f55Db0445eeAd2d646c8"
 # scripts/dev/run_gui.sh / run_services.sh (issue #2053).
 DEV_ENV = os.environ.get("DEV_ENV", "0") == "1"
 
+# Offline-first egress policy (release issue O01): with no explicit operator
+# opt-in, external (non-loopback) network access is denied at the shared
+# fetch boundary (airunner_services.url_safety.validate_url_for_fetch).
+# Loopback IPC between the GUI and daemon is a separate, already-
+# authenticated code path (see S01/S02) and is unaffected by this flag.
+# Set AIRUNNER_OFFLINE_MODE=0 to explicitly allow it.
+AIRUNNER_OFFLINE_MODE = _env_bool("AIRUNNER_OFFLINE_MODE", "1")
+
 NLTK_DOWNLOAD_DIR = os.path.join(
     python_venv_dir,
     "..",

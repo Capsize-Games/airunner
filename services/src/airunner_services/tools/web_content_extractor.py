@@ -18,6 +18,7 @@ from airunner_common.settings import (
 )
 from airunner_services.database.models.path_settings import PathSettings
 from airunner_services.url_safety import (
+    OfflineModeBlocked,
     SSRFBlocked,
     safe_fetch_url,
     validate_url_for_fetch,
@@ -309,14 +310,14 @@ class WebContentExtractor:
         """Fetch a URL with SSRF guardrails and conservative limits."""
         try:
             validate_url_for_fetch(url)
-        except SSRFBlocked as e:
+        except (SSRFBlocked, OfflineModeBlocked) as e:
             logger.warning("Blocked URL fetch (%s): %s", fingerprint_value(url, label="url"), e)
             return None
 
         try:
             headers = WebContentExtractor._get_browser_headers()
             return safe_fetch_url(url, headers=headers)
-        except SSRFBlocked as e:
+        except (SSRFBlocked, OfflineModeBlocked) as e:
             logger.warning("Blocked URL fetch (%s): %s", fingerprint_value(url, label="url"), e)
             return None
         except Exception as e:
@@ -328,7 +329,7 @@ class WebContentExtractor:
         """Fetch, extract, and summarize main content as plaintext from a URL, using cache if available."""
         try:
             validate_url_for_fetch(url)
-        except SSRFBlocked as e:
+        except (SSRFBlocked, OfflineModeBlocked) as e:
             logger.warning("Blocked URL (%s): %s", fingerprint_value(url, label="url"), e)
             return None
 
@@ -424,7 +425,7 @@ class WebContentExtractor:
         """
         try:
             validate_url_for_fetch(url)
-        except SSRFBlocked as e:
+        except (SSRFBlocked, OfflineModeBlocked) as e:
             logger.warning("Blocked URL (%s): %s", fingerprint_value(url, label="url"), e)
             return None
 
