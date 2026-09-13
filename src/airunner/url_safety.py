@@ -11,14 +11,18 @@ second copy.
 from __future__ import annotations
 
 from airunner_services.url_safety import (
+    OfflineModeBlocked,
     SSRFBlocked,
+    is_offline_mode,
     safe_fetch_bytes,
     safe_fetch_url,
     validate_url_for_fetch,
 )
 
 __all__ = [
+    "OfflineModeBlocked",
     "SSRFBlocked",
+    "is_offline_mode",
     "safe_fetch_bytes",
     "safe_fetch_url",
     "validate_url_for_fetch",
