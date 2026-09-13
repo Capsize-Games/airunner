@@ -7,7 +7,7 @@ import os
 import time
 from typing import Callable, Dict, List, Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 
 class ChatMessage(BaseModel):
@@ -110,7 +110,15 @@ def default_rate_limit_window_seconds() -> float:
 
 
 class LLMStreamMessage(BaseModel):
-    """Validated shape of one inbound ``/api/v1/llm/stream`` message."""
+    """Validated shape of one inbound ``/api/v1/llm/stream`` message.
+
+    ``extra="forbid"``: an unrecognized field (e.g. a caller-supplied
+    oversized payload stuffed into a field that isn't ``message``) must
+    be rejected outright rather than silently ignored, since ignoring it
+    would let arbitrary extra content bypass ``max_ws_message_chars``.
+    """
+
+    model_config = ConfigDict(extra="forbid")
 
     message: str
     model: Optional[str] = None
@@ -145,9 +153,14 @@ def parse_stream_message(data: dict) -> LLMStreamMessage:
         raise LLMStreamValidationError("empty_message")
     if len(message) > max_ws_message_chars():
         raise LLMStreamValidationError("message_too_long")
-    if parsed.max_tokens is not None and not (
-        1 <= parsed.max_tokens <= max_ws_output_tokens()
-    ):
+    if parsed.max_tokens is None:
+        # Omitted/null must resolve to a bounded default, not "no limit":
+        # downstream code (llm_runtime.py) forwards this value straight
+        # into the runtime's generation call, where None means unbounded
+        # output rather than "use the server default" (release issue S02
+        # review finding F4).
+        parsed.max_tokens = max_ws_output_tokens()
+    elif not (1 <= parsed.max_tokens <= max_ws_output_tokens()):
         raise LLMStreamValidationError("max_tokens_out_of_bounds")
     if not (0.0 <= parsed.temperature <= 2.0):
         raise LLMStreamValidationError("temperature_out_of_bounds")

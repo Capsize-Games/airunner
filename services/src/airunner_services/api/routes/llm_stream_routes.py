@@ -104,7 +104,24 @@ async def websocket_chat(websocket: WebSocket):
     try:
         client = resolve_llm_client(require_websocket_runtime_registry(websocket))
         while True:
-            data = await websocket.receive_json()
+            try:
+                data = await websocket.receive_json()
+            except ValueError:
+                # Malformed JSON (json.JSONDecodeError, a ValueError
+                # subclass): reject with the same deterministic
+                # invalid_request code as a structurally-wrong-but-valid
+                # -JSON payload, and keep the connection open, instead of
+                # falling through to the generic exception handler below
+                # (which would close the connection on every parse error).
+                await websocket.send_json(
+                    {
+                        "type": "error",
+                        "code": "invalid_request",
+                        "content": "Invalid request",
+                        "done": True,
+                    }
+                )
+                continue
 
             if not _rate_limiter.allow(principal):
                 await websocket.send_json(

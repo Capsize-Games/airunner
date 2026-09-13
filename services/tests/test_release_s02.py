@@ -158,6 +158,73 @@ def test_output_tokens_out_of_bounds_never_reaches_runtime(
         assert fake_client.calls == 0
 
 
+def test_omitted_max_tokens_resolves_to_bounded_default(
+    app, fake_client, monkeypatch
+) -> None:
+    """Omitting max_tokens must not mean "unbounded output" downstream.
+
+    Prior behavior skipped the bounds check entirely when max_tokens was
+    None, and that None was forwarded straight to the runtime call
+    (review finding F4). This asserts the envelope actually forwarded to
+    the runtime carries a real, bounded max_tokens value.
+    """
+    from airunner_services.api.routes import llm_runtime
+
+    captured = {}
+    original = llm_runtime.websocket_envelope
+
+    def _capture(payload):
+        captured.update(payload)
+        return original(payload)
+
+    monkeypatch.setattr(llm_stream_routes, "websocket_envelope", _capture)
+
+    client = TestClient(app)
+    with client.websocket_connect(
+        _STREAM_PATH, headers={"X-Airunner-Token": _token()}
+    ) as ws:
+        ws.send_json({"message": "hi"})
+        response = ws.receive_json()
+        assert response["type"] == "chunk"
+
+    assert captured["max_tokens"] == max_ws_output_tokens()
+
+
+def test_extra_field_is_rejected(app, fake_client) -> None:
+    """An unrecognized field must not silently bypass validation."""
+    client = TestClient(app)
+    with client.websocket_connect(
+        _STREAM_PATH, headers={"X-Airunner-Token": _token()}
+    ) as ws:
+        ws.send_json({"message": "hi", "unexpected_field": "x" * 100000})
+        response = ws.receive_json()
+        assert response["type"] == "error"
+        assert response["code"] == "invalid_request"
+        assert fake_client.calls == 0
+
+
+def test_malformed_json_gets_invalid_request_and_keeps_connection(
+    app, fake_client
+) -> None:
+    """Malformed JSON must get the same deterministic error code as any
+    other invalid payload, and must not terminate the connection."""
+    client = TestClient(app)
+    with client.websocket_connect(
+        _STREAM_PATH, headers={"X-Airunner-Token": _token()}
+    ) as ws:
+        ws.send_text("{not valid json")
+        response = ws.receive_json()
+        assert response["type"] == "error"
+        assert response["code"] == "invalid_request"
+        assert fake_client.calls == 0
+
+        # Connection is still usable afterwards.
+        ws.send_json({"message": "hello"})
+        response = ws.receive_json()
+        assert response["type"] == "chunk"
+        assert fake_client.calls == 1
+
+
 def test_empty_message_never_reaches_runtime(app, fake_client) -> None:
     client = TestClient(app)
     with client.websocket_connect(
