@@ -11,7 +11,7 @@ from __future__ import annotations
 import io
 import threading
 from dataclasses import dataclass
-from typing import Any, Callable, Dict, Optional
+from typing import Any, Callable, Dict, List, Optional
 
 from airunner_common.contract_enums import SignalCode
 
@@ -110,13 +110,13 @@ class GuiBridgeMixin:
                         f"No job_id in response: {response}"
                     )
 
-                png_bytes = self.wait_art_job(
+                png_bytes_list = self.wait_art_job_images(
                     job_id,
                     timeout_seconds=1800.0,
                     progress_callback=lambda s: self._emit_progress(s),
                 )
 
-                images = self._decode_images(png_bytes)
+                images = self._decode_images(png_bytes_list)
                 self._emit(
                     SignalCode.SD_GENERATE_IMAGE_SIGNAL,
                     {"images": images, "job_id": job_id},
@@ -429,15 +429,23 @@ class GuiBridgeMixin:
         return {k: v for k, v in req.items() if v is not None}
 
     @staticmethod
-    def _decode_images(png_bytes: bytes) -> list[Any]:
-        """Decode PNG bytes from the daemon into PIL Image objects."""
+    def _decode_images(png_bytes_list: List[bytes]) -> list[Any]:
+        """Decode a batch of PNG byte payloads into PIL Image objects.
+
+        Release issue D03: every checked batch image is decoded, not
+        only the first; a single image that fails to decode is skipped
+        rather than discarding the rest of the batch.
+        """
         from PIL import Image
 
-        try:
-            image = Image.open(io.BytesIO(png_bytes))
-            return [image.copy()]
-        except Exception:
-            return []
+        images = []
+        for png_bytes in png_bytes_list:
+            try:
+                image = Image.open(io.BytesIO(png_bytes))
+                images.append(image.copy())
+            except Exception:
+                continue
+        return images
 
     def _emit_progress(self, status: Dict[str, Any]) -> None:
         """Emit art generation progress as a signal."""

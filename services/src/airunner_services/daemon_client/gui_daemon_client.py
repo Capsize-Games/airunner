@@ -10,7 +10,7 @@ import subprocess
 import time
 from pathlib import Path
 from typing import TYPE_CHECKING
-from typing import Any, Callable, Dict, Iterable, Optional
+from typing import Any, Callable, Dict, Iterable, List, Optional
 from urllib.parse import urlencode
 
 import requests
@@ -386,7 +386,11 @@ class GuiDaemonClient(GuiBridgeMixin):
         *,
         auto_start: bool = False,
     ) -> bytes:
-        """Return the PNG payload for one completed daemon art job."""
+        """Return the PNG payload for one completed daemon art job.
+
+        Returns only the first batch image; use ``art_job_results`` for
+        every checked image from a multi-image request (release D03).
+        """
         response = self._request(
             "GET",
             f"/api/v1/art/result/{job_id}",
@@ -395,15 +399,58 @@ class GuiDaemonClient(GuiBridgeMixin):
         )
         return response.content
 
-    def wait_art_job(
+    def art_job_result_at(
+        self,
+        job_id: str,
+        index: int,
+        *,
+        auto_start: bool = False,
+    ) -> bytes:
+        """Return the PNG payload for one image of a completed batch job."""
+        response = self._request(
+            "GET",
+            f"/api/v1/art/result/{job_id}/{index}",
+            auto_start=auto_start,
+            timeout_seconds=120.0,
+        )
+        return response.content
+
+    def art_job_results(
         self,
         job_id: str,
         *,
         auto_start: bool = False,
-        timeout_seconds: float = 1800.0,
-        progress_callback: Optional[Callable[[Dict[str, Any]], None]] = None,
-    ) -> bytes:
-        """Poll one art job until it completes and return the PNG bytes."""
+    ) -> List[bytes]:
+        """Return every checked image's PNG payload for a completed job.
+
+        Uses the job status's ``image_count`` (release D03) to fetch each
+        batch image individually; falls back to a single legacy image
+        when the daemon reports none (an older/degraded job record).
+        """
+        status = self.art_job_status(job_id, auto_start=auto_start)
+        image_count = int(status.get("image_count") or 0)
+        if image_count <= 1:
+            return [self.art_job_result(job_id, auto_start=auto_start)]
+        return [
+            self.art_job_result_at(job_id, index, auto_start=auto_start)
+            for index in range(image_count)
+        ]
+
+    def _wait_for_art_job_completion(
+        self,
+        job_id: str,
+        *,
+        auto_start: bool,
+        timeout_seconds: float,
+        progress_callback: Optional[Callable[[Dict[str, Any]], None]],
+    ) -> None:
+        """Poll one art job until it reaches a terminal state.
+
+        Raises RuntimeError on failure, cancellation, or timeout; returns
+        normally once the job status is "completed". Shared by
+        ``wait_art_job`` and ``wait_art_job_images`` so both fetch
+        results (one image vs. every batch image) after the same wait.
+        """
         deadline = self._time_fn() + timeout_seconds
         poll_interval = min(
             self._poll_interval_seconds,
@@ -421,7 +468,7 @@ class GuiDaemonClient(GuiBridgeMixin):
                 progress_callback(status)
             if state != last_status or progress != last_progress:
                 self.logger.debug(
-                    "GuiDaemonClient.wait_art_job job_id=%s status=%s progress=%.1f",
+                    "GuiDaemonClient._wait_for_art_job_completion job_id=%s status=%s progress=%.1f",
                     job_id,
                     state,
                     progress,
@@ -429,7 +476,7 @@ class GuiDaemonClient(GuiBridgeMixin):
                 last_status = state
                 last_progress = progress
             if state == "completed":
-                return self.art_job_result(job_id, auto_start=auto_start)
+                return
             if state == "failed":
                 raise RuntimeError(
                     str(status.get("error") or "Art generation failed")
@@ -442,6 +489,50 @@ class GuiDaemonClient(GuiBridgeMixin):
         except RuntimeError:
             pass
         raise RuntimeError("Timed out waiting for art generation")
+
+    def wait_art_job(
+        self,
+        job_id: str,
+        *,
+        auto_start: bool = False,
+        timeout_seconds: float = 1800.0,
+        progress_callback: Optional[Callable[[Dict[str, Any]], None]] = None,
+    ) -> bytes:
+        """Poll one art job until it completes and return the PNG bytes.
+
+        Returns only the first batch image for compatibility with
+        existing single-image callers; use ``wait_art_job_images`` to
+        receive every checked image from a multi-image request.
+        """
+        self._wait_for_art_job_completion(
+            job_id,
+            auto_start=auto_start,
+            timeout_seconds=timeout_seconds,
+            progress_callback=progress_callback,
+        )
+        return self.art_job_result(job_id, auto_start=auto_start)
+
+    def wait_art_job_images(
+        self,
+        job_id: str,
+        *,
+        auto_start: bool = False,
+        timeout_seconds: float = 1800.0,
+        progress_callback: Optional[Callable[[Dict[str, Any]], None]] = None,
+    ) -> List[bytes]:
+        """Poll one art job until it completes and return every batch image.
+
+        Release issue D03: the Desktop consumer that requests
+        ``num_images`` > 1 should use this instead of ``wait_art_job``,
+        which only ever returns the first image.
+        """
+        self._wait_for_art_job_completion(
+            job_id,
+            auto_start=auto_start,
+            timeout_seconds=timeout_seconds,
+            progress_callback=progress_callback,
+        )
+        return self.art_job_results(job_id, auto_start=auto_start)
 
     def cancel_art_job(
         self,

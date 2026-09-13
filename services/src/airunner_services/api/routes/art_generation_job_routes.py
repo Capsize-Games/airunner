@@ -48,6 +48,19 @@ def completed_image_url(job_id: str, job: Any) -> Optional[str]:
     return None
 
 
+def completed_image_count(job: Any) -> int:
+    """Return how many batch images one completed job has, else 0."""
+    if job.status != JobState.COMPLETED:
+        return 0
+    result = job.result or {}
+    images = result.get("images_bytes")
+    if images:
+        return len(images)
+    if {"image", "image_bytes"}.intersection(result):
+        return 1
+    return 0
+
+
 def status_response(job_id: str, job: Any) -> JobStatusResponse:
     """Build the response payload for one tracked art job."""
     return JobStatusResponse(
@@ -55,6 +68,7 @@ def status_response(job_id: str, job: Any) -> JobStatusResponse:
         status=job.status.value,
         progress=job.progress,
         image_url=completed_image_url(job_id, job),
+        image_count=completed_image_count(job),
         error=job.error,
     )
 
@@ -77,7 +91,7 @@ def require_result_payload(job: Any) -> dict:
 
 
 def png_response(result: dict) -> Response:
-    """Return one PNG response for a stored art job result."""
+    """Return one PNG response for a stored art job result (first image)."""
     image_bytes = result.get("image_bytes")
     if image_bytes:
         return Response(content=image_bytes, media_type="image/png")
@@ -87,6 +101,23 @@ def png_response(result: dict) -> Response:
     image_io = io.BytesIO()
     image.save(image_io, "PNG")
     return Response(content=image_io.getvalue(), media_type="image/png")
+
+
+def indexed_png_response(result: dict, index: int) -> Response:
+    """Return the PNG response for image `index` of a stored batch result.
+
+    Falls back to the single-image result (index 0 only) for a result
+    with no ``images_bytes`` list, so older stored jobs still resolve
+    index 0 correctly (release issue D03).
+    """
+    images = result.get("images_bytes")
+    if images:
+        if index < 0 or index >= len(images):
+            raise IndexError(index)
+        return Response(content=images[index], media_type="image/png")
+    if index != 0:
+        raise IndexError(index)
+    return png_response(result)
 
 
 # Status polling, result download, and cancellation share the same tracker
@@ -105,12 +136,35 @@ async def get_job_status(job_id: str):
 
 @router.get("/result/{job_id}")
 async def get_result(job_id: str):
-    """Return one generated image as PNG bytes."""
+    """Return one generated image as PNG bytes (the first batch image)."""
     logger.info("Result retrieval: %s", job_id)
     job = await require_job(job_id)
     require_completed_job(job)
     try:
         return png_response(require_result_payload(job))
+    except Exception as exc:
+        logger.error("Error returning image: %s", exc)
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error returning image: {exc}",
+        ) from exc
+
+
+@router.get("/result/{job_id}/{index}")
+async def get_result_at_index(job_id: str, index: int):
+    """Return one batch image (by index) as PNG bytes.
+
+    Added for release issue D03 so every checked image from a
+    multi-image batch request is retrievable, not only the first; index
+    0 is equivalent to ``GET /result/{job_id}``.
+    """
+    logger.info("Result retrieval: %s[%d]", job_id, index)
+    job = await require_job(job_id)
+    require_completed_job(job)
+    try:
+        return indexed_png_response(require_result_payload(job), index)
+    except IndexError:
+        raise HTTPException(status_code=404, detail="Image index out of range")
     except Exception as exc:
         logger.error("Error returning image: %s", exc)
         raise HTTPException(
