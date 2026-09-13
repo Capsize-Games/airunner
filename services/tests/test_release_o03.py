@@ -114,6 +114,26 @@ def test_build_diagnostics_export_excludes_raw_content(crash_log_dir) -> None:
     assert {"application_version", "python_version", "platform"} <= payload.keys()
 
 
+def test_build_diagnostics_export_end_to_end_never_leaks_content_a_denylist_would_miss(
+    crash_log_dir,
+) -> None:
+    """End-to-end reproduction of release issue O03 review finding F2:
+    a real uncaught exception whose message carries content no
+    keyword/shape denylist would ever recognize must still never appear
+    in the exported diagnostics payload."""
+    try:
+        raise ValueError("prompt=NEUTRAL_PRIVATE_PROMPT_CANARY")
+    except ValueError:
+        import sys
+
+        crash_handler.report_uncaught_exception(*sys.exc_info())
+
+    payload = crash_handler.build_diagnostics_export()
+    serialized = json.dumps(payload)
+    assert "NEUTRAL_PRIVATE_PROMPT_CANARY" not in serialized
+    assert payload["recent_failures"][-1]["type"] == "ValueError"
+
+
 def test_extract_failure_codes_ignores_traceback_body_lines() -> None:
     """Only the unindented "SomeError: message" line is a failure code —
     indented stack-frame/source lines (which could contain a prompt, a
@@ -125,16 +145,52 @@ def test_extract_failure_codes_ignores_traceback_body_lines() -> None:
         "ValueError: something went wrong\n"
     )
     failures = crash_handler._extract_failure_codes(log_text)
-    assert failures == [{"type": "ValueError", "message": "something went wrong"}]
+    assert len(failures) == 1
+    assert failures[0]["type"] == "ValueError"
+    assert set(failures[0]) == {"type", "message_fingerprint"}
     combined = json.dumps(failures)
     assert "secret prompt text" not in combined
     assert "/home/user" not in combined
+    assert "something went wrong" not in combined
 
 
-def test_extract_failure_codes_truncates_long_messages() -> None:
+@pytest.mark.parametrize(
+    "exception_message",
+    [
+        # Reproduces release issue O03 review finding F2: sanitize_log_text's
+        # denylist only recognizes a handful of credential keywords
+        # (api_key, access_token, auth_token, bearer, secret) plus URL/path
+        # shapes -- none of these ever matched, so the raw content used to
+        # be exported verbatim.
+        "prompt=NEUTRAL_PRIVATE_PROMPT_CANARY",
+        "transcript=the user said something private",
+        "token=plain-unlabeled-token-value",
+        "    indented source line with private_variable = 'secret data'",
+    ],
+)
+def test_extract_failure_codes_never_exports_message_text_denylist_cannot_catch(
+    exception_message,
+) -> None:
+    """The message itself must never be exported, regardless of whether
+    sanitize_log_text's keyword/shape denylist happens to recognize it —
+    only an allowlisted fingerprint is exported (release issue O03
+    review finding F2)."""
+    log_text = f"ValueError: {exception_message}\n"
+    failures = crash_handler._extract_failure_codes(log_text)
+    combined = json.dumps(failures)
+    assert exception_message not in combined
+    assert "NEUTRAL_PRIVATE_PROMPT_CANARY" not in combined
+    assert "private" not in combined
+    assert "secret data" not in combined
+
+
+def test_extract_failure_codes_only_exports_allowlisted_fields() -> None:
+    """No matter how long or how it's shaped, only type + fingerprint
+    are ever present -- there is no message/text field at all."""
     log_text = f"RuntimeError: {'x' * 500}\n"
     failures = crash_handler._extract_failure_codes(log_text)
-    assert len(failures[0]["message"]) <= 203  # 200 chars + "..."
+    assert set(failures[0]) == {"type", "message_fingerprint"}
+    assert failures[0]["message_fingerprint"].startswith("message_hash=")
 
 
 def test_export_diagnostics_writes_local_json_file(crash_log_dir, tmp_path) -> None:

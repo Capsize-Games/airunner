@@ -18,7 +18,7 @@ import time
 import traceback
 from typing import Optional, TextIO
 
-from airunner_common.logging_utils import sanitize_log_text
+from airunner_common.logging_utils import fingerprint_value, sanitize_log_text
 from airunner_common.package_metadata import VERSION as AIRUNNER_VERSION
 from airunner_common.settings import AIRUNNER_BASE_PATH
 
@@ -204,37 +204,54 @@ def _extract_failure_codes(
     *,
     max_entries: int = 20,
 ) -> list[dict[str, str]]:
-    """Return sanitized failure codes found in one crash log's text.
+    """Return allowlisted failure codes found in one crash log's text.
 
-    Only the exception type name and a sanitized, truncated,
-    single-line summary of its message are kept -- never full
-    tracebacks, stack frames, or source lines, which is where prompts,
-    file contents, transcripts, or tokens would otherwise leak from
-    (release issue O03). Matches ``traceback.format_exception``'s one
-    unindented "SomeError: message" line per exception.
+    Only the exception type name (a Python identifier by construction --
+    see ``_FAILURE_LINE_PATTERN``, code-defined and never user data) and
+    a non-reversible fingerprint of its message are kept -- never the
+    message text itself, sanitized or not, and never full tracebacks,
+    stack frames, or source lines.
+
+    A denylist-regex sanitizer (``sanitize_log_text``) is the right tool
+    for the application's regular log file, but it cannot be trusted as
+    the *only* safeguard on an export meant to leave the machine: it
+    only catches known shapes (URLs, paths, a handful of credential
+    keywords), not arbitrary sensitive free text -- a prompt, a
+    transcript, a snippet of document content -- that ends up in an
+    exception's own message with no recognizable keyword to match
+    (release issue O03 review finding F2). Exporting a fingerprint
+    instead of the message still lets repeated identical failures be
+    correlated without disclosing content.
     """
     failures: list[dict[str, str]] = []
     for line in log_text.splitlines():
         match = _FAILURE_LINE_PATTERN.match(line.strip())
         if not match:
             continue
-        message = sanitize_log_text(match.group("message"))
-        if len(message) > 200:
-            message = message[:200] + "..."
-        failures.append({"type": match.group("exc_type"), "message": message})
+        failures.append(
+            {
+                "type": match.group("exc_type"),
+                "message_fingerprint": fingerprint_value(
+                    match.group("message"), label="message"
+                ),
+            }
+        )
     return failures[-max_entries:]
 
 
 def build_diagnostics_export() -> dict:
-    """Return one local-only, sanitized diagnostics payload.
+    """Return one local-only, allowlisted diagnostics payload.
 
     Includes only IDs, versions, capabilities and failure codes:
-    application version, Python/platform identity, and sanitized
-    failure codes extracted from the on-disk crash log. Never includes
-    prompts, file contents, conversation transcripts, tokens, raw tool
-    results, or policy material: this function has no access to any of
-    those subsystems and only reads the crash log's own already-
-    appended, already-sanitized-on-write lines (release issue O03).
+    application version, Python/platform identity, and allowlisted
+    failure codes (exception type plus a message fingerprint, never
+    message text -- see ``_extract_failure_codes``) extracted from the
+    on-disk crash log. Never includes prompts, file contents,
+    conversation transcripts, tokens, raw tool results, or policy
+    material: this function has no access to any of those subsystems,
+    and the failure-code extraction itself is structured as an
+    allowlist of safe fields rather than a denylist sanitizer applied to
+    arbitrary exception message text (release issue O03).
     """
     log_text = ""
     try:
