@@ -6,7 +6,7 @@
 - Do not run real models or perform GUI inference in ordinary coding sessions.
 - The user will always test runtime behavior manually.
 - Do not create or modify automated tests unless the user explicitly asks for test changes.
-- Regression checks explicitly required by the assigned release issue are authorized and may include documentation-scoped test additions/changes as specified by that issue.
+- Regression tests explicitly required by the assigned release issue are authorized additions/changes within that issue's scope.
 - When a change would normally be verified by launching the app, state that the user should verify it instead of starting the application.
 - Scope regression checks to those explicitly assigned in the active release issue.
 
