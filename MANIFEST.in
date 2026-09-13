@@ -4,3 +4,13 @@
 # phase of `python -m build`, so include them explicitly.
 include README.md
 recursive-include shared/airunner_common *.py
+
+# Packaging-time verification (release issue P01): _FilteredBuildPy in
+# setup.py imports build_ui.py's find_missing_generated_ui_files/
+# verify_generated_resources during `build_py`, which also runs for a
+# wheel built from this sdist (not only from a full git checkout). Ship
+# only the two scripts actually needed for that -- the rest of scripts/
+# remains developer tooling, run from a checkout, and does not ship
+# (issue #2044).
+include scripts/build_ui.py
+include scripts/process_qss.py

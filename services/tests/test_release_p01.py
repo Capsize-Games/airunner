@@ -131,3 +131,106 @@ def test_verify_generated_resources_clean_when_everything_present(
     (resources_dir / "feather_rc.py").write_text("# generated")
 
     assert build_ui_module.verify_generated_resources(tmp_path) == []
+
+
+def test_importing_build_ui_does_not_require_pyside6() -> None:
+    """A prior version of this fix crashed a real isolated build (see the
+    two tests below): build_ui.py imported process_qss at module scope,
+    which imports PySide6 -- unavailable in a PEP 517 isolated build
+    environment (pyproject.toml's [build-system] requires only
+    setuptools/wheel). Confirmed here at the module-graph level, and
+    end to end by the sdist tests below."""
+    scripts_dir = str(_BUILD_UI_PATH.parent)
+    proc = subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            "import sys; sys.path.insert(0, sys.argv[1]); import build_ui; "
+            "hits = [m for m in sys.modules if 'pyside' in m.lower() or "
+            "'shiboken' in m.lower()]; "
+            "print(','.join(hits)); sys.exit(1 if hits else 0)",
+            scripts_dir,
+        ],
+        capture_output=True,
+        text=True,
+    )
+    assert proc.returncode == 0, f"PySide6-related modules loaded: {proc.stdout}"
+
+
+_REPO_ROOT = _BUILD_UI_PATH.parent.parent
+
+
+@pytest.fixture(scope="module")
+def built_sdist(tmp_path_factory):
+    """Actually run `setup.py sdist` and return the resulting tarball path.
+
+    Exercises the real sdist-to-wheel packaging path end to end rather
+    than only a synthetic tmp_path fixture (release issue P01 review
+    finding F1): a prior version of this fix built a wheel successfully
+    from a full checkout but crashed with ModuleNotFoundError when built
+    from the sdist alone, because scripts/ was never shipped in it.
+    """
+    dist_dir = tmp_path_factory.mktemp("p01_sdist")
+    proc = subprocess.run(
+        [sys.executable, "setup.py", "sdist", "--dist-dir", str(dist_dir)],
+        cwd=_REPO_ROOT,
+        capture_output=True,
+        text=True,
+        timeout=120,
+    )
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+    tarballs = list(dist_dir.glob("*.tar.gz"))
+    assert len(tarballs) == 1, tarballs
+    return tarballs[0]
+
+
+def test_sdist_ships_the_scripts_packaging_verification_needs(
+    built_sdist,
+) -> None:
+    import tarfile
+
+    with tarfile.open(built_sdist) as archive:
+        names = archive.getnames()
+
+    assert any(name.endswith("scripts/build_ui.py") for name in names)
+    assert any(name.endswith("scripts/process_qss.py") for name in names)
+
+
+def test_build_py_from_extracted_sdist_does_not_hit_modulenotfounderror(
+    built_sdist, tmp_path
+) -> None:
+    """The real regression: building from the sdist alone (not a full
+    checkout) must reach the actual verification logic, not crash on a
+    missing scripts/ import. The checkout has one known, pre-existing,
+    unrelated generated-file gap (see the P01 PR description) which is
+    an acceptable and expected failure reason here -- a ModuleNotFoundError
+    for build_ui/process_qss is not."""
+    import tarfile
+
+    extract_dir = tmp_path / "extracted"
+    extract_dir.mkdir()
+    with tarfile.open(built_sdist) as archive:
+        archive.extractall(extract_dir)
+
+    (package_dir,) = extract_dir.iterdir()
+    proc = subprocess.run(
+        [
+            sys.executable,
+            "setup.py",
+            "build_py",
+            "--build-lib",
+            str(tmp_path / "buildlib"),
+        ],
+        cwd=package_dir,
+        capture_output=True,
+        text=True,
+        timeout=120,
+    )
+
+    combined_output = proc.stdout + proc.stderr
+    assert "ModuleNotFoundError" not in combined_output, combined_output
+    assert "No module named 'build_ui'" not in combined_output, combined_output
+    if proc.returncode != 0:
+        # Only the known, pre-existing, unrelated gap may cause a failure
+        # here -- anything else is a real regression in this fix.
+        assert "tts_setup.ui" in combined_output, combined_output

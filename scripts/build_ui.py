@@ -18,7 +18,14 @@ import subprocess
 import sys
 from pathlib import Path
 
-from process_qss import build_all_theme_css, generate_resources, process_qss
+# process_qss imports PySide6 at its own module level. That import is
+# deliberately deferred to the functions that actually need it (build_ui's
+# actual compilation path) rather than made here at module scope: a PEP 517
+# isolated build environment only installs this project's declared
+# build-system requirements (setuptools/wheel, see pyproject.toml), not
+# PySide6, and setup.py's packaging-time verification (find_missing_
+# generated_ui_files/verify_generated_resources below) must be importable
+# there without pulling in the GUI stack at all (release issue P01).
 
 
 def _find_uic_executable() -> str:
@@ -145,6 +152,10 @@ def main():
             sys.exit(1)
         print("All generated UI/resource files are present.")
         return
+
+    # Imported here, not at module scope: this is the actual compilation
+    # path, which genuinely needs PySide6 (unlike the --check path above).
+    from process_qss import build_all_theme_css, generate_resources, process_qss
 
     print("main() called in build_ui.py")
     build_ui()
