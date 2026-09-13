@@ -8,16 +8,31 @@ silently terminating the process.
 from __future__ import annotations
 
 import faulthandler
+import json
 import os
+import platform
+import re
 import sys
 import threading
+import time
 import traceback
 from typing import Optional, TextIO
 
+from airunner_common.logging_utils import sanitize_log_text
+from airunner_common.package_metadata import VERSION as AIRUNNER_VERSION
 from airunner_common.settings import AIRUNNER_BASE_PATH
 
 _GUI_LOG_FILENAME = "gui.log"
 _FAULT_LOG_FILENAME = "faulthandler.log"
+_DIAGNOSTICS_EXPORT_FILENAME = "diagnostics_export.json"
+
+# Matches a traceback's final "SomeError: message" line (the only line
+# python's traceback module does not indent), used to extract failure
+# codes for the diagnostics export without ever reading full stack
+# frames, source lines, or local variables.
+_FAILURE_LINE_PATTERN = re.compile(
+    r"^(?P<exc_type>[A-Za-z_][\w.]*(?:Error|Exception|Warning)):\s*(?P<message>.*)$"
+)
 
 
 def _default_log_dir() -> str:
@@ -47,10 +62,18 @@ def _dialog_is_disabled() -> bool:
 
 
 def _append_to_gui_log(message: str) -> None:
-    """Append one message to the GUI crash log, ignoring I/O failures."""
+    """Append one message to the GUI crash log, ignoring I/O failures.
+
+    Sanitized the same way as regular application logs (URLs, filesystem
+    paths, and recognizable tokens redacted): this writes directly to a
+    file rather than through the ``logging`` module, so it would
+    otherwise bypass ``LogHygieneFilter`` entirely and let raw paths,
+    URLs, or a token embedded in an exception's own message reach disk
+    unredacted (release issue O03).
+    """
     try:
         with open(_CONFIG["gui_log_path"], "a", encoding="utf-8") as handle:
-            handle.write(message)
+            handle.write(sanitize_log_text(message))
     except OSError:
         pass
 
@@ -174,3 +197,79 @@ def install_crash_handlers(log_dir: Optional[str] = None) -> None:
 
     sys.excepthook = _excepthook
     sys.unraisablehook = _unraisablehook
+
+
+def _extract_failure_codes(
+    log_text: str,
+    *,
+    max_entries: int = 20,
+) -> list[dict[str, str]]:
+    """Return sanitized failure codes found in one crash log's text.
+
+    Only the exception type name and a sanitized, truncated,
+    single-line summary of its message are kept -- never full
+    tracebacks, stack frames, or source lines, which is where prompts,
+    file contents, transcripts, or tokens would otherwise leak from
+    (release issue O03). Matches ``traceback.format_exception``'s one
+    unindented "SomeError: message" line per exception.
+    """
+    failures: list[dict[str, str]] = []
+    for line in log_text.splitlines():
+        match = _FAILURE_LINE_PATTERN.match(line.strip())
+        if not match:
+            continue
+        message = sanitize_log_text(match.group("message"))
+        if len(message) > 200:
+            message = message[:200] + "..."
+        failures.append({"type": match.group("exc_type"), "message": message})
+    return failures[-max_entries:]
+
+
+def build_diagnostics_export() -> dict:
+    """Return one local-only, sanitized diagnostics payload.
+
+    Includes only IDs, versions, capabilities and failure codes:
+    application version, Python/platform identity, and sanitized
+    failure codes extracted from the on-disk crash log. Never includes
+    prompts, file contents, conversation transcripts, tokens, raw tool
+    results, or policy material: this function has no access to any of
+    those subsystems and only reads the crash log's own already-
+    appended, already-sanitized-on-write lines (release issue O03).
+    """
+    log_text = ""
+    try:
+        with open(_CONFIG["gui_log_path"], "r", encoding="utf-8") as handle:
+            log_text = handle.read()
+    except OSError:
+        pass
+
+    return {
+        "exported_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        "application_version": AIRUNNER_VERSION,
+        "python_version": sys.version.split()[0],
+        "platform": platform.platform(),
+        "recent_failures": _extract_failure_codes(log_text),
+    }
+
+
+def export_diagnostics(destination: Optional[str] = None) -> str:
+    """Write a sanitized, local-only diagnostics export; return its path.
+
+    Purely local: no network call is made anywhere in this function.
+    The caller (a GUI action wiring this up is a separate follow-up) is
+    expected to show the exported file to the user for review before
+    they choose to share it anywhere -- nothing here uploads or
+    transmits it (release issue O03).
+    """
+    if destination is None:
+        destination = os.path.join(
+            _default_log_dir(), _DIAGNOSTICS_EXPORT_FILENAME
+        )
+    else:
+        destination = os.path.abspath(os.path.expanduser(destination))
+
+    os.makedirs(os.path.dirname(destination), exist_ok=True)
+    payload = build_diagnostics_export()
+    with open(destination, "w", encoding="utf-8") as handle:
+        json.dump(payload, handle, indent=2, sort_keys=True)
+    return destination

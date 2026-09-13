@@ -24,6 +24,18 @@ _URL_PATTERN = re.compile(r"https?://[^\s\"'<>),;]+")
 _PATH_PATTERN = re.compile(
     r"(?P<path>(?:~|/)[^\s\"'<>),;]+(?:/[^\s\"'<>),;]+)+)"
 )
+# Recognizable credential/token shapes (release issue O03: diagnostics and
+# logs must never carry raw tokens). Two forms: a known vendor prefix
+# (HuggingFace, OpenAI, GitHub, ...) regardless of surrounding context, and a
+# generic "key=value"/"key: value" pair for a field named like a secret.
+_KNOWN_TOKEN_PREFIX_PATTERN = re.compile(
+    r"\b(?:hf_|sk-ant-|sk-|ghp_|gho_|github_pat_)[A-Za-z0-9_\-]{12,}\b"
+)
+_TOKEN_KV_PATTERN = re.compile(
+    r"(?i)\b(api[_-]?key|access[_-]?token|auth[_-]?token|bearer|secret)\b"
+    r"(\s*[:=]\s*|\s+)"
+    r"(?P<token>['\"]?[A-Za-z0-9_\-.]{12,}['\"]?)"
+)
 
 
 def _summarize_mapping_keys(
@@ -53,13 +65,26 @@ def _fingerprint_value(value: str | None, *, label: str = "value") -> str:
 
 
 def _sanitize_log_text(text: str) -> str:
-    """Redact URLs and filesystem paths from one log string."""
+    """Redact URLs, filesystem paths, and recognizable tokens from one
+    log string (release issue O03: diagnostics/logs must not carry
+    secrets)."""
     sanitized = _URL_PATTERN.sub(
         lambda match: _fingerprint_value(match.group(0), label="url"),
         text,
     )
-    return _PATH_PATTERN.sub(
+    sanitized = _PATH_PATTERN.sub(
         lambda match: _fingerprint_value(match.group("path"), label="path"),
+        sanitized,
+    )
+    sanitized = _KNOWN_TOKEN_PREFIX_PATTERN.sub(
+        lambda match: _fingerprint_value(match.group(0), label="token"),
+        sanitized,
+    )
+    return _TOKEN_KV_PATTERN.sub(
+        lambda match: (
+            f"{match.group(1)}="
+            f"{_fingerprint_value(match.group('token'), label='token')}"
+        ),
         sanitized,
     )
 
