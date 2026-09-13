@@ -51,11 +51,18 @@ def provider_disabled_message(provider: str) -> str:
 
     provider_name = _provider_label(provider)
     if is_offline_mode():
+        # AIRUNNER_OFFLINE_MODE is an environment variable (see
+        # shared/airunner_common/settings.py); unlike the per-service
+        # checkboxes below, there is no Preferences GUI control for it
+        # today (release issue O02 review finding F6), so the message
+        # must not point at one.
         return (
             f"{provider_name} downloads require an internet connection, "
             "and offline mode is currently enabled.\n\n"
-            "You can allow external network access in Preferences > "
-            "Privacy & Security."
+            "Offline mode is controlled by the AIRUNNER_OFFLINE_MODE "
+            "environment variable, not a Preferences setting. Set "
+            "AIRUNNER_OFFLINE_MODE=0 and restart the application to "
+            "allow external network access."
         )
     return (
         f"{provider_name} downloads are disabled in privacy settings.\n\n"

@@ -89,6 +89,20 @@ def test_require_provider_allowed_raises_with_offline_message(offline) -> None:
         require_provider_allowed("huggingface")
 
 
+def test_offline_message_points_to_the_real_env_var_not_a_nonexistent_gui_control(
+    offline,
+) -> None:
+    """AIRUNNER_OFFLINE_MODE has no Preferences GUI control (unlike the
+    per-service checkboxes) -- the message must give real, actionable
+    instructions instead of pointing at a control that does not exist
+    (release issue O02 review finding F6)."""
+    with pytest.raises(ProviderDownloadDisabled) as exc_info:
+        require_provider_allowed("huggingface")
+    message = str(exc_info.value)
+    assert "AIRUNNER_OFFLINE_MODE" in message
+    assert "Preferences > Privacy" not in message
+
+
 def test_require_provider_allowed_passes_when_online_and_allowed(online) -> None:
     require_provider_allowed("huggingface")  # must not raise
 
