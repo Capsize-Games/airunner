@@ -9,10 +9,19 @@ from fastapi import (
     WebSocketDisconnect,
     status,
 )
+from pydantic import ValidationError
 
 from airunner_common.settings import AIRUNNER_LOG_LEVEL
 from airunner_services.utils.application import get_logger
 
+from .llm_contracts import (
+    LLMStreamValidationError,
+    WebSocketRateLimiter,
+    default_rate_limit_max_requests,
+    default_rate_limit_window_seconds,
+    hash_principal,
+    parse_stream_message,
+)
 from .llm_runtime import (
     require_websocket_runtime_registry,
     resolve_llm_client,
@@ -23,6 +32,34 @@ from .llm_runtime import (
 
 router = APIRouter()
 logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
+
+# Module-level so admission state survives a client's reconnect: a fresh
+# WebSocket object per connection must not reset the caller's budget.
+_rate_limiter = WebSocketRateLimiter(
+    max_requests=default_rate_limit_max_requests(),
+    window_seconds=default_rate_limit_window_seconds(),
+)
+
+
+def _resolve_principal(websocket: WebSocket) -> str:
+    """Return a stable id for the caller authenticate_connection() admitted.
+
+    Derived from whichever credential actually gated this connection, so
+    the same credential always yields the same principal across
+    reconnects without duplicating server.py's auth branching here.
+    """
+    state = websocket.app.state
+    if getattr(state, "require_api_key", False):
+        return hash_principal("api_key", getattr(state, "api_key", ""))
+    if getattr(state, "insecure_no_auth", False):
+        client = getattr(websocket, "client", None)
+        host = getattr(client, "host", "") if client else "unknown"
+        return hash_principal("insecure", host)
+    from airunner_services.api.loopback_token import (
+        get_or_create_loopback_token,
+    )
+
+    return hash_principal("loopback", get_or_create_loopback_token())
 
 
 def _websocket_auth_error(websocket: WebSocket) -> bool:
@@ -63,17 +100,49 @@ async def websocket_chat(websocket: WebSocket):
         return
 
     await websocket.accept()
+    principal = _resolve_principal(websocket)
     try:
         client = resolve_llm_client(require_websocket_runtime_registry(websocket))
         while True:
             data = await websocket.receive_json()
-            prompt = str(data.get("message", "")).strip()
-            if not prompt:
+
+            if not _rate_limiter.allow(principal):
                 await websocket.send_json(
-                    {"type": "error", "content": "No message provided"}
+                    {
+                        "type": "error",
+                        "code": "rate_limited",
+                        "content": "Rate limit exceeded",
+                        "done": True,
+                    }
                 )
                 continue
-            async for delta in stream_runtime(client, websocket_envelope(data)):
+
+            try:
+                parsed = parse_stream_message(data)
+            except ValidationError:
+                await websocket.send_json(
+                    {
+                        "type": "error",
+                        "code": "invalid_request",
+                        "content": "Invalid request",
+                        "done": True,
+                    }
+                )
+                continue
+            except LLMStreamValidationError as exc:
+                await websocket.send_json(
+                    {
+                        "type": "error",
+                        "code": exc.code,
+                        "content": "Request rejected",
+                        "done": True,
+                    }
+                )
+                continue
+
+            async for delta in stream_runtime(
+                client, websocket_envelope(parsed.model_dump())
+            ):
                 await websocket.send_json(websocket_chunk(delta))
                 if delta.final:
                     break
