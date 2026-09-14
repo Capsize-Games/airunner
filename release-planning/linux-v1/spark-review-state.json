@@ -1,0 +1,9 @@
+{
+  "reviewed_heads": {
+    "Capsize-Games/airunner#2152": "b334abc5f5b456a7701f35bce32c3e7dd698b8d8"
+  },
+  "findings_file": "BATCH-1-REVIEW.md",
+  "status": "corrections pending Spark reset",
+  "spark_retry_not_before": "2026-09-13T19:37:03Z",
+  "correction_requests_sent": false
+}

@@ -1,0 +1,9 @@
+{
+  "model": "gpt-5.3-codex-spark",
+  "reasoningEffort": "low",
+  "issue": "https://github.com/Capsize-Games/airunner/issues/2085",
+  "clientThreadId": "client-new-thread:1b21fc47-ef65-439b-86a7-d6076b7f0ea6",
+  "status": "worktree setup queued; canonical task ID not yet returned",
+  "authorizedSessions": 1,
+  "automaticFollowOn": false
+}

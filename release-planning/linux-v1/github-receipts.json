@@ -1,0 +1,372 @@
+{
+  "TRACKER": {
+    "repo": "Capsize-Games/airunner",
+    "url": "https://github.com/Capsize-Games/airunner/issues/2083",
+    "number": 2083
+  },
+  "R01": {
+    "repo": "Capsize-Games/airunner",
+    "url": "https://github.com/Capsize-Games/airunner/issues/2084",
+    "number": 2084
+  },
+  "R03": {
+    "repo": "Capsize-Games/airunner",
+    "url": "https://github.com/Capsize-Games/airunner/issues/2085",
+    "number": 2085
+  },
+  "W01": {
+    "repo": "Capsize-Games/airunnerweb",
+    "url": "https://github.com/Capsize-Games/airunnerweb/issues/216",
+    "number": 216
+  },
+  "W02": {
+    "repo": "Capsize-Games/airunnerweb",
+    "url": "https://github.com/Capsize-Games/airunnerweb/issues/217",
+    "number": 217
+  },
+  "R02": {
+    "repo": "Capsize-Games/airunner",
+    "url": "https://github.com/Capsize-Games/airunner/issues/2086",
+    "number": 2086
+  },
+  "W03": {
+    "repo": "Capsize-Games/airunnerweb",
+    "url": "https://github.com/Capsize-Games/airunnerweb/issues/218",
+    "number": 218
+  },
+  "S01": {
+    "repo": "Capsize-Games/airunner",
+    "url": "https://github.com/Capsize-Games/airunner/issues/2087",
+    "number": 2087
+  },
+  "S03": {
+    "repo": "Capsize-Games/airunner",
+    "url": "https://github.com/Capsize-Games/airunner/issues/2088",
+    "number": 2088
+  },
+  "P01": {
+    "repo": "Capsize-Games/airunner",
+    "url": "https://github.com/Capsize-Games/airunner/issues/2089",
+    "number": 2089
+  },
+  "D03": {
+    "repo": "Capsize-Games/airunner",
+    "url": "https://github.com/Capsize-Games/airunner/issues/2090",
+    "number": 2090
+  },
+  "O01": {
+    "repo": "Capsize-Games/airunner",
+    "url": "https://github.com/Capsize-Games/airunner/issues/2091",
+    "number": 2091
+  },
+  "L04": {
+    "repo": "Capsize-Games/airunnerweb",
+    "url": "https://github.com/Capsize-Games/airunnerweb/issues/219",
+    "number": 219
+  },
+  "W04": {
+    "repo": "Capsize-Games/airunnerweb",
+    "url": "https://github.com/Capsize-Games/airunnerweb/issues/220",
+    "number": 220
+  },
+  "S02": {
+    "repo": "Capsize-Games/airunner",
+    "url": "https://github.com/Capsize-Games/airunner/issues/2092",
+    "number": 2092
+  },
+  "S04": {
+    "repo": "Capsize-Games/airunner",
+    "url": "https://github.com/Capsize-Games/airunner/issues/2093",
+    "number": 2093
+  },
+  "S07": {
+    "repo": "Capsize-Games/airunner",
+    "url": "https://github.com/Capsize-Games/airunner/issues/2094",
+    "number": 2094
+  },
+  "P02": {
+    "repo": "Capsize-Games/airunner",
+    "url": "https://github.com/Capsize-Games/airunner/issues/2095",
+    "number": 2095
+  },
+  "P03": {
+    "repo": "Capsize-Games/airunner",
+    "url": "https://github.com/Capsize-Games/airunner/issues/2096",
+    "number": 2096
+  },
+  "D01": {
+    "repo": "Capsize-Games/airunner",
+    "url": "https://github.com/Capsize-Games/airunner/issues/2097",
+    "number": 2097
+  },
+  "D04": {
+    "repo": "Capsize-Games/airunner",
+    "url": "https://github.com/Capsize-Games/airunner/issues/2098",
+    "number": 2098
+  },
+  "O03": {
+    "repo": "Capsize-Games/airunner",
+    "url": "https://github.com/Capsize-Games/airunner/issues/2099",
+    "number": 2099
+  },
+  "S05": {
+    "repo": "Capsize-Games/airunner",
+    "url": "https://github.com/Capsize-Games/airunner/issues/2100",
+    "number": 2100
+  },
+  "S06": {
+    "repo": "Capsize-Games/airunner",
+    "url": "https://github.com/Capsize-Games/airunner/issues/2101",
+    "number": 2101
+  },
+  "S09": {
+    "repo": "Capsize-Games/airunner",
+    "url": "https://github.com/Capsize-Games/airunner/issues/2102",
+    "number": 2102
+  },
+  "P04": {
+    "repo": "Capsize-Games/airunner",
+    "url": "https://github.com/Capsize-Games/airunner/issues/2103",
+    "number": 2103
+  },
+  "D02": {
+    "repo": "Capsize-Games/airunner",
+    "url": "https://github.com/Capsize-Games/airunner/issues/2104",
+    "number": 2104
+  },
+  "C02": {
+    "repo": "Capsize-Games/airunner",
+    "url": "https://github.com/Capsize-Games/airunner/issues/2105",
+    "number": 2105
+  },
+  "S08": {
+    "repo": "Capsize-Games/airunner",
+    "url": "https://github.com/Capsize-Games/airunner/issues/2106",
+    "number": 2106
+  },
+  "P05": {
+    "repo": "Capsize-Games/airunner",
+    "url": "https://github.com/Capsize-Games/airunner/issues/2107",
+    "number": 2107
+  },
+  "O02": {
+    "repo": "Capsize-Games/airunner",
+    "url": "https://github.com/Capsize-Games/airunner/issues/2108",
+    "number": 2108
+  },
+  "S10": {
+    "repo": "Capsize-Games/airunner",
+    "url": "https://github.com/Capsize-Games/airunner/issues/2109",
+    "number": 2109
+  },
+  "S12": {
+    "repo": "Capsize-Games/airunner",
+    "url": "https://github.com/Capsize-Games/airunner/issues/2110",
+    "number": 2110
+  },
+  "P06": {
+    "repo": "Capsize-Games/airunner",
+    "url": "https://github.com/Capsize-Games/airunner/issues/2111",
+    "number": 2111
+  },
+  "P09": {
+    "repo": "Capsize-Games/airunner",
+    "url": "https://github.com/Capsize-Games/airunner/issues/2112",
+    "number": 2112
+  },
+  "P11": {
+    "repo": "Capsize-Games/airunner",
+    "url": "https://github.com/Capsize-Games/airunner/issues/2113",
+    "number": 2113
+  },
+  "C01": {
+    "repo": "Capsize-Games/airunner",
+    "url": "https://github.com/Capsize-Games/airunner/issues/2114",
+    "number": 2114
+  },
+  "S11": {
+    "repo": "Capsize-Games/airunner",
+    "url": "https://github.com/Capsize-Games/airunner/issues/2115",
+    "number": 2115
+  },
+  "P07": {
+    "repo": "Capsize-Games/airunner",
+    "url": "https://github.com/Capsize-Games/airunner/issues/2116",
+    "number": 2116
+  },
+  "P08": {
+    "repo": "Capsize-Games/airunner",
+    "url": "https://github.com/Capsize-Games/airunner/issues/2117",
+    "number": 2117
+  },
+  "B01": {
+    "repo": "Capsize-Games/airunner",
+    "url": "https://github.com/Capsize-Games/airunner/issues/2118",
+    "number": 2118
+  },
+  "P10": {
+    "repo": "Capsize-Games/airunner",
+    "url": "https://github.com/Capsize-Games/airunner/issues/2119",
+    "number": 2119
+  },
+  "B02": {
+    "repo": "Capsize-Games/airunner",
+    "url": "https://github.com/Capsize-Games/airunner/issues/2120",
+    "number": 2120
+  },
+  "L01": {
+    "repo": "Capsize-Games/airunner",
+    "url": "https://github.com/Capsize-Games/airunner/issues/2121",
+    "number": 2121
+  },
+  "Q02": {
+    "repo": "Capsize-Games/airunner",
+    "url": "https://github.com/Capsize-Games/airunner/issues/2122",
+    "number": 2122
+  },
+  "Q08": {
+    "repo": "Capsize-Games/airunner",
+    "url": "https://github.com/Capsize-Games/airunner/issues/2123",
+    "number": 2123
+  },
+  "B03": {
+    "repo": "Capsize-Games/airunner",
+    "url": "https://github.com/Capsize-Games/airunner/issues/2124",
+    "number": 2124
+  },
+  "B06": {
+    "repo": "Capsize-Games/airunner",
+    "url": "https://github.com/Capsize-Games/airunner/issues/2125",
+    "number": 2125
+  },
+  "L02": {
+    "repo": "Capsize-Games/airunner",
+    "url": "https://github.com/Capsize-Games/airunner/issues/2126",
+    "number": 2126
+  },
+  "L03": {
+    "repo": "Capsize-Games/airunner",
+    "url": "https://github.com/Capsize-Games/airunner/issues/2127",
+    "number": 2127
+  },
+  "Q06": {
+    "repo": "Capsize-Games/airunner",
+    "url": "https://github.com/Capsize-Games/airunner/issues/2128",
+    "number": 2128
+  },
+  "B04": {
+    "repo": "Capsize-Games/airunner",
+    "url": "https://github.com/Capsize-Games/airunner/issues/2129",
+    "number": 2129
+  },
+  "B08": {
+    "repo": "Capsize-Games/airunner",
+    "url": "https://github.com/Capsize-Games/airunner/issues/2130",
+    "number": 2130
+  },
+  "B14": {
+    "repo": "Capsize-Games/airunner",
+    "url": "https://github.com/Capsize-Games/airunner/issues/2131",
+    "number": 2131
+  },
+  "L05": {
+    "repo": "Capsize-Games/airunner",
+    "url": "https://github.com/Capsize-Games/airunner/issues/2132",
+    "number": 2132
+  },
+  "B05": {
+    "repo": "Capsize-Games/airunner",
+    "url": "https://github.com/Capsize-Games/airunner/issues/2133",
+    "number": 2133
+  },
+  "B09": {
+    "repo": "Capsize-Games/airunner",
+    "url": "https://github.com/Capsize-Games/airunner/issues/2134",
+    "number": 2134
+  },
+  "L06": {
+    "repo": "Capsize-Games/airunner",
+    "url": "https://github.com/Capsize-Games/airunner/issues/2135",
+    "number": 2135
+  },
+  "Q05": {
+    "repo": "Capsize-Games/airunner",
+    "url": "https://github.com/Capsize-Games/airunner/issues/2136",
+    "number": 2136
+  },
+  "B07": {
+    "repo": "Capsize-Games/airunner",
+    "url": "https://github.com/Capsize-Games/airunner/issues/2137",
+    "number": 2137
+  },
+  "B10": {
+    "repo": "Capsize-Games/airunner",
+    "url": "https://github.com/Capsize-Games/airunner/issues/2138",
+    "number": 2138
+  },
+  "Q01": {
+    "repo": "Capsize-Games/airunner",
+    "url": "https://github.com/Capsize-Games/airunner/issues/2139",
+    "number": 2139
+  },
+  "B11": {
+    "repo": "Capsize-Games/airunner",
+    "url": "https://github.com/Capsize-Games/airunner/issues/2140",
+    "number": 2140
+  },
+  "B12": {
+    "repo": "Capsize-Games/airunner",
+    "url": "https://github.com/Capsize-Games/airunner/issues/2141",
+    "number": 2141
+  },
+  "T01": {
+    "repo": "Capsize-Games/airunner",
+    "url": "https://github.com/Capsize-Games/airunner/issues/2142",
+    "number": 2142
+  },
+  "B13": {
+    "repo": "Capsize-Games/airunner",
+    "url": "https://github.com/Capsize-Games/airunner/issues/2143",
+    "number": 2143
+  },
+  "B15": {
+    "repo": "Capsize-Games/airunner",
+    "url": "https://github.com/Capsize-Games/airunner/issues/2144",
+    "number": 2144
+  },
+  "T02": {
+    "repo": "Capsize-Games/airunner",
+    "url": "https://github.com/Capsize-Games/airunner/issues/2145",
+    "number": 2145
+  },
+  "Q07": {
+    "repo": "Capsize-Games/airunner",
+    "url": "https://github.com/Capsize-Games/airunner/issues/2146",
+    "number": 2146
+  },
+  "B16": {
+    "repo": "Capsize-Games/airunner",
+    "url": "https://github.com/Capsize-Games/airunner/issues/2147",
+    "number": 2147
+  },
+  "Q04": {
+    "repo": "Capsize-Games/airunner",
+    "url": "https://github.com/Capsize-Games/airunner/issues/2148",
+    "number": 2148
+  },
+  "Q03": {
+    "repo": "Capsize-Games/airunner",
+    "url": "https://github.com/Capsize-Games/airunner/issues/2149",
+    "number": 2149
+  },
+  "C03": {
+    "repo": "Capsize-Games/airunner",
+    "url": "https://github.com/Capsize-Games/airunner/issues/2150",
+    "number": 2150
+  },
+  "C04": {
+    "repo": "Capsize-Games/airunner",
+    "url": "https://github.com/Capsize-Games/airunner/issues/2151",
+    "number": 2151
+  }
+}
