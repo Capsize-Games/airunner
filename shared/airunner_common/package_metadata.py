@@ -13,15 +13,19 @@ from typing import Any
 
 
 VERSION = "6.1.3"
-# Supply-chain hardening (issue #2036): the archive URL is hash-pinned so a
-# tampered or moved tag cannot be substituted. Digest computed from the
-# current v1.0.0 tarball (curl -sL <url> | sha256sum).
-FACEHUGGERSHIELD_REQUIREMENT = (
-    "facehuggershield @ "
-    "https://github.com/Capsize-Games/facehuggershield/"
-    "archive/refs/tags/v1.0.0.tar.gz"
-    "#sha256=3430bb3363def8d0097a903ca106a4e944ff4a36f5a6fd374f06970090723482"
-)
+# Supply-chain hardening (issue #2036). This was a hash-pinned GitHub archive
+# URL, but PyPI rejects any distribution carrying a PEP 440 direct reference
+# ("400 Can't have direct dependency"), so no such package can ever be
+# published. facehuggershield 1.0.0 is on PyPI, so depend on it by version.
+#
+# This does not weaken the original intent. That pin existed so "a tampered or
+# moved tag cannot be substituted" -- but a git tag *can* be moved, which is
+# exactly why it needed a digest. A PyPI release cannot: a version is immutable
+# once uploaded and can only be yanked, never replaced. Installs also verify
+# PyPI's own hashes over TLS. For a fully hash-locked install, pin digests in a
+# requirements file at deploy time, which is where hash-locking belongs --
+# install_requires cannot express it for consumers anyway.
+FACEHUGGERSHIELD_REQUIREMENT = "facehuggershield==1.0.0"
 
 # The project is GPL-3.0-only (issue #2058): the repo-root LICENSE file, every
 # ``license=`` metadata field and these PyPI classifiers must agree. Vendored
