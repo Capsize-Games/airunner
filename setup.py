@@ -44,12 +44,15 @@ GUI_REQUIREMENTS = [
     # markdown: utils/text/formatter
     # jinja2:   components/server/local_http_server
     # psutil:   components/application/gui/widgets/stats/stats_widget
+    # pygments: utils/text/formatter_extended (the GUI ships its own copy of
+    #           this module; airunner-services declares it separately)
     "requests>=2.31.0",
     "numpy>=1.26.0",
     "Pillow>=10.0.0",
     "markdown>=3.5.0",
     "jinja2>=3.1.0",
     "psutil>=5.9.0",
+    "pygments>=2.17.0",
     FACEHUGGERSHIELD_REQUIREMENT,
 ]
 

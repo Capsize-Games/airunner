@@ -16,7 +16,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from check_artifact_imports import (  # noqa: E402
+from check_artifact_imports import (
     _module_scope_imports,
     collect,
     load_allowlist,
