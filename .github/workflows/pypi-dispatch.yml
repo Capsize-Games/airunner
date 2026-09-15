@@ -63,6 +63,16 @@ jobs:
           mkdir -p dist
           for pkg in ${{ inputs.packages || 'shared services native .' }}; do
             echo "::group::build $pkg"
+            # The root package refuses to build when the generated Qt
+            # *_ui.py / resources.py files are missing or stale. They are not
+            # committed, and a PEP 517 isolated build only installs the
+            # declared build-system requirements, so it cannot generate them
+            # itself -- they have to exist before `python -m build` runs.
+            # Only the root package needs them; the siblings are pure Python.
+            if [ "$pkg" = "." ]; then
+              pip install "PySide6==6.9.0"
+              QT_QPA_PLATFORM=offscreen python scripts/build_ui.py
+            fi
             python -m build --outdir dist "$pkg"
             echo "::endgroup::"
           done
