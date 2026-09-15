@@ -323,14 +323,18 @@ AI Runner downloads essential TTS/STT models automatically. LLM and image models
 
 | Category | Model | Size |
 |----------|-------|------|
-| **LLM (default)** | Llama 3.1 8B Instruct (4bit) | ~4 GB |
+| **LLM (default)** | Qwen3.5-9B, GGUF `Q8_0` | ~12 GB VRAM |
 | **Image** | Stable Diffusion 1.5 | ~2 GB |
 | **Image** | SDXL 1.0 | ~6 GB |
 | **Image** | Z-Image Turbo | ~12 GB |
 | **TTS** | OpenVoice | 654 MB |
-| **STT** | Whisper Tiny | 155 MB |
+| **STT** | `Systran/faster-distil-whisper-large-v3` | — |
 
-**LLM Providers:** Local (HuggingFace), Ollama, OpenRouter, OpenAI
+Local LLM inference runs GGUF through a llama.cpp sidecar; `airunner-hf-download`
+fetches GGUF by default and `--full` gets safetensors instead. Ten bundled models
+ship a GGUF variant, and "Custom Local Path" points at your own file.
+
+**LLM Providers:** Local (GGUF / llama.cpp), Ollama, OpenRouter, OpenAI
 
 **Art Models:** Place your models in `~/.local/share/airunner/art/models/`
 
