@@ -1,6 +1,8 @@
-# These are supported funding model platforms
-
+# Only list platforms that actually resolve. A funding entry pointing at a
+# dead page is worse than no entry: GitHub renders the Sponsor button either
+# way, so a reader who clicks it lands on a 404.
+#
+# Removed 2026-09-14:
+#   patreon: w4ffl35   -> patreon.com/w4ffl35 returns "Page not found"
+#   ko_fi:             -> was left as the template's placeholder comment
 github: w4ffl35
-patreon: w4ffl35
-ko_fi: # Replace with a single Ko-fi username
-

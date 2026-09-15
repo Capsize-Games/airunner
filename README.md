@@ -19,6 +19,17 @@ AI Runner is a private AI companion you shape — name, personality, voice, memo
 
 [🐞 Report Bug](https://github.com/Capsize-Games/airunner/issues/new?template=bug_report.md) · [✨ Request Feature](https://github.com/Capsize-Games/airunner/issues/new?template=feature_request.md) · [🛡️ Report Vulnerability](https://github.com/Capsize-Games/airunner/issues/new?template=vulnerability_report.md) · [📖 Wiki](https://github.com/Capsize-Games/airunner/wiki)
 
+### Get AI Runner
+
+| | |
+|---|---|
+| **Desktop download** | [capsizegames.itch.io/ai-runner](https://capsizegames.itch.io/ai-runner) — no Python setup required |
+| **Container** | `docker pull ghcr.io/capsize-games/airunner:linux-desktop` ([also `linux`, `linux-headless`](https://github.com/Capsize-Games/airunner/pkgs/container/airunner%2Fairunner)) |
+| **Python** | `pip install airunner` ([PyPI](https://pypi.org/project/airunner/)) |
+| **On the web** | [airunner.art](https://airunner.art) |
+
+AI Runner is free and GPL-3.0. If it is useful to you, [**sponsoring the project**](https://github.com/sponsors/w4ffl35) is what keeps it maintained — it is built and released by one engineer at [Capsize LLC](https://capsize.online).
+
 ---
 
 ## What AI Runner Is For
