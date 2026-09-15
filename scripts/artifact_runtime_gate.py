@@ -21,7 +21,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 import shutil
 import subprocess
 import sys
@@ -50,12 +49,43 @@ IMPORT_PROBES = [
     ("init-daemon-api", ["import airunner_services.api.server"], True),
 ]
 
+# Deferring an import past argparse can make --help succeed while the
+# application is still broken, so --help alone proves very little. This probe
+# runs a documented operation that constructs real objects and writes a file,
+# entirely within the test-owned HOME: no port bind, no weights, no GPU.
+BASE_OPERATION = ("daemon-generate-config", ["airunner-daemon", "--generate-config"])
+
+# The optional-ML boundary. Calls the unbound method (it does not touch self
+# before the import) so no config, port or daemon process is involved.
+OPTIONAL_BOUNDARY_SRC = """
+import sys, importlib.util
+from airunner_services.daemon import AIRunnerDaemon
+if importlib.util.find_spec("torch") is not None:
+    sys.exit(2)                      # ML present: boundary not exercised
+try:
+    AIRunnerDaemon._create_headless_app(None)
+except ModuleNotFoundError as exc:
+    msg = str(exc)
+    # Must name the extra AND the index, or the guidance is not actionable.
+    sys.exit(0 if ("airunner[ml]" in msg and "download.pytorch.org" in msg) else 4)
+except Exception:
+    sys.exit(5)                      # failed, but not at the intended boundary
+sys.exit(3)                          # no error at all: ML stack not actually required
+"""
+
 TIMEOUT = 300
 
 
 def run(cmd: list[str], env: dict | None = None, cwd: str | None = None):
+    # check=False on purpose: a failing probe IS the signal here.
     return subprocess.run(
-        cmd, capture_output=True, text=True, timeout=TIMEOUT, env=env, cwd=cwd
+        cmd,
+        capture_output=True,
+        text=True,
+        timeout=TIMEOUT,
+        env=env,
+        cwd=cwd,
+        check=False,
     )
 
 
@@ -115,17 +145,17 @@ def main() -> int:
     print(f"install spec : {spec}")
     print(f"mode         : {'PUBLISHED (control)' if args.published else 'CANDIDATE'}")
 
-    if args.find_links and args.version:
-        # If the candidate version already exists upstream, a find-links install
-        # cannot be proven to have used the local artifact -- and publishing it
-        # would fail anyway.
-        if pypi_has_version("airunner", args.version):
-            print(
-                f"\nFAIL: airunner=={args.version} already exists on PyPI. The candidate "
-                "cannot be distinguished from the published artifact, and the "
-                "version cannot be published again."
-            )
-            return 1
+    # If the candidate version already exists upstream, a find-links install
+    # cannot be proven to have used the local artifact -- and that version
+    # could not be published again anyway. --published skips this deliberately,
+    # so a known-published artifact can still be re-tested for diagnostics.
+    if args.find_links and args.version and pypi_has_version("airunner", args.version):
+        print(
+            f"\nFAIL: airunner=={args.version} already exists on PyPI. The "
+            "candidate cannot be distinguished from the published artifact, "
+            "and that version cannot be published again."
+        )
+        return 1
 
     subprocess.run([sys.executable, "-m", "venv", str(venv)], check=True)
     pip = [str(venv / "bin" / "pip"), "install", "--disable-pip-version-check"]
@@ -153,9 +183,34 @@ def main() -> int:
     }
     for name in ("airunner", "airunner-common", "airunner-services", "airunner-native"):
         print(f"  {name:<20} {installed.get(name, '<NOT INSTALLED>')}")
+
+    # Every first-party distribution that got installed must be the candidate.
+    # Matching versions is what rejects an accidental substitution of a
+    # published sibling: the four pin each other by ==VERSION, so a mismatch
+    # means the resolver reached PyPI for something that should have come from
+    # --find-links. A PEP 440 local version (`+local1`) cannot exist on PyPI at
+    # all, which makes this check decisive for candidate builds.
+    wrong = {
+        n: v
+        for n, v in installed.items()
+        if n.startswith("airunner") and v != version
+    }
+    if wrong:
+        print(f"FAIL: first-party distributions are not the candidate {version}:")
+        for n, v in sorted(wrong.items()):
+            print(f"  {n} == {v}  (expected {version})")
+        return 1
     if installed.get("airunner") != version:
         print(f"FAIL: expected airunner=={version}, got {installed.get('airunner')}")
         return 1
+
+    # airunner-native is a SEPARATE installation profile, not a missing edge.
+    # It ships the `airunner-native` launcher and depends on common+services;
+    # the GUI command is owned by the `airunner` distribution (issue #2042), so
+    # `pip install airunner` deliberately does not pull it. Recorded, not added:
+    # installing it here would hide whatever the real contract turns out to be.
+    if "airunner-native" not in installed:
+        print("  note: airunner-native absent -- separate profile, not required here")
 
     print("\n--- provenance: first-party code must come from site-packages ---")
     prov = run([py, "-c", "import airunner;print(airunner.__file__)"], env=env, cwd=cwd)
@@ -192,6 +247,29 @@ def main() -> int:
                     note = line.strip()[:120]
         results.append((pid, r.returncode, required, note))
         print(f"  {pid:<22} rc={r.returncode} {note}")
+
+    print("\n--- base operation (beyond argument parsing) ---")
+    pid, argv = BASE_OPERATION
+    exe = venv / "bin" / argv[0]
+    r = run([str(exe)] + argv[1:], env=env, cwd=cwd)
+    produced = list((home / ".local").rglob("daemon.yaml")) if (home / ".local").exists() else []
+    ok = r.returncode == 0 and bool(produced)
+    note = "" if ok else (r.stderr or r.stdout).strip().splitlines()[-1][:120] if (r.stderr or r.stdout) else "no config written"
+    results.append((pid, 0 if ok else (r.returncode or 1), True, note))
+    print(f"  {pid:<22} rc={r.returncode} config_written={bool(produced)} {note}")
+
+    print("\n--- optional-ML boundary (absent extra must guide, not traceback) ---")
+    rb = run([py, "-c", OPTIONAL_BOUNDARY_SRC], env=env, cwd=cwd)
+    meaning = {
+        0: ("pass", "actionable guidance naming the extra and index"),
+        2: ("skip", "ML stack present -- boundary not exercised"),
+        3: ("FAIL", "no error raised: the ML stack was not actually required"),
+        4: ("FAIL", "raised, but without actionable installation guidance"),
+        5: ("FAIL", "failed somewhere other than the intended boundary"),
+    }.get(rb.returncode, ("FAIL", f"unexpected rc={rb.returncode}"))
+    print(f"  optional-ml-boundary   {meaning[0]}: {meaning[1]}")
+    if rb.returncode not in (0, 2):
+        results.append(("optional-ml-boundary", rb.returncode, True, meaning[1]))
 
     failures = [(p, rc, n) for p, rc, req, n in results if req and rc != 0]
     print("\n" + "=" * 68)
