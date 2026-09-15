@@ -49,12 +49,20 @@ def _evaluate_node(node: ast.AST, assignments: dict[str, ast.AST]) -> object:
     """Statically evaluate the subset of Python used by the vendored values.
 
     Supports string constants, string ``f-strings`` (``VERSION``
-    interpolation), ``Name`` references and flat string lists — everything
-    ``native/setup.py`` uses for its vendored metadata. Anything else fails
-    loudly so a metadata edit that outgrows this evaluator is reviewed.
+    interpolation), ``Name`` references, flat string lists and the single
+    ``os.environ.get("AIRUNNER_BUILD_VERSION", _RELEASE_VERSION)`` form used to
+    build unpublished candidates. Anything else fails loudly so a metadata edit
+    that outgrows this evaluator is reviewed.
+
+    The environment lookup resolves to its **default** on purpose. This test
+    compares *released* metadata across the vendored copies, and the default is
+    the released version; honouring an ambient environment variable here would
+    make the comparison depend on how the test process happened to be launched.
     """
     if isinstance(node, ast.Constant) and isinstance(node.value, str):
         return node.value
+    if isinstance(node, ast.Call):
+        return _evaluate_env_get(node, assignments)
     if isinstance(node, ast.Name):
         return _evaluate_node(assignments[node.id], assignments)
     if isinstance(node, ast.JoinedStr):
@@ -78,6 +86,28 @@ def _evaluate_node(node: ast.AST, assignments: dict[str, ast.AST]) -> object:
     if isinstance(node, ast.List):
         return [_evaluate_node(elt, assignments) for elt in node.elts]
     raise AssertionError(f"unsupported setup.py node: {ast.dump(node)}")
+
+
+def _evaluate_env_get(
+    node: ast.Call,
+    assignments: dict[str, ast.AST],
+) -> object:
+    """Resolve ``os.environ.get(<name>, <default>)`` to its default.
+
+    Only this exact shape is accepted; any other call still fails loudly.
+    """
+    func = node.func
+    is_environ_get = (
+        isinstance(func, ast.Attribute)
+        and func.attr == "get"
+        and isinstance(func.value, ast.Attribute)
+        and func.value.attr == "environ"
+        and isinstance(func.value.value, ast.Name)
+        and func.value.value.id == "os"
+    )
+    if not is_environ_get or len(node.args) != 2 or node.keywords:
+        raise AssertionError(f"unsupported setup.py node: {ast.dump(node)}")
+    return _evaluate_node(node.args[1], assignments)
 
 
 def test_setup_py_has_no_airunner_common_import() -> None:
