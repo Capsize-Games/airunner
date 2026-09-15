@@ -1,0 +1,12 @@
+AI Runner
+Copyright (C) 2026 Capsize LLC
+
+This program is free software: you can redistribute it and/or modify it under
+the terms of the GNU General Public License as published by the Free Software
+Foundation, either version 3 of the License, or (at your option) any later
+version. See LICENSE for the full text.
+
+This notice lives here rather than at the top of LICENSE because GitHub and
+most SBOM/SCA tooling identify a licence by matching the file's text against a
+known template. A single prepended line defeated that match, so the repository
+reported "Other" / NOASSERTION instead of GPL-3.0 -- see RELICENSING.md.
