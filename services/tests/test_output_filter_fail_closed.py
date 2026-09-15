@@ -17,12 +17,19 @@ from __future__ import annotations
 import logging
 from contextlib import contextmanager
 
+import pytest
 from PIL import Image
 
-from airunner_services.art.managers.stablediffusion.base_diffusers_model_manager import (
+# The stablediffusion manager imports ``diffusers``, an optional heavy runtime
+# dependency. Skip the module when it is absent instead of failing collection:
+# the runtime smoke suites select by marker across this whole directory, so a
+# collection error here fails four jobs unrelated to the art pipeline.
+pytest.importorskip("diffusers")
+
+from airunner_services.art.managers.stablediffusion.base_diffusers_model_manager import (  # noqa: E402
     BaseDiffusersModelManager,
 )
-from airunner_services.art.utils.nsfw_checker import (
+from airunner_services.art.utils.nsfw_checker import (  # noqa: E402
     check_and_mark_nsfw_images,
     mark_images_as_blocked,
 )

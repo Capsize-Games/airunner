@@ -21,8 +21,12 @@ if str(_SCRIPTS_DIR) not in sys.path:
     sys.path.insert(0, str(_SCRIPTS_DIR))
 
 # These imports require the optional analysis tooling (radon), which lives in
-# the ``[analysis]`` extra of the root package (setup.py). They are imported
-# here rather than at module top so the test collection failure is explicit.
+# the ``[analysis]`` extra of the root package (setup.py). Skip the module when
+# that extra is absent instead of failing collection: the runtime smoke suites
+# select by marker across this whole directory, so a collection error here
+# fails four jobs that have nothing to do with complexity reports.
+pytest.importorskip("radon")
+
 from scripts import gui_complexity_report  # noqa: E402
 from scripts import services_complexity_report  # noqa: E402
 
