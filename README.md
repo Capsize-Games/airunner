@@ -737,7 +737,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) and the [Development Wiki](https://github
 
 ---
 
-<a href="https://airunner.org">
-   <img src="https://airunner.org/logo.png" alt="AI Runner Logo" width="100"/>
+<a href="https://airunner.art">
+   <img src="./images/logo.png" alt="AI Runner Logo" width="100"/>
 </a>
 
