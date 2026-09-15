@@ -17,7 +17,6 @@ from __future__ import annotations
 
 import builtins
 import sys
-import types
 
 import pytest
 
@@ -43,7 +42,7 @@ def _load_daemon_module(monkeypatch: pytest.MonkeyPatch, missing: str):
     # property the rest of this PR establishes.
     for mod in [m for m in sys.modules if m.startswith("airunner_services.daemon")]:
         sys.modules.pop(mod, None)
-    import airunner_services.daemon as daemon
+    from airunner_services import daemon
 
     return daemon
 
@@ -98,7 +97,7 @@ def test_unrelated_missing_module_is_not_misdiagnosed(
 
 def test_optional_ml_modules_matches_the_ml_extra():
     """The classifier must track what the `ml` extra actually installs."""
-    import airunner_services.daemon as daemon
+    from airunner_services import daemon
 
     assert daemon.OPTIONAL_ML_MODULES == frozenset(
         {"torch", "torchvision", "torchaudio"}

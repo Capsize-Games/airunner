@@ -16,7 +16,7 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from artifact_runtime_gate import (  # noqa: E402
+from artifact_runtime_gate import (
     ALLOWED_PACKAGE_TOKENS,
     UnsupportedSelection,
     plan_validation,
