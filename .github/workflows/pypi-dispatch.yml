@@ -4,6 +4,15 @@ on:
   release:
     types: [published]
   workflow_dispatch:
+    inputs:
+      packages:
+        description: >-
+          Space-separated build directories to publish. Default publishes all
+          four. Use "shared services native" to create the sibling projects
+          first -- see the comment on the build step.
+        required: false
+        default: "shared services native ."
+        type: string
 
 permissions:
   contents: write
@@ -39,11 +48,25 @@ jobs:
           # must be published together or `pip install airunner` cannot
           # resolve. Each invocation produces an sdist and a wheel in dist/;
           # the publish step below uploads every artifact.
+          # Publishing order matters the first time. airunner pins
+          # airunner-common==VERSION and airunner-services==VERSION, and none
+          # of the three sibling projects exist on PyPI yet. If airunner
+          # uploads but a sibling fails -- e.g. a project-scoped token that
+          # cannot create new projects -- then `pip install airunner` is
+          # permanently unresolvable at that version, because PyPI versions
+          # can be yanked but never replaced.
+          #
+          # So dispatch once with packages="shared services native" to create
+          # the siblings, confirm all three appear on PyPI, then dispatch again
+          # with packages="." for airunner itself. After the projects exist,
+          # the default (all four) is safe.
           mkdir -p dist
-          python -m build --outdir dist shared
-          python -m build --outdir dist services
-          python -m build --outdir dist native
-          python -m build --outdir dist .
+          for pkg in ${{ inputs.packages || 'shared services native .' }}; do
+            echo "::group::build $pkg"
+            python -m build --outdir dist "$pkg"
+            echo "::endgroup::"
+          done
+          echo "Built artifacts:"; ls -1 dist/
 
       - name: Upload Python distribution artifacts
         uses: actions/upload-artifact@v4
