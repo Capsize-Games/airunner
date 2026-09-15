@@ -96,16 +96,18 @@ jobs:
       # dependency edge between the four distributions) into a clean
       # interpreter outside the source tree, and then runs it.
       #
-      # Only runs when building the full surface: the gate installs `airunner`,
-      # so a partial dispatch such as packages="shared services native" has no
-      # top-level artifact to exercise.
+      # This step is deliberately NOT conditional. An earlier revision skipped
+      # it for sibling-only selections, which let a package selection reach
+      # Publish with no validation at all -- a skipped gate is not a passed
+      # gate. The script now validates the selection itself and fails on any
+      # profile it cannot execute.
       - name: Gate -- candidate artifact must run
-        if: contains(inputs.packages || 'shared services native .', '.')
         run: |
           VERSION="$(python -c 'import sys; sys.path.insert(0, "shared"); from airunner_common.package_metadata import VERSION; print(VERSION)')"
-          echo "gating candidate version $VERSION"
-          python scripts/artifact_runtime_gate.py --find-links dist --version "$VERSION"
-
+          PACKAGES="${{ inputs.packages || 'shared services native .' }}"
+          echo "gating candidate version $VERSION for selection: $PACKAGES"
+          python scripts/artifact_runtime_gate.py \
+            --find-links dist --version "$VERSION" --packages "$PACKAGES"
 
       - name: Publish package
         if: github.event_name == 'release' || github.event_name == 'workflow_dispatch'

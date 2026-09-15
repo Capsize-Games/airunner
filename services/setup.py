@@ -89,6 +89,15 @@ CORE_REQUIREMENTS = [
     # without it cannot start airunner-daemon. Published 6.1.3 declared it in
     # no distribution. Mirrored in package_metadata.CORE_REQUIREMENTS.
     "pygments>=2.17.0",
+    # requests: imported at module scope by url_safety, daemon_client/
+    # gui_daemon_client and runtimes/sidecar_{art,tts}_client, among others.
+    # It was declared ONLY by the GUI distribution, so `pip install
+    # airunner-services` on its own could not start the daemon. Co-installing
+    # the GUI hid it. Found by validating the sibling-only publish profile.
+    "requests>=2.31.0",
+    # markdown: utils/text/formatter_extended.py imports it at module scope
+    # alongside pygments. Also declared only by the GUI distribution.
+    "markdown>=3.5.0",
 ]
 
 # PyTorch is pinned to the exact stable cu129 wheel line so it aligns with

@@ -119,6 +119,13 @@ CORE_REQUIREMENTS = [
     # without it cannot start the daemon. Published 6.1.3 declared it nowhere
     # and `airunner-daemon` died on import. Same class as the #2040 items above.
     "pygments>=2.17.0",
+    # requests: same class. Imported at module scope across url_safety,
+    # daemon_client and the sidecar clients, but declared only by the GUI
+    # distribution, so airunner-services alone could not start.
+    "requests>=2.31.0",
+    # markdown: imported at module scope next to pygments in
+    # utils/text/formatter_extended.py; likewise GUI-only until now.
+    "markdown>=3.5.0",
 ]
 
 # PyTorch is pinned to the exact stable cu129 wheel line so it aligns with

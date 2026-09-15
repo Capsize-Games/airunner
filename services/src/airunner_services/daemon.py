@@ -54,6 +54,11 @@ if TYPE_CHECKING:  # pragma: no cover - typing only
 
 logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 
+# Exactly what the `ml` extra installs (ML_REQUIREMENTS in setup.py). A
+# ModuleNotFoundError naming one of these at the app boundary means the
+# documented optional runtime is absent. Anything else is a different bug.
+OPTIONAL_ML_MODULES = frozenset({"torch", "torchvision", "torchaudio"})
+
 
 # ``airunner_services.app`` and ``model_management.model_resource_manager``
 # import torch transitively, and torch is an optional extra (the ML groups in
@@ -207,27 +212,35 @@ class AIRunnerDaemon:
 
     def _create_headless_app(self) -> "ServiceApp":
         """Create the daemon-owned app without embedded server ownership."""
-        # This is the boundary where the optional ML stack becomes required.
-        # Everything before it -- argument parsing, --generate-config, the API
-        # server module -- works on a base install. Running the daemon does
-        # not, because it loads models. Report that as a missing optional
-        # feature rather than a bare ModuleNotFoundError; the original error is
-        # chained, never swallowed.
+        # This is the boundary where the optional ML runtime becomes required.
+        # Everything before it -- argument parsing, --generate-config, importing
+        # the API server -- works on a base install. Running the daemon does
+        # not, because it loads models.
+        #
+        # Only a *known* absent optional runtime is reported this way. Any other
+        # missing module is an unrelated packaging or import regression and must
+        # not be dressed up as "install the ML extra", so it propagates
+        # unchanged.
         try:
             from airunner_services.app import ServiceApp
         except ModuleNotFoundError as exc:
+            if exc.name not in OPTIONAL_ML_MODULES:
+                raise
             raise ModuleNotFoundError(
-                f"Running the AI Runner daemon needs the optional ML runtime, "
-                f"which is not installed ({exc.name!r} is missing).\n"
-                "A base `pip install airunner` deliberately omits it. Install "
-                "the ML extra from the PyTorch index, which is where the "
-                "pinned CUDA wheels live:\n"
-                '    pip install "airunner[ml]" '
-                "--index-url https://download.pytorch.org/whl/cu129\n"
-                "CPU-only:\n"
-                '    pip install "airunner[ml]" '
-                "--index-url https://download.pytorch.org/whl/cpu\n"
-                "`airunner-daemon --help` and `--generate-config` work without it."
+                f"Running the AI Runner daemon requires the optional ML "
+                f"runtime, which is not installed ({exc.name!r} is missing).\n"
+                "A base `pip install airunner` deliberately omits it.\n"
+                "\n"
+                "No install command is quoted here on purpose: the `ml` extra "
+                "pins CUDA-specific builds (torch==2.13.0+cu129), which are not "
+                "on PyPI, and those exact pins are not available as CPU builds "
+                "either. Installing them needs an index that carries the pinned "
+                "CUDA wheels *in addition to* PyPI, not instead of it. See the "
+                "project README/INSTALL for the supported route for your "
+                "platform.\n"
+                "\n"
+                "`airunner-daemon --help` and `airunner-daemon "
+                "--generate-config` work without the ML runtime."
             ) from exc
 
         return ServiceApp(
