@@ -84,6 +84,29 @@ jobs:
           name: python-dist
           path: dist/*
 
+      # A published PyPI version can be yanked but never replaced, so the
+      # candidate has to be proven before upload, not after. 6.1.3 resolved,
+      # installed, and still could not start: airunner_services imports
+      # pygments at module scope and nothing declared it. The runtime-smoke
+      # jobs did not catch it because they run from a source checkout, where
+      # the dev environment already supplies it.
+      #
+      # This installs the candidate through the ADVERTISED top-level request
+      # (not by bulk-installing every built wheel, which would hide a missing
+      # dependency edge between the four distributions) into a clean
+      # interpreter outside the source tree, and then runs it.
+      #
+      # Only runs when building the full surface: the gate installs `airunner`,
+      # so a partial dispatch such as packages="shared services native" has no
+      # top-level artifact to exercise.
+      - name: Gate -- candidate artifact must run
+        if: contains(inputs.packages || 'shared services native .', '.')
+        run: |
+          VERSION="$(python -c 'import sys; sys.path.insert(0, "shared"); from airunner_common.package_metadata import VERSION; print(VERSION)')"
+          echo "gating candidate version $VERSION"
+          python scripts/artifact_runtime_gate.py --find-links dist --version "$VERSION"
+
+
       - name: Publish package
         if: github.event_name == 'release' || github.event_name == 'workflow_dispatch'
         uses: pypa/gh-action-pypi-publish@27b31702a0e7fc50959f5ad993c78deac1bdfc29
