@@ -1,0 +1,5 @@
+{
+  "main": "../../../dist/exports/private/interactions/useFocusable.cjs",
+  "module": "../../../dist/exports/private/interactions/useFocusable.js",
+  "types": "../../../dist/types/exports/private/interactions/useFocusable.d.ts"
+}

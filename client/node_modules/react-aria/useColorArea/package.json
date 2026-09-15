@@ -1,0 +1,5 @@
+{
+  "main": "../dist/exports/useColorArea.cjs",
+  "module": "../dist/exports/useColorArea.js",
+  "types": "../dist/types/exports/useColorArea.d.ts"
+}

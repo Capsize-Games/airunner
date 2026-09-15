@@ -1,0 +1,7 @@
+{
+  "name": "@restart/ui/useClickOutside",
+  "private": true,
+  "main": "../cjs/useClickOutside.js",
+  "module": "../esm/useClickOutside.js",
+  "types": "../esm/useClickOutside.d.ts"
+}

@@ -1,0 +1,7 @@
+{
+  "name": "@restart/ui/DataKey",
+  "private": true,
+  "main": "../cjs/DataKey.js",
+  "module": "../esm/DataKey.js",
+  "types": "../esm/DataKey.d.ts"
+}

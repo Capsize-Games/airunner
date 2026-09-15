@@ -1,0 +1,7 @@
+{
+  "name": "@restart/ui/NoopTransition",
+  "private": true,
+  "main": "../cjs/NoopTransition.js",
+  "module": "../esm/NoopTransition.js",
+  "types": "../esm/NoopTransition.d.ts"
+}

@@ -1,0 +1,5 @@
+{
+  "main": "../../../dist/exports/private/selection/DOMLayoutDelegate.cjs",
+  "module": "../../../dist/exports/private/selection/DOMLayoutDelegate.js",
+  "types": "../../../dist/types/exports/private/selection/DOMLayoutDelegate.d.ts"
+}

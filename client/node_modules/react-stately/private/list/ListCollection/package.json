@@ -1,0 +1,5 @@
+{
+  "main": "../../../dist/exports/private/list/ListCollection.cjs",
+  "module": "../../../dist/exports/private/list/ListCollection.js",
+  "types": "../../../dist/types/exports/private/list/ListCollection.d.ts"
+}

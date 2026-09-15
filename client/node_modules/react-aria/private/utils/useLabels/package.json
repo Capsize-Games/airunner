@@ -1,0 +1,5 @@
+{
+  "main": "../../../dist/exports/private/utils/useLabels.cjs",
+  "module": "../../../dist/exports/private/utils/useLabels.js",
+  "types": "../../../dist/types/exports/private/utils/useLabels.d.ts"
+}

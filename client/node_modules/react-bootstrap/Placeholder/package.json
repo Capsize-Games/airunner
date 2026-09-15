@@ -1,0 +1,7 @@
+{
+  "name": "react-bootstrap/Placeholder",
+  "private": true,
+  "main": "../cjs/Placeholder.js",
+  "module": "../esm/Placeholder.js",
+  "types": "../esm/Placeholder.d.ts"
+}

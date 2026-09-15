@@ -1,0 +1,5 @@
+{
+  "main": "../dist/exports/usePress.cjs",
+  "module": "../dist/exports/usePress.js",
+  "types": "../dist/types/exports/usePress.d.ts"
+}

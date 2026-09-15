@@ -1,0 +1,5 @@
+{
+  "main": "../../../dist/exports/private/utils/focusWithoutScrolling.cjs",
+  "module": "../../../dist/exports/private/utils/focusWithoutScrolling.js",
+  "types": "../../../dist/types/exports/private/utils/focusWithoutScrolling.d.ts"
+}

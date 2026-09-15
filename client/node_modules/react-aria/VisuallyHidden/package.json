@@ -1,0 +1,5 @@
+{
+  "main": "../dist/exports/VisuallyHidden.cjs",
+  "module": "../dist/exports/VisuallyHidden.js",
+  "types": "../dist/types/exports/VisuallyHidden.d.ts"
+}

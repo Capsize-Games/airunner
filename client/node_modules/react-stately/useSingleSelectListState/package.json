@@ -1,0 +1,5 @@
+{
+  "main": "../dist/exports/useSingleSelectListState.cjs",
+  "module": "../dist/exports/useSingleSelectListState.js",
+  "types": "../dist/types/exports/useSingleSelectListState.d.ts"
+}

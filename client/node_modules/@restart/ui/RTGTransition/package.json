@@ -1,0 +1,7 @@
+{
+  "name": "@restart/ui/RTGTransition",
+  "private": true,
+  "main": "../cjs/RTGTransition.js",
+  "module": "../esm/RTGTransition.js",
+  "types": "../esm/RTGTransition.d.ts"
+}

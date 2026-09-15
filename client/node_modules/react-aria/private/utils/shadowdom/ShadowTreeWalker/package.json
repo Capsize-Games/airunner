@@ -1,0 +1,5 @@
+{
+  "main": "../../../../dist/exports/private/utils/shadowdom/ShadowTreeWalker.cjs",
+  "module": "../../../../dist/exports/private/utils/shadowdom/ShadowTreeWalker.js",
+  "types": "../../../../dist/types/exports/private/utils/shadowdom/ShadowTreeWalker.d.ts"
+}

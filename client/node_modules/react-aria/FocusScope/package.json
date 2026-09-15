@@ -1,0 +1,5 @@
+{
+  "main": "../dist/exports/FocusScope.cjs",
+  "module": "../dist/exports/FocusScope.js",
+  "types": "../dist/types/exports/FocusScope.d.ts"
+}

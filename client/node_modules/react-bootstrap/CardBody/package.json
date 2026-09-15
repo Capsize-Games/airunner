@@ -1,0 +1,7 @@
+{
+  "name": "react-bootstrap/CardBody",
+  "private": true,
+  "main": "../cjs/CardBody.js",
+  "module": "../esm/CardBody.js",
+  "types": "../esm/CardBody.d.ts"
+}

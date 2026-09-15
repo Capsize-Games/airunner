@@ -1,0 +1,5 @@
+{
+  "main": "../../../dist/exports/private/landmark/useLandmark.cjs",
+  "module": "../../../dist/exports/private/landmark/useLandmark.js",
+  "types": "../../../dist/types/exports/private/landmark/useLandmark.d.ts"
+}

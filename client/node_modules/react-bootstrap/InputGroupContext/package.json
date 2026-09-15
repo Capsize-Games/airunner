@@ -1,0 +1,7 @@
+{
+  "name": "react-bootstrap/InputGroupContext",
+  "private": true,
+  "main": "../cjs/InputGroupContext.js",
+  "module": "../esm/InputGroupContext.js",
+  "types": "../esm/InputGroupContext.d.ts"
+}

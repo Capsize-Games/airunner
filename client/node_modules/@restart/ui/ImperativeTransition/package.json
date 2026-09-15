@@ -1,0 +1,7 @@
+{
+  "name": "@restart/ui/ImperativeTransition",
+  "private": true,
+  "main": "../cjs/ImperativeTransition.js",
+  "module": "../esm/ImperativeTransition.js",
+  "types": "../esm/ImperativeTransition.d.ts"
+}

@@ -1,0 +1,5 @@
+{
+  "main": "../dist/exports/useDraggableCollection.cjs",
+  "module": "../dist/exports/useDraggableCollection.js",
+  "types": "../dist/types/exports/useDraggableCollection.d.ts"
+}

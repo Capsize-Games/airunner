@@ -1,0 +1,5 @@
+{
+  "main": "../../../dist/exports/private/virtualizer/ScrollView.cjs",
+  "module": "../../../dist/exports/private/virtualizer/ScrollView.js",
+  "types": "../../../dist/types/exports/private/virtualizer/ScrollView.d.ts"
+}

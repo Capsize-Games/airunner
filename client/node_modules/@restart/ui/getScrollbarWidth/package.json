@@ -1,0 +1,7 @@
+{
+  "name": "@restart/ui/getScrollbarWidth",
+  "private": true,
+  "main": "../cjs/getScrollbarWidth.js",
+  "module": "../esm/getScrollbarWidth.js",
+  "types": "../esm/getScrollbarWidth.d.ts"
+}

@@ -1,0 +1,5 @@
+{
+  "main": "../dist/exports/useDrop.cjs",
+  "module": "../dist/exports/useDrop.js",
+  "types": "../dist/types/exports/useDrop.d.ts"
+}

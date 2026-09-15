@@ -1,0 +1,5 @@
+{
+  "main": "../../../dist/exports/private/table/useTableState.cjs",
+  "module": "../../../dist/exports/private/table/useTableState.js",
+  "types": "../../../dist/types/exports/private/table/useTableState.d.ts"
+}

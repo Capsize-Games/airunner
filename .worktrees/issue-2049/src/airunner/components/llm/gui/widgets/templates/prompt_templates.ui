@@ -1,0 +1,293 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>prompt_templates_widget</class>
+ <widget class="QWidget" name="prompt_templates_widget">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>582</width>
+    <height>459</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Form</string>
+  </property>
+  <layout class="QGridLayout" name="gridLayout">
+   <property name="leftMargin">
+    <number>0</number>
+   </property>
+   <property name="topMargin">
+    <number>0</number>
+   </property>
+   <property name="rightMargin">
+    <number>0</number>
+   </property>
+   <property name="bottomMargin">
+    <number>0</number>
+   </property>
+   <property name="horizontalSpacing">
+    <number>0</number>
+   </property>
+   <property name="verticalSpacing">
+    <number>10</number>
+   </property>
+   <item row="1" column="0">
+    <widget class="QGroupBox" name="groupBox_2">
+     <property name="title">
+      <string>System Prompt</string>
+     </property>
+     <layout class="QGridLayout" name="gridLayout_3">
+      <property name="leftMargin">
+       <number>10</number>
+      </property>
+      <property name="topMargin">
+       <number>10</number>
+      </property>
+      <property name="rightMargin">
+       <number>10</number>
+      </property>
+      <property name="bottomMargin">
+       <number>10</number>
+      </property>
+      <property name="horizontalSpacing">
+       <number>0</number>
+      </property>
+      <property name="verticalSpacing">
+       <number>10</number>
+      </property>
+      <item row="0" column="0">
+       <widget class="QPlainTextEdit" name="system_prompt"/>
+      </item>
+      <item row="1" column="0">
+       <widget class="QPushButton" name="pushButton_2">
+        <property name="text">
+         <string>Reset to Default</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item row="0" column="0">
+    <widget class="QGroupBox" name="groupBox">
+     <property name="title">
+      <string>Template</string>
+     </property>
+     <layout class="QGridLayout" name="gridLayout_2">
+      <property name="leftMargin">
+       <number>10</number>
+      </property>
+      <property name="topMargin">
+       <number>10</number>
+      </property>
+      <property name="rightMargin">
+       <number>10</number>
+      </property>
+      <property name="bottomMargin">
+       <number>10</number>
+      </property>
+      <property name="spacing">
+       <number>0</number>
+      </property>
+      <item row="0" column="0">
+       <widget class="QComboBox" name="template_name"/>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item row="2" column="0">
+    <widget class="QGroupBox" name="groupBox_3">
+     <property name="title">
+      <string>Guardrails Prompt</string>
+     </property>
+     <layout class="QGridLayout" name="gridLayout_4">
+      <property name="leftMargin">
+       <number>10</number>
+      </property>
+      <property name="topMargin">
+       <number>10</number>
+      </property>
+      <property name="rightMargin">
+       <number>10</number>
+      </property>
+      <property name="bottomMargin">
+       <number>10</number>
+      </property>
+      <property name="horizontalSpacing">
+       <number>0</number>
+      </property>
+      <property name="verticalSpacing">
+       <number>10</number>
+      </property>
+      <item row="0" column="0">
+       <widget class="QPlainTextEdit" name="guardrails_prompt"/>
+      </item>
+      <item row="1" column="0">
+       <widget class="QPushButton" name="pushButton">
+        <property name="text">
+         <string>Reset to Default</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item row="3" column="0">
+    <layout class="QHBoxLayout" name="horizontalLayout">
+     <item>
+      <spacer name="horizontalSpacer">
+       <property name="orientation">
+        <enum>Qt::Orientation::Horizontal</enum>
+       </property>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>40</width>
+         <height>20</height>
+        </size>
+       </property>
+      </spacer>
+     </item>
+     <item>
+      <widget class="QCheckBox" name="use_guardrails">
+       <property name="text">
+        <string>Use guardrails</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QCheckBox" name="use_datetime">
+       <property name="text">
+        <string>Use datetime</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections>
+  <connection>
+   <sender>system_prompt</sender>
+   <signal>textChanged()</signal>
+   <receiver>prompt_templates_widget</receiver>
+   <slot>system_prompt_changed()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>363</x>
+     <y>190</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>344</x>
+     <y>0</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>guardrails_prompt</sender>
+   <signal>textChanged()</signal>
+   <receiver>prompt_templates_widget</receiver>
+   <slot>guardrails_prompt_changed()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>390</x>
+     <y>375</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>415</x>
+     <y>0</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>use_guardrails</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>prompt_templates_widget</receiver>
+   <slot>toggle_use_guardrails(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>423</x>
+     <y>442</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>0</x>
+     <y>458</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>use_datetime</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>prompt_templates_widget</receiver>
+   <slot>toggle_use_datetime(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>530</x>
+     <y>448</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>568</x>
+     <y>458</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>template_name</sender>
+   <signal>currentIndexChanged(int)</signal>
+   <receiver>prompt_templates_widget</receiver>
+   <slot>template_changed(int)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>348</x>
+     <y>42</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>284</x>
+     <y>-13</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>pushButton_2</sender>
+   <signal>clicked()</signal>
+   <receiver>prompt_templates_widget</receiver>
+   <slot>reset_system_prompt()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>280</x>
+     <y>224</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>-3</x>
+     <y>75</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>pushButton</sender>
+   <signal>clicked()</signal>
+   <receiver>prompt_templates_widget</receiver>
+   <slot>reset_guardrails_prompt()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>202</x>
+     <y>402</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>-5</x>
+     <y>242</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
+ <slots>
+  <slot>template_changed(int)</slot>
+  <slot>system_prompt_changed()</slot>
+  <slot>guardrails_prompt_changed()</slot>
+  <slot>toggle_use_guardrails(bool)</slot>
+  <slot>toggle_use_datetime(bool)</slot>
+  <slot>reset_system_prompt()</slot>
+  <slot>reset_guardrails_prompt()</slot>
+ </slots>
+</ui>

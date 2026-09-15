@@ -1,0 +1,5 @@
+{
+  "main": "../dist/exports/useComboBoxState.cjs",
+  "module": "../dist/exports/useComboBoxState.js",
+  "types": "../dist/types/exports/useComboBoxState.d.ts"
+}

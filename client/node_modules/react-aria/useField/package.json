@@ -1,0 +1,5 @@
+{
+  "main": "../dist/exports/useField.cjs",
+  "module": "../dist/exports/useField.js",
+  "types": "../dist/types/exports/useField.d.ts"
+}

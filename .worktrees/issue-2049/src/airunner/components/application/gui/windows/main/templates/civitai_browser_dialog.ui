@@ -1,0 +1,168 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>CivitaiBrowserDialog</class>
+ <widget class="QWidget" name="CivitaiBrowserDialog">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>1080</width>
+    <height>720</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>CivitAI Browser</string>
+  </property>
+  <layout class="QVBoxLayout" name="verticalLayout">
+   <item>
+    <layout class="QHBoxLayout" name="filterLayout">
+     <item>
+      <widget class="QLineEdit" name="search_line_edit">
+       <property name="placeholderText">
+        <string>Search checkpoints, LoRAs, and embeddings</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QComboBox" name="base_model_combo"/>
+     </item>
+     <item>
+      <widget class="QComboBox" name="type_combo"/>
+     </item>
+     <item>
+      <widget class="QPushButton" name="search_button">
+       <property name="text">
+        <string>Search</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="load_more_button">
+       <property name="text">
+        <string>Load More</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <widget class="QLabel" name="status_label">
+     <property name="text">
+      <string>Loading models…</string>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QSplitter" name="browser_splitter">
+     <property name="orientation">
+      <enum>Qt::Horizontal</enum>
+     </property>
+     <widget class="QWidget" name="results_panel">
+      <layout class="QVBoxLayout" name="resultsLayout">
+       <item>
+        <widget class="QListWidget" name="results_list"/>
+       </item>
+      </layout>
+     </widget>
+     <widget class="QWidget" name="details_panel">
+      <layout class="QVBoxLayout" name="detailsLayout">
+       <item>
+        <widget class="QLabel" name="selected_model_label">
+         <property name="text">
+          <string>Select a model</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLabel" name="selected_model_meta_label">
+         <property name="text">
+          <string/>
+         </property>
+         <property name="wordWrap">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLabel" name="preview_label">
+         <property name="minimumSize">
+          <size>
+           <width>320</width>
+           <height>220</height>
+          </size>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignCenter</set>
+         </property>
+         <property name="text">
+          <string>No preview selected</string>
+         </property>
+         <property name="frameShape">
+          <enum>QFrame::StyledPanel</enum>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QListWidget" name="sample_images_list"/>
+       </item>
+       <item>
+        <widget class="QTextBrowser" name="description_browser"/>
+       </item>
+       <item>
+        <layout class="QFormLayout" name="selectionLayout">
+         <item row="0" column="0">
+          <widget class="QLabel" name="version_label">
+           <property name="text">
+            <string>Version</string>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="1">
+          <widget class="QComboBox" name="version_combo"/>
+         </item>
+         <item row="1" column="0">
+          <widget class="QLabel" name="file_label">
+           <property name="text">
+            <string>File</string>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="1">
+          <widget class="QComboBox" name="file_combo"/>
+         </item>
+        </layout>
+       </item>
+       <item>
+        <layout class="QHBoxLayout" name="actionLayout">
+         <item>
+          <widget class="QPushButton" name="open_model_button">
+           <property name="text">
+            <string>Open on CivitAI</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="download_button">
+           <property name="text">
+            <string>Download Selected File</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+      </layout>
+     </widget>
+    </widget>
+   </item>
+   <item>
+    <widget class="QDialogButtonBox" name="button_box">
+     <property name="standardButtons">
+      <set>QDialogButtonBox::Close</set>
+     </property>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

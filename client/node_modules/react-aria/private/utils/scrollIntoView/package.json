@@ -1,0 +1,5 @@
+{
+  "main": "../../../dist/exports/private/utils/scrollIntoView.cjs",
+  "module": "../../../dist/exports/private/utils/scrollIntoView.js",
+  "types": "../../../dist/types/exports/private/utils/scrollIntoView.d.ts"
+}

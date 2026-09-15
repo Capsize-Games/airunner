@@ -1,0 +1,5 @@
+{
+  "main": "../dist/exports/useMove.cjs",
+  "module": "../dist/exports/useMove.js",
+  "types": "../dist/types/exports/useMove.d.ts"
+}

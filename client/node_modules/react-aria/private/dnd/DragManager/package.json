@@ -1,0 +1,5 @@
+{
+  "main": "../../../dist/exports/private/dnd/DragManager.cjs",
+  "module": "../../../dist/exports/private/dnd/DragManager.js",
+  "types": "../../../dist/types/exports/private/dnd/DragManager.d.ts"
+}

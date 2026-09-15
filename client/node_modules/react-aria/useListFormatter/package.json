@@ -1,0 +1,5 @@
+{
+  "main": "../dist/exports/useListFormatter.cjs",
+  "module": "../dist/exports/useListFormatter.js",
+  "types": "../dist/types/exports/useListFormatter.d.ts"
+}

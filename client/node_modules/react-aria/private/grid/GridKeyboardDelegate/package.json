@@ -1,0 +1,5 @@
+{
+  "main": "../../../dist/exports/private/grid/GridKeyboardDelegate.cjs",
+  "module": "../../../dist/exports/private/grid/GridKeyboardDelegate.js",
+  "types": "../../../dist/types/exports/private/grid/GridKeyboardDelegate.d.ts"
+}

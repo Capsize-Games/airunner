@@ -1,0 +1,5 @@
+{
+  "main": "../../../dist/exports/private/utils/useDrag1D.cjs",
+  "module": "../../../dist/exports/private/utils/useDrag1D.js",
+  "types": "../../../dist/types/exports/private/utils/useDrag1D.d.ts"
+}

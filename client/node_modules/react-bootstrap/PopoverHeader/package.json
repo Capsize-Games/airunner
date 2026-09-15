@@ -1,0 +1,7 @@
+{
+  "name": "react-bootstrap/PopoverHeader",
+  "private": true,
+  "main": "../cjs/PopoverHeader.js",
+  "module": "../esm/PopoverHeader.js",
+  "types": "../esm/PopoverHeader.d.ts"
+}

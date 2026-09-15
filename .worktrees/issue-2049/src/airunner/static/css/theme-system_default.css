@@ -1,0 +1,9 @@
+/* Theme CSS for system_default theme */
+body {
+    background-color: var(--background-color);
+    color: var(--text-color);
+}
+.header {
+    background-color: var(--primary-color);
+    color: #fff;
+}

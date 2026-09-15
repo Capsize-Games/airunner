@@ -1,0 +1,5 @@
+{
+  "main": "../dist/exports/useColorSliderState.cjs",
+  "module": "../dist/exports/useColorSliderState.js",
+  "types": "../dist/types/exports/useColorSliderState.d.ts"
+}

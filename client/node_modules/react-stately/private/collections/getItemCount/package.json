@@ -1,0 +1,5 @@
+{
+  "main": "../../../dist/exports/private/collections/getItemCount.cjs",
+  "module": "../../../dist/exports/private/collections/getItemCount.js",
+  "types": "../../../dist/types/exports/private/collections/getItemCount.d.ts"
+}

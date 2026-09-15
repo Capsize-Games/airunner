@@ -1,0 +1,5 @@
+{
+  "main": "../dist/exports/useMenuTriggerState.cjs",
+  "module": "../dist/exports/useMenuTriggerState.js",
+  "types": "../dist/types/exports/useMenuTriggerState.d.ts"
+}

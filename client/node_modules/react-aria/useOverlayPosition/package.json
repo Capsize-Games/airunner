@@ -1,0 +1,5 @@
+{
+  "main": "../dist/exports/useOverlayPosition.cjs",
+  "module": "../dist/exports/useOverlayPosition.js",
+  "types": "../dist/types/exports/useOverlayPosition.d.ts"
+}

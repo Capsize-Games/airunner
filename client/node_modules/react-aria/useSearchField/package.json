@@ -1,0 +1,5 @@
+{
+  "main": "../dist/exports/useSearchField.cjs",
+  "module": "../dist/exports/useSearchField.js",
+  "types": "../dist/types/exports/useSearchField.d.ts"
+}

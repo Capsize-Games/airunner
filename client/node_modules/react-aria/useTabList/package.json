@@ -1,0 +1,5 @@
+{
+  "main": "../dist/exports/useTabList.cjs",
+  "module": "../dist/exports/useTabList.js",
+  "types": "../dist/types/exports/useTabList.d.ts"
+}

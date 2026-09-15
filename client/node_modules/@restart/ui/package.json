@@ -1,0 +1,79 @@
+{
+  "name": "@restart/ui",
+  "version": "1.9.4",
+  "description": "Utilities for creating robust overlay components",
+  "author": {
+    "name": "Jason Quense",
+    "email": "monastic.panic@gmail.com"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/react-restart/ui.git"
+  },
+  "license": "MIT",
+  "main": "cjs/index.js",
+  "module": "esm/index.js",
+  "types": "esm/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./esm/index.d.ts",
+      "node": "./cjs/index.js",
+      "import": "./esm/index.js",
+      "require": "./cjs/index.js"
+    },
+    "./*": {
+      "types": "./esm/*.d.ts",
+      "node": "./cjs/*.js",
+      "import": "./esm/*.js",
+      "require": "./cjs/*.js"
+    }
+  },
+  "sideEffects": false,
+  "gitHooks": {
+    "pre-commit": "lint-staged"
+  },
+  "keywords": [
+    "react-overlays",
+    "react-component",
+    "react",
+    "overlay",
+    "react-component",
+    "tooltip",
+    "bootstrap",
+    "popover",
+    "modal"
+  ],
+  "lint-staged": {
+    "*.js,*.tsx": "eslint --fix --ext .js,.ts,.tsx"
+  },
+  "prettier": {
+    "singleQuote": true,
+    "trailingComma": "all"
+  },
+  "publishConfig": {
+    "access": "public",
+    "directory": "lib"
+  },
+  "release": {
+    "conventionalCommits": true
+  },
+  "dependencies": {
+    "@babel/runtime": "^7.26.0",
+    "@popperjs/core": "^2.11.8",
+    "@react-aria/ssr": "^3.5.0",
+    "@restart/hooks": "^0.5.0",
+    "@types/warning": "^3.0.3",
+    "dequal": "^2.0.3",
+    "dom-helpers": "^5.2.0",
+    "uncontrollable": "^8.0.4",
+    "warning": "^4.0.3"
+  },
+  "peerDependencies": {
+    "react": ">=16.14.0",
+    "react-dom": ">=16.14.0"
+  },
+  "bugs": {
+    "url": "https://github.com/react-restart/ui/issues"
+  },
+  "packageManager": "yarn@1.22.19+sha1.4ba7fc5c6e704fce2066ecbfb0b0d8976fe62447"
+}

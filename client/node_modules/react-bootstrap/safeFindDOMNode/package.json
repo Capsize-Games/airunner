@@ -1,0 +1,7 @@
+{
+  "name": "react-bootstrap/safeFindDOMNode",
+  "private": true,
+  "main": "../cjs/safeFindDOMNode.js",
+  "module": "../esm/safeFindDOMNode.js",
+  "types": "../esm/safeFindDOMNode.d.ts"
+}

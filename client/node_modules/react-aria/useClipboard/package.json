@@ -1,0 +1,5 @@
+{
+  "main": "../dist/exports/useClipboard.cjs",
+  "module": "../dist/exports/useClipboard.js",
+  "types": "../dist/types/exports/useClipboard.d.ts"
+}

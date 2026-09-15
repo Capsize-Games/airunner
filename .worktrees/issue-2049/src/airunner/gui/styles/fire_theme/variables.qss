@@ -1,0 +1,17 @@
+/* VARIABLES */
+@primary-color: rgba(185, 45, 0, 255);
+@darkprimary-color: rgba(185, 45, 0, 100);
+@darkerprimary-color: rgba(185, 45, 0, 50);
+@secondary-color: rgba(255, 100, 0, 255);
+@darksecondary-color: #ff6600;
+@darkersecondary-color: #993d00;
+@success-color: #00A800;
+@danger-color: #FF5555;
+@warning-color: #FFAA00;
+@info-color: #FF8844;
+@light-color: #C8C8C8;
+@dim-color: #666666;
+@dark-color: #000;
+@line-color-light: #333;
+@line-color-dark: #222;
+/* END_VARIABLES */

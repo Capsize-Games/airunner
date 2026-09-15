@@ -1,0 +1,5 @@
+{
+  "main": "../../../dist/exports/private/collections/useCachedChildren.cjs",
+  "module": "../../../dist/exports/private/collections/useCachedChildren.js",
+  "types": "../../../dist/types/exports/private/collections/useCachedChildren.d.ts"
+}

@@ -1,0 +1,5 @@
+{
+  "main": "../dist/exports/useToast.cjs",
+  "module": "../dist/exports/useToast.js",
+  "types": "../dist/types/exports/useToast.d.ts"
+}

@@ -1,0 +1,5 @@
+{
+  "main": "../dist/exports/useTooltipTriggerState.cjs",
+  "module": "../dist/exports/useTooltipTriggerState.js",
+  "types": "../dist/types/exports/useTooltipTriggerState.d.ts"
+}

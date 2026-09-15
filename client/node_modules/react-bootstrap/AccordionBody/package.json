@@ -1,0 +1,7 @@
+{
+  "name": "react-bootstrap/AccordionBody",
+  "private": true,
+  "main": "../cjs/AccordionBody.js",
+  "module": "../esm/AccordionBody.js",
+  "types": "../esm/AccordionBody.d.ts"
+}

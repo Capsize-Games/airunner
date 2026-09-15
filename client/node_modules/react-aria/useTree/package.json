@@ -1,0 +1,5 @@
+{
+  "main": "../dist/exports/useTree.cjs",
+  "module": "../dist/exports/useTree.js",
+  "types": "../dist/types/exports/useTree.d.ts"
+}

@@ -1,0 +1,5 @@
+{
+  "main": "../../../dist/exports/private/datepicker/utils.cjs",
+  "module": "../../../dist/exports/private/datepicker/utils.js",
+  "types": "../../../dist/types/exports/private/datepicker/utils.d.ts"
+}

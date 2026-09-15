@@ -1,0 +1,7 @@
+{
+  "name": "react-bootstrap/CardText",
+  "private": true,
+  "main": "../cjs/CardText.js",
+  "module": "../esm/CardText.js",
+  "types": "../esm/CardText.d.ts"
+}

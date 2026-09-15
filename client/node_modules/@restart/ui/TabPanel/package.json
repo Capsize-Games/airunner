@@ -1,0 +1,7 @@
+{
+  "name": "@restart/ui/TabPanel",
+  "private": true,
+  "main": "../cjs/TabPanel.js",
+  "module": "../esm/TabPanel.js",
+  "types": "../esm/TabPanel.d.ts"
+}

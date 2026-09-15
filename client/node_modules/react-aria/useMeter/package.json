@@ -1,0 +1,5 @@
+{
+  "main": "../dist/exports/useMeter.cjs",
+  "module": "../dist/exports/useMeter.js",
+  "types": "../dist/types/exports/useMeter.d.ts"
+}

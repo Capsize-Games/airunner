@@ -1,0 +1,7 @@
+{
+  "name": "@restart/ui/ModalManager",
+  "private": true,
+  "main": "../cjs/ModalManager.js",
+  "module": "../esm/ModalManager.js",
+  "types": "../esm/ModalManager.d.ts"
+}

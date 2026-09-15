@@ -1,0 +1,7 @@
+{
+  "name": "@restart/hooks/useIsInitialRenderRef",
+  "private": true,
+  "main": "../cjs/useIsInitialRenderRef.js",
+  "module": "../esm/useIsInitialRenderRef.js",
+  "types": "../esm/useIsInitialRenderRef.d.ts"
+}

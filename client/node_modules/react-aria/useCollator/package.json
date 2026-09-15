@@ -1,0 +1,5 @@
+{
+  "main": "../dist/exports/useCollator.cjs",
+  "module": "../dist/exports/useCollator.js",
+  "types": "../dist/types/exports/useCollator.d.ts"
+}

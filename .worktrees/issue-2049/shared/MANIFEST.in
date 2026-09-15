@@ -1,0 +1,5 @@
+# The shared sdist carries its own README so the sdist -> wheel phase of
+# `python -m build` can resolve the long_description (issue #2061). In a
+# checkout, package_metadata.README resolves the repo-root README instead
+# (parents[2] of <repo>/shared/airunner_common/package_metadata.py).
+include README.md

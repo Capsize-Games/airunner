@@ -1,0 +1,5 @@
+{
+  "main": "../../../dist/exports/private/spinbutton/useSpinButton.cjs",
+  "module": "../../../dist/exports/private/spinbutton/useSpinButton.js",
+  "types": "../../../dist/types/exports/private/spinbutton/useSpinButton.d.ts"
+}

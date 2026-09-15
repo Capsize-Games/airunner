@@ -1,0 +1,5 @@
+{
+  "main": "../dist/exports/useFocusVisible.cjs",
+  "module": "../dist/exports/useFocusVisible.js",
+  "types": "../dist/types/exports/useFocusVisible.d.ts"
+}

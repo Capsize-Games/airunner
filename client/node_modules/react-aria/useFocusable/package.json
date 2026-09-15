@@ -1,0 +1,5 @@
+{
+  "main": "../dist/exports/useFocusable.cjs",
+  "module": "../dist/exports/useFocusable.js",
+  "types": "../dist/types/exports/useFocusable.d.ts"
+}

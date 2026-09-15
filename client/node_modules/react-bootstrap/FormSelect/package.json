@@ -1,0 +1,7 @@
+{
+  "name": "react-bootstrap/FormSelect",
+  "private": true,
+  "main": "../cjs/FormSelect.js",
+  "module": "../esm/FormSelect.js",
+  "types": "../esm/FormSelect.d.ts"
+}

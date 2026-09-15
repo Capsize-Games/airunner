@@ -1,0 +1,7 @@
+{
+  "name": "@restart/ui/utils",
+  "private": true,
+  "main": "../cjs/utils.js",
+  "module": "../esm/utils.js",
+  "types": "../esm/utils.d.ts"
+}

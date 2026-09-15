@@ -1,0 +1,7 @@
+{
+  "name": "react-bootstrap/Ratio",
+  "private": true,
+  "main": "../cjs/Ratio.js",
+  "module": "../esm/Ratio.js",
+  "types": "../esm/Ratio.d.ts"
+}

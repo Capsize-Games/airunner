@@ -1,0 +1,5 @@
+{
+  "main": "../dist/exports/useRadioGroupState.cjs",
+  "module": "../dist/exports/useRadioGroupState.js",
+  "types": "../dist/types/exports/useRadioGroupState.d.ts"
+}

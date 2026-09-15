@@ -1,0 +1,5 @@
+{
+  "main": "../dist/exports/useListBox.cjs",
+  "module": "../dist/exports/useListBox.js",
+  "types": "../dist/types/exports/useListBox.d.ts"
+}

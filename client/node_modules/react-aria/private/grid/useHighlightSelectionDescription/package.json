@@ -1,0 +1,5 @@
+{
+  "main": "../../../dist/exports/private/grid/useHighlightSelectionDescription.cjs",
+  "module": "../../../dist/exports/private/grid/useHighlightSelectionDescription.js",
+  "types": "../../../dist/types/exports/private/grid/useHighlightSelectionDescription.d.ts"
+}

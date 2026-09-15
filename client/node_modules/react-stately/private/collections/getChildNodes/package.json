@@ -1,0 +1,5 @@
+{
+  "main": "../../../dist/exports/private/collections/getChildNodes.cjs",
+  "module": "../../../dist/exports/private/collections/getChildNodes.js",
+  "types": "../../../dist/types/exports/private/collections/getChildNodes.d.ts"
+}

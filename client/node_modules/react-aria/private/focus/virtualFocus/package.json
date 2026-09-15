@@ -1,0 +1,5 @@
+{
+  "main": "../../../dist/exports/private/focus/virtualFocus.cjs",
+  "module": "../../../dist/exports/private/focus/virtualFocus.js",
+  "types": "../../../dist/types/exports/private/focus/virtualFocus.d.ts"
+}

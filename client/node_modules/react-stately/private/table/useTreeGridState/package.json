@@ -1,0 +1,5 @@
+{
+  "main": "../../../dist/exports/private/table/useTreeGridState.cjs",
+  "module": "../../../dist/exports/private/table/useTreeGridState.js",
+  "types": "../../../dist/types/exports/private/table/useTreeGridState.d.ts"
+}

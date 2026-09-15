@@ -1,0 +1,5 @@
+{
+  "main": "../dist/exports/useToolbar.cjs",
+  "module": "../dist/exports/useToolbar.js",
+  "types": "../dist/types/exports/useToolbar.d.ts"
+}

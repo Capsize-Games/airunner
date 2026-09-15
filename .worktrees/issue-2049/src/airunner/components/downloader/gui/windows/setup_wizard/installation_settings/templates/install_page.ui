@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>install_page</class>
+ <widget class="QWidget" name="install_page">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>579</width>
+    <height>447</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Form</string>
+  </property>
+  <layout class="QGridLayout" name="gridLayout">
+   <item row="0" column="0">
+    <widget class="QLabel" name="label">
+     <property name="font">
+      <font>
+       <pointsize>11</pointsize>
+       <bold>true</bold>
+      </font>
+     </property>
+     <property name="text">
+      <string>Downloading AI Models</string>
+     </property>
+    </widget>
+   </item>
+   <item row="4" column="0">
+    <widget class="QProgressBar" name="progress_bar">
+     <property name="value">
+      <number>0</number>
+     </property>
+     <property name="format">
+      <string>Total Installation progress %p%</string>
+     </property>
+    </widget>
+   </item>
+   <item row="3" column="0">
+    <widget class="QProgressBar" name="status_bar">
+     <property name="value">
+      <number>0</number>
+     </property>
+    </widget>
+   </item>
+   <item row="5" column="0">
+    <widget class="QPlainTextEdit" name="log">
+     <property name="readOnly">
+      <bool>true</bool>
+     </property>
+     <property name="plainText">
+      <string/>
+     </property>
+    </widget>
+   </item>
+   <item row="1" column="0">
+    <widget class="QLabel" name="status">
+     <property name="text">
+      <string/>
+     </property>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections/>
+ <slots>
+  <slot>yes_toggled(bool)</slot>
+  <slot>no_toggled(bool)</slot>
+ </slots>
+</ui>

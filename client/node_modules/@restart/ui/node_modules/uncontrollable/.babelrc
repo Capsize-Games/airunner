@@ -1,0 +1,19 @@
+{
+  "presets": [
+    "babel-preset-env-modules",
+    "@babel/preset-react",
+    "@babel/preset-typescript"
+  ],
+  "env": {
+    "esm": {
+      "presets": [
+        [
+          "babel-preset-env-modules",
+          {
+            "modules": false
+          }
+        ]
+      ]
+    }
+  }
+}

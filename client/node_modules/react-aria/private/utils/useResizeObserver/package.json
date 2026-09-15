@@ -1,0 +1,5 @@
+{
+  "main": "../../../dist/exports/private/utils/useResizeObserver.cjs",
+  "module": "../../../dist/exports/private/utils/useResizeObserver.js",
+  "types": "../../../dist/types/exports/private/utils/useResizeObserver.d.ts"
+}

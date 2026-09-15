@@ -1,0 +1,32 @@
+<html>
+  <head>
+    {% if base_href %}
+    <base href="{{ base_href }}" />
+    {% endif %}
+    <script type="text/javascript">
+      window.MathJax = {
+        tex: {inlineMath: [['$','$'], ['\\(','\\)']], displayMath: [['$$','$$'], ['\\[','\\]']]},
+        options: { skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'] },
+        svg: { fontCache: 'global' }
+      };
+    </script>
+  {%- if mathjax_url %}
+  <script type="text/javascript" src="{{ mathjax_url }}"></script>
+  {%- endif %}
+    <link rel="stylesheet" type="text/css" href="{{ static_base_path }}/css/content_widget.css">
+    <script type='text/javascript' src='{{ static_base_path }}/js/content_widget.js'></script>
+    <script type="text/javascript">
+      document.addEventListener('DOMContentLoaded', function() {
+        document.body.style.fontSize = '{{ font_size|int }}px';
+      });
+    </script>
+  </head>
+  <body>
+    {% for message in messages %}
+    <div class="message">
+      <div class="sender">{{ message.name | e }}</div>
+      <div class="content">{{ message.content | safe }}</div>
+    </div>
+    {% endfor %}
+  </body>
+</html>

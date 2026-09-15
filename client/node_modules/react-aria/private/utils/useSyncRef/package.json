@@ -1,0 +1,5 @@
+{
+  "main": "../../../dist/exports/private/utils/useSyncRef.cjs",
+  "module": "../../../dist/exports/private/utils/useSyncRef.js",
+  "types": "../../../dist/types/exports/private/utils/useSyncRef.d.ts"
+}

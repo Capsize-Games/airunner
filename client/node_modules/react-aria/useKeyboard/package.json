@@ -1,0 +1,5 @@
+{
+  "main": "../dist/exports/useKeyboard.cjs",
+  "module": "../dist/exports/useKeyboard.js",
+  "types": "../dist/types/exports/useKeyboard.d.ts"
+}

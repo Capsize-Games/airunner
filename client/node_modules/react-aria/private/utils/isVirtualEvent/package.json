@@ -1,0 +1,5 @@
+{
+  "main": "../../../dist/exports/private/utils/isVirtualEvent.cjs",
+  "module": "../../../dist/exports/private/utils/isVirtualEvent.js",
+  "types": "../../../dist/types/exports/private/utils/isVirtualEvent.d.ts"
+}

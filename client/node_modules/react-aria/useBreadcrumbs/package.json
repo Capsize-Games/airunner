@@ -1,0 +1,5 @@
+{
+  "main": "../dist/exports/useBreadcrumbs.cjs",
+  "module": "../dist/exports/useBreadcrumbs.js",
+  "types": "../dist/types/exports/useBreadcrumbs.d.ts"
+}

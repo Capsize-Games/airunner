@@ -1,0 +1,5 @@
+{
+  "main": "../../../dist/exports/private/utils/getScrollParents.cjs",
+  "module": "../../../dist/exports/private/utils/getScrollParents.js",
+  "types": "../../../dist/types/exports/private/utils/getScrollParents.d.ts"
+}

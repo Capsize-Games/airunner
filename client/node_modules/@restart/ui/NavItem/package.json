@@ -1,0 +1,7 @@
+{
+  "name": "@restart/ui/NavItem",
+  "private": true,
+  "main": "../cjs/NavItem.js",
+  "module": "../esm/NavItem.js",
+  "types": "../esm/NavItem.d.ts"
+}

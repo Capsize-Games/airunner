@@ -1,0 +1,178 @@
+name: Hybrid Runtime CI
+
+on:
+  pull_request:
+    branches: [master, llm-refactor, hybrid-runtime-foundation]
+  push:
+    branches: [master, llm-refactor, hybrid-runtime-foundation]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  PYTHON_VERSION: "3.13"
+  # The root package declares a single dev extra "development" (issue #2054);
+  # it mirrors shared DEVELOPMENT_REQUIREMENTS (pytest, pytest-timeout, ...).
+  # The services package exposes the same "development" extra.
+  TEST_PROFILES: development
+
+jobs:
+  runtime-contract-tests:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libgl1-mesa-glx \
+            libglib2.0-0 \
+            libsm6 \
+            libxext6 \
+            libxrender-dev
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip setuptools wheel
+          # Install local shared/services surfaces first so the editable root
+          # install resolves airunner-common/airunner-services from this
+          # checkout instead of PyPI (issue #2054). services/setup.py no longer
+          # imports airunner_common at build time (issue #2038), so an isolated
+          # build works; shared is still installed first because services
+          # declares it as a runtime dependency.
+          pip install -e ./shared
+          pip install -e "./services[$TEST_PROFILES]"
+          pip install -e ".[$TEST_PROFILES]"
+
+      - name: Run runtime contract tests
+        run: |
+          pytest \
+            services/tests/test_service_bootstrap.py \
+            services/tests/test_legacy_api_surface.py \
+            services/tests/test_loopback_auth.py \
+            services/tests/test_secret_storage.py \
+            services/tests/test_native_package_isolation.py \
+            services/tests/test_zimage_model_dir_config.py \
+            services/tests/test_third_party_notices.py \
+            -v \
+            --tb=short \
+            --junitxml=runtime-contracts.xml
+        env:
+          AIRUNNER_HEADLESS: "1"
+          AIRUNNER_HTTP_PORT: "8188"
+          AIRUNNER_HTTP_HOST: "127.0.0.1"
+
+      - name: Upload runtime contract results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: runtime-contract-results
+          path: runtime-contracts.xml
+
+  runtime-smoke:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        include:
+          - name: llm
+            smoke-flag: --llm-runtime-smoke
+          - name: stt
+            smoke-flag: --stt-runtime-smoke
+          - name: art
+            smoke-flag: --art-runtime-smoke
+          - name: tts
+            smoke-flag: --tts-runtime-smoke
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libgl1-mesa-glx \
+            libglib2.0-0 \
+            libsm6 \
+            libxext6 \
+            libxrender-dev
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip setuptools wheel
+          pip install -e ./shared
+          pip install -e "./services[$TEST_PROFILES]"
+          pip install -e ".[$TEST_PROFILES]"
+
+      - name: Run ${{ matrix.name }} runtime smoke tests
+        run: |
+          python scripts/run_tests.py \
+            ${{ matrix.smoke-flag }} \
+            --verbose
+
+  eval-tests:
+    runs-on: ubuntu-latest
+    needs: runtime-contract-tests
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libgl1-mesa-glx \
+            libglib2.0-0 \
+            libsm6 \
+            libxext6 \
+            libxrender-dev
+      
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip setuptools wheel
+          pip install -e ./shared
+          pip install -e "./services[$TEST_PROFILES]"
+          pip install -e ".[$TEST_PROFILES]"
+      
+      - name: Run eval tests
+        run: |
+          pytest services/tests/eval \
+            -v \
+            -m eval \
+            --timeout=300 \
+            --tb=short \
+            --junitxml=pytest-report.xml | tee pytest-output.txt
+        env:
+          AIRUNNER_HEADLESS: "1"
+          AIRUNNER_HTTP_PORT: "8188"
+          AIRUNNER_HTTP_HOST: "127.0.0.1"
+      
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: eval-test-results-${{ env.PYTHON_VERSION }}
+          path: |
+            pytest-report.xml
+            pytest-output.txt

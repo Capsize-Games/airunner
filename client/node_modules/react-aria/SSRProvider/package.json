@@ -1,0 +1,5 @@
+{
+  "main": "../dist/exports/SSRProvider.cjs",
+  "module": "../dist/exports/SSRProvider.js",
+  "types": "../dist/types/exports/SSRProvider.d.ts"
+}

@@ -1,0 +1,7 @@
+{
+  "name": "react-bootstrap/DropdownHeader",
+  "private": true,
+  "main": "../cjs/DropdownHeader.js",
+  "module": "../esm/DropdownHeader.js",
+  "types": "../esm/DropdownHeader.d.ts"
+}

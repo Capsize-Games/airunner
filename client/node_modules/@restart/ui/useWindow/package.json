@@ -1,0 +1,7 @@
+{
+  "name": "@restart/ui/useWindow",
+  "private": true,
+  "main": "../cjs/useWindow.js",
+  "module": "../esm/useWindow.js",
+  "types": "../esm/useWindow.d.ts"
+}

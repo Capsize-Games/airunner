@@ -1,0 +1,7 @@
+{
+  "name": "@restart/ui/useScrollParent",
+  "private": true,
+  "main": "../cjs/useScrollParent.js",
+  "module": "../esm/useScrollParent.js",
+  "types": "../esm/useScrollParent.d.ts"
+}

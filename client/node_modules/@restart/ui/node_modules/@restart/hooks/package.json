@@ -1,0 +1,58 @@
+{
+  "name": "@restart/hooks",
+  "version": "0.5.1",
+  "main": "cjs/index.js",
+  "types": "cjs/index.d.ts",
+  "module": "esm/index.js",
+  "exports": {
+    ".": {
+      "types": "./esm/index.d.ts",
+      "import": "./esm/index.js",
+      "require": "./cjs/index.js"
+    },
+    "./*": {
+      "types": "./esm/*.d.ts",
+      "import": "./esm/*.js",
+      "require": "./cjs/*.js"
+    }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jquense/react-common-hooks.git"
+  },
+  "author": {
+    "name": "Jason Quense",
+    "email": "monastic.panic@gmail.com"
+  },
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/react-restart/hooks/issues"
+  },
+  "homepage": "https://github.com/react-restart/hooks#readme",
+  "jest": {
+    "preset": "@4c",
+    "testEnvironment": "jsdom",
+    "setupFilesAfterEnv": [
+      "./test/setup.js"
+    ]
+  },
+  "prettier": {
+    "singleQuote": true,
+    "semi": false,
+    "trailingComma": "all"
+  },
+  "publishConfig": {
+    "access": "public",
+    "directory": "lib"
+  },
+  "release": {
+    "conventionalCommits": true
+  },
+  "peerDependencies": {
+    "react": ">=16.8.0"
+  },
+  "dependencies": {
+    "dequal": "^2.0.3"
+  },
+  "packageManager": "yarn@1.22.22+sha512.a6b2f7906b721bba3d67d4aff083df04dad64c399707841b7acf00f6b133b7ac24255f2652fa22ae3534329dc6180534e98d17432037ff6fd140556e2bb3137e"
+}

@@ -1,0 +1,5 @@
+{
+  "main": "../dist/exports/PortalProvider.cjs",
+  "module": "../dist/exports/PortalProvider.js",
+  "types": "../dist/types/exports/PortalProvider.d.ts"
+}

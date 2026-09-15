@@ -1,0 +1,7 @@
+{
+  "name": "react-bootstrap/TransitionWrapper",
+  "private": true,
+  "main": "../cjs/TransitionWrapper.js",
+  "module": "../esm/TransitionWrapper.js",
+  "types": "../esm/TransitionWrapper.d.ts"
+}

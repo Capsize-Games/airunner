@@ -1,0 +1,5 @@
+{
+  "main": "../dist/exports/useTable.cjs",
+  "module": "../dist/exports/useTable.js",
+  "types": "../dist/types/exports/useTable.d.ts"
+}

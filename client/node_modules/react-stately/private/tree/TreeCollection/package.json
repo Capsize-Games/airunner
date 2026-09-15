@@ -1,0 +1,5 @@
+{
+  "main": "../../../dist/exports/private/tree/TreeCollection.cjs",
+  "module": "../../../dist/exports/private/tree/TreeCollection.js",
+  "types": "../../../dist/types/exports/private/tree/TreeCollection.d.ts"
+}

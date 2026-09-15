@@ -1,0 +1,5 @@
+{
+  "main": "../../../dist/exports/private/collections/Hidden.cjs",
+  "module": "../../../dist/exports/private/collections/Hidden.js",
+  "types": "../../../dist/types/exports/private/collections/Hidden.d.ts"
+}

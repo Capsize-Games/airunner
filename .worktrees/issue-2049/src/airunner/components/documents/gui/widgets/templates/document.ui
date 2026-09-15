@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>document_widget</class>
+ <widget class="QWidget" name="document_widget">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>400</width>
+    <height>170</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Form</string>
+  </property>
+  <layout class="QGridLayout" name="gridLayout">
+   <item row="0" column="1">
+    <widget class="QPushButton" name="delete_button">
+     <property name="minimumSize">
+      <size>
+       <width>30</width>
+       <height>30</height>
+      </size>
+     </property>
+     <property name="maximumSize">
+      <size>
+       <width>30</width>
+       <height>30</height>
+      </size>
+     </property>
+     <property name="cursor">
+      <cursorShape>PointingHandCursor</cursorShape>
+     </property>
+     <property name="text">
+      <string/>
+     </property>
+     <property name="icon">
+      <iconset resource="../../../../../gui/resources/feather.qrc">
+       <normaloff>:/dark/icons/feather/dark/trash-2.svg</normaloff>:/dark/icons/feather/dark/trash-2.svg</iconset>
+     </property>
+    </widget>
+   </item>
+   <item row="0" column="0">
+    <widget class="QCheckBox" name="checkBox">
+     <property name="text">
+      <string>CheckBox</string>
+     </property>
+    </widget>
+   </item>
+  <item row="0" column="2">
+   <widget class="QCheckBox" name="enabledCheckBox">
+    <property name="text">
+    <string>Enabled</string>
+    </property>
+   </widget>
+  </item>
+  </layout>
+ </widget>
+ <resources>
+  <include location="../../../../../gui/resources/feather.qrc"/>
+ </resources>
+ <connections/>
+</ui>

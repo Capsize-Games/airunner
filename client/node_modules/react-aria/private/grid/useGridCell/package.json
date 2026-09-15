@@ -1,0 +1,5 @@
+{
+  "main": "../../../dist/exports/private/grid/useGridCell.cjs",
+  "module": "../../../dist/exports/private/grid/useGridCell.js",
+  "types": "../../../dist/types/exports/private/grid/useGridCell.d.ts"
+}

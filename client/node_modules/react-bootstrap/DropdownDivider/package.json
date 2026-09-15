@@ -1,0 +1,7 @@
+{
+  "name": "react-bootstrap/DropdownDivider",
+  "private": true,
+  "main": "../cjs/DropdownDivider.js",
+  "module": "../esm/DropdownDivider.js",
+  "types": "../esm/DropdownDivider.d.ts"
+}

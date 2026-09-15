@@ -1,0 +1,7 @@
+{
+  "name": "react-bootstrap/NavbarText",
+  "private": true,
+  "main": "../cjs/NavbarText.js",
+  "module": "../esm/NavbarText.js",
+  "types": "../esm/NavbarText.d.ts"
+}

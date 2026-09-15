@@ -1,0 +1,5 @@
+{
+  "main": "../dist/exports/useColorWheel.cjs",
+  "module": "../dist/exports/useColorWheel.js",
+  "types": "../dist/types/exports/useColorWheel.d.ts"
+}

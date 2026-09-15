@@ -1,0 +1,5 @@
+{
+  "main": "../dist/exports/useVirtualizerState.cjs",
+  "module": "../dist/exports/useVirtualizerState.js",
+  "types": "../dist/types/exports/useVirtualizerState.d.ts"
+}

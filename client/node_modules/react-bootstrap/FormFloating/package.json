@@ -1,0 +1,7 @@
+{
+  "name": "react-bootstrap/FormFloating",
+  "private": true,
+  "main": "../cjs/FormFloating.js",
+  "module": "../esm/FormFloating.js",
+  "types": "../esm/FormFloating.d.ts"
+}

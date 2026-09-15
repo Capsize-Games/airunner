@@ -1,0 +1,5 @@
+{
+  "main": "../dist/exports/useFocusWithin.cjs",
+  "module": "../dist/exports/useFocusWithin.js",
+  "types": "../dist/types/exports/useFocusWithin.d.ts"
+}

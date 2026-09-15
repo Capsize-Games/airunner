@@ -1,0 +1,5 @@
+{
+  "main": "../../../dist/exports/private/toggle/useToggle.cjs",
+  "module": "../../../dist/exports/private/toggle/useToggle.js",
+  "types": "../../../dist/types/exports/private/toggle/useToggle.d.ts"
+}

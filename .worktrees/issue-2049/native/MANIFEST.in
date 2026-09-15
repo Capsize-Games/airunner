@@ -1,0 +1,3 @@
+# The per-package README is used as long_description (issue #2061); it must
+# survive the sdist -> wheel phase of `python -m build`.
+include README.md

@@ -1,0 +1,7 @@
+{
+  "name": "@restart/hooks/useUpdateLayoutEffect",
+  "private": true,
+  "main": "../cjs/useUpdateLayoutEffect.js",
+  "module": "../esm/useUpdateLayoutEffect.js",
+  "types": "../esm/useUpdateLayoutEffect.d.ts"
+}

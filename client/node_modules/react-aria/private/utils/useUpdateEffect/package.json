@@ -1,0 +1,5 @@
+{
+  "main": "../../../dist/exports/private/utils/useUpdateEffect.cjs",
+  "module": "../../../dist/exports/private/utils/useUpdateEffect.js",
+  "types": "../../../dist/types/exports/private/utils/useUpdateEffect.d.ts"
+}

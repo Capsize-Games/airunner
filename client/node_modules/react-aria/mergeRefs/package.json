@@ -1,0 +1,5 @@
+{
+  "main": "../dist/exports/mergeRefs.cjs",
+  "module": "../dist/exports/mergeRefs.js",
+  "types": "../dist/types/exports/mergeRefs.d.ts"
+}

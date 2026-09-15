@@ -1,0 +1,5 @@
+{
+  "main": "../../../dist/exports/private/utils/inertValue.cjs",
+  "module": "../../../dist/exports/private/utils/inertValue.js",
+  "types": "../../../dist/types/exports/private/utils/inertValue.d.ts"
+}

@@ -1,0 +1,5 @@
+{
+  "main": "../dist/exports/useHover.cjs",
+  "module": "../dist/exports/useHover.js",
+  "types": "../dist/types/exports/useHover.d.ts"
+}

@@ -1,0 +1,5 @@
+{
+  "main": "../dist/exports/useNumberFieldState.cjs",
+  "module": "../dist/exports/useNumberFieldState.js",
+  "types": "../dist/types/exports/useNumberFieldState.d.ts"
+}

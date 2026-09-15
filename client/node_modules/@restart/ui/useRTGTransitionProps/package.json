@@ -1,0 +1,7 @@
+{
+  "name": "@restart/ui/useRTGTransitionProps",
+  "private": true,
+  "main": "../cjs/useRTGTransitionProps.js",
+  "module": "../esm/useRTGTransitionProps.js",
+  "types": "../esm/useRTGTransitionProps.d.ts"
+}

@@ -1,0 +1,5 @@
+{
+  "main": "../../../dist/exports/private/interactions/useScrollWheel.cjs",
+  "module": "../../../dist/exports/private/interactions/useScrollWheel.js",
+  "types": "../../../dist/types/exports/private/interactions/useScrollWheel.d.ts"
+}

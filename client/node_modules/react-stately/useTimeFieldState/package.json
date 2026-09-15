@@ -1,0 +1,5 @@
+{
+  "main": "../dist/exports/useTimeFieldState.cjs",
+  "module": "../dist/exports/useTimeFieldState.js",
+  "types": "../dist/types/exports/useTimeFieldState.d.ts"
+}

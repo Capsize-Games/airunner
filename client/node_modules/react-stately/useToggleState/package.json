@@ -1,0 +1,5 @@
+{
+  "main": "../dist/exports/useToggleState.cjs",
+  "module": "../dist/exports/useToggleState.js",
+  "types": "../dist/types/exports/useToggleState.d.ts"
+}

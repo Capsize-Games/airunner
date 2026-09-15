@@ -1,0 +1,5 @@
+{
+  "main": "../dist/exports/Collection.cjs",
+  "module": "../dist/exports/Collection.js",
+  "types": "../dist/types/exports/Collection.d.ts"
+}

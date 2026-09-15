@@ -1,0 +1,5 @@
+{
+  "main": "../dist/exports/useTableState.cjs",
+  "module": "../dist/exports/useTableState.js",
+  "types": "../dist/types/exports/useTableState.d.ts"
+}

@@ -1,0 +1,5 @@
+{
+  "main": "../../../dist/exports/private/virtualizer/useVirtualizerItem.cjs",
+  "module": "../../../dist/exports/private/virtualizer/useVirtualizerItem.js",
+  "types": "../../../dist/types/exports/private/virtualizer/useVirtualizerItem.d.ts"
+}

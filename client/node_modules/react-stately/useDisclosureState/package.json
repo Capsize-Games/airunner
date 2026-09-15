@@ -1,0 +1,5 @@
+{
+  "main": "../dist/exports/useDisclosureState.cjs",
+  "module": "../dist/exports/useDisclosureState.js",
+  "types": "../dist/types/exports/useDisclosureState.d.ts"
+}

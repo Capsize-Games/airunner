@@ -1,0 +1,5 @@
+{
+  "main": "../../../dist/exports/private/flags/flags.cjs",
+  "module": "../../../dist/exports/private/flags/flags.js",
+  "types": "../../../dist/types/exports/private/flags/flags.d.ts"
+}

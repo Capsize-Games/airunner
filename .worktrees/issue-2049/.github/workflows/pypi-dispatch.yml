@@ -1,0 +1,107 @@
+name: PyPI Distribution
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  packages: write
+
+env:
+  PYTHON_VERSION: "3.13"
+
+jobs:
+  build-python-package:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install build
+
+      - name: Build packages
+        run: |
+          # Publish the full package surface documented in the README
+          # (issue #2061): airunner (GUI), airunner-services (headless
+          # daemon + runtimes), airunner-native (launcher) and airunner-common
+          # (shared foundation). airunner and airunner-native pin
+          # airunner-services==VERSION / airunner-common==VERSION, so all four
+          # must be published together or `pip install airunner` cannot
+          # resolve. Each invocation produces an sdist and a wheel in dist/;
+          # the publish step below uploads every artifact.
+          mkdir -p dist
+          python -m build --outdir dist shared
+          python -m build --outdir dist services
+          python -m build --outdir dist native
+          python -m build --outdir dist .
+
+      - name: Upload Python distribution artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: python-dist
+          path: dist/*
+
+      - name: Publish package
+        if: github.event_name == 'release' || github.event_name == 'workflow_dispatch'
+        uses: pypa/gh-action-pypi-publish@27b31702a0e7fc50959f5ad993c78deac1bdfc29
+        with:
+          user: __token__
+          password: ${{ secrets.PYPI_API_TOKEN }}
+
+  build-sidecars:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        target-platform:
+          - linux
+          - windows
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install native build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake mingw-w64 ninja-build
+
+      - name: Build pinned sidecar bundle
+        run: |
+          ./scripts/build_runtime_sidecars.sh \
+            --clean \
+            --target-platform ${{ matrix.target-platform }}
+
+      - name: Upload sidecar bundle artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: runtime-sidecars-${{ matrix.target-platform }}
+          path: build/runtime-sidecars/${{ matrix.target-platform }}
+
+  publish-release-assets:
+    if: github.event_name == 'release'
+    needs: build-python-package
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download Python distribution artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: python-dist
+          path: release-assets/python-dist
+
+      - name: Upload release assets
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            release-assets/python-dist/*
+          overwrite_files: true

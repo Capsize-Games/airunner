@@ -1,0 +1,5 @@
+{
+  "main": "../../../dist/exports/private/interactions/focusSafely.cjs",
+  "module": "../../../dist/exports/private/interactions/focusSafely.js",
+  "types": "../../../dist/types/exports/private/interactions/focusSafely.d.ts"
+}

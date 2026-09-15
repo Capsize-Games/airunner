@@ -1,0 +1,7 @@
+{
+  "name": "@restart/hooks/useDebouncedCallback",
+  "private": true,
+  "main": "../cjs/useDebouncedCallback.js",
+  "module": "../esm/useDebouncedCallback.js",
+  "types": "../esm/useDebouncedCallback.d.ts"
+}

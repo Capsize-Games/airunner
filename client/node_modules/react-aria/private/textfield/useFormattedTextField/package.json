@@ -1,0 +1,5 @@
+{
+  "main": "../../../dist/exports/private/textfield/useFormattedTextField.cjs",
+  "module": "../../../dist/exports/private/textfield/useFormattedTextField.js",
+  "types": "../../../dist/types/exports/private/textfield/useFormattedTextField.d.ts"
+}

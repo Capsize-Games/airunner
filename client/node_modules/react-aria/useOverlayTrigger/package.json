@@ -1,0 +1,5 @@
+{
+  "main": "../dist/exports/useOverlayTrigger.cjs",
+  "module": "../dist/exports/useOverlayTrigger.js",
+  "types": "../dist/types/exports/useOverlayTrigger.d.ts"
+}

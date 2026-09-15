@@ -1,0 +1,5 @@
+{
+  "main": "../dist/exports/useColorSwatch.cjs",
+  "module": "../dist/exports/useColorSwatch.js",
+  "types": "../dist/types/exports/useColorSwatch.d.ts"
+}

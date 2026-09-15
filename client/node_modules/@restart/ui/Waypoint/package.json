@@ -1,0 +1,7 @@
+{
+  "name": "@restart/ui/Waypoint",
+  "private": true,
+  "main": "../cjs/Waypoint.js",
+  "module": "../esm/Waypoint.js",
+  "types": "../esm/Waypoint.d.ts"
+}

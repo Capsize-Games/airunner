@@ -1,0 +1,5 @@
+{
+  "main": "../../../dist/exports/private/utils/runAfterTransition.cjs",
+  "module": "../../../dist/exports/private/utils/runAfterTransition.js",
+  "types": "../../../dist/types/exports/private/utils/runAfterTransition.d.ts"
+}

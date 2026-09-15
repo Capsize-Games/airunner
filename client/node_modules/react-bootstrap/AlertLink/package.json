@@ -1,0 +1,7 @@
+{
+  "name": "react-bootstrap/AlertLink",
+  "private": true,
+  "main": "../cjs/AlertLink.js",
+  "module": "../esm/AlertLink.js",
+  "types": "../esm/AlertLink.d.ts"
+}

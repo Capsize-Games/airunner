@@ -1,0 +1,7 @@
+{
+  "name": "react-bootstrap/AccordionButton",
+  "private": true,
+  "main": "../cjs/AccordionButton.js",
+  "module": "../esm/AccordionButton.js",
+  "types": "../esm/AccordionButton.d.ts"
+}

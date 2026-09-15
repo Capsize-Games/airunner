@@ -1,0 +1,5 @@
+{
+  "main": "../dist/exports/mergeProps.cjs",
+  "module": "../dist/exports/mergeProps.js",
+  "types": "../dist/types/exports/mergeProps.d.ts"
+}

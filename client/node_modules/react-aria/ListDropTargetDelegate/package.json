@@ -1,0 +1,5 @@
+{
+  "main": "../dist/exports/ListDropTargetDelegate.cjs",
+  "module": "../dist/exports/ListDropTargetDelegate.js",
+  "types": "../dist/types/exports/ListDropTargetDelegate.d.ts"
+}

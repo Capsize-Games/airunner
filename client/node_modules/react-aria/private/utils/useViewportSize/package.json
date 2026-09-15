@@ -1,0 +1,5 @@
+{
+  "main": "../../../dist/exports/private/utils/useViewportSize.cjs",
+  "module": "../../../dist/exports/private/utils/useViewportSize.js",
+  "types": "../../../dist/types/exports/private/utils/useViewportSize.d.ts"
+}

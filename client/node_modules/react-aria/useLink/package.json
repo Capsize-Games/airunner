@@ -1,0 +1,5 @@
+{
+  "main": "../dist/exports/useLink.cjs",
+  "module": "../dist/exports/useLink.js",
+  "types": "../dist/types/exports/useLink.d.ts"
+}

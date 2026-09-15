@@ -1,0 +1,5 @@
+{
+  "main": "../../../dist/exports/private/selection/SelectionManager.cjs",
+  "module": "../../../dist/exports/private/selection/SelectionManager.js",
+  "types": "../../../dist/types/exports/private/selection/SelectionManager.d.ts"
+}

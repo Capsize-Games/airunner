@@ -1,0 +1,7 @@
+{
+  "name": "react-bootstrap/CardLink",
+  "private": true,
+  "main": "../cjs/CardLink.js",
+  "module": "../esm/CardLink.js",
+  "types": "../esm/CardLink.d.ts"
+}

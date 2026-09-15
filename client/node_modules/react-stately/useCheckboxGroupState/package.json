@@ -1,0 +1,5 @@
+{
+  "main": "../dist/exports/useCheckboxGroupState.cjs",
+  "module": "../dist/exports/useCheckboxGroupState.js",
+  "types": "../dist/types/exports/useCheckboxGroupState.d.ts"
+}

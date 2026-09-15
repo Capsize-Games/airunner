@@ -1,0 +1,7 @@
+{
+  "name": "react-bootstrap/OffcanvasHeader",
+  "private": true,
+  "main": "../cjs/OffcanvasHeader.js",
+  "module": "../esm/OffcanvasHeader.js",
+  "types": "../esm/OffcanvasHeader.d.ts"
+}

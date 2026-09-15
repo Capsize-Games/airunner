@@ -1,0 +1,5 @@
+{
+  "main": "../../../dist/exports/private/datepicker/useDisplayNames.cjs",
+  "module": "../../../dist/exports/private/datepicker/useDisplayNames.js",
+  "types": "../../../dist/types/exports/private/datepicker/useDisplayNames.d.ts"
+}

@@ -1,0 +1,1 @@
+"""Service-owned bootstrap metadata."""

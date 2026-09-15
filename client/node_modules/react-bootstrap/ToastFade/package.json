@@ -1,0 +1,7 @@
+{
+  "name": "react-bootstrap/ToastFade",
+  "private": true,
+  "main": "../cjs/ToastFade.js",
+  "module": "../esm/ToastFade.js",
+  "types": "../esm/ToastFade.d.ts"
+}

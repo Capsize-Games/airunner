@@ -1,0 +1,5 @@
+{
+  "main": "../dist/exports/ListKeyboardDelegate.cjs",
+  "module": "../dist/exports/ListKeyboardDelegate.js",
+  "types": "../dist/types/exports/ListKeyboardDelegate.d.ts"
+}

@@ -1,0 +1,5 @@
+{
+  "main": "../dist/exports/useInteractOutside.cjs",
+  "module": "../dist/exports/useInteractOutside.js",
+  "types": "../dist/types/exports/useInteractOutside.d.ts"
+}

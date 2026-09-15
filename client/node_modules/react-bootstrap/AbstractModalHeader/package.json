@@ -1,0 +1,7 @@
+{
+  "name": "react-bootstrap/AbstractModalHeader",
+  "private": true,
+  "main": "../cjs/AbstractModalHeader.js",
+  "module": "../esm/AbstractModalHeader.js",
+  "types": "../esm/AbstractModalHeader.d.ts"
+}

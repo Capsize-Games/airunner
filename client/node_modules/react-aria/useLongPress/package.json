@@ -1,0 +1,5 @@
+{
+  "main": "../dist/exports/useLongPress.cjs",
+  "module": "../dist/exports/useLongPress.js",
+  "types": "../dist/types/exports/useLongPress.d.ts"
+}

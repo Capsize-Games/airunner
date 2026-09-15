@@ -1,0 +1,5 @@
+{
+  "main": "../../../../dist/exports/private/utils/shadowdom/DOMFunctions.cjs",
+  "module": "../../../../dist/exports/private/utils/shadowdom/DOMFunctions.js",
+  "types": "../../../../dist/types/exports/private/utils/shadowdom/DOMFunctions.d.ts"
+}

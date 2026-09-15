@@ -1,0 +1,5 @@
+{
+  "main": "../../../dist/exports/private/overlays/useModal.cjs",
+  "module": "../../../dist/exports/private/overlays/useModal.js",
+  "types": "../../../dist/types/exports/private/overlays/useModal.d.ts"
+}

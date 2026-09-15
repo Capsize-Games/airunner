@@ -1,0 +1,5 @@
+{
+  "main": "../../../dist/exports/private/focus/FocusScope.cjs",
+  "module": "../../../dist/exports/private/focus/FocusScope.js",
+  "types": "../../../dist/types/exports/private/focus/FocusScope.d.ts"
+}

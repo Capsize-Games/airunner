@@ -1,0 +1,5 @@
+{
+  "main": "../../../dist/exports/private/grid/useGridSelectionAnnouncement.cjs",
+  "module": "../../../dist/exports/private/grid/useGridSelectionAnnouncement.js",
+  "types": "../../../dist/types/exports/private/grid/useGridSelectionAnnouncement.d.ts"
+}

@@ -1,0 +1,5 @@
+{
+  "main": "../dist/exports/useOverlay.cjs",
+  "module": "../dist/exports/useOverlay.js",
+  "types": "../dist/types/exports/useOverlay.d.ts"
+}

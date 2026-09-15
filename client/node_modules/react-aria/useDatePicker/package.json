@@ -1,0 +1,5 @@
+{
+  "main": "../dist/exports/useDatePicker.cjs",
+  "module": "../dist/exports/useDatePicker.js",
+  "types": "../dist/types/exports/useDatePicker.d.ts"
+}

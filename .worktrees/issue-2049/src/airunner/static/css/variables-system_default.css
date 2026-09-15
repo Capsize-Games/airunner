@@ -1,0 +1,6 @@
+/* CSS Variables for system_default theme */
+:root {
+    --primary-color: #007bff;
+    --background-color: #f8f9fa;
+    --text-color: #212529;
+}

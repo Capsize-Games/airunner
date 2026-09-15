@@ -1,0 +1,6 @@
+# sdist completeness (issue #2061): setup.py single-sources VERSION and the
+# requirement groups from shared/airunner_common/package_metadata.py and uses
+# the repo README.md as long_description. Both must survive the sdist -> wheel
+# phase of `python -m build`, so include them explicitly.
+include README.md
+recursive-include shared/airunner_common *.py

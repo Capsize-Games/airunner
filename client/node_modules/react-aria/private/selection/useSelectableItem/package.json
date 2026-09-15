@@ -1,0 +1,5 @@
+{
+  "main": "../../../dist/exports/private/selection/useSelectableItem.cjs",
+  "module": "../../../dist/exports/private/selection/useSelectableItem.js",
+  "types": "../../../dist/types/exports/private/selection/useSelectableItem.d.ts"
+}

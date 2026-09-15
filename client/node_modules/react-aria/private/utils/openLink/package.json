@@ -1,0 +1,5 @@
+{
+  "main": "../../../dist/exports/private/utils/openLink.cjs",
+  "module": "../../../dist/exports/private/utils/openLink.js",
+  "types": "../../../dist/types/exports/private/utils/openLink.d.ts"
+}

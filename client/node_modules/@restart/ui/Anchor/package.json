@@ -1,0 +1,7 @@
+{
+  "name": "@restart/ui/Anchor",
+  "private": true,
+  "main": "../cjs/Anchor.js",
+  "module": "../esm/Anchor.js",
+  "types": "../esm/Anchor.d.ts"
+}

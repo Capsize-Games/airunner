@@ -1,0 +1,5 @@
+{
+  "main": "../../../dist/exports/private/aria-modal-polyfill/ariaModalPolyfill.cjs",
+  "module": "../../../dist/exports/private/aria-modal-polyfill/ariaModalPolyfill.js",
+  "types": "../../../dist/types/exports/private/aria-modal-polyfill/ariaModalPolyfill.d.ts"
+}

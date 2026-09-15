@@ -1,0 +1,5 @@
+{
+  "main": "../dist/exports/CollectionBuilder.cjs",
+  "module": "../dist/exports/CollectionBuilder.js",
+  "types": "../dist/types/exports/CollectionBuilder.d.ts"
+}

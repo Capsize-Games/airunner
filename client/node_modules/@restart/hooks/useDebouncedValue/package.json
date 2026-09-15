@@ -1,0 +1,7 @@
+{
+  "name": "@restart/hooks/useDebouncedValue",
+  "private": true,
+  "main": "../cjs/useDebouncedValue.js",
+  "module": "../esm/useDebouncedValue.js",
+  "types": "../esm/useDebouncedValue.d.ts"
+}

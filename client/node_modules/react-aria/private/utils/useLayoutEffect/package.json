@@ -1,0 +1,5 @@
+{
+  "main": "../../../dist/exports/private/utils/useLayoutEffect.cjs",
+  "module": "../../../dist/exports/private/utils/useLayoutEffect.js",
+  "types": "../../../dist/types/exports/private/utils/useLayoutEffect.d.ts"
+}

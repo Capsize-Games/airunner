@@ -1,0 +1,5 @@
+{
+  "main": "../dist/exports/useListState.cjs",
+  "module": "../dist/exports/useListState.js",
+  "types": "../dist/types/exports/useListState.d.ts"
+}

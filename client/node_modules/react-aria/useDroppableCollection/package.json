@@ -1,0 +1,5 @@
+{
+  "main": "../dist/exports/useDroppableCollection.cjs",
+  "module": "../dist/exports/useDroppableCollection.js",
+  "types": "../dist/types/exports/useDroppableCollection.d.ts"
+}

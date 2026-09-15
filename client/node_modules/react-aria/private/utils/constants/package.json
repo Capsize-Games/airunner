@@ -1,0 +1,5 @@
+{
+  "main": "../../../dist/exports/private/utils/constants.cjs",
+  "module": "../../../dist/exports/private/utils/constants.js",
+  "types": "../../../dist/types/exports/private/utils/constants.d.ts"
+}

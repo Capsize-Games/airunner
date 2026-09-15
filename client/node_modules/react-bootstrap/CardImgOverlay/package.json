@@ -1,0 +1,7 @@
+{
+  "name": "react-bootstrap/CardImgOverlay",
+  "private": true,
+  "main": "../cjs/CardImgOverlay.js",
+  "module": "../esm/CardImgOverlay.js",
+  "types": "../esm/CardImgOverlay.d.ts"
+}

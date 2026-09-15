@@ -1,0 +1,5 @@
+{
+  "main": "../dist/exports/usePreventScroll.cjs",
+  "module": "../dist/exports/usePreventScroll.js",
+  "types": "../dist/types/exports/usePreventScroll.d.ts"
+}

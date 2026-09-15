@@ -1,0 +1,7 @@
+{
+  "name": "@restart/hooks/useToggleState",
+  "private": true,
+  "main": "../cjs/useToggleState.js",
+  "module": "../esm/useToggleState.js",
+  "types": "../esm/useToggleState.d.ts"
+}

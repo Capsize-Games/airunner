@@ -1,0 +1,5 @@
+{
+  "main": "../dist/exports/usePopover.cjs",
+  "module": "../dist/exports/usePopover.js",
+  "types": "../dist/types/exports/usePopover.d.ts"
+}

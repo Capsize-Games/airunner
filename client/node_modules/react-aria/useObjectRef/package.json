@@ -1,0 +1,5 @@
+{
+  "main": "../dist/exports/useObjectRef.cjs",
+  "module": "../dist/exports/useObjectRef.js",
+  "types": "../dist/types/exports/useObjectRef.d.ts"
+}

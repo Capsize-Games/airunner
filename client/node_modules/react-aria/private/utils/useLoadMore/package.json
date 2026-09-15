@@ -1,0 +1,5 @@
+{
+  "main": "../../../dist/exports/private/utils/useLoadMore.cjs",
+  "module": "../../../dist/exports/private/utils/useLoadMore.js",
+  "types": "../../../dist/types/exports/private/utils/useLoadMore.d.ts"
+}

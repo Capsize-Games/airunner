@@ -1,0 +1,5 @@
+{
+  "main": "../../../dist/exports/private/utils/useDeepMemo.cjs",
+  "module": "../../../dist/exports/private/utils/useDeepMemo.js",
+  "types": "../../../dist/types/exports/private/utils/useDeepMemo.d.ts"
+}

@@ -1,0 +1,5 @@
+{
+  "main": "../../../dist/exports/private/overlays/ariaHideOutside.cjs",
+  "module": "../../../dist/exports/private/overlays/ariaHideOutside.js",
+  "types": "../../../dist/types/exports/private/overlays/ariaHideOutside.d.ts"
+}

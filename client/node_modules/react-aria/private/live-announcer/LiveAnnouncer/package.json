@@ -1,0 +1,5 @@
+{
+  "main": "../../../dist/exports/private/live-announcer/LiveAnnouncer.cjs",
+  "module": "../../../dist/exports/private/live-announcer/LiveAnnouncer.js",
+  "types": "../../../dist/types/exports/private/live-announcer/LiveAnnouncer.d.ts"
+}

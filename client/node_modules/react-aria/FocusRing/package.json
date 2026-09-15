@@ -1,0 +1,5 @@
+{
+  "main": "../dist/exports/FocusRing.cjs",
+  "module": "../dist/exports/FocusRing.js",
+  "types": "../dist/types/exports/FocusRing.d.ts"
+}

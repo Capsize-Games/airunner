@@ -1,0 +1,7 @@
+{
+  "name": "react-bootstrap/CardSubtitle",
+  "private": true,
+  "main": "../cjs/CardSubtitle.js",
+  "module": "../esm/CardSubtitle.js",
+  "types": "../esm/CardSubtitle.d.ts"
+}

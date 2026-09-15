@@ -1,0 +1,5 @@
+{
+  "main": "../../../dist/exports/private/utils/useEvent.cjs",
+  "module": "../../../dist/exports/private/utils/useEvent.js",
+  "types": "../../../dist/types/exports/private/utils/useEvent.d.ts"
+}

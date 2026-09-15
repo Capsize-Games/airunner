@@ -1,0 +1,5 @@
+{
+  "main": "../../../dist/exports/private/interactions/PressResponder.cjs",
+  "module": "../../../dist/exports/private/interactions/PressResponder.js",
+  "types": "../../../dist/types/exports/private/interactions/PressResponder.d.ts"
+}

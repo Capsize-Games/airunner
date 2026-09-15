@@ -1,0 +1,5 @@
+{
+  "main": "../dist/exports/useMultipleSelectionState.cjs",
+  "module": "../dist/exports/useMultipleSelectionState.js",
+  "types": "../dist/types/exports/useMultipleSelectionState.d.ts"
+}

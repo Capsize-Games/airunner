@@ -1,0 +1,7 @@
+{
+  "name": "react-bootstrap/CardFooter",
+  "private": true,
+  "main": "../cjs/CardFooter.js",
+  "module": "../esm/CardFooter.js",
+  "types": "../esm/CardFooter.d.ts"
+}

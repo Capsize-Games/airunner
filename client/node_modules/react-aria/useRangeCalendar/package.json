@@ -1,0 +1,5 @@
+{
+  "main": "../dist/exports/useRangeCalendar.cjs",
+  "module": "../dist/exports/useRangeCalendar.js",
+  "types": "../dist/types/exports/useRangeCalendar.d.ts"
+}

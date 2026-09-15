@@ -1,0 +1,5 @@
+{
+  "main": "../../../dist/exports/private/form/useFormValidation.cjs",
+  "module": "../../../dist/exports/private/form/useFormValidation.js",
+  "types": "../../../dist/types/exports/private/form/useFormValidation.d.ts"
+}
