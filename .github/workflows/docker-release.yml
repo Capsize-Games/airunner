@@ -28,6 +28,11 @@ jobs:
             tags: |
               ghcr.io/capsize-games/airunner/airunner:linux-desktop
               ghcr.io/capsize-games/airunner/airunner:linux
+              # `docker pull ghcr.io/capsize-games/airunner/airunner` with no
+              # tag resolves to :latest, which did not exist -- so the obvious
+              # command every reader tries returned "manifest unknown". The
+              # desktop build is the right default for that.
+              ghcr.io/capsize-games/airunner/airunner:latest
 
     steps:
       - name: Checkout repository
