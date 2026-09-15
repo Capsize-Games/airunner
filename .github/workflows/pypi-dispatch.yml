@@ -80,6 +80,10 @@ jobs:
         with:
           user: __token__
           password: ${{ secrets.PYPI_API_TOKEN }}
+          # A failed publish is expensive to diagnose after the fact and a
+          # partial one cannot be undone, so make the upload say exactly what
+          # PyPI rejected rather than a bare "400 Bad Request".
+          verbose: true
 
   build-sidecars:
     runs-on: ubuntu-latest
