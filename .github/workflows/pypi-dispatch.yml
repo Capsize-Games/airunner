@@ -95,38 +95,40 @@ jobs:
           # PyPI rejected rather than a bare "400 Bad Request".
           verbose: true
 
-  build-sidecars:
+  fetch-sidecars:
+    # The sidecar build itself lives in Capsize-Games/airunner-native now
+    # (a different toolchain -- cmake/mingw-w64/ninja -- on its own
+    # release cadence). This downloads the pinned release's prebuilt
+    # bundles rather than rebuilding them here; see
+    # .github/native-sidecar-version for which tag.
+    if: github.event_name == 'release'
     runs-on: ubuntu-latest
-
-    strategy:
-      matrix:
-        target-platform:
-          - linux
-          - windows
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          sparse-checkout: .github/native-sidecar-version
+          sparse-checkout-cone-mode: false
 
-      - name: Install native build dependencies
+      - name: Download pinned sidecar bundles from airunner-native
         run: |
-          sudo apt-get update
-          sudo apt-get install -y cmake mingw-w64 ninja-build
+          tag="$(cat .github/native-sidecar-version)"
+          mkdir -p release-assets/sidecars
+          for platform in linux windows; do
+            curl -fsSL \
+              "https://github.com/Capsize-Games/airunner-native/releases/download/${tag}/runtime-sidecars-${platform}.tar.gz" \
+              -o "release-assets/sidecars/runtime-sidecars-${platform}.tar.gz"
+          done
 
-      - name: Build pinned sidecar bundle
-        run: |
-          ./scripts/build_runtime_sidecars.sh \
-            --clean \
-            --target-platform ${{ matrix.target-platform }}
-
-      - name: Upload sidecar bundle artifact
+      - name: Upload sidecar bundle artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: runtime-sidecars-${{ matrix.target-platform }}
-          path: build/runtime-sidecars/${{ matrix.target-platform }}
+          name: sidecar-bundles
+          path: release-assets/sidecars/*
 
   publish-release-assets:
     if: github.event_name == 'release'
-    needs: build-python-package
+    needs: [build-python-package, fetch-sidecars]
     runs-on: ubuntu-latest
 
     steps:
@@ -136,9 +138,16 @@ jobs:
           name: python-dist
           path: release-assets/python-dist
 
+      - name: Download sidecar bundle artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: sidecar-bundles
+          path: release-assets/sidecars
+
       - name: Upload release assets
         uses: softprops/action-gh-release@v2
         with:
           files: |
             release-assets/python-dist/*
+            release-assets/sidecars/*
           overwrite_files: true

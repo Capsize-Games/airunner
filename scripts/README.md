@@ -10,8 +10,10 @@ in a repo checkout.
   smoke, eval, and GUI functional suites
 - UI and resource build helpers (`build_ui.py`, `process_qss.py`,
   `compile_translations.py`)
-- developer install helpers (`install.sh`, `install_helpers.sh`,
-  `build_runtime_sidecars.sh`)
+- developer install helpers (`install.sh`, `install_helpers.sh`). Native
+  runtime sidecar (llama.cpp/whisper.cpp) builds live in
+  [Capsize-Games/airunner-native](https://github.com/Capsize-Games/airunner-native);
+  `install.sh` downloads the pinned bundle from there.
 - code-quality and reporting tooling (`code_quality_report.py`,
   `coverage_report.py`, the dead-code scanners and unused-import checkers,
   the complexity reports, `mypy_shortcut.py`, `security_audit.sh`)

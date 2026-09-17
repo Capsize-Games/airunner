@@ -9,7 +9,7 @@ AI Runner is a private AI companion you shape — name, personality, voice, memo
 
 
 [![Build](https://github.com/Capsize-Games/airunner/actions/workflows/eval-tests.yml/badge.svg)](https://github.com/Capsize-Games/airunner/actions/workflows/eval-tests.yml)
-[![Native Runtime Sidecars](https://github.com/Capsize-Games/airunner/actions/workflows/native-runtime-sidecars.yml/badge.svg)](https://github.com/Capsize-Games/airunner/actions/workflows/native-runtime-sidecars.yml)
+[![Native Runtime Sidecars](https://github.com/Capsize-Games/airunner-native/actions/workflows/native-runtime-sidecars.yml/badge.svg)](https://github.com/Capsize-Games/airunner-native/actions/workflows/native-runtime-sidecars.yml)
 [![Docker Release](https://github.com/Capsize-Games/airunner/actions/workflows/docker-release.yml/badge.svg)](https://github.com/Capsize-Games/airunner/actions/workflows/docker-release.yml)
 [![PyPI](https://github.com/Capsize-Games/airunner/actions/workflows/pypi-dispatch.yml/badge.svg)](https://github.com/Capsize-Games/airunner/actions/workflows/pypi-dispatch.yml)
 [![Python 3.13](https://img.shields.io/badge/Python-3.13-blue.svg)](https://www.python.org/downloads/)
@@ -92,7 +92,7 @@ flowchart LR
 |---------|------|
 | [src](src/README.md) | Desktop GUI client, daemon client bridge, widgets, and application entry points |
 | [services](services/README.md) | Headless daemon, FastAPI server, runtime registry, orchestration, downloads, and persistence |
-| [native](native/README.md) | Python launcher entry point, runtime layout helpers, and native sidecar support |
+| [native](native/README.md) | Python launcher entry point and runtime layout helpers. Native sidecar (llama.cpp/whisper.cpp) builds live in [airunner-native](https://github.com/Capsize-Games/airunner-native) |
 | [scripts](scripts/README.md) | Developer tooling: test runner, UI build, install helpers, and quality reports |
 
 ---
