@@ -141,38 +141,109 @@ sidecars_requested() {
 }
 
 
+NATIVE_SIDECAR_REPO='Capsize-Games/airunner-native'
+NATIVE_SIDECAR_VERSION_FILE="$ROOT_DIR/.github/native-sidecar-version"
+
+native_sidecar_tag() {
+	if [[ ! -f "$NATIVE_SIDECAR_VERSION_FILE" ]]; then
+		log_error "Missing pin file: ${NATIVE_SIDECAR_VERSION_FILE}"
+		exit 1
+	fi
+	<"$NATIVE_SIDECAR_VERSION_FILE" tr -d '[:space:]'
+}
+
+link_sidecar_binaries() {
+	local bin_dir="$1"
+	local venv_bin_dir="$2"
+	local binary_name=""
+
+	for binary_name in llama-server whisper-server; do
+		if [[ ! -x "$bin_dir/$binary_name" ]]; then
+			log_error "Missing sidecar binary: ${bin_dir}/${binary_name}"
+			exit 1
+		fi
+		ln -sfn "$bin_dir/$binary_name" "$venv_bin_dir/$binary_name"
+	done
+}
+
+# The common case: download the prebuilt bundle the pinned
+# airunner-native release publishes, rather than needing
+# cmake/mingw-w64/ninja on every dev machine (the sidecar build itself
+# now lives in that repository -- see
+# https://github.com/Capsize-Games/airunner-native).
+fetch_prebuilt_sidecars() {
+	local venv_python="$1"
+	local venv_bin_dir="$(dirname "$venv_python")"
+	local tag download_dir archive_path
+
+	tag="$(native_sidecar_tag)"
+	download_dir="$ROOT_DIR/build/runtime-sidecars-download"
+	archive_path="$download_dir/runtime-sidecars-linux.tar.gz"
+
+	if [[ "$SIDECAR_CLEAN" == '1' ]]; then
+		rm -rf "$download_dir"
+	fi
+	mkdir -p "$download_dir"
+
+	log_info "Downloading prebuilt native sidecars (${tag}) from ${NATIVE_SIDECAR_REPO}"
+	if ! curl -fsSL \
+		"https://github.com/${NATIVE_SIDECAR_REPO}/releases/download/${tag}/runtime-sidecars-linux.tar.gz" \
+		-o "$archive_path"; then
+		log_error "Failed to download sidecar bundle for ${tag}"
+		exit 1
+	fi
+	tar -xzf "$archive_path" -C "$download_dir"
+
+	link_sidecar_binaries "$download_dir/bin" "$venv_bin_dir"
+	log_success "Linked prebuilt native sidecars into ${venv_bin_dir}"
+}
+
+# CUDA builds aren't part of the published bundle (CI builds the
+# linux/windows matrix without a CUDA runner), so --sidecars-cuda
+# clones the pinned tag and builds from source instead.
+build_sidecars_from_source() {
+	local venv_python="$1"
+	local venv_bin_dir="$(dirname "$venv_python")"
+	local tag clone_dir
+	local -a builder_args=(--target-platform linux)
+
+	tag="$(native_sidecar_tag)"
+	clone_dir="$ROOT_DIR/build/airunner-native-src"
+
+	if [[ "$SIDECAR_CLEAN" == '1' || ! -d "$clone_dir" ]]; then
+		rm -rf "$clone_dir"
+		log_info "Cloning airunner-native (${tag}) for a CUDA sidecar build"
+		git clone --quiet --depth 1 --branch "$tag" \
+			"https://github.com/${NATIVE_SIDECAR_REPO}.git" "$clone_dir"
+	fi
+
+	if [[ "$SIDECAR_CLEAN" == '1' ]]; then
+		builder_args+=(--clean)
+	fi
+	builder_args+=(--enable-cuda)
+
+	log_info 'Building native llama.cpp and whisper.cpp sidecars from source (CUDA)'
+	"$clone_dir/scripts/build_runtime_sidecars.sh" "${builder_args[@]}"
+
+	link_sidecar_binaries \
+		"$clone_dir/build/runtime-sidecars/linux/bin" \
+		"$venv_bin_dir"
+	log_success "Linked source-built native sidecars into ${venv_bin_dir}"
+}
+
 install_runtime_sidecars() {
 	local venv_python="$1"
-	local builder="$ROOT_DIR/scripts/build_runtime_sidecars.sh"
-	local sidecar_bin_dir="$ROOT_DIR/build/runtime-sidecars/linux/bin"
-	local venv_bin_dir="$(dirname "$venv_python")"
-	local binary_name=""
-	local -a builder_args=(--target-platform linux)
 
 	if [[ "$(uname -s)" != 'Linux' ]]; then
 		log_warning 'Skipping native runtime sidecars on a non-Linux host'
 		return 0
 	fi
 
-	if [[ "$SIDECAR_CLEAN" == '1' ]]; then
-		builder_args+=(--clean)
-	fi
 	if [[ "$SIDECAR_ENABLE_CUDA" == '1' ]]; then
-		builder_args+=(--enable-cuda)
+		build_sidecars_from_source "$venv_python"
+	else
+		fetch_prebuilt_sidecars "$venv_python"
 	fi
-
-	log_info 'Building native llama.cpp and whisper.cpp sidecars'
-	"$builder" "${builder_args[@]}"
-
-	for binary_name in llama-server whisper-server; do
-		if [[ ! -x "$sidecar_bin_dir/$binary_name" ]]; then
-			log_error "Missing built sidecar: ${sidecar_bin_dir}/${binary_name}"
-			exit 1
-		fi
-		ln -sfn "$sidecar_bin_dir/$binary_name" "$venv_bin_dir/$binary_name"
-	done
-
-	log_success "Linked native sidecars into ${venv_bin_dir}"
 }
 
 
