@@ -20,8 +20,9 @@ def _qsettings_value(
 ):
     """Read a value from QSettings, falling back to the provided default."""
     try:
-        from PySide6.QtCore import QSettings
-        from airunner.utils.settings.get_qsettings import get_qsettings
+        from airunner_services.utils.settings.get_qsettings import (
+            get_qsettings,
+        )
 
         settings = get_qsettings()
         settings.beginGroup(group)
@@ -37,7 +38,9 @@ def _qsettings_value(
 def _set_qsettings_value(key: str, value, group: str = "application_settings"):
     """Write a value to QSettings when PySide6 is available."""
     try:
-        from airunner.utils.settings.get_qsettings import get_qsettings
+        from airunner_services.utils.settings.get_qsettings import (
+            get_qsettings,
+        )
 
         settings = get_qsettings()
         settings.beginGroup(group)

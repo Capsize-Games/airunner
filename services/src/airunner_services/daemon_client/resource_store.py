@@ -187,7 +187,9 @@ def _qsettings_value(
 ) -> Any:
     """Read one value from QSettings when available."""
     try:
-        from airunner.utils.settings.get_qsettings import get_qsettings
+        from airunner_services.utils.settings.get_qsettings import (
+            get_qsettings,
+        )
 
         settings = get_qsettings()
         settings.beginGroup(group)
@@ -203,7 +205,9 @@ def _qsettings_value(
 def _set_qsettings_value(key: str, value: Any, *, group: str) -> None:
     """Write one value to QSettings when available."""
     try:
-        from airunner.utils.settings.get_qsettings import get_qsettings
+        from airunner_services.utils.settings.get_qsettings import (
+            get_qsettings,
+        )
 
         settings = get_qsettings()
         settings.beginGroup(group)

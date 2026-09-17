@@ -11,7 +11,7 @@ import torchaudio
 from time import perf_counter
 
 from airunner_common.settings import AIRUNNER_LOG_LEVEL
-from airunner.utils.application import get_logger
+from airunner_services.utils.application.get_logger import get_logger
 
 model_size = "medium"
 model = None
