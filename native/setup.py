@@ -46,6 +46,7 @@ DEVELOPMENT_REQUIREMENTS = [
     "pytest",
     "pytest-timeout",
     "responses>=0.25.0",
+    "httpx>=0.27",
     "coverage==7.8.0",
     "black==26.3.1",
     "pyinstaller==6.12.0",
@@ -64,9 +65,14 @@ NATIVE_CONSOLE_SCRIPTS = [
     "airunner-native=airunner_native.launcher:main",
 ]
 
+# airunner-common only: launcher.py's app-specific imports (airunner,
+# airunner_services) are all function-scoped, deferred until the launcher
+# actually runs, not hard install-time dependencies (issue #2217) -- see
+# the "services"/"daemon" and "gui"/"desktop" extras below for the two
+# ways this package actually gets used together with the rest of the
+# application.
 NATIVE_BASE_REQUIREMENTS = [
     f"airunner-common=={VERSION}",
-    f"airunner-services=={VERSION}",
     FACEHUGGERSHIELD_REQUIREMENT,
 ]
 
@@ -77,6 +83,13 @@ def build_native_extras_require() -> dict[str, list[str]]:
     return {
         "development": DEVELOPMENT_REQUIREMENTS,
         "dev": DEVELOPMENT_REQUIREMENTS,
+        # A headless/daemon-role install: this launcher plus the
+        # services package, no GUI.
+        "services": [f"airunner-services=={VERSION}"],
+        "daemon": [f"airunner-services=={VERSION}"],
+        # A GUI-client-role install. airunner itself already depends on
+        # airunner-services, so this extra alone is enough for a full
+        # desktop install.
         "gui": gui_requirements,
         "desktop": gui_requirements,
     }

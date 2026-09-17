@@ -13,7 +13,8 @@ from airunner.runtimes.file_policy import (
     normalize_local_path,
     resolve_existing_file,
 )
-from airunner.enums import AvailableLanguage, TTSModel
+from airunner_common.contract_enums import AvailableLanguage
+from airunner.enums import TTSModel
 
 
 _AUDIO_FILE_SUFFIXES = (".wav", ".mp3", ".ogg")

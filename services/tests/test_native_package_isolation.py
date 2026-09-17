@@ -135,8 +135,14 @@ def test_vendored_metadata_matches_package_metadata() -> None:
     """The vendored values in native/setup.py must match the shared source.
 
     native/setup.py is intentionally static (no build-time airunner_common
-    import), so this test is the drift guard that keeps it in sync with
-    shared/airunner_common/package_metadata.py.
+    import), so this test is the drift guard that keeps its two values with
+    a real canonical source (VERSION, FACEHUGGERSHIELD_REQUIREMENT) in sync
+    with shared/airunner_common/package_metadata.py. The services/native
+    requirement registries and setup-kwargs builders that used to live in
+    that module were removed (issue #2197): they had no consumer left once
+    every setup.py vendored its own copy, so native/setup.py's own
+    NATIVE_BASE_REQUIREMENTS and NATIVE_CONSOLE_SCRIPTS are now
+    independently authoritative, not drift-checked against anything.
     """
     assignments = _module_assignments(_SETUP_PY.read_text(encoding="utf-8"))
 
@@ -146,9 +152,3 @@ def test_vendored_metadata_matches_package_metadata() -> None:
     assert _evaluate_node(
         assignments["FACEHUGGERSHIELD_REQUIREMENT"], assignments
     ) == package_metadata.FACEHUGGERSHIELD_REQUIREMENT
-    assert _evaluate_node(
-        assignments["NATIVE_BASE_REQUIREMENTS"], assignments
-    ) == package_metadata.NATIVE_BASE_REQUIREMENTS
-    assert _evaluate_node(
-        assignments["NATIVE_CONSOLE_SCRIPTS"], assignments
-    ) == package_metadata.NATIVE_CONSOLE_SCRIPTS

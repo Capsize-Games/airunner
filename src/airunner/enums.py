@@ -3,6 +3,8 @@ from enum import Enum, auto
 from PySide6.QtCore import QLocale
 import os
 
+from airunner_common.contract_enums import AvailableLanguage
+
 
 class MessageRole(str, Enum):
     """LLM message roles, matching llama_cloud.MessageRole values.
@@ -581,22 +583,6 @@ class HandlerState(Enum):
 class TTSModel(Enum):
     ESPEAK = "Espeak"
     OPENVOICE = "OpenVoice"
-
-
-class AvailableLanguage(enum.Enum):
-    """
-    Enum for available languages in OpenVoice.
-    """
-
-    AUTO = "Automatic"
-    EN = "EN"
-    ES = "ES"
-    FR = "FR"
-    ZH = "ZH"
-    ZH_MIX_EN = "ZH_MIX_EN"
-    JP = "JP"
-    KR = "KR"
-    SP = "SP"
 
 
 LANGUAGE_DISPLAY_MAP = {

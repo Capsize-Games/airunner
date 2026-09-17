@@ -8,10 +8,10 @@ from airunner.components.application.gui.widgets.language.templates.language_set
 )
 from airunner.components.application.gui.windows.main.ai_model_mixin import AIModelMixin
 from airunner.enums import (
-    AvailableLanguage,
     LANGUAGE_DISPLAY_MAP,
     AVAILABLE_LANGUAGES,
 )
+from airunner_common.contract_enums import AvailableLanguage
 
 
 class LanguageSettingsWidget(BaseWidget, AIModelMixin):

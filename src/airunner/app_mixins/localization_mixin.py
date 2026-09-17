@@ -12,7 +12,7 @@ from airunner.app_installer import AppInstaller
 from airunner.enums import AVAILABLE_LANGUAGES
 from airunner.enums import LANGUAGE_TO_LOCALE_MAP
 from airunner.enums import LOCALE_TO_LANGUAGE_MAP
-from airunner.enums import AvailableLanguage
+from airunner_common.contract_enums import AvailableLanguage
 from airunner.utils.settings.client_settings import run_setup_wizard as client_run_setup_wizard
 from airunner.enums import SignalCode
 from airunner_common.settings import AIRUNNER_DISABLE_SETUP_WIZARD
