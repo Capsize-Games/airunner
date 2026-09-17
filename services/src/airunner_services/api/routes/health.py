@@ -7,6 +7,7 @@ from typing import Any, Dict, List, Optional
 from fastapi import APIRouter, Request
 from pydantic import BaseModel, Field
 
+from airunner_common.contract_version import CONTRACT_VERSION
 from airunner_common.dev_build_token import current_dev_build_token
 from airunner_common.settings import AIRUNNER_VERSION
 
@@ -19,6 +20,7 @@ class HealthResponse(BaseModel):
 
     status: str
     version: str
+    contract_version: str
     uptime: float
     pid: int
     started_at: float
@@ -48,6 +50,7 @@ def build_health_payload(status: str) -> Dict[str, Any]:
     return {
         "status": status,
         "version": AIRUNNER_VERSION,
+        "contract_version": CONTRACT_VERSION,
         "uptime": time.time() - _start_time,
         "pid": _start_pid,
         "started_at": _start_time,

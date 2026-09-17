@@ -26,6 +26,10 @@ from airunner_services.api.loopback_token import (
 )
 from airunner_common.dev_build_token import current_dev_build_token
 from airunner_common.contract_enums import LLMActionType, SignalCode
+from airunner_common.contract_version import (
+    CONTRACT_VERSION,
+    is_compatible_contract_version,
+)
 from airunner_common.settings import AIRUNNER_LOG_LEVEL
 
 if TYPE_CHECKING:
@@ -107,6 +111,14 @@ class GuiDaemonClient(GuiBridgeMixin):
     def ensure_connected(self, *, auto_start: Optional[bool] = None) -> bool:
         """Return True when the daemon is reachable, starting it when allowed."""
         health = self._healthcheck_payload()
+        mismatch = self._contract_version_mismatch_reason(health)
+        if mismatch is not None:
+            # Not a stale-daemon condition: recycling a genuinely
+            # incompatible daemon build fixes nothing (issue #2192).
+            self._last_error = mismatch
+            self._set_state(DaemonConnectionState.FAILED, mismatch)
+            return False
+
         stale_reason = self._stale_dev_daemon_reason(health)
         if health is not None and stale_reason is None:
             self._set_state(DaemonConnectionState.CONNECTED, "connected")
@@ -157,6 +169,12 @@ class GuiDaemonClient(GuiBridgeMixin):
     def is_available(self, *, timeout_seconds: float = 0.2) -> bool:
         """Return True when the daemon is already reachable."""
         health = self._healthcheck_payload(timeout_seconds=timeout_seconds)
+        mismatch = self._contract_version_mismatch_reason(health)
+        if mismatch is not None:
+            self._last_error = mismatch
+            self._set_state(DaemonConnectionState.FAILED, mismatch)
+            return False
+
         stale_reason = self._stale_dev_daemon_reason(health)
         if health is not None and stale_reason is None:
             self._set_state(DaemonConnectionState.CONNECTED, "connected")
@@ -999,9 +1017,17 @@ class GuiDaemonClient(GuiBridgeMixin):
                 self._set_state(DaemonConnectionState.FAILED, self._last_error)
                 return False
             health = self._healthcheck_payload()
-            if health is not None and self._stale_dev_daemon_reason(health) is None:
-                self._set_state(DaemonConnectionState.CONNECTED, "connected")
-                return True
+            if health is not None:
+                mismatch = self._contract_version_mismatch_reason(health)
+                if mismatch is not None:
+                    self._last_error = mismatch
+                    self._set_state(DaemonConnectionState.FAILED, mismatch)
+                    return False
+                if self._stale_dev_daemon_reason(health) is None:
+                    self._set_state(
+                        DaemonConnectionState.CONNECTED, "connected"
+                    )
+                    return True
             self._sleep(self._poll_interval_seconds)
 
         self._last_error = "Timed out waiting for daemon to become ready"
@@ -1061,6 +1087,36 @@ class GuiDaemonClient(GuiBridgeMixin):
         if observed != expected:
             return "stale dev daemon build token mismatch"
         return None
+
+    def _contract_version_mismatch_reason(
+        self,
+        health: Optional[Dict[str, Any]],
+    ) -> Optional[str]:
+        """Return a mismatch reason when the daemon's wire contract
+        version is incompatible with this client's (issue #2192).
+
+        Unlike a stale dev daemon, this is never resolved by recycling
+        the daemon process: an incompatible pair is a genuinely
+        different daemon build, and restarting it changes nothing.
+        Callers must treat a non-None reason as a hard failure, not a
+        recycle-and-retry condition.
+        """
+        if health is None:
+            return None
+        remote_version = health.get("contract_version")
+        if not remote_version:
+            # A daemon build old enough to predate this field cannot
+            # be assumed compatible; fail closed rather than guess.
+            return (
+                "daemon health payload has no contract_version "
+                f"(expected {CONTRACT_VERSION})"
+            )
+        if is_compatible_contract_version(CONTRACT_VERSION, remote_version):
+            return None
+        return (
+            f"desktop contract version {CONTRACT_VERSION} is "
+            f"incompatible with daemon contract version {remote_version}"
+        )
 
     def _recycle_stale_daemon(self, reason: str) -> bool:
         """Stop one stale local daemon so a fresh one can be launched."""
