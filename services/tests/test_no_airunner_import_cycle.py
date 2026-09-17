@@ -20,24 +20,15 @@ import subprocess
 import sys
 from pathlib import Path
 
-import pytest
-
 _PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
-# openvoice/api.py and se_extractor.py additionally require torch/librosa,
-# which are not part of the "development" test profile this suite runs
-# under (see issue #2184's pattern for optional-dependency exclusions), so
-# they are covered separately by a static AST check below rather than a
-# subprocess import.
+# The vendored openvoice modules this used to also cover moved to their
+# own repository along with the rest of airunner_services.vendor (issue
+# #2195), which asserts the same no-airunner-import property itself
+# (see that repository's tests/test_no_app_dependency.py).
 _IMPORTABLE_WITHOUT_AIRUNNER = [
     "airunner_services.daemon_client.resource_store",
     "airunner_services.database.models.application_settings",
-    "airunner_services.vendor.openvoice.utils",
-]
-
-_MODULE_PATHS_WITHOUT_TORCH_DEPS = [
-    "services/src/airunner_services/vendor/openvoice/api.py",
-    "services/src/airunner_services/vendor/openvoice/se_extractor.py",
 ]
 
 
@@ -74,22 +65,3 @@ def test_services_import_without_airunner_on_path():
     assert result.returncode == 0, (
         f"stdout={result.stdout}\nstderr={result.stderr}"
     )
-
-
-@pytest.mark.parametrize("relative_path", _MODULE_PATHS_WITHOUT_TORCH_DEPS)
-def test_vendored_openvoice_modules_have_no_airunner_import(relative_path):
-    """Static check for the two modules a subprocess import can't reach.
-
-    ``api.py`` and ``se_extractor.py`` require torch/librosa, which are not
-    installed under the "development" test profile, so this asserts the
-    fixed import line statically instead of executing the module.
-    """
-    import ast
-
-    tree = ast.parse((_PROJECT_ROOT / relative_path).read_text())
-    for node in ast.walk(tree):
-        if isinstance(node, ast.ImportFrom) and node.module:
-            assert not (
-                node.module == "airunner"
-                or node.module.startswith("airunner.")
-            ), f"{relative_path} imports {node.module}"

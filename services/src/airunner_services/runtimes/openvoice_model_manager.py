@@ -29,9 +29,9 @@ torch.hub.set_dir(
 )
 
 from airunner_services.utils.memory.clear_memory import clear_memory
-from airunner_services.vendor.melo.api import TTS
-from airunner_services.vendor.melo.api import set_memory_cleanup_hook
-from airunner_services.vendor.melo.runtime_support import (
+from airunner_tts_vendor.melo.api import TTS
+from airunner_tts_vendor.melo.api import set_memory_cleanup_hook
+from airunner_tts_vendor.melo.runtime_support import (
     normalize_tts_model_root,
     resolve_tts_model_root,
     set_cache_base_resolver,
@@ -48,7 +48,7 @@ from airunner_services.runtimes.openvoice_runtime_helpers import (
     processed_target_dir,
     warm_melo_tts,
 )
-from airunner_services.vendor.openvoice.api import ToneColorConverter
+from airunner_tts_vendor.openvoice.api import ToneColorConverter
 
 
 def _get_path_settings():

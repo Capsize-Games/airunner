@@ -8,8 +8,12 @@ Walks ``src/airunner`` and ``services/src`` and asserts every real builtin
 
 The scan is AST-based so it only matches actual ``print`` call nodes — custom
 functions named like ``debug_print(...)`` and ``print`` examples inside
-docstrings are not flagged. Test files and vendored code are excluded: tests
-may print, and ``services/src/airunner_services/vendor`` is third-party.
+docstrings are not flagged. Test files and any ``vendor/`` directory are
+excluded: tests may print, and vendored code is third-party (there is
+currently no such directory here -- the one vendored fork this repo used
+to hold, ``airunner_services.vendor``, moved to its own repository,
+issue #2195 -- but the exclusion stays generic for whatever is vendored
+next).
 """
 
 from __future__ import annotations

@@ -1,10 +1,14 @@
 """Tests for scripts/check_third_party_notices.py (GitHub issue #2059).
 
 The notice check guards CI: every vendored package directory must ship a
-LICENSE file and be listed in the top-level THIRD_PARTY_NOTICES.md. These
-tests assert the real repo passes, that the known vendored packages are
-actually discovered, and that the check fails when a LICENSE or a notice
-entry is missing.
+LICENSE file and be listed in the top-level THIRD_PARTY_NOTICES.md. melo
+and openvoice, the packages that originally exercised this (installed
+under a real ``vendor/`` directory here), moved to their own repository
+(issue #2195, https://github.com/Capsize-Games/airunner-tts-vendor),
+which documents their licensing itself instead. These tests assert the
+real repo still passes (vacuously, with no vendor directories left) and
+that the check fails when a LICENSE or a notice entry is missing, against
+a synthetic fixture rather than real vendored code.
 """
 
 from __future__ import annotations
@@ -16,30 +20,13 @@ _PROJECT_ROOT = Path(__file__).resolve().parents[2]
 if str(_PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(_PROJECT_ROOT))
 
-from scripts.check_third_party_notices import (  # noqa: E402
-    find_vendored_packages,
-    find_vendor_roots,
-    run_check,
-)
+from scripts.check_third_party_notices import run_check  # noqa: E402
 
 
 def test_vendored_packages_have_license_and_notices() -> None:
     """The real repo's vendored packages all pass the notice check."""
     problems = run_check(repo_root=_PROJECT_ROOT)
     assert problems == [], "\n".join(problems)
-
-
-def test_script_discovers_the_known_vendored_packages() -> None:
-    """Sanity check: the scan must actually see melo and openvoice."""
-    vendor_roots = find_vendor_roots(_PROJECT_ROOT)
-    assert vendor_roots, "no vendor/ directories discovered under services/src or src"
-    packages = [
-        pkg
-        for vendor_root in vendor_roots
-        for pkg in find_vendored_packages(vendor_root)
-    ]
-    names = {pkg.name for pkg in packages}
-    assert {"melo", "openvoice"}.issubset(names)
 
 
 def _write_notice_stub(root: Path, *, listed: bool) -> None:

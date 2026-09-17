@@ -28,13 +28,17 @@ via the pytest wrapper
 - **Upstream project:** `myshell-ai/MeloTTS`
 - **Upstream URL:** https://github.com/myshell-ai/MeloTTS
 - **License:** MIT
-- **Vendored location:** `services/src/airunner_services/vendor/melo/`
+- **No longer vendored here:** this fork moved to its own repository,
+  [`Capsize-Games/airunner-tts-vendor`](https://github.com/Capsize-Games/airunner-tts-vendor)
+  (issue #2195), which `airunner-services` now depends on as an ordinary
+  published package rather than embedded source. Its own
+  [`README.md`](https://github.com/Capsize-Games/airunner-tts-vendor#readme)
+  and `melo/README.md`/`melo/LICENSE` are the current source of truth; the
+  license text below is kept here as a historical record of what this
+  distribution has depended on.
 - **Pin:** Vendored from the upstream `main` branch at the time the TTS
-  runtime was integrated into AIRunner (issue #2051). The exact vendored
-  commit is not re-pinned automatically; treat the directory as a snapshot
-  that must be reviewed and updated deliberately. See the directory
-  [`README.md`](services/src/airunner_services/vendor/melo/README.md).
-- **License file:** `services/src/airunner_services/vendor/melo/LICENSE`
+  runtime was integrated into AIRunner (issue #2051); the exact upstream
+  commit was never recorded (see the new repository's own README).
 
 ### melo License (MIT)
 
@@ -69,13 +73,18 @@ SOFTWARE.
 - **Upstream project:** `myshell-ai/OpenVoice`
 - **Upstream URL:** https://github.com/myshell-ai/OpenVoice
 - **License:** MIT
-- **Vendored location:** `services/src/airunner_services/vendor/openvoice/`
-- **Pin:** Vendored from the upstream `main` branch at the time the OpenVoice
-  TTS runtime was integrated into AIRunner (issue #2051). The exact vendored
-  commit is not re-pinned automatically; treat the directory as a snapshot
-  that must be reviewed and updated deliberately. See the directory
-  [`README.md`](services/src/airunner_services/vendor/openvoice/README.md).
-- **License file:** `services/src/airunner_services/vendor/openvoice/LICENSE`
+- **No longer vendored here:** this fork moved to its own repository,
+  [`Capsize-Games/airunner-tts-vendor`](https://github.com/Capsize-Games/airunner-tts-vendor)
+  (issue #2195), which `airunner-services` now depends on as an ordinary
+  published package rather than embedded source. Its own
+  [`README.md`](https://github.com/Capsize-Games/airunner-tts-vendor#readme)
+  and `openvoice/README.md`/`openvoice/LICENSE` are the current source of
+  truth; the license text below is kept here as a historical record of
+  what this distribution has depended on.
+- **Pin:** Vendored from the upstream `main` branch at the time the
+  OpenVoice TTS runtime was integrated into AIRunner (issue #2051); the
+  exact upstream commit was never recorded (see the new repository's own
+  README).
 
 ### openvoice License (MIT)
 
@@ -113,9 +122,10 @@ above. Their headers are retained to preserve upstream attribution:
 
 - `services/src/airunner_services/art/pipelines/z_image/*` — Apache-2.0
   headers retained from the Apache-2.0 licensed code they were derived from.
-- `services/src/airunner_services/vendor/melo/text/tone_sandhi.py` — retains
-  an Apache-2.0 header from its upstream origin within the MIT-licensed
-  MeloTTS project.
+- `melo/text/tone_sandhi.py` in
+  [`Capsize-Games/airunner-tts-vendor`](https://github.com/Capsize-Games/airunner-tts-vendor)
+  — retains an Apache-2.0 header from its upstream origin within the
+  MIT-licensed MeloTTS project.
 - `src/airunner/components/downloader/gui/windows/setup_wizard/model_setup/stt/templates/whisper_license_ui.py`
   — embeds the Whisper license text for display in the GUI setup wizard.
 

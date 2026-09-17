@@ -14,13 +14,13 @@ from airunner_common.contract_enums import AvailableLanguage
 from airunner_common.settings import AIRUNNER_BASE_PATH, AIRUNNER_LOG_LEVEL
 from airunner_services.utils.application.get_logger import get_logger
 from airunner_services.runtimes.openvoice_exceptions import FileMissing
-from airunner_services.vendor.melo.api import TTS
-from airunner_services.vendor.openvoice import se_extractor
-from airunner_services.vendor.openvoice.api import (
+from airunner_tts_vendor.melo.api import TTS
+from airunner_tts_vendor.openvoice import se_extractor
+from airunner_tts_vendor.openvoice.api import (
     OpenVoiceBaseClass,
     ToneColorConverter,
 )
-from airunner_services.vendor.openvoice.mel_processing import spectrogram_torch
+from airunner_tts_vendor.openvoice.mel_processing import spectrogram_torch
 
 logger = get_logger("AI Runner", AIRUNNER_LOG_LEVEL)
 

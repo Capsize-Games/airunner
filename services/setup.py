@@ -174,50 +174,29 @@ TTS_REQUIREMENTS = [
     "torchcodec>=0.8.0,<0.10",
 ]
 
-OPENVOICE_REQUIREMENTS = [
-    "librosa==0.11.0",
-    "pydub==0.25.1",
-    "wavmark==0.0.3",
-    "eng_to_ipa==0.0.2",
-    "inflect==7.5.0",
-    "unidecode==1.4.0",
-    "langid==1.1.6",
-]
+# The MeloTTS/OpenVoice fork moved to its own published package,
+# airunner-tts-vendor (issue #2195, part of #2185):
+# github.com/Capsize-Games/airunner-tts-vendor. Its own
+# pyproject.toml is the source of truth for the underlying
+# third-party pins now; these extras just select the matching slice
+# of that package (zh/jp/kr/tw/gruut), mirroring the extras split it
+# publishes itself
+# (docs/architecture/versioning-and-compatibility-policy.md, #2191).
+# torch/torchaudio/transformers stay out of this pin -- ML_RUNTIME_
+# REQUIREMENTS below already supplies those for tts-python.
+OPENVOICE_REQUIREMENTS = ["airunner-tts-vendor~=0.1"]
 
-MELOTTS_REQUIREMENTS = [
-    "txtsplit==1.0.0",
-    "num2words==0.5.14",
-    "g2p_en==2.1.0",
-    "anyascii==0.3.2",
-    "loguru==0.7.3",
-]
+MELOTTS_REQUIREMENTS = ["airunner-tts-vendor~=0.1"]
 
-OPENVOICE_CN_REQUIREMENTS = [
-    "pypinyin==0.54.0",
-    "jieba==0.42.1",
-    "cn2an==0.5.23",
-]
+OPENVOICE_CN_REQUIREMENTS = ["airunner-tts-vendor[zh]~=0.1"]
 
-OPENVOICE_JP_REQUIREMENTS = [
-    "unidic_lite==1.0.8",
-    "unidic==1.1.0",
-    "mecab-python3==1.0.10",
-    "fugashi==1.4.0",
-    "pykakasi==2.3.0",
-]
+OPENVOICE_JP_REQUIREMENTS = ["airunner-tts-vendor[jp]~=0.1"]
 
-OPENVOICE_KR_REQUIREMENTS = [
-    "jamo==0.4.1",
-    "python-mecab-ko==1.3.7",
-    "python-mecab-ko-dic==2.1.1.post2",
-]
+OPENVOICE_KR_REQUIREMENTS = ["airunner-tts-vendor[kr]~=0.1"]
 
-OPENVOICE_TW_REQUIREMENTS = ["g2pkk>=0.1.2"]
+OPENVOICE_TW_REQUIREMENTS = ["airunner-tts-vendor[tw]~=0.1"]
 
-GRUUT_SUPPORT_REQUIREMENTS = [
-    "gruut[de,es,fr]==2.4.0",
-    "networkx==3.4.2",
-]
+GRUUT_SUPPORT_REQUIREMENTS = ["airunner-tts-vendor[gruut]~=0.1"]
 
 SEARCH_REQUIREMENTS = [
     "ddgs>=9.0.0",

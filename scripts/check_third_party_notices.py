@@ -67,9 +67,6 @@ def run_check(*, repo_root: Path | None = None) -> list[str]:
         for vendor_root in find_vendor_roots(root)
         for pkg in find_vendored_packages(vendor_root)
     ]
-    if not packages:
-        problems.append("no vendored packages found under services/src or src")
-        return problems
 
     for pkg in packages:
         rel = _repo_relative(pkg, root)
