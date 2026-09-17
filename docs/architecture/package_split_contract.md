@@ -14,7 +14,9 @@ how to validate changes without blurring those boundaries again.
 
 The top-level `api/` and `model/` packages from earlier split-plan documents
 no longer exist in the tree. Shared runtime contracts and enums live in
-`airunner_services.contract_enums`.
+`airunner_common.contract_enums` (moved there with the `shared/` package
+split; this document was not updated at the time -- found while writing
+[versioning-and-compatibility-policy.md](versioning-and-compatibility-policy.md)).
 
 ## Boundary Examples
 
