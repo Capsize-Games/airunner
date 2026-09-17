@@ -8,11 +8,27 @@ can no longer drift from each other (architecture audit finding O1).
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 from typing import Any
 
 
-VERSION = "6.1.3"
+# The released version. Every surface reads it from here so the four
+# distributions cannot drift (they pin each other by ==VERSION).
+_RELEASE_VERSION = "6.1.3"
+
+# Build an unpublished candidate without editing this file:
+#
+#     AIRUNNER_BUILD_VERSION=6.1.3+local1 python -m build ...
+#
+# This exists so a release candidate can be built and executed before it is
+# published -- 6.1.3 shipped a daemon that could not start, and there was no
+# way to test an artifact that did not exist on PyPI yet. Prefer a PEP 440
+# local version (``+something``): PyPI refuses to accept local versions at
+# upload, so a candidate built this way cannot be published by accident.
+# Unset, the value is exactly the released version, so normal builds and the
+# publish workflow are unaffected.
+VERSION = os.environ.get("AIRUNNER_BUILD_VERSION", _RELEASE_VERSION)
 # Supply-chain hardening (issue #2036). This was a hash-pinned GitHub archive
 # URL, but PyPI rejects any distribution carrying a PEP 440 direct reference
 # ("400 Can't have direct dependency"), so no such package can ever be
@@ -98,6 +114,18 @@ CORE_REQUIREMENTS = [
     #         utils/location/get_lat_lon.py (API route -> core)
     "psutil>=5.9.0",
     "pandas>=2.0.0",
+    # pygments: utils/text/formatter_extended.py imports it at module scope,
+    # and utils/text/__init__ is on the daemon's import path, so a base install
+    # without it cannot start the daemon. Published 6.1.3 declared it nowhere
+    # and `airunner-daemon` died on import. Same class as the #2040 items above.
+    "pygments>=2.17.0",
+    # requests: same class. Imported at module scope across url_safety,
+    # daemon_client and the sidecar clients, but declared only by the GUI
+    # distribution, so airunner-services alone could not start.
+    "requests>=2.31.0",
+    # markdown: imported at module scope next to pygments in
+    # utils/text/formatter_extended.py; likewise GUI-only until now.
+    "markdown>=3.5.0",
 ]
 
 # PyTorch is pinned to the exact stable cu129 wheel line so it aligns with

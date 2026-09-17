@@ -1,0 +1,40 @@
+# Imports that may legitimately be absent from an installed artifact.
+#
+# Read by scripts/check_artifact_imports.py. An import listed here is allowed to
+# be missing; anything NOT listed here and NOT installed fails the release gate.
+#
+# The bar for adding an entry is deliberately high, because the gate already
+# ignores the graceful pattern. It only looks at *unguarded module-scope*
+# imports -- an import inside a function, or inside `try: ... except
+# ImportError:`, is never reported in the first place. So an entry here is a
+# claim that an unguarded top-level import is fine because the module containing
+# it is never imported on any user-reachable path.
+#
+# If that claim is not true, the honest fix is to declare the dependency or to
+# guard the import -- not to add a line here.
+
+[optional.pytest]
+reason = "test-only: airunner_services/eval/fixtures.py is a pytest harness, not a runtime path"
+
+# ---------------------------------------------------------------------------
+# DELIBERATELY NOT LISTED -- these were found absent from a clean
+# `pip install airunner==6.1.3` on 2026-09-15 and each one breaks startup.
+# They are left out so the gate reports them. They need a maintainer decision,
+# not an allowlist entry:
+#
+#   pygments                  undeclared outright; first thing that kills the daemon
+#   torch, transformers       on the startup path, but torch sits in the optional
+#                             [ml] extra and transformers is in no group at all
+#   langchain_core,           high fan-out (langchain_core alone is imported at
+#   langchain_huggingface,    module scope by 96 shipped files)
+#   langchain_text_splitters,
+#   langgraph
+#   bs4, libzim               undeclared
+#
+# The vendored TTS trees (airunner_services/vendor/melo, .../openvoice) also
+# import language-specific packages -- jieba, pypinyin, cn2an, jamo, pykakasi,
+# eng_to_ipa, gruut, gruut_ipa, num2words, inflect, unidecode, loguru, numba --
+# at module scope. Those are plausibly optional per-language paths, but that has
+# not been verified, and guessing here is how the last incomplete list got
+# written. Verify which are reachable, then either declare them, guard them, or
+# list them here with a real reason.

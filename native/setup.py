@@ -7,11 +7,17 @@ source of the same requirement groups; keep the values in this file in sync
 with it when a dependency changes.
 """
 
+import os
 from pathlib import Path
 
 from setuptools import find_packages, setup
 
-VERSION = "6.1.3"
+# Kept in sync with shared/airunner_common/package_metadata.py, including the
+# AIRUNNER_BUILD_VERSION override used to build unpublished candidates. All four
+# distributions pin each other by ==VERSION, so they must agree or a candidate
+# install silently resolves a published sibling instead of the one under test.
+_RELEASE_VERSION = "6.1.3"
+VERSION = os.environ.get("AIRUNNER_BUILD_VERSION", _RELEASE_VERSION)
 
 # The project is GPL-3.0-only (issue #2058): the repo-root LICENSE file, every
 # ``license=`` metadata field and these PyPI classifiers must agree. Mirrored

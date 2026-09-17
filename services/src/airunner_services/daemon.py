@@ -16,6 +16,7 @@ import sys
 import threading
 import time
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from airunner_common.startup_env import (
     configure_early_torch_allocator_environment,
@@ -45,15 +46,35 @@ from logging.handlers import RotatingFileHandler
 
 from airunner_services.runtimes.daemon_config import DaemonConfig
 from airunner_services.api.server import APIServer
-from airunner_services.app import ServiceApp
-from airunner_services.model_management.model_resource_manager import (
-    ModelResourceManager,
-)
 from airunner_common.settings import AIRUNNER_LOG_LEVEL
 from airunner_services.utils.application import get_logger
 
+if TYPE_CHECKING:  # pragma: no cover - typing only
+    from airunner_services.app import ServiceApp
+
 logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
-App = ServiceApp
+
+# Exactly what the `ml` extra installs (ML_REQUIREMENTS in setup.py). A
+# ModuleNotFoundError naming one of these at the app boundary means the
+# documented optional runtime is absent. Anything else is a different bug.
+OPTIONAL_ML_MODULES = frozenset({"torch", "torchvision", "torchaudio"})
+
+
+# ``airunner_services.app`` and ``model_management.model_resource_manager``
+# import torch transitively, and torch is an optional extra (the ML groups in
+# package_metadata). Importing them here made `airunner-daemon --help` -- and
+# any import of this module -- require a ~5 GB install just to parse two
+# arguments. They are imported at their use sites instead.
+#
+# ``App``/``ServiceApp`` stay reachable as module attributes via PEP 562 so
+# nothing that referenced ``daemon.App`` breaks; resolving either one still
+# imports the ML stack, which is correct -- you cannot build an app without it.
+def __getattr__(name: str):
+    if name in ("App", "ServiceApp"):
+        from airunner_services.app import ServiceApp as _ServiceApp
+
+        return _ServiceApp
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 
 class AIRunnerDaemon:
@@ -189,9 +210,40 @@ class AIRunnerDaemon:
             logger.error(f"Fatal error in daemon: {e}", exc_info=True)
             sys.exit(1)
 
-    def _create_headless_app(self) -> App:
+    def _create_headless_app(self) -> "ServiceApp":
         """Create the daemon-owned app without embedded server ownership."""
-        return App(
+        # This is the boundary where the optional ML runtime becomes required.
+        # Everything before it -- argument parsing, --generate-config, importing
+        # the API server -- works on a base install. Running the daemon does
+        # not, because it loads models.
+        #
+        # Only a *known* absent optional runtime is reported this way. Any other
+        # missing module is an unrelated packaging or import regression and must
+        # not be dressed up as "install the ML extra", so it propagates
+        # unchanged.
+        try:
+            from airunner_services.app import ServiceApp
+        except ModuleNotFoundError as exc:
+            if exc.name not in OPTIONAL_ML_MODULES:
+                raise
+            raise ModuleNotFoundError(
+                f"Running the AI Runner daemon requires the optional ML "
+                f"runtime, which is not installed ({exc.name!r} is missing).\n"
+                "A base `pip install airunner` deliberately omits it.\n"
+                "\n"
+                "No install command is quoted here on purpose: the `ml` extra "
+                "pins CUDA-specific builds (torch==2.13.0+cu129), which are not "
+                "on PyPI, and those exact pins are not available as CPU builds "
+                "either. Installing them needs an index that carries the pinned "
+                "CUDA wheels *in addition to* PyPI, not instead of it. See the "
+                "project README/INSTALL for the supported route for your "
+                "platform.\n"
+                "\n"
+                "`airunner-daemon --help` and `airunner-daemon "
+                "--generate-config` work without the ML runtime."
+            ) from exc
+
+        return ServiceApp(
             headless=True,
             no_splash=True,
             start_headless_api_server=False,
@@ -215,6 +267,10 @@ class AIRunnerDaemon:
             return
 
         logger.info(f"Preloading {len(preload_list)} models: {preload_list}")
+
+        from airunner_services.model_management.model_resource_manager import (
+            ModelResourceManager,
+        )
 
         ModelResourceManager()
 
