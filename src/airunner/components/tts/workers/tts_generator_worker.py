@@ -11,7 +11,7 @@ from uuid import uuid4
 import soundfile as sf
 
 from airunner.components.application.workers.worker import Worker
-from airunner.components.llm.utils.thinking_parser import (
+from airunner_services.llm.thinking_parser import (
     normalize_thinking_content,
     strip_stored_thinking_prefix,
     strip_thinking_tags,
