@@ -1,10 +1,10 @@
 from airunner.components.application.api.api_service_base import APIServiceBase
 from airunner.components.llm.managers.llm_request import LLMRequest
 from airunner.components.llm.managers.llm_response import LLMResponse
-from airunner.components.llm.utils.gpt_oss_parser import (
+from airunner_services.llm.gpt_oss_parser import (
     looks_like_tool_call_payload,
 )
-from airunner.components.llm.utils.thinking_parser import (
+from airunner_services.llm.thinking_parser import (
     detect_thinking_close_tag,
     detect_thinking_open_tag,
 )

@@ -38,6 +38,14 @@ TOOL_ARGUMENT_HINT_KEYS = {
 	"include_line_numbers",
 }
 
+_DIRECT_TOOL_CALL_ARGUMENT_KEYS = {
+	"query",
+	"prompt",
+	"url",
+	"path",
+	"text",
+}
+
 
 def _unwrap_json_code_fence(text: str) -> str:
 	"""Return the body of a fenced JSON block when present."""
@@ -72,6 +80,48 @@ def _dict_looks_like_tool_argument_payload(payload: dict) -> bool:
 	)
 
 
+def _dict_looks_like_tool_call_payload(payload: dict) -> bool:
+	"""Return True when one JSON object looks like a tool call."""
+	keys = {str(key) for key in payload.keys()}
+	tool_name = payload.get("tool")
+	if isinstance(tool_name, str) and tool_name.strip():
+		return any(
+			key in keys
+			for key in (
+				TOOL_ARGUMENT_HINT_KEYS
+				| _DIRECT_TOOL_CALL_ARGUMENT_KEYS
+				| {"args", "arguments"}
+			)
+		)
+
+	name = payload.get("name")
+	if isinstance(name, str) and name.strip():
+		return any(
+			key in keys
+			for key in (
+				TOOL_ARGUMENT_HINT_KEYS
+				| _DIRECT_TOOL_CALL_ARGUMENT_KEYS
+				| {"args", "arguments"}
+			)
+		)
+
+	function = payload.get("function")
+	if isinstance(function, dict):
+		function_name = function.get("name")
+		function_keys = {str(key) for key in function.keys()}
+		if isinstance(function_name, str) and function_name.strip():
+			return any(
+				key in function_keys
+				for key in (
+					TOOL_ARGUMENT_HINT_KEYS
+					| _DIRECT_TOOL_CALL_ARGUMENT_KEYS
+					| {"args", "arguments"}
+				)
+			)
+
+	return False
+
+
 def looks_like_tool_argument_payload(text: str) -> bool:
 	"""Return True when text looks like tool arguments, even truncated."""
 	stripped = _unwrap_json_code_fence((text or "").strip())
@@ -93,6 +143,59 @@ def looks_like_tool_argument_payload(text: str) -> bool:
 		return all(
 			isinstance(item, dict)
 			and _dict_looks_like_tool_argument_payload(item)
+			for item in payload
+		)
+	return False
+
+
+def looks_like_tool_call_payload(text: str) -> bool:
+	"""Return True when text looks like a tool call, even truncated."""
+	stripped = _unwrap_json_code_fence((text or "").strip())
+	if not stripped or stripped[0] not in "[{":
+		return False
+
+	try:
+		payload = json.loads(stripped)
+	except json.JSONDecodeError:
+		keys = set(
+			re.findall(
+				r'"([A-Za-z_][A-Za-z0-9_]*)"\s*:',
+				stripped[:512],
+			)
+		)
+		if "tool" in keys:
+			return bool(
+				keys
+				& (
+					TOOL_ARGUMENT_HINT_KEYS
+					| _DIRECT_TOOL_CALL_ARGUMENT_KEYS
+					| {"args", "arguments"}
+				)
+			)
+		if "name" in keys:
+			return bool(
+				keys
+				& (
+					TOOL_ARGUMENT_HINT_KEYS
+					| _DIRECT_TOOL_CALL_ARGUMENT_KEYS
+					| {"args", "arguments"}
+				)
+			)
+		return "function" in keys and bool(
+			keys
+			& (
+				TOOL_ARGUMENT_HINT_KEYS
+				| _DIRECT_TOOL_CALL_ARGUMENT_KEYS
+				| {"args", "arguments"}
+			)
+		)
+
+	if isinstance(payload, dict):
+		return _dict_looks_like_tool_call_payload(payload)
+	if isinstance(payload, list) and payload:
+		return all(
+			isinstance(item, dict)
+			and _dict_looks_like_tool_call_payload(item)
 			for item in payload
 		)
 	return False
@@ -286,12 +389,23 @@ class GPTOSSStreamParser:
 		return True
 
 	def _append(self, delta: GPTOSSParsedDelta, value: str) -> None:
-		"""Append one visible content segment to the correct output channel."""
+		"""Append one visible content segment to the correct output channel.
+
+		A "commentary" channel message with a recipient (``to=...``) is
+		a tool call routed elsewhere, not user-visible content, and
+		must stay suppressed -- unlike a recipient-less commentary
+		message, which is shown like any other final-channel text.
+		"""
 		if self.current_role != "assistant":
 			return
 		if self.current_channel == "analysis":
 			delta.analysis_text += value
 		elif self.current_channel == "final" or not self.current_channel:
+			delta.final_text += value
+		elif (
+			self.current_channel == "commentary"
+			and not self.current_recipient
+		):
 			delta.final_text += value
 
 
@@ -302,8 +416,6 @@ def parse_gpt_oss_response(raw_response: str) -> GPTOSSParseResult:
 	final_delta = parser.finish()
 	thinking = (delta.analysis_text + final_delta.analysis_text).strip() or None
 	content = (delta.final_text + final_delta.final_text).strip()
-	if not content and not thinking:
-		content = (raw_response or "").strip()
 	return GPTOSSParseResult(
 		thinking_content=thinking,
 		content=content,
