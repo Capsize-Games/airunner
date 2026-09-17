@@ -1,16 +1,16 @@
 import re
 
-from airunner_common.contract_enums import AvailableLanguage
+from airunner_services.vendor.melo.language import Language
 
 
 def split_sentence(
-    text, min_len=10, language: AvailableLanguage = AvailableLanguage.EN
+    text, min_len=10, language: Language = Language.EN
 ):
     if language in [
-        AvailableLanguage.EN,
-        AvailableLanguage.FR,
-        AvailableLanguage.ES,
-        AvailableLanguage.SP,
+        Language.EN,
+        Language.FR,
+        Language.ES,
+        Language.SP,
     ]:
         sentences = split_sentences_latin(text, min_len=min_len)
     else:

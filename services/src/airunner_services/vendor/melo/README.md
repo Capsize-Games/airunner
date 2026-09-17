@@ -27,6 +27,22 @@ upstream fixes stays feasible. AIRunner applies the following local changes:
 - **Path resolution:** model and cache paths resolve through
   `airunner_services.vendor.melo.runtime_support` so the vendored code stays
   relocatable across machines and containers.
+- **No application dependency (issue #2190):** this directory previously
+  imported `airunner`/`airunner_common`/`airunner_services` directly (an
+  enum, `AIRUNNER_BASE_PATH`, a `PathSettings` database lookup, the shared
+  logger, and the shared GPU-memory-clearing helper). It now depends on
+  nothing outside itself and the third-party packages it uses:
+  - `language.py` defines a same-valued local `Language` enum instead of
+    importing the application's `AvailableLanguage`.
+  - `runtime_support.py` exposes `set_tts_model_root_resolver`,
+    `set_tts_model_base_resolver` and `set_cache_base_resolver`, which
+    `airunner_services.runtimes.openvoice_model_manager` registers at
+    import time with the previous `PathSettings`-based lookups. Logging
+    is a plain `logging.getLogger(...)`.
+  - `api.py`'s `TTS.unload()` calls an injectable
+    `set_memory_cleanup_hook` callable (the host registers the
+    application's multi-GPU-aware `clear_memory`); its own default is a
+    plain `gc.collect()` plus `torch.cuda.empty_cache()`.
 
 ## Licensing
 

@@ -4,7 +4,7 @@ import torch
 import torch.utils.data
 from tqdm import tqdm
 from loguru import logger
-from airunner_common.contract_enums import AvailableLanguage
+from airunner_services.vendor.melo.language import Language
 from airunner_services.vendor.melo.mel_processing import (
     spectrogram_torch,
     mel_spectrogram_torch,
@@ -105,7 +105,7 @@ class TextAudioSpeakerLoader(torch.utils.data.Dataset):
         )
 
         bert, ja_bert, phones, tone, language = self.get_text(
-            text, word2ph, phones, tone, AvailableLanguage(language), audiopath
+            text, word2ph, phones, tone, Language(language), audiopath
         )
 
         spec, wav = self.get_audio(audiopath)
@@ -159,7 +159,7 @@ class TextAudioSpeakerLoader(torch.utils.data.Dataset):
         return spec, audio_norm
 
     def get_text(
-        self, text, word2ph, phone, tone, language: AvailableLanguage, wav_path
+        self, text, word2ph, phone, tone, language: Language, wav_path
     ):
         phone, tone, language = cleaned_text_to_sequence(phone, tone, language)
         if self.add_blank:
@@ -181,17 +181,17 @@ class TextAudioSpeakerLoader(torch.utils.data.Dataset):
             bert = torch.zeros(1024, len(phone))
             ja_bert = torch.zeros(768, len(phone))
         else:
-            if language is AvailableLanguage.ZH:
+            if language is Language.ZH:
                 bert = bert
                 ja_bert = torch.zeros(768, len(phone))
             elif language in [
-                AvailableLanguage.JP,
-                AvailableLanguage.EN,
-                AvailableLanguage.ZH_MIX_EN,
-                AvailableLanguage.KR,
-                AvailableLanguage.SP,
-                AvailableLanguage.ES,
-                AvailableLanguage.FR,
+                Language.JP,
+                Language.EN,
+                Language.ZH_MIX_EN,
+                Language.KR,
+                Language.SP,
+                Language.ES,
+                Language.FR,
             ]:
                 ja_bert = bert
                 bert = torch.zeros(1024, len(phone))

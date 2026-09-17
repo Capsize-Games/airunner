@@ -1,48 +1,48 @@
 import copy
 from importlib import import_module
 
-from airunner_common.contract_enums import AvailableLanguage
+from airunner_services.vendor.melo.language import Language
 from airunner_services.vendor.melo.text import cleaned_text_to_sequence
 
 
 class Cleaner:
     def __init__(self):
         self.language_module_map = {
-            AvailableLanguage.ZH: (
+            Language.ZH: (
                 "airunner_services.vendor.melo.text.chinese",
                 "Chinese",
             ),
-            AvailableLanguage.JP: (
+            Language.JP: (
                 "airunner_services.vendor.melo.text.japanese",
                 "Japanese",
             ),
-            AvailableLanguage.EN: (
+            Language.EN: (
                 "airunner_services.vendor.melo.text.english",
                 "English",
             ),
-            AvailableLanguage.ZH_MIX_EN: (
+            Language.ZH_MIX_EN: (
                 "airunner_services.vendor.melo.text.chinese_mix",
                 "ChineseMix",
             ),
-            AvailableLanguage.KR: (
+            Language.KR: (
                 "airunner_services.vendor.melo.text.korean",
                 "Korean",
             ),
-            AvailableLanguage.FR: (
+            Language.FR: (
                 "airunner_services.vendor.melo.text.french",
                 "French",
             ),
-            AvailableLanguage.SP: (
+            Language.SP: (
                 "airunner_services.vendor.melo.text.spanish",
                 "Spanish",
             ),
-            AvailableLanguage.ES: (
+            Language.ES: (
                 "airunner_services.vendor.melo.text.spanish",
                 "Spanish",
             ),
         }
         self._language_module = None
-        self._language: AvailableLanguage = AvailableLanguage.EN
+        self._language: Language = Language.EN
 
     @staticmethod
     def _resolve_language_module(module_path, class_name):
@@ -51,11 +51,11 @@ class Cleaner:
         return getattr(module, class_name)
 
     @property
-    def language(self) -> AvailableLanguage:
+    def language(self) -> Language:
         return self._language
 
     @language.setter
-    def language(self, value: AvailableLanguage):
+    def language(self, value: Language):
         if value is not self._language:
             self.unload()
         self._language = value
@@ -65,7 +65,7 @@ class Cleaner:
         if not self._language_module:
             lang = self.language
             if lang not in self.language_module_map:
-                lang = AvailableLanguage.EN
+                lang = Language.EN
             module_path, class_name = self.language_module_map[lang]
             language_module = Cleaner._resolve_language_module(
                 module_path,
@@ -81,7 +81,7 @@ class Cleaner:
         self._language_module = value
 
     def clean_text(
-        self, text, language: AvailableLanguage = AvailableLanguage.EN
+        self, text, language: Language = Language.EN
     ):
         self.language = language
         norm_text = self.language_module.text_normalize(text)

@@ -1,4 +1,4 @@
-from airunner_common.contract_enums import AvailableLanguage
+from airunner_services.vendor.melo.language import Language
 from airunner_services.vendor.melo.text.symbols import *
 
 
@@ -9,7 +9,7 @@ from airunner_services.vendor.melo.text import language_tone_start_map
 def cleaned_text_to_sequence(
     cleaned_text,
     tones,
-    language: AvailableLanguage = AvailableLanguage.EN,
+    language: Language = Language.EN,
     symbol_to_id=None,
 ):
     """Converts a string of text to a sequence of IDs corresponding to the symbols in the text.
@@ -21,8 +21,8 @@ def cleaned_text_to_sequence(
     symbol_to_id_map = symbol_to_id if symbol_to_id else _symbol_to_id
     phones = [symbol_to_id_map[symbol] for symbol in cleaned_text]
     if language not in language_tone_start_map:
-        tone_start = language_tone_start_map[AvailableLanguage.EN]
-        lang_id = language_id_map[AvailableLanguage.EN]
+        tone_start = language_tone_start_map[Language.EN]
+        lang_id = language_id_map[Language.EN]
     else:
         tone_start = language_tone_start_map[language]
         lang_id = language_id_map[language]

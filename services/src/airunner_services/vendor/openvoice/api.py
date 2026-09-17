@@ -2,7 +2,7 @@ import torch
 import numpy as np
 import re
 import soundfile
-from airunner_common.contract_enums import AvailableLanguage
+from airunner_services.vendor.openvoice.language import Language
 from airunner_services.vendor.openvoice import utils
 from airunner_services.vendor.openvoice import commons
 import os
@@ -72,7 +72,7 @@ class BaseSpeakerTTS(OpenVoiceBaseClass):
         return audio_segments
 
     @staticmethod
-    def split_sentences_into_pieces(text, language: AvailableLanguage):
+    def split_sentences_into_pieces(text, language: Language):
         return utils.split_sentence(text, language=language)
 
     def tts(
@@ -80,7 +80,7 @@ class BaseSpeakerTTS(OpenVoiceBaseClass):
         text,
         output_path,
         speaker,
-        language: AvailableLanguage = AvailableLanguage.EN,
+        language: Language = Language.EN,
         speed=1.0,
     ):
         texts = self.split_sentences_into_pieces(text, language)

@@ -2,7 +2,7 @@ import re
 import json
 import numpy as np
 
-from airunner_common.contract_enums import AvailableLanguage
+from airunner_services.vendor.openvoice.language import Language
 
 
 def get_hparams_from_file(config_path):
@@ -79,9 +79,9 @@ def bits_to_string(bits_array):
 
 
 def split_sentence(
-    text, min_len=10, language: AvailableLanguage = AvailableLanguage.EN
+    text, min_len=10, language: Language = Language.EN
 ):
-    if language is AvailableLanguage.EN:
+    if language is Language.EN:
         sentences = split_sentences_latin(text, min_len=min_len)
     else:
         sentences = split_sentences_zh(text, min_len=min_len)

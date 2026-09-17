@@ -23,6 +23,11 @@ upstream fixes stays feasible. AIRunner applies the following local changes:
 - **Path resolution:** model and cache paths resolve through
   `airunner_services.vendor.openvoice.api` helpers so the vendored code stays
   relocatable across machines and containers.
+- **No application dependency (issue #2190):** `api.py` and `utils.py`
+  previously imported the application's `AvailableLanguage` enum directly.
+  `language.py` now defines a same-valued local `Language` enum instead, and
+  `se_extractor.py` logs through a plain `logging.getLogger(...)` instead of
+  the application's shared logger factory.
 
 ## Licensing
 
