@@ -13,13 +13,17 @@ Allowed edges (an importer may depend on anything to its right; an
 edge not listed here is a violation -- see import_boundary_rules.py's
 ``OWNED_ROOTS`` for the literal data this docstring describes)::
 
-    airunner            -> airunner_services, airunner_common, airunner_native
-    airunner_services   -> airunner_common
-    airunner_native     -> airunner, airunner_services, airunner_common
-    airunner_common     -> (nothing in this project)
+    airunner            -> airunner_services, airunner_native
+    airunner_services   -> (nothing in this project)
+    airunner_native     -> airunner, airunner_services
 
-``services/src/airunner_services/eval`` was extracted to its own
-repository (issue #2194,
+``airunner_common`` no longer appears here: it was extracted to its
+own repository (issue #2197,
+https://github.com/Capsize-Games/airunner-common) and is now an
+ordinary installed dependency, not a project-internal package this
+checker tracks -- there's no cycle risk left once it doesn't live in
+this repo's tree. ``services/src/airunner_services/eval`` was
+extracted to its own repository (issue #2194,
 https://github.com/Capsize-Games/airunner-eval) and no longer exists
 here, so the rule that used to govern it ("nothing outside eval may
 import eval") was removed rather than left as dead code that could

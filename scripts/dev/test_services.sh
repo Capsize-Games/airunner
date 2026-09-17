@@ -15,7 +15,7 @@ FAILURES=0
 LOOPBACK_TOKEN=""
 if [[ -x "${DEV_VENV_BIN}/python" ]]; then
     LOOPBACK_TOKEN="$(
-        PYTHONPATH="${ROOT_DIR}/services/src:${ROOT_DIR}/shared" \
+        PYTHONPATH="${ROOT_DIR}/services/src" \
         "${DEV_VENV_BIN}/python" - <<'PY'
 try:
     from airunner_services.api.loopback_token import (

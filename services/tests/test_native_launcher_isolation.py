@@ -62,7 +62,6 @@ def test_launcher_imports_without_airunner_or_services_on_path():
             "PYTHONPATH": ":".join(
                 [
                     str(_PROJECT_ROOT / "native" / "src"),
-                    str(_PROJECT_ROOT / "shared"),
                 ]
             ),
         },

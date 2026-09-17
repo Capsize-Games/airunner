@@ -246,10 +246,12 @@ elif _ISOLATED_SESSION:
     # ``Package`` nodes, so the real package tree must be importable FIRST;
     # the ``sys.modules`` stubs are installed only afterwards so the mixin
     # under test uses the deterministic stubs (and never schedules real Qt
-    # timers that segfault at interpreter exit). Make the repo ``src/`` and
-    # ``shared/`` importable and pre-import the real mixins package.
+    # timers that segfault at interpreter exit). Make the repo ``src/``
+    # importable and pre-import the real mixins package. airunner_common
+    # is not a raw local path since its extraction (issue #2197) -- it
+    # comes from the normal installed dependency (real or editable).
     _repo_root = Path(__file__).resolve().parents[8]
-    for _extra_path in (_repo_root / "src", _repo_root / "shared"):
+    for _extra_path in (_repo_root / "src",):
         _extra = str(_extra_path)
         if _extra not in sys.path:
             sys.path.append(_extra)
