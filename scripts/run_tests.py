@@ -4,7 +4,8 @@ Test runner script for AI Runner project.
 
 This script provides a unified interface for running different test suites:
 - Unit tests: Safe component tests excluding GUI/widget-only suites
-- Eval tests: Daemon-backed LLM eval tests in services/tests/eval/
+- Eval tests: moved to https://github.com/Capsize-Games/airunner-eval
+  (issue #2194); --eval here now just points you there
 - LLM runtime smoke tests: safe route/runtime checks with no app startup
 - STT runtime smoke tests: safe route/worker checks with no app startup
 - Art runtime smoke tests: safe daemon-backed art checks with no app startup
@@ -16,7 +17,8 @@ Usage:
     python run_tests.py --eval              # Run eval tests only
     python run_tests.py --eval --service groq --llm groq-model
                                           # Run judged evals with Groq
-    python run_tests.py --all               # Run unit + runtime smoke + eval
+    python run_tests.py --all               # Run unit + runtime smoke
+                                          # (eval moved to its own repo)
     python run_tests.py --unit --verbose    # Run unit tests with verbose output
     python run_tests.py --component llm     # Run tests for specific component
     python run_tests.py --llm-runtime-smoke # Run safe LLM runtime smoke tests
@@ -411,7 +413,10 @@ def run_eval_tests(
     test_path = Path("services/tests/eval")
 
     if not test_path.exists():
-        print(f"Error: Eval tests directory not found at {test_path}")
+        print(
+            "Eval tests moved to their own repository (issue #2194): "
+            "https://github.com/Capsize-Games/airunner-eval"
+        )
         return 1
 
     # If specific test file provided, use it
@@ -743,8 +748,11 @@ Examples:
         )
         exit_codes.append(exit_code)
 
-    # Run eval tests
-    if args.eval or args.all:
+    # Eval tests moved to their own repository (issue #2194); --all no
+    # longer includes them (there's nothing here to run), but --eval
+    # stays available as an explicit flag so it still tells you where
+    # they went instead of silently doing nothing.
+    if args.eval:
         if args.component:
             print("\nWarning: --component flag ignored for eval tests")
 

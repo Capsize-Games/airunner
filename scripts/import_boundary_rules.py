@@ -17,8 +17,8 @@ from pathlib import Path
 # fully-qualified package name that root's files belong to, and the
 # set of top-level project package names that package is allowed to
 # import. "This project" packages are the keys of this dict plus
-# "airunner_services.vendor" and "airunner_services.eval", which are
-# checked as separate, narrower owners below.
+# "airunner_services.vendor", checked as a separate, narrower owner
+# below.
 OWNED_ROOTS: dict[str, tuple[str, frozenset[str]]] = {
     "src/airunner": (
         "airunner",
@@ -49,7 +49,6 @@ PROJECT_PACKAGES = frozenset(
 )
 
 VENDOR_REL_ROOT = "services/src/airunner_services/vendor"
-EVAL_REL_ROOT = "services/src/airunner_services/eval"
 
 
 @dataclass(frozen=True)
@@ -103,7 +102,6 @@ def check_owned_root(
     for path in iter_python_files(root):
         rel = path.relative_to(repo_root).as_posix()
         in_vendor = rel.startswith(VENDOR_REL_ROOT)
-        in_eval = rel.startswith(EVAL_REL_ROOT)
 
         try:
             tree = ast.parse(path.read_text(encoding="utf-8"), filename=rel)
@@ -142,26 +140,8 @@ def check_owned_root(
                 )
                 continue
 
-            if not in_eval and (
-                module == "airunner_services.eval"
-                or module.startswith("airunner_services.eval.")
-            ):
-                violations.append(
-                    Violation(
-                        Path(rel),
-                        lineno,
-                        module,
-                        "nothing outside airunner_services.eval may "
-                        "import airunner_services.eval",
-                    )
-                )
-                continue
-
             if top == owner_name:
                 continue  # importing within your own package is fine
-
-            if in_eval and top in {"airunner_services", "airunner_common"}:
-                continue
 
             if top in allowed:
                 continue
