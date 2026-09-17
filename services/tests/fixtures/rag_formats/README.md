@@ -9,7 +9,9 @@ Add reproducible daemon-backed RAG eval fixtures for three file formats:
 - PDF
 
 The fixture set should stay public-domain, live in-repo, and exercise the
-same service-owned RAG path used by `services/tests/eval/test_agent_document_eval.py`.
+same service-owned RAG path used by `test_agent_document_eval.py` (moved to
+[Capsize-Games/airunner-eval](https://github.com/Capsize-Games/airunner-eval),
+issue #2194).
 
 ## Current Boundary
 

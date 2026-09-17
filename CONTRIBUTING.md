@@ -162,10 +162,9 @@ Icons are managed with Qt resource files which are in turn managed with
   ```bash
   ./venv/bin/python -m pytest services/tests/test_service_bootstrap.py -v
   ```
-- Run the agent eval suite:
-  ```bash
-  AIRUNNER_TEST_NO_GUI_LAUNCH=1 ./venv/bin/python -m pytest services/tests/eval --tb=short -ra
-  ```
+- The agent eval suite moved to its own repository:
+  [Capsize-Games/airunner-eval](https://github.com/Capsize-Games/airunner-eval)
+  (issue #2194). See that repository's README for how to run it.
 - Local dev helpers live in `scripts/dev/`: `run_services.sh` starts the
   daemon, `test_services.sh` health-checks it, `stop_services.sh` stops it,
   and `run_gui.sh` launches the desktop client. These scripts run the split

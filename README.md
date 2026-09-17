@@ -711,9 +711,10 @@ distributed build. Operators can point at a different data file by setting the
 ./venv/bin/python -m pytest services/tests/test_gui_llm_tts_functional.py -v --timeout=1200
 ./venv/bin/python -m pytest services/tests/test_gui_stt_llm_tts_functional.py -v --timeout=1200
 
-# Service-owned agent evals
-AIRUNNER_TEST_NO_GUI_LAUNCH=1 ./venv/bin/python -m pytest services/tests/eval --tb=short -ra
 ```
+
+Agent evals moved to their own repository:
+[Capsize-Games/airunner-eval](https://github.com/Capsize-Games/airunner-eval).
 
 The functional suites under `services/tests/` use real local runtimes and skip
 cleanly when required assets are missing. They cover API bootstrap,

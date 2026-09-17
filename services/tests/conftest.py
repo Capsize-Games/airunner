@@ -12,7 +12,8 @@ _PROJECT_ROOT = _SERVICES_ROOT.parent
 
 for _path in (
     _TEST_ROOT,
-    _TEST_ROOT / "eval",
+    # "eval" (services/tests/eval) moved to its own repository
+    # (issue #2194, https://github.com/Capsize-Games/airunner-eval).
     _PROJECT_ROOT / "services" / "src",
     # The shared package (airunner_common) lives under <repo>/shared and must
     # be importable for the services test surface (issue #2056). The old
