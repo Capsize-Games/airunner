@@ -79,7 +79,7 @@ class ModelRegistry:
 
     def _register_llm_models(self) -> None:
         """Register local LLM models from the GGUF-aware provider catalog."""
-        from airunner.components.llm.config.provider_config import (
+        from airunner_services.llm.provider_config import (
             LLMProviderConfig,
         )
 
@@ -155,7 +155,7 @@ class ModelRegistry:
     @staticmethod
     def _preferred_llm_download(model_id: str) -> Optional[Dict[str, object]]:
         """Return the preferred downloadable artifact for one local LLM."""
-        from airunner.components.llm.config.provider_config import (
+        from airunner_services.llm.provider_config import (
             LLMProviderConfig,
         )
 

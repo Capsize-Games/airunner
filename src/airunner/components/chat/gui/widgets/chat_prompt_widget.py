@@ -63,7 +63,7 @@ from airunner_common.settings import (
     RETIRED_SLASH_COMMANDS,
     SLASH_COMMANDS,
 )
-from airunner.components.llm.config.provider_config import LLMProviderConfig
+from airunner_services.llm.provider_config import LLMProviderConfig
 from airunner.runtimes.file_policy import (
     PathPolicyError,
     resolve_existing_file,

@@ -26,7 +26,7 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Qt, Signal, Slot
 
-from airunner.components.llm.config.provider_config import LLMProviderConfig
+from airunner_services.llm.provider_config import LLMProviderConfig
 from airunner.components.application.gui.windows.main.settings_mixin import (
     SettingsMixin,
 )

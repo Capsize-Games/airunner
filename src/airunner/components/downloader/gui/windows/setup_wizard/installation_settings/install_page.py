@@ -23,7 +23,7 @@ from airunner.components.data.bootstrap_service import (
     get_llm_file_bootstrap_data,
 )
 from airunner.daemon_client.gui_daemon_client import GuiDaemonClient
-from airunner.components.llm.config.provider_config import LLMProviderConfig
+from airunner_services.llm.provider_config import LLMProviderConfig
 from airunner.components.data.bootstrap_service import get_whisper_files
 from airunner.enums import SignalCode
 from airunner.utils.application.mediator_mixin import MediatorMixin

@@ -349,7 +349,7 @@ class ChooseModelsPage(BaseWizard):
         if not self.models_enabled.get("llm", False):
             return 0
 
-        from airunner.components.llm.config.provider_config import (
+        from airunner_services.llm.provider_config import (
             LLMProviderConfig,
         )
         from airunner.components.data.bootstrap_service import (

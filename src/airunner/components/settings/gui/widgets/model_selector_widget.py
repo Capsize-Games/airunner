@@ -22,7 +22,7 @@ from PySide6.QtCore import Signal, Slot
 from airunner.components.application.gui.widgets.searchable_combo_box import (
     SearchableComboBox,
 )
-from airunner.components.llm.config.provider_config import LLMProviderConfig
+from airunner_services.llm.provider_config import LLMProviderConfig
 from airunner.enums import ModelService
 
 
