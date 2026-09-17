@@ -28,8 +28,16 @@ torch.hub.set_dir(
     os.environ.get("TORCH_HOME", os.path.join(AIRUNNER_BASE_PATH, "torch/hub"))
 )
 
+from airunner_services.utils.memory.clear_memory import clear_memory
 from airunner_services.vendor.melo.api import TTS
-from airunner_services.vendor.melo.runtime_support import resolve_tts_model_root
+from airunner_services.vendor.melo.api import set_memory_cleanup_hook
+from airunner_services.vendor.melo.runtime_support import (
+    normalize_tts_model_root,
+    resolve_tts_model_root,
+    set_cache_base_resolver,
+    set_tts_model_base_resolver,
+    set_tts_model_root_resolver,
+)
 from airunner_services.runtimes.openvoice_runtime_helpers import (
     StreamingToneColorConverter,
     build_tone_color_converter,
@@ -38,8 +46,62 @@ from airunner_services.runtimes.openvoice_runtime_helpers import (
     expand_reference_speaker_path,
     precompute_reference_speaker,
     processed_target_dir,
+    warm_melo_tts,
 )
 from airunner_services.vendor.openvoice.api import ToneColorConverter
+
+
+def _get_path_settings():
+    """Return persisted path settings when available."""
+    try:
+        from airunner_services.database.models.path_settings import (
+            PathSettings,
+        )
+
+        return PathSettings.objects.first()
+    except Exception:
+        return None
+
+
+def _resolve_configured_tts_model_root() -> Optional[str]:
+    """Explicit TTS model root override, if the user configured one.
+
+    Registered with the vendored Melo runtime (issue #2190) so that
+    fork has no direct database or settings dependency; this
+    replicates the lookup it previously did inline.
+    """
+    path_settings = _get_path_settings()
+    tts_model_path = getattr(path_settings, "tts_model_path", None)
+    if tts_model_path:
+        return normalize_tts_model_root(tts_model_path)
+    return None
+
+
+def _resolve_tts_model_base() -> str:
+    """Base directory the default ``text/models/tts`` root nests under."""
+    path_settings = _get_path_settings()
+    base_path = getattr(path_settings, "base_path", None)
+    if base_path:
+        return os.path.expanduser(base_path)
+    return AIRUNNER_BASE_PATH
+
+
+def _resolve_cache_base() -> str:
+    """Base directory Melo's g2p cache nests under.
+
+    The pre-#2190 implementation always used AIRUNNER_BASE_PATH here
+    (unlike the TTS model root, it never consulted PathSettings), so
+    this intentionally does not check PathSettings.base_path.
+    """
+    return AIRUNNER_BASE_PATH
+
+
+set_tts_model_root_resolver(_resolve_configured_tts_model_root)
+set_tts_model_base_resolver(_resolve_tts_model_base)
+set_cache_base_resolver(_resolve_cache_base)
+# Preserve the previous multi-GPU-aware cleanup exactly (the vendor
+# file's own default is a plain gc.collect() + empty_cache()).
+set_memory_cleanup_hook(clear_memory)
 
 
 def _configured_openvoice_root(tts_model_root: str) -> str:

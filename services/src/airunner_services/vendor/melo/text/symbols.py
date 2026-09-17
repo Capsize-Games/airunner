@@ -1,5 +1,5 @@
 # punctuation = ["!", "?", "…", ",", ".", "'", "-"]
-from airunner_common.contract_enums import AvailableLanguage
+from airunner_services.vendor.melo.language import Language
 
 
 punctuation = ["!", "?", "…", ",", ".", "'", "-", "¿", "¡"]
@@ -333,32 +333,32 @@ num_tones = (
 
 # language maps
 language_id_map = {
-    AvailableLanguage.ZH: 0,
-    AvailableLanguage.JP: 1,
-    AvailableLanguage.EN: 2,
-    AvailableLanguage.ZH_MIX_EN: 3,
-    AvailableLanguage.KR: 4,
-    AvailableLanguage.ES: 5,
-    AvailableLanguage.SP: 5,
-    AvailableLanguage.FR: 6,
+    Language.ZH: 0,
+    Language.JP: 1,
+    Language.EN: 2,
+    Language.ZH_MIX_EN: 3,
+    Language.KR: 4,
+    Language.ES: 5,
+    Language.SP: 5,
+    Language.FR: 6,
 }
 num_languages = len(language_id_map.keys())
 
 language_tone_start_map = {
-    AvailableLanguage.ZH: 0,
-    AvailableLanguage.ZH_MIX_EN: 0,
-    AvailableLanguage.JP: num_zh_tones,
-    AvailableLanguage.EN: num_zh_tones + num_ja_tones,
-    AvailableLanguage.KR: num_zh_tones + num_ja_tones + num_en_tones,
-    AvailableLanguage.ES: num_zh_tones
+    Language.ZH: 0,
+    Language.ZH_MIX_EN: 0,
+    Language.JP: num_zh_tones,
+    Language.EN: num_zh_tones + num_ja_tones,
+    Language.KR: num_zh_tones + num_ja_tones + num_en_tones,
+    Language.ES: num_zh_tones
     + num_ja_tones
     + num_en_tones
     + num_kr_tones,
-    AvailableLanguage.SP: num_zh_tones
+    Language.SP: num_zh_tones
     + num_ja_tones
     + num_en_tones
     + num_kr_tones,
-    AvailableLanguage.FR: num_zh_tones
+    Language.FR: num_zh_tones
     + num_ja_tones
     + num_en_tones
     + num_kr_tones

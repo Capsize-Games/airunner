@@ -3,21 +3,16 @@ import torch
 import os
 
 from transformers import AutoTokenizer, AutoModelForMaskedLM
-from airunner_common.settings import AIRUNNER_BASE_PATH
 from airunner_services.vendor.melo.runtime_support import (
     get_melo_logger,
+    resolve_cache_root,
     resolve_tts_model_path,
 )
 
 
 def _melo_cache_path() -> str:
-    """Return the AIRunner-managed cache path for Melo artifacts."""
-    return os.path.join(
-        AIRUNNER_BASE_PATH,
-        "cache",
-        "melo",
-        "cmudict_cache.pickle",
-    )
+    """Return the host-managed cache path for Melo artifacts."""
+    return os.path.join(resolve_cache_root(), "cmudict_cache.pickle")
 
 
 class _SafeG2PUnpickler(pickle.Unpickler):

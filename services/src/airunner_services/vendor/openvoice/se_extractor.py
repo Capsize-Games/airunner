@@ -4,19 +4,20 @@ import torch
 import hashlib
 import librosa
 import base64
+import logging
 from glob import glob
 import numpy as np
 from pydub import AudioSegment
 import torchaudio
 from time import perf_counter
 
-from airunner_common.settings import AIRUNNER_LOG_LEVEL
-from airunner_services.utils.application.get_logger import get_logger
-
 model_size = "medium"
 model = None
 
-logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
+# Standard-library logger under this module's own name: a vendored
+# third-party library should not depend on this project's logging
+# setup (issue #2190). Configuration is the host's job.
+logger = logging.getLogger(__name__)
 
 
 def _load_cached_speaker_embedding(se_path, device):

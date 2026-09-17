@@ -83,6 +83,9 @@ def _load_language_base_pure() -> ModuleType:
     runtime_support = ModuleType("airunner_services.vendor.melo.runtime_support")
     runtime_support.get_melo_logger = lambda *a, **k: None
     runtime_support.resolve_tts_model_path = lambda *a, **k: ""
+    # issue #2190: language_base.py's cache path now goes through this
+    # resolver instead of importing AIRUNNER_BASE_PATH directly.
+    runtime_support.resolve_cache_root = lambda *a, **k: "/tmp"
     sys.modules[
         "airunner_services.vendor.melo.runtime_support"
     ] = runtime_support

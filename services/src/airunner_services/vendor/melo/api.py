@@ -1,3 +1,4 @@
+import gc
 import os
 import re
 import soundfile
@@ -5,9 +6,8 @@ import numpy as np
 import torch.nn as nn
 from tqdm import tqdm
 import torch
-from typing import Dict, Optional
-from airunner_common.contract_enums import AvailableLanguage
-from airunner_services.utils.memory.clear_memory import clear_memory
+from typing import Callable, Dict, Optional
+from airunner_services.vendor.melo.language import Language
 from airunner_services.vendor.melo import utils
 from airunner_services.vendor.melo.models import SynthesizerTrn
 from airunner_services.vendor.melo.split_utils import split_sentence
@@ -17,40 +17,67 @@ from airunner_services.vendor.melo.text import cleaned_text_to_sequence
 from airunner_services.vendor.melo.runtime_support import resolve_tts_model_path
 
 
-def _normalize_language(value) -> AvailableLanguage:
+def _normalize_language(value) -> Language:
     """Accept equivalent language enums from GUI or service layers."""
-    if isinstance(value, AvailableLanguage):
+    if isinstance(value, Language):
         return value
 
     member_name = getattr(value, "name", None)
-    if isinstance(member_name, str) and member_name in AvailableLanguage.__members__:
-        return AvailableLanguage[member_name]
+    if isinstance(member_name, str) and member_name in Language.__members__:
+        return Language[member_name]
 
     member_value = getattr(value, "value", None)
     if isinstance(member_value, str):
         try:
-            return AvailableLanguage(member_value)
+            return Language(member_value)
         except ValueError:
             pass
 
     if isinstance(value, str):
         alias = value.strip().upper()
-        if alias in AvailableLanguage.__members__:
-            return AvailableLanguage[alias]
+        if alias in Language.__members__:
+            return Language[alias]
         try:
-            return AvailableLanguage(value)
+            return Language(value)
         except ValueError:
             pass
 
     raise ValueError(
-        f"Invalid language type: {type(value)}. Expected AvailableLanguage."
+        f"Invalid language type: {type(value)}. Expected Language."
     )
+
+
+def _default_clear_memory() -> None:
+    """Best-effort GPU cache clear plus garbage collection.
+
+    Used unless the host registers a more capable hook via
+    set_memory_cleanup_hook (see
+    airunner_services.utils.memory.clear_memory for the multi-GPU
+    aware version the application uses). A vendored third-party
+    library should not import application code directly (issue
+    #2190).
+    """
+    if torch.cuda.is_available():
+        try:
+            torch.cuda.empty_cache()
+        except RuntimeError:
+            pass
+    gc.collect()
+
+
+_memory_cleanup_hook: Callable[[], None] = _default_clear_memory
+
+
+def set_memory_cleanup_hook(fn: Callable[[], None]) -> None:
+    """Register the host's memory-cleanup callable, called on unload()."""
+    global _memory_cleanup_hook
+    _memory_cleanup_hook = fn
 
 
 class TTS(nn.Module):
     def __init__(
         self,
-        language: AvailableLanguage = AvailableLanguage.EN,
+        language: Language = Language.EN,
         device: Optional[str] = None,
     ):
         super().__init__()
@@ -65,25 +92,25 @@ class TTS(nn.Module):
     @property
     def voice_model_paths(self) -> Dict:
         return {
-            AvailableLanguage.EN: resolve_tts_model_path(
+            Language.EN: resolve_tts_model_path(
                 "myshell-ai/MeloTTS-English-v3"
             ),
-            AvailableLanguage.FR: resolve_tts_model_path(
+            Language.FR: resolve_tts_model_path(
                 "myshell-ai/MeloTTS-French"
             ),
-            AvailableLanguage.JP: resolve_tts_model_path(
+            Language.JP: resolve_tts_model_path(
                 "myshell-ai/MeloTTS-Japanese"
             ),
-            AvailableLanguage.ES: resolve_tts_model_path(
+            Language.ES: resolve_tts_model_path(
                 "myshell-ai/MeloTTS-Spanish"
             ),
-            AvailableLanguage.ZH: resolve_tts_model_path(
+            Language.ZH: resolve_tts_model_path(
                 "myshell-ai/MeloTTS-Chinese"
             ),
-            AvailableLanguage.ZH_MIX_EN: resolve_tts_model_path(
+            Language.ZH_MIX_EN: resolve_tts_model_path(
                 "myshell-ai/MeloTTS-Chinese"
             ),
-            AvailableLanguage.KR: resolve_tts_model_path(
+            Language.KR: resolve_tts_model_path(
                 "myshell-ai/MeloTTS-Korean"
             ),
         }
@@ -148,11 +175,11 @@ class TTS(nn.Module):
         return os.path.join(model_path, "config.json")
 
     @property
-    def language(self) -> AvailableLanguage:
+    def language(self) -> Language:
         return self._language
 
     @language.setter
-    def language(self, value: AvailableLanguage):
+    def language(self, value: Language):
         value = _normalize_language(value)
         # Only unload if the language actually changes
         if value is not self._language:
@@ -186,7 +213,7 @@ class TTS(nn.Module):
         if self._hps:
             del self._hps
             self._hps = None
-        clear_memory()
+        _memory_cleanup_hook()
 
     def split_sentences_into_pieces(self, text):
         texts = split_sentence(text, language=self.language)
@@ -220,8 +247,8 @@ class TTS(nn.Module):
                 tx = tqdm(texts)
         for t in tx:
             if language in [
-                AvailableLanguage.EN,
-                AvailableLanguage.ZH_MIX_EN,
+                Language.EN,
+                Language.ZH_MIX_EN,
             ]:
                 t = re.sub(r"([a-z])([A-Z])", r"\1 \2", t)
             try:
@@ -354,16 +381,16 @@ class TTS(nn.Module):
             del word2ph
 
             lang_enum = self.language
-            if lang_enum is AvailableLanguage.ZH:
+            if lang_enum is Language.ZH:
                 bert = bert
                 ja_bert = torch.zeros(768, len(phone))
             elif lang_enum in [
-                AvailableLanguage.JP,
-                AvailableLanguage.EN,
-                AvailableLanguage.ZH_MIX_EN,
-                AvailableLanguage.KR,
-                AvailableLanguage.ES,
-                AvailableLanguage.FR,
+                Language.JP,
+                Language.EN,
+                Language.ZH_MIX_EN,
+                Language.KR,
+                Language.ES,
+                Language.FR,
             ]:
                 ja_bert = bert
                 bert = torch.zeros(1024, len(phone))
