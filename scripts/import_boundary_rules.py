@@ -16,9 +16,7 @@ from pathlib import Path
 # Each entry maps a source root (relative to the repo root) to the
 # fully-qualified package name that root's files belong to, and the
 # set of top-level project package names that package is allowed to
-# import. "This project" packages are the keys of this dict plus
-# "airunner_services.vendor", checked as a separate, narrower owner
-# below.
+# import.
 OWNED_ROOTS: dict[str, tuple[str, frozenset[str]]] = {
     "src/airunner": (
         "airunner",
@@ -47,8 +45,6 @@ OWNED_ROOTS: dict[str, tuple[str, frozenset[str]]] = {
 PROJECT_PACKAGES = frozenset(
     {"airunner", "airunner_common", "airunner_services", "airunner_native"}
 )
-
-VENDOR_REL_ROOT = "services/src/airunner_services/vendor"
 
 
 @dataclass(frozen=True)
@@ -101,7 +97,6 @@ def check_owned_root(
     violations: list[Violation] = []
     for path in iter_python_files(root):
         rel = path.relative_to(repo_root).as_posix()
-        in_vendor = rel.startswith(VENDOR_REL_ROOT)
 
         try:
             tree = ast.parse(path.read_text(encoding="utf-8"), filename=rel)
@@ -117,28 +112,6 @@ def check_owned_root(
             top = module.split(".", 1)[0]
             if top not in PROJECT_PACKAGES:
                 continue  # third-party or stdlib: not this checker's job
-
-            if in_vendor:
-                # Rule: vendor must not import anything from this
-                # project *outside its own subtree*. A vendor file
-                # importing a sibling vendor module (melo importing
-                # melo.commons, say) is fine; that is the vendored
-                # library's own internal structure, not a project
-                # dependency.
-                if module == "airunner_services.vendor" or (
-                    module.startswith("airunner_services.vendor.")
-                ):
-                    continue
-                violations.append(
-                    Violation(
-                        Path(rel),
-                        lineno,
-                        module,
-                        "airunner_services.vendor must import nothing "
-                        "from this project outside its own subtree",
-                    )
-                )
-                continue
 
             if top == owner_name:
                 continue  # importing within your own package is fine

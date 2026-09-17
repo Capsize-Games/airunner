@@ -5,8 +5,12 @@ Covers:
 - ``trust_remote_code`` disabled by default across services, with the
   tokenizer mixin gated on an explicit ``ApplicationSettings.trust_remote_code``
   opt-in (issue #2031 / #2032 CI coverage).
-- g2p cache files are never loaded via raw ``pickle.load``; a restricted
-  unpickler rejects malicious payloads and falls back to regeneration.
+
+The g2p cache's restricted-unpickler coverage (never loaded via raw
+``pickle.load``) moved with ``airunner_services.vendor`` to its own
+repository (issue #2195,
+https://github.com/Capsize-Games/airunner-tts-vendor); see that
+repository's ``tests/test_g2p_cache_security.py``.
 
 CI note (issue #2054 / security-coverage): the source-scan and pure-Python
 assertions below run in the lean ``[development]`` install used by
@@ -16,10 +20,8 @@ guarded by a scoped ``importorskip`` (see ``_TorchOnlyTests``).
 
 from __future__ import annotations
 
-import builtins
 import importlib.util
 import os
-import pickle
 import sys
 from types import ModuleType
 from unittest import mock
@@ -49,112 +51,6 @@ def _read_source(relative_path: str) -> str:
     full_path = os.path.join(_services_root(), relative_path)
     with open(full_path, encoding="utf-8") as handle:
         return handle.read()
-
-
-def _write_pickle(path: str, obj) -> None:
-    with open(path, "wb") as handle:
-        pickle.dump(obj, handle)
-
-
-class _Malicious:
-    """Object whose unpickle would execute arbitrary code."""
-
-    def __reduce__(self):
-        return (builtins.eval, ("__import__('os').getcwd()",))
-
-
-def _load_language_base_pure() -> ModuleType:
-    """Import ``language_base`` without importing the torch-dependent melo API.
-
-    The ``_SafeG2PUnpickler`` class is pure Python (``pickle.Unpickler``
-    subclass); importing the whole ``melo.api`` chain pulls in torch. We load
-    the module directly via ``importlib`` with the torch-dependent
-    ``runtime_support`` dependency satisfied by a lightweight stub so the
-    lean CI install can still exercise the restricted unpickler.
-    """
-    module_path = os.path.join(
-        _services_root(),
-        "airunner_services",
-        "vendor",
-        "melo",
-        "text",
-        "language_base.py",
-    )
-    runtime_support = ModuleType("airunner_services.vendor.melo.runtime_support")
-    runtime_support.get_melo_logger = lambda *a, **k: None
-    runtime_support.resolve_tts_model_path = lambda *a, **k: ""
-    # issue #2190: language_base.py's cache path now goes through this
-    # resolver instead of importing AIRUNNER_BASE_PATH directly.
-    runtime_support.resolve_cache_root = lambda *a, **k: "/tmp"
-    sys.modules[
-        "airunner_services.vendor.melo.runtime_support"
-    ] = runtime_support
-
-    # The vendor module imports torch/transformers at module level but the
-    # restricted unpickler we test is pure Python; stub the heavy imports so
-    # the lean CI install can still exercise it. ``airunner_common.settings``
-    # is left real (it imports cleanly and other modules rely on it).
-    sys.modules.setdefault("torch", ModuleType("torch"))
-    sys.modules.setdefault("transformers", ModuleType("transformers"))
-    transformers_stub = sys.modules["transformers"]
-    transformers_stub.AutoTokenizer = object
-    transformers_stub.AutoModelForMaskedLM = object
-
-    spec = importlib.util.spec_from_file_location(
-        "airunner_services.vendor.melo.text.language_base",
-        module_path,
-    )
-    module = importlib.util.module_from_spec(spec)
-    sys.modules[spec.name] = module
-    spec.loader.exec_module(module)  # type: ignore[union-attr]
-    return module
-
-
-_language_base_pure = _load_language_base_pure()
-_load_g2p_cache_safe = _language_base_pure._load_g2p_cache_safe
-
-
-# ---------------------------------------------------------------------------
-# Restricted unpickler (pure Python; runs in the lean install)
-# ---------------------------------------------------------------------------
-
-
-def test_safe_g2p_cache_accepts_plain_dict(tmp_path) -> None:
-    cache = str(tmp_path / "cmudict_cache.pickle")
-    _write_pickle(
-        cache,
-        {"hello": [["HH", "AH0", "L", "OW1"]]},
-    )
-    assert _load_g2p_cache_safe(cache) == {
-        "hello": [["HH", "AH0", "L", "OW1"]]
-    }
-
-
-def test_safe_g2p_cache_rejects_malicious_object(tmp_path) -> None:
-    cache = str(tmp_path / "cmudict_cache.pickle")
-    _write_pickle(cache, _Malicious())
-    assert _load_g2p_cache_safe(cache) is None
-
-
-def test_safe_g2p_cache_rejects_non_dict(tmp_path) -> None:
-    cache = str(tmp_path / "cmudict_cache.pickle")
-    _write_pickle(cache, ["not", "a", "dict"])
-    assert _load_g2p_cache_safe(cache) is None
-
-
-def test_safe_g2p_cache_rejects_corrupt_file(tmp_path) -> None:
-    cache = str(tmp_path / "cmudict_cache.pickle")
-    with open(cache, "wb") as handle:
-        handle.write(b"\x00\x01garbage not a pickle")
-    assert _load_g2p_cache_safe(cache) is None
-
-
-def test_no_bare_pickle_load_in_language_base() -> None:
-    """The g2p cache must never be loaded via raw pickle.load."""
-    source = _read_source(
-        "airunner_services/vendor/melo/text/language_base.py"
-    )
-    assert "pickle.load(" not in source
 
 
 # ---------------------------------------------------------------------------
@@ -425,12 +321,13 @@ def test_tokenizer_fallback_methods_run_when_opted_in() -> None:
 # ---------------------------------------------------------------------------
 
 
+# The four vendor call sites this used to also cover (melo/api.py,
+# melo/data_utils.py, openvoice/api.py, openvoice/se_extractor.py)
+# moved to their own repository along with the rest of
+# airunner_services.vendor (issue #2195); see that repository's
+# tests/test_torch_load_weights_only.py.
 _TORCH_LOAD_FILES = [
-    "airunner_services/vendor/melo/api.py",
-    "airunner_services/vendor/openvoice/api.py",
-    "airunner_services/vendor/openvoice/se_extractor.py",
     "airunner_services/runtimes/openvoice_model_manager.py",
-    "airunner_services/vendor/melo/data_utils.py",
 ]
 
 

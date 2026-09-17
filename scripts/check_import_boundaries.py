@@ -14,17 +14,19 @@ edge not listed here is a violation -- see import_boundary_rules.py's
 ``OWNED_ROOTS`` for the literal data this docstring describes)::
 
     airunner            -> airunner_services, airunner_common, airunner_native
-    airunner_services   -> airunner_common, airunner_services.vendor
+    airunner_services   -> airunner_common
     airunner_native     -> airunner, airunner_services, airunner_common
     airunner_common     -> (nothing in this project)
-    airunner_services.vendor -> (nothing in this project outside itself)
 
 ``services/src/airunner_services/eval`` was extracted to its own
 repository (issue #2194,
 https://github.com/Capsize-Games/airunner-eval) and no longer exists
 here, so the rule that used to govern it ("nothing outside eval may
 import eval") was removed rather than left as dead code that could
-never fire.
+never fire. ``services/src/airunner_services/vendor`` was likewise
+extracted to its own package (issue #2195,
+https://github.com/Capsize-Games/airunner-tts-vendor), removing the
+vendor-isolation rule the same way.
 
 ``airunner_native -> airunner, airunner_services`` was not the
 original design (#2185's tracker described native as a leaf that only

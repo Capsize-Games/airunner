@@ -33,13 +33,10 @@ no_implicit_optional = true
 warn_redundant_casts = true
 warn_unused_configs = true
 
-# Generated and vendored code is excluded from the strictness baseline; keep
-# per-module overrides here so the project config remains the single source.
+# Generated code is excluded from the strictness baseline; keep per-module
+# overrides here so the project config remains the single source.
 [[tool.mypy.overrides]]
-module = [
-    "airunner.feather_rc",
-    "airunner_services.vendor.*",
-]
+module = ["airunner.feather_rc"]
 ignore_errors = true
 
 [tool.black]

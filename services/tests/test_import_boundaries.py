@@ -77,31 +77,3 @@ def test_services_importing_airunner_is_caught(tmp_path) -> None:
     assert len(problems) == 1
     assert "offender.py" in problems[0]
     assert "airunner.enums" in problems[0]
-
-
-def test_vendor_importing_its_own_siblings_is_not_flagged(tmp_path) -> None:
-    """A vendor file importing a sibling vendor module is not a violation."""
-    import textwrap
-
-    from scripts.check_import_boundaries import run_check as _run
-
-    fake_repo = tmp_path / "repo"
-    vendor_dir = (
-        fake_repo
-        / "services"
-        / "src"
-        / "airunner_services"
-        / "vendor"
-        / "melo"
-    )
-    vendor_dir.mkdir(parents=True)
-    (vendor_dir / "sibling.py").write_text("X = 1\n")
-    (vendor_dir / "api.py").write_text(
-        textwrap.dedent(
-            """
-            from airunner_services.vendor.melo import sibling
-            """
-        )
-    )
-    problems = _run(repo_root=fake_repo)
-    assert problems == []
