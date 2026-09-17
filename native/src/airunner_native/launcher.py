@@ -25,12 +25,12 @@ from airunner_native.repo_paths import resolve_repo_root
 
 configure_early_torch_allocator_environment()
 
+from airunner_common.get_logger import get_logger
 from airunner_common.settings import AIRUNNER_BASE_PATH
 from airunner_common.settings import AIRUNNER_DISABLE_FACEHUGGERSHIELD
 from airunner_common.settings import AIRUNNER_LOG_LEVEL
 from airunner_common.settings import LOCAL_SERVER_HOST
 from airunner_native.crash_handler import install_crash_handlers
-from airunner_services.utils.application.get_logger import get_logger
 from airunner_common.logging_utils import (
     configure_noisy_loggers,
 )
