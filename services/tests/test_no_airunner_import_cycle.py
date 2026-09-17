@@ -55,7 +55,6 @@ def test_services_import_without_airunner_on_path():
             "PYTHONPATH": ":".join(
                 [
                     str(_PROJECT_ROOT / "services" / "src"),
-                    str(_PROJECT_ROOT / "shared"),
                 ]
             ),
         },

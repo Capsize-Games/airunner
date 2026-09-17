@@ -72,10 +72,7 @@ def test_local_fallback_still_imports_the_canonical_service():
     """The one real caller must keep pointing at the canonical class."""
     import sys
 
-    sys.path[:0] = [
-        str(_PROJECT_ROOT / "services" / "src"),
-        str(_PROJECT_ROOT / "shared"),
-    ]
+    sys.path[:0] = [str(_PROJECT_ROOT / "services" / "src")]
     from airunner_services.api.services.llm_services import (
         LLMAPIService,
     )
@@ -103,10 +100,7 @@ def test_provider_config_local_models_are_a_superset_of_the_old_desktop_set():
     """
     import sys
 
-    sys.path[:0] = [
-        str(_PROJECT_ROOT / "services" / "src"),
-        str(_PROJECT_ROOT / "shared"),
-    ]
+    sys.path[:0] = [str(_PROJECT_ROOT / "services" / "src")]
     from airunner_services.llm.provider_config import LLMProviderConfig
 
     expected_ids = {

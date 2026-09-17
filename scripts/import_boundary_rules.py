@@ -20,30 +20,29 @@ from pathlib import Path
 OWNED_ROOTS: dict[str, tuple[str, frozenset[str]]] = {
     "src/airunner": (
         "airunner",
-        frozenset(
-            {"airunner_services", "airunner_common", "airunner_native"}
-        ),
+        frozenset({"airunner_services", "airunner_native"}),
     ),
     "services/src/airunner_services": (
         "airunner_services",
-        frozenset({"airunner_common"}),
+        frozenset(),
     ),
     "native/src/airunner_native": (
         "airunner_native",
         # See check_import_boundaries.py's module docstring:
         # launcher.py structurally needs to import what it launches.
-        frozenset({"airunner", "airunner_services", "airunner_common"}),
-    ),
-    "shared/airunner_common": (
-        "airunner_common",
-        frozenset(),
+        frozenset({"airunner", "airunner_services"}),
     ),
 }
 
 # Project package names recognized anywhere (used to detect a
 # disallowed import even when it isn't the file's own owning root).
+# airunner_common is deliberately not here: it moved to its own
+# repository (issue #2197, https://github.com/Capsize-Games/airunner-common)
+# and is now an ordinary installed dependency like any other third-party
+# package, not a project-internal boundary this checker enforces --
+# there's no cycle risk left once it doesn't live in this repo's tree.
 PROJECT_PACKAGES = frozenset(
-    {"airunner", "airunner_common", "airunner_services", "airunner_native"}
+    {"airunner", "airunner_services", "airunner_native"}
 )
 
 

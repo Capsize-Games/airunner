@@ -2,11 +2,12 @@
 
 The build metadata below is vendored statically, the same pattern already
 established for services/setup.py and native/setup.py (issue #2038):
-airunner_common is extracted into its own repository (issue #2197), so a
+airunner_common now lives in its own repository
+(https://github.com/Capsize-Games/airunner-common, issue #2197), so a
 ``sys.path`` insert at the repo root -- this file's previous approach,
-issue #2044 -- stops working the moment it's a separate checkout. Keep
-the values in this file in sync with
-``shared/airunner_common/package_metadata.py`` when a dependency changes.
+issue #2044 -- stopped working once it became a separate checkout. Its
+own VERSION/FACEHUGGERSHIELD_REQUIREMENT/LICENSE_CLASSIFIERS are the
+values worth keeping in sync here when they change.
 """
 
 import sys
@@ -21,17 +22,19 @@ VERSION = "6.1.3"
 
 # The project is GPL-3.0-only (issue #2058): the repo-root LICENSE file,
 # every ``license=`` metadata field and these PyPI classifiers must agree.
-# Mirrored from shared/airunner_common/package_metadata.py.
+# Mirrored from airunner_common/package_metadata.py in
+# Capsize-Games/airunner-common.
 LICENSE_CLASSIFIERS = [
     "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
 ]
 
-# Supply-chain hardening (issue #2036); see
-# shared/airunner_common/package_metadata.py for the full rationale.
+# Supply-chain hardening (issue #2036); see airunner_common/package_metadata.py
+# in Capsize-Games/airunner-common for the full rationale.
 FACEHUGGERSHIELD_REQUIREMENT = "facehuggershield==1.0.0"
 
 # Test/lint/dev tooling (issue #2054). Mirrors
-# shared/airunner_common/package_metadata.py's DEVELOPMENT_REQUIREMENTS.
+# airunner_common/package_metadata.py's DEVELOPMENT_REQUIREMENTS in
+# Capsize-Games/airunner-common.
 DEVELOPMENT_REQUIREMENTS = [
     "pytest",
     "pytest-timeout",
@@ -54,7 +57,11 @@ GUI_REQUIREMENTS = [
     "PySide6==6.9.0",
     "PySide6_Addons==6.9.0",
     "PySide6_Essentials==6.9.0",
-    f"airunner-common=={VERSION}",
+    # airunner-common is independently versioned in its own repository
+    # now (issue #2197, https://github.com/Capsize-Games/airunner-common),
+    # so a compatible-release pin per the versioning policy (#2191)
+    # instead of an exact lockstep VERSION pin.
+    "airunner-common~=6.1",
     # The GUI hard-imports airunner_services (daemon_client, api) but never
     # declared it (issue #2037). Mirror the native pattern and pin it to the
     # same VERSION as the rest of the surface.

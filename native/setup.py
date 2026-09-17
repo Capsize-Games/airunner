@@ -1,10 +1,13 @@
 """Canonical setup.py for the native package surface.
 
-The build metadata below is vendored statically so ``native/`` can be built
-without installing the shared ``airunner_common`` package first (issue #2038).
-``shared/airunner_common/package_metadata.py`` remains the canonical runtime
-source of the same requirement groups; keep the values in this file in sync
-with it when a dependency changes.
+The build metadata below is vendored statically so ``native/`` can be
+built without installing airunner_common first (issue #2038); that
+package now lives in its own repository
+(https://github.com/Capsize-Games/airunner-common, issue #2197). Its
+own VERSION/FACEHUGGERSHIELD_REQUIREMENT/LICENSE_CLASSIFIERS are the
+values worth keeping in sync here when they change; everything else
+below is specific to this package surface and independently
+authoritative.
 """
 
 from pathlib import Path
@@ -15,7 +18,7 @@ VERSION = "6.1.3"
 
 # The project is GPL-3.0-only (issue #2058): the repo-root LICENSE file, every
 # ``license=`` metadata field and these PyPI classifiers must agree. Mirrored
-# from shared/airunner_common/package_metadata.py (LICENSE_CLASSIFIERS).
+# from airunner_common/package_metadata.py in Capsize-Games/airunner-common.
 LICENSE_CLASSIFIERS = [
     "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
 ]
@@ -72,7 +75,11 @@ NATIVE_CONSOLE_SCRIPTS = [
 # ways this package actually gets used together with the rest of the
 # application.
 NATIVE_BASE_REQUIREMENTS = [
-    f"airunner-common=={VERSION}",
+    # airunner-common is independently versioned in its own repository
+    # now (issue #2197, https://github.com/Capsize-Games/airunner-common),
+    # so a compatible-release pin per the versioning policy (#2191)
+    # instead of an exact lockstep VERSION pin.
+    "airunner-common~=6.1",
     FACEHUGGERSHIELD_REQUIREMENT,
 ]
 

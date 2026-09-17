@@ -46,22 +46,32 @@ def test_build_system_setuptools_below_82() -> None:
         )
 
 
+#: Each of these setup.py files vendors its own DEVELOPMENT_REQUIREMENTS
+#: copy (issue #2038/#2197 -- no more single canonical
+#: shared/airunner_common/package_metadata.py source to scan instead).
+_DEV_REQUIREMENTS_FILES = (
+    _PROJECT_ROOT / "setup.py",
+    _PROJECT_ROOT / "services" / "setup.py",
+    _PROJECT_ROOT / "native" / "setup.py",
+)
+
+
 def test_no_setuptools_pin_above_82_in_dev_requirements() -> None:
     """DEVELOPMENT_REQUIREMENTS must not request setuptools>=82 either."""
-    metadata = (
-        _PROJECT_ROOT / "shared" / "airunner_common" / "package_metadata.py"
-    )
-    source = metadata.read_text(encoding="utf-8")
-    for line in source.splitlines():
-        if "setuptools" not in line:
-            continue
-        match = re.search(r'setuptools\s*>=?\s*([0-9]+(?:\.[0-9]+)*)', line)
-        if match and int(match.group(1).split(".")[0]) >= 82:
-            raise AssertionError(
-                f"DEVELOPMENT_REQUIREMENTS pins setuptools>={match.group(1)} "
-                "which conflicts with torch's setuptools<82 requirement "
-                "(issue #2057)"
+    for path in _DEV_REQUIREMENTS_FILES:
+        source = path.read_text(encoding="utf-8")
+        for line in source.splitlines():
+            if "setuptools" not in line:
+                continue
+            match = re.search(
+                r'setuptools\s*>=?\s*([0-9]+(?:\.[0-9]+)*)', line
             )
+            if match and int(match.group(1).split(".")[0]) >= 82:
+                raise AssertionError(
+                    f"{path}: DEVELOPMENT_REQUIREMENTS pins "
+                    f"setuptools>={match.group(1)} which conflicts with "
+                    "torch's setuptools<82 requirement (issue #2057)"
+                )
 
 
 def _build_system_files_exist() -> bool:

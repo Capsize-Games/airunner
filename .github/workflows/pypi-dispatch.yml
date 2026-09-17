@@ -7,11 +7,11 @@ on:
     inputs:
       packages:
         description: >-
-          Space-separated build directories to publish. Default publishes all
-          four. Use "shared services native" to create the sibling projects
+          Space-separated build directories to publish. Default publishes
+          all three. Use "services native" to create the sibling projects
           first -- see the comment on the build step.
         required: false
-        default: "shared services native ."
+        default: "services native ."
         type: string
 
 permissions:
@@ -40,28 +40,30 @@ jobs:
 
       - name: Build packages
         run: |
-          # Publish the full package surface documented in the README
-          # (issue #2061): airunner (GUI), airunner-services (headless
-          # daemon + runtimes), airunner-native (launcher) and airunner-common
-          # (shared foundation). airunner and airunner-native pin
-          # airunner-services==VERSION / airunner-common==VERSION, so all four
-          # must be published together or `pip install airunner` cannot
-          # resolve. Each invocation produces an sdist and a wheel in dist/;
-          # the publish step below uploads every artifact.
+          # Publish the package surface documented in the README (issue
+          # #2061): airunner (GUI), airunner-services (headless daemon +
+          # runtimes) and airunner-native (launcher). airunner-common
+          # (shared foundation) moved to its own repository (issue #2197,
+          # https://github.com/Capsize-Games/airunner-common) and
+          # publishes from there now. airunner and airunner-native pin
+          # airunner-services==VERSION, so both must be published together
+          # or `pip install airunner` cannot resolve. Each invocation
+          # produces an sdist and a wheel in dist/; the publish step below
+          # uploads every artifact.
           # Publishing order matters the first time. airunner pins
-          # airunner-common==VERSION and airunner-services==VERSION, and none
-          # of the three sibling projects exist on PyPI yet. If airunner
-          # uploads but a sibling fails -- e.g. a project-scoped token that
-          # cannot create new projects -- then `pip install airunner` is
-          # permanently unresolvable at that version, because PyPI versions
-          # can be yanked but never replaced.
+          # airunner-services==VERSION, and that sibling project might not
+          # exist on PyPI yet. If airunner uploads but the sibling fails
+          # -- e.g. a project-scoped token that cannot create new projects
+          # -- then `pip install airunner` is permanently unresolvable at
+          # that version, because PyPI versions can be yanked but never
+          # replaced.
           #
-          # So dispatch once with packages="shared services native" to create
-          # the siblings, confirm all three appear on PyPI, then dispatch again
-          # with packages="." for airunner itself. After the projects exist,
-          # the default (all four) is safe.
+          # So dispatch once with packages="services native" to create
+          # that sibling, confirm it appears on PyPI, then dispatch again
+          # with packages="." for airunner itself. After the project
+          # exists, the default (all three) is safe.
           mkdir -p dist
-          for pkg in ${{ inputs.packages || 'shared services native .' }}; do
+          for pkg in ${{ inputs.packages || 'services native .' }}; do
             echo "::group::build $pkg"
             # The root package refuses to build when the generated Qt
             # *_ui.py / resources.py files are missing or stale. They are not

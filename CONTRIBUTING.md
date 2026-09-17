@@ -169,8 +169,9 @@ Icons are managed with Qt resource files which are in turn managed with
   daemon, `test_services.sh` health-checks it, `stop_services.sh` stops it,
   and `run_gui.sh` launches the desktop client. These scripts run the split
   packages from a checkout without reinstalling: they set `DEV_ENV=1` and a
-  `PYTHONPATH` covering `services/src`, `src`, `native/src`, and `shared`
-  inside the repo `venv` (override the venv with `AIRUNNER_DEV_VENV`).
+  `PYTHONPATH` covering `services/src`, `src`, and `native/src` inside the
+  repo `venv` (override the venv with `AIRUNNER_DEV_VENV`). airunner-common
+  is a normal installed dependency, not a local path (issue #2197).
 - Write new tests for any new features or bug fixes. Follow the structure of
   existing tests in `services/tests/` and `src/airunner/components/*/tests/`.
 

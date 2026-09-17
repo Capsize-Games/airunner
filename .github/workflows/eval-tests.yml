@@ -45,13 +45,10 @@ jobs:
       - name: Install Python dependencies
         run: |
           python -m pip install --upgrade pip setuptools wheel
-          # Install local shared/services surfaces first so the editable root
-          # install resolves airunner-common/airunner-services from this
-          # checkout instead of PyPI (issue #2054). services/setup.py no longer
-          # imports airunner_common at build time (issue #2038), so an isolated
-          # build works; shared is still installed first because services
-          # declares it as a runtime dependency.
-          pip install -e ./shared
+          # airunner-common moved to its own repository (issue #2197,
+          # https://github.com/Capsize-Games/airunner-common) and is
+          # resolved from PyPI now via services/setup.py's own declared
+          # dependency, rather than installed from a local checkout.
           pip install -e "./services[$TEST_PROFILES]"
           pip install -e ".[$TEST_PROFILES]"
 
@@ -122,7 +119,6 @@ jobs:
       - name: Install Python dependencies
         run: |
           python -m pip install --upgrade pip setuptools wheel
-          pip install -e ./shared
           pip install -e "./services[$TEST_PROFILES]"
           pip install -e ".[$TEST_PROFILES]"
 

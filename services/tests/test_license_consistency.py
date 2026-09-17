@@ -37,7 +37,6 @@ def _root_setup_kwargs() -> dict:
     _orig_setup = setuptools.setup
     setuptools.setup = _fake_setup
     try:
-        # setup.py inserts <repo>/shared into sys.path itself.
         runpy.run_path(
             str(_PROJECT_ROOT / "setup.py"),
             run_name="__airunner_setup_probe__",

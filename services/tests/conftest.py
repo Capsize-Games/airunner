@@ -15,10 +15,11 @@ for _path in (
     # "eval" (services/tests/eval) moved to its own repository
     # (issue #2194, https://github.com/Capsize-Games/airunner-eval).
     _PROJECT_ROOT / "services" / "src",
-    # The shared package (airunner_common) lives under <repo>/shared and must
-    # be importable for the services test surface (issue #2056). The old
-    # "<repo>/model/src" entry was a phantom path and is removed.
-    _PROJECT_ROOT / "shared",
+    # airunner_common moved to its own repository (issue #2197,
+    # https://github.com/Capsize-Games/airunner-common); it's a normal
+    # installed dependency of services/setup.py now, not a raw local
+    # path. The old "<repo>/model/src" entry was a phantom path and is
+    # removed.
     _PROJECT_ROOT / "native" / "src",
     _PROJECT_ROOT / "src",
 ):
