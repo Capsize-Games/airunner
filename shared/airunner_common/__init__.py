@@ -9,6 +9,8 @@ agree across the desktop GUI (``src/``), the headless service daemon
 * ``dev_build_token`` — stale-daemon detection token
 * ``linux_bundle_layout`` — relocatable Linux bundle path helpers
 * ``contract_enums`` — cross-process and cross-layer contracts
+* ``contract_version`` — the desktop/daemon wire contract's own version,
+  independent of either distribution's package version (issue #2192)
 * ``logging_utils`` — shared logging configuration helpers
 
 Nothing here imports from ``airunner``, ``airunner_services`` or
@@ -20,6 +22,7 @@ from __future__ import annotations
 
 __all__ = [
     "contract_enums",
+    "contract_version",
     "dev_build_token",
     "linux_bundle_layout",
     "logging_utils",
