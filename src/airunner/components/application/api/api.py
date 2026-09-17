@@ -25,7 +25,7 @@ from airunner.utils.application.log_hygiene import summarize_text
 
 if TYPE_CHECKING:
     from airunner.components.art.api.art_services import ARTAPIService
-    from airunner.components.art.managers.stablediffusion.image_request import (
+    from airunner_services.art.managers.stablediffusion.image_request import (
         ImageRequest,
     )
     from airunner.components.llm.api.llm_services import LLMAPIService

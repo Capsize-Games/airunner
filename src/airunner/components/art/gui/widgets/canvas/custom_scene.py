@@ -43,7 +43,7 @@ from airunner_common.settings import (
 from airunner.components.application.gui.windows.main.settings_mixin import (
     SettingsMixin,
 )
-from airunner.components.art.managers.stablediffusion.rect import Rect
+from airunner_services.art.managers.stablediffusion.rect import Rect
 from airunner.components.art.utils.layer_compositor import LayerCompositor
 from airunner.components.art.utils.image_filter_utils import (
     build_filter_object_from_model,
