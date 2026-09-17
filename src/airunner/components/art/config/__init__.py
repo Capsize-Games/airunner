@@ -1,6 +1,6 @@
 """Art component configuration."""
 
-from airunner.components.art.config.image_generator_capabilities import (
+from airunner_services.art.config.image_generator_capabilities import (
     ImageGeneratorCapabilities,
     IMAGE_GENERATOR_CAPABILITIES,
     get_generator_capabilities,

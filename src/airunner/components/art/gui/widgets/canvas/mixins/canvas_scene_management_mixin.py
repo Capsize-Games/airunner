@@ -13,7 +13,7 @@ from airunner.components.art.utils.canvas_position_manager import (
     CanvasPositionManager,
     ViewState,
 )
-from airunner.components.art.managers.stablediffusion.rect import Rect
+from airunner_services.art.managers.stablediffusion.rect import Rect
 from airunner.components.art.data.canvas_layer_records import (
     create_canvas_layer,
     ensure_layer_setting,

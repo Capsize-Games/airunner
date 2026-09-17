@@ -29,7 +29,7 @@ from airunner.components.llm.gui.windows.huggingface_download_dialog import (
     HuggingFaceDownloadDialog,
 )
 from airunner.utils.image import convert_image_to_binary
-from airunner.components.art.managers.stablediffusion.image_response import (
+from airunner_services.art.managers.stablediffusion.image_response import (
     ImageResponse,
 )
 from airunner.components.llm.config.provider_config import LLMProviderConfig

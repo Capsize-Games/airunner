@@ -3,7 +3,7 @@ import os
 from typing import Any, Dict, List, Optional
 from airunner.components.application.workers.worker import Worker
 from airunner.enums import QueueType, SignalCode
-from airunner.components.art.managers.stablediffusion import (
+from airunner_services.art.managers.stablediffusion import (
     image_generation,
 )
 

@@ -17,7 +17,7 @@ if TYPE_CHECKING:
         ImageFilterAPIServices,
     )
     from airunner.components.art.api.lora_services import LoraAPIServices
-    from airunner.components.art.managers.stablediffusion.image_request import (
+    from airunner_services.art.managers.stablediffusion.image_request import (
         ImageRequest,
     )
 

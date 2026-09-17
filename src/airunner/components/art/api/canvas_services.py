@@ -5,13 +5,13 @@ from airunner.components.art.data.canvas_layer_records import (
     ensure_layer_setting,
 )
 from airunner.components.art.data.catalog_records import get_ai_model
-from airunner.components.art.managers.stablediffusion.image_request import (
+from airunner_services.art.managers.stablediffusion.image_request import (
     ImageRequest,
 )
 from airunner.enums import normalize_art_version
 from airunner.enums import GeneratorSection, SignalCode
 from PySide6.QtCore import QPoint
-from airunner.components.art.managers.stablediffusion.image_response import (
+from airunner_services.art.managers.stablediffusion.image_response import (
     ImageResponse,
 )
 from airunner.enums import SignalCode
