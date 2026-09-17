@@ -63,21 +63,17 @@ def test_root_setup_metadata_is_gpl() -> None:
     assert EXPECTED_CLASSIFIER in kwargs["classifiers"]
 
 
-def test_services_and_native_metadata_are_gpl() -> None:
-    """Both builder surfaces share airunner_common metadata and must agree."""
-    from airunner_common.package_metadata import (  # noqa: E402
-        build_native_setup_kwargs,
-        build_services_setup_kwargs,
-        LICENSE_CLASSIFIERS,
-    )
+def test_airunner_common_license_classifier_is_gpl() -> None:
+    """The one remaining canonical classifier source agrees too.
+
+    services/setup.py, native/setup.py and root setup.py each vendor their
+    own copy of this list now (issue #2197); the other tests below check
+    each of those directly. This checks the shared source they were all
+    copied from hasn't drifted on its own.
+    """
+    from airunner_common.package_metadata import LICENSE_CLASSIFIERS
 
     assert LICENSE_CLASSIFIERS == [EXPECTED_CLASSIFIER]
-    for kwargs in (
-        build_services_setup_kwargs(package_source_dir="src"),
-        build_native_setup_kwargs(package_source_dir="src"),
-    ):
-        assert kwargs["license"] == EXPECTED_LICENSE
-        assert kwargs["classifiers"] == LICENSE_CLASSIFIERS
 
 
 def test_vendored_services_setup_metadata_is_gpl() -> None:

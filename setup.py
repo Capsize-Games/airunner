@@ -1,8 +1,12 @@
 """Setup for the AIRunner GUI package.
 
-VERSION and the facehuggershield requirement are single-sourced from
-``shared/airunner_common/package_metadata.py`` (issue #2044) so the GUI,
-services, native and shared surfaces cannot drift.
+The build metadata below is vendored statically, the same pattern already
+established for services/setup.py and native/setup.py (issue #2038):
+airunner_common is extracted into its own repository (issue #2197), so a
+``sys.path`` insert at the repo root -- this file's previous approach,
+issue #2044 -- stops working the moment it's a separate checkout. Keep
+the values in this file in sync with
+``shared/airunner_common/package_metadata.py`` when a dependency changes.
 """
 
 import sys
@@ -11,17 +15,38 @@ from pathlib import Path
 from setuptools import find_packages, setup
 from setuptools.command.build_py import build_py as _build_py
 
-# Make the shared package importable when building from the repo root
-# without requiring it to be installed first (issue #2044).
 _REPO_ROOT = Path(__file__).resolve().parent
-sys.path.insert(0, str(_REPO_ROOT / "shared"))
 
-from airunner_common.package_metadata import (  # noqa: E402
-    DEVELOPMENT_REQUIREMENTS,
-    FACEHUGGERSHIELD_REQUIREMENT,
-    LICENSE_CLASSIFIERS,
-    VERSION,
-)
+VERSION = "6.1.3"
+
+# The project is GPL-3.0-only (issue #2058): the repo-root LICENSE file,
+# every ``license=`` metadata field and these PyPI classifiers must agree.
+# Mirrored from shared/airunner_common/package_metadata.py.
+LICENSE_CLASSIFIERS = [
+    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+]
+
+# Supply-chain hardening (issue #2036); see
+# shared/airunner_common/package_metadata.py for the full rationale.
+FACEHUGGERSHIELD_REQUIREMENT = "facehuggershield==1.0.0"
+
+# Test/lint/dev tooling (issue #2054). Mirrors
+# shared/airunner_common/package_metadata.py's DEVELOPMENT_REQUIREMENTS.
+DEVELOPMENT_REQUIREMENTS = [
+    "pytest",
+    "pytest-timeout",
+    "responses>=0.25.0",
+    "httpx>=0.27",
+    "coverage==7.8.0",
+    "black==26.3.1",
+    "pyinstaller==6.12.0",
+    "flake8==7.2.0",
+    "mypy==1.16.0",
+    "autoflake==2.3.1",
+    "pandas>=2.0.0",
+    "pyarrow>=14.0.0",
+    "tqdm>=4.0.0",
+]
 
 README = Path("README.md").read_text(encoding="utf-8")
 
