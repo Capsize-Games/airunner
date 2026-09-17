@@ -1,5 +1,5 @@
-from airunner.components.llm.utils.parse_template import parse_template
-from airunner.components.llm.utils.strip_names_from_message import (
+from airunner_services.llm.utils.parse_template import parse_template
+from airunner_services.llm.utils.strip_names_from_message import (
     strip_names_from_message,
 )
 from airunner.components.llm.utils.text_preprocessing import (

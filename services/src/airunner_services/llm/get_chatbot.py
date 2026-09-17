@@ -29,7 +29,7 @@ def get_chatbot():
         if chatbot is None:
             chatbot = Chatbot.objects.first(eager_load=eager_load)
         if chatbot is None:
-            chatbot = Chatbot.objects.create(name="Foobar")
+            chatbot = Chatbot.objects.create(name="Default")
             Chatbot.make_current(chatbot.id)
             chatbot = Chatbot.objects.first(eager_load=eager_load)
         return chatbot

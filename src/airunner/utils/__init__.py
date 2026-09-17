@@ -61,7 +61,7 @@ def __getattr__(name):
 
         return set_widget_state
     elif name == "strip_names_from_message":
-        from airunner.components.llm.utils.strip_names_from_message import strip_names_from_message
+        from airunner.components.llm.utils import strip_names_from_message
 
         return strip_names_from_message
     elif name == "prepare_text_for_tts":
