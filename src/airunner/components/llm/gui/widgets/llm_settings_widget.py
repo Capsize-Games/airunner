@@ -19,7 +19,7 @@ from airunner.components.application.gui.windows.main.ai_model_mixin import (
 )
 from airunner.enums import ModelService, SignalCode
 from airunner.utils.settings.get_qsettings import get_qsettings
-from airunner.components.llm.config.provider_config import LLMProviderConfig
+from airunner_services.llm.provider_config import LLMProviderConfig
 
 
 class LLMSettingsWidget(BaseWidget, AIModelMixin):

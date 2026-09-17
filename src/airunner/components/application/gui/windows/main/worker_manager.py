@@ -32,7 +32,7 @@ from airunner.utils.image import convert_image_to_binary
 from airunner_services.art.managers.stablediffusion.image_response import (
     ImageResponse,
 )
-from airunner.components.llm.config.provider_config import LLMProviderConfig
+from airunner_services.llm.provider_config import LLMProviderConfig
 from airunner.enums import TTSModel
 from airunner.components.application.gui.dialogs.privacy_consent_dialog import (
     is_huggingface_allowed,
