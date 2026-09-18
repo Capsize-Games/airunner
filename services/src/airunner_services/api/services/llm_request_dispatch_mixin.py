@@ -1,12 +1,10 @@
-"""Service-owned mixin for daemon-backed LLM request dispatch."""
+"""Service-owned mixin for in-process LLM request dispatch."""
 
 from __future__ import annotations
 
-import threading
 import uuid
 from typing import Any, Callable, Optional
 
-from airunner_services.daemon_connection_state import DaemonConnectionState
 from airunner_common.contract_enums import LLMActionType
 from airunner_services.llm.llm_request import LLMRequest
 from airunner_services.utils.application.enum_resolver import signal_code_proxy
@@ -16,7 +14,7 @@ SignalCode = signal_code_proxy()
 
 
 class LLMRequestDispatchMixin:
-    """Dispatch LLM requests through daemon or local fallback paths."""
+    """Dispatch LLM requests to the in-process local generation worker."""
 
     @staticmethod
     def _default_gguf_runtime_profile(
@@ -53,7 +51,7 @@ class LLMRequestDispatchMixin:
         conversation_id: Optional[int] = None,
         **kwargs,
     ) -> None:
-        """Queue one LLM request through daemon or local worker paths."""
+        """Queue one LLM request on the in-process local worker path."""
         search_hints = kwargs.pop("search_hints", None)
         llm_request = LLMRequestDispatchMixin._prepare_llm_request(
             self,
@@ -82,19 +80,6 @@ class LLMRequestDispatchMixin:
             resolved_request_id,
             callback,
         )
-
-        if self._send_request_via_daemon(
-            prompt,
-            llm_request,
-            action,
-            resolved_request_id,
-            search_hints,
-            conversation_id,
-            node_id,
-            signal_data=data,
-        ):
-            self.logger.info("LLM API: Daemon request queued")
-            return
 
         LLMRequestDispatchMixin._emit_local_generation_request(self, data)
 
@@ -191,98 +176,7 @@ class LLMRequestDispatchMixin:
             {"message_id": message_id},
         )
 
-    def _send_request_via_daemon(
-        self,
-        prompt: str,
-        llm_request: LLMRequest,
-        action: object,
-        request_id: Optional[str],
-        search_hints: Optional[dict],
-        conversation_id: Optional[int],
-        node_id: Optional[str],
-        signal_data: Optional[dict] = None,
-    ) -> bool:
-        """Route one request through the daemon when that client is ready."""
-        client = self._daemon_client()
-        if client is None or not request_id:
-            return False
-        if getattr(llm_request, "images", None):
-            return False
-
-        thread = threading.Thread(
-            target=LLMRequestDispatchMixin._run_daemon_request_or_fallback,
-            args=(
-                self,
-                client,
-                prompt,
-                llm_request,
-                action,
-                request_id,
-                search_hints,
-                conversation_id,
-                node_id,
-                signal_data,
-            ),
-            daemon=True,
-        )
-        thread.start()
-        return True
-
     def _emit_local_generation_request(self, data: dict[str, Any]) -> None:
-        """Emit one local-worker request when daemon routing is skipped."""
+        """Emit one local-worker request for in-process generation."""
         self.emit_signal(SignalCode.LLM_TEXT_GENERATE_REQUEST_SIGNAL, data)
         self.logger.info("LLM API: Signal emitted")
-
-    @staticmethod
-    def _daemon_state_value(state: object) -> object:
-        """Return one comparable daemon state value."""
-        return getattr(state, "value", state)
-
-    def _daemon_is_immediately_available(self, client) -> bool:
-        """Return True when the daemon can accept one request right now."""
-        if LLMRequestDispatchMixin._daemon_state_value(
-            getattr(client, "state", None)
-        ) == DaemonConnectionState.CONNECTED.value:
-            return True
-        availability_check = getattr(client, "is_available", None)
-        if callable(availability_check):
-            try:
-                return bool(availability_check(timeout_seconds=0.2))
-            except TypeError:
-                return bool(availability_check())
-        return bool(client.ensure_connected(auto_start=False))
-
-    def _run_daemon_request_or_fallback(
-        self,
-        client,
-        prompt: str,
-        llm_request: LLMRequest,
-        action: object,
-        request_id: str,
-        search_hints: Optional[dict],
-        conversation_id: Optional[int],
-        node_id: Optional[str],
-        signal_data: Optional[dict],
-    ) -> None:
-        """Use the daemon when available, else emit the local fallback."""
-        if not LLMRequestDispatchMixin._daemon_is_immediately_available(
-            self,
-            client,
-        ):
-            if signal_data is not None:
-                LLMRequestDispatchMixin._emit_local_generation_request(
-                    self,
-                    signal_data,
-                )
-            return
-
-        self._stream_daemon_request(
-            client,
-            prompt,
-            llm_request,
-            action,
-            request_id,
-            search_hints,
-            conversation_id,
-            node_id,
-        )
