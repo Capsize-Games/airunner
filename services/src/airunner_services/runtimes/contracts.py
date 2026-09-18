@@ -5,6 +5,7 @@ from __future__ import annotations
 from enum import Enum
 from typing import Any, Dict, List, Optional
 
+from airunner_common.contract_enums import MessageRole  # re-exported (#2221)
 from pydantic import BaseModel, ConfigDict, Field
 
 
@@ -42,24 +43,6 @@ class RuntimeAction(str, Enum):
     INVOKE = "invoke"
     CANCEL = "cancel"
     STATUS = "status"
-
-
-class MessageRole(str, Enum):
-    """LLM message roles shared by API and runtime requests.
-
-    Values match llama_cloud.MessageRole exactly (including DEVELOPER,
-    FUNCTION, CHATBOT and MODEL) so wire/serialization compatibility is
-    preserved without importing the llama_cloud SDK on the daemon path.
-    """
-
-    SYSTEM = "system"
-    DEVELOPER = "developer"
-    USER = "user"
-    ASSISTANT = "assistant"
-    FUNCTION = "function"
-    TOOL = "tool"
-    CHATBOT = "chatbot"
-    MODEL = "model"
 
 
 class ChatMessage(BaseModel):

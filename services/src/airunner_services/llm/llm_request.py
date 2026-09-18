@@ -1,9 +1,11 @@
 """Service-owned request model for LLM generation."""
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any, Dict, List, Optional
 
-from airunner_services.runtimes.contracts import MessageRole
+from airunner_common.llm_request import (
+    LLMRequest as _SharedLLMRequest,
+)
 
 from airunner_services.database.models.chatbot import (  # type: ignore[import-untyped]
     Chatbot,
@@ -25,47 +27,16 @@ def _clamp_generation_value(value: float) -> float:
 
 
 @dataclass
-class LLMRequest:
-    """Represent one request to a Large Language Model."""
+class LLMRequest(_SharedLLMRequest):
+    """Service-owned LLM request.
 
-    do_sample: bool = True
-    early_stopping: bool = True
-    eta_cutoff: int = 200
-    length_penalty: float = 1.0
-    max_new_tokens: int = 8192
-    min_length: int = 1
-    no_repeat_ngram_size: int = 3
-    num_beams: int = 1
-    num_return_sequences: int = 1
-    repetition_penalty: float = 1.15
-    temperature: float = 0.7
-    top_k: int = 20
-    top_p: float = 0.8
-    use_cache: bool = True
-    do_tts_reply: bool = True
-    node_id: Optional[str] = None
-    use_memory: bool = True
-    ephemeral: bool = False
-    tool_categories: Optional[List[str]] = field(default_factory=list)
-    role: MessageRole = MessageRole.USER
-    system_prompt: Optional[str] = None
-    response_format: Optional[str] = None
-    rag_files: Optional[List[str]] = field(default_factory=list)
-    ephemeral_conversation: bool = False
-    include_mood: Optional[bool] = None
-    include_datetime: Optional[bool] = None
-    include_style: Optional[bool] = None
-    include_memory: Optional[bool] = None
-    include_ui_context: Optional[bool] = None
-    enable_thinking: Optional[bool] = None
-    reasoning_effort: Optional[str] = None
-    model: str = ""
-    model_service: Optional[str] = None
-    api_model: Optional[str] = None
+    Fields shared with the desktop application live on the shared
+    ``airunner_common.llm_request.LLMRequest`` base class (issue #2221);
+    this subclass adds only the services-private fields below, which the
+    desktop has no equivalent of.
+    """
+
     gguf_runtime_profile: Optional[str] = None
-    dtype: Optional[str] = None
-    force_tool: Optional[str] = None
-    images: Optional[List[Any]] = field(default_factory=list)
     # Raw OpenAI/Ollama-style tool schemas supplied by an external API
     # caller (Ollama/OpenAI-compat "tools" request field). These are
     # bound directly to the chat model for one native-function-calling

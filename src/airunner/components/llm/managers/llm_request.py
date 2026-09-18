@@ -1,7 +1,9 @@
 from dataclasses import dataclass, asdict, field
 from typing import Optional, Dict, List, Any
 
-from airunner.enums import MessageRole
+from airunner_common.llm_request import (
+    LLMRequest as _SharedLLMRequest,
+)
 
 from airunner.daemon_client.resource_store import get_resource_store
 from airunner.components.llm.config.generation_presets import (
@@ -37,89 +39,20 @@ DEBUG_SETTING_FIELDS = (
 
 
 @dataclass
-class LLMRequest:
-    """
-    Represents a request to a Large Language Model.
+class LLMRequest(_SharedLLMRequest):
+    """Desktop-side LLM request.
 
-    This dataclass stores parameters for LLM generation, providing methods
-    to convert between various formats and sources.
-
-    Attributes:
-        do_sample: Whether to use sampling for generation.
-        early_stopping: Whether to stop generation when all beams are finished.
-        eta_cutoff: Eta value cutoff for generation.
-        length_penalty: Exponential penalty to the length of generated sequences.
-        max_new_tokens: Maximum number of tokens to generate.
-        min_length: Minimum length of the generated text.
-        no_repeat_ngram_size: Size of n-grams that should not be repeated.
-        num_beams: Number of beams for beam search.
-        num_return_sequences: Number of sequences to return.
-        repetition_penalty: Penalty for repeating tokens.
-        temperature: Temperature for sampling.
-        top_k: Keep only top-k tokens with highest probability.
-        top_p: Keep the top tokens with cumulative probability >= top_p.
-        use_cache: Whether to use the past key/values cache.
-        do_tts_reply: Whether to convert the reply to speech.
-        images: List of PIL Image objects for multimodal vision-capable models.
+    The fields that cross the desktop/daemon boundary -- and therefore
+    must agree with the daemon's own request type -- live on the shared
+    ``airunner_common.llm_request.LLMRequest`` base class (issue #2221).
+    This subclass adds only the desktop-local pre-processing/planning
+    state, all of which :meth:`to_dict` pops before a request is sent
+    over the wire, plus the desktop's own classmethods and serialization.
     """
 
-    do_sample: bool = True
-    early_stopping: bool = True
-    eta_cutoff: int = 200
-    length_penalty: float = 1.0
-    max_new_tokens: int = 8192  # Qwen2.5 generation limit, Qwen3 can do 32768
-    min_length: int = 1
-    no_repeat_ngram_size: int = 3  # Block 3-word phrase repetition
-    num_beams: int = 1
-    num_return_sequences: int = 1
-    repetition_penalty: float = 1.15  # Penalize token repetition
-    temperature: float = 0.7  # Qwen3 non-thinking mode recommended
-    top_k: int = 20  # Qwen3 recommended value
-    top_p: float = 0.8  # Qwen3 non-thinking mode recommended
-    use_cache: bool = True
-    do_tts_reply: bool = True
-    node_id: Optional[str] = None
-    use_memory: bool = True
-    ephemeral: bool = False  # If True, conversation won't be saved to database
-    tool_categories: Optional[List[str]] = field(
-        default_factory=list
-    )  # Default: no tools (empty list). Use None for all tools.
-    role: MessageRole = MessageRole.USER
-    system_prompt: Optional[str] = None  # Optional system prompt override
-    response_format: Optional[str] = (
-        None  # Override response format instruction (e.g., "json", "conversational")
-    )
-    rag_files: Optional[List[str]] = field(
-        default_factory=list
-    )  # List of file paths to load into RAG
-    ephemeral_conversation: bool = (
-        False  # If True, conversation stays in memory but not saved to database
-    )
-    # Optional prompt augmentation toggles (used when a custom system_prompt is provided)
-    include_mood: Optional[bool] = None
-    include_datetime: Optional[bool] = None
-    include_style: Optional[bool] = None
-    include_memory: Optional[bool] = None
-    include_ui_context: Optional[bool] = None
-    # Request-level thinking toggle (Qwen3-style <think> blocks).
-    # None means "use the global DB/default setting".
-    enable_thinking: Optional[bool] = None
-    # GPT-OSS reasoning effort override for runtimes without a native API knob.
-    reasoning_effort: Optional[str] = None
-    model: str = ""
-    # Request-level backend selection
-    model_service: Optional[str] = None  # local | openrouter | ollama
-    api_model: Optional[str] = None  # provider model name for API backends
     final_system_prompt: Optional[str] = None
     rewritten_prompt: Optional[str] = None
     preprocessed_primary_tool: Optional[str] = None
-    # Request-level quantization override for local HF models.
-    # This is consumed by the model manager to set llm_generator_settings.dtype
-    # before loading; it must NOT be passed through to transformers generate().
-    dtype: Optional[str] = None  # auto | 4bit | 8bit | 32bit
-    force_tool: Optional[str] = (
-        None  # Force a specific tool to be called (from slash commands)
-    )
     planner_mode: Optional[str] = None
     planner_tool_hints: Optional[List[str]] = field(default_factory=list)
     attached_document_capabilities: Optional[List[Dict[str, Any]]] = field(
@@ -132,9 +65,6 @@ class LLMRequest:
     document_primary_tool: Optional[str] = None
     document_answer_mode: Optional[str] = None
     request_plan: Optional[RequestPlan] = None
-    images: Optional[List[Any]] = field(
-        default_factory=list
-    )  # List of PIL Image objects for vision-capable models
 
     def to_dict(self) -> Dict:
         """
