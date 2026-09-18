@@ -14,7 +14,7 @@ from airunner_common.contract_enums import ModelService
 from airunner_common.contract_enums import ModelStatus
 from airunner_common.contract_enums import ModelType
 from airunner_common.settings import AIRUNNER_LLM_ON
-from airunner_services.llm.llm_response import LLMResponse
+from airunner_common.llm_response import LLMResponse
 from airunner_services.model_management.llm_model_manager import (
 	LLMModelManager,
 )

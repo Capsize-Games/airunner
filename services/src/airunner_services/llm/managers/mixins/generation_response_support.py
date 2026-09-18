@@ -13,7 +13,7 @@ from airunner_services.llm.gpt_oss_parser import (
     looks_like_tool_argument_payload,
     parse_gpt_oss_response,
 )
-from airunner_services.llm.llm_response import LLMResponse
+from airunner_common.llm_response import LLMResponse
 from airunner_services.llm.managers.mixins.generation_signal_support import (
     current_assistant_turn_index,
 )

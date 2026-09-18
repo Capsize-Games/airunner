@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any, List, Optional
 
-from airunner_services.llm.llm_response import LLMResponse
+from airunner_common.llm_response import LLMResponse
 
 
 def current_assistant_turn_index(owner) -> int:

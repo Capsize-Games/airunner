@@ -4,6 +4,7 @@ from PySide6.QtCore import QLocale
 import os
 
 from airunner_common.contract_enums import AvailableLanguage
+from airunner_common.contract_enums import LLMActionType
 
 
 class MessageRole(str, Enum):
@@ -410,48 +411,6 @@ class Mode(Enum):
     IMAGE = "Image Generation"
     LANGUAGE_PROCESSOR = "Language Processing"
     MODEL_MANAGER = "Model Manager"
-
-class LLMActionType(Enum):
-    """
-    The following action types are used by the LLM to process various user
-    requests. The default action type is "APPLICATION_COMMAND". This is used when the user
-    wants to interact with a chatbot. When this is combined with the
-    use_tool_flter flag, the LLM will attempt to determine which action to take
-    based on the user's words.
-    """
-
-    # DO_NOT_RESPOND = "DO NOTHING: Choose this action if none of the other actions apply to the user's request."
-    NONE = "None"
-    CHAT = "RESPOND: Choose this action if you want to respond to the user."
-    GENERATE_IMAGE = (
-        "GENERATE IMAGE: Choose this action if you want to generate an image."
-    )
-    APPLICATION_COMMAND = "APPLICATION_COMMAND"
-    UPDATE_MOOD = "UPDATE_MOOD"
-    QUIT_APPLICATION = "QUIT APPLICATION: If the users requests that you quit the application, choose this action."
-    TOGGLE_FULLSCREEN = "TOGGLE FULLSCREEN: If the user requests to toggle fullscreen mode, choose this action."
-    TOGGLE_TTS = (
-        "TOGGLE TEXT-TO-SPEECH: If the user requests that you turn on or off or toggle text-to-speech, "
-        "choose this action."
-    )
-    PERFORM_RAG_SEARCH = "SEARCH: If the user requests that you search for information, choose this action."
-    SUMMARIZE = "SUMMARIZE"
-    DO_NOTHING = (
-        "DO NOTHING: If the user's request is unclear or you are unable to determine the user's intent, "
-        "choose this action."
-    )
-    GET_WEATHER = "get_weather"
-    STORE_DATA = "store_data"
-    SEARCH = "search"
-    DECISION = "decision"
-
-    CODE = "code"
-    WORKFLOW = "workflow"
-
-    FILE_INTERACTION = "file_interaction"
-    WORKFLOW_INTERACTION = "workflow_interaction"
-
-    DEEP_RESEARCH = "deep_research"
 
 class CanvasToolName(Enum):
     ACTIVE_GRID_AREA = "active_grid_area"
