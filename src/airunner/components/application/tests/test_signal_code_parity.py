@@ -36,12 +36,6 @@ _CONVERTED_SEAM_FILES = (
     / "gui"
     / "widgets"
     / "chat_prompt_widget.py",
-    _AIRUNNER_ROOT
-    / "components"
-    / "chat"
-    / "gui"
-    / "widgets"
-    / "conversation_widget.py",
 )
 
 

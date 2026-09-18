@@ -1,54 +1,55 @@
 # Chat GUI Widgets
 
-This module contains widgets for the chat UI, including the main chat prompt and conversation display, and manages frontend-backend communication via QWebChannel.
-
-## 2025 Redesign
-
-### Visual Goals
-- Professional, robust, and "bulletproof" look
-- Dark, high-contrast palette (#181C20, #23272B, #007ACC)
-- Square, engineered widget shapes (border-radius: 6px)
-- Flat, utilitarian buttons with strong focus/hover states
-- Clear separation of chat bubbles, robust input area
-- Minimal, no-gloss, no gradients
-- Font: 'Fira Mono', 'Consolas', 'Segoe UI', Arial, sans-serif
-
-### How to Modify UI
-- Edit `.ui` files for layout/structure changes
-- Edit `conversation.css` for chat bubble and web content styling
-- Run `python scripts/build_ui.py` (from a checkout) after any `.ui` change
-- Do **not** edit `*_ui.py` files directly
+Widgets for the chat UI: the Qt prompt/composer widget and the
+first-class host for the desktop chat surface.
 
 ## Components
 
-- `chat_prompt_widget.py`: Parent chat prompt widget. Handles user input, send/clear/history actions, and delegates all conversation state management to `ConversationWidget`.
-- `conversation_widget.py`: The single source of truth for conversation state. Manages loading, updating, deleting, and displaying messages. Ensures all messages have unique, consecutive integer IDs and correct roles. Handles all message deletion, addition, and UI/database synchronization.
+- `chat_surface_widget.py`: hosts the built chat client in a
+  `QWebEngineView`, loaded from the daemon over loopback. The surface
+  owns its own sidebar, transcript and composer.
+- `chat_surface_interceptor.py`: refuses every non-loopback request and
+  attaches the loopback token to the rest (including WebSocket
+  handshakes, which the page cannot authenticate itself).
+- `chat_prompt_widget.py`: the Qt prompt/composer widget used by the chat
+  and generator tabs. It drives the daemon and asks the hosted surface to
+  re-read the conversation when a turn starts or finishes.
+- `templates/`: Qt Designer `.ui` sources and their generated `_ui.py`
+  modules.
 
-## Architecture & Workflow
+## Text field rendering
 
-- **State Management:**
-  - All conversation state (messages, IDs, roles) is managed exclusively in `ConversationWidget`.
-  - The parent widget (`ChatPromptWidget`) only calls `load_conversation` and `clear_conversation` on the child; it does not manipulate conversation state directly.
-- **Message Deletion:**
-  - Message deletion is robust: messages can be deleted immediately after being sent, IDs are always correct, and the UI/database remain in sync.
-  - After any add/delete, all messages are re-indexed to have consecutive IDs, preventing UI or JS errors.
-- **Frontend Integration:**
-  - QWebChannel is used for communication between the Python backend and the JavaScript frontend.
-  - The frontend triggers actions (e.g., deleteMessage), but all persistent state changes are handled in Python for security and consistency.
+- Edit `.ui` files for layout/structure changes, then run
+  `python scripts/build_ui.py` from a checkout.
+- Do **not** edit `*_ui.py` files directly.
+- Transcript rendering and chat styling live in the hosted client
+  (`projects/airunner-desktop/client` in the web repo), not in this
+  package.
 
-## Usage
+## The hosted chat surface (issue #2230)
 
-- To add or delete messages, always use the provided methods on `ConversationWidget`.
-- Do not expose slots directly on QWidget subclasses; use QObject bridges for frontend-callable slots if needed.
-- For UI changes, edit the `.ui` files and run `python scripts/build_ui.py`
-  (from a checkout).
+- The daemon serves the bundle
+  (`airunner_services.api.routes.client_bundle`) so the page's origin is
+  the same as `/api/v1/*` and the client's `wsHost()` keeps resolving to
+  the daemon — no build-time host override.
+- The daemon mounts it only when `AIRUNNER_CLIENT_BUNDLE` points at a
+  built bundle that contains `index.html`; otherwise routing is
+  unchanged.
+- `airunner/components/chat/gui/chat_surface_endpoint.py` is the single
+  place that resolves the daemon origin and the loopback token.
+- `scripts/chat_surface_smoke.py` renders the surface through this host
+  against the real daemon and reports the page text plus the events
+  socket result. It needs a display.
+- Remote access stays off (`LocalContentCanAccessRemoteUrls` is
+  explicitly disabled) and every request passes the interceptor.
 
-## Safety & Best Practices
+## Safety & best practices
 
-- All message and history logic is handled in Python.
-- The frontend only triggers actions; it does not manipulate persistent state directly.
+- Persistence stays server-side; the hosted page is a client of the
+  daemon.
 - All code follows DRY, KISS, and type-hinting guidelines.
 
 ---
 
-For more details, see the main project README and architecture documentation.
+For more details, see the main project README and architecture
+documentation.

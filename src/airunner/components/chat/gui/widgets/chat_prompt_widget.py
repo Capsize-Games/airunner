@@ -276,9 +276,10 @@ class ChatPromptWidget(BaseWidget):
             self.conversation_id = new_conversation.id
             self.conversation = new_conversation
             self._set_api_conversation_id(new_conversation.id)
-            # Clear the display
+            # The surface re-reads the conversation from the daemon; there
+            # is no Qt-side transcript to clear any more.
             if hasattr(self.ui, "conversation"):
-                self.ui.conversation.clear_conversation()
+                self.ui.conversation.reload()
             # Tell the backend to use this new conversation
             self.api.llm.clear_history(conversation_id=new_conversation.id)
         else:
@@ -466,10 +467,7 @@ class ChatPromptWidget(BaseWidget):
         self.logger.info(f"Final action: {action}")
 
         if hasattr(self.ui, "conversation"):
-            self.ui.conversation.append_user_message_for_request(
-                cleaned_prompt,
-                request_id=request_id,
-            )
+            self.ui.conversation.reload()
 
         QTimer.singleShot(
             0,
@@ -1601,6 +1599,13 @@ class ChatPromptWidget(BaseWidget):
     def message_type_text_changed(self, val):
         self.update_llm_generator_settings(message_type=val)
 
+    def _reload_chat_surface(self) -> None:
+        """Ask the hosted chat surface to re-read the conversation."""
+        conversation = getattr(self.ui, "conversation", None)
+        reload_surface = getattr(conversation, "reload", None)
+        if callable(reload_surface):
+            reload_surface()
+
     def on_add_bot_message_to_conversation(self, data: Dict):
         llm_response = data.get("response", None)
         if llm_response is None:
@@ -1638,9 +1643,10 @@ class ChatPromptWidget(BaseWidget):
 
         if getattr(llm_response, "is_end_of_message", False):
             self.enable_generate()
+            self._reload_chat_surface()
 
     def load_conversation(self, conversation_id: int = None):
-        """Load a conversation and synchronize with ConversationWidget."""
+        """Load a conversation and synchronize the hosted chat surface."""
         if conversation_id is None:
             # Try to load the current conversation first, fall back to most recent
             current_conversation = (
@@ -1654,7 +1660,7 @@ class ChatPromptWidget(BaseWidget):
                 )
         if conversation_id is None:
             if hasattr(self.ui, "conversation"):
-                self.ui.conversation.clear_conversation()
+                self.ui.conversation.reload()
             self.conversation = None
             self.conversation_id = None
             self._set_api_conversation_id(None)
@@ -1670,7 +1676,7 @@ class ChatPromptWidget(BaseWidget):
         self.conversation = conversation
         if conversation is None:
             if hasattr(self.ui, "conversation"):
-                self.ui.conversation.clear_conversation()
+                self.ui.conversation.reload()
             self.conversation_id = None
             self._set_api_conversation_id(None)
             return
@@ -1692,8 +1698,7 @@ class ChatPromptWidget(BaseWidget):
             )
 
         if hasattr(self.ui, "conversation"):
-            self.ui.conversation.conversation = conversation
-            self.ui.conversation.set_conversation_widgets(messages)
+            self.ui.conversation.reload()
 
     def on_queue_load_conversation(self, data):
         conversation_id = data.get("index")
@@ -1703,31 +1708,10 @@ class ChatPromptWidget(BaseWidget):
         deleted_id = data.get("conversation_id")
         if self.conversation_id == deleted_id:
             if hasattr(self.ui, "conversation"):
-                self.ui.conversation.clear_conversation()
+                self.ui.conversation.reload()
             self.conversation = None
             self.conversation_id = None
             self._set_api_conversation_id(None)
-
-    def _clear_conversation(self, skip_update: bool = False):
-        del skip_update
-
-    def _set_conversation_widgets(self, messages, skip_scroll: bool = False):
-        del messages, skip_scroll
-
-    def _clear_conversation_widgets(self, skip_update: bool = False):
-        del skip_update
-
-    def add_message_to_conversation(self, *args, **kwargs):
-        pass
-
-    def on_mood_summary_update_started(self, *args, **kwargs):
-        pass
-
-    def _handle_mood_summary_update_started(self, *args, **kwargs):
-        pass
-
-    def register_web_channel(self, channel):
-        del channel
 
     def _ensure_conversation_context(self) -> Optional[int]:
         """Ensure we have a valid conversation ID before sending a request."""
@@ -1752,7 +1736,7 @@ class ChatPromptWidget(BaseWidget):
         self.conversation_id = conversation.id
         self._set_api_conversation_id(conversation.id)
         if hasattr(self.ui, "conversation"):
-            self.ui.conversation.clear_conversation()
+            self.ui.conversation.reload()
         return conversation.id
 
     def _set_api_conversation_id(self, conversation_id: Optional[int]) -> None:

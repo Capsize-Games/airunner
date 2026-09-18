@@ -33,6 +33,7 @@ from airunner_services.api.routes import (
     stt,
     tts,
 )
+from airunner_services.api.routes.client_bundle import mount_client_bundle
 from airunner_services.api.routes import legacy as legacy_routes
 from airunner_services.api.loopback_token import get_or_create_loopback_token
 from airunner_services.data.tenant import reset_tenant_key, set_tenant_key
@@ -410,6 +411,11 @@ def create_app(
     async def root():
         """Root endpoint."""
         return {"status": "ready", "service": "airunner"}
+
+    # Optional: host the built desktop chat client (#2230). Mounted last so
+    # it only ever handles paths no API route claimed.
+    if mount_client_bundle(app):
+        logger.info("Serving the desktop chat client bundle from the daemon")
 
     # Global exception handler
     @app.exception_handler(Exception)

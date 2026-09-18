@@ -20,7 +20,7 @@ from PySide6.QtWidgets import (QApplication, QComboBox, QFrame, QGridLayout,
     QPushButton, QScrollArea, QSizePolicy, QSpacerItem,
     QSplitter, QTabWidget, QWidget)
 
-from airunner.components.chat.gui.widgets.conversation_widget import ConversationWidget
+from airunner.components.chat.gui.widgets.chat_surface_widget import ChatSurfaceWidget
 from airunner.components.llm.gui.widgets.llm_history_widget import LLMHistoryWidget
 from airunner.components.llm.gui.widgets.llm_settings_widget import LLMSettingsWidget
 import airunner.feather_rc
@@ -90,7 +90,7 @@ class Ui_chat_prompt(object):
         self.splitter = QSplitter(self.tab)
         self.splitter.setObjectName(u"splitter")
         self.splitter.setOrientation(Qt.Orientation.Vertical)
-        self.conversation = ConversationWidget(self.splitter)
+        self.conversation = ChatSurfaceWidget(self.splitter)
         self.conversation.setObjectName(u"conversation")
         self.splitter.addWidget(self.conversation)
         self.prompt_container = QWidget(self.splitter)

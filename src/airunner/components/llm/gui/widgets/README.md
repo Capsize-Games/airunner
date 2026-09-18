@@ -23,21 +23,21 @@ This module provides the chat prompt widget for the AI Runner LLM interface, inc
 - `templates/`: Qt Designer `.ui` files for all widgets.
 - `tests/`: Pytest-based tests for widget logic and UI behavior.
 
-## Refactor: MessageWidget-Based Conversation Display
+## Conversation Display
 
-- As of 2025-10-13, the chat prompt uses individual MessageWidget instances in a QScrollArea for message display.
-- This replaces the previous HTML/CSS/JavaScript-based approach (QWebEngineView + ChatBridge).
-- Each message is now rendered as a native PySide6 widget, providing better performance, easier debugging, and full integration with Qt's layout system.
-- See `conversation_widget.py` for the new implementation.
-- The vertical layout includes a spacer at the bottom to ensure messages align to the top.
-- MessageWidget instances handle their own content rendering (Markdown, LaTeX, mixed content, plain text) using specialized content widgets.
-
-### Benefits of the New Approach
-- **Native Qt Integration**: Direct use of PySide6 widgets eliminates JavaScript bridge overhead
-- **Better Performance**: No HTML/CSS rendering or JavaScript execution needed
-- **Easier Debugging**: Standard Qt debugging tools work out of the box
-- **Consistent Styling**: Uses the application's theme system directly
-- **Simpler Architecture**: Removes dependencies on QWebChannel, ChatBridge, and Jinja2 templates for conversation display
+- The transcript is hosted, not rendered in Qt: the chat tab embeds the
+  built chat client in a `QWebEngineView`
+  (`components/chat/gui/widgets/chat_surface_widget.py`), served by the
+  daemon over loopback (issue #2230).
+- The former Jinja2/`conversation.jinja2.html` transcript, its
+  `conversation.js`/`conversation.css` assets, `conversation_widget.py`,
+  the `ConversationWebEnginePage` and the `ChatBridge` QWebChannel object
+  were removed with it — a browser page client of the daemon needs no Qt
+  object bridge, and the loopback token is attached to each request by
+  the host instead (see `chat_surface_interceptor.py`).
+- The Qt prompt/composer widget in this package still drives the daemon
+  and asks the hosted surface to re-read the conversation when a turn
+  completes.
 
 ## Local Network Access (LNA) Support
 
