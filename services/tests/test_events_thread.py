@@ -17,6 +17,7 @@ from airunner_services.conversations.conversation_history_manager import (
     ConversationHistoryManager,
 )
 from airunner_services.database import reset_engine, setup_database
+from airunner_services.database.models.conversation import Conversation
 
 _EVENTS = "/api/v1/events"
 
@@ -123,7 +124,10 @@ def test_previews_and_delete_message(
     client = TestClient(app)
 
     previews = _rpc(
-        client, "POST", "/api/v1/llm/conversations/previews", {"chatbot_ids": []}
+        client,
+        "POST",
+        "/api/v1/llm/conversations/previews",
+        {"chatbot_ids": []},
     )
     assert previews["status"] == 200
     assert "previews" in previews["body"]
@@ -131,3 +135,54 @@ def test_previews_and_delete_message(
     deleted = _rpc(client, "DELETE", "/api/v1/llm/chatbot/1/messages/0")
     assert deleted["status"] == 200
     assert "kept" in deleted["body"]
+
+
+def test_create_and_delete_conversation(
+    monkeypatch, isolated_token, test_db
+) -> None:
+    """The New and delete-conversation actions resolve, not 404."""
+    app = create_app()
+    monkeypatch.setattr(server_module, "is_loopback_request", lambda c: True)
+    client = TestClient(app)
+
+    created = _rpc(client, "POST", "/api/v1/llm/conversations")
+    assert created["status"] == 200
+    conversation_id = created["body"]["conversation_id"]
+
+    listed = _rpc(client, "GET", "/api/v1/llm/conversations")
+    assert listed["status"] == 200
+    assert conversation_id in [
+        row["id"] for row in listed["body"]["conversations"]
+    ]
+
+    deleted = _rpc(
+        client, "DELETE", f"/api/v1/llm/conversations/{conversation_id}"
+    )
+    assert deleted["status"] == 200
+    assert deleted["body"] == {"deleted": True}
+
+    again = _rpc(
+        client, "DELETE", f"/api/v1/llm/conversations/{conversation_id}"
+    )
+    assert again["status"] == 404
+
+
+def test_thread_is_empty_when_conversation_query_fails(
+    monkeypatch, isolated_token, test_db
+) -> None:
+    """A failing conversation query yields an empty thread, not a 500.
+
+    ``filter_by`` returns ``None`` when the query raises (e.g. the
+    conversation table is not present yet), which used to reach
+    ``len(None)`` inside ``get_current_conversation``.
+    """
+    app = create_app()
+    monkeypatch.setattr(server_module, "is_loopback_request", lambda c: True)
+    client = TestClient(app)
+
+    monkeypatch.setattr(
+        Conversation.objects, "filter_by", lambda **kwargs: None
+    )
+    thread = _rpc(client, "GET", "/api/v1/llm/thread")
+    assert thread["status"] == 200
+    assert thread["body"]["messages"] == []

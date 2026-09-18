@@ -22,6 +22,9 @@ Handler = Callable[[str, Dict[str, Any]], Tuple[int, Any]]
 _MESSAGE_DELETE = re.compile(
     r"^/api/v1/llm/chatbot/(?P<chatbot>\d+)/messages/(?P<index>\d+)$"
 )
+_CONVERSATION_ITEM = re.compile(
+    r"^/api/v1/llm/conversations/(?P<conversation>\d+)$"
+)
 
 
 def _route(path: str) -> str:
@@ -70,6 +73,26 @@ def _conversations(_path: str, body: Dict[str, Any]) -> Tuple[int, Any]:
     limit = int(body.get("limit", 50))
     rows = ConversationHistoryManager().list_conversations(limit=limit)
     return 200, {"conversations": rows}
+
+
+def _create_conversation(_path: str, _body: Dict[str, Any]) -> Tuple[int, Any]:
+    session = ConversationHistoryManager().create_conversation()
+    conversation_id = session.get("conversation_id")
+    if conversation_id is None:
+        return 500, {"detail": "could not create conversation"}
+    return 200, {"conversation_id": int(conversation_id)}
+
+
+def _delete_conversation(path: str, _body: Dict[str, Any]) -> Tuple[int, Any]:
+    match = _CONVERSATION_ITEM.match(_route(path))
+    if match is None:
+        return 404, {"detail": "bad conversation path"}
+    deleted = ConversationHistoryManager().delete_conversation(
+        int(match.group("conversation"))
+    )
+    if not deleted:
+        return 404, {"detail": "no such conversation"}
+    return 200, {"deleted": True}
 
 
 def _chatbot_query(_path: str, _body: Dict[str, Any]) -> Tuple[int, Any]:
@@ -136,6 +159,7 @@ def _delete_message(path: str, _body: Dict[str, Any]) -> Tuple[int, Any]:
 EXACT: Dict[Tuple[str, str], Handler] = {
     ("GET", "/api/v1/health"): _health,
     ("GET", "/api/v1/llm/conversations"): _conversations,
+    ("POST", "/api/v1/llm/conversations"): _create_conversation,
     ("GET", "/api/v1/llm/thread"): _thread,
     ("GET", "/api/v1/llm/chatbot-session"): _chatbot_session,
     ("POST", "/api/v1/llm/conversations/truncate"): _truncate,
@@ -145,6 +169,7 @@ EXACT: Dict[Tuple[str, str], Handler] = {
 
 PATTERNS: List[Tuple[str, "re.Pattern[str]", Handler]] = [
     ("DELETE", _MESSAGE_DELETE, _delete_message),
+    ("DELETE", _CONVERSATION_ITEM, _delete_conversation),
 ]
 
 

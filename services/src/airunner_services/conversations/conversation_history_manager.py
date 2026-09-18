@@ -26,9 +26,16 @@ class ConversationHistoryManager:
         self.logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 
     def get_current_conversation(self) -> Optional[Conversation]:
-        """Fetch the current conversation if one exists."""
+        """Fetch the current conversation if one exists.
+
+        ``filter_by`` returns ``None`` (not ``[]``) when the query itself
+        fails -- e.g. a fresh install whose database has no conversation
+        table yet -- so treat both "no rows" and "query failed" as
+        "there is no current conversation" rather than crashing on
+        ``len(None)``.
+        """
         conversations = Conversation.objects.filter_by(current=True)
-        if len(conversations) == 0:
+        if not conversations:
             self.logger.info("No current conversation found.")
             return None
         self.logger.debug("Fetching the current conversation.")
