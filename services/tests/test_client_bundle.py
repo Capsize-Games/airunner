@@ -158,9 +158,7 @@ def test_packaged_bundle_is_absent_before_a_release_build(
     assert bundle_directory() is None
 
 
-def test_explicit_bundle_env_does_not_fall_back(
-    tmp_path, monkeypatch
-) -> None:
+def test_explicit_bundle_env_does_not_fall_back(tmp_path, monkeypatch) -> None:
     """An explicit but empty path is authoritative, not a hint."""
     monkeypatch.setenv(BUNDLE_ENV, str(tmp_path / "empty-choice"))
     build_root = tmp_path / "builds"
@@ -172,8 +170,9 @@ def test_explicit_bundle_env_does_not_fall_back(
     assert bundle_directory() is None
 
 
-def test_packaged_bundle_serves_the_surface(tmp_path, monkeypatch,
-                                             isolated_token) -> None:
+def test_packaged_bundle_serves_the_surface(
+    tmp_path, monkeypatch, isolated_token
+) -> None:
     """The packaged location is mountable exactly like the explicit one."""
     monkeypatch.delenv(BUNDLE_ENV, raising=False)
     build_root = tmp_path / "builds"
