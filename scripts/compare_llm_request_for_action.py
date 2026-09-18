@@ -1,29 +1,32 @@
 #!/usr/bin/env python3
 """Compare desktop vs services ``LLMRequest.for_action()`` presets.
 
-Empirical parity check for issue Capsize-Games/airunner#2221 (step b).
+Empirical parity check for issue Capsize-Games/airunner#2225 (the
+``for_action()`` reconciliation split out of #2221).
 
-``for_action()`` exists on both forks with independently-authored
-generation-preset tables:
+When this was written, ``for_action()`` existed on both forks with
+independently-authored generation-preset tables:
 
-* desktop routes through
+* desktop routed through
   ``airunner.components.llm.config.generation_presets``
   (``ACTION_GENERATION_PRESETS`` + ``DEFAULT_ACTION_PRESET``),
-* services inlines the same decision inside
+* services inlined the same decision inside
   ``airunner_services.llm.llm_request.LLMRequest.for_action``.
 
-The two tables were authored separately and were never confirmed to
-agree. This script runs the *actual* code paths (not a reading pass)
-for every ``LLMActionType`` member and reports any effective field
-that differs, so the divergence is measured rather than assumed.
+This script ran the *actual* code paths (not a reading pass) for every
+``LLMActionType`` member and measured that 13 of 20 agreed. #2225 then
+unified both sides onto one table in ``airunner_common.generation_presets``
+(desktop re-exports it; services calls
+``get_action_generation_preset()``), so this script is now the CI gate
+that proves they can never silently diverge again.
 
 Usage::
 
     venv/bin/python scripts/compare_llm_request_for_action.py
 
-Exit code is 0 when every action agrees and 1 when any differs, so the
-same command doubles as a regression gate once the tables are
-reconciled.
+Exit code is 0 when every action agrees and 1 when any differs. It is
+wired into CI (``.github/workflows/eval-tests.yml``) as a regression
+gate.
 """
 
 from __future__ import annotations

@@ -65,6 +65,7 @@ jobs:
             services/tests/test_native_package_isolation.py \
             services/tests/test_zimage_model_dir_config.py \
             services/tests/test_third_party_notices.py \
+            services/tests/test_llm_request_for_action_parity.py \
             -v \
             --tb=short \
             --junitxml=runtime-contracts.xml
@@ -72,6 +73,15 @@ jobs:
           AIRUNNER_HEADLESS: "1"
           AIRUNNER_HTTP_PORT: "8188"
           AIRUNNER_HTTP_HOST: "127.0.0.1"
+
+      # Issue #2225: desktop and services for_action() now share one preset
+      # table in airunner_common. This exits non-zero if any of the 20
+      # LLMActionType members ever resolves to different effective
+      # generation kwargs on the two live code paths again.
+      - name: Check for_action preset parity (issue #2225)
+        run: python scripts/compare_llm_request_for_action.py
+        env:
+          AIRUNNER_HEADLESS: "1"
 
       - name: Upload runtime contract results
         if: always()

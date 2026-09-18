@@ -3,6 +3,9 @@
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional
 
+from airunner_common.generation_presets import (
+    get_action_generation_preset,
+)
 from airunner_common.llm_request import (
     LLMRequest as _SharedLLMRequest,
 )
@@ -204,105 +207,19 @@ class LLMRequest(_SharedLLMRequest):
 
     @classmethod
     def for_action(cls, action: Any) -> "LLMRequest":
-        """Create one request optimized for one action type."""
-        if action in (LLMActionType.CHAT, LLMActionType.UPDATE_MOOD):
-            return cls(
-                do_sample=True,
-                temperature=0.7,
-                repetition_penalty=1.15,
-                no_repeat_ngram_size=3,
-                max_new_tokens=8192,
-                top_k=20,
-                top_p=0.8,
-                tool_categories=None,
-            )
+        """Create one request optimized for one action type.
 
-        if action == LLMActionType.CODE:
-            return cls(
-                do_sample=True,
-                temperature=0.6,
-                repetition_penalty=1.1,
-                no_repeat_ngram_size=2,
-                max_new_tokens=8192,
-                top_k=20,
-                top_p=0.8,
-                tool_categories=None,
-            )
-
-        if action == LLMActionType.PERFORM_RAG_SEARCH:
-            return cls(
-                do_sample=True,
-                temperature=0.3,
-                repetition_penalty=1.1,
-                no_repeat_ngram_size=2,
-                max_new_tokens=300,
-                top_k=30,
-                top_p=0.9,
-                tool_categories=["RAG", "SEARCH"],
-            )
-
-        if action in (LLMActionType.SUMMARIZE, LLMActionType.SEARCH):
-            return cls(
-                do_sample=True,
-                temperature=0.3,
-                repetition_penalty=1.1,
-                no_repeat_ngram_size=2,
-                max_new_tokens=300,
-                top_k=30,
-                top_p=0.9,
-                tool_categories=["SEARCH"],
-            )
-
-        if action == LLMActionType.GENERATE_IMAGE:
-            return cls(
-                do_sample=True,
-                temperature=0.9,
-                repetition_penalty=1.15,
-                no_repeat_ngram_size=3,
-                max_new_tokens=200,
-                top_k=50,
-                top_p=0.9,
-            )
-
-        if action in (
-            LLMActionType.DECISION,
-            LLMActionType.APPLICATION_COMMAND,
-            LLMActionType.FILE_INTERACTION,
-            LLMActionType.WORKFLOW,
-            LLMActionType.WORKFLOW_INTERACTION,
-        ):
-            return cls(
-                do_sample=True,
-                temperature=0.6,
-                repetition_penalty=1.0,
-                no_repeat_ngram_size=0,
-                max_new_tokens=32768,
-                top_k=20,
-                top_p=0.95,
-                tool_categories=None,
-            )
-
-        if action == LLMActionType.DEEP_RESEARCH:
-            return cls(
-                do_sample=True,
-                temperature=0.6,
-                repetition_penalty=1.15,
-                no_repeat_ngram_size=3,
-                max_new_tokens=32768,
-                top_k=20,
-                top_p=0.95,
-                tool_categories=["RESEARCH", "SEARCH"],
-            )
-
-        return cls(
-            do_sample=True,
-            temperature=0.8,
-            repetition_penalty=1.15,
-            no_repeat_ngram_size=3,
-            max_new_tokens=500,
-            top_k=50,
-            top_p=0.9,
-        )
+        Delegates to the single shared preset table in
+        ``airunner_common.generation_presets`` (issue #2225). This used
+        to inline an independently-authored copy of the desktop's
+        pre-extraction ladder, which had silently drifted: chat/mood ran
+        at 0.7 instead of 0.2, RAG/search/summarize at 0.3 instead of
+        0.2, and unmapped actions meant "no tools" (``[]``) instead of
+        "all tools" (``None``). See the shared module's docstring for the
+        evidence behind unifying on the desktop values.
+        """
+        preset = get_action_generation_preset(action)
+        return cls(**preset.to_request_kwargs())
 
 
 @dataclass
