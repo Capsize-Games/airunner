@@ -32,6 +32,7 @@ from airunner_services.api.routes import (
     setup,
     stt,
     tts,
+    tts_ws,
 )
 from airunner_services.api.routes.client_bundle import mount_client_bundle
 from airunner_services.api.routes import legacy as legacy_routes
@@ -399,6 +400,7 @@ def create_app(
         tags=["setup"],
     )
     app.include_router(tts.router, prefix="/api/v1/tts", tags=["tts"])
+    app.include_router(tts_ws.router, prefix="/api/v1/tts", tags=["tts"])
     app.include_router(stt.router, prefix="/api/v1/stt", tags=["stt"])
     app.include_router(
         events.router, prefix="/api/v1", tags=["events"]

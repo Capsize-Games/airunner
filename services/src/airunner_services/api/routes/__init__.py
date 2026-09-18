@@ -11,6 +11,7 @@ from airunner_services.api.routes import (
     persistence,
     stt,
     tts,
+    tts_ws,
 )
 
 __all__ = [
@@ -24,4 +25,5 @@ __all__ = [
     "persistence",
     "stt",
     "tts",
+    "tts_ws",
 ]

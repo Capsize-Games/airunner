@@ -27,30 +27,9 @@ from airunner_services.api.routes.events_handlers import (
     bootstrap_payload,
     dispatch,
 )
+from airunner_services.api.routes.ws_auth import websocket_auth_failed
 
 router = APIRouter()
-
-
-def _auth_failed(ws: WebSocket) -> bool:
-    """Apply the shared API-key/loopback/Origin policy to one socket."""
-    from airunner_services.api.server import (
-        authenticate_connection,
-        is_allowed_origin,
-    )
-
-    state = ws.app.state
-    origin = ws.headers.get("origin")
-    if origin and not is_allowed_origin(
-        origin, getattr(state, "allowed_origins", [])
-    ):
-        return True
-    allowed, _code = authenticate_connection(
-        ws,
-        api_key=getattr(state, "api_key", ""),
-        require_api_key=getattr(state, "require_api_key", False),
-        insecure_no_auth=getattr(state, "insecure_no_auth", False),
-    )
-    return not allowed
 
 
 async def _handle(ws: WebSocket, msg: Dict[str, Any]) -> None:
@@ -75,7 +54,7 @@ async def _handle(ws: WebSocket, msg: Dict[str, Any]) -> None:
 @router.websocket("/events")
 async def events(ws: WebSocket) -> None:
     """Serve bootstrap + RPC for the UwUChat client."""
-    if _auth_failed(ws):
+    if websocket_auth_failed(ws):
         await ws.close(code=status.WS_1008_POLICY_VIOLATION)
         return
     await ws.accept()
