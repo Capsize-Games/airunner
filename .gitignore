@@ -94,3 +94,6 @@ plans
 facehuggershield
 logs
 .worktrees/
+
+# Headless harness session state (zoo/headlesscode)
+.headlesscode/
