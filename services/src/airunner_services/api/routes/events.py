@@ -11,79 +11,24 @@ Framing:
 * server -> ``{"type": "rpc_response", "id", "status", "body"}``
 * server -> ``{"type": "bootstrap", "body": {...}}``
 
-Only an explicit allowlist of logical paths is answered; anything else
-returns a 404 ``rpc_response`` rather than being interpreted. The
-existing API-key/loopback-token policy is reused unchanged.
+This module is transport only; the logical paths live in
+:mod:`events_handlers`. The existing API-key/loopback/Origin policy is
+reused unchanged, and the loopback token is also accepted from the
+query string because a browser WebSocket cannot set headers.
 """
 
 from __future__ import annotations
 
-from typing import Any, Callable, Dict, List, Tuple
+from typing import Any, Dict
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, status
 
-from airunner_services.conversations.conversation_history_manager import (
-    ConversationHistoryManager,
+from airunner_services.api.routes.events_handlers import (
+    bootstrap_payload,
+    dispatch,
 )
-from airunner_services.database.models.chatbot import Chatbot
 
 router = APIRouter()
-
-Handler = Callable[[Dict[str, Any]], Tuple[int, Any]]
-_STREAM_404 = "unhandled rpc path"
-
-
-def _roster() -> List[Dict[str, Any]]:
-    """Return the persisted chatbots as a client-shaped roster."""
-    try:
-        bot = Chatbot.objects.first()
-    except Exception:
-        bot = None
-    if bot is None:
-        return []
-    return [
-        {
-            "id": int(getattr(bot, "id", 0) or 0),
-            "name": str(getattr(bot, "name", "Chatbot")),
-            "botname": str(getattr(bot, "botname", "Computer")),
-            "is_system_bot": False,
-        }
-    ]
-
-
-def _bootstrap_payload() -> Dict[str, Any]:
-    """Return the bootstrap body the client reads on connect."""
-    return {"chatbots": _roster()}
-
-
-def _health(_body: Dict[str, Any]) -> Tuple[int, Any]:
-    return 200, {"status": "ok"}
-
-
-def _conversations(body: Dict[str, Any]) -> Tuple[int, Any]:
-    limit = int(body.get("limit", 50))
-    rows = ConversationHistoryManager().list_conversations(limit=limit)
-    return 200, {"conversations": rows}
-
-
-def _chatbot_query(_body: Dict[str, Any]) -> Tuple[int, Any]:
-    return 200, {"records": _roster()}
-
-
-ROUTES: Dict[Tuple[str, str], Handler] = {
-    ("GET", "/api/v1/health"): _health,
-    ("GET", "/api/v1/llm/conversations"): _conversations,
-    ("POST", "/api/v1/settings/resources/Chatbot/query"): _chatbot_query,
-}
-
-
-def dispatch(method: str, path: str, body: Dict[str, Any]) -> Tuple[int, Any]:
-    """Resolve one logical RPC path against the allowlist."""
-    route = path.split("?", 1)[0]
-    handler = ROUTES.get((method, route))
-    if handler is None:
-        return 404, {"detail": f"{_STREAM_404}: {method} {route}"}
-    return handler(body)
 
 
 def _auth_failed(ws: WebSocket) -> bool:
@@ -134,9 +79,7 @@ async def events(ws: WebSocket) -> None:
         await ws.close(code=status.WS_1008_POLICY_VIOLATION)
         return
     await ws.accept()
-    await ws.send_json(
-        {"type": "bootstrap", "body": _bootstrap_payload()}
-    )
+    await ws.send_json({"type": "bootstrap", "body": bootstrap_payload()})
     while True:
         try:
             msg = await ws.receive_json()
