@@ -19,9 +19,9 @@ from __future__ import annotations
 import asyncio
 import os
 from pathlib import Path
-from typing import Any, Dict, Tuple
+from typing import Any, Dict, Optional, Tuple
 
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse
 
 from . import protocol, shim_data
@@ -31,6 +31,15 @@ PAGE = HERE / "page" / "index.html"
 QUERY_CHATBOT = "/api/v1/settings/resources/Chatbot/query"
 
 app = FastAPI(title="uwuchat-proto-shim")
+
+
+def _bundle_dir() -> Optional[Path]:
+    """Return a built client bundle dir when PROTO_BUNDLE points at one."""
+    raw = os.environ.get("PROTO_BUNDLE", "")
+    if not raw:
+        return None
+    path = Path(raw)
+    return path if (path / "index.html").is_file() else None
 
 
 def required_token() -> str:
@@ -75,8 +84,18 @@ def _dispatch(method: str, path: str) -> Tuple[int, Dict[str, Any]]:
 
 @app.get("/")
 async def index() -> FileResponse:
-    """Serve the prototype page over loopback."""
-    return FileResponse(PAGE)
+    """Serve the bundle index (or the prototype page) over loopback."""
+    bundle = _bundle_dir()
+    return FileResponse(bundle / "index.html" if bundle else PAGE)
+
+
+@app.get("/assets/{asset_path:path}")
+async def asset(asset_path: str) -> FileResponse:
+    """Serve a built client bundle's assets over loopback."""
+    bundle = _bundle_dir()
+    if bundle is None:
+        raise HTTPException(status_code=404, detail="no bundle")
+    return FileResponse(bundle / "assets" / asset_path)
 
 
 @app.websocket(protocol.EVENTS_PATH)

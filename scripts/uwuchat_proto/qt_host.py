@@ -75,8 +75,8 @@ def _capture(view: QWebEngineView, path: Path) -> None:
     pixmap.save(str(path))
     print(f"screenshot: {path} ({pixmap.width()}x{pixmap.height()})")
     view.page().runJavaScript(
-        "document.getElementById('log').innerText",
-        lambda text: print("--- page log ---\n" + str(text)),
+        "document.body ? document.body.innerText : ''",
+        lambda text: print("--- page text ---\n" + str(text)[:2000]),
     )
 
 
@@ -93,8 +93,8 @@ def main() -> int:
     view.setUrl(QUrl(f"http://127.0.0.1:{port}/"))
     view.show()
     QTimer.singleShot(2500, lambda: view.page().runJavaScript(SEND_JS))
-    QTimer.singleShot(6500, lambda: _capture(view, out))
-    QTimer.singleShot(8000, app.quit)
+    QTimer.singleShot(8000, lambda: _capture(view, out))
+    QTimer.singleShot(9500, app.quit)
     return app.exec()
 
 
