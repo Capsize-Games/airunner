@@ -27,6 +27,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+from isolation_support import import_isolation_preamble
+
 _PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
 
@@ -34,19 +36,18 @@ def test_launcher_imports_without_airunner_or_services_on_path():
     """``airunner_native.launcher`` must import with only airunner_common.
 
     Both ``airunner`` and ``airunner_services`` are editable-installed in
-    the test environment, which inserts their ``src`` directories into
-    ``sys.path`` regardless of ``PYTHONPATH`` (see
-    test_no_airunner_import_cycle.py for the same gotcha) -- so this must
-    strip those exact paths at runtime, not just omit them from the
-    subprocess's ``PYTHONPATH``.
+    the test environment, which makes their ``src`` directories
+    importable regardless of ``PYTHONPATH`` -- ``airunner`` via
+    ``__editable___airunner_6_0_0_finder`` on ``sys.meta_path``,
+    ``airunner_services`` via a ``.pth`` path entry. This must therefore
+    strip both the path entries and the editable finders at runtime, not
+    just omit them from the subprocess's ``PYTHONPATH``.
     """
     _desktop_src = str(_PROJECT_ROOT / "src")
     _services_src = str(_PROJECT_ROOT / "services" / "src")
     script = (
-        "import sys; "
-        f"sys.path[:] = [p for p in sys.path "
-        f"if p not in ({_desktop_src!r}, {_services_src!r})]; "
-        "import importlib; "
+        import_isolation_preamble((_desktop_src, _services_src))
+        + "import importlib; "
         "importlib.import_module('airunner_native.launcher'); "
         "import pytest as _pytest; "
         "_pytest.raises(ImportError, importlib.import_module, 'airunner'); "

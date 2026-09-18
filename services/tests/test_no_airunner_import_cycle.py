@@ -20,6 +20,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+from isolation_support import import_isolation_preamble
+
 _PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
 # The vendored openvoice modules this used to also cover moved to their
@@ -36,9 +38,8 @@ def test_services_import_without_airunner_on_path():
     """The touched modules must import with ``airunner`` unimportable."""
     _desktop_src = str(_PROJECT_ROOT / "src")
     script = (
-        "import sys; "
-        f"sys.path[:] = [p for p in sys.path if p != {_desktop_src!r}]; "
-        "import importlib; "
+        import_isolation_preamble((_desktop_src,))
+        + "import importlib; "
         + "; ".join(
             f"importlib.import_module({mod!r})"
             for mod in _IMPORTABLE_WITHOUT_AIRUNNER
