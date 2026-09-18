@@ -25,6 +25,7 @@ from airunner_services.api.routes import (
     daemon,
     domain_resources,
     downloads,
+    events,
     health,
     llm,
     persistence,
@@ -129,6 +130,10 @@ def authenticate_connection(
 
     expected_token = get_or_create_loopback_token()
     provided_token = _provided_bearer_or_api_key(conn, "x-airunner-token")
+    if not provided_token:
+        # WebSocket upgrades cannot set headers, so a browser client
+        # sends the loopback token in the query string instead.
+        provided_token = (conn.query_params.get("token") or "").strip()
     if not provided_token or not secrets.compare_digest(
         provided_token, expected_token
     ):
@@ -394,6 +399,9 @@ def create_app(
     )
     app.include_router(tts.router, prefix="/api/v1/tts", tags=["tts"])
     app.include_router(stt.router, prefix="/api/v1/stt", tags=["stt"])
+    app.include_router(
+        events.router, prefix="/api/v1", tags=["events"]
+    )
 
     # Legacy compatibility endpoints for existing clients.
     app.include_router(legacy_routes.router, tags=["legacy"])
