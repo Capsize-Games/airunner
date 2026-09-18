@@ -2,7 +2,7 @@ import PIL
 from typing import Optional
 from PIL import ImageQt
 from PIL.Image import Image
-from PySide6.QtCore import Qt, QPointF, QRectF
+from PySide6.QtCore import Qt, QPointF, QRect, QRectF
 from PySide6.QtGui import (
     QImage,
     QPen,
@@ -17,6 +17,9 @@ from airunner.enums import SignalCode, CanvasToolName
 from airunner.utils.image import (
     convert_binary_to_image,
     convert_image_to_binary,
+)
+from airunner.components.art.gui.widgets.canvas.composite_frame_cache import (
+    CompositeFrameCache,
 )
 from airunner.components.art.gui.widgets.canvas.custom_scene import CustomScene
 from airunner.components.art.utils.canvas_position_manager import (
@@ -54,6 +57,10 @@ class BrushScene(CustomScene):
         self._stroke_buffer_image: Optional[QImage] = None
         self._stroke_buffer_erasing = False
         self._stroke_item: Optional[QGraphicsPixmapItem] = None
+        self._stroke_item_pixmap: Optional[QPixmap] = None
+        self._stroke_frame_cache = CompositeFrameCache()
+        self._stroke_frame_base_id: Optional[int] = None
+        self._stroke_dirty: Optional[QRect] = None
         self._stroke_target_item = None
         self._stroke_target_layer_id: Optional[int] = None
 
@@ -228,16 +235,32 @@ class BrushScene(CustomScene):
         self._stroke_base_image = None
         self._stroke_buffer_image = None
         self._stroke_buffer_erasing = False
+        self._stroke_frame_cache = CompositeFrameCache()
+        self._stroke_frame_base_id: Optional[int] = None
+        self._stroke_dirty: Optional[QRect] = None
+
+    def _mark_stroke_dirty(self, path_rect: QRectF, pen_width: int) -> None:
+        """Record the rectangle the current brush segment changed."""
+        margin = pen_width // 2 + 2
+        self._stroke_dirty = path_rect.adjusted(
+            -margin, -margin, margin, margin
+        ).toAlignedRect()
+
+    def _stroke_dirty_rect(self, fallback: QRect) -> QRect:
+        """Return the current dirty rectangle, or the whole fallback."""
+        if self._stroke_dirty is None:
+            return fallback
+        return self._stroke_dirty
 
     def _remove_stroke_item(self) -> None:
-        if self._stroke_item is None:
-            return
-        try:
-            if self._stroke_item.scene() is self:
-                self.removeItem(self._stroke_item)
-        except (AttributeError, RuntimeError):
-            pass
+        if self._stroke_item is not None:
+            try:
+                if self._stroke_item.scene() is self:
+                    self.removeItem(self._stroke_item)
+            except (AttributeError, RuntimeError):
+                pass
         self._stroke_item = None
+        self._stroke_item_pixmap = None
 
     def _document_size(self) -> Optional[tuple[int, int]]:
         if not self.views():
@@ -356,11 +379,35 @@ class BrushScene(CustomScene):
                 Qt.MouseButton.NoButton
             )
             self.addItem(self._stroke_item)
-        self._stroke_item.setPixmap(
-            QPixmap.fromImage(self._stroke_buffer_image)
-        )
+        self._sync_stroke_pixmap()
         self._stroke_item.setPos(self._document_display_origin())
         self._stroke_item.setZValue(self._stroke_item_z_value())
+
+    def _sync_stroke_pixmap(self) -> None:
+        """Blit only the changed strip of the stroke buffer to the item.
+
+        Converting the full document-sized buffer to a ``QPixmap`` on
+        every tablet event was the dominant brush cost (#2231: 132 ms
+        mean, 638 ms max per segment). The pixmap is allocated once per
+        stroke and each segment refreshes only its own rectangle;
+        callers then invalidate just that region.
+        """
+        buffer = self._stroke_buffer_image
+        pixmap = self._stroke_item_pixmap
+        if pixmap is None or pixmap.size() != buffer.size():
+            self._stroke_item_pixmap = QPixmap.fromImage(buffer)
+            self._stroke_item.setPixmap(self._stroke_item_pixmap)
+            return
+        rect = self._stroke_dirty_rect(buffer.rect())
+        if rect.isEmpty():
+            return
+        painter = QPainter(pixmap)
+        painter.setCompositionMode(
+            QPainter.CompositionMode.CompositionMode_Source
+        )
+        painter.drawImage(rect, buffer, rect)
+        painter.end()
+        self._stroke_item.setPixmap(pixmap)
 
     def _current_paint_target(self):
         if self.drawing_pad_settings.mask_layer_enabled:
@@ -372,27 +419,30 @@ class BrushScene(CustomScene):
             return None
         return self.image
 
-    def _stroke_composition_mode(self, erasing: bool):
-        if erasing and not self.drawing_pad_settings.mask_layer_enabled:
-            return QPainter.CompositionMode.CompositionMode_DestinationOut
-        return QPainter.CompositionMode.CompositionMode_SourceOver
-
     def _compose_stroke_image(
         self,
         base_image: Optional[QImage],
         stroke_image: Optional[QImage],
         erasing: bool,
     ) -> Optional[QImage]:
+        """Compose the preview from the flattened frame plus the dirty strip.
+
+        The base is flattened into the cached frame once per stroke (not
+        per segment) and each segment then blits only its own rectangle,
+        instead of copying and re-blitting the whole document every
+        tablet event (#2231).
+        """
         if base_image is None:
             return None
-        composed = base_image.copy()
+        cache = self._stroke_frame_cache
+        base_id = id(base_image)
+        if self._stroke_frame_base_id != base_id or cache.frame is None:
+            cache.build(base_image.size(), [base_image])
+            self._stroke_frame_base_id = base_id
         if stroke_image is None:
-            return composed
-        painter = QPainter(composed)
-        painter.setCompositionMode(self._stroke_composition_mode(erasing))
-        painter.drawImage(0, 0, stroke_image)
-        painter.end()
-        return composed
+            return cache.frame
+        dirty = self._stroke_dirty_rect(base_image.rect())
+        return cache.apply(stroke_image, dirty, erase=erasing)
 
     def _start_stroke_buffer(self) -> None:
         base_image = self._current_paint_target()
@@ -478,11 +528,19 @@ class BrushScene(CustomScene):
             return True
 
         self._sync_stroke_item()
-        if self._stroke_item is not None and self._stroke_item.scene():
-            self._stroke_item.scene().update(
-                self._stroke_item.sceneBoundingRect()
-            )
+        self._invalidate_stroke_dirty_region()
         return True
+
+    def _invalidate_stroke_dirty_region(self) -> None:
+        """Repaint only the rectangle the last segment changed (#2231)."""
+        if self._stroke_item is None or self._stroke_item_pixmap is None:
+            return
+        scene = self._stroke_item.scene()
+        if scene is None:
+            return
+        origin = self._document_display_origin()
+        rect = self._stroke_dirty_rect(self._stroke_item_pixmap.rect())
+        scene.update(QRectF(rect).translated(origin))
 
     def _update_active_item_image(
         self,
@@ -646,6 +704,7 @@ class BrushScene(CustomScene):
         segment_path.quadTo(control_point, image_last_pos)
 
         painter.drawPath(segment_path)
+        self._mark_stroke_dirty(segment_path.boundingRect(), pen_width)
 
         self._last_draw_scene_pos = current_pos
         self.start_pos = current_pos

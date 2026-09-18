@@ -17,6 +17,10 @@ AIRUNNER_BASE_PATH=tmp/airunner-base QT_QPA_PLATFORM=offscreen \
 # candidate comparison
 AIRUNNER_BASE_PATH=tmp/airunner-base QT_QPA_PLATFORM=offscreen \
   venv/bin/python -m scripts.bench.canvas.bench_candidates --reps 10
+
+# the shipped renderer (src, not a prototype) — the before/after evidence
+AIRUNNER_BASE_PATH=tmp/airunner-base QT_QPA_PLATFORM=offscreen \
+  venv/bin/python -m scripts.bench.canvas.bench_shipping --reps 20
 ```
 
 The harness forces the offscreen Qt platform before creating the
@@ -58,3 +62,28 @@ DISPLAY=:0.0 QT_QPA_PLATFORM=xcb \
 It renders the same 10-layer 4096² scene through a `QGraphicsView` whose
 viewport is a `QOpenGLWidget`, measuring the GL frame path
 (`grabFramebuffer` forces one full paint + read-back).
+
+## Decision (#2231)
+
+`bench_shipping` measures the shipped implementation —
+`airunner/components/art/gui/widgets/canvas/composite_frame_cache.py` —
+so its numbers come from the code the app runs, not from a prototype.
+
+Chosen: **composite the document once per change + dirty-rect repaint.**
+The 512 px tiled split buys nothing over it (18.7 / 21.1 ms against
+17.4 / 16.6 ms) while adding per-tile bookkeeping, and the OpenGL
+viewport, though fastest (2.86 ms), needs a real GL context — the
+daemon, the offscreen runner and CI all have none, so it would trade a
+measurable win for an unverifiable and non-headless code path.
+
+Measured on this machine (4096², 10 layers, offscreen Qt):
+
+| Path | before | after |
+|---|---|---|
+| 10-layer frame (10 items vs cached composite) | 101.1 ms | 16.4 ms |
+| per-segment stroke buffer → pixmap sync | 48.4 ms | 0.17 ms (p50) |
+| 40 px dirty strip | 0.42 ms | 0.27 ms |
+| composite build (once per change, not per frame) | — | 128.7 ms |
+
+The composite build is paid once per change (layer swapped, visibility
+toggled, stroke started), not once per frame.
