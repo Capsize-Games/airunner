@@ -1,172 +1,45 @@
-"""Centralized generation presets for visible and hidden LLM stages."""
+"""Centralized generation presets for visible and hidden LLM stages.
+
+The visible per-action table (``GenerationPreset``,
+``ACTION_GENERATION_PRESETS``, ``DEFAULT_ACTION_PRESET`` and
+``get_action_generation_preset``) now lives once in
+``airunner_common.generation_presets``. Desktop and services both called
+into independently-authored copies of it until #2225 measured (via
+``scripts/compare_llm_request_for_action.py``) that 13 of the 20
+``LLMActionType`` members resolved to different effective generation
+kwargs depending on which side handled the request. #2225 unified the
+table on the desktop/documented values; see that module's docstring for
+the evidence and the decision.
+
+Those names are re-exported here so the existing
+``airunner.components.llm.config`` import surface is unchanged. Only the
+desktop-only hidden *workflow-stage* presets remain local to this module
+-- services has no equivalent of the document-synthesis/verification
+stages, and per #2221's "contract subset, not full union" discipline they
+stay out of the shared foundation.
+"""
 
 from dataclasses import dataclass
 from enum import Enum
 from typing import Optional
 
-from airunner.enums import LLMActionType
-
-
-@dataclass(frozen=True)
-class GenerationPreset:
-    """Resolved generation settings for one request stage or action."""
-
-    do_sample: bool = True
-    early_stopping: bool = True
-    eta_cutoff: int = 200
-    length_penalty: float = 1.0
-    max_new_tokens: int = 8192
-    min_length: int = 1
-    no_repeat_ngram_size: int = 3
-    num_beams: int = 1
-    num_return_sequences: int = 1
-    repetition_penalty: float = 1.15
-    temperature: float = 0.7
-    top_k: int = 20
-    top_p: float = 0.8
-    use_cache: bool = True
-    tool_categories: Optional[tuple[str, ...]] = None
-    reasoning_effort: Optional[str] = None
-
-    def to_request_kwargs(self) -> dict:
-        """Return kwargs compatible with LLMRequest construction."""
-        data = self.__dict__.copy()
-        categories = data["tool_categories"]
-        data["tool_categories"] = list(categories) if categories else None
-        return data
-
-
-DEFAULT_ACTION_PRESET = GenerationPreset(
-    temperature=0.8,
-    max_new_tokens=500,
-    top_k=50,
-    top_p=0.9,
+from airunner_common.generation_presets import (
+    ACTION_GENERATION_PRESETS,
+    DEFAULT_ACTION_PRESET,
+    GenerationPreset,
+    get_action_generation_preset,
 )
 
-
-ACTION_GENERATION_PRESETS = {
-    LLMActionType.CHAT: GenerationPreset(
-        temperature=0.2,
-        repetition_penalty=1.15,
-        no_repeat_ngram_size=3,
-        max_new_tokens=8192,
-        top_k=20,
-        top_p=0.8,
-        tool_categories=None,
-    ),
-    LLMActionType.UPDATE_MOOD: GenerationPreset(
-        temperature=0.2,
-        repetition_penalty=1.15,
-        no_repeat_ngram_size=3,
-        max_new_tokens=8192,
-        top_k=20,
-        top_p=0.8,
-        tool_categories=None,
-    ),
-    LLMActionType.CODE: GenerationPreset(
-        temperature=0.6,
-        repetition_penalty=1.1,
-        no_repeat_ngram_size=2,
-        max_new_tokens=8192,
-        top_k=20,
-        top_p=0.8,
-        tool_categories=None,
-    ),
-    LLMActionType.PERFORM_RAG_SEARCH: GenerationPreset(
-        temperature=0.2,
-        repetition_penalty=1.1,
-        no_repeat_ngram_size=2,
-        max_new_tokens=300,
-        top_k=30,
-        top_p=0.9,
-        tool_categories=("RAG", "SEARCH"),
-    ),
-    LLMActionType.SUMMARIZE: GenerationPreset(
-        temperature=0.2,
-        repetition_penalty=1.1,
-        no_repeat_ngram_size=2,
-        max_new_tokens=300,
-        top_k=30,
-        top_p=0.9,
-        tool_categories=("SEARCH",),
-    ),
-    LLMActionType.SEARCH: GenerationPreset(
-        temperature=0.2,
-        repetition_penalty=1.1,
-        no_repeat_ngram_size=2,
-        max_new_tokens=300,
-        top_k=30,
-        top_p=0.9,
-        tool_categories=("SEARCH",),
-    ),
-    LLMActionType.GENERATE_IMAGE: GenerationPreset(
-        temperature=0.9,
-        repetition_penalty=1.15,
-        no_repeat_ngram_size=3,
-        max_new_tokens=200,
-        top_k=50,
-        top_p=0.9,
-    ),
-    LLMActionType.DECISION: GenerationPreset(
-        temperature=0.6,
-        repetition_penalty=1.0,
-        no_repeat_ngram_size=0,
-        max_new_tokens=32768,
-        top_k=20,
-        top_p=0.95,
-        tool_categories=None,
-    ),
-    LLMActionType.APPLICATION_COMMAND: GenerationPreset(
-        temperature=0.6,
-        repetition_penalty=1.0,
-        no_repeat_ngram_size=0,
-        max_new_tokens=32768,
-        top_k=20,
-        top_p=0.95,
-        tool_categories=None,
-    ),
-    LLMActionType.FILE_INTERACTION: GenerationPreset(
-        temperature=0.6,
-        repetition_penalty=1.0,
-        no_repeat_ngram_size=0,
-        max_new_tokens=32768,
-        top_k=20,
-        top_p=0.95,
-        tool_categories=None,
-    ),
-    LLMActionType.WORKFLOW: GenerationPreset(
-        temperature=0.6,
-        repetition_penalty=1.0,
-        no_repeat_ngram_size=0,
-        max_new_tokens=32768,
-        top_k=20,
-        top_p=0.95,
-        tool_categories=None,
-    ),
-    LLMActionType.WORKFLOW_INTERACTION: GenerationPreset(
-        temperature=0.6,
-        repetition_penalty=1.0,
-        no_repeat_ngram_size=0,
-        max_new_tokens=32768,
-        top_k=20,
-        top_p=0.95,
-        tool_categories=None,
-    ),
-    LLMActionType.DEEP_RESEARCH: GenerationPreset(
-        temperature=0.6,
-        repetition_penalty=1.15,
-        no_repeat_ngram_size=3,
-        max_new_tokens=32768,
-        top_k=20,
-        top_p=0.95,
-        tool_categories=("RESEARCH", "SEARCH"),
-    ),
-}
-
-
-def get_action_generation_preset(action: LLMActionType) -> GenerationPreset:
-    """Return the visible-response preset for one action."""
-    return ACTION_GENERATION_PRESETS.get(action, DEFAULT_ACTION_PRESET)
+__all__ = [
+    "ACTION_GENERATION_PRESETS",
+    "DEFAULT_ACTION_PRESET",
+    "DEFAULT_WORKFLOW_PRESET",
+    "GenerationPreset",
+    "WorkflowGenerationPreset",
+    "WorkflowGenerationStage",
+    "get_action_generation_preset",
+    "get_workflow_generation_preset",
+]
 
 
 class WorkflowGenerationStage(str, Enum):
@@ -196,7 +69,10 @@ class WorkflowGenerationPreset:
                 value = prepared.get(key)
                 if isinstance(value, int):
                     prepared[key] = max(value, self.min_max_new_tokens)
-            if "max_new_tokens" not in prepared and "max_tokens" not in prepared:
+            if (
+                "max_new_tokens" not in prepared
+                and "max_tokens" not in prepared
+            ):
                 prepared["max_new_tokens"] = self.min_max_new_tokens
 
         if self.reasoning_effort is not None:
