@@ -14,6 +14,7 @@ from pydantic import ValidationError
 from airunner_common.settings import AIRUNNER_LOG_LEVEL
 from airunner_services.utils.application import get_logger
 
+from .llm_chat_envelope import is_client_chat, stream_client_chat
 from .llm_contracts import (
     LLMStreamValidationError,
     WebSocketRateLimiter,
@@ -132,6 +133,10 @@ async def websocket_chat(websocket: WebSocket):
                         "done": True,
                     }
                 )
+                continue
+
+            if is_client_chat(data):
+                await stream_client_chat(websocket, client, data)
                 continue
 
             try:
