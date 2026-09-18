@@ -19,7 +19,7 @@ def __getattr__(name):
 
         return LLMRequest
     if name == "LLMResponse":
-        from airunner_services.llm.llm_response import LLMResponse
+        from airunner_common.llm_response import LLMResponse
 
         return LLMResponse
     if name == "LLMSettings":

@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import List, Optional
 
-from airunner_services.llm.llm_response import LLMResponse
+from airunner_common.llm_response import LLMResponse
 from airunner_services.llm.thinking_parser import (
     detect_thinking_close_tag,
     detect_thinking_open_tag,

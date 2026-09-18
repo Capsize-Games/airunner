@@ -18,7 +18,7 @@ from airunner_services.api.services.llm_request_dispatch_mixin import (
 from airunner_services.api.services.llm_unload_routing_mixin import (
 	LLMUnloadRoutingMixin,
 )
-from airunner_services.llm.llm_response import LLMResponse
+from airunner_common.llm_response import LLMResponse
 from airunner_services.utils.application.api_reference import (
 	peek_registered_api,
 )

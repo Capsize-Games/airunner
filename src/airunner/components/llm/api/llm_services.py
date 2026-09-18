@@ -1,6 +1,6 @@
 from airunner.components.application.api.api_service_base import APIServiceBase
 from airunner.components.llm.managers.llm_request import LLMRequest
-from airunner.components.llm.managers.llm_response import LLMResponse
+from airunner_common.llm_response import LLMResponse
 from airunner_services.llm.gpt_oss_parser import (
     looks_like_tool_call_payload,
 )

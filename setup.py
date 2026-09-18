@@ -60,8 +60,11 @@ GUI_REQUIREMENTS = [
     # airunner-common is independently versioned in its own repository
     # now (issue #2197, https://github.com/Capsize-Games/airunner-common),
     # so a compatible-release pin per the versioning policy (#2191)
-    # instead of an exact lockstep VERSION pin.
-    "airunner-common~=6.1",
+    # instead of an exact lockstep VERSION pin. Floor is 6.1.5, the
+    # release that added llm_response (issue #2188) -- this package
+    # imports airunner_common.llm_response directly and cannot start
+    # on an older release.
+    "airunner-common~=6.1.5",
     # The GUI hard-imports airunner_services (daemon_client, api) but never
     # declared it (issue #2037). Mirror the native pattern and pin it to the
     # same VERSION as the rest of the surface.
