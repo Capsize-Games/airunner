@@ -47,5 +47,14 @@ app-orchestrated `CustomGraphicsView`/`BrushScene` (SettingsMixin DB,
 mediator, painter lifecycle). It therefore measures the canvas's render
 and image cost model, not end-to-end app latency.
 
-The OpenGL-viewport candidate is **not** prototyped: the offscreen Qt
-platform has no GL context, so it cannot be measured reproducibly here.
+The OpenGL-viewport candidate needs a real GL context, so it is measured
+separately from the offscreen harness:
+
+```sh
+DISPLAY=:0.0 QT_QPA_PLATFORM=xcb \
+  venv/bin/python -m scripts.bench.canvas.bench_gl --reps 30
+```
+
+It renders the same 10-layer 4096² scene through a `QGraphicsView` whose
+viewport is a `QOpenGLWidget`, measuring the GL frame path
+(`grabFramebuffer` forces one full paint + read-back).
