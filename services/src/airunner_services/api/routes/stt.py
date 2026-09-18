@@ -11,6 +11,7 @@ from fastapi import (
     UploadFile,
     WebSocket,
     WebSocketDisconnect,
+    status,
 )
 
 from airunner_services.ipc.messages import EnvelopeStatus, RequestEnvelope
@@ -19,12 +20,14 @@ from airunner_common.settings import AIRUNNER_LOG_LEVEL
 from airunner_services.utils.application import get_logger
 
 from .stt_helpers import (
+    answer_stream_frame,
     require_runtime_registry,
     resolve_stt_client,
     response_status_is,
     runtime_error_status,
 )
 from .stt_models import ModelInfo, TranscriptionResponse
+from .ws_auth import websocket_auth_failed
 
 logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 router = APIRouter()
@@ -126,63 +129,27 @@ async def list_models(req: Request):
 
 
 @router.websocket("/stream")
-async def websocket_transcription(websocket: WebSocket):
-    """
-    WebSocket endpoint for real-time transcription.
+async def websocket_transcription(websocket: WebSocket) -> None:
+    """Transcribe streamed audio over one WebSocket.
 
-    Args:
-        websocket: WebSocket connection
+    A client sends either a JSON frame
+    ``{"type": "transcribe", "audio": "<base64>", "language"}`` or a raw
+    binary frame of audio bytes, and receives one
+    ``{"type": "transcript", "text", "language", "final"}`` frame per
+    utterance -- or ``{"type": "error", "message"}`` on failure. This is
+    the microphone path behind the chat surface's STT toggle.
     """
+    if websocket_auth_failed(websocket):
+        await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
+        return
     await websocket.accept()
     logger.info("STT WebSocket connection established")
-
-    try:
-        from airunner_services.api.services.stt_services import (
-            STTAPIService,
-        )
-        from airunner_common.contract_enums import SignalCode
-        from airunner_services.utils.application.signal_mediator import (
-            SignalMediator,
-        )
-
-        stt_service = STTAPIService()
-        mediator = SignalMediator()
-
-        async def on_transcription_chunk(data: dict):
-            """Send transcription chunks to WebSocket client."""
-            text = data.get("text")
-            is_final = data.get("is_final", False)
-            if text:
-                await websocket.send_json(
-                    {"type": "chunk", "text": text, "final": is_final}
-                )
-
-        mediator.register(
-            SignalCode.STT_CHUNK_SIGNAL, on_transcription_chunk
-        )
-
+    while True:
         try:
-            while True:
-                data = await websocket.receive_bytes()
-                logger.debug(
-                    f"Received audio chunk: {len(data)} bytes"
-                )
-                stt_service.emit_signal(
-                    SignalCode.STT_TRANSCRIBE_CHUNK_SIGNAL,
-                    {"audio_chunk": data},
-                )
+            message = await websocket.receive()
         except WebSocketDisconnect:
-            logger.info("STT WebSocket connection closed")
-        finally:
-            mediator.unregister(
-                SignalCode.STT_CHUNK_SIGNAL,
-                on_transcription_chunk,
-            )
-    except Exception as e:
-        logger.error(f"STT WebSocket error: {e}")
-        try:
-            await websocket.send_json(
-                {"type": "error", "content": f"Server error: {str(e)}"}
-            )
-        except Exception:
-            pass
+            break
+        if message.get("type") == "websocket.disconnect":
+            break
+        await answer_stream_frame(websocket, message)
+    logger.info("STT WebSocket connection closed")
