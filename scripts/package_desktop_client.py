@@ -32,7 +32,10 @@ import hashlib
 import json
 import shutil
 from pathlib import Path
-from typing import Dict, List
+from typing import Any, Dict, List
+
+BundleManifest = Dict[str, Any]
+FileEntry = Dict[str, str]
 
 from airunner_services.api.routes.client_bundle import (
     BUNDLE_SUBDIR,
@@ -62,9 +65,9 @@ def _sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
-def _manifest(directory: Path) -> Dict[str, object]:
+def _manifest(directory: Path) -> BundleManifest:
     """Build the manifest describing one packaged bundle."""
-    entries = [
+    entries: List[FileEntry] = [
         {
             "path": relative.as_posix(),
             "sha256": _sha256(directory / relative),
@@ -87,7 +90,7 @@ def _validate_source(source: Path) -> Path:
     return source.resolve()
 
 
-def _package(source: Path, destination: Path) -> Dict[str, object]:
+def _package(source: Path, destination: Path) -> BundleManifest:
     """Copy the built bundle into ``destination`` and write its manifest."""
     destination.mkdir(parents=True, exist_ok=True)
     for child in destination.iterdir():
@@ -103,9 +106,10 @@ def _package(source: Path, destination: Path) -> Dict[str, object]:
     return manifest
 
 
-def _report(destination: Path, manifest: Dict[str, object]) -> None:
+def _report(destination: Path, manifest: BundleManifest) -> None:
     """Print where the bundle landed and how the daemon finds it."""
-    print(f"packaged {len(manifest['files'])} files into {destination}")
+    files: List[FileEntry] = manifest["files"]
+    print(f"packaged {len(files)} files into {destination}")
     print(f"manifest: {destination / MANIFEST_NAME}")
     print("the daemon discovers this bundle with no environment set:")
     print(f"  build root: {build_output_directory()}")
@@ -127,9 +131,9 @@ def _verify() -> int:
     return _verify_files(destination, recorded)
 
 
-def _verify_files(destination: Path, recorded: Dict[str, object]) -> int:
+def _verify_files(destination: Path, recorded: BundleManifest) -> int:
     """Compare recorded manifest entries against the installed files."""
-    pending = list(recorded.get("files") or [])
+    pending: List[FileEntry] = list(recorded.get("files") or [])
     if not pending:
         print("FAIL: manifest records no files")
         return 1

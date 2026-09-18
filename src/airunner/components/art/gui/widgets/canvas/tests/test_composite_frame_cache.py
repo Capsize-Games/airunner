@@ -10,6 +10,8 @@ touched afterwards.
 from __future__ import annotations
 
 import pytest
+from typing import Optional
+
 from PySide6.QtCore import QRect, QRectF, QSize, Qt
 from PySide6.QtGui import QColor, QImage, QPainter
 
@@ -40,6 +42,13 @@ def _target(size: QSize) -> QImage:
     return image
 
 
+def _frame(cache: CompositeFrameCache) -> QImage:
+    """Return the cache's frame, asserting that it was built."""
+    frame = cache.frame
+    assert frame is not None
+    return frame
+
+
 def test_build_flattens_layers_bottom_to_top(qapp) -> None:
     """The frame holds the topmost layer's pixels."""
     cache = CompositeFrameCache()
@@ -60,9 +69,9 @@ def test_build_is_reusable_without_recompositing(qapp) -> None:
     """A clean cache hands back the same frame object on re-read."""
     cache = CompositeFrameCache()
     size = QSize(16, 16)
-    frames = [cache.build(size, [_solid(size, QColor("red"))])]
-    frames.append(cache.frame)  # the "once per change" read path
-    assert frames[0] is frames[1]
+    built = cache.build(size, [_solid(size, QColor("red"))])
+    reread = _frame(cache)  # the "once per change" read path
+    assert built is reread
 
 
 def test_apply_touches_only_the_dirty_rectangle(qapp) -> None:
@@ -75,7 +84,7 @@ def test_apply_touches_only_the_dirty_rectangle(qapp) -> None:
 
     cache.apply(inset, rect)
 
-    frame = cache.frame
+    frame = _frame(cache)
     assert frame.pixelColor(10, 10) == QColor(0, 255, 0, 255)
     assert frame.pixelColor(7, 7) == QColor(0, 0, 0, 255)
     assert frame.pixelColor(30, 30) == QColor(0, 0, 0, 255)
@@ -93,7 +102,7 @@ def test_apply_can_erase_a_rectangle(qapp) -> None:
         erase=True,
     )
 
-    frame = cache.frame
+    frame = _frame(cache)
     assert frame.pixelColor(4, 4).alpha() == 0
     assert frame.pixelColor(24, 4).alpha() == 255
 
@@ -125,18 +134,18 @@ def test_rects_outside_the_frame_are_ignored(qapp) -> None:
     cache = CompositeFrameCache()
     size = QSize(16, 16)
     cache.build(size, [_solid(size, QColor(255, 0, 0, 255))])
-    before = cache.frame.copy()
+    before = _frame(cache).copy()
 
     cache.apply(_solid(size, QColor(0, 255, 0, 255)), QRect(64, 64, 8, 8))
 
-    assert cache.frame == before
+    assert _frame(cache) == before
 
 
 class _DirtyStub:
     """Minimal host for the scene's pure dirty-rect helpers."""
 
     def __init__(self) -> None:
-        self._stroke_dirty = None
+        self._stroke_dirty: Optional[QRect] = None
 
 
 def test_mark_stroke_dirty_pads_by_pen_width() -> None:
@@ -152,8 +161,10 @@ def test_mark_stroke_dirty_replaces_the_previous_segment() -> None:
     BrushScene._mark_stroke_dirty(stub, QRectF(0.0, 0.0, 4.0, 4.0), 4)
     first = stub._stroke_dirty
     BrushScene._mark_stroke_dirty(stub, QRectF(500.0, 500.0, 4.0, 4.0), 4)
-    assert stub._stroke_dirty != first
-    assert stub._stroke_dirty.left() > 400
+    second = stub._stroke_dirty
+    assert second is not None
+    assert second != first
+    assert second.left() > 400
 
 
 def test_stroke_dirty_rect_falls_back_to_full_bounds() -> None:
