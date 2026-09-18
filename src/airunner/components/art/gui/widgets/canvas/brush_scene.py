@@ -386,11 +386,10 @@ class BrushScene(CustomScene):
     def _sync_stroke_pixmap(self) -> None:
         """Blit only the changed strip of the stroke buffer to the item.
 
-        Converting the full document-sized buffer to a ``QPixmap`` on
+        Converting the whole document-sized buffer to a ``QPixmap`` on
         every tablet event was the dominant brush cost (#2231: 132 ms
-        mean, 638 ms max per segment). The pixmap is allocated once per
-        stroke and each segment refreshes only its own rectangle;
-        callers then invalidate just that region.
+        mean per segment). The pixmap is now allocated once per stroke and
+        each segment refreshes only its own rectangle.
         """
         buffer = self._stroke_buffer_image
         pixmap = self._stroke_item_pixmap
@@ -399,8 +398,13 @@ class BrushScene(CustomScene):
             self._stroke_item.setPixmap(self._stroke_item_pixmap)
             return
         rect = self._stroke_dirty_rect(buffer.rect())
-        if rect.isEmpty():
-            return
+        if not rect.isEmpty():
+            self._reblit_stroke_pixmap(pixmap, buffer, rect)
+
+    def _reblit_stroke_pixmap(
+        self, pixmap: QPixmap, buffer: QImage, rect: QRect
+    ) -> None:
+        """Refresh one rectangle of the stroke pixmap from the buffer."""
         painter = QPainter(pixmap)
         painter.setCompositionMode(
             QPainter.CompositionMode.CompositionMode_Source
@@ -425,24 +429,27 @@ class BrushScene(CustomScene):
         stroke_image: Optional[QImage],
         erasing: bool,
     ) -> Optional[QImage]:
-        """Compose the preview from the flattened frame plus the dirty strip.
+        """Compose the preview from the flattened frame and dirty strip.
 
-        The base is flattened into the cached frame once per stroke (not
-        per segment) and each segment then blits only its own rectangle,
-        instead of copying and re-blitting the whole document every
-        tablet event (#2231).
+        The base is flattened once per stroke (not per segment) and each
+        segment then blits only its own rectangle, instead of re-blitting
+        the whole document on every tablet event (#2231).
         """
         if base_image is None:
             return None
-        cache = self._stroke_frame_cache
-        base_id = id(base_image)
-        if self._stroke_frame_base_id != base_id or cache.frame is None:
-            cache.build(base_image.size(), [base_image])
-            self._stroke_frame_base_id = base_id
+        cache = self._ensure_stroke_frame(base_image)
         if stroke_image is None:
             return cache.frame
         dirty = self._stroke_dirty_rect(base_image.rect())
         return cache.apply(stroke_image, dirty, erase=erasing)
+
+    def _ensure_stroke_frame(self, base_image: QImage) -> CompositeFrameCache:
+        """Return the stroke frame cache, rebuilt when the base changed."""
+        cache = self._stroke_frame_cache
+        if self._stroke_frame_base_id != id(base_image) or cache.frame is None:
+            cache.build(base_image.size(), [base_image])
+            self._stroke_frame_base_id = id(base_image)
+        return cache
 
     def _start_stroke_buffer(self) -> None:
         base_image = self._current_paint_target()

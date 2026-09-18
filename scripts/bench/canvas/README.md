@@ -76,14 +76,23 @@ viewport, though fastest (2.86 ms), needs a real GL context — the
 daemon, the offscreen runner and CI all have none, so it would trade a
 measurable win for an unverifiable and non-headless code path.
 
-Measured on this machine (4096², 10 layers, offscreen Qt):
+Measured on this machine (4096², 10 layers, offscreen Qt), `--reps 30`:
 
 | Path | before | after |
 |---|---|---|
-| 10-layer frame (10 items vs cached composite) | 101.1 ms | 16.4 ms |
-| per-segment stroke buffer → pixmap sync | 48.4 ms | 0.17 ms (p50) |
-| 40 px dirty strip | 0.42 ms | 0.27 ms |
-| composite build (once per change, not per frame) | — | 128.7 ms |
+| 10-layer frame (10 items vs cached composite) | 116 ms mean | 15.0 ms mean / 16.0 p95 |
+| per-segment sync (full-document pixmap vs dirty rect) | 49.4 ms mean | 3.6 ms mean / 1.4 p50 |
+| 40 px dirty strip | 0.42 ms | 0.26 ms |
+| composite build (once per change, not per frame) | — | 120 ms |
+
+Both stroke rows come from `bench_shipping` itself
+(`baseline/segment_full_pixmap_sync` against
+`shipping/segment_dirty_rect_pixmap_sync`), so the pair differs only in
+the code under test. The 116 ms frame baseline is the original
+`bench_canvas` harness's 10-item `QGraphicsScene.render` frame; the
+brush segment baseline it reported was 132 ms mean / 638 ms max, which
+is what the per-segment sync cost before this change.
 
 The composite build is paid once per change (layer swapped, visibility
-toggled, stroke started), not once per frame.
+toggled, stroke started), not once per frame; the dirty-rect path then
+touches only the strip the last segment changed.

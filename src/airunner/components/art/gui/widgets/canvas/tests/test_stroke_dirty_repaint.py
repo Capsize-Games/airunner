@@ -87,8 +87,10 @@ class _StrokeItem:
 class _StrokeHost:
     """Minimal host exposing the scene's stroke-sync state."""
 
-    # The scene methods under test call this helper on ``self``.
+    # The scene methods under test call these helpers on ``self``.
     _stroke_dirty_rect = BrushScene._stroke_dirty_rect
+    _ensure_stroke_frame = BrushScene._ensure_stroke_frame
+    _reblit_stroke_pixmap = BrushScene._reblit_stroke_pixmap
 
     def __init__(self, scene: Optional[_RecordingScene] = None) -> None:
         self._stroke_base_image: Optional[QImage] = None
