@@ -34,6 +34,7 @@ from airunner.components.chat.gui.widgets.chat_surface_widget import (
     ChatSurfaceWidget,
 )
 from airunner_services.api.loopback_token import get_or_create_loopback_token
+from airunner_services.api.routes import client_bundle
 from airunner_services.api.server import create_app
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -52,15 +53,20 @@ TEXT_JS = "document.body ? document.body.innerText : ''"
 
 
 def bundle_directory() -> Path:
-    """Return the built client bundle directory, or exit with a message."""
-    raw = (os.environ.get("AIRUNNER_CLIENT_BUNDLE") or "").strip()
-    if not raw:
+    """Return the bundle the daemon would serve, or exit with a message.
+
+    Discovery is the daemon's own
+    (``airunner_services.api.routes.client_bundle``), so this check
+    exercises the release path too: with nothing set but a packaged
+    ``AIRUNNER_DESKTOP_BUILD_DIR`` it must still find the surface.
+    """
+    directory = client_bundle.bundle_directory()
+    if directory is None:
         raise SystemExit(
-            "AIRUNNER_CLIENT_BUNDLE must point at the built client dist"
+            "no built client bundle found: set AIRUNNER_CLIENT_BUNDLE to "
+            "the built dist, or package one with "
+            "scripts/package_desktop_client.py"
         )
-    directory = Path(raw).expanduser()
-    if not (directory / "index.html").is_file():
-        raise SystemExit(f"no index.html under {directory}")
     return directory
 
 
