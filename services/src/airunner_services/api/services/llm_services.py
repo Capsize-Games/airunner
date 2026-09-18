@@ -9,9 +9,6 @@ from airunner_services.api.api_service_base import APIServiceBase
 from airunner_services.api.services.llm_conversation_service_mixin import (
 	LLMConversationServiceMixin,
 )
-from airunner_services.api.services.llm_daemon_stream_mixin import (
-	LLMDaemonStreamMixin,
-)
 from airunner_services.api.services.llm_request_dispatch_mixin import (
 	LLMRequestDispatchMixin,
 )
@@ -32,7 +29,6 @@ class LLMAPIService(
 	LLMUnloadRoutingMixin,
 	LLMRequestDispatchMixin,
 	LLMConversationServiceMixin,
-	LLMDaemonStreamMixin,
 	APIServiceBase,
 ):
 	"""Canonical service-owned LLM API service."""
@@ -249,10 +245,3 @@ class LLMAPIService(
 			if worker_manager is not None:
 				return worker_manager
 		return None
-
-	def _daemon_client(self):
-		"""Return the daemon client when one is already attached."""
-		api = getattr(self, "api", None)
-		if api is None or getattr(api, "headless", False):
-			return None
-		return getattr(api, "daemon_client", None)

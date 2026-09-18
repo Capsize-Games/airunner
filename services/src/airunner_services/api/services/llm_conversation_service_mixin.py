@@ -22,9 +22,6 @@ class LLMConversationServiceMixin:
 
     def list_conversations(self, limit: int = 50) -> list[Dict]:
         """Return serialized conversation metadata through the service API."""
-        client = self._available_daemon_client()
-        if client is not None:
-            return client.list_conversations(limit=limit, auto_start=False)
         return self._conversation_history_manager().list_conversations(
             limit=limit
         )
@@ -35,13 +32,6 @@ class LLMConversationServiceMixin:
         max_messages: int = 50,
     ) -> Dict:
         """Return one conversation session without changing the selection."""
-        client = self._available_daemon_client()
-        if client is not None:
-            return client.get_conversation_session(
-                conversation_id=conversation_id,
-                max_messages=max_messages,
-                auto_start=False,
-            )
         return self._conversation_history_manager().get_conversation_session(
             conversation_id=conversation_id,
             max_messages=max_messages,
@@ -49,14 +39,6 @@ class LLMConversationServiceMixin:
 
     def summarize_conversation(self, conversation_id: int) -> str:
         """Return one summary for a conversation through the service API."""
-        client = self._available_daemon_client()
-        if client is not None:
-            payload = client.summarize_conversation(
-                conversation_id,
-                auto_start=False,
-            )
-            return str(payload.get("summary", "") or "")
-
         payload = self._conversation_history_manager().summarize_conversation(
             conversation_id
         )
@@ -89,17 +71,9 @@ class LLMConversationServiceMixin:
 
     def delete_conversation(self, conversation_id: int) -> bool:
         """Delete one conversation through the service API."""
-        client = self._available_daemon_client()
-        if client is not None:
-            payload = client.delete_conversation(
-                conversation_id,
-                auto_start=False,
-            )
-            deleted = bool(payload.get("deleted"))
-        else:
-            deleted = self._conversation_history_manager().delete_conversation(
-                conversation_id
-            )
+        deleted = self._conversation_history_manager().delete_conversation(
+            conversation_id
+        )
 
         if deleted:
             self.converation_deleted(conversation_id)
@@ -175,29 +149,12 @@ class LLMConversationServiceMixin:
         conversation_id: int,
         max_messages: int,
     ) -> Dict:
-        """Return one selected conversation session from daemon or local state."""
-        client = self._available_daemon_client()
-        if client is not None:
-            return client.select_conversation(
-                conversation_id,
-                max_messages=max_messages,
-                auto_start=False,
-            )
-
+        """Return one selected conversation session from local state."""
         return self._conversation_history_manager().get_conversation_session(
             conversation_id=conversation_id,
             max_messages=max_messages,
             mark_current=True,
         )
-
-    def _available_daemon_client(self):
-        """Return the live daemon client when the daemon is already reachable."""
-        client = self._daemon_client()
-        if client is None:
-            return None
-        if type(self)._daemon_is_immediately_available(self, client):
-            return client
-        return None
 
     @staticmethod
     def _conversation_history_manager() -> ConversationHistoryManager:
