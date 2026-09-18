@@ -16,8 +16,11 @@ from airunner_services.api import loopback_token
 from airunner_services.api import server as server_module
 from airunner_services.api.routes.client_bundle import (
     BUNDLE_ENV,
+    BUNDLE_SUBDIR,
+    BUILD_ROOT_ENV,
     bundle_directory,
     mount_client_bundle,
+    packaged_bundle_directory,
 )
 from airunner_services.api.server import create_app
 
@@ -124,3 +127,83 @@ def test_bundle_does_not_shadow_api_routes(
     assert "status" in health.json()
     root = client.get("/", headers=headers)
     assert root.json() == {"status": "ready", "service": "airunner"}
+
+
+def test_packaged_bundle_is_discovered_without_any_env(
+    tmp_path, monkeypatch
+) -> None:
+    """A release install finds its surface with no environment set.
+
+    This is the release-time contract: ``AIRUNNER_CLIENT_BUNDLE`` stays
+    unset, and the bundle is found in the designated build output
+    directory because the packaging step placed it there.
+    """
+    monkeypatch.delenv(BUNDLE_ENV, raising=False)
+    build_root = tmp_path / "builds"
+    packaged = build_root / BUNDLE_SUBDIR
+    packaged.mkdir(parents=True)
+    (packaged / "index.html").write_text("<html></html>", encoding="utf-8")
+    monkeypatch.setenv(BUILD_ROOT_ENV, str(build_root))
+
+    assert packaged_bundle_directory() == packaged
+    assert bundle_directory() == packaged
+
+
+def test_packaged_bundle_is_absent_before_a_release_build(
+    tmp_path, monkeypatch
+) -> None:
+    """An unpackaged build root yields no bundle, not a broken mount."""
+    monkeypatch.delenv(BUNDLE_ENV, raising=False)
+    monkeypatch.setenv(BUILD_ROOT_ENV, str(tmp_path / "nothing-built"))
+    assert bundle_directory() is None
+
+
+def test_explicit_bundle_env_does_not_fall_back(
+    tmp_path, monkeypatch
+) -> None:
+    """An explicit but empty path is authoritative, not a hint."""
+    monkeypatch.setenv(BUNDLE_ENV, str(tmp_path / "empty-choice"))
+    build_root = tmp_path / "builds"
+    packaged = build_root / BUNDLE_SUBDIR
+    packaged.mkdir(parents=True)
+    (packaged / "index.html").write_text("<html></html>", encoding="utf-8")
+    monkeypatch.setenv(BUILD_ROOT_ENV, str(build_root))
+
+    assert bundle_directory() is None
+
+
+def test_packaged_bundle_serves_the_surface(tmp_path, monkeypatch,
+                                             isolated_token) -> None:
+    """The packaged location is mountable exactly like the explicit one."""
+    monkeypatch.delenv(BUNDLE_ENV, raising=False)
+    build_root = tmp_path / "builds"
+    packaged = build_root / BUNDLE_SUBDIR
+    packaged.mkdir(parents=True)
+    (packaged / "index.html").write_text("<html>hi</html>", encoding="utf-8")
+    monkeypatch.setenv(BUILD_ROOT_ENV, str(build_root))
+
+    client, headers = _client(monkeypatch)
+    response = client.get("/index.html", headers=headers)
+    assert response.status_code == 200
+    assert "hi" in response.text
+
+
+def test_query_token_authenticates_the_entry_document(
+    bundle: Path, monkeypatch, isolated_token
+) -> None:
+    """The surface's entry document is reachable with the query token.
+
+    QtWebEngine navigates to the document before any interceptor-injected
+    header can be relied on, so the host passes the loopback token as a
+    query parameter -- the same credential and the same mechanism the
+    WebSocket handshake already uses.
+    """
+    monkeypatch.setenv(BUNDLE_ENV, str(bundle))
+    client, _ = _client(monkeypatch)
+    token = loopback_token.get_or_create_loopback_token()
+
+    allowed = client.get(f"/index.html?token={token}")
+    assert allowed.status_code == 200
+
+    denied = client.get("/index.html?token=wrong")
+    assert denied.status_code == 401

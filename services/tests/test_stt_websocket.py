@@ -151,8 +151,17 @@ def test_non_transcribe_frame_returns_an_error_frame(
     assert fake.envelopes == []
 
 
-def test_stream_socket_requires_the_loopback_token(isolated_token) -> None:
-    """The stream socket enforces the shared loopback-token policy."""
+def test_stream_socket_requires_the_loopback_token(
+    monkeypatch, isolated_token
+) -> None:
+    """The stream socket enforces the shared loopback-token policy.
+
+    The env is set explicitly rather than assumed: some suites in this
+    repo set ``AIRUNNER_INSECURE_NO_AUTH=1`` process-wide, which would
+    otherwise make this assertion pass vacuously.
+    """
+    monkeypatch.setenv("AIRUNNER_API_KEY", "")
+    monkeypatch.setenv("AIRUNNER_INSECURE_NO_AUTH", "0")
     app = create_app()
     app.state.runtime_registry = None
     client = TestClient(app)

@@ -32,11 +32,21 @@ first-class host for the desktop chat surface.
   (`airunner_services.api.routes.client_bundle`) so the page's origin is
   the same as `/api/v1/*` and the client's `wsHost()` keeps resolving to
   the daemon — no build-time host override.
-- The daemon mounts it only when `AIRUNNER_CLIENT_BUNDLE` points at a
-  built bundle that contains `index.html`; otherwise routing is
-  unchanged.
+- The daemon mounts it only when it can find a built bundle containing
+  `index.html`; otherwise routing is unchanged. Discovery order is an
+  explicit `AIRUNNER_CLIENT_BUNDLE`, then the release build output
+  directory (`AIRUNNER_DESKTOP_BUILD_DIR`, default
+  `/media/joe/Megatron/airunner-desktop-builds/`) at
+  `desktop-client/` — so a packaged install needs no environment set.
+- `scripts/package_desktop_client.py` is the packaging step: it copies a
+  built client `dist/` into that build output directory, writes a
+  `bundle-manifest.json` with a SHA-256 per file, and can re-verify an
+  existing install with `--verify-only`.
 - `airunner/components/chat/gui/chat_surface_endpoint.py` is the single
-  place that resolves the daemon origin and the loopback token.
+  place that resolves the daemon origin and the loopback token; its
+  `open_url()` carries the token as a query parameter so the entry
+  document authenticates itself before the interceptor's header can be
+  relied on.
 - `scripts/chat_surface_smoke.py` renders the surface through this host
   against the real daemon and reports the page text plus the events
   socket result. It needs a display.

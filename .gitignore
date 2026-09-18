@@ -97,3 +97,7 @@ logs
 
 # Headless harness session state (zoo/headlesscode)
 .headlesscode/
+
+# Release build output for the desktop chat client bundle
+# (scripts/package_desktop_client.py) when it is pointed inside the repo
+desktop-client/

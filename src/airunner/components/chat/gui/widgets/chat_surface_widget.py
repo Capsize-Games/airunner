@@ -102,7 +102,7 @@ class ChatSurfaceWidget(QWidget):
         if self._view is None:
             self.logger.debug("Chat surface view skipped in this run")
             return
-        self._view.setUrl(QUrl(self._endpoint.index_url))
+        self._view.setUrl(QUrl(self._endpoint.open_url()))
 
     def reload(self) -> None:
         """Re-read the surface from the daemon after a backend change."""

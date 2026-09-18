@@ -206,8 +206,8 @@ envelope unless stated otherwise.
 
 | Client call | Desktop equivalent | Status |
 |---|---|---|
-| `WS /api/v1/tts/ws` | only `POST /api/v1/tts/synthesize` | **GAP** (no TTS WS) |
-| STT | client has an `sttOn` toggle but **no implementation** (no `MediaRecorder`, `SpeechRecognition`, `getUserMedia`, or `/stt` call anywhere in the client) | **GAP** (client stub → desktop supplies) |
+| `WS /api/v1/tts/ws` | served (`tts_ws.py`): `{"type":"synthesize","text","voice","speed"}` → `{"type":"audio","data":"<base64 WAV>"}` | **DONE** |
+| STT | served (`stt.py`): `WS /api/v1/stt/stream` takes a `{"type":"transcribe","audio":"<base64>","language"}` frame (or a raw binary audio frame) → `{"type":"transcript","text","language","final"}`; the client toggle still needs to send a frame | **DONE (desktop)**; client stub remains |
 
 ### Excluded at build time (out of scope per #2230)
 

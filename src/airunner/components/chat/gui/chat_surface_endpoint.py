@@ -30,6 +30,19 @@ class ChatSurfaceEndpoint:
         """Return the absolute URL of the surface's entry document."""
         return f"{self.base_url.rstrip('/')}{INDEX_PATH}"
 
+    def open_url(self) -> str:
+        """Return the entry URL carrying the loopback token as a query.
+
+        QtWebEngine loads a URL before any interceptor-installed header can
+        be verified, and the page's own first ``/api/v1/events`` handshake
+        races the host's header injection. Passing the token in the query
+        (which the daemon already accepts for that socket) makes the entry
+        document self-authenticating, so the surface works whenever the
+        daemon serves it. The token is the same loopback credential the
+        host already injects, never a longer-lived secret.
+        """
+        return f"{self.index_url}?token={self.token}"
+
 
 def daemon_base_url() -> str:
     """Return the daemon's loopback origin, honouring an explicit override."""
@@ -50,10 +63,16 @@ def resolve_chat_surface_endpoint() -> ChatSurfaceEndpoint:
     )
 
 
+def surface_url() -> str:
+    """Return the self-authenticating entry URL of the chat surface."""
+    return resolve_chat_surface_endpoint().open_url()
+
+
 __all__ = [
     "DAEMON_URL_ENV",
     "INDEX_PATH",
     "ChatSurfaceEndpoint",
     "daemon_base_url",
     "resolve_chat_surface_endpoint",
+    "surface_url",
 ]

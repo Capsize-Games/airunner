@@ -139,8 +139,17 @@ def test_empty_text_returns_an_error_frame(
     assert reply == {"type": "error", "message": "text is required"}
 
 
-def test_unauthenticated_socket_is_rejected(isolated_token) -> None:
-    """The socket enforces the same loopback-token policy as HTTP."""
+def test_unauthenticated_socket_is_rejected(
+    monkeypatch, isolated_token
+) -> None:
+    """The socket enforces the same loopback-token policy as HTTP.
+
+    The env is set explicitly rather than assumed: some suites in this
+    repo set ``AIRUNNER_INSECURE_NO_AUTH=1`` process-wide, which would
+    otherwise make this assertion pass vacuously.
+    """
+    monkeypatch.setenv("AIRUNNER_API_KEY", "")
+    monkeypatch.setenv("AIRUNNER_INSECURE_NO_AUTH", "0")
     app = create_app()
     app.state.runtime_registry = None
     client = TestClient(app)
