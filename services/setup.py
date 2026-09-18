@@ -371,11 +371,11 @@ def build_services_setup_kwargs(*, package_source_dir: str) -> dict[str, object]
         # airunner-common is independently versioned in its own repository
         # now (issue #2197, https://github.com/Capsize-Games/airunner-common),
         # so a compatible-release pin per the versioning policy (#2191)
-        # instead of an exact lockstep VERSION pin. Floor is 6.1.5, the
-        # release that added llm_response (issue #2188) -- this package
-        # imports airunner_common.llm_response directly and cannot
-        # start on an older release.
-        "airunner-common~=6.1.5",
+        # instead of an exact lockstep VERSION pin. Floor is 6.1.6, the
+        # release that added the shared LLMRequest (issue #2221) on top
+        # of 6.1.5's LLMResponse (issue #2188) -- this package imports
+        # both directly and cannot start on an older release.
+        "airunner-common~=6.1.6",
         FACEHUGGERSHIELD_REQUIREMENT,
         *CORE_REQUIREMENTS,
     ]

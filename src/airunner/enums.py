@@ -5,24 +5,14 @@ import os
 
 from airunner_common.contract_enums import AvailableLanguage
 from airunner_common.contract_enums import LLMActionType
+from airunner_common.contract_enums import MessageRole
 
-
-class MessageRole(str, Enum):
-    """LLM message roles, matching llama_cloud.MessageRole values.
-
-    Kept local so the GUI import chain does not pull in the full
-    llama_cloud SDK (~320ms cumulative at import time). Values match
-    llama_cloud exactly for wire/serialization compatibility.
-    """
-
-    SYSTEM = "system"
-    DEVELOPER = "developer"
-    USER = "user"
-    ASSISTANT = "assistant"
-    FUNCTION = "function"
-    TOOL = "tool"
-    CHATBOT = "chatbot"
-    MODEL = "model"
+# MessageRole is re-exported, not defined locally (issue #2221): the
+# daemon and the desktop must agree on message roles, and two distinct but
+# identical ``Enum`` classes are never the same object. Values still match
+# llama_cloud.MessageRole exactly, and nothing here pulls in the
+# llama_cloud SDK. Same treatment AvailableLanguage (#2197) and
+# LLMActionType (#2223) already got.
 
 
 class WorkerState(Enum):
