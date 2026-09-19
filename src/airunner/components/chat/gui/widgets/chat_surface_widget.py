@@ -17,6 +17,7 @@ stands in, as the previous transcript widget did.
 
 from __future__ import annotations
 
+import json
 import os
 from typing import Optional
 
@@ -112,6 +113,44 @@ class ChatSurfaceWidget(QWidget):
             self.load()
             return
         self._view.reload()
+
+    def stream_user_message(self, text: str) -> None:
+        """Show the user's turn in the surface before it is persisted."""
+        if text:
+            self._call_bridge("user", text)
+
+    def stream_token(self, text: str) -> None:
+        """Append one streamed assistant token (a delta) to the surface."""
+        if text:
+            self._call_bridge("token", text)
+
+    def finish_turn(self) -> None:
+        """Drop the live buffer and let the surface re-read the thread.
+
+        The Qt prompt owns sending, so the surface is told when a turn is
+        over instead of being reloaded: a reload would reload the whole
+        bundle and flash the window between messages.
+        """
+        self._run_script(
+            "window.__airunnerChat && window.__airunnerChat.finish();"
+        )
+
+    def _call_bridge(self, method: str, text: str) -> None:
+        """Evaluate one bridge call carrying a single string argument."""
+        payload = json.dumps(text)
+        self._run_script(
+            f"window.__airunnerChat "
+            f"&& window.__airunnerChat.{method}({payload});"
+        )
+
+    def _run_script(self, script: str) -> None:
+        """Run a script in the hosted page, ignoring a placeholder run."""
+        if self._view is None:
+            return
+        try:
+            self._view.page().runJavaScript(script)
+        except RuntimeError:
+            self.logger.debug("Chat surface page already released")
 
     def handle_close(self) -> None:
         """Release the web view before the application exits."""

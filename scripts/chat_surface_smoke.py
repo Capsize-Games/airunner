@@ -50,6 +50,10 @@ PROBE_JS = (
 )
 PROBE_RESULT_JS = "window.__probe"
 TEXT_JS = "document.body ? document.body.innerText : ''"
+# The turn the Qt prompt would push into the surface, and the deltas it
+# would stream while the model answers.
+STREAM_USER = "hello from the Qt prompt"
+STREAM_TOKENS = ("stream", "ed ", "tokens")
 
 
 def bundle_directory() -> Path:
@@ -137,6 +141,11 @@ def main() -> int:
     surface.load()
     surface.show()
     QTimer.singleShot(9000, lambda: read(surface, PROBE_JS, _ignore))
+    QTimer.singleShot(9500, lambda: surface.stream_user_message(STREAM_USER))
+    for index, token in enumerate(STREAM_TOKENS):
+        QTimer.singleShot(
+            10000 + index * 250, lambda text=token: surface.stream_token(text)
+        )
     QTimer.singleShot(
         14000,
         lambda: read(
@@ -158,6 +167,13 @@ def main() -> int:
     if not text.strip():
         print("surface rendered no text", file=sys.stderr)
         return 3
+    streamed = "".join(STREAM_TOKENS)
+    has_user = STREAM_USER in text
+    has_stream = streamed in text
+    print(f"stream bridge: user={has_user} tokens={has_stream}")
+    if not (has_user and has_stream):
+        print("the stream bridge did not reach the page", file=sys.stderr)
+        return 4
     return 0
 
 

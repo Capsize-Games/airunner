@@ -466,8 +466,7 @@ class ChatPromptWidget(BaseWidget):
                 action = action_override
         self.logger.info(f"Final action: {action}")
 
-        if hasattr(self.ui, "conversation"):
-            self.ui.conversation.reload()
+        self._show_prompt_in_chat_surface(prompt)
 
         QTimer.singleShot(
             0,
@@ -1606,6 +1605,41 @@ class ChatPromptWidget(BaseWidget):
         if callable(reload_surface):
             reload_surface()
 
+    def _show_prompt_in_chat_surface(self, text: str) -> None:
+        """Show the user's turn in the hosted surface right away.
+
+        Replaces the pre-send page reload: the surface is told what the
+        user sent instead of re-reading the whole bundle, which is what
+        made the window flash on every message.
+        """
+        conversation = getattr(self.ui, "conversation", None)
+        show = getattr(conversation, "stream_user_message", None)
+        if callable(show):
+            show(text)
+            return
+        self._reload_chat_surface()
+
+    def _stream_token_to_chat_surface(self, token: str) -> None:
+        """Append one streamed token to the hosted surface."""
+        conversation = getattr(self.ui, "conversation", None)
+        push = getattr(conversation, "stream_token", None)
+        if callable(push):
+            push(token)
+
+    def _finish_chat_surface_turn(self) -> None:
+        """Settle the hosted surface at the end of a turn.
+
+        The surface drops its live buffer and re-reads the persisted
+        thread, so the streamed text and the stored message never
+        double up.
+        """
+        conversation = getattr(self.ui, "conversation", None)
+        finish = getattr(conversation, "finish_turn", None)
+        if callable(finish):
+            finish()
+            return
+        self._reload_chat_surface()
+
     def on_add_bot_message_to_conversation(self, data: Dict):
         llm_response = data.get("response", None)
         if llm_response is None:
@@ -1616,6 +1650,7 @@ class ChatPromptWidget(BaseWidget):
         if message:
             chunk_tokens = self._estimate_token_count(message)
             self._current_response_tokens += chunk_tokens
+            self._stream_token_to_chat_surface(message)
         
         # Update labels when response is complete
         if getattr(llm_response, "is_end_of_message", False):
@@ -1643,7 +1678,7 @@ class ChatPromptWidget(BaseWidget):
 
         if getattr(llm_response, "is_end_of_message", False):
             self.enable_generate()
-            self._reload_chat_surface()
+            self._finish_chat_surface_turn()
 
     def load_conversation(self, conversation_id: int = None):
         """Load a conversation and synchronize the hosted chat surface."""
