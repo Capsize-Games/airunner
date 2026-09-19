@@ -141,13 +141,19 @@ class KnowledgeBase:
 
 	def _is_duplicate_fact(self, fact: str, section_content: str) -> bool:
 		normalized_new = self._normalize_fact(fact)
-		existing_facts = []
+		# Keep each normalized fact paired with its raw line: entity
+		# extraction needs the original casing, so normalizing first and
+		# extracting later would always yield an empty entity set and
+		# silently disable the entity-overlap duplicate check below.
+		existing_facts: list[tuple[str, str]] = []
 		for line in section_content.split("\n"):
 			stripped = line.strip()
 			if stripped and not stripped.startswith("#"):
-				existing_facts.append(self._normalize_fact(stripped))
+				existing_facts.append(
+					(self._normalize_fact(stripped), stripped)
+				)
 
-		for existing in existing_facts:
+		for existing, raw_line in existing_facts:
 			if not existing:
 				continue
 			if normalized_new == existing or normalized_new in existing:
@@ -158,7 +164,7 @@ class KnowledgeBase:
 				return True
 
 			new_entities = _extract_entities(fact)
-			existing_entities = _extract_entities(existing)
+			existing_entities = _extract_entities(raw_line)
 			if not new_entities or not existing_entities:
 				continue
 

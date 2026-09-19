@@ -124,21 +124,41 @@ ART_REQUIREMENTS = [
     "gguf==0.17.1",
 ]
 
+# RAG-only document/embedding dependencies (extracted from
+# LLM_NATIVE_REQUIREMENTS so the RAG dependency footprint is isolatable;
+# prerequisite for any future airunner-rag extraction). These are still
+# pulled into the `llm-native` aggregate below, so existing installs are
+# unchanged.
+#
+# Deliberately NOT listed here, because non-RAG code imports them too and
+# moving them would break unrelated features:
+#   - beautifulsoup4: llm/.../document_loader.py, rag_lifecycle_mixin.py,
+#     but also tools/web_content_extractor.py (search).
+#   - rank-bm25: llm/core/tool_search.py (tool search).
+#   - sumy: database/models/conversation.py and tools/web_content_extractor.py.
+#   - langchain-core: shared by the whole langgraph tool-calling stack.
+RAG_REQUIREMENTS = [
+    "sentence_transformers==5.6.1",
+    "libzim==3.7.0",
+    "langchain-huggingface==1.2.2",
+    "langchain-text-splitters==1.1.2",
+    "EbookLib==0.19",
+    "mobi==0.4.1",
+    "pypdf>=5.6.0",
+]
+
 LLM_NATIVE_REQUIREMENTS = [
     "llama-cpp-python==0.3.21",
     "bitsandbytes==0.46.1",
-    "sentence_transformers==5.6.1",
     "cryptography==46.0.7",
     "sumy==0.11.0",
     "sentencepiece==0.2.1",
     "lingua-language-detector==2.1.0",
     "markdown==3.8.1",
-    "libzim==3.7.0",
     "mistral_common>=1.8.5",
     "rank-bm25>=0.2.2",
     "llama-cloud==0.1.23",
     "langchain-core==1.3.3",
-    "langchain-huggingface==1.2.2",
     # langgraph-prebuilt >=1.0.8 imports ExecutionInfo/ServerInfo from
     # langgraph.runtime, which only exists in langgraph core >=1.2. Against
     # 1.0.x core that import crashes the tool-calling path ("cannot import
@@ -150,10 +170,6 @@ LLM_NATIVE_REQUIREMENTS = [
     "langgraph-prebuilt==1.0.7",
     "langsmith>=0.8.0",
     "langchain-ollama==1.0.0",
-    "langchain-text-splitters==1.1.2",
-    "EbookLib==0.19",
-    "mobi==0.4.1",
-    "pypdf>=5.6.0",
     # Runtime dep declared in issue #2040 (previously undeclared):
     # bs4 is used by llm/managers/agent/document_loader.py and
     # llm/managers/agent/mixins/rag_lifecycle_mixin.py.
@@ -254,8 +270,10 @@ def _base_extras_require() -> dict[str, list[str]]:
         "huggingface": HUGGINGFACE_REQUIREMENTS,
         "llm-native": unique_requirements(
             ML_RUNTIME_REQUIREMENTS,
+            RAG_REQUIREMENTS,
             LLM_NATIVE_REQUIREMENTS,
         ),
+        "rag": RAG_REQUIREMENTS,
         "stt-native": STT_NATIVE_REQUIREMENTS,
         "art-python": unique_requirements(
             ML_RUNTIME_REQUIREMENTS,
@@ -264,6 +282,7 @@ def _base_extras_require() -> dict[str, list[str]]:
         ),
         "llm": unique_requirements(
             ML_RUNTIME_REQUIREMENTS,
+            RAG_REQUIREMENTS,
             LLM_NATIVE_REQUIREMENTS,
             STT_NATIVE_REQUIREMENTS,
             ["pyttsx3==2.91"],
