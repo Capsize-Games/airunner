@@ -42,7 +42,8 @@ Environment Variables:
     AIRUNNER_ART_MODEL_PATH: Path to art model to preload
     AIRUNNER_TTS_MODEL_PATH: Path to TTS model to preload
     AIRUNNER_STT_MODEL_PATH: Path to STT model to preload
-    AIRUNNER_NO_PRELOAD: Set to 1 to disable model preloading
+    AIRUNNER_NO_PRELOAD: Set to 1 to force lazy model loading
+    AIRUNNER_PRELOAD: Set to 1 to preload models at daemon startup
 
 Examples:
     # Start with defaults (127.0.0.1:8080)
@@ -237,7 +238,13 @@ def _add_service_args(parser: argparse.ArgumentParser) -> None:
         "--no-preload",
         action="store_true",
         default=os.environ.get("AIRUNNER_NO_PRELOAD", "0") == "1",
-        help="Don't preload models at startup, load on first request instead",
+        help="Load models on first request instead of at startup (default)",
+    )
+    parser.add_argument(
+        "--preload",
+        action="store_true",
+        default=os.environ.get("AIRUNNER_PRELOAD", "0") == "1",
+        help="Load models at startup instead of on first request",
     )
 
 
@@ -305,6 +312,8 @@ def _configure_model_paths(args: argparse.Namespace) -> None:
         os.environ["AIRUNNER_STT_MODEL_PATH"] = args.stt_model
     if args.no_preload:
         os.environ["AIRUNNER_NO_PRELOAD"] = "1"
+    if args.preload:
+        os.environ["AIRUNNER_PRELOAD"] = "1"
 
 
 def _configure_service_flags(args: argparse.Namespace) -> None:
@@ -375,11 +384,12 @@ def _log_ollama_endpoints(logger, ollama_mode: bool) -> None:
 
 
 def _log_preload_mode(logger, no_preload: bool) -> None:
-    """Log whether preloading is enabled for the managed daemon."""
-    if no_preload:
-        logger.info("Model preloading: DISABLED (will load on first request)")
+    """Log whether the managed daemon loads eagerly or lazily."""
+    eager = not no_preload and os.environ.get("AIRUNNER_PRELOAD") == "1"
+    if eager:
+        logger.info("Model loading: EAGER (preloaded at startup)")
         return
-    logger.info("Model preloading: ENABLED")
+    logger.info("Model loading: LAZY (on first request)")
 
 
 def _enabled_services(args: argparse.Namespace) -> list[str]:

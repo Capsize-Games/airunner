@@ -217,7 +217,12 @@ class HeadlessRuntimeMixin:
         return self.lifecycle_service
 
     def initialize_headless_lifecycle(self, preload_llm: bool = True) -> None:
-        """Initialize headless workers and optionally preload the local LLM."""
+        """Initialize headless workers and request an LLM load.
+
+        The request is lazy by default: the model loads on the first
+        request that needs it unless ``AIRUNNER_PRELOAD=1`` asks for an
+        eager load at startup.
+        """
         lifecycle_service = self.ensure_lifecycle_service()
         lifecycle_service.initialize()
         if preload_llm:
@@ -255,7 +260,7 @@ class HeadlessRuntimeMixin:
             )
 
     def _preload_llm_model(self):
-        """Pre-load the local LLM from settings if configured."""
+        """Request an LLM load; lazy unless ``AIRUNNER_PRELOAD=1``."""
         self.ensure_lifecycle_service().preload_llm_model()
 
     @property

@@ -70,8 +70,15 @@ class CoreLifecycleService:
         self.logger.info("Headless lifecycle initialized")
 
     def preload_llm_model(self) -> None:
-        """Preload the configured local LLM when enabled."""
-        if os.environ.get("AIRUNNER_NO_PRELOAD") == "1":
+        """Load the configured local LLM eagerly only when requested.
+
+        The daemon loads lazily by default: the model is loaded on the
+        first request that needs it (see ``ensure_llm_model_loaded``), so
+        startup is never blocked by a multi-gigabyte model load. Set
+        ``AIRUNNER_PRELOAD=1`` to restore eager preloading;
+        ``AIRUNNER_NO_PRELOAD=1`` always wins over it.
+        """
+        if not self._preload_requested():
             self._log_preload_disabled()
             # Still resolve/persist a CLI/env model-path override into
             # settings even when skipping the eager synchronous load,
@@ -88,6 +95,12 @@ class CoreLifecycleService:
             )
             return
         self._emit_llm_load(model_path)
+
+    def _preload_requested(self) -> bool:
+        """Return whether eager LLM preloading was explicitly requested."""
+        if os.environ.get("AIRUNNER_NO_PRELOAD") == "1":
+            return False
+        return os.environ.get("AIRUNNER_PRELOAD") == "1"
 
     def get_status(self) -> dict[str, Any]:
         """Return lifecycle status for daemon and API inspection."""
@@ -246,10 +259,10 @@ class CoreLifecycleService:
         setattr(self.signal_source, "_llm_generate_worker", self.llm_generate_worker)
 
     def _log_preload_disabled(self) -> None:
-        """Log that model preloading is disabled."""
+        """Log that the model will load lazily on first request."""
         self.logger.info(
-            "Model preloading disabled (--no-preload flag or "
-            "AIRUNNER_NO_PRELOAD=1)"
+            "Model loading deferred to first request (default; set "
+            "AIRUNNER_PRELOAD=1 to load at daemon startup)"
         )
         self.logger.info("Models will be loaded on first request")
 

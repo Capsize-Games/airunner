@@ -40,6 +40,21 @@ def isolated_token(tmp_path, monkeypatch):
     loopback_token._cached_token = None
 
 
+@pytest.fixture(autouse=True)
+def isolated_build_root(tmp_path, monkeypatch) -> Path:
+    """Keep the machine's real release build directory out of these tests.
+
+    ``packaged_bundle_directory()`` falls back to the owner's build output
+    directory, which a release or a local packaging run may have
+    populated. Pinning it to an empty temp root makes every test here
+    depend only on what it sets up itself.
+    """
+    root = tmp_path / "build-root"
+    root.mkdir()
+    monkeypatch.setenv(BUILD_ROOT_ENV, str(root))
+    return root
+
+
 @pytest.fixture()
 def bundle(tmp_path) -> Path:
     """Write a minimal built-bundle layout to a temp directory."""
