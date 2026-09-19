@@ -81,6 +81,17 @@ def _safe_tenant_dir_name(raw: str) -> str:
     return cleaned[:120] or "default"
 
 
+def _extract_entities(text: str) -> set[str]:
+    """Extract simple capitalized entities from one fact string.
+
+    Mirrors airunner_services.knowledge._extract_entities so the two
+    knowledge-base copies stop drifting on the duplicate check.
+    """
+    return set(
+        re.findall(r"\b[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*\b", text or "")
+    )
+
+
 def get_knowledge_base() -> "KnowledgeBase":
     """Get a tenant-scoped KnowledgeBase instance.
 
@@ -235,13 +246,16 @@ class KnowledgeBase:
         
         # Extract existing facts from section content
         lines = section_content.split('\n')
+        # Keep each normalized fact paired with its raw line: entity
+        # extraction needs original casing, so normalizing first and
+        # extracting later would always yield an empty entity set.
         existing_facts = []
         for line in lines:
             line = line.strip()
             if line and not line.startswith('#'):
-                existing_facts.append(self._normalize_fact(line))
-        
-        for existing in existing_facts:
+                existing_facts.append((self._normalize_fact(line), line))
+
+        for existing, raw_line in existing_facts:
             if not existing:
                 continue
                 
@@ -265,11 +279,10 @@ class KnowledgeBase:
             # This is NOT a duplicate - we want to add more detailed facts
             
             # Check key entity overlap (e.g., both about "AI Runner")
-            # Extract key entities (capitalized words, quoted strings)
-            import re as re_module
-            new_entities = set(re_module.findall(r'\b[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*\b', fact))
-            existing_entities = set(re_module.findall(r'\b[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*\b', 
-                                                       line if line else ''))
+            # Extract key entities from the raw line, not the normalized
+            # (lowercased) text, or the overlap check never fires.
+            new_entities = _extract_entities(fact)
+            existing_entities = _extract_entities(raw_line)
             
             # If >80% entity overlap and similar length, likely duplicate
             if new_entities and existing_entities:
