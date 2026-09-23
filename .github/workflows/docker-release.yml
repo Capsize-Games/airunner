@@ -23,15 +23,19 @@ jobs:
             profiles: core,llm-native,stt-native,art-python,tts-python
             tags: |
               ghcr.io/capsize-games/airunner/airunner:linux-headless
+          # `latest` is included below deliberately: `docker pull
+          # ghcr.io/capsize-games/airunner/airunner` with no tag resolves to
+          # :latest, which did not exist -- so the obvious command every
+          # reader tries returned "manifest unknown". The desktop build is
+          # the right default for that. (Note: inside a `|` block scalar, a
+          # line starting with `#` is literal string content, not a YAML
+          # comment -- keep any explanatory comments outside the block, or
+          # they become part of the tags list and break every push here.)
           - name: desktop
             profiles: core,llm-native,stt-native,art-python,tts-python,gui,computer-use
             tags: |
               ghcr.io/capsize-games/airunner/airunner:linux-desktop
               ghcr.io/capsize-games/airunner/airunner:linux
-              # `docker pull ghcr.io/capsize-games/airunner/airunner` with no
-              # tag resolves to :latest, which did not exist -- so the obvious
-              # command every reader tries returned "manifest unknown". The
-              # desktop build is the right default for that.
               ghcr.io/capsize-games/airunner/airunner:latest
 
     steps:
