@@ -102,25 +102,26 @@ RUN set -e; \
 # Set working directory
 WORKDIR /app
 
-# Copy project files: the GUI package plus the local shared/services/native
-# packages it depends on (issue #2039).
+# Copy project files: the GUI package plus the local services/native
+# packages it depends on (issue #2039). airunner_common moved to its own
+# repository and is a normal published dependency now (issue #2197,
+# https://github.com/Capsize-Games/airunner-common), resolved from PyPI
+# by services/native/root's own declared dependency instead of a local
+# copy.
 COPY setup.py pyproject.toml README.md ./
 COPY src/ ./src/
-COPY shared/ ./shared/
 COPY services/ ./services/
 COPY native/ ./native/
 
 # Install each local package explicitly in dependency order
-# (shared -> services -> native -> GUI; issue #2039). The root `airunner`
+# (services -> native -> GUI; issue #2039). The root `airunner`
 # package has no install profiles (its only extras are "analysis", "ml" and
 # "development"), so the previous
 # `pip install -e ".[$AIRUNNER_INSTALL_PROFILES]"` referenced non-existent
 # extras. "gui" is not a services extra either - it is the root GUI package
 # itself - so it is stripped from the services profile list.
 # services/native setup.py no longer imports airunner_common at build time
-# (issue #2038), so --no-build-isolation is no longer required; ./shared is
-# still installed first because services/native declare airunner-common as a
-# runtime dependency.
+# (issue #2038), so --no-build-isolation is no longer required.
 # The services extras pin CUDA builds of torch (torch==2.13.0+cu129 etc.),
 # which are only published on the PyTorch CUDA index (download.pytorch.org),
 # not PyPI; the extra index is passed to the services install so the pinned
@@ -136,7 +137,6 @@ RUN set -e; \
     service_profiles="$(printf '%s' ",${AIRUNNER_INSTALL_PROFILES}," | sed 's/,gui,/,/g')"; \
     service_profiles="${service_profiles#,}"; \
     service_profiles="${service_profiles%,}"; \
-    python3.13 -m pip install -e ./shared; \
     if [ -n "${service_profiles}" ]; then \
         python3.13 -m pip install \
             --extra-index-url https://download.pytorch.org/whl/cu129 \
