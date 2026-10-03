@@ -18,6 +18,7 @@ from airunner_services.utils.job_tracker import (
 )
 
 from .art_contracts import GenerationRequest, GenerationResponse
+from .art_generation_model import resolve_generation_model
 from .art_job_runner import build_generation_job_metadata, run_art_job
 from .art_runtime import (
     require_runtime_registry,
@@ -66,17 +67,26 @@ async def create_generation_job(
             detail=GENERIC_REJECTION_MESSAGE,
         )
 
+    # Model resolution runs before any side effect: a version with no
+    # model resolves to an installed checkpoint, and a model that is
+    # not available locally is rejected, so a bad request never
+    # occupies the worker until the timeout (issue #2229).
+    resolved_model = resolve_generation_model(request)
     # Art generation owns its own tracker lifecycle, but it still coordinates
     # with the daemon LLM so image work does not start while VRAM is occupied.
     await unload_llm_before_art(req, source="art_generate")
     client = resolve_art_client(require_runtime_registry(req))
     tracker = JobTracker()
     seed_value = resolve_seed_value(request.seed)
+    # resolved_model is None only when the caller sent neither a model
+    # nor a version, in which case the server default still applies.
+    art_request = request.model_copy(
+        update={"seed": seed_value, "model": resolved_model}
+    )
     job_id = await tracker.create_job(
-        metadata=build_generation_job_metadata(request, seed_value),
+        metadata=build_generation_job_metadata(art_request, seed_value),
     )
     await tracker.update_progress(job_id, 1.0, JobState.RUNNING)
-    art_request = request.model_copy(update={"seed": seed_value})
     asyncio.create_task(run_art_job(tracker, job_id, art_request, client))
     return job_id
 
