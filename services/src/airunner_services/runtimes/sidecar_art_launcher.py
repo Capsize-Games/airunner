@@ -14,6 +14,7 @@ from urllib.request import urlopen
 
 from airunner_common.linux_bundle_layout import LinuxBundleLayout
 from airunner_common.linux_bundle_layout import build_linux_bundle_layout
+from airunner_services.runtimes import sidecar_configs
 from airunner_services.runtimes.daemon_config import DaemonConfig
 from airunner_services.runtimes.art_daemon_runtime_settings import (
     ArtDaemonRuntimeSettings,
@@ -61,7 +62,12 @@ def _build_temp_daemon_config(
     temp_config = DaemonConfig(Path(temp_path))
     temp_config.config = config
     temp_config.save()
-    return Path(temp_path)
+    written = Path(temp_path)
+    # `_cleanup_config` cannot run when this process is killed, so the
+    # configs of dead sidecars pile up here forever. Starting a new one
+    # is the moment to clear them: see `sidecar_configs`.
+    sidecar_configs.sweep(layout.config_dir, "airunner-art-runtime-", written)
+    return written
 
 
 def _prepare_managed_daemon_launch() -> None:

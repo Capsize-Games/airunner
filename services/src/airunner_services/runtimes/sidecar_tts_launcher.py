@@ -13,6 +13,7 @@ from typing import Any, Callable, Optional
 from urllib.error import URLError
 from urllib.request import urlopen
 
+from airunner_services.runtimes import sidecar_configs
 from airunner_services.runtimes.daemon_config import DaemonConfig
 from airunner_services.runtimes.contracts import RuntimeHealthStatus
 from airunner_services.runtimes.tts_daemon_runtime_settings import (
@@ -59,7 +60,12 @@ def _build_temp_daemon_config(
     temp_config = DaemonConfig(Path(temp_path))
     temp_config.config = config
     temp_config.save()
-    return Path(temp_path)
+    written = Path(temp_path)
+    # `_cleanup_config` cannot run when this process is killed, so the
+    # configs of dead sidecars pile up here forever. Starting a new one
+    # is the moment to clear them: see `sidecar_configs`.
+    sidecar_configs.sweep(layout.config_dir, "airunner-tts-runtime-", written)
+    return written
 
 
 def _prepare_managed_daemon_launch() -> None:

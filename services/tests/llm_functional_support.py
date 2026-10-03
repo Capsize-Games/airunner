@@ -5,6 +5,8 @@ from __future__ import annotations
 import json
 import os
 import re
+import shutil
+import signal
 import socket
 import subprocess
 import sys
@@ -56,6 +58,62 @@ DEFAULT_TTS_MODEL_PATH = (
     / "tts"
 )
 FUNCTIONAL_TEST_LOG_ROOT = _PROJECT_ROOT / "logs" / "functional-tests"
+
+# How long a functional-test run directory is kept before a later run
+# sweeps it. Long enough to read the log of the run that just failed,
+# short enough that the directory does not grow without bound -- 225
+# of them, 6.7 MB, had accumulated on one machine.
+RUN_DIR_RETENTION_SECONDS = 24 * 60 * 60
+
+_PR_SET_PDEATHSIG = 1
+
+
+def _die_with_parent() -> None:
+    """Ask the kernel to kill this child when the test process dies.
+
+    ``started_daemon`` stops its daemon in a ``finally``, which covers
+    a test that fails and a suite that ends. It does not cover the test
+    process being killed -- an interrupted run, a crashed runner, a
+    reaped CI job -- and then the daemon outlives it silently. One was
+    found still listening three days after its run.
+
+    ``PR_SET_PDEATHSIG`` moves that guarantee into the kernel, which is
+    the only place it can be kept when the parent never gets to run
+    code again. Linux-only and best-effort: on anything else, or if
+    libc will not load, the ``finally`` remains the only cleanup and
+    behaviour is exactly as it was.
+    """
+    try:
+        import ctypes
+
+        ctypes.CDLL("libc.so.6", use_errno=True).prctl(
+            _PR_SET_PDEATHSIG, signal.SIGKILL
+        )
+    except Exception:
+        return
+
+
+def _sweep_old_run_dirs(now: float) -> int:
+    """Remove functional-test run directories older than the retention.
+
+    Args:
+        now: Current epoch seconds.
+
+    Returns:
+        How many directories were removed.
+    """
+    removed = 0
+    for path in FUNCTIONAL_TEST_LOG_ROOT.glob("daemon-*"):
+        if not path.is_dir():
+            continue
+        try:
+            if now - path.stat().st_mtime < RUN_DIR_RETENTION_SECONDS:
+                continue
+            shutil.rmtree(path)
+        except OSError:
+            continue
+        removed += 1
+    return removed
 
 
 @dataclass(frozen=True)
@@ -230,6 +288,7 @@ def stop_process(process: subprocess.Popen) -> None:
 def _functional_test_run_dir() -> Path:
     """Return one repo-local directory for daemon test artifacts."""
     FUNCTIONAL_TEST_LOG_ROOT.mkdir(parents=True, exist_ok=True)
+    _sweep_old_run_dirs(time.time())
     return Path(
         tempfile.mkdtemp(
             prefix="daemon-",
