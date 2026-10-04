@@ -42,8 +42,18 @@ def _validate_explicit_model(model: str) -> str:
     return model
 
 
+def _reject_traversal_version(version: str) -> None:
+    """Reject one version that escapes the local model tree."""
+    if "/" in version or "\\" in version or version == "..":
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid art version '{version}'",
+        )
+
+
 def _resolve_version_checkpoint(version: str, pipeline: str) -> str:
     """Return one installed checkpoint for an art version."""
+    _reject_traversal_version(version)
     action = pipeline or pipeline_action(generator_settings_record())
     resolved = version_model_path(art_model_base_dir(), version, action)
     if not resolved:
