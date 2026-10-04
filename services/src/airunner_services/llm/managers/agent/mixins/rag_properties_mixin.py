@@ -99,6 +99,22 @@ class RAGPropertiesMixin:
             HuggingFaceEmbedding instance
         """
         if self._embedding is None:
+            endpoint = (os.environ.get("AIRUNNER_EMBED_ENDPOINT")
+                        or "").strip()
+            if endpoint:
+                # Opt-in: run embeddings on another machine (e.g. mx's
+                # RTX 2080 SUPER) so this GPU is kept for the LLM. Unset
+                # the env var to restore the original local behaviour.
+                from langchain_ollama import OllamaEmbeddings
+
+                self._embedding = OllamaEmbeddings(
+                    base_url=endpoint,
+                    model=os.environ.get(
+                        "AIRUNNER_EMBED_MODEL", "qwen3-embedding:8b"),
+                )
+                self.logger.info(
+                    "Using remote embedding endpoint %s", endpoint)
+                return self._embedding
             try:
                 # Construct local path to embedding model files
                 # Must use local filesystem path, not HuggingFace repo ID
