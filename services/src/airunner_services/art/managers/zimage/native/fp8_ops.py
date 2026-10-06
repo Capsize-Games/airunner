@@ -19,6 +19,91 @@ import torch.nn.functional as F
 
 logger = logging.getLogger(__name__)
 
+_FP8_SCALED_MM_FALLBACKS: set[tuple[tuple[int, ...], tuple[int, ...]]] = set()
+
+
+def _scaled_fp8_linear(
+    x: torch.Tensor,
+    qweight: torch.Tensor,
+    weight_scale: Optional[torch.Tensor],
+    bias: Optional[torch.Tensor],
+    compute_dtype: Optional[torch.dtype] = None,
+) -> Optional[torch.Tensor]:
+    """Run an inference linear layer with FP8 tensor-core matrix multiply."""
+    output_dtype = x.dtype
+    if x.dtype not in (torch.float16, torch.bfloat16):
+        # Under CUDA autocast, nn.Linear normally receives FP32 activations
+        # and casts them to the configured compute dtype at the operation.
+        # Mirror that behavior before bypassing nn.Linear with _scaled_mm.
+        try:
+            autocast_enabled = torch.is_autocast_enabled("cuda")
+            autocast_dtype = torch.get_autocast_dtype("cuda")
+        except TypeError:  # torch versions before the device-type API
+            autocast_enabled = torch.is_autocast_enabled()
+            autocast_dtype = torch.get_autocast_gpu_dtype()
+        target_dtype = compute_dtype or autocast_dtype
+        if (
+            not autocast_enabled
+            or target_dtype not in (torch.float16, torch.bfloat16)
+        ):
+            return None
+        output_dtype = target_dtype
+        x = x.to(dtype=target_dtype)
+
+    if (
+        x.device.type != "cuda"
+        or qweight.dtype != torch.float8_e4m3fn
+        or not hasattr(torch, "_scaled_mm")
+        or torch.is_grad_enabled()
+    ):
+        return None
+
+    input_2d = x.reshape(-1, x.shape[-1])
+    # The activation quantization kernels dominate for small token batches.
+    # Keep those on the existing BF16 path; measurements on an RTX 5080 show
+    # the scaled-mm path becomes faster once the flattened batch is large.
+    if input_2d.shape[0] < 512 or input_2d.shape[1] % 16:
+        return None
+    if qweight.ndim != 2 or qweight.shape[1] != input_2d.shape[1]:
+        return None
+
+    try:
+        input_float = input_2d.float()
+        fp8_limit = torch.finfo(torch.float8_e4m3fn).max
+        scale_a = (input_float.abs().amax() / fp8_limit).clamp_min(1e-12)
+        input_fp8 = (input_float / scale_a).to(torch.float8_e4m3fn)
+        scale_b = (
+            weight_scale.to(device=x.device, dtype=torch.float32)
+            if weight_scale is not None
+            else torch.ones((), device=x.device, dtype=torch.float32)
+        )
+        if scale_b.numel() != 1:
+            return None
+        if bias is not None:
+            bias = bias.to(device=x.device, dtype=x.dtype)
+        output = torch._scaled_mm(
+            input_fp8,
+            qweight.t(),
+            scale_a=scale_a,
+            scale_b=scale_b,
+            bias=bias,
+            out_dtype=output_dtype,
+        )
+        if isinstance(output, tuple):
+            output = output[0]
+        return output.reshape(*x.shape[:-1], qweight.shape[0])
+    except RuntimeError as exc:
+        shape_key = (tuple(input_2d.shape), tuple(qweight.shape))
+        if shape_key not in _FP8_SCALED_MM_FALLBACKS:
+            logger.warning(
+                "FP8 tensor-core linear unavailable for shapes %s x %s; "
+                "using BF16 fallback: %s",
+                *shape_key,
+                exc,
+            )
+            _FP8_SCALED_MM_FALLBACKS.add(shape_key)
+        return None
+
 # Registry for layout-specific operation handlers
 _LAYOUT_REGISTRY: Dict[Any, Dict[str, Any]] = {}
 _GENERIC_UTILS: Dict[Any, Any] = {}
@@ -741,6 +826,15 @@ class FP8Linear(nn.Module):
         if self.fp8_weight_storage is None:
             raise RuntimeError("Weight not set. Call set_fp8_weight first.")
 
+        qweight, scale = TensorCoreFP8Layout.get_plain_tensors(
+            self.fp8_weight_storage
+        )
+        output = _scaled_fp8_linear(
+            x, qweight, scale, self.bias, self.compute_dtype
+        )
+        if output is not None:
+            return output
+
         weight = self.fp8_weight_storage.dequantize().to(x.dtype)
         
         bias = self._bias if self._has_bias and hasattr(self, '_bias') else None
@@ -796,6 +890,13 @@ class UnscaledFP8Linear(nn.Module):
     
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Forward with on-the-fly FP8 to compute-dtype conversion."""
+        if self.fp8_weight is None:
+            raise RuntimeError("Weight not set. Call set_weight first.")
+        output = _scaled_fp8_linear(
+            x, self.fp8_weight, None, self.bias, self.compute_dtype
+        )
+        if output is not None:
+            return output
         # Cast FP8 weight to compute dtype
         weight = self.fp8_weight.to(self.compute_dtype)
         return F.linear(x, weight, self.bias)

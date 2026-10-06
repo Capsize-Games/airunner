@@ -158,7 +158,11 @@ def _get_session(tenant: str):
     """Get or create one scoped session factory."""
     if tenant not in _sessions:
         _sessions[tenant] = scoped_session(
-            sessionmaker(bind=_get_engine(tenant))
+            # session_scope() removes its session at exit. Keep loaded ORM
+            # fields usable for callers that return read-only records from
+            # the scope; otherwise commit expires them and attribute access
+            # raises DetachedInstanceError as soon as the session is removed.
+            sessionmaker(bind=_get_engine(tenant), expire_on_commit=False)
         )
     return _sessions[tenant]
 
