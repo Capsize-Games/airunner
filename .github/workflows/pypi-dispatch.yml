@@ -80,6 +80,19 @@ jobs:
           done
           echo "Built artifacts:"; ls -1 dist/
 
+      # A PyPI release cannot be replaced after upload. Install the candidate
+      # through the documented top-level request into a clean environment and
+      # exercise the daemon before publishing it.
+      - name: Gate -- candidate artifact must run
+        env:
+          PUBLISH_PACKAGES: ${{ inputs.packages || 'services native .' }}
+        run: |
+          VERSION="$(python setup.py --version)"
+          echo "gating candidate version $VERSION for selection: $PUBLISH_PACKAGES"
+          python scripts/artifact_runtime_gate.py \
+            --find-links dist --version "$VERSION" \
+            --packages "$PUBLISH_PACKAGES"
+
       - name: Upload Python distribution artifacts
         uses: actions/upload-artifact@v4
         with:

@@ -1,0 +1,21 @@
+# Imports that may legitimately be absent from an installed artifact.
+#
+# Read by scripts/check_artifact_imports.py. An import listed here is allowed to
+# be missing; anything NOT listed here and NOT installed fails the release gate.
+#
+# The bar for adding an entry is deliberately high, because the gate already
+# ignores the graceful pattern. It only looks at *unguarded module-scope*
+# imports -- an import inside a function, or inside `try: ... except
+# ImportError:`, is never reported in the first place. So an entry here is a
+# claim that an unguarded top-level import is fine because the module containing
+# it is never imported on any user-reachable path.
+#
+# If that claim is not true, the honest fix is to declare the dependency or to
+# guard the import -- not to add a line here.
+
+[optional.pytest]
+reason = "test-only: airunner_services/eval/fixtures.py is a pytest harness, not a runtime path"
+
+# Do not add runtime packages here simply to quiet a scanner result. Confirm
+# that the affected module is unreachable from supported entry points, or add
+# the dependency to the distribution that imports it.

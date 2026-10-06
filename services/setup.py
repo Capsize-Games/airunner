@@ -10,11 +10,13 @@ below (the requirement groups, extras, console scripts) is specific to
 this package surface and independently authoritative.
 """
 
+import os
 from pathlib import Path
 
 from setuptools import find_packages, setup
 
-VERSION = "6.1.3"
+_RELEASE_VERSION = "6.1.3"
+VERSION = os.environ.get("AIRUNNER_BUILD_VERSION", _RELEASE_VERSION)
 
 # The project is GPL-3.0-only (issue #2058): the repo-root LICENSE file, every
 # ``license=`` metadata field and these PyPI classifiers must agree. Mirrored
@@ -84,6 +86,12 @@ CORE_REQUIREMENTS = [
     #         utils/location/get_lat_lon.py (API route -> core)
     "psutil>=5.9.0",
     "pandas>=2.0.0",
+    # These are imported at module scope on the services runtime path. The
+    # GUI distribution also depends on requests and markdown, but a
+    # services-only install must declare its own runtime requirements.
+    "pygments>=2.17.0",
+    "requests>=2.31.0",
+    "markdown>=3.5.0",
 ]
 
 # PyTorch is pinned to the exact stable cu129 wheel line so it aligns with
