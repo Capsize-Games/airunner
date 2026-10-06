@@ -16,6 +16,7 @@ import sys
 import threading
 import time
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from airunner_common.startup_env import (
     configure_early_torch_allocator_environment,
@@ -45,15 +46,26 @@ from logging.handlers import RotatingFileHandler
 
 from airunner_services.runtimes.daemon_config import DaemonConfig
 from airunner_services.api.server import APIServer
-from airunner_services.app import ServiceApp
-from airunner_services.model_management.model_resource_manager import (
-    ModelResourceManager,
-)
 from airunner_common.settings import AIRUNNER_LOG_LEVEL
 from airunner_services.utils.application import get_logger
 
+if TYPE_CHECKING:  # pragma: no cover - typing only
+    from airunner_services.app import ServiceApp
+
 logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
-App = ServiceApp
+
+# These are the optional ML runtime's direct modules. Other import failures
+# must propagate as packaging defects rather than being reported as missing ML.
+OPTIONAL_ML_MODULES = frozenset({"torch", "torchvision", "torchaudio"})
+
+
+def __getattr__(name: str):
+    """Keep historical daemon.App and daemon.ServiceApp imports available."""
+    if name in ("App", "ServiceApp"):
+        from airunner_services.app import ServiceApp as _ServiceApp
+
+        return _ServiceApp
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 
 class AIRunnerDaemon:
@@ -189,9 +201,21 @@ class AIRunnerDaemon:
             logger.error(f"Fatal error in daemon: {e}", exc_info=True)
             sys.exit(1)
 
-    def _create_headless_app(self) -> App:
+    def _create_headless_app(self) -> "ServiceApp":
         """Create the daemon-owned app without embedded server ownership."""
-        return App(
+        try:
+            from airunner_services.app import ServiceApp
+        except ModuleNotFoundError as exc:
+            if exc.name not in OPTIONAL_ML_MODULES:
+                raise
+            raise ModuleNotFoundError(
+                "Running the AI Runner daemon requires its optional ML runtime, "
+                f"but {exc.name!r} is missing. The base installation supports "
+                "--help and --generate-config without that runtime. See the "
+                "project installation documentation for platform-specific setup."
+            ) from exc
+
+        return ServiceApp(
             headless=True,
             no_splash=True,
             start_headless_api_server=False,
@@ -215,6 +239,10 @@ class AIRunnerDaemon:
             return
 
         logger.info(f"Preloading {len(preload_list)} models: {preload_list}")
+
+        from airunner_services.model_management.model_resource_manager import (
+            ModelResourceManager,
+        )
 
         ModelResourceManager()
 

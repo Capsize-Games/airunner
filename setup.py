@@ -10,6 +10,7 @@ own VERSION/FACEHUGGERSHIELD_REQUIREMENT/LICENSE_CLASSIFIERS are the
 values worth keeping in sync here when they change.
 """
 
+import os
 import sys
 from pathlib import Path
 
@@ -18,7 +19,8 @@ from setuptools.command.build_py import build_py as _build_py
 
 _REPO_ROOT = Path(__file__).resolve().parent
 
-VERSION = "6.1.3"
+_RELEASE_VERSION = "6.1.3"
+VERSION = os.environ.get("AIRUNNER_BUILD_VERSION", _RELEASE_VERSION)
 
 # The project is GPL-3.0-only (issue #2058): the repo-root LICENSE file,
 # every ``license=`` metadata field and these PyPI classifiers must agree.
@@ -86,6 +88,7 @@ GUI_REQUIREMENTS = [
     "markdown>=3.5.0",
     "jinja2>=3.1.0",
     "psutil>=5.9.0",
+    "pygments>=2.17.0",
     FACEHUGGERSHIELD_REQUIREMENT,
 ]
 
