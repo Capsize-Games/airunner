@@ -1,49 +1,57 @@
-# Q07-S00 evidence — 2026-10-09 (FAILED: frozen boot defect)
+# Q07-S00 evidence — 2026-10-09 (PASS on fixed candidate)
 
 Scenario: `q07-gpu-lifecycle.md` Q07-S00 (record candidate, hardware,
 driver, model revisions). Operator: agent boot probe on the build box.
-Verdict: **FAIL** — the gate-passing candidate cannot boot (defect
-filed as #2245). S01–S08 remain PENDING behind that defect.
+Verdict: **PASS** — the frozen daemon boots and serves. The original
+FAILED run is retained in git (commit `659d0c564`, defect #2245);
+this reruns the scenario from the top against the fixed candidate
+with fresh digests.
 
 ## Candidate identity
 
-- Bundle dir: `/tmp/bundle/dist/airunner-daemon` (8.4G)
+- Bundle dir: `/tmp/bundle/dist/airunner-daemon` (9.9G)
 - Entry: `airunner_services.daemon:main`, frozen with
-  `pyinstaller==6.12.0`, manifest base `51b0aee63`
+  `pyinstaller==6.12.0`, manifest base `0b5c5701d`
+  (branch `batch22/frozen-tail`: native-binaries collection plus
+  the mslk triton-jit hook)
 - `sha256(airunner-daemon)`:
-  `51911a1630f66c0abba598476bf7d6d70979c463295c156dc4046cf8b39baded`
+  `6a6f99adc01b75a84adab809d119df88c3aa5413e74a5fae4a37806df9925cef`
 - `sha256(bundle-manifest.json)`:
-  `571d32b967984c9da4b7c8b53376325bab41a1068fbb6376cfd3a42e31b1a3c0`
-- Inspector: exit 0 ("passes bundle inspection"), two expected
-  release-provided-sidecar warnings (llama-server, whisper-server)
+  `140edbbb9283f0e20286fd13f85844451b3ec90607b0c876914da0cc5c531de3`
+- Inspector: exit 0 ("assembled and inspected", 11769 files), two
+  expected release-provided-sidecar warnings
+  (llama-server, whisper-server)
+- Frozen payload proof: `_internal/mslk/mslk.so` (257M),
+  `_internal/mslk/quantize/triton/fp8_quantize.py` as source (absent
+  from the PYZ), 17 `llama_cpp/lib/*` files including versioned
+  SONAMEs, 15 `torchcodec/libtorchcodec_*.so`
 
-## Hardware and driver (nvidia-smi, observed)
+## Hardware and driver
 
-- GPU: NVIDIA GeForce RTX 5080, 16303 MiB, compute capability 12.0
-- Driver: 615.71.09
-- Box state at probe: GPU 7% / 2441 MiB used (operator's long-running
-  engine daemon); box under memory pressure (see #2242)
+- nvidia-smi (observed): NVIDIA GeForce RTX 5080, 16303 MiB,
+  driver 615.71.09
+- Daemon `/api/v1/daemon/hardware` (observed, 200): 15.56 GB total
+  VRAM / 12.89 GB available, CUDA available, compute capability
+  12.0, 16 CPUs, Linux
 
-## Boot probe (observed)
+## Boot probes (observed)
 
-- `--help` works (usage + `--config`/`--generate-config` shown).
-- Full boot on loopback test config (127.0.0.1:18289, scratch
-  `AIRUNNER_BASE_PATH`, empty models) **crashes before serving**:
-  `llm_generate_worker` import → `llm_model_manager` →
-  `transformers.models` lazy `__init__` calls
-  `os.scandir(.../_internal/transformers/models/__init__.pyc)` →
-  `FileNotFoundError`. Full traceback and repro in #2245.
-- Daemon `/health` and `/api/v1/daemon/hardware` were unreachable
-  (no listener; process exited). No daemon-side hardware record
-  exists for this candidate.
-- Secondary observation (same run, non-fatal): first boot on the
-  empty scratch dir logs a caught `no such table:
-  application_settings` from the knowledge-migration check before
-  schema setup completes (also noted in #2245).
+Loopback test config (127.0.0.1:18289, scratch
+`AIRUNNER_BASE_PATH`, empty models), two consecutive boots:
 
-## What unblocks S00
+- Boot 1: `/health` 200 `{"status":"ready",...}` on first poll;
+  `/api/v1/daemon/hardware` 401 (auth-guarded, proves serving).
+- Boot 2 (`AIRUNNER_INSECURE_NO_AUTH=1`, loopback probe only):
+  `/health` 200 and `/api/v1/daemon/hardware` 200 with the
+  profile above.
+- Both boots: zero `ERROR`/`Traceback`/`CRITICAL` lines;
+  `Successfully loaded: 'mslk.so'` in the log; transformers,
+  torchao, and the triton-jit `fp8_quantize` module import cleanly.
+- Raw evidence: `/tmp/q07-frozen4/{daemon.yaml,
+  stdout-first-boot.log,stdout.log,health.json,hardware.json}`,
+  build log `/tmp/bundle/build-b4.log`. Probe daemons killed
+  after each run; port verified free.
 
-#2245 fixed (frozen transformers import) plus a successful boot to
-`/health` + `/api/v1/daemon/hardware` on this candidate. Re-run this
-scenario from the top against the fixed candidate; do not carry these
-digests forward (the binary will change).
+## Downstream
+
+S00 unblocks S01–S08, which remain PENDING.
