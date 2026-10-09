@@ -46,20 +46,34 @@ def _dry_run_proc(
     )
 
 
+def _assert_recipe_flags(stdout: str) -> None:
+    """Assert the freeze recipe flags appear in dry-run output."""
+    hidden = "--hidden-import airunner_services.bin.airunner_service"
+    for needle in (
+        "--onedir",
+        "--name",
+        "airunner-daemon",
+        "--hidden-import airunner_services.llm.tools",
+        hidden,
+        "--hidden-import libzim",
+        "--exclude-module airunner",
+        "--exclude-module PySide6",
+        "--exclude-module shiboken6",
+        "--collect-submodules airunner_services.runtimes",
+        "--copy-metadata airunner-services",
+        "--add-data",
+        "alembic.ini",
+    ):
+        assert needle in stdout, needle
+
+
 def test_assemble_dry_run_prints_full_recipe(
     tmp_path: Path,
 ) -> None:
     """--dry-run resolves globs and prints the freeze command only."""
     proc = _dry_run_proc(tmp_path)
     assert proc.returncode == 0, proc.stdout + proc.stderr
-    assert "--onedir" in proc.stdout
-    assert "--name" in proc.stdout
-    assert "airunner-daemon" in proc.stdout
-    assert "--hidden-import airunner_services.llm.tools" in proc.stdout
-    assert "--collect-submodules airunner_services.runtimes" in proc.stdout
-    assert "--copy-metadata airunner-services" in proc.stdout
-    assert "--add-data" in proc.stdout
-    assert "alembic.ini" in proc.stdout
+    _assert_recipe_flags(proc.stdout)
     # Root-staged payloads (legal/) are copied post-freeze, never
     # passed as --add-data.
     assert "legal" not in proc.stdout

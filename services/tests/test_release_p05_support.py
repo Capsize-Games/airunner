@@ -124,10 +124,19 @@ def _skeleton_bundle(bundle: Path, spec: dict[str, Any]) -> None:
     (bundle / "_internal" / "base_library.zip").write_bytes(b"fake-zip")
 
 
+def _fixture_dest(bundle: Path, entry: dict[str, Any]) -> Path:
+    """Return the stage-aware dest dir for a fixture entry."""
+    dest = bundle / str(entry["dest"])
+    if str(entry.get("stage")) == "collect":
+        # PyInstaller --add-data lands under _internal/ (onedir).
+        return bundle / "_internal" / str(entry["dest"])
+    return dest
+
+
 def _stage_fixture_entry(bundle: Path, entry: dict[str, Any]) -> None:
     """Stage one synthetic payload file for a required data entry."""
     source = str(entry["source"])
-    dest_dir = bundle / str(entry["dest"])
+    dest_dir = _fixture_dest(bundle, entry)
     dest_dir.mkdir(parents=True, exist_ok=True)
     if any(char in source for char in "*?["):
         filename = "probe.dat"
@@ -140,6 +149,21 @@ def _stage_fixture_entry(bundle: Path, entry: dict[str, Any]) -> None:
     (dest_dir / filename).write_bytes(content)
 
 
+def _stage_extension_fixtures(bundle: Path, spec: dict[str, Any]) -> None:
+    """Stage one fake native lib per [code] extension module."""
+    internal = bundle / "_internal"
+    internal.mkdir(parents=True, exist_ok=True)
+    for name in spec["code"].get("extension_modules", []):
+        (internal / f"{name}.fake-ext.so").write_bytes(b"fake-elf\n")
+
+
+def _stage_required_entries(bundle: Path, spec: dict[str, Any]) -> None:
+    """Stage one fixture file per required [[data]] entry."""
+    for entry in spec.get("data", []):
+        if entry.get("required", True):
+            _stage_fixture_entry(bundle, entry)
+
+
 def make_bundle(
     root: Path,
     spec: dict[str, Any],
@@ -148,16 +172,14 @@ def make_bundle(
 ) -> Path:
     """Build a synthetic bundle tree from the spec, with a manifest.
 
-    Every required [[data]] entry contributes one file (exact sources
-    land as dest/basename, globs as dest/probe.dat); the policy payload
-    is SYNTHETIC_POLICY. Returns the bundle directory.
+    The policy payload is SYNTHETIC_POLICY; extension modules get
+    one fake .so each. Returns the bundle directory.
     """
     bundle = root / "bundle"
     bundle.mkdir(parents=True, exist_ok=True)
     _skeleton_bundle(bundle, spec)
-    for entry in spec.get("data", []):
-        if entry.get("required", True):
-            _stage_fixture_entry(bundle, entry)
+    _stage_required_entries(bundle, spec)
+    _stage_extension_fixtures(bundle, spec)
     assemble_mod.write_manifest(bundle, spec, base)
     return bundle
 
@@ -178,6 +200,11 @@ def make_toc(spec: dict[str, Any], drop: frozenset[str]) -> str:
     return "\n".join(lines) + "\n"
 
 
+def bundle_data_dir(bundle: Path, *parts: str) -> Path:
+    """Join bundle/_internal with collect-staged data path parts."""
+    return bundle.joinpath("_internal", *parts)
+
+
 def scrubbed_env() -> dict[str, str]:
     """Return the process env with repository lookups removed."""
     return {
@@ -186,11 +213,15 @@ def scrubbed_env() -> dict[str, str]:
 
 
 def write_warn(path: Path, dirty: bool) -> Path:
-    """Write a synthetic PyInstaller warn file, clean or dirty."""
+    """Write a synthetic PyInstaller warn file, clean or dirty.
+
+    The dirty marker is a bogus top level: torch itself is a
+    reviewed allowlist entry, so it can no longer play unreviewed.
+    """
     text = WARN_CLEAN
     if dirty:
         text += (
-            "missing module named torch - imported by "
+            "missing module named no_such_reviewed_module - imported by "
             "airunner_services.fake (top-level)\n"
         )
     path.write_text(text, encoding="utf-8")

@@ -84,6 +84,10 @@ def _code_args(spec: dict[str, Any]) -> list[str]:
         args.extend(["--collect-data", package])
     for module in spec["code"].get("hidden_imports", []):
         args.extend(["--hidden-import", module])
+    for module in spec["code"].get("extension_modules", []):
+        args.extend(["--hidden-import", module])
+    for name in spec["code"].get("exclude_modules", []):
+        args.extend(["--exclude-module", name])
     for package in spec["code"].get("collect_submodules", []):
         args.extend(["--collect-submodules", package])
     for dist in spec["code"].get("copy_metadata", []):
@@ -135,6 +139,43 @@ def resolve_base_rev(repo_root: Path, override: str | None) -> str:
     raise SystemExit(
         "cannot resolve git HEAD for the manifest; pass --base explicitly"
     )
+
+
+def _prune_targets(bundle_dir: Path, patterns: list[str]) -> list[Path]:
+    """Return in-bundle matches for prune globs, escape-safe."""
+    root = bundle_dir.resolve()
+    targets: list[Path] = []
+    for pattern in patterns:
+        for match in sorted(bundle_dir.glob(pattern)):
+            try:
+                match.resolve().relative_to(root)
+            except ValueError:
+                raise SystemExit(
+                    f"prune glob escapes the bundle: {pattern}"
+                ) from None
+            targets.append(match)
+    return targets
+
+
+def prune_bundle(bundle_dir: Path, spec: dict[str, Any]) -> list[str]:
+    """Delete [[prune]] matches; return removed bundle-rel paths.
+
+    Runs after the freeze and before the manifest, so the manifest
+    stays consistent. Matches that vanished (overlapping globs, or
+    a hook that stopped collecting) are skipped, never an error:
+    the exclusion scan still gates whatever remains.
+    """
+    patterns = [str(entry["glob"]) for entry in spec.get("prune", [])]
+    removed: list[str] = []
+    for path in _prune_targets(bundle_dir, patterns):
+        if not path.exists() and not path.is_symlink():
+            continue
+        if path.is_dir() and not path.is_symlink():
+            shutil.rmtree(path)
+        else:
+            path.unlink()
+        removed.append(path.relative_to(bundle_dir).as_posix())
+    return removed
 
 
 def stage_root_files(

@@ -42,6 +42,23 @@ def _entry_errors(spec: dict[str, Any]) -> list[str]:
                 errors.append(
                     f"spec [[console_script]] #{index} missing {key!r}"
                 )
+    errors.extend(_prune_errors(spec))
+    return errors
+
+
+def _prune_errors(spec: dict[str, Any]) -> list[str]:
+    """Return structural problems in prune and allowlist entries."""
+    errors: list[str] = []
+    for index, entry in enumerate(spec.get("prune", [])):
+        for key in ("glob", "reason"):
+            if not entry.get(key):
+                errors.append(f"spec [[prune]] #{index} missing {key!r}")
+        glob = str(entry.get("glob", ""))
+        if glob.startswith("/") or ".." in glob.split("/"):
+            errors.append(f"spec [[prune]] #{index} escapes: {glob!r}")
+    allowlist = spec.get("exclusion_allowlist", {}).get("paths", [])
+    if not isinstance(allowlist, list):
+        errors.append("spec [exclusion_allowlist] paths is not a list")
     return errors
 
 
@@ -154,9 +171,18 @@ def verify_manifest(
     return problems
 
 
+def _entry_dest(entry: dict[str, Any]) -> str:
+    """Return the bundle-relative dest dir for one data entry."""
+    dest = str(entry["dest"]).rstrip("/")
+    if str(entry.get("stage")) == "collect":
+        # PyInstaller --add-data lands under _internal/ (onedir).
+        return f"_internal/{dest}"
+    return dest
+
+
 def _entry_problem(recorded: set[str], entry: dict[str, Any]) -> list[str]:
     """Return the missing-payload problem for one data entry."""
-    dest = str(entry["dest"]).rstrip("/")
+    dest = _entry_dest(entry)
     source = str(entry["source"])
     if any(char in source for char in "*?["):
         if any(
@@ -191,21 +217,28 @@ def verify_required_resources(
     return problems
 
 
+def _pattern_problem(posix: str, name: str, patterns: list[str]) -> str | None:
+    """Return the exclusion problem for one file, or None."""
+    for pattern in patterns:
+        if any(fnmatch.fnmatch(p, pattern) for p in (posix, name)):
+            return f"excluded payload {posix} (pattern {pattern})"
+    return None
+
+
 def scan_exclusions(bundle_dir: Path, spec: dict[str, Any]) -> list[str]:
-    """Return bundle files matching an exclusion pattern or Qt marker."""
+    """Return exclusion and Qt problems (allowlist tolerated)."""
     problems: list[str] = []
     patterns = list(spec["exclusions"]["patterns"])
     markers = [m.lower() for m in spec["qt"].get("qt_markers", [])]
+    allowed = set(spec.get("exclusion_allowlist", {}).get("paths", []))
     for relpath in _bundle_files(bundle_dir):
         posix = relpath.as_posix()
-        lowered = posix.lower()
-        for marker in markers:
-            if marker in lowered:
-                problems.append(f"Qt payload in services bundle: {posix}")
-        for pattern in patterns:
-            if any(fnmatch.fnmatch(p, pattern) for p in (posix, relpath.name)):
-                problems.append(
-                    f"excluded payload {posix} (pattern {pattern})"
-                )
-                break
+        if posix in allowed:
+            continue
+        if any(marker in posix.lower() for marker in markers):
+            problems.append(f"Qt payload in services bundle: {posix}")
+            continue
+        found = _pattern_problem(posix, relpath.name, patterns)
+        if found is not None:
+            problems.append(found)
     return problems

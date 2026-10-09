@@ -34,14 +34,17 @@ def parse_warn_file(text: str) -> dict[str, list[str]]:
 
 
 def _gate_missing(
-    missing: dict[str, list[str]], allowlist: list[str]
+    missing: dict[str, list[str]],
+    allowlist: list[str],
+    excluded: list[str],
 ) -> tuple[list[str], list[str]]:
     """Split missing modules into problems and tolerated names."""
     allowed = {name.split(".")[0] for name in allowlist}
+    banned = {name.split(".")[0] for name in excluded}
     problems: list[str] = []
     tolerated: list[str] = []
     for name in sorted(missing):
-        if name.split(".")[0] in allowed:
+        if name.split(".")[0] in allowed | banned:
             tolerated.append(name)
         else:
             problems.append(f"unreviewed missing module: {name}")
@@ -49,18 +52,22 @@ def _gate_missing(
 
 
 def gate_warn_file(
-    warn_path: Path, allowlist: list[str]
+    warn_path: Path,
+    allowlist: list[str],
+    excluded: list[str] | None = None,
 ) -> tuple[list[str], list[str]]:
     """Gate the freeze on unreviewed missing modules.
 
     Returns (problems, tolerated). Comparison is by top-level name, so
     an allowlist entry of "collections.abc" also tolerates "collections".
+    Excluded tops are tolerated here because the toc-exclusion gate
+    separately enforces their absence from the freeze.
     """
     try:
         text = warn_path.read_text(encoding="utf-8", errors="replace")
     except OSError as exc:
         return [f"cannot read warn file {warn_path}: {exc}"], []
-    return _gate_missing(parse_warn_file(text), allowlist)
+    return _gate_missing(parse_warn_file(text), allowlist, excluded or [])
 
 
 def parse_toc_modules(text: str) -> set[str]:
@@ -99,6 +106,16 @@ def _toc_presence(modules: set[str], spec: dict[str, Any]) -> list[str]:
     return problems
 
 
+def _toc_exclusions(modules: set[str], spec: dict[str, Any]) -> list[str]:
+    """Return frozen modules under excluded top-level names."""
+    excluded = set(spec["code"].get("exclude_modules", []))
+    return [
+        f"frozen bundle ships excluded module {name}"
+        for name in sorted(modules)
+        if name.split(".")[0] in excluded
+    ]
+
+
 def check_toc_modules(
     toc_paths: list[Path], spec: dict[str, Any]
 ) -> tuple[list[str], list[str]]:
@@ -106,7 +123,7 @@ def check_toc_modules(
 
     Returns (problems, warnings). Console-script modules and hidden
     imports must appear exactly; each collect-submodules parent must
-    contribute at least one module.
+    contribute at least one module; no excluded top level may appear.
     """
     problems: list[str] = []
     warnings: list[str] = []
@@ -117,7 +134,20 @@ def check_toc_modules(
     if problems:
         return problems, warnings
     problems.extend(_toc_presence(modules, spec))
+    problems.extend(_toc_exclusions(modules, spec))
     return problems, warnings
+
+
+def check_extension_modules(
+    bundle_dir: Path, spec: dict[str, Any]
+) -> list[str]:
+    """Return extension modules missing their collected native lib."""
+    problems: list[str] = []
+    internal = bundle_dir / "_internal"
+    for name in spec["code"].get("extension_modules", []):
+        if not list(internal.glob(f"{name}*.so")):
+            problems.append(f"frozen bundle lacks native extension {name}")
+    return problems
 
 
 def check_sidecars(

@@ -32,6 +32,7 @@ from typing import Any
 from linux_bundle_assemble import (
     build_command,
     expand_data,
+    prune_bundle,
     resolve_base_rev,
     run_freeze,
     stage_root_files,
@@ -151,9 +152,16 @@ def _freeze_tree(
     bundle_dir = distpath / str(spec["bundle"]["executable"])
     if not bundle_dir.is_dir():
         raise SystemExit(f"pyinstaller produced no bundle dir: {bundle_dir}")
+    _finish_tree(spec, bundle_dir)
+    return bundle_dir
+
+
+def _finish_tree(spec: dict[str, Any], bundle_dir: Path) -> None:
+    """Stage root payloads and prune hook data in the frozen tree."""
     (bundle_dir / spec["runtimes"]["bin_dir"]).mkdir(exist_ok=True)
     stage_root_files(spec, _REPO_ROOT, bundle_dir)
-    return bundle_dir
+    pruned = prune_bundle(bundle_dir, spec)
+    print(f"pruned {len(pruned)} hook-collected paths")
 
 
 def _write_bundle_manifest(

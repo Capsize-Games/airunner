@@ -36,6 +36,7 @@ from linux_bundle_checks import (
     verify_required_resources,
 )
 from linux_bundle_gates import (
+    check_extension_modules,
     check_sidecars,
     check_toc_modules,
     gate_warn_file,
@@ -105,6 +106,7 @@ def _append_manifest(
             verify_required_resources(bundle_dir, manifest, spec)
         )
     result.problems.extend(scan_exclusions(bundle_dir, spec))
+    result.problems.extend(check_extension_modules(bundle_dir, spec))
 
 
 def _append_warn(
@@ -115,7 +117,9 @@ def _append_warn(
         result.warnings.append("no warn file supplied; freeze gate skipped")
         return
     gate_problems, _ = gate_warn_file(
-        warn_file, list(spec["warn_allowlist"]["modules"])
+        warn_file,
+        list(spec["warn_allowlist"]["modules"]),
+        list(spec["code"].get("exclude_modules", [])),
     )
     result.problems.extend(gate_problems)
 

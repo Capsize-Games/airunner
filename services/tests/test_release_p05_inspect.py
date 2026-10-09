@@ -15,6 +15,7 @@ from typing import Any
 
 from test_release_p05_support import (
     assemble_mod,
+    bundle_data_dir,
     inspect_mod,
     make_bundle,
     spec,
@@ -88,8 +89,8 @@ def test_inspect_detects_silently_dropped_payload(
     """A payload missing from both tree and manifest still fails: the
     spec requires it, so a consistent-but-incomplete freeze is caught."""
     bundle = make_bundle(tmp_path, spec, assemble_mod)
-    dropped = (
-        bundle / "airunner_services" / "database" / "alembic" / "versions"
+    dropped = bundle_data_dir(
+        bundle, "airunner_services", "database", "alembic", "versions"
     )
     for path in dropped.iterdir():
         path.unlink()
@@ -145,6 +146,69 @@ def test_inspect_detects_qt_payload(
     assemble_mod.write_manifest(bundle, spec, "testrev")
     result = inspect_mod.inspect_bundle(bundle, spec)
     assert any("Qt payload" in p for p in result.problems)
+
+
+def test_inspect_reports_qt_file_once(
+    tmp_path: Path,
+    inspect_mod: types.ModuleType,
+    assemble_mod: types.ModuleType,
+    spec: dict[str, Any],
+) -> None:
+    """A Qt file matching several markers is one problem, not many."""
+    bundle = make_bundle(tmp_path, spec, assemble_mod)
+    payload = bundle / "_internal" / "PySide6" / "libQt6Core.so.6"
+    payload.parent.mkdir(parents=True, exist_ok=True)
+    payload.write_bytes(b"fake-qt")
+    assemble_mod.write_manifest(bundle, spec, "testrev")
+    result = inspect_mod.inspect_bundle(bundle, spec)
+    assert sum("Qt payload" in p for p in result.problems) == 1
+
+
+def test_inspect_tolerates_reviewed_ca_bundle(
+    tmp_path: Path,
+    inspect_mod: types.ModuleType,
+    assemble_mod: types.ModuleType,
+    spec: dict[str, Any],
+) -> None:
+    """The reviewed certifi CA bundle passes despite *.pem."""
+    bundle = make_bundle(tmp_path, spec, assemble_mod)
+    ca_dir = bundle / "_internal" / "certifi"
+    ca_dir.mkdir(parents=True, exist_ok=True)
+    (ca_dir / "cacert.pem").write_bytes(b"fake-ca-bundle")
+    assemble_mod.write_manifest(bundle, spec, "testrev")
+    result = inspect_mod.inspect_bundle(bundle, spec)
+    assert result.problems == []
+
+
+def test_inspect_still_rejects_unreviewed_pem(
+    tmp_path: Path,
+    inspect_mod: types.ModuleType,
+    assemble_mod: types.ModuleType,
+    spec: dict[str, Any],
+) -> None:
+    """The allowlist is exact-path: another *.pem still fails."""
+    bundle = make_bundle(tmp_path, spec, assemble_mod)
+    key_dir = bundle / "_internal" / "app"
+    key_dir.mkdir(parents=True, exist_ok=True)
+    (key_dir / "server.pem").write_bytes(b"fake-key")
+    assemble_mod.write_manifest(bundle, spec, "testrev")
+    result = inspect_mod.inspect_bundle(bundle, spec)
+    assert any("server.pem" in p for p in result.problems)
+
+
+def test_inspect_requires_native_extensions(
+    tmp_path: Path,
+    inspect_mod: types.ModuleType,
+    assemble_mod: types.ModuleType,
+    spec: dict[str, Any],
+) -> None:
+    """A missing extension .so fails even with a clean manifest."""
+    bundle = make_bundle(tmp_path, spec, assemble_mod)
+    for path in (bundle / "_internal").glob("libzim*.so"):
+        path.unlink()
+    assemble_mod.write_manifest(bundle, spec, "testrev")
+    result = inspect_mod.inspect_bundle(bundle, spec)
+    assert any("native extension libzim" in p for p in result.problems)
 
 
 def test_inspect_requires_executable_bit(

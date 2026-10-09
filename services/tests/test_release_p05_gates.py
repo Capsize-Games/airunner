@@ -57,7 +57,26 @@ def test_warn_gate_rejects_unreviewed_module(
     assert {"winreg", "collections.abc"} <= set(tolerated)
     dirty = write_warn(tmp_path / "dirty.txt", dirty=True)
     problems, _ = inspect_mod.gate_warn_file(dirty, allowlist)
-    assert problems == ["unreviewed missing module: torch"]
+    assert problems == ["unreviewed missing module: no_such_reviewed_module"]
+
+
+def test_warn_gate_tolerates_excluded_tops(
+    tmp_path: Path,
+    inspect_mod: types.ModuleType,
+    spec: dict[str, Any],
+) -> None:
+    """Excluded tops tolerated as missing; toc gate enforces absence."""
+    warn = tmp_path / "excluded.txt"
+    warn.write_text(
+        "missing module named airunner - imported by x (conditional)\n"
+        "missing module named 'PySide6.QtCore' - imported by y (top)\n",
+        encoding="utf-8",
+    )
+    excluded = list(spec["code"].get("exclude_modules", []))
+    assert {"airunner", "PySide6"} <= set(excluded)
+    problems, tolerated = inspect_mod.gate_warn_file(warn, [], excluded)
+    assert problems == []
+    assert {"airunner", "PySide6.QtCore"} <= set(tolerated)
 
 
 def test_toc_check_requires_console_modules(
@@ -75,6 +94,23 @@ def test_toc_check_requires_console_modules(
     )
     problems, _ = inspect_mod.check_toc_modules([dropped], spec)
     assert problems == ["frozen bundle lacks module airunner_services.daemon"]
+
+
+def test_toc_check_rejects_excluded_module(
+    tmp_path: Path,
+    inspect_mod: types.ModuleType,
+    spec: dict[str, Any],
+) -> None:
+    """A frozen module under an excluded top level fails the gate."""
+    toc = write_toc(tmp_path / "qt.toc", spec)
+    with toc.open("a", encoding="utf-8") as handle:
+        handle.write("  ('airunner.gui.window', '/x.py', 'PYMODULE'),\n")
+        handle.write("  ('PySide6.QtCore', '/y.py', 'PYMODULE'),\n")
+    problems, _ = inspect_mod.check_toc_modules([toc], spec)
+    assert "frozen bundle ships excluded module PySide6.QtCore" in problems
+    assert (
+        "frozen bundle ships excluded module airunner.gui.window" in problems
+    )
 
 
 def test_sidecars_warn_by_default_fail_when_required(
@@ -100,7 +136,12 @@ def test_synthetic_policy_fixture_used(
     """The fixture policy payload is synthetic, never production data."""
     bundle = make_bundle(tmp_path, spec, assemble_mod)
     policy = (
-        bundle / "airunner_services" / "content_safety" / "data" / "probe.dat"
+        bundle
+        / "_internal"
+        / "airunner_services"
+        / "content_safety"
+        / "data"
+        / "probe.dat"
     )
     assert policy.read_bytes() == SYNTHETIC_POLICY
 
