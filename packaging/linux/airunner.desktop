@@ -1,5 +1,10 @@
 # AI Runner desktop launcher.
 #
+# NOTE (release P06, services-only scope): user-level services installs
+# use packaging/linux/airunner-services.desktop as rendered by
+# packaging/linux/install.sh. This entry still targets the Qt desktop
+# bundle, which ships separately from the services artifact.
+#
 # Requirements (documented per issue #2063):
 #   * `airunner` must be a real console script on PATH. It is registered by
 #     the GUI package (src/airunner setup.py entry points) and installed into

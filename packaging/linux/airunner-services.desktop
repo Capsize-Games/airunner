@@ -1,0 +1,18 @@
+# AIRunner services menu entry template (release P06).
+#
+# Rendered by packaging/linux/install.sh into
+# ${XDG_DATA_HOME:-~/.local/share}/applications/airunner-services.desktop
+# with the installed launcher path filled in (double-quoted, so
+# prefixes containing spaces work). The icon is the
+# theme name `airunner-services`: the installer copies the bundle file
+# share/icons/airunner-services.png to the user hicolor theme when the
+# bundle carries it. Terminal=true keeps daemon log output visible.
+[Desktop Entry]
+Type=Application
+Name=AIRunner Services
+Comment=Run the local AI Runner services daemon (user install)
+Exec="@AIRUNNER_LAUNCHER@"
+Terminal=true
+Categories=Utility;
+StartupNotify=false
+Icon=airunner-services
