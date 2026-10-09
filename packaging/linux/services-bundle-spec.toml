@@ -1,0 +1,363 @@
+# Linux v1 services directory-bundle specification (release P05).
+#
+# Extends the P04 recipe (release-planning/linux-v1/packaging-decision.md:
+# directory-mode PyInstaller) to the complete application bundle. Read by
+# scripts/assemble_linux_bundle.py (build) and
+# scripts/inspect_linux_bundle.py (verify); enforced by
+# services/tests/test_release_p05.py.
+#
+# SERVICES-ONLY SCOPE: the shipped Linux v1 artifact is the services
+# bundle (airunner-services daemon, Qt-free). There is deliberately no
+# Qt/PySide6 payload, no Qt plugin set, and no WebEngine helper here;
+# the [qt] section records that as a checked decision, not an omission.
+# GUI-only R01 features map to "gui" in [r01_coverage]: they are served
+# by the desktop bundle, explicitly out of this artifact's scope.
+#
+# Models are never bundled: weight files (*.gguf, *.safetensors, ...)
+# are [exclusions], and model downloads remain explicit post-install
+# steps (R01 DL-01/DL-02, D01/D02).
+#
+# Production policy data is never required from a public checkout: the
+# content-safety signature entry below is required=false because signed
+# policy provisioning happens in trusted release CI (S06). Tests use a
+# synthetic policy fixture, never production policy bytes.
+
+[bundle]
+# Frozen executable name inside the bundle root. Matches
+# LinuxBundleLayout.daemon_executable(): <bin_dir>/airunner-daemon.
+name = "airunner-services"
+executable = "airunner-daemon"
+tool = "pyinstaller==6.12.0"
+mode = "onedir"
+entry_module = "airunner_services.daemon"
+entry_function = "main"
+# Manifest identity of the entry point ("module:function").
+entry = "airunner_services.daemon:main"
+# P02 lock consumed by the isolated build environment.
+constraints = "package/constraints-linux-nvidia-cu129.txt"
+
+[profile]
+# The services-side Linux v1 NVIDIA release profile (P02): the
+# "desktop" aggregate of services/setup.py. The aggregates list must
+# union to exactly that aggregate's requirement list, in order.
+services_extra = "desktop"
+aggregates = [
+    "llm-native",
+    "stt-native",
+    "art-python",
+    "tts-python",
+    "llm_weather",
+    "search",
+    "computer_use",
+    "nvidia",
+    "linux",
+]
+
+[qt]
+# No Qt in the services bundle (see header). The inspector fails the
+# bundle if any qt_marker path segment appears (case-insensitive).
+required = false
+reason = "services-only release scope: the daemon has no Qt frontend"
+qt_markers = ["PySide6", "shiboken6", "libqxcb", "Qt6"]
+
+# Console-script surface the bundle must preserve. Must match
+# SERVICE_CONSOLE_SCRIPTS in services/setup.py exactly; the inspector
+# checks every module is present in the frozen PYZ table of contents.
+[[console_script]]
+name = "airunner-daemon"
+module = "airunner_services.daemon"
+function = "main"
+primary = true
+
+[[console_script]]
+name = "airunner-headless"
+module = "airunner_services.bin.airunner_headless"
+function = "main"
+primary = false
+
+[[console_script]]
+name = "airunner-service"
+module = "airunner_services.bin.airunner_service"
+function = "main"
+primary = false
+
+[[console_script]]
+name = "airunner-generate-migration"
+module = "airunner_services.bin.generate_migration"
+function = "main"
+primary = false
+
+[[console_script]]
+name = "airunner-hf-download"
+module = "airunner_services.bin.airunner_hf_download"
+function = "main"
+primary = false
+
+[[console_script]]
+name = "airunner-civitai-download"
+module = "airunner_services.bin.airunner_civitai_download"
+function = "main"
+primary = false
+
+# Runtime-string imports PyInstaller's static analysis cannot see (the
+# P04 probe_data finding). Each entry cites the loader; the regression
+# test re-derives the literal module names from those loaders by AST.
+[code]
+# --hidden-import: exact modules loaded by runtime string.
+hidden_imports = [
+    # tool_registry.py:270 ensure-import of the tools package.
+    "airunner_services.llm.tools",
+    # model_registry.py:64 provider-config lookup.
+    "airunner_services.llm.provider_config",
+    # message_envelopes.py:13 IPC message lookup.
+    "airunner_services.ipc.messages",
+]
+# --collect-submodules: every module under each parent ships, which
+# covers the 17 literal tool modules in tool_registry.py's
+# modules_to_reload list (llm.tools x15, tools.web_tools,
+# llm.agents.workflow_tools) plus the lazy _EXPORTS table in
+# runtimes/__init__.py.
+collect_submodules = [
+    "airunner_services.llm.tools",
+    "airunner_services.llm.agents",
+    "airunner_services.tools",
+    "airunner_services.runtimes",
+]
+# --collect-data: package data discovered by static import analysis.
+collect_data = ["airunner_services"]
+# --copy-metadata: importlib.metadata lookups at runtime
+# (utils/application/get_version.py PACKAGE_NAMES). The "airunner" GUI
+# distribution is intentionally absent: get_version() falls through to
+# the next installed distribution, so the services bundle only carries
+# the metadata of distributions it actually ships.
+copy_metadata = [
+    "airunner-services",
+    "airunner-native",
+    "airunner-common",
+]
+
+# Data payloads. source is a repo-relative glob; dest is the
+# bundle-relative directory each matched file lands in (basename
+# preserved). stage "collect" becomes a PyInstaller --add-data entry;
+# stage "root" is copied beside the executable after the freeze (legal
+# notices must be visible at the bundle top level, not inside the
+# collected tree). required=false entries may match nothing: they are
+# release-CI-provisioned artifacts, never demanded from a checkout.
+[[data]]
+source = "services/src/airunner_services/database/alembic.ini"
+dest = "airunner_services/database"
+stage = "collect"
+required = true
+comment = "additive idempotent migrations (spec item 5)"
+
+[[data]]
+source = "services/src/airunner_services/database/alembic/*.py"
+dest = "airunner_services/database/alembic"
+stage = "collect"
+required = true
+
+[[data]]
+source = "services/src/airunner_services/database/alembic/*.mako"
+dest = "airunner_services/database/alembic"
+stage = "collect"
+required = true
+
+[[data]]
+source = "services/src/airunner_services/database/alembic/versions/*.py"
+dest = "airunner_services/database/alembic/versions"
+stage = "collect"
+required = true
+
+[[data]]
+source = "services/src/airunner_services/content_safety/data/*.dat"
+dest = "airunner_services/content_safety/data"
+stage = "collect"
+required = true
+comment = "policy data file; tests substitute a synthetic fixture"
+
+[[data]]
+source = "services/src/airunner_services/content_safety/data/*.dat.sig"
+dest = "airunner_services/content_safety/data"
+stage = "collect"
+required = false
+comment = "signed policy signature, provisioned in trusted CI (S06)"
+
+[[data]]
+source = "services/src/airunner_services/assets/reference_speakers/*.wav"
+dest = "airunner_services/assets/reference_speakers"
+stage = "collect"
+required = true
+
+[[data]]
+source = "services/src/airunner_services/bin/*.sh"
+dest = "airunner_services/bin"
+stage = "collect"
+required = true
+
+[[data]]
+source = "LICENSE"
+dest = "legal"
+stage = "root"
+required = true
+
+[[data]]
+source = "NOTICE"
+dest = "legal"
+stage = "root"
+required = true
+
+[[data]]
+source = "THIRD_PARTY_NOTICES.md"
+dest = "legal"
+stage = "root"
+required = true
+
+[runtimes]
+# Native sidecar executables resolve per
+# runtimes/bundled_runtime_paths.py: $AIRUNNER_BUNDLE_ROOT/bin/<name>,
+# overridable per-binary via the env column. Binaries are
+# release-provided (pinned airunner-native bundle); the assembler only
+# guarantees bin/ exists, and the inspector warns (not fails) when a
+# sidecar is absent unless --require-sidecars is given.
+bin_dir = "bin"
+root_env = "AIRUNNER_BUNDLE_ROOT"
+
+[[runtime]]
+name = "llama-server"
+env = "AIRUNNER_LLAMA_SERVER_BIN"
+feature = "CHAT-03"
+
+[[runtime]]
+name = "whisper-server"
+env = "AIRUNNER_WHISPER_SERVER_BIN"
+feature = "VOICE-02"
+
+[exclusions]
+# Filename gate: any bundle file matching one pattern fails
+# inspection. Matched against both the bundle-relative path and the
+# bare filename, so "*.gguf" catches weights at any depth.
+patterns = [
+    # Models stay outside the application (Outcome).
+    "*.gguf",
+    "*.safetensors",
+    "*.pt",
+    "*.pth",
+    "*.ckpt",
+    "*.onnx",
+    # Secrets and credentials.
+    ".env",
+    "*.pem",
+    "*.key",
+    "*credentials*",
+    "*secret*",
+    # Developer tooling and test harness.
+    "conftest.py",
+    "test_*",
+    "*_test.py",
+    "pytest*",
+    "*.egg-info",
+    # Caches.
+    "__pycache__",
+    "*.pyc",
+    "*.pyo",
+    ".pytest_cache",
+    # Customer/user data must never be packaged.
+    "*.sqlite3",
+    "*.sqlite",
+    "*.db",
+    "user-data",
+]
+
+[warn_allowlist]
+# Reviewed platform-conditional set (P04 evidence, re-verified against
+# a PyInstaller 6.12.0 micro-build): the only missing modules the
+# freeze gate tolerates. Compared by top-level name.
+modules = [
+    "winreg",
+    "nt",
+    "_winapi",
+    "msvcrt",
+    "_frozen_importlib_external",
+    "collections.abc",
+]
+
+[manifest]
+# P04 manifest contract: bundle-manifest.json beside the executable.
+filename = "bundle-manifest.json"
+required_fields = ["bundle", "tool", "entry", "base", "files"]
+file_fields = ["path", "sha256"]
+
+# R01 feature-dependency coverage (feature-matrix.md). Every stable
+# feature ID must appear exactly once. Token semantics:
+#   extra name  - daemon-side deps come from that services/setup.py
+#                 extra (must be inside the desktop aggregate)
+#   core        - base install_requires only, no extra needed
+#   gui         - Qt desktop bundle scope, explicitly out of this
+#                 artifact (services-only scope, not a silent drop)
+#   tracked:XXX - not yet implemented; owned by release issue XXX
+[r01_coverage]
+ART-01 = "art-python"
+ART-02 = "gui"
+ART-03 = "art-python"
+ART-04 = "gui"
+ART-05 = "art-python"
+ART-06 = "gui"
+ART-07 = "art-python"
+ART-08 = "art-python"
+ART-09 = "art-python"
+ART-10 = "art-python"
+ART-11 = "art-python"
+ART-12 = "core"
+ART-13 = "art-python"
+CHAT-01 = "gui"
+CHAT-02 = "gui"
+CHAT-03 = "llm-native"
+CHAT-04 = "core"
+CHAT-05 = "llm-native"
+CHAT-06 = "core"
+CHAT-07 = "gui"
+CHAT-08 = "gui"
+CHAT-09 = "tracked:S12"
+CHAT-10 = "llm-native"
+VOICE-01 = "gui"
+VOICE-02 = "stt-native"
+VOICE-03 = "tts-python"
+VOICE-04 = "tts-python"
+VOICE-05 = "gui"
+VOICE-06 = "llm-native,stt-native,tts-python"
+RAG-01 = "gui"
+RAG-02 = "core"
+RAG-03 = "gui"
+RAG-04 = "llm-native"
+RAG-05 = "llm-native"
+RAG-06 = "tracked:B04"
+DL-01 = "core"
+DL-02 = "core"
+DL-03 = "gui"
+DL-04 = "gui"
+DL-05 = "gui"
+DL-06 = "tracked:D01"
+DL-07 = "tracked:D02"
+SET-01 = "gui"
+SET-02 = "gui"
+SET-03 = "gui"
+SET-04 = "gui"
+SET-05 = "core"
+SET-06 = "gui"
+SET-07 = "core"
+SRV-01 = "gui"
+SRV-02 = "core"
+SRV-03 = "core"
+SRV-04 = "tracked:S02"
+SRV-05 = "core"
+SRV-06 = "core"
+SRV-07 = "core"
+SRV-08 = "tracked:O01"
+TOOL-01 = "llm-native"
+TOOL-02 = "core"
+TOOL-03 = "search"
+TOOL-04 = "search"
+TOOL-05 = "search"
+TOOL-06 = "llm-native"
+TOOL-07 = "llm-native,llm_weather"
+TOOL-08 = "tracked:T01"

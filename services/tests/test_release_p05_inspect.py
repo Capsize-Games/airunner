@@ -1,0 +1,160 @@
+"""P05 bundle inspection tests (manifest, resources, exclusions).
+
+Proves scripts/inspect_linux_bundle.py accepts a well-formed synthetic
+bundle and rejects tampered, incomplete, unmanifested, excluded, Qt,
+and non-executable trees. CPU-only; bundles are synthetic tmp trees.
+"""
+
+from __future__ import annotations
+
+import json
+import re
+import types
+from pathlib import Path
+from typing import Any
+
+from test_release_p05_support import (
+    assemble_mod,
+    inspect_mod,
+    make_bundle,
+    spec,
+    write_toc,
+    write_warn,
+)
+
+__all__ = ["assemble_mod", "inspect_mod", "spec"]
+
+
+def test_inspect_clean_bundle_passes(
+    tmp_path: Path,
+    inspect_mod: types.ModuleType,
+    assemble_mod: types.ModuleType,
+    spec: dict[str, Any],
+) -> None:
+    bundle = make_bundle(tmp_path, spec, assemble_mod)
+    warn = write_warn(tmp_path / "warn.txt", dirty=False)
+    toc = write_toc(tmp_path / "PYZ-00.toc", spec)
+    result = inspect_mod.inspect_bundle(
+        bundle, spec, warn_file=warn, toc_paths=[toc]
+    )
+    assert result.problems == []
+    # Release-provided sidecars are absent from the synthetic tree:
+    # warnings, not failures.
+    assert any("llama-server" in w for w in result.warnings)
+    assert any("whisper-server" in w for w in result.warnings)
+
+
+def test_inspect_manifest_matches_p04_contract(
+    tmp_path: Path,
+    assemble_mod: types.ModuleType,
+    spec: dict[str, Any],
+) -> None:
+    """The written manifest carries the P04 identity and file hashes."""
+    bundle = make_bundle(tmp_path, spec, assemble_mod, base="rev123")
+    manifest = json.loads(
+        (bundle / str(spec["manifest"]["filename"])).read_text(
+            encoding="utf-8"
+        )
+    )
+    assert manifest["bundle"] == spec["bundle"]["name"]
+    assert manifest["tool"] == spec["bundle"]["tool"]
+    assert manifest["entry"] == spec["bundle"]["entry"]
+    assert manifest["base"] == "rev123"
+    assert manifest["files"]
+    for entry in manifest["files"]:
+        assert set(entry) == {"path", "sha256"}
+        assert re.fullmatch(r"[0-9a-f]{64}", entry["sha256"])
+
+
+def test_inspect_detects_tampered_file(
+    tmp_path: Path,
+    inspect_mod: types.ModuleType,
+    assemble_mod: types.ModuleType,
+    spec: dict[str, Any],
+) -> None:
+    bundle = make_bundle(tmp_path, spec, assemble_mod)
+    target = bundle / "legal" / "NOTICE"
+    target.write_bytes(target.read_bytes() + b"tampered")
+    result = inspect_mod.inspect_bundle(bundle, spec)
+    assert any("legal/NOTICE" in problem for problem in result.problems)
+
+
+def test_inspect_detects_silently_dropped_payload(
+    tmp_path: Path,
+    inspect_mod: types.ModuleType,
+    assemble_mod: types.ModuleType,
+    spec: dict[str, Any],
+) -> None:
+    """A payload missing from both tree and manifest still fails: the
+    spec requires it, so a consistent-but-incomplete freeze is caught."""
+    bundle = make_bundle(tmp_path, spec, assemble_mod)
+    dropped = (
+        bundle / "airunner_services" / "database" / "alembic" / "versions"
+    )
+    for path in dropped.iterdir():
+        path.unlink()
+    assemble_mod.write_manifest(bundle, spec, "testrev")
+    result = inspect_mod.inspect_bundle(bundle, spec)
+    assert any("versions" in problem for problem in result.problems)
+
+
+def test_inspect_detects_unmanifested_file(
+    tmp_path: Path,
+    inspect_mod: types.ModuleType,
+    assemble_mod: types.ModuleType,
+    spec: dict[str, Any],
+) -> None:
+    bundle = make_bundle(tmp_path, spec, assemble_mod)
+    (bundle / "stray.txt").write_text("unmanifested", encoding="utf-8")
+    result = inspect_mod.inspect_bundle(bundle, spec)
+    assert any("stray.txt" in problem for problem in result.problems)
+
+
+def test_inspect_detects_excluded_payload(
+    tmp_path: Path,
+    inspect_mod: types.ModuleType,
+    assemble_mod: types.ModuleType,
+    spec: dict[str, Any],
+) -> None:
+    """Models, secrets, and caches fail even when duly manifested."""
+    bundle = make_bundle(tmp_path, spec, assemble_mod)
+    (bundle / "models").mkdir()
+    (bundle / "models" / "weights.gguf").write_bytes(b"fake-weights")
+    (bundle / ".env").write_text("TOKEN=fake\n", encoding="utf-8")
+    cache = bundle / "pkg" / "__pycache__"
+    cache.mkdir(parents=True)
+    (cache / "mod.pyc").write_bytes(b"fake-bytecode")
+    assemble_mod.write_manifest(bundle, spec, "testrev")
+    result = inspect_mod.inspect_bundle(bundle, spec)
+    assert any("weights.gguf" in p for p in result.problems)
+    assert any(".env" in p for p in result.problems)
+    assert any("mod.pyc" in p for p in result.problems)
+
+
+def test_inspect_detects_qt_payload(
+    tmp_path: Path,
+    inspect_mod: types.ModuleType,
+    assemble_mod: types.ModuleType,
+    spec: dict[str, Any],
+) -> None:
+    """Any Qt marker path fails the services-only bundle."""
+    bundle = make_bundle(tmp_path, spec, assemble_mod)
+    qt_dir = bundle / "_internal" / "PySide6" / "Qt" / "plugins"
+    qt_dir.mkdir(parents=True)
+    (qt_dir / "libqxcb.so").write_bytes(b"fake-qt")
+    assemble_mod.write_manifest(bundle, spec, "testrev")
+    result = inspect_mod.inspect_bundle(bundle, spec)
+    assert any("Qt payload" in p for p in result.problems)
+
+
+def test_inspect_requires_executable_bit(
+    tmp_path: Path,
+    inspect_mod: types.ModuleType,
+    assemble_mod: types.ModuleType,
+    spec: dict[str, Any],
+) -> None:
+    bundle = make_bundle(tmp_path, spec, assemble_mod)
+    exe = bundle / str(spec["bundle"]["executable"])
+    exe.chmod(0o644)
+    result = inspect_mod.inspect_bundle(bundle, spec)
+    assert any("not executable" in p for p in result.problems)

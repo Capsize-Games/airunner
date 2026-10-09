@@ -19,6 +19,12 @@ in a repo checkout.
   the complexity reports, `mypy_shortcut.py`, `security_audit.sh`)
 - the out-of-band content-safety policy generator
   (`build_policy_terms.py`)
+- the Linux v1 services-bundle release tooling (release issue P05),
+  driven by `packaging/linux/services-bundle-spec.toml`: the
+  `assemble_linux_bundle.py` CLI with its `linux_bundle_assemble.py`
+  build steps, and the `inspect_linux_bundle.py` CLI with its
+  `linux_bundle_checks.py` content checks and `linux_bundle_gates.py`
+  freeze gates
 - local dev orchestration under `scripts/dev/` (`run_services.sh`,
   `run_gui.sh`, `test_services.sh`, `stop_services.sh`)
 
