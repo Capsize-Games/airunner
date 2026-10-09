@@ -100,7 +100,7 @@ class PropertyMixin:
         """
         if not hasattr(self, "_hw_profiler") or self._hw_profiler is None:
             self._hw_profiler = HardwareProfiler()
-        return self._hw_profiler._get_available_vram_gb()
+        return self._hw_profiler.get_profile().available_vram_gb
 
     @property
     def use_cache(self) -> bool:

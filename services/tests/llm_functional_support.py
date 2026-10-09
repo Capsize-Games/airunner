@@ -244,6 +244,14 @@ def loopback_auth_headers() -> dict[str, str]:
     return {"X-Airunner-Token": get_or_create_loopback_token()}
 
 
+# The legacy non-streaming LLM routes wait up to 300s server-side
+# (collect_non_stream_response, ollama/openai compat ``done.wait``) before
+# answering 504. A generate client must outlive that budget so a slow
+# verdict -- e.g. the first-load 504 of issue #2242 -- is observed with
+# the daemon log attached instead of dying as a client socket timeout.
+LLM_GENERATE_TIMEOUT_SECONDS = 330.0
+
+
 def post_json(
     url: str,
     payload: dict[str, object],
@@ -463,6 +471,7 @@ __all__ = [
     "BUNDLED_REFERENCE_SPEAKER",
     "DEFAULT_TTS_MODEL_PATH",
     "DaemonHandle",
+    "LLM_GENERATE_TIMEOUT_SECONDS",
     "daemon_env",
     "daemon_output",
     "combined_llama_env_overrides",
