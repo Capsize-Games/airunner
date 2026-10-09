@@ -14,11 +14,12 @@ consulting the optional semantic judge (fast path). Only a clean hash check
 proceeds to the semantic layer, which is off by default and only ever adds a
 block -- it can never turn a matcher block into an allow. A clean optional
 check then proceeds to the required contextual layer (S08), which is
-likewise OFF by default -- the S07 evaluator selection is an unapproved
-draft (see ``release-planning/linux-v1/safety-evaluation.md``) -- and fails
-closed when enabled: unavailable, timed-out, erroring, or ambiguous
-outcomes deny. Matcher denials are always preserved: no later layer runs
-after a matcher block.
+likewise OFF by default -- the S07 evaluator selection behind it is
+approved (see ``release-planning/linux-v1/safety-evaluation.md`` §2;
+adapter: ``content_safety.qwen_guard``) -- and fails closed when
+enabled: unavailable, timed-out, erroring, or ambiguous outcomes deny.
+Matcher denials are always preserved: no later layer runs after a
+matcher block.
 
 When mandatory policy data is missing, empty, or invalid, the gate denies
 generation before any side effect; callers surface the actionable
@@ -96,9 +97,9 @@ def evaluate_prompt_fields(
     explicit not-allowed verdict; unavailable, timed-out, erroring, or
     ambiguous outcomes leave the request allowed. A clean optional check
     then proceeds to the required contextual layer, which runs only when
-    explicitly enabled (OFF by default pending the S07 selection) and fails
-    closed: any non-allowed contextual outcome denies with a generic,
-    content-free reason.
+    explicitly enabled (OFF by default until release enablement) and
+    fails closed: any non-allowed contextual outcome denies with a
+    generic, content-free reason.
     """
     result = check_prompt_fields(**fields)
     if not result.allowed:

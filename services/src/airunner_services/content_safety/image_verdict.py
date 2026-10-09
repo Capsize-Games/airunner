@@ -5,12 +5,12 @@ verdicts for the MANDATORY output-side evaluator. It is independent of
 the optional adult-content filter: there is no enable/disable switch
 here, and nothing in this module consults the optional setting.
 
-Evaluator selection status (S07 #2094) is DRAFT and UNAPPROVED; see
+Evaluator selection status (S07 #2094, approved for #2252); see
 :data:`EVALUATOR_SELECTION_STATUS`. The concrete evaluator stays behind
-the injected :data:`ImageEvaluator` seam so the pending selection can
-land without changing this mapping. Until approval, callers adapt the
-incumbent SD safety checker path
-(:mod:`airunner_services.art.utils.nsfw_checker`).
+the injected :data:`ImageEvaluator` seam; the approved Falconsai
+adapter (:mod:`airunner_services.content_safety.falconsai`) is
+registered on it, and the SD safety checker boolean path is
+superseded for the mandatory slot.
 
 Fail-closed mapping (no unchecked fallback):
 
@@ -35,12 +35,13 @@ from typing import Any, Callable, Optional
 
 logger = logging.getLogger(__name__)
 
-# S07 selection is DRAFT/unapproved: keep the evaluator behind the seam
-# and treat the incumbent SD safety checker as the unapproved baseline.
+# S07 selection is SELECTED (owner-approved for #2252): the approved
+# Falconsai adapter is registered behind the seam; the SD safety
+# checker boolean path is superseded for the mandatory slot.
 EVALUATOR_SELECTION_STATUS = (
-    "DRAFT (S07 #2094): image evaluator selection PENDING "
-    "owner/specialist approval; incumbent SD safety checker used as "
-    "the unapproved baseline via the nsfw_checker adapter"
+    "SELECTED (S07 #2094, approved for #2252): Falconsai "
+    "nsfw_image_detection via the content_safety.falconsai adapter; "
+    "the SD safety checker boolean path is superseded here"
 )
 
 # Generic, content-free reason codes. These never contain image data.
