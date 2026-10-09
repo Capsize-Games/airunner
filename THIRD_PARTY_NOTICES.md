@@ -8,6 +8,12 @@ AIRunner itself is licensed under the GNU General Public License v3 (see
 [`LICENSE`](LICENSE)). The projects listed below are distributed as-is under
 their own licenses; AIRunner does not claim copyright over them.
 
+For the Linux v1 release-wide inventory — pinned dependencies,
+native sidecars, downloaded models, policy data, redistributed
+assets, and unresolved provenance blockers — see
+[`release-planning/linux-v1/licenses.md`](release-planning/linux-v1/licenses.md)
+(release issue #2113).
+
 ## Policy
 
 Every vendored package directory (an immediate subdirectory of a `vendor/`
