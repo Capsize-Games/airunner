@@ -13,6 +13,9 @@ from sqlalchemy.orm import sessionmaker
 from airunner_common.settings import AIRUNNER_BASE_PATH
 from airunner_common.settings import AIRUNNER_DB_URL as DEFAULT_AIRUNNER_DB_URL
 from airunner_services.database.db.engine import create_configured_engine
+from airunner_services.database.upgrade_backup import (
+    maybe_backup_before_upgrade,
+)
 
 
 _SETUP_LOCK = threading.Lock()
@@ -320,6 +323,8 @@ def setup_database(db_url: str | None = None):
                     tenant_token = None
 
         try:
+            # P07: snapshot first so a failed migration is recoverable.
+            maybe_backup_before_upgrade(target_db_url)
             command.upgrade(alembic_cfg, "heads")
         finally:
             if tenant_token is not None:
