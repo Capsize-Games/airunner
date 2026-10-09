@@ -7,9 +7,11 @@ from typing import Optional
 from fastapi import APIRouter, HTTPException, Request
 
 from airunner_common.settings import AIRUNNER_LOG_LEVEL
+from airunner_services.art.utils.nsfw_checker import check_images_mandatory
+from airunner_services.content_safety import ContentSafetyResult
 from airunner_services.content_safety_gate import (
-    GENERIC_REJECTION_MESSAGE,
     evaluate_prompt_fields,
+    rejection_message,
 )
 from airunner_services.utils.application import get_logger
 from airunner_services.utils.job_tracker import (
@@ -17,7 +19,11 @@ from airunner_services.utils.job_tracker import (
     JobTracker,
 )
 
-from .art_contracts import GenerationRequest, GenerationResponse
+from .art_contracts import (
+    GenerationRequest,
+    GenerationResponse,
+    decode_input_image,
+)
 from .art_generation_model import resolve_generation_model
 from .art_job_runner import build_generation_job_metadata, run_art_job
 from .art_runtime import (
@@ -39,6 +45,53 @@ def resolve_seed_value(seed: Optional[int]) -> int:
     if seed is not None:
         return int(seed)
     return secrets.randbelow(2**31 - 1)
+
+
+def _screen_request_input_image(request: GenerationRequest) -> None:
+    """Screen one request's input image through the mandatory seam.
+
+    Runs after the text gate and before any side effect. A text-only
+    request skips the image gate; the trace line records which gate
+    applied so a text-only pass is never mistaken for input-image
+    coverage. Screening copies are dropped: decoding and screening must
+    never preview or export the input.
+
+    Raises:
+        HTTPException: 400 when the input image is undecodable or the
+            mandatory evaluator withholds it (blocked or unavailable).
+    """
+    if not request.image_b64:
+        logger.info(
+            "Input-image screen trace (path=api, text_gate=pass, "
+            "input_images=0, image_gate=skipped_no_inputs)"
+        )
+        return
+    try:
+        decoded = decode_input_image(request.image_b64)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=400, detail=str(exc)
+        ) from exc
+    _outputs, _withheld, batch = check_images_mandatory([decoded])
+    if batch.all_allowed:
+        logger.info(
+            "Input-image screen trace (path=api, text_gate=pass, "
+            "input_images=1, image_gate=pass)"
+        )
+        return
+    logger.warning(
+        "Art generation request rejected by input-image screen "
+        "(reason=%s)",
+        ",".join(batch.reasons),
+    )
+    raise HTTPException(
+        status_code=400,
+        detail=rejection_message(
+            ContentSafetyResult(
+                allowed=False, reason=batch.reasons[0], field=None
+            )
+        ),
+    )
 
 
 async def create_generation_job(
@@ -64,8 +117,13 @@ async def create_generation_job(
         )
         raise HTTPException(
             status_code=400,
-            detail=GENERIC_REJECTION_MESSAGE,
+            detail=rejection_message(gate_result),
         )
+
+    # Mandatory input-image screen (S10): an image-bearing request is
+    # checked through the shared evaluator seam before model resolution
+    # or any other side effect.
+    _screen_request_input_image(request)
 
     # Model resolution runs before any side effect: a version with no
     # model resolves to an installed checkpoint, and a model that is

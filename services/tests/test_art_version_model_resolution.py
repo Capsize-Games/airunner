@@ -25,6 +25,7 @@ from httpx import Response
 
 from airunner_services.api.routes.art_contracts import GenerationRequest
 from airunner_services.api.server import create_app
+from airunner_services.content_safety import hash_token, policy_data
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 _ART_ROUTE = "/api/v1/art/generate"
@@ -51,6 +52,28 @@ def model_base() -> Iterator[Path]:
     base.mkdir(parents=True, exist_ok=True)
     created = Path(tempfile.mkdtemp(prefix="models_", dir=base))
     yield created
+    shutil.rmtree(created, ignore_errors=True)
+
+
+@pytest.fixture(autouse=True)
+def _synthetic_policy(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
+    """Satisfy the mandatory content-safety gate (issue #2100).
+
+    These tests exercise model resolution, not policy content, so they
+    load a synthetic neutral hash that matches none of their prompts.
+    """
+    base = _REPO_ROOT / "tmp" / "content_safety_tests"
+    base.mkdir(parents=True, exist_ok=True)
+    created = Path(tempfile.mkdtemp(prefix="resolution_", dir=base))
+    path = created / "policy_terms.dat"
+    path.write_text(
+        hash_token("synthetic-policy-fixture-token") + "\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setenv(policy_data.POLICY_DATA_ENV_VAR, str(path))
+    policy_data.reset_cache()
+    yield
+    policy_data.reset_cache()
     shutil.rmtree(created, ignore_errors=True)
 
 

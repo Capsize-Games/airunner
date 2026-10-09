@@ -9,8 +9,8 @@ from fastapi import APIRouter, HTTPException, Request
 
 from airunner_common.contract_enums import SignalCode
 from airunner_services.content_safety_gate import (
-    GENERIC_REJECTION_MESSAGE,
     evaluate_prompt_fields,
+    rejection_message,
 )
 from airunner_services.utils.application.signal_mediator import SignalMediator
 
@@ -137,7 +137,7 @@ def legacy_art_generate(body: LegacyArtRequest, req: Request):
     if not gate_result.allowed:
         raise HTTPException(
             status_code=400,
-            detail=GENERIC_REJECTION_MESSAGE,
+            detail=rejection_message(gate_result),
         )
     _ = get_airunner_app(req)
     params = _resolve_legacy_art_params(body)

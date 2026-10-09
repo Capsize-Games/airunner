@@ -1,9 +1,11 @@
 """Pydantic models for art API routes."""
 
 import base64
+import io
 import os
 from typing import List, Optional
 
+from PIL import Image
 from pydantic import BaseModel, Field, field_validator, model_validator
 
 from airunner_services.art.config.image_generator_capabilities import (
@@ -40,6 +42,38 @@ def _max_image_bytes() -> int:
     return int(
         os.environ.get("AIRUNNER_ART_MAX_IMAGE_BYTES", str(25 * 1024 * 1024))
     )
+
+
+def decode_input_image(value: str) -> Image.Image:
+    """Return one decoded input image, kept strictly in memory.
+
+    The payload must be valid base64 within the decoded size bound and
+    must decode to a real image; anything else raises ``ValueError``.
+    Decoding never writes, previews, or exports anything: the pixels
+    exist only in the returned object for mandatory screening.
+
+    Raises:
+        ValueError: when the payload is not base64, exceeds the size
+            bound, or does not decode to a supported image.
+    """
+    try:
+        raw = base64.b64decode(value, validate=True)
+    except Exception as exc:
+        raise ValueError("image_b64 is not valid base64") from exc
+    max_bytes = _max_image_bytes()
+    if len(raw) > max_bytes:
+        raise ValueError(
+            f"Decoded input image ({len(raw)} bytes) exceeds the "
+            f"maximum allowed size ({max_bytes} bytes)"
+        )
+    try:
+        image = Image.open(io.BytesIO(raw))
+        image.load()
+    except Exception as exc:
+        raise ValueError(
+            "image_b64 does not decode to a supported image"
+        ) from exc
+    return image
 
 
 class GenerationRequest(BaseModel):
@@ -93,7 +127,9 @@ class GenerationRequest(BaseModel):
 
         Checked against the decoded byte size (not the base64 string
         length) so the actual payload the runtime would receive is what
-        gets bounded.
+        gets bounded. Within-bound opaque bytes still pass here (D04);
+        whether the payload decodes to a real image is checked at the
+        route's input-image screen via :func:`decode_input_image`.
         """
         if not value:
             return value
@@ -208,6 +244,7 @@ __all__ = [
     "ArtComponentResponse",
     "ArtModelsVersion",
     "BackgroundRemovalRequest",
+    "decode_input_image",
     "GenerationRequest",
     "GenerationResponse",
     "JobStatusResponse",

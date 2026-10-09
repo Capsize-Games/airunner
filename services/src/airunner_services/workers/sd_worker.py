@@ -27,9 +27,11 @@ from airunner_common.contract_enums import StableDiffusionVersion
 from airunner_common.contract_enums import normalize_art_version
 from airunner_services.utils.image import convert_image_to_binary
 from airunner_services.application_exceptions import PipeNotLoadedException
+from airunner_services.art.utils.nsfw_checker import check_images_mandatory
+from airunner_services.content_safety import ContentSafetyResult
 from airunner_services.content_safety_gate import (
-	GENERIC_REJECTION_MESSAGE,
 	evaluate_prompt_fields,
+	rejection_message,
 )
 from airunner_services.database.models import AIModels
 from airunner_services.database.models import GeneratorSettings
@@ -44,6 +46,10 @@ from airunner_services.utils.memory import apply_cudnn_benchmark
 from airunner_services.workers.worker import QueueType, Worker
 
 logger = get_logger(__name__)
+
+# Generic, content-free message surfaced when the mandatory output gate
+# withholds daemon art results. It never names a reason code or content.
+OUTPUT_WITHHELD_MESSAGE = "Art generation failed"
 
 
 ModelAction = model_action_type()
@@ -623,20 +629,25 @@ class SDWorker(Worker):
 			),
 		}
 
-	def _reject_generation(self, image_request, reason: str) -> None:
+	def _reject_generation(
+		self, image_request, gate_result: ContentSafetyResult
+	) -> None:
 		"""Abort one request via the worker's existing generic error path.
 
 		Only a generic message and a generic reason code are emitted; the
 		request text and any matched term are never logged or surfaced.
+		Unavailable policy data surfaces the actionable installation/policy
+		error instead of the match rejection.
 		"""
+		message = rejection_message(gate_result)
 		logger = getattr(self, "logger", None)
 		if logger is not None:
 			logger.warning(
 				"Art generation rejected by content safety policy "
 				"(reason=%s)",
-				reason,
+				gate_result.reason,
 			)
-		self.handle_error(GENERIC_REJECTION_MESSAGE)
+		self.handle_error(message)
 		try:
 			self.emit_signal(
 				SignalCode.APPLICATION_STOP_SD_PROGRESS_BAR_SIGNAL,
@@ -646,13 +657,63 @@ class SDWorker(Worker):
 			pass
 		callback = getattr(image_request, "callback", None)
 		if callable(callback):
-			callback(GENERIC_REJECTION_MESSAGE)
+			callback(message)
 		api = getattr(self, "api", None)
 		if api is not None:
 			api.worker_response(
 				code=EngineResponseCode.ERROR,
-				message=GENERIC_REJECTION_MESSAGE,
+				message=message,
 			)
+
+	@staticmethod
+	def _input_images_for_screening(image_request) -> list:
+		"""Return the resolved input images carried by one request.
+
+		Only slots that actually hold an image are returned (the
+		init/reference image, the inpaint/outpaint mask, the ControlNet
+		reference). An empty list means the request is text-only and the
+		image gate has nothing to screen.
+		"""
+		if image_request is None:
+			return []
+		images = []
+		for slot in ("image", "mask", "controlnet_image"):
+			candidate = getattr(image_request, slot, None)
+			if candidate is not None:
+				images.append(candidate)
+		return images
+
+	def _screen_input_images(
+		self, image_request, input_images: list
+	) -> bool:
+		"""Screen resolved input images; reject and return False if withheld.
+
+		A blocked or unavailable mandatory verdict aborts the request via
+		the existing generic rejection path before any dispatch. Screening
+		copies are dropped: screening must never preview or export the
+		inputs.
+		"""
+		_outputs, _withheld, batch = check_images_mandatory(
+			list(input_images)
+		)
+		if batch.all_allowed:
+			self.logger.info(
+				"Input-image screen trace (path=signal, text_gate=pass, "
+				"input_images=%d, image_gate=pass)",
+				len(input_images),
+			)
+			return True
+		self.logger.warning(
+			"Art generation rejected by input-image screen (reason=%s)",
+			",".join(batch.reasons),
+		)
+		self._reject_generation(
+			image_request,
+			ContentSafetyResult(
+				allowed=False, reason=batch.reasons[0], field=None
+			),
+		)
+		return False
 
 	def _generate_image(self, message: Dict):
 		image_request = message.get("image_request")
@@ -664,8 +725,22 @@ class SDWorker(Worker):
 			self._content_safety_fields(image_request)
 		)
 		if not gate_result.allowed:
-			self._reject_generation(image_request, gate_result.reason)
+			self._reject_generation(image_request, gate_result)
 			return
+		# Mandatory input-image screen (S10): the final resolved
+		# img2img/inpaint/outpaint/reference-image inputs are checked
+		# through the shared evaluator seam before daemon forwarding or
+		# model loading. The trace records which gate applied so a
+		# text-only pass is never mistaken for input-image coverage.
+		input_images = self._input_images_for_screening(image_request)
+		if input_images:
+			if not self._screen_input_images(image_request, input_images):
+				return
+		else:
+			self.logger.info(
+				"Input-image screen trace (path=signal, text_gate=pass, "
+				"input_images=0, image_gate=skipped_no_inputs)"
+			)
 		client = self._daemon_client()
 		path_label = "daemon" if client is not None else "local"
 		self.logger.debug(
@@ -823,7 +898,25 @@ class SDWorker(Worker):
 		image_request: ImageRequest,
 		image_bytes: bytes,
 	) -> None:
-		image = Image.open(io.BytesIO(image_bytes)).copy()
+		try:
+			image = Image.open(io.BytesIO(image_bytes)).copy()
+		except Exception as exc:
+			self.logger.warning(
+				"Daemon art output withheld: result cannot be "
+				"verified (%s)",
+				type(exc).__name__,
+			)
+			self._withhold_daemon_art_result(image_request)
+			return
+		_outputs, _withheld, batch = check_images_mandatory([image])
+		if not batch.all_allowed:
+			self.logger.warning(
+				"Daemon art output withheld by mandatory image "
+				"check (reason=%s)",
+				",".join(batch.reasons),
+			)
+			self._withhold_daemon_art_result(image_request)
+			return
 		data = self._daemon_result_data(image_request)
 		export_callback = partial(
 			SDWorker._queue_post_display_export,
@@ -855,6 +948,24 @@ class SDWorker(Worker):
 		self.api.worker_response(
 			code=EngineResponseCode.IMAGE_GENERATED,
 			message=response,
+		)
+
+	def _withhold_daemon_art_result(
+		self,
+		image_request: ImageRequest,
+	) -> None:
+		"""Withhold one daemon art result via the generic error path.
+
+		No canvas handoff, export, or image-bearing response is
+		emitted; only a generic message and code leave this path.
+		"""
+		self.handle_error(OUTPUT_WITHHELD_MESSAGE)
+		callback = getattr(image_request, "callback", None)
+		if callable(callback):
+			callback(OUTPUT_WITHHELD_MESSAGE)
+		self.api.worker_response(
+			code=EngineResponseCode.ERROR,
+			message=OUTPUT_WITHHELD_MESSAGE,
 		)
 
 	def _queue_post_display_export(

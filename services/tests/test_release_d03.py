@@ -70,18 +70,48 @@ def test_decode_response_images_returns_every_image_in_order() -> None:
 
 
 def test_apply_art_response_stores_every_image_and_first_image() -> None:
+    import io
+
+    from PIL import Image
+
+    from airunner_services.content_safety import image_verdict
+
+    def _png(color) -> bytes:
+        buffer = io.BytesIO()
+        Image.new("RGB", (8, 8), color).save(buffer, format="PNG")
+        return buffer.getvalue()
+
+    # S11 gates stored results on the mandatory image verdict, so this
+    # completion case uses decodable payloads with an allow-all double.
+    raws = [_png((200, 30, 30)), _png((30, 200, 30)), _png((30, 30, 200))]
+    response = ResponseEnvelope(
+        request_id="req-1",
+        status=EnvelopeStatus.SUCCEEDED,
+        payload={
+            "images": [
+                base64.b64encode(raw).decode("ascii") for raw in raws
+            ]
+        },
+    )
+
     async def _run() -> None:
         tracker = JobTracker()
         job_id = await tracker.create_job()
-        await apply_art_response(tracker, job_id, _fake_runtime_response())
+        await apply_art_response(tracker, job_id, response)
         return tracker, job_id
 
-    tracker, job_id = asyncio.run(_run())
+    image_verdict.set_evaluator(
+        lambda images: [False] * len(list(images))
+    )
+    try:
+        tracker, job_id = asyncio.run(_run())
+    finally:
+        image_verdict.set_evaluator(None)
 
     job = tracker._jobs[job_id]
     assert job.status is JobStatus.COMPLETED
-    assert job.result["images_bytes"] == _FAKE_IMAGES
-    assert job.result["image_bytes"] == _FAKE_IMAGES[0]
+    assert job.result["images_bytes"] == raws
+    assert job.result["image_bytes"] == raws[0]
 
 
 # --- art_generation_job_routes: status/count/indexed retrieval ---

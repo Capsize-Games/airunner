@@ -23,6 +23,10 @@ from airunner_services.art.runtime_enums import (
 from airunner_common.settings import AIRUNNER_CUDA_OUT_OF_MEMORY_MESSAGE
 from airunner_services.art.runtime_memory import clear_memory
 
+# Generic, content-free message surfaced when the mandatory output gate
+# withholds a batch. It never names a reason code or image content.
+OUTPUT_WITHHELD_MESSAGE = "Art generation failed"
+
 
 def _is_out_of_memory_error(exc: Exception) -> bool:
     """Return whether an exception represents GPU memory exhaustion."""
@@ -129,6 +133,20 @@ class SDImageGenerationMixin:
 
                 if images is not None:
                     if images:
+                        gated_images = self._apply_mandatory_output_gate(
+                            images
+                        )
+                        if gated_images is None:
+                            if self.image_request.callback:
+                                self.image_request.callback(
+                                    OUTPUT_WITHHELD_MESSAGE
+                                )
+                            self.api.worker_response(
+                                code=EngineResponseCode.ERROR,
+                                message=OUTPUT_WITHHELD_MESSAGE,
+                            )
+                            break
+                        images = gated_images
                         processed_images, nsfw_flags = (
                             self._check_and_mark_nsfw_images(images)
                         )
@@ -228,6 +246,29 @@ class SDImageGenerationMixin:
             self.do_interrupt_image_generation = False
 
         clear_memory()
+
+    def _apply_mandatory_output_gate(self, images):
+        """
+        Run the mandatory output gate over one batch.
+
+        Returns the gated images when every batch member is released,
+        or None when the batch must be withheld (flagged, uncertain,
+        error, or evaluator unavailable). Runs independently of the
+        optional NSFW preference: disabling that filter never skips
+        this gate, and allowed batches still reach the optional filter.
+        """
+        from airunner_services.art.utils.nsfw_checker import (
+            check_images_mandatory,
+        )
+
+        outputs, _withheld, batch = check_images_mandatory(list(images))
+        if batch.all_allowed:
+            return outputs
+        self.logger.warning(
+            "Art output withheld by mandatory image check (reason=%s)",
+            ",".join(batch.reasons),
+        )
+        return None
 
     def _get_results(self, data):
         """

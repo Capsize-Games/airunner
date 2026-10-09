@@ -2,8 +2,13 @@
 
 import asyncio
 import base64
+import io
+import logging
 from typing import List
 
+from PIL import Image
+
+from airunner_services.art.utils.nsfw_checker import check_images_mandatory
 from airunner_services.ipc.messages import EnvelopeStatus, RequestEnvelope
 from airunner_services.runtimes.base import RuntimeClient
 from airunner_services.utils.job_tracker import JobTracker
@@ -12,6 +17,12 @@ from .art_contracts import GenerationRequest
 from .art_job_progress import fail_art_job, job_cancelled, progress_callback
 from .art_job_requests import build_art_envelope
 from .art_runtime import response_status_is
+
+logger = logging.getLogger(__name__)
+
+# Generic, content-free failure stored when the mandatory output gate
+# withholds a batch. It never names a reason code or image content.
+OUTPUT_WITHHELD_MESSAGE = "Art generation failed"
 
 
 # Runtime response handling
@@ -70,6 +81,36 @@ def decode_response_image(response: object) -> bytes:
     return decode_response_images(response)[0]
 
 
+def gate_response_images(images_bytes: List[bytes]) -> bool:
+    """Return True only when every batch image passes the check.
+
+    All batch members are verified through the mandatory image seam
+    before the result is stored. Payloads that cannot be decoded
+    cannot be verified and fail closed. Originals are never mutated.
+    """
+    pil_images = []
+    for raw in images_bytes:
+        try:
+            image = Image.open(io.BytesIO(raw))
+            image.load()
+            pil_images.append(image.convert("RGB"))
+        except Exception:
+            logger.warning(
+                "Art output withheld: one batch image cannot be "
+                "verified (images=%d)",
+                len(images_bytes),
+            )
+            return False
+    _outputs, _withheld, batch = check_images_mandatory(pil_images)
+    if batch.all_allowed:
+        return True
+    logger.warning(
+        "Art output withheld by mandatory image check (reason=%s)",
+        ",".join(batch.reasons),
+    )
+    return False
+
+
 async def apply_art_response(
     tracker: JobTracker,
     job_id: str,
@@ -84,6 +125,9 @@ async def apply_art_response(
         return
     images_bytes = decode_response_images(response)
     if await job_cancelled(tracker, job_id):
+        return
+    if not gate_response_images(images_bytes):
+        await fail_art_job(tracker, job_id, OUTPUT_WITHHELD_MESSAGE)
         return
     # image_bytes (singular, first image) is kept for existing single-image
     # callers of GET /result/{job_id}; images_bytes (every checked batch
