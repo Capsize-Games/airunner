@@ -7,6 +7,7 @@ hashing). No repository imports; stdlib only.
 
 import hashlib
 import json
+import os
 import shutil
 import subprocess
 from pathlib import Path
@@ -195,6 +196,11 @@ def run_freeze(command: list[str], pyinstaller: str) -> None:
             "install the pinned tool into the isolated build "
             "environment first"
         )
-    proc = subprocess.run(command)
+    env = dict(os.environ)
+    # NLTK's import guard breaks PyInstaller hook collection; the daemon
+    # runs with it disabled (daemon.py), so the freeze does too. Scoped
+    # to the subprocess: this process needs its sibling imports as-is.
+    env.setdefault("NLTK_DISABLE_IMPORT_SECURITY", "1")
+    proc = subprocess.run(command, env=env)
     if proc.returncode != 0:
         raise SystemExit(f"pyinstaller exited with status {proc.returncode}")
