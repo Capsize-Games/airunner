@@ -125,8 +125,11 @@ Choose one of the two primary install modes:
 
 1. `dev` for contributors working from this repo checkout.
   This reuses `./venv` by default, installs the Python packages in editable
-  mode, and builds the pinned `llama.cpp` and `whisper.cpp` sidecars under
-  `build/runtime-sidecars/linux/`.
+  mode, and downloads the pinned prebuilt `llama.cpp` and `whisper.cpp`
+  sidecar bundle (`.github/native-sidecar-version` selects the
+  [airunner-native](https://github.com/Capsize-Games/airunner-native)
+  release) into `build/runtime-sidecars-download/`, linking `llama-server`
+  and `whisper-server` into the venv.
   ```bash
   ./scripts/install.sh
   ```
@@ -134,7 +137,8 @@ Choose one of the two primary install modes:
   existing environment instead of recreating it, and it refreshes the local
   editable installs without re-solving the full dependency graph. Add
   `--refresh-deps` when you want a full dependency refresh, and add
-  `--sidecars-cuda` when you want CUDA-enabled native sidecars.
+  `--sidecars-cuda` when you want CUDA-enabled native sidecars (that flag
+  clones the pinned tag and builds from source instead of downloading).
 
 2. `distributed` for operators who want the daemon and GUI client installed
   separately, including split-machine setups.

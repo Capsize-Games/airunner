@@ -65,10 +65,15 @@ sidecars.
 ```bash
 ./scripts/install.sh --help
 ./deployment/install_distributed.sh --help
-./scripts/build_runtime_sidecars.sh --target-platform linux
+./scripts/install.sh --sidecars always
 ./venv/bin/python -m pytest services/tests/test_llm_functional.py -v --timeout=900
 ./venv/bin/python -m pytest services/tests/test_stt_transcribe_functional.py -v --timeout=1200
 ```
+
+`./scripts/install.sh --sidecars always` provisions the pinned prebuilt
+sidecar bundle (see `.github/native-sidecar-version`); source builds of
+the sidecars themselves live in
+[Capsize-Games/airunner-native](https://github.com/Capsize-Games/airunner-native).
 
 ### `scripts/`
 
