@@ -87,18 +87,27 @@ GUI_REQUIREMENTS = [
     "markdown>=3.5.0",
     "psutil>=5.9.0",
     "pygments>=2.17.0",
+    # Direct base-startup import (utils/application/signal_mediator.py,
+    # reached from the launcher via utils/application/__init__.py), not
+    # just a transitive PySide6 dependency (release issue P02). Pinned
+    # exactly: PySide6 6.9.0 itself requires shiboken6==6.9.0.
+    "shiboken6==6.9.0",
     FACEHUGGERSHIELD_REQUIREMENT,
 ]
 
-# PyTorch is a hard GUI import (utils/memory/gpu_memory_stats, main.py) but
-# is intentionally kept in a documented optional "ml" group below so the base
-# GUI package can install without a CUDA wheel. See ML_REQUIREMENTS.
-
-# Documented optional/ML group (issues #2040/#2041). torch/torchvision/
-# torchaudio are pinned to the stable cu129 line matching the Docker base
-# image (nvidia/cuda:12.9.1-devel-ubuntu24.04). Install with:
-#     pip install "airunner[ml]" --index-url https://download.pytorch.org/whl/cu129
-# CPU fallback: --index-url https://download.pytorch.org/whl/cpu
+# Linux v1 NVIDIA release profile (release issue P02). PyTorch is needed
+# by GUI startup (main() configures the torch hub dir; the stats widget
+# and load balancer read GPU memory via utils/memory/gpu_memory_stats),
+# so the release profile names that torch/torchvision/torchaudio line
+# explicitly. Pinned to the stable cu129 line matching the Docker base
+# image
+# (nvidia/cuda:12.9.1-devel-ubuntu24.04). Install with:
+#     pip install "airunner[nvidia]" \
+#         --index-url https://download.pytorch.org/whl/cu129
+# There is intentionally no CPU fallback documented here: CPU support is
+# not a Linux v1 release target, and a CPU torch cannot serve the
+# NVIDIA-only release profile. The fully resolved, hash-pinned wheel set
+# for this profile lives in package/constraints-linux-nvidia-cu129.txt.
 ML_REQUIREMENTS = [
     "torch==2.13.0+cu129",
     "torchvision==0.28.0+cu129",
@@ -196,6 +205,11 @@ setup(
     extras_require={
         "analysis": ANALYSIS_REQUIREMENTS,
         "ml": ML_REQUIREMENTS,
+        # Linux v1 NVIDIA release profile (release issue P02): the
+        # torch line GUI startup needs. Same payload as "ml" today;
+        # the name is the release contract, resolved and hash-locked
+        # in package/constraints-linux-nvidia-cu129.txt.
+        "nvidia": ML_REQUIREMENTS,
         # Test/lint/dev tooling (issue #2054). Mirrors the shared
         # DEVELOPMENT_REQUIREMENTS so ``pip install -e ".[development]"``
         # installs pytest + pytest-timeout and the CI eval-tests workflow can

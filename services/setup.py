@@ -77,6 +77,12 @@ CORE_REQUIREMENTS = [
     "pyyaml==6.0.2",
     "python-dotenv==1.2.2",
     "fastapi==0.115.0",
+    # Direct base-startup import (api/server.py imports HTTPConnection
+    # from starlette.requests at module scope on the daemon path), not
+    # just a transitive fastapi dependency (release issue P02). The
+    # bound mirrors fastapi 0.115.0's own starlette requirement so the
+    # two can never disagree.
+    "starlette<0.39.0,>=0.37.2",
     "python-multipart>=0.0.27",
     "uvicorn[standard]==0.34.0",
     # Runtime deps declared in issue #2040 (previously undeclared).
@@ -98,8 +104,10 @@ CORE_REQUIREMENTS = [
 # the Docker base image nvidia/cuda:12.9.1-devel-ubuntu24.04 (issues #2036
 # and #2041). Install with:
 #     --index-url https://download.pytorch.org/whl/cu129
-# CPU fallback (documented): use the +cpu index instead:
-#     --index-url https://download.pytorch.org/whl/cpu
+# There is intentionally no CPU fallback documented here: CPU support is
+# not a Linux v1 release target (release issue P02). The fully resolved,
+# hash-pinned wheel set for the release profile lives in
+# package/constraints-linux-nvidia-cu129.txt.
 ML_RUNTIME_REQUIREMENTS = [
     "torch==2.13.0+cu129",
     "torchvision==0.28.0+cu129",
@@ -336,6 +344,13 @@ def _aggregate_extras_require(
     extras_require: dict[str, list[str]],
 ) -> dict[str, list[str]]:
     """Return the aggregate service extras."""
+    # The "desktop" aggregate below is the Linux v1 NVIDIA release
+    # profile on the services side (release issue P02): every modality
+    # plus the CUDA runtime wheel, resolved and hash-locked together
+    # with airunner[nvidia] in
+    # package/constraints-linux-nvidia-cu129.txt. It intentionally
+    # carries no Qt/PySide6 payload: the Qt frontend lives in the root
+    # GUI distribution, never in the services dependency profile.
     headless = _aggregate_extra(
         extras_require,
         "llm-native",
