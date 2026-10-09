@@ -139,16 +139,13 @@ in the bundle. Models resolve through
 `HuggingFaceDownloadWorker._resolve_bootstrap_revision`, which
 reads the `branch` declared in
 `services/src/airunner_services/bootstrap/model_bootstrap_data.py`.
-Those pins are branch names (`main`, one `fp16`), not immutable
+Those pins are branch names (all `main`), not immutable
 commit SHAs: upstream can move under them (BLOCKER B-3). The
 SHAs below are live HEAD observations from 2026-10-09.
 
 | Model (repo path) | Revision pin | License (Hub card, 2026-10-09) | Notes |
 |---|---|---|---|
-| stabilityai/stable-diffusion-xl-base-1.0 | branch `main` | openrail++ | Default. Paid-installer compatibility of the Stability community terms needs counsel review (BLOCKER B-1) |
-| stabilityai/sdxl-turbo | branch `main` | other / `sai-nc-community` (non-commercial community license, see its `LICENSE.md`) | Default, yet non-commercial terms: owner/counsel must decide before release (BLOCKER B-1) |
-| diffusers/stable-diffusion-xl-1.0-inpainting-0.1 | branch `fp16` | openrail++ | Default inpainting model; same review as the other Stability rows (BLOCKER B-1) |
-| Tongyi-MAI/Z-Image-Turbo | branch `main` | apache-2.0 | Optional (not a default) |
+| Tongyi-MAI/Z-Image-Turbo | branch `main` | apache-2.0 | Sole art model (not flagged default) |
 | Qwen/Qwen3.5-9B (default chat) and unsloth/Qwen3.5-9B-GGUF (preferred quantized path) | branch `main` | apache-2.0 (both cards) | `provider_config.py` prefers the GGUF path |
 | openai/gpt-oss-20b (optional chat) and unsloth/gpt-oss-20b-GGUF | branch `main` | apache-2.0 (both cards) | Optional |
 | intfloat/e5-large (embeddings) | branch `main` | mit | Local embeddings |
@@ -158,8 +155,7 @@ SHAs below are live HEAD observations from 2026-10-09.
 | Content-safety / policy models | Undecided (S07, see §7) | Undecided (BLOCKER B-9) | Cannot be inventoried before selection |
 
 Live HEAD SHAs observed 2026-10-09 (informational only):
-SDXL Base `d7c3f9085de7`, SDXL Turbo `71153311d3db`, SDXL
-Inpaint `115134f36312`, Z-Image Turbo `f332072aa78b`,
+Z-Image Turbo `f332072aa78b`,
 Qwen3.5-9B `c20223623576`, gpt-oss-20b `6cee5e81ee83`,
 e5-large `4dc6d853a804`, whisper-large-v3 `06f233fe06e7`,
 Qwen3.5 GGUF `3885219b6810`, gpt-oss GGUF `d449b42d93e1`.
@@ -199,17 +195,21 @@ corresponding-source offer itself is PENDING (BLOCKER B-8).
 
 ## 10. Unresolved provenance and release blockers
 
-- BLOCKER B-1: Stability model terms vs paid installer.
-  SDXL Turbo is a default model under `sai-nc-community`
-  (non-commercial); SDXL Base and SDXL Inpaint are
-  `openrail++`. Owner/counsel must decide whether the paid
-  Linux installer may ship or auto-download these, and on
-  what terms. No commercial-use permission is claimed here.
+- BLOCKER B-1: RESOLVED by
+  https://github.com/Capsize-Games/airunner/issues/2249
+  (SDXL support stripped 2026-10-09): the
+  `stabilityai/stable-diffusion-xl-base-1.0` (`openrail++`),
+  `stabilityai/sdxl-turbo` (`sai-nc-community`,
+  non-commercial), and SDXL Inpaint (`openrail++`) rows
+  left §6 with the bootstrap catalog, so no Stability
+  weights remain to ship or auto-download and no
+  Stability-terms counsel decision is needed. No
+  commercial-use permission is claimed here.
 - BLOCKER B-2: Unpinned model artifacts. OpenVoice
   checkpoints and the RMBG model have no recorded
   revision/digest or verified license in this checkout.
 - BLOCKER B-3: Branch pins, not immutable digests. All
-  bootstrap models resolve a branch (`main`/`fp16`); D01 did
+  bootstrap models resolve a branch (`main`); D01 did
   not produce immutable commit SHAs. Upstream movement can
   change what users download.
 - BLOCKER B-4: Sidecar upstream commits. The llama.cpp and
@@ -253,11 +253,12 @@ corresponding-source offer itself is PENDING (BLOCKER B-8).
   rows, never silent omissions.
 - [ ] Required notices/source-offer material is present;
   unresolved rights remain explicit release blockers: §9
-  lists staged notices; §10 keeps B-1..B-11 open.
+  lists staged notices; §10 keeps B-2..B-11 open (B-1
+  resolved by #2249).
 - [ ] No claim that commercial use or private policy data is
-  automatically permitted: §1 states the guardrail; B-1
-  flags the non-commercial default model; §7 withholds
-  private policy data.
+  automatically permitted: §1 states the guardrail; ex-B-1
+  records the removed non-commercial default model; §7
+  withholds private policy data.
 
 ## 12. Reviewer and operator fields
 
@@ -269,7 +270,7 @@ corresponding-source offer itself is PENDING (BLOCKER B-8).
   gate record)
 - License scan tool and version: PENDING (needed to close
   BLOCKER B-7)
-- Counsel decision refs (B-1, B-5, B-6, B-8, B-10, B-11):
+- Counsel decision refs (B-5, B-6, B-8, B-10, B-11):
   PENDING
 - Reviewer acceptance: PENDING (the issue stays open until
   this exists)
@@ -299,5 +300,5 @@ Upstream (read 2026-10-09): GitHub license endpoints for
 (BSD-3-Clause text), `UKPLab/sentence-transformers`
 (Apache-2.0), `TimDettmers/bitsandbytes` (MIT),
 `nateshmbhat/pyttsx3` (MPL-2.0); Hugging Face model API
-license tags for the ten §6 repos; PyPI JSON metadata for the
+license tags for the seven §6 repos; PyPI JSON metadata for the
 §3.1 distributions.

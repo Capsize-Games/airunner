@@ -35,7 +35,6 @@ class InputImage(BaseWidget):
 
     def __init__(self, *args, **kwargs):
         self.settings_key = kwargs.pop("settings_key")
-        self.use_generated_image = kwargs.pop("use_generated_image", False)
         self.is_mask = kwargs.pop("is_mask", False)
         # Use simple scene by default for preview-only widgets
         # Complex scene is only needed for mask drawing (is_mask=True)
@@ -68,12 +67,6 @@ class InputImage(BaseWidget):
                 settings_key=self.settings_key,
                 is_mask=self.is_mask,
             )
-
-            if hasattr(self._scene, "use_generated_image"):
-                allow_generated = self.use_generated_image and not getattr(
-                    self.current_settings, "lock_input_image", False
-                )
-                self._scene.use_generated_image = allow_generated
 
         # Connect the scene to the graphics view
         self.ui.image_container.setScene(self._scene)
@@ -127,9 +120,7 @@ class InputImage(BaseWidget):
     @property
     def current_settings(self):
         settings = None
-        if self.settings_key == "controlnet_settings":
-            settings = self.controlnet_settings
-        elif self.settings_key == "image_to_image_settings":
+        if self.settings_key == "image_to_image_settings":
             settings = self.image_to_image_settings
         elif self.settings_key == "outpaint_settings":
             settings = self.outpaint_settings
@@ -148,9 +139,7 @@ class InputImage(BaseWidget):
             self.load_image_from_settings()
 
     def _apply_current_settings_value(self, key, value) -> None:
-        if self.settings_key == "controlnet_settings":
-            self.update_controlnet_settings(**{key: value})
-        elif self.settings_key == "image_to_image_settings":
+        if self.settings_key == "image_to_image_settings":
             self.update_image_to_image_settings(**{key: value})
         elif self.settings_key == "outpaint_settings":
             self.update_outpaint_settings(**{key: value})
@@ -161,17 +150,6 @@ class InputImage(BaseWidget):
         self._apply_current_settings_value(key, value)
 
         self.api.art.canvas.input_image_changed(self.settings_key, key, value)
-        if key == "lock_input_image":
-            self._update_scene_lock_state(bool(value))
-
-    def _update_scene_lock_state(self, locked: bool) -> None:
-        try:
-            if self._scene and hasattr(self._scene, "use_generated_image"):
-                self._scene.use_generated_image = (
-                    self.use_generated_image and not locked
-                )
-        except Exception:
-            pass
 
     def _sync_pin_button_state(self) -> None:
         self.ui.pin_image.blockSignals(True)
@@ -203,7 +181,6 @@ class InputImage(BaseWidget):
     ) -> None:
         is_locked = not self.should_follow_grid_updates()
         self._sync_pin_button_state()
-        self._update_scene_lock_state(is_locked)
         if is_locked:
             self.load_image_from_settings()
             return
@@ -217,12 +194,7 @@ class InputImage(BaseWidget):
         self.ui.grid_image.setVisible(
             self.settings_key == "image_to_image_settings"
         )
-        if self.settings_key == "controlnet_settings":
-            self.ui.strength_slider_widget.hide()
-            self.ui.controlnet_settings.show()
-        else:
-            self.ui.strength_slider_widget.show()
-            self.ui.controlnet_settings.hide()
+        self.ui.strength_slider_widget.show()
 
         if self.settings_key == "outpaint_settings":
             self.ui.strength_slider_widget.setProperty(
@@ -243,11 +215,9 @@ class InputImage(BaseWidget):
         if val:
             self._capture_current_input_image()
             self.update_current_settings("lock_input_image", True)
-            self._update_scene_lock_state(True)
             return
 
         self.update_current_settings("lock_input_image", False)
-        self._update_scene_lock_state(False)
         self._link_to_grid_image(force_load=True)
 
     @Slot()
@@ -291,8 +261,6 @@ class InputImage(BaseWidget):
         """Return the image that should be frozen by the lock button."""
         if self.settings_key == "image_to_image_settings":
             return self.img2img_image or self.drawing_pad_image
-        if self.settings_key == "controlnet_settings":
-            return self.controlnet_image or self.drawing_pad_image
         if self.settings_key == "outpaint_settings":
             return self.outpaint_image or self.drawing_pad_image
         return self.drawing_pad_image
@@ -352,8 +320,6 @@ class InputImage(BaseWidget):
         settings_property_name = None
         if self.settings_key == "image_to_image_settings":
             settings_property_name = "image_to_image_settings"
-        elif self.settings_key == "controlnet_settings":
-            settings_property_name = "controlnet_settings"
         elif self.settings_key == "outpaint_settings":
             settings_property_name = "outpaint_settings"
 
@@ -423,10 +389,7 @@ class InputImage(BaseWidget):
             else:
                 image = self.outpaint_settings.image
         else:
-            if self.use_generated_image:
-                image = self.current_settings.generated_image
-            else:
-                image = self.current_settings.image
+            image = self.current_settings.image
 
         if image is not None:
             image = convert_binary_to_image(image)

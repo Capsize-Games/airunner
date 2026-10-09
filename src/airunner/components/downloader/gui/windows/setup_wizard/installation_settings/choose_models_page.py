@@ -15,9 +15,6 @@ from airunner.components.downloader.gui.windows.setup_wizard.installation_settin
     Ui_install_success_page,
 )
 from airunner.components.data.bootstrap_service import (
-    get_controlnet_bootstrap_data,
-)
-from airunner.components.data.bootstrap_service import (
     get_model_bootstrap_data,
 )
 
@@ -35,7 +32,7 @@ class ChooseModelsPage(BaseWizard):
             "openvoice_model": True,
         }
 
-        # Prepare core items (safety checker, feature extractor) and per-version controlnet groups
+        # Prepare core items (safety checker, feature extractor)
         core_items = [
         ]
 
@@ -49,15 +46,8 @@ class ChooseModelsPage(BaseWizard):
             self.models_enabled[item["name"]] = True
             self._core_widgets.append((item["name"], chk))
 
-        # Group ControlNet models by version
         # Expose the stable-diffusion model bootstrap list for the installer
         self.models = get_model_bootstrap_data()
-
-        from collections import defaultdict
-
-        version_map = defaultdict(list)
-        for item in get_controlnet_bootstrap_data():
-            version_map[item["version"]].append(item)
 
         # Make the groupBox act as a checkable 'Stable Diffusion' group
         try:
@@ -84,143 +74,6 @@ class ChooseModelsPage(BaseWizard):
                 pass
         except Exception:
             pass
-
-        # For each version, create a header with "Core files" and "Controlnet" checkboxes and a scroll area for models
-        for version in sorted(version_map.keys()):
-            # Section header (group box)
-            from PySide6.QtWidgets import QGroupBox
-
-            # Create a version group and a master checkbox that controls the whole section
-            version_group = QGroupBox(self)
-            v_layout = QVBoxLayout(version_group)
-
-            # Create a checkable group box for the SD version (acts as the SDXL 1.0 checkbox)
-            master_flag = f"sd_{version}"
-            self.models_enabled[master_flag] = True
-            version_group.setTitle(version)
-            version_group.setCheckable(True)
-            version_group.setChecked(True)
-
-            # Core files checkbox (on its own row)
-            core_chk = QCheckBox("Core files", self)
-            core_flag = f"core_{version}"
-            self.models_enabled[core_flag] = True
-            core_chk.setChecked(True)
-            core_chk.toggled.connect(
-                lambda val, flag=core_flag: self._core_version_toggled(
-                    flag, val
-                )
-            )
-            v_layout.addWidget(core_chk)
-
-            # Controlnet group (checkable) containing a plain container for models (no inner scrollarea)
-            controlnet_flag = f"controlnet_{version}"
-            self.models_enabled[controlnet_flag] = True
-            controlnet_group = QGroupBox("Controlnet", self)
-            controlnet_group.setCheckable(True)
-            controlnet_group.setChecked(True)
-            controlnet_layout = QVBoxLayout(controlnet_group)
-
-            # Simple widget container for model checkboxes (no per-version scroll area)
-            models_container = QWidget()
-            models_layout = QVBoxLayout(models_container)
-            models_container.setLayout(models_layout)
-            controlnet_layout.addWidget(models_container)
-            v_layout.addWidget(controlnet_group)
-
-            # local models list for this version (used by handlers)
-            models = version_map[version]
-
-            # Populate model checkboxes
-            for item in models:
-                cb = QCheckBox(item["display_name"], self)
-                cb.setChecked(True)
-                cb.setObjectName(item["name"])
-                models_layout.addWidget(cb)
-                # store per-model enabled flags
-                self.models_enabled[item["name"]] = True
-                cb.toggled.connect(
-                    lambda checked, it=item: self.controlnet_model_toggled(
-                        it, checked
-                    )
-                )
-
-            # Wire the controlnet checkbox to enable/disable the models container and update flags
-            def _on_controlnet_toggled(
-                val,
-                container=models_container,
-                flag=controlnet_flag,
-                models=models,
-            ):
-                # enable/disable the models container
-                container.setEnabled(bool(val))
-                self.models_enabled[flag] = bool(val)
-                # When disabling, also mark all children models as False (so downloads skip them)
-                if not val:
-                    for m in models:
-                        self.models_enabled[m["name"]] = False
-                    for cb_child in container.findChildren(QCheckBox):
-                        cb_child.setChecked(False)
-                        cb_child.setEnabled(False)
-                else:
-                    for m in models:
-                        # leave individual model flags as-is or default to True
-                        self.models_enabled.setdefault(m["name"], True)
-                    for cb_child in container.findChildren(QCheckBox):
-                        cb_child.setEnabled(True)
-                self.update_total_size_label()
-
-            # connect our toggle handler to the controlnet group's toggled signal
-            controlnet_group.toggled.connect(_on_controlnet_toggled)
-
-            # Wire the master checkbox to enable/disable the entire version block
-            def _on_master_toggled(
-                val,
-                core_w=core_chk,
-                control_group=controlnet_group,
-                container=models_container,
-                flag=master_flag,
-                models=models,
-                version=version,
-            ):
-                core_w.setEnabled(bool(val))
-                control_group.setEnabled(bool(val))
-                container.setEnabled(bool(val) and control_group.isChecked())
-                self.models_enabled[flag] = bool(val)
-                core_flag_key = f"core_{version}"
-                controlnet_flag_key = f"controlnet_{version}"
-                if not val:
-                    # disable internal flags and checkboxes
-                    self.models_enabled[core_flag_key] = False
-                    self.models_enabled[controlnet_flag_key] = False
-                    for m in models:
-                        self.models_enabled[m["name"]] = False
-                    for cb_child in container.findChildren(QCheckBox):
-                        cb_child.setChecked(False)
-                        cb_child.setEnabled(False)
-                    core_w.setChecked(False)
-                    control_group.setChecked(False)
-                else:
-                    # restore defaults
-                    self.models_enabled.setdefault(core_flag_key, True)
-                    self.models_enabled.setdefault(controlnet_flag_key, True)
-                    for m in models:
-                        self.models_enabled.setdefault(m["name"], True)
-                    for cb_child in container.findChildren(QCheckBox):
-                        cb_child.setEnabled(True)
-                self.update_total_size_label()
-
-            # connect the version group's toggled signal
-            version_group.toggled.connect(_on_master_toggled)
-
-            # Add the version group to the top-level inner scroll area's layout
-            try:
-                top_inner_layout.addWidget(version_group)
-            except Exception:
-                # fallback: add directly if top scroll area wasn't created
-                self.ui.stable_diffusion_layout.layout().addWidget(
-                    version_group
-                )
 
         # Add Z-Image version groups (core files only).
         from PySide6.QtWidgets import QGroupBox
@@ -405,26 +258,6 @@ class ChooseModelsPage(BaseWizard):
                 if self.models_enabled.get(f"core_{version}", False):
                     total_bytes += size
 
-            # controlnet models grouped by version
-            from collections import defaultdict
-
-            version_group = defaultdict(list)
-            for item in get_controlnet_bootstrap_data():
-                version_group[item["version"]].append(item)
-
-            for version, models in version_group.items():
-                controlnet_flag = f"controlnet_{version}"
-                if not self.models_enabled.get(controlnet_flag, False):
-                    continue
-                for model in models:
-                    if not self.models_enabled.get(model["name"], False):
-                        continue
-                    # model['size'] may be a string; default to 700k if absent
-                    try:
-                        total_bytes += int(model.get("size", 722600))
-                    except Exception:
-                        total_bytes += 722600
-
         # Add other model categories
         if self.models_enabled.get("llm", False):
             total_bytes += llm_size
@@ -475,24 +308,6 @@ class ChooseModelsPage(BaseWizard):
         self.models_enabled["openvoice_model"] = val
         self.update_total_size_label()
 
-    @Slot(bool)
-    def controlnet_model_toggled(self, item, val: bool):
-        # update per-model flag
-        self.models_enabled[item["name"]] = val
-
-        # Determine if any stable-diffusion related option remains enabled
-        any_enabled = False
-
-        # per-version controlnet
-        for k, v in list(self.models_enabled.items()):
-            if k.startswith("controlnet_") and v:
-                any_enabled = True
-                break
-
-        self.models_enabled["stable_diffusion"] = any_enabled
-
-        self.update_total_size_label()
-
     def _core_version_toggled(self, flag: str, val: bool):
         """Handler for per-version core files checkbox (e.g. core_1.5)."""
         self.models_enabled[flag] = bool(val)
@@ -512,7 +327,7 @@ class ChooseModelsPage(BaseWizard):
         if self.models_enabled.get("upscaler_x4", False):
             any_enabled = True
         for k, v in list(self.models_enabled.items()):
-            if k.startswith("controlnet_") and v:
+            if k.startswith("core_") and v:
                 any_enabled = True
                 break
         self.models_enabled["stable_diffusion"] = any_enabled

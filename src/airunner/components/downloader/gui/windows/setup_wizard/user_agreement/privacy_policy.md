@@ -57,7 +57,7 @@ The Software processes the following types of data **locally on your device only
 When you download AI models using the built-in model downloader, your computer connects directly to third-party repositories:
 
 * **HuggingFace:** When downloading LLM, STT, TTS, and Stable Diffusion models
-* **CivitAI:** When downloading community models, LoRAs, or embeddings via the CivitAI downloader
+* **CivitAI:** When downloading community models or embeddings via the CivitAI downloader
 
 These services may log your IP address and download requests according to their own privacy policies:
 * **Hugging Face:** https://huggingface.co/privacy

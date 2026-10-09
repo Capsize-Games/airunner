@@ -153,7 +153,7 @@ class StableDiffusionGeneratorForm(BaseWidget):
         self._sd_version = normalize_art_version(
             self.generator_settings.version
         )
-        self._toggle_sdxl_form_elements()
+        self._toggle_version_form_elements()
         self.ui.infinite_images_button.blockSignals(True)
         self.ui.infinite_images_button.setChecked(
             self.generator_settings.generate_infinite_images
@@ -196,13 +196,6 @@ class StableDiffusionGeneratorForm(BaseWidget):
             return False
         resource_manager = ModelResourceManager()
         return resource_manager.get_model_state(model_path) is ModelState.LOADED
-
-    @property
-    def is_sd_xl_or_turbo(self) -> bool:
-        return (
-            self._sd_version == StableDiffusionVersion.SDXL1_0.value
-            or self._sd_version == StableDiffusionVersion.SDXL_TURBO.value
-        )
 
     @property
     def uses_negative_prompt(self) -> bool:
@@ -378,7 +371,7 @@ class StableDiffusionGeneratorForm(BaseWidget):
             self._toggle_compel_form_elements(val)
         elif column in ("sd_version", "version"):
             self._sd_version = normalize_art_version(val)
-            self._toggle_sdxl_form_elements()
+            self._toggle_version_form_elements()
 
     def _toggle_compel_form_elements(self, value: bool):
         self.logger.debug("Toggle compel form elements")
@@ -390,15 +383,13 @@ class StableDiffusionGeneratorForm(BaseWidget):
             if widget:
                 widget.show() if value else widget.hide()
 
-    def _toggle_sdxl_form_elements(self):
-        if self.is_sd_xl_or_turbo:
-            self.ui.sdxl_settings_container.show()
-            self.ui.secondary_prompt.show()
-            self.ui.secondary_negative_prompt.show()
-        else:
-            self.ui.sdxl_settings_container.hide()
-            self.ui.secondary_prompt.hide()
-            self.ui.secondary_negative_prompt.hide()
+    def _toggle_version_form_elements(self):
+        # The batch container and secondary prompts were retired with the
+        # legacy generator. No remaining version shows them, so they
+        # stay hidden.
+        self.ui.batch_settings_container.hide()
+        self.ui.secondary_prompt.hide()
+        self.ui.secondary_negative_prompt.hide()
 
         # Toggle negative prompt visibility based on model version
         self._toggle_negative_prompt_visibility()

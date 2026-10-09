@@ -40,21 +40,17 @@ from airunner.enums import StableDiffusionVersion
 from airunner.utils.application.ui_loader import load_ui_file
 
 BASE_MODEL_VALUES = {
-    "SDXL 1.0": "SDXL 1.0",
     "Z-Image Turbo": "ZImageTurbo",
 }
 MODEL_TYPE_VALUES = {
     "Checkpoint": "Checkpoint",
-    "LoRA": "LORA",
     "Embedding": "TextualInversion",
 }
 MODEL_TYPES_BY_BASE = {
-    "SDXL 1.0": ["Checkpoint", "LoRA", "Embedding"],
     "Z-Image Turbo": ["Checkpoint"],
 }
 CIVITAI_BASE_MODEL_MAP = {
     "ZImageTurbo": "Z-Image Turbo",
-    "SDXL 1.0": "SDXL 1.0",
 }
 SUPPORTED_ZIMAGE_BASE_MODELS = {StableDiffusionVersion.Z_IMAGE_TURBO.value}
 
@@ -710,8 +706,6 @@ class DownloadModelDialog(QDialog):
     def _model_subfolder(self, model_type: str, file_info: dict[str, Any]) -> str:
         """Map one browser selection onto the AIRunner art-model folder."""
         normalized_type = model_type.strip().upper()
-        if normalized_type == "LORA":
-            return "lora"
         if normalized_type == "TEXTUALINVERSION":
             return "embeddings"
         if normalized_type == "CHECKPOINT":

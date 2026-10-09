@@ -12,13 +12,6 @@ from airunner_services.utils.application import get_logger
 logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 
 
-def _get_controlnet_aux_models() -> Dict[str, Any]:
-    """Import ControlNet processor metadata only when it is needed."""
-    from controlnet_aux.processor import MODELS as controlnet_aux_models
-
-    return controlnet_aux_models
-
-
 class SomeModelClass:  # legacy test helper
     def __init__(self, path):
         self.path = path
@@ -28,10 +21,6 @@ class SomeModelClass:  # legacy test helper
 
 
 class SomeSchedulerClass:  # legacy test helper
-    pass
-
-
-class SomeControlNetClass:  # legacy test helper
     pass
 
 
@@ -77,43 +66,6 @@ def load_scheduler(
         return inst
     except Exception as e:
         logger.error(f"Failed to load scheduler {scheduler_name}: {e}")
-        return None
-
-
-def load_controlnet_model(
-    controlnet_enabled: bool,
-    controlnet_path: str,
-    data_type,
-    device,
-    logger: Any,
-):
-    if not controlnet_enabled:
-        return None
-    from diffusers import ControlNetModel
-
-    try:
-        data = dict(
-            torch_dtype=data_type,
-            device=device,
-            local_files_only=AIRUNNER_LOCAL_FILES_ONLY,
-            use_safetensors=True,
-            use_fp16=True,
-            variant="fp16",
-        )
-        if os.path.isdir(controlnet_path):
-            model = ControlNetModel.from_pretrained(controlnet_path, **data)
-        else:
-            directory_only = os.path.dirname(controlnet_path)
-            config_path = os.path.join(directory_only, "config.json")
-            model = ControlNetModel.from_single_file(
-                pretrained_model_link_or_path_or_dict=controlnet_path,
-                config=config_path,
-                **data,
-            )
-        logger.info(f"Loaded ControlNet model from {controlnet_path}")
-        return model
-    except Exception as e:
-        logger.error(f"Error loading ControlNet model: {e}")
         return None
 
 
@@ -168,57 +120,12 @@ def unload_deep_cache_helper(deep_cache_helper: Any, logger: Any) -> None:
         logger.warning(f"Failed to unload DeepCacheSDHelper: {e}")
 
 
-def load_controlnet_processor(
-    controlnet_enabled: bool,
-    controlnet_model: Any,
-    controlnet_processor_path: str,
-    logger: Any,
-) -> Optional[Any]:
-    """Load the ControlNet processor if enabled."""
-    if not controlnet_enabled or not controlnet_model:
-        return None
-
-    try:
-        controlnet_data = _get_controlnet_aux_models()[
-            controlnet_model.name
-        ]
-        controlnet_class_ = controlnet_data["class"]
-        checkpoint = controlnet_data["checkpoint"]
-        if checkpoint:
-            processor = controlnet_class_.from_pretrained(
-                controlnet_processor_path,
-                local_files_only=AIRUNNER_LOCAL_FILES_ONLY,
-            )
-        else:
-            processor = controlnet_class_()
-        logger.info(f"Loaded ControlNet processor: {controlnet_model.name}")
-        return processor
-    except Exception as e:
-        logger.error(f"Failed to load ControlNet processor: {e}")
-        return None
-
-
-def unload_controlnet_processor(
-    controlnet_processor: Any, logger: Any
-) -> None:
-    """Unload the ControlNet processor."""
-    try:
-        del controlnet_processor
-        logger.info("Unloaded ControlNet processor.")
-    except Exception as e:
-        logger.warning(f"Failed to unload ControlNet processor: {e}")
-
-
 def load_model(path):
     return SomeModelClass(path)
 
 
 def unload_model(model):
     return model.unload()
-
-
-def load_controlnet(path):
-    return SomeControlNetClass()
 
 
 def load_compel(*args, **kwargs):

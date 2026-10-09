@@ -236,8 +236,8 @@
            </widget>
           </item>
           <item row="2" column="0">
-           <widget class="QWidget" name="sdxl_settings_container" native="true">
-            <layout class="QVBoxLayout" name="sdxl_settings">
+           <widget class="QWidget" name="batch_settings_container" native="true">
+            <layout class="QVBoxLayout" name="batch_settings">
              <property name="leftMargin">
               <number>0</number>
              </property>

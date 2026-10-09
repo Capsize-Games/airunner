@@ -39,7 +39,7 @@ def persist_trigger_words(
 
     Args:
         version_data: The version object from CivitAI API containing trainedWords
-        model_type: The model type (e.g., "LORA", "CHECKPOINT", "TEXTUAL EMBEDDING")
+        model_type: The model type (e.g., "CHECKPOINT", "TEXTUAL EMBEDDING")
         file_info: File metadata from the version
         saved_file_path: Full path where the file was saved
     """
@@ -79,12 +79,6 @@ def persist_trigger_words(
                 logger.info(
                     "Skipping trigger-word persistence for removed model "
                     "type at %s",
-                    saved_file_path,
-                )
-            elif model_type_upper == "LORA":
-                logger.info(
-                    "Skipping trigger-word persistence for removed LoRA "
-                    "model at %s",
                     saved_file_path,
                 )
             else:

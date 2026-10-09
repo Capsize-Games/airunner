@@ -49,7 +49,6 @@ class SetupWizardWindow(
         self.age_restriction_warning_id = None
         self.welcome_page_id = None
         self.user_agreement_id = None
-        self.controlnet_download_id = None
         self.llm_welcome_page_id = None
         self.tts_welcome_page_id = None
         self.stt_welcome_page_id = None

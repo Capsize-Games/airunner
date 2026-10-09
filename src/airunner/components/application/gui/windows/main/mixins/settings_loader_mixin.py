@@ -57,14 +57,6 @@ class SettingsLoaderMixin:
         """
         return self.resource_store.query("PromptTemplate")
 
-    def load_controlnet_models(self) -> List[Any]:
-        """Load all ControlNet model configurations.
-
-        Returns:
-            List of ControlnetModel instances.
-        """
-        return self.resource_store.query("ControlnetModel")
-
     def load_pipelines(self) -> List[Any]:
         """Load all pipeline configurations.
 
@@ -80,14 +72,6 @@ class SettingsLoaderMixin:
             List of ShortcutKeys instances.
         """
         return self.resource_store.query("ShortcutKeys")
-
-    def load_lora(self) -> List[Any]:
-        """Load all LoRA configurations.
-
-        Returns:
-            List of Lora instances.
-        """
-        return self.resource_store.query("Lora")
 
     def load_settings_from_db(
         self,

@@ -62,7 +62,6 @@ class ApplicationSettings(BaseModel):
     llm_enabled = Column(Boolean, default=False)
     tts_enabled = Column(Boolean, default=False)
     stt_enabled = Column(Boolean, default=False)
-    controlnet_enabled = Column(Boolean, default=False)
     nsfw_filter = Column(Boolean, default=True)
     ai_mode = Column(Boolean, default=True)
     installation_path = Column(String, default="~/.local/share/airunner")

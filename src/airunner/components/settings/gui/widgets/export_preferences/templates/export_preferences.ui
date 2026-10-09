@@ -234,13 +234,6 @@
        </property>
       </widget>
      </item>
-     <item row="4" column="2">
-      <widget class="QCheckBox" name="metadata_lora">
-       <property name="text">
-        <string>LoRA</string>
-       </property>
-      </widget>
-     </item>
      <item row="5" column="2">
       <widget class="QCheckBox" name="metadata_embeddings">
        <property name="text">
@@ -259,13 +252,6 @@
       <widget class="QCheckBox" name="metadata_strength">
        <property name="text">
         <string>Strength</string>
-       </property>
-      </widget>
-     </item>
-     <item row="7" column="2">
-      <widget class="QCheckBox" name="metadata_controlnet">
-       <property name="text">
-        <string>Controlnet</string>
        </property>
       </widget>
      </item>
@@ -596,22 +582,6 @@
    </hints>
   </connection>
   <connection>
-   <sender>metadata_lora</sender>
-   <signal>toggled(bool)</signal>
-   <receiver>export_preferences</receiver>
-   <slot>action_toggled_lora(bool)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>385</x>
-     <y>318</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>-5</x>
-     <y>341</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
    <sender>metadata_embeddings</sender>
    <signal>toggled(bool)</signal>
    <receiver>export_preferences</receiver>
@@ -643,22 +613,6 @@
     </hint>
    </hints>
   </connection>
-  <connection>
-   <sender>metadata_controlnet</sender>
-   <signal>toggled(bool)</signal>
-   <receiver>export_preferences</receiver>
-   <slot>action_toggled_controlnet(bool)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>457</x>
-     <y>406</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>-3</x>
-     <y>501</y>
-    </hint>
-   </hints>
-  </connection>
  </connections>
  <slots>
   <slot>action_toggle_automatically_export_images(bool)</slot>
@@ -680,9 +634,7 @@
   <slot>action_toggled_strength(bool)</slot>
   <slot>action_toggled_clip_skip(bool)</slot>
   <slot>action_toggled_version(bool)</slot>
-  <slot>action_toggled_lora(bool)</slot>
   <slot>action_toggled_embeddings(bool)</slot>
   <slot>action_toggled_timestamp(bool)</slot>
-  <slot>action_toggled_controlnet(bool)</slot>
  </slots>
 </ui>

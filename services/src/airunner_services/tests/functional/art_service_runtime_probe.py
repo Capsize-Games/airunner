@@ -85,7 +85,6 @@ def _seed_art_runtime_settings(
         llm_enabled=False,
         tts_enabled=False,
         stt_enabled=False,
-        controlnet_enabled=False,
         nsfw_filter=False,
         auto_export_images=False,
         working_width=512,

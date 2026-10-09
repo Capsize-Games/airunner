@@ -161,7 +161,6 @@ class CanvasAPIService(APIServiceBase):
         # Check if we have an inpaint model selected, prioritize that
         section = kwargs.get("section", None)
 
-        controlnet_enabled = False
         pipeline_action = self.generator_settings.pipeline_action
 
         if pipeline_action == GeneratorSection.INPAINT.value:
@@ -180,32 +179,8 @@ class CanvasAPIService(APIServiceBase):
 
         generator_settings = self.generator_settings
 
-        controlnet_image = None
-        has_controlnet_source = False
-        if self.controlnet_settings.enabled:
-            controlnet_binary_image = self.controlnet_settings.image
-            has_controlnet_source = controlnet_binary_image is not None
-            if include_image_data:
-                if controlnet_binary_image is not None:
-                    controlnet_image = convert_binary_to_image(
-                        controlnet_binary_image
-                    )
-                    controlnet_image = controlnet_image.convert("RGB")
-                else:
-                    controlnet_image = self.controlnet_image
-                has_controlnet_source = controlnet_image is not None
-            elif self.drawing_pad_settings.image is not None:
-                has_controlnet_source = True
-
-        controlnet_enabled = (
-            self.controlnet_settings.enabled
-            and has_controlnet_source
-        )
-
         # Determine strength based on whether we are doing img2img or txt2img
-        if controlnet_enabled:
-            strength = self.controlnet_settings.strength
-        elif is_inpaint or is_outpaint:
+        if is_inpaint or is_outpaint:
             strength = self.outpaint_settings.strength
         elif is_img2img:
             strength = self.image_to_image_settings.strength
@@ -298,14 +273,9 @@ class CanvasAPIService(APIServiceBase):
             callback=kwargs.get("callback", None),
             image=image,
             mask=mask,
-            controlnet_conditioning_scale=self.controlnet_settings.conditioning_scale
-            / 100.0,
             generator_section=section,
             custom_path=custom_path,
-            controlnet_enabled=controlnet_enabled,
-            controlnet=self.controlnet_settings.controlnet,
             outpaint_mask_blur=self.outpaint_settings.mask_blur,
-            controlnet_image=controlnet_image,
         )
         return image_request
 

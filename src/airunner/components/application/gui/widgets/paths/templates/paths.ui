@@ -177,7 +177,7 @@
   <customwidget>
    <class>PathWidget</class>
    <extends>QWidget</extends>
-   <header>airunner/gui/widgets/paths/path_widget</header>
+   <header>airunner/components/application/gui/widgets/paths/path_widget</header>
    <container>1</container>
   </customwidget>
  </customwidgets>
@@ -211,7 +211,6 @@
   <slot>action_button_clicked_path_upscale()</slot>
   <slot>action_button_clicked_path_txt2vid()</slot>
   <slot>action_button_clicked_path_embeddings()</slot>
-  <slot>action_button_clicked_path_lora()</slot>
   <slot>action_button_clicked_path_image()</slot>
   <slot>action_button_clicked_path_gif()</slot>
   <slot>action_button_clicked_path_video()</slot>
@@ -224,7 +223,6 @@
   <slot>action_path_changed_upscale(QString)</slot>
   <slot>action_path_changed_txt2vid(QString)</slot>
   <slot>action_path_changed_embeddings(QString)</slot>
-  <slot>action_path_changed_lora(QString)</slot>
   <slot>action_path_changed_image(QString)</slot>
   <slot>action_path_changed_gif(QString)</slot>
   <slot>action_path_changed_video(QString)</slot>

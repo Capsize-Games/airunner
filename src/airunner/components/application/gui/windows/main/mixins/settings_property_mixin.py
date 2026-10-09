@@ -138,11 +138,6 @@ class SettingsPropertyMixin:
         )
 
     @property
-    def controlnet_settings(self) -> Any:
-        """Get layer-specific ControlNet settings."""
-        return self._get_layer_specific_settings("ControlnetSettings")
-
-    @property
     def image_to_image_settings(self) -> Any:
         """Get layer-specific image-to-image settings."""
         return self._get_layer_specific_settings("ImageToImageSettings")

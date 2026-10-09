@@ -17,7 +17,6 @@ from .art_model_resolution import (
 
 _PREFERRED_VERSIONS = [
     StableDiffusionVersion.Z_IMAGE_TURBO.value,
-    StableDiffusionVersion.SDXL1_0.value,
 ]
 
 

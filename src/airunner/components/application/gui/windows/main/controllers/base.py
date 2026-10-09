@@ -27,11 +27,10 @@ class MainWindowBase:
     _stats_sidebar_index = 0
     _art_tools_sidebar_index = 1
     _art_tools_model_tab_index = 0
-    _art_tools_lora_tab_index = 1
-    _art_tools_embeddings_tab_index = 2
-    _art_tools_layers_tab_index = 3
-    _art_tools_grid_tab_index = 4
-    _art_tools_image_browser_tab_index = 5
+    _art_tools_embeddings_tab_index = 1
+    _art_tools_layers_tab_index = 2
+    _art_tools_grid_tab_index = 3
+    _art_tools_image_browser_tab_index = 4
     _left_documents_panel_index = 0
     _left_history_panel_index = 1
     _left_llm_settings_panel_index = 2
@@ -77,7 +76,6 @@ class MainWindowBase:
         ("sparkles", "art_model_button"),
         ("activity", "stats_button"),
         ("image", "canvas_button"),
-        ("puzzle", "lora_button"),
         ("scan-text", "embeddings_button"),
         ("layers", "layers_button"),
         ("grid-2x2-check", "grid_button"),

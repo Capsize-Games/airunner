@@ -18,7 +18,7 @@ def get_stable_diffusion_model_storage_path(
     """Return the absolute path for storing a Stable Diffusion model file in the AI Runner folder.
 
     Args:
-        version (str): Model version (e.g., 'SDXL 1.0').
+        version (str): Model version (e.g., 'Z-Image Turbo').
         pipeline_action (str): Pipeline action (e.g., 'txt2img').
         filename (str): The name of the model file (e.g., 'model.safetensors').
 

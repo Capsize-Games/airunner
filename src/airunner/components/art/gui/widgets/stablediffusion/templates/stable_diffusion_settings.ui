@@ -576,7 +576,6 @@ FP32: Highest precision, most VRAM</string>
   <slot>upscale_x4_clicked()</slot>
   <slot>reset_prompt_clicked()</slot>
   <slot>reset_negative_prompt_clicked()</slot>
-  <slot>handle_controlnet_changed(QString)</slot>
   <slot>prompt_changed()</slot>
   <slot>negative_prompt_changed()</slot>
   <slot>upscale_model_changed(QString)</slot>

@@ -8,7 +8,6 @@ Directory structure expected:
 
 Example:
     ~/.local/share/airunner/art/models/Z-Image Turbo/txt2img/model.safetensors
-    ~/.local/share/airunner/art/models/SDXL 1.0/txt2img/model.safetensors
 """
 
 from pathlib import Path
@@ -18,7 +17,6 @@ from airunner.enums import SignalCode
 from airunner.components.application.workers.model_scanner.model_scanner_constants import (
     MODEL_EXTENSIONS,
     DIFFUSERS_REQUIRED_FOLDERS,
-    SKIP_FOLDERS,
 )
 from airunner.components.application.workers.model_scanner.model_scanner_data import (
     ScannedModel,
@@ -96,7 +94,7 @@ class ModelScannerWorker(Worker, PipelineMixin):
         if not base_path.exists():
             return models
 
-        # Iterate through version folders (e.g., "Z-Image Turbo", "SDXL 1.0")
+        # Iterate through version folders (e.g., "Z-Image Turbo")
         for version_dir in self._iter_directories(base_path):
             if not self.running:
                 break
@@ -114,9 +112,6 @@ class ModelScannerWorker(Worker, PipelineMixin):
                 if not self.running:
                     break
                 action_name = action_dir.name
-
-                if action_name in SKIP_FOLDERS:
-                    continue
 
                 # Scan for models in this action folder
                 found_models = self._scan_action_directory(

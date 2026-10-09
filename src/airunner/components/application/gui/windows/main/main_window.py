@@ -169,7 +169,6 @@ class MainWindow(
         self.update_application_settings(
             sd_enabled=False,
             llm_enabled=False,
-            controlnet_enabled=False,
         )
         self._init_single_click_timer()
         self._updating_settings = False

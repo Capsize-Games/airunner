@@ -2,8 +2,8 @@
 
 This window lets the user assemble an image-generation prompt from curated
 word lists (the classic AI Runner "Prompt Builder" concept) and produces a
-prompt formatted for either Z-Image Turbo (6-part single prompt, no negative
-prompt) or Stable Diffusion XL (layered prompt + negative "bug list").
+prompt formatted for Z-Image Turbo (6-part single prompt, no negative
+prompt).
 
 * **Generate Prompt** writes the built prompt into the art generator form
   (the main prompt area) so the user can review or edit it.
@@ -41,7 +41,7 @@ from airunner.components.art.gui.windows.prompt_builder.prompt_builder_engine im
 from airunner.components.art.gui.windows.prompt_builder.templates.prompt_builder_ui import (
     Ui_prompt_builder,
 )
-from airunner.enums import ImageGenerator, SignalCode
+from airunner.enums import SignalCode
 
 
 class PromptBuilder(BaseWindow):
@@ -80,7 +80,6 @@ class PromptBuilder(BaseWindow):
         """Populate all combo boxes and wire the signal handlers."""
         self._populate_combos()
         self._populate_style_group()
-        self._set_default_generator()
         self._connect_signals()
         self._rebuild_preview()
 
@@ -130,22 +129,6 @@ class PromptBuilder(BaseWindow):
         self.ui.style_detail.setCurrentIndex(0)
         self.ui.style_detail.blockSignals(False)
 
-    def _set_default_generator(self) -> None:
-        """Default the target generator to the app's current model."""
-        try:
-            current = self.application_settings.current_image_generator
-        except Exception:
-            current = ImageGenerator.ZIMAGE.value
-        target = (
-            current
-            if current in ("zimage", "stablediffusion")
-            else ImageGenerator.ZIMAGE.value
-        )
-        self.ui.target_generator.blockSignals(True)
-        self.ui.target_generator.setCurrentText(target)
-        self.ui.target_generator.blockSignals(False)
-        self._update_negative_visibility()
-
     def _connect_signals(self) -> None:
         """Wire all combo edits and buttons to a live preview rebuild."""
         for name in self._COMBO_SOURCES:
@@ -167,7 +150,6 @@ class PromptBuilder(BaseWindow):
             "custom_subject",
             "custom_scene",
             "custom_style",
-            "custom_negative",
             "prefix",
             "suffix",
         ):
@@ -180,9 +162,6 @@ class PromptBuilder(BaseWindow):
             self._on_random_seed_toggled
         )
         self.ui.seed_spinbox.valueChanged.connect(self._on_seed_changed)
-        self.ui.target_generator.currentIndexChanged.connect(
-            self._on_target_generator_changed
-        )
         self.ui.randomize_button.clicked.connect(
             self._on_randomize_button_clicked
         )
@@ -220,12 +199,10 @@ class PromptBuilder(BaseWindow):
             custom_subject=self.ui.custom_subject.text(),
             custom_scene=self.ui.custom_scene.text(),
             custom_style=self.ui.custom_style.text(),
-            custom_negative=self.ui.custom_negative.text(),
             prefix=self.ui.prefix.text(),
             suffix=self.ui.suffix.text(),
             randomize=self.ui.randomize_checkbox.isChecked(),
             seed=seed,
-            target_generator=self.ui.target_generator.currentText(),
         )
         for name in self._ATTRIBUTE_COMBOS:
             combo = getattr(self.ui, f"attribute_{name}", None)
@@ -248,17 +225,9 @@ class PromptBuilder(BaseWindow):
         result = self._engine.build(state)
         self._last_state = state
         self.ui.prompt_preview.setPlainText(result.prompt)
-        self.ui.negative_prompt_preview.setPlainText(result.negative_prompt)
         self.ui.word_count_label.setText(
             f"{result.word_count} words ({len(result.prompt.split(','))} phrases)"
         )
-        self._update_negative_visibility()
-
-    def _update_negative_visibility(self) -> None:
-        """Hide the negative-prompt section for generators without one."""
-        is_sdxl = self.ui.target_generator.currentText() == "stablediffusion"
-        self.ui.negative_prompt_label.setVisible(is_sdxl)
-        self.ui.negative_prompt_preview.setVisible(is_sdxl)
 
     # -- signal handlers ----------------------------------------------------
 
@@ -288,11 +257,6 @@ class PromptBuilder(BaseWindow):
     @Slot(int)
     def _on_seed_changed(self, _value: int):
         self._preview_seed = _value
-        self._rebuild_preview()
-
-    @Slot()
-    def _on_target_generator_changed(self):
-        self._update_negative_visibility()
         self._rebuild_preview()
 
     @Slot()

@@ -33,7 +33,6 @@ class StatusWidget(BaseWidget):
 
         if not AIRUNNER_ART_ENABLED:
             self.ui.sd_status.deleteLater()
-            self.ui.controlnet_status.deleteLater()
             self.ui.nsfw_status.deleteLater()
 
         self.set_sd_pipeline_label()
@@ -60,7 +59,6 @@ class StatusWidget(BaseWidget):
             (ModelType.TTS, "tts_enabled"),
             (ModelType.STT, "stt_enabled"),
             (ModelType.SD, "sd_enabled"),
-            (ModelType.CONTROLNET, "controlnet_enabled"),
         ]:
             if item[0] in (ModelType.TTS, ModelType.STT, ModelType.SD):
                 continue
@@ -95,14 +93,6 @@ class StatusWidget(BaseWidget):
                 {
                     "model": ModelType.SD,
                     "status": self._model_status[ModelType.SD],
-                    "path": "",
-                }
-            )
-        if self.controlnet_settings.enabled:
-            self.on_model_status_changed_signal(
-                {
-                    "model": ModelType.CONTROLNET,
-                    "status": self._model_status[ModelType.CONTROLNET],
                     "path": "",
                 }
             )
@@ -164,9 +154,6 @@ class StatusWidget(BaseWidget):
             element_name = "sd_status"
             tool_tip = "Stable Diffusion"
             self.set_sd_status_text()
-        elif data["model"] == ModelType.CONTROLNET:
-            element_name = "controlnet_status"
-            tool_tip = "Controlnet"
         elif data["model"] == ModelType.LLM:
             element_name = "llm_status"
             tool_tip = "LLM"

@@ -8,7 +8,7 @@ def get_category_for_version(version: str) -> str:
     """Get the ImageGenerator category for a given version name.
 
     Args:
-        version: The version folder name (e.g., 'Z-Image Turbo', 'SDXL 1.0')
+        version: The version folder name (e.g., 'Z-Image Turbo')
 
     Returns:
         The category string (e.g., 'zimage', 'stablediffusion').

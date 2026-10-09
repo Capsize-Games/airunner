@@ -51,15 +51,8 @@ class ImageRequest:
     skip_auto_export: bool = False
     image: Optional[Image.Image] = None
     mask: Optional[Image.Image] = None
-    controlnet_image: Optional[Image.Image] = None
-    controlnet_conditioning_scale: float = 1.0
-    control_guidance_start: float = 0.0
-    control_guidance_end: float = 1.0
-    controlnet_guess_mode: bool = False
     generator_section: GeneratorSection = GeneratorSection.TXT2IMG
     custom_path: Optional[str] = None
-    controlnet_enabled: Optional[bool] = None
-    controlnet: str = "Canny"
     outpaint_mask_blur: int = 0
     additional_prompts: Optional[List[Dict[str, str]]] = None
 

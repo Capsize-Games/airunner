@@ -123,14 +123,6 @@ class BasicSettingsUpdateMixin:
         """
         self.update_settings("GeneratorSettings", settings_dict)
 
-    def update_controlnet_image_settings(self, **settings_dict):
-        """Update ControlNet image settings.
-
-        Args:
-            **settings_dict: Settings to update as keyword arguments.
-        """
-        self.update_controlnet_settings(**settings_dict)
-
     def update_settings(
         self, resource_name: str, updates: Dict[str, Any]
     ) -> None:

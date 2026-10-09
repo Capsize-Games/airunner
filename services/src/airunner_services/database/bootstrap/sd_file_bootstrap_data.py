@@ -6,48 +6,6 @@ from airunner_common.settings import AIRUNNER_ART_ENABLED
 
 
 SD_FILE_BOOTSTRAP_DATA = {
-    "SDXL 1.0": {
-        "txt2img": {
-            "scheduler/scheduler_config.json": 479,
-            "text_encoder/config.json": 565,
-            "text_encoder_2/config.json": 575,
-            "tokenizer/merges.txt": 524619,
-            "tokenizer/special_tokens_map.json": 472,
-            "tokenizer/tokenizer_config.json": 737,
-            "tokenizer/vocab.json": 1059962,
-            "tokenizer_2/merges.txt": 524619,
-            "tokenizer_2/special_tokens_map.json": 460,
-            "tokenizer_2/tokenizer_config.json": 725,
-            "tokenizer_2/vocab.json": 1059962,
-            "unet/config.json": 1680,
-            "vae/config.json": 642,
-            "vae_1_0/config.json": 607,
-            "vae_decoder/config.json": 607,
-            "vae_encoder/config.json": 607,
-            "LICENSE.md": 14109,
-            "model_index.json": 609,
-        },
-        "inpaint": {
-            "scheduler/scheduler_config.json": 479,
-            "text_encoder/config.json": 565,
-            "text_encoder_2/config.json": 575,
-            "tokenizer/merges.txt": 524619,
-            "tokenizer/special_tokens_map.json": 472,
-            "tokenizer/tokenizer_config.json": 737,
-            "tokenizer/vocab.json": 1059962,
-            "tokenizer_2/merges.txt": 524619,
-            "tokenizer_2/special_tokens_map.json": 460,
-            "tokenizer_2/tokenizer_config.json": 725,
-            "tokenizer_2/vocab.json": 1059962,
-            "unet/config.json": 1680,
-            "vae/config.json": 642,
-            "model_index.json": 609,
-        },
-        "controlnet": {
-            "config.json": 0,
-            "diffusion_pytorch_model.fp16.safetensors": 0,
-        },
-    },
     "Upscaler": {
         "x4": {
             "low_res_scheduler/scheduler_config.json": 300,

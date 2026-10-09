@@ -409,7 +409,7 @@ R01: ART-01 (oversized request path), ART-12/D04 (resource-limit
 validation: an oversized request must be rejected or fail
 actionably, never hang), SET-05 (persistence intact), DL-05.
 
-Preconditions: Q07-S00 passed; SDXL-class model present. Have a
+Preconditions: Q07-S00 passed; Z-Image-class model present. Have a
 completed conversation/thread to re-read afterwards (B02
 persistence; any existing thread id works).
 

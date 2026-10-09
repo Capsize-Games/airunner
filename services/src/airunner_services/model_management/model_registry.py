@@ -83,7 +83,6 @@ class ModelRegistry:
 
 	def _initialize_registry(self) -> None:
 		self._register_llm_models()
-		self._register_stable_diffusion_models()
 		self._register_tts_models()
 		self._register_stt_models()
 
@@ -222,21 +221,6 @@ class ModelRegistry:
 			*metadata.aliases,
 		):
 			self._register_alias(str(alias), canonical_id)
-
-	def _register_stable_diffusion_models(self) -> None:
-		metadata = ModelMetadata(
-			name="Stable Diffusion XL 1.0",
-			provider=ModelProvider.STABLE_DIFFUSION,
-			model_type=ModelType.TEXT_TO_IMAGE,
-			size_gb=6.9,
-			min_vram_gb=6.0,
-			min_ram_gb=8.0,
-			recommended_vram_gb=8.0,
-			recommended_ram_gb=16.0,
-			supports_quantization=False,
-			huggingface_id="stabilityai/stable-diffusion-xl-base-1.0",
-		)
-		self._register_model_metadata(metadata)
 
 	def _register_tts_models(self) -> None:
 		metadata = ModelMetadata(

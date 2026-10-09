@@ -2,13 +2,12 @@
 Mixin providing model unloading operations for Stable Diffusion.
 
 This mixin handles unloading of all SD model components including safety
-checker, ControlNet, Compel, DeepCache, scheduler, and
+checker, Compel, DeepCache, scheduler, and
 pipeline to free GPU memory.
 """
 
 import gc
 
-from airunner_services.art.managers.stablediffusion import model_loader
 from airunner_services.art.runtime_enums import ModelStatus, ModelType
 
 
@@ -31,48 +30,6 @@ class SDModelUnloadingMixin:
             except Exception:
                 pass
         self.scheduler = None
-
-    def _unload_controlnet(self):
-        """
-        Unload ControlNet model and processor.
-
-        Updates model status during unload process.
-        """
-        self.logger.debug("Unloading controlnet")
-        self.change_model_status(ModelType.CONTROLNET, ModelStatus.LOADING)
-        self._unload_controlnet_model()
-        self._unload_controlnet_processor()
-        self.change_model_status(ModelType.CONTROLNET, ModelStatus.UNLOADED)
-
-    def _unload_controlnet_model(self):
-        """
-        Unload ControlNet model and force garbage collection.
-
-        Removes from both pipeline and instance variables.
-        """
-        self.logger.debug("Clearing controlnet")
-        if self._pipe and hasattr(self._pipe, "controlnet"):
-            try:
-                if self._pipe.controlnet is not None:
-                    del self._pipe.controlnet
-                del self._pipe.__controlnet
-            except AttributeError:
-                pass
-            self._pipe.__controlnet = None
-        if self._controlnet is not None:
-            del self._controlnet
-        self._controlnet = None
-        # Force garbage collection
-        gc.collect()
-
-    def _unload_controlnet_processor(self):
-        """
-        Unload ControlNet image preprocessor.
-        """
-        model_loader.unload_controlnet_processor(
-            self._controlnet_processor, self.logger
-        )
-        self._controlnet_processor = None
 
     def _unload_compel(self):
         """
@@ -98,7 +55,7 @@ class SDModelUnloadingMixin:
         Unload cached prompt embeddings.
 
         Clears all cached prompt and negative prompt embeddings including
-        pooled variants for SDXL.
+        pooled variants.
         """
         self.logger.debug("Unloading prompt embeds")
         del self._prompt_embeds

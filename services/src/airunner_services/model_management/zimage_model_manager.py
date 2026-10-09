@@ -116,11 +116,6 @@ class ZImageModelManager(
         return tuple()
 
     @property
-    def controlnet_pipelines(self) -> tuple:
-        """Get ControlNet pipeline classes for Z-Image."""
-        return ()
-
-    @property
     def outpaint_pipelines(self) -> tuple:
         """Get outpaint/inpaint pipeline classes for Z-Image."""
         return ()

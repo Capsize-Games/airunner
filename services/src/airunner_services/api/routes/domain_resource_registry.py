@@ -25,7 +25,6 @@ SINGLETON_RESOURCES = {
 
 LAYER_RESOURCES = {
     "settings": {
-        "ControlnetSettings",
         "DrawingPadSettings",
         "ImageToImageSettings",
         "MetadataSettings",

@@ -13,7 +13,6 @@ from airunner.daemon_client.resource_store import (
 
 LAYER_SETTING_RESOURCES = (
     "DrawingPadSettings",
-    "ControlnetSettings",
     "ImageToImageSettings",
     "OutpaintSettings",
 )
@@ -216,9 +215,6 @@ def capture_layer_snapshot(
     snapshot["drawing_pad"] = serialize_record(
         first_layer_setting("DrawingPadSettings", layer_id, store=store)
     )
-    snapshot["controlnet"] = serialize_record(
-        first_layer_setting("ControlnetSettings", layer_id, store=store)
-    )
     snapshot["image_to_image"] = serialize_record(
         first_layer_setting("ImageToImageSettings", layer_id, store=store)
     )
@@ -239,7 +235,6 @@ def restore_layer_snapshot(
         restore_record("CanvasLayer", layer_data, store=store)
     mapping = {
         "drawing_pad": "DrawingPadSettings",
-        "controlnet": "ControlnetSettings",
         "image_to_image": "ImageToImageSettings",
         "outpaint": "OutpaintSettings",
     }

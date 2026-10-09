@@ -6,17 +6,6 @@ from typing import Any, Dict, Optional
 class LayerSettingsUpdateMixin:
     """Mixin for updating layer-specific settings."""
 
-    def update_controlnet_settings(
-        self, layer_id: Optional[int] = None, **settings_dict
-    ) -> None:
-        """Update ControlNet settings for a specific layer.
-
-        Args:
-            layer_id: Layer ID to update. None uses current selected layer.
-            **settings_dict: Settings to update as keyword arguments.
-        """
-        self.update_layer_settings("ControlnetSettings", settings_dict, layer_id)
-
     def update_brush_settings(
         self, layer_id: Optional[int] = None, **settings_dict
     ) -> None:

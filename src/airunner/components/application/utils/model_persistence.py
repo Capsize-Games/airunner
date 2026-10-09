@@ -40,7 +40,7 @@ def persist_trigger_words(
 
     Args:
         version_data: The version object from CivitAI API containing trainedWords
-        model_type: The model type (e.g., "LORA", "CHECKPOINT", "TEXTUAL EMBEDDING")
+        model_type: The model type (e.g., "CHECKPOINT", "TEXTUAL EMBEDDING")
         file_info: File metadata from the version
         saved_file_path: Full path where the file was saved
     """
@@ -70,13 +70,7 @@ def persist_trigger_words(
         file_type = (file_info.get("type") or "").strip().upper()
         file_name = file_info.get("name", "").lower()
 
-        if model_type_upper == "LORA":
-            _persist_lora_trigger_words(
-                saved_file_path,
-                trigger_words_str,
-                version_data,
-            )
-        elif (
+        if (
             model_type_upper
             in ("TEXTUAL EMBEDDING", "EMBEDDING", "TEXTUALINVERSION")
             or file_type == "EMBEDDING"
@@ -98,51 +92,6 @@ def persist_trigger_words(
         logger.error(
             f"Failed to persist trigger words for {saved_file_path}: {e}",
             exc_info=True,
-        )
-
-
-def _persist_lora_trigger_words(
-    file_path: str, trigger_words: str, version_data: Dict[str, Any]
-) -> None:
-    """Persist trigger words for a LoRA model."""
-    file_name = os.path.basename(file_path)
-    name_without_ext = os.path.splitext(file_name)[0]
-
-    # Try to find existing LoRA by path or name
-    existing_lora = resource_store.first("Lora", filters={"path": file_path})
-    if existing_lora is None:
-        existing_lora = resource_store.first(
-            "Lora",
-            filters={"name": name_without_ext},
-        )
-
-    version_str = _extract_base_model_from_path(file_path) or str(
-        version_data.get("id", "")
-    )
-
-    if existing_lora:
-        logger.debug(f"Updating existing LoRA: {existing_lora.name}")
-        resource_store.update(
-            "Lora",
-            existing_lora.id,
-            {
-                "trigger_word": trigger_words,
-                "path": file_path,
-                "version": version_str,
-            },
-        )
-    else:
-        logger.debug(f"Creating new LoRA: {name_without_ext}")
-        resource_store.create(
-            "Lora",
-            {
-                "name": name_without_ext,
-                "path": file_path,
-                "trigger_word": trigger_words,
-                "version": version_str,
-                "enabled": False,
-                "scale": 0,
-            },
         )
 
 

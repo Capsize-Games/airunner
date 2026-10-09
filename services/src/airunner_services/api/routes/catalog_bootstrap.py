@@ -13,9 +13,6 @@ from airunner_services.bootstrap.pipeline_bootstrap_data import (
 from airunner_services.bootstrap.unified_model_files import (
     UNIFIED_MODEL_FILES,
 )
-from airunner_services.database.bootstrap.controlnet_bootstrap_data import (
-    controlnet_bootstrap_data,
-)
 from airunner_services.database.bootstrap.espeak_settings_data import (
     ESPEAK_SETTINGS_DATA,
 )
@@ -56,7 +53,6 @@ async def catalog_bootstrap():
         "models": model_bootstrap_data,
         "pipelines": pipeline_bootstrap_data,
         "unified_model_files": UNIFIED_MODEL_FILES,
-        "controlnet_bootstrap_data": controlnet_bootstrap_data,
         "espeak_settings_data": ESPEAK_SETTINGS_DATA,
         "llm_file_bootstrap_data": LLM_FILE_BOOTSTRAP_DATA,
         "openvoice_files": OPENVOICE_FILES,

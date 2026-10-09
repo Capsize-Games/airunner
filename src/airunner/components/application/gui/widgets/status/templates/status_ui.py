@@ -98,13 +98,6 @@ class Ui_status_widget(object):
 
         self.horizontalLayout.addWidget(self.sd_status)
 
-        self.controlnet_status = QLabel(status_widget)
-        self.controlnet_status.setObjectName(u"controlnet_status")
-        self.controlnet_status.setFont(font)
-        self.controlnet_status.setAlignment(Qt.AlignmentFlag.AlignCenter)
-
-        self.horizontalLayout.addWidget(self.controlnet_status)
-
         self.line_2 = QFrame(status_widget)
         self.line_2.setObjectName(u"line_2")
         self.line_2.setFrameShape(QFrame.Shape.VLine)
@@ -158,7 +151,6 @@ class Ui_status_widget(object):
         self.nsfw_status.setText(QCoreApplication.translate("status_widget", u"Safety Checker", None))
         self.pipeline_label.setText(QCoreApplication.translate("status_widget", u"pipeline", None))
         self.sd_status.setText(QCoreApplication.translate("status_widget", u"SD", None))
-        self.controlnet_status.setText(QCoreApplication.translate("status_widget", u"CN", None))
         self.llm_status.setText(QCoreApplication.translate("status_widget", u"LLM", None))
         self.tts_status.setText(QCoreApplication.translate("status_widget", u"TTS", None))
         self.stt_status.setText(QCoreApplication.translate("status_widget", u"STT", None))

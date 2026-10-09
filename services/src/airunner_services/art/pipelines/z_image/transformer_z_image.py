@@ -46,7 +46,7 @@ except ImportError:
             is_causal=is_causal,
         ).transpose(1, 2)
 
-# Register ZImageTransformer2DModel in diffusers' LoRA scale mapping
+# Register ZImageTransformer2DModel in diffusers' adapter scale mapping
 # This allows set_adapters() to work with our custom transformer
 try:
     from diffusers.loaders.peft import _SET_ADAPTER_SCALE_FN_MAPPING

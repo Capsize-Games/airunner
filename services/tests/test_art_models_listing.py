@@ -31,7 +31,7 @@ from airunner_services.database.session import reset_engine
 _ART_MODELS_ROUTE = "/api/v1/art/models"
 
 _TREE: dict[str, bytes] = {
-    "art/models/SDXL 1.0/txt2img/sdxl.safetensors": b"0123456789",
+    "art/models/Custom/txt2img/custom.safetensors": b"0123456789",
     "art/models/Z-Image Turbo/txt2img/z.safetensors": b"abcdef",
     "art/models/Z-Image Turbo/img2img/styled.ckpt": b"gh",
     "art/models/Z-Image Turbo/img2img/bundle/model_index.json": b"{}",
@@ -116,9 +116,9 @@ def _assert_version_groups(
 ) -> dict[str, list[str]]:
     """Assert the expected per-version groups and return them."""
     grouped = _paths_by_version(body)
-    assert sorted(grouped) == ["SDXL 1.0", "Z-Image Turbo"]
-    assert grouped["SDXL 1.0"] == [
-        str(models_base / "SDXL 1.0" / "txt2img" / "sdxl.safetensors")
+    assert sorted(grouped) == ["Custom", "Z-Image Turbo"]
+    assert grouped["Custom"] == [
+        str(models_base / "Custom" / "txt2img" / "custom.safetensors")
     ]
     assert grouped["Z-Image Turbo"] == [
         str(models_base / "Z-Image Turbo" / "img2img" / "bundle"),
@@ -136,7 +136,9 @@ def _assert_flat_models(
     """Assert the flat list matches the groups with live paths."""
     flat = {model["path"]: model for model in body["models"]}
     assert set(flat) == {path for paths in grouped.values() for path in paths}
-    checkpoint = str(models_base / "SDXL 1.0" / "txt2img" / "sdxl.safetensors")
+    checkpoint = str(
+        models_base / "Custom" / "txt2img" / "custom.safetensors"
+    )
     assert flat[checkpoint]["size_bytes"] == 10
     bundle = str(models_base / "Z-Image Turbo" / "img2img" / "bundle")
     assert flat[bundle]["pipeline"] == "img2img"
@@ -218,8 +220,8 @@ def test_poisoned_settings_record_still_serves_filesystem(
     assert response.status_code == 200
     body = response.json()
     assert body["base_dir"] == str(models_base)
-    assert _paths_by_version(body)["SDXL 1.0"] == [
-        str(models_base / "SDXL 1.0" / "txt2img" / "sdxl.safetensors")
+    assert _paths_by_version(body)["Custom"] == [
+        str(models_base / "Custom" / "txt2img" / "custom.safetensors")
     ]
     assert body["schedulers"] == [item.value for item in Scheduler]
 

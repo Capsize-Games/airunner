@@ -15,7 +15,7 @@ class StablediffusionToolTabWidget(BaseWidget):
     ui: Ui_stablediffusion_tool_tab_widget  # type: ignore[assignment]
     widget_class_ = Ui_stablediffusion_tool_tab_widget
     _min_tab_index = 0
-    _max_tab_index = 5
+    _max_tab_index = 4
     _page_widget_specs = {
         0: (
             (
@@ -28,15 +28,6 @@ class StablediffusionToolTabWidget(BaseWidget):
         ),
         1: (
             (
-                "lora_container_widget_placeholder",
-                "lora_container_widget",
-                "airunner.components.art.gui.widgets.lora."
-                "lora_container_widget",
-                "LoraContainerWidget",
-            ),
-        ),
-        2: (
-            (
                 "embeddings_container_widget_placeholder",
                 "embeddings_container_widget",
                 "airunner.components.art.gui.widgets.embeddings."
@@ -44,7 +35,7 @@ class StablediffusionToolTabWidget(BaseWidget):
                 "EmbeddingsContainerWidget",
             ),
         ),
-        3: (
+        2: (
             (
                 "canvas_layer_container_placeholder",
                 "canvas_layer_container",
@@ -53,7 +44,7 @@ class StablediffusionToolTabWidget(BaseWidget):
                 "CanvasLayerContainerWidget",
             ),
         ),
-        4: (
+        3: (
             (
                 "grid_preferences_placeholder",
                 "grid_preferences",
@@ -69,7 +60,7 @@ class StablediffusionToolTabWidget(BaseWidget):
                 "ActiveGridSettingsWidget",
             ),
         ),
-        5: (
+        4: (
             (
                 "batch_container_placeholder",
                 "widget",

@@ -48,8 +48,7 @@
       <string>Prompt</string>
      </property>
      <property name="icon">
-      <iconset theme="edit-paste">
-       <normaloff>../../lora/templates</normaloff>../../lora/templates</iconset>
+      <iconset theme="edit-paste"/>
      </property>
     </widget>
    </item>
@@ -65,8 +64,7 @@
       <string>Negative</string>
      </property>
      <property name="icon">
-      <iconset theme="edit-paste">
-       <normaloff>../../lora/templates</normaloff>../../lora/templates</iconset>
+      <iconset theme="edit-paste"/>
      </property>
     </widget>
    </item>
@@ -82,8 +80,7 @@
       <string/>
      </property>
      <property name="icon">
-      <iconset theme="edit-copy">
-       <normaloff>../../lora/templates</normaloff>../../lora/templates</iconset>
+      <iconset theme="edit-copy"/>
      </property>
     </widget>
    </item>

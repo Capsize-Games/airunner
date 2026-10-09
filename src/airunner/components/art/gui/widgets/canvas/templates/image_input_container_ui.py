@@ -46,19 +46,6 @@ class Ui_image_input_container(object):
         self.gridLayout_2.addWidget(self.image_to_image, 0, 0, 1, 1)
 
         self.tabWidget.addTab(self.tab, "")
-        self.tab_2 = QWidget()
-        self.tab_2.setObjectName(u"tab_2")
-        self.gridLayout_3 = QGridLayout(self.tab_2)
-        self.gridLayout_3.setObjectName(u"gridLayout_3")
-        self.gridLayout_3.setContentsMargins(0, 0, 0, 0)
-        self.controlnet_image = InputImageContainer(self.tab_2)
-        self.controlnet_image.setObjectName(u"controlnet_image")
-        sizePolicy.setHeightForWidth(self.controlnet_image.sizePolicy().hasHeightForWidth())
-        self.controlnet_image.setSizePolicy(sizePolicy)
-
-        self.gridLayout_3.addWidget(self.controlnet_image, 0, 0, 1, 1)
-
-        self.tabWidget.addTab(self.tab_2, "")
         self.tab_3 = QWidget()
         self.tab_3.setObjectName(u"tab_3")
         self.gridLayout_4 = QGridLayout(self.tab_3)
@@ -86,8 +73,6 @@ class Ui_image_input_container(object):
         image_input_container.setWindowTitle(QCoreApplication.translate("image_input_container", u"Form", None))
         self.image_to_image.setProperty(u"settings_key", QCoreApplication.translate("image_input_container", u"image_to_image_settings", None))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab), QCoreApplication.translate("image_input_container", u"Image-to-Image", None))
-        self.controlnet_image.setProperty(u"settings_key", QCoreApplication.translate("image_input_container", u"controlnet_settings", None))
-        self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_2), QCoreApplication.translate("image_input_container", u"Controlnet", None))
         self.widget_2.setProperty(u"settings_key", QCoreApplication.translate("image_input_container", u"outpaint_settings", None))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_3), QCoreApplication.translate("image_input_container", u"Inpaint", None))
     # retranslateUi

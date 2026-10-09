@@ -35,13 +35,7 @@ class Ui_embedding_trigger_word(object):
         self.button_to_prompt = QPushButton(embedding_trigger_word)
         self.button_to_prompt.setObjectName(u"button_to_prompt")
         self.button_to_prompt.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
-        icon = QIcon()
-        iconThemeName = u"edit-paste"
-        if QIcon.hasThemeIcon(iconThemeName):
-            icon = QIcon.fromTheme(iconThemeName)
-        else:
-            icon.addFile(u"../../lora/templates", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
-
+        icon = QIcon(QIcon.fromTheme(u"edit-paste"))
         self.button_to_prompt.setIcon(icon)
 
         self.horizontalLayout.addWidget(self.button_to_prompt)
@@ -56,13 +50,7 @@ class Ui_embedding_trigger_word(object):
         self.button_copy = QPushButton(embedding_trigger_word)
         self.button_copy.setObjectName(u"button_copy")
         self.button_copy.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
-        icon1 = QIcon()
-        iconThemeName = u"edit-copy"
-        if QIcon.hasThemeIcon(iconThemeName):
-            icon1 = QIcon.fromTheme(iconThemeName)
-        else:
-            icon1.addFile(u"../../lora/templates", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
-
+        icon1 = QIcon(QIcon.fromTheme(u"edit-copy"))
         self.button_copy.setIcon(icon1)
 
         self.horizontalLayout.addWidget(self.button_copy)

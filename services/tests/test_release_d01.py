@@ -3,11 +3,12 @@
 Proves:
 
 - Curated downloads stop silently ignoring a declared revision/branch
-  pin: model_bootstrap_data already declares "branch" per entry (e.g.
-  SDXL Inpaint pins "fp16"), but every download previously hardcoded
-  ``resolve/main`` regardless. ``_resolve_bootstrap_revision`` now
-  surfaces that pin, and repos with no curated entry (custom models)
-  keep resolving "main" exactly as before.
+  pin: model_bootstrap_data already declares "branch" per entry, but
+  every download previously hardcoded ``resolve/main`` regardless.
+  ``_resolve_bootstrap_revision`` now surfaces that pin, and repos
+  with no curated entry (custom models) keep resolving "main"
+  exactly as before. The live catalog pins "main" everywhere, so
+  the pin-surfacing path is proven with a synthetic non-main pin.
 - A same-sized file whose digest does not match a pinned expectation
   fails verification and is never moved to its final, loadable
   location — even though its size alone would previously have looked
@@ -25,6 +26,9 @@ import hashlib
 
 import pytest
 
+from airunner_services.downloads import (
+    huggingface_download_worker as worker_mod,
+)
 from airunner_services.downloads.huggingface_download_worker import (
     HuggingFaceDownloadWorker,
 )
@@ -35,12 +39,23 @@ def worker() -> HuggingFaceDownloadWorker:
     return HuggingFaceDownloadWorker()
 
 
-def test_resolve_bootstrap_revision_uses_declared_pin(worker) -> None:
-    """SDXL Inpaint's curated entry pins "fp16", not "main"."""
-    revision = worker._resolve_bootstrap_revision(
-        "diffusers/stable-diffusion-xl-1.0-inpainting-0.1"
+def test_resolve_bootstrap_revision_uses_declared_pin(
+    worker, monkeypatch
+) -> None:
+    """A curated entry with a non-default pin resolves that pin."""
+    monkeypatch.setattr(
+        worker_mod,
+        "model_bootstrap_data",
+        [{"path": "some-org/pinned-model", "branch": "fp16"}],
     )
+    revision = worker._resolve_bootstrap_revision("some-org/pinned-model")
     assert revision == "fp16"
+
+
+def test_resolve_bootstrap_revision_reads_live_catalog(worker) -> None:
+    """The curated Z-Image entry resolves its declared "main" pin."""
+    revision = worker._resolve_bootstrap_revision("Tongyi-MAI/Z-Image-Turbo")
+    assert revision == "main"
 
 
 def test_resolve_bootstrap_revision_defaults_to_main_for_custom_repo(

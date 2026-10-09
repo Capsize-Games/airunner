@@ -7,7 +7,6 @@ from airunner.daemon_client.resource_store import get_resource_store
 
 SETTINGS_PERSISTENCE_MAP: Dict[str, Tuple[str, bool]] = {
     "drawing_pad_settings": ("DrawingPadSettings", True),
-    "controlnet_settings": ("ControlnetSettings", True),
     "image_to_image_settings": ("ImageToImageSettings", True),
     "outpaint_settings": ("OutpaintSettings", True),
 }

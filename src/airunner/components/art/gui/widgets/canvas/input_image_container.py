@@ -20,7 +20,6 @@ class InputImageContainer(BaseWidget):
         super().__init__(*args, **kwargs)
         self.input_image = None
         self.mask_image = None
-        self.generated_image = None
         # Debounce timer to coalesce multiple grid updates
         self._grid_refresh_timer = QTimer(self)
         self._grid_refresh_timer.setSingleShot(True)
@@ -48,12 +47,6 @@ class InputImageContainer(BaseWidget):
                 self.input_image.load_image_from_grid()
 
             if (
-                self.generated_image
-                and self.generated_image.should_follow_grid_updates()
-            ):
-                self.generated_image.load_image_from_grid()
-
-            if (
                 self.mask_image
                 and self.mask_image.should_follow_grid_updates()
             ):
@@ -73,15 +66,7 @@ class InputImageContainer(BaseWidget):
                 # image and the tab UI is redundant
                 self.ui.tabWidget.tabBar().setVisible(False)
 
-        if (
-            self.generated_image is None
-            and settings_key == "controlnet_settings"
-        ):
-            self.generated_image = InputImage(
-                settings_key=self.settings_key, use_generated_image=True
-            )
-            self.ui.tabWidget.addTab(self.generated_image, "Generated Image")
-        elif self.mask_image is None and settings_key == "outpaint_settings":
+        if self.mask_image is None and settings_key == "outpaint_settings":
             self.mask_image = InputImage(
                 settings_key=self.settings_key, is_mask=True
             )
@@ -91,8 +76,6 @@ class InputImageContainer(BaseWidget):
         settings_key = self.settings_key
         if settings_key == "outpaint_settings":
             label = "Inpaint / Outpaint"
-        elif settings_key == "controlnet_settings":
-            label = "Controlnet"
         else:
             label = "Image-to-Image"
         self.ui.label.setText(label)

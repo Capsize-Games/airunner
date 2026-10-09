@@ -59,10 +59,6 @@ def get_required_files_for_model(
     return {}
 
 
-def get_controlnet_bootstrap_data() -> List[dict[str, Any]]:
-    return get_bootstrap_data().get("controlnet_bootstrap_data", [])
-
-
 def get_espeak_settings_data() -> List[dict[str, Any]]:
     return get_bootstrap_data().get("espeak_settings_data", [])
 
@@ -101,7 +97,6 @@ def get_whisper_files() -> Dict[str, Any]:
 
 __all__ = [
     "get_bootstrap_data",
-    "get_controlnet_bootstrap_data",
     "get_espeak_settings_data",
     "get_llm_file_bootstrap_data",
     "get_model_bootstrap_data",

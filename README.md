@@ -56,7 +56,7 @@ subscription. Everything runs on your hardware.
 |---------|-------------|
 | **🤖 AI Companion** | Shape a named, voiced companion with persistent personality, shifting mood, and long-term memory built from your conversations |
 | **🎨 Layered Canvas** | Draw, paint, generate, and filter on a multi-layer canvas — convert sketches to images, composite scenes, and iterate in place |
-| **🖼️ Image Generation** | SDXL and Z-Image Turbo with LoRA, embeddings, image-to-image, inpainting, and post-process filters, background removal |
+| **🖼️ Image Generation** | Z-Image Turbo with embeddings, image-to-image, inpainting, and post-process filters, background removal |
 | **🗣️ Voice Conversation** | Full TTS and STT — speak to your companion and hear it respond in a voice you choose |
 | **🧠 Memory & Recall** | Companion builds long-term memory of you across sessions with RAG-powered recall |
 | **🌤️ Environmental Awareness** | Companion is aware of time, date, and local weather — grounded in the real moment |
@@ -343,7 +343,6 @@ AI Runner downloads essential TTS/STT models automatically. LLM and image models
 |----------|-------|------|
 | **LLM (default)** | Qwen3.5-9B, GGUF `Q8_0` | ~12 GB VRAM |
 | **Image** | Stable Diffusion 1.5 | ~2 GB |
-| **Image** | SDXL 1.0 | ~6 GB |
 | **Image** | Z-Image Turbo | ~12 GB |
 | **TTS** | OpenVoice | 654 MB |
 | **STT** | `Systran/faster-distil-whisper-large-v3` | — |
@@ -371,8 +370,8 @@ ship a GGUF variant, and "Custom Local Path" points at your own file.
 | `airunner-generate-cert` | Generate SSL certificate |
 
 **Note:** To download models, use *Tools → Download Models* from the main
-application menu. The GUI now opens a filtered CivitAI browser for SDXL 1.0
-and Z-Image Turbo models and queues downloads through the local daemon. You
+application menu. The GUI now opens a filtered CivitAI browser for Z-Image
+Turbo models and queues downloads through the local daemon. You
 can also use `airunner-hf-download` / `airunner-civitai-download` from the
 command line.
 

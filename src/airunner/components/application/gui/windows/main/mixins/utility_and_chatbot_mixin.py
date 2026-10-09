@@ -113,7 +113,6 @@ class UtilityAndChatbotMixin:
         settings_resources = [
             "ApplicationSettings",
             "ActiveGridSettings",
-            "ControlnetSettings",
             "ImageToImageSettings",
             "OutpaintSettings",
             "DrawingPadSettings",

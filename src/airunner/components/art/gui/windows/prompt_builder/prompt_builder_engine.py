@@ -2,13 +2,9 @@
 
 This module recreates the classic AI Runner "Prompt Builder" concept (a
 template with named slots filled from curated word lists) but rebuilds the
-output around the prompt structures recommended for the two generators
-this app supports:
-
-* Z-Image Turbo — a 6-part single positive prompt (no negative prompt, no
-  CFG, so every constraint must be phrased positively).
-* Stable Diffusion XL (SDXL) — a layered positive prompt plus a negative
-  "bug list" prompt.
+output around the prompt structure recommended for Z-Image Turbo: a
+6-part single positive prompt (no negative prompt, no CFG, so every
+constraint must be phrased positively).
 
 No LLM is involved anywhere in this pipeline. Every value is picked from a
 local, deterministic vocabulary, so generation is fast, offline, and fully
@@ -498,29 +494,6 @@ QUALITY_TERMS = [
     "exceptional clarity, no motion blur, crisp line work",
 ]
 
-# SDXL-specific negative-prompt vocabulary ("bug list")
-SDXL_NEGATIVE_TERMS = [
-    "text",
-    "watermark",
-    "extra fingers",
-    "fused fingers",
-    "deformed hands",
-    "blurry face",
-    "duplicate",
-    "mutation",
-    "bad anatomy",
-    "worst quality",
-    "low quality",
-    "jpeg artifacts",
-]
-
-SDXL_STYLE_NEGATIVES = {
-    "Photorealistic": "CGI, plastic skin, 3d render, anime, overexposed",
-    "Cinematic": "flat lighting, lens distortion, frame artifacts, oversaturated",
-    "Artistic": "photorealistic, 3d render, messy lines, low contrast",
-    "Digital": "photorealistic, blurry, low contrast, noisy, sketchy",
-}
-
 # ---------------------------------------------------------------------------
 # Data model
 # ---------------------------------------------------------------------------
@@ -556,7 +529,6 @@ class PromptBuilderState:
     custom_subject: str = ""
     custom_scene: str = ""
     custom_style: str = ""
-    custom_negative: str = ""
     prefix: str = ""
     suffix: str = ""
     # ``True``: slots still set to "Random" draw a fresh random value on every
@@ -565,33 +537,28 @@ class PromptBuilderState:
     # ``None`` means "draw a fresh seed for this build" (recommended for the
     # UI flow, which advances the seed after each generate anyway).
     seed: Optional[int] = None
-    target_generator: str = "zimage"  # "zimage" | "stablediffusion"
 
 
 class PromptBuilderEngine:
-    """Builds Z-Image and SDXL prompts from a :class:`PromptBuilderState`.
+    """Builds Z-Image prompts from a :class:`PromptBuilderState`.
 
     A single shared :class:`random.Random` instance is used for the whole
     build so every "Random" slot draws from the same uncorrelated stream.
     """
 
-    def __init__(self, target_generator: str = "zimage"):
-        self.target_generator = target_generator
+    def __init__(self):
         self._rng: random.Random = random.Random()
 
     # -- public API ----------------------------------------------------------
 
     def build(self, state: PromptBuilderState) -> PromptBuilderResult:
-        """Build the positive (and where relevant negative) prompts."""
+        """Build the positive prompt."""
         if state.seed is None:
             # Fresh seed per build so repeated Generates differ.
             self._rng = random.Random()
         else:
             self._rng = random.Random(state.seed)
-        if state.target_generator == "stablediffusion":
-            prompt, negative = self._build_sdxl(state)
-        else:
-            prompt, negative = self._build_zimage(state)
+        prompt, negative = self._build_zimage(state)
         prompt = self._apply_prefix_suffix(prompt, state)
         result = PromptBuilderResult(
             prompt=prompt,
@@ -681,47 +648,6 @@ class PromptBuilderEngine:
         prompt = ", ".join(part for part in parts if part)
         # Z-Image Turbo ignores negative prompts entirely.
         return prompt, ""
-
-    # -- SDXL (layered prompt + negative bug list) ---------------------------
-
-    def _build_sdxl(self, state: PromptBuilderState) -> tuple[str, str]:
-        parts: List[str] = []
-
-        # 1. Layout & core scene
-        parts.append(self._subject(state))
-
-        # 2. Environment
-        scene = self._scene(state)
-        if scene:
-            parts.append(scene)
-
-        # 3. Composition
-        composition = self._composition(state)
-        if composition:
-            parts.append(composition)
-
-        # 4. Texture & style (includes lighting cues)
-        lighting = self._pick(LIGHTING, state, "lighting")
-        if lighting:
-            parts.append(lighting)
-        style = self._style(state)
-        if style:
-            parts.append(style)
-        if state.custom_style:
-            parts.append(state.custom_style.strip().rstrip(","))
-
-        # 5. Negative prompt (bug list)
-        negatives: List[str] = []
-        if state.style_group in SDXL_STYLE_NEGATIVES:
-            negatives.append(SDXL_STYLE_NEGATIVES[state.style_group])
-        negatives.extend(SDXL_NEGATIVE_TERMS)
-        if state.custom_negative:
-            negatives.append(state.custom_negative.strip().rstrip(","))
-        # De-duplicate while preserving order.
-        negative = ", ".join(dict.fromkeys(negatives))
-
-        prompt = ", ".join(part for part in parts if part)
-        return prompt, negative
 
     # -- shared fragment builders --------------------------------------------
 

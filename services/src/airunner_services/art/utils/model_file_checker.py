@@ -2,7 +2,8 @@
 
 This module provides functionality to verify that all required files for a
 model are present on disk, and to initiate downloads for missing files.
-Supports all model types: Art (SD, SDXL, Z-Image), LLM, STT (Whisper), TTS (OpenVoice).
+Supports all model types: Art (Z-Image, upscaler), LLM, STT
+(Whisper), TTS (OpenVoice).
 """
 
 import os
@@ -39,8 +40,7 @@ class ModelFileChecker:
         Args:
             model_type: Type of model (art, llm, stt, tts_openvoice)
             model_id: Model identifier (repo_id or version name)
-            version: Model version (for art models like "SDXL 1.0" and
-                "Z-Image Turbo")
+            version: Model version (for art models like "Z-Image Turbo")
             pipeline_action: Pipeline action (for art models like "txt2img", "inpaint")
 
         Returns:
@@ -67,8 +67,7 @@ class ModelFileChecker:
             model_path: Path to the model directory or GGUF file
             model_type: Type of model (art, llm, stt, tts_openvoice)
             model_id: Model identifier (repo_id for non-art models)
-            version: Model version (for art models like "Z-Image Turbo",
-                "SDXL 1.0")
+            version: Model version (for art models like "Z-Image Turbo")
             pipeline_action: Pipeline action (for art models like "txt2img", "inpaint")
 
         Returns:
@@ -213,7 +212,7 @@ class ModelFileChecker:
         """Get HuggingFace repo ID for a given model version.
 
         Args:
-            version: Model version (e.g., "SDXL 1.0", "Z-Image Turbo",
+            version: Model version (e.g., "Z-Image Turbo",
                 "Safety Checker")
             pipeline_action: Pipeline action (e.g., "txt2img", "inpaint", "safety_checker")
 
@@ -255,8 +254,7 @@ class ModelFileChecker:
             model_path: Path to the model
             model_type: Type of model (art, llm, stt, tts_openvoice)
             model_id: Model identifier (repo_id for non-art models)
-            version: Model version (for art models like "Z-Image Turbo",
-                "SDXL 1.0")
+            version: Model version (for art models like "Z-Image Turbo")
             pipeline_action: Pipeline action (for art models like "txt2img", "inpaint")
 
         Returns:

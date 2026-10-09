@@ -981,7 +981,6 @@
  </resources>
  <connections/>
  <slots>
-  <slot>toggle_controlnet(bool)</slot>
   <slot>toggle_drawing_pad(bool)</slot>
   <slot>toggle_outpaint(bool)</slot>
  </slots>
