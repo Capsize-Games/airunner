@@ -52,6 +52,12 @@ jobs:
           pip install -e "./services[$TEST_PROFILES]"
           pip install -e ".[$TEST_PROFILES]"
 
+      # Required deterministic checks (C01: safety, auth, download,
+      # data migration). This list is the PR-side half of the release
+      # gate: linux-candidate in pypi-dispatch.yml runs the same
+      # safety/auth/download/migration files before assembling the
+      # bundle, and candidate-gate blocks promotion unless the full
+      # required set reports success. No continue-on-error here.
       - name: Run runtime contract tests
         run: |
           pytest \
@@ -66,6 +72,9 @@ jobs:
             services/tests/test_zimage_model_dir_config.py \
             services/tests/test_third_party_notices.py \
             services/tests/test_llm_request_for_action_parity.py \
+            services/tests/test_content_safety_gate.py \
+            services/tests/test_download_security.py \
+            services/tests/test_release_b02.py \
             -v \
             --tb=short \
             --junitxml=runtime-contracts.xml

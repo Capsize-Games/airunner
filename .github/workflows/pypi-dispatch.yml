@@ -22,7 +22,289 @@ env:
   PYTHON_VERSION: "3.13"
 
 jobs:
+  provision-policy:
+    # Trusted release-only policy provisioning (S06). Retrieves the
+    # already-compiled, signed private policy artifact with protected
+    # release credentials, verifies its expected digest plus the
+    # detached Ed25519 sidecar, and stages the verified bytes for the
+    # release bundle. Never runs on untrusted PR code: this workflow
+    # has no pull_request trigger, this job additionally requires the
+    # release event, and secrets live in the protected `release-policy`
+    # environment (owner-managed; see
+    # release-planning/linux-v1/policy-provisioning.md). All actions
+    # below are pinned to immutable commit SHAs.
+    if: github.event_name == 'release'
+    runs-on: ubuntu-latest
+    environment: release-policy
+    permissions:
+      contents: read
+
+    steps:
+      - name: Check out release tag
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.event.release.tag_name }}
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install "cryptography==46.0.7"
+
+      # Secrets arrive via the environment only and are never echoed,
+      # listed, or dumped: no `set -x`, no `env` output, no debug
+      # artifacts. The stage script prints counts and the signing key
+      # ID only -- never terms, hashes, digests, or key material.
+      - name: Retrieve and stage signed policy artifact
+        env:
+          POLICY_ARTIFACT_URL: ${{ secrets.POLICY_ARTIFACT_URL }}
+          POLICY_ARTIFACT_TOKEN: ${{ secrets.POLICY_ARTIFACT_TOKEN }}
+          POLICY_ARTIFACT_SHA256: ${{ secrets.POLICY_ARTIFACT_SHA256 }}
+          POLICY_TRUST_STORE_JSON: ${{ secrets.POLICY_TRUST_STORE_JSON }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/policy-release" "$RUNNER_TEMP/policy-staged"
+          curl -fsSL -H "Authorization: Bearer $POLICY_ARTIFACT_TOKEN" \
+            "$POLICY_ARTIFACT_URL" \
+            -o "$RUNNER_TEMP/policy-release/policy_terms.dat"
+          curl -fsSL -H "Authorization: Bearer $POLICY_ARTIFACT_TOKEN" \
+            "$POLICY_ARTIFACT_URL.sig" \
+            -o "$RUNNER_TEMP/policy-release/policy_terms.dat.sig"
+          printf '%s' "$POLICY_TRUST_STORE_JSON" \
+            > "$RUNNER_TEMP/policy-release/trust-store.json"
+          python scripts/build_policy_terms.py --stage-release \
+            --artifact "$RUNNER_TEMP/policy-release/policy_terms.dat" \
+            --trust-store "$RUNNER_TEMP/policy-release/trust-store.json" \
+            --expected-sha256 "$POLICY_ARTIFACT_SHA256" \
+            --output "$RUNNER_TEMP/policy-staged/policy_terms.dat"
+          cp "$RUNNER_TEMP/policy-release/policy_terms.dat.sig" \
+            "$RUNNER_TEMP/policy-staged/policy_terms.dat.sig"
+          # Drop credential-derived material; only verified hashes plus
+          # the detached signature remain for the bundle fragment.
+          rm "$RUNNER_TEMP/policy-release/trust-store.json"
+
+      # The fragment holds verified hashes plus the detached signature:
+      # no source list, no keys. It is a release-bundle input with a
+      # one-day retention, not a general downloadable artifact.
+      - name: Upload verified policy fragment
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: policy-bundle-fragment
+          path: ${{ runner.temp }}/policy-staged/policy_terms.dat*
+          if-no-files-found: error
+          retention-days: 1
+
+  provision-policy-fixture:
+    # Secret-free wiring check (S06): exercises the same release-stage
+    # script with throwaway keys and synthetic data. No environment, no
+    # secrets; safe to run on every dispatch of this workflow.
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install "cryptography==46.0.7" pytest pyyaml
+
+      - name: Validate release-stage wiring with synthetic fixtures
+        run: |
+          PYTHONPATH=services/src python -m pytest \
+            services/tests/test_release_s06.py -o addopts='' -q
+
+  linux-candidate:
+    # Linux v1 release-candidate assembly (C01). Runs the required
+    # deterministic checks (safety/auth/download/data migration),
+    # freezes the services bundle with the provisioned policy and
+    # pinned sidecars, verifies the single candidate manifest, and
+    # uploads the bundle as candidate artifacts. This job creates a
+    # candidate only: it must never publish to PyPI/itch itself --
+    # promotion goes through candidate-gate below.
+    #
+    # Runs unless an upstream hard-failed: on workflow_dispatch the
+    # release-only upstreams skip by design and the candidate builds
+    # with the packaged policy data and no sidecars (the inspector
+    # warns); on release both must have run for --require-sidecars.
+    needs: [provision-policy, fetch-sidecars]
+    if: >-
+      always() &&
+      needs.provision-policy.result != 'failure' &&
+      needs.provision-policy.result != 'cancelled' &&
+      needs.fetch-sidecars.result != 'failure' &&
+      needs.fetch-sidecars.result != 'cancelled'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip setuptools wheel
+          # Freeze profile from the P05 bundle spec: the desktop
+          # aggregate of services/setup.py under the P02 lock, plus
+          # the pinned PyInstaller recipe (spec [bundle].tool) and
+          # the development extra for the required checks below.
+          pip install -c package/constraints-linux-nvidia-cu129.txt \
+            "pyinstaller==6.12.0"
+          pip install -c package/constraints-linux-nvidia-cu129.txt \
+            -e "./services[desktop,development]"
+
+      # Required deterministic checks (C01): safety, auth, download,
+      # and data-migration coverage. Same files as the PR contract
+      # list in eval-tests.yml; no continue-on-error anywhere here.
+      - name: Run required deterministic checks
+        run: |
+          PYTHONPATH=services/src python -m pytest \
+            services/tests/test_content_safety_gate.py \
+            services/tests/test_model_load_security.py \
+            services/tests/test_loopback_auth.py \
+            services/tests/test_secret_storage.py \
+            services/tests/test_download_security.py \
+            services/tests/test_release_b02.py \
+            -o addopts='' -q
+        env:
+          AIRUNNER_HEADLESS: "1"
+          AIRUNNER_HTTP_PORT: "8188"
+          AIRUNNER_HTTP_HOST: "127.0.0.1"
+
+      - name: Download verified policy fragment
+        if: needs.provision-policy.result == 'success'
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: policy-bundle-fragment
+          path: policy-fragment
+
+      # The freeze collects content_safety/data/*.dat* from the
+      # source tree (spec [[data]]), so the staged production policy
+      # lands inside the frozen bundle and its manifest.
+      - name: Install staged policy data
+        if: needs.provision-policy.result == 'success'
+        run: |
+          ls -1 policy-fragment/
+          cp policy-fragment/policy_terms.dat \
+            services/src/airunner_services/content_safety/data/policy_terms.dat
+          cp policy-fragment/policy_terms.dat.sig \
+            services/src/airunner_services/content_safety/data/policy_terms.dat.sig
+
+      - name: Download sidecar bundle artifacts
+        if: needs.fetch-sidecars.result == 'success'
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: sidecar-bundles
+          path: release-assets/sidecars
+
+      # The assembler's internal gate verifies the frozen tree,
+      # policy payload, and manifest; sidecars stage next, and the
+      # standalone verify below re-gates the final shipped bytes.
+      - name: Assemble candidate bundle
+        run: |
+          python scripts/assemble_linux_bundle.py \
+            --distpath build/bundle-dist \
+            --workpath build/bundle-work
+
+      # Native sidecars land in bin/ after the freeze (PyInstaller
+      # wipes its output dir, so nothing can be pre-seeded) and the
+      # manifest is extended over them, keeping native artifacts and
+      # signed policy in the same manifest. Names cite spec
+      # [runtimes]; runs on release only.
+      - name: Stage sidecars and extend manifest
+        if: needs.fetch-sidecars.result == 'success'
+        run: |
+          bash packaging/linux/stage-sidecars.sh \
+            --tarball \
+            release-assets/sidecars/runtime-sidecars-linux.tar.gz \
+            --bundle build/bundle-dist/airunner-daemon \
+            -- llama-server whisper-server
+
+      # Re-verify the exact bytes about to ship: manifest shape,
+      # hashes, required resources, and the exclusion scan.
+      - name: Verify candidate manifest
+        run: |
+          extra=""
+          if [ "${{ github.event_name }}" = "release" ]; then
+            extra="--require-sidecars"
+          fi
+          python scripts/inspect_linux_bundle.py \
+            build/bundle-dist/airunner-daemon $extra
+
+      - name: Upload Linux candidate bundle
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: linux-candidate
+          path: build/bundle-dist/airunner-daemon
+          if-no-files-found: error
+
+  candidate-gate:
+    # Promotion gate (C01): every required upstream result must be
+    # exactly `success`. A required check that failed, was skipped
+    # or cancelled, or is missing (empty result) blocks promotion --
+    # there is deliberately no continue-on-error and no
+    # `success || skipped` tolerance on this path. The gate script
+    # knows the per-event required set: on release the trusted
+    # provisioning and sidecar jobs must have run; on
+    # workflow_dispatch they skip by design. Publish steps below
+    # need this job, so nothing ships without a green candidate.
+    needs:
+      - provision-policy
+      - provision-policy-fixture
+      - fetch-sidecars
+      - linux-candidate
+    if: always()
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+
+      - name: Gate candidate promotion on required checks
+        run: |
+          bash packaging/linux/candidate-gate.sh \
+            --event "${{ github.event_name }}" \
+            --check "provision-policy=${{ needs.provision-policy.result }}" \
+            --check "provision-policy-fixture=${{ needs.provision-policy-fixture.result }}" \
+            --check "fetch-sidecars=${{ needs.fetch-sidecars.result }}" \
+            --check "linux-candidate=${{ needs.linux-candidate.result }}"
+
   build-python-package:
+    # On a release, the verified policy fragment must stage first; a
+    # failed provisioning fails the release (this job skips). Ordinary
+    # dispatches skip provisioning and build with the packaged data.
+    # Nothing here publishes without a green candidate (C01): the
+    # gate result must be exactly `success`, never skipped.
+    needs: [provision-policy, candidate-gate]
+    if: >-
+      always() && (needs.provision-policy.result == 'success' ||
+      needs.provision-policy.result == 'skipped') &&
+      needs.candidate-gate.result == 'success'
     runs-on: ubuntu-latest
 
     steps:
@@ -37,6 +319,26 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install build
+
+      # Release only: install the verified policy fragment staged by
+      # provision-policy so the built services package carries the
+      # production hashes plus the detached signature. Dispatches skip
+      # this and build with the packaged (empty/synthetic) data.
+      - name: Download verified policy fragment
+        if: needs.provision-policy.result == 'success'
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: policy-bundle-fragment
+          path: policy-fragment
+
+      - name: Install staged policy data
+        if: needs.provision-policy.result == 'success'
+        run: |
+          ls -1 policy-fragment/
+          cp policy-fragment/policy_terms.dat \
+            services/src/airunner_services/content_safety/data/policy_terms.dat
+          cp policy-fragment/policy_terms.dat.sig \
+            services/src/airunner_services/content_safety/data/policy_terms.dat.sig
 
       - name: Build packages
         run: |
@@ -142,8 +444,10 @@ jobs:
           path: release-assets/sidecars/*
 
   publish-release-assets:
+    # Promotes the green candidate only (C01): the gate must have
+    # passed, which already implies the candidate bundle verified.
     if: github.event_name == 'release'
-    needs: [build-python-package, fetch-sidecars]
+    needs: [build-python-package, fetch-sidecars, candidate-gate]
     runs-on: ubuntu-latest
 
     steps:
