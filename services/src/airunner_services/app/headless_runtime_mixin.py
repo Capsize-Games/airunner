@@ -29,6 +29,15 @@ if TYPE_CHECKING:
 ARTAPIService = None
 LLMAPIService = None
 
+# sqlite reports a first-boot empty database this way; the migration
+# retries on the next startup, so it stays quiet (issue #2245).
+_SCHEMA_NOT_READY_MARKER = "no such table"
+
+
+def _is_schema_not_ready(exc: BaseException) -> bool:
+    """True when the database schema has no tables yet."""
+    return _SCHEMA_NOT_READY_MARKER in str(exc).lower()
+
 
 def _get_headless_api_service_classes():
     """Return lazily imported API service classes for headless mode."""
@@ -355,6 +364,12 @@ class HeadlessRuntimeMixin:
             self._migrate_json_to_markdown(json_path)
             self._mark_migration_complete()
         except Exception as exc:
+            if _is_schema_not_ready(exc):
+                self.logger.info(
+                    "Database schema not ready; knowledge "
+                    "migration deferred to next startup."
+                )
+                return
             self.logger.error(
                 "Failed to run knowledge migration: %s. Migration NOT marked "
                 "complete - will retry on next startup.",

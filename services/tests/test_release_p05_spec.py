@@ -13,6 +13,7 @@ from typing import Any
 
 from test_release_p05_support import (
     MATRIX_PATH,
+    REPO_ROOT,
     inspect_mod,
     module_file,
     services_setup,
@@ -129,3 +130,11 @@ def test_console_scripts_match_services_setup(
 def test_console_script_modules_exist(spec: dict[str, Any]) -> None:
     for entry in spec.get("console_script", []):
         assert module_file(str(entry["module"])).is_file()
+
+
+def test_runtime_hooks_exist_on_disk(spec: dict[str, Any]) -> None:
+    """Every declared runtime hook resolves to a checkout file."""
+    hooks = spec["code"].get("runtime_hooks", [])
+    assert hooks, "spec declares no runtime hooks"
+    for hook in hooks:
+        assert (REPO_ROOT / str(hook)).is_file(), hook

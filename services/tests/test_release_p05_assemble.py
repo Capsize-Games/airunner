@@ -10,9 +10,23 @@ from __future__ import annotations
 
 import subprocess
 import sys
+import types
 from pathlib import Path
+from typing import Any
 
-from test_release_p05_support import SCRIPTS_DIR, SPEC_PATH, scrubbed_env
+import pytest
+
+from test_release_p05_support import (
+    REPO_ROOT,
+    SCRIPTS_DIR,
+    SPEC_PATH,
+    assemble_mod,
+    inspect_mod,
+    scrubbed_env,
+    spec,
+)
+
+__all__ = ["assemble_mod", "inspect_mod", "spec"]
 
 
 def _dry_run_argv(tmp_path: Path) -> list[str]:
@@ -61,6 +75,8 @@ def _assert_recipe_flags(stdout: str) -> None:
         "--exclude-module shiboken6",
         "--collect-submodules airunner_services.runtimes",
         "--copy-metadata airunner-services",
+        "--runtime-hook",
+        "pyi_rth_transformers_frozen.py",
         "--add-data",
         "alembic.ini",
     ):
@@ -87,3 +103,22 @@ def test_assemble_dry_run_without_repo_pythonpath(
     """Dry-run works from an unrelated cwd with PYTHONPATH scrubbed."""
     proc = _dry_run_proc(tmp_path, extra_env=scrubbed_env())
     assert proc.returncode == 0, proc.stdout + proc.stderr
+
+
+def test_build_command_rejects_missing_runtime_hook(
+    tmp_path: Path,
+    assemble_mod: types.ModuleType,
+    spec: dict[str, Any],
+) -> None:
+    """A declared-but-absent runtime hook fails the freeze recipe."""
+    bad = dict(spec)
+    bad["code"] = dict(spec["code"], runtime_hooks=["no/such/hook.py"])
+    with pytest.raises(SystemExit, match="runtime hook"):
+        assemble_mod.build_command(
+            bad,
+            REPO_ROOT,
+            tmp_path / "entry.py",
+            tmp_path / "dist",
+            tmp_path / "work",
+            "pyinstaller",
+        )

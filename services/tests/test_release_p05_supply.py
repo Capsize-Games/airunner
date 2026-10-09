@@ -11,6 +11,7 @@ CPU-only.
 from __future__ import annotations
 
 import ast
+import re
 import types
 from pathlib import Path
 from typing import Any
@@ -171,15 +172,30 @@ def test_exclusion_allowlist_paths_are_exact(
         assert not any(char in text for char in "*?[]")
 
 
+def _lock_text(spec: dict[str, Any]) -> str:
+    """Return the P02 constraints lock text for the bundle spec."""
+    lock_path = REPO_ROOT / str(spec["bundle"]["constraints"])
+    return lock_path.read_text(encoding="utf-8")
+
+
 def test_extension_modules_are_pinned_requirements(
     spec: dict[str, Any],
 ) -> None:
-    """Extension modules name pinned services requirements."""
+    """Extension tops are pinned in setup.py or the P02 lock.
+
+    Dotted entries name a submodule .so; the pin applies to the
+    top-level distribution, which may be transitive (scipy arrives
+    via scikit-learn, pinned only in the lock).
+    """
     setup_text = SERVICES_SETUP.read_text(encoding="utf-8")
+    lock_text = _lock_text(spec)
     names = spec["code"].get("extension_modules", [])
     assert names
     for name in names:
-        assert f'"{name}==' in setup_text, name
+        top = str(name).split(".")[0]
+        direct = f'"{top}==' in setup_text
+        locked = re.search(rf"^{re.escape(top)}==", lock_text, re.M)
+        assert direct or locked, name
 
 
 def _prune_fixture(root: Path) -> Path:

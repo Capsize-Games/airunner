@@ -138,6 +138,11 @@ def check_toc_modules(
     return problems, warnings
 
 
+def _extension_glob(name: str) -> str:
+    """Return the _internal/ glob for a (possibly dotted) extension."""
+    return "/".join(name.split(".")) + "*.so"
+
+
 def check_extension_modules(
     bundle_dir: Path, spec: dict[str, Any]
 ) -> list[str]:
@@ -145,8 +150,21 @@ def check_extension_modules(
     problems: list[str] = []
     internal = bundle_dir / "_internal"
     for name in spec["code"].get("extension_modules", []):
-        if not list(internal.glob(f"{name}*.so")):
+        if not list(internal.glob(_extension_glob(str(name)))):
             problems.append(f"frozen bundle lacks native extension {name}")
+    return problems
+
+
+def check_frozen_sources(
+    bundle_dir: Path, spec: dict[str, Any]
+) -> list[str]:
+    """Return frozen import-scan sources missing from the tree."""
+    problems: list[str] = []
+    for marker in spec["code"].get("frozen_source_markers", []):
+        if not (bundle_dir / str(marker)).is_file():
+            problems.append(
+                f"frozen bundle lacks import-scan source {marker}"
+            )
     return problems
 
 
