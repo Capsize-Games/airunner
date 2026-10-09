@@ -50,6 +50,12 @@ pip install -e ./native
 pip install -e .
 ```
 
+Worktrees: pytest pins imports to the checkout under test (issue #2246),
+so running the suite from a worktree with another checkout's venv still
+exercises the worktree's sources. That pin only applies under pytest;
+running the app itself from a worktree needs that checkout's own
+editable install (or its own venv as above).
+
 ## Test Running
 
 The desktop package has both GUI-safe unit coverage and real daemon-backed

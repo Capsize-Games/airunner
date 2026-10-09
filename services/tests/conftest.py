@@ -21,19 +21,26 @@ _TEST_ROOT = Path(__file__).resolve().parent
 _SERVICES_ROOT = _TEST_ROOT.parent
 _PROJECT_ROOT = _SERVICES_ROOT.parent
 
-for _path in (
-    _TEST_ROOT,
-    # "eval" (services/tests/eval) moved to its own repository
-    # (issue #2194, https://github.com/Capsize-Games/airunner-eval).
-    _PROJECT_ROOT / "services" / "src",
-    # airunner_common moved to its own repository (issue #2197,
-    # https://github.com/Capsize-Games/airunner-common); it's a normal
-    # installed dependency of services/setup.py now, not a raw local
-    # path. The old "<repo>/model/src" entry was a phantom path and is
-    # removed.
-    _PROJECT_ROOT / "native" / "src",
-    _PROJECT_ROOT / "src",
+# Issue #2246: these entries must come BEFORE the venv's editable-install
+# pointers (``.pth`` path entries processed at interpreter startup), so a
+# worktree reusing another checkout's venv still imports its own sources.
+# Appending here used to leave the foreign checkout first on sys.path.
+for _path in reversed(
+    (
+        _TEST_ROOT,
+        # "eval" (services/tests/eval) moved to its own repository
+        # (issue #2194, https://github.com/Capsize-Games/airunner-eval).
+        _PROJECT_ROOT / "services" / "src",
+        # airunner_common moved to its own repository (issue #2197,
+        # https://github.com/Capsize-Games/airunner-common); it's a normal
+        # installed dependency of services/setup.py now, not a raw local
+        # path. The old "<repo>/model/src" entry was a phantom path and is
+        # removed.
+        _PROJECT_ROOT / "native" / "src",
+        _PROJECT_ROOT / "src",
+    )
 ):
     _path_str = str(_path)
-    if _path_str not in sys.path:
-        sys.path.append(_path_str)
+    if _path_str in sys.path:
+        sys.path.remove(_path_str)
+    sys.path.insert(0, _path_str)

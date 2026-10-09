@@ -58,6 +58,12 @@ Use `services[desktop]` when you want the broader desktop-oriented extra
 set, and use `./deployment/install_distributed.sh` when you are installing
 the daemon or GUI client into separate roots.
 
+Worktrees: pytest pins imports to the checkout under test (issue #2246),
+so running the suite from a worktree with another checkout's venv still
+exercises the worktree's sources. That pin only applies under pytest;
+running the daemon itself from a worktree needs that checkout's own
+editable install (or its own venv as above).
+
 ## Test Running
 
 The quickest service checks are the daemon runtime smoke commands exposed
