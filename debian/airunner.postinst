@@ -18,13 +18,20 @@ case "$1" in
         mkdir -p /var/lib/airunner/models
         mkdir -p /var/log/airunner
         if [ ! -f /etc/airunner/daemon.yaml ]; then
-            cp /usr/share/doc/airunner/examples/daemon.yaml \
-                /etc/airunner/daemon.yaml
+            if [ -f /usr/share/airunner/daemon.yaml ]; then
+                cp /usr/share/airunner/daemon.yaml \
+                    /etc/airunner/daemon.yaml
+            else
+                echo "airunner: seed config /usr/share/airunner/daemon.yaml missing; run 'airunner-daemon --generate-config' (issue #2250)" >&2
+            fi
         fi
         chown -R airunner:airunner /var/lib/airunner /var/log/airunner
-        chown root:airunner /etc/airunner /etc/airunner/daemon.yaml
+        chown root:airunner /etc/airunner
         chmod 0750 /etc/airunner
-        chmod 0640 /etc/airunner/daemon.yaml
+        if [ -f /etc/airunner/daemon.yaml ]; then
+            chown root:airunner /etc/airunner/daemon.yaml
+            chmod 0640 /etc/airunner/daemon.yaml
+        fi
         chmod 0700 /var/lib/airunner/runtime/configs \
             /var/lib/airunner/runtime/sockets \
             /var/lib/airunner/cache /var/lib/airunner/models

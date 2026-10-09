@@ -1,4 +1,8 @@
 debian/daemon.yaml usr/share/doc/airunner/examples
+# Canonical seed for /etc/airunner/daemon.yaml (postinst copies from
+# here, not from the doc dir: systems with path-exclude doc stripping
+# such as containers never install usr/share/doc; issue #2250).
+debian/daemon.yaml usr/share/airunner
 # Pure-python airunner_native launcher module (native/ sister dist). The
 # daemon imports it at startup; pybuild cannot build two source trees
 # into one binary package, so the module ships as files (no dist-info,

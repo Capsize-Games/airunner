@@ -2,7 +2,9 @@ airunner for Debian
 ------------------
 
 This is the SERVICES-ONLY apt packaging of AIRunner (issue #2237). It
-contains no Qt desktop client by owner decision. What you get:
+contains no Qt desktop client by owner decision. Supported on
+Ubuntu 26.04 and newer (the sqlalchemy 2.x dependency is not
+available on 24.04; issue #2250). What you get:
 
   * Python package airunner-services built from services/ via pybuild,
     exposing the airunner-daemon, airunner-headless and
