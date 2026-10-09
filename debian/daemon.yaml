@@ -1,0 +1,25 @@
+# Default daemon config shipped as an example by the services-only apt
+# package (issue #2237). postinst copies this to /etc/airunner/daemon.yaml
+# on first install only; later edits there are never overwritten.
+# Mirrors DaemonConfig._default_config (services/src/airunner_services/
+# runtimes/daemon_config.py): loopback-only 127.0.0.1:8188 with FHS paths.
+server:
+  host: 127.0.0.1
+  port: 8188
+  enable_cors: true
+  allowed_origins:
+    - http://localhost:*
+    - http://127.0.0.1:*
+models:
+  persistence_mode: timeout
+  timeout_minutes: 30
+  preload: []
+health:
+  heartbeat_interval: 30
+  heartbeat_file: /var/lib/airunner/runtime/daemon.heartbeat
+logging:
+  level: INFO
+  to_file: false
+  file: /var/log/airunner/daemon.log
+  max_bytes: 52428800
+  backup_count: 5

@@ -1,0 +1,27 @@
+Source: airunner
+Section: utils
+Priority: optional
+Maintainer: Capsize LLC <contact@capsizegames.com>
+Build-Depends: debhelper-compat (= 13),
+               dh-python,
+               pybuild-plugin-pyproject,
+               python3-all,
+               python3-setuptools,
+               python3-wheel
+Standards-Version: 4.6.2
+Rules-Requires-Root: no
+Homepage: https://github.com/Capsize-Games/airunner
+
+Package: airunner
+Architecture: all
+Depends: ${python3:Depends}, ${misc:Depends}, python3-yaml, adduser
+Description: Headless service daemon for AI Runner (services only)
+ The services/ package surface of AIRunner: headless orchestration layer
+ owning the daemon entry points, FastAPI server wiring, runtime registry,
+ downloads, persistence, lifecycle control, and modality services.
+ .
+ This package is services only (issue #2237): it ships the
+ airunner-daemon, airunner-headless and airunner-service console scripts
+ plus the airunner-headless systemd unit. It deliberately contains no Qt
+ desktop client. Heavy ML extras (torch, diffusers, llama.cpp bindings)
+ are not Debian-packaged; install them from PyPI when needed.

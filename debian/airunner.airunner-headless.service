@@ -1,0 +1,60 @@
+# FHS-rendered variant of deployment/systemd/airunner-headless.service for
+# the services-only apt package (issue #2237). The template placeholders
+# are resolved to fixed Debian paths: console script in /usr/bin (installed
+# by pybuild from SERVICE_CONSOLE_SCRIPTS), config in /etc/airunner,
+# writable state in /var/lib/airunner, logs in /var/log/airunner.
+# Loopback-only bind defaults are kept: daemon 127.0.0.1:8188 (see
+# DaemonConfig._default_config), HTTP 127.0.0.1:8080.
+[Unit]
+Description=AI Runner Headless Daemon
+Documentation=https://github.com/Capsize-Games/airunner
+After=network.target
+
+[Service]
+Type=simple
+User=airunner
+Group=airunner
+WorkingDirectory=/var/lib/airunner
+Environment="AIRUNNER_HEADLESS=1"
+Environment="AIRUNNER_DATA_DIR=/var/lib/airunner"
+Environment="AIRUNNER_BASE_PATH=/var/lib/airunner"
+Environment="AIRUNNER_RUNTIME_ROOT=/var/lib/airunner/runtime"
+Environment="AIRUNNER_RUNTIME_CONFIG_DIR=/var/lib/airunner/runtime/configs"
+Environment="AIRUNNER_RUNTIME_LOG_DIR=/var/log/airunner"
+Environment="AIRUNNER_RUNTIME_SOCKET_DIR=/var/lib/airunner/runtime/sockets"
+Environment="AIRUNNER_CACHE_DIR=/var/lib/airunner/cache"
+Environment="AIRUNNER_MODEL_DIR=/var/lib/airunner/models"
+Environment="AIRUNNER_DAEMON_CONFIG=/etc/airunner/daemon.yaml"
+Environment="AIRUNNER_RUNTIME_BIND_HOST=127.0.0.1"
+Environment="AIRUNNER_HTTP_HOST=127.0.0.1"
+Environment="AIRUNNER_HTTP_PORT=8080"
+Environment="AIRUNNER_LLM_ON=1"
+Environment="QT_QPA_PLATFORM=offscreen"
+Environment="QT_LOGGING_RULES=*.debug=false;qt.qpa.*=false"
+Environment="AIRUNNER_LOG_LEVEL=INFO"
+Environment="DEV_ENV=0"
+
+ExecStartPre=/bin/mkdir -p /var/lib/airunner/runtime/configs /var/lib/airunner/runtime/sockets /var/lib/airunner/cache /var/lib/airunner/models /var/log/airunner
+ExecStart=/usr/bin/airunner-headless --daemon-config /etc/airunner/daemon.yaml
+Restart=on-failure
+RestartSec=10
+TimeoutStopSec=30
+KillMode=mixed
+KillSignal=SIGTERM
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=airunner-headless
+
+LimitNOFILE=65536
+UMask=0077
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=full
+ProtectHome=read-only
+ReadWritePaths=/var/lib/airunner /var/log/airunner
+RestrictSUIDSGID=yes
+LockPersonality=yes
+RestrictRealtime=yes
+
+[Install]
+WantedBy=multi-user.target

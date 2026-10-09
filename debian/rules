@@ -1,0 +1,20 @@
+#!/usr/bin/make -f
+# Services-only apt packaging (issue #2237). The Python package surface
+# lives in services/ (services/setup.py + services/pyproject.toml), so
+# the pybuild steps run with that sourcedirectory; dh_install and friends
+# still run from the repo root. No Qt desktop is built or shipped.
+
+export PYBUILD_NAME = airunner-services
+
+%:
+	dh $@ --with python3 --buildsystem=pybuild --sourcedirectory=services
+
+# The services test suite needs network/GPU fixtures; it runs in CI, not
+# in the package build.
+override_dh_auto_test:
+	echo "dh_auto_test skipped: services tests run in CI, not debuild"
+
+# The unit is named airunner-headless, not airunner: --name makes
+# dh_installsystemd pick up debian/airunner.airunner-headless.service.
+override_dh_installsystemd:
+	dh_installsystemd --name=airunner-headless

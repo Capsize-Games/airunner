@@ -1,0 +1,8 @@
+# The postinst chown -R covers only the state dirs this package creates
+# (/var/lib/airunner, /var/log/airunner); recursive ownership is intended.
+airunner binary: recursive-privilege-change "chown -R" [postinst:*]
+# Both helpers are invoked through an explicit interpreter (/bin/bash in
+# docker_wrapper.py, bash in generate_cert.py), so the shipped
+# non-executable mode is correct.
+airunner binary: script-not-executable [usr/lib/python3/dist-packages/airunner_services/bin/docker.sh]
+airunner binary: script-not-executable [usr/lib/python3/dist-packages/airunner_services/bin/generate_cert.sh]

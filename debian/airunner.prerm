@@ -1,0 +1,8 @@
+#!/bin/sh
+# prerm for the services-only airunner package (issue #2237).
+# dh_installsystemd autoscript stops/disables airunner-headless.service.
+set -e
+
+#DEBHELPER#
+
+exit 0

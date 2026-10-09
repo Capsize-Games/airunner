@@ -1,0 +1,6 @@
+debian/airunner-daemon.1
+debian/airunner-headless.1
+debian/airunner-service.1
+debian/airunner-generate-migration.1
+debian/airunner-hf-download.1
+debian/airunner-civitai-download.1

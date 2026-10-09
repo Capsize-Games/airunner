@@ -72,7 +72,11 @@ CORE_REQUIREMENTS = [
     "pydantic>=2.7,<3.0",
     "nltk>=3.9.1",
     "alembic==1.13.2",
-    "sqlalchemy==2.0.38",
+    # Compatible-release bound (not ==): dh_python3 turns == into a
+    # distro upper bound that rejects newer compatible dist-packages
+    # (e.g. Debian trixie ships 2.0.40). The release-exact pin with
+    # hashes stays in package/constraints-linux-nvidia-cu129.txt (P02).
+    "sqlalchemy>=2.0.38,<2.1",
     "jinja2==3.1.6",
     "pyyaml==6.0.2",
     "python-dotenv==1.2.2",

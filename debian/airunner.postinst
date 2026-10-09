@@ -1,0 +1,42 @@
+#!/bin/sh
+# postinst for the services-only airunner package (issue #2237).
+# Creates the airunner system user, daemon config/state dirs, and seeds
+# /etc/airunner/daemon.yaml from the packaged example on first install.
+set -e
+
+case "$1" in
+    configure)
+        if ! getent passwd airunner >/dev/null; then
+            adduser --system --group --home /var/lib/airunner \
+                --no-create-home --gecos "AIRunner headless daemon" \
+                airunner
+        fi
+        mkdir -p /etc/airunner
+        mkdir -p /var/lib/airunner/runtime/configs
+        mkdir -p /var/lib/airunner/runtime/sockets
+        mkdir -p /var/lib/airunner/cache
+        mkdir -p /var/lib/airunner/models
+        mkdir -p /var/log/airunner
+        if [ ! -f /etc/airunner/daemon.yaml ]; then
+            cp /usr/share/doc/airunner/examples/daemon.yaml \
+                /etc/airunner/daemon.yaml
+        fi
+        chown -R airunner:airunner /var/lib/airunner /var/log/airunner
+        chown root:airunner /etc/airunner /etc/airunner/daemon.yaml
+        chmod 0750 /etc/airunner
+        chmod 0640 /etc/airunner/daemon.yaml
+        chmod 0700 /var/lib/airunner/runtime/configs \
+            /var/lib/airunner/runtime/sockets \
+            /var/lib/airunner/cache /var/lib/airunner/models
+        ;;
+    abort-upgrade|abort-remove|abort-deconfigure)
+        ;;
+    *)
+        echo "postinst called with unknown argument '$1'" >&2
+        exit 1
+        ;;
+esac
+
+#DEBHELPER#
+
+exit 0

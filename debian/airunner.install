@@ -1,0 +1,7 @@
+debian/daemon.yaml usr/share/doc/airunner/examples
+# Pure-python airunner_native launcher module (native/ sister dist). The
+# daemon imports it at startup; pybuild cannot build two source trees
+# into one binary package, so the module ships as files (no dist-info,
+# no airunner-native console script — nothing queries its metadata and
+# the CLI dispatches desktop flows out of scope for services-only).
+native/src/airunner_native usr/lib/python3/dist-packages

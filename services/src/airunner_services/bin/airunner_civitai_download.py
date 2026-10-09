@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 """CivitAI model downloader CLI tool.
 
 Download models from CivitAI using URLs. Supports progress bars and resumable downloads.

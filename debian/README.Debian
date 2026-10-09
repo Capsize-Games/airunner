@@ -1,0 +1,31 @@
+airunner for Debian
+------------------
+
+This is the SERVICES-ONLY apt packaging of AIRunner (issue #2237). It
+contains no Qt desktop client by owner decision. What you get:
+
+  * Python package airunner-services built from services/ via pybuild,
+    exposing the airunner-daemon, airunner-headless and
+    airunner-service console scripts in /usr/bin (plus the download
+    and migration helpers from SERVICE_CONSOLE_SCRIPTS).
+  * systemd unit airunner-headless.service, enabled on install,
+    running loopback-only by default (daemon 127.0.0.1:8188,
+    HTTP 127.0.0.1:8080).
+  * Default config seeded to /etc/airunner/daemon.yaml on first
+    install; writable state in /var/lib/airunner, logs journaled
+    (file logging only when the daemon config enables it).
+
+Heavy ML extras (torch/cu129 wheels, diffusers, llama-cpp-python and
+friends) are not Debian-packaged. Note the daemon currently requires
+torch to be importable before it serves anything (otherwise
+airunner-headless exits with a diagnostic naming the missing module);
+install extras from PyPI into a venv when a workload needs them:
+
+    /usr/bin/python3 -m venv /opt/airunner-ml && \
+    /opt/airunner-ml/bin/pip install 'airunner-services[headless]'
+
+Config: edit /etc/airunner/daemon.yaml, then
+`systemctl restart airunner-headless`. Logs: `journalctl -u
+airunner-headless`.
+
+ -- Capsize LLC <contact@capsizegames.com>  Thu, 08 Oct 2026

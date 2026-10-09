@@ -1,0 +1,15 @@
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Source: https://github.com/Capsize-Games/airunner
+
+Files: *
+Copyright: 2022-2025 Capsize LLC
+License: GPL-3.0-only
+ The project is GPL-3.0-only (issue #2058): the repo-root LICENSE file,
+ every license= metadata field and the PyPI classifiers agree.
+ .
+ On Debian systems the full text of the GNU General Public License
+ version 3 can be found in /usr/share/common-licenses/GPL-3.
+
+Files: debian/*
+Copyright: 2026 Capsize LLC
+License: GPL-3.0-only
