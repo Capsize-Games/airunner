@@ -23,6 +23,15 @@ from airunner_services.service_worker_manager import ServiceWorkerManager
 WorkerFactory = Callable[[type[Any]], Any]
 WorkerManagerFactory = Callable[[], Any]
 
+# sqlite reports a first-boot empty database this way; the model loads
+# on first request instead, so it stays quiet (issue #2248).
+_SCHEMA_NOT_READY_MARKER = "no such table"
+
+
+def _is_schema_not_ready(exc: BaseException) -> bool:
+    """Return True when the database schema has no tables yet."""
+    return _SCHEMA_NOT_READY_MARKER in str(exc).lower()
+
 
 class CoreLifecycleService:
     """Manage worker lifecycle for headless and daemon execution."""
@@ -285,6 +294,12 @@ class CoreLifecycleService:
         try:
             return self._preload_settings_store.resolve_model_path()
         except Exception as exc:
+            if _is_schema_not_ready(exc):
+                self.logger.info(
+                    "Database schema not ready; LLM preload "
+                    "deferred to first request."
+                )
+                return None
             self.logger.info("Warning: Could not pre-load model: %s", exc)
             self.logger.info("Model will load on first request")
             return None
