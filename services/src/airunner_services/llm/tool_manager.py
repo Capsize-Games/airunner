@@ -19,6 +19,63 @@ from airunner_services.llm_workflow_events import (
 )
 
 
+def _invoke_worker_tool(
+    logger: Any, tool_record: Any, name: str, caps: Any, timeout: int,
+    args: Any, kwargs: Any,
+) -> Any:
+    """Invoke one custom tool in the worker and record provenance."""
+    from airunner_services.llm.core.tool_worker_ipc import STATUS_OK
+    from airunner_services.llm.core.tool_worker_runner import (
+        run_custom_tool,
+    )
+
+    result = run_custom_tool(
+        tool_name=name, code=tool_record.code, args=args,
+        kwargs=kwargs, capabilities=caps, timeout_ms=timeout)
+    if result.status == STATUS_OK:
+        tool_record.increment_usage(success=True)
+        return result.value
+    tool_record.increment_usage(success=False, error=result.error)
+    logger.error("Custom tool '%s' failed (%s): %s",
+                 name, result.status, result.error)
+    return f"Error: {result.error}"
+
+
+def _build_tracked_tool(
+    logger: Any, tool_record: Any, meta: tuple[str, str, bool]
+) -> Callable[..., Any]:
+    """Wrap one described tool record in a worker-backed handle."""
+    from airunner_services.llm.core.tool_worker_ipc import (
+        Capabilities, normalize_timeout_ms)
+    name, description, return_direct = meta
+    caps = Capabilities.from_unknown(
+        getattr(tool_record, "capabilities", None))
+    timeout = normalize_timeout_ms(getattr(tool_record, "timeout_ms", None))
+
+    def tracked_tool(*args: Any, **kwargs: Any) -> Any:
+        return _invoke_worker_tool(
+            logger, tool_record, name, caps, timeout, args, kwargs)
+
+    tracked_tool.name = name
+    tracked_tool.description = description
+    tracked_tool.__name__ = name
+    tracked_tool.return_direct = return_direct
+    return tracked_tool
+
+
+def _compile_validated_tool(logger: Any, tool_record: Any) -> Any:
+    """Describe one validated record and wrap it (None if no @tool)."""
+    from airunner_services.llm.core.tool_worker_ipc import (
+        describe_tool_code)
+
+    meta = describe_tool_code(tool_record.code or "")
+    if meta is None:
+        logger.error("Cannot compile tool '%s': no @tool function",
+                     getattr(tool_record, "name", "?"))
+        return None
+    return _build_tracked_tool(logger, tool_record, meta)
+
+
 class ToolManager(
     ImageTools,
     FileTools,
@@ -222,7 +279,7 @@ class ToolManager(
             return []
 
     def _compile_custom_tool(self, tool_record) -> Optional[Callable]:
-        """Compile one custom tool from its database record."""
+        """Compile one custom tool record into a worker-backed handle."""
         # Fail closed: never compile/execute a tool whose code has not been
         # through an actual safety validation pass.
         if not getattr(tool_record, "safety_validated", False):
@@ -232,54 +289,10 @@ class ToolManager(
                 "safety_validated is not True"
             )
         try:
-            from langchain_core.tools import tool
-            from airunner_services.llm.core.code_sandbox import (
-                create_safe_builtins,
-            )
-
-            namespace = {
-                "tool": tool,
-                "__name__": f"custom_tool_{tool_record.name}",
-                "__builtins__": create_safe_builtins(),
-            }
-
-            exec(tool_record.code, namespace)
-
-            for item in namespace.values():
-                if callable(item) and hasattr(item, "name"):
-                    original_func = item
-
-                    def tracked_tool(*args, **kwargs):
-                        try:
-                            result = original_func(*args, **kwargs)
-                            tool_record.increment_usage(success=True)
-                            return result
-                        except Exception as error:
-                            tool_record.increment_usage(
-                                success=False,
-                                error=str(error),
-                            )
-                            raise
-
-                    tracked_tool.name = original_func.name
-                    tracked_tool.description = original_func.description
-                    tracked_tool.__name__ = getattr(
-                        original_func,
-                        "__name__",
-                        tracked_tool.name,
-                    )
-                    tracked_tool.return_direct = getattr(
-                        original_func,
-                        "return_direct",
-                        False,
-                    )
-                    return tracked_tool
-
-            return None
+            return _compile_validated_tool(self.logger, tool_record)
         except Exception as error:
-            self.logger.error(
-                f"Error compiling tool '{tool_record.name}': {error}"
-            )
+            self.logger.error("Error compiling tool '%s': %s",
+                              getattr(tool_record, "name", "?"), error)
             return None
 
     def get_tools_for_action(self, action: Any) -> List[Callable]:
