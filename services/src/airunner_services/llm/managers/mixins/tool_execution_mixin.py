@@ -167,6 +167,7 @@ class ToolExecutionMixin:
                 {
                     "tool_id": tool_id,
                     "tool_name": tool_name,
+                    "tool_arguments": tool_args,
                     "query": query,
                     "status": "starting",
                     "details": None,
@@ -215,6 +216,7 @@ class ToolExecutionMixin:
                         {
                             "tool_id": msg.tool_call_id,
                             "tool_name": tool_name,
+                            "tool_arguments": tool_args,
                             "query": query,
                             "status": "completed",
                             "details": details,

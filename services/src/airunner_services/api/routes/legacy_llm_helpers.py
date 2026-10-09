@@ -47,6 +47,7 @@ def tool_status_stream_payload(data: Dict[str, Any]) -> Optional[Dict[str, Any]]
         "tool_status": status,
         "tool_id": tool_id,
         "tool_name": tool_name,
+        "tool_arguments": data.get("tool_arguments"),
         "query": query,
         "details": data.get("details") or "",
         "metadata": data.get("metadata"),
