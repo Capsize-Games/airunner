@@ -4,7 +4,10 @@ from __future__ import annotations
 
 from typing import Dict
 
-import torch
+try:
+    import torch
+except ImportError:  # pragma: no cover - optional dependency
+    torch = None
 
 
 def _fallback_used_free(
@@ -34,9 +37,9 @@ def _driver_used_free(
     return used_gb, free_gb
 
 
-def gpu_memory_stats(device: torch.device) -> Dict[str, float | str]:
-    """Return GPU memory statistics for one torch device."""
-    stats: Dict[str, float | str] = {
+def _zeroed_stats() -> Dict[str, float | str]:
+    """Return zeroed stats used without torch or off CUDA."""
+    return {
         "total": 0.0,
         "used": 0.0,
         "allocated": 0.0,
@@ -44,6 +47,17 @@ def gpu_memory_stats(device: torch.device) -> Dict[str, float | str]:
         "free": 0.0,
         "device_name": "N/A",
     }
+
+
+def gpu_memory_stats(device: torch.device) -> Dict[str, float | str]:
+    """Return GPU memory statistics for one torch device.
+
+    Without torch there is no CUDA device to measure, so the call
+    degrades to zeroed stats instead of raising (issue #2243).
+    """
+    if torch is None:
+        return _zeroed_stats()
+    stats = _zeroed_stats()
     if device.type != "cuda":
         return stats
 

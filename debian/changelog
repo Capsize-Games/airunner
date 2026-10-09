@@ -1,3 +1,21 @@
+airunner (6.1.3-2) unstable; urgency=medium
+
+  * Fix #2243 (apt package cannot boot):
+    - Gap 1: vendor airunner-common 6.1.7 as files (debian/vendor,
+      verified against the published wheel) until it ships its own
+      Debian binary; the installed daemon no longer dies with
+      ModuleNotFoundError: No module named 'airunner_common'.
+    - Gap 2: the daemon boots without torch in degraded mode: /health
+      stays reachable, sidecar-backed modalities keep working, and
+      local generation endpoints report missing-runtime diagnostics
+      (502/503) instead of exiting. Torch imports in the shared memory
+      helpers are now optional and the local STT fallback returns
+      failure envelopes instead of raising. The optional desktop
+      client bundle mount no longer fails the boot when its
+      directory is unreadable by the service user.
+
+ -- Capsize LLC <contact@capsizegames.com>  Fri, 09 Oct 2026 03:46:18 -0600
+
 airunner (6.1.3-1) unstable; urgency=medium
 
   * Services-only apt packaging scaffold (issue #2237). Ships the

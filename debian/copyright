@@ -10,6 +10,11 @@ License: GPL-3.0-only
  On Debian systems the full text of the GNU General Public License
  version 3 can be found in /usr/share/common-licenses/GPL-3.
 
+Files: debian/vendor/*
+Copyright: 2022-2025 Capsize LLC
+License: GPL-3.0-only
+ Verbatim airunner-common 6.1.7 sources; see debian/vendor/README.source.
+
 Files: debian/*
 Copyright: 2026 Capsize LLC
 License: GPL-3.0-only

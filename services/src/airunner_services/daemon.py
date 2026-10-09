@@ -9,6 +9,7 @@ Runs AI Runner as a background service without GUI, providing:
 """
 
 import argparse
+import importlib.util
 import logging
 import os
 import signal
@@ -57,6 +58,18 @@ logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 # These are the optional ML runtime's direct modules. Other import failures
 # must propagate as packaging defects rather than being reported as missing ML.
 OPTIONAL_ML_MODULES = frozenset({"torch", "torchvision", "torchaudio"})
+
+
+def ml_runtime_available() -> bool:
+    """Return True when the optional torch runtime is importable.
+
+    Presence is checked with find_spec so the probe never imports
+    torch (or touches the GPU) on machines without it.
+    """
+    try:
+        return importlib.util.find_spec("torch") is not None
+    except ImportError:
+        return False
 
 
 def __getattr__(name: str):
@@ -186,11 +199,7 @@ class AIRunnerDaemon:
             sys.exit(1)
 
         try:
-            self.app = self._create_headless_app()
-            self._initialize_lifecycle_service()
-
-            logger.info("AI Runner app initialized in headless mode")
-            self._preload_models()
+            self._init_app_or_degraded()
             self._start_health_monitor()
             self._start_api_server()
 
@@ -201,6 +210,35 @@ class AIRunnerDaemon:
             logger.error(f"Fatal error in daemon: {e}", exc_info=True)
             sys.exit(1)
 
+    def _init_app_or_degraded(self) -> None:
+        """Build the headless app, or degrade to API-only without torch.
+
+        Without the optional ML runtime the daemon still serves: the
+        health endpoint stays reachable and sidecar-backed modalities
+        (Ollama/llama.cpp) keep working. Local generation endpoints
+        report missing-runtime diagnostics instead (issue #2243).
+        """
+        if ml_runtime_available():
+            self.app = self._create_headless_app()
+            self._initialize_lifecycle_service()
+            logger.info("AI Runner app initialized in headless mode")
+            self._preload_models()
+            return
+        self._enter_degraded_mode()
+
+    def _enter_degraded_mode(self) -> None:
+        """Park the app empty and log the degraded-mode diagnostic."""
+        self.app = None
+        self.lifecycle_service = None
+        logger.warning(
+            "Optional ML runtime ('torch') is not installed: starting "
+            "in degraded mode without local models. /health stays "
+            "reachable; local generation endpoints report "
+            "missing-runtime diagnostics. Install the Linux NVIDIA "
+            "runtime profile for your installation method to enable "
+            "local generation."
+        )
+
     def _create_headless_app(self) -> "ServiceApp":
         """Create the daemon-owned app without embedded server ownership."""
         try:
@@ -209,10 +247,13 @@ class AIRunnerDaemon:
             if exc.name not in OPTIONAL_ML_MODULES:
                 raise
             raise ModuleNotFoundError(
-                "Running the AI Runner daemon requires its optional ML runtime, "
-                f"but {exc.name!r} is missing. The base installation supports "
-                "--help and --generate-config without that runtime. See the "
-                "project installation documentation for platform-specific setup."
+                "Running the AI Runner daemon with local models requires "
+                "its optional ML runtime, "
+                f"but {exc.name!r} is missing. The base installation serves "
+                "/health and sidecar-backed modalities without that "
+                "runtime (--help and --generate-config always work). See "
+                "the project installation documentation for "
+                "platform-specific setup."
             ) from exc
 
         return ServiceApp(

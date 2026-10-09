@@ -785,6 +785,17 @@ class LocalFallbackSTTClient(_SignalRuntimeClient):
                     "Timed out waiting for STT response",
                     retryable=True,
                 )
+        except Exception as exc:
+            # A missing local STT backend (no model configured, no ML
+            # runtime) surfaces here as a raised error; report it as a
+            # failed envelope like the art fallback does (issue #2243)
+            # instead of letting the route turn it into a bare 500.
+            return self._failure_response(
+                request.request_id,
+                "stt_invoke_failed",
+                str(exc),
+                retryable=True,
+            )
         finally:
             self._mediator.unregister(
                 SignalCode.AUDIO_PROCESSOR_RESPONSE_SIGNAL,

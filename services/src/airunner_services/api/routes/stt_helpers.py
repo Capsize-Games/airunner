@@ -46,11 +46,16 @@ def resolve_stt_client(registry: RuntimeRegistry) -> RuntimeClient:
 
 
 def runtime_error_status(response) -> int:
-    """Map runtime envelope failures to HTTP status codes."""
+    """Map runtime envelope failures to HTTP status codes.
+
+    A failed envelope means the backing STT runtime failed, not this
+    server, so non-timeout failures report 502 like the LLM and TTS
+    routes instead of a misleading 500 (issue #2243).
+    """
     error = response.error
     if error and error.code.endswith("_timeout"):
         return 504
-    return 500
+    return 502
 
 
 def response_status_is(response: object, expected: EnvelopeStatus) -> bool:

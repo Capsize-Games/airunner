@@ -38,8 +38,16 @@ INDEX_FILE = "index.html"
 
 
 def _has_index(directory: Path) -> bool:
-    """Return whether ``directory`` holds a bundle entry document."""
-    return (directory / INDEX_FILE).is_file()
+    """Return whether ``directory`` holds a bundle entry document.
+
+    The bundle is optional: an unreadable directory (e.g. the
+    release build root traversed by the service user) counts as
+    absent instead of failing the boot (issue #2243).
+    """
+    try:
+        return (directory / INDEX_FILE).is_file()
+    except OSError:
+        return False
 
 
 def build_output_directory() -> Path:

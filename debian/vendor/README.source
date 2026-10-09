@@ -1,0 +1,47 @@
+Vendored airunner_common (issue #2243, Gap 1)
+============================================
+
+What
+----
+`airunner_common/` is a verbatim copy of the pure-Python package from the
+published airunner-common 6.1.7 wheel (13 files, no dist-info), shipped
+as files into usr/lib/python3/dist-packages by debian/airunner.install.
+`airunner-common.LICENSE` is the wheel's GPL-3.0-only license text.
+
+Origin
+------
+- Distribution: airunner-common 6.1.7 (PyPI)
+- Wheel: airunner_common-6.1.7-py3-none-any.whl
+- Wheel sha256:
+  a7d975b72fb0059b3ec466cc793c894f31eb35dbb4345d7592ddf3f4d1cef970
+- Upstream repo: https://github.com/Capsize-Games/airunner-common
+- Retrieved: 2026-10-09. Every file was verified byte-identical
+  against the wheel's RECORD hashes before committing.
+
+Why vendored
+------------
+airunner-common~=6.1.7 is a hard services import (235 import sites),
+but dh_python3 cannot map it to a distro package, so the .deb neither
+shipped it nor depended on it and the installed daemon died with
+ModuleNotFoundError. This mirrors the airunner_native stanza in
+debian/airunner.install: pybuild cannot build two source trees into
+one binary package, so the module ships as files. Nothing queries
+airunner-common dist metadata at runtime (get_version() resolves
+airunner-services first and falls back to package_metadata.VERSION),
+so no dist-info is shipped.
+
+Its own wheel dependencies need no extra handling: facehuggershield
+is never imported at runtime (package_metadata.py only names the
+requirement string), and python-dotenv is already in this package's
+dependency closure (services/setup.py CORE_REQUIREMENTS).
+
+Exit criteria
+-------------
+Delete this directory and ship a real dependency once either holds:
+
+- Capsize-Games/airunner-common publishes its own Debian binary
+  (the fix #2243 prefers), or
+- dh_python3 can map airunner-common to a distro package.
+
+Then replace the .install stanza below with that binary in
+debian/control Depends.

@@ -14,7 +14,9 @@ Homepage: https://github.com/Capsize-Games/airunner
 
 Package: airunner
 Architecture: all
-Depends: ${python3:Depends}, ${misc:Depends}, python3-yaml, adduser
+# python3-dotenv is explicit (not just ${python3:Depends}) because the
+# vendored airunner_common.settings imports dotenv at module scope.
+Depends: ${python3:Depends}, ${misc:Depends}, python3-yaml, python3-dotenv, adduser
 Description: Headless service daemon for AI Runner (services only)
  The services/ package surface of AIRunner: headless orchestration layer
  owning the daemon entry points, FastAPI server wiring, runtime registry,
@@ -23,5 +25,9 @@ Description: Headless service daemon for AI Runner (services only)
  This package is services only (issue #2237): it ships the
  airunner-daemon, airunner-headless and airunner-service console scripts
  plus the airunner-headless systemd unit. It deliberately contains no Qt
- desktop client. Heavy ML extras (torch, diffusers, llama.cpp bindings)
- are not Debian-packaged; install them from PyPI when needed.
+ desktop client. It also ships airunner-common 6.1.7 as files (see
+ debian/vendor/README.source) until that project publishes its own
+ Debian binary. Heavy ML extras (torch, diffusers, llama.cpp bindings)
+ are not Debian-packaged; without torch the daemon still boots and
+ serves /health plus sidecar-backed modalities, while local generation
+ endpoints report missing-runtime diagnostics (issue #2243).

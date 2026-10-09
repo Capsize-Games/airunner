@@ -15,11 +15,17 @@ contains no Qt desktop client by owner decision. What you get:
     install; writable state in /var/lib/airunner, logs journaled
     (file logging only when the daemon config enables it).
 
+airunner-common 6.1.7 is vendored as files (debian/vendor/README.source,
+issue #2243): dh_python3 cannot map it to a distro package yet, and the
+daemon cannot boot without it. This becomes a real Depends once
+airunner-common publishes its own Debian binary.
+
 Heavy ML extras (torch/cu129 wheels, diffusers, llama-cpp-python and
-friends) are not Debian-packaged. Note the daemon currently requires
-torch to be importable before it serves anything (otherwise
-airunner-headless exits with a diagnostic naming the missing module);
-install extras from PyPI into a venv when a workload needs them:
+friends) are not Debian-packaged. Without torch the daemon boots in
+degraded mode: /health stays reachable, sidecar-backed modalities
+(Ollama/llama.cpp) keep working, and local generation endpoints report
+missing-runtime diagnostics (502/503) instead of tracebacks. Install
+extras from PyPI into a venv when a workload needs local models:
 
     /usr/bin/python3 -m venv /opt/airunner-ml && \
     /opt/airunner-ml/bin/pip install 'airunner-services[headless]'
