@@ -74,7 +74,6 @@ def _seed_art_runtime_settings(runtime_root: Path, output_root: Path) -> None:
         llm_enabled=False,
         tts_enabled=False,
         stt_enabled=False,
-        controlnet_enabled=False,
         nsfw_filter=False,
         auto_export_images=False,
         working_width=512,
@@ -92,7 +91,7 @@ def _seed_art_runtime_settings(runtime_root: Path, output_root: Path) -> None:
     GeneratorSettings.objects.update(
         pk=getattr(generator_settings, "id", None),
         pipeline_action="txt2img",
-        version=StableDiffusionVersion.SDXL1_0.value,
+        version=StableDiffusionVersion.Z_IMAGE_TURBO.value,
         scheduler=Scheduler.EULER.value,
         steps=4,
         scale=500,
@@ -287,33 +286,6 @@ def test_direct_art_runtime_bootstraps_headless_worker_only(
     assert worker is not None
     assert worker is service_app._worker_manager.sd_worker
     assert client._art_model_manager(create=False) is worker.model_manager
-
-
-@pytest.mark.gpu
-@pytest.mark.integration
-@pytest.mark.slow
-@pytest.mark.timeout(600)
-def test_sdxl_txt2img_generates_image_through_direct_service_runtime(
-    tmp_path: Path,
-) -> None:
-    """SDXL txt2img succeeds through the direct service runtime boundary."""
-    model_path = _require_model_file(
-        StableDiffusionVersion.SDXL1_0.value,
-        "txt2img",
-    )
-    result = _run_runtime_probe(
-        tmp_path=tmp_path,
-        model_path=model_path,
-        version=StableDiffusionVersion.SDXL1_0.value,
-        scheduler=Scheduler.EULER.value,
-        prompt="A product photo of a red ceramic mug on a plain table.",
-    )
-
-    assert result["status"] == "succeeded"
-    assert result["response_status"] == "succeeded"
-    assert result["image_count"] == 1
-    assert result["image_size"] == [512, 512]
-    assert result["progress_count"] >= 1
 
 
 @pytest.mark.gpu

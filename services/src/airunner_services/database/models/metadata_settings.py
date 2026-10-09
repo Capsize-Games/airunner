@@ -26,7 +26,6 @@ class MetadataSettings(BaseModel):
     image_export_metadata_clip_skip = Column(Boolean, default=True)
     image_export_metadata_version = Column(Boolean, default=True)
     image_export_metadata_timestamp = Column(Boolean, default=True)
-    image_export_metadata_controlnet = Column(Boolean, default=True)
     export_metadata = Column(Boolean, default=True)
     import_metadata = Column(Boolean, default=True)
 

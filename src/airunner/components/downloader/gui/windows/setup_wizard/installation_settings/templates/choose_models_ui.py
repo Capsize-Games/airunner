@@ -115,7 +115,7 @@ class Ui_install_success_page(object):
         install_success_page.setWindowTitle(QCoreApplication.translate("install_success_page", u"Form", None))
         self.page_title.setText(QCoreApplication.translate("install_success_page", u"Choose models to download", None))
         self.total_size_label.setText(QCoreApplication.translate("install_success_page", u"0MB", None))
-        self.groupBox.setTitle(QCoreApplication.translate("install_success_page", u"Stable Diffusion Controlnet", None))
+        self.groupBox.setTitle(QCoreApplication.translate("install_success_page", u"Art Models", None))
         self.checkBox.setText(QCoreApplication.translate("install_success_page", u"e5 Large: Embedding model (RAG search)", None))
         self.whisper_checkbox.setText(QCoreApplication.translate("install_success_page", u"Whisper: Speech-to-Text (voice conversations)", None))
         self.llm_checkbox.setText(QCoreApplication.translate("install_success_page", u"Local language models: conversation and coding", None))

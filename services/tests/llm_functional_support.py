@@ -180,7 +180,6 @@ def daemon_env(
             "AIRUNNER_LLM_ON": "1" if llm_on else "0",
             "AIRUNNER_SD_ON": "0",
             "AIRUNNER_STT_ON": "0",
-            "AIRUNNER_CN_ON": "0",
             "AIRUNNER_KNOWLEDGE_ON": "0",
             "AIRUNNER_TTS_ON": "1" if tts_on else "0",
             "AIRUNNER_NO_PRELOAD": "1",

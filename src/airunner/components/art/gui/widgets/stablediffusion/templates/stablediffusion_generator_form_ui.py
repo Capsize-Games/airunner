@@ -145,12 +145,12 @@ class Ui_stablediffusion_generator_form(object):
 
         self.gridLayout.addWidget(self.generator_form_splitter, 0, 0, 1, 1)
 
-        self.sdxl_settings_container = QWidget(self.scrollAreaWidgetContents)
-        self.sdxl_settings_container.setObjectName(u"sdxl_settings_container")
-        self.sdxl_settings = QVBoxLayout(self.sdxl_settings_container)
-        self.sdxl_settings.setObjectName(u"sdxl_settings")
-        self.sdxl_settings.setContentsMargins(0, 0, 0, 0)
-        self.n_samples = SliderWidget(self.sdxl_settings_container)
+        self.batch_settings_container = QWidget(self.scrollAreaWidgetContents)
+        self.batch_settings_container.setObjectName(u"batch_settings_container")
+        self.batch_settings = QVBoxLayout(self.batch_settings_container)
+        self.batch_settings.setObjectName(u"batch_settings")
+        self.batch_settings.setContentsMargins(0, 0, 0, 0)
+        self.n_samples = SliderWidget(self.batch_settings_container)
         self.n_samples.setObjectName(u"n_samples")
         self.n_samples.setProperty(u"current_value", 1)
         self.n_samples.setProperty(u"slider_maximum", 1000)
@@ -161,11 +161,11 @@ class Ui_stablediffusion_generator_form(object):
         self.n_samples.setProperty(u"spinbox_minimum", 1)
         self.n_samples.setProperty(u"slider_minimum", 1)
 
-        self.sdxl_settings.addWidget(self.n_samples)
+        self.batch_settings.addWidget(self.n_samples)
 
         self.horizontalLayout_14 = QHBoxLayout()
         self.horizontalLayout_14.setObjectName(u"horizontalLayout_14")
-        self.images_per_batch = SliderWidget(self.sdxl_settings_container)
+        self.images_per_batch = SliderWidget(self.batch_settings_container)
         self.images_per_batch.setObjectName(u"images_per_batch")
         self.images_per_batch.setProperty(u"current_value", 1)
         self.images_per_batch.setProperty(u"slider_maximum", 6)
@@ -178,7 +178,7 @@ class Ui_stablediffusion_generator_form(object):
 
         self.horizontalLayout_14.addWidget(self.images_per_batch)
 
-        self.infinite_images_button = QPushButton(self.sdxl_settings_container)
+        self.infinite_images_button = QPushButton(self.batch_settings_container)
         self.infinite_images_button.setObjectName(u"infinite_images_button")
         self.infinite_images_button.setMinimumSize(QSize(30, 30))
         self.infinite_images_button.setMaximumSize(QSize(30, 30))
@@ -191,10 +191,10 @@ class Ui_stablediffusion_generator_form(object):
         self.horizontalLayout_14.addWidget(self.infinite_images_button)
 
 
-        self.sdxl_settings.addLayout(self.horizontalLayout_14)
+        self.batch_settings.addLayout(self.horizontalLayout_14)
 
 
-        self.gridLayout.addWidget(self.sdxl_settings_container, 2, 0, 1, 1)
+        self.gridLayout.addWidget(self.batch_settings_container, 2, 0, 1, 1)
 
         self.image_mode = QGridLayout()
         self.image_mode.setObjectName(u"image_mode")

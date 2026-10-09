@@ -135,22 +135,6 @@
     </widget>
    </item>
    <item>
-    <widget class="QLabel" name="controlnet_status">
-     <property name="font">
-      <font>
-       <pointsize>-1</pointsize>
-       <bold>true</bold>
-      </font>
-     </property>
-     <property name="text">
-      <string>CN</string>
-     </property>
-     <property name="alignment">
-      <set>Qt::AlignmentFlag::AlignCenter</set>
-     </property>
-    </widget>
-   </item>
-   <item>
     <widget class="Line" name="line_2">
      <property name="orientation">
       <enum>Qt::Orientation::Vertical</enum>

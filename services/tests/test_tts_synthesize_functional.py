@@ -90,7 +90,6 @@ def _daemon_env(model_path: Path) -> dict[str, str]:
             "AIRUNNER_LLM_ON": "0",
             "AIRUNNER_SD_ON": "0",
             "AIRUNNER_STT_ON": "0",
-            "AIRUNNER_CN_ON": "0",
             "AIRUNNER_KNOWLEDGE_ON": "0",
             "AIRUNNER_TTS_ON": "1",
             "AIRUNNER_TTS_MODEL_TYPE": "OpenVoice",

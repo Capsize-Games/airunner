@@ -49,7 +49,7 @@ def test_every_bootstrap_model_has_provenance_row() -> None:
     """Each catalogued model path appears in the inventory."""
     text = licenses_text()
     repo_ids = bootstrap_repo_ids()
-    assert len(repo_ids) >= 7, repo_ids
+    assert len(repo_ids) >= 4, repo_ids
     missing = sorted(rid for rid in repo_ids if rid not in text)
     assert missing == [], missing
 

@@ -233,7 +233,6 @@
  </connections>
  <slots>
   <slot>color_button_clicked()</slot>
-  <slot>controlnet_changed(QString)</slot>
   <slot>toggle_auto_generate_while_drawing(bool)</slot>
  </slots>
 </ui>

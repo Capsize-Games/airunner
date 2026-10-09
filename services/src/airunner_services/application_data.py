@@ -8,8 +8,6 @@ from airunner_services.database.models import BrushSettings
 from airunner_services.database.models import CanvasLayer
 from airunner_services.database.models import Chatbot
 from airunner_services.database.models import Chatstore
-from airunner_services.database.models import ControlnetModel
-from airunner_services.database.models import ControlnetSettings
 from airunner_services.database.models import Conversation
 from airunner_services.database.models import Document
 from airunner_services.database.models import DrawingPadSettings
@@ -48,7 +46,6 @@ classes = [
 	ActiveGridSettings,
 	ApplicationSettings,
 	CanvasLayer,
-	ControlnetSettings,
 	ImageToImageSettings,
 	OutpaintSettings,
 	Chatstore,
@@ -71,7 +68,6 @@ classes = [
 	ShortcutKeys,
 	SavedPrompt,
 	PromptTemplate,
-	ControlnetModel,
 	FontSetting,
 	PipelineModel,
 	Conversation,

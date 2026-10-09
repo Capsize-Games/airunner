@@ -72,7 +72,7 @@
       </font>
      </property>
      <property name="title">
-      <string>Stable Diffusion Controlnet</string>
+      <string>Art Models</string>
      </property>
      <property name="checkable">
       <bool>true</bool>

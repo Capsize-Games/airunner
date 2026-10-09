@@ -1100,7 +1100,6 @@ class CanvasWidget(BaseWidget):
         self._delete_all_layers()
         for resource_name in (
             "DrawingPadSettings",
-            "ControlnetSettings",
             "ImageToImageSettings",
             "OutpaintSettings",
         ):
@@ -1471,12 +1470,6 @@ class CanvasWidget(BaseWidget):
         """
         try:
             self._ensure_drawing_pad_defaults(layer_id)
-
-            ensure_layer_setting(
-                "ControlnetSettings",
-                layer_id,
-                store=self.resource_store,
-            )
 
             ensure_layer_setting(
                 "ImageToImageSettings",

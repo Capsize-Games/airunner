@@ -16,7 +16,6 @@ if TYPE_CHECKING:
     from airunner.components.art.api.image_filter_services import (
         ImageFilterAPIServices,
     )
-    from airunner.components.art.api.lora_services import LoraAPIServices
     from airunner_services.art.managers.stablediffusion.image_request import (
         ImageRequest,
     )
@@ -29,7 +28,6 @@ class ARTAPIService(APIServiceBase):
         super().__init__(api=api)
         self._canvas_service = None
         self._embeddings_service = None
-        self._lora_service = None
         self._image_filter_service = None
 
     @property
@@ -61,21 +59,6 @@ class ARTAPIService(APIServiceBase):
     @embeddings.setter
     def embeddings(self, value: EmbeddingAPIServices) -> None:
         self._embeddings_service = value
-
-    @property
-    def lora(self) -> LoraAPIServices:
-        """Return the cached LoRA API service."""
-        if self._lora_service is None:
-            from airunner.components.art.api.lora_services import (
-                LoraAPIServices,
-            )
-
-            self._lora_service = LoraAPIServices()
-        return self._lora_service
-
-    @lora.setter
-    def lora(self, value: LoraAPIServices) -> None:
-        self._lora_service = value
 
     @property
     def image_filter(self) -> ImageFilterAPIServices:
@@ -134,9 +117,6 @@ class ARTAPIService(APIServiceBase):
         if pipeline is not None:
             data["pipeline"] = pipeline
         self.emit_signal(SignalCode.SD_ART_MODEL_CHANGED, data)
-
-    def lora_updated(self):
-        self.emit_signal(SignalCode.LORA_UPDATED_SIGNAL, {})
 
     def embedding_updated(self):
         self.emit_signal(SignalCode.EMBEDDING_UPDATED_SIGNAL, {})
@@ -222,7 +202,7 @@ class ARTAPIService(APIServiceBase):
             resolved_request = image_request
         else:
             # Default to a request built from current canvas + generator settings.
-            # This is critical for img2img/outpaint/controlnet since those settings
+            # This is critical for img2img/outpaint since those settings
             # live outside generator_settings and determine generator_section, image, strength, etc.
             resolved_request = self.canvas.create_image_request()
 

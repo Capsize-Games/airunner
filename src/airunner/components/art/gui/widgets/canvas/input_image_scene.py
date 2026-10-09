@@ -84,9 +84,6 @@ class InputImageScene(BrushScene):
         if self._is_mask:
             # For mask image (outpainting mask)
             base_64_image = self.drawing_pad_settings.mask
-        elif self.settings_key == "controlnet_settings":
-            # For controlnet generated image
-            base_64_image = self.controlnet_settings.generated_image
         elif self.settings_key == "outpaint_settings":
             # For outpaint image
             base_64_image = self.outpaint_settings.image
@@ -115,9 +112,6 @@ class InputImageScene(BrushScene):
             if self._is_mask:
                 # For mask image
                 self.update_drawing_pad_settings(mask=image_binary)
-            elif self.settings_key == "controlnet_settings":
-                # For controlnet generated image
-                self.update_controlnet_settings(generated_image=image_binary)
             elif self.settings_key == "outpaint_settings":
                 # For outpaint image
                 self.update_outpaint_settings(image=image_binary)
@@ -149,9 +143,6 @@ class InputImageScene(BrushScene):
             if self._is_mask:
                 # For mask image
                 self.update_drawing_pad_settings(mask=base_64_image)
-            elif self.settings_key == "controlnet_settings":
-                # For controlnet generated image
-                self.update_controlnet_settings(generated_image=base_64_image)
             elif self.settings_key == "outpaint_settings":
                 # For outpaint image
                 self.update_outpaint_settings(image=base_64_image)

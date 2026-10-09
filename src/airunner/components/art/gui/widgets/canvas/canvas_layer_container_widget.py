@@ -719,13 +719,6 @@ class CanvasLayerContainerWidget(BaseWidget, PipelineMixin):
         try:
             self._ensure_drawing_pad_defaults(layer_id)
 
-            # Create default ControlnetSettings
-            ensure_layer_setting(
-                "ControlnetSettings",
-                layer_id,
-                store=self.resource_store,
-            )
-
             # Create default ImageToImageSettings
             ensure_layer_setting(
                 "ImageToImageSettings",

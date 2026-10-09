@@ -53,7 +53,8 @@ IMAGE_GENERATOR_CAPABILITIES: Dict[str, ImageGeneratorCapabilities] = {
         default_width=1024,
         default_height=1024,
         prompt_guidance=(
-            "SDXL supports detailed prompts with negative prompts to exclude unwanted elements. "
+            "Diffusion models support detailed prompts with "
+            "negative prompts to exclude unwanted elements. "
             "Use second_prompt for background/atmosphere details."
         ),
     ),

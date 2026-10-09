@@ -19,7 +19,7 @@
      <item>
       <widget class="QLineEdit" name="search_line_edit">
        <property name="placeholderText">
-        <string>Search checkpoints, LoRAs, and embeddings</string>
+        <string>Search checkpoints and embeddings</string>
        </property>
       </widget>
      </item>

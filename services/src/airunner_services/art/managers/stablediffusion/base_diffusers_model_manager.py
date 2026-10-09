@@ -60,14 +60,12 @@ class BaseDiffusersModelManager(
 
     model_type: ModelType = ModelType.SD
     _model_status = {
-        ModelType.CONTROLNET: ModelStatus.UNLOADED,
         ModelType.SAFETY_CHECKER: ModelStatus.UNLOADED,
         ModelType.SCHEDULER: ModelStatus.UNLOADED,
     }
 
     def __init__(self, *args, **kwargs):
         self._scheduler = None
-        self._loaded_lora = {}
         self._loaded_embeddings = []
         super().__init__(*args, **kwargs)
         self._initialize_model_status()
@@ -77,9 +75,6 @@ class BaseDiffusersModelManager(
         self.do_change_scheduler: bool = False
         self._resolved_model_version: Optional[str] = None
         self._image_request = None
-        self._controlnet_model = None
-        self._controlnet: Optional[Any] = None
-        self._controlnet_processor: Any = None
         self._memory_settings_flags: dict = {
             "vae_slicing_applied": None,
             "last_channels_applied": None,
@@ -112,8 +107,6 @@ class BaseDiffusersModelManager(
         # Cached properties from database
         self._outpaint_image = None
         self._img2img_image = None
-        self._controlnet_settings = None
-        self._controlnet_image_settings = None
         self._drawing_pad_settings = None
         self._outpaint_settings = None
         self._path_settings = None
@@ -142,11 +135,6 @@ class BaseDiffusersModelManager(
     @property
     def txt2img_pipelines(self) -> List[Any]:
         """Return list of txt2img pipeline classes (overridden in subclasses)."""
-        return []
-
-    @property
-    def controlnet_pipelines(self) -> List[Any]:
-        """Return list of controlnet pipeline classes (overridden in subclasses)."""
         return []
 
     @property
@@ -271,7 +259,6 @@ class BaseDiffusersModelManager(
 
         Coordinates loading of:
         - Safety checker
-        - ControlNet (if enabled)
         - Main pipeline
         - Scheduler
         - Compel processor
@@ -289,7 +276,6 @@ class BaseDiffusersModelManager(
         resource_manager = ModelResourceManager()
         if not self._prepare_for_load(resource_manager):
             return
-        self.load_controlnet()
 
         self.logger.debug("[LOAD] About to call _load_pipe()")
         if self._load_pipe():
@@ -325,8 +311,6 @@ class BaseDiffusersModelManager(
             return False
         if not self._ensure_safety_checker_ready():
             return False
-        if self._should_reset_pipe_for_controlnet():
-            self.unload()
         return True
 
     def _ensure_safety_checker_ready(self) -> bool:
@@ -341,15 +325,6 @@ class BaseDiffusersModelManager(
             next_status = ModelStatus.UNLOADED
         self.change_model_status(self.model_type, next_status)
         return False
-
-    def _should_reset_pipe_for_controlnet(self) -> bool:
-        """Return True when ControlNet loading requires a pipeline reset."""
-        return (
-            self.controlnet_enabled
-            and not self.controlnet_is_loading
-            and self._pipe
-            and not self._controlnet_model
-        )
 
     def _finalize_loaded_pipe(
         self,
@@ -367,32 +342,13 @@ class BaseDiffusersModelManager(
         self._finalize_load_stable_diffusion()
         resource_manager.model_loaded(self.model_path, "text_to_image")
 
-    def load_controlnet(self):
-        """
-        Load ControlNet model if enabled.
-
-        Public method to load ControlNet model and processor.
-        Skips loading if ControlNet is not enabled or already loading.
-        """
-        if not self.controlnet_enabled or self.controlnet_is_loading:
-            return
-
-        self.change_model_status(ModelType.CONTROLNET, ModelStatus.LOADING)
-        try:
-            self._load_controlnet_model()
-            self._load_controlnet_processor()
-            self.change_model_status(ModelType.CONTROLNET, ModelStatus.LOADED)
-        except Exception as e:
-            self.logger.error(f"Failed to load ControlNet: {e}", exc_info=True)
-            self.change_model_status(ModelType.CONTROLNET, ModelStatus.FAILED)
-
     def unload(self):
         """
         Unload the Stable Diffusion model and all components.
 
         Performs ordered unloading to minimize memory usage:
         1. Lightweight components (DeepCache, Compel, scheduler)
-        2. GPU components (ControlNet, safety checker)
+        2. GPU components (safety checker)
         3. Main pipeline
         4. Generator
 
@@ -414,8 +370,6 @@ class BaseDiffusersModelManager(
         self._unload_scheduler()
 
         # Unload heavier GPU components
-        self._unload_controlnet()
-
         if (
             self._safety_checker is not None
             or self._feature_extractor is not None
@@ -453,8 +407,6 @@ class BaseDiffusersModelManager(
         """Clear cached database-backed properties."""
         self._outpaint_image = None
         self._img2img_image = None
-        self._controlnet_settings = None
-        self._controlnet_image_settings = None
         self._application_settings = None
         self._drawing_pad_settings = None
         self._outpaint_settings = None
@@ -479,8 +431,7 @@ class BaseDiffusersModelManager(
         Prepare data dictionary for pipeline loading.
 
         Returns:
-            Dictionary with torch_dtype, safetensors flags, device, and
-            optional controlnet configuration
+            Dictionary with torch_dtype, safetensors flags, and device.
         """
         data = {
             "torch_dtype": self.data_type,
@@ -488,11 +439,6 @@ class BaseDiffusersModelManager(
             "local_files_only": True,
             "device": self._device,
         }
-        if self.controlnet_enabled:
-            data.update(controlnet=self.controlnet)
-
-        if self.controlnet_enabled:
-            data["controlnet"] = self.controlnet
 
         return data
 
@@ -545,7 +491,7 @@ class BaseDiffusersModelManager(
         Finalize Stable Diffusion loading after all components are ready.
 
         Verifies all required components are loaded and sets handler state
-        to READY. Attaches ControlNet processor to pipeline if enabled.
+        to READY.
         """
         if self._pipe is not None:
             self._current_state = HandlerState.READY
@@ -556,14 +502,6 @@ class BaseDiffusersModelManager(
             )
             self.unload()
             self._clear_cached_properties()
-
-        if (
-            self.controlnet is not None
-            and self.controlnet_processor is not None
-            and self._pipe
-        ):
-            self._pipe.__controlnet = self.controlnet
-            self._pipe.processor = self.controlnet_processor
 
     def _check_and_trigger_download(self) -> tuple:
         """Check for missing model files and trigger download if needed.

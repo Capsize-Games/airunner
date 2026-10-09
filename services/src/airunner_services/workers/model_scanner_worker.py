@@ -8,7 +8,6 @@ Directory structure expected:
 
 Example:
     ~/.local/share/airunner/art/models/Z-Image Turbo/txt2img/model.safetensors
-    ~/.local/share/airunner/art/models/SDXL 1.0/txt2img/model.safetensors
 """
 
 from dataclasses import dataclass
@@ -25,10 +24,6 @@ from airunner_services.workers.worker import Worker
 # Mapping from version names to ImageGenerator categories
 VERSION_TO_CATEGORY: dict[str, str] = {
     StableDiffusionVersion.Z_IMAGE_TURBO.value: ImageGenerator.ZIMAGE.value,
-    StableDiffusionVersion.SDXL1_0.value: ImageGenerator.STABLEDIFFUSION.value,
-    StableDiffusionVersion.SDXL_TURBO.value: ImageGenerator.STABLEDIFFUSION.value,
-    StableDiffusionVersion.SDXL_LIGHTNING.value: ImageGenerator.STABLEDIFFUSION.value,
-    StableDiffusionVersion.SDXL_HYPER.value: ImageGenerator.STABLEDIFFUSION.value,
     StableDiffusionVersion.X4_UPSCALER.value: ImageGenerator.STABLEDIFFUSION.value,
 }
 
@@ -40,15 +35,12 @@ MODEL_EXTENSIONS = (".ckpt", ".safetensors", ".gguf")
 # Folders that indicate a diffusers model directory
 DIFFUSERS_REQUIRED_FOLDERS = ("scheduler", "text_encoder", "tokenizer", "unet", "vae")
 
-# Folders to skip during scanning
-SKIP_FOLDERS = ("controlnet_processors",)
-
 
 def get_category_for_version(version: str) -> str:
     """Get the ImageGenerator category for a given version name.
 
     Args:
-        version: The version folder name (e.g., 'Z-Image Turbo', 'SDXL 1.0')
+        version: The version folder name (e.g., 'Z-Image Turbo')
 
     Returns:
         The category string (e.g., 'zimage', 'stablediffusion').
@@ -137,7 +129,7 @@ class ModelScannerWorker(Worker):
         if not base_path.exists():
             return models
 
-        # Iterate through version folders (e.g., "Z-Image Turbo", "SDXL 1.0")
+        # Iterate through version folders (e.g., "Z-Image Turbo")
         for version_dir in self._iter_directories(base_path):
             if not self.running:
                 break
@@ -155,9 +147,6 @@ class ModelScannerWorker(Worker):
                 if not self.running:
                     break
                 action_name = action_dir.name
-
-                if action_name in SKIP_FOLDERS:
-                    continue
 
                 # Scan for models in this action folder
                 found_models = self._scan_action_directory(

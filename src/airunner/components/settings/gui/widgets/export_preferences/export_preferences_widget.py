@@ -28,10 +28,8 @@ class ExportPreferencesWidget(BaseWidget):
             self.ui.metadata_strength,
             self.ui.metadata_clip_skip,
             self.ui.metadata_version,
-            self.ui.metadata_lora,
             self.ui.metadata_embeddings,
             self.ui.metadata_timestamp,
-            self.ui.metadata_controlnet,
             self.ui.export_metadata,
             self.ui.actionAuto_export_images,
             self.ui.image_type_dropdown,
@@ -82,12 +80,6 @@ class ExportPreferencesWidget(BaseWidget):
         self.ui.metadata_version.setChecked(
             self.metadata_settings.image_export_metadata_version is True
         )
-        self.ui.metadata_lora.setChecked(
-            getattr(
-                self.metadata_settings, "image_export_metadata_lora", False
-            )
-            is True
-        )
         self.ui.metadata_embeddings.setChecked(
             getattr(
                 self.metadata_settings,
@@ -98,9 +90,6 @@ class ExportPreferencesWidget(BaseWidget):
         )
         self.ui.metadata_timestamp.setChecked(
             self.metadata_settings.image_export_metadata_timestamp is True
-        )
-        self.ui.metadata_controlnet.setChecked(
-            self.metadata_settings.image_export_metadata_controlnet is True
         )
         self.ui.export_metadata.setChecked(
             self.metadata_settings.export_metadata is True
@@ -170,11 +159,6 @@ class ExportPreferencesWidget(BaseWidget):
     def action_toggled_version(self, val):
         self.update_metadata_settings(image_export_metadata_version=val)
 
-    def action_toggled_lora(self, val):
-        # image_export_metadata_lora was retired from MetadataSettings
-        # (adapter schema removal); nothing to persist.
-        pass
-
     def action_toggled_embeddings(self, val):
         # image_export_metadata_embeddings was retired from MetadataSettings
         # (adapter schema removal); nothing to persist.
@@ -182,9 +166,6 @@ class ExportPreferencesWidget(BaseWidget):
 
     def action_toggled_timestamp(self, val):
         self.update_metadata_settings(image_export_metadata_timestamp=val)
-
-    def action_toggled_controlnet(self, val):
-        self.update_metadata_settings(image_export_metadata_controlnet=val)
 
     def action_toggled_export_metadata(self, val):
         self.update_metadata_settings(export_metadata=val)

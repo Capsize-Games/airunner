@@ -174,9 +174,6 @@
         </property>
        </widget>
       </item>
-      <item row="2" column="0">
-       <widget class="ControlnetSettingsWidget" name="controlnet_settings" native="true"/>
-      </item>
      </layout>
     </widget>
    </item>
@@ -303,12 +300,6 @@
    <class>SliderWidget</class>
    <extends>QWidget</extends>
    <header>airunner/components/application/gui/widgets/slider/slider_widget</header>
-   <container>1</container>
-  </customwidget>
-  <customwidget>
-   <class>ControlnetSettingsWidget</class>
-   <extends>QWidget</extends>
-   <header>airunner/components/art/gui/widgets/controlnet/controlnet_settings_widget</header>
    <container>1</container>
   </customwidget>
  </customwidgets>

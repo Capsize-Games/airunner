@@ -15,14 +15,12 @@ _CIVITAI_API_URL = "https://civitai.com/api/v1"
 _ALLOWED_FILE_EXTENSIONS = (".safetensors", ".gguf")
 _ALLOWED_FILE_FORMATS = {"safetensor", "gguf"}
 _BASE_MODEL_ALIASES = {
-    "SDXL 1.0": "SDXL 1.0",
     "Z-Image Turbo": "ZImageTurbo",
     "ZImageTurbo": "ZImageTurbo",
 }
 _MODEL_TYPE_ALIASES = {
     "CHECKPOINT": "Checkpoint",
     "MODEL": "Checkpoint",
-    "LORA": "LORA",
     "EMBEDDING": "TextualInversion",
     "EMBEDDINGS": "TextualInversion",
     "TEXTUAL EMBEDDING": "TextualInversion",

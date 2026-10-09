@@ -1,9 +1,8 @@
 """Tests for the deterministic madlibs Prompt Builder engine.
 
 The engine is pure Python (no Qt), so these tests run without a GUI or a
-database. They lock down the structure of the generated prompts for both
-Z-Image Turbo (6-part single prompt, no negative prompt) and SDXL (layered
-positive + negative "bug list").
+database. They lock down the structure of the generated Z-Image Turbo
+prompts (6-part single prompt, no negative prompt).
 """
 
 from __future__ import annotations
@@ -22,21 +21,10 @@ def engine() -> PromptBuilderEngine:
     return PromptBuilderEngine()
 
 
-def _sdxl_state(seed: int = 42, **overrides) -> PromptBuilderState:
-    defaults = dict(
-        randomize=True,
-        seed=seed,
-        target_generator="stablediffusion",
-    )
-    defaults.update(overrides)
-    return PromptBuilderState(**defaults)
-
-
 def _zimage_state(seed: int = 42, **overrides) -> PromptBuilderState:
     defaults = dict(
         randomize=True,
         seed=seed,
-        target_generator="zimage",
     )
     defaults.update(overrides)
     return PromptBuilderState(**defaults)
@@ -99,44 +87,6 @@ def test_zimage_applies_prefix_and_suffix(engine):
     result = engine.build(state)
     assert result.prompt.startswith("masterpiece, ")
     assert result.prompt.endswith(", ultra detailed")
-
-
-# -- SDXL -------------------------------------------------------------------
-
-
-def test_sdxl_has_negative_prompt(engine):
-    result = engine.build(_sdxl_state())
-    assert result.prompt
-    assert result.negative_prompt
-    assert "watermark" in result.negative_prompt
-    assert "extra fingers" in result.negative_prompt
-
-
-def test_sdxl_is_deterministic_for_same_seed(engine):
-    a = engine.build(_sdxl_state(seed=99))
-    b = engine.build(_sdxl_state(seed=99))
-    assert a.prompt == b.prompt
-
-
-def test_sdxl_negative_includes_style_bug_list(engine):
-    state = _sdxl_state(seed=1, style_group="Photorealistic")
-    result = engine.build(state)
-    assert "CGI" in result.negative_prompt
-    assert "3d render" in result.negative_prompt
-
-
-def test_sdxl_custom_negative_appended(engine):
-    state = _sdxl_state(seed=1, custom_negative="out of frame, cropped")
-    result = engine.build(state)
-    assert "out of frame" in result.negative_prompt
-    assert "cropped" in result.negative_prompt
-
-
-def test_sdxl_includes_lighting_and_style(engine):
-    result = engine.build(_sdxl_state(seed=2))
-    prompt = result.prompt.lower()
-    assert "light" in prompt
-    assert "palette" in prompt or "photography" in prompt
 
 
 # -- shared -----------------------------------------------------------------

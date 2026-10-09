@@ -172,9 +172,7 @@ class SDImageGenerationMixin:
                             "model_path": self.model_path,
                             "version": self.version,
                             "scheduler_name": self.scheduler_name,
-                            "loaded_lora": self._loaded_lora,
                             "loaded_embeddings": self._loaded_embeddings,
-                            "controlnet_enabled": self.controlnet_enabled,
                             "is_txt2img": self.is_txt2img,
                             "is_img2img": self.is_img2img,
                             "is_inpaint": self.is_inpaint,
@@ -184,7 +182,6 @@ class SDImageGenerationMixin:
                             "application_settings": self.application_settings,
                             "path_settings": self.path_settings,
                             "metadata_settings": self.metadata_settings,
-                            "controlnet_settings": self.controlnet_settings,
                             "nsfw_detected": nsfw_flags,
                             "nsfw_filter_active": self.use_safety_checker,
                         }

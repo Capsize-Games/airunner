@@ -11,9 +11,6 @@ from airunner.components.data.bootstrap_service import (
     get_model_bootstrap_data,
 )
 from airunner.components.data.bootstrap_service import (
-    get_controlnet_bootstrap_data,
-)
-from airunner.components.data.bootstrap_service import (
     get_sd_file_bootstrap_data,
 )
 from airunner.components.data.bootstrap_service import (
@@ -41,36 +38,6 @@ from airunner.components.downloader.gui.windows.setup_wizard.installation_settin
 )
 
 logger = get_logger(__name__)
-
-
-# Note: SD 1.5 ControlNet support has been deprecated in favor of
-# newer art models.
-CONTROLNET_PATHS = []
-controlnet_processor_files = [
-    "150_16_swin_l_oneformer_coco_100ep.pth",
-    "250_16_swin_l_oneformer_ade20k_160k.pth",
-    "ControlNetHED.pth",
-    "ControlNetLama.pth",
-    "RealESRGAN_x4plus.pth",
-    "ZoeD_M12_N.pt",
-    "body_pose_model.pth",
-    "clip_g.pth",
-    "dpt_hybrid-midas-501f0c75.pt",
-    "erika.pth",
-    "facenet.pth",
-    "hand_pose_model.pth",
-    "lama.ckpt",
-    "latest_net_G.pth",
-    "mlsd_large_512_fp32.pth",
-    "netG.pth",
-    "network-bsds500.pth",
-    "res101.pth",
-    "scannet.pt",
-    "sk_model.pth",
-    "sk_model2.pth",
-    "table5_pidinet.pth",
-    "upernet_global_small.pth",
-]
 
 
 def _enabled_llm_download_repo_ids(
@@ -362,120 +329,6 @@ class InstallWorker(
         except Exception:
             # Non-fatal: proceed with other downloads
             pass
-
-    def download_controlnet(self):
-        if not self.models_enabled["stable_diffusion"]:
-            self.set_page()
-            return
-        self.parent.on_set_downloading_status_label(
-            {"label": "Downloading Controlnet models..."}
-        )
-        from collections import defaultdict
-
-        version_group = defaultdict(list)
-        for cn in get_controlnet_bootstrap_data():
-            version_group[cn["version"]].append(cn)
-
-        # First, tally totals for models that will be downloaded (already counted in calculate_total_files, but keep step tracking)
-        for version, models in version_group.items():
-            # Skip entire SD version if its master group is disabled
-            sd_flag = f"sd_{version}"
-            if not self.models_enabled.get(sd_flag, True):
-                continue
-            controlnet_flag = f"controlnet_{version}"
-            if not self.models_enabled.get(controlnet_flag, True):
-                continue
-            for controlnet_model in models:
-                if not self.models_enabled.get(controlnet_model["name"], True):
-                    continue
-                try:
-                    files = get_sd_file_bootstrap_data()[
-                        controlnet_model["version"]
-                    ]["controlnet"]
-                    self.total_models_in_current_step += len(files)
-                except KeyError:
-                    continue
-
-        # Now download the files honoring the version and per-model toggles
-        for version, models in version_group.items():
-            # Skip entire SD version if its master group is disabled
-            sd_flag = f"sd_{version}"
-            if not self.models_enabled.get(sd_flag, True):
-                continue
-            controlnet_flag = f"controlnet_{version}"
-            if not self.models_enabled.get(controlnet_flag, True):
-                # Skip entire version
-                continue
-            for controlnet_model in models:
-                if not self.models_enabled.get(controlnet_model["name"], True):
-                    continue
-                try:
-                    files = get_sd_file_bootstrap_data()[
-                        controlnet_model["version"]
-                    ]["controlnet"]
-                except KeyError:
-                    continue
-                for filename in files:
-                    requested_file_path = os.path.expanduser(
-                        os.path.join(
-                            self.path_settings.base_path,
-                            "art",
-                            "models",
-                            controlnet_model["version"],
-                            "controlnet",
-                            controlnet_model["path"],
-                        )
-                    )
-                    try:
-                        if self._debug_queue:
-                            try:
-                                msg = f"Queueing ControlNet file: {controlnet_model.get('path','<no-path>')} / {filename} -> {requested_file_path}"
-                            except Exception:
-                                msg = f"Queueing ControlNet file: {filename} -> {requested_file_path}"
-                            self.logger.debug(msg)
-                            if hasattr(self.parent, "update_download_log"):
-                                try:
-                                    self.parent.update_download_log(
-                                        {"message": msg}
-                                    )
-                                except Exception:
-                                    pass
-                        self.hf_downloader.download_model(
-                            requested_path=controlnet_model["path"],
-                            requested_file_name=filename,
-                            requested_file_path=requested_file_path,
-                            requested_callback=self._safe_progress_emit,
-                        )
-                    except Exception as e:
-                        logger.error("Error downloading %s: %s", filename, e)
-
-    def download_controlnet_processors(self):
-        if not self.models_enabled["stable_diffusion"]:
-            self.set_page()
-            return
-        self.parent.on_set_downloading_status_label(
-            {"label": "Downloading Controlnet processors..."}
-        )
-        self.total_models_in_current_step += len(controlnet_processor_files)
-        # Remove redundant total_steps increment - already counted in calculate_total_files()
-        for filename in controlnet_processor_files:
-            requested_file_path = os.path.expanduser(
-                os.path.join(
-                    self.path_settings.base_path,
-                    "art",
-                    "models",
-                    "controlnet_processors",
-                )
-            )
-            try:
-                self.hf_downloader.download_model(
-                    requested_path=f"lllyasviel/Annotators",
-                    requested_file_name=filename,
-                    requested_file_path=requested_file_path,
-                    requested_callback=self._safe_progress_emit,
-                )
-            except Exception as e:
-                logger.error("Error downloading %s: %s", filename, e)
 
     def download_llms(self):
         if not self.models_enabled["llm"]:
@@ -1143,38 +996,29 @@ class InstallWorker(
             self.download_stable_diffusion()
         elif self.current_step == 1:
             self.parent.on_set_downloading_status_label(
-                {"label": f"Downloading Controlnet"}
-            )
-            self.current_step = 2
-            self.download_controlnet()
-        elif self.current_step == 2:
-            self.current_step = 3
-            self.download_controlnet_processors()
-        elif self.current_step == 3:
-            self.parent.on_set_downloading_status_label(
                 {"label": f"Downloading LLM"}
             )
-            self.current_step = 4
+            self.current_step = 2
             self.download_llms()
-        elif self.current_step == 4:
+        elif self.current_step == 2:
             self.parent.on_set_downloading_status_label(
                 {"label": f"Downloading Text-to-Speech"}
             )
-            self.current_step = 5
+            self.current_step = 3
             self.download_tts()
-        elif self.current_step == 5:
+        elif self.current_step == 3:
             self.parent.on_set_downloading_status_label(
                 {"label": f"Downloading Speech-to-Text"}
             )
-            self.current_step = 6
+            self.current_step = 4
             self.download_stt()
-        elif self.current_step == 6:
+        elif self.current_step == 4:
             # Set step before downloading to ensure processing in download_finished
-            self.current_step = 7
+            self.current_step = 5
             self.download_openvoice()
             # Only download unidic/openvoice zips after OpenVoice models are completed
             # download_openvoice_and_unidic will be called automatically when OpenVoice models finish
-        elif self.current_step == 7:
+        elif self.current_step == 5:
             # Only called when set_page() runs after step 8 completes
             self.finalize_installation()
 
@@ -1282,9 +1126,8 @@ class InstallPage(BaseWizard):
                     get_sd_file_bootstrap_data()[version][action]
                 )
 
-        # Determine total controlnet models being downloaded
+        # Determine total art models being downloaded
 
-        # Controlnet models
         for model in self.stablediffusion_models:
             # Use .get to avoid KeyError for model names that aren't present in models_enabled
             if self.models_enabled.get(model["name"], True):
@@ -1429,30 +1272,6 @@ class InstallPage(BaseWizard):
                     self.total_files += len(files)
                 except KeyError:
                     continue
-            # Count controlnet files grouped by version only when that version's controlnet is enabled
-            from collections import defaultdict
-
-            version_group = defaultdict(list)
-            for cn in get_controlnet_bootstrap_data():
-                version_group[cn["version"]].append(cn)
-
-            for version, models in version_group.items():
-                controlnet_flag = f"controlnet_{version}"
-                if not self.models_enabled.get(controlnet_flag, True):
-                    continue
-                for controlnet_model in models:
-                    if not self.models_enabled.get(
-                        controlnet_model["name"], True
-                    ):
-                        continue
-                    try:
-                        files = get_sd_file_bootstrap_data()[
-                            controlnet_model["version"]
-                        ]["controlnet"]
-                        self.total_files += len(files)
-                    except KeyError:
-                        continue
-            self.total_files += len(controlnet_processor_files)
             # Upscaler (x4) files
             if self.models_enabled.get("upscaler_x4", False):
                 try:

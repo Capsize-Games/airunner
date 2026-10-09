@@ -106,8 +106,6 @@ class X4ResponseMixin:
         Returns:
             Dictionary with comprehensive operation metadata.
         """
-        controlnet_settings = self._safe_controlnet_settings()
-
         return self._compose_response_metadata(
             prompt=prompt,
             negative_prompt=negative_prompt,
@@ -115,19 +113,7 @@ class X4ResponseMixin:
             guidance_scale=guidance_scale,
             saved_path=saved_path,
             noise_level=noise_level,
-            controlnet_settings=controlnet_settings,
         )
-
-    def _safe_controlnet_settings(self):
-        """Safely retrieve controlnet settings if available.
-
-        Returns:
-            The controlnet settings object or None if not present.
-        """
-        try:
-            return self.controlnet_settings
-        except Exception:
-            return None
 
     def _compose_response_metadata(
         self,
@@ -137,7 +123,6 @@ class X4ResponseMixin:
         guidance_scale: float,
         saved_path: Optional[str],
         noise_level: int,
-        controlnet_settings: Optional[object],
     ) -> Dict:
         """Compose the response metadata dictionary.
 
@@ -147,7 +132,6 @@ class X4ResponseMixin:
         base = self._base_response_metadata(
             prompt, negative_prompt, steps, guidance_scale, saved_path
         )
-        base["controlnet_settings"] = controlnet_settings
         base["noise_level"] = noise_level
         return base
 

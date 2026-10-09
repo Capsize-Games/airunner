@@ -2,7 +2,7 @@
 Mixin providing model loading operations for Stable Diffusion.
 
 This mixin handles loading of all SD model components including safety checker,
-ControlNet, Compel, DeepCache, and schedulers.
+Compel, DeepCache, and schedulers.
 """
 
 import os
@@ -15,33 +15,12 @@ from transformers import CLIPImageProcessor
 from diffusers.pipelines.stable_diffusion import StableDiffusionSafetyChecker
 
 from airunner_services.database.models.schedulers import Schedulers
-from airunner_services.art.managers.stablediffusion import model_loader
 from airunner_services.art.runtime_enums import ModelStatus, ModelType
 from airunner_common.settings import AIRUNNER_LOCAL_FILES_ONLY
 
 
 class SDModelLoadingMixin:
     """Mixin providing model loading operations for Stable Diffusion."""
-
-    def _load_controlnet_model(self):
-        """
-        Load ControlNet model for conditional image generation.
-
-        Only loads if ControlNet is enabled in current request.
-        """
-        if not self.controlnet_enabled:
-            return
-        self._controlnet = model_loader.load_controlnet_model(
-            self.controlnet_enabled,
-            self.controlnet_path,
-            self.data_type,
-            self._pipe.device if self._pipe else self._device,
-            self.logger,
-        )
-        if self._controlnet:
-            self.change_model_status(ModelType.CONTROLNET, ModelStatus.LOADED)
-        else:
-            self.change_model_status(ModelType.CONTROLNET, ModelStatus.FAILED)
 
     def _load_compel(self):
         """
@@ -69,22 +48,6 @@ class SDModelLoadingMixin:
             self._deep_cache_helper.enable()
         except AttributeError as e:
             self.logger.error(f"Failed to enable deep cache: {e}")
-
-    def _load_controlnet_processor(self):
-        """
-        Load ControlNet image preprocessor.
-
-        Loads appropriate processor for current ControlNet model type
-        (e.g., Canny, depth, OpenPose).
-        """
-        if not self.controlnet_enabled:
-            return
-        self._controlnet_processor = model_loader.load_controlnet_processor(
-            self.controlnet_enabled,
-            self.controlnet_model,
-            self.controlnet_processor_path,
-            self.logger,
-        )
 
     def _load_scheduler(self, scheduler_name: Optional[str] = None):
         """

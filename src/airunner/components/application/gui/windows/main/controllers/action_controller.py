@@ -99,10 +99,6 @@ class ActionController(MenuController):
         self.show_settings_path("embeddings_model_path")
 
     @Slot()
-    def action_show_model_path_lora(self):
-        self.show_settings_path("lora_model_path")
-
-    @Slot()
     def action_show_llm(self):
         pass
 

@@ -1,4 +1,4 @@
-"""Mixin providing AI model, LoRA, and embedding management operations."""
+"""Mixin providing AI model and embedding management operations."""
 
 from typing import Any, List, Optional
 
@@ -6,7 +6,7 @@ from airunner.daemon_client.resource_store import TABLE_TO_RESOURCE as table_to_
 
 
 class ModelManagementMixin:
-    """Mixin for managing AI models, LoRAs, and embeddings."""
+    """Mixin for managing AI models and embeddings."""
 
     def update_ai_models(self, models: List[Any]) -> None:
         """Update multiple AI models.
@@ -49,7 +49,6 @@ class ModelManagementMixin:
         layer_tables = {
             "image_to_image_settings": self.update_image_to_image_settings,
             "outpaint_settings": self.update_outpaint_settings,
-            "controlnet_settings": self.update_controlnet_settings,
             "drawing_pad_settings": self.update_drawing_pad_settings,
         }
 
@@ -69,37 +68,6 @@ class ModelManagementMixin:
             self._notify_setting_updated(resource_name, column_name, val)
         else:
             self.logger.error("Failed to update settings: No setting found")
-
-    def update_lora(self, lora: Any) -> None:
-        """Update or create a LoRA.
-
-        Args:
-            lora: Lora instance to update or create.
-        """
-        existing = self._find_lora_by_name(lora.name)
-
-        if existing:
-            self._update_existing_lora(existing, lora)
-        else:
-            self._create_new_lora(lora)
-
-        self._notify_setting_updated(None, None, None)
-
-    def update_loras(self, loras: List[Any]) -> None:
-        """Update multiple LoRAs.
-
-        Args:
-            loras: List of Lora instances to update.
-        """
-        for lora in loras:
-            existing = self._find_lora_by_name(lora.name)
-
-            if existing:
-                self._update_existing_lora(existing, lora)
-            else:
-                self._create_new_lora(lora)
-
-        self._notify_setting_updated(None, None, None)
 
     def update_embeddings(self, embeddings: List[Any]) -> None:
         """Update multiple embeddings.
@@ -121,30 +89,6 @@ class ModelManagementMixin:
 
         self._notify_setting_updated(None, None, None)
 
-    def delete_lora(self, lora: Any) -> None:
-        """Delete a LoRA by name.
-
-        Args:
-            lora: Lora instance to delete.
-        """
-        loras = self.resource_store.query("Lora", filters={"name": lora.name})
-        for lora_instance in loras:
-            self.resource_store.delete("Lora", lora_instance.id)
-
-    def delete_lora_by_name(self, lora_name: str, version: str) -> None:
-        """Delete LoRA by name and version.
-
-        Args:
-            lora_name: Name of the LoRA.
-            version: Version of the LoRA.
-        """
-        loras = self.resource_store.query(
-            "Lora",
-            filters={"name": lora_name, "version": version},
-        )
-        for lora in loras:
-            self.resource_store.delete("Lora", lora.id)
-
     def delete_embedding(self, embedding: Any) -> None:
         """Delete an embedding.
 
@@ -155,33 +99,6 @@ class ModelManagementMixin:
             "Embedding",
             filters=self._record_values(embedding),
         )
-
-    def get_lora_by_name(self, name: str) -> Optional[Any]:
-        """Get LoRA by name.
-
-        Args:
-            name: Name of the LoRA.
-
-        Returns:
-            Lora instance or None.
-        """
-        return self.resource_store.first("Lora", filters={"name": name})
-
-    def add_lora(self, lora: Any) -> None:
-        """Add a new LoRA.
-
-        Args:
-            lora: Lora instance to add.
-        """
-        self.resource_store.create("Lora", self._record_values(lora))
-
-    def create_lora(self, lora: Any) -> None:
-        """Create a new LoRA.
-
-        Args:
-            lora: Lora instance to create.
-        """
-        self.resource_store.create("Lora", self._record_values(lora))
 
     def get_embedding_by_name(self, name: str) -> Optional[Any]:
         """Get embedding by name.
@@ -238,38 +155,6 @@ class ModelManagementMixin:
             model: AIModels instance to create.
         """
         self.resource_store.create("AIModels", self._record_values(model))
-
-    def _find_lora_by_name(self, name: str) -> Optional[Any]:
-        """Find LoRA by name.
-
-        Args:
-            name: LoRA name.
-
-        Returns:
-            Lora instance or None.
-        """
-        return self.resource_store.first("Lora", filters={"name": name})
-
-    def _update_existing_lora(self, existing: Any, lora: Any) -> None:
-        """Update existing LoRA.
-
-        Args:
-            existing: Existing LoRA.
-            lora: New LoRA data.
-        """
-        self.resource_store.update(
-            "Lora",
-            existing.id,
-            self._record_values(lora),
-        )
-
-    def _create_new_lora(self, lora: Any) -> None:
-        """Create new LoRA instance.
-
-        Args:
-            lora: LoRA data.
-        """
-        self.resource_store.create("Lora", self._record_values(lora))
 
     def _find_existing_embedding(
         self, embedding: Any

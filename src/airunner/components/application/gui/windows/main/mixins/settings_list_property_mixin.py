@@ -32,11 +32,6 @@ class SettingsListPropertyMixin:
         return self.load_prompt_templates()
 
     @property
-    def controlnet_models(self) -> List[Type[Any]]:
-        """Get all ControlNet model configurations."""
-        return self.load_controlnet_models()
-
-    @property
     def saved_prompts(self) -> List[Type[Any]]:
         """Get all saved prompt configurations."""
         return self.load_saved_prompts()

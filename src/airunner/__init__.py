@@ -43,8 +43,9 @@ def _apply_diffusers_torchao_workaround() -> bool:
 
 	Diffusers 0.35.1 imports its torchao quantizer module during pipeline
 	loading. With torchao 0.16.x, that path triggers an upstream NameError
-	before AIRunner can construct SDXL pipelines. AIRunner does not depend on
-	diffusers torchao quantization directly, so we disable that optional path
+	before AIRunner can construct diffusion pipelines. AIRunner does not
+	depend on diffusers torchao quantization directly, so we disable
+	that optional path
 	up front for the affected versions.
 	"""
 	if _is_truthy(os.environ.get("AIRUNNER_ENABLE_DIFFUSERS_TORCHAO")):

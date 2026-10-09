@@ -23,7 +23,7 @@ class SDPipelineManagementMixin:
         Swap current pipeline to match operation type.
 
         Preserves model components while changing pipeline class to support
-        different operations (txt2img, img2img, inpaint, controlnet variants).
+        different operations (txt2img, img2img, inpaint).
         """
         pipeline_class_ = self._pipeline_class
         if (
@@ -45,11 +45,6 @@ class SDPipelineManagementMixin:
                 k: getattr(self._pipe, k) for k in original_config.keys()
             }
 
-            if self.controlnet_enabled:
-                kwargs["controlnet"] = self.controlnet
-            else:
-                kwargs.pop("controlnet", None)
-
             kwargs = {
                 k: v
                 for k, v in kwargs.items()
@@ -61,7 +56,6 @@ class SDPipelineManagementMixin:
                     "tokenizer",
                     "tokenizer_2",
                     "unet",
-                    "controlnet",
                     # NOTE: "scheduler" is intentionally excluded here
                     # We manage the scheduler separately via _load_scheduler()
                     # to ensure scheduler changes persist across pipeline swaps

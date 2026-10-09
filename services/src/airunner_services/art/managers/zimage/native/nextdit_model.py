@@ -664,7 +664,7 @@ class NextDiT(nn.Module):
                 transformer_options=transformer_options,
             )
             
-            # Handle patches (for ControlNet, etc.)
+            # Handle patches (for conditioning adapters, etc.)
             if "double_block" in patches:
                 for p in patches["double_block"]:
                     out = p({

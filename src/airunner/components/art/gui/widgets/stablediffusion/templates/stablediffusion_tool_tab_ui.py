@@ -51,19 +51,6 @@ class Ui_stablediffusion_tool_tab_widget(object):
         self.gridLayout_4.addWidget(self.stable_diffusion_widget_placeholder, 0, 0, 2, 2)
 
         self.tool_tab_widget_container.addTab(self.tab_3, "")
-        self.tab_6 = QWidget()
-        self.tab_6.setObjectName(u"tab_6")
-        self.gridLayout_7 = QGridLayout(self.tab_6)
-        self.gridLayout_7.setObjectName(u"gridLayout_7")
-        self.gridLayout_7.setHorizontalSpacing(0)
-        self.gridLayout_7.setVerticalSpacing(10)
-        self.gridLayout_7.setContentsMargins(0, 0, 0, 0)
-        self.lora_container_widget_placeholder = QWidget(self.tab_6)
-        self.lora_container_widget_placeholder.setObjectName(u"lora_container_widget_placeholder")
-
-        self.gridLayout_7.addWidget(self.lora_container_widget_placeholder, 0, 0, 1, 1)
-
-        self.tool_tab_widget_container.addTab(self.tab_6, "")
         self.tab_7 = QWidget()
         self.tab_7.setObjectName(u"tab_7")
         self.gridLayout_8 = QGridLayout(self.tab_7)
@@ -150,7 +137,6 @@ class Ui_stablediffusion_tool_tab_widget(object):
     def retranslateUi(self, stablediffusion_tool_tab_widget):
         stablediffusion_tool_tab_widget.setWindowTitle(QCoreApplication.translate("stablediffusion_tool_tab_widget", u"Form", None))
         self.tool_tab_widget_container.setTabText(self.tool_tab_widget_container.indexOf(self.tab_3), QCoreApplication.translate("stablediffusion_tool_tab_widget", u"Model", None))
-        self.tool_tab_widget_container.setTabText(self.tool_tab_widget_container.indexOf(self.tab_6), QCoreApplication.translate("stablediffusion_tool_tab_widget", u"LoRA", None))
         self.tool_tab_widget_container.setTabText(self.tool_tab_widget_container.indexOf(self.tab_7), QCoreApplication.translate("stablediffusion_tool_tab_widget", u"Embeddings", None))
         self.tool_tab_widget_container.setTabText(self.tool_tab_widget_container.indexOf(self.tab_2), QCoreApplication.translate("stablediffusion_tool_tab_widget", u"Layers", None))
         self.tool_tab_widget_container.setTabText(self.tool_tab_widget_container.indexOf(self.tab_4), QCoreApplication.translate("stablediffusion_tool_tab_widget", u"Grid", None))

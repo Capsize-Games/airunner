@@ -31,18 +31,6 @@ class Ui_prompt_builder(object):
         self.verticalLayout_root.setObjectName(u"verticalLayout_root")
         self.horizontalLayout_target = QHBoxLayout()
         self.horizontalLayout_target.setObjectName(u"horizontalLayout_target")
-        self.label_target = QLabel(prompt_builder)
-        self.label_target.setObjectName(u"label_target")
-
-        self.horizontalLayout_target.addWidget(self.label_target)
-
-        self.target_generator = QComboBox(prompt_builder)
-        self.target_generator.addItem("")
-        self.target_generator.addItem("")
-        self.target_generator.setObjectName(u"target_generator")
-
-        self.horizontalLayout_target.addWidget(self.target_generator)
-
         self.horizontalSpacer_target = QSpacerItem(40, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
 
         self.horizontalLayout_target.addItem(self.horizontalSpacer_target)
@@ -335,16 +323,6 @@ class Ui_prompt_builder(object):
 
         self.gridLayout_polish.addWidget(self.quality, 0, 1, 1, 1)
 
-        self.label_custom_negative = QLabel(self.groupBox_polish)
-        self.label_custom_negative.setObjectName(u"label_custom_negative")
-
-        self.gridLayout_polish.addWidget(self.label_custom_negative, 1, 0, 1, 1)
-
-        self.custom_negative = QLineEdit(self.groupBox_polish)
-        self.custom_negative.setObjectName(u"custom_negative")
-
-        self.gridLayout_polish.addWidget(self.custom_negative, 1, 1, 1, 1)
-
 
         self.verticalLayout_scroll.addWidget(self.groupBox_polish)
 
@@ -378,17 +356,6 @@ class Ui_prompt_builder(object):
         self.prompt_preview.setReadOnly(False)
 
         self.verticalLayout_preview.addWidget(self.prompt_preview)
-
-        self.negative_prompt_label = QLabel(self.groupBox_preview)
-        self.negative_prompt_label.setObjectName(u"negative_prompt_label")
-
-        self.verticalLayout_preview.addWidget(self.negative_prompt_label)
-
-        self.negative_prompt_preview = QPlainTextEdit(self.groupBox_preview)
-        self.negative_prompt_preview.setObjectName(u"negative_prompt_preview")
-        self.negative_prompt_preview.setReadOnly(False)
-
-        self.verticalLayout_preview.addWidget(self.negative_prompt_preview)
 
 
         self.verticalLayout_root.addWidget(self.groupBox_preview)
@@ -430,10 +397,6 @@ class Ui_prompt_builder(object):
 
     def retranslateUi(self, prompt_builder):
         prompt_builder.setWindowTitle(QCoreApplication.translate("prompt_builder", u"Prompt Builder", None))
-        self.label_target.setText(QCoreApplication.translate("prompt_builder", u"Target Model", None))
-        self.target_generator.setItemText(0, QCoreApplication.translate("prompt_builder", u"zimage", None))
-        self.target_generator.setItemText(1, QCoreApplication.translate("prompt_builder", u"stablediffusion", None))
-
         self.randomize_checkbox.setText(QCoreApplication.translate("prompt_builder", u"Randomize unfilled slots", None))
         self.random_seed_checkbox.setText(QCoreApplication.translate("prompt_builder", u"Random seed", None))
 #if QT_CONFIG(tooltip)
@@ -469,14 +432,11 @@ class Ui_prompt_builder(object):
         self.custom_style.setPlaceholderText(QCoreApplication.translate("prompt_builder", u"Custom style (appended to the style section)", None))
         self.groupBox_polish.setTitle(QCoreApplication.translate("prompt_builder", u"Constraints & Polish", None))
         self.label_quality.setText(QCoreApplication.translate("prompt_builder", u"Quality Phrase", None))
-        self.label_custom_negative.setText(QCoreApplication.translate("prompt_builder", u"Custom Negative Terms", None))
-        self.custom_negative.setPlaceholderText(QCoreApplication.translate("prompt_builder", u"Extra negative terms (SDXL only, comma separated)", None))
         self.groupBox_prefix.setTitle(QCoreApplication.translate("prompt_builder", u"Prefix / Suffix", None))
         self.prefix.setPlaceholderText(QCoreApplication.translate("prompt_builder", u"Prefix", None))
         self.suffix.setPlaceholderText(QCoreApplication.translate("prompt_builder", u"Suffix", None))
         self.groupBox_preview.setTitle(QCoreApplication.translate("prompt_builder", u"Prompt Preview", None))
         self.prompt_preview.setPlaceholderText(QCoreApplication.translate("prompt_builder", u"Generated prompt appears here...", None))
-        self.negative_prompt_label.setText(QCoreApplication.translate("prompt_builder", u"Negative Prompt (SDXL only)", None))
         self.word_count_label.setText(QCoreApplication.translate("prompt_builder", u"0 words", None))
         self.randomize_button.setText(QCoreApplication.translate("prompt_builder", u"Randomize All", None))
         self.generate_button.setText(QCoreApplication.translate("prompt_builder", u"Generate Prompt", None))

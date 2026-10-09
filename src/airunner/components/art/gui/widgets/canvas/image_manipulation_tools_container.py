@@ -7,8 +7,8 @@ from airunner.utils.settings.get_qsettings import get_qsettings
 from airunner.enums import StableDiffusionVersion, normalize_art_version
 
 
-# Versions that don't support ControlNet or Inpaint
-_NO_CONTROLNET_INPAINT_VERSIONS = (
+# Versions that don't support Inpaint
+_NO_INPAINT_VERSIONS = (
     StableDiffusionVersion.Z_IMAGE_TURBO.value,
 )
 
@@ -20,7 +20,6 @@ class ImageManipulationToolsContainer(BaseWidget):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.qsettings = get_qsettings()
-        self._controlnet_tab = None
         self._inpaint_tab = None
         self._last_version = None
         self.ui.image_manipulation_tools_tab_container.currentChanged.connect(
@@ -47,34 +46,27 @@ class ImageManipulationToolsContainer(BaseWidget):
             self._update_tab_visibility()
 
     def _update_tab_visibility(self):
-        """Hide/show ControlNet and Inpaint tabs based on model version.
-        
-        Z-Image models don't support ControlNet or Inpaint pipelines,
-        so those tabs should be hidden when Z-Image is selected.
+        """Hide/show the Inpaint tab based on model version.
+
+        Z-Image models don't support Inpaint pipelines,
+        so that tab should be hidden when Z-Image is selected.
         """
         tab_widget = self.ui.image_manipulation_tools_tab_container
         current_version = normalize_art_version(
             self.generator_settings.version
         )
-        should_hide = current_version in _NO_CONTROLNET_INPAINT_VERSIONS
-        
+        should_hide = current_version in _NO_INPAINT_VERSIONS
+
         # Store references to removed tabs so they can be restored
         if should_hide:
-            # Remove ControlNet tab (index 1) and Inpaint tab (index 2)
-            # Note: Remove in reverse order to preserve indices
-            if tab_widget.count() > 2:
-                self._inpaint_tab = tab_widget.widget(2)
-                tab_widget.removeTab(2)
+            # Remove Inpaint tab (index 1)
             if tab_widget.count() > 1:
-                self._controlnet_tab = tab_widget.widget(1)
+                self._inpaint_tab = tab_widget.widget(1)
                 tab_widget.removeTab(1)
         else:
-            # Restore tabs if they were previously removed
-            if self._controlnet_tab is not None and tab_widget.count() == 1:
-                tab_widget.insertTab(1, self._controlnet_tab, "Controlnet")
-                self._controlnet_tab = None
-            if self._inpaint_tab is not None and tab_widget.count() == 2:
-                tab_widget.insertTab(2, self._inpaint_tab, "Inpaint")
+            # Restore the tab if it was previously removed
+            if self._inpaint_tab is not None and tab_widget.count() == 1:
+                tab_widget.insertTab(1, self._inpaint_tab, "Inpaint")
                 self._inpaint_tab = None
 
     def showEvent(self, event):

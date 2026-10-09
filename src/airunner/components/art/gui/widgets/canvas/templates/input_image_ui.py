@@ -20,7 +20,6 @@ from PySide6.QtWidgets import (QApplication, QGraphicsView, QGridLayout, QHBoxLa
     QWidget)
 
 from airunner.components.application.gui.widgets.slider.slider_widget import SliderWidget
-from airunner.components.art.gui.widgets.controlnet.controlnet_settings_widget import ControlnetSettingsWidget
 import airunner.feather_rc
 
 class Ui_input_image(object):
@@ -94,11 +93,6 @@ class Ui_input_image(object):
         self.mask_blur_slider_widget.setProperty(u"spinbox_page_step", 0.100000000000000)
 
         self.gridLayout.addWidget(self.mask_blur_slider_widget, 1, 0, 1, 1)
-
-        self.controlnet_settings = ControlnetSettingsWidget(self.verticalWidget)
-        self.controlnet_settings.setObjectName(u"controlnet_settings")
-
-        self.gridLayout.addWidget(self.controlnet_settings, 2, 0, 1, 1)
 
 
         self.gridLayout_3.addWidget(self.verticalWidget, 1, 0, 1, 1)

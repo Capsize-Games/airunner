@@ -24,10 +24,6 @@ from airunner_services.database.models.companion_session import (
     CompanionSession,
 )
 from airunner_services.database.models.companion_turn import CompanionTurn
-from airunner_services.database.models.controlnet_model import ControlnetModel
-from airunner_services.database.models.controlnet_settings import (
-    ControlnetSettings,
-)
 from airunner_services.database.models.conversation import Conversation
 from airunner_services.database.models.drawingpad_settings import (
     DrawingPadSettings,
@@ -92,7 +88,6 @@ from airunner_services.database.models.whisper_settings import (
     WhisperSettings,
 )
 from airunner_services.database.models.zimfile import ZimFile
-from airunner_services.database.models.lora import Lora
 from airunner_services.database.models.embedding import Embedding
 from airunner_services.database.models.fine_tuned_model import FineTunedModel
 
@@ -111,8 +106,6 @@ __all__ = [
     "CompanionNarrative",
     "CompanionSession",
     "CompanionTurn",
-    "ControlnetModel",
-    "ControlnetSettings",
     "Conversation",
     "DecisionMemory",
     "DecisionOutcome",
@@ -132,7 +125,6 @@ __all__ = [
     "LanguageSettings",
     "LLMTool",
     "LLMGeneratorSettings",
-    "Lora",
     "MemorySettings",
     "MetadataSettings",
     "OpenVoiceSettings",

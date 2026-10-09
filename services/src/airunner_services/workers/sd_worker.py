@@ -10,9 +10,6 @@ from typing import Dict, Optional
 import torch
 from PIL import Image
 
-from airunner_services.model_management.sdxl_model_manager import (
-	SDXLModelManager,
-)
 from airunner_services.model_management.x4_upscale_manager import (
 	X4UpscaleManager,
 )
@@ -77,7 +74,6 @@ class SDWorker(Worker):
 			SignalCode.SD_ART_MODEL_CHANGED: self.on_art_model_changed,
 		}
 		self.image_export_worker = image_export_worker
-		self._sdxl: Optional[SDXLModelManager] = None
 		self._zimage: Optional[ZImageModelManager] = None
 		self._sd: Optional[object] = None
 		self._x4_upscaler: Optional[X4UpscaleManager] = None
@@ -125,13 +121,6 @@ class SDWorker(Worker):
 
 				if version in (StableDiffusionVersion.Z_IMAGE_TURBO,):
 					self._model_manager = self.zimage
-				elif version in (
-					StableDiffusionVersion.SDXL1_0,
-					StableDiffusionVersion.SDXL_TURBO,
-					StableDiffusionVersion.SDXL_LIGHTNING,
-					StableDiffusionVersion.SDXL_HYPER,
-				):
-					self._model_manager = self.sdxl
 				elif version == StableDiffusionVersion.X4_UPSCALER:
 					self._model_manager = self.x4_upscaler
 				else:
@@ -153,35 +142,15 @@ class SDWorker(Worker):
 		return self._zimage
 
 	@property
-	def sdxl(self):
-		if self._sdxl is None:
-			self._sdxl = SDXLModelManager()
-			self._sdxl.image_export_worker = self.image_export_worker
-		return self._sdxl
-
-	@property
 	def x4_upscaler(self):
 		if self._x4_upscaler is None:
 			self._x4_upscaler = X4UpscaleManager()
 			self._x4_upscaler.image_export_worker = self.image_export_worker
 		return self._x4_upscaler
 
-	def on_load_controlnet_signal(self, data=None):
-		self.add_to_queue(
-			{
-				"action": ModelAction.LOAD,
-				"type": ModelType.CONTROLNET,
-				"data": data,
-			}
-		)
-
 	def on_input_image_settings_changed_signal(self, data: Dict):
 		if self.model_manager:
 			self.model_manager.settings_changed(data)
-
-	def on_unload_controlnet_signal(self, _data=None):
-		if self.model_manager:
-			self._unload_controlnet()
 
 	def on_load_art_signal(self, data: Dict = None):
 		self.add_to_queue(
@@ -442,13 +411,6 @@ class SDWorker(Worker):
 				self._sd.image_export_worker = None
 				del self._sd
 				self._sd = None
-			elif manager_ref is self._sdxl:
-				self.logger.info(">>> Unloading SDXL model manager")
-				self._sdxl.image_export_worker.stop()
-				del self._sdxl.image_export_worker
-				self._sdxl.image_export_worker = None
-				del self._sdxl
-				self._sdxl = None
 			elif manager_ref is self._zimage:
 				self.logger.info(">>> Unloading Z-Image model manager")
 				self._zimage.image_export_worker.stop()
@@ -470,14 +432,6 @@ class SDWorker(Worker):
 			callback = data.get("callback", None)
 			if callback is not None:
 				callback(data)
-
-	def _load_controlnet(self):
-		if self.model_manager:
-			self.model_manager.load_controlnet()
-
-	def _unload_controlnet(self):
-		if self.model_manager:
-			self.model_manager.unload_controlnet()
 
 	def on_tokenizer_load_signal(self, data: Dict = None):
 		if self.model_manager:
@@ -593,13 +547,9 @@ class SDWorker(Worker):
 		if action is ModelAction.LOAD:
 			if model_type is ModelType.SD:
 				self.load_model_manager(data)
-			elif model_type is ModelType.CONTROLNET:
-				self._load_controlnet()
 		elif action == ModelAction.UNLOAD:
 			if model_type is ModelType.SD:
 				self.unload_model_manager(data)
-			elif model_type is ModelType.CONTROLNET:
-				self._unload_controlnet()
 		elif action is ModelAction.GENERATE:
 			if model_type is ModelType.SD:
 				self._generate_image(data)
@@ -670,14 +620,14 @@ class SDWorker(Worker):
 		"""Return the resolved input images carried by one request.
 
 		Only slots that actually hold an image are returned (the
-		init/reference image, the inpaint/outpaint mask, the ControlNet
-		reference). An empty list means the request is text-only and the
-		image gate has nothing to screen.
+		init/reference image and the inpaint/outpaint mask). An empty
+		list means the request is text-only and the image gate has
+		nothing to screen.
 		"""
 		if image_request is None:
 			return []
 		images = []
-		for slot in ("image", "mask", "controlnet_image"):
+		for slot in ("image", "mask"):
 			candidate = getattr(image_request, slot, None)
 			if candidate is not None:
 				images.append(candidate)
@@ -990,9 +940,7 @@ class SDWorker(Worker):
 			"version": image_request.version,
 			"scheduler_name": image_request.scheduler,
 			"strength": image_request.strength,
-			"loaded_lora": [],
 			"loaded_embeddings": [],
-			"controlnet_enabled": bool(image_request.controlnet_enabled),
 			"is_txt2img": generator_section is GeneratorSection.TXT2IMG,
 			"is_img2img": generator_section is GeneratorSection.IMG2IMG,
 			"is_inpaint": generator_section is GeneratorSection.INPAINT,
@@ -1002,7 +950,6 @@ class SDWorker(Worker):
 			"application_settings": self.application_settings,
 			"path_settings": self.path_settings,
 			"metadata_settings": self.metadata_settings,
-			"controlnet_settings": self.controlnet_settings,
 		}
 
 	def _finalize_do_generate_signal(self, message: Dict):

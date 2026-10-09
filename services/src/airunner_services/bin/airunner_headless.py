@@ -37,7 +37,6 @@ Environment Variables:
     AIRUNNER_TTS_ON: Enable TTS service (default: 0)
     AIRUNNER_STT_ON: Enable STT service (default: 0)
     AIRUNNER_SD_ON: Enable Stable Diffusion (default: 0)
-    AIRUNNER_CN_ON: Enable ControlNet (default: 0)
     AIRUNNER_LLM_MODEL_PATH: Path to LLM model to preload
     AIRUNNER_ART_MODEL_PATH: Path to art model to preload
     AIRUNNER_TTS_MODEL_PATH: Path to TTS model to preload
@@ -322,7 +321,6 @@ def _configure_service_flags(args: argparse.Namespace) -> None:
     _set_service_env(args.enable_art, args.art_model, "AIRUNNER_SD_ON", "1")
     _set_service_env(args.enable_tts, args.tts_model, "AIRUNNER_TTS_ON", "1")
     _set_service_env(args.enable_stt, args.stt_model, "AIRUNNER_STT_ON", "1")
-    os.environ.setdefault("AIRUNNER_CN_ON", "0")
     os.environ.setdefault("AIRUNNER_KNOWLEDGE_ON", "0")
 
 

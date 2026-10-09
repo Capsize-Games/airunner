@@ -236,20 +236,10 @@ class SDMemoryManagementMixin:
             attr_val: Whether to enable sequential CPU offload.
 
         Moves model components to CPU when not in use. Slow but minimal VRAM.
-        Disabled for SDXL + Compel due to compatibility issues.
         """
         enabled = AIRUNNER_MEM_USE_ENABLE_SEQUENTIAL_CPU_OFFLOAD
         if enabled is None:
             enabled = attr_val
-
-        # Disable sequential CPU offload only for SDXL models when compel is enabled
-        # due to compatibility issues with compel prompt processing and meta tensor handling
-        if enabled and "SDXL" in self.version and self.use_compel:
-            self.logger.warning(
-                "Disabling sequential CPU offload for SDXL model with "
-                "compel due to compatibility issues"
-            )
-            enabled = False
 
         if enabled and not self.memory_settings.enable_model_cpu_offload:
             self._pipe.to("cpu")
@@ -272,18 +262,10 @@ class SDMemoryManagementMixin:
             attr_val: Whether to enable model CPU offload.
 
         Less aggressive than sequential offload, keeps active components on GPU.
-        May cause stability issues with SDXL + Compel.
         """
         enabled = AIRUNNER_MEM_ENABLE_MODEL_CPU_OFFLOAD
         if enabled is None:
             enabled = attr_val
-
-        # Add warning for SDXL models with model CPU offload when using compel
-        if enabled and "SDXL" in self.version and self.use_compel:
-            self.logger.warning(
-                "Model CPU offload with SDXL + compel may cause "
-                "stability issues"
-            )
 
         if (
             enabled

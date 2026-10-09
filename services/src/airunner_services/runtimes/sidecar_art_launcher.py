@@ -259,7 +259,6 @@ class SidecarArtLauncher:
                 "AIRUNNER_SD_ON": "1",
                 "AIRUNNER_TTS_ON": "0",
                 "AIRUNNER_STT_ON": "0",
-                "AIRUNNER_CN_ON": "0",
                 "AIRUNNER_KNOWLEDGE_ON": "0",
                 "AIRUNNER_ART_SIDECAR_PROCESS": "1",
                 "AIRUNNER_NO_PRELOAD": "1",

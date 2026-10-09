@@ -2,7 +2,7 @@
 Mixin providing generation data preparation for Stable Diffusion.
 
 This mixin handles preparing all parameters and data for image generation
-including prompts, images, masks, controlnet, and scheduler-specific setup.
+including prompts, images, masks, and scheduler-specific setup.
 """
 
 from typing import Any, Dict, Optional
@@ -14,7 +14,6 @@ from airunner_services.art.managers.stablediffusion.noise_sampler import (
     DeterministicSDENoiseSampler,
 )
 from airunner_common.settings import AIRUNNER_MIN_NUM_INFERENCE_STEPS_IMG2IMG
-from airunner_services.utils.image import convert_image_to_binary
 
 
 class SDGenerationPreparationMixin:
@@ -69,7 +68,7 @@ class SDGenerationPreparationMixin:
         Returns:
             Dictionary of generation parameters for pipeline.
 
-        Handles txt2img, img2img, inpaint, outpaint, and controlnet modes.
+        Handles txt2img, img2img, inpaint, and outpaint modes.
         """
         self.logger.debug("Preparing data")
         self._set_seed()
@@ -175,30 +174,6 @@ class SDGenerationPreparationMixin:
 
         data["guidance_scale"] = self.image_request.scale
 
-        # set the image to controlnet image if controlnet is enabled
-        if self.controlnet_enabled:
-            controlnet_image = self.controlnet_image
-            if controlnet_image:
-                controlnet_image = self._resize_image(
-                    controlnet_image, width, height
-                )
-                control_image = self._controlnet_processor(
-                    controlnet_image,
-                    to_pil=True,
-                    image_resolution=min(width, height),
-                    detect_resolution=min(width, height),
-                )
-                if control_image is not None:
-                    self.update_controlnet_settings(
-                        generated_image=convert_image_to_binary(control_image),
-                    )
-                    if self.is_txt2img:
-                        image = control_image
-                    else:
-                        data["control_image"] = control_image
-                else:
-                    raise ValueError("Controlnet image is None")
-
         if image is not None:
             image = self._resize_image(image, width, height)
             data["image"] = image
@@ -221,17 +196,6 @@ class SDGenerationPreparationMixin:
                 "strength": self.image_request.strength,
             }
         )
-
-        if self.controlnet_enabled:
-            data.update(
-                {
-                    "guess_mode": self.image_request.controlnet_guess_mode,
-                    "control_guidance_start": self.image_request.control_guidance_start,
-                    "control_guidance_end": self.image_request.control_guidance_end,
-                    "guidance_scale": self.image_request.scale,
-                    "controlnet_conditioning_scale": self.image_request.controlnet_conditioning_scale,
-                }
-            )
 
         # Prepare deterministic noise for SDE schedulers
         data = self._prepare_sde_noise_sampler(data)

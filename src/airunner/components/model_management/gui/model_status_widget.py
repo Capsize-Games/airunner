@@ -35,14 +35,12 @@ from airunner.daemon_client.resource_store import get_resource_store
 
 _UNLOAD_SIGNALS = {
     "art": SignalCode.SD_UNLOAD_SIGNAL,
-    "controlnet": SignalCode.CONTROLNET_UNLOAD_SIGNAL,
     "llm": SignalCode.LLM_UNLOAD_SIGNAL,
     "llmmodel": SignalCode.LLM_UNLOAD_SIGNAL,
     "ragembedding": SignalCode.RAG_UNLOAD_SIGNAL,
     "rmbg": SignalCode.RMBG_UNLOAD_SIGNAL,
     "rmbgmodel": SignalCode.RMBG_UNLOAD_SIGNAL,
     "sd": SignalCode.SD_UNLOAD_SIGNAL,
-    "sdcontrolnet": SignalCode.CONTROLNET_UNLOAD_SIGNAL,
     "sdmodel": SignalCode.SD_UNLOAD_SIGNAL,
     "speechtotext": SignalCode.STT_UNLOAD_SIGNAL,
     "stt": SignalCode.STT_UNLOAD_SIGNAL,

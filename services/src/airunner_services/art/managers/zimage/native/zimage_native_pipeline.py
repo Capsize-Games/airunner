@@ -171,7 +171,7 @@ class ZImageNativePipeline:
         vram = torch.cuda.memory_allocated() / 1024**3
         cpu = torch.cuda.memory_reserved() / 1024**3  # Approximation
 
-        # PEFT compatibility: diffusers LoRA loader checks hf_device_map
+        # PEFT compatibility: the diffusers adapter loader checks hf_device_map
         # even though native pipeline manages devices internally.
         self.hf_device_map = None
         

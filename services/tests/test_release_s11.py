@@ -160,9 +160,7 @@ class _FakeGenerator(mixin_mod.SDImageGenerationMixin):
         self.model_path = "synthetic-model"
         self.version = "synthetic"
         self.scheduler_name = "synthetic"
-        self._loaded_lora: list = []
         self._loaded_embeddings: list = []
-        self.controlnet_enabled = False
         self.is_txt2img = True
         self.is_img2img = False
         self.is_inpaint = False
@@ -172,7 +170,6 @@ class _FakeGenerator(mixin_mod.SDImageGenerationMixin):
         self.application_settings = SimpleNamespace()
         self.path_settings = SimpleNamespace()
         self.metadata_settings = SimpleNamespace()
-        self.controlnet_settings = SimpleNamespace()
         self.use_safety_checker = False
 
     def _load_prompt_embeds(self) -> None:
@@ -260,11 +257,6 @@ def _make_daemon_worker():
 
         @property
         def metadata_settings(self):
-            """Return neutral settings without touching the database."""
-            return SimpleNamespace()
-
-        @property
-        def controlnet_settings(self):
             """Return neutral settings without touching the database."""
             return SimpleNamespace()
 

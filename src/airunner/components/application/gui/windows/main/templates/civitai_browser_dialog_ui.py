@@ -169,7 +169,7 @@ class Ui_CivitaiBrowserDialog(object):
 
     def retranslateUi(self, CivitaiBrowserDialog):
         CivitaiBrowserDialog.setWindowTitle(QCoreApplication.translate("CivitaiBrowserDialog", u"CivitAI Browser", None))
-        self.search_line_edit.setPlaceholderText(QCoreApplication.translate("CivitaiBrowserDialog", u"Search checkpoints, LoRAs, and embeddings", None))
+        self.search_line_edit.setPlaceholderText(QCoreApplication.translate("CivitaiBrowserDialog", u"Search checkpoints and embeddings", None))
         self.search_button.setText(QCoreApplication.translate("CivitaiBrowserDialog", u"Search", None))
         self.load_more_button.setText(QCoreApplication.translate("CivitaiBrowserDialog", u"Load More", None))
         self.status_label.setText(QCoreApplication.translate("CivitaiBrowserDialog", u"Loading models\u2026", None))

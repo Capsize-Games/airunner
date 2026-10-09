@@ -11,9 +11,6 @@ from airunner_services.database.models.application_settings import (
     ApplicationSettings,
 )
 from airunner_services.database.models.chatbot import Chatbot
-from airunner_services.database.models.controlnet_settings import (
-    ControlnetSettings,
-)
 from airunner_services.database.models.espeak_settings import (
     EspeakSettings,
 )
@@ -229,11 +226,6 @@ class RuntimeContextMixin:
     def metadata_settings(self) -> Any:
         """Return persisted metadata settings or one default object."""
         return self._load_settings(MetadataSettings)
-
-    @property
-    def controlnet_settings(self) -> Any:
-        """Return one shared ControlNet settings row."""
-        return self._load_settings(ControlnetSettings)
 
     @property
     def path_settings(self) -> Any:

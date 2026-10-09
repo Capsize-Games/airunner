@@ -163,7 +163,6 @@ class PanelStateController(MainWindowBase):
         self.set_canvas_button_checked()
         self.set_prompt_editor_button_checked()
         self.set_art_model_button_checked()
-        self.set_lora_button_checked()
         self.set_embeddings_button_checked()
         self.set_layers_button_checked()
         self.set_grid_button_checked()
@@ -234,11 +233,6 @@ class PanelStateController(MainWindowBase):
     def set_art_model_button_checked(self):
         self._set_art_tools_button_checked(
             "art_model_button", self._art_tools_model_tab_index
-        )
-
-    def set_lora_button_checked(self):
-        self._set_art_tools_button_checked(
-            "lora_button", self._art_tools_lora_tab_index
         )
 
     def set_embeddings_button_checked(self):

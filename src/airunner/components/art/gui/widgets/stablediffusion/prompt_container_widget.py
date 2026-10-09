@@ -20,7 +20,7 @@ class PromptContainerWidget(BaseWidget):
         }
         super().__init__(*args, **kwargs)
         self._sd_version: str = self.generator_settings.version
-        # Note: SDXL support deprecated, secondary prompt feature removed
+        # Note: secondary prompt feature removed
 
     @Slot()
     def on_delete_prompt_button_clicked(self):

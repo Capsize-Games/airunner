@@ -394,7 +394,7 @@ def test_worker_screens_resolved_image_before_dispatch(
     )
 
 
-@pytest.mark.parametrize("slot", ["image", "mask", "controlnet_image"])
+@pytest.mark.parametrize("slot", ["image", "mask"])
 def test_worker_blocks_each_image_slot_when_flagged(
     policy_dir: Path, monkeypatch: pytest.MonkeyPatch, slot: str
 ) -> None:

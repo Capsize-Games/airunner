@@ -80,7 +80,7 @@ class Ui_embedding(object):
         self.enabled_checkbox.setText(QCoreApplication.translate("embedding", u"enabledCheckbox", None))
         self.delete_button.setText("")
 #if QT_CONFIG(tooltip)
-        self.trigger_word_edit.setToolTip(QCoreApplication.translate("embedding", u"<html><head/><body><p>Some LoRA require a trigger word to activate.</p><p>Make a note here for your records.</p></body></html>", None))
+        self.trigger_word_edit.setToolTip(QCoreApplication.translate("embedding", u"<html><head/><body><p>Some embeddings require a trigger word to activate.</p><p>Make a note here for your records.</p></body></html>", None))
 #endif // QT_CONFIG(tooltip)
         self.trigger_word_edit.setPlaceholderText(QCoreApplication.translate("embedding", u"Trigger words (comma separated)", None))
     # retranslateUi

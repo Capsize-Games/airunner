@@ -1,8 +1,5 @@
 """Shared bootstrap metadata for multiple runtime consumers."""
 
-from airunner_services.database.bootstrap.controlnet_bootstrap_data import (
-    controlnet_bootstrap_data,
-)
 from airunner_services.database.bootstrap.openvoice_languages import (
     OPENVOICE_CORE_MODELS,
     OPENVOICE_LANGUAGE_MODELS,
@@ -23,7 +20,6 @@ from airunner_services.database.bootstrap.espeak_settings_data import (
 from airunner_services.database.bootstrap.whisper import WHISPER_FILES
 
 __all__ = [
-    "controlnet_bootstrap_data",
     "ESPEAK_SETTINGS_DATA",
     "LLM_FILE_BOOTSTRAP_DATA",
     "OPENVOICE_FILES",

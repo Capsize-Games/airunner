@@ -64,7 +64,7 @@ class PrivacySettingsWidget(BaseWidget):
             downloads_layout,
             SERVICE_CIVITAI_KEY,
             "Allow CivitAI downloads",
-            "Download community models, LoRAs, and embeddings from CivitAI",
+            "Download community models and embeddings from CivitAI",
             True,
         )
         layout.addWidget(downloads_group)

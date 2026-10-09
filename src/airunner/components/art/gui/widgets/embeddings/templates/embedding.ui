@@ -68,7 +68,7 @@
       </font>
      </property>
      <property name="toolTip">
-      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Some LoRA require a trigger word to activate.&lt;/p&gt;&lt;p&gt;Make a note here for your records.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Some embeddings require a trigger word to activate.&lt;/p&gt;&lt;p&gt;Make a note here for your records.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
      </property>
      <property name="placeholderText">
       <string>Trigger words (comma separated)</string>

@@ -129,7 +129,6 @@ NVIDIA_REQUIREMENTS = ["nvidia-cuda-runtime-cu12==12.9.79"]
 
 HUGGINGFACE_REQUIREMENTS = [
     "diffusers==0.38.0",
-    "controlnet_aux==0.0.10",
     "safetensors==0.8.0",
     "kornia",
     "timm",

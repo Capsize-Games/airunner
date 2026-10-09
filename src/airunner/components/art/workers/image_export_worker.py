@@ -44,7 +44,6 @@ class ImageExportWorker(Worker):
     ) -> Optional[dict]:
         metadata = None
         metadata_settings = data.get("metadata_settings")
-        controlnet_settings = data.get("controlnet_settings")
         if metadata_settings.export_metadata:
             metadata_dict = {}
             if metadata_settings.image_export_metadata_prompt:
@@ -80,8 +79,6 @@ class ImageExportWorker(Worker):
                 metadata_dict["scheduler"] = data.get("scheduler_name", "")
             if metadata_settings.image_export_metadata_strength:
                 metadata_dict["strength"] = data.get("strength", 0)
-            if getattr(metadata_settings, "image_export_metadata_lora", False):
-                metadata_dict["lora"] = data.get("loaded_lora", [])
             if getattr(
                 metadata_settings, "image_export_metadata_embeddings", False
             ):
@@ -90,25 +87,6 @@ class ImageExportWorker(Worker):
                 metadata_dict["timestamp"] = datetime.datetime.now(
                     datetime.timezone.utc
                 ).isoformat()
-            if (
-                metadata_settings.image_export_metadata_controlnet
-                and data.get("controlnet_enabled", False)
-            ):
-                metadata_dict.update(
-                    {
-                        "guess_mode": data["guess_mode"],
-                        "control_guidance_start": data[
-                            "control_guidance_start"
-                        ],
-                        "control_guidance_end": data["control_guidance_end"],
-                        "controlnet_strength": data["strength"],
-                        "controlnet_guidance_scale": data["guidance_scale"],
-                        "controlnet_conditioning_scale": data[
-                            "controlnet_conditioning_scale"
-                        ],
-                        "controlnet": controlnet_settings.controlnet,
-                    }
-                )
             if data.get("is_txt2img", False):
                 metadata_dict["action"] = "txt2img"
             elif data.get("is_img2img", False):

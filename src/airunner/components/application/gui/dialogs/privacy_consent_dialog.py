@@ -153,7 +153,7 @@ class PrivacyConsentDialog(QDialog):
         civitai_checkbox = QCheckBox("CivitAI")
         civitai_checkbox.setChecked(True)
         civitai_desc = QLabel(
-            "Download community models, LoRAs, and embeddings from CivitAI.\n"
+            "Download community models and embeddings from CivitAI.\n"
             "Your IP address and download requests may be logged."
         )
         civitai_desc.setWordWrap(True)

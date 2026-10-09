@@ -136,15 +136,14 @@ class CustomScene(
         """Get the current settings object based on settings_key.
 
         Returns:
-            The active settings object (controlnet, image_to_image, outpaint, or drawing_pad).
+            The active settings object (image_to_image, outpaint,
+            or drawing_pad).
 
         Raises:
             ValueError: If settings_key doesn't match any known settings type.
         """
         settings = None
-        if self.settings_key == "controlnet_settings":
-            settings = self.controlnet_settings
-        elif self.settings_key == "image_to_image_settings":
+        if self.settings_key == "image_to_image_settings":
             settings = self.image_to_image_settings
         elif self.settings_key == "outpaint_settings":
             settings = self.outpaint_settings
@@ -351,9 +350,7 @@ class CustomScene(
             self.stop_painter()
 
     def _update_current_settings(self, key, value):
-        if self.settings_key == "controlnet_settings":
-            self.update_controlnet_settings(**{key: value})
-        elif self.settings_key == "image_to_image_settings":
+        if self.settings_key == "image_to_image_settings":
             self.update_image_to_image_settings(**{key: value})
         elif self.settings_key == "outpaint_settings":
             self.update_outpaint_settings(**{key: value})

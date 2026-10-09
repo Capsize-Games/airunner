@@ -10,17 +10,14 @@ from typing import Sequence, Union
 
 from alembic import op
 import sqlalchemy as sa
-from airunner_services.database.models.controlnet_settings import (
-    ControlnetSettings,
-)
-from airunner_services.database.models.drawingpad_settings import (
-    DrawingPadSettings,
-)
-from airunner_services.database.models.image_to_image_settings import (
-    ImageToImageSettings,
-)
-from airunner_services.database.models.outpaint_settings import (
-    OutpaintSettings,
+
+# Table names are inlined (not imported from models) so this historical
+# revision stays importable after model removals. See issue #2249.
+LAYER_SETTINGS_TABLES = (
+    "drawing_pad_settings",
+    "controlnet_settings",
+    "image_to_image_settings",
+    "outpaint_settings",
 )
 
 
@@ -33,28 +30,17 @@ depends_on: Union[str, Sequence[str], None] = None
 
 def upgrade() -> None:
     """Add layer_id foreign key columns to settings models."""
-    # List of settings models that should be layer-specific
-    settings_models = [
-        DrawingPadSettings,
-        ControlnetSettings,
-        ImageToImageSettings,
-        OutpaintSettings,
-    ]
     # Get inspector to check existing schema so this migration is idempotent
     bind = op.get_bind()
     inspector = sa.inspect(bind)
 
-    for model in settings_models:
-        table_name = model.__tablename__
-
+    existing_tables = set(inspector.get_table_names())
+    for table_name in LAYER_SETTINGS_TABLES:
+        if table_name not in existing_tables:
+            # Retired tables are absent on fresh databases; nothing to do.
+            continue
         # If the column already exists, skip modifying this table
-        try:
-            existing_cols = [
-                c["name"] for c in inspector.get_columns(table_name)
-            ]
-        except Exception:
-            # Table might not exist yet; let the batch operation handle it
-            existing_cols = []
+        existing_cols = [c["name"] for c in inspector.get_columns(table_name)]
 
         if "layer_id" in existing_cols:
             # Column already present; skip to avoid re-creating tables
@@ -79,18 +65,10 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     """Remove layer_id foreign key columns from settings models."""
-    settings_models = [
-        DrawingPadSettings,
-        ControlnetSettings,
-        ImageToImageSettings,
-        OutpaintSettings,
-    ]
     bind = op.get_bind()
     inspector = sa.inspect(bind)
 
-    for model in settings_models:
-        table_name = model.__tablename__
-
+    for table_name in LAYER_SETTINGS_TABLES:
         # If the table/column doesn't exist, skip
         try:
             existing_cols = [

@@ -53,9 +53,9 @@ class HuggingFaceDownloadWorker(BaseDownloadWorker):
     def _resolve_bootstrap_revision(repo_id: str) -> str:
         """Return the pinned revision for a curated repo_id, else "main".
 
-        model_bootstrap_data entries already declare a ``branch`` (e.g.
-        the SDXL Inpaint entry pins "fp16"), but nothing previously read
-        it — every download hardcoded ``resolve/main`` regardless. This
+        model_bootstrap_data entries already declare a ``branch``, but
+        nothing previously read it — every download hardcoded
+        ``resolve/main`` regardless. This
         only stops ignoring a pin that was already declared; it does not
         invent new pins for repos with no curated entry (custom models),
         which continue to resolve "main" exactly as before (release
@@ -267,7 +267,7 @@ class HuggingFaceDownloadWorker(BaseDownloadWorker):
             model_type: Type of model (llm, art, gguf, openvoice_zip, etc.)
             output_dir: Directory to save the model
             version: Version name for bootstrap data lookup (e.g.,
-                "SDXL 1.0", "Z-Image Turbo")
+                "Z-Image Turbo")
             pipeline_action: Pipeline action (txt2img, inpaint, etc.)
             missing_files: Specific list of files to download (if provided, only these files will be downloaded)
             gguf_filename: For GGUF downloads, the specific .gguf file to download

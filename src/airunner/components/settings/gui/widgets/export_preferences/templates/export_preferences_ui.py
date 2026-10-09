@@ -171,11 +171,6 @@ class Ui_export_preferences(object):
 
         self.gridLayout.addWidget(self.metadata_version, 3, 2, 1, 1)
 
-        self.metadata_lora = QCheckBox(export_preferences)
-        self.metadata_lora.setObjectName(u"metadata_lora")
-
-        self.gridLayout.addWidget(self.metadata_lora, 4, 2, 1, 1)
-
         self.metadata_embeddings = QCheckBox(export_preferences)
         self.metadata_embeddings.setObjectName(u"metadata_embeddings")
 
@@ -190,11 +185,6 @@ class Ui_export_preferences(object):
         self.metadata_strength.setObjectName(u"metadata_strength")
 
         self.gridLayout.addWidget(self.metadata_strength, 7, 1, 1, 1)
-
-        self.metadata_controlnet = QCheckBox(export_preferences)
-        self.metadata_controlnet.setObjectName(u"metadata_controlnet")
-
-        self.gridLayout.addWidget(self.metadata_controlnet, 7, 2, 1, 1)
 
         self.label_4 = QLabel(export_preferences)
         self.label_4.setObjectName(u"label_4")
@@ -234,10 +224,8 @@ class Ui_export_preferences(object):
         self.metadata_strength.toggled.connect(export_preferences.action_toggled_strength)
         self.metadata_clip_skip.toggled.connect(export_preferences.action_toggled_clip_skip)
         self.metadata_version.toggled.connect(export_preferences.action_toggled_version)
-        self.metadata_lora.toggled.connect(export_preferences.action_toggled_lora)
         self.metadata_embeddings.toggled.connect(export_preferences.action_toggled_embeddings)
         self.metadata_timestamp.toggled.connect(export_preferences.action_toggled_timestamp)
-        self.metadata_controlnet.toggled.connect(export_preferences.action_toggled_controlnet)
 
         QMetaObject.connectSlotsByName(export_preferences)
     # setupUi
@@ -267,11 +255,9 @@ class Ui_export_preferences(object):
         self.metadata_steps.setText(QCoreApplication.translate("export_preferences", u"Steps", None))
         self.metadata_clip_skip.setText(QCoreApplication.translate("export_preferences", u"Clip Skip", None))
         self.metadata_version.setText(QCoreApplication.translate("export_preferences", u"Version", None))
-        self.metadata_lora.setText(QCoreApplication.translate("export_preferences", u"LoRA", None))
         self.metadata_embeddings.setText(QCoreApplication.translate("export_preferences", u"Embeddings", None))
         self.metadata_timestamp.setText(QCoreApplication.translate("export_preferences", u"Timestamp", None))
         self.metadata_strength.setText(QCoreApplication.translate("export_preferences", u"Strength", None))
-        self.metadata_controlnet.setText(QCoreApplication.translate("export_preferences", u"Controlnet", None))
         self.label_4.setText(QCoreApplication.translate("export_preferences", u"Choose which metadata to include with exported images", None))
     # retranslateUi
 

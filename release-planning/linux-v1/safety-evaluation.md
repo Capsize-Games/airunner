@@ -24,7 +24,7 @@ is not sufficient: nudity-only detectors cannot satisfy slot (a) at all.
 
 | Candidate | Slot | License / access | Local fit | Uncertainty | Key limitation |
 |---|---|---|---|---|---|
-| SD Safety Checker (incumbent) | image | Upstream license genuinely unspecified; RAIL-adjacent lineage | tiny CLIP add-on; runs where SDXL runs | boolean only, no calibrated score | documented false positives; under-generalizes; evadable |
+| SD Safety Checker (incumbent) | image | Upstream license genuinely unspecified; RAIL-adjacent lineage | tiny CLIP add-on; runs where Z-Image runs | boolean only, no calibrated score | documented false positives; under-generalizes; evadable |
 | NudeNet classifier+detector | image, nudity only | AGPL-3.0 (copyleft) | CPU/GPU, ONNX available | per-class scores + boxes | nudity-only; female-skewed training data; ~90% academic |
 | LAION/OpenNSFW2-type CLIP/ResNet filter | image | varies; verify per weight release | lightweight, CPU-viable | probability score | same under-generalization class as incumbent |
 | Llama Guard 3 (1B/8B) / 4 (12B multimodal) | text / text+image | Llama Community (gated, not OSI-approved, use-policy + MAU clause) | 1B small; 8B/12B heavy on shared 16 GB GPU | safe/unsafe + category codes | prompt-injection susceptible; single-benchmark scores vary (77-98% F1 by source) |

@@ -21,10 +21,9 @@ Every modality actually shipped, per the verified feature matrix ([R01](https://
 
 | Modality | Model(s) | Format | Source |
 |---|---|---|---|
-| Art — Stable Diffusion | SDXL Base 1.0 (`stabilityai/stable-diffusion-xl-base-1.0`, branch `main`); SDXL Turbo (`stabilityai/sdxl-turbo`, branch `main`); SDXL Inpaint (`diffusers/stable-diffusion-xl-1.0-inpainting-0.1`, branch **`fp16`**) | diffusers / safetensors | `services/src/airunner_services/bootstrap/model_bootstrap_data.py:6-51` |
-| Art — Z-Image | Z-Image Turbo (`Tongyi-MAI/Z-Image-Turbo`, branch `main`) | diffusers / safetensors | same file, `:40-50` |
-| LLM — chat | Qwen3.5 9B (`Qwen/Qwen3.5-9B`, branch `main`), default; GPT-OSS 20B (`openai/gpt-oss-20b`, branch `main`), optional | transformers, with a GGUF pre-quantized path preferred | `model_bootstrap_data.py:53-76`; GGUF repos `services/src/airunner_services/llm/provider_config.py:56` (`unsloth/Qwen3.5-9B-GGUF`), `:95` (`unsloth/gpt-oss-20b-GGUF`) |
-| LLM — embeddings | Intfloat E5 Large (`intfloat/e5-large`, branch `main`) | transformers | `model_bootstrap_data.py:76-86` |
+| Art — Z-Image | Z-Image Turbo (`Tongyi-MAI/Z-Image-Turbo`, branch `main`) | diffusers / safetensors | `services/src/airunner_services/bootstrap/model_bootstrap_data.py:6-18` |
+| LLM — chat | Qwen3.5 9B (`Qwen/Qwen3.5-9B`, branch `main`), default; GPT-OSS 20B (`openai/gpt-oss-20b`, branch `main`), optional | transformers, with a GGUF pre-quantized path preferred | `model_bootstrap_data.py:20-42`; GGUF repos `services/src/airunner_services/llm/provider_config.py:56` (`unsloth/Qwen3.5-9B-GGUF`), `:95` (`unsloth/gpt-oss-20b-GGUF`) |
+| LLM — embeddings | Intfloat E5 Large (`intfloat/e5-large`, branch `main`) | transformers | `model_bootstrap_data.py:43-53` |
 | STT | Whisper large-v3 via whisper.cpp sidecar | GGML (`ggml-large-v3.bin`), whisper.cpp pinned to commit `9386f23...` / tag `v1.8.4` | `native/runtime_sidecars/runtime_pins.env:7-9`; default STT path `shared/airunner_common/settings.py` (`AIRUNNER_DEFAULT_STT_HF_PATH`/`AIRUNNER_DEFAULT_STT_MODEL_FILENAME`, see that file's own drift-resolution note at the top) |
 | TTS | eSpeak (CPU, no model download) and OpenVoice | eSpeak: none; OpenVoice: PyTorch checkpoint | Confirmed present via `services/src/airunner_services/runtimes/{espeak_model_manager,openvoice_model_manager}.py` (see feature matrix VOICE-03/04) |
 | Local LLM inference backend | llama.cpp sidecar | native binary, pinned to commit `47a3966...` / tag `b10000` | `native/runtime_sidecars/runtime_pins.env:3-5` |
@@ -39,14 +38,13 @@ These are the engineering estimates the app's own model-resource-arbitration sub
 |---|---|---|---|---|
 | Qwen3.5-9B | 10 GB | 12 GB | Yes, either quantization | `llm/provider_config.py:53-54` |
 | GPT-OSS 20B | 14 GB | 20 GB | **4-bit only** — 8-bit needs ~20 GB, over the 16 GB minimum | `llm/provider_config.py:92-93` |
-| SDXL Base 1.0 | — | — (`min_vram_gb=6.0`, `recommended_vram_gb=8.0`) | Yes | `model_management/model_registry.py:227-239` |
 | Z-Image Turbo | 4-bit: ~4 GB total; 8-bit: ~7-8 GB total; bf16: ~14 GB total | — | Yes at 4-bit/8-bit; bf16 is tight on 16 GB once other models are also loaded | `art/managers/zimage/mixins/zimage_memory_mixin.py:108-115` (VAE tiling is called out there as "critical" on ≤16 GB cards at 8-bit) |
-| Whisper large-v3 | — | — (registry entry: `min_vram_gb=4.0`, `recommended_vram_gb=6.0`) | Yes | `model_management/model_registry.py:257-273` — **note**: this registry entry cites `openai/whisper-large-v3` (transformers) and a GGML download target, which does not match the actual shipped whisper.cpp sidecar path in §2; flagging as a discrepancy between this registry and the real STT pipeline, not resolving it here |
+| Whisper large-v3 | — | — (registry entry: `min_vram_gb=4.0`, `recommended_vram_gb=6.0`) | Yes | `model_management/model_registry.py:241-257` — **note**: this registry entry cites `openai/whisper-large-v3` (transformers) and a GGML download target, which does not match the actual shipped whisper.cpp sidecar path in §2; flagging as a discrepancy between this registry and the real STT pipeline, not resolving it here |
 | Intfloat E5 Large (embeddings) | Not separately tracked | Not separately tracked | Yes (small model, ~1.3 GB by upstream HF listing) | No `provider_config.py`/`model_registry.py` entry found for this model |
 
-**Important caveat found while compiling this table**: `model_management/model_registry.py` also registers a "Bark" TTS model (`:242-254`) that does **not** appear anywhere in `model_bootstrap_data.py`'s actual default catalog and is not one of the two TTS engines confirmed shipped in §2 (eSpeak, OpenVoice). Treat `model_registry.py`'s estimates as the resource-arbitration subsystem's generic reference data, not a definitive list of what installs by default — the feature matrix and `model_bootstrap_data.py` are the authoritative source for what actually ships.
+**Important caveat found while compiling this table**: `model_management/model_registry.py` also registers a "Bark" TTS model (`:226-238`) that does **not** appear anywhere in `model_bootstrap_data.py`'s actual default catalog and is not one of the two TTS engines confirmed shipped in §2 (eSpeak, OpenVoice). Treat `model_registry.py`'s estimates as the resource-arbitration subsystem's generic reference data, not a definitive list of what installs by default — the feature matrix and `model_bootstrap_data.py` are the authoritative source for what actually ships.
 
-Total disk footprint for a "download every default model" install is **PENDING** — it would need to be computed from live HuggingFace repo listings (a network call), which this documentation-only ticket does not make. A rough floor from the sizes above (Qwen3.5-9B ~10-18 GB depending on format, SDXL Base ~7 GB, Z-Image ~5-14 GB, Whisper large-v3 ~3 GB) suggests **at least 30-40 GB** free disk for a typical default-model install, before accounting for GGUF alternates, OpenVoice, or any optional models a user enables. Mark this as a proposed planning floor, not a verified figure.
+Total disk footprint for a "download every default model" install is **PENDING** — it would need to be computed from live HuggingFace repo listings (a network call), which this documentation-only ticket does not make. A rough floor from the sizes above (Qwen3.5-9B ~10-18 GB depending on format, Z-Image ~5-14 GB, Whisper large-v3 ~3 GB) suggests **at least 25-35 GB** free disk for a typical default-model install, before accounting for GGUF alternates, OpenVoice, or any optional models a user enables. Mark this as a proposed planning floor, not a verified figure.
 
 ## 4. Shared-GPU scheduling assumptions
 
@@ -63,8 +61,6 @@ This is a template, not a report: every cell is deliberately empty/pending. It e
 | Scenario | Expected outcome | Result | Notes |
 |---|---|---|---|
 | Install / first run | Completes, all default models selectable | PENDING | |
-| SDXL Base txt2img | Generates without OOM | PENDING | |
-| SDXL Inpaint | Generates without OOM | PENDING | |
 | Z-Image Turbo, 4-bit | Generates without OOM | PENDING | |
 | Z-Image Turbo, 8-bit | Generates without OOM (VAE tiling active) | PENDING | per §3 caveat |
 | Qwen3.5-9B chat, 4-bit and 8-bit | Responds without OOM | PENDING | |

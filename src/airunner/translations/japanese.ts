@@ -13,7 +13,7 @@
         <location filename="../gui/widgets/llm/templates/action_menu_item.ui" line="14"/>
         <location filename="../gui/widgets/llm/templates/chat_template.ui" line="14"/>
         <location filename="../gui/widgets/llm/templates/prompt_template_editor.ui" line="14"/>
-        <location filename="../gui/widgets/lora/templates/lora_simplified.ui" line="14"/>
+        
         <location filename="../gui/widgets/model_scheduler/templates/model_scheduler_widget.ui" line="26"/>
         <location filename="../gui/widgets/prompt/templates/prompt.ui" line="14"/>
         <location filename="../gui/widgets/slider/templates/slider_spinbox.ui" line="14"/>
@@ -74,7 +74,7 @@
     <message>
         <location filename="../gui/widgets/llm/templates/action_menu_item.ui" line="20"/>
         <location filename="../gui/widgets/llm/templates/action_menu_item.ui" line="27"/>
-        <location filename="../gui/widgets/lora/templates/lora_simplified.ui" line="22"/>
+        
         <source>TextLabel</source>
         <translation></translation>
     </message>
@@ -395,11 +395,7 @@
         <source>Toggle Stable Diffusion</source>
         <translation>ステーブルディフュージョンを切り替え</translation>
     </message>
-    <message>
-        <location filename="../gui/windows/main/templates/main_window.ui" line="779"/>
-        <source>Toggle Controlnet</source>
-        <translation>Controlnetを切り替え</translation>
-    </message>
+    
     <message>
         <location filename="../gui/windows/main/templates/main_window.ui" line="791"/>
         <source>Toggle Active Grid Area</source>
@@ -1344,57 +1340,8 @@ Please be aware that AI-generated content could unintentionally replicate copyri
         <translation>AIエンジンのインストールが完了しました。責任を持ってご利用ください。</translation>
     </message>
 </context>
-<context>
-    <name>controlnet_settings_widget</name>
-    <message>
-        <location filename="../gui/widgets/controlnet/templates/controlnet_settings_widget.ui" line="14"/>
-        <source>Form</source>
-        <translation></translation>
-    </message>
-    <message>
-        <location filename="../gui/widgets/controlnet/templates/controlnet_settings_widget.ui" line="104"/>
-        <source>Conditioning Scale</source>
-        <translation>コンディショニングスケール</translation>
-    </message>
-    <message>
-        <location filename="../gui/widgets/controlnet/templates/controlnet_settings_widget.ui" line="144"/>
-        <source>Strength</source>
-        <translation>強さ</translation>
-    </message>
-</context>
-<context>
-    <name>controlnet_setup</name>
-    <message>
-        <location filename="../gui/windows/setup_wizard/model_setup/controlnet/templates/controlnet_setup.ui" line="14"/>
-        <source>Form</source>
-        <translation></translation>
-    </message>
-    <message>
-        <location filename="../gui/windows/setup_wizard/model_setup/controlnet/templates/controlnet_setup.ui" line="20"/>
-        <source>Yes</source>
-        <translation></translation>
-    </message>
-    <message>
-        <location filename="../gui/windows/setup_wizard/model_setup/controlnet/templates/controlnet_setup.ui" line="36"/>
-        <source>Stable Diffusion: Controlnet</source>
-        <translation></translation>
-    </message>
-    <message>
-        <location filename="../gui/windows/setup_wizard/model_setup/controlnet/templates/controlnet_setup.ui" line="43"/>
-        <source>Would you like to use Controlnet with Stable Diffusion</source>
-        <translation></translation>
-    </message>
-    <message>
-        <location filename="../gui/windows/setup_wizard/model_setup/controlnet/templates/controlnet_setup.ui" line="70"/>
-        <source>These models allow for greater control over the output of your AI Art and are required for AI Runner to function properly</source>
-        <translation>これらのモデルを使用することで、AIアートの出力の制御が向上し、AIエンジンが適切に機能するために必要です。</translation>
-    </message>
-    <message>
-        <location filename="../gui/windows/setup_wizard/model_setup/controlnet/templates/controlnet_setup.ui" line="80"/>
-        <source>No</source>
-        <translation></translation>
-    </message>
-</context>
+
+
 <context>
     <name>document_widget</name>
     <message>
@@ -1425,11 +1372,7 @@ Please be aware that AI-generated content could unintentionally replicate copyri
         <source>enabledCheckbox</source>
         <translation></translation>
     </message>
-    <message>
-        <location filename="../gui/widgets/embeddings/templates/embedding.ui" line="50"/>
-        <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Some LoRA require a trigger word to activate.&lt;/p&gt;&lt;p&gt;Make a note here for your records.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
-        <translation></translation>
-    </message>
+    
     <message>
         <location filename="../gui/widgets/embeddings/templates/embedding.ui" line="53"/>
         <source>Trigger words (comma separated)</source>
@@ -1687,11 +1630,7 @@ Please be aware that AI-generated content could unintentionally replicate copyri
         <source>Version</source>
         <translation>バージョン</translation>
     </message>
-    <message>
-        <location filename="../gui/widgets/export_preferences/templates/export_preferences.ui" line="240"/>
-        <source>LoRA</source>
-        <translation></translation>
-    </message>
+    
     <message>
         <location filename="../gui/widgets/export_preferences/templates/export_preferences.ui" line="247"/>
         <source>Embeddings</source>
@@ -1707,11 +1646,7 @@ Please be aware that AI-generated content could unintentionally replicate copyri
         <source>Strength</source>
         <translation>強さ</translation>
     </message>
-    <message>
-        <location filename="../gui/widgets/export_preferences/templates/export_preferences.ui" line="268"/>
-        <source>Controlnet</source>
-        <translation></translation>
-    </message>
+    
     <message>
         <location filename="../gui/widgets/export_preferences/templates/export_preferences.ui" line="281"/>
         <source>Choose which metadata to include with exported images</source>
@@ -2248,11 +2183,7 @@ Please be aware that AI-generated content could unintentionally replicate copyri
         <source>0MB</source>
         <translation></translation>
     </message>
-    <message>
-        <location filename="../gui/windows/setup_wizard/installation_settings/templates/choose_models.ui" line="75"/>
-        <source>Stable Diffusion Controlnet</source>
-        <translation></translation>
-    </message>
+    
     <message>
         <location filename="../gui/windows/setup_wizard/installation_settings/templates/choose_models.ui" line="105"/>
         <source>e5 Large: Embedding model (RAG search)</source>
@@ -2831,125 +2762,9 @@ exclusive jurisdiction of any dispute arising out of this Agreement.</source>
         <translation></translation>
     </message>
 </context>
-<context>
-    <name>lora</name>
-    <message>
-        <location filename="../gui/widgets/lora/templates/lora.ui" line="31"/>
-        <source>Form</source>
-        <translation></translation>
-    </message>
-    <message>
-        <location filename="../gui/widgets/lora/templates/lora.ui" line="78"/>
-        <source>enabledCheckbox</source>
-        <translation></translation>
-    </message>
-    <message>
-        <location filename="../gui/widgets/lora/templates/lora.ui" line="85"/>
-        <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Some LoRA require a trigger word to activate.&lt;/p&gt;&lt;p&gt;Make a note here for your records.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
-        <translation></translation>
-    </message>
-    <message>
-        <location filename="../gui/widgets/lora/templates/lora.ui" line="88"/>
-        <source>Trigger words (comma separated)</source>
-        <translation>トリガーワード（コンマ区切り）</translation>
-    </message>
-    <message>
-        <location filename="../gui/widgets/lora/templates/lora.ui" line="110"/>
-        <source>Delete model</source>
-        <translation>モデルを削除</translation>
-    </message>
-    <message>
-        <location filename="../gui/widgets/lora/templates/lora.ui" line="151"/>
-        <source>lora.scale</source>
-        <translation></translation>
-    </message>
-    <message>
-        <location filename="../gui/widgets/lora/templates/lora.ui" line="166"/>
-        <source>Scale</source>
-        <translation>スケール</translation>
-    </message>
-</context>
-<context>
-    <name>lora_container</name>
-    <message>
-        <location filename="../gui/widgets/lora/templates/lora_container.ui" line="14"/>
-        <source>Form</source>
-        <translation></translation>
-    </message>
-    <message>
-        <location filename="../gui/widgets/lora/templates/lora_container.ui" line="38"/>
-        <source>Scan for LoRA</source>
-        <translation>LoRAをスキャン</translation>
-    </message>
-    <message>
-        <location filename="../gui/widgets/lora/templates/lora_container.ui" line="120"/>
-        <source>Lora</source>
-        <translation></translation>
-    </message>
-    <message>
-        <location filename="../gui/widgets/lora/templates/lora_container.ui" line="156"/>
-        <source>Apply Changes</source>
-        <translation>変更を適用</translation>
-    </message>
-    <message>
-        <location filename="../gui/widgets/lora/templates/lora_container.ui" line="199"/>
-        <source>generator_settings.lora_scale</source>
-        <translation></translation>
-    </message>
-    <message>
-        <location filename="../gui/widgets/lora/templates/lora_container.ui" line="214"/>
-        <source>Scale</source>
-        <translation>スケール</translation>
-    </message>
-    <message>
-        <location filename="../gui/widgets/lora/templates/lora_container.ui" line="232"/>
-        <source>Search</source>
-        <translation>検索</translation>
-    </message>
-    <message>
-        <location filename="../gui/widgets/lora/templates/lora_container.ui" line="244"/>
-        <source>Toggle all</source>
-        <translation>全て切り替え</translation>
-    </message>
-</context>
-<context>
-    <name>lora_trigger_word</name>
-    <message>
-        <location filename="../gui/widgets/lora/templates/lora_trigger_word.ui" line="14"/>
-        <source>Form</source>
-        <translation></translation>
-    </message>
-    <message>
-        <location filename="../gui/widgets/lora/templates/lora_trigger_word.ui" line="20"/>
-        <source>Trigger Word</source>
-        <translation>トリガーワード</translation>
-    </message>
-    <message>
-        <location filename="../gui/widgets/lora/templates/lora_trigger_word.ui" line="30"/>
-        <source>Send trigger word to prompt</source>
-        <translation>トリガーワードをプロンプトに送信</translation>
-    </message>
-    <message>
-        <location filename="../gui/widgets/lora/templates/lora_trigger_word.ui" line="33"/>
-        <source>Prompt</source>
-        <translation>プロンプト</translation>
-    </message>
-    <message>
-        <location filename="../gui/widgets/lora/templates/lora_trigger_word.ui" line="47"/>
-        <source>Send trigger word to negative prompt</source>
-        <translation>トリガーワードをネガティブプロンプトに送信</translation>
-    </message>
-    <message>
-        <location filename="../gui/widgets/lora/templates/lora_trigger_word.ui" line="50"/>
-        <source>Negative</source>
-        <translation>ネガティブ</translation>
-    </message>
-    <message>
-        <location filename="../gui/widgets/lora/templates/lora_trigger_word.ui" line="64"/>
-        <source>Copy trigger word to clipboard</source>
-        <translation>トリガーワードをクリップボードにコピー</translation>
-    </message>
-</context>
+
+
+
 <context>
     <name>memory_preferences</name>
     <message>
@@ -4303,16 +4118,8 @@ remain valid as if such provision had not been set forth herein.
         <source>image_to_image_settings</source>
         <translation></translation>
     </message>
-    <message>
-        <location filename="../gui/widgets/stablediffusion/templates/stablediffusion_tool_tab.ui" line="138"/>
-        <source>Controlnet</source>
-        <translation></translation>
-    </message>
-    <message>
-        <location filename="../gui/widgets/stablediffusion/templates/stablediffusion_tool_tab.ui" line="165"/>
-        <source>controlnet_settings</source>
-        <translation></translation>
-    </message>
+    
+    
     <message>
         <location filename="../gui/widgets/stablediffusion/templates/stablediffusion_tool_tab.ui" line="173"/>
         <source>Inpaint</source>
@@ -4323,11 +4130,7 @@ remain valid as if such provision had not been set forth herein.
         <source>outpaint_settings</source>
         <translation></translation>
     </message>
-    <message>
-        <location filename="../gui/widgets/stablediffusion/templates/stablediffusion_tool_tab.ui" line="202"/>
-        <source>LoRA</source>
-        <translation></translation>
-    </message>
+    
     <message>
         <location filename="../gui/widgets/stablediffusion/templates/stablediffusion_tool_tab.ui" line="230"/>
         <source>Embeddings</source>

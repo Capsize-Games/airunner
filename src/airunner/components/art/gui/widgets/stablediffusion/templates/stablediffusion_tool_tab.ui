@@ -88,34 +88,6 @@
        </item>
       </layout>
      </widget>
-     <widget class="QWidget" name="tab_6">
-      <attribute name="title">
-       <string>LoRA</string>
-      </attribute>
-      <layout class="QGridLayout" name="gridLayout_7">
-       <property name="leftMargin">
-        <number>0</number>
-       </property>
-       <property name="topMargin">
-        <number>0</number>
-       </property>
-       <property name="rightMargin">
-        <number>0</number>
-       </property>
-       <property name="bottomMargin">
-        <number>0</number>
-       </property>
-       <property name="horizontalSpacing">
-        <number>0</number>
-       </property>
-       <property name="verticalSpacing">
-        <number>10</number>
-       </property>
-    <item row="0" column="0">
-     <widget class="QWidget" name="lora_container_widget_placeholder"/>
-       </item>
-      </layout>
-     </widget>
      <widget class="QWidget" name="tab_7">
       <attribute name="title">
        <string>Embeddings</string>

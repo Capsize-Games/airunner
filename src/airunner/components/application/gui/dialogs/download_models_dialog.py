@@ -29,9 +29,6 @@ from airunner.components.data.bootstrap_service import (
     get_model_bootstrap_data,
     get_openvoice_files,
 )
-from airunner.components.data.bootstrap_service import (
-    get_controlnet_bootstrap_data,
-)
 from airunner_services.llm.provider_config import LLMProviderConfig
 from airunner.components.data.bootstrap_service import get_whisper_files
 from airunner.enums import SignalCode
@@ -96,7 +93,6 @@ class DownloadModelsDialog(MediatorMixin, SettingsMixin, QDialog):
         # Add model category groups
         if AIRUNNER_ART_ENABLED:
             self._add_sd_group(scroll_layout)
-            self._add_controlnet_group(scroll_layout)
         
         self._add_llm_group(scroll_layout)
         self._add_stt_group(scroll_layout)
@@ -159,28 +155,6 @@ class DownloadModelsDialog(MediatorMixin, SettingsMixin, QDialog):
             group_layout.addWidget(checkbox)
             
             # Store model info for download
-            setattr(checkbox, "_model_info", model)
-        
-        layout.addWidget(group)
-        
-    def _add_controlnet_group(self, layout: QVBoxLayout) -> None:
-        """Add ControlNet model selection group."""
-        if not get_controlnet_bootstrap_data():
-            return
-            
-        group = QGroupBox("ControlNet Models")
-        group_layout = QVBoxLayout(group)
-        
-        for model in get_controlnet_bootstrap_data():
-            key = f"controlnet_{model['name']}"
-            checkbox = QCheckBox(f"{model['display_name']} ({model['version']})")
-            checkbox.setChecked(False)
-            checkbox.stateChanged.connect(
-                lambda state, k=key: self._on_checkbox_changed(k, state)
-            )
-            self._selected_models[key] = False
-            group_layout.addWidget(checkbox)
-            
             setattr(checkbox, "_model_info", model)
         
         layout.addWidget(group)
@@ -328,27 +302,6 @@ class DownloadModelsDialog(MediatorMixin, SettingsMixin, QDialog):
                             "models",
                             model["version"],
                             model["pipeline_action"],
-                        ),
-                    })
-                    
-            elif key.startswith("controlnet_"):
-                cn_name = key[11:]  # Remove "controlnet_" prefix
-                model = next(
-                    (m for m in get_controlnet_bootstrap_data() if m["name"] == cn_name),
-                    None
-                )
-                if model:
-                    self._download_queue.append({
-                        "repo_id": model["path"],
-                        "model_type": "controlnet",
-                        "model_name": model["display_name"],
-                        "output_dir": os.path.join(
-                            self.path_settings.base_path,
-                            "art",
-                            "models",
-                            model["version"],
-                            "controlnet",
-                            model["path"],
                         ),
                     })
                     

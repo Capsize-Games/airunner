@@ -46,10 +46,6 @@ class PanelToggleController(MainWindowBase):
         self._toggle_art_tools_tab(self._art_tools_model_tab_index, val)
 
     @Slot(bool)
-    def on_lora_button_toggled(self, val: bool):
-        self._toggle_art_tools_tab(self._art_tools_lora_tab_index, val)
-
-    @Slot(bool)
     def on_embeddings_button_toggled(self, val: bool):
         self._toggle_art_tools_tab(self._art_tools_embeddings_tab_index, val)
 

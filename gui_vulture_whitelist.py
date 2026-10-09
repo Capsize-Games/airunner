@@ -19,9 +19,9 @@ src/airunner/components/application/gui/windows/main/ai_model_mixin.py:{ai_model
 src/airunner/components/application/gui/windows/main/base_mixin.py:{BaseMixin, get_all, get_by_filter}
 src/airunner/components/application/gui/windows/main/embedding_mixin.py:{EmbeddingMixin, delete_missing_embeddings}
 src/airunner/components/application/gui/windows/main/main_window.py:{_action_new_shortcut, _configured_runtime_resource_model_id, _document_path, _generate_drawingpad_mask, _generator, _generator_settings, _gui_probe_controller, _knowledgebase_panel_is_visible, _restore_tab, _set_current_button_and_tab, _set_tab_index, _themes, _updating_settings, action_show_model_path_txt2img, bash_execute, button_clicked_signal, deterministic_window, generator_tab_changed_signal, handle_double_click, handle_unknown, header_widget_spacer, image_generated, input_event_manager, key_text, last_tray_click_time, load_image_object, move_to_second_screen, on_actionBrowse_Images_Path_2_triggered, on_actionReset_Settings_2_triggered, on_actionRun_setup_wizard_2_triggered, progress_bar_started, set_path_settings, show_grid_toggled, show_path, show_update_message, show_update_popup, status_error_color, status_normal_color_dark, status_normal_color_light, token_signal, tqdm_callback_triggered, update_popup, window_opened}
-src/airunner/components/application/gui/windows/main/mixins/basic_settings_update_mixin.py:{update_controlnet_image_settings, update_font_setting, update_saved_prompt}
-src/airunner/components/application/gui/windows/main/mixins/image_property_mixin.py:{controlnet_generated_image, drawing_pad_mask, outpaint_mask}
-src/airunner/components/application/gui/windows/main/mixins/model_management_mixin.py:{add_embedding, add_lora, create_lora, delete_embedding, delete_lora, delete_lora_by_name, get_embedding_by_name, get_lora_by_name, update_loras}
+src/airunner/components/application/gui/windows/main/mixins/basic_settings_update_mixin.py:{update_font_setting, update_saved_prompt}
+src/airunner/components/application/gui/windows/main/mixins/image_property_mixin.py:{drawing_pad_mask, outpaint_mask}
+src/airunner/components/application/gui/windows/main/mixins/model_management_mixin.py:{add_embedding, delete_embedding, get_embedding_by_name}
 src/airunner/components/application/gui/windows/main/mixins/settings_cache_mixin.py:{clear_cache_settings}
 src/airunner/components/application/gui/windows/main/mixins/settings_list_property_mixin.py:{font_settings, image_filter_values, prompt_templates}
 src/airunner/components/application/gui/windows/main/mixins/utility_and_chatbot_mixin.py:{get_chatbot_by_id}
@@ -36,7 +36,7 @@ src/airunner/components/application/workers/model_quantization_worker.py:{ModelQ
 src/airunner/components/application/workers/qt_civitai_workers.py:{_cancelled}
 src/airunner/components/application/workers/watch_state_worker.py:{WatchStateWorker}
 src/airunner/components/application/workers/worker.py:{pause, resume, start_worker_thread, unpause}
-src/airunner/components/art/api/art_services.py:{clear_progress_bar, embedding_updated, final_progress_update, generate_image_signal, llm_image_generated, lora_updated, missing_required_models, pipeline_loaded}
+src/airunner/components/art/api/art_services.py:{clear_progress_bar, embedding_updated, final_progress_update, generate_image_signal, llm_image_generated, missing_required_models, pipeline_loaded}
 src/airunner/components/art/api/canvas_services.py:{layer_opacity_changed, mask_layer_toggled, rotate_image_90_clockwise, rotate_image_90_counterclockwise, send_image_to_canvas}
 src/airunner/components/art/config/image_generator_capabilities.py:{dimension_step, min_height, min_width, supports_second_negative_prompt}
 src/airunner/components/art/data/bootstrap/imagefilter_bootstrap_data.py:{imagefilter_bootstrap_data}
@@ -75,7 +75,6 @@ src/airunner/components/art/gui/widgets/grid_preferences/grid_preferences_widget
 src/airunner/components/art/gui/widgets/image/folder_widget.py:{FolderWidget}
 src/airunner/components/art/gui/widgets/image/image_widget.py:{ImageWidget}
 src/airunner/components/art/gui/widgets/image_generator_preferences/image_generator_preferences_widget.py:{ImageGeneratorPreferencesWidget, stablediffusion_toggled, version_changed}
-src/airunner/components/art/gui/widgets/lora/lora_container_widget.py:{LoraContainerWidget, _deleting, handle_lora_slider, handle_lora_spinbox, initialize_lora_trigger_words}
 src/airunner/components/art/gui/widgets/stablediffusion/stable_diffusion_settings_widget.py:{FLOW_MATCH_SCHEDULER_NAME}
 src/airunner/components/art/gui/widgets/stablediffusion/stablediffusion_generator_form.py:{changed_signal, do_generate_image, extract_json_from_message, get_memory_options, is_txt2img, seed_override, unload_llm_callback}
 src/airunner/components/art/gui/windows/filter_list_window/filter_list_window.py:{_on_item_changed}
@@ -84,14 +83,13 @@ src/airunner/components/art/gui/windows/image_window/image_window.py:{ImageWindo
 src/airunner/components/art/gui/windows/upscale_preview.py:{UpscalePreviewDialog}
 src/airunner/components/art/managers/rmbg/rmbg_model_manager.py:{__path__, is_available_on_disk, remove_background_to_png_bytes}
 src/airunner/components/art/managers/stablediffusion/download_huggingface.py:{DownloadHuggingface}
-src/airunner/components/art/managers/stablediffusion/image_request.py:{control_guidance_end, control_guidance_start, controlnet_guess_mode, lora_scale, outpaint_mask_blur}
+src/airunner/components/art/managers/stablediffusion/image_request.py:{outpaint_mask_blur}
 src/airunner/components/art/managers/stablediffusion/memory_utils.py:{apply_last_channels, get_hardware_profiler, set_memory_efficient}
-src/airunner/components/art/managers/stablediffusion/model_loader.py:{SomeEmbeddingsClass, load_compel, load_compel_proc, load_controlnet, load_controlnet_model, load_controlnet_processor, load_deep_cache, load_deep_cache_helper, load_embedding, load_scheduler, unload_compel_proc, unload_controlnet_processor, unload_deep_cache, unload_deep_cache_helper, unload_embeddings, unload_lora}
+src/airunner/components/art/managers/stablediffusion/model_loader.py:{SomeEmbeddingsClass, load_compel, load_compel_proc, load_deep_cache, load_deep_cache_helper, load_embedding, load_scheduler, unload_compel_proc, unload_deep_cache, unload_deep_cache_helper, unload_embeddings}
 src/airunner/components/art/managers/stablediffusion/prompt_weight_bridge.py:{PromptWeightBridge}
 src/airunner/components/art/managers/stablediffusion/utils.py:{resize_image}
 src/airunner/components/art/managers/zimage/zimage_bundle_requirements.py:{ZIMAGE_LOAD_MODES, find_active_checkpoint, get_downloadable_files_for_mode, get_missing_files_for_mode, get_unused_files_for_mode, list_archived_files}
 src/airunner/components/art/services/grid_service.py:{GridService, get_state, set_position}
-src/airunner/components/art/trainers/base.py:{_global_step_to_epoch, image_column, lora_alpha, lora_dropout, lora_rank, lora_target_modules, lr_warmup_steps, num_train_epochs, save_precision, train_text_encoder}
 src/airunner/components/art/utils/canvas_position_manager.py:{get_centered_position}
 src/airunner/components/art/utils/image_filter_utils.py:{get_all_filter_names}
 src/airunner/components/art/utils/layer_compositor.py:{create_layer_from_image, get_layer_bounds}
@@ -109,10 +107,9 @@ src/airunner/components/downloader/gui/windows/download_wizard/download_wizard_w
 src/airunner/components/downloader/gui/windows/installer/completion_page.py:{CompletionPage}
 src/airunner/components/downloader/gui/windows/setup_wizard/age_restriction/age_restriction_warning.py:{age_restriction_agreed, read_age_restriction_agreement, read_agreement_clicked}
 src/airunner/components/downloader/gui/windows/setup_wizard/installation_settings/choose_models_page.py:{_core_toggled}
-src/airunner/components/downloader/gui/windows/setup_wizard/installation_settings/install_page.py:{CONTROLNET_PATHS, _check_completion_fallback, _openvoice_unidic_complete, _process_next_openvoice_zip, _tts_download_in_progress, files_in_current_step, n_, steps_completed, total_attempted_files, total_failed, total_steps, total_success}
+src/airunner/components/downloader/gui/windows/setup_wizard/installation_settings/install_page.py:{_check_completion_fallback, _openvoice_unidic_complete, _process_next_openvoice_zip, _tts_download_in_progress, files_in_current_step, n_, steps_completed, total_attempted_files, total_failed, total_steps, total_success}
 src/airunner/components/downloader/gui/windows/setup_wizard/llama_license/llama_license.py:{LlamaLicense, setting_key}
 src/airunner/components/downloader/gui/windows/setup_wizard/model_setup/choose_model_style.py:{ChooseModelStyle}
-src/airunner/components/downloader/gui/windows/setup_wizard/model_setup/controlnet/controlnet_setup.py:{toggled_no, toggled_yes}
 src/airunner/components/downloader/gui/windows/setup_wizard/model_setup/llm/llm_setup.py:{LLMSetup}
 src/airunner/components/downloader/gui/windows/setup_wizard/model_setup/llm_welcome_screen.py:{toggled_no, toggled_yes}
 src/airunner/components/downloader/gui/windows/setup_wizard/model_setup/metadata_setup.py:{toggled_no, toggled_yes}
@@ -123,7 +120,7 @@ src/airunner/components/downloader/gui/windows/setup_wizard/model_setup/stt/stt_
 src/airunner/components/downloader/gui/windows/setup_wizard/model_setup/stt_welcome_screen.py:{toggled_no, toggled_yes}
 src/airunner/components/downloader/gui/windows/setup_wizard/model_setup/tts_welcome_screen.py:{toggled_no, toggled_yes}
 src/airunner/components/downloader/gui/windows/setup_wizard/privacy_policy/privacy_policy.py:{isComplete, setting_key}
-src/airunner/components/downloader/gui/windows/setup_wizard/setup_wizard_window.py:{age_restriction_warning_id, controlnet_download_id, final_page_id, llm_welcome_page_id, meta_data_settings_id, set_page_order, stable_diffusion_license_id, stt_welcome_page_id, tts_welcome_page_id, user_agreement_id, welcome_page_id}
+src/airunner/components/downloader/gui/windows/setup_wizard/setup_wizard_window.py:{age_restriction_warning_id, final_page_id, llm_welcome_page_id, meta_data_settings_id, set_page_order, stable_diffusion_license_id, stt_welcome_page_id, tts_welcome_page_id, user_agreement_id, welcome_page_id}
 src/airunner/components/downloader/gui/windows/setup_wizard/user_agreement/agreement_page.py:{isComplete, setting_key}
 src/airunner/components/downloader/gui/windows/setup_wizard/user_agreement/user_agreement.py:{setting_key}
 src/airunner/components/file_explorer/gui/widgets/file_explorer_widget.py:{_delete_item, _file_open_slot, connect_signal, set_project_service}
@@ -189,7 +186,7 @@ src/airunner/components/tts/workers/tts_generator_worker.py:{_llm_spoken_visible
 src/airunner/components/tts/workers/tts_vocalizer_worker.py:{handle_speech, reader_mode_active}
 src/airunner/daemon_client/gui_daemon_client.py:{health_check}
 src/airunner/daemon_client/resource_store.py:{is_layer_resource}
-src/airunner/enums.py:{CodeOperationType, Controlnet, FilterType, HandlerState, QualityEffects, Quantize}
+src/airunner/enums.py:{CodeOperationType, FilterType, HandlerState, QualityEffects, Quantize}
 src/airunner/gui/utils/ui_dispatcher.py:{test_hello_world_window}
 src/airunner/qt_runtime_env.py:{prefers_software_qt_rendering}
 src/airunner/runtime_layout.py:{as_environment, ensure_exists}

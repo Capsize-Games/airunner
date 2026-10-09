@@ -159,9 +159,6 @@ class SignalCode(Enum):
     LLM_TOKEN_SIGNAL = "llm_token_signal"
     LLM_THINKING_SIGNAL = "llm_thinking_signal"
     LLM_TOOL_STATUS_SIGNAL = "llm_tool_status_signal"
-    LORA_UPDATE_SIGNAL = "update_lora_signal"
-    LORA_UPDATED_SIGNAL = "lora_updated_signal"
-    LORA_DELETE_SIGNAL = "delete_lora_signal"
     EMBEDDING_UPDATED_SIGNAL = "embedding_updated_signal"
     # Signal emitted when an upscale x4 operation is requested from the UI
     UPSCALE_REQUEST = "upscale_request_signal"
@@ -238,8 +235,6 @@ class SignalCode(Enum):
     SD_ART_MODEL_CHANGED = "reload_stablediffusion_signal"
     LLM_MODEL_CHANGED = "llm_model_changed_signal"
     RAG_LOAD_DOCUMENTS = "rag_load_documents_signal"
-    CONTROLNET_LOAD_SIGNAL = "load_controlnet_signal"
-    CONTROLNET_UNLOAD_SIGNAL = "unload_controlnet_signal"
 
     BRUSH_COLOR_CHANGED_SIGNAL = "brush_color_changed_signal"
 
@@ -291,7 +286,6 @@ class SignalCode(Enum):
     AGENT_ACTION_PROPOSAL_SIGNAL = "agent_action_proposal_signal"
 
     KEYBOARD_SHORTCUTS_UPDATED = "keyboard_shortcuts_updated_signal"
-    LORA_STATUS_CHANGED = "lora_status_changed"
     EMBEDDING_STATUS_CHANGED = "embedding_status_changed"
 
     MASK_LAYER_TOGGLED = "mask_layer_toggled"
@@ -356,7 +350,6 @@ class EngineResponseCode(Enum):
     WARNING = 300
     PROGRESS = 400
     IMAGE_GENERATED = 500
-    CONTROLNET_IMAGE_GENERATED = 501
     MASK_IMAGE_GENERATED = 502
     EMBEDDING_LOAD_FAILED = 600
     TEXT_GENERATED = 700
@@ -427,10 +420,6 @@ class GeneratorSection(Enum):
 
 class StableDiffusionVersion(Enum):
     NONE = "None"
-    SDXL1_0 = "SDXL 1.0"
-    SDXL_TURBO = "SDXL Turbo"
-    SDXL_LIGHTNING = "SDXL Lightning"
-    SDXL_HYPER = "SDXL Hyper"
     X4_UPSCALER = "x4-upscaler"
     Z_IMAGE_TURBO = "Z-Image Turbo"
 
@@ -461,12 +450,7 @@ class Language(Enum):
 class CanvasType(Enum):
     BRUSH = "brush"
     IMAGE = "image"
-    CONTROLNET = "controlnet"
     OUTPAINT = "outpaint"
-
-
-class Controlnet(Enum):
-    CANNY = "canny"
 
 
 class Gender(Enum):
@@ -491,7 +475,6 @@ class StatusColors(Enum):
 
 
 class ModelType(Enum):
-    LORA = "Lora"
     EMBEDDINGS = "Embeddings"
     SD = "SD Model"
     RMBG = "RMBG Model"
@@ -511,8 +494,6 @@ class ModelType(Enum):
     STT = "STT Model"
     STT_PROCESSOR = "STT Processor"
     STT_FEATURE_EXTRACTOR = "STT Feature Extractor"
-    CONTROLNET = "SD Controlnet"
-    CONTROLNET_PROCESSOR = "SD Controlnet Processor"
     UPSCALER = "Upscaler"
     SCHEDULER = "SD Scheduler"
     LLM = "LLM Model"

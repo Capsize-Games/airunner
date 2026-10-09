@@ -11,9 +11,6 @@ from airunner_services.api.api_service_base import APIServiceBase
 from airunner_services.api.services._art_signal_code import get_art_signal_code
 from airunner_services.database.models.brush_settings import BrushSettings
 from airunner_services.database.models.canvas_layer import CanvasLayer
-from airunner_services.database.models.controlnet_settings import (
-    ControlnetSettings,
-)
 from airunner_services.database.models.drawingpad_settings import (
     DrawingPadSettings,
 )
@@ -237,7 +234,6 @@ class CanvasAPIService(APIServiceBase):
             return None
         data = {"layer_id": layer.id}
         DrawingPadSettings.objects.create(**data)
-        ControlnetSettings.objects.create(**data)
         ImageToImageSettings.objects.create(**data)
         OutpaintSettings.objects.create(**data)
         BrushSettings.objects.create(**data)

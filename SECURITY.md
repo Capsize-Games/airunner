@@ -70,4 +70,4 @@ The filter fails **closed**: if it is enabled but cannot render a verdict
 because the checker model is unavailable (for example unloaded mid-session or
 only partially loaded), or because the check raises, the batch is blacked out
 and every image is flagged as blocked rather than released unchecked. This
-behavior is shared by the SDXL and Z-Image generation paths.
+behavior applies to the Z-Image generation path.

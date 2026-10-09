@@ -15,14 +15,9 @@ from diffusers import (
     StableDiffusionPipeline,
     StableDiffusionImg2ImgPipeline,
     StableDiffusionInpaintPipeline,
-    StableDiffusionControlNetPipeline,
-    StableDiffusionControlNetImg2ImgPipeline,
-    StableDiffusionControlNetInpaintPipeline,
-    ControlNetModel,
 )
 from PIL.Image import Image
 
-from airunner_services.database.models.controlnet_model import ControlnetModel
 from airunner_services.art.managers.stablediffusion.image_request import (
     ImageRequest,
 )
@@ -32,7 +27,6 @@ from airunner_services.art.runtime_enums import (
     GeneratorSection,
     ModelStatus,
     ModelType,
-    StableDiffusionVersion,
 )
 from airunner_common.settings import (
     AIRUNNER_MEM_SD_DEVICE,
@@ -101,48 +95,6 @@ class SDPropertiesMixin:
         return active_rect
 
     @property
-    def controlnet(self) -> Optional[ControlNetModel]:
-        """Get ControlNet model, loading if necessary.
-
-        Returns:
-            Optional ControlNetModel instance.
-        """
-        if self._controlnet is None:
-            self._load_controlnet_model()
-        return self._controlnet
-
-    @controlnet.setter
-    def controlnet(self, value: Optional[ControlNetModel]):
-        """Set ControlNet model.
-
-        Args:
-            value: ControlNetModel instance or None to unload.
-        """
-        if value is None:
-            del self._controlnet
-        self._controlnet = value
-
-    @property
-    def controlnet_processor(self) -> Any:
-        """Get ControlNet processor, loading if necessary.
-
-        Returns:
-            ControlNet processor instance for image preprocessing.
-        """
-        if self._controlnet_processor is None:
-            self._load_controlnet_processor()
-        return self._controlnet_processor
-
-    @controlnet_processor.setter
-    def controlnet_processor(self, value: Optional[Any]):
-        """Set ControlNet processor.
-
-        Args:
-            value: ControlNet processor instance.
-        """
-        self._controlnet_processor = value
-
-    @property
     def generator(self) -> torch.Generator:
         """Get PyTorch random generator for deterministic generation.
 
@@ -153,42 +105,6 @@ class SDPropertiesMixin:
             self.logger.debug("Loading generator")
             self._generator = torch.Generator(device=self._device)
         return self._generator
-
-    @property
-    def controlnet_path(self) -> Optional[str]:
-        """Get filesystem path to ControlNet model.
-
-        Returns:
-            Optional path string to ControlNet model directory.
-        """
-        if self.controlnet_model:
-            version = self.version
-            if version == StableDiffusionVersion.SDXL_TURBO.value:
-                version = StableDiffusionVersion.SDXL1_0.value
-            return os.path.join(
-                self.path_settings.base_path,
-                "art/models",
-                version,
-                "controlnet",
-                os.path.expanduser(self.controlnet_model.path),
-            )
-        return None
-
-    @property
-    def controlnet_processor_path(self) -> str:
-        """Get filesystem path to ControlNet processor models.
-
-        Returns:
-            Path string to ControlNet processor directory.
-        """
-        return os.path.expanduser(
-            os.path.join(
-                self.path_settings.base_path,
-                "art",
-                "models",
-                "controlnet_processors",
-            )
-        )
 
     @property
     def model_status(self) -> Dict[ModelType, ModelStatus]:
@@ -236,71 +152,6 @@ class SDPropertiesMixin:
                 self._resolved_model_version = version
 
     @property
-    def controlnet_image(self) -> Image:
-        """Get ControlNet conditioning image.
-
-        Returns:
-            PIL Image for ControlNet conditioning.
-        """
-        return self.image_request.controlnet_image
-
-    @property
-    def controlnet_model(self) -> Optional[ControlnetModel]:
-        """Get ControlNet model metadata from database.
-
-        Returns:
-            Optional ControlnetModel database record.
-        """
-        if (
-            self._controlnet_model is None
-            or self._controlnet_model.version != self.version
-            or self._controlnet_model.display_name
-            != self.image_request.controlnet
-        ):
-            self.logger.debug(
-                f"Loading controlnet model from database {self.image_request.controlnet} {self.version}"
-            )
-            self._controlnet_model = ControlnetModel.objects.filter_by_first(
-                display_name=self.image_request.controlnet,
-                version=self.version,
-            )
-        return self._controlnet_model
-
-    @property
-    def controlnet_enabled(self) -> bool:
-        """Check if ControlNet is enabled for current generation.
-
-        Returns:
-            True if ControlNet should be used.
-        """
-        if self.image_request:
-            controlnet_enabled = self.image_request.controlnet_enabled
-            if controlnet_enabled is not None:
-                return controlnet_enabled
-        return (
-            self.controlnet_settings.enabled
-            and self.controlnet_settings.image is not None
-        )
-
-    @property
-    def controlnet_conditioning_scale(self) -> int:
-        """Get ControlNet conditioning strength.
-
-        Returns:
-            Conditioning scale value (0-100).
-        """
-        return self.image_request.controlnet_conditioning_scale
-
-    @property
-    def controlnet_is_loading(self) -> bool:
-        """Check if ControlNet model is currently loading.
-
-        Returns:
-            True if ControlNet is being loaded.
-        """
-        return self.model_status[ModelType.CONTROLNET] is ModelStatus.LOADING
-
-    @property
     def pipeline(self) -> str:
         """Get current pipeline action type.
 
@@ -311,10 +162,10 @@ class SDPropertiesMixin:
 
     @property
     def operation_type(self) -> str:
-        """Get operation type including ControlNet suffix if enabled.
+        """Get operation type.
 
         Returns:
-            Operation type string (e.g., 'txt2img_controlnet').
+            Operation type string (e.g., 'txt2img').
         """
         operation_type = self.pipeline
         if self.is_img2img:
@@ -323,8 +174,6 @@ class SDPropertiesMixin:
             operation_type = "inpaint"
         elif self.is_outpaint:
             operation_type = "outpaint"
-        if self.controlnet_enabled:
-            operation_type = f"{operation_type}_controlnet"
         return operation_type
 
     @property
@@ -616,10 +465,6 @@ class SDPropertiesMixin:
             "img2img": StableDiffusionImg2ImgPipeline,
             "inpaint": StableDiffusionInpaintPipeline,
             "outpaint": StableDiffusionInpaintPipeline,
-            "txt2img_controlnet": StableDiffusionControlNetPipeline,
-            "img2img_controlnet": StableDiffusionControlNetImg2ImgPipeline,
-            "inpaint_controlnet": StableDiffusionControlNetInpaintPipeline,
-            "outpaint_controlnet": StableDiffusionControlNetInpaintPipeline,
         }
 
     @property

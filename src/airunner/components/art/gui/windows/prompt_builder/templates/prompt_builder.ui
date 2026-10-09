@@ -23,27 +23,6 @@
    <item>
     <layout class="QHBoxLayout" name="horizontalLayout_target">
      <item>
-      <widget class="QLabel" name="label_target">
-       <property name="text">
-        <string>Target Model</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QComboBox" name="target_generator">
-       <item>
-        <property name="text">
-         <string>zimage</string>
-        </property>
-       </item>
-       <item>
-        <property name="text">
-         <string>stablediffusion</string>
-        </property>
-       </item>
-      </widget>
-     </item>
-     <item>
       <spacer name="horizontalSpacer_target">
        <property name="orientation">
         <enum>Qt::Orientation::Horizontal</enum>
@@ -382,20 +361,6 @@
           <item row="0" column="1">
            <widget class="QComboBox" name="quality"/>
           </item>
-          <item row="1" column="0">
-           <widget class="QLabel" name="label_custom_negative">
-            <property name="text">
-             <string>Custom Negative Terms</string>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="1">
-           <widget class="QLineEdit" name="custom_negative">
-            <property name="placeholderText">
-             <string>Extra negative terms (SDXL only, comma separated)</string>
-            </property>
-           </widget>
-          </item>
          </layout>
         </widget>
        </item>
@@ -439,20 +404,6 @@
         </property>
         <property name="placeholderText">
          <string>Generated prompt appears here...</string>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QLabel" name="negative_prompt_label">
-        <property name="text">
-         <string>Negative Prompt (SDXL only)</string>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QPlainTextEdit" name="negative_prompt_preview">
-        <property name="readOnly">
-         <bool>false</bool>
         </property>
        </widget>
       </item>
