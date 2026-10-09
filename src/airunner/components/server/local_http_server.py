@@ -4,9 +4,7 @@ import posixpath
 from http.server import SimpleHTTPRequestHandler
 from socketserver import ThreadingTCPServer
 from PySide6.QtCore import QThread
-import jinja2
 import mimetypes
-import json
 import functools
 
 from airunner_common.settings import (
@@ -32,7 +30,7 @@ class ReusableTCPServer(ThreadingTCPServer):
 
 
 class MultiDirectoryCORSRequestHandler(SimpleHTTPRequestHandler):
-    """Request handler with CORS, Jinja2 template rendering, and multiple directory support.
+    """Request handler with CORS and multiple directory support.
 
     Args:
         lna_enabled (bool): If True, send LNA and permissive CORS headers for Chromium LNA compliance.
@@ -219,36 +217,7 @@ class MultiDirectoryCORSRequestHandler(SimpleHTTPRequestHandler):
                 if not abs_target_dir.startswith(abs_directory):
                     self.send_error(403, "Forbidden")
                     return
-                # Try Jinja2 template first
-                jinja2_index = os.path.join(
-                    abs_target_dir, "index.jinja2.html"
-                )
-                if os.path.exists(jinja2_index):
-                    loader = jinja2.FileSystemLoader(self.directories)
-                    env = jinja2.Environment(
-                        loader=loader,
-                        autoescape=jinja2.select_autoescape(["html", "xml"]),
-                    )
-                    # Relative path for Jinja2 loader
-                    template_rel = os.path.relpath(jinja2_index, directory)
-                    template = env.get_template(template_rel)
-                    # Provide static_base_path for template rendering
-                    context = {
-                        "static_base_path": f"http://{LOCAL_SERVER_HOST}:{LOCAL_SERVER_PORT}"
-                    }
-                    rendered = template.render(**context)
-                    self.send_response(200)
-                    self.send_header("Content-type", "text/html")
-                    # Add cache-control headers to ensure fresh content on reload
-                    self.send_header(
-                        "Cache-Control", "no-cache, no-store, must-revalidate"
-                    )
-                    self.send_header("Pragma", "no-cache")
-                    self.send_header("Expires", "0")
-                    self.end_headers()
-                    self.wfile.write(rendered.encode("utf-8"))
-                    return
-                # Try static HTML fallback
+                # Serve the static HTML entry document.
                 html_index = os.path.join(abs_target_dir, "index.html")
                 if os.path.exists(html_index):
                     with open(html_index, "rb") as f:
@@ -351,71 +320,6 @@ class MultiDirectoryCORSRequestHandler(SimpleHTTPRequestHandler):
                 f"[SECURITY] Directory traversal attempt: {self.path}"
             )
             self.send_error(403)
-            return
-        # Jinja2 template rendering
-        rel_path_no_query = rel_path.split("?", 1)[0]
-        if rel_path_no_query.endswith(".jinja2.html"):
-            for directory in self.directories:
-                normalized_rel_path = os.path.normpath(rel_path_no_query)
-                abs_directory = os.path.abspath(os.path.normpath(directory))
-                # Reject absolute paths or any path with '..' after normalization
-                if (
-                    os.path.isabs(normalized_rel_path)
-                    or normalized_rel_path.startswith("..")
-                    or ".." in normalized_rel_path.split(os.sep)
-                ):
-                    logger.warning(
-                        f"[SECURITY] Attempted directory traversal in template path: {normalized_rel_path}"
-                    )
-                    self.send_error(403)
-                    return
-                abs_target = os.path.abspath(
-                    os.path.join(abs_directory, normalized_rel_path)
-                )
-                try:
-                    if (
-                        os.path.commonpath([abs_directory, abs_target])
-                        != abs_directory
-                    ):
-                        logger.warning(
-                            f"[SECURITY] Attempted escape from base directory: {abs_target} not in {abs_directory}"
-                        )
-                        self.send_error(403)
-                        return
-                except ValueError:
-                    self.send_error(403)
-                    return
-                jinja2_path = abs_target
-                if os.path.exists(jinja2_path):
-                    parsed_url = urllib.parse.urlparse(self.path)
-                    query_params = urllib.parse.parse_qs(parsed_url.query)
-                    context = {}
-                    for k, v in query_params.items():
-                        val = v[0]
-                        try:
-                            context[k] = json.loads(val)
-                        except Exception:
-                            context[k] = val
-                    loader = jinja2.FileSystemLoader(self.directories)
-                    env = jinja2.Environment(
-                        loader=loader,
-                        autoescape=jinja2.select_autoescape(["html", "xml"]),
-                    )
-                    template = env.get_template(rel_path_no_query)
-                    rendered = template.render(**context)
-                    self.send_response(200)
-                    self.send_header("Content-type", "text/html")
-                    # Add cache-control headers to ensure fresh content on reload
-                    self.send_header(
-                        "Cache-Control", "no-cache, no-store, must-revalidate"
-                    )
-                    self.send_header("Pragma", "no-cache")
-                    self.send_header("Expires", "0")
-                    self.end_headers()
-                    self.wfile.write(rendered.encode("utf-8"))
-                    return
-            # If we reach here, template was not found in any directory
-            self.send_error(404)
             return
         # Strict MIME type enforcement
         abs_path = self.translate_path(self.path)

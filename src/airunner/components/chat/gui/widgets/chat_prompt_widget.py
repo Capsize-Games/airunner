@@ -63,7 +63,18 @@ from airunner_common.settings import (
     RETIRED_SLASH_COMMANDS,
     SLASH_COMMANDS,
 )
+from airunner_common.llm_response import LLMResponse
 from airunner_services.llm.provider_config import LLMProviderConfig
+from airunner_services.llm.companion.contracts import CallChainId
+from airunner_services.llm.companion.qt_chat_adapter import (
+    CompanionChatAdapter,
+)
+from airunner_services.llm.companion.qt_chat_chunks import (
+    TOOL_STATUS_SIGNAL,
+    chunk_signal,
+    chunk_to_response_fields,
+    chunk_to_tool_status_payload,
+)
 from airunner.runtimes.file_policy import (
     PathPolicyError,
     resolve_existing_file,
@@ -199,6 +210,11 @@ class ChatPromptWidget(BaseWidget):
         self.loading = True
         self.conversation_id: int = None
         self.conversation = None
+        # B13 companion-event adapter; stays None until the first
+        # companion turn so the legacy stream path is untouched.
+        self._companion_chat_adapter: Optional[CompanionChatAdapter] = (
+            None
+        )
         self._llm_history_tab_index = None
         self._llm_history_widget = None
         if hasattr(self.ui, "chat_history_placeholder"):
@@ -418,6 +434,7 @@ class ChatPromptWidget(BaseWidget):
         if callable(clear_loading):
             clear_loading()
         self.enable_send_button()
+        self._settle_companion_turn()
 
     def do_generate(self, prompt_override=None):
         prompt = (
@@ -1680,6 +1697,76 @@ class ChatPromptWidget(BaseWidget):
             self.enable_generate()
             self._finish_chat_surface_turn()
 
+    def _companion_adapter(self) -> CompanionChatAdapter:
+        """Return the companion-event adapter, creating it on use."""
+        adapter = self._companion_chat_adapter
+        if adapter is None:
+            adapter = CompanionChatAdapter()
+            self._companion_chat_adapter = adapter
+        return adapter
+
+    def begin_companion_turn(
+        self,
+        call_chain_id: CallChainId,
+        request_id: str,
+        conversation_id: Optional[int] = None,
+    ) -> None:
+        """Register one companion turn (the send-side entrypoint).
+
+        The turn's ``CompanionStreamEvent`` values are surfaced with
+        :meth:`feed_companion_stream_events`.
+        """
+        self._companion_adapter().begin_turn(
+            call_chain_id,
+            request_id,
+            (
+                self.conversation_id
+                if conversation_id is None
+                else conversation_id
+            ),
+        )
+
+    def feed_companion_stream_events(self, events) -> None:
+        """Surface one batch of companion events in the chat stream."""
+        adapter = self._companion_adapter()
+        for event in events:
+            for chunk in adapter.adapt(event):
+                self._emit_companion_chunk(chunk)
+
+    def _emit_companion_chunk(self, chunk: Dict) -> None:
+        """Route one adapter chunk through the public LLM signals."""
+        if chunk_signal(chunk) == TOOL_STATUS_SIGNAL:
+            self.api.llm.send_llm_tool_status_signal(
+                chunk_to_tool_status_payload(chunk)
+            )
+            return
+        self.api.llm.send_llm_text_streamed_signal(
+            LLMResponse(
+                action=self.action,
+                **chunk_to_response_fields(chunk),
+            )
+        )
+
+    def _settle_companion_turn(
+        self, call_chain_id: Optional[CallChainId] = None
+    ) -> None:
+        """Settle any active companion turn; a no-op when idle."""
+        adapter = self._companion_chat_adapter
+        if adapter is None:
+            return
+        for chunk in adapter.cancel_turn(call_chain_id):
+            self._emit_companion_chunk(chunk)
+
+    def _sync_companion_conversation(
+        self, conversation_id: Optional[int]
+    ) -> None:
+        """Settle companion state after a conversation switch/reopen."""
+        adapter = self._companion_chat_adapter
+        if adapter is None:
+            return
+        for chunk in adapter.switch_conversation(conversation_id):
+            self._emit_companion_chunk(chunk)
+
     def load_conversation(self, conversation_id: int = None):
         """Load a conversation and synchronize the hosted chat surface."""
         if conversation_id is None:
@@ -1738,6 +1825,7 @@ class ChatPromptWidget(BaseWidget):
     def on_queue_load_conversation(self, data):
         conversation_id = data.get("index")
         self.load_conversation(conversation_id=conversation_id)
+        self._sync_companion_conversation(self.conversation_id)
 
     def on_delete_conversation(self, data):
         deleted_id = data.get("conversation_id")
@@ -1747,6 +1835,7 @@ class ChatPromptWidget(BaseWidget):
             self.conversation = None
             self.conversation_id = None
             self._set_api_conversation_id(None)
+            self._sync_companion_conversation(None)
 
     def _ensure_conversation_context(self) -> Optional[int]:
         """Ensure we have a valid conversation ID before sending a request."""

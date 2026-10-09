@@ -7,6 +7,7 @@ functional test exercises when it constructs ``ChatPromptWidget``.
 
 from __future__ import annotations
 
+from PySide6.QtCore import QUrl
 from PySide6.QtWidgets import QLabel
 
 from airunner.components.chat.gui.chat_surface_endpoint import (
@@ -103,3 +104,73 @@ def test_placeholder_surface_accepts_bridge_calls(qapp, monkeypatch) -> None:
     surface.stream_token("tok")
     surface.finish_turn()
     assert surface.view is None
+
+
+class _FakeNavView(_FakeView):
+    """Stand-in for the web view's navigation and close behavior."""
+
+    def __init__(self, page: _FakePage, url: QUrl) -> None:
+        super().__init__(page)
+        self._url = url
+        self.loaded: list[QUrl] = []
+        self.reloads = 0
+        self.stopped = 0
+        self.closed = 0
+
+    def url(self) -> QUrl:
+        return self._url
+
+    def setUrl(self, url: QUrl) -> None:
+        self.loaded.append(url)
+        self._url = url
+
+    def reload(self) -> None:
+        self.reloads += 1
+
+    def stop(self) -> None:
+        self.stopped += 1
+
+    def close(self) -> None:
+        self.closed += 1
+
+
+def test_reload_loads_when_nothing_was_navigated(
+    qapp, monkeypatch
+) -> None:
+    """Reload navigates to the entry document on a fresh view."""
+    monkeypatch.setenv("AIRUNNER_TEST_NO_GUI_LAUNCH", "1")
+    surface = ChatSurfaceWidget(endpoint=_ENDPOINT)
+    view = _FakeNavView(_FakePage(), QUrl())
+    surface._view = view
+
+    surface.reload()
+
+    assert [url.toString() for url in view.loaded] == [
+        _ENDPOINT.open_url()
+    ]
+    assert view.reloads == 0
+
+
+def test_reload_refreshes_a_navigated_view(qapp, monkeypatch) -> None:
+    """Reload refreshes the page once the surface was navigated."""
+    monkeypatch.setenv("AIRUNNER_TEST_NO_GUI_LAUNCH", "1")
+    surface = ChatSurfaceWidget(endpoint=_ENDPOINT)
+    view = _FakeNavView(_FakePage(), QUrl(_ENDPOINT.open_url()))
+    surface._view = view
+
+    surface.reload()
+
+    assert view.loaded == []
+    assert view.reloads == 1
+
+
+def test_handle_close_releases_the_view(qapp, monkeypatch) -> None:
+    """Close stops and closes the hosted web view."""
+    monkeypatch.setenv("AIRUNNER_TEST_NO_GUI_LAUNCH", "1")
+    surface = ChatSurfaceWidget(endpoint=_ENDPOINT)
+    view = _FakeNavView(_FakePage(), QUrl(_ENDPOINT.open_url()))
+    surface._view = view
+
+    surface.handle_close()
+
+    assert (view.stopped, view.closed) == (1, 1)

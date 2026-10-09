@@ -1,4 +1,3 @@
-import traceback
 from typing import Any, Dict, List, Optional, Tuple
 from abc import ABC, ABCMeta
 from abc import abstractmethod
@@ -27,9 +26,6 @@ from airunner.utils.settings.client_settings import (
 from airunner.gui.styles.styles_mixin import StylesMixin
 from airunner.components.application.gui.windows.main.settings_mixin import (
     SettingsMixin,
-)
-from airunner_common.settings import (
-    CONTENT_WIDGETS_BASE_PATH,
 )
 from airunner.utils.application.mediator_mixin import MediatorMixin
 from airunner.utils.application import create_worker
@@ -121,58 +117,12 @@ class BaseWidget(AbstractBaseWidget):
         self.worker_class_map: Dict = {}
         self.initialize_ui()
         self._setup_splitters()
-        self.render_template()
-
-    @property
-    def web_engine_view(self) -> Optional[object]:
-        """
-        Set this to the QWebEngineView instance in your widget if you want to render templates.
-        """
-        return None
-
-    @property
-    def template(self) -> Optional[str]:
-        """
-        Override this property to return the name of the Jinja2 template to render.
-        The template should be located in the static HTML directory.
-        """
-        return None
-
-    @property
-    def template_context(self) -> Dict:
-        settings = get_qsettings()
-        theme = settings.value("theme", TemplateName.DARK.value)
-        return {
-            "theme": theme.lower().replace(" ", "_"),
-        }
-
-    def render_template(self):
-        if not self.web_engine_view or not self.template:
-            return
-        try:
-            # Pass theme variable to Jinja2 template for correct CSS links
-            self._render_template(
-                self.web_engine_view,
-                self.template,
-                **self.template_context,
-            )
-        except Exception as e:
-            self.logger.error(
-                f"Failed to render template {self.template}: {e}"
-            )
 
     def on_theme_changed_signal(self, data: Dict):
         template = data.get("template", TemplateName.DARK)
         self.set_stylesheet(
             template=template,
         )
-
-    @property
-    def static_html_dir(self) -> str:
-        """
-        Return the directory where static HTML files are stored.
-        """
-        return os.path.join(CONTENT_WIDGETS_BASE_PATH, "html")
 
     @property
     def splitters(self) -> List[str]:
@@ -363,68 +313,6 @@ class BaseWidget(AbstractBaseWidget):
         }
         data.update(kwargs)
         load_splitter_settings(self.ui, self.splitters, **data)
-
-    def _render_template(self, element, template_name: str, **kwargs):
-        """
-        Load a Jinja2 template, render it, and set it directly using setHtml with a file:// base URL.
-        No network access required - everything loads from local filesystem.
-        """
-        import jinja2
-        from PySide6.QtCore import QUrl
-        from pathlib import Path
-
-        # Search for the template in common locations
-        # __file__ is .../components/application/gui/widgets/base_widget.py
-        # Go up to airunner/ directory (5 levels up)
-        airunner_root = Path(__file__).parent.parent.parent.parent.parent
-        possible_dirs = [
-            airunner_root / "components" / "chat" / "gui" / "static" / "html",
-            airunner_root / "components" / "llm" / "gui" / "static" / "html",
-            airunner_root / "static" / "html",
-        ]
-
-        template_dir = None
-        for dir_path in possible_dirs:
-            if (dir_path / template_name).exists():
-                template_dir = str(dir_path)
-                break
-
-        if not template_dir:
-            self.logger.error(
-                "[BaseWidget] ERROR: Template %s not found in any of %s",
-                template_name,
-                possible_dirs,
-            )
-            return
-
-        # Set up Jinja2 environment
-        loader = jinja2.FileSystemLoader(template_dir)
-        env = jinja2.Environment(
-            loader=loader,
-            autoescape=jinja2.select_autoescape(["html", "xml"]),
-        )
-
-        # Render the template
-        try:
-            template = env.get_template(template_name)
-            rendered_html = template.render(**kwargs)
-            template_url = (
-                f"http://127.0.0.1:5005/static/html/{template_name}"
-            )
-            self.logger.debug(
-                f"[BaseWidget] Loading rendered template with base URL: "
-                f"{template_url}"
-            )
-
-            if hasattr(element, "setHtml"):
-                element.setHtml(rendered_html, QUrl(template_url))
-            else:
-                element.setUrl(QUrl(template_url))
-        except Exception as e:
-            self.logger.error(
-                f"[BaseWidget] Error rendering template {template_name}: {e}"
-            )
-            traceback.print_exc()
 
     def set_status_message_text(self, message: str):
         """

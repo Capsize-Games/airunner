@@ -80,13 +80,11 @@ GUI_REQUIREMENTS = [
     #           components/art/filters/{dither,rgb_noise,film}
     # Pillow:   utils/image/convert_image_to_binary
     # markdown: utils/text/formatter
-    # jinja2:   components/server/local_http_server
     # psutil:   components/application/gui/widgets/stats/stats_widget
     "requests>=2.31.0",
     "numpy>=1.26.0",
     "Pillow>=10.0.0",
     "markdown>=3.5.0",
-    "jinja2>=3.1.0",
     "psutil>=5.9.0",
     "pygments>=2.17.0",
     FACEHUGGERSHIELD_REQUIREMENT,
