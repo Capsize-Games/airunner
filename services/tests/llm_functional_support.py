@@ -174,6 +174,7 @@ def daemon_env(
     env.update(
         {
             "PYTHONPATH": os.pathsep.join(pythonpath_entries),
+            "PYTHONUNBUFFERED": "1",
             "AIRUNNER_DISABLE_STALE_DAEMON_CHECK": "1",
             "AIRUNNER_INSECURE_NO_AUTH": "1",
             "AIRUNNER_LLM_ON": "1" if llm_on else "0",
@@ -312,6 +313,9 @@ def started_daemon(env: dict[str, str]) -> Iterator[DaemonHandle]:
     with open(log_path, "w", encoding="utf-8") as log_handle:
         process = subprocess.Popen(
             [
+                "stdbuf",
+                "-o0",
+                "-e0",
                 sys.executable,
                 "-m",
                 "airunner_services.daemon",
