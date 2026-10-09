@@ -42,7 +42,7 @@ class QuantizationMixin:
 
     def _get_available_vram_gb(self) -> float:
         """Return the currently available VRAM in gigabytes."""
-        return self._hardware_profiler._get_available_vram_gb()
+        return self._hardware_profiler.get_profile().available_vram_gb
 
     def _auto_select_quantization(self) -> str:
         """Select a quantization level based on available VRAM."""

@@ -6,6 +6,7 @@ import json
 
 import pytest
 
+from llm_functional_support import LLM_GENERATE_TIMEOUT_SECONDS
 from llm_functional_support import daemon_env
 from llm_functional_support import daemon_output
 from llm_functional_support import llm_artifact_path
@@ -33,6 +34,7 @@ def test_llm_end_to_end_without_gui(model_id: str) -> None:
         generate_status, generate_body, _generate_type = post_json(
             f"{daemon.base_url}/llm/generate",
             llm_request_payload(model_id, do_tts_reply=False),
+            timeout_seconds=LLM_GENERATE_TIMEOUT_SECONDS,
         )
 
         assert generate_status == 200, daemon_output(daemon.log_path)
