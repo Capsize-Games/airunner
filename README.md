@@ -114,7 +114,24 @@ flowchart LR
 ## 💾 Installation
 
 Current status:
-AIRunner runs as a Python application with two install paths.
+AIRunner services install from apt (Ubuntu 26.04+) or run as a
+Python application with two install paths.
+
+### apt (services only, no Qt desktop)
+
+```bash
+curl -fsSL https://apt.airunner.art/airunner-apt-keyring.gpg \
+  -o /usr/share/keyrings/airunner-apt.gpg
+printf 'Types: deb\nURIs: https://apt.airunner.art\nSuites: stable\nComponents: main\nSigned-By: /usr/share/keyrings/airunner-apt.gpg\n' \
+  > /etc/apt/sources.list.d/airunner.sources
+sudo apt update && sudo apt install airunner
+```
+
+Then `systemctl status airunner-headless` and
+`curl http://127.0.0.1:8188/health` (default loopback daemon).
+Without torch the daemon boots degraded (/health plus
+sidecar-backed modalities); install ML extras into a venv when a
+workload needs local models (see `debian/README.Debian`).
 
 Choose one of the two primary install modes:
 
