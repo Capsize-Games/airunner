@@ -59,7 +59,13 @@ if not existing_url:
 # Configure Python logging (best-effort).
 try:
     if getattr(config, "config_file_name", None) and os.path.exists(config.config_file_name):
-        fileConfig(config.config_file_name)
+        # Never disable existing loggers: the fileConfig default
+        # (disable_existing_loggers=True) would silently mute every
+        # logger the host app already created, including at daemon
+        # startup via setup_database.
+        fileConfig(
+            config.config_file_name, disable_existing_loggers=False
+        )
 except Exception:
     pass
 
