@@ -84,6 +84,18 @@ def test_bootstrap_catalog_has_no_fp16_branch() -> None:
     assert '"fp16"' not in _BOOTSTRAP_PATH.read_text(encoding="utf-8")
 
 
+def test_zimage_turbo_is_the_default_art_model() -> None:
+    """The surviving art catalog defaults to Z-Image Turbo alone."""
+    from airunner_services.bootstrap.model_bootstrap_data import (
+        ai_art_models,
+    )
+
+    defaults = [m for m in ai_art_models if m.get("is_default")]
+    assert [m["path"] for m in defaults] == [
+        "Tongyi-MAI/Z-Image-Turbo"
+    ]
+
+
 def test_removed_modules_stay_deleted() -> None:
     """The stripped SDXL/ControlNet/LoRA modules do not resolve."""
     for name in _REMOVED_MODULES:

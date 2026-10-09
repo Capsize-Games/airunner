@@ -145,7 +145,7 @@ SHAs below are live HEAD observations from 2026-10-09.
 
 | Model (repo path) | Revision pin | License (Hub card, 2026-10-09) | Notes |
 |---|---|---|---|
-| Tongyi-MAI/Z-Image-Turbo | branch `main` | apache-2.0 | Sole art model (not flagged default) |
+| Tongyi-MAI/Z-Image-Turbo | branch `main` | apache-2.0 | Sole art model; default (owner decision 2026-10-09) |
 | Qwen/Qwen3.5-9B (default chat) and unsloth/Qwen3.5-9B-GGUF (preferred quantized path) | branch `main` | apache-2.0 (both cards) | `provider_config.py` prefers the GGUF path |
 | openai/gpt-oss-20b (optional chat) and unsloth/gpt-oss-20b-GGUF | branch `main` | apache-2.0 (both cards) | Optional |
 | intfloat/e5-large (embeddings) | branch `main` | mit | Local embeddings |

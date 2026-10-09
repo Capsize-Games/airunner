@@ -13,7 +13,7 @@ ai_art_models = [
         "pipeline_action": "txt2img",
         "enabled": True,
         "model_type": "art",
-        "is_default": False,
+        "is_default": True,
     },
 ]
 
