@@ -160,6 +160,16 @@ def _stage_extension_fixtures(bundle: Path, spec: dict[str, Any]) -> None:
         target.write_bytes(b"fake-elf\n")
 
 
+def _stage_binary_fixtures(bundle: Path, spec: dict[str, Any]) -> None:
+    """Stage one fake .so per [code] collect-binaries package."""
+    internal = bundle / "_internal"
+    internal.mkdir(parents=True, exist_ok=True)
+    for package in spec["code"].get("collect_binaries", []):
+        target = internal / str(package) / "collected-fixture.so"
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes(b"fake-elf\n")
+
+
 def _stage_frozen_source_fixtures(bundle: Path, spec: dict[str, Any]) -> None:
     """Stage one fake source per [code] frozen source marker."""
     for marker in spec["code"].get("frozen_source_markers", []):
@@ -191,6 +201,7 @@ def make_bundle(
     _skeleton_bundle(bundle, spec)
     _stage_required_entries(bundle, spec)
     _stage_extension_fixtures(bundle, spec)
+    _stage_binary_fixtures(bundle, spec)
     _stage_frozen_source_fixtures(bundle, spec)
     assemble_mod.write_manifest(bundle, spec, base)
     return bundle

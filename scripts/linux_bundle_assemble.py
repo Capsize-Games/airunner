@@ -92,6 +92,8 @@ def _code_args(spec: dict[str, Any]) -> list[str]:
         args.extend(["--collect-submodules", package])
     for dist in spec["code"].get("copy_metadata", []):
         args.extend(["--copy-metadata", dist])
+    for package in spec["code"].get("collect_binaries", []):
+        args.extend(["--collect-binaries", package])
     return args
 
 
@@ -106,6 +108,22 @@ def _hook_args(spec: dict[str, Any], repo_root: Path) -> list[str]:
                 "(declare the hook or drop it)"
             )
         args.extend(["--runtime-hook", str(path)])
+    return args
+
+
+def _additional_hooks_args(
+    spec: dict[str, Any], repo_root: Path
+) -> list[str]:
+    """Return the --additional-hooks-dir flags for repo hook dirs."""
+    args: list[str] = []
+    for hooks_dir in spec["code"].get("additional_hooks_dirs", []):
+        path = repo_root / str(hooks_dir)
+        if not path.is_dir():
+            raise SystemExit(
+                f"hooks dir matches no directory: {hooks_dir} "
+                "(declare the hooks dir or drop it)"
+            )
+        args.extend(["--additional-hooks-dir", str(path)])
     return args
 
 
@@ -124,6 +142,7 @@ def build_command(
     command.extend(_data_args(spec, repo_root))
     command.extend(_code_args(spec))
     command.extend(_hook_args(spec, repo_root))
+    command.extend(_additional_hooks_args(spec, repo_root))
     command.append(str(entry_script))
     return command
 
