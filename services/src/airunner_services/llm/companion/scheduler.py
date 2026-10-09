@@ -51,6 +51,11 @@ class CompanionJobType(str, Enum):
     FACT_EXTRACTION = "fact_extraction"
     # upstream: llm/curiosity_engine.py
     CURIOSITY = "curiosity"
+    # B04: re-embed a persisted companion index after the embedding
+    # model/revision/dimension changed. No upstream equivalent — the
+    # parent spec's "changing models requires a rebuilt index, not
+    # mixed vector spaces" (arch. decision #5) is Desktop-specific.
+    EMBEDDING_REBUILD = "embedding_rebuild"
 
 
 class CompanionJobRequest(BaseModel):

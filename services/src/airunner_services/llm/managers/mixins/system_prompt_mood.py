@@ -35,6 +35,12 @@ def _checkpoint_mood(owner) -> Optional[dict]:
     return None
 
 
+def format_mood_context(current_mood: Optional[dict]) -> str:
+    """Return one mood paragraph for companion prompt injection."""
+    mood_text, behavior = _mood_text_and_behavior(current_mood)
+    return f"{mood_text}\n\n{behavior}"
+
+
 def get_mood_section(owner, force: bool = False) -> Optional[str]:
     """Return the mood section when mood prompting is enabled."""
     if not force and not _mood_is_enabled(owner):

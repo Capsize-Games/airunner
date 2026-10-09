@@ -20,6 +20,7 @@ from airunner_services.llm.tools import (
     research_validation_tools,  # URL, content, and temporal validation for research
     research_rag_tools,  # RAG-based research tools (search, summaries)
     qa_tools,
+    companion_memory_tools,  # Scoped companion recall (B05)
 )
 from airunner_services.tools import web_tools
 
@@ -53,6 +54,7 @@ __all__ = [
     "author_tools",
     "research_validation_tools",
     "qa_tools",
+    "companion_memory_tools",
     # Long-running project tools
     "project_tools",
 ]

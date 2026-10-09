@@ -1,13 +1,14 @@
 """Concrete ``CompanionMemoryRepository`` backed by Desktop's own
-SQLAlchemy/SQLite database (release issue B02).
+SQLAlchemy/SQLite database (release issues B02/B03).
 
-Implements session/turn persistence only. Fact storage
-(``get_facts``/``upsert_fact``) is B03's scope (see
-``release-planning/linux-v1/companion-contracts.md``): ``get_facts``
-returns an empty list, an honest answer since no fact storage exists
-yet to read from, and ``upsert_fact`` raises ``NotImplementedError``
-rather than silently no-op-ing, so a caller cannot mistake "not yet
-implemented" for "saved".
+B02 added session/turn persistence; B03 implements fact storage
+(``get_facts``/``upsert_fact``) plus fact retraction/reopening and
+the one-per-chatbot evolving narrative. Every method runs in exactly
+one ``session_scope`` transaction and scopes every query by
+``ChatbotId`` at the query level. No embedding columns or vector
+index reads/writes live here: vector indexing is B04's scope, and
+the pre-existing file/document knowledge tables are left untouched
+until B14 migrates them.
 """
 
 from __future__ import annotations
@@ -15,9 +16,14 @@ from __future__ import annotations
 from datetime import datetime, timedelta
 from typing import Callable, List, Optional
 
+from pydantic import BaseModel, ConfigDict
 from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError
 
+from airunner_services.database.models.companion_fact import CompanionFact
+from airunner_services.database.models.companion_narrative import (
+    CompanionNarrative,
+)
 from airunner_services.database.models.companion_session import (
     CompanionSession,
 )
@@ -39,6 +45,51 @@ _MAX_APPEND_TURN_ATTEMPTS = 5
 # threshold (see memory_repository.py's get_or_start_session docstring),
 # so this ports the upstream value as-is rather than inventing one.
 DEFAULT_SESSION_GAP = timedelta(hours=4)
+
+
+class StoredFactRecord(FactRecord):
+    """A ``FactRecord`` with its stored provenance attached.
+
+    A strict superset of the B01 contract: every extra field is
+    optional, so a plain ``FactRecord`` still upserts (provenance
+    fields default to unknown) and every stored fact reads back as
+    this type (which *is* a ``FactRecord``, keeping ``get_facts``'
+    return type honest). Subclassing -- rather than extending the
+    B01 Protocol -- keeps this issue's scope additive: B01's
+    contract and its regression file are untouched.
+
+    ``event_id`` is the idempotency key: one extraction event
+    produces at most one fact per chatbot, so redelivering the
+    same event never duplicates it. ``retracted_at``/None is the
+    active/retracted state; retraction never deletes the row.
+    """
+
+    subject: Optional[str] = None
+    source: Optional[str] = None
+    event_id: Optional[str] = None
+    created_at: Optional[str] = None
+    updated_at: Optional[str] = None
+    retracted_at: Optional[str] = None
+    retraction_reason: Optional[str] = None
+
+
+class NarrativeRecord(BaseModel):
+    """One chatbot's evolving narrative memory (B03; B09 rewrites it).
+
+    ``version`` counts rewrites starting at 1 for the first stored
+    revision; a hand-constructed record carries 0, meaning "no
+    stored narrative yet". Timestamps are ISO strings, matching
+    ``SessionRecord``'s convention.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    narrative_id: Optional[int] = None
+    chatbot_id: ChatbotId
+    content: str = ""
+    version: int = 0
+    created_at: Optional[str] = None
+    updated_at: Optional[str] = None
 
 
 class SqlCompanionMemoryRepository:
@@ -224,17 +275,240 @@ class SqlCompanionMemoryRepository:
             session_row.summary_ready = session.summary_ready
 
     def get_facts(
-        self, chatbot_id: ChatbotId, *, limit: int
+        self,
+        chatbot_id: ChatbotId,
+        *,
+        limit: int,
+        include_retracted: bool = False,
     ) -> List[FactRecord]:
-        del chatbot_id, limit
-        return []
+        """Return one chatbot's facts, most recently updated first.
+
+        Retracted facts are excluded unless ``include_retracted``
+        is set: recall (B05) must not resurrect withdrawn facts by
+        default, while retraction management still needs to see
+        them. ``include_retracted`` is defaulted, so the B01
+        ``(chatbot_id, *, limit)`` call shape is unchanged.
+        """
+        if limit <= 0:
+            return []
+        with session_scope() as db:
+            query = db.query(CompanionFact).filter(
+                CompanionFact.chatbot_id == int(chatbot_id)
+            )
+            if not include_retracted:
+                query = query.filter(
+                    CompanionFact.retracted_at.is_(None)
+                )
+            rows = (
+                query.order_by(CompanionFact.updated_at.desc())
+                .limit(limit)
+                .all()
+            )
+            return [_fact_to_record(row) for row in rows]
 
     def upsert_fact(self, fact: FactRecord) -> FactRecord:
-        del fact
-        raise NotImplementedError(
-            "Fact storage is not implemented yet -- see release issue B03 "
-            "(CompanionMemoryRepository.upsert_fact)."
+        """Insert a new fact or update the stored one, idempotently.
+
+        Three paths, in order:
+
+        1. ``fact_id`` set: update that row's content/provenance in
+           place (``updated_at`` advances, ``created_at`` and the
+           retraction state are preserved). The lookup is scoped by
+           ``chatbot_id``: another chatbot's ID raises ``ValueError``
+           rather than touching that row.
+        2. ``event_id`` set and already stored for this chatbot:
+           return the existing row unchanged, the same
+           return-existing semantics ``append_turn`` uses for a
+           repeated completion event -- one event produces one
+           fact, and redelivery is not an update.
+        3. Otherwise insert a new row.
+
+        Accepts a plain B01 ``FactRecord`` (extra provenance then
+        defaults to unknown) or a ``StoredFactRecord``. Concurrent
+        inserts of the same event collapse onto the unique
+        ``(chatbot_id, event_id)`` constraint: the loser rolls back
+        its savepoint and returns the winner's row instead of
+        raising.
+        """
+        event_id = getattr(fact, "event_id", None)
+        with session_scope() as db:
+            if fact.fact_id is not None:
+                return self._update_fact(db, fact, int(fact.fact_id))
+            if event_id is not None:
+                existing = _find_existing_fact(
+                    db, fact.chatbot_id, event_id
+                )
+                if existing is not None:
+                    return _fact_to_record(existing)
+            return self._insert_fact(db, fact, event_id)
+
+    def _update_fact(
+        self, db, fact: FactRecord, fact_id: int
+    ) -> FactRecord:
+        row = self._scoped_fact(db, fact.chatbot_id, fact_id)
+        row.subject = getattr(fact, "subject", None)
+        row.content = fact.content
+        row.source = getattr(fact, "source", None)
+        if fact.source_turn_id is not None:
+            row.source_turn_id = int(fact.source_turn_id)
+        row.confidence = fact.confidence
+        row.fact_metadata = dict(fact.metadata)
+        row.updated_at = self._clock()
+        db.flush()
+        return _fact_to_record(row)
+
+    def _insert_fact(
+        self, db, fact: FactRecord, event_id: Optional[str]
+    ) -> FactRecord:
+        now = self._clock()
+        row = CompanionFact(
+            chatbot_id=int(fact.chatbot_id),
+            subject=getattr(fact, "subject", None),
+            content=fact.content,
+            source=getattr(fact, "source", None),
+            source_turn_id=(
+                int(fact.source_turn_id)
+                if fact.source_turn_id is not None
+                else None
+            ),
+            event_id=event_id,
+            confidence=fact.confidence,
+            fact_metadata=dict(fact.metadata),
+            created_at=now,
+            updated_at=now,
         )
+        savepoint = db.begin_nested()
+        db.add(row)
+        try:
+            db.flush()
+        except IntegrityError:
+            # A concurrent writer committed this exact event first.
+            savepoint.rollback()
+            winner = (
+                _find_existing_fact(db, fact.chatbot_id, event_id)
+                if event_id is not None
+                else None
+            )
+            if winner is not None:
+                return _fact_to_record(winner)
+            raise
+        return _fact_to_record(row)
+
+    def retract_fact(
+        self,
+        chatbot_id: ChatbotId,
+        fact_id: int,
+        *,
+        reason: Optional[str] = None,
+    ) -> FactRecord:
+        """Mark one fact retracted without deleting its row.
+
+        The fact keeps its content and provenance and stays
+        readable via ``include_retracted=True``; ``reopen_fact``
+        reverses this. Scoped by chatbot: another chatbot's fact
+        ID raises ``ValueError``.
+        """
+        with session_scope() as db:
+            row = self._scoped_fact(db, chatbot_id, fact_id)
+            row.retracted_at = self._clock()
+            row.retraction_reason = reason
+            db.flush()
+            return _fact_to_record(row)
+
+    def reopen_fact(
+        self, chatbot_id: ChatbotId, fact_id: int
+    ) -> FactRecord:
+        """Clear one fact's retraction, restoring it to recall."""
+        with session_scope() as db:
+            row = self._scoped_fact(db, chatbot_id, fact_id)
+            row.retracted_at = None
+            row.retraction_reason = None
+            row.updated_at = self._clock()
+            db.flush()
+            return _fact_to_record(row)
+
+    def _scoped_fact(
+        self, db, chatbot_id: ChatbotId, fact_id: int
+    ) -> CompanionFact:
+        row = (
+            db.query(CompanionFact)
+            .filter(
+                CompanionFact.id == int(fact_id),
+                CompanionFact.chatbot_id == int(chatbot_id),
+            )
+            .one_or_none()
+        )
+        if row is None:
+            raise ValueError(
+                f"No fact {fact_id} for chatbot {chatbot_id}"
+            )
+        return row
+
+    def get_narrative(
+        self, chatbot_id: ChatbotId
+    ) -> Optional[NarrativeRecord]:
+        """Return one chatbot's narrative, or None if never written."""
+        with session_scope() as db:
+            row = (
+                db.query(CompanionNarrative)
+                .filter(
+                    CompanionNarrative.chatbot_id == int(chatbot_id)
+                )
+                .one_or_none()
+            )
+            if row is None:
+                return None
+            return _narrative_to_record(row)
+
+    def update_narrative(
+        self, chatbot_id: ChatbotId, content: str
+    ) -> NarrativeRecord:
+        """Replace one chatbot's narrative, creating it at version 1
+        or bumping ``version`` on each rewrite. A concurrent
+        first-write collapses onto the unique ``chatbot_id``
+        constraint: the loser re-reads the winner's row and applies
+        its update on top instead of raising."""
+        now = self._clock()
+        with session_scope() as db:
+            row = (
+                db.query(CompanionNarrative)
+                .filter(
+                    CompanionNarrative.chatbot_id == int(chatbot_id)
+                )
+                .one_or_none()
+            )
+            if row is None:
+                row = CompanionNarrative(
+                    chatbot_id=int(chatbot_id),
+                    content=content,
+                    version=1,
+                    created_at=now,
+                    updated_at=now,
+                )
+                savepoint = db.begin_nested()
+                db.add(row)
+                try:
+                    db.flush()
+                except IntegrityError:
+                    savepoint.rollback()
+                    row = (
+                        db.query(CompanionNarrative)
+                        .filter(
+                            CompanionNarrative.chatbot_id
+                            == int(chatbot_id)
+                        )
+                        .one()
+                    )
+                    row.content = content
+                    row.version += 1
+                    row.updated_at = now
+                    db.flush()
+            else:
+                row.content = content
+                row.version += 1
+                row.updated_at = now
+                db.flush()
+            return _narrative_to_record(row)
 
 
 def _find_existing_turn(db, turn: TurnRecord) -> Optional[CompanionTurn]:
@@ -250,6 +524,56 @@ def _find_existing_turn(db, turn: TurnRecord) -> Optional[CompanionTurn]:
             CompanionTurn.role == turn.role,
         )
         .one_or_none()
+    )
+
+
+def _find_existing_fact(
+    db, chatbot_id: ChatbotId, event_id: str
+) -> Optional[CompanionFact]:
+    """Return the already-persisted row for this exact extraction
+    event, if any -- the shared lookup behind both the fast-path
+    idempotency check and the post-conflict "who won the race"
+    check in ``upsert_fact``."""
+    return (
+        db.query(CompanionFact)
+        .filter(
+            CompanionFact.chatbot_id == int(chatbot_id),
+            CompanionFact.event_id == event_id,
+        )
+        .one_or_none()
+    )
+
+
+def _fact_to_record(row: CompanionFact) -> StoredFactRecord:
+    return StoredFactRecord(
+        fact_id=row.id,
+        chatbot_id=row.chatbot_id,
+        content=row.content,
+        source_turn_id=row.source_turn_id,
+        confidence=row.confidence,
+        metadata=dict(row.fact_metadata or {}),
+        subject=row.subject,
+        source=row.source,
+        event_id=row.event_id,
+        created_at=row.created_at.isoformat(),
+        updated_at=row.updated_at.isoformat(),
+        retracted_at=(
+            row.retracted_at.isoformat()
+            if row.retracted_at is not None
+            else None
+        ),
+        retraction_reason=row.retraction_reason,
+    )
+
+
+def _narrative_to_record(row: CompanionNarrative) -> NarrativeRecord:
+    return NarrativeRecord(
+        narrative_id=row.id,
+        chatbot_id=row.chatbot_id,
+        content=row.content,
+        version=row.version,
+        created_at=row.created_at.isoformat(),
+        updated_at=row.updated_at.isoformat(),
     )
 
 
@@ -279,4 +603,9 @@ def _turn_to_record(row: CompanionTurn) -> TurnRecord:
     )
 
 
-__all__ = ["DEFAULT_SESSION_GAP", "SqlCompanionMemoryRepository"]
+__all__ = [
+    "DEFAULT_SESSION_GAP",
+    "NarrativeRecord",
+    "SqlCompanionMemoryRepository",
+    "StoredFactRecord",
+]

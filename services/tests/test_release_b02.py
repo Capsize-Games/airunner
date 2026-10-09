@@ -441,15 +441,22 @@ def test_update_session_summary_persists_fields(test_db, repo) -> None:
         assert row.key_topics == ["weather", "small talk"]
 
 
-def test_get_facts_returns_empty_and_upsert_fact_is_not_implemented(
+def test_get_facts_and_upsert_fact_are_implemented(
     test_db, repo
 ) -> None:
-    """Fact storage is B03's scope; this confirms the honest placeholder
-    behavior documented in repository.py."""
+    """Fact storage was B03's scope; the B02 placeholder (empty list /
+    NotImplementedError) is superseded. This keeps the B02 file green
+    by asserting the now-real round trip; full coverage lives in
+    test_release_b03.py."""
+    from airunner_services.llm.companion.memory_repository import FactRecord
+
     chatbot_id = _make_chatbot()
     assert repo.get_facts(chatbot_id, limit=10) == []
-    with pytest.raises(NotImplementedError):
-        repo.upsert_fact(object())  # type: ignore[arg-type]
+    stored = repo.upsert_fact(
+        FactRecord(chatbot_id=chatbot_id, content="b03 stores facts")
+    )
+    assert stored.fact_id is not None
+    assert repo.get_facts(chatbot_id, limit=10)[0].fact_id == stored.fact_id
 
 
 # --- Migration: fresh and historical SQLite fixtures ---

@@ -81,6 +81,7 @@ class CompanionError(Exception):
 # Known, stable codes. Additive only — do not repurpose an existing code
 # for a new meaning once B02+ ships against it.
 ERROR_UNKNOWN_CHATBOT = "unknown_chatbot"
+ERROR_EMBEDDING_SPACE_MISMATCH = "embedding_space_mismatch"
 ERROR_SESSION_EXPIRED = "session_expired"
 ERROR_CONTEXT_BUDGET_EXCEEDED = "context_budget_exceeded"
 ERROR_TOOL_DISPATCH_FAILED = "tool_dispatch_failed"
@@ -188,6 +189,7 @@ __all__ = [
     "CompanionTurnResult",
     "ContextBudget",
     "ERROR_CANCELLED",
+    "ERROR_EMBEDDING_SPACE_MISMATCH",
     "ERROR_CONTEXT_BUDGET_EXCEEDED",
     "ERROR_INFERENCE_UNAVAILABLE",
     "ERROR_SESSION_EXPIRED",

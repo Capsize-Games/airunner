@@ -13,6 +13,13 @@ from airunner_services.database.models.brush_settings import BrushSettings
 from airunner_services.database.models.canvas_layer import CanvasLayer
 from airunner_services.database.models.chatstore import Chatstore
 from airunner_services.database.models.chatbot import Chatbot
+from airunner_services.database.models.companion_fact import (
+    CompanionFact,
+)
+from airunner_services.database.models.companion_job import CompanionJob
+from airunner_services.database.models.companion_narrative import (
+    CompanionNarrative,
+)
 from airunner_services.database.models.companion_session import (
     CompanionSession,
 )
@@ -99,6 +106,9 @@ __all__ = [
     "CanvasLayer",
     "Chatstore",
     "Chatbot",
+    "CompanionFact",
+    "CompanionJob",
+    "CompanionNarrative",
     "CompanionSession",
     "CompanionTurn",
     "ControlnetModel",
