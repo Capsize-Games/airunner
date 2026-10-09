@@ -40,13 +40,13 @@ ALLOWLIST: frozenset[tuple[str, int, str]] = frozenset(
         (
             "services/src/airunner_services/runtimes/"
             "sidecar_art_launcher.py",
-            74,
+            80,
             "airunner_native.launcher",
         ),
         (
             "services/src/airunner_services/runtimes/"
             "sidecar_tts_launcher.py",
-            67,
+            73,
             "airunner_native.launcher",
         ),
     }
