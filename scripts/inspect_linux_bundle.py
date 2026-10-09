@@ -36,6 +36,7 @@ from linux_bundle_checks import (
     verify_required_resources,
 )
 from linux_bundle_gates import (
+    check_collected_binaries,
     check_extension_modules,
     check_frozen_sources,
     check_sidecars,
@@ -108,6 +109,7 @@ def _append_manifest(
         )
     result.problems.extend(scan_exclusions(bundle_dir, spec))
     result.problems.extend(check_extension_modules(bundle_dir, spec))
+    result.problems.extend(check_collected_binaries(bundle_dir, spec))
     result.problems.extend(check_frozen_sources(bundle_dir, spec))
 
 

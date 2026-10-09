@@ -155,6 +155,20 @@ def check_extension_modules(
     return problems
 
 
+def check_collected_binaries(
+    bundle_dir: Path, spec: dict[str, Any]
+) -> list[str]:
+    """Return collect-binaries packages missing any .so in-tree."""
+    problems: list[str] = []
+    internal = bundle_dir / "_internal"
+    for package in spec["code"].get("collect_binaries", []):
+        if not list((internal / str(package)).rglob("*.so")):
+            problems.append(
+                f"frozen bundle lacks collected binaries for {package}"
+            )
+    return problems
+
+
 def check_frozen_sources(
     bundle_dir: Path, spec: dict[str, Any]
 ) -> list[str]:
