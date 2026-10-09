@@ -25,6 +25,9 @@ from airunner_services.content_safety import (
     normalize_tokens,
 )
 from airunner_services.content_safety import policy_data
+from airunner_services.content_safety.matcher import (
+    REASON_POLICY_UNAVAILABLE,
+)
 
 _HASH_RE = re.compile(r"^[0-9a-f]{64}$")
 _REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -140,11 +143,13 @@ def test_ngram_match_when_tokens_split_by_punctuation(
     assert check_text("alpha widget") is True
 
 
-def test_check_text_allows_when_unavailable(
+def test_check_text_denies_when_unavailable(
     policy_dir: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     _load(policy_dir / "missing.dat", monkeypatch)
-    assert check_text("synthetic") is True
+    assert check_text("synthetic") is False
+    # Empty input still passes: there is no content to match.
+    assert check_text("") is True
 
 
 # --------------------------------------------------------------------------
@@ -209,7 +214,7 @@ def test_result_helper_constructors() -> None:
 # --------------------------------------------------------------------------
 
 
-def test_missing_data_file_is_unavailable_and_allows(
+def test_missing_data_file_is_unavailable_and_denies(
     policy_dir: Path,
     monkeypatch: pytest.MonkeyPatch,
     caplog: pytest.LogCaptureFixture,
@@ -217,9 +222,11 @@ def test_missing_data_file_is_unavailable_and_allows(
     _load(policy_dir / "does_not_exist.dat", monkeypatch)
     with caplog.at_level("WARNING"):
         assert is_available() is False
-        assert check_text("synthetic") is True
+        assert check_text("synthetic") is False
         result = check_prompt_fields(prompt="synthetic")
-    assert result.allowed is True
+    assert result.allowed is False
+    assert result.reason == REASON_POLICY_UNAVAILABLE
+    assert result.field is None
     assert all(
         "synthetic" not in record.getMessage() for record in caplog.records
     )
@@ -232,7 +239,10 @@ def test_empty_data_file_is_unavailable(
     path.write_text("", encoding="utf-8")
     _load(path, monkeypatch)
     assert is_available() is False
-    assert check_text("anything at all") is True
+    assert check_text("anything at all") is False
+    result = check_prompt_fields(prompt="anything at all")
+    assert result.allowed is False
+    assert result.reason == REASON_POLICY_UNAVAILABLE
 
 
 def test_corrupt_lines_are_ignored(
@@ -265,7 +275,10 @@ def test_file_with_only_corrupt_lines_is_unavailable(
     path.write_text("garbage\n# comment\n\n", encoding="utf-8")
     _load(path, monkeypatch)
     assert is_available() is False
-    assert check_text("anything at all") is True
+    assert check_text("anything at all") is False
+    result = check_prompt_fields(prompt="anything at all")
+    assert result.allowed is False
+    assert result.reason == REASON_POLICY_UNAVAILABLE
 
 
 def test_uppercase_hashes_are_accepted(

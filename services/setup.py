@@ -430,6 +430,7 @@ def build_services_setup_kwargs(*, package_source_dir: str) -> dict[str, object]
             "airunner_services.bin": ["*.sh"],
             "airunner_services.content_safety": [
                 "data/*.dat",
+                "data/*.dat.sig",
             ],
             "airunner_services.database": [
                 "alembic.ini",

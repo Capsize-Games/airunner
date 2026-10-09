@@ -17,15 +17,18 @@ in which common digit/symbol substitutions are folded back to letters
 (e.g. ``4`` -> ``a``, ``0`` -> ``o``), and 1-, 2- and 3-gram windows of the
 normalized token sequence (both space-joined and delimiter-free).
 
-Fail behavior (deliberately fail-open on missing data)
-------------------------------------------------------
-So the application stays usable before the owner generates a real policy
-set, a missing, empty, or all-malformed policy data file does NOT raise:
+Fail behavior (fail-closed on missing data)
+------------------------------------------
+Generation requires a usable policy data set. When the policy data file
+is missing, empty, or strictly invalid,
 :func:`~airunner_services.content_safety.policy_data.is_available` returns
 ``False``, a single content-free warning is logged, and :func:`check_text`
-/ :func:`check_prompt_fields` report the input as allowed. Corrupt lines are
-skipped rather than raising. The enforced, fail-closed output-side layer is
-a separate concern handled elsewhere.
+reports non-empty input as failing while :func:`check_prompt_fields`
+denies the request with ``REASON_POLICY_UNAVAILABLE`` before any field is
+inspected. Legacy corrupt lines are still skipped rather than raising, but
+a file that yields no usable hash set denies generation all the same. No
+environment override bypasses this denial. The enforced, fail-closed
+output-side layer is a separate concern handled elsewhere.
 
 No-disclosure guarantee
 -----------------------
@@ -46,6 +49,7 @@ from .policy_data import load_policy_hashes
 
 REASON_ALLOWED = "ok"
 REASON_PROHIBITED = "prohibited_content"
+REASON_POLICY_UNAVAILABLE = "policy_unavailable"
 
 NORMALIZATION_VERSION = "v1"
 NGRAM_MIN = 1
@@ -94,8 +98,14 @@ class ContentSafetyResult:
         return cls(allowed=True, reason=REASON_ALLOWED, field=None)
 
     @classmethod
-    def blocked_result(cls, field: str, reason: str) -> "ContentSafetyResult":
-        """Return a blocked outcome for ``field`` with a generic ``reason``."""
+    def blocked_result(
+        cls, field: str | None, reason: str
+    ) -> "ContentSafetyResult":
+        """Return a blocked outcome for ``field`` with a generic ``reason``.
+
+        ``field`` is ``None`` when no single field is at fault, as with
+        an unavailable policy data set.
+        """
         return cls(allowed=False, reason=reason, field=field)
 
 
@@ -166,14 +176,15 @@ def candidate_hashes(text: str) -> set[str]:
 def check_text(text: str) -> bool:
     """Return ``True`` when ``text`` passes (i.e. no policy match).
 
-    Returns ``True`` when no policy data is loaded, so the application stays
-    usable until the owner generates a real policy set.
+    Fails closed: non-empty text fails when no policy data set is loaded,
+    because the mandatory match cannot run. Empty and non-string input
+    still passes, as there is no content to match.
     """
     if not isinstance(text, str) or not text:
         return True
     hashes = load_policy_hashes()
     if not hashes:
-        return True
+        return False
     return not any(
         candidate in hashes for candidate in candidate_hashes(text)
     )
@@ -182,14 +193,24 @@ def check_text(text: str) -> bool:
 def check_prompt_fields(**fields: str) -> ContentSafetyResult:
     """Check named text fields and report the first blocking one.
 
-    ``None`` and empty fields are skipped. The returned reason is generic and
-    never echoes field text or a matched term; only the offending field name
-    is reported.
+    Fails closed: when no policy data set is loaded the request is denied
+    with ``REASON_POLICY_UNAVAILABLE`` before any field is inspected,
+    because the mandatory match cannot run. ``None`` and empty fields are
+    skipped. The returned reason is generic and never echoes field text or
+    a matched term; only the offending field name is reported (``None``
+    when the policy data itself is unavailable).
     """
+    hashes = load_policy_hashes()
+    if not hashes:
+        return ContentSafetyResult.blocked_result(
+            None, REASON_POLICY_UNAVAILABLE
+        )
     for field, value in fields.items():
         if not isinstance(value, str) or not value:
             continue
-        if not check_text(value):
+        if any(
+            candidate in hashes for candidate in candidate_hashes(value)
+        ):
             return ContentSafetyResult.blocked_result(field, REASON_PROHIBITED)
     return ContentSafetyResult.allowed_result()
 
@@ -200,6 +221,7 @@ __all__ = [
     "NGRAM_MIN",
     "NORMALIZATION_VERSION",
     "REASON_ALLOWED",
+    "REASON_POLICY_UNAVAILABLE",
     "REASON_PROHIBITED",
     "candidate_hashes",
     "check_prompt_fields",

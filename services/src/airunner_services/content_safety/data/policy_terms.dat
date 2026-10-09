@@ -1,8 +1,15 @@
 # Content safety policy data.
 #
-# Format: one lowercase hex SHA-256 digest per line (UTF-8). Blank lines and
-# lines starting with '#' are ignored; malformed lines are skipped.
+# Versioned artifact (airunner-policy-data/1): sorted lowercase hex
+# SHA-256 digests (UTF-8), one per line, with '#' integrity metadata
+# (format, normalization, count, sha256 of the digest block). Blank
+# lines and other '#' lines are ignored.
 #
 # This public repository ships an empty set. The real hash set is generated
 # out of band by scripts/build_policy_terms.py from a plaintext list the
 # maintainer keeps outside the repository, and is never committed.
+#
+# format: airunner-policy-data/1
+# normalization: v1
+# count: 0
+# sha256: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855

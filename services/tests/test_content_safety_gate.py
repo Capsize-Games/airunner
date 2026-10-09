@@ -226,21 +226,35 @@ def test_route_allows_unrelated_prompt(
     assert response.json()["status"] == "running"
 
 
-def test_route_allows_when_policy_unavailable(
+def test_route_denies_when_policy_unavailable(
     monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
 ) -> None:
-    # No env override: the packaged policy set is empty, so checks pass.
+    # No env override: the packaged policy set is empty, so generation
+    # is denied with the installation/policy error before any side effect.
     policy_data.reset_cache()
     routes = _import_routes()
-    _patch_downstream(monkeypatch, routes)
+    unload_calls: list[bool] = []
 
-    response = _route_client().post(
-        _ART_ROUTE,
-        json={"prompt": _SYNTHETIC},
+    async def _spy_unload(*_args, **_kwargs):
+        unload_calls.append(True)
+
+    monkeypatch.setattr(routes, "unload_llm_before_art", _spy_unload)
+
+    with caplog.at_level(logging.DEBUG):
+        response = _route_client().post(
+            _ART_ROUTE,
+            json={"prompt": _SYNTHETIC},
+        )
+
+    assert response.status_code == 400
+    body = response.json()
+    assert body["detail"] == gate.GENERIC_POLICY_ERROR_MESSAGE
+    assert _SYNTHETIC not in json.dumps(body)
+    assert unload_calls == []
+    assert all(
+        _SYNTHETIC not in record.getMessage() for record in caplog.records
     )
-
-    assert response.status_code == 200
-    assert response.json()["job_id"] == "job-1"
 
 
 def test_legacy_art_route_rejects_matching_prompt(
@@ -345,9 +359,10 @@ def test_worker_allows_unrelated_request(
     assert len(load_calls) == 1
 
 
-def test_worker_allows_when_policy_unavailable(
+def test_worker_denies_when_policy_unavailable(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    from airunner_common.contract_enums import EngineResponseCode
     from airunner_services.art.managers.stablediffusion.image_request import (
         ImageRequest,
     )
@@ -357,8 +372,12 @@ def test_worker_allows_when_policy_unavailable(
 
     worker._generate_image({"image_request": ImageRequest(prompt=_SYNTHETIC)})
 
-    assert errors == []
-    assert len(load_calls) == 1
+    assert errors == [gate.GENERIC_POLICY_ERROR_MESSAGE]
+    assert load_calls == []
+    assert worker.api.responses[-1] == (
+        EngineResponseCode.ERROR,
+        gate.GENERIC_POLICY_ERROR_MESSAGE,
+    )
 
 
 # --------------------------------------------------------------------------

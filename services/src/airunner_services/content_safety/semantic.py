@@ -27,6 +27,24 @@ module never imports model machinery. :func:`make_llm_judge` builds a ready
 adapter around any synchronous text-generation callable, composing its
 instruction from the existing guardrails prompt (falling back to a short
 built-in generic instruction) and parsing the response strictly.
+
+S08 required contextual adapter (default OFF, pending S07 approval)
+------------------------------------------------------------------
+:func:`evaluate_fields_contextual` is the REQUIRED input-side contextual
+check behind the S07 selection
+(``release-planning/linux-v1/safety-evaluation.md``). That selection is a
+DRAFT: the text slot has no approved evaluator and the proposed §4
+thresholds are unapproved, so this layer stays OFF unless
+:data:`CONTEXTUAL_ENV_VAR` is truthy. The evaluator choice stays behind
+the injection seam (:func:`set_evaluator`, falling back to the approved
+:func:`set_judge` seam); no model, provider, or download is wired in, and
+inference is local-only through the injected callable.
+
+Unlike the optional layer above, the required check fails closed: only an
+explicit allowed verdict allows, while unavailable, timed-out, erroring,
+or ambiguous outcomes all deny. Every call runs on one shared bounded
+pool (:data:`CONTEXTUAL_MAX_WORKERS`), so a timeout cancels the queued
+wait without spawning an unbounded chain of abandoned threads.
 """
 
 from __future__ import annotations
@@ -35,6 +53,8 @@ import logging
 import os
 import re
 import threading
+from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import TimeoutError as FuturesTimeoutError
 from dataclasses import dataclass
 from typing import Callable, Optional
 
@@ -47,6 +67,16 @@ SEMANTIC_ENV_VAR = "AIRUNNER_CONTENT_SAFETY_SEMANTIC"
 # Hard ceiling on a single judge call. Kept short so a slow or stuck model
 # can never stall generation through this optional layer.
 SEMANTIC_TIMEOUT_SECONDS = 5.0
+
+# Required contextual check (S08). Same 5 s ceiling as the optional layer
+# (safety-evaluation.md §4 L4 keeps 5 s); still pending S07 approval, like
+# every other proposed threshold -- no numeric threshold is approved yet.
+CONTEXTUAL_ENV_VAR = "AIRUNNER_CONTENT_SAFETY_CONTEXTUAL"
+CONTEXTUAL_TIMEOUT_SECONDS = 5.0
+
+# Bound on the shared safety worker pool. One worker serializes judge
+# calls so concurrent generations can never spawn unbounded threads.
+CONTEXTUAL_MAX_WORKERS = 1
 
 # Generic, content-free reason codes. These never contain field text.
 REASON_DISABLED = "disabled"
@@ -75,6 +105,14 @@ _DEFAULT_INSTRUCTION = (
 Judge = Callable[[dict[str, str]], "SemanticVerdict"]
 
 _judge: Optional[Judge] = None
+
+# S08 required-check evaluator. When unset, the required check falls back
+# to the approved :func:`set_judge` seam so the evaluator choice stays
+# behind one injection point; no model is ever wired in here.
+_evaluator: Optional[Judge] = None
+
+_executor_lock = threading.Lock()
+_executor: Optional[ThreadPoolExecutor] = None
 
 
 @dataclass(frozen=True)
@@ -115,6 +153,35 @@ def set_judge(judge: Optional[Judge]) -> None:
 def get_judge() -> Optional[Judge]:
     """Return the currently registered judge, or ``None`` when unset."""
     return _judge
+
+
+def set_evaluator(evaluator: Optional[Judge]) -> None:
+    """Register (or clear with ``None``) the required-check evaluator."""
+    global _evaluator
+    _evaluator = evaluator
+
+
+def get_evaluator() -> Optional[Judge]:
+    """Return the registered required-check evaluator, or ``None``."""
+    return _evaluator
+
+
+def _resolve_evaluator() -> Optional[Judge]:
+    """Return the required-check evaluator, falling back to the judge seam."""
+    if _evaluator is not None:
+        return _evaluator
+    return get_judge()
+
+
+def contextual_enabled() -> bool:
+    """Return ``True`` when the required contextual check is switched on."""
+    raw = os.environ.get(CONTEXTUAL_ENV_VAR)
+    return isinstance(raw, str) and raw.strip().lower() in _TRUTHY
+
+
+def contextual_max_workers() -> int:
+    """Return the bound on shared safety worker threads."""
+    return CONTEXTUAL_MAX_WORKERS
 
 
 def build_judge_instruction(
@@ -192,34 +259,48 @@ class _JudgeTimeout(Exception):
     """Raised internally when the judge exceeds the timeout budget."""
 
 
+def _get_executor() -> ThreadPoolExecutor:
+    """Return the shared bounded safety worker pool (created once)."""
+    global _executor
+    with _executor_lock:
+        if _executor is None:
+            _executor = ThreadPoolExecutor(
+                max_workers=CONTEXTUAL_MAX_WORKERS,
+                thread_name_prefix="airunner-safety",
+            )
+        return _executor
+
+
+def reset_contextual_workers() -> None:
+    """Shut down the shared safety worker pool (test hook).
+
+    Queued work is cancelled and a running judge call is awaited so the
+    worker count returns to zero; the pool is recreated on next use with
+    :data:`CONTEXTUAL_MAX_WORKERS` workers. Only tests need this.
+    """
+    global _executor
+    with _executor_lock:
+        executor, _executor = _executor, None
+    if executor is not None:
+        executor.shutdown(wait=True, cancel_futures=True)
+
+
 def _call_with_timeout(
     judge: Judge, fields: dict[str, str], timeout: float
 ) -> SemanticVerdict:
-    """Run ``judge`` on a daemon thread and return within ``timeout`` seconds.
+    """Run ``judge`` on the shared bounded pool within ``timeout`` seconds.
 
-    A daemon thread is used so a stuck call can never block interpreter
-    shutdown, and the caller raises :class:`_JudgeTimeout` rather than
-    waiting indefinitely.
+    The pool holds at most :data:`CONTEXTUAL_MAX_WORKERS` workers, so
+    concurrent or repeated calls can never spawn an unbounded chain of
+    threads. On timeout the queued wait is cancelled and the caller raises
+    :class:`_JudgeTimeout` rather than waiting indefinitely.
     """
-    outcome: list = []
-
-    def _run() -> None:
-        try:
-            outcome.append((True, judge(fields)))
-        except BaseException as exc:  # noqa: BLE001 - re-raised to caller
-            outcome.append((False, exc))
-
-    thread = threading.Thread(target=_run, daemon=True)
-    thread.start()
-    thread.join(timeout)
-    if thread.is_alive():
+    future = _get_executor().submit(judge, fields)
+    try:
+        return future.result(timeout=timeout)
+    except FuturesTimeoutError:
+        future.cancel()
         raise _JudgeTimeout("semantic judge exceeded the timeout budget")
-    if not outcome:
-        raise RuntimeError("semantic judge produced no result")
-    succeeded, value = outcome[0]
-    if not succeeded:
-        raise value
-    return value
 
 
 def evaluate_fields_semantic(fields: dict[str, str]) -> SemanticVerdict:
@@ -287,7 +368,100 @@ def evaluate_fields_semantic(fields: dict[str, str]) -> SemanticVerdict:
     return verdict
 
 
+def evaluate_fields_contextual(
+    fields: dict[str, str],
+) -> SemanticVerdict:
+    """Run the REQUIRED contextual check over a request's text fields.
+
+    Fail-closed: only an explicit evaluated allowed verdict allows. A
+    missing evaluator, a timeout, an error, an unexpected return value,
+    or an ambiguous outcome all deny. No field text is ever logged. The
+    layer runs only when :func:`contextual_enabled` is true; while the
+    S07 selection is an unapproved draft it stays OFF by default.
+    """
+    if not contextual_enabled():
+        return SemanticVerdict.allow(REASON_DISABLED, evaluated=False)
+    evaluator = _resolve_evaluator()
+    if evaluator is None:
+        logger.warning(
+            "Contextual content-safety check enabled but no evaluator "
+            "is registered; denying request (reason=%s)",
+            REASON_UNAVAILABLE,
+        )
+        return SemanticVerdict(
+            evaluated=False, allowed=False, reason=REASON_UNAVAILABLE
+        )
+    cleaned = {
+        name: value
+        for name, value in (fields or {}).items()
+        if isinstance(value, str) and value
+    }
+    if not cleaned:
+        return SemanticVerdict.allow(REASON_ALLOWED, evaluated=False)
+    field_count = len(cleaned)
+    try:
+        verdict = _call_with_timeout(
+            evaluator, cleaned, CONTEXTUAL_TIMEOUT_SECONDS
+        )
+    except _JudgeTimeout:
+        logger.warning(
+            "Contextual content-safety evaluator timed out; denying "
+            "request (fields=%d, reason=%s)",
+            field_count,
+            REASON_TIMEOUT,
+        )
+        return SemanticVerdict(
+            evaluated=True, allowed=False, reason=REASON_TIMEOUT
+        )
+    except Exception:
+        # Never include the exception text: it could embed prompt content.
+        logger.warning(
+            "Contextual content-safety evaluator error; denying "
+            "request (fields=%d, reason=%s)",
+            field_count,
+            REASON_ERROR,
+        )
+        return SemanticVerdict(
+            evaluated=True, allowed=False, reason=REASON_ERROR
+        )
+    if not isinstance(verdict, SemanticVerdict):
+        logger.warning(
+            "Contextual content-safety evaluator returned an "
+            "unexpected result; denying request (fields=%d, reason=%s)",
+            field_count,
+            REASON_AMBIGUOUS,
+        )
+        return SemanticVerdict(
+            evaluated=True, allowed=False, reason=REASON_AMBIGUOUS
+        )
+    if verdict.evaluated and verdict.allowed:
+        if verdict.reason == REASON_ALLOWED:
+            return verdict
+        # An allowed verdict without the explicit allowed reason is
+        # ambiguous: only an explicit SAFE allows.
+        logger.warning(
+            "Contextual content-safety evaluator was ambiguous; "
+            "denying request (fields=%d, reason=%s)",
+            field_count,
+            REASON_AMBIGUOUS,
+        )
+        return SemanticVerdict(
+            evaluated=True, allowed=False, reason=REASON_AMBIGUOUS
+        )
+    # Echo only the fixed generic reason, never the evaluator's own text.
+    logger.info(
+        "Contextual content-safety evaluator flagged a request "
+        "(fields=%d, reason=%s)",
+        field_count,
+        REASON_BLOCKED,
+    )
+    return SemanticVerdict.block(REASON_BLOCKED)
+
+
 __all__ = [
+    "CONTEXTUAL_ENV_VAR",
+    "CONTEXTUAL_MAX_WORKERS",
+    "CONTEXTUAL_TIMEOUT_SECONDS",
     "SEMANTIC_ENV_VAR",
     "SEMANTIC_TIMEOUT_SECONDS",
     "REASON_ALLOWED",
@@ -302,10 +476,16 @@ __all__ = [
     "Judge",
     "SemanticVerdict",
     "build_judge_instruction",
+    "contextual_enabled",
+    "contextual_max_workers",
+    "evaluate_fields_contextual",
     "evaluate_fields_semantic",
+    "get_evaluator",
     "get_judge",
     "make_llm_judge",
     "parse_judge_response",
+    "reset_contextual_workers",
     "semantic_enabled",
+    "set_evaluator",
     "set_judge",
 ]

@@ -5,3 +5,5 @@ include README.md
 # Hashed content-safety policy data (hash-only; ships empty in the public
 # repo, populated out of band). Must be present in sdist -> wheel builds.
 include src/airunner_services/content_safety/data/*.dat
+# Detached Ed25519 sidecar staged by trusted release provisioning (S06).
+include src/airunner_services/content_safety/data/*.dat.sig

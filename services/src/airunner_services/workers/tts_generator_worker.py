@@ -17,6 +17,9 @@ from airunner_common.contract_enums import (
 )
 from airunner_common.settings import AIRUNNER_TTS_MODEL_TYPE
 from airunner_common.settings import AIRUNNER_TTS_ON
+from airunner_services.content_safety_gate import (
+	evaluate_publication_fields,
+)
 from airunner_services.utils.text.formatter_extended import FormatterExtended
 from airunner_services.llm.stream_text import combine_stream_chunks
 from airunner_services.llm.thinking_parser import (
@@ -787,6 +790,11 @@ class TTSGeneratorWorker(Worker):
 			message = message.get("message", "")
 
 		message = FormatterExtended.to_speakable_text(message)
+		if not evaluate_publication_fields({"message": message}).allowed:
+			self.logger.debug(
+				"TTS publication denied by content safety policy"
+			)
+			return
 		TTSGeneratorWorker._log_tts_input(self, message)
 
 		model = (
