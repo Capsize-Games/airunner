@@ -31,6 +31,12 @@ from isolation_support import import_isolation_preamble
 
 _PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
+# Block the top-level names outright as well: in a worktree reusing
+# another checkout's venv (issue #2246), that venv's editable install
+# provides both packages from the foreign checkout, which no path entry
+# passed to the preamble covers.
+_BLOCKED = ("airunner", "airunner_services")
+
 
 def test_launcher_imports_without_airunner_or_services_on_path():
     """``airunner_native.launcher`` must import with only airunner_common.
@@ -46,7 +52,7 @@ def test_launcher_imports_without_airunner_or_services_on_path():
     _desktop_src = str(_PROJECT_ROOT / "src")
     _services_src = str(_PROJECT_ROOT / "services" / "src")
     script = (
-        import_isolation_preamble((_desktop_src, _services_src))
+        import_isolation_preamble((_desktop_src, _services_src), _BLOCKED)
         + "import importlib; "
         "importlib.import_module('airunner_native.launcher'); "
         "import pytest as _pytest; "

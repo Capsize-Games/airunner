@@ -33,12 +33,18 @@ _IMPORTABLE_WITHOUT_AIRUNNER = [
     "airunner_services.database.models.application_settings",
 ]
 
+# Block the top-level name outright as well: in a worktree reusing
+# another checkout's venv (issue #2246), that venv's editable install
+# provides ``airunner`` from the foreign checkout, which no path entry
+# passed to the preamble covers.
+_BLOCKED = ("airunner",)
+
 
 def test_services_import_without_airunner_on_path():
     """The touched modules must import with ``airunner`` unimportable."""
     _desktop_src = str(_PROJECT_ROOT / "src")
     script = (
-        import_isolation_preamble((_desktop_src,))
+        import_isolation_preamble((_desktop_src,), _BLOCKED)
         + "import importlib; "
         + "; ".join(
             f"importlib.import_module({mod!r})"
