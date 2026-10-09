@@ -11,6 +11,7 @@ from .art_catalog_routes import router as catalog_router
 from .catalog_bootstrap import router as catalog_bootstrap_router
 from .art_contracts import (
     ArtComponentResponse,
+    ArtModelsVersion,
     BackgroundRemovalRequest,
     GenerationRequest,
     GenerationResponse,
@@ -42,6 +43,7 @@ except ImportError as exc:
 
 __all__ = [
     "ArtComponentResponse",
+    "ArtModelsVersion",
     "BackgroundRemovalRequest",
     "GenerationRequest",
     "GenerationResponse",

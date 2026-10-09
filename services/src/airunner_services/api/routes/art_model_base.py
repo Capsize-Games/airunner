@@ -29,13 +29,21 @@ def query_first(model_class: type[Any]) -> Any:
 
 
 def service_base_path() -> Path:
-    """Return the configured AIRunner base path."""
-    path_settings = query_first(PathSettings)
-    base_path = ""
-    if path_settings is not None:
-        base_path = (getattr(path_settings, "base_path", "") or "").strip()
-    if base_path:
-        return Path(base_path).expanduser()
+    """Return the configured AIRunner base path.
+
+    A poisoned or detached settings record must never break model
+    discovery (issue #2228): fall back to the default base path.
+    """
+    try:
+        path_settings = query_first(PathSettings)
+        base_path = ""
+        if path_settings is not None:
+            value = getattr(path_settings, "base_path", "") or ""
+            base_path = value.strip()
+        if base_path:
+            return Path(base_path).expanduser()
+    except Exception:
+        pass
     return _DEFAULT_BASE_PATH
 
 

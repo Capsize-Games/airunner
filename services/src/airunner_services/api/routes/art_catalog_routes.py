@@ -1,6 +1,5 @@
 """Model discovery routes for art API endpoints."""
 
-from pathlib import Path
 from typing import List
 
 from fastapi import APIRouter
@@ -11,8 +10,16 @@ from airunner_services.model_management.model_registry import (
     ModelType as RegistryModelType,
 )
 
-from .art_contracts import LocalArtModel, LocalArtModelsResponse, ModelInfo
-from .art_model_paths import resolve_art_model_path, resolve_zimage_txt2img_dir
+from .art_contracts import (
+    ArtModelsVersion,
+    LocalArtModel,
+    LocalArtModelsResponse,
+    ModelInfo,
+)
+from .art_model_base import art_model_base_dir
+from .art_model_resolution import resolve_art_model_path
+from .art_model_scan import installed_art_models
+from .art_schedulers import list_scheduler_names
 
 router = APIRouter()
 
@@ -21,25 +28,17 @@ router = APIRouter()
 # so the API can keep serving filesystem paths and registry IDs side by side.
 
 
-def local_art_models(base_dir: str) -> list[LocalArtModel]:
-    """Return local txt2img checkpoint files from one base dir."""
-    models: list[LocalArtModel] = []
-    if not base_dir:
-        return models
-    for model_path in sorted(Path(base_dir).glob("*.safetensors")):
-        try:
-            stats = model_path.stat()
-        except Exception:
-            continue
-        models.append(
-            LocalArtModel(
-                id=str(model_path),
-                name=model_path.name,
-                path=str(model_path),
-                size_bytes=int(stats.st_size),
-            )
-        )
-    return models
+def group_models_by_version(
+    models: list[LocalArtModel],
+) -> list[ArtModelsVersion]:
+    """Group one flat model list by version name."""
+    groups: dict[str, list[LocalArtModel]] = {}
+    for model in models:
+        groups.setdefault(model.version, []).append(model)
+    return [
+        ArtModelsVersion(version=version, models=grouped)
+        for version, grouped in sorted(groups.items())
+    ]
 
 
 def registry_model_info(configured: str, model) -> ModelInfo:
@@ -54,11 +53,14 @@ def registry_model_info(configured: str, model) -> ModelInfo:
 
 @router.get("/models", response_model=LocalArtModelsResponse)
 async def list_models():
-    """List local checkpoint files suitable for txt2img."""
-    base_dir = resolve_zimage_txt2img_dir()
+    """List installed models per version plus valid schedulers."""
+    model_base = art_model_base_dir()
+    models = installed_art_models(model_base)
     return LocalArtModelsResponse(
-        base_dir=base_dir,
-        models=local_art_models(base_dir),
+        base_dir=str(model_base),
+        models=models,
+        versions=group_models_by_version(models),
+        schedulers=list_scheduler_names(),
     )
 
 

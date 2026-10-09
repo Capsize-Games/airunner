@@ -161,12 +161,25 @@ class ModelInfo(BaseModel):
 
 
 class LocalArtModel(BaseModel):
-    """One local art model file."""
+    """One installed local art model.
+
+    ``path`` is the ``model`` value to send to POST /generate; a
+    diffusers bundle directory is a valid value as well as a file.
+    """
 
     id: str
     name: str
     path: str
     size_bytes: int
+    version: str = ""
+    pipeline: str = ""
+
+
+class ArtModelsVersion(BaseModel):
+    """Installed models for one art model version."""
+
+    version: str
+    models: List[LocalArtModel]
 
 
 class LocalArtModelsResponse(BaseModel):
@@ -174,6 +187,8 @@ class LocalArtModelsResponse(BaseModel):
 
     base_dir: str
     models: List[LocalArtModel]
+    versions: List[ArtModelsVersion] = []
+    schedulers: List[str] = []
 
 
 class BackgroundRemovalRequest(BaseModel):
@@ -191,6 +206,7 @@ class ArtComponentResponse(BaseModel):
 
 __all__ = [
     "ArtComponentResponse",
+    "ArtModelsVersion",
     "BackgroundRemovalRequest",
     "GenerationRequest",
     "GenerationResponse",
