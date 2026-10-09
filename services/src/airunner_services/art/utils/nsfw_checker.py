@@ -5,8 +5,10 @@ mandatory image-evaluation entry point (:func:`check_images_mandatory`).
 The mandatory path always runs its evaluator through the
 :mod:`airunner_services.content_safety.image_verdict` seam and has no
 enable/disable switch, so disabling the optional filter never disables
-it. Until S07 approves an evaluator, the mandatory path adapts the
-incumbent SD safety checker call already used here.
+it. The mandatory evaluator is the approved Falconsai adapter
+(:mod:`airunner_services.content_safety.falconsai`); the SD safety
+checker boolean path is superseded for this slot, while the optional
+filter keeps its own model and flow.
 """
 
 import numpy as np
@@ -119,46 +121,8 @@ def check_and_mark_nsfw_images(
         return images, [False] * len(images)
 
 
-def make_sd_safety_checker_evaluator(
-    feature_extractor: Any,
-    safety_checker: Any,
-    device: str = "cpu",
-) -> image_verdict.ImageEvaluator:
-    """Adapt the incumbent SD safety checker to the mandatory seam.
-
-    Reproduces the exact incumbent invocation (feature extraction, then
-    the checker over the batch) and normalizes its flags to built-in
-    bools. The S07 selection is still DRAFT/unapproved, so this adapter
-    is the baseline until an approved evaluator replaces it.
-
-    Args:
-        feature_extractor: Feature extractor model for preprocessing
-        safety_checker: Safety checker model for detection
-        device: Device to run inference on ('cuda' or 'cpu')
-
-    Returns:
-        Evaluator callable for :func:`check_images_mandatory`.
-    """
-
-    def _evaluate(images: List[Any]) -> List[bool]:
-        batch = list(images)
-        safety_checker_input = feature_extractor(
-            batch, return_tensors="pt"
-        ).to(device)
-        _, has_nsfw_concepts = safety_checker(
-            images=[np.array(img) for img in batch],
-            clip_input=safety_checker_input.pixel_values.to(device),
-        )
-        return [bool(flag) for flag in has_nsfw_concepts]
-
-    return _evaluate
-
-
 def check_images_mandatory(
     images: List[Image.Image],
-    feature_extractor: Optional[Any] = None,
-    safety_checker: Optional[Any] = None,
-    device: str = "cpu",
     evaluator: Optional[image_verdict.ImageEvaluator] = None,
 ) -> Tuple[List[Image.Image], List[bool], image_verdict.ImageBatchVerdict]:
     """Run the MANDATORY image evaluator over one batch.
@@ -166,20 +130,20 @@ def check_images_mandatory(
     There is intentionally no enable/disable switch: disabling the
     optional adult-content filter never disables this path. Evaluator
     resolution is explicit-arg, then registered
-    (:func:`image_verdict.get_evaluator`), then the incumbent SD safety
-    checker adapter when both models are provided, else unavailable.
+    (:func:`image_verdict.get_evaluator`), else unavailable. The
+    approved Falconsai adapter
+    (:mod:`airunner_services.content_safety.falconsai`) is registered
+    on the seam; the SD safety checker boolean path is superseded
+    for this slot and no model arguments are accepted here.
 
-    Missing models, raised checks, mismatched batch lengths, and
+    Missing evaluator, raised checks, mismatched batch lengths, and
     uncertain outcomes all withhold (fail closed). Originals are never
     mutated and never written anywhere; withheld outputs are blacked-out
     copies. No automatic export happens here.
 
     Args:
         images: List of PIL images to check (kept in memory only)
-        feature_extractor: Feature extractor for the incumbent adapter
-        safety_checker: Safety checker model for the incumbent adapter
-        device: Device for the incumbent adapter ('cuda' or 'cpu')
-        evaluator: Explicit evaluator, winning over every other source
+        evaluator: Explicit evaluator, winning over the registered one
 
     Returns:
         Tuple of (output_images, withheld_flags, batch_verdict).
@@ -187,14 +151,6 @@ def check_images_mandatory(
     resolved = evaluator
     if resolved is None:
         resolved = image_verdict.get_evaluator()
-    if (
-        resolved is None
-        and feature_extractor is not None
-        and safety_checker is not None
-    ):
-        resolved = make_sd_safety_checker_evaluator(
-            feature_extractor, safety_checker, device
-        )
     batch = image_verdict.evaluate_image_batch(images, resolved)
     outputs = [
         image if verdict.allowed else _mark_image_as_nsfw(image, "BLOCKED")

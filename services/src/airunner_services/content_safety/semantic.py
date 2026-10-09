@@ -28,17 +28,18 @@ adapter around any synchronous text-generation callable, composing its
 instruction from the existing guardrails prompt (falling back to a short
 built-in generic instruction) and parsing the response strictly.
 
-S08 required contextual adapter (default OFF, pending S07 approval)
+S08 required contextual adapter (default OFF, selection approved)
 ------------------------------------------------------------------
 :func:`evaluate_fields_contextual` is the REQUIRED input-side contextual
 check behind the S07 selection
-(``release-planning/linux-v1/safety-evaluation.md``). That selection is a
-DRAFT: the text slot has no approved evaluator and the proposed §4
-thresholds are unapproved, so this layer stays OFF unless
-:data:`CONTEXTUAL_ENV_VAR` is truthy. The evaluator choice stays behind
-the injection seam (:func:`set_evaluator`, falling back to the approved
-:func:`set_judge` seam); no model, provider, or download is wired in, and
-inference is local-only through the injected callable.
+(``release-planning/linux-v1/safety-evaluation.md`` §2, owner-approved
+for #2252): Qwen3Guard-Gen-0.6B via
+:mod:`airunner_services.content_safety.qwen_guard`, strict and
+fail-closed. This layer stays OFF unless :data:`CONTEXTUAL_ENV_VAR` is
+truthy. The evaluator choice stays behind the injection seam
+(:func:`set_evaluator`, falling back to the approved :func:`set_judge`
+seam); no provider or download is wired in, and inference is
+local-only through the injected callable.
 
 Unlike the optional layer above, the required check fails closed: only an
 explicit allowed verdict allows, while unavailable, timed-out, erroring,
@@ -376,8 +377,8 @@ def evaluate_fields_contextual(
     Fail-closed: only an explicit evaluated allowed verdict allows. A
     missing evaluator, a timeout, an error, an unexpected return value,
     or an ambiguous outcome all deny. No field text is ever logged. The
-    layer runs only when :func:`contextual_enabled` is true; while the
-    S07 selection is an unapproved draft it stays OFF by default.
+    layer runs only when :func:`contextual_enabled` is true (OFF by
+    default; the S07 selection behind it is approved for #2252).
     """
     if not contextual_enabled():
         return SemanticVerdict.allow(REASON_DISABLED, evaluated=False)

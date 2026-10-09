@@ -13,17 +13,17 @@ all withhold instead of releasing unchecked images.
 
 from __future__ import annotations
 
+import inspect
 import logging
 from contextlib import contextmanager
-from typing import Any
 
 import pytest
 from PIL import Image
 
+from airunner_services.art.utils import nsfw_checker
 from airunner_services.art.utils.nsfw_checker import (
     check_and_mark_nsfw_images,
     check_images_mandatory,
-    make_sd_safety_checker_evaluator,
 )
 from airunner_services.content_safety import image_verdict
 from airunner_services.content_safety.image_verdict import (
@@ -74,48 +74,6 @@ def _is_withheld_copy(output: Image.Image, original: Image.Image) -> bool:
 def _is_original(image: Image.Image) -> bool:
     """True when the image still holds the untouched fixture colour."""
     return image.convert("RGB").getpixel((0, 0)) == _ORIGINAL_COLOR
-
-
-class _FakePixels:
-    """Stand-in for tensor input with a chainable ``.to()``."""
-
-    def __init__(self) -> None:
-        self.device: Any = None
-
-    def to(self, device: str) -> "_FakePixels":
-        self.device = device
-        return self
-
-
-class _FakeExtractorOutput:
-    def __init__(self) -> None:
-        self.pixel_values = _FakePixels()
-
-    def to(self, device: str) -> "_FakeExtractorOutput":
-        return self
-
-
-class _FakeExtractor:
-    """Feature-extractor double recording the incumbent call shape."""
-
-    def __init__(self) -> None:
-        self.calls: list[tuple[list, Any]] = []
-
-    def __call__(self, images, return_tensors=None):
-        self.calls.append((list(images), return_tensors))
-        return _FakeExtractorOutput()
-
-
-class _FakeChecker:
-    """Safety-checker double returning scripted per-image flags."""
-
-    def __init__(self, flags) -> None:
-        self._flags = list(flags)
-        self.calls: list[tuple[Any, Any]] = []
-
-    def __call__(self, images=None, clip_input=None):
-        self.calls.append((images, clip_input))
-        return None, list(self._flags)
 
 
 class _RaisingEvaluator:
@@ -212,9 +170,12 @@ def test_error_log_omits_exception_message() -> None:
     assert _SENTINEL not in " ".join(handler.messages)
 
 
-def test_selection_status_flags_pending_approval() -> None:
-    assert "PENDING" in image_verdict.EVALUATOR_SELECTION_STATUS
-    assert "S07" in image_verdict.EVALUATOR_SELECTION_STATUS
+def test_selection_status_names_approved_evaluator() -> None:
+    status = image_verdict.EVALUATOR_SELECTION_STATUS
+    assert "SELECTED" in status
+    assert "Falconsai" in status
+    assert "PENDING" not in status
+    assert "S07" in status
 
 
 # --------------------------------------------------------------------------
@@ -284,41 +245,22 @@ def test_raising_registered_evaluator_withholds() -> None:
 
 
 # --------------------------------------------------------------------------
-# Incumbent SD safety checker adapter
+# Superseded SD safety checker path (#2252)
 # --------------------------------------------------------------------------
 
 
-def test_adapter_reproduces_incumbent_call_shape() -> None:
-    extractor, checker = _FakeExtractor(), _FakeChecker([False, True])
-    evaluator = make_sd_safety_checker_evaluator(
-        extractor, checker, device="cpu"
-    )
+def test_incumbent_adapter_is_gone_from_mandatory_slot() -> None:
+    assert not hasattr(nsfw_checker, "make_sd_safety_checker_evaluator")
+    params = list(inspect.signature(check_images_mandatory).parameters)
+    assert params == ["images", "evaluator"]
+
+
+def test_mandatory_without_evaluator_withholds_as_unavailable() -> None:
     images = _synthetic_images()
-    flags = evaluator(images)
-    assert flags == [False, True]
-    assert all(type(flag) is bool for flag in flags)
-    assert extractor.calls == [(images, "pt")]
-    assert len(checker.calls) == 1
-    checked, clip_input = checker.calls[0]
-    assert len(checked) == len(images)
-    assert clip_input.device == "cpu"
-
-
-def test_mandatory_with_incumbent_models_end_to_end() -> None:
-    extractor, checker = _FakeExtractor(), _FakeChecker([False, True])
-    images = _synthetic_images()
-    outputs, withheld, batch = check_images_mandatory(
-        images, extractor, checker, device="cpu"
-    )
-    assert withheld == [False, True]
-    assert batch.reasons == [REASON_ALLOWED, REASON_FLAGGED]
-    assert outputs[0] is images[0]
-    assert _is_withheld_copy(outputs[1], images[1])
-    assert all(_is_original(img) for img in images)
-
-
-def test_mandatory_with_single_model_still_unavailable() -> None:
-    images = _synthetic_images()
-    _, withheld, batch = check_images_mandatory(images, _FakeExtractor(), None)
+    outputs, withheld, batch = check_images_mandatory(images)
     assert withheld == [True] * len(images)
     assert batch.reasons == [REASON_UNAVAILABLE] * len(images)
+    assert all(
+        _is_withheld_copy(out, img) for out, img in zip(outputs, images)
+    )
+    assert all(_is_original(img) for img in images)
