@@ -145,22 +145,33 @@ exclude_modules = [
 # cannot see. libzim's reader/search entry points are injected by
 # its extension .so at import time, so the modulegraph records
 # them missing and never collects the .so itself (build #1: the
-# frozen bundle lacked libzim while dev imports it fine). Presence
-# is verified on the bundle tree (_internal/<name>*.so), never the
-# PYZ table of contents.
+# frozen bundle lacked libzim while dev imports it fine). Dotted
+# names name a submodule .so (scipy._cyutility is cimported by
+# scipy._lib._ccallback_c at init, invisible to the modulegraph and
+# absent from the warn file; #2245). Presence is verified on the
+# bundle tree (_internal/<dotted/path>*.so), never the PYZ table
+# of contents.
 extension_modules = [
     "libzim",
+    "scipy._cyutility",
 ]
 # --collect-submodules: every module under each parent ships, which
 # covers the 17 literal tool modules in tool_registry.py's
 # modules_to_reload list (llm.tools x15, tools.web_tools,
 # llm.agents.workflow_tools) plus the lazy _EXPORTS table in
-# runtimes/__init__.py.
+# runtimes/__init__.py. Third-party parents cover dynamic imports
+# static analysis cannot see: the vendored array_api_compat
+# numpy/__init__ files import .fft/.linalg via computed
+# __import__(__package__ + ...), invisible to the modulegraph and
+# absent from the warn file (scipy linalg/fft crash the frozen
+# daemon at transformers import; #2245).
 collect_submodules = [
     "airunner_services.llm.tools",
     "airunner_services.llm.agents",
     "airunner_services.tools",
     "airunner_services.runtimes",
+    "scipy._external.array_api_compat.numpy",
+    "sklearn.externals.array_api_compat.numpy",
 ]
 # --collect-data: package data discovered by static import analysis.
 collect_data = ["airunner_services"]
@@ -173,6 +184,22 @@ copy_metadata = [
     "airunner-services",
     "airunner-native",
     "airunner-common",
+]
+# --runtime-hook: frozen-only import patches, repo-relative paths.
+# Missing files fail the build (recipe bug, like an empty data glob).
+runtime_hooks = [
+    # Repairs transformers' lazy import-structure scan for the frozen
+    # layout (__init__.pyc has no on-disk file to isfile(); #2245).
+    "packaging/linux/pyi-rthooks/pyi_rth_transformers_frozen.py",
+]
+# Frozen-import preconditions: bundle-relative source files the
+# runtime hooks scan at import time. transformers' lazy structure
+# reads .py sources collected by hooks-contrib's pyz+py mode; if
+# that collection ever stops, the build must fail here instead of
+# shipping a daemon that dies at boot (issue #2245).
+frozen_source_markers = [
+    "_internal/transformers/models/__init__.py",
+    "_internal/transformers/models/auto/__init__.py",
 ]
 
 # Data payloads. source is a repo-relative glob; dest is the

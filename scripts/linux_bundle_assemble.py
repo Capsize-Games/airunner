@@ -95,6 +95,20 @@ def _code_args(spec: dict[str, Any]) -> list[str]:
     return args
 
 
+def _hook_args(spec: dict[str, Any], repo_root: Path) -> list[str]:
+    """Return the --runtime-hook flags for repo-relative hook files."""
+    args: list[str] = []
+    for hook in spec["code"].get("runtime_hooks", []):
+        path = repo_root / str(hook)
+        if not path.is_file():
+            raise SystemExit(
+                f"runtime hook matches no file: {hook} "
+                "(declare the hook or drop it)"
+            )
+        args.extend(["--runtime-hook", str(path)])
+    return args
+
+
 def build_command(
     spec: dict[str, Any],
     repo_root: Path,
@@ -109,6 +123,7 @@ def build_command(
         command.extend(["--paths", str(repo_root / extra)])
     command.extend(_data_args(spec, repo_root))
     command.extend(_code_args(spec))
+    command.extend(_hook_args(spec, repo_root))
     command.append(str(entry_script))
     return command
 

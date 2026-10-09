@@ -37,6 +37,7 @@ from linux_bundle_checks import (
 )
 from linux_bundle_gates import (
     check_extension_modules,
+    check_frozen_sources,
     check_sidecars,
     check_toc_modules,
     gate_warn_file,
@@ -107,6 +108,7 @@ def _append_manifest(
         )
     result.problems.extend(scan_exclusions(bundle_dir, spec))
     result.problems.extend(check_extension_modules(bundle_dir, spec))
+    result.problems.extend(check_frozen_sources(bundle_dir, spec))
 
 
 def _append_warn(

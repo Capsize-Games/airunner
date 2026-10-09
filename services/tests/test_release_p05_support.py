@@ -154,7 +154,18 @@ def _stage_extension_fixtures(bundle: Path, spec: dict[str, Any]) -> None:
     internal = bundle / "_internal"
     internal.mkdir(parents=True, exist_ok=True)
     for name in spec["code"].get("extension_modules", []):
-        (internal / f"{name}.fake-ext.so").write_bytes(b"fake-elf\n")
+        rel = "/".join(str(name).split("."))
+        target = internal / f"{rel}.fake-ext.so"
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes(b"fake-elf\n")
+
+
+def _stage_frozen_source_fixtures(bundle: Path, spec: dict[str, Any]) -> None:
+    """Stage one fake source per [code] frozen source marker."""
+    for marker in spec["code"].get("frozen_source_markers", []):
+        path = bundle / str(marker)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(b"fixture-source\n")
 
 
 def _stage_required_entries(bundle: Path, spec: dict[str, Any]) -> None:
@@ -180,6 +191,7 @@ def make_bundle(
     _skeleton_bundle(bundle, spec)
     _stage_required_entries(bundle, spec)
     _stage_extension_fixtures(bundle, spec)
+    _stage_frozen_source_fixtures(bundle, spec)
     assemble_mod.write_manifest(bundle, spec, base)
     return bundle
 

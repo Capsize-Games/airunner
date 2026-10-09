@@ -211,6 +211,41 @@ def test_inspect_requires_native_extensions(
     assert any("native extension libzim" in p for p in result.problems)
 
 
+def test_inspect_requires_nested_extension_submodule(
+    tmp_path: Path,
+    inspect_mod: types.ModuleType,
+    assemble_mod: types.ModuleType,
+    spec: dict[str, Any],
+) -> None:
+    """A missing dotted extension .so fails with its full name."""
+    bundle = make_bundle(tmp_path, spec, assemble_mod)
+    nested = bundle / "_internal" / "scipy" / "_cyutility.fake-ext.so"
+    assert nested.is_file()
+    nested.unlink()
+    assemble_mod.write_manifest(bundle, spec, "testrev")
+    result = inspect_mod.inspect_bundle(bundle, spec)
+    assert any(
+        "native extension scipy._cyutility" in p
+        for p in result.problems
+    )
+
+
+def test_inspect_requires_frozen_import_sources(
+    tmp_path: Path,
+    inspect_mod: types.ModuleType,
+    assemble_mod: types.ModuleType,
+    spec: dict[str, Any],
+) -> None:
+    """A dropped import-scan source fails even with a clean manifest."""
+    bundle = make_bundle(tmp_path, spec, assemble_mod)
+    marker = bundle / "_internal" / "transformers" / "models"
+    for path in marker.rglob("__init__.py"):
+        path.unlink()
+    assemble_mod.write_manifest(bundle, spec, "testrev")
+    result = inspect_mod.inspect_bundle(bundle, spec)
+    assert any("import-scan source" in p for p in result.problems)
+
+
 def test_inspect_requires_executable_bit(
     tmp_path: Path,
     inspect_mod: types.ModuleType,

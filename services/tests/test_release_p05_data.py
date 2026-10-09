@@ -9,6 +9,7 @@ the runtime settings. CPU-only.
 from __future__ import annotations
 
 import ast
+import importlib.util
 import types
 from pathlib import Path
 from typing import Any
@@ -106,14 +107,24 @@ def test_legal_entries_cover_root_notices(spec: dict[str, Any]) -> None:
     assert staged == {"LICENSE", "NOTICE", "THIRD_PARTY_NOTICES.md"}
 
 
+def _assert_collect_parent_exists(parent: str) -> None:
+    """Assert one collect parent resolves in the worktree or venv."""
+    if parent.startswith("airunner_services."):
+        package = module_file(parent).with_suffix("")
+        assert (package / "__init__.py").is_file(), parent
+        return
+    # Third-party parents cover dynamic imports in pinned deps; the
+    # toolchain venv must import them (typo/drift guard).
+    assert importlib.util.find_spec(parent) is not None, parent
+
+
 def test_hidden_imports_and_collect_parents_exist(
     spec: dict[str, Any],
 ) -> None:
     for module in spec["code"].get("hidden_imports", []):
         assert module_exists(str(module)), module
     for parent in spec["code"].get("collect_submodules", []):
-        package = module_file(str(parent)).with_suffix("")
-        assert (package / "__init__.py").is_file(), parent
+        _assert_collect_parent_exists(str(parent))
 
 
 def test_copy_metadata_names_are_version_lookup_packages(
