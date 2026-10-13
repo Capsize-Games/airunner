@@ -1,10 +1,13 @@
-# AI Runner Desktop terms -- DRAFT FOR COUNSEL REVIEW
+# AI Runner Desktop terms -- OWNER-ACCEPTED WORKING DRAFT
 
-> DRAFT FOR COUNSEL REVIEW. This is a working draft grounded in
+> OWNER-ACCEPTED WORKING DRAFT. This is a working draft grounded in
 > the L01 evidence inventory and the P11 license inventory. It is
-> not legal advice, not effective terms, and must not ship with
-> the product until qualified counsel and the owner approve it.
-> Bracketed OWNER and COUNSEL items below are unresolved.
+> not legal advice and not effective terms. No attorney review has
+> been sought or is expected while the software is unreleased; the
+> owner accepts the wording as a best-effort extra layer, to be
+> revisited with qualified counsel if distribution starts.
+> Bracketed OWNER items need owner facts; bracketed OPEN LEGAL Q
+> items are unresolved legal questions carried as accepted risk.
 
 - Document: `release-planning/linux-v1/legal/desktop-terms-draft.md`
 - Version: 0.1 (2026-10-09)
@@ -25,7 +28,7 @@
 
 # AI Runner Desktop terms
 
-**Updated: [UNSET -- set on counsel approval]**
+**Updated: [UNSET -- set on owner approval]**
 
 By installing or using AI Runner Desktop (the "Software"),
 buying an official copy, or using Capsize support, you agree
@@ -47,7 +50,7 @@ itself: your rights to the code come from the GPL and cannot
 be taken back by these terms.
 
 Paid distribution carries a written corresponding-source
-offer as the GPL requires. [OWNER/COUNSEL: the offer text is
+offer as the GPL requires. [OWNER + OPEN LEGAL Q: the offer text is
 release BLOCKER B-8 in `licenses.md` -- approve it and state
 where buyers find it.]
 
@@ -94,7 +97,7 @@ Capsize LLC. The GPL gives you rights to the code, not to
 the marks: if you redistribute modified copies, do not
 present them as official Capsize builds and remove or
 replace branding that would confuse users about the source.
-[COUNSEL: confirm the rebrand/confusion rule and whether a
+[OPEN LEGAL Q: confirm the rebrand/confusion rule and whether a
 trademark policy page is needed.]
 
 ## 6. Third-party models, data, and services
@@ -108,7 +111,7 @@ Software is not an endorsement, and we are not responsible
 for what third-party models do, contain, or generate. Model
 files are downloaded after installation, are never part of
 the bundle, and upstream projects can change or remove
-them. [COUNSEL: confirm the model-license responsibility
+them. [OPEN LEGAL Q: confirm the model-license responsibility
 allocation, including the unpinned-artifact caveats in
 `licenses.md` BLOCKERs B-2/B-3, before release.]
 
@@ -148,7 +151,7 @@ cannot monitor or automatically report your use: you are
 responsible for complying with this section. Breach may
 lead us to refuse or end PAID services and support where
 the law allows; it does not revoke your GPL rights to the
-Software itself. [COUNSEL: confirm the remedy wording --
+Software itself. [OPEN LEGAL Q: confirm the remedy wording --
 refusal of paid services only -- and whether any reporting
 duty (for example, CSAM knowledge obtained through support
 channels) needs stating.]
@@ -176,13 +179,13 @@ channels) needs stating.]
   housing, insurance), you may be the deployer of a
   regulated AI system with duties of your own, including
   under the Colorado AI Act for Colorado uses. That
-  compliance is yours. [COUNSEL: confirm this allocation
+  compliance is yours. [OPEN LEGAL Q: confirm this allocation
   and whether EU AI Act deployer wording is needed for
   worldwide sales.]
 - Private policy vocabulary and signing material used to
   build official releases are Capsize confidential
   information, are never published, and are not part of
-  the GPL source offer for the application. [COUNSEL:
+  the GPL source offer for the application. [OPEN LEGAL Q:
   confirm this carve-out is stated correctly and
   consistently with the source offer in section 1.]
 
@@ -192,7 +195,7 @@ You must be 18 or older (or the age of majority where you
 live) to use the Software. Generated content is
 unpredictable and may include sexual, nude, violent, or
 otherwise offensive material: use discretion and your own
-risk. [COUNSEL: confirm the age line and whether app-store
+risk. [OPEN LEGAL Q: confirm the age line and whether app-store
 or territory-specific content-rating wording is required.]
 
 ## 10. Consumer rights and refunds
@@ -203,7 +206,7 @@ delivery affects it in each sales territory. Do not ship a
 blanket "no refunds" line.] Nothing here waives consumer
 rights the law in your territory gives you and does not let
 you sign away: where the law guarantees remedies for
-faulty digital goods, those remedies apply. [COUNSEL:
+faulty digital goods, those remedies apply. [OPEN LEGAL Q:
 supply the per-territory treatment for worldwide sales,
 including EU/UK digital-content and withdrawal rules and
 any US state requirements.]
@@ -225,7 +228,7 @@ warranties or forbids excluding or limiting certain
 damages, our warranties are limited and our liability is
 limited to the maximum extent the law permits, and nothing
 here excludes liability the law does not let us exclude
-(such as for fraud or willful misconduct). [COUNSEL:
+(such as for fraud or willful misconduct). [OPEN LEGAL Q:
 confirm the savings clause covers paid-installer and
 support liability in every sales territory, and whether a
 monetary cap (for example, the amount paid) should be
@@ -233,7 +236,7 @@ stated for the paid elements.]
 
 ## 13. Indemnification
 
-[COUNSEL: the prior draft's broad indemnity (all claims
+[OPEN LEGAL Q: the prior draft's broad indemnity (all claims
 from any use or generated content, including attorney's
 fees) is aggressive for worldwide consumer sales next to
 GPL freedoms. Confirm whether to keep a narrowed version
@@ -243,7 +246,7 @@ clause unreviewed.]
 
 ## 14. Governing law and disputes
 
-[COUNSEL: the prior draft chose Colorado law with exclusive
+[OPEN LEGAL Q: the prior draft chose Colorado law with exclusive
 Colorado courts. Confirm this survives for worldwide sales,
 or supply consumer-friendly alternatives (for example,
 buyer's-home-court options where mandatory law requires
@@ -270,24 +273,24 @@ text uses `contact@capsizegames.com`].
 
 | # | Decision | Owner |
 |---|---|---|
-| D1 | Corresponding-source offer text and location (BLOCKER B-8) | Owner + counsel |
+| D1 | Corresponding-source offer text and location (BLOCKER B-8) | Owner (accepted risk; revisit if distributed) |
 | D2 | Price, package contents, delivery, support scope and window | Owner |
-| D3 | Refund rule per territory; consumer-rights savings (section 10) | Owner + counsel |
-| D4 | Indemnity: narrow, business-only, or drop (section 13) | Counsel |
-| D5 | Governing law, venue, arbitration posture (section 14) | Counsel |
-| D6 | Trademark/redistribution-branding rule (section 5) | Counsel |
-| D7 | Model-license allocation confirmation incl. B-2/B-3 (section 6) | Counsel |
-| D8 | Remedy wording and any reporting-duty statement (section 7) | Counsel |
-| D9 | Liability cap for paid elements (section 12) | Counsel |
-| D10 | Policy-data confidentiality carve-out vs source offer (section 8) | Counsel |
-| D11 | Age/content-rating wording per territory (section 9) | Counsel |
+| D3 | Refund rule per territory; consumer-rights savings (section 10) | Owner (accepted risk; revisit if distributed) |
+| D4 | Indemnity: narrow, business-only, or drop (section 13) | Owner (accepted risk; revisit if distributed) |
+| D5 | Governing law, venue, arbitration posture (section 14) | Owner (accepted risk; revisit if distributed) |
+| D6 | Trademark/redistribution-branding rule (section 5) | Owner (accepted risk; revisit if distributed) |
+| D7 | Model-license allocation confirmation incl. B-2/B-3 (section 6) | Owner (accepted risk; revisit if distributed) |
+| D8 | Remedy wording and any reporting-duty statement (section 7) | Owner (accepted risk; revisit if distributed) |
+| D9 | Liability cap for paid elements (section 12) | Owner (accepted risk; revisit if distributed) |
+| D10 | Policy-data confidentiality carve-out vs source offer (section 8) | Owner (accepted risk; revisit if distributed) |
+| D11 | Age/content-rating wording per territory (section 9) | Owner (accepted risk; revisit if distributed) |
 | D12 | Change-notification channel and contact address (section 15) | Owner |
 
 ## Reviewer fields
 
 - Owner reviewer: PENDING -- Owner date (UTC): PENDING
-- Counsel reviewer: PENDING -- Counsel date (UTC): PENDING
+- Attorney review: not sought while the software is unreleased
 - Approved version and effective date: PENDING
 - Acceptance: PENDING (issue #2127 stays open until
-  counsel-approved text is staged for release; L05 tracks
+  owner-accepted text is staged for release; L05 tracks
   the human acceptance gate)

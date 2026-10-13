@@ -1,17 +1,17 @@
-# Counsel-support memo: US-law grounding for the safety-notices delta — DRAFT, NOT LEGAL ADVICE
+# US-law grounding memo for the safety-notices delta — DRAFT, NOT LEGAL ADVICE
 
-> DRAFT FOR COUNSEL REVIEW. Research support for
+> OWNER-ACCEPTED RESEARCH SUPPORT (2026-10-13). Research support for
 > `safety-notices-delta-draft.md` D1–D5, drawn from the
 > workstation US-law corpus (`~/Projects/usds`, FTS index:
 > 60,458 usc + 48,672 state + 1,001 ecfr + 24,526 fr records;
 > corpus current to ~2026-10-11). Every citation below was
 > spot-checked against the index. This memo is not legal
-> advice, states no conclusion, and must not ship. Bracketed
-> COUNSEL items are unresolved. Issues: L05 (#2132), L06
-> (#2135), Q06 (#2128).
+> advice, states no conclusion, and must not ship. No attorney
+> review has been sought or is expected while the software is
+> unreleased. Issues: L05 (#2132), L06 (#2135), Q06 (#2128).
 
 - Document:
-  `release-planning/linux-v1/legal/usds-counsel-support-memo.md`
+  `release-planning/linux-v1/legal/us-law-grounding-memo.md`
 - Version: 0.1 (2026-10-13)
 - Supports: `safety-notices-delta-draft.md` v0.1 (D1–D5)
 
@@ -30,7 +30,7 @@
   parental consent before collection from a child.
 - 16 CFR 312.2: "collection" includes passive tracking;
   internal-operations use must not enable contact or
-  profiling. [COUNSEL: reviewer log fields — do any count
+  profiling. [OPEN LEGAL Q: reviewer log fields — do any count
   as personal information?]
 - 16 CFR 312.5(a), (c)(6)–(7): consent-first posture with
   narrow security / identifier-only exceptions.
@@ -62,7 +62,7 @@
 - 47 USC 230(d): parental-control availability notice —
   closest disclosure analogue for the optional filter.
 - 47 USC 230(e)(2)–(3): intellectual-property and state-law
-  bounds — [COUNSEL: map to territory remedies].
+  bounds — [OPEN LEGAL Q: map to territory remedies].
 - 17 USC 512(i)(1): noticed repeat-infringer-style policy
   as precedent for publishing the filter policy.
 - 17 USC 512(m): no duty to monitor — supports stating
@@ -78,7 +78,7 @@
   deceptive claim.
 - 15 USC 2301, 2308 (Magnuson-Moss): keep best-effort as a
   statement of fact, not a warranty disclaimer.
-  [COUNSEL: reach to GPL software unconfirmed; ch. 50
+  [OPEN LEGAL Q: reach to GPL software unconfirmed; ch. 50
   tangible-product fit unconfirmed.]
 
 ## D4 — offline/remote statement and state stacking
@@ -127,7 +127,7 @@
   full text, 7001(e) tail; 312 pinpoints at chapter-blob
   level only.
 
-## Open questions for counsel (unchanged from delta draft)
+## Open legal questions (for a future attorney if distribution starts) (unchanged from delta draft)
 
 1. COPPA child-directed vs. actual-knowledge standard for
    a general-audience desktop app.

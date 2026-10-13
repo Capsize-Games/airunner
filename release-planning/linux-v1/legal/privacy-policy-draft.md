@@ -1,10 +1,13 @@
-# AI Runner Desktop privacy policy -- DRAFT FOR COUNSEL REVIEW
+# AI Runner Desktop privacy policy -- OWNER-ACCEPTED WORKING DRAFT
 
-> DRAFT FOR COUNSEL REVIEW. This is a working draft prepared from
-> the L01 evidence inventory. It is not legal advice, not an
-> effective notice, and must not replace the live policy until
-> qualified counsel and the owner approve it. Bracketed OWNER and
-> COUNSEL items below are unresolved.
+> OWNER-ACCEPTED WORKING DRAFT. This is a working draft prepared from
+> the L01 evidence inventory. It is not legal advice and not an
+> effective notice. No attorney review has been sought or is expected
+> while the software is unreleased; the owner accepts the wording as
+> a best-effort extra layer, to be revisited with qualified counsel
+> if distribution starts. Bracketed OWNER items need owner facts;
+> bracketed OPEN LEGAL Q items are unresolved legal questions carried
+> as accepted risk.
 
 - Document: `release-planning/linux-v1/legal/privacy-policy-draft.md`
 - Version: 0.1 (2026-10-09)
@@ -25,7 +28,7 @@
 
 # Privacy policy
 
-**Updated: [UNSET -- set on counsel approval]**
+**Updated: [UNSET -- set on owner approval]**
 
 AI Runner Desktop runs on your computer with no account, no
 analytics, and no advertising trackers. Your chats, files, voice,
@@ -70,7 +73,7 @@ device security, and you are responsible for backups.
 
 Each feature below connects only when you set it up or use
 it. Your network address is visible to the other end of any
-connection, as with any internet use. [COUNSEL: confirm this
+connection, as with any internet use. [OPEN LEGAL Q: confirm this
 characterization and whether IP-address-as-personal-data
 wording is needed per territory.]
 
@@ -175,7 +178,7 @@ special handling.]
 - The storefront and payment processor for purchases, and
   the support tooling for messages [OWNER: name them].
 - We may also disclose information when the law requires it.
-  [COUNSEL: confirm scope and add any required
+  [OPEN LEGAL Q: confirm scope and add any required
   territory-specific disclosure language.]
 
 ## Retention and your choices
@@ -207,12 +210,12 @@ Your choices:
 
 AI Runner Desktop is for people 18 or older (or the age of
 majority where they live). The application does not ask for
-a date of birth. [COUNSEL: confirm the age line matches the
+a date of birth. [OPEN LEGAL Q: confirm the age line matches the
 terms draft and any territory-specific age-assurance rules.]
 
 ## Region notes
 
-[COUNSEL: the current live policy asserts Colorado Privacy
+[OPEN LEGAL Q: the current live policy asserts Colorado Privacy
 Act rights against a no-collection posture. Confirm what
 this draft must say for Colorado residents, whether other
 US state laws or the EU/UK GDPR or other regimes apply to
@@ -246,7 +249,7 @@ uses `contact@capsizegames.com`].
    section 5).
 6. Decide the change-notification channel.
 
-## Counsel questions
+## Open legal questions (no attorney review while unreleased)
 
 1. What must the policy say for Colorado, other US states,
    and non-US buyers (rights, bases, transfers, authorities)?
@@ -259,7 +262,7 @@ uses `contact@capsizegames.com`].
 ## Reviewer fields
 
 - Owner reviewer: PENDING -- Owner date (UTC): PENDING
-- Counsel reviewer: PENDING -- Counsel date (UTC): PENDING
+- Attorney review: not sought while the software is unreleased
 - Approved version and effective date: PENDING
 - Acceptance: PENDING (issue #2126 stays open until
-  counsel-approved text replaces the live notice)
+  owner-accepted text replaces the live notice)

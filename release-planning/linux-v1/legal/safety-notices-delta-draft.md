@@ -1,13 +1,15 @@
-# Safety-notices delta — DRAFT FOR COUNSEL REVIEW
+# Safety-notices delta — OWNER-ACCEPTED WORKING DRAFT
 
-> DRAFT FOR COUNSEL REVIEW. Proposed insertions for the L02
-> privacy draft and L03 terms draft, prepared from the S07
-> selection (`../safety-evaluation.md`), the L01 evidence
-> inventory (`../privacy-facts.md`), and the shipped safety
-> seams. This file is not legal advice, not an effective
-> notice, and must not ship until qualified counsel and the
-> owner approve each item. Bracketed OWNER and COUNSEL items
-> are unresolved. Issues: L05
+> OWNER-ACCEPTED WORKING DRAFT (wording accepted 2026-10-13).
+> Proposed insertions for the L02 privacy draft and L03 terms
+> draft, prepared from the S07 selection
+> (`../safety-evaluation.md`), the L01 evidence inventory
+> (`../privacy-facts.md`), and the shipped safety seams. This
+> file is not legal advice and not an effective notice. No
+> attorney review has been sought or is expected while the
+> software is unreleased; open legal questions below are carried
+> as accepted risk, to be revisited with qualified counsel if
+> distribution starts. Issues: L05
 > (https://github.com/Capsize-Games/airunner/issues/2132),
 > L06 (https://github.com/Capsize-Games/airunner/issues/2135),
 > Q06 (https://github.com/Capsize-Games/airunner/issues/2128).
@@ -17,7 +19,7 @@
 - Version: 0.1 (2026-10-13)
 - Targets: `privacy-policy-draft.md` v0.1, `desktop-terms-draft.md`
   v0.1. This file proposes text only; the target drafts are
-  unchanged until counsel approves.
+  unchanged until the owner approves their install.
 
 ## D1. Privacy draft: on-device safety processing (new subsection)
 
@@ -37,7 +39,7 @@ Proposed anchor: after the "Privacy features" list in
 > check ran and its generic outcome, never your words or
 > images. [OWNER: confirm the reviewer weight files are
 > provisioned the same post-install way as other models and
-> are never part of the bundle. COUNSEL: confirm this
+> are never part of the bundle. OPEN LEGAL Q: confirm this
 > characterization, including whether any log field counts
 > as personal data per territory.]
 
@@ -67,7 +69,7 @@ Proposed anchor: after section 7 ("Acceptable use") in
 > optional layers stay off unless explicitly enabled (see
 > the release notes for the version you run). Nothing in
 > this section limits your GPL rights to the Software
-> itself. [COUNSEL: confirm the no-guarantee wording and
+> itself. [OPEN LEGAL Q: confirm the no-guarantee wording and
 > its interplay with consumer-remedy terms in section 10.]
 
 ## D4. Offline/remote statement (Q06 evidence wording)
@@ -91,7 +93,7 @@ draft's "Privacy features" offline bullet:
 > gates, the unscreened vision-model remote-image input
 > (Q08 template G1), and the unsynchronized GUI/services
 > consent stores. [OWNER: rule on each gap — fix or
-> accepted risk — before counsel finalizes.]
+> accepted risk — before they are finalized.]
 
 ## D5. Consent records (L06 acceptance support)
 
@@ -108,17 +110,17 @@ draft's "Privacy features" offline bullet:
 > runs. No online account acceptance is required for
 > offline use. [OWNER: confirm the exact record location
 > and format; confirm the uninstaller's deletion list
-> covers or explicitly excludes these records. COUNSEL:
+> covers or explicitly excludes these records. OPEN LEGAL Q:
 > confirm the acknowledgment/consent split per territory.]
 
 ## Review checklist (all PENDING)
 
 - [x] ACCEPTED by owner 2026-10-13: D1–D5 wording as
-  drafted (not yet effective; still needs counsel review
-  per item below before install).
+  drafted (not yet effective; install needs explicit owner approval
+  per item below).
 - [ ] PENDING owner: entity/address/contact,
   reviewer-weight provisioning facts, gap rulings (D4).
-- [ ] PENDING counsel: legal sufficiency of D1–D5, IP/territory
+- [ ] OPEN LEGAL Q (accepted risk while unreleased): legal sufficiency of D1–D5, IP/territory
   wording, acknowledgment/consent split (D5), no-guarantee
   clause interplay (D3).
 - [ ] PENDING release: install only the approved texts with
