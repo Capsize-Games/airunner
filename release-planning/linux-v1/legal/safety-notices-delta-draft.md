@@ -113,7 +113,10 @@ draft's "Privacy features" offline bullet:
 
 ## Review checklist (all PENDING)
 
-- [ ] PENDING owner: D1–D5 wording, entity/address/contact,
+- [x] ACCEPTED by owner 2026-10-13: D1–D5 wording as
+  drafted (not yet effective; still needs counsel review
+  per item below before install).
+- [ ] PENDING owner: entity/address/contact,
   reviewer-weight provisioning facts, gap rulings (D4).
 - [ ] PENDING counsel: legal sufficiency of D1–D5, IP/territory
   wording, acknowledgment/consent split (D5), no-guarantee
