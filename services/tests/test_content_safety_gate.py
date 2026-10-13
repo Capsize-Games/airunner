@@ -18,6 +18,7 @@ import logging
 import os
 import shutil
 import tempfile
+from collections.abc import Callable
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Iterator
@@ -28,6 +29,10 @@ from fastapi.testclient import TestClient
 from airunner_services import content_safety_gate as gate
 from airunner_services.api.server import create_app
 from airunner_services.content_safety import candidate_hashes, policy_data
+from airunner_services.content_safety.matcher import (
+    REASON_POLICY_UNAVAILABLE,
+    REASON_PROHIBITED,
+)
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 _ART_ROUTE = "/api/v1/art/generate"
@@ -461,3 +466,244 @@ def test_tool_precheck_allows_unrelated_prompt(
     payload = json.loads(result)
     assert payload["status"] == "generating"
     assert enhance_calls and len(art.calls) == 1
+
+
+# --------------------------------------------------------------------------
+# In-pipeline choke point (direct-call bypass)
+# --------------------------------------------------------------------------
+
+
+class _DirectManagerStub:
+    """Bare in-process caller: only what the gate reads exists.
+
+    Deliberately lacks ``_pipe``, loaders, and inference state, so a
+    denial proves the gate runs before any pipeline work is touched.
+    """
+
+    def __init__(self, request: SimpleNamespace) -> None:
+        self.image_request = request
+        self.logger = logging.getLogger("content-safety-choke-test")
+
+
+def _blocked_request(
+    callback: Callable[[str], None] | None = None,
+) -> SimpleNamespace:
+    return SimpleNamespace(
+        prompt=f"draw {_SYNTHETIC}",
+        negative_prompt="",
+        second_prompt=None,
+        second_negative_prompt=None,
+        scheduler="test-scheduler",
+        callback=callback,
+    )
+
+
+def test_manager_generate_denies_blocked_prompt_directly(
+    policy_dir: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from airunner_services.art.managers.stablediffusion.mixins import (
+        sd_image_generation_mixin as mixin,
+    )
+
+    _load_synthetic_policy(policy_dir, monkeypatch)
+    stub = _DirectManagerStub(_blocked_request())
+
+    with pytest.raises(gate.ContentSafetyDenied) as exc_info:
+        mixin.SDImageGenerationMixin._generate(stub)
+
+    assert str(exc_info.value) == gate.GENERIC_REJECTION_MESSAGE
+    assert exc_info.value.result.reason == REASON_PROHIBITED
+    assert _SYNTHETIC not in str(exc_info.value)
+
+
+def test_manager_generate_denies_when_policy_unavailable(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from airunner_services.art.managers.stablediffusion.mixins import (
+        sd_image_generation_mixin as mixin,
+    )
+
+    policy_data.reset_cache()
+    stub = _DirectManagerStub(_blocked_request())
+
+    with pytest.raises(gate.ContentSafetyDenied) as exc_info:
+        mixin.SDImageGenerationMixin._generate(stub)
+
+    assert str(exc_info.value) == gate.GENERIC_POLICY_ERROR_MESSAGE
+    assert exc_info.value.result.reason == REASON_POLICY_UNAVAILABLE
+
+
+def test_manager_generate_skips_textless_request(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A request with no text carries nothing to match.
+
+    Pins the vacuous-empty rule shared with ``check_text``: the choke
+    passes a textless call even when policy data is unavailable, so
+    text-free output-gate harnesses keep working. Any text-bearing
+    call still fails closed (see the tests above).
+    """
+    policy_data.reset_cache()
+    assert gate.has_checkable_text(
+        {"prompt": None, "negative_prompt": ""}
+    ) is False
+    # No raise: nothing to check.
+    gate.enforce_prompt_fields(
+        {"prompt": None, "negative_prompt": ""}
+    )
+
+
+class _DirectSignalStub(_DirectManagerStub):
+    """Stub able to run the signal handler up to the gate."""
+
+    scheduler_name = ""
+
+    def __init__(
+        self, request: SimpleNamespace, api: _FakeApi
+    ) -> None:
+        from airunner_services.art.runtime_enums import HandlerState
+
+        super().__init__(request)
+        self.api = api
+        self._current_state = HandlerState.UNINITIALIZED
+        self.scheduler_loads: list = []
+        self.handled_actions = False
+
+    def _load_scheduler(self, name=None) -> None:
+        self.scheduler_loads.append(name)
+
+    def _clear_cached_properties(self) -> None:
+        return None
+
+    def handle_requested_action(self) -> None:
+        self.handled_actions = True
+
+
+def test_manager_handle_signal_converts_denial_to_generic_error(
+    policy_dir: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    from airunner_common.contract_enums import EngineResponseCode
+    from airunner_services.art.managers.stablediffusion.mixins import (
+        sd_image_generation_mixin as mixin,
+    )
+
+    _load_synthetic_policy(policy_dir, monkeypatch)
+    api = _FakeApi()
+    callbacks: list[str] = []
+
+    class _Stub(_DirectSignalStub, mixin.SDImageGenerationMixin):
+        """Combine the stub doubles with the real signal handler."""
+
+    stub = _Stub(_blocked_request(callbacks.append), api)
+
+    with caplog.at_level(logging.DEBUG):
+        stub.handle_generate_signal({"image_request": stub.image_request})
+
+    assert callbacks == [gate.GENERIC_REJECTION_MESSAGE]
+    assert api.responses == [
+        (EngineResponseCode.ERROR, gate.GENERIC_REJECTION_MESSAGE)
+    ]
+    assert _SYNTHETIC not in json.dumps(callbacks)
+    assert all(
+        _SYNTHETIC not in record.getMessage() for record in caplog.records
+    )
+
+
+def test_x4_upscale_denies_blocked_prompt_directly(
+    policy_dir: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from airunner_services.art.managers.stablediffusion import (
+        x4_upscale_mixins as x4,
+    )
+
+    _load_synthetic_policy(policy_dir, monkeypatch)
+    stub = _DirectManagerStub(_blocked_request())
+
+    with pytest.raises(gate.ContentSafetyDenied) as exc_info:
+        x4.X4UpscalingCoreMixin.handle_upscale_request(stub, object())
+
+    assert str(exc_info.value) == gate.GENERIC_REJECTION_MESSAGE
+    assert exc_info.value.result.reason == REASON_PROHIBITED
+    assert _SYNTHETIC not in str(exc_info.value)
+
+
+def test_zimage_pipeline_call_denies_blocked_prompt_directly(
+    policy_dir: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from airunner_services.art.pipelines.z_image import (
+        pipeline_z_image as pipe_module,
+    )
+
+    _load_synthetic_policy(policy_dir, monkeypatch)
+    pipe = pipe_module.ZImagePipeline.__new__(
+        pipe_module.ZImagePipeline
+    )
+
+    with pytest.raises(gate.ContentSafetyDenied) as exc_info:
+        pipe(prompt=f"draw {_SYNTHETIC}")
+
+    assert str(exc_info.value) == gate.GENERIC_REJECTION_MESSAGE
+    assert exc_info.value.result.reason == REASON_PROHIBITED
+    assert _SYNTHETIC not in str(exc_info.value)
+
+
+def test_zimage_img2img_call_denies_blocked_prompt_directly(
+    policy_dir: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from airunner_services.art.pipelines.z_image import (
+        pipeline_z_image_img2img as img2img_module,
+    )
+
+    _load_synthetic_policy(policy_dir, monkeypatch)
+    pipe = img2img_module.ZImageImg2ImgPipeline.__new__(
+        img2img_module.ZImageImg2ImgPipeline
+    )
+
+    with pytest.raises(gate.ContentSafetyDenied) as exc_info:
+        pipe(prompt=f"draw {_SYNTHETIC}", image=None)
+
+    assert str(exc_info.value) == gate.GENERIC_REJECTION_MESSAGE
+    assert exc_info.value.result.reason == REASON_PROHIBITED
+    assert _SYNTHETIC not in str(exc_info.value)
+
+
+def test_zimage_pipeline_denies_when_policy_unavailable(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from airunner_services.art.pipelines.z_image import (
+        pipeline_z_image as pipe_module,
+    )
+
+    policy_data.reset_cache()
+    pipe = pipe_module.ZImagePipeline.__new__(
+        pipe_module.ZImagePipeline
+    )
+
+    with pytest.raises(gate.ContentSafetyDenied) as exc_info:
+        pipe(prompt=f"draw {_SYNTHETIC}")
+
+    assert str(exc_info.value) == gate.GENERIC_POLICY_ERROR_MESSAGE
+    assert exc_info.value.result.reason == REASON_POLICY_UNAVAILABLE
+    assert _SYNTHETIC not in str(exc_info.value)
+
+
+def test_native_pipeline_generate_denies_blocked_prompt_directly(
+    policy_dir: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from airunner_services.art.managers.zimage.native import (
+        zimage_native_pipeline as native_module,
+    )
+
+    _load_synthetic_policy(policy_dir, monkeypatch)
+    pipe = native_module.ZImageNativePipeline.__new__(
+        native_module.ZImageNativePipeline
+    )
+
+    with pytest.raises(gate.ContentSafetyDenied) as exc_info:
+        pipe.generate(prompt=f"draw {_SYNTHETIC}")
+
+    assert str(exc_info.value) == gate.GENERIC_REJECTION_MESSAGE
+    assert exc_info.value.result.reason == REASON_PROHIBITED
+    assert _SYNTHETIC not in str(exc_info.value)

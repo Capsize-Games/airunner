@@ -41,6 +41,18 @@ class X4UpscalingCoreMixin:
             InterruptedException,
         )
         from airunner_services.art.runtime_memory import clear_memory
+        from airunner_services.content_safety_gate import (
+            enforce_prompt_fields,
+            prompt_fields_from_request,
+        )
+
+        # Extract request and run the input gate first: this is the
+        # in-pipeline choke point for the upscaler path, so a direct
+        # in-process call cannot bypass the mandatory hash check.
+        # Raises with only the generic message before any image,
+        # progress, loading, or inference side effect.
+        request = self.image_request
+        enforce_prompt_fields(prompt_fields_from_request(request))
 
         # Normalize image and extract request
         source_image = self._ensure_image(source_image)

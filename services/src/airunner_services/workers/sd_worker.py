@@ -667,10 +667,12 @@ class SDWorker(Worker):
 
 	def _generate_image(self, message: Dict):
 		image_request = message.get("image_request")
-		# Content-safety input gate: the shared signal-layer choke point for
-		# every signal-driven art request (GUI path and LLM image-tool path).
-		# Runs before daemon forwarding, tracker writes, or model loading so a
-		# rejected request has no side effects.
+		# Content-safety input gate: early signal-layer pre-check for
+		# every signal-driven art request (GUI path and LLM image-tool
+		# path). Runs before daemon forwarding, tracker writes, or model
+		# loading so a rejected request has no side effects. The
+		# authoritative choke sits in-pipeline (manager _generate and
+		# pipeline __call__ entries) and uses the same validator.
 		gate_result = evaluate_prompt_fields(
 			self._content_safety_fields(image_request)
 		)

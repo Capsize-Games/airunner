@@ -190,7 +190,7 @@ def generate_image(
     # Content-safety input gate: fail closed before the (potentially
     # expensive) prompt-enhancement call and before dispatching to the
     # daemon generation path. This is a defense-in-depth pre-check; the
-    # authoritative gate is the shared worker/route choke point.
+    # authoritative gate is the in-pipeline choke point.
     gate_result = evaluate_prompt_fields(
         {
             "prompt": prompt,

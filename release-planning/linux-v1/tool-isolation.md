@@ -153,3 +153,24 @@ real credentials, no sensitive imagery):
    unmeasured; spawn-on-call stands until T02 measures it.
 4. E3 trusted-tool jailing scope (per-user-dir vs per-call grants) —
    deferred to proposed T04.
+
+## 7. Trust boundary vs headlesscode contained execution
+
+The desktop local profile runs generation in-process with the invoking
+user's full ambient authority (filesystem, DB, signals, GPU) and has no
+OS containment boundary: the in-pipeline content-safety gate is a policy
+choke point, not a sandbox. headlesscode's `contained` profile is the
+contrast case — Docker image pinned by digest, Landlock as a hard
+requirement, non-root guest identity, filesystem writes limited to an
+allowlist (`/tmp`, `/workspace`, `/result`, …), worker network limited to
+the single configured inference endpoint (evaluation sessions: zero),
+GPU excluded from contained qualification, and no fallback to local
+execution when verification fails (see headlesscode
+`docs/security-profiles.md`).
+
+GPU-contained execution for desktop art/LLM workloads is therefore
+future work, blocked on headlesscode GPU qualification, which that
+profile explicitly leaves uncovered. Until then, narrow the blast radius
+with least-privilege process/IPC scoping — per-call capability grants as
+in §3, no ambient handles across the boundary — rather than by scanning
+untrusted bytes.

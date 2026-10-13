@@ -127,7 +127,8 @@ def legacy_art_generate(body: LegacyArtRequest, req: Request):
     """Serve the legacy synchronous art endpoint."""
     # Content-safety input gate: reject policy-matching prompt text before
     # any signal is emitted, so this legacy entry point cannot bypass the
-    # gate that the versioned generation route applies.
+    # gate that the versioned generation route and the in-pipeline
+    # choke apply.
     gate_result = evaluate_prompt_fields(
         {
             "prompt": body.prompt,

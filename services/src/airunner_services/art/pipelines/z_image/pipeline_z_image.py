@@ -32,6 +32,7 @@ from diffusers.utils.torch_utils import randn_tensor
 
 from airunner_services.art.pipelines.z_image.pipeline_output import ZImagePipelineOutput
 from airunner_services.art.pipelines.z_image.transformer_z_image import ZImageTransformer2DModel
+from airunner_services.content_safety_gate import enforce_prompt_text
 
 
 logger = logging.get_logger(__name__)
@@ -409,6 +410,13 @@ class ZImagePipeline(DiffusionPipeline, FromSingleFileMixin):
             [`~pipelines.z_image.ZImagePipelineOutput`] if `return_dict` is True, otherwise a `tuple`. When returning a
             tuple, the first element is a list with the generated images.
         """
+
+        # 0. Input gate (in-pipeline choke point): a direct in-process
+        # pipeline call cannot bypass the mandatory hash check. Raises
+        # with only the generic message before any encoding or
+        # inference. Embeddings-only calls carry no text to match;
+        # text-bearing flows are gated with request text above this.
+        enforce_prompt_text(prompt)
 
         # 1. Check inputs. Raise error if not correct
         self.check_inputs(

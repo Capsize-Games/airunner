@@ -39,6 +39,7 @@ from airunner_services.art.managers.zimage.native.zimage_native_pipeline_vae_hel
     NativeVaeImageProcessor,
     ZImageNativePipelineVaeHelper,
 )
+from airunner_services.content_safety_gate import enforce_prompt_text
 
 logger = logging.getLogger(__name__)
 
@@ -246,6 +247,10 @@ class ZImageNativePipeline:
         callback_steps: int = 1,
     ) -> Union[torch.Tensor, List["Image.Image"]]:
         """Generate images from text prompts."""
+        # Input gate (in-pipeline choke point): a direct in-process
+        # call cannot bypass the mandatory hash check. Raises with
+        # only the generic message before any encoding or inference.
+        enforce_prompt_text(prompt, negative_prompt)
         return self._get_generation_helper().generate(
             prompt,
             negative_prompt,

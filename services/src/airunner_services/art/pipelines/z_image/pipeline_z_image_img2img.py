@@ -33,6 +33,7 @@ from diffusers.utils.torch_utils import randn_tensor
 
 from airunner_services.art.pipelines.z_image.pipeline_output import ZImagePipelineOutput
 from airunner_services.art.pipelines.z_image.transformer_z_image import ZImageTransformer2DModel
+from airunner_services.content_safety_gate import enforce_prompt_text
 
 
 logger = logging.get_logger(__name__)
@@ -419,6 +420,13 @@ class ZImageImg2ImgPipeline(DiffusionPipeline, FromSingleFileMixin):
             [`~pipelines.z_image.ZImagePipelineOutput`] or `tuple`:
                 The generated images.
         """
+        # 0. Input gate (in-pipeline choke point): a direct in-process
+        # pipeline call cannot bypass the mandatory hash check. Raises
+        # with only the generic message before any dimension, encoding,
+        # or inference work. Embeddings-only calls carry no text to
+        # match; text-bearing flows are gated with request text above.
+        enforce_prompt_text(prompt)
+
         # Get image dimensions if not provided
         if isinstance(image, Image.Image):
             if height is None:

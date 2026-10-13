@@ -5,9 +5,15 @@ shared application layer that delegates to the hash-based matcher in
 :mod:`airunner_services.content_safety` and centralizes the single
 generic rejection message used by every generation entry point.
 
-Both the HTTP generation route and the signal-driven art worker call
-:func:`evaluate_prompt_fields`, so there is exactly one validator and one
-generic message across the GUI path and the LLM image-tool path.
+Enforcement architecture: the authoritative choke point sits
+in-pipeline -- the art manager ``_generate`` paths and the Z-Image
+pipeline ``__call__`` entries call :func:`enforce_prompt_fields` (or
+:func:`enforce_prompt_text`) first, so a direct in-process generate
+call cannot bypass the mandatory hash check. The HTTP generation
+routes, the signal-driven art worker, and the LLM image tool keep
+calling :func:`evaluate_prompt_fields` as early defense-in-depth
+pre-checks that reject before side effects; they share exactly the one
+validator and one generic message with the choke point.
 
 Ordering: the hash matcher runs first and a match blocks immediately without
 consulting the optional semantic judge (fast path). Only a clean hash check
@@ -79,6 +85,92 @@ def rejection_message(result: ContentSafetyResult) -> str:
     if result.reason == REASON_POLICY_UNAVAILABLE:
         return GENERIC_POLICY_ERROR_MESSAGE
     return GENERIC_REJECTION_MESSAGE
+
+
+class ContentSafetyDenied(Exception):
+    """Raised by in-pipeline choke points on a gate denial.
+
+    Carries only the gate ``result`` (a boolean, a generic reason code,
+    and a field name). ``str()`` is exactly :func:`rejection_message`,
+    so no checked text or matched term can leave through the exception.
+    """
+
+    def __init__(self, result: ContentSafetyResult) -> None:
+        self.result = result
+        super().__init__(rejection_message(result))
+
+
+def has_checkable_text(fields: dict[str, Optional[str]]) -> bool:
+    """Return whether any field holds text the gate can match.
+
+    Mirrors :func:`check_text`: empty and non-string values carry
+    nothing to match, so a request with no text at all is vacuous for
+    the hash gate even when policy data is unavailable.
+    """
+    return any(
+        isinstance(value, str) and value for value in fields.values()
+    )
+
+
+def enforce_prompt_fields(
+    fields: dict[str, Optional[str]],
+) -> None:
+    """Evaluate ``fields`` and raise :class:`ContentSafetyDenied`.
+
+    The single raising validator for in-pipeline choke points: it runs
+    :func:`evaluate_prompt_fields` and raises on any denial, including
+    the fail-closed policy-unavailable denial when mandatory policy
+    data is missing, empty, or invalid. When no field holds text there
+    is nothing to match, so the call passes -- this never weakens a
+    text-bearing call, which always fails closed when data is unusable.
+    """
+    if not has_checkable_text(fields):
+        return
+    result = evaluate_prompt_fields(fields)
+    if not result.allowed:
+        raise ContentSafetyDenied(result)
+
+
+def enforce_prompt_text(
+    prompt: str | list[str] | None,
+    negative_prompt: str | list[str] | None = None,
+) -> None:
+    """Enforce the gate over raw pipeline prompt arguments.
+
+    Each non-empty text is checked on its own so batched prompts never
+    merge across element boundaries. ``None`` (embeddings-only calls,
+    which carry no text to match) is skipped: text-bearing flows are
+    always gated with their request text at the manager entry above.
+    """
+    for name, value in (
+        ("prompt", prompt),
+        ("negative_prompt", negative_prompt),
+    ):
+        if value is None:
+            continue
+        texts = [value] if isinstance(value, str) else list(value)
+        for text in texts:
+            if isinstance(text, str) and text:
+                enforce_prompt_fields({name: text})
+
+
+def prompt_fields_from_request(
+    request: object,
+) -> dict[str, Optional[str]]:
+    """Return the four gated text fields read off a request object.
+
+    Missing attributes read as ``None`` and are skipped by the gate,
+    mirroring the sources the worker and managers already use.
+    """
+    return {
+        name: getattr(request, name, None)
+        for name in (
+            "prompt",
+            "negative_prompt",
+            "second_prompt",
+            "second_negative_prompt",
+        )
+    }
 
 
 def evaluate_prompt_fields(
@@ -157,10 +249,15 @@ def _check_post_match_layers(
 
 
 __all__ = [
+    "ContentSafetyDenied",
     "GENERIC_POLICY_ERROR_MESSAGE",
     "GENERIC_PUBLICATION_DENIAL_MESSAGE",
     "GENERIC_REJECTION_MESSAGE",
+    "enforce_prompt_fields",
+    "enforce_prompt_text",
     "evaluate_prompt_fields",
     "evaluate_publication_fields",
+    "has_checkable_text",
+    "prompt_fields_from_request",
     "rejection_message",
 ]

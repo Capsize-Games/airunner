@@ -101,8 +101,8 @@ async def create_generation_job(
     """Create one tracked generation job and start its worker task."""
     # Content-safety input gate: reject policy-matching prompt text before
     # any side effect (LLM unload, job/tracker creation, model loading).
-    # This is the public HTTP boundary shared by the GUI daemon-forward path
-    # and by direct API/sidecar clients.
+    # This early public-HTTP pre-check shares its validator with the
+    # authoritative in-pipeline choke (manager _generate entries).
     gate_result = evaluate_prompt_fields(
         {
             "prompt": request.prompt,

@@ -22,6 +22,11 @@ from airunner_services.art.runtime_enums import (
 )
 from airunner_common.settings import AIRUNNER_CUDA_OUT_OF_MEMORY_MESSAGE
 from airunner_services.art.runtime_memory import clear_memory
+from airunner_services.content_safety_gate import (
+    ContentSafetyDenied,
+    enforce_prompt_fields,
+    prompt_fields_from_request,
+)
 
 # Generic, content-free message surfaced when the mandatory output gate
 # withholds a batch. It never names a reason code or image content.
@@ -74,9 +79,13 @@ class SDImageGenerationMixin:
             HandlerState.GENERATING,
             HandlerState.PREPARING_TO_GENERATE,
         ):
-            self._generate()
-            self._current_state = HandlerState.READY
-            clear_memory()
+            try:
+                self._generate()
+            except ContentSafetyDenied as denied:
+                self._deny_generate(denied)
+            else:
+                self._current_state = HandlerState.READY
+                clear_memory()
         self.handle_requested_action()
 
         # Clear the image request so that we no longer
@@ -102,6 +111,27 @@ class SDImageGenerationMixin:
             except Exception:
                 pass
 
+    def _deny_generate(self, denied: ContentSafetyDenied) -> None:
+        """Route an in-pipeline gate denial to the generic error path.
+
+        Only the generic message and the generic reason code leave;
+        the request text is never logged or surfaced.
+        """
+        message = str(denied)
+        self.logger.warning(
+            "Art generation rejected by content safety policy "
+            "(reason=%s)",
+            denied.result.reason,
+        )
+        if self.image_request is not None:
+            callback = self.image_request.callback
+            if callable(callback):
+                callback(message)
+        self.api.worker_response(
+            code=EngineResponseCode.ERROR,
+            message=message,
+        )
+
     def _generate(self):
         """
         Execute image generation process.
@@ -113,7 +143,16 @@ class SDImageGenerationMixin:
         4. Sends responses
 
         Handles interruption and errors gracefully.
+
+        The input gate runs first: this is the in-pipeline choke point
+        shared by every BaseDiffusersModelManager subclass, so a direct
+        in-process generate call cannot bypass the mandatory hash check.
+        Raises :class:`ContentSafetyDenied` with only the generic
+        message before any pipeline, embedding, or inference work.
         """
+        enforce_prompt_fields(
+            prompt_fields_from_request(self.image_request)
+        )
         self.logger.debug(f"[GEN DEBUG] _generate called: self._pipe={self._pipe}, self={id(self)}")
         if self._pipe is None:
             raise PipeNotLoadedException()
