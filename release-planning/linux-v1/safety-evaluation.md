@@ -207,6 +207,31 @@ received.
   once the picks are approved.
 - Reviewer: ______ (owner/specialist) Date: ______ Operator: ______
 
+### Groundwork log (2026-10-13, no behavior change)
+
+Acceptance groundwork only; every gate above stays PENDING and
+both layers stay default OFF:
+
+- Adapters for the §2 picks landed separately in #2252
+  (`content_safety/qwen_guard.py`, `content_safety/falconsai.py`).
+- Plumbing fixtures:
+  `services/tests/test_release_safety_acceptance.py`
+  (default-off composition, block-only-adds,
+  closed-only-if-enabled, fail-closed-when-enabled, S07 code
+  pins) and `release-planning/linux-v1/acceptance/q08-safety-results-template.md`
+  (Q08 operator scenarios, all PENDING until run).
+- Legal/privacy deltas proposed for counsel review in
+  `release-planning/linux-v1/legal/safety-notices-delta-draft.md`
+  (L05 #2132, L06 #2135, Q06 #2128); target drafts unchanged.
+- Output-gate coverage verified by static reading: gen batches
+  (manager mandatory gate + optional checker fail-closed),
+  daemon results, response envelopes, and input images (signal
+  + API screens) all route through `check_images_mandatory`;
+  one gap recorded for #2123 — vision-model remote image
+  inputs have no mandatory screen (see the Q08 template G1).
+- No efficacy claim here rests on unit tests; E1-E3/L1-L4
+  still need specialist measurement on curated sets.
+
 ## 8. Sources
 
 Lookups 2026-10-09. HF model API (`cardData.license`, params,
