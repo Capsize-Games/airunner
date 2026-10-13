@@ -21,6 +21,16 @@
 # content-safety signature entry below is required=false because signed
 # policy provisioning happens in trusted release CI (S06). Tests use a
 # synthetic policy fixture, never production policy bytes.
+#
+# Release packaging gate: scripts/assemble_linux_bundle.py refuses to
+# freeze (exit 2, content-free, writes nothing) unless every staged
+# policy .dat is present, strictly versioned, non-empty, and
+# accompanied by a well-formed detached signature. A public checkout
+# ships the empty set with no sidecar, so local assembly fails closed
+# by design; only the trusted release fragment passes. With
+# --policy-trust-store the gate additionally verifies each signature
+# against those release keys. scripts/inspect_linux_bundle.py offers
+# the same shape check for frozen trees via --require-signed-policy.
 
 [bundle]
 # Frozen executable name inside the bundle root. Matches
@@ -268,14 +278,14 @@ source = "services/src/airunner_services/content_safety/data/*.dat"
 dest = "airunner_services/content_safety/data"
 stage = "collect"
 required = true
-comment = "policy data file; tests substitute a synthetic fixture"
+comment = "policy data file; the assembly gate requires the staged set to be the signed non-empty release set, never the shipped empty set; tests substitute a synthetic fixture"
 
 [[data]]
 source = "services/src/airunner_services/content_safety/data/*.dat.sig"
 dest = "airunner_services/content_safety/data"
 stage = "collect"
 required = false
-comment = "signed policy signature, provisioned in trusted CI (S06)"
+comment = "signed policy signature, provisioned in trusted CI (S06); required=false because a public checkout must assemble nothing shippable without the release fragment; the sidecar ships with the .dat (sdist, wheel, frozen bundle) so the exact staged bytes stay re-verifiable after the freeze"
 
 [[data]]
 source = "services/src/airunner_services/assets/reference_speakers/*.wav"

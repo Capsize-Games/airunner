@@ -60,6 +60,11 @@ jobs:
       # listed, or dumped: no `set -x`, no `env` output, no debug
       # artifacts. The stage script prints counts and the signing key
       # ID only -- never terms, hashes, digests, or key material.
+      #
+      # Both files ship: the verified .dat plus its detached .sig ride
+      # the fragment into services/.../content_safety/data/ (sdist,
+      # wheel, frozen bundle) so the exact staged bytes stay
+      # re-verifiable after the freeze. No source list, no keys.
       - name: Retrieve and stage signed policy artifact
         env:
           POLICY_ARTIFACT_URL: ${{ secrets.POLICY_ARTIFACT_URL }}
@@ -74,6 +79,9 @@ jobs:
           curl -fsSL -H "Authorization: Bearer $POLICY_ARTIFACT_TOKEN" \
             "$POLICY_ARTIFACT_URL.sig" \
             -o "$RUNNER_TEMP/policy-release/policy_terms.dat.sig"
+          # Fail closed on an empty download before anything is staged.
+          test -s "$RUNNER_TEMP/policy-release/policy_terms.dat"
+          test -s "$RUNNER_TEMP/policy-release/policy_terms.dat.sig"
           printf '%s' "$POLICY_TRUST_STORE_JSON" \
             > "$RUNNER_TEMP/policy-release/trust-store.json"
           python scripts/build_policy_terms.py --stage-release \
@@ -83,6 +91,9 @@ jobs:
             --output "$RUNNER_TEMP/policy-staged/policy_terms.dat"
           cp "$RUNNER_TEMP/policy-release/policy_terms.dat.sig" \
             "$RUNNER_TEMP/policy-staged/policy_terms.dat.sig"
+          # Fail closed on an empty stage before the fragment exists.
+          test -s "$RUNNER_TEMP/policy-staged/policy_terms.dat"
+          test -s "$RUNNER_TEMP/policy-staged/policy_terms.dat.sig"
           # Drop credential-derived material; only verified hashes plus
           # the detached signature remain for the bundle fragment.
           rm "$RUNNER_TEMP/policy-release/trust-store.json"

@@ -17,11 +17,21 @@ installed (package/constraints-linux-nvidia-cu129.txt)::
 --dry-run resolves every data glob and prints the exact PyInstaller
 command without executing it. stdlib only; safe to run with no
 repository on PYTHONPATH.
+
+Release policy gate (S06): every real (non-dry-run) assembly first
+form-checks the staged content-safety policy set -- present,
+strictly versioned, non-empty, with a well-formed detached
+signature -- and exits 2 with a content-free error before writing
+anything when the set is absent, empty, unsigned, or synthetic-only.
+With --policy-trust-store the gate additionally verifies each
+detached signature against that owner-provisioned trust store,
+which is what rejects data signed outside the release process.
 """
 
 from __future__ import annotations
 
 import argparse
+import hashlib
 import importlib.util
 import sys
 import types
@@ -87,6 +97,7 @@ def _assemble_args(argv: list[str] | None) -> argparse.Namespace:
     parser.add_argument("--pyinstaller", default="pyinstaller")
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--require-sidecars", action="store_true")
+    parser.add_argument("--policy-trust-store", type=Path, default=None)
     return parser.parse_args(argv)
 
 
@@ -95,6 +106,87 @@ def _report_spec_errors(errors: list[str]) -> bool:
     for error in errors:
         print(f"SPEC: {error}", file=sys.stderr)
     return bool(errors)
+
+
+def _staged_policy_files(
+    spec: dict[str, Any], repo_root: Path
+) -> list[Path]:
+    """Resolve staged policy .dat files from the spec data entries."""
+    staged: list[Path] = []
+    for entry in spec.get("data", []):
+        if not str(entry.get("source", "")).endswith(".dat"):
+            continue
+        matches = sorted(repo_root.glob(str(entry["source"])))
+        staged.extend(path for path in matches if path.is_file())
+    return staged
+
+
+def _verify_policy_trust(
+    staged: list[Path], trust_store: Path
+) -> list[str]:
+    """Verify staged files against the trust store; problems or [].
+
+    Reuses the S06 staging verifier with the self-computed digest, so
+    only the signature-against-trust-store check is meaningful here.
+    """
+    try:
+        stage_mod = _load_sibling_module(
+            "bundle_policy_stage", "build_policy_terms.py"
+        )
+        store = stage_mod.load_release_trust_store(Path(trust_store))
+    except (ImportError, OSError, ValueError):
+        return ["release policy trust store is unusable"]
+    problems: list[str] = []
+    for path in staged:
+        try:
+            data = path.read_bytes()
+        except OSError:
+            return ["release policy data set is absent"]
+        try:
+            stage_mod.stage_release_artifact(
+                artifact=path,
+                trust_store=store,
+                expected_sha256=hashlib.sha256(data).hexdigest(),
+            )
+        except ValueError:
+            problems.append(
+                "release policy data is unsigned or synthetic-only"
+            )
+    return problems
+
+
+def gate_staged_policy(
+    spec: dict[str, Any],
+    repo_root: Path,
+    trust_store: Path | None = None,
+) -> list[str]:
+    """Fail-closed release gate over the staged policy set.
+
+    Returns content-free problems ([]) when every staged .dat is
+    present, strictly versioned, non-empty, and accompanied by a
+    well-formed detached signature. With ``trust_store`` each
+    signature is additionally verified against those release keys,
+    which rejects data signed outside the release process. Writes
+    nothing; the caller maps a non-empty return to exit code 2.
+    """
+    staged = _staged_policy_files(spec, repo_root)
+    if not staged:
+        return ["release policy data set is absent"]
+    checker = _load_inspect_module()
+    problems: list[str] = []
+    for path in staged:
+        problems.extend(checker.check_policy_file(path))
+    if problems or trust_store is None:
+        return problems
+    problems.extend(_verify_policy_trust(staged, trust_store))
+    return problems
+
+
+def _report_policy_errors(problems: list[str]) -> bool:
+    """Print policy gate problems; True when packaging must stop."""
+    for problem in problems:
+        print(f"POLICY: {problem}", file=sys.stderr)
+    return bool(problems)
 
 
 def _output_paths(
@@ -212,6 +304,12 @@ def main(argv: list[str] | None = None) -> int:
     spec = inspect.load_spec(args.spec or DEFAULT_SPEC)
     if _report_spec_errors(inspect.spec_errors(spec)):
         return 2
+    if not args.dry_run:
+        problems = gate_staged_policy(
+            spec, _REPO_ROOT, args.policy_trust_store
+        )
+        if _report_policy_errors(problems):
+            return 2
     workpath, distpath = _output_paths(args, spec)
     base = resolve_base_rev(_REPO_ROOT, args.base)
     entry_script, command = _freeze_cmd(

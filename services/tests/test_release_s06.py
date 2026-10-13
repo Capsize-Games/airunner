@@ -220,6 +220,56 @@ def test_release_stage_tampered_body_fails(work_dir: Path) -> None:
     assert not out.exists()
 
 
+def test_release_stage_tampered_signature_fails(work_dir: Path) -> None:
+    """Edited sidecar bytes fail even when the artifact is intact."""
+    private, public = _keypair()
+    artifact = _write_signed(work_dir, _valid_text(), private, _KEY_ID_A)
+    sidecar = Path(str(artifact) + ".sig")
+    text = sidecar.read_text(encoding="utf-8")
+    marker = "# signature: "
+    head, _, tail = text.partition(marker)
+    assert tail.strip()
+    flipped = ("0" if tail[0] != "0" else "1") + tail[1:]
+    sidecar.write_text(head + marker + flipped, encoding="utf-8")
+    store_path = _write_trust_store(work_dir, {_KEY_ID_A: public})
+    digest = _digest(artifact)
+    out = work_dir / "staged.dat"
+
+    stdout, stderr = io.StringIO(), io.StringIO()
+    with contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(
+        stderr
+    ):
+        rc = main(_stage_args(artifact, store_path, digest, out))
+
+    assert rc == 2
+    assert not out.exists()
+    for secret in _secret_strings({_KEY_ID_A: public}, digest):
+        assert secret not in stdout.getvalue()
+        assert secret not in stderr.getvalue()
+
+
+def test_release_stage_swapped_sidecar_fails(work_dir: Path) -> None:
+    """A valid signature over different bytes never stages."""
+    private, public = _keypair()
+    artifact_a = _write_signed(
+        work_dir, _valid_text(), private, _KEY_ID_A, name="a.dat"
+    )
+    other = render_artifact({hash_token(_TERMS[0])})
+    artifact_b = _write_signed(
+        work_dir, other, private, _KEY_ID_A, name="b.dat"
+    )
+    Path(str(artifact_b) + ".sig").write_bytes(
+        Path(str(artifact_a) + ".sig").read_bytes()
+    )
+    store_path = _write_trust_store(work_dir, {_KEY_ID_A: public})
+    out = work_dir / "staged.dat"
+
+    rc = main(_stage_args(artifact_b, store_path, _digest(artifact_b), out))
+
+    assert rc == 2
+    assert not out.exists()
+
+
 def test_release_stage_invalid_artifact_fails(work_dir: Path) -> None:
     """A versioned artifact with a bad inner digest is rejected."""
     private, public = _keypair()
