@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
-from typing import Any, Optional
+import io
+from pathlib import Path
+from typing import TYPE_CHECKING, Any, Optional
 from urllib.parse import urlparse
 
 import torch
@@ -18,6 +20,57 @@ from airunner_services.llm.adapters.mixins.generation_vision_image_loading impor
     image_from_file,
     image_from_remote_url,
 )
+
+if TYPE_CHECKING:
+    from airunner_services.content_safety.image_verdict import (
+        ImageBatchVerdict,
+    )
+
+
+class VisionImageSafetyDenied(Exception):
+    """Deny a vision request withheld by the mandatory image screen.
+
+    Carries only the batch verdict (allow/withhold flags with generic
+    reason codes). ``str()`` is exactly the shared generic rejection
+    message, so no checked image content leaves via this exception.
+    """
+
+    def __init__(self, verdict: ImageBatchVerdict) -> None:
+        from airunner_services.content_safety_gate import (
+            GENERIC_REJECTION_MESSAGE,
+        )
+
+        self.verdict = verdict
+        super().__init__(GENERIC_REJECTION_MESSAGE)
+
+
+def enforce_vision_images(
+    adapter: Any,
+    pil_images: list[PILImage.Image],
+) -> None:
+    """Screen one resolved vision batch via the mandatory image gate.
+
+    Choke point: the final batch that would reach the processor is
+    checked, so no entry form bypasses the screen. Any withhold —
+    flagged, uncertain, error, or unavailable evaluator — raises with
+    only the generic message. Empty batches pass to text-only inputs.
+    """
+    from airunner_services.art.utils.nsfw_checker import (
+        check_images_mandatory,
+    )
+
+    if not pil_images:
+        return
+    _outputs, _withheld, batch = check_images_mandatory(
+        list(pil_images)
+    )
+    if batch.all_allowed:
+        return
+    adapter.logger.warning(
+        "Vision input withheld by mandatory image check (reason=%s)",
+        ",".join(batch.reasons),
+    )
+    raise VisionImageSafetyDenied(batch)
 
 
 def prepare_vision_inputs(
@@ -47,7 +100,9 @@ def collect_vision_images(
             )
             continue
         pil_images.append(_normalized_image(adapter, image, quantized))
-    return cap_quantized_images(adapter, pil_images, quantized)
+    pil_images = cap_quantized_images(adapter, pil_images, quantized)
+    enforce_vision_images(adapter, pil_images)
+    return pil_images
 
 
 def _normalized_image(

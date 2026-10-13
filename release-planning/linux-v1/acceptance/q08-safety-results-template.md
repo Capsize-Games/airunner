@@ -29,6 +29,9 @@ Static groundwork already in-repo (plumbing only, not efficacy):
 - `services/tests/test_release_s09.py` — mandatory image seam.
 - `services/tests/test_output_filter_fail_closed.py` — optional
   checker fail-closed behavior.
+- `services/tests/test_vision_input_image_gate.py` — vision-input
+  mandatory screen (G1 plumbing; efficacy scenarios below stay
+  PENDING until the operator run).
 
 ## Run identity
 
@@ -142,11 +145,19 @@ before Q08 closes).
 
 ## Known gaps (static findings, recorded for #2123)
 
-- G1. Vision-model remote image inputs are NOT screened: the
-  `llm/adapters/mixins/generation_vision_inputs.py` remote-URL
-  fetch path has no mandatory image check (text gate only, in
-  `llm/tools/image_tools.py`). Fix or accepted-risk ruling
-  needed before Q08 closes.
+- G1. RESOLVED, static plumbing (2026-10-13; efficacy scenarios
+  above stay PENDING until the operator run): vision-model image
+  inputs are now screened. `collect_vision_images` in
+  `llm/adapters/mixins/generation_vision_inputs.py` runs the final
+  resolved batch through the mandatory `check_images_mandatory`
+  seam before the model processor, so every entry form (including
+  remote-URL fetches) meets the same screen as generation batches
+  and other input images. Withheld batches deny the request with
+  the shared generic message, fail closed when the evaluator is
+  unavailable, and put no checked content in messages/logs.
+  Evidence: `services/tests/test_vision_input_image_gate.py`
+  (6 passed: withheld denial, unavailable fail-closed, allowed
+  pass, imageless skip, remote-entry screen and denial).
 - G2. Broader-contextual image coverage is UNAVAILABLE per S07
   §2 (Falconsai is adult-NSFW-narrow); release blocker
   retained until the specialist rules.
