@@ -69,3 +69,26 @@ synthetic data. It uses no environment and no secrets.
   boundary, and only the hashes plus signature land in the bundle.
 - The fragment artifact is a release-bundle input, not a general
   download: one-day retention, installed only by the release build.
+
+## Runtime enforcement (packaged mode)
+
+The shipped loader (`policy_data.py`) verifies the staged sidecar
+over the exact packaged bytes against the provisioned `TRUSTED_KEYS`
+store on first use and fails closed to the empty set: any failure
+denies generation with the policy-unavailable message, and the
+loader never falls back to the development path override.
+
+- The `AIRUNNER_CONTENT_SAFETY_DATA` variable is a development and
+  test hook only. Packaged mode locks it: a set value is ignored
+  (one content-free warning) and can never swap or bypass the
+  verified packaged set.
+- Trusted release provisioning must install the production public
+  keys into `TRUSTED_KEYS` before the build. An empty store fails
+  closed: with enforcement on and no provisioned keys, no policy
+  set loads and generation stays denied.
+- Public checkouts keep the empty store and never run packaged
+  mode, so ordinary development and OSS behavior are unchanged.
+- Non-frozen production runs opt into enforcement with a truthy
+  `AIRUNNER_CONTENT_SAFETY_ENFORCE_SIGNED`; frozen bundles always
+  enforce. The switch can only turn enforcement on, never off in
+  a frozen bundle.

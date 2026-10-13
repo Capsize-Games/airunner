@@ -15,7 +15,10 @@ custom cryptography and no online key lookup are performed.
 Trust store: :data:`TRUSTED_KEYS` maps key IDs to raw 32-byte Ed25519
 public keys. Private signing keys never ship; the public repo carries
 an empty store and trusted release provisioning (S06) installs the
-production keys. Callers may pass an explicit trust store for tests.
+production keys before the build. Packaged/production mode verifies
+the staged sidecar against this store at load and fails closed when
+the store is empty or the signature does not match. Callers may pass
+an explicit trust store for tests.
 """
 
 from __future__ import annotations
