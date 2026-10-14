@@ -957,9 +957,9 @@ datasets==4.0.0 \
     --hash=sha256:9657e7140a9050db13443ba21cb5de185af8af944479b00e7ff1e00a61c8dbf1
     # via airunner-services
     # from https://pypi.org/simple
-dateparser==1.1.8 \
-    --hash=sha256:070b29b5bbf4b1ec2cd51c96ea040dc68a614de703910a91ad1abba18f9f379f \
-    --hash=sha256:86b8b7517efcc558f085a142cdb7620f0921543fcabdb538c8a4c4001d8178e3
+dateparser==1.4.3 \
+    --hash=sha256:bab8c43a746266e68142f4926e69438ce551441aa88e54e78bb6410bf3ee7000 \
+    --hash=sha256:cbce86c64e0cea5c54c84c015d34c903d46c51bfad50632bf2f05a6141d10c05
     # via
     #   gruut
     #   htmldate
