@@ -12,8 +12,11 @@
 
 - Document:
   `release-planning/linux-v1/legal/us-law-grounding-memo.md`
-- Version: 0.1 (2026-10-13)
+- Version: 0.2 (2026-10-14)
 - Supports: `safety-notices-delta-draft.md` v0.1 (D1–D5)
+- v0.2 re-check: corpus grown to 362,698 FTS records with a new
+  `ftc` collection (usds commit `e645972`). Gaps 2–7 below
+  re-verified closed except where noted; case law still absent.
 
 ## D1 — on-device processing / no-copy claims
 
@@ -113,19 +116,42 @@
 - 16 CFR 312.10 again: written retention + deletion floor
   for any records kept.
 
-## Absent from the corpus (do not cite what is not there)
+## Corpus gaps: resolved vs. still absent (re-checked 2026-10-14)
 
-- No case law and no FTC guidance documents (Deception
-  Policy Statement, .com Disclosures); FR COPPA queries
-  came back empty.
-- No California source: no CCPA/CPRA regulations, no
-  age-appropriate-design code.
-- No Utah Accountability Act source.
-- No state UDAP statute at section level (FL 2-2 repealed
-  1997; NC 02E repealed 1981).
-- Unverified tails: FL 2-43.001–.003 bodies, 6504/6505
-  full text, 7001(e) tail; 312 pinpoints at chapter-blob
-  level only.
+Resolved since v0.1 (usds commit `e645972`, 362,698 records):
+
+- FTC guidance: CLOSED — new `ftc` collection holds all
+  three (Deception Policy Statement, .com Disclosures
+  2013, Unfairness Policy Statement). Provenance caveat:
+  Deception pins search.ftc.gov; the other two pin Wayback
+  snapshots. The D3 efficacy-disclaimer question can now be
+  worked from these sources.
+- FR COPPA bodies: CLOSED — 4,403/4,403 rulemaking bodies
+  indexed; COPPA queries now hit body text.
+- California statutes: CLOSED — Civ. Code §§1798.100+
+  (CCPA) and §§1798.99.28–.99.31 (age-appropriate design)
+  present. CCR (regs) still has an open gap row: no
+  primary path, zero mirror rows.
+- Utah Accountability Act: CLOSED — Title 13 Ch. 76
+  present (§13-76-101 definitions, §13-76-201 app-store
+  provider requirements, plus surrounding sections).
+- State UDAP at section level: CLOSED — live FL
+  §§501.204–.501.2042 present (repealed FL 2-2 / NC 02E
+  remain dead ends, as before).
+- FL Rules 2-43.001–.003: present at index level, but
+  2-43.003 is short — still pull current text from
+  flrules.org before reliance.
+- 16 CFR 312 pinpoints: CLOSED — §§312.1–312.13 now
+  indexed at section level (corpus current ~2026-10-01).
+- 15 USC 6504/6505/7001 tails: present at index level
+  (626/1,038/2,191 words).
+
+Still absent — do not cite what is not there:
+
+- Case law: no opinion corpus in the index (only
+  incidental hits). Ingestion path is proven but not run
+  (CourtListener bulk adapter benchmarked: 100k opinions
+  to 1.34GB FTS; full ~8.3M universe estimated ~112GB).
 
 ## Open legal questions (for a future attorney if distribution starts) (unchanged from delta draft)
 
@@ -135,7 +161,9 @@
    information per territory.
 3. Magnuson-Moss reach and the D3 interplay with section
    10 consumer-remedy terms.
-4. Filter-efficacy disclaimer doctrine (needs case law /
-   Deception Policy outside this corpus).
+4. Filter-efficacy disclaimer doctrine: now workable
+   from the in-corpus FTC Deception and .com Disclosures
+   statements (v0.2); case-law application still outside
+   the corpus.
 5. State UDAP survey + CCPA/AADC/Utah follow-up offered
    once a California/Utah source is available.
