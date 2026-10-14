@@ -1056,9 +1056,9 @@ docopt==0.6.2 \
     #   num2words
     #   sumy
     # from https://pypi.org/simple
-ebooklib==0.19 \
-    --hash=sha256:07e9b4db0a30c73623b14e23b315634a450d2c13f23d1dba4b457a6ca16a58be \
-    --hash=sha256:a790e280e1d5ef105e350e34cc88b83c9c987fa6bab8a63a7543410c313cfa31
+ebooklib==0.20 \
+    --hash=sha256:35e2f9d7d39907be8d39ae2deb261b19848945903ae3dbb6577b187ead69e985 \
+    --hash=sha256:fff5322517a37e31c972d27be7d982cc3928c16b3dcc5fd7e8f7c0f5d7bcf42b
     # via airunner-services
     # from https://pypi.org/simple
 einops==0.8.2 \
