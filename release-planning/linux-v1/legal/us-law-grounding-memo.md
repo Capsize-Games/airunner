@@ -149,9 +149,13 @@ Resolved since v0.1 (usds commit `e645972`, 362,698 records):
 Still absent — do not cite what is not there:
 
 - Case law: no opinion corpus in the index (only
-  incidental hits). Ingestion path is proven but not run
-  (CourtListener bulk adapter benchmarked: 100k opinions
-  to 1.34GB FTS; full ~8.3M universe estimated ~112GB).
+  incidental hits). Ingestion machinery is now implemented
+  and tested (usds `c8999e5`: contiguous-chunk streaming
+  with carry-over, sqlite cluster join yielding citable
+  case names, proven on real snapshot bytes), but no run
+  has executed: full ~8.3M universe (~112GB) on hold per
+  owner TARGETED decision; targeted consumer-protection
+  scope (dockets/courts, filters, refresh) still to define.
 
 ## Open legal questions (for a future attorney if distribution starts) (unchanged from delta draft)
 
