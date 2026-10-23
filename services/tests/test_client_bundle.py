@@ -131,6 +131,25 @@ def test_bundle_rejects_an_unauthenticated_request(
     assert client.get("/index.html").status_code == 401
 
 
+@pytest.mark.parametrize(
+    "path",
+    [
+        "/api/v1/tts/synthesize",
+        "/api/v1/stt/transcribe",
+        "/api/v1/art/generate",
+        "/api/v1/downloads/url",
+    ],
+)
+def test_bundle_does_not_shadow_method_not_allowed(
+    bundle: Path, monkeypatch, isolated_token, path: str
+) -> None:
+    """GET on a POST-only API path stays 405 with a bundle mounted."""
+    monkeypatch.setenv(BUNDLE_ENV, str(bundle))
+    client, headers = _client(monkeypatch)
+    response = client.get(path, headers=headers)
+    assert response.status_code == 405
+
+
 def test_bundle_does_not_shadow_api_routes(
     bundle: Path, monkeypatch, isolated_token
 ) -> None:

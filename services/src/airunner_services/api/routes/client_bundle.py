@@ -29,6 +29,8 @@ from typing import Optional, Union
 
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
+from starlette.routing import Match, Mount
+from starlette.types import Scope
 
 BUNDLE_ENV = "AIRUNNER_CLIENT_BUNDLE"
 BUILD_ROOT_ENV = "AIRUNNER_DESKTOP_BUILD_DIR"
@@ -73,6 +75,29 @@ def bundle_directory() -> Optional[Path]:
     return packaged if _has_index(packaged) else None
 
 
+class _BundleMount(Mount):
+    """Static mount that yields to API routes on method mismatch.
+
+    Starlette serves the first full match, so a plain ``"/"`` static
+    mount would answer ``404`` for ``GET`` on a POST-only API path
+    instead of the router's ``405``. Deferring on a sibling partial
+    match keeps the documented precedence: API paths answer as before
+    and only unmatched paths reach the bundle.
+    """
+
+    def matches(self, scope: Scope) -> tuple[Match, Scope]:
+        """Claim no match when an API route matches the path."""
+        if scope.get("type") in ("http", "websocket"):
+            routes = getattr(scope.get("app"), "routes", [])
+            for route in routes:
+                if route is self or isinstance(route, Mount):
+                    continue
+                match, _ = route.matches(scope)
+                if match == Match.PARTIAL:
+                    return Match.NONE, {}
+        return super().matches(scope)
+
+
 def mount_client_bundle(app: FastAPI) -> bool:
     """Mount the built bundle at the site root; report whether it was mounted.
 
@@ -82,10 +107,12 @@ def mount_client_bundle(app: FastAPI) -> bool:
     directory: Union[None, Path] = bundle_directory()
     if directory is None:
         return False
-    app.mount(
-        "/",
-        StaticFiles(directory=str(directory), html=True),
-        name="client-bundle",
+    app.routes.append(
+        _BundleMount(
+            "/",
+            app=StaticFiles(directory=str(directory), html=True),
+            name="client-bundle",
+        )
     )
     return True
 
