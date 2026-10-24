@@ -4,13 +4,22 @@ from __future__ import annotations
 
 import os
 import sys
+from pathlib import Path
+
+
+#: Kernel graphics devices consulted to detect hardware GL. Tests replace
+#: this with a temp directory.
+_DRI_PATH = Path("/dev/dri")
+
+#: Explicit override: "1" forces software rendering, "0" forces hardware.
+SOFTWARE_RENDERING_ENV = "AIRUNNER_QT_SOFTWARE_RENDERING"
 
 
 def configure_early_qt_environment() -> None:
     """Set safe Qt defaults before importing or creating Qt objects."""
     os.environ.setdefault("QT_QUICK_BACKEND", "software")
     os.environ.setdefault("TOKENIZERS_PARALLELISM", "true")
-    if sys.platform.startswith("linux"):
+    if sys.platform.startswith("linux") and _force_software_rendering():
         os.environ.setdefault("QT_OPENGL", "software")
         os.environ.setdefault("QT_XCB_GL_INTEGRATION", "none")
         os.environ.setdefault("QT_WIDGETS_NO_CHILD_RHI", "1")
@@ -23,6 +32,31 @@ def configure_early_qt_environment() -> None:
         os.environ.setdefault("LIBGL_ALWAYS_SOFTWARE", "1")
     _configure_qt_logging_rules()
     _configure_fontconfig_path()
+
+
+def _force_software_rendering() -> bool:
+    """Return whether the Linux software fallbacks must stay forced."""
+    override = (os.environ.get(SOFTWARE_RENDERING_ENV) or "").strip()
+    if override.lower() in ("1", "true", "yes"):
+        return True
+    if override.lower() in ("0", "false", "no"):
+        return False
+    if os.environ.get("QT_QPA_PLATFORM", "").lower() == "offscreen":
+        return True
+    if not (os.environ.get("DISPLAY") or os.environ.get("WAYLAND_DISPLAY")):
+        return True
+    return not _dri_device_present()
+
+
+def _dri_device_present() -> bool:
+    """Return whether a kernel graphics device exists for Qt to use."""
+    try:
+        entries = _DRI_PATH.iterdir()
+    except OSError:
+        return False
+    return any(
+        entry.name.startswith(("card", "renderD")) for entry in entries
+    )
 
 
 def _configure_qt_logging_rules() -> None:
@@ -47,7 +81,7 @@ def _configure_qt_logging_rules() -> None:
 
 
 def prefers_software_qt_rendering() -> bool:
-    """Return whether the current process is configured for Qt software rendering."""
+    """Return whether the process uses Qt software rendering."""
     return any(
         (
             os.environ.get("QT_QUICK_BACKEND") == "software",
