@@ -286,9 +286,7 @@ def ollama_ps(req: Request) -> dict[str, Any]:
 @router.post("/api/show")
 def ollama_show(body: dict) -> dict[str, Any]:
     """Handle the Ollama /api/show endpoint."""
-    # Real Ollama clients send {"model": ...}; "name" stays as a
-    # fallback for older callers (issue #2237 Model UX parity).
-    model_name = body.get("model", body.get("name", "airunner:latest"))
+    model_name = body.get("name", "airunner:latest")
     metadata = metadata_from_name(model_name)
     context_length = model_context_length(model_name.lower())
     return {
