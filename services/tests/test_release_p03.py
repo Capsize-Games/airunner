@@ -112,6 +112,10 @@ def test_explicit_override_wins_over_bundle(
     """An explicit binary path still bypasses bundle discovery."""
     custom = tmp_path / "custom-llama-server"
     custom.write_text("#!/bin/sh\n")
+    # resolve_runtime_executable requires the override to be executable
+    # (PermissionError otherwise, enforced since the voice-slice
+    # hardening): the fixture binary must carry the exec bit.
+    custom.chmod(0o755)
     monkeypatch.setenv("AIRUNNER_BUNDLE_ROOT", str(tmp_path))
     monkeypatch.setenv("AIRUNNER_LLAMA_SERVER_BIN", str(custom))
 
