@@ -70,12 +70,11 @@ NATIVE_CONSOLE_SCRIPTS = [
     "airunner-native=airunner_native.launcher:main",
 ]
 
-# airunner-common only: launcher.py's app-specific imports (airunner,
-# airunner_services) are all function-scoped, deferred until the launcher
-# actually runs, not hard install-time dependencies (issue #2217) -- see
-# the "services"/"daemon" and "gui"/"desktop" extras below for the two
-# ways this package actually gets used together with the rest of the
-# application.
+# launcher.py's service imports (airunner_services, plus the test-mode
+# helper's airunner.components imports) are all function-scoped,
+# deferred until the launcher actually runs, not hard install-time
+# dependencies (issue #2217) -- see the "services"/"daemon" extras below
+# for how this package gets used together with the services runtime.
 NATIVE_BASE_REQUIREMENTS = [
     # airunner-common is independently versioned in its own repository
     # now (issue #2197, https://github.com/Capsize-Games/airunner-common),
@@ -88,7 +87,12 @@ NATIVE_BASE_REQUIREMENTS = [
 
 def build_native_extras_require() -> dict[str, list[str]]:
     """Return optional extras for the native package surface."""
-    gui_requirements = [f"airunner=={VERSION}"]
+    # The root `airunner` GUI distribution is no longer published, so
+    # the historical `gui`/`desktop` extra names resolve to the
+    # headless services runtime instead of failing on an
+    # uninstallable pin. Kept under the old names so existing
+    # install commands keep working against the services surface.
+    headless_requirements = [f"airunner-services=={VERSION}"]
     return {
         "development": DEVELOPMENT_REQUIREMENTS,
         "dev": DEVELOPMENT_REQUIREMENTS,
@@ -96,11 +100,9 @@ def build_native_extras_require() -> dict[str, list[str]]:
         # services package, no GUI.
         "services": [f"airunner-services=={VERSION}"],
         "daemon": [f"airunner-services=={VERSION}"],
-        # A GUI-client-role install. airunner itself already depends on
-        # airunner-services, so this extra alone is enough for a full
-        # desktop install.
-        "gui": gui_requirements,
-        "desktop": gui_requirements,
+        # Former GUI-client-role names; now aliases for headless.
+        "gui": headless_requirements,
+        "desktop": headless_requirements,
     }
 
 

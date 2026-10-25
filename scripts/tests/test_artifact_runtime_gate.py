@@ -20,6 +20,7 @@ from artifact_runtime_gate import (
     ALLOWED_PACKAGE_TOKENS,
     CANDIDATE_DISTRIBUTIONS,
     UnsupportedSelection,
+    optional_boundary_is_failure,
     plan_validation,
 )
 
@@ -150,3 +151,22 @@ class TestProvenanceDecision:
             ]
         }
         assert self._first_party_origins(report, tmp_path) == []
+
+
+class TestOptionalBoundaryStrictness:
+    """A skipped optional-ML boundary is not a pass on release candidates."""
+
+    def test_pass_never_fails(self):
+        assert optional_boundary_is_failure(0, False) is False
+        assert optional_boundary_is_failure(0, True) is False
+
+    def test_skip_passes_without_strict_flag(self):
+        assert optional_boundary_is_failure(2, False) is False
+
+    def test_skip_fails_with_strict_flag(self):
+        assert optional_boundary_is_failure(2, True) is True
+
+    @pytest.mark.parametrize("returncode", [1, 3, 4, 5, 127])
+    def test_any_other_rc_always_fails(self, returncode):
+        assert optional_boundary_is_failure(returncode, False) is True
+        assert optional_boundary_is_failure(returncode, True) is True

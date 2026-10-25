@@ -108,6 +108,22 @@ CANDIDATE_DISTRIBUTIONS = frozenset(
 )
 
 
+def optional_boundary_is_failure(
+    returncode: int, require_boundary: bool
+) -> bool:
+    """Return True when the optional-ML boundary rc fails the gate.
+
+    rc=0 always passes (absent runtime named truthfully). rc=2 means
+    the ML stack was present so the boundary was skipped: it fails
+    only with ``--require-optional-boundary``. Any other rc fails.
+    """
+    if returncode == 0:
+        return False
+    if returncode == 2:
+        return require_boundary
+    return True
+
+
 class UnsupportedSelection(ValueError):
     """The requested package selection cannot be validated by this gate."""
 
@@ -212,6 +228,16 @@ def main() -> int:
         help=(
             "The publish workflow's package selection, validated exactly. "
             "Determines which distribution is installed and exercised."
+        ),
+    )
+    ap.add_argument(
+        "--require-optional-boundary",
+        action="store_true",
+        help=(
+            "Fail when the optional-ML boundary probe is skipped "
+            "(rc=2, ML stack present) instead of passing. Release "
+            "candidates must exercise the boundary truthfully: a skip "
+            "is not a pass."
         ),
     )
     args = ap.parse_args()
@@ -427,8 +453,13 @@ def main() -> int:
         5: ("FAIL", "failed somewhere other than the intended boundary"),
     }.get(rb.returncode, ("FAIL", f"unexpected rc={rb.returncode}"))
     print(f"  optional-ml-boundary   {meaning[0]}: {meaning[1]}")
-    if rb.returncode not in (0, 2):
-        results.append(("optional-ml-boundary", rb.returncode, True, meaning[1]))
+    if optional_boundary_is_failure(
+        rb.returncode, args.require_optional_boundary
+    ):
+        note = meaning[1]
+        if rb.returncode == 2:
+            note += " (run the gate without the ML stack installed)"
+        results.append(("optional-ml-boundary", rb.returncode, True, note))
 
     failures = [(p, rc, n) for p, rc, req, n in results if req and rc != 0]
     print("\n" + "=" * 68)

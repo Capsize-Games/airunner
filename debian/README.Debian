@@ -36,4 +36,23 @@ Config: edit /etc/airunner/daemon.yaml, then
 `systemctl restart airunner-headless`. Logs: `journalctl -u
 airunner-headless`.
 
+Port matrix (loopback-only by default)
+-------------------------------------
+  * Daemon control plane: 127.0.0.1:8188, from
+    /etc/airunner/daemon.yaml (seeded from
+    debian/daemon.yaml, mirroring DaemonConfig defaults).
+  * HTTP API: 127.0.0.1:8080, from AIRUNNER_HTTP_PORT in the
+    systemd unit. `curl http://127.0.0.1:8080/health` is the
+    operator health check.
+The two ports are different surfaces: the daemon port speaks the
+internal control plane, the HTTP port serves the FastAPI API.
+
+Environment precedence
+----------------------
+The shipped unit pins AIRUNNER_HTTP_PORT=8080 and
+AIRUNNER_LLM_ON=1. Do not edit the shipped unit: override with
+`systemctl edit airunner-headless` (an Environment= drop-in),
+then `systemctl restart airunner-headless`. The daemon port has
+no unit override: it comes from /etc/airunner/daemon.yaml alone.
+
  -- Capsize LLC <contact@capsizegames.com>  Thu, 08 Oct 2026

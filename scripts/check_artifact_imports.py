@@ -48,8 +48,16 @@ import sysconfig
 import tomllib
 
 # Distributions built from this repository. Imports between them are internal
-# and are validated by being importable like any other.
-OWN_PREFIXES = ("airunner",)
+# and are validated by being importable like any other. Matched exactly:
+# a prefix glob such as `airunner*` also catches vendored copies and
+# unrelated names (e.g. airunner_common), silently treating them as
+# first-party.
+OWN_DISTRIBUTIONS = (
+    "airunner",
+    "airunner_common",
+    "airunner_native",
+    "airunner_services",
+)
 
 DEFAULT_ALLOWLIST = (
     pathlib.Path(__file__).resolve().parent.parent
@@ -66,22 +74,90 @@ def _site_packages() -> pathlib.Path:
     return pathlib.Path(purelib)
 
 
+def _is_type_checking_guard(node: ast.If) -> bool:
+    """Return True when an `if` body only runs for type checkers."""
+    test = node.test
+    if isinstance(test, ast.Name) and test.id == "TYPE_CHECKING":
+        return True
+    return (
+        isinstance(test, ast.Attribute)
+        and test.attr == "TYPE_CHECKING"
+    )
+
+
+def _handler_covers_import_error(node: ast.Try) -> bool:
+    """Return True when every import in try can fail gracefully.
+
+    A ``try`` whose handlers catch ImportError (or catch-all) is the
+    graceful-degradation pattern optional dependencies are supposed to
+    follow. Any other try (try/finally, try/except ValueError) still
+    raises at import time when the module is missing.
+    """
+    if not node.handlers:
+        return False  # try/finally: nothing is caught
+    for handler in node.handlers:
+        if handler.type is None:
+            return True  # bare `except:` catches everything
+        caught = handler.type
+        if isinstance(caught, ast.Name) and caught.id in (
+            "ImportError",
+            "Exception",
+            "BaseException",
+        ):
+            return True
+        if isinstance(caught, ast.Tuple):
+            for name in caught.elts:
+                if isinstance(name, ast.Name) and name.id in (
+                    "ImportError",
+                    "Exception",
+                    "BaseException",
+                ):
+                    return True
+    return False
+
+
 def _module_scope_imports(tree: ast.Module) -> set[str]:
     """Top-level import names only.
 
-    An import nested in a function or a ``try`` block fails lazily, at worst
-    when that code path runs. A module-scope import fails for everyone, on
-    import, which is the failure this gate exists to catch.
+    An import nested in a function fails lazily, at worst when that
+    code path runs. A module-scope import fails for everyone, on
+    import, which is the failure this gate exists to catch. Module-level
+    ``try``/``if`` bodies count too -- they still execute at import
+    time -- except the two graceful patterns: a ``try`` guarded by an
+    ImportError (or broader) handler, and ``if TYPE_CHECKING:`` bodies,
+    which never run outside a type checker.
     """
     names: set[str] = set()
-    for node in tree.body:
+
+    def record(node: ast.Import | ast.ImportFrom) -> None:
         if isinstance(node, ast.Import):
-            names.update(alias.name.split(".")[0] for alias in node.names)
-        elif isinstance(node, ast.ImportFrom):
+            names.update(
+                alias.name.split(".")[0] for alias in node.names
+            )
+        elif not node.level and node.module:
             # Relative imports resolve within the package itself.
-            if node.level or not node.module:
-                continue
             names.add(node.module.split(".")[0])
+
+    def visit(statements: list[ast.stmt]) -> None:
+        for node in statements:
+            if isinstance(node, (ast.Import, ast.ImportFrom)):
+                record(node)
+            elif isinstance(node, ast.Try):
+                # `else`/`finally` run at import time outside the
+                # handlers' protection, so they always count; only
+                # the `try` body itself is excused by graceful
+                # handling. Handler bodies are failure-path-only.
+                if not _handler_covers_import_error(node):
+                    visit(node.body)
+                visit(node.orelse)
+                visit(node.finalbody)
+            elif isinstance(node, ast.If):
+                if _is_type_checking_guard(node):
+                    continue
+                visit(node.body)
+                visit(node.orelse)
+
+    visit(tree.body)
     return names
 
 
@@ -89,25 +165,25 @@ def collect(site_packages: pathlib.Path) -> dict[str, list[str]]:
     """Map each third-party module-scope import to the files that import it."""
     stdlib = set(sys.stdlib_module_names)
     found: dict[str, list[str]] = {}
-    for prefix in OWN_PREFIXES:
-        for root in sorted(site_packages.glob(f"{prefix}*")):
-            if not root.is_dir():
+    for distribution in OWN_DISTRIBUTIONS:
+        root = site_packages / distribution
+        if not root.is_dir():
+            continue
+        for py in sorted(root.rglob("*.py")):
+            try:
+                tree = ast.parse(py.read_text(encoding="utf-8", errors="ignore"))
+            except SyntaxError:
+                # A file that will not parse cannot be imported either, but
+                # that is a build problem, not a declaration problem.
                 continue
-            for py in sorted(root.rglob("*.py")):
-                try:
-                    tree = ast.parse(py.read_text(encoding="utf-8", errors="ignore"))
-                except SyntaxError:
-                    # A file that will not parse cannot be imported either, but
-                    # that is a build problem, not a declaration problem.
+            for name in _module_scope_imports(tree):
+                if name in stdlib or name == "__future__":
                     continue
-                for name in _module_scope_imports(tree):
-                    if name in stdlib or name == "__future__":
-                        continue
-                    if name.startswith(OWN_PREFIXES):
-                        continue
-                    found.setdefault(name, []).append(
-                        str(py.relative_to(site_packages))
-                    )
+                if name in OWN_DISTRIBUTIONS:
+                    continue
+                found.setdefault(name, []).append(
+                    str(py.relative_to(site_packages))
+                )
     return found
 
 

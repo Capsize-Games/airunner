@@ -186,17 +186,28 @@ jobs:
             -e "./services[desktop,development]"
 
       # Required deterministic checks (C01): safety, auth, download,
-      # and data-migration coverage. Same files as the PR contract
-      # list in eval-tests.yml; no continue-on-error anywhere here.
+      # and data-migration coverage. Identical file list to the PR
+      # contract in eval-tests.yml; no continue-on-error anywhere
+      # here. Keep the two lists in lockstep: a check that gates PRs
+      # must gate releases too.
       - name: Run required deterministic checks
         run: |
           PYTHONPATH=services/src python -m pytest \
-            services/tests/test_content_safety_gate.py \
-            services/tests/test_model_load_security.py \
+            services/tests/test_service_bootstrap.py \
+            services/tests/test_legacy_api_surface.py \
             services/tests/test_loopback_auth.py \
             services/tests/test_secret_storage.py \
+            services/tests/test_model_load_security.py \
+            services/tests/test_tool_sandbox_security.py \
+            services/tests/test_dependency_constraints.py \
+            services/tests/test_native_package_isolation.py \
+            services/tests/test_zimage_model_dir_config.py \
+            services/tests/test_third_party_notices.py \
+            services/tests/test_llm_request_for_action_parity.py \
+            services/tests/test_content_safety_gate.py \
             services/tests/test_download_security.py \
             services/tests/test_release_b02.py \
+            services/tests/test_import_boundaries.py \
             -o addopts='' -q
         env:
           AIRUNNER_HEADLESS: "1"
@@ -306,16 +317,20 @@ jobs:
             --check "linux-candidate=${{ needs.linux-candidate.result }}"
 
   build-python-package:
-    # On a release, the verified policy fragment must stage first; a
-    # failed provisioning fails the release (this job skips). Ordinary
-    # dispatches skip provisioning and build with the packaged data.
-    # Nothing here publishes without a green candidate (C01): the
-    # gate result must be exactly `success`, never skipped.
+    # Fail closed on the release path: a release requires the verified
+    # policy fragment, so provision-policy must be exactly `success`
+    # there -- a failure or skip never builds or publishes. Ordinary
+    # dispatches skip provisioning by design and build with the
+    # packaged data. Nothing here publishes without a green candidate
+    # (C01): the gate result must be exactly `success`, never skipped.
     needs: [provision-policy, candidate-gate]
     if: >-
-      always() && (needs.provision-policy.result == 'success' ||
-      needs.provision-policy.result == 'skipped') &&
-      needs.candidate-gate.result == 'success'
+      always() && needs.candidate-gate.result == 'success' && ((
+      github.event_name == 'release' &&
+      needs.provision-policy.result == 'success') || (
+      github.event_name != 'release' && (
+      needs.provision-policy.result == 'success' ||
+      needs.provision-policy.result == 'skipped')))
     runs-on: ubuntu-latest
 
     steps:
@@ -378,7 +393,8 @@ jobs:
           echo "gating candidate version $VERSION for selection: $PUBLISH_PACKAGES"
           python scripts/artifact_runtime_gate.py \
             --find-links dist --version "$VERSION" \
-            --packages "$PUBLISH_PACKAGES"
+            --packages "$PUBLISH_PACKAGES" \
+            --require-optional-boundary
 
       - name: Upload Python distribution artifacts
         uses: actions/upload-artifact@v4

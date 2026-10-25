@@ -105,6 +105,29 @@ def _is_allowlisted(violation: Violation) -> bool:
     return key in ALLOWLIST
 
 
+def _allowlist_drift_note(violation: Violation) -> str | None:
+    """Point at the stale allowlist entry a violation almost matches.
+
+    The allowlist keys on (path, line, module), so a shifted line
+    silently stops matching. When the (path, module) pair still
+    exists in the allowlist at a different line, say so with the
+    expected lines instead of reporting a bare violation.
+    """
+    path = violation.path.as_posix()
+    lines = sorted(
+        line
+        for (entry_path, line, imported) in ALLOWLIST
+        if entry_path == path and imported == violation.imported
+    )
+    if not lines:
+        return None
+    return (
+        f"{violation} [allowlist line drift: "
+        f"entry lists line(s) {lines}; update "
+        "scripts/import_boundary_allowlist.py]"
+    )
+
+
 def run_check(*, repo_root: Path | None = None) -> list[str]:
     """Return every violation as a formatted string; empty means clean."""
     root = (repo_root or _REPO_ROOT).resolve()
@@ -116,7 +139,14 @@ def run_check(*, repo_root: Path | None = None) -> list[str]:
         )
     violations.extend(check_pyside6_not_at_module_scope(root))
 
-    return [str(v) for v in violations if not _is_allowlisted(v)]
+    problems: list[str] = []
+    for violation in violations:
+        if _is_allowlisted(violation):
+            continue
+        problems.append(
+            _allowlist_drift_note(violation) or str(violation)
+        )
+    return problems
 
 
 if __name__ == "__main__":

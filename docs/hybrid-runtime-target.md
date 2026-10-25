@@ -35,13 +35,14 @@ AIRunner currently supports two installation or delivery modes while this
 runtime target is being productized:
 
 1. `dev` for repo-local editable installs driven by `./scripts/install.sh`
-2. `distributed` for separate daemon and GUI-client installs driven by
-  `./deployment/install_distributed.sh`
+2. `distributed` for daemon-only installs driven by
+  `./deployment/install_distributed.sh` (the GUI-client role was
+  removed with the desktop client)
 
 Those modes share the same package split:
 
-- `native/` owns the Python launcher entry point and bundle layout helpers
-- `src/` owns the desktop client
+- `native/` owns the headless launcher entry point and bundle layout helpers
 - `services/` owns the daemon and orchestration layer
-- `scripts/` owns developer tooling such as the test runner, UI build, and
-  quality reports
+- `scripts/` owns developer tooling such as the services test runner and
+  quality reports (the UI build helpers were removed with the desktop
+  client)

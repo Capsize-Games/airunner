@@ -16,6 +16,16 @@ Package: airunner
 Architecture: all
 # python3-dotenv is explicit (not just ${python3:Depends}) because the
 # vendored airunner_common.settings imports dotenv at module scope.
+# Runtime closure audit: fastapi/uvicorn/pydantic and the rest of the
+# daemon's runtime come from services/setup.py install_requires via
+# pybuild-generated ${python3:Depends} above (dh_python3 maps the wheel
+# metadata to distro packages); they are not re-listed here by hand so
+# the two sources cannot drift apart. Explicit distro deps are added
+# only where the wheel metadata cannot express them: python3-yaml and
+# python3-dotenv (vendored airunner_common.settings imports dotenv at
+# module scope), plus adduser for the postinst system user. The
+# loose-file native/common trees (debian/airunner.install) are
+# deliberately absent from Depends -- see that file's version stamps.
 Depends: ${python3:Depends}, ${misc:Depends}, python3-yaml, python3-dotenv, adduser
 Description: Headless service daemon for AI Runner (services only)
  The services/ package surface of AIRunner: headless orchestration layer

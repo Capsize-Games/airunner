@@ -1,9 +1,13 @@
 name: Docker Release
 
+# Images only publish from gated sources: completed Hybrid Runtime CI
+# runs that succeeded, published releases, or a manual dispatch. A
+# plain master push no longer publishes untested `latest` tags.
 on:
-  push:
-    branches:
-      - master
+  workflow_run:
+    workflows: ["Hybrid Runtime CI"]
+    types: [completed]
+    branches: [master]
   release:
     types: [published]
   workflow_dispatch:
@@ -14,6 +18,10 @@ permissions:
 
 jobs:
   build-and-push:
+    # A failed or untested contract run must never publish an image.
+    if: >-
+      github.event_name != 'workflow_run' ||
+      github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
 
     strategy:
@@ -29,6 +37,10 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          # For workflow_run events this is the tested head commit;
+          # for releases/dispatches it falls back to the event ref.
+          ref: ${{ github.event.workflow_run.head_sha || github.ref }}
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -40,14 +52,33 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ github.token }}
 
-      - name: Build and push ${{ matrix.name }} image
+      - name: Build ${{ matrix.name }} image (no push yet)
         uses: docker/build-push-action@v6
         with:
           context: .
           file: ./Dockerfile
-          push: true
+          push: false
+          load: true
           platforms: linux/amd64
           tags: ${{ matrix.tags }}
           build-args: |
             AIRUNNER_ENABLE_CUDA=0
             AIRUNNER_INSTALL_PROFILES=${{ matrix.profiles }}
+
+      # Smoke the image before it can reach the registry: the same
+      # offline generate-config probe the PyPI artifact gate runs.
+      - name: Smoke test the built image
+        run: |
+          set -e
+          tag="$(printf '%s' '${{ matrix.tags }}' | head -n 1)"
+          docker run --rm --entrypoint airunner-daemon "$tag" \
+            --generate-config
+
+      - name: Push ${{ matrix.name }} image
+        run: |
+          set -e
+          printf '%s' '${{ matrix.tags }}' | while IFS= read -r tag; do
+            if [ -n "$tag" ]; then
+              docker push "$tag"
+            fi
+          done

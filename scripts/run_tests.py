@@ -514,8 +514,8 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  %(prog)s --unit                    Run all unit tests
-    %(prog)s --eval                    Run eval tests only
+  %(prog)s --unit                    Run all services unit tests
+    %(prog)s --eval                    Run eval tests only (external repo)
         %(prog)s --eval --judge-model qwen3.5-9b
                                                                             Run judged evals with a
                                                                             separate local judge model
@@ -529,7 +529,7 @@ Examples:
   %(prog)s --eval --model /path/to/model    Test with specific model
   %(prog)s --eval --file test_calendar_tool_eval.py --model /path/to/model    Run specific eval test file
   %(prog)s --eval --skip-slow        Run only fast eval tests
-  %(prog)s --all                     Run all tests
+  %(prog)s --all                     Run all services tests (unit + smoke)
   %(prog)s --unit --component llm    Run LLM component tests only
   %(prog)s --unit -v                 Run unit tests with verbose output
         """,
@@ -578,13 +578,14 @@ Examples:
     parser.add_argument(
         "--gui-functional",
         action="store_true",
-        help="Run headless GUI functional tests with mocked backends",
+        help="Removed with the desktop GUI (always exits 1); "
+        "use the services suite instead",
     )
 
     parser.add_argument(
         "--all",
         action="store_true",
-        help="Run all tests (unit + runtime smoke + eval)",
+        help="Run all services-only tests (unit + runtime smoke)",
     )
 
     parser.add_argument(

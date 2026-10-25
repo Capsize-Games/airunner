@@ -71,19 +71,51 @@ def test_ignores_relative_imports():
 
 
 def test_reports_conditional_import_at_module_scope():
-    # `if TYPE_CHECKING:` and similar still execute at import time for the
-    # non-TYPE_CHECKING branch, but they are not bare top-level statements;
-    # the checker deliberately does not descend into them.
+    # A conditional import at module scope still executes at import time
+    # whenever the branch is taken, so it counts.
     assert _imports(
         """
         if True:
             import lxml
         """
-    ) == set()
+    ) == {"lxml"}
+
+
+def test_ignores_type_checking_import():
+    # `if TYPE_CHECKING:` bodies never run outside a type checker.
+    # (`typing` itself is stdlib and filtered by collect, not here.)
+    assert _imports(
+        """
+        from typing import TYPE_CHECKING
+        if TYPE_CHECKING:
+            import lxml
+        """
+    ) == {"typing"}
+
+
+def test_reports_try_import_without_import_error_handler():
+    # A try without an ImportError handler (try/finally, or an
+    # unrelated except) still raises at import time when missing.
+    assert _imports(
+        """
+        try:
+            import lxml
+        finally:
+            pass
+        """
+    ) == {"lxml"}
+    assert _imports(
+        """
+        try:
+            import lxml
+        except ValueError:
+            pass
+        """
+    ) == {"lxml"}
 
 
 def test_collect_skips_stdlib_and_first_party(tmp_path: Path):
-    pkg = tmp_path / "airunner_demo"
+    pkg = tmp_path / "airunner_services"
     pkg.mkdir()
     (pkg / "__init__.py").write_text("")
     (pkg / "mod.py").write_text(
@@ -95,8 +127,19 @@ def test_collect_skips_stdlib_and_first_party(tmp_path: Path):
         assert excluded not in found
 
 
+def test_collect_ignores_lookalike_directories(tmp_path: Path):
+    # Exact distribution matching: a vendored `airunner_common_copy`
+    # directory is not scanned as first-party, and its imports are
+    # not attributed to this project.
+    pkg = tmp_path / "airunner_common_copy"
+    pkg.mkdir()
+    (pkg / "__init__.py").write_text("")
+    (pkg / "mod.py").write_text("import pygments\n")
+    assert collect(tmp_path) == {}
+
+
 def test_collect_records_every_importing_file(tmp_path: Path):
-    pkg = tmp_path / "airunner_demo"
+    pkg = tmp_path / "airunner_services"
     pkg.mkdir()
     (pkg / "__init__.py").write_text("")
     for name in ("a.py", "b.py"):
@@ -105,7 +148,7 @@ def test_collect_records_every_importing_file(tmp_path: Path):
 
 
 def test_collect_ignores_unparseable_file(tmp_path: Path):
-    pkg = tmp_path / "airunner_demo"
+    pkg = tmp_path / "airunner_services"
     pkg.mkdir()
     (pkg / "__init__.py").write_text("")
     (pkg / "broken.py").write_text("def (:\n")

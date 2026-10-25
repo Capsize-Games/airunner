@@ -31,7 +31,11 @@ services:
       - ~/.local/share/airunner:/home/airunner/.local/share/airunner
       # Mount local huggingface cache
       - ~/.cache/huggingface:/home/airunner/.cache/huggingface
-      # Mount source code for live development
+      # Development-only source mounts: live repo code shadows the
+      # baked image, so container behavior diverges from the
+      # published image operators actually run. Keep these for local
+      # development; the release compose must drop them and run the
+      # image as built.
       - ./services:/app/services:ro
       - ./native:/app/native:ro
     ports:

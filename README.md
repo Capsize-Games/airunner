@@ -2,7 +2,7 @@
 
 ## Edge AI for art and chat companions, built with privacy, flexibility, and creativity in mind.
 
-AI Runner is a private AI companion you shape — name, personality, voice, memory — and a layered canvas for AI art generation. Everything runs on your machine by default.
+AI Runner is a private headless AI daemon — local LLM, image generation, TTS, and STT served over an HTTP API. Everything runs on your machine by default.
 
 
 <img src="./images/art_interface.png" alt="AI Runner Logo" />
@@ -33,43 +33,39 @@ AI Runner is free and GPL-3.0. If it is useful to you, [**sponsoring the project
 
 ## What AI Runner Is For
 
-AI Runner is built around two interlocking experiences.
+AI Runner is a headless local-AI daemon. It serves LLM, image
+generation, TTS, and STT over an HTTP API on your own hardware,
+consumed by airunnerweb or any OpenAI/Ollama-compatible client.
 
-**A companion you shape.** Name it, give it a personality, assign it
-a voice, and let it build memory of who you are over time. Your
-companion is aware of the time, date, and weather, and its mood shifts
-naturally through conversation. Everything — the conversations, the
-memories, the personality — stays on your machine.
+**Local models, API-first.** Run GGUF LLMs through a llama.cpp
+sidecar, generate images with Z-Image-class pipelines, and synthesize
+or transcribe speech — all behind one FastAPI server with loopback
+auth. Conversations, memories, and personality state stay on your
+machine.
 
-**A canvas for AI art.** A layered drawing and generation surface where
-you can sketch, paint, generate, and filter. Convert sketches to images,
-iterate with image-to-image, composite on layers, and apply styles and
-filters — with your companion present alongside you while you create.
-
-Neither experience requires an internet connection, an API key, or a
-subscription. Everything runs on your hardware.
+Neither the daemon nor its sidecars require an internet connection,
+an API key, or a subscription to serve local models. Everything runs
+on your hardware. (The Qt desktop client was removed; there is no
+bundled GUI, canvas, or companion window in this repo.)
 
 ## ✨ Key Features
 
 | Feature | Description |
 |---------|-------------|
-| **🤖 AI Companion** | Shape a named, voiced companion with persistent personality, shifting mood, and long-term memory built from your conversations |
-| **🎨 Layered Canvas** | Draw, paint, generate, and filter on a multi-layer canvas — convert sketches to images, composite scenes, and iterate in place |
 | **🖼️ Image Generation** | Z-Image Turbo with embeddings, image-to-image, inpainting, and post-process filters, background removal |
-| **🗣️ Voice Conversation** | Full TTS and STT — speak to your companion and hear it respond in a voice you choose |
-| **🧠 Memory & Recall** | Companion builds long-term memory of you across sessions with RAG-powered recall |
-| **🌤️ Environmental Awareness** | Companion is aware of time, date, and local weather — grounded in the real moment |
+| **🗣️ Voice Conversation** | Full TTS and STT served over the daemon API |
+| **🧠 Memory & Recall** | Long-term memory across sessions with RAG-powered recall |
 | **🔒 Privacy First** | Private by default — no telemetry and no data leaves your machine unless you explicitly enable an optional cloud feature |
 | **🛡️ Safety Filters** | Configurable NSFW output filtering and always-on prompt classifier for illegal content |
-| **📦 Model Management** | Built-in HuggingFace and Civitai downloaders with support for multiple local LLMs and image models |
+| **📦 Model Management** | HuggingFace and CivitAI downloader CLIs with support for multiple local LLMs and image models |
 
 ### 🌍 Language Support
 
-| Language | TTS | LLM | STT | GUI |
-|----------|-----|-----|-----|-----|
-| English | ✅ | ✅ | ✅ | ✅ |
-| Japanese | ✅ | ✅ | ❌ | ✅ |
-| Spanish/French/Chinese/Korean | ✅ | ✅ | ❌ | ❌ |
+| Language | TTS | LLM | STT |
+|----------|-----|-----|-----|
+| English | ✅ | ✅ | ✅ |
+| Japanese | ✅ | ✅ | ❌ |
+| Spanish/French/Chinese/Korean | ✅ | ✅ | ❌ |
 
 ## 🧱 Package Overview
 
@@ -186,8 +182,7 @@ The container publishes the headless daemon's HTTP API on port 8080 with endpoin
 
 Use this path when you want to assemble the environment manually instead of
 using `./scripts/install.sh` for repo development or
-`./deployment/install_distributed.sh` for managed daemon and GUI-client
-installs.
+`./deployment/install_distributed.sh` for managed daemon installs.
 
 **Python 3.13+ required.** We recommend using `pyenv` and `venv`.
 
@@ -195,8 +190,8 @@ installs.
    ```bash
    sudo apt update && sudo apt install -y \
      build-essential cmake git curl wget pkg-config \
-     nvidia-cuda-toolkit pipewire libportaudio2 libxcb-cursor0 \
-     espeak espeak-ng-espeak qt6-qpa-plugins qt6-wayland \
+     nvidia-cuda-toolkit pipewire libportaudio2 \
+     espeak espeak-ng-espeak \
      libsentencepiece-dev \
      mecab libmecab-dev mecab-ipadic-utf8 libxslt-dev mkcert
    ```
@@ -218,36 +213,26 @@ installs.
    - `openvoice_jp` / `openvoice_kr`: MeCab-backed Japanese and Korean voice packs
 
    All of the runtime profiles above live on the `airunner-services` package.
-   The desktop GUI ships in the root `airunner` package, which pulls in
-   `airunner-services==6.1.3` automatically (issue #2037). The optional
-   `airunner-native[gui]` extra provides the native launcher and bundle
-   tooling.
+   The optional `airunner-native[services]` extra provides the headless
+   launcher alongside the services runtime.
 
-4. **Install AI Runner:**
+4. **Install AI Runner (services-only):**
 
-   The published packages are `airunner` (desktop GUI), `airunner-services`
-   (headless daemon, API server, and model runtimes), `airunner-native`
-   (optional native launcher), and `airunner-common` (shared metadata). The
-   `airunner` package itself only ships `analysis`, `ml`, and `development`
-   extras; all model runtimes live in the `airunner-services` extras (issues
-   #2039/#2040).
+   The published packages are `airunner-services` (headless daemon, API
+   server, and model runtimes), `airunner-native` (headless launcher),
+   and `airunner-common` (shared metadata). All model runtimes live in
+   the `airunner-services` extras (issues #2039/#2040). The desktop GUI
+   is removed and the root `airunner` distribution is no longer
+   published.
 
-   From PyPI (full GUI install):
+   From PyPI:
    ```bash
    # torch family pinned to the CUDA 12.9 wheel line (issues #2036/#2041)
    pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu129
-   # Desktop GUI; pulls in airunner-services==6.1.3 automatically
-   pip install "airunner"
    # Model runtimes (LLM, STT, art, TTS); `headless` aggregates the four extras
    pip install "airunner-services[headless]"
-   # Optional: native launcher and bundle tooling (also pulls the GUI)
-   pip install "airunner-native[gui]"
-   ```
-
-   For a headless-only install (no GUI), install the services package with the
-   runtimes you need:
-   ```bash
-   pip install "airunner-services[headless]"
+   # Optional: headless launcher and bundle tooling
+   pip install "airunner-native[services]"
    ```
 
    From a local clone in editable mode:
@@ -268,7 +253,6 @@ installs.
    # step needed for it anymore.
    pip install -e "./services[headless,development]"
    pip install -e ./native
-   pip install -e .
    ```
 
   The base `tts-python` profile intentionally excludes the MeCab-backed
@@ -292,17 +276,17 @@ installs.
 
 6. **Run:**
    ```bash
-   airunner
+   airunner-headless --port 8080
    ```
 
 ### Alembic Upgrades
 
 When you need to run database migrations manually from a local clone, use the
-repo Alembic config and upgrade all heads:
+services Alembic config and upgrade all heads:
 
 ```bash
 source venv/bin/activate
-alembic -c src/airunner/alembic.ini upgrade heads
+alembic -c services/src/airunner_services/database/alembic.ini upgrade heads
 ```
 
 If you are targeting a non-default database, set `AIRUNNER_DATABASE_URL`
@@ -346,37 +330,23 @@ ship a GGUF variant, and "Custom Local Path" points at your own file.
 
 ## 🛠️ CLI Commands
 
+All commands below are headless-only; the desktop GUI is removed.
+
 | Command | Description |
 |---------|-------------|
-| `airunner` | Launch GUI |
 | `airunner-headless` | Start headless API server |
+| `airunner-daemon` | Manage the local daemon lifecycle |
+| `airunner-service` | Service control helper |
 | `airunner-hf-download` | Download/manage models from HuggingFace |
 | `airunner-civitai-download` | Download models from CivitAI |
-| `airunner-build-ui` (dev) | Rebuild UI from `.ui` files (`python scripts/build_ui.py`) |
-| `airunner-tests` (dev) | Run test suite (`python scripts/run_tests.py`) |
 | `airunner-generate-cert` | Generate SSL certificate |
 
-**Note:** To download models, use *Tools → Download Models* from the main
-application menu. The GUI now opens a filtered CivitAI browser for Z-Image
-Turbo models and queues downloads through the local daemon. You
-can also use `airunner-hf-download` / `airunner-civitai-download` from the
-command line.
+Run the test suite from a checkout with `python scripts/run_tests.py`
+(`--unit`, `--all`, or one of the runtime-smoke flags).
 
-### Rebuilding Qt UI Files
-
-When you change any `.ui` file in a local clone, rebuild the generated
-`*_ui.py` files from the repo root with:
-
-```bash
-source venv/bin/activate
-python scripts/build_ui.py
-```
-
-If you installed AIRunner's dev console scripts, `airunner-build-ui` runs the
-same rebuild; from a source checkout use `python scripts/build_ui.py`.
-
-This rebuild also refreshes the Qt resources and generated stylesheet
-assets.
+**Note:** To download models, use `airunner-hf-download` /
+`airunner-civitai-download` from the command line; downloads queue
+through the local daemon.
 
 ---
 

@@ -34,6 +34,10 @@ Options:
   --systemd                   Register the daemon role with systemd
   -h, --help                  Show this help text
 EOF
+    echo ""
+    echo "Model sidecars (llama-server/whisper-server) are not installed"
+    echo "here: fetch the pinned prebuilt bundle from airunner-native"
+    echo "(tag in .github/native-sidecar-version) after installing."
 }
 
 
@@ -112,10 +116,30 @@ install_packages() {
 
     case "$role" in
         daemon)
+            # The daemon role still launches through
+            # airunner_native.launcher (see the import-boundary
+            # allowlist), so the venv needs both distributions.
             "$venv_python" -m pip install \
-                "$ROOT_DIR/services[$service_profile]"
+                "$ROOT_DIR/services[$service_profile]" \
+                "$ROOT_DIR/native"
             ;;
     esac
+}
+
+
+fetch_sidecar_note() {
+    # This installer never builds or downloads model sidecars
+    # (llama-server/whisper-server): that toolchain lives in
+    # Capsize-Games/airunner-native on its own release cadence.
+    # After installing, fetch the pinned prebuilt bundles named in
+    # .github/native-sidecar-version, the same source
+    # scripts/install.sh --sidecars uses. Fetch the matching
+    # runtime-sidecars-linux.tar.gz release asset from
+    # Capsize-Games/airunner-native for that tag.
+    log_info 'Sidecars are a separate post-step: fetch the pinned'
+    log_info 'runtime-sidecars-linux.tar.gz from airunner-native'
+    log_info '(tag in .github/native-sidecar-version) before enabling'
+    log_info 'local-model modalities.'
 }
 
 
@@ -211,6 +235,7 @@ main() {
 
     log_info "Installing ${ROLE} packages with services[${service_profile}]"
     install_packages "$venv_python" "$ROLE" "$service_profile"
+    fetch_sidecar_note
     link_role_command "$role_root" "$ROLE"
 
     if [[ "$INSTALL_SYSTEMD" == '1' ]]; then

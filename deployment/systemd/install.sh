@@ -26,6 +26,10 @@ ACTUAL_GROUP=$(id -gn "$ACTUAL_USER")
 TEMPLATE_ROOT="${AIRUNNER_TEMPLATE_ROOT:-$( cd "$( dirname "${BASH_SOURCE[0]}" )/../.." && pwd )}"
 AIRUNNER_DIR="${AIRUNNER_INSTALL_ROOT:-$TEMPLATE_ROOT}"
 
+# Python precedence (first executable wins): the AIRUNNER_PYTHON
+# environment override (passed by install_distributed.sh), then
+# <install>/venv, <install>/.venv, <install>/bin. Keep this order in
+# sync with deployment/install_distributed.sh's AIRUNNER_PYTHON pass.
 find_bundle_python() {
     local candidates=(
         "${AIRUNNER_PYTHON:-}"
@@ -46,7 +50,10 @@ find_bundle_python() {
 }
 
 escape_sed_replacement() {
-    printf '%s' "$1" | sed 's/[&]/\\&/g'
+    # The template below is rendered with `sed ... -e "s|...|...|g"`,
+    # so the replacement must escape the `|` delimiter as well as sed's
+    # own metacharacters (`&` repeats the match, `\` starts an escape).
+    printf '%s' "$1" | sed 's/[&|\\]/\\&/g'
 }
 
 echo -e "${YELLOW}Configuration:${NC}"
@@ -68,7 +75,7 @@ fi
 # Check if bundle Python exists
 if ! BUNDLE_PYTHON=$(find_bundle_python); then
     echo -e "${RED}Error: No bundle Python found under $AIRUNNER_DIR${NC}"
-    echo "Expected one of:"
+    echo "Set AIRUNNER_PYTHON explicitly, or provide one of:"
     echo "  $AIRUNNER_DIR/venv/bin/python"
     echo "  $AIRUNNER_DIR/.venv/bin/python"
     echo "  $AIRUNNER_DIR/bin/python"

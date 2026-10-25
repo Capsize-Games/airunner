@@ -49,8 +49,14 @@ menu entry and icon.
   `AIRUNNER_BUNDLE_ROOT` (the version directory) and
   `AIRUNNER_DATA_DIR` (the data directory), then execs the daemon;
   explicit environment values are respected as overrides.
-- Confirm the menu entry shows the installed icon and the daemon log
-  appears in the terminal window.
+- Confirm the menu entry shows the installed icon, then verify the
+  headless API (default HTTP 127.0.0.1:8080):
+  `curl http://127.0.0.1:8080/health` (also `/api/v1/health`).
+- The bundle is headless and Qt-free: there is no terminal window.
+  When the daemon runs under systemd instead, check
+  `systemctl status airunner-headless` and
+  `journalctl -u airunner-headless`; for the user-level install
+  above, the daemon logs to the configured runtime log directory.
 
 ## 4. Guarantees and limits
 

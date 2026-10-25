@@ -106,9 +106,15 @@ RUN set -e; \
     if dpkg -l python3-cryptography >/dev/null 2>&1; then \
         apt-get purge -y python3-cryptography; \
     fi; \
-    service_profiles="$(printf '%s' ",${AIRUNNER_INSTALL_PROFILES}," | sed 's/,gui,/,/g')"; \
-    service_profiles="${service_profiles#,}"; \
-    service_profiles="${service_profiles%,}"; \
+    known_profiles="$(python3.13 -c 'import types; src = open("./services/setup.py").read().replace("setup(**build_services_setup_kwargs(package_source_dir=\"src\"))", ""); m = types.ModuleType("probe"); m.__file__ = "./services/setup.py"; exec(compile(src, "setup.py", "exec"), m.__dict__); print(",".join(sorted(m.build_services_extras_require())))')"; \
+    checked_profiles=""; \
+    for profile in $(printf '%s' "${AIRUNNER_INSTALL_PROFILES}" | tr ',' ' '); do \
+        case ",${known_profiles}," in \
+            *",${profile},"*) checked_profiles="${checked_profiles},${profile}";; \
+            *) echo "ERROR: unknown AIRUNNER_INSTALL_PROFILES entry '${profile}'. Known services extras: ${known_profiles}. The desktop GUI is removed; use 'headless' for the headless runtime aggregate." >&2; exit 1;; \
+        esac; \
+    done; \
+    service_profiles="${checked_profiles#,}"; \
     if [ -n "${service_profiles}" ]; then \
         python3.13 -m pip install \
             --extra-index-url https://download.pytorch.org/whl/cu129 \
