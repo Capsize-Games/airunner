@@ -212,9 +212,11 @@ jobs:
             "compel==2.4.0" \
             "bitsandbytes==0.46.1" \
             "cryptography==46.0.7" \
+            "langchain-huggingface==1.2.2" \
             "langchain-core==1.3.3" \
             "langgraph==1.0.8" \
-            "langgraph-prebuilt==1.0.7"
+            "langgraph-prebuilt==1.0.7" \
+            "librosa==0.11.0"
 
       - name: Run ${{ matrix.name }} runtime smoke tests
         run: |
