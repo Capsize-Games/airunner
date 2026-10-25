@@ -34,7 +34,7 @@ ALLOWLIST: frozenset[tuple[str, int, str]] = frozenset(
         # this issue.
         (
             "services/src/airunner_services/bin/airunner_headless.py",
-            471,
+            474,
             "airunner_native.launcher",
         ),
         (
