@@ -10,6 +10,11 @@ logger = get_logger(__name__)
 RAW_MAGIC = b"AIRAW1"
 PNG_MAGIC = b"\x89PNG\r\n\x1a\n"
 
+#: Decompression-bomb guard: reject images above ~50 megapixels.
+MAX_IMAGE_PIXELS = 50_000_000
+#: Raw header dimensions are untrusted; cap each axis before use.
+MAX_RAW_DIMENSION = 16384
+
 
 def _validate_or_none(binary_data: bytes):
     """Quick sanity filter: if not raw or PNG signature, skip libpng parse.
@@ -51,6 +56,14 @@ def _try_raw_decode(binary_data: bytes):
     try:
         w = int.from_bytes(binary_data[6:10], "big")
         h = int.from_bytes(binary_data[10:14], "big")
+        if (
+            w < 1
+            or h < 1
+            or w > MAX_RAW_DIMENSION
+            or h > MAX_RAW_DIMENSION
+            or w * h > MAX_IMAGE_PIXELS
+        ):
+            return None
         rgba = binary_data[14:]
         if len(rgba) != w * h * 4:
             return None
@@ -159,8 +172,23 @@ def convert_binary_to_image(binary_data) -> Image:  # type: ignore[override]
     try:
         bytes_ = io.BytesIO(validated)
         img = Image.open(bytes_)
-        # Additional validation: try to access basic properties
-        _ = img.size  # This will trigger libpng read if needed
+        # Decompression-bomb guard: check dimensions from the header
+        # before the full pixel buffer is decoded.
+        width, height = img.size
+        if (
+            width < 1
+            or height < 1
+            or width > MAX_RAW_DIMENSION
+            or height > MAX_RAW_DIMENSION
+            or width * height > MAX_IMAGE_PIXELS
+        ):
+            logger.error(
+                "[convert_binary_to_image] Rejected oversized image "
+                "%sx%s",
+                width,
+                height,
+            )
+            return None
         img.load()  # Force decode to raise early if corrupt
         return img
     except PIL.UnidentifiedImageError as e:

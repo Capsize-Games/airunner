@@ -92,14 +92,17 @@ def build_native_extras_require() -> dict[str, list[str]]:
     # headless services runtime instead of failing on an
     # uninstallable pin. Kept under the old names so existing
     # install commands keep working against the services surface.
-    headless_requirements = [f"airunner-services=={VERSION}"]
+    # The pin floats within the compatible 6.x line on purpose: native
+    # and services version independently, so an exact == pin would go
+    # stale the moment either side releases (as ==6.1.3 did).
+    headless_requirements = ["airunner-services>=6.1,<7"]
     return {
         "development": DEVELOPMENT_REQUIREMENTS,
         "dev": DEVELOPMENT_REQUIREMENTS,
         # A headless/daemon-role install: this launcher plus the
         # services package, no GUI.
-        "services": [f"airunner-services=={VERSION}"],
-        "daemon": [f"airunner-services=={VERSION}"],
+        "services": ["airunner-services>=6.1,<7"],
+        "daemon": ["airunner-services>=6.1,<7"],
         # Former GUI-client-role names; now aliases for headless.
         "gui": headless_requirements,
         "desktop": headless_requirements,

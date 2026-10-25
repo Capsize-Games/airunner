@@ -18,6 +18,11 @@ class KiwixAPI:
 
     ATOM_URL = "https://browse.library.kiwix.org/catalog/v2/entries"
 
+    #: Cap the catalog response and caller-supplied parameter lengths.
+    MAX_FEED_BYTES = 5 * 1024 * 1024
+    MAX_PARAM_LENGTH = 64
+    MAX_ENTRIES = 500
+
     @staticmethod
     def list_zim_files(
         language: Optional[str] = None,
@@ -26,16 +31,20 @@ class KiwixAPI:
         """Return Kiwix catalog entries filtered by language or query."""
         params: dict[str, str] = {}
         if language:
-            params["lang"] = language
+            params["lang"] = language[: KiwixAPI.MAX_PARAM_LENGTH]
         if query:
-            params["q"] = query
+            params["q"] = query[: KiwixAPI.MAX_PARAM_LENGTH]
 
         url = KiwixAPI.ATOM_URL
         if params:
             url = f"{url}?{urlencode(params)}"
 
         try:
-            response_text = safe_fetch_url(url, timeout_seconds=15)
+            response_text = safe_fetch_url(
+                url,
+                timeout_seconds=15,
+                max_bytes=KiwixAPI.MAX_FEED_BYTES,
+            )
             root = ET.fromstring(response_text)
             return KiwixAPI._parse_entries(root)
         except Exception as error:
@@ -54,7 +63,9 @@ class KiwixAPI:
             "dc": "http://purl.org/dc/terms/",
         }
         entries: list[dict[str, str]] = []
-        for entry in root.findall("atom:entry", ns):
+        for entry in root.findall("atom:entry", ns)[
+            : KiwixAPI.MAX_ENTRIES
+        ]:
             zim = {
                 "id": entry.findtext("atom:id", default="", namespaces=ns),
                 "title": entry.findtext(
