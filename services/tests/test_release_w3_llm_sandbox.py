@@ -747,10 +747,17 @@ def test_transformer_mixin_degrades_on_typed_error() -> None:
     manager = mixin_mod.ModelLoaderMixin()
     manager._model = None
     manager.logger = mock.Mock()
-    with mock.patch.object(
-        manager,
-        "_execute_model_loading",
-        side_effect=mixin_mod.ModelLoadError("weights missing"),
+    # Hermetic: _load_model() otherwise calls torch.cuda.empty_cache()
+    # via _log_gpu_memory_status, which segfaults when earlier GPU tests
+    # have torn down the CUDA context (order-dependent, cf. #2276). GPU
+    # logging is not what this test verifies.
+    with (
+        mock.patch.object(manager, "_log_gpu_memory_status"),
+        mock.patch.object(
+            manager,
+            "_execute_model_loading",
+            side_effect=mixin_mod.ModelLoadError("weights missing"),
+        ),
     ):
         manager._load_model()  # must not raise: graceful degrade
     assert manager._model is None
