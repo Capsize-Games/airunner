@@ -285,17 +285,40 @@ def run_command(cmd: list[str], description: str, env: dict = None) -> int:
 
 
 def _has_pytest_marker(test_path: Path, marker: str) -> bool:
-    """Check test source for a direct ``pytest.mark.<marker>`` declaration.
+    """Check test source for a direct pytest marker declaration.
 
     This avoids importing unrelated test modules when an optional marker is
-    absent. If a file cannot be parsed, let pytest handle the error instead of
-    treating the suite as empty.
+    absent. If parsing or dynamic marker hooks make the result ambiguous, let
+    pytest handle collection instead of treating the suite as empty.
     """
-    for path in test_path.rglob("test_*.py"):
+    for path in (*test_path.rglob("test_*.py"), *test_path.rglob("conftest.py")):
         try:
             tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
         except (OSError, UnicodeError, SyntaxError):
             return True
+        if path.name == "conftest.py" and any(
+            isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+            and node.name in {"pytest_configure", "pytest_collection_modifyitems"}
+            for node in tree.body
+        ):
+            return True
+
+        pytest_aliases = {"pytest"}
+        mark_aliases: set[str] = set()
+        for node in tree.body:
+            if isinstance(node, ast.Import):
+                pytest_aliases.update(
+                    alias.asname or alias.name
+                    for alias in node.names
+                    if alias.name == "pytest"
+                )
+            elif isinstance(node, ast.ImportFrom) and node.module == "pytest":
+                mark_aliases.update(
+                    alias.asname or alias.name
+                    for alias in node.names
+                    if alias.name == "mark"
+                )
+
         for node in ast.walk(tree):
             if not isinstance(node, ast.Attribute) or node.attr != marker:
                 continue
@@ -304,8 +327,10 @@ def _has_pytest_marker(test_path: Path, marker: str) -> bool:
                 isinstance(parent, ast.Attribute)
                 and parent.attr == "mark"
                 and isinstance(parent.value, ast.Name)
-                and parent.value.id == "pytest"
+                and parent.value.id in pytest_aliases
             ):
+                return True
+            if isinstance(parent, ast.Name) and parent.id in mark_aliases:
                 return True
     return False
 
