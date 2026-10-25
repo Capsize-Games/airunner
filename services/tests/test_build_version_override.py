@@ -9,7 +9,6 @@ from pathlib import Path
 
 _PROJECT_ROOT = Path(__file__).resolve().parents[2]
 _SETUP_FILES = (
-    _PROJECT_ROOT / "setup.py",
     _PROJECT_ROOT / "services" / "setup.py",
     _PROJECT_ROOT / "native" / "setup.py",
 )

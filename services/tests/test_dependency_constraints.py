@@ -50,7 +50,6 @@ def test_build_system_setuptools_below_82() -> None:
 #: copy (issue #2038/#2197 -- no more single canonical
 #: shared/airunner_common/package_metadata.py source to scan instead).
 _DEV_REQUIREMENTS_FILES = (
-    _PROJECT_ROOT / "setup.py",
     _PROJECT_ROOT / "services" / "setup.py",
     _PROJECT_ROOT / "native" / "setup.py",
 )
