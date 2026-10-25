@@ -74,8 +74,8 @@
 - **Currently**: Melo/OpenVoice vendor code, TTS model managers, and inference all live in `src/airunner`
 - **Target**: Only audio **playback** (tts_vocalizer_worker) stays in GUI. All inference (model loading, synthesis) moves to services.
 - **Vendor code**: `src/airunner/vendor/melo/` and `src/airunner/vendor/openvoice/` → `services/src/airunner_services/vendor/`
-- **Managers**: `components/tts/managers/` → `services/src/airunner_services/tts/`
-- **Tests**: `components/tts/tests/` → `services/tests/tts/`
+- **Managers**: `components/tts/managers/` → `services/src/airunner_services/tts/` (never created — TTS inference now lives in `services/src/airunner_services/{api/services,api/routes,runtimes,workers}`)
+- **Tests**: `components/tts/tests/` → `services/tests/tts/` (never created — see above; the `src/airunner/` source tree no longer exists after the GUI package split)
 
 ---
 

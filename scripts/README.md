@@ -8,8 +8,9 @@ in a repo checkout.
 
 - the unified test runner (`run_tests.py`) that drives the unit, runtime
   smoke, eval, and GUI functional suites
-- UI and resource build helpers (`build_ui.py`, `process_qss.py`,
-  `compile_translations.py`)
+- UI and resource build helpers (removed with the GUI package split;
+  `build_ui.py`, `process_qss.py`, and `compile_translations.py` no
+  longer exist — Qt UI sources now build with their owning GUI package)
 - developer install helpers (`install.sh`, `install_helpers.sh`). Native
   runtime sidecar (llama.cpp/whisper.cpp) builds live in
   [Capsize-Games/airunner-native](https://github.com/Capsize-Games/airunner-native);
@@ -41,11 +42,9 @@ Run the unit suite from a repo checkout:
 ./venv/bin/python scripts/run_tests.py --unit
 ```
 
-Rebuild the UI assets after changing `.ui` or `.qrc` sources:
-
-```bash
-./venv/bin/python scripts/build_ui.py
-```
+Rebuild the UI assets after changing `.ui` or `.qrc` sources with
+the owning GUI package's build (the former `scripts/build_ui.py` was
+removed with the GUI package split and no longer exists).
 
 Regenerate the content-safety policy data file from a plaintext term list
 kept outside the repository (the default input lives under the gitignored

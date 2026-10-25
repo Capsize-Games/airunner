@@ -8,6 +8,8 @@ directly; the bridge layer wraps calls through HTTP instead.
 from __future__ import annotations
 
 import os
+import re
+import threading
 from contextlib import contextmanager
 
 from sqlalchemy import pool
@@ -76,6 +78,22 @@ def _tenant_db_url(base_url: str, tenant_schema: str) -> str:
 _engines: dict[str, object] = {}
 _sessions: dict[str, scoped_session] = {}
 _migrated_tenants: set[str] = set()
+_tenant_lock = threading.Lock()
+
+# PostgreSQL identifiers: at most 63 bytes.  The tenant value is
+# interpolated into ``text()`` SQL, so it must match this charset
+# exactly -- never pass user input through unvalidated.
+_TENANT_RE = re.compile(r"^[A-Za-z0-9_]{1,63}$")
+
+
+def _validate_tenant_identifier(tenant: str) -> str:
+    """Return ``tenant`` when it is safe to interpolate into SQL."""
+    if not isinstance(tenant, str) or not _TENANT_RE.match(tenant):
+        raise ValueError(
+            f"Invalid tenant identifier: {tenant!r}. "
+            "Expected 1-63 ASCII letters, digits, or underscores."
+        )
+    return tenant
 
 
 def _ensure_sqlite_parent_dir(url: str) -> None:
@@ -93,8 +111,9 @@ def _ensure_tenant_ready(tenant: str) -> None:
     if (os.environ.get("AIRUNNER_MIGRATION_RUNNING") or "").strip() == "1":
         return
 
+    _validate_tenant_identifier(tenant)
     db_url = _db_url()
-    if not _is_postgres(db_url) or tenant in _migrated_tenants:
+    if not _is_postgres(db_url):
         return
 
     from sqlalchemy import text
@@ -102,18 +121,21 @@ def _ensure_tenant_ready(tenant: str) -> None:
         setup_database,
     )
 
-    base_engine = create_configured_engine(
-        db_url,
-        poolclass=pool.NullPool,
-    )
-    with base_engine.begin() as connection:
-        connection.execute(
-            text(f"CREATE SCHEMA IF NOT EXISTS {tenant}")
+    with _tenant_lock:
+        if tenant in _migrated_tenants:
+            return
+        base_engine = create_configured_engine(
+            db_url,
+            poolclass=pool.NullPool,
         )
+        with base_engine.begin() as connection:
+            connection.execute(
+                text(f"CREATE SCHEMA IF NOT EXISTS {tenant}")
+            )
 
-    tenant_url = _tenant_db_url(db_url, tenant)
-    setup_database(db_url=tenant_url)
-    _migrated_tenants.add(tenant)
+        tenant_url = _tenant_db_url(db_url, tenant)
+        setup_database(db_url=tenant_url)
+        _migrated_tenants.add(tenant)
 
 
 def _get_engine(tenant: str):
@@ -196,6 +218,7 @@ def session_scope():
     try:
         if _tenancy_mode() != "single" and _is_postgres(_db_url()):
             _ensure_tenant_ready(tenant)
+            _validate_tenant_identifier(tenant)
 
             from sqlalchemy import text
 

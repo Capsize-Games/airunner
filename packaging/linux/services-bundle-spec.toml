@@ -109,6 +109,30 @@ module = "airunner_services.bin.airunner_civitai_download"
 function = "main"
 primary = false
 
+[[console_script]]
+name = "airunner-cleanup-llm-models"
+module = "airunner_services.bin.cleanup_llm_models"
+function = "main"
+primary = false
+
+[[console_script]]
+name = "airunner-docker-build"
+module = "airunner_services.bin.docker_build"
+function = "main"
+primary = false
+
+[[console_script]]
+name = "airunner-docker-wrapper"
+module = "airunner_services.bin.docker_wrapper"
+function = "main"
+primary = false
+
+[[console_script]]
+name = "airunner-generate-cert"
+module = "airunner_services.bin.generate_cert"
+function = "main"
+primary = false
+
 # Runtime-string imports PyInstaller's static analysis cannot see (the
 # P04 probe_data finding). Each entry cites the loader; the regression
 # test re-derives the literal module names from those loaders by AST.
@@ -134,6 +158,14 @@ hidden_imports = [
     "airunner_services.bin.airunner_hf_download",
     # [[console_script]] airunner-civitai-download.
     "airunner_services.bin.airunner_civitai_download",
+    # [[console_script]] airunner-cleanup-llm-models.
+    "airunner_services.bin.cleanup_llm_models",
+    # [[console_script]] airunner-docker-build.
+    "airunner_services.bin.docker_build",
+    # [[console_script]] airunner-docker-wrapper.
+    "airunner_services.bin.docker_wrapper",
+    # [[console_script]] airunner-generate-cert.
+    "airunner_services.bin.generate_cert",
 ]
 # --exclude-module: subtrees the services daemon never executes.
 # Guard-verified in the worktree (issue #2244), not assumed: the

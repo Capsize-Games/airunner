@@ -5,17 +5,42 @@ when the optional ``keyring`` package is available. The database keeps only a
 reference and the secret is injected back into serialized records at read
 time.
 
-Backward compatibility: in headless/unattended environments where no keyring
-backend is available, the existing plaintext database columns remain as a
-documented fallback and a warning is logged. ``keyring`` is intentionally an
-optional dependency; nothing here raises when it is missing.
+Plaintext database persistence is never silent: when no keyring backend
+is available (or the backend fails), persisting a secret requires explicit
+opt-in via the ``AIRUNNER_ALLOW_PLAINTEXT_SECRETS=1`` environment variable.
+Without that opt-in, :func:`store_secret` raises instead of writing
+plaintext to the database. ``keyring`` stays an optional dependency, and
+reading back previously stored plaintext values keeps working (with a
+warning) so keyring-less setups are not locked out of existing data.
 """
 
 from __future__ import annotations
 
 import logging
+import os
 
 logger = logging.getLogger(__name__)
+
+#: Explicit opt-in for plaintext database persistence when no keyring
+#: backend is usable. Anything other than ``"1"`` means "not allowed".
+PLAINTEXT_OPT_IN_ENV_VAR = "AIRUNNER_ALLOW_PLAINTEXT_SECRETS"
+
+
+def plaintext_persistence_allowed() -> bool:
+    """Return whether plaintext secret persistence was explicitly allowed."""
+    return os.environ.get(PLAINTEXT_OPT_IN_ENV_VAR) == "1"
+
+
+def _require_plaintext_opt_in(column_key: str) -> None:
+    """Raise unless plaintext persistence was explicitly opted into."""
+    if plaintext_persistence_allowed():
+        return
+    raise RuntimeError(
+        f"Cannot persist credential for {column_key!r} without a "
+        "usable OS keyring backend: refusing to write plaintext to the "
+        "local database. Install the 'keyring' package, or explicitly "
+        f"opt in to plaintext storage with {PLAINTEXT_OPT_IN_ENV_VAR}=1."
+    )
 
 _KEYRING_AVAILABLE = False
 try:
@@ -56,16 +81,20 @@ def store_secret(column_key: str, value: str) -> str:
 
     Returns an empty string when the secret was moved to the keyring (the DB
     column is cleared), or the plaintext value when the keyring is
-    unavailable (documented headless fallback).
+    unavailable *and* plaintext persistence was explicitly opted into via
+    ``AIRUNNER_ALLOW_PLAINTEXT_SECRETS=1``. Raises :class:`RuntimeError`
+    instead of silently persisting plaintext otherwise.
     """
     value = value or ""
     if not value:
         return ""
     key_name = SECRET_KEYS.get(column_key, column_key)
     if not _KEYRING_AVAILABLE:
+        _require_plaintext_opt_in(column_key)
         logger.warning(
             "keyring is not available; storing %s as plaintext in the "
-            "local database (headless/unattended fallback). Install the "
+            "local database (explicit "
+            "AIRUNNER_ALLOW_PLAINTEXT_SECRETS=1 opt-in). Install the "
             "'keyring' package for secure credential storage.",
             column_key,
         )
@@ -73,9 +102,11 @@ def store_secret(column_key: str, value: str) -> str:
     try:
         _keyring.set_password(_KEYRING_SERVICE, key_name, value)
     except Exception as exc:
+        _require_plaintext_opt_in(column_key)
         logger.warning(
             "keyring backend failed for %s (%s); falling back to the "
-            "plaintext database column.",
+            "plaintext database column (explicit "
+            "AIRUNNER_ALLOW_PLAINTEXT_SECRETS=1 opt-in).",
             column_key,
             exc,
         )
@@ -123,9 +154,11 @@ def clear_secret(column_key: str, db_value: str) -> str:
 
 __all__ = [
     "MODEL_SECRET_COLUMNS",
+    "PLAINTEXT_OPT_IN_ENV_VAR",
     "SECRET_KEYS",
     "clear_secret",
     "keyring_available",
+    "plaintext_persistence_allowed",
     "retrieve_secret",
     "store_secret",
 ]

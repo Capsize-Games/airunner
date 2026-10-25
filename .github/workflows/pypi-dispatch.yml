@@ -11,7 +11,7 @@ on:
           all three. Use "services native" to create the sibling projects
           first -- see the comment on the build step.
         required: false
-        default: "services native ."
+        default: "services native"
         type: string
 
 permissions:

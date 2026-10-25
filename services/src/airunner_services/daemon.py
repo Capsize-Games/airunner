@@ -95,33 +95,71 @@ class AIRunnerDaemon:
         self.app = None
         self.api_server = None
         self.shutdown_requested = False
+        self._shutting_down = False
+        self._lock_file = None
         self._setup_logging()
         self._setup_signal_handlers()
         self.lifecycle_service = None
 
+    def _lock_file_path(self) -> Path:
+        """Return the daemon lockfile under the runtime layout dir."""
+        from airunner_services.config.runtime_layout import (
+            build_runtime_directory_layout,
+        )
+
+        configured = self.config.config.get("runtime", {}).get("root")
+        if configured:
+            return Path(configured) / "daemon.lock"
+        return build_runtime_directory_layout().runtime_root / "daemon.lock"
+
     def _acquire_lock(self) -> bool:
-        """Return True when no other daemon is listening on the configured port.
+        """Return True when this process holds the daemon lockfile.
 
-        Attempts a TCP connection to the port.  If something answers,
-        another daemon is already running.
+        Takes an exclusive non-blocking ``flock`` on a lockfile under
+        the runtime layout dir and holds it for the process lifetime
+        via ``self._lock_file``.  The kernel releases the lock when
+        the process dies, so no stale-lock cleanup is needed.  A TCP
+        probe cannot do this: another program may answer the port, or
+        the port may be free while a second daemon is still starting.
         """
-        import socket
-
-        server_config = self.config.config.get("server", {})
-        host = server_config.get("host", "127.0.0.1")
-        port = int(server_config.get("port", 8188))
-
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        sock.settimeout(0.5)
         try:
-            sock.connect((host, port))
-            # Connected — another daemon is listening
-            return False
-        except (OSError, ConnectionRefusedError, socket.timeout):
-            # Nothing listening — port is free
-            return True
-        finally:
-            sock.close()
+            import fcntl
+        except ImportError:  # pragma: no cover - non-POSIX fallback
+            fcntl = None  # type: ignore[assignment]
+
+        path = self._lock_file_path()
+        path.parent.mkdir(parents=True, exist_ok=True)
+        if fcntl is not None:
+            handle = open(path, "w")
+            try:
+                fcntl.flock(
+                    handle.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB
+                )
+            except OSError:
+                handle.close()
+                return False
+        else:  # pragma: no cover - non-POSIX fallback
+            try:
+                fd = os.open(path, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+            except OSError:
+                return False
+            handle = os.fdopen(fd, "w")
+        self._lock_file = handle
+        try:
+            handle.write(str(os.getpid()))
+            handle.flush()
+        except OSError:
+            pass
+        return True
+
+    def _release_lock(self) -> None:
+        """Release the daemon lockfile held for the process lifetime."""
+        handle, self._lock_file = self._lock_file, None
+        if handle is not None:
+            try:
+                handle.close()
+            except OSError:
+                pass
 
     def _setup_logging(self):
         """Configure logging for daemon mode."""
@@ -176,7 +214,6 @@ class AIRunnerDaemon:
         logger.info(
             f"Received signal {signum}, initiating graceful shutdown..."
         )
-        self.shutdown_requested = True
         self.shutdown()
 
     def _handle_reload_signal(self, signum, frame):
@@ -222,7 +259,6 @@ class AIRunnerDaemon:
             self.app = self._create_headless_app()
             self._initialize_lifecycle_service()
             logger.info("AI Runner app initialized in headless mode")
-            self._preload_models()
             return
         self._enter_degraded_mode()
 
@@ -270,29 +306,6 @@ class AIRunnerDaemon:
         self.lifecycle_service = self.app.ensure_lifecycle_service()
         self.lifecycle_service.initialize()
         self.lifecycle_service.preload_llm_model()
-
-    def _preload_models(self):
-        """Preload configured models on startup."""
-        preload_list = self.config.config.get("models", {}).get("preload", [])
-
-        if not preload_list:
-            logger.info("No models configured for preloading")
-            return
-
-        logger.info(f"Preloading {len(preload_list)} models: {preload_list}")
-
-        from airunner_services.model_management.model_resource_manager import (
-            ModelResourceManager,
-        )
-
-        ModelResourceManager()
-
-        for model_id in preload_list:
-            try:
-                logger.info(f"Preloading model: {model_id}")
-                logger.info(f"Model {model_id} queued for preload")
-            except Exception as e:
-                logger.error(f"Failed to preload model {model_id}: {e}")
 
     def _start_health_monitor(self):
         """Start health monitoring heartbeat."""
@@ -365,9 +378,10 @@ class AIRunnerDaemon:
 
     def shutdown(self):
         """Gracefully shutdown the daemon."""
-        if self.shutdown_requested:
+        if self._shutting_down:
             return
 
+        self._shutting_down = True
         self.shutdown_requested = True
         logger.info("Shutting down AI Runner daemon...")
 
@@ -400,6 +414,7 @@ class AIRunnerDaemon:
             logger.error(f"Error during shutdown: {e}", exc_info=True)
 
         finally:
+            self._release_lock()
             sys.exit(0)
 
     def _shutdown_runtime_clients(self) -> None:

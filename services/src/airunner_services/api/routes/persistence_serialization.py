@@ -84,8 +84,9 @@ def normalized_values(
     """Convert serialized payload values into ORM-ready Python values.
 
     Credential columns are moved into the OS keyring; the database column
-    stores only a reference (or the plaintext fallback when no keyring
-    backend is available).
+    stores only a reference (or plaintext with explicit
+    AIRUNNER_ALLOW_PLAINTEXT_SECRETS=1 opt-in when no keyring backend
+    is available, raising otherwise).
     """
     mapper = sqlalchemy_inspect(model_cls).mapper
     column_types = {

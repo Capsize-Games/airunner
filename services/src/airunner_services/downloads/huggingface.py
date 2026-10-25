@@ -3,12 +3,37 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from pathlib import PurePosixPath
 from typing import Any, Optional
 
 from airunner_services.llm.provider_config import LLMProviderConfig
+from airunner_services.runtimes.file_policy import PathPolicyError
 from airunner_common.settings import AIRUNNER_BASE_PATH
 
 _LLM_DOWNLOAD_TYPES = {"gguf", "llm"}
+
+
+def safe_hf_filename(filename: str) -> str:
+    """Return one normalized HF-relative path, rejecting escape attempts.
+
+    HuggingFace file names legitimately contain ``/`` subdirectories
+    (``tokenizer/merges.txt``), so unlike ``job_service._safe_filename``
+    this keeps relative subpaths but still rejects NUL bytes, absolute
+    paths, backslashes, and ``..`` components so a server-supplied name
+    can never escape the model directory.
+    """
+    raw = str(filename or "").strip()
+    if not raw or "\x00" in raw:
+        raise PathPolicyError("HuggingFace filename is not allowed")
+    if "\\" in raw:
+        raise PathPolicyError("HuggingFace filename is not allowed")
+    pure = PurePosixPath(raw)
+    if pure.is_absolute() or ".." in pure.parts:
+        raise PathPolicyError("HuggingFace filename is not allowed")
+    normalized = str(pure)
+    if not normalized or normalized in {".", ".."}:
+        raise PathPolicyError("HuggingFace filename is not allowed")
+    return normalized
 
 
 @dataclass(frozen=True)
@@ -66,6 +91,10 @@ def prepare_huggingface_download_request(
         resolved_download,
         prefer_pre_quantized,
     )
+    if gguf_filename is not None:
+        safe_hf_filename(gguf_filename)
+    for missing_name in missing_files or []:
+        safe_hf_filename(missing_name)
     repo_id = _resolved_repo_id(repo_id, resolved_download)
     return HuggingFaceDownloadRequest(
         repo_id=repo_id,

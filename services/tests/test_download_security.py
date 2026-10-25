@@ -15,15 +15,28 @@ from unittest import mock
 import pytest
 
 from airunner_common import settings as airunner_common_settings
+from airunner_services.downloads.civitai import (
+    _MAX_DOWNLOAD_REDIRECTS,
+    _open_download,
+    _planned_download_file,
+    _safe_server_filename,
+    get_files_to_download,
+)
+from airunner_services.downloads.huggingface import (
+    prepare_huggingface_download_request,
+    safe_hf_filename,
+)
+from airunner_services.downloads.huggingface_download_worker import (
+    _HF_MAX_REDIRECTS,
+    _contained_hf_path,
+    _open_validated_hf_response,
+)
 from airunner_services.downloads.job_service import (
+    DownloadJobService,
     _assert_output_path_contained,
     _resolve_safe_file_path,
     _resolve_safe_output_dir,
     _safe_filename,
-)
-from airunner_services.downloads.civitai import (
-    _MAX_DOWNLOAD_REDIRECTS,
-    _open_download,
 )
 from airunner_services.runtimes.file_policy import PathPolicyError
 from airunner_services.url_safety import (
@@ -391,3 +404,320 @@ def test_resolve_safe_output_dir_rejects_empty(tmp_path, monkeypatch) -> None:
         _resolve_safe_output_dir("")
     with pytest.raises(PathPolicyError):
         _resolve_safe_output_dir("   ")
+
+
+# ---------------------------------------------------------------------------
+# CivitAI server-supplied filenames (fail closed, never rewritten)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "bad_filename",
+    [
+        "../evil.sh",
+        "../../etc/passwd",
+        "sub/escape.bin",
+        "sub\\escape.bin",
+        "/etc/passwd",
+        "/tmp/absolute.bin",
+        "..",
+        ".",
+        "",
+        "   ",
+        "name\x00evil",
+    ],
+)
+def test_safe_server_filename_rejects_escapes(bad_filename: str) -> None:
+    with pytest.raises(PathPolicyError):
+        _safe_server_filename(bad_filename)
+
+
+def test_safe_server_filename_accepts_plain_basename() -> None:
+    assert _safe_server_filename("model.safetensors") == "model.safetensors"
+
+
+def test_planned_download_file_rejects_malicious_server_name(tmp_path) -> None:
+    file_info = {
+        "name": "../evil.sh",
+        "downloadUrl": "https://civitai.com/api/download/models/1",
+        "sizeKB": 1,
+    }
+    with pytest.raises(PathPolicyError):
+        _planned_download_file(file_info, tmp_path / "model")
+
+
+def test_get_files_to_download_rejects_malicious_server_name(tmp_path) -> None:
+    version = {
+        "files": [
+            {
+                "name": "good.safetensors",
+                "downloadUrl": "https://civitai.com/api/download/models/1",
+                "sizeKB": 1,
+            },
+            {
+                "name": "../../evil.sh",
+                "downloadUrl": "https://civitai.com/api/download/models/2",
+                "sizeKB": 1,
+            },
+        ]
+    }
+    with pytest.raises(PathPolicyError):
+        get_files_to_download(version, tmp_path / "model")
+
+
+def test_planned_download_file_confines_writes_to_model_dir(tmp_path) -> None:
+    file_info = {
+        "name": "weights.safetensors",
+        "downloadUrl": "https://civitai.com/api/download/models/1",
+        "sizeKB": 1,
+    }
+    planned = _planned_download_file(file_info, tmp_path / "model")
+    assert planned is not None
+    assert planned["filename"] == "weights.safetensors"
+
+
+def test_civitai_model_job_fails_closed_on_malicious_filename(tmp_path) -> None:
+    """A malicious server filename fails the job instead of writing."""
+    import threading
+
+    tracker = mock.AsyncMock()
+    service = DownloadJobService(
+        tracker=tracker,
+        huggingface_downloader=mock.MagicMock(),
+    )
+    malicious_version = {
+        "files": [
+            {
+                "name": "../evil.sh",
+                "downloadUrl": "https://civitai.com/api/download/models/1",
+                "sizeKB": 1,
+            }
+        ]
+    }
+    with (
+        mock.patch(
+            "airunner_services.downloads.job_service.fetch_model_info_for_url",
+            return_value={
+                "name": "model",
+                "selectedVersion": malicious_version,
+            },
+        ),
+        mock.patch(
+            "airunner_services.downloads.job_service.download_civitai_file"
+        ) as download,
+    ):
+        service._run_civitai_model_job(
+            "job-1",
+            threading.Event(),
+            "https://civitai.com/models/1",
+            str(tmp_path),
+            "",
+        )
+    download.assert_not_called()
+    tracker.fail_job.assert_called()
+
+
+# ---------------------------------------------------------------------------
+# HuggingFace filename gate (relative subpaths allowed, escapes rejected)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "bad_filename",
+    [
+        "../evil.bin",
+        "sub/../../evil.bin",
+        "/etc/passwd",
+        "/tmp/absolute.bin",
+        "..\\evil.bin",
+        "sub\\escape.bin",
+        "..",
+        ".",
+        "",
+        "   ",
+        "name\x00evil",
+    ],
+)
+def test_safe_hf_filename_rejects_escapes(bad_filename: str) -> None:
+    with pytest.raises(PathPolicyError):
+        safe_hf_filename(bad_filename)
+
+
+def test_safe_hf_filename_accepts_relative_subpaths() -> None:
+    assert safe_hf_filename("model.safetensors") == "model.safetensors"
+    assert (
+        safe_hf_filename("tokenizer/merges.txt") == "tokenizer/merges.txt"
+    )
+
+
+def test_prepare_hf_request_rejects_malicious_filenames() -> None:
+    with pytest.raises(PathPolicyError):
+        prepare_huggingface_download_request(
+            repo_id="org/repo",
+            model_type="art",
+            output_dir="/tmp/models",
+            gguf_filename="../evil.gguf",
+        )
+    with pytest.raises(PathPolicyError):
+        prepare_huggingface_download_request(
+            repo_id="org/repo",
+            model_type="art",
+            output_dir="/tmp/models",
+            missing_files=["good.bin", "../../evil.bin"],
+        )
+
+
+def test_contained_hf_path_rejects_symlink_escape(tmp_path) -> None:
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    base = tmp_path / "model"
+    base.mkdir()
+    (base / "link").symlink_to(outside, target_is_directory=True)
+    with pytest.raises(PathPolicyError):
+        _contained_hf_path(base, "link/evil.bin")
+
+
+def test_contained_hf_path_accepts_inside_path(tmp_path) -> None:
+    base = tmp_path / "model"
+    (base / "sub").mkdir(parents=True)
+    resolved = _contained_hf_path(base, "sub/weights.safetensors")
+    assert resolved == (base / "sub" / "weights.safetensors").resolve()
+
+
+def test_hf_file_job_rejects_traversal_filename(tmp_path) -> None:
+    """A traversal filename fails the HF single-file job without writing."""
+    import threading
+
+    tracker = mock.AsyncMock()
+    downloader = mock.MagicMock()
+    service = DownloadJobService(
+        tracker=tracker,
+        huggingface_downloader=downloader,
+    )
+    service._run_huggingface_file_job(
+        "job-1",
+        threading.Event(),
+        "org/repo",
+        "../evil.bin",
+        str(tmp_path),
+    )
+    downloader.download_file.assert_not_called()
+    tracker.fail_job.assert_called()
+
+
+# ---------------------------------------------------------------------------
+# HuggingFace redirect validation (every hop, like civitai)
+# ---------------------------------------------------------------------------
+
+
+def test_validated_hf_response_blocks_ssrf_url_before_request() -> None:
+    with mock.patch(
+        "airunner_services.downloads.huggingface_download_worker.requests.get"
+    ) as get, mock.patch(
+        "airunner_services.downloads.huggingface_download_worker.requests.head"
+    ) as head:
+        with pytest.raises(SSRFBlocked):
+            _open_validated_hf_response(
+                "get", "http://127.0.0.1/private", {}, 30
+            )
+        with pytest.raises(SSRFBlocked):
+            _open_validated_hf_response(
+                "head", "http://127.0.0.1/private", {}, 30
+            )
+        get.assert_not_called()
+        head.assert_not_called()
+
+
+def test_validated_hf_response_rejects_redirect_to_private_target(
+    monkeypatch,
+) -> None:
+    """A public HF URL that redirects onto the metadata IP is blocked."""
+    import ipaddress
+
+    from airunner_services import url_safety
+
+    def _fake_public_resolve(hostname: str, port: int):
+        del hostname, port
+        return {ipaddress.ip_address("93.184.216.34")}
+
+    monkeypatch.setattr(url_safety, "_resolve_host_ips", _fake_public_resolve)
+
+    redirect_response = mock.MagicMock()
+    redirect_response.status_code = 302
+    redirect_response.headers = {
+        "location": "http://169.254.169.254/latest/meta-data/",
+    }
+    final_response = mock.MagicMock()
+    final_response.status_code = 200
+
+    with mock.patch(
+        "airunner_services.downloads.huggingface_download_worker.requests.get",
+        side_effect=[redirect_response, final_response],
+    ) as get:
+        with pytest.raises(SSRFBlocked):
+            _open_validated_hf_response(
+                "get", "https://huggingface.co/org/repo", {}, 30
+            )
+    assert get.call_count == 1
+
+
+def test_validated_hf_response_follows_public_redirect(monkeypatch) -> None:
+    """A public redirect target is still followed."""
+    import ipaddress
+
+    from airunner_services import url_safety
+
+    def _fake_public_resolve(hostname: str, port: int):
+        del hostname, port
+        return {ipaddress.ip_address("93.184.216.34")}
+
+    monkeypatch.setattr(url_safety, "_resolve_host_ips", _fake_public_resolve)
+
+    redirect_response = mock.MagicMock()
+    redirect_response.status_code = 302
+    redirect_response.headers = {"location": "https://cdn.example/model.bin"}
+    final_response = mock.MagicMock()
+    final_response.status_code = 200
+
+    with mock.patch(
+        "airunner_services.downloads.huggingface_download_worker.requests.get",
+        side_effect=[redirect_response, final_response],
+    ) as get:
+        result = _open_validated_hf_response(
+            "get", "https://huggingface.co/org/repo", {}, 30
+        )
+    assert result is final_response
+    assert get.call_count == 2
+
+
+def test_validated_hf_response_limits_redirects(monkeypatch) -> None:
+    """Redirect chains are capped to avoid open-redirect loops."""
+    import ipaddress
+
+    from airunner_services import url_safety
+
+    def _fake_public_resolve(hostname: str, port: int):
+        del hostname, port
+        return {ipaddress.ip_address("93.184.216.34")}
+
+    monkeypatch.setattr(url_safety, "_resolve_host_ips", _fake_public_resolve)
+
+    redirects = [
+        mock.MagicMock(
+            status_code=302,
+            headers={"location": f"https://cdn.example/hop-{index}.bin"},
+        )
+        for index in range(_HF_MAX_REDIRECTS + 1)
+    ]
+    final_response = mock.MagicMock()
+    final_response.status_code = 200
+
+    with mock.patch(
+        "airunner_services.downloads.huggingface_download_worker.requests.get",
+        side_effect=[*redirects, final_response],
+    ) as get:
+        with pytest.raises(SSRFBlocked):
+            _open_validated_hf_response(
+                "get", "https://huggingface.co/org/repo", {}, 30
+            )
+    assert get.call_count == _HF_MAX_REDIRECTS + 1

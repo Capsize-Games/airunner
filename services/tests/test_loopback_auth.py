@@ -12,6 +12,7 @@ Proves:
 from __future__ import annotations
 
 import asyncio
+import os
 import stat
 from unittest import mock
 
@@ -193,6 +194,62 @@ def test_token_is_stable_across_reads(isolated_token) -> None:
     first = loopback_token.get_or_create_loopback_token()
     second = loopback_token.get_or_create_loopback_token()
     assert first == second
+
+
+def test_group_readable_token_is_tightened_to_0600(isolated_token) -> None:
+    isolated_token.parent.mkdir(parents=True, exist_ok=True)
+    isolated_token.write_text("existing-token\n", encoding="utf-8")
+    os.chmod(isolated_token, 0o640)
+    token = loopback_token.get_or_create_loopback_token()
+    assert token == "existing-token"
+    mode = stat.S_IMODE(isolated_token.stat().st_mode)
+    assert mode == 0o600, f"token file mode was {oct(mode)}"
+
+
+def test_world_readable_token_is_tightened_to_0600(isolated_token) -> None:
+    isolated_token.parent.mkdir(parents=True, exist_ok=True)
+    isolated_token.write_text("existing-token\n", encoding="utf-8")
+    os.chmod(isolated_token, 0o644)
+    token = loopback_token.load_loopback_token()
+    assert token == "existing-token"
+    mode = stat.S_IMODE(isolated_token.stat().st_mode)
+    assert mode == 0o600, f"token file mode was {oct(mode)}"
+
+
+def test_load_ignores_symlink_token(isolated_token) -> None:
+    target = isolated_token.parent / "real-token"
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text("planted-token\n", encoding="utf-8")
+    isolated_token.symlink_to(target)
+    assert loopback_token.load_loopback_token() is None
+
+
+def test_symlink_token_is_replaced_with_private_file(isolated_token) -> None:
+    target = isolated_token.parent / "real-token"
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text("planted-token\n", encoding="utf-8")
+    isolated_token.symlink_to(target)
+    token = loopback_token.get_or_create_loopback_token()
+    assert token != "planted-token"
+    assert not isolated_token.is_symlink()
+    assert isolated_token.read_text(encoding="utf-8").strip() == token
+    mode = stat.S_IMODE(isolated_token.stat().st_mode)
+    assert mode == 0o600, f"token file mode was {oct(mode)}"
+
+
+def test_unfixable_permissions_fail_closed(isolated_token, monkeypatch) -> None:
+    """A token file that stays weak is refused, never silently kept."""
+    isolated_token.parent.mkdir(parents=True, exist_ok=True)
+    isolated_token.write_text("weak-token\n", encoding="utf-8")
+    os.chmod(isolated_token, 0o644)
+    monkeypatch.setattr(
+        os,
+        "chmod",
+        mock.MagicMock(side_effect=OSError("read-only filesystem")),
+    )
+    token = loopback_token.get_or_create_loopback_token()
+    assert token != "weak-token"
+    assert not isolated_token.exists()
 
 
 def test_gui_client_sends_token_on_every_request(tmp_path) -> None:

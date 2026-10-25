@@ -172,7 +172,11 @@ def test_daemon_degrades_without_torch(
 def test_daemon_builds_app_with_torch(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    """With torch the daemon builds app, lifecycle, then preloads."""
+    """With torch the daemon builds app then initializes lifecycle.
+
+    Eager model loading lives in the lifecycle service
+    (``preload_llm_model``); the daemon keeps no separate preload path.
+    """
     calls: list[str] = []
     monkeypatch.setattr(
         "airunner_services.daemon.ml_runtime_available",
@@ -188,12 +192,8 @@ def test_daemon_builds_app_with_torch(
         "_initialize_lifecycle_service",
         lambda self: calls.append("lifecycle"),
     )
-    monkeypatch.setattr(
-        AIRunnerDaemon,
-        "_preload_models",
-        lambda self: calls.append("preload"),
-    )
     daemon = _stub_daemon(tmp_path)
     daemon._init_app_or_degraded()
-    assert calls == ["app", "lifecycle", "preload"]
+    assert calls == ["app", "lifecycle"]
     assert daemon.app is not None
+    assert not hasattr(daemon, "_preload_models")

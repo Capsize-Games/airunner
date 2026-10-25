@@ -42,8 +42,8 @@ class TurnRecord(BaseModel):
     column; B04 owns the embeddings index) and minus
     ``conversation_id``. Upstream UwUchat has no multi-conversation
     concept (W01 §2), but Desktop *does* --
-    ``src/airunner/components/conversations/`` (``ConversationRecord``,
-    ``ConversationHistoryManager``) lets one chatbot have several
+    ``services/src/airunner_services/conversations/``
+    (``ConversationHistoryManager``) lets one chatbot have several
     conversations. Whether a companion session/turn should map onto
     that existing model, or remain a separate companion-specific
     concept, is an open question left for B02/B03 (see

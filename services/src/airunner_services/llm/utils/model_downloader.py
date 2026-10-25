@@ -140,10 +140,31 @@ class HuggingFaceDownloader:
         Returns:
             Path to downloaded file
         """
+        # Validate untrusted URL parts before any fetch: the revision is
+        # one path segment and the filename must stay inside local_dir.
+        from airunner_services.downloads.huggingface import safe_hf_filename
+        from airunner_services.runtimes.file_policy import PathPolicyError
+
+        if (
+            not revision
+            or "/" in revision
+            or "\\" in revision
+            or ".." in revision
+        ):
+            raise ValueError(f"HuggingFace revision is not allowed: {revision!r}")
+        filename = safe_hf_filename(filename)
+        base_dir = Path(local_dir).resolve()
+        local_path = (base_dir / filename).resolve()
+        try:
+            local_path.relative_to(base_dir)
+        except ValueError:
+            raise PathPolicyError(
+                "HuggingFace file path escapes the model directory"
+            ) from None
+
         # Construct download URL
         url = f"{self.BASE_URL}/{repo_id}/resolve/{revision}/{filename}"
 
-        local_path = Path(local_dir) / filename
         local_path.parent.mkdir(parents=True, exist_ok=True)
 
         # Check if file already exists
@@ -161,10 +182,42 @@ class HuggingFaceDownloader:
             headers["Authorization"] = f"Bearer {api_key}"
 
         try:
-            # Stream download with progress tracking
-            response = requests.get(
-                url, headers=headers, stream=True, timeout=60
+            # Stream download with progress tracking. Redirects are
+            # followed manually (with a hard hop cap) so a model URL can
+            # never redirect the downloader onto loopback or
+            # private-network addresses.
+            from urllib.parse import urljoin
+
+            from airunner_services.url_safety import (
+                SSRFBlocked,
+                validate_url_for_fetch,
             )
+
+            current_url = url
+            response = None
+            for _ in range(4):
+                validate_url_for_fetch(current_url)
+                candidate = requests.get(
+                    current_url,
+                    headers=headers,
+                    stream=True,
+                    timeout=60,
+                    allow_redirects=False,
+                )
+                if candidate.status_code not in (301, 302, 303, 307, 308):
+                    response = candidate
+                    break
+                location = candidate.headers.get("location")
+                candidate.close()
+                if not location:
+                    raise SSRFBlocked("redirect without location")
+                current_url = urljoin(current_url, location)
+            else:
+                raise SSRFBlocked("too many redirects")
+            assert response is not None
+            final_url = getattr(response, "url", "") or current_url
+            if isinstance(final_url, str) and final_url != current_url:
+                validate_url_for_fetch(final_url)
             response.raise_for_status()
 
             total_size = int(response.headers.get("content-length", 0))

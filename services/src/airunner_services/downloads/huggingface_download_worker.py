@@ -20,10 +20,92 @@ from airunner_services.config.local_settings_store import get_setting
 from airunner_services.downloads.base_download_worker import (
     BaseDownloadWorker,
 )
+from airunner_services.downloads.huggingface import safe_hf_filename
+from airunner_services.runtimes.file_policy import PathPolicyError
 from airunner_services.llm.utils.model_downloader import (
     HuggingFaceDownloader,
 )
 from airunner_services.utils.zip_utils import safe_extract_zip
+
+
+_HF_MAX_REDIRECTS = 3
+
+_REDIRECT_STATUSES = frozenset({301, 302, 303, 307, 308})
+
+
+def _open_validated_hf_response(
+    method: str,
+    url: str,
+    headers: dict,
+    timeout: int,
+) -> "requests.Response":
+    """Return one HF response after validating every redirect hop.
+
+    Redirects are followed manually (with a hard hop cap) so a model URL
+    can never redirect the downloader onto loopback or private-network
+    addresses, mirroring ``civitai._get_streaming_response``.
+    """
+    from urllib.parse import urljoin
+
+    from airunner_services.url_safety import SSRFBlocked, validate_url_for_fetch
+
+    current = url
+    hops = 0
+    while True:
+        validate_url_for_fetch(current)
+        if method == "head":
+            response = requests.head(
+                current,
+                headers=headers,
+                allow_redirects=False,
+                timeout=timeout,
+            )
+        else:
+            response = requests.get(
+                current,
+                headers=headers,
+                stream=True,
+                allow_redirects=False,
+                timeout=timeout,
+            )
+        if response.status_code in _REDIRECT_STATUSES:
+            location = response.headers.get("location")
+            response.close()
+            if not location:
+                raise SSRFBlocked("redirect without location")
+            hops += 1
+            if hops > _HF_MAX_REDIRECTS:
+                raise SSRFBlocked("too many redirects")
+            current = urljoin(current, location)
+            continue
+        final_url = getattr(response, "url", "") or current
+        if isinstance(final_url, str) and final_url != current:
+            validate_url_for_fetch(final_url)
+        return response
+
+
+def _contained_hf_path(base_dir: Path, filename: str) -> Path:
+    """Return one resolved HF write path verified inside its base directory."""
+    candidate = (base_dir.resolve() / safe_hf_filename(filename)).resolve()
+    try:
+        candidate.relative_to(base_dir.resolve())
+    except ValueError:
+        raise PathPolicyError(
+            "HuggingFace file path escapes the model directory"
+        ) from None
+    return candidate
+
+
+def _safe_hf_revision(revision: str) -> str:
+    """Return one HF revision segment, rejecting path escapes.
+
+    The revision becomes one URL path segment; ``/``, backslashes, and
+    ``..`` would let a malicious listing rewrite the fetch URL.
+    """
+    raw = str(revision or "").strip()
+    if not raw or "/" in raw or "\\" in raw or ".." in raw:
+        raise ValueError(f"HuggingFace revision is not allowed: {revision!r}")
+    return raw
 
 
 class HuggingFaceDownloadWorker(BaseDownloadWorker):
@@ -777,7 +859,15 @@ class HuggingFaceDownloadWorker(BaseDownloadWorker):
         """
         import zipfile
 
-        filename = os.path.basename(zip_url)
+        try:
+            filename = safe_hf_filename(os.path.basename(zip_url))
+        except PathPolicyError as exc:
+            self.logger.error("Refusing ZIP download: %s", exc)
+            self.emit_signal(
+                self._failed_signal,
+                {"error": str(exc)},
+            )
+            return
         model_path = Path(output_dir)
         model_path.mkdir(parents=True, exist_ok=True)
 
@@ -803,10 +893,12 @@ class HuggingFaceDownloadWorker(BaseDownloadWorker):
 
         # Get file size
         try:
-            head_response = requests.head(zip_url, allow_redirects=True, timeout=30)
-            head_response.raise_for_status()
-            file_size = int(head_response.headers.get("Content-Length", 0))
-        except requests.RequestException as e:
+            with _open_validated_hf_response(
+                "head", zip_url, {}, 30
+            ) as head_response:
+                head_response.raise_for_status()
+                file_size = int(head_response.headers.get("Content-Length", 0))
+        except (requests.RequestException, ValueError) as e:
             self.logger.error(f"Failed to get ZIP file size: {e}")
             file_size = 0
 
@@ -820,9 +912,11 @@ class HuggingFaceDownloadWorker(BaseDownloadWorker):
         )
 
         # Download the file
-        temp_path = temp_dir / filename
+        temp_path = _contained_hf_path(temp_dir, filename)
         try:
-            with requests.get(zip_url, stream=True, timeout=300) as response:
+            with _open_validated_hf_response(
+                "get", zip_url, {}, 300
+            ) as response:
                 response.raise_for_status()
 
                 downloaded = 0
@@ -901,6 +995,17 @@ class HuggingFaceDownloadWorker(BaseDownloadWorker):
         """
         api_key = get_setting("huggingface/api_key", "")
 
+        try:
+            revision = _safe_hf_revision(revision)
+            gguf_filename = safe_hf_filename(gguf_filename)
+        except (ValueError, PathPolicyError) as exc:
+            self.logger.error("Refusing GGUF download: %s", exc)
+            self.emit_signal(
+                self._failed_signal,
+                {"error": str(exc)},
+            )
+            return
+
         model_path = Path(output_dir)
         model_path.mkdir(parents=True, exist_ok=True)
 
@@ -931,10 +1036,12 @@ class HuggingFaceDownloadWorker(BaseDownloadWorker):
             headers["Authorization"] = f"Bearer {api_key}"
 
         try:
-            head_response = requests.head(url, headers=headers, allow_redirects=True, timeout=30)
-            head_response.raise_for_status()
-            file_size = int(head_response.headers.get("Content-Length", 0))
-        except requests.RequestException as e:
+            with _open_validated_hf_response(
+                "head", url, headers, 30
+            ) as head_response:
+                head_response.raise_for_status()
+                file_size = int(head_response.headers.get("Content-Length", 0))
+        except (requests.RequestException, ValueError) as e:
             self.logger.error(f"Failed to get GGUF file size: {e}")
             # Continue without size - progress will be approximate
             file_size = 0
@@ -1010,8 +1117,10 @@ class HuggingFaceDownloadWorker(BaseDownloadWorker):
         """
         self.logger.info(f"[DOWNLOAD THREAD] Starting download for {filename} from {repo_id}")
 
-        temp_path = temp_dir / filename
-        final_path = model_path / filename
+        revision = _safe_hf_revision(revision)
+        filename = safe_hf_filename(filename)
+        temp_path = _contained_hf_path(temp_dir, filename)
+        final_path = _contained_hf_path(model_path, filename)
 
         # Create parent directories for files in subdirectories
         temp_path.parent.mkdir(parents=True, exist_ok=True)
@@ -1059,11 +1168,13 @@ class HuggingFaceDownloadWorker(BaseDownloadWorker):
                 )
                 try:
                     stored_identity = self._read_stored_identity(temp_path)
-                    head_response = requests.head(
-                        url, headers=headers, allow_redirects=True, timeout=30
-                    )
-                    head_response.raise_for_status()
-                    response_identity = self._response_identity(head_response)
+                    with _open_validated_hf_response(
+                        "head", url, headers, 30
+                    ) as head_response:
+                        head_response.raise_for_status()
+                        response_identity = self._response_identity(
+                            head_response
+                        )
                     identity_confirmed = (
                         stored_identity is not None
                         and response_identity is not None
@@ -1096,8 +1207,8 @@ class HuggingFaceDownloadWorker(BaseDownloadWorker):
             request_attempts = 0
             while True:
                 request_attempts += 1
-                with requests.get(
-                    url, headers=headers, stream=True, timeout=30
+                with _open_validated_hf_response(
+                    "get", url, headers, 30
                 ) as response:
                     # Check if server supports range requests
                     if resume_from > 0:

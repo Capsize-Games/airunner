@@ -29,6 +29,7 @@ GGUF Conversion Requirements (for option 2):
 
 import subprocess
 import shutil
+import sys
 from pathlib import Path
 from typing import Optional, Tuple, Literal
 from enum import Enum
@@ -251,7 +252,7 @@ class ModelOptimizer:
             
             # Build conversion command
             cmd = [
-                "python", self._llama_cpp_path,
+                sys.executable, self._llama_cpp_path,
                 str(path),
                 "--outfile", output_path,
                 "--outtype", self._quantization_to_outtype(quantization),

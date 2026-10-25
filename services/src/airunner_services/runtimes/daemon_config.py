@@ -63,7 +63,6 @@ class DaemonConfig:
             "models": {
                 "persistence_mode": "timeout",
                 "timeout_minutes": 30,
-                "preload": [],
             },
             "health": {
                 "heartbeat_interval": 30,

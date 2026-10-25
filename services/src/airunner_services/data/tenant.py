@@ -59,17 +59,30 @@ _UUID_RE = re.compile(
 )
 
 
+def _sanitized_schema_prefix() -> str:
+    """Return the schema prefix restricted to safe identifier chars."""
+    prefix = re.sub(r"[^a-z0-9]+", "_", get_tenant_schema_prefix().lower())
+    return prefix.strip("_") or "tenant_"
+
+
 def tenant_schema_for_key(key: str | None) -> str:
-    """Convert one tenant key into a safe deterministic schema name."""
+    """Convert one tenant key into a safe deterministic schema name.
+
+    Both the key and the (operator-configurable) prefix are restricted
+    to ``[a-z0-9_]`` and the composed name is capped at 63 chars, so
+    the result always satisfies the strict identifier validation in
+    ``database.session`` before SQL interpolation.
+    """
+    prefix = _sanitized_schema_prefix()
     raw = (key or "").strip().lower()
     if _UUID_RE.match(raw):
         raw = raw.replace("-", "")
-        return f"{get_tenant_schema_prefix()}{raw}"
+        return f"{prefix}{raw}"[:63]
 
     raw = re.sub(r"[^a-z0-9]+", "_", raw).strip("_")
     if not raw:
         raw = "anonymous"
-    return f"{get_tenant_schema_prefix()}{raw}"
+    return f"{prefix}{raw}"[:63]
 
 
 __all__ = [

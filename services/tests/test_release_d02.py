@@ -78,6 +78,28 @@ def worker() -> HuggingFaceDownloadWorker:
     return HuggingFaceDownloadWorker()
 
 
+@pytest.fixture(autouse=True)
+def _online_mode_with_fake_dns(monkeypatch):
+    """Keep these tests hermetic now that downloads validate every hop.
+
+    ``_download_file`` validates each request URL (and redirect hop)
+    against the SSRF policy, which needs online mode and DNS. Forcing
+    online mode with a stubbed public resolver keeps the fake-transport
+    property: still no real network.
+    """
+    import ipaddress
+
+    from airunner_common import settings as airunner_common_settings
+    from airunner_services import url_safety
+
+    monkeypatch.setattr(airunner_common_settings, "AIRUNNER_OFFLINE_MODE", False)
+    monkeypatch.setattr(
+        url_safety,
+        "_resolve_host_ips",
+        lambda hostname, port: {ipaddress.ip_address("93.184.216.34")},
+    )
+
+
 @pytest.fixture()
 def dirs(tmp_path):
     temp_dir = tmp_path / "temp"

@@ -98,17 +98,24 @@ def _migration_signature(
     version_locations: list[Path],
     base: Path,
 ) -> str:
-    """Return a stable signature for all migration files on disk."""
+    """Return a stable signature for all migration files on disk.
+
+    The signature hashes file contents, not just mtime+size: a
+    same-size rewrite with a preserved mtime must still invalidate the
+    cache, otherwise a stale heads entry could skip needed migrations.
+    """
+    import hashlib
+
     parts: list[str] = []
     for version_dir in version_locations:
         if not version_dir.exists():
             continue
         for migration_file in sorted(version_dir.glob("*.py")):
-            stat = migration_file.stat()
             relative_path = migration_file.relative_to(base)
-            parts.append(
-                f"{relative_path}:{stat.st_mtime_ns}:{stat.st_size}"
-            )
+            digest = hashlib.sha256(
+                migration_file.read_bytes()
+            ).hexdigest()[:32]
+            parts.append(f"{relative_path}:{digest}")
     return "|".join(parts)
 
 

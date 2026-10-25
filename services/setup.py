@@ -15,7 +15,7 @@ from pathlib import Path
 
 from setuptools import find_packages, setup
 
-_RELEASE_VERSION = "6.1.4"
+_RELEASE_VERSION = "6.1.5"
 VERSION = os.environ.get("AIRUNNER_BUILD_VERSION", _RELEASE_VERSION)
 
 # The project is GPL-3.0-only (issue #2058): the repo-root LICENSE file, every
@@ -266,6 +266,10 @@ SERVICE_CONSOLE_SCRIPTS = [
     "airunner-hf-download=airunner_services.bin.airunner_hf_download:main",
     "airunner-civitai-download="
     "airunner_services.bin.airunner_civitai_download:main",
+    "airunner-cleanup-llm-models=airunner_services.bin.cleanup_llm_models:main",
+    "airunner-docker-build=airunner_services.bin.docker_build:main",
+    "airunner-docker-wrapper=airunner_services.bin.docker_wrapper:main",
+    "airunner-generate-cert=airunner_services.bin.generate_cert:main",
 ]
 
 

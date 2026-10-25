@@ -74,9 +74,10 @@ def is_excluded(path: Path, root: Path, excludes: tuple[str, ...]) -> bool:
 def _is_generated(path: Path) -> bool:
     """Return ``True`` for auto-generated files that should be skipped.
 
-    This must stay identical to ``scripts/gui_complexity_report.py`` so both
-    reports measure the same source surface (issue #2052). ``*_rc.py`` covers
-    ``feather_rc.py`` and other compiled resource modules.
+    ``scripts/gui_complexity_report.py`` was deleted with the GUI package
+    split, so this report is now the only source-surface measure (issue
+    #2052). ``*_rc.py`` covers ``feather_rc.py`` and other compiled
+    resource modules.
     """
     if path.stem.endswith("_ui"):
         return True
