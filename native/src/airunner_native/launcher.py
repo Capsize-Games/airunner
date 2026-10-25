@@ -220,18 +220,12 @@ def deep_merge(defaults, current):
 
 
 def build_ui_if_needed():
-    """Build UI files only if necessary."""
-    ui_build_marker = _components_path() / "ui_build_marker"
-    if not ui_build_marker.exists():
-        try:
-            subprocess.run(
-                [sys.executable, "scripts/build_ui.py"],
-                check=True,
-            )
-            with ui_build_marker.open("w", encoding="utf-8") as marker:
-                marker.write("UI files built successfully.")
-        except Exception as e:
-            logger.warning(f"UI build step failed: {e}")
+    """No-op: the Qt UI build pipeline was removed with the desktop client.
+
+    Kept as a named seam so the (also retired) desktop bootstrap flow still
+    imports; headless startup never calls it.
+    """
+    logger.debug("UI build skipped: desktop client removed.")
 
 
 # Optimize component settings registration by caching results
