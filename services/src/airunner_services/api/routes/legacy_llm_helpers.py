@@ -1,11 +1,15 @@
 """Shared helpers for legacy LLM compatibility routes."""
 
-from typing import Any, Dict, Optional
+from typing import Any, Callable, Dict, Optional
 
 from airunner_common.contract_enums import LLMActionType
 from airunner_services.llm.llm_request import LLMRequest
 
 from .legacy_contracts import LegacyLLMGenerateRequest
+from .legacy_sampling_bounds import (
+    is_int_range as _is_int_range,
+    in_range as _in_range,
+)
 
 
 def parse_action(action_str: str) -> LLMActionType:
@@ -92,10 +96,79 @@ def _normalize_legacy_field_aliases(data: Dict[str, Any]) -> Dict[str, Any]:
     return data
 
 
+def _is_bool(value: Any) -> bool:
+    """Return whether a value is a real bool."""
+    return isinstance(value, bool)
+
+
+def _is_str(value: Any) -> bool:
+    """Return whether a value is a string."""
+    return isinstance(value, str)
+
+
+def _is_opt_bool(value: Any) -> bool:
+    """Return whether a value is None or a real bool."""
+    return value is None or isinstance(value, bool)
+
+
+def _is_tool_categories(value: Any) -> bool:
+    """Return whether a value is a valid tool-category selection."""
+    if value is None:
+        return True
+    return isinstance(value, list) and all(
+        isinstance(item, str) for item in value
+    )
+
+
+_LLM_FIELD_CHECKS: Dict[str, Callable[[Any], bool]] = {
+    "temperature": lambda v: _in_range(v, 0.0, 2.0),
+    "max_new_tokens": lambda v: _is_int_range(v, 1, 32768),
+    "top_p": lambda v: _in_range(v, 0.0, 1.0),
+    "top_k": lambda v: _is_int_range(v, 1, 200),
+    "repetition_penalty": lambda v: _in_range(v, 0.0, 2.0),
+    "min_length": lambda v: _is_int_range(v, 0, 32768),
+    "num_beams": lambda v: _is_int_range(v, 1, 8),
+    "num_return_sequences": lambda v: _is_int_range(v, 1, 8),
+    "no_repeat_ngram_size": lambda v: _is_int_range(v, 1, 10),
+    "length_penalty": lambda v: _in_range(v, 0.0, 5.0),
+    "do_sample": _is_bool,
+    "early_stopping": _is_bool,
+    "use_cache": _is_bool,
+    "use_memory": _is_bool,
+    "ephemeral": _is_bool,
+    "ephemeral_conversation": _is_bool,
+    "do_tts_reply": _is_bool,
+    "include_mood": _is_opt_bool,
+    "include_datetime": _is_opt_bool,
+    "include_style": _is_opt_bool,
+    "include_memory": _is_opt_bool,
+    "include_ui_context": _is_opt_bool,
+    "enable_thinking": _is_bool,
+    "reasoning_effort": _is_str,
+    "response_format": _is_str,
+    "system_prompt": _is_str,
+    "model": _is_str,
+    "node_id": _is_str,
+    "gguf_runtime_profile": _is_str,
+    "tool_categories": _is_tool_categories,
+}
+
+
 def _populate_llm_fields(data: Dict[str, Any], llm_request: LLMRequest) -> None:
-    """Copy known fields from data into the LLMRequest, skipping None values."""
+    """Copy allowlisted fields from data into the LLMRequest.
+
+    Only the generation/toggle fields above are assignable, each with
+    its own type/range check; anything else is ignored. In particular
+    ``rag_files``/``images`` (server-side file reads), ``dtype``
+    (model reload), ``model_service``/``api_model`` (remote backend
+    selection), ``force_tool``, and ``role`` can no longer be injected
+    through an ``extra="allow"`` legacy payload.
+    """
     for key, value in data.items():
-        if value is None or not hasattr(llm_request, key):
+        check = _LLM_FIELD_CHECKS.get(key)
+        if value is None or check is None:
+            continue
+        if not check(value):
             continue
         try:
             setattr(llm_request, key, value)

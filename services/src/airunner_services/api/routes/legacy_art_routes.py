@@ -14,10 +14,29 @@ from airunner_services.content_safety_gate import (
 )
 from airunner_services.utils.application.signal_mediator import SignalMediator
 
+from .art_contracts import (
+    _DEFAULT_CAPABILITIES,
+    _MAX_PIXELS,
+    _max_batch_size,
+    _max_steps,
+)
 from .legacy_common import get_airunner_app
 from .legacy_contracts import LegacyArtRequest
 
 router = APIRouter()
+
+
+def _bounded_int(value: Any, low: int, high: int, code: str) -> int:
+    """Return one caller int inside bounds, else raise a fixed 400."""
+    if isinstance(value, bool):
+        raise HTTPException(status_code=400, detail=code)
+    try:
+        parsed = int(value)
+    except (TypeError, ValueError):
+        raise HTTPException(status_code=400, detail=code) from None
+    if not low <= parsed <= high:
+        raise HTTPException(status_code=400, detail=code)
+    return parsed
 
 
 def _resolve_legacy_art_params(body: LegacyArtRequest) -> dict:
@@ -25,11 +44,20 @@ def _resolve_legacy_art_params(body: LegacyArtRequest) -> dict:
     prompt = (body.prompt or "").strip()
     if not prompt:
         raise HTTPException(status_code=400, detail="Missing 'prompt' field")
-    cfg_scale = (
-        float(body.cfg_scale)
-        if body.cfg_scale is not None
-        else float(body.scale) if body.scale is not None else 7.5
-    )
+    try:
+        cfg_scale = (
+            float(body.cfg_scale)
+            if body.cfg_scale is not None
+            else float(body.scale) if body.scale is not None else 7.5
+        )
+    except (TypeError, ValueError):
+        raise HTTPException(
+            status_code=400, detail="cfg_scale_out_of_bounds"
+        ) from None
+    if not 0.0 <= cfg_scale <= 100.0:
+        raise HTTPException(
+            status_code=400, detail="cfg_scale_out_of_bounds"
+        )
     want_random = (
         bool(body.random_seed)
         if body.random_seed is not None
@@ -38,13 +66,32 @@ def _resolve_legacy_art_params(body: LegacyArtRequest) -> dict:
     seed = None if want_random else (
         int(body.seed) if body.seed is not None else None
     )
-    num_images = max(1, int(body.n_samples or 1))
+    num_images = _bounded_int(
+        body.n_samples or 1, 1, _max_batch_size(), "n_samples_out_of_bounds"
+    )
+    width = _bounded_int(
+        body.width,
+        _DEFAULT_CAPABILITIES.min_width,
+        _DEFAULT_CAPABILITIES.max_width,
+        "width_out_of_bounds",
+    )
+    height = _bounded_int(
+        body.height,
+        _DEFAULT_CAPABILITIES.min_height,
+        _DEFAULT_CAPABILITIES.max_height,
+        "height_out_of_bounds",
+    )
+    steps = _bounded_int(body.steps, 1, _max_steps(), "steps_out_of_bounds")
+    if width * height > _MAX_PIXELS:
+        raise HTTPException(
+            status_code=400, detail="resolution_out_of_bounds"
+        )
     return {
         "prompt": prompt,
         "negative_prompt": body.negative_prompt or "",
-        "width": int(body.width),
-        "height": int(body.height),
-        "steps": int(body.steps),
+        "width": width,
+        "height": height,
+        "steps": steps,
         "cfg_scale": float(cfg_scale),
         "seed": seed,
         "num_images": int(num_images),
@@ -160,7 +207,7 @@ def legacy_art_generate(body: LegacyArtRequest, req: Request):
             )
         if error_holder["error"]:
             raise HTTPException(
-                status_code=500, detail=error_holder["error"]
+                status_code=500, detail="Image generation failed"
             )
         if not images:
             raise HTTPException(

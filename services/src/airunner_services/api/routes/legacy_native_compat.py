@@ -27,6 +27,7 @@ from airunner_services.utils.application import get_logger
 from .legacy_contracts import LegacyLLMGenerateRequest
 from .legacy_llm_compat import get_airunner_app
 from .legacy_llm_helpers import build_llm_request, parse_action
+from .legacy_sampling_bounds import MAX_PROMPT_CHARS
 from .legacy_llm_routes import legacy_llm_generate
 from .stt_helpers import require_runtime_registry, resolve_stt_client, response_status_is
 from .tts_helpers import build_tts_envelope, require_runtime_registry as require_tts_registry
@@ -74,6 +75,9 @@ def _map_batch_top_level_params(
             llm_request_data[llm_param] = data[client_param]
 
 
+_MAX_BATCH_PROMPTS = 16
+
+
 @router.post("/llm/generate_batch")
 def legacy_llm_generate_batch(body: dict, req: Request):
     """Serve the native batch LLM endpoint."""
@@ -83,6 +87,19 @@ def legacy_llm_generate_batch(body: dict, req: Request):
         raise HTTPException(
             status_code=400, detail="Missing or invalid 'prompts' field"
         )
+    if len(prompts) > _MAX_BATCH_PROMPTS:
+        raise HTTPException(
+            status_code=400, detail="too_many_prompts"
+        )
+    for prompt in prompts:
+        if not isinstance(prompt, str) or not prompt.strip():
+            raise HTTPException(
+                status_code=400, detail="invalid_prompt"
+            )
+        if len(prompt) > MAX_PROMPT_CHARS:
+            raise HTTPException(
+                status_code=400, detail="prompt_too_long"
+            )
 
     system_prompt = body.get("system_prompt")
     action = parse_action(body.get("action", "CHAT"))
@@ -216,8 +233,9 @@ def legacy_stt(body: dict, req: Request):
         )
     )
     if not response_status_is(response, EnvelopeStatus.SUCCEEDED):
-        detail = response.error.message if response.error else "STT request failed"
-        raise HTTPException(status_code=500, detail=detail)
+        if response.error:
+            logger.warning("STT request failed: %s", response.error.message)
+        raise HTTPException(status_code=500, detail="STT request failed")
     return {
         "transcription": response.payload.get("text", ""),
         "status": "success",
@@ -239,8 +257,9 @@ def legacy_tts(body: dict, req: Request):
     client = resolve_tts_client(require_tts_registry(req))
     response = client.invoke(build_tts_envelope(request_model))
     if response.status is not EnvelopeStatus.SUCCEEDED:
-        detail = response.error.message if response.error else "TTS request failed"
-        raise HTTPException(status_code=500, detail=detail)
+        if response.error:
+            logger.warning("TTS request failed: %s", response.error.message)
+        raise HTTPException(status_code=500, detail="TTS request failed")
     return {
         "status": "queued",
         "message": "Text queued for speech synthesis",

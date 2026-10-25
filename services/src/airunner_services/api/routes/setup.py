@@ -13,7 +13,7 @@ import logging
 import os
 from typing import Any
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
@@ -37,6 +37,30 @@ class SetupInstallRequest(BaseModel):
 def _emit(msg: dict[str, Any]) -> str:
     """Return one SSE-formatted event string."""
     return f"data: {json.dumps(msg)}\n\n"
+
+
+def _allowed_base_roots() -> list[str]:
+    """Return the real paths a setup install may create directories in."""
+    return [
+        os.path.realpath(os.path.expanduser(str(AIRUNNER_BASE_PATH)))
+    ]
+
+
+def _resolve_base_path(raw: str) -> str:
+    """Resolve an install base path confined to the allowed data root.
+
+    Symlinks, ``..`` segments, and tilde are resolved before the
+    comparison, so a value that escapes the data root is rejected
+    instead of letting an authenticated caller create directories
+    anywhere the daemon can write.
+    """
+    candidate = os.path.realpath(os.path.expanduser(raw or ""))
+    for root in _allowed_base_roots():
+        if candidate == root or candidate.startswith(root + os.sep):
+            return candidate
+    raise HTTPException(
+        status_code=400, detail="base_path_outside_allowed_root"
+    )
 
 
 def _create_directories(base_path: str) -> list[str]:
@@ -134,6 +158,7 @@ async def setup_install(
     request: Request,
 ):
     """Install AIRunner models and data through the daemon."""
+    resolved_base = _resolve_base_path(payload.base_path)
 
     async def _stream():
         download_service = getattr(
@@ -142,7 +167,7 @@ async def setup_install(
 
         # Phase 1: Create directories
         yield _emit({"status": "installing", "message": "Creating directories...", "progress": 0})
-        created = _create_directories(payload.base_path)
+        created = _create_directories(resolved_base)
         yield _emit({"status": "installing", "message": f"Created {len(created)} directories", "progress": 2})
 
         # Phase 2: Install NLTK data

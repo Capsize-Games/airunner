@@ -80,8 +80,16 @@ def serialize_record(
 def normalized_values(
     model_cls: type[Any],
     values: Dict[str, Any],
+    *,
+    allow_pk: bool = False,
 ) -> Dict[str, Any]:
     """Convert serialized payload values into ORM-ready Python values.
+
+    Only mapped column keys pass through: relationship attributes and
+    other unknown keys are dropped so a caller cannot mass-assign them,
+    and the ``id`` primary key is dropped unless ``allow_pk`` is set
+    (create/merge paths, which need it; update paths must not let a
+    caller rewrite row identity).
 
     Credential columns are moved into the OS keyring; the database column
     stores only a reference (or plaintext with explicit
@@ -95,6 +103,10 @@ def normalized_values(
     }
     normalized: Dict[str, Any] = {}
     for key, value in values.items():
+        if key not in column_types:
+            continue
+        if key == "id" and not allow_pk:
+            continue
         column_type = column_types.get(key)
         if isinstance(value, str) and isinstance(column_type, DateTime):
             try:

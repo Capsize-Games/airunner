@@ -28,6 +28,11 @@ from airunner_services.api.routes.events_handlers import (
     dispatch,
 )
 from airunner_services.api.routes.ws_auth import websocket_auth_failed
+from airunner_services.data.tenant import (
+    get_tenant_key,
+    reset_tenant_key,
+    set_tenant_key,
+)
 
 router = APIRouter()
 
@@ -59,11 +64,15 @@ async def events(ws: WebSocket) -> None:
         return
     await ws.accept()
     await ws.send_json({"type": "bootstrap", "body": bootstrap_payload()})
-    while True:
-        try:
-            msg = await ws.receive_json()
-        except WebSocketDisconnect:
-            return
-        except ValueError:
-            continue
-        await _handle(ws, msg)
+    conn_token = set_tenant_key(get_tenant_key())
+    try:
+        while True:
+            try:
+                msg = await ws.receive_json()
+            except WebSocketDisconnect:
+                return
+            except ValueError:
+                continue
+            await _handle(ws, msg)
+    finally:
+        reset_tenant_key(conn_token)

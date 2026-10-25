@@ -286,7 +286,9 @@ def ollama_ps(req: Request) -> dict[str, Any]:
 @router.post("/api/show")
 def ollama_show(body: dict) -> dict[str, Any]:
     """Handle the Ollama /api/show endpoint."""
-    model_name = body.get("name", "airunner:latest")
+    # Real Ollama clients send {"model": ...}; "name" stays as a
+    # fallback for older callers (issue #2237 Model UX parity).
+    model_name = body.get("model", body.get("name", "airunner:latest"))
     metadata = metadata_from_name(model_name)
     context_length = model_context_length(model_name.lower())
     return {
@@ -413,9 +415,23 @@ def _ollama_chat_request(
     tool_choice: Any = None,
 ) -> LLMRequest:
     """Build the LLMRequest used by Ollama chat endpoints."""
+    from .legacy_sampling_bounds import (
+        clamp_max_tokens,
+        clamp_repetition_penalty,
+        clamp_temperature,
+    )
+
+    if not isinstance(options, dict):
+        raise HTTPException(status_code=400, detail="invalid_options")
+    if not isinstance(tools, list):
+        raise HTTPException(status_code=400, detail="invalid_tools")
+    if think is not None and not isinstance(think, bool):
+        raise HTTPException(status_code=400, detail="invalid_think")
+    if tool_choice is not None and not isinstance(tool_choice, (str, dict)):
+        raise HTTPException(status_code=400, detail="invalid_tool_choice")
     llm_request = LLMRequest()
-    llm_request.temperature = options.get("temperature", 0.7)
-    llm_request.max_new_tokens = options.get("num_predict", 2048)
+    llm_request.temperature = clamp_temperature(options.get("temperature"))
+    llm_request.max_new_tokens = clamp_max_tokens(options.get("num_predict"))
     # Per-request sampling override (headlesscode's identical-consecutive-
     # call guardrail sends this once it detects a repeat streak, as an
     # alternative to a text-only nudge — see loop.ts's
@@ -423,7 +439,9 @@ def _ollama_chat_request(
     # LLMRequest dataclass default (1.15) when the caller doesn't send it,
     # matching prior behavior exactly.
     if "repeat_penalty" in options:
-        llm_request.repetition_penalty = options["repeat_penalty"]
+        llm_request.repetition_penalty = clamp_repetition_penalty(
+            options["repeat_penalty"]
+        )
     # Serve the model the way a real Ollama server does: only the
     # caller's own messages, no default companion-chatbot persona, no
     # mood/datetime/style/memory injection, and no tool categories
@@ -649,10 +667,14 @@ def _ollama_chat_timings(
 
 def _ollama_generate_request(data: dict[str, Any]) -> LLMRequest:
     """Build the LLMRequest used by Ollama generate endpoints."""
+    from .legacy_sampling_bounds import clamp_max_tokens, clamp_temperature
+
     llm_request = LLMRequest()
     options = data.get("options", {})
-    llm_request.temperature = options.get("temperature", 0.7)
-    llm_request.max_new_tokens = options.get("num_predict", 2048)
+    if not isinstance(options, dict):
+        raise HTTPException(status_code=400, detail="invalid_options")
+    llm_request.temperature = clamp_temperature(options.get("temperature"))
+    llm_request.max_new_tokens = clamp_max_tokens(options.get("num_predict"))
     system = data.get("system", "")
     if system:
         llm_request.system_prompt = system
@@ -777,12 +799,19 @@ def _embedding_vector() -> list[float]:
     return [random.uniform(-1, 1) for _ in range(384)]
 
 
+_MAX_EMBED_INPUTS = 64
+
+
 @router.post("/api/embed")
 @router.post("/api/embeddings")
 def ollama_embed(body: dict) -> dict[str, Any]:
     """Handle the Ollama /api/embed endpoint with placeholder embeddings."""
     input_text = body.get("input", body.get("prompt", ""))
     if isinstance(input_text, list):
+        if len(input_text) > _MAX_EMBED_INPUTS:
+            raise HTTPException(
+                status_code=400, detail="too_many_embed_inputs"
+            )
         embeddings = [_embedding_vector() for _ in input_text]
     else:
         embeddings = [_embedding_vector()]
@@ -797,41 +826,17 @@ def ollama_embed(body: dict) -> dict[str, Any]:
 
 @router.post("/api/pull")
 def ollama_pull(body: dict):
-    """Handle the Ollama /api/pull endpoint."""
-    model = body.get("model", "airunner:latest")
-    responses = [
-        {"status": "pulling manifest"},
-        {"status": f"pulling {model}"},
-        {"status": "verifying sha256 digest"},
-        {"status": "writing manifest"},
-        {"status": "success"},
-    ]
-    return _stream_or_success(body.get("stream", True), responses)
+    """Reject model pulls: the daemon serves one local model only."""
+    raise HTTPException(status_code=501, detail="Not implemented")
 
 
 @router.post("/api/copy")
 def ollama_copy(_body: dict) -> dict[str, str]:
-    """Handle the Ollama /api/copy endpoint."""
-    return {"status": "success"}
+    """Reject model copies: the daemon serves one local model only."""
+    raise HTTPException(status_code=501, detail="Not implemented")
 
 
 @router.post("/api/create")
 def ollama_create(body: dict):
-    """Handle the Ollama /api/create endpoint."""
-    responses = [
-        {"status": "reading model metadata"},
-        {"status": "creating system layer"},
-        {"status": "writing manifest"},
-        {"status": "success"},
-    ]
-    return _stream_or_success(body.get("stream", True), responses)
-
-
-def _stream_or_success(stream: bool, responses: list[dict[str, Any]]):
-    """Return either one streamed NDJSON response or one success object."""
-    if not stream:
-        return {"status": "success"}
-    return StreamingResponse(
-        (_ndjson_line(response) for response in responses),
-        media_type="application/x-ndjson",
-    )
+    """Reject model creation: the daemon serves one local model only."""
+    raise HTTPException(status_code=501, detail="Not implemented")

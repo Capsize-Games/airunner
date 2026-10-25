@@ -53,17 +53,14 @@ async def synthesize_speech(request: TTSRequest, req: Request):
         logger.error(f"Error synthesizing speech: {e}")
         raise HTTPException(
             status_code=500,
-            detail=f"Error synthesizing speech: {str(e)}",
+            detail="TTS request failed",
         )
     if response.status is not EnvelopeStatus.SUCCEEDED:
-        detail = (
-            response.error.message
-            if response.error
-            else "TTS request failed"
-        )
+        if response.error:
+            logger.warning("TTS request failed: %s", response.error.message)
         raise HTTPException(
             status_code=tts_error_status_code(response),
-            detail=detail,
+            detail="TTS request failed",
         )
     audio_data = tts_response_audio(response)
     audio_io = io.BytesIO(audio_data)
@@ -100,5 +97,5 @@ async def list_models(req: Request):
     except Exception as e:
         logger.error(f"Error listing models: {e}")
         raise HTTPException(
-            status_code=500, detail=f"Error listing models: {str(e)}"
+            status_code=500, detail="Failed to list models"
         )

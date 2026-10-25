@@ -87,6 +87,13 @@ async def websocket_chat(websocket: WebSocket):
 
     await websocket.accept()
     principal = _resolve_principal(websocket)
+    from airunner_services.data.tenant import (
+        get_tenant_key,
+        reset_tenant_key,
+        set_tenant_key,
+    )
+
+    conn_token = set_tenant_key(get_tenant_key())
     try:
         client = resolve_llm_client(require_websocket_runtime_registry(websocket))
         while True:
@@ -170,3 +177,5 @@ async def websocket_chat(websocket: WebSocket):
                 "done": True,
             }
         )
+    finally:
+        reset_tenant_key(conn_token)

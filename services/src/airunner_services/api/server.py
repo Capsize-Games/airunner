@@ -8,6 +8,7 @@ from typing import List, Optional, Any, Tuple
 from contextlib import asynccontextmanager
 import os
 import secrets
+import uuid
 from ipaddress import ip_address
 from urllib.parse import urlsplit
 
@@ -88,6 +89,15 @@ def is_loopback_host(host: str) -> bool:
 
 
 def is_loopback_request(conn: HTTPConnection) -> bool:
+    """Return whether one connection arrived over loopback.
+
+    ``client.host`` is the direct TCP peer as seen by this server: there
+    is intentionally no ``X-Forwarded-For`` handling here. Do not put a
+    reverse proxy in front of this port unless the proxy itself enforces
+    the auth policy, because a proxied deployment would see the proxy's
+    address (not the real client's) and fail closed to 401 for every
+    loopback-authenticated caller.
+    """
     client = getattr(conn, "client", None)
     if not client:
         return False
@@ -331,6 +341,13 @@ def create_app(
             "http://127.0.0.1:*",
         ]
 
+    if "*" in allowed_origins:
+        raise ValueError(
+            "Refusing wildcard CORS origin with credentials enabled: "
+            "a '*' origin together with allow_credentials=True would "
+            "expose authenticated responses to any site."
+        )
+
     # Stashed on app.state so the LLM WebSocket route (a separate ASGI
     # scope that FastAPI/Starlette HTTP middleware never runs for) can
     # apply the identical auth/origin policy before accepting a socket.
@@ -338,6 +355,10 @@ def create_app(
     app.state.require_api_key = require_api_key
     app.state.insecure_no_auth = insecure_no_auth
     app.state.allowed_origins = allowed_origins
+    # Snapshot of the tenant allowlist shared with the WebSocket tenant
+    # scoping in ws_auth, so HTTP and sockets cannot drift apart when
+    # the environment changes after startup.
+    app.state.allowed_tenants = allowed_tenants
 
     if enable_cors:
         app.add_middleware(
@@ -419,18 +440,39 @@ def create_app(
     if mount_client_bundle(app):
         logger.info("Serving the desktop chat client bundle from the daemon")
 
+    @app.middleware("http")
+    async def docs_visibility_middleware(request: Request, call_next):
+        """Hide API docs outside debug mode and loopback clients.
+
+        ``/docs``, ``/redoc``, and ``/openapi.json`` expand the attack
+        surface in production, so they answer 404 unless debug mode is
+        on or the caller arrived over loopback.
+        """
+        if request.url.path in {"/docs", "/redoc", "/openapi.json"}:
+            debug = os.environ.get("AIRUNNER_DEBUG", "0") == "1"
+            if not debug and not is_loopback_request(request):
+                return JSONResponse(
+                    status_code=404, content={"detail": "Not Found"}
+                )
+        return await call_next(request)
+
     # Global exception handler
     @app.exception_handler(Exception)
     async def global_exception_handler(request, exc):
-        logger.error(f"Unhandled exception: {exc}", exc_info=True)
-        debug = os.environ.get("AIRUNNER_DEBUG", "0") == "1"
-        if debug and is_loopback_request(request):
-            return JSONResponse(
-                status_code=500,
-                content={"error": "Internal server error", "detail": str(exc)},
-            )
-
-        return JSONResponse(status_code=500, content={"error": "Internal server error"})
+        correlation_id = uuid.uuid4().hex[:12]
+        logger.error(
+            "Unhandled exception %s: %s",
+            correlation_id,
+            exc,
+            exc_info=True,
+        )
+        return JSONResponse(
+            status_code=500,
+            content={
+                "error": "Internal server error",
+                "correlation_id": correlation_id,
+            },
+        )
 
     return app
 

@@ -14,6 +14,11 @@ from fastapi import (
     status,
 )
 
+from airunner_services.data.tenant import (
+    get_tenant_key,
+    reset_tenant_key,
+    set_tenant_key,
+)
 from airunner_services.ipc.messages import EnvelopeStatus, RequestEnvelope
 from airunner_services.runtimes.contracts import RuntimeAction, RuntimeKind
 from airunner_common.settings import AIRUNNER_LOG_LEVEL
@@ -70,11 +75,13 @@ async def transcribe_audio(
             )
         )
         if not response_status_is(response, EnvelopeStatus.SUCCEEDED):
+            if response.error:
+                logger.warning(
+                    "STT transcribe failed: %s", response.error.message
+                )
             raise HTTPException(
                 status_code=runtime_error_status(response),
-                detail=response.error.message
-                if response.error
-                else "STT request failed",
+                detail="STT request failed",
             )
         return TranscriptionResponse(
             text=response.payload.get("text", ""),
@@ -85,7 +92,7 @@ async def transcribe_audio(
     except Exception as e:
         logger.error(f"Error transcribing audio: {e}")
         raise HTTPException(
-            status_code=500, detail=f"Error transcribing audio: {str(e)}"
+            status_code=500, detail="STT request failed"
         )
 
 
@@ -124,7 +131,7 @@ async def list_models(req: Request):
     except Exception as e:
         logger.error(f"Error listing models: {e}")
         raise HTTPException(
-            status_code=500, detail=f"Error listing models: {str(e)}"
+            status_code=500, detail="Failed to list models"
         )
 
 
@@ -144,12 +151,16 @@ async def websocket_transcription(websocket: WebSocket) -> None:
         return
     await websocket.accept()
     logger.info("STT WebSocket connection established")
-    while True:
-        try:
-            message = await websocket.receive()
-        except WebSocketDisconnect:
-            break
-        if message.get("type") == "websocket.disconnect":
-            break
-        await answer_stream_frame(websocket, message)
+    conn_token = set_tenant_key(get_tenant_key())
+    try:
+        while True:
+            try:
+                message = await websocket.receive()
+            except WebSocketDisconnect:
+                break
+            if message.get("type") == "websocket.disconnect":
+                break
+            await answer_stream_frame(websocket, message)
+    finally:
+        reset_tenant_key(conn_token)
     logger.info("STT WebSocket connection closed")

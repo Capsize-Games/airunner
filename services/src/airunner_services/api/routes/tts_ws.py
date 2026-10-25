@@ -21,6 +21,11 @@ from typing import Any, Dict
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, status
 
+from airunner_services.data.tenant import (
+    get_tenant_key,
+    reset_tenant_key,
+    set_tenant_key,
+)
 from airunner_services.ipc.messages import EnvelopeStatus
 from airunner_common.settings import AIRUNNER_LOG_LEVEL
 from airunner_services.utils.application import get_logger
@@ -60,18 +65,15 @@ async def _synthesize(ws: WebSocket, msg: Dict[str, Any]) -> None:
         )
     except Exception as exc:
         logger.error("Error synthesizing speech: %s", exc)
-        await ws.send_json({"type": "error", "message": str(exc)})
+        await ws.send_json({"type": "error", "message": "synthesis_failed"})
         return
     if response.status is not EnvelopeStatus.SUCCEEDED:
-        message = (
-            response.error.message
-            if response.error
-            else "TTS request failed"
-        )
+        if response.error:
+            logger.warning("TTS request failed: %s", response.error.message)
         await ws.send_json(
             {
                 "type": "error",
-                "message": message,
+                "message": "synthesis_failed",
                 "status": tts_error_status_code(response),
             }
         )
@@ -97,14 +99,18 @@ async def tts_websocket(ws: WebSocket) -> None:
         await ws.close(code=status.WS_1008_POLICY_VIOLATION)
         return
     await ws.accept()
-    while True:
-        try:
-            msg = await ws.receive_json()
-        except WebSocketDisconnect:
-            return
-        except ValueError:
-            continue
-        await _handle(ws, msg)
+    conn_token = set_tenant_key(get_tenant_key())
+    try:
+        while True:
+            try:
+                msg = await ws.receive_json()
+            except WebSocketDisconnect:
+                return
+            except ValueError:
+                continue
+            await _handle(ws, msg)
+    finally:
+        reset_tenant_key(conn_token)
 
 
 __all__ = ["router", "tts_websocket"]

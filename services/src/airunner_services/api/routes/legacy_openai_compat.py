@@ -183,10 +183,12 @@ def _build_openai_request(
     tools: list[dict[str, Any]],
 ) -> LLMRequest:
     """Create the internal LLM request for one OpenAI chat completion."""
+    from .legacy_sampling_bounds import clamp_max_tokens, clamp_temperature
+
     enhanced_prompt = _enhance_system_prompt(system_prompt, tools)
     llm_request = LLMRequest()
-    llm_request.temperature = data.get("temperature", 0.7)
-    llm_request.max_new_tokens = data.get("max_tokens", 2048)
+    llm_request.temperature = clamp_temperature(data.get("temperature"))
+    llm_request.max_new_tokens = clamp_max_tokens(data.get("max_tokens"))
     # Serve the model the way a real OpenAI-compatible server does:
     # only the caller's own messages, no default companion-chatbot
     # persona, no mood/datetime/style/memory injection, and no tool

@@ -60,9 +60,11 @@ def test_ollama_utility_endpoints() -> None:
     """Ollama utility endpoints answer through FastAPI."""
     client = _client()
 
-    response = client.post("/api/copy", json={})
-    assert response.status_code == 200
-    assert response.json() == {"status": "success"}
+    # Model-management endpoints have no local implementation: they
+    # must report 501, never a fake success payload.
+    for path in ("/api/copy", "/api/pull", "/api/create"):
+        response = client.post(path, json={})
+        assert response.status_code == 501
 
     response = client.post(
         "/api/embed", json={"input": ["hello"], "model": "airunner:latest"}
@@ -74,13 +76,10 @@ def test_ollama_utility_endpoints() -> None:
     assert response.status_code == 200
     assert len(response.json()["embeddings"]) == 1
 
-    response = client.post("/api/pull", json={"model": "airunner:latest", "stream": False})
-    assert response.status_code == 200
-    assert response.json() == {"status": "success"}
-
-    response = client.post("/api/create", json={"stream": False})
-    assert response.status_code == 200
-    assert response.json() == {"status": "success"}
+    response = client.post(
+        "/api/embed", json={"input": ["x"] * 65}
+    )
+    assert response.status_code == 400
 
 
 def test_openai_models_endpoint() -> None:
