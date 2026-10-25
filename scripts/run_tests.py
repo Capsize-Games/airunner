@@ -32,6 +32,7 @@ Note: Eval tests start a fresh daemon process inside the test harness.
 """
 
 import argparse
+import ast
 import os
 import signal
 import subprocess
@@ -283,7 +284,55 @@ def run_command(cmd: list[str], description: str, env: dict = None) -> int:
     return result.returncode
 
 
-def _run_optional_smoke_suite(cmd: list[str], description: str) -> int:
+def _has_pytest_marker(test_path: Path, marker: str) -> bool:
+    """Check test source for a direct pytest marker declaration.
+
+    This avoids importing unrelated test modules when an optional marker is
+    absent. If parsing or dynamic marker hooks make the result ambiguous, let
+    pytest handle collection instead of treating the suite as empty.
+    """
+    for path in test_path.rglob("*.py"):
+        try:
+            tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+        except (OSError, UnicodeError, SyntaxError):
+            return True
+        if path.name == "conftest.py" and any(
+            isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+            and node.name in {"pytest_configure", "pytest_collection_modifyitems"}
+            for node in tree.body
+        ):
+            return True
+
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Attribute) and node.attr == marker:
+                return True
+            if isinstance(node, ast.Assign) and any(
+                isinstance(target, ast.Name) and target.id == "pytestmark"
+                for target in node.targets
+            ):
+                # A module-level marker may be assembled through aliases or
+                # helper calls; let pytest resolve it rather than guess.
+                return True
+            if isinstance(node, ast.Call) and isinstance(node.func, ast.Name):
+                if node.func.id == "getattr" and len(node.args) >= 2:
+                    first, second = node.args[:2]
+                    if isinstance(second, ast.Constant) and second.value in {
+                        marker,
+                        "mark",
+                        "pytestmark",
+                    }:
+                        return True
+                    if isinstance(first, ast.Attribute) and first.attr == "mark":
+                        return True
+                    if isinstance(first, ast.Name) and first.id in {"pytest", "mark"}:
+                        return True
+
+    return False
+
+
+def _run_optional_smoke_suite(
+    cmd: list[str], description: str, test_path: Path, marker: str
+) -> int:
     """Run one optional runtime smoke suite; empty collection is a pass.
 
     pytest exits 5 when no tests match the requested marker. The LLM/STT/art/
@@ -291,6 +340,13 @@ def _run_optional_smoke_suite(cmd: list[str], description: str) -> int:
     every checkout (issue #2055), so an empty collection is reported as a
     skip-style notice instead of failing CI.
     """
+    if not _has_pytest_marker(test_path, marker):
+        print(
+            f"NOTE: {description}: no tests declare marker {marker!r}; "
+            "treating as pass (optional suite)."
+        )
+        return 0
+
     exit_code = run_command(cmd, description, env=_build_pytest_env())
     if exit_code == 5:
         print(
@@ -478,7 +534,9 @@ def run_llm_runtime_smoke_tests(verbose: bool = False) -> int:
         cmd.append("--tb=short")
 
     cmd.extend(["--color=yes", "-ra"])
-    return _run_optional_smoke_suite(cmd, "LLM runtime smoke tests")
+    return _run_optional_smoke_suite(
+        cmd, "LLM runtime smoke tests", test_path, "llm_runtime_smoke"
+    )
 
 
 def run_stt_runtime_smoke_tests(verbose: bool = False) -> int:
@@ -496,7 +554,9 @@ def run_stt_runtime_smoke_tests(verbose: bool = False) -> int:
         cmd.append("--tb=short")
 
     cmd.extend(["--color=yes", "-ra"])
-    return _run_optional_smoke_suite(cmd, "STT runtime smoke tests")
+    return _run_optional_smoke_suite(
+        cmd, "STT runtime smoke tests", test_path, "stt_runtime_smoke"
+    )
 
 
 def run_art_runtime_smoke_tests(verbose: bool = False) -> int:
@@ -514,7 +574,9 @@ def run_art_runtime_smoke_tests(verbose: bool = False) -> int:
         cmd.append("--tb=short")
 
     cmd.extend(["--color=yes", "-ra"])
-    return _run_optional_smoke_suite(cmd, "Art runtime smoke tests")
+    return _run_optional_smoke_suite(
+        cmd, "Art runtime smoke tests", test_path, "art_runtime_smoke"
+    )
 
 
 def run_art_service_runtime_tests(verbose: bool = False) -> int:
@@ -554,7 +616,9 @@ def run_tts_runtime_smoke_tests(verbose: bool = False) -> int:
         cmd.append("--tb=short")
 
     cmd.extend(["--color=yes", "-ra"])
-    return _run_optional_smoke_suite(cmd, "TTS runtime smoke tests")
+    return _run_optional_smoke_suite(
+        cmd, "TTS runtime smoke tests", test_path, "tts_runtime_smoke"
+    )
 
 
 def main():

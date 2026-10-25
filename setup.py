@@ -68,10 +68,10 @@ GUI_REQUIREMENTS = [
     # LLMResponse (#2188) -- this package imports all three directly and
     # cannot start on an older release.
     "airunner-common~=6.1.7",
-    # The GUI hard-imports airunner_services (daemon_client, api) but never
-    # declared it (issue #2037). Mirror the native pattern and pin it to the
-    # same VERSION as the rest of the surface.
-    f"airunner-services=={VERSION}",
+    # airunner and airunner-services version independently. Ordinary source
+    # installs accept the current compatible services patch line; the
+    # released bundle records its tested exact pair in the release lockfile.
+    "airunner-services~=6.1.4",
     # Undeclared third-party runtime imports (issue #2040).
     # requests: url_safety, components/documents/kiwix_api,
     #           components/llm/utils/model_downloader,
