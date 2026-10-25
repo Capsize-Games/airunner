@@ -49,8 +49,10 @@ class ToolExecutionMixin:
         This wraps the standard ToolNode behavior but adds real-time status
         updates that can be displayed in the UI.
 
-        NOTE: Validation removed - bind_tools() ensures the model only receives
-        valid tool schemas. Invalid calls should not occur with proper binding.
+        NOTE: bind_tools() narrows what the model *should* emit, but the
+        model is untrusted input: every call is re-validated server-side
+        (known tool, dict args, signature fit) before execution. Invalid
+        calls are answered with a tool error and never executed.
 
         Args:
             state: Workflow state containing messages
@@ -77,22 +79,161 @@ class ToolExecutionMixin:
         if blocked_state is not None:
             return blocked_state
 
-        # Emit "starting" status for each tool
-        self._emit_starting_status(tool_calls)
+        valid_calls, invalid_errors = self._validate_tool_calls(tool_calls)
+
+        # Emit "starting" status for valid tools only; invalid calls get
+        # an immediate error without execution.
+        self._emit_starting_status(valid_calls)
 
         # Sanitize tool functions to ensure docstrings exist before wrapping
         self._sanitize_tool_functions()
 
-        # Execute tools using standard ToolNode
-        tool_node = ToolNode(self._tools)
-        result_state = tool_node.invoke(state)
+        if valid_calls:
+            # Execute valid tools using standard ToolNode
+            tool_node = ToolNode(self._tools)
+            filtered_state = self._state_with_tool_calls(state, valid_calls)
+            result_state = tool_node.invoke(filtered_state)
+        else:
+            result_state = dict(state)
+
+        if invalid_errors:
+            result_state = self._append_tool_errors(
+                result_state, invalid_errors
+            )
 
         # Extract tool results and emit "completed" status
-        self._emit_completed_status(result_state, tool_calls)
+        self._emit_completed_status(result_state, valid_calls)
 
-        policy.complete(tool_calls)
+        policy.complete(valid_calls)
 
         return result_state
+
+    def _known_tool_map(self) -> dict:
+        """Map known tool names to their callables."""
+        known = {}
+        for tool in self._tools or []:
+            name = getattr(tool, "name", None) or getattr(
+                tool, "__name__", None
+            )
+            if isinstance(name, str) and name:
+                known[name] = tool
+        return known
+
+    def _validate_tool_calls(self, tool_calls: list) -> tuple:
+        """Split model tool calls into valid and rejected.
+
+        A call is valid only when it names a bound tool, carries a
+        dict of arguments, and fits that tool's signature (when the
+        signature is inspectable). Rejected calls return ``(tool_id,
+        error)`` pairs answered with a tool error, never executed.
+
+        Args:
+            tool_calls: Raw tool call dictionaries from the model
+
+        Returns:
+            (valid_calls, [(tool_call_id, error_message)])
+        """
+        valid = []
+        rejected = []
+        known = self._known_tool_map()
+        for call in tool_calls:
+            if not isinstance(call, dict):
+                continue
+            name = call.get("name", "unknown")
+            call_id = call.get("id", "")
+            args = call.get("args", {})
+            tool = known.get(name)
+            if tool is None:
+                rejected.append(
+                    (call_id, f"Unknown tool '{name}': not a bound tool")
+                )
+                continue
+            if not isinstance(args, dict):
+                rejected.append(
+                    (
+                        call_id,
+                        f"Invalid arguments for tool '{name}': "
+                        "args must be an object",
+                    )
+                )
+                continue
+            mismatch = self._signature_mismatch(tool, args)
+            if mismatch is not None:
+                rejected.append((call_id, mismatch))
+                continue
+            valid.append(call)
+        return valid, rejected
+
+    def _signature_mismatch(self, tool, args: dict) -> Optional[str]:
+        """Check tool args against its signature, if inspectable."""
+        import inspect
+
+        target = getattr(tool, "func", tool)
+        try:
+            params = inspect.signature(target).parameters
+        except (TypeError, ValueError):
+            return None
+        accepts_kwargs = any(
+            p.kind == inspect.Parameter.VAR_KEYWORD
+            for p in params.values()
+        )
+        tool_name = getattr(tool, "name", None) or getattr(
+            target, "__name__", "tool"
+        )
+        unexpected = [
+            key for key in args if key not in params and not accepts_kwargs
+        ]
+        if unexpected:
+            return (
+                f"Invalid arguments for tool '{tool_name}': "
+                f"unexpected argument(s) {sorted(unexpected)}"
+            )
+        missing = [
+            name
+            for name, param in params.items()
+            if param.default is inspect.Parameter.empty
+            and param.kind
+            not in (
+                inspect.Parameter.VAR_POSITIONAL,
+                inspect.Parameter.VAR_KEYWORD,
+            )
+            and name not in args
+            and name not in ("api", "agent", "self")
+        ]
+        if missing:
+            return (
+                f"Invalid arguments for tool '{tool_name}': "
+                f"missing required argument(s) {sorted(missing)}"
+            )
+        return None
+
+    def _state_with_tool_calls(self, state: "WorkflowState", calls: list):
+        """Return state with the last message limited to valid calls."""
+        messages = list(state["messages"])
+        last_message = messages[-1]
+        try:
+            messages[-1] = last_message.model_copy(
+                update={"tool_calls": list(calls)}
+            )
+        except Exception:
+            from langchain_core.messages import AIMessage
+
+            messages[-1] = AIMessage(
+                content=getattr(last_message, "content", ""),
+                tool_calls=list(calls),
+            )
+        return {**state, "messages": messages}
+
+    def _append_tool_errors(self, state: "WorkflowState", errors: list):
+        """Append ToolMessage errors for rejected tool calls."""
+        from langchain_core.messages import ToolMessage
+
+        messages = list(state.get("messages", []))
+        for call_id, message in errors:
+            messages.append(
+                ToolMessage(content=message, tool_call_id=call_id)
+            )
+        return {**state, "messages": messages}
 
     def _get_next_workflow_tool(self, _current_tool: str) -> str | None:
         """Get the next required tool in the coding workflow sequence.

@@ -38,13 +38,24 @@ class SystemTools(BaseTool):
         """Quit the application."""
 
         @tool
-        def quit_application() -> str:
+        def quit_application(confirm: bool = False) -> str:
             """Quit the AI Runner application.
+
+            Args:
+                confirm: Explicit confirmation flag. The application
+                    quits only when this is True; the default denies
+                    the request so a stray or hallucinated call cannot
+                    close the app.
 
             Returns:
                 Confirmation message
             """
             try:
+                if confirm is not True:
+                    return (
+                        "Refused: quitting requires explicit "
+                        "confirmation (confirm=True)."
+                    )
                 if not self.dispatch_tool_action("quit_application"):
                     return "Application quit is unavailable in this runtime."
                 return "Quitting application..."
@@ -134,7 +145,7 @@ class SystemTools(BaseTool):
               Data: {}
 
             - QUIT_APPLICATION: Quit the application (use with confirmation!)
-              Data: {}
+              Data: {"confirm": true} (required; refused without it)
 
             Args:
                 signal_name: Name of the signal to emit (e.g., "TOGGLE_TTS_SIGNAL")
@@ -149,6 +160,15 @@ class SystemTools(BaseTool):
                     data_dict = json.loads(data)
                 except json.JSONDecodeError:
                     return f"Error: data must be valid JSON. Got: {data}"
+
+                if signal_name == "QUIT_APPLICATION" and (
+                    not isinstance(data_dict, dict)
+                    or data_dict.get("confirm") is not True
+                ):
+                    return (
+                        "Refused: QUIT_APPLICATION requires explicit "
+                        'confirmation (data={"confirm": true}).'
+                    )
 
                 if not signal_name:
                     available = [

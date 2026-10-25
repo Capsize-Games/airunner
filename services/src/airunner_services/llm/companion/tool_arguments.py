@@ -33,11 +33,18 @@ def validate_arguments(
     func: Callable[..., Any],
     arguments: Mapping[str, Any],
 ) -> bool:
-    """Return whether ``arguments`` fit the tool's signature."""
+    """Return whether ``arguments`` fit the tool's signature.
+
+    Fail-closed: when the signature cannot be inspected, or the
+    arguments are not a mapping at all, validation fails instead of
+    letting an unchecked call through.
+    """
+    if not isinstance(arguments, Mapping):
+        return False
     try:
         params = inspect.signature(func).parameters
     except (TypeError, ValueError):
-        return True
+        return False
     accepts_kwargs = any(
         p.kind == inspect.Parameter.VAR_KEYWORD for p in params.values()
     )

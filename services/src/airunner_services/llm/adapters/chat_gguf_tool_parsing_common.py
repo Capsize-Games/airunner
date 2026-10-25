@@ -18,17 +18,23 @@ def normalize_tool_payload(payload: Any) -> Any:
 
 
 def normalize_tool_value(key: str, value: Any) -> Any:
-    """Normalize one tool payload value recursively."""
+    """Normalize one tool payload value recursively.
+
+    ``code`` arguments are passed through byte-for-byte: earlier
+    normalization stripped whitespace between digits, silently
+    rewriting numeric literals (``range(1, 10)``) and string
+    contents inside model-generated code.
+    """
     if isinstance(value, (dict, list)):
         return normalize_tool_payload(value)
     if not isinstance(value, str):
+        return value
+    if key.strip() == "code":
         return value
     cleaned = value.strip()
     if key.strip() in {"tool", "name"}:
         cleaned = re.sub(r"\s*_\s*", "_", cleaned)
         return re.sub(r"\s+", "", cleaned)
-    if key.strip() == "code":
-        return re.sub(r"(?<=\d)\s+(?=\d)", "", cleaned)
     return cleaned
 
 

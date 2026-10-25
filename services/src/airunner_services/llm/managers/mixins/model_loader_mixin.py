@@ -21,9 +21,14 @@ from transformers import (
 )
 
 from airunner_common.settings import AIRUNNER_LOCAL_FILES_ONLY
+from airunner_services.llm.adapters.chat_gguf_model_loading import (
+    ModelLoadError,
+)
 from airunner_services.utils.memory.clear_memory import clear_memory
 from airunner_services.utils.memory.gpu_memory_stats import gpu_memory_stats
 from airunner_services.llm.config.provider_config import LLMProviderConfig
+
+__all__ = ["ModelLoadError", "ModelLoaderMixin"]
 
 if TYPE_CHECKING:
     pass
@@ -197,11 +202,24 @@ class ModelLoaderMixin:
         Args:
             model_path: Path to model directory
             model_kwargs: Model loading parameters
+
+        Raises:
+            ModelLoadError: When the weights fail to load, so the
+                caller can degrade (run without a model) instead of
+                crashing on an untyped backend exception.
         """
-        if config is None:
-            self._load_standard_model(model_path, model_kwargs)
-        else:
-            self._load_standard_model(model_path, model_kwargs, config)
+        try:
+            if config is None:
+                self._load_standard_model(model_path, model_kwargs)
+            else:
+                self._load_standard_model(model_path, model_kwargs, config)
+        except ModelLoadError:
+            raise
+        except Exception as exc:
+            raise ModelLoadError(
+                f"Failed to load model from {model_path}: {exc}",
+                model_path=model_path,
+            ) from exc
 
     def _load_standard_model(
         self,
@@ -268,6 +286,11 @@ class ModelLoaderMixin:
 
         try:
             self._execute_model_loading()
+        except ModelLoadError as e:
+            # Typed load failure: degrade gracefully and keep running
+            # without a model instead of crashing the manager.
+            self.logger.warning("Model unavailable, degrading: %s", e)
+            self._model = None
         except Exception as e:
             self._handle_model_loading_error(e)
 

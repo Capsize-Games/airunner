@@ -14,12 +14,15 @@ import builtins
 from typing import Any, Dict
 
 
-# Builtins that are safe to expose in the restricted namespace
+# Builtins that are safe to expose in the restricted namespace.
+# Deliberately absent: ``format`` (``"{0.__class__}".format(obj)``
+# walks an object graph from a format string), ``hasattr``/``getattr``
+# (introspection machinery), and ``dir`` (namespace enumeration).
 SAFE_BUILTINS = {
     # Core functions
     'abs', 'all', 'any', 'bin', 'bool', 'bytes', 'callable',
     'chr', 'complex', 'dict', 'divmod', 'enumerate',
-    'filter', 'float', 'format', 'frozenset', 'hasattr',
+    'filter', 'float', 'frozenset',
     'hash', 'hex', 'id', 'int', 'isinstance', 'issubclass',
     'iter', 'len', 'list', 'map', 'max', 'min', 'next',
     'oct', 'ord', 'pow', 'print', 'range', 'repr', 'reversed',

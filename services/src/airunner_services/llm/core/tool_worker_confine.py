@@ -26,6 +26,8 @@ _GUARD_DENIED_CALLS = frozenset(
         "getattr",
         "setattr",
         "delattr",
+        "hasattr",
+        "dir",
         "globals",
         "locals",
         "vars",
@@ -34,6 +36,11 @@ _GUARD_DENIED_CALLS = frozenset(
         "breakpoint",
         "help",
         "memoryview",
+        # ``str.format``/``format_map`` walk an object graph from a
+        # format string (``"{0.__class__}".format(obj)``); deny the
+        # method form as well as the builtin below.
+        "format",
+        "format_map",
     }
 )
 _GUARD_DENIED_ROOTS = frozenset(
@@ -71,6 +78,10 @@ def _guard_node(node: ast.AST) -> str | None:
     if isinstance(node, ast.Call) and isinstance(node.func, ast.Name):
         if node.func.id in _GUARD_DENIED_CALLS:
             return f"call to '{node.func.id}' is not allowed"
+    if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute):
+        # Method form: ``"...".format(obj)``, ``x.format_map(d)``.
+        if node.func.attr in _GUARD_DENIED_CALLS:
+            return f"call to '{node.func.attr}' is not allowed"
     if isinstance(node, ast.Attribute):
         if node.attr.startswith("__") and node.attr.endswith("__"):
             return f"attribute access to '{node.attr}' is not allowed"

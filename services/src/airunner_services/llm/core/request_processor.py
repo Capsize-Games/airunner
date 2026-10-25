@@ -100,6 +100,35 @@ class RequestProcessor:
         # Create new request with merged values
         return replace(request, **merged)
 
+    def validation_errors(self, request: LLMRequest) -> list:
+        """
+        Collect every request validation violation.
+
+        Args:
+            request: Request to validate
+
+        Returns:
+            List of violation messages (empty when valid)
+        """
+        errors = []
+        try:
+            # Check ranges
+            if request.max_new_tokens < 1:
+                errors.append("max_new_tokens must be >= 1")
+
+            if request.temperature < 0.0001:
+                errors.append("temperature must be >= 0.0001")
+
+            if not (0 < request.top_p <= 1):
+                errors.append("top_p must be between 0 and 1")
+
+            if request.top_k < 1:
+                errors.append("top_k must be >= 1")
+
+        except Exception as e:
+            errors.append(f"Error validating request: {e}")
+        return errors
+
     def validate_request(self, request: LLMRequest) -> bool:
         """
         Validate request parameters.
@@ -110,29 +139,12 @@ class RequestProcessor:
         Returns:
             True if valid, False otherwise
         """
-        try:
-            # Check ranges
-            if request.max_new_tokens < 1:
-                self.logger.error("max_new_tokens must be >= 1")
-                return False
-
-            if request.temperature < 0.0001:
-                self.logger.error("temperature must be >= 0.0001")
-                return False
-
-            if not (0 < request.top_p <= 1):
-                self.logger.error("top_p must be between 0 and 1")
-                return False
-
-            if request.top_k < 1:
-                self.logger.error("top_k must be >= 1")
-                return False
-
-            return True
-
-        except Exception as e:
-            self.logger.error(f"Error validating request: {e}")
+        errors = self.validation_errors(request)
+        if errors:
+            for error in errors:
+                self.logger.error(error)
             return False
+        return True
 
     def prepare_request(
         self,
@@ -160,11 +172,12 @@ class RequestProcessor:
         # Merge with database settings
         merged_request = self.merge_settings(llm_request, db_settings)
 
-        # Validate
-        if not self.validate_request(merged_request):
-            self.logger.warning(
-                "Using default request due to validation failure"
+        # Validate: surface every violation to the caller instead of
+        # silently falling back to defaults (which hid bad inputs).
+        errors = self.validation_errors(merged_request)
+        if errors:
+            raise ValueError(
+                "Invalid LLM request: " + "; ".join(errors)
             )
-            merged_request = LLMRequest()
 
         return merged_request

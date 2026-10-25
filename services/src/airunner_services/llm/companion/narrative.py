@@ -37,13 +37,19 @@ _INSTRUCTION_PATTERNS = tuple(
     re.compile(pattern, re.IGNORECASE)
     for pattern in (
         r"^\s*ignore\s+(all\s+)?(previous|prior|above)\s+instructions",
+        r"^\s*ignore\s+all\s+instructions",
         r"^\s*disregard\s+(all\s+)?(previous|prior|above)\s+instructions",
         r"^\s*override\s+(all\s+)?(previous|prior)\s+instructions",
         r"^\s*forget\s+(everything|all)(\s+you\s+know)?\s*$",
+        r"^\s*forget\s+(your|these)\s+(rules|instructions)",
         r"^\s*you\s+are\s+now\s+",
         r"^\s*new\s+instructions\s*:",
         r"^\s*system\s*:",
         r"^\s*\[system\]",
+        r"^\s*developer\s*:",
+        r"^\s*\[developer\]",
+        r"^\s*do\s+anything\s+now",
+        r"^\s*reveal\s+(your|the)\s+(system\s+)?(prompt|instructions)",
     )
 )
 

@@ -26,16 +26,44 @@ except ImportError:
     torch = None
 
 
+class ModelLoadError(Exception):
+    """Typed failure for GGUF model loading.
+
+    Raised instead of bare ``ImportError``/``RuntimeError`` so callers
+    can distinguish "the model could not load" (degrade: keep running
+    without a model) from programming errors. Carries the model path
+    for log correlation.
+    """
+
+    def __init__(self, message: str, model_path: Any = None) -> None:
+        super().__init__(message)
+        self.model_path = model_path
+
+
 def load_model(adapter: Any) -> None:
-    """Load the GGUF model via llama-cpp-python."""
+    """Load the GGUF model via llama-cpp-python.
+
+    Raises:
+        ModelLoadError: When the runtime or model file cannot load.
+        UnsupportedGGUFArchitectureError: When the architecture is
+            known-unsupported (a distinct typed failure).
+    """
     if adapter._llama is not None:
         return
-    _raise_for_unsupported_architecture(adapter)
-    llama_cls, gpu_offload_supported = _prepare_runtime_load(adapter)
-    llama_tuning = _resolve_and_log_runtime_signature(adapter)
-    llama_kwargs = _build_llama_kwargs(adapter, llama_tuning)
-    _log_llama_tuning(adapter, llama_tuning)
-    _load_llama_runtime_instance(adapter, llama_cls, llama_kwargs)
+    try:
+        _raise_for_unsupported_architecture(adapter)
+        llama_cls, gpu_offload_supported = _prepare_runtime_load(adapter)
+        llama_tuning = _resolve_and_log_runtime_signature(adapter)
+        llama_kwargs = _build_llama_kwargs(adapter, llama_tuning)
+        _log_llama_tuning(adapter, llama_tuning)
+        _load_llama_runtime_instance(adapter, llama_cls, llama_kwargs)
+    except (ModelLoadError, UnsupportedGGUFArchitectureError):
+        raise
+    except Exception as exc:
+        raise ModelLoadError(
+            f"Failed to load GGUF model from {adapter.model_path}: {exc}",
+            model_path=adapter.model_path,
+        ) from exc
     configure_chat_handler(adapter)
     _log_estimated_kv_cache(adapter)
     adapter.logger.info("✓ GGUF model loaded successfully")
@@ -90,7 +118,7 @@ def _load_llama_runtime() -> tuple[Any, bool]:
     try:
         from llama_cpp import Llama, llama_supports_gpu_offload
     except ImportError as exc:
-        raise ImportError(
+        raise ModelLoadError(
             "llama-cpp-python is required for GGUF support. "
             "Install with: pip install llama-cpp-python"
         ) from exc
@@ -259,6 +287,8 @@ def _should_retry_fewer_gpu_layers(exc: Exception, n_gpu_layers: int) -> bool:
 
 def _raise_normalized_runtime_error(adapter: Any, exc: Exception) -> None:
     """Raise a normalized GGUF load error from one llama.cpp exception."""
+    if isinstance(exc, (ModelLoadError, UnsupportedGGUFArchitectureError)):
+        raise exc
     error_msg = str(exc).lower()
     if "unknown model architecture" in error_msg:
         architecture = _extract_runtime_architecture(error_msg)
@@ -274,12 +304,16 @@ def _raise_normalized_runtime_error(adapter: Any, exc: Exception) -> None:
                 f"{adapter.n_gpu_layers}); the model may exceed available "
                 "VRAM. Reduce n_gpu_layers or disable GPU offload."
             )
-        raise RuntimeError(
+        raise ModelLoadError(
             f"Failed to load GGUF model from {adapter.model_path}: {exc}. "
             "This may be due to an unsupported model architecture or "
-            f"corrupted file.{vram_hint}"
+            f"corrupted file.{vram_hint}",
+            model_path=adapter.model_path,
         ) from exc
-    raise exc
+    raise ModelLoadError(
+        f"Failed to load GGUF model from {adapter.model_path}: {exc}",
+        model_path=adapter.model_path,
+    ) from exc
 
 
 def _extract_runtime_architecture(error_msg: str) -> str:

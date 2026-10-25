@@ -21,6 +21,11 @@ from airunner_services.llm.managers.request_rag_preparation import (
 )
 
 
+#: Hard cap on caller-supplied system prompts. A rogue or runaway client
+#: must not be able to stuff the context window via ``system_prompt``.
+MAX_SYSTEM_PROMPT_CHARS = 8000
+
+
 class RequestHandlingMixin:
     """Coordinate request-time model, tool, and RAG preparation."""
 
@@ -259,6 +264,14 @@ class RequestHandlingMixin:
             )
             if getattr(llm_request, "system_prompt", None):
                 system_prompt = llm_request.system_prompt
+                if len(system_prompt) > MAX_SYSTEM_PROMPT_CHARS:
+                    self.logger.warning(
+                        "Truncating oversized request system prompt "
+                        "(%d chars > %d cap)",
+                        len(system_prompt),
+                        MAX_SYSTEM_PROMPT_CHARS,
+                    )
+                    system_prompt = system_prompt[:MAX_SYSTEM_PROMPT_CHARS]
                 self.logger.info(
                     "Using custom system prompt from request: %s...",
                     system_prompt[:100],
