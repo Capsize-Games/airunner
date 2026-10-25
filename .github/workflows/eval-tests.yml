@@ -120,9 +120,6 @@ jobs:
           HF_HUB_OFFLINE: "1"
           TRANSFORMERS_OFFLINE: "1"
           HF_HUB_DISABLE_TELEMETRY: "1"
-          HF_HUB_OFFLINE: "1"
-          TRANSFORMERS_OFFLINE: "1"
-          HF_HUB_DISABLE_TELEMETRY: "1"
 
       # Issue #2225: desktop and services for_action() now share one preset
       # table in airunner_common. This exits non-zero if any of the 20
