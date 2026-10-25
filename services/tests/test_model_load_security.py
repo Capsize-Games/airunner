@@ -12,10 +12,10 @@ repository (issue #2195,
 https://github.com/Capsize-Games/airunner-tts-vendor); see that
 repository's ``tests/test_g2p_cache_security.py``.
 
-CI note (issue #2054 / security-coverage): the source-scan and pure-Python
-assertions below run in the lean ``[development]`` install used by
-``Hybrid Runtime CI``. Only the genuinely torch-dependent assertions are
-guarded by a scoped ``importorskip`` (see ``_TorchOnlyTests``).
+CI note (issue #2054 / security-coverage): ``Hybrid Runtime CI`` installs
+the pinned CPU runtime imports needed by the security-gate tests, without
+installing the CUDA release profile or downloading model weights. The
+torch-dependent source-scan assertions still skip when torch is unavailable.
 """
 
 from __future__ import annotations
@@ -112,6 +112,8 @@ def _load_tokenizer_mixin() -> ModuleType:
     transformers_stub = ModuleType("transformers")
     transformers_stub.AutoTokenizer = object
     transformers_stub.AutoConfig = object
+    had_transformers = "transformers" in sys.modules
+    previous_transformers = sys.modules.get("transformers")
     sys.modules["transformers"] = transformers_stub
 
     spec = importlib.util.spec_from_file_location(
@@ -120,8 +122,24 @@ def _load_tokenizer_mixin() -> ModuleType:
     )
     module = importlib.util.module_from_spec(spec)
     sys.modules[spec.name] = module
-    spec.loader.exec_module(module)  # type: ignore[union-attr]
+    try:
+        spec.loader.exec_module(module)  # type: ignore[union-attr]
+    finally:
+        if had_transformers:
+            sys.modules["transformers"] = previous_transformers
+        else:
+            sys.modules.pop("transformers", None)
     return module
+
+
+def test_tokenizer_mixin_loader_restores_transformers_module() -> None:
+    previous = sys.modules.get("transformers")
+    was_present = "transformers" in sys.modules
+
+    _load_tokenizer_mixin()
+
+    assert ("transformers" in sys.modules) is was_present
+    assert sys.modules.get("transformers") is previous
 
 
 def test_tokenizer_mixin_has_no_unconditional_remote_code() -> None:
@@ -332,7 +350,7 @@ _TORCH_LOAD_FILES = [
 
 
 class TestTorchOnlySourceScans:
-    """Assertions that require torch (skipped in the lean CI install)."""
+    """Assertions that require torch (skipped when torch is unavailable)."""
 
     def test_all_torch_load_calls_use_weights_only(self) -> None:
         """Every torch.load call site passes weights_only=True."""
