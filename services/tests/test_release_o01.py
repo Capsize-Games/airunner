@@ -124,12 +124,3 @@ def test_exceptions_are_not_frozen_dataclasses() -> None:
     err2 = OfflineModeBlocked("test")
     err2.reason = "mutated"
     assert err2.reason == "mutated"
-
-
-def test_compat_shim_reexports_new_symbols() -> None:
-    """src/airunner/url_safety.py is a re-export shim (issue #2048); the
-    new O01 symbols must be reachable through it too."""
-    import airunner.url_safety as shim
-
-    assert shim.OfflineModeBlocked is OfflineModeBlocked
-    assert shim.is_offline_mode is is_offline_mode

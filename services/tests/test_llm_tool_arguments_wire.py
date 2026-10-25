@@ -3,10 +3,10 @@
 ``LLMResponse.tool_arguments`` was permanently ``None``: the
 services-side tool-status emitter never included call arguments in
 its event dict, and ``tool_status_stream_payload`` never copied them
-onto the NDJSON wire, even though the desktop converter already read
-``chunk.get("tool_arguments")``. These tests pin the full round
-trip: emitter -> wire payload -> NDJSON bytes -> parsed chunk ->
-desktop ``LLMResponse.tool_arguments``.
+onto the NDJSON wire. These tests pin the services side of the round
+trip: emitter -> wire payload -> NDJSON bytes -> parsed chunk.
+(The former desktop ``LLMResponse`` converter test was removed with
+the desktop client; airunnerweb consumes the chunk directly.)
 """
 
 from __future__ import annotations
@@ -16,8 +16,6 @@ from typing import Any
 
 from langchain_core.messages import ToolMessage
 
-from airunner.components.llm.api.llm_services import LLMAPIService
-from airunner.enums import LLMActionType
 from airunner_services.api.routes.legacy_llm_helpers import (
     tool_status_stream_payload,
 )
@@ -108,15 +106,9 @@ def test_wire_payload_defaults_tool_arguments_to_none() -> None:
     assert payload["tool_arguments"] is None
 
 
-def test_round_trip_to_desktop_response() -> None:
-    """Wire tool arguments must reach LLMResponse.tool_arguments."""
+def test_round_trip_chunk_carries_tool_arguments() -> None:
+    """Wire tool arguments must survive the NDJSON round trip."""
     harness = _Harness()
     harness._emit_starting_status(_TOOL_CALLS)
     chunk = _wire_chunk(harness._event_sink.events[0])
-    response = LLMAPIService._response_from_daemon_chunk(
-        chunk,
-        request_id="req-1",
-        action=LLMActionType.CHAT,
-        node_id=None,
-    )
-    assert response.tool_arguments == _TOOL_ARGS
+    assert chunk["tool_arguments"] == _TOOL_ARGS

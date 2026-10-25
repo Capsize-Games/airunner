@@ -19,7 +19,6 @@ from packaging.requirements import Requirement
 from startup_closure_support import startup_closure
 
 _PROJECT_ROOT = Path(__file__).resolve().parents[2]
-_ROOT_SETUP = _PROJECT_ROOT / "setup.py"
 _SERVICES_SETUP = _PROJECT_ROOT / "services" / "setup.py"
 _NATIVE_SETUP = _PROJECT_ROOT / "native" / "setup.py"
 _LOCK_PATH = _PROJECT_ROOT / "package" / "constraints-linux-nvidia-cu129.txt"
@@ -30,7 +29,6 @@ _PIN_LINE = re.compile(r"^([A-Za-z0-9_.\-]+)==([^\s\\;]+)")
 _SERVICES_SETUP_CALL = "\nsetup(**build_services_setup_kwargs"
 _NATIVE_SETUP_CALL = "\nsetup(**build_native_setup_kwargs"
 _PACKAGE_ROOTS = {
-    "airunner": _PROJECT_ROOT / "src" / "airunner",
     "airunner_services": _PROJECT_ROOT / "services" / "src"
     / "airunner_services",
     "airunner_native": _PROJECT_ROOT / "native" / "src" / "airunner_native",
@@ -61,14 +59,16 @@ def _declared_dists(requirements: list[str]) -> set[str]:
 
 
 def _profile_inputs() -> list[str]:
-    """All requirement strings of the locked release profile."""
-    root = _load_setup_module(_ROOT_SETUP, "\nsetup(")
+    """All requirement strings of the locked release profile.
+
+    Services-only: the former root GUI distribution (GUI_REQUIREMENTS,
+    ML_REQUIREMENTS) was removed; the profile is the services install
+    plus its Qt-free "desktop" aggregate plus the native launcher.
+    """
     services = _load_setup_module(_SERVICES_SETUP, _SERVICES_SETUP_CALL)
     native = _load_setup_module(_NATIVE_SETUP, _NATIVE_SETUP_CALL)
     kwargs = services.build_services_setup_kwargs(package_source_dir="src")
     return [
-        *root.GUI_REQUIREMENTS,
-        *root.ML_REQUIREMENTS,
         *kwargs["install_requires"],
         *services.build_services_extras_require()["desktop"],
         *native.NATIVE_BASE_REQUIREMENTS,
@@ -84,29 +84,25 @@ def _lock_pins() -> dict[str, str]:
 
 def test_release_profile_is_defined() -> None:
     """Profile extras exist with the cu129 torch line and no CPU docs."""
-    root = _load_setup_module(_ROOT_SETUP, "\nsetup(")
-    assert root.ML_REQUIREMENTS == [
+    services = _load_setup_module(_SERVICES_SETUP, _SERVICES_SETUP_CALL)
+    assert services.ML_RUNTIME_REQUIREMENTS[:3] == [
         "torch==2.13.0+cu129",
         "torchvision==0.28.0+cu129",
         "torchaudio==2.11.0+cu129",
     ]
-    text = _ROOT_SETUP.read_text(encoding="utf-8")
-    assert '"nvidia": ML_REQUIREMENTS' in text
-    services = _load_setup_module(_SERVICES_SETUP, _SERVICES_SETUP_CALL)
     desktop = services.build_services_extras_require()["desktop"]
     names = _declared_dists(desktop)
     assert "torch" in names
     assert "nvidia-cuda-runtime-cu12" in names
     assert not ({"pyside6", "shiboken6"} & names)
-    for path in (_ROOT_SETUP, _SERVICES_SETUP):
-        profile = path.read_text(encoding="utf-8")
-        assert "whl/cpu" not in profile
-        assert "download.pytorch.org/whl/cu129" in profile
+    profile = _SERVICES_SETUP.read_text(encoding="utf-8")
+    assert "whl/cpu" not in profile
+    assert "download.pytorch.org/whl/cu129" in profile
 
 
 def test_lock_covers_profile_requirements() -> None:
     """Every profile requirement is locked to a satisfying version."""
-    local_roots = {"airunner", "airunner-services", "airunner-native"}
+    local_roots = {"airunner-services", "airunner-native"}
     pins = _lock_pins()
     assert pins, "lock file has no pins"
     for raw in _profile_inputs():
@@ -164,12 +160,9 @@ def test_base_startup_imports_are_declared() -> None:
     daemon_allowed = _declared_dists(kwargs["install_requires"])
     native_allowed = _declared_dists(native.NATIVE_BASE_REQUIREMENTS)
     svc = _PROJECT_ROOT / "services" / "src" / "airunner_services"
-    gui = _PROJECT_ROOT / "src" / "airunner"
     nat = _PROJECT_ROOT / "native" / "src" / "airunner_native"
     cases = (
         ("daemon", daemon_allowed, [("airunner_services", svc / "daemon.py")]),
-        ("gui", _declared_dists(_profile_inputs()), [
-            ("airunner", gui / "launcher.py"), ("airunner", gui / "main.py")]),
         ("native", native_allowed, [("airunner_native", nat / "launcher.py")]),
     )
     for label, allowed, entries in cases:

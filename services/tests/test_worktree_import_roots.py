@@ -7,6 +7,10 @@ pins this checkout's source trees ahead of the venv's pointers. This
 test proves the pin holds: every in-repo top-level package must
 resolve inside the checkout under test, never inside another checkout
 that happens to own the venv's editable install.
+
+Services-only: the former ``airunner`` desktop distribution was
+removed; the pinned packages are ``airunner_native`` and
+``airunner_services``.
 """
 
 from __future__ import annotations
@@ -14,14 +18,12 @@ from __future__ import annotations
 from pathlib import Path
 from types import ModuleType
 
-import airunner
 import airunner_native
 import airunner_services
 
 _CHECKOUT_ROOT = Path(__file__).resolve().parents[2]
 
 _PACKAGES: dict[str, ModuleType] = {
-    "airunner": airunner,
     "airunner_native": airunner_native,
     "airunner_services": airunner_services,
 }

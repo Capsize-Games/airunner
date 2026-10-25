@@ -353,41 +353,15 @@ jobs:
 
       - name: Build packages
         run: |
-          # Publish the package surface documented in the README (issue
-          # #2061): airunner (GUI), airunner-services (headless daemon +
-          # runtimes) and airunner-native (launcher). airunner-common
-          # (shared foundation) moved to its own repository (issue #2197,
-          # https://github.com/Capsize-Games/airunner-common) and
-          # publishes from there now. airunner and airunner-native pin
-          # airunner-services==VERSION, so both must be published together
-          # or `pip install airunner` cannot resolve. Each invocation
-          # produces an sdist and a wheel in dist/; the publish step below
-          # uploads every artifact.
-          # Publishing order matters the first time. airunner pins
-          # airunner-services==VERSION, and that sibling project might not
-          # exist on PyPI yet. If airunner uploads but the sibling fails
-          # -- e.g. a project-scoped token that cannot create new projects
-          # -- then `pip install airunner` is permanently unresolvable at
-          # that version, because PyPI versions can be yanked but never
-          # replaced.
-          #
-          # So dispatch once with packages="services native" to create
-          # that sibling, confirm it appears on PyPI, then dispatch again
-          # with packages="." for airunner itself. After the project
-          # exists, the default (all three) is safe.
+          # Services-only surface: airunner-services (headless daemon +
+          # runtimes + FastAPI) and airunner-native (launcher).
+          # airunner-common (shared foundation) moved to its own
+          # repository (issue #2197) and publishes from there now.
+          # The former root `airunner` GUI distribution was removed;
+          # this workflow builds `services` + `native` only.
           mkdir -p dist
-          for pkg in ${{ inputs.packages || 'services native .' }}; do
+          for pkg in ${{ inputs.packages || 'services native' }}; do
             echo "::group::build $pkg"
-            # The root package refuses to build when the generated Qt
-            # *_ui.py / resources.py files are missing or stale. They are not
-            # committed, and a PEP 517 isolated build only installs the
-            # declared build-system requirements, so it cannot generate them
-            # itself -- they have to exist before `python -m build` runs.
-            # Only the root package needs them; the siblings are pure Python.
-            if [ "$pkg" = "." ]; then
-              pip install "PySide6==6.9.0"
-              QT_QPA_PLATFORM=offscreen python scripts/build_ui.py
-            fi
             python -m build --outdir dist "$pkg"
             echo "::endgroup::"
           done
@@ -398,9 +372,9 @@ jobs:
       # exercise the daemon before publishing it.
       - name: Gate -- candidate artifact must run
         env:
-          PUBLISH_PACKAGES: ${{ inputs.packages || 'services native .' }}
+          PUBLISH_PACKAGES: ${{ inputs.packages || 'services native' }}
         run: |
-          VERSION="$(python setup.py --version)"
+          VERSION="$(python services/setup.py --version)"
           echo "gating candidate version $VERSION for selection: $PUBLISH_PACKAGES"
           python scripts/artifact_runtime_gate.py \
             --find-links dist --version "$VERSION" \

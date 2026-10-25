@@ -1,9 +1,8 @@
-# Dockerfile for AI Runner - supports both headless server and GUI modes
+# Dockerfile for AI Runner - headless server only
 # Provides HTTP API for LLM, Art generation, TTS, STT, and Vision
-# Can also run full PySide6 GUI with X11 forwarding
+# consumed by airunnerweb. The former Qt desktop GUI was removed.
 #
 # Usage:
-#   GUI mode:      docker compose run --rm airunner
 #   Headless mode: docker compose run --rm airunner --headless
 
 # Base image pinned to the digest of the manifest list resolved for
@@ -15,7 +14,7 @@ FROM nvidia/cuda:12.9.1-devel-ubuntu24.04@sha256:020bc241a628776338f4d4053fed4c3
 # Prevent interactive prompts
 ENV DEBIAN_FRONTEND=noninteractive
 
-ARG AIRUNNER_INSTALL_PROFILES=core,llm-native,stt-native,art-python,tts-python,gui,development,computer-use
+ARG AIRUNNER_INSTALL_PROFILES=core,llm-native,stt-native,art-python,tts-python,development
 
 # Install system dependencies required by the selected runtime profiles.
 RUN set -e; \
@@ -102,26 +101,19 @@ RUN set -e; \
 # Set working directory
 WORKDIR /app
 
-# Copy project files: the GUI package plus the local services/native
-# packages it depends on (issue #2039). airunner_common moved to its own
-# repository and is a normal published dependency now (issue #2197,
-# https://github.com/Capsize-Games/airunner-common), resolved from PyPI
-# by services/native/root's own declared dependency instead of a local
-# copy.
-COPY setup.py pyproject.toml README.md ./
-COPY src/ ./src/
+# Copy project files: services-only (headless daemon + FastAPI) plus
+# the local native package. The former root GUI package (setup.py +
+# src/airunner) was removed. airunner_common moved to its own
+# repository and is a normal published dependency now (issue #2197),
+# resolved from PyPI by services/native's own declared dependency.
+COPY pyproject.toml README.md ./
 COPY services/ ./services/
 COPY native/ ./native/
 
 # Install each local package explicitly in dependency order
-# (services -> native -> GUI; issue #2039). The root `airunner`
-# package has no install profiles (its only extras are "analysis", "ml" and
-# "development"), so the previous
-# `pip install -e ".[$AIRUNNER_INSTALL_PROFILES]"` referenced non-existent
-# extras. "gui" is not a services extra either - it is the root GUI package
-# itself - so it is stripped from the services profile list.
-# services/native setup.py no longer imports airunner_common at build time
-# (issue #2038), so --no-build-isolation is no longer required.
+# (services -> native). services/native setup.py no longer imports
+# airunner_common at build time (issue #2038), so --no-build-isolation
+# is no longer required.
 # The services extras pin CUDA builds of torch (torch==2.13.0+cu129 etc.),
 # which are only published on the PyTorch CUDA index (download.pytorch.org),
 # not PyPI; the extra index is passed to the services install so the pinned
@@ -144,8 +136,7 @@ RUN set -e; \
     else \
         python3.13 -m pip install -e ./services; \
     fi; \
-    python3.13 -m pip install -e ./native; \
-    python3.13 -m pip install -e .
+    python3.13 -m pip install -e ./native
 
 # Create non-root user for running the container
 # docker-compose may override the runtime UID/GID; avoid hard-coding 1000 here

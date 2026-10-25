@@ -1,6 +1,6 @@
 """Repo-root pytest bootstrap: pin imports to the checkout under test.
 
-Issue #2246: the shared dev venv editable-installs ``airunner``,
+Issue #2246: the shared dev venv editable-installs
 ``airunner_native`` and ``airunner_services`` from one checkout (plain
 ``.pth`` path entries, or ``__editable__`` meta-path finders in strict
 editable mode). When pytest runs in another worktree reusing that
@@ -9,7 +9,7 @@ wrong checkout's sources.
 
 pytest imports this file before any test module, and the repo-root
 ``pyproject.toml`` is the only pytest config, so this one file covers
-both suites (``src`` and ``services/tests``): it moves this checkout's
+the services-only suite (``services/tests``): it moves this checkout's
 source trees to the front of ``sys.path`` and drops any
 already-imported in-repo package that resolved outside this checkout
 so its next import picks up this checkout's sources.
@@ -30,10 +30,9 @@ _CHECKOUT_ROOT = Path(__file__).resolve().parent
 _SOURCE_DIRS = (
     _CHECKOUT_ROOT / "services" / "src",
     _CHECKOUT_ROOT / "native" / "src",
-    _CHECKOUT_ROOT / "src",
 )
 _PINNED_TOP_LEVELS = frozenset(
-    {"airunner", "airunner_native", "airunner_services"}
+    {"airunner_native", "airunner_services"}
 )
 _EDITABLE_FINDER_PREFIX = "__editable__"
 

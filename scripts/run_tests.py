@@ -51,30 +51,7 @@ def _component_targets(
     component: str,
 ) -> tuple[list[Path], str] | None:
     """Resolve one component name or alias into pytest targets."""
-    alias_targets = {
-        "chat": [
-            base_path
-            / "chat"
-            / "gui"
-            / "widgets"
-            / "tests"
-            / "test_chat_prompt_widget_show_event.py",
-            base_path
-            / "chat"
-            / "gui"
-            / "widgets"
-            / "tests"
-            / "test_conversation_widget_streaming.py",
-        ],
-        "documents": [
-            base_path
-            / "documents"
-            / "gui"
-            / "widgets"
-            / "tests"
-            / "test_knowledge_base_panel_widget.py",
-        ],
-    }
+    alias_targets: dict[str, list[Path]] = {}
     if component in alias_targets:
         return alias_targets[component], (
             f"Focused validation suite for {component}"
@@ -312,7 +289,7 @@ def run_unit_tests(component: str = None, verbose: bool = False) -> int:
     Returns:
         Exit code from pytest
     """
-    base_path = Path("src/airunner/components")
+    base_path = Path("services/tests")
 
     if component:
         resolved = _component_targets(base_path, component)
@@ -325,9 +302,7 @@ def run_unit_tests(component: str = None, verbose: bool = False) -> int:
         test_targets, description = resolved
     else:
         test_targets = [base_path]
-        description = "Safe unit tests (GUI suites excluded)"
-
-    include_gui_tests = component in {"chat", "documents"}
+        description = "Services unit tests (desktop GUI removed)"
 
     cmd = _pytest_command(*[str(path) for path in test_targets])
 
@@ -342,52 +317,27 @@ def run_unit_tests(component: str = None, verbose: bool = False) -> int:
             "--color=yes",
             "-ra",  # Show summary of all test outcomes
             "-m",
-            (
-                "not eval and not benchmark and not integration"
-                if include_gui_tests
-                else "not gui and not eval and not benchmark and not integration"
-            ),
-            "--ignore=src/airunner/components/eval",  # Exclude eval tests
-            "--ignore=src/airunner/components/server/tests/functional",
+            "not eval and not benchmark and not integration",
         ]
     )
 
     return run_command(
         cmd,
         description,
-        env=_build_pytest_env(skip_gui=not include_gui_tests),
+        env=_build_pytest_env(skip_gui=True),
     )
-
-
-def _gui_component_targets(base_path: Path, component: str) -> list[Path] | None:
-    """Resolve one component into its GUI subtree."""
-    gui_path = base_path / component / "gui"
-    if gui_path.exists():
-        return [gui_path]
-    return None
 
 
 def run_gui_functional_tests(
     component: str = None,
     verbose: bool = False,
 ) -> int:
-    """Run headless GUI functional tests with mocked backends."""
-    base_path = Path("src/airunner/components")
-    test_targets = [base_path]
-    description = "Headless GUI functional tests"
-
-    if component:
-        resolved = _gui_component_targets(base_path, component)
-        if resolved is None:
-            print(f"Error: GUI component '{component}' is not configured")
-            return 1
-        test_targets = resolved
-        description = f"Headless GUI functional tests for {component}"
-
-    cmd = _pytest_command(*[str(path) for path in test_targets])
-    cmd.append("-v" if verbose else "--tb=short")
-    cmd.extend(["--color=yes", "-ra", "-m", "gui_functional"])
-    return run_command(cmd, description, env=_build_pytest_env())
+    """Removed with the desktop GUI; services-only repo has no GUI tests."""
+    print(
+        "GUI functional tests were removed with the desktop client; "
+        "use the services suite instead."
+    )
+    return 1
 
 
 def run_eval_tests(

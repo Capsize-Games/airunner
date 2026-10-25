@@ -45,8 +45,6 @@ line-length = 79
 
 [tool.pytest.ini_options]
 markers = [
-    "gui: tests that require Qt GUI components (may cause thread issues when run in bulk)",
-    "gui_functional: headless GUI functional tests with mocked backends",
     "slow: tests that take a long time to run",
     "fast: tests that use mocked responses and run quickly",
     "asyncio: asynchronous test marker",
@@ -63,14 +61,10 @@ markers = [
     "benchmark: tests using standard benchmark datasets (GSM8K, MATH, HumanEval)",
     "code: tests for code generation capabilities",
 ]
-# Both the in-repo GUI suite (src) and the services-owned suite
-# (services/tests) are collected by a plain `pytest` run (issue #2056).
-# GUI tests run headless via QT_QPA_PLATFORM=offscreen (set in
-# src/airunner/conftest.py); on machines without a display that env var is
-# applied automatically, so collection stays safe. The canvas history test
-# that installs sys.modules stubs is guarded to skip in shared sessions
-# (issue #2055).
-testpaths = ["src", "services/tests"]
+# Services-only suite (services/tests) is collected by a plain
+# `pytest` run. The former desktop GUI suite (src/) was removed; this
+# repo ships the headless daemon + FastAPI consumed by airunnerweb.
+testpaths = ["services/tests"]
 # Disable parallel execution to prevent worker cleanup issues
 # Use serial execution for now until worker cleanup is fixed
 # -s disables output capturing for real-time feedback
