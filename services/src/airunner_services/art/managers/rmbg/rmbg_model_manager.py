@@ -2,13 +2,15 @@
 
 from __future__ import annotations
 
+import hashlib
 import importlib.machinery
 import importlib.util
 import logging
 import os
 import sys
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from types import ModuleType
+from typing import Dict, Optional
 
 import torch
 from PIL import Image
@@ -22,12 +24,20 @@ from airunner_services.utils.image.convert_image_to_binary import (
 from airunner_services.utils.memory import clear_memory
 
 
+#: Model python files executed via exec_module during RMBG loads.
+#: Their hashes must be pinned before untrusted bundles are trusted.
+RMBG_CODE_FILES = ("BiRefNet_config.py", "birefnet.py")
+
+
 @dataclass(frozen=True)
 class RMBGModelSpec:
     """Describe the on-disk BRIA RMBG model bundle."""
 
     repo_id: str = "briaai/RMBG-2.0"
     model_dir_name: str = "RMBG-2.0"
+    #: filename -> expected lowercase hex sha256 of the model .py files.
+    #: When empty, code runs unpinned and a warning is logged.
+    code_hashes: Optional[Dict[str, str]] = field(default=None)
 
     @property
     def local_dir(self) -> str:
@@ -108,6 +118,7 @@ class RMBGModelManager:
                 f"Missing RMBG model files on disk: {missing}"
             )
 
+        self._verify_model_code(base_dir)
         package_name = f"airunner_rmbg2_{abs(hash(base_dir))}"
         self._ensure_package(package_name, base_dir)
         config_module = self._load_submodule(
@@ -166,6 +177,32 @@ class RMBGModelManager:
                 logging.getLogger(__name__).debug(
                     "Failed to clear CUDA cache while unloading RMBG",
                     exc_info=True,
+                )
+
+    def _verify_model_code(self, base_dir: str) -> None:
+        """Verify pinned sha256 hashes of executed model .py files.
+
+        Refuses to load when a pinned hash mismatches. When no pins are
+        configured, logs a warning and proceeds (use
+        ``hash_model_code_files`` to generate pins for a trusted bundle).
+        """
+        pins = self.spec.code_hashes or {}
+        for filename in RMBG_CODE_FILES:
+            path = os.path.join(base_dir, filename)
+            digest = _sha256_file(path)
+            expected = pins.get(filename)
+            if expected is None:
+                logging.getLogger(__name__).warning(
+                    "RMBG model code %s is not hash-pinned "
+                    "(sha256=%s); executing unpinned remote code",
+                    filename,
+                    digest,
+                )
+                continue
+            if digest != expected.lower():
+                raise ImportError(
+                    f"RMBG model code hash mismatch for {filename}: "
+                    f"expected {expected}, got {digest}"
                 )
 
     @staticmethod
@@ -264,3 +301,20 @@ class RMBGModelManager:
         if binary is None:
             raise RuntimeError("Failed to convert output image to PNG bytes")
         return binary
+
+
+def _sha256_file(path: str) -> str:
+    """Return the hex sha256 digest of one file."""
+    digest = hashlib.sha256()
+    with open(path, "rb") as handle:
+        for chunk in iter(lambda: handle.read(65536), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def hash_model_code_files(base_dir: str) -> Dict[str, str]:
+    """Return filename -> sha256 pins for one RMBG model bundle."""
+    return {
+        filename: _sha256_file(os.path.join(base_dir, filename))
+        for filename in RMBG_CODE_FILES
+    }

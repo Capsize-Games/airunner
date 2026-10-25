@@ -7,8 +7,10 @@ from airunner_services.database.db.column import alter_column
 from airunner_services.database.db.column import column_exists
 from airunner_services.database.db.column import create_unique_constraint
 from airunner_services.database.db.column import drop_column
+from airunner_services.database.db.column import drop_column_by_name
 from airunner_services.database.db.column import drop_column_with_fk
 from airunner_services.database.db.column import drop_columns
+from airunner_services.database.db.column import drop_columns_by_name
 from airunner_services.database.db.column import drop_constraint
 from airunner_services.database.db.column import get_columns
 from airunner_services.database.db.column import safe_alter_column
@@ -35,8 +37,10 @@ __all__ = [
     "create_foreign_key",
     "create_unique_constraint",
     "drop_column",
+    "drop_column_by_name",
     "drop_column_with_fk",
     "drop_columns",
+    "drop_columns_by_name",
     "drop_constraint",
     "drop_table",
     "drop_tables",

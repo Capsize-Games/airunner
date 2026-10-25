@@ -81,6 +81,42 @@ def drop_columns(cls, cols: list[str]) -> None:
         drop_column(cls, col)
 
 
+def _table_has_column(bind, table_name: str, column_name: str) -> bool:
+    """Return whether one table currently has one column."""
+    import sqlalchemy as sa  # noqa: PLC0415
+
+    inspector = sa.inspect(bind)
+    try:
+        columns = inspector.get_columns(table_name)
+    except Exception:
+        return False
+    return column_name in {col["name"] for col in columns}
+
+
+def drop_column_by_name(table_name: str, column_name: str) -> None:
+    """Drop one column by table name using batch mode (SQLite-safe).
+
+    Unlike a bare ``op.drop_column``, batch mode works on SQLite, which
+    cannot drop columns directly.
+    """
+    bind = op.get_bind()
+    if not _table_has_column(bind, table_name, column_name):
+        logger.warning(
+            "Column '%s.%s' does not exist, skipping drop.",
+            table_name,
+            column_name,
+        )
+        return
+    with op.batch_alter_table(table_name, recreate="auto") as batch_op:
+        batch_op.drop_column(column_name)
+
+
+def drop_columns_by_name(table_name: str, cols: list[str]) -> None:
+    """Drop several columns by table name using batch mode."""
+    for col in cols:
+        drop_column_by_name(table_name, col)
+
+
 def alter_column(
     cls,
     col_a: sa.Column,
@@ -306,8 +342,10 @@ __all__ = [
     "column_exists",
     "create_unique_constraint",
     "drop_column",
+    "drop_column_by_name",
     "drop_column_with_fk",
     "drop_columns",
+    "drop_columns_by_name",
     "drop_constraint",
     "get_columns",
     "safe_alter_column",

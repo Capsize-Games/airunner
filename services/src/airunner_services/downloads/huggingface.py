@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from pathlib import PurePosixPath
 from typing import Any, Optional
@@ -9,6 +10,18 @@ from typing import Any, Optional
 from airunner_services.llm.provider_config import LLMProviderConfig
 from airunner_services.runtimes.file_policy import PathPolicyError
 from airunner_common.settings import AIRUNNER_BASE_PATH
+
+#: owner/repo with safe characters only; rejects ".." and absolute IDs.
+REPO_ID_RE = re.compile(r"^[\w.-]+/[\w.-]+$")
+
+
+def validate_repo_id(repo_id: str) -> str:
+    """Return repo_id when it matches owner/repo charset, else raise."""
+    if not isinstance(repo_id, str) or not REPO_ID_RE.match(repo_id):
+        raise ValueError(f"Invalid HuggingFace repo_id: {repo_id!r}")
+    if any(part in (".", "..", "") for part in repo_id.split("/")):
+        raise ValueError(f"Invalid HuggingFace repo_id: {repo_id!r}")
+    return repo_id
 
 _LLM_DOWNLOAD_TYPES = {"gguf", "llm"}
 
@@ -72,6 +85,7 @@ def prepare_huggingface_download_request(
     prefer_pre_quantized: bool = True,
 ) -> HuggingFaceDownloadRequest:
     """Return one normalized request for the shared HF download worker."""
+    validate_repo_id(repo_id)
     resolved_download = _resolve_preferred_download(
         repo_id,
         model_type,
@@ -96,6 +110,7 @@ def prepare_huggingface_download_request(
     for missing_name in missing_files or []:
         safe_hf_filename(missing_name)
     repo_id = _resolved_repo_id(repo_id, resolved_download)
+    validate_repo_id(repo_id)
     return HuggingFaceDownloadRequest(
         repo_id=repo_id,
         model_type=model_type,

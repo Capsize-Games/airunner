@@ -14,6 +14,20 @@ ProgressCallback = Callable[[int, int], None]
 CancelCallback = Callable[[], bool]
 
 _CIVITAI_API_URL = "https://civitai.com/api/v1"
+_CIVITAI_HOSTS = frozenset({"civitai.com", "www.civitai.com"})
+
+
+def _require_civitai_url(url: str) -> str:
+    """Return url when its host is CivitAI, else raise."""
+    from urllib.parse import urlparse
+
+    from airunner_services.url_safety import validate_url_for_fetch
+
+    host = (urlparse(url).hostname or "").lower()
+    if host not in _CIVITAI_HOSTS:
+        raise ValueError(f"Refusing non-CivitAI URL: {url!r}")
+    validate_url_for_fetch(url)
+    return url
 _ALLOWED_FILE_EXTENSIONS = (".safetensors", ".gguf")
 _ALLOWED_FILE_FORMATS = {"safetensor", "gguf"}
 _BASE_MODEL_ALIASES = {
@@ -33,6 +47,11 @@ _MODEL_TYPE_ALIASES = {
 
 def parse_civitai_url(url: str) -> Dict[str, Any]:
     """Extract model and version identifiers from one CivitAI URL."""
+    from urllib.parse import urlparse
+
+    host = (urlparse(url).hostname or "").lower()
+    if host and host not in _CIVITAI_HOSTS:
+        raise ValueError(f"Refusing non-CivitAI URL: {url!r}")
     model_id = _match_url_token(url, r"/models/(\d+)")
     model_version_id = _match_url_token(url, r"modelVersionId=(\d+)")
     return {
@@ -43,6 +62,9 @@ def parse_civitai_url(url: str) -> Dict[str, Any]:
 
 def fetch_model_info(model_id: str, api_key: str = "") -> Dict[str, Any]:
     """Fetch one model metadata payload from the CivitAI API."""
+    if not re.fullmatch(r"\d+", str(model_id)):
+        raise ValueError(f"Invalid CivitAI model id: {model_id!r}")
+    _require_civitai_url(f"{_CIVITAI_API_URL}/models/{model_id}")
     url = f"{_CIVITAI_API_URL}/models/{model_id}"
     response = requests.get(
         url,
@@ -63,6 +85,9 @@ def search_models(
     api_key: str = "",
 ) -> Dict[str, Any]:
     """Return one filtered CivitAI model-search payload."""
+    if not 1 <= int(limit) <= 50:
+        raise ValueError(f"Invalid CivitAI search limit: {limit!r}")
+    _require_civitai_url(f"{_CIVITAI_API_URL}/models")
     response = requests.get(
         f"{_CIVITAI_API_URL}/models",
         params=_search_params(

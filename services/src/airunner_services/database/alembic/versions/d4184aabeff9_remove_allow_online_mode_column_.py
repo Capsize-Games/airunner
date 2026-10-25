@@ -8,6 +8,7 @@ Create Date: 2025-12-02 15:26:02.555152
 from typing import Sequence, Union
 
 from alembic import op
+from airunner_services.database.db.column import drop_column_by_name
 import sqlalchemy as sa
 
 
@@ -26,7 +27,7 @@ def upgrade() -> None:
     cols = {col["name"] for col in inspector.get_columns("application_settings")}
 
     if "allow_online_mode" in cols:
-        op.drop_column("application_settings", "allow_online_mode")
+        drop_column_by_name("application_settings", "allow_online_mode")
 
 
 def downgrade() -> None:

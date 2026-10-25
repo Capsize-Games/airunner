@@ -11,6 +11,57 @@ from airunner_services.utils.application import get_logger
 
 logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 
+#: Scheduler classes that may be instantiated from a DB-stored class name.
+#: Anything else (arbitrary diffusers classes from a writable DB row) is
+#: refused. Verified against the installed diffusers version.
+ALLOWED_SCHEDULER_CLASSES = frozenset(
+    {
+        "DDIMScheduler",
+        "DDPMScheduler",
+        "DEISMultistepScheduler",
+        "DPMSolverMultistepScheduler",
+        "DPMSolverSinglestepScheduler",
+        "EDMDPMSolverMultistepScheduler",
+        "EulerAncestralDiscreteScheduler",
+        "EulerDiscreteScheduler",
+        "FlowMatchEulerDiscreteScheduler",
+        "FlowMatchHeunDiscreteScheduler",
+        "HeunDiscreteScheduler",
+        "KDPM2AncestralDiscreteScheduler",
+        "KDPM2DiscreteScheduler",
+        "LCMScheduler",
+        "LMSDiscreteScheduler",
+        "PNDMScheduler",
+        "SASolverScheduler",
+        "TCDScheduler",
+        "UniPCMultistepScheduler",
+    }
+)
+
+
+def resolve_scheduler_class(class_name: str, logger: Any) -> Optional[Any]:
+    """Return one allowlisted diffusers scheduler class, or None.
+
+    Args:
+        class_name: Scheduler class name read from the schedulers table.
+        logger: Logger for refusal diagnostics.
+
+    Returns:
+        The diffusers class when allowlisted and importable, else None.
+    """
+    if class_name not in ALLOWED_SCHEDULER_CLASSES:
+        logger.error(
+            f"Refusing scheduler class outside allowlist: {class_name}"
+        )
+        return None
+    import diffusers  # noqa: PLC0415
+
+    cls = getattr(diffusers, class_name, None)
+    if cls is None or not isinstance(cls, type):
+        logger.error(f"Scheduler class {class_name} not in diffusers")
+        return None
+    return cls
+
 
 class SomeModelClass:  # legacy test helper
     def __init__(self, path):
@@ -53,10 +104,10 @@ def load_scheduler(
         logger.error(f"Failed to find scheduler {scheduler_name}")
         return None
     class_name = scheduler.name
+    cls = resolve_scheduler_class(class_name, logger)
+    if cls is None:
+        return None
     try:
-        cls = getattr(
-            __import__("diffusers", fromlist=[class_name]), class_name
-        )
         inst = cls.from_pretrained(
             scheduler_path,
             subfolder="scheduler",

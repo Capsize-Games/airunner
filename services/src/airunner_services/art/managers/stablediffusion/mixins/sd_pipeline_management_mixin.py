@@ -95,6 +95,13 @@ class SDPipelineManagementMixin:
             f"Loading {pipeline_class_.__class__} from {self.model_path}"
         )
         if self.use_from_single_file:
+            if not str(self.model_path).lower().endswith(".safetensors"):
+                raise ValueError(
+                    "Refusing single-file load of "
+                    f"{self.model_path}: only .safetensors checkpoints "
+                    "are allowed (pickle payloads in .ckpt/.pt/.bin "
+                    "are blocked)."
+                )
             self._pipe = pipeline_class_.from_single_file(
                 self.model_path,
                 config=config_path,
@@ -138,8 +145,33 @@ class SDPipelineManagementMixin:
                 self._pipe.to(self._device)
             except torch.OutOfMemoryError as e:
                 self.logger.error(f"Failed to load model to device: {e}")
+                self._mark_out_of_memory_failed()
             except RuntimeError as e:
                 self.logger.error(f"Failed to load model to device: {e}")
+                if "out of memory" in str(e).lower():
+                    self._mark_out_of_memory_failed()
+
+    def _mark_out_of_memory_failed(self) -> None:
+        """
+        Mark the model FAILED and unload the half-moved pipeline.
+
+        A partial ``.to(device)`` leaves tensors split across devices;
+        keep none of it so the next load starts from a clean state.
+        """
+        try:
+            self.change_model_status(
+                self.model_type, ModelStatus.FAILED
+            )
+        except Exception as e:
+            self.logger.error(
+                f"Failed to mark model status FAILED after OOM: {e}"
+            )
+        try:
+            self._unload_pipe()
+        except Exception as e:
+            self.logger.error(
+                f"Failed to unload pipeline after OOM: {e}"
+            )
 
     def _unload_pipe(self):
         """

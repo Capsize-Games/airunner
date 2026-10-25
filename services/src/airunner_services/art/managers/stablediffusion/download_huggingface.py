@@ -1,6 +1,19 @@
+import re
 from urllib.parse import urlparse
 from airunner_services.utils.application.mediator_mixin import MediatorMixin
 from huggingface_hub import hf_hub_download
+
+#: owner/repo with safe characters only; rejects ".." and absolute IDs.
+REPO_ID_RE = re.compile(r"^[\w.-]+/[\w.-]+$")
+
+
+def validate_repo_id(repo_id: str) -> str:
+    """Return repo_id when it matches owner/repo charset, else raise."""
+    if not isinstance(repo_id, str) or not REPO_ID_RE.match(repo_id):
+        raise ValueError(f"Invalid HuggingFace repo_id: {repo_id!r}")
+    if any(part in (".", "..", "") for part in repo_id.split("/")):
+        raise ValueError(f"Invalid HuggingFace repo_id: {repo_id!r}")
+    return repo_id
 
 
 class DownloadHuggingface(MediatorMixin):
@@ -22,6 +35,7 @@ class DownloadHuggingface(MediatorMixin):
         :param _callback: Optional callback function to execute after download.
         """
         path = self.extract_path_from_url(url)
+        validate_repo_id(path)
         hf_hub_download(repo_id=path, filename="config.json")
 
     @staticmethod
@@ -57,6 +71,7 @@ class HuggingFaceDownloader:
         Returns:
             str: Path to the downloaded model file.
         """
+        validate_repo_id(repo_id)
         # In real code, use huggingface_hub.hf_hub_download
         # Here, just a stub for testability
         return f"/models/{repo_id}/{version}/model.safetensors"

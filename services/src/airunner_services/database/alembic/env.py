@@ -106,6 +106,7 @@ def run_migrations_online():
         config.get_section(config.config_ini_section),
         prefix="sqlalchemy.",
         poolclass=pool.NullPool,
+        connect_args=dict(config.attributes.get("connect_args") or {}),
     )
 
     with connectable.connect() as connection:

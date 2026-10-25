@@ -21,6 +21,35 @@ from airunner_services.database.session import session_scope
 
 _T = TypeVar("_T", bound=Any)
 
+#: Kwarg-name hints whose values must never reach logs verbatim.
+SECRET_KEY_HINTS = (
+    "secret",
+    "api_key",
+    "apikey",
+    "token",
+    "password",
+    "passwd",
+    "private_key",
+)
+
+#: Default page size for unbounded list queries (N+1 guard).
+DEFAULT_LIST_LIMIT = 500
+
+#: Refuse single bulk deletes larger than this (row-cap guard).
+MAX_BULK_DELETE_ROWS = 1000
+
+
+def _redacted_kwargs(kwargs: dict) -> dict:
+    """Return kwargs with secret-looking values replaced."""
+    redacted = {}
+    for key, value in kwargs.items():
+        lowered = str(key).lower()
+        if any(hint in lowered for hint in SECRET_KEY_HINTS):
+            redacted[key] = "***"
+        else:
+            redacted[key] = value
+    return redacted
+
 
 class RealBaseManager:
     """Provide shared ORM query helpers for one model class."""
@@ -59,6 +88,37 @@ class RealBaseManager:
                         relationship,
                         exc,
                     )
+        return query
+
+    @staticmethod
+    def _bounded_limit(limit: Optional[int]) -> Optional[int]:
+        """Return an effective row limit, or None for unbounded.
+
+        ``None`` preserves the historical unbounded behavior; an explicit
+        value is clamped into [1, DEFAULT_LIST_LIMIT * 10].
+        """
+        if limit is None:
+            return None
+        try:
+            return max(1, min(int(limit), DEFAULT_LIST_LIMIT * 10))
+        except (TypeError, ValueError):
+            return DEFAULT_LIST_LIMIT
+
+    def _apply_paging(
+        self,
+        query: Query,
+        limit: Optional[int],
+        offset: Optional[int],
+    ) -> Query:
+        """Apply optional limit/offset paging to one list query."""
+        bounded = self._bounded_limit(limit)
+        if bounded is not None:
+            query = query.limit(bounded)
+        if offset is not None:
+            try:
+                query = query.offset(max(0, int(offset)))
+            except (TypeError, ValueError):
+                pass
         return query
 
     # ------------------------------------------------------------------
@@ -135,7 +195,9 @@ class RealBaseManager:
                 return result
             except Exception as exc:
                 self.logger.error(
-                    "Error in get_or_create(%s): %s", kwargs, exc
+                    "Error in get_or_create(%s): %s",
+                    _redacted_kwargs(kwargs),
+                    exc,
                 )
                 raise
 
@@ -150,24 +212,26 @@ class RealBaseManager:
                 session.expunge(result)
                 return result.to_dataclass()
             except Exception as exc:
-                self.logger.error("Error in create(%s): %s", kwargs, exc)
+                self.logger.error(
+                    "Error in create(%s): %s",
+                    _redacted_kwargs(kwargs),
+                    exc,
+                )
                 return None
 
     def update(self, pk=None, **kwargs) -> bool:
         """Update one record by id and return whether it succeeded."""
         record_id = kwargs.pop("pk", pk)
-        if not kwargs:
+        if not kwargs or record_id is None:
             return False
 
         with session_scope() as session:
             try:
-                query = session.query(self.cls)
-                if record_id is None:
-                    result = query.first()
-                else:
-                    result = query.filter(
-                        self.cls.id == record_id
-                    ).first()
+                result = (
+                    session.query(self.cls)
+                    .filter(self.cls.id == record_id)
+                    .first()
+                )
 
                 if result is None:
                     return False
@@ -182,34 +246,57 @@ class RealBaseManager:
                 self.logger.error(
                     "Error in update(%s, %s): %s",
                     record_id,
-                    kwargs,
+                    _redacted_kwargs(kwargs),
                     exc,
                 )
                 return False
 
-    def all(self) -> List[_T]:
-        """Return all rows converted to dataclasses."""
+    def all(
+        self,
+        eager_load: Optional[List[str]] = None,
+        limit: Optional[int] = None,
+        offset: Optional[int] = None,
+    ) -> List[_T]:
+        """Return rows converted to dataclasses, with paging."""
         with session_scope() as session:
             try:
-                result = session.query(self.cls).all()
+                query = session.query(self.cls)
+                query = self._apply_eager_load(query, eager_load)
+                query = self._apply_paging(query, limit, offset)
+                result = query.all()
                 session.expunge_all()
                 return [obj.to_dataclass() for obj in result]
             except Exception as exc:
                 self.logger.error("Error in all(): %s", exc)
                 return []
 
-    def filter_by(self, **kwargs) -> Optional[List[_T]]:
-        """Return rows matching simple equality filters."""
+    def filter_by(
+        self,
+        *positional: object,
+        eager_load: Optional[List[str]] = None,
+        limit: Optional[int] = None,
+        offset: Optional[int] = None,
+        **kwargs,
+    ) -> Optional[List[_T]]:
+        """Return rows matching simple equality filters, with paging."""
+        if positional:
+            raise TypeError(
+                "filter_by() takes no positional filters; "
+                "use filter() or keyword arguments"
+            )
         with session_scope() as session:
             try:
-                result = (
-                    session.query(self.cls).filter_by(**kwargs).all()
-                )
+                query = session.query(self.cls).filter_by(**kwargs)
+                query = self._apply_eager_load(query, eager_load)
+                query = self._apply_paging(query, limit, offset)
+                result = query.all()
                 session.expunge_all()
                 return [obj.to_dataclass() for obj in result]
             except Exception as exc:
                 self.logger.error(
-                    "Error in filter_by(%s): %s", kwargs, exc
+                    "Error in filter_by(%s): %s",
+                    _redacted_kwargs(kwargs),
+                    exc,
                 )
                 return None
 
@@ -228,13 +315,20 @@ class RealBaseManager:
                 )
                 return None
 
-    def filter(self, *args) -> Optional[List[_T]]:
-        """Return all rows matching arbitrary filters."""
+    def filter(
+        self,
+        *args,
+        eager_load: Optional[List[str]] = None,
+        limit: Optional[int] = None,
+        offset: Optional[int] = None,
+    ) -> Optional[List[_T]]:
+        """Return rows matching arbitrary filters, with paging."""
         with session_scope() as session:
             try:
-                result = (
-                    session.query(self.cls).filter(*args).all()
-                )
+                query = session.query(self.cls).filter(*args)
+                query = self._apply_eager_load(query, eager_load)
+                query = self._apply_paging(query, limit, offset)
+                result = query.all()
                 session.expunge_all()
                 return [obj.to_dataclass() for obj in result]
             except Exception as exc:
@@ -272,7 +366,9 @@ class RealBaseManager:
                 return result.to_dataclass() if result else None
             except Exception as exc:
                 self.logger.error(
-                    "Error in filter_by(%s): %s", kwargs, exc
+                    "Error in filter_by(%s): %s",
+                    _redacted_kwargs(kwargs),
+                    exc,
                 )
                 return None
 
@@ -318,45 +414,78 @@ class RealBaseManager:
                         return True
                     return False
                 if kwargs:
-                    result = (
-                        session.query(self.cls)
-                        .filter_by(**kwargs)
-                        .delete()
-                    )
-                    session.commit()
-                    return bool(result)
+                    query = session.query(self.cls).filter_by(**kwargs)
+                    return self._guarded_bulk_delete(session, query) >= 0
                 return False
             except Exception as exc:
                 self.logger.error(
-                    "Error in delete(%s, %s): %s", pk, kwargs, exc
+                    "Error in delete(%s, %s): %s",
+                    pk,
+                    _redacted_kwargs(kwargs),
+                    exc,
                 )
                 return False
 
-    def delete_all(self) -> int:
-        """Delete all rows and return the count removed."""
+    def _guarded_bulk_delete(self, session, query) -> int:
+        """Delete via query, refusing removals above the row cap.
+
+        Returns:
+            Rows removed, or -1 when the row cap refused the delete.
+        """
+        matched = query.count()
+        if matched > MAX_BULK_DELETE_ROWS:
+            self.logger.error(
+                "Refusing bulk delete of %d %s rows (cap %d); "
+                "narrow the filter",
+                matched,
+                self.cls.__name__,
+                MAX_BULK_DELETE_ROWS,
+            )
+            session.rollback()
+            return -1
+        result = query.delete()
+        session.commit()
+        return result
+
+    def delete_all(self, confirm: bool = False) -> int:
+        """Delete all rows and return the count removed.
+
+        Args:
+            confirm: Must be True; deleting a whole table without an
+                explicit opt-in is refused with a -1 return.
+        """
+        if not confirm:
+            self.logger.error(
+                "Refusing unconfirmed delete_all() on %s; "
+                "pass confirm=True",
+                self.cls.__name__,
+            )
+            return -1
         with session_scope() as session:
             try:
-                result = session.query(self.cls).delete()
-                session.commit()
-                return result
+                query = session.query(self.cls)
+                return max(self._guarded_bulk_delete(session, query), 0)
             except Exception as exc:
                 self.logger.error("Error in delete(): %s", exc)
                 return 0
 
     def delete_by(self, **kwargs) -> bool:
         """Delete rows matching equality filters."""
+        if not kwargs:
+            self.logger.error(
+                "Refusing delete_by() with empty filter on %s",
+                self.cls.__name__,
+            )
+            return False
         with session_scope() as session:
             try:
-                result = (
-                    session.query(self.cls)
-                    .filter_by(**kwargs)
-                    .delete()
-                )
-                session.commit()
-                return result
+                query = session.query(self.cls).filter_by(**kwargs)
+                return self._guarded_bulk_delete(session, query) >= 0
             except Exception as exc:
                 self.logger.error(
-                    "Error in delete_by(%s): %s", kwargs, exc
+                    "Error in delete_by(%s): %s",
+                    _redacted_kwargs(kwargs),
+                    exc,
                 )
                 return False
 
@@ -387,4 +516,9 @@ class RealBaseManager:
                 return False
 
 
-__all__ = ["RealBaseManager"]
+__all__ = [
+    "DEFAULT_LIST_LIMIT",
+    "MAX_BULK_DELETE_ROWS",
+    "RealBaseManager",
+    "SECRET_KEY_HINTS",
+]

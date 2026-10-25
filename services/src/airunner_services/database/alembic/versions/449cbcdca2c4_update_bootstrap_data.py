@@ -65,11 +65,16 @@ def upgrade() -> None:
     image_filter_values["yellow_blue"]["max_value"] = 1.0
 
     for param_name, param_data in image_filter_values.items():
+        # Insert-only: never overwrite rows the user may have tuned.
         connection.execute(
             sa.text(
-                "UPDATE image_filter_values "
-                "SET value = :value, value_type = :value_type, min_value = :min_value, max_value = :max_value "
-                "WHERE image_filter_id = :image_filter_id AND name = :name"
+                "INSERT INTO image_filter_values (image_filter_id, name, "
+                "value, value_type, min_value, max_value) "
+                "SELECT :image_filter_id, :name, :value, :value_type, "
+                ":min_value, :max_value "
+                "WHERE NOT EXISTS (SELECT 1 FROM image_filter_values "
+                "WHERE image_filter_id = :image_filter_id "
+                "AND name = :name)"
             ),
             {
                 "image_filter_id": filter_id,

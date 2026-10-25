@@ -169,9 +169,13 @@ def _cached_expected_migration_heads(
     return expected_heads
 
 
-def _current_database_heads(target_db_url: str) -> tuple[str, ...]:
+def _current_database_heads(
+    target_db_url: str, connect_args: dict | None = None
+) -> tuple[str, ...]:
     """Return the sorted migration heads currently recorded in the DB."""
-    engine = create_configured_engine(target_db_url)
+    engine = create_configured_engine(
+        target_db_url, connect_args=dict(connect_args or {})
+    )
     try:
         with engine.connect() as connection:
             context = MigrationContext.configure(connection)
@@ -185,6 +189,7 @@ def _database_is_at_head(
     target_db_url: str,
     version_locations: list[Path],
     base: Path,
+    connect_args: dict | None = None,
 ) -> bool:
     """Return whether the database already matches the latest heads."""
     try:
@@ -195,7 +200,7 @@ def _database_is_at_head(
         )
         if not expected_heads:
             return False
-        current_heads = _current_database_heads(target_db_url)
+        current_heads = _current_database_heads(target_db_url, connect_args)
         return current_heads == expected_heads
     except Exception:
         return False
@@ -224,7 +229,9 @@ def _ensure_startup_rows(engine) -> None:
             session.commit()
 
 
-def _repair_application_schema(target_db_url: str) -> None:
+def _repair_application_schema(
+    target_db_url: str, connect_args: dict | None = None
+) -> None:
     """Ensure core application tables exist even on pristine databases."""
     import airunner_services.database.models as model_module
     from airunner_services.database.base import Base
@@ -236,7 +243,9 @@ def _repair_application_schema(target_db_url: str) -> None:
         if hasattr(getattr(model_module, name), "__tablename__")
     ]
 
-    engine = create_configured_engine(target_db_url)
+    engine = create_configured_engine(
+        target_db_url, connect_args=dict(connect_args or {})
+    )
     try:
         existing_tables = set(inspect(engine).get_table_names())
         missing_tables = [
@@ -255,7 +264,9 @@ def _repair_application_schema(target_db_url: str) -> None:
         engine.dispose()
 
 
-def setup_database(db_url: str | None = None):
+def setup_database(
+    db_url: str | None = None, connect_args: dict | None = None
+):
     target_db_url = db_url or _default_db_url()
     _ensure_sqlite_parent_dir(target_db_url)
 
@@ -288,14 +299,17 @@ def setup_database(db_url: str | None = None):
         # we add Postgres connection options like search_path.
         safe_url = target_db_url.replace("%", "%%")
         alembic_cfg.set_main_option("sqlalchemy.url", safe_url)
+        # In-memory only: driver secrets for env.py (never written to disk).
+        alembic_cfg.attributes["connect_args"] = dict(connect_args or {})
 
         if _database_is_at_head(
             alembic_cfg,
             target_db_url,
             version_locations,
             base,
+            connect_args,
         ):
-            _repair_application_schema(target_db_url)
+            _repair_application_schema(target_db_url, connect_args)
             _restrict_sqlite_file_permissions(target_db_url)
             if _use_setup_cache():
                 _COMPLETED_SETUP_URLS.add(target_db_url)
@@ -347,7 +361,7 @@ def setup_database(db_url: str | None = None):
             else:
                 os.environ["AIRUNNER_MIGRATION_RUNNING"] = old_flag
 
-        _repair_application_schema(target_db_url)
+        _repair_application_schema(target_db_url, connect_args)
         _restrict_sqlite_file_permissions(target_db_url)
 
         if _use_setup_cache():

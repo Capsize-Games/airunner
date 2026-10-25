@@ -8,8 +8,8 @@ Create Date: 2026-05-22 09:30:00.000000
 
 from typing import Sequence, Union
 
-from alembic import op
 from airunner_services.database.db.column import add_column
+from airunner_services.database.db.column import drop_columns_by_name
 from airunner_services.database.models.application_settings import (
     ApplicationSettings,
 )
@@ -28,5 +28,6 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    op.drop_column("application_settings", "document_height")
-    op.drop_column("application_settings", "document_width")
+    drop_columns_by_name(
+        "application_settings", ["document_height", "document_width"]
+    )

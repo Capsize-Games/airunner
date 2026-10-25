@@ -7,6 +7,7 @@ resume, and the B14 ledger alembic revision. See
 
 from __future__ import annotations
 
+import ast
 import importlib.util
 from pathlib import Path
 from types import ModuleType
@@ -209,4 +210,14 @@ def test_alembic_chain_links_companion_head() -> None:
     for path in versions.glob("*.py"):
         if path.name == _VERSION_FILENAME:
             continue
-        assert "d951d2fd378d" not in path.read_text(encoding="utf-8")
+        text = path.read_text(encoding="utf-8")
+        tree = ast.parse(text)
+        downs = [
+            node
+            for node in ast.walk(tree)
+            if isinstance(node, ast.AnnAssign)
+            and getattr(node.target, "id", "") == "down_revision"
+        ]
+        if any(isinstance(node.value, (ast.Tuple, ast.List)) for node in downs):
+            continue  # merge revision legitimately references both parents
+        assert "d951d2fd378d" not in text

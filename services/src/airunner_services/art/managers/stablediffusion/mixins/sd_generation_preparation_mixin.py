@@ -13,6 +13,17 @@ from PIL.Image import Image
 from airunner_services.art.managers.stablediffusion.noise_sampler import (
     DeterministicSDENoiseSampler,
 )
+from airunner_services.art.managers.stablediffusion.image_request import (
+    MAX_IMAGES_PER_BATCH,
+    MAX_INFERENCE_STEPS,
+    MAX_STRENGTH,
+    MIN_IMAGES_PER_BATCH,
+    MIN_INFERENCE_STEPS,
+    MIN_STRENGTH,
+    clamp_float,
+    clamp_int,
+    snap_dimension,
+)
 from airunner_common.settings import AIRUNNER_MIN_NUM_INFERENCE_STEPS_IMG2IMG
 
 
@@ -73,19 +84,30 @@ class SDGenerationPreparationMixin:
         self.logger.debug("Preparing data")
         self._set_seed()
 
+        width = snap_dimension(self.image_request.width, 1024)
+        height = snap_dimension(self.image_request.height, 1024)
+        steps = clamp_int(
+            self.image_request.steps,
+            MIN_INFERENCE_STEPS,
+            MAX_INFERENCE_STEPS,
+            20,
+        )
+        images_per_batch = clamp_int(
+            self.image_request.images_per_batch,
+            MIN_IMAGES_PER_BATCH,
+            MAX_IMAGES_PER_BATCH,
+            1,
+        )
+
         data = {
-            "width": int(self.image_request.width),
-            "height": int(self.image_request.height),
+            "width": width,
+            "height": height,
             "clip_skip": int(self.image_request.clip_skip),
-            "num_inference_steps": int(self.image_request.steps),
+            "num_inference_steps": steps,
             "callback_on_step_end": self._interrupt_callback,
             "generator": self.generator,
             # Use 1 as default if images_per_batch is None
-            "num_images_per_prompt": (
-                int(self.image_request.images_per_batch)
-                if self.image_request.images_per_batch is not None
-                else 1
-            ),
+            "num_images_per_prompt": images_per_batch,
         }
 
         if self.use_compel:
@@ -99,8 +121,6 @@ class SDGenerationPreparationMixin:
                 }
             )
 
-        width = int(self.image_request.width)
-        height = int(self.image_request.height)
         image = None
         mask = None
 
@@ -193,7 +213,12 @@ class SDGenerationPreparationMixin:
         )
         data.update(
             {
-                "strength": self.image_request.strength,
+                "strength": clamp_float(
+                    self.image_request.strength,
+                    MIN_STRENGTH,
+                    MAX_STRENGTH,
+                    0.5,
+                ),
             }
         )
 

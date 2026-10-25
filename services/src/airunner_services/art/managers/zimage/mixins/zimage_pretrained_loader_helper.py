@@ -231,11 +231,13 @@ class ZImagePretrainedLoaderHelper:
                 load_kwargs["torch_dtype"] = model_dtype
             text_encoder = AutoModelForCausalLM.from_pretrained(
                 str(text_encoder_path),
+                trust_remote_code=False,
                 **load_kwargs,
             )
             tokenizer = AutoTokenizer.from_pretrained(
                 str(tokenizer_path),
                 local_files_only=True,
+                trust_remote_code=False,
             )
             return text_encoder, tokenizer
         except Exception as exc:
