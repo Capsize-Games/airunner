@@ -1,6 +1,8 @@
 from typing import Type, Optional
 from abc import ABCMeta
 import os
+import tempfile
+import threading
 from pathlib import Path
 from time import perf_counter
 import torch
@@ -12,7 +14,6 @@ from airunner_common.contract_enums import (
     SignalCode,
 )
 from airunner_common.settings import AIRUNNER_BASE_PATH
-from airunner_services.requests.tts_request import OpenVoiceTTSRequest
 from airunner_services.requests.tts_request import TTSRequest
 from airunner_services.runtimes.tts_model_manager import TTSModelManager
 from airunner_services.utils.text.language_detection import detect_language
@@ -44,7 +45,6 @@ from airunner_services.runtimes.openvoice_runtime_helpers import (
     default_openvoice_device,
     ensure_reference_speaker_embedding,
     expand_reference_speaker_path,
-    precompute_reference_speaker,
     processed_target_dir,
     warm_melo_tts,
 )
@@ -86,6 +86,15 @@ def _resolve_tts_model_base() -> str:
     return AIRUNNER_BASE_PATH
 
 
+def _readable_file(path: str) -> bool:
+    """Return True when one file can actually be opened for reading."""
+    try:
+        with open(path, "rb"):
+            return True
+    except OSError:
+        return False
+
+
 def _resolve_cache_base() -> str:
     """Base directory Melo's g2p cache nests under.
 
@@ -124,6 +133,9 @@ class OpenVoiceModelManager(TTSModelManager, metaclass=ABCMeta):
         self._target_se = None
         self._audio_name = None
         self._skip_download_check = False
+        self._load_in_progress = False
+        self._download_completed = False
+        self._generate_lock = threading.Lock()
         self._tts_model_root: str = resolve_tts_model_root()
         self._openvoice_model_root: str = _configured_openvoice_root(
             self._tts_model_root
@@ -253,6 +265,18 @@ class OpenVoiceModelManager(TTSModelManager, metaclass=ABCMeta):
         """
         Generate speech using OpenVoice and apply tone color conversion.
         """
+        if self.model is None:
+            raise OpenVoiceError("OpenVoice model is not loaded")
+        with self._generate_lock:
+            return self._generate_locked(tts_request)
+
+    def _generate_locked(self, tts_request: Type[TTSRequest]):
+        """Run one synthesis with per-request temp files.
+
+        The previous implementation shared one fixed ``tmp.wav`` and one
+        ``output_v2_<speaker>.wav`` per speaker, so concurrent syntheses
+        overwrote each other's audio mid-flight.
+        """
         generation_start = perf_counter()
         message = self._prepare_text(tts_request.message)
         lang = self.language_settings.bot_language
@@ -282,30 +306,57 @@ class OpenVoiceModelManager(TTSModelManager, metaclass=ABCMeta):
         noise_scale = (settings.noise_scale if settings.noise_scale is not None else 80) / 100.0
         noise_scale_w = (settings.noise_scale_w if settings.noise_scale_w is not None else 90) / 100.0
 
-        synthesis_start = perf_counter()
-        self.model.tts_to_file(
-            message,
-            speaker_ids[speaker_id],
-            self.src_path,
-            speed=self._speed,
-            sdp_ratio=sdp_ratio,
-            noise_scale=noise_scale,
-            noise_scale_w=noise_scale_w,
+        os.makedirs(self._output_dir, exist_ok=True)
+        src_fd, src_path = tempfile.mkstemp(
+            prefix="openvoice-src-", suffix=".wav", dir=self._output_dir
         )
+        os.close(src_fd)
+        out_fd, output_path = tempfile.mkstemp(
+            prefix=f"openvoice-{self.speaker_key}-",
+            suffix=".wav",
+            dir=self._output_dir,
+        )
+        os.close(out_fd)
+        # Backwards-compatible alias: single-threaded callers that read
+        # the last synthesis straight off the manager.
+        self.src_path = src_path
+
+        synthesis_start = perf_counter()
+        try:
+            self.model.tts_to_file(
+                message,
+                speaker_ids[speaker_id],
+                src_path,
+                speed=self._speed,
+                sdp_ratio=sdp_ratio,
+                noise_scale=noise_scale,
+                noise_scale_w=noise_scale_w,
+            )
+        except Exception:
+            for stale in (src_path, output_path):
+                try:
+                    os.unlink(stale)
+                except OSError:
+                    pass
+            raise
         synthesis_elapsed = perf_counter() - synthesis_start
 
-        output_path = os.path.join(
-            self._output_dir,
-            f"output_v2_{self.speaker_key}.wav",
-        )
-
         conversion_start = perf_counter()
-        response = self.tone_color_converter.convert(
-            audio_src_path=self.src_path,
-            src_se=self.source_se,
-            tgt_se=self._target_se,
-            output_path=output_path,
-        )
+        try:
+            response = self.tone_color_converter.convert(
+                audio_src_path=src_path,
+                src_se=self.source_se,
+                tgt_se=self._target_se,
+                output_path=output_path,
+            )
+        finally:
+            # Both paths are intermediates (convert returns audio, not a
+            # path); remove them so per-request temps never accumulate.
+            for stale in (src_path, output_path):
+                try:
+                    os.unlink(stale)
+                except OSError:
+                    pass
         conversion_elapsed = perf_counter() - conversion_start
         self.logger.info(
             "OpenVoice generate timings: tts_to_file=%.3fs "
@@ -330,19 +381,22 @@ class OpenVoiceModelManager(TTSModelManager, metaclass=ABCMeta):
                 f"OpenVoice already in state {current_status}, skipping load"
             )
             return True
+        if self._load_in_progress:
+            # Re-entrant call from the download-complete callback firing
+            # synchronously inside the signal handler below: defer to the
+            # outer load instead of recursing the state machine.
+            self._skip_download_check = True
+            self.logger.debug("OpenVoice load already in progress, deferring")
+            return True
 
         self.logger.debug("Initializing OpenVoice")
-
-        if self._skip_download_check:
-            self._skip_download_check = False
-            self.logger.info("Skipping download check after batch download")
-        else:
-            should_download, _download_info = self._check_and_trigger_download()
-            if should_download:
-                self.logger.info(
-                    "OpenVoice model files missing, download triggered"
-                )
-                return False
+        self._load_in_progress = True
+        try:
+            ready = self._prepare_for_load()
+        finally:
+            self._load_in_progress = False
+        if not ready:
+            return False
 
         self.change_model_status(ModelType.TTS, ModelStatus.LOADING)
         try:
@@ -359,6 +413,7 @@ class OpenVoiceModelManager(TTSModelManager, metaclass=ABCMeta):
                 language=self.language,
                 device=self.device,
             )
+            self._warm_model_components()
             model_elapsed = perf_counter() - model_start
 
             self.logger.info(
@@ -375,6 +430,25 @@ class OpenVoiceModelManager(TTSModelManager, metaclass=ABCMeta):
 
         self.change_model_status(ModelType.TTS, ModelStatus.LOADED)
         return True
+
+    def _prepare_for_load(self) -> bool:
+        """Run the download check, returning True when init may proceed."""
+        if self._skip_download_check:
+            self._skip_download_check = False
+            self.logger.info("Skipping download check after batch download")
+            return True
+        should_download, _download_info = self._check_and_trigger_download()
+        if not should_download:
+            return True
+        if self._download_completed:
+            # The batch download ran synchronously inside the signal
+            # handler and the deferred callback already fired: the files
+            # are present, so initialize now instead of reporting a
+            # pending download.
+            self._download_completed = False
+            return True
+        self.logger.info("OpenVoice model files missing, download triggered")
+        return False
 
     def unload(self):
         """
@@ -413,18 +487,6 @@ class OpenVoiceModelManager(TTSModelManager, metaclass=ABCMeta):
             pass
 
         self._load_target_speaker_embedding()
-
-    @classmethod
-    def precompute_reference_speaker(
-        cls,
-        reference_speaker_path: str,
-        tts_model_path: str,
-    ) -> bool:
-        """Best-effort precompute of one reference speaker embedding."""
-        return precompute_reference_speaker(
-            reference_speaker_path,
-            tts_model_path,
-        )
 
     def reload_speaker_embeddings(
         self,
@@ -476,29 +538,13 @@ class OpenVoiceModelManager(TTSModelManager, metaclass=ABCMeta):
             raise OpenVoiceError("Target speaker extraction returned None.")
 
     def _warm_model_components(self) -> None:
-        """Force-load the lazy frontend and one full synthesis pass."""
+        """Best-effort warm of the lazy Melo frontend after load."""
         if self.model is None:
             return
-        warm_melo_tts(self.model, self.language)
-        self._warm_inference_path()
-
-    def _warm_inference_path(self) -> None:
-        """Run one tiny synthesis so first user audio is already warm."""
-        start = perf_counter()
-        self.generate(
-            OpenVoiceTTSRequest(
-                message="Warm up.",
-                gender=getattr(
-                    getattr(self, "chatbot", None),
-                    "gender",
-                    "Male",
-                ),
-            )
-        )
-        self.logger.info(
-            "OpenVoice full warmup completed in %.3fs",
-            perf_counter() - start,
-        )
+        try:
+            warm_melo_tts(self.model, self.language)
+        except Exception as exc:
+            self.logger.debug("OpenVoice warmup skipped: %s", exc)
 
     def _check_and_trigger_download(self):
         """Check for missing OpenVoice model files and trigger download if needed.
@@ -517,14 +563,18 @@ class OpenVoiceModelManager(TTSModelManager, metaclass=ABCMeta):
             OPENVOICE_LANGUAGE_MODELS,
         )
 
-        # Check for the converter checkpoint files (from ZIP download)
+        # Check for the converter checkpoint files (from ZIP download).
+        # Open each file directly instead of exists()-then-open: the
+        # pre-check races a concurrent download or cleanup.
         converter_config = os.path.join(
             self._checkpoint_converter_path, "config.json"
         )
         converter_checkpoint = os.path.join(
             self._checkpoint_converter_path, "checkpoint.pth"
         )
-        needs_converter = not os.path.exists(converter_config) or not os.path.exists(converter_checkpoint)
+        needs_converter = not _readable_file(
+            converter_config
+        ) or not _readable_file(converter_checkpoint)
 
         # Check which core models are missing
         missing_core_models = []
@@ -570,9 +620,19 @@ class OpenVoiceModelManager(TTSModelManager, metaclass=ABCMeta):
             )
             
             def on_download_complete():
-                """Callback after batch download completes - skip re-checking."""
+                """Callback after batch download completes.
+
+                Never calls load() directly: when this fires
+                synchronously inside the load() signal handler above,
+                that would recurse the load state machine. Instead it
+                records completion and reloads only when no load is in
+                progress; the in-progress load picks the flags up and
+                initializes exactly once.
+                """
                 self._skip_download_check = True
-                self.load()
+                self._download_completed = True
+                if not self._load_in_progress:
+                    self.load()
             
             self.emit_signal(
                 SignalCode.START_OPENVOICE_BATCH_DOWNLOAD,

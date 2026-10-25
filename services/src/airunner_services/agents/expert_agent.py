@@ -95,6 +95,8 @@ class ExpertAgent(ABC):
         # Check for keyword matches across all capabilities
         max_score = 0.0
         for capability in self.capabilities:
+            if not capability.keywords:
+                continue
             keyword_matches = sum(
                 1
                 for keyword in capability.keywords

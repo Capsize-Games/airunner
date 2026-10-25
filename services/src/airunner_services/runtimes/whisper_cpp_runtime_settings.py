@@ -24,6 +24,45 @@ DEFAULT_REQUEST_PATH = ""
 DEFAULT_LANGUAGE = "auto"
 DEFAULT_STARTUP_TIMEOUT_SECONDS = 60.0
 
+MIN_PORT = 1
+MAX_PORT = 65535
+MIN_THREADS = 1
+MIN_PROCESSORS = 1
+
+#: Language codes accepted by whisper.cpp, plus "auto" for detection.
+WHISPER_LANGUAGES = frozenset(
+    {
+        "auto",
+        "en", "zh", "de", "es", "ru", "ko", "fr", "ja", "pt", "tr",
+        "pl", "ca", "nl", "ar", "sv", "it", "id", "hi", "fi", "vi",
+        "he", "uk", "el", "ms", "cs", "ro", "da", "hu", "ta", "no",
+        "th", "ur", "hr", "bg", "lt", "la", "mi", "ml", "cy", "sk",
+        "te", "fa", "lv", "bn", "sr", "az", "sl", "kn", "et", "mk",
+        "br", "eu", "is", "hy", "ne", "mn", "bs", "kk", "sq", "sw",
+        "gl", "mr", "pa", "ku", "as", "gu", "km", "nd", "lo", "mg",
+        "so", "si", "ka", "be", "tg", "sd", "tk", "tl", "yo", "am",
+        "jv", "su", "haw", "yi", "ln", "ps", "uz", "mt", "sa", "ml",
+        "oc", "ga", "gd", "cy", "fy", "lb", "tt", "ba", "ha", "ig",
+        "sn", "yo", "zu", "xh", "af", "fo",
+    }
+)
+
+
+def _clamp_int(name: str, value: int, *, minimum: int, maximum: int | None,
+               default: int) -> int:
+    """Clamp one numeric setting into its valid range."""
+    if value < minimum or (maximum is not None and value > maximum):
+        return default
+    return value
+
+
+def _normalize_language(value: str) -> str:
+    """Return a supported whisper language code or the default."""
+    normalized = (value or "").strip().lower()
+    if normalized in WHISPER_LANGUAGES:
+        return normalized
+    return DEFAULT_LANGUAGE
+
 
 def _env_int(name: str, default: int) -> int:
     """Return an integer environment override when one is set."""
@@ -124,10 +163,22 @@ def _discover_model_path(model_directories: list[str]) -> Optional[str]:
 
 
 def _candidate_model_path(base_path: str, path_settings: Any) -> Optional[str]:
-    """Return the configured whisper.cpp model path when one exists."""
+    """Return the configured whisper.cpp model path when one exists.
+
+    An explicit AIRUNNER_WHISPER_MODEL_PATH override is validated at
+    resolve time so a typo fails fast here instead of at sidecar start.
+    """
     env_override = os.environ.get("AIRUNNER_WHISPER_MODEL_PATH", "").strip()
     if env_override:
-        return os.path.expanduser(env_override)
+        from airunner_services.runtimes.file_policy import (
+            resolve_existing_file,
+        )
+
+        return resolve_existing_file(
+            env_override,
+            label="AIRUNNER_WHISPER_MODEL_PATH",
+            allowed_suffixes=(".bin",),
+        )
     return _discover_model_path(
         _stt_candidate_directories(base_path, path_settings)
     )
@@ -190,6 +241,7 @@ def resolve_whisper_cpp_runtime_settings(
     model_path = _candidate_model_path(base_path, resolved_path_settings)
     model_id = Path(model_path).name if model_path else None
     cpu_count = os.cpu_count() or 4
+    default_threads = max(1, min(cpu_count, 8))
 
     return WhisperCppRuntimeSettings(
         executable=resolve_runtime_executable(
@@ -200,15 +252,32 @@ def resolve_whisper_cpp_runtime_settings(
             "AIRUNNER_WHISPER_HOST",
             "AIRUNNER_RUNTIME_BIND_HOST",
         ),
-        port=_env_int("AIRUNNER_WHISPER_PORT", DEFAULT_PORT),
+        port=_clamp_int(
+            "port",
+            _env_int("AIRUNNER_WHISPER_PORT", DEFAULT_PORT),
+            minimum=MIN_PORT,
+            maximum=MAX_PORT,
+            default=DEFAULT_PORT,
+        ),
         model_path=model_path,
         model_id=model_id,
-        n_threads=_env_int(
-            "AIRUNNER_WHISPER_THREADS",
-            max(1, min(cpu_count, 8)),
+        n_threads=_clamp_int(
+            "n_threads",
+            _env_int("AIRUNNER_WHISPER_THREADS", default_threads),
+            minimum=MIN_THREADS,
+            maximum=None,
+            default=default_threads,
         ),
-        n_processors=_env_int("AIRUNNER_WHISPER_PROCESSORS", 1),
-        language=os.environ.get("AIRUNNER_WHISPER_LANGUAGE", DEFAULT_LANGUAGE),
+        n_processors=_clamp_int(
+            "n_processors",
+            _env_int("AIRUNNER_WHISPER_PROCESSORS", 1),
+            minimum=MIN_PROCESSORS,
+            maximum=None,
+            default=1,
+        ),
+        language=_normalize_language(
+            os.environ.get("AIRUNNER_WHISPER_LANGUAGE", DEFAULT_LANGUAGE)
+        ),
         request_path=os.environ.get(
             "AIRUNNER_WHISPER_REQUEST_PATH",
             DEFAULT_REQUEST_PATH,
@@ -227,6 +296,9 @@ def resolve_whisper_cpp_runtime_settings(
 
 
 __all__ = [
+    "MAX_PORT",
+    "MIN_PORT",
+    "WHISPER_LANGUAGES",
     "WhisperCppRuntimeSettings",
     "resolve_whisper_cpp_runtime_settings",
 ]

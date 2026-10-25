@@ -6,6 +6,7 @@ import base64
 import io
 import json
 import os
+import threading
 from queue import Empty, Queue
 from typing import Any, Callable, Iterable, Optional
 
@@ -60,6 +61,9 @@ def _default_timeout_seconds() -> float:
 
 
 DEFAULT_TIMEOUT_SECONDS = _default_timeout_seconds()
+
+#: Largest decoded audio clip accepted by the local-fallback STT path.
+MAX_LOCAL_FALLBACK_AUDIO_BYTES = 15 * 1024 * 1024
 
 
 def _build_signal_mediator() -> Any:
@@ -279,6 +283,7 @@ class _SignalRuntimeClient(RuntimeClient):
         )
         self._signal_source = signal_source or _build_signal_mediator()
         self._mediator = mediator or _build_signal_mediator()
+        self._signal_lock = threading.Lock()
         self._timeout_seconds = timeout_seconds
         self._health_provider = health_provider
         self._last_model_status = None
@@ -709,6 +714,9 @@ class LocalFallbackSTTClient(_SignalRuntimeClient):
         """Interrupt an STT request on a best-effort basis."""
         from airunner_common.contract_enums import SignalCode
 
+        logger.warning(
+            "STT cancel for request %s is best-effort only", request_id
+        )
         self._emit_signal(SignalCode.INTERRUPT_PROCESS_SIGNAL, {})
         return ResponseEnvelope(
             request_id=request_id,
@@ -745,7 +753,13 @@ class LocalFallbackSTTClient(_SignalRuntimeClient):
         )
 
     def _transcribe(self, request: RequestEnvelope) -> ResponseEnvelope:
-        """Run a transcription request through the working response signal."""
+        """Run a transcription request through the working response signal.
+
+        Registration, emit and wait all hold the signal lock: the
+        mediator is shared, so without it a concurrent transcription
+        registers an identical handler and each call can consume the
+        other's response.
+        """
         from airunner_common.contract_enums import SignalCode
 
         invocation = STTInvocationRequest.model_validate(request.payload)
@@ -757,50 +771,59 @@ class LocalFallbackSTTClient(_SignalRuntimeClient):
                 "stt_invalid_audio",
                 "Invalid base64 audio payload",
             )
+        if len(audio_bytes) > MAX_LOCAL_FALLBACK_AUDIO_BYTES:
+            return self._failure_response(
+                request.request_id,
+                "stt_invalid_audio",
+                "Audio payload exceeds the size budget",
+            )
 
         transcription_queue: Queue[Any] = Queue()
 
         def on_transcription(data: dict[str, Any]) -> None:
+            if data.get("request_id", request.request_id) != request.request_id:
+                return
             transcription = data.get("transcription")
             if transcription is not None:
                 transcription_queue.put(transcription)
 
-        self._mediator.register(
-            SignalCode.AUDIO_PROCESSOR_RESPONSE_SIGNAL,
-            on_transcription,
-        )
-        try:
-            self._emit_signal(
-                SignalCode.AUDIO_CAPTURE_WORKER_RESPONSE_SIGNAL,
-                {"item": audio_bytes},
-            )
-            try:
-                transcription = transcription_queue.get(
-                    timeout=self._timeout_seconds
-                )
-            except Empty:
-                return self._failure_response(
-                    request.request_id,
-                    "stt_timeout",
-                    "Timed out waiting for STT response",
-                    retryable=True,
-                )
-        except Exception as exc:
-            # A missing local STT backend (no model configured, no ML
-            # runtime) surfaces here as a raised error; report it as a
-            # failed envelope like the art fallback does (issue #2243)
-            # instead of letting the route turn it into a bare 500.
-            return self._failure_response(
-                request.request_id,
-                "stt_invoke_failed",
-                str(exc),
-                retryable=True,
-            )
-        finally:
-            self._mediator.unregister(
+        with self._signal_lock:
+            self._mediator.register(
                 SignalCode.AUDIO_PROCESSOR_RESPONSE_SIGNAL,
                 on_transcription,
             )
+            try:
+                self._emit_signal(
+                    SignalCode.AUDIO_CAPTURE_WORKER_RESPONSE_SIGNAL,
+                    {"item": audio_bytes, "request_id": request.request_id},
+                )
+                try:
+                    transcription = transcription_queue.get(
+                        timeout=self._timeout_seconds
+                    )
+                except Empty:
+                    return self._failure_response(
+                        request.request_id,
+                        "stt_timeout",
+                        "Timed out waiting for STT response",
+                        retryable=True,
+                    )
+            except Exception as exc:
+                # A missing local STT backend (no model configured, no ML
+                # runtime) surfaces here as a raised error; report it as a
+                # failed envelope like the art fallback does (issue #2243)
+                # instead of letting the route turn it into a bare 500.
+                return self._failure_response(
+                    request.request_id,
+                    "stt_invoke_failed",
+                    str(exc),
+                    retryable=True,
+                )
+            finally:
+                self._mediator.unregister(
+                    SignalCode.AUDIO_PROCESSOR_RESPONSE_SIGNAL,
+                    on_transcription,
+                )
 
         payload = self._transcription_payload(transcription, invocation.language)
         return ResponseEnvelope(
@@ -896,18 +919,45 @@ class LocalFallbackTTSClient(_SignalRuntimeClient):
         invocation: TTSInvocationRequest,
     ) -> ResponseEnvelope:
         """Queue playback for one local interactive runtime."""
-        self._speak(invocation.text)
+        self._speak(invocation)
+        metadata: dict[str, Any] = {"stream": False}
+        unsupported = self._unsupported_playback_params(invocation)
+        if unsupported:
+            metadata["unsupported_params"] = unsupported
+            logger.warning(
+                "TTS playback ignores caller params for request %s: %s",
+                request_id,
+                ", ".join(unsupported),
+            )
         return ResponseEnvelope(
             request_id=request_id,
             status=EnvelopeStatus.SUCCEEDED,
             payload={"accepted": True},
-            metadata={"stream": False},
+            metadata=metadata,
         )
+
+    @staticmethod
+    def _unsupported_playback_params(
+        invocation: TTSInvocationRequest,
+    ) -> list[str]:
+        """Name caller TTS params the playback path cannot honor."""
+        unsupported = []
+        if invocation.voice:
+            unsupported.append("voice")
+        if invocation.speed != 1.0:
+            unsupported.append("speed")
+        if invocation.model:
+            unsupported.append("model")
+        return unsupported
 
     def cancel(self, request_id: str) -> ResponseEnvelope:
         """Interrupt queued or active TTS playback on a best-effort basis."""
         from airunner_common.contract_enums import SignalCode
 
+        logger.warning(
+            "TTS playback cancel for request %s is best-effort only",
+            request_id,
+        )
         self._emit_signal(SignalCode.INTERRUPT_PROCESS_SIGNAL, {})
         return ResponseEnvelope(
             request_id=request_id,
@@ -1115,17 +1165,26 @@ class LocalFallbackTTSClient(_SignalRuntimeClient):
         sf.write(buffer, audio, sample_rate, format="WAV")
         return buffer.getvalue()
 
-    def _speak(self, text: str) -> None:
-        """Queue a TTS request using the current playback service."""
+    def _speak(self, invocation: TTSInvocationRequest) -> None:
+        """Queue a TTS request using the current playback service.
+
+        Voice, speed and model travel in the queued payload for
+        consumers that can honor them; the legacy playback path only
+        speaks the message text (see _unsupported_playback_params).
+        """
+        payload = {
+            "message": invocation.text,
+            "is_end_of_message": True,
+            "voice": invocation.voice,
+            "speed": invocation.speed,
+            "model": invocation.model,
+        }
         if hasattr(self._signal_source, "play_audio"):
-            self._signal_source.play_audio(text)
+            self._signal_source.play_audio(invocation.text)
             return
         from airunner_common.contract_enums import SignalCode
 
-        self._emit_signal(
-            SignalCode.TTS_QUEUE_SIGNAL,
-            {"message": text, "is_end_of_message": True},
-        )
+        self._emit_signal(SignalCode.TTS_QUEUE_SIGNAL, payload)
 
 
 class LocalFallbackArtClient(_SignalRuntimeClient):

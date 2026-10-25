@@ -62,11 +62,12 @@ def _build_temp_daemon_config(
     temp_config = DaemonConfig(Path(temp_path))
     temp_config.config = config
     temp_config.save()
+    os.chmod(temp_path, 0o600)
     written = Path(temp_path)
     # `_cleanup_config` cannot run when this process is killed, so the
     # configs of dead sidecars pile up here forever. Starting a new one
     # is the moment to clear them: see `sidecar_configs`.
-    sidecar_configs.sweep(layout.config_dir, "airunner-art-runtime-", written)
+    sidecar_configs.sweep_all(layout.config_dir, keep=written)
     return written
 
 

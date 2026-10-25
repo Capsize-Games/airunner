@@ -1,8 +1,12 @@
 """Web search and scraping tools."""
 
 import asyncio
+import ipaddress
+import socket
+import threading
 import time
-from typing import Annotated
+from typing import Annotated, Any, Callable, Coroutine
+from urllib.parse import urlparse
 
 from airunner_services.llm.core.tool_registry import ToolCategory, tool
 from airunner_common.settings import AIRUNNER_LOG_LEVEL
@@ -17,21 +21,53 @@ logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 
 _last_search_time = 0
 _SEARCH_COOLDOWN = 2.0
+_cooldown_lock = threading.Lock()
 
 
 def _respect_search_cooldown(search_label: str) -> None:
 	"""Apply rate limiting between successive internet tool requests."""
 	global _last_search_time
-	time_since_last = time.time() - _last_search_time
-	if time_since_last < _SEARCH_COOLDOWN:
+	with _cooldown_lock:
+		time_since_last = time.time() - _last_search_time
 		wait_time = _SEARCH_COOLDOWN - time_since_last
-		logger.info(
-			"Rate limiting: waiting %.1fs before %s",
-			wait_time,
-			search_label,
-		)
-		time.sleep(wait_time)
-	_last_search_time = time.time()
+		if wait_time > 0:
+			logger.info(
+				"Rate limiting: waiting %.1fs before %s",
+				wait_time,
+				search_label,
+			)
+			time.sleep(wait_time)
+		_last_search_time = time.time()
+
+
+def _run_provider_coro(coro_factory: Callable[[], Coroutine]) -> Any:
+	"""Run one provider coroutine with or without a running loop.
+
+	asyncio.run() raises inside a running event loop, so when one is
+	already running the coroutine executes on a helper thread with its
+	own loop instead.
+	"""
+	try:
+		asyncio.get_running_loop()
+		running = True
+	except RuntimeError:
+		running = False
+	if not running:
+		return asyncio.run(coro_factory())
+	result: dict[str, Any] = {}
+
+	def _runner() -> None:
+		try:
+			result["value"] = asyncio.run(coro_factory())
+		except Exception as exc:
+			result["error"] = exc
+
+	worker = threading.Thread(target=_runner, daemon=True)
+	worker.start()
+	worker.join()
+	if "error" in result:
+		raise result["error"]
+	return result.get("value")
 
 
 def _duckduckgo_web_results(query: str, num_results: int = 10) -> list[dict]:
@@ -41,7 +77,9 @@ def _duckduckgo_web_results(query: str, num_results: int = 10) -> list[dict]:
 	)
 
 	provider = DuckDuckGoProvider()
-	return asyncio.run(provider.search(query, num_results=num_results))
+	return _run_provider_coro(
+		lambda: provider.search(query, num_results=num_results)
+	)
 
 
 def _duckduckgo_news_results(
@@ -54,7 +92,57 @@ def _duckduckgo_news_results(
 	)
 
 	provider = DuckDuckGoProvider()
-	return asyncio.run(provider.news_search(query, num_results=num_results))
+	return _run_provider_coro(
+		lambda: provider.news_search(query, num_results=num_results)
+	)
+
+
+def validate_scrape_url(url: str) -> str:
+	"""Validate one scrape URL against the SSRF gate.
+
+	Only http/https URLs whose hosts resolve exclusively to public
+	unicast addresses pass. Loopback, link-local, multicast, reserved
+	and cloud metadata addresses are rejected, since this tool fetches
+	caller-supplied URLs from an agent context.
+
+	Returns the normalized URL, raising ValueError otherwise.
+	"""
+	parsed = urlparse((url or "").strip())
+	if parsed.scheme not in ("http", "https"):
+		raise ValueError(f"Refusing to scrape non-http(s) URL: {url!r}")
+	host = parsed.hostname or ""
+	if not host:
+		raise ValueError(f"Refusing to scrape URL without a host: {url!r}")
+	lowered = host.lower()
+	if lowered in ("localhost", "metadata.google.internal") or lowered.endswith(
+		(".localhost", ".internal", ".local", ".lan", ".home", ".corp")
+	):
+		raise ValueError(f"Refusing to scrape non-public host: {host!r}")
+	try:
+		addresses = socket.getaddrinfo(host, None)
+	except socket.gaierror as exc:
+		raise ValueError(f"Refusing to scrape unresolvable host: {host!r}") from exc
+	for _family, _kind, _proto, _canon, sockaddr in addresses:
+		try:
+			address = ipaddress.ip_address(sockaddr[0])
+		except ValueError:
+			raise ValueError(
+				f"Refusing to scrape unparsable address for host: {host!r}"
+			)
+		if (
+			address.is_loopback
+			or address.is_link_local
+			or address.is_multicast
+			or address.is_reserved
+			or address.is_private
+			or address.is_unspecified
+			or address.is_global is False
+		):
+			raise ValueError(
+				f"Refusing to scrape non-public address {address} "
+				f"for host: {host!r}"
+			)
+	return parsed.geturl()
 
 
 @tool(
@@ -244,12 +332,22 @@ def scrape_website(
 	)
 
 	try:
+		safe_url = validate_scrape_url(url)
+	except ValueError as exc:
+		logger.warning(
+			"Refusing to scrape URL (%s): %s",
+			fingerprint_value(url, label="url"),
+			exc,
+		)
+		return {"content": None, "error": str(exc)}
+
+	try:
 		from airunner_services.tools.web_content_extractor import (
 			WebContentExtractor,
 		)
 
 		result = WebContentExtractor.fetch_and_extract_with_metadata(
-			url,
+			safe_url,
 			use_cache=True,
 		)
 

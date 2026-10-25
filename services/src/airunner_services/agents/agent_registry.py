@@ -1,5 +1,6 @@
 """Registry for managing expert agents."""
 
+import threading
 from typing import Dict, List, Optional
 from airunner_services.agents.expert_agent import ExpertAgent
 
@@ -15,6 +16,7 @@ class AgentRegistry:
     def __init__(self):
         """Initialize agent registry."""
         self._agents: Dict[str, ExpertAgent] = {}
+        self._lock = threading.Lock()
 
     def register(self, agent: ExpertAgent) -> None:
         """Register an expert agent.
@@ -25,9 +27,12 @@ class AgentRegistry:
         Raises:
             ValueError: If agent with same name already registered
         """
-        if agent.name in self._agents:
-            raise ValueError(f"Agent '{agent.name}' is already registered")
-        self._agents[agent.name] = agent
+        with self._lock:
+            if agent.name in self._agents:
+                raise ValueError(
+                    f"Agent '{agent.name}' is already registered"
+                )
+            self._agents[agent.name] = agent
 
     def unregister(self, agent_name: str) -> None:
         """Unregister an expert agent.
@@ -38,9 +43,10 @@ class AgentRegistry:
         Raises:
             KeyError: If agent not found
         """
-        if agent_name not in self._agents:
-            raise KeyError(f"Agent '{agent_name}' not found")
-        del self._agents[agent_name]
+        with self._lock:
+            if agent_name not in self._agents:
+                raise KeyError(f"Agent '{agent_name}' not found")
+            del self._agents[agent_name]
 
     def get(self, agent_name: str) -> Optional[ExpertAgent]:
         """Get agent by name.
@@ -51,7 +57,8 @@ class AgentRegistry:
         Returns:
             ExpertAgent instance or None if not found
         """
-        return self._agents.get(agent_name)
+        with self._lock:
+            return self._agents.get(agent_name)
 
     def list_agents(self) -> List[str]:
         """List all registered agent names.
@@ -59,7 +66,8 @@ class AgentRegistry:
         Returns:
             List of agent names
         """
-        return list(self._agents.keys())
+        with self._lock:
+            return list(self._agents.keys())
 
     def list_agents_by_capability(self, capability_name: str) -> List[str]:
         """List agents that have a specific capability.
@@ -71,7 +79,9 @@ class AgentRegistry:
             List of agent names that have the capability
         """
         matching_agents = []
-        for agent_name, agent in self._agents.items():
+        with self._lock:
+            agents = list(self._agents.items())
+        for agent_name, agent in agents:
             for capability in agent.capabilities:
                 if capability.name == capability_name:
                     matching_agents.append(agent_name)
@@ -92,7 +102,9 @@ class AgentRegistry:
             List of (agent_name, score) tuples, sorted by score descending
         """
         scores = []
-        for agent_name, agent in self._agents.items():
+        with self._lock:
+            agents = list(self._agents.items())
+        for agent_name, agent in agents:
             score = agent.evaluate_task(task, context)
             if score >= min_score:
                 scores.append((agent_name, score))
@@ -110,7 +122,7 @@ class AgentRegistry:
         Returns:
             Dictionary with agent info or None if not found
         """
-        agent = self._agents.get(agent_name)
+        agent = self.get(agent_name)
         if not agent:
             return None
 
@@ -131,7 +143,8 @@ class AgentRegistry:
 
     def clear(self) -> None:
         """Clear all registered agents."""
-        self._agents.clear()
+        with self._lock:
+            self._agents.clear()
 
     def __len__(self) -> int:
         """Get number of registered agents.
@@ -139,7 +152,8 @@ class AgentRegistry:
         Returns:
             Number of registered agents
         """
-        return len(self._agents)
+        with self._lock:
+            return len(self._agents)
 
     def __contains__(self, agent_name: str) -> bool:
         """Check if agent is registered.
@@ -150,4 +164,5 @@ class AgentRegistry:
         Returns:
             True if agent is registered
         """
-        return agent_name in self._agents
+        with self._lock:
+            return agent_name in self._agents

@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import base64
 import json
+import logging
+import threading
 from typing import Any, Callable, Optional
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
@@ -30,6 +32,29 @@ from airunner_services.runtimes.whisper_cpp_runtime_settings import (
 DEFAULT_PROVIDER = "local"
 WhisperSettingsResolver = Callable[[], WhisperCppRuntimeSettings]
 
+logger = logging.getLogger(__name__)
+
+#: MIME types accepted for the multipart file field. The value is
+#: interpolated into the Content-Type header, so anything outside this
+#: list is rejected instead of being echoed into the header.
+ALLOWED_STT_MIME_TYPES = frozenset(
+    {
+        "audio/wav",
+        "audio/x-wav",
+        "audio/flac",
+        "audio/mpeg",
+        "audio/mp3",
+        "audio/ogg",
+        "application/octet-stream",
+    }
+)
+
+#: Largest decoded audio clip accepted for one transcription request.
+MAX_STT_AUDIO_BYTES = 15 * 1024 * 1024
+
+#: Largest sidecar response body decoded as JSON.
+MAX_STT_RESPONSE_BYTES = 4 * 1024 * 1024
+
 
 class SidecarSTTClient(RuntimeClient):
 	"""Route STT runtime envelopes through a supervised whisper.cpp server."""
@@ -53,6 +78,8 @@ class SidecarSTTClient(RuntimeClient):
 		self._managed_launcher = launcher is None
 		self._http_opener = http_opener
 		self._timeout_seconds = timeout_seconds
+		self._active_requests: set[str] = set()
+		self._active_requests_lock = threading.Lock()
 		self.descriptor = RuntimeDescriptor(
 			runtime=RuntimeKind.STT,
 			provider=provider,
@@ -88,9 +115,26 @@ class SidecarSTTClient(RuntimeClient):
 		)
 
 	def cancel(self, request_id: str) -> Any:
-		"""Cancel active work by stopping the current sidecar process."""
+		"""Mark one request cancelled without stopping the sidecar.
+
+		The whisper.cpp sidecar has no per-request cancel endpoint, so
+		cancellation is best-effort bookkeeping only: the shared process
+		is deliberately left running so unrelated in-flight
+		transcriptions are not killed.
+		"""
 		messages = load_message_types()
-		self._launcher.stop()
+		known = self._untrack_request(request_id)
+		if not known:
+			logger.warning(
+				"STT cancel for unknown request %s; shared sidecar left running",
+				request_id,
+			)
+		else:
+			logger.warning(
+				"STT cancel for request %s is best-effort only; "
+				"shared sidecar left running",
+				request_id,
+			)
 		return messages.ResponseEnvelope(
 			request_id=request_id,
 			status=messages.EnvelopeStatus.CANCELLED,
@@ -145,9 +189,22 @@ class SidecarSTTClient(RuntimeClient):
 	def _transcribe(self, request: Any) -> Any:
 		"""Execute a transcription request through the whisper.cpp sidecar."""
 		messages = load_message_types()
-		invocation = STTInvocationRequest.model_validate(request.payload)
 		try:
+			invocation = STTInvocationRequest.model_validate(request.payload)
+			self._validate_mime_type(invocation.mime_type)
 			audio_bytes = base64.b64decode(invocation.audio_b64, validate=True)
+			if len(audio_bytes) > MAX_STT_AUDIO_BYTES:
+				return self._failure_response(
+					request.request_id,
+					"stt_invalid_audio",
+					"Audio payload exceeds the size budget",
+				)
+		except ValueError as exc:
+			return self._failure_response(
+				request.request_id,
+				"stt_invalid_audio",
+				str(exc),
+			)
 		except Exception:
 			return self._failure_response(
 				request.request_id,
@@ -155,6 +212,7 @@ class SidecarSTTClient(RuntimeClient):
 				"Invalid base64 audio payload",
 			)
 
+		self._track_request(request.request_id)
 		try:
 			self._prepare_launcher()
 			self._launcher.start()
@@ -167,6 +225,14 @@ class SidecarSTTClient(RuntimeClient):
 				str(exc),
 				retryable=True,
 			)
+		except (UnicodeDecodeError, ValueError) as exc:
+			return self._failure_response(
+				request.request_id,
+				"stt_invoke_failed",
+				f"Invalid sidecar response: {exc}",
+			)
+		finally:
+			self._untrack_request(request.request_id)
 
 		return messages.ResponseEnvelope(
 			request_id=request.request_id,
@@ -174,6 +240,31 @@ class SidecarSTTClient(RuntimeClient):
 			payload=self._transcription_payload(data, invocation.language),
 			metadata=self._metadata(),
 		)
+
+	@staticmethod
+	def _normalized_mime_type(mime_type: str) -> str:
+		"""Return the canonical allow-listed MIME type for a header."""
+		return (mime_type or "audio/wav").strip().lower().split(";")[0].strip()
+
+	@staticmethod
+	def _validate_mime_type(mime_type: str) -> None:
+		"""Reject MIME types outside the multipart allow-list."""
+		normalized = SidecarSTTClient._normalized_mime_type(mime_type)
+		if normalized not in ALLOWED_STT_MIME_TYPES:
+			raise ValueError(f"Unsupported audio MIME type: {mime_type!r}")
+
+	def _track_request(self, request_id: str) -> None:
+		"""Track one active transcription request for cancellation."""
+		with self._active_requests_lock:
+			self._active_requests.add(request_id)
+
+	def _untrack_request(self, request_id: str) -> bool:
+		"""Remove one active request identifier when it exists."""
+		with self._active_requests_lock:
+			if request_id not in self._active_requests:
+				return False
+			self._active_requests.remove(request_id)
+			return True
 
 	def _open_request(self, audio_bytes: bytes, invocation: STTInvocationRequest):
 		"""Open a multipart HTTP request against the sidecar inference endpoint."""
@@ -203,8 +294,9 @@ class SidecarSTTClient(RuntimeClient):
 		resolved_settings = self._settings_resolver()
 		if resolved_settings == self._settings and not for_reload:
 			return
-		if for_reload:
-			self._launcher.stop()
+		# Stop the previous launcher before replacing it so settings
+		# drift never orphans a live whisper process.
+		self._launcher.stop()
 		self._settings = resolved_settings
 		self._launcher = SidecarSTTLauncher(resolved_settings)
 
@@ -234,7 +326,9 @@ class SidecarSTTClient(RuntimeClient):
 			SidecarSTTClient._file_field(
 				boundary,
 				filename="audio.wav",
-				content_type=invocation.mime_type or "audio/wav",
+				content_type=SidecarSTTClient._normalized_mime_type(
+					invocation.mime_type
+				),
 				payload=audio_bytes,
 			)
 		)
@@ -268,9 +362,23 @@ class SidecarSTTClient(RuntimeClient):
 
 	@staticmethod
 	def _decode_json(response: Any) -> dict[str, Any]:
-		"""Decode a JSON response body from the sidecar."""
-		raw = response.read().decode("utf-8")
-		return json.loads(raw or "{}")
+		"""Decode a JSON response body from the sidecar.
+
+		Raises:
+			ValueError: When the body exceeds the size budget or is not
+				valid UTF-8 JSON.
+		"""
+		raw_bytes = response.read(MAX_STT_RESPONSE_BYTES + 1)
+		if len(raw_bytes) > MAX_STT_RESPONSE_BYTES:
+			raise ValueError("Sidecar response exceeds the size budget")
+		try:
+			raw = raw_bytes.decode("utf-8")
+		except UnicodeDecodeError as exc:
+			raise ValueError(f"Sidecar response is not UTF-8: {exc}") from exc
+		try:
+			return json.loads(raw or "{}")
+		except json.JSONDecodeError as exc:
+			raise ValueError(f"Sidecar response is not JSON: {exc}") from exc
 
 	@staticmethod
 	def _transcription_payload(
@@ -351,4 +459,10 @@ def register_sidecar_stt_client(
 	return registry
 
 
-__all__ = ["SidecarSTTClient", "register_sidecar_stt_client"]
+__all__ = [
+    "ALLOWED_STT_MIME_TYPES",
+    "MAX_STT_AUDIO_BYTES",
+    "MAX_STT_RESPONSE_BYTES",
+    "SidecarSTTClient",
+    "register_sidecar_stt_client",
+]

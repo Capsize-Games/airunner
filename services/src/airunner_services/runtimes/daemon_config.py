@@ -31,21 +31,40 @@ class DaemonConfig:
         return layout.config_file("daemon")
 
     def _load_config(self) -> dict[str, Any]:
-        """Load configuration from file."""
+        """Load configuration from file.
+
+        Raises:
+            ValueError: When the file exists but is corrupt, so the
+                daemon never boots silently on the wrong host/port.
+        """
         if not self.config_path.exists():
             return self._default_config()
 
         try:
             with open(self.config_path, "r", encoding="utf-8") as handle:
                 config = yaml.safe_load(handle) or {}
-            return {**self._default_config(), **config}
-        except Exception as exc:
+        except OSError as exc:
             logger.error(
                 "Failed to load config from %s: %s",
                 self.config_path,
                 exc,
             )
-            return self._default_config()
+            raise
+        except yaml.YAMLError as exc:
+            logger.error(
+                "Corrupt config at %s, refusing to use defaults: %s",
+                self.config_path,
+                exc,
+            )
+            raise ValueError(
+                f"Corrupt daemon config at {self.config_path}: {exc}"
+            ) from exc
+        if not isinstance(config, dict):
+            raise ValueError(
+                f"Corrupt daemon config at {self.config_path}: "
+                "top-level mapping required"
+            )
+        return {**self._default_config(), **config}
 
     def _default_config(self) -> dict[str, Any]:
         """Get default configuration."""
@@ -54,11 +73,8 @@ class DaemonConfig:
             "server": {
                 "host": "127.0.0.1",
                 "port": 8188,
-                "enable_cors": True,
-                "allowed_origins": [
-                    "http://localhost:*",
-                    "http://127.0.0.1:*",
-                ],
+                "enable_cors": False,
+                "allowed_origins": [],
             },
             "models": {
                 "persistence_mode": "timeout",
@@ -79,7 +95,13 @@ class DaemonConfig:
         }
 
     def save(self) -> None:
-        """Save configuration to file."""
+        """Save configuration to file.
+
+        Raises:
+            OSError: When the config cannot be written, so callers
+                launching a daemon abort instead of running against a
+                missing or partial config.
+        """
         try:
             self.config_path.parent.mkdir(parents=True, exist_ok=True)
             with open(self.config_path, "w", encoding="utf-8") as handle:
@@ -88,12 +110,13 @@ class DaemonConfig:
                     handle,
                     default_flow_style=False,
                 )
-        except Exception as exc:
+        except OSError as exc:
             logger.error(
                 "Failed to save config to %s: %s",
                 self.config_path,
                 exc,
             )
+            raise
 
 
 __all__ = ["DaemonConfig"]

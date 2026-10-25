@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import base64
+import logging
+import os
 import threading
 from dataclasses import replace
 from typing import Any, Callable, Optional, Protocol
@@ -35,6 +37,33 @@ from airunner_services.runtimes.tts_daemon_runtime_settings import (
 
 DEFAULT_PROVIDER = "local"
 _INNER_RUNTIME_STATUS_TIMEOUT_SECONDS = 1.0
+
+logger = logging.getLogger(__name__)
+
+
+def _validate_tts_model_path(model_path: Optional[str]) -> Optional[str]:
+    """Validate one caller-supplied TTS model path or directory.
+
+    Raises:
+        ValueError: When the path is set but names nothing usable.
+    """
+    if not model_path:
+        return model_path
+    from airunner_services.runtimes.file_policy import normalize_local_path
+
+    candidate = normalize_local_path(model_path, label="TTS model")
+    if os.path.isdir(candidate):
+        return candidate
+    from airunner_services.runtimes.file_policy import resolve_existing_file
+
+    try:
+        return resolve_existing_file(
+            candidate,
+            label="TTS model",
+            allowed_suffixes=(".onnx", ".pt", ".pth", ".bin", ".ckpt"),
+        )
+    except ValueError as exc:
+        raise ValueError(str(exc)) from exc
 
 
 class TTSLauncherLike(Protocol):
@@ -164,8 +193,12 @@ class SidecarTTSClient(RuntimeClient):
 					"/cancel",
 					json_payload={"request_id": request_id},
 				)
-			except RuntimeError:
-				pass
+			except RuntimeError as exc:
+				logger.warning(
+					"TTS cancel delivery failed for request %s: %s",
+					request_id,
+					exc,
+				)
 		return messages.ResponseEnvelope(
 			request_id=request_id,
 			status=messages.EnvelopeStatus.CANCELLED,
@@ -194,27 +227,30 @@ class SidecarTTSClient(RuntimeClient):
 	def _load_runtime(self, request: Any) -> Any:
 		"""Start the managed TTS daemon."""
 		messages = load_message_types()
-		try:
-			settings = self._settings_for_control(request.metadata)
-			self._ensure_launcher(settings)
-			launcher = self._require_launcher()
-			launcher.start()
-			self._request(
-				"POST",
-				f"{launcher.endpoint}/api/v1/daemon/runtimes/tts/load",
-				json_payload={
-					"provider": self.descriptor.provider,
-					"deployment_mode": RuntimeMode.LOCAL_FALLBACK.value,
-					"request_id": request.request_id,
-					"metadata": dict(request.metadata or {}),
-				},
-			)
-		except RuntimeError as exc:
-			return self._failure_response(
-				request.request_id,
-				"tts_load_failed",
-				str(exc),
-			)
+		# Hold the invoke lock across load/ensure/start so a concurrent
+		# synthesize cannot stop or swap the launcher underneath us.
+		with self._invoke_lock:
+			try:
+				settings = self._settings_for_control(request.metadata)
+				self._ensure_launcher(settings)
+				launcher = self._require_launcher()
+				launcher.start()
+				self._request(
+					"POST",
+					f"{launcher.endpoint}/api/v1/daemon/runtimes/tts/load",
+					json_payload={
+						"provider": self.descriptor.provider,
+						"deployment_mode": RuntimeMode.LOCAL_FALLBACK.value,
+						"request_id": request.request_id,
+						"metadata": dict(request.metadata or {}),
+					},
+				)
+			except (RuntimeError, ValueError) as exc:
+				return self._failure_response(
+					request.request_id,
+					"tts_load_failed",
+					str(exc),
+				)
 		return messages.ResponseEnvelope(
 			request_id=request.request_id,
 			status=messages.EnvelopeStatus.SUCCEEDED,
@@ -230,7 +266,7 @@ class SidecarTTSClient(RuntimeClient):
 		metadata = metadata or {}
 		return replace(
 			self._base_settings,
-			tts_model_path=(
+			tts_model_path=_validate_tts_model_path(
 				metadata.get("model_path")
 				or self._base_settings.tts_model_path
 			),
@@ -257,9 +293,11 @@ class SidecarTTSClient(RuntimeClient):
 	def _synthesize_speech(self, request: Any) -> Any:
 		"""Execute one TTS request through the supervised sidecar daemon."""
 		messages = load_message_types()
-		invocation = TTSInvocationRequest.model_validate(request.payload)
 		with self._invoke_lock:
 			try:
+				invocation = TTSInvocationRequest.model_validate(
+					request.payload
+				)
 				settings = self._settings_for_invocation(invocation)
 				self._ensure_launcher(settings)
 				launcher = self._require_launcher()
@@ -283,6 +321,12 @@ class SidecarTTSClient(RuntimeClient):
 					request.request_id,
 					str(exc),
 				)
+			except ValueError as exc:
+				return self._failure_response(
+					request.request_id,
+					"tts_invalid_request",
+					str(exc),
+				)
 			finally:
 				self._untrack_request(request.request_id)
 
@@ -304,7 +348,9 @@ class SidecarTTSClient(RuntimeClient):
 		metadata = invocation.metadata
 		return replace(
 			self._base_settings,
-			tts_model_path=invocation.model or self._base_settings.tts_model_path,
+			tts_model_path=_validate_tts_model_path(
+				invocation.model or self._base_settings.tts_model_path
+			),
 			tts_model_type=(
 				self._normalize_model_type(metadata.get("model_type"))
 				or self._normalize_model_type(

@@ -28,7 +28,14 @@ def _coerce_path_text(path: str, label: str) -> str:
 
 
 def normalize_local_path(path: str, *, label: str = "Path") -> str:
-    """Return one normalized local filesystem path."""
+    """Return one normalized local filesystem path.
+
+    Environment variables (``$VAR``/``${VAR}``) and ``~`` are expanded
+    before resolution: a model path containing ``$HOME`` or ``~`` names
+    the expanded destination, and an unset variable expands to an empty
+    string. Callers that must reject unexpanded input should check for
+    ``$`` in the raw value before calling this helper.
+    """
     value = _coerce_path_text(path, label)
     if _URI_SCHEME_RE.match(value):
         raise PathPolicyError(f"{label} must be a local filesystem path")

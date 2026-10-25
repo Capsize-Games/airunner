@@ -55,9 +55,19 @@ class RuntimeRegistry:
 		runtime: RuntimeKind,
 		provider: str,
 		deployment_mode: str = DEFAULT_DEPLOYMENT,
+		*,
+		allow_fallback: bool = False,
 	) -> RuntimeClient:
-		"""Resolve a client with explicit fallback order."""
-		for route in self._candidate_routes(runtime, provider, deployment_mode):
+		"""Resolve a client, exact-only unless fallback is opted into.
+
+		Cross-provider/deployment fallback previously bound callers to
+		the wrong client silently (e.g. an STT local request landing on
+		an unrelated deployment), so it now requires explicit opt-in.
+		"""
+		routes = self._candidate_routes(runtime, provider, deployment_mode)
+		if not allow_fallback:
+			routes = routes[:1]
+		for route in routes:
 			client = self._clients.get(route)
 			if client is not None:
 				return client

@@ -47,6 +47,13 @@ _REMOTE_ATTRIBUTES = ("base_url", "api_base", "api_key")
 #: Class-name markers of remote/provider embedders, lowercased.
 _REMOTE_CLASS_MARKERS = ("ollama", "openai", "openrouter", "remote")
 
+#: Largest single text embedded in one call; oversized input is rejected
+#: instead of being tokenized and encoded unbounded.
+MAX_EMBED_TEXT_CHARS = 8 * 1024
+
+#: Largest batch embedded in one embed_documents call.
+MAX_EMBED_BATCH_SIZE = 256
+
 
 class LocalEmbeddingClient:
     """A ``CompanionEmbeddingClient`` over one local embedder.
@@ -70,12 +77,32 @@ class LocalEmbeddingClient:
 
     def embed_documents(self, texts: List[str]) -> List[List[float]]:
         """Embed texts; rejects an off-width vector fail-closed."""
-        vectors = self._embedder.embed_documents(list(texts))
+        bounded = [self._checked_text(text) for text in list(texts)]
+        if len(bounded) > MAX_EMBED_BATCH_SIZE:
+            raise ValueError(
+                f"embed batch of {len(bounded)} exceeds "
+                f"{MAX_EMBED_BATCH_SIZE}"
+            )
+        vectors = self._embedder.embed_documents(bounded)
         return [self._checked(vector) for vector in vectors]
 
     def embed_query(self, text: str) -> List[float]:
         """Embed one query; rejects an off-width vector fail-closed."""
-        return self._checked(self._embedder.embed_query(text))
+        return self._checked(
+            self._embedder.embed_query(self._checked_text(text))
+        )
+
+    @staticmethod
+    def _checked_text(text: str) -> str:
+        """Reject one oversized embedding input before tokenization."""
+        if not isinstance(text, str):
+            raise TypeError("embedding input must be a string")
+        if len(text) > MAX_EMBED_TEXT_CHARS:
+            raise ValueError(
+                f"embedding input of {len(text)} chars exceeds "
+                f"{MAX_EMBED_TEXT_CHARS}"
+            )
+        return text
 
     def _checked(self, vector: List[float]) -> List[float]:
         if len(vector) != int(self._identity.dimension):
@@ -89,16 +116,27 @@ class LocalEmbeddingClient:
         return [float(value) for value in vector]
 
 
+def _type_has_attribute(embedder_type: type, attribute: str) -> bool:
+    """Return True when one attribute is defined on the embedder type.
+
+    Inspects the type MRO instead of the instance so evaluating the
+    probe never executes arbitrary descriptor or __getattr__ code on a
+    hostile embedder object.
+    """
+    return any(attribute in klass.__dict__ for klass in embedder_type.__mro__)
+
+
 def _require_local_embedder(embedder: Any) -> None:
     """Refuse remote-endpoint embedders (explicit remote stays opt-in
     elsewhere; this client never dials out)."""
+    embedder_type = type(embedder)
     for attribute in _REMOTE_ATTRIBUTES:
-        if hasattr(embedder, attribute):
+        if _type_has_attribute(embedder_type, attribute):
             raise ValueError(
                 "refusing remote embedding endpoint "
-                f"(found {attribute!r} on {type(embedder).__name__})"
+                f"(found {attribute!r} on {embedder_type.__name__})"
             )
-    class_name = type(embedder).__name__.lower()
+    class_name = embedder_type.__name__.lower()
     if any(marker in class_name for marker in _REMOTE_CLASS_MARKERS):
         raise ValueError(f"refusing remote embedding endpoint ({class_name})")
 

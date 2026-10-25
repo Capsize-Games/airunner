@@ -7,6 +7,7 @@ import os
 import subprocess
 import sys
 import tempfile
+import threading
 import time
 from pathlib import Path
 from typing import Any, Callable, Optional
@@ -59,12 +60,16 @@ def _build_temp_daemon_config(
     os.close(file_descriptor)
     temp_config = DaemonConfig(Path(temp_path))
     temp_config.config = config
+    # save() re-creates the file under the default umask, widening the
+    # 0600 mode mkstemp used; restore owner-only access afterwards since
+    # the config may carry secrets.
     temp_config.save()
+    os.chmod(temp_path, 0o600)
     written = Path(temp_path)
     # `_cleanup_config` cannot run when this process is killed, so the
     # configs of dead sidecars pile up here forever. Starting a new one
     # is the moment to clear them: see `sidecar_configs`.
-    sidecar_configs.sweep(layout.config_dir, "airunner-tts-runtime-", written)
+    sidecar_configs.sweep_all(layout.config_dir, keep=written)
     return written
 
 
@@ -102,6 +107,8 @@ class SidecarTTSLauncher:
         self._process: Optional[subprocess.Popen] = None
         self._config_path: Optional[Path] = None
         self._last_error = ""
+        # Re-entrant: start() reaches stop() through the wait path.
+        self._lock = threading.RLock()
 
     @property
     def endpoint(self) -> str:
@@ -132,27 +139,29 @@ class SidecarTTSLauncher:
 
     def start(self) -> None:
         """Start the TTS runtime and wait until health responds."""
-        if self.is_ready():
-            return
-        self._last_error = ""
-        self._spawn_if_needed()
-        self._wait_until_ready()
+        with self._lock:
+            if self.is_ready():
+                return
+            self._last_error = ""
+            self._spawn_if_needed()
+            self._wait_until_ready()
 
     def stop(self) -> None:
         """Stop the managed process and clean up its temp config."""
-        process = self._process
-        self._process = None
-        try:
-            if process is None or process.poll() is not None:
-                return
-            process.terminate()
+        with self._lock:
+            process = self._process
+            self._process = None
             try:
-                process.wait(timeout=5)
-            except subprocess.TimeoutExpired:
-                process.kill()
-                process.wait(timeout=5)
-        finally:
-            self._cleanup_config()
+                if process is None or process.poll() is not None:
+                    return
+                process.terminate()
+                try:
+                    process.wait(timeout=5)
+                except subprocess.TimeoutExpired:
+                    process.kill()
+                    process.wait(timeout=5)
+            finally:
+                self._cleanup_config()
 
     def is_running(self) -> bool:
         """Return True when the subprocess is still alive."""

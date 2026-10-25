@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
+import math
 from enum import Enum
 from typing import Any, Dict, List, Optional
 
 from airunner_common.contract_enums import MessageRole  # re-exported (#2221)
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class RuntimeKind(str, Enum):
@@ -83,17 +84,53 @@ class STTInvocationRequest(BaseModel):
     metadata: Dict[str, Any] = Field(default_factory=dict)
 
 
+TTS_TEXT_MAX_LENGTH = 5000
+TTS_SPEED_MIN = 0.25
+TTS_SPEED_MAX = 4.0
+TTS_NAME_MAX_LENGTH = 256
+
+
 class TTSInvocationRequest(BaseModel):
     """Request payload for text-to-speech execution."""
 
     model_config = ConfigDict(extra="forbid")
 
-    text: str
-    model: Optional[str] = None
-    voice: Optional[str] = None
+    text: str = Field(max_length=TTS_TEXT_MAX_LENGTH)
+    model: Optional[str] = Field(default=None, max_length=TTS_NAME_MAX_LENGTH)
+    voice: Optional[str] = Field(default=None, max_length=TTS_NAME_MAX_LENGTH)
     speed: float = 1.0
     stream: bool = False
     metadata: Dict[str, Any] = Field(default_factory=dict)
+
+    @field_validator("text")
+    @classmethod
+    def _text_must_not_be_blank(cls, value: str) -> str:
+        if not value.strip():
+            raise ValueError("text must not be blank")
+        return value
+
+    @field_validator("speed")
+    @classmethod
+    def _speed_must_be_finite_and_bounded(cls, value: float) -> float:
+        if not math.isfinite(value):
+            raise ValueError("speed must be finite")
+        if not TTS_SPEED_MIN <= value <= TTS_SPEED_MAX:
+            raise ValueError(
+                f"speed must be between {TTS_SPEED_MIN} and {TTS_SPEED_MAX}"
+            )
+        return value
+
+    @field_validator("model", "voice")
+    @classmethod
+    def _names_must_be_plain(cls, value: Optional[str]) -> Optional[str]:
+        if value is None:
+            return None
+        text = value.strip()
+        if not text:
+            raise ValueError("model/voice names must not be blank")
+        if any(char in text for char in ("\x00", "\n", "\r")):
+            raise ValueError("model/voice names contain invalid characters")
+        return text
 
 
 class ArtInvocationRequest(BaseModel):

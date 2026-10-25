@@ -15,6 +15,10 @@ from airunner_services.utils.application.api_reference import (
 from airunner_services.utils.application.get_logger import get_logger
 
 
+#: Largest raw audio clip accepted before base64 encoding.
+MAX_EXECUTOR_AUDIO_BYTES = 15 * 1024 * 1024
+
+
 def _response_status_is(response: object, expected: EnvelopeStatus) -> bool:
     """Return True when one envelope-like response matches a status."""
     status = getattr(response, "status", None)
@@ -73,6 +77,12 @@ class RuntimeRegistrySTTExecutor(STTExecutor):
         item = audio_data.get("item") if audio_data else None
         if not item:
             return ""
+        if len(bytes(item)) > MAX_EXECUTOR_AUDIO_BYTES:
+            self.logger.warning(
+                "STT clip exceeds the size budget (%d bytes), rejecting",
+                len(bytes(item)),
+            )
+            return ""
         payload = {
             "audio_b64": base64.b64encode(item).decode("ascii"),
             "mime_type": audio_data.get("mime_type", "application/octet-stream"),
@@ -114,4 +124,4 @@ class RuntimeRegistrySTTExecutor(STTExecutor):
         return response.payload
 
 
-__all__ = ["RuntimeRegistrySTTExecutor"]
+__all__ = ["MAX_EXECUTOR_AUDIO_BYTES", "RuntimeRegistrySTTExecutor"]

@@ -110,7 +110,23 @@ class TTSModelManager(MediatorMixin):
         settings = self._load_settings(PathSettings)
         env_tts_model_path = os.environ.get("AIRUNNER_TTS_MODEL_PATH", "")
         if env_tts_model_path.strip():
-            settings.tts_model_path = os.path.expanduser(env_tts_model_path)
+            from airunner_services.runtimes.file_policy import (
+                normalize_local_path,
+                resolve_existing_directory,
+                resolve_existing_file,
+            )
+
+            candidate = normalize_local_path(
+                env_tts_model_path, label="AIRUNNER_TTS_MODEL_PATH"
+            )
+            if os.path.isdir(candidate):
+                settings.tts_model_path = resolve_existing_directory(
+                    candidate, label="AIRUNNER_TTS_MODEL_PATH"
+                )
+            else:
+                settings.tts_model_path = resolve_existing_file(
+                    candidate, label="AIRUNNER_TTS_MODEL_PATH"
+                )
             return settings
         if getattr(settings, "tts_model_path", None):
             return settings
@@ -142,8 +158,13 @@ class TTSModelManager(MediatorMixin):
         if callable(notify):
             try:
                 notify(model, status)
-            except Exception:
-                pass
+            except Exception as exc:
+                self.logger.warning(
+                    "TTS model status notification failed for %s=%s: %s",
+                    model,
+                    status,
+                    exc,
+                )
 
     @property
     def tts_request(self) -> Optional[object]:
