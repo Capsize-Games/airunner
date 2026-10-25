@@ -29,37 +29,17 @@ RUN set -e; \
         packages="$packages ffmpeg libsndfile1 portaudio19-dev"; \
         packages="$packages pulseaudio libasound2-dev"; \
     fi; \
-    if profile_match 'gui|desktop|all|all_dev|all_native|all_dev_native|computer-use|computer_use'; then \
-        packages="$packages libnss3 libxslt1.1 libxkbfile1"; \
-        packages="$packages libx11-xcb1 libxcb-cursor0 libxcb-icccm4"; \
-        packages="$packages libxcb-image0 libxcb-keysyms1"; \
-        packages="$packages libxcb-randr0 libxcb-render-util0"; \
-        packages="$packages libxcb-shape0 libxcb-xfixes0"; \
-        packages="$packages libxcb-xinerama0 libxkbcommon-x11-0"; \
-        packages="$packages libegl1 libgl1 libgles2"; \
-        packages="$packages libfontconfig1 libdbus-1-3"; \
-        packages="$packages libxcomposite1 libxdamage1 libxrandr2"; \
-        packages="$packages libxtst6 libdrm2 libgbm1 libxss1"; \
-        packages="$packages libcups2 libatk1.0-0"; \
-        packages="$packages libatk-bridge2.0-0 xclip"; \
-        packages="$packages scrot xdotool gnome-screenshot"; \
-    fi; \
     if profile_match 'openvoice_jp|openvoice_kr|all_native|all_dev_native'; then \
         packages="$packages mecab libmecab-dev mecab-ipadic-utf8"; \
     fi; \
     apt-get update && apt-get install -y $packages && \
     rm -rf /var/lib/apt/lists/*
 
-# Install Python 3.13 and tkinter when GUI automation is enabled.
+# Install Python 3.13.
 RUN set -e; \
     add-apt-repository ppa:deadsnakes/ppa -y; \
     apt-get update; \
-    packages="python3.13 python3.13-dev"; \
-    if printf '%s' ",${AIRUNNER_INSTALL_PROFILES}," | \
-        grep -Eq ',(gui|desktop|all|all_dev|all_native|all_dev_native|computer-use|computer_use),'; then \
-        packages="$packages python3.13-tk"; \
-    fi; \
-    apt-get install -y $packages && rm -rf /var/lib/apt/lists/*
+    apt-get install -y python3.13 python3.13-dev && rm -rf /var/lib/apt/lists/*
 
 # Install pip for Python 3.13
 RUN curl -sS https://bootstrap.pypa.io/get-pip.py | python3.13

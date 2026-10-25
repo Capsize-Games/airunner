@@ -68,29 +68,14 @@ def _websocket_auth_error(websocket: WebSocket) -> bool:
 
     Applied before ``accept()`` and before any runtime resolution so an
     unauthenticated or unapproved-Origin caller never reaches the LLM
-    runtime, matching the HTTP API's existing auth policy.
+    runtime, matching the HTTP API's existing auth policy. Delegates to
+    the shared helper so every socket enforces one implementation.
     """
     # Imported lazily: server.py's module-level route imports transitively
     # import this file, so a top-level import here would be circular.
-    from airunner_services.api.server import (
-        authenticate_connection,
-        is_allowed_origin,
-    )
+    from airunner_services.api.routes.ws_auth import websocket_auth_failed
 
-    state = websocket.app.state
-    origin = websocket.headers.get("origin")
-    if origin and not is_allowed_origin(
-        origin, getattr(state, "allowed_origins", [])
-    ):
-        return True
-
-    allowed, _status_code = authenticate_connection(
-        websocket,
-        api_key=getattr(state, "api_key", ""),
-        require_api_key=getattr(state, "require_api_key", False),
-        insecure_no_auth=getattr(state, "insecure_no_auth", False),
-    )
-    return not allowed
+    return websocket_auth_failed(websocket)
 
 
 @router.websocket("/stream")

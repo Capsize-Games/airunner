@@ -21,10 +21,12 @@ usage() {
     cat <<EOF
 Usage: ./deployment/install_distributed.sh [options]
 
-Linux-first distributed installer for AIRunner daemon and GUI-client roles.
+Linux-first distributed installer for the AIRunner headless daemon
+(services-only; the former GUI-client role was removed with the
+desktop client).
 
 Options:
-  --role ROLE                 daemon|gui-client
+  --role ROLE                 daemon (only role; gui-client was removed)
   --install-root PATH         Base install root for the selected role
   --python CMD                Python interpreter to use for venv creation
   --service-profile NAME      Services extra for the selected role
@@ -82,7 +84,8 @@ normalize_role() {
             printf 'daemon\n'
             ;;
         gui|gui-client)
-            printf 'gui-client\n'
+            log_error "Role '${ROLE}' was removed with the desktop client; only 'daemon' is supported"
+            exit 1
             ;;
         *)
             log_error "Unsupported distributed role: ${ROLE}"
@@ -93,14 +96,7 @@ normalize_role() {
 
 
 default_service_profile() {
-    case "$1" in
-        daemon)
-            printf 'headless\n'
-            ;;
-        gui-client)
-            printf 'core\n'
-            ;;
-    esac
+    printf 'headless\n'
 }
 
 
@@ -119,11 +115,6 @@ install_packages() {
             "$venv_python" -m pip install \
                 "$ROOT_DIR/services[$service_profile]"
             ;;
-        gui-client)
-            "$venv_python" -m pip install \
-                "$ROOT_DIR/services[$service_profile]" \
-                "$ROOT_DIR"
-            ;;
     esac
 }
 
@@ -140,10 +131,6 @@ link_role_command() {
         daemon)
             source_path="$role_root/venv/bin/airunner-daemon"
             target_name='airunner-distributed-daemon'
-            ;;
-        gui-client)
-            source_path="$role_root/venv/bin/airunner"
-            target_name='airunner-distributed-gui'
             ;;
     esac
 
@@ -191,10 +178,6 @@ print_next_steps() {
             printf 'Launch manually: %s/venv/bin/airunner-daemon\n' "$role_root"
             printf 'Shortcut: %s/airunner-distributed-daemon\n' "$LOCAL_BIN_DIR"
             ;;
-        gui-client)
-            printf 'Launch manually: %s/venv/bin/airunner\n' "$role_root"
-            printf 'Shortcut: %s/airunner-distributed-gui\n' "$LOCAL_BIN_DIR"
-            ;;
     esac
 }
 
@@ -210,7 +193,7 @@ main() {
     resolved_role="$(normalize_role)"
     ROLE="$resolved_role"
     role_root="$(role_install_root "$ROLE")"
-    service_profile="${SERVICE_PROFILE:-$(default_service_profile "$ROLE") }"
+    service_profile="${SERVICE_PROFILE:-$(default_service_profile)}"
     service_profile="${service_profile% }"
 
     resolved_python="$(find_python "$PYTHON_CMD" 3.13)" || {

@@ -23,9 +23,8 @@ AI Runner is a private AI companion you shape — name, personality, voice, memo
 
 | | |
 |---|---|
-| **Desktop download** | [capsizegames.itch.io/ai-runner](https://capsizegames.itch.io/ai-runner) — no Python setup required |
-| **Container** | `docker pull ghcr.io/capsize-games/airunner:linux-desktop` ([also `linux`, `linux-headless`](https://github.com/Capsize-Games/airunner/pkgs/container/airunner%2Fairunner)) |
-| **Python** | `pip install airunner` ([PyPI](https://pypi.org/project/airunner/)) |
+| **Container** | `docker pull ghcr.io/capsize-games/airunner:linux-headless` ([also `linux`, `latest`](https://github.com/Capsize-Games/airunner/pkgs/container/airunner%2Fairunner)) |
+| **Python** | `pip install airunner-services` ([PyPI](https://pypi.org/project/airunner-services/)) |
 | **On the web** | [airunner.art](https://airunner.art) |
 
 AI Runner is free and GPL-3.0. If it is useful to you, [**sponsoring the project**](https://github.com/sponsors/w4ffl35) is what keeps it maintained — it is built and released by one engineer at [Capsize LLC](https://capsize.online).
@@ -76,24 +75,18 @@ subscription. Everything runs on your hardware.
 
 ```mermaid
 flowchart LR
-  User[User] --> Native[native/ launcher and bundle helpers]
-  Native --> GUI[src/ desktop client]
-  Native --> Daemon[services/ headless daemon]
-  GUI --> Daemon
-  Native --> Sidecars[llama.cpp and whisper.cpp sidecars]
-  Daemon --> Sidecars
-  GUI --> Scripts[scripts/ tooling]
-  Daemon --> Scripts
-  GUI --> Data[(AIRUNNER_BASE_PATH)]
-  Daemon --> Data
+  User[airunnerweb] --> Daemon[services/ headless daemon + FastAPI]
+  Native[native/ launcher and bundle helpers] --> Daemon
+  Daemon --> Sidecars[llama.cpp and whisper.cpp sidecars]
+  Daemon --> Scripts[scripts/ tooling]
+  Daemon --> Data[(AIRUNNER_BASE_PATH)]
 ```
 
 | Package | Role |
 |---------|------|
-| [src](src/README.md) | Desktop GUI client, daemon client bridge, widgets, and application entry points |
 | [services](services/README.md) | Headless daemon, FastAPI server, runtime registry, orchestration, downloads, and persistence |
 | [native](native/README.md) | Python launcher entry point and runtime layout helpers. Native sidecar (llama.cpp/whisper.cpp) builds live in [airunner-native](https://github.com/Capsize-Games/airunner-native) |
-| [scripts](scripts/README.md) | Developer tooling: test runner, UI build, install helpers, and quality reports |
+| [scripts](scripts/README.md) | Developer tooling: test runner, install helpers, and quality reports |
 
 ---
 
@@ -138,7 +131,7 @@ Choose one of the two primary install modes:
 | Install mode | Best for | Primary command |
 |--------------|----------|-----------------|
 | `dev` | Contributors working from a repo checkout | `./scripts/install.sh` |
-| `distributed` | Operators separating daemon and GUI-client installs | `./deployment/install_distributed.sh --role ...` |
+| `distributed` | Operators installing the headless daemon | `./deployment/install_distributed.sh --role daemon` |
 
 1. `dev` for contributors working from this repo checkout.
   This reuses `./venv` by default, installs the Python packages in editable
@@ -157,11 +150,10 @@ Choose one of the two primary install modes:
   `--sidecars-cuda` when you want CUDA-enabled native sidecars (that flag
   clones the pinned tag and builds from source instead of downloading).
 
-2. `distributed` for operators who want the daemon and GUI client installed
-  separately, including split-machine setups.
+2. `distributed` for operators who want the headless daemon on its own
+  machine or prefix.
   ```bash
   ./deployment/install_distributed.sh --role daemon
-  ./deployment/install_distributed.sh --role gui-client
   ```
 
 The manual and Docker paths below are still useful developer/operator
@@ -169,14 +161,9 @@ installation flows.
 
 ### Docker (Recommended)
 
-**GUI Mode:**
-```bash
-xhost +local:docker && docker compose run --rm airunner
-```
-
 **Headless API Server:**
 ```bash
-docker compose run --rm --service-ports airunner --headless
+docker compose run --rm --service-ports airunner
 ```
 
 > **Note:** `--service-ports` is required to expose the container's published port (8080), which maps to the headless daemon's HTTP API.
