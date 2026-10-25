@@ -291,7 +291,7 @@ def _has_pytest_marker(test_path: Path, marker: str) -> bool:
     absent. If parsing or dynamic marker hooks make the result ambiguous, let
     pytest handle collection instead of treating the suite as empty.
     """
-    for path in (*test_path.rglob("test_*.py"), *test_path.rglob("conftest.py")):
+    for path in test_path.rglob("*.py"):
         try:
             tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
         except (OSError, UnicodeError, SyntaxError):
@@ -303,35 +303,30 @@ def _has_pytest_marker(test_path: Path, marker: str) -> bool:
         ):
             return True
 
-        pytest_aliases = {"pytest"}
-        mark_aliases: set[str] = set()
-        for node in tree.body:
-            if isinstance(node, ast.Import):
-                pytest_aliases.update(
-                    alias.asname or alias.name
-                    for alias in node.names
-                    if alias.name == "pytest"
-                )
-            elif isinstance(node, ast.ImportFrom) and node.module == "pytest":
-                mark_aliases.update(
-                    alias.asname or alias.name
-                    for alias in node.names
-                    if alias.name == "mark"
-                )
-
         for node in ast.walk(tree):
-            if not isinstance(node, ast.Attribute) or node.attr != marker:
-                continue
-            parent = node.value
-            if (
-                isinstance(parent, ast.Attribute)
-                and parent.attr == "mark"
-                and isinstance(parent.value, ast.Name)
-                and parent.value.id in pytest_aliases
+            if isinstance(node, ast.Attribute) and node.attr == marker:
+                return True
+            if isinstance(node, ast.Assign) and any(
+                isinstance(target, ast.Name) and target.id == "pytestmark"
+                for target in node.targets
             ):
+                # A module-level marker may be assembled through aliases or
+                # helper calls; let pytest resolve it rather than guess.
                 return True
-            if isinstance(parent, ast.Name) and parent.id in mark_aliases:
-                return True
+            if isinstance(node, ast.Call) and isinstance(node.func, ast.Name):
+                if node.func.id == "getattr" and len(node.args) >= 2:
+                    first, second = node.args[:2]
+                    if isinstance(second, ast.Constant) and second.value in {
+                        marker,
+                        "mark",
+                        "pytestmark",
+                    }:
+                        return True
+                    if isinstance(first, ast.Attribute) and first.attr == "mark":
+                        return True
+                    if isinstance(first, ast.Name) and first.id in {"pytest", "mark"}:
+                        return True
+
     return False
 
 

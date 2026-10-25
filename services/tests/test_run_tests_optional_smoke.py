@@ -57,8 +57,16 @@ def test_declared_optional_smoke_marker_runs_pytest(
 
 
 def test_marker_import_alias_runs_pytest(tmp_path: Path) -> None:
-    (tmp_path / "test_alias.py").write_text(
+    (tmp_path / "optional_test.py").write_text(
         "import pytest as pt\n@pt.mark.stt_runtime_smoke\ndef test_smoke(): pass\n",
+        encoding="utf-8",
+    )
+    assert run_tests._has_pytest_marker(tmp_path, "stt_runtime_smoke")
+
+
+def test_dynamic_marker_assignment_falls_back_to_pytest(tmp_path: Path) -> None:
+    (tmp_path / "test_dynamic.py").write_text(
+        "import pytest\npytestmark = getattr(pytest.mark, marker_name)\n",
         encoding="utf-8",
     )
     assert run_tests._has_pytest_marker(tmp_path, "stt_runtime_smoke")
