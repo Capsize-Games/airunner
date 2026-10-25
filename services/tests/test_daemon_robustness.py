@@ -35,7 +35,7 @@ def test_second_daemon_does_not_acquire_lock(tmp_path: Path) -> None:
     assert first._acquire_lock() is True
     try:
         assert second._acquire_lock() is False
-        assert (tmp_path / "runtime" / "daemon.lock").exists()
+        assert (tmp_path / "runtime" / "daemon-8188.lock").exists()
     finally:
         first._release_lock()
         second._release_lock()
@@ -52,11 +52,11 @@ def test_lock_released_allows_reacquire(tmp_path: Path) -> None:
 
 
 def test_shutdown_signal_runs_cleanup(tmp_path: Path) -> None:
-    """The signal path must run cleanup, not skip it via the guard.
+    """The signal handler only flags; _run_loop runs the cleanup.
 
-    Regression: the handler set ``shutdown_requested`` before calling
-    ``shutdown()``, and ``shutdown()`` returned early on that flag,
-    so a real SIGTERM never stopped the server or cleaned the app.
+    The handler must return immediately (no blocking teardown, no
+    sys.exit in async-signal context); the main loop then performs
+    stop/join/cleanup and exits (issues #2418, #2419).
     """
     stopped: list[str] = []
     daemon = _stub_daemon(tmp_path)
@@ -64,8 +64,12 @@ def test_shutdown_signal_runs_cleanup(tmp_path: Path) -> None:
         stop=lambda: stopped.append("server")
     )
     daemon.app = SimpleNamespace(cleanup=lambda: stopped.append("app"))
+    daemon._handle_shutdown_signal(signal.SIGTERM, None)
+    assert daemon.shutdown_requested is True
+    assert daemon._signal_received == signal.SIGTERM
+    assert stopped == []
     with pytest.raises(SystemExit) as excinfo:
-        daemon._handle_shutdown_signal(signal.SIGTERM, None)
+        daemon._run_loop()
     assert excinfo.value.code == 0
     assert stopped == ["server", "app"]
     assert daemon.app is None
@@ -80,9 +84,8 @@ def test_shutdown_is_idempotent(tmp_path: Path) -> None:
         stop=lambda: calls.append("server")
     )
     daemon.app = SimpleNamespace(cleanup=lambda: calls.append("app"))
-    with pytest.raises(SystemExit):
-        daemon.shutdown()
-    daemon.shutdown()  # idempotent: no-op, no second SystemExit
+    daemon.shutdown()
+    daemon.shutdown()  # idempotent: no-op on the second call
     assert calls == ["server", "app"]
 
 

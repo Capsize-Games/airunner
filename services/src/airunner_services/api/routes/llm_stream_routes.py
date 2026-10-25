@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import itertools
+
 from fastapi import (
     APIRouter,
     HTTPException,
@@ -18,6 +20,7 @@ from .llm_chat_envelope import is_client_chat, stream_client_chat
 from .llm_contracts import (
     LLMStreamValidationError,
     WebSocketRateLimiter,
+    default_connection_rate_limit_max_requests,
     default_rate_limit_max_requests,
     default_rate_limit_window_seconds,
     hash_principal,
@@ -34,10 +37,17 @@ from .llm_runtime import (
 router = APIRouter()
 logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 
-# Module-level so admission state survives a client's reconnect: a fresh
-# WebSocket object per connection must not reset the caller's budget.
+# Two-tier admission: the credential-keyed global limiter survives a
+# client's reconnect (a fresh WebSocket per connection must not reset
+# the caller's budget), while the per-connection limiter stops one
+# abusive local client from burning the shared loopback budget for
+# every local client — loopback callers are indistinguishable (#2425).
 _rate_limiter = WebSocketRateLimiter(
     max_requests=default_rate_limit_max_requests(),
+    window_seconds=default_rate_limit_window_seconds(),
+)
+_connection_rate_limiter = WebSocketRateLimiter(
+    max_requests=default_connection_rate_limit_max_requests(),
     window_seconds=default_rate_limit_window_seconds(),
 )
 
@@ -61,6 +71,25 @@ def _resolve_principal(websocket: WebSocket) -> str:
     )
 
     return hash_principal("loopback", get_or_create_loopback_token())
+
+
+_connection_ids = itertools.count(1)
+
+
+def _resolve_connection_principal(websocket: WebSocket) -> str:
+    """Return the id gating one connection's smaller message budget.
+
+    Loopback (and insecure-mode) callers share one credential across
+    every local process, so the budget key must be per-connection
+    there; with API-key auth the credential itself is the key (#2425).
+    Called once per connection after accept(): each call mints a fresh
+    id rather than reusing ``id(websocket)``, whose address can be
+    recycled after a closed connection is garbage-collected.
+    """
+    state = websocket.app.state
+    if getattr(state, "require_api_key", False):
+        return _resolve_principal(websocket)
+    return f"conn:{next(_connection_ids)}"
 
 
 def _websocket_auth_error(websocket: WebSocket) -> bool:
@@ -87,6 +116,7 @@ async def websocket_chat(websocket: WebSocket):
 
     await websocket.accept()
     principal = _resolve_principal(websocket)
+    connection_principal = _resolve_connection_principal(websocket)
     from airunner_services.data.tenant import (
         get_tenant_key,
         reset_tenant_key,
@@ -116,6 +146,16 @@ async def websocket_chat(websocket: WebSocket):
                 )
                 continue
 
+            if not _connection_rate_limiter.allow(connection_principal):
+                await websocket.send_json(
+                    {
+                        "type": "error",
+                        "code": "rate_limited",
+                        "content": "Rate limit exceeded",
+                        "done": True,
+                    }
+                )
+                continue
             if not _rate_limiter.allow(principal):
                 await websocket.send_json(
                     {

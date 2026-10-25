@@ -21,7 +21,7 @@ def _build_docker_image(docker_compose_file: str) -> int:
 
 def dev_image() -> int:
     """Build the development Docker image."""
-    return _build_docker_image("./docker-compose.yml")
+    return _build_docker_image("./docker-compose.dev.yml")
 
 
 def main() -> int:

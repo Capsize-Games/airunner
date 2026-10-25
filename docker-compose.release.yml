@@ -1,8 +1,12 @@
-# Docker Compose for AI Runner (headless services only)
+# Docker Compose for AI Runner operators (headless services only).
+# This is the RELEASE variant: it runs the published image exactly as
+# built, with NO source bind-mounts. Container behavior therefore
+# matches what the image smoke gate verified. Developers iterating on
+# live repo code must use docker-compose.dev.yml instead.
 #
 # Usage:
-#   Headless mode: docker compose run --rm --service-ports airunner
-#   With args:     docker compose run --rm --service-ports airunner --port 8080
+#   Headless mode: docker compose -f docker-compose.release.yml run --rm --service-ports airunner
+#   With args:     docker compose -f docker-compose.release.yml run --rm --service-ports airunner --port 8080
 #
 # Note: --service-ports is required to expose port 8080.
 #
@@ -20,9 +24,7 @@ services:
   # AI Runner headless service: local model runtimes behind the FastAPI
   # daemon consumed by airunnerweb.
   airunner:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image: ghcr.io/capsize-games/airunner/airunner:linux-headless
     # Run as host user to avoid file permission issues. UID/GID are taken from
     # the environment (see .env.example); 1000 is only a last-resort fallback.
     user: "${UID:-1000}:${GID:-1000}"
@@ -31,13 +33,6 @@ services:
       - ~/.local/share/airunner:/home/airunner/.local/share/airunner
       # Mount local huggingface cache
       - ~/.cache/huggingface:/home/airunner/.cache/huggingface
-      # Development-only source mounts: live repo code shadows the
-      # baked image, so container behavior diverges from the
-      # published image operators actually run. Keep these for local
-      # development; the release compose must drop them and run the
-      # image as built.
-      - ./services:/app/services:ro
-      - ./native:/app/native:ro
     ports:
       # Bind to loopback only by default; set e.g. "0.0.0.0:8080:8080" to
       # expose the API on all interfaces (requires AIRUNNER_API_KEY).

@@ -8,6 +8,8 @@ from typing import List, Optional, Any, Tuple
 from contextlib import asynccontextmanager
 import os
 import secrets
+import threading
+import time
 import uuid
 from ipaddress import ip_address
 from urllib.parse import urlsplit
@@ -114,12 +116,34 @@ def _provided_bearer_or_api_key(conn: HTTPConnection, header_name: str) -> str:
     return provided
 
 
+def _is_api_claimed_path(request: Request) -> bool:
+    """Return True when an API route fully claims the request path.
+
+    Anything no API route claims (static mounts, docs) may be fetched
+    by a header-less first navigation much like a browser WebSocket
+    handshake — so the query-string token stays accepted there, and
+    only there, for plain HTTP (issue #2424). Mounts are skipped here
+    because a mount only partially matches by prefix.
+    """
+    from starlette.routing import Match, Mount
+
+    scope = request.scope
+    for route in request.app.routes:
+        if isinstance(route, Mount):
+            continue
+        match, _ = route.matches(scope)
+        if match == Match.FULL:
+            return True
+    return False
+
+
 def authenticate_connection(
     conn: HTTPConnection,
     *,
     api_key: str,
     require_api_key: bool,
     insecure_no_auth: bool,
+    allow_query_token: bool = False,
 ) -> Tuple[bool, int]:
     """Apply the API-key/loopback-token policy to an HTTP or WebSocket conn.
 
@@ -143,9 +167,16 @@ def authenticate_connection(
     expected_token = get_or_create_loopback_token()
     provided_token = _provided_bearer_or_api_key(conn, "x-airunner-token")
     if not provided_token:
-        # WebSocket upgrades cannot set headers, so a browser client
-        # sends the loopback token in the query string instead.
-        provided_token = (conn.query_params.get("token") or "").strip()
+        # Browsers cannot set headers on a WebSocket upgrade, so a
+        # browser client sends the loopback token in the query string
+        # instead. Plain HTTP must always use the header — a query
+        # token would land in access logs, proxies, and shell history
+        # — except the static bundle surface, which cannot carry
+        # headers either (issue #2424).
+        scope = getattr(conn, "scope", None)
+        scope_type = scope.get("type") if isinstance(scope, dict) else None
+        if scope_type == "websocket" or allow_query_token:
+            provided_token = (conn.query_params.get("token") or "").strip()
     if not provided_token or not secrets.compare_digest(
         provided_token, expected_token
     ):
@@ -325,6 +356,7 @@ def create_app(
             api_key=api_key,
             require_api_key=require_api_key,
             insecure_no_auth=insecure_no_auth,
+            allow_query_token=not _is_api_claimed_path(request),
         )
         if not allowed:
             return JSONResponse(
@@ -504,6 +536,8 @@ class APIServer:
         self.app = create_app(allowed_origins, enable_cors, app_instance=app_instance)
 
         self.server = None
+        self.server_thread: Optional[threading.Thread] = None
+        self._started_event = threading.Event()
 
     def start(self):
         """Start the API server (blocking call)."""
@@ -517,11 +551,66 @@ class APIServer:
 
         self.server = uvicorn.Server(config)
         logger.info(f"Starting API server on {self.host}:{self.port}")
-        self.server.run()
+        try:
+            self.server.run()
+        finally:
+            self._started_event.clear()
 
-    def stop(self):
-        """Stop the API server."""
-        if self.server:
-            logger.info("Stopping API server...")
-            self.server.should_exit = True
+    def wait_until_started(self, timeout: float = 15.0) -> bool:
+        """Return True once uvicorn reports a successful bind.
+
+        Polls the serving thread's ``server.started`` flag, which
+        uvicorn sets only after the socket binds. Returns False when
+        the timeout elapses or the server thread dies unbound, so a
+        dead API never idles silently in the daemon loop (#2423).
+        """
+        deadline = time.monotonic() + max(0.0, timeout)
+        while time.monotonic() < deadline:
+            server = self.server
+            if server is not None and getattr(
+                server, "started", False
+            ):
+                self._started_event.set()
+                return True
+            thread = self.server_thread
+            if (
+                thread is not None
+                and thread.ident is not None
+                and not thread.is_alive()
+            ):
+                return False
+            time.sleep(0.05)
+        return False
+
+    def stop(self, timeout: float = 10.0):
+        """Stop the API server and join the serving thread.
+
+        A server that never finished binding is a silent no-op.
+        Otherwise ``should_exit`` is set and the serving thread is
+        joined with a bounded wait, warning when it lingers (#2419).
+        """
+        server = self.server
+        if server is None:
+            return
+        if not self._started_event.is_set() and not getattr(
+            server, "started", False
+        ):
+            logger.warning(
+                "API server never finished binding; skipping stop"
+            )
             self.server = None
+            self.server_thread = None
+            return
+        logger.info("Stopping API server...")
+        server.should_exit = True
+        thread = self.server_thread
+        if thread is not None and thread is not threading.current_thread():
+            thread.join(timeout=timeout)
+            if thread.is_alive():
+                logger.warning(
+                    "API server thread did not stop "
+                    f"within {timeout}s; continuing shutdown"
+                )
+        self.server = None
+        self.server_thread = None
+        self._started_event.clear()

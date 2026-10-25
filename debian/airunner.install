@@ -8,9 +8,11 @@ debian/daemon.yaml usr/share/airunner
 # into one binary package, so the module ships as files (no dist-info,
 # no airunner-native console script — nothing queries its metadata and
 # the CLI dispatches desktop flows out of scope for services-only).
-# Version stamp: native/setup.py _RELEASE_VERSION (must match the
-# services pin airunner-native==VERSION); PR CI's packaging-gates job
-# re-checks this lockstep.
+# Version stamp: native/setup.py _RELEASE_VERSION. The dependency
+# direction runs native->services (native[services] pins
+# airunner-services>=6.1.5,<7); no services-side pin on
+# airunner-native exists to match. PR CI's packaging-gates job
+# re-checks the stamp.
 native/src/airunner_native usr/lib/python3/dist-packages
 # Verbatim airunner-common package (debian/vendor/README.source,
 # issue #2243 Gap 1). Hard services import that dh_python3 cannot map

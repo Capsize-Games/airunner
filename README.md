@@ -227,8 +227,12 @@ using `./scripts/install.sh` for repo development or
 
    From PyPI:
    ```bash
-   # torch family pinned to the CUDA 12.9 wheel line (issues #2036/#2041)
-   pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu129
+   # torch family pinned to the CUDA 12.9 wheel line (issues #2036/#2041).
+   # Versions must match the release lock
+   # (package/constraints-linux-nvidia-cu129.txt).
+   pip install "torch==2.13.0+cu129" "torchvision==0.28.0+cu129" \
+     "torchaudio==2.11.0+cu129" \
+     --index-url https://download.pytorch.org/whl/cu129
    # Model runtimes (LLM, STT, art, TTS); `headless` aggregates the four extras
    pip install "airunner-services[headless]"
    # Optional: headless launcher and bundle tooling
@@ -246,7 +250,9 @@ using `./scripts/install.sh` for repo development or
    # setuptools<82 upper bound, so the latest setuptools is safe for `pip check`
    # (issue #2057). Older torch wheels (e.g. some 2.11.x) still declare
    # `setuptools<82`; if you use one, `pip install "setuptools<82"` first.
-   pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu129
+   pip install "torch==2.13.0+cu129" "torchvision==0.28.0+cu129" \
+     "torchaudio==2.11.0+cu129" \
+     --index-url https://download.pytorch.org/whl/cu129
    # airunner-common moved to its own repository and resolves from PyPI
    # now (issue #2197, https://github.com/Capsize-Games/airunner-common)
    # via services/native's own declared dependency -- no local install
@@ -266,13 +272,16 @@ using `./scripts/install.sh` for repo development or
 
 5. **Install llama-cpp-python with CUDA (Python 3.13, Linux):**
   ```bash
-  pip install --no-cache-dir \
-    --extra-index-url https://abetlen.github.io/llama-cpp-python/whl/cu124 \
+  CMAKE_ARGS="-DGGML_CUDA=on" FORCE_CMAKE=1 pip install --no-cache-dir \
+    --no-binary=llama-cpp-python \
     "llama-cpp-python==0.3.21"
   ```
   - This is the verified runtime for `Qwen3.5-9B-Q8_0.gguf` in this repo.
-  - The `cu124` wheel enables GPU offload on Linux without rebuilding from source.
-  - If you must build from source for an RTX 5080 / compute capability 12.0, use CUDA toolkit 12.8+ and `GGML_CUDA_ARCHITECTURES=120`.
+  - The source build (same flags the Dockerfile uses) enables GPU
+    offload on Linux. Prebuilt `cu124` wheels are not used: the release
+    profile builds CUDA 12.9 from source.
+  - For an RTX 5080 / compute capability 12.0, use CUDA toolkit 12.8+
+    and prefix `GGML_CUDA_ARCHITECTURES=120` to the build environment.
 
 6. **Run:**
    ```bash

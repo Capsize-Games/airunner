@@ -46,16 +46,32 @@ def _pytest_command(*args: str) -> list[str]:
     return [sys.executable, "-m", "pytest", *args]
 
 
+# services/tests/ is flat (no per-component subdirectories), so
+# --component resolves to the real filename prefixes present in that
+# directory (release issue #2440). A component with no matching files
+# still falls through to the missing-dir error below.
+_COMPONENT_FILE_PREFIXES: dict[str, str] = {
+    "llm": "test_llm",
+    "art": "test_art",
+    "tts": "test_tts",
+    "stt": "test_stt",
+    "daemon": "test_daemon",
+    "release": "test_release",
+}
+
+
 def _component_targets(
     base_path: Path,
     component: str,
 ) -> tuple[list[Path], str] | None:
     """Resolve one component name or alias into pytest targets."""
-    alias_targets: dict[str, list[Path]] = {}
-    if component in alias_targets:
-        return alias_targets[component], (
-            f"Focused validation suite for {component}"
-        )
+    prefix = _COMPONENT_FILE_PREFIXES.get(component)
+    if prefix is not None:
+        targets = sorted(base_path.glob(prefix + "*.py"))
+        if targets:
+            return targets, (
+                f"Focused validation suite for {component}"
+            )
     test_path = base_path / component / "tests"
     if test_path.exists():
         return [test_path], f"Safe unit tests for {component} component"
@@ -591,7 +607,10 @@ Examples:
     parser.add_argument(
         "--component",
         type=str,
-        help="Run tests for specific component only (e.g., 'llm', 'art', 'tts')",
+        help=(
+            "Run tests for a component file prefix only "
+            "(llm, art, tts, stt, daemon, release)"
+        ),
     )
 
     parser.add_argument(

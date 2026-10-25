@@ -19,6 +19,7 @@ query string because a browser WebSocket cannot set headers.
 
 from __future__ import annotations
 
+import asyncio
 from typing import Any, Dict
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, status
@@ -38,10 +39,16 @@ router = APIRouter()
 
 
 async def _handle(ws: WebSocket, msg: Dict[str, Any]) -> None:
-    """Answer one ``rpc`` frame with one ``rpc_response`` frame."""
+    """Answer one ``rpc`` frame with one ``rpc_response`` frame.
+
+    ``dispatch`` runs synchronous ORM calls that would stall the
+    event loop (and with it ``/events``, ``/llm/stream``, ``/tts/ws``),
+    so it runs in a worker thread like the TTS route (issue #2426).
+    """
     if msg.get("type") != "rpc":
         return
-    code, body = dispatch(
+    code, body = await asyncio.to_thread(
+        dispatch,
         str(msg.get("method", "")),
         str(msg.get("path", "")),
         msg.get("body") or {},

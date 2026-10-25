@@ -68,9 +68,12 @@ DEVELOPMENT_REQUIREMENTS = [
 CORE_REQUIREMENTS = [
     "numpy==2.2.5",
     "packaging>=24.0",
-    "pillow==12.2.0",
+    "pillow==13.0.0",
     "pydantic>=2.7,<3.0",
     "nltk>=3.9.1",
+    # Requests uses certifi's bundled roots; require the release that removes
+    # the three Mozilla-retired emSign roots. The Linux profile hash-locks it.
+    "certifi>=2026.10.23",
     "alembic==1.13.2",
     # Compatible-release bound (not ==): dh_python3 turns == into a
     # distro upper bound that rejects newer compatible dist-packages
@@ -248,11 +251,15 @@ SEARCH_REQUIREMENTS = [
     "trafilatura==2.0.0",
 ]
 
+# No module under services/src or native/src imports these (verified
+# by test: grep for pyautogui/pygetwindow/pyscreeze finds nothing), so
+# they stay Linux-gated AND out of the desktop release aggregate until
+# a feature actually needs them (release issue #2439).
 COMPUTER_USE_REQUIREMENTS = [
-    "pyautogui>=0.9.54",
-    "pyscreeze>=1.0.1",
+    "pyautogui>=0.9.54;platform_system=='Linux'",
+    "pyscreeze>=1.0.1;platform_system=='Linux'",
     "python-xlib>=0.33;platform_system=='Linux'",
-    "pygetwindow>=0.0.9",
+    "pygetwindow>=0.0.9;platform_system=='Linux'",
 ]
 
 SYSTEM_DEP_EXTRAS = {"openvoice_jp", "openvoice_kr"}
@@ -353,8 +360,8 @@ def _aggregate_extras_require(
     """Return the aggregate service extras."""
     # The "desktop" aggregate below is the Linux v1 NVIDIA release
     # profile on the services side (release issue P02): every modality
-    # plus the CUDA runtime wheel, resolved and hash-locked together
-    # with airunner[nvidia] in
+    # except the unused computer_use slice (issue #2439), plus the CUDA
+    # runtime wheel, resolved and hash-locked together in
     # package/constraints-linux-nvidia-cu129.txt. It intentionally
     # carries no Qt/PySide6 payload: the Qt frontend lives in the root
     # GUI distribution, never in the services dependency profile.
@@ -371,7 +378,6 @@ def _aggregate_extras_require(
         "headless",
         "llm_weather",
         "search",
-        "computer_use",
         "nvidia",
         "linux",
     )

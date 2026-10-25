@@ -145,11 +145,16 @@ def test_lock_records_provenance() -> None:
     first = next(i for i, line in enumerate(lines) if _PIN_LINE.match(line))
     header = "\n".join(lines[:first])
     for token in (
-        "./[nvidia]", "./services[desktop]", "./native",
+        "./services[desktop]", "./native",
         "https://pypi.org/simple", "https://download.pytorch.org/whl/cu129",
         "Linux", "pip check", "uv pip compile",
     ):
         assert token in header, f"provenance header lacks {token!r}"
+    # The profile is services-rooted since the Qt desktop removal
+    # (issue #2435): no verified-consumption or regeneration recipe
+    # may root at the removed ./[nvidia] path.
+    assert "pip install --no-deps ./[nvidia]" not in header
+    assert "\n#   ./[nvidia]\n" not in header
 
 
 def test_base_startup_imports_are_declared() -> None:

@@ -108,8 +108,18 @@ class GuiDaemonClient(GuiBridgeMixin):
         port = server.get("port", 8188)
         return f"http://{host}:{port}"
 
-    def ensure_connected(self, *, auto_start: Optional[bool] = None) -> bool:
-        """Return True when the daemon is reachable, starting it when allowed."""
+    def ensure_connected(
+        self,
+        *,
+        auto_start: Optional[bool] = None,
+        stop_event: Optional[Any] = None,
+    ) -> bool:
+        """Return True when the daemon is reachable, starting it when allowed.
+
+        ``stop_event`` (a ``threading.Event``) is polled while waiting
+        for the daemon so a supervisor shutdown request aborts the
+        wait instead of blocking to the timeout (issue #2431).
+        """
         health = self._healthcheck_payload()
         mismatch = self._contract_version_mismatch_reason(health)
         if mismatch is not None:
@@ -148,7 +158,7 @@ class GuiDaemonClient(GuiBridgeMixin):
             self._last_error = str(exc)
             self._set_state(DaemonConnectionState.FAILED, self._last_error)
             return False
-        return self._wait_until_ready()
+        return self._wait_until_ready(stop_event=stop_event)
 
     def reconnect(self) -> bool:
         """Force a reconnect attempt to the daemon."""
@@ -1004,10 +1014,19 @@ class GuiDaemonClient(GuiBridgeMixin):
             return
         self._set_state(DaemonConnectionState.RECONNECTING, "starting daemon")
 
-    def _wait_until_ready(self) -> bool:
+    def _wait_until_ready(
+        self, *, stop_event: Optional[Any] = None
+    ) -> bool:
         """Wait for the daemon health endpoint to become ready."""
         deadline = self._time_fn() + self._startup_timeout_seconds
         while self._time_fn() < deadline:
+            if stop_event is not None and stop_event.is_set():
+                self._last_error = "shutdown requested"
+                self._set_state(
+                    DaemonConnectionState.DISCONNECTED,
+                    self._last_error,
+                )
+                return False
             exit_code = self._launcher.last_exit_code()
             if exit_code is not None:
                 self._last_error = (
@@ -1153,14 +1172,60 @@ class GuiDaemonClient(GuiBridgeMixin):
             self._sleep(self._poll_interval_seconds)
         return False
 
+    @staticmethod
+    def _read_pid_cmdline(pid: int) -> Optional[str]:
+        """Return one process's command line, or None when unreadable."""
+        try:
+            raw = Path(f"/proc/{pid}/cmdline").read_bytes()
+        except OSError:
+            return None
+        return raw.replace(b"\0", b" ").decode("utf-8", "replace").strip()
+
+    def _pid_is_daemon_owner(self, pid: int) -> bool:
+        """Return True when a pid looks like our managed daemon.
+
+        The supervised daemon runs as the ``airunner_services.daemon``
+        module (or a bundled ``airunner`` daemon executable); anything
+        else legitimately holding the port must never be signalled
+        (issue #2430). Unreadable command lines fail closed.
+        """
+        cmdline = self._read_pid_cmdline(pid)
+        if not cmdline:
+            return False
+        lowered = cmdline.lower()
+        return "airunner" in lowered and "daemon" in lowered
+
     def _terminate_port_owner(self) -> None:
-        """Send SIGTERM to any process listening on the configured port."""
+        """SIGTERM the stale daemon holding the port, nothing else.
+
+        Every candidate pid is verified against the daemon marker and
+        re-verified immediately before signalling to close the pid
+        reuse TOCTOU window; non-matching or unreadable pids (and our
+        own pid) are skipped, never killed (issue #2430).
+        """
         port = self.config.config.get("server", {}).get("port", 8188)
         for pid in self._pids_on_port(port):
+            if pid == os.getpid():
+                continue
+            if not self._pid_is_daemon_owner(pid):
+                self.logger.warning(
+                    "Skipping non-daemon pid=%s on port %s",
+                    pid,
+                    port,
+                )
+                continue
+            if not self._pid_is_daemon_owner(pid):
+                continue
             try:
                 os.kill(pid, signal.SIGTERM)
+            except (ProcessLookupError, PermissionError):
+                self.logger.debug(
+                    "Failed to terminate pid=%s", pid, exc_info=True
+                )
             except OSError:
-                self.logger.debug("Failed to terminate pid=%s", pid)
+                self.logger.debug(
+                    "Failed to terminate pid=%s", pid, exc_info=True
+                )
 
     def _pids_on_port(self, port: int) -> list[int]:
         """Return process ids currently listening on one TCP port."""

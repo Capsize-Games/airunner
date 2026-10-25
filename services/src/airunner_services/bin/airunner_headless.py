@@ -84,9 +84,12 @@ import os
 import signal
 import sys
 import tempfile
+import threading
 import time
 from pathlib import Path
 from typing import Optional, Sequence
+
+import requests
 
 
 BANNER = """
@@ -476,24 +479,73 @@ def _prepare_managed_daemon_launch() -> None:
         _configure_test_mode()
 
 
+_shutdown_event = threading.Event()
+
+
 def _register_shutdown_handlers() -> None:
-    """Translate process signals into KeyboardInterrupt for cleanup flow."""
+    """Record SIGINT/SIGTERM on an event polled by the monitor loop."""
     signal.signal(signal.SIGINT, _handle_shutdown_signal)
     signal.signal(signal.SIGTERM, _handle_shutdown_signal)
 
 
 def _handle_shutdown_signal(_signum, _frame) -> None:
-    """Raise KeyboardInterrupt so the normal cleanup path runs."""
-    raise KeyboardInterrupt()
+    """Flag a shutdown request without interrupting the monitor loop.
+
+    Raising inside the handler could interrupt launcher.start() or
+    ensure_connected() mid-Popen, leaving a half-started child that
+    cleanup then reaps racy (issue #2431). The monitor loop and
+    ensure_connected() poll the event and run the normal finally path.
+    """
+    _shutdown_event.set()
 
 
-def _monitor_managed_daemon(client, logger) -> int:
-    """Keep the supervisor alive while the managed daemon remains healthy."""
+def _monitor_managed_daemon(
+    client,
+    logger,
+    *,
+    max_consecutive_failures: int = 3,
+    poll_interval_seconds: float = 1.0,
+    stop_event: Optional[threading.Event] = None,
+) -> int:
+    """Keep the supervisor alive while the managed daemon is healthy.
+
+    One failed probe is noise (model-load spike, GC pause), so the
+    daemon is only treated as dead after ``max_consecutive_failures``
+    consecutive failures (issue #2429). Returns 0 on a requested
+    shutdown, 1 when the daemon stays unhealthy; either way main's
+    finally block stops the managed child.
+    """
+    if stop_event is None:
+        stop_event = _shutdown_event
+    max_consecutive_failures = max(1, max_consecutive_failures)
+    consecutive_failures = 0
     logger.info("Managed daemon ready at %s", client.base_url)
     logger.info("Press Ctrl+C to stop the managed daemon.")
     while True:
-        client.health_check()
-        time.sleep(1)
+        if stop_event.is_set():
+            logger.info("Shutdown requested")
+            return 0
+        try:
+            client.health_check()
+        except (requests.RequestException, RuntimeError) as exc:
+            consecutive_failures += 1
+            logger.warning(
+                "Managed daemon health check failed "
+                "(%d/%d): %s",
+                consecutive_failures,
+                max_consecutive_failures,
+                exc,
+            )
+            if consecutive_failures >= max_consecutive_failures:
+                logger.error(
+                    "Managed daemon unhealthy after %d "
+                    "consecutive failures",
+                    consecutive_failures,
+                )
+                return 1
+        else:
+            consecutive_failures = 0
+        stop_event.wait(poll_interval_seconds)
 
 
 def _cleanup_client(client) -> None:
@@ -557,7 +609,9 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     try:
         config_path = _prepare_daemon_config(args, port)
         client = _build_daemon_client(config_path)
-        if client.ensure_connected(auto_start=False):
+        if client.ensure_connected(
+            auto_start=False, stop_event=_shutdown_event
+        ):
             logger.info("Connected to existing daemon at %s", client.base_url)
             logger.info("Leaving existing daemon running.")
             return 0
@@ -566,7 +620,12 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
             return 1
         _prepare_managed_daemon_launch()
         logger.info("Starting managed daemon at %s", client.base_url)
-        if not client.ensure_connected(auto_start=True):
+        if not client.ensure_connected(
+            auto_start=True, stop_event=_shutdown_event
+        ):
+            if _shutdown_event.is_set():
+                logger.info("Shutdown requested")
+                return 0
             logger.error("Failed to start daemon: %s", client.last_error)
             return 1
         return _monitor_managed_daemon(client, logger)

@@ -86,9 +86,23 @@ ensure_venv() {
 }
 
 
+# Pinned torch stack (release issues #2432/#2433). These MUST match
+# services/setup.py ML_RUNTIME_REQUIREMENTS, plus the torchcodec pin in
+# the release lock (package/constraints-linux-nvidia-cu129.txt):
+# services[headless] demands torch==2.13.0+cu129, so installing any
+# other build here just forces a later reinstall (or a broken mix of a
+# wrong-CUDA or CPU torch under cu129-built bitsandbytes/torchcodec).
+AIRUNNER_TORCH_VERSION='2.13.0+cu129'
+AIRUNNER_TORCHVISION_VERSION='0.28.0+cu129'
+AIRUNNER_TORCHAUDIO_VERSION='2.11.0+cu129'
+AIRUNNER_TORCHCODEC_VERSION='0.9.1'
+AIRUNNER_TORCH_CUDA_INDEX='https://download.pytorch.org/whl/cu129'
+AIRUNNER_TORCH_CPU_INDEX='https://download.pytorch.org/whl/cpu'
+
+
 service_extra_needs_torch() {
     case ",${1}," in
-        *,llm-native,*|*,art-python,*|*,tts-python,*|*,headless,*|*,desktop,*|*,all,*|*,all_dev,*|*,all_native,*|*,all_dev_native,*)
+        *,llm,*|*,llm-native,*|*,art-python,*|*,tts-python,*|*,headless,*|*,desktop,*|*,windows,*|*,all,*|*,all_dev,*|*,all_native,*|*,all_dev_native,*)
             return 0
             ;;
     esac
@@ -106,10 +120,49 @@ service_extra_needs_sidecars() {
 }
 
 
+torch_version_matches() {
+    local python_bin="$1"
+    local expected_version="$2"
+    local installed_version=""
+
+    installed_version="$(
+        "$python_bin" -c 'import torch; print(torch.__version__)' \
+            2>/dev/null
+    )" || return 1
+    [[ "$installed_version" == "$expected_version" ]]
+}
+
+
+install_cuda_torch_stack() {
+    local python_bin="$1"
+
+    log_info 'Installing pinned torch with CUDA wheels'
+    "$python_bin" -m pip install --force-reinstall \
+        "torch==${AIRUNNER_TORCH_VERSION}" \
+        "torchvision==${AIRUNNER_TORCHVISION_VERSION}" \
+        "torchaudio==${AIRUNNER_TORCHAUDIO_VERSION}" \
+        "torchcodec==${AIRUNNER_TORCHCODEC_VERSION}" \
+        --index-url "$AIRUNNER_TORCH_CUDA_INDEX"
+}
+
+
+install_cpu_torch_stack() {
+    local python_bin="$1"
+
+    log_info 'Installing pinned torch with CPU wheels (dev fallback only)'
+    "$python_bin" -m pip install --force-reinstall \
+        "torch==${AIRUNNER_TORCH_VERSION%%+*}" \
+        "torchvision==${AIRUNNER_TORCHVISION_VERSION%%+*}" \
+        "torchaudio==${AIRUNNER_TORCHAUDIO_VERSION%%+*}" \
+        "torchcodec==${AIRUNNER_TORCHCODEC_VERSION}" \
+        --index-url "$AIRUNNER_TORCH_CPU_INDEX" \
+        --extra-index-url https://pypi.org/simple
+}
+
+
 install_torch_stack() {
     local python_bin="$1"
     local torch_mode="$2"
-    local index_url=""
 
     case "$torch_mode" in
         skip)
@@ -117,34 +170,31 @@ install_torch_stack() {
             return 0
             ;;
         auto)
-            if "$python_bin" -c 'import torch' >/dev/null 2>&1; then
-                log_info 'torch already installed; skipping reinstall'
-                log_info 'Use --torch cpu|cuda to force a specific wheel set'
+            if torch_version_matches \
+                "$python_bin" "$AIRUNNER_TORCH_VERSION"; then
+                log_info "torch ${AIRUNNER_TORCH_VERSION} already installed"
                 return 0
             fi
-            if command_exists nvidia-smi; then
-                index_url='https://download.pytorch.org/whl/cu128'
-                log_info 'Installing torch with CUDA wheels'
-            else
-                index_url='https://download.pytorch.org/whl/cpu'
-                log_info 'Installing torch with CPU wheels'
+            if "$python_bin" -c 'import torch' >/dev/null 2>&1; then
+                log_info 'Installed torch mismatches the pinned release line'
+                log_info 'Reinstalling the pinned torch stack'
             fi
+            if command_exists nvidia-smi; then
+                install_cuda_torch_stack "$python_bin"
+            else
+                install_cpu_torch_stack "$python_bin"
+            fi
+            return 0
             ;;
         cuda)
-            index_url='https://download.pytorch.org/whl/cu128'
-            log_info 'Installing torch with CUDA wheels'
+            install_cuda_torch_stack "$python_bin"
             ;;
         cpu)
-            index_url='https://download.pytorch.org/whl/cpu'
-            log_info 'Installing torch with CPU wheels'
+            install_cpu_torch_stack "$python_bin"
             ;;
         *)
             log_error "Unknown torch mode: ${torch_mode}"
             return 1
             ;;
     esac
-
-    "$python_bin" -m pip install --force-reinstall \
-        torch torchvision torchaudio torchcodec \
-        --index-url "$index_url"
 }

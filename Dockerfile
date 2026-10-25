@@ -14,7 +14,10 @@ FROM nvidia/cuda:12.9.1-devel-ubuntu24.04@sha256:020bc241a628776338f4d4053fed4c3
 # Prevent interactive prompts
 ENV DEBIAN_FRONTEND=noninteractive
 
-ARG AIRUNNER_INSTALL_PROFILES=core,llm-native,stt-native,art-python,tts-python,development
+# Default install profile is the desktop-equivalent release aggregate
+# (headless runtimes plus the weather/search/CUDA extras) without the
+# development tooling: dev tools must never ship in a production image.
+ARG AIRUNNER_INSTALL_PROFILES=desktop
 
 # Install system dependencies required by the selected runtime profiles.
 RUN set -e; \
@@ -56,6 +59,12 @@ RUN set -e; \
     if printf '%s' ",${AIRUNNER_INSTALL_PROFILES}," | \
         grep -Eq ',(llm-native|headless|desktop|all|all_dev|all_native|all_dev_native),'; then \
         if [ "${AIRUNNER_ENABLE_CUDA}" = "1" ]; then \
+            if [ -z "${GGML_CUDA_ARCHITECTURES}" ]; then \
+                echo "ERROR: AIRUNNER_ENABLE_CUDA=1 requires GGML_CUDA_ARCHITECTURES" >&2; \
+                echo "Pass e.g. --build-arg GGML_CUDA_ARCHITECTURES=120 for sm_120 (RTX 5080)" >&2; \
+                echo "so the image never silently builds a wrong-arch llama.cpp." >&2; \
+                exit 1; \
+            fi; \
             CUDA_STUB_DIR="/usr/local/cuda/targets/x86_64-linux/lib/stubs"; \
             if [ ! -f "${CUDA_STUB_DIR}/libcuda.so" ]; then \
                 echo "CUDA stub libcuda.so not found at ${CUDA_STUB_DIR}/libcuda.so"; \
@@ -157,8 +166,7 @@ EXPOSE 8080
 HEALTHCHECK --interval=30s --timeout=10s --start-period=180s --retries=3 \
     CMD curl -f http://localhost:8080/health
 
-# Use entrypoint script to handle GUI vs headless
+# Use the headless entrypoint script (no GUI mode remains)
 ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
 
-# Default to GUI mode (no arguments = GUI)
 CMD []

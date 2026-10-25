@@ -16,7 +16,7 @@ needs an owner/counsel decision before release.
 
 This inventory covers the Linux v1 services bundle
 (`packaging/linux/services-bundle-spec.toml`), the desktop aggregate
-it freezes (`services[desktop]` plus `airunner[nvidia]`, locked in
+it freezes (`services[desktop]`, locked in
 `package/constraints-linux-nvidia-cu129.txt`), vendored and
 attributed code, native sidecar binaries, downloaded models,
 detector/policy data, and redistributed assets. Each row records
@@ -59,10 +59,10 @@ Authoritative pin set (release issue P02):
 
 - Constraint lock: package/constraints-linux-nvidia-cu129.txt
 - Constraint lock sha256:
-  76e7ddd0af39de0b2131ba3f723299b51c8126dacc172c17af32d097ca844594
+  5a9e1825f66ac2a76e2d7613daf00d7c97acdf4f76ddaa9c55c05725203768ef
 - Constraint pins: 352
-- Profile roots: `./[nvidia]`, `./services[desktop]`,
-  `./native` (installed from the local tree, not pinned in the
+- Profile roots: `./services[desktop]`, `./native`
+  (installed from the local tree, not pinned in the
   lock). Verified consumption and regeneration are documented in
   the lock file header.
 

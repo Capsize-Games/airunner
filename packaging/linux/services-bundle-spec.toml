@@ -58,7 +58,6 @@ aggregates = [
     "tts-python",
     "llm_weather",
     "search",
-    "computer_use",
     "nvidia",
     "linux",
 ]

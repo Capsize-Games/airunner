@@ -79,8 +79,10 @@ NATIVE_BASE_REQUIREMENTS = [
     # airunner-common is independently versioned in its own repository
     # now (issue #2197, https://github.com/Capsize-Games/airunner-common),
     # so a compatible-release pin per the versioning policy (#2191)
-    # instead of an exact lockstep VERSION pin.
-    "airunner-common~=6.1",
+    # instead of an exact lockstep VERSION pin. The floor is 6.1.7:
+    # services requires ~=6.1.7 (shared generation table, issue #2225),
+    # and the launcher must resolve the same common line (issue #2441).
+    "airunner-common~=6.1.7",
     FACEHUGGERSHIELD_REQUIREMENT,
 ]
 
@@ -92,17 +94,17 @@ def build_native_extras_require() -> dict[str, list[str]]:
     # headless services runtime instead of failing on an
     # uninstallable pin. Kept under the old names so existing
     # install commands keep working against the services surface.
-    # The pin floats within the compatible 6.x line on purpose: native
-    # and services version independently, so an exact == pin would go
-    # stale the moment either side releases (as ==6.1.3 did).
-    headless_requirements = ["airunner-services>=6.1,<7"]
+    # The floor is 6.1.5: older services predate the shared
+    # generation-table/LLMRequest/LLMResponse APIs this launcher
+    # consumes, so 6.1.0-6.1.4 must not resolve (issue #2441).
+    headless_requirements = ["airunner-services>=6.1.5,<7"]
     return {
         "development": DEVELOPMENT_REQUIREMENTS,
         "dev": DEVELOPMENT_REQUIREMENTS,
         # A headless/daemon-role install: this launcher plus the
         # services package, no GUI.
-        "services": ["airunner-services>=6.1,<7"],
-        "daemon": ["airunner-services>=6.1,<7"],
+        "services": ["airunner-services>=6.1.5,<7"],
+        "daemon": ["airunner-services>=6.1.5,<7"],
         # Former GUI-client-role names; now aliases for headless.
         "gui": headless_requirements,
         "desktop": headless_requirements,

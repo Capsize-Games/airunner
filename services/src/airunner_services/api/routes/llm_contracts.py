@@ -109,6 +109,22 @@ def default_rate_limit_window_seconds() -> float:
     )
 
 
+def default_connection_rate_limit_max_requests() -> int:
+    """Default per-connection message budget for the LLM WebSocket.
+
+    Loopback callers are indistinguishable (one shared token), so one
+    abusive local client could burn the shared per-principal budget
+    for every local client (issue #2425). Each connection gets this
+    smaller cap while the credential-keyed global cap stays looser.
+    Override via AIRUNNER_LLM_WS_CONN_RATE_LIMIT_MAX_REQUESTS.
+    """
+    return int(
+        os.environ.get(
+            "AIRUNNER_LLM_WS_CONN_RATE_LIMIT_MAX_REQUESTS", "10"
+        )
+    )
+
+
 class LLMStreamMessage(BaseModel):
     """Validated shape of one inbound ``/api/v1/llm/stream`` message.
 
@@ -229,6 +245,7 @@ __all__ = [
     "ModelLoadRequest",
     "RagIndexRequest",
     "WebSocketRateLimiter",
+    "default_connection_rate_limit_max_requests",
     "default_rate_limit_max_requests",
     "default_rate_limit_window_seconds",
     "hash_principal",
