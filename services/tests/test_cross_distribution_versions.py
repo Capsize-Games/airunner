@@ -5,6 +5,8 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
+from packaging.specifiers import SpecifierSet
+
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -30,4 +32,8 @@ def test_airunner_services_source_dependency_tracks_its_independent_version() ->
         "development installations use a compatible services range; only "
         "the release lockfile pins the tested exact pair"
     )
-    assert requirement.group(2) == service_version
+    specifier = SpecifierSet(f"{requirement.group(1)}{requirement.group(2)}")
+    assert service_version in specifier, (
+        f"in-tree services version {service_version} does not satisfy "
+        f"root dependency {specifier}"
+    )
