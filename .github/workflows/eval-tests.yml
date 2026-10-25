@@ -109,6 +109,7 @@ jobs:
             services/tests/test_llm_request_for_action_parity.py \
             services/tests/test_content_safety_gate.py \
             services/tests/test_download_security.py \
+            services/tests/test_security_package_pins.py \
             services/tests/test_release_b02.py \
             services/tests/test_run_tests_optional_smoke.py \
             -v \

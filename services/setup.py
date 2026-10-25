@@ -68,9 +68,12 @@ DEVELOPMENT_REQUIREMENTS = [
 CORE_REQUIREMENTS = [
     "numpy==2.2.5",
     "packaging>=24.0",
-    "pillow==12.2.0",
+    "pillow==13.0.0",
     "pydantic>=2.7,<3.0",
     "nltk>=3.9.1",
+    # Requests uses certifi's bundled roots; require the release that removes
+    # the three Mozilla-retired emSign roots. The Linux profile hash-locks it.
+    "certifi>=2026.10.23",
     "alembic==1.13.2",
     # Compatible-release bound (not ==): dh_python3 turns == into a
     # distro upper bound that rejects newer compatible dist-packages
