@@ -51,6 +51,8 @@ class LLMGeneratorSettings(BaseModel):
     enable_thinking = Column(Boolean, default=True)
     reasoning_effort = Column(String, default="medium")
     api_base_url = Column(String, nullable=True)
+    perform_conversation_summary = Column(Boolean, default=False)
+    summarize_after_n_turns = Column(Integer, default=8)
 
 
 __all__ = ["LLMGeneratorSettings"]

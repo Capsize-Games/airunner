@@ -22,12 +22,28 @@ def maybe_summarize_checkpoint(owner: Any) -> None:
                `llm_settings`, and `logger` attributes).
     """
     try:
+        # Prefer DB-persisted settings, fall back to the LLMSettings dataclass
+        db_settings = getattr(owner, "llm_generator_settings", None)
+        if db_settings is not None:
+            perform_summary = getattr(
+                db_settings, "perform_conversation_summary", None
+            )
+            threshold = getattr(db_settings, "summarize_after_n_turns", None)
+        else:
+            perform_summary = None
+            threshold = None
+
         settings = getattr(owner, "llm_settings", None)
-        if not settings:
+        if settings is not None:
+            if perform_summary is None:
+                perform_summary = getattr(
+                    settings, "perform_conversation_summary", False
+                )
+            if threshold is None or threshold <= 0:
+                threshold = getattr(settings, "summarize_after_n_turns", 0)
+
+        if not perform_summary:
             return
-        if not getattr(settings, "perform_conversation_summary", False):
-            return
-        threshold = getattr(settings, "summarize_after_n_turns", 0)
         if not threshold or threshold <= 0:
             return
 
@@ -56,7 +72,9 @@ def maybe_summarize_checkpoint(owner: Any) -> None:
         )
         summary = _call_llm_for_summary(wm, messages[:-threshold])
         if not summary:
-            owner.logger.warning("[SUMMARIZE] LLM returned empty summary, skipping")
+            owner.logger.warning(
+                "[SUMMARIZE] LLM returned empty summary, skipping"
+            )
             return
 
         from langchain_core.messages import SystemMessage
@@ -83,12 +101,16 @@ def maybe_summarize_checkpoint(owner: Any) -> None:
         )
     except Exception as exc:
         try:
-            owner.logger.warning("[SUMMARIZE] Error during summarization: %s", exc)
+            owner.logger.warning(
+                "[SUMMARIZE] Error during summarization: %s", exc
+            )
         except Exception:
             pass
 
 
-def _call_llm_for_summary(wm: Any, messages_to_summarize: list) -> Optional[str]:
+def _call_llm_for_summary(
+    wm: Any, messages_to_summarize: list
+) -> Optional[str]:
     """Call the LLM to summarize the given messages.
 
     Uses the unbound chat model (`_original_chat_model`) to avoid tool
@@ -127,7 +149,9 @@ def _call_llm_for_summary(wm: Any, messages_to_summarize: list) -> Optional[str]
 
     try:
         response = chat_model.invoke(prompt)
-        return str(getattr(response, "content", response) or "").strip() or None
+        return (
+            str(getattr(response, "content", response) or "").strip() or None
+        )
     except Exception:
         return None
 

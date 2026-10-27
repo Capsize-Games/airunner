@@ -94,6 +94,9 @@ export function LLMSettingsPanel() {
   );
   const [doSample, setDoSample] = useState(DEFAULTS.do_sample);
   const [useCache, setUseCache] = useState(DEFAULTS.use_cache);
+  const [performConversationSummary, setPerformConversationSummary] =
+    useState(false);
+  const [summarizeAfterNTurns, setSummarizeAfterNTurns] = useState(8);
   const [presets, setPresets] = useState<Preset[]>([]);
   const [selectedPreset, setSelectedPreset] = useState(() => {
     try {
@@ -158,11 +161,14 @@ export function LLMSettingsPanel() {
       sequences: sequences, top_k: topK,
       early_stopping: earlyStopping, do_sample: doSample,
       use_cache: useCache,
+      perform_conversation_summary: performConversationSummary,
+      summarize_after_n_turns: summarizeAfterNTurns,
     }),
     [
       topP, repetitionPenalty, minLength, lengthPenalty,
       numBeams, ngramSize, temperature, maxTokens,
       sequences, topK, earlyStopping, doSample, useCache,
+      performConversationSummary, summarizeAfterNTurns,
     ],
   );
 
@@ -213,6 +219,12 @@ export function LLMSettingsPanel() {
       setUseCache(
         (v("use_cache") as boolean) ?? DEFAULTS.use_cache,
       );
+      setPerformConversationSummary(
+        (v("perform_conversation_summary") as boolean) ?? false,
+      );
+      setSummarizeAfterNTurns(
+        (v("summarize_after_n_turns") as number) ?? 8,
+      );
     },
     [],
   );
@@ -245,6 +257,13 @@ export function LLMSettingsPanel() {
         );
         setDoSample(r.do_sample === true || r.do_sample === "true");
         setUseCache(r.use_cache === true || r.use_cache === "true");
+        setPerformConversationSummary(
+          r.perform_conversation_summary === true ||
+            r.perform_conversation_summary === "true",
+        );
+        setSummarizeAfterNTurns(
+          Number(r.summarize_after_n_turns ?? 8),
+        );
       })
       .catch(() => {})
       .finally(() => setLoading(false));
@@ -424,6 +443,70 @@ export function LLMSettingsPanel() {
                   precision={precision}
                   onChange={handlePrecisionChange}
                 />
+
+                <div
+                  className="p-2 mt-2"
+                  style={{
+                    border: "1px solid #333",
+                    borderRadius: 6,
+                  }}
+                >
+                  <span
+                    style={{
+                      color: "var(--theme-text-secondary)",
+                      fontWeight: 600,
+                      fontSize: "0.85rem",
+                      display: "block",
+                      marginBottom: 8,
+                    }}
+                  >
+                    Conversation Summarization
+                  </span>
+                  <Form.Check
+                    type="switch"
+                    id="llm-perform-summary"
+                    label={
+                      <span style={{ color: "var(--theme-text-secondary)" }}>
+                        Auto-summarize long conversations
+                      </span>
+                    }
+                    checked={performConversationSummary}
+                    onChange={(e) => {
+                      setPerformConversationSummary(e.target.checked);
+                      persist({
+                        perform_conversation_summary: e.target.checked,
+                      });
+                    }}
+                  />
+                  {performConversationSummary && (
+                    <Form.Group className="mt-2">
+                      <Form.Label
+                        style={{
+                          color: "var(--theme-text-secondary)",
+                          fontSize: "0.8rem",
+                        }}
+                      >
+                        Summarize after{" "}
+                        <strong>{summarizeAfterNTurns}</strong>{" "}
+                        conversation turns
+                      </Form.Label>
+                      <Form.Range
+                        min={2}
+                        max={50}
+                        step={1}
+                        value={summarizeAfterNTurns}
+                        onChange={(e) => {
+                          const v = Number(e.target.value);
+                          setSummarizeAfterNTurns(v);
+                          persist({
+                            summarize_after_n_turns: v,
+                          });
+                        }}
+                        style={{ accentColor: "var(--theme-primary)" }}
+                      />
+                    </Form.Group>
+                  )}
+                </div>
 
                 <div className="d-flex gap-2 mt-1">
                   <button

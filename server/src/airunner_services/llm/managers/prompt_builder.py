@@ -1,10 +1,21 @@
-"""Core prompt text and action sets for system prompt generation."""
+"""Single assembly point for the AIRunner system prompt.
+
+Consolidates what was previously spread across:
+- system_prompt_text.py   (static constants, action sets)
+- system_prompt_mood.py   (mood detection and formatting)
+- system_prompt_context.py (context-aware tiered assembly)
+- system_prompt_actions.py (action-to-prompt mapping)
+"""
 
 from __future__ import annotations
 
 from typing import Set
 
 from airunner_services.contract_enums import LLMActionType
+
+# ---------------------------------------------------------------------------
+# Static constants — formerly system_prompt_text.py
+# ---------------------------------------------------------------------------
 
 CONVERSATIONAL_ACTIONS: Set[LLMActionType] = {
     LLMActionType.CHAT,
@@ -107,3 +118,6 @@ MEMORY_INSTRUCTIONS = (
     "- The knowledge base automatically deduplicates, so don't worry about duplicates\n"
     "- After any search, record the key findings"
 )
+
+
+# ---------------------------------------------------------------------------

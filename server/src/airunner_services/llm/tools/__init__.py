@@ -15,6 +15,11 @@ from airunner_services.llm.tools import (
     user_data_tools,
     mood_tools,
     generation_tools,  # Direct text generation tools
+    migrated_factory_tools as _,  # noqa: F401
+    migrated_factory_conv_tools as _,  # noqa: F401
+    migrated_factory_conv_tools_b as _,  # noqa: F401
+    migrated_factory_ac_tools as _,  # noqa: F401
+    migrated_factory_extra_tools as _,  # noqa: F401
     # Phase 2: Mode-specific tools
     author_tools,
     research_validation_tools,  # URL, content, and temporal validation for research

@@ -3,36 +3,27 @@
 import inspect
 import logging
 import time
-from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeoutError
+from concurrent.futures import (
+    ThreadPoolExecutor,
+    TimeoutError as FuturesTimeoutError,
+)
 from inspect import Signature
 from typing import Any, Callable, List, Optional
+
+from airunner_services.contract_enums import LLMActionType
+from airunner_services.llm import tools  # noqa: F401
+from airunner_services.llm.core.tool_registry import ToolCategory
+from airunner_services.llm_workflow_events import (
+    build_llm_tool_action_handler,
+)
+from airunner_services.tools.base_tool import BaseTool
 
 _security_audit_logger = logging.getLogger("airunner.security.custom_tools")
 
 CUSTOM_TOOL_EXEC_TIMEOUT_SECONDS = 10
 
-from airunner_services.llm import tools  # noqa: F401
-from airunner_services.llm.core.tool_registry import ToolCategory
-from airunner_services.llm.managers.tools import (
-    AutonomousControlTools,
-    ConversationTools,
-    FileTools,
-    ImageTools,
-    SystemTools,
-)
-from airunner_services.contract_enums import LLMActionType
-from airunner_services.llm_workflow_events import (
-    build_llm_tool_action_handler,
-)
 
-
-class ToolManager(
-    ImageTools,
-    FileTools,
-    SystemTools,
-    ConversationTools,
-    AutonomousControlTools,
-):
+class ToolManager(BaseTool):
     """Manage LangChain tools for the AIRunner agent."""
 
     def __init__(
@@ -83,7 +74,9 @@ class ToolManager(
         def wrapped(*args, **kwargs):
             self.logger.debug(
                 "Invoking tool: %s args=%s kwargs_keys=%s",
-                tool_info.name, args, list(kwargs.keys()),
+                tool_info.name,
+                args,
+                list(kwargs.keys()),
             )
 
             if tool_info.requires_api:
@@ -137,50 +130,21 @@ class ToolManager(
         return wrapped
 
     def get_all_tools(self, include_deferred: bool = True) -> List[Callable]:
-        """Return all available tools for the current request."""
-        from airunner_services.llm.core.tool_registry import ToolRegistry
+        """Return all available tools for the current request.
 
-        tools_list = [
-            self.clear_conversation_tool(),
-            self.list_files_tool(),
-            self.emit_signal_tool(),
-            self.list_conversations_tool(),
-            self.get_conversation_tool(),
-            self.summarize_conversation_tool(),
-            self.update_conversation_title_tool(),
-            self.switch_conversation_tool(),
-            self.create_new_conversation_tool(),
-            self.search_conversations_tool(),
-            self.delete_conversation_tool(),
-            self.get_application_state_tool(),
-            self.schedule_task_tool(),
-            self.set_application_mode_tool(),
-            self.request_user_input_tool(),
-            self.analyze_user_behavior_tool(),
-            self.propose_action_tool(),
-            self.monitor_system_health_tool(),
-            self.log_agent_decision_tool(),
-        ]
+        All tools are now registered exclusively through ToolRegistry.
+        The legacy factory-method list has been migrated to @tool()
+        decorators in migrated_factory_tools.py.
+        """
+        from airunner_services.llm.core.tool_registry import ToolRegistry
 
         if include_deferred:
             registry_tools = ToolRegistry.all()
         else:
             registry_tools = ToolRegistry.get_immediate_tools()
 
-        # Build a name→tool dict for deduplication.  Hardcoded factory tools
-        # are registered first; ToolRegistry tools override on name collision
-        # so that migrated registry entries cleanly supersede legacy factories.
+        # Build a name→tool dict for deduplication.
         tools_by_name: dict[str, Callable] = {}
-        for t in tools_list:
-            name = getattr(t, "name", None)
-            if name:
-                if name in tools_by_name:
-                    self.logger.warning(
-                        "Duplicate tool name in factory list: %s — keeping first", name
-                    )
-                else:
-                    tools_by_name[name] = t
-
         for tool_info in registry_tools.values():
             wrapped_func = self._wrap_tool_with_dependencies(tool_info)
             wrapped_func.name = tool_info.name
@@ -189,7 +153,7 @@ class ToolManager(
             wrapped_func.category = getattr(tool_info, "category", None)
             if tool_info.name in tools_by_name:
                 self.logger.warning(
-                    "Duplicate tool name between factory and registry: %s — registry wins",
+                    "Duplicate tool name in registry: %s — keeping first",
                     tool_info.name,
                 )
             tools_by_name[tool_info.name] = wrapped_func
@@ -198,7 +162,8 @@ class ToolManager(
             name = getattr(custom_tool, "name", None)
             if name and name in tools_by_name:
                 self.logger.warning(
-                    "Custom tool name conflicts with built-in: %s — custom wins", name
+                    "Custom tool name conflicts with built-in: %s — custom wins",
+                    name,
                 )
             if name:
                 tools_by_name[name] = custom_tool
@@ -267,7 +232,8 @@ class ToolManager(
                 except FuturesTimeoutError:
                     self.logger.error(
                         "Custom tool '%s' compilation timed out after %ds",
-                        tool_record.name, CUSTOM_TOOL_EXEC_TIMEOUT_SECONDS,
+                        tool_record.name,
+                        CUSTOM_TOOL_EXEC_TIMEOUT_SECONDS,
                     )
                     return None
 
@@ -275,19 +241,29 @@ class ToolManager(
                 if callable(item) and hasattr(item, "name"):
                     original_func = item
 
-                    def tracked_tool(*args, _tool_record=tool_record, _func=original_func, **kwargs):
+                    def tracked_tool(
+                        *args,
+                        _tool_record=tool_record,
+                        _func=original_func,
+                        **kwargs,
+                    ):
                         _security_audit_logger.info(
                             "custom_tool_invoked tool=%s ts=%s",
-                            _tool_record.name, time.time(),
+                            _tool_record.name,
+                            time.time(),
                         )
                         with ThreadPoolExecutor(max_workers=1) as ex:
                             fut = ex.submit(_func, *args, **kwargs)
                             try:
-                                result = fut.result(timeout=CUSTOM_TOOL_EXEC_TIMEOUT_SECONDS)
+                                result = fut.result(
+                                    timeout=CUSTOM_TOOL_EXEC_TIMEOUT_SECONDS
+                                )
                                 _tool_record.increment_usage(success=True)
                                 return result
                             except FuturesTimeoutError:
-                                _tool_record.increment_usage(success=False, error="timeout")
+                                _tool_record.increment_usage(
+                                    success=False, error="timeout"
+                                )
                                 raise RuntimeError(
                                     f"Custom tool '{_tool_record.name}' timed out"
                                 )
@@ -444,20 +420,7 @@ class ToolManager(
             wrapped_func.category = getattr(tool_info, "category", None)
             return wrapped_func
 
-        tool_getters = {
-            "update_mood": self.update_mood_tool,
-            "clear_conversation": self.clear_conversation_tool,
-            "toggle_tts": self.toggle_tts_tool,
-            "generate_image": self.generate_image_tool,
-            "clear_canvas": self.clear_canvas_tool,
-            "open_image": self.open_image_tool,
-        }
-
-        getter = tool_getters.get(name)
-        if getter:
-            return getter()
-
-        self.logger.warning(f"Tool getter not found for: {name}")
+        self.logger.warning("Tool not found in registry: %s", name)
         return None
 
 
