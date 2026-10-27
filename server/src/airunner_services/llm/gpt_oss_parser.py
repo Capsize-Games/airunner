@@ -292,6 +292,14 @@ class GPTOSSStreamParser:
             delta.analysis_text += value
         elif self.current_channel == "final" or not self.current_channel:
             delta.final_text += value
+        elif self.current_channel == "commentary" and not self.current_recipient:
+            # gpt-oss often emits user-facing text in the commentary channel
+            # (notably when it deliberates about using a tool, e.g. "what time
+            # is it?"). Commentary WITH a recipient (``to=functions.x``) is a
+            # tool call handled separately, so only surface recipient-less
+            # commentary as visible content — otherwise the real answer is
+            # silently dropped and only the stub "final" channel survives.
+            delta.final_text += value
 
 
 def parse_gpt_oss_response(raw_response: str) -> GPTOSSParseResult:

@@ -100,20 +100,6 @@ def render_gpt_oss_developer_message(
     return render_harmony_message("developer", developer_content)
 
 
-def _thinking_message(message: AIMessage) -> Optional[str]:
-    """Render one assistant analysis channel message when present."""
-    thinking = str(
-        message.additional_kwargs.get("thinking_content") or ""
-    ).strip()
-    if not thinking:
-        return None
-    return render_harmony_message(
-        "assistant",
-        thinking,
-        channel="analysis",
-    )
-
-
 def _final_ai_message(message: AIMessage) -> Optional[str]:
     """Render one assistant final channel message when present."""
     content = str(message.content or "").strip()
@@ -130,11 +116,15 @@ def render_gpt_oss_ai_message(
     adapter: Any,
     message: AIMessage,
 ) -> List[str]:
-    """Render one historical AI message into Harmony messages."""
+    """Render one historical AI message into Harmony messages.
+
+    Per the Harmony spec, the analysis (chain-of-thought) channel of *past*
+    assistant turns must NOT be fed back into the prompt — only the final
+    channel (or tool calls) is kept. Re-injecting prior reasoning bloats the
+    context every turn, which on gpt-oss's small n_ctx quickly leaves no room
+    for generation and truncates the answer.
+    """
     rendered: List[str] = []
-    thinking = _thinking_message(message)
-    if thinking:
-        rendered.append(thinking)
 
     tool_calls = getattr(message, "tool_calls", None) or []
     if tool_calls:
