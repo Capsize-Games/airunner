@@ -78,6 +78,7 @@ export function extensionLoaderPlugin(): Plugin {
       const imports: string[] = [];
       const routeElements: string[] = [];
       const providers: string[] = [];
+      const headerGetters: string[] = [];
 
       extNames.forEach((name, i) => {
         const clientDir = path.join(EXTENSIONS_DIR, name, "client");
@@ -106,6 +107,14 @@ export function extensionLoaderPlugin(): Plugin {
             `import { BottomBar as Ext${i}BottomBar } from "@extensions/${name}/client/BottomBar";`,
           );
         }
+
+        const headersPath = path.join(clientDir, "headers.ts");
+        if (fs.existsSync(headersPath)) {
+          imports.push(
+            `import { getRequestHeaders as ext${i}GetRequestHeaders } from "@extensions/${name}/client/headers";`,
+          );
+          headerGetters.push(`ext${i}GetRequestHeaders`);
+        }
       });
 
       const bottomBarName =
@@ -119,6 +128,16 @@ export function extensionLoaderPlugin(): Plugin {
               .join("")
           : "null";
 
+      const headerGetterBody =
+        headerGetters.length > 0
+          ? headerGetters
+              .map((fn) => `Object.assign(h, ${fn}())`)
+              .join("; ")
+          : "";
+      const getRequestHeadersFn = headerGetterBody
+        ? `export function getRequestHeaders() { const h: Record<string, string> = {}; ${headerGetterBody}; return h; }`
+        : `export function getRequestHeaders() { return {}; }`;
+
       const source = [
         'import { Route } from "react-router-dom";',
         'import React from "react";',
@@ -128,6 +147,7 @@ export function extensionLoaderPlugin(): Plugin {
         `export const extensionRouteElements = [${routeElements.join(", ")}];`,
         `export const extensionProviders = [${providers.join(", ")}];`,
         `export const extensionBottomBarItems = ${bottomBarName};`,
+        getRequestHeadersFn,
       ].join("\n");
 
       return source;

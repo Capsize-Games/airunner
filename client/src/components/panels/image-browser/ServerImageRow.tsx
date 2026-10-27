@@ -1,9 +1,10 @@
 import { useState } from "react";
-import { BASE_URL } from "../../../types/api";
 import type { ImageInfo } from "../../../api/client";
 import { deleteImage, renameImage } from "../../../api/client";
 import { formatFileSize, formatTimestamp } from "./LocalImageHelpers";
 import LucideIcon from "../../../components/shared/LucideIcon";
+import { useAuthenticatedBlobUrl } from "../../../hooks/useAuthenticatedBlobUrl";
+import { BASE_URL } from "../../../types/api";
 
 export default function ServerImageRow({
   img,
@@ -22,6 +23,9 @@ export default function ServerImageRow({
   const [editValue, setEditValue] = useState("");
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [moveFeedback, setMoveFeedback] = useState<string | null>(null);
+
+  const thumbnailBlobUrl = useAuthenticatedBlobUrl(img.thumbnail_url);
+  const imageBlobUrl = useAuthenticatedBlobUrl(img.image_url);
 
   const handleStartRename = () => {
     setEditingId(img.id);
@@ -60,7 +64,7 @@ export default function ServerImageRow({
   const handleMoveToCanvas = () => {
     window.dispatchEvent(
       new CustomEvent("canvas-place-image", {
-        detail: { imageUrl: `${BASE_URL}${img.image_url}` },
+        detail: { imageUrl: imageBlobUrl ?? `${BASE_URL}${img.image_url}` },
       }),
     );
     setMoveFeedback(img.id);
@@ -91,13 +95,13 @@ export default function ServerImageRow({
         onDragStart={(e) => {
           e.dataTransfer.setData(
             "text/image-url",
-            `${BASE_URL}${img.image_url}`,
+            imageBlobUrl ?? `${BASE_URL}${img.image_url}`,
           );
           e.dataTransfer.effectAllowed = "copy";
         }}
       >
         <img
-          src={`${BASE_URL}${img.thumbnail_url}`}
+          src={thumbnailBlobUrl ?? undefined}
           alt={img.id}
           className="w-100 h-100"
           style={{ objectFit: "cover" }}
@@ -156,144 +160,36 @@ export default function ServerImageRow({
         >
           <button
             type="button"
-            title={
-              moveFeedback === img.id
-                ? "Sent to canvas"
-                : "Move to canvas"
-            }
-            style={{
-              background: "none",
-              border: "none",
-              cursor: "pointer",
-              padding: 4,
-              borderRadius: 4,
-              opacity: 0.7,
-              transition: "opacity 0.15s, background 0.15s",
-              lineHeight: 1,
-            }}
+            className="icon-btn"
+            title={moveFeedback === img.id ? "Sent to canvas" : "Move to canvas"}
             onClick={handleMoveToCanvas}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background =
-                "rgba(0,132,185,0.15)";
-              e.currentTarget.style.opacity = "1";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = "none";
-              e.currentTarget.style.opacity = "0.7";
-            }}
           >
             <LucideIcon name="panel-right-open" size={16} />
           </button>
           <button
             type="button"
+            className="icon-btn"
             title="View details"
-            style={{
-              background: "none",
-              border: "none",
-              cursor: "pointer",
-              padding: 4,
-              borderRadius: 4,
-              opacity: 0.7,
-              transition: "opacity 0.15s, background 0.15s",
-              lineHeight: 1,
-            }}
             onClick={() => onPreview(idx)}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background =
-                "rgba(0,132,185,0.15)";
-              e.currentTarget.style.opacity = "1";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = "none";
-              e.currentTarget.style.opacity = "0.7";
-            }}
           >
             <LucideIcon name="info" size={16} />
           </button>
           <button
             type="button"
+            className="icon-btn"
             title="Delete image"
-            style={{
-              background: "none",
-              border: "none",
-              cursor: "pointer",
-              padding: 4,
-              borderRadius: 4,
-              opacity: 0.7,
-              transition: "opacity 0.15s, background 0.15s",
-              lineHeight: 1,
-            }}
-            onClick={() =>
-              setConfirmDeleteId(
-                confirmDeleteId === img.id ? null : img.id,
-              )
-            }
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background =
-                "rgba(0,132,185,0.15)";
-              e.currentTarget.style.opacity = "1";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = "none";
-              e.currentTarget.style.opacity = "0.7";
-            }}
+            onClick={() => setConfirmDeleteId(confirmDeleteId === img.id ? null : img.id)}
           >
             <LucideIcon name="trash" size={16} />
           </button>
 
           {confirmDeleteId === img.id && (
             <div className="d-flex gap-2 align-items-center">
-              <span className="small text-muted">
-                Delete this image?
-              </span>
-              <button
-                title="Yes"
-                style={{
-                  background: "none",
-                  border: "none",
-                  cursor: "pointer",
-                  padding: 4,
-                  borderRadius: 4,
-                  opacity: 0.7,
-                  transition: "opacity 0.15s, background 0.15s",
-                  lineHeight: 1,
-                }}
-                onClick={handleDelete}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background =
-                    "rgba(0,132,185,0.15)";
-                  e.currentTarget.style.opacity = "1";
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = "none";
-                  e.currentTarget.style.opacity = "0.7";
-                }}
-              >
+              <span className="small text-muted">Delete this image?</span>
+              <button className="icon-btn" title="Yes" onClick={handleDelete}>
                 <LucideIcon name="circle-check" size={16} />
               </button>
-              <button
-                title="No"
-                style={{
-                  background: "none",
-                  border: "none",
-                  cursor: "pointer",
-                  padding: 4,
-                  borderRadius: 4,
-                  opacity: 0.7,
-                  transition: "opacity 0.15s, background 0.15s",
-                  lineHeight: 1,
-                }}
-                onClick={() => setConfirmDeleteId(null)}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background =
-                    "rgba(0,132,185,0.15)";
-                  e.currentTarget.style.opacity = "1";
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = "none";
-                  e.currentTarget.style.opacity = "0.7";
-                }}
-              >
+              <button className="icon-btn" title="No" onClick={() => setConfirmDeleteId(null)}>
                 <LucideIcon name="circle-x" size={16} />
               </button>
             </div>

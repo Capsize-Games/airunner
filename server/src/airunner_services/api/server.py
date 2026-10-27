@@ -20,7 +20,7 @@ from .server_helpers import (
     _register_watchers,
     _mount_static_files,
 )
-from .server_auth import (
+from .server_middleware import (
     register_middleware,
     register_exception_handler,
     update_api_key_config,

@@ -159,32 +159,10 @@ function TrayHeader({
       <span>Downloads ({count})</span>
       {!anyActive && (
         <div style={{ display: "flex", gap: 8 }}>
-          <button
-            onClick={onClearAll}
-            style={{
-              background: "transparent",
-              border: "none",
-              color: "#888",
-              cursor: "pointer",
-              fontSize: 10,
-              padding: 0,
-            }}
-          >
+          <button className="tray-text-btn" onClick={onClearAll}>
             Clear all
           </button>
-          <button
-            onClick={onClose}
-            style={{
-              background: "transparent",
-              border: "none",
-              color: "#888",
-              cursor: "pointer",
-              fontSize: 14,
-              padding: 0,
-              lineHeight: 1,
-            }}
-            title="Close tray"
-          >
+          <button className="tray-text-btn tray-text-btn-lg" onClick={onClose} title="Close tray">
             ✕
           </button>
         </div>
@@ -197,19 +175,7 @@ function ResumeButton({ jobId, onResume }: { jobId: string; onResume: () => void
   const state = useDownloadProgress(jobId);
   if (state.status !== "interrupted") return null;
   return (
-    <button
-      onClick={onResume}
-      style={{
-        background: "rgba(255,255,255,0.12)",
-        border: "1px solid rgba(255,255,255,0.2)",
-        borderRadius: 3,
-        color: "#ccc",
-        cursor: "pointer",
-        fontSize: 10,
-        padding: "2px 8px",
-        whiteSpace: "nowrap",
-      }}
-    >
+    <button className="download-resume-btn" onClick={onResume}>
       Resume
     </button>
   );
@@ -219,19 +185,7 @@ function CancelButton({ jobId, onCancel }: { jobId: string; onCancel: () => void
   const state = useDownloadProgress(jobId);
   if (state.status !== "running" && state.status !== "interrupted") return null;
   return (
-    <button
-      onClick={onCancel}
-      style={{
-        background: "rgba(255,80,80,0.15)",
-        border: "1px solid rgba(255,80,80,0.25)",
-        borderRadius: 3,
-        color: "#ff8888",
-        cursor: "pointer",
-        fontSize: 10,
-        padding: "2px 8px",
-        whiteSpace: "nowrap",
-      }}
-    >
+    <button className="download-cancel-btn" onClick={onCancel}>
       Cancel
     </button>
   );
