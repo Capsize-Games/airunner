@@ -6,6 +6,9 @@ from datetime import date
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics.pairwise import cosine_similarity
+
 from airunner_services.settings import AIRUNNER_BASE_PATH, AIRUNNER_LOG_LEVEL
 from airunner_services.data.tenant import get_tenant_key
 from airunner_services.utils.application.get_logger import get_logger
@@ -313,9 +316,17 @@ class KnowledgeBase:
 
         for path in self.list_files():
             lines = path.read_text(encoding="utf-8").split("\n")
+            current_section = ""
             for index, line in enumerate(lines):
+                if line.startswith("## "):
+                    current_section = line.lower()
                 line_lower = line.lower()
+                # Score: query words in the line itself
                 score = sum(1 for word in query_words if word in line_lower)
+                # Also match against the nearest section header
+                score += sum(
+                    1 for word in query_words if word in current_section
+                )
                 if (
                     score < min_score
                     or not line.strip()
@@ -330,6 +341,58 @@ class KnowledgeBase:
                         "file": path.stem,
                         "line": line.strip(),
                         "context": "\n".join(lines[start:end]),
+                        "score": score,
+                    }
+                )
+
+        results.sort(key=lambda item: item["score"], reverse=True)
+        return results[:max_results]
+
+    def search_tfidf(
+        self, query: str, max_results: int = 10
+    ) -> List[Dict[str, str]]:
+        """Search across all knowledge files using TF-IDF semantic similarity.
+
+        More robust than keyword search — finds relevant facts even when
+        the query doesn't share exact words with the fact text.
+
+        Args:
+            query: Natural language search query
+            max_results: Maximum number of results to return
+
+        Returns:
+            List of result dicts with 'file', 'line', 'context', 'score'
+        """
+        lines: List[Tuple[str, str, str]] = []  # (file, line, context)
+        for path in self.list_files():
+            file_lines = path.read_text(encoding="utf-8").split("\n")
+            for index, line in enumerate(file_lines):
+                stripped = line.strip()
+                if not stripped or stripped.startswith("#"):
+                    continue
+                start = max(0, index - 1)
+                end = min(len(file_lines), index + 2)
+                context = "\n".join(file_lines[start:end])
+                lines.append((path.stem, stripped, context))
+
+        if not lines:
+            return []
+
+        corpus = [query] + [line[1] for line in lines]
+        vectorizer = TfidfVectorizer(stop_words="english")
+        tfidf_matrix = vectorizer.fit_transform(corpus)
+        similarities = cosine_similarity(tfidf_matrix[0:1], tfidf_matrix[1:])
+        sim_scores = similarities[0]
+
+        results: List[Dict[str, str]] = []
+        for idx, (fname, line, context) in enumerate(lines):
+            score = float(sim_scores[idx])
+            if score > 0:
+                results.append(
+                    {
+                        "file": fname,
+                        "line": line,
+                        "context": context,
                         "score": score,
                     }
                 )

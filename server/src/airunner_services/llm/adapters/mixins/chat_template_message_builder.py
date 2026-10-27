@@ -149,11 +149,13 @@ def _image_payload(part: dict[str, Any]) -> Any:
 
 
 def _assistant_message(message: AIMessage) -> dict[str, Any]:
-    """Return one chat-template assistant message."""
-    assistant_message = {"role": "assistant", "content": message.content or ""}
-    if hasattr(message, "tool_calls") and message.tool_calls:
-        assistant_message["tool_calls"] = message.tool_calls
-    return assistant_message
+    """Return one chat-template assistant message.
+
+    Tool calls are intentionally excluded — custom XML-format tool calls
+    crash the Qwen HF chat template.  The workflow handles tool execution
+    separately via force_response, so the template only needs plain text.
+    """
+    return {"role": "assistant", "content": message.content or ""}
 
 
 def _tool_message(message: ToolMessage) -> dict[str, Any]:

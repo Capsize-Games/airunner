@@ -72,6 +72,27 @@ class NodePromptAssemblyHelper:
                 additional_kwargs={"error": "no_message_generated"},
                 tool_calls=[],
             )
+        # If a previous message had tool calls, prepend its <tool_call>
+        # XML so the client-side parser can render the tool call widget.
+        # Only do this when the response is NOT itself a tool call (which
+        # would already have its own XML).
+        resp_content = str(getattr(response_message, "content", "") or "")
+        if resp_content and "<tool_call>" not in resp_content:
+            for prev in reversed(state["messages"]):
+                if hasattr(prev, "tool_calls") and prev.tool_calls:
+                    src = str(getattr(prev, "content", "") or "")
+                    if "<tool_call>" in src:
+                        response_message = AIMessage(
+                            content=src + "\n" + resp_content,
+                            additional_kwargs=getattr(
+                                response_message,
+                                "additional_kwargs",
+                                {},
+                            )
+                            or {},
+                            tool_calls=[],
+                        )
+                    break
         return {"messages": [response_message]}
 
     def trim_messages(self, messages: List[BaseMessage]) -> List[BaseMessage]:

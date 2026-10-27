@@ -18,7 +18,6 @@ from airunner_services.contract_enums import (
 from airunner_services.settings import AIRUNNER_TTS_MODEL_TYPE
 from airunner_services.settings import AIRUNNER_TTS_ON
 from airunner_services.utils.text.formatter_extended import FormatterExtended
-from airunner_services.llm.stream_text import combine_stream_chunks
 from airunner_services.llm.thinking_parser import (
     normalize_thinking_content,
     strip_stored_thinking_prefix,
@@ -104,7 +103,7 @@ class TTSGeneratorWorker(Worker):
 
         raw_chunks = getattr(self, "_llm_raw_visible_chunks", [])
         visible_text = strip_stored_thinking_prefix(
-            combine_stream_chunks(raw_chunks),
+            "".join(raw_chunks),
             getattr(self, "_llm_thinking_content", None),
         )
         spoken_text = getattr(self, "_llm_spoken_visible_text", "")
@@ -127,9 +126,7 @@ class TTSGeneratorWorker(Worker):
         if getattr(self, "_llm_thinking_active", False):
             return ""
         return strip_stored_thinking_prefix(
-            combine_stream_chunks(
-                getattr(self, "_llm_raw_visible_chunks", [])
-            ),
+            "".join(getattr(self, "_llm_raw_visible_chunks", [])),
             getattr(self, "_llm_thinking_content", None),
         )
 
@@ -649,7 +646,7 @@ class TTSGeneratorWorker(Worker):
         else:
             self.tokens.extend(message)
 
-        text = combine_stream_chunks(self.tokens)
+        text = "".join(self.tokens)
         timestamp_pattern = re.compile(r"\b(\d{1,2}):(\d{2})\b")
         text = timestamp_pattern.sub(r"\1 \2", text)
 
