@@ -84,49 +84,6 @@ tail -f build/logs/server.log
 
 ---
 
-## 📦 End-User Bundle (Desktop Application)
-
-For non-developer users, AI Runner provides a self-contained desktop application
-via **Electron**.  The bundle includes an embedded Python runtime, all Python
-dependencies, CUDA-accelerated `llama.cpp` and `whisper.cpp` binaries, and the
-compiled React frontend — all in a single installable package.
-
-**No Python, Node.js, CMake, C++ compiler, or CUDA toolkit is required.**
-Only an NVIDIA GPU driver (525+) is needed.
-
-### Platforms
-
-| Platform | Installer Format | GPU |
-|----------|-----------------|-----|
-| Linux    | `.AppImage`, `.deb` | NVIDIA (CUDA, Ampere+) |
-| Windows  | `.exe` (NSIS) | NVIDIA (CUDA, Ampere+) |
-
-### Download
-
-Pre-built installers are attached to each [GitHub Release](https://github.com/Capsize-Games/airunner/releases)
-tagged with a `v*` version.  Look for artifacts named:
-
-- `airunner-bundle-linux-*.AppImage` or `airunner-bundle-linux-*.deb`
-- `airunner-bundle-win32-*.exe`
-
-### How it works
-
-AI Runner is a web application with a Python backend (FastAPI) serving
-a React frontend and API endpoints.
-
-- **Backend:** Python FastAPI server on `localhost:8080`
-- **Frontend:** React SPA built with Vite, served by the backend
-- **Database:** PostgreSQL (required)
-
-### Running in development
-
-```bash
-# Start the backend and frontend
-./scripts/run_web.sh
-```
-
----
-
 ## 💾 Manual Installation (Advanced)
 
 If you need fine-grained control, the install script supports three modes:

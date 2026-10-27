@@ -129,7 +129,7 @@ MELOTTS_REQUIREMENTS = [
 
 OPENVOICE_CN_REQUIREMENTS = [
     "pypinyin==0.54.0",
-    "jieba==0.5.23",
+    "jieba==0.42.1",
     "cn2an==0.5.23",
 ]
 

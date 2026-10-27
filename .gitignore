@@ -98,9 +98,6 @@ airunner_web_client/dist
 airunner_web_client/node_modules
 docs
 plans
-electron/node_modules
-electron/dist
-electron/resources
 
 # Vite client (new location)
 client/node_modules
@@ -115,3 +112,4 @@ node_modules
 
 # Allow the Docker dev env template to be committed
 !.env.docker.example
+.roomodes

@@ -1,6 +1,6 @@
-"""add_conversation_summary_settings
+"""add_conv_summary_settings
 
-Revision ID: add_conversation_summary_settings
+Revision ID: add_conv_summary_settings
 Revises: add_provider_api_base_url
 Create Date: 2026-06-08 00:00:00.000000
 
@@ -13,7 +13,7 @@ from typing import Sequence, Union
 from alembic import op
 import sqlalchemy as sa
 
-revision: str = "add_conversation_summary_settings"
+revision: str = "add_conv_summary_settings"
 down_revision: Union[str, None] = "add_provider_api_base_url"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None

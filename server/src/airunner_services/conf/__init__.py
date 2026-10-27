@@ -124,7 +124,11 @@ class LazySettings:
         host = self._store.get("POSTGRES_HOST", "localhost")
         port = self._store.get("POSTGRES_PORT", 5432)
         db = self._store.get("POSTGRES_DB", "airunner")
-        return f"postgresql://{user}:{password}" f"@{host}:{port}/{db}"
+        # Use psycopg v3 driver (installed via psycopg[binary]).
+        return (
+            f"postgresql+psycopg://{user}:{password}"
+            f"@{host}:{port}/{db}"
+        )
 
     # ------------------------------------------------------------------
     # Attributes

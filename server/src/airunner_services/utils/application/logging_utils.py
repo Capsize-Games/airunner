@@ -42,11 +42,10 @@ def _get_log_level_from_env() -> int:
     """Get the configured log level from the environment."""
     log_level_str = os.environ.get("AIRUNNER_LOG_LEVEL")
     if log_level_str is None:
-        numeric_level = AIRUNNER_LOG_LEVEL
-        level_name = logging.getLevelName(numeric_level)
-        if level_name.startswith("Level"):
-            return logging.DEBUG
-        return numeric_level
+        log_level_setting = AIRUNNER_LOG_LEVEL
+        if isinstance(log_level_setting, str):
+            return getattr(logging, log_level_setting.upper(), logging.DEBUG)
+        return log_level_setting
 
     try:
         return int(log_level_str)
