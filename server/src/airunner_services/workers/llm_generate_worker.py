@@ -38,6 +38,7 @@ SignalCode = signal_code_proxy(
         "RAG_INDEXING_PROGRESS": "rag_indexing_progress_signal",
         "RAG_INDEXING_COMPLETE": "rag_indexing_complete_signal",
         "RAG_INDEX_CANCEL": "rag_index_cancel_signal",
+        "RAG_LOAD_EMBEDDING": "rag_load_embedding_signal",
     }
 )
 
@@ -78,6 +79,9 @@ class LLMGenerateWorker(
                 self.on_rag_indexing_complete_signal
             ),
             SignalCode.RAG_INDEX_CANCEL: (self.on_rag_index_cancel_signal),
+            SignalCode.RAG_LOAD_EMBEDDING: (
+                self.on_rag_load_embedding_signal
+            ),
         }
         self._model_manager: Optional[LLMModelManager] = None
         self._model_manager_lock = threading.Lock()

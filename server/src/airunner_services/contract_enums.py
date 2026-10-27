@@ -72,6 +72,7 @@ class SignalCode(Enum):
     RAG_DOCUMENT_ADDED = "rag_document_added_signal"
     RAG_INDEX_ALL_DOCUMENTS = "rag_index_all_documents_signal"
     RAG_INDEX_CANCEL = "rag_index_cancel_signal"
+    RAG_LOAD_EMBEDDING = "rag_load_embedding_signal"
     RAG_INDEXING_COMPLETE = "rag_indexing_complete_signal"
     RAG_INDEXING_PROGRESS = "rag_indexing_progress_signal"
     RAG_INDEX_SELECTED_DOCUMENTS = "rag_index_selected_documents_signal"

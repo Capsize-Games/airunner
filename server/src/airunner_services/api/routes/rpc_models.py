@@ -164,6 +164,12 @@ async def _rpc_models_load(body: dict, **kwargs: Any) -> dict[str, Any]:
     )
 
     model_type = str(body.get("model_type", "")).lower()
+    if "embedding" in model_type:
+        SignalMediator().emit_signal(
+            SignalCode.RAG_LOAD_EMBEDDING,
+            {},
+        )
+        return {"status": 200, "body": {"status": "accepted"}}
     if "llm" in model_type:
         SignalMediator().emit_signal(
             SignalCode.LLM_LOAD_SIGNAL,

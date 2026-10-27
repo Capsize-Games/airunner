@@ -266,9 +266,14 @@ def _register_model_status_handlers(app_instance) -> None:
     from airunner_services.contract_enums import SignalCode  # noqa: PLC0415
 
     def on_model_status(data: dict) -> None:
-        model_type = str(data.get("model", data.get("model_type", "")))
+        # Prefer the explicit string ``model_type`` field; fall back to the
+        # ``model`` key (which may be a ``ModelType`` enum) and normalize it
+        # to its value so the frontend can match on it (e.g. "embedding").
+        model_value = data.get("model_type") or data.get("model", "")
+        model_value = getattr(model_value, "value", model_value)
+        model_type = str(model_value)
         model_id = str(
-            data.get("path", data.get("model_id", model_type)),
+            data.get("model_id") or data.get("path") or model_type,
         )
         status = str(data.get("status", ""))
 
