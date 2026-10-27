@@ -29,7 +29,7 @@ logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
         "Sections: Identity, Work & Projects, Interests & Hobbies, "
         "Preferences, Health & Wellness, Relationships, Goals, Notes."
     ),
-    return_direct=True,
+    return_direct=False,
     requires_api=False,
     defer_loading=False,  # Essential tool - always available
     keywords=[

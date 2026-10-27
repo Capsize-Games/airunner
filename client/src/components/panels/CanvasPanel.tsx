@@ -7,17 +7,15 @@ import {
 } from "../../features/canvas";
 import type { CanvasStageHandle } from "../../features/canvas/CanvasStage";
 import CanvasStage from "../../features/canvas/CanvasStage";
-import ToolBar, { type ToolbarDock } from "../../features/canvas/ToolBar";
+import ToolBar from "../../features/canvas/ToolBar";
 import CanvasSettingsModal from "../../features/canvas/CanvasSettingsModal";
 import ImageDropModal, {
   type DropResizeMode,
   fitDimensions,
 } from "../../features/canvas/ImageDropModal";
-import CanvasLayersSidebar from "../../features/canvas/CanvasLayersSidebar";
+import CanvasAssetsSidebar from "../../features/canvas/CanvasAssetsSidebar";
 import CanvasStatusBar from "./canvas/CanvasStatusBar";
 import ArtPromptPanel from "./ArtPromptPanel";
-import ArtPromptToolbar from "./art-prompt/ArtPromptToolbar";
-import ArtPromptBottomToolbar from "./art-prompt/ArtPromptBottomToolbar";
 import { useCanvasImageDrop } from "./canvas/useCanvasImageDrop";
 
 export default function CanvasPanel() {
@@ -28,7 +26,7 @@ export default function CanvasPanel() {
   const maskLayerRef = useRef<Konva.Layer>(null!) as React.RefObject<Konva.Layer>;
   const canvasHandleRef = useRef<CanvasStageHandle>(null);
 
-  const [showGrid, setShowGrid] = useState(() => {
+  const [showGrid] = useState(() => {
     try {
       return localStorage.getItem("canvas_show_grid") !== "false";
     } catch {
@@ -36,7 +34,8 @@ export default function CanvasPanel() {
     }
   });
   const [zoom, setZoom] = useState(1);
-  const [gridLocked, setGridLocked] = useState(() => {
+  const [zoomMode, setZoomMode] = useState<"fit" | "locked">("fit");
+  const [gridLocked] = useState(() => {
     try {
       return localStorage.getItem("canvas_grid_locked") === "true";
     } catch {
@@ -45,32 +44,6 @@ export default function CanvasPanel() {
   });
   const [showSettings, setShowSettings] = useState(false);
   const [showNewDocModal, setShowNewDocModal] = useState(false);
-  const [showLayers, setShowLayers] = useState(() => {
-    try {
-      return localStorage.getItem("canvas_show_layers") !== "false";
-    } catch {
-      return true;
-    }
-  });
-  const [showArtPanel, setShowArtPanel] = useState(() => {
-    try {
-      return localStorage.getItem("canvas_show_art_panel") !== "false";
-    } catch {
-      return true;
-    }
-  });
-
-  const ART_PROMPT_W = 260;
-
-
-  const [dock, setDock] = useState<ToolbarDock>(() =>
-    (localStorage.getItem("canvas_toolbar_dock") as ToolbarDock | null) ?? "top",
-  );
-
-  const handleSetDock = useCallback((d: ToolbarDock) => {
-    setDock(d);
-    localStorage.setItem("canvas_toolbar_dock", d);
-  }, []);
 
   // WebSocket sync for instant canvas persistence.
   const canvasSync = useCanvasSync({
@@ -176,13 +149,6 @@ export default function CanvasPanel() {
   useEffect(() => {
     try { localStorage.setItem("canvas_grid_locked", String(gridLocked)); } catch { /* */ }
   }, [gridLocked]);
-  useEffect(() => {
-    try { localStorage.setItem("canvas_show_layers", String(showLayers)); } catch { /* */ }
-  }, [showLayers]);
-  useEffect(() => {
-    try { localStorage.setItem("canvas_show_art_panel", String(showArtPanel)); } catch { /* */ }
-  }, [showArtPanel]);
-
   if (!isLoaded) {
     return (
       <div className="canvas-panel d-flex align-items-center justify-content-center h-100">
@@ -196,36 +162,8 @@ export default function CanvasPanel() {
   }
 
   const sharedToolbarProps = {
-    activeTool: canvas.activeTool,
-    brushSize: canvas.brushSize,
-    brushColor: canvas.brushColor,
-    showGrid,
-    snapToGrid: canvas.snapToGrid,
-    zoom,
-    activeGridArea: canvas.activeGridArea,
-    gridLocked,
-    onSetActiveTool: canvas.setActiveTool,
-    onSetBrushSize: canvas.setBrushSize,
-    onSetBrushColor: canvas.setBrushColor,
-    onToggleGrid: () => setShowGrid((v) => !v),
-    onToggleSnap: () => canvas.setSnapToGrid(!canvas.snapToGrid),
-    onZoomIn: () => canvasHandleRef.current?.zoomIn(),
-    onZoomOut: () => canvasHandleRef.current?.zoomOut(),
-    onZoomReset: () => canvasHandleRef.current?.zoomReset(),
-    onCenterView: () => canvasHandleRef.current?.centerView(),
-    onSetGridArea: canvas.setActiveGridArea,
-    onToggleGridLock: () => setGridLocked((v) => !v),
     onOpenSettings: () => setShowSettings(true),
-    onSetDock: handleSetDock,
-    onUndo: canvas.undo,
-    onRedo: canvas.redo,
     onNewDocument: handleNewDocument,
-    onClearMask: canvas.clearMask,
-    hasMaskStrokes: canvas.maskStrokes.length > 0,
-    showLayers,
-    onToggleLayers: () => setShowLayers((v) => !v),
-    showArtPanel,
-    onToggleArtPanel: () => setShowArtPanel((v) => !v),
   };
 
   return (
@@ -233,7 +171,7 @@ export default function CanvasPanel() {
       className="canvas-panel d-flex h-100 overflow-hidden flex-column"
       style={{ background: "#0a0a0f" }}
     >
-      {dock === "top" && <ToolBar {...sharedToolbarProps} dock="top" />}
+      <ToolBar {...sharedToolbarProps} />
 
       {/* Canvas viewport + layers sidebar */}
       <div
@@ -244,23 +182,7 @@ export default function CanvasPanel() {
           className="flex-grow-1 d-flex flex-row overflow-hidden"
           style={{ minHeight: 0 }}
         >
-          {showArtPanel && (
-            <div
-              data-art-panel
-              style={{
-                width: ART_PROMPT_W,
-                flexShrink: 0,
-                display: "flex",
-                flexDirection: "column",
-                overflow: "hidden",
-                borderRight: "1px solid var(--separator-color)",
-              }}
-            >
-              <div className="art-prompt-panel" style={{ flex: 1, overflow: "auto" }}>
-                <ArtPromptPanel />
-              </div>
-            </div>
-          )}
+          <ArtPromptPanel />
           <div
             className="flex-grow-1 overflow-hidden"
             style={{
@@ -270,7 +192,6 @@ export default function CanvasPanel() {
             onDragOver={handleDragOver}
             onDrop={handleDrop}
           >
-            {showArtPanel && <ArtPromptToolbar />}
             <div style={{ flex: 1, minHeight: 0, overflow: "hidden" }}>
               <CanvasStage
                 ref={canvasHandleRef}
@@ -290,19 +211,21 @@ export default function CanvasPanel() {
                 onMoveImage={canvas.moveImage}
                 onMoveLayer={canvas.moveLayer}
                 onAddMaskStroke={canvas.addMaskStroke}
+                onAddLayerMaskStroke={canvas.addLayerMaskStroke}
                 setActiveGridArea={canvas.setActiveGridArea}
                 onUndo={canvas.undo}
                 onRedo={canvas.redo}
                 setActiveTool={canvas.setActiveTool}
                 onZoomChange={setZoom}
+                zoomMode={zoomMode}
+                onZoomModeChange={setZoomMode}
                 gridLayerRef={gridLayerRef}
                 maskLayerRef={maskLayerRef}
                 stageRef={stageRef}
               />
             </div>
-            {showArtPanel && <ArtPromptBottomToolbar />}
           </div>
-          {showLayers && <CanvasLayersSidebar />}
+          <CanvasAssetsSidebar />
         </div>
 
         {/* Status bar */}
@@ -313,12 +236,14 @@ export default function CanvasPanel() {
           gridWidth={canvas.activeGridArea.width}
           gridHeight={canvas.activeGridArea.height}
           activeLayer={canvas.activeLayer}
+          zoomMode={zoomMode}
+          onZoomOut={() => canvasHandleRef.current?.zoomOut()}
+          onZoomReset={() => canvasHandleRef.current?.zoomReset()}
+          onZoomIn={() => canvasHandleRef.current?.zoomIn()}
+          onCenterView={() => canvasHandleRef.current?.centerView()}
+          onFitView={() => canvasHandleRef.current?.fitView()}
         />
       </div>
-
-      {dock === "bottom" && (
-        <ToolBar {...sharedToolbarProps} dock="bottom" />
-      )}
 
       {/* Modals */}
       <CanvasSettingsModal

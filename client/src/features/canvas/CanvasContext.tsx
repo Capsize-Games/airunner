@@ -59,6 +59,10 @@ export interface CanvasContextValue {
   addStroke: (stroke: Omit<StrokeNode, "id">) => void;
   addMaskStroke: (stroke: Omit<StrokeNode, "id">) => void;
   clearMask: () => void;
+  addLayerMask: (layerId: string, fill?: "white" | "black") => void;
+  removeLayerMask: (layerId: string) => void;
+  addLayerMaskStroke: (layerId: string, stroke: Omit<StrokeNode, "id">) => void;
+  setLayerMaskTarget: (layerId: string, target: "content" | "mask") => void;
   setLayerFilters: (id: string, filters: FilterConfig[]) => void;
   undo: () => void;
   redo: () => void;

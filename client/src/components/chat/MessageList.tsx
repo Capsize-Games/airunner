@@ -357,7 +357,8 @@ function MessageBubble({
 }) {
   const isUser = message.role === "user";
   const [thinkingExpanded, setThinkingExpanded] = useState(false);
-  const hasThinking = !!message.thinking_content;
+  const hasThinking = !isUser;
+  const thinkingExpandable = !!message.thinking_content;
 
   // Parse tool calls from message content
   const { toolCalls, cleanContent } = parseToolCallContent(message.content);
@@ -415,17 +416,20 @@ function MessageBubble({
           >
             <div
               className="d-flex align-items-center gap-1 p-1"
-              style={{ cursor: "pointer", userSelect: "none" }}
-              onClick={() => setThinkingExpanded((e) => !e)}
-              role="button"
+              style={{
+                cursor: thinkingExpandable ? "pointer" : "default",
+                userSelect: "none",
+              }}
+              onClick={thinkingExpandable ? () => setThinkingExpanded((e) => !e) : undefined}
+              role={thinkingExpandable ? "button" : undefined}
             >
-              <span>{thinkingExpanded ? "▼" : "▶"}</span>
+              <span>{thinkingExpandable ? (thinkingExpanded ? "▼" : "▶") : "–"}</span>
               <span>✅</span>
               <span style={{ fontSize: "0.75rem", color: "var(--theme-text-secondary)" }}>
                 Complete
               </span>
             </div>
-            {thinkingExpanded && (
+            {thinkingExpandable && thinkingExpanded && (
               <div
                 className="p-2"
                 style={{

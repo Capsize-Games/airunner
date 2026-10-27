@@ -1,26 +1,37 @@
 import LucideIcon from "../shared/LucideIcon";
 
-type PanelId =
-  | "image_browser"
-  | "civitai_browser";
+type PanelId = "civitai_browser";
 
 export function LeftIconBar({
   showChat,
+  showCanvas,
+  rightPanel,
   ttsOn,
   sttOn,
   onToggleChat,
+  onToggleCanvas,
+  onRightPanel,
   onToggleTts,
   onToggleStt,
+  onOpenSettings,
   bottomSlot,
 }: {
   showChat: boolean;
+  showCanvas: boolean;
+  rightPanel: PanelId | null;
   ttsOn: boolean;
   sttOn: boolean;
   onToggleChat: () => void;
+  onToggleCanvas: () => void;
+  onRightPanel: (id: PanelId) => void;
   onToggleTts: () => void;
   onToggleStt: () => void;
+  onOpenSettings: () => void;
   bottomSlot?: React.ReactNode;
 }) {
+  const canvasActive = showCanvas && rightPanel !== "civitai_browser";
+  const civitaiActive = rightPanel === "civitai_browser";
+
   return (
     <div className="icon-bar left">
       <button
@@ -28,94 +39,54 @@ export function LeftIconBar({
         onClick={onToggleChat}
         title="Toggle Chat"
       >
-        <LucideIcon name="bot-message-square" />
+        <LucideIcon name="bot-message-square" size={18} />
+        <span className="icon-bar-label">Chat</span>
       </button>
+
+      <button
+        className={canvasActive ? "active" : ""}
+        onClick={onToggleCanvas}
+        title="Canvas"
+      >
+        <LucideIcon name="image" size={18} />
+        <span className="icon-bar-label">Canvas</span>
+      </button>
+
+      <button
+        className={civitaiActive ? "active" : ""}
+        onClick={() => onRightPanel("civitai_browser")}
+        title="CivitAI Browser"
+      >
+        <LucideIcon name="cloud" size={18} />
+        <span className="icon-bar-label">CivitAI</span>
+      </button>
+
       <div className="flex-spacer" />
+
       <button
         className={ttsOn ? "active" : ""}
         onClick={onToggleTts}
         title="Text to Speech"
       >
-        <LucideIcon name="speaker" />
+        <LucideIcon name="speaker" size={18} />
+        <span className="icon-bar-label">TTS</span>
       </button>
+
       <button
         className={sttOn ? "active" : ""}
         onClick={onToggleStt}
         title="Speech to Text"
       >
-        <LucideIcon name="mic" />
+        <LucideIcon name="mic" size={18} />
+        <span className="icon-bar-label">STT</span>
       </button>
-      {bottomSlot}
-    </div>
-  );
-}
 
-export function RightIconBar({
-  showCanvas,
-  rightPanel,
-  onToggleCanvas,
-  onRightPanel,
-  onOpenSettings,
-  showCacheDebug,
-  onToggleCacheDebug,
-  showStats,
-  onToggleStats,
-}: {
-  showCanvas: boolean;
-  rightPanel: PanelId | null;
-  onToggleCanvas: () => void;
-  onRightPanel: (id: PanelId) => void;
-  onOpenSettings: () => void;
-  showCacheDebug: boolean;
-  onToggleCacheDebug: () => void;
-  showStats: boolean;
-  onToggleStats: () => void;
-}) {
-  const active = (id: PanelId, panel: PanelId | null) =>
-    panel === id ? "active" : "";
-
-  return (
-    <div className="icon-bar right">
-      <button
-        className={showCanvas ? "active" : ""}
-        onClick={onToggleCanvas}
-        title="Canvas"
-      >
-        <LucideIcon name="image" />
-      </button>
-      <hr />
-      <button
-        className={active("civitai_browser", rightPanel)}
-        onClick={() => onRightPanel("civitai_browser")}
-        title="CivitAI Browser"
-      >
-        <LucideIcon name="cloud" />
-      </button>
-      <button
-        className={active("image_browser", rightPanel)}
-        onClick={() => onRightPanel("image_browser")}
-        title="Image Browser"
-      >
-        <LucideIcon name="images" />
-      </button>
-      <div className="flex-spacer" />
-      <button
-        className={showStats ? "active" : ""}
-        onClick={onToggleStats}
-        title="Stats"
-      >
-        <LucideIcon name="activity" />
-      </button>
-      <button
-        className={showCacheDebug ? "active" : ""}
-        onClick={onToggleCacheDebug}
-        title="Cache Debug"
-      >
-        <LucideIcon name="database-zap" />
-      </button>
       <button onClick={onOpenSettings} title="Settings">
-        <LucideIcon name="settings" />
+        <LucideIcon name="settings" size={18} />
+        <span className="icon-bar-label">Settings</span>
       </button>
+
+      {bottomSlot}
     </div>
   );
 }

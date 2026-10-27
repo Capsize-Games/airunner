@@ -105,10 +105,6 @@ export default function LoraPanel() {
 
   return (
     <div className="p-2">
-      <div className="d-flex justify-content-between align-items-center mb-2">
-        <h6 className="text-muted mb-0">LoRA</h6>
-      </div>
-
       {loading ? (
         <Spinner animation="border" size="sm" className="d-block mx-auto" />
       ) : items.length === 0 ? (

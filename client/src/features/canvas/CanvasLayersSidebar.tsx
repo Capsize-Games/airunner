@@ -1,41 +1,35 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import {
   Eye, EyeOff, ChevronUp, ChevronDown, Trash2, Combine,
-  FolderPlus, Copy, FilePlus,
+  FolderPlus, Copy, LayersPlus, Drama,
 } from "lucide-react";
 import { useCanvasContext } from "./CanvasContext";
 import type { CanvasLayer, LayerGroup } from "./useCanvasState";
 import NewLayerModal from "./NewLayerModal";
+import NewLayerMaskModal from "./NewLayerMaskModal";
+import LayerThumbnail from "./LayerThumbnail";
 import IconBtn from "./IconBtn";
 import OpacitySlider from "./OpacitySlider";
 
-const LS_KEY = "airunner_layers_sidebar_w";
-
-function loadWidth(): number {
-  try {
-    const v = localStorage.getItem(LS_KEY);
-    return v !== null ? Number(v) : 200;
-  } catch {
-    return 200;
-  }
-}
-
-function saveWidth(w: number) {
-  try { localStorage.setItem(LS_KEY, String(w)); } catch { /* */ }
-}
+const ROW_H = 42;
 
 export default function CanvasLayersSidebar() {
   const canvas = useCanvasContext();
-  const [width, setWidth] = useState(loadWidth);
-  const dragging = useRef(false);
-  const startX = useRef(0);
-  const startW = useRef(0);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName]   = useState("");
   const [dragOverId, setDragOverId] = useState<string | null>(null);
   const [showNewLayer, setShowNewLayer] = useState(false);
+  const [showMaskModal, setShowMaskModal] = useState(false);
   const [draggingId, setDraggingId] = useState<string | null>(null);
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; layerId: string } | null>(null);
   const dragSourceId = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!contextMenu) return;
+    const close = () => setContextMenu(null);
+    window.addEventListener("mousedown", close);
+    return () => window.removeEventListener("mousedown", close);
+  }, [contextMenu]);
 
   const startEdit = useCallback((layer: CanvasLayer) => {
     setEditingId(layer.id);
@@ -288,6 +282,8 @@ export default function CanvasLayersSidebar() {
   const renderLayerRow = (layer: CanvasLayer, depth: number, idx: number) => {
     const isSelected = canvas.selectedLayerIds.includes(layer.id);
     const isActive = layer.id === canvas.activeLayerId;
+    const hasMask = Array.isArray(layer.maskStrokes);
+    const maskTarget = layer.maskTarget ?? "content";
     const indent = depth * 12;
     return (
       <div key={layer.id ?? `layer-${idx}`}>
@@ -302,18 +298,16 @@ export default function CanvasLayersSidebar() {
           onDragStart={(e) => onDragStart(layer.id, e)}
           onDragOver={(e) => onDragOver(layer.id, e)}
           onDragLeave={() => setDragOverId(null)}
-          onDrop={(e) => {
-            e.preventDefault();
-            setDragOverId(null);
-            performDrop(layer.id);
-          }}
+          onDrop={(e) => { e.preventDefault(); setDragOverId(null); performDrop(layer.id); }}
           onDragEnd={onDragEnd}
+          onContextMenu={(e) => { e.preventDefault(); setContextMenu({ x: e.clientX, y: e.clientY, layerId: layer.id }); }}
           role="button"
           style={{
             display: "flex",
             alignItems: "center",
             padding: `0 6px 0 ${4 + indent}px`,
-            height: 30,
+            height: ROW_H,
+            gap: 5,
             cursor: draggingId === layer.id ? "grabbing" : "default",
             background: isActive
               ? "rgba(99,153,255,0.16)"
@@ -327,37 +321,60 @@ export default function CanvasLayersSidebar() {
           }}
           onMouseEnter={(e) => {
             if (!isActive && !isSelected && dragOverId !== layer.id)
-              (e.currentTarget as HTMLDivElement).style.background =
-                "rgba(255,255,255,0.04)";
+              (e.currentTarget as HTMLDivElement).style.background = "rgba(255,255,255,0.04)";
           }}
           onMouseLeave={(e) => {
             if (!isActive && !isSelected && dragOverId !== layer.id)
-              (e.currentTarget as HTMLDivElement).style.background =
-                "transparent";
+              (e.currentTarget as HTMLDivElement).style.background = "transparent";
           }}
         >
+          {/* Visibility eye */}
           <button
             title={layer.visible ? "Hide" : "Show"}
-            onClick={(e) => {
-              e.stopPropagation();
-              canvas.setLayerVisible(layer.id, !layer.visible);
-            }}
+            onClick={(e) => { e.stopPropagation(); canvas.setLayerVisible(layer.id, !layer.visible); }}
             style={{
               background: "none", border: "none", padding: 0,
-              marginRight: 4, flexShrink: 0, cursor: "pointer",
-              color: layer.visible
-                ? "rgba(var(--theme-text-rgb), 0.55)"
-                : "rgba(var(--theme-text-rgb), 0.2)",
+              flexShrink: 0, cursor: "pointer",
+              color: layer.visible ? "rgba(var(--theme-text-rgb), 0.55)" : "rgba(var(--theme-text-rgb), 0.2)",
               display: "flex", alignItems: "center",
             }}
           >
-            {layer.visible ? (
-              <Eye size={13} strokeWidth={1.75} />
-            ) : (
-              <EyeOff size={13} strokeWidth={1.75} />
-            )}
+            {layer.visible ? <Eye size={13} strokeWidth={1.75} /> : <EyeOff size={13} strokeWidth={1.75} />}
           </button>
 
+          {/* Layer content thumbnail */}
+          <LayerThumbnail
+            layer={layer}
+            docWidth={canvas.documentWidth}
+            docHeight={canvas.documentHeight}
+            type="content"
+            active={isActive && maskTarget === "content"}
+            size={30}
+            onClick={(e) => {
+              e.stopPropagation();
+              canvas.setActiveLayer(layer.id);
+              if (hasMask) canvas.setLayerMaskTarget(layer.id, "content");
+            }}
+          />
+
+          {/* Mask thumbnail — only shown when mask exists */}
+          {hasMask && (
+            <LayerThumbnail
+              layer={layer}
+              docWidth={canvas.documentWidth}
+              docHeight={canvas.documentHeight}
+              type="mask"
+              active={isActive && maskTarget === "mask"}
+              size={30}
+              onClick={(e) => {
+                e.stopPropagation();
+                canvas.setActiveLayer(layer.id);
+                canvas.setLayerMaskTarget(layer.id, "mask");
+              }}
+            />
+          )}
+
+          {/* Name / edit */}
           {editingId === layer.id ? (
             <input
               autoFocus value={editName}
@@ -366,7 +383,7 @@ export default function CanvasLayersSidebar() {
               onKeyDown={(e) => onKeyDown(e, layer.id)}
               onClick={(e) => e.stopPropagation()}
               style={{
-                flexGrow: 1, minWidth: 0, fontSize: 12,
+                flexGrow: 1, minWidth: 0, fontSize: 11,
                 padding: "1px 4px",
                 background: "rgba(0,0,0,0.5)",
                 border: "1px solid rgba(99,153,255,0.5)",
@@ -379,28 +396,18 @@ export default function CanvasLayersSidebar() {
               style={{
                 flexGrow: 1, minWidth: 0, overflow: "hidden",
                 textOverflow: "ellipsis", whiteSpace: "nowrap",
-                fontSize: 12,
+                fontSize: 11,
                 color: layer.visible
-                  ? isActive
-                    ? "rgba(var(--theme-text-rgb), 0.9)"
-                    : "rgba(var(--theme-text-rgb), 0.65)"
+                  ? isActive ? "rgba(var(--theme-text-rgb), 0.9)" : "rgba(var(--theme-text-rgb), 0.65)"
                   : "rgba(var(--theme-text-rgb), 0.25)",
-                cursor: "default",
               }}
-              onDoubleClick={(e) => {
-                e.stopPropagation();
-                startEdit(layer);
-              }}
+              onDoubleClick={(e) => { e.stopPropagation(); startEdit(layer); }}
             >
               {displayLayerName(layer)}
             </span>
           )}
 
-          <span style={{
-            fontSize: 10, fontFamily: "monospace",
-            color: "rgba(var(--theme-text-rgb), 0.3)",
-            flexShrink: 0, marginLeft: 4,
-          }}>
+          <span style={{ fontSize: 10, fontFamily: "monospace", color: "rgba(var(--theme-text-rgb), 0.3)", flexShrink: 0 }}>
             {Math.round(layer.opacity * 100)}%
           </span>
         </div>
@@ -431,96 +438,16 @@ export default function CanvasLayersSidebar() {
     }
   }, [canvas]);
 
-  const handleMouseDown = useCallback((e: React.MouseEvent) => {
-    e.preventDefault();
-    dragging.current = true;
-    startX.current = e.clientX;
-    startW.current = width;
-    document.body.style.cursor = "col-resize";
-    document.body.style.userSelect = "none";
-
-    const onMove = (ev: MouseEvent) => {
-      if (!dragging.current) return;
-      const delta = ev.clientX - startX.current;
-      const newW = Math.max(180, Math.min(500, startW.current - delta));
-      setWidth(newW);
-    };
-
-    const onUp = () => {
-      dragging.current = false;
-      document.body.style.cursor = "";
-      document.body.style.userSelect = "";
-      window.removeEventListener("mousemove", onMove);
-      window.removeEventListener("mouseup", onUp);
-    };
-
-    window.addEventListener("mousemove", onMove);
-    window.addEventListener("mouseup", onUp);
-  }, [width]);
-
-  useEffect(() => {
-    saveWidth(width);
-  }, [width]);
-
   return (
     <div
       style={{
-        width,
-        flexShrink: 0,
+        flex: 1,
         display: "flex",
-        flexDirection: "row",
+        flexDirection: "column",
         overflow: "hidden",
+        minWidth: 0,
       }}
     >
-      {/* ── Resize handle on the left ── */}
-      <div
-        onMouseDown={handleMouseDown}
-        style={{
-          width: 4,
-          cursor: "col-resize",
-          flexShrink: 0,
-          background: "transparent",
-          transition: "background 0.15s",
-        }}
-        onMouseEnter={(e) => {
-          (e.currentTarget as HTMLDivElement).style.background =
-            "rgba(99,153,255,0.3)";
-        }}
-        onMouseLeave={(e) => {
-          if (!dragging.current) {
-            (e.currentTarget as HTMLDivElement).style.background =
-              "transparent";
-          }
-        }}
-      />
-      <div
-        style={{
-          flex: 1,
-          display: "flex",
-          flexDirection: "column",
-          background: "#181824",
-          overflow: "hidden",
-          minWidth: 0,
-        }}
-      >
-      {/* Header — title */}
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          padding: "6px 8px 5px",
-          borderBottom: "1px solid rgba(255,255,255,0.07)",
-          flexShrink: 0,
-        }}
-      >
-        <span style={{
-          fontSize: 10, fontWeight: 600, letterSpacing: "0.07em",
-          textTransform: "uppercase", color: "rgba(var(--theme-text-rgb), 0.3)",
-        }}>
-          Layers
-        </span>
-      </div>
-
       {/* Anchored opacity slider */}
       <OpacitySlider
         value={activeOpacity}
@@ -550,17 +477,17 @@ export default function CanvasLayersSidebar() {
         }}
       >
         <IconBtn title="Add layer" onClick={() => setShowNewLayer(true)}>
-          <FilePlus size={13} strokeWidth={2} />
+          <LayersPlus size={15} strokeWidth={1.75} />
         </IconBtn>
         <IconBtn title="Add group" onClick={canvas.addLayerGroup}>
-          <FolderPlus size={13} strokeWidth={2} />
+          <FolderPlus size={15} strokeWidth={1.75} />
         </IconBtn>
         <IconBtn
           title="Copy selected"
           disabled={canvas.selectedLayerIds.length === 0}
           onClick={copySelected}
         >
-          <Copy size={13} strokeWidth={2} />
+          <Copy size={15} strokeWidth={1.75} />
         </IconBtn>
         <span style={{ width: 4 }} />
         <IconBtn
@@ -571,7 +498,7 @@ export default function CanvasLayersSidebar() {
             canvas.reorderLayer(canvas.activeLayerId, "up")
           }
         >
-          <ChevronUp size={13} strokeWidth={2} />
+          <ChevronUp size={15} strokeWidth={1.75} />
         </IconBtn>
         <IconBtn
           title="Move down"
@@ -581,34 +508,130 @@ export default function CanvasLayersSidebar() {
             canvas.reorderLayer(canvas.activeLayerId, "down")
           }
         >
-          <ChevronDown size={13} strokeWidth={2} />
+          <ChevronDown size={15} strokeWidth={1.75} />
         </IconBtn>
         <IconBtn
           title="Merge selected"
           disabled={canvas.selectedLayerIds.length < 2}
           onClick={canvas.mergeSelectedLayers}
         >
-          <Combine size={13} strokeWidth={2} />
+          <Combine size={15} strokeWidth={1.75} />
         </IconBtn>
+        {canvas.activeLayerId && (() => {
+          const activeLayer = canvas.layers.find((l) => l.id === canvas.activeLayerId);
+          const hasMask = Array.isArray(activeLayer?.maskStrokes);
+          return (
+            <IconBtn
+              title={hasMask ? "Remove Layer Mask" : "Add Mask to Layer"}
+              active={hasMask}
+              onClick={() => {
+                if (!canvas.activeLayerId) return;
+                if (hasMask) {
+                  canvas.removeLayerMask(canvas.activeLayerId);
+                } else {
+                  setShowMaskModal(true);
+                }
+              }}
+            >
+              <Drama size={15} strokeWidth={1.75} />
+            </IconBtn>
+          );
+        })()}
+        <div style={{ flex: 1 }} />
         <IconBtn
           title="Delete selected"
           danger
           disabled={canvas.selectedLayerIds.length === 0}
           onClick={deleteSelected}
         >
-          <Trash2 size={13} strokeWidth={2} />
+          <Trash2 size={15} strokeWidth={1.75} />
         </IconBtn>
       </div>
+      {/* Right-click context menu */}
+      {contextMenu && (() => {
+        const menuLayer = canvas.layers.find((l) => l.id === contextMenu.layerId);
+        const menuHasMask = Array.isArray(menuLayer?.maskStrokes);
+        return (
+          <div
+            onMouseDown={(e) => e.stopPropagation()}
+            style={{
+              position: "fixed",
+              top: contextMenu.y,
+              left: contextMenu.x,
+              zIndex: 9999,
+              background: "#1e1e2e",
+              border: "1px solid rgba(255,255,255,0.12)",
+              borderRadius: 6,
+              padding: "4px 0",
+              minWidth: 160,
+              boxShadow: "0 4px 16px rgba(0,0,0,0.5)",
+            }}
+          >
+            {[
+              {
+                label: "Delete Layer",
+                danger: true,
+                disabled: false,
+                onClick: () => { canvas.deleteLayer(contextMenu.layerId); setContextMenu(null); },
+              },
+              {
+                label: "Delete Mask",
+                danger: false,
+                disabled: !menuHasMask,
+                onClick: () => { if (menuHasMask) { canvas.removeLayerMask(contextMenu.layerId); } setContextMenu(null); },
+              },
+            ].map((item) => (
+              <button
+                key={item.label}
+                disabled={item.disabled}
+                onClick={item.onClick}
+                style={{
+                  display: "block",
+                  width: "100%",
+                  padding: "6px 14px",
+                  background: "none",
+                  border: "none",
+                  textAlign: "left",
+                  fontSize: 12,
+                  cursor: item.disabled ? "default" : "pointer",
+                  color: item.disabled
+                    ? "rgba(255,255,255,0.2)"
+                    : item.danger
+                      ? "rgba(255,100,100,0.8)"
+                      : "rgba(255,255,255,0.75)",
+                }}
+                onMouseEnter={(e) => {
+                  if (!item.disabled) (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.07)";
+                }}
+                onMouseLeave={(e) => {
+                  (e.currentTarget as HTMLButtonElement).style.background = "none";
+                }}
+              >
+                {item.label}
+              </button>
+            ))}
+          </div>
+        );
+      })()}
+
       <NewLayerModal
         show={showNewLayer}
         layerIndex={canvas.layers.length + 1}
         defaultName={canvas.activeLayer?.name === "Background" ? "Layer" : (canvas.activeLayer?.name ?? "Layer")}
-        onConfirm={(name, opacity, fillColor) => {
-          canvas.addLayer(name, opacity);
-        }}
+        onConfirm={(name, opacity, _fillColor) => { canvas.addLayer(name, opacity); }}
         onHide={() => setShowNewLayer(false)}
       />
-      </div>
+      <NewLayerMaskModal
+        show={showMaskModal}
+        layerName={canvas.activeLayer?.name ?? "Layer"}
+        onAdd={(fill, _invert) => {
+          if (canvas.activeLayerId) {
+            canvas.addLayerMask(canvas.activeLayerId, fill);
+          }
+          setShowMaskModal(false);
+        }}
+        onHide={() => setShowMaskModal(false)}
+      />
     </div>
   );
 }

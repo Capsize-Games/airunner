@@ -155,7 +155,6 @@ export default function ImageBrowserPanel() {
   if (loadingDates) {
     return (
       <div className="p-2">
-        <h6 className="text-muted mb-2">Image Browser</h6>
         <Spinner animation="border" size="sm" className="d-block mx-auto" />
         {previewIndex !== null && (
           <ImagePreviewModal
@@ -172,8 +171,6 @@ export default function ImageBrowserPanel() {
 
   return (
     <div className="p-2 d-flex flex-column h-100">
-      <h6 className="text-muted mb-2">Image Browser</h6>
-
       <ImageDateSelector
         dates={dates}
         selectedDate={selectedDate}

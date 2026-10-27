@@ -1,8 +1,6 @@
 import {
   useCallback,
   useState,
-  lazy,
-  Suspense,
   type ReactNode,
 } from "react";
 import { Routes, Route } from "react-router-dom";
@@ -18,28 +16,6 @@ import {
   extensionBottomBarItems,
 } from "virtual:extensions";
 
-const CacheDebugPanel = lazy(
-  () => import("./components/shared/CacheDebugPanel"),
-);
-
-const StatsPanel = lazy(
-  () => import("./components/panels/StatsPanel"),
-);
-
-const showDebugPanel =
-  import.meta.env.DEV ||
-  (typeof window !== "undefined" &&
-    new URLSearchParams(window.location.search).has("debug"));
-
-const overlayContainerStyle: React.CSSProperties = {
-  position: "fixed",
-  bottom: 40,
-  right: 56,
-  display: "flex",
-  gap: 12,
-  flexDirection: "row-reverse",
-  zIndex: 9999,
-};
 
 export default function App() {
   const {
@@ -58,8 +34,6 @@ export default function App() {
   } = useLayoutPrefs();
 
   const [showSettings, setShowSettings] = useState(false);
-  const [showCacheDebug, setShowCacheDebug] = useState(false);
-  const [showStats, setShowStats] = useState(false);
 
   const handleSelectConversation = useCallback(
     (id: number) => {
@@ -67,14 +41,6 @@ export default function App() {
     },
     [setConversationId],
   );
-
-  const handleToggleCacheDebug = useCallback(() => {
-    setShowCacheDebug((v) => !v);
-  }, []);
-
-  const handleToggleStats = useCallback(() => {
-    setShowStats((v) => !v);
-  }, []);
 
   // Compose extension providers (empty in core, populated in fork).
   // useMemo prevents the wrapper component from being recreated on every
@@ -103,23 +69,26 @@ export default function App() {
           element={
             <Layout
               rightPanel={rightPanel}
-              onRightPanel={(id: PanelId) =>
-                setRightPanel(rightPanel === id ? null : id)
-              }
+              onRightPanel={(id: PanelId) => {
+                if (rightPanel !== id) setShowCanvas(true);
+                setRightPanel(rightPanel === id ? null : id);
+              }}
               showChat={showChat}
               onToggleChat={() => setShowChat(!showChat)}
               showCanvas={showCanvas}
-              onToggleCanvas={() => setShowCanvas(!showCanvas)}
+              onToggleCanvas={() => {
+                if (rightPanel === "civitai_browser") {
+                  setRightPanel(null);
+                } else {
+                  setShowCanvas(!showCanvas);
+                }
+              }}
               ttsOn={ttsOn}
               onToggleTts={() => setTtsOn(!ttsOn)}
               sttOn={sttOn}
               onToggleStt={() => setSttOn(!sttOn)}
               onOpenSettings={() => setShowSettings(true)}
               onSelectConversation={handleSelectConversation}
-              showCacheDebug={showCacheDebug}
-              onToggleCacheDebug={handleToggleCacheDebug}
-              showStats={showStats}
-              onToggleStats={handleToggleStats}
               bottomBarSlot={extensionBottomBarItems}
             >
               {showChat && <ChatView
@@ -151,20 +120,6 @@ export default function App() {
         <SettingsModal onClose={() => setShowSettings(false)} />
       )}
 
-      {(showCacheDebug || showStats) && (
-        <div style={overlayContainerStyle}>
-          {showCacheDebug && (
-            <Suspense fallback={null}>
-              <CacheDebugPanel />
-            </Suspense>
-          )}
-          {showStats && (
-            <Suspense fallback={null}>
-              <StatsPanel />
-            </Suspense>
-          )}
-        </div>
-      )}
     </Providers>
   );
 }

@@ -667,6 +667,60 @@ export function useCanvasState() {
     });
   }, []);
 
+  const addLayerMask = useCallback((layerId: string, fill: "white" | "black" = "white") => {
+    setState((prev) => {
+      const snap = recordSnapshot(prev);
+      return {
+        ...snap,
+        layers: snap.layers.map((l) =>
+          l.id === layerId
+            ? { ...l, maskStrokes: [], maskFill: fill, maskTarget: "mask" }
+            : l,
+        ),
+      };
+    });
+  }, [recordSnapshot]);
+
+  const setLayerMaskTarget = useCallback((layerId: string, target: "content" | "mask") => {
+    setState((prev) => ({
+      ...prev,
+      layers: prev.layers.map((l) =>
+        l.id === layerId ? { ...l, maskTarget: target } : l,
+      ),
+    }));
+  }, []);
+
+  const removeLayerMask = useCallback((layerId: string) => {
+    setState((prev) => {
+      const snap = recordSnapshot(prev);
+      return {
+        ...snap,
+        layers: snap.layers.map((l) =>
+          l.id === layerId ? { ...l, maskStrokes: null } : l,
+        ),
+      };
+    });
+  }, [recordSnapshot]);
+
+  const addLayerMaskStroke = useCallback(
+    (layerId: string, stroke: Omit<SN, "id">) => {
+      setState((prev) => {
+        const newStroke: SN = { ...stroke, id: nextStrokeId() };
+        const layers = prev.layers.map((l) =>
+          l.id === layerId
+            ? { ...l, maskStrokes: [...(l.maskStrokes ?? []), newStroke] }
+            : l,
+        );
+        const next = { ...prev, _ts: Date.now(), layers };
+        const { history, historyIndex } = pushHistory(
+          prev.history, prev.historyIndex, serialize(next),
+        );
+        return { ...next, history, historyIndex };
+      });
+    },
+    [],
+  );
+
   // ── Filters ───────────────────────────────────────────────────────────────
 
   const setLayerFilters = useCallback(
@@ -835,6 +889,10 @@ export function useCanvasState() {
     addStroke,
     addMaskStroke,
     clearMask,
+    addLayerMask,
+    removeLayerMask,
+    addLayerMaskStroke,
+    setLayerMaskTarget,
     setLayerFilters,
     undo,
     redo,

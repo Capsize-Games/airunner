@@ -379,31 +379,31 @@ export default function ChatView({
             <LucideIcon name={t.icon} size={16} />
           </button>
         ))}
+        <button
+          type="button"
+          onClick={handleNewConversation}
+          title="New conversation"
+          style={{
+            padding: "0 8px",
+            background: "transparent",
+            border: "none",
+            borderBottom: "2px solid transparent",
+            color: "rgba(255,255,255,0.4)",
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            flexShrink: 0,
+          }}
+          onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "rgba(255,255,255,0.85)"; }}
+          onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "rgba(255,255,255,0.4)"; }}
+        >
+          <LucideIcon name="plus" size={15} />
+        </button>
       </div>
 
       {/* Tab content */}
       {tab === "chat" && (
         <>
-          <div
-            className="d-flex justify-content-end p-1 flex-shrink-0"
-            style={{ borderBottom: "1px solid #333" }}
-          >
-            <button
-              onClick={handleNewConversation}
-              title="New conversation"
-              style={{
-                background: "transparent",
-                border: "1px solid #444",
-                borderRadius: 4,
-                padding: "2px 4px",
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-              }}
-            >
-              <LucideIcon name="plus" size={14} />
-            </button>
-          </div>
 
           {error && (
             <Alert variant="danger" dismissible onClose={() => setError(null)}>

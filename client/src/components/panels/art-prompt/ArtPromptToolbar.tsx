@@ -67,10 +67,12 @@ export default function ArtPromptToolbar() {
       style={{
         display: "flex",
         alignItems: "center",
-        gap: 8,
-        padding: "4px 8px",
+        flexWrap: "wrap",
+        gap: 4,
+        padding: "4px 0",
+        borderTop: "1px solid rgba(255,255,255,0.07)",
         borderBottom: "1px solid rgba(255,255,255,0.07)",
-        background: "var(--theme-panel-bg)",
+        marginBottom: 4,
         flexShrink: 0,
       }}
     >
@@ -87,7 +89,7 @@ export default function ArtPromptToolbar() {
       )}
       <select
         className="form-select form-select-sm"
-        style={{ width: "auto", minWidth: 110, fontSize: 11 }}
+        style={{ flex: 1, minWidth: 90, fontSize: 11 }}
         value={version}
         disabled={loading}
         onChange={(e) => handleVersion(e.target.value)}
@@ -99,7 +101,7 @@ export default function ArtPromptToolbar() {
       </select>
       <select
         className="form-select form-select-sm"
-        style={{ width: "auto", minWidth: 130, fontSize: 11 }}
+        style={{ flex: 2, minWidth: 110, fontSize: 11 }}
         value={modelPath}
         disabled={loading || !version || availableModels.length === 0}
         onChange={(e) => handleModel(e.target.value)}
@@ -113,7 +115,7 @@ export default function ArtPromptToolbar() {
       </select>
       <select
         className="form-select form-select-sm"
-        style={{ width: "auto", minWidth: 130, fontSize: 11 }}
+        style={{ flex: 1, minWidth: 100, fontSize: 11 }}
         value={scheduler}
         disabled={loading || !version}
         onChange={(e) => handleScheduler(e.target.value)}

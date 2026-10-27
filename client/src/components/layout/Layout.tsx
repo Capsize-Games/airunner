@@ -1,27 +1,27 @@
 import {
   type ReactNode,
+  lazy,
+  Suspense,
   useEffect,
-  useMemo,
   useRef,
   useState,
 } from "react";
 import CanvasPanel from "../panels/CanvasPanel";
-import ImageBrowserPanel from "../panels/ImageBrowserPanel";
 import CivitaiBrowserPanel from "../panels/civitai-browser/CivitaiBrowserPanel";
 import DownloadTray from "../downloads/DownloadTray";
 import TopBar from "./TopBar";
 import { isWsConnected } from "../../features/api/WsApiClient";
-import { LeftIconBar, RightIconBar } from "./IconBar";
+import { LeftIconBar } from "./IconBar";
 import { CanvasProvider } from "../../features/canvas";
+import type { HardwareProfile } from "../../types/api";
+
+const StatsPanel = lazy(() => import("../panels/StatsPanel"));
 
 const HANDLE_W = 4;
 const CHAT_MIN = 260;
 const CANVAS_MIN = 400;
-const RIGHT_MIN = 180;
 
-type PanelId =
-  | "image_browser"
-  | "civitai_browser";
+type PanelId = "civitai_browser";
 
 interface LayoutProps {
   children: ReactNode;
@@ -37,11 +37,6 @@ interface LayoutProps {
   onToggleStt: () => void;
   onOpenSettings: () => void;
   onSelectConversation: (id: number) => void;
-  showCacheDebug: boolean;
-  onToggleCacheDebug: () => void;
-  showStats: boolean;
-  onToggleStats: () => void;
-  /** Slot for extension-provided UI (e.g. account menu button). */
   bottomBarSlot?: React.ReactNode;
 }
 
@@ -60,56 +55,18 @@ function loadNum(key: string, fallback: number): number {
 
 /* ── Drag state (module-level, captured at mousedown) ── */
 let dragState: {
-  key: string;
   startX: number;
-  wC: number;
-  wV: number;
-  wR: number;
-  showChat: boolean;
-  showCanvas: boolean;
-  showRight: boolean;
-  setC: (w: number) => void;
-  setV: (w: number) => void;
-  setR: (w: number) => void;
+  startChatW: number;
+  maxChatW: number;
+  setChatW: (w: number) => void;
 } | null = null;
 
 function onGlobalMouseMove(e: MouseEvent) {
-  const d = dragState;
-  if (!d) return;
-  const delta = e.clientX - d.startX;
-
-  if (d.key === "chat-canvas") {
-    let room = 0;
-    if (d.showCanvas) room += d.wV - CANVAS_MIN;
-    if (d.showRight) room += d.wR - RIGHT_MIN;
-    const clamped = Math.max(-(d.wC - CHAT_MIN), Math.min(room, delta));
-
-    let remaining = clamped;
-    let newV = d.wV;
-    let newR = d.wR;
-    if (d.showCanvas) {
-      const s = Math.min(d.wV - CANVAS_MIN, remaining);
-      newV = d.wV - s;
-      remaining -= s;
-    }
-    if (d.showRight) {
-      const s = Math.min(d.wR - RIGHT_MIN, remaining);
-      newR = d.wR - s;
-    }
-    d.setC(d.wC + clamped);
-    d.setV(newV);
-    d.setR(newR);
-  } else if (d.key === "chat-right") {
-    const room = d.wR - RIGHT_MIN;
-    const clamped = Math.max(-(d.wC - CHAT_MIN), Math.min(room, delta));
-    d.setC(d.wC + clamped);
-    d.setR(d.wR - clamped);
-  } else if (d.key === "canvas-right") {
-    const room = d.wR - RIGHT_MIN;
-    const clamped = Math.max(-(d.wV - CANVAS_MIN), Math.min(room, delta));
-    d.setV(d.wV + clamped);
-    d.setR(d.wR - clamped);
-  }
+  if (!dragState) return;
+  const delta = e.clientX - dragState.startX;
+  dragState.setChatW(
+    Math.max(CHAT_MIN, Math.min(dragState.maxChatW, dragState.startChatW + delta)),
+  );
 }
 
 function onGlobalMouseUp() {
@@ -137,11 +94,7 @@ export default function Layout({
   sttOn,
   onToggleStt,
   onOpenSettings,
-  onSelectConversation,
-  showCacheDebug,
-  onToggleCacheDebug,
-  showStats,
-  onToggleStats,
+  onSelectConversation: _onSelectConversation,
   bottomBarSlot,
 }: LayoutProps) {
   const panelsRef = useRef<HTMLDivElement>(null);
@@ -151,123 +104,55 @@ export default function Layout({
     const el = panelsRef.current;
     if (!el) return;
     const ro = new ResizeObserver((entries) => {
-      for (const entry of entries) {
-        setPanelsWidth(entry.contentRect.width);
-      }
+      for (const entry of entries) setPanelsWidth(entry.contentRect.width);
     });
     ro.observe(el);
     return () => ro.disconnect();
   }, []);
 
-  const [chatW, setChatW] = useState(() =>
-    loadNum("airunner_chat_w", 400),
-  );
-  const [canvasW, setCanvasW] = useState(() =>
-    loadNum("airunner_canvas_w", 600),
-  );
-  const [rightPanelW, setRightPanelW] = useState(() =>
-    loadNum("airunner_right_panel_w", 260),
-  );
+  const [chatW, setChatW] = useState(() => loadNum("airunner_chat_w", 400));
 
-  // Build ordered list of visible panels and their handles.
-  const visible: string[] = [];
-  if (showChat) visible.push("chat");
-  if (showCanvas) visible.push("canvas");
-  if (rightPanel) visible.push("right");
-
-  const numHandles = Math.max(0, visible.length - 1);
-  const fixedWidths = numHandles * HANDLE_W;
-
-  // Auto-clamp when panels container width or visibility changes.
+  // Clamp chat width when container or visibility changes.
   useEffect(() => {
-    if (panelsWidth === 0) return;
-    const total =
-      fixedWidths +
-      (showChat ? chatW : 0) +
-      (showCanvas ? canvasW : 0) +
-      (rightPanel ? rightPanelW : 0);
-
-    if (total > panelsWidth) {
-      let excess = total - panelsWidth;
-      if (rightPanel) {
-        const s = Math.min(rightPanelW - RIGHT_MIN, excess);
-        setRightPanelW((w) => w - s);
-        excess -= s;
-      }
-      if (showCanvas) {
-        const s = Math.min(canvasW - CANVAS_MIN, excess);
-        setCanvasW((w) => w - s);
-        excess -= s;
-      }
-      if (showChat) {
-        const s = Math.min(chatW - CHAT_MIN, excess);
-        setChatW((w) => w - s);
-        excess -= s;
-      }
-    } else if (total < panelsWidth) {
-      const slack = panelsWidth - total;
-      if (rightPanel) {
-        setRightPanelW((w) => w + slack);
-      } else if (showCanvas) {
-        setCanvasW((w) => w + slack);
-      } else if (showChat) {
-        setChatW((w) => w + slack);
-      }
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [panelsWidth, showChat, showCanvas, rightPanel]);
+    if (panelsWidth === 0 || !showChat) return;
+    const max = panelsWidth - (showCanvas ? CANVAS_MIN + HANDLE_W : 0);
+    if (chatW > max) setChatW(Math.max(CHAT_MIN, max));
+  }, [panelsWidth, showChat, showCanvas]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => saveNum("airunner_chat_w", chatW), [chatW]);
-  useEffect(() => saveNum("airunner_canvas_w", canvasW), [canvasW]);
-  useEffect(() => saveNum("airunner_right_panel_w", rightPanelW), [rightPanelW]);
 
-  const handlePairs: string[] = [];
-  for (let i = 0; i < visible.length - 1; i++) {
-    handlePairs.push(`${visible[i]}-${visible[i + 1]}`);
-  }
-
-  const makeHandle = (key: string) => {
+  const makeHandle = () => {
     const onDown = (e: React.MouseEvent) => {
       e.preventDefault();
       dragState = {
-        key,
         startX: e.clientX,
-        wC: chatW,
-        wV: canvasW,
-        wR: rightPanelW,
-        showChat,
-        showCanvas,
-        showRight: rightPanel !== null,
-        setC: setChatW,
-        setV: setCanvasW,
-        setR: setRightPanelW,
+        startChatW: chatW,
+        maxChatW: panelsWidth - CANVAS_MIN - HANDLE_W,
+        setChatW,
       };
       document.body.style.cursor = "col-resize";
       document.body.style.userSelect = "none";
     };
-    return (
-      <div
-        className={`resize-handle ${dragState?.key === key ? "dragging" : ""}`}
-        onMouseDown={onDown}
-      />
-    );
+    return <div className="resize-handle" onMouseDown={onDown} />;
   };
-
-  const hasHandle = (pair: string) => handlePairs.includes(pair);
 
   return (
     <div className="app-shell">
       <TopBar />
 
-      {/* ── Main row ── */}
       <div className="main-row">
         <LeftIconBar
           showChat={showChat}
+          showCanvas={showCanvas}
+          rightPanel={rightPanel}
           ttsOn={ttsOn}
           sttOn={sttOn}
           onToggleChat={onToggleChat}
+          onToggleCanvas={onToggleCanvas}
+          onRightPanel={onRightPanel}
           onToggleTts={onToggleTts}
           onToggleStt={onToggleStt}
+          onOpenSettings={onOpenSettings}
           bottomSlot={bottomBarSlot}
         />
 
@@ -276,60 +161,36 @@ export default function Layout({
           ref={panelsRef}
           style={{ flex: 1, display: "flex", overflow: "hidden", minWidth: 0 }}
         >
-          {/* ── Chat panel ── */}
-          <div
-            className={showChat ? "chat-panel" : "panel-hidden"}
-            style={{ width: chatW, flex: "none" }}
-          >
-            {showChat && children}
-          </div>
+          {/* Chat */}
+          {showChat && (
+            <div
+              className="chat-panel"
+              style={{ width: chatW, flex: "none", overflow: "hidden" }}
+            >
+              {children}
+            </div>
+          )}
 
-          {hasHandle("chat-canvas") && makeHandle("chat-canvas")}
-          {hasHandle("chat-right") && makeHandle("chat-right")}
+          {showChat && showCanvas && makeHandle()}
 
-          {/* ── Canvas panel ── */}
-          <div
-            className={showCanvas ? "canvas-panel" : "panel-hidden"}
-            style={{ width: canvasW, flex: "none" }}
-          >
-            {showCanvas && (
-              <CanvasProvider>
-                <CanvasPanel />
-              </CanvasProvider>
-            )}
-          </div>
-
-          {hasHandle("canvas-right") && makeHandle("canvas-right")}
-
-          {/* ── Right panel ── */}
-          <div
-            className={
-              rightPanel ? "collapsible-panel right" : "panel-hidden"
-            }
-            style={{ width: rightPanelW }}
-          >
-            {rightPanel === "civitai_browser" && <CivitaiBrowserPanel />}
-            {rightPanel === "image_browser" && <ImageBrowserPanel />}
-          </div>
+          {/* Main content — canvas or CivitAI browser (full-width mode) */}
+          {showCanvas && (
+            <div style={{ flex: 1, minWidth: 0, overflow: "hidden" }}>
+              {rightPanel === "civitai_browser" ? (
+                <CivitaiBrowserPanel />
+              ) : (
+                <CanvasProvider>
+                  <CanvasPanel />
+                </CanvasProvider>
+              )}
+            </div>
+          )}
         </div>
 
-        <RightIconBar
-          showCanvas={showCanvas}
-          rightPanel={rightPanel}
-          onToggleCanvas={onToggleCanvas}
-          onRightPanel={onRightPanel}
-          onOpenSettings={onOpenSettings}
-          showCacheDebug={showCacheDebug}
-          onToggleCacheDebug={onToggleCacheDebug}
-          showStats={showStats}
-          onToggleStats={onToggleStats}
-        />
       </div>
 
-      {/* ── Download tray ── */}
       <DownloadTray />
 
-      {/* ── Footer ── */}
       <div
         className="footer-bar"
         style={{
@@ -343,24 +204,86 @@ export default function Layout({
           &copy; {new Date().getFullYear()} Capsize LLC &mdash; All rights
           reserved.
         </span>
-        <LiveIndicator />
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <FooterStats />
+          <LiveIndicator />
+        </div>
       </div>
     </div>
   );
 }
 
-/** Small dot + label showing WebSocket connection status. */
+function FooterStats() {
+  const [hw, setHw] = useState<HardwareProfile | null>(null);
+  const [showDetail, setShowDetail] = useState(false);
+
+  useEffect(() => {
+    let canceled = false;
+    const poll = async () => {
+      try {
+        const { getHardwareProfile } = await import("../../api/client");
+        const data = await getHardwareProfile();
+        if (!canceled) setHw(data);
+      } catch { /* server may be unavailable */ }
+    };
+    poll();
+    const id = setInterval(poll, 2000);
+    return () => { canceled = true; clearInterval(id); };
+  }, []);
+
+  if (!hw || hw.total_vram_gb === 0) return null;
+
+  const vramUsed = hw.total_vram_gb - hw.available_vram_gb;
+  const vramPct = (vramUsed / hw.total_vram_gb) * 100;
+  const ramUsed = hw.total_ram_gb - hw.available_ram_gb;
+  const ramPct = (ramUsed / hw.total_ram_gb) * 100;
+
+  const color = (pct: number) =>
+    pct > 90 ? "#dc3545" : pct > 70 ? "#ffc107" : "rgba(255,255,255,0.4)";
+
+  return (
+    <span style={{ position: "relative", display: "flex", alignItems: "center" }}>
+      <button
+        onClick={() => setShowDetail((v) => !v)}
+        title="Resource monitor"
+        style={{
+          background: "none", border: "none", cursor: "pointer", padding: 0,
+          display: "flex", alignItems: "center", gap: 6,
+          fontFamily: "monospace", fontSize: 11,
+        }}
+      >
+        <span style={{ color: color(vramPct) }}>
+          VRAM {vramUsed.toFixed(1)}/{hw.total_vram_gb.toFixed(0)}GB
+        </span>
+        <span style={{ color: "rgba(255,255,255,0.2)" }}>·</span>
+        <span style={{ color: color(ramPct) }}>
+          RAM {ramUsed.toFixed(1)}/{hw.total_ram_gb.toFixed(0)}GB
+        </span>
+      </button>
+      {showDetail && (
+        <div
+          style={{
+            position: "absolute", bottom: "calc(100% + 8px)", right: 0,
+            zIndex: 9999,
+          }}
+        >
+          <Suspense fallback={null}>
+            <StatsPanel />
+          </Suspense>
+        </div>
+      )}
+    </span>
+  );
+}
+
 function LiveIndicator() {
   const [connected, setConnected] = useState(isWsConnected);
   useEffect(() => {
     let canceled = false;
     const id = setInterval(() => {
       if (!canceled) setConnected(isWsConnected());
-    }, 1);
-    return () => {
-      canceled = true;
-      clearInterval(id);
-    };
+    }, 1000);
+    return () => { canceled = true; clearInterval(id); };
   }, []);
   return (
     <span
@@ -370,9 +293,7 @@ function LiveIndicator() {
         gap: 4,
         fontSize: 11,
         fontFamily: "monospace",
-        color: connected
-          ? "rgba(0,200,100,0.7)"
-          : "rgba(255,150,50,0.6)",
+        color: connected ? "rgba(0,200,100,0.7)" : "rgba(255,150,50,0.6)",
       }}
     >
       <span
@@ -380,13 +301,11 @@ function LiveIndicator() {
           width: 6,
           height: 6,
           borderRadius: "50%",
-          background: connected
-            ? "rgb(0,200,100)"
-            : "rgb(255,150,50)",
+          background: connected ? "rgb(0,200,100)" : "rgb(255,150,50)",
           display: "inline-block",
         }}
       />
-      {connected ? "Live" : "Reconnecting\u2026"}
+      {connected ? "Live" : "Reconnecting…"}
     </span>
   );
 }

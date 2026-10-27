@@ -19,6 +19,7 @@ export interface CanvasStageHandle {
   zoomOut: () => void;
   zoomReset: () => void;
   centerView: () => void;
+  fitView: () => void;
   getZoom: () => number;
   getStage: () => Konva.Stage | null;
 }
@@ -40,11 +41,14 @@ interface CanvasStageProps {
   onMoveImage: (layerId: string, imageId: string, x: number, y: number) => void;
   onMoveLayer: (layerId: string, x: number, y: number) => void;
   onAddMaskStroke: (stroke: Omit<StrokeNode, "id">) => void;
+  onAddLayerMaskStroke: (layerId: string, stroke: Omit<StrokeNode, "id">) => void;
   setActiveGridArea: (area: ActiveGridAreaType) => void;
   onUndo: () => void;
   onRedo: () => void;
   setActiveTool: (tool: ActiveTool) => void;
   onZoomChange: (zoom: number) => void;
+  zoomMode: "fit" | "locked";
+  onZoomModeChange: (mode: "fit" | "locked") => void;
   gridLayerRef: React.RefObject<Konva.Layer>;
   maskLayerRef: React.RefObject<Konva.Layer>;
   stageRef: React.RefObject<Konva.Stage>;
@@ -70,11 +74,14 @@ const CanvasStage = forwardRef<CanvasStageHandle, CanvasStageProps>(
     onMoveImage,
     onMoveLayer,
     onAddMaskStroke,
+    onAddLayerMaskStroke,
     setActiveGridArea,
     onUndo,
     onRedo,
     setActiveTool,
     onZoomChange,
+    zoomMode,
+    onZoomModeChange,
     gridLayerRef,
     maskLayerRef,
     stageRef,
@@ -84,6 +91,10 @@ const CanvasStage = forwardRef<CanvasStageHandle, CanvasStageProps>(
     const lastTouchDist = useRef(0);
     const [zoom, setZoom] = useState(1);
     const containerRef = useRef<HTMLDivElement>(null);
+    const zoomModeRef = useRef(zoomMode);
+    const onZoomModeChangeRef = useRef(onZoomModeChange);
+    useEffect(() => { zoomModeRef.current = zoomMode; }, [zoomMode]);
+    useEffect(() => { onZoomModeChangeRef.current = onZoomModeChange; }, [onZoomModeChange]);
     const selectionStartRef = useRef<{ x: number; y: number } | null>(null);
     const [selectionRect, setSelectionRect] = useState<{
       x: number; y: number; width: number; height: number;
@@ -100,12 +111,11 @@ const CanvasStage = forwardRef<CanvasStageHandle, CanvasStageProps>(
         setStageSize({ width, height });
         const stage = stageRef.current;
         if (!stage) return;
-        // First time: zoom to fit the document inside the viewport.
-        if (stage.x() === 0 && stage.y() === 0 && stage.scaleX() === 1) {
+        if (zoomModeRef.current === "fit") {
           const fitScale = Math.min(
             (width - PADDING) / Math.max(documentWidth, 1),
             (height - PADDING) / Math.max(documentHeight, 1),
-            1, // never zoom in past 1:1
+            1,
           );
           stage.scale({ x: fitScale, y: fitScale });
           setZoom(fitScale);
@@ -130,6 +140,7 @@ const CanvasStage = forwardRef<CanvasStageHandle, CanvasStageProps>(
         stage.scale({ x: newScale, y: newScale });
         setZoom(newScale);
         onZoomChange(newScale);
+        onZoomModeChange("locked");
       },
       zoomOut: () => {
         const stage = stageRef.current;
@@ -138,6 +149,7 @@ const CanvasStage = forwardRef<CanvasStageHandle, CanvasStageProps>(
         stage.scale({ x: newScale, y: newScale });
         setZoom(newScale);
         onZoomChange(newScale);
+        onZoomModeChange("locked");
       },
       zoomReset: () => {
         const stage = stageRef.current;
@@ -145,15 +157,12 @@ const CanvasStage = forwardRef<CanvasStageHandle, CanvasStageProps>(
         if (!stage) return;
         stage.scale({ x: 1, y: 1 });
         stage.position({
-          x: container
-            ? (container.clientWidth  - documentWidth)  / 2
-            : 0,
-          y: container
-            ? (container.clientHeight - documentHeight) / 2
-            : 0,
+          x: container ? (container.clientWidth  - documentWidth)  / 2 : 0,
+          y: container ? (container.clientHeight - documentHeight) / 2 : 0,
         });
         setZoom(1);
         onZoomChange(1);
+        onZoomModeChange("locked");
       },
       centerView: () => {
         const stage = stageRef.current;
@@ -165,9 +174,30 @@ const CanvasStage = forwardRef<CanvasStageHandle, CanvasStageProps>(
           y: (container.clientHeight - documentHeight * scale) / 2,
         });
       },
+      fitView: () => {
+        const stage = stageRef.current;
+        const container = containerRef.current;
+        if (!stage || !container) return;
+        const PADDING = 40;
+        const width = container.clientWidth;
+        const height = container.clientHeight;
+        const fitScale = Math.min(
+          (width - PADDING) / Math.max(documentWidth, 1),
+          (height - PADDING) / Math.max(documentHeight, 1),
+          1,
+        );
+        stage.scale({ x: fitScale, y: fitScale });
+        stage.position({
+          x: (width - documentWidth * fitScale) / 2,
+          y: (height - documentHeight * fitScale) / 2,
+        });
+        setZoom(fitScale);
+        onZoomChange(fitScale);
+        onZoomModeChange("fit");
+      },
       getZoom: () => stageRef.current?.scaleX() ?? 1,
       getStage: () => stageRef.current,
-    }), [stageRef, documentWidth, documentHeight, onZoomChange]);
+    }), [stageRef, documentWidth, documentHeight, onZoomChange, onZoomModeChange]);
 
     // Multi-touch: two-finger drag to pan, pinch to zoom.
     useEffect(() => {
@@ -214,6 +244,7 @@ const CanvasStage = forwardRef<CanvasStageHandle, CanvasStageProps>(
             stage.scale({ x: newScale, y: newScale });
             setZoom(newScale);
             onZoomChange(newScale);
+            onZoomModeChangeRef.current("locked");
             lastTouchDist.current = dist;
           }
         }
@@ -323,6 +354,7 @@ const CanvasStage = forwardRef<CanvasStageHandle, CanvasStageProps>(
         });
         setZoom(clampedScale);
         onZoomChange(clampedScale);
+        onZoomModeChangeRef.current("locked");
       },
       [stageRef, onZoomChange],
     );
@@ -493,56 +525,64 @@ const CanvasStage = forwardRef<CanvasStageHandle, CanvasStageProps>(
           />
 
           {/* Content layers */}
-          {layers.map((layer, index) => (
-            <CanvasLayerRenderer
-              key={layer.id ?? `layer-${index}`}
-              layer={layer}
-              isActive={layer.id === activeLayerId}
-              activeTool={activeTool}
-              brushSize={brushSize}
-              brushColor={brushColor}
-              snapToGrid={snapToGrid}
-              canvasWidth={documentWidth}
-              canvasHeight={documentHeight}
-              onStrokeComplete={onAddStroke}
-              onMoveImage={onMoveImage}
-              onMoveLayer={onMoveLayer}
-            />
-          ))}
+          {layers.map((layer, index) => {
+            const isMaskTarget =
+              layer.id === activeLayerId &&
+              Array.isArray(layer.maskStrokes) &&
+              layer.maskTarget === "mask";
+            return (
+              <CanvasLayerRenderer
+                key={layer.id ?? `layer-${index}`}
+                layer={layer}
+                isActive={layer.id === activeLayerId}
+                activeTool={activeTool}
+                brushSize={brushSize}
+                brushColor={brushColor}
+                snapToGrid={snapToGrid}
+                canvasWidth={documentWidth}
+                canvasHeight={documentHeight}
+                onStrokeComplete={
+                  isMaskTarget
+                    ? (stroke) => onAddLayerMaskStroke(layer.id, stroke)
+                    : onAddStroke
+                }
+                onMoveImage={onMoveImage}
+                onMoveLayer={onMoveLayer}
+              />
+            );
+          })}
 
           {/* Pixel grid */}
           <Layer listening={false} visible={showGrid}>
             <Shape sceneFunc={gridSceneFunc} />
           </Layer>
 
-          {/* Active Grid Area — only listens when move/select tool active */}
-          <Layer
-            ref={gridLayerRef}
-            listening={activeTool === "move" || activeTool === "select"}
-          >
-            <ActiveGridArea
-              area={activeGridArea}
-              documentWidth={documentWidth}
-              documentHeight={documentHeight}
-              onChange={setActiveGridArea}
-              snapToGrid={snapToGrid}
-            />
-          </Layer>
+          {/* Active Grid Area — hidden; ref kept for compatibility */}
+          <Layer ref={gridLayerRef} listening={false} visible={false} />
 
-          {/* Mask layer */}
-          {(activeTool === "mask" ||
-            (activeTool === "eraser" && maskStrokes.length > 0)) && (
-            <Layer ref={maskLayerRef}>
-              <MaskLayer
-                strokes={maskStrokes}
-                activeTool={activeTool}
-                brushSize={brushSize}
-                documentWidth={documentWidth}
-                documentHeight={documentHeight}
-                onStrokeComplete={onAddMaskStroke}
-              />
-            </Layer>
-          )}
+          {/* Mask layer — routes to per-layer mask when active layer has one */}
+          {activeTool === "mask" && (() => {
+            const activeLayer = layers.find((l) => l.id === activeLayerId);
+            const hasLayerMask = Array.isArray(activeLayer?.maskStrokes);
+            const handleMaskStroke = hasLayerMask && activeLayerId
+              ? (stroke: Omit<StrokeNode, "id">) => onAddLayerMaskStroke(activeLayerId, stroke)
+              : onAddMaskStroke;
+            const visibleStrokes = hasLayerMask
+              ? (activeLayer?.maskStrokes ?? [])
+              : maskStrokes;
+            return (
+              <Layer ref={maskLayerRef}>
+                <MaskLayer
+                  strokes={visibleStrokes}
+                  activeTool={activeTool}
+                  brushSize={brushSize}
+                  documentWidth={documentWidth}
+                  documentHeight={documentHeight}
+                  onStrokeComplete={handleMaskStroke}
+                />
+              </Layer>
+            );
+          })()}
 
           {/* Brush-size indicator circle */}
           {showBrushIndicator && (
