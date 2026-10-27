@@ -209,12 +209,30 @@ def session_scope():
     tenant = _tenant_key()
     Session = _get_session(tenant)
     session = Session()
+    multitenant = _tenancy_mode() != "single" and _is_postgres(_db_url())
+    listener = None
     try:
-        if _tenancy_mode() != "single" and _is_postgres(_db_url()):
+        if multitenant:
             _ensure_tenant_ready(tenant)
 
-            from sqlalchemy import text
+            from sqlalchemy import event, text
 
+            # Re-apply the tenant search_path at the START of every transaction
+            # in this session — not just once. `SET LOCAL` is transaction
+            # scoped, so a single up-front SET is discarded by the first
+            # commit(); any statement run afterwards (e.g. the post-commit
+            # refresh() in base_manager.create()) would then hit the default
+            # `public` schema and fail to find rows that live in the tenant
+            # schema ("Could not refresh instance ...").
+            def _apply_search_path(sess, transaction, connection):
+                connection.exec_driver_sql(
+                    f"SET LOCAL search_path TO {tenant}"
+                )
+
+            listener = _apply_search_path
+            event.listen(session, "after_begin", listener)
+            # Ensure the path is set for the first transaction too (after_begin
+            # fires lazily on the first statement, which this triggers).
             session.execute(text(f"SET LOCAL search_path TO {tenant}"))
         yield session
         session.commit()
@@ -222,6 +240,10 @@ def session_scope():
         session.rollback()
         raise
     finally:
+        if listener is not None:
+            from sqlalchemy import event
+
+            event.remove(session, "after_begin", listener)
         Session.remove()
 
 

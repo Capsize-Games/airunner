@@ -279,5 +279,18 @@ class PersistentJobTracker:
         async with self._lock:
             return self._jobs.get(job_id)
 
+    # ── Sync wrappers for callers in thread context ─────────────────
+
+    def update_metadata_sync(
+        self,
+        job_id: str,
+        metadata: dict[str, Any],
+    ) -> None:
+        """Synchronous wrapper for :meth:`update_metadata`.
+
+        Safe to call from background threads (e.g. download workers).
+        """
+        asyncio.run(self.update_metadata(job_id, metadata))
+
 
 __all__ = ["JobState", "PersistentJobTracker"]

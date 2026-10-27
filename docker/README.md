@@ -86,6 +86,17 @@ docker run --rm --gpus all nvidia/cuda:12.4.0-base-ubuntu22.04 nvidia-smi  # smo
 When the GPU is live, `HardwareProfiler` reports a non-zero `total_vram_gb` and
 the site footer's hardware stats appear (they're hidden when VRAM reads 0).
 
+**GGUF LLM on GPU:** `torch` (Stable Diffusion, etc.) uses the GPU as soon as
+passthrough works, but `llama-cpp-python` (GGUF chat models) is a *separately
+compiled* library — the default PyPI wheel is CPU-only. When the GPU stack is
+active, `scripts/docker.sh` sets the `AIRUNNER_LLAMA_CUDA=1` build arg, and the
+image compiles `llama-cpp-python` with CUDA (Ada/Hopper/Blackwell). This makes
+the **first GPU build noticeably longer** (CUDA toolkit + compile), but only
+once. To force it manually: `docker compose build --build-arg AIRUNNER_LLAMA_CUDA=1 server`.
+Verify inside the container with
+`python -c "import llama_cpp; print(llama_cpp.llama_supports_gpu_offload())"`
+(should print `True`).
+
 For a lighter, API-only image without torch, build with `AIRUNNER_DOCKER_EXTRAS=core`.
 
 ## Model data & persistence

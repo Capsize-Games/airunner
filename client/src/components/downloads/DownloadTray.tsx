@@ -1,11 +1,41 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { BASE_URL } from "../../types/api";
 import DownloadProgress, { useDownloadProgress } from "./DownloadProgress";
 import { useDownloads, type DownloadJob } from "./useDownloadState";
 import { cancelDownloadJob, startCivitaiFileDownload } from "../../api/downloads";
+import { useEventBus } from "../../features/events/useEventBus";
+import { EVENT_DOWNLOADS } from "../../features/events/types";
 
 export default function DownloadTray() {
   const { downloads, addDownload, removeDownload, clearDownloads } = useDownloads();
+  const startedRef = useRef<Set<string>>(new Set());
+
+  // Listen for auto-triggered model downloads arriving over the events
+  // WebSocket.  When inference finds a missing model the server starts a
+  // tracked job and broadcasts a "started" event carrying the jobId.
+  useEventBus([EVENT_DOWNLOADS], (_event, data) => {
+    const payload = data as {
+      type?: string;
+      job_id?: string;
+      repo_id?: string;
+      model_name?: string;
+      model_type?: string;
+      started_at?: string;
+      error?: string;
+    };
+
+    if (payload.type === "started" && payload.job_id) {
+      if (startedRef.current.has(payload.job_id)) return;
+      startedRef.current.add(payload.job_id);
+      addDownload({
+        jobId: payload.job_id,
+        label: payload.model_name || payload.repo_id || "Model Download",
+        modelName: payload.model_name,
+        modelType: payload.model_type,
+        startedAt: payload.started_at || new Date().toISOString(),
+      });
+    }
+  });
   const [visible, setVisible] = useState(() => {
     try {
       return localStorage.getItem("airunner_download_tray_visible") !== "false";
