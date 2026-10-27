@@ -3,27 +3,21 @@
 from typing import List, Optional
 
 from airunner_services.contract_enums import LLMActionType
-from airunner_services.llm.managers.mixins.system_prompt_actions import (
-    get_force_tool_instruction,
-    get_system_prompt_for_action,
-    get_system_prompt_with_context,
-)
-from airunner_services.llm.managers.mixins.system_prompt_context import (
+from airunner_services.llm.managers.prompt_builder import (
+    HEALTH_DISCLAIMER,
+    MEMORY_INSTRUCTIONS,
+    STYLE_GUIDELINES,
     augment_custom_system_prompt,
     build_base_prompt_parts,
     build_research_mode_prompt,
     build_system_prompt_for_action,
-    get_memory_context,
-    get_prompt_mode,
-)
-from airunner_services.llm.managers.mixins.system_prompt_mood import (
     get_current_mood,
+    get_force_tool_instruction,
+    get_memory_context,
     get_mood_section,
-)
-from airunner_services.llm.managers.mixins.system_prompt_text import (
-    HEALTH_DISCLAIMER,
-    MEMORY_INSTRUCTIONS,
-    STYLE_GUIDELINES,
+    get_prompt_mode,
+    get_system_prompt_for_action as get_action_system_prompt,
+    get_system_prompt_with_context,
 )
 
 
@@ -111,7 +105,7 @@ class SystemPromptMixin:
         force_tool: Optional[str] = None,
     ) -> str:
         """Return the final action-specific system prompt."""
-        return get_system_prompt_for_action(self, action, force_tool)
+        return get_action_system_prompt(self, action, force_tool)
 
     def _get_style_guidelines(self) -> str:
         """Return the conversational style guidelines block."""

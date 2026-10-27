@@ -15,6 +15,7 @@ from airunner_services.llm.tools import (
     user_data_tools,
     mood_tools,
     generation_tools,  # Direct text generation tools
+    migrated_factory_tools,  # Replaces managers/tools/ mixin factories
     # Phase 2: Mode-specific tools
     author_tools,
     research_validation_tools,  # URL, content, and temporal validation for research
