@@ -45,12 +45,16 @@ from airunner_services.database.models.project_state import (
     FeatureCategory,
     DecisionOutcome,
 )
-from airunner_services.llm.long_running.project_manager import ProjectManager
-from airunner_services.llm.long_running.initializer_agent import (
+from airunner_services.llm.long_running.project_manager.project_manager import (
+    ProjectManager,
+)
+from airunner_services.llm.long_running.initializer_agent.initializer_agent import (
     InitializerAgent,
 )
 from airunner_services.llm.long_running.session_agent import SessionAgent
-from airunner_services.llm.long_running.harness import LongRunningHarness
+from airunner_services.llm.long_running.harness.harness import (
+    LongRunningHarness,
+)
 from airunner_services.llm.long_running.sub_agents import (
     BaseSubAgent,
     ResearchSubAgent,
@@ -64,7 +68,7 @@ from airunner_services.llm.long_running.task_detector import (
     analyze_task,
     should_use_harness,
 )
-from airunner_services.llm.long_running.auto_wrapper import (
+from airunner_services.llm.long_running.auto_wrapper.auto_wrapper import (
     AutoHarnessWrapper,
     create_auto_wrapper,
 )

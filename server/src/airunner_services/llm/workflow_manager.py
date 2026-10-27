@@ -10,22 +10,22 @@ from typing_extensions import TypedDict
 from airunner_services.llm.managers.database_checkpoint_saver import (
     DatabaseCheckpointSaver,
 )
-from airunner_services.llm.managers.mixins.node_functions_mixin import (
+from airunner_services.llm.managers.mixins.node_functions import (
     NodeFunctionsMixin,
 )
-from airunner_services.llm.managers.mixins.streaming_mixin import (
+from airunner_services.llm.managers.mixins.streaming import (
     StreamingMixin,
 )
-from airunner_services.llm.managers.mixins.system_prompt_mixin import (
+from airunner_services.llm.managers.mixins.system_prompt import (
     SystemPromptMixin,
 )
-from airunner_services.llm.managers.mixins.tool_execution_mixin import (
+from airunner_services.llm.managers.mixins.tool_execution import (
     ToolExecutionMixin,
 )
-from airunner_services.llm.managers.mixins.tool_management_mixin import (
+from airunner_services.llm.managers.mixins.tool_management import (
     ToolManagementMixin,
 )
-from airunner_services.llm.managers.mixins.workflow_building_mixin import (
+from airunner_services.llm.managers.mixins.workflow_building import (
     WorkflowBuildingMixin,
 )
 from airunner_services.settings import AIRUNNER_LOG_LEVEL

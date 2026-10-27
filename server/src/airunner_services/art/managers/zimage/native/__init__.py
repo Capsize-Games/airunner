@@ -39,15 +39,15 @@ from airunner_services.art.managers.zimage.native.embedders import (
     EmbedND,
     apply_rope,
 )
-from airunner_services.art.managers.zimage.native.zimage_text_encoder import (
+from airunner_services.art.managers.zimage.native.text_encoder import (
     ZImageTextEncoder,
     ZImageTokenizer,
     SimpleTextEncoder,
 )
-from airunner_services.art.managers.zimage.native.zimage_native_pipeline import (
+from airunner_services.art.managers.zimage.native.pipeline import (
     ZImageNativePipeline,
 )
-from airunner_services.art.managers.zimage.native.zimage_native_wrapper import (
+from airunner_services.art.managers.zimage.native.wrapper import (
     NativePipelineWrapper,
 )
 

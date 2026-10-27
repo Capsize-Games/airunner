@@ -5,10 +5,12 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Optional
 
-from airunner_services.llm.long_running.initializer_agent import (
+from airunner_services.llm.long_running.initializer_agent.initializer_agent import (
     InitializerAgent,
 )
-from airunner_services.llm.long_running.project_manager import ProjectManager
+from airunner_services.llm.long_running.project_manager.project_manager import (
+    ProjectManager,
+)
 from airunner_services.llm.long_running.session_agent import SessionAgent
 
 

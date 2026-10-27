@@ -2,7 +2,7 @@
 
 from typing import List, Optional, Dict, Tuple
 
-from airunner_services.llm.adapters.chat_gguf_tool_parsing_react import (
+from airunner_services.llm.adapters.chat_gguff.tool.parsing_react import (
     parse_react_tool_calls,
 )
 from airunner_services.llm.adapters.mixins.tool_call_json_parsing import (
