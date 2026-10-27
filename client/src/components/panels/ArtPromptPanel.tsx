@@ -11,69 +11,19 @@ import { ToolbarIconBtn } from "./art-prompt/ArtShared";
 import { SettingsPopup } from "./art-prompt/SettingsPopup";
 import LoraPanel from "./LoraPanel";
 import EmbeddingsPanel from "./EmbeddingsPanel";
-import { useArtPromptState, ART_PANEL_MIN, ART_PANEL_MAX } from "./art-prompt/useArtPromptState";
+import { useArtPromptState } from "./art-prompt/useArtPromptState";
 
 // side-effect: injects CSS for sliders / number spinners
 import "./art-prompt/ArtShared";
 
-const railBtnStyle: React.CSSProperties = {
-  background: "none", border: "none", cursor: "pointer",
-  color: "rgba(255,255,255,0.4)", padding: 0,
-  display: "flex", alignItems: "center", justifyContent: "center",
-  borderRadius: 4, width: 28, height: 28, flexShrink: 0,
-};
-
-let artDragState: { startX: number; startW: number; setW: (w: number) => void } | null = null;
-function onArtMouseMove(e: MouseEvent) {
-  if (!artDragState) return;
-  const delta = e.clientX - artDragState.startX;
-  artDragState.setW(Math.max(ART_PANEL_MIN, Math.min(ART_PANEL_MAX, artDragState.startW + delta)));
-}
-function onArtMouseUp() {
-  if (!artDragState) return;
-  document.body.style.cursor = "";
-  document.body.style.userSelect = "";
-  artDragState = null;
-}
-if (typeof window !== "undefined") {
-  window.addEventListener("mousemove", onArtMouseMove);
-  window.addEventListener("mouseup", onArtMouseUp);
-}
-
-export default function ArtPromptPanel() {
+export default function ArtPromptPanel({ visible = true }: { visible?: boolean }) {
   const s = useArtPromptState();
 
-  if (s.collapsed) {
-    return (
-      <div
-        className="flex-shrink-0 d-flex flex-column align-items-center bg-theme-panel overflow-hidden"
-        style={{ width: 32, borderRight: "1px solid var(--separator-color)", padding: "4px 0", gap: 2 }}
-      >
-        <button style={railBtnStyle} title="Expand art panel" onClick={() => s.collapseToStorage(false)}>
-          <LucideIcon name="chevron-right" size={14} />
-        </button>
-        <div className="sep-h" />
-        <button style={railBtnStyle} title="Prompt" onClick={() => s.collapseToStorage(false)}>
-          <LucideIcon name="message-square-heart" size={14} />
-        </button>
-      </div>
-    );
-  }
+  if (!visible) return null;
 
   return (
     <Fragment>
-      <div className="flex-shrink-0 d-flex flex-column overflow-hidden" style={{ width: s.artW }}>
-        <div className="d-flex align-items-center flex-shrink-0 border-b-theme" style={{ padding: "2px 4px" }}>
-          <button
-            type="button" onClick={() => s.collapseToStorage(true)} title="Collapse art panel"
-            style={{ ...railBtnStyle, width: 24, height: 24, color: "var(--theme-text-secondary)", flexShrink: 0 }}
-          >
-            <LucideIcon name="chevron-left" size={13} />
-          </button>
-          <span style={{ fontSize: 10, fontWeight: 700, color: "var(--theme-text-secondary)", letterSpacing: "0.06em", paddingLeft: 4 }}>
-            ART PROMPT
-          </span>
-        </div>
+      <div className="flex-grow-1 d-flex flex-column overflow-hidden w-100">
 
         <div className="d-flex flex-column flex-grow-1 overflow-hidden">
           <div className="flex-grow-1 d-flex flex-column bg-theme-input overflow-hidden min-h-0" style={{ border: "none", borderRadius: 0 }}>
@@ -190,16 +140,6 @@ export default function ArtPromptPanel() {
           </div>
         </div>
       </div>
-
-      <div
-        className="resize-handle"
-        onMouseDown={(e) => {
-          e.preventDefault();
-          artDragState = { startX: e.clientX, startW: s.artW, setW: s.setArtW };
-          document.body.style.cursor = "col-resize";
-          document.body.style.userSelect = "none";
-        }}
-      />
 
       {s.openPanel && s.artPanelAnchor && (
         <div

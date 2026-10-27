@@ -54,7 +54,10 @@ export interface ActiveGridArea {
   height: number;
 }
 
-export type ActiveTool = "select" | "brush" | "eraser" | "mask" | "move";
+export type ActiveTool =
+  | "select" | "brush" | "eraser" | "mask" | "move"
+  | "lasso" | "wand" | "crop" | "bucket" | "smudge"
+  | "text" | "pipette" | "zoom";
 
 export interface CanvasState {
   /** Monotonic timestamp (Date.now()) used to resolve localStorage vs server

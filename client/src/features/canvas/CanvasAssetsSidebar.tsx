@@ -2,9 +2,6 @@ import { useState, useCallback, useRef, useEffect } from "react";
 import LucideIcon from "../../components/shared/LucideIcon";
 import CanvasLayersSidebar from "./CanvasLayersSidebar";
 import ImageBrowserPanel from "../../components/panels/ImageBrowserPanel";
-import CollapsedRail from "./sidebar/CollapsedRail";
-import ToolRow from "./sidebar/ToolRow";
-import BrushControls from "./sidebar/BrushControls";
 import type { AssetTab } from "./sidebar/CollapsedRail";
 
 const LS_W         = "airunner_assets_sidebar_w";
@@ -38,11 +35,23 @@ function loadWidth(): number {
   } catch { return 220; }
 }
 
-export default function CanvasAssetsSidebar() {
+export default function CanvasAssetsSidebar({
+  visible = true,
+  activeTab,
+}: {
+  visible?: boolean;
+  activeTab?: AssetTab;
+}) {
+  if (!visible) return null;
+
   const [tab, setTab] = useState<AssetTab>(() => {
     try { return (localStorage.getItem(LS_TAB) as AssetTab) ?? "layers"; }
     catch { return "layers"; }
   });
+
+  useEffect(() => {
+    if (activeTab) setTab(activeTab);
+  }, [activeTab]);
   const [width, setWidth] = useState(loadWidth);
   const [collapsed, setCollapsed] = useState(() => {
     try { return localStorage.getItem(LS_COLLAPSED) === "true"; }
@@ -84,10 +93,6 @@ export default function CanvasAssetsSidebar() {
     setCollapsed(false);
   };
 
-  if (collapsed) {
-    return <CollapsedRail activeTab={tab} onExpand={expand} />;
-  }
-
   return (
     <div className="flex-shrink-0 d-flex overflow-hidden" style={{ width }}>
       {/* Resize handle */}
@@ -100,21 +105,6 @@ export default function CanvasAssetsSidebar() {
       />
 
       <div className="flex-grow-1 d-flex flex-column overflow-hidden" style={{ background: "#181824", minWidth: 0 }}>
-        {/* Header */}
-        <div
-          className="d-flex align-items-center justify-content-end flex-shrink-0 border-b-subtle"
-          style={{ padding: "2px 4px" }}
-        >
-          <span style={{ flex: 1, fontSize: 10, fontWeight: 600, color: "rgba(255,255,255,0.25)", letterSpacing: "0.06em", paddingLeft: 4 }}>
-            ASSETS
-          </span>
-          <button type="button" onClick={() => setCollapsed(true)} title="Collapse panel" style={railBtnStyle}>
-            <LucideIcon name="chevron-right" size={13} />
-          </button>
-        </div>
-
-        <ToolRow />
-        <BrushControls />
 
         {/* Tab bar */}
         <div className="d-flex flex-shrink-0 border-b-subtle">
