@@ -116,6 +116,12 @@ class LazySettings:
     # Computed helpers
     # ------------------------------------------------------------------
     def _build_db_url(self) -> str:
+        # An explicit URL (AIRUNNER_DATABASE_URL / DATABASE_URL) always wins
+        # so operators can point at an existing database without juggling
+        # the POSTGRES_* parts.
+        explicit = str(self._store.get("DATABASE_URL", "") or "").strip()
+        if explicit:
+            return explicit
         backend = self._store.get("DATABASE_BACKEND", "sqlite")
         if backend == "postgresql":
             user = self._store.get("POSTGRES_USER", "airunner")

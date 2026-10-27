@@ -71,6 +71,24 @@ def tenant_schema_for_key(key: str | None) -> str:
     return f"{get_tenant_schema_prefix()}{raw}"
 
 
+def tenant_key_from_schema(schema: str | None) -> str | None:
+    """Recover the raw tenant key from a fully-qualified schema name.
+
+    This is the inverse of :func:`tenant_schema_for_key` for the purpose
+    of feeding :func:`set_tenant_key`, which expects the *raw* key (it
+    re-applies the prefix internally).  Callers that hold a materialised
+    schema name (e.g. decoded from a JWT or read from a column) must use
+    this before calling ``set_tenant_key`` to avoid double-prefixing.
+    """
+    raw = (schema or "").strip()
+    if not raw:
+        return None
+    prefix = get_tenant_schema_prefix()
+    if prefix and raw.startswith(prefix):
+        raw = raw[len(prefix) :]
+    return raw or None
+
+
 __all__ = [
     "get_tenant_key",
     "get_tenant_schema_prefix",
@@ -79,4 +97,5 @@ __all__ = [
     "set_tenant_key",
     "set_tenant_schema_prefix",
     "tenant_schema_for_key",
+    "tenant_key_from_schema",
 ]

@@ -140,22 +140,23 @@ class ExtensionLoader:
         subdirectory, suitable for appending to Alembic's
         ``version_locations``.
 
-        Paths are resolved relative to this module's location so the
-        function works regardless of the current working directory.
+        The location is derived from each extension's *actually imported*
+        package (``extensions.{name}``) rather than a guessed relative
+        path, so it works no matter where the extensions repo lives on
+        disk relative to the core package.
         """
-        # Resolve the repo root from this module's path:
-        #   extensions/loader.py → <repo_root>/
-        module_dir = Path(__file__).resolve().parent.parent
         paths: list[Path] = []
         for config in self.configs.values():
+            try:
+                pkg = importlib.import_module(f"extensions.{config.name}")
+            except ModuleNotFoundError:
+                continue
+            pkg_file = getattr(pkg, "__file__", None)
+            if not pkg_file:
+                continue
             candidate = (
-                module_dir
-                / ".."
-                / "extensions"
-                / config.name
-                / "server"
-                / "migrations"
-            ).resolve()
+                Path(pkg_file).resolve().parent / "server" / "migrations"
+            )
             versions_dir = candidate / "versions"
             if versions_dir.is_dir():
                 paths.append(candidate)
