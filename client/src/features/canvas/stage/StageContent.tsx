@@ -14,6 +14,7 @@ import type {
   LayerGroup,
   ActiveTool,
   StrokeNode,
+  MoveMode,
 } from "../useCanvasState";
 
 interface Props {
@@ -30,6 +31,7 @@ interface Props {
   displayOrder: string[];
   activeLayerId: string | null;
   activeTool: ActiveTool;
+  moveMode: MoveMode;
   brushSize: number;
   brushColor: string;
   maskStrokes: StrokeNode[];
@@ -111,6 +113,7 @@ export default function StageContent({
   displayOrder,
   activeLayerId,
   activeTool,
+  moveMode,
   brushSize,
   brushColor,
   maskStrokes,
@@ -215,6 +218,7 @@ export default function StageContent({
             layer={layer}
             isActive={layer.id === activeLayerId}
             activeTool={activeTool}
+            moveMode={moveMode}
             brushSize={brushSize}
             brushColor={brushColor}
             snapToGrid={snapToGrid}

@@ -71,6 +71,8 @@ export function serialization(
               data.activeGridArea || prev.activeGridArea,
             activeTool:
               data.activeTool || ("brush" as const),
+            moveMode:
+              data.moveMode ?? prev.moveMode,
             brushSize:
               data.brushSize ?? prev.brushSize,
             brushColor:

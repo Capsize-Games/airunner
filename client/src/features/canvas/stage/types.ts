@@ -5,6 +5,7 @@ import type {
   ActiveGridArea,
   StrokeNode,
   ActiveTool,
+  MoveMode,
   LayerGroup,
 } from "../useCanvasState";
 import type {
@@ -36,6 +37,8 @@ export interface CanvasStageProps {
   activeTool: ActiveTool;
   brushSize: number;
   brushColor: string;
+  moveMode: MoveMode;
+  selectedLayerIds: string[];
   maskStrokes: StrokeNode[];
   showGrid: boolean;
   snapToGrid: boolean;
@@ -64,6 +67,7 @@ export interface CanvasStageProps {
   onUndo: () => void;
   onRedo: () => void;
   setActiveTool: (tool: ActiveTool) => void;
+  setActiveLayer: (layerId: string) => void;
   onZoomChange: (zoom: number) => void;
   isFitToView: boolean;
   isCenterView: boolean;

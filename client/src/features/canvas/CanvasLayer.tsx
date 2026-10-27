@@ -1,13 +1,14 @@
 import { useRef, useEffect, useLayoutEffect, useCallback } from "react";
 import { Group, Image as KonvaImage, Layer, Line, Rect } from "react-konva";
 import Konva from "konva";
-import type { CanvasLayer as CanvasLayerType, StrokeNode, ActiveTool } from "./useCanvasState";
+import type { CanvasLayer as CanvasLayerType, StrokeNode, ActiveTool, MoveMode } from "./useCanvasState";
 import DrawingLayer from "./DrawingLayer";
 
 interface CanvasLayerProps {
   layer: CanvasLayerType;
   isActive: boolean;
   activeTool: ActiveTool;
+  moveMode: MoveMode;
   brushSize: number;
   brushColor: string;
   snapToGrid: boolean;
@@ -102,6 +103,7 @@ export default function CanvasLayerRenderer({
   layer,
   isActive,
   activeTool,
+  moveMode,
   brushSize,
   brushColor,
   snapToGrid,
@@ -124,7 +126,9 @@ export default function CanvasLayerRenderer({
     if (contentGroupRef.current) applyKonvaFilters(contentGroupRef.current, layer.filters);
   }, [layer.filters]);
 
-  const isLayerMovable = activeTool === "move" && isActive;
+  // Stage-level move tool handles both "pick" and "move-selected"
+  // modes, so we disable the per-layer transparent overlay rect.
+  const isLayerMovable = false;
 
   // ── Imperative Layer clip ─────────────────────────────────────────────
   // react-konva may not reliably pass clip props through to the native
@@ -277,12 +281,13 @@ export default function CanvasLayerRenderer({
   return (
     <Layer ref={layerRef} visible={layer.visible} opacity={layer.opacity}>
       {hasMask ? (
-        <Group ref={dragGroupRef} x={layer.offsetX} y={layer.offsetY}>
+        <Group ref={dragGroupRef} x={layer.offsetX} y={layer.offsetY} name={"layer-drag-" + layer.id}>
           <Group
             ref={(node) => {
               outerGroupRef.current = node;
               clippedGroupRef.current = node;
             }}
+            name={"layer-clip-" + layer.id}
             clipX={-layer.offsetX}
             clipY={-layer.offsetY}
             clipWidth={canvasWidth}
@@ -333,12 +338,13 @@ export default function CanvasLayerRenderer({
           )}
         </Group>
       ) : (
-        <Group ref={dragGroupRef} x={layer.offsetX} y={layer.offsetY}>
+        <Group ref={dragGroupRef} x={layer.offsetX} y={layer.offsetY} name={"layer-drag-" + layer.id}>
           <Group
             ref={(node) => {
               contentGroupRef.current = node;
               clippedGroupRef.current = node;
             }}
+            name={"layer-clip-" + layer.id}
             clipX={-layer.offsetX}
             clipY={-layer.offsetY}
             clipWidth={canvasWidth}
