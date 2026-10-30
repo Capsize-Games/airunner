@@ -45,13 +45,13 @@ self-contained static bundle; the desktop pins the version. No sibling
 checkout.**
 
 - Precedent already exists and is documented: the `AIRUNNER_PROJECT` root-swap
-  and per-product builds (CLAUDE.md "Independent per-product builds",
+  and per-product builds (airunner `AGENTS.md` "Independent per-product builds",
   issue #258 — `projects/uwuchat/client` and `projects/airunner-art/client`
   each have their own `package.json` / `vite.config.ts` / `main.tsx` and build
   independently).
 - Add a third target whose `App.tsx` roots only the in-scope surface. Because
   the in-scope surface is a whole app shell, a build-time root swap is the
-  correct shape here — the same reasoning CLAUDE.md gives for the existing
+  correct shape here — the same reasoning airunner `AGENTS.md` gives for the existing
   `virtual:app-root` swap, not a shared component with a slot prop.
 - **Cloud-only code is excluded at build time** by that target never importing
   the auth / subscription / social / rooms / economy / admin modules. This is
