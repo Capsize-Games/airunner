@@ -2,12 +2,11 @@
 
 ## Testing Boundary
 
-- Do not run or launch the AI Runner application as part of normal task execution unless explicitly requested by the user in the active ticket/release issue.
+- Verify runtime behavior yourself with a local dev launch where possible; manual testing is reserved for releases and hosted builds.
 - Do not run real models or perform GUI inference in ordinary coding sessions.
-- The user will always test runtime behavior manually.
 - Do not create or modify automated tests unless the user explicitly asks for test changes.
 - Regression tests explicitly required by the assigned release issue are authorized additions/changes within that issue's scope.
-- When a change would normally be verified by launching the app, state that the user should verify it instead of starting the application.
+- When a change can only be verified in a release build, state that the user should verify it instead of starting the application.
 - Scope regression checks to those explicitly assigned in the active release issue.
 
 ## Code Style and Quality
