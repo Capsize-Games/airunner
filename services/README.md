@@ -1,98 +1,45 @@
 # Services
 
-The `services/` package is AIRunner's headless orchestration layer. It
-owns the daemon entry points, FastAPI server wiring, runtime registry,
-downloads, persistence, lifecycle control, and the modality services that
-coordinate LLM, STT, TTS, and art workloads.
+`services/` contains AI Runner's headless daemon and API implementation. It owns request routing, runtime coordination, downloads, persistence, and service lifecycle behavior for the model workers used by other applications.
 
-```mermaid
-flowchart LR
-    GUI[src/ GUI client] --> Daemon[services/ daemon routes]
-    Daemon --> Registry[runtime registry]
-    Daemon --> Client[canonical daemon HTTP client]
-    Registry --> Sidecars[llama.cpp or whisper.cpp sidecars]
-    Daemon --> Data[(AIRUNNER_BASE_PATH)]
-    Daemon --> Scripts[scripts/ tooling]
-```
+Importable Python code is under `services/src/airunner_services/`. The main console entry points are declared in [`setup.py`](setup.py): `airunner-daemon`, `airunner-headless`, and `airunner-service`, along with download and maintenance commands.
 
-## What This Package Owns
+## Package profiles and dependencies
 
-- FastAPI server bootstrap and daemon entry points
-- runtime routing, runtime load or unload control, and health checks
-- service-level downloads, migrations, persistence, and settings
-- orchestration for daemon-backed LLM, TTS, STT, and art requests
-- the canonical daemon HTTP client (`airunner_services.daemon_client`),
-  which the desktop client imports through the thin `airunner.daemon_client`
-  re-export layer
+`services/setup.py` declares the `core`, `llm-native`, `stt-native`, `art-python`, `tts-python`, `headless`, `desktop`, and `development` extras, among others. `desktop` is a legacy package-extra name for a broader service profile; it does not include the retired Qt interface.
 
-Importable service code lives under `services/src/airunner_services/`.
+The base package metadata requires `airunner-common~=6.1.7` and `facehuggershield==1.0.0`. The CI workflow uses pinned source checkouts for these dependencies because their PyPI releases are paused or yanked. No general external install instructions for those sources are established here. The TTS-related extras also require `airunner-tts-vendor`; [issue #2413](https://github.com/Capsize-Games/airunner/issues/2413) records unresolved PyPI availability. Since `headless` and `desktop` include TTS dependencies, their names alone do not establish that dependency resolution succeeds.
 
-The package split contract is documented in
-[docs/architecture/package_split_contract.md](../docs/architecture/package_split_contract.md),
-the package map lives in
-[docs/architecture/layered_product_architecture.md](../docs/architecture/layered_product_architecture.md),
-and the architecture audit is tracked in
-[docs/architecture/architecture-complexity-audit.md](../docs/architecture/architecture-complexity-audit.md).
-
-## Installation
-
-For normal repo development, use the developer installer. It installs the
-split packages in editable mode and builds the pinned native sidecars used
-by daemon-backed functional tests:
+For a local development environment, first confirm that the required dependencies are available from an approved source. Then create an isolated environment with `uv` and install the service package and development tools:
 
 ```bash
-./scripts/install.sh
+uv venv --python 3.13 .venv
+uv pip install --python .venv/bin/python -e "./services[development]"
 ```
 
-For an isolated service environment, install the local package stack and a
-service extra that matches the workload you are validating:
+This command uses the current package metadata; it cannot supply dependencies that are unavailable from the configured indexes.
+
+## Run the service
+
+The `airunner-headless` console command supervises a daemon and exposes its HTTP API. It binds to loopback by default. A non-loopback bind requires `AIRUNNER_API_KEY`; `--insecure-no-auth` disables that requirement and should not be used for a network-facing deployment.
+
+For a container-based checkout, use the development compose file. It builds from the repository and mounts the local service and native source. For the published-image configuration, use the release compose file, which has no source bind mounts:
 
 ```bash
-python -m venv venv
-source venv/bin/activate
-pip install --upgrade pip setuptools wheel
-pip install -e './services[headless,development]'
+docker compose -f docker-compose.dev.yml run --rm --service-ports airunner
+docker compose -f docker-compose.release.yml run --rm --service-ports airunner
 ```
 
-Use `services[desktop]` when you want the broader desktop-oriented extra
-set, and use `./deployment/install_distributed.sh` when you are installing
-the daemon or GUI client into separate roots.
+Both definitions bind port `127.0.0.1:8080` and mount the configured data and Hugging Face cache directories. The release compose file references `ghcr.io/capsize-games/airunner/airunner:linux-headless`; image publication and startup are not verified here. The repository's dependency publication gaps may also affect builds that request the `tts-python` extra.
 
-Worktrees: pytest pins imports to the checkout under test (issue #2246),
-so running the suite from a worktree with another checkout's venv still
-exercises the worktree's sources. That pin only applies under pytest;
-running the daemon itself from a worktree needs that checkout's own
-editable install (or its own venv as above).
+## Checks
 
-## Test Running
-
-The quickest service checks are the daemon runtime smoke commands exposed
-by the repo test runner:
+Run focused tests after setting up the documented dependencies:
 
 ```bash
-./venv/bin/python scripts/run_tests.py --llm-runtime-smoke
-./venv/bin/python scripts/run_tests.py --stt-runtime-smoke
-./venv/bin/python scripts/run_tests.py --art-runtime-smoke
-./venv/bin/python scripts/run_tests.py --tts-runtime-smoke
+.venv/bin/python -m pytest services/tests/test_service_bootstrap.py -q
 ```
 
-The bootstrap sanity check for the server surface is:
+The test suite includes runtime smoke and functional checks that can require sidecars, model files, or GPU capacity. Report skips and missing runtime resources as unverified; they are not evidence that a workload ran.
 
-```bash
-./venv/bin/python -m pytest services/tests/test_service_bootstrap.py -v
-```
-
-When a change touches daemon routes, workers, or runtime coordination,
-pair those smoke checks with the relevant daemon-backed functional suites
-in `services/tests/`, especially:
-
-```bash
-./venv/bin/python -m pytest services/tests/test_tts_synthesize_functional.py -v --timeout=120
-./venv/bin/python -m pytest services/tests/test_llm_functional.py -v --timeout=900
-./venv/bin/python -m pytest services/tests/test_llm_tts_functional.py -v --timeout=1200
-./venv/bin/python -m pytest services/tests/test_stt_transcribe_functional.py -v --timeout=1200
-```
-
-The functional tests live under `services/tests/` because they validate the
-composed product boundary, even when the behavior under test is primarily
-owned by `services/`.
+See the [repository README](../README.md) for dependency and Docker context, [CONTRIBUTING.md](../CONTRIBUTING.md) for contributor guidance, and [SECURITY.md](../SECURITY.md) for the security reporting process.
