@@ -3,10 +3,7 @@
 # (issue #2038), so an isolated build only needs setuptools+wheel from the
 # index; airunner-common is not fetched into the isolated build environment
 # (all four packages are built and published together since issue #2061).
-# Repository packaging policy (#2057) keeps setuptools in
-# >=80.9,<82 for builds and the Linux runtime lock. The pinned
-# torch==2.13.0+cu129 wheel metadata inspected for this audit declares
-# setuptools>=77.0.3 with no upper bound; the repository's <82 cap is not a
-# torch Requires-Dist constraint.
-requires = ["setuptools>=80.9.0,<82", "wheel"]
+# Use the reviewed setuptools build backend revision. The historical runtime
+# lock is a separate, inactive desktop snapshot.
+requires = ["setuptools==84.2.1", "wheel"]
 build-backend = "setuptools.build_meta"
