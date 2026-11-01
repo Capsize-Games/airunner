@@ -208,11 +208,21 @@ jobs:
             services/tests/test_download_security.py \
             services/tests/test_release_b02.py \
             services/tests/test_import_boundaries.py \
-            -o addopts='' -q
+            -o addopts='' -q --junitxml=required-checks.xml
         env:
           AIRUNNER_HEADLESS: "1"
           AIRUNNER_HTTP_PORT: "8188"
           AIRUNNER_HTTP_HOST: "127.0.0.1"
+
+      # Counts come from the JUnit XML: the pytest stdout tail is
+      # deterministically lost in this job's log stream, so a green
+      # step alone does not prove how many checks ran.
+      - name: Upload required-check results
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: required-check-results
+          path: required-checks.xml
 
       - name: Download verified policy fragment
         if: needs.provision-policy.result == 'success'
