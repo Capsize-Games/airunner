@@ -14,6 +14,8 @@ real contracts, and both scripts run on synthetic fixtures only.
 from __future__ import annotations
 
 import json
+import os
+import re
 import subprocess
 import tomllib
 from pathlib import Path
@@ -112,8 +114,116 @@ def test_release_archives_verified_candidate_before_upload_and_promotion() -> No
         step for step in publish_steps
         if step.get("name") == "Upload release assets"
     )
-    assert "linux-candidate/*" in upload_release["with"]["files"]
-    assert "SHA256SUMS" in upload_release["with"]["files"]
+    upload_script = upload_release["run"]
+    assert upload_release["env"]["GH_TOKEN"] == "${{ github.token }}"
+    assert "gh version" in upload_script
+    assert 'gh release upload "$GITHUB_REF_NAME"' in upload_script
+    assert '"${python_assets[@]}"' in upload_script
+    assert '"${sidecar_assets[@]}"' in upload_script
+    assert '"${candidate_assets[@]}"' in upload_script
+    assert '"${checksum_assets[@]}"' in upload_script
+    assert "--clobber" not in upload_script
+
+
+def _run_release_asset_upload(
+    tmp_path: Path, *, missing_group: str | None = None
+) -> tuple[subprocess.CompletedProcess[str], list[str] | None]:
+    """Run the real workflow upload script against a fake GitHub CLI."""
+    jobs = c01._load_yaml(c01._DISPATCH)["jobs"]
+    step = next(
+        step
+        for step in jobs["publish-release-assets"]["steps"]
+        if step.get("name") == "Upload release assets"
+    )
+    groups = {
+        "python": ("release-assets/python-dist", "airunner-services.whl"),
+        "sidecars": (
+            "release-assets/sidecars",
+            "runtime-sidecars-linux.tar.gz",
+        ),
+        "candidate": (
+            "release-assets/linux-candidate",
+            "candidate.tar.gz",
+        ),
+        "checksums": ("release-assets", "SHA256SUMS"),
+    }
+    for group, (directory, filename) in groups.items():
+        parent = tmp_path / directory
+        parent.mkdir(parents=True, exist_ok=True)
+        if group != missing_group:
+            (parent / filename).write_bytes(b"neutral release asset fixture\n")
+
+    fake_bin = tmp_path / "fake-bin"
+    fake_bin.mkdir()
+    fake_gh = fake_bin / "gh"
+    fake_gh.write_text(
+        "#!/bin/sh\n"
+        'if [ "$1" = "version" ]; then echo "gh version fixture"; exit 0; fi\n'
+        'printf "%s\\0" "$@" > "$FAKE_GH_ARGS"\n',
+        encoding="utf-8",
+    )
+    fake_gh.chmod(0o755)
+    args_file = tmp_path / "gh-args.bin"
+    env = os.environ.copy()
+    env.update(
+        {
+            "PATH": str(fake_bin) + os.pathsep + env.get("PATH", ""),
+            "FAKE_GH_ARGS": str(args_file),
+            "GITHUB_REF_NAME": "v-fixture",
+            "GITHUB_REPOSITORY": "Capsize-Games/airunner",
+            "GH_TOKEN": "fixture-token-not-a-credential",
+        }
+    )
+    result = subprocess.run(
+        ["bash", "-e", "-o", "pipefail", "-c", step["run"]],
+        cwd=tmp_path,
+        env=env,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    args = (
+        args_file.read_bytes().decode().rstrip("\0").split("\0")
+        if args_file.exists()
+        else None
+    )
+    return result, args
+
+
+def test_release_asset_upload_passes_explicit_files_without_clobber(
+    tmp_path: Path,
+) -> None:
+    """Upload invokes gh with all existing files and no replacement flag."""
+    result, args = _run_release_asset_upload(tmp_path)
+    assert result.returncode == 0, result.stderr
+    assert args is not None
+    assert args[:3] == ["release", "upload", "v-fixture"]
+    assert "--repo" in args
+    assert args[args.index("--repo") + 1] == "Capsize-Games/airunner"
+    assert "--clobber" not in args
+    assert len(args) == 9
+
+
+@pytest.mark.parametrize("missing_group", ["python", "sidecars", "candidate", "checksums"])
+def test_release_asset_upload_stops_when_a_required_group_is_empty(
+    tmp_path: Path, missing_group: str
+) -> None:
+    """The upload script refuses incomplete asset sets before calling gh."""
+    result, args = _run_release_asset_upload(tmp_path, missing_group=missing_group)
+    assert result.returncode != 0
+    assert "expected Python packages, sidecars, candidate archive, and checksums" in result.stderr
+    assert args is None
+
+
+def test_release_workflows_pin_every_action_to_a_commit() -> None:
+    """Release and contract workflows use immutable action refs."""
+    for workflow_path in (c01._DISPATCH, c01._EVAL):
+        workflow = c01._load_yaml(workflow_path)
+        for job in workflow["jobs"].values():
+            for step in job.get("steps", []):
+                uses = step.get("uses")
+                if uses:
+                    assert re.fullmatch(r"[^@]+@[0-9a-f]{40}", uses), uses
 
 
 def test_promotion_checks_tag_source_and_existing_assets_before_side_effects() -> None:

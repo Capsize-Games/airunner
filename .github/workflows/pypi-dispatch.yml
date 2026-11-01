@@ -257,7 +257,7 @@ jobs:
           --workflow .github/workflows/pypi-dispatch.yml
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
@@ -309,7 +309,7 @@ jobs:
             --publish-pypi "$PUBLISH_PYPI"
 
       - name: Upload Python distribution artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: python-dist
           path: dist/*
@@ -368,7 +368,7 @@ jobs:
           done
 
       - name: Upload sidecar bundle artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: sidecar-bundles
           path: release-assets/sidecars/*
@@ -430,8 +430,8 @@ jobs:
 
       # Inspect the existing GitHub Release before uploading anything. This
       # rejects a previous candidate archive for this version from another
-      # source SHA, and catches any filename collision before the upload action
-      # can partially attach the new set of assets.
+      # source SHA and catches filename collisions. The GitHub CLI upload below
+      # omits --clobber, so a concurrent collision also fails without replacing.
       - name: Preflight immutable release asset identities
         env:
           GITHUB_TOKEN: ${{ github.token }}
@@ -448,12 +448,34 @@ jobs:
             --asset-file release-assets/SHA256SUMS
 
       - name: Upload release assets
-        uses: softprops/action-gh-release@v2
-        with:
-          files: |
-            release-assets/python-dist/*
-            release-assets/sidecars/*
-            release-assets/linux-candidate/*
-            release-assets/SHA256SUMS
-          overwrite_files: false
-          fail_on_unmatched_files: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh version
+          shopt -s nullglob
+          python_assets=(release-assets/python-dist/*)
+          sidecar_assets=(release-assets/sidecars/*)
+          candidate_assets=(release-assets/linux-candidate/*)
+          checksum_assets=(release-assets/SHA256SUMS)
+          if ((
+            ${#python_assets[@]} == 0 ||
+            ${#sidecar_assets[@]} == 0 ||
+            ${#candidate_assets[@]} == 0
+          )) || [[ ! -f release-assets/SHA256SUMS ]]; then
+            echo "expected Python packages, sidecars, candidate archive, and checksums" >&2
+            exit 1
+          fi
+          files=(
+            "${python_assets[@]}"
+            "${sidecar_assets[@]}"
+            "${candidate_assets[@]}"
+            "${checksum_assets[@]}"
+          )
+          for file in "${files[@]}"; do
+            if [[ ! -f "$file" ]]; then
+              echo "release asset is not a regular file: $file" >&2
+              exit 1
+            fi
+          done
+          gh release upload "$GITHUB_REF_NAME" "${files[@]}" \
+            --repo "$GITHUB_REPOSITORY"
