@@ -10,9 +10,11 @@ The service branch was inspected at `f953d5496`, then reconciled with
 `origin/master` at `5898dad49` in merge `d9fb0c1e3`. Preserve the existing
 service APIs, data, optional companion contracts, licenses and extracted
 packages. Do not reintroduce the root GUI distribution or move the service
-to a new repository. Consuming applications own interface flows; existing
-companion memory and jobs remain supported service modules until an
-explicit migration replaces them.
+to a new repository. Consuming applications own interface flows and cognitive
+policy, including mood, curiosity and proactive conversation. The service owns
+model execution and generic runtime contracts. Retain existing companion
+interfaces, schema history and stored data during staged retirement; see
+`COMPANION.md` for the dependency and preservation boundaries.
 
 The initial inventory contained 41 open GitHub issues.
 Issues #2083, #2185, #2198, #2199, #2132, #2135 and #2150 were retired as
@@ -39,9 +41,11 @@ acceptance, legal review, or release readiness.
    model/revision/dimension identity. Random vectors and fabricated timing
    measurements are invalid responses. If a backend cannot serve a request,
    return an explicit unavailable/unsupported error.
-5. Optional companion modules consume the same local inference, job,
-   memory, and tool contracts. Map remaining cognition work without copying
-   the web application's auth, billing, interface, or live configuration.
+5. Consolidate cognitive policy in consuming applications rather than adding
+   a second production scheduler to this service. Extract generic embedding,
+   capability, error and execution contracts from companion modules first.
+   Preserve registered memory-tool compatibility and historical migrations
+   until their callers and stored data have an explicit retirement path.
 6. Safety checks remain fail closed across inputs and publication paths.
    Private policy contents, credentials, customer data and sensitive
    evaluation evidence never enter public source, issues or artifacts.
@@ -58,7 +62,7 @@ acceptance, legal review, or release readiness.
 | 0: Reconcile scope | Retire obsolete plans; align contributor/service docs (#2201), preserve companion boundaries (#2144); integrate mainline; make optional static app hosting explicitly configured | Tracker reconciliation; service contract and accurate commands; no machine-specific implicit UI mount; focused merge checks |
 | 1: API correctness | HTTP admission and setup terminal status (#2408); Ollama show/pull (#2415); real embedding responses; bounded TTS HTTP requests and voice listing (#2254); accurate STT loaded state | Authenticated contract tests with fake runtime boundaries, bounded request/concurrency tests, no false success or synthetic model output |
 | 2: Data integrity | Safe downgrade policy (#2358), existing NULL preservation (#2363), schema drift checks (#2364), list boundaries (#2365), bootstrap/backup/document batching (#2409) | Temporary SQLite upgrade/recovery tests, preserved user values, bounded public reads and streaming ingestion |
-| 3: Runtime and companion | Reconcile confirmed LLM/art/voice findings (#2405/#2406/#2407); preserve companion evaluation (#2147/#2149); diagnose CPU/CUDA scenario (#2242/#2416) | Focused security/lifecycle regressions; documented unsupported behavior; no real-model parity claim from doubles |
+| 3: Runtime and companion | Reconcile confirmed LLM/art/voice findings (#2405/#2406/#2407); characterize retained compatibility (#2147/#2149); retire duplicate cognitive policy in stages; diagnose CPU/CUDA scenario (#2242/#2416) | Focused security/lifecycle regressions; preserved data and compatibility; explicit caller inventory before deletion; no real-model parity claim from doubles |
 | 4: Distribution | Resolve unavailable TTS distribution (#2413); service dependency/version orchestration (#2200); apt release artifact (#2251); dependency refresh evidence (#2274); optional-ML gate (#2399); ops cleanup (#2410); isolated crash regression (#2276) | Supported profiles resolve; pinned reviewed inputs; artifact-level daemon checks; CI uses the same source/check list; excluded tests recorded |
 | 5: Code quality | Repair analyzer path and unavailable-tool handling; analyze all service/native modules; review dead imports and ranked complexity by subsystem | JSON reports with exact scope/exclusions; confirmed defects fixed; reviewed dispositions for residual advisory findings; focused tests/import checks |
 | 6: Service acceptance | Installation/restart/recovery (#2139), art API (#2122), voice API (#2148), embeddings/RAG (#2136), offline/auth (#2128), GPU handoffs (#2146), safety efficacy/publication (#2123) | Candidate/model/runtime hashes; exact commands and results on isolated targets; pending/skipped is never pass |
