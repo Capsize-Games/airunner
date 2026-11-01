@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import sqlite3
 import sys
@@ -27,6 +28,7 @@ MAX_TIMEOUT_SECONDS = 10.0
 MIN_TIMEOUT_SECONDS = 0.05
 BUSY_TIMEOUT_SECONDS = 0.02
 PROGRESS_INSTRUCTIONS = 500
+SQLITE_SIDECAR_SUFFIXES = ("-wal", "-shm", "-journal")
 
 
 class InventoryError(Exception):
@@ -67,6 +69,17 @@ def _existing_database_path(raw_path: str | Path) -> Path:
             "database path must be an existing regular file"
         ) from exc
     return resolved
+
+
+def _reject_sqlite_sidecars(path: Path) -> None:
+    """Require a standalone snapshot with no adjacent SQLite journal files."""
+    if any(
+        os.path.lexists(f"{path}{suffix}")
+        for suffix in SQLITE_SIDECAR_SUFFIXES
+    ):
+        raise InventoryError(
+            "database must be a standalone snapshot without SQLite sidecars"
+        )
 
 
 def _execute(
@@ -161,8 +174,9 @@ def inventory_database(
             f"{MAX_TIMEOUT_SECONDS} seconds"
         )
     path = _existing_database_path(database)
+    _reject_sqlite_sidecars(path)
     deadline = InventoryDeadline(timeout_seconds)
-    uri = f"file:{quote(str(path), safe='/:')}?mode=ro"
+    uri = f"file:{quote(str(path), safe='/:')}?mode=ro&immutable=1"
     connection: sqlite3.Connection | None = None
     try:
         connection = sqlite3.connect(
@@ -243,14 +257,14 @@ def inventory_database(
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         description=(
-            "Read aggregate counts from an explicitly selected companion "
-            "SQLite database. No database path is assumed."
+            "Read aggregate counts from an explicitly selected standalone "
+            "SQLite snapshot. Never use an active database."
         )
     )
     parser.add_argument(
         "--database",
         required=True,
-        help="existing SQLite database file to inspect read-only",
+        help="existing standalone SQLite backup or snapshot (not active)",
     )
     parser.add_argument(
         "--timeout-seconds",

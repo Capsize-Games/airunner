@@ -252,6 +252,31 @@ class CompanionStoreInventoryTests(unittest.TestCase):
             self.assertNotEqual(result.returncode, 0)
             self.assertNotIn("link.sqlite", result.stderr)
 
+    def test_sqlite_sidecars_are_rejected_without_changes(self) -> None:
+        for suffix in ("-wal", "-shm", "-journal"):
+            with (
+                self.subTest(suffix=suffix),
+                tempfile.TemporaryDirectory() as directory,
+            ):
+                database = Path(directory) / "inventory.sqlite"
+                self.create_fixture(database)
+                sidecar = Path(f"{database}{suffix}")
+                sidecar.write_text("SIDE_CAR_SENTINEL", encoding="utf-8")
+                before = sidecar.read_bytes()
+                before_files = {
+                    path.name for path in Path(directory).iterdir()
+                }
+
+                result = self.run_cli(database)
+
+                self.assertNotEqual(result.returncode, 0)
+                self.assertNotIn("SIDE_CAR_SENTINEL", result.stderr)
+                self.assertEqual(sidecar.read_bytes(), before)
+                self.assertEqual(
+                    {path.name for path in Path(directory).iterdir()},
+                    before_files,
+                )
+
     def test_progress_handler_cancels_a_long_read(self) -> None:
         connection = sqlite3.connect(":memory:")
         deadline = INVENTORY.InventoryDeadline(0.01)

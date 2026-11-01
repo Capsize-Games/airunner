@@ -51,9 +51,13 @@ statuses (with an `unknown` bucket), and one validated Alembic revision. It
 uses the stored job statuses `queued`, `leased`, `succeeded`, `failed`, and
 `cancelled`, and ledger statuses `migrated`, `failed`, `needs_resolution`, and
 `resolved`; other or null values contribute only to `unknown`.
-It requires an explicit existing SQLite file, opens it with `mode=ro` and
-`query_only`, rejects a symbolic-link file path, and enforces a finite query
-deadline. It does not load service models, inspect table contents, return
+It requires an explicit existing standalone SQLite backup or snapshot; never
+point it at an active database. It opens with `mode=ro&immutable=1` and
+`query_only`, rejects a symbolic-link file path and existing `-wal`, `-shm`, or
+`-journal` sidecars, and enforces a finite query deadline. The immutable mode
+bypasses SQLite locking and change detection, so the caller must provide a
+stable snapshot. The tool does not make a copy or validate snapshot stability.
+It does not load service models, inspect table contents, return
 identities or payloads, migrate, export, or delete data. An absent expected
 table is reported with a `null` count; an existing empty table has a count of
 zero. The command has no default database path:
