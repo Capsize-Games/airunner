@@ -103,7 +103,11 @@ class LocalInferenceCapability(BaseModel):
 
 
 def _configured_model_id() -> str:
-    """Return the selected (not proven-loaded) model id, or ""."""
+    """Return the effective selection (never proof of a load).
+
+    Falls back to the documented default local model when no
+    selection is persisted; "" only when settings are unreadable.
+    """
     try:
         from airunner_services.database.models.llm_generator_settings import (
             LLMGeneratorSettings,

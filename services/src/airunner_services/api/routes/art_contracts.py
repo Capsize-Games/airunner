@@ -188,7 +188,12 @@ class JobStatusResponse(BaseModel):
 
 
 class ModelInfo(BaseModel):
-    """Art model information."""
+    """Art model information.
+
+    ``loaded`` is catalog-configured state (the configured art
+    model equals this entry), not runtime-loaded proof; see
+    ``registry_model_info`` in ``art_catalog_routes``.
+    """
 
     id: str
     name: str

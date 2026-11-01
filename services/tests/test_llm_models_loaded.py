@@ -1,8 +1,9 @@
 """GET /api/v1/llm/models reports proven-loaded, not configured.
 
-The ``loaded`` flag must use the same READY-gated proof as the
-local-inference capability payload: a configured selection with a
-stopped (or missing) runtime reports ``loaded=false``. Hermetic:
+The ``loaded`` flag must use the same READY-plus-metadata proof
+as the local-inference capability payload: a configured selection
+with a stopped (or missing) runtime, or a READY runtime whose
+health names no served model, reports ``loaded=false``. Hermetic:
 stubbed settings, model registry, and runtime; no model, network,
 GPU, or database access.
 """
@@ -39,7 +40,11 @@ _OTHER_ID = "qwen3.5-9b"
 class _FakeRuntimeClient(RuntimeClient):
     """Local runtime with canned health; no model or network."""
 
-    def __init__(self, status: RuntimeHealthStatus) -> None:
+    def __init__(
+        self,
+        status: RuntimeHealthStatus,
+        metadata: Optional[Dict[str, Any]] = None,
+    ) -> None:
         self.descriptor = RuntimeDescriptor(
             runtime=RuntimeKind.LLM,
             provider=DEFAULT_PROVIDER,
@@ -48,6 +53,7 @@ class _FakeRuntimeClient(RuntimeClient):
             supports_streaming=True,
         )
         self._status = status
+        self._metadata = metadata or {}
 
     def invoke(self, request: Any) -> Any:
         del request
@@ -58,7 +64,11 @@ class _FakeRuntimeClient(RuntimeClient):
         raise AssertionError("/models must not stream inference")
 
     def healthcheck(self) -> RuntimeHealth:
-        return RuntimeHealth(descriptor=self.descriptor, status=self._status)
+        return RuntimeHealth(
+            descriptor=self.descriptor,
+            status=self._status,
+            metadata=self._metadata,
+        )
 
 
 class _SettingsObjects:
@@ -131,8 +141,11 @@ def test_stopped_runtime_reports_configured_model_not_loaded(
 def test_ready_runtime_reports_configured_model_loaded(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Configured + READY runtime: only that model is loaded."""
-    ready = _FakeRuntimeClient(status=RuntimeHealthStatus.READY)
+    """READY plus served-model metadata: only that model loads."""
+    ready = _FakeRuntimeClient(
+        status=RuntimeHealthStatus.READY,
+        metadata={"model_id": _CONFIGURED_ID},
+    )
     client = _client(monkeypatch, _registry_with(ready))
     body = client.get("/api/v1/llm/models").json()
     loaded = [m["id"] for m in body if m["loaded"]]
@@ -141,6 +154,16 @@ def test_ready_runtime_reports_configured_model_loaded(
     assert set(entry) == {"id", "name", "loaded", "size_mb"}
     assert entry["name"] == "GPT-OSS 20B"
     assert entry["size_mb"] == 1024
+
+
+def test_ready_without_metadata_reports_nothing_loaded(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """READY with no served-model metadata claims no load."""
+    ready = _FakeRuntimeClient(status=RuntimeHealthStatus.READY)
+    client = _client(monkeypatch, _registry_with(ready))
+    body = client.get("/api/v1/llm/models").json()
+    assert not any(m["loaded"] for m in body)
 
 
 def test_no_runtime_registry_still_answers_not_loaded(

@@ -42,7 +42,15 @@ def group_models_by_version(
 
 
 def registry_model_info(configured: str, model) -> ModelInfo:
-    """Return one registry-backed art model response entry."""
+    """Return one registry-backed art model response entry.
+
+    Scope: ``loaded`` here is catalog-configured state only —
+    the configured art model path/id equals this registry entry.
+    Unlike the LLM ``loaded`` flags (READY-proven via
+    ``local_capability_runtime``), no art runtime health is
+    probed here, so it must not be read as runtime-loaded. The
+    wire field keeps its name for response compatibility.
+    """
     return ModelInfo(
         id=model.huggingface_id,
         name=model.name,

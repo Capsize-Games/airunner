@@ -131,9 +131,10 @@ def test_runtime_unavailable_without_registry_or_route() -> None:
 
 
 def test_runtime_health_and_loaded_flag_are_live() -> None:
-    """READY health proves the configured model is loaded."""
+    """READY health with served-model metadata proves the load."""
+    serving = _FakeRuntimeClient(metadata={"model_id": "gpt-oss-20b"})
     payload = build_local_capability(
-        registry=_registry_with(_FakeRuntimeClient()),
+        registry=_registry_with(serving),
         configured_model_id="gpt-oss-20b",
     )
     assert payload["runtime"]["status"] == "ready"
@@ -141,6 +142,7 @@ def test_runtime_health_and_loaded_flag_are_live() -> None:
     configured = [m["id"] for m in payload["models"] if m["configured"]]
     loaded = [m["id"] for m in payload["models"] if m["loaded"]]
     assert configured == loaded == ["gpt-oss-20b"]
+
 
 
 def test_configured_model_is_not_loaded_without_ready_runtime() -> None:

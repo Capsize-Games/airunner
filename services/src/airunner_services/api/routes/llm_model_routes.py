@@ -13,6 +13,9 @@ from airunner_services.database.models.path_settings import PathSettings
 from airunner_services.llm.local_capability import (
     proven_loaded_model_id,
 )
+from airunner_services.llm.local_model_selection import (
+    effective_local_model_id,
+)
 from airunner_services.llm.provider_config import LLMProviderConfig
 from airunner_services.model_management.model_registry import ModelRegistry
 from airunner_services.runtimes.contracts import RuntimeAction
@@ -32,9 +35,15 @@ logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 
 
 def selected_model_id(settings: Any) -> str:
-    """Return the configured local model id when one can be resolved."""
+    """Return the effective local model selection.
+
+    The persisted selection wins; when nothing is configured the
+    documented default local model is selected (see
+    ``local_model_selection``). A selection is never proof that
+    the model is loaded.
+    """
     if settings is None:
-        return ""
+        return effective_local_model_id()
     for value in (
         getattr(settings, "model_id", None),
         getattr(settings, "model_version", None),
@@ -45,7 +54,7 @@ def selected_model_id(settings: Any) -> str:
         resolved = LLMProviderConfig.resolve_model_id("local", str(value))
         if resolved:
             return resolved
-    return ""
+    return effective_local_model_id()
 
 
 def persist_model_selection(model_id: str) -> str:
