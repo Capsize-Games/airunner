@@ -149,6 +149,13 @@ Do not impose a bulk formatting rewrite or silently mark legacy debt as
 passed. Residual advisory findings need recorded dispositions and linked
 work; new or changed code receives focused checks.
 
+The per-revision data recovery dispositions are recorded in
+`MIGRATION_RECOVERY.md`. The historical conversation-pointer migration rejects
+non-NULL values before upgrade mutation because converting a conversation ID
+to a chatbot ID would lose information. Its NULL and absent-column paths retain
+the supported upgrade behavior. Already-discarded values cannot be recovered by
+editing a migration that has run.
+
 ## Verification and release constraints
 
 The first merge check ran in `.venv-ci` and failed collection because
