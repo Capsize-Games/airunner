@@ -1,8 +1,9 @@
 """Local fallback split keeps every public import path working.
 
-The signal-runtime client and the art request resolvers live
-in their own modules; ``local_fallback`` re-exports the names
-existing callers import from it, as the identical objects.
+The signal-runtime client, the art request resolvers and the
+STT client live in their own modules; ``local_fallback``
+re-exports the names existing callers import from it, as the
+identical objects.
 Hermetic: imports only, no services are constructed.
 """
 
@@ -10,6 +11,7 @@ from __future__ import annotations
 
 from airunner_services.runtimes import local_fallback
 from airunner_services.runtimes import local_fallback_art_helpers
+from airunner_services.runtimes import local_fallback_stt_client
 from airunner_services.runtimes import signal_runtime_client
 from airunner_services.runtimes.local_fallback import (
     LocalFallbackArtClient,
@@ -81,6 +83,21 @@ def test_art_resolvers_live_in_art_helpers_module() -> None:
         assert hasattr(local_fallback_art_helpers, name), name
     moved = local_fallback_art_helpers._resolve_art_operation
     assert local_fallback._resolve_art_operation is moved
+
+
+def test_stt_client_lives_in_stt_module() -> None:
+    """The extracted STT client is one shared class object."""
+    moved = local_fallback_stt_client.LocalFallbackSTTClient
+    assert moved is LocalFallbackSTTClient
+    assert local_fallback.LocalFallbackSTTClient is moved
+    assert moved.__module__.endswith("local_fallback_stt_client")
+    build = local_fallback_stt_client._build_stt_service
+    assert local_fallback._build_stt_service is build
+    moved_cap = local_fallback_stt_client.MAX_LOCAL_FALLBACK_AUDIO_BYTES
+    assert local_fallback.MAX_LOCAL_FALLBACK_AUDIO_BYTES == moved_cap
+    resolve = signal_runtime_client._resolve_model_type
+    assert local_fallback._resolve_model_type is resolve
+    assert local_fallback_stt_client._resolve_model_type is resolve
 
 
 def test_runtimes_package_lazy_exports_resolve() -> None:

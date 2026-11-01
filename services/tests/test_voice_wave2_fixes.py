@@ -1130,9 +1130,10 @@ def test_fallback_stt_accepts_correlated_response():
 def test_fallback_stt_rejects_oversize_audio(monkeypatch):
     from airunner_services.ipc.messages import EnvelopeStatus
     from airunner_services.runtimes import local_fallback as fallback
+    from airunner_services.runtimes import local_fallback_stt_client
 
     monkeypatch.setattr(
-        fallback, "MAX_LOCAL_FALLBACK_AUDIO_BYTES", 4
+        local_fallback_stt_client, "MAX_LOCAL_FALLBACK_AUDIO_BYTES", 4
     )
     client = fallback.LocalFallbackSTTClient(
         signal_source=object(),
@@ -1189,9 +1190,10 @@ def test_fallback_tts_playback_reports_unsupported_params(monkeypatch):
 def test_fallback_cancels_log_best_effort(monkeypatch):
     from airunner_services.ipc.messages import EnvelopeStatus
     from airunner_services.runtimes import local_fallback as fallback
+    from airunner_services.runtimes import local_fallback_stt_client
 
     recorder = _LogRecorder()
-    monkeypatch.setattr(fallback, "logger", recorder)
+    monkeypatch.setattr(local_fallback_stt_client, "logger", recorder)
     stt = fallback.LocalFallbackSTTClient(
         signal_source=object(),
         mediator=_FakeMediator(),

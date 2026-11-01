@@ -49,6 +49,13 @@ def _build_signal_mediator() -> Any:
     return SignalMediator()
 
 
+def _resolve_model_type(name: str) -> Any:
+    """Resolve a model type lazily to avoid eager imports."""
+    from airunner_common.contract_enums import ModelType
+
+    return getattr(ModelType, name)
+
+
 def _model_health_status(model_status: Any) -> RuntimeHealthStatus:
     """Translate application model status into runtime health status."""
     from airunner_common.contract_enums import ModelStatus
