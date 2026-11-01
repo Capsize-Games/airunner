@@ -130,3 +130,16 @@ def test_nltk_false_return_is_not_reported_installed(monkeypatch, tmp_path):
     monkeypatch.setattr(setup_nltk_worker, "AIRUNNER_BASE_PATH", str(tmp_path))
     with pytest.raises(RuntimeError, match="NLTK data installation failed"):
         setup_nltk_worker.download_nltk_data(tmp_path / "nltk_data")
+
+
+def test_nested_install_root_is_rejected_before_setup_starts(client, monkeypatch):
+    http, payload = client
+    nested = payload["base_path"] + "/other-runtime"
+
+    def reject_write(*args):
+        raise AssertionError("rejected setup must not create directories")
+
+    monkeypatch.setattr(setup, "_create_directories", reject_write)
+    response = _post(http, {**payload, "base_path": nested})
+    assert response.status_code == 409
+    assert response.json()["detail"] == "base_path_requires_daemon_reconfiguration"

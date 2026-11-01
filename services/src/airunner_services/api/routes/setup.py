@@ -59,17 +59,21 @@ def _allowed_base_roots() -> list[str]:
 
 
 def _resolve_base_path(raw: str) -> str:
-    """Resolve an install base path confined to the allowed data root.
+    """Require the data root used by this daemon and its runtime workers.
 
     Symlinks, ``..`` segments, and tilde are resolved before the
-    comparison, so a value that escapes the data root is rejected
-    instead of letting an authenticated caller create directories
-    anywhere the daemon can write.
+    comparison. Installing into a child directory would not reconfigure
+    the model download service or the runtime's language-data search path.
     """
     candidate = os.path.realpath(os.path.expanduser(raw or ""))
     for root in _allowed_base_roots():
-        if candidate == root or candidate.startswith(root + os.sep):
+        if candidate == root:
             return candidate
+        if candidate.startswith(root + os.sep):
+            raise HTTPException(
+                status_code=409,
+                detail="base_path_requires_daemon_reconfiguration",
+            )
     raise HTTPException(
         status_code=400, detail="base_path_outside_allowed_root"
     )
