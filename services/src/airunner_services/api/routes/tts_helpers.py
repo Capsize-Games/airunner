@@ -20,6 +20,9 @@ from airunner_services.runtimes.contracts import (
     TTSInvocationRequest,
 )
 from airunner_services.runtimes.registry import RuntimeRegistry
+from airunner_services.runtimes.tts_capabilities import (
+    TTS_BACKEND_UNAVAILABLE_CODE,
+)
 
 from .tts_models import TTSRequest
 
@@ -42,6 +45,11 @@ def tts_error_status_code(response: ResponseEnvelope) -> int:
     if response.status is EnvelopeStatus.CANCELLED:
         return 409
     if response.status is EnvelopeStatus.FAILED:
+        if (
+            response.error
+            and response.error.code == TTS_BACKEND_UNAVAILABLE_CODE
+        ):
+            return 503
         if response.error and response.error.code.endswith("_timeout"):
             return 504
         return 502

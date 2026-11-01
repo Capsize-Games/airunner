@@ -16,6 +16,9 @@ from airunner_services.ipc.messages import (
 )
 from airunner_services.runtimes.base import RuntimeClient
 from airunner_services.runtimes.contracts import RuntimeAction, RuntimeKind
+from airunner_services.runtimes.tts_capabilities import (
+    TTS_BACKEND_UNAVAILABLE_CODE,
+)
 
 from .daemon_runtime_registry import require_runtime_registry
 
@@ -42,6 +45,8 @@ def runtime_failure_status(response: ResponseEnvelope) -> int:
     error = response.error
     if error is None:
         return 502
+    if error.code == TTS_BACKEND_UNAVAILABLE_CODE:
+        return 503
     if error.code.endswith("_timeout"):
         return 504
     if error.code.endswith("_unsupported"):

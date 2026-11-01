@@ -79,7 +79,7 @@ class _WorkerManager:
         raise AssertionError("health must not resolve the lazy worker property")
 
 
-def test_healthcheck_advertises_default_voice_from_loaded_openvoice_only() -> None:
+def test_healthcheck_marks_deferred_openvoice_failed_without_voice_catalog() -> None:
     worker_manager = _WorkerManager(_FakeWorker())
     client = LocalFallbackTTSClient(
         signal_source=SimpleNamespace(_worker_manager=worker_manager)
@@ -87,8 +87,9 @@ def test_healthcheck_advertises_default_voice_from_loaded_openvoice_only() -> No
 
     health = client.healthcheck()
 
-    assert health.status.value == "ready"
-    assert health.metadata["voice_ids"] == ["default"]
+    assert health.status.value == "failed"
+    assert health.metadata["capability_status"] == "deferred"
+    assert health.metadata.get("voice_ids") is None
     assert worker_manager.property_accesses == 0
 
 

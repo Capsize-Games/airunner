@@ -57,6 +57,12 @@ from airunner_services.runtimes.signal_runtime_client import (
     _model_status_value,
     _resolve_model_type,
 )
+from airunner_services.runtimes.tts_capabilities import (
+    OPENVOICE_DEFERRED_DETAILS,
+    TTS_BACKEND_UNAVAILABLE_CODE,
+    deferred_tts_metadata,
+    is_deferred_tts_model_type,
+)
 
 logger = get_logger(__name__)
 
@@ -484,6 +490,19 @@ class LocalFallbackTTSClient(_SignalRuntimeClient):
         worker = self._existing_tts_worker()
         status_getter = getattr(worker, "_current_tts_status", None)
         if worker is None or not callable(status_getter):
+            configured_model = os.environ.get("AIRUNNER_TTS_MODEL_TYPE")
+            if is_deferred_tts_model_type(configured_model):
+                metadata = {
+                    **health.metadata,
+                    **deferred_tts_metadata(configured_model),
+                }
+                return health.model_copy(
+                    update={
+                        "status": RuntimeHealthStatus.FAILED,
+                        "details": OPENVOICE_DEFERRED_DETAILS,
+                        "metadata": metadata,
+                    }
+                )
             return health
 
         from airunner_common.contract_enums import ModelStatus
@@ -512,6 +531,15 @@ class LocalFallbackTTSClient(_SignalRuntimeClient):
         ).strip().lower().split(".")[-1]
         if normalized_model:
             metadata["model_type"] = normalized_model
+        if is_deferred_tts_model_type(normalized_model):
+            metadata.update(deferred_tts_metadata(normalized_model))
+            return health.model_copy(
+                update={
+                    "status": RuntimeHealthStatus.FAILED,
+                    "details": OPENVOICE_DEFERRED_DETAILS,
+                    "metadata": metadata,
+                }
+            )
         if (
             runtime_status is RuntimeHealthStatus.READY
             and normalized_model == "openvoice"
@@ -542,13 +570,39 @@ class LocalFallbackTTSClient(_SignalRuntimeClient):
         if request.action is RuntimeAction.STATUS:
             return self._status_response(request.request_id)
         if request.action is RuntimeAction.LOAD_MODEL:
-            return self._load_model(request.request_id)
+            return self._load_model(
+                request.request_id,
+                (request.metadata or {}).get("model_type"),
+            )
         if request.action is RuntimeAction.UNLOAD_MODEL:
             return self._unload_model(request.request_id)
         if request.action is not RuntimeAction.INVOKE:
             raise ValueError("LocalFallbackTTSClient only supports invoke")
         invocation = TTSInvocationRequest.model_validate(request.payload)
-        if self._headless_tts_worker() is not None:
+        configured_model = os.environ.get("AIRUNNER_TTS_MODEL_TYPE")
+        requested_model = (invocation.metadata or {}).get("model_type")
+        if is_deferred_tts_model_type(
+            requested_model or configured_model
+        ):
+            return self._failure_response(
+                request.request_id,
+                TTS_BACKEND_UNAVAILABLE_CODE,
+                OPENVOICE_DEFERRED_DETAILS,
+            )
+
+        worker = self._headless_tts_worker()
+        active_model = getattr(worker, "_active_tts_model", None)
+        try:
+            active_model_type = active_model() if callable(active_model) else None
+        except Exception:
+            active_model_type = None
+        if is_deferred_tts_model_type(active_model_type):
+            return self._failure_response(
+                request.request_id,
+                TTS_BACKEND_UNAVAILABLE_CODE,
+                OPENVOICE_DEFERRED_DETAILS,
+            )
+        if worker is not None:
             return self._invoke_headless_runtime(
                 request.request_id,
                 invocation,
@@ -642,12 +696,38 @@ class LocalFallbackTTSClient(_SignalRuntimeClient):
             metadata={"best_effort": True},
         )
 
-    def _load_model(self, request_id: str) -> ResponseEnvelope:
+    def _load_model(
+        self,
+        request_id: str,
+        requested_model_type: Optional[str] = None,
+    ) -> ResponseEnvelope:
         """Enable and load the local TTS model."""
         from airunner_common.contract_enums import ModelStatus, SignalCode
 
+        if is_deferred_tts_model_type(
+            requested_model_type or os.environ.get("AIRUNNER_TTS_MODEL_TYPE")
+        ):
+            return self._failure_response(
+                request_id,
+                TTS_BACKEND_UNAVAILABLE_CODE,
+                OPENVOICE_DEFERRED_DETAILS,
+            )
+
         worker = self._headless_tts_worker()
         if worker is not None:
+            active_model = getattr(worker, "_active_tts_model", None)
+            try:
+                active_model_type = (
+                    active_model() if callable(active_model) else None
+                )
+            except Exception:
+                active_model_type = None
+            if is_deferred_tts_model_type(active_model_type):
+                return self._failure_response(
+                    request_id,
+                    TTS_BACKEND_UNAVAILABLE_CODE,
+                    OPENVOICE_DEFERRED_DETAILS,
+                )
             load_tts = getattr(worker, "_load_tts", None)
             current_status = getattr(worker, "_current_tts_status", None)
             if not callable(load_tts) or not callable(current_status):

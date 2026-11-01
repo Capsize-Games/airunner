@@ -34,6 +34,12 @@ from airunner_services.runtimes.tts_daemon_runtime_settings import (
 	TTSDaemonRuntimeSettings,
 	resolve_tts_daemon_runtime_settings,
 )
+from airunner_services.runtimes.tts_capabilities import (
+	OPENVOICE_DEFERRED_DETAILS,
+	TTS_BACKEND_UNAVAILABLE_CODE,
+	deferred_tts_metadata,
+	is_deferred_tts_model_type,
+)
 
 DEFAULT_PROVIDER = "local"
 _INNER_RUNTIME_STATUS_TIMEOUT_SECONDS = 1.0
@@ -155,6 +161,16 @@ class SidecarTTSClient(RuntimeClient):
 	def healthcheck(self) -> RuntimeHealth:
 		"""Return the health of the managed TTS runtime."""
 		metadata = self._metadata()
+		if is_deferred_tts_model_type(self._settings.tts_model_type):
+			metadata.update(
+				deferred_tts_metadata(self._settings.tts_model_type)
+			)
+			return RuntimeHealth(
+				descriptor=self.descriptor,
+				status=RuntimeHealthStatus.FAILED,
+				details=OPENVOICE_DEFERRED_DETAILS,
+				metadata=metadata,
+			)
 		if self._launcher is None:
 			return RuntimeHealth(
 				descriptor=self.descriptor,
@@ -232,6 +248,12 @@ class SidecarTTSClient(RuntimeClient):
 		with self._invoke_lock:
 			try:
 				settings = self._settings_for_control(request.metadata)
+				if is_deferred_tts_model_type(settings.tts_model_type):
+					return self._failure_response(
+						request.request_id,
+						TTS_BACKEND_UNAVAILABLE_CODE,
+						OPENVOICE_DEFERRED_DETAILS,
+					)
 				self._ensure_launcher(settings)
 				launcher = self._require_launcher()
 				launcher.start()
@@ -299,6 +321,12 @@ class SidecarTTSClient(RuntimeClient):
 					request.payload
 				)
 				settings = self._settings_for_invocation(invocation)
+				if is_deferred_tts_model_type(settings.tts_model_type):
+					return self._failure_response(
+						request.request_id,
+						TTS_BACKEND_UNAVAILABLE_CODE,
+						OPENVOICE_DEFERRED_DETAILS,
+					)
 				self._ensure_launcher(settings)
 				launcher = self._require_launcher()
 				launcher.start()

@@ -164,6 +164,45 @@ def test_tts_voice_catalog_reports_unavailable_when_not_provided(
     assert response.json()["detail"] == "tts_voice_catalog_unavailable"
 
 
+def test_tts_voice_catalog_hides_deferred_openvoice_even_if_ready(
+    authenticated_client,
+) -> None:
+    client, headers, app = authenticated_client
+    runtime = _FakeTTSClient(
+        SimpleNamespace(
+            status=RuntimeHealthStatus.READY,
+            metadata={
+                "model_type": "OpenVoice",
+                "voice_ids": ["default"],
+            },
+        )
+    )
+    app.state.runtime_registry = _FakeRegistry(runtime)
+
+    response = client.get("/api/v1/tts/voices", headers=headers)
+
+    assert response.status_code == 503
+    assert response.json()["detail"] == "tts_voice_catalog_unavailable"
+
+
+def test_tts_http_rejects_explicit_deferred_backend_before_runtime(
+    authenticated_client,
+) -> None:
+    client, headers, app = authenticated_client
+    runtime = _FakeTTSClient()
+    app.state.runtime_registry = _FakeRegistry(runtime)
+
+    response = client.post(
+        "/api/v1/tts/synthesize",
+        headers=headers,
+        json={"text": "hello", "model_type": "OpenVoice"},
+    )
+
+    assert response.status_code == 503
+    assert response.json()["detail"] == "tts_backend_unavailable"
+    assert runtime.envelopes == []
+
+
 @pytest.mark.parametrize(
     ("status", "metadata", "expected_loaded"),
     [
@@ -225,7 +264,7 @@ class _LazyWorkerManager:
         raise AssertionError("health must not resolve the lazy worker property")
 
 
-def test_production_fallback_health_exposes_default_only_when_loaded(
+def test_production_fallback_does_not_report_deferred_openvoice_as_ready(
     authenticated_client,
 ) -> None:
     from airunner_common.contract_enums import ModelStatus
@@ -243,8 +282,8 @@ def test_production_fallback_health_exposes_default_only_when_loaded(
 
     response = client.get("/api/v1/tts/voices", headers=headers)
 
-    assert response.status_code == 200
-    assert response.json() == {"voices": ["default"]}
+    assert response.status_code == 503
+    assert response.json()["detail"] == "tts_voice_catalog_unavailable"
     assert worker_manager.access_count == 0
 
 
@@ -267,7 +306,7 @@ def test_unloaded_fallback_voice_lookup_does_not_create_worker(
     assert worker_manager.access_count == 0
 
 
-def test_sidecar_health_transports_child_voice_metadata(
+def test_sidecar_openvoice_health_is_deferred_without_child_check(
     authenticated_client, monkeypatch
 ) -> None:
     from airunner_services.runtimes.sidecar_tts_client import SidecarTTSClient
@@ -279,8 +318,10 @@ def test_sidecar_health_transports_child_voice_metadata(
         endpoint = "http://127.0.0.1:8191"
         api_base_url = endpoint + "/api/v1/tts"
 
-        @staticmethod
-        def health_status():
+        health_checks = 0
+
+        def health_status(self):
+            self.health_checks += 1
             return RuntimeHealthStatus.READY, "ready"
 
     settings = TTSDaemonRuntimeSettings(
@@ -296,10 +337,11 @@ def test_sidecar_health_transports_child_voice_metadata(
         settings=settings,
         launcher=_ReadyLauncher(),
     )
+    inner_summary = []
     monkeypatch.setattr(
         runtime,
         "_inner_runtime_summary",
-        lambda: {
+        lambda: inner_summary.append(True) or {
             "status": "ready",
             "metadata": {"voice_ids": ["default"]},
         },
@@ -309,20 +351,39 @@ def test_sidecar_health_transports_child_voice_metadata(
 
     response = client.get("/api/v1/tts/voices", headers=headers)
 
-    assert response.status_code == 200
-    assert response.json() == {"voices": ["default"]}
+    assert response.status_code == 503
+    assert response.json()["detail"] == "tts_voice_catalog_unavailable"
+    assert runtime.healthcheck().metadata["capability_status"] == "deferred"
+    assert inner_summary == []
 
 
 @pytest.mark.parametrize(
-    ("status", "metadata", "expected_loaded"),
+    ("status", "metadata", "expected_models"),
     [
-        (RuntimeHealthStatus.READY, {"model_type": "Bark"}, True),
-        (RuntimeHealthStatus.STOPPED, {"model_type": "Bark"}, False),
-        (RuntimeHealthStatus.READY, {"model_type": "OpenVoice"}, False),
+        (
+            RuntimeHealthStatus.READY,
+            {"model_id": "local-tts-1", "model_name": "Local TTS"},
+            [{"id": "local-tts-1", "name": "Local TTS", "loaded": True}],
+        ),
+        (
+            RuntimeHealthStatus.STOPPED,
+            {"model_id": "local-tts-1", "model_name": "Local TTS"},
+            [],
+        ),
+        (
+            RuntimeHealthStatus.READY,
+            {"model_id": "openvoice-v2", "model_type": "OpenVoice"},
+            [],
+        ),
+        (
+            RuntimeHealthStatus.READY,
+            {"model_type": "Espeak"},
+            [],
+        ),
     ],
 )
 def test_tts_catalog_loaded_requires_ready_matching_identity(
-    authenticated_client, status, metadata, expected_loaded: bool
+    authenticated_client, status, metadata, expected_models: list[dict]
 ) -> None:
     client, headers, app = authenticated_client
     runtime = _FakeTTSClient(
@@ -333,10 +394,7 @@ def test_tts_catalog_loaded_requires_ready_matching_identity(
     response = client.get("/api/v1/tts/models", headers=headers)
 
     assert response.status_code == 200
-    models = response.json()
-    assert len(models) == 1
-    assert models[0]["id"] == "suno/bark"
-    assert models[0]["loaded"] is expected_loaded
+    assert response.json() == expected_models
 
 
 def test_tts_and_stt_routes_reject_missing_authentication(

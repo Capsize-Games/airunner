@@ -31,6 +31,10 @@ from airunner_services.requests.tts_request import EspeakTTSRequest
 from airunner_services.requests.tts_request import OpenVoiceTTSRequest
 from airunner_services.requests.tts_request import TTSRequest
 from airunner_services.runtimes.openvoice_exceptions import OpenVoiceError
+from airunner_services.runtimes.tts_capabilities import (
+	OPENVOICE_DEFERRED_DETAILS,
+	is_deferred_tts_model_type,
+)
 from airunner_services.utils.application import peek_registered_api
 from airunner_services.utils.application.enum_resolver import signal_code_proxy
 from airunner_services.workers.worker import QueueType, Worker
@@ -531,18 +535,13 @@ class TTSGeneratorWorker(Worker):
 		if column_name != "reference_speaker_path":
 			return
 
+		active_model = self._active_tts_model()
+		if is_deferred_tts_model_type(active_model):
+			self._failed_model = active_model
+			self.logger.warning(OPENVOICE_DEFERRED_DETAILS)
+			return
 		if self.tts and hasattr(self.tts, "reload_speaker_embeddings"):
 			self.tts.reload_speaker_embeddings(reference_speaker_path=value)
-			return
-
-		if self._active_tts_model() != TTSModel.OPENVOICE.value:
-			return
-
-		self._initialize_tts_model_manager()
-		if self.tts and hasattr(self.tts, "reload_speaker_embeddings"):
-			self.tts.reload_speaker_embeddings(reference_speaker_path=value)
-			if self.tts_enabled:
-				self._load_tts()
 
 	def _initialize_tts_model_manager(self):
 		self.logger.info("Initializing TTS handler...")
@@ -551,6 +550,8 @@ class TTSGeneratorWorker(Worker):
 			self.logger.error("No TTS model found. Skipping initialization.")
 			return
 		model_type = TTSModel(model)
+		if is_deferred_tts_model_type(model_type):
+			raise OpenVoiceError(OPENVOICE_DEFERRED_DETAILS)
 		if self.tts and self._current_model == model:
 			self.logger.debug(
 				"TTS model already initialized and matches current model."
@@ -713,6 +714,10 @@ class TTSGeneratorWorker(Worker):
 			return
 
 		model = self._active_tts_model()
+		if is_deferred_tts_model_type(model):
+			self._failed_model = model
+			self.logger.warning(OPENVOICE_DEFERRED_DETAILS)
+			return
 		if model is not None and self._failed_model == model:
 			return
 
@@ -806,6 +811,10 @@ class TTSGeneratorWorker(Worker):
 			return
 
 		model_type = TTSModel(model)
+		if is_deferred_tts_model_type(model_type):
+			self._failed_model = model
+			self.logger.warning(OPENVOICE_DEFERRED_DETAILS)
+			return
 
 		self.logger.debug(f"self.tts: {self.tts} | model_type: {model_type}")
 
