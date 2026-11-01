@@ -21,6 +21,32 @@ Issues #2083, #2185, #2198, #2199, #2132, #2135 and #2150 were retired as
 not planned because their target product changed. This does not establish
 acceptance, legal review, or release readiness.
 
+## Current release decisions
+
+The owner deferred OpenVoice on 2026-11-01. The `linux-release` extra excludes
+the TTS vendor; runtime and API guards reject OpenVoice before import, loading,
+synthesis or automatic download. Historical vendor-bearing extras remain
+described as unavailable profiles. Docker and installer defaults use the new
+profile and reject those historical selections.
+
+The headless eSpeak path returns WAV bytes without local playback. It uses a
+bounded plain-text renderer and an explicit voice catalogue operation; see
+`services/README.md` for the API selector and supported speed range. Isolated
+engine and contract checks do not establish packaged installation or voice
+acceptance.
+
+The active release lock is pending generation. The old desktop lock is retained
+only as historical evidence. Binary-only resolution stopped at
+`llama-cpp-python==0.3.21`, which requires a reviewed source-built wheel for the
+target. Source review, a pinned isolated CUDA build and hardware validation are
+separate work units. CI preflight deliberately fails while the lock or required
+sibling input reviews are pending; a skipped or unavailable check is not a pass.
+
+The service Kanban project tracks these inputs, companion retirement, eSpeak
+acceptance, CUDA wheel preparation and signed policy provisioning as bounded
+follow-ups. A production policy artifact, its packaged trust configuration and
+the applicable acceptance evidence are still required before promotion.
+
 ## Service boundaries
 
 1. The transport layer authenticates all non-health HTTP requests and
