@@ -104,6 +104,51 @@ def test_candidate_archive_rejects_escaping_symlink_and_special_file(
         candidate.create_archive(bundle, tmp_path / "out", _VERSION, _SHA)
 
 
+def _archive_with_root(tmp_path: Path, kind: bytes, mode: int, duplicate: bool) -> Path:
+    bundle, _ = _candidate_tree(tmp_path)
+    original = candidate.create_archive(bundle, tmp_path / "out", _VERSION, _SHA)
+    destination = tmp_path / "with-root" / original.name
+    destination.parent.mkdir()
+    root = tarfile.TarInfo(original.name.removesuffix(".tar.gz"))
+    root.type = kind
+    root.mode = mode
+    root.linkname = "../../outside"
+    with tarfile.open(original, "r:gz") as source:
+        with tarfile.open(destination, "w:gz") as target:
+            target.addfile(root)
+            if duplicate:
+                target.addfile(root)
+            for member in source:
+                data = source.extractfile(member) if member.isfile() else None
+                try:
+                    target.addfile(member, data)
+                finally:
+                    if data is not None:
+                        data.close()
+    return destination
+
+
+@pytest.mark.parametrize(("kind", "mode", "duplicate"), [
+    (tarfile.SYMTYPE, 0o755, False),
+    (tarfile.LNKTYPE, 0o755, False),
+    (tarfile.REGTYPE, 0o755, False),
+    (tarfile.CHRTYPE, 0o755, False),
+    (tarfile.DIRTYPE, 0o4755, False),
+    (tarfile.DIRTYPE, 0o755, True),
+])
+def test_candidate_archive_rejects_unsafe_or_duplicate_root(
+    tmp_path: Path, kind: bytes, mode: int, duplicate: bool,
+) -> None:
+    archive = _archive_with_root(tmp_path, kind, mode, duplicate)
+    with pytest.raises(candidate.CandidateArtifactError, match="unsafe root"):
+        candidate.verify_archive(archive, _VERSION, _SHA)
+
+
+def test_candidate_archive_accepts_explicit_regular_root_directory(tmp_path: Path) -> None:
+    archive = _archive_with_root(tmp_path, tarfile.DIRTYPE, 0o755, False)
+    candidate.verify_archive(archive, _VERSION, _SHA)
+
+
 def test_release_checksums_use_exact_bytes_and_reject_basename_collisions(
     tmp_path: Path,
 ) -> None:

@@ -266,9 +266,116 @@ def _version_from_archive(path: Path, source_sha: str) -> str:
     return version
 
 
-def verify_archive(
-    path: Path, version: str | None, source_sha: str
+def _index_archive_members(
+    archive: tarfile.TarFile, prefix: str
+) -> dict[str, tarfile.TarInfo]:
+    """Validate member types and names, including an optional root directory."""
+    by_name: dict[str, tarfile.TarInfo] = {}
+    root_seen = False
+    for member in archive:
+        relative = _safe_member_name(member.name, prefix)
+        if not relative:
+            if root_seen or not member.isdir() or member.mode & 0o7000:
+                raise CandidateArtifactError("candidate archive has an unsafe root")
+            root_seen = True
+            continue
+        if relative in by_name:
+            raise CandidateArtifactError("candidate archive has duplicate entries")
+        if not (member.isfile() or member.isdir() or member.issym()):
+            raise CandidateArtifactError("candidate archive has a special entry")
+        if member.mode & 0o7000:
+            raise CandidateArtifactError("candidate archive has unsafe mode bits")
+        if member.issym():
+            _safe_archive_symlink(relative, member.linkname)
+        by_name[relative] = member
+    _reject_members_below_symlinks(by_name)
+    return by_name
+
+
+def _reject_members_below_symlinks(members: dict[str, tarfile.TarInfo]) -> None:
+    """Reject archive names whose parent is an archive symlink."""
+    symlink_paths = {name for name, member in members.items() if member.issym()}
+    for name in members:
+        parts = PurePosixPath(name).parts
+        if any("/".join(parts[:index]) in symlink_paths
+               for index in range(1, len(parts))):
+            raise CandidateArtifactError("candidate archive has entries beneath a symlink")
+
+
+def _archive_manifest_files(
+    archive: tarfile.TarFile, members: dict[str, tarfile.TarInfo], source_sha: str
+) -> dict[str, str]:
+    """Read the bounded manifest and validate its source and payload entries."""
+    member = members.get(_MANIFEST)
+    if member is None or not member.isfile():
+        raise CandidateArtifactError("candidate archive manifest is absent")
+    stream = archive.extractfile(member)
+    if stream is None:
+        raise CandidateArtifactError("candidate archive manifest is unreadable")
+    with stream:
+        manifest_bytes = stream.read(4 * 1024 * 1024 + 1)
+    if len(manifest_bytes) > 4 * 1024 * 1024:
+        raise CandidateArtifactError("candidate archive manifest is oversized")
+    manifest = json.loads(manifest_bytes.decode("utf-8"))
+    if not isinstance(manifest, dict) or manifest.get("base") != source_sha:
+        raise CandidateArtifactError("candidate archive source SHA does not match")
+    files = manifest.get("files")
+    if not isinstance(files, list) or not files:
+        raise CandidateArtifactError("candidate archive manifest has no files")
+    expected: dict[str, str] = {}
+    for item in files:
+        file_name, digest = _archive_manifest_entry(item)
+        if file_name == _MANIFEST or file_name in expected:
+            raise CandidateArtifactError("candidate archive manifest has duplicate paths")
+        expected[file_name] = digest
+    return expected
+
+
+def _archive_manifest_entry(item: object) -> tuple[str, str]:
+    """Validate one relative manifest path and its SHA-256 digest."""
+    if not isinstance(item, dict):
+        raise CandidateArtifactError("candidate archive manifest is invalid")
+    file_name, digest = item.get("path"), item.get("sha256")
+    if (
+        not isinstance(file_name, str)
+        or not isinstance(digest, str)
+        or not _HEX_RE.fullmatch(digest)
+    ):
+        raise CandidateArtifactError("candidate archive manifest is invalid")
+    parsed = PurePosixPath(file_name)
+    if parsed.is_absolute() or not file_name or any(
+        part in ("", ".", "..") for part in parsed.parts
+    ):
+        raise CandidateArtifactError("candidate archive manifest path is unsafe")
+    return file_name, digest
+
+
+def _verify_archive_payloads(
+    archive: tarfile.TarFile,
+    members: dict[str, tarfile.TarInfo],
+    expected: dict[str, str],
 ) -> None:
+    """Require the exact manifest file set and hash resolved payload bytes."""
+    actual = {
+        name for name, member in members.items()
+        if member.isfile()
+        or (member.issym() and _archive_resolves_to_file(members, name))
+    }
+    actual.discard(_MANIFEST)
+    if actual != set(expected):
+        raise CandidateArtifactError("candidate archive files do not match manifest")
+    for file_name, digest in expected.items():
+        resolved = _resolve_archive_file(members, file_name)
+        data = archive.extractfile(members[resolved])
+        if data is None:
+            raise CandidateArtifactError("candidate archive file is unreadable")
+        with data:
+            actual_digest = hashlib.file_digest(data, "sha256").hexdigest()
+        if actual_digest != digest:
+            raise CandidateArtifactError("candidate archive hash mismatch")
+
+
+def verify_archive(path: Path, version: str | None, source_sha: str) -> None:
     """Validate archive identity, safe members, manifest hashes and modes."""
     version = version or _version_from_archive(path, source_sha)
     _validate_identity(version, source_sha)
@@ -278,102 +385,9 @@ def verify_archive(
     prefix = expected_name.removesuffix(".tar.gz")
     try:
         with tarfile.open(path, mode="r:gz") as archive:
-            members = archive.getmembers()
-            by_name: dict[str, tarfile.TarInfo] = {}
-            for member in members:
-                relative = _safe_member_name(member.name, prefix)
-                if not relative:
-                    continue
-                if relative in by_name:
-                    raise CandidateArtifactError(
-                        "candidate archive has duplicate entries"
-                    )
-                if not (member.isfile() or member.isdir() or member.issym()):
-                    raise CandidateArtifactError(
-                        "candidate archive has a special entry"
-                    )
-                if member.mode & 0o7000:
-                    raise CandidateArtifactError(
-                        "candidate archive has unsafe mode bits"
-                    )
-                if member.issym():
-                    _safe_archive_symlink(relative, member.linkname)
-                by_name[relative] = member
-            symlink_paths = {
-                name for name, member in by_name.items() if member.issym()
-            }
-            for name in by_name:
-                parts = PurePosixPath(name).parts
-                if any("/".join(parts[:index]) in symlink_paths
-                       for index in range(1, len(parts))):
-                    raise CandidateArtifactError(
-                        "candidate archive has entries beneath a symlink"
-                    )
-            manifest_member = by_name.get(_MANIFEST)
-            if manifest_member is None or not manifest_member.isfile():
-                raise CandidateArtifactError("candidate archive manifest is absent")
-            stream = archive.extractfile(manifest_member)
-            if stream is None:
-                raise CandidateArtifactError("candidate archive manifest is unreadable")
-            manifest_bytes = stream.read(4 * 1024 * 1024 + 1)
-            if len(manifest_bytes) > 4 * 1024 * 1024:
-                raise CandidateArtifactError("candidate archive manifest is oversized")
-            manifest = json.loads(manifest_bytes.decode("utf-8"))
-            if not isinstance(manifest, dict) or manifest.get("base") != source_sha:
-                raise CandidateArtifactError(
-                    "candidate archive source SHA does not match"
-                )
-            files = manifest.get("files")
-            if not isinstance(files, list) or not files:
-                raise CandidateArtifactError("candidate archive manifest has no files")
-            expected: dict[str, str] = {}
-            for item in files:
-                if not isinstance(item, dict):
-                    raise CandidateArtifactError(
-                        "candidate archive manifest is invalid"
-                    )
-                file_name, digest = item.get("path"), item.get("sha256")
-                if (
-                    not isinstance(file_name, str)
-                    or not isinstance(digest, str)
-                    or not _HEX_RE.fullmatch(digest)
-                ):
-                    raise CandidateArtifactError(
-                        "candidate archive manifest is invalid"
-                    )
-                parsed = PurePosixPath(file_name)
-                if parsed.is_absolute() or not file_name or any(
-                    part in ("", ".", "..") for part in parsed.parts
-                ):
-                    raise CandidateArtifactError(
-                        "candidate archive manifest path is unsafe"
-                    )
-                if file_name == _MANIFEST or file_name in expected:
-                    raise CandidateArtifactError(
-                        "candidate archive manifest has duplicate paths"
-                    )
-                expected[file_name] = digest
-            actual = {
-                name for name, member in by_name.items()
-                if member.isfile()
-                or (member.issym() and _archive_resolves_to_file(by_name, name))
-            }
-            actual.discard(_MANIFEST)
-            if actual != set(expected):
-                raise CandidateArtifactError(
-                    "candidate archive files do not match manifest"
-                )
-            for file_name, digest in expected.items():
-                resolved = _resolve_archive_file(by_name, file_name)
-                member = by_name[resolved]
-                data = archive.extractfile(member)
-                if data is None:
-                    raise CandidateArtifactError("candidate archive file is unreadable")
-                actual_digest = hashlib.sha256()
-                for chunk in iter(lambda: data.read(1024 * 1024), b""):
-                    actual_digest.update(chunk)
-                if actual_digest.hexdigest() != digest:
-                    raise CandidateArtifactError("candidate archive hash mismatch")
+            members = _index_archive_members(archive, prefix)
+            expected = _archive_manifest_files(archive, members, source_sha)
+            _verify_archive_payloads(archive, members, expected)
     except (
         OSError,
         EOFError,
