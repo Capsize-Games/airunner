@@ -109,7 +109,7 @@ COPY native/ ./native/
 # +cu129 wheels resolve inside the CUDA base image.
 # The debian python3-cryptography (pulled in by the deadsnakes/other apt
 # packages above) has no RECORD file, so pip cannot upgrade it to the pinned
-# cryptography==46.0.7 and aborts with "uninstall-no-record-file". Purge it
+# cryptography==50.0.2 and aborts with "uninstall-no-record-file". Purge it
 # before the pip installs so the pinned version installs cleanly.
 RUN set -e; \
     if dpkg -l python3-cryptography >/dev/null 2>&1; then \

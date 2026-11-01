@@ -54,7 +54,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install "cryptography==46.0.7"
+          pip install "cryptography==50.0.2"
 
       # Secrets arrive via the environment only and are never echoed,
       # listed, or dumped: no `set -x`, no `env` output, no debug
@@ -131,7 +131,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install "cryptography==46.0.7" pytest pyyaml
+          pip install "cryptography==50.0.2" pytest pyyaml
 
       - name: Validate release-stage wiring with synthetic fixtures
         run: |
