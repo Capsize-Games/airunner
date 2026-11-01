@@ -43,19 +43,21 @@ entry_module = "airunner_services.daemon"
 entry_function = "main"
 # Manifest identity of the entry point ("module:function").
 entry = "airunner_services.daemon:main"
-# P02 lock consumed by the isolated build environment.
-constraints = "package/constraints-linux-nvidia-cu129.txt"
+# Active P02 lock path for the Linux release profile. The prior desktop
+# lock is historical; release-lock generation remains pending after the
+# OpenVoice/Melo deferral, and release preflight blocks before installation.
+constraints = "package/constraints-linux-nvidia-cu129-linux-release.txt"
 
 [profile]
-# The services-side Linux v1 NVIDIA release profile (P02): the
-# "desktop" aggregate of services/setup.py. The aggregates list must
-# union to exactly that aggregate's requirement list, in order.
-services_extra = "desktop"
+# The services-side Linux v1 NVIDIA release profile (P02). It excludes
+# the paused OpenVoice/Melo vendor extra; package metadata retains those
+# opt-in extras. The active hash lock is pending regeneration.
+services_extra = "linux-release"
 aggregates = [
     "llm-native",
     "stt-native",
     "art-python",
-    "tts-python",
+    "tts-python-core",
     "llm_weather",
     "search",
     "nvidia",

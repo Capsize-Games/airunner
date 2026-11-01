@@ -7,8 +7,9 @@ write the P04 bundle manifest, then gate the result through
 inspect_linux_bundle (manifest hashes, required resources, exclusion
 scan, warn-file gate, frozen-module presence).
 
-Run from the repo root in an isolated venv with the P02 profile
-installed (package/constraints-linux-nvidia-cu129.txt)::
+Run from the repo root in an isolated venv with the P02 linux-release
+profile installed from its validated hash lock. Lock generation is pending;
+the candidate workflow fails closed until that lock exists.
 
     venv/bin/python scripts/assemble_linux_bundle.py --dry-run
     venv/bin/python scripts/assemble_linux_bundle.py \\

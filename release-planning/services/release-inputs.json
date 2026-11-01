@@ -1,6 +1,23 @@
 {
   "schema_version": 1,
-  "purpose": "Track sibling source inputs that require review before CI, candidate, or release activation.",
+  "purpose": "Track sibling source review state and active Linux release-profile lock readiness.",
+  "release_profile": {
+    "services_extra": "linux-release",
+    "aggregates": [
+      "llm-native",
+      "stt-native",
+      "art-python",
+      "tts-python-core",
+      "llm_weather",
+      "search",
+      "nvidia",
+      "linux"
+    ],
+    "active_lock": "package/constraints-linux-nvidia-cu129-linux-release.txt",
+    "lock_status": "generation_pending",
+    "historical_lock": "package/constraints-linux-nvidia-cu129-historical-desktop.txt",
+    "excludes": ["airunner-tts-vendor"]
+  },
   "inputs": [
     {
       "distribution": "airunner-common",
@@ -32,8 +49,9 @@
       "revision": "d9228e57a08371e124725dc6a6f32a6c407ac944",
       "version": "0.1.0",
       "requirement": "~=0.1",
-      "status": "pending",
+      "status": "deferred",
       "activation": "quarantined",
+      "deferred_from_profile": "linux-release",
       "workflow_source_refs": {}
     }
   ]

@@ -133,3 +133,11 @@ the reason "Distribution paused by the project owner." Preserve that
 decision. The current task authorizes a GitHub release; it does not require
 resuming PyPI publication. Dependency availability must be resolved through
 reviewed release inputs rather than silently bypassing the owner's pause.
+
+The Linux candidate profile now uses `services[linux-release]`, which omits
+the OpenVoice/Melo `airunner-tts-vendor` dependency. Those backends and their
+historical opt-in extras remain deferred and quarantined. The previous
+desktop-profile lock is retained as historical evidence only; a validated
+`linux-release` hash lock has not been generated. The release preflight blocks
+before dependency installation until that lock and the common/shield source
+reviews are complete.

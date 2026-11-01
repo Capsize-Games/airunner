@@ -1,8 +1,9 @@
-"""Packaging constraint tests (GitHub issue #2057).
+"""Build-system bounds and historical P02 lock evidence (#2057).
 
 The repository's isolated build requirements are pinned to
-``setuptools>=80.9,<82`` and the Linux runtime lock must stay in that same
-range. The installed ``torch==2.13.0+cu129`` metadata inspected for this audit
+``setuptools>=80.9,<82`` and the preserved historical runtime lock stays in
+that range. The active linux-release lock is not yet generated. The installed
+``torch==2.13.0+cu129`` metadata inspected for this audit
 declares ``setuptools>=77.0.3`` without an upper bound; the <82 policy is a
 repository compatibility pin, not a torch runtime metadata requirement.
 """
@@ -20,8 +21,10 @@ _BUILD_SYSTEM_FILES = (
     _PROJECT_ROOT / "services" / "pyproject.toml",
     _PROJECT_ROOT / "native" / "pyproject.toml",
 )
-_LINUX_RUNTIME_LOCK = (
-    _PROJECT_ROOT / "package" / "constraints-linux-nvidia-cu129.txt"
+_HISTORICAL_RUNTIME_LOCK = (
+    _PROJECT_ROOT
+    / "package"
+    / "constraints-linux-nvidia-cu129-historical-desktop.txt"
 )
 
 def test_build_system_setuptools_below_82() -> None:
@@ -76,9 +79,9 @@ def test_no_setuptools_pin_above_82_in_dev_requirements() -> None:
                 )
 
 
-def test_linux_runtime_lock_setuptools_fits_build_system_range() -> None:
-    """The hash lock must not contradict the repository's build pin."""
-    source = _LINUX_RUNTIME_LOCK.read_text(encoding="utf-8")
+def test_historical_runtime_lock_setuptools_fits_build_system_range() -> None:
+    """The historical hash set stays within the recorded build pin."""
+    source = _HISTORICAL_RUNTIME_LOCK.read_text(encoding="utf-8")
     match = re.search(r"(?m)^setuptools==([0-9]+(?:\.[0-9]+)*) \\", source)
     assert match is not None, "Linux runtime lock must pin setuptools exactly"
     locked = tuple(int(part) for part in match.group(1).split("."))

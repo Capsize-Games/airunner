@@ -88,8 +88,8 @@ ensure_venv() {
 
 # Pinned torch stack (release issues #2432/#2433). These MUST match
 # services/setup.py ML_RUNTIME_REQUIREMENTS, plus the torchcodec pin in
-# the release lock (package/constraints-linux-nvidia-cu129.txt):
-# services[headless] demands torch==2.13.0+cu129, so installing any
+# the release lock (package/constraints-linux-nvidia-cu129-linux-release.txt):
+# services[headless] and services[linux-release] demand torch==2.13.0+cu129, so installing any
 # other build here just forces a later reinstall (or a broken mix of a
 # wrong-CUDA or CPU torch under cu129-built bitsandbytes/torchcodec).
 AIRUNNER_TORCH_VERSION='2.13.0+cu129'
@@ -102,7 +102,7 @@ AIRUNNER_TORCH_CPU_INDEX='https://download.pytorch.org/whl/cpu'
 
 service_extra_needs_torch() {
     case ",${1}," in
-        *,llm,*|*,llm-native,*|*,art-python,*|*,tts-python,*|*,headless,*|*,desktop,*|*,windows,*|*,all,*|*,all_dev,*|*,all_native,*|*,all_dev_native,*)
+        *,llm,*|*,llm-native,*|*,art-python,*|*,tts-python,*|*,tts-python-core,*|*,headless,*|*,desktop,*|*,linux-release,*|*,windows,*|*,all,*|*,all_dev,*|*,all_native,*|*,all_dev_native,*)
             return 0
             ;;
     esac
@@ -112,7 +112,7 @@ service_extra_needs_torch() {
 
 service_extra_needs_sidecars() {
     case ",${1}," in
-        *,llm-native,*|*,stt-native,*|*,llm,*|*,headless,*|*,desktop,*|*,all,*|*,all_dev,*|*,all_native,*|*,all_dev_native,*)
+        *,llm-native,*|*,stt-native,*|*,llm,*|*,headless,*|*,desktop,*|*,linux-release,*|*,all,*|*,all_dev,*|*,all_native,*|*,all_dev_native,*)
             return 0
             ;;
     esac

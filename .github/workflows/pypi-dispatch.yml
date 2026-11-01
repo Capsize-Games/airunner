@@ -189,14 +189,13 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip setuptools wheel
-          # Freeze profile from the P05 bundle spec: the desktop
-          # aggregate of services/setup.py under the P02 lock, plus
-          # the pinned PyInstaller recipe (spec [bundle].tool) and
-          # the development extra for the required checks below.
-          pip install -c package/constraints-linux-nvidia-cu129.txt \
+          # Freeze profile from the P05 bundle spec: the linux-release
+          # aggregate of services/setup.py under its P02 lock, plus the
+          # pinned PyInstaller recipe and development extra for checks.
+          pip install -c package/constraints-linux-nvidia-cu129-linux-release.txt \
             "pyinstaller==6.12.0"
-          pip install -c package/constraints-linux-nvidia-cu129.txt \
-            -e "./services[desktop,development]"
+          pip install -c package/constraints-linux-nvidia-cu129-linux-release.txt \
+            -e "./services[linux-release,development]"
 
       # Required deterministic checks (C01): safety, auth, download,
       # and data-migration coverage. Identical file list to the PR
@@ -214,6 +213,7 @@ jobs:
             services/tests/test_cross_distribution_versions.py \
             services/tests/test_tool_sandbox_security.py \
             services/tests/test_dependency_constraints.py \
+            services/tests/test_release_p02.py \
             services/tests/test_native_package_isolation.py \
             services/tests/test_zimage_model_dir_config.py \
             services/tests/test_third_party_notices.py \

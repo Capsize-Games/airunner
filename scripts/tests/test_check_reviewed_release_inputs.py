@@ -12,7 +12,8 @@ from scripts.check_reviewed_release_inputs import inspect_release_inputs
 ROOT = Path(__file__).resolve().parents[2]
 _GATE_FILES = [
     Path("release-planning/services/release-inputs.json"),
-    Path("package/constraints-linux-nvidia-cu129.txt"),
+    Path("package/constraints-linux-nvidia-cu129-historical-desktop.txt"),
+    Path("packaging/linux/services-bundle-spec.toml"),
     Path("services/setup.py"),
     Path("native/setup.py"),
     Path(".github/workflows/eval-tests.yml"),
@@ -33,10 +34,27 @@ def test_quarantined_inputs_fail_closed_without_pin_errors() -> None:
     )
 
     assert errors == [
+        "pending-release-lock: linux-release hash lock generation and "
+        "validation remain pending",
         "pending-source-review: quarantined release inputs: "
-        "airunner-common, airunner-tts-vendor, facehuggershield"
+        "airunner-common, facehuggershield",
     ]
 
+
+def test_deferred_vendor_cannot_be_added_to_release_profile(tmp_path: Path) -> None:
+    _copy_gate_tree(tmp_path)
+    setup_path = tmp_path / "services/setup.py"
+    setup = setup_path.read_text(encoding="utf-8")
+    setup = setup.replace('"tts-python-core",', '"tts-python",', 1)
+    setup_path.write_text(setup, encoding="utf-8")
+
+    errors = inspect_release_inputs(
+        tmp_path, Path(".github/workflows/pypi-dispatch.yml")
+    )
+
+    assert any("linux-release aggregates drifted" in error for error in errors)
+    assert any("activates the quarantined TTS vendor" in error for error in errors)
+    assert any("airunner-tts-vendor" in error for error in errors if error.startswith("pending-source-review:"))
 
 def test_sibling_checkout_ref_must_match_manifest(tmp_path: Path) -> None:
     _copy_gate_tree(tmp_path)

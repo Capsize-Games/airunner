@@ -1,9 +1,9 @@
-"""Release issue P02: NVIDIA profile defined, hashed, documented.
+"""Release issue P02: historical lock and current profile scope.
 
-Static analysis only (no installs/network/GPU/models/databases);
-install plus ``pip check`` evidence is in the lock header. The daemon
-closure case additionally proves services base imports without the ML
-profile (torch stays optional); the walker lives in
+Static analysis only (no installs/network/GPU/models/databases). The old
+lock is retained as historical evidence; it does not validate the current
+linux-release profile. The daemon closure case proves services base imports
+without the ML profile (torch stays optional); the walker lives in
 startup_closure_support.py.
 """
 
@@ -21,7 +21,14 @@ from startup_closure_support import startup_closure
 _PROJECT_ROOT = Path(__file__).resolve().parents[2]
 _SERVICES_SETUP = _PROJECT_ROOT / "services" / "setup.py"
 _NATIVE_SETUP = _PROJECT_ROOT / "native" / "setup.py"
-_LOCK_PATH = _PROJECT_ROOT / "package" / "constraints-linux-nvidia-cu129.txt"
+_LOCK_PATH = (
+    _PROJECT_ROOT
+    / "package"
+    / "constraints-linux-nvidia-cu129-historical-desktop.txt"
+)
+_ACTIVE_LOCK_PATH = (
+    _PROJECT_ROOT / "package" / "constraints-linux-nvidia-cu129-linux-release.txt"
+)
 _IMPORT_TO_DIST = {"PIL": "pillow", "yaml": "pyyaml"}
 _LINUX_ENV = {**default_environment(), "platform_system": "Linux"}
 _LINUX_ENV["python_version"] = "3.13"
@@ -59,7 +66,7 @@ def _declared_dists(requirements: list[str]) -> set[str]:
 
 
 def _profile_inputs() -> list[str]:
-    """All requirement strings of the locked release profile.
+    """All requirement strings of the historical desktop lock.
 
     Services-only: the former root GUI distribution (GUI_REQUIREMENTS,
     ML_REQUIREMENTS) was removed; the profile is the services install
@@ -83,7 +90,7 @@ def _lock_pins() -> dict[str, str]:
 
 
 def test_release_profile_is_defined() -> None:
-    """Profile extras exist with the cu129 torch line and no CPU docs."""
+    """The release profile excludes vendor TTS; legacy extras remain."""
     services = _load_setup_module(_SERVICES_SETUP, _SERVICES_SETUP_CALL)
     assert services.ML_RUNTIME_REQUIREMENTS[:3] == [
         "torch==2.13.0+cu129",
@@ -95,13 +102,34 @@ def test_release_profile_is_defined() -> None:
     assert "torch" in names
     assert "nvidia-cuda-runtime-cu12" in names
     assert not ({"pyside6", "shiboken6"} & names)
+    extras = services.build_services_extras_require()
+    release_names = _declared_dists(extras["linux-release"])
+    assert _normalise("airunner-tts-vendor") not in release_names
+    assert _normalise("airunner-tts-vendor") in _declared_dists(
+        extras["desktop"]
+    )
+    for legacy_name in (
+        "tts-python",
+        "openvoice",
+        "melotts",
+        "openvoice_cn",
+        "openvoice_jp",
+        "openvoice_kr",
+        "openvoice_tw",
+        "gruut_support",
+    ):
+        assert "airunner-tts-vendor" in _declared_dists(extras[legacy_name])
+    assert tuple(services.LINUX_RELEASE_EXTRAS) == (
+        "llm-native", "stt-native", "art-python", "tts-python-core",
+        "llm_weather", "search", "nvidia", "linux",
+    )
     profile = _SERVICES_SETUP.read_text(encoding="utf-8")
     assert "whl/cpu" not in profile
     assert "download.pytorch.org/whl/cu129" in profile
 
 
 def test_lock_covers_profile_requirements() -> None:
-    """Every profile requirement is locked to a satisfying version."""
+    """Historical desktop requirements remain covered by their old lock."""
     local_roots = {"airunner-services", "airunner-native"}
     pins = _lock_pins()
     assert pins, "lock file has no pins"
@@ -155,6 +183,31 @@ def test_lock_records_provenance() -> None:
     # may root at the removed ./[nvidia] path.
     assert "pip install --no-deps ./[nvidia]" not in header
     assert "\n#   ./[nvidia]\n" not in header
+
+
+def test_current_release_lock_is_explicitly_pending() -> None:
+    """No historical lock is presented as the current linux-release lock."""
+    import json
+
+    manifest = json.loads(
+        (_PROJECT_ROOT / "release-planning/services/release-inputs.json")
+        .read_text(encoding="utf-8")
+    )
+    profile = manifest["release_profile"]
+    spec = (_PROJECT_ROOT / "packaging/linux/services-bundle-spec.toml").read_text(
+        encoding="utf-8"
+    )
+    workflow = (_PROJECT_ROOT / ".github/workflows/pypi-dispatch.yml").read_text(
+        encoding="utf-8"
+    )
+    assert profile["services_extra"] == "linux-release"
+    assert profile["lock_status"] == "generation_pending"
+    assert not (_PROJECT_ROOT / profile["active_lock"]).exists()
+    assert profile["historical_lock"].endswith(
+        "constraints-linux-nvidia-cu129-historical-desktop.txt"
+    )
+    assert 'services_extra = "linux-release"' in spec
+    assert '"./services[linux-release,development]"' in workflow
 
 
 def test_base_startup_imports_are_declared() -> None:

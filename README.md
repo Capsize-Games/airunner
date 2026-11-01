@@ -21,14 +21,17 @@ The package metadata requires Python 3.13.3 or newer. The Linux CUDA profile pin
 
 The package metadata currently declares these service extras:
 
-- `core`, `llm-native`, `stt-native`, `art-python`, and `tts-python`
+- `core`, `llm-native`, `stt-native`, `art-python`, `tts-python`, and `tts-python-core`
 - `headless`, which aggregates LLM, STT, art, and TTS runtime extras
 - `desktop`, a legacy extra name for a broader service profile; it does not install a GUI
+- `linux-release`, the current Linux candidate aggregate, which excludes the TTS vendor
 - `development`, for contributor and packaging tools
 
 For the published distribution name, `airunner-services[development]` denotes the development extra. The local editable-install command below uses the checkout path instead.
 
-Some dependency publication issues affect clean installs. The CI workflow checks out pinned source revisions of `airunner-common` and `facehuggershield` because their PyPI releases are paused or yanked; this repository does not yet document a general external installation route for those sources. Separately, the TTS extras depend on `airunner-tts-vendor`; issue [#2413](https://github.com/Capsize-Games/airunner/issues/2413) records unresolved PyPI availability. `tts-python`, `headless`, and `desktop` inherit that dependency. These profile names describe package metadata and do not mean that a clean public-index resolution has passed.
+Some dependency publication issues affect clean installs. The CI workflow checks out pinned source revisions of `airunner-common` and `facehuggershield` because their PyPI releases are paused or yanked; this repository does not yet document a general external installation route for those sources. Separately, the TTS extras depend on `airunner-tts-vendor`; issue [#2413](https://github.com/Capsize-Games/airunner/issues/2413) records unresolved PyPI availability. `tts-python`, `headless`, `desktop`, `all`, `all_dev`, `all_native`, `all_dev_native`, and `windows` inherit that dependency and are not available from the configured public indexes. These profile names describe package metadata and do not mean that a clean public-index resolution has passed.
+
+The Linux `linux-release` aggregate excludes `airunner-tts-vendor`; OpenVoice and Melo support are deferred from that release profile. Its separate hash lock has not been generated or validated, and the paused `airunner-common` and `facehuggershield` inputs still require source review, so candidate packaging remains blocked.
 
 When the required dependencies are available from an approved package source, an isolated contributor environment can be created with `uv`:
 

@@ -81,7 +81,7 @@ CORE_REQUIREMENTS = [
     # Compatible-release bound (not ==): dh_python3 turns == into a
     # distro upper bound that rejects newer compatible dist-packages
     # (e.g. Debian trixie ships 2.0.40). The release-exact pin with
-    # hashes stays in package/constraints-linux-nvidia-cu129.txt (P02).
+    # hashes stay in the P02 linux-release lock once generated.
     "sqlalchemy>=2.0.38,<2.1",
     "jinja2==3.1.6",
     "pyyaml==6.0.2",
@@ -120,7 +120,7 @@ CORE_REQUIREMENTS = [
 # There is intentionally no CPU fallback documented here: CPU support is
 # not a Linux v1 release target (release issue P02). The fully resolved,
 # hash-pinned wheel set for the release profile lives in
-# package/constraints-linux-nvidia-cu129.txt.
+# package/constraints-linux-nvidia-cu129-linux-release.txt once generated.
 ML_RUNTIME_REQUIREMENTS = [
     "torch==2.13.0+cu129",
     "torchvision==0.28.0+cu129",
@@ -270,6 +270,21 @@ COMPUTER_USE_REQUIREMENTS = [
 
 SYSTEM_DEP_EXTRAS = {"openvoice_jp", "openvoice_kr"}
 
+# The Linux release bundle keeps the verified local runtime/TTS base
+# dependencies without activating the paused OpenVoice/Melo vendor package.
+# The historical tts-python, headless, desktop, and explicit OpenVoice/Melo
+# extras below remain available as package metadata but are not release roots.
+LINUX_RELEASE_EXTRAS = (
+    "llm-native",
+    "stt-native",
+    "art-python",
+    "tts-python-core",
+    "llm_weather",
+    "search",
+    "nvidia",
+    "linux",
+)
+
 SERVICE_CONSOLE_SCRIPTS = [
     "airunner-daemon=airunner_services.daemon:main",
     "airunner-headless=airunner_services.bin.airunner_headless:main",
@@ -336,6 +351,11 @@ def _base_extras_require() -> dict[str, list[str]]:
             OPENVOICE_TW_REQUIREMENTS,
             GRUUT_SUPPORT_REQUIREMENTS,
         ),
+        "tts-python-core": unique_requirements(
+            ML_RUNTIME_REQUIREMENTS,
+            TTS_REQUIREMENTS,
+            ["pyttsx3==2.91"],
+        ),
         "openvoice": OPENVOICE_REQUIREMENTS,
         "melotts": MELOTTS_REQUIREMENTS,
         "openvoice_cn": OPENVOICE_CN_REQUIREMENTS,
@@ -364,13 +384,12 @@ def _aggregate_extras_require(
     extras_require: dict[str, list[str]],
 ) -> dict[str, list[str]]:
     """Return the aggregate service extras."""
-    # The "desktop" aggregate below is the Linux v1 NVIDIA release
-    # profile on the services side (release issue P02): every modality
-    # except the unused computer_use slice (issue #2439), plus the CUDA
-    # runtime wheel, resolved and hash-locked together in
-    # package/constraints-linux-nvidia-cu129.txt. It intentionally
-    # carries no Qt/PySide6 payload: the Qt frontend lives in the root
-    # GUI distribution, never in the services dependency profile.
+    # ``desktop`` and ``headless`` preserve historical aggregate behavior,
+    # including the optional OpenVoice/Melo vendor dependencies. The
+    # ``linux-release`` aggregate below is the current P02 profile: it uses
+    # ``tts-python-core`` and excludes the quarantined vendor distribution.
+    # Its active hash lock is being generated; it intentionally has no Qt
+    # payload because this package is the headless service distribution.
     headless = _aggregate_extra(
         extras_require,
         "llm-native",
@@ -396,6 +415,9 @@ def _aggregate_extras_require(
     return {
         "headless": headless,
         "desktop": desktop,
+        "linux-release": _aggregate_extra(
+            aggregate_require, *LINUX_RELEASE_EXTRAS
+        ),
         "all": desktop,
         "all_dev": _aggregate_extra(
             {**aggregate_require, "all": desktop},

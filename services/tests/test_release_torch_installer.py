@@ -1,6 +1,6 @@
 """Regression tests for installer torch issues #2432-#2434.
 
-P1: install_helpers.sh fetched cu128 wheels while the release pins
+P1: install_helpers.sh fetched cu128 wheels while the pinned stack
 cu129 (services/setup.py, the Dockerfile, the constraints lock).
 P2: the torch install floated unpinned and ``auto`` kept any
 importable torch without checking its version.
@@ -23,8 +23,10 @@ from packaging.requirements import Requirement
 _PROJECT_ROOT = Path(__file__).resolve().parents[2]
 _HELPERS = _PROJECT_ROOT / "scripts" / "install_helpers.sh"
 _SETUP = _PROJECT_ROOT / "services" / "setup.py"
-_LOCK = (
-    _PROJECT_ROOT / "package" / "constraints-linux-nvidia-cu129.txt"
+_HISTORICAL_LOCK = (
+    _PROJECT_ROOT
+    / "package"
+    / "constraints-linux-nvidia-cu129-historical-desktop.txt"
 )
 
 _LINUX_ENV = {**default_environment(), "platform_system": "Linux"}
@@ -90,8 +92,8 @@ def _ml_runtime_pin(dist: str) -> str:
 
 
 def _lock_pin(dist: str) -> str:
-    """Locked version for one distribution in the release lock."""
-    for line in _LOCK.read_text(encoding="utf-8").splitlines():
+    """Historical locked version for one distribution."""
+    for line in _HISTORICAL_LOCK.read_text(encoding="utf-8").splitlines():
         head = line.split("\\", 1)[0].strip()
         if head.startswith(dist + "=="):
             return head.split("==", 1)[1].strip()
