@@ -675,7 +675,7 @@ def delete_model(model_name: str, force: bool = False) -> bool:
     
     if not found_model:
         print(f"\n❌ Error: Model '{model_name}' not found in downloaded models")
-        print(f"\nUse 'airunner-hf-download --downloaded' to see downloaded models")
+        print("\nUse 'airunner-hf-download --downloaded' to see downloaded models")
         return False
     
     model_path = found_model["path"]
@@ -689,7 +689,7 @@ def delete_model(model_name: str, force: bool = False) -> bool:
     
     # Confirm deletion (unless force flag is set)
     if not force:
-        response = input(f"\nAre you sure you want to delete this model? [y/N]: ").strip().lower()
+        response = input("\nAre you sure you want to delete this model? [y/N]: ").strip().lower()
         if response != 'y':
             print("Deletion cancelled.")
             return False
@@ -813,13 +813,13 @@ def main():
     
     # Model not found
     print(f"\n❌ Error: Model '{args.model}' not found in catalog")
-    print(f"\nAvailable model keys:")
+    print("\nAvailable model keys:")
     for mtype, mlist in models.items():
         if mlist:
             keys = [m["key"] for m in mlist[:5]]
             print(f"  {mtype}: {', '.join(keys)}{'...' if len(mlist) > 5 else ''}")
-    print(f"\nUse 'airunner-hf-download' to see full list")
-    print(f"Or specify a full repo_id like 'user/model-name'")
+    print("\nUse 'airunner-hf-download' to see full list")
+    print("Or specify a full repo_id like 'user/model-name'")
     return 1
 
 

@@ -16,34 +16,6 @@ MAX_IMAGE_PIXELS = 50_000_000
 MAX_RAW_DIMENSION = 16384
 
 
-def _validate_or_none(binary_data: bytes):
-    """Quick sanity filter: if not raw or PNG signature, skip libpng parse.
-
-    Prevents libpng read errors by avoiding attempts to decode clearly invalid data.
-    """
-    if not binary_data or len(binary_data) < 10:
-        return None
-    if binary_data.startswith(RAW_MAGIC) or binary_data.startswith(PNG_MAGIC):
-        # For PNG, do additional validation to prevent libpng errors
-        if binary_data.startswith(PNG_MAGIC):
-            # Check for minimum PNG file size and IHDR chunk
-            if len(binary_data) < 33:  # PNG header + IHDR minimum
-                return None
-            # Verify IHDR chunk exists at position 8
-            if binary_data[12:16] != b"IHDR":
-                return None
-            # Check for IEND chunk (PNG must end with this)
-            if not binary_data.endswith(b"\x00\x00\x00\x00IEND\xaeB`\x82"):
-                # Try to find IEND chunk anywhere in the data
-                if b"IEND\xaeB`\x82" not in binary_data:
-                    return None
-        return binary_data
-    # Allow small headers of other PIL-supported formats (JPEG etc.) if they match
-    if binary_data[:2] in (b"\xff\xd8",):  # JPEG
-        return binary_data
-    return None
-
-
 def _try_raw_decode(binary_data: bytes):
     """Attempt to decode the custom raw format.
 
@@ -162,11 +134,6 @@ def convert_binary_to_image(binary_data) -> Image:  # type: ignore[override]
     # Validate before PNG decode to avoid libpng spew
     validated = _validate_or_none(binary_data)
     if validated is None:
-        # Debug trace for invalid header
-        try:
-            snippet = binary_data[:16]
-        except Exception:
-            pass
         return None
 
     try:
