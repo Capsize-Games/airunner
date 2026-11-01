@@ -75,12 +75,14 @@ def _build_temp_daemon_config(
 
 def _prepare_managed_daemon_launch() -> None:
     """Perform the one-time setup required before launching a daemon."""
-    from airunner_native.launcher import _configure_test_mode
     from airunner_services.database.setup_database import setup_database
 
     setup_database()
-    if os.environ.get("AIRUNNER_ENVIRONMENT") == "test":
-        _configure_test_mode()
+    if os.environ.get("AIRUNNER_ENVIRONMENT") != "test":
+        return
+    from airunner_native.launcher import _configure_test_mode
+
+    _configure_test_mode()
 
 
 class SidecarTTSLauncher:
