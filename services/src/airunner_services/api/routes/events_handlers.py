@@ -98,7 +98,15 @@ def _conversations(_path: str, body: Dict[str, Any]) -> Tuple[int, Any]:
     )
     if limit is None:
         return 400, {"detail": "invalid_limit"}
-    rows = ConversationHistoryManager().list_conversations(limit=limit)
+    try:
+        offset = int(body.get("offset", 0))
+    except (TypeError, ValueError):
+        return 400, {"detail": "invalid_offset"}
+    if offset < 0:
+        return 400, {"detail": "invalid_offset"}
+    rows = ConversationHistoryManager().list_conversations(
+        limit=limit, offset=offset
+    )
     return 200, {"conversations": rows}
 
 
@@ -166,11 +174,22 @@ def _truncate(_path: str, body: Dict[str, Any]) -> Tuple[int, Any]:
 
 
 def _previews(_path: str, body: Dict[str, Any]) -> Tuple[int, Any]:
-    wanted = {int(i) for i in (body.get("chatbot_ids") or [])}
+    raw_ids = body.get("chatbot_ids") or []
+    if not isinstance(raw_ids, list) or len(raw_ids) > 100:
+        return 400, {"detail": "invalid_chatbot_ids"}
+    try:
+        wanted = {int(value) for value in raw_ids}
+    except (TypeError, ValueError):
+        return 400, {"detail": "invalid_chatbot_ids"}
+
+    manager = ConversationHistoryManager()
     previews: Dict[str, Any] = {}
-    for row in ConversationHistoryManager().list_conversations(limit=0):
-        chatbot_id = row.get("chatbot_id")
-        if chatbot_id in wanted:
+    for chatbot_id in wanted:
+        rows = manager.list_conversations(
+            limit=1, chatbot_id=chatbot_id
+        )
+        if rows:
+            row = rows[0]
             previews[str(chatbot_id)] = {
                 "preview": row.get("summary") or None,
                 "updated_at": row.get("timestamp") or None,

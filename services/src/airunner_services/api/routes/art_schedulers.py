@@ -4,6 +4,8 @@ from airunner_common.contract_enums import Scheduler
 from airunner_services.database.models.schedulers import Schedulers
 from airunner_services.database.session import session_scope
 
+_MAX_STORED_SCHEDULERS = 1000
+
 
 def stored_scheduler_names() -> list[str]:
     """Return scheduler display names stored in the database.
@@ -13,7 +15,11 @@ def stored_scheduler_names() -> list[str]:
     """
     try:
         with session_scope() as session:
-            rows = session.query(Schedulers.display_name).all()
+            rows = (
+                session.query(Schedulers.display_name)
+                .limit(_MAX_STORED_SCHEDULERS)
+                .all()
+            )
             names = sorted({row[0] for row in rows if row[0]})
             return [str(name) for name in names]
     except Exception:
