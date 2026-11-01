@@ -1,0 +1,353 @@
+"""Authenticated STT and TTS HTTP contracts with fake runtime boundaries."""
+
+from __future__ import annotations
+
+import base64
+from pathlib import Path
+from types import SimpleNamespace
+
+import pytest
+from starlette.testclient import TestClient
+
+from airunner_services.api import loopback_token
+from airunner_services.api import server as server_module
+from airunner_services.api.server import create_app
+from airunner_services.ipc.messages import EnvelopeStatus, ResponseEnvelope
+from airunner_services.runtimes.contracts import RuntimeHealthStatus
+
+
+class _FakeTTSClient:
+    def __init__(self, health=None) -> None:
+        self.envelopes = []
+        self.health = health
+
+    def healthcheck(self):
+        if self.health is None:
+            raise RuntimeError("health unavailable")
+        return self.health
+
+    def invoke(self, envelope):
+        self.envelopes.append(envelope)
+        return ResponseEnvelope(
+            request_id=envelope.request_id,
+            status=EnvelopeStatus.SUCCEEDED,
+            payload={"audio_b64": base64.b64encode(b"wav").decode("ascii")},
+        )
+
+
+class _FakeSTTClient:
+    def __init__(self, status: str, metadata: dict | None) -> None:
+        self.health = SimpleNamespace(
+            status=status,
+            metadata=metadata or {},
+        )
+
+    def healthcheck(self):
+        return self.health
+
+
+class _FakeRegistry:
+    def __init__(self, client=None) -> None:
+        self.client = client
+
+    def resolve(self, *_args, **_kwargs):
+        if self.client is None:
+            raise KeyError("runtime unavailable")
+        return self.client
+
+
+@pytest.fixture()
+def authenticated_client(tmp_path, monkeypatch):
+    """Build an app with an isolated loopback token and base directory."""
+    monkeypatch.setenv("AIRUNNER_BASE_PATH", str(tmp_path))
+    monkeypatch.setenv("AIRUNNER_API_KEY", "")
+    monkeypatch.setenv("AIRUNNER_INSECURE_NO_AUTH", "0")
+    monkeypatch.setattr(server_module, "is_loopback_request", lambda _c: True)
+    monkeypatch.setattr(
+        loopback_token,
+        "loopback_token_path",
+        lambda: Path(tmp_path) / "config" / "loopback_token",
+    )
+    loopback_token._cache_loaded = False
+    loopback_token._cached_token = None
+    app = create_app()
+    token = loopback_token.get_or_create_loopback_token()
+    yield TestClient(app), {"X-Airunner-Token": token}, app
+    loopback_token._cache_loaded = False
+    loopback_token._cached_token = None
+
+
+def test_tts_http_accepts_bounded_request_and_returns_wav(
+    authenticated_client,
+) -> None:
+    client, headers, app = authenticated_client
+    runtime = _FakeTTSClient()
+    app.state.runtime_registry = _FakeRegistry(runtime)
+
+    response = client.post(
+        "/api/v1/tts/synthesize",
+        headers=headers,
+        json={"text": "hello", "voice": "voice-id", "speed": 0.25},
+    )
+
+    assert response.status_code == 200
+    assert response.content == b"wav"
+    invocation = runtime.envelopes[0].payload
+    assert invocation["text"] == "hello"
+    assert invocation["voice"] == "voice-id"
+    assert invocation["speed"] == 0.25
+
+
+@pytest.mark.parametrize(
+    "payload",
+    [
+        {"text": "   "},
+        {"text": "x" * 5001},
+        {"text": "hello", "speed": 0.249},
+        {"text": "hello", "speed": 4.001},
+        {"text": "hello", "speed": "NaN"},
+        {"text": "hello", "speed": "Infinity"},
+        {"text": "hello", "speed": "1.0"},
+        {"text": "hello", "voice": 12},
+        {"text": "hello", "voice": "bad\r\nname"},
+        {"text": "hello", "model": " "},
+    ],
+)
+def test_tts_http_rejects_invalid_payload_before_runtime(
+    authenticated_client, payload: dict
+) -> None:
+    client, headers, app = authenticated_client
+    runtime = _FakeTTSClient()
+    app.state.runtime_registry = _FakeRegistry(runtime)
+
+    response = client.post(
+        "/api/v1/tts/synthesize", headers=headers, json=payload
+    )
+
+    assert response.status_code == 422
+    assert runtime.envelopes == []
+
+
+def test_tts_voice_catalog_uses_ready_runtime_health_metadata(
+    authenticated_client,
+) -> None:
+    client, headers, app = authenticated_client
+    runtime = _FakeTTSClient(
+        SimpleNamespace(
+            status=RuntimeHealthStatus.READY,
+            metadata={"voice_ids": ["default"]},
+        )
+    )
+    app.state.runtime_registry = _FakeRegistry(runtime)
+
+    response = client.get("/api/v1/tts/voices", headers=headers)
+
+    assert response.status_code == 200
+    assert response.json() == {"voices": ["default"]}
+
+
+def test_tts_voice_catalog_reports_unavailable_when_not_provided(
+    authenticated_client,
+) -> None:
+    client, headers, app = authenticated_client
+    runtime = _FakeTTSClient(
+        SimpleNamespace(
+            status=RuntimeHealthStatus.STOPPED,
+            metadata={"voice_ids": ["default"]},
+        )
+    )
+    app.state.runtime_registry = _FakeRegistry(runtime)
+
+    response = client.get("/api/v1/tts/voices", headers=headers)
+
+    assert response.status_code == 503
+    assert response.json()["detail"] == "tts_voice_catalog_unavailable"
+
+
+@pytest.mark.parametrize(
+    ("status", "metadata", "expected_loaded"),
+    [
+        (RuntimeHealthStatus.READY, {"model_id": "ggml-large-v3.bin"}, True),
+        (RuntimeHealthStatus.STOPPED, {"model_id": "ggml-large-v3.bin"}, False),
+        (RuntimeHealthStatus.READY, {"model_id": "other-model.bin"}, False),
+        (RuntimeHealthStatus.READY, {}, False),
+    ],
+)
+def test_stt_catalog_loaded_requires_ready_matching_identity(
+    authenticated_client, status, metadata, expected_loaded: bool
+) -> None:
+    client, headers, app = authenticated_client
+    app.state.runtime_registry = _FakeRegistry(
+        _FakeSTTClient(status, metadata)
+    )
+
+    response = client.get("/api/v1/stt/models", headers=headers)
+
+    assert response.status_code == 200
+    models = response.json()
+    assert len(models) == 1
+    assert models[0]["id"] == "openai/whisper-large-v3"
+    assert models[0]["loaded"] is expected_loaded
+
+
+def test_stt_catalog_marks_models_unloaded_when_runtime_is_unavailable(
+    authenticated_client,
+) -> None:
+    client, headers, app = authenticated_client
+    app.state.runtime_registry = None
+
+    response = client.get("/api/v1/stt/models", headers=headers)
+
+    assert response.status_code == 200
+    assert all(model["loaded"] is False for model in response.json())
+
+
+class _LoadedOpenVoiceWorker:
+    def __init__(self, status) -> None:
+        self.status = status
+
+    def _current_tts_status(self):
+        return self.status
+
+    @staticmethod
+    def _active_tts_model():
+        return "OpenVoice"
+
+
+class _LazyWorkerManager:
+    def __init__(self, worker=None) -> None:
+        self._tts_generator_worker = worker
+        self.access_count = 0
+
+    @property
+    def tts_generator_worker(self):
+        self.access_count += 1
+        raise AssertionError("health must not resolve the lazy worker property")
+
+
+def test_production_fallback_health_exposes_default_only_when_loaded(
+    authenticated_client,
+) -> None:
+    from airunner_common.contract_enums import ModelStatus
+    from airunner_services.runtimes.local_fallback import LocalFallbackTTSClient
+
+    client, headers, app = authenticated_client
+    worker_manager = _LazyWorkerManager(
+        _LoadedOpenVoiceWorker(ModelStatus.LOADED)
+    )
+    runtime = LocalFallbackTTSClient(
+        signal_source=SimpleNamespace(_worker_manager=worker_manager),
+        mediator=SimpleNamespace(),
+    )
+    app.state.runtime_registry = _FakeRegistry(runtime)
+
+    response = client.get("/api/v1/tts/voices", headers=headers)
+
+    assert response.status_code == 200
+    assert response.json() == {"voices": ["default"]}
+    assert worker_manager.access_count == 0
+
+
+def test_unloaded_fallback_voice_lookup_does_not_create_worker(
+    authenticated_client,
+) -> None:
+    from airunner_services.runtimes.local_fallback import LocalFallbackTTSClient
+
+    client, headers, app = authenticated_client
+    worker_manager = _LazyWorkerManager()
+    runtime = LocalFallbackTTSClient(
+        signal_source=SimpleNamespace(_worker_manager=worker_manager),
+        mediator=SimpleNamespace(),
+    )
+    app.state.runtime_registry = _FakeRegistry(runtime)
+
+    response = client.get("/api/v1/tts/voices", headers=headers)
+
+    assert response.status_code == 503
+    assert worker_manager.access_count == 0
+
+
+def test_sidecar_health_transports_child_voice_metadata(
+    authenticated_client, monkeypatch
+) -> None:
+    from airunner_services.runtimes.sidecar_tts_client import SidecarTTSClient
+    from airunner_services.runtimes.tts_daemon_runtime_settings import (
+        TTSDaemonRuntimeSettings,
+    )
+
+    class _ReadyLauncher:
+        endpoint = "http://127.0.0.1:8191"
+        api_base_url = endpoint + "/api/v1/tts"
+
+        @staticmethod
+        def health_status():
+            return RuntimeHealthStatus.READY, "ready"
+
+    settings = TTSDaemonRuntimeSettings(
+        host="127.0.0.1",
+        port=8191,
+        base_daemon_config_path=None,
+        tts_model_path=None,
+        tts_model_type="OpenVoice",
+        startup_timeout_seconds=1.0,
+        request_timeout_seconds=1.0,
+    )
+    runtime = SidecarTTSClient(
+        settings=settings,
+        launcher=_ReadyLauncher(),
+    )
+    monkeypatch.setattr(
+        runtime,
+        "_inner_runtime_summary",
+        lambda: {
+            "status": "ready",
+            "metadata": {"voice_ids": ["default"]},
+        },
+    )
+    client, headers, app = authenticated_client
+    app.state.runtime_registry = _FakeRegistry(runtime)
+
+    response = client.get("/api/v1/tts/voices", headers=headers)
+
+    assert response.status_code == 200
+    assert response.json() == {"voices": ["default"]}
+
+
+@pytest.mark.parametrize(
+    ("status", "metadata", "expected_loaded"),
+    [
+        (RuntimeHealthStatus.READY, {"model_type": "Bark"}, True),
+        (RuntimeHealthStatus.STOPPED, {"model_type": "Bark"}, False),
+        (RuntimeHealthStatus.READY, {"model_type": "OpenVoice"}, False),
+    ],
+)
+def test_tts_catalog_loaded_requires_ready_matching_identity(
+    authenticated_client, status, metadata, expected_loaded: bool
+) -> None:
+    client, headers, app = authenticated_client
+    runtime = _FakeTTSClient(
+        SimpleNamespace(status=status, metadata=metadata)
+    )
+    app.state.runtime_registry = _FakeRegistry(runtime)
+
+    response = client.get("/api/v1/tts/models", headers=headers)
+
+    assert response.status_code == 200
+    models = response.json()
+    assert len(models) == 1
+    assert models[0]["id"] == "suno/bark"
+    assert models[0]["loaded"] is expected_loaded
+
+
+def test_tts_and_stt_routes_reject_missing_authentication(
+    authenticated_client,
+) -> None:
+    client, _headers, app = authenticated_client
+    app.state.runtime_registry = _FakeRegistry(_FakeTTSClient())
+
+    for response in (
+        client.get("/api/v1/tts/voices"),
+        client.get("/api/v1/stt/models"),
+        client.post("/api/v1/tts/synthesize", json={"text": "hello"}),
+    ):
+        assert response.status_code in {401, 403}

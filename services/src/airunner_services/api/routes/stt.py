@@ -1,7 +1,8 @@
 """Speech-to-text routes backed by the runtime registry."""
 
 import base64
-from typing import List
+from pathlib import Path
+from typing import Any, List
 
 from fastapi import (
     APIRouter,
@@ -115,6 +116,9 @@ async def list_models(req: Request):
         )
 
         registry = ModelRegistry()
+        loaded_model_ids = _loaded_stt_model_ids(
+            getattr(req.app.state, "runtime_registry", None)
+        )
         models = []
 
         for model_id, model_spec in registry.models.items():
@@ -123,7 +127,9 @@ async def list_models(req: Request):
                     ModelInfo(
                         id=model_id,
                         name=model_spec.name,
-                        loaded=False,  # TODO: Get actual loaded state
+                        loaded=_model_matches_loaded_identity(
+                            model_id, model_spec, loaded_model_ids
+                        ),
                     )
                 )
 
@@ -133,6 +139,50 @@ async def list_models(req: Request):
         raise HTTPException(
             status_code=500, detail="Failed to list models"
         )
+
+
+def _loaded_stt_model_ids(runtime_registry: Any) -> set[str]:
+    """Return identity aliases only when the registered runtime is ready."""
+    if runtime_registry is None:
+        return set()
+    try:
+        client = resolve_stt_client(runtime_registry)
+        health = client.healthcheck()
+    except Exception as exc:
+        logger.debug("STT model status is unavailable: %s", exc)
+        return set()
+    status_value = getattr(health, "status", None)
+    health_status = getattr(status_value, "value", status_value)
+    if str(health_status).lower() != "ready":
+        return set()
+    health_metadata = getattr(health, "metadata", None)
+    metadata = health_metadata if isinstance(health_metadata, dict) else {}
+    identifiers = set()
+    for key in ("model_id", "model_path"):
+        value = metadata.get(key)
+        if isinstance(value, str) and value.strip():
+            identifiers.add(value.strip())
+            identifiers.add(Path(value.strip()).name)
+    return identifiers
+
+
+def _model_matches_loaded_identity(
+    model_id: str, model_spec: Any, loaded_model_ids: set[str]
+) -> bool:
+    """Match runtime metadata against the catalog's model identifiers."""
+    if not loaded_model_ids:
+        return False
+    aliases = {
+        str(value).strip()
+        for value in (
+            model_id,
+            getattr(model_spec, "model_id", None),
+            getattr(model_spec, "huggingface_id", None),
+            getattr(model_spec, "preferred_download_filename", None),
+        )
+        if isinstance(value, str) and value.strip()
+    }
+    return bool(aliases.intersection(loaded_model_ids))
 
 
 @router.websocket("/stream")

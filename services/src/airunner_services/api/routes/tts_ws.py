@@ -20,6 +20,7 @@ import base64
 from typing import Any, Dict
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, status
+from pydantic import ValidationError
 
 from airunner_services.data.tenant import (
     get_tenant_key,
@@ -75,14 +76,21 @@ async def _synthesize(
             {"type": "error", "message": "invalid_speed"}
         )
         return
-    request = TTSRequest(
-        text=str(msg.get("text") or ""),
-        voice=msg.get("voice"),
-        speed=speed,
-    )
-    if not request.text.strip():
+    text = str(msg.get("text") or "")
+    if not text.strip():
         await ws.send_json(
             {"type": "error", "message": "text is required"}
+        )
+        return
+    try:
+        request = TTSRequest(
+            text=text,
+            voice=msg.get("voice"),
+            speed=speed,
+        )
+    except ValidationError:
+        await ws.send_json(
+            {"type": "error", "message": "invalid_request"}
         )
         return
     logger.info("TTS ws request (%s)", summarize_text(request.text))

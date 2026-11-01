@@ -24,6 +24,7 @@ from airunner_services.runtimes.contracts import (
     RuntimeAction,
     RuntimeKind,
     RuntimeMode,
+    RuntimeHealthStatus,
     TTSInvocationRequest,
 )
 from airunner_services.runtimes.registry import RuntimeRegistry, RuntimeRoute
@@ -477,6 +478,63 @@ class LocalFallbackTTSClient(_SignalRuntimeClient):
             model_type=_resolve_model_type("TTS"),
         )
 
+    def healthcheck(self):
+        """Report loaded TTS identity without creating a worker or model."""
+        health = super().healthcheck()
+        worker = self._existing_tts_worker()
+        status_getter = getattr(worker, "_current_tts_status", None)
+        if worker is None or not callable(status_getter):
+            return health
+
+        from airunner_common.contract_enums import ModelStatus
+
+        model_status = status_getter()
+        status_map = {
+            ModelStatus.LOADING: RuntimeHealthStatus.STARTING,
+            ModelStatus.LOADED: RuntimeHealthStatus.READY,
+            ModelStatus.READY: RuntimeHealthStatus.READY,
+            ModelStatus.FAILED: RuntimeHealthStatus.FAILED,
+            ModelStatus.UNLOADED: RuntimeHealthStatus.STOPPED,
+        }
+        runtime_status = status_map.get(model_status)
+        if runtime_status is None:
+            return health
+
+        metadata = dict(health.metadata)
+        metadata["model_status"] = _model_status_value(model_status)
+        model_resolver = getattr(worker, "_active_tts_model", None)
+        try:
+            model_type = model_resolver() if callable(model_resolver) else None
+        except Exception:
+            model_type = None
+        normalized_model = str(
+            getattr(model_type, "value", model_type) or ""
+        ).strip().lower().split(".")[-1]
+        if normalized_model:
+            metadata["model_type"] = normalized_model
+        if (
+            runtime_status is RuntimeHealthStatus.READY
+            and normalized_model == "openvoice"
+        ):
+            metadata["voice_ids"] = ["default"]
+        else:
+            metadata.pop("voice_ids", None)
+        return health.model_copy(
+            update={"status": runtime_status, "metadata": metadata}
+        )
+
+    def _existing_tts_worker(self) -> Any:
+        """Return an instantiated worker without triggering its lazy property."""
+        worker_manager = getattr(
+            self._signal_source, "_worker_manager", None
+        )
+        if worker_manager is None:
+            return None
+        try:
+            return vars(worker_manager).get("_tts_generator_worker")
+        except TypeError:
+            return None
+
     def invoke(self, request: RequestEnvelope) -> ResponseEnvelope:
         """Queue playback or execute TTS model-control actions."""
         if request.runtime is not RuntimeKind.TTS:
@@ -504,6 +562,16 @@ class LocalFallbackTTSClient(_SignalRuntimeClient):
         invocation: TTSInvocationRequest,
     ) -> ResponseEnvelope:
         """Return audio from one headless runtime instead of local playback."""
+        unsupported = self._unsupported_headless_openvoice_params(
+            invocation, self._headless_tts_worker()
+        )
+        if unsupported:
+            return self._failure_response(
+                request_id,
+                "tts_unsupported_parameter",
+                "Headless OpenVoice does not support: "
+                + ", ".join(unsupported),
+            )
         audio_b64 = self._audio_payload(invocation)
         if audio_b64 is not None:
             return ResponseEnvelope(
@@ -742,7 +810,24 @@ class LocalFallbackTTSClient(_SignalRuntimeClient):
         return OpenVoiceTTSRequest(
             message=invocation.text,
             gender=getattr(chatbot, "gender", "Male"),
+            speed=round(invocation.speed * 100),
+            voice=invocation.voice or "default",
         )
+
+    @staticmethod
+    def _unsupported_headless_openvoice_params(
+        invocation: TTSInvocationRequest, worker: Any
+    ) -> list[str]:
+        """Report request parameters OpenVoice cannot apply as requested."""
+        unsupported = []
+        if invocation.voice not in (None, "default"):
+            unsupported.append("voice")
+        active_model = LocalFallbackTTSClient._tts_model_type(
+            invocation, worker
+        )
+        if invocation.model and invocation.model not in (active_model,):
+            unsupported.append("model")
+        return unsupported
 
     @staticmethod
     def _tts_model_type(invocation: TTSInvocationRequest, worker) -> Optional[str]:

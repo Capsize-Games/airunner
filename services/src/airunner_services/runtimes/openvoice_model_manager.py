@@ -14,7 +14,10 @@ from airunner_common.contract_enums import (
     SignalCode,
 )
 from airunner_common.settings import AIRUNNER_BASE_PATH
-from airunner_services.requests.tts_request import TTSRequest
+from airunner_services.requests.tts_request import (
+    TTSRequest,
+    openvoice_speed_multiplier,
+)
 from airunner_services.runtimes.tts_model_manager import TTSModelManager
 from airunner_services.utils.text.language_detection import detect_language
 from airunner_services.runtimes.openvoice_file_checker import (
@@ -279,6 +282,7 @@ class OpenVoiceModelManager(TTSModelManager, metaclass=ABCMeta):
         """
         generation_start = perf_counter()
         message = self._prepare_text(tts_request.message)
+        speed = openvoice_speed_multiplier(tts_request, self._speed)
         lang = self.language_settings.bot_language
         if lang is None:
             language = AvailableLanguage.EN
@@ -327,7 +331,7 @@ class OpenVoiceModelManager(TTSModelManager, metaclass=ABCMeta):
                 message,
                 speaker_ids[speaker_id],
                 src_path,
-                speed=self._speed,
+                speed=speed,
                 sdp_ratio=sdp_ratio,
                 noise_scale=noise_scale,
                 noise_scale_w=noise_scale_w,
