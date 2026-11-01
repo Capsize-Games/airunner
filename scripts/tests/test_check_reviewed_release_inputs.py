@@ -6,6 +6,8 @@ import json
 import shutil
 from pathlib import Path
 
+import pytest
+
 from scripts.check_reviewed_release_inputs import inspect_release_inputs
 
 
@@ -54,8 +56,65 @@ def test_deferred_vendor_cannot_be_added_to_release_profile(tmp_path: Path) -> N
     )
 
     assert any("linux-release aggregates drifted" in error for error in errors)
-    assert any("activates the quarantined TTS vendor" in error for error in errors)
+    assert any(
+        "linux-release extra tts-python activates excluded dependency airunner-tts-vendor"
+        in error
+        for error in errors
+    )
     assert any("airunner-tts-vendor" in error for error in errors if error.startswith("pending-source-review:"))
+
+
+@pytest.mark.parametrize(
+    ("relative_path", "anchor", "expected_error"),
+    [
+        (
+            "services/setup.py",
+            'CORE_REQUIREMENTS = [\n',
+            "base service requirements activate excluded dependency facehuggershield",
+        ),
+        (
+            "services/setup.py",
+            'LLM_NATIVE_REQUIREMENTS = [\n',
+            "linux-release extra llm-native activates excluded dependency facehuggershield",
+        ),
+        (
+            "native/setup.py",
+            'NATIVE_BASE_REQUIREMENTS = [\n',
+            "native base requirements activate excluded dependency facehuggershield",
+        ),
+    ],
+)
+def test_reviewed_manifest_cannot_activate_profile_exclusions(
+    tmp_path: Path,
+    relative_path: str,
+    anchor: str,
+    expected_error: str,
+) -> None:
+    _copy_gate_tree(tmp_path)
+    setup_path = tmp_path / relative_path
+    setup = setup_path.read_text(encoding="utf-8")
+    assert anchor in setup
+    setup_path.write_text(
+        setup.replace(anchor, anchor + '    "facehuggershield==1.0.0",\n', 1),
+        encoding="utf-8",
+    )
+
+    manifest_path = tmp_path / "release-planning/services/release-inputs.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    for item in manifest["inputs"]:
+        item["status"] = "reviewed"
+        item["activation"] = "approved"
+        item["review_record"] = f"review-records/{item['distribution']}.md"
+        review_record = tmp_path / item["review_record"]
+        review_record.parent.mkdir(parents=True, exist_ok=True)
+        review_record.write_text("Reviewed fixture.\n", encoding="utf-8")
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+
+    errors = inspect_release_inputs(
+        tmp_path, Path(".github/workflows/pypi-dispatch.yml")
+    )
+
+    assert any(expected_error in error for error in errors)
 
 def test_sibling_checkout_ref_must_match_manifest(tmp_path: Path) -> None:
     _copy_gate_tree(tmp_path)

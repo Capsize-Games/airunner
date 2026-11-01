@@ -112,6 +112,27 @@ def _returned_dict(tree: ast.Module, name: str) -> dict[str, ast.expr] | None:
     return None
 
 
+def _function_assignments(tree: ast.Module, name: str) -> dict[str, ast.expr]:
+    """Index simple local assignments inside a named function."""
+    values: dict[str, ast.expr] = {}
+    for node in tree.body:
+        if (
+            not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+            or node.name != name
+        ):
+            continue
+        for child in ast.walk(node):
+            if isinstance(child, ast.Assign):
+                for target in child.targets:
+                    if isinstance(target, ast.Name):
+                        values[target.id] = child.value
+            elif isinstance(child, ast.AnnAssign) and isinstance(
+                child.target, ast.Name
+            ):
+                values[child.target.id] = child.value
+    return values
+
+
 def _resolved_strings(
     expression: ast.expr,
     assignments: dict[str, ast.expr],
@@ -135,6 +156,18 @@ def _resolved_strings(
     return found
 
 
+def _excluded_dependencies(
+    expression: ast.expr, assignments: dict[str, ast.expr], excludes: set[str]
+) -> set[str]:
+    """Return excluded distributions found in a statically resolved requirement."""
+    values = _resolved_strings(expression, assignments)
+    return {
+        distribution
+        for distribution in excludes
+        if any(distribution in value.lower() for value in values)
+    }
+
+
 def _profile_errors(root: Path, profile: Any) -> list[str]:
     """Bind the deferred vendor decision to the actual release profile."""
     errors: list[str] = []
@@ -146,6 +179,9 @@ def _profile_errors(root: Path, profile: Any) -> list[str]:
         )
         setup_tree = ast.parse(
             (root / "services/setup.py").read_text(encoding="utf-8")
+        )
+        native_tree = ast.parse(
+            (root / "native/setup.py").read_text(encoding="utf-8")
         )
         workflow_text = (root / ".github/workflows/pypi-dispatch.yml").read_text(
             encoding="utf-8"
@@ -204,11 +240,23 @@ def _profile_errors(root: Path, profile: Any) -> list[str]:
     install_requires = (
         setup_kwargs.get("install_requires") if setup_kwargs is not None else None
     )
-    if install_requires is None or any(
-        _VENDOR_DISTRIBUTION in value
-        for value in _resolved_strings(install_requires, assignments)
-    ):
-        errors.append("base service requirements activate the quarantined TTS vendor")
+    service_requirements_assignments = {
+        **assignments,
+        **_function_assignments(setup_tree, "build_services_setup_kwargs"),
+    }
+    excluded_distributions = set(EXPECTED_PROFILE_EXCLUDES)
+    if install_requires is None:
+        errors.append("base service requirements are not statically inspectable")
+    else:
+        activated = _excluded_dependencies(
+            install_requires,
+            service_requirements_assignments,
+            excluded_distributions,
+        )
+        for distribution in sorted(activated):
+            errors.append(
+                f"base service requirements activate excluded dependency {distribution}"
+            )
     release_expr = aggregate_extras.get("linux-release")
     if not (
         isinstance(release_expr, ast.Call)
@@ -229,9 +277,27 @@ def _profile_errors(root: Path, profile: Any) -> list[str]:
             errors.append(f"linux-release aggregate is missing extra {extra_name}")
             continue
         requirement_strings = _resolved_strings(expression, assignments)
-        if any(_VENDOR_DISTRIBUTION in value for value in requirement_strings):
+        activated = {
+            distribution
+            for distribution in excluded_distributions
+            if any(distribution in value.lower() for value in requirement_strings)
+        }
+        for distribution in sorted(activated):
             errors.append(
-                f"linux-release extra {extra_name} activates the quarantined TTS vendor"
+                f"linux-release extra {extra_name} activates excluded dependency {distribution}"
+            )
+
+    native_assignments = _assignment_values(native_tree)
+    native_base = native_assignments.get("NATIVE_BASE_REQUIREMENTS")
+    if native_base is None:
+        errors.append("native base requirements are not statically inspectable")
+    else:
+        activated = _excluded_dependencies(
+            native_base, native_assignments, excluded_distributions
+        )
+        for distribution in sorted(activated):
+            errors.append(
+                f"native base requirements activate excluded dependency {distribution}"
             )
 
     legacy_extras = (
@@ -247,7 +313,7 @@ def _profile_errors(root: Path, profile: Any) -> list[str]:
     for extra_name in legacy_extras:
         expression = base_extras.get(extra_name)
         if expression is None or not any(
-            _VENDOR_DISTRIBUTION in value
+            _VENDOR_DISTRIBUTION in value.lower()
             for value in _resolved_strings(expression, assignments)
         ):
             errors.append(
