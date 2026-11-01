@@ -10,6 +10,9 @@ from airunner_services.database.models.llm_generator_settings import (
     LLMGeneratorSettings,
 )
 from airunner_services.database.models.path_settings import PathSettings
+from airunner_services.llm.local_capability import (
+    proven_loaded_model_id,
+)
 from airunner_services.llm.provider_config import LLMProviderConfig
 from airunner_services.model_management.model_registry import ModelRegistry
 from airunner_services.runtimes.contracts import RuntimeAction
@@ -17,7 +20,12 @@ from airunner_common.settings import AIRUNNER_BASE_PATH, AIRUNNER_LOG_LEVEL
 from airunner_services.utils.application import get_logger
 
 from .llm_contracts import ModelInfo, ModelLoadRequest
-from .llm_runtime import require_runtime_registry, resolve_llm_client, run_runtime_action
+from .llm_runtime import (
+    get_runtime_registry,
+    require_runtime_registry,
+    resolve_llm_client,
+    run_runtime_action,
+)
 
 router = APIRouter()
 logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
@@ -70,11 +78,18 @@ def persist_model_selection(model_id: str) -> str:
 
 
 @router.get("/models", response_model=List[ModelInfo])
-async def list_models(_req: Request):
-    """List available local LLM models."""
+async def list_models(req: Request):
+    """List available local LLM models.
+
+    ``loaded`` is READY-proven via the local-inference capability
+    helpers: the configured selection alone never claims a load.
+    """
     settings = LLMGeneratorSettings.objects.first()
     current_model_id = selected_model_id(settings)
     try:
+        loaded_id = proven_loaded_model_id(
+            get_runtime_registry(req), current_model_id
+        )
         registry = ModelRegistry()
         models = []
         for model_id, model_spec in registry.models.items():
@@ -84,7 +99,7 @@ async def list_models(_req: Request):
                 ModelInfo(
                     id=model_id,
                     name=model_spec.name,
-                    loaded=(model_id == current_model_id),
+                    loaded=bool(loaded_id) and model_id == loaded_id,
                     size_mb=model_spec.size_mb,
                 )
             )
