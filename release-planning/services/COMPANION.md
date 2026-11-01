@@ -17,7 +17,7 @@ needed for ordinary model execution.
 |---|---|
 | Embedding model identity and structured errors | Canonical definitions now live in `runtimes/embedding_contracts.py`. Companion names re-export the same types for compatibility. The local embedding runtime and Ollama helper use the neutral definitions. |
 | API package initialization | Route modules now load on demand. Importing an embedding helper no longer imports the entire route set and companion modules. |
-| Local capability routing | Inventory and extract the generic capability definitions before removing companion routing modules. Keep runtime selection and offline enforcement behavior. |
+| Local capability routing | Generic pipeline definitions now live in `runtimes/local_pipeline.py`; companion routing retains compatibility aliases. Capability reporting uses the neutral module and preserves runtime selection and offline enforcement behavior. |
 | Registered fact and turn tools | Retain the existing compatibility adapters until callers have a supported replacement or an explicit unsupported result. Do not silently unregister tools. |
 | ORM models and historical Alembic revisions | Preserve schema history and data. Deleting an unused Python handler does not authorize dropping tables or rewriting migrations. |
 | Durable jobs and inference adapters | Retain existing contracts during caller analysis. Model execution, cancellation, resource arbitration and truthful terminal results remain service responsibilities. |
@@ -37,7 +37,7 @@ first five tables. Revision `d951d2fd378d` imports
 that module remains part of migration replay until the historical import is
 decoupled without changing the revision's behavior.
 
-The private repository source scan records 15 import entries across
+A repository source scan records 15 import entries across
 `services/src/airunner_services/llm/tools/companion_memory_compat.py`,
 `services/src/airunner_services/llm/tools/companion_memory_tools.py`, and the
 historical ledger migration. The two tool modules contain current in-repository
@@ -57,24 +57,25 @@ point it at an active database. It opens with `mode=ro&immutable=1` and
 `-journal` sidecars, and enforces a finite query deadline. The immutable mode
 bypasses SQLite locking and change detection, so the caller must provide a
 stable snapshot. The tool does not make a copy or validate snapshot stability.
-It does not load service models, inspect table contents, return
-identities or payloads, migrate, export, or delete data. An absent expected
+It does not load service models, return conversation text, identities or
+payloads, migrate, export, or delete data. An absent expected
 table is reported with a `null` count; an existing empty table has a count of
 zero. The command has no default database path:
 
 ```sh
-python scripts/inventory_companion_store.py --database /path/to/existing.sqlite
+python scripts/inventory_companion_store.py --database /path/to/backup.sqlite
 ```
 
 No operational database was inspected for this change. Actual occupancy,
 retention requirements, external consumers, and data ownership remain
-unresolved until an explicitly authorized inventory and owner review.
+unresolved until a separate operational inventory and retention decision.
 
 ## Retirement phases
 
 1. **Separate generic runtime contracts.** Keep compatibility aliases and prove
    narrow imports do not initialize companion code. The embedding extraction
-   and lazy route initialization are implemented; capability routing remains.
+   and lazy route initialization are implemented. Capability routing also uses
+   neutral definitions, with compatibility aliases and focused route tests.
 2. **Inventory callers and data.** Distinguish production registrations from
    test-only factories, document stored schemas and identify pending jobs.
    Existing data occupancy has not been inspected. A single-user store cannot
