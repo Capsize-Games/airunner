@@ -35,7 +35,7 @@ jobs:
               echo "== OS =="
               cat /etc/os-release
               echo "== command paths =="
-              for tool in nvcc gcc g++ cmake ninja make python3 python3.13; do
+              for tool in nvcc cuobjdump gcc g++ cmake ninja make python3 python3.13; do
                 if path=$(command -v "$tool" 2>/dev/null); then
                   printf "%s=%s\n" "$tool" "$path"
                 else
@@ -44,6 +44,7 @@ jobs:
               done
               echo "== tool versions =="
               nvcc --version 2>&1 || true
+              cuobjdump --version 2>&1 || true
               gcc --version 2>&1 | head -n 2 || true
               g++ --version 2>&1 | head -n 2 || true
               cmake --version 2>&1 | head -n 2 || true
@@ -143,3 +144,237 @@ jobs:
               export PATH="/out/install/cmake-3.31.6-linux-x86_64/bin:$PATH"
               cmake --version
             '
+  build-llama-cpp-python:
+    name: Build reviewed CUDA source wheel
+    # Source execution remains disabled while input readiness is pending.
+    if: ${{ false }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    steps:
+      - name: Pull the supported amd64 CUDA image
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/cuda-wheel"
+          image='nvidia/cuda:12.9.2-devel-ubuntu24.04@sha256:16656a1ef115bca9e1f820c6349876f1486d2b3c9a0e615773799fe402960dc5'
+          docker pull --platform linux/amd64 "$image"
+          docker image inspect "$image" --format \
+            'image_id={{.Id}} repo_digests={{json .RepoDigests}} os={{.Os}} arch={{.Architecture}}' \
+            > "$RUNNER_TEMP/cuda-wheel/image-info.txt"
+          docker run --rm --pull=never --platform linux/amd64 --network=none \
+            --cap-drop=ALL --security-opt=no-new-privileges --read-only \
+            --tmpfs /tmp:rw,noexec,nosuid,size=64m --entrypoint /bin/bash "$image" -ceu '
+              printf "\n== image tool versions ==\n"
+              cat /etc/os-release
+              nvcc --version
+              cuobjdump --version 2>&1 || true
+              gcc --version | head -n 1
+              g++ --version | head -n 1
+              make --version | head -n 1
+            ' >> "$RUNNER_TEMP/cuda-wheel/image-info.txt"
+
+      - name: Fetch exact reviewed sources and hash-pinned build inputs
+        shell: bash
+        run: |
+          set -euo pipefail
+          root="$RUNNER_TEMP/cuda-wheel"
+          source="$root/source"
+          mkdir -p "$source" "$root/backend" "$root/cmake" "$root/wheel" "$root/tmp"
+          chmod 700 "$root" "$root/tmp"
+          export GIT_TERMINAL_PROMPT=0
+          git -c core.hooksPath=/dev/null init --quiet "$root/wrapper-repo"
+          git -C "$root/wrapper-repo" remote add origin https://github.com/abetlen/llama-cpp-python.git
+          git -C "$root/wrapper-repo" -c protocol.file.allow=never fetch --quiet --no-tags --depth=1 origin refs/tags/v0.3.21
+          wrapper_commit=$(git -C "$root/wrapper-repo" rev-parse 'FETCH_HEAD^{commit}')
+          test "$wrapper_commit" = d2bcbac46605f11d382426dd88d67e8b5c124cd7
+          git -C "$root/wrapper-repo" archive --format=tar "$wrapper_commit" | tar -xf - -C "$source"
+          gitlink=$(git -C "$root/wrapper-repo" ls-tree "$wrapper_commit" vendor/llama.cpp | awk '{print $3}')
+          test "$gitlink" = f53577432541bb9edc1588c4ef45c66bf07e4468
+          git -c core.hooksPath=/dev/null init --quiet "$root/llama-repo"
+          git -C "$root/llama-repo" remote add origin https://github.com/ggerganov/llama.cpp.git
+          git -C "$root/llama-repo" -c protocol.file.allow=never fetch --quiet --no-tags --depth=1 origin "$gitlink"
+          llama_commit=$(git -C "$root/llama-repo" rev-parse 'FETCH_HEAD^{commit}')
+          test "$llama_commit" = f53577432541bb9edc1588c4ef45c66bf07e4468
+          mkdir -p "$source/vendor/llama.cpp"
+          git -C "$root/llama-repo" archive --format=tar "$llama_commit" | tar -xf - -C "$source/vendor/llama.cpp"
+          test ! -e "$source/.git"
+          test ! -e "$source/vendor/llama.cpp/.git"
+          printf 'wrapper_commit=%s\nllama_cpp_commit=%s\n' "$wrapper_commit" "$llama_commit" | tee "$root/source-revisions.txt"
+
+          fetch_wheel() {
+            local filename="$1" url="$2" sha="$3"
+            curl --fail --location --silent --show-error "$url" --output "$root/backend/$filename"
+            printf '%s  %s\n' "$sha" "$root/backend/$filename" | sha256sum --check --status
+          }
+          fetch_wheel scikit_build_core-1.1.1-py3-none-any.whl \
+            'https://files.pythonhosted.org/packages/01/1b/83913d6d5c6a7f8ad5bf5d67b2d57ab09475f1bb9dd0c7a3f44067d59b90/scikit_build_core-1.1.1-py3-none-any.whl' \
+            6f6d6cf600e2e9639fd258ecd11cfc19bd189354b968916a519c6793e7e26237
+          fetch_wheel pathspec-1.1.1-py3-none-any.whl \
+            'https://files.pythonhosted.org/packages/f1/d9/7fb5aa316bc299258e68c73ba3bddbc499654a07f151cba08f6153988714/pathspec-1.1.1-py3-none-any.whl' \
+            a00ce642f577bf7f473932318056212bc4f8bfdf53128c78bbd5af0b9b20b189
+          fetch_wheel packaging-26.3-py3-none-any.whl \
+            'https://files.pythonhosted.org/packages/63/34/ba1c580383c9eada3711951fef0795c80b829a078d72188184bcab9dd527/packaging-26.3-py3-none-any.whl' \
+            d7193f7c8e4e93f444fde0262bf90af30e16fa0ad0ad44cb553c87339b23cd1c
+
+          cmake_archive="$root/cmake/cmake-3.31.6-linux-x86_64.tar.gz"
+          curl --fail --location --silent --show-error \
+            'https://github.com/Kitware/CMake/releases/download/v3.31.6/cmake-3.31.6-linux-x86_64.tar.gz' \
+            --output "$cmake_archive"
+          printf '%s  %s\n' \
+            5a1133ff103c71eb5120e2cc3de922733e7d8a26a98ae716397e8676adb367bf \
+            "$cmake_archive" | sha256sum --check --status
+          mkdir -p "$root/cmake/unpacked"
+          tar -xzf "$cmake_archive" -C "$root/cmake/unpacked" --no-same-owner --no-same-permissions
+          test "$(sha256sum "$root/cmake/unpacked/cmake-3.31.6-linux-x86_64/bin/cmake" | cut -d ' ' -f 1)" \
+            = c4b3b237dc7a013590db9e90f70fca2dfdedde09521e920d3339569ea364230a
+
+      - name: Install only the reviewed PEP 517 backend wheels
+        shell: bash
+        run: |
+          set -euo pipefail
+          root="$RUNNER_TEMP/cuda-wheel"
+          python3 --version
+          python3 -m pip --version
+          python3 -m pip install --no-index --no-deps --target "$root/backend-site" "$root"/backend/*.whl
+          {
+            printf '== hosted runner ==\n'
+            uname -a
+            printf 'python_executable=%s\n' "$(python3 -c 'import sys; print(sys.executable)')"
+            python3 --version
+            python3 -m pip --version
+            git --version
+            docker --version
+            cat "$root/image-info.txt"
+            printf '\nofficial_cmake_version=3.31.6\n'
+            printf '\nsource_date_epoch=1777269304\n'
+          } > "$root/build-inputs.txt"
+
+      - name: Build offline through CMake in the pinned CUDA image
+        shell: bash
+        env:
+          CUDA_IMAGE: nvidia/cuda:12.9.2-devel-ubuntu24.04@sha256:16656a1ef115bca9e1f820c6349876f1486d2b3c9a0e615773799fe402960dc5
+        run: |
+          set -euo pipefail
+          root="$RUNNER_TEMP/cuda-wheel"
+          source="$root/source"
+          build="$root/build"
+          tmp="$root/tmp"
+          cmake_home="$root/cmake/unpacked/cmake-3.31.6-linux-x86_64"
+          mkdir -p "$build" "$tmp"
+
+          cat > "$root/cmake-docker" <<'WRAPPER'
+          #!/usr/bin/env bash
+          set -euo pipefail
+          : "${CUDA_IMAGE:?}"
+          : "${CUDA_SOURCE:?}"
+          : "${CUDA_BUILD:?}"
+          : "${CUDA_TMP:?}"
+          : "${CUDA_CMAKE_HOME:?}"
+          : "${SOURCE_DATE_EPOCH:?}"
+          # The reviewed upstream CMakeLists installs native libraries into
+          # llama_cpp/lib in the source tree as well as SKBUILD_PLATLIB_DIR.
+          # This source is a fresh per-run archive; keep it writable for install.
+          exec docker run --rm --pull=never --platform linux/amd64 \
+            --network=none --cpus=2 --memory=6g --pids-limit=1024 \
+            --cap-drop=ALL --security-opt=no-new-privileges \
+            --read-only --tmpfs /tmp:rw,noexec,nosuid,size=256m \
+            --user "$(id -u):$(id -g)" --env HOME=/tmp --env TMPDIR="$CUDA_TMP" \
+            --env CMAKE_BUILD_PARALLEL_LEVEL=2 --env SOURCE_DATE_EPOCH \
+            --mount "type=bind,src=$CUDA_SOURCE,dst=$CUDA_SOURCE" \
+            --mount "type=bind,src=$CUDA_BUILD,dst=$CUDA_BUILD" \
+            --mount "type=bind,src=$CUDA_TMP,dst=$CUDA_TMP" \
+            --mount "type=bind,src=$CUDA_CMAKE_HOME,dst=/opt/cmake,readonly" \
+            --entrypoint /bin/bash "$CUDA_IMAGE" -ceu '
+              mkdir -p /tmp/cuda-stubs
+              ln -s /usr/local/cuda/targets/x86_64-linux/lib/stubs/libcuda.so /tmp/cuda-stubs/libcuda.so.1
+              export LIBRARY_PATH="/tmp/cuda-stubs:${LIBRARY_PATH:-}"
+              export LD_LIBRARY_PATH="/tmp/cuda-stubs:${LD_LIBRARY_PATH:-}"
+              export PATH="/opt/cmake/bin:$PATH"
+              exec /opt/cmake/bin/cmake "$@"
+            ' cuda-cmake "$@"
+          WRAPPER
+          chmod 0755 "$root/cmake-docker"
+          export CUDA_SOURCE="$source" CUDA_BUILD="$build" CUDA_TMP="$tmp"
+          export CUDA_CMAKE_HOME="$cmake_home" CMAKE_EXECUTABLE="$root/cmake-docker"
+          export CMAKE_GENERATOR='Unix Makefiles'
+          export CMAKE_BUILD_PARALLEL_LEVEL=2 SOURCE_DATE_EPOCH=1777269304
+          export CMAKE_ARGS='-DLLAMA_BUILD=ON -DLLAVA_BUILD=ON -DGGML_CUDA=ON -DGGML_NATIVE=OFF -DGGML_CUDA_ARCHITECTURES=120a-real -DCMAKE_CUDA_ARCHITECTURES=120a-real -DGGML_CUDA_CUB_3DOT2=OFF -DGGML_CUDA_NCCL=OFF -DLLAMA_CURL=OFF -DFETCHCONTENT_FULLY_DISCONNECTED=ON -DCMAKE_EXE_LINKER_FLAGS=-Wl,-rpath-link,/tmp/cuda-stubs'
+          export PYTHONPATH="$root/backend-site"
+          export PIP_CONFIG_FILE=/dev/null PIP_NO_INDEX=1 PIP_DISABLE_PIP_VERSION_CHECK=1
+          python3 -m pip wheel --no-build-isolation --no-deps --no-index --no-cache-dir \
+            --config-settings="build-dir=$build" \
+            --wheel-dir "$root/wheel" "$source"
+          shopt -s nullglob
+          wheels=("$root"/wheel/llama_cpp_python-0.3.21-*.whl)
+          test "${#wheels[@]}" -eq 1
+          sha256sum "${wheels[0]}"
+
+      - name: Verify wheel contents and SM 120 target configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+          root="$RUNNER_TEMP/cuda-wheel"
+          wheel=$(find "$root/wheel" -maxdepth 1 -type f -name 'llama_cpp_python-0.3.21-*.whl' -print -quit)
+          test -n "$wheel"
+          cache=$(find "$root/build" -maxdepth 2 -name CMakeCache.txt -print -quit)
+          test -n "$cache"
+          grep -E '^GGML_CUDA_ARCHITECTURES:[^=]*=120a-real$' "$cache"
+          grep -E '^CMAKE_CUDA_ARCHITECTURES:[^=]*=120a-real$' "$cache"
+          cp "$cache" "$root/CMakeCache.txt"
+          mkdir -p "$root/inspect"
+          python3 - "$wheel" "$root/inspect" <<'PY'
+          import hashlib, pathlib, sys, zipfile
+          wheel, out = pathlib.Path(sys.argv[1]), pathlib.Path(sys.argv[2])
+          names = []
+          with zipfile.ZipFile(wheel) as archive:
+              for name in archive.namelist():
+                  if name.startswith("llama_cpp/lib/") and (name.endswith(".so") or ".so." in name):
+                      target = out / pathlib.Path(name).name
+                      target.write_bytes(archive.read(name))
+                      names.append(name)
+          assert any("ggml-cuda" in name for name in names), names
+          assert any("mtmd" in name for name in names), names
+          assert any("llama" in name for name in names), names
+          print("wheel_sha256=" + hashlib.sha256(wheel.read_bytes()).hexdigest())
+          for name in sorted(names):
+              print("wheel_elf=" + name)
+          PY
+          cuda_lib=$(find "$root/inspect" -maxdepth 1 -type f -name 'libggml-cuda.so*' -print -quit)
+          test -n "$cuda_lib"
+          readelf -d "$cuda_lib" | tee "$root/elf-dynamic.txt"
+          ! grep -Eqi 'libcurl|libnccl' "$root/elf-dynamic.txt"
+          image='nvidia/cuda:12.9.2-devel-ubuntu24.04@sha256:16656a1ef115bca9e1f820c6349876f1486d2b3c9a0e615773799fe402960dc5'
+          mkdir -p "$root/evidence"
+          docker run --rm --pull=never --platform linux/amd64 --network=none \
+            --cpus=2 --memory=6g --pids-limit=1024 --cap-drop=ALL \
+            --security-opt=no-new-privileges --read-only \
+            --tmpfs /tmp:rw,noexec,nosuid,size=64m \
+            --mount "type=bind,src=$root/inspect,dst=/inspect,readonly" \
+            --mount "type=bind,src=$root/evidence,dst=/evidence" \
+            --entrypoint /bin/bash "$image" -ceu '
+              cuda_lib=$(find /inspect -maxdepth 1 -type f -name "libggml-cuda.so*" -print -quit)
+              test -n "$cuda_lib"
+              cuobjdump --list-elf "$cuda_lib" | tee /evidence/cuobjdump.txt
+              # This proves an SM 120 family code object; CMakeCache separately
+              # verifies that the configured target was exactly 120a-real.
+              grep -Eq "sm_120a|sm_120" /evidence/cuobjdump.txt
+            '
+          {
+            cat "$root/source-revisions.txt"
+            printf 'cuda_image=%s\n' "$image"
+            printf 'cmake_archive_sha256=5a1133ff103c71eb5120e2cc3de922733e7d8a26a98ae716397e8676adb367bf\n'
+            sha256sum "$root/cmake/unpacked/cmake-3.31.6-linux-x86_64/bin/cmake"
+            printf 'cuda_arch=120a-real\nparallel_jobs=2\nsource_date_epoch=1777269304\nbyte_reproducibility=not-claimed\nnetwork_during_compile=none\nmodel_or_gpu_execution=none\n'
+            cat "$root/build-inputs.txt"
+            sha256sum "$root/CMakeCache.txt"
+            sha256sum "$root"/backend/*.whl "$root"/wheel/*.whl
+            sha256sum "$root/inspect"/* "$root/evidence/cuobjdump.txt"
+          } > "$root/wheel/BUILD-MANIFEST.txt"
+
+      - name: Upload reviewed CUDA wheel candidate
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: llama-cpp-python-cu129-sm120a
+          path: ${{ runner.temp }}/cuda-wheel/wheel/*
+          if-no-files-found: error
+          retention-days: 14
