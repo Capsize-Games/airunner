@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import shutil
 from pathlib import Path
 
@@ -9,6 +10,21 @@ from scripts.check_reviewed_release_inputs import inspect_release_inputs
 
 
 ROOT = Path(__file__).resolve().parents[2]
+_GATE_FILES = [
+    Path("release-planning/services/release-inputs.json"),
+    Path("package/constraints-linux-nvidia-cu129.txt"),
+    Path("services/setup.py"),
+    Path("native/setup.py"),
+    Path(".github/workflows/eval-tests.yml"),
+    Path(".github/workflows/pypi-dispatch.yml"),
+]
+
+
+def _copy_gate_tree(destination_root: Path) -> None:
+    for relative in _GATE_FILES:
+        destination = destination_root / relative
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(ROOT / relative, destination)
 
 
 def test_quarantined_inputs_fail_closed_without_pin_errors() -> None:
@@ -23,18 +39,7 @@ def test_quarantined_inputs_fail_closed_without_pin_errors() -> None:
 
 
 def test_sibling_checkout_ref_must_match_manifest(tmp_path: Path) -> None:
-    required_paths = [
-        Path("release-planning/services/release-inputs.json"),
-        Path("package/constraints-linux-nvidia-cu129.txt"),
-        Path("services/setup.py"),
-        Path("native/setup.py"),
-        Path(".github/workflows/eval-tests.yml"),
-        Path(".github/workflows/pypi-dispatch.yml"),
-    ]
-    for relative in required_paths:
-        destination = tmp_path / relative
-        destination.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(ROOT / relative, destination)
+    _copy_gate_tree(tmp_path)
 
     workflow_path = tmp_path / ".github/workflows/eval-tests.yml"
     workflow = workflow_path.read_text(encoding="utf-8")
@@ -56,6 +61,86 @@ def test_sibling_checkout_ref_must_match_manifest(tmp_path: Path) -> None:
         for error in errors
     )
     assert any(error.startswith("pending-source-review:") for error in errors)
+
+
+def test_manifest_cannot_omit_a_mandatory_distribution(tmp_path: Path) -> None:
+    _copy_gate_tree(tmp_path)
+    manifest_path = tmp_path / "release-planning/services/release-inputs.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    manifest["inputs"] = [
+        item
+        for item in manifest["inputs"]
+        if item["distribution"] != "facehuggershield"
+    ]
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+
+    errors = inspect_release_inputs(
+        tmp_path, Path(".github/workflows/pypi-dispatch.yml")
+    )
+
+    assert "mandatory release input is missing: facehuggershield" in errors
+
+
+def test_quoted_mutable_unregistered_checkout_is_rejected(tmp_path: Path) -> None:
+    _copy_gate_tree(tmp_path)
+    workflow_path = tmp_path / ".github/workflows/pypi-dispatch.yml"
+    with workflow_path.open("a", encoding="utf-8") as workflow:
+        workflow.write(
+            "\n      - name: Unregistered vendor source\n"
+            "        uses: actions/checkout@v4\n"
+            "        with:\n"
+            '          repository: "Capsize-Games/airunner-tts-vendor"\n'
+            "          ref: master\n"
+        )
+
+    errors = inspect_release_inputs(
+        tmp_path, Path(".github/workflows/pypi-dispatch.yml")
+    )
+
+    assert any("unregistered sibling source checkout" in error for error in errors)
+    assert any("missing or mutable source ref" in error for error in errors)
+
+
+def test_checkout_without_ref_is_rejected(tmp_path: Path) -> None:
+    _copy_gate_tree(tmp_path)
+    workflow_path = tmp_path / ".github/workflows/pypi-dispatch.yml"
+    with workflow_path.open("a", encoding="utf-8") as workflow:
+        workflow.write(
+            "\n      - name: Vendor source without pin\n"
+            "        uses: actions/checkout@v4\n"
+            "        with:\n"
+            "          repository: Capsize-Games/airunner-tts-vendor\n"
+        )
+
+    errors = inspect_release_inputs(
+        tmp_path, Path(".github/workflows/pypi-dispatch.yml")
+    )
+
+    assert any("unregistered sibling source checkout" in error for error in errors)
+    assert any("missing or mutable source ref" in error for error in errors)
+
+
+def test_short_manifest_revision_is_rejected(tmp_path: Path) -> None:
+    _copy_gate_tree(tmp_path)
+    manifest_path = tmp_path / "release-planning/services/release-inputs.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    vendor = next(
+        item
+        for item in manifest["inputs"]
+        if item["distribution"] == "airunner-tts-vendor"
+    )
+    vendor["revision"] = "d9228"
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+
+    errors = inspect_release_inputs(
+        tmp_path, Path(".github/workflows/pypi-dispatch.yml")
+    )
+
+    assert any(
+        "airunner-tts-vendor: source revision must be a full 40-character SHA"
+        in error
+        for error in errors
+    )
 
 
 def test_release_workflow_gates_precede_dependency_execution() -> None:

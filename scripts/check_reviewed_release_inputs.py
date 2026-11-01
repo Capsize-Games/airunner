@@ -14,22 +14,42 @@ CONSTRAINTS = Path("package/constraints-linux-nvidia-cu129.txt")
 PACKAGE_METADATA = (Path("services/setup.py"), Path("native/setup.py"))
 _REVIEWED_STATUS = "reviewed"
 _APPROVED_ACTIVATION = "approved"
+EXPECTED_INPUTS = {
+    "airunner-common": "Capsize-Games/airunner-common",
+    "facehuggershield": "Capsize-Games/facehuggershield",
+    "airunner-tts-vendor": "Capsize-Games/airunner-tts-vendor",
+}
 
 
-def _source_refs(text: str, repository: str) -> list[str]:
-    """Collect checkout refs paired with one repository in workflow YAML."""
+def _source_refs(text: str, repository: str) -> list[str | None]:
+    """Collect raw checkout refs, preserving absent and mutable ref values."""
     lines = text.splitlines()
-    refs: list[str] = []
+    refs: list[str | None] = []
     for index, line in enumerate(lines):
-        if line.strip() != f"repository: {repository}":
+        repository_match = re.fullmatch(
+            rf"\s*repository:\s*(['\"]?){re.escape(repository)}\1\s*(?:#.*)?",
+            line,
+        )
+        if not repository_match:
             continue
-        for candidate in lines[index + 1 :]:
-            if candidate.startswith("      - "):
-                break
-            match = re.match(r"\s*ref:\s*([0-9a-fA-F]{5,40})\s*(?:#.*)?$", candidate)
+
+        step_end = index + 1
+        while step_end < len(lines) and not re.match(
+            r"^\s{6}-\s", lines[step_end]
+        ):
+            step_end += 1
+        ref: str | None = None
+        for candidate in lines[index + 1 : step_end]:
+            match = re.fullmatch(
+                r"\s*ref:\s*(.*?)\s*(?:#.*)?", candidate
+            )
             if match:
-                refs.append(match.group(1).lower())
+                raw_ref = match.group(1).strip()
+                if len(raw_ref) >= 2 and raw_ref[0] == raw_ref[-1] and raw_ref[0] in "'\"":
+                    raw_ref = raw_ref[1:-1]
+                ref = raw_ref.lower()
                 break
+        refs.append(ref)
     return refs
 
 
@@ -59,6 +79,21 @@ def inspect_release_inputs(root: Path, workflow: Path) -> list[str]:
     inputs = manifest.get("inputs")
     if not isinstance(inputs, list) or not inputs:
         return errors + ["release input manifest has no inputs"]
+
+    identities = {
+        item.get("distribution"): item.get("repository")
+        for item in inputs
+        if isinstance(item, dict)
+    }
+    for distribution, repository in EXPECTED_INPUTS.items():
+        if distribution not in identities:
+            errors.append(f"mandatory release input is missing: {distribution}")
+        elif identities[distribution] != repository:
+            errors.append(
+                f"{distribution}: repository must be {repository}"
+            )
+    for distribution in identities.keys() - EXPECTED_INPUTS.keys():
+        errors.append(f"unrecognized release input: {distribution}")
 
     try:
         if not (root / workflow).is_file():
@@ -97,8 +132,10 @@ def inspect_release_inputs(root: Path, workflow: Path) -> list[str]:
             errors.append(f"duplicate release input: {distribution}")
             continue
         seen_distributions.add(distribution)
-        if not re.fullmatch(r"[0-9a-fA-F]{5,40}", revision):
-            errors.append(f"{distribution}: invalid source revision format")
+        if not re.fullmatch(r"[0-9a-fA-F]{40}", revision):
+            errors.append(
+                f"{distribution}: source revision must be a full 40-character SHA"
+            )
         expected_source_refs = item.get("workflow_source_refs", {})
         if not isinstance(expected_source_refs, dict):
             errors.append(
@@ -116,16 +153,29 @@ def inspect_release_inputs(root: Path, workflow: Path) -> list[str]:
                     f"{distribution}: unregistered sibling source checkout in "
                     f"{source_workflow}"
                 )
+                if any(
+                    ref is None or not re.fullmatch(r"[0-9a-f]{40}", ref)
+                    for ref in refs
+                ):
+                    errors.append(
+                        f"{distribution}: sibling checkout in {source_workflow} "
+                        "has a missing or mutable source ref"
+                    )
             elif expected_count is not None and (
                 len(refs) != expected_count
-                or any(ref != revision.lower() for ref in refs)
+                or any(
+                    ref is None
+                    or not re.fullmatch(r"[0-9a-f]{40}", ref)
+                    or ref != revision.lower()
+                    for ref in refs
+                )
             ):
                 errors.append(
                     f"{distribution}: workflow source refs do not match "
                     f"manifest revision {revision} ({source_workflow}: "
                     f"found {len(refs)}, expected {expected_count})"
                 )
-        for source_workflow, expected_count in expected_source_refs.items():
+        for source_workflow in expected_source_refs:
             if not (root / source_workflow).is_file():
                 errors.append(
                     f"{distribution}: manifest source workflow is missing: "

@@ -29,7 +29,7 @@
     {
       "distribution": "airunner-tts-vendor",
       "repository": "Capsize-Games/airunner-tts-vendor",
-      "revision": "d9228",
+      "revision": "d9228e57a08371e124725dc6a6f32a6c407ac944",
       "version": "0.1.0",
       "requirement": "~=0.1",
       "status": "pending",
