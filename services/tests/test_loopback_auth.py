@@ -20,6 +20,7 @@ import httpx
 import pytest
 
 from airunner_services.api import loopback_token
+from airunner_services.api import server as server_module
 from airunner_services.api.server import create_app
 from airunner_services.daemon_client.gui_daemon_client import GuiDaemonClient
 from airunner_services.runtimes.art_daemon_runtime_settings import (
@@ -71,6 +72,7 @@ def app(monkeypatch, test_db):
     """A no-API-key, no-insecure-bypass app instance."""
     monkeypatch.setenv("AIRUNNER_API_KEY", "")
     monkeypatch.setenv("AIRUNNER_INSECURE_NO_AUTH", "0")
+    monkeypatch.setattr(server_module, "mount_client_bundle", lambda app: False)
     return create_app()
 
 
