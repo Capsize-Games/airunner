@@ -112,16 +112,40 @@ def _load_tokenizer_mixin() -> ModuleType:
     transformers_stub = ModuleType("transformers")
     transformers_stub.AutoTokenizer = object
     transformers_stub.AutoConfig = object
+    # The stub must not outlive this load: a leaked bare ModuleType
+    # breaks every later ``from transformers import ...`` in the same
+    # pytest process ("unknown location" ImportError, e.g. the W3
+    # sandbox suite importing model_loader_mixin).
+    missing = object()
+    previous = sys.modules.get("transformers", missing)
     sys.modules["transformers"] = transformers_stub
-
-    spec = importlib.util.spec_from_file_location(
-        "tokenizer_loader_mixin_under_test",
-        module_path,
-    )
-    module = importlib.util.module_from_spec(spec)
-    sys.modules[spec.name] = module
-    spec.loader.exec_module(module)  # type: ignore[union-attr]
+    try:
+        spec = importlib.util.spec_from_file_location(
+            "tokenizer_loader_mixin_under_test",
+            module_path,
+        )
+        module = importlib.util.module_from_spec(spec)
+        sys.modules[spec.name] = module
+        spec.loader.exec_module(module)  # type: ignore[union-attr]
+    finally:
+        if previous is missing:
+            sys.modules.pop("transformers", None)
+        else:
+            sys.modules["transformers"] = previous
     return module
+
+
+def test_load_tokenizer_mixin_restores_transformers(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The transformers stub must not leak into later tests."""
+    sentinel = ModuleType("transformers")
+    monkeypatch.setitem(sys.modules, "transformers", sentinel)
+    _load_tokenizer_mixin()
+    assert sys.modules["transformers"] is sentinel
+    monkeypatch.delitem(sys.modules, "transformers", raising=False)
+    _load_tokenizer_mixin()
+    assert "transformers" not in sys.modules
 
 
 def test_tokenizer_mixin_has_no_unconditional_remote_code() -> None:
