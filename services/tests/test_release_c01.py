@@ -60,12 +60,55 @@ def test_candidate_stages_sidecars_before_verifying() -> None:
         "Assemble candidate bundle",
         "Stage sidecars",
         "Verify candidate manifest",
-        "Upload Linux candidate bundle",
+        "Upload Linux candidate archive",
     )
     positions = [[i for i, n in enumerate(names) if w in n] for w in wants]
     assert all(len(found) == 1 for found in positions)
     flat = [found[0] for found in positions]
     assert flat == sorted(flat)
+
+
+def test_release_archives_verified_candidate_before_upload_and_promotion() -> None:
+    """The exact SHA-bound bundle archive is uploaded, then rechecked."""
+    jobs = c01._load_yaml(c01._DISPATCH)["jobs"]
+    candidate_steps = jobs["linux-candidate"]["steps"]
+    names = [str(step.get("name", "")) for step in candidate_steps]
+    assert names.index("Verify candidate manifest") < names.index(
+        "Package verified Linux candidate"
+    ) < names.index("Upload Linux candidate archive")
+    assemble = next(
+        step for step in candidate_steps
+        if step.get("name") == "Assemble candidate bundle"
+    )
+    assert '--base "${{ github.sha }}"' in assemble["run"]
+    upload = next(
+        step for step in candidate_steps
+        if step.get("name") == "Upload Linux candidate archive"
+    )
+    assert "*.tar.gz" in upload["with"]["path"]
+
+    publish = jobs["publish-release-assets"]
+    publish_steps = publish["steps"]
+    publish_names = [str(step.get("name", "")) for step in publish_steps]
+    assert publish_names.index("Download verified Linux candidate archive") < (
+        publish_names.index("Verify candidate and checksum final release assets")
+    )
+    assert publish_names.index(
+        "Verify candidate and checksum final release assets"
+    ) < publish_names.index("Upload release assets")
+    verify = next(
+        step for step in publish_steps
+        if step.get("name") == "Verify candidate and checksum final release assets"
+    )
+    assert "linux_candidate_artifact.py verify" in verify["run"]
+    assert "linux_candidate_artifact.py checksums" in verify["run"]
+    assert "${{ github.sha }}" in verify["env"]["RELEASE_SOURCE_SHA"]
+    upload_release = next(
+        step for step in publish_steps
+        if step.get("name") == "Upload release assets"
+    )
+    assert "linux-candidate/*" in upload_release["with"]["files"]
+    assert "SHA256SUMS" in upload_release["with"]["files"]
 
 
 def test_candidate_creation_publishes_nothing() -> None:
