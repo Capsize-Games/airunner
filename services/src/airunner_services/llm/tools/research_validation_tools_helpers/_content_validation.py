@@ -100,6 +100,34 @@ def validate_url_impl(url: str) -> dict:
         return _url_error_result(exc)
 
 
+MAX_RESEARCH_PROMPT_CONTENT_CHARS = 100_000
+
+
+def prompt_content_rejection_reason(
+    content: str, source_url: str = ""
+) -> str | None:
+    """Reject over-budget text or text matching known injection patterns."""
+    if len(content) > MAX_RESEARCH_PROMPT_CONTENT_CHARS:
+        logger.warning(
+            "Rejected oversized research content from %s (%d chars)",
+            source_url,
+            len(content),
+        )
+        return (
+            "Research content exceeds the "
+            f"{MAX_RESEARCH_PROMPT_CONTENT_CHARS}-character scan limit"
+        )
+    for pattern in INJECTION_PATTERNS:
+        if re.search(pattern, content, re.IGNORECASE):
+            logger.warning(
+                "[Security] Blocked content from %s - injection pattern: '%s'",
+                source_url,
+                pattern,
+            )
+            return "Security: Potential prompt injection detected"
+    return None
+
+
 def validate_content_impl(content: str, source_url: str = "") -> dict:
     """Validate scraped content quality and safety."""
     warnings: list[str] = []
@@ -199,18 +227,11 @@ def _injection_result(
     source_url: str,
     warnings: list[str],
 ) -> dict | None:
-    """Return the security payload when prompt-injection text is detected."""
-    scan_text = content[:5000] + "\n" + content[-5000:]
-    for pattern in INJECTION_PATTERNS:
-        if re.search(pattern, scan_text, re.IGNORECASE):
-            logger.warning(
-                "[Security] Blocked content from %s - injection pattern: '%s'",
-                source_url,
-                pattern,
-            )
-            reason = "Security: Potential prompt injection detected"
-            return _content_result(False, reason, warnings, len(content))
-    return None
+    """Return a negative validation result for unsafe or oversized text."""
+    reason = prompt_content_rejection_reason(content, source_url)
+    if reason is None:
+        return None
+    return _content_result(False, reason, warnings, len(content))
 
 
 def _content_warnings(content_lower: str) -> list[str]:

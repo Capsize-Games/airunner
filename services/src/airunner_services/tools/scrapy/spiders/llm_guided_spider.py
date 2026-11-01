@@ -11,6 +11,9 @@ import scrapy
 from typing import Callable, Optional, Set, Dict, List
 
 from airunner_services.tools.web_content_extractor import WebContentExtractor
+from airunner_services.llm.tools.research_validation_tools_helpers import (
+    prompt_content_rejection_reason,
+)
 from airunner_services.url_safety import (
     OfflineModeBlocked,
     SSRFBlocked,
@@ -105,6 +108,19 @@ class LLMGuidedSpider(scrapy.Spider):
             logger.warning(
                 "Failed to extract data from %s",
                 fingerprint_value(url, label="url"),
+            )
+            return
+
+        # Reject injection-like content before it reaches the decision LLM
+        # or is yielded back into the caller's research prompt.
+        rejection_reason = prompt_content_rejection_reason(
+            str(page_data), url
+        )
+        if rejection_reason is not None:
+            logger.warning(
+                "Rejected scraped page before LLM context (%s): %s",
+                fingerprint_value(url, label="url"),
+                rejection_reason,
             )
             return
 

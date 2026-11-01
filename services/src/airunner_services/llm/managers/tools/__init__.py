@@ -4,7 +4,8 @@ DEPRECATED: Most tools have been migrated to the new ToolRegistry system.
 Only the following mixins remain here temporarily:
 - ImageTools, FileTools, SystemTools, ConversationTools, AutonomousControlTools
 
-For new tools, use the @tool decorator in airunner.components.llm.tools/
+For new tools, use the @tool decorator in
+airunner_services.llm.core.tool_registry.
 """
 
 from airunner_services.llm.managers.tools.image_tools import ImageTools

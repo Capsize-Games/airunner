@@ -9,6 +9,9 @@ from typing import Annotated, Any, Callable, Coroutine
 from urllib.parse import urlparse
 
 from airunner_services.llm.core.tool_registry import ToolCategory, tool
+from airunner_services.llm.tools.research_validation_tools_helpers import (
+	prompt_content_rejection_reason,
+)
 from airunner_common.settings import AIRUNNER_LOG_LEVEL
 from airunner_services.downloads.policy import is_duckduckgo_allowed
 from airunner_services.utils.application.get_logger import get_logger
@@ -68,6 +71,20 @@ def _run_provider_coro(coro_factory: Callable[[], Coroutine]) -> Any:
 	if "error" in result:
 		raise result["error"]
 	return result.get("value")
+
+
+def _filter_injection_search_results(
+	results: list[dict], source: str
+) -> list[dict]:
+	"""Filter records matching known patterns before returning model context."""
+	accepted = []
+	for result in results:
+		if prompt_content_rejection_reason(
+			str(result), str(result.get("link") or source)
+		) is not None:
+			continue
+		accepted.append(result)
+	return accepted
 
 
 def _duckduckgo_web_results(query: str, num_results: int = 10) -> list[dict]:
@@ -188,7 +205,15 @@ def search_web(
 		)
 
 		ddg_results = _duckduckgo_web_results(query, num_results=10)
-		logger.info("Got %d DuckDuckGo results", len(ddg_results))
+		raw_result_count = len(ddg_results)
+		ddg_results = _filter_injection_search_results(
+			ddg_results, "web search result"
+		)
+		logger.info(
+			"Retained %d DuckDuckGo results; filtered %d matching known patterns",
+			len(ddg_results),
+			raw_result_count - len(ddg_results),
+		)
 
 		if not ddg_results:
 			logger.warning("Empty DuckDuckGo results list")
@@ -265,8 +290,16 @@ def search_news(
 		)
 
 		results = _duckduckgo_news_results(query, num_results=10)
+		raw_result_count = len(results)
+		results = _filter_injection_search_results(
+			results, "news search result"
+		)
 
-		logger.info("Got %d news results", len(results))
+		logger.info(
+			"Retained %d news results; filtered %d matching known patterns",
+			len(results),
+			raw_result_count - len(results),
+		)
 
 		if not results:
 			logger.warning("No news results returned")
@@ -352,6 +385,11 @@ def scrape_website(
 		)
 
 		if result and result.get("content"):
+			rejection_reason = prompt_content_rejection_reason(
+				str(result), safe_url
+			)
+			if rejection_reason is not None:
+				return {"content": None, "error": rejection_reason}
 			logger.info(
 				"Extracted %d characters from scraped website",
 				len(result["content"]),
