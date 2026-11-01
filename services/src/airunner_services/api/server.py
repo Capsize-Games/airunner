@@ -43,6 +43,7 @@ from airunner_services.api.routes import legacy as legacy_routes
 from airunner_services.api.loopback_token import get_or_create_loopback_token
 from airunner_services.data.tenant import reset_tenant_key, set_tenant_key
 from airunner_services.runtimes.bootstrap import build_runtime_registry
+from airunner_services.api.admission_middleware import AdmissionMiddleware
 
 
 logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
@@ -297,6 +298,9 @@ def create_app(
 
     allowed_env = (os.environ.get("AIRUNNER_ALLOWED_TENANT_KEYS") or "").strip()
     allowed_tenants = {t.strip() for t in allowed_env.split(",") if t.strip()}
+
+    # Registered before auth so rejected credentials never consume capacity.
+    app.add_middleware(AdmissionMiddleware)
 
     @app.middleware("http")
     async def tenant_middleware(request: Request, call_next):
