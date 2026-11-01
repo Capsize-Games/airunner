@@ -20,6 +20,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import ast
 import json
 import shutil
 import subprocess
@@ -100,6 +101,33 @@ TOKEN_DISTRIBUTION = {
     "native": "airunner-native",
     ".": "airunner",
 }
+
+
+def release_version_from_setup(path: Path) -> str:
+    """Read a package's literal release version without importing setup.py.
+
+    Build helpers often import setuptools, which is intentionally installed in
+    isolated build environments and may not exist in the CI source-gate
+    interpreter. Parsing the single literal also avoids executing packaging
+    code during a metadata consistency check.
+    """
+    tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+    for node in tree.body:
+        if not isinstance(node, ast.Assign):
+            continue
+        if not any(
+            isinstance(target, ast.Name) and target.id == "_RELEASE_VERSION"
+            for target in node.targets
+        ):
+            continue
+        value = ast.literal_eval(node.value)
+        if not isinstance(value, str) or not value.strip():
+            raise ValueError(
+                f"{path}: _RELEASE_VERSION must be a non-empty string"
+            )
+        return value
+    raise ValueError(f"{path}: _RELEASE_VERSION assignment not found")
+
 
 # airunner-common is independently versioned and published from its own
 # repository. Only these distributions are built from the candidate here.

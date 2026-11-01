@@ -1,10 +1,10 @@
 """Packaging constraint tests (GitHub issue #2057).
 
-The pinned ``torch==2.13.0+cu129`` wheel's runtime metadata requires
-``setuptools<82``. Every build-system file that carries a setuptools
-requirement must therefore stay below 82, or ``pip check`` fails on any
-install that includes the ML runtime. This file source-scans the packaging
-files so a future bump (e.g. PR #2022 wanting ``>=84``) is caught in CI.
+The repository's isolated build requirements are pinned to
+``setuptools>=80.9,<82`` and the Linux runtime lock must stay in that same
+range. The installed ``torch==2.13.0+cu129`` metadata inspected for this audit
+declares ``setuptools>=77.0.3`` without an upper bound; the <82 policy is a
+repository compatibility pin, not a torch runtime metadata requirement.
 """
 
 from __future__ import annotations
@@ -20,10 +20,12 @@ _BUILD_SYSTEM_FILES = (
     _PROJECT_ROOT / "services" / "pyproject.toml",
     _PROJECT_ROOT / "native" / "pyproject.toml",
 )
+_LINUX_RUNTIME_LOCK = (
+    _PROJECT_ROOT / "package" / "constraints-linux-nvidia-cu129.txt"
+)
 
 def test_build_system_setuptools_below_82() -> None:
-    """Every build-system file must keep setuptools below 82 while torch is
-    pinned below 2.14 (issue #2057)."""
+    """Enforce the repository's build-system setuptools cap (issue #2057)."""
     assert _build_system_files_exist()
 
     for path in _BUILD_SYSTEM_FILES:
@@ -36,8 +38,8 @@ def test_build_system_setuptools_below_82() -> None:
         major = int(version_str.split(".")[0])
         assert major < 82, (
             f"{path.name} requests setuptools>={version_str} (>=82) which "
-            "conflicts with the pinned torch wheel requiring setuptools<82 "
-            "(issue #2057)"
+            "conflicts with the repository's setuptools<82 compatibility "
+            "policy (issue #2057)"
         )
         # The requirement must also carry an explicit upper bound <82.
         assert re.search(r'setuptools\s*>=?\s*[0-9]+(?:\.[0-9]+)*\s*,\s*<82', source), (
@@ -69,8 +71,28 @@ def test_no_setuptools_pin_above_82_in_dev_requirements() -> None:
                 raise AssertionError(
                     f"{path}: DEVELOPMENT_REQUIREMENTS pins "
                     f"setuptools>={match.group(1)} which conflicts with "
-                    "torch's setuptools<82 requirement (issue #2057)"
+                    "the repository's setuptools<82 compatibility policy "
+                    "(issue #2057)"
                 )
+
+
+def test_linux_runtime_lock_setuptools_fits_build_system_range() -> None:
+    """The hash lock must not contradict the repository's build pin."""
+    source = _LINUX_RUNTIME_LOCK.read_text(encoding="utf-8")
+    match = re.search(r"(?m)^setuptools==([0-9]+(?:\.[0-9]+)*) \\", source)
+    assert match is not None, "Linux runtime lock must pin setuptools exactly"
+    locked = tuple(int(part) for part in match.group(1).split("."))
+    assert (80, 9) <= locked < (82,), (
+        f"runtime setuptools {match.group(1)} is outside the guarded "
+        ">=80.9,<82 range"
+    )
+    start = match.start()
+    end = re.search(r"(?m)^[A-Za-z0-9_.-]+==", source[match.end():])
+    block = source[start:]
+    if end is not None:
+        block = source[start:match.end() + end.start()]
+    hashes = re.findall(r"--hash=sha256:[0-9a-f]{64}", block)
+    assert len(hashes) >= 2, "setuptools lock entry needs wheel and sdist hashes"
 
 
 def _build_system_files_exist() -> bool:

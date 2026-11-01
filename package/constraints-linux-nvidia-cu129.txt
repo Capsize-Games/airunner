@@ -30,7 +30,7 @@
 #   pip install --no-deps ./services[desktop] ./native
 #   pip check
 # Step 1 installs only index artifacts, every one hash-verified. Step 2
-# builds the three profile roots from this tree (their declared build
+# builds the two profile roots from this tree (their declared build
 # backends fetch setuptools>=80.9.0,<82 plus wheel into ephemeral
 # isolated build environments per pyproject.toml; that build-system pin,
 # guarded by test_dependency_constraints.py for issue #2057, is
@@ -44,15 +44,22 @@
 #   from this tree (exit 0); `pip freeze` matches every locked version
 #   (modulo pip's own -/._ name normalization); `pip check` verdict:
 #   "No broken requirements found." (exit 0). Installed torch
-#   2.13.0+cu129 metadata requires setuptools>=77.0.3 with no upper
-#   bound, so the locked runtime setuptools==84.0.0 satisfies it; the
-#   <82 build-system pin (issue #2057) governs only the ephemeral
-#   isolated build environments, not this runtime set.
+#   2.13.0+cu129 metadata requires setuptools>=77.0.3. The runtime pin
+#   is 81.0.0 so it also remains within the repository's explicit
+#   setuptools>=80.9.0,<82 compatibility range (issue #2057).
+#   PyPI's 81.0.0 release file records (checked 2026-11-01): wheel
+#   SHA-256 fdd925d5c5d9f62e4b74b30d6dd7828ce236fd6ed998a08d81de62ce5a6310d6;
+#   sdist SHA-256 487b53915f52501f0a79ccfd0c02c165ffe06631443a886740b91af4b7a5845a.
+#   Source: https://pypi.org/project/setuptools/81.0.0/; PyPI reports no
+#   provenance attestation for this release.
 #
 # Amendment 2026-11-01: seeded (lock-preserving) regeneration for
 # fastapi 0.141.1 / starlette 1.6.0. Pin set is now 332: fastapi,
 # starlette and pyopenssl moved; 20 stale pins dropped. The
 # 2026-10-08 verification above describes the previous 352-pin set.
+# The subsequent setuptools 84.0.0 -> 81.0.0 hash-pin correction is
+# source-reviewed against PyPI file records, but has not been installed
+# or revalidated with `pip check` in this task.
 #
 # Regeneration (from the repository root; needs network and uv):
 #   uv pip compile --python <a CPython 3.13 interpreter> \
@@ -4733,9 +4740,9 @@ service-identity==24.2.0 \
     --hash=sha256:b8683ba13f0d39c6cd5d625d2c5f65421d6d707b013b375c355751557cbe8e09
     # via scrapy
     # from https://pypi.org/simple
-setuptools==84.0.0 \
-    --hash=sha256:51a52592b3b99e102b609654876bd65f19f999935166d1352678931132b0c670 \
-    --hash=sha256:f4695c21257f0d9b537ec2692c941d02ee143b7cc1276941349a546573b2ef73
+setuptools==81.0.0 \
+    --hash=sha256:fdd925d5c5d9f62e4b74b30d6dd7828ce236fd6ed998a08d81de62ce5a6310d6 \
+    --hash=sha256:487b53915f52501f0a79ccfd0c02c165ffe06631443a886740b91af4b7a5845a
     # via torch
     # from https://pypi.org/simple
 shellingham==1.5.4 \

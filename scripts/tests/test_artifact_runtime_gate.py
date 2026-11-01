@@ -22,6 +22,7 @@ from artifact_runtime_gate import (
     UnsupportedSelection,
     optional_boundary_is_failure,
     plan_validation,
+    release_version_from_setup,
 )
 
 
@@ -79,6 +80,34 @@ class TestPackageSelection:
         assert ALLOWED_PACKAGE_TOKENS == frozenset(
             {"services", "native", "."}
         )
+
+
+class TestStaticSetupMetadata:
+    """CI metadata checks must not execute setup.py or need setuptools."""
+
+    def test_reads_literal_release_version_without_importing_build_tools(
+        self, tmp_path
+    ):
+        setup = tmp_path / "setup.py"
+        setup.write_text(
+            "from setuptools import setup\n"
+            "_RELEASE_VERSION = '9.8.7'\n"
+            "setup()\n",
+            encoding="utf-8",
+        )
+        assert release_version_from_setup(setup) == "9.8.7"
+
+    def test_rejects_missing_or_nonliteral_release_version(self, tmp_path):
+        setup = tmp_path / "setup.py"
+        setup.write_text("VERSION = '1.0'\n", encoding="utf-8")
+        with pytest.raises(ValueError, match="_RELEASE_VERSION assignment"):
+            release_version_from_setup(setup)
+
+        setup.write_text(
+            "_RELEASE_VERSION = compute_version()\n", encoding="utf-8"
+        )
+        with pytest.raises(ValueError):
+            release_version_from_setup(setup)
 
 
 class TestProvenanceDecision:
