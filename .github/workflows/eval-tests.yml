@@ -24,6 +24,11 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Require reviewed sibling release inputs
+        run: >-
+          python scripts/check_reviewed_release_inputs.py
+          --workflow .github/workflows/eval-tests.yml
+
       # PyPI releases for both packages are paused/yanked. Their public source
       # repositories remain available; install the exact released commits
       # with the unchanged package metadata and dependencies.
@@ -153,6 +158,11 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Require reviewed sibling release inputs
+        run: >-
+          python scripts/check_reviewed_release_inputs.py
+          --workflow .github/workflows/eval-tests.yml
+
       - name: Checkout facehuggershield source
         uses: actions/checkout@v4
         with:
@@ -213,6 +223,11 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Require reviewed sibling release inputs
+        run: >-
+          python scripts/check_reviewed_release_inputs.py
+          --workflow .github/workflows/eval-tests.yml
 
       - name: Set up Python
         uses: actions/setup-python@v5

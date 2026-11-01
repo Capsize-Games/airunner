@@ -1,0 +1,40 @@
+{
+  "schema_version": 1,
+  "purpose": "Track sibling source inputs that require review before CI, candidate, or release activation.",
+  "inputs": [
+    {
+      "distribution": "airunner-common",
+      "repository": "Capsize-Games/airunner-common",
+      "revision": "544a553dc565a91407d9654358e8b4bc3b480b94",
+      "version": "6.1.7",
+      "requirement": "~=6.1.7",
+      "status": "pending",
+      "activation": "quarantined",
+      "workflow_source_refs": {
+        ".github/workflows/eval-tests.yml": 2
+      }
+    },
+    {
+      "distribution": "facehuggershield",
+      "repository": "Capsize-Games/facehuggershield",
+      "revision": "e17f61cd2a894c71f2e0a2480f1f7d29a8756833",
+      "version": "1.0.0",
+      "requirement": "==1.0.0",
+      "status": "pending",
+      "activation": "quarantined",
+      "workflow_source_refs": {
+        ".github/workflows/eval-tests.yml": 2
+      }
+    },
+    {
+      "distribution": "airunner-tts-vendor",
+      "repository": "Capsize-Games/airunner-tts-vendor",
+      "revision": "d9228",
+      "version": "0.1.0",
+      "requirement": "~=0.1",
+      "status": "pending",
+      "activation": "quarantined",
+      "workflow_source_refs": {}
+    }
+  ]
+}
