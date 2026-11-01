@@ -444,7 +444,7 @@ def _run_blocks(job: dict) -> list[str]:
 
 
 def test_workflow_trusted_job_is_release_only() -> None:
-    """Provisioning needs the release event plus the protected env."""
+    """Provisioning uses the same immutable event revision as candidate jobs."""
     workflow = _workflow()
     # NOTE: YAML 1.1 parses the `on` key as boolean True.
     assert "pull_request" not in workflow[True]
@@ -453,7 +453,7 @@ def test_workflow_trusted_job_is_release_only() -> None:
     assert job["environment"] == "release-policy"
     assert job["permissions"] == {"contents": "read"}
     checkout = job["steps"][0]
-    assert checkout["with"]["ref"] == ("${{ github.event.release.tag_name }}")
+    assert checkout["with"]["ref"] == "${{ github.sha }}"
     assert checkout["with"]["persist-credentials"] is False
 
 
