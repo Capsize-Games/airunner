@@ -62,12 +62,18 @@ from airunner_services.runtimes.tts_capabilities import (
     TTS_BACKEND_UNAVAILABLE_CODE,
     deferred_tts_metadata,
     is_deferred_tts_model_type,
+    normalize_tts_model_type,
+)
+from airunner_services.runtimes.espeak_cli_renderer import (
+    EspeakCliRenderer,
+    EspeakRenderError,
 )
 
 logger = get_logger(__name__)
 
 DEFAULT_PROVIDER = "local"
 ProgressCallback = Callable[[dict[str, Any]], None]
+_UNRESOLVED_WORKER = object()
 
 LLMRequestFactory = Callable[[LLMInvocationRequest], Any]
 
@@ -483,10 +489,28 @@ class LocalFallbackTTSClient(_SignalRuntimeClient):
             health_provider=health_provider,
             model_type=_resolve_model_type("TTS"),
         )
+        self._espeak_cli_renderer = EspeakCliRenderer()
+        self._espeak_cli_ready = False
 
     def healthcheck(self):
         """Report loaded TTS identity without creating a worker or model."""
         health = super().healthcheck()
+        if self._espeak_cli_ready:
+            return health.model_copy(
+                update={
+                    "status": RuntimeHealthStatus.READY,
+                    "details": "eSpeak NG command-line renderer is ready",
+                    "metadata": {
+                        **health.metadata,
+                        "model_type": "espeak",
+                        "model_id": "espeak-ng-cli",
+                        "model_name": "eSpeak NG CLI",
+                        "voice_ids": list(
+                            self._espeak_cli_renderer.voice_ids or ()
+                        ),
+                    },
+                }
+            )
         worker = self._existing_tts_worker()
         status_getter = getattr(worker, "_current_tts_status", None)
         if worker is None or not callable(status_getter):
@@ -590,6 +614,13 @@ class LocalFallbackTTSClient(_SignalRuntimeClient):
                 OPENVOICE_DEFERRED_DETAILS,
             )
 
+        if self._is_espeak_model_type(requested_model or configured_model):
+            return self._invoke_headless_runtime(
+                request.request_id,
+                invocation,
+                worker=None,
+            )
+
         worker = self._headless_tts_worker()
         active_model = getattr(worker, "_active_tts_model", None)
         try:
@@ -606,6 +637,7 @@ class LocalFallbackTTSClient(_SignalRuntimeClient):
             return self._invoke_headless_runtime(
                 request.request_id,
                 invocation,
+                worker=worker,
             )
 
         return self._invoke_playback_runtime(request.request_id, invocation)
@@ -614,10 +646,19 @@ class LocalFallbackTTSClient(_SignalRuntimeClient):
         self,
         request_id: str,
         invocation: TTSInvocationRequest,
+        *,
+        worker: Any = _UNRESOLVED_WORKER,
     ) -> ResponseEnvelope:
         """Return audio from one headless runtime instead of local playback."""
-        unsupported = self._unsupported_headless_openvoice_params(
-            invocation, self._headless_tts_worker()
+        if worker is _UNRESOLVED_WORKER:
+            worker = self._headless_tts_worker()
+        model_type = normalize_tts_model_type(
+            self._tts_model_type(invocation, worker)
+        )
+        unsupported = (
+            self._unsupported_headless_openvoice_params(invocation, worker)
+            if model_type == "openvoice"
+            else []
         )
         if unsupported:
             return self._failure_response(
@@ -626,7 +667,7 @@ class LocalFallbackTTSClient(_SignalRuntimeClient):
                 "Headless OpenVoice does not support: "
                 + ", ".join(unsupported),
             )
-        audio_b64 = self._audio_payload(invocation)
+        audio_b64 = self._audio_payload(invocation, worker=worker)
         if audio_b64 is not None:
             return ResponseEnvelope(
                 request_id=request_id,
@@ -824,9 +865,11 @@ class LocalFallbackTTSClient(_SignalRuntimeClient):
     def _audio_payload(
         self,
         invocation: TTSInvocationRequest,
+        *,
+        worker: Any = _UNRESOLVED_WORKER,
     ) -> Optional[str]:
         """Return base64 WAV audio when headless synthesis is available."""
-        audio_bytes = self._render_audio_bytes(invocation)
+        audio_bytes = self._render_audio_bytes(invocation, worker=worker)
         if not audio_bytes:
             return None
         return base64.b64encode(audio_bytes).decode("ascii")
@@ -834,9 +877,36 @@ class LocalFallbackTTSClient(_SignalRuntimeClient):
     def _render_audio_bytes(
         self,
         invocation: TTSInvocationRequest,
+        *,
+        worker: Any = _UNRESOLVED_WORKER,
     ) -> Optional[bytes]:
         """Render one TTS request to WAV bytes in headless mode."""
-        worker = self._headless_tts_worker()
+        if worker is _UNRESOLVED_WORKER:
+            selected_model = (
+                (invocation.metadata or {}).get("model_type")
+                or os.environ.get("AIRUNNER_TTS_MODEL_TYPE")
+            )
+            worker = (
+                None
+                if self._is_espeak_model_type(selected_model)
+                else self._headless_tts_worker()
+            )
+        selected_model = normalize_tts_model_type(
+            self._tts_model_type(invocation, worker)
+            or os.environ.get("AIRUNNER_TTS_MODEL_TYPE")
+        )
+        if self._is_espeak_model_type(selected_model):
+            try:
+                audio = self._espeak_cli_renderer.render(
+                    invocation.text,
+                    voice=invocation.voice,
+                    speed=invocation.speed,
+                )
+            except EspeakRenderError as exc:
+                logger.warning("eSpeak CLI request failed: %s", exc)
+                return None
+            self._espeak_cli_ready = True
+            return audio
         manager = self._tts_manager(worker)
         request = self._tts_request(invocation, worker)
         if worker is None or manager is None or request is None:
@@ -845,6 +915,15 @@ class LocalFallbackTTSClient(_SignalRuntimeClient):
         if audio is None:
             return None
         return self._encode_audio(audio, self._sample_rate(manager))
+
+    @staticmethod
+    def _is_espeak_model_type(model_type: Any) -> bool:
+        """Return whether a model selection names the eSpeak backend."""
+        return normalize_tts_model_type(model_type) in {
+            "espeak",
+            "espeak-ng",
+            "espeak_ng",
+        }
 
     def _headless_tts_worker(self):
         """Return the headless TTS worker when one exists."""

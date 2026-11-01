@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import base64
+import io
+import struct
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -96,6 +98,82 @@ def test_tts_http_accepts_bounded_request_and_returns_wav(
     assert invocation["text"] == "hello"
     assert invocation["voice"] == "voice-id"
     assert invocation["speed"] == 0.25
+
+
+def test_espeak_model_type_uses_headless_cli_through_authenticated_route(
+    authenticated_client, monkeypatch
+) -> None:
+    from airunner_services.runtimes.espeak_cli_renderer import EspeakCliRenderer
+    from airunner_services.runtimes.local_fallback import LocalFallbackTTSClient
+
+    client, headers, app = authenticated_client
+    voice_table = b"""Pty Language Age/Gender VoiceName File Other Languages
+ 5 en-us --/M English_(America) gmw/en-US
+"""
+    frames = b"\x00\x00" * 20
+    streaming_wav = (
+        b"RIFF"
+        + struct.pack("<I", 0xFFFFFFFF)
+        + b"WAVEfmt "
+        + struct.pack("<IHHIIHH", 16, 1, 1, 22050, 44100, 2, 16)
+        + b"data"
+        + struct.pack("<I", 0xFFFFFFFF)
+        + frames
+    )
+
+    class FakeProcess:
+        def __init__(self, output: bytes) -> None:
+            self.stdin = io.BytesIO()
+            self.stdout = io.BytesIO(output)
+            self.returncode = 0
+            self.waited = False
+
+        def wait(self, timeout=None):
+            self.waited = True
+            return self.returncode
+
+        def poll(self):
+            return self.returncode if self.waited else None
+
+        def kill(self):
+            self.returncode = -9
+
+    calls = []
+
+    def fake_popen(argv, **kwargs):
+        calls.append(argv)
+        output = voice_table if argv[-1] == "--voices" else streaming_wav
+        return FakeProcess(output)
+
+    class LazyWorkerManager:
+        @property
+        def tts_generator_worker(self):
+            raise AssertionError("eSpeak CLI route created playback worker")
+
+    runtime = LocalFallbackTTSClient(
+        signal_source=SimpleNamespace(_worker_manager=LazyWorkerManager()),
+        mediator=SimpleNamespace(),
+    )
+    runtime._espeak_cli_renderer = EspeakCliRenderer(popen=fake_popen)
+    app.state.runtime_registry = _FakeRegistry(runtime)
+
+    response = client.post(
+        "/api/v1/tts/synthesize",
+        headers=headers,
+        json={
+            "text": "route check",
+            "voice": "en-us",
+            "speed": 1.0,
+            "model_type": "Espeak",
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.content[:4] == b"RIFF"
+    assert response.content[8:12] == b"WAVE"
+    assert struct.unpack_from("<I", response.content, 4)[0] == len(response.content) - 8
+    assert calls[1][1] == "--stdout"
+    assert "-m" not in calls[1]
 
 
 @pytest.mark.parametrize(
