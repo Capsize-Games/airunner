@@ -357,6 +357,159 @@ def test_tts_voice_catalog_reports_unavailable_when_not_provided(
     response = client.get("/api/v1/tts/voices", headers=headers)
 
     assert response.status_code == 503
+
+
+def test_explicit_espeak_voice_catalog_is_discovered_without_synthesis(
+    authenticated_client,
+) -> None:
+    from airunner_services.runtimes.espeak_cli_renderer import EspeakCliRenderer
+    from airunner_services.runtimes.local_fallback import LocalFallbackTTSClient
+
+    client, headers, app = authenticated_client
+    voice_table = b"""Pty Language Age/Gender VoiceName File Other Languages
+ 5 en-us --/M English_(America) gmw/en-US
+ 5 fr --/M French roa/fr
+ 5 xx --/M MBROLA mb/mb-xx
+ 5 /tmp/voice --/M PathVoice /tmp/voice
+"""
+
+    class FakeProcess:
+        def __init__(self, output: bytes) -> None:
+            self.stdin = io.BytesIO()
+            self.stdout = io.BytesIO(output)
+            self.returncode = 0
+            self.waited = False
+
+        def wait(self, timeout=None):
+            self.waited = True
+            return self.returncode
+
+        def poll(self):
+            return self.returncode if self.waited else None
+
+        def kill(self):
+            self.returncode = -9
+
+    calls = []
+
+    def fake_popen(argv, **_kwargs):
+        calls.append(argv)
+        return FakeProcess(voice_table)
+
+    class LazyWorkerManager:
+        accesses = 0
+
+        @property
+        def tts_generator_worker(self):
+            self.accesses += 1
+            raise AssertionError("voice catalog query accessed playback worker")
+
+    worker_manager = LazyWorkerManager()
+    runtime = LocalFallbackTTSClient(
+        signal_source=SimpleNamespace(_worker_manager=worker_manager),
+        mediator=SimpleNamespace(),
+    )
+    runtime._espeak_cli_renderer = EspeakCliRenderer(popen=fake_popen)
+    app.state.runtime_registry = _FakeRegistry(runtime)
+
+    response = client.get(
+        "/api/v1/tts/voices?model_type=Espeak", headers=headers
+    )
+
+    assert response.status_code == 200
+    assert response.json() == {"voices": ["en-us", "fr"]}
+    assert calls == [["/usr/bin/espeak-ng", "--voices"]]
+    assert worker_manager.accesses == 0
+    assert runtime._espeak_cli_ready is False
+
+    generic_response = client.get("/api/v1/tts/voices", headers=headers)
+    assert generic_response.status_code == 503
+    assert calls == [["/usr/bin/espeak-ng", "--voices"]]
+    assert worker_manager.accesses == 0
+
+
+@pytest.mark.parametrize(
+    "model_type,expected_status",
+    [
+        ("UnlistedBackend", 422),
+        ("OpenVoice", 503),
+        ("Espeak", 503),
+    ],
+)
+def test_explicit_voice_catalog_rejects_unknown_and_deferred_backends(
+    authenticated_client, model_type, expected_status
+) -> None:
+    client, headers, app = authenticated_client
+    app.state.runtime_registry = None
+
+    response = client.get(
+        f"/api/v1/tts/voices?model_type={model_type}", headers=headers
+    )
+
+    assert response.status_code == expected_status
+
+
+def test_explicit_espeak_catalog_does_not_fall_back_to_sidecar(
+    authenticated_client,
+) -> None:
+    client, headers, app = authenticated_client
+
+    class RegistryWithModes:
+        def __init__(self):
+            self.modes = []
+
+        def resolve(self, _kind, *, provider, deployment_mode):
+            assert provider == "local"
+            self.modes.append(deployment_mode)
+            if deployment_mode == "local_fallback":
+                return _FakeTTSClient()
+            return _FakeTTSClient(
+                SimpleNamespace(
+                    status=RuntimeHealthStatus.READY,
+                    metadata={"voice_ids": ["sidecar-voice"]},
+                )
+            )
+
+    registry = RegistryWithModes()
+    app.state.runtime_registry = registry
+
+    response = client.get(
+        "/api/v1/tts/voices?model_type=Espeak", headers=headers
+    )
+
+    assert response.status_code == 503
+    assert registry.modes == ["local_fallback"]
+    assert response.json()["detail"] == "tts_voice_catalog_unavailable"
+
+
+def test_unavailable_espeak_catalog_returns_service_unavailable(
+    authenticated_client,
+) -> None:
+    from airunner_services.runtimes.espeak_cli_renderer import EspeakCliRenderer
+    from airunner_services.runtimes.local_fallback import LocalFallbackTTSClient
+
+    client, headers, app = authenticated_client
+
+    def missing_binary(_argv, **_kwargs):
+        raise FileNotFoundError("eSpeak is not installed")
+
+    class LazyWorkerManager:
+        @property
+        def tts_generator_worker(self):
+            raise AssertionError("voice catalog query accessed playback worker")
+
+    runtime = LocalFallbackTTSClient(
+        signal_source=SimpleNamespace(_worker_manager=LazyWorkerManager()),
+        mediator=SimpleNamespace(),
+    )
+    runtime._espeak_cli_renderer = EspeakCliRenderer(popen=missing_binary)
+    app.state.runtime_registry = _FakeRegistry(runtime)
+
+    response = client.get(
+        "/api/v1/tts/voices?model_type=Espeak", headers=headers
+    )
+
+    assert response.status_code == 503
     assert response.json()["detail"] == "tts_voice_catalog_unavailable"
 
 

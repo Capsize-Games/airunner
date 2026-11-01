@@ -32,6 +32,18 @@ docker compose -f docker-compose.release.yml run --rm --service-ports airunner
 
 Both definitions bind port `127.0.0.1:8080` and mount the configured data and Hugging Face cache directories. The release compose file references `ghcr.io/capsize-games/airunner/airunner:linux-headless`; image publication and startup are not verified here. The repository's dependency publication gaps may also affect builds that request the `tts-python` extra.
 
+## TTS HTTP API
+
+`POST /api/v1/tts/synthesize` accepts `text`, `model_type`, `voice`, and `speed`. To use the headless eSpeak CLI renderer, select it explicitly:
+
+```json
+{"text":"Hello.","model_type":"Espeak","voice":"en-us","speed":1.0}
+```
+
+Use `GET /api/v1/tts/voices?model_type=Espeak` to read the voice IDs reported by the installed eSpeak executable. This request runs its bounded voice-catalog command; it does not start the playback worker or synthesize audio. The returned IDs depend on the installed voice data. `GET /api/v1/tts/voices` without `model_type` reads metadata from an already-ready runtime and does not start one.
+
+The eSpeak renderer accepts speeds from `0.5` through `4.0`, where `1.0` maps to eSpeak rate `100`. The shared HTTP request schema accepts `0.25` through `4.0`; eSpeak returns `422` for values below its supported rate. An unknown voice or model type returns `422`. An unavailable voice catalog or executable returns `503`, and a synthesis timeout returns `504`. OpenVoice is unavailable in this release and returns `503` when selected.
+
 ## Checks
 
 Run focused tests after setting up the documented dependencies:

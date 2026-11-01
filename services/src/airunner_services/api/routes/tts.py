@@ -22,6 +22,7 @@ from .tts_helpers import (
     tts_error_status_code,
     tts_response_audio,
 )
+from airunner_services.runtimes.espeak_cli_renderer import EspeakRenderError
 from airunner_services.runtimes.contracts import (
     RuntimeHealthStatus,
     RuntimeKind,
@@ -30,6 +31,7 @@ from airunner_services.runtimes.contracts import (
 from airunner_services.runtimes.tts_capabilities import (
     TTS_BACKEND_UNAVAILABLE_CODE,
     is_deferred_tts_model_type,
+    normalize_tts_model_type,
 )
 
 from .tts_models import (
@@ -136,8 +138,54 @@ async def list_models(req: Request):
 
 
 @router.get("/voices", response_model=VoiceCatalogResponse)
-async def list_voices(req: Request) -> VoiceCatalogResponse:
-    """Return voice IDs reported by an already-ready local TTS runtime."""
+async def list_voices(
+    req: Request, model_type: str | None = None
+) -> VoiceCatalogResponse:
+    """Return explicit eSpeak IDs or metadata from an already-ready runtime."""
+    if model_type is not None:
+        normalized_model = normalize_tts_model_type(model_type)
+        if is_deferred_tts_model_type(normalized_model):
+            raise HTTPException(
+                status_code=503,
+                detail=TTS_BACKEND_UNAVAILABLE_CODE,
+            )
+        if normalized_model not in {"espeak", "espeak-ng", "espeak_ng"}:
+            raise HTTPException(
+                status_code=422,
+                detail="tts_model_type_unsupported",
+            )
+        registry = require_runtime_registry(req)
+        try:
+            client = registry.resolve(
+                RuntimeKind.TTS,
+                provider="local",
+                deployment_mode=RuntimeMode.LOCAL_FALLBACK.value,
+            )
+        except Exception as exc:
+            logger.debug("eSpeak voice catalog is unavailable: %s", exc)
+            raise HTTPException(
+                status_code=503,
+                detail="tts_voice_catalog_unavailable",
+            ) from exc
+        list_voice_ids = getattr(client, "list_voice_ids", None)
+        if not callable(list_voice_ids):
+            raise HTTPException(
+                status_code=503,
+                detail="tts_voice_catalog_unavailable",
+            )
+        try:
+            return VoiceCatalogResponse(
+                voices=await asyncio.to_thread(
+                    list_voice_ids, model_type
+                )
+            )
+        except EspeakRenderError as exc:
+            status_code = 504 if exc.code == "tts_timeout" else 503
+            raise HTTPException(
+                status_code=status_code,
+                detail="tts_voice_catalog_unavailable",
+            ) from exc
+
     registry = require_runtime_registry(req)
     for mode in (RuntimeMode.LOCAL_FALLBACK, RuntimeMode.SIDECAR):
         try:

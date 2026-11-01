@@ -587,6 +587,14 @@ class LocalFallbackTTSClient(_SignalRuntimeClient):
         except TypeError:
             return None
 
+    def list_voice_ids(self, model_type: str) -> tuple[str, ...]:
+        """Enumerate an explicitly selected eSpeak CLI voice catalog."""
+        if is_deferred_tts_model_type(model_type):
+            raise EspeakRenderError("tts_backend_unavailable")
+        if not self._is_espeak_model_type(model_type):
+            raise EspeakRenderError("tts_invalid_request")
+        return self._espeak_cli_renderer.catalogue()
+
     def invoke(self, request: RequestEnvelope) -> ResponseEnvelope:
         """Queue playback or execute TTS model-control actions."""
         if request.runtime is not RuntimeKind.TTS:
