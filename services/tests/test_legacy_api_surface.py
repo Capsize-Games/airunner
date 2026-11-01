@@ -66,15 +66,15 @@ def test_ollama_utility_endpoints() -> None:
         response = client.post(path, json={})
         assert response.status_code == 501
 
-    response = client.post(
-        "/api/embed", json={"input": ["hello"], "model": "airunner:latest"}
-    )
-    assert response.status_code == 200
-    assert len(response.json()["embeddings"]) == 1
+    # This smoke app has no configured local embedding provider. Neither
+    # Ollama endpoint may report success with invented placeholder vectors.
+    response = client.post("/api/embed", json={"input": ["hello"]})
+    assert response.status_code == 503
+    assert response.json()["detail"] == "local_embedding_unavailable"
 
-    response = client.post("/api/embeddings", json={"input": "hello"})
-    assert response.status_code == 200
-    assert len(response.json()["embeddings"]) == 1
+    response = client.post("/api/embeddings", json={"prompt": "hello"})
+    assert response.status_code == 503
+    assert response.json()["detail"] == "local_embedding_unavailable"
 
     response = client.post(
         "/api/embed", json={"input": ["x"] * 65}

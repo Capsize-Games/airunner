@@ -18,6 +18,9 @@ from airunner_services.api.routes.legacy_ollama_compat import (
     ollama_embed,
     ollama_pull,
 )
+from airunner_services.api.routes.ollama_embedding_helpers import (
+    _embedding_inputs,
+)
 from airunner_services.api.routes.legacy_openai_compat import (
     _build_openai_request,
 )
@@ -143,7 +146,7 @@ def test_ollama_sampling_clamped() -> None:
 def test_ollama_embed_cap_and_model_mgmt_501() -> None:
     """Embed lists are capped; pull/copy/create report 501."""
     with pytest.raises(HTTPException):
-        ollama_embed({"input": ["x"] * 65})
+        _embedding_inputs({"input": ["x"] * 65}, legacy=False)
     for func in (ollama_pull, ollama_copy, ollama_create):
         with pytest.raises(HTTPException) as exc:
             func({})

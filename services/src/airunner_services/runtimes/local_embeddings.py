@@ -24,6 +24,7 @@ heavy ML runtime.
 
 from __future__ import annotations
 
+import math
 from typing import Any, List
 
 from airunner_services.llm.companion.contracts import (
@@ -113,7 +114,10 @@ class LocalEmbeddingClient:
                     f"found dim={len(vector)}",
                 )
             )
-        return [float(value) for value in vector]
+        values = [float(value) for value in vector]
+        if any(not math.isfinite(value) for value in values):
+            raise ValueError("embedding vector contains a non-finite value")
+        return values
 
 
 def _type_has_attribute(embedder_type: type, attribute: str) -> bool:

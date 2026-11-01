@@ -10,7 +10,6 @@ from __future__ import annotations
 
 import json
 import os
-import random
 import threading
 import time
 import uuid
@@ -20,14 +19,15 @@ from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import StreamingResponse
 
 from airunner_common.contract_enums import LLMActionType
+from airunner_common.settings import AIRUNNER_LOG_LEVEL
 from airunner_services.database.models.llm_generator_settings import (
     LLMGeneratorSettings,
 )
 from airunner_services.llm.llm_request import LLMRequest
-from airunner_common.settings import AIRUNNER_LOG_LEVEL
 from airunner_services.utils.application import get_logger
 
 from .legacy_llm_compat import ensure_llm_model_loaded
+from .ollama_embedding_helpers import handle_ollama_embedding
 
 router = APIRouter()
 logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
@@ -788,38 +788,20 @@ def _ollama_generate_error(model: str, message: str) -> dict[str, Any]:
 
 
 # ---------------------------------------------------------------------------
-# /api/embed, /api/pull, /api/copy, /api/create
+# /api/embed, /api/embeddings, /api/pull, /api/copy, /api/create
 # ---------------------------------------------------------------------------
 
 
-def _embedding_vector() -> list[float]:
-    """Return one placeholder embedding vector."""
-    return [random.uniform(-1, 1) for _ in range(384)]
-
-
-_MAX_EMBED_INPUTS = 64
-
-
 @router.post("/api/embed")
+def ollama_embed(body: dict[str, Any], req: Request) -> dict[str, Any]:
+    """Return `{model, embeddings}` for one or many `input` texts."""
+    return handle_ollama_embedding(body, req, legacy=False)
+
+
 @router.post("/api/embeddings")
-def ollama_embed(body: dict) -> dict[str, Any]:
-    """Handle the Ollama /api/embed endpoint with placeholder embeddings."""
-    input_text = body.get("input", body.get("prompt", ""))
-    if isinstance(input_text, list):
-        if len(input_text) > _MAX_EMBED_INPUTS:
-            raise HTTPException(
-                status_code=400, detail="too_many_embed_inputs"
-            )
-        embeddings = [_embedding_vector() for _ in input_text]
-    else:
-        embeddings = [_embedding_vector()]
-    return {
-        "model": body.get("model", "airunner:latest"),
-        "embeddings": embeddings,
-        "total_duration": 1000000,
-        "load_duration": 100000,
-        "prompt_eval_count": len(str(input_text)) // 4,
-    }
+def ollama_embeddings(body: dict[str, Any], req: Request) -> dict[str, Any]:
+    """Return `{embedding}` for the legacy single `prompt` contract."""
+    return handle_ollama_embedding(body, req, legacy=True)
 
 
 @router.post("/api/pull")
