@@ -66,6 +66,7 @@ class LLMInvocationRequest(BaseModel):
     max_tokens: Optional[int] = None
     temperature: float = 0.7
     stream: bool = False
+    enable_thinking: Optional[bool] = None
     tool_choice: Optional[str] = None
     metadata: Dict[str, Any] = Field(default_factory=dict)
 

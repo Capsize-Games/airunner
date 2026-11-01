@@ -29,18 +29,19 @@ async def chat_completion(request: ChatCompletionRequest, req: Request):
     if not request.messages:
         raise HTTPException(status_code=400, detail="No messages provided")
     client = resolve_llm_client(require_runtime_registry(req))
-    response = await invoke_llm_runtime(
+    content, finish_reason = await invoke_llm_runtime(
         client,
         to_runtime_messages(request.messages),
         request.model,
         request.gguf_runtime_profile,
         request.temperature,
         request.max_tokens,
+        request.enable_thinking,
     )
     return ChatCompletionResponse(
-        content=response,
+        content=content,
         model=request.model or "default",
-        finish_reason="stop",
+        finish_reason=finish_reason,
     )
 
 
@@ -48,12 +49,13 @@ async def chat_completion(request: ChatCompletionRequest, req: Request):
 async def text_completion(request: CompletionRequest, req: Request):
     """Run text completion against the runtime-backed local LLM."""
     client = resolve_llm_client(require_runtime_registry(req))
-    response = await invoke_llm_runtime(
+    text, finish_reason = await invoke_llm_runtime(
         client,
         [RuntimeChatMessage(role=MessageRole.USER, content=request.prompt)],
         None,
         request.gguf_runtime_profile,
         request.temperature,
         request.max_tokens,
+        request.enable_thinking,
     )
-    return CompletionResponse(text=response, finish_reason="stop")
+    return CompletionResponse(text=text, finish_reason=finish_reason)

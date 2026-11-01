@@ -97,8 +97,15 @@ async def invoke_llm_runtime(
     gguf_runtime_profile: Optional[str],
     temperature: float,
     max_tokens: Optional[int],
-) -> str:
-    """Invoke the configured LLM runtime client."""
+    enable_thinking: Optional[bool] = None,
+) -> tuple[str, str]:
+    """Invoke the configured LLM runtime client.
+
+    Returns ``(content, finish_reason)``: the runtime's own finish
+    reason (``"length"`` when the token budget truncated the reply,
+    e.g. a thinking model that spent it all reasoning), never a
+    synthesized ``"stop"`` for a truncated empty answer.
+    """
     invocation = LLMInvocationRequest(
         messages=messages,
         model=model,
@@ -107,6 +114,7 @@ async def invoke_llm_runtime(
         else {},
         temperature=temperature,
         max_tokens=max_tokens,
+        enable_thinking=enable_thinking,
     )
     envelope = RequestEnvelope(
         runtime=RuntimeKind.LLM,
@@ -116,7 +124,10 @@ async def invoke_llm_runtime(
     )
     response = await asyncio.to_thread(client.invoke, envelope)
     raise_for_runtime_error(response)
-    return str(response.payload.get("content", ""))
+    return (
+        str(response.payload.get("content", "")),
+        str(response.payload.get("finish_reason") or "stop"),
+    )
 
 
 async def run_runtime_action(

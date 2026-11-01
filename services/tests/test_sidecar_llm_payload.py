@@ -69,3 +69,66 @@ def test_set_name_survives_into_payload() -> None:
     payload = _client()._chat_payload(invocation)
 
     assert payload["messages"][0]["name"] == "bob"
+
+
+def test_thinking_kwargs_absent_by_default() -> None:
+    """An unset ``enable_thinking`` sends no template kwargs.
+
+    W21: the sidecar payload must stay byte-identical for callers
+    that never opt in, so hosted defaults cannot drift.
+    """
+    invocation = LLMInvocationRequest(
+        messages=[ChatMessage(role="user", content="hi")]
+    )
+
+    payload = _client()._chat_payload(invocation)
+
+    assert "chat_template_kwargs" not in payload
+
+
+def test_thinking_disabled_reaches_template_kwargs() -> None:
+    """``enable_thinking=False`` forwards to llama.cpp kwargs.
+
+    W21: without this, a thinking model spends a small token
+    budget entirely on reasoning and returns empty content.
+    """
+    invocation = LLMInvocationRequest(
+        messages=[ChatMessage(role="user", content="hi")],
+        enable_thinking=False,
+    )
+
+    payload = _client()._chat_payload(invocation)
+
+    assert payload["chat_template_kwargs"] == {
+        "enable_thinking": False
+    }
+
+
+def test_completion_payload_keeps_length_finish_reason() -> None:
+    """A truncated reply keeps ``finish_reason="length"``.
+
+    W21: the budget-exhausted shape (empty content, reasoning
+    only) must not be normalized into a clean stop.
+    """
+    data = {
+        "choices": [{
+            "finish_reason": "length",
+            "message": {"content": "", "reasoning_content": "x"},
+        }],
+        "usage": {"completion_tokens": 32},
+    }
+
+    payload = SidecarLLMClient._completion_payload(data)
+
+    assert payload["content"] == ""
+    assert payload["finish_reason"] == "length"
+
+
+def test_completion_payload_defaults_finish_reason() -> None:
+    """A payload without a finish reason still reports stop."""
+    data = {"choices": [{"message": {"content": "pong"}}]}
+
+    payload = SidecarLLMClient._completion_payload(data)
+
+    assert payload["content"] == "pong"
+    assert payload["finish_reason"] == "stop"

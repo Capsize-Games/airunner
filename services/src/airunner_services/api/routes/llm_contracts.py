@@ -25,6 +25,7 @@ class ChatCompletionRequest(BaseModel):
     gguf_runtime_profile: Optional[str] = None
     temperature: float = 0.7
     max_tokens: Optional[int] = None
+    enable_thinking: Optional[bool] = None
     stream: bool = False
 
 
@@ -43,6 +44,7 @@ class CompletionRequest(BaseModel):
     gguf_runtime_profile: Optional[str] = None
     max_tokens: int = 100
     temperature: float = 0.7
+    enable_thinking: Optional[bool] = None
 
 
 class CompletionResponse(BaseModel):

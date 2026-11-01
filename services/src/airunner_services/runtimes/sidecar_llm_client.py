@@ -199,6 +199,10 @@ class SidecarLLMClient(RuntimeClient):
 			payload["model"] = invocation.model
 		if invocation.tool_choice is not None:
 			payload["tool_choice"] = invocation.tool_choice
+		if invocation.enable_thinking is not None:
+			payload["chat_template_kwargs"] = {
+				"enable_thinking": invocation.enable_thinking,
+			}
 		runtime_profile = invocation.metadata.get("gguf_runtime_profile")
 		if isinstance(runtime_profile, str) and runtime_profile.strip():
 			payload["metadata"] = {
@@ -276,6 +280,8 @@ class SidecarLLMClient(RuntimeClient):
 			"content": message.get("content", "") or "",
 			"tools": message.get("tool_calls") or [],
 			"usage": data.get("usage") or {},
+			"finish_reason": choices[0].get("finish_reason")
+			or "stop",
 		}
 
 	def _stream_response(
