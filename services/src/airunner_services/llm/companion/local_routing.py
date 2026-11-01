@@ -16,15 +16,19 @@ the LLM registry, so it has no registry route here.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from enum import Enum
-from typing import Callable, Dict, Optional
+from typing import Callable, Optional
 
 from airunner_services.runtimes.base import RuntimeClient
-from airunner_services.runtimes.contracts import RuntimeKind
 from airunner_services.runtimes.registry import (
     DEFAULT_PROVIDER,
     RuntimeRegistry,
     RuntimeRoute,
+)
+from airunner_services.runtimes.local_pipeline import (
+    LOCAL_PIPELINE_ROUTES,
+    REMOTE_PROVIDER_OPENROUTER,
+    LocalInferencePipeline,
+    LocalPipelineRoute,
 )
 
 from .contracts import (
@@ -33,52 +37,11 @@ from .contracts import (
     CompanionErrorCode,
 )
 
-REMOTE_PROVIDER_OPENROUTER = "openrouter"
-
-
-class CompanionPipeline(str, Enum):
-    """Every W01 text/embedding pipeline needing inference."""
-
-    DIALOGUE = "dialogue"
-    FACT_EXTRACTION = "fact_extraction"
-    MOOD_UPDATE = "mood_update"
-    ROLLING_COMPRESSION = "rolling_compression"
-    EPISODIC_SUMMARY = "episodic_summary"
-    MEMORY_BLEND = "memory_blend"
-    CURIOSITY = "curiosity"
-    EMBEDDING = "embedding"
-
-
-@dataclass(frozen=True)
-class PipelineRoute:
-    """Where one pipeline's inference executes by default."""
-
-    pipeline: CompanionPipeline
-    runtime: Optional[RuntimeKind]
-    provider: str = DEFAULT_PROVIDER
-
-
-def _llm_route(pipeline: CompanionPipeline) -> PipelineRoute:
-    """Return the default local-LLM route for one pipeline."""
-    return PipelineRoute(pipeline=pipeline, runtime=RuntimeKind.LLM)
-
-
-PIPELINE_ROUTES: Dict[CompanionPipeline, PipelineRoute] = {
-    pipeline: _llm_route(pipeline)
-    for pipeline in (
-        CompanionPipeline.DIALOGUE,
-        CompanionPipeline.FACT_EXTRACTION,
-        CompanionPipeline.MOOD_UPDATE,
-        CompanionPipeline.ROLLING_COMPRESSION,
-        CompanionPipeline.EPISODIC_SUMMARY,
-        CompanionPipeline.MEMORY_BLEND,
-        CompanionPipeline.CURIOSITY,
-    )
-}
-PIPELINE_ROUTES[CompanionPipeline.EMBEDDING] = PipelineRoute(
-    pipeline=CompanionPipeline.EMBEDDING,
-    runtime=None,
-)
+# Compatibility aliases: companion policy keeps using its existing names,
+# while the neutral runtime module owns the pipeline contract data.
+CompanionPipeline = LocalInferencePipeline
+PipelineRoute = LocalPipelineRoute
+PIPELINE_ROUTES = LOCAL_PIPELINE_ROUTES
 
 
 @dataclass(frozen=True)

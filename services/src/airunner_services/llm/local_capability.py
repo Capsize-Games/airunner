@@ -21,8 +21,8 @@ from __future__ import annotations
 
 from typing import Any, Dict, List, Optional
 
-from airunner_services.llm.companion.local_routing import (
-    PIPELINE_ROUTES,
+from airunner_services.runtimes.local_pipeline import (
+    LOCAL_PIPELINE_ROUTES,
     REMOTE_PROVIDER_OPENROUTER,
 )
 from airunner_services.llm.local_capability_models import (
@@ -56,7 +56,7 @@ def _pipeline_entries() -> List[Dict[str, Any]]:
     """Return the local-first routing matrix, pipeline by name."""
     entries = []
     for pipeline, route in sorted(
-        PIPELINE_ROUTES.items(), key=lambda item: item[0].value
+        LOCAL_PIPELINE_ROUTES.items(), key=lambda item: item[0].value
     ):
         entries.append(
             {

@@ -9,6 +9,8 @@ GPU, or database access.
 
 from __future__ import annotations
 
+import builtins
+import importlib
 from typing import Any, Dict, Iterable, Optional
 
 import pytest
@@ -16,6 +18,7 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 import airunner_services.api.routes.llm_local_routes as local_routes
+import airunner_services.llm.local_capability as local_capability
 from airunner_services.api.routes.llm_local_routes import router
 from airunner_services.llm.companion.local_routing import (
     PIPELINE_ROUTES,
@@ -39,6 +42,11 @@ from airunner_services.runtimes.registry import (
     DEFAULT_PROVIDER,
     RuntimeRegistry,
     RuntimeRoute,
+)
+from airunner_services.runtimes.local_pipeline import (
+    LOCAL_PIPELINE_ROUTES,
+    LocalInferencePipeline,
+    LocalPipelineRoute,
 )
 
 
@@ -112,6 +120,9 @@ def test_pipelines_cover_routing_matrix_and_stay_local() -> None:
     """Every companion pipeline is listed; embedding is local-only."""
     payload = build_local_capability()
     by_name = {p["pipeline"]: p for p in payload["pipelines"]}
+    assert PIPELINE_ROUTES is LOCAL_PIPELINE_ROUTES
+    assert CompanionPipeline is LocalInferencePipeline
+    assert next(iter(PIPELINE_ROUTES.values())).__class__ is LocalPipelineRoute
     assert set(by_name) == {p.value for p in PIPELINE_ROUTES}
     assert set(by_name) == {p.value for p in CompanionPipeline}
     assert by_name["embedding"]["local_only"] is True
@@ -120,6 +131,26 @@ def test_pipelines_cover_routing_matrix_and_stay_local() -> None:
     assert by_name["dialogue"]["local_only"] is False
     assert payload["routing"]["remote_requires_consent"] is True
     assert payload["routing"]["remote_provider"] == "openrouter"
+
+
+def test_capability_import_does_not_load_companion_policy(monkeypatch) -> None:
+    """Capability reporting depends on neutral runtime contract data."""
+    original_import = builtins.__import__
+
+    def reject_companion(name, *args, **kwargs):
+        if name.startswith("airunner_services.llm.companion"):
+            raise AssertionError(f"unexpected companion import: {name}")
+        return original_import(name, *args, **kwargs)
+
+    with monkeypatch.context() as scoped:
+        scoped.setattr(builtins, "__import__", reject_companion)
+        importlib.reload(local_capability)
+        payload = local_capability.build_local_capability()
+
+    assert payload["contract"] == CAPABILITY_CONTRACT
+    assert {entry["pipeline"] for entry in payload["pipelines"]} == {
+        pipeline.value for pipeline in LocalInferencePipeline
+    }
 
 
 def test_runtime_unavailable_without_registry_or_route() -> None:
