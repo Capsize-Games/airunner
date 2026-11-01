@@ -24,6 +24,27 @@ VOICE_ID_RE = re.compile(r"^[a-zA-Z0-9][a-zA-Z0-9_-]{0,63}$")
 class EspeakRenderError(RuntimeError):
     """Raised when bounded eSpeak synthesis or voice lookup fails."""
 
+    _MESSAGES = {
+        "tts_invalid_request": "Invalid TTS request",
+        "tts_unsupported_parameter": "Requested TTS parameter is unsupported",
+        "tts_backend_unavailable": "eSpeak backend is unavailable",
+        "tts_timeout": "TTS rendering timed out",
+        "tts_render_failed": "TTS rendering failed",
+    }
+    _RETRYABLE_CODES = {
+        "tts_backend_unavailable",
+        "tts_timeout",
+        "tts_render_failed",
+    }
+
+    def __init__(self, code: str = "tts_render_failed") -> None:
+        if code not in self._MESSAGES:
+            code = "tts_render_failed"
+        self.code = code
+        self.public_message = self._MESSAGES[code]
+        self.retryable = code in self._RETRYABLE_CODES
+        super().__init__(self.public_message)
+
 
 class EspeakCliRenderer:
     """Render plain text with the fixed, reviewed eSpeak NG executable."""
@@ -49,10 +70,10 @@ class EspeakCliRenderer:
         rate = self._rate_for_speed(speed)
         voice_id = voice or "en-us"
         if not VOICE_ID_RE.fullmatch(voice_id):
-            raise EspeakRenderError("unsupported eSpeak voice")
+            raise EspeakRenderError("tts_unsupported_parameter")
         voices = self.catalogue()
         if voice_id not in voices:
-            raise EspeakRenderError("unsupported eSpeak voice")
+            raise EspeakRenderError("tts_unsupported_parameter")
         argv = [
             self._executable,
             "--stdout",
@@ -75,7 +96,7 @@ class EspeakCliRenderer:
         try:
             lines = output.decode("utf-8", errors="strict").splitlines()
         except UnicodeDecodeError as exc:
-            raise EspeakRenderError("eSpeak voice catalogue is malformed") from exc
+            raise EspeakRenderError("tts_backend_unavailable") from exc
         voices: set[str] = set()
         for line in lines[1:]:
             columns = line.split()
@@ -93,27 +114,27 @@ class EspeakCliRenderer:
                 continue
             voices.add(voice_id)
         if not voices:
-            raise EspeakRenderError("eSpeak reported no supported voices")
+            raise EspeakRenderError("tts_backend_unavailable")
         self._voice_ids = tuple(sorted(voices))
         return self._voice_ids
 
     @staticmethod
     def _validate_text(text: str) -> str:
         if not isinstance(text, str) or not text.strip():
-            raise EspeakRenderError("text must not be blank")
+            raise EspeakRenderError("tts_invalid_request")
         if len(text) > MAX_TEXT_LENGTH or "\x00" in text:
-            raise EspeakRenderError("text exceeds eSpeak input limits")
+            raise EspeakRenderError("tts_invalid_request")
         return text
 
     @staticmethod
     def _rate_for_speed(speed: float) -> int:
         if isinstance(speed, bool) or not isinstance(speed, (float, int)):
-            raise EspeakRenderError("speed must be a finite number")
+            raise EspeakRenderError("tts_invalid_request")
         if not math.isfinite(speed):
-            raise EspeakRenderError("speed must be a finite number")
+            raise EspeakRenderError("tts_invalid_request")
         rate = round(float(speed) * 100)
         if not 50 <= rate <= 400:
-            raise EspeakRenderError("speed is outside eSpeak's supported range")
+            raise EspeakRenderError("tts_unsupported_parameter")
         return rate
 
     def _run_bounded(
@@ -135,7 +156,7 @@ class EspeakCliRenderer:
                     env={"PATH": "/usr/bin:/bin", "LANG": "C.UTF-8"},
                 )
         except OSError as exc:
-            raise EspeakRenderError("eSpeak executable is unavailable") from exc
+            raise EspeakRenderError("tts_backend_unavailable") from exc
 
         chunks: list[bytes] = []
         total_bytes = 0
@@ -168,20 +189,18 @@ class EspeakCliRenderer:
                 process.kill()
                 process.wait()
                 reader.join(timeout=1.0)
-                raise EspeakRenderError("eSpeak synthesis timed out")
+                raise EspeakRenderError("tts_timeout")
             reader.join(timeout=1.0)
             if reader.is_alive():
                 process.kill()
                 process.wait()
-                raise EspeakRenderError("eSpeak output did not close")
+                raise EspeakRenderError("tts_render_failed")
             if overflow.is_set():
-                raise EspeakRenderError("eSpeak output exceeded the limit")
+                raise EspeakRenderError("tts_render_failed")
             if read_error:
-                raise EspeakRenderError(
-                    "could not read eSpeak output"
-                ) from read_error[0]
+                raise EspeakRenderError("tts_render_failed") from read_error[0]
             if process.returncode != 0:
-                raise EspeakRenderError("eSpeak process failed")
+                raise EspeakRenderError("tts_render_failed")
             return b"".join(chunks)
         finally:
             if process.poll() is None:
@@ -197,7 +216,7 @@ class EspeakCliRenderer:
     def _normalize_wav(output: bytes) -> bytes:
         """Validate bounded PCM WAV data and fix streaming-size placeholders."""
         if len(output) < 44 or output[:4] != b"RIFF" or output[8:12] != b"WAVE":
-            raise EspeakRenderError("eSpeak returned invalid WAV data")
+            raise EspeakRenderError("tts_render_failed")
         normalized = bytearray(output)
         struct.pack_into("<I", normalized, 4, len(normalized) - 8)
         cursor = 12
@@ -211,21 +230,21 @@ class EspeakCliRenderer:
             chunk_size = declared_size
             if chunk_size > available:
                 if chunk_id != b"data":
-                    raise EspeakRenderError("eSpeak returned truncated WAV data")
+                    raise EspeakRenderError("tts_render_failed")
                 chunk_size = available
                 struct.pack_into("<I", normalized, cursor + 4, chunk_size)
             if chunk_id == b"fmt ":
                 if chunk_size < 16:
-                    raise EspeakRenderError("eSpeak returned invalid WAV format")
+                    raise EspeakRenderError("tts_render_failed")
                 format_params = struct.unpack_from("<HHIIHH", normalized, payload_start)
             elif chunk_id == b"data":
                 if data_size is not None:
-                    raise EspeakRenderError("eSpeak returned multiple WAV data chunks")
+                    raise EspeakRenderError("tts_render_failed")
                 data_size = chunk_size
                 break
             cursor = payload_start + chunk_size + (chunk_size & 1)
         if format_params is None or data_size is None or data_size <= 0:
-            raise EspeakRenderError("eSpeak returned incomplete WAV data")
+            raise EspeakRenderError("tts_render_failed")
         (
             audio_format,
             channels,
@@ -244,7 +263,7 @@ class EspeakCliRenderer:
             or byte_rate != sample_rate * block_align
             or data_size % block_align != 0
         ):
-            raise EspeakRenderError("eSpeak returned unsupported WAV format")
+            raise EspeakRenderError("tts_render_failed")
         try:
             with wave.open(io.BytesIO(normalized), "rb") as wav_file:
                 if (
@@ -253,10 +272,10 @@ class EspeakCliRenderer:
                     or wav_file.getsampwidth() != sample_width
                     or wav_file.getframerate() != sample_rate
                 ):
-                    raise EspeakRenderError("eSpeak returned unsupported WAV format")
+                    raise EspeakRenderError("tts_render_failed")
                 frames = wav_file.readframes(wav_file.getnframes())
         except (wave.Error, EOFError) as exc:
-            raise EspeakRenderError("eSpeak returned malformed WAV data") from exc
+            raise EspeakRenderError("tts_render_failed") from exc
         if len(frames) != data_size:
-            raise EspeakRenderError("eSpeak returned incomplete WAV frames")
+            raise EspeakRenderError("tts_render_failed")
         return bytes(normalized)

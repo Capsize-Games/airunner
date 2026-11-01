@@ -667,7 +667,15 @@ class LocalFallbackTTSClient(_SignalRuntimeClient):
                 "Headless OpenVoice does not support: "
                 + ", ".join(unsupported),
             )
-        audio_b64 = self._audio_payload(invocation, worker=worker)
+        try:
+            audio_b64 = self._audio_payload(invocation, worker=worker)
+        except EspeakRenderError as exc:
+            return self._failure_response(
+                request_id,
+                exc.code,
+                exc.public_message,
+                retryable=exc.retryable,
+            )
         if audio_b64 is not None:
             return ResponseEnvelope(
                 request_id=request_id,
@@ -896,15 +904,11 @@ class LocalFallbackTTSClient(_SignalRuntimeClient):
             or os.environ.get("AIRUNNER_TTS_MODEL_TYPE")
         )
         if self._is_espeak_model_type(selected_model):
-            try:
-                audio = self._espeak_cli_renderer.render(
-                    invocation.text,
-                    voice=invocation.voice,
-                    speed=invocation.speed,
-                )
-            except EspeakRenderError as exc:
-                logger.warning("eSpeak CLI request failed: %s", exc)
-                return None
+            audio = self._espeak_cli_renderer.render(
+                invocation.text,
+                voice=invocation.voice,
+                speed=invocation.speed,
+            )
             self._espeak_cli_ready = True
             return audio
         manager = self._tts_manager(worker)

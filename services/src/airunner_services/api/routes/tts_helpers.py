@@ -50,7 +50,15 @@ def tts_error_status_code(response: ResponseEnvelope) -> int:
             and response.error.code == TTS_BACKEND_UNAVAILABLE_CODE
         ):
             return 503
-        if response.error and response.error.code.endswith("_timeout"):
+        if response.error and response.error.code in {
+            "tts_invalid_request",
+            "tts_unsupported_parameter",
+        }:
+            return 422
+        if response.error and (
+            response.error.code.endswith("_timeout")
+            or response.error.code == "tts_timeout"
+        ):
             return 504
         return 502
     return 502

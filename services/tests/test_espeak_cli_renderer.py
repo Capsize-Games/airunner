@@ -151,9 +151,10 @@ def test_renderer_kills_and_reaps_process_when_output_exceeds_cap(
     renderer = EspeakCliRenderer(popen=popen)
     renderer._voice_ids = ("en-us",)
 
-    with pytest.raises(EspeakRenderError, match="exceeded the limit"):
+    with pytest.raises(EspeakRenderError) as error:
         renderer.render("hello", voice="en-us", speed=1.0)
 
+    assert error.value.code == "tts_render_failed"
     assert process.killed
     assert process.waited
 
@@ -164,9 +165,10 @@ def test_renderer_kills_and_reaps_process_on_deadline() -> None:
         popen=lambda *_args, **_kwargs: process
     )
 
-    with pytest.raises(EspeakRenderError, match="timed out"):
+    with pytest.raises(EspeakRenderError) as error:
         renderer.catalogue()
 
+    assert error.value.code == "tts_timeout"
     assert process.killed
     assert process.waited
 
@@ -189,11 +191,12 @@ def test_deadline_with_maximum_multibyte_input_uses_owned_child_process(
 
     renderer = EspeakCliRenderer(popen=popen)
     started = time.monotonic()
-    with pytest.raises(EspeakRenderError, match="timed out"):
+    with pytest.raises(EspeakRenderError) as error:
         renderer.render("界" * 5000, voice="en-us", speed=1.0)
     elapsed = time.monotonic() - started
 
     assert elapsed < 2.0
+    assert error.value.code == "tts_timeout"
     assert len(child_processes) == 1
     assert child_processes[0].poll() is not None
     assert child_processes[0].returncode == -9
@@ -206,9 +209,10 @@ def test_renderer_bounds_voice_catalogue_output(monkeypatch) -> None:
         popen=lambda *_args, **_kwargs: process
     )
 
-    with pytest.raises(EspeakRenderError, match="exceeded the limit"):
+    with pytest.raises(EspeakRenderError) as error:
         renderer.catalogue()
 
+    assert error.value.code == "tts_render_failed"
     assert process.killed
     assert process.waited
 
@@ -217,15 +221,17 @@ def test_renderer_rejects_invalid_wav_and_nonzero_exit() -> None:
     renderer = EspeakCliRenderer(
         popen=_factory([VOICE_TABLE, b"not-wav"], [])
     )
-    with pytest.raises(EspeakRenderError, match="invalid WAV"):
+    with pytest.raises(EspeakRenderError) as error:
         renderer.render("hello", voice="en-us", speed=1.0)
+    assert error.value.code == "tts_render_failed"
 
     renderer = EspeakCliRenderer(
         popen=lambda *_args, **_kwargs: FakeProcess(WAV, returncode=2)
     )
     renderer._voice_ids = ("en-us",)
-    with pytest.raises(EspeakRenderError, match="process failed"):
+    with pytest.raises(EspeakRenderError) as error:
         renderer.render("hello", voice="en-us", speed=1.0)
+    assert error.value.code == "tts_render_failed"
 
 
 def test_eSpeak_selection_does_not_create_playback_worker(monkeypatch) -> None:

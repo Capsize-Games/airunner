@@ -5,6 +5,7 @@ from __future__ import annotations
 import base64
 import io
 import struct
+import subprocess
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -174,6 +175,123 @@ def test_espeak_model_type_uses_headless_cli_through_authenticated_route(
     assert struct.unpack_from("<I", response.content, 4)[0] == len(response.content) - 8
     assert calls[1][1] == "--stdout"
     assert "-m" not in calls[1]
+
+
+@pytest.mark.parametrize(
+    "failure,voice,speed,expected_status,expected_code,retryable",
+    [
+        (
+            "unknown_voice",
+            "not-listed",
+            1.0,
+            422,
+            "tts_unsupported_parameter",
+            False,
+        ),
+        (
+            "unsupported_speed",
+            "en-us",
+            0.25,
+            422,
+            "tts_unsupported_parameter",
+            False,
+        ),
+        (
+            "missing_binary",
+            "en-us",
+            1.0,
+            503,
+            "tts_backend_unavailable",
+            True,
+        ),
+        ("timeout", "en-us", 1.0, 504, "tts_timeout", True),
+    ],
+)
+def test_espeak_route_preserves_runtime_error_categories(
+    authenticated_client,
+    failure,
+    voice,
+    speed,
+    expected_status,
+    expected_code,
+    retryable,
+) -> None:
+    from airunner_services.runtimes.espeak_cli_renderer import EspeakCliRenderer
+    from airunner_services.runtimes.local_fallback import LocalFallbackTTSClient
+
+    client, headers, app = authenticated_client
+    voice_table = b"""Pty Language Age/Gender VoiceName File Other Languages
+ 5 en-us --/M English_(America) gmw/en-US
+"""
+
+    class FakeProcess:
+        def __init__(self, output: bytes = b"") -> None:
+            self.stdin = io.BytesIO()
+            self.stdout = io.BytesIO(output)
+            self.returncode = 0
+            self.waited = False
+
+        def wait(self, timeout=None):
+            self.waited = True
+            return self.returncode
+
+        def poll(self):
+            return self.returncode if self.waited or self.returncode else None
+
+        def kill(self):
+            self.returncode = -9
+
+    class TimeoutProcess(FakeProcess):
+        def wait(self, timeout=None):
+            if timeout is not None:
+                raise subprocess.TimeoutExpired("espeak-ng", timeout)
+            self.waited = True
+            return self.returncode
+
+    calls = []
+
+    def fake_popen(argv, **kwargs):
+        calls.append(argv)
+        if failure == "missing_binary":
+            raise FileNotFoundError("binary unavailable")
+        if failure == "timeout" and argv[-1] != "--voices":
+            return TimeoutProcess()
+        return FakeProcess(voice_table)
+
+    class LazyWorkerManager:
+        @property
+        def tts_generator_worker(self):
+            raise AssertionError("eSpeak CLI route created playback worker")
+
+    class RecordingRuntime(LocalFallbackTTSClient):
+        last_response = None
+
+        def invoke(self, envelope):
+            self.last_response = super().invoke(envelope)
+            return self.last_response
+
+    runtime = RecordingRuntime(
+        signal_source=SimpleNamespace(_worker_manager=LazyWorkerManager()),
+        mediator=SimpleNamespace(),
+    )
+    runtime._espeak_cli_renderer = EspeakCliRenderer(popen=fake_popen)
+    app.state.runtime_registry = _FakeRegistry(runtime)
+    response = client.post(
+        "/api/v1/tts/synthesize",
+        headers=headers,
+        json={
+            "text": "route error check",
+            "voice": voice,
+            "speed": speed,
+            "model_type": "Espeak",
+        },
+    )
+
+    assert response.status_code == expected_status
+    assert runtime.last_response.error.code == expected_code
+    assert runtime.last_response.error.retryable is retryable
+    if failure == "unsupported_speed":
+        assert calls == []
 
 
 @pytest.mark.parametrize(
