@@ -3,14 +3,14 @@
 import gc
 import os
 import tempfile
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Iterable, List, Optional
 
 from bs4 import BeautifulSoup
 from langchain_core.documents import Document
 
 from airunner_services.llm.managers.agent.document_loader import (
     DocumentBatchLoader,
-    load_documents_from_file,
+    iter_document_batches_from_file,
 )
 from airunner_services.llm.managers.agent.vector_index import (
     DocumentVectorIndex,
@@ -182,11 +182,12 @@ class RAGLifecycleMixin:
             if self.embedding is None:
                 return
 
-            documents = load_documents_from_file(
-                file_path,
-                self._extract_metadata,
+            batches = iter_document_batches_from_file(
+                file_path, self._extract_metadata
             )
-            self._add_documents_to_unified_index(documents, file_path)
+            self._add_document_batches_to_unified_index(
+                batches, file_path
+            )
         except Exception as e:
             self.logger.error(f"Error loading file into RAG: {e}")
 
@@ -244,6 +245,47 @@ class RAGLifecycleMixin:
 
         self._retriever = None
         self._track_loaded_doc(source_id)
+
+    def _add_document_batches_to_unified_index(
+        self,
+        batches: Iterable[list[Document]],
+        source_id: str,
+    ) -> None:
+        """Add bounded batches and roll back partial in-memory updates on error."""
+        original_index = self._index
+        original_document_count = (
+            len(original_index.documents) if original_index is not None else 0
+        )
+        original_embeddings = (
+            original_index.embeddings if original_index is not None else None
+        )
+        added_documents = False
+        try:
+            for documents in batches:
+                if not documents:
+                    continue
+                if self._index is None:
+                    self._index = DocumentVectorIndex.from_documents(
+                        documents, self.embedding, self.text_splitter
+                    )
+                else:
+                    self._index.add_documents(
+                        documents, self.embedding, self.text_splitter
+                    )
+                added_documents = True
+        except Exception:
+            if original_index is None:
+                self._index = None
+            else:
+                del original_index.documents[original_document_count:]
+                original_index.embeddings = original_embeddings
+                self._index = original_index
+            self._retriever = None
+            raise
+
+        if added_documents:
+            self._retriever = None
+            self._track_loaded_doc(source_id)
 
     def _track_loaded_doc(self, source_id: str) -> None:
         if source_id not in self._loaded_doc_ids:

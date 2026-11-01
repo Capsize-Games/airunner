@@ -7,7 +7,7 @@ from langchain_core.documents import Document
 
 from airunner_services.llm.managers.agent.document_loader import (
     DocumentBatchLoader,
-    load_documents_from_file,
+    iter_document_batches_from_file,
 )
 from airunner_services.llm.managers.agent.vector_index import (
     DocumentVectorIndex,
@@ -84,29 +84,41 @@ class RAGIndexingMixin:
 
             doc_id = self._generate_doc_id(db_doc.path)
 
-            docs = load_documents_from_file(db_doc.path, self._extract_metadata)
-            if not docs:
+            doc_index = None
+            source_document_count = 0
+            for batch in iter_document_batches_from_file(
+                db_doc.path, self._extract_metadata
+            ):
+                for doc in batch:
+                    doc.metadata.update(self._extract_metadata(db_doc.path))
+                    doc.metadata["doc_id"] = doc_id
+
+                if doc_index is None:
+                    doc_index = DocumentVectorIndex.from_documents(
+                        batch, self.embedding, self.text_splitter
+                    )
+                else:
+                    doc_index.add_documents(
+                        batch, self.embedding, self.text_splitter
+                    )
+                source_document_count += len(batch)
+
+            if doc_index is None:
                 self.logger.warning(f"No content extracted from {db_doc.path}")
                 return False
-            for doc in docs:
-                doc.metadata.update(self._extract_metadata(db_doc.path))
-                doc.metadata["doc_id"] = doc_id
-
-            doc_index = DocumentVectorIndex.from_documents(
-                docs,
-                self.embedding,
-                self.text_splitter,
-            )
 
             index_dir = self._get_doc_index_dir(doc_id, db_doc.path)
             os.makedirs(index_dir, exist_ok=True)
             doc_index.persist(index_dir)
 
-            self._update_registry_entry(doc_id, db_doc.path, len(docs))
+            self._update_registry_entry(
+                doc_id, db_doc.path, source_document_count
+            )
             self._mark_document_indexed(db_doc.path)
 
             self.logger.info(
-                f"Indexed document {os.path.basename(db_doc.path)} ({len(docs)} chunks)"
+                f"Indexed document {os.path.basename(db_doc.path)} "
+                f"({len(doc_index.documents)} chunks)"
             )
             try:
                 self._loaded_doc_ids.append(db_doc.path)

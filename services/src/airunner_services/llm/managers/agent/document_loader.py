@@ -38,12 +38,16 @@ class DocumentBatchLoader:
         self._input_files = list(input_files)
         self._metadata_loader = metadata_loader
 
+    def iter_data(self) -> Iterator[list[Document]]:
+        """Yield bounded document batches from each configured file."""
+        for file_path in self._input_files:
+            yield from iter_document_batches_from_file(
+                file_path, self._metadata_loader
+            )
+
     def load_data(self) -> list[Document]:
-        """Load all configured files into documents."""
-        return load_documents_from_files(
-            self._input_files,
-            self._metadata_loader,
-        )
+        """Load all configured files for list-based compatibility callers."""
+        return [document for batch in self.iter_data() for document in batch]
 
 
 def load_documents_from_files(
@@ -51,24 +55,52 @@ def load_documents_from_files(
     metadata_loader: Optional[MetadataLoader] = None,
 ) -> list[Document]:
     """Load documents from the provided file paths."""
-    documents: list[Document] = []
-    for file_path in file_paths:
-        documents.extend(load_documents_from_file(file_path, metadata_loader))
-    return documents
+    return [
+        document
+        for file_path in file_paths
+        for batch in iter_document_batches_from_file(
+            file_path, metadata_loader
+        )
+        for document in batch
+    ]
+
+
+def iter_document_batches_from_file(
+    file_path: str,
+    metadata_loader: Optional[MetadataLoader] = None,
+) -> Iterator[list[Document]]:
+    """Yield bounded batches for incremental ingestion.
+
+    ZIM files are decoded and yielded in ``ZIM_BATCH_SIZE`` groups. Other
+    formats retain their existing per-file loader and are yielded as one batch.
+    """
+    if not os.path.exists(file_path):
+        return
+
+    metadata = _resolve_metadata(file_path, metadata_loader)
+    extension = os.path.splitext(file_path)[1].lower()
+    if extension == ".zim":
+        yield from _iter_zim_documents(file_path, metadata)
+        return
+
+    loader = _FILE_LOADERS.get(extension, _load_text_document)
+    documents = loader(file_path, metadata)
+    if documents:
+        yield documents
 
 
 def load_documents_from_file(
     file_path: str,
     metadata_loader: Optional[MetadataLoader] = None,
 ) -> list[Document]:
-    """Load documents for a single file path."""
-    if not os.path.exists(file_path):
-        return []
-
-    metadata = _resolve_metadata(file_path, metadata_loader)
-    extension = os.path.splitext(file_path)[1].lower()
-    loader = _FILE_LOADERS.get(extension, _load_text_document)
-    return loader(file_path, metadata)
+    """Load one file into a list for existing callers."""
+    return [
+        document
+        for batch in iter_document_batches_from_file(
+            file_path, metadata_loader
+        )
+        for document in batch
+    ]
 
 
 def extract_text_from_file(file_path: str) -> Optional[str]:
@@ -321,10 +353,12 @@ def _load_zim_documents(
     file_path: str,
     metadata: dict[str, Any],
 ) -> list[Document]:
-    documents: list[Document] = []
-    for batch in _iter_zim_documents(file_path, metadata):
-        documents.extend(batch)
-    return documents
+    """Materialize ZIM batches for legacy list-return callers."""
+    return [
+        document
+        for batch in _iter_zim_documents(file_path, metadata)
+        for document in batch
+    ]
 
 
 _FILE_LOADERS = {

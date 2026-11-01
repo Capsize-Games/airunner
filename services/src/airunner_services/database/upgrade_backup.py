@@ -1,8 +1,12 @@
 """P07 SQLite backup and compatibility-aware recovery planning.
 
-Snapshots the database before migration; permits a restore only at
-identical migration heads, so a migrated database is never blindly
-downgraded. Only local ``sqlite:///`` URLs are supported.
+Snapshots the database synchronously before migration; startup waits for the
+complete snapshot before Alembic runs. SQLite may make concurrent writers wait
+during the copy depending on journal mode and contention. The connection uses
+SQLite's default five-second busy timeout, but the whole snapshot has no
+duration deadline or progress callback. Restore is permitted only at identical
+migration heads, so a migrated database is never blindly downgraded. Only
+local ``sqlite:///`` URLs are supported.
 """
 
 from __future__ import annotations
@@ -106,7 +110,14 @@ def read_manifest(manifest: str | Path) -> BackupRecord:
 
 
 def _snapshot_sqlite(source: Path, dest: Path) -> None:
-    """Copy one SQLite file consistently via VACUUM INTO."""
+    """Synchronously copy one SQLite file consistently via VACUUM INTO.
+
+    Upgrade setup calls this before Alembic and waits until the full copy
+    finishes; restore uses the same copy path. VACUUM INTO has no progress
+    callback or total-duration deadline here. The SQLite connection retains its
+    default five-second busy timeout, and writer contention depends on journal
+    mode.
+    """
     quoted = str(dest).replace("'", "''")
     connection = sqlite3.connect(str(source))
     try:
