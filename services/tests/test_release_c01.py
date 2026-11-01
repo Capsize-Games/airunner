@@ -113,6 +113,35 @@ def test_publish_paths_need_candidate_gate() -> None:
     assert "candidate-gate" in assets["needs"]
 
 
+def test_pypi_publish_requires_explicit_dispatch_opt_in() -> None:
+    """A published GitHub release never publishes to PyPI implicitly."""
+    workflow = c01._load_yaml(c01._DISPATCH)
+    triggers = workflow.get("on", workflow.get(True, {}))
+    opt_in = triggers["workflow_dispatch"]["inputs"]["publish_pypi"]
+    assert opt_in["type"] == "boolean"
+    assert opt_in["default"] is False
+
+    steps = workflow["jobs"]["build-python-package"]["steps"]
+    publishers = [
+        step for step in steps
+        if "pypa/gh-action-pypi-publish" in str(step.get("uses", ""))
+    ]
+    assert len(publishers) == 1
+    assert publishers[0]["if"] == (
+        "github.event_name == 'workflow_dispatch' && inputs.publish_pypi == true"
+    )
+
+
+def test_all_release_checkouts_use_the_tested_source_ref() -> None:
+    """Release jobs use the tag SHA; manual runs use their selected SHA."""
+    jobs = c01._load_yaml(c01._DISPATCH)["jobs"]
+    expected_ref = "${{ github.sha }}"
+    for job_name, job in jobs.items():
+        for step in job.get("steps", []):
+            if str(step.get("uses", "")).startswith("actions/checkout@"):
+                assert step.get("with", {}).get("ref") == expected_ref, job_name
+
+
 def test_pr_pipeline_runs_required_set_secret_free() -> None:
     """The PR contracts run the required set with no secrets."""
     text = c01._EVAL.read_text(encoding="utf-8")

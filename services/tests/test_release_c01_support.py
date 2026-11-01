@@ -19,12 +19,24 @@ _STAGE = _ROOT / "packaging" / "linux" / "stage-sidecars.sh"
 _SPEC = _ROOT / "packaging" / "linux" / "services-bundle-spec.toml"
 
 _REQUIRED_TESTS = (
-    "services/tests/test_content_safety_gate.py",
-    "services/tests/test_model_load_security.py",
+    "services/tests/test_service_bootstrap.py",
+    "services/tests/test_legacy_api_surface.py",
     "services/tests/test_loopback_auth.py",
     "services/tests/test_secret_storage.py",
+    "services/tests/test_model_load_security.py",
+    "services/tests/test_cross_distribution_versions.py",
+    "services/tests/test_tool_sandbox_security.py",
+    "services/tests/test_dependency_constraints.py",
+    "services/tests/test_native_package_isolation.py",
+    "services/tests/test_zimage_model_dir_config.py",
+    "services/tests/test_third_party_notices.py",
+    "services/tests/test_llm_request_for_action_parity.py",
+    "services/tests/test_content_safety_gate.py",
     "services/tests/test_download_security.py",
+    "services/tests/test_security_package_pins.py",
     "services/tests/test_release_b02.py",
+    "services/tests/test_import_boundaries.py",
+    "services/tests/test_run_tests_optional_smoke.py",
 )
 _GATE_NEEDS = (
     "provision-policy",

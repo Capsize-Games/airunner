@@ -7,12 +7,18 @@ on:
     inputs:
       packages:
         description: >-
-          Space-separated build directories to publish. Default publishes
-          all three. Use "services native" to create the sibling projects
-          first -- see the comment on the build step.
+          Space-separated build directories to build. Default builds the
+          services and native distributions.
         required: false
         default: "services native"
         type: string
+      publish_pypi:
+        description: >-
+          Publish built distributions to PyPI. Defaults off; release events
+          only build and attach GitHub release artifacts.
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   contents: write
@@ -43,7 +49,7 @@ jobs:
       - name: Check out release tag
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
-          ref: ${{ github.event.release.tag_name }}
+          ref: ${{ github.sha }}
           persist-credentials: false
 
       - name: Set up Python
@@ -121,6 +127,7 @@ jobs:
       - name: Check out code
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
+          ref: ${{ github.sha }}
           persist-credentials: false
 
       - name: Set up Python
@@ -166,6 +173,7 @@ jobs:
       - name: Check out code
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
+          ref: ${{ github.sha }}
           persist-credentials: false
 
       - name: Set up Python
@@ -198,6 +206,7 @@ jobs:
             services/tests/test_loopback_auth.py \
             services/tests/test_secret_storage.py \
             services/tests/test_model_load_security.py \
+            services/tests/test_cross_distribution_versions.py \
             services/tests/test_tool_sandbox_security.py \
             services/tests/test_dependency_constraints.py \
             services/tests/test_native_package_isolation.py \
@@ -208,6 +217,8 @@ jobs:
             services/tests/test_download_security.py \
             services/tests/test_release_b02.py \
             services/tests/test_import_boundaries.py \
+            services/tests/test_security_package_pins.py \
+            services/tests/test_run_tests_optional_smoke.py \
             -o addopts='' -q --junitxml=required-checks.xml
         env:
           AIRUNNER_HEADLESS: "1"
@@ -315,6 +326,7 @@ jobs:
       - name: Check out code
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
+          ref: ${{ github.sha }}
           persist-credentials: false
 
       - name: Gate candidate promotion on required checks
@@ -344,7 +356,10 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -413,7 +428,7 @@ jobs:
           path: dist/*
 
       - name: Publish package
-        if: github.event_name == 'release' || github.event_name == 'workflow_dispatch'
+        if: github.event_name == 'workflow_dispatch' && inputs.publish_pypi == true
         uses: pypa/gh-action-pypi-publish@27b31702a0e7fc50959f5ad993c78deac1bdfc29
         with:
           user: __token__
@@ -433,10 +448,12 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
+          ref: ${{ github.sha }}
           sparse-checkout: .github/native-sidecar-version
           sparse-checkout-cone-mode: false
+          persist-credentials: false
 
       - name: Download pinned sidecar bundles from airunner-native
         run: |
