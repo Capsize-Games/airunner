@@ -35,7 +35,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: Capsize-Games/airunner-common
-          ref: 8f8274aab2c270cab7e0db9464db1811a175397a
+          ref: 733b0f4c8fb38952866e9cf7be2cc69793a46e92
           path: .ci-sources/airunner-common
           persist-credentials: false
 
@@ -161,7 +161,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: Capsize-Games/airunner-common
-          ref: 8f8274aab2c270cab7e0db9464db1811a175397a
+          ref: 733b0f4c8fb38952866e9cf7be2cc69793a46e92
           path: .ci-sources/airunner-common
           persist-credentials: false
 
@@ -243,23 +243,63 @@ jobs:
       - name: Debian vendored-version drift check
         run: |
           python - <<'EOF'
+          import ast
+          import hashlib
+          import json
           import re
           from pathlib import Path
           from scripts.artifact_runtime_gate import release_version_from_setup
 
 
           native_version = release_version_from_setup(Path("native/setup.py"))
-          vendor_readme = Path("debian/vendor/README.source").read_text()
-          vendored = re.search(
-              r"Distribution: airunner-common (\S+) \(PyPI\)", vendor_readme
-          ).group(1)
+          vendor_root = Path("debian/vendor")
+          vendor_record = json.loads(
+              (vendor_root / "airunner-common.json").read_text(encoding="utf-8")
+          )
+          metadata_path = vendor_root / "airunner_common/package_metadata.py"
+          metadata_tree = ast.parse(metadata_path.read_text(encoding="utf-8"))
+          vendored = next(
+              ast.literal_eval(node.value)
+              for node in metadata_tree.body
+              if isinstance(node, ast.Assign)
+              and any(
+                  isinstance(target, ast.Name) and target.id == "VERSION"
+                  for target in node.targets
+              )
+          )
           services_src = Path("services/setup.py").read_text()
           required = re.search(
               r'"airunner-common~=(.*?)"', services_src
           ).group(1)
           assert native_version, "native VERSION is empty"
+          assert vendor_record["distribution"] == "airunner-common"
+          assert vendor_record["version"] == vendored
+          assert vendor_record["source_repository"] == (
+              "https://github.com/Capsize-Games/airunner-common"
+          )
+          assert vendor_record["source_commit"]
+          assert re.fullmatch(r"[0-9a-f]{40}", vendor_record["source_commit"])
+          assert re.fullmatch(r"[0-9a-f]{64}", vendor_record["wheel_sha256"])
+          assert vendor_record["wheel_record_verified"] is True
+          assert len(vendor_record["vendored_files_sha256"]) == 13
+          actual_modules = sorted(
+              f"airunner_common/{path.name}"
+              for path in (vendor_root / "airunner_common").glob("*.py")
+          )
+          assert sorted(vendor_record["vendored_files_sha256"]) == actual_modules
+          for relative, expected in vendor_record["vendored_files_sha256"].items():
+              path = vendor_root / relative
+              actual = hashlib.sha256(path.read_bytes()).hexdigest()
+              assert actual == expected, f"vendored file hash mismatch: {path}"
+          license_record = vendor_record["license"]
+          assert license_record["spdx_id"] == "GPL-3.0-only"
+          license_path = Path(license_record["path"])
+          assert (
+              hashlib.sha256(license_path.read_bytes()).hexdigest()
+              == license_record["sha256"]
+          )
           print(f"native={native_version} vendored-common={vendored} "
-                f"services-requires~={required}")
+                f"services-requires~={required} source={vendor_record['source_commit']}")
           assert vendored == required, (
               f"vendored airunner-common {vendored} != services pin {required}"
           )

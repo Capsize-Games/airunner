@@ -1,0 +1,29 @@
+{
+  "distribution": "airunner-common",
+  "version": "6.1.8",
+  "source_repository": "https://github.com/Capsize-Games/airunner-common",
+  "source_commit": "733b0f4c8fb38952866e9cf7be2cc69793a46e92",
+  "wheel_filename": "airunner_common-6.1.8-py3-none-any.whl",
+  "wheel_sha256": "ac2110ecbcd965c9a773405494bcecb3d1c6c5f127d22fde81d37478b94088fd",
+  "wheel_record_verified": true,
+  "vendored_files_sha256": {
+    "airunner_common/__init__.py": "fe8cd177e0dc81a0cb7bf7dbeb0a4e0ecd8f28935f47d332dcd5a4c6e6b21fac",
+    "airunner_common/contract_enums.py": "a37d5820b0c9965b09774ab2caf6754161ea6f0f33d28dc8c681d04529bc9cb7",
+    "airunner_common/contract_version.py": "429aac5b80a9a76e95e92c25cf09766f3d067fde4d0449c727f148ee2cc8e3ad",
+    "airunner_common/dev_build_token.py": "9d1e9664ca9cf35e40d5e0e36a101da650d37adf6a40abdcc41bab6d228ebba2",
+    "airunner_common/generation_presets.py": "ffda3458621999bb1c33fe5e25e2155ab009c9b88c6c38a7076032dbbf76f757",
+    "airunner_common/get_logger.py": "476d27b08c9a332361a2a2265375a6e0637d7282e1bca7169512e0afe5630a1d",
+    "airunner_common/linux_bundle_layout.py": "0ecc78f3b601e64c508658274c813245e0a98fd9546356a97496e829372c8fc4",
+    "airunner_common/llm_request.py": "1ada8584405821e53b45bf01eff04d978df8060f9bda793351ea3b9760c4b541",
+    "airunner_common/llm_response.py": "61db047a0193b36c058ca32614724835a44457f00454584cf5506b1d19db5708",
+    "airunner_common/logging_utils.py": "5813cb3bf5cb5822f24e2dde35f2dcb5a5005ca75a8f9fe75ee65cc4298ea138",
+    "airunner_common/package_metadata.py": "7809e81e4067da48dfd3269945c3a0deb67fb8cef7a63bffa1580c98e6b4a9ad",
+    "airunner_common/settings.py": "192c9ec2ceaa8208326f9252d34122e7f02fc158661bf1fc9ba90fd18f5726a6",
+    "airunner_common/startup_env.py": "c8fad8fc75cb75263cc09b46650ecc16966992df33dfda6c7abe8f65e1d6012c"
+  },
+  "license": {
+    "spdx_id": "GPL-3.0-only",
+    "path": "debian/vendor/airunner-common.LICENSE",
+    "sha256": "3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986"
+  }
+}

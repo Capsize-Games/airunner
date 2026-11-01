@@ -35,7 +35,7 @@ Description: Headless service daemon for AI Runner (services only)
  This package is services only (issue #2237): it ships the
  airunner-daemon, airunner-headless and airunner-service console scripts
  plus the airunner-headless systemd unit. It deliberately contains no Qt
- desktop client. It also ships airunner-common 6.1.7 as files (see
+ desktop client. It also ships airunner-common 6.1.8 as files (see
  debian/vendor/README.source) until that project publishes its own
  Debian binary. Heavy ML extras (torch, diffusers, llama.cpp bindings)
  are not Debian-packaged; without torch the daemon still boots and

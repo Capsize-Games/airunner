@@ -13,7 +13,7 @@ License: GPL-3.0-only
 Files: debian/vendor/*
 Copyright: 2022-2025 Capsize LLC
 License: GPL-3.0-only
- Verbatim airunner-common 6.1.7 sources; see debian/vendor/README.source.
+ Verbatim airunner-common 6.1.8 sources; see debian/vendor/README.source.
 
 Files: debian/*
 Copyright: 2026 Capsize LLC

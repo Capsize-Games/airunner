@@ -17,7 +17,7 @@ available on 24.04; issue #2250). What you get:
     install; writable state in /var/lib/airunner, logs journaled
     (file logging only when the daemon config enables it).
 
-airunner-common 6.1.7 is vendored as files (debian/vendor/README.source,
+airunner-common 6.1.8 is vendored as files (debian/vendor/README.source,
 issue #2243): dh_python3 cannot map it to a distro package yet, and the
 daemon cannot boot without it. This becomes a real Depends once
 airunner-common publishes its own Debian binary.

@@ -25,20 +25,10 @@ from pathlib import Path
 # "airunner-common~=6.1" -- a version series break would need every one
 # of those pins bumped in lockstep, defeating the point of extracting an
 # independently-versioned foundation package in the first place.
-VERSION = "6.1.7"
+VERSION = "6.1.8"
 
-# Supply-chain hardening (issue #2036). This was a hash-pinned GitHub archive
-# URL, but PyPI rejects any distribution carrying a PEP 440 direct reference
-# ("400 Can't have direct dependency"), so no such package can ever be
-# published. facehuggershield 1.0.0 is on PyPI, so depend on it by version.
-#
-# This does not weaken the original intent. That pin existed so "a tampered or
-# moved tag cannot be substituted" -- but a git tag *can* be moved, which is
-# exactly why it needed a digest. A PyPI release cannot: a version is immutable
-# once uploaded and can only be yanked, never replaced. Installs also verify
-# PyPI's own hashes over TLS. For a fully hash-locked install, pin digests in a
-# requirements file at deploy time, which is where hash-locking belongs --
-# install_requires cannot express it for consumers anyway.
+# Optional compatibility pin for consumers that explicitly request the
+# legacy-shield extra. Common runtime code does not import or activate it.
 FACEHUGGERSHIELD_REQUIREMENT = "facehuggershield==1.0.0"
 
 # The project is GPL-3.0-only (issue #2058): the repo-root LICENSE file, every
