@@ -94,28 +94,6 @@ CACHE_DIR="$DATA_DIR/cache"
 MODEL_DIR="$DATA_DIR/models"
 DAEMON_CONFIG="$RUNTIME_CONFIG_DIR/daemon.yaml"
 
-# Copy service file
-echo -e "${YELLOW}Installing systemd service file...${NC}"
-cp "$TEMPLATE_ROOT/deployment/systemd/airunner-headless.service" /etc/systemd/system/
-
-# Render the relocatable service template
-echo -e "${YELLOW}Rendering service file with bundle paths...${NC}"
-sed -i \
-    -e "s|__AIRUNNER_USER__|$(escape_sed_replacement "$ACTUAL_USER")|g" \
-    -e "s|__AIRUNNER_GROUP__|$(escape_sed_replacement "$ACTUAL_GROUP")|g" \
-    -e "s|__AIRUNNER_BUNDLE_ROOT__|$(escape_sed_replacement "$BUNDLE_ROOT")|g" \
-    -e "s|__AIRUNNER_BIN_DIR__|$(escape_sed_replacement "$BUNDLE_BIN_DIR")|g" \
-    -e "s|__AIRUNNER_PYTHON__|$(escape_sed_replacement "$BUNDLE_PYTHON")|g" \
-    -e "s|__AIRUNNER_DATA_DIR__|$(escape_sed_replacement "$DATA_DIR")|g" \
-    -e "s|__AIRUNNER_RUNTIME_ROOT__|$(escape_sed_replacement "$RUNTIME_DIR")|g" \
-    -e "s|__AIRUNNER_RUNTIME_CONFIG_DIR__|$(escape_sed_replacement "$RUNTIME_CONFIG_DIR")|g" \
-    -e "s|__AIRUNNER_RUNTIME_LOG_DIR__|$(escape_sed_replacement "$RUNTIME_LOG_DIR")|g" \
-    -e "s|__AIRUNNER_RUNTIME_SOCKET_DIR__|$(escape_sed_replacement "$RUNTIME_SOCKET_DIR")|g" \
-    -e "s|__AIRUNNER_CACHE_DIR__|$(escape_sed_replacement "$CACHE_DIR")|g" \
-    -e "s|__AIRUNNER_MODEL_DIR__|$(escape_sed_replacement "$MODEL_DIR")|g" \
-    -e "s|__AIRUNNER_DAEMON_CONFIG__|$(escape_sed_replacement "$DAEMON_CONFIG")|g" \
-    /etc/systemd/system/airunner-headless.service
-
 # Smoke test: verify the headless entry point actually exists in this bundle
 # (issue #2060). The previous ExecStart referenced `python -m
 # airunner.services.daemon`, which does not exist; the unit now execs the
@@ -133,6 +111,33 @@ if ! SMOKE_OUTPUT=$("$BUNDLE_PYTHON" -c "import airunner_services.daemon" 2>&1);
     exit 1
 fi
 echo -e "${GREEN}✓ airunner-headless entry point verified${NC}"
+
+# Render only after the bundle passed its startup preflight.
+echo -e "${YELLOW}Installing systemd service file...${NC}"
+UNIT_PATH=/etc/systemd/system/airunner-headless.service
+UNIT_TEMP=$(mktemp /etc/systemd/system/.airunner-headless.XXXXXX)
+trap 'rm -f -- "$UNIT_TEMP"' EXIT
+
+# Render the relocatable service template
+echo -e "${YELLOW}Rendering service file with bundle paths...${NC}"
+sed \
+    -e "s|__AIRUNNER_USER__|$(escape_sed_replacement "$ACTUAL_USER")|g" \
+    -e "s|__AIRUNNER_GROUP__|$(escape_sed_replacement "$ACTUAL_GROUP")|g" \
+    -e "s|__AIRUNNER_BUNDLE_ROOT__|$(escape_sed_replacement "$BUNDLE_ROOT")|g" \
+    -e "s|__AIRUNNER_BIN_DIR__|$(escape_sed_replacement "$BUNDLE_BIN_DIR")|g" \
+    -e "s|__AIRUNNER_PYTHON__|$(escape_sed_replacement "$BUNDLE_PYTHON")|g" \
+    -e "s|__AIRUNNER_DATA_DIR__|$(escape_sed_replacement "$DATA_DIR")|g" \
+    -e "s|__AIRUNNER_RUNTIME_ROOT__|$(escape_sed_replacement "$RUNTIME_DIR")|g" \
+    -e "s|__AIRUNNER_RUNTIME_CONFIG_DIR__|$(escape_sed_replacement "$RUNTIME_CONFIG_DIR")|g" \
+    -e "s|__AIRUNNER_RUNTIME_LOG_DIR__|$(escape_sed_replacement "$RUNTIME_LOG_DIR")|g" \
+    -e "s|__AIRUNNER_RUNTIME_SOCKET_DIR__|$(escape_sed_replacement "$RUNTIME_SOCKET_DIR")|g" \
+    -e "s|__AIRUNNER_CACHE_DIR__|$(escape_sed_replacement "$CACHE_DIR")|g" \
+    -e "s|__AIRUNNER_MODEL_DIR__|$(escape_sed_replacement "$MODEL_DIR")|g" \
+    -e "s|__AIRUNNER_DAEMON_CONFIG__|$(escape_sed_replacement "$DAEMON_CONFIG")|g" \
+    "$TEMPLATE_ROOT/deployment/systemd/airunner-headless.service" > "$UNIT_TEMP"
+chmod 0644 "$UNIT_TEMP"
+mv -f -- "$UNIT_TEMP" "$UNIT_PATH"
+trap - EXIT
 
 # Ensure runtime directories exist and are owned by the service user
 mkdir -p "$DATA_DIR" "$RUNTIME_DIR" "$RUNTIME_CONFIG_DIR"
