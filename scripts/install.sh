@@ -172,7 +172,8 @@ link_sidecar_binaries() {
 # https://github.com/Capsize-Games/airunner-native).
 fetch_prebuilt_sidecars() {
 	local venv_python="$1"
-	local venv_bin_dir="$(dirname "$venv_python")"
+	local venv_bin_dir
+	venv_bin_dir="$(dirname "$venv_python")"
 	local tag download_dir archive_path
 
 	tag="$(native_sidecar_tag)"
@@ -202,7 +203,8 @@ fetch_prebuilt_sidecars() {
 # clones the pinned tag and builds from source instead.
 build_sidecars_from_source() {
 	local venv_python="$1"
-	local venv_bin_dir="$(dirname "$venv_python")"
+	local venv_bin_dir
+	venv_bin_dir="$(dirname "$venv_python")"
 	local tag clone_dir
 	local -a builder_args=(--target-platform linux)
 
