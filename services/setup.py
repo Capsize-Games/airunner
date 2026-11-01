@@ -242,7 +242,6 @@ SEARCH_REQUIREMENTS = [
     "ddgs>=9.0.0",
     "aiohttp>=3.13.4",
     "google-api-python-client>=2.170.0",
-    "wikipedia>=1.4.0",
     "scrapy==2.14.2",
     "trafilatura==2.0.0",
 ]

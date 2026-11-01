@@ -174,9 +174,18 @@ The Linux candidate profile now uses `services[linux-release]`, which omits
 the OpenVoice/Melo `airunner-tts-vendor` dependency and the unused default
 FacehuggerShield dependency. Explicit `legacy-shield` compatibility extras
 retain its pin without activating it. Common 6.1.8 also makes Shield optional;
-the exact common source revision and its dependencies still need release-input
-validation. These excluded components remain quarantined. The previous
+its exact source and wheel are recorded in
+`input-reviews/airunner-common-6.1.8.md`. The common release is published on
+GitHub, its downloaded bytes match the recorded hash, and isolated installed
+imports passed with the reviewed python-dotenv dependency. This establishes
+that bounded input, not the full service artifact. The excluded components
+remain quarantined. The previous
 desktop-profile lock is retained as historical evidence only; a validated
 `linux-release` hash lock has not been generated. The release preflight blocks
-before dependency installation until that lock and the required common input
-review are complete.
+before dependency installation until that lock is generated and validated.
+
+The binary-only dependency probe advanced past an unused Wikipedia requirement
+after its removal from the search extra. Sumy remains necessary for conversation
+and web-content summarization; its docopt dependency needs a reviewed source
+wheel. Diagnostic probes omit the separately blocked llama-cpp wheel and do not
+constitute a complete release lock.
