@@ -1,15 +1,4 @@
-"""Managed-daemon launch prep must not require airunner_native.
-
-Every ``_prepare_managed_daemon_launch`` only needs
-``airunner_native.launcher._configure_test_mode`` when
-``AIRUNNER_ENVIRONMENT=test``. Importing it unconditionally made the
-services-only ``airunner-headless`` boot die with
-``ModuleNotFoundError: No module named 'airunner_native'`` in an
-environment where the native package is not installed (W16). The
-art sidecar launcher already imported it inside the test branch;
-these tests pin the same shape for the headless supervisor and the
-TTS sidecar launcher.
-"""
+"""Managed-daemon launch prep uses service-owned test-mode setup."""
 
 from __future__ import annotations
 
@@ -25,10 +14,14 @@ from airunner_services.bin.airunner_headless import (
 from airunner_services.runtimes.sidecar_tts_launcher import (
     _prepare_managed_daemon_launch as prepare_tts_launch,
 )
+from airunner_services.runtimes.sidecar_art_launcher import (
+    _prepare_managed_daemon_launch as prepare_art_launch,
+)
 
 _PREPARERS: tuple[Callable[[], None], ...] = (
     prepare_headless_launch,
     prepare_tts_launch,
+    prepare_art_launch,
 )
 
 
@@ -70,14 +63,62 @@ def test_launch_prep_skips_native_outside_test_env(
 
 
 @pytest.mark.parametrize("prepare", _PREPARERS)
-def test_launch_prep_imports_native_only_in_test_env(
+def test_launch_prep_configures_test_mode_without_native(
     prepare: Callable[[], None],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """In test env the native helper is still imported and fails."""
+    """Test-mode launch preparation works without native installed."""
     monkeypatch.setenv("AIRUNNER_ENVIRONMENT", "test")
     _block_airunner_native(monkeypatch)
     _stub_setup_database(monkeypatch)
+    calls: list[bool] = []
+    module = importlib.import_module("airunner_services.config.test_mode")
+    monkeypatch.setattr(
+        module,
+        "configure_test_mode",
+        lambda: calls.append(True),
+    )
 
-    with pytest.raises(ModuleNotFoundError):
-        prepare()
+    prepare()
+    assert calls == [True]
+
+
+def test_configure_test_mode_creates_temp_database_settings(
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Test-mode setup creates service settings and honors model override."""
+    from airunner_services.config.test_mode import configure_test_mode
+    from airunner_services.database.models.application_settings import (
+        ApplicationSettings,
+    )
+    from airunner_services.database.models.llm_generator_settings import (
+        LLMGeneratorSettings,
+    )
+    from airunner_services.database.models.path_settings import PathSettings
+    from airunner_services.database.session import reset_engine, session_scope
+    from airunner_services.database.setup_database import setup_database
+
+    monkeypatch.setenv(
+        "AIRUNNER_DATABASE_URL",
+        f"sqlite:///{tmp_path / 'test-mode.sqlite3'}",
+    )
+    monkeypatch.setenv("AIRUNNER_DISABLE_DB_SETUP_CACHE", "1")
+    monkeypatch.setenv("AIRUNNER_TEST_MODEL_PATH", str(tmp_path / "model"))
+    reset_engine()
+    setup_database()
+    try:
+        configure_test_mode()
+        configure_test_mode()
+
+        assert PathSettings.objects.first() is not None
+        assert ApplicationSettings.objects.first() is not None
+        llm_settings = LLMGeneratorSettings.objects.first()
+        assert llm_settings is not None
+        assert llm_settings.model_path == str(tmp_path / "model")
+        with session_scope() as session:
+            assert session.query(PathSettings).count() == 1
+            assert session.query(ApplicationSettings).count() == 1
+            assert session.query(LLMGeneratorSettings).count() == 1
+    finally:
+        reset_engine()

@@ -159,42 +159,10 @@ def _run_headless_launcher(
 
 
 def _configure_test_mode():
-    """Configure database settings for test mode.
+    """Compatibility wrapper for service-owned test-mode setup."""
+    from airunner_services.config.test_mode import configure_test_mode
 
-    Kept here because the services sidecar launchers import this helper
-    to avoid opening a real GUI during tests (see
-    scripts/import_boundary_allowlist.py). The imports below stay
-    function-scoped so importing this module never requires the
-    application packages.
-    """
-    from airunner.components.llm.data.llm_generator_settings import (
-        LLMGeneratorSettings,
-    )
-    from airunner.components.settings.data.application_settings import (
-        ApplicationSettings,
-    )
-    from airunner.components.settings.data.path_settings import PathSettings
-
-    PathSettings.objects.first() or PathSettings.objects.create()
-    ApplicationSettings.objects.first() or ApplicationSettings.objects.create()
-
-    llm_settings = LLMGeneratorSettings.objects.first()
-    if llm_settings is None:
-        llm_settings = LLMGeneratorSettings.objects.create()
-
-    test_model_path = os.environ.get("AIRUNNER_TEST_MODEL_PATH")
-    if test_model_path:
-        LLMGeneratorSettings.objects.update(
-            llm_settings.id,
-            model_path=test_model_path,
-        )
-        logger.info(f"Test mode: Using model path: {test_model_path}")
-    else:
-        logger.warning(
-            "Test mode: AIRUNNER_TEST_MODEL_PATH not set. "
-            "Tests requiring LLM will fail. "
-            "Use pytest --model=/path/to/model or set environment variable."
-        )
+    configure_test_mode()
 
 
 def main(argv: Optional[Sequence[str]] = None) -> int:

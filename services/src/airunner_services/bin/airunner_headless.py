@@ -475,9 +475,9 @@ def _prepare_managed_daemon_launch() -> None:
     setup_database()
     if os.environ.get("AIRUNNER_ENVIRONMENT") != "test":
         return
-    from airunner_native.launcher import _configure_test_mode
+    from airunner_services.config.test_mode import configure_test_mode
 
-    _configure_test_mode()
+    configure_test_mode()
 
 
 _shutdown_event = threading.Event()

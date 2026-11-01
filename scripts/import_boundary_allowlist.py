@@ -17,37 +17,4 @@ loudly on a stale entry rather than letting one silently accumulate.
 
 from __future__ import annotations
 
-ALLOWLIST: frozenset[tuple[str, int, str]] = frozenset(
-    {
-        # Genuinely open, not yet decided. A private test-mode
-        # configuration helper (airunner_native.launcher.
-        # _configure_test_mode) is imported by three services files
-        # to keep sidecar-launcher tests from opening a real GUI. This
-        # is a narrow, always-lazy import, but airunner_services ->
-        # airunner_native is not otherwise a designed edge (unlike
-        # airunner_native -> airunner/airunner_services, which the
-        # checker's own allowed graph now grants, this direction has
-        # no structural reason -- services does not launch anything
-        # native). Whether to formalize this edge or move
-        # _configure_test_mode somewhere neutral (airunner_common is
-        # the obvious candidate) is an open question, not resolved by
-        # this issue.
-        (
-            "services/src/airunner_services/bin/airunner_headless.py",
-            478,
-            "airunner_native.launcher",
-        ),
-        (
-            "services/src/airunner_services/runtimes/"
-            "sidecar_art_launcher.py",
-            81,
-            "airunner_native.launcher",
-        ),
-        (
-            "services/src/airunner_services/runtimes/"
-            "sidecar_tts_launcher.py",
-            83,
-            "airunner_native.launcher",
-        ),
-    }
-)
+ALLOWLIST: frozenset[tuple[str, int, str]] = frozenset()
