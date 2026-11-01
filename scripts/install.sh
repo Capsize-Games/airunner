@@ -142,6 +142,7 @@ sidecars_requested() {
 
 NATIVE_SIDECAR_REPO='Capsize-Games/airunner-native'
 NATIVE_SIDECAR_VERSION_FILE="$ROOT_DIR/.github/native-sidecar-version"
+NATIVE_SIDECAR_CHECKSUMS_FILE="$ROOT_DIR/.github/native-sidecar-checksums.json"
 
 native_sidecar_tag() {
 	if [[ ! -f "$NATIVE_SIDECAR_VERSION_FILE" ]]; then
@@ -156,12 +157,19 @@ link_sidecar_binaries() {
 	local venv_bin_dir="$2"
 	local binary_name=""
 
+	# Validate the whole verified payload before replacing either link.
 	for binary_name in llama-server whisper-server; do
 		if [[ ! -x "$bin_dir/$binary_name" ]]; then
 			log_error "Missing sidecar binary: ${bin_dir}/${binary_name}"
 			exit 1
 		fi
-		ln -sfn "$bin_dir/$binary_name" "$venv_bin_dir/$binary_name"
+		if [[ -d "$venv_bin_dir/$binary_name" && ! -L "$venv_bin_dir/$binary_name" ]]; then
+			log_error "Sidecar destination is a directory: ${venv_bin_dir}/${binary_name}"
+			exit 1
+		fi
+	done
+	for binary_name in llama-server whisper-server; do
+		ln -sfnT "$bin_dir/$binary_name" "$venv_bin_dir/$binary_name"
 	done
 }
 
@@ -174,27 +182,46 @@ fetch_prebuilt_sidecars() {
 	local venv_python="$1"
 	local venv_bin_dir
 	venv_bin_dir="$(dirname "$venv_python")"
-	local tag download_dir archive_path
+	local tag staging_dir archive_path binary_dir
 
 	tag="$(native_sidecar_tag)"
-	download_dir="$ROOT_DIR/build/runtime-sidecars-download"
-	archive_path="$download_dir/runtime-sidecars-linux.tar.gz"
-
-	if [[ "$SIDECAR_CLEAN" == '1' ]]; then
-		rm -rf "$download_dir"
+	if ! python3 "$ROOT_DIR/scripts/sidecar_archive.py" check-pin \
+		--checksums "$NATIVE_SIDECAR_CHECKSUMS_FILE" \
+		--tag-file "$NATIVE_SIDECAR_VERSION_FILE" \
+		--platform linux; then
+		log_error "Sidecar archive provenance is not verified; refusing download"
+		exit 1
 	fi
-	mkdir -p "$download_dir"
+	mkdir -p "$ROOT_DIR/build"
+	if ! staging_dir="$(mktemp -d "$ROOT_DIR/build/.runtime-sidecars-stage.XXXXXX")"; then
+		log_error "Could not create a fresh sidecar staging directory"
+		exit 1
+	fi
+	archive_path="$staging_dir/runtime-sidecars-linux.tar.gz"
+	binary_dir="$staging_dir/bin"
+	mkdir "$binary_dir"
 
 	log_info "Downloading prebuilt native sidecars (${tag}) from ${NATIVE_SIDECAR_REPO}"
 	if ! curl -fsSL \
 		"https://github.com/${NATIVE_SIDECAR_REPO}/releases/download/${tag}/runtime-sidecars-linux.tar.gz" \
 		-o "$archive_path"; then
+		rm -rf -- "$staging_dir"
 		log_error "Failed to download sidecar bundle for ${tag}"
 		exit 1
 	fi
-	tar -xzf "$archive_path" -C "$download_dir"
+	if ! python3 "$ROOT_DIR/scripts/sidecar_archive.py" stage \
+		--tarball "$archive_path" \
+		--checksums "$NATIVE_SIDECAR_CHECKSUMS_FILE" \
+		--tag-file "$NATIVE_SIDECAR_VERSION_FILE" \
+		--platform linux \
+		--output-dir "$binary_dir" llama-server whisper-server; then
+		rm -rf -- "$staging_dir"
+		log_error "Sidecar archive or payload validation failed; refusing to install"
+		exit 1
+	fi
+	rm -f -- "$archive_path"
 
-	link_sidecar_binaries "$download_dir/bin" "$venv_bin_dir"
+	link_sidecar_binaries "$binary_dir" "$venv_bin_dir"
 	log_success "Linked prebuilt native sidecars into ${venv_bin_dir}"
 }
 
@@ -209,13 +236,27 @@ build_sidecars_from_source() {
 	local -a builder_args=(--target-platform linux)
 
 	tag="$(native_sidecar_tag)"
+	if ! python3 "$ROOT_DIR/scripts/sidecar_archive.py" check-source-pin \
+		--checksums "$NATIVE_SIDECAR_CHECKSUMS_FILE" \
+		--tag-file "$NATIVE_SIDECAR_VERSION_FILE"; then
+		log_error "Native sidecar source review is not complete; refusing clone or build"
+		exit 1
+	fi
 	clone_dir="$ROOT_DIR/build/airunner-native-src"
 
 	if [[ "$SIDECAR_CLEAN" == '1' || ! -d "$clone_dir" ]]; then
 		rm -rf "$clone_dir"
 		log_info "Cloning airunner-native (${tag}) for a CUDA sidecar build"
-		git clone --quiet --depth 1 --branch "$tag" \
+		GIT_CONFIG_NOSYSTEM=1 GIT_CONFIG_GLOBAL=/dev/null GIT_LFS_SKIP_SMUDGE=1 \
+			git -c core.hooksPath=/dev/null clone --quiet --depth 1 --branch "$tag" \
 			"https://github.com/${NATIVE_SIDECAR_REPO}.git" "$clone_dir"
+	fi
+	if ! python3 "$ROOT_DIR/scripts/sidecar_archive.py" verify-source \
+		--checksums "$NATIVE_SIDECAR_CHECKSUMS_FILE" \
+		--tag-file "$NATIVE_SIDECAR_VERSION_FILE" \
+		--repository "$clone_dir"; then
+		log_error "Native sidecar source does not match its pinned commit"
+		exit 1
 	fi
 
 	if [[ "$SIDECAR_CLEAN" == '1' ]]; then

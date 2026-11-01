@@ -26,6 +26,7 @@ text and never executed.
 from __future__ import annotations
 
 from pathlib import Path
+import json
 
 import pytest
 
@@ -35,6 +36,7 @@ from airunner_services.runtimes.bundled_runtime_paths import (
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 _PIN_FILE = _REPO_ROOT / ".github" / "native-sidecar-version"
+_CHECKSUM_FILE = _REPO_ROOT / ".github" / "native-sidecar-checksums.json"
 _INSTALL_SH = _REPO_ROOT / "scripts" / "install.sh"
 _WORKFLOW = _REPO_ROOT / ".github" / "workflows" / "pypi-dispatch.yml"
 _NATIVE_REPO = "Capsize-Games/airunner-native"
@@ -47,13 +49,22 @@ def _read_text(path: Path) -> str:
     return path.read_text(encoding="utf-8")
 
 
-def test_pin_file_is_the_single_authoritative_manifest() -> None:
-    """One pin file holds the whole native-sidecar selection."""
+def test_tag_and_digest_metadata_bind_one_native_sidecar_source() -> None:
+    """The tag and checksum records bind to the reviewed source commit."""
     raw = _read_text(_PIN_FILE)
     lines = [line for line in raw.splitlines() if line.strip()]
     assert len(lines) == 1, raw
     tag = lines[0].strip()
     assert tag and "/" not in tag and " " not in tag, raw
+    metadata = json.loads(_read_text(_CHECKSUM_FILE))
+    assert metadata["tag"] == tag == "v0.1.0"
+    assert metadata["source_commit"] == "0554185f27ac7db8f58e1ae8d59ba041e4118e62"
+    assert metadata["source_review_status"] == "pending"
+    assert "do not clone or execute" in metadata["source_review_note"]
+    assert metadata["provenance_status"] == "pending-verification"
+    assert "returned 404 on 2026-11-01" in metadata["provenance_note"]
+    assert metadata["archives"]["linux"]["sha256"] is None
+    assert metadata["archives"]["windows"]["sha256"] is None
 
 
 def test_removed_in_repo_sidecar_build_stays_removed() -> None:
@@ -82,6 +93,13 @@ def test_release_workflow_consumes_same_pin_and_repo() -> None:
     assert "releases/download/${tag}/" in text
     assert "for platform in linux windows" in text
     assert "runtime-sidecars-${platform}.tar.gz" in text
+    assert "--checksums .github/native-sidecar-checksums.json" in text
+    assert "python scripts/sidecar_archive.py verify" in text
+    fetch = text.split("  fetch-sidecars:", 1)[1].split(
+        "  publish-release-assets:", 1
+    )[0]
+    assert fetch.index("sidecar_archive.py check-pin") < fetch.index("curl -fsSL")
+    assert fetch.index("curl -fsSL") < fetch.index("sidecar_archive.py verify")
 
 
 def test_bundle_bin_layout_matches_runtime_discovery(
@@ -143,7 +161,7 @@ def test_installer_links_the_discovered_binary_names() -> None:
     """The installer link step uses the bundle/discovery names."""
     text = _read_text(_INSTALL_SH)
     assert "for binary_name in llama-server whisper-server" in text
-    assert 'link_sidecar_binaries "$download_dir/bin"' in text
+    assert 'link_sidecar_binaries "$binary_dir"' in text
 
 
 def test_installer_sidecar_paths_are_repo_relative() -> None:
@@ -151,17 +169,46 @@ def test_installer_sidecar_paths_are_repo_relative() -> None:
     text = _read_text(_INSTALL_SH)
     for forbidden in ("/home/", "/root/", "/Users/", "/tmp/"):
         assert forbidden not in text, forbidden
-    assert 'download_dir="$ROOT_DIR/build/' in text
+    assert 'mktemp -d "$ROOT_DIR/build/.runtime-sidecars-stage.XXXXXX"' in text
     assert 'clone_dir="$ROOT_DIR/build/' in text
 
 
-def test_sidecar_fetch_tools_are_documented_prerequisites() -> None:
-    """curl and git (the network tools install.sh needs) are in README."""
-    readme = _read_text(_REPO_ROOT / "README.md")
-    assert "curl" in readme
-    assert "git" in readme
-    assert ".github/native-sidecar-version" in readme
-    assert "build/runtime-sidecars-download/" in readme
+def test_installer_and_workflow_consume_expected_archive_digests() -> None:
+    """Both download paths require the committed checksum authority."""
+    installer = _read_text(_INSTALL_SH)
+    workflow = _read_text(_WORKFLOW)
+    assert ".github/native-sidecar-checksums.json" in installer
+    assert ".github/native-sidecar-checksums.json" in workflow
+    assert 'sidecar_archive.py" stage' in installer
+    assert "sidecar_archive.py verify" in workflow
+
+
+def test_installer_never_extracts_an_unverified_tarball() -> None:
+    """Hash verification and file selection precede both installed links."""
+    text = _read_text(_INSTALL_SH)
+    assert "tar -xzf" not in text
+    stage = text.index('sidecar_archive.py" stage')
+    link = text.index('link_sidecar_binaries "$binary_dir"')
+    pin = text.index('sidecar_archive.py" check-pin')
+    download = text.index('curl -fsSL')
+    assert pin < download < stage < link
+    assert "--checksums \"$NATIVE_SIDECAR_CHECKSUMS_FILE\"" in text[stage:link]
+
+
+def test_source_build_waits_for_review_before_clone_or_cleanup() -> None:
+    """No source operation starts while the private source review is pending."""
+    text = _read_text(_INSTALL_SH)
+    build = text.split("build_sidecars_from_source() {", 1)[1].split(
+        "install_runtime_sidecars() {", 1
+    )[0]
+    review = build.index("sidecar_archive.py\" check-source-pin")
+    cleanup = build.index('rm -rf "$clone_dir"')
+    clone = build.index("git -c core.hooksPath=/dev/null clone")
+    build_script = build.index('"$clone_dir/scripts/build_runtime_sidecars.sh"')
+    assert review < cleanup < clone < build_script
+    assert "GIT_CONFIG_NOSYSTEM=1" in build
+    assert "GIT_CONFIG_GLOBAL=/dev/null" in build
+    assert "GIT_LFS_SKIP_SMUDGE=1" in build
 
 
 def test_docs_do_not_reference_removed_build_paths() -> None:

@@ -1,0 +1,18 @@
+{
+  "tag": "v0.1.0",
+  "source_commit": "0554185f27ac7db8f58e1ae8d59ba041e4118e62",
+  "source_review_status": "pending",
+  "source_review_note": "The pinned source and dependencies have not completed review; do not clone or execute this revision.",
+  "provenance_status": "pending-verification",
+  "provenance_note": "Archive bytes have not been independently obtained and matched to this source revision. The release API lookup returned 404 on 2026-11-01. Do not populate a digest from the downloaded archive or an unverified adjacent checksum.",
+  "archives": {
+    "linux": {
+      "asset": "runtime-sidecars-linux.tar.gz",
+      "sha256": null
+    },
+    "windows": {
+      "asset": "runtime-sidecars-windows.tar.gz",
+      "sha256": null
+    }
+  }
+}

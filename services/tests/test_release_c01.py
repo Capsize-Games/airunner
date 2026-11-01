@@ -66,6 +66,12 @@ def test_candidate_stages_sidecars_before_verifying() -> None:
     assert all(len(found) == 1 for found in positions)
     flat = [found[0] for found in positions]
     assert flat == sorted(flat)
+    stage = next(
+        step for step in steps if step.get("name") == "Stage sidecars and extend manifest"
+    )
+    assert "--checksums .github/native-sidecar-checksums.json" in stage["run"]
+    assert "--tag-file .github/native-sidecar-version" in stage["run"]
+    assert "--platform linux" in stage["run"]
 
 
 def test_release_archives_verified_candidate_before_upload_and_promotion() -> None:
@@ -318,9 +324,16 @@ def test_gate_rejects_bad_invocation() -> None:
 def test_stage_sidecars_extends_manifest(tmp_path: Path) -> None:
     """Staging installs sidecars and extends the manifest, sorted."""
     bundle, tarball = c01._stage_fixture(tmp_path)
+    checksums, tag_file = c01._write_test_sidecar_pin(tmp_path, tarball)
     proc = c01._run_stage(
         "--tarball",
         str(tarball),
+        "--checksums",
+        str(checksums),
+        "--tag-file",
+        str(tag_file),
+        "--platform",
+        "linux",
         "--bundle",
         str(bundle),
         "--",
@@ -338,6 +351,11 @@ def test_stage_sidecars_extends_manifest(tmp_path: Path) -> None:
 def test_stage_sidecars_fails_closed(tmp_path: Path) -> None:
     """Missing binaries, bundles, and bad names all exit non-zero."""
     bundle, tarball = c01._stage_fixture(tmp_path)
+    checksums, tag_file = c01._write_test_sidecar_pin(tmp_path, tarball)
+    pin_args = [
+        "--checksums", str(checksums), "--tag-file", str(tag_file),
+        "--platform", "linux",
+    ]
     cases = [
         ["--bundle", str(bundle), "--", "nope"],
         ["--bundle", str(tmp_path / "absent"), "--", "llama-server"],
@@ -345,8 +363,29 @@ def test_stage_sidecars_fails_closed(tmp_path: Path) -> None:
         ["--bundle", str(bundle), "--", "../evil"],
     ]
     for argv in cases:
-        proc = c01._run_stage("--tarball", str(tarball), *argv)
+        proc = c01._run_stage("--tarball", str(tarball), *pin_args, *argv)
         assert proc.returncode != 0, argv
+
+
+def test_candidate_stage_rejects_checksum_mismatch_before_bundle_changes(
+    tmp_path: Path,
+) -> None:
+    """A wrong archive digest cannot add binaries or change its manifest."""
+    bundle, tarball = c01._stage_fixture(tmp_path)
+    checksums, tag_file = c01._write_test_sidecar_pin(tmp_path, tarball)
+    metadata = json.loads(checksums.read_text())
+    metadata["archives"]["linux"]["sha256"] = "f" * 64
+    checksums.write_text(json.dumps(metadata))
+    before = (bundle / "bundle-manifest.json").read_bytes()
+    proc = c01._run_stage(
+        "--tarball", str(tarball), "--bundle", str(bundle),
+        "--checksums", str(checksums), "--tag-file", str(tag_file),
+        "--platform", "linux", "--", "llama-server", "whisper-server",
+    )
+    assert proc.returncode != 0
+    assert "SHA-256 mismatch" in proc.stderr
+    assert (bundle / "bundle-manifest.json").read_bytes() == before
+    assert list((bundle / "bin").iterdir()) == []
 
 
 @pytest.mark.parametrize("script", [c01._GATE, c01._STAGE])

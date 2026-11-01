@@ -316,6 +316,9 @@ jobs:
           bash packaging/linux/stage-sidecars.sh \
             --tarball \
             release-assets/sidecars/runtime-sidecars-linux.tar.gz \
+            --checksums .github/native-sidecar-checksums.json \
+            --tag-file .github/native-sidecar-version \
+            --platform linux \
             --bundle build/bundle-dist/airunner-daemon \
             -- llama-server whisper-server
 
@@ -528,18 +531,33 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           ref: ${{ github.sha }}
-          sparse-checkout: .github/native-sidecar-version
+          sparse-checkout: |
+            .github/native-sidecar-version
+            .github/native-sidecar-checksums.json
+            scripts/sidecar_archive.py
           sparse-checkout-cone-mode: false
           persist-credentials: false
 
       - name: Download pinned sidecar bundles from airunner-native
         run: |
           tag="$(cat .github/native-sidecar-version)"
+          for platform in linux windows; do
+            python scripts/sidecar_archive.py check-pin \
+              --checksums .github/native-sidecar-checksums.json \
+              --tag-file .github/native-sidecar-version \
+              --platform "$platform"
+          done
           mkdir -p release-assets/sidecars
           for platform in linux windows; do
+            archive="release-assets/sidecars/runtime-sidecars-${platform}.tar.gz"
             curl -fsSL \
               "https://github.com/Capsize-Games/airunner-native/releases/download/${tag}/runtime-sidecars-${platform}.tar.gz" \
-              -o "release-assets/sidecars/runtime-sidecars-${platform}.tar.gz"
+              -o "$archive"
+            python scripts/sidecar_archive.py verify \
+              --tarball "$archive" \
+              --checksums .github/native-sidecar-checksums.json \
+              --tag-file .github/native-sidecar-version \
+              --platform "$platform"
           done
 
       - name: Upload sidecar bundle artifacts

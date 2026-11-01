@@ -101,6 +101,29 @@ def _sha256_of(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+def _write_test_sidecar_pin(
+    root: Path, archive: Path, platform: str = "linux"
+) -> tuple[Path, Path]:
+    """Write an explicit synthetic trusted pin for one fixture archive."""
+    pin = root / "native-sidecar-checksums.json"
+    tag = root / "native-sidecar-version"
+    records = {
+        name: {
+            "asset": f"runtime-sidecars-{name}.tar.gz",
+            "sha256": _sha256_of(archive) if name == platform else None,
+        }
+        for name in ("linux", "windows")
+    }
+    pin.write_text(json.dumps({
+        "tag": "v0.1.0",
+        "source_commit": "0554185f27ac7db8f58e1ae8d59ba041e4118e62",
+        "provenance_status": "verified",
+        "archives": records,
+    }), encoding="utf-8")
+    tag.write_text("v0.1.0\n", encoding="utf-8")
+    return pin, tag
+
+
 def _write_fake_manifest(bundle: Path) -> None:
     """Write a one-entry manifest over the fake bundle executable."""
     exe = bundle / "airunner-daemon"
