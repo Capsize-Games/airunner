@@ -5,11 +5,13 @@
 # Usage:
 #   Headless mode: docker compose run --rm airunner --headless
 
-# Base image pinned to the digest of the manifest list resolved for
-# nvidia/cuda:12.9.1-devel-ubuntu24.04 at the time of this change
-# (issue #2036). Verify/refresh with:
-#   docker buildx imagetools inspect nvidia/cuda:12.9.1-devel-ubuntu24.04
-FROM nvidia/cuda:12.9.1-devel-ubuntu24.04@sha256:020bc241a628776338f4d4053fed4c38f6f7f3d7eb5919fecb8de313bb8ba47c
+# Base image pinned to NVIDIA CUDA 12.9.2 on Ubuntu 24.04. The tag is listed
+# as supported by NVIDIA's CUDA container source revision
+# eca680d0ef074c6f8c36069ca766539d8879527b. Verify/refresh with:
+#   docker buildx imagetools inspect nvidia/cuda:12.9.2-devel-ubuntu24.04
+# Manifest-list digest. amd64 child digest:
+# sha256:420850a3fd665171b3f1fd08946c51d50468d732a46d6c42345ea04444755048
+FROM nvidia/cuda:12.9.2-devel-ubuntu24.04@sha256:16656a1ef115bca9e1f820c6349876f1486d2b3c9a0e615773799fe402960dc5
 
 # Prevent interactive prompts
 ENV DEBIAN_FRONTEND=noninteractive

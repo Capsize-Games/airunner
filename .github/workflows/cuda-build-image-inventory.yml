@@ -1,0 +1,145 @@
+name: CUDA native build bootstrap
+
+on:
+  pull_request:
+    paths:
+      - .github/workflows/cuda-build-image-inventory.yml
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  inventory:
+    name: Inspect and bootstrap pinned CUDA image
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - name: Pull and identify the supported amd64 image
+        shell: bash
+        run: |
+          set -euo pipefail
+          image='nvidia/cuda:12.9.2-devel-ubuntu24.04@sha256:16656a1ef115bca9e1f820c6349876f1486d2b3c9a0e615773799fe402960dc5'
+          docker pull --platform linux/amd64 "$image"
+          docker image inspect "$image" --format \
+            'image_id={{.Id}} repo_digests={{json .RepoDigests}} os={{.Os}} arch={{.Architecture}} created={{.Created}} size={{.Size}}'
+
+      - name: Inventory compilers, build tools, Python, and CUDA libraries
+        shell: bash
+        run: |
+          set -euo pipefail
+          image='nvidia/cuda:12.9.2-devel-ubuntu24.04@sha256:16656a1ef115bca9e1f820c6349876f1486d2b3c9a0e615773799fe402960dc5'
+          docker run --rm --pull=never --platform linux/amd64 \
+            --network=none --cap-drop=ALL --security-opt=no-new-privileges \
+            --read-only --tmpfs /tmp:rw,noexec,nosuid,size=64m \
+            --entrypoint /bin/bash "$image" -ceu '
+              echo "== OS =="
+              cat /etc/os-release
+              echo "== command paths =="
+              for tool in nvcc gcc g++ cmake ninja make python3 python3.13; do
+                if path=$(command -v "$tool" 2>/dev/null); then
+                  printf "%s=%s\n" "$tool" "$path"
+                else
+                  printf "%s=MISSING\n" "$tool"
+                fi
+              done
+              echo "== tool versions =="
+              nvcc --version 2>&1 || true
+              gcc --version 2>&1 | head -n 2 || true
+              g++ --version 2>&1 | head -n 2 || true
+              cmake --version 2>&1 | head -n 2 || true
+              ninja --version 2>&1 || true
+              make --version 2>&1 | head -n 2 || true
+              python3 --version 2>&1 || true
+              python3.13 --version 2>&1 || true
+              echo "== relevant installed packages =="
+              dpkg-query -W -f="\${Package}=\${Version}\n" 2>/dev/null \
+                | grep -Ei "(cuda|cublas|cccl|nccl|cmake|ninja|gcc|g\+\+|make|python3|libssl|libuv)" \
+                | sort || true
+              echo "== relevant shared libraries =="
+              ldconfig -p 2>/dev/null \
+                | grep -Ei "(cudart|cublas|nvrtc|nccl|libstdc\+\+|libssl|libuv)" \
+                | sort || true
+              echo "== apt source configuration =="
+              grep -RhsE "^(Types|URIs|Suites|Components|Signed-By):" \
+                /etc/apt/sources.list /etc/apt/sources.list.d 2>/dev/null || true
+              echo "== image license =="
+              if [ -f /NGC-DL-CONTAINER-LICENSE ]; then
+                sha256sum /NGC-DL-CONTAINER-LICENSE
+                cat /NGC-DL-CONTAINER-LICENSE
+              else
+                echo "NGC-DL-CONTAINER-LICENSE=MISSING"
+              fi
+              echo "== NVIDIA entrypoint files (read only; not executed) =="
+              if [ -d /opt/nvidia ]; then
+                find /opt/nvidia -maxdepth 4 -type f -print0 \
+                  | sort -z \
+                  | xargs -0 -r sha256sum
+                for file in /opt/nvidia/nvidia_entrypoint.sh \
+                            /opt/nvidia/entrypoint.d/*; do
+                  if [ -f "$file" ]; then
+                    echo "--- $file ---"
+                    sed -n "1,240p" "$file"
+                  fi
+                done
+              else
+                echo "/opt/nvidia=MISSING"
+              fi
+            '
+
+      - name: Stage hash-pinned Kitware CMake binary input
+        shell: bash
+        run: |
+          set -euo pipefail
+          input_dir="$RUNNER_TEMP/cmake-binary-input"
+          mkdir -p "$input_dir"
+          archive="$input_dir/cmake-3.31.6-linux-x86_64.tar.gz"
+          curl --fail --location --silent --show-error \
+            'https://github.com/Kitware/CMake/releases/download/v3.31.6/cmake-3.31.6-linux-x86_64.tar.gz' \
+            --output "$archive"
+          # Archive SHA is pinned by CMakeUrls.cmake in the reviewed
+          # scikit-build/cmake-python-distributions v3.31.6 source tag
+          # (commit 8b974dcfed398bf534c9e21331574e52756c8e0b).
+          printf '%s  %s\n' \
+            '5a1133ff103c71eb5120e2cc3de922733e7d8a26a98ae716397e8676adb367bf' \
+            "$archive" | sha256sum --check --status
+          sha256sum "$archive"
+
+      - name: Inspect and verify CMake inside the isolated CUDA image
+        shell: bash
+        run: |
+          set -euo pipefail
+          image='nvidia/cuda:12.9.2-devel-ubuntu24.04@sha256:16656a1ef115bca9e1f820c6349876f1486d2b3c9a0e615773799fe402960dc5'
+          input_dir="$RUNNER_TEMP/cmake-binary-input"
+          output_dir="$RUNNER_TEMP/cmake-binary-inspect"
+          mkdir -p "$output_dir"
+          docker run --rm --pull=never --platform linux/amd64 \
+            --network=none --cpus=2 --memory=6g --pids-limit=1024 \
+            --cap-drop=ALL --security-opt=no-new-privileges \
+            --read-only --tmpfs /tmp:rw,noexec,nosuid,size=256m \
+            --user "$(id -u):$(id -g)" --env HOME=/tmp \
+            --mount "type=bind,src=$input_dir,dst=/inputs,readonly" \
+            --mount "type=bind,src=$output_dir,dst=/out" \
+            --entrypoint /bin/bash "$image" -ceu '
+              mkdir -p /out/install
+              tar --extract --gzip --no-same-owner --no-same-permissions \
+                --file /inputs/cmake-3.31.6-linux-x86_64.tar.gz \
+                --directory /out/install
+              cmake_bin=/out/install/cmake-3.31.6-linux-x86_64/bin/cmake
+              test -x "$cmake_bin"
+              sha256sum "$cmake_bin"
+              test "$(sha256sum "$cmake_bin" | cut -d " " -f 1)" \
+                = c4b3b237dc7a013590db9e90f70fca2dfdedde09521e920d3339569ea364230a
+              cpack_bin=/out/install/cmake-3.31.6-linux-x86_64/bin/cpack
+              ctest_bin=/out/install/cmake-3.31.6-linux-x86_64/bin/ctest
+              sha256sum "$cpack_bin" "$ctest_bin"
+              # These expected hashes were measured from the verified
+              # official Kitware archive; no PyPI wheel executable is used.
+              test "$(sha256sum "$cpack_bin" | cut -d " " -f 1)" \
+                = fecbf350f31c0ffa70412a9a17c1a27cf64fc09a5cfda19ce1cbff158ebc17b2
+              test "$(sha256sum "$ctest_bin" | cut -d " " -f 1)" \
+                = 2706cc813046fccae4f7d4c3553fde451ca10e82fda274bf3fa9941fdefbcfa6
+              cat /out/install/cmake-3.31.6-linux-x86_64/doc/cmake/Copyright.txt
+              ldd "$cmake_bin"
+              export PATH="/out/install/cmake-3.31.6-linux-x86_64/bin:$PATH"
+              cmake --version
+            '
