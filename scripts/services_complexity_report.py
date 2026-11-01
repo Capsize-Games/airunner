@@ -11,6 +11,7 @@ from __future__ import annotations
 import argparse
 import ast
 import json
+import shutil
 import subprocess
 import sys
 from collections import defaultdict
@@ -358,11 +359,22 @@ def run_xenon(
     excludes: tuple[str, ...],
     args: argparse.Namespace,
 ) -> dict[str, Any]:
-    """Run Xenon as a best-effort gate over the selected root."""
+    """Run Xenon and distinguish pass, failure, and unavailable states."""
     max_average = args.xenon_max_average or args.max_complexity_rank
     max_modules = args.xenon_max_modules or args.max_complexity_rank
+    xenon = Path(sys.executable).with_name("xenon")
+    if not xenon.is_file():
+        found = shutil.which("xenon")
+        xenon = Path(found) if found else xenon
+    if not xenon.is_file():
+        return {
+            "status": "unavailable",
+            "returncode": None,
+            "output": f"Xenon executable not found for {sys.executable}",
+        }
+
     command = [
-        str(Path(sys.executable).with_name("xenon")),
+        str(xenon),
         "--paths-in-front",
         "--max-average",
         max_average,
@@ -374,9 +386,20 @@ def run_xenon(
         ",".join(excludes),
         str(root),
     ]
-    result = subprocess.run(command, capture_output=True, text=True, check=False)
+    try:
+        result = subprocess.run(command, capture_output=True, text=True, check=False)
+    except OSError as exc:
+        return {
+            "status": "unavailable",
+            "returncode": None,
+            "output": f"Xenon could not be started: {exc}",
+        }
     output = filter_xenon_output(result.stdout + "\n" + result.stderr)
-    return {"passed": result.returncode == 0, "output": output.strip()}
+    return {
+        "status": "passed" if result.returncode == 0 else "failed",
+        "returncode": result.returncode,
+        "output": output.strip(),
+    }
 
 
 def build_markdown(payload: dict[str, Any]) -> str:
@@ -402,7 +425,12 @@ def build_markdown(payload: dict[str, Any]) -> str:
             lines.append(f"- `{report['path']}`: {reasons}")
     lines += ["", "## Draft Issue Titles"]
     lines += [f"- {item['title']}" for item in payload["issue_candidates"]]
-    lines += ["", "## Xenon Gate", payload["xenon"]["output"] or "No Xenon findings."]
+    lines += [
+        "",
+        "## Xenon Result",
+        f"Status: **{payload['xenon']['status']}**",
+        payload["xenon"]["output"] or "Xenon completed with no findings.",
+    ]
     return "\n".join(lines) + "\n"
 
 
@@ -420,6 +448,9 @@ def main() -> int:
     """Generate reports and print their output paths."""
     args = parse_args()
     root = args.path.resolve()
+    if not root.is_dir():
+        print(f"ERROR: Source directory does not exist: {root}", file=sys.stderr)
+        return 2
     excludes = split_csv(args.exclude)
     thresholds = Thresholds(
         max_file_lines=args.max_file_lines,
@@ -428,7 +459,14 @@ def main() -> int:
         max_complexity_rank=args.max_complexity_rank,
         min_mi=args.min_mi,
     )
-    reports = [build_file_report(path, root, thresholds) for path in iter_python_files(root, excludes)]
+    source_files = list(iter_python_files(root, excludes))
+    if not source_files:
+        print(
+            f"ERROR: No Python source files found under {root} after exclusions",
+            file=sys.stderr,
+        )
+        return 2
+    reports = [build_file_report(path, root, thresholds) for path in source_files]
     reports.sort(key=lambda item: -report_score(item, thresholds))
     payload = {
         "generated_at": datetime.now(UTC).isoformat(),
