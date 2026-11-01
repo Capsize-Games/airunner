@@ -50,9 +50,11 @@ constraints = "package/constraints-linux-nvidia-cu129-linux-release.txt"
 
 [profile]
 # The services-side Linux v1 NVIDIA release profile (P02). It excludes
-# the paused OpenVoice/Melo vendor extra; package metadata retains those
-# opt-in extras. The active hash lock is pending regeneration.
+# the paused OpenVoice/Melo vendor and optional FacehuggerShield compatibility
+# extra; package metadata retains those opt-in extras. The active hash lock
+# is pending regeneration.
 services_extra = "linux-release"
+excludes = ["airunner-tts-vendor", "facehuggershield"]
 aggregates = [
     "llm-native",
     "stt-native",

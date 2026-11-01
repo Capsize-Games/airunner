@@ -104,6 +104,8 @@ def test_release_profile_is_defined() -> None:
     assert not ({"pyside6", "shiboken6"} & names)
     extras = services.build_services_extras_require()
     release_names = _declared_dists(extras["linux-release"])
+    assert "facehuggershield" not in release_names
+    assert _declared_dists(extras["legacy-shield"]) == {"facehuggershield"}
     assert _normalise("airunner-tts-vendor") not in release_names
     assert _normalise("airunner-tts-vendor") in _declared_dists(
         extras["desktop"]
@@ -129,7 +131,14 @@ def test_release_profile_is_defined() -> None:
 
 
 def test_lock_covers_profile_requirements() -> None:
-    """Historical desktop requirements remain covered by their old lock."""
+    """Old lock coverage is explicit while the new release lock is pending."""
+    import json
+
+    manifest = json.loads(
+        (_PROJECT_ROOT / "release-planning/services/release-inputs.json")
+        .read_text(encoding="utf-8")
+    )
+    lock_pending = manifest["release_profile"]["lock_status"] == "generation_pending"
     local_roots = {"airunner-services", "airunner-native"}
     pins = _lock_pins()
     assert pins, "lock file has no pins"
@@ -141,6 +150,11 @@ def test_lock_covers_profile_requirements() -> None:
         if name in local_roots:
             continue
         assert name in pins, f"{raw} is missing from the lock"
+        if name == "airunner-common" and lock_pending:
+            # The prior desktop lock remains historical at 6.1.7; only the
+            # pending linux-release lock can bind the new 6.1.8 floor.
+            assert not req.specifier.contains(pins[name], prereleases=True)
+            continue
         assert req.specifier.contains(pins[name], prereleases=True), (
             f"locked {name}=={pins[name]} violates {raw}"
         )

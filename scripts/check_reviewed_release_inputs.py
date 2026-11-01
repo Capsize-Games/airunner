@@ -33,6 +33,10 @@ EXPECTED_PROFILE_EXTRAS = (
     "nvidia",
     "linux",
 )
+EXPECTED_PROFILE_EXCLUDES = (
+    "airunner-tts-vendor",
+    "facehuggershield",
+)
 _VENDOR_DISTRIBUTION = "airunner-tts-vendor"
 
 
@@ -152,12 +156,18 @@ def _profile_errors(root: Path, profile: Any) -> list[str]:
     profile_name = profile.get("services_extra") if isinstance(profile, dict) else None
     aggregates = profile.get("aggregates") if isinstance(profile, dict) else None
     active_lock = profile.get("active_lock") if isinstance(profile, dict) else None
-    if profile_name != "linux-release" or aggregates != list(EXPECTED_PROFILE_EXTRAS):
+    excludes = profile.get("excludes") if isinstance(profile, dict) else None
+    if (
+        profile_name != "linux-release"
+        or aggregates != list(EXPECTED_PROFILE_EXTRAS)
+        or excludes != list(EXPECTED_PROFILE_EXCLUDES)
+    ):
         errors.append("manifest release profile is not the expected linux-release profile")
     spec_profile = spec.get("profile", {})
     if (
         spec_profile.get("services_extra") != profile_name
         or spec_profile.get("aggregates") != aggregates
+        or spec_profile.get("excludes") != excludes
         or spec.get("bundle", {}).get("constraints") != active_lock
     ):
         errors.append("bundle specification does not match the manifest release profile")
@@ -420,15 +430,35 @@ def inspect_release_inputs(root: Path, workflow: Path) -> list[str]:
                     f"{source_workflow}"
                 )
 
-        is_deferred_vendor = (
-            distribution == _VENDOR_DISTRIBUTION
-            and item.get("status") == "deferred"
+        release_profile_name = (
+            release_profile.get("services_extra")
+            if isinstance(release_profile, dict)
+            else None
+        )
+        profile_excludes = (
+            release_profile.get("excludes", [])
+            if isinstance(release_profile, dict)
+            else []
+        )
+        is_deferred_input = (
+            item.get("status") == "deferred"
             and item.get("activation") == "quarantined"
-            and item.get("deferred_from_profile") == "linux-release"
+            and item.get("deferred_from_profile")
+            == release_profile_name
+            and distribution in profile_excludes
             and profile_is_safe
         )
-        if not is_deferred_vendor and not _has_constraint(
-            constraints_text, distribution, version
+        is_pending_common_refresh = (
+            distribution == "airunner-common"
+            and lock_status == "generation_pending"
+            and not _has_constraint(
+                historical_constraints_text, distribution, version
+            )
+        )
+        if (
+            not is_deferred_input
+            and not is_pending_common_refresh
+            and not _has_constraint(constraints_text, distribution, version)
         ):
             errors.append(
                 f"{distribution}: constraints do not pin exactly {version}"
@@ -437,8 +467,9 @@ def inspect_release_inputs(root: Path, workflow: Path) -> list[str]:
             path for path, text in package_text.items()
             if _has_requirement(text, distribution, requirement)
         ]
-        # The vendor is an optional service extra, while common/shield are
-        # runtime requirements in both shipped Python distributions.
+        # The vendor is a service-only extra; common is required by both
+        # shipped packages. Shield stays pinned in explicit compatibility
+        # extras while deferred from the default linux-release profile.
         required_metadata_files = (
             (Path("services/setup.py"),)
             if distribution == "airunner-tts-vendor"
@@ -454,7 +485,7 @@ def inspect_release_inputs(root: Path, workflow: Path) -> list[str]:
                 f"in {', '.join(map(str, missing_metadata))}"
             )
 
-        if is_deferred_vendor:
+        if is_deferred_input:
             pass
         elif (
             item.get("status") != _REVIEWED_STATUS

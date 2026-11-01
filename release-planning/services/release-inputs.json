@@ -16,15 +16,15 @@
     "active_lock": "package/constraints-linux-nvidia-cu129-linux-release.txt",
     "lock_status": "generation_pending",
     "historical_lock": "package/constraints-linux-nvidia-cu129-historical-desktop.txt",
-    "excludes": ["airunner-tts-vendor"]
+    "excludes": ["airunner-tts-vendor", "facehuggershield"]
   },
   "inputs": [
     {
       "distribution": "airunner-common",
       "repository": "Capsize-Games/airunner-common",
-      "revision": "544a553dc565a91407d9654358e8b4bc3b480b94",
-      "version": "6.1.7",
-      "requirement": "~=6.1.7",
+      "revision": "8f8274aab2c270cab7e0db9464db1811a175397a",
+      "version": "6.1.8",
+      "requirement": "~=6.1.8",
       "status": "pending",
       "activation": "quarantined",
       "workflow_source_refs": {
@@ -37,11 +37,10 @@
       "revision": "e17f61cd2a894c71f2e0a2480f1f7d29a8756833",
       "version": "1.0.0",
       "requirement": "==1.0.0",
-      "status": "pending",
+      "status": "deferred",
       "activation": "quarantined",
-      "workflow_source_refs": {
-        ".github/workflows/eval-tests.yml": 2
-      }
+      "deferred_from_profile": "linux-release",
+      "workflow_source_refs": {}
     },
     {
       "distribution": "airunner-tts-vendor",

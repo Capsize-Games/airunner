@@ -38,7 +38,7 @@ def test_quarantined_inputs_fail_closed_without_pin_errors() -> None:
         "pending-release-lock: linux-release hash lock generation and "
         "validation remain pending",
         "pending-source-review: quarantined release inputs: "
-        "airunner-common, facehuggershield",
+        "airunner-common",
     ]
 
 
@@ -60,11 +60,20 @@ def test_deferred_vendor_cannot_be_added_to_release_profile(tmp_path: Path) -> N
 def test_sibling_checkout_ref_must_match_manifest(tmp_path: Path) -> None:
     _copy_gate_tree(tmp_path)
 
+    manifest = json.loads(
+        (tmp_path / "release-planning/services/release-inputs.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    common = next(
+        item for item in manifest["inputs"]
+        if item["distribution"] == "airunner-common"
+    )
     workflow_path = tmp_path / ".github/workflows/eval-tests.yml"
     workflow = workflow_path.read_text(encoding="utf-8")
     workflow_path.write_text(
         workflow.replace(
-            "544a553dc565a91407d9654358e8b4bc3b480b94",
+            common["revision"],
             "1111111111111111111111111111111111111111",
             1,
         ),
@@ -98,6 +107,25 @@ def test_manifest_cannot_omit_a_mandatory_distribution(tmp_path: Path) -> None:
     )
 
     assert "mandatory release input is missing: facehuggershield" in errors
+
+
+def test_deferred_shield_must_remain_excluded_from_release_profile(
+    tmp_path: Path,
+) -> None:
+    _copy_gate_tree(tmp_path)
+    manifest_path = tmp_path / "release-planning/services/release-inputs.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    manifest["release_profile"]["excludes"].remove("facehuggershield")
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+
+    errors = inspect_release_inputs(
+        tmp_path, Path(".github/workflows/pypi-dispatch.yml")
+    )
+
+    assert any(
+        "manifest release profile is not the expected linux-release profile" in error
+        for error in errors
+    )
 
 
 def test_quoted_mutable_unregistered_checkout_is_rejected(tmp_path: Path) -> None:
@@ -185,10 +213,10 @@ def test_release_workflow_gates_precede_dependency_execution() -> None:
             else eval_workflow[eval_workflow.index(f"  {job}:") :]
         )
         gate = section.index("check_reviewed_release_inputs.py")
-        if job == "runtime-contract-tests":
-            assert gate < section.index("Checkout facehuggershield source")
-        if job == "runtime-smoke":
-            assert gate < section.index("Checkout facehuggershield source")
+        if job in {"runtime-contract-tests", "runtime-smoke"}:
+            assert gate < section.index("Checkout airunner-common source")
+            assert "Checkout facehuggershield source" not in section
+            assert ".ci-sources/facehuggershield" not in section
         if job == "packaging-gates":
             assert gate < section.index("Install source-gate test tools")
             assert gate < section.index("Build candidate wheels")
@@ -221,5 +249,5 @@ def test_docker_release_preflight_reports_current_lock_and_source_blockers() -> 
         "pending-release-lock: linux-release hash lock generation and "
         "validation remain pending",
         "pending-source-review: quarantined release inputs: "
-        "airunner-common, facehuggershield",
+        "airunner-common",
     ]

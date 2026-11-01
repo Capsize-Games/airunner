@@ -114,10 +114,25 @@ def test_native_common_floor_matches_services() -> None:
         req = Requirement(raw)
         if req.name == "airunner-common":
             assert req.specifier == Requirement(
-                "airunner-common~=6.1.7"
+                "airunner-common~=6.1.8"
             ).specifier, raw
             return
     raise AssertionError("airunner-common missing from native base")
+
+
+def test_facehuggershield_is_only_an_explicit_compatibility_extra() -> None:
+    """Base service, native, and Linux release profiles omit the legacy pin."""
+    services = _services()
+    native = _native()
+    service_kwargs = services.build_services_setup_kwargs(package_source_dir="src")
+    service_extras = services.build_services_extras_require()
+    native_extras = native.build_native_extras_require()
+
+    assert "facehuggershield" not in _dist_names(service_kwargs["install_requires"])
+    assert "facehuggershield" not in _dist_names(native.NATIVE_BASE_REQUIREMENTS)
+    assert "facehuggershield" not in _dist_names(service_extras["linux-release"])
+    assert service_extras["legacy-shield"] == ["facehuggershield==1.0.0"]
+    assert native_extras["legacy-shield"] == ["facehuggershield==1.0.0"]
 
 
 def test_native_services_floors_exclude_stale_apis() -> None:

@@ -25,18 +25,8 @@ LICENSE_CLASSIFIERS = [
     "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
 ]
 
-# Supply-chain hardening (issue #2036). This was a hash-pinned GitHub archive
-# URL, but PyPI rejects any distribution carrying a PEP 440 direct reference
-# ("400 Can't have direct dependency"), so no such package can ever be
-# published. facehuggershield 1.0.0 is on PyPI, so depend on it by version.
-#
-# This does not weaken the original intent. That pin existed so "a tampered or
-# moved tag cannot be substituted" -- but a git tag *can* be moved, which is
-# exactly why it needed a digest. A PyPI release cannot: a version is immutable
-# once uploaded and can only be yanked, never replaced. Installs also verify
-# PyPI's own hashes over TLS. For a fully hash-locked install, pin digests in a
-# requirements file at deploy time, which is where hash-locking belongs --
-# install_requires cannot express it for consumers anyway.
+# Optional compatibility pin for consumers that explicitly request the
+# legacy-shield extra. Service runtime startup does not activate it.
 FACEHUGGERSHIELD_REQUIREMENT = "facehuggershield==1.0.0"
 
 # Per-package README used as long_description (mirrors native/). The
@@ -313,6 +303,7 @@ def _base_extras_require() -> dict[str, list[str]]:
     """Return the non-aggregate service extras."""
     return {
         "core": [],
+        "legacy-shield": [FACEHUGGERSHIELD_REQUIREMENT],
         "nvidia": NVIDIA_REQUIREMENTS,
         "linux": [],
         "development": DEVELOPMENT_REQUIREMENTS,
@@ -454,13 +445,11 @@ def build_services_setup_kwargs(*, package_source_dir: str) -> dict[str, object]
         # airunner-common is independently versioned in its own repository
         # now (issue #2197, https://github.com/Capsize-Games/airunner-common),
         # so a compatible-release pin per the versioning policy (#2191)
-        # instead of an exact lockstep VERSION pin. Floor is 6.1.7, the
-        # release that added the shared for_action generation table
-        # (issue #2225) on top of 6.1.6's shared LLMRequest (#2221) and
-        # 6.1.5's LLMResponse (#2188) -- this package imports all three
-        # directly and cannot start on an older release.
-        "airunner-common~=6.1.7",
-        FACEHUGGERSHIELD_REQUIREMENT,
+        # instead of an exact lockstep VERSION pin. Floor is 6.1.8, which
+        # removes the unused FacehuggerShield base dependency while retaining
+        # an explicit compatibility extra; it includes the shared contracts
+        # required by this package.
+        "airunner-common~=6.1.8",
         *CORE_REQUIREMENTS,
     ]
     return {

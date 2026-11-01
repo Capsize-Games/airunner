@@ -25,18 +25,9 @@ LICENSE_CLASSIFIERS = [
     "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
 ]
 
-# Supply-chain hardening (issue #2036). This was a hash-pinned GitHub archive
-# URL, but PyPI rejects any distribution carrying a PEP 440 direct reference
-# ("400 Can't have direct dependency"), so no such package can ever be
-# published. facehuggershield 1.0.0 is on PyPI, so depend on it by version.
-#
-# This does not weaken the original intent. That pin existed so "a tampered or
-# moved tag cannot be substituted" -- but a git tag *can* be moved, which is
-# exactly why it needed a digest. A PyPI release cannot: a version is immutable
-# once uploaded and can only be yanked, never replaced. Installs also verify
-# PyPI's own hashes over TLS. For a fully hash-locked install, pin digests in a
-# requirements file at deploy time, which is where hash-locking belongs --
-# install_requires cannot express it for consumers anyway.
+# Optional compatibility pin for consumers that explicitly request the
+# legacy-shield extra. The current headless launcher does not call its
+# historical activation helper.
 FACEHUGGERSHIELD_REQUIREMENT = "facehuggershield==1.0.0"
 
 # Per-package README used as long_description (mirrors services/). The
@@ -79,11 +70,9 @@ NATIVE_BASE_REQUIREMENTS = [
     # airunner-common is independently versioned in its own repository
     # now (issue #2197, https://github.com/Capsize-Games/airunner-common),
     # so a compatible-release pin per the versioning policy (#2191)
-    # instead of an exact lockstep VERSION pin. The floor is 6.1.7:
-    # services requires ~=6.1.7 (shared generation table, issue #2225),
-    # and the launcher must resolve the same common line (issue #2441).
-    "airunner-common~=6.1.7",
-    FACEHUGGERSHIELD_REQUIREMENT,
+    # instead of an exact lockstep VERSION pin. The floor is 6.1.8 so
+    # launcher and services share the same common dependency graph.
+    "airunner-common~=6.1.8",
 ]
 
 
@@ -101,6 +90,7 @@ def build_native_extras_require() -> dict[str, list[str]]:
     return {
         "development": DEVELOPMENT_REQUIREMENTS,
         "dev": DEVELOPMENT_REQUIREMENTS,
+        "legacy-shield": [FACEHUGGERSHIELD_REQUIREMENT],
         # A headless/daemon-role install: this launcher plus the
         # services package, no GUI.
         "services": ["airunner-services>=6.1.5,<7"],
