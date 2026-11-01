@@ -82,6 +82,37 @@ def test_errors_release_active_slot(monkeypatch) -> None:
     asyncio.run(scenario())
 
 
+def test_pull_and_install_share_bounded_setup_capacity(monkeypatch) -> None:
+    monkeypatch.setenv("AIRUNNER_SETUP_MAX_INFLIGHT", "1")
+
+    async def scenario() -> None:
+        entered, finish = asyncio.Event(), asyncio.Event()
+
+        async def app(scope, receive, send) -> None:
+            entered.set()
+            await finish.wait()
+
+        middleware = AdmissionMiddleware(app)
+        messages: list[dict] = []
+
+        async def send(message: dict) -> None:
+            messages.append(message)
+
+        first = asyncio.create_task(
+            middleware(_scope("/api/pull"), _receive, send)
+        )
+        await entered.wait()
+        await middleware(_scope("/api/v1/install"), _receive, send)
+        assert messages[0]["status"] == 429
+        first.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await first
+        finish.set()
+        await middleware(_scope("/api/v1/install"), _receive, send)
+
+    asyncio.run(scenario())
+
+
 def test_unauthorized_requests_do_not_consume_capacity(monkeypatch) -> None:
     monkeypatch.setenv("AIRUNNER_API_KEY", "test-key")
     monkeypatch.setenv("AIRUNNER_INSECURE_NO_AUTH", "0")

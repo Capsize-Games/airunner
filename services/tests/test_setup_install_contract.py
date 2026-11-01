@@ -10,7 +10,7 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from airunner_services.api.routes import setup
-from airunner_services.api.routes.setup_nltk import install_nltk_data
+from airunner_services import setup_nltk_worker
 
 
 @pytest.fixture
@@ -20,7 +20,8 @@ def client(monkeypatch, tmp_path):
     monkeypatch.setattr(setup, "_allowed_base_roots", lambda: [str(tmp_path)])
     monkeypatch.setattr(setup, "_create_directories", lambda path: [])
 
-    async def install_data():
+    async def install_data(base_path):
+        assert base_path == str(tmp_path)
         return ["fixture"]
 
     monkeypatch.setattr(setup, "_install_nltk_data", install_data)
@@ -98,7 +99,7 @@ def test_successful_queue_is_not_completed_download(client, monkeypatch):
 def test_nltk_failure_is_terminal(client, monkeypatch):
     http, payload = client
 
-    async def fail():
+    async def fail(base_path):
         raise RuntimeError("private error")
 
     monkeypatch.setattr(setup, "_install_nltk_data", fail)
@@ -121,9 +122,11 @@ def test_current_art_catalog_is_selected(monkeypatch):
     }]
 
 
-def test_nltk_false_return_is_not_reported_installed(monkeypatch):
+def test_nltk_false_return_is_not_reported_installed(monkeypatch, tmp_path):
     monkeypatch.setitem(
         sys.modules, "nltk", SimpleNamespace(download=lambda *a, **kw: False)
     )
+    monkeypatch.setattr(setup_nltk_worker, "is_offline_mode", lambda: False)
+    monkeypatch.setattr(setup_nltk_worker, "AIRUNNER_BASE_PATH", str(tmp_path))
     with pytest.raises(RuntimeError, match="NLTK data installation failed"):
-        asyncio.run(install_nltk_data())
+        setup_nltk_worker.download_nltk_data(tmp_path / "nltk_data")

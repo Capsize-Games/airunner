@@ -45,9 +45,13 @@ _configure_daemon_environment()
 
 from logging.handlers import RotatingFileHandler
 
+from airunner_common.settings import AIRUNNER_BASE_PATH, AIRUNNER_LOG_LEVEL
+
+# The installer and runtime share an application-owned resource location.
+os.environ.setdefault("NLTK_DATA", str(Path(AIRUNNER_BASE_PATH) / "nltk_data"))
+
 from airunner_services.runtimes.daemon_config import DaemonConfig
 from airunner_services.api.server import APIServer
-from airunner_common.settings import AIRUNNER_LOG_LEVEL
 from airunner_services.utils.application import get_logger
 
 if TYPE_CHECKING:  # pragma: no cover - typing only
@@ -539,8 +543,15 @@ def main():
         action="store_true",
         help="Generate default configuration file and exit",
     )
+    parser.add_argument("--install-nltk-data", type=Path, help=argparse.SUPPRESS)
 
     args = parser.parse_args()
+
+    if args.install_nltk_data is not None:
+        from airunner_services.setup_nltk_worker import download_nltk_data
+
+        download_nltk_data(args.install_nltk_data)
+        return
 
     if args.generate_config:
         config = DaemonConfig(args.config)

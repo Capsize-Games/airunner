@@ -42,7 +42,7 @@ class AdmissionMiddleware:
         if scope["type"] != "http" or scope["method"] != "POST":
             return None
         path = scope["path"].rstrip("/")
-        if path == "/api/v1/install":
+        if path in {"/api/v1/install", "/api/pull"}:
             return self.setup
         return self.generation if path in GENERATION_PATHS else None
 

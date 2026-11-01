@@ -162,7 +162,7 @@ async def setup_install(
         # Phase 2: Install NLTK data
         yield _emit({"status": "installing", "message": "Installing NLTK data...", "progress": 5})
         try:
-            nltk_installed = await _install_nltk_data()
+            nltk_installed = await _install_nltk_data(resolved_base)
         except Exception:
             logger.exception("Setup data installation failed")
             yield _emit({"status": "failed", "message": "Data installation failed"})
