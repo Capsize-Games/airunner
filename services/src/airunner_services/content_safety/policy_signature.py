@@ -12,17 +12,20 @@ The signature is Ed25519 over the exact artifact bytes (headers and
 digests included), verified with the ``cryptography`` library. No
 custom cryptography and no online key lookup are performed.
 
-Trust store: :data:`TRUSTED_KEYS` maps key IDs to raw 32-byte Ed25519
-public keys. Private signing keys never ship; the public repo carries
-an empty store and trusted release provisioning (S06) installs the
-production keys before the build. Packaged/production mode verifies
-the staged sidecar against this store at load and fails closed when
-the store is empty or the signature does not match. Callers may pass
-an explicit trust store for tests.
+Trust store: ``data/policy_trust_store.json`` maps key IDs to lowercase
+hex-encoded Ed25519 public keys. The public repo carries an empty store;
+trusted release staging (S06) writes only the key that verified the
+staged artifact. Packaged/production mode reads that resource and fails
+closed when it is missing, malformed, empty, or does not match. Private
+signing keys never ship. The low-level verifier accepts an explicit trust
+mapping for release staging and isolated cryptographic tests; the packaged
+policy loader does not accept a trust-store override.
 """
 
 from __future__ import annotations
 
+import importlib.resources
+import json
 import re
 from collections.abc import Mapping
 from pathlib import Path
@@ -33,14 +36,71 @@ SIGNATURE_VERSION = 1
 
 MAX_SIGNATURE_BYTES = 4096
 ED25519_PUBLIC_KEY_BYTES = 32
+MAX_TRUST_STORE_BYTES = 64 * 1024
+TRUST_STORE_FILENAME = "policy_trust_store.json"
 
 _KEY_ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$")
 _HEX_SIG_RE = re.compile(r"^[0-9a-f]{128}$")
+_HEX_PUBLIC_KEY_RE = re.compile(r"^[0-9a-f]{64}$")
 _META_RE = re.compile(r"^#\s*([a-z0-9_]+)\s*:\s*(\S+)\s*$")
 
-# Bundled public-key trust store: key ID -> raw Ed25519 public key.
-# Empty in the public repo; populated by trusted release provisioning.
-TRUSTED_KEYS: dict[str, bytes] = {}
+
+def load_bundled_trusted_keys() -> dict[str, bytes]:
+    """Load validated public keys from the packaged trust-store resource.
+
+    The public checkout carries an empty JSON object. Release staging
+    replaces it with only the public key whose ID verified the staged
+    artifact. Missing, malformed, oversized, or empty resources produce
+    an empty mapping so signature verification fails closed.
+    """
+    try:
+        resource = (
+            importlib.resources.files(__package__)
+            .joinpath("data")
+            .joinpath(TRUST_STORE_FILENAME)
+        )
+        if not resource.is_file():
+            return {}
+        raw = resource.read_bytes()
+    except (OSError, ModuleNotFoundError, TypeError):
+        return {}
+    if not raw or len(raw) > MAX_TRUST_STORE_BYTES:
+        return {}
+
+    def unique_pairs(pairs: list[tuple[str, object]]) -> dict[str, object]:
+        values: dict[str, object] = {}
+        for key, value in pairs:
+            if key in values:
+                raise ValueError("duplicate trust-store key")
+            values[key] = value
+        return values
+
+    try:
+        payload = json.loads(raw.decode("utf-8"), object_pairs_hook=unique_pairs)
+    except (UnicodeDecodeError, json.JSONDecodeError, ValueError, RecursionError):
+        return {}
+    if not isinstance(payload, dict):
+        return {}
+
+    trusted: dict[str, bytes] = {}
+    for key_id, encoded_key in payload.items():
+        if (
+            not isinstance(key_id, str)
+            or not _KEY_ID_RE.fullmatch(key_id)
+            or not isinstance(encoded_key, str)
+            or not _HEX_PUBLIC_KEY_RE.fullmatch(encoded_key)
+        ):
+            return {}
+        public_key = bytes.fromhex(encoded_key)
+        if len(public_key) != ED25519_PUBLIC_KEY_BYTES:
+            return {}
+        trusted[key_id] = public_key
+    return trusted
+
+
+# Import-time snapshot retained for introspection. Verification loads the
+# resource at call time; packaged policy loading cannot override that store.
+TRUSTED_KEYS: dict[str, bytes] = load_bundled_trusted_keys()
 
 
 class PolicySignatureError(ValueError):
@@ -138,9 +198,13 @@ def verify_policy_artifact(
 
     Raise :class:`PolicySignatureError` on missing/unknown key ID,
     malformed trust-store entry, or a signature that does not match
-    the exact bytes. ``trusted_keys`` defaults to :data:`TRUSTED_KEYS`.
+    the exact bytes. ``trusted_keys`` defaults to the packaged trust resource.
     """
-    store = TRUSTED_KEYS if trusted_keys is None else trusted_keys
+    store = (
+        load_bundled_trusted_keys()
+        if trusted_keys is None
+        else trusted_keys
+    )
     key_id, signature = parse_signature_file(signature_data)
     public_key = store.get(key_id)
     if public_key is None:

@@ -32,8 +32,9 @@ Release staging (``--stage-release``, issue S06) does the opposite job:
 it takes an ALREADY-COMPILED private artifact plus its detached Ed25519
 sidecar (``<artifact>.sig``), verifies the expected SHA-256 digest and
 the signature against an owner-provisioned public-key trust store, and
-stages the exact verified bytes to ``--output``. It never compiles from
-a term list, never signs, and never handles a private key. Absent,
+stages the exact verified artifact and signature plus only the verified
+signer's public key to ``--output`` and its sidecars. It never compiles
+from a term list, never signs, and never handles a private key. Absent,
 invalid, empty, or synthetic-only data (unsigned, or signed by a key
 outside the release trust store) fails with exit code 2 and writes
 nothing. Output and errors report counts and key IDs only; terms,
@@ -71,6 +72,7 @@ from airunner_services.content_safety.policy_signature import (  # noqa: E402
     ED25519_PUBLIC_KEY_BYTES,
     MAX_SIGNATURE_BYTES,
     PolicySignatureError,
+    TRUST_STORE_FILENAME,
     signature_path_for,
     verify_policy_artifact,
 )
@@ -225,6 +227,7 @@ def stage_release_artifact(
     artifact: Path,
     trust_store: dict[str, bytes],
     expected_sha256: str,
+    signature_data: bytes | None = None,
 ) -> tuple[bytes, str, int]:
     """Verify a compiled artifact; return ``(bytes, key_id, count)``.
 
@@ -253,8 +256,13 @@ def stage_release_artifact(
     if not hashes:
         raise PolicyBuildError("refusing to stage an empty policy artifact")
     try:
+        signature = (
+            _read_release_sidecar(artifact)
+            if signature_data is None
+            else signature_data
+        )
         key_id = verify_policy_artifact(
-            data, _read_release_sidecar(artifact), trusted_keys=trust_store
+            data, signature, trusted_keys=trust_store
         )
     except PolicySignatureError as exc:
         raise PolicyBuildError(
@@ -263,10 +271,83 @@ def stage_release_artifact(
     return data, key_id, len(hashes)
 
 
-def write_staged_release(output_path: Path, data: bytes) -> None:
-    """Write the exact verified release bytes to ``output_path``."""
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-    output_path.write_bytes(data)
+def write_staged_release(
+    output_path: Path,
+    data: bytes,
+    signature_data: bytes,
+    *,
+    signing_key_id: str,
+    trust_store: dict[str, bytes],
+) -> None:
+    """Stage verified bytes and the sole verified signer's public key."""
+    public_key = trust_store.get(signing_key_id)
+    if public_key is None or len(public_key) != ED25519_PUBLIC_KEY_BYTES:
+        raise PolicyBuildError("verified signing key is unavailable")
+    trust_payload = (
+        json.dumps(
+            {signing_key_id: public_key.hex()},
+            separators=(",", ":"),
+            sort_keys=True,
+        )
+        + "\n"
+    ).encode("utf-8")
+    outputs = (
+        (output_path, data),
+        (signature_path_for(output_path), signature_data),
+        (output_path.parent / TRUST_STORE_FILENAME, trust_payload),
+    )
+    temporaries: list[tuple[Path, Path]] = []
+    backups: list[tuple[Path, Path]] = []
+    installed: list[Path] = []
+    committed = False
+    import os
+    import tempfile
+
+    try:
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        for path, content in outputs:
+            with tempfile.NamedTemporaryFile(
+                mode="wb", dir=output_path.parent,
+                prefix=f".{path.name}.", delete=False,
+            ) as handle:
+                temp_path = Path(handle.name)
+                temporaries.append((temp_path, path))
+                handle.write(content)
+                handle.flush()
+                os.fsync(handle.fileno())
+            os.chmod(temp_path, 0o644)
+        # Preserve an existing complete set so a failed promotion can
+        # restore it; new destinations remain absent until verification
+        # above has succeeded and all staged contents are durable.
+        for _, path in temporaries:
+            if path.exists():
+                with tempfile.NamedTemporaryFile(
+                    mode="wb", dir=output_path.parent,
+                    prefix=f".{path.name}.backup.", delete=False,
+                ) as handle:
+                    backup_path = Path(handle.name)
+                    backups.append((backup_path, path))
+                    handle.write(path.read_bytes())
+                    handle.flush()
+                    os.fsync(handle.fileno())
+        for temp_path, path in temporaries:
+            os.replace(temp_path, path)
+            installed.append(path)
+        committed = True
+    except OSError:
+        for path in installed:
+            path.unlink(missing_ok=True)
+        for backup_path, path in backups:
+            if backup_path.exists():
+                os.replace(backup_path, path)
+        raise
+    finally:
+        for temp_path, _ in temporaries:
+            if temp_path.exists():
+                temp_path.unlink()
+        for backup_path, _ in backups:
+            if committed and backup_path.exists():
+                backup_path.unlink()
 
 
 def _parse_args(argv: list[str] | None) -> argparse.Namespace:
@@ -341,10 +422,12 @@ def _main_stage_release(args: argparse.Namespace) -> int:
         return 2
     try:
         trust_store = load_release_trust_store(Path(args.trust_store))
+        signature_data = _read_release_sidecar(Path(args.artifact))
         data, key_id, count = stage_release_artifact(
             artifact=Path(args.artifact),
             trust_store=trust_store,
             expected_sha256=args.expected_sha256,
+            signature_data=signature_data,
         )
     except PolicyBuildError as exc:
         print(
@@ -354,10 +437,16 @@ def _main_stage_release(args: argparse.Namespace) -> int:
         return 2
     output_path = Path(args.output)
     try:
-        write_staged_release(output_path, data)
-    except OSError as exc:
+        write_staged_release(
+            output_path,
+            data,
+            signature_data,
+            signing_key_id=key_id,
+            trust_store=trust_store,
+        )
+    except (OSError, PolicyBuildError) as exc:
         print(
-            f"error: cannot write staged policy data: {exc}",
+            "error: cannot write staged policy data",
             file=sys.stderr,
         )
         return 2

@@ -91,7 +91,13 @@ def _shard() -> dict:
                 "dest": "policy/data",
                 "stage": "collect",
                 "required": True,
-            }
+            },
+            {
+                "source": "staged/policy_trust_store.json",
+                "dest": "policy/data",
+                "stage": "collect",
+                "required": True,
+            },
         ]
     }
 
@@ -218,6 +224,10 @@ def _write_frozen(
         path.with_name(path.name + ".sig").write_bytes(
             _sign(private, _KEY_ID, data)
         )
+        public = private.public_key().public_bytes_raw()
+        (payload / "policy_trust_store.json").write_text(
+            json.dumps({_KEY_ID: public.hex()}), encoding="utf-8"
+        )
     return bundle
 
 
@@ -226,6 +236,41 @@ def test_inspect_payload_rejects_synthetic_frozen(tmp_path: Path) -> None:
     bundle = _write_frozen(tmp_path, "synthetic-test-policy-fixture\n", None)
     problems = inspect_mod.verify_policy_payload(bundle, _shard())
     assert problems
+
+
+def test_inspect_payload_requires_matching_packaged_trust_resource(
+    tmp_path: Path,
+) -> None:
+    """The frozen trust resource must contain the signature's public ID."""
+    private = Ed25519PrivateKey.generate()
+    bundle = _write_frozen(tmp_path, _artifact_text(_digests()), private)
+    payload = bundle / "_internal" / "policy" / "data"
+    other_private = Ed25519PrivateKey.generate()
+    other_public = other_private.public_key().public_bytes_raw()
+    (payload / "policy_trust_store.json").write_text(
+        json.dumps({_OTHER_KEY_ID: other_public.hex()}), encoding="utf-8"
+    )
+
+    problems = inspect_mod.verify_policy_payload(bundle, _shard())
+    assert any("signer is absent from trust resource" in p for p in problems)
+
+
+def test_inspect_payload_rejects_duplicate_trust_store_keys(
+    tmp_path: Path,
+) -> None:
+    """A duplicate JSON key cannot hide trust-store ambiguity."""
+    private = Ed25519PrivateKey.generate()
+    bundle = _write_frozen(tmp_path, _artifact_text(_digests()), private)
+    payload = bundle / "_internal" / "policy" / "data"
+    public = private.public_key().public_bytes_raw().hex()
+    (payload / "policy_trust_store.json").write_text(
+        json.dumps({_KEY_ID: public})[:-1]
+        + f',"{_KEY_ID}":"{public}"}}',
+        encoding="utf-8",
+    )
+
+    problems = inspect_mod.verify_policy_payload(bundle, _shard())
+    assert "policy trust resource is invalid" in problems
 
 
 def test_inspect_payload_accepts_wellformed_frozen(tmp_path: Path) -> None:

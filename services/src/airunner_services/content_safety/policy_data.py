@@ -210,11 +210,11 @@ def _verified_text(
     return _decode(data)
 
 
-def _note_locked_override() -> None:
-    """Log that the dev/test path override is locked (content-free)."""
-    if os.environ.get(POLICY_DATA_ENV_VAR):
+def _note_locked_override(*, trust_override_requested: bool = False) -> None:
+    """Log that development data and trust overrides are locked."""
+    if os.environ.get(POLICY_DATA_ENV_VAR) or trust_override_requested:
         logger.warning(
-            "Content safety policy data override is locked in "
+            "Content safety data or trust-store override is locked in "
             "packaged mode; override ignored"
         )
 
@@ -226,7 +226,7 @@ def _load_verified_text(
 ) -> str | None:
     """Return verified artifact text; fail closed without fallback."""
     if packaged_only:
-        _note_locked_override()
+        _note_locked_override(trust_override_requested=trusted_keys is not None)
     else:
         data = _read_env_bytes()
         if data is not None:
@@ -343,15 +343,17 @@ def load_policy_hashes(
     With ``verify_signature``, the sidecar signature is verified
     over the exact artifact bytes before decoding or parsing, and
     any failure fails closed to the empty set. ``trusted_keys``
-    overrides the bundled store (test hook); ``None`` uses it.
-    Packaged/production mode always verifies the packaged set and
-    locks the path override, whatever ``verify_signature`` says.
+    overrides the store only in non-packaged test/development mode.
+    Packaged/production mode always uses the packaged resource and
+    ignores explicit trust or data-path overrides.
     """
     global _cache, _warned_empty
     if _cache is not None and not refresh:
         return _cache
     if is_packaged_mode():
-        text = _load_verified_text(trusted_keys, packaged_only=True)
+        text = _load_verified_text(None, packaged_only=True)
+        if trusted_keys is not None:
+            _note_locked_override(trust_override_requested=True)
     elif verify_signature:
         text = _load_verified_text(trusted_keys)
     else:

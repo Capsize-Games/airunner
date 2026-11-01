@@ -242,6 +242,7 @@ def test_signature_schema_mismatch_fails() -> None:
 def test_bundled_trust_store_holds_public_keys_only() -> None:
     """Bundled trust entries are key IDs to 32-byte public keys."""
     assert isinstance(TRUSTED_KEYS, dict)
+    assert TRUSTED_KEYS == {}, "public source checkout must ship an empty trust store"
     for key_id, public_key in TRUSTED_KEYS.items():
         assert isinstance(key_id, str) and key_id
         assert isinstance(public_key, bytes)

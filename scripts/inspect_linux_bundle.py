@@ -68,9 +68,12 @@ _POLICY_NORMALIZATION = "v1"
 _POLICY_SIG_FORMAT_ID = "airunner-policy-signature/1"
 _MAX_POLICY_BYTES = 64 * 1024 * 1024
 _MAX_POLICY_SIG_BYTES = 4096
+_POLICY_TRUST_STORE_NAME = "policy_trust_store.json"
+_MAX_POLICY_TRUST_STORE_BYTES = 64 * 1024
 
 _HASH_LINE_RE = re.compile(r"^[0-9a-f]{64}$")
 _SIG_VALUE_RE = re.compile(r"^[0-9a-f]{128}$")
+_PUBLIC_KEY_RE = re.compile(r"^[0-9a-f]{64}$")
 _KEY_ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$")
 _META_LINE_RE = re.compile(r"^#\s*([a-z0-9_]+)\s*:\s*(\S+)\s*$")
 
@@ -303,8 +306,53 @@ def check_policy_file(path: Path) -> list[str]:
 def verify_policy_payload(
     bundle_dir: Path, spec: dict[str, Any]
 ) -> list[str]:
-    """Form-check every frozen policy payload; content-free problems."""
+    """Check frozen policy plus packaged public-key trust resource."""
     problems: list[str] = []
+    trust_entries = [
+        entry for entry in spec.get("data", [])
+        if Path(str(entry.get("source", ""))).name
+        == _POLICY_TRUST_STORE_NAME
+    ]
+    if len(trust_entries) != 1:
+        return ["policy trust resource is missing or ambiguous in bundle spec"]
+    trust_entry = trust_entries[0]
+    trust_path = (
+        bundle_dir / "_internal" / str(trust_entry["dest"])
+        / _POLICY_TRUST_STORE_NAME
+    )
+    try:
+        trust_bytes = trust_path.read_bytes()
+    except OSError:
+        return ["policy trust resource is absent"]
+    if not trust_bytes or len(trust_bytes) > _MAX_POLICY_TRUST_STORE_BYTES:
+        return ["policy trust resource is empty or oversized"]
+    def unique_pairs(pairs: list[tuple[str, object]]) -> dict[str, object]:
+        values: dict[str, object] = {}
+        for key, value in pairs:
+            if key in values:
+                raise ValueError("duplicate trust-store key")
+            values[key] = value
+        return values
+
+    try:
+        trust_payload = json.loads(
+            trust_bytes.decode("utf-8"), object_pairs_hook=unique_pairs
+        )
+    except (UnicodeDecodeError, json.JSONDecodeError, ValueError, RecursionError):
+        return ["policy trust resource is invalid"]
+    if not isinstance(trust_payload, dict) or len(trust_payload) != 1:
+        return ["policy trust resource must contain one verified key"]
+    trusted_ids = set()
+    for key_id, public_key in trust_payload.items():
+        if (
+            not isinstance(key_id, str)
+            or not _KEY_ID_RE.fullmatch(key_id)
+            or not isinstance(public_key, str)
+            or not _PUBLIC_KEY_RE.fullmatch(public_key)
+        ):
+            return ["policy trust resource is invalid"]
+        trusted_ids.add(key_id)
+
     for entry in spec.get("data", []):
         if str(entry.get("stage")) != "collect":
             continue
@@ -317,6 +365,13 @@ def verify_policy_payload(
             continue
         for path in staged:
             problems.extend(check_policy_file(path))
+            try:
+                signature = path.with_name(path.name + ".sig").read_bytes()
+                meta = _signature_meta(signature.decode("utf-8"))
+            except (OSError, UnicodeDecodeError):
+                meta = None
+            if meta is None or meta.get("key_id") not in trusted_ids:
+                problems.append("release policy signer is absent from trust resource")
     return problems
 
 

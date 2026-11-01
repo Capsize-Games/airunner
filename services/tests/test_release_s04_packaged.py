@@ -43,6 +43,7 @@ from airunner_services.content_safety.policy_data import (  # noqa: E402
     is_packaged_mode,
     load_policy_hashes,
 )
+from airunner_services.content_safety import policy_signature  # noqa: E402
 from airunner_services.content_safety.policy_signature import (  # noqa: E402
     ED25519_PUBLIC_KEY_BYTES,
     SIGNATURE_FORMAT_ID,
@@ -103,12 +104,16 @@ def _enable_packaged(
     monkeypatch: pytest.MonkeyPatch,
     data: bytes | None,
     sig: bytes | None,
+    store: dict[str, bytes],
 ) -> None:
-    """Simulate packaged mode with staged synthetic bytes plus sidecar."""
+    """Simulate packaged mode with synthetic resources and public keys."""
     monkeypatch.setenv(policy_data.PACKAGED_ENFORCE_ENV_VAR, "1")
     monkeypatch.setattr(policy_data, "_read_packaged_bytes", lambda: data)
     monkeypatch.setattr(
         policy_data, "_read_packaged_signature", lambda: sig
+    )
+    monkeypatch.setattr(
+        policy_signature, "load_bundled_trusted_keys", lambda: store
     )
 
 
@@ -152,10 +157,11 @@ def test_packaged_mode_loads_verified_set(
     """The enforced path loads the staged set with no flag needed."""
     private, public = _keypair()
     data = _artifact("zorrb")
-    _enable_packaged(monkeypatch, data, _sign(private, _KEY_ID_A, data))
-    hashes = load_policy_hashes(
-        refresh=True, trusted_keys={_KEY_ID_A: public}
+    _enable_packaged(
+        monkeypatch, data, _sign(private, _KEY_ID_A, data),
+        {_KEY_ID_A: public},
     )
+    hashes = load_policy_hashes(refresh=True)
     assert hashes == frozenset({hash_token("zorrb")})
     assert policy_data.is_available() is True
     assert check_text("zorrb") is False
@@ -169,11 +175,10 @@ def test_packaged_mode_sig_tamper_fails_closed(
     private, public = _keypair()
     data = _artifact("zorrb")
     _enable_packaged(
-        monkeypatch, data + b"\n", _sign(private, _KEY_ID_A, data)
+        monkeypatch, data + b"\n", _sign(private, _KEY_ID_A, data),
+        {_KEY_ID_A: public},
     )
-    assert load_policy_hashes(
-        refresh=True, trusted_keys={_KEY_ID_A: public}
-    ) == frozenset()
+    assert load_policy_hashes(refresh=True) == frozenset()
     assert policy_data.is_available() is False
     result = gate.evaluate_prompt_fields({"prompt": _SAFE})
     assert result.allowed is False
@@ -190,13 +195,12 @@ def test_packaged_mode_ignores_env_repoint(
     private_b, _ = _keypair()
     staged = _artifact("zorrb")
     _enable_packaged(
-        monkeypatch, staged, _sign(private_a, _KEY_ID_A, staged)
+        monkeypatch, staged, _sign(private_a, _KEY_ID_A, staged),
+        {_KEY_ID_A: public_a},
     )
     env_path = _write_env_file(work_dir, "quixnor", private_b, _KEY_ID_B)
     monkeypatch.setenv(policy_data.POLICY_DATA_ENV_VAR, str(env_path))
-    hashes = load_policy_hashes(
-        refresh=True, trusted_keys={_KEY_ID_A: public_a}
-    )
+    hashes = load_policy_hashes(refresh=True)
     assert hashes == frozenset({hash_token("zorrb")})
     assert hash_token("quixnor") not in hashes
 
@@ -209,12 +213,29 @@ def test_packaged_mode_has_no_env_fallback(
     private_b, public_b = _keypair()
     staged = _artifact("zorrb")
     _enable_packaged(
-        monkeypatch, staged + b"\n", _sign(private_a, _KEY_ID_A, staged)
+        monkeypatch, staged + b"\n", _sign(private_a, _KEY_ID_A, staged),
+        {_KEY_ID_B: public_b},
     )
     env_path = _write_env_file(work_dir, "quixnor", private_b, _KEY_ID_B)
     monkeypatch.setenv(policy_data.POLICY_DATA_ENV_VAR, str(env_path))
+    assert load_policy_hashes(refresh=True) == frozenset()
+    assert policy_data.is_available() is False
+
+
+def test_packaged_mode_ignores_explicit_trust_override(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Packaged mode never accepts caller-supplied trust keys."""
+    private_a, public_a = _keypair()
+    _, public_b = _keypair()
+    data = _artifact("zorrb")
+    _enable_packaged(
+        monkeypatch, data, _sign(private_a, _KEY_ID_A, data),
+        {_KEY_ID_B: public_b},
+    )
+
     assert load_policy_hashes(
-        refresh=True, trusted_keys={_KEY_ID_B: public_b}
+        refresh=True, trusted_keys={_KEY_ID_A: public_a}
     ) == frozenset()
     assert policy_data.is_available() is False
 
@@ -224,10 +245,8 @@ def test_packaged_mode_missing_data_denies(
 ) -> None:
     """Absent staged bytes deny with the policy-unavailable reason."""
     _, public = _keypair()
-    _enable_packaged(monkeypatch, None, None)
-    assert load_policy_hashes(
-        refresh=True, trusted_keys={_KEY_ID_A: public}
-    ) == frozenset()
+    _enable_packaged(monkeypatch, None, None, {_KEY_ID_A: public})
+    assert load_policy_hashes(refresh=True) == frozenset()
     assert policy_data.is_available() is False
     result = gate.evaluate_prompt_fields({"prompt": _SAFE})
     assert result.allowed is False
@@ -242,8 +261,9 @@ def test_packaged_mode_empty_data_denies(
 ) -> None:
     """Verified-but-empty staged bytes still deny generation."""
     private, public = _keypair()
-    _enable_packaged(monkeypatch, b"", _sign(private, _KEY_ID_A, b""))
-    assert load_policy_hashes(
-        refresh=True, trusted_keys={_KEY_ID_A: public}
-    ) == frozenset()
+    _enable_packaged(
+        monkeypatch, b"", _sign(private, _KEY_ID_A, b""),
+        {_KEY_ID_A: public},
+    )
+    assert load_policy_hashes(refresh=True) == frozenset()
     assert policy_data.is_available() is False

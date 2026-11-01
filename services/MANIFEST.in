@@ -7,3 +7,6 @@ include README.md
 include src/airunner_services/content_safety/data/*.dat
 # Detached Ed25519 sidecar staged by trusted release provisioning (S06).
 include src/airunner_services/content_safety/data/*.dat.sig
+# Public-key trust resource: empty in source checkouts, release-provisioned
+# with only the key ID that verified the staged policy sidecar.
+include src/airunner_services/content_safety/data/policy_trust_store.json

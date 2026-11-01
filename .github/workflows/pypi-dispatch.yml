@@ -67,10 +67,9 @@ jobs:
       # artifacts. The stage script prints counts and the signing key
       # ID only -- never terms, hashes, digests, or key material.
       #
-      # Both files ship: the verified .dat plus its detached .sig ride
-      # the fragment into services/.../content_safety/data/ (sdist,
-      # wheel, frozen bundle) so the exact staged bytes stay
-      # re-verifiable after the freeze. No source list, no keys.
+      # The verified .dat, detached .sig, and single-key public trust
+      # resource ride the one-day fragment into package builds. No source
+      # list or private key enters the runner.
       - name: Retrieve and stage signed policy artifact
         env:
           POLICY_ARTIFACT_URL: ${{ secrets.POLICY_ARTIFACT_URL }}
@@ -95,23 +94,23 @@ jobs:
             --trust-store "$RUNNER_TEMP/policy-release/trust-store.json" \
             --expected-sha256 "$POLICY_ARTIFACT_SHA256" \
             --output "$RUNNER_TEMP/policy-staged/policy_terms.dat"
-          cp "$RUNNER_TEMP/policy-release/policy_terms.dat.sig" \
-            "$RUNNER_TEMP/policy-staged/policy_terms.dat.sig"
+          test -s "$RUNNER_TEMP/policy-staged/policy_terms.dat.sig"
+          test -s "$RUNNER_TEMP/policy-staged/policy_trust_store.json"
           # Fail closed on an empty stage before the fragment exists.
           test -s "$RUNNER_TEMP/policy-staged/policy_terms.dat"
           test -s "$RUNNER_TEMP/policy-staged/policy_terms.dat.sig"
-          # Drop credential-derived material; only verified hashes plus
-          # the detached signature remain for the bundle fragment.
+          # Drop the full input trust store; only the verified signer’s
+          # public key remains in the staged package resource.
           rm "$RUNNER_TEMP/policy-release/trust-store.json"
 
-      # The fragment holds verified hashes plus the detached signature:
-      # no source list, no keys. It is a release-bundle input with a
-      # one-day retention, not a general downloadable artifact.
+      # The fragment holds verified hashes, the detached signature, and
+      # only the verified signer's public key. It is a release-bundle
+      # input with a one-day retention, not a general downloadable artifact.
       - name: Upload verified policy fragment
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: policy-bundle-fragment
-          path: ${{ runner.temp }}/policy-staged/policy_terms.dat*
+          path: ${{ runner.temp }}/policy-staged/
           if-no-files-found: error
           retention-days: 1
 
@@ -260,6 +259,8 @@ jobs:
             services/src/airunner_services/content_safety/data/policy_terms.dat
           cp policy-fragment/policy_terms.dat.sig \
             services/src/airunner_services/content_safety/data/policy_terms.dat.sig
+          cp policy-fragment/policy_trust_store.json \
+            services/src/airunner_services/content_safety/data/policy_trust_store.json
 
       - name: Download sidecar bundle artifacts
         if: needs.fetch-sidecars.result == 'success'
@@ -274,6 +275,8 @@ jobs:
       - name: Assemble candidate bundle
         run: |
           python scripts/assemble_linux_bundle.py \
+            --policy-trust-store \
+            services/src/airunner_services/content_safety/data/policy_trust_store.json \
             --distpath build/bundle-dist \
             --workpath build/bundle-work
 
@@ -402,6 +405,8 @@ jobs:
             services/src/airunner_services/content_safety/data/policy_terms.dat
           cp policy-fragment/policy_terms.dat.sig \
             services/src/airunner_services/content_safety/data/policy_terms.dat.sig
+          cp policy-fragment/policy_trust_store.json \
+            services/src/airunner_services/content_safety/data/policy_trust_store.json
 
       - name: Build packages
         run: |

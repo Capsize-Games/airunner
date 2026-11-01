@@ -25,11 +25,14 @@ runs the `provision-policy` job before the package build:
    Anything else -- absent, invalid, empty, unsigned, or signed
    outside the release trust store (synthetic-only) -- exits 2 and
    fails the release with a content-free error.
-4. Upload the verified hashes plus sidecar as the
-   `policy-bundle-fragment` job artifact (one-day retention), which
-   the build job installs into
+4. Stage the exact verified artifact and signature, plus a JSON
+   `policy_trust_store.json` containing only the public key whose ID
+   verified that signature. Upload those three files as the
+   `policy-bundle-fragment` job artifact (one-day retention). The build
+   job installs all three into
    `services/src/airunner_services/content_safety/data/` before
-   `python -m build`, so the wheel carries production data.
+   `python -m build`, so the wheel and frozen bundle carry the exact
+   policy bytes, signature, and runtime trust resource.
 
 A secret-free `provision-policy-fixture` job runs the S06 regression
 suite (`services/tests/test_release_s06.py`) with throwaway keys and
@@ -53,8 +56,10 @@ synthetic data. It uses no environment and no secrets.
    `POLICY_ARTIFACT_SHA256` (hex of the exact bytes),
    `POLICY_TRUST_STORE_JSON` (`{"key-id": "<64 hex chars>"}`).
 4. Rotate by publishing a new artifact/sidecar pair, updating the
-   digest secret, and adding the new key ID to the trust-store
-   secret before first use. Remove retired key IDs afterwards.
+   digest secret, and adding the new key ID to the input trust-store
+   secret before first use. Remove retired key IDs afterwards. The
+   stage output contains only the key that verified the current
+   artifact; other keys from the protected input are not packaged.
 
 ## Safety rules
 
@@ -64,28 +69,31 @@ synthetic data. It uses no environment and no secrets.
 - Steps never echo, list, or dump secrets: no `set -x`, no `env`
   output, no debug artifacts. Steps print counts and the signing key
   ID only.
-- The source term list and private keys never enter the runner: only
-  hashes, the detached signature, and public keys cross the trust
-  boundary, and only the hashes plus signature land in the bundle.
+- The source term list and private keys never enter the runner. The
+  protected input trust store contains public keys only. The staged
+  fragment contains hashes, the detached signature, and only the
+  verified signer's public key; it is not committed to the repository.
 - The fragment artifact is a release-bundle input, not a general
   download: one-day retention, installed only by the release build.
 
 ## Runtime enforcement (packaged mode)
 
 The shipped loader (`policy_data.py`) verifies the staged sidecar
-over the exact packaged bytes against the provisioned `TRUSTED_KEYS`
-store on first use and fails closed to the empty set: any failure
-denies generation with the policy-unavailable message, and the
-loader never falls back to the development path override.
+over the exact packaged bytes against `data/policy_trust_store.json`
+on first use and fails closed to the empty set: any failure denies
+generation with the policy-unavailable message, and the loader never
+falls back to the development path override. The public checkout carries
+an empty `{}` store. The release stage writes only the public key for
+the verified signing ID into the one-day fragment and package resource.
 
 - The `AIRUNNER_CONTENT_SAFETY_DATA` variable is a development and
   test hook only. Packaged mode locks it: a set value is ignored
   (one content-free warning) and can never swap or bypass the
   verified packaged set.
-- Trusted release provisioning must install the production public
-  keys into `TRUSTED_KEYS` before the build. An empty store fails
-  closed: with enforcement on and no provisioned keys, no policy
-  set loads and generation stays denied.
+- The runtime reads its trust resource from packaged data only; there
+  is no environment or development override for trust keys. Missing,
+  malformed, empty, or untrusted stores fail closed. No production key
+  or ID is checked into the source repository.
 - Public checkouts keep the empty store and never run packaged
   mode, so ordinary development and OSS behavior are unchanged.
 - Non-frozen production runs opt into enforcement with a truthy

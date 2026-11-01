@@ -98,6 +98,20 @@ def test_policy_signature_is_release_provisioned(
     assert sigs[0].get("required") is False
 
 
+def test_policy_trust_store_is_collected(spec: dict[str, Any]) -> None:
+    """The packaged key resource is a manifest-covered bundle resource."""
+    entries = [
+        entry for entry in spec.get("data", [])
+        if entry.get("source") == (
+            "services/src/airunner_services/content_safety/data/"
+            "policy_trust_store.json"
+        )
+    ]
+    assert len(entries) == 1
+    assert entries[0].get("required") is True
+    assert entries[0].get("dest") == "airunner_services/content_safety/data"
+
+
 def test_legal_entries_cover_root_notices(spec: dict[str, Any]) -> None:
     staged = {
         Path(str(entry["source"])).name

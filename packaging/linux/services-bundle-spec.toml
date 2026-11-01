@@ -321,6 +321,13 @@ required = false
 comment = "signed policy signature, provisioned in trusted CI (S06); required=false because a public checkout must assemble nothing shippable without the release fragment; the sidecar ships with the .dat (sdist, wheel, frozen bundle) so the exact staged bytes stay re-verifiable after the freeze"
 
 [[data]]
+source = "services/src/airunner_services/content_safety/data/policy_trust_store.json"
+dest = "airunner_services/content_safety/data"
+stage = "collect"
+required = true
+comment = "packaged public-key trust resource; empty in a public checkout and release-staged with only the verified signer's public key"
+
+[[data]]
 source = "services/src/airunner_services/assets/reference_speakers/*.wav"
 dest = "airunner_services/assets/reference_speakers"
 stage = "collect"
