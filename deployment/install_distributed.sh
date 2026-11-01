@@ -100,7 +100,7 @@ normalize_role() {
 
 
 default_service_profile() {
-    printf 'headless\n'
+    printf 'linux-release\n'
 }
 
 
@@ -219,6 +219,10 @@ main() {
     role_root="$(role_install_root "$ROLE")"
     service_profile="${SERVICE_PROFILE:-$(default_service_profile)}"
     service_profile="${service_profile% }"
+    if service_profile_uses_deferred_tts_vendor "$service_profile"; then
+        log_error "Service profile '${service_profile}' includes deferred airunner-tts-vendor; use linux-release or tts-python-core while OpenVoice/Melo remain deferred"
+        exit 1
+    fi
 
     resolved_python="$(find_python "$PYTHON_CMD" 3.13)" || {
         log_error 'Python 3.13+ is required for distributed installs'

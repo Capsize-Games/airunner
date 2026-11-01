@@ -18,6 +18,7 @@ _GATE_FILES = [
     Path("native/setup.py"),
     Path(".github/workflows/eval-tests.yml"),
     Path(".github/workflows/pypi-dispatch.yml"),
+    Path(".github/workflows/docker-release.yml"),
 ]
 
 
@@ -199,3 +200,26 @@ def test_release_workflow_gates_precede_dependency_execution() -> None:
         section = job_slice(release_workflow, job, next_job)
         gate = section.index("check_reviewed_release_inputs.py")
         assert gate < section.index("Install dependencies")
+
+    docker_release = (ROOT / ".github/workflows/docker-release.yml").read_text(
+        encoding="utf-8"
+    )
+    docker_job = docker_release[docker_release.index("  build-and-push:"):]
+    gate = docker_job.index("check_reviewed_release_inputs.py")
+    assert gate < docker_job.index("Set up Docker Buildx")
+    assert gate < docker_job.index("Log in to GitHub Container Registry")
+    assert gate < docker_job.index("Build ${{ matrix.name }} image")
+    assert "ref: ${{ github.event.workflow_run.head_sha || github.sha }}" in docker_job
+
+
+def test_docker_release_preflight_reports_current_lock_and_source_blockers() -> None:
+    errors = inspect_release_inputs(
+        ROOT, Path(".github/workflows/docker-release.yml")
+    )
+
+    assert errors == [
+        "pending-release-lock: linux-release hash lock generation and "
+        "validation remain pending",
+        "pending-source-review: quarantined release inputs: "
+        "airunner-common, facehuggershield",
+    ]

@@ -10,7 +10,7 @@ source "$HELPERS"
 
 VENV_DIR="${AIRUNNER_DEV_VENV:-$ROOT_DIR/venv}"
 PYTHON_CMD="${AIRUNNER_DEV_PYTHON:-}"
-SERVICE_PROFILE="${AIRUNNER_DEV_SERVICE_PROFILE:-desktop}"
+SERVICE_PROFILE="${AIRUNNER_DEV_SERVICE_PROFILE:-linux-release}"
 TORCH_MODE="${AIRUNNER_DEV_TORCH:-auto}"
 SIDECAR_MODE="${AIRUNNER_DEV_SIDECARS:-auto}"
 SIDECAR_ENABLE_CUDA="${AIRUNNER_DEV_SIDECAR_CUDA:-0}"
@@ -258,6 +258,11 @@ main() {
 	fi
 
 	parse_args "$@"
+
+	if service_profile_uses_deferred_tts_vendor "$SERVICE_PROFILE"; then
+		log_error "Service profile '${SERVICE_PROFILE}' includes deferred airunner-tts-vendor; use linux-release or tts-python-core while OpenVoice/Melo remain deferred"
+		exit 1
+	fi
 
 	resolved_python="$(find_python "$PYTHON_CMD" 3.13)" || {
 		log_error 'Python 3.13+ is required for development installs'

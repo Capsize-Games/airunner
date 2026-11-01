@@ -14,10 +14,18 @@ FROM nvidia/cuda:12.9.1-devel-ubuntu24.04@sha256:020bc241a628776338f4d4053fed4c3
 # Prevent interactive prompts
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Default install profile is the desktop-equivalent release aggregate
-# (headless runtimes plus the weather/search/CUDA extras) without the
-# development tooling: dev tools must never ship in a production image.
-ARG AIRUNNER_INSTALL_PROFILES=desktop
+# Default install profile is the vendor-free Linux release aggregate.
+# It does not include development tooling or the deferred OpenVoice/Melo
+# vendor package.
+ARG AIRUNNER_INSTALL_PROFILES=linux-release
+
+# Fail before any apt/pip/network installs when an explicitly selected
+# historical profile would activate the quarantined TTS vendor.
+RUN case ",${AIRUNNER_INSTALL_PROFILES}," in \
+    *,tts-python,*|*,headless,*|*,desktop,*|*,all,*|*,all_dev,*|*,all_native,*|*,all_dev_native,*|*,windows,*|*,openvoice,*|*,melotts,*|*,openvoice_cn,*|*,openvoice_jp,*|*,openvoice_kr,*|*,openvoice_tw,*|*,gruut_support,*) \
+        echo "ERROR: AIRUNNER_INSTALL_PROFILES activates deferred airunner-tts-vendor; use linux-release while OpenVoice/Melo remain deferred" >&2; exit 1;; \
+    *) exit 0;; \
+esac
 
 # Install system dependencies required by the selected runtime profiles.
 RUN set -e; \
@@ -28,7 +36,7 @@ RUN set -e; \
     packages="software-properties-common curl wget git build-essential"; \
     packages="$packages cmake pkg-config libprotobuf-dev"; \
     packages="$packages protobuf-compiler"; \
-    if profile_match 'stt-native|tts-python|headless|desktop|all|all_dev|all_native|all_dev_native'; then \
+    if profile_match 'stt-native|tts-python-core|linux-release|headless|desktop|all|all_dev|all_native|all_dev_native'; then \
         packages="$packages ffmpeg libsndfile1 portaudio19-dev"; \
         packages="$packages pulseaudio libasound2-dev"; \
     fi; \
@@ -57,7 +65,7 @@ ARG AIRUNNER_ENABLE_CUDA=0
 ARG GGML_CUDA_ARCHITECTURES=
 RUN set -e; \
     if printf '%s' ",${AIRUNNER_INSTALL_PROFILES}," | \
-        grep -Eq ',(llm-native|headless|desktop|all|all_dev|all_native|all_dev_native),'; then \
+        grep -Eq ',(llm-native|linux-release|headless|desktop|all|all_dev|all_native|all_dev_native),'; then \
         if [ "${AIRUNNER_ENABLE_CUDA}" = "1" ]; then \
             if [ -z "${GGML_CUDA_ARCHITECTURES}" ]; then \
                 echo "ERROR: AIRUNNER_ENABLE_CUDA=1 requires GGML_CUDA_ARCHITECTURES" >&2; \
@@ -120,7 +128,7 @@ RUN set -e; \
     for profile in $(printf '%s' "${AIRUNNER_INSTALL_PROFILES}" | tr ',' ' '); do \
         case ",${known_profiles}," in \
             *",${profile},"*) checked_profiles="${checked_profiles},${profile}";; \
-            *) echo "ERROR: unknown AIRUNNER_INSTALL_PROFILES entry '${profile}'. Known services extras: ${known_profiles}. The desktop GUI is removed; use 'headless' for the headless runtime aggregate." >&2; exit 1;; \
+            *) echo "ERROR: unknown AIRUNNER_INSTALL_PROFILES entry '${profile}'. Known services extras: ${known_profiles}. The desktop GUI is removed; use 'linux-release' for the vendor-free release aggregate." >&2; exit 1;; \
         esac; \
     done; \
     service_profiles="${checked_profiles#,}"; \

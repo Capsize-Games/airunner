@@ -27,8 +27,8 @@ jobs:
     strategy:
       matrix:
         include:
-          - name: headless
-            profiles: core,llm-native,stt-native,art-python,tts-python
+          - name: linux-release
+            profiles: linux-release
             tags: |
               ghcr.io/capsize-games/airunner/airunner:linux-headless
               ghcr.io/capsize-games/airunner/airunner:linux
@@ -39,8 +39,14 @@ jobs:
         uses: actions/checkout@v4
         with:
           # For workflow_run events this is the tested head commit;
-          # for releases/dispatches it falls back to the event ref.
-          ref: ${{ github.event.workflow_run.head_sha || github.ref }}
+          # for releases/dispatches it uses the immutable event SHA.
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+          persist-credentials: false
+
+      - name: Require reviewed service inputs and active lock
+        run: >-
+          python scripts/check_reviewed_release_inputs.py
+          --workflow .github/workflows/docker-release.yml
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3

@@ -110,6 +110,16 @@ service_extra_needs_torch() {
 }
 
 
+service_profile_uses_deferred_tts_vendor() {
+    case ",${1}," in
+        *,tts-python,*|*,headless,*|*,desktop,*|*,all,*|*,all_dev,*|*,all_native,*|*,all_dev_native,*|*,windows,*|*,openvoice,*|*,melotts,*|*,openvoice_cn,*|*,openvoice_jp,*|*,openvoice_kr,*|*,openvoice_tw,*|*,gruut_support,*)
+            return 0
+            ;;
+    esac
+    return 1
+}
+
+
 service_extra_needs_sidecars() {
     case ",${1}," in
         *,llm-native,*|*,stt-native,*|*,llm,*|*,headless,*|*,desktop,*|*,linux-release,*|*,all,*|*,all_dev,*|*,all_native,*|*,all_dev_native,*)
