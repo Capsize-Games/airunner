@@ -37,6 +37,16 @@ def _bootstrap_checkout_imports() -> None:
 
 _bootstrap_checkout_imports()
 
+
+def _migration_context_options() -> dict[str, object]:
+    """Load shared metadata after checkout import paths are available."""
+    from airunner_services.database.migration_metadata import (
+        migration_context_options,
+    )
+
+    return migration_context_options()
+
+
 def _default_db_url() -> str:
     """Return the default database URL for Alembic commands."""
     from airunner_common.settings import AIRUNNER_DB_URL as default_airunner_db_url
@@ -69,9 +79,8 @@ try:
 except Exception:
     pass
 
-# We don't use autogenerate in this repo's runtime flow; avoid heavy imports.
-target_metadata = None
-# ... etc.
+# Autogeneration uses the same complete service model registry for online
+# and offline contexts, with type and server-default drift comparison enabled.
 
 
 def run_migrations_offline():
@@ -86,11 +95,9 @@ def run_migrations_offline():
     url = config.get_main_option("sqlalchemy.url")
     context.configure(
         url=url,
-        target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
-        compare_type=False,
-        compare_server_default=False,
+        **_migration_context_options(),
     )
 
     with context.begin_transaction():
@@ -112,9 +119,7 @@ def run_migrations_online():
     with connectable.connect() as connection:
         context.configure(
             connection=connection,
-            target_metadata=target_metadata,
-            compare_type=False,
-            compare_server_default=False,
+            **_migration_context_options(),
         )
 
         with context.begin_transaction():

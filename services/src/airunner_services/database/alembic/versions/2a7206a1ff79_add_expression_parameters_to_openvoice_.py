@@ -31,13 +31,17 @@ def upgrade() -> None:
     add_column(OpenVoiceSettings, 'noise_scale')
     add_column(OpenVoiceSettings, 'noise_scale_w')
     
-    # Set defaults for existing rows
-    op.execute("UPDATE openvoice_settings SET sdp_ratio = 20 WHERE sdp_ratio IS NULL")
-    op.execute("UPDATE openvoice_settings SET noise_scale = 60 WHERE noise_scale IS NULL")
-    op.execute("UPDATE openvoice_settings SET noise_scale_w = 80 WHERE noise_scale_w IS NULL")
+    # Preserve existing NULLs (including databases where these columns were
+    # added by an interrupted or manual migration). OpenVoiceSettings supplies
+    # Python-side defaults for new ORM-created rows; no historical value can be
+    # inferred safely from NULL.
 
 
 def downgrade() -> None:
-    # SQLite doesn't support DROP COLUMN, so we skip column removal
-    # The columns will remain but be unused
-    pass
+    """Reject restoring the XTTS table after its user data was dropped."""
+    raise RuntimeError(
+        "Cannot downgrade this revision because xtts_settings was dropped; "
+        "its schema and rows cannot be reconstructed safely. Restore a "
+        "pre-upgrade database backup to recover the lost data; otherwise "
+        "keep this revision and upgrade forward."
+    )

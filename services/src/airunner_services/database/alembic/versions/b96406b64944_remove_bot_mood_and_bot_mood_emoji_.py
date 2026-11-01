@@ -24,4 +24,9 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    pass
+    """Reject recovery that would silently discard or fabricate data."""
+    raise RuntimeError(
+        "Cannot downgrade: conversations.bot_mood and its per-row values "
+        "were dropped. Restore a pre-upgrade database backup to recover the "
+        "lost data; otherwise keep this revision and upgrade forward."
+    )

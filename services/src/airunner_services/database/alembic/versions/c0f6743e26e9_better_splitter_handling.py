@@ -16,8 +16,10 @@ down_revision: Union[str, None] = "7fb526dc074c"
 
 
 def upgrade() -> None:
+    """No-op historical marker; this revision changed no schema or data."""
     pass
 
 
 def downgrade() -> None:
+    """No-op is reversible because the paired upgrade changed nothing."""
     pass
