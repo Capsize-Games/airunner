@@ -46,6 +46,7 @@ ProgressCallback = Callable[[dict[str, Any]], None]
 
 LLMRequestFactory = Callable[[LLMInvocationRequest], Any]
 HealthProvider = Callable[[], RuntimeHealthStatus]
+LoadedModelProvider = Callable[[], dict[str, Any]]
 
 
 def _default_timeout_seconds() -> float:
@@ -257,6 +258,37 @@ def _model_status_value(model_status: Any) -> str:
     return getattr(model_status, "value", "")
 
 
+def _is_loaded_model_status(model_status: Any) -> bool:
+    """Return True only for statuses that prove a model is loaded."""
+    from airunner_common.contract_enums import ModelStatus
+
+    return model_status in (ModelStatus.LOADED, ModelStatus.READY)
+
+
+def _served_model_metadata(
+    raw: Optional[dict[str, Any]],
+) -> dict[str, Any]:
+    """Keep only non-empty served-model identity fields."""
+    if not raw:
+        return {}
+    metadata: dict[str, Any] = {}
+    for key in ("model_id", "model_path"):
+        value = raw.get(key)
+        if isinstance(value, str) and value.strip():
+            metadata[key] = value.strip()
+    return metadata
+
+
+def _resolve_served_model_id(model_path: str) -> str:
+    """Resolve a known local model id from one loaded model path."""
+    from airunner_services.llm.provider_config import LLMProviderConfig
+
+    resolved = LLMProviderConfig.resolve_model_id(
+        "local", os.path.basename(model_path)
+    )
+    return resolved or ""
+
+
 class _SignalRuntimeClient(RuntimeClient):
     """Common helpers for signal-backed local fallback clients."""
 
@@ -272,6 +304,7 @@ class _SignalRuntimeClient(RuntimeClient):
         supports_streaming: bool = False,
         allows_model_control: bool = True,
         model_type: Any = None,
+        loaded_model_provider: Optional[LoadedModelProvider] = None,
     ) -> None:
         self.descriptor = RuntimeDescriptor(
             runtime=runtime,
@@ -288,6 +321,11 @@ class _SignalRuntimeClient(RuntimeClient):
         self._health_provider = health_provider
         self._last_model_status = None
         self._model_type = model_type
+        self._loaded_model_provider = loaded_model_provider
+        self._loaded_model: dict[str, Any] = {}
+        self._status_handler = self._on_model_status_changed
+        self._status_registered = False
+        self._register_status_handler()
 
     def healthcheck(self) -> RuntimeHealth:
         """Return current health state for the runtime client."""
@@ -296,11 +334,12 @@ class _SignalRuntimeClient(RuntimeClient):
                 descriptor=self.descriptor,
                 status=self._health_provider(),
             )
+        metadata = self._status_metadata()
         return RuntimeHealth(
             descriptor=self.descriptor,
             status=_model_health_status(self._last_model_status),
             details=_model_status_value(self._last_model_status),
-            metadata=self._status_metadata(),
+            metadata=metadata,
         )
 
     def _emit_signal(self, code: Any, data: Optional[dict[str, Any]] = None):
@@ -323,13 +362,113 @@ class _SignalRuntimeClient(RuntimeClient):
 
     def _status_metadata(self) -> dict[str, Any]:
         """Return cached model metadata when available."""
+        if _is_loaded_model_status(self._last_model_status):
+            self._revalidate_loaded_model()
         if self._last_model_status is None:
             return {}
-        return {"model_status": _model_status_value(self._last_model_status)}
+        metadata = {
+            "model_status": _model_status_value(self._last_model_status)
+        }
+        metadata.update(self._loaded_model_metadata())
+        return metadata
 
-    def _cache_status(self, model_status: Any) -> None:
-        """Track the most recent model status for health checks."""
+    def _cache_status(
+        self,
+        model_status: Any,
+        event_data: Optional[dict[str, Any]] = None,
+    ) -> None:
+        """Track status and the model identity it proves loaded."""
         self._last_model_status = model_status
+        if not _is_loaded_model_status(model_status):
+            self._loaded_model = {}
+            return
+        self._loaded_model = self._snapshot_loaded_model(event_data)
+
+    def _snapshot_loaded_model(
+        self, event_data: Optional[dict[str, Any]] = None
+    ) -> dict[str, Any]:
+        """Snapshot served-model identity at a loaded transition."""
+        identity = _served_model_metadata(event_data)
+        if identity:
+            return identity
+        return self._probe_loaded_model()
+
+    def _probe_loaded_model(self) -> dict[str, Any]:
+        """Return identity from the configured loaded-state probe."""
+        if self._loaded_model_provider is None:
+            return {}
+        return _served_model_metadata(self._loaded_model_provider())
+
+    def _loaded_model_metadata(self) -> dict[str, Any]:
+        """Return loaded identity, probing once if still unknown."""
+        if not self._loaded_model and _is_loaded_model_status(
+            self._last_model_status
+        ):
+            self._loaded_model = self._probe_loaded_model()
+        return dict(self._loaded_model)
+
+    def _revalidate_loaded_model(self) -> None:
+        """Drop a snapshot the loaded-state probe contradicts.
+
+        Only a probe positively reporting no loaded model
+        clears the snapshot; without a probe there is no live
+        evidence and the snapshot stands.
+        """
+        if not self._loaded_model:
+            return
+        if self._loaded_model_provider is None:
+            return
+        try:
+            current = _served_model_metadata(
+                self._loaded_model_provider()
+            )
+        except Exception:
+            return
+        if not current:
+            self._mark_silently_unloaded()
+
+    def _mark_silently_unloaded(self) -> None:
+        """Record an unload observed without a status signal."""
+        from airunner_common.contract_enums import ModelStatus
+
+        self._loaded_model = {}
+        self._last_model_status = ModelStatus.UNLOADED
+
+    def _register_status_handler(self) -> None:
+        """Track external load/unload events for this model type."""
+        register = getattr(self._mediator, "register", None)
+        if not callable(register):
+            return
+        from airunner_common.contract_enums import SignalCode
+
+        register(
+            SignalCode.MODEL_STATUS_CHANGED_SIGNAL, self._status_handler
+        )
+        self._status_registered = True
+
+    def _on_model_status_changed(self, data: dict[str, Any]) -> None:
+        """Cache one external model-status event for this client."""
+        if not isinstance(data, dict):
+            return
+        if not self._matches_model(data.get("model")):
+            return
+        status = data.get("status")
+        if status is not None:
+            self._cache_status(status, data)
+
+    def close(self) -> None:
+        """Stop tracking external model-status events."""
+        if not self._status_registered:
+            return
+        unregister = getattr(self._mediator, "unregister", None)
+        if callable(unregister):
+            from airunner_common.contract_enums import SignalCode
+
+            unregister(
+                SignalCode.MODEL_STATUS_CHANGED_SIGNAL,
+                self._status_handler,
+            )
+        self._status_registered = False
 
     def _matches_model(self, model: Any) -> bool:
         """Return True when a status event targets this client's model."""
@@ -360,7 +499,7 @@ class _SignalRuntimeClient(RuntimeClient):
             if not self._matches_model(model):
                 return
             status = data.get("status")
-            self._cache_status(status)
+            self._cache_status(status, data)
             if status in success_statuses or status is ModelStatus.FAILED:
                 status_queue.put(status)
 
@@ -429,6 +568,7 @@ class LocalFallbackLLMClient(_SignalRuntimeClient):
         mediator: Any = None,
         llm_request_factory: Optional[LLMRequestFactory] = None,
         health_provider: Optional[HealthProvider] = None,
+        loaded_model_provider: Optional[LoadedModelProvider] = None,
     ) -> None:
         llm_service = llm_service or _build_llm_service()
         super().__init__(
@@ -440,9 +580,94 @@ class LocalFallbackLLMClient(_SignalRuntimeClient):
             health_provider=health_provider,
             allows_model_control=True,
             model_type=_resolve_model_type("LLM"),
+            loaded_model_provider=loaded_model_provider,
         )
         self._llm_service = llm_service
         self._llm_request_factory = llm_request_factory or _build_llm_request
+
+    def _probe_loaded_model(self) -> dict[str, Any]:
+        """Return the model the LLM worker currently has loaded."""
+        provided = super()._probe_loaded_model()
+        if provided:
+            return provided
+        return self._worker_loaded_model()
+
+    def _worker_loaded_model(self) -> dict[str, Any]:
+        """Build served-model metadata from real worker state."""
+        model_path = self._current_worker_model_path()
+        if not model_path:
+            return {}
+        metadata: dict[str, Any] = {}
+        model_id = _resolve_served_model_id(model_path)
+        if model_id:
+            metadata["model_id"] = model_id
+        metadata["model_path"] = model_path
+        return metadata
+
+    def _current_worker_model_path(self) -> str:
+        """Read the loaded path without creating a worker/manager."""
+        return self._reachable_worker_model_path() or ""
+
+    def _reachable_worker_model_path(self) -> Optional[str]:
+        """Return worker path, "" if none, None if unknown.
+
+        None is no evidence; "" proves no model is loaded."""
+        manager = self._reachable_model_manager()
+        if manager is None:
+            return None
+        missing = object()
+        try:
+            model_path = getattr(manager, "_current_model_path", missing)
+        except Exception:
+            return None
+        if model_path is missing:
+            return None
+        if model_path is None:
+            return ""
+        if isinstance(model_path, str):
+            return model_path.strip()
+        return None
+
+    def _reachable_model_manager(self) -> Any:
+        """Return the live model manager without creating one."""
+        try:
+            worker_manager = getattr(
+                self._signal_source, "_worker_manager", None
+            )
+            if callable(worker_manager):
+                worker_manager = worker_manager()
+            worker = getattr(
+                worker_manager, "_llm_generate_worker", None
+            )
+            return getattr(worker, "_model_manager", None)
+        except Exception:
+            return None
+
+    def _revalidate_loaded_model(self) -> None:
+        """Re-check the snapshot against reachable worker state."""
+        if self._loaded_model_provider is not None:
+            super()._revalidate_loaded_model()
+            return
+        if not self._loaded_model:
+            return
+        model_path = self._reachable_worker_model_path()
+        if model_path is None:
+            return
+        if not model_path:
+            self._mark_silently_unloaded()
+            return
+        if not self._snapshot_matches(model_path):
+            self._loaded_model = self._worker_loaded_model()
+
+    def _snapshot_matches(self, model_path: str) -> bool:
+        """Return True when the snapshot names this model path."""
+        snapshot_path = self._loaded_model.get("model_path")
+        if isinstance(snapshot_path, str) and snapshot_path:
+            return snapshot_path == model_path
+        snapshot_id = self._loaded_model.get("model_id")
+        if isinstance(snapshot_id, str) and snapshot_id:
+            return snapshot_id == _resolve_served_model_id(model_path)
+        return True
 
     def invoke(self, request: RequestEnvelope) -> ResponseEnvelope:
         """Invoke the legacy LLM service or model-control path."""
