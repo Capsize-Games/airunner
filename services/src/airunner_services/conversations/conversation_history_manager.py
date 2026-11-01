@@ -237,7 +237,7 @@ class ConversationHistoryManager:
             return summary
 
         try:
-            summary = str(conversation.summarize() or "").strip()
+            summary = self._generate_summary(conversation)
         except Exception as exc:
             self.logger.warning(
                 "Failed to summarize conversation %s: %s",
@@ -259,6 +259,24 @@ class ConversationHistoryManager:
             )
         conversation.summary = summary
         return summary
+
+    def _generate_summary(self, conversation: Any) -> str:
+        """Generate a summary for an ORM or dataclass conversation.
+
+        ``RealBaseManager`` returns generated ``ConversationData``
+        dataclasses, which carry fields only and have no
+        ``summarize`` method; reuse the ORM summarizer on a
+        transient instance for those. Empty conversations
+        short-circuit without importing the summarizer stack.
+        """
+        raw_messages = getattr(conversation, "value", None)
+        if not isinstance(raw_messages, list) or not raw_messages:
+            return ""
+        summarize = getattr(conversation, "summarize", None)
+        if callable(summarize):
+            return str(summarize() or "").strip()
+        transient = Conversation(value=raw_messages)
+        return str(transient.summarize() or "").strip()
 
     @staticmethod
     def _serialize_timestamp(timestamp: Any) -> str:

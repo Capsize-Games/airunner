@@ -24,6 +24,7 @@ from airunner_common.settings import AIRUNNER_LOG_LEVEL
 from airunner_services.utils.application import get_logger
 from airunner_services.api.routes import (
     art,
+    catalog_bootstrap,
     conversations,
     daemon,
     domain_resources,
@@ -425,6 +426,13 @@ def create_app(
         domain_resources.settings_router,
         prefix="/api/v1/settings",
         tags=["settings"],
+    )
+    # Bootstrap owns GET /bootstrap; the domain catalog router
+    # owns /resources/* under the same prefix. No path overlap.
+    app.include_router(
+        catalog_bootstrap.router,
+        prefix="/api/v1/catalog",
+        tags=["catalog"],
     )
     app.include_router(
         domain_resources.catalog_router,

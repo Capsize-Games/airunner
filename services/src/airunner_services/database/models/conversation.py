@@ -77,22 +77,22 @@ class Conversation(BaseModel):
 
 	def summarize(self) -> str:
 		"""Generate a one-sentence summary of the conversation."""
+		messages = self.formatted_messages
+		if messages == "":
+			return ""
 		# Imported lazily: sumy pulls in nltk/sklearn/scipy/pandas, which
 		# costs ~1.1s+ on the daemon import path when loaded eagerly.
 		from sumy.nlp.tokenizers import Tokenizer
 		from sumy.parsers.plaintext import PlaintextParser
 		from sumy.summarizers.lex_rank import LexRankSummarizer
 
-		messages = self.formatted_messages
-		if messages != "":
-			parser = PlaintextParser.from_string(
-				messages,
-				Tokenizer("english"),
-			)
-			summarizer = LexRankSummarizer()
-			summary = summarizer(parser.document, 1)
-			return "\n".join([str(sentence) for sentence in summary])
-		return ""
+		parser = PlaintextParser.from_string(
+			messages,
+			Tokenizer("english"),
+		)
+		summarizer = LexRankSummarizer()
+		summary = summarizer(parser.document, 1)
+		return "\n".join([str(sentence) for sentence in summary])
 
 	@classmethod
 	def delete(cls, pk=None, **kwargs):

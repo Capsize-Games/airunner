@@ -293,6 +293,11 @@ class AIRunnerDaemon:
 
         try:
             self._init_app_or_degraded()
+            # ServiceApp construction installs its own SIGINT/SIGTERM
+            # handlers; reinstall so the daemon stays the single
+            # owner. shutdown() still runs app cleanup from the
+            # main loop, so no cleanup is lost.
+            self._maybe_setup_signal_handlers()
             self._start_health_monitor()
             self._start_api_server()
 
