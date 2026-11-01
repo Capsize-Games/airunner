@@ -32,7 +32,7 @@ from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Protocol, runtime_checkable
 
 import numpy as np
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel
 
 from .contracts import (
     ERROR_EMBEDDING_SPACE_MISMATCH,
@@ -46,35 +46,11 @@ from .scheduler import (
     CompanionJobType,
     CompanionScheduler,
 )
+from airunner_services.runtimes.embedding_contracts import EmbeddingModelIdentity
 
 EMBEDDING_INDEX_SCHEMA_VERSION = 1
 INDEX_MANIFEST_FILE = "companion_index.json"
 INDEX_EMBEDDINGS_FILE = "embeddings.npy"
-
-
-class EmbeddingModelIdentity(BaseModel):
-    """Which embedding space an index or client belongs to.
-
-    ``model_id`` is the upstream repo id (``intfloat/e5-large``);
-    ``revision`` the model branch/commit it was loaded from;
-    ``dimension`` the vector width it produces. All three must match
-    for an index read to be valid — same model at a new revision, or
-    same model at a new width, is a different embedding space.
-    """
-
-    model_config = ConfigDict(extra="forbid")
-
-    model_id: str
-    revision: str = "main"
-    dimension: int = Field(gt=0)
-
-    def matches(self, other: "EmbeddingModelIdentity") -> bool:
-        """Return whether two identities describe one space."""
-        return (
-            self.model_id == other.model_id
-            and self.revision == other.revision
-            and self.dimension == other.dimension
-        )
 
 
 @runtime_checkable

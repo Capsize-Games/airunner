@@ -15,7 +15,7 @@ from typing import Any
 
 from fastapi import HTTPException, Request
 
-from airunner_services.llm.companion.embeddings import EmbeddingModelIdentity
+from airunner_services.runtimes.embedding_contracts import EmbeddingModelIdentity
 from airunner_services.runtimes.local_embeddings import (
     E5_LARGE_MODEL_ID,
     E5_LARGE_REVISION,

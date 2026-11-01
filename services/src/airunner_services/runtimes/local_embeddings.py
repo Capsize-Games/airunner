@@ -1,11 +1,10 @@
 """Local-only embedding runtime adapter (release B04).
 
-Adapts the selected local embedding runtime — Intfloat E5 Large
+Adapts an injected local embedding runtime — currently Intfloat E5 Large
 (``intfloat/e5-large``) constructed with ``local_files_only`` by the
 existing RAG stack (``llm/managers/agent/mixins/rag_properties_mixin.py``)
-— to the B01 ``CompanionEmbeddingClient`` contract, so companion
-memory search (B05) embeds through the same local model the rest of
-Desktop already uses instead of growing a second embedding path.
+— to the shared embedding identity contract. Companion memory search and
+other consumers can use the same local model without adding a second path.
 
 The adapter never loads a model, never downloads, and never dials a
 remote endpoint: it wraps an already-constructed embedder
@@ -17,9 +16,8 @@ width against it. A remote embedder (the opt-in
 one) is refused at construction — this client is local-only by
 construction, not by configuration.
 
-No torch/langchain import here: the embedder arrives injected, so
-this module (and its companion contract import) stays free of the
-heavy ML runtime.
+No torch/langchain or companion import here: the embedder arrives injected,
+and the identity/error contracts are defined in the neutral runtime layer.
 """
 
 from __future__ import annotations
@@ -27,12 +25,12 @@ from __future__ import annotations
 import math
 from typing import Any, List
 
-from airunner_services.llm.companion.contracts import (
+from airunner_services.runtimes.embedding_contracts import (
     ERROR_EMBEDDING_SPACE_MISMATCH,
-    CompanionError,
-    CompanionErrorCode,
+    EmbeddingModelIdentity,
+    ServiceError,
+    ServiceErrorCode,
 )
-from airunner_services.llm.companion.embeddings import EmbeddingModelIdentity
 
 #: Selected local embedding model (R02 manifest, hardware-models.md §2;
 #: default catalog entry in ``bootstrap/model_bootstrap_data.py``).
@@ -107,8 +105,8 @@ class LocalEmbeddingClient:
 
     def _checked(self, vector: List[float]) -> List[float]:
         if len(vector) != int(self._identity.dimension):
-            raise CompanionError(
-                CompanionErrorCode(
+            raise ServiceError(
+                ServiceErrorCode(
                     code=ERROR_EMBEDDING_SPACE_MISMATCH,
                     detail=f"expected dim={self._identity.dimension}, "
                     f"found dim={len(vector)}",

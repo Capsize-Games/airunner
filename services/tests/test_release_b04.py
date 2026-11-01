@@ -332,3 +332,45 @@ def test_new_modules_import_without_heavy_or_remote_deps() -> None:
         timeout=60,
     )
     assert proc.returncode == 0, proc.stdout
+
+
+def test_generic_embedding_runtime_does_not_import_companion() -> None:
+    """The generic runtime and neutral contracts stay domain independent."""
+    proc = subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            "import sys; "
+            "import airunner_services.runtimes.local_embeddings; "
+            "hits = [name for name in sys.modules "
+            "if name == 'airunner_services.llm.companion' "
+            "or name.startswith('airunner_services.llm.companion.')]; "
+            "print(','.join(hits)); sys.exit(1 if hits else 0)",
+        ],
+        capture_output=True,
+        text=True,
+        timeout=60,
+    )
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+
+
+def test_ollama_embedding_helper_has_no_direct_companion_import() -> None:
+    """The helper imports cleanly and legacy package attrs remain available."""
+    proc = subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            "import sys; "
+            "import airunner_services.api.routes.ollama_embedding_helpers; "
+            "from airunner_services.api.routes import conversations; "
+            "assert conversations.__name__.endswith('.routes.conversations'); "
+            "hits = [name for name in sys.modules "
+            "if name == 'airunner_services.llm.companion' "
+            "or name.startswith('airunner_services.llm.companion.')]; "
+            "print(','.join(hits)); sys.exit(1 if hits else 0)",
+        ],
+        capture_output=True,
+        text=True,
+        timeout=60,
+    )
+    assert proc.returncode == 0, proc.stdout + proc.stderr
