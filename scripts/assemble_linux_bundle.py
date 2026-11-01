@@ -19,14 +19,9 @@ the candidate workflow fails closed until that lock exists.
 command without executing it. stdlib only; safe to run with no
 repository on PYTHONPATH.
 
-Release policy gate (S06): every real (non-dry-run) assembly first
-form-checks the staged content-safety policy set -- present,
-strictly versioned, non-empty, with a well-formed detached
-signature -- and exits 2 with a content-free error before writing
-anything when the set is absent, empty, unsigned, or synthetic-only.
-With --policy-trust-store the gate additionally verifies each
-detached signature against that owner-provisioned trust store,
-which is what rejects data signed outside the release process.
+Content policy data is optional and omitted from the standard bundle.
+Applications that choose signed policy data can request strict build
+validation with --require-signed-policy and --policy-trust-store.
 """
 
 from __future__ import annotations
@@ -99,6 +94,7 @@ def _assemble_args(argv: list[str] | None) -> argparse.Namespace:
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--require-sidecars", action="store_true")
     parser.add_argument("--policy-trust-store", type=Path, default=None)
+    parser.add_argument("--require-signed-policy", action="store_true")
     return parser.parse_args(argv)
 
 
@@ -219,11 +215,13 @@ def _freeze_cmd(
     workpath: Path,
     distpath: Path,
     pyinstaller: str,
+    include_content_policy: bool = False,
 ) -> tuple[Path, list[str]]:
     """Return the entry path and exact freeze command for the spec."""
     entry_script = workpath / "_bundle_entry.py"
     command = build_command(
-        spec, _REPO_ROOT, entry_script, distpath, workpath, pyinstaller
+        spec, _REPO_ROOT, entry_script, distpath, workpath, pyinstaller,
+        include_content_policy=include_content_policy,
     )
     return entry_script, command
 
@@ -294,6 +292,9 @@ def _inspect_frozen(
         warn_file=warn_file if warn_file.is_file() else None,
         toc_paths=toc_paths,
         require_sidecars=args.require_sidecars,
+        require_signed_policy=(
+            args.require_signed_policy or args.policy_trust_store is not None
+        ),
     )
     return _report_gate(result, bundle_dir)
 
@@ -305,7 +306,11 @@ def main(argv: list[str] | None = None) -> int:
     spec = inspect.load_spec(args.spec or DEFAULT_SPEC)
     if _report_spec_errors(inspect.spec_errors(spec)):
         return 2
-    if not args.dry_run:
+    validate_policy = args.require_signed_policy or args.policy_trust_store is not None
+    if validate_policy and args.policy_trust_store is None:
+        print("POLICY: --require-signed-policy requires --policy-trust-store", file=sys.stderr)
+        return 2
+    if validate_policy and not args.dry_run:
         problems = gate_staged_policy(
             spec, _REPO_ROOT, args.policy_trust_store
         )
@@ -314,7 +319,7 @@ def main(argv: list[str] | None = None) -> int:
     workpath, distpath = _output_paths(args, spec)
     base = resolve_base_rev(_REPO_ROOT, args.base)
     entry_script, command = _freeze_cmd(
-        spec, workpath, distpath, args.pyinstaller
+        spec, workpath, distpath, args.pyinstaller, validate_policy
     )
     if args.dry_run:
         _print_dry_run(base, entry_script, command)
@@ -322,7 +327,7 @@ def main(argv: list[str] | None = None) -> int:
     bundle_dir = _freeze_tree(
         spec, workpath, distpath, command, args.pyinstaller
     )
-    manifest = _write_bundle_manifest(bundle_dir, spec, base)
+    _write_bundle_manifest(bundle_dir, spec, base)
     return _inspect_frozen(inspect, spec, bundle_dir, args)
 
 

@@ -20,8 +20,9 @@ lines over ``MAX_LINE_LENGTH``, are rejected.
 
 Resolution (development): ``AIRUNNER_CONTENT_SAFETY_DATA`` first,
 then the packaged ``data/policy_terms.dat``. The variable is a
-development and test hook only; packaged/production mode (see
-:func:`is_packaged_mode`) locks it and always loads the packaged set.
+development and test hook only; when the explicit signed-policy
+requirement (see :func:`is_packaged_mode`) is enabled, the path is
+locked and only the packaged set is considered.
 Unusable data yields an empty set plus one content-free warning;
 :func:`parse_policy_artifact` raises instead.
 
@@ -31,8 +32,9 @@ artifact bytes before decoding or parsing (see
 :mod:`airunner_services.content_safety.policy_signature`). Any
 verification failure fails closed to the empty set; the selected
 source is never bypassed by falling back to the other one.
-Packaged/production mode always takes this verified path over the
-packaged bytes against the provisioned trust store.
+Explicit signed-policy mode always takes this verified path over the
+packaged bytes against the provisioned trust store. Frozen or production
+execution alone does not require signed content-policy artifacts.
 """
 
 from __future__ import annotations
@@ -42,7 +44,6 @@ import importlib.resources
 import logging
 import os
 import re
-import sys
 from collections.abc import Iterable, Iterator, Mapping
 from pathlib import Path
 
@@ -59,13 +60,17 @@ POLICY_DATA_ENV_VAR = "AIRUNNER_CONTENT_SAFETY_DATA"
 POLICY_DATA_PACKAGE = "airunner_services.content_safety"
 POLICY_DATA_FILENAME = "data/policy_terms.dat"
 
-# Explicit enforcement switch for non-frozen production runs and
-# tests. Frozen bundles always enforce; anything else enforces only
-# with a truthy value here. Never a production bypass: it can only
-# turn enforcement on, and the path override stays locked when on.
+# Explicit signed-policy switch for deployments that provision a signed
+# corpus and trust store. Frozen/production status alone does not require
+# those application-level artifacts.
 PACKAGED_ENFORCE_ENV_VAR = "AIRUNNER_CONTENT_SAFETY_ENFORCE_SIGNED"
 
 _TRUTHY = frozenset({"1", "true", "yes", "on"})
+_FALSY = frozenset({"0", "false", "no", "off"})
+
+
+class SignedPolicyConfigurationError(ValueError):
+    """The signed-policy setting is not a supported boolean value."""
 
 ARTIFACT_VERSION = 1
 ARTIFACT_FORMAT_ID = "airunner-policy-data/1"
@@ -84,15 +89,23 @@ _warned_empty = False
 
 
 def is_packaged_mode() -> bool:
-    """Return ``True`` when signed-bundle policy rules apply.
+    """Return whether signed policy data was explicitly required.
 
-    Frozen bundles always enforce; otherwise only an explicit
-    truthy ``PACKAGED_ENFORCE_ENV_VAR`` opts in (tests use this).
+    When configured, the value must be a recognized boolean spelling:
+    ``1/true/yes/on`` or ``0/false/no/off`` (case-insensitive). An absent
+    setting is false; an empty or unknown value is an error.
     """
-    if getattr(sys, "frozen", False) or hasattr(sys, "_MEIPASS"):
+    raw = os.environ.get(PACKAGED_ENFORCE_ENV_VAR)
+    if raw is None:
+        return False
+    value = raw.strip().lower()
+    if value in _TRUTHY:
         return True
-    value = os.environ.get(PACKAGED_ENFORCE_ENV_VAR, "")
-    return value.strip().lower() in _TRUTHY
+    if value in _FALSY:
+        return False
+    raise SignedPolicyConfigurationError(
+        f"{PACKAGED_ENFORCE_ENV_VAR} must be a recognized boolean value"
+    )
 
 
 class PolicyDataError(ValueError):
@@ -215,7 +228,7 @@ def _note_locked_override(*, trust_override_requested: bool = False) -> None:
     if os.environ.get(POLICY_DATA_ENV_VAR) or trust_override_requested:
         logger.warning(
             "Content safety data or trust-store override is locked in "
-            "packaged mode; override ignored"
+            "signed-policy mode; override ignored"
         )
 
 
@@ -343,9 +356,9 @@ def load_policy_hashes(
     With ``verify_signature``, the sidecar signature is verified
     over the exact artifact bytes before decoding or parsing, and
     any failure fails closed to the empty set. ``trusted_keys``
-    overrides the store only in non-packaged test/development mode.
-    Packaged/production mode always uses the packaged resource and
-    ignores explicit trust or data-path overrides.
+    overrides the store only when signed-policy mode is off. Explicit
+    signed-policy mode always uses the packaged resource and ignores
+    explicit trust or data-path overrides.
     """
     global _cache, _warned_empty
     if _cache is not None and not refresh:
@@ -376,7 +389,7 @@ def load_policy_hashes(
 def is_available() -> bool:
     """Return ``True`` when a non-empty policy data set is loaded.
 
-    In packaged mode this reflects the verified packaged set only.
+    In signed-policy mode this reflects the verified packaged set only.
     """
     return bool(load_policy_hashes())
 
@@ -386,3 +399,8 @@ def reset_cache() -> None:
     global _cache, _warned_empty
     _cache = None
     _warned_empty = False
+
+
+# Reject a malformed explicit signing setting during service import rather
+# than interpreting it as a request to disable signature verification.
+is_packaged_mode()

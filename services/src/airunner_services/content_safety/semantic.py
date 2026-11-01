@@ -28,24 +28,18 @@ adapter around any synchronous text-generation callable, composing its
 instruction from the existing guardrails prompt (falling back to a short
 built-in generic instruction) and parsing the response strictly.
 
-S08 required contextual adapter (default OFF, selection approved)
-------------------------------------------------------------------
-:func:`evaluate_fields_contextual` is the REQUIRED input-side contextual
-check behind the S07 selection
-(``release-planning/linux-v1/safety-evaluation.md`` §2, owner-approved
-for #2252): Qwen3Guard-Gen-0.6B via
-:mod:`airunner_services.content_safety.qwen_guard`, strict and
-fail-closed. This layer stays OFF unless :data:`CONTEXTUAL_ENV_VAR` is
-truthy. The evaluator choice stays behind the injection seam
-(:func:`set_evaluator`, falling back to the approved :func:`set_judge`
-seam); no provider or download is wired in, and inference is
-local-only through the injected callable.
+Optional contextual adapter (default OFF)
+------------------------------------------
+:func:`evaluate_fields_contextual` is an optional input-side contextual
+check. It stays OFF unless :data:`CONTEXTUAL_ENV_VAR` is truthy. The
+evaluator is supplied through :func:`set_evaluator` or the fallback
+:func:`set_judge` seam; this module does not choose or load a model.
 
-Unlike the optional layer above, the required check fails closed: only an
-explicit allowed verdict allows, while unavailable, timed-out, erroring,
-or ambiguous outcomes all deny. Every call runs on one shared bounded
-pool (:data:`CONTEXTUAL_MAX_WORKERS`), so a timeout cancels the queued
-wait without spawning an unbounded chain of abandoned threads.
+When enabled, the contextual check fails closed: only an explicit allowed
+verdict allows, while unavailable, timed-out, erroring, or ambiguous
+outcomes all deny. Every call runs on one shared bounded pool
+(:data:`CONTEXTUAL_MAX_WORKERS`), so a timeout cancels the queued wait
+without spawning an unbounded chain of abandoned threads.
 """
 
 from __future__ import annotations
@@ -69,9 +63,7 @@ SEMANTIC_ENV_VAR = "AIRUNNER_CONTENT_SAFETY_SEMANTIC"
 # can never stall generation through this optional layer.
 SEMANTIC_TIMEOUT_SECONDS = 5.0
 
-# Required contextual check (S08). Same 5 s ceiling as the optional layer
-# (safety-evaluation.md §4 L4 keeps 5 s); still pending S07 approval, like
-# every other proposed threshold -- no numeric threshold is approved yet.
+# Optional contextual check. It is disabled unless explicitly enabled.
 CONTEXTUAL_ENV_VAR = "AIRUNNER_CONTENT_SAFETY_CONTEXTUAL"
 CONTEXTUAL_TIMEOUT_SECONDS = 5.0
 
@@ -107,9 +99,8 @@ Judge = Callable[[dict[str, str]], "SemanticVerdict"]
 
 _judge: Optional[Judge] = None
 
-# S08 required-check evaluator. When unset, the required check falls back
-# to the approved :func:`set_judge` seam so the evaluator choice stays
-# behind one injection point; no model is ever wired in here.
+# Optional contextual evaluator. When unset, the check falls back to the
+# :func:`set_judge` seam; this module does not load or select a model.
 _evaluator: Optional[Judge] = None
 
 _executor_lock = threading.Lock()
@@ -157,25 +148,25 @@ def get_judge() -> Optional[Judge]:
 
 
 def set_evaluator(evaluator: Optional[Judge]) -> None:
-    """Register (or clear with ``None``) the required-check evaluator."""
+    """Register (or clear with ``None``) the contextual evaluator."""
     global _evaluator
     _evaluator = evaluator
 
 
 def get_evaluator() -> Optional[Judge]:
-    """Return the registered required-check evaluator, or ``None``."""
+    """Return the registered contextual evaluator, or ``None``."""
     return _evaluator
 
 
 def _resolve_evaluator() -> Optional[Judge]:
-    """Return the required-check evaluator, falling back to the judge seam."""
+    """Return the contextual evaluator, falling back to the judge seam."""
     if _evaluator is not None:
         return _evaluator
     return get_judge()
 
 
 def contextual_enabled() -> bool:
-    """Return ``True`` when the required contextual check is switched on."""
+    """Return ``True`` when contextual checking is switched on."""
     raw = os.environ.get(CONTEXTUAL_ENV_VAR)
     return isinstance(raw, str) and raw.strip().lower() in _TRUTHY
 
@@ -372,13 +363,13 @@ def evaluate_fields_semantic(fields: dict[str, str]) -> SemanticVerdict:
 def evaluate_fields_contextual(
     fields: dict[str, str],
 ) -> SemanticVerdict:
-    """Run the REQUIRED contextual check over a request's text fields.
+    """Run contextual checking over a request's text fields.
 
     Fail-closed: only an explicit evaluated allowed verdict allows. A
     missing evaluator, a timeout, an error, an unexpected return value,
     or an ambiguous outcome all deny. No field text is ever logged. The
     layer runs only when :func:`contextual_enabled` is true (OFF by
-    default; the S07 selection behind it is approved for #2252).
+    default).
     """
     if not contextual_enabled():
         return SemanticVerdict.allow(REASON_DISABLED, evaluated=False)

@@ -57,6 +57,7 @@ def policy_dir() -> Iterator[Path]:
 
 @pytest.fixture(autouse=True)
 def _clean_policy_cache(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
+    monkeypatch.setenv("AIRUNNER_CONTENT_POLICY_MODE", "enforce")
     monkeypatch.delenv(policy_data.POLICY_DATA_ENV_VAR, raising=False)
     policy_data.reset_cache()
     yield

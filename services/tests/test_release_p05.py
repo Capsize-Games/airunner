@@ -1,9 +1,7 @@
-"""Release regression tests for P05 policy packaging enforcement.
+"""Release regression tests for optional P05 policy packaging.
 
-Proves bundle assembly fails closed (exit 2, content-free, writes
-nothing) on an absent/empty/unsigned policy set, that the inspector
-rejects synthetic frozen payloads when asked, and that trust-store
-verification rejects data signed outside the release process.
+Proves default assembly needs no policy corpus, while explicitly
+requested signed-policy validation rejects absent or invalid data.
 
 Every token here is synthetic and neutral. Signing keys are
 throwaway Ed25519 keys generated at test time; no private key,
@@ -186,13 +184,15 @@ def test_gate_trust_store_accepts_release_key(tmp_path: Path) -> None:
     ) == []
 
 
-def test_assemble_main_fails_closed_on_checkout(tmp_path: Path) -> None:
-    """Real assembly from the checkout exits 2 and writes nothing."""
+def test_default_assembly_needs_no_policy_corpus(tmp_path: Path) -> None:
+    """Default dry-run resolves without provisioning policy data."""
     dist = tmp_path / "dist"
     work = tmp_path / "work"
     stderr = io.StringIO()
+    stdout = io.StringIO()
     with contextlib.redirect_stderr(stderr):
-        rc = assemble_mod.main(
+        with contextlib.redirect_stdout(stdout):
+            rc = assemble_mod.main(
             [
                 "--spec",
                 str(_SPEC_PATH),
@@ -202,12 +202,24 @@ def test_assemble_main_fails_closed_on_checkout(tmp_path: Path) -> None:
                 str(work),
                 "--base",
                 "testrev",
-            ]
-        )
-    assert rc == 2
+                "--dry-run",
+                ]
+            )
+    assert rc == 0
     assert not dist.exists()
     assert not work.exists()
-    assert "POLICY" in stderr.getvalue()
+    assert "content_safety/data" not in stdout.getvalue()
+
+
+def test_explicit_signed_policy_option_requires_trust_store(
+    tmp_path: Path,
+) -> None:
+    """Explicit validation fails closed without a trust store."""
+    stderr = io.StringIO()
+    with contextlib.redirect_stderr(stderr):
+        rc = assemble_mod.main(["--require-signed-policy", "--dry-run"])
+    assert rc == 2
+    assert "requires --policy-trust-store" in stderr.getvalue()
 
 
 def _write_frozen(

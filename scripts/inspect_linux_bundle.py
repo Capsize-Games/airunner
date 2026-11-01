@@ -391,6 +391,23 @@ def inspect_bundle(
     _append_manifest(bundle_dir, spec, result)
     _append_warn(result, spec, warn_file)
     _append_toc_sidecars(bundle_dir, spec, result, toc_paths, require_sidecars)
+    policy_files = [
+        bundle_dir / "_internal" / str(entry["dest"])
+        for entry in spec.get("data", [])
+        if entry.get("content_policy")
+    ]
+    has_policy_payload = any(
+        directory.exists()
+        and (
+            not directory.is_dir()
+            or any(directory.iterdir())
+        )
+        for directory in policy_files
+    )
+    if has_policy_payload and not require_signed_policy:
+        result.problems.append(
+            "content-policy payload requires explicit --require-signed-policy validation"
+        )
     if require_signed_policy:
         result.problems.extend(verify_policy_payload(bundle_dir, spec))
     return result

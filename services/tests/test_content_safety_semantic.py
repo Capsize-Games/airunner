@@ -65,6 +65,7 @@ def policy_dir() -> Iterator[Path]:
 @pytest.fixture(autouse=True)
 def _reset_state(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
     """Clear env switches, the injected judge, and the policy cache."""
+    monkeypatch.setenv("AIRUNNER_CONTENT_POLICY_MODE", "enforce")
     monkeypatch.delenv(semantic.SEMANTIC_ENV_VAR, raising=False)
     monkeypatch.delenv(policy_data.POLICY_DATA_ENV_VAR, raising=False)
     set_judge(None)

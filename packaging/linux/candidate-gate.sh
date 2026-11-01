@@ -10,11 +10,8 @@
 # or was never reported (missing or empty result) blocks promotion:
 # there is deliberately no `success || skipped` tolerance here.
 #
-# The required sets mirror pypi-dispatch.yml. On `release` the
-# trusted provisioning and sidecar jobs must have run; on
-# `workflow_dispatch` they skip by design (no secrets, no sidecar
-# fetch), so only the secret-free wiring check and the assembled
-# candidate itself are required. Non-required results are reported
+# The required sets mirror pypi-dispatch.yml. On `release` sidecar
+# fetching and candidate assembly must succeed. Non-required results are reported
 # and ignored. Dependency-free (bash + coreutils); sources
 # release-lib.sh for fail()/warn().
 # shellcheck shell=bash
@@ -35,12 +32,9 @@ usage() {
 required_jobs() { # $1=event; prints one required job per line
     case "$1" in
         release)
-            printf '%s\n' provision-policy \
-                provision-policy-fixture fetch-sidecars \
-                linux-candidate;;
+            printf '%s\n' fetch-sidecars linux-candidate;;
         workflow_dispatch)
-            printf '%s\n' provision-policy-fixture \
-                linux-candidate;;
+            printf '%s\n' linux-candidate;;
     esac
 }
 

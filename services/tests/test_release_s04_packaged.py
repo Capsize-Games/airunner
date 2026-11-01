@@ -67,6 +67,7 @@ def work_dir() -> Iterator[Path]:
 
 @pytest.fixture(autouse=True)
 def _clean_policy_cache(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
+    monkeypatch.setenv("AIRUNNER_CONTENT_POLICY_MODE", "enforce")
     monkeypatch.delenv(policy_data.POLICY_DATA_ENV_VAR, raising=False)
     monkeypatch.delenv(
         policy_data.PACKAGED_ENFORCE_ENV_VAR, raising=False
@@ -139,15 +140,29 @@ def test_packaged_mode_defaults_off(
     for value in ("1", "true", "YES", " on "):
         monkeypatch.setenv(policy_data.PACKAGED_ENFORCE_ENV_VAR, value)
         assert is_packaged_mode() is True
+    for value in ("0", "false", "NO", " off "):
+        monkeypatch.setenv(policy_data.PACKAGED_ENFORCE_ENV_VAR, value)
+        assert is_packaged_mode() is False
         monkeypatch.delenv(policy_data.PACKAGED_ENFORCE_ENV_VAR)
     assert is_packaged_mode() is False
 
 
-def test_packaged_mode_follows_frozen(
+@pytest.mark.parametrize("value", ["", "tru", "2"])
+def test_invalid_signed_policy_setting_is_rejected(
+    monkeypatch: pytest.MonkeyPatch, value: str
+) -> None:
+    monkeypatch.setenv(policy_data.PACKAGED_ENFORCE_ENV_VAR, value)
+    with pytest.raises(policy_data.SignedPolicyConfigurationError):
+        is_packaged_mode()
+
+
+def test_signed_policy_mode_is_not_automatic_for_frozen_runtime(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """A frozen bundle enforces even without the switch set."""
+    """Packaging does not require an application policy corpus by itself."""
     monkeypatch.setattr(sys, "frozen", True, raising=False)
+    assert is_packaged_mode() is False
+    monkeypatch.setenv(policy_data.PACKAGED_ENFORCE_ENV_VAR, "1")
     assert is_packaged_mode() is True
 
 

@@ -37,8 +37,9 @@ _ORIGINAL_COLOR = (40, 120, 200)
 
 
 @pytest.fixture(autouse=True)
-def _clean_evaluator():
+def _clean_evaluator(monkeypatch: pytest.MonkeyPatch):
     """Leave no registered evaluator behind for other tests."""
+    monkeypatch.setenv("AIRUNNER_CONTENT_POLICY_MODE", "enforce")
     image_verdict.set_evaluator(None)
     yield
     image_verdict.set_evaluator(None)

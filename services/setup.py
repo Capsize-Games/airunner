@@ -472,16 +472,18 @@ def build_services_setup_kwargs(*, package_source_dir: str) -> dict[str, object]
                 "assets/reference_speakers/*.wav",
             ],
             "airunner_services.bin": ["*.sh"],
-            "airunner_services.content_safety": [
-                "data/*.dat",
-                "data/*.dat.sig",
-                "data/policy_trust_store.json",
-            ],
             "airunner_services.database": [
                 "alembic.ini",
                 "alembic/*.py",
                 "alembic/*.mako",
                 "alembic/versions/*.py",
+            ],
+        },
+        "exclude_package_data": {
+            "airunner_services.content_safety": [
+                "data/*.dat",
+                "data/*.dat.sig",
+                "data/policy_trust_store.json",
             ],
         },
         "include_package_data": True,

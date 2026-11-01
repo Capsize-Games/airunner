@@ -18,8 +18,10 @@ interfaces, schema history and stored data during staged retirement; see
 
 The initial inventory contained 41 open GitHub issues.
 Issues #2083, #2185, #2198, #2199, #2132, #2135 and #2150 were retired as
-not planned because their target product changed. This does not establish
-acceptance, legal review, or release readiness.
+not planned because their target product changed. Issue #2123 was retired
+after the owner made application content policy optional and removed manual
+release gates. Optional-policy integration is tracked by SRV-22. These
+dispositions do not establish acceptance or release readiness.
 
 ## Current release decisions
 
@@ -43,12 +45,14 @@ separate work units. CI preflight deliberately fails while the lock or required
 sibling input reviews are pending; a skipped or unavailable check is not a pass.
 
 The service Kanban project tracks these inputs, companion retirement, eSpeak
-acceptance and CUDA wheel preparation as bounded follow-ups. The inherited
-signed content-policy mechanism has not been confirmed as a service requirement.
-Its existing code blocks packaged operation without provisioned data;
-that behavior is an implementation fact, not a verified owner requirement.
-Resolve its place in the service before treating provisioning or specialist
-content-policy acceptance as release prerequisites.
+acceptance and CUDA wheel preparation as bounded follow-ups. On 2026-11-01 the
+owner chose optional application content policy. It is disabled by default;
+consuming applications can select `AIRUNNER_CONTENT_POLICY_MODE=enforce`.
+Invalid mode values are configuration errors, and enabled policy retains its
+deny/unavailable behavior. Signed policy-data verification is a separate
+explicit option. Standard service artifacts require no private corpus, signing
+keys, semantic judge, or image evaluator. Authentication, URL restrictions,
+sandboxing, admission controls and artifact integrity remain service controls.
 
 The next candidate versions are services 6.1.9 and native launcher 6.1.4.
 The latest existing GitHub application tag is v6.1.8; older tags retained a
@@ -82,10 +86,13 @@ metadata, not published releases.
    capability, error and execution contracts from companion modules first.
    Preserve registered memory-tool compatibility and historical migrations
    until their callers and stored data have an explicit retirement path.
-6. Preserve existing checks while the content-policy requirement is reviewed.
-   Private policy contents, credentials, customer data and sensitive
-   evaluation evidence never enter public source, issues or artifacts.
-   Deterministic coverage cannot substitute for specialist efficacy review.
+6. Keep application content policy optional. Test the disabled default and
+   explicit enforcement separately; a configured denial or unavailable
+   evaluator must not silently become an allow. Preserve explicit signature
+   validation for applications that select it. Private policy contents,
+   credentials, customer data and sensitive evaluation evidence never enter
+   public source, issues or standard artifacts. Contract tests establish
+   integration behavior, not moderation efficacy.
 7. Builds consume reviewed dependencies and exact sibling/runtime pins.
    The tested source revision, artifact manifest and tag must agree. Build
    and verify candidates before promotion. GitHub publication is authorized
@@ -101,7 +108,7 @@ metadata, not published releases.
 | 3: Runtime and companion | Reconcile confirmed LLM/art/voice findings (#2405/#2406/#2407); characterize retained compatibility (#2147/#2149); retire duplicate cognitive policy in stages; diagnose CPU/CUDA scenario (#2242/#2416) | Focused security/lifecycle regressions; preserved data and compatibility; explicit caller inventory before deletion; no real-model parity claim from doubles |
 | 4: Distribution | Resolve unavailable TTS distribution (#2413); service dependency/version orchestration (#2200); apt release artifact (#2251); dependency refresh evidence (#2274); optional-ML gate (#2399); ops cleanup (#2410); isolated crash regression (#2276) | Supported profiles resolve; pinned reviewed inputs; artifact-level daemon checks; CI uses the same source/check list; excluded tests recorded |
 | 5: Code quality | Repair analyzer path and unavailable-tool handling; analyze all service/native modules; review dead imports and ranked complexity by subsystem | JSON reports with exact scope/exclusions; confirmed defects fixed; reviewed dispositions for residual advisory findings; focused tests/import checks |
-| 6: Service acceptance | Installation/restart/recovery (#2139), art API (#2122), voice API (#2148), embeddings/RAG (#2136), offline/auth (#2128), GPU handoffs (#2146), safety efficacy/publication (#2123) | Candidate/model/runtime hashes; exact commands and results on isolated targets; pending/skipped is never pass |
+| 6: Service acceptance | Installation/restart/recovery (#2139), art API (#2122), voice API (#2148), embeddings/RAG (#2136), offline/auth (#2128), GPU handoffs (#2146), optional-policy contracts (SRV-22) | Automated candidate/model/runtime checks with hashes and exact results on isolated targets; disabled-default and opt-in policy tests; pending/skipped is never pass |
 | 7: Release | Service tracker (#2237/#2238), candidate promotion (#2151) | Required CI green for exact source; clean artifacts and notices; immutable tag/release; downloaded bytes match manifest |
 
 Parallel Luna implementation uses disjoint file groups: API/runtime, data,
@@ -160,8 +167,11 @@ Release outputs include the service source commit, versions and lock
 digests, wheel/sdist/bundle or package manifests, required notices, exact
 check results and exclusions, and downloadable SHA-256 sums. A successful
 source test is insufficient for artifact startup or model quality.
-Unavailable distribution credentials, safety specialist review, or hardware
-capacity are explicit gates; no worker may invent their completion.
+Run the existing automated CI/CD flow through merge and release. Do not add
+human review, release approval, sign-off or manual verification gates.
+Unavailable credentials, external dependencies or hardware capacity are
+specific blockers; finish independent work and report the exact unfinished
+step without inventing completion.
 
 On 2026-11-01, the PyPI JSON API showed all published versions of
 `airunner-common`, `facehuggershield` and `airunner-tts-vendor` yanked with

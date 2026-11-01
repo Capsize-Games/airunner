@@ -17,20 +17,9 @@
 # are [exclusions], and model downloads remain explicit post-install
 # steps (R01 DL-01/DL-02, D01/D02).
 #
-# Production policy data is never required from a public checkout: the
-# content-safety signature entry below is required=false because signed
-# policy provisioning happens in trusted release CI (S06). Tests use a
-# synthetic policy fixture, never production policy bytes.
-#
-# Release packaging gate: scripts/assemble_linux_bundle.py refuses to
-# freeze (exit 2, content-free, writes nothing) unless every staged
-# policy .dat is present, strictly versioned, non-empty, and
-# accompanied by a well-formed detached signature. A public checkout
-# ships the empty set with no sidecar, so local assembly fails closed
-# by design; only the trusted release fragment passes. With
-# --policy-trust-store the gate additionally verifies each signature
-# against those release keys. scripts/inspect_linux_bundle.py offers
-# the same shape check for frozen trees via --require-signed-policy.
+# Content policy resources are optional application data. The standard
+# bundle omits them; an application that configures policy data must
+# explicitly request signed-policy validation during assembly and inspection.
 
 [bundle]
 # Frozen executable name inside the bundle root. Matches
@@ -219,7 +208,9 @@ collect_submodules = [
     "sklearn.externals.array_api_compat.numpy",
 ]
 # --collect-data: package data discovered by static import analysis.
-collect_data = ["airunner_services"]
+# Avoid implicit collection of optional content-policy files. Required
+# runtime data is listed explicitly in [[data]] below.
+collect_data = []
 # --copy-metadata: importlib.metadata lookups at runtime
 # (utils/application/get_version.py PACKAGE_NAMES). The "airunner" GUI
 # distribution is intentionally absent: get_version() falls through to
@@ -281,8 +272,8 @@ frozen_source_markers = [
 # preserved). stage "collect" becomes a PyInstaller --add-data entry;
 # stage "root" is copied beside the executable after the freeze (legal
 # notices must be visible at the bundle top level, not inside the
-# collected tree). required=false entries may match nothing: they are
-# release-CI-provisioned artifacts, never demanded from a checkout.
+# collected tree). required=false entries may match nothing; policy
+# payloads are included only when explicitly enabled by the assembler.
 [[data]]
 source = "services/src/airunner_services/database/alembic.ini"
 dest = "airunner_services/database"
@@ -312,22 +303,25 @@ required = true
 source = "services/src/airunner_services/content_safety/data/*.dat"
 dest = "airunner_services/content_safety/data"
 stage = "collect"
-required = true
-comment = "policy data file; the assembly gate requires the staged set to be the signed non-empty release set, never the shipped empty set; tests substitute a synthetic fixture"
+required = false
+content_policy = true
+comment = "optional policy data; standard service bundles do not include application policy"
 
 [[data]]
 source = "services/src/airunner_services/content_safety/data/*.dat.sig"
 dest = "airunner_services/content_safety/data"
 stage = "collect"
 required = false
-comment = "signed policy signature, provisioned in trusted CI (S06); required=false because a public checkout must assemble nothing shippable without the release fragment; the sidecar ships with the .dat (sdist, wheel, frozen bundle) so the exact staged bytes stay re-verifiable after the freeze"
+content_policy = true
+comment = "optional detached signature for explicitly configured signed policy data"
 
 [[data]]
 source = "services/src/airunner_services/content_safety/data/policy_trust_store.json"
 dest = "airunner_services/content_safety/data"
 stage = "collect"
-required = true
-comment = "packaged public-key trust resource; empty in a public checkout and release-staged with only the verified signer's public key"
+required = false
+content_policy = true
+comment = "optional trust resource for explicitly configured signed policy data"
 
 [[data]]
 source = "services/src/airunner_services/assets/reference_speakers/*.wav"

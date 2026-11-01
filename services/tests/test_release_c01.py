@@ -35,14 +35,13 @@ def test_candidate_assembles_verifies_and_uploads() -> None:
     """The candidate assembles, stages, verifies, and uploads."""
     jobs = c01._load_yaml(c01._DISPATCH)["jobs"]
     job = jobs["linux-candidate"]
-    assert set(job["needs"]) == {"provision-policy", "fetch-sidecars"}
+    assert set(job["needs"]) == {"fetch-sidecars"}
     text = c01._steps_text(job)
     for marker in (
         "scripts/assemble_linux_bundle.py",
         "packaging/linux/stage-sidecars.sh",
         "scripts/inspect_linux_bundle.py",
         "runtime-sidecars-linux.tar.gz",
-        "policy-bundle-fragment",
         "llama-server",
         "whisper-server",
         "upload-artifact",
@@ -120,11 +119,9 @@ def test_release_archives_verified_candidate_before_upload_and_promotion() -> No
 def test_promotion_checks_tag_source_and_existing_assets_before_side_effects() -> None:
     """Tag/version identity and collision checks precede protected actions."""
     jobs = c01._load_yaml(c01._DISPATCH)["jobs"]
-    provision_steps = jobs["provision-policy"]["steps"]
-    provision_names = [str(step.get("name", "")) for step in provision_steps]
-    assert provision_names.index("Verify promotion tag and source identity") < (
-        provision_names.index("Retrieve and stage signed policy artifact")
-    )
+    workflow_text = c01._steps_text(jobs["linux-candidate"])
+    assert "POLICY_ARTIFACT_URL" not in workflow_text
+    assert "POLICY_TRUST_STORE_JSON" not in workflow_text
 
     candidate_steps = jobs["linux-candidate"]["steps"]
     candidate_names = [str(step.get("name", "")) for step in candidate_steps]
@@ -300,10 +297,6 @@ def test_gate_dispatch_needs_green_candidate(
     proc = c01._run_gate(
         "--event",
         "workflow_dispatch",
-        "--check",
-        "provision-policy=skipped",
-        "--check",
-        "provision-policy-fixture=success",
         "--check",
         "fetch-sidecars=skipped",
         "--check",

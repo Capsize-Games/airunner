@@ -128,22 +128,44 @@ def test_sidecars_warn_by_default_fail_when_required(
     assert any("whisper-server" in p for p in strict.problems)
 
 
-def test_synthetic_policy_fixture_used(
+def test_default_bundle_omits_content_policy(
     tmp_path: Path,
     assemble_mod: types.ModuleType,
     spec: dict[str, Any],
 ) -> None:
-    """The fixture policy payload is synthetic, never production data."""
+    """Default bundles contain no content-policy payload."""
     bundle = make_bundle(tmp_path, spec, assemble_mod)
-    policy = (
+    policy_dir = (
         bundle
         / "_internal"
         / "airunner_services"
         / "content_safety"
         / "data"
-        / "probe.dat"
     )
-    assert policy.read_bytes() == SYNTHETIC_POLICY
+    assert not policy_dir.exists()
+
+
+def test_inspector_requires_opt_in_for_present_policy_payload(
+    tmp_path: Path,
+    assemble_mod: types.ModuleType,
+    inspect_mod: types.ModuleType,
+    spec: dict[str, Any],
+) -> None:
+    """Configured policy is never silently accepted by default inspection."""
+    bundle = make_bundle(tmp_path, spec, assemble_mod)
+    payload = (
+        bundle / "_internal" / "airunner_services" / "content_safety"
+        / "data"
+    )
+    payload.mkdir(parents=True)
+    (payload / "policy_terms.dat").write_bytes(SYNTHETIC_POLICY)
+    assemble_mod.write_manifest(bundle, spec, "testrev")
+    default = inspect_mod.inspect_bundle(bundle, spec)
+    assert any("requires explicit" in problem for problem in default.problems)
+    strict = inspect_mod.inspect_bundle(
+        bundle, spec, require_signed_policy=True
+    )
+    assert strict.problems
 
 
 def _run_cli(bundle: Path, cwd: Path, expect: int, needle: str) -> None:

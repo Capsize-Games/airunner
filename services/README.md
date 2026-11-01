@@ -23,6 +23,10 @@ This command uses the current package metadata; it cannot supply dependencies th
 
 The `airunner-headless` console command supervises a daemon and exposes its HTTP API. It binds to loopback by default. A non-loopback bind requires `AIRUNNER_API_KEY`; `--insecure-no-auth` disables that requirement and should not be used for a network-facing deployment.
 
+### Application content policy
+
+Application content moderation is disabled by default. Set `AIRUNNER_CONTENT_POLICY_MODE=enforce` before starting the service to enable the existing text and image policy integration. The accepted values are exactly `disabled` and `enforce`; if the variable is set to any other value, service startup rejects the configuration. With enforcement enabled, unavailable policy data or image evaluators continue to fail closed. Set `AIRUNNER_CONTENT_SAFETY_ENFORCE_SIGNED=1` when the deployment requires a signed bundled policy corpus and trust store; packaged execution alone does not require them. This signing setting accepts `1`, `true`, `yes`, or `on` as true and `0`, `false`, `no`, or `off` as false, ignoring case and surrounding whitespace; other values are rejected.
+
 For a container-based checkout, use the development compose file. It builds from the repository and mounts the local service and native source. For the published-image configuration, use the release compose file, which has no source bind mounts:
 
 ```bash

@@ -1,7 +1,7 @@
 """P05 data payload, code collection, and sidecar tests.
 
-Proves every spec data glob resolves, the policy signature stays
-release-provisioned, legal notices stage at the bundle root, the
+Proves every spec data glob resolves, optional policy resources are
+excluded from default collection, legal notices stage at bundle root, the
 freeze recipe covers all runtime-loaded code, and spec sidecars match
 the runtime settings. CPU-only.
 """
@@ -85,21 +85,22 @@ def test_data_sources_resolve_in_checkout(spec: dict[str, Any]) -> None:
         assert all(path.is_file() for path in matches)
 
 
-def test_policy_signature_is_release_provisioned(
+def test_policy_resources_are_explicitly_optional(
     spec: dict[str, Any],
 ) -> None:
-    """Public-checkout assembly must not demand production policy (S06)."""
-    sigs = [
+    """Applications opt into policy data; default assembly omits it."""
+    policy_entries = [
         entry
         for entry in spec.get("data", [])
-        if str(entry["source"]).endswith(".dat.sig")
+        if entry.get("content_policy")
     ]
-    assert len(sigs) == 1
-    assert sigs[0].get("required") is False
+    assert len(policy_entries) == 3
+    assert all(entry.get("required") is False for entry in policy_entries)
+    assert spec["code"].get("collect_data") == []
 
 
-def test_policy_trust_store_is_collected(spec: dict[str, Any]) -> None:
-    """The packaged key resource is a manifest-covered bundle resource."""
+def test_policy_trust_store_is_opt_in(spec: dict[str, Any]) -> None:
+    """The optional trust resource is available to configured applications."""
     entries = [
         entry for entry in spec.get("data", [])
         if entry.get("source") == (
@@ -108,7 +109,8 @@ def test_policy_trust_store_is_collected(spec: dict[str, Any]) -> None:
         )
     ]
     assert len(entries) == 1
-    assert entries[0].get("required") is True
+    assert entries[0].get("required") is False
+    assert entries[0].get("content_policy") is True
     assert entries[0].get("dest") == "airunner_services/content_safety/data"
 
 

@@ -93,8 +93,28 @@ def test_assemble_dry_run_prints_full_recipe(
     # Root-staged payloads (legal/) are copied post-freeze, never
     # passed as --add-data.
     assert "legal" not in proc.stdout
+    assert "content_safety/data" not in proc.stdout
+    assert "--collect-data airunner_services" not in proc.stdout
     assert not (tmp_path / "dist").exists()
     assert not (tmp_path / "work").exists()
+
+
+def test_content_policy_data_is_included_only_for_explicit_validation(
+    tmp_path: Path,
+    assemble_mod: types.ModuleType,
+    spec: dict[str, Any],
+) -> None:
+    """Opt-in strict builds collect configured policy resources."""
+    command = assemble_mod.build_command(
+        spec,
+        REPO_ROOT,
+        tmp_path / "entry.py",
+        tmp_path / "dist",
+        tmp_path / "work",
+        "pyinstaller",
+        include_content_policy=True,
+    )
+    assert any("content_safety/data/policy_terms.dat" in item for item in command)
 
 
 def test_assemble_dry_run_without_repo_pythonpath(

@@ -1,18 +1,17 @@
-"""Mandatory image-evaluator verdict seam (S09).
+"""Image-evaluator verdict seam for the optional content-policy mode.
 
-This module maps one batch of in-memory images to per-image release
-verdicts for the MANDATORY output-side evaluator. It is independent of
-the optional adult-content filter: there is no enable/disable switch
-here, and nothing in this module consults the optional setting.
+When ``AIRUNNER_CONTENT_POLICY_MODE=enforce``, this module maps one batch of
+in-memory images to per-image release verdicts for the configured output-side
+evaluator. In the default ``disabled`` mode, images pass through without
+calling an evaluator. The separate user-selected adult-content filter remains
+independent.
 
-Evaluator selection status (S07 #2094, approved for #2252); see
-:data:`EVALUATOR_SELECTION_STATUS`. The concrete evaluator stays behind
-the injected :data:`ImageEvaluator` seam; the approved Falconsai
-adapter (:mod:`airunner_services.content_safety.falconsai`) is
-registered on it, and the SD safety checker boolean path is
-superseded for the mandatory slot.
+The concrete evaluator stays behind the injected :data:`ImageEvaluator`
+seam. The Falconsai adapter (:mod:`airunner_services.content_safety.falconsai`)
+registers through that seam, and the SD safety-checker boolean path is not
+used by this policy integration.
 
-Fail-closed mapping (no unchecked fallback):
+Fail-closed mapping in ``enforce`` mode (no unchecked fallback):
 
 * missing evaluator -> every image withheld (``image_unavailable``)
 * evaluator raised -> every image withheld (``image_error``)
@@ -33,15 +32,15 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Any, Callable, Optional
 
+from .config import content_policy_is_enforced
+
 logger = logging.getLogger(__name__)
 
-# S07 selection is SELECTED (owner-approved for #2252): the approved
-# Falconsai adapter is registered behind the seam; the SD safety
-# checker boolean path is superseded for the mandatory slot.
+# The Falconsai adapter is registered behind this seam; the SD safety
+# checker boolean path is not used by this policy integration.
 EVALUATOR_SELECTION_STATUS = (
-    "SELECTED (S07 #2094, approved for #2252): Falconsai "
-    "nsfw_image_detection via the content_safety.falconsai adapter; "
-    "the SD safety checker boolean path is superseded here"
+    "OPTIONAL ADAPTER AVAILABLE: Falconsai registration helper; SD "
+    "safety-checker boolean path is not used by this policy integration."
 )
 
 # Generic, content-free reason codes. These never contain image data.
@@ -51,6 +50,7 @@ REASON_UNAVAILABLE = "image_unavailable"
 REASON_ERROR = "image_error"
 REASON_CARDINALITY = "image_cardinality"
 REASON_UNCERTAIN = "image_uncertain"
+REASON_DISABLED = "image_policy_disabled"
 
 # One evaluator call reviews a whole batch. Each returned item must be a
 # built-in bool (True = withhold, False = release) or None (uncertain,
@@ -125,16 +125,34 @@ def _withhold_all(count: int, reason: str) -> ImageBatchVerdict:
     )
 
 
+def _allow_all(count: int) -> ImageBatchVerdict:
+    """Return unevaluated allow verdicts while application policy is off."""
+    return ImageBatchVerdict(
+        verdicts=tuple(
+            ImageVerdict(
+                evaluated=False,
+                allowed=True,
+                reason=REASON_DISABLED,
+            )
+            for _ in range(count)
+        )
+    )
+
+
 def evaluate_image_batch(
     images: Sequence[Any],
     evaluator: Optional[ImageEvaluator],
 ) -> ImageBatchVerdict:
-    """Map one batch to per-image verdicts; unknown means withheld.
+    """Map one batch to per-image verdicts.
 
     ``images`` are passed to ``evaluator`` untouched and never logged.
-    Only counts and generic reason codes leave this function.
+    Only counts and generic reason codes leave this function. When application
+    policy is disabled, no evaluator is called and each image is allowed with
+    ``evaluated=False``. When enabled, unknown outcomes are withheld.
     """
     batch = list(images)
+    if not content_policy_is_enforced():
+        return _allow_all(len(batch))
     if evaluator is None:
         logger.warning(
             "Mandatory image evaluator unavailable; withholding batch "
@@ -193,10 +211,10 @@ def _map_outcome(outcome: Any) -> ImageVerdict:
 
 
 def evaluate_images(images: Sequence[Any]) -> ImageBatchVerdict:
-    """Evaluate ``images`` with the registered evaluator (fail closed).
+    """Evaluate ``images`` with the registered evaluator when enabled.
 
-    With no evaluator registered every image is withheld as unavailable;
-    the mandatory path has no pass-through mode.
+    With policy disabled the batch passes through uninspected. With policy
+    enabled and no evaluator registered every image is withheld as unavailable.
     """
     return evaluate_image_batch(images, get_evaluator())
 
@@ -205,6 +223,7 @@ __all__ = [
     "EVALUATOR_SELECTION_STATUS",
     "REASON_ALLOWED",
     "REASON_CARDINALITY",
+    "REASON_DISABLED",
     "REASON_ERROR",
     "REASON_FLAGGED",
     "REASON_UNAVAILABLE",

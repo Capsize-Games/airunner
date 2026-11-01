@@ -32,6 +32,9 @@ _REQUIRED_TESTS = (
     "services/tests/test_third_party_notices.py",
     "services/tests/test_llm_request_for_action_parity.py",
     "services/tests/test_content_safety_gate.py",
+    "services/tests/test_content_policy_mode.py",
+    "services/tests/test_optional_policy_streaming.py",
+    "services/tests/test_release_s04_packaged.py",
     "services/tests/test_download_security.py",
     "services/tests/test_security_package_pins.py",
     "services/tests/test_release_b02.py",
@@ -39,8 +42,6 @@ _REQUIRED_TESTS = (
     "services/tests/test_run_tests_optional_smoke.py",
 )
 _GATE_NEEDS = (
-    "provision-policy",
-    "provision-policy-fixture",
     "fetch-sidecars",
     "linux-candidate",
 )
