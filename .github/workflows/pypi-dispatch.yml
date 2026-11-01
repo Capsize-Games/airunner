@@ -514,4 +514,5 @@ jobs:
           files: |
             release-assets/python-dist/*
             release-assets/sidecars/*
-          overwrite_files: true
+          overwrite_files: false
+          fail_on_unmatched_files: true
