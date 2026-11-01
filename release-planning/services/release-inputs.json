@@ -22,7 +22,7 @@
     {
       "distribution": "airunner-common",
       "repository": "Capsize-Games/airunner-common",
-      "revision": "8f8274aab2c270cab7e0db9464db1811a175397a",
+      "revision": "733b0f4c8fb38952866e9cf7be2cc69793a46e92",
       "version": "6.1.8",
       "requirement": "~=6.1.8",
       "status": "pending",
