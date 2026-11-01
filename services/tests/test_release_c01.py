@@ -111,6 +111,46 @@ def test_release_archives_verified_candidate_before_upload_and_promotion() -> No
     assert "SHA256SUMS" in upload_release["with"]["files"]
 
 
+def test_promotion_checks_tag_source_and_existing_assets_before_side_effects() -> None:
+    """Tag/version identity and collision checks precede protected actions."""
+    jobs = c01._load_yaml(c01._DISPATCH)["jobs"]
+    provision_steps = jobs["provision-policy"]["steps"]
+    provision_names = [str(step.get("name", "")) for step in provision_steps]
+    assert provision_names.index("Verify promotion tag and source identity") < (
+        provision_names.index("Retrieve and stage signed policy artifact")
+    )
+
+    candidate_steps = jobs["linux-candidate"]["steps"]
+    candidate_names = [str(step.get("name", "")) for step in candidate_steps]
+    assert candidate_names.index("Verify promotion tag and source identity") < (
+        candidate_names.index("Install dependencies")
+    )
+    candidate_checkout = candidate_steps[0]["with"]
+    assert candidate_checkout["fetch-depth"] == 0
+
+    package_steps = jobs["build-python-package"]["steps"]
+    package_names = [str(step.get("name", "")) for step in package_steps]
+    assert package_names.index("Verify promotion tag and source identity") < (
+        package_names.index("Build packages")
+    )
+    assert package_names.index("Recheck promotion tag before PyPI upload") < (
+        package_names.index("Publish package")
+    )
+
+    release_steps = jobs["publish-release-assets"]["steps"]
+    release_names = [str(step.get("name", "")) for step in release_steps]
+    assert release_names.index(
+        "Preflight immutable release asset identities"
+    ) < release_names.index("Upload release assets")
+    preflight = next(
+        step for step in release_steps
+        if step.get("name") == "Preflight immutable release asset identities"
+    )
+    assert "GITHUB_TOKEN" in preflight["env"]
+    assert "--check-release-assets" in preflight["run"]
+    assert "--github-token" not in preflight["run"]
+
+
 def test_candidate_creation_publishes_nothing() -> None:
     """The candidate job has no publish step, secret, or environment."""
     jobs = c01._load_yaml(c01._DISPATCH)["jobs"]

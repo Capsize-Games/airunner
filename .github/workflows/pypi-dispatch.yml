@@ -50,7 +50,19 @@ jobs:
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           ref: ${{ github.sha }}
+          fetch-depth: 0
           persist-credentials: false
+
+      - name: Verify promotion tag and source identity
+        env:
+          PUBLISH_PYPI: "false"
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          python scripts/check_release_identity.py \
+            --event "$GITHUB_EVENT_NAME" \
+            --ref "$GITHUB_REF" \
+            --source-sha "$GITHUB_SHA" \
+            --publish-pypi "$PUBLISH_PYPI"
 
       - name: Set up Python
         uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
@@ -173,7 +185,19 @@ jobs:
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           ref: ${{ github.sha }}
+          fetch-depth: 0
           persist-credentials: false
+
+      - name: Verify promotion tag and source identity
+        env:
+          PUBLISH_PYPI: ${{ inputs.publish_pypi || false }}
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          python scripts/check_release_identity.py \
+            --event "$GITHUB_EVENT_NAME" \
+            --ref "$GITHUB_REF" \
+            --source-sha "$GITHUB_SHA" \
+            --publish-pypi "$PUBLISH_PYPI"
 
       - name: Require reviewed sibling release inputs
         run: >-
@@ -374,12 +398,26 @@ jobs:
       needs.provision-policy.result == 'success' ||
       needs.provision-policy.result == 'skipped')))
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
 
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           ref: ${{ github.sha }}
+          fetch-depth: 0
           persist-credentials: false
+
+      - name: Verify promotion tag and source identity
+        env:
+          PUBLISH_PYPI: ${{ inputs.publish_pypi || false }}
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          python scripts/check_release_identity.py \
+            --event "$GITHUB_EVENT_NAME" \
+            --ref "$GITHUB_REF" \
+            --source-sha "$GITHUB_SHA" \
+            --publish-pypi "$PUBLISH_PYPI"
 
       - name: Require reviewed sibling release inputs
         run: >-
@@ -448,6 +486,18 @@ jobs:
             --packages "$PUBLISH_PACKAGES" \
             --require-optional-boundary
 
+      - name: Recheck promotion tag before PyPI upload
+        if: github.event_name == 'workflow_dispatch' && inputs.publish_pypi == true
+        env:
+          PUBLISH_PYPI: "true"
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          python scripts/check_release_identity.py \
+            --event "$GITHUB_EVENT_NAME" \
+            --ref "$GITHUB_REF" \
+            --source-sha "$GITHUB_SHA" \
+            --publish-pypi "$PUBLISH_PYPI"
+
       - name: Upload Python distribution artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -510,6 +560,7 @@ jobs:
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           ref: ${{ github.sha }}
+          fetch-depth: 0
           persist-credentials: false
 
       - name: Download Python distribution artifacts
@@ -551,6 +602,25 @@ jobs:
           )
           python scripts/linux_candidate_artifact.py checksums \
             --output release-assets/SHA256SUMS "${ASSETS[@]}"
+
+      # Inspect the existing GitHub Release before uploading anything. This
+      # rejects a previous candidate archive for this version from another
+      # source SHA, and catches any filename collision before the upload action
+      # can partially attach the new set of assets.
+      - name: Preflight immutable release asset identities
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          python scripts/check_release_identity.py \
+            --event "$GITHUB_EVENT_NAME" \
+            --ref "$GITHUB_REF" \
+            --source-sha "$GITHUB_SHA" \
+            --check-release-assets \
+            --repository "$GITHUB_REPOSITORY" \
+            --asset-dir release-assets/python-dist \
+            --asset-dir release-assets/sidecars \
+            --asset-dir release-assets/linux-candidate \
+            --asset-file release-assets/SHA256SUMS
 
       - name: Upload release assets
         uses: softprops/action-gh-release@v2
