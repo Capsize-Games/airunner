@@ -43,9 +43,12 @@ separate work units. CI preflight deliberately fails while the lock or required
 sibling input reviews are pending; a skipped or unavailable check is not a pass.
 
 The service Kanban project tracks these inputs, companion retirement, eSpeak
-acceptance, CUDA wheel preparation and signed policy provisioning as bounded
-follow-ups. A production policy artifact, its packaged trust configuration and
-the applicable acceptance evidence are still required before promotion.
+acceptance and CUDA wheel preparation as bounded follow-ups. The inherited
+signed content-policy mechanism has not been confirmed as a service requirement.
+Its existing code blocks packaged operation without provisioned data;
+that behavior is an implementation fact, not a verified owner requirement.
+Resolve its place in the service before treating provisioning or specialist
+content-policy acceptance as release prerequisites.
 
 ## Service boundaries
 
@@ -72,7 +75,7 @@ the applicable acceptance evidence are still required before promotion.
    capability, error and execution contracts from companion modules first.
    Preserve registered memory-tool compatibility and historical migrations
    until their callers and stored data have an explicit retirement path.
-6. Safety checks remain fail closed across inputs and publication paths.
+6. Preserve existing checks while the content-policy requirement is reviewed.
    Private policy contents, credentials, customer data and sensitive
    evaluation evidence never enter public source, issues or artifacts.
    Deterministic coverage cannot substitute for specialist efficacy review.
