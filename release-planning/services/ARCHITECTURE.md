@@ -50,6 +50,13 @@ that behavior is an implementation fact, not a verified owner requirement.
 Resolve its place in the service before treating provisioning or specialist
 content-policy acceptance as release prerequisites.
 
+The next candidate versions are services 6.1.9 and native launcher 6.1.4.
+The latest existing GitHub application tag is v6.1.8; older tags retained a
+stale services version. New promotion checks require the annotated tag,
+services metadata, event commit and candidate source SHA to agree and reject
+existing asset-name collisions before upload. These versions are prepared
+metadata, not published releases.
+
 ## Service boundaries
 
 1. The transport layer authenticates all non-health HTTP requests and
@@ -164,9 +171,12 @@ resuming PyPI publication. Dependency availability must be resolved through
 reviewed release inputs rather than silently bypassing the owner's pause.
 
 The Linux candidate profile now uses `services[linux-release]`, which omits
-the OpenVoice/Melo `airunner-tts-vendor` dependency. Those backends and their
-historical opt-in extras remain deferred and quarantined. The previous
+the OpenVoice/Melo `airunner-tts-vendor` dependency and the unused default
+FacehuggerShield dependency. Explicit `legacy-shield` compatibility extras
+retain its pin without activating it. Common 6.1.8 also makes Shield optional;
+the exact common source revision and its dependencies still need release-input
+validation. These excluded components remain quarantined. The previous
 desktop-profile lock is retained as historical evidence only; a validated
 `linux-release` hash lock has not been generated. The release preflight blocks
-before dependency installation until that lock and the common/shield source
-reviews are complete.
+before dependency installation until that lock and the required common input
+review are complete.
