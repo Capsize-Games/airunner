@@ -25,8 +25,9 @@
       "revision": "733b0f4c8fb38952866e9cf7be2cc69793a46e92",
       "version": "6.1.8",
       "requirement": "~=6.1.8",
-      "status": "pending",
-      "activation": "quarantined",
+      "status": "reviewed",
+      "activation": "approved",
+      "review_record": "release-planning/services/input-reviews/airunner-common-6.1.8.md",
       "workflow_source_refs": {
         ".github/workflows/eval-tests.yml": 2
       }

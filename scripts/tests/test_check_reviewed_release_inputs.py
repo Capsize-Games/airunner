@@ -39,8 +39,6 @@ def test_quarantined_inputs_fail_closed_without_pin_errors() -> None:
     assert errors == [
         "pending-release-lock: linux-release hash lock generation and "
         "validation remain pending",
-        "pending-source-review: quarantined release inputs: "
-        "airunner-common",
     ]
 
 
@@ -147,7 +145,7 @@ def test_sibling_checkout_ref_must_match_manifest(tmp_path: Path) -> None:
         "airunner-common: workflow source refs do not match" in error
         for error in errors
     )
-    assert any(error.startswith("pending-source-review:") for error in errors)
+    assert not any(error.startswith("pending-source-review:") for error in errors)
 
 
 def test_manifest_cannot_omit_a_mandatory_distribution(tmp_path: Path) -> None:
@@ -307,6 +305,4 @@ def test_docker_release_preflight_reports_current_lock_and_source_blockers() -> 
     assert errors == [
         "pending-release-lock: linux-release hash lock generation and "
         "validation remain pending",
-        "pending-source-review: quarantined release inputs: "
-        "airunner-common",
     ]
