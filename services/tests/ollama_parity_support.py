@@ -19,6 +19,8 @@ from fastapi import FastAPI
 
 from airunner_common.contract_enums import ModelType
 from airunner_services.api.server import create_app
+from airunner_services.utils.job_tracker import JobState
+from airunner_services.utils.job_tracker import JobStatus
 
 CANNED_CHUNKS = ("Hello", " from", " AIRunner")
 CANNED_TEXT = "".join(CANNED_CHUNKS)
@@ -67,6 +69,41 @@ class FakeApp:
         """Ignore signal emissions during canned-client tests."""
 
 
+class FakeDownloadJobService:
+    """Controlled download-job states; never performs a network request."""
+
+    def __init__(self) -> None:
+        self.calls: list[dict[str, Any]] = []
+        self.default_states = [
+            JobState("fake-job", JobStatus.PENDING, progress=0.0),
+            JobState("fake-job", JobStatus.RUNNING, progress=35.0),
+            JobState("fake-job", JobStatus.COMPLETED, progress=100.0),
+        ]
+        self.states = self.default_states
+        self.next_states: list[JobState] | None = None
+        self._position = 0
+
+    async def start_huggingface_download(self, **kwargs: Any) -> str:
+        """Record the normalized target and start a deterministic fake job."""
+        self.calls.append(kwargs)
+        self.states = (
+            self.next_states
+            if self.next_states is not None
+            else self.default_states
+        )
+        self.next_states = None
+        self._position = 0
+        return "fake-job"
+
+    async def get_status(self, job_id: str) -> JobState | None:
+        """Return the next controlled status for the requested job."""
+        if job_id != "fake-job" or not self.states:
+            return None
+        position = min(self._position, len(self.states) - 1)
+        self._position += 1
+        return self.states[position]
+
+
 def free_loopback_port() -> int:
     """Return one currently-free loopback TCP port."""
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
@@ -77,11 +114,16 @@ def free_loopback_port() -> int:
 def served_app(port: int) -> uvicorn.Server:
     """Return a uvicorn server for the compat app on one port."""
     os.environ["AIRUNNER_INSECURE_NO_AUTH"] = "1"
+    # The parity suite makes several sequential pull requests against one
+    # process. Keep those deterministic integration cases independent of the
+    # production setup rate limit; admission behavior has its own tests.
+    os.environ["AIRUNNER_SETUP_REQUESTS_PER_MINUTE"] = "1000"
     app: FastAPI = create_app(
         allowed_origins=["http://localhost"],
         enable_cors=False,
         app_instance=FakeApp(),
     )
+    app.state.download_job_service = FakeDownloadJobService()
     config = uvicorn.Config(
         app,
         host="127.0.0.1",

@@ -35,8 +35,15 @@ def _client() -> TestClient:
     return TestClient(app)
 
 
-def test_ollama_metadata_endpoints() -> None:
+def test_ollama_metadata_endpoints(monkeypatch) -> None:
     """Ollama read-only metadata endpoints answer through FastAPI."""
+    from airunner_services.api.routes import legacy_ollama_compat
+
+    monkeypatch.setattr(
+        legacy_ollama_compat,
+        "configured_model_basename",
+        lambda: "qwen3.5-9b",
+    )
     client = _client()
 
     response = client.get("/api/version")
@@ -51,20 +58,26 @@ def test_ollama_metadata_endpoints() -> None:
     assert response.status_code == 200
     assert response.json() == {"models": []}
 
-    response = client.post("/api/show", json={"name": "airunner:latest"})
+    response = client.post("/api/show", json={"model": "qwen3.5-9b"})
     assert response.status_code == 200
-    assert "modelfile" in response.json()
+    assert response.json()["model_info"]["context_length"] == 262144
+    assert "license" not in response.json()
+    assert "details" not in response.json()
 
 
 def test_ollama_utility_endpoints() -> None:
     """Ollama utility endpoints answer through FastAPI."""
     client = _client()
 
-    # Model-management endpoints have no local implementation: they
-    # must report 501, never a fake success payload.
-    for path in ("/api/copy", "/api/pull", "/api/create"):
+    # Copy and model creation have no local implementation: they must
+    # report 501, never a fake success payload.
+    for path in ("/api/copy", "/api/create"):
         response = client.post(path, json={})
         assert response.status_code == 501
+
+    # Pull without a model is a request error and must not queue work.
+    response = client.post("/api/pull", json={})
+    assert response.status_code == 400
 
     # This smoke app has no configured local embedding provider. Neither
     # Ollama endpoint may report success with invented placeholder vectors.

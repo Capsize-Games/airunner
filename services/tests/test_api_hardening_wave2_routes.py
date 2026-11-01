@@ -15,8 +15,6 @@ from airunner_services.api.routes.legacy_ollama_compat import (
     _ollama_chat_request,
     ollama_copy,
     ollama_create,
-    ollama_embed,
-    ollama_pull,
 )
 from airunner_services.api.routes.ollama_embedding_helpers import (
     _embedding_inputs,
@@ -147,7 +145,7 @@ def test_ollama_embed_cap_and_model_mgmt_501() -> None:
     """Embed lists are capped; pull/copy/create report 501."""
     with pytest.raises(HTTPException):
         _embedding_inputs({"input": ["x"] * 65}, legacy=False)
-    for func in (ollama_pull, ollama_copy, ollama_create):
+    for func in (ollama_copy, ollama_create):
         with pytest.raises(HTTPException) as exc:
             func({})
         assert exc.value.status_code == 501

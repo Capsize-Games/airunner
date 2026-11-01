@@ -13,7 +13,7 @@ import os
 import threading
 import time
 import uuid
-from typing import Any, Callable, List, Optional
+from typing import Any, Callable, List
 
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import StreamingResponse
@@ -23,11 +23,17 @@ from airunner_common.settings import AIRUNNER_LOG_LEVEL
 from airunner_services.database.models.llm_generator_settings import (
     LLMGeneratorSettings,
 )
+from airunner_services.downloads.service import ProviderDownloadDisabled
 from airunner_services.llm.llm_request import LLMRequest
 from airunner_services.utils.application import get_logger
 
 from .legacy_llm_compat import ensure_llm_model_loaded
 from .ollama_embedding_helpers import handle_ollama_embedding
+from .ollama_model_helpers import ollama_show_metadata
+from .ollama_model_helpers import ollama_show_unknown_metadata
+from .ollama_model_helpers import resolve_ollama_model
+from .ollama_pull_helpers import stream_ollama_pull
+from .ollama_pull_helpers import wait_for_ollama_pull
 
 router = APIRouter()
 logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
@@ -148,64 +154,6 @@ def model_digest(model_name: str) -> str:
     return f"sha256:{digest.ljust(64, '0')}"
 
 
-def model_capabilities(name_lower: str) -> list[str]:
-    """Return the Ollama capabilities for a model name."""
-    capabilities = ["completion", "tools"]
-    if "-vl" in name_lower or "vl-" in name_lower or "vision" in name_lower:
-        capabilities.append("vision")
-    return capabilities
-
-
-def model_context_length(name_lower: str) -> int:
-    """Return the default context length for a model name."""
-    if "qwen3" not in name_lower:
-        return 4096
-    if any(token in name_lower for token in ["30b", "235b", "4b"]):
-        return 262144
-    return 40960
-
-
-def modelfile_text(model_name: str, context_length: int) -> str:
-    """Return the simplified Ollama modelfile text."""
-    return (
-        f"FROM {model_name}\n"
-        "PARAMETER temperature 0.7\n"
-        f"PARAMETER num_ctx {context_length}"
-    )
-
-
-def model_template() -> str:
-    """Return the placeholder Ollama chat template."""
-    return (
-        "{{ if .System }}<|im_start|>system\n{{ .System }}<|im_end|>\n"
-        "{{ end }}{{ if .Prompt }}<|im_start|>user\n{{ .Prompt }}"
-        "<|im_end|>\n{{ end }}<|im_start|>assistant\n{{ .Response }}"
-        "<|im_end|>"
-    )
-
-
-def parameter_count(parameter_size: str) -> int:
-    """Return the integer parameter count for a parameter-size string."""
-    cleaned = parameter_size.replace(".", "").replace("B", "")
-    if cleaned.isdigit():
-        return int(float(parameter_size.replace("B", "")) * 1e9)
-    return 8000000000
-
-
-def model_info(
-    metadata: dict[str, Any], context_length: int
-) -> dict[str, Any]:
-    """Return the Ollama show model_info payload."""
-    return {
-        "general.architecture": metadata["family"],
-        "general.file_type": 15,
-        "general.parameter_count": parameter_count(metadata["parameter_size"]),
-        "general.quantization_version": 2,
-        "tokenizer.ggml.model": "gpt2",
-        "context_length": context_length,
-    }
-
-
 def _created_at() -> str:
     """Return the formatted Ollama timestamp."""
     return time.strftime("%Y-%m-%dT%H:%M:%S.000000Z", time.gmtime())
@@ -286,19 +234,21 @@ def ollama_ps(req: Request) -> dict[str, Any]:
 @router.post("/api/show")
 def ollama_show(body: dict) -> dict[str, Any]:
     """Handle the Ollama /api/show endpoint."""
-    model_name = body.get("name", "airunner:latest")
-    metadata = metadata_from_name(model_name)
-    context_length = model_context_length(model_name.lower())
-    return {
-        "modelfile": modelfile_text(model_name, context_length),
-        "parameters": f"temperature 0.7\nnum_ctx {context_length}",
-        "template": model_template(),
-        "license": "Apache 2.0",
-        "modified_at": "2024-12-01T00:00:00.000000000Z",
-        "details": model_details(metadata),
-        "model_info": model_info(metadata, context_length),
-        "capabilities": model_capabilities(model_name.lower()),
-    }
+    model_name = body.get("model") or body.get("name")
+    if not isinstance(model_name, str) or not model_name.strip():
+        raise HTTPException(status_code=400, detail="model_required")
+
+    model = resolve_ollama_model(model_name)
+    if model is not None:
+        return ollama_show_metadata(model)
+
+    configured_name = configured_model_basename()
+    requested_base = model_name.strip()
+    if requested_base.casefold().endswith(":latest"):
+        requested_base = requested_base[: -len(":latest")]
+    if configured_name and requested_base.casefold() == configured_name.casefold():
+        return ollama_show_unknown_metadata()
+    raise HTTPException(status_code=404, detail="model_not_found")
 
 
 # ---------------------------------------------------------------------------
@@ -805,9 +755,52 @@ def ollama_embeddings(body: dict[str, Any], req: Request) -> dict[str, Any]:
 
 
 @router.post("/api/pull")
-def ollama_pull(body: dict):
-    """Reject model pulls: the daemon serves one local model only."""
-    raise HTTPException(status_code=501, detail="Not implemented")
+async def ollama_pull(body: dict[str, Any], req: Request):
+    """Pull one supported catalog model through the shared download service."""
+    model_name = body.get("model") or body.get("name")
+    if not isinstance(model_name, str) or not model_name.strip():
+        raise HTTPException(status_code=400, detail="model_required")
+    stream = body.get("stream", False)
+    if not isinstance(stream, bool):
+        raise HTTPException(status_code=400, detail="invalid_stream_value")
+
+    model = resolve_ollama_model(model_name)
+    if model is None:
+        raise HTTPException(status_code=404, detail="model_not_found")
+
+    from .downloads import get_download_job_service
+
+    service = get_download_job_service(req)
+    try:
+        job_id = await service.start_huggingface_download(
+            repo_id=model.repo_id,
+            model_type=model.download_type,
+            gguf_filename=model.gguf_filename,
+            prefer_pre_quantized=True,
+        )
+    except ProviderDownloadDisabled as exc:
+        raise HTTPException(
+            status_code=403,
+            detail="provider_download_disabled",
+        ) from exc
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=400,
+            detail="invalid_model_download_request",
+        ) from exc
+    except Exception as exc:
+        logger.exception("Could not start Ollama model pull")
+        raise HTTPException(
+            status_code=502,
+            detail="model_pull_unavailable",
+        ) from exc
+
+    if stream:
+        return StreamingResponse(
+            stream_ollama_pull(service, job_id, req),
+            media_type="application/x-ndjson",
+        )
+    return await wait_for_ollama_pull(service, job_id, req)
 
 
 @router.post("/api/copy")

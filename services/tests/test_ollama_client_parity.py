@@ -10,8 +10,10 @@ metadata parsing, and error mapping.
 
 from __future__ import annotations
 
+import json
 import threading
 from collections.abc import Iterator
+from unittest.mock import patch
 
 import ollama
 import pytest
@@ -21,19 +23,33 @@ from ollama_parity_support import SERVER_START_TIMEOUT_SECONDS
 from ollama_parity_support import free_loopback_port
 from ollama_parity_support import served_app
 from ollama_parity_support import wait_for_server
+from airunner_services.utils.job_tracker import JobState
+from airunner_services.utils.job_tracker import JobStatus
 
 
 @pytest.fixture(scope="module")
-def ollama_client() -> Iterator[ollama.Client]:
-    """Serve the compat app and yield a real client bound to it."""
+def ollama_server() -> Iterator[object]:
+    """Serve the compat app with only canned LLM and download jobs."""
     port = free_loopback_port()
-    server = served_app(port)
-    thread = threading.Thread(target=server.run, daemon=True)
-    thread.start()
-    wait_for_server(server)
-    yield ollama.Client(host=f"http://127.0.0.1:{port}")
-    server.should_exit = True
-    thread.join(timeout=SERVER_START_TIMEOUT_SECONDS)
+    with patch(
+        "airunner_services.api.routes.legacy_ollama_compat.configured_model_basename",
+        return_value="qwen3.5-9b",
+    ):
+        server = served_app(port)
+        thread = threading.Thread(target=server.run, daemon=True)
+        thread.start()
+        wait_for_server(server)
+        yield server
+        server.should_exit = True
+        thread.join(timeout=SERVER_START_TIMEOUT_SECONDS)
+
+
+@pytest.fixture(scope="module")
+def ollama_client(ollama_server) -> ollama.Client:
+    """Return the real Ollama client bound to the fake service server."""
+    return ollama.Client(
+        host=f"http://127.0.0.1:{ollama_server.config.port}"
+    )
 
 
 @pytest.fixture(scope="module")
@@ -56,15 +72,16 @@ def test_list_models_parses(ollama_client: ollama.Client) -> None:
 
 @pytest.mark.fast
 def test_show_model_parses(
-    ollama_client: ollama.Client, listed_model: str
+    ollama_client: ollama.Client,
 ) -> None:
-    """The real client parses our /api/show payload."""
-    shown = ollama_client.show(listed_model)
-    assert f"FROM {listed_model}" in (shown.modelfile or "")
-    assert "num_ctx" in (shown.parameters or "")
-    assert shown.template
+    """The real client parses only metadata present in the model catalog."""
+    shown = ollama_client.show("qwen3.5-9b")
+    assert shown.modelinfo == {"context_length": 262144}
     assert "completion" in (shown.capabilities or [])
-    assert shown.modelinfo is not None
+    assert "tools" in (shown.capabilities or [])
+    assert shown.license is None
+    assert shown.details is None
+    assert shown.modelfile is None
 
 
 @pytest.mark.fast
@@ -168,12 +185,202 @@ def test_generate_rejects_empty_prompt(
 
 @pytest.mark.fast
 def test_pull_stream_ends_in_success(
-    ollama_client: ollama.Client, listed_model: str
+    ollama_client: ollama.Client, ollama_server
 ) -> None:
-    """Streaming pull ends with a success status like real Ollama."""
+    """Streaming pull reflects fake job progress and ends on completion."""
     statuses = [
         chunk.status
-        for chunk in ollama_client.pull(listed_model, stream=True)
+        for chunk in ollama_client.pull("qwen3.5-9b", stream=True)
     ]
     assert len(statuses) > 1
     assert statuses[-1] == "success"
+    service = ollama_server.config.app.state.download_job_service
+    assert service.calls[-1] == {
+        "repo_id": "unsloth/Qwen3.5-9B-GGUF",
+        "model_type": "gguf",
+        "gguf_filename": "Qwen3.5-9B-Q8_0.gguf",
+        "prefer_pre_quantized": True,
+    }
+
+
+@pytest.mark.fast
+def test_pull_stream_includes_real_job_progress(
+    ollama_client: ollama.Client,
+) -> None:
+    """NDJSON carries progress from JobState without invented byte totals."""
+    response = ollama_client._client.post(
+        "/api/pull",
+        json={"model": "qwen3.5-9b", "stream": True},
+    )
+    assert response.status_code == 200
+    records = [json.loads(line) for line in response.text.splitlines()]
+    assert records[0] == {"status": "starting"}
+    assert {"status": "downloading", "progress": 35.0} in records
+    assert records[-1] == {"status": "success"}
+
+
+@pytest.mark.fast
+def test_pull_non_stream_waits_for_job_success(
+    ollama_client: ollama.Client,
+) -> None:
+    """Non-streaming pull returns success only after completion."""
+    result = ollama_client.pull("qwen3.5-9b", stream=False)
+    assert result.status == "success"
+
+
+@pytest.mark.fast
+def test_pull_requires_a_boolean_stream_flag(
+    ollama_client: ollama.Client, ollama_server
+) -> None:
+    """String values such as "false" are rejected without starting work."""
+    service = ollama_server.config.app.state.download_job_service
+    initial_calls = len(service.calls)
+    response = ollama_client._client.post(
+        "/api/pull",
+        json={"model": "qwen3.5-9b", "stream": "false"},
+    )
+    assert response.status_code == 400
+    assert len(service.calls) == initial_calls
+
+
+@pytest.mark.fast
+def test_show_unknown_model_is_not_found(
+    ollama_client: ollama.Client,
+) -> None:
+    with pytest.raises(ollama.ResponseError) as exc_info:
+        ollama_client.show("not-in-the-local-catalog")
+    assert exc_info.value.status_code == 404
+
+
+@pytest.mark.fast
+def test_show_configured_non_catalog_model_is_minimal(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Configured custom models show no invented catalog metadata."""
+    from airunner_services.api.routes import legacy_ollama_compat
+
+    monkeypatch.setattr(
+        legacy_ollama_compat,
+        "configured_model_basename",
+        lambda: "custom-local-model",
+    )
+    response = legacy_ollama_compat.ollama_show(
+        {"model": "custom-local-model:latest"}
+    )
+    assert response == {"model_info": {}, "capabilities": []}
+
+
+@pytest.mark.fast
+def test_pull_unknown_model_is_not_found(
+    ollama_client: ollama.Client,
+) -> None:
+    with pytest.raises(ollama.ResponseError) as exc_info:
+        ollama_client.pull("not-in-the-local-catalog", stream=False)
+    assert exc_info.value.status_code == 404
+
+
+@pytest.mark.fast
+def test_pull_stream_reports_job_failure(
+    ollama_client: ollama.Client, ollama_server
+) -> None:
+    """A failed fake job emits the Ollama stream error terminal record."""
+    service = ollama_server.config.app.state.download_job_service
+    service.next_states = [
+        JobState("fake-job", JobStatus.RUNNING, progress=10.0),
+        JobState("fake-job", JobStatus.FAILED, progress=10.0),
+    ]
+    with pytest.raises(ollama.ResponseError, match="Model pull failed"):
+        list(ollama_client.pull("qwen3.5-9b", stream=True))
+
+
+@pytest.mark.fast
+def test_pull_non_stream_reports_job_failure(
+    ollama_client: ollama.Client, ollama_server
+) -> None:
+    """A failed job cannot return non-stream success."""
+    service = ollama_server.config.app.state.download_job_service
+    service.next_states = [
+        JobState("fake-job", JobStatus.RUNNING, progress=12.0),
+        JobState("fake-job", JobStatus.FAILED, progress=12.0),
+    ]
+    with pytest.raises(ollama.ResponseError) as exc_info:
+        ollama_client.pull("qwen3.5-9b", stream=False)
+    assert exc_info.value.status_code == 502
+    assert service._position >= 2
+
+
+@pytest.mark.fast
+def test_pull_stream_timeout_is_an_error_terminal(
+    ollama_client: ollama.Client,
+    ollama_server,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from airunner_services.api.routes import ollama_pull_helpers
+    from airunner_services.utils.job_tracker import JobState
+    from airunner_services.utils.job_tracker import JobStatus
+
+    monkeypatch.setattr(
+        ollama_pull_helpers,
+        "pull_timeouts",
+        lambda: (0.006, 0.02, 0.001),
+    )
+    service = ollama_server.config.app.state.download_job_service
+    service.next_states = [
+        JobState("fake-job", JobStatus.RUNNING, progress=10.0)
+    ]
+    with pytest.raises(
+        ollama.ResponseError,
+        match="Model pull observation timed out",
+    ):
+        list(ollama_client.pull("qwen3.5-9b", stream=True))
+    assert service.states[-1].status is JobStatus.RUNNING
+
+
+@pytest.mark.fast
+def test_pull_nonstream_timeout_is_http_504(
+    ollama_client: ollama.Client,
+    ollama_server,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from airunner_services.api.routes import ollama_pull_helpers
+    from airunner_services.utils.job_tracker import JobState
+    from airunner_services.utils.job_tracker import JobStatus
+
+    monkeypatch.setattr(
+        ollama_pull_helpers,
+        "pull_timeouts",
+        lambda: (0.006, 0.02, 0.001),
+    )
+    service = ollama_server.config.app.state.download_job_service
+    service.next_states = [
+        JobState("fake-job", JobStatus.RUNNING, progress=10.0)
+    ]
+    with pytest.raises(ollama.ResponseError) as exc_info:
+        ollama_client.pull("qwen3.5-9b", stream=False)
+    assert exc_info.value.status_code == 504
+    assert service.states[-1].status is JobStatus.RUNNING
+
+
+@pytest.mark.fast
+def test_pull_respects_offline_provider_policy(
+    ollama_client: ollama.Client,
+    ollama_server,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The shared job service rejects pulls before creating a job offline."""
+    from airunner_common import settings as airunner_settings
+    from airunner_services.downloads.job_service import DownloadJobService
+
+    app = ollama_server.config.app
+    fake_service = app.state.download_job_service
+    real_service = DownloadJobService()
+    monkeypatch.setattr(app.state, "download_job_service", real_service)
+    monkeypatch.setattr(airunner_settings, "AIRUNNER_OFFLINE_MODE", True)
+    try:
+        with pytest.raises(ollama.ResponseError) as exc_info:
+            ollama_client.pull("qwen3.5-9b", stream=False)
+        assert exc_info.value.status_code == 403
+        assert "provider_download_disabled" in exc_info.value.error
+        assert real_service._tracker.get_all_jobs() == {}
+    finally:
+        app.state.download_job_service = fake_service
