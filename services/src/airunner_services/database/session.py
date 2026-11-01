@@ -11,9 +11,10 @@ import os
 import re
 import threading
 from contextlib import contextmanager
+from typing import Iterator
 
 from sqlalchemy import pool
-from sqlalchemy.orm import scoped_session, sessionmaker
+from sqlalchemy.orm import Session, scoped_session, sessionmaker
 
 from airunner_services.database.db.engine import create_configured_engine
 from airunner_common.settings import AIRUNNER_DB_URL as DEFAULT_AIRUNNER_DB_URL
@@ -228,7 +229,7 @@ def _get_session(tenant: str):
     return _sessions[tenant]
 
 
-def reset_engine():
+def reset_engine() -> None:
     """Reset engines and sessions so later calls recreate them."""
     global _engines, _sessions, _migrated_tenants
 
@@ -249,7 +250,7 @@ def reset_engine():
 
 
 @contextmanager
-def session_scope():
+def session_scope() -> Iterator[Session]:
     """Provide one transactional scope around a series of operations."""
     tenant = _tenant_key()
     Session = _get_session(tenant)

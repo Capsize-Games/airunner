@@ -265,8 +265,10 @@ def _repair_application_schema(
 
 
 def setup_database(
-    db_url: str | None = None, connect_args: dict | None = None
-):
+    db_url: str | None = None,
+    connect_args: dict | None = None,
+) -> None:
+    """Ensure the configured database schema and startup rows are ready."""
     target_db_url = db_url or _default_db_url()
     _ensure_sqlite_parent_dir(target_db_url)
 

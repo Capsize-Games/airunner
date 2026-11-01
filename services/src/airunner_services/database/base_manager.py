@@ -121,6 +121,16 @@ class RealBaseManager:
                 pass
         return query
 
+    @staticmethod
+    def _apply_ordering(
+        query: Query,
+        order_by: Optional[List[Any]],
+    ) -> Query:
+        """Apply caller-supplied SQL ordering to one list query."""
+        if order_by:
+            query = query.order_by(*order_by)
+        return query
+
     # ------------------------------------------------------------------
     # Query methods
     # ------------------------------------------------------------------
@@ -256,12 +266,19 @@ class RealBaseManager:
         eager_load: Optional[List[str]] = None,
         limit: Optional[int] = None,
         offset: Optional[int] = None,
+        order_clauses: Optional[List[Any]] = None,
     ) -> List[_T]:
-        """Return rows converted to dataclasses, with paging."""
+        """Return rows converted to dataclasses, with optional paging.
+
+        Omitting ``limit`` intentionally preserves the legacy full-read
+        behavior for internal consumers. Public HTTP list routes must provide
+        their own bounded default and maximum.
+        """
         with session_scope() as session:
             try:
                 query = session.query(self.cls)
                 query = self._apply_eager_load(query, eager_load)
+                query = self._apply_ordering(query, order_clauses)
                 query = self._apply_paging(query, limit, offset)
                 result = query.all()
                 session.expunge_all()
@@ -276,9 +293,10 @@ class RealBaseManager:
         eager_load: Optional[List[str]] = None,
         limit: Optional[int] = None,
         offset: Optional[int] = None,
+        order_clauses: Optional[List[Any]] = None,
         **kwargs,
     ) -> Optional[List[_T]]:
-        """Return rows matching simple equality filters, with paging."""
+        """Return equality matches; omitted limits preserve full internal reads."""
         if positional:
             raise TypeError(
                 "filter_by() takes no positional filters; "
@@ -288,6 +306,7 @@ class RealBaseManager:
             try:
                 query = session.query(self.cls).filter_by(**kwargs)
                 query = self._apply_eager_load(query, eager_load)
+                query = self._apply_ordering(query, order_clauses)
                 query = self._apply_paging(query, limit, offset)
                 result = query.all()
                 session.expunge_all()
@@ -321,12 +340,14 @@ class RealBaseManager:
         eager_load: Optional[List[str]] = None,
         limit: Optional[int] = None,
         offset: Optional[int] = None,
+        order_clauses: Optional[List[Any]] = None,
     ) -> Optional[List[_T]]:
-        """Return rows matching arbitrary filters, with paging."""
+        """Return arbitrary-filter matches with optional list controls."""
         with session_scope() as session:
             try:
                 query = session.query(self.cls).filter(*args)
                 query = self._apply_eager_load(query, eager_load)
+                query = self._apply_ordering(query, order_clauses)
                 query = self._apply_paging(query, limit, offset)
                 result = query.all()
                 session.expunge_all()

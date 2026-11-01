@@ -11,7 +11,7 @@ from typing import Sequence, Union
 from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.dialects import sqlite
-from airunner_services.database.db import safe_alter_column, add_table, drop_table
+from airunner_services.database.db import safe_alter_column, drop_table
 from airunner_services.database.models.llm_generator_settings import (
     LLMGeneratorSettings,
 )

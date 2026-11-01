@@ -8,10 +8,11 @@ boundaries (e.g. returned by the HTTP bridge).
 from __future__ import annotations
 
 from dataclasses import make_dataclass, field
+from typing import Any
 from sqlalchemy.inspection import inspect
 
 
-def model_to_dataclass(model_cls):
+def model_to_dataclass(model_cls: type[Any]) -> type[Any]:
     """Dynamically generate a dataclass for one SQLAlchemy model."""
     mapper = inspect(model_cls)
     dataclass_fields = [

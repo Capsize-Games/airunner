@@ -21,6 +21,7 @@ class QueryRequest(BaseModel):
     order_by: List[OrderClause] = Field(default_factory=list)
     eager_load: List[str] = Field(default_factory=list)
     limit: Optional[int] = None
+    offset: int = 0
 
 
 class MutationRequest(BaseModel):
