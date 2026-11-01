@@ -23,6 +23,49 @@ needed for ordinary model execution.
 | Durable jobs and inference adapters | Retain existing contracts during caller analysis. Model execution, cancellation, resource arbitration and truthful terminal results remain service responsibilities. |
 | Mood, curiosity, prompt composition and memory policy | Retire the duplicate service implementation in bounded slices after caller and data checks. Do not add new production cognition integration here. |
 
+## Stored data inventory
+
+The schema includes `companion_sessions`, `companion_turns`,
+`companion_facts`, `companion_narratives`, `companion_jobs`, and
+`companion_migration_ledger`. ORM definitions are in
+`services/src/airunner_services/database/models/companion_*.py`; the ledger
+table definition is in
+`services/src/airunner_services/llm/companion/migration_ledger.py`. Historical
+Alembic revisions `910441db1456`, `eb1b28d1b87f`, and `3beaa16d79c8` create the
+first five tables. Revision `d951d2fd378d` imports
+`MIGRATION_LEDGER_TABLE` and `MIGRATION_METADATA` from the ledger module, so
+that module remains part of migration replay until the historical import is
+decoupled without changing the revision's behavior.
+
+The private repository source scan records 15 import entries across
+`services/src/airunner_services/llm/tools/companion_memory_compat.py`,
+`services/src/airunner_services/llm/tools/companion_memory_tools.py`, and the
+historical ledger migration. The two tool modules contain current in-repository
+memory-tool and compatibility-adapter callers. This scan does not observe
+external applications or databases; it does not establish that external
+consumers are absent or that stored data is unused.
+
+[`scripts/inventory_companion_store.py`](../../scripts/inventory_companion_store.py)
+can report expected-table row counts, aggregate known job and migration-ledger
+statuses (with an `unknown` bucket), and one validated Alembic revision. It
+uses the stored job statuses `queued`, `leased`, `succeeded`, `failed`, and
+`cancelled`, and ledger statuses `migrated`, `failed`, `needs_resolution`, and
+`resolved`; other or null values contribute only to `unknown`.
+It requires an explicit existing SQLite file, opens it with `mode=ro` and
+`query_only`, rejects a symbolic-link file path, and enforces a finite query
+deadline. It does not load service models, inspect table contents, return
+identities or payloads, migrate, export, or delete data. An absent expected
+table is reported with a `null` count; an existing empty table has a count of
+zero. The command has no default database path:
+
+```sh
+python scripts/inventory_companion_store.py --database /path/to/existing.sqlite
+```
+
+No operational database was inspected for this change. Actual occupancy,
+retention requirements, external consumers, and data ownership remain
+unresolved until an explicitly authorized inventory and owner review.
+
 ## Retirement phases
 
 1. **Separate generic runtime contracts.** Keep compatibility aliases and prove
