@@ -70,7 +70,7 @@
 # first-index strategy cannot resolve this profile because the cu129
 # index shadows several PyPI packages at older versions.
 #
-# Generated 2026-10-08 with uv 0.12.3 for CPython 3.13.5 on Linux
+# Original profile generated 2026-10-08 with uv 0.12.3 for CPython 3.13.5 on Linux
 # x86_64, from worktree commit 742a686c2 plus the uncommitted P02
 # profile changes (services `desktop` aggregate, declared starlette;
 # the root GUI/`nvidia` extra is removed with the Qt desktop).

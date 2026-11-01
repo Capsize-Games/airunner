@@ -12,10 +12,10 @@ repository (issue #2195,
 https://github.com/Capsize-Games/airunner-tts-vendor); see that
 repository's ``tests/test_g2p_cache_security.py``.
 
-CI note (issue #2054 / security-coverage): the source-scan and pure-Python
-assertions below run in the lean ``[development]`` install used by
-``Hybrid Runtime CI``. Only the genuinely torch-dependent assertions are
-guarded by a scoped ``importorskip`` (see ``_TorchOnlyTests``).
+CI note (issue #2054 / security-coverage): ``Hybrid Runtime CI`` installs
+the pinned CPU runtime imports needed by the security-gate tests, without
+installing the CUDA release profile or downloading model weights. The
+torch-dependent source-scan assertions still skip when torch is unavailable.
 """
 
 from __future__ import annotations
@@ -356,7 +356,7 @@ _TORCH_LOAD_FILES = [
 
 
 class TestTorchOnlySourceScans:
-    """Assertions that require torch (skipped in the lean CI install)."""
+    """Assertions that require torch (skipped when torch is unavailable)."""
 
     def test_all_torch_load_calls_use_weights_only(self) -> None:
         """Every torch.load call site passes weights_only=True."""
