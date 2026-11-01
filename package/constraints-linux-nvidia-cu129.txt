@@ -49,6 +49,11 @@
 #   <82 build-system pin (issue #2057) governs only the ephemeral
 #   isolated build environments, not this runtime set.
 #
+# Amendment 2026-11-01: seeded (lock-preserving) regeneration for
+# fastapi 0.141.1 / starlette 1.6.0. Pin set is now 332: fastapi,
+# starlette and pyopenssl moved; 20 stale pins dropped. The
+# 2026-10-08 verification above describes the previous 352-pin set.
+#
 # Regeneration (from the repository root; needs network and uv):
 #   uv pip compile --python <a CPython 3.13 interpreter> \
 #     --generate-hashes --emit-index-url --emit-index-annotation \
@@ -257,7 +262,6 @@ airunner-common==6.1.7 \
     --hash=sha256:a7d975b72fb0059b3ec466cc793c894f31eb35dbb4345d7592ddf3f4d1cef970 \
     --hash=sha256:b178a1bb190d91078f9b86bd1d7c93795de7f6c4b676e9ddf179c14b1f58e372
     # via
-    #   airunner
     #   airunner-native
     #   airunner-services
     # from https://pypi.org/simple
@@ -274,7 +278,9 @@ alembic==1.13.2 \
 annotated-doc==0.0.5 \
     --hash=sha256:117bac03a25ede5df5440e855b32d556049ca169ead221505badf432fed4b101 \
     --hash=sha256:c7e58ce09192557605d8bbd92836d7e1d520ac9580096042c0bfd197efacf1bb
-    # via typer
+    # via
+    #   fastapi
+    #   typer
     # from https://pypi.org/simple
 annotated-types==0.8.0 \
     --hash=sha256:13b2beaad985e05e2d6407ee4c4f35590b11f8d693a258a561055cac8f64cab7 \
@@ -290,6 +296,7 @@ anyio==4.15.1 \
     --hash=sha256:6152fdbbf9a77fdec97731721bebf7c4c44f7c29b424b0065826173efc7ed101 \
     --hash=sha256:9f28306018cbd6d329e64a36d58256edff76dd996fe423bc957326e578b82a94
     # via
+    #   airunner-services
     #   httpx
     #   httpx2
     #   jupyter-server
@@ -477,8 +484,8 @@ cattrs==26.2.1 \
 certifi==2026.10.23 \
     --hash=sha256:a9895e6e2758b371e0545e321a3a8fd1fcfd9829ada8824a936dfb16aaaf36cd \
     --hash=sha256:e9b54de76e530bb6cf0ccd036787103acb58fd42ba930ea8bf948ddbaa2f61d1
-    # from https://pypi.org/simple
     # via
+    #   airunner-services
     #   httpcore
     #   httpx
     #   llama-cloud
@@ -853,11 +860,6 @@ constantly==23.10.4 \
     --hash=sha256:aa92b70a33e2ac0bb33cd745eb61776594dc48764b06c35e0efd050b7f1c7cbd
     # via twisted
     # from https://pypi.org/simple
-controlnet-aux==0.0.10 \
-    --hash=sha256:31dc265a54448bdcee033a130b47423c80587fa35ccac752113af1b4d48f5183 \
-    --hash=sha256:cad3480d62c7df1ae569258a659c88d730873323d2adbb9f6f7aebd87917df3b
-    # via airunner-services
-    # from https://pypi.org/simple
 courlan==1.4.0 \
     --hash=sha256:ad1dbdefd912ca7238d4607dc855df5df097f56bac175dd662c84eed3802f49e \
     --hash=sha256:fbbac7b7fcde2195ea08e707609503c81cf39c891e8d26cdb1fed4585782d63d
@@ -1075,11 +1077,6 @@ ebooklib==0.19 \
     --hash=sha256:a790e280e1d5ef105e350e34cc88b83c9c987fa6bab8a63a7543410c313cfa31
     # via airunner-services
     # from https://pypi.org/simple
-einops==0.8.2 \
-    --hash=sha256:54058201ac7087911181bfec4af6091bb59380360f069276601256a76af08193 \
-    --hash=sha256:609da665570e5e265e27283aab09e7f279ade90c4f01bcfca111f3d3e13f2827
-    # via controlnet-aux
-    # from https://pypi.org/simple
 eng-to-ipa==0.0.2 \
     --hash=sha256:0e4fac8370b0ffeaf696193e971b3ff9bd3762e4d153c6d0d280147887e008b1
     # via airunner-tts-vendor
@@ -1093,14 +1090,13 @@ facehuggershield==1.0.0 \
     --hash=sha256:be4b4203550ae369f7c8ca4e697b9bc9fbc4ac054f87a55afb399c41af3d8248 \
     --hash=sha256:e83cf71cf6ebae2a500a2325e5402a8aac672d340b694276b6d7ae0534a918dd
     # via
-    #   airunner
     #   airunner-common
     #   airunner-native
     #   airunner-services
     # from https://pypi.org/simple
-fastapi==0.115.0 \
-    --hash=sha256:17ea427674467486e997206a5ab25760f6b09e069f099b96f5b55a32fb6f1631 \
-    --hash=sha256:f93b4ca3529a8ebc6fc3fcf710e5efa8de3df9b41570958abf1d97d843138004
+fastapi==0.141.1 \
+    --hash=sha256:bfb91aa2d334c61cb35ba9a116fc123b3d3df31640b801cf57a7a78ec3f603b3 \
+    --hash=sha256:e8822fc40db1e1858054d7a949a888695bc9bdce70139178e33bd2871a453ca1
     # via airunner-services
     # from https://pypi.org/simple
 fastjsonschema==2.22.2 \
@@ -1112,13 +1108,12 @@ filelock==4.0.12 \
     --hash=sha256:5f17ee83ecee8a6f3e389c75822fb70a1c2f0506b99438a6dffa1d56793588c8 \
     --hash=sha256:cf42711a7ac791818b299fab0332a088c65aeeefa36290de98db92c434303b0c
     # via
-    #   controlnet-aux
     #   datasets
     #   diffusers
     #   huggingface-hub
     #   tldextract
     #   torch
-    # from https://pypi.org/simple
+    # from https://download.pytorch.org/whl/cu129
 flatbuffers==25.9.23 \
     --hash=sha256:255538574d6cb6d0a79a17ec8bc0d30985913b87513a01cce8bcdb6b4c44d0e2 \
     --hash=sha256:676f9fa62750bb50cf531b42a0a2a118ad8f7f797a511eda12881c016f093b12
@@ -1546,7 +1541,6 @@ huggingface-hub==1.33.0 \
     # via
     #   accelerate
     #   airunner-services
-    #   controlnet-aux
     #   datasets
     #   diffusers
     #   langchain-huggingface
@@ -1576,17 +1570,10 @@ idna==3.20 \
     #   url-normalize
     #   yarl
     # from https://pypi.org/simple
-imageio==2.38.1 \
-    --hash=sha256:36d23eb7423d2fb63f637098758edb3d2df3687f7125e0a5ce8596572022dcf9 \
-    --hash=sha256:6769f1f01c4dd46448307863a787c9a22fa4dbe11c0c88f525c6e410fdfd7983
-    # via scikit-image
-    # from https://pypi.org/simple
 importlib-metadata==9.0.1 \
     --hash=sha256:ab830580bc0ef3db61ce8fae716389e5462b67e033018bab6d8f80ef17172f99 \
     --hash=sha256:bba5600596a7e21f3eef53281cf28d6a5195634d2f2b78ff9501a3272c6eaab0
-    # via
-    #   controlnet-aux
-    #   diffusers
+    # via diffusers
     # from https://pypi.org/simple
 incremental==24.11.0 \
     --hash=sha256:87d3480dbb083c1d736222511a8cf380012a8176c2456d01ef483242abbbcf8c \
@@ -1650,7 +1637,6 @@ jieba==0.42.1 \
 jinja2==3.1.6 \
     --hash=sha256:85ece4451f492d0c13c5dd7c13a64681a86afae63a5f347908daf103ce6d2f67
     # via
-    #   airunner
     #   airunner-services
     #   jupyter-server
     #   jupyterlab
@@ -1917,9 +1903,7 @@ lark==1.3.1 \
 lazy-loader==0.6 \
     --hash=sha256:2f4b7824d6401958639008a0cae20c776b61dff619accd6890693e2de8260167 \
     --hash=sha256:77253be3391b06124a0e16105bd663b6c54470af1a9ca8e1cf026f38d58ed056
-    # via
-    #   librosa
-    #   scikit-image
+    # via librosa
     # from https://pypi.org/simple
 librosa==0.11.0 \
     --hash=sha256:0b6415c4fd68bff4c29288abe67c6d80b587e0e1e2cfb0aad23e4559504a7fa1 \
@@ -2267,9 +2251,7 @@ mako==1.4.3 \
 markdown==3.8.1 \
     --hash=sha256:46cc0c0f1e5211ab2e9d453582f0b28a1bfaf058a9f7d5c50386b99b588d8811 \
     --hash=sha256:a2e2f01cead4828ee74ecca9623045f62216aef2212a7685d6eb9163f590b8c1
-    # via
-    #   airunner
-    #   airunner-services
+    # via airunner-services
     # from https://pypi.org/simple
 markdown-it-py==4.2.0 \
     --hash=sha256:04a21681d6fbb623de53f6f364d352309d4094dd4194040a10fd51833e418d49 \
@@ -2464,10 +2446,6 @@ more-itertools==11.1.0 \
     --hash=sha256:48e8f4d9e7e5878571ecf6f2b4e57634f93cd474cc8cfbd2376f2d11b396e30d \
     --hash=sha256:4b65538ae22f6fed0ce4874efd317463a7489796a0939fa66824dd542125a192
     # via inflect
-    # from https://pypi.org/simple
-mouseinfo==0.1.3 \
-    --hash=sha256:2c62fb8885062b8e520a3cce0a297c657adcc08c60952eb05bc8256ef6f7f6e7
-    # via pyautogui
     # from https://pypi.org/simple
 mpmath==1.3.0 \
     --hash=sha256:7a28eb2a9774d00c7bc92411c19a89209d5da7c4c9a9e227be8330a23a25b91f \
@@ -2793,7 +2771,6 @@ networkx==3.4.2 \
     # via
     #   airunner-tts-vendor
     #   gruut
-    #   scikit-image
     #   torch
     # from https://download.pytorch.org/whl/cu129
 nltk==3.10.3 \
@@ -2919,34 +2896,28 @@ numpy==2.2.5 \
     --hash=sha256:f5045039100ed58fa817a6227a356240ea1b9a1bc141018864c306c1a16d4175
     # via
     #   accelerate
-    #   airunner
     #   airunner-services
     #   airunner-tts-vendor
     #   bitsandbytes
-    #   controlnet-aux
     #   datasets
     #   diffusers
     #   g2p-en
     #   gguf
     #   gruut
-    #   imageio
     #   langid
     #   librosa
     #   llama-cpp-python
     #   mistral-common
     #   numba
-    #   opencv-python-headless
     #   optimum
     #   pandas
     #   rank-bm25
     #   resampy
-    #   scikit-image
     #   scikit-learn
     #   scipy
     #   sentence-transformers
     #   soundfile
     #   soxr
-    #   tifffile
     #   torchvision
     #   transformers
     # from https://download.pytorch.org/whl/cu129
@@ -3052,18 +3023,6 @@ ollama==0.6.3 \
     --hash=sha256:41fc49a8095c4a75939c4c1f8582e4d0671692fb6eac2a5a7ede8c9872b67096 \
     --hash=sha256:6a20bc42c1a5f889295d7ec490d35e5132fc31f339561530f43a8abd4dbfe508
     # via langchain-ollama
-    # from https://pypi.org/simple
-opencv-python-headless==5.0.0.93 \
-    --hash=sha256:030ca5e0837a2963ab36ef896baa9767eb8d2b83353fb28af5a521e40dd8756f \
-    --hash=sha256:09a872a157c1376ab922a69bbf22f9a95bcc7b658a9d8b436a60212b02b2eeb4 \
-    --hash=sha256:10818d91510e05c04568ae12b5cd120779c70c01bf897b001a6221fe430df80f \
-    --hash=sha256:1e55af3abfb462eeeabe5c775f12bdb36216d8a93a3583d69e6bd6e1d6ba7d00 \
-    --hash=sha256:829717b6a95554f273e49e357cee3b3a2a26b6f4842fbc1bed2b45bdd8f87e0e \
-    --hash=sha256:840bd717c21e5c11cadadc022a823315ea417f961213d06b4df010e019eb16f4 \
-    --hash=sha256:b82f9831daab90b725c7c1ee1b36cb5732c367096ac76d119e64e14eb70d5f3c \
-    --hash=sha256:c6bcd96b185975ea240d22cfdb15a1f6d080cc95264cfbe2621f21bb144d89b9 \
-    --hash=sha256:ed709fdf9aa0bd1f2ed8549e71d19449b03a675bb581eb292285f6861953be37
-    # via controlnet-aux
     # from https://pypi.org/simple
 openmeteo-requests==1.4.0 \
     --hash=sha256:05514b2795b03dd2b1964cb98136bf793702eb39dbaa2fc9a61cab58c808312d \
@@ -3224,7 +3183,6 @@ packaging==26.3 \
     #   nbconvert
     #   optimum
     #   pooch
-    #   scikit-image
     #   scrapy
     #   transformers
     # from https://pypi.org/simple
@@ -3397,15 +3355,10 @@ pillow==13.0.0 \
     --hash=sha256:fc481f742ccda20e9ed760b8f978dff50f2a4e9bc253ac167fb0a05b0783ef52 \
     --hash=sha256:ff3fe9eb621fbb9db4c4be33ab946f6bac5f98ab50ca8d3260503653656c961b \
     --hash=sha256:ffea6b2986a797c84b6d1d27d4f43e0b83c73fc16281a930891cd237cf0d08fe
-    # from https://pypi.org/simple
     # via
-    #   airunner
     #   airunner-services
-    #   controlnet-aux
     #   diffusers
-    #   imageio
     #   mistral-common
-    #   scikit-image
     #   torchvision
     # from https://download.pytorch.org/whl/cu129
 platformdirs==4.12.4 \
@@ -3661,7 +3614,6 @@ psutil==7.2.2 \
     --hash=sha256:fd04ef36b4a6d599bbdb225dd1d3f51e00105f6d48a28f006da7f9822f2606d8
     # via
     #   accelerate
-    #   airunner
     #   airunner-services
     #   ipython
     # from https://pypi.org/simple
@@ -3736,10 +3688,6 @@ pyasn1-modules==0.4.2 \
     # via
     #   google-auth
     #   service-identity
-    # from https://pypi.org/simple
-pyautogui==0.9.54 \
-    --hash=sha256:dd1d29e8fd118941cb193f74df57e5c6ff8e9253b99c7b04f39cfc69f3ae04b2
-    # via airunner-services
     # from https://pypi.org/simple
 pycountry==24.6.1 \
     --hash=sha256:b61b3faccea67f87d10c1f2b0fc0be714409e8fcdcc1315613174f6466c10221 \
@@ -3923,31 +3871,19 @@ pydub==0.25.1 \
     --hash=sha256:980a33ce9949cab2a569606b65674d748ecbca4f0796887fd6f46173a7b0d30f
     # via airunner-tts-vendor
     # from https://pypi.org/simple
-pygetwindow==0.0.9 \
-    --hash=sha256:17894355e7d2b305cd832d717708384017c1698a90ce24f6f7fbf0242dd0a688
-    # via
-    #   airunner-services
-    #   pyautogui
-    # from https://pypi.org/simple
 pygments==2.21.0 \
     --hash=sha256:2363c69b61c4a97c838da3b130dcd6468f4848992b21a82f2a63ec34377137d9 \
     --hash=sha256:610ca751c9bc2492b38eb9a38a7fbc93edbbb2d7182edaf34e66ae493dee5c8c
     # via
-    #   airunner
     #   airunner-services
     #   ipython
     #   ipython-pygments-lexers
     #   nbconvert
     #   rich
     # from https://pypi.org/simple
-pymsgbox==2.0.1 \
-    --hash=sha256:5de8ec19bca2ca7e6c09d39c817c83f17c75cee80275235f43a9931db699f73b \
-    --hash=sha256:98d055c49a511dcc10fa08c3043e7102d468f5e4b3a83c6d3c61df722c7d798d
-    # via pyautogui
-    # from https://pypi.org/simple
-pyopenssl==26.2.0 \
-    --hash=sha256:4f9d971bc5298b8bc1fab282803da04bf000c755d4ad9d99b52de2569ca19a70 \
-    --hash=sha256:8c6fcecd1183a7fc897548dfe388b0cdb7f37e018200d8409cf33959dbe35387
+pyopenssl==26.4.0 \
+    --hash=sha256:28dfcce0162b9211413e26dfbfdf1d24317fbeba18fc93c12400a1856b2a0bc7 \
+    --hash=sha256:f0eb0cb2d581d3ad2b9c489468485e7f2ab6727d08401bcf9d824c3caddf3c1c
     # via scrapy
     # from https://pypi.org/simple
 pyparsing==3.3.3 \
@@ -3962,54 +3898,10 @@ pypdf==6.19.0 \
     --hash=sha256:bbc43aca292369ccc6cbc8a921991ecf2538a3587ab5a116eff06c321d647155
     # via airunner-services
     # from https://pypi.org/simple
-pyperclip==1.11.0 \
-    --hash=sha256:244035963e4428530d9e3a6101a1ef97209c6825edab1567beac148ccc1db1b6 \
-    --hash=sha256:299403e9ff44581cb9ba2ffeed69c7aa96a008622ad0c46cb575ca75b5b84273
-    # via mouseinfo
-    # from https://pypi.org/simple
 pypinyin==0.54.0 \
     --hash=sha256:5f776f19b9fd922e4121a114810b22048d90e6e8037fb1c07f4c40f987ae6e7a \
     --hash=sha256:9ab0d07ff51d191529e22134a60e109d0526d80b7a80afa73da4c89521610958
     # via airunner-tts-vendor
-    # from https://pypi.org/simple
-pyrect==0.2.0 \
-    --hash=sha256:f65155f6df9b929b67caffbd57c0947c5ae5449d3b580d178074bffb47a09b78
-    # via pygetwindow
-    # from https://pypi.org/simple
-pyscreeze==1.0.1 \
-    --hash=sha256:cf1662710f1b46aa5ff229ee23f367da9e20af4a78e6e365bee973cad0ead4be
-    # via
-    #   airunner-services
-    #   pyautogui
-    # from https://pypi.org/simple
-pyside6==6.9.0 \
-    --hash=sha256:0103e5d161696db40d75bfbf4e4b7d4f3372903c1b400c4e3379377b62c50290 \
-    --hash=sha256:09239d1b808f18efccd3803db874d683917efcdebfdf0e8dec449cf50e74e7aa \
-    --hash=sha256:1a176409dd0dd12b72d2c78b776e5051f569071ec52b7aaadd0a5b3333493c24 \
-    --hash=sha256:846fbccf0b3501eb31cf0791a46e137615efba6ce540da2b426d79fa3e7762c4 \
-    --hash=sha256:b8f286a1bd143f3b2bdf08367b9362b13f469d26986c25700af9c4c68f79213e
-    # via airunner
-    # from https://pypi.org/simple
-pyside6-addons==6.9.0 \
-    --hash=sha256:260a56da59539f476c1635a3ff13591e10f1b04d92155c0617129bc53ca8b5f8 \
-    --hash=sha256:8cf54065b3d1b4698448fad825378a25c10ef52017d9dff48cead03200636d8d \
-    --hash=sha256:98f9ad4b65820736e12d49c18db2e570eac63727407fbb59a62ac753e89dc201 \
-    --hash=sha256:d8a650644e0b9d1e7a092f6bcd11f25a63706d12f77d442b6ace75d346ab5d30 \
-    --hash=sha256:fc9dcd63a0ce7565f238cb11c44494435a50eb6cb72b8dbce3b709618989c3dc
-    # via
-    #   airunner
-    #   pyside6
-    # from https://pypi.org/simple
-pyside6-essentials==6.9.0 \
-    --hash=sha256:45eaf7f17688d1991f39680dbfd3c41674f3cbb78f278aa10fe0b5f2f31c1989 \
-    --hash=sha256:69aedfad77119c5bec0005ca31d5620e9bac8ba5ae66c7389160530cfd698ed8 \
-    --hash=sha256:94a0096d6bb1d3e5cef29ca4a5366d0f229d42480fbb17aa25ad85d72b1b7947 \
-    --hash=sha256:b18e3e01b507e8a57481fe19792eb373d5f10a23a50702ce540da1435e722f39 \
-    --hash=sha256:d2dc45536f2269ad111991042e81257124f1cd1c9ed5ea778d7224fd65dc9e2b
-    # via
-    #   airunner
-    #   pyside6
-    #   pyside6-addons
     # from https://pypi.org/simple
 python-crfsuite==0.9.12 \
     --hash=sha256:0bc929cbfe88b775361feba36f9632170d411a3a3a1e31d53e3a07452bb54588 \
@@ -4085,25 +3977,10 @@ python-multipart==0.0.32 \
     --hash=sha256:ff6d3f776f16878c894e52e107296ffc890e913c611b1a4ec6c44e2821fe2e23
     # via airunner-services
     # from https://pypi.org/simple
-python-xlib==0.33 \
-    --hash=sha256:55af7906a2c75ce6cb280a584776080602444f75815a7aff4d287bb2d7018b32 \
-    --hash=sha256:c3534038d42e0df2f1392a1b30a15a4ff5fdc2b86cfa94f072bf11b10a164398
-    # via airunner-services
-    # from https://pypi.org/simple
-python3-xlib==0.15 \
-    --hash=sha256:dc4245f3ae4aa5949c1d112ee4723901ade37a96721ba9645f2bfa56e5b383f8
-    # via
-    #   mouseinfo
-    #   pyautogui
-    # from https://pypi.org/simple
 pyttsx3==2.91 \
     --hash=sha256:8e31e521f0154a0c598f5b74b3ac070f1cb46954058bd6d09a3ba171511f0460 \
     --hash=sha256:8f19217c4d65a46870e0b82f2e7eb1570ec2b2ca80517fbeee095e54f76f73e2
     # via airunner-services
-    # from https://pypi.org/simple
-pytweening==1.2.0 \
-    --hash=sha256:243318b7736698066c5f362ec5c2b6434ecf4297c3c8e7caa8abfe6af4cac71b
-    # via pyautogui
     # from https://pypi.org/simple
 pytz==2026.5 \
     --hash=sha256:e658af3757f9e26a9d25dd2aff38335acd92bc9104f890a894b2c1ba28311b03 \
@@ -4428,7 +4305,6 @@ requests==2.34.2 \
     --hash=sha256:2a0d60c172f83ac6ab31e4554906c0f3b3588d37b5cb939b1c061f4907e278e0 \
     --hash=sha256:f288924cae4e29463698d6d60bc6a4da69c89185ad1e0bcc4104f584e960b9ed
     # via
-    #   airunner
     #   airunner-services
     #   datasets
     #   diffusers
@@ -4654,58 +4530,6 @@ safetensors==0.8.0 \
     #   timm
     #   transformers
     # from https://pypi.org/simple
-scikit-image==0.26.0 \
-    --hash=sha256:0608aa4a9ec39e0843de10d60edb2785a30c1c47819b67866dd223ebd149acaf \
-    --hash=sha256:0660b83968c15293fd9135e8d860053ee19500d52bf55ca4fb09de595a1af650 \
-    --hash=sha256:09bad6a5d5949c7896c8347424c4cca899f1d11668030e5548813ab9c2865dcb \
-    --hash=sha256:0baa0108d2d027f34d748e84e592b78acc23e965a5de0e4bb03cf371de5c0581 \
-    --hash=sha256:163e9afb5b879562b9aeda0dd45208a35316f26cc7a3aed54fd601604e5cf46f \
-    --hash=sha256:20ef4a155e2e78b8ab973998e04d8a361d49d719e65412405f4dadd9155a61d9 \
-    --hash=sha256:21a818ee6ca2f2131b9e04d8eb7637b5c18773ebe7b399ad23dcc5afaa226d2d \
-    --hash=sha256:27d58bc8b2acd351f972c6508c1b557cfed80299826080a4d803dd29c51b707e \
-    --hash=sha256:2c1e7bd342f43e7a97e571b3f03ba4c1293ea1a35c3f13f41efdc8a81c1dc8f2 \
-    --hash=sha256:3268f13310e6857508bd87202620df996199a016a1d281b309441d227c822394 \
-    --hash=sha256:3409e89d66eff5734cd2b672d1c48d2759360057e714e1d92a11df82c87cba37 \
-    --hash=sha256:3f5bf622d7c0435884e1e141ebbe4b2804e16b2dd23ae4c6183e2ea99233be70 \
-    --hash=sha256:4c717490cec9e276afb0438dd165b7c3072d6c416709cc0f9f5a4c1070d23a44 \
-    --hash=sha256:4d57e39ef67a95d26860c8caf9b14b8fb130f83b34c6656a77f191fa6d1d04d8 \
-    --hash=sha256:52c496f75a7e45844d951557f13c08c81487c6a1da2e3c9c8a39fcde958e02cc \
-    --hash=sha256:6381edf972b32e4f54085449afde64365a57316637496c1325a736987083e2ab \
-    --hash=sha256:63af3d3a26125f796f01052052f86806da5b5e54c6abef152edb752683075a9c \
-    --hash=sha256:6caec76e16c970c528d15d1c757363334d5cb3069f9cea93d2bead31820511f3 \
-    --hash=sha256:724f79fd9b6cb6f4a37864fe09f81f9f5d5b9646b6868109e1b100d1a7019e59 \
-    --hash=sha256:74aa5518ccea28121f57a95374581d3b979839adc25bb03f289b1bc9b99c58af \
-    --hash=sha256:7af7aa331c6846bd03fa28b164c18d0c3fd419dbb888fb05e958ac4257a78fdd \
-    --hash=sha256:7df650e79031634ac90b11e64a9eedaf5a5e06fcd09bcd03a34be01745744466 \
-    --hash=sha256:915bb3ba66455cf8adac00dc8fdf18a4cd29656aec7ddd38cb4dda90289a6f21 \
-    --hash=sha256:92242351bccf391fc5df2d1529d15470019496d2498d615beb68da85fe7fdf37 \
-    --hash=sha256:9490360c8d3f9a7e85c8de87daf7c0c66507960cf4947bb9610d1751928721c7 \
-    --hash=sha256:98329aab3bc87db352b9887f64ce8cdb8e75f7c2daa19927f2e121b797b678d5 \
-    --hash=sha256:9ea6207d9e9d21c3f464efe733121c0504e494dbdc7728649ff3e23c3c5a4953 \
-    --hash=sha256:9eefb4adad066da408a7601c4c24b07af3b472d90e08c3e7483d4e9e829d8c49 \
-    --hash=sha256:a07200fe09b9d99fcdab959859fe0f7db8df6333d6204344425d476850ce3604 \
-    --hash=sha256:a2d211bc355f59725efdcae699b93b30348a19416cc9e017f7b2fb599faf7219 \
-    --hash=sha256:a2e852eccf41d2d322b8e60144e124802873a92b8d43a6f96331aa42888491c7 \
-    --hash=sha256:abed017474593cd3056ae0fe948d07d0747b27a085e92df5474f4955dd65aec0 \
-    --hash=sha256:ac529eb9dbd5954f9aaa2e3fe9a3fd9661bfe24e134c688587d811a0233127f1 \
-    --hash=sha256:aeb14db1ed09ad4bee4ceb9e635547a8d5f3549be67fc6c768c7f923e027e6cd \
-    --hash=sha256:b1ede33a0fb3731457eaf53af6361e73dd510f449dac437ab54573b26788baf0 \
-    --hash=sha256:b36ab5e778bf50af5ff386c3ac508027dc3aaeccf2161bdf96bde6848f44d21b \
-    --hash=sha256:b702c3bb115e1dcf4abf5297429b5c90f2189655888cbed14921f3d26f81d3a4 \
-    --hash=sha256:b8d14d3181c21c11170477a42542c1addc7072a90b986675a71266ad17abc37f \
-    --hash=sha256:c6624a76c6085218248154cc7e1500e6b488edcd9499004dd0d35040607d7505 \
-    --hash=sha256:c9087cf7d0e7f33ab5c46d2068d86d785e70b05400a891f73a13400f1e1faf6a \
-    --hash=sha256:cde0bbd57e6795eba83cb10f71a677f7239271121dc950bc060482834a668ad1 \
-    --hash=sha256:ce00600cd70d4562ed59f80523e18cdcc1fae0e10676498a01f73c255774aefd \
-    --hash=sha256:cefd85033e66d4ea35b525bb0937d7f42d4cdcfed2d1888e1570d5ce450d3932 \
-    --hash=sha256:d454b93a6fa770ac5ae2d33570f8e7a321bb80d29511ce4b6b78058ebe176e8c \
-    --hash=sha256:d5c244656de905e195a904e36dbc18585e06ecf67d90f0482cbde63d7f9ad59d \
-    --hash=sha256:ede4d6d255cc5da9faeb2f9ba7fedbc990abbc652db429f40a16b22e770bb578 \
-    --hash=sha256:f5f970ab04efad85c24714321fcc91613fcb64ef2a892a13167df2f3e59199fa \
-    --hash=sha256:f775f0e420faac9c2aa6757135f4eb468fb7b70e0b67fa77a5e79be3c30ee331 \
-    --hash=sha256:fac96a1f9b06cd771cbbb3cd96c5332f36d4efd839b1d8b053f79e5887acde62
-    # via controlnet-aux
-    # from https://pypi.org/simple
 scikit-learn==1.9.1 \
     --hash=sha256:09f4d73049cd63575157f6b1060e06a8c83a4bd3488dbfaeedf35ccba7aad712 \
     --hash=sha256:0c0f8b5d09b44101cea2767f300680bada1ea27f976fe4b48b83950a4f55a49a \
@@ -4817,9 +4641,7 @@ scipy==1.18.1 \
     --hash=sha256:f55fa87b6c612ecd6b058f167c53231b1d14e412efe361d3d6e38b3631c73218 \
     --hash=sha256:fdaf5ea890a6183d0565f51a61799d67081bd5b1cf03c5f4b3fd3732108625c9
     # via
-    #   controlnet-aux
     #   librosa
-    #   scikit-image
     #   scikit-learn
     #   sentence-transformers
     # from https://pypi.org/simple
@@ -4921,18 +4743,6 @@ shellingham==1.5.4 \
     --hash=sha256:8dbca0739d487e5bd35ab3ca4b36e11c4078f3a234bfce294b0a0291363404de
     # via typer
     # from https://pypi.org/simple
-shiboken6==6.9.0 \
-    --hash=sha256:121ea290ed1afa5ad6abf690b377612693436292b69c61b0f8e10b1f0850f935 \
-    --hash=sha256:24f53857458881b54798d7e35704611d07f6b6885bcdf80f13a4c8bb485b8df2 \
-    --hash=sha256:3f585caae5b814a7e23308db0a077355a7dc20c34d58ca4c339ff7625e9a1936 \
-    --hash=sha256:b61579b90bf9c53ecc174085a69429166dfe57a0b8b894f933d1281af9df6568 \
-    --hash=sha256:c4d8e3a5907154ac4789e52c77957db95bcf584238c244d7743cb39e9b66dd26
-    # via
-    #   airunner
-    #   pyside6
-    #   pyside6-addons
-    #   pyside6-essentials
-    # from https://pypi.org/simple
 six==1.17.0 \
     --hash=sha256:4721f391ed90541fddacab5acf947aa0d3dc7d27b2e1e8eda2be8970586c3274 \
     --hash=sha256:ff70335d468e7eb6ec65b95b99d3a2836546063f63acc5171de367e834932a81
@@ -4940,7 +4750,6 @@ six==1.17.0 \
     #   ebooklib
     #   jsonlines
     #   python-dateutil
-    #   python-xlib
     #   rfc3339-validator
     # from https://pypi.org/simple
 sniffio==1.3.1 \
@@ -5093,9 +4902,9 @@ standard-sunau==3.13.0 \
     #   audioread
     #   librosa
     # from https://pypi.org/simple
-starlette==0.38.6 \
-    --hash=sha256:4517a1409e2e73ee4951214ba012052b9e16f60e90d73cfb06192c19203bbb05 \
-    --hash=sha256:863a1588f5574e70a821dadefb41e4881ea451a47a3cd1b4df359d4ffefe5ead
+starlette==1.6.0 \
+    --hash=sha256:a86dd39d14bb45f85a3d18525215a9ef0cfd1f192ac793220e72598c90335f0c \
+    --hash=sha256:d4e3ac5e546444960c710297a3c9fc3f7ebae1b7e963f3d36173b49da535be9b
     # via
     #   airunner-services
     #   fastapi
@@ -5126,11 +4935,6 @@ threadpoolctl==3.7.0 \
     --hash=sha256:61348cfb77d53b9242e0017029244b559b810c142ced65b4e21eeca1843959a7 \
     --hash=sha256:cd8b60b5641b45c67bbf73c64c843235fc2d8a480c87389f52f5dbee893b86be
     # via scikit-learn
-    # from https://pypi.org/simple
-tifffile==2026.9.20 \
-    --hash=sha256:30e145a7042ce7143ae50a50fe8b7221b0070aae22adab8f9e79a264be6b5cdc \
-    --hash=sha256:9b913167b8f66a57f2e7c0454486c4c4607196d494797461226166bd0755c0e6
-    # via scikit-image
     # from https://pypi.org/simple
 tiktoken==0.14.0 \
     --hash=sha256:087538c080e5ff421abd3a0785ed63c5111d06af98e6cd0d374dbe5969147ca3 \
@@ -5202,9 +5006,7 @@ tiktoken==0.14.0 \
 timm==1.0.30 \
     --hash=sha256:1444a3af7e17fdba5440ac2bcf6e4b728da96dd62289ed9e1bcba31a545f5935 \
     --hash=sha256:c8e27adf6801a2fdfb570dbbdd171f2f084756eefc673df8cfaab06bd14864f3
-    # via
-    #   airunner-services
-    #   controlnet-aux
+    # via airunner-services
     # from https://pypi.org/simple
 tinycss2==1.5.1 \
     --hash=sha256:3415ba0f5839c062696996998176c4a3751d18b7edaaeeb658c9ce21ec150661 \
@@ -5275,11 +5077,9 @@ torch==2.13.0+cu129 \
     --hash=sha256:f99236a28481941374b4379af7b71cd6954ffcf5a4c16e3267e2a94e26d42f79
     # via
     #   accelerate
-    #   airunner
     #   airunner-services
     #   bitsandbytes
     #   compel
-    #   controlnet-aux
     #   deepcache
     #   kornia
     #   optimum
@@ -5305,7 +5105,6 @@ torchaudio==2.11.0+cu129 \
     --hash=sha256:f695a613c1afbd3fdc1e8e91116644e9a21ed1a920382ceb33482c4ed28350ca \
     --hash=sha256:fa6fa276ac84fd44c87ea26b44b01442ae0ca434253eb3b039484d3f898be1da
     # via
-    #   airunner
     #   airunner-services
     #   wavmark
     # from https://download.pytorch.org/whl/cu129
@@ -5330,9 +5129,7 @@ torchcodec==0.9.1 \
 torchvision==0.28.0+cu129 \
     --hash=sha256:c007a68cb54c3ee6941aab6388c69bf14e4a2a9071d339455bb5bd5f47da2ce7
     # via
-    #   airunner
     #   airunner-services
-    #   controlnet-aux
     #   timm
     # from https://download.pytorch.org/whl/cu129
 tornado==6.5.10 \
@@ -5475,7 +5272,9 @@ typing-extensions==4.16.0 \
 typing-inspection==0.4.4 \
     --hash=sha256:547274fa6b0a561ccf549cc9524b999a578e737d015d8709d021f9d0d13bea47 \
     --hash=sha256:65b8397ba37ccbce054456aaccddfc91e6e3083c92824df348d96ca832f3f147
-    # via pydantic
+    # via
+    #   fastapi
+    #   pydantic
     # from https://pypi.org/simple
 tzdata==2026.5 \
     --hash=sha256:8cc73c0a0bfca7dbfa59235d60b2eff82231dee33f53d206db1acd9173cfc0a7 \

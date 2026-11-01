@@ -105,7 +105,10 @@ class TestFastAPIAppConstruction:
             enable_cors=True,
         )
 
-        routes = {route.path for route in app.routes if hasattr(route, "path")}
+        # FastAPI 0.141 include_router is lazy: app.routes holds
+        # _IncludedRouter entries without .path, so enumerate the
+        # served paths through the public OpenAPI surface instead.
+        routes = set(app.openapi()["paths"])
 
         expected_prefixes = [
             "/api/v1/health",

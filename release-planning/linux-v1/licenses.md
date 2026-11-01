@@ -59,8 +59,8 @@ Authoritative pin set (release issue P02):
 
 - Constraint lock: package/constraints-linux-nvidia-cu129.txt
 - Constraint lock sha256:
-  5a9e1825f66ac2a76e2d7613daf00d7c97acdf4f76ddaa9c55c05725203768ef
-- Constraint pins: 352
+  5719edc0e51057a0b369a7d7272e62002fd70d1e22f102e99227f1b2f2dc70a0
+- Constraint pins: 332
 - Profile roots: `./services[desktop]`, `./native`
   (installed from the local tree, not pinned in the
   lock). Verified consumption and regeneration are documented in
@@ -90,7 +90,7 @@ downloaded means fetched at install or first use.
 
 ### 3.2 Long tail
 
-The remaining pins in the 352-entry lock are inventoried by
+The remaining pins in the 332-entry lock are inventoried by
 name, exact version, and per-file hashes in the lock itself.
 Per-package license confirmation for the full set is PENDING a
 machine-readable license scan of the frozen bundle in release
@@ -222,7 +222,7 @@ corresponding-source offer itself is PENDING (BLOCKER B-8).
 - BLOCKER B-6: pyttsx3 MPL-2.0 secondary-license check.
   Confirm the combined GPL-3.0 work satisfies MPL-2.0 §3.3
   (no "Incompatible With Secondary Licenses" exhibit).
-- BLOCKER B-7: Full-tree license scan. The 352-pin lock
+- BLOCKER B-7: Full-tree license scan. The 332-pin lock
   beyond §3.1 needs a machine-readable scan of the frozen
   bundle in release CI before any clearance statement.
 - BLOCKER B-8: Written corresponding-source offer text needs
@@ -248,7 +248,7 @@ corresponding-source offer itself is PENDING (BLOCKER B-8).
 
 - [ ] Every selected bundle/model artifact has a
   license/provenance row: §3-§8 tabulate the bundle spec
-  payloads, the 352-pin lock, both sidecars, and every
+  payloads, the 332-pin lock, both sidecars, and every
   bootstrap model; gaps stay as explicit PENDING/BLOCKER
   rows, never silent omissions.
 - [ ] Required notices/source-offer material is present;

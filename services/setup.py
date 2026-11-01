@@ -53,7 +53,10 @@ DEVELOPMENT_REQUIREMENTS = [
     "responses>=0.25.0",
     # starlette/fastapi TestClient (services HTTP-surface tests) needs httpx;
     # it is otherwise only pulled in transitively by the llm-native extra.
+    # starlette 1.x TestClient prefers httpx2; without it, it emits the
+    # httpx deprecation warning.
     "httpx>=0.27",
+    "httpx2>=2.0.0",
     "coverage==7.8.0",
     "black==26.3.1",
     "pyinstaller==6.12.0",
@@ -83,13 +86,16 @@ CORE_REQUIREMENTS = [
     "jinja2==3.1.6",
     "pyyaml==6.0.2",
     "python-dotenv==1.2.2",
-    "fastapi==0.115.0",
+    "fastapi==0.141.1",
     # Direct base-startup import (api/server.py imports HTTPConnection
     # from starlette.requests at module scope on the daemon path), not
-    # just a transitive fastapi dependency (release issue P02). The
-    # bound mirrors fastapi 0.115.0's own starlette requirement so the
-    # two can never disagree.
-    "starlette<0.39.0,>=0.37.2",
+    # just a transitive fastapi dependency (release issue P02). The pin
+    # satisfies fastapi 0.141.1's own starlette>=0.46.0 requirement so
+    # the two can never disagree.
+    "starlette==1.6.0",
+    # starlette 1.6.0 requires anyio<5,>=3.6.2; declare the proven
+    # floor directly instead of relying on the transitive pin.
+    "anyio>=4.14.2",
     "python-multipart>=0.0.27",
     "uvicorn[standard]==0.34.0",
     # Runtime deps declared in issue #2040 (previously undeclared).
