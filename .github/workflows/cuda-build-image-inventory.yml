@@ -4,7 +4,7 @@ on:
   pull_request:
     paths:
       - .github/workflows/cuda-build-image-inventory.yml
-      - packaging/patches/llama-cpp-python-0.3.21-diskcache-optional-capsize2.patch
+      - packaging/patches/llama-cpp-python-0.3.21-diskcache-optional-capsize3.patch
   workflow_dispatch:
 
 permissions: {}
@@ -196,8 +196,8 @@ jobs:
           wrapper_commit=$(git -C "$root/wrapper-repo" rev-parse 'FETCH_HEAD^{commit}')
           test "$wrapper_commit" = d2bcbac46605f11d382426dd88d67e8b5c124cd7
           git -C "$root/wrapper-repo" archive --format=tar "$wrapper_commit" | tar -xf - -C "$source"
-          patch="$GITHUB_WORKSPACE/packaging/patches/llama-cpp-python-0.3.21-diskcache-optional-capsize2.patch"
-          patch_sha256=e5af3e92fec98df8b4845662d7b1a7033465e01e110e686e38d963ed67711564
+          patch="$GITHUB_WORKSPACE/packaging/patches/llama-cpp-python-0.3.21-diskcache-optional-capsize3.patch"
+          patch_sha256=0f8dca544d67ea72851daab1c6116fdb4b6dc96f72a30bb7dbfde5bc3e91205b
           printf '%s  %s\n' "$patch_sha256" "$patch" | sha256sum --check --strict
           (
             cd "$source"
@@ -217,8 +217,13 @@ jobs:
           git -C "$root/llama-repo" archive --format=tar "$llama_commit" | tar -xf - -C "$source/vendor/llama.cpp"
           test ! -e "$source/.git"
           test ! -e "$source/vendor/llama.cpp/.git"
+          (
+            cd "$source"
+            LLAMA_CPP_INCLUDE_DIR="$source/vendor/llama.cpp/include" \
+              python -m unittest tests.test_context_params_abi tests.test_diskcache_optional_dependency -v
+          )
           printf 'wrapper_commit=%s\nllama_cpp_commit=%s\n' "$wrapper_commit" "$llama_commit" | tee "$root/source-revisions.txt"
-          printf 'wrapper_patch_sha256=%s\nwrapper_version=0.3.21+capsize.2\n' "$patch_sha256" >> "$root/source-revisions.txt"
+          printf 'wrapper_patch_sha256=%s\nwrapper_version=0.3.21+capsize.3\n' "$patch_sha256" >> "$root/source-revisions.txt"
 
           fetch_wheel() {
             local filename="$1" url="$2" sha="$3"
@@ -391,7 +396,7 @@ jobs:
           print(f"wheel={wheel}")
           PY
           shopt -s nullglob
-          wheels=("$root"/wheel/llama_cpp_python-0.3.21+capsize.2-*.whl)
+          wheels=("$root"/wheel/llama_cpp_python-0.3.21+capsize.3-*.whl)
           test "${#wheels[@]}" -eq 1
           sha256sum "${wheels[0]}"
 
@@ -400,7 +405,7 @@ jobs:
         run: |
           set -euo pipefail
           root="$RUNNER_TEMP/cuda-wheel"
-          wheel=$(find "$root/wheel" -maxdepth 1 -type f -name 'llama_cpp_python-0.3.21+capsize.2-*.whl' -print -quit)
+          wheel=$(find "$root/wheel" -maxdepth 1 -type f -name 'llama_cpp_python-0.3.21+capsize.3-*.whl' -print -quit)
           test -n "$wheel"
           cache=$(find "$root/build" -maxdepth 2 -name CMakeCache.txt -print -quit)
           test -n "$cache"
@@ -417,7 +422,7 @@ jobs:
               metadata_paths = [name for name in archive.namelist() if name.endswith('.dist-info/METADATA')]
               assert len(metadata_paths) == 1, metadata_paths
               metadata = BytesParser().parsebytes(archive.read(metadata_paths[0]))
-              assert metadata['Version'] == '0.3.21+capsize.2'
+              assert metadata['Version'] == '0.3.21+capsize.3'
               disk_requirements = [value for value in metadata.get_all('Requires-Dist', []) if value.lower().startswith('diskcache')]
               assert len(disk_requirements) == 1, disk_requirements
               assert 'extra == "disk"' in disk_requirements[0], disk_requirements

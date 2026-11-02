@@ -1,0 +1,440 @@
+diff --git a/README.md b/README.md
+index 69a0f82..e7b9f4b 100644
+--- a/README.md
++++ b/README.md
+@@ -263,6 +263,13 @@ CMAKE_ARGS="-DCMAKE_OSX_ARCHITECTURES=arm64 -DCMAKE_APPLE_SILICON_PROCESSOR=arm6
+ 
+ To upgrade and rebuild `llama-cpp-python` add `--upgrade --force-reinstall --no-cache-dir` flags to the `pip install` command to ensure the package is rebuilt from source.
+ 
++### Cache dependencies
++
++`LlamaRAMCache` and its `LlamaCache` alias use in-memory caching and are
++available with the base package. `LlamaDiskCache` requires the optional disk
++dependency; install `llama-cpp-python[disk]` to use it. Server installations
++that set `cache_type` to `disk` also need this extra.
++
+ ## High-level API
+ 
+ [API Reference](https://llama-cpp-python.readthedocs.io/en/latest/api-reference/#high-level-api)
+diff --git a/llama_cpp/__init__.py b/llama_cpp/__init__.py
+index fbad5c2..eb05a96 100644
+--- a/llama_cpp/__init__.py
++++ b/llama_cpp/__init__.py
+@@ -1,4 +1,4 @@
+ from .llama_cpp import *
+ from .llama import *
+ 
+-__version__ = "0.3.21"
++__version__ = "0.3.21+capsize.3"
+diff --git a/llama_cpp/llama_cache.py b/llama_cpp/llama_cache.py
+index 5220c79..934d779 100644
+--- a/llama_cpp/llama_cache.py
++++ b/llama_cpp/llama_cache.py
+@@ -7,8 +7,6 @@ from typing import (
+ )
+ from collections import OrderedDict
+ 
+-import diskcache
+-
+ import llama_cpp.llama
+ 
+ from .llama_types import *
+@@ -108,6 +106,13 @@ class LlamaDiskCache(BaseLlamaCache):
+         self, cache_dir: str = ".cache/llama_cache", capacity_bytes: int = (2 << 30)
+     ):
+         super().__init__(capacity_bytes)
++        try:
++            import diskcache
++        except ImportError as exc:
++            raise ImportError(
++                "LlamaDiskCache requires the optional disk dependency. "
++                "Install llama-cpp-python[disk] to use disk caching."
++            ) from exc
+         self.cache = diskcache.Cache(cache_dir)
+ 
+     @property
+diff --git a/llama_cpp/llama_cpp.py b/llama_cpp/llama_cpp.py
+index d032371..361ee67 100644
+--- a/llama_cpp/llama_cpp.py
++++ b/llama_cpp/llama_cpp.py
+@@ -513,6 +513,10 @@ LLAMA_SPLIT_MODE_LAYER = 1
+ LLAMA_SPLIT_MODE_ROW = 2
+ LLAMA_SPLIT_MODE_TENSOR = 3
+ 
++# enum llama_context_type
++LLAMA_CONTEXT_TYPE_DEFAULT = 0
++LLAMA_CONTEXT_TYPE_MTP = 1
++
+ 
+ # typedef struct llama_token_data {
+ #     llama_token id; // token id
+@@ -892,8 +896,11 @@ class llama_sampler_seq_config(ctypes.Structure):
+ #     uint32_t n_batch;           // logical maximum batch size that can be submitted to llama_decode
+ #     uint32_t n_ubatch;          // physical maximum batch size
+ #     uint32_t n_seq_max;         // max number of sequences (i.e. distinct states for recurrent models)
++#     uint32_t n_rs_seq;          // recurrent-state snapshots per sequence for rollback
++#     uint32_t n_outputs_max;     // max outputs in a ubatch (0 = n_batch)
+ #     int32_t  n_threads;         // number of threads to use for generation
+ #     int32_t  n_threads_batch;   // number of threads to use for batch processing
++#     enum llama_context_type      ctx_type;          // context type (e.g. MTP)
+ 
+ #     enum llama_rope_scaling_type rope_scaling_type; // RoPE scaling type, from `enum llama_rope_scaling_type`
+ #     enum llama_pooling_type      pooling_type;      // whether to pool (sum) embedding results by sequence id
+@@ -945,8 +952,11 @@ class llama_context_params(ctypes.Structure):
+         n_batch (int): logical maximum batch size that can be submitted to llama_decode
+         n_ubatch (int): physical maximum batch size
+         n_seq_max (int): max number of sequences (i.e. distinct states for recurrent models)
++        n_rs_seq (int): recurrent-state snapshots per sequence for rollback
++        n_outputs_max (int): max outputs in a ubatch (0 = n_batch)
+         n_threads (int): number of threads to use for generation
+         n_threads_batch (int): number of threads to use for batch processing
++        ctx_type (int): context type, from `enum llama_context_type`
+         rope_scaling_type (int): RoPE scaling type, from `enum llama_rope_scaling_type`
+         pooling_type (int): whether to pool (sum) embedding results by sequence id (ignored if no pooling layer)
+         attention_type (int): attention type to use for embeddings
+@@ -980,8 +990,11 @@ class llama_context_params(ctypes.Structure):
+         n_batch: int
+         n_ubatch: int
+         n_seq_max: int
++        n_rs_seq: int
++        n_outputs_max: int
+         n_threads: int
+         n_threads_batch: int
++        ctx_type: int
+         rope_scaling_type: int
+         pooling_type: int
+         attention_type: int
+@@ -1014,8 +1027,11 @@ class llama_context_params(ctypes.Structure):
+         ("n_batch", ctypes.c_uint32),
+         ("n_ubatch", ctypes.c_uint32),
+         ("n_seq_max", ctypes.c_uint32),
++        ("n_rs_seq", ctypes.c_uint32),
++        ("n_outputs_max", ctypes.c_uint32),
+         ("n_threads", ctypes.c_int32),
+         ("n_threads_batch", ctypes.c_int32),
++        ("ctx_type", ctypes.c_int),
+         ("rope_scaling_type", ctypes.c_int),
+         ("pooling_type", ctypes.c_int),
+         ("attention_type", ctypes.c_int),
+diff --git a/pyproject.toml b/pyproject.toml
+index b5998dd..fe5faf4 100644
+--- a/pyproject.toml
++++ b/pyproject.toml
+@@ -14,7 +14,6 @@ authors = [
+ dependencies = [
+     "typing-extensions>=4.5.0",
+     "numpy>=1.20.0",
+-    "diskcache>=5.6.1",
+     "jinja2>=2.11.3",
+ ]
+ requires-python = ">=3.8"
+@@ -30,6 +29,7 @@ classifiers = [
+ 
+ 
+ [project.optional-dependencies]
++disk = ["diskcache>=5.6.1"]
+ server = [
+     "uvicorn>=0.22.0",
+     "fastapi>=0.100.0",
+diff --git a/tests/test_context_params_abi.py b/tests/test_context_params_abi.py
+new file mode 100644
+index 0000000..82a1008
+--- /dev/null
++++ b/tests/test_context_params_abi.py
+@@ -0,0 +1,179 @@
++"""Keep the ctypes context-parameter layout aligned with llama.cpp 7acb4e8."""
++
++from __future__ import annotations
++
++import ast
++import ctypes
++import os
++from pathlib import Path
++import shutil
++import subprocess
++import tempfile
++import unittest
++
++
++ROOT = Path(__file__).resolve().parents[1]
++
++
++def load_context_params_from_source():
++    """Evaluate only the data-only ctypes structure, without loading libllama."""
++    tree = ast.parse((ROOT / "llama_cpp/llama_cpp.py").read_text())
++    structure = next(
++        node
++        for node in tree.body
++        if isinstance(node, ast.ClassDef) and node.name == "llama_context_params"
++    )
++
++    class SamplerConfig(ctypes.Structure):
++        _fields_ = [("seq_id", ctypes.c_int32), ("sampler", ctypes.c_void_p)]
++
++    namespace = {
++        "ctypes": ctypes,
++        "TYPE_CHECKING": False,
++        "llama_seq_id": ctypes.c_int32,
++        "llama_sampler_seq_config": SamplerConfig,
++        "ggml_backend_sched_eval_callback": ctypes.CFUNCTYPE(
++            ctypes.c_bool,
++            ctypes.c_void_p,
++            ctypes.c_bool,
++            ctypes.c_void_p,
++        ),
++        "ggml_abort_callback": ctypes.CFUNCTYPE(ctypes.c_bool, ctypes.c_void_p),
++    }
++    module = ast.Module(body=[structure], type_ignores=[])
++    exec(compile(module, str(ROOT / "llama_cpp/llama_cpp.py"), "exec"), namespace)
++    return namespace["llama_context_params"]
++
++
++class ContextParamsAbiTests(unittest.TestCase):
++    def test_context_type_values_match_llama_cpp_7acb4e8(self):
++        tree = ast.parse((ROOT / "llama_cpp/llama_cpp.py").read_text())
++        values = {
++            target.id: node.value.value
++            for node in tree.body
++            if isinstance(node, ast.Assign)
++            and isinstance(node.value, ast.Constant)
++            for target in node.targets
++            if isinstance(target, ast.Name)
++            and target.id in {"LLAMA_CONTEXT_TYPE_DEFAULT", "LLAMA_CONTEXT_TYPE_MTP"}
++        }
++        self.assertEqual(
++            values,
++            {"LLAMA_CONTEXT_TYPE_DEFAULT": 0, "LLAMA_CONTEXT_TYPE_MTP": 1},
++        )
++
++    def test_context_params_matches_llama_cpp_7acb4e8_layout(self):
++        params = load_context_params_from_source()
++        expected_offsets = {
++            "n_ctx": 0,
++            "n_batch": 4,
++            "n_ubatch": 8,
++            "n_seq_max": 12,
++            "n_rs_seq": 16,
++            "n_outputs_max": 20,
++            "n_threads": 24,
++            "n_threads_batch": 28,
++            "ctx_type": 32,
++            "rope_scaling_type": 36,
++            "pooling_type": 40,
++            "attention_type": 44,
++            "flash_attn_type": 48,
++            "rope_freq_base": 52,
++            "rope_freq_scale": 56,
++            "yarn_ext_factor": 60,
++            "yarn_attn_factor": 64,
++            "yarn_beta_fast": 68,
++            "yarn_beta_slow": 72,
++            "yarn_orig_ctx": 76,
++            "defrag_thold": 80,
++            "cb_eval": 88,
++            "cb_eval_user_data": 96,
++            "type_k": 104,
++            "type_v": 108,
++            "abort_callback": 112,
++            "abort_callback_data": 120,
++            "embeddings": 128,
++            "offload_kqv": 129,
++            "no_perf": 130,
++            "op_offload": 131,
++            "swa_full": 132,
++            "kv_unified": 133,
++            "samplers": 136,
++            "n_samplers": 144,
++        }
++        self.assertEqual(ctypes.sizeof(params), 152)
++        self.assertEqual({name: getattr(params, name).offset for name, _ in params._fields_}, expected_offsets)
++
++    def test_ctypes_layout_matches_compiled_pinned_llama_header(self):
++        include = Path(
++            os.environ.get(
++                "LLAMA_CPP_INCLUDE_DIR", ROOT / "vendor/llama.cpp/include"
++            )
++        )
++        ggml_include = include.parent / "ggml/include"
++        compiler = shutil.which("c++")
++        self.assertIsNotNone(compiler, "C++ compiler is required for ABI verification")
++        self.assertTrue((include / "llama.h").is_file(), include)
++        self.assertTrue((ggml_include / "ggml.h").is_file(), ggml_include)
++
++        fields = [name for name, _ in load_context_params_from_source()._fields_]
++        lines = [
++            "#include <cstddef>",
++            "#include <cstdio>",
++            "#include <type_traits>",
++            '#include "llama.h"',
++            "using context_default_fn = llama_context_params (*)();",
++            "using init_from_model_fn = llama_context * (*)(llama_model *, llama_context_params);",
++            "using new_context_fn = llama_context * (*)(llama_model *, llama_context_params);",
++            "static_assert(std::is_same_v<decltype(&llama_context_default_params), context_default_fn>);",
++            "static_assert(std::is_same_v<decltype(&llama_init_from_model), init_from_model_fn>);",
++            "static_assert(std::is_same_v<decltype(&llama_new_context_with_model), new_context_fn>);",
++            "int main() {",
++            '  std::printf("sizeof=%zu\\n", sizeof(llama_context_params));',
++        ]
++        lines.extend(
++            f'  std::printf("{name}=%zu\\n", offsetof(llama_context_params, {name}));'
++            for name in fields
++        )
++        lines.append("}")
++        with tempfile.TemporaryDirectory(prefix="llama-abi-") as temp:
++            temp_path = Path(temp)
++            source = temp_path / "probe.cpp"
++            binary = temp_path / "probe"
++            source.write_text("\n".join(lines) + "\n")
++            subprocess.run(
++                [
++                    compiler,
++                    "-std=c++17",
++                    "-I",
++                    str(include),
++                    "-I",
++                    str(ggml_include),
++                    str(source),
++                    "-o",
++                    str(binary),
++                ],
++                check=True,
++                capture_output=True,
++                text=True,
++                timeout=30,
++            )
++            output = subprocess.run(
++                [str(binary)], check=True, capture_output=True, text=True, timeout=5
++            ).stdout
++
++        compiled = {
++            key: int(value)
++            for line in output.splitlines()
++            for key, value in [line.split("=", 1)]
++        }
++        params = load_context_params_from_source()
++        ctypes_layout = {"sizeof": ctypes.sizeof(params)}
++        ctypes_layout.update(
++            {name: getattr(params, name).offset for name, _ in params._fields_}
++        )
++        self.assertEqual(compiled, ctypes_layout)
++
++
++if __name__ == "__main__":
++    unittest.main()
+diff --git a/tests/test_diskcache_optional_dependency.py b/tests/test_diskcache_optional_dependency.py
+new file mode 100644
+index 0000000..a4e7191
+--- /dev/null
++++ b/tests/test_diskcache_optional_dependency.py
+@@ -0,0 +1,111 @@
++"""Static contract checks for the optional disk-cache dependency."""
++
++from __future__ import annotations
++
++import ast
++from pathlib import Path
++import unittest
++
++
++ROOT = Path(__file__).resolve().parents[1]
++
++
++class DiskCacheOptionalDependencyTests(unittest.TestCase):
++    def test_diskcache_is_imported_only_when_disk_cache_is_constructed(self):
++        tree = ast.parse((ROOT / "llama_cpp/llama_cache.py").read_text())
++        top_level_imports = [
++            node
++            for node in tree.body
++            if isinstance(node, (ast.Import, ast.ImportFrom))
++        ]
++        self.assertFalse(
++            any(
++                isinstance(node, ast.Import)
++                and any(alias.name == "diskcache" for alias in node.names)
++                or isinstance(node, ast.ImportFrom)
++                and node.module == "diskcache"
++                for node in top_level_imports
++            )
++        )
++
++        disk_cache = next(
++            node
++            for node in tree.body
++            if isinstance(node, ast.ClassDef) and node.name == "LlamaDiskCache"
++        )
++        initializer = next(
++            node
++            for node in disk_cache.body
++            if isinstance(node, ast.FunctionDef) and node.name == "__init__"
++        )
++        self.assertTrue(
++            any(
++                isinstance(node, ast.Import)
++                and any(alias.name == "diskcache" for alias in node.names)
++                for node in ast.walk(initializer)
++            )
++        )
++        self.assertTrue(
++            any(
++                isinstance(node, ast.Raise)
++                and isinstance(node.exc, ast.Call)
++                and isinstance(node.exc.func, ast.Name)
++                and node.exc.func.id == "ImportError"
++                for node in ast.walk(initializer)
++            )
++        )
++
++    def test_ram_cache_public_names_remain_available_without_diskcache(self):
++        tree = ast.parse((ROOT / "llama_cpp/llama.py").read_text())
++        imports = [
++            alias.name
++            for node in tree.body
++            if isinstance(node, ast.ImportFrom)
++            and node.module == "llama_cache"
++            and node.level == 1
++            for alias in node.names
++        ]
++        self.assertEqual(
++            imports,
++            ["BaseLlamaCache", "LlamaCache", "LlamaDiskCache", "LlamaRAMCache"],
++        )
++        cache_tree = ast.parse((ROOT / "llama_cpp/llama_cache.py").read_text())
++        class_names = {
++            node.name for node in cache_tree.body if isinstance(node, ast.ClassDef)
++        }
++        self.assertTrue({"LlamaRAMCache", "LlamaDiskCache"} <= class_names)
++        self.assertTrue(
++            any(
++                isinstance(node, ast.Assign)
++                and any(
++                    isinstance(target, ast.Name) and target.id == "LlamaCache"
++                    for target in node.targets
++                )
++                and isinstance(node.value, ast.Name)
++                and node.value.id == "LlamaRAMCache"
++                for node in cache_tree.body
++            )
++        )
++
++    def test_diskcache_is_an_explicit_optional_extra(self):
++        pyproject = (ROOT / "pyproject.toml").read_text()
++        dependencies = pyproject.split("dependencies = [", 1)[1].split("]", 1)[0]
++        self.assertFalse(
++            any(line.strip().startswith('"diskcache') for line in dependencies.splitlines())
++        )
++        self.assertIn('disk = ["diskcache>=5.6.1"]', pyproject)
++        package_tree = ast.parse((ROOT / "llama_cpp/__init__.py").read_text())
++        version = next(
++            node.value.value
++            for node in package_tree.body
++            if isinstance(node, ast.Assign)
++            and any(
++                isinstance(target, ast.Name) and target.id == "__version__"
++                for target in node.targets
++            )
++        )
++        self.assertEqual(version, "0.3.21+capsize.3")
++
++
++if __name__ == "__main__":
++    unittest.main()

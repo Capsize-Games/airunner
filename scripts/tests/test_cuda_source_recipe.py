@@ -71,8 +71,9 @@ def test_cuda_source_recipe_binds_the_new_wrapper_patch_and_version():
     text = WORKFLOW.read_text(encoding="utf-8")
     build_job = text.split("  build-llama-cpp-python:", 1)[1]
 
-    assert "llama-cpp-python-0.3.21-diskcache-optional-capsize2.patch" in build_job
-    assert "e5af3e92fec98df8b4845662d7b1a7033465e01e110e686e38d963ed67711564" in build_job
-    assert "wrapper_version=0.3.21+capsize.2" in build_job
-    assert "llama_cpp_python-0.3.21+capsize.2-*.whl" in build_job
-    assert "metadata['Version'] == '0.3.21+capsize.2'" in build_job
+    assert "llama-cpp-python-0.3.21-diskcache-optional-capsize3.patch" in build_job
+    assert "patch_sha256=0f8dca544d67ea72851daab1c6116fdb4b6dc96f72a30bb7dbfde5bc3e91205b" in build_job
+    assert "wrapper_version=0.3.21+capsize.3" in build_job
+    assert "llama_cpp_python-0.3.21+capsize.3-*.whl" in build_job
+    assert "metadata['Version'] == '0.3.21+capsize.3'" in build_job
+    assert "tests.test_context_params_abi" in build_job
