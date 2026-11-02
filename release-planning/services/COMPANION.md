@@ -70,6 +70,62 @@ No operational database was inspected for this change. Actual occupancy,
 retention requirements, external consumers, and data ownership remain
 unresolved until a separate operational inventory and retention decision.
 
+The companion package's public `__init__.py` exports B01 request/result,
+inference, repository protocol, scheduler protocol and tool-dispatch contracts.
+There is no production construction of the durable scheduler, but that does
+not establish the absence of external package consumers. No companion
+implementation module has been removed: repository and tool call edges remain,
+and historical migration replay imports `migration_ledger.py`.
+
+`llm/tools/__init__.py` imports and registers `companion_memory_tools`;
+`companion_memory_compat.py` still adapts legacy memory operations; and
+`ToolManager` registers `update_mood`. The streaming mixins also call the
+existing mood update path. These registrations and paths remain intact.
+
+The UwUchat checkout is a separate, locally dirty owner application. Its
+`server/portable/exporter.py` exports that application's character, cumulative
+memory and attributed conversations; its matching importer validates bundle
+revisions and merges those records into the tenant. That bundle is not the
+AIRunner companion SQLite schema and does not cover companion job or migration
+ledger rows. UwUchat's source was inspected read-only; none of its files or
+existing dirty changes were edited for this contract.
+
+## Snapshot export and compatibility contract
+
+[`scripts/export_companion_snapshot.py`](../../scripts/export_companion_snapshot.py)
+creates an explicit, byte-for-byte copy of a standalone SQLite backup or
+snapshot to a new local path. It hashes the copy and reports only byte count
+and SHA-256. It does not query the database, transform rows, choose tables,
+drop unknown columns, change job states, run migrations, or modify the source.
+The destination must not already exist. The exporter rejects symlinks,
+SQLite journal sidecars, and files without the SQLite header. It detects source
+file metadata changes during copying and removes an incomplete destination on
+failure. Because the file is an opaque full-database copy, it contains the
+source database's private contents; choose a protected local destination and
+do not upload it as a source artifact. The command requires an explicit
+source and destination:
+
+```sh
+python scripts/export_companion_snapshot.py \
+  --source /path/to/stable-backup.sqlite \
+  --destination /path/to/new-protected-copy.sqlite
+```
+
+This is a recovery copy, not a cross-application import format. It does not
+make an active database safe to copy; obtain a stable standalone snapshot
+through the database owner's backup procedure first. No operational database
+or backup was read or copied for this change. Tests use synthetic SQLite files
+only.
+
+Retirement remains gated by evidence, not a claim of data absence. Before
+removing a production registration or persistence contract, the change must
+show the replacement and its callers, preserve job state and the complete
+database snapshot, retain the historical Alembic chain and ledger import, and
+keep the compatibility surface available for external consumers that have not
+yet been inventoried. No table, row, model, registered tool, migration, or
+duplicate-policy module was deleted here. No new companion endpoint, worker,
+or scheduler pump was added.
+
 ## Retirement phases
 
 1. **Separate generic runtime contracts.** Keep compatibility aliases and prove
@@ -79,11 +135,14 @@ unresolved until a separate operational inventory and retention decision.
 2. **Inventory callers and data.** Distinguish production registrations from
    test-only factories, document stored schemas and identify pending jobs.
    Existing data occupancy has not been inspected. A single-user store cannot
-   be copied directly into a consumer's tenant or encryption model.
-3. **Preserve compatibility and recovery.** Specify export, retention and
-   rollback behavior before changing persistence. Existing tools require an
-   explicit replacement or deprecation contract. No destructive downgrade is
-   part of this phase.
+   be copied directly into a consumer's tenant or encryption model. UwUchat's
+   separate portable bundle does not cover the AIRunner companion job or
+   migration-ledger tables.
+3. **Preserve compatibility and recovery.** Keep current registrations,
+   exports and historical schema replay available. Use the opaque snapshot
+   exporter only with an explicitly provided stable backup. External callers,
+   retention requirements and actual occupancy remain unknown; no destructive
+   downgrade or data transformation is part of this phase.
 4. **Remove isolated duplicate policy.** Delete only modules with a proven
    absence of remaining callers, retain historical migration imports, and run
    focused compatibility and database checks. Keep each deletion reviewable.
@@ -109,8 +168,8 @@ companion-free import boundary and compatibility aliases.
 There is no companion turn endpoint, production construction of
 `DurableCompanionScheduler`, handler registration set or scheduler pump in the
 daemon. Mood and curiosity enum entries route to providers but do not establish
-implemented background handlers. Legacy mood tools and memory registrations
-still exist and must be included in retirement analysis.
+implemented background handlers. This does not mean companion code is unused:
+the memory tools are registered and existing mood update paths remain in use.
 
 The earlier evaluation document and `services/tests/eval/` are absent from this
 checkout. Model revisions, latency and factuality thresholds, hardware trials,
