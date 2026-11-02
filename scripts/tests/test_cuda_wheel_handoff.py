@@ -158,6 +158,24 @@ def test_handoff_rejects_mismatched_cuda_target(tmp_path):
         verify_artifact_directory(artifact, spec)
 
 
+def test_handoff_binds_the_reviewed_wrapper_patch_digest(tmp_path):
+    artifact, spec = _artifact(tmp_path)
+    spec["build"]["wrapper_patch_sha256"] = "f" * 64
+    with (artifact / "BUILD-MANIFEST.txt").open("a") as stream:
+        stream.write("wrapper_patch_sha256=" + "e" * 64 + "\n")
+    with pytest.raises(HandoffError, match="wrapper_patch_sha256"):
+        verify_artifact_directory(artifact, spec)
+
+
+def test_handoff_rejects_diskcache_reintroduced_as_a_base_requirement(tmp_path):
+    artifact, spec = _artifact(tmp_path)
+    spec["wheel"]["required_runtime_dependencies"].remove("diskcache>=5.6.1")
+    spec["wheel"]["isolated_dependency_names"] = ["diskcache"]
+    spec["wheel"]["optional_runtime_dependencies"] = []
+    with pytest.raises(HandoffError, match="activates an isolated optional dependency"):
+        verify_artifact_directory(artifact, spec)
+
+
 def test_handoff_rejects_extra_artifact_files(tmp_path):
     artifact, spec = _artifact(tmp_path)
     (artifact / "unexpected.txt").write_text("extra", encoding="utf-8")

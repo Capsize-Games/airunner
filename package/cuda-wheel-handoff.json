@@ -3,21 +3,21 @@
   "repository": "Capsize-Games/airunner",
   "workflow": ".github/workflows/cuda-build-image-inventory.yml",
   "artifact": {
-    "run_id": 41457788526,
-    "source_revision": "feac066eb64a5d59b5cfc153011f424bf24b5c3f",
-    "id": 13148598556,
+    "run_id": 41482860195,
+    "source_revision": "4215e978a11220ab7bcf5e9458c406186e859313",
+    "id": 13160814796,
     "name": "llama-cpp-python-cu129-sm120a",
-    "zip_sha256": "82289dc8be40047e1ac56c64d494c13762601c10615c0462aa09b9c3c3f609dd",
-    "created_at": "2026-11-02T14:15:36Z",
-    "expires_at": "2026-11-16T14:15:32Z",
+    "zip_sha256": "79add050ada248ed1b8e186693cdec6e8511cb9495cea3923f1bdf5b3420e1b2",
+    "created_at": "2026-11-02T16:58:10Z",
+    "expires_at": "2026-11-16T16:58:04Z",
     "retention_days": 14
   },
   "wheel": {
-    "filename": "llama_cpp_python-0.3.21-py3-none-linux_x86_64.whl",
-    "sha256": "3f57994bfb0f2a1f7791933de4c1e49baef06255eac21fa7854340ad50fd0ae6",
-    "size_bytes": 150593689,
+    "filename": "llama_cpp_python-0.3.21+capsize.1-py3-none-linux_x86_64.whl",
+    "sha256": "3a38ddc647bc978750f6139074318070523cf498b03dd58949a4380a1a759b35",
+    "size_bytes": 150594012,
     "name": "llama_cpp_python",
-    "version": "0.3.21",
+    "version": "0.3.21+capsize.1",
     "requires_python": ">=3.8",
     "license": "MIT",
     "tag": "py3-none-linux_x86_64",
@@ -25,8 +25,13 @@
     "required_runtime_dependencies": [
       "typing-extensions>=4.5.0",
       "numpy>=1.20.0",
-      "diskcache>=5.6.1",
       "jinja2>=2.11.3"
+    ],
+    "optional_runtime_dependencies": [
+      "diskcache>=5.6.1; extra == \"disk\""
+    ],
+    "isolated_dependency_names": [
+      "diskcache"
     ]
   },
   "build": {
@@ -43,7 +48,9 @@
       "scikit_build_core-1.1.1-py3-none-any.whl": "6f6d6cf600e2e9639fd258ecd11cfc19bd189354b968916a519c6793e7e26237",
       "pathspec-1.1.1-py3-none-any.whl": "a00ce642f577bf7f473932318056212bc4f8bfdf53128c78bbd5af0b9b20b189",
       "packaging-26.3-py3-none-any.whl": "d7193f7c8e4e93f444fde0262bf90af30e16fa0ad0ad44cb553c87339b23cd1c"
-    }
+    },
+    "wrapper_patch_sha256": "bcbb3cdb76fd56ee26e9b3088f312ffea65cf1c48354c92482d6663fcc167a4a",
+    "wrapper_version": "0.3.21+capsize.1"
   },
   "durability": {
     "status": "temporary_actions_artifact",

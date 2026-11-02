@@ -12,7 +12,6 @@ import csv
 import hashlib
 import io
 import json
-import os
 import re
 import shutil
 import subprocess
@@ -77,6 +76,14 @@ def _verify_build_manifest(text: str, handoff: Mapping[str, Any]) -> None:
     ):
         if values.get(key) != expected.get(key):
             raise HandoffError(f"build manifest mismatch for {key}")
+    for key in ("wrapper_patch_sha256", "wrapper_version"):
+        if key in expected and values.get(key) != expected[key]:
+            raise HandoffError(f"build manifest mismatch for {key}")
+    if "+capsize." in handoff["wheel"]["version"] and (
+        not expected.get("wrapper_patch_sha256")
+        or expected.get("wrapper_version") != handoff["wheel"]["version"]
+    ):
+        raise HandoffError("patched wrapper lacks source patch/version provenance")
 
     wheel = handoff["wheel"]
     wheel_matches = []
@@ -148,6 +155,15 @@ def _verify_wheel(path: Path, spec: Mapping[str, Any]) -> int:
         declared = set(metadata.get_all("Requires-Dist", []))
         if not required <= declared:
             raise HandoffError("wheel base runtime requirements do not match")
+        optional = set(spec.get("optional_runtime_dependencies", []))
+        if not optional <= declared:
+            raise HandoffError("wheel optional runtime requirements do not match")
+        isolated_names = set(spec.get("isolated_dependency_names", []))
+        for requirement in declared:
+            name = re.split(r"[<>=!~;\s\[]", requirement.strip(), maxsplit=1)[0]
+            normalized = name.lower().replace("_", "-")
+            if normalized in isolated_names and requirement not in optional:
+                raise HandoffError("wheel activates an isolated optional dependency")
 
         wheel_text = archive.read(wheel_names[0]).decode("utf-8")
         if f"Tag: {spec['tag']}" not in wheel_text.splitlines():
@@ -229,8 +245,9 @@ def _load_handoff(path: Path = HANDOFF_PATH) -> dict[str, Any]:
 
 
 def _download_archive(archive_path: Path, handoff: Mapping[str, Any]) -> None:
-    if not (os.environ.get("GH_TOKEN") or os.environ.get("GITHUB_TOKEN")):
-        raise HandoffError("set GH_TOKEN with actions:read permission")
+    # gh accepts either its existing authenticated account or a workflow token.
+    # Let the actual API request establish access rather than requiring a new
+    # environment credential when the CLI already has a working login.
     artifact_id = handoff["artifact"]["id"]
     endpoint = (
         f"repos/{handoff['repository']}/actions/artifacts/{artifact_id}/zip"
