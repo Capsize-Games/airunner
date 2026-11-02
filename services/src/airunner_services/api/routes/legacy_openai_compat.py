@@ -13,7 +13,7 @@ import re
 import threading
 import time
 import uuid
-from typing import Any, Callable, List, Optional
+from typing import Any, Callable, List
 
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import StreamingResponse
@@ -24,6 +24,7 @@ from airunner_common.settings import AIRUNNER_LOG_LEVEL
 from airunner_services.utils.application import get_logger
 
 from .legacy_llm_compat import ensure_llm_model_loaded
+from .legacy_llm_helpers import failed_runtime_response
 
 router = APIRouter()
 logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
@@ -301,8 +302,16 @@ def _openai_chat_stream(
     queue: List[bytes] = []
 
     def callback(data: dict[str, Any]) -> None:
+        if done.is_set():
+            return
         response = data.get("response")
         if response is None:
+            return
+        if failed_runtime_response(response):
+            queue.append(_sse_line({"error": {"message": "LLM generation failed"}}))
+            done.set()
+            return
+        if getattr(response, "is_system_message", False):
             return
         # "thinking"-type events carry the model's chain-of-thought, not
         # the visible reply — including them (and, worse, treating a
@@ -364,11 +373,18 @@ def _openai_chat_non_stream(
 ) -> dict[str, Any]:
     """Return one non-streaming OpenAI chat completion."""
     done = threading.Event()
+    failed = threading.Event()
     complete_message: List[str] = []
 
     def callback(data: dict[str, Any]) -> None:
         response = data.get("response")
         if response is None:
+            return
+        if failed_runtime_response(response):
+            failed.set()
+            done.set()
+            return
+        if getattr(response, "is_system_message", False):
             return
         # "thinking"-type events carry the model's chain-of-thought, not
         # the visible reply — including them (and, worse, treating a
@@ -398,6 +414,9 @@ def _openai_chat_non_stream(
 
     if not done.wait(timeout=300):
         raise HTTPException(status_code=504, detail="Request timeout")
+
+    if failed.is_set():
+        raise HTTPException(status_code=500, detail="LLM generation failed")
 
     full_response = "".join(complete_message)
     content, tool_calls = _parse_tool_calls_from_response(full_response, tools)

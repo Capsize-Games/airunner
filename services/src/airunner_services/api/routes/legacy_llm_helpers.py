@@ -32,6 +32,17 @@ def terminal_stream_message(response: Any) -> bool:
     return True
 
 
+def failed_runtime_response(response: Any) -> bool:
+    """Identify explicit errors and the manager's terminal error contract."""
+    message_type = getattr(response, "message_type", None)
+    if isinstance(message_type, str) and message_type.strip().lower() == "error":
+        return True
+    return bool(
+        getattr(response, "is_system_message", False)
+        and terminal_stream_message(response)
+    )
+
+
 def tool_status_stream_payload(data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     """Convert one request-scoped tool status event into NDJSON payload."""
     tool_id = data.get("tool_id")

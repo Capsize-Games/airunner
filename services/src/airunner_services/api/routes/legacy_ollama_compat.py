@@ -28,6 +28,7 @@ from airunner_services.llm.llm_request import LLMRequest
 from airunner_services.utils.application import get_logger
 
 from .legacy_llm_compat import ensure_llm_model_loaded
+from .legacy_llm_helpers import failed_runtime_response
 from .ollama_embedding_helpers import handle_ollama_embedding
 from .ollama_model_helpers import ollama_show_metadata
 from .ollama_model_helpers import ollama_show_unknown_metadata
@@ -456,8 +457,19 @@ def _ollama_chat_stream(app, prompt: str, model: str, llm_request: LLMRequest, r
     accumulated_response: List[str] = []
 
     def callback(data: dict[str, Any]) -> None:
+        if done.is_set():
+            return
         response = data.get("response")
         if not response:
+            return
+        if failed_runtime_response(response):
+            queue.append(_ndjson_line(_ollama_chat_error(
+                model, {"role": "assistant", "content": ""},
+                "LLM generation failed",
+            )))
+            done.set()
+            return
+        if getattr(response, "is_system_message", False):
             return
         # "thinking"-type events carry the model's chain-of-thought, not
         # the visible reply — including them (and, worse, treating a
@@ -503,8 +515,9 @@ def _ollama_chat_stream(app, prompt: str, model: str, llm_request: LLMRequest, r
                 _ollama_chat_timings(start_time, prompt, full_text, True)
             )
             payload["done_reason"] = "stop"
-            done.set()
         queue.append(_ndjson_line(payload))
+        if is_final:
+            done.set()
 
     try:
         _collect_text(app, prompt, llm_request, request_id, callback)
@@ -531,6 +544,7 @@ def _ollama_chat_stream(app, prompt: str, model: str, llm_request: LLMRequest, r
 def _ollama_chat_non_stream(app, prompt: str, model: str, llm_request: LLMRequest, request_id: str):
     """Return one non-streaming Ollama chat response."""
     done = threading.Event()
+    failed = threading.Event()
     complete_message: List[str] = []
     tool_calls_result: List[Any] = []
     start_time = time.time()
@@ -538,6 +552,12 @@ def _ollama_chat_non_stream(app, prompt: str, model: str, llm_request: LLMReques
     def callback(data: dict[str, Any]) -> None:
         response = data.get("response")
         if not response:
+            return
+        if failed_runtime_response(response):
+            failed.set()
+            done.set()
+            return
+        if getattr(response, "is_system_message", False):
             return
         # "thinking"-type events carry the model's chain-of-thought, not
         # the visible reply — including them (and, worse, treating a
@@ -569,6 +589,9 @@ def _ollama_chat_non_stream(app, prompt: str, model: str, llm_request: LLMReques
 
     if not done.wait(timeout=300):
         raise HTTPException(status_code=504, detail="Request timeout")
+
+    if failed.is_set():
+        raise HTTPException(status_code=500, detail="LLM generation failed")
 
     full_response = "".join(complete_message)
     message: dict[str, Any] = {"role": "assistant", "content": full_response}
@@ -657,8 +680,18 @@ def _ollama_generate_stream(app, prompt: str, model: str, llm_request: LLMReques
     queue: List[bytes] = []
 
     def callback(data: dict[str, Any]) -> None:
+        if done.is_set():
+            return
         response = data.get("response")
         if not response:
+            return
+        if failed_runtime_response(response):
+            queue.append(_ndjson_line(_ollama_generate_error(
+                model, "LLM generation failed",
+            )))
+            done.set()
+            return
+        if getattr(response, "is_system_message", False):
             return
         payload = {
             "model": model,
@@ -668,8 +701,9 @@ def _ollama_generate_stream(app, prompt: str, model: str, llm_request: LLMReques
         }
         if response.is_end_of_message:
             payload.update(_ollama_timings(start_time, prompt, response.message, False))
-            done.set()
         queue.append(_ndjson_line(payload))
+        if response.is_end_of_message:
+            done.set()
 
     try:
         _collect_text(app, prompt, llm_request, request_id, callback)
@@ -692,12 +726,19 @@ def _ollama_generate_stream(app, prompt: str, model: str, llm_request: LLMReques
 def _ollama_generate_non_stream(app, prompt: str, model: str, llm_request: LLMRequest, request_id: str):
     """Return one non-streaming Ollama generate response."""
     done = threading.Event()
+    failed = threading.Event()
     complete_message: List[str] = []
     start_time = time.time()
 
     def callback(data: dict[str, Any]) -> None:
         response = data.get("response")
         if not response:
+            return
+        if failed_runtime_response(response):
+            failed.set()
+            done.set()
+            return
+        if getattr(response, "is_system_message", False):
             return
         complete_message.append(response.message)
         if response.is_end_of_message:
@@ -715,6 +756,9 @@ def _ollama_generate_non_stream(app, prompt: str, model: str, llm_request: LLMRe
 
     if not done.wait(timeout=300):
         raise HTTPException(status_code=504, detail="Request timeout")
+
+    if failed.is_set():
+        raise HTTPException(status_code=500, detail="LLM generation failed")
 
     full_response = "".join(complete_message)
     return {

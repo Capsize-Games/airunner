@@ -7,7 +7,9 @@ from typing import Any
 from fastapi import HTTPException
 
 from .legacy_contracts import LegacyLLMGenerateRequest
-from .legacy_llm_helpers import send_legacy_llm_request, terminal_stream_message
+from .legacy_llm_helpers import (
+    failed_runtime_response, send_legacy_llm_request, terminal_stream_message,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -16,12 +18,18 @@ def collect_callback(
     complete_by_turn: dict[int, list[str]],
     executed_tools: list[str],
     done: threading.Event,
+    failed: threading.Event | None = None,
 ):
     """Return the callback used for non-streaming legacy LLM requests."""
 
     def callback(data: dict) -> None:
         response = data.get("response")
         if not response:
+            return
+        if failed_runtime_response(response):
+            if failed is not None:
+                failed.set()
+            done.set()
             return
         turn_index = int(getattr(response, "turn_index", 0) or 0)
         message = getattr(response, "message", "") or ""
@@ -50,7 +58,8 @@ def collect_non_stream_response(
     complete_by_turn: dict[int, list[str]] = {}
     executed_tools: list[str] = []
     done = threading.Event()
-    callback = collect_callback(complete_by_turn, executed_tools, done)
+    failed = threading.Event()
+    callback = collect_callback(complete_by_turn, executed_tools, done, failed)
     try:
         send_legacy_llm_request(
             app,
@@ -75,6 +84,8 @@ def collect_non_stream_response(
         ) from exc
     if not done.wait(timeout=300):
         raise HTTPException(status_code=504, detail="Request timeout")
+    if failed.is_set():
+        raise HTTPException(status_code=500, detail="LLM generation failed")
     final_turn = max(complete_by_turn.keys(), default=0)
     return {
         "message": "".join(complete_by_turn.get(final_turn, [])),
