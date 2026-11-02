@@ -71,26 +71,47 @@ published wheel. This review does not claim those submodules are source-audited.
   12.8.1 EULAs, the CUPTI 12.8.1 copyright/license page, and bundled AMD HIP
   header notices. Those files and hashes are recorded in
   `packaging/licenses/triton-3.7.1-supplement/source-notices.json`.
-  Redistribution remains blocked for the bundled NVIDIA `ptxas`,
-  `ptxas-blackwell`, `cuobjdump`, `nvdisasm`, and additional CUDA headers: the
-  selected EULA Attachment A does not list those members, and no separate grant
-  was found. The candidate currently still contains those members and is
-  quarantined; its added notices do not establish redistribution rights.
+  The first hardened candidate still contains NVIDIA `ptxas`,
+  `ptxas-blackwell`, `cuobjdump`, `nvdisasm`, all 154 bundled CUDA headers, and
+  nine CUPTI payload files. The selected EULA Attachment A does not list all of
+  those members, and no separate grant was found, so that candidate remains
+  quarantined. Its added notices do not establish redistribution rights.
 
-  Source inspection found a possible feature-preserving external-toolchain
-  boundary, but it is not yet implemented or validated. Triton resolves
+  A separate feature-preserving subset recipe now removes those exact 167
+  members while retaining Triton's CUDA backend/JIT code and the EULA-listed
+  `libdevice.10.bc`. The recipe is
+  `package/triton-external-toolchain-subset.json`; it binds the source candidate,
+  each excluded member hash, the replacement-tool hashes, and the output wheel
+  hash. `scripts/build_triton_external_toolchain_subset.py` verifies input and
+  output RECORDs, all excluded-member digests, ZIP CRCs, and the retained
+  libdevice digest. The resulting `3.7.1+capsize.2` wheel is 138,821,684 bytes
+  with SHA-256
+  `a90ecd98dd9aa6207e820396a2e2d5ee5ef9c118cf59d25098955b35f8ac4e93`. It is
+  in ignored local evidence and has not been installed, imported, or loaded.
+
+  Triton resolves external overrides for
   `TRITON_PTXAS_PATH`, `TRITON_PTXAS_BLACKWELL_PATH`, `TRITON_CUOBJDUMP_PATH`,
   and `TRITON_NVDISASM_PATH` as external tool paths. It also accepts
   `TRITON_LIBDEVICE_PATH`; `TRITON_CUDACRT_PATH` and `TRITON_CUDART_PATH` are
   added to runtime compiler include paths, and `TRITON_CUPTI_LIB_PATH` selects
   the CUPTI library directory. An absent or invalid tool override falls back to
-  the wheel's bundled path, so a service integration must set and preflight the
-  required external paths. The NVIDIA driver extension also starts with the
-  packaged `triton/backends/nvidia/include` directory; removing bundled headers
-  would require verifying that the external CRT/runtime include directories
-  fully satisfy its `cuda.h` compilation contract. Do not drop JIT or
-  `torch.compile`; until a subset candidate and that external-toolchain contract
-  are tested, Triton remains inactive. No model or GPU operation was run.
+  the wheel's bundled path; the subset preflight therefore requires and hashes
+  all four tool overrides, both header roots, the exact `cuda.h`, and all nine
+  CUPTI payload files before service startup. It also rejects an installed
+  Triton package that still contains any excluded member, without importing the
+  package. The preflight is `scripts/triton_toolchain_preflight.py`.
+
+  Source inspection confirms the JIT uses ptxas below SM100 and
+  `ptxas-blackwell` for SM100 and newer. `cuobjdump` backs the disassembly
+  helper; `nvdisasm` supports disassembly and line-info paths. The NVIDIA
+  runtime extension directly includes `cuda.h`; the selected header has no
+  other NVIDIA-header includes, and external CRT/runtime directories are added
+  to its include search paths. Proton resolves `libcupti.so` through
+  `TRITON_CUPTI_LIB_PATH`. The source contracts support this boundary, but the
+  external toolchain has not been installed or runtime-tested on the service
+  target. The preflight suite passed 9 tests and the subset builder suite
+  passed 5 tests. JIT and `torch.compile` remain in the candidate. No model or
+  GPU operation was run.
 - **CUDA Python**: selected `cuda-bindings` and `cuda-pathfinder` sources share
   the exact `cuda-python` release tree. The PEP 517 hook delegates metadata to
   setuptools and reads local CUDA headers/compiler configuration to generate
@@ -196,7 +217,7 @@ basis and current disposition. The package set is:
 | `torch` | `2.13.0+cu129` | Exact source and wheel metadata reviewed; wheel ships its license bundle; no build/import/GPU run. |
 | `torchaudio` | `2.11.0+cu129.capsize.1` candidate | Local candidate fixes three RPATHs and adds exact CTC/CUTLASS notices; static-only, inactive. |
 | `torchvision` | `0.28.0+cu129.capsize.1` candidate | Exact image-library source notices and CUDA EULA added; candidate is static-only and inactive. Closed `nvjpeg` source mapping remains bounded as described above. |
-| `triton` | `3.7.1+capsize.1` candidate | LLVM/MLIR, f2reduce, CUDA EULA, CUPTI, and AMD header notices added. Candidate still contains NVIDIA tools and headers without identified redistribution grant; external-toolchain subset is not yet implemented or tested. Inactive. |
+| `triton` | `3.7.1+capsize.2` candidate | Candidate removes unlisted tool/header/CUPTI payloads, retains JIT and permitted libdevice, and requires exact preflighted external equivalents. Static candidate checks and focused tests passed; no external runtime or GPU validation. Inactive. |
 
 ## Commands and exclusions
 
@@ -219,21 +240,38 @@ Private evidence paths:
 - `.headlesscode/service-audit-2026-11-02/linux-release-lock/cuda-native-runpath-candidates/manifest.json`
 
 The current input manifest SHA-256 is
-`302a7f70d22433be91e85aed8af64d1bbf6cf41eff5de61ba50b1dfa919e08dd`. The local repeat-transform report SHA-256 is
+`715e49adc27227beb719e9419dc9c0a4e2bbfdadfc2a3bc3cc93a1eb9b3d1e15`. The local repeat-transform report SHA-256 is
 `003eecb23fae5da6257c86746bed63add471c06620f1dc61c0ba841df929e901`. Two
 independent offline transforms produced identical wheel hashes. The candidates
 are not active lock inputs, were not installed or imported, and have not been
-loaded with `dlopen` or exercised on CUDA hardware. The Triton candidate is
-specifically not suitable for redistribution until its bundled NVIDIA tool and
-header scope is resolved.
+loaded with `dlopen` or exercised on CUDA hardware. Triton `.1` remains
+unsuitable for redistribution because it contains the bundled NVIDIA
+tool/header/CUPTI payload. The separate `.2` subset removes those members; it
+is still inactive pending external-toolchain integration and runtime
+validation.
 
 The hosted candidate workflow explicitly selects TorchAudio, TorchVision and
 NVSHMEM only, with their accompanying notice files. Triton is excluded from
-public candidate artifact uploads while the redistribution finding remains
-unresolved. This partial artifact build does not satisfy the full ML release
-requirement.
+public candidate artifact uploads while the `.2` external-toolchain contract
+awaits integration and runtime validation. The `.1` wheel remains quarantined.
+This partial artifact build does not satisfy the full ML release requirement.
+
+The Triton subset recipe SHA-256 is
+`ff68281c53526986f054b52d66211dd6f771085e0e0230331430698a7e953958`; its
+ignored candidate report records output SHA-256
+`a90ecd98dd9aa6207e820396a2e2d5ee5ef9c118cf59d25098955b35f8ac4e93`, 167
+excluded NVIDIA members, regenerated RECORD, and successful ZIP CRC validation.
+The fail-closed preflight requires exact external tool, CUDA header, and CUPTI
+hashes, and verifies that the installed package omits all 167 members.
 
 The hosted staging URLs are the exact links from the official PyTorch CUDA
 index, including its `download-r2.pytorch.org` and NVIDIA PyPI destinations.
 The original handoff URLs returned HTTP 403; the corrected recipe preserves
 the same reviewed source wheel SHA-256 values.
+
+The hosted compile exposed two required repository headers. The builder now
+stages and verifies `src/patchelf.cc`, `src/patchelf.h` and `src/elf.h` from
+the exact reviewed Patchelf revision before and after compilation. The header
+review covers ELF data definitions and editor templates, their includes and
+process/network primitives; it is not an exhaustive semantic audit of the
+compiler or system C++ headers. No upstream bootstrap hook is run.

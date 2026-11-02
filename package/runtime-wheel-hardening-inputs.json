@@ -9,7 +9,21 @@
     "private_copy": "Capsize-Games/patchelf-maintenance",
     "actions_disabled": true,
     "source_file": "src/patchelf.cc",
-    "source_file_sha256": "d0215767b60b8290a2b271a2313dd919b011ac1c985950c5310116a03242065e"
+    "source_file_sha256": "d0215767b60b8290a2b271a2313dd919b011ac1c985950c5310116a03242065e",
+    "source_files": [
+      {
+        "path": "src/patchelf.cc",
+        "sha256": "d0215767b60b8290a2b271a2313dd919b011ac1c985950c5310116a03242065e"
+      },
+      {
+        "path": "src/patchelf.h",
+        "sha256": "a921f34d5c2966858574ab9a43f59b9c970da244a3e22a3df8d12248695a8a55"
+      },
+      {
+        "path": "src/elf.h",
+        "sha256": "ee9279a21176da387bc3ff2fd4989413ecad4c313e62f8db6c9ab1d70df00d59"
+      }
+    ]
   },
   "patchelf": {
     "version": "0.18.0",

@@ -246,11 +246,29 @@ def transform_one(spec: dict, input_dir: Path, output_dir: Path, patchelf: str, 
             "patchelf_sha256": hash_file(Path(patchelf))}
 
 
+def verify_patchelf_sources(source: Path, source_files: list[dict]) -> dict[str, str]:
+    """Bind the compiler translation unit and both repository headers."""
+    expected_names = {"patchelf.cc", "patchelf.h", "elf.h"}
+    if {item["path"] for item in source_files} != {f"src/{name}" for name in expected_names}:
+        raise ValueError("Patchelf source closure must include its two exact headers")
+    if len(source_files) != 3 or source.name != "patchelf.cc":
+        raise ValueError("invalid Patchelf source closure")
+    verified = {}
+    for item in source_files:
+        relative = checked_relative(item["path"])
+        path = source.parent / relative.name
+        if path.is_symlink() or not path.is_file() or hash_file(path) != item["sha256"]:
+            raise ValueError(f"Patchelf source missing or SHA256 mismatch: {relative}")
+        verified[relative.as_posix()] = item["sha256"]
+    return verified
+
+
 def build_patchelf(source: Path, expected_source_sha256: str, compiler: str,
-                   flags: list[str], output_dir: Path) -> tuple[Path, dict]:
+                   flags: list[str], output_dir: Path, source_files: list[dict]) -> tuple[Path, dict]:
     """Compile the reviewed standalone Patchelf source with the pinned flags."""
     if not source.is_file() or hash_file(source) != expected_source_sha256:
         raise ValueError(f"Patchelf source missing or SHA256 mismatch: {source}")
+    verified_sources = verify_patchelf_sources(source, source_files)
     compiler_path = shutil.which(compiler)
     if not compiler_path:
         raise ValueError(f"compiler not found: {compiler}")
@@ -259,9 +277,12 @@ def build_patchelf(source: Path, expected_source_sha256: str, compiler: str,
     binary = output_dir / "patchelf-reviewed"
     command = [compiler_path, *flags, str(source), "-o", str(binary)]
     subprocess.check_call(command, timeout=600)
+    if verify_patchelf_sources(source, source_files) != verified_sources:
+        raise ValueError("Patchelf source changed during compilation")
     receipt = {
         "source_path": source.name,
         "source_sha256": hash_file(source),
+        "source_files": verified_sources,
         "compiler": compiler_path,
         "compiler_version": version,
         "build_command": command,
@@ -309,6 +330,7 @@ def main() -> int:
         args.compiler,
         data["patchelf"]["build_flags"],
         tool_dir,
+        data["source_repository"]["source_files"],
     )
     results = [transform_one(s, args.input_dir, args.output_dir, patchelf, args.readelf, args.license_root)
                for s in artifacts]

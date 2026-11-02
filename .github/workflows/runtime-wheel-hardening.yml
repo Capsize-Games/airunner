@@ -52,9 +52,10 @@ jobs:
           downloads = [(item['source_url'], item['source_filename'], item['source_sha256'])
                        for item in manifest['artifacts']
                        if item['distribution'] in {'torchaudio', 'torchvision', 'nvidia-nvshmem-cu12'}]
-          downloads.append((
-              f"https://raw.githubusercontent.com/NixOS/patchelf/{source['commit']}/src/patchelf.cc",
-              'patchelf.cc', source['source_file_sha256']))
+          for item in source['source_files']:
+              downloads.append((
+                  f"https://raw.githubusercontent.com/NixOS/patchelf/{source['commit']}/{item['path']}",
+                  Path(item['path']).name, item['sha256']))
           for url, filename, digest in downloads:
               parsed = urlsplit(url)
               assert parsed.scheme == 'https'

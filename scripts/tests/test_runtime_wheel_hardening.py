@@ -17,6 +17,21 @@ import runtime_wheel_hardening as hardening
 
 
 class RuntimeWheelHardeningTests(unittest.TestCase):
+    def test_patchelf_source_closure_rejects_missing_or_changed_headers(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            records = []
+            for name in ("patchelf.cc", "patchelf.h", "elf.h"):
+                content = ("synthetic " + name).encode()
+                (root / name).write_bytes(content)
+                records.append({"path": "src/" + name, "sha256": hardening.sha256(content)})
+            source = root / "patchelf.cc"
+            self.assertEqual(len(hardening.verify_patchelf_sources(source, records)), 3)
+            with self.assertRaisesRegex(ValueError, "source closure"):
+                hardening.verify_patchelf_sources(source, records[:1])
+            (root / "elf.h").write_bytes(b"changed")
+            with self.assertRaisesRegex(ValueError, "SHA256 mismatch"):
+                hardening.verify_patchelf_sources(source, records)
     def test_distribution_selection_is_explicit_and_rejects_unknown_names(self) -> None:
         data = {"artifacts": [{"distribution": "allowed"}, {"distribution": "held"}]}
         self.assertEqual(hardening.select_artifacts(data, ["allowed"]), [{"distribution": "allowed"}])
