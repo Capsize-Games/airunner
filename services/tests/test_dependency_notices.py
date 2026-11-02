@@ -404,3 +404,19 @@ def test_inspector_rejects_lock_change_tampered_notice_and_incomplete_package_se
     _collect(tmp_path, site, spec, bundle)
     lock.write_text(lock.read_text(encoding="utf-8") + "# changed\n", encoding="utf-8")
     assert dependency_notices.verify_dependency_notice_manifest(bundle, spec, tmp_path)
+
+
+def test_collects_nested_source_relative_license_paths(tmp_path, monkeypatch):
+    """The tzdata layout retains licenses/ inside the wheel license directory."""
+    site, _lock, spec, bundle = _setup(tmp_path, monkeypatch)
+    shutil.rmtree(site / "alpha-1.0.dist-info")
+    _write_distribution(
+        site, "alpha", "1.0",
+        {"licenses/LICENSE": b"Package notice", "licenses/licenses/LICENSE_APACHE": b"Apache notice"},
+        license_file_headers=["LICENSE", "licenses/LICENSE_APACHE"],
+    )
+    manifest = _collect(tmp_path, site, spec, bundle)
+    alpha = next(item for item in manifest["distributions"] if item["normalized_name"] == "alpha")
+    assert len(alpha["notices"]) == 2
+    assert (bundle / "legal/dependencies/alpha-1.0/alpha-1.0.dist-info/licenses/licenses/LICENSE_APACHE").read_bytes() == b"Apache notice"
+    assert dependency_notices.verify_dependency_notice_manifest(bundle, spec, tmp_path) == []

@@ -392,10 +392,9 @@ def _distribution_notices(
             relative.as_posix(),
             f"{dist_info_relative}/{relative.as_posix()}",
         }
-        if relative.parts[0] == "licenses":
-            candidates.add(f"{dist_info_relative}/{relative.as_posix()}")
-        else:
-            candidates.add(f"{dist_info_relative}/licenses/{relative.as_posix()}")
+        # License-File is source-relative, even when it begins with
+        # licenses/: PEP 639 wheels retain that path below dist-info/licenses.
+        candidates.add(f"{dist_info_relative}/licenses/{relative.as_posix()}")
         declared_paths[license_file] = candidates
 
     selected_metadata_paths = set().union(*declared_paths.values()) if declared_paths else set()
