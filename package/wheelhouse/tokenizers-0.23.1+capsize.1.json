@@ -1,0 +1,80 @@
+{
+  "change_scope": "No Tokenizers Python or Rust implementation source, exposed API, or default feature changes; wheel Python package files derived from exact upstream 0.23.1 wheel and exact source tag comparison; only compiled native extension replaced and version/build metadata updated.",
+  "dependency_changes": [
+    "PyO3 family 0.29.2; pyo3-async-runtimes 0.29.0",
+    "NumPy 0.29.0",
+    "Tokio 1.53.3",
+    "crossbeam-epoch 0.9.20",
+    "anyhow 1.0.103"
+  ],
+  "distribution": "tokenizers",
+  "license_bundle": {
+    "locked_registry_crates": 165,
+    "manifest_sha256": "a8a50237333f852297e01b9c1917342de07e5a41e6f42b3f6c8fc0fbb8019b77",
+    "missing_notice_crates": [],
+    "notice_files": 343,
+    "path": "packaging/licenses/tokenizers-rust-crates-capsize-0.23.1/",
+    "supplemental_text_revisions": [
+      "bytecodealliance/wasm-tools d4e317f22c3bace76cb3205003bcc34b4929037d",
+      "bytecodealliance/wasi-rs 06ce201370fcde0d1b0d47cac8ecb1b0b312c9f9"
+    ]
+  },
+  "native_build": {
+    "build_python": "3.13.5",
+    "cargo": "1.99.1 (5f94df478 2026-08-27)",
+    "cargo_lock_sha256": "94975b0e52bc19b6eda80e38b6219f3c285c8ab724d2f44321105d923d7d6505",
+    "command": "cargo build --release --locked --offline",
+    "extension_sha256": "1b04a20b1efa7bf9a8a44072650dfa67ba7d0f469563cfd9ec017ef778e91628",
+    "extension_size_bytes": 10910792,
+    "glibc_max_symbol": "GLIBC_2.34",
+    "glibcxx_max_symbol": "GLIBCXX_3.4",
+    "init_symbol": "PyInit_tokenizers",
+    "needed_shared_libraries": [
+      "libstdc++.so.6",
+      "libgcc_s.so.1",
+      "libm.so.6",
+      "libc.so.6",
+      "ld-linux-x86-64.so.2"
+    ],
+    "rustc": "1.99.1 (58cf8f9c3 2026-10-13)",
+    "source_sha": "0a272995c381e187f82540fa6aba4cee7e063d91",
+    "target": "x86_64-unknown-linux-gnu",
+    "warnings": "PyO3 deprecation warnings for unchanged tuple binding syntax."
+  },
+  "project_license": {
+    "sha256": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4",
+    "source": "upstream v0.23.1 exact source root LICENSE",
+    "wheel_path": "tokenizers-0.23.1+capsize.1.dist-info/licenses/LICENSE"
+  },
+  "schema_version": 1,
+  "security_review": "Candidate patched crate OSV scan has no fixed-version advisories; only informational unmaintained paste 1.0.15. Exact upstream paste source was retained in private Capsize-Games/paste-maintenance; no unexpected network, credential, or process behavior was found in bounded source/build-hook review.",
+  "source": {
+    "private_branch": "source-review/capsize-fix-native-cargo-v0.23.1",
+    "private_branch_commit": "4cfdd14acbdb42e25e56447d0bc8bea2fe407315",
+    "private_merged_sha": "0a272995c381e187f82540fa6aba4cee7e063d91",
+    "private_pr": "https://github.com/Capsize-Games/tokenizers-maintenance/pull/1",
+    "private_release_tag": "capsize-tokenizers-v0.23.1.1",
+    "private_release_url": "https://github.com/Capsize-Games/tokenizers-maintenance/releases/tag/capsize-tokenizers-v0.23.1.1",
+    "private_repository": "https://github.com/Capsize-Games/tokenizers-maintenance",
+    "upstream_commit": "7f1623b90b5adfb9bc327d4c3468d2f70bbce262",
+    "upstream_repository": "https://github.com/huggingface/tokenizers",
+    "upstream_tag": "v0.23.1"
+  },
+  "verification": {
+    "archive_paths": "unique paths; no absolute or parent traversal members",
+    "isolated_import": "passed with uv-isolated CPython 3.13.5 environment; installed only this wheel using uv pip --no-deps; import tokenizers printed 0.23.1+capsize.1",
+    "private_source_review": "merged PR #1 to actual private default branch; repository Actions disabled; no CI checks reported",
+    "source_to_binary_reproducibility": "not claimed",
+    "tests": "not run",
+    "wheel_record": "all non-RECORD archive entries hash and size verified"
+  },
+  "version": "0.23.1+capsize.1",
+  "wheel": {
+    "filename": "tokenizers-0.23.1+capsize.1-cp310-abi3-linux_x86_64.whl",
+    "platform_scope": "generic Linux x86_64; built with Ubuntu 24.04 system toolchain; ELF GLIBC symbol ceiling 2.34; no manylinux portability claim",
+    "platform_tag": "linux_x86_64",
+    "python_tag": "cp310-abi3",
+    "sha256": "519b5060fec672eb485e0f1d3ef50eb3aedc904d8fdda8075d402cd51369df3b",
+    "size_bytes": 3987391
+  }
+}
