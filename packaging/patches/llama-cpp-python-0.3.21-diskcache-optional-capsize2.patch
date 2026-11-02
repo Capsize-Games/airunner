@@ -1,0 +1,192 @@
+diff --git a/README.md b/README.md
+index 69a0f82..e7b9f4b 100644
+--- a/README.md
++++ b/README.md
+@@ -263,6 +263,13 @@ CMAKE_ARGS="-DCMAKE_OSX_ARCHITECTURES=arm64 -DCMAKE_APPLE_SILICON_PROCESSOR=arm6
+ 
+ To upgrade and rebuild `llama-cpp-python` add `--upgrade --force-reinstall --no-cache-dir` flags to the `pip install` command to ensure the package is rebuilt from source.
+ 
++### Cache dependencies
++
++`LlamaRAMCache` and its `LlamaCache` alias use in-memory caching and are
++available with the base package. `LlamaDiskCache` requires the optional disk
++dependency; install `llama-cpp-python[disk]` to use it. Server installations
++that set `cache_type` to `disk` also need this extra.
++
+ ## High-level API
+ 
+ [API Reference](https://llama-cpp-python.readthedocs.io/en/latest/api-reference/#high-level-api)
+diff --git a/llama_cpp/__init__.py b/llama_cpp/__init__.py
+index fbad5c2..13e94f8 100644
+--- a/llama_cpp/__init__.py
++++ b/llama_cpp/__init__.py
+@@ -1,4 +1,4 @@
+ from .llama_cpp import *
+ from .llama import *
+ 
+-__version__ = "0.3.21"
++__version__ = "0.3.21+capsize.2"
+diff --git a/llama_cpp/llama_cache.py b/llama_cpp/llama_cache.py
+index 5220c79..934d779 100644
+--- a/llama_cpp/llama_cache.py
++++ b/llama_cpp/llama_cache.py
+@@ -7,8 +7,6 @@ from typing import (
+ )
+ from collections import OrderedDict
+ 
+-import diskcache
+-
+ import llama_cpp.llama
+ 
+ from .llama_types import *
+@@ -108,6 +106,13 @@ class LlamaDiskCache(BaseLlamaCache):
+         self, cache_dir: str = ".cache/llama_cache", capacity_bytes: int = (2 << 30)
+     ):
+         super().__init__(capacity_bytes)
++        try:
++            import diskcache
++        except ImportError as exc:
++            raise ImportError(
++                "LlamaDiskCache requires the optional disk dependency. "
++                "Install llama-cpp-python[disk] to use disk caching."
++            ) from exc
+         self.cache = diskcache.Cache(cache_dir)
+ 
+     @property
+diff --git a/pyproject.toml b/pyproject.toml
+index b5998dd..fe5faf4 100644
+--- a/pyproject.toml
++++ b/pyproject.toml
+@@ -14,7 +14,6 @@ authors = [
+ dependencies = [
+     "typing-extensions>=4.5.0",
+     "numpy>=1.20.0",
+-    "diskcache>=5.6.1",
+     "jinja2>=2.11.3",
+ ]
+ requires-python = ">=3.8"
+@@ -30,6 +29,7 @@ classifiers = [
+ 
+ 
+ [project.optional-dependencies]
++disk = ["diskcache>=5.6.1"]
+ server = [
+     "uvicorn>=0.22.0",
+     "fastapi>=0.100.0",
+diff --git a/tests/test_diskcache_optional_dependency.py b/tests/test_diskcache_optional_dependency.py
+new file mode 100644
+index 0000000..dba7467
+--- /dev/null
++++ b/tests/test_diskcache_optional_dependency.py
+@@ -0,0 +1,111 @@
++"""Static contract checks for the optional disk-cache dependency."""
++
++from __future__ import annotations
++
++import ast
++from pathlib import Path
++import unittest
++
++
++ROOT = Path(__file__).resolve().parents[1]
++
++
++class DiskCacheOptionalDependencyTests(unittest.TestCase):
++    def test_diskcache_is_imported_only_when_disk_cache_is_constructed(self):
++        tree = ast.parse((ROOT / "llama_cpp/llama_cache.py").read_text())
++        top_level_imports = [
++            node
++            for node in tree.body
++            if isinstance(node, (ast.Import, ast.ImportFrom))
++        ]
++        self.assertFalse(
++            any(
++                isinstance(node, ast.Import)
++                and any(alias.name == "diskcache" for alias in node.names)
++                or isinstance(node, ast.ImportFrom)
++                and node.module == "diskcache"
++                for node in top_level_imports
++            )
++        )
++
++        disk_cache = next(
++            node
++            for node in tree.body
++            if isinstance(node, ast.ClassDef) and node.name == "LlamaDiskCache"
++        )
++        initializer = next(
++            node
++            for node in disk_cache.body
++            if isinstance(node, ast.FunctionDef) and node.name == "__init__"
++        )
++        self.assertTrue(
++            any(
++                isinstance(node, ast.Import)
++                and any(alias.name == "diskcache" for alias in node.names)
++                for node in ast.walk(initializer)
++            )
++        )
++        self.assertTrue(
++            any(
++                isinstance(node, ast.Raise)
++                and isinstance(node.exc, ast.Call)
++                and isinstance(node.exc.func, ast.Name)
++                and node.exc.func.id == "ImportError"
++                for node in ast.walk(initializer)
++            )
++        )
++
++    def test_ram_cache_public_names_remain_available_without_diskcache(self):
++        tree = ast.parse((ROOT / "llama_cpp/llama.py").read_text())
++        imports = [
++            alias.name
++            for node in tree.body
++            if isinstance(node, ast.ImportFrom)
++            and node.module == "llama_cache"
++            and node.level == 1
++            for alias in node.names
++        ]
++        self.assertEqual(
++            imports,
++            ["BaseLlamaCache", "LlamaCache", "LlamaDiskCache", "LlamaRAMCache"],
++        )
++        cache_tree = ast.parse((ROOT / "llama_cpp/llama_cache.py").read_text())
++        class_names = {
++            node.name for node in cache_tree.body if isinstance(node, ast.ClassDef)
++        }
++        self.assertTrue({"LlamaRAMCache", "LlamaDiskCache"} <= class_names)
++        self.assertTrue(
++            any(
++                isinstance(node, ast.Assign)
++                and any(
++                    isinstance(target, ast.Name) and target.id == "LlamaCache"
++                    for target in node.targets
++                )
++                and isinstance(node.value, ast.Name)
++                and node.value.id == "LlamaRAMCache"
++                for node in cache_tree.body
++            )
++        )
++
++    def test_diskcache_is_an_explicit_optional_extra(self):
++        pyproject = (ROOT / "pyproject.toml").read_text()
++        dependencies = pyproject.split("dependencies = [", 1)[1].split("]", 1)[0]
++        self.assertFalse(
++            any(line.strip().startswith('"diskcache') for line in dependencies.splitlines())
++        )
++        self.assertIn('disk = ["diskcache>=5.6.1"]', pyproject)
++        package_tree = ast.parse((ROOT / "llama_cpp/__init__.py").read_text())
++        version = next(
++            node.value.value
++            for node in package_tree.body
++            if isinstance(node, ast.Assign)
++            and any(
++                isinstance(target, ast.Name) and target.id == "__version__"
++                for target in node.targets
++            )
++        )
++        self.assertEqual(version, "0.3.21+capsize.2")
++
++
++if __name__ == "__main__":
++    unittest.main()

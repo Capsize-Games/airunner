@@ -4,7 +4,7 @@ on:
   pull_request:
     paths:
       - .github/workflows/cuda-build-image-inventory.yml
-      - packaging/patches/llama-cpp-python-0.3.21-diskcache-optional.patch
+      - packaging/patches/llama-cpp-python-0.3.21-diskcache-optional-capsize2.patch
   workflow_dispatch:
 
 permissions: {}
@@ -196,8 +196,8 @@ jobs:
           wrapper_commit=$(git -C "$root/wrapper-repo" rev-parse 'FETCH_HEAD^{commit}')
           test "$wrapper_commit" = d2bcbac46605f11d382426dd88d67e8b5c124cd7
           git -C "$root/wrapper-repo" archive --format=tar "$wrapper_commit" | tar -xf - -C "$source"
-          patch="$GITHUB_WORKSPACE/packaging/patches/llama-cpp-python-0.3.21-diskcache-optional.patch"
-          patch_sha256=bcbb3cdb76fd56ee26e9b3088f312ffea65cf1c48354c92482d6663fcc167a4a
+          patch="$GITHUB_WORKSPACE/packaging/patches/llama-cpp-python-0.3.21-diskcache-optional-capsize2.patch"
+          patch_sha256=e5af3e92fec98df8b4845662d7b1a7033465e01e110e686e38d963ed67711564
           printf '%s  %s\n' "$patch_sha256" "$patch" | sha256sum --check --strict
           (
             cd "$source"
@@ -208,16 +208,17 @@ jobs:
           test "$gitlink" = f53577432541bb9edc1588c4ef45c66bf07e4468
           git -c core.hooksPath=/dev/null init --quiet "$root/llama-repo"
           git -C "$root/llama-repo" config core.hooksPath /dev/null
-          git -C "$root/llama-repo" remote add origin https://github.com/ggerganov/llama.cpp.git
-          git -C "$root/llama-repo" -c protocol.file.allow=never fetch --quiet --no-tags --depth=1 origin "$gitlink"
+          git -C "$root/llama-repo" remote add origin https://github.com/ggml-org/llama.cpp.git
+          llama_source_revision=7acb4e8cd2ce21f457d1298e75fad729520d263c
+          git -C "$root/llama-repo" -c protocol.file.allow=never fetch --quiet --no-tags --depth=1 origin "$llama_source_revision"
           llama_commit=$(git -C "$root/llama-repo" rev-parse 'FETCH_HEAD^{commit}')
-          test "$llama_commit" = f53577432541bb9edc1588c4ef45c66bf07e4468
+          test "$llama_commit" = "$llama_source_revision"
           mkdir -p "$source/vendor/llama.cpp"
           git -C "$root/llama-repo" archive --format=tar "$llama_commit" | tar -xf - -C "$source/vendor/llama.cpp"
           test ! -e "$source/.git"
           test ! -e "$source/vendor/llama.cpp/.git"
           printf 'wrapper_commit=%s\nllama_cpp_commit=%s\n' "$wrapper_commit" "$llama_commit" | tee "$root/source-revisions.txt"
-          printf 'wrapper_patch_sha256=%s\nwrapper_version=0.3.21+capsize.1\n' "$patch_sha256" >> "$root/source-revisions.txt"
+          printf 'wrapper_patch_sha256=%s\nwrapper_version=0.3.21+capsize.2\n' "$patch_sha256" >> "$root/source-revisions.txt"
 
           fetch_wheel() {
             local filename="$1" url="$2" sha="$3"
@@ -359,7 +360,7 @@ jobs:
           export CUDA_CMAKE_HOME="$cmake_home" CMAKE_EXECUTABLE="$root/cmake-docker"
           export CMAKE_GENERATOR='Unix Makefiles'
           export CMAKE_BUILD_PARALLEL_LEVEL=2 SOURCE_DATE_EPOCH=1777269304
-          export CMAKE_ARGS='-DLLAMA_BUILD=ON -DLLAVA_BUILD=ON -DGGML_CUDA=ON -DGGML_NATIVE=OFF -DGGML_CUDA_ARCHITECTURES=120a-real -DCMAKE_CUDA_ARCHITECTURES=120a-real -DGGML_CUDA_CUB_3DOT2=OFF -DGGML_CUDA_NCCL=OFF -DLLAMA_CURL=OFF -DFETCHCONTENT_FULLY_DISCONNECTED=ON -DCMAKE_EXE_LINKER_FLAGS=-Wl,-rpath-link,/tmp/cuda-stubs'
+          export CMAKE_ARGS='-DLLAMA_BUILD=ON -DLLAVA_BUILD=ON -DGGML_CUDA=ON -DGGML_NATIVE=OFF -DGGML_CUDA_ARCHITECTURES=120a-real -DCMAKE_CUDA_ARCHITECTURES=120a-real -DGGML_CUDA_CUB_3DOT2=OFF -DGGML_CUDA_NCCL=OFF -DLLAMA_CURL=OFF -DLLAMA_BUILD_SERVER=OFF -DLLAMA_BUILD_UI=OFF -DLLAMA_USE_PREBUILT_UI=OFF -DLLAMA_BUILD_APP=OFF -DFETCHCONTENT_FULLY_DISCONNECTED=ON -DCMAKE_EXE_LINKER_FLAGS=-Wl,-rpath-link,/tmp/cuda-stubs'
           export PYTHONPATH="$root/backend-site"
           timeout 30s "$CMAKE_EXECUTABLE" -E capabilities > "$root/cmake-capabilities.json"
           env -i \
@@ -390,7 +391,7 @@ jobs:
           print(f"wheel={wheel}")
           PY
           shopt -s nullglob
-          wheels=("$root"/wheel/llama_cpp_python-0.3.21+capsize.1-*.whl)
+          wheels=("$root"/wheel/llama_cpp_python-0.3.21+capsize.2-*.whl)
           test "${#wheels[@]}" -eq 1
           sha256sum "${wheels[0]}"
 
@@ -399,7 +400,7 @@ jobs:
         run: |
           set -euo pipefail
           root="$RUNNER_TEMP/cuda-wheel"
-          wheel=$(find "$root/wheel" -maxdepth 1 -type f -name 'llama_cpp_python-0.3.21+capsize.1-*.whl' -print -quit)
+          wheel=$(find "$root/wheel" -maxdepth 1 -type f -name 'llama_cpp_python-0.3.21+capsize.2-*.whl' -print -quit)
           test -n "$wheel"
           cache=$(find "$root/build" -maxdepth 2 -name CMakeCache.txt -print -quit)
           test -n "$cache"
@@ -416,7 +417,7 @@ jobs:
               metadata_paths = [name for name in archive.namelist() if name.endswith('.dist-info/METADATA')]
               assert len(metadata_paths) == 1, metadata_paths
               metadata = BytesParser().parsebytes(archive.read(metadata_paths[0]))
-              assert metadata['Version'] == '0.3.21+capsize.1'
+              assert metadata['Version'] == '0.3.21+capsize.2'
               disk_requirements = [value for value in metadata.get_all('Requires-Dist', []) if value.lower().startswith('diskcache')]
               assert len(disk_requirements) == 1, disk_requirements
               assert 'extra == "disk"' in disk_requirements[0], disk_requirements

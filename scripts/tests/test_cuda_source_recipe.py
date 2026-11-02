@@ -39,6 +39,7 @@ def test_cuda_source_recipe_binds_exact_sources_backend_and_offline_flags():
 
     assert "d2bcbac46605f11d382426dd88d67e8b5c124cd7" in build_job
     assert "f53577432541bb9edc1588c4ef45c66bf07e4468" in build_job
+    assert "7acb4e8cd2ce21f457d1298e75fad729520d263c" in build_job
     assert "6f6d6cf600e2e9639fd258ecd11cfc19bd189354b968916a519c6793e7e26237" in build_job
     assert "a00ce642f577bf7f473932318056212bc4f8bfdf53128c78bbd5af0b9b20b189" in build_job
     assert "d7193f7c8e4e93f444fde0262bf90af30e16fa0ad0ad44cb553c87339b23cd1c" in build_job
@@ -52,6 +53,10 @@ def test_cuda_source_recipe_binds_exact_sources_backend_and_offline_flags():
     )
     assert "PIP_FIND_LINKS: ${{ runner.temp }}/cuda-wheel/backend" in build_job
     assert "--network=none" in build_job
+    assert "-DLLAMA_BUILD_SERVER=OFF" in build_job
+    assert "-DLLAMA_BUILD_UI=OFF" in build_job
+    assert "-DLLAMA_USE_PREBUILT_UI=OFF" in build_job
+    assert "-DLLAMA_BUILD_APP=OFF" in build_job
     assert "-DGGML_CUDA_CUB_3DOT2=OFF" in build_job
     assert "-DGGML_NATIVE=OFF" in build_job
     assert "-DCMAKE_CUDA_ARCHITECTURES=120a-real" in build_job
@@ -60,3 +65,14 @@ def test_cuda_source_recipe_binds_exact_sources_backend_and_offline_flags():
         "name: Verify wheel contents and SM 120 target configuration", 1
     )[1]
     assert '--user "$(id -u):$(id -g)"' in verification
+
+
+def test_cuda_source_recipe_binds_the_new_wrapper_patch_and_version():
+    text = WORKFLOW.read_text(encoding="utf-8")
+    build_job = text.split("  build-llama-cpp-python:", 1)[1]
+
+    assert "llama-cpp-python-0.3.21-diskcache-optional-capsize2.patch" in build_job
+    assert "e5af3e92fec98df8b4845662d7b1a7033465e01e110e686e38d963ed67711564" in build_job
+    assert "wrapper_version=0.3.21+capsize.2" in build_job
+    assert "llama_cpp_python-0.3.21+capsize.2-*.whl" in build_job
+    assert "metadata['Version'] == '0.3.21+capsize.2'" in build_job
