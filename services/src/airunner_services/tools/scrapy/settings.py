@@ -37,6 +37,10 @@ RETRY_HTTP_CODES = [500, 502, 503, 504, 522, 524, 408, 429]
 # Request timeout
 DOWNLOAD_TIMEOUT = 15
 
+# Cap untrusted wire and decompressed response bodies for the crawl worker.
+# Scrapy's default (1 GiB) exceeds this service's memory budget.
+DOWNLOAD_MAXSIZE = 16 * 1024 * 1024
+
 # Logging
 LOG_LEVEL = "INFO"
 LOG_FORMAT = "%(levelname)s: %(message)s"
