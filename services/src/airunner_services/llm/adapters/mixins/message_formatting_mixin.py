@@ -1,6 +1,7 @@
 """Message formatting operations for HuggingFace chat models."""
 
 from typing import List
+from urllib.parse import urlsplit
 from langchain_core.messages import (
     BaseMessage,
     AIMessage,
@@ -27,6 +28,48 @@ try:
     MISTRAL_AVAILABLE = True
 except ImportError:
     MISTRAL_AVAILABLE = False
+
+
+class MistralRemoteImageUnsupportedError(ValueError):
+    """Stable error raised for image URLs the Mistral tokenizer would fetch."""
+
+    code = "remote_image_url_unsupported_for_mistral_native"
+
+    def __init__(self) -> None:
+        super().__init__(self.code)
+
+
+def _has_remote_image_reference(content: object) -> bool:
+    """Return whether structured message content contains an HTTP image URL.
+
+    Mistral Common resolves HTTP image chunks itself and currently supplies no
+    timeout or AIRunner URL-safety policy at that boundary. This adapter only
+    permits inline and local image inputs for native tokenization.
+    """
+    if isinstance(content, (list, tuple)):
+        return any(_has_remote_image_reference(part) for part in content)
+    if isinstance(content, dict):
+        chunk_type = content.get("type")
+        image_url = content.get("image_url")
+        image = content.get("image")
+        url = content.get("url")
+    else:
+        chunk_type = getattr(content, "type", None)
+        image_url = getattr(content, "image_url", None)
+        image = getattr(content, "image", None)
+        url = getattr(content, "url", None)
+    if chunk_type in {"image", "image_url"}:
+        reference = image_url
+        if reference is None:
+            reference = image if image is not None else url
+        if isinstance(reference, dict):
+            reference = reference.get("url")
+        if not isinstance(reference, str):
+            reference = getattr(reference, "url", None)
+        if isinstance(reference, str):
+            if urlsplit(reference.strip()).scheme.lower() in {"http", "https"}:
+                return True
+    return False
 
 
 class MessageFormattingMixin:
@@ -221,6 +264,8 @@ class MessageFormattingMixin:
         """
         mistral_messages = []
         for msg in messages:
+            if _has_remote_image_reference(msg.content):
+                raise MistralRemoteImageUnsupportedError()
             if isinstance(msg, SystemMessage):
                 mistral_messages.append(
                     MistralSystemMessage(content=msg.content)
