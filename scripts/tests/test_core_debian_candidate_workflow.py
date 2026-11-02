@@ -43,6 +43,7 @@ class CoreDebianCandidateWorkflowTests(unittest.TestCase):
     def test_reviews_inputs_before_binary_only_locked_install(self):
         self.assertIn("--mode verify-record", self.workflow_text)
         self.assertIn("--mode activate", self.workflow_text)
+        self.assertIn("apt-get install -y build-essential debhelper-compat dpkg-dev python3-venv", self.workflow_text)
         self.assertIn("pip install --require-hashes --only-binary=:all:", self.workflow_text)
         self.assertIn("-r package/constraints-linux-core.txt", self.workflow_text)
         self.assertIn("pip install --no-deps --no-build-isolation ./services", self.workflow_text)
