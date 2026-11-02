@@ -23,6 +23,11 @@ class CoreDebianCandidateWorkflowTests(unittest.TestCase):
         self.assertEqual(set(self.workflow["on"]), {"workflow_dispatch", "pull_request"})
         self.assertEqual(self.workflow["permissions"], {"contents": "read"})
         self.assertIn("github.event_name == 'pull_request' || github.ref_type == 'branch'", self.workflow_text)
+        for path in (
+            "scripts/core_debian_candidate_smoke.sh",
+            "scripts/tests/test_core_debian_candidate_workflow.py",
+        ):
+            self.assertIn(f'"{path}"', self.workflow_text)
 
     def test_checks_out_exact_candidate_without_persisting_credentials(self):
         self.assertEqual(self.workflow_text.count("persist-credentials: false"), 2)
@@ -42,6 +47,15 @@ class CoreDebianCandidateWorkflowTests(unittest.TestCase):
         self.assertIn("-r package/constraints-linux-core.txt", self.workflow_text)
         self.assertIn("pip install --no-deps --no-build-isolation ./services", self.workflow_text)
         self.assertIn("dpkg-buildpackage --build=binary --no-sign", self.workflow_text)
+        jobs = self.workflow["jobs"]
+        self.assertEqual(jobs["build-core-debian-candidate"]["runs-on"], "ubuntu-24.04")
+        self.assertEqual(jobs["clean-install-smoke"]["runs-on"], "ubuntu-26.04")
+        python_setup = next(
+            step
+            for step in jobs["build-core-debian-candidate"]["steps"]
+            if str(step.get("uses", "")).startswith("actions/setup-python@")
+        )
+        self.assertEqual(python_setup["with"]["python-version"], "3.13.5")
 
     def test_artifact_is_bound_to_source_and_lock_and_not_published(self):
         self.assertIn('"source_sha": os.environ["CORE_SOURCE_SHA"]', self.workflow_text)

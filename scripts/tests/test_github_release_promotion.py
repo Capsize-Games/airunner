@@ -132,9 +132,11 @@ class _GitHub:
                 "object": {"sha": self.tag_object, "type": "tag"},
             })
         if path.endswith("/releases/tags/v1.2.3") and method == "GET":
-            if self.release is None:
+            if self.release is None or self.release.get("draft"):
                 raise HTTPError(request.full_url, 404, "missing", Message(), None)
             return _Response(self.release)
+        if path.endswith("/releases") and method == "GET":
+            return _Response([self.release] if self.release is not None else [])
         if path.endswith("/releases") and method == "POST":
             payload = json.loads(request.data)
             assert payload["tag_name"] == "v1.2.3"
@@ -298,3 +300,25 @@ def test_published_event_verification_is_read_only(tmp_path: Path) -> None:
 
     assert result["immutable"] is True
     assert all(method == "GET" for method, _ in api.calls)
+
+
+def test_draft_lookup_reaches_later_release_pages() -> None:
+    def opener(request, timeout):
+        url = request.full_url
+        if "/releases/tags/" in url:
+            raise HTTPError(url, 404, "draft omitted", Message(), None)
+        page = parse_qs(urlparse(url).query)["page"][0]
+        if page == "1":
+            return _Response([{"id": n, "tag_name": f"v-old-{n}"} for n in range(100)])
+        assert page == "2"
+        return _Response([{"id": 101, "tag_name": "v1", "draft": True}])
+
+    assert guard._release_by_tag("Capsize-Games/airunner", "v1", "fixture-token", opener=opener)["id"] == 101
+
+
+def test_draft_lookup_does_not_hide_authorization_failure() -> None:
+    def opener(request, timeout):
+        raise HTTPError(request.full_url, 403, "denied", Message(), None)
+
+    with pytest.raises(guard.ReleaseIdentityError, match="request failed"):
+        guard._release_by_tag("Capsize-Games/airunner", "v1", "fixture-token", opener=opener)

@@ -12,6 +12,8 @@ on:
       - "packaging/linux/services-core-bundle-spec.toml"
       - "scripts/assemble_linux_bundle.py"
       - "scripts/check_core_input_readiness.py"
+      - "scripts/core_debian_candidate_smoke.sh"
+      - "scripts/tests/test_core_debian_candidate_workflow.py"
       - "services/**"
 
 permissions:
@@ -24,7 +26,7 @@ concurrency:
 jobs:
   build-core-debian-candidate:
     if: github.event_name == 'pull_request' || github.ref_type == 'branch'
-    runs-on: ubuntu-26.04
+    runs-on: ubuntu-24.04
     permissions:
       contents: read
     env:
@@ -49,7 +51,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y debhelper-compat dpkg-dev python3-venv
 
-      - name: Set up Python 3.13.5
+      - name: Set up reviewed Python 3.13.5
         uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with:
           python-version: "3.13.5"

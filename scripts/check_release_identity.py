@@ -220,9 +220,29 @@ def _release_by_tag(
         result = _api_request(url, token, opener=opener)
     except ReleaseIdentityError as exc:
         cause = exc.__cause__
-        if isinstance(cause, HTTPError) and cause.code == 404:
-            return None
-        raise
+        if not isinstance(cause, HTTPError) or cause.code != 404:
+            raise
+        # GitHub omits drafts from tag lookup; authenticated listing can find
+        # a partial draft left by an interrupted promotion.
+        for page in range(1, 101):
+            releases = _api_request(
+                f"https://api.github.com/repos/{repository}/releases?per_page=100&page={page}",
+                token, opener=opener,
+            )
+            if not isinstance(releases, list) or any(
+                not isinstance(item, dict) for item in releases
+            ):
+                raise ReleaseIdentityError("GitHub release list is invalid")
+            matches = [item for item in releases if item.get("tag_name") == tag]
+            if len(matches) > 1:
+                raise ReleaseIdentityError("GitHub release tag is ambiguous")
+            if matches:
+                result = matches[0]
+                break
+            if len(releases) < 100:
+                return None
+        else:
+            raise ReleaseIdentityError("GitHub release lookup exceeded page limit")
     if not isinstance(result, dict) or not isinstance(result.get("id"), int):
         raise ReleaseIdentityError("GitHub release response is invalid")
     return result
