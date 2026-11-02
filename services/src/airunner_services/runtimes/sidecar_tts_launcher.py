@@ -23,6 +23,7 @@ from airunner_services.runtimes.tts_daemon_runtime_settings import (
 from airunner_services.config.runtime_layout import (
     build_runtime_directory_layout,
 )
+from airunner_services.config.daemon_command import daemon_module_command
 
 HealthOpener = Callable[..., Any]
 LaunchPreparer = Callable[[], None]
@@ -132,9 +133,7 @@ class SidecarTTSLauncher:
         if self._config_path is None:
             self._config_path = self._config_path_builder(self.settings)
         return [
-            sys.executable,
-            "-m",
-            "airunner_services.daemon",
+            *daemon_module_command(sys.executable),
             "--config",
             str(self._config_path),
         ]

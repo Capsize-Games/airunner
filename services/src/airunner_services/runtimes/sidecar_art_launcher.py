@@ -23,6 +23,7 @@ from airunner_services.runtimes.contracts import RuntimeHealthStatus
 from airunner_services.config.runtime_layout import (
     build_runtime_directory_layout,
 )
+from airunner_services.config.daemon_command import daemon_module_command
 
 HealthOpener = Callable[..., Any]
 LaunchPreparer = Callable[[], None]
@@ -142,11 +143,7 @@ class SidecarArtLauncher:
         if daemon_executable is not None and os.environ.get("DEV_ENV", "1") != "1":
             command = [str(daemon_executable)]
         else:
-            command = [
-                str(bundle_layout.python_executable),
-                "-m",
-                "airunner_services.daemon",
-            ]
+            command = daemon_module_command(bundle_layout.python_executable)
         command.extend(["--config", str(self._config_path)])
         return command
 
