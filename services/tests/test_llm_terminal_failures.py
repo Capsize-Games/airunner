@@ -129,7 +129,10 @@ def test_http_nonstream_failure_is_not_status_200(monkeypatch, path, module, bod
     monkeypatch.setattr(module, "ensure_llm_model_loaded", lambda req: object())
     app = FastAPI()
     app.include_router(module.router)
-    with TestClient(app) as client:
-        response = client.post(path, json={"model": "fixture", "stream": False, **body})
+    # Avoid lifespan startup for this isolated route contract check. The
+    # process-wide application lifespan has unrelated service initialization.
+    client = TestClient(app)
+    response = client.post(path, json={"model": "fixture", "stream": False, **body})
+    client.close()
     assert response.status_code == 500
     assert response.json() == {"detail": "LLM generation failed"}

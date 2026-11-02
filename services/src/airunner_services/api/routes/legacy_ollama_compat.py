@@ -10,7 +10,6 @@ from __future__ import annotations
 
 import json
 import os
-import threading
 import time
 import uuid
 from typing import Any, Callable, List
@@ -29,6 +28,10 @@ from airunner_services.utils.application import get_logger
 
 from .legacy_llm_compat import ensure_llm_model_loaded
 from .legacy_llm_helpers import failed_runtime_response
+from .legacy_llm_observer import (
+    LegacyCompletionObserver,
+    cancel_owned_llm_request,
+)
 from .ollama_embedding_helpers import handle_ollama_embedding
 from .ollama_model_helpers import ollama_show_metadata
 from .ollama_model_helpers import ollama_show_unknown_metadata
@@ -451,23 +454,36 @@ def ollama_chat(body: dict, req: Request):
 
 def _ollama_chat_stream(app, prompt: str, model: str, llm_request: LLMRequest, request_id: str):
     """Yield one streaming Ollama chat response."""
-    done = threading.Event()
     start_time = time.time()
-    queue: List[bytes] = []
     accumulated_response: List[str] = []
 
+    def error_frame(reason: str) -> bytes:
+        error = "Request timeout" if reason == "timeout" else (
+            "Response exceeded the configured output limit"
+            if reason == "overflow"
+            else "LLM generation failed"
+        )
+        return _ndjson_line(
+            _ollama_chat_error(model, {"role": "assistant", "content": ""}, error)
+        )
+
+    observer = LegacyCompletionObserver(
+        request_id,
+        error_frame,
+        cancel=lambda: cancel_owned_llm_request(app, request_id),
+    )
+
     def callback(data: dict[str, Any]) -> None:
-        if done.is_set():
-            return
         response = data.get("response")
         if not response:
             return
         if failed_runtime_response(response):
-            queue.append(_ndjson_line(_ollama_chat_error(
-                model, {"role": "assistant", "content": ""},
-                "LLM generation failed",
-            )))
-            done.set()
+            observer.publish(
+                payload=error_frame("backend_error"),
+                terminal=True,
+                failed=True,
+                failure_reason="backend_error",
+            )
             return
         if getattr(response, "is_system_message", False):
             return
@@ -515,47 +531,54 @@ def _ollama_chat_stream(app, prompt: str, model: str, llm_request: LLMRequest, r
                 _ollama_chat_timings(start_time, prompt, full_text, True)
             )
             payload["done_reason"] = "stop"
-        queue.append(_ndjson_line(payload))
-        if is_final:
-            done.set()
-
-    try:
-        _collect_text(app, prompt, llm_request, request_id, callback)
-    except Exception as exc:
-        logger.error("Ollama chat error: %s", exc, exc_info=True)
-        # Generic message only; the exception detail stays in the log
-        # (CodeQL py/stack-trace-exposure, GitHub issue #2079).
-        yield _ndjson_line(
-            _ollama_chat_error(
-                model,
-                {"role": "assistant", "content": ""},
-                "Failed to generate response",
-            )
+        observer.publish(
+            payload=_ndjson_line(payload),
+            text=content,
+            terminal=is_final,
         )
-        return
 
-    while not done.wait(timeout=0.25):
-        if queue:
-            yield queue.pop(0)
-    while queue:
-        yield queue.pop(0)
+    observer.start_dispatch(
+        lambda cb: _collect_text(app, prompt, llm_request, request_id, cb),
+        callback,
+    )
+    try:
+        while True:
+            event = observer.next_event(timeout=0.25)
+            if event is None:
+                continue
+            if event.payload:
+                yield event.payload
+            if event.terminal:
+                return
+    finally:
+        observer.close()
 
 
 def _ollama_chat_non_stream(app, prompt: str, model: str, llm_request: LLMRequest, request_id: str):
     """Return one non-streaming Ollama chat response."""
-    done = threading.Event()
-    failed = threading.Event()
-    complete_message: List[str] = []
-    tool_calls_result: List[Any] = []
     start_time = time.time()
+    observer = LegacyCompletionObserver(
+        request_id,
+        lambda reason: _ndjson_line(
+            _ollama_chat_error(
+                model,
+                {"role": "assistant", "content": ""},
+                "Request timeout" if reason == "timeout" else "LLM generation failed",
+            )
+        ),
+        cancel=lambda: cancel_owned_llm_request(app, request_id),
+    )
 
     def callback(data: dict[str, Any]) -> None:
         response = data.get("response")
         if not response:
             return
         if failed_runtime_response(response):
-            failed.set()
-            done.set()
+            observer.publish(
+                terminal=True,
+                failed=True,
+                failure_reason="backend_error",
+            )
             return
         if getattr(response, "is_system_message", False):
             return
@@ -566,32 +589,36 @@ def _ollama_chat_non_stream(app, prompt: str, model: str, llm_request: LLMReques
         # boundary, before the actual answer has even been generated.
         if getattr(response, "message_type", None) == "thinking":
             return
-        if response.message:
-            complete_message.append(response.message)
-        if getattr(response, "tool_calls", None):
-            tool_calls_result.extend(response.tool_calls)
-        if response.is_end_of_message:
-            final_visible = getattr(response, "final_visible_message", None)
-            if final_visible:
-                complete_message.clear()
-                complete_message.append(final_visible)
-            done.set()
+        tools = getattr(response, "tool_calls", None) or []
+        final_visible = getattr(response, "final_visible_message", None)
+        observer.publish(
+            text=final_visible if final_visible else (response.message or ""),
+            tools=tuple(tools),
+            terminal=bool(response.is_end_of_message),
+            replace_text=bool(final_visible),
+        )
 
+    observer.start_dispatch(
+        lambda cb: _collect_text(app, prompt, llm_request, request_id, cb),
+        callback,
+    )
     try:
-        _collect_text(app, prompt, llm_request, request_id, callback)
-    except Exception as exc:
-        logger.error("Ollama chat error: %s", exc, exc_info=True)
-        # Generic detail only; exception detail stays in the log
-        # (CodeQL py/stack-trace-exposure, GitHub issue #2079).
-        raise HTTPException(
-            status_code=500, detail="Failed to generate response"
-        ) from exc
-
-    if not done.wait(timeout=300):
-        raise HTTPException(status_code=504, detail="Request timeout")
-
-    if failed.is_set():
+        events = observer.collect()
+    finally:
+        observer.close()
+    if events[-1].failed:
+        if events[-1].failure_reason == "timeout":
+            raise HTTPException(status_code=504, detail="Request timeout")
         raise HTTPException(status_code=500, detail="LLM generation failed")
+
+    complete_message: List[str] = []
+    tool_calls_result: List[Any] = []
+    for event in events:
+        if event.replace_text:
+            complete_message.clear()
+        if event.text:
+            complete_message.append(event.text)
+        tool_calls_result.extend(event.tools)
 
     full_response = "".join(complete_message)
     message: dict[str, Any] = {"role": "assistant", "content": full_response}
@@ -675,21 +702,33 @@ def ollama_generate(body: dict, req: Request):
 
 def _ollama_generate_stream(app, prompt: str, model: str, llm_request: LLMRequest, request_id: str):
     """Yield one streaming Ollama generate response."""
-    done = threading.Event()
     start_time = time.time()
-    queue: List[bytes] = []
+
+    def error_frame(reason: str) -> bytes:
+        error = "Request timeout" if reason == "timeout" else (
+            "Response exceeded the configured output limit"
+            if reason == "overflow"
+            else "LLM generation failed"
+        )
+        return _ndjson_line(_ollama_generate_error(model, error))
+
+    observer = LegacyCompletionObserver(
+        request_id,
+        error_frame,
+        cancel=lambda: cancel_owned_llm_request(app, request_id),
+    )
 
     def callback(data: dict[str, Any]) -> None:
-        if done.is_set():
-            return
         response = data.get("response")
         if not response:
             return
         if failed_runtime_response(response):
-            queue.append(_ndjson_line(_ollama_generate_error(
-                model, "LLM generation failed",
-            )))
-            done.set()
+            observer.publish(
+                payload=error_frame("backend_error"),
+                terminal=True,
+                failed=True,
+                failure_reason="backend_error",
+            )
             return
         if getattr(response, "is_system_message", False):
             return
@@ -701,66 +740,75 @@ def _ollama_generate_stream(app, prompt: str, model: str, llm_request: LLMReques
         }
         if response.is_end_of_message:
             payload.update(_ollama_timings(start_time, prompt, response.message, False))
-        queue.append(_ndjson_line(payload))
-        if response.is_end_of_message:
-            done.set()
-
-    try:
-        _collect_text(app, prompt, llm_request, request_id, callback)
-    except Exception as exc:
-        logger.error("Ollama generate error: %s", exc, exc_info=True)
-        # Generic message only; the exception detail stays in the log
-        # (CodeQL py/stack-trace-exposure, GitHub issue #2079).
-        yield _ndjson_line(
-            _ollama_generate_error(model, "Failed to generate response")
+        observer.publish(
+            payload=_ndjson_line(payload),
+            text=getattr(response, "message", "") or "",
+            terminal=bool(response.is_end_of_message),
         )
-        return
 
-    while not done.wait(timeout=0.25):
-        if queue:
-            yield queue.pop(0)
-    while queue:
-        yield queue.pop(0)
+    observer.start_dispatch(
+        lambda cb: _collect_text(app, prompt, llm_request, request_id, cb),
+        callback,
+    )
+    try:
+        while True:
+            event = observer.next_event(timeout=0.25)
+            if event is None:
+                continue
+            if event.payload:
+                yield event.payload
+            if event.terminal:
+                return
+    finally:
+        observer.close()
 
 
 def _ollama_generate_non_stream(app, prompt: str, model: str, llm_request: LLMRequest, request_id: str):
     """Return one non-streaming Ollama generate response."""
-    done = threading.Event()
-    failed = threading.Event()
-    complete_message: List[str] = []
     start_time = time.time()
+    observer = LegacyCompletionObserver(
+        request_id,
+        lambda reason: _ndjson_line(
+            _ollama_generate_error(
+                model,
+                "Request timeout" if reason == "timeout" else "LLM generation failed",
+            )
+        ),
+        cancel=lambda: cancel_owned_llm_request(app, request_id),
+    )
 
     def callback(data: dict[str, Any]) -> None:
         response = data.get("response")
         if not response:
             return
         if failed_runtime_response(response):
-            failed.set()
-            done.set()
+            observer.publish(
+                terminal=True,
+                failed=True,
+                failure_reason="backend_error",
+            )
             return
         if getattr(response, "is_system_message", False):
             return
-        complete_message.append(response.message)
-        if response.is_end_of_message:
-            done.set()
+        observer.publish(
+            text=getattr(response, "message", "") or "",
+            terminal=bool(response.is_end_of_message),
+        )
 
+    observer.start_dispatch(
+        lambda cb: _collect_text(app, prompt, llm_request, request_id, cb),
+        callback,
+    )
     try:
-        _collect_text(app, prompt, llm_request, request_id, callback)
-    except Exception as exc:
-        logger.error("Ollama generate error: %s", exc, exc_info=True)
-        # Generic detail only; exception detail stays in the log
-        # (CodeQL py/stack-trace-exposure, GitHub issue #2079).
-        raise HTTPException(
-            status_code=500, detail="Failed to generate response"
-        ) from exc
-
-    if not done.wait(timeout=300):
-        raise HTTPException(status_code=504, detail="Request timeout")
-
-    if failed.is_set():
+        events = observer.collect()
+    finally:
+        observer.close()
+    if events[-1].failed:
+        if events[-1].failure_reason == "timeout":
+            raise HTTPException(status_code=504, detail="Request timeout")
         raise HTTPException(status_code=500, detail="LLM generation failed")
 
-    full_response = "".join(complete_message)
+    full_response = "".join(event.text for event in events)
     return {
         "model": model,
         "created_at": _created_at(),

@@ -1,6 +1,7 @@
 """Service-owned top-level LLM model manager."""
 
 import os
+import threading
 
 from typing import Any, List, Optional
 
@@ -88,6 +89,7 @@ class LLMModelManager(
 	llm_settings: LLMSettings
 
 	def __init__(self, *args, **kwargs):
+		self._request_state_lock = threading.RLock()
 		super().__init__(*args, **kwargs)
 		self.llm_request: Optional[Any] = None
 		RAGMixin.__init__(self)

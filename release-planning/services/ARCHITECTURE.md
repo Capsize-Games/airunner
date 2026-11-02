@@ -134,15 +134,20 @@ tool-only completions retain their existing contract. Source change `d93e3c189`
 implements this error propagation; 31 isolated API regressions passed, including
 HTTP status checks for all three compatibility endpoints. No model was run.
 
-The remaining observer must own one request's callback registration, terminal
-state and bounded output queue. Use a monotonic total deadline, retaining the
+The shared observer owns one request's callback registration, terminal
+state and bounded output queue. It uses a monotonic total deadline, retaining the
 existing 300-second default with a finite validated configuration override.
-Timeouts, buffer exhaustion, backend failures and client disconnects must clean
+Timeouts, buffer exhaustion, backend failures and client disconnects clean
 up that request's registration and cancel only its owned runtime operation.
-Queue the terminal event before signalling completion, reject late callbacks,
-and never truncate output into a successful result. Regression evidence must
-cover silence, partial output then failure, late events, slow consumers and
-cross-request isolation. Real Qwen Q8/32k and target lifecycle acceptance remain
+The terminal event is queued before signalling completion; late callbacks are
+rejected. Overflow fails explicitly rather than truncating a successful result.
+Model-download completion and retries are serialized on the LLM worker, with
+FIFO waiting requests and cancellation by request identity. The combined local
+observer, ownership, terminal-error, Ollama client and action-parity suite passed
+69 tests (four dependency deprecation warnings) in an isolated temporary home,
+with model network access and GPU visibility disabled. It covers silence,
+partial output then failure, late events, slow consumers and cross-request
+isolation using runtime doubles. Real Qwen Q8/32k and target lifecycle acceptance remain
 in #2416 and #2146; callback doubles cannot satisfy those requirements.
 
 ## Triton distribution and optional compilation

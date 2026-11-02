@@ -29,6 +29,27 @@ MAX_SYSTEM_PROMPT_CHARS = 8000
 class RequestHandlingMixin:
     """Coordinate request-time model, tool, and RAG preparation."""
 
+    def begin_request(self, request_id: Optional[str]) -> None:
+        """Publish one request as active and reset its interruption state."""
+        lock = self._request_state_lock
+        with lock:
+            self._current_request_id = request_id
+            self._interrupted = False
+            if self._chat_model and hasattr(self._chat_model, "set_interrupted"):
+                self._chat_model.set_interrupted(False)
+            if self._workflow_manager and hasattr(
+                self._workflow_manager, "set_interrupted"
+            ):
+                self._workflow_manager.set_interrupted(False)
+
+    def cancel_request(self, request_id: str) -> bool:
+        """Interrupt only the request currently owned by this manager."""
+        with self._request_state_lock:
+            if self._current_request_id != request_id:
+                return False
+            self.do_interrupt()
+            return True
+
     def handle_request(
         self,
         data: Dict,
@@ -38,8 +59,10 @@ class RequestHandlingMixin:
         self.logger.info("handle_request called on instance %s", id(self))
         self._invalidate_setting_cache(LLMGeneratorSettings)
 
-        self._current_request_id = data.get("request_id")
-        if not self._current_request_id:
+        request_id = data.get("request_id")
+        if self._current_request_id != request_id:
+            self.begin_request(request_id)
+        if not request_id:
             self.logger.warning(
                 "[REQUEST] Missing request_id on incoming request; "
                 "streaming responses will not be routed"
@@ -49,15 +72,6 @@ class RequestHandlingMixin:
                 "[REQUEST] Set _current_request_id=%s",
                 self._current_request_id,
             )
-
-        self._interrupted = False
-        if self._chat_model and hasattr(self._chat_model, "set_interrupted"):
-            self._chat_model.set_interrupted(False)
-        if self._workflow_manager and hasattr(
-            self._workflow_manager,
-            "set_interrupted",
-        ):
-            self._workflow_manager.set_interrupted(False)
 
         llm_request = data["request_data"].get("llm_request")
         self.llm_request = llm_request

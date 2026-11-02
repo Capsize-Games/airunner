@@ -1,22 +1,25 @@
-"""Streaming helpers for legacy LLM compatibility routes."""
+"""Bounded NDJSON streaming helpers for legacy LLM compatibility routes."""
 
 from __future__ import annotations
 
 import logging
-import os
-import queue
-import threading
 import time
 
 from fastapi.responses import StreamingResponse
 
 from .legacy_contracts import LegacyLLMGenerateRequest
-from .legacy_llm_helpers import send_legacy_llm_request
-from .legacy_llm_stream_helpers import (
-    action_name,
-    handle_stream_event,
-    unregister_pending_request,
+from .legacy_llm_helpers import (
+    failed_runtime_response,
+    send_legacy_llm_request,
+    terminal_stream_message,
+    thinking_stream_payload,
+    tool_status_stream_payload,
 )
+from .legacy_llm_observer import (
+    LegacyCompletionObserver,
+    cancel_owned_llm_request,
+)
+from .legacy_llm_stream_helpers import stream_payload
 from .legacy_llm_stream_payloads import (
     error_payload,
     keepalive_payload,
@@ -24,161 +27,71 @@ from .legacy_llm_stream_payloads import (
     timeout_payload,
 )
 
+
 logger = logging.getLogger(__name__)
 
 
-def interrupt_llm_async(app) -> None:
-    """Interrupt the app LLM in a background thread."""
-    try:
-        threading.Thread(target=app.llm.interrupt, daemon=True).start()
-    except Exception:
-        pass
-
-
-def stream_callback(
-    q: queue.Queue[bytes],
-    done: threading.Event,
-    last_callback_at: list[float],
-    action,
-    request_id: str,
-):
-    """Return the callback used for streaming legacy LLM requests."""
+def stream_callback(observer: LegacyCompletionObserver, action, request_id: str):
+    """Return one request-owned callback that queues terminal events last."""
 
     def callback(data: dict) -> None:
-        done_now = handle_stream_event(
-            data, q, last_callback_at, action, request_id
+        response = data.get("response")
+        if response is None:
+            payload = tool_status_stream_payload(data) or thinking_stream_payload(data)
+            if payload is not None:
+                observer.publish(payload=ndjson_line(payload))
+            return
+        if getattr(response, "is_system_message", False) and not getattr(
+            response, "is_end_of_message", False
+        ):
+            return
+        if failed_runtime_response(response):
+            observer.publish(
+                payload=error_payload("LLM generation failed", str(action)),
+                terminal=True,
+                failed=True,
+                failure_reason="backend_error",
+            )
+            return
+        payload = stream_payload(response, action)
+        message_type = getattr(response, "message_type", None)
+        visible_text = (
+            payload.get("message", "")
+            if message_type in (None, "", "assistant")
+            and not getattr(response, "is_system_message", False)
+            else ""
         )
-        if done_now:
-            done.set()
+        observer.publish(
+            payload=ndjson_line(payload),
+            text=visible_text,
+            terminal=terminal_stream_message(response),
+        )
 
     return callback
 
 
-def _start_background_kickoff(
-    app,
-    body: LegacyLLMGenerateRequest,
-    prompt: str,
-    action,
-    llm_request,
-    request_id: str,
-    q: queue.Queue[bytes],
-    done: threading.Event,
+def stream_lines(
+    observer: LegacyCompletionObserver,
     action_str: str,
-) -> None:
-    """Start the background thread that kicks off the legacy LLM stream."""
-
-    def kickoff() -> None:
-        try:
-            logger.info(
-                "llm/generate kickoff send_request start request_id=%s",
-                request_id,
-            )
-            send_legacy_llm_request(
-                app, prompt, action, llm_request,
-                body, request_id,
-                stream_callback(
-                    q, done, [time.monotonic()], action, request_id
-                ),
-            )
-            logger.info(
-                "llm/generate kickoff send_request returned "
-                "request_id=%s",
-                request_id,
-            )
-        except Exception as exc:
-            logger.exception(
-                "llm/generate kickoff send_request failed "
-                "request_id=%s",
-                request_id,
-            )
-            # Generic message only; the exception detail stays in the log
-            # (CodeQL py/stack-trace-exposure, GitHub issue #2079).
-            q.put(error_payload("Error invoking LLM", action_str))
-            done.set()
-
-    threading.Thread(target=kickoff, daemon=True).start()
-
-
-def _idle_timeout_seconds() -> float:
-    """Return the configured idle timeout for stream idle detection."""
-    try:
-        return float(
-            os.environ.get(
-                "AIRUNNER_LLM_STREAM_IDLE_TIMEOUT_SECONDS", "600"
-            )
-        )
-    except Exception:
-        return 600.0
-
-
-
-
-def _cleanup_stream(app, request_id: str, done: threading.Event) -> None:
-    """Perform stream cleanup and optional LLM interruption."""
-    unregister_pending_request(request_id)
-    if not done.is_set():
-        logger.warning(
-            "llm/generate gen closed early; interrupting request_id=%s",
-            request_id,
-        )
-        interrupt_llm_async(app)
-    else:
-        logger.info(
-            "llm/generate gen cleanup after done; not interrupting "
-            "request_id=%s",
-            request_id,
-        )
-
-
-def stream_lines(  # noqa: C901
-    app,
-    q: queue.Queue[bytes],
-    done: threading.Event,
-    last_callback_at: list[float],
-    action_str: str,
-    request_id: str,
 ):
-    """Yield streamed NDJSON lines for one legacy LLM request."""
-    last_yield = time.monotonic()
+    """Yield observer events and keepalives until one terminal frame."""
     keepalive_interval = 5.0
-    idle_timeout = _idle_timeout_seconds()
-    logger.info("llm/generate gen start request_id=%s", request_id)
+    last_yield = time.monotonic()
     try:
         while True:
-            try:
-                line = q.get(timeout=0.25)
-                yield line
+            event = observer.next_event(timeout=0.25)
+            if event is not None:
+                if event.payload:
+                    yield event.payload
+                    last_yield = time.monotonic()
+                if event.terminal:
+                    return
+                continue
+            if time.monotonic() - last_yield >= keepalive_interval:
+                yield ndjson_line(keepalive_payload(action_str))
                 last_yield = time.monotonic()
-            except queue.Empty:
-                now = time.monotonic()
-                if done.is_set():
-                    logger.info(
-                        "llm/generate gen done request_id=%s",
-                        request_id,
-                    )
-                    break
-                if now - last_callback_at[0] >= idle_timeout:
-                    logger.warning(
-                        "llm/generate idle-timeout request_id=%s "
-                        "idle=%.1fs timeout=%.1fs",
-                        request_id,
-                        now - last_callback_at[0],
-                        idle_timeout,
-                    )
-                    yield ndjson_line(
-                        timeout_payload(action_str)
-                    )
-                    done.set()
-                    unregister_pending_request(request_id)
-                    interrupt_llm_async(app)
-                    break
-                if now - last_yield >= keepalive_interval:
-                    yield ndjson_line(
-                        keepalive_payload(action_str)
-                    )
-                    last_yield = now
     finally:
-        _cleanup_stream(app, request_id, done)
+        observer.close()
 
 
 def build_streaming_response(
@@ -189,18 +102,30 @@ def build_streaming_response(
     llm_request,
     request_id: str,
 ) -> StreamingResponse:
-    """Return the streaming NDJSON response for one legacy LLM request."""
-    q: queue.Queue[bytes] = queue.Queue()
-    done = threading.Event()
-    last_callback_at = [time.monotonic()]
-    action_str = action_name(action, action)
-    _start_background_kickoff(
-        app, body, prompt, action, llm_request,
-        request_id, q, done, action_str,
+    """Dispatch and return one bounded request-owned NDJSON stream."""
+    action_str = getattr(action, "name", None) or str(action)
+
+    def error_frame(reason: str) -> bytes:
+        if reason == "timeout":
+            return ndjson_line(timeout_payload(action_str))
+        if reason == "overflow":
+            message = "Response exceeded the configured output limit"
+        else:
+            message = "LLM generation failed"
+        return error_payload(message, action_str)
+
+    observer = LegacyCompletionObserver(
+        request_id,
+        error_frame,
+        cancel=lambda: cancel_owned_llm_request(app, request_id),
+    )
+    observer.start_dispatch(
+        lambda callback: send_legacy_llm_request(
+            app, prompt, action, llm_request, body, request_id, callback
+        ),
+        stream_callback(observer, action, request_id),
     )
     return StreamingResponse(
-        stream_lines(
-            app, q, done, last_callback_at, action_str, request_id
-        ),
+        stream_lines(observer, action_str),
         media_type="application/x-ndjson",
     )

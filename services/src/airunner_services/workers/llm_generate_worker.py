@@ -1,6 +1,7 @@
 """Service-owned LLM generation worker."""
 
 import os
+import queue
 import threading
 import time
 import uuid
@@ -87,6 +88,14 @@ class LLMGenerateWorker(
 		self._download_dialog_showing = False
 		self._download_dialog = None
 		self._pending_llm_request = None
+		self._pending_llm_requests: dict[str, Dict] = {}
+		self._retry_waiting_request_ids: set[str] = set()
+		self._retry_waiting_order: list[str] = []
+		self._retry_enqueued_epoch: dict[str, int] = {}
+		self._download_epoch = 0
+		self._active_request_lock = threading.RLock()
+		self._active_llm_request_id = None
+		self._cancelled_request_ids: set[str] = set()
 		self._pending_unload_request: Optional[Dict] = None
 		self.manager_thread: Optional[object] = None
 		self.download_manager = None
@@ -392,6 +401,8 @@ class LLMGenerateWorker(
 		self.logger.debug(f"Assigned request_id={request_id} to incoming request")
 
 		self._update_activity_timestamp()
+		if self._request_cancelled(request_id):
+			return
 		self.add_to_queue(message)
 		self.logger.info("Added request to queue")
 
@@ -458,8 +469,231 @@ class LLMGenerateWorker(
 			self._inactivity_timer.stop()
 		super().stop()
 
+	@staticmethod
+	def _llm_request_id(message) -> Optional[str]:
+		if not isinstance(message, dict) or not message.get("llm_request"):
+			return None
+		request_data = message.get("request_data")
+		if not isinstance(request_data, dict):
+			return None
+		return message.get("request_id")
+
+	def get_next_item(self):
+		"""Pop one item only when no other request owns the worker."""
+		with self._queue_lock:
+			with self._active_request_lock:
+				if self._active_llm_request_id is not None:
+					return None
+				try:
+					index = self.queue.get_nowait()
+				except queue.Empty:
+					return None
+				message = self.items.pop(index, None)
+				request_id = self._llm_request_id(message)
+				if request_id:
+					self._active_llm_request_id = request_id
+				return message
+
+	def cancel_request(self, request_id: str) -> bool:
+		"""Cancel only this request, without clearing another queued request."""
+		if not isinstance(request_id, str) or not request_id:
+			return False
+		with self._queue_lock:
+			with self._active_request_lock:
+				if self._active_llm_request_id == request_id:
+					manager = self._model_manager
+					self._cancelled_request_ids.add(request_id)
+					cancel = getattr(manager, "cancel_request", None)
+					if callable(cancel):
+						cancel(request_id)
+					was_active = True
+				else:
+					was_active = False
+
+				queued_indexes: list[int] = []
+				retained_indexes: list[int] = []
+				while True:
+					try:
+						index = self.queue.get_nowait()
+					except queue.Empty:
+						break
+					if self._llm_request_id(self.items.get(index)) == request_id:
+						queued_indexes.append(index)
+						self.items.pop(index, None)
+					else:
+						retained_indexes.append(index)
+				for index in retained_indexes:
+					self.queue.put(index)
+
+				pending = self._clear_pending_llm_request_locked(request_id)
+			return bool(was_active or queued_indexes or pending)
+
+	def _request_cancelled(self, request_id: Optional[str]) -> bool:
+		if not request_id:
+			return False
+		with self._active_request_lock:
+			return request_id in self._cancelled_request_ids
+
+	def _set_pending_llm_request(self, message) -> None:
+		"""Track requests awaiting model readiness without replacing peers."""
+		with self._queue_lock:
+			if message is None:
+				for request_id in tuple(self._pending_llm_requests):
+					self._clear_pending_llm_request_locked(request_id)
+				return
+			request_id = self._llm_request_id(message)
+			if request_id:
+				self._pending_llm_requests[request_id] = message
+				self._pending_llm_request = next(
+					iter(self._pending_llm_requests.values()), None
+				)
+
+	def _clear_pending_llm_request_locked(self, request_id: str) -> bool:
+		"""Drop one pending request; caller holds ``_queue_lock``."""
+		removed = self._pending_llm_requests.pop(request_id, None) is not None
+		self._forget_retry_waiting_locked(request_id)
+		self._retry_enqueued_epoch.pop(request_id, None)
+		if self._llm_request_id(self._pending_llm_request) == request_id:
+			self._pending_llm_request = next(
+				iter(self._pending_llm_requests.values()), None
+			)
+		return removed
+
+	def _forget_retry_waiting_locked(self, request_id: str) -> None:
+		"""Remove one request from waiting state; caller holds ``_queue_lock``."""
+		self._retry_waiting_request_ids.discard(request_id)
+		try:
+			self._retry_waiting_order.remove(request_id)
+		except ValueError:
+			pass
+
+	def _clear_pending_llm_request(self, request_id: str) -> bool:
+		"""Clear one request from retry state."""
+		with self._queue_lock:
+			return self._clear_pending_llm_request_locked(request_id)
+
+	def _mark_request_waiting_for_download(self, request_id: str, message: Dict) -> str:
+		"""Retain a retryable request and queue it after a completed model load."""
+		with self._queue_lock:
+			with self._active_request_lock:
+				if request_id in self._cancelled_request_ids:
+					self._clear_pending_llm_request_locked(request_id)
+					return "cancelled"
+				self._pending_llm_requests.setdefault(request_id, message)
+				self._pending_llm_request = next(
+					iter(self._pending_llm_requests.values()), None
+				)
+				last_epoch = self._retry_enqueued_epoch.get(request_id, 0)
+				if self._download_epoch > last_epoch:
+					self._enqueue_retry_locked(request_id)
+					return "queued"
+				if self._download_epoch > 0 and last_epoch == self._download_epoch:
+					self._clear_pending_llm_request_locked(request_id)
+					return "exhausted"
+				if request_id not in self._retry_waiting_request_ids:
+					self._retry_waiting_request_ids.add(request_id)
+					self._retry_waiting_order.append(request_id)
+				return "waiting"
+
+	def _enqueue_retry_locked(self, request_id: str) -> None:
+		"""Append one retry to the worker FIFO; caller holds ``_queue_lock``."""
+		message = self._pending_llm_requests.get(request_id)
+		if message is None or request_id in self._cancelled_request_ids:
+			self._clear_pending_llm_request_locked(request_id)
+			return
+		index = self.current_index
+		self.items[index] = message
+		self.queue.put(index)
+		self.current_index += 1
+		self._retry_enqueued_epoch[request_id] = self._download_epoch
+		self._forget_retry_waiting_locked(request_id)
+
+	def _schedule_pending_llm_retries(self) -> None:
+		"""Queue all waiting requests after a successful model load."""
+		with self._queue_lock:
+			with self._active_request_lock:
+				self._download_epoch += 1
+				for request_id in tuple(self._retry_waiting_order):
+					if (
+						self._retry_enqueued_epoch.get(request_id, 0)
+						< self._download_epoch
+					):
+						self._enqueue_retry_locked(request_id)
+
+	def _fail_pending_llm_requests(self, error: str) -> None:
+		"""Finish each waiting request if its model cannot be loaded."""
+		with self._queue_lock:
+			pending = list(self._pending_llm_requests.items())
+			request_ids = {request_id for request_id, _message in pending}
+			retained_indexes: list[int] = []
+			while True:
+				try:
+					index = self.queue.get_nowait()
+				except queue.Empty:
+					break
+				if self._llm_request_id(self.items.get(index)) in request_ids:
+					self.items.pop(index, None)
+				else:
+					retained_indexes.append(index)
+			for index in retained_indexes:
+				self.queue.put(index)
+			for request_id in request_ids:
+				self._clear_pending_llm_request_locked(request_id)
+
+		for request_id, message in pending:
+			request_data = message.get("request_data", {})
+			action = request_data.get("action")
+			if not isinstance(action, LLMActionType):
+				action = LLMActionType.CHAT
+			response = LLMResponse(
+				message=f"Error: model download or load failed: {error}",
+				is_first_message=True,
+				is_end_of_message=True,
+				sequence_number=0,
+				action=action,
+				request_id=request_id,
+				is_system_message=True,
+			)
+			self.emit_signal(
+				SignalCode.LLM_TEXT_STREAMED_SIGNAL,
+				{"response": response, "request_id": request_id},
+			)
+
 	def handle_message(self, message: Dict) -> None:
+		"""Handle one message under request-owned cancellation tracking."""
+		request_id = message.get("request_id") if isinstance(message, dict) else None
+		is_llm_request = bool(
+			request_id
+			and isinstance(message, dict)
+			and isinstance(message.get("request_data"), dict)
+			and message.get("llm_request")
+		)
+		if not is_llm_request:
+			return self._handle_message(message)
+
+		with self._queue_lock:
+			with self._active_request_lock:
+				if self._active_llm_request_id not in (None, request_id):
+					self.logger.warning("Skipping overlapping LLM request handoff")
+					return
+				self._active_llm_request_id = request_id
+				if request_id in self._cancelled_request_ids:
+					self._cancelled_request_ids.discard(request_id)
+					self._active_llm_request_id = None
+					return
+
+		try:
+			return self._handle_message(message)
+		finally:
+			with self._queue_lock:
+				with self._active_request_lock:
+					if self._active_llm_request_id == request_id:
+						self._active_llm_request_id = None
+					self._cancelled_request_ids.discard(request_id)
+
+	def _handle_message(self, message: Dict) -> None:
 		"""Process queued messages for LLM generation."""
+		request_id = message.get("request_id")
 		message_type = message.get("_message_type")
 		if message_type == "llm_load":
 			self.on_llm_load_model_signal(message.get("data", {}))
@@ -470,7 +704,13 @@ class LLMGenerateWorker(
 
 		if message.get("_message_type") == "download_complete":
 			self.logger.info("Processing download complete message from queue")
-			self.on_huggingface_download_complete_signal(message.get("data", {}))
+			self._handle_huggingface_download_complete(message.get("data", {}))
+			return
+		if message_type == "download_failed":
+			self._download_dialog_showing = False
+			self._fail_pending_llm_requests(
+				str(message.get("data", {}).get("error") or "download failed")
+			)
 			return
 
 		if self._interrupted:
@@ -482,7 +722,7 @@ class LLMGenerateWorker(
 		)
 		self.logger.info(f"request_id in message: {message.get('request_id')}")
 
-		self._pending_llm_request = message
+		self._set_pending_llm_request(message)
 		self.logger.info(
 			f"Stored pending request with ID: {message.get('request_id')}"
 		)
@@ -496,11 +736,22 @@ class LLMGenerateWorker(
 				f"Auto-loading {len(llm_request.rag_files)} RAG documents from request"
 			)
 			self._load_documents_into_rag(llm_request.rag_files)
+		if self._request_cancelled(request_id):
+			self._clear_pending_llm_request(request_id)
+			return
 
 		try:
+			with self._queue_lock:
+				with self._active_request_lock:
+					if request_id in self._cancelled_request_ids:
+						self._clear_pending_llm_request_locked(request_id)
+						return
+					begin_request = getattr(manager, "begin_request", None)
+					if callable(begin_request):
+						begin_request(request_id)
 			result = manager.handle_request(message, {})
 		except Exception as error:
-			self._pending_llm_request = None
+			self._clear_pending_llm_request(request_id)
 			self.logger.exception(f"LLM request failed: {error}")
 			try:
 				request_id = message.get("request_id")
@@ -546,11 +797,41 @@ class LLMGenerateWorker(
 				self.logger.info(
 					"Request completed successfully, clearing pending request"
 				)
-				self._pending_llm_request = None
+				self._clear_pending_llm_request(request_id)
 			elif retry_after_download:
+				retry_state = self._mark_request_waiting_for_download(
+					request_id, message
+				)
+				if retry_state == "cancelled":
+					return
+				if retry_state == "exhausted":
+					self.logger.error(
+						"Model remained unavailable after a completed download; "
+						"not retrying request %s again",
+						request_id,
+					)
+					response = LLMResponse(
+						message=(
+							"Error: the model remained unavailable after its "
+							"download completed."
+						),
+						is_first_message=True,
+						is_end_of_message=True,
+						sequence_number=0,
+						action=LLMActionType.CHAT,
+						request_id=request_id,
+						is_system_message=True,
+					)
+					self.emit_signal(
+						SignalCode.LLM_TEXT_STREAMED_SIGNAL,
+						{"response": response, "request_id": request_id},
+					)
+					self._queue_pending_unload_request()
+					return
 				self.logger.info(
-					"Request failed while model download is still pending; "
-					"keeping pending request for automatic retry"
+					"Request is waiting for model readiness (%s); "
+					"it will be requeued by the worker after load",
+					retry_state,
 				)
 				try:
 					request_id = message.get("request_id")
@@ -593,7 +874,7 @@ class LLMGenerateWorker(
 				except Exception:
 					pass
 			else:
-				self._pending_llm_request = None
+				self._clear_pending_llm_request(request_id)
 				self.logger.info(
 					"Request failed with non-retryable error, clearing pending request"
 				)

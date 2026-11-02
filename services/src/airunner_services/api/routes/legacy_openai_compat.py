@@ -10,7 +10,6 @@ from __future__ import annotations
 
 import json
 import re
-import threading
 import time
 import uuid
 from typing import Any, Callable, List
@@ -25,6 +24,10 @@ from airunner_services.utils.application import get_logger
 
 from .legacy_llm_compat import ensure_llm_model_loaded
 from .legacy_llm_helpers import failed_runtime_response
+from .legacy_llm_observer import (
+    LegacyCompletionObserver,
+    cancel_owned_llm_request,
+)
 
 router = APIRouter()
 logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
@@ -297,19 +300,33 @@ def _openai_chat_stream(
     tools: list[dict[str, Any]] | None,
 ):
     """Yield one streaming OpenAI chat completion."""
-    done = threading.Event()
     accumulated_response: List[str] = []
-    queue: List[bytes] = []
+
+    def error_frame(reason: str) -> bytes:
+        message = "Request timeout" if reason == "timeout" else (
+            "Response exceeded the configured output limit"
+            if reason == "overflow"
+            else "LLM generation failed"
+        )
+        return _sse_line({"error": {"message": message}})
+
+    observer = LegacyCompletionObserver(
+        request_id,
+        error_frame,
+        cancel=lambda: cancel_owned_llm_request(app, request_id),
+    )
 
     def callback(data: dict[str, Any]) -> None:
-        if done.is_set():
-            return
         response = data.get("response")
         if response is None:
             return
         if failed_runtime_response(response):
-            queue.append(_sse_line({"error": {"message": "LLM generation failed"}}))
-            done.set()
+            observer.publish(
+                payload=error_frame("backend_error"),
+                terminal=True,
+                failed=True,
+                failure_reason="backend_error",
+            )
             return
         if getattr(response, "is_system_message", False):
             return
@@ -326,28 +343,33 @@ def _openai_chat_stream(
             full_text = final_visible or "".join(accumulated_response)
             content, tool_calls = _parse_tool_calls_from_response(full_text, tools)
             if tool_calls:
-                queue.append(_sse_line(_tool_call_chunk(model, request_id, tool_calls)))
+                payload = _sse_line(
+                    _tool_call_chunk(model, request_id, tool_calls)
+                ) + b"data: [DONE]\n\n"
             else:
-                queue.append(_sse_line(_stop_chunk(model, request_id)))
-            queue.append(b"data: [DONE]\n\n")
-            done.set()
+                payload = _sse_line(_stop_chunk(model, request_id)) + b"data: [DONE]\n\n"
+            observer.publish(payload=payload, terminal=True)
             return
-        queue.append(_sse_line(_content_chunk(model, request_id, response.message)))
+        observer.publish(
+            payload=_sse_line(_content_chunk(model, request_id, response.message)),
+            text=response.message or "",
+        )
 
+    observer.start_dispatch(
+        lambda cb: _dispatch_request(app, prompt, llm_request, request_id, cb),
+        callback,
+    )
     try:
-        _dispatch_request(app, prompt, llm_request, request_id, callback)
-    except Exception as exc:
-        logger.error("OpenAI chat stream error: %s", exc, exc_info=True)
-        # Generic message only; the exception detail stays in the log
-        # (CodeQL py/stack-trace-exposure, GitHub issue #2079).
-        yield _sse_line({"error": {"message": "Request failed"}})
-        return
-
-    while not done.wait(timeout=0.25):
-        if queue:
-            yield queue.pop(0)
-    while queue:
-        yield queue.pop(0)
+        while True:
+            event = observer.next_event(timeout=0.25)
+            if event is None:
+                continue
+            if event.payload:
+                yield event.payload
+            if event.terminal:
+                return
+    finally:
+        observer.close()
 
 
 def _completion_message(
@@ -372,17 +394,30 @@ def _openai_chat_non_stream(
     tools: list[dict[str, Any]] | None,
 ) -> dict[str, Any]:
     """Return one non-streaming OpenAI chat completion."""
-    done = threading.Event()
-    failed = threading.Event()
-    complete_message: List[str] = []
+    observer = LegacyCompletionObserver(
+        request_id,
+        lambda reason: _sse_line(
+            {
+                "error": {
+                    "message": "Request timeout"
+                    if reason == "timeout"
+                    else "LLM generation failed"
+                }
+            }
+        ),
+        cancel=lambda: cancel_owned_llm_request(app, request_id),
+    )
 
     def callback(data: dict[str, Any]) -> None:
         response = data.get("response")
         if response is None:
             return
         if failed_runtime_response(response):
-            failed.set()
-            done.set()
+            observer.publish(
+                terminal=True,
+                failed=True,
+                failure_reason="backend_error",
+            )
             return
         if getattr(response, "is_system_message", False):
             return
@@ -393,31 +428,32 @@ def _openai_chat_non_stream(
         # boundary, before the actual answer has even been generated.
         if getattr(response, "message_type", None) == "thinking":
             return
-        if response.message:
-            complete_message.append(response.message)
-        if response.is_end_of_message:
-            final_visible = getattr(response, "final_visible_message", None)
-            if final_visible:
-                complete_message.clear()
-                complete_message.append(final_visible)
-            done.set()
+        final_visible = getattr(response, "final_visible_message", None)
+        observer.publish(
+            text=final_visible if final_visible else (response.message or ""),
+            terminal=bool(response.is_end_of_message),
+            replace_text=bool(final_visible),
+        )
 
+    observer.start_dispatch(
+        lambda cb: _dispatch_request(app, prompt, llm_request, request_id, cb),
+        callback,
+    )
     try:
-        _dispatch_request(app, prompt, llm_request, request_id, callback)
-    except Exception as exc:
-        logger.error("OpenAI chat error: %s", exc, exc_info=True)
-        # Generic detail only; exception detail stays in the log
-        # (CodeQL py/stack-trace-exposure, GitHub issue #2079).
-        raise HTTPException(
-            status_code=500, detail="Request failed"
-        ) from exc
-
-    if not done.wait(timeout=300):
-        raise HTTPException(status_code=504, detail="Request timeout")
-
-    if failed.is_set():
+        events = observer.collect()
+    finally:
+        observer.close()
+    if events[-1].failed:
+        if events[-1].failure_reason == "timeout":
+            raise HTTPException(status_code=504, detail="Request timeout")
         raise HTTPException(status_code=500, detail="LLM generation failed")
 
+    complete_message: List[str] = []
+    for event in events:
+        if event.replace_text:
+            complete_message.clear()
+        if event.text:
+            complete_message.append(event.text)
     full_response = "".join(complete_message)
     content, tool_calls = _parse_tool_calls_from_response(full_response, tools)
     return {
