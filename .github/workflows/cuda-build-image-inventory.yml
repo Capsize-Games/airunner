@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - .github/workflows/cuda-build-image-inventory.yml
+      - packaging/patches/llama-cpp-python-0.3.21-diskcache-optional.patch
   workflow_dispatch:
 
 permissions: {}
@@ -187,6 +188,14 @@ jobs:
           wrapper_commit=$(git -C "$root/wrapper-repo" rev-parse 'FETCH_HEAD^{commit}')
           test "$wrapper_commit" = d2bcbac46605f11d382426dd88d67e8b5c124cd7
           git -C "$root/wrapper-repo" archive --format=tar "$wrapper_commit" | tar -xf - -C "$source"
+          patch="$GITHUB_WORKSPACE/packaging/patches/llama-cpp-python-0.3.21-diskcache-optional.patch"
+          patch_sha256=bcbb3cdb76fd56ee26e9b3088f312ffea65cf1c48354c92482d6663fcc167a4a
+          printf '%s  %s\n' "$patch_sha256" "$patch" | sha256sum --check --strict
+          (
+            cd "$source"
+            git apply --check "$patch"
+            git apply "$patch"
+          )
           gitlink=$(git -C "$root/wrapper-repo" ls-tree "$wrapper_commit" vendor/llama.cpp | awk '{print $3}')
           test "$gitlink" = f53577432541bb9edc1588c4ef45c66bf07e4468
           git -c core.hooksPath=/dev/null init --quiet "$root/llama-repo"
@@ -200,6 +209,7 @@ jobs:
           test ! -e "$source/.git"
           test ! -e "$source/vendor/llama.cpp/.git"
           printf 'wrapper_commit=%s\nllama_cpp_commit=%s\n' "$wrapper_commit" "$llama_commit" | tee "$root/source-revisions.txt"
+          printf 'wrapper_patch_sha256=%s\nwrapper_version=0.3.21+capsize.1\n' "$patch_sha256" >> "$root/source-revisions.txt"
 
           fetch_wheel() {
             local filename="$1" url="$2" sha="$3"
@@ -372,7 +382,7 @@ jobs:
           print(f"wheel={wheel}")
           PY
           shopt -s nullglob
-          wheels=("$root"/wheel/llama_cpp_python-0.3.21-*.whl)
+          wheels=("$root"/wheel/llama_cpp_python-0.3.21+capsize.1-*.whl)
           test "${#wheels[@]}" -eq 1
           sha256sum "${wheels[0]}"
 
@@ -381,7 +391,7 @@ jobs:
         run: |
           set -euo pipefail
           root="$RUNNER_TEMP/cuda-wheel"
-          wheel=$(find "$root/wheel" -maxdepth 1 -type f -name 'llama_cpp_python-0.3.21-*.whl' -print -quit)
+          wheel=$(find "$root/wheel" -maxdepth 1 -type f -name 'llama_cpp_python-0.3.21+capsize.1-*.whl' -print -quit)
           test -n "$wheel"
           cache=$(find "$root/build" -maxdepth 2 -name CMakeCache.txt -print -quit)
           test -n "$cache"
@@ -390,10 +400,24 @@ jobs:
           cp "$cache" "$root/CMakeCache.txt"
           mkdir -p "$root/inspect"
           python3 - "$wheel" "$root/inspect" <<'PY'
-          import hashlib, pathlib, sys, zipfile
+          import ast, hashlib, pathlib, sys, zipfile
+          from email.parser import BytesParser
           wheel, out = pathlib.Path(sys.argv[1]), pathlib.Path(sys.argv[2])
           names = []
           with zipfile.ZipFile(wheel) as archive:
+              metadata_paths = [name for name in archive.namelist() if name.endswith('.dist-info/METADATA')]
+              assert len(metadata_paths) == 1, metadata_paths
+              metadata = BytesParser().parsebytes(archive.read(metadata_paths[0]))
+              assert metadata['Version'] == '0.3.21+capsize.1'
+              disk_requirements = [value for value in metadata.get_all('Requires-Dist', []) if value.lower().startswith('diskcache')]
+              assert len(disk_requirements) == 1, disk_requirements
+              assert 'extra == "disk"' in disk_requirements[0], disk_requirements
+              cache_source = ast.parse(archive.read('llama_cpp/llama_cache.py'))
+              assert not any(
+                  isinstance(node, ast.Import) and any(alias.name == 'diskcache' for alias in node.names)
+                  or isinstance(node, ast.ImportFrom) and node.module == 'diskcache'
+                  for node in cache_source.body
+              ), 'base cache module must not import diskcache'
               for name in archive.namelist():
                   if name.startswith("llama_cpp/lib/") and (name.endswith(".so") or ".so." in name):
                       target = out / pathlib.Path(name).name
