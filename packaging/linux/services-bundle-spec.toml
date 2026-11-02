@@ -10,8 +10,8 @@
 # bundle (airunner-services daemon, Qt-free). There is deliberately no
 # Qt/PySide6 payload, no Qt plugin set, and no WebEngine helper here;
 # the [qt] section records that as a checked decision, not an omission.
-# GUI-only R01 features map to "gui" in [r01_coverage]: they are served
-# by the desktop bundle, explicitly out of this artifact's scope.
+# Historical interface features map to "gui" in [r01_coverage] and remain
+# outside this service artifact. Consuming applications own their interfaces.
 #
 # Models are never bundled: weight files (*.gguf, *.safetensors, ...)
 # are [exclusions], and model downloads remain explicit post-install
@@ -1068,11 +1068,12 @@ file_fields = ["path", "sha256"]
 # R01 feature-dependency coverage (feature-matrix.md). Every stable
 # feature ID must appear exactly once. Token semantics:
 #   extra name  - daemon-side deps come from that services/setup.py
-#                 extra (must be inside the desktop aggregate)
+#                 extra (must be inside the selected release aggregate)
 #   core        - base install_requires only, no extra needed
 #   gui         - Qt desktop bundle scope, explicitly out of this
 #                 artifact (services-only scope, not a silent drop)
-#   tracked:XXX - not yet implemented; owned by release issue XXX
+#   tracked:XXX - unfinished work owned by release issue XXX
+#   deferred:openvoice - OpenVoice is excluded by the owner's release decision
 [r01_coverage]
 ART-01 = "art-python"
 ART-02 = "gui"
@@ -1098,10 +1099,10 @@ CHAT-09 = "tracked:S12"
 CHAT-10 = "llm-native"
 VOICE-01 = "gui"
 VOICE-02 = "stt-native"
-VOICE-03 = "tts-python"
-VOICE-04 = "tts-python"
+VOICE-03 = "tts-python-core"
+VOICE-04 = "deferred:openvoice"
 VOICE-05 = "gui"
-VOICE-06 = "llm-native,stt-native,tts-python"
+VOICE-06 = "llm-native,stt-native,tts-python-core"
 RAG-01 = "gui"
 RAG-02 = "core"
 RAG-03 = "gui"
