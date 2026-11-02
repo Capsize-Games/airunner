@@ -47,12 +47,14 @@ CORE profile excludes ML model runtimes, GPU libraries, and model files; those
 remain separately provisioned. The full ML P05 bundle retains its separate
 dependency and acceptance profile.
 
-`package/core-input-readiness.json` records the current 51-distribution graph
-and records incomplete dependency review. The reviewed packaging-tool origin
-exceptions are recorded; remaining exact-pin reviews still block activation.
-CI checks the record before installing dependencies. While it is pending,
-the CORE build does not start. The
-frozen artifact and clean Ubuntu install have not yet passed acceptance.
+`package/core-input-readiness.json` binds the current 51-distribution graph
+to its static source reviews and recorded origin dispositions. All 51 inputs
+are ready for isolated candidate installation and build work. The visible
+review and whitelist inventory is in
+[`DEPENDENCY_DECISIONS.md`](../../release-planning/services/DEPENDENCY_DECISIONS.md).
+CI checks that record before installing dependencies. This input readiness
+does not establish artifact acceptance: the frozen runtime and clean Ubuntu
+installation have not yet passed their checks.
 
 The release candidate must pass the Ubuntu 26.04 clean install and daemon
 health check in the publisher before the apt repository is promoted. A Debian
