@@ -4,6 +4,8 @@ set -Eeuo pipefail
 : "${CORE_SOURCE_SHA:?CORE_SOURCE_SHA must identify the tested candidate}"
 
 artifact_dir=${1:?usage: core_debian_candidate_smoke.sh ARTIFACT_DIR}
+artifact_dir=$(realpath -e -- "$artifact_dir")
+test -d "$artifact_dir"
 deb_file=$(find "$artifact_dir" -maxdepth 1 -type f -name 'airunner_*_amd64.deb' -print -quit)
 test -n "$deb_file" || { echo 'candidate .deb not found' >&2; exit 1; }
 record="$artifact_dir/candidate-validation.json"
