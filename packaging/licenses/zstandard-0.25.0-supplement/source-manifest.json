@@ -1,0 +1,26 @@
+{
+  "distribution": "zstandard",
+  "version": "0.25.0",
+  "exact_pin": "zstandard==0.25.0",
+  "license_source": "hash-verified PyPI sdist; Zstandard library BSD license copied byte-for-byte",
+  "source_distribution": {
+    "filename": "zstandard-0.25.0.tar.gz",
+    "sha256": "7713e1179d162cf5c7906da876ec2ccb9c3a9dcbdffef0cc7f70c3667a205f0b"
+  },
+  "selected_wheel": {
+    "filename": "zstandard-0.25.0-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.whl",
+    "sha256": "8e735494da3db08694d26480f1493ad2cf86e99bdd53e8e9771b2752a5c0246a"
+  },
+  "files": [
+    {
+      "path": "packaging/licenses/zstandard-0.25.0-supplement/zstd--LICENSE",
+      "source_archive_path": "zstandard-0.25.0/zstd/LICENSE",
+      "size_bytes": 1549,
+      "sha256": "7055266497633c9025b777c78eb7235af13922117480ed5c674677adc381c9d8"
+    }
+  ],
+  "excluded_source_notice": {
+    "source_archive_path": "zstandard-0.25.0/zstd/COPYING",
+    "reason": "GNU GPL text in sdist; selected wheel contains the Python extension/library backend and no Zstandard command-line program. Do not infer that this CLI notice applies to the selected wheel."
+  }
+}

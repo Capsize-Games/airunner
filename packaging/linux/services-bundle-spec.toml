@@ -61,6 +61,12 @@ aggregates = [
 required = true
 dest = "legal/dependencies"
 manifest = "dependency-notices.json"
+source_supplements = [
+    "packaging/licenses/DeepCache-0.1.1-supplement/source-manifest.json",
+    "packaging/licenses/orjson-3.13.0-supplement/source-manifest.json",
+    "packaging/licenses/sentencepiece-0.2.1-supplement/source-manifest.json",
+    "packaging/licenses/zstandard-0.25.0-supplement/source-manifest.json",
+]
 
 [qt]
 # No Qt in the services bundle (see header). The inspector fails the
@@ -216,6 +222,8 @@ hidden_imports = [
 # import of these tops in services/ or native/, and the
 # toc-exclusion gate fails the build if one is frozen anyway.
 exclude_modules = [
+    # Legacy local playback is outside the headless TTS release profile.
+    "pyttsx3",
     "airunner",
     "PySide6",
     "shiboken6",

@@ -307,6 +307,7 @@ def _distribution_notices(
     package: LockedDistribution,
     roots: list[Path],
     bundle_dest: str,
+    source_supplement: tuple[list[dict[str, Any]], list[tuple[str, bytes]]] | None = None,
 ) -> tuple[dict[str, Any], list[tuple[str, bytes]]]:
     """Read verified notice files for one locked package without importing it."""
     candidates = _metadata_candidates(package, roots)
@@ -464,6 +465,13 @@ def _distribution_notices(
                 f"locked distribution License-File metadata does not identify one recorded file: {package.normalized_name}"
             )
 
+    if source_supplement is not None:
+        source_records, source_files = source_supplement
+        notices.extend(source_records)
+        contents.extend(
+            (PurePosixPath(relative).relative_to(bundle_dest).as_posix(), content)
+            for relative, content in source_files
+        )
     if not notices:
         raise DependencyNoticeError(
             f"locked distribution has no hashed license, notice, or copyright file: {package.normalized_name}"
@@ -499,6 +507,11 @@ def collect_dependency_notices(
     destination_text = str(config.get("dest", ""))
     manifest_name = str(config.get("manifest", ""))
     destination_rel = _safe_relative(destination_text, "dependency notice directory")
+    from source_notice_supplements import load_source_notice_supplements
+
+    source_supplements = load_source_notice_supplements(
+        spec, repo_root, packages, destination_rel.as_posix()
+    )
     manifest_rel = _safe_relative(manifest_name, "dependency notice manifest name")
     if len(manifest_rel.parts) != 1:
         raise DependencyNoticeError("dependency notice manifest must be a filename")
@@ -521,7 +534,8 @@ def collect_dependency_notices(
     copied: dict[str, bytes] = {}
     for package in packages:
         record, files = _distribution_notices(
-            package, roots, destination_rel.as_posix()
+            package, roots, destination_rel.as_posix(),
+            source_supplements.get(f"{package.normalized_name}=={package.version}"),
         )
         distributions.append(record)
         for relative, content in files:
@@ -626,6 +640,11 @@ def verify_dependency_notice_manifest(
         packages, lock_digest = read_lock(lock_text, repo_root)
         dest = str(config.get("dest", ""))
         dest_rel = _safe_relative(dest, "dependency notice directory")
+        from source_notice_supplements import load_source_notice_supplements
+
+        source_supplements = load_source_notice_supplements(
+            spec, repo_root, packages, dest_rel.as_posix()
+        )
         manifest_name = str(config.get("manifest", ""))
         manifest_leaf = _safe_relative(manifest_name, "dependency notice manifest name")
         if len(manifest_leaf.parts) != 1:
@@ -670,6 +689,13 @@ def verify_dependency_notice_manifest(
             if not isinstance(notices, list) or not notices:
                 raise DependencyNoticeError("locked distribution has no notice files")
             package_slug = f"{normalized}-{package.version}"
+            source_records, _source_files = source_supplements.get(
+                f"{normalized}=={package.version}", ([], [])
+            )
+            expected_source_records = {
+                record["bundle_path"]: record for record in source_records
+            }
+            seen_source_records: set[str] = set()
             source_paths: set[str] = set()
             for notice in notices:
                 if not isinstance(notice, dict):
@@ -684,6 +710,18 @@ def verify_dependency_notice_manifest(
                 wanted_path = f"{dest_rel.as_posix()}/{package_slug}/{source_path}"
                 if notice.get("bundle_path") != wanted_path or wanted_path in referenced:
                     raise DependencyNoticeError("dependency notice output path is unsafe or duplicated")
+                is_source_supplement = (
+                    notice.get("provenance") in {
+                        "reviewed-source-supplement",
+                        "reviewed-upstream-source-supplement",
+                    }
+                )
+                if is_source_supplement:
+                    if notice != expected_source_records.get(wanted_path):
+                        raise DependencyNoticeError("source notice differs from its reviewed manifest")
+                    seen_source_records.add(wanted_path)
+                elif "provenance" in notice:
+                    raise DependencyNoticeError("dependency notice provenance is invalid")
                 record_hash = notice.get("record_hash")
                 hash_match = (
                     re.fullmatch(r"(sha256|sha384|sha512):([0-9a-f]+)", record_hash)
@@ -695,7 +733,7 @@ def verify_dependency_notice_manifest(
                     "sha384": 96,
                     "sha512": 128,
                 }
-                if (
+                if not is_source_supplement and (
                     hash_match is None
                     or len(hash_match.group(2)) != expected_hash_length[hash_match.group(1)]
                 ):
@@ -710,6 +748,8 @@ def verify_dependency_notice_manifest(
                 if path.stat().st_size != size or _sha256_file(path) != digest:
                     raise DependencyNoticeError("dependency notice file hash or size differs")
                 referenced.add(wanted_path)
+            if seen_source_records != set(expected_source_records):
+                raise DependencyNoticeError("reviewed source notices are missing from the bundle")
             actual[normalized] = item
         if set(actual) != set(expected):
             raise DependencyNoticeError("dependency notice package set differs from selected lock")

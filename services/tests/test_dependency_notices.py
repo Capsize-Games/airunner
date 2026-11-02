@@ -160,6 +160,96 @@ def _collect(tmp_path: Path, site: Path, spec: dict, bundle: Path) -> dict:
     )
 
 
+def _reviewed_source_fixture(tmp_path, monkeypatch):
+    site, lock, spec, bundle = _setup(tmp_path, monkeypatch)
+    metadata = site / "alpha-1.0.dist-info"
+    (metadata / "licenses/LICENSE").unlink()
+    (metadata / "licenses").rmdir()
+    record = metadata / "RECORD"
+    rows = list(csv.reader(record.read_text().splitlines()))
+    with record.open("w", newline="") as stream:
+        csv.writer(stream, lineterminator="\n").writerows(
+            row for row in rows if not row[0].endswith("licenses/LICENSE")
+        )
+    source = tmp_path / "reviewed/alpha-LICENSE"
+    source.parent.mkdir()
+    content = b"Original reviewed source license\n"
+    source.write_bytes(content)
+    packages, _ = dependency_notices.read_lock(lock.name, tmp_path)
+    wheel_hash = next(p.hashes[0] for p in packages if p.normalized_name == "alpha")
+    manifest = {
+        "distribution": "alpha", "version": "1.0", "exact_pin": "alpha==1.0",
+        "license_source": "reviewed source distribution",
+        "source_distribution": {"filename": "alpha-1.0.tar.gz", "sha256": "b" * 64},
+        "selected_wheel": {"filename": "alpha-1.0-py3-none-any.whl", "sha256": wheel_hash},
+        "files": [{
+            "path": "reviewed/alpha-LICENSE", "source_archive_path": "alpha-1.0/LICENSE",
+            "sha256": hashlib.sha256(content).hexdigest(), "size_bytes": len(content),
+        }],
+    }
+    manifest_path = tmp_path / "reviewed/source-manifest.json"
+    manifest_path.write_text(json.dumps(manifest))
+    return site, spec, bundle
+
+
+def test_reviewed_source_notice_can_supply_missing_wheel_notice(tmp_path, monkeypatch):
+    site, spec, bundle = _reviewed_source_fixture(tmp_path, monkeypatch)
+    with pytest.raises(dependency_notices.DependencyNoticeError, match="no hashed license"):
+        _collect(tmp_path, site, spec, bundle)
+    spec["dependency_notices"]["source_supplements"] = ["reviewed/source-manifest.json"]
+    manifest = _collect(tmp_path, site, spec, bundle)
+    alpha = next(item for item in manifest["distributions"] if item["normalized_name"] == "alpha")
+    assert len(alpha["notices"]) == 1
+    assert alpha["notices"][0]["provenance"] == "reviewed-source-supplement"
+    assert "record_hash" not in alpha["notices"][0]
+    assert dependency_notices.verify_dependency_notice_manifest(bundle, spec, tmp_path) == []
+
+
+def test_reviewed_upstream_notice_keeps_separate_source_provenance(tmp_path, monkeypatch):
+    site, spec, bundle = _reviewed_source_fixture(tmp_path, monkeypatch)
+    source_path = tmp_path / "reviewed/source-manifest.json"
+    source = json.loads(source_path.read_text())
+    source["package_source_evidence"] = {
+        "path": "alpha-1.0/attribution.py", "sha256": "e" * 64,
+    }
+    notice = source["files"][0]
+    notice.pop("source_archive_path")
+    notice["upstream_source"] = {
+        "repository": "example/attributed-project", "revision": "d" * 40,
+        "path": "LICENSE", "size_bytes": notice["size_bytes"], "sha256": notice["sha256"],
+    }
+    source_path.write_text(json.dumps(source))
+    spec["dependency_notices"]["source_supplements"] = ["reviewed/source-manifest.json"]
+    manifest = _collect(tmp_path, site, spec, bundle)
+    alpha = next(item for item in manifest["distributions"] if item["normalized_name"] == "alpha")
+    assert alpha["notices"][0]["provenance"] == "reviewed-upstream-source-supplement"
+    assert "source_archive_path" not in alpha["notices"][0]
+    assert "record_hash" not in alpha["notices"][0]
+    assert dependency_notices.verify_dependency_notice_manifest(bundle, spec, tmp_path) == []
+
+
+@pytest.mark.parametrize("tamper", ["manifest", "provenance", "omission", "payload"])
+def test_source_notice_bundle_rejects_forged_or_missing_provenance(
+    tmp_path, monkeypatch, tamper
+):
+    site, spec, bundle = _reviewed_source_fixture(tmp_path, monkeypatch)
+    spec["dependency_notices"]["source_supplements"] = ["reviewed/source-manifest.json"]
+    manifest = _collect(tmp_path, site, spec, bundle)
+    alpha = next(item for item in manifest["distributions"] if item["normalized_name"] == "alpha")
+    notice = alpha["notices"][0]
+    if tamper == "manifest":
+        notice["manifest_sha256"] = "c" * 64
+    elif tamper == "provenance":
+        notice.pop("provenance")
+        notice["record_hash"] = "sha256:" + notice["sha256"]
+    elif tamper == "omission":
+        alpha["notices"].clear()
+    else:
+        (bundle / notice["bundle_path"]).write_bytes(b"changed license")
+    (bundle / "legal/dependencies/dependency-notices.json").write_text(json.dumps(manifest))
+    assert dependency_notices.verify_dependency_notice_manifest(bundle, spec, tmp_path)
+
+
 def test_collects_only_locked_notice_files_and_inspector_accepts_manifest(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
