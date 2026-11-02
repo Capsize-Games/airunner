@@ -1,0 +1,32 @@
+{
+  "distribution": "accelerate",
+  "version": "1.14.0+capsize.1",
+  "filename": "accelerate-1.14.0+capsize.1-py3-none-any.whl",
+  "wheel_sha256": "cd361391b478a733c1efde37ace5ae3e7e54cdd791ba7a9f1bd6d9849be8facb",
+  "size_bytes": 390394,
+  "license": "Apache-2.0",
+  "license_file": "accelerate-LICENSE",
+  "license_sha256": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4",
+  "canonical_repository": "https://github.com/huggingface/accelerate",
+  "upstream_tag": "v1.14.0",
+  "upstream_commit": "beb0672aa8444ea7647aee056f624effe5996346",
+  "private_patch_commit": "a2dba5ab79b7c60368f8d9a8771f364bb03951ef",
+  "build_environment": {
+    "python": "3.13.5",
+    "uv": "0.13.4",
+    "setuptools": "84.2.1",
+    "setuptools_wheel_sha256": "ca140b45d5325a9478f880e351484f62fef15f336462e449ca0c03c873d589c2",
+    "wheel": "0.48.0",
+    "wheel_wheel_sha256": "3217dcc807155e45db462d7ef2431f5ddda0d7273b700d05a67b271ceb1287ab",
+    "packaging": "26.3",
+    "packaging_wheel_sha256": "d7193f7c8e4e93f444fde0262bf90af30e16fa0ad0ad44cb553c87339b23cd1c",
+    "network_during_build": false
+  },
+  "wheel_record_entries": 90,
+  "source_review": "All 84 Python files are present; only __init__.py and utils/modeling.py differ from upstream wheel source. Runtime requirements and license are unchanged.",
+  "helper_checks": "AST-extracted helpers passed with standard-library dependencies and mocked FIFO metadata; no package import, runtime test, or actual FIFO.",
+  "review_record": "release-planning/services/input-reviews/linux-ml-hf-review.md",
+  "private_merged_sha": "94abb7bf13947b2ca46608867b07c5f5908061f9",
+  "private_release_tag": "capsize-accelerate-v1.14.0.1",
+  "source_tree_identity": "Merged tree matches reviewed wheel build-source commit."
+}
