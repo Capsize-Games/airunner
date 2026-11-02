@@ -222,6 +222,19 @@ absent in the inspected environments; record it as unavailable until a
 reviewed pinned tool environment exists. Do not install unreviewed tools
 to manufacture a complete audit.
 
+The 2026-11-02 refreshed legacy AST report inspected 802 service files /
+135,415 lines and reported 1,263 advisory findings. Its native selection
+inspected three files / 407 lines and reported six notes. The refreshed
+Radon report inspected 996 files and identified 176 complex blocks and 529
+hotspot files under its broader selection. Xenon remains explicitly
+unavailable; successful report generation does not mean a Xenon pass. These
+counts use different tool selections and are not a before/after defect score.
+The new artifact stager's main function initially ranked F (complexity 59);
+its refactor splits preflight, routes, streaming and receipts while preserving
+security regressions. The current stager has no D/E/F blocks (maximum C, 17).
+Remaining advisory findings require the subsystem dispositions below rather
+than mechanical deletion of optional imports, migrations or compatibility code.
+
 Review quality findings in API, persistence, workers/runtimes, LLM and
 companion, art/voice, utilities and build tooling as separate work units.
 Prioritize correctness and boundaries, then simplify confirmed hotspots
