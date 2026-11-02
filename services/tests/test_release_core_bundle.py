@@ -403,3 +403,25 @@ def test_full_ml_profile_still_requires_its_backend_imports():
     spec = inspect_linux_bundle.load_spec()
     failures, _ = _gate_missing({"DeepCache": []}, spec["warn_allowlist"]["modules"], spec["code"]["exclude_modules"])
     assert failures == ["unreviewed missing module: DeepCache"]
+
+
+def test_frozen_profiles_retain_imports_from_externally_loaded_migrations():
+    import ast
+
+    imports = set()
+    migrations = SERVICES_SRC / "airunner_services/database/alembic"
+    for path in migrations.rglob("*.py"):
+        for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"))):
+            if isinstance(node, ast.ImportFrom) and node.module:
+                if node.module.startswith("airunner_services."):
+                    imports.add(node.module)
+            elif isinstance(node, ast.Import):
+                imports.update(
+                    alias.name for alias in node.names
+                    if alias.name.startswith("airunner_services.")
+                )
+    assert "airunner_services.database.migration_metadata" in imports
+    assert "airunner_services.llm.companion.migration_ledger" in imports
+    for profile in ("services-bundle-spec.toml", "services-core-bundle-spec.toml"):
+        spec = inspect_linux_bundle.load_spec(ROOT / "packaging/linux" / profile)
+        assert imports <= set(spec["code"]["hidden_imports"])

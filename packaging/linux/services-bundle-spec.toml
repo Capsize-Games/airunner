@@ -141,6 +141,44 @@ primary = false
 # the daemon, so the modulegraph drops them and the frozen CLI loses
 # subcommands -- issue #2244).
 hidden_imports = [
+    # Alembic executes these modules from packaged migration data. Keep every
+    # service import in that data in the frozen module graph and TOC gate.
+    "airunner_services.database.base",
+    "airunner_services.database.db",
+    "airunner_services.database.db.column",
+    "airunner_services.database.db.engine",
+    "airunner_services.database.db.table",
+    "airunner_services.database.migration_metadata",
+    "airunner_services.database.models",
+    "airunner_services.database.models.agent_config",
+    "airunner_services.database.models.airunner_settings",
+    "airunner_services.database.models.application_settings",
+    "airunner_services.database.models.canvas_layer",
+    "airunner_services.database.models.chatbot",
+    "airunner_services.database.models.companion_fact",
+    "airunner_services.database.models.companion_job",
+    "airunner_services.database.models.companion_narrative",
+    "airunner_services.database.models.companion_session",
+    "airunner_services.database.models.companion_turn",
+    "airunner_services.database.models.conversation",
+    "airunner_services.database.models.document",
+    "airunner_services.database.models.generator_settings",
+    "airunner_services.database.models.image_to_image_settings",
+    "airunner_services.database.models.language_settings",
+    "airunner_services.database.models.llm_generator_settings",
+    "airunner_services.database.models.llm_tool",
+    "airunner_services.database.models.memory_settings",
+    "airunner_services.database.models.openvoice_settings",
+    "airunner_services.database.models.outpaint_settings",
+    "airunner_services.database.models.path_settings",
+    "airunner_services.database.models.project_state",
+    "airunner_services.database.models.rag_settings",
+    "airunner_services.database.models.sound_settings",
+    "airunner_services.database.models.voice_settings",
+    "airunner_services.database.models.zimfile",
+    "airunner_services.database.secret_store",
+    "airunner_services.llm.companion.migration_ledger",
+
     # tool_registry.py:270 ensure-import of the tools package.
     "airunner_services.llm.tools",
     # model_registry.py:64 provider-config lookup.

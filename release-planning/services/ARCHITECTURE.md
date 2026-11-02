@@ -37,12 +37,16 @@ bounded plain-text renderer and an explicit voice catalogue operation; see
 engine and contract checks do not establish packaged installation or voice
 acceptance.
 
-The active release lock is pending generation. The old desktop lock is retained
-only as historical evidence. Binary-only resolution stopped at
-`llama-cpp-python==0.3.21`, which requires a reviewed source-built wheel for the
-target. Source review, a pinned isolated CUDA build and hardware validation are
-separate work units. CI preflight deliberately fails while the lock or required
-sibling input reviews are pending; a skipped or unavailable check is not a pass.
+The active release lock is pending generation and validation. The old desktop
+lock is retained only as historical evidence. A pinned isolated CUDA build
+produced a statically verified llama-cpp-python wheel, without model or GPU
+execution. A reviewed wrapper patch now makes disk caching an explicit extra;
+its replacement wheel is being built separately. The diagnostic dependency
+graph resolves with the security replacements while preserving other exact
+baseline pins. It remains unactivated: native dependency fixes, artifact and
+license review, and runtime compatibility checks are incomplete. CI preflight
+deliberately fails while the lock or required input reviews are pending; a
+skipped or unavailable check is not a pass.
 
 The service Kanban project tracks these inputs, companion retirement, eSpeak
 acceptance and CUDA wheel preparation as bounded follow-ups. On 2026-11-01 the
@@ -205,8 +209,9 @@ The binary-only dependency probe advanced past an unused Wikipedia requirement
 after its removal from the search extra. Sumy remains necessary for conversation
 and web-content summarization. Its reviewed docopt 0.6.2 wheel, source identity
 and MIT notice are retained in `package/wheelhouse`; an offline build and parser
-smoke check passed. Diagnostic probes omit the separately unfinished llama-cpp wheel and do not
-constitute a complete release lock.
+smoke check passed. Diagnostic probes now include the verified CUDA wheel;
+their metadata resolution does not constitute a validated release lock or
+authorize installing affected dependencies.
 
 The Debian candidate uses a separate `linux-services-core` frozen profile.
 Ubuntu's Python package catalog does not provide the service's exact base pins,
@@ -222,8 +227,14 @@ by SHA-256. Completed source reviews without a concrete policy flag do not
 require an owner exception. Concrete unresolved flags and incomplete source
 reviews prevent installation or freezing. As of 2026-11-02, all 51 locked
 distributions have recorded static source review and origin disposition. The
-readiness record permits isolated candidate installation and build work;
-artifact validation remains unrun. The visible input and whitelist inventory
+readiness record permits isolated candidate installation and build work.
+CORE Debian builds and post-packaging manifest inspection passed at source
+`4215e978a11220ab7bcf5e9458c406186e859313` in workflow run `41482860335`.
+Fresh-target installation reached daemon startup, which failed because an
+Alembic data-file import was absent from the frozen module graph. The frozen
+profiles now explicitly retain service imports from all packaged migration
+files, with a regression check and TOC validation. A corrected fresh-install
+result is still required. The visible input and whitelist inventory
 is in `DEPENDENCY_DECISIONS.md`. Metadata resolution and source-level tests do
 not establish an executable or Debian package acceptance result. The Debian exit checks are a clean target
 install, daemon health, command dispatch, restart and upgrade preservation,
