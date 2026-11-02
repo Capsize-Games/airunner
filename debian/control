@@ -2,42 +2,24 @@ Source: airunner
 Section: utils
 Priority: optional
 Maintainer: Capsize LLC <contact@capsizegames.com>
-Build-Depends: debhelper-compat (= 13),
-               dh-python,
-               pybuild-plugin-pyproject,
-               python3-all,
-               python3-setuptools,
-               python3-wheel
+Build-Depends: debhelper-compat (= 13), python3
 Standards-Version: 4.6.2
 Rules-Requires-Root: no
 Homepage: https://github.com/Capsize-Games/airunner
 
 Package: airunner
-Architecture: all
-# python3-dotenv is explicit (not just ${python3:Depends}) because the
-# vendored airunner_common.settings imports dotenv at module scope.
-# Runtime closure audit: fastapi/uvicorn/pydantic and the rest of the
-# daemon's runtime come from services/setup.py install_requires via
-# pybuild-generated ${python3:Depends} above (dh_python3 maps the wheel
-# metadata to distro packages); they are not re-listed here by hand so
-# the two sources cannot drift apart. Explicit distro deps are added
-# only where the wheel metadata cannot express them: python3-yaml and
-# python3-dotenv (vendored airunner_common.settings imports dotenv at
-# module scope), plus adduser for the postinst system user. The
-# loose-file native/common trees (debian/airunner.install) are
-# deliberately absent from Depends -- see that file's version stamps.
-Depends: ${python3:Depends}, ${misc:Depends}, python3-yaml, python3-dotenv, adduser
+Architecture: amd64
+# The frozen onedir runtime carries the pinned Python interpreter and
+# CORE dependencies. dh_shlibdeps derives the host shared-library closure
+# from the executable; adduser provisions the service account.
+Depends: ${shlibs:Depends}, ${misc:Depends}, adduser
 Description: Headless service daemon for AI Runner (services only)
- The services/ package surface of AIRunner: headless orchestration layer
- owning the daemon entry points, FastAPI server wiring, runtime registry,
- downloads, persistence, lifecycle control, and modality services.
+ The frozen CORE services runtime provides headless orchestration, the
+ FastAPI server, runtime registry, downloads, persistence, lifecycle
+ control, and daemon health.
  .
- This package is services only (issue #2237): it ships the
- airunner-daemon, airunner-headless and airunner-service console scripts
- plus the airunner-headless systemd unit. It deliberately contains no Qt
- desktop client. It also ships airunner-common 6.1.8 as files (see
- debian/vendor/README.source) until that project publishes its own
- Debian binary. Heavy ML extras (torch, diffusers, llama.cpp bindings)
- are not Debian-packaged; without torch the daemon still boots and
- serves /health plus sidecar-backed modalities, while local generation
- endpoints report missing-runtime diagnostics (issue #2243).
+ This amd64 services package ships the AIRunner console commands and the
+ airunner-headless systemd unit. It contains no Qt desktop client. ML
+ model runtimes, weights, and GPU libraries are not included. The daemon
+ reports missing-runtime diagnostics when an optional ML runtime is not
+ separately provisioned.

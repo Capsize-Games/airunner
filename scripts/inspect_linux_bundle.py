@@ -91,17 +91,47 @@ class InspectionResult:
         return bool(self.problems)
 
 
-def load_spec(path: Path | None = None) -> dict[str, Any]:
-    """Return the parsed bundle spec."""
+def load_spec(
+    path: Path | None = None, _seen: frozenset[Path] = frozenset()
+) -> dict[str, Any]:
+    """Return the parsed bundle spec, applying one local ``extends`` layer."""
     spec_path = path or DEFAULT_SPEC
+    spec_path = spec_path.resolve()
+    if spec_path in _seen:
+        raise SystemExit("bundle spec extends cycle detected")
+    seen = _seen | {spec_path}
     try:
         text = spec_path.read_text(encoding="utf-8")
     except OSError as exc:
         raise SystemExit(f"cannot read bundle spec: {exc}") from exc
     try:
-        return dict(tomllib.loads(text))
+        spec = dict(tomllib.loads(text))
     except tomllib.TOMLDecodeError as exc:
         raise SystemExit(f"invalid bundle spec {spec_path}: {exc}") from exc
+    parent_name = spec.pop("extends", None)
+    if parent_name is None:
+        return spec
+    if not isinstance(parent_name, str) or Path(parent_name).is_absolute():
+        raise SystemExit("bundle spec extends must be a relative path")
+    parent_path = (spec_path.parent / parent_name).resolve()
+    if parent_path.parent != spec_path.parent:
+        raise SystemExit("bundle spec extends must stay in its directory")
+    try:
+        parent = load_spec(parent_path, seen)
+    except SystemExit:
+        raise
+
+    def overlay(base: dict[str, Any], override: dict[str, Any]) -> dict[str, Any]:
+        """Merge tables recursively; arrays and scalar values replace."""
+        merged = dict(base)
+        for key, value in override.items():
+            if isinstance(value, dict) and isinstance(merged.get(key), dict):
+                merged[key] = overlay(merged[key], value)
+            else:
+                merged[key] = value
+        return merged
+
+    return overlay(parent, spec)
 
 
 def _read_manifest(

@@ -1,0 +1,52 @@
+{
+  "schema_version": 1,
+  "profile": "linux-services-core",
+  "readiness_status": "pending-review",
+  "activation_allowed": false,
+  "requirements": {
+    "path": "package/requirements-linux-core.in",
+    "sha256": "e05b93209931f945ee66686d33ac76173279dcdc8ca3f9c8ade83e55d494cc66"
+  },
+  "lock": {
+    "path": "package/constraints-linux-core.txt",
+    "sha256": "1ec91599b40ab9dccd826aeed33928a20eeb0319b90f4f57a6b4bff33d2b16cf",
+    "resolved_distributions": 51,
+    "python": "3.13.5",
+    "platform": "linux-x86_64"
+  },
+  "dependency_review": {
+    "path": "release-planning/services/input-reviews/core-linux-dependency-inventory.json",
+    "sha256": "6a2828aadd4fe72975382242552e590827cdebda69e03e66d1c2efcfead5c6fb",
+    "status": "incomplete",
+    "source_reviewed_count": 7,
+    "source_pending_count": 44,
+    "origin_ready_count": 2,
+    "origin_pending_review_count": 47,
+    "origin_pending_exception_count": 2
+  },
+  "builder_inputs": [
+    {
+      "name": "pyinstaller",
+      "version": "6.12.0",
+      "source_commit": "31dbe9ff477716e4790aa317bc9da68766d20659",
+      "source_archive_sha256": "1834797be48ce1b26015af68bdeb3c61a6c7500136f04e0fc65e468115dec777",
+      "review_record": "release-planning/services/input-reviews/core-linux-freeze-inputs.md",
+      "source_policy_status": "pending-owner-exception",
+      "review_record_sha256": "3dc2e40d5c6245cd5c3fae5b57064fcea537dbd94791f4ad02022bb8d469b667"
+    },
+    {
+      "name": "pyinstaller-hooks-contrib",
+      "version": "2026.9",
+      "source_commit": "222e37fea0d8300595af3601a4f42d2fcf634a37",
+      "source_archive_sha256": "2748767901acb5cecd1304652b6c7add5bffcff1d71d01207fe24a5d42942a56",
+      "review_record": "release-planning/services/input-reviews/core-linux-freeze-inputs.md",
+      "source_policy_status": "pending-owner-exception",
+      "review_record_sha256": "3dc2e40d5c6245cd5c3fae5b57064fcea537dbd94791f4ad02022bb8d469b667"
+    }
+  ],
+  "blockers": [
+    "dependency-source-review-pending",
+    "dependency-origin-review-pending",
+    "builder-origin-exception-pending"
+  ]
+}

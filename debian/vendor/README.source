@@ -4,8 +4,8 @@ Vendored airunner_common (issue #2243, Gap 1)
 What
 ----
 `airunner_common/` is a byte-verified copy of the 13 pure-Python modules from
-the airunner-common 6.1.8 wheel (no dist-info), shipped as files into
-usr/lib/python3/dist-packages by debian/airunner.install.
+the airunner-common 6.1.8 wheel (no dist-info), included in the frozen CORE
+runtime by the PyInstaller build profile.
 `airunner-common.LICENSE` is the wheel's GPL-3.0-only license text.
 
 Origin
@@ -25,26 +25,17 @@ source LICENSE.
 Why vendored
 ------------
 airunner-common~=6.1.8 is a hard services import (235 import sites), but
-dh_python3 cannot map it to a distro package, so the .deb neither shipped it
-nor depended on it and the installed daemon died with
-ModuleNotFoundError: No module named 'airunner_common'. This mirrors the
-airunner_native stanza in debian/airunner.install: pybuild cannot build two
-source trees into one binary package, so the module ships as files. Nothing
-queries airunner-common dist metadata at runtime (get_version() resolves
-airunner-services first and falls back to package_metadata.VERSION), so no
-dist-info is shipped.
+Ubuntu's Python package catalog does not supply the service's pinned
+dependency versions. The Debian package therefore freezes Python and its
+dependencies rather than relying on dh_python3. Nothing queries airunner-common
+distribution metadata at runtime (get_version() resolves airunner-services
+first and falls back to package_metadata.VERSION), so no common dist-info is
+required.
 
-The common runtime package requires python-dotenv at module import time;
-debian/control declares python3-dotenv. Its legacy Shield requirement is an
-optional extra, not a base dependency or an enabled runtime in this package.
+The common runtime package requires python-dotenv at module import time; it is
+included in the CORE lock. Its legacy Shield requirement is an optional extra,
+not a base dependency or an enabled runtime in this package.
 
 Exit criteria
 -------------
-Delete this directory and ship a real dependency once either holds:
-
-- Capsize-Games/airunner-common publishes its own Debian binary (the fix
-  #2243 prefers), or
-- dh_python3 can map airunner-common to a distro package.
-
-Then replace the .install stanza below with that binary in debian/control
-Depends.
+This source copy remains until a reviewed source or wheel update replaces it.

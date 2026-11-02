@@ -1,13 +1,27 @@
 #!/usr/bin/make -f
-# Services-only apt packaging (issue #2237). The Python package surface
-# lives in services/ (services/setup.py + services/pyproject.toml), so
-# the pybuild steps run with that sourcedirectory; dh_install and friends
-# still run from the repo root. No Qt desktop is built or shipped.
-
-export PYBUILD_NAME = airunner-services
+# The Debian package carries the independently locked, frozen CORE
+# runtime. Python dependencies are embedded in the onedir bundle; the
+# package only needs the target's ordinary shared-library runtime.
 
 %:
-	dh $@ --with python3 --buildsystem=pybuild --sourcedirectory=services
+	dh $@
+
+override_dh_auto_build:
+	@test -n "$(AIRUNNER_CORE_PYTHON)" || { echo "AIRUNNER_CORE_PYTHON must name the reviewed CORE build environment" >&2; exit 2; }
+	$(AIRUNNER_CORE_PYTHON) scripts/assemble_linux_bundle.py \
+		--spec packaging/linux/services-core-bundle-spec.toml \
+		--distpath build/core-dist --workpath build/core-work \
+		--pyinstaller "$$(dirname "$(AIRUNNER_CORE_PYTHON)")/pyinstaller"
+
+override_dh_auto_install:
+	install -d debian/airunner/usr/lib/airunner debian/airunner/usr/bin
+	cp -a build/core-dist/airunner-core/. debian/airunner/usr/lib/airunner/
+	for command in airunner-daemon airunner-headless airunner-service \
+		airunner-generate-migration airunner-hf-download airunner-civitai-download \
+		airunner-cleanup-llm-models airunner-docker-build airunner-docker-wrapper \
+		airunner-generate-cert; do \
+		ln -s ../lib/airunner/airunner-core "debian/airunner/usr/bin/$$command"; \
+	done
 
 # The services test suite needs network/GPU fixtures; it runs in CI, not
 # in the package build.

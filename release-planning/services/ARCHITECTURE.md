@@ -206,3 +206,21 @@ after its removal from the search extra. Sumy remains necessary for conversation
 and web-content summarization; its docopt dependency needs a reviewed source
 wheel. Diagnostic probes omit the separately blocked llama-cpp wheel and do not
 constitute a complete release lock.
+
+The Debian candidate uses a separate `linux-services-core` frozen profile.
+Ubuntu's Python package catalog does not provide the service's exact base pins,
+so the package embeds its Python interpreter and CORE dependency closure instead
+of substituting older distribution versions. The profile preserves the ten
+service console aliases, migrations and notices. It excludes ML libraries and
+weights; runtime-backed features remain optional and OpenVoice remains deferred.
+The full ML bundle retains its separate dependency and acceptance requirements.
+
+The CORE candidate lock contains 51 distributions. Its readiness record binds
+the requirements, lock, exact-pin review inventory and builder review records
+by SHA-256. Completed source reviews without a concrete policy flag do not
+require an owner exception. Concrete unresolved flags and incomplete source
+reviews prevent installation or freezing. The current graph remains pending;
+metadata resolution and source-level tests do not establish an executable or
+Debian package acceptance result. The Debian exit checks are a clean target
+install, daemon health, command dispatch, restart and upgrade preservation,
+followed by source-bound apt promotion and downloaded-package verification.

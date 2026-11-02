@@ -37,7 +37,7 @@ _bundle_root()
 
 from {module} import {function}
 
-{function}()
+raise SystemExit({function}())
 '''
 
 
@@ -142,7 +142,11 @@ def build_command(
 ) -> list[str]:
     """Return the exact PyInstaller command for this spec."""
     command = _tool_args(pyinstaller, spec["bundle"], distpath, workpath)
-    for extra in ("services/src", "native/src"):
+    for extra in (
+        "services/src",
+        "native/src",
+        *[str(path) for path in spec.get("profile", {}).get("extra_paths", [])],
+    ):
         command.extend(["--paths", str(repo_root / extra)])
     command.extend(_data_args(spec, repo_root, include_content_policy))
     command.extend(_code_args(spec))

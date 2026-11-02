@@ -1,25 +1,2 @@
 debian/daemon.yaml usr/share/doc/airunner/examples
-# Canonical seed for /etc/airunner/daemon.yaml (postinst copies from
-# here, not from the doc dir: systems with path-exclude doc stripping
-# such as containers never install usr/share/doc; issue #2250).
 debian/daemon.yaml usr/share/airunner
-# Pure-python airunner_native launcher module (native/ sister dist). The
-# daemon imports it at startup; pybuild cannot build two source trees
-# into one binary package, so the module ships as files (no dist-info,
-# no airunner-native console script — nothing queries its metadata and
-# the CLI dispatches desktop flows out of scope for services-only).
-# Version stamp: native/setup.py _RELEASE_VERSION. The dependency
-# direction runs native->services (native[services] pins
-# airunner-services>=6.1.5,<7); no services-side pin on
-# airunner-native exists to match. PR CI's packaging-gates job
-# re-checks the stamp.
-native/src/airunner_native usr/lib/python3/dist-packages
-# Verbatim airunner-common package (debian/vendor/README.source,
-# issue #2243 Gap 1). Hard services import that dh_python3 cannot map
-# to a distro package; ships as files like airunner_native above until
-# airunner-common publishes its own Debian binary (then this stanza
-# becomes a Depends instead). No dist-info: nothing queries it.
-# Version stamp: debian/vendor/README.source pins the exact wheel and
-# sha256; PR CI's packaging-gates job re-checks it against the
-# services airunner-common requirement.
-debian/vendor/airunner_common usr/lib/python3/dist-packages

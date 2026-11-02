@@ -1,7 +1,7 @@
 # FHS-rendered variant of deployment/systemd/airunner-headless.service for
 # the services-only apt package (issue #2237). The template placeholders
-# are resolved to fixed Debian paths: console script in /usr/bin (installed
-# by pybuild from SERVICE_CONSOLE_SCRIPTS), config in /etc/airunner,
+# are resolved to fixed Debian paths: frozen console alias in /usr/bin,
+# config in /etc/airunner,
 # writable state in /var/lib/airunner, logs in /var/log/airunner.
 # Loopback-only bind defaults are kept: daemon 127.0.0.1:8188 (see
 # DaemonConfig._default_config), HTTP 127.0.0.1:8080.
