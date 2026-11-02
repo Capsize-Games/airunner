@@ -17,7 +17,7 @@ and bundled submodule content are described in the package notes.
 | starlette | 1.6.0 | [`1.6.0`](https://github.com/Kludex/starlette/tree/1.6.0), `4f250d6b814587e20c5365f0a5f0c4d42bcb929f` | `d4e3ac5e546444960c710297a3c9fc3f7ebae1b7e963f3d36173b49da535be9b` | Owner whitelist recorded |
 | uvicorn | 0.34.0 | [`0.34.0`](https://github.com/encode/uvicorn/tree/0.34.0), `7983c1ae9c2276b94cd85217f7aa58bb248847c4` | `404051050cd7e905de2c9a7e61790943440b3416f49cb409f965d9dcd0fa73e9` | Owner whitelist recorded |
 | uvloop | 0.23.0 | [`v0.23.0`](https://github.com/MagicStack/uvloop/tree/v0.23.0), `c5f7debaabe98bba70859aa0120db243775c255c` | `28d160f51ab4da3b187063652e643dea6831072add4adc1e6d62afbe73b6be27` | Owner whitelist recorded |
-| watchfiles | 1.3.0 | [`v1.3.0`](https://github.com/samuelcolvin/watchfiles/tree/v1.3.0), `e74b8fc7d8d9e35c3b6bb88af0aef5ea82ee815e` | `99aee4a07847c06820765fd7b1b49ceac4f3f711ccb7d104655a33231de1c207` | Package whitelist recorded; nested crate flags pending |
+| watchfiles | 1.3.0 | [`v1.3.0`](https://github.com/samuelcolvin/watchfiles/tree/v1.3.0), `e74b8fc7d8d9e35c3b6bb88af0aef5ea82ee815e` | `99aee4a07847c06820765fd7b1b49ceac4f3f711ccb7d104655a33231de1c207` | Owner whitelist recorded for package and flagged nested crates |
 | websockets | 17.4 | [`17.4`](https://github.com/python-websockets/websockets/tree/17.4), `625a59ed613ac60e60d577dd64b8641d59ecb2b1` | `09d3939b70df0c8ad2da145ebd50978bccaee1d565e838b0e7921a34d38571eb` | Reviewed; no concrete flag found |
 
 The two no-flag dispositions mean the reviewed primary project profiles and
@@ -187,17 +187,19 @@ maintenance evidence branch.
 | unicode-ident | 1.0.12 | (MIT OR Apache-2.0) AND Unicode-DFS-2016 |
 | walkdir | 2.5.0 | Unlicense/MIT |
 
-The selected wheel contains only watchfiles' own `LICENSE` in its license
-metadata; it does not carry the crate license files. The runtime closure
-includes crates with separate MIT, Apache-2.0, ISC, and Unicode license texts.
-This review identifies a downstream third-party notice gap that must be
-resolved before activating this wheel in the bundle.
+The selected wheel contains watchfiles' own `LICENSE` in its license metadata,
+but it does not carry the crate license files. The downstream bundle now keeps
+the package license and all 51 license/copyright files reported for the 26
+compiled crates in
+[`packaging/licenses/watchfiles-rust-crates/`](../../../packaging/licenses/watchfiles-rust-crates/).
+The adjacent source JSON records each crate's version, registry checksum,
+manifest license expression, source license path, copied-file SHA-256, and
+size. This records the applicable source notices; it is not a legal clearance.
 
-The owner whitelist covers watchfiles 1.3.0's package-level origin flag. Static
-review of the nested crate owners found separate concrete profile flags for
-`inotify`, `inotify-sys`, `once_cell`, and build-time `heck`; their owner
-disposition is pending. Exact profile evidence is retained privately. No
-location is inferred from a package or maintainer name.
+The owner whitelist covers watchfiles 1.3.0's package-level origin flag and the
+separate concrete profile flags found for `inotify`, `inotify-sys`, `once_cell`,
+and build-time `heck`. Exact profile evidence and the owner disposition are
+retained privately. No location is inferred from a package or maintainer name.
 
 Static inspection of the exact Rust runtime and build scripts found no
 telemetry, credential access, or outbound client code. The compiler/proc-macro
@@ -232,6 +234,8 @@ and the owner pre-push hook remained active. Static review covered the selected
 parser source, libuv Linux source/build path, license files, and native wheel
 payloads. Source builds remain excluded; no source build hooks, package imports,
 or runtime code were executed. The owner has recorded the whitelist disposition
-for the six Python package origin-policy flags. The separate nested Rust crate
-flags and watchfiles notice gap remain open. This review does not change the
-shared readiness inventory or authorize activation.
+for the six Python package origin-policy flags. The watchfiles crate notice gap
+is addressed by the bundled original notice files and source JSON described
+above. The owner whitelist now covers the nested Rust crate origin-policy
+flags. This notice work does not by itself change the shared readiness
+inventory or authorize activation.

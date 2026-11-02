@@ -1,4 +1,4 @@
-"""The CORE candidate lock stays non-activatable while source review is pending."""
+"""CORE source readiness is distinct from frozen artifact acceptance."""
 
 from __future__ import annotations
 
@@ -125,24 +125,28 @@ def test_candidate_record_matches_the_51_package_lock() -> None:
     )
 
     assert result["distribution_count"] == 51
-    assert result["status"] == "pending-review"
-    assert result["activation_allowed"] is False
-    assert result["blockers"] == [
-        "dependency-source-review-pending",
-        "dependency-origin-review-pending",
-        "builder-origin-exception-pending",
-    ]
+    assert result["status"] == "ready"
+    assert result["activation_allowed"] is True
+    assert result["blockers"] == []
     assert result["dependency_review"] == {
-        "status": "incomplete",
-        "source_reviewed_count": 7,
-        "source_pending_count": 44,
-        "origin_ready_count": 2,
-        "origin_pending_review_count": 47,
-        "origin_pending_exception_count": 2,
+        "status": "complete",
+        "source_reviewed_count": 51,
+        "source_pending_count": 0,
+        "origin_ready_count": 51,
+        "origin_pending_review_count": 0,
+        "origin_pending_exception_count": 0,
     }
+    manifest = json.loads(
+        (ROOT / "package/core-input-readiness.json").read_text(encoding="utf-8")
+    )
+    assert manifest["activation_scope"] == "isolated-candidate-install-build"
+    assert manifest["artifact_validation"]["status"] == "not-run"
+    assert manifest["artifact_validation"]["pending_checks"]
 
 
-def test_activation_mode_fails_before_builder_install_or_freeze(capsys) -> None:
+def test_activation_mode_accepts_reviewed_inputs_without_claiming_freeze_acceptance(
+    capsys,
+) -> None:
     code = readiness.main(
         [
             "--root",
@@ -154,8 +158,8 @@ def test_activation_mode_fails_before_builder_install_or_freeze(capsys) -> None:
         ]
     )
 
-    assert code == 2
-    assert "exact dependency source/origin review is incomplete" in capsys.readouterr().err
+    assert code == 0
+    assert "status=ready" in capsys.readouterr().out
 
 
 def test_lock_digest_mismatch_is_rejected(tmp_path: Path) -> None:
@@ -177,7 +181,7 @@ def test_lock_digest_mismatch_is_rejected(tmp_path: Path) -> None:
         readiness.check_readiness(tmp_path, Path("package/core-input-readiness.json"))
 
 
-def test_builder_exceptions_cannot_activate_an_unreviewed_graph(tmp_path: Path) -> None:
+def test_builder_exceptions_cannot_mask_an_unresolved_origin_flag(tmp_path: Path) -> None:
     manifest = json.loads(
         (ROOT / "package/core-input-readiness.json").read_text(encoding="utf-8")
     )
@@ -186,13 +190,17 @@ def test_builder_exceptions_cannot_activate_an_unreviewed_graph(tmp_path: Path) 
     for package in inventory["packages"]:
         if package["name"] in {"pyinstaller", "pyinstaller-hooks-contrib"}:
             package["origin_policy_status"] = "owner-exception-recorded"
-    inventory["origin_ready_count"] = 4
-    inventory["origin_pending_exception_count"] = 0
+        elif package["name"] == "numpy":
+            package["origin_policy_status"] = "pending-owner-exception"
+    inventory["origin_ready_count"] = 50
+    inventory["origin_pending_exception_count"] = 1
+    inventory["status"] = "incomplete"
     inventory_bytes = (json.dumps(inventory, indent=2, sort_keys=True) + "\n").encode()
     digest = hashlib.sha256(inventory_bytes).hexdigest()
     manifest["dependency_review"]["sha256"] = digest
-    manifest["dependency_review"]["origin_ready_count"] = 4
-    manifest["dependency_review"]["origin_pending_exception_count"] = 0
+    manifest["dependency_review"]["origin_ready_count"] = 50
+    manifest["dependency_review"]["origin_pending_exception_count"] = 1
+    manifest["dependency_review"]["status"] = "incomplete"
     for builder in manifest["builder_inputs"]:
         builder["source_policy_status"] = "owner-exception-recorded"
     manifest["readiness_status"] = "ready"
@@ -217,6 +225,14 @@ def test_builder_exceptions_cannot_activate_an_unreviewed_graph(tmp_path: Path) 
     evidence_copy = tmp_path / evidence_path
     evidence_copy.parent.mkdir(parents=True, exist_ok=True)
     evidence_copy.write_bytes(evidence_copy_path.read_bytes())
+    for package in inventory["packages"]:
+        evidence = package.get("review_evidence")
+        if not evidence:
+            continue
+        source = ROOT / evidence["record"]
+        destination = tmp_path / evidence["record"]
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        destination.write_bytes(source.read_bytes())
     (tmp_path / "package/core-input-readiness.json").write_text(
         json.dumps(manifest), encoding="utf-8"
     )

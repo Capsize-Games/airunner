@@ -1,13 +1,17 @@
 # Linux CORE freeze input review
 
-Date: 2026-11-01
+Review date: 2026-11-01
+Integration status updated: 2026-11-02
 
 ## Candidate and status
 
-This record describes the Linux `services-core` dependency graph candidate. It
-is not approval to install or execute the freeze tools. Activation remains
-pending; CI must stop before installing builder dependencies while
-`package/core-input-readiness.json` has a pending status.
+This record describes the Linux `services-core` dependency graph candidate.
+The 2026-11-01 intake was not itself approval to install or execute freeze
+tools. After the static review integration on 2026-11-02,
+`package/core-input-readiness.json` permits installing the exact locked inputs
+and proceeding with an isolated candidate build. CI must run its readiness
+check before installation. This permission does not establish artifact or
+runtime acceptance.
 
 The metadata-only resolution used CPython 3.13.5, Linux x86_64, and binary-only
 selection. It contains 51 distributions. The requirements input SHA-256 is
@@ -25,17 +29,19 @@ lock includes hashes for the resolved distribution artifacts. The exact-pin
 inventory at
 [`core-linux-dependency-inventory.json`](core-linux-dependency-inventory.json)
 binds every package/version to this lock digest and records source review
-separately from origin-policy state. Current evidence covers source review for
-7 of 51 locked distributions; the other 44 need exact-pin source review. Origin
-review is complete for two inputs, pending for 47 inputs, and the two
-freeze-tool exceptions remain pending. See
-[`core-linux-reviewed-inputs.md`](core-linux-reviewed-inputs.md) for reviewed
-scope and next source intakes.
+separately from origin-policy state. Static source/artifact review is now
+recorded for all 51 locked distributions; origin disposition is recorded for
+all 51. Source review does not certify a built or running bundle. See
+[`core-linux-reviewed-inputs.md`](core-linux-reviewed-inputs.md) for the
+review batches, exact whitelist identities, and scope limits.
 
-The readiness checker requires the inventory package set and pins to match
-the complete lock before any input can become ready. Reviewed freeze-tool
-sources or recorded origin exceptions cannot substitute for the remaining
-package reviews. The current candidate remains non-activatable.
+`readiness_status: ready` and `activation_allowed: true` mean the exact locked
+inputs have completed static source review and origin disposition for isolated
+candidate installation/build work. They do not mean the candidate has passed
+artifact, runtime, or release acceptance. The machine-readable readiness
+record keeps `artifact_validation.status` at `not-run`; frozen startup, clean
+install, and runtime/native-extension checks remain outstanding. No candidate
+freeze or runtime validation is claimed here.
 
 ## Reviewed builder sources
 
@@ -82,7 +88,8 @@ unavailable during review, which is not evidence that the project has no
 advisories. PyPI listed no provenance metadata for either reviewed release.
 
 Static review did not install or import either tool, run setup hooks, invoke
-PyInstaller, freeze an executable, download models, or use a GPU. The exact
-source inputs were inspected, but activation remains pending the outstanding dependency source
-reviews and concrete source-policy flags. No frozen startup or clean-install acceptance result
-is available.
+PyInstaller, freeze an executable, download models, or use a GPU. The
+pyinstaller-hooks-contrib advisory endpoint was unavailable during review, so
+its advisory state remains an evidence gap. No frozen startup, clean-install,
+runtime, native-extension, or release acceptance result is available. Static
+input readiness only permits proceeding to isolated candidate build checks.
