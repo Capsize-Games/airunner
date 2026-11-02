@@ -144,10 +144,13 @@ rejected. Overflow fails explicitly rather than truncating a successful result.
 Model-download completion and retries are serialized on the LLM worker, with
 FIFO waiting requests and cancellation by request identity. The combined local
 observer, ownership, terminal-error, Ollama client and action-parity suite passed
-69 tests (four dependency deprecation warnings) in an isolated temporary home,
+72 tests (four dependency deprecation warnings) in an isolated temporary home,
 with model network access and GPU visibility disabled. It covers silence,
 partial output then failure, late events, slow consumers and cross-request
-isolation using runtime doubles. Real Qwen Q8/32k and target lifecycle acceptance remain
+isolation using runtime doubles. The existing Radon tool identified the worker
+message handler at complexity E (34); focused control/request/result helpers
+reduce it to A (3), retaining peer-checked error and waiting-status behavior.
+Real Qwen Q8/32k and target lifecycle acceptance remain
 in #2416 and #2146; callback doubles cannot satisfy those requirements.
 
 ## Triton distribution and optional compilation
@@ -294,10 +297,10 @@ reviews prevent installation or freezing. As of 2026-11-02, all 51 locked
 distributions have recorded static source review and origin disposition. The
 readiness record permits isolated candidate installation and build work.
 CORE Debian builds, post-packaging inspection and fresh-target installation
-passed at source `de2c8f3cde4d2e8b03dbfa0eacb8379ff1cdcc42` in
-[workflow run 41494962269](https://github.com/Capsize-Games/airunner/actions/runs/41494962269).
+passed at source `ac1fc6206a8388e4ce19068209a714296cc21290` in
+[workflow run 41502697852](https://github.com/Capsize-Games/airunner/actions/runs/41502697852).
 The validation receipt binds Debian SHA-256
-`6c9a096b6f1c8f713377462648fece66eb6c03ac743b43f857ff19ad92b77005`
+`75e747b019d2a2a839fa2109907a1d618c07f754de02859330c6c4031d3c7ea1`
 to that source. It covers systemd start, authenticated API health, installed
 service version, frozen API executable identity, stop/start/restart and exit
 of both the supervisor and API child. The profiles retain imports from all

@@ -302,4 +302,3 @@ def test_pending_download_retry_schedule_and_cancel_have_one_owner():
     thread.join(timeout=1)
     assert result == [None]
     assert worker._active_llm_request_id is None
-

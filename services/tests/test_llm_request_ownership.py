@@ -38,7 +38,11 @@ def _worker() -> LLMGenerateWorker:
     worker._active_request_lock = threading.RLock()
     worker._active_llm_request_id = None
     worker._cancelled_request_ids = set()
+    worker._model_manager_lock = threading.Lock()
     worker._model_manager = None
+    worker._download_dialog_showing = False
+    worker._download_dialog = None
+    worker._interrupted = False
     worker._pending_unload_request = None
     worker.logger = type(
         "Logger",
@@ -217,6 +221,77 @@ def test_completion_before_return_replays_all_requests_on_worker_thread():
     assert manager.calls == ["first", "second", "first", "second"]
     assert manager.max_active_calls == 1
     assert worker._pending_llm_requests == {}
+
+
+def test_manager_exception_emits_terminal_error_and_releases_request_owner():
+    worker = _worker()
+    responses = []
+    worker.emit_signal = lambda _code, payload: responses.append(payload)
+
+    class Manager:
+        def begin_request(self, _request_id):
+            pass
+
+        def handle_request(self, _message, _context):
+            raise RuntimeError("fixture backend failure")
+
+    worker._model_manager = Manager()
+    message = _message("failed")
+    message["request_data"].update(
+        action=LLMActionType.CHAT,
+        llm_request=SimpleNamespace(rag_files=None),
+    )
+
+    worker.handle_message(message)
+
+    assert worker._active_llm_request_id is None
+    assert worker._pending_llm_requests == {}
+    assert len(responses) == 1
+    assert responses[0]["request_id"] == "failed"
+    assert responses[0]["response"].message == "Error invoking LLM: fixture backend failure"
+    assert responses[0]["response"].is_end_of_message
+
+
+def test_download_wait_message_keeps_fallback_when_model_name_lookup_fails():
+    worker = _worker()
+    responses = []
+    worker.emit_signal = lambda _code, payload: responses.append(payload)
+
+    class Manager:
+        @property
+        def model_name(self):
+            raise RuntimeError("model name unavailable")
+
+    worker._model_manager = Manager()
+    message = _message("waiting")
+    worker._set_pending_llm_request(message)
+
+    assert worker._handle_download_retry(message, "waiting")
+
+    assert len(responses) == 1
+    assert responses[0]["request_id"] == "waiting"
+    assert "the configured model" in responses[0]["response"].message
+    assert "download is in progress" in responses[0]["response"].message
+
+
+def test_exhausted_retry_keeps_signal_error_propagation_order():
+    worker = _worker()
+    worker._mark_request_waiting_for_download = lambda *_args: "exhausted"
+    worker._pending_unload_request = {"source": "interrupt"}
+
+    def fail_emit(_code, _payload):
+        raise RuntimeError("signal dispatch failed")
+
+    worker.emit_signal = fail_emit
+
+    try:
+        worker._handle_download_retry(_message("retry"), "retry")
+    except RuntimeError as exc:
+        assert str(exc) == "signal dispatch failed"
+    else:
+        raise AssertionError("exhausted retry must preserve signal errors")
+
+    assert worker._pending_unload_request == {"source": "interrupt"}
 
 
 def test_all_waiting_requests_are_requeued_once_in_order():

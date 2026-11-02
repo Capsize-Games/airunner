@@ -693,30 +693,37 @@ class LLMGenerateWorker(
 
 	def _handle_message(self, message: Dict) -> None:
 		"""Process queued messages for LLM generation."""
-		request_id = message.get("request_id")
 		message_type = message.get("_message_type")
-		if message_type == "llm_load":
-			self.on_llm_load_model_signal(message.get("data", {}))
-			return
-		if message_type == "llm_unload":
-			self.on_llm_on_unload_signal(message.get("data", {}))
-			return
-
-		if message.get("_message_type") == "download_complete":
-			self.logger.info("Processing download complete message from queue")
-			self._handle_huggingface_download_complete(message.get("data", {}))
-			return
-		if message_type == "download_failed":
-			self._download_dialog_showing = False
-			self._fail_pending_llm_requests(
-				str(message.get("data", {}).get("error") or "download failed")
-			)
+		if self._handle_control_message(message, message_type):
 			return
 
 		if self._interrupted:
 			self.logger.info("Skipping message - worker interrupted")
 			return
 
+		self._handle_llm_request(message)
+
+	def _handle_control_message(self, message: Dict, message_type: str | None) -> bool:
+		"""Dispatch model and download lifecycle messages away from requests."""
+		if message_type == "llm_load":
+			self.on_llm_load_model_signal(message.get("data", {}))
+		elif message_type == "llm_unload":
+			self.on_llm_on_unload_signal(message.get("data", {}))
+		elif message_type == "download_complete":
+			self.logger.info("Processing download complete message from queue")
+			self._handle_huggingface_download_complete(message.get("data", {}))
+		elif message_type == "download_failed":
+			self._download_dialog_showing = False
+			self._fail_pending_llm_requests(
+				str(message.get("data", {}).get("error") or "download failed")
+			)
+		else:
+			return False
+		return True
+
+	def _handle_llm_request(self, message: Dict) -> None:
+		"""Prepare, execute, and resolve one owned LLM request."""
+		request_id = message.get("request_id")
 		self.logger.info(
 			f"handle_message called with keys: {list(message.keys())}"
 		)
@@ -751,168 +758,139 @@ class LLMGenerateWorker(
 						begin_request(request_id)
 			result = manager.handle_request(message, {})
 		except Exception as error:
-			self._clear_pending_llm_request(request_id)
-			self.logger.exception(f"LLM request failed: {error}")
-			try:
-				request_id = message.get("request_id")
-				action = None
-				try:
-					action = message.get("request_data", {}).get("action")
-				except Exception:
-					action = None
-
-				action_val = (
-					action
-					if isinstance(action, LLMActionType)
-					else LLMActionType.CHAT
-				)
-
-				response = LLMResponse(
-					message=f"Error invoking LLM: {error}",
-					is_first_message=True,
-					is_end_of_message=True,
-					sequence_number=0,
-					action=action_val,
-					request_id=request_id,
-					is_system_message=True,
-				)
-				self.emit_signal(
-					SignalCode.LLM_TEXT_STREAMED_SIGNAL,
-					{"response": response, "request_id": request_id},
-				)
-			except Exception:
-				pass
-			self._queue_pending_unload_request()
+			self._handle_llm_execution_error(message, request_id, error)
 			return
 
-		if result:
-			response_text = result.get("response", "")
-			retry_after_download = bool(result.get("retry_after_download"))
-			has_error = result.get("error") or (
-				isinstance(response_text, str)
-				and response_text.startswith("Error:")
+		self._handle_llm_request_result(message, request_id, result)
+
+	def _handle_llm_execution_error(
+		self, message: Dict, request_id: str | None, error: Exception
+	) -> None:
+		"""Emit a terminal manager failure and finish this request's state."""
+		self._clear_pending_llm_request(request_id)
+		self.logger.exception(f"LLM request failed: {error}")
+		self._emit_request_message(message, f"Error invoking LLM: {error}")
+		self._queue_pending_unload_request()
+
+	def _handle_llm_request_result(
+		self, message: Dict, request_id: str | None, result: Dict | None
+	) -> None:
+		"""Resolve successful, retryable, and terminal manager responses."""
+		if not result:
+			return
+		response_text = result.get("response", "")
+		retry_after_download = bool(result.get("retry_after_download"))
+		has_error = result.get("error") or (
+			isinstance(response_text, str)
+			and response_text.startswith("Error:")
+		)
+		if not has_error:
+			self.logger.info(
+				"Request completed successfully, clearing pending request"
+			)
+			self._clear_pending_llm_request(request_id)
+		elif retry_after_download:
+			if not self._handle_download_retry(message, request_id):
+				return
+		else:
+			self._clear_pending_llm_request(request_id)
+			self.logger.info(
+				"Request failed with non-retryable error, clearing pending request"
+			)
+			self._emit_request_message(
+				message, response_text or "Error invoking LLM", stringify=True
+			)
+		self._queue_pending_unload_request()
+
+	def _handle_download_retry(self, message: Dict, request_id: str | None) -> bool:
+		"""Retain a request for download or report that retry is no longer valid."""
+		retry_state = self._mark_request_waiting_for_download(request_id, message)
+		if retry_state == "cancelled":
+			return False
+		if retry_state == "exhausted":
+			self.logger.error(
+				"Model remained unavailable after a completed download; "
+				"not retrying request %s again",
+				request_id,
+			)
+			self._emit_request_message(
+				message,
+				"Error: the model remained unavailable after its download completed.",
+				action=LLMActionType.CHAT,
+				suppress_errors=False,
+			)
+			self._queue_pending_unload_request()
+			return False
+		self.logger.info(
+			"Request is waiting for model readiness (%s); "
+			"it will be requeued by the worker after load",
+			retry_state,
+		)
+		self._emit_download_waiting_message(message)
+		return True
+
+	def _emit_download_waiting_message(self, message: Dict) -> None:
+		"""Tell the matching caller its request waits for model download."""
+		try:
+			model_name = "the configured model"
+			try:
+				if self.model_manager:
+					model_name = self.model_manager.model_name or model_name
+			except Exception:
+				pass
+			self._emit_request_message(
+				message,
+				f"The LLM model ({model_name}) is not available and a "
+				"download is in progress. Your request is queued and will run "
+				"automatically once the model download completes.",
+			)
+		except Exception:
+			pass
+
+	def _emit_request_message(
+		self,
+		message: Dict,
+		text: object,
+		*,
+		action: LLMActionType | None = None,
+		stringify: bool = False,
+		suppress_errors: bool = True,
+	) -> None:
+		"""Emit one system completion while preserving legacy error fallback."""
+		def emit() -> None:
+			request_id = message.get("request_id")
+			resolved_action = action
+			resolved_text = text
+			if resolved_action is None:
+				try:
+					resolved_action = message.get("request_data", {}).get("action")
+				except Exception:
+					resolved_action = None
+			if not isinstance(resolved_action, LLMActionType):
+				resolved_action = LLMActionType.CHAT
+			if stringify and not isinstance(resolved_text, str):
+				resolved_text = str(resolved_text)
+			response = LLMResponse(
+				message=resolved_text,
+				is_first_message=True,
+				is_end_of_message=True,
+				sequence_number=0,
+				action=resolved_action,
+				request_id=request_id,
+				is_system_message=True,
+			)
+			self.emit_signal(
+				SignalCode.LLM_TEXT_STREAMED_SIGNAL,
+				{"response": response, "request_id": request_id},
 			)
 
-			if not has_error:
-				self.logger.info(
-					"Request completed successfully, clearing pending request"
-				)
-				self._clear_pending_llm_request(request_id)
-			elif retry_after_download:
-				retry_state = self._mark_request_waiting_for_download(
-					request_id, message
-				)
-				if retry_state == "cancelled":
-					return
-				if retry_state == "exhausted":
-					self.logger.error(
-						"Model remained unavailable after a completed download; "
-						"not retrying request %s again",
-						request_id,
-					)
-					response = LLMResponse(
-						message=(
-							"Error: the model remained unavailable after its "
-							"download completed."
-						),
-						is_first_message=True,
-						is_end_of_message=True,
-						sequence_number=0,
-						action=LLMActionType.CHAT,
-						request_id=request_id,
-						is_system_message=True,
-					)
-					self.emit_signal(
-						SignalCode.LLM_TEXT_STREAMED_SIGNAL,
-						{"response": response, "request_id": request_id},
-					)
-					self._queue_pending_unload_request()
-					return
-				self.logger.info(
-					"Request is waiting for model readiness (%s); "
-					"it will be requeued by the worker after load",
-					retry_state,
-				)
-				try:
-					request_id = message.get("request_id")
-					action = None
-					try:
-						action = message.get("request_data", {}).get("action")
-					except Exception:
-						action = None
-					action_val = (
-						action
-						if isinstance(action, LLMActionType)
-						else LLMActionType.CHAT
-					)
-					model_name = "the configured model"
-					try:
-						if self.model_manager:
-							model_name = (
-								self.model_manager.model_name or model_name
-							)
-					except Exception:
-						pass
-					response = LLMResponse(
-						message=(
-							f"The LLM model ({model_name}) is not available "
-							"and a download is in progress. Your request is "
-							"queued and will run automatically once the "
-							"model download completes."
-						),
-						is_first_message=True,
-						is_end_of_message=True,
-						sequence_number=0,
-						action=action_val,
-						request_id=request_id,
-						is_system_message=True,
-					)
-					self.emit_signal(
-						SignalCode.LLM_TEXT_STREAMED_SIGNAL,
-						{"response": response, "request_id": request_id},
-					)
-				except Exception:
-					pass
-			else:
-				self._clear_pending_llm_request(request_id)
-				self.logger.info(
-					"Request failed with non-retryable error, clearing pending request"
-				)
-
-				try:
-					request_id = message.get("request_id")
-					action = None
-					try:
-						action = message.get("request_data", {}).get("action")
-					except Exception:
-						action = None
-					action_val = (
-						action
-						if isinstance(action, LLMActionType)
-						else LLMActionType.CHAT
-					)
-
-					response_message = response_text or "Error invoking LLM"
-					if not isinstance(response_message, str):
-						response_message = str(response_message)
-
-					response = LLMResponse(
-						message=response_message,
-						is_first_message=True,
-						is_end_of_message=True,
-						sequence_number=0,
-						action=action_val,
-						request_id=request_id,
-						is_system_message=True,
-					)
-					self.emit_signal(
-						SignalCode.LLM_TEXT_STREAMED_SIGNAL,
-						{"response": response, "request_id": request_id},
-					)
-				except Exception:
-					pass
-
-			self._queue_pending_unload_request()
+		if suppress_errors:
+			try:
+				emit()
+			except Exception:
+				pass
+		else:
+			emit()
 
 	def _load_llm_thread(self, data: Optional[Dict] = None) -> None:
 		"""Load the LLM in a separate background thread."""
