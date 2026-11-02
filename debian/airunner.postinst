@@ -4,31 +4,111 @@
 # /etc/airunner/daemon.yaml from the packaged example on first install.
 set -e
 
+fail_path() {
+    echo "airunner: refusing unsafe install path: $1" >&2
+    exit 1
+}
+
+assert_no_symlink_components() {
+    path=$1
+    case "$path" in
+        /*) rest=${path#/} ;;
+        *) fail_path "$path is not absolute" ;;
+    esac
+    current=
+    while [ -n "$rest" ]; do
+        component=${rest%%/*}
+        if [ "$rest" = "$component" ]; then
+            rest=
+        else
+            rest=${rest#*/}
+        fi
+        current="$current/$component"
+        if [ -L "$current" ]; then
+            fail_path "$current is a symbolic link"
+        fi
+        if [ -n "$rest" ] && [ -e "$current" ] && [ ! -d "$current" ]; then
+            fail_path "$current is not a directory"
+        fi
+    done
+}
+
+ensure_directory() {
+    path=$1
+    parent=${path%/*}
+    assert_no_symlink_components "$path"
+    if [ -e "$path" ] && [ ! -d "$path" ]; then
+        fail_path "$path is not a directory"
+    fi
+    if [ ! -d "$path" ]; then
+        if [ ! -d "$parent" ]; then
+            fail_path "$parent is missing"
+        fi
+        mkdir "$path"
+    fi
+    assert_no_symlink_components "$path"
+    [ -d "$path" ] || fail_path "$path could not be created"
+}
+
 case "$1" in
     configure)
+        for path in \
+            /etc/airunner \
+            /etc/airunner/daemon.yaml \
+            /var/lib/airunner \
+            /var/lib/airunner/runtime \
+            /var/lib/airunner/runtime/configs \
+            /var/lib/airunner/runtime/sockets \
+            /var/lib/airunner/cache \
+            /var/lib/airunner/models \
+            /var/log/airunner; do
+            assert_no_symlink_components "$path"
+        done
+
         if ! getent passwd airunner >/dev/null; then
             adduser --system --group --home /var/lib/airunner \
                 --no-create-home --gecos "AIRunner headless daemon" \
                 airunner
         fi
-        mkdir -p /etc/airunner
-        mkdir -p /var/lib/airunner/runtime/configs
-        mkdir -p /var/lib/airunner/runtime/sockets
-        mkdir -p /var/lib/airunner/cache
-        mkdir -p /var/lib/airunner/models
-        mkdir -p /var/log/airunner
+
+        ensure_directory /etc/airunner
+        ensure_directory /var/lib/airunner
+        ensure_directory /var/lib/airunner/runtime
+        ensure_directory /var/lib/airunner/runtime/configs
+        ensure_directory /var/lib/airunner/runtime/sockets
+        ensure_directory /var/lib/airunner/cache
+        ensure_directory /var/lib/airunner/models
+        ensure_directory /var/log/airunner
+
+        if [ -e /etc/airunner/daemon.yaml ] && \
+            [ ! -f /etc/airunner/daemon.yaml ]; then
+            fail_path "/etc/airunner/daemon.yaml is not a regular file"
+        fi
         if [ ! -f /etc/airunner/daemon.yaml ]; then
-            if [ -f /usr/share/airunner/daemon.yaml ]; then
+            if [ -f /usr/share/airunner/daemon.yaml ] && \
+                [ ! -L /usr/share/airunner/daemon.yaml ]; then
                 cp /usr/share/airunner/daemon.yaml \
                     /etc/airunner/daemon.yaml
             else
                 echo "airunner: seed config /usr/share/airunner/daemon.yaml missing; run 'airunner-daemon --generate-config' (issue #2250)" >&2
             fi
         fi
-        chown -R airunner:airunner /var/lib/airunner /var/log/airunner
+
+        # Own only package-managed directories. Upgrades preserve ownership
+        # and metadata of user files and do not recursively walk model data.
+        chown --no-dereference airunner:airunner \
+            /var/lib/airunner \
+            /var/lib/airunner/runtime \
+            /var/lib/airunner/runtime/configs \
+            /var/lib/airunner/runtime/sockets \
+            /var/lib/airunner/cache \
+            /var/lib/airunner/models \
+            /var/log/airunner
         chown root:airunner /etc/airunner
         chmod 0750 /etc/airunner
         if [ -f /etc/airunner/daemon.yaml ]; then
+            [ ! -L /etc/airunner/daemon.yaml ] || \
+                fail_path "/etc/airunner/daemon.yaml is a symbolic link"
             chown root:airunner /etc/airunner/daemon.yaml
             chmod 0640 /etc/airunner/daemon.yaml
         fi

@@ -1,6 +1,3 @@
-# The postinst chown -R covers only the state dirs this package creates
-# (/var/lib/airunner, /var/log/airunner); recursive ownership is intended.
-airunner binary: recursive-privilege-change "chown -R" [postinst:*]
 # Both helpers are invoked through an explicit interpreter (/bin/bash in
 # docker_wrapper.py, bash in generate_cert.py), so the shipped
 # non-executable mode is correct.
