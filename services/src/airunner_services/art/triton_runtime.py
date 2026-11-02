@@ -18,7 +18,7 @@ from pathlib import Path
 from typing import Any
 
 POLICY_SHA256 = (
-    "a0da9a8a3cae9eb5fd95f368294c3130feb4f3f7f7f8bb9f1d5284f60b0245fb"
+    "4c435641a851904e636ce72a965863ad923911bfc84b293099d1a43fc1b8c2ef"
 )
 
 
@@ -105,36 +105,32 @@ def _installed_triton_root() -> Path | None:
         return None
 
 
-def validate_toolchain(environ: dict[str, str] | None = None) -> list[str]:
-    """Return redacted errors when the exact candidate/toolchain contract fails."""
-    env = os.environ if environ is None else environ
-    try:
-        policy = load_policy()
-    except (OSError, ValueError, json.JSONDecodeError):
-        return ["packaged Triton toolchain policy cannot be read"]
-    candidate = policy["candidate"]
-    errors: list[str] = []
+def _candidate_root(candidate: dict[str, Any]) -> tuple[Path | None, list[str]]:
     if sys.platform != "linux" or platform.machine().lower() not in {
         "x86_64",
         "amd64",
     }:
-        return ["Triton external toolchain is supported only on Linux x86_64"]
+        return None, ["Triton external toolchain is supported only on Linux x86_64"]
     if sys.version_info[:2] != (3, 13):
-        return ["Triton external toolchain is reviewed only for Python 3.13"]
+        return None, ["Triton external toolchain is reviewed only for Python 3.13"]
     try:
         installed_version = metadata.version(candidate["distribution"])
     except metadata.PackageNotFoundError:
-        return ["reviewed Triton candidate is not installed"]
+        return None, ["reviewed Triton candidate is not installed"]
     if installed_version != candidate["version"]:
-        return [
+        return None, [
             "installed Triton version does not match the reviewed external-toolchain candidate"
         ]
 
     root = _installed_triton_root()
     if root is None:
-        return [
+        return None, [
             "installed Triton package cannot be located without importing it"
         ]
+    return root, []
+
+
+def _check_excluded_payload(root: Path, policy: dict[str, Any], errors: list[str]) -> None:
     for prefix, expected_count in policy["excluded_counts"].items():
         directory = root / prefix.removeprefix("triton/")
         if directory.exists():
@@ -145,12 +141,9 @@ def validate_toolchain(environ: dict[str, str] | None = None) -> list[str]:
                 )
                 break
 
-    for tool in policy["tools"]:
-        name = tool["env"]
-        path = _resolve(env.get(name), name, errors)
-        if path is not None:
-            _check(path, tool, name, errors, executable=True)
 
+
+def _check_headers(policy: dict[str, Any], env: dict[str, str], errors: list[str]) -> None:
     header_roots = []
     configured_header_paths = [
         (name, env[name])
@@ -177,6 +170,9 @@ def validate_toolchain(environ: dict[str, str] | None = None) -> list[str]:
                 "external CUDA include roots lack the exact reviewed cuda.h"
             )
 
+
+
+def _check_cupti(policy: dict[str, Any], env: dict[str, str], errors: list[str]) -> None:
     cupti = policy["cupti"]
     cupti_root = _resolve(env.get(cupti["env"]), cupti["env"], errors)
     if cupti_root is not None and cupti_root.is_dir():
@@ -190,6 +186,9 @@ def validate_toolchain(environ: dict[str, str] | None = None) -> list[str]:
     elif cupti_root is not None:
         errors.append(f"{cupti['env']} must point to a directory")
 
+
+
+def _check_libdevice(root: Path, policy: dict[str, Any], env: dict[str, str], errors: list[str]) -> None:
     libdevice = policy["libdevice"]
     retained_member = libdevice["retained_wheel_member"]
     retained_path = root / retained_member["path"].removeprefix("triton/")
@@ -203,6 +202,27 @@ def validate_toolchain(environ: dict[str, str] | None = None) -> list[str]:
         path = _resolve(env.get(libdevice["env"]), libdevice["env"], errors)
         if path is not None:
             _check(path, retained_member, libdevice["env"], errors)
+
+
+def validate_toolchain(environ: dict[str, str] | None = None) -> list[str]:
+    """Return redacted errors when the exact candidate/toolchain contract fails."""
+    env = os.environ if environ is None else environ
+    try:
+        policy = load_policy()
+    except (OSError, ValueError, json.JSONDecodeError):
+        return ["packaged Triton toolchain policy cannot be read"]
+    root, errors = _candidate_root(policy["candidate"])
+    if root is None:
+        return errors
+    _check_excluded_payload(root, policy, errors)
+    for tool in policy["tools"]:
+        name = tool["env"]
+        path = _resolve(env.get(name), name, errors)
+        if path is not None:
+            _check(path, tool, name, errors, executable=True)
+    _check_headers(policy, env, errors)
+    _check_cupti(policy, env, errors)
+    _check_libdevice(root, policy, env, errors)
     return errors
 
 
@@ -210,7 +230,30 @@ def ensure_available(
     environ: dict[str, str] | None = None,
 ) -> tuple[bool, str]:
     """Return availability and a safe user-facing reason for compile opt-in."""
-    errors = validate_toolchain(environ)
+    env = os.environ if environ is None else environ
+    # Called only by explicit compile opt-in. Existing operator overrides take
+    # precedence and must pass the same checks; no downloads occur here.
+    candidate_env = dict(env)
+    cached: dict[str, str] = {}
+    toolchain_keys = {
+        "TRITON_PTXAS_PATH", "TRITON_PTXAS_BLACKWELL_PATH",
+        "TRITON_CUOBJDUMP_PATH", "TRITON_NVDISASM_PATH",
+        "TRITON_CUDACRT_PATH", "TRITON_CUDART_PATH",
+        "TRITON_CUPTI_LIB_PATH", "TRITON_LIBDEVICE_PATH",
+    }
+    if not any(env.get(name) for name in toolchain_keys):
+        try:
+            from airunner_services.art.triton_toolchain_installer import (
+                cached_toolchain_environment,
+            )
+
+            cached = cached_toolchain_environment()
+            candidate_env.update(cached)
+        except (OSError, ValueError, RuntimeError):
+            pass
+    errors = validate_toolchain(candidate_env)
     if errors:
         return False, "; ".join(errors)
+    # Publish only after all hashes, sizes, package and platform checks pass.
+    env.update(cached)
     return True, "reviewed external Triton toolchain is available"

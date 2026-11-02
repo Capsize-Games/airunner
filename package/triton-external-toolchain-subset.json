@@ -81,6 +81,7 @@
         {
           "relative_path": "cuda.h",
           "sha256": "756c5d0b68c4bf33d279419d5db479d63263abe80c1e476f8899f4b077215bf5",
+          "size_bytes": 1177046,
           "source_member": "triton/backends/nvidia/include/cuda.h"
         }
       ]

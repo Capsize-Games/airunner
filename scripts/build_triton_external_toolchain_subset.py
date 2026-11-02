@@ -28,7 +28,7 @@ DEFAULT_MANIFEST = (
     Path(__file__).resolve().parent.parent / "package" / "triton-external-toolchain-subset.json"
 )
 CHUNK_SIZE = 1024 * 1024
-EXPECTED_MANIFEST_SHA256 = "ff68281c53526986f054b52d66211dd6f771085e0e0230331430698a7e953958"
+EXPECTED_MANIFEST_SHA256 = "fdcd4e9788e890c6b6539e749a458863fda1f9ebd24f37a08c01bd847d297db5"
 
 
 class WheelError(ValueError):

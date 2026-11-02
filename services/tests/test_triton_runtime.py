@@ -71,6 +71,46 @@ def test_packaged_policy_is_available_without_repository_scripts() -> None:
     assert policy["candidate"]["version"] == "3.7.1+capsize.2"
     assert len(policy["tools"]) == 4
     assert len(policy["cupti"]["required_files"]) == 9
+    records = (
+        policy["tools"] + policy["headers"]["required_files"]
+        + policy["cupti"]["required_files"]
+        + [policy["libdevice"]["retained_wheel_member"]]
+    )
+    for record in records:
+        assert isinstance(record["size_bytes"], int) and record["size_bytes"] > 0
+        assert len(record["sha256"]) == 64
+
+
+def test_compile_optin_publishes_cached_paths_only_after_validation(monkeypatch):
+    from airunner_services.art import triton_toolchain_installer as installer
+
+    cached = {"TRITON_PTXAS_PATH": "/reviewed-cache/ptxas"}
+    monkeypatch.setattr(installer, "cached_toolchain_environment", lambda: cached)
+    seen = []
+    monkeypatch.setattr(
+        triton_runtime, "validate_toolchain",
+        lambda env: seen.append(dict(env)) or ["reviewed candidate is missing"],
+    )
+    env = {"TRITON_CACHE_DIR": "/compiler-cache"}
+    assert triton_runtime.ensure_available(env)[0] is False
+    assert "TRITON_PTXAS_PATH" not in env
+    assert seen[0]["TRITON_PTXAS_PATH"] == cached["TRITON_PTXAS_PATH"]
+    monkeypatch.setattr(triton_runtime, "validate_toolchain", lambda _env: [])
+    assert triton_runtime.ensure_available(env)[0] is True
+    assert env["TRITON_PTXAS_PATH"] == cached["TRITON_PTXAS_PATH"]
+
+
+def test_explicit_toolchain_override_is_never_replaced_from_cache(monkeypatch):
+    from airunner_services.art import triton_toolchain_installer as installer
+
+    def unexpected_cache_read():
+        raise AssertionError("explicit paths must take precedence")
+
+    monkeypatch.setattr(installer, "cached_toolchain_environment", unexpected_cache_read)
+    monkeypatch.setattr(triton_runtime, "validate_toolchain", lambda _env: ["invalid override"])
+    env = {"TRITON_PTXAS_PATH": "/operator/path"}
+    assert triton_runtime.ensure_available(env) == (False, "invalid override")
+    assert env == {"TRITON_PTXAS_PATH": "/operator/path"}
 
 
 def test_hash_check_does_not_execute_external_tool(tmp_path: Path) -> None:

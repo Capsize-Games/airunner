@@ -473,6 +473,8 @@ def build_services_setup_kwargs(*, package_source_dir: str) -> dict[str, object]
             ],
             "airunner_services.art": [
                 "data/triton_external_toolchain_runtime.json",
+                "data/triton_external_toolchain_sources.json",
+                "data/triton_external_toolchain_notices/*",
             ],
             "airunner_services.bin": ["*.sh"],
             "airunner_services.database": [

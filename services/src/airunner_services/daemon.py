@@ -530,8 +530,8 @@ class AIRunnerDaemon:
             client.close()
 
 
-def main():
-    """Main entry point for daemon."""
+def main(argv: list[str] | None = None):
+    """Main entry point for daemon and explicit offline/operator actions."""
     parser = argparse.ArgumentParser(description="AI Runner Daemon")
     parser.add_argument(
         "--config",
@@ -544,14 +544,37 @@ def main():
         help="Generate default configuration file and exit",
     )
     parser.add_argument("--install-nltk-data", type=Path, help=argparse.SUPPRESS)
+    parser.add_argument(
+        "--install-triton-toolchain",
+        action="store_true",
+        help="Download and stage reviewed NVIDIA developer inputs in a private user cache",
+    )
+    parser.add_argument("--triton-toolchain-dir", type=Path)
 
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
 
     if args.install_nltk_data is not None:
         from airunner_services.setup_nltk_worker import download_nltk_data
 
         download_nltk_data(args.install_nltk_data)
         return
+
+    if args.install_triton_toolchain:
+        try:
+            from airunner_services.art.triton_toolchain_installer import (
+                install_private_toolchain,
+            )
+
+            receipt = install_private_toolchain(args.triton_toolchain_dir)
+        except (ImportError, OSError, ValueError) as exc:
+            parser.exit(1, f"Triton toolchain installation failed: {exc}\n")
+        print(
+            "Private Triton toolchain staged: "
+            f"{receipt['environment']['TRITON_PTXAS_PATH']}"
+        )
+        return
+    if args.triton_toolchain_dir is not None:
+        parser.error("--triton-toolchain-dir requires --install-triton-toolchain")
 
     if args.generate_config:
         config = DaemonConfig(args.config)

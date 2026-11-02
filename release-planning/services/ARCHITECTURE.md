@@ -161,6 +161,18 @@ the candidate identity, required external bytes and retained libdevice without
 importing Triton or executing tools. Frozen packaging must retain its metadata
 and policy resource. These source contracts do not prove JIT execution.
 
+Operators can explicitly stage the inputs with
+`airunner-daemon --install-triton-toolchain`. This is the only daemon action
+that downloads those inputs. Compile opt-in can discover the existing private,
+versioned cache, verify its files and then configure the process environment;
+explicit operator path overrides retain precedence. Startup and inference never
+download missing toolchain files. Cached installation exercised all six exact
+NVIDIA archives and staged 14 selected files with their notices; read-only cache
+discovery returned the same paths. No vendor executable or Triton JIT ran in
+that check. Focused staging, CLI, preflight, subset and compile regressions
+passed 58 tests. Radon reported the preflight validator at complexity 33 before
+refactoring; focused helpers reduce its highest function complexity to 12.
+
 The existing `use_torch_compile` setting now has an explicit Stable Diffusion
 operation boundary. Default inference and CORE startup do not require the
 external compiler. When enabled, compilation requires CUDA and a successful

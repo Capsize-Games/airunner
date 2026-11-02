@@ -397,6 +397,18 @@ required = true
 stage = "collect"
 
 [[data]]
+source = "services/src/airunner_services/art/data/triton_external_toolchain_sources.json"
+dest = "airunner_services/art/data"
+required = true
+stage = "collect"
+
+[[data]]
+source = "services/src/airunner_services/art/data/triton_external_toolchain_notices/*"
+dest = "airunner_services/art/data/triton_external_toolchain_notices"
+required = true
+stage = "collect"
+
+[[data]]
 source = "services/src/airunner_services/bin/*.sh"
 dest = "airunner_services/bin"
 stage = "collect"
