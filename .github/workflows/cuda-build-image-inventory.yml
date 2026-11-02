@@ -146,8 +146,6 @@ jobs:
             '
   build-llama-cpp-python:
     name: Build reviewed CUDA source wheel
-    # Source execution remains disabled while input readiness is pending.
-    if: ${{ false }}
     runs-on: ubuntu-24.04
     timeout-minutes: 180
     steps:
@@ -183,6 +181,7 @@ jobs:
           chmod 700 "$root" "$root/tmp"
           export GIT_TERMINAL_PROMPT=0
           git -c core.hooksPath=/dev/null init --quiet "$root/wrapper-repo"
+          git -C "$root/wrapper-repo" config core.hooksPath /dev/null
           git -C "$root/wrapper-repo" remote add origin https://github.com/abetlen/llama-cpp-python.git
           git -C "$root/wrapper-repo" -c protocol.file.allow=never fetch --quiet --no-tags --depth=1 origin refs/tags/v0.3.21
           wrapper_commit=$(git -C "$root/wrapper-repo" rev-parse 'FETCH_HEAD^{commit}')
@@ -191,6 +190,7 @@ jobs:
           gitlink=$(git -C "$root/wrapper-repo" ls-tree "$wrapper_commit" vendor/llama.cpp | awk '{print $3}')
           test "$gitlink" = f53577432541bb9edc1588c4ef45c66bf07e4468
           git -c core.hooksPath=/dev/null init --quiet "$root/llama-repo"
+          git -C "$root/llama-repo" config core.hooksPath /dev/null
           git -C "$root/llama-repo" remote add origin https://github.com/ggerganov/llama.cpp.git
           git -C "$root/llama-repo" -c protocol.file.allow=never fetch --quiet --no-tags --depth=1 origin "$gitlink"
           llama_commit=$(git -C "$root/llama-repo" rev-parse 'FETCH_HEAD^{commit}')
@@ -228,20 +228,51 @@ jobs:
           test "$(sha256sum "$root/cmake/unpacked/cmake-3.31.6-linux-x86_64/bin/cmake" | cut -d ' ' -f 1)" \
             = c4b3b237dc7a013590db9e90f70fca2dfdedde09521e920d3339569ea364230a
 
+      - name: Set up reviewed Python build host
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: '3.13.5'
+
       - name: Install only the reviewed PEP 517 backend wheels
         shell: bash
         run: |
           set -euo pipefail
           root="$RUNNER_TEMP/cuda-wheel"
-          python3 --version
-          python3 -m pip --version
-          python3 -m pip install --no-index --no-deps --target "$root/backend-site" "$root"/backend/*.whl
+          python --version
+          mkdir -p "$root/backend-site"
+          python - "$root/backend" "$root/backend-site" <<'PY'
+          import hashlib
+          import pathlib
+          import sys
+          import zipfile
+
+          source, target = map(pathlib.Path, sys.argv[1:])
+          expected = {
+              "scikit_build_core-1.1.1-py3-none-any.whl":
+                  "6f6d6cf600e2e9639fd258ecd11cfc19bd189354b968916a519c6793e7e26237",
+              "pathspec-1.1.1-py3-none-any.whl":
+                  "a00ce642f577bf7f473932318056212bc4f8bfdf53128c78bbd5af0b9b20b189",
+              "packaging-26.3-py3-none-any.whl":
+                  "d7193f7c8e4e93f444fde0262bf90af30e16fa0ad0ad44cb553c87339b23cd1c",
+          }
+          for filename, digest in expected.items():
+              archive_path = source / filename
+              actual = hashlib.sha256(archive_path.read_bytes()).hexdigest()
+              if actual != digest:
+                  raise SystemExit(f"wheel hash mismatch: {filename}: {actual}")
+              with zipfile.ZipFile(archive_path) as archive:
+                  for member in archive.infolist():
+                      path = pathlib.PurePosixPath(member.filename)
+                      if path.is_absolute() or ".." in path.parts:
+                          raise SystemExit(f"unsafe wheel member: {member.filename}")
+                      archive.extract(member, target)
+              print(f"installed_reviewed_wheel={filename} sha256={actual}")
+          PY
           {
             printf '== hosted runner ==\n'
             uname -a
-            printf 'python_executable=%s\n' "$(python3 -c 'import sys; print(sys.executable)')"
-            python3 --version
-            python3 -m pip --version
+            printf 'python_executable=%s\n' "$(python -c 'import sys; print(sys.executable)')"
+            python --version
             git --version
             docker --version
             cat "$root/image-info.txt"
@@ -300,10 +331,33 @@ jobs:
           export CMAKE_BUILD_PARALLEL_LEVEL=2 SOURCE_DATE_EPOCH=1777269304
           export CMAKE_ARGS='-DLLAMA_BUILD=ON -DLLAVA_BUILD=ON -DGGML_CUDA=ON -DGGML_NATIVE=OFF -DGGML_CUDA_ARCHITECTURES=120a-real -DCMAKE_CUDA_ARCHITECTURES=120a-real -DGGML_CUDA_CUB_3DOT2=OFF -DGGML_CUDA_NCCL=OFF -DLLAMA_CURL=OFF -DFETCHCONTENT_FULLY_DISCONNECTED=ON -DCMAKE_EXE_LINKER_FLAGS=-Wl,-rpath-link,/tmp/cuda-stubs'
           export PYTHONPATH="$root/backend-site"
-          export PIP_CONFIG_FILE=/dev/null PIP_NO_INDEX=1 PIP_DISABLE_PIP_VERSION_CHECK=1
-          python3 -m pip wheel --no-build-isolation --no-deps --no-index --no-cache-dir \
-            --config-settings="build-dir=$build" \
-            --wheel-dir "$root/wheel" "$source"
+          env -i \
+            PATH="$PATH" HOME="$tmp" TMPDIR="$tmp" \
+            LD_LIBRARY_PATH="${pythonLocation:?}/lib" \
+            CUDA_IMAGE="$CUDA_IMAGE" CUDA_SOURCE="$CUDA_SOURCE" \
+            CUDA_BUILD="$CUDA_BUILD" CUDA_TMP="$CUDA_TMP" \
+            CUDA_CMAKE_HOME="$CUDA_CMAKE_HOME" \
+            CMAKE_EXECUTABLE="$CMAKE_EXECUTABLE" \
+            CMAKE_GENERATOR="$CMAKE_GENERATOR" CMAKE_BUILD_PARALLEL_LEVEL=2 \
+            SOURCE_DATE_EPOCH="$SOURCE_DATE_EPOCH" CMAKE_ARGS="$CMAKE_ARGS" \
+            PYTHONPATH="$PYTHONPATH" \
+            python - "$source" "$root/wheel" "$build" <<'PY'
+          import os
+          import pathlib
+          import sys
+
+          from scikit_build_core.build import build_wheel
+
+          source, wheel_dir, build_dir = map(pathlib.Path, sys.argv[1:])
+          os.chdir(source)
+          filename = build_wheel(
+              str(wheel_dir), {"build-dir": str(build_dir)}
+          )
+          wheel = wheel_dir / filename
+          if not wheel.is_file():
+              raise SystemExit(f"backend did not create wheel: {wheel}")
+          print(f"wheel={wheel}")
+          PY
           shopt -s nullglob
           wheels=("$root"/wheel/llama_cpp_python-0.3.21-*.whl)
           test "${#wheels[@]}" -eq 1

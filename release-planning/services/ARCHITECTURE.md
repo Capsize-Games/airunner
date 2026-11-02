@@ -203,8 +203,9 @@ before dependency installation until that lock is generated and validated.
 
 The binary-only dependency probe advanced past an unused Wikipedia requirement
 after its removal from the search extra. Sumy remains necessary for conversation
-and web-content summarization; its docopt dependency needs a reviewed source
-wheel. Diagnostic probes omit the separately blocked llama-cpp wheel and do not
+and web-content summarization. Its reviewed docopt 0.6.2 wheel, source identity
+and MIT notice are retained in `package/wheelhouse`; an offline build and parser
+smoke check passed. Diagnostic probes omit the separately unfinished llama-cpp wheel and do not
 constitute a complete release lock.
 
 The Debian candidate uses a separate `linux-services-core` frozen profile.

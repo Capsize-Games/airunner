@@ -1,0 +1,23 @@
+{
+  "distribution": "docopt",
+  "version": "0.6.2",
+  "filename": "docopt-0.6.2-py2.py3-none-any.whl",
+  "wheel_sha256": "8423591f153f451e5ef653763edd922b9298e06071e0bcdfbc42bec8181a0d06",
+  "size_bytes": 13781,
+  "license": "MIT",
+  "license_file": "LICENSE-MIT",
+  "license_sha256": "3d5df78f592ff2433c3c6ce4984091b7f497059ddb8c6b08a061ba48e37b67f2",
+  "canonical_repository": "https://github.com/docopt/docopt",
+  "release_tag": "0.6.2",
+  "release_commit": "944641a7357376a43151bd4a3ca44f9c07c4d1ae",
+  "sdist_sha256": "49b3a825280bd66b3aa83585ef59c4a8c82f2c8a522dbe754a8bc8d08c85c491",
+  "build_environment": {
+    "python": "3.13.5",
+    "uv": "0.13.4",
+    "setuptools": "84.2.1",
+    "wheel": "0.48.0",
+    "packaging": "26.3",
+    "network_during_build": false
+  },
+  "review_record": "release-planning/services/input-reviews/docopt-0.6.2.md"
+}
