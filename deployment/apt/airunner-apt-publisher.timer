@@ -1,0 +1,11 @@
+[Unit]
+Description=Check for verified AIRunner Debian releases
+
+[Timer]
+OnBootSec=5min
+OnUnitActiveSec=10min
+Persistent=true
+Unit=airunner-apt-publisher.service
+
+[Install]
+WantedBy=timers.target

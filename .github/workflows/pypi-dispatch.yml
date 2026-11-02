@@ -1,21 +1,30 @@
 name: PyPI Distribution
 
 on:
+  # Published releases are verified only. Promotion runs as a dispatch on the
+  # existing annotated version tag so all assets can be attached to a draft.
   release:
     types: [published]
   workflow_dispatch:
     inputs:
       packages:
         description: >-
-          Space-separated build directories to build. Default builds the
-          services and native distributions.
+          Space-separated build directories to build. Default builds services
+          and native; release promotion requires both.
         required: false
         default: "services native"
         type: string
       publish_pypi:
         description: >-
-          Publish built distributions to PyPI. Defaults off; release events
-          only build and attach GitHub release artifacts.
+          Publish built distributions to PyPI. Defaults off and is separate
+          from GitHub Release promotion.
+        required: false
+        default: false
+        type: boolean
+      promote_release:
+        description: >-
+          Build all release artifacts and publish an immutable GitHub Release
+          from the selected existing annotated version tag.
         required: false
         default: false
         type: boolean
@@ -37,11 +46,12 @@ jobs:
     # candidate only: it must never publish to PyPI/itch itself --
     # promotion goes through candidate-gate below.
     #
-    # Runs unless sidecar fetching hard-failed. Manual dispatches may
-    # omit sidecars; release events require them during inspection.
+    # Runs unless sidecar fetching hard-failed. Ordinary dispatches may
+    # omit sidecars; release promotion requires them.
     needs: [fetch-sidecars]
     if: >-
       always() &&
+      github.event_name == 'workflow_dispatch' &&
       needs.fetch-sidecars.result != 'failure' &&
       needs.fetch-sidecars.result != 'cancelled'
     runs-on: ubuntu-latest
@@ -56,16 +66,21 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
+      - name: Check CORE builder input readiness before installs
+        run: python scripts/check_core_input_readiness.py --mode activate
+
       - name: Verify promotion tag and source identity
         env:
           PUBLISH_PYPI: ${{ inputs.publish_pypi || false }}
+          PROMOTE_RELEASE: ${{ inputs.promote_release || false }}
           GITHUB_TOKEN: ${{ github.token }}
         run: |
           python scripts/check_release_identity.py \
             --event "$GITHUB_EVENT_NAME" \
             --ref "$GITHUB_REF" \
             --source-sha "$GITHUB_SHA" \
-            --publish-pypi "$PUBLISH_PYPI"
+            --publish-pypi "$PUBLISH_PYPI" \
+            --promote-release "$PROMOTE_RELEASE"
 
       - name: Require reviewed sibling release inputs
         run: >-
@@ -96,6 +111,14 @@ jobs:
       - name: Run required deterministic checks
         run: |
           PYTHONPATH=services/src python -m pytest \
+            scripts/tests/test_cuda_source_recipe.py \
+            scripts/tests/test_apt_release_publisher.py \
+            scripts/tests/test_apt_daemon_health_probe.py \
+            scripts/tests/test_github_release_promotion.py \
+            services/tests/test_release_identity.py \
+            services/tests/test_debian_postinst_safety.py \
+            services/tests/test_release_core_bundle.py \
+            services/tests/test_core_input_readiness.py \
             services/tests/test_service_bootstrap.py \
             services/tests/test_legacy_api_surface.py \
             services/tests/test_loopback_auth.py \
@@ -157,7 +180,7 @@ jobs:
       # manifest is extended over them. Names cite spec
       # [runtimes]; runs on release only.
       - name: Stage sidecars and extend manifest
-        if: needs.fetch-sidecars.result == 'success'
+        if: github.event_name == 'workflow_dispatch' && inputs.promote_release == true && needs.fetch-sidecars.result == 'success'
         run: |
           bash packaging/linux/stage-sidecars.sh \
             --tarball \
@@ -173,7 +196,7 @@ jobs:
       - name: Verify candidate manifest
         run: |
           extra=""
-          if [ "${{ github.event_name }}" = "release" ]; then
+          if [ "${{ inputs.promote_release || false }}" = "true" ]; then
             extra="--require-sidecars"
           fi
           python scripts/inspect_linux_bundle.py \
@@ -201,12 +224,12 @@ jobs:
     # or cancelled, or is missing (empty result) blocks promotion --
     # there is deliberately no continue-on-error and no
     # `success || skipped` tolerance on this path. The gate script
-    # knows the per-event required set. Publish steps below
+    # knows the required set for a candidate or release promotion. Publish steps below
     # need this job, so nothing ships without a green candidate.
     needs:
       - fetch-sidecars
       - linux-candidate
-    if: always()
+    if: always() && github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -221,7 +244,7 @@ jobs:
       - name: Gate candidate promotion on required checks
         run: |
           bash packaging/linux/candidate-gate.sh \
-            --event "${{ github.event_name }}" \
+            --event "${{ inputs.promote_release == true && 'release' || github.event_name }}" \
             --check "fetch-sidecars=${{ needs.fetch-sidecars.result }}" \
             --check "linux-candidate=${{ needs.linux-candidate.result }}"
 
@@ -243,13 +266,15 @@ jobs:
       - name: Verify promotion tag and source identity
         env:
           PUBLISH_PYPI: ${{ inputs.publish_pypi || false }}
+          PROMOTE_RELEASE: ${{ inputs.promote_release || false }}
           GITHUB_TOKEN: ${{ github.token }}
         run: |
           python scripts/check_release_identity.py \
             --event "$GITHUB_EVENT_NAME" \
             --ref "$GITHUB_REF" \
             --source-sha "$GITHUB_SHA" \
-            --publish-pypi "$PUBLISH_PYPI"
+            --publish-pypi "$PUBLISH_PYPI" \
+            --promote-release "$PROMOTE_RELEASE"
 
       - name: Require reviewed sibling release inputs
         run: >-
@@ -266,7 +291,28 @@ jobs:
           python -m pip install --upgrade pip
           pip install build
 
+      - name: Validate requested package selection
+        env:
+          PACKAGE_SELECTION: ${{ inputs.packages || 'services native' }}
+          PROMOTE_RELEASE: ${{ inputs.promote_release || false }}
+        run: |
+          python - <<'PY'
+          import os
+          import re
+
+          selection = os.environ["PACKAGE_SELECTION"]
+          if not re.fullmatch(r"(services|native)( (services|native))*", selection):
+              raise SystemExit("packages must contain unique services/native names")
+          packages = selection.split()
+          if len(packages) != len(set(packages)):
+              raise SystemExit("packages must not contain duplicates")
+          if os.environ["PROMOTE_RELEASE"] == "true" and set(packages) != {"services", "native"}:
+              raise SystemExit("release promotion requires both services and native packages")
+          PY
+
       - name: Build packages
+        env:
+          PACKAGE_SELECTION: ${{ inputs.packages || 'services native' }}
         run: |
           # Services-only surface: airunner-services (headless daemon +
           # runtimes + FastAPI) and airunner-native (launcher).
@@ -275,7 +321,8 @@ jobs:
           # The former root `airunner` GUI distribution was removed;
           # this workflow builds `services` + `native` only.
           mkdir -p dist
-          for pkg in ${{ inputs.packages || 'services native' }}; do
+          read -r -a packages <<< "$PACKAGE_SELECTION"
+          for pkg in "${packages[@]}"; do
             echo "::group::build $pkg"
             python -m build --outdir dist "$pkg"
             echo "::endgroup::"
@@ -325,13 +372,98 @@ jobs:
           # PyPI rejected rather than a bare "400 Bad Request".
           verbose: true
 
+  build-debian-package:
+    # The apt source contains only a pull publisher. Build the .deb here,
+    # after the same candidate gate and wheel artifact gate as the release;
+    # only publish-release-assets may attach it to the exact release tag.
+    if: github.event_name == 'workflow_dispatch' && inputs.promote_release == true
+    needs: [candidate-gate, build-python-package]
+    runs-on: ubuntu-26.04
+    permissions:
+      contents: read
+
+    steps:
+      - name: Check out exact release source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Check CORE builder input readiness before installs
+        run: python scripts/check_core_input_readiness.py --mode activate
+
+      - name: Verify promotion tag and source identity
+        env:
+          PROMOTE_RELEASE: "true"
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          python scripts/check_release_identity.py \
+            --event "$GITHUB_EVENT_NAME" \
+            --ref "$GITHUB_REF" \
+            --source-sha "$GITHUB_SHA" \
+            --promote-release "$PROMOTE_RELEASE"
+
+      - name: Install Debian build tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y debhelper-compat dpkg-dev python3-venv
+
+      - name: Set up the hash-locked CORE freeze environment
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install CORE freeze inputs
+        run: |
+          core_env="$RUNNER_TEMP/airunner-core-build"
+          python -m venv "$core_env"
+          "$core_env/bin/python" -m pip install --require-hashes --only-binary=:all: \
+            -r package/constraints-linux-core.txt
+          "$core_env/bin/python" -m pip install --no-deps \
+            --no-build-isolation ./services
+          echo "AIRUNNER_CORE_PYTHON=$core_env/bin/python" >> "$GITHUB_ENV"
+
+      - name: Build and bind the Debian package
+        run: |
+          dpkg-buildpackage --build=binary --no-sign
+          debian_version="$(dpkg-parsechangelog --show-field Version)"
+          mapfile -t packages < <(
+            find .. -maxdepth 1 -type f -name 'airunner_*_amd64.deb' -print
+          )
+          if [[ "${#packages[@]}" -ne 1 ]]; then
+            echo "expected exactly one amd64 AIRunner .deb" >&2
+            exit 1
+          fi
+          install -d -m 0755 build/debian-release
+          install -m 0644 "${packages[0]}" build/debian-release/
+          package="build/debian-release/$(basename "${packages[0]}")"
+          python packaging/apt/release_manifest.py \
+            --deb "$package" \
+            --repository "$GITHUB_REPOSITORY" \
+            --tag "$GITHUB_REF_NAME" \
+            --source-commit "$GITHUB_SHA" \
+            --workflow .github/workflows/pypi-dispatch.yml \
+            --workflow-event workflow_dispatch \
+            --promotion-job publish-release-assets \
+            --run-id "$GITHUB_RUN_ID" \
+            --debian-version "$debian_version" \
+            --output build/debian-release/airunner-apt-release.json
+
+      - name: Upload Debian package and source manifest
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: debian-release
+          path: build/debian-release/*
+          if-no-files-found: error
+
   fetch-sidecars:
     # The sidecar build itself lives in Capsize-Games/airunner-native now
     # (a different toolchain -- cmake/mingw-w64/ninja -- on its own
     # release cadence). This downloads the pinned release's prebuilt
     # bundles rather than rebuilding them here; see
     # .github/native-sidecar-version for which tag.
-    if: github.event_name == 'release'
+    if: github.event_name == 'workflow_dispatch' && inputs.promote_release == true
     runs-on: ubuntu-latest
 
     steps:
@@ -374,11 +506,13 @@ jobs:
           path: release-assets/sidecars/*
 
   publish-release-assets:
-    # Promotes the green candidate only (C01): the gate must have
-    # passed, which already implies the candidate bundle verified.
-    if: github.event_name == 'release'
-    needs: [build-python-package, fetch-sidecars, candidate-gate]
+    # Create/resume a draft only after every artifact has been built and gated.
+    # Attach the complete digest-checked set before publishing exactly once.
+    if: github.event_name == 'workflow_dispatch' && inputs.promote_release == true
+    needs: [build-python-package, build-debian-package, fetch-sidecars, candidate-gate]
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
 
     steps:
       - name: Check out exact release source
@@ -406,6 +540,12 @@ jobs:
           name: linux-candidate
           path: release-assets/linux-candidate
 
+      - name: Download Debian package and source manifest
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: debian-release
+          path: release-assets/debian
+
       - name: Verify candidate and checksum final release assets
         env:
           RELEASE_SOURCE_SHA: ${{ github.sha }}
@@ -423,16 +563,13 @@ jobs:
             --source-sha "$RELEASE_SOURCE_SHA"
           mapfile -t ASSETS < <(
             find release-assets/python-dist release-assets/sidecars \
-              release-assets/linux-candidate -maxdepth 1 -type f -print | sort
+              release-assets/linux-candidate release-assets/debian \
+              -maxdepth 1 -type f -print | sort
           )
           python scripts/linux_candidate_artifact.py checksums \
             --output release-assets/SHA256SUMS "${ASSETS[@]}"
 
-      # Inspect the existing GitHub Release before uploading anything. This
-      # rejects a previous candidate archive for this version from another
-      # source SHA and catches filename collisions. The GitHub CLI upload below
-      # omits --clobber, so a concurrent collision also fails without replacing.
-      - name: Preflight immutable release asset identities
+      - name: Create draft, attach all assets, and publish immutable release
         env:
           GITHUB_TOKEN: ${{ github.token }}
         run: |
@@ -440,42 +577,36 @@ jobs:
             --event "$GITHUB_EVENT_NAME" \
             --ref "$GITHUB_REF" \
             --source-sha "$GITHUB_SHA" \
-            --check-release-assets \
+            --promote-release-assets \
+            --run-id "$GITHUB_RUN_ID" \
             --repository "$GITHUB_REPOSITORY" \
             --asset-dir release-assets/python-dist \
             --asset-dir release-assets/sidecars \
             --asset-dir release-assets/linux-candidate \
+            --asset-dir release-assets/debian \
             --asset-file release-assets/SHA256SUMS
 
-      - name: Upload release assets
+  verify-published-release:
+    # Any release.published run is verification-only. The dispatch promotion
+    # verifies publication itself because GITHUB_TOKEN may suppress this event.
+    if: github.event_name == 'release'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Check out exact published source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Verify published immutable release without mutation
         env:
-          GH_TOKEN: ${{ github.token }}
+          GITHUB_TOKEN: ${{ github.token }}
         run: |
-          gh version
-          shopt -s nullglob
-          python_assets=(release-assets/python-dist/*)
-          sidecar_assets=(release-assets/sidecars/*)
-          candidate_assets=(release-assets/linux-candidate/*)
-          checksum_assets=(release-assets/SHA256SUMS)
-          if ((
-            ${#python_assets[@]} == 0 ||
-            ${#sidecar_assets[@]} == 0 ||
-            ${#candidate_assets[@]} == 0
-          )) || [[ ! -f release-assets/SHA256SUMS ]]; then
-            echo "expected Python packages, sidecars, candidate archive, and checksums" >&2
-            exit 1
-          fi
-          files=(
-            "${python_assets[@]}"
-            "${sidecar_assets[@]}"
-            "${candidate_assets[@]}"
-            "${checksum_assets[@]}"
-          )
-          for file in "${files[@]}"; do
-            if [[ ! -f "$file" ]]; then
-              echo "release asset is not a regular file: $file" >&2
-              exit 1
-            fi
-          done
-          gh release upload "$GITHUB_REF_NAME" "${files[@]}" \
-            --repo "$GITHUB_REPOSITORY"
+          python scripts/check_release_identity.py \
+            --event "$GITHUB_EVENT_NAME" \
+            --ref "$GITHUB_REF" \
+            --source-sha "$GITHUB_SHA" \
+            --repository "$GITHUB_REPOSITORY" \
+            --verify-published-release

@@ -224,3 +224,20 @@ metadata resolution and source-level tests do not establish an executable or
 Debian package acceptance result. The Debian exit checks are a clean target
 install, daemon health, command dispatch, restart and upgrade preservation,
 followed by source-bound apt promotion and downloaded-package verification.
+
+GitHub release promotion runs from the exact annotated version tag through
+`workflow_dispatch`. It builds and checks the Python distributions, full Linux
+candidate, native sidecars and Debian package before creating or resuming a
+draft release. The promoter checks the complete asset set and digests, uploads
+only missing matching assets, then publishes once and verifies GitHub's immutable
+release state. A published-release event only verifies the existing release;
+it does not append assets. The dispatch verifies its own publication because
+GitHub can suppress events caused by the workflow token.
+
+The apt publisher accepts only a stable immutable release whose Debian manifest
+binds to the exact successful promotion run and job. It stages the existing apt
+repository, verifies its signature and package digest, checks an isolated target
+install and daemon health, then promotes and checks the public repository again.
+Failed validation restores the previous repository. These are automated release
+steps, not owner approval or manual review gates. The pipeline source is prepared;
+no main service release or apt publication has passed these steps yet.

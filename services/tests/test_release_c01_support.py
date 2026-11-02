@@ -19,6 +19,14 @@ _STAGE = _ROOT / "packaging" / "linux" / "stage-sidecars.sh"
 _SPEC = _ROOT / "packaging" / "linux" / "services-bundle-spec.toml"
 
 _REQUIRED_TESTS = (
+    "scripts/tests/test_cuda_source_recipe.py",
+    "scripts/tests/test_apt_release_publisher.py",
+    "scripts/tests/test_apt_daemon_health_probe.py",
+    "scripts/tests/test_github_release_promotion.py",
+    "services/tests/test_release_identity.py",
+    "services/tests/test_debian_postinst_safety.py",
+    "services/tests/test_release_core_bundle.py",
+    "services/tests/test_core_input_readiness.py",
     "services/tests/test_service_bootstrap.py",
     "services/tests/test_legacy_api_surface.py",
     "services/tests/test_loopback_auth.py",
@@ -48,6 +56,7 @@ _GATE_NEEDS = (
 _REQUIRED_JOBS = _GATE_NEEDS + (
     "candidate-gate",
     "build-python-package",
+    "build-debian-package",
     "publish-release-assets",
 )
 _PUBLISH_MARKERS = (

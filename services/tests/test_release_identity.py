@@ -164,6 +164,31 @@ def test_branch_dispatch_remains_available_but_publish_requires_tag(
         )
 
 
+def test_release_promotion_dispatch_requires_the_annotated_version_tag(
+    tmp_path: Path,
+) -> None:
+    root, source_sha = _repo(tmp_path)
+    assert guard.verify_release_identity(
+        event_name="workflow_dispatch",
+        ref="refs/tags/v1.2.3",
+        source_sha=source_sha,
+        service_version="1.2.3",
+        publish_pypi=False,
+        promote_release=True,
+        root=root,
+    ) == "v1.2.3"
+    with pytest.raises(guard.ReleaseIdentityError, match="annotated v<services-version>"):
+        guard.verify_release_identity(
+            event_name="workflow_dispatch",
+            ref="refs/heads/main",
+            source_sha=source_sha,
+            service_version="1.2.3",
+            publish_pypi=False,
+            promote_release=True,
+            root=root,
+        )
+
+
 class _Response:
     def __init__(self, value: Any) -> None:
         self.value = value

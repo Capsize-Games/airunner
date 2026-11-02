@@ -24,6 +24,9 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
+      - name: Check CORE builder input readiness before installs
+        run: python scripts/check_core_input_readiness.py --mode activate
+
       - name: Require reviewed sibling release inputs
         run: >-
           python scripts/check_reviewed_release_inputs.py
@@ -90,6 +93,14 @@ jobs:
         run: |
           pytest \
             services/tests/test_service_bootstrap.py \
+            scripts/tests/test_cuda_source_recipe.py \
+            scripts/tests/test_apt_release_publisher.py \
+            scripts/tests/test_apt_daemon_health_probe.py \
+            scripts/tests/test_github_release_promotion.py \
+            services/tests/test_release_identity.py \
+            services/tests/test_debian_postinst_safety.py \
+            services/tests/test_release_core_bundle.py \
+            services/tests/test_core_input_readiness.py \
             services/tests/test_legacy_api_surface.py \
             services/tests/test_loopback_auth.py \
             services/tests/test_secret_storage.py \

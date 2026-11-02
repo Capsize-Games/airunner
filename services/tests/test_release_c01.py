@@ -14,7 +14,6 @@ real contracts, and both scripts run on synthetic fixtures only.
 from __future__ import annotations
 
 import json
-import os
 import re
 import subprocess
 import tomllib
@@ -75,8 +74,8 @@ def test_candidate_stages_sidecars_before_verifying() -> None:
     assert "--platform linux" in stage["run"]
 
 
-def test_release_archives_verified_candidate_before_upload_and_promotion() -> None:
-    """The exact SHA-bound bundle archive is uploaded, then rechecked."""
+def test_release_archives_are_verified_before_draft_promotion() -> None:
+    """The exact SHA-bound bundle is checked before draft assets are attached."""
     jobs = c01._load_yaml(c01._DISPATCH)["jobs"]
     candidate_steps = jobs["linux-candidate"]["steps"]
     names = [str(step.get("name", "")) for step in candidate_steps]
@@ -102,7 +101,7 @@ def test_release_archives_verified_candidate_before_upload_and_promotion() -> No
     )
     assert publish_names.index(
         "Verify candidate and checksum final release assets"
-    ) < publish_names.index("Upload release assets")
+    ) < publish_names.index("Create draft, attach all assets, and publish immutable release")
     verify = next(
         step for step in publish_steps
         if step.get("name") == "Verify candidate and checksum final release assets"
@@ -110,109 +109,57 @@ def test_release_archives_verified_candidate_before_upload_and_promotion() -> No
     assert "linux_candidate_artifact.py verify" in verify["run"]
     assert "linux_candidate_artifact.py checksums" in verify["run"]
     assert "${{ github.sha }}" in verify["env"]["RELEASE_SOURCE_SHA"]
-    upload_release = next(
+    promotion = next(
         step for step in publish_steps
-        if step.get("name") == "Upload release assets"
+        if step.get("name") == "Create draft, attach all assets, and publish immutable release"
     )
-    upload_script = upload_release["run"]
-    assert upload_release["env"]["GH_TOKEN"] == "${{ github.token }}"
-    assert "gh version" in upload_script
-    assert 'gh release upload "$GITHUB_REF_NAME"' in upload_script
-    assert '"${python_assets[@]}"' in upload_script
-    assert '"${sidecar_assets[@]}"' in upload_script
-    assert '"${candidate_assets[@]}"' in upload_script
-    assert '"${checksum_assets[@]}"' in upload_script
-    assert "--clobber" not in upload_script
+    assert promotion["env"]["GITHUB_TOKEN"] == "${{ github.token }}"
+    assert "--promote-release-assets" in promotion["run"]
+    assert "gh release upload" not in promotion["run"]
 
 
-def _run_release_asset_upload(
-    tmp_path: Path, *, missing_group: str | None = None
-) -> tuple[subprocess.CompletedProcess[str], list[str] | None]:
-    """Run the real workflow upload script against a fake GitHub CLI."""
+def test_debian_build_and_asset_share_candidate_gate_identity() -> None:
+    """The .deb is built after candidate gates and attached without replacement."""
     jobs = c01._load_yaml(c01._DISPATCH)["jobs"]
-    step = next(
-        step
-        for step in jobs["publish-release-assets"]["steps"]
-        if step.get("name") == "Upload release assets"
-    )
-    groups = {
-        "python": ("release-assets/python-dist", "airunner-services.whl"),
-        "sidecars": (
-            "release-assets/sidecars",
-            "runtime-sidecars-linux.tar.gz",
-        ),
-        "candidate": (
-            "release-assets/linux-candidate",
-            "candidate.tar.gz",
-        ),
-        "checksums": ("release-assets", "SHA256SUMS"),
-    }
-    for group, (directory, filename) in groups.items():
-        parent = tmp_path / directory
-        parent.mkdir(parents=True, exist_ok=True)
-        if group != missing_group:
-            (parent / filename).write_bytes(b"neutral release asset fixture\n")
+    build = jobs["build-debian-package"]
+    assert set(build["needs"]) == {"candidate-gate", "build-python-package"}
+    assert build["if"] == "github.event_name == 'workflow_dispatch' && inputs.promote_release == true"
+    assert build["runs-on"] == "ubuntu-26.04"
+    text = c01._steps_text(build)
+    assert "scripts/check_release_identity.py" in text
+    assert "constraints-linux-core.txt" in text
+    assert "AIRUNNER_CORE_PYTHON" in text
+    assert "--no-build-isolation" in text
+    assert "services-core-bundle-spec.toml" in (
+        c01._ROOT / "debian/rules"
+    ).read_text(encoding="utf-8")
+    assert "dpkg-buildpackage --build=binary --no-sign" in text
+    assert "packaging/apt/release_manifest.py" in text
+    assert "GITHUB_RUN_ID" in text
+    assert "actions/upload-artifact" in text
+    assert "publish.sh" not in text
+    assert "ssh " not in text
 
-    fake_bin = tmp_path / "fake-bin"
-    fake_bin.mkdir()
-    fake_gh = fake_bin / "gh"
-    fake_gh.write_text(
-        "#!/bin/sh\n"
-        'if [ "$1" = "version" ]; then echo "gh version fixture"; exit 0; fi\n'
-        'printf "%s\\0" "$@" > "$FAKE_GH_ARGS"\n',
-        encoding="utf-8",
+    release_job = jobs["publish-release-assets"]
+    assert "build-debian-package" in release_job["needs"]
+    release_steps = release_job["steps"]
+    download = next(
+        step for step in release_steps
+        if step.get("name") == "Download Debian package and source manifest"
     )
-    fake_gh.chmod(0o755)
-    args_file = tmp_path / "gh-args.bin"
-    env = os.environ.copy()
-    env.update(
-        {
-            "PATH": str(fake_bin) + os.pathsep + env.get("PATH", ""),
-            "FAKE_GH_ARGS": str(args_file),
-            "GITHUB_REF_NAME": "v-fixture",
-            "GITHUB_REPOSITORY": "Capsize-Games/airunner",
-            "GH_TOKEN": "fixture-token-not-a-credential",
-        }
+    assert download["with"]["name"] == "debian-release"
+    assert download["with"]["path"] == "release-assets/debian"
+    promotion = next(
+        step for step in release_steps
+        if step.get("name") == "Create draft, attach all assets, and publish immutable release"
     )
-    result = subprocess.run(
-        ["bash", "-e", "-o", "pipefail", "-c", step["run"]],
-        cwd=tmp_path,
-        env=env,
-        capture_output=True,
-        text=True,
-        check=False,
+    assert "--asset-dir release-assets/debian" in promotion["run"]
+    assert "--promote-release-assets" in promotion["run"]
+    checksum = next(
+        step for step in release_steps
+        if step.get("name") == "Verify candidate and checksum final release assets"
     )
-    args = (
-        args_file.read_bytes().decode().rstrip("\0").split("\0")
-        if args_file.exists()
-        else None
-    )
-    return result, args
-
-
-def test_release_asset_upload_passes_explicit_files_without_clobber(
-    tmp_path: Path,
-) -> None:
-    """Upload invokes gh with all existing files and no replacement flag."""
-    result, args = _run_release_asset_upload(tmp_path)
-    assert result.returncode == 0, result.stderr
-    assert args is not None
-    assert args[:3] == ["release", "upload", "v-fixture"]
-    assert "--repo" in args
-    assert args[args.index("--repo") + 1] == "Capsize-Games/airunner"
-    assert "--clobber" not in args
-    assert len(args) == 9
-
-
-@pytest.mark.parametrize("missing_group", ["python", "sidecars", "candidate", "checksums"])
-def test_release_asset_upload_stops_when_a_required_group_is_empty(
-    tmp_path: Path, missing_group: str
-) -> None:
-    """The upload script refuses incomplete asset sets before calling gh."""
-    result, args = _run_release_asset_upload(tmp_path, missing_group=missing_group)
-    assert result.returncode != 0
-    assert "expected Python packages, sidecars, candidate archive, and checksums" in result.stderr
-    assert args is None
+    assert "release-assets/debian" in checksum["run"]
 
 
 def test_release_workflows_pin_every_action_to_a_commit() -> None:
@@ -250,18 +197,28 @@ def test_promotion_checks_tag_source_and_existing_assets_before_side_effects() -
         package_names.index("Publish package")
     )
 
+    debian_steps = jobs["build-debian-package"]["steps"]
+    debian_names = [str(step.get("name", "")) for step in debian_steps]
+    assert debian_names.index("Verify promotion tag and source identity") < (
+        debian_names.index("Build and bind the Debian package")
+    )
+
     release_steps = jobs["publish-release-assets"]["steps"]
     release_names = [str(step.get("name", "")) for step in release_steps]
-    assert release_names.index(
-        "Preflight immutable release asset identities"
-    ) < release_names.index("Upload release assets")
-    preflight = next(
+    promotion = next(
         step for step in release_steps
-        if step.get("name") == "Preflight immutable release asset identities"
+        if step.get("name") == "Create draft, attach all assets, and publish immutable release"
     )
-    assert "GITHUB_TOKEN" in preflight["env"]
-    assert "--check-release-assets" in preflight["run"]
-    assert "--github-token" not in preflight["run"]
+    assert "GITHUB_TOKEN" in promotion["env"]
+    assert "--promote-release-assets" in promotion["run"]
+    assert "--github-token" not in promotion["run"]
+
+    verify = jobs["verify-published-release"]
+    assert verify["if"] == "github.event_name == 'release'"
+    verify_text = c01._steps_text(verify)
+    assert "--verify-published-release" in verify_text
+    assert "gh release upload" not in verify_text
+    assert "contents" not in verify["permissions"] or verify["permissions"]["contents"] == "read"
 
 
 def test_candidate_creation_publishes_nothing() -> None:
@@ -278,8 +235,8 @@ def test_gate_passes_every_required_result() -> None:
     """The gate runs always and reports every need to the script."""
     jobs = c01._load_yaml(c01._DISPATCH)["jobs"]
     job = jobs["candidate-gate"]
-    assert job["if"] == "always()"
     assert list(job["needs"]) == list(c01._GATE_NEEDS)
+    assert job["if"] == "always() && github.event_name == 'workflow_dispatch'"
     text = c01._steps_text(job)
     assert "packaging/linux/candidate-gate.sh" in text
     for need in job["needs"]:
@@ -307,6 +264,9 @@ def test_publish_paths_need_candidate_gate() -> None:
     assert "needs.candidate-gate.result == 'success'" in build["if"]
     assets = jobs["publish-release-assets"]
     assert "candidate-gate" in assets["needs"]
+    debian = jobs["build-debian-package"]
+    assert "candidate-gate" in debian["needs"]
+    assert "build-python-package" in debian["needs"]
 
 
 def test_pypi_publish_requires_explicit_dispatch_opt_in() -> None:
@@ -316,6 +276,9 @@ def test_pypi_publish_requires_explicit_dispatch_opt_in() -> None:
     opt_in = triggers["workflow_dispatch"]["inputs"]["publish_pypi"]
     assert opt_in["type"] == "boolean"
     assert opt_in["default"] is False
+    promotion = triggers["workflow_dispatch"]["inputs"]["promote_release"]
+    assert promotion["type"] == "boolean"
+    assert promotion["default"] is False
 
     steps = workflow["jobs"]["build-python-package"]["steps"]
     publishers = [
@@ -326,6 +289,28 @@ def test_pypi_publish_requires_explicit_dispatch_opt_in() -> None:
     assert publishers[0]["if"] == (
         "github.event_name == 'workflow_dispatch' && inputs.publish_pypi == true"
     )
+
+
+def test_release_event_only_verifies_and_never_builds_or_appends_assets() -> None:
+    jobs = c01._load_yaml(c01._DISPATCH)["jobs"]
+    assert jobs["verify-published-release"]["if"] == "github.event_name == 'release'"
+    for name in ("linux-candidate", "build-debian-package", "fetch-sidecars", "publish-release-assets"):
+        assert "github.event_name == 'workflow_dispatch'" in jobs[name]["if"]
+    promotion = c01._steps_text(jobs["publish-release-assets"])
+    assert "--promote-release-assets" in promotion
+    verification = c01._steps_text(jobs["verify-published-release"])
+    assert "--verify-published-release" in verification
+    assert "upload-artifact" not in verification
+
+
+def test_package_dispatch_input_is_validated_as_data_before_build() -> None:
+    jobs = c01._load_yaml(c01._DISPATCH)["jobs"]
+    steps = jobs["build-python-package"]["steps"]
+    names = [str(step.get("name", "")) for step in steps]
+    assert names.index("Validate requested package selection") < names.index("Build packages")
+    build = next(step for step in steps if step.get("name") == "Build packages")
+    assert "for pkg in \"${packages[@]}\"" in build["run"]
+    assert "${{ inputs.packages" not in build["run"]
 
 
 def test_all_release_checkouts_use_the_tested_source_ref() -> None:
