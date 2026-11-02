@@ -1,0 +1,138 @@
+{
+  "artifact": "/tmp/build-libzim-9.3.0/src/libzim.so.9.3.0",
+  "build_tool_hashes": {
+    "cython_sdist_sha256": "7146dd2af8682b4ca61331851e6aebce9fe5158e75300343f80c07ca80b1faff",
+    "cython_wheel_sha256": "0e25f6425ad4a700d7f77cd468da9161e63658837d1bc34861a9861a4ef6346d",
+    "packaging_wheel_sha256": "d7193f7c8e4e93f444fde0262bf90af30e16fa0ad0ad44cb553c87339b23cd1c",
+    "setuptools_wheel_sha256": "ca140b45d5325a9478f880e351484f62fef15f336462e449ca0c03c873d589c2",
+    "wheel_wheel_sha256": "3217dcc807155e45db462d7ef2431f5ddda0d7273b700d05a67b271ceb1287ab"
+  },
+  "build_tools": {
+    "cython": "3.0.11",
+    "gcc": "13.3",
+    "meson": "1.12.1",
+    "ninja": "1.12.1",
+    "packaging": "26.3",
+    "python": "3.13.5",
+    "setuptools": "84.2.1",
+    "uv": "0.13.4",
+    "wheel": "0.48.0"
+  },
+  "bytes": 56060032,
+  "native_dependencies": {
+    "icu": "79.1",
+    "uuid": "util-linux 2.41.5-0+deb13u1",
+    "xapian": "1.4.32",
+    "xz": "5.2.11",
+    "zlib": "1.3.1",
+    "zstd": "1.5.4"
+  },
+  "network": "No network access during native build, Python wheel build, or tests; source artifacts retrieved separately and hash-verified.",
+  "python_wheel": {
+    "abi_measurement": "Numeric symbol-version maximum from readelf on the exact imported candidate extension and bundled library; corrects earlier lexicographic GLIBC_2.14 result.",
+    "abi_symbols": {
+      "bundled_native": {
+        "GLIBC": "2.39",
+        "GLIBCXX": "3.4.32"
+      },
+      "extension": {
+        "GLIBC": "2.32",
+        "GLIBCXX": "3.4.32"
+      }
+    },
+    "bytes": 21614078,
+    "dynamic_dependencies": {
+      "extension": [
+        "libzim.so.9",
+        "libstdc++.so.6",
+        "libgcc_s.so.1",
+        "libc.so.6"
+      ],
+      "native": [
+        "libstdc++.so.6",
+        "libm.so.6",
+        "libgcc_s.so.1",
+        "libc.so.6",
+        "ld-linux-x86-64.so.2"
+      ],
+      "other_native_dependencies": "static in libzim.so.9.3.0"
+    },
+    "extension_sha256": "fd345ae50db93ca8091b1ae85c2afbf2b87706c8ed7dae3b56d489909854e2bc",
+    "filename": "libzim-3.7.0+capsize.2-cp313-cp313-linux_x86_64.whl",
+    "host": {
+      "glibc": "2.41",
+      "os": "Debian GNU/Linux 13 (trixie)"
+    },
+    "native_library_sha256": "b71f24d6b402e313741c055299e2e046698e8c2eefff57c879fc6a96509e2cde",
+    "portability": "Host-specific generic Linux wheel built on Debian 13 glibc 2.41; no manylinux claim; Ubuntu 24 runtime job pending.",
+    "record_rows_verified": 19,
+    "sha256": "7747d1dd9f1a0bfa5ee2af9cefdb13c237b8f1eb75874d5c1cba2a19eba36f46",
+    "tag": "cp313-cp313-linux_x86_64"
+  },
+  "python_wrapper_source": {
+    "merged_commit": "854ffa91605d6406517147ca05f3878b840c8727",
+    "merged_tree": "e8c1c25f966db52f9599b6c63bc393965d247eb5",
+    "private_tag_status": "merged and released",
+    "proposed_private_tag": "v3.7.0-capsize.2",
+    "source_tree": "e8c1c25f966db52f9599b6c63bc393965d247eb5",
+    "upstream_commit": "b9182a2d4b61d605ba886b7730e30add538bc1ed"
+  },
+  "real_zim_corpus": "not tested",
+  "service_loader": {
+    "bundled_native_sha256": "b71f24d6b402e313741c055299e2e046698e8c2eefff57c879fc6a96509e2cde",
+    "candidate_wheel_sha256": "7747d1dd9f1a0bfa5ee2af9cefdb13c237b8f1eb75874d5c1cba2a19eba36f46",
+    "candidate_wheel_version": "3.7.0+capsize.2",
+    "checks": [
+      "synthetic ZIM parsed",
+      "document text preserved",
+      "zim_file and zim_path metadata present"
+    ],
+    "documents": 1,
+    "entrypoint": "airunner_services.llm.managers.agent.document_loader.iter_document_batches_from_file",
+    "runtime": "existing project Python 3.13.5 environment with exact candidate wheel site-packages prepended",
+    "status": "passed"
+  },
+  "sha256": "b71f24d6b402e313741c055299e2e046698e8c2eefff57c879fc6a96509e2cde",
+  "target": "x86_64 Linux, libzim.so.9.3.0",
+  "target_acceptance": {
+    "actual_runner_validation": "pending Ubuntu 24.04 workflow run",
+    "local_container_attempt": "Docker content-store blob read failed with I/O error before container startup; no image pulled.",
+    "real_zim_corpus": "not tested",
+    "selected_wheel": "unchanged; candidate not selected by runtime constraints",
+    "service_loader_candidate_identity": "The local service-loader probe loaded the candidate extension from its separate runtime environment; see service_loader.candidate_wheel_sha256.",
+    "ubuntu_24_04_symbol_compatibility": "Measured ceilings fit Ubuntu24 glibc2.39/GCC13 libstdc++3.4.32; actual runner validation pending."
+  },
+  "tests": {
+    "native": {
+      "command": "meson test -C /tmp/build-libzim-9.3.0 --print-errorlogs",
+      "data_tests": "test_data_dir=none",
+      "failed": 0,
+      "passed": 28
+    },
+    "python_wrapper_subset": {
+      "command": "pytest -q test_libzim_version.py test_libzim_creator.py::test_imports test_creator_filename test_creator_indexing",
+      "failed": 0,
+      "passed": 12
+    },
+    "real_zim_corpus": "not tested",
+    "service_loader": {
+      "checks": [
+        "synthetic ZIM parsed",
+        "document text preserved",
+        "zim_file and zim_path metadata present"
+      ],
+      "documents": 1,
+      "entrypoint": "airunner_services.llm.managers.agent.document_loader.iter_document_batches_from_file",
+      "result": "passed"
+    },
+    "synthetic_api": {
+      "checks": [
+        "import candidate wheel",
+        "create ZIM with two HTML entries",
+        "read main entry",
+        "full-text search synthetic token"
+      ],
+      "result": "passed"
+    }
+  }
+}

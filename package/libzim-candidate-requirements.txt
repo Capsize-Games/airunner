@@ -1,0 +1,1 @@
+libzim==3.7.0+capsize.2 --hash=sha256:7747d1dd9f1a0bfa5ee2af9cefdb13c237b8f1eb75874d5c1cba2a19eba36f46
