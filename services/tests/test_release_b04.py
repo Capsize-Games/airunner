@@ -374,3 +374,31 @@ def test_ollama_embedding_helper_has_no_direct_companion_import() -> None:
         timeout=60,
     )
     assert proc.returncode == 0, proc.stdout + proc.stderr
+
+
+@pytest.mark.parametrize("metadata", [[], [{}, {}], [None]])
+def test_add_rejects_misaligned_metadata_without_mutating_index(metadata) -> None:
+    client = FakeEmbeddingClient(_identity())
+    index = CompanionEmbeddingIndex(identity=client.identity)
+    index.add_texts(["original"], client, [{"source": "retained"}])
+    with pytest.raises(ValueError, match="metadata"):
+        index.add_texts(["invalid"], client, metadata)
+    assert len(index) == 1
+    hits = index.search("original", client, k=10)
+    assert [hit.text for hit in hits] == ["original"]
+    assert hits[0].metadata == {"source": "retained"}
+
+
+def test_load_rejects_misaligned_persisted_metadata_without_rewriting(tmp_path) -> None:
+    client = FakeEmbeddingClient(_identity())
+    index = CompanionEmbeddingIndex(identity=client.identity)
+    index.add_texts(["retained"], client)
+    index.save(str(tmp_path))
+    manifest_path = next(tmp_path.glob("*.json"))
+    manifest = json.loads(manifest_path.read_text())
+    manifest["metadatas"] = []
+    original = json.dumps(manifest)
+    manifest_path.write_text(original)
+    with pytest.raises(ValueError, match="misaligned"):
+        CompanionEmbeddingIndex.load(str(tmp_path), client)
+    assert manifest_path.read_text() == original
