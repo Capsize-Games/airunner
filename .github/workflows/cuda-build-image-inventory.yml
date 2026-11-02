@@ -414,6 +414,7 @@ jobs:
           mkdir -p "$root/evidence"
           docker run --rm --pull=never --platform linux/amd64 --network=none \
             --cpus=2 --memory=6g --pids-limit=1024 --cap-drop=ALL \
+            --user "$(id -u):$(id -g)" \
             --security-opt=no-new-privileges --read-only \
             --tmpfs /tmp:rw,noexec,nosuid,size=64m \
             --mount "type=bind,src=$root/inspect,dst=/inspect,readonly" \

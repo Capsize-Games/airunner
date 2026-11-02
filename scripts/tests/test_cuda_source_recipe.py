@@ -56,3 +56,7 @@ def test_cuda_source_recipe_binds_exact_sources_backend_and_offline_flags():
     assert "-DGGML_NATIVE=OFF" in build_job
     assert "-DCMAKE_CUDA_ARCHITECTURES=120a-real" in build_job
     assert "--allow-unsupported-compiler" not in build_job
+    verification = build_job.split(
+        "name: Verify wheel contents and SM 120 target configuration", 1
+    )[1]
+    assert '--user "$(id -u):$(id -g)"' in verification
