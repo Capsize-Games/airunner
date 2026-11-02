@@ -51,6 +51,9 @@ class ModelMetadata:
 	runtime_backend: str | None = None
 	aliases: tuple[str, ...] = ()
 	compute_capability_min: tuple[int, int] | None = None
+	preferred_download_revision: str | None = None
+	preferred_download_sha256: str | None = None
+	preferred_download_size_bytes: int | None = None
 
 	@property
 	def size_mb(self) -> int:
@@ -253,6 +256,14 @@ class ModelRegistry:
 			preferred_download_repo_id="ggerganov/whisper.cpp",
 			preferred_download_filename="ggml-large-v3.bin",
 			runtime_backend="whisper.cpp",
+			preferred_download_revision=(
+				"c521a4b02f422512d734391fdf08bb08c0862f68"
+			),
+			preferred_download_sha256=(
+				"64d182b440b98d5203c4f9bd541544d84c605196c4f7b845"
+				"dfa11fb23594d1e2"
+			),
+			preferred_download_size_bytes=3095033483,
 		)
 		self._register_model_metadata(metadata)
 

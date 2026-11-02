@@ -16,6 +16,11 @@ from airunner_services.bootstrap.model_bootstrap_data import (
 from airunner_services.bootstrap.unified_model_files import (
     get_required_files_for_model,
 )
+from airunner_services.database.bootstrap.whisper import (
+    UnsupportedWhisperModelError,
+    get_registered_whisper_cpp_model_spec,
+    get_whisper_cpp_model_spec,
+)
 from airunner_services.config.local_settings_store import get_setting
 from airunner_services.downloads.base_download_worker import (
     BaseDownloadWorker,
@@ -143,6 +148,9 @@ class HuggingFaceDownloadWorker(BaseDownloadWorker):
         which continue to resolve "main" exactly as before (release
         issue D01).
         """
+        whisper_spec = get_registered_whisper_cpp_model_spec()
+        if repo_id == whisper_spec.repo_id:
+            return whisper_spec.revision
         for model in model_bootstrap_data:
             if model.get("path") == repo_id:
                 return model.get("branch") or "main"
@@ -391,6 +399,19 @@ class HuggingFaceDownloadWorker(BaseDownloadWorker):
             f"missing_files={missing_files}, gguf_filename={gguf_filename}, zip_url={zip_url}"
         )
 
+        stt_model_spec = None
+        if model_type == "stt":
+            try:
+                stt_model_spec = get_whisper_cpp_model_spec(
+                    repo_id=repo_id,
+                    filenames=missing_files,
+                )
+            except UnsupportedWhisperModelError as error:
+                message = str(error)
+                self.logger.error("Refusing unsupported STT download: %s", message)
+                self.emit_signal(self._failed_signal, {"error": message})
+                return
+
         # Handle ZIP file downloads (OpenVoice checkpoints)
         if model_type == "openvoice_zip" and zip_url:
             self._download_and_extract_zip(zip_url, output_dir)
@@ -417,7 +438,9 @@ class HuggingFaceDownloadWorker(BaseDownloadWorker):
             )
             return
 
-        api_key = get_setting("huggingface/api_key", "")
+        # The pinned whisper.cpp artifact is public. Do not attach any saved
+        # Hugging Face credential to this download request.
+        api_key = "" if stt_model_spec else get_setting("huggingface/api_key", "")
 
         if not output_dir:
             output_dir = os.path.join(MODELS_DIR, "text/models/llm/causallm")
@@ -533,7 +556,9 @@ class HuggingFaceDownloadWorker(BaseDownloadWorker):
             for f in missing_files:
                 # Get expected size from full bootstrap data if available
                 expected_size = 0
-                if full_bootstrap_data and isinstance(full_bootstrap_data, dict) and f in full_bootstrap_data:
+                if stt_model_spec and f == stt_model_spec.filename:
+                    expected_size = stt_model_spec.size_bytes
+                elif full_bootstrap_data and isinstance(full_bootstrap_data, dict) and f in full_bootstrap_data:
                     expected_size = full_bootstrap_data[f]
                     self.logger.info(f"Missing file {f}: expected size {expected_size} (from bootstrap)")
                 else:
@@ -556,9 +581,13 @@ class HuggingFaceDownloadWorker(BaseDownloadWorker):
                 return
         elif is_stt_tts_model or is_rmbg_model:
             # For STT/TTS/RMBG models, bootstrap data is a list of filenames.
-            # Convert to dict with size=0 (unknown) for compatibility
             if full_bootstrap_data:
-                bootstrap_files = {f: 0 for f in full_bootstrap_data}
+                if stt_model_spec:
+                    bootstrap_files = {
+                        stt_model_spec.filename: stt_model_spec.size_bytes
+                    }
+                else:
+                    bootstrap_files = {f: 0 for f in full_bootstrap_data}
             else:
                 self.logger.error(
                     f"No bootstrap data found for {model_type}/{repo_id}! Cannot determine required files."
@@ -581,7 +610,25 @@ class HuggingFaceDownloadWorker(BaseDownloadWorker):
 
                 if final_path.exists():
                     actual_size = final_path.stat().st_size
-                    if expected_size > 0 and actual_size < expected_size:
+                    if stt_model_spec and filename == stt_model_spec.filename:
+                        if (
+                            actual_size == stt_model_spec.size_bytes
+                            and self._file_sha256(final_path)
+                            == stt_model_spec.sha256
+                        ):
+                            self.logger.debug(
+                                "Pinned STT model %s already matches its digest",
+                                filename,
+                            )
+                            continue
+                        # Preserve the existing user file until a complete,
+                        # digest-verified replacement can be atomically moved.
+                        self.logger.warning(
+                            "Existing STT model %s does not match the pinned "
+                            "size/digest; downloading a verified replacement",
+                            filename,
+                        )
+                    elif expected_size > 0 and actual_size < expected_size:
                         # File is incomplete - needs re-download
                         self.logger.warning(
                             f"File {filename} is incomplete: {actual_size} bytes vs expected {expected_size} bytes. "
@@ -628,7 +675,16 @@ class HuggingFaceDownloadWorker(BaseDownloadWorker):
                     continue
 
                 files_to_download.append(
-                    {"filename": filename, "size": expected_size}
+                    {
+                        "filename": filename,
+                        "size": expected_size,
+                        "sha256": (
+                            stt_model_spec.sha256
+                            if stt_model_spec
+                            and filename == stt_model_spec.filename
+                            else None
+                        ),
+                    }
                 )
 
         else:
@@ -755,7 +811,10 @@ class HuggingFaceDownloadWorker(BaseDownloadWorker):
                     model_path,
                     api_key,
                 ),
-                kwargs={"revision": resolved_revision},
+                kwargs={
+                    "revision": resolved_revision,
+                    "expected_sha256": file_info.get("sha256"),
+                },
                 daemon=True,
             )
             self._file_threads[filename] = thread
