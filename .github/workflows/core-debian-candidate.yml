@@ -13,6 +13,8 @@ on:
       - "scripts/assemble_linux_bundle.py"
       - "scripts/check_core_input_readiness.py"
       - "scripts/core_debian_candidate_smoke.sh"
+      - "scripts/core_debian_upgrade_smoke.sh"
+      - "scripts/create_core_upgrade_fixture.py"
       - "scripts/tests/test_core_debian_candidate_workflow.py"
       - "services/**"
 
@@ -83,6 +85,10 @@ jobs:
           fi
           install -d -m 0755 build/core-debian-candidate
           install -m 0644 "${packages[0]}" build/core-debian-candidate/
+          PYTHONPATH=services/src:native/src:debian/vendor \
+            "$AIRUNNER_CORE_PYTHON" scripts/create_core_upgrade_fixture.py \
+            --output-dir build/core-debian-candidate/synthetic-upgrade-fixture \
+            --source-sha "$CORE_SOURCE_SHA"
           CORE_DEB="build/core-debian-candidate/$(basename "${packages[0]}")"
           CORE_DEB="$CORE_DEB" "$AIRUNNER_CORE_PYTHON" - <<'PY'
           import hashlib
@@ -109,13 +115,15 @@ jobs:
               "architecture": "amd64",
               "build_status": "passed",
               "clean_install_smoke": "pending",
+              "synthetic_upgrade_smoke": "pending",
           }
           Path("build/core-debian-candidate/candidate.json").write_text(
               json.dumps(record, indent=2, sort_keys=True) + "\n",
               encoding="utf-8",
           )
           PY
-          (cd build/core-debian-candidate && sha256sum ./*.deb candidate.json > SHA256SUMS)
+          (cd build/core-debian-candidate && find . -type f ! -name SHA256SUMS -print0 \
+            | sort -z | xargs -0 sha256sum > SHA256SUMS)
 
       - name: Upload non-publishing CORE candidate
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
@@ -185,5 +193,71 @@ jobs:
         with:
           name: core-debian-validation-${{ github.run_id }}-${{ github.run_attempt }}
           path: build/core-debian-candidate/candidate-validation.json
+          if-no-files-found: ignore
+          retention-days: 7
+
+  synthetic-upgrade-data-smoke:
+    needs: build-core-debian-candidate
+    runs-on: ubuntu-26.04
+    permissions:
+      contents: read
+    env:
+      CORE_SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+
+    steps:
+      - name: Check out exact candidate source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify CORE input record before install
+        run: python3 scripts/check_core_input_readiness.py --mode verify-record
+
+      - name: Check CORE inputs before candidate install
+        run: python3 scripts/check_core_input_readiness.py --mode activate
+
+      - name: Download candidate artifact and synthetic database fixture
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: core-debian-candidate-${{ github.run_id }}-${{ github.run_attempt }}
+          path: build/core-debian-candidate
+
+      - name: Verify candidate and fixture digests
+        run: |
+          (cd build/core-debian-candidate && sha256sum --check SHA256SUMS)
+          python3 - <<'PY'
+          import hashlib
+          import json
+          import os
+          from pathlib import Path
+
+          root = Path("build/core-debian-candidate")
+          candidate = json.loads((root / "candidate.json").read_text())
+          fixture_root = root / "synthetic-upgrade-fixture"
+          fixture = json.loads((fixture_root / "fixture.json").read_text())
+          digest = lambda path: hashlib.sha256(Path(path).read_bytes()).hexdigest()
+          assert candidate["source_sha"] == os.environ["CORE_SOURCE_SHA"]
+          assert candidate["lock_sha256"] == digest("package/constraints-linux-core.txt")
+          assert candidate["requirements_sha256"] == digest("package/requirements-linux-core.in")
+          assert fixture["source_sha"] == os.environ["CORE_SOURCE_SHA"]
+          assert fixture["database_sha256"] == digest(fixture_root / "airunner.db")
+          assert fixture["fixture_kind"] == "synthetic_intermediate_alembic_revision"
+          assert candidate["debian_sha256"] == digest(root / candidate["debian_filename"])
+          PY
+
+      - name: Run synthetic package upgrade and data-preservation smoke
+        run: |
+          sudo env CORE_SOURCE_SHA="$CORE_SOURCE_SHA" \
+            bash scripts/core_debian_upgrade_smoke.sh \
+            build/core-debian-candidate
+
+      - name: Upload upgrade validation record
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: core-debian-upgrade-validation-${{ github.run_id }}-${{ github.run_attempt }}
+          path: build/core-debian-candidate/candidate-upgrade-validation.json
           if-no-files-found: ignore
           retention-days: 7
