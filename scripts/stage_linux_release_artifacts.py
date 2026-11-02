@@ -116,47 +116,65 @@ def copy_checked(source: Path, target: Path, spec: dict[str, Any]) -> None:
     shutil.copyfile(source, target)
 
 
-def download_https(url: str, target: Path, spec: dict[str, Any]) -> None:
+def _validate_canonical_source_url(url: str) -> None:
     from urllib.parse import urlsplit
 
     parsed = urlsplit(url)
     if (parsed.scheme != "https" or parsed.hostname not in ALLOWED_HOSTS
             or parsed.username or parsed.password or parsed.fragment or parsed.query):
         raise StageError("manifest HTTPS URL is not an approved canonical source")
-    request = urllib.request.Request(url, headers={"User-Agent": "airunner-release-stager/1"})
+
+
+def _validate_download_response(response, spec: dict[str, Any]) -> None:
+    from urllib.parse import urlsplit
+
+    final = urlsplit(response.geturl())
+    if (final.scheme != "https" or final.hostname not in ALLOWED_HOSTS or final.username
+            or final.password or (final.query and final.hostname != "release-assets.githubusercontent.com")):
+        raise StageError("HTTPS input redirected outside approved artifact hosts")
+    content_length = response.headers.get("Content-Length")
+    if content_length is None:
+        return
+    try:
+        announced_size = int(content_length)
+    except ValueError as error:
+        raise StageError("download has a malformed Content-Length") from error
+    if announced_size != spec["size_bytes"]:
+        raise StageError("download Content-Length differs from its pinned wheel size")
+
+
+def _stream_wheel_response(response, output, spec: dict[str, Any]) -> tuple[int, str]:
     digest = hashlib.sha256()
     size = 0
+    while block := response.read(CHUNK):
+        size += len(block)
+        if size > spec["size_bytes"]:
+            raise StageError("download exceeds the pinned wheel size")
+        digest.update(block)
+        output.write(block)
+    return size, digest.hexdigest()
+
+
+def download_https(url: str, target: Path, spec: dict[str, Any]) -> None:
+    _validate_canonical_source_url(url)
+    request = urllib.request.Request(url, headers={"User-Agent": "airunner-release-stager/1"})
+    size = 0
+    content_hash = ""
     created_target = False
     try:
         opener = urllib.request.build_opener(RestrictedRedirect(ALLOWED_HOSTS))
         with opener.open(request, timeout=120) as response:
-            final = urlsplit(response.geturl())
-            if (final.scheme != "https" or final.hostname not in ALLOWED_HOSTS or final.username
-                    or final.password or (final.query and final.hostname != "release-assets.githubusercontent.com")):
-                raise StageError("HTTPS input redirected outside approved artifact hosts")
-            content_length = response.headers.get("Content-Length")
-            if content_length is not None:
-                try:
-                    announced_size = int(content_length)
-                except ValueError as error:
-                    raise StageError("download has a malformed Content-Length") from error
-                if announced_size != spec["size_bytes"]:
-                    raise StageError("download Content-Length differs from its pinned wheel size")
+            _validate_download_response(response, spec)
             with target.open("xb") as output:
                 created_target = True
-                while block := response.read(CHUNK):
-                    size += len(block)
-                    if size > spec["size_bytes"]:
-                        raise StageError("download exceeds the pinned wheel size")
-                    digest.update(block)
-                    output.write(block)
+                size, content_hash = _stream_wheel_response(response, output, spec)
     except (OSError, urllib.error.URLError, StageError) as error:
         if created_target:
             target.unlink(missing_ok=True)
         if isinstance(error, StageError):
             raise
         raise StageError(f"could not fetch {spec['filename']}") from error
-    if size != spec["size_bytes"] or digest.hexdigest() != spec["sha256"]:
+    if size != spec["size_bytes"] or content_hash != spec["sha256"]:
         if created_target:
             target.unlink(missing_ok=True)
         raise StageError(f"download size or digest mismatch: {spec['filename']}")
@@ -202,9 +220,7 @@ def verify_actions_metadata(source: dict[str, Any], token: str) -> int:
     return size
 
 
-def actions_zip(source: dict[str, Any], token: str, expected_size: int):
-    if source["kind"] == "actions_artifact_pending":
-        raise StageError(f"Actions artifact handoff is not bound yet: {source['filename']}")
+def _actions_zip_request(source: dict[str, Any], token: str):
     repo = source["repo"]
     if not re.fullmatch(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+", repo):
         raise StageError("invalid Actions artifact repository")
@@ -221,38 +237,56 @@ def actions_zip(source: dict[str, Any], token: str, expected_size: int):
     max_bytes = source.get("max_archive_bytes")
     if not isinstance(max_bytes, int) or not 1 <= max_bytes <= 2_147_483_648:
         raise StageError("Actions artifact has no safe archive size bound")
-    payload = tempfile.SpooledTemporaryFile(max_size=64 * 1024 * 1024, mode="w+b")
+    return request, max_bytes
+
+
+def _stream_action_archive_response(response, payload, expected_size: int, max_bytes: int) -> str:
+    from urllib.parse import urlsplit
+
+    final = urlsplit(response.geturl())
+    if not _actions_redirect_allowed(final):
+        raise StageError("Actions artifact redirected outside GitHub's HTTPS artifact hosts")
+    content_length = response.headers.get("Content-Length")
+    try:
+        announced_size = int(content_length) if content_length is not None else None
+    except ValueError as error:
+        raise StageError("Actions archive has malformed Content-Length") from error
+    if announced_size is None or announced_size != expected_size:
+        raise StageError("Actions archive Content-Length differs from authenticated metadata")
     digest = hashlib.sha256()
     size = 0
-    try:
-        opener = urllib.request.build_opener(RestrictedRedirect(GITHUB_ACTIONS_HOSTS,
-                                                                 allow_actions_storage=True))
-        with opener.open(request, timeout=120) as response:
-            from urllib.parse import urlsplit
+    while block := response.read(CHUNK):
+        size += len(block)
+        if size > max_bytes:
+            raise StageError("Actions artifact exceeds its maximum archive size")
+        digest.update(block)
+        payload.write(block)
+    if size != expected_size:
+        raise StageError("Actions archive size differs from authenticated metadata")
+    return digest.hexdigest()
 
-            final = urlsplit(response.geturl())
-            if not _actions_redirect_allowed(final):
-                raise StageError("Actions artifact redirected outside GitHub's HTTPS artifact hosts")
-            content_length = response.headers.get("Content-Length")
-            try:
-                announced_size = int(content_length) if content_length is not None else None
-            except ValueError as error:
-                raise StageError("Actions archive has malformed Content-Length") from error
-            if announced_size is None or announced_size != expected_size:
-                raise StageError("Actions archive Content-Length differs from authenticated metadata")
-            while block := response.read(CHUNK):
-                size += len(block)
-                if size > max_bytes:
-                    raise StageError("Actions artifact exceeds its maximum archive size")
-                digest.update(block)
-                payload.write(block)
+
+def _fetch_action_archive(request, payload, expected_size: int, max_bytes: int) -> str:
+    opener = urllib.request.build_opener(RestrictedRedirect(
+        GITHUB_ACTIONS_HOSTS, allow_actions_storage=True
+    ))
+    with opener.open(request, timeout=120) as response:
+        return _stream_action_archive_response(response, payload, expected_size, max_bytes)
+
+
+def actions_zip(source: dict[str, Any], token: str, expected_size: int):
+    artifact_id = source["artifact_id"]
+    request, max_bytes = _actions_zip_request(source, token)
+    payload = tempfile.SpooledTemporaryFile(max_size=64 * 1024 * 1024, mode="w+b")
+    try:
+        actual_digest = _fetch_action_archive(request, payload, expected_size, max_bytes)
     except (OSError, urllib.error.URLError, StageError) as error:
         payload.close()
         if isinstance(error, StageError):
             raise
         raise StageError(f"could not retrieve Actions artifact {artifact_id}") from error
     try:
-        verify_actions_archive_digest(digest.hexdigest(), source["archive_sha256"])
+        verify_actions_archive_digest(actual_digest, source["archive_sha256"])
     except StageError:
         payload.close()
         raise StageError(f"Actions artifact archive digest mismatch: {artifact_id}") from None
@@ -260,49 +294,107 @@ def actions_zip(source: dict[str, Any], token: str, expected_size: int):
     return payload
 
 
+def _validate_actions_archive_members(archive: zipfile.ZipFile) -> list[zipfile.ZipInfo]:
+    infos = archive.infolist()
+    names: set[str] = set()
+    for info in infos:
+        name = info.filename
+        path = PurePosixPath(name)
+        mode = (info.external_attr >> 16) & 0o170000
+        invalid = (
+            not name or "\\" in name or path.is_absolute() or ".." in path.parts
+            or (path.parts and path.parts[0].endswith(":")) or "\0" in name
+            or any(part in {"", "."} for part in name.rstrip("/").split("/"))
+            or mode not in {0, stat.S_IFREG, stat.S_IFDIR} or name in names
+        )
+        if invalid:
+            raise StageError("Actions artifact contains an unsafe or duplicate path")
+        names.add(name)
+    return infos
+
+
+def _extract_pinned_wheel(archive: zipfile.ZipFile, info: zipfile.ZipInfo,
+                          spec: dict[str, Any], destination: Path) -> dict[str, Any]:
+    target = destination / spec["filename"]
+    created = False
+    digest = hashlib.sha256()
+    size = 0
+    try:
+        with archive.open(info) as source, target.open("xb") as output:
+            created = True
+            while block := source.read(CHUNK):
+                size += len(block)
+                if size > spec["size_bytes"]:
+                    raise StageError("Actions wheel exceeds its pinned size")
+                digest.update(block)
+                output.write(block)
+    except Exception:
+        if created:
+            target.unlink(missing_ok=True)
+        raise
+    if size != spec["size_bytes"] or digest.hexdigest() != spec["sha256"]:
+        target.unlink(missing_ok=True)
+        raise StageError(f"Actions wheel digest mismatch: {spec['filename']}")
+    return {key: spec[key] for key in ("filename", "sha256", "size_bytes")}
+
+
 def extract_actions_wheels(payload, expected: list[dict[str, Any]], destination: Path) -> list[dict[str, Any]]:
     expected_by_name = {row["filename"]: row for row in expected}
-    extracted: set[str] = set()
+    extracted: dict[str, dict[str, Any]] = {}
     try:
         with zipfile.ZipFile(payload) as archive:
-            names: set[str] = set()
-            for info in archive.infolist():
-                name = info.filename
-                path = PurePosixPath(name)
-                mode = (info.external_attr >> 16) & 0o170000
-                if (not name or "\\" in name or path.is_absolute() or ".." in path.parts
-                        or (path.parts and path.parts[0].endswith(":")) or "\0" in name
-                        or any(part in {"", "."} for part in name.rstrip("/").split("/"))
-                        or mode not in {0, stat.S_IFREG, stat.S_IFDIR} or name in names):
-                    raise StageError("Actions artifact contains an unsafe or duplicate path")
-                names.add(name)
-            for info in archive.infolist():
+            infos = _validate_actions_archive_members(archive)
+            for info in infos:
                 basename = PurePosixPath(info.filename).name
                 if basename not in expected_by_name:
                     continue
                 if basename in extracted:
                     raise StageError("Actions artifact contains duplicate expected wheel names")
-                row = expected_by_name[basename]
-                target = destination / basename
-                with archive.open(info) as source, target.open("xb") as output:
-                    digest = hashlib.sha256()
-                    size = 0
-                    while block := source.read(CHUNK):
-                        size += len(block)
-                        if size > row["size_bytes"]:
-                            raise StageError("Actions wheel exceeds its pinned size")
-                        digest.update(block)
-                        output.write(block)
-                if size != row["size_bytes"] or digest.hexdigest() != row["sha256"]:
-                    target.unlink(missing_ok=True)
-                    raise StageError(f"Actions wheel digest mismatch: {basename}")
-                extracted.add(basename)
+                extracted[basename] = _extract_pinned_wheel(
+                    archive, info, expected_by_name[basename], destination
+                )
     except zipfile.BadZipFile as error:
         raise StageError("Actions artifact is not a valid ZIP") from error
-    if extracted != set(expected_by_name):
+    if set(extracted) != set(expected_by_name):
         raise StageError("Actions artifact is missing one or more pinned wheels")
-    return [{"filename": name, "sha256": expected_by_name[name]["sha256"], "size_bytes": expected_by_name[name]["size_bytes"]}
-            for name in sorted(extracted)]
+    return [extracted[name] for name in sorted(extracted)]
+
+
+def _lock_blocks(text: str) -> list[tuple[str, list[str]]]:
+    blocks: list[tuple[str, list[str]]] = []
+    current: tuple[str, list[str]] | None = None
+    for line in text.splitlines():
+        candidate = line.strip()
+        if not candidate or candidate.startswith("#"):
+            continue
+        if candidate.endswith("\\"):
+            candidate = candidate[:-1].rstrip()
+        if candidate.startswith("--hash="):
+            if current is None or not re.fullmatch(r"--hash=sha256:[0-9a-f]{64}", candidate):
+                raise StageError("selected lock has an unexpected or malformed hash option")
+            current[1].append(candidate.rsplit(":", 1)[1])
+            continue
+        if candidate.startswith("-"):
+            raise StageError("selected lock contains an unsupported option")
+        if current is not None:
+            blocks.append(current)
+        current = (candidate, [])
+    if current is not None:
+        blocks.append(current)
+    return blocks
+
+
+def _locked_pins(text: str) -> dict[str, tuple[str, list[str]]]:
+    locked = {}
+    for requirement, hashes in _lock_blocks(text):
+        match = re.fullmatch(r"([A-Za-z0-9_.-]+)==([^\s]+)", requirement)
+        if not match:
+            raise StageError("selected lock contains a non-pinned or malformed requirement")
+        name, version = match.groups()
+        if name in locked:
+            raise StageError("selected lock repeats a package")
+        locked[name] = (version, hashes)
+    return {name.lower().replace("_", "-"): pin for name, pin in locked.items()}
 
 
 def validate_lock(manifest: dict[str, Any], lockfile: Path) -> None:
@@ -310,52 +402,20 @@ def validate_lock(manifest: dict[str, Any], lockfile: Path) -> None:
     count = manifest.get("selected_count")
     if not isinstance(rows, list) or not isinstance(count, int) or count < 1 or len(rows) != count:
         raise StageError("manifest rows do not match its selected_count")
-    if not re.fullmatch(r"[0-9a-f]{64}", manifest.get("selected_lock_sha256", "")):
+    expected_digest = manifest.get("selected_lock_sha256", "")
+    if not re.fullmatch(r"[0-9a-f]{64}", expected_digest):
         raise StageError("manifest selected-lock digest is invalid")
-    if lockfile.is_symlink() or not lockfile.is_file() or sha256_file(lockfile) != manifest["selected_lock_sha256"]:
+    if lockfile.is_symlink() or not lockfile.is_file() or sha256_file(lockfile) != expected_digest:
         raise StageError("selected requirements file does not match the manifest lock digest")
     lock_text = lockfile.read_text(encoding="utf-8")
     if " @ " in lock_text or "https://" in lock_text or "file:" in lock_text or "--index-url" in lock_text:
         raise StageError("selected lock contains direct URLs or index configuration")
-    locked: dict[str, tuple[str, list[str]]] = {}
-    current_name: str | None = None
-    current_version: str | None = None
-    current_hashes: list[str] = []
-
-    def finish() -> None:
-        nonlocal current_name, current_version, current_hashes
-        if current_name is None or current_version is None:
-            return
-        if current_name in locked:
-            raise StageError("selected lock repeats a package")
-        locked[current_name] = (current_version, current_hashes)
-        current_name = current_version = None
-        current_hashes = []
-
-    for line in lock_text.splitlines():
-        candidate = line.strip()
-        if not candidate or candidate.startswith("#"):
-            continue
-        if candidate.endswith("\\"):
-            candidate = candidate[:-1].rstrip()
-        if candidate.startswith("--hash=sha256:"):
-            if current_name is None or not re.fullmatch(r"--hash=sha256:[0-9a-f]{64}", candidate):
-                raise StageError("selected lock has an unexpected or malformed hash option")
-            current_hashes.append(candidate.rsplit(":", 1)[1])
-            continue
-        if candidate.startswith("-"):
-            raise StageError("selected lock contains an unsupported option")
-        finish()
-        match = re.fullmatch(r"([A-Za-z0-9_.-]+)==([^\s]+)", candidate)
-        if not match:
-            raise StageError("selected lock contains a non-pinned or malformed requirement")
-        current_name, current_version = match.groups()
-    finish()
-    normalized = {name.lower().replace("_", "-"): (version, hashes) for name, (version, hashes) in locked.items()}
-    if len(normalized) != count:
-        raise StageError(f"selected lock does not contain {count} unique name==version rows")
-    expected_pins = {row["name"].lower().replace("_", "-"): (row["version"], [row["sha256"]]) for row in rows}
-    if normalized != expected_pins:
+    actual_pins = _locked_pins(lock_text)
+    expected_pins = {
+        row["name"].lower().replace("_", "-"): (row["version"], [row["sha256"]])
+        for row in rows
+    }
+    if len(actual_pins) != count or actual_pins != expected_pins:
         raise StageError("selected lock pins or hashes do not match the artifact manifest")
 
 
@@ -374,101 +434,128 @@ def verify_actions_archive_digest(actual_sha256: str, expected_sha256: str) -> N
         raise StageError("Actions artifact archive digest mismatch")
 
 
-def stage(manifest_path: Path, lockfile: Path, destination: Path) -> dict[str, Any]:
+def _validate_local_source(row: dict[str, Any]) -> None:
+    spec = {key: row[key] for key in ("filename", "sha256", "size_bytes")}
+    relative = checked_repo_wheel_path(row["source"].get("path", ""))
+    path = ROOT.joinpath(*relative.parts)
+    if path.is_symlink() or not path.is_file() or path.stat().st_size != spec["size_bytes"] or sha256_file(path) != spec["sha256"]:
+        raise StageError(f"repository wheelhouse source mismatch: {spec['filename']}")
+
+
+def _validate_https_source(row: dict[str, Any]) -> None:
+    from urllib.parse import urlsplit
+
+    parsed = urlsplit(row["source"].get("url", ""))
+    if (parsed.scheme != "https" or parsed.hostname not in ALLOWED_HOSTS or parsed.username
+            or parsed.password or parsed.fragment or parsed.query):
+        raise StageError("manifest contains a noncanonical or unapproved HTTPS URL")
+
+
+def _validate_actions_source(row: dict[str, Any], groups: dict) -> None:
+    source = row["source"]
+    max_size = source.get("max_archive_bytes")
+    if (not isinstance(source.get("repo"), str)
+            or not re.fullmatch(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+", source["repo"])
+            or not isinstance(source.get("artifact_id"), int) or source["artifact_id"] <= 0
+            or not isinstance(source.get("run_id"), int) or source["run_id"] <= 0
+            or not isinstance(source.get("artifact_name"), str) or not source["artifact_name"]
+            or not re.fullmatch(r"[0-9a-f]{40}", source.get("source_revision", ""))
+            or not re.fullmatch(r"[0-9a-f]{64}", source.get("archive_sha256", ""))
+            or not isinstance(max_size, int) or not 1 <= max_size <= 2_147_483_648):
+        raise StageError("manifest contains an invalid Actions artifact pin or size bound")
+    groups.setdefault((source["repo"], source["artifact_id"]), []).append(row)
+
+
+def _validate_source_rows(rows: list[dict[str, Any]]) -> dict[tuple[str, int], list[dict[str, Any]]]:
+    if len({row.get("filename") for row in rows}) != len(rows) or len({row.get("name") for row in rows}) != len(rows):
+        raise StageError("manifest repeats a distribution or wheel filename")
+    groups: dict[tuple[str, int], list[dict[str, Any]]] = {}
+    for row in rows:
+        check_spec({key: row[key] for key in ("filename", "sha256", "size_bytes")})
+        kind = row["source"].get("kind")
+        if kind == "repo_wheelhouse":
+            _validate_local_source(row)
+        elif kind == "https":
+            _validate_https_source(row)
+        elif kind == "actions_artifact":
+            _validate_actions_source(row, groups)
+        elif kind == "actions_artifact_pending":
+            raise StageError(f"Actions artifact handoff is not bound yet: {row['filename']}")
+        else:
+            raise StageError(f"unknown source route for {row['filename']}")
+    return groups
+
+
+def _verify_action_groups(groups: dict, token: str) -> dict[tuple[str, int], int]:
+    sizes = {}
+    for key, rows in groups.items():
+        source = rows[0]["source"]
+        binding = tuple(source[name] for name in (
+            "archive_sha256", "max_archive_bytes", "run_id", "artifact_name", "source_revision"
+        ))
+        if any(tuple(row["source"][name] for name in (
+                "archive_sha256", "max_archive_bytes", "run_id", "artifact_name", "source_revision"
+        )) != binding for row in rows):
+            raise StageError("one Actions artifact ID has conflicting identity or digest bindings")
+        sizes[key] = verify_actions_metadata(source, token)
+    return sizes
+
+
+def _prepare_stage(manifest_path: Path, lockfile: Path, destination: Path):
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     if manifest.get("schema_version") != 1 or manifest.get("status") != "candidate-only; not activated":
         raise StageError("unsupported or non-candidate manifest")
     rows = manifest.get("artifact_sources")
     validate_lock(manifest, lockfile)
-    if len({row.get("filename") for row in rows}) != len(rows) or len({row.get("name") for row in rows}) != len(rows):
-        raise StageError("manifest repeats a distribution or wheel filename")
-    groups: dict[tuple[str, int], list[dict[str, Any]]] = {}
-    for row in rows:
-        spec = {key: row[key] for key in ("filename", "sha256", "size_bytes")}
-        check_spec(spec)
-        source = row["source"]
-        kind = source.get("kind")
-        if kind == "repo_wheelhouse":
-            relative = checked_repo_wheel_path(source.get("path", ""))
-            local_path = ROOT.joinpath(*relative.parts)
-            if local_path.is_symlink() or not local_path.is_file() or local_path.stat().st_size != spec["size_bytes"] or sha256_file(local_path) != spec["sha256"]:
-                raise StageError(f"repository wheelhouse source mismatch: {spec['filename']}")
-        elif kind == "https":
-            from urllib.parse import urlsplit
-
-            parsed = urlsplit(source.get("url", ""))
-            if (parsed.scheme != "https" or parsed.hostname not in ALLOWED_HOSTS or parsed.username
-                    or parsed.password or parsed.fragment or parsed.query):
-                raise StageError("manifest contains a noncanonical or unapproved HTTPS URL")
-        elif kind == "actions_artifact":
-            archive_hash = source.get("archive_sha256", "")
-            max_archive_bytes = source.get("max_archive_bytes")
-            if (not isinstance(source.get("repo"), str)
-                    or not re.fullmatch(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+", source["repo"])
-                    or not isinstance(source.get("artifact_id"), int) or source["artifact_id"] <= 0
-                    or not isinstance(source.get("run_id"), int) or source["run_id"] <= 0
-                    or not isinstance(source.get("artifact_name"), str) or not source["artifact_name"]
-                    or not re.fullmatch(r"[0-9a-f]{40}", source.get("source_revision", ""))
-                    or not re.fullmatch(r"[0-9a-f]{64}", archive_hash)
-                    or not isinstance(max_archive_bytes, int) or not 1 <= max_archive_bytes <= 2_147_483_648):
-                raise StageError("manifest contains an invalid Actions artifact pin or size bound")
-            groups.setdefault((source["repo"], source["artifact_id"]), []).append(row)
-        elif kind == "actions_artifact_pending":
-            raise StageError(f"Actions artifact handoff is not bound yet: {spec['filename']}")
-        else:
-            raise StageError(f"unknown source route for {spec['filename']}")
-
+    groups = _validate_source_rows(rows)
     token = os.environ.get("GH_TOKEN") or os.environ.get("GITHUB_TOKEN")
     if groups and not token:
         raise StageError("GH_TOKEN or GITHUB_TOKEN is required for hosted build artifacts")
-    if destination.is_symlink():
-        raise StageError("output directory must not be a symbolic link")
-    if destination.exists() and any(destination.iterdir()):
-        raise StageError("output directory must be empty")
-    action_sizes = {}
-    for key, grouped_rows in groups.items():
-        source = grouped_rows[0]["source"]
-        binding = (source["archive_sha256"], source["max_archive_bytes"], source["run_id"],
-                   source["artifact_name"], source["source_revision"])
-        if any((item["source"]["archive_sha256"], item["source"]["max_archive_bytes"],
-                item["source"]["run_id"], item["source"]["artifact_name"],
-                item["source"]["source_revision"]) != binding for item in grouped_rows):
-            raise StageError("one Actions artifact ID has conflicting identity or digest bindings")
-        action_sizes[key] = verify_actions_metadata(source, token or "")
-    destination.mkdir(parents=True, exist_ok=True)
+    if destination.is_symlink() or (destination.exists() and any(destination.iterdir())):
+        raise StageError("output directory must be a non-symlink empty directory")
+    action_sizes = _verify_action_groups(groups, token) if groups else {}
+    return manifest, rows, groups, token, action_sizes
 
+
+def _stage_direct_wheels(rows: list[dict[str, Any]], destination: Path) -> list[dict[str, Any]]:
     results = []
     for row in rows:
-        spec = {key: row[key] for key in ("filename", "sha256", "size_bytes")}
-        check_spec(spec)
         source = row["source"]
-        kind = source["kind"]
+        spec = {key: row[key] for key in ("filename", "sha256", "size_bytes")}
         target = destination / spec["filename"]
-        if kind == "repo_wheelhouse":
+        if source["kind"] == "repo_wheelhouse":
             relative = checked_repo_wheel_path(source["path"])
             copy_checked(ROOT.joinpath(*relative.parts), target, spec)
-        elif kind == "https":
+        elif source["kind"] == "https":
             download_https(source["url"], target, spec)
-        elif kind == "actions_artifact":
-            continue
         else:
-            raise StageError(f"unknown source route for {spec['filename']}")
-        results.append({"filename": spec["filename"], "sha256": spec["sha256"], "size_bytes": spec["size_bytes"], "source_kind": kind})
+            continue
+        results.append({**spec, "source_kind": source["kind"]})
+    return results
 
-    by_group = {}
-    for key, grouped_rows in groups.items():
-        source = grouped_rows[0]["source"]
-        payload = actions_zip(source, token or "", action_sizes[key])
-        artifact_rows = [{"filename": item["filename"], "sha256": item["sha256"], "size_bytes": item["size_bytes"]} for item in grouped_rows]
+
+def _stage_action_wheels(groups: dict, token: str, action_sizes: dict,
+                         destination: Path) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    results = []
+    receipts = {}
+    for key, rows in groups.items():
+        source = rows[0]["source"]
+        payload = actions_zip(source, token, action_sizes[key])
+        expected = [{key: row[key] for key in ("filename", "sha256", "size_bytes")} for row in rows]
         try:
-            verified = extract_actions_wheels(payload, artifact_rows, destination)
+            verified = extract_actions_wheels(payload, expected, destination)
         finally:
             payload.close()
-        by_group[str(key[1])] = verified
+        receipts[str(key[1])] = verified
         results.extend({**item, "source_kind": "actions_artifact", "artifact_id": key[1]} for item in verified)
+    return results, receipts
 
+
+def _write_staging_receipt(manifest_path: Path, lockfile: Path, manifest: dict[str, Any],
+                           rows: list[dict[str, Any]], results: list[dict[str, Any]],
+                           action_receipts: dict[str, Any], destination: Path) -> dict[str, Any]:
     expected_names = {row["filename"] for row in rows}
-    actual_names = {path.name for path in destination.iterdir() if path.is_file() and path.name != "staging-receipt.json"}
+    actual_names = {path.name for path in destination.iterdir() if path.is_file()}
     if actual_names != expected_names:
         raise StageError("staged directory does not exactly match selected artifact manifest")
     requirements = destination / "requirements.txt"
@@ -480,11 +567,24 @@ def stage(manifest_path: Path, lockfile: Path, destination: Path) -> dict[str, A
         "manifest_sha256": sha256_file(manifest_path),
         "requirements_sha256": sha256_file(requirements),
         "selected_count": len(results),
-        "actions_artifacts": by_group,
+        "actions_artifacts": action_receipts,
         "wheels": sorted(results, key=lambda item: item["filename"]),
     }
-    (destination / "staging-receipt.json").write_text(json.dumps(receipt, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    (destination / "staging-receipt.json").write_text(
+        json.dumps(receipt, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+    )
     return receipt
+
+
+def stage(manifest_path: Path, lockfile: Path, destination: Path) -> dict[str, Any]:
+    manifest, rows, groups, token, action_sizes = _prepare_stage(manifest_path, lockfile, destination)
+    destination.mkdir(parents=True, exist_ok=True)
+    results = _stage_direct_wheels(rows, destination)
+    action_results, action_receipts = _stage_action_wheels(groups, token or "", action_sizes, destination)
+    results.extend(action_results)
+    return _write_staging_receipt(
+        manifest_path, lockfile, manifest, rows, results, action_receipts, destination
+    )
 
 
 def main() -> int:

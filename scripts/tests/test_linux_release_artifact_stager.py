@@ -10,6 +10,7 @@ import unittest
 import urllib.request
 import zipfile
 from pathlib import Path
+from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import stage_linux_release_artifacts as stager
@@ -17,6 +18,30 @@ import stage_linux_release_artifacts as stager
 
 class RedirectResponse:
     headers = {}
+
+
+class FakeWheelResponse:
+    headers = {"Content-Length": "4"}
+
+    def __init__(self) -> None:
+        self._chunks = [b"abc"]
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *_args) -> None:
+        return None
+
+    def geturl(self) -> str:
+        return "https://files.pythonhosted.org/packages/demo.whl"
+
+    def read(self, _size: int) -> bytes:
+        return self._chunks.pop(0) if self._chunks else b""
+
+
+class FakeOpener:
+    def open(self, _request, timeout: int):
+        return FakeWheelResponse()
 
 
 class LinuxReleaseArtifactStagerTests(unittest.TestCase):
@@ -98,6 +123,34 @@ class LinuxReleaseArtifactStagerTests(unittest.TestCase):
         with self.assertRaisesRegex(stager.StageError, "archive digest"):
             stager.verify_actions_archive_digest(actual, "0" * 64)
 
+    def test_failed_https_hash_check_removes_partial_output(self) -> None:
+        content_hash = hashlib.sha256(b"abcd").hexdigest()
+        spec = {"filename": "demo.whl", "size_bytes": 4, "sha256": content_hash}
+        with tempfile.TemporaryDirectory() as directory:
+            target = Path(directory) / "demo.whl"
+            with mock.patch.object(stager.urllib.request, "build_opener", return_value=FakeOpener()):
+                with self.assertRaisesRegex(stager.StageError, "download size or digest mismatch"):
+                    stager.download_https("https://files.pythonhosted.org/demo.whl", target, spec)
+            self.assertFalse(target.exists())
+
+    def test_failed_actions_wheel_hash_check_removes_partial_output(self) -> None:
+        content = b"abc"
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            archive_path = root / "artifact.zip"
+            with zipfile.ZipFile(archive_path, "w") as archive:
+                archive.writestr("demo-1.0-py3-none-any.whl", content)
+            out = root / "out"
+            out.mkdir()
+            with archive_path.open("rb") as archive:
+                with self.assertRaisesRegex(stager.StageError, "digest mismatch"):
+                    stager.extract_actions_wheels(
+                        archive, [{"filename": "demo-1.0-py3-none-any.whl",
+                                   "sha256": hashlib.sha256(b"different").hexdigest(),
+                                   "size_bytes": len(content)}], out,
+                    )
+            self.assertFalse((out / "demo-1.0-py3-none-any.whl").exists())
+
     def test_pending_artifact_fails_before_creating_output(self) -> None:
         wheel_hash = hashlib.sha256(b"wheel").hexdigest()
         lock = f"demo-package==1.2.3 \\\n    --hash=sha256:{wheel_hash}\n"
@@ -156,6 +209,14 @@ class TritonWorkflowContractTests(unittest.TestCase):
         self.assertNotIn("triton-3.7.1-cp313-", upload)
         self.assertIn("package/triton-external-toolchain-subset.json", upload)
         self.assertIn("candidate_input_sha256", workflow)
+        ownership_handoff = workflow.split("sudo chown", 1)[1].split("\n          sudo unshare", 1)[0]
+        self.assertIn("triton-3.7.1+capsize.2-", ownership_handoff)
+        verify_output = workflow.index("subset differs from reviewed pin")
+        ownership_change = workflow.index("sudo chown")
+        receipt_binding = workflow.index("- name: Bind the safe output to this workflow run")
+        self.assertLess(verify_output, ownership_change)
+        self.assertLess(ownership_change, receipt_binding)
+        self.assertIn("sudo unshare --net", workflow[workflow.rfind("sudo unshare --net", 0, verify_output):verify_output])
 
 
 if __name__ == "__main__":

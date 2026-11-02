@@ -112,6 +112,12 @@ jobs:
             python3 -I -S scripts/build_triton_external_toolchain_subset.py \
             --input "$RUNNER_TEMP/triton-base/triton-3.7.1+capsize.1-cp313-cp313-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl" \
             --output-dir "$RUNNER_TEMP/triton-subset"
+          sudo unshare --net -- env -i PATH=/usr/bin:/bin LC_ALL=C \
+            python3 -I -S -c 'import hashlib,json,sys; from pathlib import Path; p=Path(sys.argv[1]); s=json.loads(Path(sys.argv[2]).read_text())["subset_output"]; d=hashlib.file_digest(p.open("rb"),"sha256").hexdigest(); assert p.name==s["filename"] and p.stat().st_size==s["size_bytes"] and d==s["sha256"], "subset differs from reviewed pin"' \
+            "$RUNNER_TEMP/triton-subset/triton-3.7.1+capsize.2-cp313-cp313-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl" \
+            package/triton-subset-candidate-input.json
+          sudo chown "$(id -u):$(id -g)" \
+            "$RUNNER_TEMP/triton-subset/triton-3.7.1+capsize.2-cp313-cp313-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl"
 
       - name: Bind the safe output to this workflow run
         env:
