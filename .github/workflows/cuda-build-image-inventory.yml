@@ -149,7 +149,15 @@ jobs:
     name: Build reviewed CUDA source wheel
     runs-on: ubuntu-24.04
     timeout-minutes: 180
+    permissions:
+      contents: read
     steps:
+      - name: Check out the exact reviewed patch source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+
       - name: Pull the supported amd64 CUDA image
         shell: bash
         run: |
