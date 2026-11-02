@@ -206,6 +206,12 @@ jobs:
             curl --fail --location --silent --show-error "$url" --output "$root/backend/$filename"
             printf '%s  %s\n' "$sha" "$root/backend/$filename" | sha256sum --check --status
           }
+          # setup-python runs the release archive's pip-upgrade step during
+          # installation. Keep that operation offline and bind it to this
+          # exact reviewed wheel instead of resolving pip from an index.
+          fetch_wheel pip-26.2.2-py3-none-any.whl \
+            'https://files.pythonhosted.org/packages/3f/06/3e4420302363fbb71be3c7f35ce042f54bfca330e3e66b3a2e3c4cca579f/pip-26.2.2-py3-none-any.whl' \
+            fd7f4dfa8190e014013b9f08f3e973f4e4c26ffd179a204895533a7254813a70
           fetch_wheel scikit_build_core-1.1.1-py3-none-any.whl \
             'https://files.pythonhosted.org/packages/01/1b/83913d6d5c6a7f8ad5bf5d67b2d57ab09475f1bb9dd0c7a3f44067d59b90/scikit_build_core-1.1.1-py3-none-any.whl' \
             6f6d6cf600e2e9639fd258ecd11cfc19bd189354b968916a519c6793e7e26237
@@ -233,6 +239,7 @@ jobs:
         env:
           PIP_NO_INDEX: '1'
           PIP_DISABLE_PIP_VERSION_CHECK: '1'
+          PIP_FIND_LINKS: ${{ runner.temp }}/cuda-wheel/backend
         with:
           python-version: '3.13.5'
 
@@ -242,6 +249,7 @@ jobs:
           set -euo pipefail
           root="$RUNNER_TEMP/cuda-wheel"
           python --version
+          python -m pip --version
           mkdir -p "$root/backend-site"
           python - "$root/backend" "$root/backend-site" <<'PY'
           import hashlib
