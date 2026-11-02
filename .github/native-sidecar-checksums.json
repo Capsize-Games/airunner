@@ -1,18 +1,18 @@
 {
-  "tag": "v0.1.0",
-  "source_commit": "0554185f27ac7db8f58e1ae8d59ba041e4118e62",
-  "source_review_status": "pending",
-  "source_review_note": "The pinned source and dependencies have not completed review; do not clone or execute this revision.",
-  "provenance_status": "pending-verification",
-  "provenance_note": "Archive bytes have not been independently obtained and matched to this source revision. The release API lookup returned 404 on 2026-11-01. Do not populate a digest from the downloaded archive or an unverified adjacent checksum.",
+  "tag": "v0.2.3",
+  "source_commit": "35a029f765bd25abdf792b968f229ea1f72ca5e2",
+  "source_review_status": "reviewed",
+  "source_review_note": "Bounded static review recorded in release-planning/services/input-reviews/airunner-native-0.2.3.md and private airunner-native-maintenance review/v0.2.3. Covers this exact source SHA, release/build scripts and workflow, exact llama.cpp and whisper.cpp pins, CMake flags, expected network paths, build hooks, and required licenses. No source build or upstream hooks were run during review; toolchain package inputs and runtime behavior remain outside this review.",
+  "provenance_status": "verified",
+  "provenance_note": "The published immutable v0.2.3 release was fetched from GitHub. Both archive SHA-256 values were independently calculated and matched the archive manifests and GitHub asset digests. Both provenance files identify source SHA 35a029f765bd25abdf792b968f229ea1f72ca5e2 and refs/tags/v0.2.3.",
   "archives": {
     "linux": {
       "asset": "runtime-sidecars-linux.tar.gz",
-      "sha256": null
+      "sha256": "bc22b5928d3b566299fd7cf4cc4c2495bd54a978d0db244c232aaa094f91b15e"
     },
     "windows": {
       "asset": "runtime-sidecars-windows.tar.gz",
-      "sha256": null
+      "sha256": "4755b91f564d56eac6ccb7027cd86a3bb18456354388e4d80e98f30cb2ce5bb1"
     }
   }
 }

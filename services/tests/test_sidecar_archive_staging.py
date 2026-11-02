@@ -121,11 +121,15 @@ def test_native_tar_dot_prefix_and_executable_mode_are_supported(tmp_path):
 
 def test_repository_pin_fails_closed_while_provenance_is_pending(tmp_path):
     bundle, archive = c01._stage_fixture(tmp_path)
+    checksums, tag_file = c01._write_test_sidecar_pin(tmp_path, archive)
+    metadata = json.loads(checksums.read_text(encoding="utf-8"))
+    metadata["provenance_status"] = "pending-verification"
+    checksums.write_text(json.dumps(metadata), encoding="utf-8")
     before = (bundle / "bundle-manifest.json").read_bytes()
     proc = c01._run_stage(
         "--tarball", str(archive),
-        "--checksums", str(c01._ROOT / ".github/native-sidecar-checksums.json"),
-        "--tag-file", str(c01._ROOT / ".github/native-sidecar-version"),
+        "--checksums", str(checksums),
+        "--tag-file", str(tag_file),
         "--platform", "linux", "--bundle", str(bundle), "--",
         "llama-server", "whisper-server",
     )
@@ -135,24 +139,38 @@ def test_repository_pin_fails_closed_while_provenance_is_pending(tmp_path):
     assert list((bundle / "bin").iterdir()) == []
 
 
-def test_pending_archive_pin_can_be_rejected_before_download():
+def test_pending_archive_pin_can_be_rejected_before_download(tmp_path):
     helper = c01._ROOT / "scripts" / "sidecar_archive.py"
+    checksums = c01._ROOT / ".github/native-sidecar-checksums.json"
+    tag_file = c01._ROOT / ".github/native-sidecar-version"
+    metadata = json.loads(checksums.read_text(encoding="utf-8"))
+    metadata["provenance_status"] = "pending-verification"
+    pending_checksums = tmp_path / "pending-sidecar-pin.json"
+    pending_checksums.write_text(json.dumps(metadata), encoding="utf-8")
     result = subprocess.run(
         [sys.executable, str(helper), "check-pin", "--checksums",
-         str(c01._ROOT / ".github/native-sidecar-checksums.json"),
-         "--tag-file", str(c01._ROOT / ".github/native-sidecar-version"),
+         str(pending_checksums), "--tag-file", str(tag_file),
          "--platform", "linux"],
         capture_output=True, text=True, check=False,
     )
+    pending_checksums.unlink()
     assert result.returncode != 0
     assert "pending verification" in result.stderr
 
 
-def test_pending_source_review_rejects_before_clone_or_repository_access():
+def test_pending_source_review_rejects_before_clone_or_repository_access(tmp_path):
     helper = c01._ROOT / "scripts" / "sidecar_archive.py"
+    source_pin = json.loads(
+        (c01._ROOT / ".github/native-sidecar-checksums.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    source_pin["source_review_status"] = "pending"
+    source_pin_file = tmp_path / "pending-source-pin.json"
+    source_pin_file.write_text(json.dumps(source_pin), encoding="utf-8")
     result = subprocess.run(
         [sys.executable, str(helper), "check-source-pin", "--checksums",
-         str(c01._ROOT / ".github/native-sidecar-checksums.json"),
+         str(source_pin_file),
          "--tag-file", str(c01._ROOT / ".github/native-sidecar-version")],
         capture_output=True, text=True, check=False,
     )

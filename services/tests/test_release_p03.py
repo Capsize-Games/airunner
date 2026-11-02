@@ -57,14 +57,19 @@ def test_tag_and_digest_metadata_bind_one_native_sidecar_source() -> None:
     tag = lines[0].strip()
     assert tag and "/" not in tag and " " not in tag, raw
     metadata = json.loads(_read_text(_CHECKSUM_FILE))
-    assert metadata["tag"] == tag == "v0.1.0"
-    assert metadata["source_commit"] == "0554185f27ac7db8f58e1ae8d59ba041e4118e62"
-    assert metadata["source_review_status"] == "pending"
-    assert "do not clone or execute" in metadata["source_review_note"]
-    assert metadata["provenance_status"] == "pending-verification"
-    assert "returned 404 on 2026-11-01" in metadata["provenance_note"]
-    assert metadata["archives"]["linux"]["sha256"] is None
-    assert metadata["archives"]["windows"]["sha256"] is None
+    assert metadata["tag"] == tag == "v0.2.3"
+    assert metadata["source_commit"] == "35a029f765bd25abdf792b968f229ea1f72ca5e2"
+    assert metadata["source_review_status"] == "reviewed"
+    assert "bounded static review" in metadata["source_review_note"].lower()
+    assert "toolchain package inputs" in metadata["source_review_note"]
+    assert metadata["provenance_status"] == "verified"
+    assert "independently calculated" in metadata["provenance_note"]
+    assert metadata["archives"]["linux"]["sha256"] == (
+        "bc22b5928d3b566299fd7cf4cc4c2495bd54a978d0db244c232aaa094f91b15e"
+    )
+    assert metadata["archives"]["windows"]["sha256"] == (
+        "4755b91f564d56eac6ccb7027cd86a3bb18456354388e4d80e98f30cb2ce5bb1"
+    )
 
 
 def test_removed_in_repo_sidecar_build_stays_removed() -> None:
