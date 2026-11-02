@@ -36,8 +36,11 @@ wrapper and gitlink commits, reconstructs clean source trees, verifies the
 reviewed backend wheels and CMake archive by SHA-256, disables network during
 CMake compilation, and verifies the configured `120a-real` target and an SM
 120-family code object before producing a short-lived candidate artifact. The
-pinned CUDA 12.9.2 image inventory was completed in hosted run `41363193817`;
-no source wheel build has been run or claimed here.
+pinned CUDA 12.9.2 image inventory was completed in hosted run `41363193817`.
+The first source-wheel attempt, run `41371760061`, failed during CMake discovery
+before compilation and produced no wheel. Its scrubbed environment omitted the
+backend's CI marker, leaving a five-second tool-discovery timeout around Docker
+startup. The recipe now retains that marker and explicitly probes CMake first.
 
 The current workflow disables Git hooks in each temporary source repository,
 pins the existing `actions/setup-python` action by full commit, and selects
@@ -45,10 +48,13 @@ CPython 3.13.5. It verifies the three backend wheel hashes, extracts those
 wheel files without invoking pip, and calls the reviewed
 `scikit_build_core.build.build_wheel` API directly. The backend receives a
 scrubbed environment, including the selected interpreter's shared-library path;
-CMake compilation runs in the network-disabled container. The build job is enabled
-for this recipe; it has not yet produced a wheel.
+CMake compilation runs in the network-disabled container. The interpreter
+installer receives `PIP_NO_INDEX=1` to prevent a network upgrade of its bundled
+pip. The first failed run did upgrade pip to 26.2.2 during interpreter setup;
+that run does not establish a validated build input or wheel. The build job is
+enabled for the corrected recipe; it has not yet produced a wheel.
 
 The wheel target is limited to Linux x86_64, CPython 3.13, CUDA Toolkit 12.9,
 and `120a-real`. It is not validated for runtime behavior, other GPUs, or model
-fit. The job does not use the official credential-bearing Python sdist, load a
-model, or access a GPU.
+fit. The job uses the clean reconstructed Git source, loads no model, and
+accesses no GPU.

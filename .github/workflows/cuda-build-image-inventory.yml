@@ -230,6 +230,9 @@ jobs:
 
       - name: Set up reviewed Python build host
         uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        env:
+          PIP_NO_INDEX: '1'
+          PIP_DISABLE_PIP_VERSION_CHECK: '1'
         with:
           python-version: '3.13.5'
 
@@ -331,8 +334,9 @@ jobs:
           export CMAKE_BUILD_PARALLEL_LEVEL=2 SOURCE_DATE_EPOCH=1777269304
           export CMAKE_ARGS='-DLLAMA_BUILD=ON -DLLAVA_BUILD=ON -DGGML_CUDA=ON -DGGML_NATIVE=OFF -DGGML_CUDA_ARCHITECTURES=120a-real -DCMAKE_CUDA_ARCHITECTURES=120a-real -DGGML_CUDA_CUB_3DOT2=OFF -DGGML_CUDA_NCCL=OFF -DLLAMA_CURL=OFF -DFETCHCONTENT_FULLY_DISCONNECTED=ON -DCMAKE_EXE_LINKER_FLAGS=-Wl,-rpath-link,/tmp/cuda-stubs'
           export PYTHONPATH="$root/backend-site"
+          timeout 30s "$CMAKE_EXECUTABLE" -E capabilities > "$root/cmake-capabilities.json"
           env -i \
-            PATH="$PATH" HOME="$tmp" TMPDIR="$tmp" \
+            PATH="$PATH" HOME="$tmp" TMPDIR="$tmp" CI=1 \
             LD_LIBRARY_PATH="${pythonLocation:?}/lib" \
             CUDA_IMAGE="$CUDA_IMAGE" CUDA_SOURCE="$CUDA_SOURCE" \
             CUDA_BUILD="$CUDA_BUILD" CUDA_TMP="$CUDA_TMP" \

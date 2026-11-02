@@ -16,6 +16,9 @@ def test_cuda_source_recipe_uses_reviewed_python_and_backend_directly():
         in build_job
     )
     assert "python-version: '3.13.5'" in build_job
+    assert "PIP_NO_INDEX: '1'" in build_job
+    assert 'TMPDIR="$tmp" CI=1' in build_job
+    assert 'timeout 30s "$CMAKE_EXECUTABLE" -E capabilities' in build_job
     assert "from scikit_build_core.build import build_wheel" in build_job
     assert "filename = build_wheel(" in build_job
     assert "python3 -m pip" not in build_job
