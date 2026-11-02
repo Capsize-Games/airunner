@@ -1,0 +1,22 @@
+{
+  "actions_archive_max_bytes": 1073741824,
+  "hardening_base": {
+    "filename": "triton-3.7.1+capsize.1-cp313-cp313-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl",
+    "sha256": "2143a1a884c128773ae892a45deb8b6ba432779ae8606b0d136a372d67cb86ac",
+    "size_bytes": 196383626
+  },
+  "schema_version": 1,
+  "source": {
+    "filename": "triton-3.7.1-cp313-cp313-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl",
+    "sha256": "59688b9b924f887316dcd0fae9e8cbe697ee1d1f6ab386723982cc9ecdebee01",
+    "size_bytes": 197169871,
+    "url": "https://download-r2.pytorch.org/whl/triton-3.7.1-cp313-cp313-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl"
+  },
+  "source_size_provenance": "Observed byte size for the exact pinned source wheel digest.",
+  "subset_output": {
+    "filename": "triton-3.7.1+capsize.2-cp313-cp313-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl",
+    "sha256": "a90ecd98dd9aa6207e820396a2e2d5ee5ef9c118cf59d25098955b35f8ac4e93",
+    "size_bytes": 138821684
+  },
+  "subset_recipe_sha256": "fdcd4e9788e890c6b6539e749a458863fda1f9ebd24f37a08c01bd847d297db5"
+}

@@ -6,12 +6,15 @@ import hashlib
 import io
 import json
 import os
+import sys
+import tempfile
+import unittest
 import zipfile
 from pathlib import Path
+from unittest import mock
 
-import pytest
-
-from scripts.build_triton_external_toolchain_subset import WheelError, build_candidate
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from build_triton_external_toolchain_subset import WheelError, build_candidate
 
 
 MANIFEST_PATH = Path(__file__).resolve().parents[2] / "package" / "triton-external-toolchain-subset.json"
@@ -73,107 +76,115 @@ def _output_path(tmp_path: Path, manifest: dict, folder: str = "out") -> Path:
     return output_dir / manifest["subset"]["output_filename"]
 
 
-def test_subset_preserves_jit_payload_metadata_and_valid_record(tmp_path: Path) -> None:
-    manifest, source, expected_libdevice = _fixture(tmp_path)
-    output = _output_path(tmp_path, manifest)
+class TritonSubsetTests(unittest.TestCase):
+    def setUp(self) -> None:
+        self._temporary = tempfile.TemporaryDirectory()
+        self.tmp_path = Path(self._temporary.name)
 
-    receipt = build_candidate(source, output, manifest)
+    def tearDown(self) -> None:
+        self._temporary.cleanup()
 
-    assert receipt["record_verified"] is True
-    assert receipt["zip_crc_verified"] is True
-    assert receipt["excluded_members"] == 1
-    with zipfile.ZipFile(output) as archive:
-        names = set(archive.namelist())
-        assert "triton/backends/nvidia/bin/ptxas" not in names
-        assert archive.read("triton/backends/nvidia/lib/libdevice.10.bc") == expected_libdevice
-        assert archive.read("triton/core.py") == b"compile-time feature remains\n"
-        metadata = archive.read("triton-3.7.1+capsize.2.dist-info/METADATA")
-        assert b"Version: 3.7.1+capsize.2\n" in metadata
-        assert "triton-3.7.1+capsize.2.dist-info/RECORD" in names
+    def test_subset_preserves_jit_payload_metadata_and_valid_record(self) -> None:
+        manifest, source, expected_libdevice = _fixture(self.tmp_path)
+        output = _output_path(self.tmp_path, manifest)
+
+        receipt = build_candidate(source, output, manifest)
+
+        self.assertIs(receipt["record_verified"], True)
+        self.assertIs(receipt["zip_crc_verified"], True)
+        self.assertEqual(receipt["excluded_members"], 1)
+        with zipfile.ZipFile(output) as archive:
+            names = set(archive.namelist())
+            self.assertNotIn("triton/backends/nvidia/bin/ptxas", names)
+            self.assertEqual(archive.read("triton/backends/nvidia/lib/libdevice.10.bc"), expected_libdevice)
+            self.assertEqual(archive.read("triton/core.py"), b"compile-time feature remains\n")
+            metadata = archive.read("triton-3.7.1+capsize.2.dist-info/METADATA")
+            self.assertIn(b"Version: 3.7.1+capsize.2\n", metadata)
+            self.assertIn("triton-3.7.1+capsize.2.dist-info/RECORD", names)
+
+    def test_subset_output_is_deterministic_from_the_same_input(self) -> None:
+        manifest, source, _ = _fixture(self.tmp_path)
+        first = _output_path(self.tmp_path, manifest, "out-a")
+        second = _output_path(self.tmp_path, manifest, "out-b")
+
+        build_candidate(source, first, manifest)
+        build_candidate(source, second, manifest)
+        self.assertEqual(_hash(first.read_bytes()), _hash(second.read_bytes()))
+
+    def test_changed_excluded_member_fails_before_output(self) -> None:
+        manifest, source, _ = _fixture(self.tmp_path)
+        with zipfile.ZipFile(source) as archive:
+            files = {name: archive.read(name) for name in archive.namelist() if not name.endswith("/RECORD")}
+        files["triton/backends/nvidia/bin/ptxas"] = b"different tool bytes"
+        changed = self.tmp_path / "changed.whl"
+        _write_source_wheel(changed, files)
+        manifest["source"]["hardening_candidate"].update(
+            filename=changed.name, sha256=_hash(changed.read_bytes())
+        )
+        output = _output_path(self.tmp_path, manifest)
+
+        with self.assertRaisesRegex(WheelError, "pinned excluded member bytes changed"):
+            build_candidate(changed, output, manifest)
+        self.assertFalse(output.exists())
+
+    def test_invalid_source_record_fails_closed(self) -> None:
+        manifest, source, _ = _fixture(self.tmp_path)
+        with zipfile.ZipFile(source) as archive:
+            files = {name: archive.read(name) for name in archive.namelist()}
+        files["triton-3.7.1+capsize.1.dist-info/METADATA"] = b"changed without updating RECORD\n"
+        broken = self.tmp_path / "broken.whl"
+        with zipfile.ZipFile(broken, "w", compression=zipfile.ZIP_DEFLATED) as archive:
+            for name, content in files.items():
+                archive.writestr(name, content)
+        manifest["source"]["hardening_candidate"].update(
+            filename=broken.name, sha256=_hash(broken.read_bytes())
+        )
+        output = _output_path(self.tmp_path, manifest)
+
+        with self.assertRaisesRegex(WheelError, "wheel RECORD does not match"):
+            build_candidate(broken, output, manifest)
+        self.assertFalse(output.exists())
+
+    def test_pinned_output_digest_is_enforced(self) -> None:
+        manifest, source, _ = _fixture(self.tmp_path)
+        output = _output_path(self.tmp_path, manifest)
+
+        with self.assertRaisesRegex(WheelError, "differs from the pinned output"):
+            build_candidate(source, output, manifest, expected_output_sha256="0" * 64)
+        self.assertFalse(output.exists())
+
+    def test_noncanonical_paths_are_rejected_before_output(self) -> None:
+        for bad_name in ("triton//alias.py", "triton/./alias.py"):
+            with self.subTest(bad_name=bad_name):
+                manifest, source, _ = _fixture(self.tmp_path)
+                with zipfile.ZipFile(source) as archive:
+                    files = {name: archive.read(name) for name in archive.namelist() if not name.endswith("/RECORD")}
+                files[bad_name] = b"noncanonical member"
+                changed = self.tmp_path / ("noncanonical-" + str(len(bad_name)) + ".whl")
+                _write_source_wheel(changed, files)
+                manifest["source"]["hardening_candidate"].update(
+                    filename=changed.name, sha256=_hash(changed.read_bytes())
+                )
+                output = _output_path(self.tmp_path, manifest, "out-" + str(len(bad_name)))
+                with self.assertRaisesRegex(WheelError, "unsafe member path"):
+                    build_candidate(changed, output, manifest)
+                self.assertFalse(output.exists())
+
+    def test_concurrently_created_output_is_not_overwritten_or_deleted(self) -> None:
+        manifest, source, _ = _fixture(self.tmp_path)
+        output = _output_path(self.tmp_path, manifest)
+        original_link = os.link
+
+        def race_link(source_path, destination_path):
+            Path(destination_path).write_bytes(b"concurrent owner artifact")
+            return original_link(source_path, destination_path)
+
+        with mock.patch.object(os, "link", side_effect=race_link):
+            with self.assertRaises(FileExistsError):
+                build_candidate(source, output, manifest)
+        self.assertEqual(output.read_bytes(), b"concurrent owner artifact")
+        self.assertEqual(list(output.parent.glob("*.tmp")), [])
 
 
-def test_subset_output_is_deterministic_from_the_same_input(tmp_path: Path) -> None:
-    manifest, source, _ = _fixture(tmp_path)
-    first = _output_path(tmp_path, manifest, "out-a")
-    second = _output_path(tmp_path, manifest, "out-b")
-
-    build_candidate(source, first, manifest)
-    build_candidate(source, second, manifest)
-
-    assert _hash(first.read_bytes()) == _hash(second.read_bytes())
-
-
-def test_changed_excluded_member_fails_before_output(tmp_path: Path) -> None:
-    manifest, source, _ = _fixture(tmp_path)
-    files = {}
-    with zipfile.ZipFile(source) as archive:
-        files = {name: archive.read(name) for name in archive.namelist() if not name.endswith("/RECORD")}
-    files["triton/backends/nvidia/bin/ptxas"] = b"different tool bytes"
-    changed = tmp_path / "changed.whl"
-    _write_source_wheel(changed, files)
-    manifest["source"]["hardening_candidate"]["filename"] = changed.name
-    manifest["source"]["hardening_candidate"]["sha256"] = _hash(changed.read_bytes())
-    output = _output_path(tmp_path, manifest)
-
-    with pytest.raises(WheelError, match="pinned excluded member bytes changed"):
-        build_candidate(changed, output, manifest)
-    assert not output.exists()
-
-
-def test_invalid_source_record_fails_closed(tmp_path: Path) -> None:
-    manifest, source, _ = _fixture(tmp_path)
-    with zipfile.ZipFile(source) as archive:
-        files = {name: archive.read(name) for name in archive.namelist()}
-    files["triton-3.7.1+capsize.1.dist-info/METADATA"] = b"changed without updating RECORD\n"
-    broken = tmp_path / "broken.whl"
-    with zipfile.ZipFile(broken, "w", compression=zipfile.ZIP_DEFLATED) as archive:
-        for name, content in files.items():
-            archive.writestr(name, content)
-    manifest["source"]["hardening_candidate"]["filename"] = broken.name
-    manifest["source"]["hardening_candidate"]["sha256"] = _hash(broken.read_bytes())
-    output = _output_path(tmp_path, manifest)
-
-    with pytest.raises(WheelError, match="wheel RECORD does not match"):
-        build_candidate(broken, output, manifest)
-
-
-def test_pinned_output_digest_is_enforced(tmp_path: Path) -> None:
-    manifest, source, _ = _fixture(tmp_path)
-    output = _output_path(tmp_path, manifest)
-
-    with pytest.raises(WheelError, match="differs from the pinned output"):
-        build_candidate(source, output, manifest, expected_output_sha256="0" * 64)
-    assert not output.exists()
-
-
-@pytest.mark.parametrize("bad_name", ["triton//alias.py", "triton/./alias.py"])
-def test_noncanonical_paths_are_rejected_before_output(tmp_path: Path, bad_name: str) -> None:
-    manifest, source, _ = _fixture(tmp_path)
-    with zipfile.ZipFile(source) as archive:
-        files = {name: archive.read(name) for name in archive.namelist() if not name.endswith("/RECORD")}
-    files[bad_name] = b"noncanonical member"
-    changed = tmp_path / "noncanonical.whl"
-    _write_source_wheel(changed, files)
-    manifest["source"]["hardening_candidate"].update(
-        filename=changed.name, sha256=_hash(changed.read_bytes())
-    )
-    output = _output_path(tmp_path, manifest)
-    with pytest.raises(WheelError, match="unsafe member path"):
-        build_candidate(changed, output, manifest)
-    assert not output.exists()
-
-
-def test_concurrently_created_output_is_not_overwritten_or_deleted(tmp_path: Path, monkeypatch) -> None:
-    manifest, source, _ = _fixture(tmp_path)
-    output = _output_path(tmp_path, manifest)
-    original_link = os.link
-
-    def race_link(source_path, destination_path):
-        Path(destination_path).write_bytes(b"concurrent owner artifact")
-        original_link(source_path, destination_path)
-
-    monkeypatch.setattr(os, "link", race_link)
-    with pytest.raises(FileExistsError):
-        build_candidate(source, output, manifest)
-    assert output.read_bytes() == b"concurrent owner artifact"
-    assert not list(output.parent.glob("*.tmp"))
+if __name__ == "__main__":
+    unittest.main()
