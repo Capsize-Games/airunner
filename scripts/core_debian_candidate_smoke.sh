@@ -33,6 +33,8 @@ Path(sys.argv[1]).write_text(json.dumps({
     "checks": [
         "fresh Ubuntu runner; local candidate package install",
         "systemd start, authenticated API probe, stop, start and restart",
+        "installed service version and frozen executable identity",
+        "supervisor and API child exit after stop and restart",
     ] if os.environ["STATUS"] == "passed" else [],
     "exclusions": [
         "real model inference and model downloads",
@@ -109,6 +111,22 @@ assert_api_auth() {
     http://127.0.0.1:8080/api/v1/health/daemon >/dev/null
 }
 
+api_process_identity() {
+  local version
+  version=$(dpkg-query -W -f='${Version}' airunner)
+  version=${version%-*}
+  curl --silent --show-error --fail --connect-timeout 2 --max-time 3 \
+    http://127.0.0.1:8080/health | python3 -c '
+import json, pathlib, sys
+payload = json.load(sys.stdin)
+assert payload["version"] == sys.argv[1], "health version differs from installed package"
+pid = payload["pid"]
+assert type(pid) is int and pid > 1, "invalid API process identity"
+assert pathlib.Path(f"/proc/{pid}/exe").resolve() == pathlib.Path("/usr/lib/airunner/airunner-core")
+print(pid)
+' "$version"
+}
+
 assert_stopped() {
   local pid=$1
   for _ in $(seq 1 30); do
@@ -124,21 +142,27 @@ wait_for_health
 assert_api_auth
 initial_pid=$(systemctl show --property=MainPID --value airunner-headless.service)
 [[ "$initial_pid" =~ ^[1-9][0-9]*$ ]]
+initial_api_pid=$(api_process_identity)
 
 systemctl stop airunner-headless.service
 assert_stopped "$initial_pid"
+assert_stopped "$initial_api_pid"
 
 systemctl start airunner-headless.service
 wait_for_health
 second_pid=$(systemctl show --property=MainPID --value airunner-headless.service)
 [[ "$second_pid" =~ ^[1-9][0-9]*$ ]]
+second_api_pid=$(api_process_identity)
 systemctl restart airunner-headless.service
 wait_for_health
 third_pid=$(systemctl show --property=MainPID --value airunner-headless.service)
 [[ "$third_pid" =~ ^[1-9][0-9]*$ ]]
+third_api_pid=$(api_process_identity)
 assert_stopped "$second_pid"
+assert_stopped "$second_api_pid"
 [[ "$third_pid" != "$second_pid" ]] || { echo 'restart retained daemon PID' >&2; exit 1; }
 systemctl stop airunner-headless.service
 assert_stopped "$third_pid"
+assert_stopped "$third_api_pid"
 
 status=passed
