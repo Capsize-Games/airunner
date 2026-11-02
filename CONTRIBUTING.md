@@ -10,18 +10,18 @@ AI Runner in this repository is the headless model service and API. Contribution
 4. Run the relevant existing checks and report their exact results, including skips and unavailable resources.
 5. Open a pull request against the current base branch and respond to review feedback.
 
-Preserve the project's GPL-3.0-only license, upstream copyright notices, and third-party notices. Do not add generated artifacts, model weights, credentials, private policy data, customer data, or local runtime state to commits.
+Preserve the project's GPL-3.0-only license, upstream copyright notices, and third-party notices. Commit generated release inputs only when the packaging workflow needs them, with exact hashes, source provenance, and required license material. Keep model weights, credentials, private policy data, customer data, and local runtime state out of commits.
 
 ## Development environment
 
-The package metadata requires Python 3.13.3 or newer. New Python environments on this machine use `uv`:
+The package metadata requires Python 3.13.3 or newer; Linux candidate CI uses 3.13.5. New Python environments on this machine use `uv`:
 
 ```bash
-uv venv --python 3.13 .venv
+uv venv --python 3.13.5 .venv
 uv pip install --python .venv/bin/python -e "./services[development]"
 ```
 
-Dependency availability currently limits this clean install command. The services metadata requires `airunner-common~=6.1.7` and `facehuggershield==1.0.0`; the CI workflow checks out pinned source revisions because the corresponding PyPI releases are paused or yanked. The TTS extras require `airunner-tts-vendor`, whose PyPI availability is tracked in [issue #2413](https://github.com/Capsize-Games/airunner/issues/2413). Confirm the approved source for these dependencies before attempting package or model-profile installation. Do not treat an unresolved or skipped package-resolution check as a pass.
+The editable development command is not a verified full-profile installation. The base metadata requires `airunner-common~=6.1.8`; its reviewed wheel is available in the [common v6.1.8 release](https://github.com/Capsize-Games/airunner-common/releases/tag/v6.1.8), while PyPI publication remains paused. The [CORE constraints](package/constraints-linux-core.txt) bind its exact release wheel and the other reviewed CORE inputs. FacehuggerShield is optional through `legacy-shield`. OpenVoice/Melo vendor inputs are deferred from `linux-release`; the retained Linux TTS profile uses eSpeak. The full ML release lock remains pending, so the CORE installation checks do not establish that the development or ML extras resolve. See the [CORE candidate workflow](.github/workflows/core-debian-candidate.yml) and [service architecture](release-planning/services/ARCHITECTURE.md) for their separate checks and exclusions.
 
 ## Tests and reports
 

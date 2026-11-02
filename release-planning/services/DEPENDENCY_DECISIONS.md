@@ -122,9 +122,9 @@ Excluded OpenVoice/Melo and legacy Shield components remain outside the enabled 
 
 ## Full Linux diagnostic graph: 243 exact distributions
 
-The frozen diagnostic graph is `constraints.headless-security-v2.frozen.raw.txt` (local audit evidence), SHA-256 `0cf57de192c8f4c13ea39cff5129267ed1afc38d627d4c1fe25bb5f5df64b9cb`. Its matching local `headless-security-v2-resolution-evidence.json` records 243 distributions, `diagnostic-only-unactivated`, and no package installation or import. This graph is evidence for a candidate, not an active release lock.
+The current frozen diagnostic graph is `constraints.linux-release-v3.frozen.raw.txt` (local audit evidence), SHA-256 `5a75407a615ff49cb255017732f9954008051d925328acf4177f89d08ba21b14`. It contains 243 distributions. The prior V2 diagnostic graph (`0cf57de192c8f4c13ea39cff5129267ed1afc38d627d4c1fe25bb5f5df64b9cb`) is superseded. This graph remains separate from the active release lock.
 
-The pin inventory below is complete for that graph. It does not mean every distribution has a completed source review. Review documents cover earlier/different candidate graph hashes and bounded package scopes; they do not provide a machine-bound package-by-package review mapping for these 243 identities. The resolution evidence explicitly lists the full input review inventory and active lock generation as pending. Static source review, origin-policy acceptance, artifact checks, activation, and runtime acceptance are separate states.
+The list below enumerates every exact V3 distribution. All 243 selected wheel files passed hash, size, ZIP and RECORD checks. Component-specific isolated installs/imports and Libzim's Ubuntu 24 synthetic test are recorded separately; the complete graph has not been installed or accepted. Reviewed origin flags are covered by the owner's standing whitelist, including reviewed transitives. This does not clear actual source, advisory, license or runtime findings. Native crate notice manifests linked below enumerate their separately reviewed scopes; they are not additional Python distributions.
 
 ```text
 accelerate==1.14.0+capsize.1
@@ -208,7 +208,7 @@ jsonschema==4.26.0
 jsonschema-specifications==2025.9.1
 justext==3.0.2
 kornia==0.8.3
-kornia-rs==0.2.0
+kornia-rs==0.2.0+capsize.2
 langchain-core==1.4.7
 langchain-huggingface==1.2.2
 langchain-ollama==1.0.0
@@ -221,7 +221,7 @@ langgraph-sdk==0.4.6+capsize.1
 langsmith==0.14.4
 lazy-loader==0.6
 librosa==0.11.0
-libzim==3.7.0
+libzim==3.7.0+capsize.2
 lingua-language-detector==2.1.0
 llama-cloud==0.1.23
 llama-cpp-python==0.3.21+capsize.1
@@ -259,7 +259,7 @@ nvidia-cusparse-cu12==12.5.10.65
 nvidia-cusparselt-cu12==0.8.1
 nvidia-nccl-cu12==2.29.7
 nvidia-nvjitlink-cu12==12.9.86
-nvidia-nvshmem-cu12==3.4.5
+nvidia-nvshmem-cu12==3.4.5+capsize.1
 nvidia-nvtx-cu12==12.9.79
 ollama==0.6.3
 openmeteo-requests==1.4.0
@@ -274,7 +274,7 @@ parsel==1.12.1
 pillow==13.0.0
 platformdirs==4.12.4
 pooch==1.9.0
-primp==2.0.1+capsize.1
+primp==2.0.1+capsize.2
 propcache==0.5.4
 protego==0.7.0
 proto-plus==1.29.0
@@ -341,13 +341,13 @@ tldextract==5.4.0
 tokenizers==0.23.1+capsize.1
 tomesd==0.1.3
 torch==2.13.0+cu129
-torchaudio==2.11.0+cu129
+torchaudio==2.11.0+cu129.capsize.1
 torchcodec==0.16.0+cu129
-torchvision==0.28.0+cu129
+torchvision==0.28.0+cu129.capsize.1
 tqdm==4.70.1
 trafilatura==2.0.0
 transformers==5.22.0
-triton==3.7.1
+triton==3.7.1+capsize.2
 truststore==0.10.4
 twisted==26.10.0
 typeguard==4.6.0
@@ -378,7 +378,7 @@ zstandard==0.25.0
 | Scope | Recorded evidence | Disposition and limits |
 |---|---|---|
 | Source review | The dated input-review records are linked below. Each states its candidate hash, exact bounded scope, and exclusions. The 243 graph hash above differs from the hashes in several review records. | Source review is incomplete as a graph-wide, exact-pin inventory. Do not infer unlisted packages were reviewed. |
-| Origin whitelist | The exact identities presently enumerated in this ledger are the 31 CORE pins above and Watchfiles’ four transitive crates (`inotify==0.11.0`, `inotify-sys==0.1.5`, `once_cell==1.21.3`, `heck==0.5.0`). The [RAG review](input-reviews/linux-rag-source-review.md) says reviewed origin flags are covered by the standing exception, but does not enumerate additional exact identities. | The owner’s standing exception covers reviewed origin flags, including transitives. The full graph’s flag-to-pin mapping is not attached to the 243 graph; no origin is inferred from a name or blank profile. |
+| Origin whitelist | The 243 identities above are visible current graph inputs; the CORE table and linked native crate manifests retain their exact scopes. The owner authorized reviewed origin exceptions, including transitive components. | No further origin-only approval is required. Do not infer an origin from a package name, and do not treat this exception as approval of unreviewed or unsafe code. |
 | Kornia | The [Kornia source and notice review](input-reviews/linux-shared-source-review.md) covers `kornia-rs==0.2.0` and its exact 184-crate Linux normal/build Cargo graph; the companion notice manifest binds the source revision and Cargo.lock checksum. | **Activation hold:** the selected 184-crate graph reports `anyhow==1.0.102` (`RUSTSEC-2026-0190`), `bincode==2.0.1` (`RUSTSEC-2025-0141`, unmaintained), `paste==1.0.15` (`RUSTSEC-2024-0436`, unmaintained), `pyo3==0.28.3` (four advisories; fixed in 0.29.0), and `quick-xml==0.37.5` (`RUSTSEC-2026-0194` and `RUSTSEC-2026-0195`). The review identified a reachable quadratic-attribute parser path for untrusted image XMP. The notice supplement does not resolve these findings. |
 | CUDA and native wheels | The [CUDA review](input-reviews/linux-cuda-source-review.md) records 25 exact wheel inputs, 115 statically inspected ELF members, and candidate RUNPATH changes; original wheels remain preserved. | **Activation hold:** CUDA Toolkit 12.9.1 has an official 12.9 EULA source supplement. NCCL wheel notice, source `LICENSE.txt`, and `ThirdPartyNotices.txt` are separate records because they differ in scope. Open findings are the Torchaudio bundled CTC notice and exact BSD notice source; TorchVision bundled image-library license provenance; Triton wheel LLVM/MLIR license closure and network-capable source-build hook; and the NVSHMEM subset license and artifact evidence. These are recorded in the candidate source review; no GPU binary was loaded. |
 | Audio/TTS/STT | The [audio review](input-reviews/linux-audio-source-review.md) records 20 exact pins and artifact/source checks for its candidate graph. | Legacy `pyttsx3` remains quarantined and excluded from this headless graph. OS-provided eSpeak NG package provenance and runtime/audio checks are outside the recorded pip evidence. |
