@@ -29,6 +29,19 @@
       "text_path": "packaging/licenses/nvidia-nccl-cu12-2.29.7-supplement/NCCL-ThirdPartyNotices.txt",
       "text_sha256": "afc433a3b9262c3266f5e683e017fb6a44687c5098967928e478be6614e77df6",
       "text_size_bytes": 12482
+    },
+    {
+      "publisher": "NVIDIA Corporation",
+      "product": "NVIDIA NCCL",
+      "release_scope": "NCCL 2.29.7 archive SLA, document cover March 2026; includes NCCL Binary Supplement and binary distribution conditions.",
+      "official_source_url": "https://docs.nvidia.com/deeplearning/nccl/archives/nccl_2297/pdf/NCCL-SLA.pdf",
+      "retrieved_date": "2026-11-02",
+      "document_path": "packaging/licenses/nvidia-nccl-cu12-2.29.7-supplement/NCCL-2.29.7-SLA.pdf",
+      "document_sha256": "2c925b41d8a6662930081030fb51259a46708dbb99eb4a644449432b0307c6c4",
+      "document_size_bytes": 243628,
+      "text_path": "packaging/licenses/nvidia-nccl-cu12-2.29.7-supplement/NCCL-2.29.7-SLA.txt",
+      "text_sha256": "a8c8de44afcc104763c8fe5c3ba5892590c7635135ba9efc9d1e0a6658c9c2e9",
+      "text_size_bytes": 50112
     }
   ]
 }

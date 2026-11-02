@@ -92,6 +92,30 @@ def _load(repo: Path, spec: dict, packages, *, dest: str = "legal/dependencies")
     )
 
 
+def test_loads_exact_archived_nccl_binary_sla(tmp_path: Path) -> None:
+    url = (
+        "https://docs.nvidia.com/deeplearning/nccl/archives/"
+        "nccl_2297/pdf/NCCL-SLA.pdf"
+    )
+    repo, _manifest, _document_path, _text_path, _data, spec, wheel_hash = (
+        _document(tmp_path, url=url)
+    )
+    result = _load(repo, spec, [_locked(wheel_hash=wheel_hash)])
+    records, files = result["cuda-toolkit==12.9.1"]
+    assert len(files) == 2
+    assert all(record["vendor_document"]["official_source_url"] == url for record in records)
+
+
+@pytest.mark.parametrize("path", [
+    "/deeplearning/nccl/latest/pdf/NCCL-SLA.pdf",
+    "/deeplearning/nccl/archives/nccl_2297/pdf/other.pdf",
+    "/unreviewed/NCCL-SLA.pdf",
+])
+def test_rejects_other_nvidia_document_paths(path: str) -> None:
+    with pytest.raises(vendor_notice_supplements.VendorNoticeSupplementError):
+        vendor_notice_supplements._official_url("https://docs.nvidia.com" + path)
+
+
 def test_loads_both_vendor_document_and_extracted_text_with_provenance(
     tmp_path: Path,
 ) -> None:

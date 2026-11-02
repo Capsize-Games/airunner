@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "distribution": "nvidia-nccl-cu12",
+  "version": "2.29.7",
+  "selected_wheel_sha256": "ecd0a012051abc20c1aa87328841efa8cade3ced65803046e38c2f03c0891fea",
+  "wheel_metadata_license": {
+    "expression": "LicenseRef-NVIDIA-Proprietary",
+    "metadata_member": "nvidia_nccl_cu12-2.29.7.dist-info/METADATA",
+    "scope": "NVIDIA distribution license metadata for the selected binary wheel; not the same material as the source project LICENSE.txt."
+  },
+  "selected_wheel_notice": {
+    "member": "nvidia_nccl_cu12-2.29.7.dist-info/licenses/License.txt",
+    "sha256": "0f0174a6b4e0b33ac26375bf729533075b32f4c51a5b6802a3d742d7dcdc9a76",
+    "scope": "This 1,895-byte BSD notice says the code also includes files from NVIDIA Tools Extension SDK and points to NVTX. It is an embedded third-party notice; it is not the binary distribution license text."
+  },
+  "binary_distribution_license": {
+    "publisher": "NVIDIA Corporation",
+    "product": "NVIDIA NCCL",
+    "official_source_url": "https://docs.nvidia.com/deeplearning/nccl/archives/nccl_2297/pdf/NCCL-SLA.pdf",
+    "document_release": "NCCL 2.29.7 documentation archive; SLA dated March 2026; includes NCCL Binary Supplement",
+    "pdf_path": "packaging/licenses/nvidia-nccl-cu12-2.29.7-supplement/NCCL-2.29.7-SLA.pdf",
+    "pdf_sha256": "2c925b41d8a6662930081030fb51259a46708dbb99eb4a644449432b0307c6c4",
+    "pdf_size_bytes": 243628,
+    "text_path": "packaging/licenses/nvidia-nccl-cu12-2.29.7-supplement/NCCL-2.29.7-SLA.txt",
+    "text_sha256": "a8c8de44afcc104763c8fe5c3ba5892590c7635135ba9efc9d1e0a6658c9c2e9",
+    "text_size_bytes": 50112,
+    "reviewed_terms_scope": "The Binary Supplement allows the runtime files (.so, .h) to be redistributed solely in binary form as a component of the distributor's own application with additional material functionality, subject to the SLA, valid NVIDIA copyright notices, and downstream terms at least as restrictive. This is a bounded summary of the official text, not a statement that every operational requirement has been implemented."
+  },
+  "scope_reconciliation": "No conflict is inferred between the proprietary binary metadata and the selected BSD notice or source project notices: they identify different scopes. The wheel notice is the NVTX-related third-party text; the NCCL source LICENSE.txt and ThirdPartyNotices cover source/project notice scopes; the official SLA and NCCL Binary Supplement state the NVIDIA binary distribution terms."
+}

@@ -168,9 +168,12 @@ def _official_url(value: Any) -> str:
             "vendor document official_source_url is not an allowed canonical HTTPS URL"
         )
     if parsed.hostname == "docs.nvidia.com":
-        if not parsed.path.startswith("/cuda/archive/"):
-            _fail("vendor document URL is outside the allowed CUDA archive")
-        return url
+        if parsed.path.startswith("/cuda/archive/") or re.fullmatch(
+            r"/deeplearning/nccl/archives/nccl_[0-9]+/pdf/NCCL-SLA\.pdf",
+            parsed.path,
+        ):
+            return url
+        _fail("vendor document URL is outside the allowed NVIDIA archives")
     if parsed.hostname == "github.com":
         match = re.fullmatch(
             r"/NVIDIA/(nvshmem|nccl)/blob/([0-9a-fA-F]{40})/"
