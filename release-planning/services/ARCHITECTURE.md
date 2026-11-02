@@ -230,17 +230,20 @@ require an owner exception. Concrete unresolved flags and incomplete source
 reviews prevent installation or freezing. As of 2026-11-02, all 51 locked
 distributions have recorded static source review and origin disposition. The
 readiness record permits isolated candidate installation and build work.
-CORE Debian builds and post-packaging manifest inspection passed at source
-`4215e978a11220ab7bcf5e9458c406186e859313` in workflow run `41482860335`.
-Fresh-target installation exposed missing Alembic data-file imports and a
-supervisor command that treated the frozen image as a Python interpreter.
-The profiles now retain service imports from all packaged migrations, with
-regression and TOC checks. Daemon, art and TTS launchers run a frozen image
-directly while preserving normal Python module execution. A corrected
-fresh-install result is still required. The visible input and whitelist inventory
-is in `DEPENDENCY_DECISIONS.md`. Metadata resolution and source-level tests do
-not establish an executable or Debian package acceptance result. The Debian exit checks are a clean target
-install, daemon health, command dispatch, restart and upgrade preservation,
+CORE Debian builds, post-packaging inspection and fresh-target installation
+passed at source `de2c8f3cde4d2e8b03dbfa0eacb8379ff1cdcc42` in
+[workflow run 41494962269](https://github.com/Capsize-Games/airunner/actions/runs/41494962269).
+The validation receipt binds Debian SHA-256
+`6c9a096b6f1c8f713377462648fece66eb6c03ac743b43f857ff19ad92b77005`
+to that source. It covers systemd start, authenticated API health, installed
+service version, frozen API executable identity, stop/start/restart and exit
+of both the supervisor and API child. The profiles retain imports from all
+packaged migrations, with regression and TOC checks. Daemon, art and TTS
+launchers execute the frozen image directly and preserve normal Python module
+execution. These results apply to this CORE candidate; they exclude real models,
+offline denial, prior-package upgrades, apt promotion/signing and the full ML
+bundle. The visible input and whitelist inventory is in
+`DEPENDENCY_DECISIONS.md`. Remaining Debian exit checks include upgrade preservation,
 followed by source-bound apt promotion and downloaded-package verification.
 
 GitHub release promotion runs from the exact annotated version tag through
