@@ -28,6 +28,21 @@ override_dh_auto_install:
 override_dh_auto_test:
 	echo "dh_auto_test skipped: services tests run in CI, not debuild"
 
+# Preserve the reviewed prebuilt wheel binaries and frozen executable.
+# Debug rewriting can invalidate their recorded hashes and auditwheel layout.
+override_dh_dwz:
+	dh_dwz -Xusr/lib/airunner
+
+override_dh_strip:
+	dh_strip -Xusr/lib/airunner
+
+# Verify the installed payload after the other debhelper transformations.
+override_dh_builddeb:
+	$(AIRUNNER_CORE_PYTHON) scripts/inspect_linux_bundle.py \
+		--spec packaging/linux/services-core-bundle-spec.toml \
+		debian/airunner/usr/lib/airunner
+	dh_builddeb
+
 # The unit is named airunner-headless, not airunner: --name makes
 # dh_installsystemd pick up debian/airunner.airunner-headless.service.
 override_dh_installsystemd:
