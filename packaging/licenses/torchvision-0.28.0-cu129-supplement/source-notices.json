@@ -1,0 +1,114 @@
+{
+  "schema_version": 1,
+  "distribution": "torchvision",
+  "source_version": "0.28.0+cu129",
+  "candidate_version": "0.28.0+cu129.capsize.1",
+  "source_wheel_filename": "torchvision-0.28.0+cu129-cp313-cp313-manylinux_2_28_x86_64.whl",
+  "source_wheel_sha256": "c007a68cb54c3ee6941aab6388c69bf14e4a2a9071d339455bb5bd5f47da2ce7",
+  "source_repository": "https://github.com/pytorch/vision",
+  "source_commit": "8fb87713a24951e639c494b0f2a8a81b5f8e33a6",
+  "owner_private_copy": "Capsize-Games/pytorch-vision-maintenance",
+  "actions_disabled": true,
+  "components": [
+    {
+      "name": "libpng",
+      "version": "1.6.56",
+      "member": {
+        "path": "torchvision.libs/libpng16.1c0b398e.so.16",
+        "sha256": "82fa8f3e22369adc12838c7ae571da8d24199112f578c80760180e6486634b13",
+        "size_bytes": 288001,
+        "bytes": null
+      },
+      "version_evidence": "embedded libpng version string",
+      "license_source": "https://github.com/pnggroup/libpng/blob/d5515b5b8be3901aac04e5bd8bd5c89f287bcd33/LICENSE",
+      "source_commit": "d5515b5b8be3901aac04e5bd8bd5c89f287bcd33",
+      "notice": "libpng-1.6.56-LICENSE",
+      "notice_sha256": "bdb0a645ea18c60507d0368379b1ac5474b92255fcc2d115e07486a7672ba526"
+    },
+    {
+      "name": "libjpeg-turbo",
+      "version": "3.1.3",
+      "member": {
+        "path": "torchvision.libs/libjpeg.5980e1e3.so.8",
+        "sha256": "944920e943b2ef28a66c3c8196d33447689ffca791152f7b422c839f11616b47",
+        "size_bytes": 877472,
+        "bytes": null
+      },
+      "version_evidence": "embedded libjpeg-turbo version string",
+      "license_source": "https://github.com/libjpeg-turbo/libjpeg-turbo/blob/af9c1c268520a29adf98cad5138dafe612b3d318/LICENSE.md",
+      "source_commit": "af9c1c268520a29adf98cad5138dafe612b3d318",
+      "notice": "libjpeg-turbo-3.1.3-LICENSE.md",
+      "notice_sha256": "2189dc45a8fe96204069f8124caa53a148dfdc193f50f584c6ca7849a6072872"
+    },
+    {
+      "name": "libwebp",
+      "version": "1.6.0",
+      "member": {
+        "path": "torchvision.libs/libwebp.4fcc8f97.so.7",
+        "sha256": "426caf4105c21deb24d61e5fe80c412968e5c4fd77a27408c76945a4c6ebdbca",
+        "size_bytes": 790273,
+        "bytes": null
+      },
+      "version_evidence": "static WebPGetEncoderVersion return 0x10600",
+      "license_source": "https://github.com/webmproject/libwebp/blob/4fa21912338357f89e4fd51cf2368325b59e9bd9/COPYING",
+      "source_commit": "4fa21912338357f89e4fd51cf2368325b59e9bd9",
+      "notice": "libwebp-1.6.0-COPYING",
+      "notice_sha256": "5aec868f669e384a22372a4e8a1a6cd7d44c64cd451f960ca69cc170d1e13acf"
+    },
+    {
+      "name": "SharpYuv",
+      "version": "4.0.2",
+      "member": {
+        "path": "torchvision.libs/libsharpyuv.5a6b5d87.so.0",
+        "sha256": "ec3ccc1dcdac71f5c66515dc63d833c7ac411bdc45cd53b19b817c1d500b8cf5",
+        "size_bytes": 46336,
+        "bytes": null
+      },
+      "version_evidence": "static SharpYuvGetVersion return 0x40002",
+      "license_source": "https://github.com/webmproject/libwebp/blob/4fa21912338357f89e4fd51cf2368325b59e9bd9/COPYING",
+      "source_commit": "4fa21912338357f89e4fd51cf2368325b59e9bd9",
+      "notice": "libwebp-1.6.0-COPYING",
+      "notice_sha256": "5aec868f669e384a22372a4e8a1a6cd7d44c64cd451f960ca69cc170d1e13acf",
+      "scope": "Same pinned source tree and root COPYING apply; no separate SharpYuv COPYING file exists."
+    },
+    {
+      "name": "zlib",
+      "version": "1.3.2",
+      "member": {
+        "path": "torchvision.libs/libz.b9a71669.so.1",
+        "sha256": "0900010993ecb9e3bf674459147f3433b5b001aeea94d5ba43b61c867e596cd1",
+        "size_bytes": 117416,
+        "bytes": null
+      },
+      "version_evidence": "embedded zlib 1.3.2 string",
+      "license_source": "https://github.com/madler/zlib/blob/da607da739fa6047df13e66a2af6b8bec7c2a498/LICENSE",
+      "source_commit": "da607da739fa6047df13e66a2af6b8bec7c2a498",
+      "notice": "zlib-1.3.2-LICENSE",
+      "notice_sha256": "e32ff4e00d9d94930537635291da39e7e612703334bf6fde8c7f1686fe8a45a2"
+    },
+    {
+      "name": "CUDA Runtime + nvJPEG",
+      "versions": "CUDA 12.9; exact nvJPEG patch level not independently established",
+      "members": [
+        {
+          "path": "torchvision.libs/libcudart.6ead8f7a.so.12",
+          "sha256": "256e6409e4f06f618e1fb53d4844a6b81cdded1013afa8ade40c22f99eb133b7",
+          "size_bytes": 741088,
+          "bytes": null
+        },
+        {
+          "path": "torchvision.libs/libnvjpeg.af8ad92e.so.12",
+          "sha256": "27e1eb1834b20db64f99deba379746d8ec46b92975ccb4cdfa06a84d77e4c11e",
+          "size_bytes": 9352784,
+          "bytes": null
+        }
+      ],
+      "cudart_duplicate": "Exact byte match with selected nvidia-cuda-runtime-cu12 12.9.79 wheel",
+      "nvidia_runtime_wheel_sha256": "25bba2dfb01d48a9b59ca474a1ac43c6ebf7011f1b0b8cc44f54eb6ac48a96c3",
+      "nvidia_license_sha256": "ad6f5853fba0ca0d159d0f58d49ae49830c2f8c93f7a92648b9ce90adb4c6ccd",
+      "official_eula": "https://docs.nvidia.com/cuda/archive/12.9.1/pdf/EULA.pdf",
+      "eula_pdf_sha256": "8dfb8f9da1d5d2face9bfd22213aef8b311bda6a8c734e64f1dce1843cf7e56b",
+      "eula_text_sha256": "b070ebdc3ee4566df26f7409b65cb9b9dac4d5cdac02fb470c3ad35b259f8357"
+    }
+  ]
+}

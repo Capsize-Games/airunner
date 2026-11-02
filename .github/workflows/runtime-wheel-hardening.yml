@@ -1,0 +1,128 @@
+name: Runtime wheel hardening candidates
+
+on:
+  pull_request:
+    paths:
+      - .github/workflows/runtime-wheel-hardening.yml
+      - scripts/runtime_wheel_hardening.py
+      - scripts/tests/test_runtime_wheel_hardening.py
+      - package/runtime-wheel-hardening-inputs.json
+      - packaging/licenses/torchaudio-2.11.0-cu129-supplement/**
+      - packaging/licenses/torchvision-0.28.0-cu129-supplement/**
+      - packaging/licenses/triton-3.7.1-supplement/**
+      - packaging/licenses/nvidia-nvshmem-cu12-3.4.5-supplement/**
+      - packaging/licenses/cuda-toolkit-12.9.1-supplement/**
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  candidates:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - name: Check out exact candidate source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+
+      - name: Check wheel transformation contracts
+        run: python3 -I -S -m unittest discover -s scripts/tests -p test_runtime_wheel_hardening.py
+
+      - name: Stage exact reviewed wheels and Patchelf source
+        env:
+          HARDENING_INPUT_DIR: ${{ runner.temp }}/runtime-hardening-inputs
+        run: |
+          python3 -I -S - <<'PY'
+          import hashlib
+          import json
+          import os
+          from pathlib import Path
+          import subprocess
+          from urllib.parse import urlsplit
+
+          manifest = json.loads(Path('package/runtime-wheel-hardening-inputs.json').read_text())
+          destination = Path(os.environ['HARDENING_INPUT_DIR'])
+          destination.mkdir()
+          source = manifest['source_repository']
+          assert source['url'] == 'https://github.com/NixOS/patchelf'
+          assert source['commit'] == '99c24238981b7b1084313aca8f5c493bb46f302c'
+          downloads = [(item['source_url'], item['source_filename'], item['source_sha256'])
+                       for item in manifest['artifacts']
+                       if item['distribution'] in {'torchaudio', 'torchvision', 'nvidia-nvshmem-cu12'}]
+          downloads.append((
+              f"https://raw.githubusercontent.com/NixOS/patchelf/{source['commit']}/src/patchelf.cc",
+              'patchelf.cc', source['source_file_sha256']))
+          for url, filename, digest in downloads:
+              parsed = urlsplit(url)
+              assert parsed.scheme == 'https'
+              assert parsed.hostname in {'download.pytorch.org', 'raw.githubusercontent.com'}
+              assert not parsed.username and not parsed.password
+              assert Path(filename).name == filename and filename not in {'.', '..'}
+              target = destination / filename
+              subprocess.run([
+                  'curl', '--proto', '=https', '--proto-redir', '=https',
+                  '--fail', '--location', '--silent', '--show-error',
+                  '--connect-timeout', '20', '--max-time', '300',
+                  url, '--output', str(target),
+              ], check=True, timeout=310)
+              actual = hashlib.file_digest(target.open('rb'), 'sha256').hexdigest()
+              if actual != digest:
+                  raise SystemExit(f'Input SHA256 mismatch: {filename}')
+          PY
+
+      - name: Build and transform with network disabled
+        run: |
+          sudo unshare --net -- env -i PATH=/usr/bin:/bin LC_ALL=C \
+            python3 -I -S scripts/runtime_wheel_hardening.py \
+            --inputs package/runtime-wheel-hardening-inputs.json \
+            --input-dir "$RUNNER_TEMP/runtime-hardening-inputs" \
+            --output-dir "$RUNNER_TEMP/runtime-hardening-candidates" \
+            --distribution torchaudio --distribution torchvision \
+            --distribution nvidia-nvshmem-cu12 \
+            --patchelf-source "$RUNNER_TEMP/runtime-hardening-inputs/patchelf.cc" \
+            --report "$RUNNER_TEMP/runtime-hardening-candidates/build-report.json"
+
+      - name: Bind candidate artifacts to the exact source
+        env:
+          CANDIDATE_SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          python3 -I -S - <<'PY'
+          import hashlib
+          import json
+          import os
+          from pathlib import Path
+          inputs = Path('package/runtime-wheel-hardening-inputs.json')
+          receipt = {
+              'schema_version': 1,
+              'source_sha': os.environ['CANDIDATE_SOURCE_SHA'],
+              'inputs_sha256': hashlib.sha256(inputs.read_bytes()).hexdigest(),
+              'helper_sha256': hashlib.sha256(Path('scripts/runtime_wheel_hardening.py').read_bytes()).hexdigest(),
+              'network_during_transform': 'disabled by separate network namespace',
+              'status': 'candidate artifacts; not installed or imported',
+              'exclusions': ['runtime/model/GPU acceptance', 'main release publication'],
+              'quarantined_distributions': {
+                  'triton': 'Bundled NVIDIA tools and extra headers lack a verified redistribution grant; feature-preserving external-toolchain subset is in progress.',
+              },
+          }
+          target = Path(os.environ['RUNNER_TEMP']) / 'runtime-hardening-receipt.json'
+          target.write_text(json.dumps(receipt, indent=2, sort_keys=True) + '\n')
+          PY
+
+      - name: Upload non-publishing candidate artifacts
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: runtime-hardening-candidates-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/runtime-hardening-candidates/*.whl
+            ${{ runner.temp }}/runtime-hardening-candidates/build-report.json
+            ${{ runner.temp }}/runtime-hardening-receipt.json
+            package/runtime-wheel-hardening-inputs.json
+            packaging/licenses/torchaudio-2.11.0-cu129-supplement/
+            packaging/licenses/torchvision-0.28.0-cu129-supplement/
+            packaging/licenses/nvidia-nvshmem-cu12-3.4.5-supplement/
+            packaging/licenses/cuda-toolkit-12.9.1-supplement/
+          if-no-files-found: error
+          retention-days: 14

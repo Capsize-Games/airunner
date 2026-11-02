@@ -1,0 +1,983 @@
+{
+  "schema_version": 1,
+  "description": "Offline deterministic wheel candidate transformation. This manifest is not an active lock and does not authorize install/import/runtime use. Source wheels must be downloaded separately and SHA256 checked.",
+  "target": "Ubuntu 24.04 x86_64 build runner; CPython 3.13 ABI wheels and vendor manylinux wheels as tagged; no claim beyond selected runtime target.",
+  "source_repository": {
+    "url": "https://github.com/NixOS/patchelf",
+    "tag": "0.18.0",
+    "commit": "99c24238981b7b1084313aca8f5c493bb46f302c",
+    "private_copy": "Capsize-Games/patchelf-maintenance",
+    "actions_disabled": true,
+    "source_file": "src/patchelf.cc",
+    "source_file_sha256": "d0215767b60b8290a2b271a2313dd919b011ac1c985950c5310116a03242065e"
+  },
+  "patchelf": {
+    "version": "0.18.0",
+    "build_command": [
+      "g++",
+      "-std=c++17",
+      "-D_FILE_OFFSET_BITS=64",
+      "-O2",
+      "-Wall",
+      "-Wextra",
+      "-Wcast-qual",
+      "src/patchelf.cc",
+      "-o",
+      "patchelf-reviewed"
+    ],
+    "network_during_build": false,
+    "build_flags": [
+      "-std=c++17",
+      "-D_FILE_OFFSET_BITS=64",
+      "-O2",
+      "-Wall",
+      "-Wextra",
+      "-Wcast-qual"
+    ],
+    "source_file_sha256": "d0215767b60b8290a2b271a2313dd919b011ac1c985950c5310116a03242065e",
+    "source_commit": "99c24238981b7b1084313aca8f5c493bb46f302c"
+  },
+  "zip_policy": {
+    "timestamp_utc": "1980-01-01T00:00:00",
+    "sort_members": true,
+    "compression_level": 9,
+    "preserve_original_compression_method": true,
+    "clear_extra_fields": true,
+    "record_hash": "sha256 with URL-safe base64, no padding",
+    "metadata_update": "only Version field; dist-info paths and output wheel filename updated"
+  },
+  "artifacts": [
+    {
+      "distribution": "torchaudio",
+      "source_filename": "torchaudio-2.11.0+cu129-cp313-cp313-manylinux_2_28_x86_64.whl",
+      "source_url": "https://download.pytorch.org/whl/cu129/torchaudio-2.11.0+cu129-cp313-cp313-manylinux_2_28_x86_64.whl",
+      "source_sha256": "45103fac849ffee337976ff19eac81725b3396e2c18e3f48ed92ba7669cb32d7",
+      "candidate_filename": "torchaudio-2.11.0+cu129.capsize.1-cp313-cp313-manylinux_2_28_x86_64.whl",
+      "expected_candidate_sha256": "442827154e36ff0643036d0065ce96b9f65cdaee224b9f6b5c4318e6e3f1620c",
+      "old_version": "2.11.0+cu129",
+      "new_version": "2.11.0+cu129.capsize.1",
+      "old_dist_version_token": "2.11.0+cu129",
+      "new_dist_version_token": "2.11.0+cu129.capsize.1",
+      "elf_patches": [
+        {
+          "path": "torchaudio/lib/_torchaudio.abi3.so",
+          "expected_before": {
+            "kind": "RPATH",
+            "paths": [
+              "/__w/_temp/conda_environment_23408961945/lib"
+            ],
+            "needed": [
+              "libc10.so",
+              "libtorch.so",
+              "libtorch_cpu.so",
+              "libcudart.so.12",
+              "libc10_cuda.so",
+              "libtorch_cuda.so",
+              "libstdc++.so.6",
+              "libm.so.6",
+              "libgcc_s.so.1",
+              "libpthread.so.0",
+              "libc.so.6"
+            ],
+            "soname": []
+          },
+          "expected_after_paths": [
+            "$ORIGIN/../../torch/lib"
+          ],
+          "expected_after_sha256": "30b7005f899db45c8c21a78ee9cb254d9f0221a5f515edb1eb0f74111965e889"
+        },
+        {
+          "path": "torchaudio/lib/libtorchaudio.abi3.so",
+          "expected_before": {
+            "kind": "RPATH",
+            "paths": [
+              "/__w/_temp/conda_environment_23408961945/lib"
+            ],
+            "needed": [
+              "libc10.so",
+              "libtorch.so",
+              "libtorch_cpu.so",
+              "libcudart.so.12",
+              "libc10_cuda.so",
+              "libtorch_cuda.so",
+              "libstdc++.so.6",
+              "libm.so.6",
+              "libgcc_s.so.1",
+              "libpthread.so.0",
+              "libc.so.6"
+            ],
+            "soname": []
+          },
+          "expected_after_paths": [
+            "$ORIGIN/../../torch/lib"
+          ],
+          "expected_after_sha256": "ba6d24c653d96b8967d6506ab0a68c159c8f375c4fb01dd126969bc14f9dc09f"
+        },
+        {
+          "path": "torchaudio/lib/torchaudio_prefixctc.abi3.so",
+          "expected_before": {
+            "kind": "RPATH",
+            "paths": [
+              "/__w/_temp/conda_environment_23408961945/lib"
+            ],
+            "needed": [
+              "libc10.so",
+              "libtorch.so",
+              "libtorch_cpu.so",
+              "libcudart.so.12",
+              "libc10_cuda.so",
+              "libtorch_cuda.so",
+              "libstdc++.so.6",
+              "libm.so.6",
+              "libgcc_s.so.1",
+              "libpthread.so.0",
+              "libc.so.6"
+            ],
+            "soname": []
+          },
+          "expected_after_paths": [
+            "$ORIGIN/../../torch/lib"
+          ],
+          "expected_after_sha256": "058b28365528c5767aca8283a58385b4162dc88a8778e3ac91980db6e97e8702"
+        }
+      ],
+      "exclude_members": [],
+      "license_extras": [
+        {
+          "source_path": "packaging/licenses/torchaudio-2.11.0-cu129-supplement/torchaudio-cuctc-BSD-2-Clause.txt",
+          "wheel_path": "torchaudio-2.11.0+cu129.capsize.1.dist-info/licenses/third_party/BSD-2-Clause.txt",
+          "sha256": "3f500f9b0e630fab6e29f6deec94d69c60ef56ffc97019768539b766f64c7c5f"
+        },
+        {
+          "source_path": "packaging/licenses/torchaudio-2.11.0-cu129-supplement/torchaudio-bitonic-topk-Apache-2.0.txt",
+          "wheel_path": "torchaudio-2.11.0+cu129.capsize.1.dist-info/licenses/third_party/bitonic-topk-Apache-2.0.txt",
+          "sha256": "756005f963846334943e8bfc08ef98cd254257d8467ac7a7ffd42a1be262f442"
+        },
+        {
+          "source_path": "packaging/licenses/torchaudio-2.11.0-cu129-supplement/torchaudio-LICENSES_BUNDLED.txt",
+          "wheel_path": "torchaudio-2.11.0+cu129.capsize.1.dist-info/licenses/third_party/LICENSES_BUNDLED.txt",
+          "sha256": "4d04bc753040de9153426d882f235e978c68930df7980e60490563ba064283e1"
+        },
+        {
+          "source_path": "packaging/licenses/torchaudio-2.11.0-cu129-supplement/CUTLASS-BSD-3-Clause.txt",
+          "wheel_path": "torchaudio-2.11.0+cu129.capsize.1.dist-info/licenses/third_party/CUTLASS-BSD-3-Clause.txt",
+          "sha256": "7bc733829f16663593865344541c6dcc433beb6b6b555c8f86a43e9b399993cf"
+        }
+      ]
+    },
+    {
+      "distribution": "torchvision",
+      "source_filename": "torchvision-0.28.0+cu129-cp313-cp313-manylinux_2_28_x86_64.whl",
+      "source_url": "https://download.pytorch.org/whl/cu129/torchvision-0.28.0+cu129-cp313-cp313-manylinux_2_28_x86_64.whl",
+      "source_sha256": "c007a68cb54c3ee6941aab6388c69bf14e4a2a9071d339455bb5bd5f47da2ce7",
+      "candidate_filename": "torchvision-0.28.0+cu129.capsize.1-cp313-cp313-manylinux_2_28_x86_64.whl",
+      "expected_candidate_sha256": "fb59f03148302906a39abe711bd4dcffe62973c741884a879b3247a2fa7f5d40",
+      "old_version": "0.28.0+cu129",
+      "new_version": "0.28.0+cu129.capsize.1",
+      "old_dist_version_token": "0.28.0+cu129",
+      "new_dist_version_token": "0.28.0+cu129.capsize.1",
+      "elf_patches": [
+        {
+          "path": "torchvision/_C.so",
+          "expected_before": {
+            "kind": "RPATH",
+            "paths": [
+              "/__w/_temp/conda_environment_28707544027/lib"
+            ],
+            "needed": [
+              "libc10.so",
+              "libtorch.so",
+              "libtorch_cpu.so",
+              "libtorch_python.so",
+              "libcudart.so.12",
+              "libc10_cuda.so",
+              "libtorch_cuda.so",
+              "libstdc++.so.6",
+              "libm.so.6",
+              "libgcc_s.so.1",
+              "libpthread.so.0",
+              "libc.so.6",
+              "ld-linux-x86-64.so.2"
+            ],
+            "soname": []
+          },
+          "expected_after_paths": [
+            "$ORIGIN/../torch/lib"
+          ],
+          "expected_after_sha256": "c3bc7a409ad33894d7f3c6c8bdfc311faa0602846cd69e5691cca6544612f3e8"
+        }
+      ],
+      "exclude_members": [],
+      "license_extras": [
+        {
+          "source_path": "packaging/licenses/torchvision-0.28.0-cu129-supplement/libpng-1.6.56-LICENSE",
+          "wheel_path": "torchvision-0.28.0+cu129.capsize.1.dist-info/licenses/third_party/libpng/LICENSE",
+          "sha256": "bdb0a645ea18c60507d0368379b1ac5474b92255fcc2d115e07486a7672ba526"
+        },
+        {
+          "source_path": "packaging/licenses/torchvision-0.28.0-cu129-supplement/libjpeg-turbo-3.1.3-LICENSE.md",
+          "wheel_path": "torchvision-0.28.0+cu129.capsize.1.dist-info/licenses/third_party/libjpeg-turbo/LICENSE.md",
+          "sha256": "2189dc45a8fe96204069f8124caa53a148dfdc193f50f584c6ca7849a6072872"
+        },
+        {
+          "source_path": "packaging/licenses/torchvision-0.28.0-cu129-supplement/libwebp-1.6.0-COPYING",
+          "wheel_path": "torchvision-0.28.0+cu129.capsize.1.dist-info/licenses/third_party/libwebp-and-sharpyuv/COPYING",
+          "sha256": "5aec868f669e384a22372a4e8a1a6cd7d44c64cd451f960ca69cc170d1e13acf"
+        },
+        {
+          "source_path": "packaging/licenses/torchvision-0.28.0-cu129-supplement/zlib-1.3.2-LICENSE",
+          "wheel_path": "torchvision-0.28.0+cu129.capsize.1.dist-info/licenses/third_party/zlib/LICENSE",
+          "sha256": "e32ff4e00d9d94930537635291da39e7e612703334bf6fde8c7f1686fe8a45a2"
+        },
+        {
+          "source_path": "packaging/licenses/torchvision-0.28.0-cu129-supplement/NVIDIA-CUDA-12.9-License.txt",
+          "wheel_path": "torchvision-0.28.0+cu129.capsize.1.dist-info/licenses/third_party/NVIDIA-CUDA-12.9-License.txt",
+          "sha256": "ad6f5853fba0ca0d159d0f58d49ae49830c2f8c93f7a92648b9ce90adb4c6ccd"
+        },
+        {
+          "source_path": "packaging/licenses/torchvision-0.28.0-cu129-supplement/CUDA-12.9-EULA.pdf",
+          "wheel_path": "torchvision-0.28.0+cu129.capsize.1.dist-info/licenses/third_party/CUDA-12.9-EULA.pdf",
+          "sha256": "8dfb8f9da1d5d2face9bfd22213aef8b311bda6a8c734e64f1dce1843cf7e56b"
+        },
+        {
+          "source_path": "packaging/licenses/torchvision-0.28.0-cu129-supplement/CUDA-12.9-EULA.txt",
+          "wheel_path": "torchvision-0.28.0+cu129.capsize.1.dist-info/licenses/third_party/CUDA-12.9-EULA.txt",
+          "sha256": "b070ebdc3ee4566df26f7409b65cb9b9dac4d5cdac02fb470c3ad35b259f8357"
+        }
+      ]
+    },
+    {
+      "distribution": "triton",
+      "source_filename": "triton-3.7.1-cp313-cp313-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl",
+      "source_url": "https://download.pytorch.org/whl/cu129/triton-3.7.1-cp313-cp313-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl",
+      "source_sha256": "59688b9b924f887316dcd0fae9e8cbe697ee1d1f6ab386723982cc9ecdebee01",
+      "candidate_filename": "triton-3.7.1+capsize.1-cp313-cp313-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl",
+      "expected_candidate_sha256": "2143a1a884c128773ae892a45deb8b6ba432779ae8606b0d136a372d67cb86ac",
+      "old_version": "3.7.1",
+      "new_version": "3.7.1+capsize.1",
+      "old_dist_version_token": "3.7.1",
+      "new_dist_version_token": "3.7.1+capsize.1",
+      "elf_patches": [
+        {
+          "path": "triton/plugins/libMLIRDialectPlugin.so",
+          "expected_before": {
+            "kind": "RUNPATH",
+            "paths": [
+              "$ORIGIN/../lib",
+              "/root/.triton/llvm/llvm-1f126a6d-almalinux-x64-1/lib",
+              "/tmp/tmpwuje9ilp/triton/build/lib.linux-x86_64-cpython-313/triton/_C",
+              ""
+            ],
+            "needed": [
+              "libtriton.so",
+              "librt.so.1",
+              "libdl.so.2",
+              "libpthread.so.0",
+              "libm.so.6",
+              "libstdc++.so.6",
+              "libgcc_s.so.1",
+              "libc.so.6"
+            ],
+            "soname": [
+              "libMLIRDialectPlugin.so.23.0git"
+            ]
+          },
+          "expected_after_paths": [
+            "$ORIGIN/../lib",
+            "$ORIGIN/../_C"
+          ],
+          "expected_after_sha256": "38e870194387b408bf204c45f58de8154a6f6184362ffbfe866a2349ede70693"
+        },
+        {
+          "path": "triton/plugins/libMLIRDialectPlugin.so.23.0git",
+          "expected_before": {
+            "kind": "RUNPATH",
+            "paths": [
+              "$ORIGIN/../lib",
+              "/root/.triton/llvm/llvm-1f126a6d-almalinux-x64-1/lib",
+              "/tmp/tmpwuje9ilp/triton/build/lib.linux-x86_64-cpython-313/triton/_C",
+              ""
+            ],
+            "needed": [
+              "libtriton.so",
+              "librt.so.1",
+              "libdl.so.2",
+              "libpthread.so.0",
+              "libm.so.6",
+              "libstdc++.so.6",
+              "libgcc_s.so.1",
+              "libc.so.6"
+            ],
+            "soname": [
+              "libMLIRDialectPlugin.so.23.0git"
+            ]
+          },
+          "expected_after_paths": [
+            "$ORIGIN/../lib",
+            "$ORIGIN/../_C"
+          ],
+          "expected_after_sha256": "38e870194387b408bf204c45f58de8154a6f6184362ffbfe866a2349ede70693"
+        },
+        {
+          "path": "triton/plugins/libTritonPluginsTestLib.so",
+          "expected_before": {
+            "kind": "RUNPATH",
+            "paths": [
+              "/tmp/tmpwuje9ilp/triton/build/lib.linux-x86_64-cpython-313/triton/_C"
+            ],
+            "needed": [
+              "libtriton.so",
+              "libstdc++.so.6",
+              "libm.so.6",
+              "libgcc_s.so.1",
+              "libc.so.6"
+            ],
+            "soname": [
+              "libTritonPluginsTestLib.so"
+            ]
+          },
+          "expected_after_paths": [
+            "$ORIGIN/../_C"
+          ],
+          "expected_after_sha256": "9ddf5b14cb55d8da986e5cdfe9726b11a3c6ddc4a45f8ae871f2e5b3d843349b"
+        }
+      ],
+      "exclude_members": [],
+      "license_extras": [
+        {
+          "source_path": "packaging/licenses/triton-3.7.1-supplement/LLVM-23-LLVM-License.TXT",
+          "wheel_path": "triton-3.7.1+capsize.1.dist-info/licenses/third_party/LLVM/LICENSE.TXT",
+          "sha256": "8d85c1057d742e597985c7d4e6320b015a9139385cff4cbae06ffc0ebe89afee"
+        },
+        {
+          "source_path": "packaging/licenses/triton-3.7.1-supplement/f2reduce-LICENCE.txt",
+          "wheel_path": "triton-3.7.1+capsize.1.dist-info/licenses/third_party/f2reduce/LICENCE.txt",
+          "sha256": "e18b77c5b0f23ee0f20d391ea2b49a05d571a9656248cfb057c4e0e44faf58b5"
+        },
+        {
+          "source_path": "packaging/licenses/triton-3.7.1-supplement/CUDA-13.1-EULA.pdf",
+          "wheel_path": "triton-3.7.1+capsize.1.dist-info/licenses/third_party/NVIDIA-CUDA-13.1-EULA.pdf",
+          "sha256": "abf3a2de172a41ef2b9bf01a29ebe77b2652034a6bf36b9e0efc72ec621709ae"
+        },
+        {
+          "source_path": "packaging/licenses/triton-3.7.1-supplement/CUDA-13.1-EULA.txt",
+          "wheel_path": "triton-3.7.1+capsize.1.dist-info/licenses/third_party/NVIDIA-CUDA-13.1-EULA.txt",
+          "sha256": "b932008f2a02d7f90f433527f173b8f47f95001f0ab642012a925a5ad07fb8e6"
+        },
+        {
+          "source_path": "packaging/licenses/triton-3.7.1-supplement/CUDA-12.8.1-EULA.pdf",
+          "wheel_path": "triton-3.7.1+capsize.1.dist-info/licenses/third_party/NVIDIA-CUDA-12.8.1-EULA.pdf",
+          "sha256": "94736434ff4409100167951f4a76c0a6ab9ba98cf75b41bb74fae53610d9940b"
+        },
+        {
+          "source_path": "packaging/licenses/triton-3.7.1-supplement/CUDA-12.8.1-EULA.txt",
+          "wheel_path": "triton-3.7.1+capsize.1.dist-info/licenses/third_party/NVIDIA-CUDA-12.8.1-EULA.txt",
+          "sha256": "81e73618b62700b5a6b51de9aa4430f8d2dd43c6219c518221f2a8d2cb22a22e"
+        },
+        {
+          "source_path": "packaging/licenses/triton-3.7.1-supplement/CUPTI-12.8.1-copyright-and-licenses.html",
+          "wheel_path": "triton-3.7.1+capsize.1.dist-info/licenses/third_party/NVIDIA-CUPTI-12.8.1-copyright-and-licenses.html",
+          "sha256": "f43d4ab3be8469ae7547c6b84616aea7a3baa603c47258cc57d3f41d7254322a"
+        },
+        {
+          "source_path": "packaging/licenses/triton-3.7.1-supplement/CUPTI-12.8.1-copyright-and-licenses.txt",
+          "wheel_path": "triton-3.7.1+capsize.1.dist-info/licenses/third_party/NVIDIA-CUPTI-12.8.1-copyright-and-licenses.txt",
+          "sha256": "ccffc0331d86c4bcb479906913321152a16d08217097e96d381ea3748645822a"
+        },
+        {
+          "source_path": "packaging/licenses/triton-3.7.1-supplement/AMD-HIP-header-license-notices.txt",
+          "wheel_path": "triton-3.7.1+capsize.1.dist-info/licenses/third_party/AMD-HIP-header-license-notices.txt",
+          "sha256": "e7f5b88dd0a53dcf5c6cca240fc5f9f2ee47e8d209c29e5722e09e3128c3de70"
+        }
+      ]
+    },
+    {
+      "distribution": "nvidia-nvshmem-cu12",
+      "source_filename": "nvidia_nvshmem_cu12-3.4.5-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl",
+      "source_url": "https://download.pytorch.org/whl/cu129/nvidia_nvshmem_cu12-3.4.5-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl",
+      "source_sha256": "042f2500f24c021db8a06c5eec2539027d57460e1c1a762055a6554f72c369bd",
+      "candidate_filename": "nvidia_nvshmem_cu12-3.4.5+capsize.1-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl",
+      "expected_candidate_sha256": "f2297cd80f097e40e0544672186c020d2ae12ddfa438f50626053e2de72c94ea",
+      "old_version": "3.4.5",
+      "new_version": "3.4.5+capsize.1",
+      "old_dist_version_token": "3.4.5",
+      "new_dist_version_token": "3.4.5+capsize.1",
+      "elf_patches": [],
+      "exclude_members": [
+        "nvidia/nvshmem/lib/nvshmem_bootstrap_mpi.so.3",
+        "nvidia/nvshmem/lib/nvshmem_bootstrap_shmem.so.3"
+      ],
+      "excluded_member_hashes": [
+        {
+          "path": "nvidia/nvshmem/lib/nvshmem_bootstrap_mpi.so.3",
+          "sha256": "a624fbfe9ccc7bb244851d98f008711f24f4c39a1d4bbb13af2de2fab33af695"
+        },
+        {
+          "path": "nvidia/nvshmem/lib/nvshmem_bootstrap_shmem.so.3",
+          "sha256": "e3628a3b631a8abb0e9ae3ea19bf379edc3d86299a3747f22a33203099346a96"
+        }
+      ],
+      "license_extras": []
+    }
+  ],
+  "license_extra_sources": {
+    "torchaudio": {
+      "upstream": "pytorch/audio",
+      "commit": "34c52a67e8941bbd8e6adaca0eb0b9eabec11d78",
+      "owner_private_copy": "Capsize-Games/pytorch-audio-maintenance",
+      "actions_disabled": true,
+      "copied_from": [
+        "src/libtorchaudio/cuctc/LICENSE",
+        "src/libtorchaudio/cuctc/src/bitonic_topk/LICENSE",
+        "third_party/LICENSES_BUNDLED.txt"
+      ],
+      "cutlass": {
+        "upstream": "NVIDIA/cutlass",
+        "commit": "da5e086dab31d63815acafdac9a9c5893b1c69e2",
+        "file": "LICENSE.txt",
+        "scope_note": "BSD-3-Clause notice included because torchaudio source maps ctc_fast_divmod.cuh to BSD-3-Clause and identifies it as modified from CUTLASS; exact source ancestry revision is not asserted."
+      }
+    },
+    "torchvision": {
+      "schema_version": 1,
+      "distribution": "torchvision",
+      "source_version": "0.28.0+cu129",
+      "candidate_version": "0.28.0+cu129.capsize.1",
+      "source_wheel_filename": "torchvision-0.28.0+cu129-cp313-cp313-manylinux_2_28_x86_64.whl",
+      "source_wheel_sha256": "c007a68cb54c3ee6941aab6388c69bf14e4a2a9071d339455bb5bd5f47da2ce7",
+      "source_repository": "https://github.com/pytorch/vision",
+      "source_commit": "8fb87713a24951e639c494b0f2a8a81b5f8e33a6",
+      "owner_private_copy": "Capsize-Games/pytorch-vision-maintenance",
+      "actions_disabled": true,
+      "components": [
+        {
+          "name": "libpng",
+          "version": "1.6.56",
+          "member": {
+            "path": "torchvision.libs/libpng16.1c0b398e.so.16",
+            "sha256": "82fa8f3e22369adc12838c7ae571da8d24199112f578c80760180e6486634b13",
+            "size_bytes": 288001,
+            "bytes": null
+          },
+          "version_evidence": "embedded libpng version string",
+          "license_source": "https://github.com/pnggroup/libpng/blob/d5515b5b8be3901aac04e5bd8bd5c89f287bcd33/LICENSE",
+          "source_commit": "d5515b5b8be3901aac04e5bd8bd5c89f287bcd33",
+          "notice": "libpng-1.6.56-LICENSE",
+          "notice_sha256": "bdb0a645ea18c60507d0368379b1ac5474b92255fcc2d115e07486a7672ba526"
+        },
+        {
+          "name": "libjpeg-turbo",
+          "version": "3.1.3",
+          "member": {
+            "path": "torchvision.libs/libjpeg.5980e1e3.so.8",
+            "sha256": "944920e943b2ef28a66c3c8196d33447689ffca791152f7b422c839f11616b47",
+            "size_bytes": 877472,
+            "bytes": null
+          },
+          "version_evidence": "embedded libjpeg-turbo version string",
+          "license_source": "https://github.com/libjpeg-turbo/libjpeg-turbo/blob/af9c1c268520a29adf98cad5138dafe612b3d318/LICENSE.md",
+          "source_commit": "af9c1c268520a29adf98cad5138dafe612b3d318",
+          "notice": "libjpeg-turbo-3.1.3-LICENSE.md",
+          "notice_sha256": "2189dc45a8fe96204069f8124caa53a148dfdc193f50f584c6ca7849a6072872"
+        },
+        {
+          "name": "libwebp",
+          "version": "1.6.0",
+          "member": {
+            "path": "torchvision.libs/libwebp.4fcc8f97.so.7",
+            "sha256": "426caf4105c21deb24d61e5fe80c412968e5c4fd77a27408c76945a4c6ebdbca",
+            "size_bytes": 790273,
+            "bytes": null
+          },
+          "version_evidence": "static WebPGetEncoderVersion return 0x10600",
+          "license_source": "https://github.com/webmproject/libwebp/blob/4fa21912338357f89e4fd51cf2368325b59e9bd9/COPYING",
+          "source_commit": "4fa21912338357f89e4fd51cf2368325b59e9bd9",
+          "notice": "libwebp-1.6.0-COPYING",
+          "notice_sha256": "5aec868f669e384a22372a4e8a1a6cd7d44c64cd451f960ca69cc170d1e13acf"
+        },
+        {
+          "name": "SharpYuv",
+          "version": "4.0.2",
+          "member": {
+            "path": "torchvision.libs/libsharpyuv.5a6b5d87.so.0",
+            "sha256": "ec3ccc1dcdac71f5c66515dc63d833c7ac411bdc45cd53b19b817c1d500b8cf5",
+            "size_bytes": 46336,
+            "bytes": null
+          },
+          "version_evidence": "static SharpYuvGetVersion return 0x40002",
+          "license_source": "https://github.com/webmproject/libwebp/blob/4fa21912338357f89e4fd51cf2368325b59e9bd9/COPYING",
+          "source_commit": "4fa21912338357f89e4fd51cf2368325b59e9bd9",
+          "notice": "libwebp-1.6.0-COPYING",
+          "notice_sha256": "5aec868f669e384a22372a4e8a1a6cd7d44c64cd451f960ca69cc170d1e13acf",
+          "scope": "Same pinned source tree and root COPYING apply; no separate SharpYuv COPYING file exists."
+        },
+        {
+          "name": "zlib",
+          "version": "1.3.2",
+          "member": {
+            "path": "torchvision.libs/libz.b9a71669.so.1",
+            "sha256": "0900010993ecb9e3bf674459147f3433b5b001aeea94d5ba43b61c867e596cd1",
+            "size_bytes": 117416,
+            "bytes": null
+          },
+          "version_evidence": "embedded zlib 1.3.2 string",
+          "license_source": "https://github.com/madler/zlib/blob/da607da739fa6047df13e66a2af6b8bec7c2a498/LICENSE",
+          "source_commit": "da607da739fa6047df13e66a2af6b8bec7c2a498",
+          "notice": "zlib-1.3.2-LICENSE",
+          "notice_sha256": "e32ff4e00d9d94930537635291da39e7e612703334bf6fde8c7f1686fe8a45a2"
+        },
+        {
+          "name": "CUDA Runtime + nvJPEG",
+          "versions": "CUDA 12.9; exact nvJPEG patch level not independently established",
+          "members": [
+            {
+              "path": "torchvision.libs/libcudart.6ead8f7a.so.12",
+              "sha256": "256e6409e4f06f618e1fb53d4844a6b81cdded1013afa8ade40c22f99eb133b7",
+              "size_bytes": 741088,
+              "bytes": null
+            },
+            {
+              "path": "torchvision.libs/libnvjpeg.af8ad92e.so.12",
+              "sha256": "27e1eb1834b20db64f99deba379746d8ec46b92975ccb4cdfa06a84d77e4c11e",
+              "size_bytes": 9352784,
+              "bytes": null
+            }
+          ],
+          "cudart_duplicate": "Exact byte match with selected nvidia-cuda-runtime-cu12 12.9.79 wheel",
+          "nvidia_runtime_wheel_sha256": "25bba2dfb01d48a9b59ca474a1ac43c6ebf7011f1b0b8cc44f54eb6ac48a96c3",
+          "nvidia_license_sha256": "ad6f5853fba0ca0d159d0f58d49ae49830c2f8c93f7a92648b9ce90adb4c6ccd",
+          "official_eula": "https://docs.nvidia.com/cuda/archive/12.9.1/pdf/EULA.pdf",
+          "eula_pdf_sha256": "8dfb8f9da1d5d2face9bfd22213aef8b311bda6a8c734e64f1dce1843cf7e56b",
+          "eula_text_sha256": "b070ebdc3ee4566df26f7409b65cb9b9dac4d5cdac02fb470c3ad35b259f8357"
+        }
+      ]
+    },
+    "triton": {
+      "schema_version": 1,
+      "distribution": "triton",
+      "source_version": "3.7.1",
+      "candidate_version": "3.7.1+capsize.1",
+      "source_wheel_filename": "triton-3.7.1-cp313-cp313-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl",
+      "source_wheel_sha256": "59688b9b924f887316dcd0fae9e8cbe697ee1d1f6ab386723982cc9ecdebee01",
+      "source_repository": "https://github.com/triton-lang/triton",
+      "source_commit": "f797708c0626e5f9840ca5b0a98790e2c7cb09ad",
+      "owner_private_copy": "Capsize-Games/triton-maintenance",
+      "actions_disabled": true,
+      "native_component_evidence": {
+        "triton/_C/libtriton.so": {
+          "path": "triton/_C/libtriton.so",
+          "sha256": "cb16848ccf3d656175d5f3b6d92298c8d56e230e9e3da4db7f53e9db08215e01",
+          "size_bytes": 460828264
+        },
+        "triton/backends/amd/include/TDMCommon.h": {
+          "path": "triton/backends/amd/include/TDMCommon.h",
+          "sha256": "70d943369cc105bec392ffdc9ed256899a7bd929770a18419ded5f19977c49b5",
+          "size_bytes": 2075
+        },
+        "triton/backends/amd/include/hip/channel_descriptor.h": {
+          "path": "triton/backends/amd/include/hip/channel_descriptor.h",
+          "sha256": "d6d585e084c20182969dda448a0179a70154c249982249da5bf7df8b824ef162",
+          "size_bytes": 1774
+        },
+        "triton/backends/amd/include/hip/driver_types.h": {
+          "path": "triton/backends/amd/include/hip/driver_types.h",
+          "sha256": "d1f9df2221456c157e8dc0d8d154606276a74c32bed1ff1c74d849e1c713204f",
+          "size_bytes": 31339
+        },
+        "triton/backends/amd/include/hip/hip_common.h": {
+          "path": "triton/backends/amd/include/hip/hip_common.h",
+          "sha256": "41e51ddfbaf16220dde027e9e0e23c3ba4f019e1b5182df848e23ff5baa06545",
+          "size_bytes": 3430
+        },
+        "triton/backends/amd/include/hip/hip_deprecated.h": {
+          "path": "triton/backends/amd/include/hip/hip_deprecated.h",
+          "sha256": "9334c9333f6e28a3c385b62b29d003d69ed798c3f3a6bf94ca4d6f3b7ed9b33d",
+          "size_bytes": 7758
+        },
+        "triton/backends/amd/include/hip/hip_runtime.h": {
+          "path": "triton/backends/amd/include/hip/hip_runtime.h",
+          "sha256": "a7fbe286f7cdf9d1deced6fb6d663b48950315fc32caec96435bf78599c3bafa",
+          "size_bytes": 2869
+        },
+        "triton/backends/amd/include/hip/hip_runtime_api.h": {
+          "path": "triton/backends/amd/include/hip/hip_runtime_api.h",
+          "sha256": "f0ed814c4f9cd8bcf8905f358acda397ffbcbb8395bb1a65973c5b547ec455c0",
+          "size_bytes": 444378
+        },
+        "triton/backends/amd/include/hip/hip_texture_types.h": {
+          "path": "triton/backends/amd/include/hip/hip_texture_types.h",
+          "sha256": "02192f8c6e1c0e37ff6452e0e52b124df0675c6eb5e0f04ad5754f6bb8ab65b9",
+          "size_bytes": 1237
+        },
+        "triton/backends/amd/include/hip/hip_vector_types.h": {
+          "path": "triton/backends/amd/include/hip/hip_vector_types.h",
+          "sha256": "c1585f3ee359e3036cab65ff7d65eb2e0582b7a4325ee86400614c3b92ba2041",
+          "size_bytes": 1631
+        },
+        "triton/backends/amd/include/hip/hip_version.h": {
+          "path": "triton/backends/amd/include/hip/hip_version.h",
+          "sha256": "f2f49e44ccd0509582566a32ff9cf1b104e45b3a5dfc2356208b8f52b7b6c3de",
+          "size_bytes": 408
+        },
+        "triton/backends/amd/include/hip/library_types.h": {
+          "path": "triton/backends/amd/include/hip/library_types.h",
+          "sha256": "d9a86ad289e11419696f78917fb96879de2fa9963c27fbd2d41416a9ff327f11",
+          "size_bytes": 2433
+        },
+        "triton/backends/amd/include/hip/linker_types.h": {
+          "path": "triton/backends/amd/include/hip/linker_types.h",
+          "sha256": "057aba5652e78984c2cf2a42cf4c96b9acb6b9c673ab135e93ba27965a627d7b",
+          "size_bytes": 6691
+        },
+        "triton/backends/amd/include/hip/surface_types.h": {
+          "path": "triton/backends/amd/include/hip/surface_types.h",
+          "sha256": "e5eddc787fc90638713bc7341e22d2ee23011051962b50dc8c33900a2c6c9f15",
+          "size_bytes": 1953
+        },
+        "triton/backends/amd/include/hip/texture_types.h": {
+          "path": "triton/backends/amd/include/hip/texture_types.h",
+          "sha256": "f25c81c6f2ad63540551128dd692b6ca7811bc0c12d981a0ad20ce1fa1e04d2c",
+          "size_bytes": 6499
+        },
+        "triton/backends/amd/include/hip/amd_detail/amd_channel_descriptor.h": {
+          "path": "triton/backends/amd/include/hip/amd_detail/amd_channel_descriptor.h",
+          "sha256": "bed3e191b56c5444d398db006f17bd66b030d31d2e7a1ca69b5e044d86b1287e",
+          "size_bytes": 11574
+        },
+        "triton/backends/amd/include/hip/amd_detail/amd_device_functions.h": {
+          "path": "triton/backends/amd/include/hip/amd_detail/amd_device_functions.h",
+          "sha256": "4c49dd5f468aa2c8e8a3bd27570326d5fb90654be73d27a3572b5fe067e3167d",
+          "size_bytes": 31924
+        },
+        "triton/backends/amd/include/hip/amd_detail/amd_hip_atomic.h": {
+          "path": "triton/backends/amd/include/hip/amd_detail/amd_hip_atomic.h",
+          "sha256": "6f3d55c6fda28ce63614e0cb43a70318a573f2b40078b6e0cef481e627685f0c",
+          "size_bytes": 29043
+        },
+        "triton/backends/amd/include/hip/amd_detail/amd_hip_common.h": {
+          "path": "triton/backends/amd/include/hip/amd_detail/amd_hip_common.h",
+          "sha256": "b2731a9c4084dc96c297b618295dd5c9474b4ce7accd3f7352dd82b4d94b42d1",
+          "size_bytes": 1371
+        },
+        "triton/backends/amd/include/hip/amd_detail/amd_hip_gl_interop.h": {
+          "path": "triton/backends/amd/include/hip/amd_detail/amd_hip_gl_interop.h",
+          "sha256": "566881ac455970f68f03423c6c947bd20600a6cfd892666b5b8ba1ed57944773",
+          "size_bytes": 3976
+        },
+        "triton/backends/amd/include/hip/amd_detail/amd_hip_runtime.h": {
+          "path": "triton/backends/amd/include/hip/amd_detail/amd_hip_runtime.h",
+          "sha256": "e51a973fd5dd9e07300cb7c5a51fbd2059531abc33f67a45d7fe7cdef79552c8",
+          "size_bytes": 14276
+        },
+        "triton/backends/amd/include/hip/amd_detail/amd_hip_runtime_pt_api.h": {
+          "path": "triton/backends/amd/include/hip/amd_detail/amd_hip_runtime_pt_api.h",
+          "sha256": "be840fd08265680bcf8fc62c3c6293479e24c7cbf617b46b01a6c7ee536dd63c",
+          "size_bytes": 10359
+        },
+        "triton/backends/amd/include/hip/amd_detail/amd_hip_unsafe_atomics.h": {
+          "path": "triton/backends/amd/include/hip/amd_detail/amd_hip_unsafe_atomics.h",
+          "sha256": "b5eaaa01260176b641e9c8c25a0a8fc9527318dcd11cc4754e0bd1482ddedd97",
+          "size_bytes": 25567
+        },
+        "triton/backends/amd/include/hip/amd_detail/amd_hip_vector_types.h": {
+          "path": "triton/backends/amd/include/hip/amd_detail/amd_hip_vector_types.h",
+          "sha256": "611f2ea3338a9911e36527dff422dfa5829b6bcce685888bf18f0d9d8284a156",
+          "size_bytes": 56477
+        },
+        "triton/backends/amd/include/hip/amd_detail/amd_math_functions.h": {
+          "path": "triton/backends/amd/include/hip/amd_detail/amd_math_functions.h",
+          "sha256": "58553025db2bf68b564bb8ea4071d3124126b60cde888c7b365560a2f4e7beff",
+          "size_bytes": 3048
+        },
+        "triton/backends/amd/include/hip/amd_detail/amd_surface_functions.h": {
+          "path": "triton/backends/amd/include/hip/amd_detail/amd_surface_functions.h",
+          "sha256": "f46860972886f789c31f40a24e6a0aedd8026c19df3ed8e4ea1dd0c98c3da3cc",
+          "size_bytes": 18608
+        },
+        "triton/backends/amd/include/hip/amd_detail/amd_warp_functions.h": {
+          "path": "triton/backends/amd/include/hip/amd_detail/amd_warp_functions.h",
+          "sha256": "a3c82e4b2205babb03d241f2f6ce7a8f489880047cf3b37460f52d007c29d75c",
+          "size_bytes": 22072
+        },
+        "triton/backends/amd/include/hip/amd_detail/amd_warp_sync_functions.h": {
+          "path": "triton/backends/amd/include/hip/amd_detail/amd_warp_sync_functions.h",
+          "sha256": "119571e114342f7ea237f25604e8c08ceca821b1200149964ef7ce5e3f8c4a21",
+          "size_bytes": 30172
+        },
+        "triton/backends/amd/include/hip/amd_detail/device_library_decls.h": {
+          "path": "triton/backends/amd/include/hip/amd_detail/device_library_decls.h",
+          "sha256": "fc828035bf5b378e8c894e2db13f996375634f749142a2fde63833d729e4868e",
+          "size_bytes": 7396
+        },
+        "triton/backends/amd/include/hip/amd_detail/hip_assert.h": {
+          "path": "triton/backends/amd/include/hip/amd_detail/hip_assert.h",
+          "sha256": "199906029b4ad199320d738419dbb4d32b37a5a3619e7ab2e3c3942cbb15caaa",
+          "size_bytes": 4360
+        },
+        "triton/backends/amd/include/hip/amd_detail/hip_fp16_math_fwd.h": {
+          "path": "triton/backends/amd/include/hip/amd_detail/hip_fp16_math_fwd.h",
+          "sha256": "e6ed59fc1599959e7d8d83af5db5ac82c3d63bd91018f1f48cd9622b9471b40a",
+          "size_bytes": 4923
+        },
+        "triton/backends/amd/include/hip/amd_detail/hip_ldg.h": {
+          "path": "triton/backends/amd/include/hip/amd_detail/hip_ldg.h",
+          "sha256": "2801196fd1f8cf80c3ae46a5a0c39e5b36a18837c8d95e9cebcbd64f78dbe5f5",
+          "size_bytes": 3652
+        },
+        "triton/backends/amd/include/hip/amd_detail/hip_prof_str.h": {
+          "path": "triton/backends/amd/include/hip/amd_detail/hip_prof_str.h",
+          "sha256": "3f7b371e6289fc2194a010de87575b19c03a873822348c7e653c6bed67951029",
+          "size_bytes": 738681
+        },
+        "triton/backends/amd/include/hip/amd_detail/hip_runtime_prof.h": {
+          "path": "triton/backends/amd/include/hip/amd_detail/hip_runtime_prof.h",
+          "sha256": "f6ee65d05b5a60210a29260b79cda355c89ed5e772eb1c8272c9a537411bd95b",
+          "size_bytes": 2696
+        },
+        "triton/backends/amd/include/hip/amd_detail/host_defines.h": {
+          "path": "triton/backends/amd/include/hip/amd_detail/host_defines.h",
+          "sha256": "c3a1f5d1dce7b303205e8ea32414c8be18ce3901b39e180dac79b947f84cbfb5",
+          "size_bytes": 10131
+        },
+        "triton/backends/amd/include/hip/amd_detail/math_fwd.h": {
+          "path": "triton/backends/amd/include/hip/amd_detail/math_fwd.h",
+          "sha256": "1a059224f23fa9619f779d283c8864f799598877648eba5691347b75dc29101e",
+          "size_bytes": 17219
+        },
+        "triton/backends/amd/include/hip/amd_detail/ockl_image.h": {
+          "path": "triton/backends/amd/include/hip/amd_detail/ockl_image.h",
+          "sha256": "cb313c619a66a56244b3e669380184b436039b7804a58d368595477294497f67",
+          "size_bytes": 14969
+        },
+        "triton/backends/amd/include/hip/amd_detail/texture_fetch_functions.h": {
+          "path": "triton/backends/amd/include/hip/amd_detail/texture_fetch_functions.h",
+          "sha256": "c0ead499d728f9eb4fa8ee5094a9543f4f92a45c14577c3f75fc6e3ec042a655",
+          "size_bytes": 18998
+        },
+        "triton/backends/amd/include/hip/amd_detail/texture_indirect_functions.h": {
+          "path": "triton/backends/amd/include/hip/amd_detail/texture_indirect_functions.h",
+          "sha256": "256b3ee718feb9bc0eccd129e90248ee4b80b2a7f12ad864c11bce2974c7dea3",
+          "size_bytes": 23136
+        },
+        "triton/backends/amd/include/hipblas-common/hipblas-common.h": {
+          "path": "triton/backends/amd/include/hipblas-common/hipblas-common.h",
+          "sha256": "9d92c7d9662b7030c579fcfd6b4f29db280ff9869820ebb152239b1afc173d3b",
+          "size_bytes": 5450
+        },
+        "triton/backends/amd/include/hsa/amd_hsa_kernel_code.h": {
+          "path": "triton/backends/amd/include/hsa/amd_hsa_kernel_code.h",
+          "sha256": "2f48b1fff5432fb96aa460d3c5ac0bccb2e8996adfa5ecdb508722f3911ff9d0",
+          "size_bytes": 12754
+        },
+        "triton/backends/amd/include/hsa/hsa.h": {
+          "path": "triton/backends/amd/include/hsa/hsa.h",
+          "sha256": "f0dc5099a15c812cb6cdf33cf67ec35f1386be222a6d0f05896cfff16916e514",
+          "size_bytes": 191415
+        },
+        "triton/backends/amd/include/hsa/hsa_ext_amd.h": {
+          "path": "triton/backends/amd/include/hsa/hsa_ext_amd.h",
+          "sha256": "b15af4e0f20b05c60b8b219d15fd949c132c9d99bae96c48535e9b4ec69eacaa",
+          "size_bytes": 136290
+        },
+        "triton/backends/amd/include/hsa/hsa_ext_image.h": {
+          "path": "triton/backends/amd/include/hsa/hsa_ext_image.h",
+          "sha256": "0c52e6bf76790b4d2967886b2a501995e0f08d78a053b23620174ab974b7b71c",
+          "size_bytes": 56383
+        },
+        "triton/backends/amd/include/hsa/hsa_ven_amd_loader.h": {
+          "path": "triton/backends/amd/include/hsa/hsa_ven_amd_loader.h",
+          "sha256": "73a7313c0cc0a31eeee886c5cc491065f0ae465f8aaf7f56858dbfc36dd7d51e",
+          "size_bytes": 26146
+        },
+        "triton/backends/amd/include/hsa/hsa_ven_amd_pc_sampling.h": {
+          "path": "triton/backends/amd/include/hsa/hsa_ven_amd_pc_sampling.h",
+          "sha256": "d6342f8bdeacf78f868ce1a4b66be9aa3551b1318036e80eb15e979a031f8af9",
+          "size_bytes": 18767
+        },
+        "triton/backends/amd/include/roctracer/roctracer.h": {
+          "path": "triton/backends/amd/include/roctracer/roctracer.h",
+          "sha256": "07cb07cf60cc369acfec4a8d5881b054b635290329c6685f572e14a11f1dcf36",
+          "size_bytes": 23849
+        },
+        "triton/backends/amd/include/roctracer/roctracer_ext.h": {
+          "path": "triton/backends/amd/include/roctracer/roctracer_ext.h",
+          "sha256": "bcb699f29780c52cb4730add11a94a9d402990ab297dad388b0d4caff65c8a8d",
+          "size_bytes": 2940
+        },
+        "triton/backends/amd/include/roctracer/roctracer_hip.h": {
+          "path": "triton/backends/amd/include/roctracer/roctracer_hip.h",
+          "sha256": "442cd8b8dc35bcb47bc4ae2b6f4e93b4cf53539e3a51828727cdc8307999126f",
+          "size_bytes": 1432
+        },
+        "triton/backends/amd/include/roctracer/roctracer_roctx.h": {
+          "path": "triton/backends/amd/include/roctracer/roctracer_roctx.h",
+          "sha256": "8018c1939bdbd25dcf6c1490ed5f6216d68cfd1ce42032445b503f3d70628413",
+          "size_bytes": 2014
+        },
+        "triton/backends/amd/include/roctracer/roctx.h": {
+          "path": "triton/backends/amd/include/roctracer/roctx.h",
+          "sha256": "461257517461489e4b444ff5826ec4ebe6e310cadf70504b0cbb9fdd4c40221f",
+          "size_bytes": 6717
+        },
+        "triton/backends/amd/include/roctracer/ext/prof_protocol.h": {
+          "path": "triton/backends/amd/include/roctracer/ext/prof_protocol.h",
+          "sha256": "e8501cbd50fe74d33bbae945b3607e693c70e71380586cba7af743e3251a79b0",
+          "size_bytes": 3849
+        },
+        "triton/backends/nvidia/bin/cuobjdump": {
+          "path": "triton/backends/nvidia/bin/cuobjdump",
+          "sha256": "8f240516056740fee62c40eec6e1ba5d3d5ab5a309fbba4b0fe26fd54c79767d",
+          "size_bytes": 744760
+        },
+        "triton/backends/nvidia/bin/nvdisasm": {
+          "path": "triton/backends/nvidia/bin/nvdisasm",
+          "sha256": "12153e5bcb8176cadfe15f6498c866db1a58de7bd53d660fe870428b6814049c",
+          "size_bytes": 5006832
+        },
+        "triton/backends/nvidia/bin/ptxas": {
+          "path": "triton/backends/nvidia/bin/ptxas",
+          "sha256": "c960a4f238b17d5c5d3c01ad2bbc1ebd2c5aecc459cb4d223bff10b45f9b8fca",
+          "size_bytes": 31912192
+        },
+        "triton/backends/nvidia/bin/ptxas-blackwell": {
+          "path": "triton/backends/nvidia/bin/ptxas-blackwell",
+          "sha256": "cdcbf106e11a09f4cc5ff6f064a060570103d7ab123e31b1b0b75a8dbbc43119",
+          "size_bytes": 41369696
+        },
+        "triton/backends/nvidia/lib/cupti/libcheckpoint.so": {
+          "path": "triton/backends/nvidia/lib/cupti/libcheckpoint.so",
+          "sha256": "06ba82bd09237b934cf16da2172ed5943c582caa35c79b52cfcfeb0ff71f7250",
+          "size_bytes": 1644872
+        },
+        "triton/backends/nvidia/lib/cupti/libcupti.so": {
+          "path": "triton/backends/nvidia/lib/cupti/libcupti.so",
+          "sha256": "fccdc5fcc7c32f8cf4b3ed9b17f7f187a185a6fa0a5bcc06e3434cbd1687c808",
+          "size_bytes": 7595792
+        },
+        "triton/backends/nvidia/lib/cupti/libcupti.so.12": {
+          "path": "triton/backends/nvidia/lib/cupti/libcupti.so.12",
+          "sha256": "fccdc5fcc7c32f8cf4b3ed9b17f7f187a185a6fa0a5bcc06e3434cbd1687c808",
+          "size_bytes": 7595792
+        },
+        "triton/backends/nvidia/lib/cupti/libcupti.so.2025.1.1": {
+          "path": "triton/backends/nvidia/lib/cupti/libcupti.so.2025.1.1",
+          "sha256": "fccdc5fcc7c32f8cf4b3ed9b17f7f187a185a6fa0a5bcc06e3434cbd1687c808",
+          "size_bytes": 7595792
+        },
+        "triton/backends/nvidia/lib/cupti/libcupti_static.a": {
+          "path": "triton/backends/nvidia/lib/cupti/libcupti_static.a",
+          "sha256": "ab6d9db248f9d87527e34c2c27afb983d0050ff698b4e4aa225349adb46a3a4a",
+          "size_bytes": 43563448
+        },
+        "triton/backends/nvidia/lib/cupti/libnvperf_host.so": {
+          "path": "triton/backends/nvidia/lib/cupti/libnvperf_host.so",
+          "sha256": "609f54063c253daff6efba79fe49252fdd2324308ab0ffb991cc125d3e9a1eab",
+          "size_bytes": 25825936
+        },
+        "triton/backends/nvidia/lib/cupti/libnvperf_host_static.a": {
+          "path": "triton/backends/nvidia/lib/cupti/libnvperf_host_static.a",
+          "sha256": "b132e85f9606f3525706848a9b77cba3444074fdc7a884a682dc7c2f8ed717ee",
+          "size_bytes": 33480030
+        },
+        "triton/backends/nvidia/lib/cupti/libnvperf_target.so": {
+          "path": "triton/backends/nvidia/lib/cupti/libnvperf_target.so",
+          "sha256": "2f10e1109fc341a57434c28e4006b45a89247801e20f5ace135c302c173e0770",
+          "size_bytes": 5275312
+        },
+        "triton/backends/nvidia/lib/cupti/libpcsamplingutil.so": {
+          "path": "triton/backends/nvidia/lib/cupti/libpcsamplingutil.so",
+          "sha256": "e6fa2783077974fb2765bfa9cbaebf980736df74eebf994c59c7596988aec83b",
+          "size_bytes": 970064
+        }
+      },
+      "toolchain_versions": {
+        "ptxas-blackwell": "13.1.80",
+        "ptxas": "12.8.93",
+        "cuobjdump": "13.1.80",
+        "nvdisasm": "13.1.80",
+        "cudacrt": "13.1.80",
+        "cudart": "13.1.80",
+        "cupti": "12.8.90"
+      },
+      "llvm_source_commit": "1f126a6dea50d185c0781743a667390037ae88bd",
+      "components": [
+        {
+          "name": "LLVM/MLIR",
+          "scope": "460 MB libtriton.so contains statically linked LLVM/MLIR; there is no LLVM DT_NEEDED dependency. Exact source pin is cmake/llvm-hash.txt.",
+          "member": "triton/_C/libtriton.so",
+          "member_sha256": "cb16848ccf3d656175d5f3b6d92298c8d56e230e9e3da4db7f53e9db08215e01",
+          "source_url": "https://github.com/llvm/llvm-project/blob/1f126a6dea50d185c0781743a667390037ae88bd/llvm/LICENSE.TXT",
+          "source_commit": "1f126a6dea50d185c0781743a667390037ae88bd",
+          "notice": "LLVM-23-LLVM-License.TXT",
+          "notice_sha256": "8d85c1057d742e597985c7d4e6320b015a9139385cff4cbae06ffc0ebe89afee"
+        },
+        {
+          "name": "f2reduce",
+          "scope": "GenericSwizzling.cpp and LinearLayout.cpp compile this source into libtriton.so.",
+          "source_url": "https://github.com/triton-lang/triton/blob/f797708c0626e5f9840ca5b0a98790e2c7cb09ad/third_party/f2reduce/LICENCE.txt",
+          "source_commit": "f797708c0626e5f9840ca5b0a98790e2c7cb09ad",
+          "notice": "f2reduce-LICENCE.txt",
+          "notice_sha256": "e18b77c5b0f23ee0f20d391ea2b49a05d571a9656248cfb057c4e0e44faf58b5"
+        },
+        {
+          "name": "NVIDIA CUDA header/toolchain assets",
+          "evidence": "cmake/nvidia-toolchain-version.json; header macro CUDA_VERSION=13010.",
+          "versions": {
+            "ptxas-blackwell": "13.1.80",
+            "ptxas": "12.8.93",
+            "cuobjdump": "13.1.80",
+            "nvdisasm": "13.1.80",
+            "cudacrt": "13.1.80",
+            "cudart": "13.1.80",
+            "cupti": "12.8.90"
+          },
+          "official_eulas": [
+            {
+              "release": "13.1",
+              "url": "https://docs.nvidia.com/cuda/archive/13.1.1/pdf/EULA.pdf",
+              "pdf_sha256": "abf3a2de172a41ef2b9bf01a29ebe77b2652034a6bf36b9e0efc72ec621709ae",
+              "text_sha256": "b932008f2a02d7f90f433527f173b8f47f95001f0ab642012a925a5ad07fb8e6"
+            },
+            {
+              "release": "12.8.1",
+              "url": "https://docs.nvidia.com/cuda/archive/12.8.1/pdf/EULA.pdf",
+              "pdf_sha256": "94736434ff4409100167951f4a76c0a6ab9ba98cf75b41bb74fae53610d9940b",
+              "text_sha256": "81e73618b62700b5a6b51de9aa4430f8d2dd43c6219c518221f2a8d2cb22a22e"
+            }
+          ]
+        },
+        {
+          "name": "CUPTI/NVPerf",
+          "version": "12.8.90",
+          "evidence_members": [
+            "triton/backends/nvidia/lib/cupti/libcheckpoint.so",
+            "triton/backends/nvidia/lib/cupti/libcupti.so",
+            "triton/backends/nvidia/lib/cupti/libcupti.so.12",
+            "triton/backends/nvidia/lib/cupti/libcupti.so.2025.1.1",
+            "triton/backends/nvidia/lib/cupti/libcupti_static.a",
+            "triton/backends/nvidia/lib/cupti/libnvperf_host.so",
+            "triton/backends/nvidia/lib/cupti/libnvperf_host_static.a",
+            "triton/backends/nvidia/lib/cupti/libnvperf_target.so",
+            "triton/backends/nvidia/lib/cupti/libpcsamplingutil.so"
+          ],
+          "official_source_url": "https://docs.nvidia.com/cupti/12.8.1/copyright-and-licenses/index.html",
+          "document_sha256": "f43d4ab3be8469ae7547c6b84616aea7a3baa603c47258cc57d3f41d7254322a",
+          "text_sha256": "ccffc0331d86c4bcb479906913321152a16d08217097e96d381ea3748645822a",
+          "scope": "Official CUPTI agreement and third-party notices are preserved; no conclusion about which license purpose applies."
+        },
+        {
+          "name": "AMD HIP/HSA/ROCtracer headers",
+          "versions": [
+            "HIP 7.1.25424; githash 4179531dcd",
+            "ROCtracer 4.1"
+          ],
+          "evidence_member": "triton/backends/amd/include/hip/hip_version.h",
+          "evidence_sha256": "f2f49e44ccd0509582566a32ff9cf1b104e45b3a5dfc2356208b8f52b7b6c3de",
+          "scope": "Original AMD MIT and HSA NCSA license blocks remain in exact wheel headers; 17 distinct exact blocks also aggregated in this notice.",
+          "notice": "AMD-HIP-header-license-notices.txt",
+          "notice_sha256": "e7f5b88dd0a53dcf5c6cca240fc5f9f2ee47e8d209c29e5722e09e3128c3de70"
+        }
+      ]
+    }
+  }
+}
