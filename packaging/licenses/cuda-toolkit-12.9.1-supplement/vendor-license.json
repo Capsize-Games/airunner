@@ -1,0 +1,19 @@
+{
+  "distribution": "cuda-toolkit",
+  "version": "12.9.1",
+  "exact_pin": "cuda-toolkit==12.9.1",
+  "selected_wheel_sha256": "0c8636dfacbecfe9867a949a211864f080a805bc54023ce4a361aa4e1fd8738b",
+  "vendor_document": {
+    "publisher": "NVIDIA Corporation",
+    "product": "CUDA Toolkit meta-package",
+    "release_scope": "CUDA Toolkit EULA, Release 12.9 (document dated May 31, 2025); the selected cuda-toolkit 12.9.1 artifact is a metadata-only wheel with no embedded license file.",
+    "official_source_url": "https://docs.nvidia.com/cuda/archive/12.9.1/pdf/EULA.pdf",
+    "retrieved_date": "2026-11-02",
+    "document_path": "packaging/licenses/cuda-toolkit-12.9.1-supplement/CUDA-Toolkit-12.9.1-EULA.pdf",
+    "document_sha256": "8dfb8f9da1d5d2face9bfd22213aef8b311bda6a8c734e64f1dce1843cf7e56b",
+    "document_size_bytes": 226690,
+    "text_path": "packaging/licenses/cuda-toolkit-12.9.1-supplement/CUDA-Toolkit-12.9.1-EULA.txt",
+    "text_sha256": "b070ebdc3ee4566df26f7409b65cb9b9dac4d5cdac02fb470c3ad35b259f8357",
+    "text_size_bytes": 94991
+  }
+}

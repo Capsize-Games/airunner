@@ -1,0 +1,22 @@
+{
+  "distribution": "pydispatcher",
+  "version": "2.0.7",
+  "exact_pin": "pydispatcher==2.0.7",
+  "license_source": "The exact PyPI source distribution contains license.txt with the BSD notice and copyright attribution. The selected wheel omits that file; the notice below is copied byte-for-byte from the source archive.",
+  "source_distribution": {
+    "filename": "PyDispatcher-2.0.7.tar.gz",
+    "sha256": "b777c6ad080dc1bad74a4c29d6a46914fa6701ac70f94b0d66fbcfde62f5be31"
+  },
+  "selected_wheel": {
+    "filename": "PyDispatcher-2.0.7-py3-none-any.whl",
+    "sha256": "96543bea04115ffde08f851e1d45cacbfd1ee866ac42127d9b476dc5aefa7de0"
+  },
+  "files": [
+    {
+      "path": "packaging/licenses/pydispatcher-2.0.7-supplement/PyDispatcher-2.0.7--license.txt",
+      "source_archive_path": "PyDispatcher-2.0.7/license.txt",
+      "size_bytes": 1564,
+      "sha256": "aeec9c40c508ce52e66e3eb087c062d8ecf49622a4abd3af79410506b43b698b"
+    }
+  ]
+}

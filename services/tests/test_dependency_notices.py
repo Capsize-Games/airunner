@@ -5,7 +5,6 @@ from __future__ import annotations
 import base64
 import csv
 import hashlib
-import importlib.util
 import json
 import shutil
 import sys
@@ -203,6 +202,88 @@ def test_reviewed_source_notice_can_supply_missing_wheel_notice(tmp_path, monkey
     assert alpha["notices"][0]["provenance"] == "reviewed-source-supplement"
     assert "record_hash" not in alpha["notices"][0]
     assert dependency_notices.verify_dependency_notice_manifest(bundle, spec, tmp_path) == []
+
+
+def _add_vendor_fixture(tmp_path, spec):
+    packages, _ = dependency_notices.read_lock(spec["bundle"]["constraints"], tmp_path)
+    wheel_hash = next(p.hashes[0] for p in packages if p.normalized_name == "alpha")
+    folder = tmp_path / "vendor"
+    folder.mkdir()
+    documents = []
+    for name in ("LICENSE.txt", "ThirdPartyNotices.txt"):
+        content = f"Original vendor {name}\n".encode()
+        (folder / name).write_bytes(content)
+        documents.append({
+            "publisher": "NVIDIA Corporation", "product": "Fixture",
+            "release_scope": "Synthetic integration fixture",
+            "official_source_url": f"https://github.com/NVIDIA/nccl/blob/{'a' * 40}/{name}",
+            "retrieved_date": "2026-11-02",
+            "document_path": f"vendor/{name}",
+            "text_path": f"vendor/{name}",
+            "document_sha256": hashlib.sha256(content).hexdigest(),
+            "text_sha256": hashlib.sha256(content).hexdigest(),
+            "document_size_bytes": len(content), "text_size_bytes": len(content),
+        })
+    manifest = {
+        "distribution": "alpha", "version": "1.0", "exact_pin": "alpha==1.0",
+        "selected_wheel_sha256": wheel_hash, "vendor_documents": documents,
+    }
+    (folder / "vendor-license.json").write_text(json.dumps(manifest))
+    spec["dependency_notices"]["vendor_supplements"] = ["vendor/vendor-license.json"]
+
+
+def test_vendor_can_supply_missing_wheel_notices(tmp_path, monkeypatch):
+    site, spec, bundle = _reviewed_source_fixture(tmp_path, monkeypatch)
+    _add_vendor_fixture(tmp_path, spec)
+    manifest = _collect(tmp_path, site, spec, bundle)
+    alpha = manifest["distributions"][0]
+    assert len(alpha["notices"]) == 2
+    assert all(n["provenance"] == "reviewed-vendor-license-supplement" for n in alpha["notices"])
+    assert all("record_hash" not in n for n in alpha["notices"])
+    assert dependency_notices.verify_dependency_notice_manifest(bundle, spec, tmp_path) == []
+
+
+def test_wheel_and_source_and_vendor_notices_are_all_preserved(tmp_path, monkeypatch):
+    site, spec, bundle = _reviewed_source_fixture(tmp_path, monkeypatch)
+    # Restore the original installed notice while retaining reviewed source evidence.
+    shutil.rmtree(site / "alpha-1.0.dist-info")
+    shutil.rmtree(site / "alpha")
+    _write_distribution(site, "alpha", "1.0")
+    spec["dependency_notices"]["source_supplements"] = ["reviewed/source-manifest.json"]
+    _add_vendor_fixture(tmp_path, spec)
+    manifest = _collect(tmp_path, site, spec, bundle)
+    notices = manifest["distributions"][0]["notices"]
+    assert len(notices) == 4
+    assert sum("record_hash" in notice for notice in notices) == 1
+    assert dependency_notices.verify_dependency_notice_manifest(bundle, spec, tmp_path) == []
+
+
+@pytest.mark.parametrize("tamper", ["omission", "provenance", "payload", "vendor_hash"])
+def test_vendor_bundle_rejects_missing_or_forged_evidence(tmp_path, monkeypatch, tamper):
+    site, lock, spec, bundle = _setup(tmp_path, monkeypatch)
+    _add_vendor_fixture(tmp_path, spec)
+    manifest = _collect(tmp_path, site, spec, bundle)
+    alpha = manifest["distributions"][0]
+    notice = next(n for n in alpha["notices"] if "provenance" in n)
+    if tamper == "omission":
+        alpha["notices"].remove(notice)
+    elif tamper == "provenance":
+        notice.pop("provenance")
+        notice["record_hash"] = "sha256:" + notice["sha256"]
+    elif tamper == "payload":
+        (bundle / notice["bundle_path"]).write_bytes(b"altered")
+    else:
+        notice["vendor_document"]["document_sha256"] = "0" * 64
+    (bundle / "legal/dependencies/dependency-notices.json").write_text(json.dumps(manifest))
+    assert dependency_notices.verify_dependency_notice_manifest(bundle, spec, tmp_path)
+
+
+def test_vendor_manifest_failure_is_a_collection_error(tmp_path, monkeypatch):
+    site, lock, spec, bundle = _setup(tmp_path, monkeypatch)
+    _add_vendor_fixture(tmp_path, spec)
+    (tmp_path / "vendor/LICENSE.txt").write_bytes(b"altered")
+    with pytest.raises(dependency_notices.DependencyNoticeError, match="differs"):
+        _collect(tmp_path, site, spec, bundle)
 
 
 def test_reviewed_upstream_notice_keeps_separate_source_provenance(tmp_path, monkeypatch):

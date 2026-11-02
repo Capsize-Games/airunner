@@ -489,6 +489,33 @@ def _distribution_notices(
     return package_record, contents
 
 
+def _reviewed_notice_supplements(
+    spec: dict[str, Any], repo_root: Path,
+    packages: list[LockedDistribution], destination: str,
+) -> dict[str, tuple[list[dict[str, Any]], list[tuple[str, bytes]]]]:
+    """Combine independently verified source and vendor evidence per pin."""
+    from source_notice_supplements import load_source_notice_supplements
+    from vendor_notice_supplements import load_vendor_notice_supplements
+
+    combined: dict[str, tuple[list[dict[str, Any]], list[tuple[str, bytes]]]] = {}
+    seen_paths: set[str] = set()
+    try:
+        for loader in (load_source_notice_supplements, load_vendor_notice_supplements):
+            for pin, (records, files) in loader(
+                spec, repo_root, packages, destination
+            ).items():
+                for path, _content in files:
+                    if path in seen_paths:
+                        raise DependencyNoticeError("reviewed notice output path collision")
+                    seen_paths.add(path)
+                merged_records, merged_files = combined.setdefault(pin, ([], []))
+                merged_records.extend(records)
+                merged_files.extend(files)
+    except ValueError as exc:
+        raise DependencyNoticeError(str(exc)) from exc
+    return combined
+
+
 def collect_dependency_notices(
     spec: dict[str, Any],
     repo_root: Path,
@@ -507,9 +534,7 @@ def collect_dependency_notices(
     destination_text = str(config.get("dest", ""))
     manifest_name = str(config.get("manifest", ""))
     destination_rel = _safe_relative(destination_text, "dependency notice directory")
-    from source_notice_supplements import load_source_notice_supplements
-
-    source_supplements = load_source_notice_supplements(
+    source_supplements = _reviewed_notice_supplements(
         spec, repo_root, packages, destination_rel.as_posix()
     )
     manifest_rel = _safe_relative(manifest_name, "dependency notice manifest name")
@@ -640,9 +665,7 @@ def verify_dependency_notice_manifest(
         packages, lock_digest = read_lock(lock_text, repo_root)
         dest = str(config.get("dest", ""))
         dest_rel = _safe_relative(dest, "dependency notice directory")
-        from source_notice_supplements import load_source_notice_supplements
-
-        source_supplements = load_source_notice_supplements(
+        source_supplements = _reviewed_notice_supplements(
             spec, repo_root, packages, dest_rel.as_posix()
         )
         manifest_name = str(config.get("manifest", ""))
@@ -714,6 +737,7 @@ def verify_dependency_notice_manifest(
                     notice.get("provenance") in {
                         "reviewed-source-supplement",
                         "reviewed-upstream-source-supplement",
+                        "reviewed-vendor-license-supplement",
                     }
                 )
                 if is_source_supplement:

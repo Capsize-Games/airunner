@@ -1,0 +1,32 @@
+{
+  "distribution": "openmeteo-sdk",
+  "version": "1.28.0",
+  "exact_pin": "openmeteo-sdk==1.28.0",
+  "license_source": "The exact PyPI source distribution and selected wheel omit a license file. Its source metadata identifies the package as MIT-licensed and links to the upstream repository. The MIT notice below is copied byte-for-byte from the upstream v1.28.0 tag at the recorded commit.",
+  "source_distribution": {
+    "filename": "openmeteo_sdk-1.28.0.tar.gz",
+    "sha256": "e77011b34f8696eb8cd6756d22b6868f9b3420671b93285171f2ab0ea3be1ba4"
+  },
+  "selected_wheel": {
+    "filename": "openmeteo_sdk-1.28.0-py3-none-any.whl",
+    "sha256": "e975faffd9f3095ec2e10409b1233913b5110a2cf47dd7e64fc650c661619fe2"
+  },
+  "package_source_evidence": {
+    "path": "openmeteo-sdk-1.28.0/PKG-INFO",
+    "sha256": "8b282506121b9c0478109aba7c047f5f32145d75fbfb706af20fd29001b36d11"
+  },
+  "files": [
+    {
+      "path": "packaging/licenses/openmeteo-sdk-1.28.0-supplement/openmeteo-sdk--LICENSE.txt",
+      "size_bytes": 1067,
+      "sha256": "06f7bdf604db150e13e7d898a775669db34d28d8bb3ee39bee201de666efae94",
+      "upstream_source": {
+        "repository": "open-meteo/sdk",
+        "revision": "00ac91cf7267e7750b816af3d7c054e75c8f8ddf",
+        "path": "LICENSE",
+        "sha256": "06f7bdf604db150e13e7d898a775669db34d28d8bb3ee39bee201de666efae94",
+        "size_bytes": 1067
+      }
+    }
+  ]
+}

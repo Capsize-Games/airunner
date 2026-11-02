@@ -66,6 +66,13 @@ source_supplements = [
     "packaging/licenses/orjson-3.13.0-supplement/source-manifest.json",
     "packaging/licenses/sentencepiece-0.2.1-supplement/source-manifest.json",
     "packaging/licenses/zstandard-0.25.0-supplement/source-manifest.json",
+    "packaging/licenses/openmeteo-sdk-1.28.0-supplement/source-manifest.json",
+    "packaging/licenses/pydispatcher-2.0.7-supplement/source-manifest.json",
+]
+vendor_supplements = [
+    "packaging/licenses/cuda-toolkit-12.9.1-supplement/vendor-license.json",
+    "packaging/licenses/nvidia-nvshmem-cu12-3.4.5-supplement/vendor-license.json",
+    "packaging/licenses/nvidia-nccl-cu12-2.29.7-supplement/vendor-license.json",
 ]
 
 [qt]
