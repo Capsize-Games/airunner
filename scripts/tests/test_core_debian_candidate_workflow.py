@@ -5,6 +5,7 @@ import hashlib
 import json
 import os
 import subprocess
+import sys
 import tempfile
 import unittest
 
@@ -224,6 +225,7 @@ esac''',
                 capture_output=True,
                 text=True,
                 check=False,
+                timeout=180,
             )
 
             self.assertNotEqual(result.returncode, 0)
@@ -276,6 +278,42 @@ esac''',
             }
             self.assertEqual(bad_digest_before, bad_digest_after)
             self.assertFalse((artifact / "candidate-upgrade-validation.json").exists())
+
+    def test_fixture_database_hash_matches_after_creator_process_exits(self):
+        with tempfile.TemporaryDirectory(prefix="core-upgrade-fixture-") as temporary:
+            output = Path(temporary) / "fixture"
+            environment = os.environ.copy()
+            source_paths = [
+                ROOT / "services/src",
+                ROOT / "native/src",
+                ROOT / "debian/vendor",
+            ]
+            environment["PYTHONPATH"] = os.pathsep.join(
+                [*(str(path) for path in source_paths), environment.get("PYTHONPATH", "")]
+            ).rstrip(os.pathsep)
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(FIXTURE),
+                    "--output-dir",
+                    str(output),
+                    "--source-sha",
+                    "b" * 40,
+                ],
+                env=environment,
+                capture_output=True,
+                text=True,
+                check=False,
+                timeout=180,
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+
+            record = json.loads((output / "fixture.json").read_text(encoding="utf-8"))
+            database = output / "airunner.db"
+            actual_digest = hashlib.sha256(database.read_bytes()).hexdigest()
+            self.assertEqual(record["database_sha256"], actual_digest)
+            self.assertFalse((output / "airunner.db-wal").exists())
+            self.assertFalse((output / "airunner.db-shm").exists())
 
 
 if __name__ == "__main__":
