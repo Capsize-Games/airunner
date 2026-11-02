@@ -8,12 +8,14 @@ Importable Python code is under `services/src/airunner_services/`. The main cons
 
 `services/setup.py` declares the `core`, `llm-native`, `stt-native`, `art-python`, `tts-python`, `tts-python-core`, `headless`, `desktop`, `linux-release`, and `development` extras, among others. `desktop` is a legacy package-extra name for a broader service profile; it does not include the retired Qt interface.
 
-The base package metadata requires `airunner-common~=6.1.7` and `facehuggershield==1.0.0`. The CI workflow uses pinned source checkouts for these dependencies because their PyPI releases are paused or yanked. No general external install instructions for those sources are established here. The legacy `tts-python` extra requires `airunner-tts-vendor`; the `headless`, `desktop`, `all`, `all_dev`, `all_native`, `all_dev_native`, and `windows` aggregates inherit it. [Issue #2413](https://github.com/Capsize-Games/airunner/issues/2413) records unresolved PyPI availability, so these vendor-bearing profiles are not available from the configured public indexes. `tts-python-core` contains the shared Python TTS requirements without the OpenVoice/Melo vendor dependency. OpenVoice and Melo are deferred from `linux-release`, which selects this extra. The active hash lock is pending generation, and the paused `airunner-common` and `facehuggershield` inputs still require source review; no release profile is currently ready for installation.
+The base package requires `airunner-common~=6.1.8`. Its reviewed wheel is published in the [common v6.1.8 GitHub release](https://github.com/Capsize-Games/airunner-common/releases/tag/v6.1.8); PyPI publication remains paused. FacehuggerShield is optional through the `legacy-shield` extra.
+
+The legacy `tts-python` extra requires `airunner-tts-vendor`; the `headless`, `desktop`, `all`, `all_dev`, `all_native`, `all_dev_native`, and `windows` aggregates inherit it. [Issue #2413](https://github.com/Capsize-Games/airunner/issues/2413) records unresolved PyPI availability, so these vendor-bearing profiles are not available from the configured public indexes. The current `linux-release` profile selects `tts-python-core`, which omits OpenVoice/Melo and the legacy pyttsx3 local-playback dependency. The headless eSpeak HTTP path uses the bounded eSpeak NG CLI renderer described below. Legacy `llm` and `tts-python` extras retain their playback dependency; they are not the Linux release profile. The full ML release lock and artifact/model acceptance remain unfinished.
 
 For a local development environment, first confirm that the required dependencies are available from an approved source. Then create an isolated environment with `uv` and install the service package and development tools:
 
 ```bash
-uv venv --python 3.13 .venv
+uv venv --python 3.13.5 .venv
 uv pip install --python .venv/bin/python -e "./services[development]"
 ```
 

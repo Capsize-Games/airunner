@@ -35,7 +35,9 @@ The headless eSpeak path returns WAV bytes without local playback. It uses a
 bounded plain-text renderer and an explicit voice catalogue operation; see
 `services/README.md` for the API selector and supported speed range. Isolated
 engine and contract checks do not establish packaged installation or voice
-acceptance.
+acceptance. The `tts-python-core` release extra no longer installs pyttsx3:
+only the retained legacy playback manager uses it. Legacy `llm` and
+`tts-python` extras preserve that separate dependency and compatibility path.
 
 The active release lock is pending generation and validation. The old desktop
 lock is retained only as historical evidence. A pinned isolated CUDA build
@@ -230,11 +232,12 @@ distributions have recorded static source review and origin disposition. The
 readiness record permits isolated candidate installation and build work.
 CORE Debian builds and post-packaging manifest inspection passed at source
 `4215e978a11220ab7bcf5e9458c406186e859313` in workflow run `41482860335`.
-Fresh-target installation reached daemon startup, which failed because an
-Alembic data-file import was absent from the frozen module graph. The frozen
-profiles now explicitly retain service imports from all packaged migration
-files, with a regression check and TOC validation. A corrected fresh-install
-result is still required. The visible input and whitelist inventory
+Fresh-target installation exposed missing Alembic data-file imports and a
+supervisor command that treated the frozen image as a Python interpreter.
+The profiles now retain service imports from all packaged migrations, with
+regression and TOC checks. Daemon, art and TTS launchers run a frozen image
+directly while preserving normal Python module execution. A corrected
+fresh-install result is still required. The visible input and whitelist inventory
 is in `DEPENDENCY_DECISIONS.md`. Metadata resolution and source-level tests do
 not establish an executable or Debian package acceptance result. The Debian exit checks are a clean target
 install, daemon health, command dispatch, restart and upgrade preservation,

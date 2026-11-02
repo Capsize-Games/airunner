@@ -162,7 +162,7 @@ RAG_REQUIREMENTS = [
     "langchain-text-splitters==1.1.2",
     "EbookLib==0.19",
     "mobi==0.4.1",
-    "pypdf>=5.6.0",
+    "pypdf>=6.21.4",
 ]
 
 LLM_NATIVE_REQUIREMENTS = [
@@ -172,7 +172,7 @@ LLM_NATIVE_REQUIREMENTS = [
     "sumy==0.11.0",
     "sentencepiece==0.2.1",
     "lingua-language-detector==2.1.0",
-    "markdown==3.8.1",
+    "markdown==3.11.2",
     "mistral_common>=1.8.5",
     "rank-bm25>=0.2.2",
     "llama-cloud==0.1.23",
@@ -210,8 +210,9 @@ TTS_REQUIREMENTS = [
     "inflect==7.5.0",
     "pycountry==24.6.1",
     "librosa==0.11.0",
-    # Bound torchcodec to the pinned torch 2.13.x line (issue #2041).
-    "torchcodec>=0.8.0,<0.10",
+    # TorchCodec 0.12-0.17 documents torch >=2.11 compatibility. The
+    # Linux release lock selects the exact reviewed CUDA build.
+    "torchcodec>=0.12.0,<0.18",
 ]
 
 # The MeloTTS/OpenVoice fork moved to its own published package,
@@ -344,7 +345,6 @@ def _base_extras_require() -> dict[str, list[str]]:
         "tts-python-core": unique_requirements(
             ML_RUNTIME_REQUIREMENTS,
             TTS_REQUIREMENTS,
-            ["pyttsx3==2.91"],
         ),
         "openvoice": OPENVOICE_REQUIREMENTS,
         "melotts": MELOTTS_REQUIREMENTS,
