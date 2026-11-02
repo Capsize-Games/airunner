@@ -36,10 +36,15 @@ override_dh_dwz:
 override_dh_strip:
 	dh_strip -Xusr/lib/airunner
 
+override_dh_strip_nondeterminism:
+	dh_strip_nondeterminism -Xusr/lib/airunner
+
 # Verify the installed payload after the other debhelper transformations.
 override_dh_builddeb:
 	$(AIRUNNER_CORE_PYTHON) scripts/inspect_linux_bundle.py \
 		--spec packaging/linux/services-core-bundle-spec.toml \
+		--warn-file build/core-work/airunner-core/warn-airunner-core.txt \
+		--toc build/core-work/airunner-core \
 		debian/airunner/usr/lib/airunner
 	dh_builddeb
 
