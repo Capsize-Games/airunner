@@ -76,6 +76,7 @@ def test_core_spec_inherits_resources_but_replaces_full_ml_profile() -> None:
         "LICENSE",
         "NOTICE",
         "THIRD_PARTY_NOTICES.md",
+        "packaging/licenses/libuv-LICENSE",
     } <= required_data
     for entry in spec["data"]:
         if entry.get("required", True):

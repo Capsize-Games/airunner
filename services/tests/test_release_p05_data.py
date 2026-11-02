@@ -120,7 +120,12 @@ def test_legal_entries_cover_root_notices(spec: dict[str, Any]) -> None:
         for entry in spec.get("data", [])
         if str(entry.get("stage")) == "root"
     }
-    assert staged == {"LICENSE", "NOTICE", "THIRD_PARTY_NOTICES.md"}
+    assert staged == {
+        "LICENSE",
+        "NOTICE",
+        "THIRD_PARTY_NOTICES.md",
+        "libuv-LICENSE",
+    }
 
 
 def _assert_collect_parent_exists(parent: str) -> None:

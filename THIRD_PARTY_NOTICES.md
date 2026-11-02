@@ -137,3 +137,14 @@ above. Their headers are retained to preserve upstream attribution:
 
 This section is informational only; the CI check applies to vendored package
 directories.
+
+## libuv — uvloop Linux runtime
+
+- **Upstream project:** `libuv/libuv`
+- **Upstream URL:** https://github.com/libuv/libuv
+- **Version and source pin:** libuv 1.52.1, commit
+  `1cfa32ff59c076ffb6ed735bbc8c18361558661f`, vendored by uvloop 0.23.0.
+- **License notice:** [`packaging/licenses/libuv-LICENSE`](packaging/licenses/libuv-LICENSE)
+  is the original `vendor/libuv/LICENSE` file (SHA-256
+  `16de0c32b265cb7d46a6d3bd614f259dd4d693a5e26b3407b04aae8d73041f0c`).
+  Linux bundles stage this notice in `legal/` alongside the other notices.

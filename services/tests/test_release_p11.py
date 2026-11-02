@@ -12,6 +12,7 @@ from __future__ import annotations
 from test_release_p11_support import (
     LEGAL_FILES,
     REPO_ROOT,
+    THIRD_PARTY_PATH,
     bootstrap_repo_ids,
     constraint_pins,
     constraints_sha256,
@@ -90,9 +91,30 @@ def test_legal_sources_present_and_staged() -> None:
     assert "Version 3" in license_text
     staged = staged_legal_sources(load_spec())
     for path in LEGAL_FILES:
-        entry = staged.get(path.name)
-        assert entry is not None, path.name
-        assert entry.get("required") is True, path.name
+        source = path.relative_to(REPO_ROOT).as_posix()
+        entry = staged.get(source)
+        assert entry is not None, source
+        assert entry.get("required") is True, source
+
+
+def test_libuv_notice_matches_vendored_license_bytes() -> None:
+    """The bundled uvloop libuv license is retained byte-for-byte."""
+    import hashlib
+
+    path = LEGAL_FILES[-1]
+    assert hashlib.sha256(path.read_bytes()).hexdigest() == (
+        "16de0c32b265cb7d46a6d3bd614f259dd4d693a5e26b3407b04aae8d73041f0c"
+    )
+    assert "libuv" in THIRD_PARTY_PATH.read_text(encoding="utf-8").lower()
+
+
+def test_debian_copyright_tracks_bundled_libuv_notice() -> None:
+    """The Debian source package declares the additional license file."""
+    copyright_text = (REPO_ROOT / "debian" / "copyright").read_text(
+        encoding="utf-8"
+    )
+    assert "Files: packaging/licenses/libuv-LICENSE" in copyright_text
+    assert "legal/libuv-LICENSE" in copyright_text
 
 
 def test_vendored_notice_gate_still_passes() -> None:

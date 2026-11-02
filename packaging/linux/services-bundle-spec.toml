@@ -353,6 +353,12 @@ dest = "legal"
 stage = "root"
 required = true
 
+[[data]]
+source = "packaging/licenses/libuv-LICENSE"
+dest = "legal"
+stage = "root"
+required = true
+
 [runtimes]
 # Native sidecar executables resolve per
 # runtimes/bundled_runtime_paths.py: $AIRUNNER_BUNDLE_ROOT/bin/<name>,
