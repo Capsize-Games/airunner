@@ -14,6 +14,8 @@ from airunner_services.api.routes.legacy_ollama_compat import (
 )
 from airunner_services.llm.companion.embeddings import EmbeddingModelIdentity
 from airunner_services.runtimes.local_embeddings import LocalEmbeddingClient
+from airunner_services.runtimes import e5_model_identity as e5_identity_module
+from airunner_services.runtimes.e5_model_identity import E5ModelIdentity, VerifiedE5Embedder
 
 _DIMENSION = 1024
 
@@ -153,6 +155,38 @@ def test_unconfigured_local_provider_returns_503() -> None:
     assert error.value.detail == "local_embedding_unavailable"
 
 
+def test_missing_e5_model_is_unavailable_without_phantom_download_signal(
+    tmp_path, monkeypatch
+) -> None:
+    import logging
+
+    from airunner_services.llm.managers.agent.mixins.rag_properties_mixin import (
+        RAGPropertiesMixin,
+    )
+    from airunner_services.runtimes.e5_model_identity import E5ModelIdentityError
+
+    monkeypatch.delenv("AIRUNNER_EMBED_ENDPOINT", raising=False)
+    signals = []
+
+    class _Properties(RAGPropertiesMixin):
+        _embedding = None
+
+        def __init__(self):
+            self.path_settings = SimpleNamespace(base_path=str(tmp_path))
+            self.logger = logging.getLogger("missing-e5-test")
+            self.emit_signal = lambda *args: signals.append(args)
+
+    from airunner_services.runtimes import e5_model_identity
+
+    def _missing(_path):
+        raise E5ModelIdentityError("model directory is incomplete")
+
+    monkeypatch.setattr(e5_model_identity, "verify_e5_model_directory", _missing)
+
+    assert _Properties().embedding is None
+    assert signals == []
+
+
 def test_explicit_remote_provider_is_not_used(monkeypatch) -> None:
     monkeypatch.setenv("AIRUNNER_EMBED_ENDPOINT", "http://remote.invalid")
 
@@ -168,17 +202,48 @@ def test_explicit_remote_provider_is_not_used(monkeypatch) -> None:
     assert error.value.status_code == 503
 
 
-def test_initialized_e5_embedder_requires_matching_model_path(tmp_path) -> None:
+def test_initialized_e5_embedder_requires_verified_identity(tmp_path) -> None:
     embedder = _FakeLocalEmbedder()
     embedder.model_name = str(
         tmp_path / "text/models/llm/embedding/intfloat/e5-large"
     )
     request = _request(embedder, injected=False, base_path=str(tmp_path))
 
-    response = ollama_embed({"input": "already loaded"}, request)
+    with pytest.raises(HTTPException) as error:
+        ollama_embed({"input": "already loaded"}, request)
+
+    assert error.value.status_code == 503
+    assert embedder.calls == []
+
+
+def test_initialized_verified_e5_embedder_is_accepted(tmp_path) -> None:
+    embedder = _FakeLocalEmbedder()
+    embedder.model_name = str(
+        tmp_path / "text/models/llm/embedding/intfloat/e5-large"
+    )
+    files = tuple(
+        sorted(
+            (name, digest)
+            for name, (_, digest) in e5_identity_module.E5_MODEL_FILES.items()
+        )
+    )
+    identity = E5ModelIdentity(
+        model_id=e5_identity_module.E5_LARGE_MODEL_ID,
+        revision=e5_identity_module.E5_LARGE_REVISION,
+        dimension=e5_identity_module.E5_LARGE_DIMENSION,
+        manifest_sha256=e5_identity_module._manifest_digest(files),
+        file_sha256=files,
+    )
+    request = _request(
+        VerifiedE5Embedder(embedder, identity),
+        injected=False,
+        base_path=str(tmp_path),
+    )
+
+    response = ollama_embed({"input": "plain input"}, request)
 
     assert response["model"] == "intfloat/e5-large"
-    assert embedder.calls == [["already loaded"]]
+    assert embedder.calls == [["passage: plain input"]]
 
 
 def test_initialized_non_e5_model_is_unavailable(tmp_path) -> None:

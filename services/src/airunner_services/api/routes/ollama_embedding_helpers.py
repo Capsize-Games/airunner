@@ -16,6 +16,10 @@ from typing import Any
 from fastapi import HTTPException, Request
 
 from airunner_services.runtimes.embedding_contracts import EmbeddingModelIdentity
+from airunner_services.runtimes.e5_model_identity import (
+    E5ModelIdentity,
+    canonical_e5_space_fingerprint,
+)
 from airunner_services.runtimes.local_embeddings import (
     E5_LARGE_MODEL_ID,
     E5_LARGE_REVISION,
@@ -73,6 +77,7 @@ def _e5_identity() -> EmbeddingModelIdentity:
         model_id=E5_LARGE_MODEL_ID,
         revision=E5_LARGE_REVISION,
         dimension=E5_LARGE_DIMENSION,
+        space_fingerprint=canonical_e5_space_fingerprint(),
     )
 
 
@@ -88,12 +93,17 @@ def _initialized_e5_client(req: Request) -> LocalEmbeddingClient:
     model_name = getattr(embedder, "model_name", None)
     if embedder is None or not base_path or not model_name:
         raise _unavailable()
+    verified_identity = getattr(embedder, "verified_identity", None)
+    if not isinstance(verified_identity, E5ModelIdentity):
+        raise _unavailable()
     expected_path = (Path(base_path).expanduser() / E5_LARGE_RELATIVE_PATH).resolve()
     actual_path = Path(model_name).expanduser().resolve()
     if actual_path != expected_path:
         raise _unavailable()
     try:
-        return LocalEmbeddingClient(embedder, _e5_identity())
+        if verified_identity.to_embedding_model_identity() != _e5_identity():
+            raise ValueError("verified model identity does not match E5")
+        return LocalEmbeddingClient(embedder, verified_identity.to_embedding_model_identity())
     except (TypeError, ValueError) as exc:
         logger.warning("Initialized E5 embedder is unusable: %s", exc)
         raise _unavailable() from exc

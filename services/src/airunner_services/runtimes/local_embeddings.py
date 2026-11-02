@@ -37,7 +37,7 @@ from airunner_services.runtimes.embedding_contracts import (
 E5_LARGE_MODEL_ID = "intfloat/e5-large"
 
 #: Pinned branch for the selected model (same sources as above).
-E5_LARGE_REVISION = "main"
+E5_LARGE_REVISION = "4dc6d853a804b9c8886ede6dda8a073b7dc08a81"
 
 #: Attribute only a remote-endpoint embedder carries
 #: (``langchain_ollama.OllamaEmbeddings.base_url``).

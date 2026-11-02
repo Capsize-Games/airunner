@@ -8,6 +8,14 @@ from airunner_services.database.models.document import Document as DBDocument
 from airunner_services.llm.workers.rag_index_status import (
     rag_index_status_tracker,
 )
+from airunner_services.llm.workers.rag_index_admission import (
+    acknowledge_rag_index_job,
+    claim_rag_index_job,
+    owns_rag_index_job,
+    rag_index_cancel_requested,
+    release_rag_index_job,
+    request_rag_index_cancel,
+)
 from airunner_services.runtimes.file_policy import (
     PathPolicyError,
     resolve_existing_file,
@@ -46,15 +54,42 @@ class RAGIndexingMixin:
 
     def on_rag_index_all_documents_signal(self, data: Dict) -> None:
         """Start indexing all documents on a background thread."""
+        token = claim_rag_index_job(data.get("_job_token"))
+        if token is None:
+            self.logger.warning("Ignoring RAG index request while another job is active")
+            return
         self.logger.info("Received RAG_INDEX_ALL_DOCUMENTS signal")
-        rag_index_status_tracker.start(
-            message="Preparing to index documents...",
-        )
+        start_gate = threading.Event()
         indexing_thread = threading.Thread(
-            target=self._index_all_documents_thread,
-            args=(data,),
+            target=self._run_all_documents_job,
+            args=(data, token, start_gate),
         )
-        indexing_thread.start()
+        try:
+            if not owns_rag_index_job(token):
+                return
+            indexing_thread.start()
+        except Exception as exc:
+            acknowledge_rag_index_job(token, False)
+            if owns_rag_index_job(token):
+                self._emit_indexing_error(f"Failed to start indexing: {exc}")
+            release_rag_index_job(token)
+        else:
+            acknowledge_rag_index_job(token, True)
+            start_gate.set()
+
+    def _run_all_documents_job(
+        self, data: Dict, token: str, start_gate: threading.Event
+    ) -> None:
+        start_gate.wait()
+        if not owns_rag_index_job(token):
+            return
+        try:
+            rag_index_status_tracker.start(
+                message="Preparing to index documents...",
+            )
+            self._index_all_documents_thread(data)
+        finally:
+            release_rag_index_job(token)
 
     def _index_all_documents_thread(self, data: Dict) -> None:
         """Run full-document indexing without blocking the caller."""
@@ -124,64 +159,133 @@ class RAGIndexingMixin:
     def on_rag_index_selected_documents_signal(self, data: Dict) -> None:
         """Start indexing one selected list of documents."""
         file_paths = data.get("file_paths", [])
+        reindex = bool(data.get("reindex", False))
         if not file_paths:
             self.logger.warning(
                 "RAG_INDEX_SELECTED_DOCUMENTS called with no file paths"
             )
             return
-        rag_index_status_tracker.start(
-            total=len(file_paths),
-            message="Preparing to index documents...",
-        )
+        token = claim_rag_index_job(data.get("_job_token"))
+        if token is None:
+            self.logger.warning(
+                "Ignoring selected RAG index request while another job is active"
+            )
+            return
+
         self.logger.info(
             "Received RAG_INDEX_SELECTED_DOCUMENTS signal for "
             f"{len(file_paths)} documents"
         )
 
+        start_gate = threading.Event()
         indexing_thread = threading.Thread(
-            target=self._index_selected_documents_thread,
-            args=(file_paths,),
+            target=self._run_selected_documents_job,
+            args=(file_paths, reindex, token, start_gate),
         )
-        indexing_thread.start()
+        try:
+            if not owns_rag_index_job(token):
+                return
+            indexing_thread.start()
+        except Exception as exc:
+            acknowledge_rag_index_job(token, False)
+            if owns_rag_index_job(token):
+                self._emit_indexing_error(f"Failed to start indexing: {exc}")
+            release_rag_index_job(token)
+        else:
+            acknowledge_rag_index_job(token, True)
+            start_gate.set()
 
-    def _index_selected_documents_thread(self, file_paths: List[str]) -> None:
+    def _run_selected_documents_job(
+        self,
+        file_paths: List[str],
+        reindex: bool,
+        token: str,
+        start_gate: threading.Event,
+    ) -> None:
+        start_gate.wait()
+        if not owns_rag_index_job(token):
+            return
+        try:
+            rag_index_status_tracker.start(
+                total=len(file_paths),
+                message=(
+                    "Preparing to reindex documents..."
+                    if reindex
+                    else "Preparing to index documents..."
+                ),
+            )
+            self._index_selected_documents_thread(file_paths, reindex)
+        finally:
+            release_rag_index_job(token)
+
+    def _index_selected_documents_thread(
+        self, file_paths: List[str], reindex: bool = False
+    ) -> None:
         """Run selective indexing without blocking the caller."""
         if not self._ensure_agent_loaded():
             return
 
-        if not self._validate_indexing_support():
+        if not self._validate_indexing_support(reindex=reindex):
             return
 
-        self._index_documents(file_paths)
+        self._index_documents(file_paths, reindex=reindex)
 
-    def _validate_indexing_support(self) -> bool:
+    def _validate_indexing_support(self, *, reindex: bool = False) -> bool:
         """Return whether the active agent supports single-document indexing."""
         agent = getattr(self.model_manager, "agent", None) or self.model_manager
-        if not hasattr(agent, "_index_single_document"):
+        method = (
+            "_reindex_single_document"
+            if reindex
+            else "_index_or_reindex_document"
+        )
+        if not hasattr(agent, method):
             self.logger.error(
-                "Agent/manager does not support document indexing"
+                "Agent/manager does not support %s", method
             )
-            self._emit_indexing_error("Agent does not support indexing")
+            self._emit_indexing_error(f"Agent does not support {method}")
             return False
         return True
 
-    def _index_documents(self, file_paths: List[str]) -> None:
+    def _index_documents(
+        self, file_paths: List[str], *, reindex: bool = False
+    ) -> None:
         """Index one list of validated document paths."""
         total = len(file_paths)
         indexed_total = 0
+        failed_total = 0
         for idx, file_path in enumerate(file_paths):
+            if rag_index_cancel_requested():
+                self.emit_signal(
+                    SignalCode.RAG_INDEXING_COMPLETE,
+                    {
+                        "success": False,
+                        "message": (
+                            f"Indexing cancelled after {indexed_total} of "
+                            f"{total} document(s)"
+                        ),
+                    },
+                )
+                return
             self._emit_indexing_progress(idx, total)
             validated_path = self._validate_document_path(file_path)
             if not validated_path:
+                failed_total += 1
                 continue
-            indexed_total += 1
-            self._index_single_file(validated_path, idx, total)
+            if self._index_single_file(
+                validated_path, idx, total, reindex=reindex
+            ):
+                indexed_total += 1
+            else:
+                failed_total += 1
 
         self.emit_signal(
             SignalCode.RAG_INDEXING_COMPLETE,
             {
-                "success": True,
-                "message": f"Indexed {indexed_total} of {total} documents",
+                "success": failed_total == 0,
+                "message": (
+                    f"Indexed {indexed_total} of {total} documents; "
+                    f"{failed_total} failed"
+                ),
             },
         )
 
@@ -196,12 +300,14 @@ class RAGIndexingMixin:
             },
         )
 
-    def _index_single_file(self, file_path: str, idx: int, total: int) -> None:
+    def _index_single_file(
+        self, file_path: str, idx: int, total: int, *, reindex: bool = False
+    ) -> bool:
         """Index one document file by path."""
         try:
             db_doc = self._get_document_from_db(file_path)
             if not db_doc:
-                return
+                return False
 
             self.logger.info(
                 f"Indexing document {idx + 1}/{total}: {file_path}"
@@ -210,23 +316,30 @@ class RAGIndexingMixin:
                 getattr(self.model_manager, "agent", None)
                 or self.model_manager
             )
-            success = agent._index_single_document(db_doc)
+            if reindex:
+                success = agent._reindex_single_document(db_doc)
+            else:
+                success = agent._index_or_reindex_document(db_doc)
 
             if success:
-                DBDocument.objects.update(pk=db_doc.id, active=True)
+                if not reindex:
+                    DBDocument.objects.update(pk=db_doc.id, active=True)
                 self.emit_signal(
                     SignalCode.DOCUMENT_INDEXED,
                     {"path": file_path},
                 )
+                return True
             else:
                 self._emit_index_failed(
                     file_path,
                     "No content could be extracted",
                 )
+                return False
 
         except Exception as exc:
             self.logger.error(f"Failed to index {file_path}: {exc}")
             self._emit_index_failed(file_path, str(exc))
+            return False
 
     def _get_document_from_db(self, file_path: str):
         """Return the document record matching one file path."""
@@ -249,6 +362,7 @@ class RAGIndexingMixin:
 
     def on_rag_index_cancel_signal(self, data: Dict) -> None:
         """Request cancellation of one in-flight indexing operation."""
+        request_rag_index_cancel()
         rag_index_status_tracker.cancel_requested()
         try:
             if self.model_manager and hasattr(
@@ -346,7 +460,7 @@ class RAGIndexingMixin:
                 getattr(self.model_manager, "agent", None)
                 or self.model_manager
             )
-            success = agent._index_single_document(db_doc)
+            success = agent._index_or_reindex_document(db_doc)
 
             if success:
                 self._handle_indexing_success(path, db_doc, filename)

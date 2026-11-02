@@ -73,6 +73,7 @@ class MultiIndexRetriever:
             return []
 
         all_documents: list = []
+        identity = _embedding_identity(self._rag_mixin.embedding)
 
         if hasattr(self._rag_mixin, "_index") and self._rag_mixin._index:
             try:
@@ -85,6 +86,7 @@ class MultiIndexRetriever:
                     self._rag_mixin._index.similarity_search_by_vector(
                         query_vector,
                         self._similarity_top_k,
+                        expected_identity=identity,
                     )
                 )
 
@@ -123,6 +125,7 @@ class MultiIndexRetriever:
                     doc_index.similarity_search_by_vector(
                         query_vector,
                         self._similarity_top_k,
+                        expected_identity=identity,
                     )
                 )
 
@@ -148,3 +151,8 @@ class MultiIndexRetriever:
 def _top_documents(hits: list, limit: int) -> list[Document]:
     hits.sort(key=lambda hit: hit.score, reverse=True)
     return [hit.document for hit in hits[:limit]]
+
+
+def _embedding_identity(embedder):
+    identity = getattr(embedder, "verified_identity", None)
+    return identity.to_dict() if callable(getattr(identity, "to_dict", None)) else None

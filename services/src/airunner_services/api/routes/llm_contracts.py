@@ -7,7 +7,7 @@ import os
 import time
 from typing import Callable, Dict, List, Optional
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class ChatMessage(BaseModel):
@@ -72,7 +72,7 @@ class ModelLoadRequest(BaseModel):
 class RagIndexRequest(BaseModel):
     """Document indexing request."""
 
-    file_paths: Optional[List[str]] = None
+    file_paths: Optional[List[str]] = Field(default=None, max_length=64)
 
 
 def max_ws_message_chars() -> int:

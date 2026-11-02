@@ -63,6 +63,8 @@ class RAGIndexManagementMixin:
         doc_id: str,
         file_path: str,
         chunk_count: int,
+        *,
+        file_hash: Optional[str] = None,
     ):
         """Update a document entry in the registry.
 
@@ -71,7 +73,9 @@ class RAGIndexManagementMixin:
             file_path: Path to document
             chunk_count: Number of chunks
         """
-        file_hash = self._calculate_file_hash(file_path)
+        file_hash = (
+            self._calculate_file_hash(file_path) if file_hash is None else file_hash
+        )
         entry = {
             "path": file_path,
             "file_hash": file_hash,

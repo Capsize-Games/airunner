@@ -7,9 +7,6 @@ import torch
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
-from airunner_common.settings import AIRUNNER_LOCAL_FILES_ONLY
-
-
 class RAGPropertiesMixin:
     """Mixin for RAG properties and configuration."""
 
@@ -129,10 +126,22 @@ class RAGPropertiesMixin:
                     )
                 )
 
-                # Check if model files exist and trigger download if needed
-                if not self._check_and_download_embedding_model(model_name):
+                # Bind the model to the reviewed immutable files before
+                # constructing the runtime. The verifier rejects mutable or
+                # unexpected artifacts and never imports code from this path.
+                from airunner_services.runtimes.e5_model_identity import (
+                    E5ModelIdentityError,
+                    VerifiedE5Embedder,
+                    verify_e5_model_directory,
+                )
+
+                try:
+                    verified_identity = verify_e5_model_directory(model_name)
+                except (E5ModelIdentityError, OSError) as exc:
                     self.logger.warning(
-                        "Embedding model files missing - download in progress"
+                        "Local E5 embedding is unavailable: model files are "
+                        "missing or do not match the reviewed manifest (%s)",
+                        exc,
                     )
                     return None
 
@@ -155,12 +164,15 @@ class RAGPropertiesMixin:
                 # intfloat/e5-large is natively supported; do not execute
                 # code shipped inside a downloaded model repo.
                 model_kwargs["trust_remote_code"] = False
-                model_kwargs["local_files_only"] = AIRUNNER_LOCAL_FILES_ONLY
+                model_kwargs["local_files_only"] = True
 
-                self._embedding = HuggingFaceEmbeddings(
+                raw_embedder = HuggingFaceEmbeddings(
                     model_name=model_name,
                     model_kwargs=model_kwargs,
                     encode_kwargs={"normalize_embeddings": True},
+                )
+                self._embedding = VerifiedE5Embedder(
+                    raw_embedder, verified_identity
                 )
 
                 self.logger.info("Embedding model initialized successfully")
@@ -229,112 +241,3 @@ class RAGPropertiesMixin:
     def legacy_storage_persist_dir(self) -> str:
         """Return the legacy unified-index storage directory."""
         return os.path.join(self.legacy_rag_storage_root, "storage")
-
-    def _check_and_download_embedding_model(self, model_path: str) -> bool:
-        """Check if embedding model files exist and trigger download if needed.
-
-        Uses llm_file_bootstrap_data.py as the source of truth for required files.
-
-        Args:
-            model_path: Path to the embedding model directory
-
-        Returns:
-            True if model files exist, False if download was triggered
-        """
-        from airunner_services.database.bootstrap.llm_file_bootstrap_data import (
-            LLM_FILE_BOOTSTRAP_DATA,
-        )
-        from airunner_common.contract_enums import SignalCode
-
-        if not hasattr(self, "_embedding_download_pending"):
-            self._embedding_download_pending = False
-        if not hasattr(self, "_embedding_download_handler_registered"):
-            self._embedding_download_handler_registered = False
-
-        # Use llm_file_bootstrap_data as source of truth
-        repo_id = "intfloat/e5-large"
-
-        if repo_id not in LLM_FILE_BOOTSTRAP_DATA:
-            self.logger.error(
-                f"Embedding model {repo_id} not in LLM_FILE_BOOTSTRAP_DATA"
-            )
-            return False
-
-        # Check which required files are missing or incomplete
-        # files is a dict of {filename: expected_size}
-        required_files = LLM_FILE_BOOTSTRAP_DATA[repo_id]["files"]
-        missing_files = []
-
-        for required_file, expected_size in required_files.items():
-            file_path = os.path.join(model_path, required_file)
-            if not os.path.exists(file_path):
-                missing_files.append(required_file)
-            elif expected_size > 0:
-                # Check if file is complete by comparing size
-                actual_size = os.path.getsize(file_path)
-                if actual_size < expected_size:
-                    self.logger.warning(
-                        f"File {required_file} is incomplete: {actual_size} bytes vs expected {expected_size} bytes"
-                    )
-                    missing_files.append(required_file)
-
-        if not missing_files:
-            # All files exist
-            return True
-
-        # Files are missing - trigger download
-        self.logger.info(
-            f"Missing {len(missing_files)} files for embedding model {repo_id}, triggering download"
-        )
-        self.logger.debug(f"Missing files: {missing_files}")
-
-        # Emit signal to trigger download dialog
-        # Avoid triggering multiple simultaneous downloads
-        if not getattr(self, "_embedding_download_pending", False):
-            self.emit_signal(
-                SignalCode.LLM_MODEL_DOWNLOAD_REQUIRED,
-                {
-                    "repo_id": repo_id,
-                    "model_path": model_path,
-                    "missing_files": missing_files,
-                    "model_type": "embedding",
-                },
-            )
-            self._embedding_download_pending = True
-
-        # Register handler for download completion to retry embedding initialization
-        if (
-            hasattr(self, "register")
-            and not self._embedding_download_handler_registered
-        ):
-            self.register(
-                SignalCode.HUGGINGFACE_DOWNLOAD_COMPLETE,
-                self._on_embedding_download_complete,
-            )
-            self._embedding_download_handler_registered = True
-
-        return False
-
-    def _on_embedding_download_complete(self, data: dict):
-        """Handle embedding model download completion and retry initialization.
-
-        Args:
-            data: Download completion data
-        """
-        repo_id = data.get("repo_id")
-        if repo_id == "intfloat/e5-large":
-            self.logger.info(
-                "Embedding model download complete - will initialize on next access"
-            )
-            # Clear cached embedding so it will be re-initialized on next access
-            self._embedding = None
-            self._embedding_download_pending = False
-            # Unregister this handler
-            if hasattr(self, "unregister"):
-                from airunner_common.contract_enums import SignalCode
-
-                self.unregister(
-                    SignalCode.HUGGINGFACE_DOWNLOAD_COMPLETE,
-                    self._on_embedding_download_complete,
-                )
-                self._embedding_download_handler_registered = False

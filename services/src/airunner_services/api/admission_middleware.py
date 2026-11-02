@@ -13,6 +13,7 @@ GENERATION_PATHS = frozenset({
     "/api/v1/llm/chat", "/api/v1/llm/completion", "/art",
     "/api/v1/art/generate", "/api/v1/tts/synthesize",
     "/api/v1/stt/transcribe", "/api/v1/llm/rag/index",
+    "/api/v1/llm/rag/reindex",
 })
 
 

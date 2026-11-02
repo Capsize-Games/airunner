@@ -6,7 +6,11 @@ database, or application-domain dependencies.
 
 from __future__ import annotations
 
-from pydantic import BaseModel, ConfigDict, Field
+from typing import Any
+
+from pydantic import (
+    BaseModel, ConfigDict, Field, SerializerFunctionWrapHandler, model_serializer,
+)
 
 
 ERROR_EMBEDDING_SPACE_MISMATCH = "embedding_space_mismatch"
@@ -20,6 +24,15 @@ class EmbeddingModelIdentity(BaseModel):
     model_id: str
     revision: str = "main"
     dimension: int = Field(gt=0)
+    space_fingerprint: str | None = None
+
+    @model_serializer(mode="wrap")
+    def _serialize_identity(self, handler: SerializerFunctionWrapHandler) -> dict[str, Any]:
+        """Preserve legacy identity JSON when no space fingerprint is supplied."""
+        data = handler(self)
+        if self.space_fingerprint is None:
+            data.pop("space_fingerprint", None)
+        return data
 
     def matches(self, other: "EmbeddingModelIdentity") -> bool:
         """Return whether two identities describe the same space."""
@@ -27,6 +40,7 @@ class EmbeddingModelIdentity(BaseModel):
             self.model_id == other.model_id
             and self.revision == other.revision
             and self.dimension == other.dimension
+            and self.space_fingerprint == other.space_fingerprint
         )
 
 

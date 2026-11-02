@@ -1,6 +1,10 @@
 """RAG document indexing operations."""
 
+import copy
+import json
 import os
+import tempfile
+from pathlib import Path
 from typing import List, Optional
 
 from langchain_core.documents import Document
@@ -16,6 +20,12 @@ from airunner_services.database.models.document import (
     Document as DBDocument,
 )
 from airunner_common.contract_enums import SignalCode
+
+
+class ReindexRequiredError(RuntimeError):
+    """An automatic initial-index request found persisted index data."""
+
+    code = "reindex_required"
 
 
 class RAGIndexingMixin:
@@ -78,14 +88,22 @@ class RAGIndexingMixin:
             True if indexing succeeded, False otherwise
         """
         try:
+            doc_id = self._generate_doc_id(db_doc.path)
+            index_paths = (
+                self._get_doc_index_dir(doc_id, db_doc.path),
+                self._get_legacy_doc_index_dir(doc_id, db_doc.path),
+            )
+            if any(os.path.exists(path) for path in index_paths):
+                raise ReindexRequiredError(
+                    "reindex_required: an index directory already exists; "
+                    "use the explicit staged reindex operation"
+                )
+
             self._setup_rag()
             if self.embedding is None:
                 return False
 
-            doc_id = self._generate_doc_id(db_doc.path)
-
             doc_index = None
-            source_document_count = 0
             for batch in iter_document_batches_from_file(
                 db_doc.path, self._extract_metadata
             ):
@@ -101,7 +119,6 @@ class RAGIndexingMixin:
                     doc_index.add_documents(
                         batch, self.embedding, self.text_splitter
                     )
-                source_document_count += len(batch)
 
             if doc_index is None:
                 self.logger.warning(f"No content extracted from {db_doc.path}")
@@ -112,7 +129,7 @@ class RAGIndexingMixin:
             doc_index.persist(index_dir)
 
             self._update_registry_entry(
-                doc_id, db_doc.path, source_document_count
+                doc_id, db_doc.path, len(doc_index.documents)
             )
             self._mark_document_indexed(db_doc.path)
 
@@ -127,8 +144,157 @@ class RAGIndexingMixin:
             return True
 
         except Exception as e:
+            if isinstance(e, ReindexRequiredError):
+                raise
             self.logger.error(f"Failed to index {db_doc.path}: {e}")
             return False
+
+    def _index_or_reindex_document(self, db_doc: DBDocument) -> bool:
+        """Explicitly index a new document or stage-reindex an existing one."""
+        doc_id = self._generate_doc_id(db_doc.path)
+        index_paths = (
+            self._get_doc_index_dir(doc_id, db_doc.path),
+            self._get_legacy_doc_index_dir(doc_id, db_doc.path),
+        )
+        existing_paths = [path for path in index_paths if os.path.exists(path)]
+        if not existing_paths:
+            return self._index_single_document(db_doc)
+
+        persisted_path = self._resolve_doc_index_dir(doc_id, db_doc.path)
+        if persisted_path is None:
+            self.logger.error(
+                "reindex_required: existing index directory is not a valid "
+                "persisted index for %s", db_doc.path
+            )
+            return False
+        return self._reindex_single_document(db_doc)
+
+    def _reindex_single_document(self, db_doc: DBDocument) -> bool:
+        """Rebuild one existing index and switch it only after validation."""
+        doc_id = self._generate_doc_id(db_doc.path)
+        index_dir = self._resolve_doc_index_dir(doc_id, db_doc.path)
+        if index_dir is None:
+            self.logger.error(
+                "Cannot reindex %s because no persisted index exists", db_doc.path
+            )
+            return False
+
+        registry_before = copy.deepcopy(self.index_registry)
+        registry_path = self.registry_path
+        registry_before_bytes = (
+            Path(registry_path).read_bytes()
+            if os.path.exists(registry_path)
+            else None
+        )
+        old_db_state = {
+            field: getattr(db_doc, field, None)
+            for field in ("indexed", "file_hash", "indexed_at", "file_size")
+        }
+        backup_dir = None
+        try:
+            self._setup_rag()
+            embedding = self.embedding
+            if embedding is None:
+                return False
+            source_file_hash = self._calculate_file_hash(db_doc.path)
+            if not source_file_hash:
+                raise ValueError("source file is unavailable for reindex")
+            source_file_size = os.path.getsize(db_doc.path)
+
+            candidate = None
+            for batch in iter_document_batches_from_file(
+                db_doc.path, self._extract_metadata
+            ):
+                for document in batch:
+                    document.metadata.update(self._extract_metadata(db_doc.path))
+                    document.metadata["doc_id"] = doc_id
+                if candidate is None:
+                    candidate = DocumentVectorIndex.from_documents(
+                        batch, embedding, self.text_splitter
+                    )
+                else:
+                    candidate.add_documents(batch, embedding, self.text_splitter)
+
+            if candidate is None or not candidate.documents:
+                raise ValueError("no content extracted for staged reindex")
+
+            if self._calculate_file_hash(db_doc.path) != source_file_hash:
+                raise RuntimeError(
+                    "source file changed while reindex embeddings were built"
+                )
+
+            backup_dir = candidate.replace_persisted_atomically(index_dir)
+            if backup_dir is None:
+                raise RuntimeError("reindex did not retain the previous index")
+
+            self._update_registry_entry(
+                doc_id, db_doc.path, len(candidate.documents),
+                file_hash=source_file_hash,
+            )
+            with open(self.registry_path, "r", encoding="utf-8") as registry_file:
+                persisted_registry = json.load(registry_file)
+            entry = persisted_registry.get("documents", {}).get(doc_id, {})
+            if (
+                entry.get("path") != db_doc.path
+                or entry.get("chunk_count") != len(candidate.documents)
+                or entry.get("file_hash") != source_file_hash
+            ):
+                raise RuntimeError("reindex registry update did not persist")
+
+            self._mark_document_indexed(
+                db_doc.path,
+                file_hash=source_file_hash,
+                file_size=source_file_size,
+            )
+            current_records = DBDocument.objects.filter_by(path=db_doc.path)
+            current_record = current_records[0] if current_records else None
+            if (
+                current_record is None
+                or not getattr(current_record, "indexed", False)
+                or getattr(current_record, "file_hash", None) != source_file_hash
+            ):
+                raise RuntimeError("reindex database status did not persist")
+
+            self._unload_doc_index(doc_id)
+            self.logger.info(
+                "Reindexed document %s (%d chunks); previous index retained at %s",
+                os.path.basename(db_doc.path),
+                len(candidate.documents),
+                backup_dir,
+            )
+            return True
+        except Exception as exc:
+            self.logger.error("Failed to reindex %s: %s", db_doc.path, exc)
+            if backup_dir is not None:
+                try:
+                    DocumentVectorIndex.restore_persisted_backup(
+                        index_dir, backup_dir
+                    )
+                except Exception as rollback_exc:
+                    self.logger.critical(
+                        "Failed to restore previous index for %s: %s",
+                        db_doc.path,
+                        rollback_exc,
+                    )
+            self._index_registry = registry_before
+            try:
+                _restore_registry_file(registry_path, registry_before_bytes)
+            except Exception as rollback_exc:
+                self.logger.critical(
+                    "Failed to restore reindex registry for %s: %s",
+                    db_doc.path,
+                    rollback_exc,
+                )
+            try:
+                DBDocument.objects.update(pk=db_doc.id, **old_db_state)
+            except Exception as rollback_exc:
+                self.logger.critical(
+                    "Failed to restore document metadata for %s: %s",
+                    db_doc.path,
+                    rollback_exc,
+                )
+            return False
+
 
     def ensure_indexed_files(self, file_paths: List[str]) -> bool:
         """Ensure that the given file paths have been loaded/indexed.
@@ -274,7 +440,7 @@ class RAGIndexingMixin:
                 )
 
                 # Index the document
-                if self._index_single_document(db_doc):
+                if self._index_or_reindex_document(db_doc):
                     success_count += 1
 
             # Emit completion
@@ -309,3 +475,25 @@ class RAGIndexingMixin:
             except Exception:
                 pass
             return False
+
+
+def _restore_registry_file(path: str, contents: bytes | None) -> None:
+    """Restore the exact registry bytes after a failed index transaction."""
+    if contents is None:
+        if os.path.exists(path):
+            os.unlink(path)
+        return
+    parent = os.path.dirname(path)
+    descriptor, temporary = tempfile.mkstemp(
+        prefix=".registry-restore-", dir=parent
+    )
+    try:
+        with os.fdopen(descriptor, "wb") as registry_file:
+            registry_file.write(contents)
+            registry_file.flush()
+            os.fsync(registry_file.fileno())
+        os.replace(temporary, path)
+    except Exception:
+        if os.path.exists(temporary):
+            os.unlink(temporary)
+        raise
