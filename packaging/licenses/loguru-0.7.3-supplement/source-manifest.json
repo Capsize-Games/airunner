@@ -1,0 +1,32 @@
+{
+  "distribution": "loguru",
+  "exact_pin": "loguru==0.7.3",
+  "files": [
+    {
+      "path": "packaging/licenses/loguru-0.7.3-supplement/LICENSE.txt",
+      "sha256": "b35d026cc7aca9d5859a02eb87ddf7a386a24c986838651bd1f283f94e003327",
+      "size_bytes": 1056,
+      "upstream_source": {
+        "path": "LICENSE",
+        "repository": "Delgan/loguru",
+        "revision": "ae3bfd1b85b6b4a3db535f69b975687c79498be4",
+        "sha256": "b35d026cc7aca9d5859a02eb87ddf7a386a24c986838651bd1f283f94e003327",
+        "size_bytes": 1056
+      }
+    }
+  ],
+  "license_source": "The selected wheel and PyPI source archive contain no standalone license file. The exact 0.7.3 source metadata declares MIT; the root LICENSE is copied byte-for-byte from the canonical source commit.",
+  "package_source_evidence": {
+    "path": "loguru-0.7.3/PKG-INFO",
+    "sha256": "3a371f8b089014fdaee055edc440d448242847926ad67613621af402f9975fd9"
+  },
+  "selected_wheel": {
+    "filename": "loguru-0.7.3-py3-none-any.whl",
+    "sha256": "31a33c10c8e1e10422bfd431aeb5d351c7cf7fa671e3c4df004162264b28220c"
+  },
+  "source_distribution": {
+    "filename": "loguru-0.7.3.tar.gz",
+    "sha256": "19480589e77d47b8d85b2c827ad95d49bf31b0dcde16593892eb51dd18706eb6"
+  },
+  "version": "0.7.3"
+}

@@ -46,6 +46,7 @@ def _write_distribution(
     symlink_notice: str | None = None,
     extra_record_rows: list[tuple[str, str, str]] | None = None,
     license_file_headers: list[str] | None = None,
+    metadata_version: str = "2.3",
 ) -> Path:
     """Create a synthetic wheel installation with a realistic RECORD."""
     notices = notices or {"licenses/LICENSE": f"{name} notice\n".encode()}
@@ -53,7 +54,7 @@ def _write_distribution(
     metadata_dir = site / f"{name}-{version}.dist-info"
     metadata_dir.mkdir(parents=True)
     metadata = (
-        f"Metadata-Version: 2.3\nName: {name}\nVersion: {version}\n"
+        f"Metadata-Version: {metadata_version}\nName: {name}\nVersion: {version}\n"
         + "".join(f"License-File: {value}\n" for value in license_file_headers or [])
         + "\n"
     )
@@ -177,59 +178,167 @@ def _reviewed_source_fixture(tmp_path, monkeypatch):
     packages, _ = dependency_notices.read_lock(lock.name, tmp_path)
     wheel_hash = next(p.hashes[0] for p in packages if p.normalized_name == "alpha")
     manifest = {
-        "distribution": "alpha", "version": "1.0", "exact_pin": "alpha==1.0",
+        "distribution": "alpha",
+        "version": "1.0",
+        "exact_pin": "alpha==1.0",
         "license_source": "reviewed source distribution",
-        "source_distribution": {"filename": "alpha-1.0.tar.gz", "sha256": "b" * 64},
-        "selected_wheel": {"filename": "alpha-1.0-py3-none-any.whl", "sha256": wheel_hash},
-        "files": [{
-            "path": "reviewed/alpha-LICENSE", "source_archive_path": "alpha-1.0/LICENSE",
-            "sha256": hashlib.sha256(content).hexdigest(), "size_bytes": len(content),
-        }],
+        "source_distribution": {
+            "filename": "alpha-1.0.tar.gz",
+            "sha256": "b" * 64,
+        },
+        "selected_wheel": {
+            "filename": "alpha-1.0-py3-none-any.whl",
+            "sha256": wheel_hash,
+        },
+        "files": [
+            {
+                "path": "reviewed/alpha-LICENSE",
+                "source_archive_path": "alpha-1.0/LICENSE",
+                "sha256": hashlib.sha256(content).hexdigest(),
+                "size_bytes": len(content),
+            }
+        ],
     }
     manifest_path = tmp_path / "reviewed/source-manifest.json"
     manifest_path.write_text(json.dumps(manifest))
     return site, spec, bundle
 
 
-def test_reviewed_source_notice_can_supply_missing_wheel_notice(tmp_path, monkeypatch):
+def _reviewed_git_snapshot_fixture(tmp_path, monkeypatch):
     site, spec, bundle = _reviewed_source_fixture(tmp_path, monkeypatch)
-    with pytest.raises(dependency_notices.DependencyNoticeError, match="no hashed license"):
+    packages, _ = dependency_notices.read_lock(
+        spec["bundle"]["constraints"], tmp_path
+    )
+    wheel_hash = next(
+        package.hashes[0]
+        for package in packages
+        if package.normalized_name == "alpha"
+    )
+    revision = "a" * 40
+    gitlink_revision = "b" * 40
+    identity = f"git_version = '{revision}'\n".encode()
+    notice_bytes = b"MIT notice from pinned Git source\n"
+    identity_path = tmp_path / "reviewed/torch-version.py"
+    notice_path = tmp_path / "reviewed/third-party-LICENSE.txt"
+    identity_path.write_bytes(identity)
+    notice_path.write_bytes(notice_bytes)
+    manifest = {
+        "distribution": "alpha",
+        "version": "1.0",
+        "exact_pin": "alpha==1.0",
+        "license_source": "Reviewed source snapshot notice; no source archive or exact wheel build claim.",
+        "selected_wheel": {
+            "filename": "alpha-1.0-py3-none-any.whl",
+            "sha256": wheel_hash,
+        },
+        "source_snapshot": {
+            "repository": "example/project",
+            "revision": revision,
+            "identity_member": {
+                "package_path": "src/version.py",
+                "evidence_path": "reviewed/torch-version.py",
+                "sha256": hashlib.sha256(identity).hexdigest(),
+                "size_bytes": len(identity),
+            },
+            "gitlinks": [
+                {
+                    "path": "third_party/example",
+                    "repository": "example/third-party",
+                    "revision": gitlink_revision,
+                }
+            ],
+        },
+        "files": [
+            {
+                "path": "reviewed/third-party-LICENSE.txt",
+                "gitlink_path": "third_party/example",
+                "upstream_source": {
+                    "repository": "example/third-party",
+                    "revision": gitlink_revision,
+                    "path": "LICENSE.txt",
+                    "sha256": hashlib.sha256(notice_bytes).hexdigest(),
+                    "size_bytes": len(notice_bytes),
+                },
+                "sha256": hashlib.sha256(notice_bytes).hexdigest(),
+                "size_bytes": len(notice_bytes),
+            }
+        ],
+    }
+    manifest_path = tmp_path / "reviewed/git-source-manifest.json"
+    manifest_path.write_text(json.dumps(manifest))
+    spec["dependency_notices"]["source_supplements"] = [
+        "reviewed/git-source-manifest.json"
+    ]
+    return site, spec, bundle, manifest_path
+
+
+def test_reviewed_source_notice_can_supply_missing_wheel_notice(
+    tmp_path, monkeypatch
+):
+    site, spec, bundle = _reviewed_source_fixture(tmp_path, monkeypatch)
+    with pytest.raises(
+        dependency_notices.DependencyNoticeError, match="no hashed license"
+    ):
         _collect(tmp_path, site, spec, bundle)
-    spec["dependency_notices"]["source_supplements"] = ["reviewed/source-manifest.json"]
+    spec["dependency_notices"]["source_supplements"] = [
+        "reviewed/source-manifest.json"
+    ]
     manifest = _collect(tmp_path, site, spec, bundle)
-    alpha = next(item for item in manifest["distributions"] if item["normalized_name"] == "alpha")
+    alpha = next(
+        item
+        for item in manifest["distributions"]
+        if item["normalized_name"] == "alpha"
+    )
     assert len(alpha["notices"]) == 1
     assert alpha["notices"][0]["provenance"] == "reviewed-source-supplement"
     assert "record_hash" not in alpha["notices"][0]
-    assert dependency_notices.verify_dependency_notice_manifest(bundle, spec, tmp_path) == []
+    assert (
+        dependency_notices.verify_dependency_notice_manifest(
+            bundle, spec, tmp_path
+        )
+        == []
+    )
 
 
 def _add_vendor_fixture(tmp_path, spec):
-    packages, _ = dependency_notices.read_lock(spec["bundle"]["constraints"], tmp_path)
-    wheel_hash = next(p.hashes[0] for p in packages if p.normalized_name == "alpha")
+    packages, _ = dependency_notices.read_lock(
+        spec["bundle"]["constraints"], tmp_path
+    )
+    wheel_hash = next(
+        p.hashes[0] for p in packages if p.normalized_name == "alpha"
+    )
     folder = tmp_path / "vendor"
     folder.mkdir()
     documents = []
     for name in ("LICENSE.txt", "ThirdPartyNotices.txt"):
         content = f"Original vendor {name}\n".encode()
         (folder / name).write_bytes(content)
-        documents.append({
-            "publisher": "NVIDIA Corporation", "product": "Fixture",
-            "release_scope": "Synthetic integration fixture",
-            "official_source_url": f"https://github.com/NVIDIA/nccl/blob/{'a' * 40}/{name}",
-            "retrieved_date": "2026-11-02",
-            "document_path": f"vendor/{name}",
-            "text_path": f"vendor/{name}",
-            "document_sha256": hashlib.sha256(content).hexdigest(),
-            "text_sha256": hashlib.sha256(content).hexdigest(),
-            "document_size_bytes": len(content), "text_size_bytes": len(content),
-        })
+        documents.append(
+            {
+                "publisher": "NVIDIA Corporation",
+                "product": "Fixture",
+                "release_scope": "Synthetic integration fixture",
+                "official_source_url": f"https://github.com/NVIDIA/nccl/blob/{'a' * 40}/{name}",
+                "retrieved_date": "2026-11-02",
+                "document_path": f"vendor/{name}",
+                "text_path": f"vendor/{name}",
+                "document_sha256": hashlib.sha256(content).hexdigest(),
+                "text_sha256": hashlib.sha256(content).hexdigest(),
+                "document_size_bytes": len(content),
+                "text_size_bytes": len(content),
+            }
+        )
     manifest = {
-        "distribution": "alpha", "version": "1.0", "exact_pin": "alpha==1.0",
-        "selected_wheel_sha256": wheel_hash, "vendor_documents": documents,
+        "distribution": "alpha",
+        "version": "1.0",
+        "exact_pin": "alpha==1.0",
+        "selected_wheel_sha256": wheel_hash,
+        "vendor_documents": documents,
     }
     (folder / "vendor-license.json").write_text(json.dumps(manifest))
-    spec["dependency_notices"]["vendor_supplements"] = ["vendor/vendor-license.json"]
+    spec["dependency_notices"]["vendor_supplements"] = [
+        "vendor/vendor-license.json"
+    ]
 
 
 def test_vendor_can_supply_missing_wheel_notices(tmp_path, monkeypatch):
@@ -238,28 +347,49 @@ def test_vendor_can_supply_missing_wheel_notices(tmp_path, monkeypatch):
     manifest = _collect(tmp_path, site, spec, bundle)
     alpha = manifest["distributions"][0]
     assert len(alpha["notices"]) == 2
-    assert all(n["provenance"] == "reviewed-vendor-license-supplement" for n in alpha["notices"])
+    assert all(
+        n["provenance"] == "reviewed-vendor-license-supplement"
+        for n in alpha["notices"]
+    )
     assert all("record_hash" not in n for n in alpha["notices"])
-    assert dependency_notices.verify_dependency_notice_manifest(bundle, spec, tmp_path) == []
+    assert (
+        dependency_notices.verify_dependency_notice_manifest(
+            bundle, spec, tmp_path
+        )
+        == []
+    )
 
 
-def test_wheel_and_source_and_vendor_notices_are_all_preserved(tmp_path, monkeypatch):
+def test_wheel_and_source_and_vendor_notices_are_all_preserved(
+    tmp_path, monkeypatch
+):
     site, spec, bundle = _reviewed_source_fixture(tmp_path, monkeypatch)
     # Restore the original installed notice while retaining reviewed source evidence.
     shutil.rmtree(site / "alpha-1.0.dist-info")
     shutil.rmtree(site / "alpha")
     _write_distribution(site, "alpha", "1.0")
-    spec["dependency_notices"]["source_supplements"] = ["reviewed/source-manifest.json"]
+    spec["dependency_notices"]["source_supplements"] = [
+        "reviewed/source-manifest.json"
+    ]
     _add_vendor_fixture(tmp_path, spec)
     manifest = _collect(tmp_path, site, spec, bundle)
     notices = manifest["distributions"][0]["notices"]
     assert len(notices) == 4
     assert sum("record_hash" in notice for notice in notices) == 1
-    assert dependency_notices.verify_dependency_notice_manifest(bundle, spec, tmp_path) == []
+    assert (
+        dependency_notices.verify_dependency_notice_manifest(
+            bundle, spec, tmp_path
+        )
+        == []
+    )
 
 
-@pytest.mark.parametrize("tamper", ["omission", "provenance", "payload", "vendor_hash"])
-def test_vendor_bundle_rejects_missing_or_forged_evidence(tmp_path, monkeypatch, tamper):
+@pytest.mark.parametrize(
+    "tamper", ["omission", "provenance", "payload", "vendor_hash"]
+)
+def test_vendor_bundle_rejects_missing_or_forged_evidence(
+    tmp_path, monkeypatch, tamper
+):
     site, lock, spec, bundle = _setup(tmp_path, monkeypatch)
     _add_vendor_fixture(tmp_path, spec)
     manifest = _collect(tmp_path, site, spec, bundle)
@@ -274,39 +404,168 @@ def test_vendor_bundle_rejects_missing_or_forged_evidence(tmp_path, monkeypatch,
         (bundle / notice["bundle_path"]).write_bytes(b"altered")
     else:
         notice["vendor_document"]["document_sha256"] = "0" * 64
-    (bundle / "legal/dependencies/dependency-notices.json").write_text(json.dumps(manifest))
-    assert dependency_notices.verify_dependency_notice_manifest(bundle, spec, tmp_path)
+    (bundle / "legal/dependencies/dependency-notices.json").write_text(
+        json.dumps(manifest)
+    )
+    assert dependency_notices.verify_dependency_notice_manifest(
+        bundle, spec, tmp_path
+    )
 
 
 def test_vendor_manifest_failure_is_a_collection_error(tmp_path, monkeypatch):
     site, lock, spec, bundle = _setup(tmp_path, monkeypatch)
     _add_vendor_fixture(tmp_path, spec)
     (tmp_path / "vendor/LICENSE.txt").write_bytes(b"altered")
-    with pytest.raises(dependency_notices.DependencyNoticeError, match="differs"):
+    with pytest.raises(
+        dependency_notices.DependencyNoticeError, match="differs"
+    ):
         _collect(tmp_path, site, spec, bundle)
 
 
-def test_reviewed_upstream_notice_keeps_separate_source_provenance(tmp_path, monkeypatch):
+def test_reviewed_upstream_notice_keeps_separate_source_provenance(
+    tmp_path, monkeypatch
+):
     site, spec, bundle = _reviewed_source_fixture(tmp_path, monkeypatch)
     source_path = tmp_path / "reviewed/source-manifest.json"
     source = json.loads(source_path.read_text())
     source["package_source_evidence"] = {
-        "path": "alpha-1.0/attribution.py", "sha256": "e" * 64,
+        "path": "alpha-1.0/attribution.py",
+        "sha256": "e" * 64,
     }
     notice = source["files"][0]
     notice.pop("source_archive_path")
     notice["upstream_source"] = {
-        "repository": "example/attributed-project", "revision": "d" * 40,
-        "path": "LICENSE", "size_bytes": notice["size_bytes"], "sha256": notice["sha256"],
+        "repository": "example/attributed-project",
+        "revision": "d" * 40,
+        "path": "LICENSE",
+        "size_bytes": notice["size_bytes"],
+        "sha256": notice["sha256"],
     }
     source_path.write_text(json.dumps(source))
-    spec["dependency_notices"]["source_supplements"] = ["reviewed/source-manifest.json"]
+    spec["dependency_notices"]["source_supplements"] = [
+        "reviewed/source-manifest.json"
+    ]
     manifest = _collect(tmp_path, site, spec, bundle)
-    alpha = next(item for item in manifest["distributions"] if item["normalized_name"] == "alpha")
-    assert alpha["notices"][0]["provenance"] == "reviewed-upstream-source-supplement"
+    alpha = next(
+        item
+        for item in manifest["distributions"]
+        if item["normalized_name"] == "alpha"
+    )
+    assert (
+        alpha["notices"][0]["provenance"]
+        == "reviewed-upstream-source-supplement"
+    )
     assert "source_archive_path" not in alpha["notices"][0]
     assert "record_hash" not in alpha["notices"][0]
-    assert dependency_notices.verify_dependency_notice_manifest(bundle, spec, tmp_path) == []
+    assert (
+        dependency_notices.verify_dependency_notice_manifest(
+            bundle, spec, tmp_path
+        )
+        == []
+    )
+
+
+def test_git_snapshot_notice_is_collected_and_recomputed_without_record_hash(
+    tmp_path, monkeypatch
+):
+    site, spec, bundle, _source_manifest = _reviewed_git_snapshot_fixture(
+        tmp_path, monkeypatch
+    )
+
+    manifest = _collect(tmp_path, site, spec, bundle)
+    alpha = next(
+        item
+        for item in manifest["distributions"]
+        if item["normalized_name"] == "alpha"
+    )
+    assert len(alpha["notices"]) == 1
+    notice = alpha["notices"][0]
+    assert notice["provenance"] == "reviewed-git-snapshot-source-supplement"
+    assert notice["source_snapshot"]["repository"] == "example/project"
+    assert notice["source_snapshot"]["revision"] == "a" * 40
+    assert notice["gitlink_path"] == "third_party/example"
+    assert notice["upstream_source"]["repository"] == "example/third-party"
+    assert "source_archive_filename" not in notice
+    assert "record_hash" not in notice
+    assert (
+        dependency_notices.verify_dependency_notice_manifest(
+            bundle, spec, tmp_path
+        )
+        == []
+    )
+
+
+@pytest.mark.parametrize(
+    "tamper", ["provenance", "omission", "payload", "source_revision"]
+)
+def test_git_snapshot_notice_verifier_rejects_tampering(
+    tmp_path, monkeypatch, tamper
+):
+    site, spec, bundle, source_path = _reviewed_git_snapshot_fixture(
+        tmp_path, monkeypatch
+    )
+    manifest = _collect(tmp_path, site, spec, bundle)
+    alpha = next(
+        item
+        for item in manifest["distributions"]
+        if item["normalized_name"] == "alpha"
+    )
+    notice = alpha["notices"][0]
+    if tamper == "provenance":
+        notice.pop("provenance")
+        notice["record_hash"] = "sha256:" + notice["sha256"]
+    elif tamper == "omission":
+        alpha["notices"].clear()
+    elif tamper == "payload":
+        (bundle / notice["bundle_path"]).write_bytes(b"changed license")
+    else:
+        source = json.loads(source_path.read_text())
+        source["source_snapshot"]["revision"] = "c" * 40
+        source_path.write_text(json.dumps(source))
+    if tamper != "payload":
+        (bundle / "legal/dependencies/dependency-notices.json").write_text(
+            json.dumps(manifest)
+        )
+
+    assert dependency_notices.verify_dependency_notice_manifest(
+        bundle, spec, tmp_path
+    )
+
+
+def test_foreign_notice_helper_on_sys_path_is_never_executed(
+    tmp_path, monkeypatch
+):
+    foreign_directory = tmp_path / "foreign"
+    foreign_directory.mkdir()
+    marker = tmp_path / "foreign-helper-ran"
+    foreign_body = (
+        "from pathlib import Path\n"
+        f"Path({str(marker)!r}).write_text('executed')\n"
+    )
+    (foreign_directory / "source_notice_supplements.py").write_text(
+        foreign_body
+    )
+    (foreign_directory / "vendor_notice_supplements.py").write_text(
+        foreign_body
+    )
+    monkeypatch.syspath_prepend(str(foreign_directory))
+
+    names = ("source_notice_supplements", "vendor_notice_supplements")
+    previous_modules = {name: sys.modules.pop(name, None) for name in names}
+    try:
+        assert (
+            dependency_notices._reviewed_notice_supplements(
+                {}, tmp_path, [], "legal/dependencies"
+            )
+            == {}
+        )
+        assert not marker.exists()
+    finally:
+        for name in names:
+            sys.modules.pop(name, None)
+            previous = previous_modules[name]
+            if previous is not None:
+                sys.modules[name] = previous
 
 
 @pytest.mark.parametrize("tamper", ["manifest", "provenance", "omission", "payload"])
@@ -454,6 +713,50 @@ def test_collects_metadata_license_directory_and_declared_legacy_filename(
         "alpha-1.0.dist-info/licenses/vendor-third-party.txt",
         "alpha-1.0.dist-info/legacy-notice.dat",
     }
+
+
+def test_legacy_parent_license_hint_uses_only_recorded_dist_info_notice(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    site, _lock, spec, bundle = _setup(tmp_path, monkeypatch)
+    shutil.rmtree(site / "alpha-1.0.dist-info")
+    (site / "LICENSE").write_bytes(b"Outside the distribution; do not copy\n")
+    _write_distribution(
+        site, "alpha", "1.0", {"LICENSE": b"Actual Alpha notice\n"},
+        license_file_headers=["../LICENSE"], metadata_version="2.1",
+    )
+    manifest = _collect(tmp_path, site, spec, bundle)
+    alpha = next(item for item in manifest["distributions"] if item["normalized_name"] == "alpha")
+    assert [item["source_path"] for item in alpha["notices"]] == ["alpha-1.0.dist-info/LICENSE"]
+    output = bundle / alpha["notices"][0]["bundle_path"]
+    assert output.read_bytes() == b"Actual Alpha notice\n"
+    assert dependency_notices.verify_dependency_notice_manifest(bundle, spec, tmp_path) == []
+
+
+def test_modern_metadata_rejects_even_one_parent_license_hint(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    site, _lock, spec, bundle = _setup(tmp_path, monkeypatch)
+    shutil.rmtree(site / "alpha-1.0.dist-info")
+    _write_distribution(
+        site, "alpha", "1.0", {"LICENSE": b"Alpha notice\n"},
+        license_file_headers=["../LICENSE"], metadata_version="2.4",
+    )
+    with pytest.raises(dependency_notices.DependencyNoticeError, match="unsafe License-File"):
+        _collect(tmp_path, site, spec, bundle)
+
+
+def test_legacy_parent_hint_cannot_match_an_unrelated_nested_notice(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    site, _lock, spec, bundle = _setup(tmp_path, monkeypatch)
+    shutil.rmtree(site / "alpha-1.0.dist-info")
+    _write_distribution(
+        site, "alpha", "1.0", {"licenses/LICENSE": b"Alpha notice\n"},
+        license_file_headers=["../LICENSE"], metadata_version="2.1",
+    )
+    with pytest.raises(dependency_notices.DependencyNoticeError, match="does not identify one recorded"):
+        _collect(tmp_path, site, spec, bundle)
 
 
 def test_rejects_traversing_metadata_license_file_declaration(

@@ -151,20 +151,33 @@ def _parse_manifest(manifest_bytes: bytes) -> dict[str, Any]:
             "source notice manifest is invalid JSON"
         ) from exc
     _no_urls(data)
-    return _keys(
+    top = _keys(
         data,
         {
             "distribution",
             "version",
             "exact_pin",
             "license_source",
-            "source_distribution",
             "selected_wheel",
             "files",
         },
-        {"excluded_source_notice", "package_source_evidence"},
+        {
+            "excluded_source_notice",
+            "package_source_evidence",
+            "source_distribution",
+            "source_snapshot",
+        },
         "source notice manifest",
     )
+    if ("source_distribution" in top) == ("source_snapshot" in top):
+        _fail(
+            "source notice manifest must identify exactly one source distribution or Git snapshot"
+        )
+    if "source_snapshot" in top and "package_source_evidence" in top:
+        _fail(
+            "Git snapshot source notices cannot also use package source attribution evidence"
+        )
+    return top
 
 
 def _manifest_identity(top: dict[str, Any]) -> tuple[str, str]:
@@ -214,25 +227,40 @@ def _artifact_record(
     return record
 
 
-def _validate_artifacts(
+def _validate_selected_wheel(
     top: dict[str, Any], name: str, version: str
-) -> tuple[dict[str, Any], dict[str, Any]]:
-    source = _keys(
-        top["source_distribution"],
-        {"filename", "sha256"},
-        set(),
-        "source distribution record",
-    )
+) -> dict[str, Any]:
     wheel = _keys(
         top["selected_wheel"],
         {"filename", "sha256"},
         set(),
         "selected wheel record",
     )
+    wheel = _artifact_record(wheel, "selected wheel", (".whl",))
+    wheel_parts = wheel["filename"][:-4].split("-")
+    if (
+        len(wheel_parts) < 5
+        or _normalized_name(wheel_parts[0]) != _normalized_name(name)
+        or wheel_parts[1] != version
+    ):
+        _fail(
+            "source notice manifest wheel filename differs from its package identity"
+        )
+    return wheel
+
+
+def _validate_source_distribution(
+    top: dict[str, Any], name: str, version: str
+) -> dict[str, Any]:
+    source = _keys(
+        top["source_distribution"],
+        {"filename", "sha256"},
+        set(),
+        "source distribution record",
+    )
     source = _artifact_record(
         source, "source distribution", (".tar.gz", ".zip", ".tgz")
     )
-    wheel = _artifact_record(wheel, "selected wheel", (".whl",))
     source_filename = source["filename"]
     source_suffix = next(
         suffix
@@ -241,19 +269,135 @@ def _validate_artifacts(
     )
     source_stem = source_filename[: -len(source_suffix)]
     version_suffix = f"-{version}"
-    wheel_parts = wheel["filename"][:-4].split("-")
+    if not source_stem.endswith(version_suffix) or _normalized_name(
+        source_stem[: -len(version_suffix)]
+    ) != _normalized_name(name):
+        _fail(
+            "source notice manifest source distribution filenames differ from its package identity"
+        )
+    return source
+
+
+def _validate_snapshot_identity(
+    identity_value: Any, repository_revision: str, repo_root: Path
+) -> dict[str, Any]:
+    identity = _keys(
+        identity_value,
+        {"package_path", "evidence_path", "sha256", "size_bytes"},
+        set(),
+        "Git source snapshot identity member",
+    )
+    package_path = _safe_relative(
+        identity["package_path"], "Git source snapshot package path"
+    ).as_posix()
+    evidence_path = _safe_relative(
+        identity["evidence_path"], "Git source snapshot evidence path"
+    ).as_posix()
+    size = identity["size_bytes"]
+    digest = identity["sha256"]
     if (
-        not source_stem.endswith(version_suffix)
-        or _normalized_name(source_stem[: -len(version_suffix)])
-        != _normalized_name(name)
-        or len(wheel_parts) < 5
-        or _normalized_name(wheel_parts[0]) != _normalized_name(name)
-        or wheel_parts[1] != version
+        not isinstance(size, int)
+        or isinstance(size, bool)
+        or size <= 0
+        or size > _MAX_NOTICE_BYTES
+        or not isinstance(digest, str)
+        or not _HEX_RE.fullmatch(digest)
+    ):
+        _fail("Git source snapshot identity hash or size is invalid")
+    _, _, content = _safe_repo_file(
+        repo_root,
+        evidence_path,
+        "Git source snapshot identity evidence",
+        max_bytes=_MAX_NOTICE_BYTES,
+    )
+    if (
+        len(content) != size
+        or hashlib.sha256(content).hexdigest() != digest
+        or repository_revision.encode("ascii") not in content
     ):
         _fail(
-            "source notice manifest artifact filenames differ from its package identity"
+            "Git source snapshot identity evidence does not bind the selected revision"
         )
-    return source, wheel
+
+    return {
+        "package_path": package_path,
+        "evidence_path": evidence_path,
+        "sha256": digest,
+        "size_bytes": size,
+    }
+
+
+def _validate_snapshot_gitlinks(gitlinks: Any) -> list[dict[str, str]]:
+    if not isinstance(gitlinks, list) or not gitlinks or len(gitlinks) > 256:
+        _fail("Git source snapshot gitlink list is empty or exceeds its limit")
+    normalized_gitlinks: list[dict[str, str]] = []
+    seen_paths: set[str] = set()
+    seen_sources: set[tuple[str, str]] = set()
+    for item in gitlinks:
+        gitlink = _keys(
+            item,
+            {"path", "repository", "revision"},
+            set(),
+            "Git source snapshot gitlink",
+        )
+        path = _safe_relative(
+            gitlink["path"], "Git source snapshot gitlink path"
+        ).as_posix()
+        linked_repository = gitlink["repository"]
+        linked_revision = gitlink["revision"]
+        if (
+            not isinstance(linked_repository, str)
+            or not _REPOSITORY_RE.fullmatch(linked_repository)
+            or not isinstance(linked_revision, str)
+            or not _GIT_REV_RE.fullmatch(linked_revision)
+        ):
+            _fail("Git source snapshot gitlink identity is invalid")
+        if (
+            path in seen_paths
+            or (linked_repository, linked_revision) in seen_sources
+        ):
+            _fail("Git source snapshot repeats a gitlink")
+        seen_paths.add(path)
+        seen_sources.add((linked_repository, linked_revision))
+        normalized_gitlinks.append(
+            {
+                "path": path,
+                "repository": linked_repository,
+                "revision": linked_revision,
+            }
+        )
+
+    return normalized_gitlinks
+
+
+def _validate_git_snapshot(
+    top: dict[str, Any], repo_root: Path
+) -> dict[str, Any]:
+    snapshot = _keys(
+        top["source_snapshot"],
+        {"repository", "revision", "identity_member", "gitlinks"},
+        set(),
+        "Git source snapshot record",
+    )
+    repository = snapshot["repository"]
+    revision = snapshot["revision"]
+    if (
+        not isinstance(repository, str)
+        or not _REPOSITORY_RE.fullmatch(repository)
+        or not isinstance(revision, str)
+        or not _GIT_REV_RE.fullmatch(revision)
+    ):
+        _fail("Git source snapshot repository or revision is invalid")
+    identity = _validate_snapshot_identity(
+        snapshot["identity_member"], revision, repo_root
+    )
+    gitlinks = _validate_snapshot_gitlinks(snapshot["gitlinks"])
+    return {
+        "repository": repository,
+        "revision": revision,
+        "identity_member": identity,
+        "gitlinks": gitlinks,
+    }
 
 
 def _package_source_evidence(
@@ -284,34 +428,94 @@ def _package_source_evidence(
     return {"path": evidence_path.as_posix(), "sha256": digest}
 
 
-def _source_file_evidence(
+def _source_archive_evidence(
     file: dict[str, Any],
     *,
     name: str,
     version: str,
+    seen_archive_paths: set[str],
+) -> dict[str, str]:
+    archive_path = _safe_relative(
+        file["source_archive_path"], "source archive notice path"
+    )
+    archive_canonical = archive_path.as_posix()
+    version_suffix = f"-{version}"
+    archive_root = archive_path.parts[0]
+    if not archive_root.endswith(version_suffix) or _normalized_name(
+        archive_root[: -len(version_suffix)]
+    ) != _normalized_name(name):
+        _fail(
+            "source archive notice path does not map to its exact distribution"
+        )
+    if archive_canonical in seen_archive_paths:
+        _fail("source notice manifest repeats a source archive path")
+    seen_archive_paths.add(archive_canonical)
+    return {"source_archive_path": archive_canonical}
+
+
+def _git_snapshot_notice_evidence(
+    file: dict[str, Any],
+    *,
+    size: int,
+    digest: str,
+    source_snapshot: dict[str, Any],
+) -> dict[str, Any]:
+    if "gitlink_path" not in file:
+        _fail("Git snapshot notice requires a package gitlink path")
+    gitlink_path = _safe_relative(
+        file["gitlink_path"], "source notice gitlink path"
+    ).as_posix()
+    upstream = _keys(
+        file["upstream_source"],
+        {"repository", "revision", "path", "sha256", "size_bytes"},
+        set(),
+        "Git snapshot upstream notice source record",
+    )
+    matched = next(
+        (
+            link
+            for link in source_snapshot["gitlinks"]
+            if link["path"] == gitlink_path
+        ),
+        None,
+    )
+    upstream_path = _safe_relative(
+        upstream["path"], "Git snapshot upstream notice path"
+    ).as_posix()
+    if (
+        matched is None
+        or upstream["repository"] != matched["repository"]
+        or upstream["revision"] != matched["revision"]
+    ):
+        _fail("Git snapshot notice source differs from its package gitlink")
+    if (
+        not isinstance(upstream["sha256"], str)
+        or not _HEX_RE.fullmatch(upstream["sha256"])
+        or upstream["sha256"] != digest
+        or not isinstance(upstream["size_bytes"], int)
+        or isinstance(upstream["size_bytes"], bool)
+        or upstream["size_bytes"] != size
+    ):
+        _fail("Git snapshot upstream notice bytes differ from the supplement")
+    return {
+        "gitlink_path": gitlink_path,
+        "upstream_source": {
+            "repository": matched["repository"],
+            "revision": matched["revision"],
+            "path": upstream_path,
+            "sha256": digest,
+            "size_bytes": size,
+        },
+    }
+
+
+def _upstream_notice_evidence(
+    file: dict[str, Any],
+    *,
     size: int,
     digest: str,
     package_evidence: dict[str, str] | None,
-    seen_archive_paths: set[str],
 ) -> dict[str, Any]:
-    if "source_archive_path" in file:
-        archive_path = _safe_relative(
-            file["source_archive_path"], "source archive notice path"
-        )
-        archive_canonical = archive_path.as_posix()
-        version_suffix = f"-{version}"
-        archive_root = archive_path.parts[0]
-        if not archive_root.endswith(version_suffix) or _normalized_name(
-            archive_root[: -len(version_suffix)]
-        ) != _normalized_name(name):
-            _fail(
-                "source archive notice path does not map to its exact distribution"
-            )
-        if archive_canonical in seen_archive_paths:
-            _fail("source notice manifest repeats a source archive path")
-        seen_archive_paths.add(archive_canonical)
-        return {"source_archive_path": archive_canonical}
-
     if package_evidence is None:
         _fail("upstream notice requires package source attribution evidence")
     upstream = _keys(
@@ -353,12 +557,41 @@ def _source_file_evidence(
     }
 
 
+def _source_file_evidence(
+    file: dict[str, Any],
+    *,
+    name: str,
+    version: str,
+    size: int,
+    digest: str,
+    package_evidence: dict[str, str] | None,
+    source_snapshot: dict[str, Any] | None,
+    seen_archive_paths: set[str],
+) -> dict[str, Any]:
+    if "source_archive_path" in file:
+        return _source_archive_evidence(
+            file,
+            name=name,
+            version=version,
+            seen_archive_paths=seen_archive_paths,
+        )
+
+    if source_snapshot is not None:
+        return _git_snapshot_notice_evidence(
+            file, size=size, digest=digest, source_snapshot=source_snapshot
+        )
+    return _upstream_notice_evidence(
+        file, size=size, digest=digest, package_evidence=package_evidence
+    )
+
+
 def _manifest_file(
     item: Any,
     *,
     name: str,
     version: str,
     package_evidence: dict[str, str] | None,
+    source_snapshot: dict[str, Any] | None,
     seen_paths: set[str],
     seen_basenames: set[str],
     seen_archive_paths: set[str],
@@ -366,13 +599,20 @@ def _manifest_file(
     file = _keys(
         item,
         {"path", "size_bytes", "sha256"},
-        {"source_archive_path", "upstream_source"},
+        {"source_archive_path", "upstream_source", "gitlink_path"},
         "source notice file record",
     )
-    if ("source_archive_path" in file) == ("upstream_source" in file):
+    if source_snapshot is not None:
+        if "source_archive_path" in file or "upstream_source" not in file:
+            _fail(
+                "Git snapshot notice must identify an upstream source and no archive"
+            )
+    elif ("source_archive_path" in file) == ("upstream_source" in file):
         _fail(
             "source notice file must identify exactly one package-archive or upstream source"
         )
+    elif "gitlink_path" in file:
+        _fail("Gitlink path is only valid for a Git snapshot source")
     repo_path = _safe_relative(file["path"], "source notice repository path")
     canonical = repo_path.as_posix()
     basename = repo_path.name
@@ -398,6 +638,7 @@ def _manifest_file(
         size=size,
         digest=digest,
         package_evidence=package_evidence,
+        source_snapshot=source_snapshot,
         seen_archive_paths=seen_archive_paths,
     )
     return {
@@ -415,6 +656,7 @@ def _manifest_files(
     name: str,
     version: str,
     package_evidence: dict[str, str] | None,
+    source_snapshot: dict[str, Any] | None,
 ) -> list[dict[str, Any]]:
     raw_files = top["files"]
     if (
@@ -434,6 +676,7 @@ def _manifest_files(
             name=name,
             version=version,
             package_evidence=package_evidence,
+            source_snapshot=source_snapshot,
             seen_paths=seen_paths,
             seen_basenames=seen_basenames,
             seen_archive_paths=seen_archive_paths,
@@ -466,16 +709,24 @@ def _validate_excluded_source_notice(top: dict[str, Any]) -> None:
 
 def _manifest_record(
     manifest_bytes: bytes,
+    repo_root: Path,
 ) -> tuple[dict[str, Any], list[dict[str, Any]]]:
     top = _parse_manifest(manifest_bytes)
     name, version = _manifest_identity(top)
-    _validate_artifacts(top, name, version)
+    _validate_selected_wheel(top, name, version)
     package_evidence = _package_source_evidence(top, name, version)
+    source_snapshot = None
+    if "source_distribution" in top:
+        _validate_source_distribution(top, name, version)
+    else:
+        source_snapshot = _validate_git_snapshot(top, repo_root)
+        top["_validated_source_snapshot"] = source_snapshot
     files = _manifest_files(
         top,
         name=name,
         version=version,
         package_evidence=package_evidence,
+        source_snapshot=source_snapshot,
     )
     _validate_excluded_source_notice(top)
     return top, files
@@ -556,7 +807,7 @@ def _read_manifest_record(
     if canonical in seen_paths:
         _fail("source notice manifest path is duplicated")
     seen_paths.add(canonical)
-    top, files = _manifest_record(raw)
+    top, files = _manifest_record(raw, root)
     normalized = _normalized_name(top["distribution"])
     if normalized in seen_distributions:
         _fail("source notice manifests repeat a distribution")
@@ -596,6 +847,7 @@ def _notice_record(
     canonical_manifest: str,
     manifest_sha: str,
     source_distribution: dict[str, Any],
+    source_snapshot: dict[str, Any] | None,
 ) -> tuple[dict[str, Any], tuple[str, bytes]]:
     _, _, content = _safe_repo_file(
         root,
@@ -621,9 +873,14 @@ def _notice_record(
         "manifest_path": canonical_manifest,
         "manifest_sha256": manifest_sha,
         "supplement_path": file["repo_path"],
-        "source_archive_filename": source_distribution["filename"],
-        "source_archive_sha256": source_distribution["sha256"],
     }
+    if source_snapshot is None:
+        record.update(
+            {
+                "source_archive_filename": source_distribution["filename"],
+                "source_archive_sha256": source_distribution["sha256"],
+            }
+        )
     if "source_archive_path" in file:
         record.update(
             {
@@ -632,13 +889,23 @@ def _notice_record(
             }
         )
     else:
-        record.update(
-            {
-                "provenance": "reviewed-upstream-source-supplement",
-                "package_source_evidence": file["package_source_evidence"],
-                "upstream_source": file["upstream_source"],
-            }
-        )
+        if source_snapshot is not None:
+            record.update(
+                {
+                    "provenance": "reviewed-git-snapshot-source-supplement",
+                    "source_snapshot": source_snapshot,
+                    "gitlink_path": file["gitlink_path"],
+                    "upstream_source": file["upstream_source"],
+                }
+            )
+        else:
+            record.update(
+                {
+                    "provenance": "reviewed-upstream-source-supplement",
+                    "package_source_evidence": file["package_source_evidence"],
+                    "upstream_source": file["upstream_source"],
+                }
+            )
     return record, (bundle_path, content)
 
 
@@ -668,7 +935,8 @@ def _selected_manifest_notices(
             normalized=normalized,
             canonical_manifest=canonical_manifest,
             manifest_sha=manifest_sha,
-            source_distribution=top["source_distribution"],
+            source_distribution=top.get("source_distribution", {}),
+            source_snapshot=top.get("_validated_source_snapshot"),
         )
         if output[0] in output_paths:
             _fail("source notice output path is duplicated")

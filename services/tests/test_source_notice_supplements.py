@@ -86,8 +86,89 @@ def _load(repo: Path, spec: dict, packages, *, bundle_dest: str = "legal/depende
     )
 
 
-def test_loads_locked_source_notice_without_installed_distribution(tmp_path: Path) -> None:
-    repo, _manifest_path, _source_file, _manifest, spec, wheel_sha = _fixture(tmp_path)
+def _git_snapshot_fixture(tmp_path: Path):
+    repo = tmp_path / "repo"
+    source_dir = (
+        repo / "packaging" / "licenses" / "torch-2.13.0-cu129-supplement"
+    )
+    source_dir.mkdir(parents=True)
+    wheel_sha = _sha(b"selected torch wheel")
+    revision = "a" * 40
+    gitlink_revision = "b" * 40
+    version_bytes = f"git_version = '{revision}'\n".encode()
+    license_bytes = b"MIT License text from reviewed Git snapshot\n"
+    identity_path = source_dir / "torch-version.py"
+    notice_path = source_dir / "LICENSE-nlohmann-json.txt"
+    identity_path.write_bytes(version_bytes)
+    notice_path.write_bytes(license_bytes)
+    manifest = {
+        "distribution": "torch",
+        "version": "2.13.0+cu129",
+        "exact_pin": "torch==2.13.0+cu129",
+        "license_source": "Reviewed Git snapshot notice; not a source distribution or exact wheel build input claim.",
+        "selected_wheel": {
+            "filename": "torch-2.13.0+cu129-cp313-cp313-manylinux_2_28_x86_64.whl",
+            "sha256": wheel_sha,
+        },
+        "source_snapshot": {
+            "repository": "pytorch/pytorch",
+            "revision": revision,
+            "identity_member": {
+                "package_path": "torch/version.py",
+                "evidence_path": identity_path.relative_to(repo).as_posix(),
+                "sha256": _sha(version_bytes),
+                "size_bytes": len(version_bytes),
+            },
+            "gitlinks": [
+                {
+                    "path": "third_party/nlohmann",
+                    "repository": "nlohmann/json",
+                    "revision": gitlink_revision,
+                }
+            ],
+        },
+        "files": [
+            {
+                "path": notice_path.relative_to(repo).as_posix(),
+                "gitlink_path": "third_party/nlohmann",
+                "upstream_source": {
+                    "repository": "nlohmann/json",
+                    "revision": gitlink_revision,
+                    "path": "LICENSE.MIT",
+                    "sha256": _sha(license_bytes),
+                    "size_bytes": len(license_bytes),
+                },
+                "size_bytes": len(license_bytes),
+                "sha256": _sha(license_bytes),
+            }
+        ],
+    }
+    manifest_path = source_dir / "source-manifest.json"
+    manifest_path.write_text(
+        json.dumps(manifest, indent=2) + "\n", encoding="utf-8"
+    )
+    spec = {
+        "dependency_notices": {
+            "source_supplements": [manifest_path.relative_to(repo).as_posix()]
+        }
+    }
+    return (
+        repo,
+        manifest_path,
+        identity_path,
+        notice_path,
+        manifest,
+        spec,
+        wheel_sha,
+    )
+
+
+def test_loads_locked_source_notice_without_installed_distribution(
+    tmp_path: Path,
+) -> None:
+    repo, _manifest_path, _source_file, _manifest, spec, wheel_sha = _fixture(
+        tmp_path
+    )
 
     result = _load(repo, spec, [_locked(wheel_sha=wheel_sha)])
 
@@ -101,23 +182,109 @@ def test_loads_locked_source_notice_without_installed_distribution(tmp_path: Pat
     ]
     assert records[0]["provenance"] == "reviewed-source-supplement"
     assert records[0]["source_archive_path"] == "example-1.2.3/LICENSE"
-    assert records[0]["source_archive_sha256"] == _manifest["source_distribution"]["sha256"]
-    assert records[0]["manifest_path"] == spec["dependency_notices"]["source_supplements"][0]
+    assert (
+        records[0]["source_archive_sha256"]
+        == _manifest["source_distribution"]["sha256"]
+    )
+    assert (
+        records[0]["manifest_path"]
+        == spec["dependency_notices"]["source_supplements"][0]
+    )
     assert records[0]["manifest_sha256"] == _sha(_manifest_path.read_bytes())
     assert "record_hash" not in records[0]
 
 
-def test_ignores_unlocked_manifest_but_still_validates_config_path(tmp_path: Path) -> None:
-    repo, manifest_path, _source_file, _manifest, spec, _wheel_sha = _fixture(tmp_path)
+def test_loads_git_snapshot_notice_without_claiming_source_distribution(
+    tmp_path: Path,
+) -> None:
+    repo, manifest_path, _identity, _notice, manifest, spec, wheel_sha = (
+        _git_snapshot_fixture(tmp_path)
+    )
+
+    result = _load(repo, spec, [_locked("torch", "2.13.0+cu129", wheel_sha)])
+
+    records, outputs = result["torch==2.13.0+cu129"]
+    assert outputs == [
+        (
+            "legal/dependencies/torch-2.13.0+cu129/source-supplements/LICENSE-nlohmann-json.txt",
+            b"MIT License text from reviewed Git snapshot\n",
+        )
+    ]
+    record = records[0]
+    assert record["provenance"] == "reviewed-git-snapshot-source-supplement"
+    assert record["source_snapshot"]["repository"] == "pytorch/pytorch"
+    assert record["source_snapshot"]["revision"] == "a" * 40
+    assert record["gitlink_path"] == "third_party/nlohmann"
+    assert record["upstream_source"]["repository"] == "nlohmann/json"
+    assert record["upstream_source"]["revision"] == "b" * 40
+    assert record["manifest_sha256"] == _sha(manifest_path.read_bytes())
+    assert "source_archive_filename" not in record
+    assert "source_archive_sha256" not in record
+    assert "record_hash" not in record
+    assert "source_distribution" not in manifest
+
+
+@pytest.mark.parametrize(
+    "change,match",
+    [
+        ("identity-bytes", "identity evidence"),
+        ("identity-revision", "identity evidence"),
+        ("gitlink-map", "package gitlink"),
+        ("traversal", "traversal"),
+        ("duplicate-gitlink", "repeats a gitlink"),
+    ],
+)
+def test_rejects_invalid_git_snapshot_notice_binding(
+    tmp_path: Path, change: str, match: str
+) -> None:
+    repo, manifest_path, identity_path, _notice, manifest, spec, wheel_sha = (
+        _git_snapshot_fixture(tmp_path)
+    )
+    if change == "identity-bytes":
+        identity_path.write_bytes(b"changed identity\n")
+    elif change == "identity-revision":
+        manifest["source_snapshot"]["revision"] = "c" * 40
+    elif change == "gitlink-map":
+        manifest["files"][0]["upstream_source"]["revision"] = "c" * 40
+    elif change == "traversal":
+        manifest["files"][0]["gitlink_path"] = "../nlohmann"
+    elif change == "duplicate-gitlink":
+        manifest["source_snapshot"]["gitlinks"].append(
+            dict(manifest["source_snapshot"]["gitlinks"][0])
+        )
+    if change != "identity-bytes":
+        manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+
+    with pytest.raises(
+        source_notice_supplements.SourceNoticeSupplementError, match=match
+    ):
+        _load(repo, spec, [_locked("torch", "2.13.0+cu129", wheel_sha)])
+
+
+def test_ignores_unlocked_manifest_but_still_validates_config_path(
+    tmp_path: Path,
+) -> None:
+    repo, manifest_path, _source_file, _manifest, spec, _wheel_sha = _fixture(
+        tmp_path
+    )
 
     assert _load(repo, spec, []) == {}
     spec["dependency_notices"]["source_supplements"] = ["../outside.json"]
-    with pytest.raises(source_notice_supplements.SourceNoticeSupplementError, match="traversal"):
+    with pytest.raises(
+        source_notice_supplements.SourceNoticeSupplementError,
+        match="traversal",
+    ):
         _load(repo, spec, [])
-    spec["dependency_notices"]["source_supplements"] = [manifest_path.relative_to(repo).as_posix()]
+    spec["dependency_notices"]["source_supplements"] = [
+        manifest_path.relative_to(repo).as_posix()
+    ]
     missing = repo / "missing.json"
-    spec["dependency_notices"]["source_supplements"] = [missing.relative_to(repo).as_posix()]
-    with pytest.raises(source_notice_supplements.SourceNoticeSupplementError, match="missing"):
+    spec["dependency_notices"]["source_supplements"] = [
+        missing.relative_to(repo).as_posix()
+    ]
+    with pytest.raises(
+        source_notice_supplements.SourceNoticeSupplementError, match="missing"
+    ):
         _load(repo, spec, [])
 
 

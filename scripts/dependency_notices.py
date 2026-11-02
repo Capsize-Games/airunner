@@ -11,6 +11,7 @@ import base64
 import csv
 import hashlib
 import hmac
+import importlib.util
 import io
 import json
 import re
@@ -19,6 +20,7 @@ import sysconfig
 import tempfile
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
+from types import ModuleType
 from typing import Any, Iterable
 from urllib.parse import unquote, urlsplit
 
@@ -208,9 +210,9 @@ def _site_package_roots(explicit: Iterable[Path] | None) -> list[Path]:
 
 def _metadata_candidates(
     package: LockedDistribution, roots: list[Path]
-) -> list[tuple[Path, str, str, list[str]]]:
+) -> list[tuple[Path, str, str, list[str], str]]:
     """Find exact-name dist-info entries in the scoped active site-packages roots."""
-    matches: list[tuple[Path, str, str, list[str]]] = []
+    matches: list[tuple[Path, str, str, list[str], str]] = []
     for site_root in roots:
         for item in site_root.iterdir():
             if not item.name.endswith(_DIST_INFO_SUFFIXES):
@@ -246,7 +248,10 @@ def _metadata_candidates(
             if _normalized_name(actual_name) != package.normalized_name:
                 continue
             license_files = metadata.get_all("License-File", []) or []
-            matches.append((item, actual_name, actual_version, license_files))
+            matches.append((
+                item, actual_name, actual_version, license_files,
+                metadata.get("Metadata-Version", ""),
+            ))
     return matches
 
 
@@ -319,7 +324,7 @@ def _distribution_notices(
         raise DependencyNoticeError(
             f"locked distribution has duplicate installed metadata: {package.normalized_name}"
         )
-    metadata_dir, actual_name, actual_version, license_files = candidates[0]
+    metadata_dir, actual_name, actual_version, license_files, metadata_version = candidates[0]
     if actual_version != package.version:
         raise DependencyNoticeError(
             f"installed distribution version differs from lock: {package.normalized_name}"
@@ -386,6 +391,15 @@ def _distribution_notices(
         try:
             relative = _safe_relative(license_file, "License-File metadata path")
         except DependencyNoticeError as exc:
+            # Before metadata 2.4 standardized this field, older builders
+            # emitted ../LICENSE for a source-root notice. Never resolve that
+            # path: match only the canonical dist-info basename in RECORD.
+            legacy_path = _legacy_license_record_path(
+                license_file, metadata_version, dist_info_relative
+            )
+            if legacy_path is not None:
+                declared_paths[license_file] = {legacy_path}
+                continue
             raise DependencyNoticeError(
                 f"locked distribution declares an unsafe License-File path: {package.normalized_name}"
             ) from exc
@@ -489,31 +503,103 @@ def _distribution_notices(
     return package_record, contents
 
 
+def _legacy_license_record_path(
+    declaration: str, metadata_version: str, dist_info_relative: str
+) -> str | None:
+    """Recognize one legacy source-parent hint without traversing a path."""
+    if metadata_version not in {"1.0", "1.1", "1.2", "2.1", "2.2", "2.3"}:
+        return None
+    if not declaration.startswith("../"):
+        return None
+    try:
+        basename = _safe_relative(declaration[3:], "legacy license basename")
+    except DependencyNoticeError:
+        return None
+    if len(basename.parts) != 1 or not _is_notice_path(basename.as_posix()):
+        return None
+    return f"{dist_info_relative}/{basename.as_posix()}"
+
+
 def _reviewed_notice_supplements(
-    spec: dict[str, Any], repo_root: Path,
-    packages: list[LockedDistribution], destination: str,
+    spec: dict[str, Any],
+    repo_root: Path,
+    packages: list[LockedDistribution],
+    destination: str,
 ) -> dict[str, tuple[list[dict[str, Any]], list[tuple[str, bytes]]]]:
     """Combine independently verified source and vendor evidence per pin."""
-    from source_notice_supplements import load_source_notice_supplements
-    from vendor_notice_supplements import load_vendor_notice_supplements
+    script_directory = Path(__file__).resolve().parent
+    source_loader = _load_checkout_notice_helper(
+        "source_notice_supplements", script_directory
+    )
+    vendor_loader = _load_checkout_notice_helper(
+        "vendor_notice_supplements", script_directory
+    )
 
-    combined: dict[str, tuple[list[dict[str, Any]], list[tuple[str, bytes]]]] = {}
+    combined: dict[
+        str, tuple[list[dict[str, Any]], list[tuple[str, bytes]]]
+    ] = {}
     seen_paths: set[str] = set()
     try:
-        for loader in (load_source_notice_supplements, load_vendor_notice_supplements):
+        for loader in (
+            source_loader.load_source_notice_supplements,
+            vendor_loader.load_vendor_notice_supplements,
+        ):
             for pin, (records, files) in loader(
                 spec, repo_root, packages, destination
             ).items():
                 for path, _content in files:
                     if path in seen_paths:
-                        raise DependencyNoticeError("reviewed notice output path collision")
+                        raise DependencyNoticeError(
+                            "reviewed notice output path collision"
+                        )
                     seen_paths.add(path)
-                merged_records, merged_files = combined.setdefault(pin, ([], []))
+                merged_records, merged_files = combined.setdefault(
+                    pin, ([], [])
+                )
                 merged_records.extend(records)
                 merged_files.extend(files)
     except ValueError as exc:
         raise DependencyNoticeError(str(exc)) from exc
     return combined
+
+
+def _load_checkout_notice_helper(
+    module_name: str, script_directory: Path
+) -> ModuleType:
+    """Load a notice helper from this checkout without executing a shadow module."""
+    expected_path = (script_directory / f"{module_name}.py").resolve(
+        strict=True
+    )
+    cached = sys.modules.get(module_name)
+    if cached is not None:
+        cached_path = getattr(cached, "__file__", None)
+        if (
+            not isinstance(cached_path, str)
+            or Path(cached_path).resolve() != expected_path
+        ):
+            raise DependencyNoticeError(
+                f"reviewed notice loader is already loaded from another path: {module_name}"
+            )
+        return cached
+
+    spec = importlib.util.spec_from_file_location(module_name, expected_path)
+    if (
+        spec is None
+        or spec.loader is None
+        or not isinstance(spec.origin, str)
+        or Path(spec.origin).resolve() != expected_path
+    ):
+        raise DependencyNoticeError(
+            f"reviewed notice loader path is invalid: {module_name}"
+        )
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[module_name] = module
+    try:
+        spec.loader.exec_module(module)
+    except BaseException:
+        sys.modules.pop(module_name, None)
+        raise
+    return module
 
 
 def collect_dependency_notices(
@@ -730,16 +816,22 @@ def verify_dependency_notice_manifest(
                 if source_path in source_paths:
                     raise DependencyNoticeError("dependency notice source path is duplicated")
                 source_paths.add(source_path)
-                wanted_path = f"{dest_rel.as_posix()}/{package_slug}/{source_path}"
-                if notice.get("bundle_path") != wanted_path or wanted_path in referenced:
-                    raise DependencyNoticeError("dependency notice output path is unsafe or duplicated")
-                is_source_supplement = (
-                    notice.get("provenance") in {
-                        "reviewed-source-supplement",
-                        "reviewed-upstream-source-supplement",
-                        "reviewed-vendor-license-supplement",
-                    }
+                wanted_path = (
+                    f"{dest_rel.as_posix()}/{package_slug}/{source_path}"
                 )
+                if (
+                    notice.get("bundle_path") != wanted_path
+                    or wanted_path in referenced
+                ):
+                    raise DependencyNoticeError(
+                        "dependency notice output path is unsafe or duplicated"
+                    )
+                is_source_supplement = notice.get("provenance") in {
+                    "reviewed-source-supplement",
+                    "reviewed-upstream-source-supplement",
+                    "reviewed-git-snapshot-source-supplement",
+                    "reviewed-vendor-license-supplement",
+                }
                 if is_source_supplement:
                     if notice != expected_source_records.get(wanted_path):
                         raise DependencyNoticeError("source notice differs from its reviewed manifest")

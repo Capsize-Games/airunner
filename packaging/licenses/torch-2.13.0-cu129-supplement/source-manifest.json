@@ -1,0 +1,42 @@
+{
+  "distribution": "torch",
+  "version": "2.13.0+cu129",
+  "exact_pin": "torch==2.13.0+cu129",
+  "license_source": "Niels Lohmann JSON for Modern C++ MIT license copied byte-for-byte from the reviewed nlohmann/json v3.12.0 private source snapshot; this Git snapshot identifies a selected source revision, not a source distribution or exact wheel build input set.",
+  "selected_wheel": {
+    "filename": "torch-2.13.0+cu129-cp313-cp313-manylinux_2_28_x86_64.whl",
+    "sha256": "6e3bcf183e3096db45bf539dc21f820963074986ece7a56550714f12863c76af"
+  },
+  "source_snapshot": {
+    "repository": "pytorch/pytorch",
+    "revision": "cf30153c4c131c8164ee7798e5022d810682e2cb",
+    "identity_member": {
+      "package_path": "torch/version.py",
+      "evidence_path": "packaging/licenses/torch-2.13.0-cu129-supplement/torch-version.py",
+      "size_bytes": 317,
+      "sha256": "239c03fe2d8d0e3f18119c12d462ce863bb4de5eb9546535734efeb4f7b4f5ef"
+    },
+    "gitlinks": [
+      {
+        "path": "third_party/nlohmann",
+        "repository": "nlohmann/json",
+        "revision": "55f93686c01528224f448c19128836e7df245f72"
+      }
+    ]
+  },
+  "files": [
+    {
+      "path": "packaging/licenses/torch-2.13.0-cu129-supplement/LICENSE-nlohmann-json.txt",
+      "gitlink_path": "third_party/nlohmann",
+      "upstream_source": {
+        "repository": "nlohmann/json",
+        "revision": "55f93686c01528224f448c19128836e7df245f72",
+        "path": "LICENSE.MIT",
+        "sha256": "46a65cffd1ea955132d95a8dd921640714a8d6b537d2e4e482d31145ae95b603",
+        "size_bytes": 1076
+      },
+      "size_bytes": 1076,
+      "sha256": "46a65cffd1ea955132d95a8dd921640714a8d6b537d2e4e482d31145ae95b603"
+    }
+  ]
+}

@@ -62,6 +62,11 @@ required = true
 dest = "legal/dependencies"
 manifest = "dependency-notices.json"
 source_supplements = [
+    "packaging/licenses/torch-2.13.0-cu129-supplement/source-manifest.json",
+    "packaging/licenses/langchain-core-1.4.7-supplement/source-manifest.json",
+    "packaging/licenses/langchain-text-splitters-1.1.2-supplement/source-manifest.json",
+    "packaging/licenses/langsmith-0.14.4-supplement/source-manifest.json",
+    "packaging/licenses/loguru-0.7.3-supplement/source-manifest.json",
     "packaging/licenses/DeepCache-0.1.1-supplement/source-manifest.json",
     "packaging/licenses/orjson-3.13.0-supplement/source-manifest.json",
     "packaging/licenses/sentencepiece-0.2.1-supplement/source-manifest.json",
