@@ -55,6 +55,7 @@ from linux_bundle_gates import (
     parse_toc_modules,
     parse_warn_file,
 )
+from dependency_notices import verify_dependency_notice_manifest
 
 DEFAULT_SPEC = (
     Path(__file__).resolve().parent.parent
@@ -62,6 +63,7 @@ DEFAULT_SPEC = (
     / "linux"
     / "services-bundle-spec.toml"
 )
+_REPO_ROOT = Path(__file__).resolve().parent.parent
 
 _POLICY_FORMAT_ID = "airunner-policy-data/1"
 _POLICY_NORMALIZATION = "v1"
@@ -151,7 +153,10 @@ def _read_manifest(
 
 
 def _append_manifest(
-    bundle_dir: Path, spec: dict[str, Any], result: InspectionResult
+    bundle_dir: Path,
+    spec: dict[str, Any],
+    result: InspectionResult,
+    repo_root: Path,
 ) -> None:
     """Append manifest, resource, and exclusion findings to result."""
     manifest, manifest_problems = _read_manifest(bundle_dir, spec)
@@ -161,6 +166,9 @@ def _append_manifest(
         result.problems.extend(
             verify_required_resources(bundle_dir, manifest, spec)
         )
+    result.problems.extend(
+        verify_dependency_notice_manifest(bundle_dir, spec, repo_root)
+    )
     result.problems.extend(scan_exclusions(bundle_dir, spec))
     result.problems.extend(check_extension_modules(bundle_dir, spec))
     result.problems.extend(check_collected_binaries(bundle_dir, spec))
@@ -412,13 +420,14 @@ def inspect_bundle(
     toc_paths: list[Path] | None = None,
     require_sidecars: bool = False,
     require_signed_policy: bool = False,
+    repo_root: Path | None = None,
 ) -> InspectionResult:
     """Run every static check over one built bundle directory."""
     result = InspectionResult()
     if not bundle_dir.is_dir():
         result.problems.append(f"not a directory: {bundle_dir}")
         return result
-    _append_manifest(bundle_dir, spec, result)
+    _append_manifest(bundle_dir, spec, result, repo_root or _REPO_ROOT)
     _append_warn(result, spec, warn_file)
     _append_toc_sidecars(bundle_dir, spec, result, toc_paths, require_sidecars)
     policy_files = [

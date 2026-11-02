@@ -20,6 +20,7 @@ _REQUIRED_SECTIONS = (
     "exclusions",
     "warn_allowlist",
     "manifest",
+    "dependency_notices",
     "r01_coverage",
 )
 
@@ -74,6 +75,20 @@ def spec_errors(spec: dict[str, Any]) -> list[str]:
         if key not in bundle:
             errors.append(f"spec [bundle] missing {key!r}")
     errors.extend(_entry_errors(spec))
+    notices = spec.get("dependency_notices", {})
+    if not isinstance(notices, dict):
+        errors.append("spec [dependency_notices] is not a table")
+    else:
+        for key in ("dest", "manifest"):
+            if not isinstance(notices.get(key), str) or not notices[key]:
+                errors.append(f"spec [dependency_notices] missing {key!r}")
+        if not isinstance(notices.get("required"), bool):
+            errors.append("spec [dependency_notices] required is not boolean")
+        dest = str(notices.get("dest", ""))
+        manifest = str(notices.get("manifest", ""))
+        for key, value in (("dest", dest), ("manifest", manifest)):
+            if value.startswith("/") or "\\" in value or ".." in value.split("/"):
+                errors.append(f"spec [dependency_notices] {key} path is unsafe")
     return errors
 
 

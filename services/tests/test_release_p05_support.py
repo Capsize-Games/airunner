@@ -74,7 +74,12 @@ def assemble_mod() -> types.ModuleType:
 @pytest.fixture(scope="module")
 def spec(inspect_mod: types.ModuleType) -> dict[str, Any]:
     """The parsed services bundle spec."""
-    return dict(inspect_mod.load_spec(SPEC_PATH))
+    value = dict(inspect_mod.load_spec(SPEC_PATH))
+    # These synthetic P05 tests exercise bundle checks without pretending
+    # that the blocked full-profile lock is installed. Dedicated notice
+    # tests use temporary synthetic locks and metadata fixtures.
+    value["dependency_notices"]["required"] = False
+    return value
 
 
 @pytest.fixture(scope="module")

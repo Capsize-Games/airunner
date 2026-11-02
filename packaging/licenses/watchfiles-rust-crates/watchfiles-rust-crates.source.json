@@ -1,0 +1,594 @@
+{
+  "build_provenance": {
+    "compiled_external_crate_count": 26,
+    "head_sha": "e74b8fc7d8d9e35c3b6bb88af0aef5ea82ee815e",
+    "job": "build on linux (x86_64 - auto)",
+    "log_archive_sha256": "20382f98744c37dd58fbe3033012810b698f61eadb1696b5cfb6eee8b1054335",
+    "run_id": 35581174330,
+    "type": "upstream release workflow log reviewed as data"
+  },
+  "cargo_lock_sha256": "e18da541b276924cc96e5149fec75505d7ab9faff8dcf21db4697952b8302529",
+  "compiled_crates": [
+    {
+      "crate_archive_sha256": "b5aba8db14291edd000dfcc4d620c7ebfb122c613afb886ca8803fa4e128a20a",
+      "license_expression": "MIT OR Apache-2.0",
+      "name": "libc",
+      "notices": [
+        {
+          "bundle_path": "libc-0.2.169--LICENSE-APACHE",
+          "sha256": "62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a",
+          "size": 9723,
+          "source_path": "LICENSE-APACHE"
+        },
+        {
+          "bundle_path": "libc-0.2.169--LICENSE-MIT",
+          "sha256": "a8d47ff51ca256f56a8932dba07660672dbfe3004257ca8de708aac1415937a1",
+          "size": 1076,
+          "source_path": "LICENSE-MIT"
+        }
+      ],
+      "registry_checksum": "b5aba8db14291edd000dfcc4d620c7ebfb122c613afb886ca8803fa4e128a20a",
+      "source_repository": "https://github.com/rust-lang/libc",
+      "version": "0.2.169"
+    },
+    {
+      "crate_archive_sha256": "adb6935a6f5c20170eeceb1a3835a49e12e19d792f6dd344ccc76a985ca5a6ca",
+      "license_expression": "Apache-2.0 WITH LLVM-exception",
+      "name": "target-lexicon",
+      "notices": [
+        {
+          "bundle_path": "target-lexicon-0.13.5--LICENSE",
+          "sha256": "268872b9816f90fd8e85db5a28d33f8150ebb8dd016653fb39ef1f94f2686bc5",
+          "size": 12243,
+          "source_path": "LICENSE"
+        }
+      ],
+      "registry_checksum": "adb6935a6f5c20170eeceb1a3835a49e12e19d792f6dd344ccc76a985ca5a6ca",
+      "source_repository": "https://github.com/bytecodealliance/target-lexicon",
+      "version": "0.13.5"
+    },
+    {
+      "crate_archive_sha256": "3d1597b0c024618f09a9c3b8655b7e430397a36d23fdafec26d6965e9eec3eba",
+      "license_expression": "MIT OR Apache-2.0",
+      "name": "proc-macro2",
+      "notices": [
+        {
+          "bundle_path": "proc-macro2-1.0.81--LICENSE-APACHE",
+          "sha256": "62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a",
+          "size": 9723,
+          "source_path": "LICENSE-APACHE"
+        },
+        {
+          "bundle_path": "proc-macro2-1.0.81--LICENSE-MIT",
+          "sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3",
+          "size": 1023,
+          "source_path": "LICENSE-MIT"
+        }
+      ],
+      "registry_checksum": "3d1597b0c024618f09a9c3b8655b7e430397a36d23fdafec26d6965e9eec3eba",
+      "source_repository": "https://github.com/dtolnay/proc-macro2",
+      "version": "1.0.81"
+    },
+    {
+      "crate_archive_sha256": "41f2619966050689382d2b44f664f4bc593e129785a36d6ee376ddf37259b924",
+      "license_expression": "MIT OR Apache-2.0",
+      "name": "quote",
+      "notices": [
+        {
+          "bundle_path": "quote-1.0.45--LICENSE-APACHE",
+          "sha256": "62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a",
+          "size": 9723,
+          "source_path": "LICENSE-APACHE"
+        },
+        {
+          "bundle_path": "quote-1.0.45--LICENSE-MIT",
+          "sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3",
+          "size": 1023,
+          "source_path": "LICENSE-MIT"
+        }
+      ],
+      "registry_checksum": "41f2619966050689382d2b44f664f4bc593e129785a36d6ee376ddf37259b924",
+      "source_repository": "https://github.com/dtolnay/quote",
+      "version": "1.0.45"
+    },
+    {
+      "crate_archive_sha256": "3354b9ac3fae1ff6755cb6db53683adb661634f67557942dea4facebec0fee4b",
+      "license_expression": "(MIT OR Apache-2.0) AND Unicode-DFS-2016",
+      "name": "unicode-ident",
+      "notices": [
+        {
+          "bundle_path": "unicode-ident-1.0.12--LICENSE-APACHE",
+          "sha256": "62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a",
+          "size": 9723,
+          "source_path": "LICENSE-APACHE"
+        },
+        {
+          "bundle_path": "unicode-ident-1.0.12--LICENSE-MIT",
+          "sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3",
+          "size": 1023,
+          "source_path": "LICENSE-MIT"
+        },
+        {
+          "bundle_path": "unicode-ident-1.0.12--LICENSE-UNICODE",
+          "sha256": "68f5b9f5ea36881a0942ba02f558e9e1faf76cc09cb165ad801744c61b738844",
+          "size": 2315,
+          "source_path": "LICENSE-UNICODE"
+        }
+      ],
+      "registry_checksum": "3354b9ac3fae1ff6755cb6db53683adb661634f67557942dea4facebec0fee4b",
+      "source_repository": "https://github.com/dtolnay/unicode-ident",
+      "version": "1.0.12"
+    },
+    {
+      "crate_archive_sha256": "2304e00983f87ffb38b55b444b5e3b60a884b5d30c0fca7d82fe33449bbe55ea",
+      "license_expression": "MIT OR Apache-2.0",
+      "name": "heck",
+      "notices": [
+        {
+          "bundle_path": "heck-0.5.0--LICENSE-APACHE",
+          "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+          "size": 10847,
+          "source_path": "LICENSE-APACHE"
+        },
+        {
+          "bundle_path": "heck-0.5.0--LICENSE-MIT",
+          "sha256": "7b63ecd5f1902af1b63729947373683c32745c16a10e8e6292e2e2dcd7e90ae0",
+          "size": 1071,
+          "source_path": "LICENSE-MIT"
+        }
+      ],
+      "registry_checksum": "2304e00983f87ffb38b55b444b5e3b60a884b5d30c0fca7d82fe33449bbe55ea",
+      "source_repository": "https://github.com/withoutboats/heck",
+      "version": "0.5.0"
+    },
+    {
+      "crate_archive_sha256": "248e3bacc7dc6baa3b21e405ee045c3047101a49145e7e9eca583ab4c2ca5345",
+      "license_expression": "MIT OR Apache-2.0",
+      "name": "crossbeam-utils",
+      "notices": [
+        {
+          "bundle_path": "crossbeam-utils-0.8.19--LICENSE-APACHE",
+          "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+          "size": 10847,
+          "source_path": "LICENSE-APACHE"
+        },
+        {
+          "bundle_path": "crossbeam-utils-0.8.19--LICENSE-MIT",
+          "sha256": "5734ed989dfca1f625b40281ee9f4530f91b2411ec01cb748223e7eb87e201ab",
+          "size": 1099,
+          "source_path": "LICENSE-MIT"
+        }
+      ],
+      "registry_checksum": "248e3bacc7dc6baa3b21e405ee045c3047101a49145e7e9eca583ab4c2ca5345",
+      "source_repository": "https://github.com/crossbeam-rs/crossbeam",
+      "version": "0.8.19"
+    },
+    {
+      "crate_archive_sha256": "baf1de4339761588bc0619e3cbc0120ee582ebb74b53b4efbf79117bd2da40fd",
+      "license_expression": "MIT/Apache-2.0",
+      "name": "cfg-if",
+      "notices": [
+        {
+          "bundle_path": "cfg-if-1.0.0--LICENSE-APACHE",
+          "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+          "size": 10847,
+          "source_path": "LICENSE-APACHE"
+        },
+        {
+          "bundle_path": "cfg-if-1.0.0--LICENSE-MIT",
+          "sha256": "378f5840b258e2779c39418f3f2d7b2ba96f1c7917dd6be0713f88305dbda397",
+          "size": 1057,
+          "source_path": "LICENSE-MIT"
+        }
+      ],
+      "registry_checksum": "baf1de4339761588bc0619e3cbc0120ee582ebb74b53b4efbf79117bd2da40fd",
+      "source_repository": "https://github.com/alexcrichton/cfg-if",
+      "version": "1.0.0"
+    },
+    {
+      "crate_archive_sha256": "c5e2a7d2f0d013342f295c048ad19237add5154a55b1c5a254c0ec93d4109078",
+      "license_expression": "MIT OR Apache-2.0",
+      "name": "pyo3-build-config",
+      "notices": [
+        {
+          "bundle_path": "pyo3-build-config-0.29.0--LICENSE-APACHE",
+          "sha256": "32c76dbe0e73d79100d5ece77c158399f2e2541bc5c78548a4ba45c1cb53c5c9",
+          "size": 9807,
+          "source_path": "LICENSE-APACHE"
+        },
+        {
+          "bundle_path": "pyo3-build-config-0.29.0--LICENSE-MIT",
+          "sha256": "afcbe3b2e6b37172b5a9ca869ee4c0b8cdc09316e5d4384864154482c33e5af6",
+          "size": 1107,
+          "source_path": "LICENSE-MIT"
+        }
+      ],
+      "registry_checksum": "c5e2a7d2f0d013342f295c048ad19237add5154a55b1c5a254c0ec93d4109078",
+      "source_repository": "https://github.com/pyo3/pyo3",
+      "version": "0.29.0"
+    },
+    {
+      "crate_archive_sha256": "909518bc7b1c9b779f1bbf07f2929d35af9f0f37e47c6e9ef7f9dddc1e1821f3",
+      "license_expression": "MIT OR Apache-2.0",
+      "name": "syn",
+      "notices": [
+        {
+          "bundle_path": "syn-2.0.60--LICENSE-APACHE",
+          "sha256": "62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a",
+          "size": 9723,
+          "source_path": "LICENSE-APACHE"
+        },
+        {
+          "bundle_path": "syn-2.0.60--LICENSE-MIT",
+          "sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3",
+          "size": 1023,
+          "source_path": "LICENSE-MIT"
+        }
+      ],
+      "registry_checksum": "909518bc7b1c9b779f1bbf07f2929d35af9f0f37e47c6e9ef7f9dddc1e1821f3",
+      "source_repository": "https://github.com/dtolnay/syn",
+      "version": "2.0.60"
+    },
+    {
+      "crate_archive_sha256": "e05c02b5e89bff3b946cedeca278abc628fe811e604f027c45a8aa3cf793d0eb",
+      "license_expression": "ISC",
+      "name": "inotify-sys",
+      "notices": [
+        {
+          "bundle_path": "inotify-sys-0.1.5--LICENSE",
+          "sha256": "f68878c9ca61b25d4b2c470de571cb85ce97804a62bb153607f7e0e0d2684c8a",
+          "size": 740,
+          "source_path": "LICENSE"
+        }
+      ],
+      "registry_checksum": "e05c02b5e89bff3b946cedeca278abc628fe811e604f027c45a8aa3cf793d0eb",
+      "source_repository": "https://github.com/hannobraun/inotify-sys",
+      "version": "0.1.5"
+    },
+    {
+      "crate_archive_sha256": "93fc1dc3aaa9bfed95e02e6eadabb4baf7e3078b0bd1b4d7b6b0b68378900502",
+      "license_expression": "Unlicense/MIT",
+      "name": "same-file",
+      "notices": [
+        {
+          "bundle_path": "same-file-1.0.6--COPYING",
+          "sha256": "01c266bced4a434da0051174d6bee16a4c82cf634e2679b6155d40d75012390f",
+          "size": 126,
+          "source_path": "COPYING"
+        },
+        {
+          "bundle_path": "same-file-1.0.6--LICENSE-MIT",
+          "sha256": "cb3c929a05e6cbc9de9ab06a4c57eeb60ca8c724bef6c138c87d3a577e27aa14",
+          "size": 1081,
+          "source_path": "LICENSE-MIT"
+        }
+      ],
+      "registry_checksum": "93fc1dc3aaa9bfed95e02e6eadabb4baf7e3078b0bd1b4d7b6b0b68378900502",
+      "source_repository": "https://github.com/BurntSushi/same-file",
+      "version": "1.0.6"
+    },
+    {
+      "crate_archive_sha256": "a7a70ba024b9dc04c27ea2f0c0548feb474ec5c54bba33a7f72f873a39d07b24",
+      "license_expression": "MIT OR Apache-2.0",
+      "name": "log",
+      "notices": [
+        {
+          "bundle_path": "log-0.4.22--LICENSE-APACHE",
+          "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+          "size": 10847,
+          "source_path": "LICENSE-APACHE"
+        },
+        {
+          "bundle_path": "log-0.4.22--LICENSE-MIT",
+          "sha256": "6485b8ed310d3f0340bf1ad1f47645069ce4069dcc6bb46c7d5c6faf41de1fdb",
+          "size": 1071,
+          "source_path": "LICENSE-MIT"
+        }
+      ],
+      "registry_checksum": "a7a70ba024b9dc04c27ea2f0c0548feb474ec5c54bba33a7f72f873a39d07b24",
+      "source_repository": "https://github.com/rust-lang/log",
+      "version": "0.4.22"
+    },
+    {
+      "crate_archive_sha256": "1be3f42a67d6d345ecd59f675f3f012d6974981560836e938c22b424b85ce1be",
+      "license_expression": "MIT OR Apache-2.0",
+      "name": "bitflags",
+      "notices": [
+        {
+          "bundle_path": "bitflags-2.7.0--LICENSE-APACHE",
+          "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+          "size": 10847,
+          "source_path": "LICENSE-APACHE"
+        },
+        {
+          "bundle_path": "bitflags-2.7.0--LICENSE-MIT",
+          "sha256": "6485b8ed310d3f0340bf1ad1f47645069ce4069dcc6bb46c7d5c6faf41de1fdb",
+          "size": 1071,
+          "source_path": "LICENSE-MIT"
+        }
+      ],
+      "registry_checksum": "1be3f42a67d6d345ecd59f675f3f012d6974981560836e938c22b424b85ce1be",
+      "source_repository": "https://github.com/bitflags/bitflags",
+      "version": "2.7.0"
+    },
+    {
+      "crate_archive_sha256": "f37dccff2791ab604f9babef0ba14fbe0be30bd368dc541e2b08d07c8aa908f3",
+      "license_expression": "ISC",
+      "name": "inotify",
+      "notices": [
+        {
+          "bundle_path": "inotify-0.11.0--LICENSE",
+          "sha256": "7f78b31de4e7a3e2ac8de40e2b409eda313f03637aa62b8416fbde9bdc5ce4c9",
+          "size": 741,
+          "source_path": "LICENSE"
+        }
+      ],
+      "registry_checksum": "f37dccff2791ab604f9babef0ba14fbe0be30bd368dc541e2b08d07c8aa908f3",
+      "source_repository": "https://github.com/hannobraun/inotify",
+      "version": "0.11.0"
+    },
+    {
+      "crate_archive_sha256": "2886843bf800fba2e3377cff24abf6379b4c4d5c6681eaf9ea5b0d15090450bd",
+      "license_expression": "MIT",
+      "name": "mio",
+      "notices": [
+        {
+          "bundle_path": "mio-1.0.3--LICENSE",
+          "sha256": "07919255c7e04793d8ea760d6c2ce32d19f9ff02bdbdde3ce90b1e1880929a9b",
+          "size": 1082,
+          "source_path": "LICENSE"
+        }
+      ],
+      "registry_checksum": "2886843bf800fba2e3377cff24abf6379b4c4d5c6681eaf9ea5b0d15090450bd",
+      "source_repository": "https://github.com/tokio-rs/mio",
+      "version": "1.0.3"
+    },
+    {
+      "crate_archive_sha256": "ca85c467da1bbc8d866eea5deff9cf29ea5f7785054a17da36e65bda9c05845b",
+      "license_expression": "MIT OR Apache-2.0",
+      "name": "pyo3-ffi",
+      "notices": [
+        {
+          "bundle_path": "pyo3-ffi-0.29.0--LICENSE-APACHE",
+          "sha256": "32c76dbe0e73d79100d5ece77c158399f2e2541bc5c78548a4ba45c1cb53c5c9",
+          "size": 9807,
+          "source_path": "LICENSE-APACHE"
+        },
+        {
+          "bundle_path": "pyo3-ffi-0.29.0--LICENSE-MIT",
+          "sha256": "afcbe3b2e6b37172b5a9ca869ee4c0b8cdc09316e5d4384864154482c33e5af6",
+          "size": 1107,
+          "source_path": "LICENSE-MIT"
+        }
+      ],
+      "registry_checksum": "ca85c467da1bbc8d866eea5deff9cf29ea5f7785054a17da36e65bda9c05845b",
+      "source_repository": "https://github.com/pyo3/pyo3",
+      "version": "0.29.0"
+    },
+    {
+      "crate_archive_sha256": "cd274650b21d4bfc26a0a47587962c1edb425f69287324355cd040c3ea66071c",
+      "license_expression": "MIT OR Apache-2.0",
+      "name": "pyo3",
+      "notices": [
+        {
+          "bundle_path": "pyo3-0.29.0--LICENSE-APACHE",
+          "sha256": "32c76dbe0e73d79100d5ece77c158399f2e2541bc5c78548a4ba45c1cb53c5c9",
+          "size": 9807,
+          "source_path": "LICENSE-APACHE"
+        },
+        {
+          "bundle_path": "pyo3-0.29.0--LICENSE-MIT",
+          "sha256": "afcbe3b2e6b37172b5a9ca869ee4c0b8cdc09316e5d4384864154482c33e5af6",
+          "size": 1107,
+          "source_path": "LICENSE-MIT"
+        },
+        {
+          "bundle_path": "pyo3-0.29.0--pyo3-runtime__LICENSE-APACHE",
+          "sha256": "32c76dbe0e73d79100d5ece77c158399f2e2541bc5c78548a4ba45c1cb53c5c9",
+          "size": 9807,
+          "source_path": "pyo3-runtime/LICENSE-APACHE"
+        },
+        {
+          "bundle_path": "pyo3-0.29.0--pyo3-runtime__LICENSE-MIT",
+          "sha256": "afcbe3b2e6b37172b5a9ca869ee4c0b8cdc09316e5d4384864154482c33e5af6",
+          "size": 1107,
+          "source_path": "pyo3-runtime/LICENSE-MIT"
+        }
+      ],
+      "registry_checksum": "cd274650b21d4bfc26a0a47587962c1edb425f69287324355cd040c3ea66071c",
+      "source_repository": "https://github.com/pyo3/pyo3",
+      "version": "0.29.0"
+    },
+    {
+      "crate_archive_sha256": "29790946404f91d9c5d06f9874efddea1dc06c5efe94541a7d6863108e3a5e4b",
+      "license_expression": "Unlicense/MIT",
+      "name": "walkdir",
+      "notices": [
+        {
+          "bundle_path": "walkdir-2.5.0--COPYING",
+          "sha256": "01c266bced4a434da0051174d6bee16a4c82cf634e2679b6155d40d75012390f",
+          "size": 126,
+          "source_path": "COPYING"
+        },
+        {
+          "bundle_path": "walkdir-2.5.0--LICENSE-MIT",
+          "sha256": "0f96a83840e146e43c0ec96a22ec1f392e0680e6c1226e6f3ba87e0740af850f",
+          "size": 1081,
+          "source_path": "LICENSE-MIT"
+        }
+      ],
+      "registry_checksum": "29790946404f91d9c5d06f9874efddea1dc06c5efe94541a7d6863108e3a5e4b",
+      "source_repository": "https://github.com/BurntSushi/walkdir",
+      "version": "2.5.0"
+    },
+    {
+      "crate_archive_sha256": "bf401df4a4e3872c4fe8151134cf483738e74b67fc934d6532c882b3d24a4550",
+      "license_expression": "MIT/Apache-2.0",
+      "name": "filetime",
+      "notices": [
+        {
+          "bundle_path": "filetime-0.2.24--LICENSE-APACHE",
+          "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+          "size": 10847,
+          "source_path": "LICENSE-APACHE"
+        },
+        {
+          "bundle_path": "filetime-0.2.24--LICENSE-MIT",
+          "sha256": "378f5840b258e2779c39418f3f2d7b2ba96f1c7917dd6be0713f88305dbda397",
+          "size": 1057,
+          "source_path": "LICENSE-MIT"
+        }
+      ],
+      "registry_checksum": "bf401df4a4e3872c4fe8151134cf483738e74b67fc934d6532c882b3d24a4550",
+      "source_repository": "https://github.com/alexcrichton/filetime",
+      "version": "0.2.24"
+    },
+    {
+      "crate_archive_sha256": "5e0826a989adedc2a244799e823aece04662b66609d96af8dff7ac6df9a8925d",
+      "license_expression": "MIT OR Apache-2.0",
+      "name": "notify-types",
+      "notices": [
+        {
+          "bundle_path": "notify-types-2.0.0--LICENSE-APACHE",
+          "sha256": "b5b413d7421d728c14f33d78198d6e255a0018beef717d78c4c3f6188be3dfb4",
+          "size": 10839,
+          "source_path": "LICENSE-APACHE"
+        },
+        {
+          "bundle_path": "notify-types-2.0.0--LICENSE-MIT",
+          "sha256": "b63e167d61ced1d872a588c5ac764b0dda477d62209dc4f6b6bfea5517d0a24c",
+          "size": 1063,
+          "source_path": "LICENSE-MIT"
+        }
+      ],
+      "registry_checksum": "5e0826a989adedc2a244799e823aece04662b66609d96af8dff7ac6df9a8925d",
+      "source_repository": "https://github.com/notify-rs/notify.git",
+      "version": "2.0.0"
+    },
+    {
+      "crate_archive_sha256": "42f5e15c9953c5e4ccceeb2e7382a716482c34515315f7b03532b8b4e8393d2d",
+      "license_expression": "MIT OR Apache-2.0",
+      "name": "once_cell",
+      "notices": [
+        {
+          "bundle_path": "once_cell-1.21.3--LICENSE-APACHE",
+          "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+          "size": 10847,
+          "source_path": "LICENSE-APACHE"
+        },
+        {
+          "bundle_path": "once_cell-1.21.3--LICENSE-MIT",
+          "sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3",
+          "size": 1023,
+          "source_path": "LICENSE-MIT"
+        }
+      ],
+      "registry_checksum": "42f5e15c9953c5e4ccceeb2e7382a716482c34515315f7b03532b8b4e8393d2d",
+      "source_repository": "https://github.com/matklad/once_cell",
+      "version": "1.21.3"
+    },
+    {
+      "crate_archive_sha256": "82b8f8f868b36967f9606790d1903570de9ceaf870a7bf9fbbd3016d636a2cb2",
+      "license_expression": "MIT OR Apache-2.0",
+      "name": "crossbeam-channel",
+      "notices": [
+        {
+          "bundle_path": "crossbeam-channel-0.5.15--LICENSE-APACHE",
+          "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+          "size": 10847,
+          "source_path": "LICENSE-APACHE"
+        },
+        {
+          "bundle_path": "crossbeam-channel-0.5.15--LICENSE-MIT",
+          "sha256": "5734ed989dfca1f625b40281ee9f4530f91b2411ec01cb748223e7eb87e201ab",
+          "size": 1099,
+          "source_path": "LICENSE-MIT"
+        },
+        {
+          "bundle_path": "crossbeam-channel-0.5.15--LICENSE-THIRD-PARTY",
+          "sha256": "b16db96b93b1d7cf7bea533f572091ec6bca3234fbe0a83038be772ff391a44c",
+          "size": 33447,
+          "source_path": "LICENSE-THIRD-PARTY"
+        }
+      ],
+      "registry_checksum": "82b8f8f868b36967f9606790d1903570de9ceaf870a7bf9fbbd3016d636a2cb2",
+      "source_repository": "https://github.com/crossbeam-rs/crossbeam",
+      "version": "0.5.15"
+    },
+    {
+      "crate_archive_sha256": "2fee8403b3d66ac7b26aee6e40a897d85dc5ce26f44da36b8b73e987cc52e943",
+      "license_expression": "CC0-1.0",
+      "name": "notify",
+      "notices": [
+        {
+          "bundle_path": "notify-8.0.0--LICENSE-CC0",
+          "sha256": "e0456cbab4f7b5e7203e678faff37eadbdfef02e822db3b7a52a1dd9d3dc514a",
+          "size": 7007,
+          "source_path": "LICENSE-CC0"
+        }
+      ],
+      "registry_checksum": "2fee8403b3d66ac7b26aee6e40a897d85dc5ce26f44da36b8b73e987cc52e943",
+      "source_repository": "https://github.com/notify-rs/notify.git",
+      "version": "8.0.0"
+    },
+    {
+      "crate_archive_sha256": "4ca3a1557399783172dc5bf39cfca835157732532cba56b71d2292161e53b362",
+      "license_expression": "MIT OR Apache-2.0",
+      "name": "pyo3-macros-backend",
+      "notices": [
+        {
+          "bundle_path": "pyo3-macros-backend-0.29.0--LICENSE-APACHE",
+          "sha256": "32c76dbe0e73d79100d5ece77c158399f2e2541bc5c78548a4ba45c1cb53c5c9",
+          "size": 9807,
+          "source_path": "LICENSE-APACHE"
+        },
+        {
+          "bundle_path": "pyo3-macros-backend-0.29.0--LICENSE-MIT",
+          "sha256": "afcbe3b2e6b37172b5a9ca869ee4c0b8cdc09316e5d4384864154482c33e5af6",
+          "size": 1107,
+          "source_path": "LICENSE-MIT"
+        }
+      ],
+      "registry_checksum": "4ca3a1557399783172dc5bf39cfca835157732532cba56b71d2292161e53b362",
+      "source_repository": "https://github.com/pyo3/pyo3",
+      "version": "0.29.0"
+    },
+    {
+      "crate_archive_sha256": "9ac53762fd065daa3194dd09337a38bd793a188100fd1a9304c4ab312d901771",
+      "license_expression": "MIT OR Apache-2.0",
+      "name": "pyo3-macros",
+      "notices": [
+        {
+          "bundle_path": "pyo3-macros-0.29.0--LICENSE-APACHE",
+          "sha256": "32c76dbe0e73d79100d5ece77c158399f2e2541bc5c78548a4ba45c1cb53c5c9",
+          "size": 9807,
+          "source_path": "LICENSE-APACHE"
+        },
+        {
+          "bundle_path": "pyo3-macros-0.29.0--LICENSE-MIT",
+          "sha256": "afcbe3b2e6b37172b5a9ca869ee4c0b8cdc09316e5d4384864154482c33e5af6",
+          "size": 1107,
+          "source_path": "LICENSE-MIT"
+        }
+      ],
+      "registry_checksum": "9ac53762fd065daa3194dd09337a38bd793a188100fd1a9304c4ab312d901771",
+      "source_repository": "https://github.com/pyo3/pyo3",
+      "version": "0.29.0"
+    }
+  ],
+  "distribution": "watchfiles",
+  "distribution_sdist_sha256": "99aee4a07847c06820765fd7b1b49ceac4f3f711ccb7d104655a33231de1c207",
+  "distribution_source_commit": "e74b8fc7d8d9e35c3b6bb88af0aef5ea82ee815e",
+  "distribution_version": "1.3.0",
+  "package_license_notice": {
+    "bundle_path": "watchfiles-1.3.0--LICENSE",
+    "license_expression": "MIT",
+    "sha256": "4fd78355b67ce2677ede9fb6f63a250f377bb7e22088136a5f4699adb4bc069f",
+    "size": 1091,
+    "source_archive_sha256": "99aee4a07847c06820765fd7b1b49ceac4f3f711ccb7d104655a33231de1c207",
+    "source_path": "watchfiles-1.3.0/LICENSE"
+  },
+  "schema_version": 1,
+  "selected_linux_wheel": "watchfiles-1.3.0-cp310-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl",
+  "selected_linux_wheel_sha256": "b5768b49e426fd5b550b012c866db347cdf15c398ef98dc557b6e6b72fa74cd1"
+}

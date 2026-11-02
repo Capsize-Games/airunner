@@ -148,3 +148,25 @@ directories.
   is the original `vendor/libuv/LICENSE` file (SHA-256
   `16de0c32b265cb7d46a6d3bd614f259dd4d693a5e26b3407b04aae8d73041f0c`).
   Linux bundles stage this notice in `legal/` alongside the other notices.
+
+## watchfiles 1.3.0 Rust build dependencies
+
+The selected watchfiles Linux wheel contains a compiled Rust extension built
+with 26 external Cargo crates, including build-time crates. The package's MIT
+license and the original license texts found in those crate archives are
+included under [`packaging/licenses/watchfiles-rust-crates/`](packaging/licenses/watchfiles-rust-crates/).
+The accompanying `watchfiles-rust-crates.source.json` maps each notice to its
+crate and version, source path, source archive checksum, license expression,
+and copied-file checksum. The recorded notice files include the MIT, Apache,
+ISC, Unicode, Unlicense, and CC0 texts present in the reviewed crate sources.
+
+## pydantic-core 2.50.2 Cargo dependency notices
+
+Original legal and attribution files from the 101 registry crates in the
+selected source Cargo.lock are included under
+[`packaging/licenses/pydantic-core-rust-crates/`](packaging/licenses/pydantic-core-rust-crates/).
+The source index records exact archive checksums and copied-file hashes.
+This is a notice superset: the exact subset compiled into the selected Linux
+wheel has not been established by a build log. It does not assert that all
+101 crates are linked into that wheel. Linux bundles include these notices
+alongside the installed Python dependency notices.

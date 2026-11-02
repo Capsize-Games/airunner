@@ -77,6 +77,8 @@ def test_core_spec_inherits_resources_but_replaces_full_ml_profile() -> None:
         "NOTICE",
         "THIRD_PARTY_NOTICES.md",
         "packaging/licenses/libuv-LICENSE",
+        "packaging/licenses/watchfiles-rust-crates/*",
+        "packaging/licenses/pydantic-core-rust-crates/*",
     } <= required_data
     for entry in spec["data"]:
         if entry.get("required", True):

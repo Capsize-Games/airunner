@@ -97,6 +97,44 @@ def test_legal_sources_present_and_staged() -> None:
         assert entry.get("required") is True, source
 
 
+def test_watchfiles_rust_notice_directory_is_staged_for_full_and_core() -> None:
+    """The inherited spec includes all watchfiles crate notices in both profiles."""
+    source = "packaging/licenses/watchfiles-rust-crates/*"
+    entry = staged_legal_sources(load_spec()).get(source)
+    assert entry is not None
+    assert entry.get("required") is True
+    assert entry.get("dest") == "legal"
+
+
+def test_watchfiles_rust_notice_manifest_matches_preserved_original_texts() -> None:
+    """Every crate license text retains its source hash and collision-free name."""
+    import hashlib
+    import json
+
+    notice_dir = REPO_ROOT / "packaging" / "licenses" / "watchfiles-rust-crates"
+    manifest_path = notice_dir / "watchfiles-rust-crates.source.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    crates = manifest["compiled_crates"]
+    assert manifest["distribution"] == "watchfiles"
+    assert manifest["distribution_version"] == "1.3.0"
+    assert manifest["distribution_source_commit"] == (
+        "e74b8fc7d8d9e35c3b6bb88af0aef5ea82ee815e"
+    )
+    assert len(crates) == 26
+    assert len({(crate["name"], crate["version"]) for crate in crates}) == 26
+
+    files = [manifest["package_license_notice"]]
+    files.extend(notice for crate in crates for notice in crate["notices"])
+    bundle_paths = [entry["bundle_path"] for entry in files]
+    assert len(bundle_paths) == len(set(bundle_paths)) == 52
+    for notice in files:
+        path = notice_dir / notice["bundle_path"]
+        contents = path.read_bytes()
+        assert hashlib.sha256(contents).hexdigest() == notice["sha256"]
+        assert len(contents) == notice["size"]
+    assert len(list(notice_dir.glob("*"))) == 53  # 52 notices plus source JSON
+
+
 def test_libuv_notice_matches_vendored_license_bytes() -> None:
     """The bundled uvloop libuv license is retained byte-for-byte."""
     import hashlib
@@ -115,6 +153,16 @@ def test_debian_copyright_tracks_bundled_libuv_notice() -> None:
     )
     assert "Files: packaging/licenses/libuv-LICENSE" in copyright_text
     assert "legal/libuv-LICENSE" in copyright_text
+
+
+def test_debian_copyright_tracks_watchfiles_crate_notices() -> None:
+    """The Debian source package identifies the preserved Rust notices."""
+    copyright_text = (REPO_ROOT / "debian" / "copyright").read_text(
+        encoding="utf-8"
+    )
+    assert "Files: packaging/licenses/watchfiles-rust-crates/*--*" in copyright_text
+    assert "Files: packaging/licenses/watchfiles-rust-crates/*.source.json" in copyright_text
+    assert "see-included-original-notice" in copyright_text
 
 
 def test_vendored_notice_gate_still_passes() -> None:

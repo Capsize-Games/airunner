@@ -45,6 +45,7 @@ from linux_bundle_assemble import (
     write_entry_script,
     write_manifest,
 )
+from dependency_notices import collect_dependency_notices
 
 _REPO_ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_SPEC = (
@@ -248,11 +249,13 @@ def _freeze_tree(
 
 
 def _finish_tree(spec: dict[str, Any], bundle_dir: Path) -> None:
-    """Stage root payloads and prune hook data in the frozen tree."""
+    """Stage root payloads, prune hook data, then collect locked notices."""
     (bundle_dir / spec["runtimes"]["bin_dir"]).mkdir(exist_ok=True)
     stage_root_files(spec, _REPO_ROOT, bundle_dir)
     pruned = prune_bundle(bundle_dir, spec)
     print(f"pruned {len(pruned)} hook-collected paths")
+    if spec.get("dependency_notices", {}).get("required", False):
+        collect_dependency_notices(spec, _REPO_ROOT, bundle_dir)
 
 
 def _write_bundle_manifest(

@@ -55,6 +55,13 @@ aggregates = [
     "linux",
 ]
 
+[dependency_notices]
+# After the freeze, collect the exact recorded license/NOTICE/copyright files
+# for every distribution in the active hash-locked profile environment.
+required = true
+dest = "legal/dependencies"
+manifest = "dependency-notices.json"
+
 [qt]
 # No Qt in the services bundle (see header). The inspector fails the
 # bundle if any qt_marker path segment appears (case-insensitive).
@@ -355,6 +362,18 @@ required = true
 
 [[data]]
 source = "packaging/licenses/libuv-LICENSE"
+dest = "legal"
+stage = "root"
+required = true
+
+[[data]]
+source = "packaging/licenses/watchfiles-rust-crates/*"
+dest = "legal"
+stage = "root"
+required = true
+
+[[data]]
+source = "packaging/licenses/pydantic-core-rust-crates/*"
 dest = "legal"
 stage = "root"
 required = true

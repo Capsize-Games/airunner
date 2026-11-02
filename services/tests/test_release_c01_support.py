@@ -27,6 +27,7 @@ _REQUIRED_TESTS = (
     "services/tests/test_debian_postinst_safety.py",
     "services/tests/test_release_core_bundle.py",
     "services/tests/test_core_input_readiness.py",
+    "services/tests/test_dependency_notices.py",
     "services/tests/test_service_bootstrap.py",
     "services/tests/test_legacy_api_surface.py",
     "services/tests/test_loopback_auth.py",
