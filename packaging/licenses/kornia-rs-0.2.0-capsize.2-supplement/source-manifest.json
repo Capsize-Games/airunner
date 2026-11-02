@@ -1,0 +1,3968 @@
+{
+  "distribution": "kornia-rs",
+  "exact_pin": "kornia-rs==0.2.0+capsize.2",
+  "files": [
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/adler2-2.0.1--adler2-2.0.1--LICENSE-0BSD",
+      "sha256": "861399f8c21c042b110517e76dc6b63a2b334276c8cf17412fc3c8908ca8dc17",
+      "size_bytes": 665,
+      "upstream_source": {
+        "path": "LICENSE-0BSD",
+        "repository": "oyvindln/adler2",
+        "revision": "89a031a0f42eeff31c70dc598b398cbf31f1680f",
+        "sha256": "861399f8c21c042b110517e76dc6b63a2b334276c8cf17412fc3c8908ca8dc17",
+        "size_bytes": 665
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/adler2-2.0.1--adler2-2.0.1--LICENSE-APACHE",
+      "sha256": "8ada45cd9f843acf64e4722ae262c622a2b3b3007c7310ef36ac1061a30f6adb",
+      "size_bytes": 10860,
+      "upstream_source": {
+        "path": "LICENSE-APACHE",
+        "repository": "oyvindln/adler2",
+        "revision": "89a031a0f42eeff31c70dc598b398cbf31f1680f",
+        "sha256": "8ada45cd9f843acf64e4722ae262c622a2b3b3007c7310ef36ac1061a30f6adb",
+        "size_bytes": 10860
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/adler2-2.0.1--adler2-2.0.1--LICENSE-MIT",
+      "sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3",
+      "size_bytes": 1023,
+      "upstream_source": {
+        "path": "LICENSE-MIT",
+        "repository": "oyvindln/adler2",
+        "revision": "89a031a0f42eeff31c70dc598b398cbf31f1680f",
+        "sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3",
+        "size_bytes": 1023
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/aligned-vec-0.6.4--aligned-vec-0.6.4--LICENSE",
+      "sha256": "bf5a93d1014429b43e01c57d45bea928748fbf37d059306145a1a0a91aec2014",
+      "size_bytes": 1062,
+      "upstream_source": {
+        "path": "LICENSE",
+        "repository": "sarah-ek/aligned-vec",
+        "revision": "6af6c18c831c93395f948a0e6527b8d6b9729784",
+        "sha256": "bf5a93d1014429b43e01c57d45bea928748fbf37d059306145a1a0a91aec2014",
+        "size_bytes": 1062
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/alloc-no-stdlib-2.0.4--alloc-no-stdlib-2.0.4--LICENSE",
+      "sha256": "c0c56f26d9c051cac4d200c34c84e7ae9aaa853e01a982a1df08b09931e518ae",
+      "size_bytes": 1483,
+      "upstream_source": {
+        "path": "LICENSE",
+        "repository": "dropbox/rust-alloc-no-stdlib",
+        "revision": "6032b6a9b20e03737135c55a0270ccffcc1438ef",
+        "sha256": "c0c56f26d9c051cac4d200c34c84e7ae9aaa853e01a982a1df08b09931e518ae",
+        "size_bytes": 1483
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/alloc-stdlib-0.2.2--alloc-stdlib-0.2.2--upstream--LICENSE",
+      "sha256": "c0c56f26d9c051cac4d200c34c84e7ae9aaa853e01a982a1df08b09931e518ae",
+      "size_bytes": 1483,
+      "upstream_source": {
+        "path": "LICENSE",
+        "repository": "dropbox/rust-alloc-no-stdlib",
+        "revision": "6032b6a9b20e03737135c55a0270ccffcc1438ef",
+        "sha256": "c0c56f26d9c051cac4d200c34c84e7ae9aaa853e01a982a1df08b09931e518ae",
+        "size_bytes": 1483
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/anyhow-1.0.103--LICENSE-APACHE",
+      "sha256": "62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a",
+      "size_bytes": 9723,
+      "upstream_source": {
+        "path": "LICENSE-APACHE",
+        "repository": "dtolnay/anyhow",
+        "revision": "5bdb0e24db3994be119d42f18fe2d655e1f68f4a",
+        "sha256": "62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a",
+        "size_bytes": 9723
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/anyhow-1.0.103--LICENSE-MIT",
+      "sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3",
+      "size_bytes": 1023,
+      "upstream_source": {
+        "path": "LICENSE-MIT",
+        "repository": "dtolnay/anyhow",
+        "revision": "5bdb0e24db3994be119d42f18fe2d655e1f68f4a",
+        "sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3",
+        "size_bytes": 1023
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/approx-0.5.1--approx-0.5.1--LICENSE",
+      "sha256": "3ddf9be5c28fe27dad143a5dc76eea25222ad1dd68934a047064e56ed2fa40c5",
+      "size_bytes": 11560,
+      "upstream_source": {
+        "path": "LICENSE",
+        "repository": "brendanzab/approx",
+        "revision": "13fcbc78dcda4d0136de07c36a7979d545f08e38",
+        "sha256": "3ddf9be5c28fe27dad143a5dc76eea25222ad1dd68934a047064e56ed2fa40c5",
+        "size_bytes": 11560
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/array-init-2.1.0--array-init-2.1.0--LICENSE-APACHE",
+      "sha256": "c8d9a0d15dd76ca3bf277b6bf6da56799e266eac60bdc321a97ebc6d76d5153c",
+      "size_bytes": 10850,
+      "upstream_source": {
+        "path": "LICENSE-APACHE",
+        "repository": "Manishearth/array-init",
+        "revision": "60635047ab2800832319829840c68df03c39945b",
+        "sha256": "c8d9a0d15dd76ca3bf277b6bf6da56799e266eac60bdc321a97ebc6d76d5153c",
+        "size_bytes": 10850
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/array-init-2.1.0--array-init-2.1.0--LICENSE-MIT",
+      "sha256": "e27fb2953c088c71285a4f2f54a0ac53323460ee7c2b1b838d563bd2687a38af",
+      "size_bytes": 1074,
+      "upstream_source": {
+        "path": "LICENSE-MIT",
+        "repository": "Manishearth/array-init",
+        "revision": "60635047ab2800832319829840c68df03c39945b",
+        "sha256": "e27fb2953c088c71285a4f2f54a0ac53323460ee7c2b1b838d563bd2687a38af",
+        "size_bytes": 1074
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/atomic-wait-1.1.0--atomic-wait-1.1.0--LICENSE",
+      "sha256": "a7bd8b93bc1ee4c2caa75e5c500133c366f31066e1617db8743188ae0fae182c",
+      "size_bytes": 1292,
+      "upstream_source": {
+        "path": "LICENSE",
+        "repository": "m-ou-se/atomic-wait",
+        "revision": "2be60404d6d4972a09c1d9b05ff9c6a4cc3c3f22",
+        "sha256": "a7bd8b93bc1ee4c2caa75e5c500133c366f31066e1617db8743188ae0fae182c",
+        "size_bytes": 1292
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/autocfg-1.5.1--autocfg-1.5.1--LICENSE-APACHE",
+      "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+      "size_bytes": 10847,
+      "upstream_source": {
+        "path": "LICENSE-APACHE",
+        "repository": "cuviper/autocfg",
+        "revision": "2799b09c24e6632f8e653c5cd8fc303e85a906ba",
+        "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+        "size_bytes": 10847
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/autocfg-1.5.1--autocfg-1.5.1--LICENSE-MIT",
+      "sha256": "27995d58ad5c1145c1a8cd86244ce844886958a35eb2b78c6b772748669999ac",
+      "size_bytes": 1054,
+      "upstream_source": {
+        "path": "LICENSE-MIT",
+        "repository": "cuviper/autocfg",
+        "revision": "2799b09c24e6632f8e653c5cd8fc303e85a906ba",
+        "sha256": "27995d58ad5c1145c1a8cd86244ce844886958a35eb2b78c6b772748669999ac",
+        "size_bytes": 1054
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/az-1.3.0--az-1.3.0--LICENSE-APACHE",
+      "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+      "size_bytes": 10847,
+      "upstream_source": {
+        "path": "LICENSE-APACHE",
+        "repository": "tspiteri/az",
+        "revision": "22c97852d4a0dd7f665810123cc28da29bb1f146",
+        "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+        "size_bytes": 10847
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/az-1.3.0--az-1.3.0--LICENSE-MIT",
+      "sha256": "693c6dc3bae9ae10348bda4f838aacd36bca2375424036ade68f9658bbf4a383",
+      "size_bytes": 1064,
+      "upstream_source": {
+        "path": "LICENSE-MIT",
+        "repository": "tspiteri/az",
+        "revision": "22c97852d4a0dd7f665810123cc28da29bb1f146",
+        "sha256": "693c6dc3bae9ae10348bda4f838aacd36bca2375424036ade68f9658bbf4a383",
+        "size_bytes": 1064
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/bincode-2.0.1--bincode-2.0.1--LICENSE.md",
+      "sha256": "90d7e062634054e6866d3c81e6a2b3058a840e6af733e98e80bdfe1a7dec6912",
+      "size_bytes": 1076,
+      "upstream_source": {
+        "path": "LICENSE.md",
+        "repository": "bincode-org/bincode",
+        "revision": "4673360aa638b2b907dff24538de54f258d157da",
+        "sha256": "90d7e062634054e6866d3c81e6a2b3058a840e6af733e98e80bdfe1a7dec6912",
+        "size_bytes": 1076
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/bincode_derive-2.0.1--bincode_derive-2.0.1--LICENSE.md",
+      "sha256": "90d7e062634054e6866d3c81e6a2b3058a840e6af733e98e80bdfe1a7dec6912",
+      "size_bytes": 1076,
+      "upstream_source": {
+        "path": "LICENSE.md",
+        "repository": "bincode-org/bincode",
+        "revision": "4673360aa638b2b907dff24538de54f258d157da",
+        "sha256": "90d7e062634054e6866d3c81e6a2b3058a840e6af733e98e80bdfe1a7dec6912",
+        "size_bytes": 1076
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/bitflags-2.13.0--bitflags-2.13.0--LICENSE-APACHE",
+      "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+      "size_bytes": 10847,
+      "upstream_source": {
+        "path": "LICENSE-APACHE",
+        "repository": "bitflags/bitflags",
+        "revision": "9253889ee93921055309908c46272bd6c5c6ad99",
+        "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+        "size_bytes": 10847
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/bitflags-2.13.0--bitflags-2.13.0--LICENSE-MIT",
+      "sha256": "6485b8ed310d3f0340bf1ad1f47645069ce4069dcc6bb46c7d5c6faf41de1fdb",
+      "size_bytes": 1071,
+      "upstream_source": {
+        "path": "LICENSE-MIT",
+        "repository": "bitflags/bitflags",
+        "revision": "9253889ee93921055309908c46272bd6c5c6ad99",
+        "sha256": "6485b8ed310d3f0340bf1ad1f47645069ce4069dcc6bb46c7d5c6faf41de1fdb",
+        "size_bytes": 1071
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/block-buffer-0.10.4--block-buffer-0.10.4--LICENSE-APACHE",
+      "sha256": "a9040321c3712d8fd0b09cf52b17445de04a23a10165049ae187cd39e5c86be5",
+      "size_bytes": 10849,
+      "upstream_source": {
+        "path": "LICENSE-APACHE",
+        "repository": "RustCrypto/utils",
+        "revision": "6d35952d3d3b124bc1049ad6fb406b42b1ce4bfe",
+        "sha256": "a9040321c3712d8fd0b09cf52b17445de04a23a10165049ae187cd39e5c86be5",
+        "size_bytes": 10849
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/block-buffer-0.10.4--block-buffer-0.10.4--LICENSE-MIT",
+      "sha256": "d5c22aa3118d240e877ad41c5d9fa232f9c77d757d4aac0c2f943afc0a95e0ef",
+      "size_bytes": 1082,
+      "upstream_source": {
+        "path": "LICENSE-MIT",
+        "repository": "RustCrypto/utils",
+        "revision": "6d35952d3d3b124bc1049ad6fb406b42b1ce4bfe",
+        "sha256": "d5c22aa3118d240e877ad41c5d9fa232f9c77d757d4aac0c2f943afc0a95e0ef",
+        "size_bytes": 1082
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/brotli-8.0.3--brotli-8.0.3--LICENSE.BSD-3-Clause",
+      "sha256": "c0c56f26d9c051cac4d200c34c84e7ae9aaa853e01a982a1df08b09931e518ae",
+      "size_bytes": 1483,
+      "upstream_source": {
+        "path": "LICENSE.BSD-3-Clause",
+        "repository": "dropbox/rust-brotli",
+        "revision": "21de815f394796ef6ad2b312b7a00da2efa7b226",
+        "sha256": "c0c56f26d9c051cac4d200c34c84e7ae9aaa853e01a982a1df08b09931e518ae",
+        "size_bytes": 1483
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/brotli-8.0.3--brotli-8.0.3--LICENSE.MIT",
+      "sha256": "3d180008e36922a4e8daec11c34c7af264fed5962d07924aea928c38e8663c94",
+      "size_bytes": 1084,
+      "upstream_source": {
+        "path": "LICENSE.MIT",
+        "repository": "dropbox/rust-brotli",
+        "revision": "21de815f394796ef6ad2b312b7a00da2efa7b226",
+        "sha256": "3d180008e36922a4e8daec11c34c7af264fed5962d07924aea928c38e8663c94",
+        "size_bytes": 1084
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/brotli-decompressor-5.0.1--brotli-decompressor-5.0.1--LICENSE",
+      "sha256": "c0c56f26d9c051cac4d200c34c84e7ae9aaa853e01a982a1df08b09931e518ae",
+      "size_bytes": 1483,
+      "upstream_source": {
+        "path": "LICENSE",
+        "repository": "dropbox/rust-brotli-decompressor",
+        "revision": "273d1b9864b52f5a2a9e90479710dd5ce8bce8ed",
+        "sha256": "c0c56f26d9c051cac4d200c34c84e7ae9aaa853e01a982a1df08b09931e518ae",
+        "size_bytes": 1483
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/bytemuck-1.25.0--bytemuck-1.25.0--LICENSE-APACHE",
+      "sha256": "e3ba223bb1423f0aad8c3dfce0fe3148db48926d41e6fbc3afbbf5ff9e1c89cb",
+      "size_bytes": 10398,
+      "upstream_source": {
+        "path": "LICENSE-APACHE",
+        "repository": "Lokathor/bytemuck",
+        "revision": "164cedda0eae131bc6cb67902599f4ec253642ca",
+        "sha256": "e3ba223bb1423f0aad8c3dfce0fe3148db48926d41e6fbc3afbbf5ff9e1c89cb",
+        "size_bytes": 10398
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/bytemuck-1.25.0--bytemuck-1.25.0--LICENSE-MIT",
+      "sha256": "9df9ba60a11af705f2e451b53762686e615d86f76b169cf075c3237730dbd7e2",
+      "size_bytes": 1110,
+      "upstream_source": {
+        "path": "LICENSE-MIT",
+        "repository": "Lokathor/bytemuck",
+        "revision": "164cedda0eae131bc6cb67902599f4ec253642ca",
+        "sha256": "9df9ba60a11af705f2e451b53762686e615d86f76b169cf075c3237730dbd7e2",
+        "size_bytes": 1110
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/bytemuck-1.25.0--bytemuck-1.25.0--LICENSE-ZLIB",
+      "sha256": "84b34dd7608f7fb9b17bd588a6bf392bf7de504e2716f024a77d89f1b145a151",
+      "size_bytes": 851,
+      "upstream_source": {
+        "path": "LICENSE-ZLIB",
+        "repository": "Lokathor/bytemuck",
+        "revision": "164cedda0eae131bc6cb67902599f4ec253642ca",
+        "sha256": "84b34dd7608f7fb9b17bd588a6bf392bf7de504e2716f024a77d89f1b145a151",
+        "size_bytes": 851
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/byteorder-1.5.0--byteorder-1.5.0--COPYING",
+      "sha256": "01c266bced4a434da0051174d6bee16a4c82cf634e2679b6155d40d75012390f",
+      "size_bytes": 126,
+      "upstream_source": {
+        "path": "COPYING",
+        "repository": "BurntSushi/byteorder",
+        "revision": "ec068eefa042d494475db125c4b034bd8e9e34dd",
+        "sha256": "01c266bced4a434da0051174d6bee16a4c82cf634e2679b6155d40d75012390f",
+        "size_bytes": 126
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/byteorder-1.5.0--byteorder-1.5.0--LICENSE-MIT",
+      "sha256": "0f96a83840e146e43c0ec96a22ec1f392e0680e6c1226e6f3ba87e0740af850f",
+      "size_bytes": 1081,
+      "upstream_source": {
+        "path": "LICENSE-MIT",
+        "repository": "BurntSushi/byteorder",
+        "revision": "ec068eefa042d494475db125c4b034bd8e9e34dd",
+        "sha256": "0f96a83840e146e43c0ec96a22ec1f392e0680e6c1226e6f3ba87e0740af850f",
+        "size_bytes": 1081
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/byteorder-lite-0.1.0--byteorder-lite-0.1.0--LICENSE-MIT",
+      "sha256": "0f96a83840e146e43c0ec96a22ec1f392e0680e6c1226e6f3ba87e0740af850f",
+      "size_bytes": 1081,
+      "upstream_source": {
+        "path": "LICENSE-MIT",
+        "repository": "image-rs/byteorder-lite",
+        "revision": "7d44da06a48fe10d7e23efd9a932d18a7a2def63",
+        "sha256": "0f96a83840e146e43c0ec96a22ec1f392e0680e6c1226e6f3ba87e0740af850f",
+        "size_bytes": 1081
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/cc-1.2.63--cc-1.2.63--LICENSE-APACHE",
+      "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+      "size_bytes": 10847,
+      "upstream_source": {
+        "path": "LICENSE-APACHE",
+        "repository": "rust-lang/cc-rs",
+        "revision": "b49589a6a1d207d9d61079ddf599c03ef89b3b55",
+        "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+        "size_bytes": 10847
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/cc-1.2.63--cc-1.2.63--LICENSE-MIT",
+      "sha256": "378f5840b258e2779c39418f3f2d7b2ba96f1c7917dd6be0713f88305dbda397",
+      "size_bytes": 1057,
+      "upstream_source": {
+        "path": "LICENSE-MIT",
+        "repository": "rust-lang/cc-rs",
+        "revision": "b49589a6a1d207d9d61079ddf599c03ef89b3b55",
+        "sha256": "378f5840b258e2779c39418f3f2d7b2ba96f1c7917dd6be0713f88305dbda397",
+        "size_bytes": 1057
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/cfg-if-1.0.4--cfg-if-1.0.4--LICENSE-APACHE",
+      "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+      "size_bytes": 10847,
+      "upstream_source": {
+        "path": "LICENSE-APACHE",
+        "repository": "rust-lang/cfg-if",
+        "revision": "3510ca6abea34cbbc702509a4e50ea9709925eda",
+        "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+        "size_bytes": 10847
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/cfg-if-1.0.4--cfg-if-1.0.4--LICENSE-MIT",
+      "sha256": "378f5840b258e2779c39418f3f2d7b2ba96f1c7917dd6be0713f88305dbda397",
+      "size_bytes": 1057,
+      "upstream_source": {
+        "path": "LICENSE-MIT",
+        "repository": "rust-lang/cfg-if",
+        "revision": "3510ca6abea34cbbc702509a4e50ea9709925eda",
+        "sha256": "378f5840b258e2779c39418f3f2d7b2ba96f1c7917dd6be0713f88305dbda397",
+        "size_bytes": 1057
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/chacha20-0.10.0--chacha20-0.10.0--LICENSE-APACHE",
+      "sha256": "a9040321c3712d8fd0b09cf52b17445de04a23a10165049ae187cd39e5c86be5",
+      "size_bytes": 10849,
+      "upstream_source": {
+        "path": "LICENSE-APACHE",
+        "repository": "RustCrypto/stream-ciphers",
+        "revision": "23f4f70aa6315207d1dc5b85de597091b92e420b",
+        "sha256": "a9040321c3712d8fd0b09cf52b17445de04a23a10165049ae187cd39e5c86be5",
+        "size_bytes": 10849
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/chacha20-0.10.0--chacha20-0.10.0--LICENSE-MIT",
+      "sha256": "b8c6939380a400f53e11923d50fcc4dd2fa1ba8339fd9d04cda38a0251b6c9b0",
+      "size_bytes": 1082,
+      "upstream_source": {
+        "path": "LICENSE-MIT",
+        "repository": "RustCrypto/stream-ciphers",
+        "revision": "23f4f70aa6315207d1dc5b85de597091b92e420b",
+        "sha256": "b8c6939380a400f53e11923d50fcc4dd2fa1ba8339fd9d04cda38a0251b6c9b0",
+        "size_bytes": 1082
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/cmake-0.1.58--cmake-0.1.58--LICENSE-APACHE",
+      "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+      "size_bytes": 10847,
+      "upstream_source": {
+        "path": "LICENSE-APACHE",
+        "repository": "rust-lang/cmake-rs",
+        "revision": "63190697197b34e5e5cd3cabf17da4fcab348bef",
+        "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+        "size_bytes": 10847
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/cmake-0.1.58--cmake-0.1.58--LICENSE-MIT",
+      "sha256": "378f5840b258e2779c39418f3f2d7b2ba96f1c7917dd6be0713f88305dbda397",
+      "size_bytes": 1057,
+      "upstream_source": {
+        "path": "LICENSE-MIT",
+        "repository": "rust-lang/cmake-rs",
+        "revision": "63190697197b34e5e5cd3cabf17da4fcab348bef",
+        "sha256": "378f5840b258e2779c39418f3f2d7b2ba96f1c7917dd6be0713f88305dbda397",
+        "size_bytes": 1057
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/cmov-0.5.4--cmov-0.5.4--LICENSE-APACHE",
+      "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+      "size_bytes": 11358,
+      "upstream_source": {
+        "path": "LICENSE-APACHE",
+        "repository": "RustCrypto/utils",
+        "revision": "5c7e4f9bb31af81bf766360e836b6d633b84dbff",
+        "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+        "size_bytes": 11358
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/cmov-0.5.4--cmov-0.5.4--LICENSE-MIT",
+      "sha256": "70c9d40f1f9545c3f133b8a67206e89da850f6468eed072281bb3701514114a9",
+      "size_bytes": 1082,
+      "upstream_source": {
+        "path": "LICENSE-MIT",
+        "repository": "RustCrypto/utils",
+        "revision": "5c7e4f9bb31af81bf766360e836b6d633b84dbff",
+        "sha256": "70c9d40f1f9545c3f133b8a67206e89da850f6468eed072281bb3701514114a9",
+        "size_bytes": 1082
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/cpufeatures-0.2.17--cpufeatures-0.2.17--LICENSE-APACHE",
+      "sha256": "a9040321c3712d8fd0b09cf52b17445de04a23a10165049ae187cd39e5c86be5",
+      "size_bytes": 10849,
+      "upstream_source": {
+        "path": "LICENSE-APACHE",
+        "repository": "RustCrypto/utils",
+        "revision": "9d92d5e95ab4c07c5d8bfd024bf2a17e96d20feb",
+        "sha256": "a9040321c3712d8fd0b09cf52b17445de04a23a10165049ae187cd39e5c86be5",
+        "size_bytes": 10849
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/cpufeatures-0.2.17--cpufeatures-0.2.17--LICENSE-MIT",
+      "sha256": "ae9baa7beea910273c2f384c2a6b721fb7bd02bda3436074a1072e4ee689f985",
+      "size_bytes": 1082,
+      "upstream_source": {
+        "path": "LICENSE-MIT",
+        "repository": "RustCrypto/utils",
+        "revision": "9d92d5e95ab4c07c5d8bfd024bf2a17e96d20feb",
+        "sha256": "ae9baa7beea910273c2f384c2a6b721fb7bd02bda3436074a1072e4ee689f985",
+        "size_bytes": 1082
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/cpufeatures-0.3.0--cpufeatures-0.3.0--LICENSE-APACHE",
+      "sha256": "a9040321c3712d8fd0b09cf52b17445de04a23a10165049ae187cd39e5c86be5",
+      "size_bytes": 10849,
+      "upstream_source": {
+        "path": "LICENSE-APACHE",
+        "repository": "RustCrypto/utils",
+        "revision": "31e6ec3727f11f9f5e0c106e282014653a4d7bb7",
+        "sha256": "a9040321c3712d8fd0b09cf52b17445de04a23a10165049ae187cd39e5c86be5",
+        "size_bytes": 10849
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/cpufeatures-0.3.0--cpufeatures-0.3.0--LICENSE-MIT",
+      "sha256": "ae9baa7beea910273c2f384c2a6b721fb7bd02bda3436074a1072e4ee689f985",
+      "size_bytes": 1082,
+      "upstream_source": {
+        "path": "LICENSE-MIT",
+        "repository": "RustCrypto/utils",
+        "revision": "31e6ec3727f11f9f5e0c106e282014653a4d7bb7",
+        "sha256": "ae9baa7beea910273c2f384c2a6b721fb7bd02bda3436074a1072e4ee689f985",
+        "size_bytes": 1082
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/crc-3.4.0--crc-3.4.0--LICENSE-APACHE",
+      "sha256": "470355a7eed93fcc4281ec2e0f82ca3b94e7af1e4d83629f91de8cfac34d750e",
+      "size_bytes": 10846,
+      "upstream_source": {
+        "path": "LICENSE-APACHE",
+        "repository": "mrhooray/crc-rs",
+        "revision": "2c8fd9615d620b5a5f8c9556b79a4ca173d6d401",
+        "sha256": "470355a7eed93fcc4281ec2e0f82ca3b94e7af1e4d83629f91de8cfac34d750e",
+        "size_bytes": 10846
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/crc-3.4.0--crc-3.4.0--LICENSE-MIT",
+      "sha256": "3488679340a49ecc34d342c4009d2dabf76f4a21f12aec2ca99b15805d656544",
+      "size_bytes": 1074,
+      "upstream_source": {
+        "path": "LICENSE-MIT",
+        "repository": "mrhooray/crc-rs",
+        "revision": "2c8fd9615d620b5a5f8c9556b79a4ca173d6d401",
+        "sha256": "3488679340a49ecc34d342c4009d2dabf76f4a21f12aec2ca99b15805d656544",
+        "size_bytes": 1074
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/crc-catalog-2.5.0--crc-catalog-2.5.0--upstream--LICENSES--MIT.txt",
+      "sha256": "5ef8fcfb6cccec8fcae043c834099a60c8b7406408db576e026d2b7e67dc5cf5",
+      "size_bytes": 1073,
+      "upstream_source": {
+        "path": "LICENSES/MIT.txt",
+        "repository": "akhilles/crc-catalog",
+        "revision": "ed4ad631f22b05055c21a3a4127eb7cf6d75bb62",
+        "sha256": "5ef8fcfb6cccec8fcae043c834099a60c8b7406408db576e026d2b7e67dc5cf5",
+        "size_bytes": 1073
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/crc-catalog-2.5.0--crc-catalog-2.5.0--upstream--LICENSES--Apache-2.0.txt",
+      "sha256": "d3cdb764b98283ee7c3a3cea8d374e2a2957322374378d1f3263f4d512741fc3",
+      "size_bytes": 11346,
+      "upstream_source": {
+        "path": "LICENSES/Apache-2.0.txt",
+        "repository": "akhilles/crc-catalog",
+        "revision": "ed4ad631f22b05055c21a3a4127eb7cf6d75bb62",
+        "sha256": "d3cdb764b98283ee7c3a3cea8d374e2a2957322374378d1f3263f4d512741fc3",
+        "size_bytes": 11346
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/crc32fast-1.5.0--crc32fast-1.5.0--LICENSE-APACHE",
+      "sha256": "c6596eb7be8581c18be736c846fb9173b69eccf6ef94c5135893ec56bd92ba08",
+      "size_bytes": 11358,
+      "upstream_source": {
+        "path": "LICENSE-APACHE",
+        "repository": "srijs/rust-crc32fast",
+        "revision": "dbf4f76cd71cdcc57d9164cbd46890d53ce0423c",
+        "sha256": "c6596eb7be8581c18be736c846fb9173b69eccf6ef94c5135893ec56bd92ba08",
+        "size_bytes": 11358
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/crc32fast-1.5.0--crc32fast-1.5.0--LICENSE-MIT",
+      "sha256": "61d383b05b87d78f94d2937e2580cce47226d17823c0430fbcad09596537efcf",
+      "size_bytes": 1097,
+      "upstream_source": {
+        "path": "LICENSE-MIT",
+        "repository": "srijs/rust-crc32fast",
+        "revision": "dbf4f76cd71cdcc57d9164cbd46890d53ce0423c",
+        "sha256": "61d383b05b87d78f94d2937e2580cce47226d17823c0430fbcad09596537efcf",
+        "size_bytes": 1097
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/crossbeam-0.8.4--crossbeam-0.8.4--LICENSE-APACHE",
+      "sha256": "6f712474a3e3be1386d2d0c29449850ea788da64d35cff0fc8799acf741e9ecd",
+      "size_bytes": 10852,
+      "upstream_source": {
+        "path": "LICENSE-APACHE",
+        "repository": "crossbeam-rs/crossbeam",
+        "revision": "9c3182abebb36bdc9446d75d4644190fef70fa01",
+        "sha256": "6f712474a3e3be1386d2d0c29449850ea788da64d35cff0fc8799acf741e9ecd",
+        "size_bytes": 10852
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/crossbeam-0.8.4--crossbeam-0.8.4--LICENSE-MIT",
+      "sha256": "5734ed989dfca1f625b40281ee9f4530f91b2411ec01cb748223e7eb87e201ab",
+      "size_bytes": 1099,
+      "upstream_source": {
+        "path": "LICENSE-MIT",
+        "repository": "crossbeam-rs/crossbeam",
+        "revision": "9c3182abebb36bdc9446d75d4644190fef70fa01",
+        "sha256": "5734ed989dfca1f625b40281ee9f4530f91b2411ec01cb748223e7eb87e201ab",
+        "size_bytes": 1099
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/crossbeam-channel-0.5.15--crossbeam-channel-0.5.15--LICENSE-APACHE",
+      "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+      "size_bytes": 10847,
+      "upstream_source": {
+        "path": "LICENSE-APACHE",
+        "repository": "crossbeam-rs/crossbeam",
+        "revision": "d35ffde18a76ae9667f602d8c0127ff89ac2e4d4",
+        "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+        "size_bytes": 10847
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/crossbeam-channel-0.5.15--crossbeam-channel-0.5.15--LICENSE-MIT",
+      "sha256": "5734ed989dfca1f625b40281ee9f4530f91b2411ec01cb748223e7eb87e201ab",
+      "size_bytes": 1099,
+      "upstream_source": {
+        "path": "LICENSE-MIT",
+        "repository": "crossbeam-rs/crossbeam",
+        "revision": "d35ffde18a76ae9667f602d8c0127ff89ac2e4d4",
+        "sha256": "5734ed989dfca1f625b40281ee9f4530f91b2411ec01cb748223e7eb87e201ab",
+        "size_bytes": 1099
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/crossbeam-channel-0.5.15--crossbeam-channel-0.5.15--LICENSE-THIRD-PARTY",
+      "sha256": "b16db96b93b1d7cf7bea533f572091ec6bca3234fbe0a83038be772ff391a44c",
+      "size_bytes": 33447,
+      "upstream_source": {
+        "path": "LICENSE-THIRD-PARTY",
+        "repository": "crossbeam-rs/crossbeam",
+        "revision": "d35ffde18a76ae9667f602d8c0127ff89ac2e4d4",
+        "sha256": "b16db96b93b1d7cf7bea533f572091ec6bca3234fbe0a83038be772ff391a44c",
+        "size_bytes": 33447
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/crossbeam-deque-0.8.6--crossbeam-deque-0.8.6--LICENSE-APACHE",
+      "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+      "size_bytes": 10847,
+      "upstream_source": {
+        "path": "LICENSE-APACHE",
+        "repository": "crossbeam-rs/crossbeam",
+        "revision": "ccd83ac4108a2a1b41e9c6e79c87267167d18dfa",
+        "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+        "size_bytes": 10847
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/crossbeam-deque-0.8.6--crossbeam-deque-0.8.6--LICENSE-MIT",
+      "sha256": "5734ed989dfca1f625b40281ee9f4530f91b2411ec01cb748223e7eb87e201ab",
+      "size_bytes": 1099,
+      "upstream_source": {
+        "path": "LICENSE-MIT",
+        "repository": "crossbeam-rs/crossbeam",
+        "revision": "ccd83ac4108a2a1b41e9c6e79c87267167d18dfa",
+        "sha256": "5734ed989dfca1f625b40281ee9f4530f91b2411ec01cb748223e7eb87e201ab",
+        "size_bytes": 1099
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/crossbeam-epoch-0.9.21--crossbeam-epoch-0.9.21--LICENSE-APACHE",
+      "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+      "size_bytes": 10847,
+      "upstream_source": {
+        "path": "LICENSE-APACHE",
+        "repository": "crossbeam-rs/crossbeam",
+        "revision": "2920c984290229ab4e0ca0452ef09e48a82063f3",
+        "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+        "size_bytes": 10847
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/crossbeam-epoch-0.9.21--crossbeam-epoch-0.9.21--LICENSE-MIT",
+      "sha256": "5734ed989dfca1f625b40281ee9f4530f91b2411ec01cb748223e7eb87e201ab",
+      "size_bytes": 1099,
+      "upstream_source": {
+        "path": "LICENSE-MIT",
+        "repository": "crossbeam-rs/crossbeam",
+        "revision": "2920c984290229ab4e0ca0452ef09e48a82063f3",
+        "sha256": "5734ed989dfca1f625b40281ee9f4530f91b2411ec01cb748223e7eb87e201ab",
+        "size_bytes": 1099
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/crossbeam-queue-0.3.12--crossbeam-queue-0.3.12--LICENSE-APACHE",
+      "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+      "size_bytes": 10847,
+      "upstream_source": {
+        "path": "LICENSE-APACHE",
+        "repository": "crossbeam-rs/crossbeam",
+        "revision": "ccd83ac4108a2a1b41e9c6e79c87267167d18dfa",
+        "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+        "size_bytes": 10847
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/crossbeam-queue-0.3.12--crossbeam-queue-0.3.12--LICENSE-MIT",
+      "sha256": "5734ed989dfca1f625b40281ee9f4530f91b2411ec01cb748223e7eb87e201ab",
+      "size_bytes": 1099,
+      "upstream_source": {
+        "path": "LICENSE-MIT",
+        "repository": "crossbeam-rs/crossbeam",
+        "revision": "ccd83ac4108a2a1b41e9c6e79c87267167d18dfa",
+        "sha256": "5734ed989dfca1f625b40281ee9f4530f91b2411ec01cb748223e7eb87e201ab",
+        "size_bytes": 1099
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/crossbeam-utils-0.8.21--crossbeam-utils-0.8.21--LICENSE-APACHE",
+      "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+      "size_bytes": 10847,
+      "upstream_source": {
+        "path": "LICENSE-APACHE",
+        "repository": "crossbeam-rs/crossbeam",
+        "revision": "ccd83ac4108a2a1b41e9c6e79c87267167d18dfa",
+        "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+        "size_bytes": 10847
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/crossbeam-utils-0.8.21--crossbeam-utils-0.8.21--LICENSE-MIT",
+      "sha256": "5734ed989dfca1f625b40281ee9f4530f91b2411ec01cb748223e7eb87e201ab",
+      "size_bytes": 1099,
+      "upstream_source": {
+        "path": "LICENSE-MIT",
+        "repository": "crossbeam-rs/crossbeam",
+        "revision": "ccd83ac4108a2a1b41e9c6e79c87267167d18dfa",
+        "sha256": "5734ed989dfca1f625b40281ee9f4530f91b2411ec01cb748223e7eb87e201ab",
+        "size_bytes": 1099
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/crypto-common-0.1.7--crypto-common-0.1.7--LICENSE-APACHE",
+      "sha256": "a9040321c3712d8fd0b09cf52b17445de04a23a10165049ae187cd39e5c86be5",
+      "size_bytes": 10849,
+      "upstream_source": {
+        "path": "LICENSE-APACHE",
+        "repository": "RustCrypto/traits",
+        "revision": "66a997ccf5776ce873da5a48e2885a9908e940f6",
+        "sha256": "a9040321c3712d8fd0b09cf52b17445de04a23a10165049ae187cd39e5c86be5",
+        "size_bytes": 10849
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/crypto-common-0.1.7--crypto-common-0.1.7--LICENSE-MIT",
+      "sha256": "3521672491a3479422d5fe1aca6645dd2984090f85da6e5205abfb18fb7a6897",
+      "size_bytes": 1065,
+      "upstream_source": {
+        "path": "LICENSE-MIT",
+        "repository": "RustCrypto/traits",
+        "revision": "66a997ccf5776ce873da5a48e2885a9908e940f6",
+        "sha256": "3521672491a3479422d5fe1aca6645dd2984090f85da6e5205abfb18fb7a6897",
+        "size_bytes": 1065
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/defer-0.2.1--defer-0.2.1--LICENSE-APACHE.txt",
+      "sha256": "98811e25dec78a24fb82837189c32bbe92da4c451b6025f298e1211c3d54ece7",
+      "size_bytes": 11049,
+      "upstream_source": {
+        "path": "LICENSE-APACHE.txt",
+        "repository": "andrewhickman/defer",
+        "revision": "07e2225531944dcbc7b873d9c33d28d149883001",
+        "sha256": "98811e25dec78a24fb82837189c32bbe92da4c451b6025f298e1211c3d54ece7",
+        "size_bytes": 11049
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/defer-0.2.1--defer-0.2.1--LICENSE-MIT.txt",
+      "sha256": "5012186e53180c4c7c2403b7b09bccc52a88e76fb9350bce90992ef24ec10b16",
+      "size_bytes": 1092,
+      "upstream_source": {
+        "path": "LICENSE-MIT.txt",
+        "repository": "andrewhickman/defer",
+        "revision": "07e2225531944dcbc7b873d9c33d28d149883001",
+        "sha256": "5012186e53180c4c7c2403b7b09bccc52a88e76fb9350bce90992ef24ec10b16",
+        "size_bytes": 1092
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/digest-0.10.7--digest-0.10.7--LICENSE-APACHE",
+      "sha256": "a9040321c3712d8fd0b09cf52b17445de04a23a10165049ae187cd39e5c86be5",
+      "size_bytes": 10849,
+      "upstream_source": {
+        "path": "LICENSE-APACHE",
+        "repository": "RustCrypto/traits",
+        "revision": "344389411fd9718a0742435152e933a9e71461ee",
+        "sha256": "a9040321c3712d8fd0b09cf52b17445de04a23a10165049ae187cd39e5c86be5",
+        "size_bytes": 10849
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/digest-0.10.7--digest-0.10.7--LICENSE-MIT",
+      "sha256": "9e0dfd2dd4173a530e238cb6adb37aa78c34c6bc7444e0e10c1ab5d8881f63ba",
+      "size_bytes": 1057,
+      "upstream_source": {
+        "path": "LICENSE-MIT",
+        "repository": "RustCrypto/traits",
+        "revision": "344389411fd9718a0742435152e933a9e71461ee",
+        "sha256": "9e0dfd2dd4173a530e238cb6adb37aa78c34c6bc7444e0e10c1ab5d8881f63ba",
+        "size_bytes": 1057
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/divrem-1.0.0--divrem-1.0.0--LICENSE",
+      "sha256": "214f0241862a5a77d64417c6eced643a602f32c672d2a491ee4ded6affaca01d",
+      "size_bytes": 1064,
+      "upstream_source": {
+        "path": "LICENSE",
+        "repository": "letheed/divrem",
+        "revision": "d17f429aa2b47e6f4af5d8e5a0235418415b1741",
+        "sha256": "214f0241862a5a77d64417c6eced643a602f32c672d2a491ee4ded6affaca01d",
+        "size_bytes": 1064
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/dyn-stack-0.13.2--dyn-stack-0.13.2--LICENSE",
+      "sha256": "bf5a93d1014429b43e01c57d45bea928748fbf37d059306145a1a0a91aec2014",
+      "size_bytes": 1062,
+      "upstream_source": {
+        "path": "LICENSE",
+        "repository": "sarah-quinones/dyn-stack",
+        "revision": "e6b946658df54173dca852a54723115aab7a4a92",
+        "sha256": "bf5a93d1014429b43e01c57d45bea928748fbf37d059306145a1a0a91aec2014",
+        "size_bytes": 1062
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/dyn-stack-macros-0.1.3--dyn-stack-macros-0.1.3--LICENSE",
+      "sha256": "4263a9907c8e8d799f714d5cf2ec18663772f09e7eef3eeaaab074ea29ee1358",
+      "size_bytes": 1083,
+      "upstream_source": {
+        "path": "LICENSE",
+        "repository": "kitegi/dynstack",
+        "revision": "19808d6b5ef361f4cbec4868c26b104bfc5537c9",
+        "sha256": "4263a9907c8e8d799f714d5cf2ec18663772f09e7eef3eeaaab074ea29ee1358",
+        "size_bytes": 1083
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/either-1.16.0--either-1.16.0--LICENSE-APACHE",
+      "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+      "size_bytes": 10847,
+      "upstream_source": {
+        "path": "LICENSE-APACHE",
+        "repository": "rayon-rs/either",
+        "revision": "8f4ecd9964ea909a7f989a3668a2710310a0e62f",
+        "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+        "size_bytes": 10847
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/either-1.16.0--either-1.16.0--LICENSE-MIT",
+      "sha256": "7576269ea71f767b99297934c0b2367532690f8c4badc695edf8e04ab6a1e545",
+      "size_bytes": 1043,
+      "upstream_source": {
+        "path": "LICENSE-MIT",
+        "repository": "rayon-rs/either",
+        "revision": "8f4ecd9964ea909a7f989a3668a2710310a0e62f",
+        "sha256": "7576269ea71f767b99297934c0b2367532690f8c4badc695edf8e04ab6a1e545",
+        "size_bytes": 1043
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/equator-0.2.2--equator-0.2.2--upstream--LICENSE",
+      "sha256": "97d3424e347e8fa236806725ce9837bb453d4dfc9ce1d4733fd6023a8038000a",
+      "size_bytes": 1062,
+      "upstream_source": {
+        "path": "LICENSE",
+        "repository": "sarah-ek/equator",
+        "revision": "9d4107bdd6a75598aed4a60fe46200c9e9f4e653",
+        "sha256": "97d3424e347e8fa236806725ce9837bb453d4dfc9ce1d4733fd6023a8038000a",
+        "size_bytes": 1062
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/equator-0.4.2--equator-0.4.2--LICENSE",
+      "sha256": "97d3424e347e8fa236806725ce9837bb453d4dfc9ce1d4733fd6023a8038000a",
+      "size_bytes": 1062,
+      "upstream_source": {
+        "path": "LICENSE",
+        "repository": "sarah-ek/equator",
+        "revision": "8054473359c17be1e25c0ac551a54f924337319f",
+        "sha256": "97d3424e347e8fa236806725ce9837bb453d4dfc9ce1d4733fd6023a8038000a",
+        "size_bytes": 1062
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/equator-0.6.0--equator-0.6.0--LICENSE",
+      "sha256": "97d3424e347e8fa236806725ce9837bb453d4dfc9ce1d4733fd6023a8038000a",
+      "size_bytes": 1062,
+      "upstream_source": {
+        "path": "LICENSE",
+        "repository": "sarah-ek/equator",
+        "revision": "51ded912a6f4cf71ff7ce7c37ca33c1f2ce462b1",
+        "sha256": "97d3424e347e8fa236806725ce9837bb453d4dfc9ce1d4733fd6023a8038000a",
+        "size_bytes": 1062
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/equator-macro-0.2.1--equator-macro-0.2.1--upstream--LICENSE",
+      "sha256": "97d3424e347e8fa236806725ce9837bb453d4dfc9ce1d4733fd6023a8038000a",
+      "size_bytes": 1062,
+      "upstream_source": {
+        "path": "LICENSE",
+        "repository": "sarah-ek/equator",
+        "revision": "c9061f3da9a7cc53b0d388f26ab6bb95422823c3",
+        "sha256": "97d3424e347e8fa236806725ce9837bb453d4dfc9ce1d4733fd6023a8038000a",
+        "size_bytes": 1062
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/equator-macro-0.4.2--equator-macro-0.4.2--LICENSE",
+      "sha256": "97d3424e347e8fa236806725ce9837bb453d4dfc9ce1d4733fd6023a8038000a",
+      "size_bytes": 1062,
+      "upstream_source": {
+        "path": "LICENSE",
+        "repository": "sarah-ek/equator",
+        "revision": "8054473359c17be1e25c0ac551a54f924337319f",
+        "sha256": "97d3424e347e8fa236806725ce9837bb453d4dfc9ce1d4733fd6023a8038000a",
+        "size_bytes": 1062
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/equator-macro-0.6.0--equator-macro-0.6.0--LICENSE",
+      "sha256": "97d3424e347e8fa236806725ce9837bb453d4dfc9ce1d4733fd6023a8038000a",
+      "size_bytes": 1062,
+      "upstream_source": {
+        "path": "LICENSE",
+        "repository": "sarah-ek/equator",
+        "revision": "51ded912a6f4cf71ff7ce7c37ca33c1f2ce462b1",
+        "sha256": "97d3424e347e8fa236806725ce9837bb453d4dfc9ce1d4733fd6023a8038000a",
+        "size_bytes": 1062
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/faer-0.24.4--faer-0.24.4--COPYING.EIGEN.MPL2",
+      "sha256": "1905e1009a9d8444c2573d0f9e96d34188a6f098a5c359694f2d9043a7445323",
+      "size_bytes": 16853,
+      "upstream_source": {
+        "path": "COPYING.EIGEN.MPL2",
+        "repository": "sarah-quinones/faer",
+        "revision": "0539947ffb757a739d7e703a7d2fa0c792a909c1",
+        "sha256": "1905e1009a9d8444c2573d0f9e96d34188a6f098a5c359694f2d9043a7445323",
+        "size_bytes": 16853
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/faer-0.24.4--faer-0.24.4--COPYING.LAPACK.BSD",
+      "sha256": "7e4bc07b4d1691c7b503816c232467ac808bdb3f260a7f4f203ca0e3e44311ad",
+      "size_bytes": 2577,
+      "upstream_source": {
+        "path": "COPYING.LAPACK.BSD",
+        "repository": "sarah-quinones/faer",
+        "revision": "0539947ffb757a739d7e703a7d2fa0c792a909c1",
+        "sha256": "7e4bc07b4d1691c7b503816c232467ac808bdb3f260a7f4f203ca0e3e44311ad",
+        "size_bytes": 2577
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/faer-0.24.4--faer-0.24.4--COPYING.SUITE_SPARSE.AMD.BSD",
+      "sha256": "748448bad56ee129a9222d63da70513428b41e9ff804b401a0be37a7b5151bf9",
+      "size_bytes": 1922,
+      "upstream_source": {
+        "path": "COPYING.SUITE_SPARSE.AMD.BSD",
+        "repository": "sarah-quinones/faer",
+        "revision": "0539947ffb757a739d7e703a7d2fa0c792a909c1",
+        "sha256": "748448bad56ee129a9222d63da70513428b41e9ff804b401a0be37a7b5151bf9",
+        "size_bytes": 1922
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/faer-0.24.4--faer-0.24.4--COPYING.SUITE_SPARSE.COLAMD.BSD",
+      "sha256": "0e92b7bb3e216b8a4d1357b3d828043a4f758f762b2abc30b3440cf78063f80f",
+      "size_bytes": 1792,
+      "upstream_source": {
+        "path": "COPYING.SUITE_SPARSE.COLAMD.BSD",
+        "repository": "sarah-quinones/faer",
+        "revision": "0539947ffb757a739d7e703a7d2fa0c792a909c1",
+        "sha256": "0e92b7bb3e216b8a4d1357b3d828043a4f758f762b2abc30b3440cf78063f80f",
+        "size_bytes": 1792
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/faer-traits-0.24.0--faer-traits-0.24.0--upstream--LICENSE",
+      "sha256": "1f6b7e2a30afc2f5f253cb3535e041f91de1e1f9815b38714dfd94e53e61d972",
+      "size_bytes": 1083,
+      "upstream_source": {
+        "path": "LICENSE",
+        "repository": "sarah-quinones/faer",
+        "revision": "8dfcceee8eb3d81231366acc9d3f157ac5e7057a",
+        "sha256": "1f6b7e2a30afc2f5f253cb3535e041f91de1e1f9815b38714dfd94e53e61d972",
+        "size_bytes": 1083
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/fax-0.2.7--fax-0.2.7--LICENSE",
+      "sha256": "7101390b4c8edd752f4c0de47f35d61b44d9cf0ee8dd032115e25644e277cfff",
+      "size_bytes": 1075,
+      "upstream_source": {
+        "path": "LICENSE",
+        "repository": "pdf-rs/fax",
+        "revision": "ac2a4b2237d98830ea1fd37c7d280eec0e87c1d8",
+        "sha256": "7101390b4c8edd752f4c0de47f35d61b44d9cf0ee8dd032115e25644e277cfff",
+        "size_bytes": 1075
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/fdeflate-0.3.7--fdeflate-0.3.7--LICENSE-APACHE",
+      "sha256": "0d542e0c8804e39aa7f37eb00da5a762149dc682d7829451287e11b938e94594",
+      "size_bytes": 10174,
+      "upstream_source": {
+        "path": "LICENSE-APACHE",
+        "repository": "image-rs/fdeflate",
+        "revision": "c365c7e6ffa81feb2e1fb762eed7299f05c9b0ca",
+        "sha256": "0d542e0c8804e39aa7f37eb00da5a762149dc682d7829451287e11b938e94594",
+        "size_bytes": 10174
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/fdeflate-0.3.7--fdeflate-0.3.7--LICENSE-MIT",
+      "sha256": "c77a4cf9da729987d0fe7ccd811e3bd27393914ddf3d23467c18cc22954513b3",
+      "size_bytes": 1036,
+      "upstream_source": {
+        "path": "LICENSE-MIT",
+        "repository": "image-rs/fdeflate",
+        "revision": "c365c7e6ffa81feb2e1fb762eed7299f05c9b0ca",
+        "sha256": "c77a4cf9da729987d0fe7ccd811e3bd27393914ddf3d23467c18cc22954513b3",
+        "size_bytes": 1036
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/find-msvc-tools-0.1.9--find-msvc-tools-0.1.9--LICENSE-APACHE",
+      "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+      "size_bytes": 10847,
+      "upstream_source": {
+        "path": "LICENSE-APACHE",
+        "repository": "rust-lang/cc-rs",
+        "revision": "0767349e1d1253e6849b4c2af2059db661f54343",
+        "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+        "size_bytes": 10847
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/find-msvc-tools-0.1.9--find-msvc-tools-0.1.9--LICENSE-MIT",
+      "sha256": "378f5840b258e2779c39418f3f2d7b2ba96f1c7917dd6be0713f88305dbda397",
+      "size_bytes": 1057,
+      "upstream_source": {
+        "path": "LICENSE-MIT",
+        "repository": "rust-lang/cc-rs",
+        "revision": "0767349e1d1253e6849b4c2af2059db661f54343",
+        "sha256": "378f5840b258e2779c39418f3f2d7b2ba96f1c7917dd6be0713f88305dbda397",
+        "size_bytes": 1057
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/fixed-1.29.0--fixed-1.29.0--LICENSE-APACHE",
+      "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+      "size_bytes": 10847,
+      "upstream_source": {
+        "path": "LICENSE-APACHE",
+        "repository": "tspiteri/fixed",
+        "revision": "58c98388429f48cc8e48849718ec5377dad76a51",
+        "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+        "size_bytes": 10847
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/fixed-1.29.0--fixed-1.29.0--LICENSE-MIT",
+      "sha256": "a52bda4b9ecfd65f9f49413b49d500af3c3b2bd5c3fd9cb987969aecc302a1e4",
+      "size_bytes": 1064,
+      "upstream_source": {
+        "path": "LICENSE-MIT",
+        "repository": "tspiteri/fixed",
+        "revision": "58c98388429f48cc8e48849718ec5377dad76a51",
+        "sha256": "a52bda4b9ecfd65f9f49413b49d500af3c3b2bd5c3fd9cb987969aecc302a1e4",
+        "size_bytes": 1064
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/flate2-1.1.9--flate2-1.1.9--LICENSE-APACHE",
+      "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+      "size_bytes": 10847,
+      "upstream_source": {
+        "path": "LICENSE-APACHE",
+        "repository": "rust-lang/flate2-rs",
+        "revision": "19ddb18bf11199858fbc6504d079448fafd1606e",
+        "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+        "size_bytes": 10847
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/flate2-1.1.9--flate2-1.1.9--LICENSE-MIT",
+      "sha256": "025436edff4cfcdde17a5811fdea78892d8482efd1abdec5a17872d07a4f2112",
+      "size_bytes": 1062,
+      "upstream_source": {
+        "path": "LICENSE-MIT",
+        "repository": "rust-lang/flate2-rs",
+        "revision": "19ddb18bf11199858fbc6504d079448fafd1606e",
+        "sha256": "025436edff4cfcdde17a5811fdea78892d8482efd1abdec5a17872d07a4f2112",
+        "size_bytes": 1062
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/gcd-2.3.0--gcd-2.3.0--LICENSE-APACHE",
+      "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+      "size_bytes": 10847,
+      "upstream_source": {
+        "path": "LICENSE-APACHE",
+        "repository": "frewsxcv/rust-gcd",
+        "revision": "df6ba81825b2cb4f1e328f2283fb0fda8f8bda27",
+        "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+        "size_bytes": 10847
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/gcd-2.3.0--gcd-2.3.0--LICENSE-MIT",
+      "sha256": "4c9222d8d8ec233ffc1b317729878430f2db2a49cb2324c856a02e9848a3c185",
+      "size_bytes": 1057,
+      "upstream_source": {
+        "path": "LICENSE-MIT",
+        "repository": "frewsxcv/rust-gcd",
+        "revision": "df6ba81825b2cb4f1e328f2283fb0fda8f8bda27",
+        "sha256": "4c9222d8d8ec233ffc1b317729878430f2db2a49cb2324c856a02e9848a3c185",
+        "size_bytes": 1057
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/gemm-0.19.0--gemm-0.19.0--LICENSE",
+      "sha256": "d64f878c89bd5f1e5ada7e4aad57690b122727cf5229b7b87ea1980c188da1d9",
+      "size_bytes": 1062,
+      "upstream_source": {
+        "path": "LICENSE",
+        "repository": "sarah-ek/gemm",
+        "revision": "86102c5b712737978371ac9ef7a11982f686d7bc",
+        "sha256": "d64f878c89bd5f1e5ada7e4aad57690b122727cf5229b7b87ea1980c188da1d9",
+        "size_bytes": 1062
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/gemm-c32-0.19.0--gemm-c32-0.19.0--LICENSE",
+      "sha256": "d64f878c89bd5f1e5ada7e4aad57690b122727cf5229b7b87ea1980c188da1d9",
+      "size_bytes": 1062,
+      "upstream_source": {
+        "path": "LICENSE",
+        "repository": "sarah-ek/gemm",
+        "revision": "86102c5b712737978371ac9ef7a11982f686d7bc",
+        "sha256": "d64f878c89bd5f1e5ada7e4aad57690b122727cf5229b7b87ea1980c188da1d9",
+        "size_bytes": 1062
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/gemm-c64-0.19.0--gemm-c64-0.19.0--LICENSE",
+      "sha256": "d64f878c89bd5f1e5ada7e4aad57690b122727cf5229b7b87ea1980c188da1d9",
+      "size_bytes": 1062,
+      "upstream_source": {
+        "path": "LICENSE",
+        "repository": "sarah-ek/gemm",
+        "revision": "86102c5b712737978371ac9ef7a11982f686d7bc",
+        "sha256": "d64f878c89bd5f1e5ada7e4aad57690b122727cf5229b7b87ea1980c188da1d9",
+        "size_bytes": 1062
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/gemm-common-0.19.0--gemm-common-0.19.0--LICENSE",
+      "sha256": "d64f878c89bd5f1e5ada7e4aad57690b122727cf5229b7b87ea1980c188da1d9",
+      "size_bytes": 1062,
+      "upstream_source": {
+        "path": "LICENSE",
+        "repository": "sarah-ek/gemm",
+        "revision": "86102c5b712737978371ac9ef7a11982f686d7bc",
+        "sha256": "d64f878c89bd5f1e5ada7e4aad57690b122727cf5229b7b87ea1980c188da1d9",
+        "size_bytes": 1062
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/gemm-f32-0.19.0--gemm-f32-0.19.0--LICENSE",
+      "sha256": "d64f878c89bd5f1e5ada7e4aad57690b122727cf5229b7b87ea1980c188da1d9",
+      "size_bytes": 1062,
+      "upstream_source": {
+        "path": "LICENSE",
+        "repository": "sarah-ek/gemm",
+        "revision": "86102c5b712737978371ac9ef7a11982f686d7bc",
+        "sha256": "d64f878c89bd5f1e5ada7e4aad57690b122727cf5229b7b87ea1980c188da1d9",
+        "size_bytes": 1062
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/gemm-f64-0.19.0--gemm-f64-0.19.0--LICENSE",
+      "sha256": "d64f878c89bd5f1e5ada7e4aad57690b122727cf5229b7b87ea1980c188da1d9",
+      "size_bytes": 1062,
+      "upstream_source": {
+        "path": "LICENSE",
+        "repository": "sarah-ek/gemm",
+        "revision": "86102c5b712737978371ac9ef7a11982f686d7bc",
+        "sha256": "d64f878c89bd5f1e5ada7e4aad57690b122727cf5229b7b87ea1980c188da1d9",
+        "size_bytes": 1062
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/generativity-1.2.1--generativity-1.2.1--LICENSE-APACHE",
+      "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+      "size_bytes": 11358,
+      "upstream_source": {
+        "path": "LICENSE-APACHE",
+        "repository": "CAD97/generativity",
+        "revision": "1667c6839d188da73477b17f97b6f953c85d4e82",
+        "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+        "size_bytes": 11358
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/generativity-1.2.1--generativity-1.2.1--LICENSE-MIT",
+      "sha256": "7230950be2113ed0293b254c19d93f365bc8add64b06dd6b8ae3811028bdc3fd",
+      "size_bytes": 1089,
+      "upstream_source": {
+        "path": "LICENSE-MIT",
+        "repository": "CAD97/generativity",
+        "revision": "1667c6839d188da73477b17f97b6f953c85d4e82",
+        "sha256": "7230950be2113ed0293b254c19d93f365bc8add64b06dd6b8ae3811028bdc3fd",
+        "size_bytes": 1089
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/generator-0.8.9--generator-0.8.9--LICENSE-APACHE",
+      "sha256": "7ecb6108c3b8570339bb27e0f3affbe19300263a0e7a7e8c5f59a028a6eb70b3",
+      "size_bytes": 11355,
+      "upstream_source": {
+        "path": "LICENSE-APACHE",
+        "repository": "Xudong-Huang/generator-rs",
+        "revision": "94b35ac4e39ee8b8d3b580a5044278b24b0648da",
+        "sha256": "7ecb6108c3b8570339bb27e0f3affbe19300263a0e7a7e8c5f59a028a6eb70b3",
+        "size_bytes": 11355
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/generator-0.8.9--generator-0.8.9--LICENSE-MIT",
+      "sha256": "d0efb39501d05934b5d141573627ab9ead815287bb49acb37855642cf6a7205b",
+      "size_bytes": 1055,
+      "upstream_source": {
+        "path": "LICENSE-MIT",
+        "repository": "Xudong-Huang/generator-rs",
+        "revision": "94b35ac4e39ee8b8d3b580a5044278b24b0648da",
+        "sha256": "d0efb39501d05934b5d141573627ab9ead815287bb49acb37855642cf6a7205b",
+        "size_bytes": 1055
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/generic-array-0.14.7--generic-array-0.14.7--LICENSE",
+      "sha256": "c09aae9d3c77b531f56351a9947bc7446511d6b025b3255312d3e3442a9a7583",
+      "size_bytes": 1107,
+      "upstream_source": {
+        "path": "LICENSE",
+        "repository": "fizyk20/generic-array",
+        "revision": "1397d2bb40c406901b7827161b73b34b056cbe3a",
+        "sha256": "c09aae9d3c77b531f56351a9947bc7446511d6b025b3255312d3e3442a9a7583",
+        "size_bytes": 1107
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/getrandom-0.3.4--getrandom-0.3.4--LICENSE-APACHE",
+      "sha256": "aaff376532ea30a0cd5330b9502ad4a4c8bf769c539c87ffe78819d188a18ebf",
+      "size_bytes": 10849,
+      "upstream_source": {
+        "path": "LICENSE-APACHE",
+        "repository": "rust-random/getrandom",
+        "revision": "38e4ad38309a85b56eef4fc759535ccfc322ba9a",
+        "sha256": "aaff376532ea30a0cd5330b9502ad4a4c8bf769c539c87ffe78819d188a18ebf",
+        "size_bytes": 10849
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/getrandom-0.3.4--getrandom-0.3.4--LICENSE-MIT",
+      "sha256": "29e9fe5074bd27e0e5d5d110394fbbcd841baee2651a3c4b4560a632702cede4",
+      "size_bytes": 1130,
+      "upstream_source": {
+        "path": "LICENSE-MIT",
+        "repository": "rust-random/getrandom",
+        "revision": "38e4ad38309a85b56eef4fc759535ccfc322ba9a",
+        "sha256": "29e9fe5074bd27e0e5d5d110394fbbcd841baee2651a3c4b4560a632702cede4",
+        "size_bytes": 1130
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/getrandom-0.4.2--getrandom-0.4.2--LICENSE-APACHE",
+      "sha256": "aaff376532ea30a0cd5330b9502ad4a4c8bf769c539c87ffe78819d188a18ebf",
+      "size_bytes": 10849,
+      "upstream_source": {
+        "path": "LICENSE-APACHE",
+        "repository": "rust-random/getrandom",
+        "revision": "4d826731b20a09e69cca91c66aea57ab3cf00072",
+        "sha256": "aaff376532ea30a0cd5330b9502ad4a4c8bf769c539c87ffe78819d188a18ebf",
+        "size_bytes": 10849
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/getrandom-0.4.2--getrandom-0.4.2--LICENSE-MIT",
+      "sha256": "523a42c25d245dde9c015f882cec7f4555aad883382a6cf19b4b7d9b2cd5419b",
+      "size_bytes": 1130,
+      "upstream_source": {
+        "path": "LICENSE-MIT",
+        "repository": "rust-random/getrandom",
+        "revision": "4d826731b20a09e69cca91c66aea57ab3cf00072",
+        "sha256": "523a42c25d245dde9c015f882cec7f4555aad883382a6cf19b4b7d9b2cd5419b",
+        "size_bytes": 1130
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/glam-0.33.2--glam-0.33.2--LICENSE-APACHE",
+      "sha256": "be33ddb87a30fd321ab100e2d922cba512e50ec7a63d8e62e5bfc0798dd4b585",
+      "size_bytes": 10834,
+      "upstream_source": {
+        "path": "LICENSE-APACHE",
+        "repository": "bitshifter/glam-rs",
+        "revision": "c9bb1a29fd7f7ed3d8f6440bcb28396de050c74c",
+        "sha256": "be33ddb87a30fd321ab100e2d922cba512e50ec7a63d8e62e5bfc0798dd4b585",
+        "size_bytes": 10834
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/glam-0.33.2--glam-0.33.2--LICENSE-MIT",
+      "sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3",
+      "size_bytes": 1023,
+      "upstream_source": {
+        "path": "LICENSE-MIT",
+        "repository": "bitshifter/glam-rs",
+        "revision": "c9bb1a29fd7f7ed3d8f6440bcb28396de050c74c",
+        "sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3",
+        "size_bytes": 1023
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/half-2.7.1--half-2.7.1--LICENSE-APACHE",
+      "sha256": "a6cba85bc92e0cff7a450b1d873c0eaa2e9fc96bf472df0247a26bec77bf3ff9",
+      "size_bytes": 10173,
+      "upstream_source": {
+        "path": "LICENSE-APACHE",
+        "repository": "VoidStarKat/half-rs",
+        "revision": "8cc891f3e4aad956eca7fa79b1f42f87ecd141ae",
+        "sha256": "a6cba85bc92e0cff7a450b1d873c0eaa2e9fc96bf472df0247a26bec77bf3ff9",
+        "size_bytes": 10173
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/half-2.7.1--half-2.7.1--LICENSE-MIT",
+      "sha256": "508a77d2e7b51d98adeed32648ad124b7b30241a8e70b2e72c99f92d8e5874d1",
+      "size_bytes": 1036,
+      "upstream_source": {
+        "path": "LICENSE-MIT",
+        "repository": "VoidStarKat/half-rs",
+        "revision": "8cc891f3e4aad956eca7fa79b1f42f87ecd141ae",
+        "sha256": "508a77d2e7b51d98adeed32648ad124b7b30241a8e70b2e72c99f92d8e5874d1",
+        "size_bytes": 1036
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/heck-0.5.0--heck-0.5.0--LICENSE-APACHE",
+      "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+      "size_bytes": 10847,
+      "upstream_source": {
+        "path": "LICENSE-APACHE",
+        "repository": "withoutboats/heck",
+        "revision": "070693322aee7c5c7fbee7c9964bf8d7d3a29c96",
+        "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+        "size_bytes": 10847
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/heck-0.5.0--heck-0.5.0--LICENSE-MIT",
+      "sha256": "7b63ecd5f1902af1b63729947373683c32745c16a10e8e6292e2e2dcd7e90ae0",
+      "size_bytes": 1071,
+      "upstream_source": {
+        "path": "LICENSE-MIT",
+        "repository": "withoutboats/heck",
+        "revision": "070693322aee7c5c7fbee7c9964bf8d7d3a29c96",
+        "sha256": "7b63ecd5f1902af1b63729947373683c32745c16a10e8e6292e2e2dcd7e90ae0",
+        "size_bytes": 1071
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/image-webp-0.2.4--image-webp-0.2.4--LICENSE-APACHE",
+      "sha256": "0d542e0c8804e39aa7f37eb00da5a762149dc682d7829451287e11b938e94594",
+      "size_bytes": 10174,
+      "upstream_source": {
+        "path": "LICENSE-APACHE",
+        "repository": "image-rs/image-webp",
+        "revision": "08b57d473c90148dd4b37a075df365afc3dfcc2b",
+        "sha256": "0d542e0c8804e39aa7f37eb00da5a762149dc682d7829451287e11b938e94594",
+        "size_bytes": 10174
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/image-webp-0.2.4--image-webp-0.2.4--LICENSE-MIT",
+      "sha256": "c77a4cf9da729987d0fe7ccd811e3bd27393914ddf3d23467c18cc22954513b3",
+      "size_bytes": 1036,
+      "upstream_source": {
+        "path": "LICENSE-MIT",
+        "repository": "image-rs/image-webp",
+        "revision": "08b57d473c90148dd4b37a075df365afc3dfcc2b",
+        "sha256": "c77a4cf9da729987d0fe7ccd811e3bd27393914ddf3d23467c18cc22954513b3",
+        "size_bytes": 1036
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/interpol-0.2.1--interpol-0.2.1--LICENSE",
+      "sha256": "eb699a2e5ea36a8a61194175d67616400479e76c1a96e2096da44065281cbaaa",
+      "size_bytes": 1072,
+      "upstream_source": {
+        "path": "LICENSE",
+        "repository": "tanakh/interpol",
+        "revision": "0cc8e1de9843b92b47ea2425b4ef8acd2a3a0fdc",
+        "sha256": "eb699a2e5ea36a8a61194175d67616400479e76c1a96e2096da44065281cbaaa",
+        "size_bytes": 1072
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/inventory-0.3.24--inventory-0.3.24--LICENSE-APACHE",
+      "sha256": "62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a",
+      "size_bytes": 9723,
+      "upstream_source": {
+        "path": "LICENSE-APACHE",
+        "repository": "dtolnay/inventory",
+        "revision": "d11c2796c973ee61fa971419b61cdeb500914941",
+        "sha256": "62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a",
+        "size_bytes": 9723
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/inventory-0.3.24--inventory-0.3.24--LICENSE-MIT",
+      "sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3",
+      "size_bytes": 1023,
+      "upstream_source": {
+        "path": "LICENSE-MIT",
+        "repository": "dtolnay/inventory",
+        "revision": "d11c2796c973ee61fa971419b61cdeb500914941",
+        "sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3",
+        "size_bytes": 1023
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/jpeg-encoder-0.7.0--jpeg-encoder-0.7.0--LICENSE-APACHE",
+      "sha256": "85a884980abd6032fc6b5439ba918ab16db9ac9051b5cf18db9c27c587df07c0",
+      "size_bytes": 10701,
+      "upstream_source": {
+        "path": "LICENSE-APACHE",
+        "repository": "vstroebel/jpeg-encoder",
+        "revision": "4e7b1e1b07093f62be1478131ca5d50b2b910413",
+        "sha256": "85a884980abd6032fc6b5439ba918ab16db9ac9051b5cf18db9c27c587df07c0",
+        "size_bytes": 10701
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/jpeg-encoder-0.7.0--jpeg-encoder-0.7.0--LICENSE-MIT",
+      "sha256": "4d022727ea392ebba2fe5e9a5f78c610a0eae506b491f3db29c78b6d430d6503",
+      "size_bytes": 1088,
+      "upstream_source": {
+        "path": "LICENSE-MIT",
+        "repository": "vstroebel/jpeg-encoder",
+        "revision": "4e7b1e1b07093f62be1478131ca5d50b2b910413",
+        "sha256": "4d022727ea392ebba2fe5e9a5f78c610a0eae506b491f3db29c78b6d430d6503",
+        "size_bytes": 1088
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/kiddo-5.3.2--kiddo-5.3.2--LICENSE-APACHE",
+      "sha256": "470355a7eed93fcc4281ec2e0f82ca3b94e7af1e4d83629f91de8cfac34d750e",
+      "size_bytes": 10846,
+      "upstream_source": {
+        "path": "LICENSE-APACHE",
+        "repository": "sdd/kiddo",
+        "revision": "ce7b753e5290c59032b5df6ae07bcb17a5af8c9b",
+        "sha256": "470355a7eed93fcc4281ec2e0f82ca3b94e7af1e4d83629f91de8cfac34d750e",
+        "size_bytes": 10846
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/kiddo-5.3.2--kiddo-5.3.2--LICENSE-MIT",
+      "sha256": "50a9962fefba5b80b8085d20fbdd36e8a0278aa694956a3834cec095f5904d60",
+      "size_bytes": 1107,
+      "upstream_source": {
+        "path": "LICENSE-MIT",
+        "repository": "sdd/kiddo",
+        "revision": "ce7b753e5290c59032b5df6ae07bcb17a5af8c9b",
+        "sha256": "50a9962fefba5b80b8085d20fbdd36e8a0278aa694956a3834cec095f5904d60",
+        "size_bytes": 1107
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/lazy_static-1.5.0--lazy_static-1.5.0--LICENSE-APACHE",
+      "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+      "size_bytes": 10847,
+      "upstream_source": {
+        "path": "LICENSE-APACHE",
+        "repository": "rust-lang-nursery/lazy-static.rs",
+        "revision": "be7c1c43f264699f956b70ce8e29941bd1e61bde",
+        "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+        "size_bytes": 10847
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/lazy_static-1.5.0--lazy_static-1.5.0--LICENSE-MIT",
+      "sha256": "0621878e61f0d0fda054bcbe02df75192c28bde1ecc8289cbd86aeba2dd72720",
+      "size_bytes": 1071,
+      "upstream_source": {
+        "path": "LICENSE-MIT",
+        "repository": "rust-lang-nursery/lazy-static.rs",
+        "revision": "be7c1c43f264699f956b70ce8e29941bd1e61bde",
+        "sha256": "0621878e61f0d0fda054bcbe02df75192c28bde1ecc8289cbd86aeba2dd72720",
+        "size_bytes": 1071
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/libc-0.2.186--libc-0.2.186--LICENSE-APACHE",
+      "sha256": "62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a",
+      "size_bytes": 9723,
+      "upstream_source": {
+        "path": "LICENSE-APACHE",
+        "repository": "rust-lang/libc",
+        "revision": "42620ffc4109dc32e02f1cae9e63a3f4311b4b71",
+        "sha256": "62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a",
+        "size_bytes": 9723
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/libc-0.2.186--libc-0.2.186--LICENSE-MIT",
+      "sha256": "123a331b5dbf04c30097fa43b8f858bc85df671fe776de498d01f3d6b7c1f69e",
+      "size_bytes": 1066,
+      "upstream_source": {
+        "path": "LICENSE-MIT",
+        "repository": "rust-lang/libc",
+        "revision": "42620ffc4109dc32e02f1cae9e63a3f4311b4b71",
+        "sha256": "123a331b5dbf04c30097fa43b8f858bc85df671fe776de498d01f3d6b7c1f69e",
+        "size_bytes": 1066
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/libm-0.2.16--libm-0.2.16--LICENSE.txt",
+      "sha256": "3823dda7cf046602f4b4e77ec8e227863dc4736037cc85bb33d9f19febe16bb7",
+      "size_bytes": 14088,
+      "upstream_source": {
+        "path": "LICENSE.txt",
+        "repository": "rust-lang/compiler-builtins",
+        "revision": "dfd2203a4d6110820ad7bb65cafe1bf331a03a3d",
+        "sha256": "3823dda7cf046602f4b4e77ec8e227863dc4736037cc85bb33d9f19febe16bb7",
+        "size_bytes": 14088
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/log-0.4.33--log-0.4.33--LICENSE-APACHE",
+      "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+      "size_bytes": 10847,
+      "upstream_source": {
+        "path": "LICENSE-APACHE",
+        "repository": "rust-lang/log",
+        "revision": "f405739f3a15a3f00680c793e1e1fa7e57d26ba4",
+        "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+        "size_bytes": 10847
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/log-0.4.33--log-0.4.33--LICENSE-MIT",
+      "sha256": "6485b8ed310d3f0340bf1ad1f47645069ce4069dcc6bb46c7d5c6faf41de1fdb",
+      "size_bytes": 1071,
+      "upstream_source": {
+        "path": "LICENSE-MIT",
+        "repository": "rust-lang/log",
+        "revision": "f405739f3a15a3f00680c793e1e1fa7e57d26ba4",
+        "sha256": "6485b8ed310d3f0340bf1ad1f47645069ce4069dcc6bb46c7d5c6faf41de1fdb",
+        "size_bytes": 1071
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/matrixmultiply-0.3.10--matrixmultiply-0.3.10--LICENSE-APACHE",
+      "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+      "size_bytes": 10847,
+      "upstream_source": {
+        "path": "LICENSE-APACHE",
+        "repository": "bluss/matrixmultiply",
+        "revision": "1c91e1c6993f7847b9523982f8d708ff6ed09bc0",
+        "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+        "size_bytes": 10847
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/matrixmultiply-0.3.10--matrixmultiply-0.3.10--LICENSE-MIT",
+      "sha256": "792d075c7bad6dac258a44e799eb64cbf465e24d9932d27669be08c5ec957e27",
+      "size_bytes": 1159,
+      "upstream_source": {
+        "path": "LICENSE-MIT",
+        "repository": "bluss/matrixmultiply",
+        "revision": "1c91e1c6993f7847b9523982f8d708ff6ed09bc0",
+        "sha256": "792d075c7bad6dac258a44e799eb64cbf465e24d9932d27669be08c5ec957e27",
+        "size_bytes": 1159
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/memchr-2.8.1--memchr-2.8.1--COPYING",
+      "sha256": "01c266bced4a434da0051174d6bee16a4c82cf634e2679b6155d40d75012390f",
+      "size_bytes": 126,
+      "upstream_source": {
+        "path": "COPYING",
+        "repository": "BurntSushi/memchr",
+        "revision": "ff7dca72388ade97ec536f550271fe5acab0a05f",
+        "sha256": "01c266bced4a434da0051174d6bee16a4c82cf634e2679b6155d40d75012390f",
+        "size_bytes": 126
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/memchr-2.8.1--memchr-2.8.1--LICENSE-MIT",
+      "sha256": "0f96a83840e146e43c0ec96a22ec1f392e0680e6c1226e6f3ba87e0740af850f",
+      "size_bytes": 1081,
+      "upstream_source": {
+        "path": "LICENSE-MIT",
+        "repository": "BurntSushi/memchr",
+        "revision": "ff7dca72388ade97ec536f550271fe5acab0a05f",
+        "sha256": "0f96a83840e146e43c0ec96a22ec1f392e0680e6c1226e6f3ba87e0740af850f",
+        "size_bytes": 1081
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/miniz_oxide-0.8.9--miniz_oxide-0.8.9--LICENSE",
+      "sha256": "4108245a1f2df9d4e94df8abed5b4ba0759bb2f9b40a6b939f1be141077ae50b",
+      "size_bytes": 1213,
+      "upstream_source": {
+        "path": "LICENSE",
+        "repository": "master/miniz_oxide",
+        "revision": "44e43c7786e379b2b1a7fde4aa0e63be719e583d",
+        "sha256": "4108245a1f2df9d4e94df8abed5b4ba0759bb2f9b40a6b939f1be141077ae50b",
+        "size_bytes": 1213
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/miniz_oxide-0.8.9--miniz_oxide-0.8.9--LICENSE-APACHE.md",
+      "sha256": "0d542e0c8804e39aa7f37eb00da5a762149dc682d7829451287e11b938e94594",
+      "size_bytes": 10174,
+      "upstream_source": {
+        "path": "LICENSE-APACHE.md",
+        "repository": "master/miniz_oxide",
+        "revision": "44e43c7786e379b2b1a7fde4aa0e63be719e583d",
+        "sha256": "0d542e0c8804e39aa7f37eb00da5a762149dc682d7829451287e11b938e94594",
+        "size_bytes": 10174
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/miniz_oxide-0.8.9--miniz_oxide-0.8.9--LICENSE-MIT.md",
+      "sha256": "799e9ca9d179295ef372f25d3769cdda7d25bb2668add6a6a1e22d1e4c678b8d",
+      "size_bytes": 1212,
+      "upstream_source": {
+        "path": "LICENSE-MIT.md",
+        "repository": "master/miniz_oxide",
+        "revision": "44e43c7786e379b2b1a7fde4aa0e63be719e583d",
+        "sha256": "799e9ca9d179295ef372f25d3769cdda7d25bb2668add6a6a1e22d1e4c678b8d",
+        "size_bytes": 1212
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/miniz_oxide-0.8.9--miniz_oxide-0.8.9--LICENSE-ZLIB.md",
+      "sha256": "0a54e647fe54104658b5e563c04c6f9edf251710e47bce692e0bd990a4ddaa39",
+      "size_bytes": 984,
+      "upstream_source": {
+        "path": "LICENSE-ZLIB.md",
+        "repository": "master/miniz_oxide",
+        "revision": "44e43c7786e379b2b1a7fde4aa0e63be719e583d",
+        "sha256": "0a54e647fe54104658b5e563c04c6f9edf251710e47bce692e0bd990a4ddaa39",
+        "size_bytes": 984
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/nalgebra-0.35.0--nalgebra-0.35.0--LICENSE",
+      "sha256": "ceacfa4d7fa67df64ab09a56fe248c50a3bfc9bc00374d69bd74ad763b14b89c",
+      "size_bytes": 11347,
+      "upstream_source": {
+        "path": "LICENSE",
+        "repository": "dimforge/nalgebra",
+        "revision": "5f927f6c821d0ced07a0e086e5f37251cab2a8c3",
+        "sha256": "ceacfa4d7fa67df64ab09a56fe248c50a3bfc9bc00374d69bd74ad763b14b89c",
+        "size_bytes": 11347
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/nalgebra-macros-0.3.0--nalgebra-macros-0.3.0--LICENSE",
+      "sha256": "ceacfa4d7fa67df64ab09a56fe248c50a3bfc9bc00374d69bd74ad763b14b89c",
+      "size_bytes": 11347,
+      "upstream_source": {
+        "path": "LICENSE",
+        "repository": "dimforge/nalgebra",
+        "revision": "631064a3bcdf0b307f23ab0853b8dadad52a7d37",
+        "sha256": "ceacfa4d7fa67df64ab09a56fe248c50a3bfc9bc00374d69bd74ad763b14b89c",
+        "size_bytes": 11347
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/nano-gemm-0.2.2--nano-gemm-0.2.2--upstream--LICENSE",
+      "sha256": "310b7323adcc27fc94c45d1155b6c89c17986576d790f766a04c855662428a7c",
+      "size_bytes": 1073,
+      "upstream_source": {
+        "path": "LICENSE",
+        "repository": "sarah-ek/nano-gemm",
+        "revision": "806b012a6f5ee0615042bf64675180fb97ff2ccc",
+        "sha256": "310b7323adcc27fc94c45d1155b6c89c17986576d790f766a04c855662428a7c",
+        "size_bytes": 1073
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/nano-gemm-c32-0.2.1--nano-gemm-c32-0.2.1--upstream--LICENSE",
+      "sha256": "310b7323adcc27fc94c45d1155b6c89c17986576d790f766a04c855662428a7c",
+      "size_bytes": 1073,
+      "upstream_source": {
+        "path": "LICENSE",
+        "repository": "sarah-ek/nano-gemm",
+        "revision": "d5f1cd77f0af31fb90aa0d128a76e2366c5dabc7",
+        "sha256": "310b7323adcc27fc94c45d1155b6c89c17986576d790f766a04c855662428a7c",
+        "size_bytes": 1073
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/nano-gemm-c64-0.2.1--nano-gemm-c64-0.2.1--upstream--LICENSE",
+      "sha256": "310b7323adcc27fc94c45d1155b6c89c17986576d790f766a04c855662428a7c",
+      "size_bytes": 1073,
+      "upstream_source": {
+        "path": "LICENSE",
+        "repository": "sarah-ek/nano-gemm",
+        "revision": "d5f1cd77f0af31fb90aa0d128a76e2366c5dabc7",
+        "sha256": "310b7323adcc27fc94c45d1155b6c89c17986576d790f766a04c855662428a7c",
+        "size_bytes": 1073
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/nano-gemm-codegen-0.2.1--nano-gemm-codegen-0.2.1--upstream--LICENSE",
+      "sha256": "310b7323adcc27fc94c45d1155b6c89c17986576d790f766a04c855662428a7c",
+      "size_bytes": 1073,
+      "upstream_source": {
+        "path": "LICENSE",
+        "repository": "sarah-ek/nano-gemm",
+        "revision": "d5f1cd77f0af31fb90aa0d128a76e2366c5dabc7",
+        "sha256": "310b7323adcc27fc94c45d1155b6c89c17986576d790f766a04c855662428a7c",
+        "size_bytes": 1073
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/nano-gemm-core-0.2.1--nano-gemm-core-0.2.1--upstream--LICENSE",
+      "sha256": "310b7323adcc27fc94c45d1155b6c89c17986576d790f766a04c855662428a7c",
+      "size_bytes": 1073,
+      "upstream_source": {
+        "path": "LICENSE",
+        "repository": "sarah-ek/nano-gemm",
+        "revision": "d5f1cd77f0af31fb90aa0d128a76e2366c5dabc7",
+        "sha256": "310b7323adcc27fc94c45d1155b6c89c17986576d790f766a04c855662428a7c",
+        "size_bytes": 1073
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/nano-gemm-f32-0.2.1--nano-gemm-f32-0.2.1--upstream--LICENSE",
+      "sha256": "310b7323adcc27fc94c45d1155b6c89c17986576d790f766a04c855662428a7c",
+      "size_bytes": 1073,
+      "upstream_source": {
+        "path": "LICENSE",
+        "repository": "sarah-ek/nano-gemm",
+        "revision": "d5f1cd77f0af31fb90aa0d128a76e2366c5dabc7",
+        "sha256": "310b7323adcc27fc94c45d1155b6c89c17986576d790f766a04c855662428a7c",
+        "size_bytes": 1073
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/nano-gemm-f64-0.2.1--nano-gemm-f64-0.2.1--upstream--LICENSE",
+      "sha256": "310b7323adcc27fc94c45d1155b6c89c17986576d790f766a04c855662428a7c",
+      "size_bytes": 1073,
+      "upstream_source": {
+        "path": "LICENSE",
+        "repository": "sarah-ek/nano-gemm",
+        "revision": "d5f1cd77f0af31fb90aa0d128a76e2366c5dabc7",
+        "sha256": "310b7323adcc27fc94c45d1155b6c89c17986576d790f766a04c855662428a7c",
+        "size_bytes": 1073
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/ndarray-0.16.1--LICENSE-APACHE",
+      "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+      "size_bytes": 10847,
+      "upstream_source": {
+        "path": "LICENSE-APACHE",
+        "repository": "rust-ndarray/ndarray",
+        "revision": "6f77377d7d508550bf516e54c142cee3ab243aeb",
+        "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+        "size_bytes": 10847
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/ndarray-0.16.1--LICENSE-MIT",
+      "sha256": "1fd6747d2c8e80f9fa766f57c5888864774621deb85cc2838ccaed727db32d45",
+      "size_bytes": 1119,
+      "upstream_source": {
+        "path": "LICENSE-MIT",
+        "repository": "rust-ndarray/ndarray",
+        "revision": "6f77377d7d508550bf516e54c142cee3ab243aeb",
+        "sha256": "1fd6747d2c8e80f9fa766f57c5888864774621deb85cc2838ccaed727db32d45",
+        "size_bytes": 1119
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/nu-ansi-term-0.50.3--nu-ansi-term-0.50.3--LICENSE",
+      "sha256": "284465860407420254e39be4e1bdcaaf2e7f2d18e06f9bab75bc75341a5d8501",
+      "size_bytes": 1157,
+      "upstream_source": {
+        "path": "LICENSE",
+        "repository": "nushell/nu-ansi-term",
+        "revision": "a23b71dae8efc17ca89d6bfe86134e15c3b157f5",
+        "sha256": "284465860407420254e39be4e1bdcaaf2e7f2d18e06f9bab75bc75341a5d8501",
+        "size_bytes": 1157
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/num-bigint-0.4.6--num-bigint-0.4.6--LICENSE-APACHE",
+      "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+      "size_bytes": 10847,
+      "upstream_source": {
+        "path": "LICENSE-APACHE",
+        "repository": "rust-num/num-bigint",
+        "revision": "a25836ec6c341d1aa40c97335842f330b6a62911",
+        "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+        "size_bytes": 10847
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/num-bigint-0.4.6--num-bigint-0.4.6--LICENSE-MIT",
+      "sha256": "6485b8ed310d3f0340bf1ad1f47645069ce4069dcc6bb46c7d5c6faf41de1fdb",
+      "size_bytes": 1071,
+      "upstream_source": {
+        "path": "LICENSE-MIT",
+        "repository": "rust-num/num-bigint",
+        "revision": "a25836ec6c341d1aa40c97335842f330b6a62911",
+        "sha256": "6485b8ed310d3f0340bf1ad1f47645069ce4069dcc6bb46c7d5c6faf41de1fdb",
+        "size_bytes": 1071
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/num-complex-0.4.6--num-complex-0.4.6--LICENSE-APACHE",
+      "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+      "size_bytes": 10847,
+      "upstream_source": {
+        "path": "LICENSE-APACHE",
+        "repository": "rust-num/num-complex",
+        "revision": "91fdc06356c0c868cb88b5a180859023c57e6e50",
+        "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+        "size_bytes": 10847
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/num-complex-0.4.6--num-complex-0.4.6--LICENSE-MIT",
+      "sha256": "6485b8ed310d3f0340bf1ad1f47645069ce4069dcc6bb46c7d5c6faf41de1fdb",
+      "size_bytes": 1071,
+      "upstream_source": {
+        "path": "LICENSE-MIT",
+        "repository": "rust-num/num-complex",
+        "revision": "91fdc06356c0c868cb88b5a180859023c57e6e50",
+        "sha256": "6485b8ed310d3f0340bf1ad1f47645069ce4069dcc6bb46c7d5c6faf41de1fdb",
+        "size_bytes": 1071
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/num-integer-0.1.46--num-integer-0.1.46--LICENSE-APACHE",
+      "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+      "size_bytes": 10847,
+      "upstream_source": {
+        "path": "LICENSE-APACHE",
+        "repository": "rust-num/num-integer",
+        "revision": "ede2d2cb993e55e7b1c992bfd22ecbf16601a652",
+        "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+        "size_bytes": 10847
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/num-integer-0.1.46--num-integer-0.1.46--LICENSE-MIT",
+      "sha256": "6485b8ed310d3f0340bf1ad1f47645069ce4069dcc6bb46c7d5c6faf41de1fdb",
+      "size_bytes": 1071,
+      "upstream_source": {
+        "path": "LICENSE-MIT",
+        "repository": "rust-num/num-integer",
+        "revision": "ede2d2cb993e55e7b1c992bfd22ecbf16601a652",
+        "sha256": "6485b8ed310d3f0340bf1ad1f47645069ce4069dcc6bb46c7d5c6faf41de1fdb",
+        "size_bytes": 1071
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/num-rational-0.4.2--num-rational-0.4.2--LICENSE-APACHE",
+      "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+      "size_bytes": 10847,
+      "upstream_source": {
+        "path": "LICENSE-APACHE",
+        "repository": "rust-num/num-rational",
+        "revision": "4d55ad22ac86ebbc4cb45d79a956e4a1f7af57d1",
+        "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+        "size_bytes": 10847
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/num-rational-0.4.2--num-rational-0.4.2--LICENSE-MIT",
+      "sha256": "6485b8ed310d3f0340bf1ad1f47645069ce4069dcc6bb46c7d5c6faf41de1fdb",
+      "size_bytes": 1071,
+      "upstream_source": {
+        "path": "LICENSE-MIT",
+        "repository": "rust-num/num-rational",
+        "revision": "4d55ad22ac86ebbc4cb45d79a956e4a1f7af57d1",
+        "sha256": "6485b8ed310d3f0340bf1ad1f47645069ce4069dcc6bb46c7d5c6faf41de1fdb",
+        "size_bytes": 1071
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/num-traits-0.2.19--num-traits-0.2.19--LICENSE-APACHE",
+      "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+      "size_bytes": 10847,
+      "upstream_source": {
+        "path": "LICENSE-APACHE",
+        "repository": "rust-num/num-traits",
+        "revision": "7ec3d41d39b28190ec1d42db38021107b3951f3a",
+        "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+        "size_bytes": 10847
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/num-traits-0.2.19--num-traits-0.2.19--LICENSE-MIT",
+      "sha256": "6485b8ed310d3f0340bf1ad1f47645069ce4069dcc6bb46c7d5c6faf41de1fdb",
+      "size_bytes": 1071,
+      "upstream_source": {
+        "path": "LICENSE-MIT",
+        "repository": "rust-num/num-traits",
+        "revision": "7ec3d41d39b28190ec1d42db38021107b3951f3a",
+        "sha256": "6485b8ed310d3f0340bf1ad1f47645069ce4069dcc6bb46c7d5c6faf41de1fdb",
+        "size_bytes": 1071
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/num_cpus-1.17.0--num_cpus-1.17.0--LICENSE-APACHE",
+      "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+      "size_bytes": 10847,
+      "upstream_source": {
+        "path": "LICENSE-APACHE",
+        "repository": "seanmonstar/num_cpus",
+        "revision": "342af76b486335e5a955c7314fc96cd104e7a17b",
+        "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+        "size_bytes": 10847
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/num_cpus-1.17.0--num_cpus-1.17.0--LICENSE-MIT",
+      "sha256": "391a5396cec6230bfabd4ef4eb2350eb895bc5efce377a2218f5702ed020d3e3",
+      "size_bytes": 1063,
+      "upstream_source": {
+        "path": "LICENSE-MIT",
+        "repository": "seanmonstar/num_cpus",
+        "revision": "342af76b486335e5a955c7314fc96cd104e7a17b",
+        "sha256": "391a5396cec6230bfabd4ef4eb2350eb895bc5efce377a2218f5702ed020d3e3",
+        "size_bytes": 1063
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/numpy-0.29.0--LICENSE",
+      "sha256": "57088c28c5ea50e729a06c3b04de70c41e496a5b753d75a744e2abbf60a2448f",
+      "size_bytes": 1321,
+      "upstream_source": {
+        "path": "LICENSE",
+        "repository": "PyO3/rust-numpy",
+        "revision": "4ef01021d01078dc89193ea6ddb8ab6c7d6525d3",
+        "sha256": "57088c28c5ea50e729a06c3b04de70c41e496a5b753d75a744e2abbf60a2448f",
+        "size_bytes": 1321
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/once_cell-1.21.4--once_cell-1.21.4--LICENSE-APACHE",
+      "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+      "size_bytes": 10847,
+      "upstream_source": {
+        "path": "LICENSE-APACHE",
+        "repository": "matklad/once_cell",
+        "revision": "80fe900b21f6d76c1a2ed74d3343e8a3a88c46d0",
+        "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+        "size_bytes": 10847
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/once_cell-1.21.4--once_cell-1.21.4--LICENSE-MIT",
+      "sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3",
+      "size_bytes": 1023,
+      "upstream_source": {
+        "path": "LICENSE-MIT",
+        "repository": "matklad/once_cell",
+        "revision": "80fe900b21f6d76c1a2ed74d3343e8a3a88c46d0",
+        "sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3",
+        "size_bytes": 1023
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/ordered-float-5.3.0--ordered-float-5.3.0--LICENSE-MIT",
+      "sha256": "f7715d38a3fa1b4ac97c5729740752505a39cb92ee83ab5b102aeb5eaa7cdea4",
+      "size_bytes": 1057,
+      "upstream_source": {
+        "path": "LICENSE-MIT",
+        "repository": "reem/rust-ordered-float",
+        "revision": "6cca9b87766aa086e4dde8e646f66aa975bdf757",
+        "sha256": "f7715d38a3fa1b4ac97c5729740752505a39cb92ee83ab5b102aeb5eaa7cdea4",
+        "size_bytes": 1057
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/paste-1.0.15--paste-1.0.15--LICENSE-APACHE",
+      "sha256": "62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a",
+      "size_bytes": 9723,
+      "upstream_source": {
+        "path": "LICENSE-APACHE",
+        "repository": "dtolnay/paste",
+        "revision": "a2c7e27875277450ed28147623ba5218dd23e732",
+        "sha256": "62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a",
+        "size_bytes": 9723
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/paste-1.0.15--paste-1.0.15--LICENSE-MIT",
+      "sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3",
+      "size_bytes": 1023,
+      "upstream_source": {
+        "path": "LICENSE-MIT",
+        "repository": "dtolnay/paste",
+        "revision": "a2c7e27875277450ed28147623ba5218dd23e732",
+        "sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3",
+        "size_bytes": 1023
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/pest-2.8.6--pest-2.8.6--LICENSE-APACHE",
+      "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+      "size_bytes": 10847,
+      "upstream_source": {
+        "path": "LICENSE-APACHE",
+        "repository": "pest-parser/pest",
+        "revision": "79dd30d11aab6f0fba3cd79bd48f456209b966b3",
+        "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+        "size_bytes": 10847
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/pest-2.8.6--pest-2.8.6--LICENSE-MIT",
+      "sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3",
+      "size_bytes": 1023,
+      "upstream_source": {
+        "path": "LICENSE-MIT",
+        "repository": "pest-parser/pest",
+        "revision": "79dd30d11aab6f0fba3cd79bd48f456209b966b3",
+        "sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3",
+        "size_bytes": 1023
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/pest_derive-2.8.6--pest_derive-2.8.6--LICENSE-APACHE",
+      "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+      "size_bytes": 10847,
+      "upstream_source": {
+        "path": "LICENSE-APACHE",
+        "repository": "pest-parser/pest",
+        "revision": "79dd30d11aab6f0fba3cd79bd48f456209b966b3",
+        "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+        "size_bytes": 10847
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/pest_derive-2.8.6--pest_derive-2.8.6--LICENSE-MIT",
+      "sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3",
+      "size_bytes": 1023,
+      "upstream_source": {
+        "path": "LICENSE-MIT",
+        "repository": "pest-parser/pest",
+        "revision": "79dd30d11aab6f0fba3cd79bd48f456209b966b3",
+        "sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3",
+        "size_bytes": 1023
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/pest_generator-2.8.6--pest_generator-2.8.6--LICENSE-APACHE",
+      "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+      "size_bytes": 10847,
+      "upstream_source": {
+        "path": "LICENSE-APACHE",
+        "repository": "pest-parser/pest",
+        "revision": "79dd30d11aab6f0fba3cd79bd48f456209b966b3",
+        "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+        "size_bytes": 10847
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/pest_generator-2.8.6--pest_generator-2.8.6--LICENSE-MIT",
+      "sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3",
+      "size_bytes": 1023,
+      "upstream_source": {
+        "path": "LICENSE-MIT",
+        "repository": "pest-parser/pest",
+        "revision": "79dd30d11aab6f0fba3cd79bd48f456209b966b3",
+        "sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3",
+        "size_bytes": 1023
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/pest_meta-2.8.6--pest_meta-2.8.6--LICENSE-APACHE",
+      "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+      "size_bytes": 10847,
+      "upstream_source": {
+        "path": "LICENSE-APACHE",
+        "repository": "pest-parser/pest",
+        "revision": "79dd30d11aab6f0fba3cd79bd48f456209b966b3",
+        "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+        "size_bytes": 10847
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/pest_meta-2.8.6--pest_meta-2.8.6--LICENSE-MIT",
+      "sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3",
+      "size_bytes": 1023,
+      "upstream_source": {
+        "path": "LICENSE-MIT",
+        "repository": "pest-parser/pest",
+        "revision": "79dd30d11aab6f0fba3cd79bd48f456209b966b3",
+        "sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3",
+        "size_bytes": 1023
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/pin-project-lite-0.2.17--pin-project-lite-0.2.17--LICENSE-APACHE",
+      "sha256": "0d542e0c8804e39aa7f37eb00da5a762149dc682d7829451287e11b938e94594",
+      "size_bytes": 10174,
+      "upstream_source": {
+        "path": "LICENSE-APACHE",
+        "repository": "taiki-e/pin-project-lite",
+        "revision": "3bdf763446aa78f90e3bdac1ef583e014832ab4c",
+        "sha256": "0d542e0c8804e39aa7f37eb00da5a762149dc682d7829451287e11b938e94594",
+        "size_bytes": 10174
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/pin-project-lite-0.2.17--pin-project-lite-0.2.17--LICENSE-MIT",
+      "sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3",
+      "size_bytes": 1023,
+      "upstream_source": {
+        "path": "LICENSE-MIT",
+        "repository": "taiki-e/pin-project-lite",
+        "revision": "3bdf763446aa78f90e3bdac1ef583e014832ab4c",
+        "sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3",
+        "size_bytes": 1023
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/pkg-config-0.3.33--pkg-config-0.3.33--LICENSE-APACHE",
+      "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+      "size_bytes": 10847,
+      "upstream_source": {
+        "path": "LICENSE-APACHE",
+        "repository": "rust-lang/pkg-config-rs",
+        "revision": "f4ac872e02f9e2c111c55f3ed0eee6284d41d50f",
+        "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+        "size_bytes": 10847
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/pkg-config-0.3.33--pkg-config-0.3.33--LICENSE-MIT",
+      "sha256": "378f5840b258e2779c39418f3f2d7b2ba96f1c7917dd6be0713f88305dbda397",
+      "size_bytes": 1057,
+      "upstream_source": {
+        "path": "LICENSE-MIT",
+        "repository": "rust-lang/pkg-config-rs",
+        "revision": "f4ac872e02f9e2c111c55f3ed0eee6284d41d50f",
+        "sha256": "378f5840b258e2779c39418f3f2d7b2ba96f1c7917dd6be0713f88305dbda397",
+        "size_bytes": 1057
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/png-0.18.1--png-0.18.1--LICENSE-APACHE",
+      "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+      "size_bytes": 10847,
+      "upstream_source": {
+        "path": "LICENSE-APACHE",
+        "repository": "image-rs/image-png",
+        "revision": "2a3f980245e3ae38b82ade96533e7b450e8477bb",
+        "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+        "size_bytes": 10847
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/png-0.18.1--png-0.18.1--LICENSE-MIT",
+      "sha256": "eaf40297c75da471f7cda1f3458e8d91b4b2ec866e609527a13acfa93b638652",
+      "size_bytes": 1048,
+      "upstream_source": {
+        "path": "LICENSE-MIT",
+        "repository": "image-rs/image-png",
+        "revision": "2a3f980245e3ae38b82ade96533e7b450e8477bb",
+        "sha256": "eaf40297c75da471f7cda1f3458e8d91b4b2ec866e609527a13acfa93b638652",
+        "size_bytes": 1048
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/ppv-lite86-0.2.21--ppv-lite86-0.2.21--LICENSE-APACHE",
+      "sha256": "0218327e7a480793ffdd4eb792379a9709e5c135c7ba267f709d6f6d4d70af0a",
+      "size_bytes": 10854,
+      "upstream_source": {
+        "path": "LICENSE-APACHE",
+        "repository": "cryptocorrosion/cryptocorrosion",
+        "revision": "000a6cd6bbcb0b091381dc5f8fe6d6efa480b818",
+        "sha256": "0218327e7a480793ffdd4eb792379a9709e5c135c7ba267f709d6f6d4d70af0a",
+        "size_bytes": 10854
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/ppv-lite86-0.2.21--ppv-lite86-0.2.21--LICENSE-MIT",
+      "sha256": "4cada0bd02ea3692eee6f16400d86c6508bbd3bafb2b65fed0419f36d4f83e8f",
+      "size_bytes": 1076,
+      "upstream_source": {
+        "path": "LICENSE-MIT",
+        "repository": "cryptocorrosion/cryptocorrosion",
+        "revision": "000a6cd6bbcb0b091381dc5f8fe6d6efa480b818",
+        "sha256": "4cada0bd02ea3692eee6f16400d86c6508bbd3bafb2b65fed0419f36d4f83e8f",
+        "size_bytes": 1076
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/private-gemm-x86-0.1.20--private-gemm-x86-0.1.20--LICENSE",
+      "sha256": "4263a9907c8e8d799f714d5cf2ec18663772f09e7eef3eeaaab074ea29ee1358",
+      "size_bytes": 1083,
+      "upstream_source": {
+        "path": "LICENSE",
+        "repository": "sarah-quinones/gemm-x64-v2",
+        "revision": "b161af1e7751a9b7978414d2419438b13c58a97b",
+        "sha256": "4263a9907c8e8d799f714d5cf2ec18663772f09e7eef3eeaaab074ea29ee1358",
+        "size_bytes": 1083
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/proc-macro2-1.0.106--proc-macro2-1.0.106--LICENSE-APACHE",
+      "sha256": "62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a",
+      "size_bytes": 9723,
+      "upstream_source": {
+        "path": "LICENSE-APACHE",
+        "repository": "dtolnay/proc-macro2",
+        "revision": "58ab776b95a4c2865554badbb6629c50971a9118",
+        "sha256": "62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a",
+        "size_bytes": 9723
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/proc-macro2-1.0.106--proc-macro2-1.0.106--LICENSE-MIT",
+      "sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3",
+      "size_bytes": 1023,
+      "upstream_source": {
+        "path": "LICENSE-MIT",
+        "repository": "dtolnay/proc-macro2",
+        "revision": "58ab776b95a4c2865554badbb6629c50971a9118",
+        "sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3",
+        "size_bytes": 1023
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/pulp-0.22.2--pulp-0.22.2--LICENSE",
+      "sha256": "d64f878c89bd5f1e5ada7e4aad57690b122727cf5229b7b87ea1980c188da1d9",
+      "size_bytes": 1062,
+      "upstream_source": {
+        "path": "LICENSE",
+        "repository": "sarah-quinones/pulp",
+        "revision": "10b6867c9a11e5002ebe79fb356d8951fc62b611",
+        "sha256": "d64f878c89bd5f1e5ada7e4aad57690b122727cf5229b7b87ea1980c188da1d9",
+        "size_bytes": 1062
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/pulp-wasm-simd-flag-0.1.0--pulp-wasm-simd-flag-0.1.0--upstream--LICENSE",
+      "sha256": "d64f878c89bd5f1e5ada7e4aad57690b122727cf5229b7b87ea1980c188da1d9",
+      "size_bytes": 1062,
+      "upstream_source": {
+        "path": "LICENSE",
+        "repository": "sarah-quinones/pulp",
+        "revision": "28ba9b9a75da773d9426f18019fed63eff0e591f",
+        "sha256": "d64f878c89bd5f1e5ada7e4aad57690b122727cf5229b7b87ea1980c188da1d9",
+        "size_bytes": 1062
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/py_literal-0.4.0--py_literal-0.4.0--LICENSE-APACHE",
+      "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+      "size_bytes": 11358,
+      "upstream_source": {
+        "path": "LICENSE-APACHE",
+        "repository": "jturner314/py_literal",
+        "revision": "368ccc27c9582a9b684d623f46d6ffb95c0c139c",
+        "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+        "size_bytes": 11358
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/py_literal-0.4.0--py_literal-0.4.0--LICENSE-MIT",
+      "sha256": "2113741119d38a3d20165a9d2f9fada98d3e8e9d8df6d901358519e630f9acda",
+      "size_bytes": 1083,
+      "upstream_source": {
+        "path": "LICENSE-MIT",
+        "repository": "jturner314/py_literal",
+        "revision": "368ccc27c9582a9b684d623f46d6ffb95c0c139c",
+        "sha256": "2113741119d38a3d20165a9d2f9fada98d3e8e9d8df6d901358519e630f9acda",
+        "size_bytes": 1083
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/pyo3-0.29.2--LICENSE-APACHE",
+      "sha256": "32c76dbe0e73d79100d5ece77c158399f2e2541bc5c78548a4ba45c1cb53c5c9",
+      "size_bytes": 9807,
+      "upstream_source": {
+        "path": "LICENSE-APACHE",
+        "repository": "pyo3/pyo3",
+        "revision": "a70d17f898df41b3d1632ee987f624f5222d8d39",
+        "sha256": "32c76dbe0e73d79100d5ece77c158399f2e2541bc5c78548a4ba45c1cb53c5c9",
+        "size_bytes": 9807
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/pyo3-0.29.2--LICENSE-MIT",
+      "sha256": "afcbe3b2e6b37172b5a9ca869ee4c0b8cdc09316e5d4384864154482c33e5af6",
+      "size_bytes": 1107,
+      "upstream_source": {
+        "path": "LICENSE-MIT",
+        "repository": "pyo3/pyo3",
+        "revision": "a70d17f898df41b3d1632ee987f624f5222d8d39",
+        "sha256": "afcbe3b2e6b37172b5a9ca869ee4c0b8cdc09316e5d4384864154482c33e5af6",
+        "size_bytes": 1107
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/pyo3-0.29.2--pyo3-runtime--LICENSE-APACHE",
+      "sha256": "32c76dbe0e73d79100d5ece77c158399f2e2541bc5c78548a4ba45c1cb53c5c9",
+      "size_bytes": 9807,
+      "upstream_source": {
+        "path": "pyo3-runtime/LICENSE-APACHE",
+        "repository": "pyo3/pyo3",
+        "revision": "a70d17f898df41b3d1632ee987f624f5222d8d39",
+        "sha256": "32c76dbe0e73d79100d5ece77c158399f2e2541bc5c78548a4ba45c1cb53c5c9",
+        "size_bytes": 9807
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/pyo3-0.29.2--pyo3-runtime--LICENSE-MIT",
+      "sha256": "afcbe3b2e6b37172b5a9ca869ee4c0b8cdc09316e5d4384864154482c33e5af6",
+      "size_bytes": 1107,
+      "upstream_source": {
+        "path": "pyo3-runtime/LICENSE-MIT",
+        "repository": "pyo3/pyo3",
+        "revision": "a70d17f898df41b3d1632ee987f624f5222d8d39",
+        "sha256": "afcbe3b2e6b37172b5a9ca869ee4c0b8cdc09316e5d4384864154482c33e5af6",
+        "size_bytes": 1107
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/pyo3-build-config-0.29.2--LICENSE-APACHE",
+      "sha256": "32c76dbe0e73d79100d5ece77c158399f2e2541bc5c78548a4ba45c1cb53c5c9",
+      "size_bytes": 9807,
+      "upstream_source": {
+        "path": "LICENSE-APACHE",
+        "repository": "pyo3/pyo3",
+        "revision": "a70d17f898df41b3d1632ee987f624f5222d8d39",
+        "sha256": "32c76dbe0e73d79100d5ece77c158399f2e2541bc5c78548a4ba45c1cb53c5c9",
+        "size_bytes": 9807
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/pyo3-build-config-0.29.2--LICENSE-MIT",
+      "sha256": "afcbe3b2e6b37172b5a9ca869ee4c0b8cdc09316e5d4384864154482c33e5af6",
+      "size_bytes": 1107,
+      "upstream_source": {
+        "path": "LICENSE-MIT",
+        "repository": "pyo3/pyo3",
+        "revision": "a70d17f898df41b3d1632ee987f624f5222d8d39",
+        "sha256": "afcbe3b2e6b37172b5a9ca869ee4c0b8cdc09316e5d4384864154482c33e5af6",
+        "size_bytes": 1107
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/pyo3-ffi-0.29.2--LICENSE-APACHE",
+      "sha256": "32c76dbe0e73d79100d5ece77c158399f2e2541bc5c78548a4ba45c1cb53c5c9",
+      "size_bytes": 9807,
+      "upstream_source": {
+        "path": "LICENSE-APACHE",
+        "repository": "pyo3/pyo3",
+        "revision": "a70d17f898df41b3d1632ee987f624f5222d8d39",
+        "sha256": "32c76dbe0e73d79100d5ece77c158399f2e2541bc5c78548a4ba45c1cb53c5c9",
+        "size_bytes": 9807
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/pyo3-ffi-0.29.2--LICENSE-MIT",
+      "sha256": "afcbe3b2e6b37172b5a9ca869ee4c0b8cdc09316e5d4384864154482c33e5af6",
+      "size_bytes": 1107,
+      "upstream_source": {
+        "path": "LICENSE-MIT",
+        "repository": "pyo3/pyo3",
+        "revision": "a70d17f898df41b3d1632ee987f624f5222d8d39",
+        "sha256": "afcbe3b2e6b37172b5a9ca869ee4c0b8cdc09316e5d4384864154482c33e5af6",
+        "size_bytes": 1107
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/pyo3-macros-0.29.2--LICENSE-APACHE",
+      "sha256": "32c76dbe0e73d79100d5ece77c158399f2e2541bc5c78548a4ba45c1cb53c5c9",
+      "size_bytes": 9807,
+      "upstream_source": {
+        "path": "LICENSE-APACHE",
+        "repository": "pyo3/pyo3",
+        "revision": "a70d17f898df41b3d1632ee987f624f5222d8d39",
+        "sha256": "32c76dbe0e73d79100d5ece77c158399f2e2541bc5c78548a4ba45c1cb53c5c9",
+        "size_bytes": 9807
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/pyo3-macros-0.29.2--LICENSE-MIT",
+      "sha256": "afcbe3b2e6b37172b5a9ca869ee4c0b8cdc09316e5d4384864154482c33e5af6",
+      "size_bytes": 1107,
+      "upstream_source": {
+        "path": "LICENSE-MIT",
+        "repository": "pyo3/pyo3",
+        "revision": "a70d17f898df41b3d1632ee987f624f5222d8d39",
+        "sha256": "afcbe3b2e6b37172b5a9ca869ee4c0b8cdc09316e5d4384864154482c33e5af6",
+        "size_bytes": 1107
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/pyo3-macros-backend-0.29.2--LICENSE-APACHE",
+      "sha256": "32c76dbe0e73d79100d5ece77c158399f2e2541bc5c78548a4ba45c1cb53c5c9",
+      "size_bytes": 9807,
+      "upstream_source": {
+        "path": "LICENSE-APACHE",
+        "repository": "pyo3/pyo3",
+        "revision": "a70d17f898df41b3d1632ee987f624f5222d8d39",
+        "sha256": "32c76dbe0e73d79100d5ece77c158399f2e2541bc5c78548a4ba45c1cb53c5c9",
+        "size_bytes": 9807
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/pyo3-macros-backend-0.29.2--LICENSE-MIT",
+      "sha256": "afcbe3b2e6b37172b5a9ca869ee4c0b8cdc09316e5d4384864154482c33e5af6",
+      "size_bytes": 1107,
+      "upstream_source": {
+        "path": "LICENSE-MIT",
+        "repository": "pyo3/pyo3",
+        "revision": "a70d17f898df41b3d1632ee987f624f5222d8d39",
+        "sha256": "afcbe3b2e6b37172b5a9ca869ee4c0b8cdc09316e5d4384864154482c33e5af6",
+        "size_bytes": 1107
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/qd-0.8.0--qd-0.8.0--LICENSE",
+      "sha256": "4263a9907c8e8d799f714d5cf2ec18663772f09e7eef3eeaaab074ea29ee1358",
+      "size_bytes": 1083,
+      "upstream_source": {
+        "path": "LICENSE",
+        "repository": "sarah-quinones/qd",
+        "revision": "e671c42f20d5b9b1bf036172bf74f02c5c91de30",
+        "sha256": "4263a9907c8e8d799f714d5cf2ec18663772f09e7eef3eeaaab074ea29ee1358",
+        "size_bytes": 1083
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/quick-error-2.0.1--quick-error-2.0.1--LICENSE-APACHE",
+      "sha256": "c6596eb7be8581c18be736c846fb9173b69eccf6ef94c5135893ec56bd92ba08",
+      "size_bytes": 11358,
+      "upstream_source": {
+        "path": "LICENSE-APACHE",
+        "repository": "tailhook/quick-error",
+        "revision": "25ab982bb0c43130ae48485151f4a232eeab7d0c",
+        "sha256": "c6596eb7be8581c18be736c846fb9173b69eccf6ef94c5135893ec56bd92ba08",
+        "size_bytes": 11358
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/quick-error-2.0.1--quick-error-2.0.1--LICENSE-MIT",
+      "sha256": "058f01fe181608d027fcde7e528fc03ea3cf90f30903c407644b0a9bbc54f500",
+      "size_bytes": 1070,
+      "upstream_source": {
+        "path": "LICENSE-MIT",
+        "repository": "tailhook/quick-error",
+        "revision": "25ab982bb0c43130ae48485151f4a232eeab7d0c",
+        "sha256": "058f01fe181608d027fcde7e528fc03ea3cf90f30903c407644b0a9bbc54f500",
+        "size_bytes": 1070
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/quick-xml-0.41.0--LICENSE-MIT.md",
+      "sha256": "5b2c207dcf571267ebe0bbdd5bf321f561ddc22ff597e7b363e96f4539507a29",
+      "size_bytes": 1105,
+      "upstream_source": {
+        "path": "LICENSE-MIT.md",
+        "repository": "tafia/quick-xml",
+        "revision": "4deda08abeffdc188c269360229cf47e12a77a9f",
+        "sha256": "5b2c207dcf571267ebe0bbdd5bf321f561ddc22ff597e7b363e96f4539507a29",
+        "size_bytes": 1105
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/quote-1.0.45--quote-1.0.45--LICENSE-APACHE",
+      "sha256": "62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a",
+      "size_bytes": 9723,
+      "upstream_source": {
+        "path": "LICENSE-APACHE",
+        "repository": "dtolnay/quote",
+        "revision": "842ffde933fdd76cd1681a288bed136d8b95a97a",
+        "sha256": "62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a",
+        "size_bytes": 9723
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/quote-1.0.45--quote-1.0.45--LICENSE-MIT",
+      "sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3",
+      "size_bytes": 1023,
+      "upstream_source": {
+        "path": "LICENSE-MIT",
+        "repository": "dtolnay/quote",
+        "revision": "842ffde933fdd76cd1681a288bed136d8b95a97a",
+        "sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3",
+        "size_bytes": 1023
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/rand-0.10.1--rand-0.10.1--COPYRIGHT",
+      "sha256": "90eb64f0279b0d9432accfa6023ff803bc4965212383697eee27a0f426d5f8d5",
+      "size_bytes": 569,
+      "upstream_source": {
+        "path": "COPYRIGHT",
+        "repository": "rust-random/rand",
+        "revision": "27ff4cb7ced3122a1f677fc248c1a07e59ddc8cd",
+        "sha256": "90eb64f0279b0d9432accfa6023ff803bc4965212383697eee27a0f426d5f8d5",
+        "size_bytes": 569
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/rand-0.10.1--rand-0.10.1--LICENSE-APACHE",
+      "sha256": "35242e7a83f69875e6edeff02291e688c97caafe2f8902e4e19b49d3e78b4cab",
+      "size_bytes": 9724,
+      "upstream_source": {
+        "path": "LICENSE-APACHE",
+        "repository": "rust-random/rand",
+        "revision": "27ff4cb7ced3122a1f677fc248c1a07e59ddc8cd",
+        "sha256": "35242e7a83f69875e6edeff02291e688c97caafe2f8902e4e19b49d3e78b4cab",
+        "size_bytes": 9724
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/rand-0.10.1--rand-0.10.1--LICENSE-MIT",
+      "sha256": "209fbbe0ad52d9235e37badf9cadfe4dbdc87203179c0899e738b39ade42177b",
+      "size_bytes": 1117,
+      "upstream_source": {
+        "path": "LICENSE-MIT",
+        "repository": "rust-random/rand",
+        "revision": "27ff4cb7ced3122a1f677fc248c1a07e59ddc8cd",
+        "sha256": "209fbbe0ad52d9235e37badf9cadfe4dbdc87203179c0899e738b39ade42177b",
+        "size_bytes": 1117
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/rand-0.8.6--rand-0.8.6--COPYRIGHT",
+      "sha256": "90eb64f0279b0d9432accfa6023ff803bc4965212383697eee27a0f426d5f8d5",
+      "size_bytes": 569,
+      "upstream_source": {
+        "path": "COPYRIGHT",
+        "repository": "rust-random/rand",
+        "revision": "5309f25bb5e7d21ac01c5b6f476badd06f9cdc3f",
+        "sha256": "90eb64f0279b0d9432accfa6023ff803bc4965212383697eee27a0f426d5f8d5",
+        "size_bytes": 569
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/rand-0.8.6--rand-0.8.6--LICENSE-APACHE",
+      "sha256": "35242e7a83f69875e6edeff02291e688c97caafe2f8902e4e19b49d3e78b4cab",
+      "size_bytes": 9724,
+      "upstream_source": {
+        "path": "LICENSE-APACHE",
+        "repository": "rust-random/rand",
+        "revision": "5309f25bb5e7d21ac01c5b6f476badd06f9cdc3f",
+        "sha256": "35242e7a83f69875e6edeff02291e688c97caafe2f8902e4e19b49d3e78b4cab",
+        "size_bytes": 9724
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/rand-0.8.6--rand-0.8.6--LICENSE-MIT",
+      "sha256": "209fbbe0ad52d9235e37badf9cadfe4dbdc87203179c0899e738b39ade42177b",
+      "size_bytes": 1117,
+      "upstream_source": {
+        "path": "LICENSE-MIT",
+        "repository": "rust-random/rand",
+        "revision": "5309f25bb5e7d21ac01c5b6f476badd06f9cdc3f",
+        "sha256": "209fbbe0ad52d9235e37badf9cadfe4dbdc87203179c0899e738b39ade42177b",
+        "size_bytes": 1117
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/rand-0.9.4--rand-0.9.4--COPYRIGHT",
+      "sha256": "90eb64f0279b0d9432accfa6023ff803bc4965212383697eee27a0f426d5f8d5",
+      "size_bytes": 569,
+      "upstream_source": {
+        "path": "COPYRIGHT",
+        "repository": "rust-random/rand",
+        "revision": "ba4c4c62d5a3dc73a5c975a53d9a139372c011cc",
+        "sha256": "90eb64f0279b0d9432accfa6023ff803bc4965212383697eee27a0f426d5f8d5",
+        "size_bytes": 569
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/rand-0.9.4--rand-0.9.4--LICENSE-APACHE",
+      "sha256": "35242e7a83f69875e6edeff02291e688c97caafe2f8902e4e19b49d3e78b4cab",
+      "size_bytes": 9724,
+      "upstream_source": {
+        "path": "LICENSE-APACHE",
+        "repository": "rust-random/rand",
+        "revision": "ba4c4c62d5a3dc73a5c975a53d9a139372c011cc",
+        "sha256": "35242e7a83f69875e6edeff02291e688c97caafe2f8902e4e19b49d3e78b4cab",
+        "size_bytes": 9724
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/rand-0.9.4--rand-0.9.4--LICENSE-MIT",
+      "sha256": "209fbbe0ad52d9235e37badf9cadfe4dbdc87203179c0899e738b39ade42177b",
+      "size_bytes": 1117,
+      "upstream_source": {
+        "path": "LICENSE-MIT",
+        "repository": "rust-random/rand",
+        "revision": "ba4c4c62d5a3dc73a5c975a53d9a139372c011cc",
+        "sha256": "209fbbe0ad52d9235e37badf9cadfe4dbdc87203179c0899e738b39ade42177b",
+        "size_bytes": 1117
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/rand_chacha-0.9.0--rand_chacha-0.9.0--COPYRIGHT",
+      "sha256": "90eb64f0279b0d9432accfa6023ff803bc4965212383697eee27a0f426d5f8d5",
+      "size_bytes": 569,
+      "upstream_source": {
+        "path": "COPYRIGHT",
+        "repository": "rust-random/rand",
+        "revision": "96f8df65ee6b4368d91a006f9c5b4a8050abae49",
+        "sha256": "90eb64f0279b0d9432accfa6023ff803bc4965212383697eee27a0f426d5f8d5",
+        "size_bytes": 569
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/rand_chacha-0.9.0--rand_chacha-0.9.0--LICENSE-APACHE",
+      "sha256": "35242e7a83f69875e6edeff02291e688c97caafe2f8902e4e19b49d3e78b4cab",
+      "size_bytes": 9724,
+      "upstream_source": {
+        "path": "LICENSE-APACHE",
+        "repository": "rust-random/rand",
+        "revision": "96f8df65ee6b4368d91a006f9c5b4a8050abae49",
+        "sha256": "35242e7a83f69875e6edeff02291e688c97caafe2f8902e4e19b49d3e78b4cab",
+        "size_bytes": 9724
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/rand_chacha-0.9.0--rand_chacha-0.9.0--LICENSE-MIT",
+      "sha256": "209fbbe0ad52d9235e37badf9cadfe4dbdc87203179c0899e738b39ade42177b",
+      "size_bytes": 1117,
+      "upstream_source": {
+        "path": "LICENSE-MIT",
+        "repository": "rust-random/rand",
+        "revision": "96f8df65ee6b4368d91a006f9c5b4a8050abae49",
+        "sha256": "209fbbe0ad52d9235e37badf9cadfe4dbdc87203179c0899e738b39ade42177b",
+        "size_bytes": 1117
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/rand_core-0.10.1--rand_core-0.10.1--COPYRIGHT",
+      "sha256": "92b81db30f7ab6d693e0af5661a40d273ca1947e891123ed823924192c10cbc7",
+      "size_bytes": 478,
+      "upstream_source": {
+        "path": "COPYRIGHT",
+        "repository": "rust-random/rand_core",
+        "revision": "5cd7df496d0bff1d95534ac8b66a2610f5bf7808",
+        "sha256": "92b81db30f7ab6d693e0af5661a40d273ca1947e891123ed823924192c10cbc7",
+        "size_bytes": 478
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/rand_core-0.10.1--rand_core-0.10.1--LICENSE-APACHE",
+      "sha256": "6df43f6f4b5d4587f3d8d71e45532c688fd168afa5fe89d571cb32fa09c4ef51",
+      "size_bytes": 10282,
+      "upstream_source": {
+        "path": "LICENSE-APACHE",
+        "repository": "rust-random/rand_core",
+        "revision": "5cd7df496d0bff1d95534ac8b66a2610f5bf7808",
+        "sha256": "6df43f6f4b5d4587f3d8d71e45532c688fd168afa5fe89d571cb32fa09c4ef51",
+        "size_bytes": 10282
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/rand_core-0.10.1--rand_core-0.10.1--LICENSE-MIT",
+      "sha256": "8b6e9feec03e7c9a5facb26855cecd31662bf989b636bcfe79521bdf8ac863f0",
+      "size_bytes": 1076,
+      "upstream_source": {
+        "path": "LICENSE-MIT",
+        "repository": "rust-random/rand_core",
+        "revision": "5cd7df496d0bff1d95534ac8b66a2610f5bf7808",
+        "sha256": "8b6e9feec03e7c9a5facb26855cecd31662bf989b636bcfe79521bdf8ac863f0",
+        "size_bytes": 1076
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/rand_core-0.6.4--rand_core-0.6.4--COPYRIGHT",
+      "sha256": "90eb64f0279b0d9432accfa6023ff803bc4965212383697eee27a0f426d5f8d5",
+      "size_bytes": 569,
+      "upstream_source": {
+        "path": "COPYRIGHT",
+        "repository": "rust-random/rand",
+        "revision": "89a1336b934c68ddce548127c6f8afd910b35a18",
+        "sha256": "90eb64f0279b0d9432accfa6023ff803bc4965212383697eee27a0f426d5f8d5",
+        "size_bytes": 569
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/rand_core-0.6.4--rand_core-0.6.4--LICENSE-APACHE",
+      "sha256": "6df43f6f4b5d4587f3d8d71e45532c688fd168afa5fe89d571cb32fa09c4ef51",
+      "size_bytes": 10282,
+      "upstream_source": {
+        "path": "LICENSE-APACHE",
+        "repository": "rust-random/rand",
+        "revision": "89a1336b934c68ddce548127c6f8afd910b35a18",
+        "sha256": "6df43f6f4b5d4587f3d8d71e45532c688fd168afa5fe89d571cb32fa09c4ef51",
+        "size_bytes": 10282
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/rand_core-0.6.4--rand_core-0.6.4--LICENSE-MIT",
+      "sha256": "209fbbe0ad52d9235e37badf9cadfe4dbdc87203179c0899e738b39ade42177b",
+      "size_bytes": 1117,
+      "upstream_source": {
+        "path": "LICENSE-MIT",
+        "repository": "rust-random/rand",
+        "revision": "89a1336b934c68ddce548127c6f8afd910b35a18",
+        "sha256": "209fbbe0ad52d9235e37badf9cadfe4dbdc87203179c0899e738b39ade42177b",
+        "size_bytes": 1117
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/rand_core-0.9.5--rand_core-0.9.5--COPYRIGHT",
+      "sha256": "90eb64f0279b0d9432accfa6023ff803bc4965212383697eee27a0f426d5f8d5",
+      "size_bytes": 569,
+      "upstream_source": {
+        "path": "COPYRIGHT",
+        "repository": "rust-random/rand",
+        "revision": "a34dab266970cd0986ecbefe6b5b7afa619234f4",
+        "sha256": "90eb64f0279b0d9432accfa6023ff803bc4965212383697eee27a0f426d5f8d5",
+        "size_bytes": 569
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/rand_core-0.9.5--rand_core-0.9.5--LICENSE-APACHE",
+      "sha256": "6df43f6f4b5d4587f3d8d71e45532c688fd168afa5fe89d571cb32fa09c4ef51",
+      "size_bytes": 10282,
+      "upstream_source": {
+        "path": "LICENSE-APACHE",
+        "repository": "rust-random/rand",
+        "revision": "a34dab266970cd0986ecbefe6b5b7afa619234f4",
+        "sha256": "6df43f6f4b5d4587f3d8d71e45532c688fd168afa5fe89d571cb32fa09c4ef51",
+        "size_bytes": 10282
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/rand_core-0.9.5--rand_core-0.9.5--LICENSE-MIT",
+      "sha256": "209fbbe0ad52d9235e37badf9cadfe4dbdc87203179c0899e738b39ade42177b",
+      "size_bytes": 1117,
+      "upstream_source": {
+        "path": "LICENSE-MIT",
+        "repository": "rust-random/rand",
+        "revision": "a34dab266970cd0986ecbefe6b5b7afa619234f4",
+        "sha256": "209fbbe0ad52d9235e37badf9cadfe4dbdc87203179c0899e738b39ade42177b",
+        "size_bytes": 1117
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/rand_distr-0.5.1--rand_distr-0.5.1--COPYRIGHT",
+      "sha256": "90eb64f0279b0d9432accfa6023ff803bc4965212383697eee27a0f426d5f8d5",
+      "size_bytes": 569,
+      "upstream_source": {
+        "path": "COPYRIGHT",
+        "repository": "rust-random/rand_distr",
+        "revision": "c5de6c776b9d7fed87138c5d1f70f5f8368aebca",
+        "sha256": "90eb64f0279b0d9432accfa6023ff803bc4965212383697eee27a0f426d5f8d5",
+        "size_bytes": 569
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/rand_distr-0.5.1--rand_distr-0.5.1--LICENSE-APACHE",
+      "sha256": "6df43f6f4b5d4587f3d8d71e45532c688fd168afa5fe89d571cb32fa09c4ef51",
+      "size_bytes": 10282,
+      "upstream_source": {
+        "path": "LICENSE-APACHE",
+        "repository": "rust-random/rand_distr",
+        "revision": "c5de6c776b9d7fed87138c5d1f70f5f8368aebca",
+        "sha256": "6df43f6f4b5d4587f3d8d71e45532c688fd168afa5fe89d571cb32fa09c4ef51",
+        "size_bytes": 10282
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/rand_distr-0.5.1--rand_distr-0.5.1--LICENSE-MIT",
+      "sha256": "a771e4354f6b3ad4c92da1a5c9a239b6c291527db869632ecea4f20e24ca1135",
+      "size_bytes": 1070,
+      "upstream_source": {
+        "path": "LICENSE-MIT",
+        "repository": "rust-random/rand_distr",
+        "revision": "c5de6c776b9d7fed87138c5d1f70f5f8368aebca",
+        "sha256": "a771e4354f6b3ad4c92da1a5c9a239b6c291527db869632ecea4f20e24ca1135",
+        "size_bytes": 1070
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/raw-cpuid-11.6.0--raw-cpuid-11.6.0--AUTHORS",
+      "sha256": "62fb7a7ae72a917b7e6bc2bbdb3a20987f1a52aa2d5ae10bb1033e3d7d071e38",
+      "size_bytes": 960,
+      "upstream_source": {
+        "path": "AUTHORS",
+        "repository": "gz/rust-cpuid",
+        "revision": "aefadf7dd8d9e37ad94171d617158cad2133f3f7",
+        "sha256": "62fb7a7ae72a917b7e6bc2bbdb3a20987f1a52aa2d5ae10bb1033e3d7d071e38",
+        "size_bytes": 960
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/raw-cpuid-11.6.0--raw-cpuid-11.6.0--LICENSE.md",
+      "sha256": "cdd45f4d0c552c3a51725728215919e0dedb1e1af250f130e7c2d60eef6721fe",
+      "size_bytes": 1080,
+      "upstream_source": {
+        "path": "LICENSE.md",
+        "repository": "gz/rust-cpuid",
+        "revision": "aefadf7dd8d9e37ad94171d617158cad2133f3f7",
+        "sha256": "cdd45f4d0c552c3a51725728215919e0dedb1e1af250f130e7c2d60eef6721fe",
+        "size_bytes": 1080
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/rawpointer-0.2.1--rawpointer-0.2.1--LICENSE-APACHE",
+      "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+      "size_bytes": 10847,
+      "upstream_source": {
+        "path": "LICENSE-APACHE",
+        "repository": "bluss/rawpointer",
+        "revision": "e4f5800e86acc8cb610430a3f361977480e2b0a6",
+        "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+        "size_bytes": 10847
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/rawpointer-0.2.1--rawpointer-0.2.1--LICENSE-MIT",
+      "sha256": "7576269ea71f767b99297934c0b2367532690f8c4badc695edf8e04ab6a1e545",
+      "size_bytes": 1043,
+      "upstream_source": {
+        "path": "LICENSE-MIT",
+        "repository": "bluss/rawpointer",
+        "revision": "e4f5800e86acc8cb610430a3f361977480e2b0a6",
+        "sha256": "7576269ea71f767b99297934c0b2367532690f8c4badc695edf8e04ab6a1e545",
+        "size_bytes": 1043
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/rayon-1.12.0--rayon-1.12.0--LICENSE-APACHE",
+      "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+      "size_bytes": 10847,
+      "upstream_source": {
+        "path": "LICENSE-APACHE",
+        "repository": "rayon-rs/rayon",
+        "revision": "c9ced185ae3508246a9eb70c8407a1199bb1b77f",
+        "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+        "size_bytes": 10847
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/rayon-1.12.0--rayon-1.12.0--LICENSE-MIT",
+      "sha256": "0621878e61f0d0fda054bcbe02df75192c28bde1ecc8289cbd86aeba2dd72720",
+      "size_bytes": 1071,
+      "upstream_source": {
+        "path": "LICENSE-MIT",
+        "repository": "rayon-rs/rayon",
+        "revision": "c9ced185ae3508246a9eb70c8407a1199bb1b77f",
+        "sha256": "0621878e61f0d0fda054bcbe02df75192c28bde1ecc8289cbd86aeba2dd72720",
+        "size_bytes": 1071
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/rayon-core-1.13.0--rayon-core-1.13.0--LICENSE-APACHE",
+      "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+      "size_bytes": 10847,
+      "upstream_source": {
+        "path": "LICENSE-APACHE",
+        "repository": "rayon-rs/rayon",
+        "revision": "7af20d7692d5decbcb4adcaa079cd607e3e50814",
+        "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+        "size_bytes": 10847
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/rayon-core-1.13.0--rayon-core-1.13.0--LICENSE-MIT",
+      "sha256": "0621878e61f0d0fda054bcbe02df75192c28bde1ecc8289cbd86aeba2dd72720",
+      "size_bytes": 1071,
+      "upstream_source": {
+        "path": "LICENSE-MIT",
+        "repository": "rayon-rs/rayon",
+        "revision": "7af20d7692d5decbcb4adcaa079cd607e3e50814",
+        "sha256": "0621878e61f0d0fda054bcbe02df75192c28bde1ecc8289cbd86aeba2dd72720",
+        "size_bytes": 1071
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/reborrow-0.5.5--reborrow-0.5.5--LICENSE",
+      "sha256": "bf5a93d1014429b43e01c57d45bea928748fbf37d059306145a1a0a91aec2014",
+      "size_bytes": 1062,
+      "upstream_source": {
+        "path": "LICENSE",
+        "repository": "sarah-ek/reborrow",
+        "revision": "6688d1cce5f1155791a30012a127b34119c4179b",
+        "sha256": "bf5a93d1014429b43e01c57d45bea928748fbf37d059306145a1a0a91aec2014",
+        "size_bytes": 1062
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/rustc-hash-2.1.2--rustc-hash-2.1.2--LICENSE-APACHE",
+      "sha256": "95bd3988beee069fa2848f648dab43cc6e0b2add2ad6bcb17360caf749802bcc",
+      "size_bytes": 9722,
+      "upstream_source": {
+        "path": "LICENSE-APACHE",
+        "repository": "rust-lang/rustc-hash",
+        "revision": "fdb275c8a0135403067ce1c4be8e97e53c473764",
+        "sha256": "95bd3988beee069fa2848f648dab43cc6e0b2add2ad6bcb17360caf749802bcc",
+        "size_bytes": 9722
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/rustc-hash-2.1.2--rustc-hash-2.1.2--LICENSE-MIT",
+      "sha256": "30fefc3a7d6a0041541858293bcbea2dde4caa4c0a5802f996a7f7e8c0085652",
+      "size_bytes": 1022,
+      "upstream_source": {
+        "path": "LICENSE-MIT",
+        "repository": "rust-lang/rustc-hash",
+        "revision": "fdb275c8a0135403067ce1c4be8e97e53c473764",
+        "sha256": "30fefc3a7d6a0041541858293bcbea2dde4caa4c0a5802f996a7f7e8c0085652",
+        "size_bytes": 1022
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/rustversion-1.0.22--rustversion-1.0.22--LICENSE-APACHE",
+      "sha256": "62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a",
+      "size_bytes": 9723,
+      "upstream_source": {
+        "path": "LICENSE-APACHE",
+        "repository": "dtolnay/rustversion",
+        "revision": "9e86f839b6a34a7d9398f243d88bf400b7fa1f7c",
+        "sha256": "62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a",
+        "size_bytes": 9723
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/rustversion-1.0.22--rustversion-1.0.22--LICENSE-MIT",
+      "sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3",
+      "size_bytes": 1023,
+      "upstream_source": {
+        "path": "LICENSE-MIT",
+        "repository": "dtolnay/rustversion",
+        "revision": "9e86f839b6a34a7d9398f243d88bf400b7fa1f7c",
+        "sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3",
+        "size_bytes": 1023
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/safe_arch-1.0.0--safe_arch-1.0.0--LICENSE-APACHE.md",
+      "sha256": "e3ba223bb1423f0aad8c3dfce0fe3148db48926d41e6fbc3afbbf5ff9e1c89cb",
+      "size_bytes": 10398,
+      "upstream_source": {
+        "path": "LICENSE-APACHE.md",
+        "repository": "Lokathor/safe_arch",
+        "revision": "69c1aa03040c11660553554c5177bf50be1e44db",
+        "sha256": "e3ba223bb1423f0aad8c3dfce0fe3148db48926d41e6fbc3afbbf5ff9e1c89cb",
+        "size_bytes": 10398
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/safe_arch-1.0.0--safe_arch-1.0.0--LICENSE-MIT.md",
+      "sha256": "e57011537d230b14e790f6666dc00816f7b371ebbd7da8a12491e51086fec278",
+      "size_bytes": 1110,
+      "upstream_source": {
+        "path": "LICENSE-MIT.md",
+        "repository": "Lokathor/safe_arch",
+        "revision": "69c1aa03040c11660553554c5177bf50be1e44db",
+        "sha256": "e57011537d230b14e790f6666dc00816f7b371ebbd7da8a12491e51086fec278",
+        "size_bytes": 1110
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/safe_arch-1.0.0--safe_arch-1.0.0--LICENSE-ZLIB.md",
+      "sha256": "c43b9a9b1387ed53d2c49263838261129a010e280e3a174a792242c3e2c98db9",
+      "size_bytes": 851,
+      "upstream_source": {
+        "path": "LICENSE-ZLIB.md",
+        "repository": "Lokathor/safe_arch",
+        "revision": "69c1aa03040c11660553554c5177bf50be1e44db",
+        "sha256": "c43b9a9b1387ed53d2c49263838261129a010e280e3a174a792242c3e2c98db9",
+        "size_bytes": 851
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/seq-macro-0.3.6--seq-macro-0.3.6--LICENSE-APACHE",
+      "sha256": "62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a",
+      "size_bytes": 9723,
+      "upstream_source": {
+        "path": "LICENSE-APACHE",
+        "repository": "dtolnay/seq-macro",
+        "revision": "828442657f65fbf3730763e0ecdcf5c7b1155399",
+        "sha256": "62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a",
+        "size_bytes": 9723
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/seq-macro-0.3.6--seq-macro-0.3.6--LICENSE-MIT",
+      "sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3",
+      "size_bytes": 1023,
+      "upstream_source": {
+        "path": "LICENSE-MIT",
+        "repository": "dtolnay/seq-macro",
+        "revision": "828442657f65fbf3730763e0ecdcf5c7b1155399",
+        "sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3",
+        "size_bytes": 1023
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/serde-1.0.228--serde-1.0.228--LICENSE-APACHE",
+      "sha256": "62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a",
+      "size_bytes": 9723,
+      "upstream_source": {
+        "path": "LICENSE-APACHE",
+        "repository": "serde-rs/serde",
+        "revision": "a866b336f14aa57a07f0d0be9f8762746e64ecb4",
+        "sha256": "62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a",
+        "size_bytes": 9723
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/serde-1.0.228--serde-1.0.228--LICENSE-MIT",
+      "sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3",
+      "size_bytes": 1023,
+      "upstream_source": {
+        "path": "LICENSE-MIT",
+        "repository": "serde-rs/serde",
+        "revision": "a866b336f14aa57a07f0d0be9f8762746e64ecb4",
+        "sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3",
+        "size_bytes": 1023
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/serde_core-1.0.228--serde_core-1.0.228--LICENSE-APACHE",
+      "sha256": "62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a",
+      "size_bytes": 9723,
+      "upstream_source": {
+        "path": "LICENSE-APACHE",
+        "repository": "serde-rs/serde",
+        "revision": "a866b336f14aa57a07f0d0be9f8762746e64ecb4",
+        "sha256": "62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a",
+        "size_bytes": 9723
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/serde_core-1.0.228--serde_core-1.0.228--LICENSE-MIT",
+      "sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3",
+      "size_bytes": 1023,
+      "upstream_source": {
+        "path": "LICENSE-MIT",
+        "repository": "serde-rs/serde",
+        "revision": "a866b336f14aa57a07f0d0be9f8762746e64ecb4",
+        "sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3",
+        "size_bytes": 1023
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/serde_derive-1.0.228--serde_derive-1.0.228--LICENSE-APACHE",
+      "sha256": "62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a",
+      "size_bytes": 9723,
+      "upstream_source": {
+        "path": "LICENSE-APACHE",
+        "repository": "serde-rs/serde",
+        "revision": "a866b336f14aa57a07f0d0be9f8762746e64ecb4",
+        "sha256": "62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a",
+        "size_bytes": 9723
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/serde_derive-1.0.228--serde_derive-1.0.228--LICENSE-MIT",
+      "sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3",
+      "size_bytes": 1023,
+      "upstream_source": {
+        "path": "LICENSE-MIT",
+        "repository": "serde-rs/serde",
+        "revision": "a866b336f14aa57a07f0d0be9f8762746e64ecb4",
+        "sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3",
+        "size_bytes": 1023
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/sha2-0.10.9--sha2-0.10.9--LICENSE-APACHE",
+      "sha256": "a9040321c3712d8fd0b09cf52b17445de04a23a10165049ae187cd39e5c86be5",
+      "size_bytes": 10849,
+      "upstream_source": {
+        "path": "LICENSE-APACHE",
+        "repository": "RustCrypto/hashes",
+        "revision": "82c36a428f8d6f05f3bfccdedb243e9d1f85359d",
+        "sha256": "a9040321c3712d8fd0b09cf52b17445de04a23a10165049ae187cd39e5c86be5",
+        "size_bytes": 10849
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/sha2-0.10.9--sha2-0.10.9--LICENSE-MIT",
+      "sha256": "b4eb00df6e2a4d22518fcaa6a2b4646f249b3a3c9814509b22bd2091f1392ff1",
+      "size_bytes": 1138,
+      "upstream_source": {
+        "path": "LICENSE-MIT",
+        "repository": "RustCrypto/hashes",
+        "revision": "82c36a428f8d6f05f3bfccdedb243e9d1f85359d",
+        "sha256": "b4eb00df6e2a4d22518fcaa6a2b4646f249b3a3c9814509b22bd2091f1392ff1",
+        "size_bytes": 1138
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/sharded-slab-0.1.7--sharded-slab-0.1.7--LICENSE",
+      "sha256": "eafbfa606bc005ed7fd2f623d65af17ffe4ef7c017221ac14405bf4140771ea9",
+      "size_bytes": 1057,
+      "upstream_source": {
+        "path": "LICENSE",
+        "repository": "hawkw/sharded-slab",
+        "revision": "40579b92debe2ef283a455eb379945e023080ff3",
+        "sha256": "eafbfa606bc005ed7fd2f623d65af17ffe4ef7c017221ac14405bf4140771ea9",
+        "size_bytes": 1057
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/shlex-2.0.1--shlex-2.0.1--LICENSE-APACHE",
+      "sha256": "553fffcd9b1cb158bc3e9edc35da85ca5c3b3d7d2e61c883ebcfa8a65814b583",
+      "size_bytes": 566,
+      "upstream_source": {
+        "path": "LICENSE-APACHE",
+        "repository": "comex/rust-shlex",
+        "revision": "e82b1411beb7c92871c2c078c9ab415bbcf207ef",
+        "sha256": "553fffcd9b1cb158bc3e9edc35da85ca5c3b3d7d2e61c883ebcfa8a65814b583",
+        "size_bytes": 566
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/shlex-2.0.1--shlex-2.0.1--LICENSE-MIT",
+      "sha256": "4455bf75a91154108304cb283e0fea9948c14f13e20d60887cf2552449dea3b1",
+      "size_bytes": 1092,
+      "upstream_source": {
+        "path": "LICENSE-MIT",
+        "repository": "comex/rust-shlex",
+        "revision": "e82b1411beb7c92871c2c078c9ab415bbcf207ef",
+        "sha256": "4455bf75a91154108304cb283e0fea9948c14f13e20d60887cf2552449dea3b1",
+        "size_bytes": 1092
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/simba-0.10.0--simba-0.10.0--LICENSE",
+      "sha256": "ceacfa4d7fa67df64ab09a56fe248c50a3bfc9bc00374d69bd74ad763b14b89c",
+      "size_bytes": 11347,
+      "upstream_source": {
+        "path": "LICENSE",
+        "repository": "dimforge/simba",
+        "revision": "9a415d906ebe6146051cb3e1fa9be0e8b830b8ca",
+        "sha256": "ceacfa4d7fa67df64ab09a56fe248c50a3bfc9bc00374d69bd74ad763b14b89c",
+        "size_bytes": 11347
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/simd-adler32-0.3.9--simd-adler32-0.3.9--LICENSE.md",
+      "sha256": "42a35170233e83e18856792e748de4c1ce4a63b2afce9a370c89ef3fe23f9f2d",
+      "size_bytes": 1078,
+      "upstream_source": {
+        "path": "LICENSE.md",
+        "repository": "mcountryman/simd-adler32",
+        "revision": "0b94f6a278f5662f24d311c9c1f16bcf272b7f43",
+        "sha256": "42a35170233e83e18856792e748de4c1ce4a63b2afce9a370c89ef3fe23f9f2d",
+        "size_bytes": 1078
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/smallvec-1.15.1--smallvec-1.15.1--LICENSE-APACHE",
+      "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+      "size_bytes": 10847,
+      "upstream_source": {
+        "path": "LICENSE-APACHE",
+        "repository": "servo/rust-smallvec",
+        "revision": "d0f47a3ea99296498ee940b5d99f59b403c498a2",
+        "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+        "size_bytes": 10847
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/smallvec-1.15.1--smallvec-1.15.1--LICENSE-MIT",
+      "sha256": "0b28172679e0009b655da42797c03fd163a3379d5cfa67ba1f1655e974a2a1a9",
+      "size_bytes": 1072,
+      "upstream_source": {
+        "path": "LICENSE-MIT",
+        "repository": "servo/rust-smallvec",
+        "revision": "d0f47a3ea99296498ee940b5d99f59b403c498a2",
+        "sha256": "0b28172679e0009b655da42797c03fd163a3379d5cfa67ba1f1655e974a2a1a9",
+        "size_bytes": 1072
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/sorted-vec-0.8.10--sorted-vec-0.8.10--LICENSE",
+      "sha256": "e7b5a75ffce5a74f992b73379ddf6a7b69d47012f265334dae39bb4c6fa7d921",
+      "size_bytes": 11343,
+      "upstream_source": {
+        "path": "LICENSE",
+        "repository": "spearman/sorted-vec",
+        "revision": "66950c05ff8061b7a8e0f1810a117c508e21ecb6",
+        "sha256": "e7b5a75ffce5a74f992b73379ddf6a7b69d47012f265334dae39bb4c6fa7d921",
+        "size_bytes": 11343
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/spindle-0.2.6--spindle-0.2.6--LICENSE",
+      "sha256": "4263a9907c8e8d799f714d5cf2ec18663772f09e7eef3eeaaab074ea29ee1358",
+      "size_bytes": 1083,
+      "upstream_source": {
+        "path": "LICENSE",
+        "repository": "sarah-quinones/spindle",
+        "revision": "bcabf4e4f3a1443dae9d2fa657ef3db50dd5e6db",
+        "sha256": "4263a9907c8e8d799f714d5cf2ec18663772f09e7eef3eeaaab074ea29ee1358",
+        "size_bytes": 1083
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/syn-1.0.109--syn-1.0.109--LICENSE-APACHE",
+      "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+      "size_bytes": 10847,
+      "upstream_source": {
+        "path": "LICENSE-APACHE",
+        "repository": "dtolnay/syn",
+        "revision": "bfa790b8e445dc67b7ab94d75adb1a92d6296c9a",
+        "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+        "size_bytes": 10847
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/syn-1.0.109--syn-1.0.109--LICENSE-MIT",
+      "sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3",
+      "size_bytes": 1023,
+      "upstream_source": {
+        "path": "LICENSE-MIT",
+        "repository": "dtolnay/syn",
+        "revision": "bfa790b8e445dc67b7ab94d75adb1a92d6296c9a",
+        "sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3",
+        "size_bytes": 1023
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/syn-2.0.117--syn-2.0.117--LICENSE-APACHE",
+      "sha256": "62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a",
+      "size_bytes": 9723,
+      "upstream_source": {
+        "path": "LICENSE-APACHE",
+        "repository": "dtolnay/syn",
+        "revision": "7bcb37cdb3399977658c8b52d2441d37e42e48f2",
+        "sha256": "62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a",
+        "size_bytes": 9723
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/syn-2.0.117--syn-2.0.117--LICENSE-MIT",
+      "sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3",
+      "size_bytes": 1023,
+      "upstream_source": {
+        "path": "LICENSE-MIT",
+        "repository": "dtolnay/syn",
+        "revision": "7bcb37cdb3399977658c8b52d2441d37e42e48f2",
+        "sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3",
+        "size_bytes": 1023
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/target-lexicon-0.13.5--target-lexicon-0.13.5--LICENSE",
+      "sha256": "268872b9816f90fd8e85db5a28d33f8150ebb8dd016653fb39ef1f94f2686bc5",
+      "size_bytes": 12243,
+      "upstream_source": {
+        "path": "LICENSE",
+        "repository": "bytecodealliance/target-lexicon",
+        "revision": "6647bd7d681d3e218c88568d8285dfd8cae2dd97",
+        "sha256": "268872b9816f90fd8e85db5a28d33f8150ebb8dd016653fb39ef1f94f2686bc5",
+        "size_bytes": 12243
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/thiserror-1.0.69--thiserror-1.0.69--LICENSE-APACHE",
+      "sha256": "62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a",
+      "size_bytes": 9723,
+      "upstream_source": {
+        "path": "LICENSE-APACHE",
+        "repository": "dtolnay/thiserror",
+        "revision": "41938bd3a03a70d34ed8e53d99c89c770c7c9c41",
+        "sha256": "62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a",
+        "size_bytes": 9723
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/thiserror-1.0.69--thiserror-1.0.69--LICENSE-MIT",
+      "sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3",
+      "size_bytes": 1023,
+      "upstream_source": {
+        "path": "LICENSE-MIT",
+        "repository": "dtolnay/thiserror",
+        "revision": "41938bd3a03a70d34ed8e53d99c89c770c7c9c41",
+        "sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3",
+        "size_bytes": 1023
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/thiserror-2.0.18--thiserror-2.0.18--LICENSE-APACHE",
+      "sha256": "62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a",
+      "size_bytes": 9723,
+      "upstream_source": {
+        "path": "LICENSE-APACHE",
+        "repository": "dtolnay/thiserror",
+        "revision": "dc0f6a23a3fb6ae34ef117133ec43650450c4b32",
+        "sha256": "62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a",
+        "size_bytes": 9723
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/thiserror-2.0.18--thiserror-2.0.18--LICENSE-MIT",
+      "sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3",
+      "size_bytes": 1023,
+      "upstream_source": {
+        "path": "LICENSE-MIT",
+        "repository": "dtolnay/thiserror",
+        "revision": "dc0f6a23a3fb6ae34ef117133ec43650450c4b32",
+        "sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3",
+        "size_bytes": 1023
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/thiserror-impl-1.0.69--thiserror-impl-1.0.69--LICENSE-APACHE",
+      "sha256": "62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a",
+      "size_bytes": 9723,
+      "upstream_source": {
+        "path": "LICENSE-APACHE",
+        "repository": "dtolnay/thiserror",
+        "revision": "41938bd3a03a70d34ed8e53d99c89c770c7c9c41",
+        "sha256": "62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a",
+        "size_bytes": 9723
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/thiserror-impl-1.0.69--thiserror-impl-1.0.69--LICENSE-MIT",
+      "sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3",
+      "size_bytes": 1023,
+      "upstream_source": {
+        "path": "LICENSE-MIT",
+        "repository": "dtolnay/thiserror",
+        "revision": "41938bd3a03a70d34ed8e53d99c89c770c7c9c41",
+        "sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3",
+        "size_bytes": 1023
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/thiserror-impl-2.0.18--thiserror-impl-2.0.18--LICENSE-APACHE",
+      "sha256": "62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a",
+      "size_bytes": 9723,
+      "upstream_source": {
+        "path": "LICENSE-APACHE",
+        "repository": "dtolnay/thiserror",
+        "revision": "dc0f6a23a3fb6ae34ef117133ec43650450c4b32",
+        "sha256": "62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a",
+        "size_bytes": 9723
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/thiserror-impl-2.0.18--thiserror-impl-2.0.18--LICENSE-MIT",
+      "sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3",
+      "size_bytes": 1023,
+      "upstream_source": {
+        "path": "LICENSE-MIT",
+        "repository": "dtolnay/thiserror",
+        "revision": "dc0f6a23a3fb6ae34ef117133ec43650450c4b32",
+        "sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3",
+        "size_bytes": 1023
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/thread_local-1.1.9--thread_local-1.1.9--LICENSE-APACHE",
+      "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+      "size_bytes": 10847,
+      "upstream_source": {
+        "path": "LICENSE-APACHE",
+        "repository": "Amanieu/thread_local-rs",
+        "revision": "4b7cc0f30b81b768fafc4b0ef4d541bfc94a0433",
+        "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+        "size_bytes": 10847
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/thread_local-1.1.9--thread_local-1.1.9--LICENSE-MIT",
+      "sha256": "c9a75f18b9ab2927829a208fc6aa2cf4e63b8420887ba29cdb265d6619ae82d5",
+      "size_bytes": 1071,
+      "upstream_source": {
+        "path": "LICENSE-MIT",
+        "repository": "Amanieu/thread_local-rs",
+        "revision": "4b7cc0f30b81b768fafc4b0ef4d541bfc94a0433",
+        "sha256": "c9a75f18b9ab2927829a208fc6aa2cf4e63b8420887ba29cdb265d6619ae82d5",
+        "size_bytes": 1071
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/tiff-0.11.3--tiff-0.11.3--LICENSE",
+      "sha256": "20c097d0de27e2adc179140a3d542091951a030699c7e1c78655f2a2d08d4e3e",
+      "size_bytes": 1073,
+      "upstream_source": {
+        "path": "LICENSE",
+        "repository": "image-rs/image-tiff",
+        "revision": "e41159ce058bf193718b017599e2d7d53e9ccc92",
+        "sha256": "20c097d0de27e2adc179140a3d542091951a030699c7e1c78655f2a2d08d4e3e",
+        "size_bytes": 1073
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/tiff-0.11.3--tiff-0.11.3--tests--COPYRIGHT",
+      "sha256": "c6d1d56bb6e2fe4f0aed4aa8553261dd65247db6db50c87c9e9f3fbe095e2202",
+      "size_bytes": 513,
+      "upstream_source": {
+        "path": "tests/COPYRIGHT",
+        "repository": "image-rs/image-tiff",
+        "revision": "e41159ce058bf193718b017599e2d7d53e9ccc92",
+        "sha256": "c6d1d56bb6e2fe4f0aed4aa8553261dd65247db6db50c87c9e9f3fbe095e2202",
+        "size_bytes": 513
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/tracing-0.1.44--tracing-0.1.44--LICENSE",
+      "sha256": "898b1ae9821e98daf8964c8d6c7f61641f5f5aa78ad500020771c0939ee0dea1",
+      "size_bytes": 1062,
+      "upstream_source": {
+        "path": "LICENSE",
+        "repository": "tokio-rs/tracing",
+        "revision": "2d55f6faf9be83e7e4634129fb96813241aac2b8",
+        "sha256": "898b1ae9821e98daf8964c8d6c7f61641f5f5aa78ad500020771c0939ee0dea1",
+        "size_bytes": 1062
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/tracing-attributes-0.1.31--tracing-attributes-0.1.31--LICENSE",
+      "sha256": "898b1ae9821e98daf8964c8d6c7f61641f5f5aa78ad500020771c0939ee0dea1",
+      "size_bytes": 1062,
+      "upstream_source": {
+        "path": "LICENSE",
+        "repository": "tokio-rs/tracing",
+        "revision": "55086231ec4aaeffcaab9932e696f40278f06bd1",
+        "sha256": "898b1ae9821e98daf8964c8d6c7f61641f5f5aa78ad500020771c0939ee0dea1",
+        "size_bytes": 1062
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/tracing-core-0.1.36--tracing-core-0.1.36--LICENSE",
+      "sha256": "898b1ae9821e98daf8964c8d6c7f61641f5f5aa78ad500020771c0939ee0dea1",
+      "size_bytes": 1062,
+      "upstream_source": {
+        "path": "LICENSE",
+        "repository": "tokio-rs/tracing",
+        "revision": "10a9e838a35e6ded79d66af246be2ee05417136d",
+        "sha256": "898b1ae9821e98daf8964c8d6c7f61641f5f5aa78ad500020771c0939ee0dea1",
+        "size_bytes": 1062
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/tracing-core-0.1.36--tracing-core-0.1.36--src--spin--LICENSE",
+      "sha256": "58545fed1565e42d687aecec6897d35c6d37ccb71479a137c0deb2203e125c79",
+      "size_bytes": 1085,
+      "upstream_source": {
+        "path": "src/spin/LICENSE",
+        "repository": "tokio-rs/tracing",
+        "revision": "10a9e838a35e6ded79d66af246be2ee05417136d",
+        "sha256": "58545fed1565e42d687aecec6897d35c6d37ccb71479a137c0deb2203e125c79",
+        "size_bytes": 1085
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/tracing-log-0.2.0--tracing-log-0.2.0--LICENSE",
+      "sha256": "898b1ae9821e98daf8964c8d6c7f61641f5f5aa78ad500020771c0939ee0dea1",
+      "size_bytes": 1062,
+      "upstream_source": {
+        "path": "LICENSE",
+        "repository": "tokio-rs/tracing",
+        "revision": "4161d8137d4f6117f17b110b0ec022d9350bf8e6",
+        "sha256": "898b1ae9821e98daf8964c8d6c7f61641f5f5aa78ad500020771c0939ee0dea1",
+        "size_bytes": 1062
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/tracing-subscriber-0.3.23--tracing-subscriber-0.3.23--LICENSE",
+      "sha256": "898b1ae9821e98daf8964c8d6c7f61641f5f5aa78ad500020771c0939ee0dea1",
+      "size_bytes": 1062,
+      "upstream_source": {
+        "path": "LICENSE",
+        "repository": "tokio-rs/tracing",
+        "revision": "54ede4d5d85a536aed5485c5213011d9ec961935",
+        "sha256": "898b1ae9821e98daf8964c8d6c7f61641f5f5aa78ad500020771c0939ee0dea1",
+        "size_bytes": 1062
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/turbojpeg-1.4.0--turbojpeg-1.4.0--LICENSE",
+      "sha256": "1c99d306def307c6e570615a484c65e6eafdd7717913f42118b65847830c5123",
+      "size_bytes": 1060,
+      "upstream_source": {
+        "path": "LICENSE",
+        "repository": "honzasp/rust-turbojpeg",
+        "revision": "864e11b752ff1a6f2a8301a606348e0e58ccb600",
+        "sha256": "1c99d306def307c6e570615a484c65e6eafdd7717913f42118b65847830c5123",
+        "size_bytes": 1060
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/turbojpeg-sys-1.2.0--turbojpeg-sys-1.2.0--libjpeg-turbo--LICENSE.md",
+      "sha256": "96f5b328adbb78eeaaec6980d73fd558cb1e4d62560ed615646bc3cf5e532430",
+      "size_bytes": 5620,
+      "upstream_source": {
+        "path": "libjpeg-turbo/LICENSE.md",
+        "repository": "rust-turbojpeg/turbojpeg-sys",
+        "revision": "05da705c6b6147baec1834a4c1f0de5e1df2614b",
+        "sha256": "96f5b328adbb78eeaaec6980d73fd558cb1e4d62560ed615646bc3cf5e532430",
+        "size_bytes": 5620
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/turbojpeg-sys-1.2.0--turbojpeg-sys-1.2.0--libjpeg-turbo--release--License.rtf",
+      "sha256": "d26120ab237f87dea10aa4fa7fd4243cadffd26e54eb2f3903d5fb0f8ed336b2",
+      "size_bytes": 2178,
+      "upstream_source": {
+        "path": "libjpeg-turbo/release/License.rtf",
+        "repository": "rust-turbojpeg/turbojpeg-sys",
+        "revision": "05da705c6b6147baec1834a4c1f0de5e1df2614b",
+        "sha256": "d26120ab237f87dea10aa4fa7fd4243cadffd26e54eb2f3903d5fb0f8ed336b2",
+        "size_bytes": 2178
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/typenum-1.20.1--typenum-1.20.1--LICENSE",
+      "sha256": "db11fec9946737df39ca3898d9cd8c10ec6f6c3a884a6802b0ad0b81b4e8f23a",
+      "size_bytes": 17,
+      "upstream_source": {
+        "path": "LICENSE",
+        "repository": "paholg/typenum",
+        "revision": "0db9a0f731981f29266b63586c29fa07e4477b1a",
+        "sha256": "db11fec9946737df39ca3898d9cd8c10ec6f6c3a884a6802b0ad0b81b4e8f23a",
+        "size_bytes": 17
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/typenum-1.20.1--typenum-1.20.1--LICENSE-APACHE",
+      "sha256": "516b24e051bf5630880ebbd55c40a25ce9552ebaf8970a53e8976eb70e522406",
+      "size_bytes": 10835,
+      "upstream_source": {
+        "path": "LICENSE-APACHE",
+        "repository": "paholg/typenum",
+        "revision": "0db9a0f731981f29266b63586c29fa07e4477b1a",
+        "sha256": "516b24e051bf5630880ebbd55c40a25ce9552ebaf8970a53e8976eb70e522406",
+        "size_bytes": 10835
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/typenum-1.20.1--typenum-1.20.1--LICENSE-MIT",
+      "sha256": "a825bd853ab71619a4923d7b4311221427848070ff44d990da39b0b274c1683f",
+      "size_bytes": 1083,
+      "upstream_source": {
+        "path": "LICENSE-MIT",
+        "repository": "paholg/typenum",
+        "revision": "0db9a0f731981f29266b63586c29fa07e4477b1a",
+        "sha256": "a825bd853ab71619a4923d7b4311221427848070ff44d990da39b0b274c1683f",
+        "size_bytes": 1083
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/ucd-trie-0.1.7--ucd-trie-0.1.7--LICENSE-APACHE",
+      "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+      "size_bytes": 10847,
+      "upstream_source": {
+        "path": "LICENSE-APACHE",
+        "repository": "BurntSushi/ucd-generate",
+        "revision": "6035dbb69169e68c9fcf309f9d16676aae4a16ae",
+        "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+        "size_bytes": 10847
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/ucd-trie-0.1.7--ucd-trie-0.1.7--LICENSE-MIT",
+      "sha256": "0f96a83840e146e43c0ec96a22ec1f392e0680e6c1226e6f3ba87e0740af850f",
+      "size_bytes": 1081,
+      "upstream_source": {
+        "path": "LICENSE-MIT",
+        "repository": "BurntSushi/ucd-generate",
+        "revision": "6035dbb69169e68c9fcf309f9d16676aae4a16ae",
+        "sha256": "0f96a83840e146e43c0ec96a22ec1f392e0680e6c1226e6f3ba87e0740af850f",
+        "size_bytes": 1081
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/unicode-ident-1.0.24--unicode-ident-1.0.24--LICENSE-APACHE",
+      "sha256": "62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a",
+      "size_bytes": 9723,
+      "upstream_source": {
+        "path": "LICENSE-APACHE",
+        "repository": "dtolnay/unicode-ident",
+        "revision": "5b54a632702b5744a1c40ea01c127c0ac0498172",
+        "sha256": "62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a",
+        "size_bytes": 9723
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/unicode-ident-1.0.24--unicode-ident-1.0.24--LICENSE-MIT",
+      "sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3",
+      "size_bytes": 1023,
+      "upstream_source": {
+        "path": "LICENSE-MIT",
+        "repository": "dtolnay/unicode-ident",
+        "revision": "5b54a632702b5744a1c40ea01c127c0ac0498172",
+        "sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3",
+        "size_bytes": 1023
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/unicode-ident-1.0.24--unicode-ident-1.0.24--LICENSE-UNICODE",
+      "sha256": "f7db81051789b729fea528a63ec4c938fdcb93d9d61d97dc8cc2e9df6d47f2a1",
+      "size_bytes": 1995,
+      "upstream_source": {
+        "path": "LICENSE-UNICODE",
+        "repository": "dtolnay/unicode-ident",
+        "revision": "5b54a632702b5744a1c40ea01c127c0ac0498172",
+        "sha256": "f7db81051789b729fea528a63ec4c938fdcb93d9d61d97dc8cc2e9df6d47f2a1",
+        "size_bytes": 1995
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/unty-0.0.4--unty-0.0.4--LICENSE-APACHE",
+      "sha256": "fa84f04c495f2533ba036606acc8644b50077752f17bc2e943235459dda1c12c",
+      "size_bytes": 11541,
+      "upstream_source": {
+        "path": "LICENSE-APACHE",
+        "repository": "bincode-org/unty",
+        "revision": "5455639ae05f42202a270f16bb4d79f6791d9b70",
+        "sha256": "fa84f04c495f2533ba036606acc8644b50077752f17bc2e943235459dda1c12c",
+        "size_bytes": 11541
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/unty-0.0.4--unty-0.0.4--LICENSE-MIT",
+      "sha256": "ac1e6e437cd571f6b450abd33dc055cf26dfb0fe2a72952c3ef6ae3844549c12",
+      "size_bytes": 1085,
+      "upstream_source": {
+        "path": "LICENSE-MIT",
+        "repository": "bincode-org/unty",
+        "revision": "5455639ae05f42202a270f16bb4d79f6791d9b70",
+        "sha256": "ac1e6e437cd571f6b450abd33dc055cf26dfb0fe2a72952c3ef6ae3844549c12",
+        "size_bytes": 1085
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/version_check-0.9.5--version_check-0.9.5--LICENSE-APACHE",
+      "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+      "size_bytes": 10847,
+      "upstream_source": {
+        "path": "LICENSE-APACHE",
+        "repository": "SergioBenitez/version_check",
+        "revision": "d77ef9f27cc336719b2d839d09ee6635dd22f758",
+        "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+        "size_bytes": 10847
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/version_check-0.9.5--version_check-0.9.5--LICENSE-MIT",
+      "sha256": "b7e650f3fce5c53249d1cdc608b54df156a97edd636cf9d23498d0cfe7aec63e",
+      "size_bytes": 1085,
+      "upstream_source": {
+        "path": "LICENSE-MIT",
+        "repository": "SergioBenitez/version_check",
+        "revision": "d77ef9f27cc336719b2d839d09ee6635dd22f758",
+        "sha256": "b7e650f3fce5c53249d1cdc608b54df156a97edd636cf9d23498d0cfe7aec63e",
+        "size_bytes": 1085
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/virtue-0.0.18--virtue-0.0.18--LICENSE.md",
+      "sha256": "ddcbb6914b62d5bebc3cb58ebe8d2738ffa9a48555469bbcbe65159979b878cf",
+      "size_bytes": 1103,
+      "upstream_source": {
+        "path": "LICENSE.md",
+        "repository": "bincode-org/virtue",
+        "revision": "1ecc01325a038c4f28aa8de25caae7c6eb91c66f",
+        "sha256": "ddcbb6914b62d5bebc3cb58ebe8d2738ffa9a48555469bbcbe65159979b878cf",
+        "size_bytes": 1103
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/weezl-0.1.12--weezl-0.1.12--LICENSE-APACHE",
+      "sha256": "769f80b5bcb42ed0af4e4d2fd74e1ac9bf843cb80c5a29219d1ef3544428a6bb",
+      "size_bytes": 10846,
+      "upstream_source": {
+        "path": "LICENSE-APACHE",
+        "repository": "image-rs/weezl",
+        "revision": "c75ea1f6d935cc56bad8674396b7cb0dd7275f99",
+        "sha256": "769f80b5bcb42ed0af4e4d2fd74e1ac9bf843cb80c5a29219d1ef3544428a6bb",
+        "size_bytes": 10846
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/weezl-0.1.12--weezl-0.1.12--LICENSE-MIT",
+      "sha256": "573f5227db835cd30bbdd3aed3f82615f80119a4d5c82b4daf642dbfe2b6afde",
+      "size_bytes": 1080,
+      "upstream_source": {
+        "path": "LICENSE-MIT",
+        "repository": "image-rs/weezl",
+        "revision": "c75ea1f6d935cc56bad8674396b7cb0dd7275f99",
+        "sha256": "573f5227db835cd30bbdd3aed3f82615f80119a4d5c82b4daf642dbfe2b6afde",
+        "size_bytes": 1080
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/wide-1.5.0--wide-1.5.0--LICENSE-ZLIB.md",
+      "sha256": "c43b9a9b1387ed53d2c49263838261129a010e280e3a174a792242c3e2c98db9",
+      "size_bytes": 851,
+      "upstream_source": {
+        "path": "LICENSE-ZLIB.md",
+        "repository": "Lokathor/wide",
+        "revision": "dcfa3c5ba39ab340323c4e64570cc1c5db7321b7",
+        "sha256": "c43b9a9b1387ed53d2c49263838261129a010e280e3a174a792242c3e2c98db9",
+        "size_bytes": 851
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/zerocopy-0.8.50--zerocopy-0.8.50--LICENSE-APACHE",
+      "sha256": "9d185ac6703c4b0453974c0d85e9eee43e6941009296bb1f5eb0b54e2329e9f3",
+      "size_bytes": 11350,
+      "upstream_source": {
+        "path": "LICENSE-APACHE",
+        "repository": "google/zerocopy",
+        "revision": "f70e4224996ed73b2cd927719246361d977a629e",
+        "sha256": "9d185ac6703c4b0453974c0d85e9eee43e6941009296bb1f5eb0b54e2329e9f3",
+        "size_bytes": 11350
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/zerocopy-0.8.50--zerocopy-0.8.50--LICENSE-BSD",
+      "sha256": "83c1763356e822adde0a2cae748d938a73fdc263849ccff6b27776dff213bd32",
+      "size_bytes": 1275,
+      "upstream_source": {
+        "path": "LICENSE-BSD",
+        "repository": "google/zerocopy",
+        "revision": "f70e4224996ed73b2cd927719246361d977a629e",
+        "sha256": "83c1763356e822adde0a2cae748d938a73fdc263849ccff6b27776dff213bd32",
+        "size_bytes": 1275
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/zerocopy-0.8.50--zerocopy-0.8.50--LICENSE-MIT",
+      "sha256": "1a2f5c12ddc934d58956aa5dbdd3255fe55fd957633ab7d0d39e4f0daa73f7df",
+      "size_bytes": 1060,
+      "upstream_source": {
+        "path": "LICENSE-MIT",
+        "repository": "google/zerocopy",
+        "revision": "f70e4224996ed73b2cd927719246361d977a629e",
+        "sha256": "1a2f5c12ddc934d58956aa5dbdd3255fe55fd957633ab7d0d39e4f0daa73f7df",
+        "size_bytes": 1060
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/zerocopy-derive-0.8.50--zerocopy-derive-0.8.50--LICENSE-APACHE",
+      "sha256": "9d185ac6703c4b0453974c0d85e9eee43e6941009296bb1f5eb0b54e2329e9f3",
+      "size_bytes": 11350,
+      "upstream_source": {
+        "path": "LICENSE-APACHE",
+        "repository": "google/zerocopy",
+        "revision": "f70e4224996ed73b2cd927719246361d977a629e",
+        "sha256": "9d185ac6703c4b0453974c0d85e9eee43e6941009296bb1f5eb0b54e2329e9f3",
+        "size_bytes": 11350
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/zerocopy-derive-0.8.50--zerocopy-derive-0.8.50--LICENSE-BSD",
+      "sha256": "83c1763356e822adde0a2cae748d938a73fdc263849ccff6b27776dff213bd32",
+      "size_bytes": 1275,
+      "upstream_source": {
+        "path": "LICENSE-BSD",
+        "repository": "google/zerocopy",
+        "revision": "f70e4224996ed73b2cd927719246361d977a629e",
+        "sha256": "83c1763356e822adde0a2cae748d938a73fdc263849ccff6b27776dff213bd32",
+        "size_bytes": 1275
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/zerocopy-derive-0.8.50--zerocopy-derive-0.8.50--LICENSE-MIT",
+      "sha256": "1a2f5c12ddc934d58956aa5dbdd3255fe55fd957633ab7d0d39e4f0daa73f7df",
+      "size_bytes": 1060,
+      "upstream_source": {
+        "path": "LICENSE-MIT",
+        "repository": "google/zerocopy",
+        "revision": "f70e4224996ed73b2cd927719246361d977a629e",
+        "sha256": "1a2f5c12ddc934d58956aa5dbdd3255fe55fd957633ab7d0d39e4f0daa73f7df",
+        "size_bytes": 1060
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/zune-core-0.5.1--zune-core-0.5.1--LICENSE-APACHE",
+      "sha256": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4",
+      "size_bytes": 11357,
+      "upstream_source": {
+        "path": "LICENSE-APACHE",
+        "repository": "etemesi254/zune-image",
+        "revision": "bf30e1ecb9034964bfa251189173328a8a1380a8",
+        "sha256": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4",
+        "size_bytes": 11357
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/zune-core-0.5.1--zune-core-0.5.1--LICENSE-MIT",
+      "sha256": "d30047bca3b516639339a3c279bb84c3483124fb5a9dafe3c75056a85090e745",
+      "size_bytes": 1073,
+      "upstream_source": {
+        "path": "LICENSE-MIT",
+        "repository": "etemesi254/zune-image",
+        "revision": "bf30e1ecb9034964bfa251189173328a8a1380a8",
+        "sha256": "d30047bca3b516639339a3c279bb84c3483124fb5a9dafe3c75056a85090e745",
+        "size_bytes": 1073
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/zune-core-0.5.1--zune-core-0.5.1--LICENSE-ZLIB",
+      "sha256": "d201d14804d3bcd3b944147173175e4abfbd838b7c8069b6bd3452496bf13e6c",
+      "size_bytes": 859,
+      "upstream_source": {
+        "path": "LICENSE-ZLIB",
+        "repository": "etemesi254/zune-image",
+        "revision": "bf30e1ecb9034964bfa251189173328a8a1380a8",
+        "sha256": "d201d14804d3bcd3b944147173175e4abfbd838b7c8069b6bd3452496bf13e6c",
+        "size_bytes": 859
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/zune-jpeg-0.5.15--zune-jpeg-0.5.15--LICENSE-APACHE",
+      "sha256": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4",
+      "size_bytes": 11357,
+      "upstream_source": {
+        "path": "LICENSE-APACHE",
+        "repository": "crates/zune-jpeg",
+        "revision": "31d81fed7551c8ccea456d9d8e2b1fd8bebb6995",
+        "sha256": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4",
+        "size_bytes": 11357
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/zune-jpeg-0.5.15--zune-jpeg-0.5.15--LICENSE-MIT",
+      "sha256": "d30047bca3b516639339a3c279bb84c3483124fb5a9dafe3c75056a85090e745",
+      "size_bytes": 1073,
+      "upstream_source": {
+        "path": "LICENSE-MIT",
+        "repository": "crates/zune-jpeg",
+        "revision": "31d81fed7551c8ccea456d9d8e2b1fd8bebb6995",
+        "sha256": "d30047bca3b516639339a3c279bb84c3483124fb5a9dafe3c75056a85090e745",
+        "size_bytes": 1073
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/zune-jpeg-0.5.15--zune-jpeg-0.5.15--LICENSE-ZLIB",
+      "sha256": "d201d14804d3bcd3b944147173175e4abfbd838b7c8069b6bd3452496bf13e6c",
+      "size_bytes": 859,
+      "upstream_source": {
+        "path": "LICENSE-ZLIB",
+        "repository": "crates/zune-jpeg",
+        "revision": "31d81fed7551c8ccea456d9d8e2b1fd8bebb6995",
+        "sha256": "d201d14804d3bcd3b944147173175e4abfbd838b7c8069b6bd3452496bf13e6c",
+        "size_bytes": 859
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/dlpack-rs-0.3.4--LICENSE",
+      "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+      "size_bytes": 11358,
+      "upstream_source": {
+        "path": "LICENSE",
+        "repository": "Capsize-Games/dlpack-rs-maintenance",
+        "revision": "912352efb23bc1e41a7799e02f06e58e886ba6ce",
+        "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+        "size_bytes": 11358
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/little_exif-0.6.23--LICENSE-MIT",
+      "sha256": "ca6f234e215848ac16ae2242e9efbf52876984dd27c14ce4dcb076c80e9b94e2",
+      "size_bytes": 1073,
+      "upstream_source": {
+        "path": "LICENSE-MIT",
+        "repository": "Capsize-Games/little-exif-maintenance",
+        "revision": "d22b3b5d61c2e27363559082b037b448ae63bde9",
+        "sha256": "ca6f234e215848ac16ae2242e9efbf52876984dd27c14ce4dcb076c80e9b94e2",
+        "size_bytes": 1073
+      }
+    },
+    {
+      "path": "packaging/licenses/kornia-rs-0.2.0-capsize.2-supplement/notices/little_exif-0.6.23--LICENSE-APACHE",
+      "sha256": "9fbeec703d0b51e428036c62cec26fa0e42b1900f5abb07957669055ac3ee339",
+      "size_bytes": 11346,
+      "upstream_source": {
+        "path": "LICENSE-APACHE",
+        "repository": "Capsize-Games/little-exif-maintenance",
+        "revision": "d22b3b5d61c2e27363559082b037b448ae63bde9",
+        "sha256": "9fbeec703d0b51e428036c62cec26fa0e42b1900f5abb07957669055ac3ee339",
+        "size_bytes": 11346
+      }
+    }
+  ],
+  "license_source": "Exact Cargo.lock-selected registry crate archives and source revisions; notice bytes are preserved and SHA-256 bound in the full notice manifest.",
+  "package_source_evidence": {
+    "path": "kornia-rs-0.2.0+capsize.2/Cargo.lock",
+    "sha256": "c05866ecbe4dfc397dc485a901d86dde847b11673f28e287f0838b815e6e42cf"
+  },
+  "selected_wheel": {
+    "filename": "kornia_rs-0.2.0+capsize.2-cp313-cp313-manylinux_2_39_x86_64.whl",
+    "sha256": "b976d7383abfff07811f3d7c1659d3c209709a514ca8289f02dbb646018ca5f2"
+  },
+  "source_distribution": {
+    "filename": "kornia-rs-0.2.0+capsize.2.tar.gz",
+    "sha256": "4543ffa2295d5e3fdcc4741b6f1df7427f56eda03e3bd88d52be1982c0fed6bb"
+  },
+  "version": "0.2.0+capsize.2"
+}
