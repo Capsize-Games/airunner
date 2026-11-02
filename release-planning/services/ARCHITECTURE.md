@@ -220,9 +220,12 @@ The CORE candidate lock contains 51 distributions. Its readiness record binds
 the requirements, lock, exact-pin review inventory and builder review records
 by SHA-256. Completed source reviews without a concrete policy flag do not
 require an owner exception. Concrete unresolved flags and incomplete source
-reviews prevent installation or freezing. The current graph remains pending;
-metadata resolution and source-level tests do not establish an executable or
-Debian package acceptance result. The Debian exit checks are a clean target
+reviews prevent installation or freezing. As of 2026-11-02, all 51 locked
+distributions have recorded static source review and origin disposition. The
+readiness record permits isolated candidate installation and build work;
+artifact validation remains unrun. The visible input and whitelist inventory
+is in `DEPENDENCY_DECISIONS.md`. Metadata resolution and source-level tests do
+not establish an executable or Debian package acceptance result. The Debian exit checks are a clean target
 install, daemon health, command dispatch, restart and upgrade preservation,
 followed by source-bound apt promotion and downloaded-package verification.
 

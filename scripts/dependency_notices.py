@@ -526,7 +526,7 @@ def collect_dependency_notices(
         )
         distributions.append(record)
         for relative, content in files:
-            path = _safe_relative(relative, "dependency notice output path")
+            _safe_relative(relative, "dependency notice output path")
             if relative in copied:
                 raise DependencyNoticeError("dependency notice output path collision")
             copied[relative] = content
