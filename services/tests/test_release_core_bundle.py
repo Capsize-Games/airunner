@@ -384,3 +384,22 @@ def test_debian_binary_depends_on_frozen_closure_and_preserves_systemd_alias() -
     assert "services-core-bundle-spec.toml" in rules
     assert "AIRUNNER_CORE_PYTHON" in rules
     assert "ExecStart=/usr/bin/airunner-headless" in unit
+
+
+def test_core_optional_exclusions_do_not_waive_required_base_imports():
+    from linux_bundle_gates import _gate_missing
+
+    spec = inspect_linux_bundle.load_spec(ROOT / "packaging/linux/services-core-bundle-spec.toml")
+    missing = {"fastapi": [], "langchain_core": [], "DeepCache": [], "mypy.plugins": []}
+    failures, tolerated = _gate_missing(missing, spec["warn_allowlist"]["modules"], spec["code"]["exclude_modules"])
+    assert failures == ["unreviewed missing module: fastapi"]
+    assert set(tolerated) == {"langchain_core", "DeepCache", "mypy.plugins"}
+    assert not {"fastapi", "pydantic", "sqlalchemy", "requests"} & set(spec["code"]["exclude_modules"])
+
+
+def test_full_ml_profile_still_requires_its_backend_imports():
+    from linux_bundle_gates import _gate_missing
+
+    spec = inspect_linux_bundle.load_spec()
+    failures, _ = _gate_missing({"DeepCache": []}, spec["warn_allowlist"]["modules"], spec["code"]["exclude_modules"])
+    assert failures == ["unreviewed missing module: DeepCache"]

@@ -8,6 +8,7 @@ inspect CLI over scrubbed PYTHONPATH. CPU-only.
 from __future__ import annotations
 
 import subprocess
+import re
 import sys
 import types
 from pathlib import Path
@@ -170,12 +171,21 @@ def test_inspector_requires_opt_in_for_present_policy_payload(
 
 def _run_cli(bundle: Path, cwd: Path, expect: int, needle: str) -> None:
     """Run the inspect CLI with PYTHONPATH scrubbed; assert outcome."""
+    # Match the in-process synthetic fixture, which carries no installed
+    # dependency graph. Dedicated notice tests enforce production profiles.
+    fixture_source, changes = re.subn(
+        r"(?ms)^(\[dependency_notices\]\n.*?^required\s*=\s*)true",
+        r"\g<1>false", SPEC_PATH.read_text(), count=1,
+    )
+    assert changes == 1
+    fixture_spec = cwd / "inspect-fixture.toml"
+    fixture_spec.write_text(fixture_source)
     proc = subprocess.run(
         [
             sys.executable,
             str(SCRIPTS_DIR / "inspect_linux_bundle.py"),
             "--spec",
-            str(SPEC_PATH),
+            str(fixture_spec),
             str(bundle),
         ],
         capture_output=True,
