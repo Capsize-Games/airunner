@@ -1,0 +1,52 @@
+{
+  "schema_version": 1,
+  "repository": "Capsize-Games/airunner",
+  "workflow": ".github/workflows/cuda-build-image-inventory.yml",
+  "artifact": {
+    "run_id": 41457788526,
+    "source_revision": "feac066eb64a5d59b5cfc153011f424bf24b5c3f",
+    "id": 13148598556,
+    "name": "llama-cpp-python-cu129-sm120a",
+    "zip_sha256": "82289dc8be40047e1ac56c64d494c13762601c10615c0462aa09b9c3c3f609dd",
+    "created_at": "2026-11-02T14:15:36Z",
+    "expires_at": "2026-11-16T14:15:32Z",
+    "retention_days": 14
+  },
+  "wheel": {
+    "filename": "llama_cpp_python-0.3.21-py3-none-linux_x86_64.whl",
+    "sha256": "3f57994bfb0f2a1f7791933de4c1e49baef06255eac21fa7854340ad50fd0ae6",
+    "size_bytes": 150593689,
+    "name": "llama_cpp_python",
+    "version": "0.3.21",
+    "requires_python": ">=3.8",
+    "license": "MIT",
+    "tag": "py3-none-linux_x86_64",
+    "record_entries": 97,
+    "required_runtime_dependencies": [
+      "typing-extensions>=4.5.0",
+      "numpy>=1.20.0",
+      "diskcache>=5.6.1",
+      "jinja2>=2.11.3"
+    ]
+  },
+  "build": {
+    "wrapper_commit": "d2bcbac46605f11d382426dd88d67e8b5c124cd7",
+    "llama_cpp_commit": "f53577432541bb9edc1588c4ef45c66bf07e4468",
+    "cuda_image": "nvidia/cuda:12.9.2-devel-ubuntu24.04@sha256:16656a1ef115bca9e1f820c6349876f1486d2b3c9a0e615773799fe402960dc5",
+    "cuda_arch": "120a-real",
+    "network_during_compile": "none",
+    "model_or_gpu_execution": "none",
+    "source_date_epoch": "1777269304",
+    "cmake_archive_sha256": "5a1133ff103c71eb5120e2cc3de922733e7d8a26a98ae716397e8676adb367bf",
+    "backend_wheels": {
+      "pip-26.2.2-py3-none-any.whl": "fd7f4dfa8190e014013b9f08f3e973f4e4c26ffd179a204895533a7254813a70",
+      "scikit_build_core-1.1.1-py3-none-any.whl": "6f6d6cf600e2e9639fd258ecd11cfc19bd189354b968916a519c6793e7e26237",
+      "pathspec-1.1.1-py3-none-any.whl": "a00ce642f577bf7f473932318056212bc4f8bfdf53128c78bbd5af0b9b20b189",
+      "packaging-26.3-py3-none-any.whl": "d7193f7c8e4e93f444fde0262bf90af30e16fa0ad0ad44cb553c87339b23cd1c"
+    }
+  },
+  "durability": {
+    "status": "temporary_actions_artifact",
+    "note": "Before final release, archive the same reviewed wheel as an explicit durable release asset and record its immutable URL and hash."
+  }
+}
