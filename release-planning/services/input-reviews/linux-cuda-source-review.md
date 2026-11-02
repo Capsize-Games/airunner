@@ -219,7 +219,7 @@ Private evidence paths:
 - `.headlesscode/service-audit-2026-11-02/linux-release-lock/cuda-native-runpath-candidates/manifest.json`
 
 The current input manifest SHA-256 is
-`f819d658ca9feffe93e829f813b3f8956dba7a0fbccb06417dcc71e622aefd8e`. The local repeat-transform report SHA-256 is
+`302a7f70d22433be91e85aed8af64d1bbf6cf41eff5de61ba50b1dfa919e08dd`. The local repeat-transform report SHA-256 is
 `003eecb23fae5da6257c86746bed63add471c06620f1dc61c0ba841df929e901`. Two
 independent offline transforms produced identical wheel hashes. The candidates
 are not active lock inputs, were not installed or imported, and have not been
@@ -232,3 +232,8 @@ NVSHMEM only, with their accompanying notice files. Triton is excluded from
 public candidate artifact uploads while the redistribution finding remains
 unresolved. This partial artifact build does not satisfy the full ML release
 requirement.
+
+The hosted staging URLs are the exact links from the official PyTorch CUDA
+index, including its `download-r2.pytorch.org` and NVIDIA PyPI destinations.
+The original handoff URLs returned HTTP 403; the corrected recipe preserves
+the same reviewed source wheel SHA-256 values.

@@ -58,7 +58,9 @@ jobs:
           for url, filename, digest in downloads:
               parsed = urlsplit(url)
               assert parsed.scheme == 'https'
-              assert parsed.hostname in {'download.pytorch.org', 'raw.githubusercontent.com'}
+              assert parsed.hostname in {
+                  'download-r2.pytorch.org', 'pypi.nvidia.com', 'raw.githubusercontent.com',
+              }
               assert not parsed.username and not parsed.password
               assert Path(filename).name == filename and filename not in {'.', '..'}
               target = destination / filename

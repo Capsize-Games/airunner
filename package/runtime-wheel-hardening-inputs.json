@@ -50,7 +50,7 @@
     {
       "distribution": "torchaudio",
       "source_filename": "torchaudio-2.11.0+cu129-cp313-cp313-manylinux_2_28_x86_64.whl",
-      "source_url": "https://download.pytorch.org/whl/cu129/torchaudio-2.11.0+cu129-cp313-cp313-manylinux_2_28_x86_64.whl",
+      "source_url": "https://download-r2.pytorch.org/whl/cu129/torchaudio-2.11.0%2Bcu129-cp313-cp313-manylinux_2_28_x86_64.whl",
       "source_sha256": "45103fac849ffee337976ff19eac81725b3396e2c18e3f48ed92ba7669cb32d7",
       "candidate_filename": "torchaudio-2.11.0+cu129.capsize.1-cp313-cp313-manylinux_2_28_x86_64.whl",
       "expected_candidate_sha256": "442827154e36ff0643036d0065ce96b9f65cdaee224b9f6b5c4318e6e3f1620c",
@@ -163,12 +163,13 @@
           "wheel_path": "torchaudio-2.11.0+cu129.capsize.1.dist-info/licenses/third_party/CUTLASS-BSD-3-Clause.txt",
           "sha256": "7bc733829f16663593865344541c6dcc433beb6b6b555c8f86a43e9b399993cf"
         }
-      ]
+      ],
+      "source_index": "https://download.pytorch.org/whl/cu129/torchaudio/"
     },
     {
       "distribution": "torchvision",
       "source_filename": "torchvision-0.28.0+cu129-cp313-cp313-manylinux_2_28_x86_64.whl",
-      "source_url": "https://download.pytorch.org/whl/cu129/torchvision-0.28.0+cu129-cp313-cp313-manylinux_2_28_x86_64.whl",
+      "source_url": "https://download-r2.pytorch.org/whl/cu129/torchvision-0.28.0%2Bcu129-cp313-cp313-manylinux_2_28_x86_64.whl",
       "source_sha256": "c007a68cb54c3ee6941aab6388c69bf14e4a2a9071d339455bb5bd5f47da2ce7",
       "candidate_filename": "torchvision-0.28.0+cu129.capsize.1-cp313-cp313-manylinux_2_28_x86_64.whl",
       "expected_candidate_sha256": "fb59f03148302906a39abe711bd4dcffe62973c741884a879b3247a2fa7f5d40",
@@ -244,12 +245,13 @@
           "wheel_path": "torchvision-0.28.0+cu129.capsize.1.dist-info/licenses/third_party/CUDA-12.9-EULA.txt",
           "sha256": "b070ebdc3ee4566df26f7409b65cb9b9dac4d5cdac02fb470c3ad35b259f8357"
         }
-      ]
+      ],
+      "source_index": "https://download.pytorch.org/whl/cu129/torchvision/"
     },
     {
       "distribution": "triton",
       "source_filename": "triton-3.7.1-cp313-cp313-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl",
-      "source_url": "https://download.pytorch.org/whl/cu129/triton-3.7.1-cp313-cp313-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl",
+      "source_url": "https://download-r2.pytorch.org/whl/triton-3.7.1-cp313-cp313-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl",
       "source_sha256": "59688b9b924f887316dcd0fae9e8cbe697ee1d1f6ab386723982cc9ecdebee01",
       "candidate_filename": "triton-3.7.1+capsize.1-cp313-cp313-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl",
       "expected_candidate_sha256": "2143a1a884c128773ae892a45deb8b6ba432779ae8606b0d136a372d67cb86ac",
@@ -389,12 +391,13 @@
           "wheel_path": "triton-3.7.1+capsize.1.dist-info/licenses/third_party/AMD-HIP-header-license-notices.txt",
           "sha256": "e7f5b88dd0a53dcf5c6cca240fc5f9f2ee47e8d209c29e5722e09e3128c3de70"
         }
-      ]
+      ],
+      "source_index": "https://download.pytorch.org/whl/cu129/triton/"
     },
     {
       "distribution": "nvidia-nvshmem-cu12",
       "source_filename": "nvidia_nvshmem_cu12-3.4.5-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl",
-      "source_url": "https://download.pytorch.org/whl/cu129/nvidia_nvshmem_cu12-3.4.5-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl",
+      "source_url": "https://pypi.nvidia.com/nvidia-nvshmem-cu12/nvidia_nvshmem_cu12-3.4.5-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl",
       "source_sha256": "042f2500f24c021db8a06c5eec2539027d57460e1c1a762055a6554f72c369bd",
       "candidate_filename": "nvidia_nvshmem_cu12-3.4.5+capsize.1-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl",
       "expected_candidate_sha256": "f2297cd80f097e40e0544672186c020d2ae12ddfa438f50626053e2de72c94ea",
@@ -417,7 +420,8 @@
           "sha256": "e3628a3b631a8abb0e9ae3ea19bf379edc3d86299a3747f22a33203099346a96"
         }
       ],
-      "license_extras": []
+      "license_extras": [],
+      "source_index": "https://download.pytorch.org/whl/cu129/nvidia-nvshmem-cu12/"
     }
   ],
   "license_extra_sources": {
