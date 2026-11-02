@@ -39,15 +39,24 @@ acceptance. The `tts-python-core` release extra no longer installs pyttsx3:
 only the retained legacy playback manager uses it. Legacy `llm` and
 `tts-python` extras preserve that separate dependency and compatibility path.
 
-The active release lock is pending generation and validation. The old desktop
-lock is retained only as historical evidence. A pinned isolated CUDA build
-produced a statically verified llama-cpp-python wheel, without model or GPU
-execution. A reviewed wrapper patch now makes disk caching an explicit extra;
-its replacement wheel is being built separately. The diagnostic dependency
-graph resolves with the security replacements while preserving other exact
-baseline pins. It remains unactivated: native dependency fixes, artifact and
-license review, and runtime compatibility checks are incomplete. CI preflight
-deliberately fails while the lock or required input reviews are pending; a
+The active release lock remains pending portable artifact staging and target
+validation. The old desktop lock is historical evidence. The selected V4
+diagnostic graph installed all 243 exact reviewed wheels in a separate project
+environment with kernel network denial, hash enforcement and no builds;
+`uv pip check` passed. All 77 direct service requirements match the installed
+metadata. Five CPU ABI/local-fixture probes and full production notice
+verification (243 distributions, 1,732 files) passed. These results do not
+establish full model, GPU, API or frozen-artifact acceptance. The visible
+exact-pin inventory is in `DEPENDENCY_DECISIONS.md`.
+
+The reviewed CUDA wrapper `0.3.21+capsize.1` was built and installed; disk
+caching is an explicit extra. Actual Qwen3.5-9B Q8 loading at context 32768
+selected CUDA on RTX 5080 but failed before inference with missing tensor
+`blk.32.ssm_conv1d.weight`. The pinned llama.cpp loader treats the appended
+next-token-prediction block as recurrent. The service returned an explicit
+failure and released its GPU allocation. A reviewed source correction and
+replacement wheel are required before repeating the unchanged scenario.
+CI preflight continues to fail while active input readiness is pending; a
 skipped or unavailable check is not a pass.
 
 The service Kanban project tracks these inputs, companion retirement, eSpeak
