@@ -77,7 +77,7 @@ class CoreDebianCandidateWorkflowTests(unittest.TestCase):
             "systemctl stop airunner-headless.service",
             "systemctl restart airunner-headless.service",
             "http://127.0.0.1:8080/health",
-            "http://127.0.0.1:8080/health/daemon",
+            "http://127.0.0.1:8080/api/v1/health/daemon",
             "Authorization: Bearer $api_key",
             "expected 401",
             "assert_stopped",

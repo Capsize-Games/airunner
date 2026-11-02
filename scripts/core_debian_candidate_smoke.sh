@@ -102,11 +102,11 @@ wait_for_health() {
 assert_api_auth() {
   local code
   code=$(curl --silent --output /dev/null --write-out '%{http_code}' \
-    --connect-timeout 2 --max-time 3 http://127.0.0.1:8080/health/daemon)
+    --connect-timeout 2 --max-time 3 http://127.0.0.1:8080/api/v1/health/daemon)
   [[ "$code" == 401 ]] || { echo "unauthenticated API returned $code, expected 401" >&2; return 1; }
   curl --silent --show-error --fail --connect-timeout 2 --max-time 3 \
     -H "Authorization: Bearer $api_key" \
-    http://127.0.0.1:8080/health/daemon >/dev/null
+    http://127.0.0.1:8080/api/v1/health/daemon >/dev/null
 }
 
 assert_stopped() {
