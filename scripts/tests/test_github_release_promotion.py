@@ -113,6 +113,7 @@ class _GitHub:
     def __init__(self, root: Path) -> None:
         self.tag_object = _git(root, "rev-parse", "refs/tags/v1.2.3")
         self.publish_immutable = True
+        self.immutable_releases_enabled = True
         self.release: dict[str, Any] | None = None
         self.assets: dict[str, dict[str, Any]] = {}
         self.calls: list[tuple[str, str]] = []
@@ -126,6 +127,8 @@ class _GitHub:
         self.calls.append((method, request.full_url))
         assert request.get_header("Authorization") == "Bearer fixture-token"
 
+        if path.endswith("/immutable-releases") and method == "GET":
+            return _Response({"enabled": self.immutable_releases_enabled})
         if path.endswith("/git/ref/tags/v1.2.3"):
             return _Response({
                 "ref": "refs/tags/v1.2.3",
@@ -322,3 +325,12 @@ def test_draft_lookup_does_not_hide_authorization_failure() -> None:
 
     with pytest.raises(guard.ReleaseIdentityError, match="request failed"):
         guard._release_by_tag("Capsize-Games/airunner", "v1", "fixture-token", opener=opener)
+
+
+def test_promotion_requires_immutable_policy_before_any_mutation(tmp_path: Path) -> None:
+    root, sha, dirs, files = _fixture(tmp_path)
+    api = _GitHub(root)
+    api.immutable_releases_enabled = False
+    with pytest.raises(guard.ReleaseIdentityError, match="enabled before promotion"):
+        _promote(root, sha, dirs, files, api)
+    assert not any(method in {"POST", "PATCH", "PUT", "DELETE"} for method, _ in api.calls)

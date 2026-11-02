@@ -411,6 +411,12 @@ def promote_release_assets(
         raise ReleaseIdentityError("release promotion needs workflow authentication")
     if not tag or not _SHA_RE.fullmatch(source_sha):
         raise ReleaseIdentityError("release promotion source identity is invalid")
+    policy = _api_request(
+        f"https://api.github.com/repos/{repository}/immutable-releases",
+        token, opener=opener,
+    )
+    if not isinstance(policy, dict) or policy.get("enabled") is not True:
+        raise ReleaseIdentityError("immutable releases must be enabled before promotion")
     if verify_release_identity(
         event_name="workflow_dispatch",
         ref=f"refs/tags/{tag}",
