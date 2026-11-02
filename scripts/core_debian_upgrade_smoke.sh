@@ -8,8 +8,9 @@ fixture_dir="$artifact_dir/synthetic-upgrade-fixture"
 fixture_record="$fixture_dir/fixture.json"
 fixture_db="$fixture_dir/airunner.db"
 validation="$artifact_dir/candidate-upgrade-validation.json"
+baseline_deb="$artifact_dir/airunner_6.1.3-3_all.deb"
 deb_file=$(find "$artifact_dir" -maxdepth 1 -type f -name 'airunner_*_amd64.deb' -print -quit)
-test -n "$deb_file" && test -f "$candidate_record" && test -f "$fixture_record" && test -f "$fixture_db"
+test -n "$deb_file" && test -f "$candidate_record" && test -f "$fixture_record" && test -f "$fixture_db" && test -f "$baseline_deb"
 test "$(id -u)" -eq 0 || { echo 'upgrade smoke must run as root' >&2; exit 1; }
 
 # Refuse an already-installed package before allocating temp files or touching
@@ -20,16 +21,23 @@ if dpkg-query -W -f='${db:Status-Status}' airunner 2>/dev/null | grep -qx instal
 fi
 
 candidate_version=$(dpkg-deb --field "$deb_file" Version)
+baseline_version=$(dpkg-deb --field "$baseline_deb" Version)
+baseline_architecture=$(dpkg-deb --field "$baseline_deb" Architecture)
+baseline_hash=$(sha256sum "$baseline_deb" | cut -d' ' -f1)
+baseline_expected_hash=$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1]))["upgrade_baseline"]["sha256"])' "$candidate_record")
+baseline_expected_version=$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1]))["upgrade_baseline"]["version"])' "$candidate_record")
+baseline_expected_arch=$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1]))["upgrade_baseline"]["architecture"])' "$candidate_record")
 candidate_source=$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1]))["source_sha"])' "$candidate_record")
 fixture_source=$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1]))["source_sha"])' "$fixture_record")
 candidate_hash=$(sha256sum "$deb_file" | cut -d' ' -f1)
 record_hash=$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1]))["debian_sha256"])' "$candidate_record")
 fixture_hash=$(sha256sum "$fixture_db" | cut -d' ' -f1)
 fixture_record_hash=$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1]))["database_sha256"])' "$fixture_record")
-synthetic_version=0.0.0~synthetic1
 [[ "$candidate_source" == "$CORE_SOURCE_SHA" && "$fixture_source" == "$CORE_SOURCE_SHA" ]]
 [[ "$candidate_hash" == "$record_hash" && "$fixture_hash" == "$fixture_record_hash" ]]
-dpkg --compare-versions "$synthetic_version" lt "$candidate_version"
+[[ "$baseline_hash" == "$baseline_expected_hash" && "$baseline_version" == "$baseline_expected_version" ]]
+[[ "$baseline_architecture" == "$baseline_expected_arch" && "$baseline_version" == "6.1.3-3" ]]
+dpkg --compare-versions "$baseline_version" lt "$candidate_version"
 
 # A service left active without an installed package is also outside this
 # fresh-runner test contract. Do not take ownership of or stop it.
@@ -41,7 +49,6 @@ fi
 dropin_dir=/etc/systemd/system/airunner-headless.service.d
 dropin="$dropin_dir/90-core-upgrade-smoke.conf"
 policy=/usr/sbin/policy-rc.d
-scratch=
 key_file=
 policy_backup=
 had_policy=0
@@ -54,18 +61,24 @@ status=failed
 config_sha_before=
 database_sha_before=
 database_sha_after=
-synthetic_install_status=pending
+ownership_marker_sha_before=
+ownership_marker_owner_before=
+ownership_marker_sha_after=
+ownership_marker_owner_after=
+baseline_install_status=pending
 candidate_upgrade_status=pending
 database_migration_status=pending
 remove_status=pending
 purge_status=pending
 
 write_record() {
-  STATUS="$status" SOURCE_SHA="$CORE_SOURCE_SHA" DEB="$deb_file" \
-    CANDIDATE_VERSION="$candidate_version" CONFIG_SHA="$config_sha_before" \
-    DB_BEFORE="$database_sha_before" DB_AFTER="$database_sha_after" \
-    SYNTHETIC_INSTALL="$synthetic_install_status" CANDIDATE_UPGRADE="$candidate_upgrade_status" \
+  STATUS="$status" SOURCE_SHA="$CORE_SOURCE_SHA" DEB="$deb_file" BASELINE_DEB="$baseline_deb" \
+    CANDIDATE_VERSION="$candidate_version" BASELINE_VERSION="$baseline_version" \
+    CONFIG_SHA="$config_sha_before" DB_BEFORE="$database_sha_before" DB_AFTER="$database_sha_after" \
+    BASELINE_INSTALL="$baseline_install_status" CANDIDATE_UPGRADE="$candidate_upgrade_status" \
     DB_MIGRATION="$database_migration_status" REMOVE_STATUS="$remove_status" PURGE_STATUS="$purge_status" \
+    OWNER_HASH_BEFORE="$ownership_marker_sha_before" OWNER_UIDGID_BEFORE="$ownership_marker_owner_before" \
+    OWNER_HASH_AFTER="$ownership_marker_sha_after" OWNER_UIDGID_AFTER="$ownership_marker_owner_after" \
     python3 - "$validation" "$candidate_record" "$fixture_record" <<'PY'
 import hashlib
 import json
@@ -87,7 +100,7 @@ payload = {
     "debian_version": os.environ["CANDIDATE_VERSION"],
     "upgrade_smoke": os.environ["STATUS"],
     "checks": {
-        "synthetic_baseline_install": os.environ["SYNTHETIC_INSTALL"],
+        "published_baseline_install": os.environ["BASELINE_INSTALL"],
         "candidate_package_upgrade": os.environ["CANDIDATE_UPGRADE"],
         "database_migration_and_marker": os.environ["DB_MIGRATION"],
         "package_remove_preserves_data": os.environ["REMOVE_STATUS"],
@@ -102,15 +115,24 @@ payload = {
     "config_sha256_before_upgrade": os.environ["CONFIG_SHA"],
     "database_sha256_before_migration": os.environ["DB_BEFORE"],
     "database_sha256_after_migration": os.environ["DB_AFTER"],
-    "synthetic_baseline": "candidate payload repacked as version 0.0.0~synthetic1",
     "published_prior_release_upgrade": {
-        "status": "not_run",
-        "reason": "No prior published services-only .deb is supplied to this workflow; synthetic baseline is not an earlier release.",
+        "status": "passed" if os.environ["BASELINE_INSTALL"] == "passed" and os.environ["CANDIDATE_UPGRADE"] == "passed" else "incomplete",
+        "source": "apt.airunner.art stable",
+        "version": os.environ["BASELINE_VERSION"],
+        "filename": Path(os.environ["BASELINE_DEB"]).name,
+        "sha256": sha(os.environ["BASELINE_DEB"]),
+        "source_revision": candidate["upgrade_baseline"]["source_revision"],
+        "source_identity_note": candidate["upgrade_baseline"]["source_identity_note"],
+    },
+    "data_ownership_marker": {
+        "sha256_before_upgrade": os.environ["OWNER_HASH_BEFORE"],
+        "uid_gid_before_upgrade": os.environ["OWNER_UIDGID_BEFORE"],
+        "sha256_after_upgrade": os.environ["OWNER_HASH_AFTER"],
+        "uid_gid_after_upgrade": os.environ["OWNER_UIDGID_AFTER"],
     },
     "limitations": [
-        "Synthetic package reuses the candidate payload and changes only Debian Version.",
-        "Synthetic database uses current migration source at an intermediate revision; it is not a prior-release database or schema.",
-        "Migration from a previously published services-only Debian package was not tested.",
+        "Uses a published prior services-only Debian package; no source commit is bound in its package metadata.",
+        "Database fixture is synthetic and uses this candidate source's migrations at an intermediate revision, not a database or schema from the prior release.",
         "No production database, model, or model download was used.",
     ],
 }
@@ -133,14 +155,12 @@ cleanup() {
   fi
   if [[ -n "$policy_backup" ]]; then rm -f "$policy_backup"; fi
   if (( unit_config_changed )); then systemctl daemon-reload 2>/dev/null || true; fi
-  if [[ -n "$scratch" ]]; then rm -rf -- "$scratch"; fi
   if (( rc != 0 )); then status=failed; fi
   write_record || true
   exit "$rc"
 }
 trap cleanup EXIT
 
-scratch=$(mktemp -d /var/tmp/airunner-core-upgrade.XXXXXX)
 key_file=$(mktemp /run/airunner-upgrade-key.XXXXXX)
 policy_backup=$(mktemp /run/airunner-policy-backup.XXXXXX)
 
@@ -159,24 +179,10 @@ exit 101
 EOF
 chmod 0755 "$policy"
 
-dpkg-deb --raw-extract "$deb_file" "$scratch/package"
-python3 - "$scratch/package/DEBIAN/control" "$synthetic_version" <<'PY'
-from pathlib import Path
-import sys
-path = Path(sys.argv[1])
-lines = path.read_text(encoding="utf-8").splitlines()
-matches = [index for index, line in enumerate(lines) if line.startswith("Version:")]
-if len(matches) != 1:
-    raise SystemExit("synthetic control file must contain exactly one Version field")
-lines[matches[0]] = f"Version: {sys.argv[2]}"
-path.write_text("\n".join(lines) + "\n", encoding="utf-8")
-PY
-synthetic_deb="$scratch/airunner_${synthetic_version}_amd64.deb"
-dpkg-deb --build --root-owner-group "$scratch/package" "$synthetic_deb" >/dev/null
 apt-get update
-apt-get install -y "$synthetic_deb"
-[[ "$(dpkg-query -W -f='${Version}' airunner)" == "$synthetic_version" ]]
-synthetic_install_status=passed
+apt-get install -y "$baseline_deb"
+[[ "$(dpkg-query -W -f='${Version}' airunner)" == "$baseline_version" ]]
+baseline_install_status=passed
 
 config_file=/etc/airunner/daemon.yaml
 database_file=/var/lib/airunner/data/airunner.db
@@ -186,11 +192,21 @@ config_sha_before=$(sha256sum "$config_file" | cut -d' ' -f1)
 install -d -m 0700 -o airunner -g airunner /var/lib/airunner/data
 install -m 0600 -o airunner -g airunner "$fixture_db" "$database_file"
 database_sha_before=$(sha256sum "$database_file" | cut -d' ' -f1)
+ownership_marker=/var/lib/airunner/data/.upgrade-ownership-marker
+printf 'synthetic-data-ownership-preservation-marker-v1\n' > "$ownership_marker"
+chown root:root "$ownership_marker"
+chmod 0640 "$ownership_marker"
+ownership_marker_sha_before=$(sha256sum "$ownership_marker" | cut -d' ' -f1)
+ownership_marker_owner_before=$(stat -c '%u:%g:%a' "$ownership_marker")
 
 apt-get install -y "$deb_file"
 [[ "$(dpkg-query -W -f='${Version}' airunner)" == "$candidate_version" ]]
 [[ "$(sha256sum "$config_file" | cut -d' ' -f1)" == "$config_sha_before" ]]
 [[ "$(sha256sum "$database_file" | cut -d' ' -f1)" == "$database_sha_before" ]]
+ownership_marker_sha_after=$(sha256sum "$ownership_marker" | cut -d' ' -f1)
+ownership_marker_owner_after=$(stat -c '%u:%g:%a' "$ownership_marker")
+[[ "$ownership_marker_sha_after" == "$ownership_marker_sha_before" ]]
+[[ "$ownership_marker_owner_after" == "$ownership_marker_owner_before" ]]
 candidate_upgrade_status=passed
 
 [[ ! -e "$dropin" && ! -L "$dropin" ]] || { echo "refusing existing smoke drop-in: $dropin" >&2; exit 1; }
@@ -249,11 +265,13 @@ database_sha_after=$(sha256sum "$database_file" | cut -d' ' -f1)
 database_migration_status=passed
 
 apt-get remove -y airunner
-test -f "$config_file" -a -f "$database_file"
+test -f "$config_file" -a -f "$database_file" -a -f "$ownership_marker"
 remove_status=passed
 apt-get purge -y airunner
-test -f "$config_file" -a -f "$database_file"
+test -f "$config_file" -a -f "$database_file" -a -f "$ownership_marker"
 [[ "$(sha256sum "$config_file" | cut -d' ' -f1)" == "$config_sha_before" ]]
+[[ "$(sha256sum "$ownership_marker" | cut -d' ' -f1)" == "$ownership_marker_sha_before" ]]
+[[ "$(stat -c '%u:%g:%a' "$ownership_marker")" == "$ownership_marker_owner_before" ]]
 DATABASE_FILE="$database_file" FIXTURE_PAYLOAD='synthetic-core-upgrade-data-preservation-fixture-v1' python3 - <<'PY'
 import os
 import sqlite3
@@ -267,4 +285,3 @@ PY
 purge_status=passed
 
 status=passed
-

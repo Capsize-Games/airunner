@@ -39,7 +39,7 @@ Path(sys.argv[1]).write_text(json.dumps({
     "exclusions": [
         "real model inference and model downloads",
         "offline network-denial behavior",
-        "upgrade preservation from a prior package",
+        "upgrade preservation from a prior package (covered by separate upgrade validation)",
         "APT repository promotion or signing",
         "full-ML candidate build",
     ],

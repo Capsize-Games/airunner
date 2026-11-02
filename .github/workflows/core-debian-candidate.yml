@@ -85,6 +85,17 @@ jobs:
           fi
           install -d -m 0755 build/core-debian-candidate
           install -m 0644 "${packages[0]}" build/core-debian-candidate/
+          baseline_deb=build/core-debian-candidate/airunner_6.1.3-3_all.deb
+          curl --fail --location --silent --show-error \
+            --user-agent 'Debian APT-HTTP/1.3 (2.6.1)' \
+            --output "$baseline_deb" \
+            https://apt.airunner.art/pool/main/a/airunner/airunner_6.1.3-3_all.deb
+          printf '%s  %s\n' \
+            '60c07b5c2e8701b9f07309ee10be0327b5ef5ae908464fc370619bcfe4e4b87c' \
+            "$baseline_deb" | sha256sum --check --status
+          test "$(stat -c '%s' "$baseline_deb")" = 1464816
+          test "$(dpkg-deb --field "$baseline_deb" Version)" = 6.1.3-3
+          test "$(dpkg-deb --field "$baseline_deb" Architecture)" = all
           PYTHONPATH=services/src:native/src:debian/vendor \
             "$AIRUNNER_CORE_PYTHON" scripts/create_core_upgrade_fixture.py \
             --output-dir build/core-debian-candidate/synthetic-upgrade-fixture \
@@ -98,11 +109,23 @@ jobs:
           from pathlib import Path
 
           deb = Path(os.environ["CORE_DEB"])
+          baseline = Path("build/core-debian-candidate/airunner_6.1.3-3_all.deb")
           digest = lambda path: hashlib.sha256(Path(path).read_bytes()).hexdigest()
           version = subprocess.run(
               ["dpkg-deb", "--field", str(deb), "Version"],
               check=True, capture_output=True, text=True,
           ).stdout.strip()
+          baseline_version = subprocess.run(
+              ["dpkg-deb", "--field", str(baseline), "Version"],
+              check=True, capture_output=True, text=True,
+          ).stdout.strip()
+          baseline_architecture = subprocess.run(
+              ["dpkg-deb", "--field", str(baseline), "Architecture"],
+              check=True, capture_output=True, text=True,
+          ).stdout.strip()
+          assert digest(baseline) == "60c07b5c2e8701b9f07309ee10be0327b5ef5ae908464fc370619bcfe4e4b87c"
+          assert baseline.stat().st_size == 1464816
+          assert baseline_version == "6.1.3-3" and baseline_architecture == "all"
           record = {
               "schema_version": 1,
               "profile": "linux-services-core",
@@ -115,7 +138,17 @@ jobs:
               "architecture": "amd64",
               "build_status": "passed",
               "clean_install_smoke": "pending",
-              "synthetic_upgrade_smoke": "pending",
+              "upgrade_smoke": "pending",
+              "upgrade_baseline": {
+                  "source": "apt.airunner.art stable",
+                  "filename": baseline.name,
+                  "version": baseline_version,
+                  "architecture": baseline_architecture,
+                  "sha256": digest(baseline),
+                  "size_bytes": baseline.stat().st_size,
+                  "source_revision": None,
+                  "source_identity_note": "No source-bound publish marker or Source/Vcs field is present in the published Debian artifact metadata.",
+              },
           }
           Path("build/core-debian-candidate/candidate.json").write_text(
               json.dumps(record, indent=2, sort_keys=True) + "\n",
@@ -196,7 +229,7 @@ jobs:
           if-no-files-found: ignore
           retention-days: 7
 
-  synthetic-upgrade-data-smoke:
+  published-upgrade-data-smoke:
     needs: build-core-debian-candidate
     runs-on: ubuntu-26.04
     permissions:
@@ -245,9 +278,14 @@ jobs:
           assert fixture["database_sha256"] == digest(fixture_root / "airunner.db")
           assert fixture["fixture_kind"] == "synthetic_intermediate_alembic_revision"
           assert candidate["debian_sha256"] == digest(root / candidate["debian_filename"])
+          baseline = root / "airunner_6.1.3-3_all.deb"
+          assert candidate["upgrade_baseline"]["version"] == "6.1.3-3"
+          assert candidate["upgrade_baseline"]["architecture"] == "all"
+          assert candidate["upgrade_baseline"]["sha256"] == digest(baseline)
+          assert candidate["upgrade_baseline"]["size_bytes"] == baseline.stat().st_size
           PY
 
-      - name: Run synthetic package upgrade and data-preservation smoke
+      - name: Upgrade from published prior package and check synthetic data preservation
         run: |
           sudo env CORE_SOURCE_SHA="$CORE_SOURCE_SHA" \
             bash scripts/core_debian_upgrade_smoke.sh \

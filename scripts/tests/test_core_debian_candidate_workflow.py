@@ -62,9 +62,9 @@ class CoreDebianCandidateWorkflowTests(unittest.TestCase):
         jobs = self.workflow["jobs"]
         self.assertEqual(jobs["build-core-debian-candidate"]["runs-on"], "ubuntu-24.04")
         self.assertEqual(jobs["clean-install-smoke"]["runs-on"], "ubuntu-26.04")
-        self.assertEqual(jobs["synthetic-upgrade-data-smoke"]["runs-on"], "ubuntu-26.04")
-        self.assertEqual(jobs["synthetic-upgrade-data-smoke"]["needs"], "build-core-debian-candidate")
-        self.assertEqual(jobs["synthetic-upgrade-data-smoke"]["permissions"], {"contents": "read"})
+        self.assertEqual(jobs["published-upgrade-data-smoke"]["runs-on"], "ubuntu-26.04")
+        self.assertEqual(jobs["published-upgrade-data-smoke"]["needs"], "build-core-debian-candidate")
+        self.assertEqual(jobs["published-upgrade-data-smoke"]["permissions"], {"contents": "read"})
         python_setup = next(
             step
             for step in jobs["build-core-debian-candidate"]["steps"]
@@ -101,22 +101,26 @@ class CoreDebianCandidateWorkflowTests(unittest.TestCase):
             self.assertIn(expected, self.smoke)
         self.assertIn('"real model inference and model downloads"', self.smoke)
         self.assertIn('"offline network-denial behavior"', self.smoke)
-        self.assertIn('"upgrade preservation from a prior package"', self.smoke)
+        self.assertIn('"upgrade preservation from a prior package (covered by separate upgrade validation)"', self.smoke)
         self.assertIn('"APT repository promotion or signing"', self.smoke)
         self.assertIn('"full-ML candidate build"', self.smoke)
 
-    def test_upgrade_smoke_is_explicitly_synthetic_and_preserves_data(self):
-        self.assertIn("Run synthetic package upgrade and data-preservation smoke", self.workflow_text)
+    def test_upgrade_smoke_uses_published_prior_package_and_preserves_data(self):
+        self.assertIn("Upgrade from published prior package and check synthetic data preservation", self.workflow_text)
         self.assertIn("create_core_upgrade_fixture.py", self.workflow_text)
         self.assertIn("--source-sha \"$CORE_SOURCE_SHA\"", self.workflow_text)
         self.assertIn('assert candidate["lock_sha256"] == digest("package/constraints-linux-core.txt")', self.workflow_text)
         self.assertIn('assert candidate["requirements_sha256"] == digest("package/requirements-linux-core.in")', self.workflow_text)
-        self.assertIn('"synthetic_baseline": "candidate payload repacked as version 0.0.0~synthetic1"', self.upgrade_smoke)
-        self.assertIn('"status": "not_run"', self.upgrade_smoke)
-        self.assertIn("apt-get install -y \"$deb_file\"", self.upgrade_smoke)
+        self.assertIn("https://apt.airunner.art/pool/main/a/airunner/airunner_6.1.3-3_all.deb", self.workflow_text)
+        self.assertIn("60c07b5c2e8701b9f07309ee10be0327b5ef5ae908464fc370619bcfe4e4b87c", self.workflow_text)
+        self.assertIn('baseline_version == "6.1.3-3"', self.workflow_text)
+        self.assertIn("apt-get install -y \"$baseline_deb\"", self.upgrade_smoke)
         self.assertIn("apt-get remove -y airunner", self.upgrade_smoke)
         self.assertIn("apt-get purge -y airunner", self.upgrade_smoke)
         self.assertIn("core_upgrade_fixture", self.upgrade_smoke)
+        self.assertIn(".upgrade-ownership-marker", self.upgrade_smoke)
+        self.assertIn('"published_prior_release_upgrade": {', self.upgrade_smoke)
+        self.assertIn('"source_revision": candidate["upgrade_baseline"]["source_revision"]', self.upgrade_smoke)
         self.assertIn('[[ -f "$policy" && ! -L "$policy" ]] ||', self.upgrade_smoke)
         self.assertIn('elif (( policy_changed )); then\n    rm -f "$policy"', self.upgrade_smoke)
         self.assertIn('if (( dropin_created )); then rm -f "$dropin"', self.upgrade_smoke)
@@ -125,7 +129,7 @@ class CoreDebianCandidateWorkflowTests(unittest.TestCase):
         self.assertIn('cp -a "$policy" "$policy_backup"\n  had_policy=1', self.upgrade_smoke)
         self.assertLess(
             self.upgrade_smoke.index("airunner is already installed"),
-            self.upgrade_smoke.index('scratch=$(mktemp -d'),
+            self.upgrade_smoke.index('key_file=$(mktemp'),
         )
         self.assertIn("_REVISION = \"69fb44e0d99f\"", self.fixture)
         self.assertIn("synthetic_intermediate_alembic_revision", self.fixture)
@@ -141,6 +145,8 @@ class CoreDebianCandidateWorkflowTests(unittest.TestCase):
             source_sha = "a" * 40
             deb = artifact / "airunner_6.1.9-1_amd64.deb"
             deb.write_bytes(b"synthetic-test-only-not-a-debian-package")
+            baseline = artifact / "airunner_6.1.3-3_all.deb"
+            baseline.write_bytes(b"synthetic-test-only-published-baseline")
             database = artifact / "synthetic-upgrade-fixture" / "airunner.db"
             database.parent.mkdir()
             database.write_bytes(b"synthetic-test-database")
@@ -148,6 +154,11 @@ class CoreDebianCandidateWorkflowTests(unittest.TestCase):
                 "source_sha": source_sha,
                 "debian_sha256": hashlib.sha256(deb.read_bytes()).hexdigest(),
                 "lock_sha256": "b" * 64,
+                "upgrade_baseline": {
+                    "version": "6.1.3-3",
+                    "architecture": "all",
+                    "sha256": hashlib.sha256(baseline.read_bytes()).hexdigest(),
+                },
             }
             fixture = {
                 "source_sha": source_sha,
@@ -173,7 +184,14 @@ class CoreDebianCandidateWorkflowTests(unittest.TestCase):
             )
             fake_command(
                 "dpkg-deb",
-                'echo "dpkg-deb $*" >> "$CALL_LOG"; echo 6.1.9-1',
+                '''echo "dpkg-deb $*" >> "$CALL_LOG"
+case "$2:$3" in
+  */airunner_6.1.3-3_all.deb:Version) echo 6.1.3-3 ;;
+  */airunner_6.1.3-3_all.deb:Architecture) echo all ;;
+  *:Version) echo 6.1.9-1 ;;
+  *:Architecture) echo amd64 ;;
+  *) exit 1 ;;
+esac''',
             )
             fake_command(
                 "mktemp",
