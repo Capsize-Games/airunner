@@ -321,6 +321,7 @@ jobs:
             --cap-drop=ALL --security-opt=no-new-privileges \
             --read-only --tmpfs /tmp:rw,noexec,nosuid,size=256m \
             --user "$(id -u):$(id -g)" --env HOME=/tmp --env TMPDIR="$CUDA_TMP" \
+            --workdir "$CUDA_SOURCE" \
             --env CMAKE_BUILD_PARALLEL_LEVEL=2 --env SOURCE_DATE_EPOCH \
             --mount "type=bind,src=$CUDA_SOURCE,dst=$CUDA_SOURCE" \
             --mount "type=bind,src=$CUDA_BUILD,dst=$CUDA_BUILD" \
