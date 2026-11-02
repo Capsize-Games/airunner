@@ -14,11 +14,12 @@ import subprocess
 import time
 import uuid
 from dataclasses import dataclass
+from email.message import Message
 from pathlib import Path, PurePosixPath
 from typing import Any, Callable
 from urllib.error import HTTPError, URLError
 from urllib.parse import quote, urljoin, urlparse
-from urllib.request import HTTPRedirectHandler, Request, build_opener, urlopen
+from urllib.request import HTTPRedirectHandler, Request, build_opener
 
 _REPOSITORY = "Capsize-Games/airunner"
 _WORKFLOW = ".github/workflows/pypi-dispatch.yml"
@@ -58,7 +59,11 @@ class _BoundedHTTPSRedirectHandler(HTTPRedirectHandler):
         super().__init__()
         self.origins = origins
 
-    def redirect_request(self, req, fp, code, msg, headers, newurl):
+    def redirect_request(
+        self, req: Request, fp: Any, code: int, msg: str,
+        headers: Message, newurl: str,
+    ) -> Request | None:
+        """Reject redirects outside the configured credential-free origins."""
         target = urlparse(urljoin(req.full_url, newurl))
         try:
             port = target.port if target.port is not None else 443
@@ -109,6 +114,7 @@ class Config:
 
     @classmethod
     def load(cls, path: Path) -> "Config":
+        """Validate a root-only configuration before using its paths or URLs."""
         try:
             info = path.lstat()
         except OSError as exc:
@@ -283,6 +289,7 @@ def _asset_bytes(
 def _strict_json_object(data: bytes) -> dict[str, Any]:
     """Parse one JSON object while rejecting duplicate property names."""
     def pairs(items: list[tuple[str, Any]]) -> dict[str, Any]:
+        """Reject duplicate manifest properties instead of replacing values."""
         result: dict[str, Any] = {}
         for key, value in items:
             if key in result:
@@ -986,6 +993,7 @@ def run_once(config: Config) -> str:
 
 
 def main(argv: list[str] | None = None) -> int:
+    """Validate configuration or run one bounded publication attempt."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--config", required=True, type=Path)
     action = parser.add_mutually_exclusive_group(required=True)
