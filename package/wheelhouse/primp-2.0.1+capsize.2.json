@@ -1,0 +1,60 @@
+{
+  "build": {
+    "abi": "cp310-abi3",
+    "cargo": "1.99.1",
+    "command": "maturin build --manifest-path crates/primp-python/Cargo.toml --release --locked --compatibility linux --auditwheel skip; cargo offline with vendored lock sources",
+    "maturin": "1.16.0",
+    "merged_source_build": true,
+    "network": "disabled during Rust dependency resolution/build",
+    "python": "3.13.5",
+    "rustc": "1.99.1",
+    "target": "x86_64-unknown-linux-gnu"
+  },
+  "distribution": "primp",
+  "filename": "primp-2.0.1+capsize.2-cp310-abi3-linux_x86_64.whl",
+  "licenses": {
+    "license_file_declarations": 408,
+    "lock_registry_packages": 418,
+    "manifest_notice_records": 401,
+    "manifest_sha256": "925092b41872dfdd6275f94ded5c3ac5f25a2dc1dbd4873de37db6008b3205f5",
+    "scope": "Selected Linux normal/build crates have source notices. Lock-wide entries include dev and platform-specific records and are not asserted as compiled or linked.",
+    "selected_linux_normal_build_registry_crates": 230
+  },
+  "record": {
+    "all_members_hashed_except_record_self_row": true,
+    "entries": 416
+  },
+  "sbom": {
+    "dependency_graph_preserved": true,
+    "local_refs_sanitized": 5,
+    "path": "sboms/primp-python.cyclonedx.json",
+    "sha256": "5872e0f7ac4d080b11ac7ad26784965effac8d711642add4266c8a4a2bd69bdb"
+  },
+  "sha256": "036f35339074f9fee6b40393db87104c3aaa5a204577203b61bd00f0980cad99",
+  "size_bytes": 7338369,
+  "source": {
+    "merged_sha": "9a07d3d284f1d9f5312db653a50318517b994416",
+    "private_repository": "https://github.com/Capsize-Games/primp-maintenance",
+    "pull_request": 2,
+    "release_url": "https://github.com/Capsize-Games/primp-maintenance/releases/tag/capsize-primp-v2.0.1.2",
+    "tag": "capsize-primp-v2.0.1.2",
+    "upstream_commit": "cf29cd94f339c1a69ec7f271f532f0f2411aa06e",
+    "upstream_repository": "https://github.com/deedy5/primp",
+    "upstream_tag": "v2.0.1"
+  },
+  "verification": {
+    "cargo_metadata_locked_offline": "passed",
+    "ci": "No CI checks ran; repository Actions are disabled.",
+    "exclusions": [
+      "No Windows build",
+      "No manylinux audit or portability claim",
+      "No live network TLS tests",
+      "No model download or GPU workload"
+    ],
+    "focused_path_tests": "9 passed",
+    "import_smoke": "passed",
+    "installed_notice_collector": "408 notice files verified",
+    "offline_locked_linux_wheel_build": "passed"
+  },
+  "version": "2.0.1+capsize.2"
+}

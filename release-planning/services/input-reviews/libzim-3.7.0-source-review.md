@@ -85,7 +85,12 @@ run locally on Debian 13/glibc 2.41 and passed. The probe verifies loaded extens
 and computes numeric symbol-version ceilings; this corrects an earlier
 lexicographic maximum reported as GLIBC 2.14. The new
 `.github/workflows/libzim-candidate-validation.yml` job performs the actual
-Ubuntu 24.04 runtime check; that job has not run yet. A local Ubuntu 24
+Ubuntu 24.04 runtime check. [Run 41517812860](https://github.com/Capsize-Games/airunner/actions/runs/41517812860)
+passed at source `36d64ee967591c04cb9eaafcc1978f49ee7b043c`, using Python 3.13.5
+and glibc 2.39. The downloaded receipt verifies the exact wheel, loaded extension
+and bundled library hashes, and synthetic create/read/search. The isolated
+service-loader check was not run because its three service dependencies were
+absent; full graph, real corpus and model acceptance remain open. A local Ubuntu 24
 container attempt failed before startup because Docker's backing store reports
 an I/O error for a content blob. The candidate remains separate from the
 selected public wheel.
@@ -130,9 +135,8 @@ own notices and is not represented as having been rebuilt from these inputs.
 
 ## Distribution work still required
 
-Run the Ubuntu 24.04 candidate-validation workflow and record its uploaded
-receipt. If that target check fails, rebuild or correct the candidate before
-considering it for the dependency lock. The wheel has a unique internal version
+The Ubuntu 24.04 candidate workflow and downloaded receipt now pass. Keep its
+exact source/wheel identity when integrating the candidate into the graph. The wheel has a unique internal version
 and matching private source tag/release; it remains separate from the selected
 dependency wheel until the target check and remaining service acceptance are
 complete.
