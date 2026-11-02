@@ -1168,6 +1168,7 @@ def test_fallback_tts_playback_reports_unsupported_params(monkeypatch):
         signal_source=object(),
         mediator=mediator,
         timeout_seconds=5.0,
+        allow_legacy_playback=True,
     )
     request = RequestEnvelope(
         runtime=RuntimeKind.TTS,

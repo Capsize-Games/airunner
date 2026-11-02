@@ -470,7 +470,7 @@ class LocalFallbackLLMClient(_SignalRuntimeClient):
 
 
 class LocalFallbackTTSClient(_SignalRuntimeClient):
-    """Bridge TTS runtime requests to the existing playback-oriented path."""
+    """Use configured headless TTS backends with opt-in legacy playback."""
 
     def __init__(
         self,
@@ -479,6 +479,7 @@ class LocalFallbackTTSClient(_SignalRuntimeClient):
         signal_source: Any = None,
         mediator: Any = None,
         health_provider: Optional[HealthProvider] = None,
+        allow_legacy_playback: bool = False,
     ) -> None:
         super().__init__(
             RuntimeKind.TTS,
@@ -491,6 +492,7 @@ class LocalFallbackTTSClient(_SignalRuntimeClient):
         )
         self._espeak_cli_renderer = EspeakCliRenderer()
         self._espeak_cli_ready = False
+        self._allow_legacy_playback = bool(allow_legacy_playback)
 
     def healthcheck(self):
         """Report loaded TTS identity without creating a worker or model."""
@@ -596,7 +598,7 @@ class LocalFallbackTTSClient(_SignalRuntimeClient):
         return self._espeak_cli_renderer.catalogue()
 
     def invoke(self, request: RequestEnvelope) -> ResponseEnvelope:
-        """Queue playback or execute TTS model-control actions."""
+        """Synthesize with a configured backend or honor explicit playback opt-in."""
         if request.runtime is not RuntimeKind.TTS:
             raise ValueError("LocalFallbackTTSClient only supports TTS")
         if request.action is RuntimeAction.STATUS:
@@ -648,7 +650,13 @@ class LocalFallbackTTSClient(_SignalRuntimeClient):
                 worker=worker,
             )
 
-        return self._invoke_playback_runtime(request.request_id, invocation)
+        if self._allow_legacy_playback:
+            return self._invoke_playback_runtime(request.request_id, invocation)
+        return self._failure_response(
+            request.request_id,
+            TTS_BACKEND_UNAVAILABLE_CODE,
+            "No headless TTS backend is configured",
+        )
 
     def _invoke_headless_runtime(
         self,
