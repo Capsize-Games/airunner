@@ -280,6 +280,7 @@ copy_metadata = [
     "airunner-services",
     "airunner-native",
     "airunner-common",
+    "triton",
 ]
 # --collect-binaries: native .so payloads loaded by filesystem path
 # at runtime (torch.ops.load_library, ctypes), invisible to the
@@ -388,6 +389,12 @@ source = "services/src/airunner_services/assets/reference_speakers/*.wav"
 dest = "airunner_services/assets/reference_speakers"
 stage = "collect"
 required = true
+
+[[data]]
+source = "services/src/airunner_services/art/data/triton_external_toolchain_runtime.json"
+dest = "airunner_services/art/data"
+required = true
+stage = "collect"
 
 [[data]]
 source = "services/src/airunner_services/bin/*.sh"

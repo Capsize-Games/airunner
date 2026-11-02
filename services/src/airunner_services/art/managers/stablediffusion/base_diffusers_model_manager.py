@@ -84,6 +84,8 @@ class BaseDiffusersModelManager(
             "cpu_offload_applied": None,
             "model_cpu_offload_applied": None,
             "tome_sd_applied": None,
+            "torch_compile_applied": None,
+            "torch_compile_status": "disabled",
             "tome_ratio": 0.0,
             "use_enable_sequential_cpu_offload": None,
             "enable_model_cpu_offload": None,
@@ -94,6 +96,11 @@ class BaseDiffusersModelManager(
         self._pooled_prompt_embeds: Optional[torch.Tensor] = None
         self._negative_pooled_prompt_embeds: Optional[torch.Tensor] = None
         self._pipe = None
+        self._torch_compile_original_unet = None
+        self._torch_compile_owner_pipe = None
+        self._torch_compile_compiled_unet = None
+        self.torch_compile_applied = False
+        self.torch_compile_status = "disabled"
         self._current_prompt: str = ""
         self._current_negative_prompt: str = ""
         self._current_prompt_2: str = ""

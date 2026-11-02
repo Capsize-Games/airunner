@@ -77,7 +77,7 @@ published wheel. This review does not claim those submodules are source-audited.
   those members, and no separate grant was found, so that candidate remains
   quarantined. Its added notices do not establish redistribution rights.
 
-  A separate feature-preserving subset recipe now removes those exact 167
+  A separate subset recipe now removes those exact 167
   members while retaining Triton's CUDA backend/JIT code and the EULA-listed
   `libdevice.10.bc`. The recipe is
   `package/triton-external-toolchain-subset.json`; it binds the source candidate,
@@ -97,10 +97,13 @@ published wheel. This review does not claim those submodules are source-audited.
   the CUPTI library directory. An absent or invalid tool override falls back to
   the wheel's bundled path; the subset preflight therefore requires and hashes
   all four tool overrides, both header roots, the exact `cuda.h`, and all nine
-  CUPTI payload files before service startup. It also rejects an installed
+  CUPTI payload files when explicitly invoked. Service integration will check
+  this boundary only when compilation is enabled; CORE startup and unrelated
+  inference do not require this toolchain. It also rejects an installed
   Triton package that still contains any excluded member, without importing the
   package. The preflight is `scripts/triton_toolchain_preflight.py`.
 
+  Actual JIT feature parity with external tools remains unverified.
   Source inspection confirms the JIT uses ptxas below SM100 and
   `ptxas-blackwell` for SM100 and newer. `cuobjdump` backs the disassembly
   helper; `nvdisasm` supports disassembly and line-info paths. The NVIDIA

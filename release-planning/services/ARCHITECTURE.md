@@ -109,10 +109,10 @@ metadata, not published releases.
 | Phase | Work and existing issues | Exit evidence |
 |---|---|---|
 | 0: Reconcile scope | Retire obsolete plans; align contributor/service docs (#2201), preserve companion boundaries (#2144); integrate mainline; make optional static app hosting explicitly configured | Tracker reconciliation; service contract and accurate commands; no machine-specific implicit UI mount; focused merge checks |
-| 1: API correctness | HTTP admission and setup terminal status (#2408); Ollama show/pull (#2415); real embedding responses; bounded TTS HTTP requests and voice listing (#2254); accurate STT loaded state | Authenticated contract tests with fake runtime boundaries, bounded request/concurrency tests, no false success or synthetic model output |
+| 1: API correctness | HTTP admission and setup terminal status (#2408); Ollama show/pull (#2415); real embedding responses; bounded TTS HTTP requests and voice listing (#2254); accurate STT loaded state; terminal LLM failures and bounded completion observation (SRV-23, #2416) | Authenticated contract tests with fake runtime boundaries, bounded request/concurrency tests, no false success or synthetic model output |
 | 2: Data integrity | Safe downgrade policy (#2358), existing NULL preservation (#2363), schema drift checks (#2364), list boundaries (#2365), bootstrap/backup/document batching (#2409) | Temporary SQLite upgrade/recovery tests, preserved user values, bounded public reads and streaming ingestion |
 | 3: Runtime and companion | Reconcile confirmed LLM/art/voice findings (#2405/#2406/#2407); characterize retained compatibility (#2147/#2149); retire duplicate cognitive policy in stages; diagnose CPU/CUDA scenario (#2242/#2416) | Focused security/lifecycle regressions; preserved data and compatibility; explicit caller inventory before deletion; no real-model parity claim from doubles |
-| 4: Distribution | Resolve unavailable TTS distribution (#2413); service dependency/version orchestration (#2200); apt release artifact (#2251); dependency refresh evidence (#2274); optional-ML gate (#2399); ops cleanup (#2410); isolated crash regression (#2276) | Supported profiles resolve; pinned reviewed inputs; artifact-level daemon checks; CI uses the same source/check list; excluded tests recorded |
+| 4: Distribution | Resolve unavailable TTS distribution (#2413); service dependency/version orchestration (#2200); apt release artifact (#2251); dependency refresh evidence (#2274); Triton external toolchain and compile opt-in (SRV-24); optional-ML gate (#2399); ops cleanup (#2410); isolated crash regression (#2276) | Supported profiles resolve; pinned reviewed inputs; artifact-level daemon checks; CI uses the same source/check list; excluded tests recorded |
 | 5: Code quality | Repair analyzer path and unavailable-tool handling; analyze all service/native modules; review dead imports and ranked complexity by subsystem | JSON reports with exact scope/exclusions; confirmed defects fixed; reviewed dispositions for residual advisory findings; focused tests/import checks |
 | 6: Service acceptance | Installation/restart/recovery (#2139), art API (#2122), voice API (#2148), embeddings/RAG (#2136), offline/auth (#2128), GPU handoffs (#2146), optional-policy contracts (SRV-22) | Automated candidate/model/runtime checks with hashes and exact results on isolated targets; disabled-default and opt-in policy tests; pending/skipped is never pass |
 | 7: Release | Service tracker (#2237/#2238), candidate promotion (#2151) | Required CI green for exact source; clean artifacts and notices; immutable tag/release; downloaded bytes match manifest |
@@ -123,13 +123,59 @@ runs combined checks and owns publication. Shared workflow/metadata edits
 are serialized. Workers do not install new third-party dependencies or
 start real models without the applicable provenance and capacity checks.
 
+## LLM completion observation
+
+SRV-23 tracks the shared callback boundary used by legacy, Ollama and OpenAI
+completion APIs. A terminal manager error must fail the request, including
+after partial output. Non-streaming routes return an HTTP error; streams emit
+an explicit protocol error because their HTTP headers may already be sent.
+Internal loading/status messages are excluded from assistant output. Successful
+tool-only completions retain their existing contract. Source change `d93e3c189`
+implements this error propagation; 31 isolated API regressions passed, including
+HTTP status checks for all three compatibility endpoints. No model was run.
+
+The remaining observer must own one request's callback registration, terminal
+state and bounded output queue. Use a monotonic total deadline, retaining the
+existing 300-second default with a finite validated configuration override.
+Timeouts, buffer exhaustion, backend failures and client disconnects must clean
+up that request's registration and cancel only its owned runtime operation.
+Queue the terminal event before signalling completion, reject late callbacks,
+and never truncate output into a successful result. Regression evidence must
+cover silence, partial output then failure, late events, slow consumers and
+cross-request isolation. Real Qwen Q8/32k and target lifecycle acceptance remain
+in #2416 and #2146; callback doubles cannot satisfy those requirements.
+
+## Triton distribution and optional compilation
+
+SRV-24 preserves JIT functionality without redistributing NVIDIA tools and
+headers whose grant is not established. The local Triton subset removes those
+members and retains its compiler/backend code and licensed libdevice. Its
+external toolchain must be staged privately from exact reviewed vendor inputs;
+excluded payloads must not enter public artifacts. The packaged preflight checks
+the candidate identity, required external bytes and retained libdevice without
+importing Triton or executing tools. Frozen packaging must retain its metadata
+and policy resource. These source contracts do not prove JIT execution.
+
+The existing `use_torch_compile` setting now has an explicit Stable Diffusion
+operation boundary. Default inference and CORE startup do not require the
+external compiler. When enabled, compilation requires CUDA and a successful
+preflight; an unavailable toolchain leaves eager execution active with an
+unapplied status. Lazy compiler failures may restore the same pipeline's eager
+UNet; resource/model errors propagate. Pipeline ownership prevents stale wrappers
+from restoring a different model. Parent regressions cover these boundaries,
+but installed/frozen toolchain staging, actual compilation and model/hardware
+acceptance remain open. A compiled driver object checks only the header contract.
+
 ## Audit evidence and quality treatment
 
-The repository's legacy AST analyzer, invoked with a relative services
-path, inspected 771 files / 128,965 lines and reported 1,147 findings:
-778 warnings and 369 informational notes. The identical absolute path
-incorrectly excludes the whole tree. Correct path handling and make
-zero-file scans explicit failures for a requested existing source tree.
+The initial legacy AST scan with a relative services path inspected 771 files /
+128,965 lines and reported 1,147 findings. Its absolute-path handling incorrectly
+excluded the whole tree. That analyzer defect and empty-selection reporting
+were fixed in `657f0b2dd`; focused quality-tool regressions passed 17 tests.
+The corrected baseline reported 783 files / 130,395 lines and 1,215 findings,
+with identical relative/absolute-path results. These are dated inventories,
+not a claim that the current tree has the same counts or that every finding
+is a confirmed defect.
 
 The fleet analyzer inspected 973 services files / 141,108 lines, including
 different scope from the legacy analyzer. It reported 4,888 advisory notes:

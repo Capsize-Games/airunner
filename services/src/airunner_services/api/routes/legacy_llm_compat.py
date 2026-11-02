@@ -113,13 +113,12 @@ def _validate_model_available() -> Tuple[bool, str]:
 
     if not model_path:
         return False, (
-            "No model path configured. Please run 'airunner' (GUI) first "
-            "to download and select a model."
+            "No model path configured. Configure a local model "
+            "before requesting inference."
         )
     if not os.path.exists(model_path):
         return False, (
-            f"Model not found at '{model_path}'. The model needs to be "
-            "downloaded."
+            "The configured model path was not found."
         )
     return True, model_path
 
