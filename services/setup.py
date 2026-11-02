@@ -113,11 +113,11 @@ CORE_REQUIREMENTS = [
 # package/constraints-linux-nvidia-cu129-linux-release.txt once generated.
 ML_RUNTIME_REQUIREMENTS = [
     "torch==2.13.0+cu129",
-    "torchvision==0.28.0+cu129",
-    "torchaudio==2.11.0+cu129",
-    "accelerate==1.14.0",
+    "torchvision==0.28.0+cu129.capsize.1",
+    "torchaudio==2.11.0+cu129.capsize.1",
+    "accelerate==1.14.0+capsize.1",
     "huggingface-hub>=1.5.0,<2.0",
-    "tokenizers==0.22.2",
+    "tokenizers==0.23.1+capsize.1",
     "optimum==1.25.1",
 ]
 
@@ -131,9 +131,9 @@ HUGGINGFACE_REQUIREMENTS = [
     "safetensors==0.8.0",
     "kornia",
     "timm",
-    "compel==2.4.0",
-    "transformers==5.8.1",
-    "datasets==4.0.0",
+    "compel==2.4.0+capsize.1",
+    "transformers==5.22.0",
+    "datasets==5.0.1",
 ]
 
 ART_REQUIREMENTS = [
@@ -157,7 +157,7 @@ ART_REQUIREMENTS = [
 #   - langchain-core: shared by the whole langgraph tool-calling stack.
 RAG_REQUIREMENTS = [
     "sentence_transformers==5.6.1",
-    "libzim==3.7.0",
+    "libzim==3.7.0+capsize.2",
     "langchain-huggingface==1.2.2",
     "langchain-text-splitters==1.1.2",
     "EbookLib==0.19",
@@ -166,26 +166,21 @@ RAG_REQUIREMENTS = [
 ]
 
 LLM_NATIVE_REQUIREMENTS = [
-    "llama-cpp-python==0.3.21",
+    "llama-cpp-python==0.3.21+capsize.1",
     "bitsandbytes==0.46.1",
     "cryptography==50.0.2",
     "sumy==0.11.0",
     "sentencepiece==0.2.1",
-    "lingua-language-detector==2.1.0",
+    "lingua-language-detector==2.1.0+capsize.1",
     "markdown==3.11.2",
     "mistral_common>=1.8.5",
     "rank-bm25>=0.2.2",
     "llama-cloud==0.1.23",
-    "langchain-core==1.3.3",
-    # langgraph-prebuilt >=1.0.8 imports ExecutionInfo/ServerInfo from
-    # langgraph.runtime, which only exists in langgraph core >=1.2. Against
-    # 1.0.x core that import crashes the tool-calling path ("cannot import
-    # name 'ExecutionInfo'"). langgraph 1.0.9/1.0.10 require prebuilt>=1.0.8,
-    # so the only self-consistent 1.0.x set is core 1.0.8 + prebuilt 1.0.7
-    # (1.0.8 still allows prebuilt>=1.0.7). Pinning core 1.0.10 + prebuilt
-    # 1.0.5 satisfied neither pip's resolver nor the runtime.
-    "langgraph==1.0.8",
-    "langgraph-prebuilt==1.0.7",
+    "langchain-core==1.4.7",
+    # Keep graph core, prebuilt, checkpoint, and SDK coordinated by the
+    # reviewed Linux release lock; mixed generations fail tool dispatch.
+    "langgraph==1.2.14",
+    "langgraph-prebuilt==1.1.0",
     "langsmith>=0.8.0",
     "langchain-ollama==1.0.0",
     # Runtime dep declared in issue #2040 (previously undeclared):
@@ -243,7 +238,7 @@ SEARCH_REQUIREMENTS = [
     "ddgs>=9.0.0",
     "aiohttp>=3.13.4",
     "google-api-python-client>=2.170.0",
-    "scrapy==2.14.2",
+    "scrapy==2.17.0",
     "trafilatura==2.0.0",
 ]
 

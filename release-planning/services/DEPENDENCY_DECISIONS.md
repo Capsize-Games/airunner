@@ -122,9 +122,9 @@ Excluded OpenVoice/Melo and legacy Shield components remain outside the enabled 
 
 ## Full Linux diagnostic graph: 243 exact distributions
 
-The current frozen diagnostic graph is `constraints.linux-release-v3.frozen.raw.txt` (local audit evidence), SHA-256 `5a75407a615ff49cb255017732f9954008051d925328acf4177f89d08ba21b14`. It contains 243 distributions. The prior V2 diagnostic graph (`0cf57de192c8f4c13ea39cff5129267ed1afc38d627d4c1fe25bb5f5df64b9cb`) is superseded. This graph remains separate from the active release lock.
+The current selected diagnostic graph is `constraints.linux-release-v4.selected.txt` (local audit evidence), SHA-256 `53a3aed363c9c3003ccf7e3e4e6ef7da719cdda84a9fd2bd876561e27b5afc74`. It contains 243 distributions, each bound to one reviewed wheel hash. V4 replaces the original Lingua wheel with the maintained 2.1.0+capsize.1 wheel; the other 242 selected artifacts are unchanged from V3. The raw V4 diagnostic splice was rejected for a malformed continuation and retained as failed evidence. The selected graph remains separate from the active release lock.
 
-The list below enumerates every exact V3 distribution. All 243 selected wheel files passed hash, size, ZIP and RECORD checks. Component-specific isolated installs/imports and Libzim's Ubuntu 24 synthetic test are recorded separately; the complete graph has not been installed or accepted. Reviewed origin flags are covered by the owner's standing whitelist, including reviewed transitives. This does not clear actual source, advisory, license or runtime findings. Native crate notice manifests linked below enumerate their separately reviewed scopes; they are not additional Python distributions.
+The list below enumerates every exact V4 distribution. All 243 selected wheel files passed hash, size, ZIP and RECORD checks. A fresh project environment installed the selected wheels with hash enforcement, no dependency resolution or builds, and kernel network denial; `uv pip check` passed. All 77 direct service base and Linux release requirements match the installed metadata. Production notice collection and verification passed for all 243 distributions and 1,403 notice files. These checks do not establish full model, GPU, API, or frozen-artifact acceptance. Component-specific runtime results are recorded separately. Reviewed origin flags are covered by the owner's standing whitelist, including reviewed transitives. This does not clear actual source, advisory, license or runtime findings. Native crate notice manifests linked below enumerate their separately reviewed scopes; they are not additional Python distributions.
 
 ```text
 accelerate==1.14.0+capsize.1
@@ -222,7 +222,7 @@ langsmith==0.14.4
 lazy-loader==0.6
 librosa==0.11.0
 libzim==3.7.0+capsize.2
-lingua-language-detector==2.1.0
+lingua-language-detector==2.1.0+capsize.1
 llama-cloud==0.1.23
 llama-cpp-python==0.3.21+capsize.1
 llvmlite==0.50.0
