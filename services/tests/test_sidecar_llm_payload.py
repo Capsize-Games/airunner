@@ -10,6 +10,7 @@ wire shape: unset optionals are absent, set optionals survive.
 from __future__ import annotations
 
 import json
+from types import SimpleNamespace
 
 from airunner_services.runtimes.contracts import (
     ChatMessage,
@@ -18,12 +19,14 @@ from airunner_services.runtimes.contracts import (
 from airunner_services.runtimes.llama_cpp_runtime_settings import (
     LlamaCppRuntimeSettings,
 )
+from airunner_services.runtimes import llama_cpp_runtime_settings
 from airunner_services.runtimes.sidecar_launcher import (
     SidecarLauncher,
 )
 from airunner_services.runtimes.sidecar_llm_client import (
     SidecarLLMClient,
 )
+from airunner_services.llm.provider_config import LLMProviderConfig
 
 
 def _client() -> SidecarLLMClient:
@@ -132,3 +135,147 @@ def test_completion_payload_defaults_finish_reason() -> None:
 
     assert payload["content"] == "pong"
     assert payload["finish_reason"] == "stop"
+
+
+def test_completion_payload_preserves_tool_only_completion():
+    tool_calls = [{"id": "call-1", "type": "function"}]
+    payload = SidecarLLMClient._completion_payload(
+        {
+            "choices": [{
+                "finish_reason": "tool_calls",
+                "message": {"content": "", "tool_calls": tool_calls},
+            }],
+            "usage": {"prompt_tokens": 4},
+        }
+    )
+    assert payload["content"] == ""
+    assert payload["tools"] == tool_calls
+    assert payload["finish_reason"] == "tool_calls"
+    assert payload["usage"] == {"prompt_tokens": 4}
+
+
+def test_qwen_profile_has_only_explicit_server_tuning() -> None:
+    """Qwen's named profile carries its chosen llama-server settings."""
+    profile = LLMProviderConfig.get_gguf_runtime_profile(
+        "local", "qwen3.5-9b", "default"
+    )
+    assert profile["n_batch"] == 256
+    assert profile["llama_server"] == {
+        "batch_size": 256,
+        "flash_attn": True,
+        "cache_type_k": "q8_0",
+        "cache_type_v": "q8_0",
+        "repeat_last_n": 4096,
+    }
+
+    other_profile = LLMProviderConfig.get_gguf_runtime_profile(
+        "local", "qwen2.5-7b", "default"
+    )
+    assert "llama_server" not in other_profile
+
+
+def test_settings_resolver_applies_only_nested_sidecar_profile(monkeypatch):
+    profile = LLMProviderConfig.get_gguf_runtime_profile(
+        "local", "qwen3.5-9b", "default"
+    )
+
+    class ProviderConfig:
+        @staticmethod
+        def get_gguf_runtime_profile(*_args, **_kwargs):
+            return profile
+
+    monkeypatch.setattr(
+        llama_cpp_runtime_settings,
+        "_candidate_model_id",
+        lambda _: "qwen3.5-9b",
+    )
+    monkeypatch.setattr(
+        llama_cpp_runtime_settings, "_context_length", lambda *_: 32768
+    )
+    monkeypatch.setattr(
+        llama_cpp_runtime_settings, "_gpu_layers", lambda *_: 0
+    )
+    monkeypatch.setattr(
+        llama_cpp_runtime_settings, "_resolve_model_path", lambda *_: None
+    )
+    monkeypatch.setattr(
+        llama_cpp_runtime_settings,
+        "_load_provider_config",
+        lambda: ProviderConfig,
+    )
+    monkeypatch.setattr(
+        llama_cpp_runtime_settings,
+        "resolve_runtime_executable",
+        lambda *_: "llama-server",
+    )
+    monkeypatch.setattr(
+        llama_cpp_runtime_settings,
+        "resolve_runtime_bind_host",
+        lambda *_: "127.0.0.1",
+    )
+
+    settings = llama_cpp_runtime_settings.resolve_llama_cpp_runtime_settings(
+        llm_settings=object(),
+        path_settings=SimpleNamespace(base_path="/tmp"),
+    )
+
+    assert settings.n_batch == 256
+    assert settings.flash_attn is True
+    assert settings.cache_type_k == "q8_0"
+    assert settings.cache_type_v == "q8_0"
+    assert settings.repeat_last_n == 4096
+
+
+def test_launcher_appends_optional_profile_flags(tmp_path) -> None:
+    """Optional profile settings become CLI args; defaults stay omitted."""
+    model = tmp_path / "model.gguf"
+    model.write_bytes(b"fixture")
+    base = LlamaCppRuntimeSettings(
+        executable="llama-server",
+        host="127.0.0.1",
+        port=18080,
+        model_path=str(model),
+        model_id="qwen3.5-9b",
+        runtime_profile="default",
+        n_ctx=4096,
+        n_gpu_layers=0,
+        startup_timeout_seconds=1,
+        n_batch=256,
+        flash_attn=True,
+        cache_type_k="q8_0",
+        cache_type_v="q8_0",
+        repeat_last_n=4096,
+    )
+    command = SidecarLauncher(base).command()
+    expected = [
+        "--batch-size", "256",
+        "--flash-attn", "on",
+        "--cache-type-k", "q8_0",
+        "--cache-type-v", "q8_0",
+        "--repeat-last-n", "4096",
+    ]
+    assert command[-len(expected):] == expected
+
+    defaults = SidecarLauncher(
+        LlamaCppRuntimeSettings(
+            executable="llama-server",
+            host="127.0.0.1",
+            port=18080,
+            model_path=str(model),
+            model_id="other",
+            runtime_profile="default",
+            n_ctx=4096,
+            n_gpu_layers=0,
+            startup_timeout_seconds=1,
+        )
+    ).command()
+    assert not any(
+        flag in defaults
+        for flag in (
+            "--batch-size",
+            "--flash-attn",
+            "--cache-type-k",
+            "--cache-type-v",
+            "--repeat-last-n",
+        )
+    )

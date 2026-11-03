@@ -129,6 +129,8 @@ def client_frame(delta: Any, call_chain_id: Optional[str]) -> Dict[str, Any]:
             "content": delta.metadata.get("error", "LLM runtime failed"),
             "done": True,
         }
+    if delta.status is EnvelopeStatus.CANCELLED:
+        return {"type": "cancelled", "done": True}
     frame: Dict[str, Any] = {
         "type": "chunk",
         "content": delta.delta.get("content", ""),
@@ -136,6 +138,8 @@ def client_frame(delta: Any, call_chain_id: Optional[str]) -> Dict[str, Any]:
     }
     if delta.final and call_chain_id:
         frame["call_chain_id"] = call_chain_id
+    if isinstance(delta.metadata.get("usage"), dict):
+        frame["usage"] = delta.metadata["usage"]
     return frame
 
 

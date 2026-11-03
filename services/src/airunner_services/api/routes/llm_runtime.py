@@ -169,6 +169,8 @@ def websocket_chunk(delta: StreamDelta) -> dict[str, Any]:
             "content": delta.metadata.get("error", "LLM runtime failed"),
             "done": True,
         }
+    if delta.status is EnvelopeStatus.CANCELLED:
+        return {"type": "cancelled", "done": True}
     payload = {
         "type": "chunk",
         "content": delta.delta.get("content", ""),
@@ -177,6 +179,8 @@ def websocket_chunk(delta: StreamDelta) -> dict[str, Any]:
     tool_calls = delta.delta.get("tool_calls")
     if tool_calls:
         payload["tool_calls"] = tool_calls
+    if isinstance(delta.metadata.get("usage"), dict):
+        payload["usage"] = delta.metadata["usage"]
     return payload
 
 

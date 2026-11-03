@@ -65,6 +65,13 @@ class LLMProviderConfig:
                 "default": {
                     "n_ctx": 32768,
                     "n_batch": 256,
+                    "llama_server": {
+                        "batch_size": 256,
+                        "flash_attn": True,
+                        "cache_type_k": "q8_0",
+                        "cache_type_v": "q8_0",
+                        "repeat_last_n": 4096,
+                    },
                 },
                 "combined_tts": {
                     "n_ctx": 4096,

@@ -228,6 +228,13 @@ class LlamaCppRuntimeSettings:
     n_ctx: int
     n_gpu_layers: int
     startup_timeout_seconds: float
+    # Optional profile-specific server tuning. None leaves llama.cpp's own
+    # defaults in place for existing profiles.
+    n_batch: Optional[int] = None
+    flash_attn: Optional[bool] = None
+    cache_type_k: Optional[str] = None
+    cache_type_v: Optional[str] = None
+    repeat_last_n: Optional[int] = None
 
     @property
     def endpoint(self) -> str:
@@ -255,6 +262,17 @@ def resolve_llama_cpp_runtime_settings(
     model_id = _candidate_model_id(resolved_llm_settings) or None
     selected_profile = str(runtime_profile or "default").strip() or "default"
     default_ctx = _context_length(model_id or "", selected_profile)
+    provider_config = _load_provider_config()
+    profile = (
+        provider_config.get_gguf_runtime_profile(
+            "local", model_id or "", profile_name=selected_profile
+        )
+        if provider_config is not None and model_id
+        else {}
+    )
+    sidecar_profile = profile.get("llama_server")
+    if not isinstance(sidecar_profile, dict):
+        sidecar_profile = {}
 
     return LlamaCppRuntimeSettings(
         executable=resolve_runtime_executable(
@@ -283,7 +301,28 @@ def resolve_llama_cpp_runtime_settings(
             "AIRUNNER_LLAMA_STARTUP_TIMEOUT",
             DEFAULT_STARTUP_TIMEOUT_SECONDS,
         ),
+        n_batch=_profile_int(sidecar_profile, "batch_size"),
+        flash_attn=_profile_bool(sidecar_profile, "flash_attn"),
+        cache_type_k=_profile_text(sidecar_profile, "cache_type_k"),
+        cache_type_v=_profile_text(sidecar_profile, "cache_type_v"),
+        repeat_last_n=_profile_int(sidecar_profile, "repeat_last_n"),
     )
+
+
+def _profile_int(profile: dict[str, Any], name: str) -> Optional[int]:
+    value = profile.get(name)
+    return int(value) if value is not None else None
+
+
+def _profile_bool(profile: dict[str, Any], name: str) -> Optional[bool]:
+    value = profile.get(name)
+    return bool(value) if value is not None else None
+
+
+def _profile_text(profile: dict[str, Any], name: str) -> Optional[str]:
+    value = profile.get(name)
+    text = str(value).strip() if value is not None else ""
+    return text or None
 
 
 __all__ = [
