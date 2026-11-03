@@ -235,6 +235,17 @@ validator is C/20 and its durable writer C/17. The separate OS input stager's
 validator was reduced from F/52 to A/5; its maximum function complexity is C/15.
 These scores support maintenance review, not runtime correctness claims.
 
+## Docker OS and Python inputs
+
+SRV-30 / [#2449](https://github.com/Capsize-Games/airunner/issues/2449)
+extends phases 4 and 6 to the remaining Docker OS/Python inputs. Although the
+CUDA base and Python wheels are pinned, additional apt packages and the
+deadsnakes PPA still resolve mutable versions. Inventory and review the retained
+closure, remove retired interface-only dependencies where compatible, and
+stage authenticated exact archives before an offline image install. Preserve
+the separate PostgreSQL lock and CUDA dependencies. Actual image-build and
+isolated service evidence are required; source checks do not close this gap.
+
 ## Native execution profiles in delivered artifacts
 
 SRV-29 / [#2448](https://github.com/Capsize-Games/airunner/issues/2448)
