@@ -5,16 +5,49 @@ from __future__ import annotations
 import hashlib
 import os
 import time
-from typing import Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional, Union
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+
+from airunner_services.runtimes.contracts import (
+    MAX_LLM_TOOL_CALLS,
+    MAX_LLM_TOOL_CALL_ID_CHARS,
+    MAX_LLM_TOOL_NAME_CHARS,
+    validate_function_tools,
+    validate_message_tool_calls,
+    validate_tool_choice,
+)
 
 
 class ChatMessage(BaseModel):
     """Chat message submitted to the HTTP API."""
 
     role: str
-    content: str
+    content: Optional[str]
+    name: Optional[str] = Field(default=None, max_length=MAX_LLM_TOOL_NAME_CHARS)
+    tool_calls: List[Dict[str, Any]] = Field(
+        default_factory=list, max_length=MAX_LLM_TOOL_CALLS
+    )
+    tool_call_id: Optional[str] = Field(
+        default=None, min_length=1, max_length=MAX_LLM_TOOL_CALL_ID_CHARS
+    )
+
+    @field_validator("tool_calls")
+    @classmethod
+    def _validate_tool_calls(cls, value: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        return validate_message_tool_calls(value)
+
+    @model_validator(mode="after")
+    def _validate_tool_message_shape(self) -> "ChatMessage":
+        if self.tool_calls and self.role != "assistant":
+            raise ValueError("only assistant messages may contain tool calls")
+        if self.role == "tool" and not self.tool_call_id:
+            raise ValueError("tool messages require tool_call_id")
+        if self.tool_call_id is not None and self.role != "tool":
+            raise ValueError("tool_call_id is only valid on tool messages")
+        if self.content is None and not (self.role == "assistant" and self.tool_calls):
+            raise ValueError("null content is only valid for assistant tool calls")
+        return self
 
 
 class ChatCompletionRequest(BaseModel):
@@ -26,7 +59,22 @@ class ChatCompletionRequest(BaseModel):
     temperature: float = 0.7
     max_tokens: Optional[int] = None
     enable_thinking: Optional[bool] = None
+    # Streaming requests must use the /api/v1/llm/stream WebSocket endpoint.
     stream: bool = False
+    tools: List[Dict[str, Any]] = Field(default_factory=list, max_length=16)
+    tool_choice: Optional[Union[str, Dict[str, Any]]] = None
+
+    @field_validator("tools")
+    @classmethod
+    def _validate_tools(cls, value: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        return validate_function_tools(value)
+
+    @field_validator("tool_choice")
+    @classmethod
+    def _validate_tool_choice(
+        cls, value: Optional[Union[str, Dict[str, Any]]]
+    ) -> Optional[Union[str, Dict[str, Any]]]:
+        return validate_tool_choice(value)
 
 
 class ChatCompletionResponse(BaseModel):
@@ -35,6 +83,8 @@ class ChatCompletionResponse(BaseModel):
     content: str
     model: str
     finish_reason: str
+    tool_calls: Optional[List[Dict[str, Any]]] = Field(default=None, max_length=16)
+    usage: Optional[Dict[str, Any]] = None
 
 
 class CompletionRequest(BaseModel):

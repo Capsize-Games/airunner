@@ -17,7 +17,8 @@ from __future__ import annotations
 
 from typing import Any, Dict, List, Optional
 
-from fastapi import WebSocket
+from fastapi import HTTPException, WebSocket
+from pydantic import ValidationError
 
 from airunner_services.ipc.messages import EnvelopeStatus, RequestEnvelope
 from airunner_services.runtimes.base import RuntimeClient
@@ -30,7 +31,7 @@ from airunner_services.runtimes.contracts import (
 )
 
 from .llm_contracts import max_ws_message_chars, max_ws_output_tokens
-from .llm_runtime import stream_runtime
+from .llm_runtime import require_sidecar_for_function_tools, stream_runtime
 
 _CHAT_TYPE = "chat"
 
@@ -58,10 +59,23 @@ def _role(raw: Any) -> MessageRole:
 def _one_message(raw: Any, total: int) -> RuntimeChatMessage:
     if not isinstance(raw, dict):
         raise ClientChatError("bad_message")
-    content = str(raw.get("content", ""))
-    if total + len(content) > max_ws_message_chars():
+    raw_content = raw.get("content")
+    if raw_content is None and raw.get("tool_calls"):
+        content = None
+    else:
+        content = str(raw_content if raw_content is not None else "")
+    if total + len(content or "") > max_ws_message_chars():
         raise ClientChatError("message_too_long")
-    return RuntimeChatMessage(role=_role(raw.get("role")), content=content)
+    try:
+        return RuntimeChatMessage(
+            role=_role(raw.get("role")),
+            content=content,
+            name=raw.get("name"),
+            tool_calls=raw.get("tool_calls") or [],
+            tool_call_id=raw.get("tool_call_id"),
+        )
+    except ValidationError as exc:
+        raise ClientChatError("invalid_tool_message") from exc
 
 
 def parse_client_chat(data: Dict[str, Any]) -> List[RuntimeChatMessage]:
@@ -73,7 +87,7 @@ def parse_client_chat(data: Dict[str, Any]) -> List[RuntimeChatMessage]:
     total = 0
     for raw in raw_messages:
         message = _one_message(raw, total)
-        total += len(message.content)
+        total += len(message.content or "")
         messages.append(message)
     return messages
 
@@ -105,13 +119,18 @@ def client_envelope(
     messages: List[RuntimeChatMessage], data: Dict[str, Any]
 ) -> RequestEnvelope:
     """Build one streaming runtime envelope from a client chat frame."""
-    payload = LLMInvocationRequest(
-        model=data.get("model"),
-        messages=messages,
-        max_tokens=_max_tokens(data),
-        temperature=_temperature(data),
-        stream=True,
-    )
+    try:
+        payload = LLMInvocationRequest(
+            model=data.get("model"),
+            messages=messages,
+            max_tokens=_max_tokens(data),
+            temperature=_temperature(data),
+            stream=True,
+            tools=data.get("tools", []),
+            tool_choice=data.get("tool_choice"),
+        )
+    except ValidationError as exc:
+        raise ClientChatError("invalid_tool_request") from exc
     return RequestEnvelope(
         runtime=RuntimeKind.LLM,
         action=RuntimeAction.INVOKE,
@@ -136,10 +155,14 @@ def client_frame(delta: Any, call_chain_id: Optional[str]) -> Dict[str, Any]:
         "content": delta.delta.get("content", ""),
         "done": delta.final,
     }
+    tool_calls = delta.delta.get("tool_calls")
+    if tool_calls:
+        frame["tool_calls"] = tool_calls
+    usage = delta.metadata.get("usage")
+    if isinstance(usage, dict):
+        frame["usage"] = usage
     if delta.final and call_chain_id:
         frame["call_chain_id"] = call_chain_id
-    if isinstance(delta.metadata.get("usage"), dict):
-        frame["usage"] = delta.metadata["usage"]
     return frame
 
 
@@ -150,7 +173,16 @@ async def stream_client_chat(
 ) -> None:
     """Stream one client chat frame as client-shaped frames."""
     try:
-        envelope = client_envelope(parse_client_chat(data), data)
+        messages = parse_client_chat(data)
+        require_sidecar_for_function_tools(
+            client, messages, data.get("tools", []), data.get("tool_choice")
+        )
+        envelope = client_envelope(messages, data)
+    except HTTPException:
+        await websocket.send_json(
+            {"type": "error", "content": "unsupported_tool_runtime", "done": True}
+        )
+        return
     except ClientChatError as exc:
         await websocket.send_json(
             {"type": "error", "content": exc.code, "done": True}

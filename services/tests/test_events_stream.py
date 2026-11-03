@@ -16,6 +16,8 @@ client — no real model, network, or live-data side effects.
 
 from __future__ import annotations
 
+import asyncio
+
 import pytest
 from starlette.testclient import TestClient
 
@@ -26,11 +28,17 @@ from airunner_services.api.routes.llm_chat_envelope import (
     client_envelope,
     client_frame,
     parse_client_chat,
+    stream_client_chat,
 )
 from airunner_services.api.server import create_app
 from airunner_services.database import reset_engine, setup_database
-from airunner_services.ipc.messages import EnvelopeStatus, StreamDelta
-from airunner_services.runtimes.contracts import RuntimeKind
+from airunner_services.ipc.messages import EnvelopeStatus, ResponseEnvelope, StreamDelta
+from airunner_services.runtimes.contracts import (
+    RuntimeDescriptor,
+    RuntimeKind,
+    RuntimeMode,
+    TransportKind,
+)
 
 _STREAM = "/api/v1/llm/stream"
 
@@ -39,6 +47,7 @@ class _FakeClient:
     """Deterministic runtime client: two deltas, the last one final."""
 
     def stream(self, envelope):
+        self.last_envelope = envelope
         yield StreamDelta(
             request_id="r", delta={"content": "Hello"}, final=False
         )
@@ -89,7 +98,14 @@ def _connect(monkeypatch):
     monkeypatch.setenv("AIRUNNER_INSECURE_NO_AUTH", "0")
     monkeypatch.setattr(server_module, "is_loopback_request", lambda c: True)
     app = create_app()
-    app.state.runtime_registry = _FakeRegistry(_FakeClient())
+    runtime = _FakeClient()
+    runtime.descriptor = RuntimeDescriptor(
+        runtime=RuntimeKind.LLM,
+        provider="local",
+        mode=RuntimeMode.SIDECAR,
+        transport=TransportKind.HTTP,
+    )
+    app.state.runtime_registry = _FakeRegistry(runtime)
     token = loopback_token.get_or_create_loopback_token()
     return TestClient(app), {"X-Airunner-Token": token}
 
@@ -169,6 +185,182 @@ def test_stream_serves_client_chat(
     assert second["content"] == " world"
     assert second["done"] is True
     assert second["call_chain_id"] == "7"
+
+
+def test_stream_forwards_function_tool_messages_and_frames(
+    monkeypatch,
+) -> None:
+    async def run_inline(function, *args, **kwargs):
+        return function(*args, **kwargs)
+
+    monkeypatch.setattr(
+        "airunner_services.api.routes.llm_runtime.asyncio.to_thread", run_inline
+    )
+    runtime = _FakeClient()
+    runtime.descriptor = RuntimeDescriptor(
+        runtime=RuntimeKind.LLM,
+        provider="local",
+        mode=RuntimeMode.SIDECAR,
+        transport=TransportKind.HTTP,
+    )
+    response_call = {
+        "index": 0,
+        "id": "call-2",
+        "type": "function",
+        "function": {"name": "lookup", "arguments": '{"key":"y"}'},
+    }
+    def stream(envelope):
+        runtime.last_envelope = envelope
+        yield StreamDelta(
+            request_id="r",
+            delta={"content": "", "tool_calls": [response_call]},
+            final=True,
+            metadata={"usage": {"prompt_tokens": 4, "completion_tokens": 1}},
+        )
+
+    runtime.stream = stream
+    incoming_call = {
+        "id": "call-1",
+        "type": "function",
+        "function": {"name": "lookup", "arguments": '{"key":"x"}'},
+    }
+    data = {
+        "type": "chat",
+        "messages": [
+            {"role": "assistant", "content": None, "tool_calls": [incoming_call]},
+            {"role": "tool", "tool_call_id": "call-1", "content": "value: 42"},
+        ],
+        "tools": [
+            {"type": "function", "function": {"name": "lookup", "parameters": {"type": "object"}}}
+        ],
+        "tool_choice": {"type": "function", "function": {"name": "lookup"}},
+    }
+    ws = _RecordingWebSocket()
+    asyncio.run(stream_client_chat(ws, runtime, data))
+
+    frame = ws.frames[0]
+    assert frame["tool_calls"] == [response_call]
+    assert frame["usage"] == {"prompt_tokens": 4, "completion_tokens": 1}
+    payload = runtime.last_envelope.payload
+    assert payload["tools"][0]["function"]["name"] == "lookup"
+    assert payload["tool_choice"]["function"]["name"] == "lookup"
+    assert payload["messages"][0]["tool_calls"] == [incoming_call]
+    assert payload["messages"][1]["tool_call_id"] == "call-1"
+
+
+@pytest.mark.parametrize("transport", ["http", "websocket"])
+def test_authenticated_routes_preserve_function_tool_roundtrip(
+    transport, monkeypatch, isolated_token, test_db
+) -> None:
+    client, headers = _connect(monkeypatch)
+    runtime = client.app.state.runtime_registry._client
+    call = {
+        "id": "call-1",
+        "type": "function",
+        "function": {"name": "lookup", "arguments": '{"key":"x"}'},
+    }
+    data = {
+        "messages": [
+            {"role": "assistant", "content": None, "tool_calls": [call]},
+            {"role": "tool", "tool_call_id": "call-1", "content": "42"},
+        ],
+        "tools": [{"type": "function", "function": {"name": "lookup"}}],
+        "tool_choice": "auto",
+    }
+    usage = {"prompt_tokens": 4, "completion_tokens": 1}
+
+    def invoke(envelope):
+        runtime.last_envelope = envelope
+        return ResponseEnvelope(
+            request_id=envelope.request_id,
+            status=EnvelopeStatus.SUCCEEDED,
+            payload={
+                "content": "", "tools": [call], "usage": usage,
+                "finish_reason": "tool_calls",
+            },
+        )
+
+    def stream(envelope):
+        runtime.last_envelope = envelope
+        yield StreamDelta(
+            request_id=envelope.request_id,
+            delta={"tool_calls": [call]},
+            metadata={"usage": usage},
+            final=True,
+        )
+
+    runtime.invoke = invoke
+    runtime.stream = stream
+    if transport == "http":
+        response = client.post("/api/v1/llm/chat", json=data, headers=headers)
+        assert response.status_code == 200, response.text
+        frame = response.json()
+        assert frame["finish_reason"] == "tool_calls"
+    else:
+        with client.websocket_connect(_STREAM, headers=headers) as ws:
+            ws.send_json({"type": "chat", **data})
+            frame = ws.receive_json()
+        assert frame["done"] is True
+    assert frame["tool_calls"] == [call]
+    assert frame["usage"] == usage
+    forwarded = runtime.last_envelope.payload
+    assistant, result = forwarded["messages"]
+    assert assistant["role"] == "assistant"
+    assert assistant["content"] is None
+    assert assistant["tool_calls"] == [call]
+    assert result["role"] == "tool"
+    assert result["content"] == "42"
+    assert result["tool_call_id"] == "call-1"
+    assert forwarded["tools"] == data["tools"]
+    assert forwarded["tool_choice"] == "auto"
+
+
+def test_stream_rejects_function_tools_for_local_fallback(
+    monkeypatch,
+) -> None:
+    runtime = _FakeClient()
+    runtime.descriptor = RuntimeDescriptor(
+        runtime=RuntimeKind.LLM,
+        provider="local",
+        mode=RuntimeMode.SIDECAR,
+        transport=TransportKind.HTTP,
+    )
+    runtime.descriptor = runtime.descriptor.model_copy(
+        update={"mode": RuntimeMode.LOCAL_FALLBACK}
+    )
+    called = []
+    runtime.stream = lambda envelope: called.append(envelope) or iter(())
+
+    ws = _RecordingWebSocket()
+    asyncio.run(
+        stream_client_chat(
+            ws,
+            runtime,
+            {
+                "type": "chat",
+                "messages": [{"role": "user", "content": "hi"}],
+                "tools": [
+                    {"type": "function", "function": {"name": "lookup"}}
+                ],
+            },
+        )
+    )
+    frame = ws.frames[0]
+
+    assert frame == {
+        "type": "error",
+        "content": "unsupported_tool_runtime",
+        "done": True,
+    }
+    assert called == []
+
+
+class _RecordingWebSocket:
+    def __init__(self):
+        self.frames = []
+
+    async def send_json(self, frame):
+        self.frames.append(frame)
 
 
 def test_legacy_frame_path_unchanged(

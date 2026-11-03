@@ -675,7 +675,16 @@ class SidecarLLMClient(RuntimeClient):
 		"""Convert a neutral invocation into the sidecar JSON payload."""
 		payload = {
 			"messages": [
-				message.model_dump(exclude_none=True)
+				{
+					"role": message.role.value,
+					"content": message.content,
+					**({"name": message.name} if message.name is not None else {}),
+					**({"tool_calls": message.tool_calls} if message.tool_calls else {}),
+					**(
+						{"tool_call_id": message.tool_call_id}
+						if message.tool_call_id is not None else {}
+					),
+				}
 				for message in invocation.messages
 			],
 			"stream": stream,
@@ -685,6 +694,8 @@ class SidecarLLMClient(RuntimeClient):
 			payload["max_tokens"] = invocation.max_tokens
 		if invocation.model:
 			payload["model"] = invocation.model
+		if invocation.tools:
+			payload["tools"] = invocation.tools
 		if invocation.tool_choice is not None:
 			payload["tool_choice"] = invocation.tool_choice
 		if invocation.enable_thinking is not None:

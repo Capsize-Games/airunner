@@ -74,6 +74,39 @@ def test_set_name_survives_into_payload() -> None:
     assert payload["messages"][0]["name"] == "bob"
 
 
+def test_function_tool_messages_and_choice_survive_sidecar_serialization() -> None:
+	"""Tool definitions and assistant/tool-result turns reach llama.cpp."""
+	call = {
+		"id": "call-1",
+		"type": "function",
+		"function": {"name": "lookup", "arguments": '{"key":"x"}'},
+	}
+	tool = {
+		"type": "function",
+		"function": {"name": "lookup", "parameters": {"type": "object"}},
+	}
+	invocation = LLMInvocationRequest(
+		messages=[
+			ChatMessage(role="assistant", content=None, tool_calls=[call]),
+			ChatMessage(role="tool", content="value: 42", tool_call_id="call-1"),
+		],
+		tools=[tool],
+		tool_choice={"type": "function", "function": {"name": "lookup"}},
+	)
+
+	payload = _client()._chat_payload(invocation)
+
+	assert payload["messages"] == [
+		{"role": "assistant", "content": None, "tool_calls": [call]},
+		{"role": "tool", "content": "value: 42", "tool_call_id": "call-1"},
+	]
+	assert payload["tools"] == [tool]
+	assert payload["tool_choice"] == {
+		"type": "function",
+		"function": {"name": "lookup"},
+	}
+
+
 def test_thinking_kwargs_absent_by_default() -> None:
     """An unset ``enable_thinking`` sends no template kwargs.
 
