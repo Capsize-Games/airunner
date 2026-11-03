@@ -36,6 +36,15 @@ RUN if [ "${AIRUNNER_INSTALL_PROFILES}" != "linux-release" ]; then \
         exit 1; \
     fi
 
+# Validate every staged .deb and the associated lock receipt before the first
+# package installation in this image build.
+RUN --network=none \
+    --mount=type=bind,from=reviewed-inputs,source=postgresql,target=/tmp/release-inputs/postgresql,ro \
+    --mount=type=bind,from=reviewed-inputs,source=postgresql-build-supplement,target=/tmp/release-inputs/postgresql-build-supplement,ro \
+    set -eu; \
+    (cd /tmp/release-inputs/postgresql && sha256sum -c SHA256SUMS); \
+    (cd /tmp/release-inputs/postgresql-build-supplement && sha256sum -c SHA256SUMS)
+
 # Install system dependencies required by the selected runtime profiles.
 RUN set -e; \
     profile_match() { \
@@ -43,9 +52,6 @@ RUN set -e; \
             grep -Eq ",($1),"; \
     }; \
     packages="software-properties-common curl wget git build-essential"; \
-    if profile_match 'linux-release'; then \
-        packages="$packages libpq5=16.15-0ubuntu0.24.04.1"; \
-    fi; \
     packages="$packages cmake pkg-config libprotobuf-dev"; \
     packages="$packages protobuf-compiler"; \
     if profile_match 'stt-native|tts-python-core|linux-release|headless|desktop|all|all_dev|all_native|all_dev_native'; then \
@@ -58,11 +64,103 @@ RUN set -e; \
     apt-get update && apt-get install -y $packages && \
     rm -rf /var/lib/apt/lists/*
 
+# Install the reviewed Noble libpq closure and the glibc build compatibility
+# supplement from verified local inputs. Full package control metadata comes
+# from the verified .debs, so apt sees Provides/Breaks/Replaces/Multi-Arch.
+RUN --network=none \
+    --mount=type=bind,from=reviewed-inputs,source=postgresql,target=/tmp/release-inputs/postgresql,ro \
+    --mount=type=bind,from=reviewed-inputs,source=postgresql-build-supplement,target=/tmp/release-inputs/postgresql-build-supplement,ro \
+    set -eu; \
+    runtime_inputs=/tmp/release-inputs/postgresql; \
+    supplement_inputs=/tmp/release-inputs/postgresql-build-supplement; \
+    (cd "$runtime_inputs" && sha256sum -c SHA256SUMS); \
+    (cd "$supplement_inputs" && sha256sum -c SHA256SUMS); \
+    repo=/tmp/airunner-postgresql-local; \
+    mkdir -p "$repo/debs"; \
+    cp "$runtime_inputs"/debs/*.deb "$repo/debs/"; \
+    cp "$supplement_inputs"/debs/*.deb "$repo/debs/"; \
+    cp "$runtime_inputs/install-packages.txt" "$repo/install-packages.txt"; \
+    cat "$supplement_inputs/install-packages.txt" >> "$repo/install-packages.txt"; \
+    : > "$repo/Packages"; \
+    for deb in "$repo"/debs/*.deb; do \
+        metadata="$(dpkg-deb -f "$deb")"; \
+        filename="${deb##*/}"; \
+        size="$(stat -c %s "$deb")"; \
+        digest="$(sha256sum "$deb")"; digest="${digest%% *}"; \
+        printf '%s\nFilename: debs/%s\nSize: %s\nSHA256: %s\n\n' \
+            "$metadata" "$filename" "$size" "$digest" >> "$repo/Packages"; \
+    done; \
+    gzip -c -n -9 "$repo/Packages" > "$repo/Packages.gz"; \
+    packages_sha="$(sha256sum "$repo/Packages")"; packages_sha="${packages_sha%% *}"; \
+    packages_size="$(stat -c %s "$repo/Packages")"; \
+    compressed_sha="$(sha256sum "$repo/Packages.gz")"; compressed_sha="${compressed_sha%% *}"; \
+    compressed_size="$(stat -c %s "$repo/Packages.gz")"; \
+    { printf 'Origin: AIRunner reviewed local PostgreSQL runtime inputs\nLabel: AIRunner Noble libpq runtime plus glibc build supplement\nSuite: noble-local\nCodename: noble-local\nArchitectures: amd64\nComponents: main\nDate: %s\nDescription: Hash-verified Ubuntu package inputs\nSHA256:\n' "$(date -Ru)"; \
+      printf ' %s %s Packages\n %s %s Packages.gz\n' "$packages_sha" "$packages_size" "$compressed_sha" "$compressed_size"; } \
+        > "$repo/Release"; \
+    mkdir -p /usr/share/doc/airunner/release-inputs/postgresql \
+        /usr/share/doc/airunner/release-inputs/postgresql-build-supplement; \
+    cp "$runtime_inputs/SHA256SUMS" "$runtime_inputs/install-packages.txt" \
+        "$runtime_inputs/staging-receipt.json" \
+        "$runtime_inputs/postgresql-libpq-noble-runtime-lock.json" \
+        /usr/share/doc/airunner/release-inputs/postgresql/; \
+    cp "$supplement_inputs/SHA256SUMS" "$supplement_inputs/install-packages.txt" \
+        "$supplement_inputs/staging-receipt.json" \
+        "$supplement_inputs/postgresql-libpq-noble-build-supplement-lock.json" \
+        /usr/share/doc/airunner/release-inputs/postgresql-build-supplement/; \
+    apt_source=/tmp/airunner-postgresql-runtime.sources.list; \
+    printf '%s\n' 'deb [trusted=yes] file:/tmp/airunner-postgresql-local ./' > "$apt_source"; \
+    apt-get \
+        -o Dir::Etc::sourcelist="$apt_source" \
+        -o Dir::Etc::sourceparts=- \
+        -o APT::Get::List-Cleanup=0 \
+        update; \
+    cp "$repo"/debs/*.deb /var/cache/apt/archives/; \
+    xargs -r apt-get \
+        -o Dir::Etc::sourcelist="$apt_source" \
+        -o Dir::Etc::sourceparts=- \
+        --no-download --no-remove --no-install-recommends -y install \
+        < "$repo/install-packages.txt"; \
+    rm -f "$apt_source"; \
+    rm -rf "$repo" /var/lib/apt/lists/* /var/cache/apt/archives/*.deb /var/cache/apt/archives/partial/*
+
 # Install Python 3.13.
 RUN set -e; \
     add-apt-repository ppa:deadsnakes/ppa -y; \
     apt-get update; \
     apt-get install -y python3.13 python3.13-dev && rm -rf /var/lib/apt/lists/*
+
+# Check the reviewed OS closure after all subsequent system package installs.
+RUN python3.13 - <<'PY'
+import json
+from pathlib import Path
+import subprocess
+
+receipt_paths = (
+    (Path("/usr/share/doc/airunner/release-inputs/postgresql/staging-receipt.json"), "runtime", 24),
+    (Path("/usr/share/doc/airunner/release-inputs/postgresql-build-supplement/staging-receipt.json"), "build-supplement", 2),
+)
+format_field = chr(36) + "{Version}"
+checked = 0
+for receipt_path, kind, expected_count in receipt_paths:
+    receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
+    if receipt.get("kind") != kind or receipt.get("package_count") != expected_count:
+        raise SystemExit(f"reviewed PostgreSQL {kind} receipt has an unexpected shape")
+    for package in receipt["packages"]:
+        name = package["package"]
+        expected = package["version"]
+        result = subprocess.run(
+            ["dpkg-query", "-W", "-f=" + format_field, name],
+            check=True, capture_output=True, text=True, timeout=10,
+        )
+        actual = result.stdout.strip()
+        if actual != expected:
+            raise SystemExit(
+                f"reviewed PostgreSQL runtime drift: {name} expected {expected}, got {actual}"
+            )
+        checked += 1
+print(f"verified {checked} reviewed Ubuntu PostgreSQL runtime/build package identities")
+PY
 
 # Keep application wheels separate from Debian's Python packages. This image's
 # supported offline bootstrap uses the standard-library environment creator and

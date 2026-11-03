@@ -31,7 +31,7 @@ jobs:
     if: >-
       github.event_name != 'workflow_run' ||
       github.event.workflow_run.conclusion == 'success'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     strategy:
       matrix:
@@ -71,6 +71,20 @@ jobs:
           inputs="$RUNNER_TEMP/docker-release-inputs"
           python scripts/stage_docker_release_inputs.py --output-dir "$inputs"
           echo "DOCKER_RELEASE_INPUTS=$inputs" >> "$GITHUB_ENV"
+
+      - name: Stage exact reviewed Ubuntu libpq runtime closure
+        run: |
+          set -euo pipefail
+          mkdir -p "$DOCKER_RELEASE_INPUTS/postgresql"
+          python scripts/stage_postgresql_runtime.py \
+            --kind runtime \
+            --output-dir "$DOCKER_RELEASE_INPUTS/postgresql" \
+            --cache-dir /var/cache/apt/archives
+          mkdir -p "$DOCKER_RELEASE_INPUTS/postgresql-build-supplement"
+          python scripts/stage_postgresql_runtime.py \
+            --kind build-supplement \
+            --output-dir "$DOCKER_RELEASE_INPUTS/postgresql-build-supplement" \
+            --cache-dir /var/cache/apt/archives
 
       - name: Validate manual image publication source
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.publish_image }}

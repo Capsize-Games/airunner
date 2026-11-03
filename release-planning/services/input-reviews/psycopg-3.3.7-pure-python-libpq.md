@@ -61,7 +61,28 @@ allowances for other callers or model families.
 
 ## Not exercised
 
-No Psycopg import, libpq load from the service, package installation, PostgreSQL
+No Psycopg import, libpq load from the service, PostgreSQL
 server, DBAPI connection, migration, LDAP authentication, GSSAPI authentication,
 TLS connection, or final Ubuntu 24.04 frozen bundle was run. This record and
 staged lock describe reviewed inputs; they do not claim runtime acceptance.
+
+## Isolated OS installation follow-up
+
+The exact runtime closure and two matching glibc development packages were
+installed offline in the pinned CUDA 12.9.2 Ubuntu 24.04 image. Installing the
+runtime closure alone would remove CUDA development packages because its newer
+libc6 conflicts with the base image's older libc6-dev. The separate build
+supplement resolves that exact dependency without removals or downgrades.
+All 26 locked versions and the five checked CUDA/build package identities were
+present after installation; `dpkg --audit` was clean. The retained install-log
+SHA-256 is `389e81289ccbd21ccdaed89798331df17e8d16f1dfe02be4b579ad54045b5cba`.
+The container was disposable, used runc, had no network or GPU access, and ran
+under CPU/RAM limits. Runtime package scripts and triggers ran only there; the
+two supplemental archives contain no maintainer scripts.
+
+The production Docker recipe verifies staged archives before package installs,
+constructs local apt metadata from the verified control records, disables
+network/downloads/removals for the locked install, and checks the exact package
+versions after subsequent system installs. Full Docker execution is still
+required. The frozen candidate currently depends on target-host libpq; carrying
+and validating that external prerequisite remains separate work under #2446.

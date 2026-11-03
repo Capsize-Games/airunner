@@ -471,3 +471,22 @@ target-process verification. The Psycopg binary implementation is excluded.
 | libunistring5 | 1.1-2build1.1 |
 
 The [Ubuntu input ledger](../../packaging/linux/postgresql-libpq-noble-runtime-lock.json) binds package versions, archive paths, sizes and SHA-256 values. It records OS dependencies, not libraries copied into the frozen bundle.
+
+### Noble CUDA build compatibility supplement
+
+Updating the reviewed runtime libc6 in the pinned CUDA development image also
+requires matching development packages. These two build inputs use the same
+reviewed `glibc 2.39-0ubuntu8.9` source; their canonical archives match the signed
+Noble security index. They contain no package maintainer scripts. They are
+separate from the 24-package runtime closure and are not a frozen glibc overlay.
+
+| Package | Version | Archive SHA-256 |
+|---|---|---|
+| libc-dev-bin | 2.39-0ubuntu8.9 | 77db23aba4582d034d9a95e4818a16e7e51a2d4fb17a9204439688e288d67f4c |
+| libc6-dev | 2.39-0ubuntu8.9 | e13d5fcc1b2a86f75bca8e0026a8e39f24fe97ca86e92be79991f8697eb1306f |
+
+The [build supplement lock](../../packaging/linux/postgresql-libpq-noble-build-supplement-lock.json)
+retains package metadata and signed-index identity. An isolated offline install
+on the pinned CUDA image passed with all 26 exact package identities, the five
+checked CUDA/build packages retained, and a clean `dpkg --audit`. This does not
+establish the final Docker image, DBAPI connection, or frozen loader behavior.
