@@ -29,9 +29,27 @@ The package metadata currently declares these service extras:
 
 For the published distribution name, `airunner-services[development]` denotes the development extra. The local editable-install command below uses the checkout path instead.
 
-Some dependency publication issues affect clean installs. The CI workflow checks out pinned source revisions of `airunner-common` and `facehuggershield` because their PyPI releases are paused or yanked; this repository does not yet document a general external installation route for those sources. Separately, the TTS extras depend on `airunner-tts-vendor`; issue [#2413](https://github.com/Capsize-Games/airunner/issues/2413) records unresolved PyPI availability. `tts-python`, `headless`, `desktop`, `all`, `all_dev`, `all_native`, `all_dev_native`, and `windows` inherit that dependency and are not available from the configured public indexes. These profile names describe package metadata and do not mean that a clean public-index resolution has passed.
+Some extras still cannot be resolved from the configured public indexes. PyPI
+publication of `airunner-common` and `facehuggershield` remains paused;
+`airunner-common==6.1.8` is available from its reviewed
+[GitHub release](https://github.com/Capsize-Games/airunner-common/releases/tag/v6.1.8),
+and FacehuggerShield is optional through the `legacy-shield` extra and excluded
+from `linux-release`. The evaluation workflow checks out pinned
+`airunner-common` source for compatibility tests. Separately, the TTS extras
+depend on `airunner-tts-vendor`; issue
+[#2413](https://github.com/Capsize-Games/airunner/issues/2413) records unresolved
+PyPI availability. `tts-python`, `headless`, `desktop`, `all`, `all_dev`,
+`all_native`, `all_dev_native`, and `windows` inherit that dependency and are not
+available from the configured public indexes. The validated offline V6 input
+lock for `linux-release` does not establish clean public-index resolution for
+other profiles.
 
-The Linux `linux-release` aggregate excludes `airunner-tts-vendor`; OpenVoice and Melo support are deferred from that release profile. Its separate hash lock has not been generated or validated, and the paused `airunner-common` and `facehuggershield` inputs still require source review, so candidate packaging remains blocked.
+The Linux `linux-release` aggregate excludes `airunner-tts-vendor`; OpenVoice
+and Melo support are deferred from that release profile. Its V6 hash lock is
+generated and validated for 244 reviewed inputs; see the
+[V6 input validation record](release-planning/services/input-reviews/linux-release-v6-input-validation.md).
+This offline input validation is separate from clean public-index resolution for
+paused distributions, and from final frozen-artifact and model acceptance.
 
 When the required dependencies are available from an approved package source, an isolated contributor environment can be created with `uv`:
 

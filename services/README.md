@@ -10,7 +10,20 @@ Importable Python code is under `services/src/airunner_services/`. The main cons
 
 The base package requires `airunner-common~=6.1.8`. Its reviewed wheel is published in the [common v6.1.8 GitHub release](https://github.com/Capsize-Games/airunner-common/releases/tag/v6.1.8); PyPI publication remains paused. FacehuggerShield is optional through the `legacy-shield` extra.
 
-The legacy `tts-python` extra requires `airunner-tts-vendor`; the `headless`, `desktop`, `all`, `all_dev`, `all_native`, `all_dev_native`, and `windows` aggregates inherit it. [Issue #2413](https://github.com/Capsize-Games/airunner/issues/2413) records unresolved PyPI availability, so these vendor-bearing profiles are not available from the configured public indexes. The current `linux-release` profile selects `tts-python-core`, which omits OpenVoice/Melo and the legacy pyttsx3 local-playback dependency. The headless eSpeak HTTP path uses the bounded eSpeak NG CLI renderer described below. Legacy `llm` and `tts-python` extras retain their playback dependency; they are not the Linux release profile. The full ML release lock and artifact/model acceptance remain unfinished.
+The legacy `tts-python` extra requires `airunner-tts-vendor`; the `headless`,
+`desktop`, `all`, `all_dev`, `all_native`, `all_dev_native`, and `windows`
+aggregates inherit it. [Issue #2413](https://github.com/Capsize-Games/airunner/issues/2413)
+records unresolved PyPI availability, so these vendor-bearing profiles are not
+available from the configured public indexes. The current `linux-release`
+profile selects `tts-python-core`, which omits OpenVoice/Melo and the legacy
+pyttsx3 local-playback dependency. The headless eSpeak HTTP path uses the
+bounded eSpeak NG CLI renderer described below. Legacy `llm` and `tts-python`
+extras retain their playback dependency; they are not the Linux release profile.
+The V6 Linux release lock covers 244 reviewed inputs and passed offline
+installation, metadata, and notice checks; see the
+[V6 input validation record](../release-planning/services/input-reviews/linux-release-v6-input-validation.md).
+Source PostgreSQL acceptance has passed, but frozen PostgreSQL, final artifact,
+and model acceptance remain unfinished.
 
 For a local development environment, first confirm that the required dependencies are available from an approved source. Then create an isolated environment with `uv` and install the service package and development tools:
 

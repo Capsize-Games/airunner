@@ -44,9 +44,12 @@ Psycopg 3.3.7 for the full Linux profile. A fresh offline installation,
 dependency check, all 80 direct requirement checks, and notice verification
 (244 distributions, 1,735 files) passed. See
 [the V6 input record](input-reviews/linux-release-v6-input-validation.md).
-PostgreSQL connections, native library resolution and final frozen acceptance
-remain unverified. CORE remains SQLite-only. The old desktop lock is
-historical evidence. The preceding V5
+A separate 2026-11-03 source-service acceptance on commit `57bebf4a8` passed
+using the reviewed Ubuntu 24.04 system libpq and pure Psycopg. It verified `verify-full`
+TLS, rejection of an invalid password and unrelated CA, migrations and isolation
+for two tenant schemas, and cleanup. Frozen PostgreSQL acceptance remains open;
+CORE remains SQLite-only. The old desktop lock is historical evidence. The preceding
+V5
 diagnostic graph installed all 243 exact reviewed wheels in a separate project
 environment with kernel network denial, hash enforcement and no builds;
 `uv pip check` passed. All 77 direct service requirements match the installed
@@ -79,8 +82,9 @@ local repository, preserved CUDA/compiler package identities, and passed a
 second invocation without package changes. Missing input, checksum drift,
 wrong architecture and downgrade cases rejected before installation. The
 integrated local bundle/upgrade regression selection passed 163 tests. This
-establishes staging, package installation and metadata checks; actual PostgreSQL
-connections, migrations and a full frozen release remain required.
+establishes staging, package installation and metadata checks. The later source
+PostgreSQL acceptance described above covers connections and migrations; frozen
+PostgreSQL and full-release acceptance remain required.
 
 A subsequent isolated Ubuntu 24.04 source-runtime probe established a
 `verify-full` TLS connection, rejection of an invalid password and unrelated
@@ -90,8 +94,10 @@ directory redirected PostgreSQL into the SQLite-only snapshot helper. The
 guard now skips non-SQLite URLs before considering that directory; SQLite
 snapshots remain enabled. Unsupported-backup errors omit the database URL.
 The integrated backup, recovery and PostgreSQL runtime selection passed 41
-tests. Actual service migrations/schema isolation and frozen acceptance remain
-open until the corrected service runs successfully.
+tests. A later isolated source-service probe on commit `57bebf4a8` passed
+live PostgreSQL migrations and two-schema isolation. This was an integration
+probe, not an additional numbered test selection. Frozen PostgreSQL acceptance
+remains open.
 
 The reviewed CUDA wrapper `0.3.21+capsize.3` corrects the Qwen MTP loader and
 ctypes context-layout defects found in earlier candidates. Disk caching is an
@@ -204,7 +210,7 @@ These are targets; actual source and final-artifact results remain separate.
 |---|---|---|
 | 0: Reconcile scope | Retire obsolete plans; align contributor/service docs (#2201), preserve companion boundaries (#2144); integrate mainline; make optional static app hosting explicitly configured | Tracker reconciliation; service contract and accurate commands; no machine-specific implicit UI mount; focused merge checks |
 | 1: API correctness | HTTP admission and setup terminal status (#2408); Ollama show/pull (#2415); real embedding responses; bounded TTS HTTP requests and voice listing (#2254); accurate STT loaded state; terminal LLM failures and bounded completion observation (SRV-23, #2416) | Authenticated contract tests with fake runtime boundaries, bounded request/concurrency tests, no false success or synthetic model output |
-| 2: Data integrity | Safe downgrade policy (#2358), existing NULL preservation (#2363), schema drift checks (#2364), list boundaries (#2365), bootstrap/backup/document batching (#2409); restore the full-profile PostgreSQL driver and verify migrations/schema isolation (#2446, SRV-27) | Temporary SQLite upgrade/recovery tests, PostgreSQL connection/migration/schema tests, preserved user values, bounded public reads and streaming ingestion |
+| 2: Data integrity | Safe downgrade policy (#2358), existing NULL preservation (#2363), schema drift checks (#2364), list boundaries (#2365), bootstrap/backup/document batching (#2409); restore the full-profile PostgreSQL driver and verify migrations/schema isolation (#2446, SRV-27; source acceptance passed, frozen acceptance remains) | Temporary SQLite upgrade/recovery tests, PostgreSQL connection/migration/schema tests, preserved user values, bounded public reads and streaming ingestion |
 | 3: Runtime and companion | Reconcile confirmed LLM/art/voice findings (#2405/#2406/#2407); characterize retained compatibility (#2147/#2149); retire duplicate cognitive policy in stages; consolidate native LLM execution and authenticate supervised native children (#2242/#2416) | Shared backend identity and ownership tests, child authentication, native-failure containment, preserved route semantics/data/compatibility; explicit caller inventory before deletion; no real-model parity claim from doubles |
 | 4: Distribution | Resolve unavailable TTS distribution (#2413); service dependency/version orchestration (#2200); apt release artifact (#2251); dependency refresh evidence (#2274); Triton external toolchain and compile opt-in (SRV-24); optional-ML gate (#2399); ops cleanup (#2410); isolated crash regression (#2276) | Supported profiles resolve; pinned reviewed inputs; artifact-level daemon checks; CI uses the same source/check list; excluded tests recorded |
 | 5: Code quality | Repair analyzer path and unavailable-tool handling; analyze all service/native modules; review dead imports and ranked complexity by subsystem | JSON reports with exact scope/exclusions; confirmed defects fixed; reviewed dispositions for residual advisory findings; focused tests/import checks |
@@ -302,45 +308,52 @@ stager was refactored from F/51 and E/38 functions to a maximum C/20; no D/E/F
 blocks remain. Actual final archive pins, installed/container integration and
 GPU acceptance remain open; no candidate is promoted by these fixture tests.
 
-Installer and Docker staging now preserve the complete pinned CPU archive,
-including its licenses and provenance, alongside the independently verified
-CUDA profile. The development launcher discovers that profile through
+The installer and Docker staging helpers preserve the complete pinned CPU
+archive, including its licenses and provenance, alongside an independently
+verified CUDA profile. The developer `scripts/install.sh` leaves CUDA opt-in by default; an operator
+can request it with `--sidecars-cuda` or `AIRUNNER_DEV_SIDECAR_CUDA=1`. The full
+Linux bundle spec currently marks CUDA staging optional. The development
+launcher discovers a staged profile through
 `AIRUNNER_LLAMA_CUDA_PROFILE_ROOT`, without redirecting application/Python paths.
-The full NVIDIA Docker image requires both profiles. Its published CUDA pin
-remains absent until actual native acceptance and publication; no candidate
-placeholder is installed. The integrated payload, launcher, authentication and
-compatibility selection passed 123 tests with three dependency warnings.
+The full NVIDIA Docker image requires both profiles. The published CUDA pin
+remains absent pending native acceptance and publication; no candidate
+placeholder is installed. Once an accepted profile is published, the release
+installer and frozen-profile defaults still need to require both CPU and CUDA
+profiles. The integrated payload, launcher, authentication and compatibility
+selection passed 123 tests with three dependency warnings.
 New staging helpers have no Radon D/E/F blocks. Source review retains the
 88-line staging transaction and the pre-existing D/23 named-file extractor as
 advisory findings: the former keeps validation and atomic replacement together;
 the latter remains the compatibility extraction path. These dispositions do not
 replace runtime or artifact acceptance.
 
-Actual CUDA candidate `41720615159` loaded the required Qwen model and 32k
+Historical CUDA candidate `41720615159` loaded the required Qwen model and 32k
 context in 24.515 seconds, returned health 200, rejected an unauthenticated
 completion with 401, and released its owned process. It did not pass acceptance:
-the server observed 33/34 layers on GPU and block 0 on CPU. Source review found
-that negative GPU-layer handling counts the main stack while placement counts
-the appended next-token prediction block too. The service now maps its negative
-full-offload setting to the native CLI's explicit `all` value (`-2`), preserving
-CPU and positive layer counts. A maintained native fix must make that explicit
-value include every layer. Rebuild and observed full placement, authenticated
-generation, cancellation and cleanup remain required; fixture tests do not
-establish that the native fix works. Device capability also needs actual
-evidence rather than inference from the compiled CUDA target.
+the server observed 33/34 layers on GPU and block 0 on CPU. Source review traced
+the layer-count discrepancy to the native full-offload branch. The service maps
+its negative full-offload setting to the native CLI's explicit `all` value
+(`-2`), preserving CPU and positive layer counts. The maintained native source
+backport at `7495314` has passed 59 focused tests. Hosted candidate run
+[41737512324](https://github.com/Capsize-Games/airunner-native/actions/runs/41737512324)
+was building when this status was recorded; no new CUDA profile is accepted.
+Observed full placement, authenticated generation, cancellation and cleanup
+remain required, and device capability must come from runtime evidence rather
+than the compiled CUDA target.
 
 Coordinate the producer's annotated release/tag, complete immutable asset set,
 consumer pins and safe profile-tree staging. Preserve existing immutable tags.
 Native producer PR [#4](https://github.com/Capsize-Games/airunner-native/pull/4)
 retains the reviewed Whisper v1.9.5 source with a version-specific key-file auth
 patch and binds CPU/CUDA packaging to committed producer recipes. Local
-model-free producer tests and hosted input tests pass. Candidate run
+model-free producer tests and hosted input tests pass. Earlier candidate run
 `41712069289` built both Linux and Windows CPU archives and passed their native
 OS help/version checks. CUDA run `41712967565` completed compilation but failed
 the subsequent runtime-notice/package-list verification; it produced no accepted
-CUDA archive. The CUDA candidate is not accepted or activated. Actual service
-inference, offload, lifecycle, quality/latency and final packaged evidence remain
-required before the service release.
+CUDA archive. A later source backport and candidate run are tracked above; the
+profile remains unaccepted until the current run completes and its runtime
+evidence passes. Actual service inference, offload, lifecycle, quality/latency
+and final packaged evidence remain required before the service release.
 
 The Linux Whisper candidate from that CPU run was also exercised through the
 source `SidecarSTTClient` in an isolated network namespace with the unchanged
@@ -599,10 +612,13 @@ its exact source and wheel are recorded in
 GitHub, its downloaded bytes match the recorded hash, and isolated installed
 imports passed with the reviewed python-dotenv dependency. This establishes
 that bounded input, not the full service artifact. The excluded components
-remain quarantined. The previous
-desktop-profile lock is retained as historical evidence only; a validated
-`linux-release` hash lock has not been generated. The release preflight blocks
-before dependency installation until that lock is generated and validated.
+remain quarantined. The previous desktop-profile lock is retained as historical
+evidence only. The V6 `linux-release` hash lock now contains 244 reviewed inputs
+and passed offline installation, direct-requirement and notice checks; see the
+[V6 input validation record](input-reviews/linux-release-v6-input-validation.md).
+That lock result does not establish frozen PostgreSQL or full artifact acceptance.
+Temporary Actions inputs still need durable release mirrors before final
+publication.
 
 The binary-only dependency probe advanced past an unused Wikipedia requirement
 after its removal from the search extra. Sumy remains necessary for conversation
@@ -640,8 +656,10 @@ launchers execute the frozen image directly and preserve normal Python module
 execution. These results apply to this CORE candidate; they exclude real models,
 offline denial, prior-package upgrades, apt promotion/signing and the full ML
 bundle. The visible input and whitelist inventory is in
-`DEPENDENCY_DECISIONS.md`. Remaining Debian exit checks include upgrade preservation,
-followed by source-bound apt promotion and downloaded-package verification.
+`DEPENDENCY_DECISIONS.md`. A later published-package upgrade run
+(`41718346308`) passed upgrade preservation and installed frozen interruption
+recovery for its synthetic SQLite scenario. Remaining Debian exit checks include
+source-bound apt promotion and downloaded-package verification.
 
 GitHub release promotion runs from the exact annotated version tag through
 `workflow_dispatch`. It builds and checks the Python distributions, full Linux
@@ -740,12 +758,14 @@ The pinned Z-Image intake contains all 19 selected files. Seven safetensors
 payloads total 32,832,339,790 bytes; source/LFS identities and tensor header/layout
 checks passed. This is data intake evidence, not model loading or generation.
 
-Phase 6 / [#2139](https://github.com/Capsize-Games/airunner/issues/2139) now
-has an automated interruption probe. It kills only its own setup subprocess after
-one observed schema DDL. The published-baseline local run interrupted
-post-migration schema repair, retained the verified pre-upgrade backup and
-synthetic conversation, correctly rejected restoring an already-migrated database,
-and resumed to the authoritative candidate graph heads. Fifteen independent
-regressions passed locally. Hosted installed-package verification of this new
-probe remains pending; it does not establish arbitrary power-loss or interrupted
+Phase 6 / [#2139](https://github.com/Capsize-Games/airunner/issues/2139) has
+two distinct interruption probes. The source probe kills only its own setup
+subprocess after one observed schema DDL. Its published-baseline local run
+interrupted post-migration schema repair, retained the verified pre-upgrade backup
+and synthetic conversation, correctly rejected restoring an already-migrated
+database, and resumed to the authoritative candidate graph heads. Fifteen
+independent regressions passed locally. Separately, hosted installed-package run
+`41718346308` tested interruption after the durable pre-upgrade backup and before
+migration writes, then resumed the frozen daemon and verified the synthetic
+conversation. Neither probe establishes arbitrary power-loss or interrupted
 dpkg-unpack recovery.
