@@ -82,6 +82,17 @@ integrated local bundle/upgrade regression selection passed 163 tests. This
 establishes staging, package installation and metadata checks; actual PostgreSQL
 connections, migrations and a full frozen release remain required.
 
+A subsequent isolated Ubuntu 24.04 source-runtime probe established a
+`verify-full` TLS connection, rejection of an invalid password and unrelated
+CA, pure Psycopg with the exact system libpq, and private SASL plugin paths.
+Tenant startup then exposed a service defect: a configured SQLite backup
+directory redirected PostgreSQL into the SQLite-only snapshot helper. The
+guard now skips non-SQLite URLs before considering that directory; SQLite
+snapshots remain enabled. Unsupported-backup errors omit the database URL.
+The integrated backup, recovery and PostgreSQL runtime selection passed 41
+tests. Actual service migrations/schema isolation and frozen acceptance remain
+open until the corrected service runs successfully.
+
 The reviewed CUDA wrapper `0.3.21+capsize.3` corrects the Qwen MTP loader and
 ctypes context-layout defects found in earlier candidates. Disk caching is an
 explicit extra. Compiled candidate run `41545665728` and notice-completion run

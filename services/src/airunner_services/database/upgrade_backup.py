@@ -55,7 +55,7 @@ def _sqlite_path(db_url: str) -> Path:
     parsed = sa_url.make_url(db_url)
     name = parsed.database or ""
     if parsed.drivername != "sqlite" or not name or name == ":memory:":
-        raise UpgradeBackupError(f"only local sqlite URLs: {db_url}")
+        raise UpgradeBackupError("only local sqlite URLs are supported")
     return Path(name)
 
 
@@ -174,11 +174,11 @@ def backup_database_for_upgrade(
 
 def default_backup_dir(db_url: str) -> str | None:
     """Return the backup dir for one URL, or None when not SQLite."""
+    if not db_url.startswith("sqlite:///"):
+        return None
     override = os.environ.get("AIRUNNER_UPGRADE_BACKUP_DIR")
     if override:
         return override
-    if not db_url.startswith("sqlite:///"):
-        return None
     parent = os.path.dirname(db_url.replace("sqlite:///", "", 1))
     return os.path.join(parent, "backups") if parent else None
 
