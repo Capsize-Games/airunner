@@ -211,6 +211,35 @@ validator is C/20 and its durable writer C/17. The separate OS input stager's
 validator was reduced from F/52 to A/5; its maximum function complexity is C/15.
 These scores support maintenance review, not runtime correctness claims.
 
+## Native execution profiles in delivered artifacts
+
+SRV-29 / [#2448](https://github.com/Capsize-Games/airunner/issues/2448)
+extends phases 3, 4 and 6 to native artifact delivery and selection. The pinned
+v0.2.3 archives supply CPU sidecars; requesting GPU layers from that binary does
+not create CUDA support. The current Docker recipe's GPU reservation also does
+not supply a model-server payload. The separate SM 120a candidate must retain
+its wrapper and archive-local libraries in a distinct profile tree rather than
+replace the CPU executable under the same name.
+
+Resolve native backend selection separately from GGUF context/sampling profiles.
+Honor CPU/GPU intent, reject unavailable or unsupported requested GPU profiles,
+and keep model identity and 32k context unchanged. Verify profile manifests,
+relative entrypoints, hashes, permissions and notices before launch. Distinguish
+selected artifact capabilities from observed device/layer offload; unknown
+observations remain unknown. Frozen, installer and Docker staging must carry
+the same verified native profiles. A versioned sidecar manifest must describe
+standalone runtime facts without fictional application Python paths.
+
+Coordinate the producer's annotated release/tag, complete immutable asset set,
+consumer pins and safe profile-tree staging. Preserve existing immutable tags.
+Native producer PR [#4](https://github.com/Capsize-Games/airunner-native/pull/4)
+retains the reviewed Whisper v1.9.5 source with a version-specific key-file auth
+patch and binds CPU/CUDA packaging to committed producer recipes. Local
+model-free producer tests and hosted input tests pass; native build workflows
+are running. The CUDA candidate is not accepted or activated. Actual service
+inference, offload, lifecycle, quality/latency and final packaged evidence remain
+required before the service release.
+
 ## Shared native LLM request lifecycle
 
 Source commits `61c5d12a5`, `b7ccee850`, and `32554f6ee` share the supervised
