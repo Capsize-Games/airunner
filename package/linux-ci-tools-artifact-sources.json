@@ -1,6 +1,59 @@
 {
   "artifact_sources": [
     {
+      "filename": "certifi-2026.10.23-py3-none-any.whl",
+      "name": "certifi",
+      "sha256": "e9b54de76e530bb6cf0ccd036787103acb58fd42ba930ea8bf948ddbaa2f61d1",
+      "size_bytes": 135082,
+      "source": {
+        "filename": "certifi-2026.10.23-py3-none-any.whl",
+        "kind": "https",
+        "sha256": "e9b54de76e530bb6cf0ccd036787103acb58fd42ba930ea8bf948ddbaa2f61d1",
+        "size_bytes": 135082,
+        "url": "https://files.pythonhosted.org/packages/32/d1/a3652fe2c19134d0d15922177821d863cbd7e842d53a21bbe7e8e3a1b5ac/certifi-2026.10.23-py3-none-any.whl"
+      },
+      "version": "2026.10.23",
+      "wheel_tags": [
+        "py3-none-any"
+      ]
+    },
+    {
+      "filename": "charset_normalizer-3.5.2-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl",
+      "name": "charset-normalizer",
+      "sha256": "7218e8f32b0956cfcd048fd42d9d5779809745ca1d86113ca56f66e7ae1549c4",
+      "size_bytes": 254660,
+      "source": {
+        "filename": "charset_normalizer-3.5.2-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl",
+        "kind": "https",
+        "sha256": "7218e8f32b0956cfcd048fd42d9d5779809745ca1d86113ca56f66e7ae1549c4",
+        "size_bytes": 254660,
+        "url": "https://files.pythonhosted.org/packages/4b/85/41d27f234b82e47c167a5f6c0f62501dc0c640585ff4aba79e08a390336a/charset_normalizer-3.5.2-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl"
+      },
+      "version": "3.5.2",
+      "wheel_tags": [
+        "cp313-cp313-manylinux2014_x86_64",
+        "cp313-cp313-manylinux_2_17_x86_64",
+        "cp313-cp313-manylinux_2_28_x86_64"
+      ]
+    },
+    {
+      "filename": "idna-3.20-py3-none-any.whl",
+      "name": "idna",
+      "sha256": "ab7ae7122974553370f0bdb919e1a960b2cd1bc1ef0276416d896db81c14582c",
+      "size_bytes": 69583,
+      "source": {
+        "filename": "idna-3.20-py3-none-any.whl",
+        "kind": "https",
+        "sha256": "ab7ae7122974553370f0bdb919e1a960b2cd1bc1ef0276416d896db81c14582c",
+        "size_bytes": 69583,
+        "url": "https://files.pythonhosted.org/packages/58/a2/bb081bab032533a855d44de1d56f8e8426114ff1ba5d1f07a438a0a654f8/idna-3.20-py3-none-any.whl"
+      },
+      "version": "3.20",
+      "wheel_tags": [
+        "py3-none-any"
+      ]
+    },
+    {
       "filename": "iniconfig-2.3.0-py3-none-any.whl",
       "name": "iniconfig",
       "sha256": "f631c04d2c48c52b84d0d0549c99ff3859c98df65b3101406327ecc7d53fbf12",
@@ -30,6 +83,23 @@
         "url": "https://files.pythonhosted.org/packages/40/9e/2b38731e0fc536806f16490e1a12d7f0dc2a1235aa8cc07bcc75416a7daa/pluggy-1.7.0-py3-none-any.whl"
       },
       "version": "1.7.0",
+      "wheel_tags": [
+        "py3-none-any"
+      ]
+    },
+    {
+      "filename": "pygments-2.21.0-py3-none-any.whl",
+      "name": "pygments",
+      "sha256": "2363c69b61c4a97c838da3b130dcd6468f4848992b21a82f2a63ec34377137d9",
+      "size_bytes": 1250147,
+      "source": {
+        "filename": "pygments-2.21.0-py3-none-any.whl",
+        "kind": "https",
+        "sha256": "2363c69b61c4a97c838da3b130dcd6468f4848992b21a82f2a63ec34377137d9",
+        "size_bytes": 1250147,
+        "url": "https://files.pythonhosted.org/packages/71/46/17f022dd3e953bf20a04a028a21ec746d942f8d2af30fa0f124fa0e6a684/pygments-2.21.0-py3-none-any.whl"
+      },
+      "version": "2.21.0",
       "wheel_tags": [
         "py3-none-any"
       ]
@@ -69,6 +139,23 @@
       ]
     },
     {
+      "filename": "requests-2.34.2-py3-none-any.whl",
+      "name": "requests",
+      "sha256": "2a0d60c172f83ac6ab31e4554906c0f3b3588d37b5cb939b1c061f4907e278e0",
+      "size_bytes": 73075,
+      "source": {
+        "filename": "requests-2.34.2-py3-none-any.whl",
+        "kind": "https",
+        "sha256": "2a0d60c172f83ac6ab31e4554906c0f3b3588d37b5cb939b1c061f4907e278e0",
+        "size_bytes": 73075,
+        "url": "https://files.pythonhosted.org/packages/a0/f4/c67b0b3f1b9245e8d266f0f112c500d50e5b4e83cb6f3b71b6528104182a/requests-2.34.2-py3-none-any.whl"
+      },
+      "version": "2.34.2",
+      "wheel_tags": [
+        "py3-none-any"
+      ]
+    },
+    {
       "filename": "responses-0.26.3-py3-none-any.whl",
       "name": "responses",
       "sha256": "74474f799334ac4f37d93b6437ecc3bb1bb5c77a8d31780a338643be2dce0af8",
@@ -84,17 +171,35 @@
       "wheel_tags": [
         "py3-none-any"
       ]
+    },
+    {
+      "filename": "urllib3-2.8.0-py3-none-any.whl",
+      "name": "urllib3",
+      "sha256": "0cf3cae568d36aa9576b28dfb35f11328f1cb974ca7647d9475ebb86c75ac6e3",
+      "size_bytes": 135717,
+      "source": {
+        "filename": "urllib3-2.8.0-py3-none-any.whl",
+        "kind": "https",
+        "sha256": "0cf3cae568d36aa9576b28dfb35f11328f1cb974ca7647d9475ebb86c75ac6e3",
+        "size_bytes": 135717,
+        "url": "https://files.pythonhosted.org/packages/92/9d/c4e665119135114480843e7ab388fa94d8480650450e6f8e26b70d323a4c/urllib3-2.8.0-py3-none-any.whl"
+      },
+      "version": "2.8.0",
+      "wheel_tags": [
+        "py3-none-any"
+      ]
     }
   ],
   "prohibitions": [
     "No sdists or build hooks",
-    "No dependency resolution from indexes",
-    "Install with --no-deps after the selected runtime lock",
-    "The test tools are not runtime dependencies"
+    "No dependency resolution from indexes during install",
+    "Install this exact closure using --no-deps --require-hashes after a reviewed runtime profile",
+    "The six supporting runtime wheels are pinned to the selected CORE-reviewed artifacts; they are used as test-tool dependencies, not as a replacement runtime profile",
+    "The tools and their closure are not additional service runtime dependencies"
   ],
   "schema_version": 1,
-  "selected_count": 5,
-  "selected_lock_sha256": "d3a186ed9ec12d6e7053034e0f197dfe8053d882a7c5e942ec7c7d26352d5218",
+  "selected_count": 11,
+  "selected_lock_sha256": "5fa26bf0a79215505c55631e2e03dc44773a48206814f6d255f361144b342360",
   "source_review": {
     "packages": [
       {
@@ -187,8 +292,45 @@
       }
     ],
     "scope": "build metadata, pinned source package files, bundled license, exact selected wheel RECORD, code-to-wheel correspondence, package runtime requirements and relevant install/timeout/network behavior; no package install/import/build/test execution",
-    "status": "bounded review of exact upstream tags and wheels complete; selected tags and commits are recorded in private repositories with Actions disabled and automatic upstream sync disabled. Exact wheel hashes and license members are verified. Test tools remain candidate-only and are not runtime dependencies."
+    "status": "bounded review of exact upstream tags and wheels complete; selected tags and commits are recorded in private repositories with Actions disabled and automatic upstream sync disabled. Exact wheel hashes and license members are verified. Test tools remain candidate-only and are not runtime dependencies.",
+    "runtime_support": {
+      "evidence": "package/core-input-readiness.json and release-planning/services/input-reviews/core-linux-dependency-inventory.json",
+      "scope": "The six supporting wheels are exact artifact rows from the selected Linux V4 lock and have completed CORE source/license review; they close pytest (Pygments) and responses (requests plus its HTTP/TLS dependency closure).",
+      "packages": [
+        {
+          "name": "certifi",
+          "version": "2026.10.23",
+          "wheel_sha256": "e9b54de76e530bb6cf0ccd036787103acb58fd42ba930ea8bf948ddbaa2f61d1"
+        },
+        {
+          "name": "charset-normalizer",
+          "version": "3.5.2",
+          "wheel_sha256": "7218e8f32b0956cfcd048fd42d9d5779809745ca1d86113ca56f66e7ae1549c4"
+        },
+        {
+          "name": "idna",
+          "version": "3.20",
+          "wheel_sha256": "ab7ae7122974553370f0bdb919e1a960b2cd1bc1ef0276416d896db81c14582c"
+        },
+        {
+          "name": "pygments",
+          "version": "2.21.0",
+          "wheel_sha256": "2363c69b61c4a97c838da3b130dcd6468f4848992b21a82f2a63ec34377137d9"
+        },
+        {
+          "name": "requests",
+          "version": "2.34.2",
+          "wheel_sha256": "2a0d60c172f83ac6ab31e4554906c0f3b3588d37b5cb939b1c061f4907e278e0"
+        },
+        {
+          "name": "urllib3",
+          "version": "2.8.0",
+          "wheel_sha256": "0cf3cae568d36aa9576b28dfb35f11328f1cb974ca7647d9475ebb86c75ac6e3"
+        }
+      ],
+      "use": "Installed only as test-tool dependencies in source and packaging CI; the artifact/runtime smoke gate installs its own separately locked CORE profile."
+    }
   },
   "status": "candidate-only; not activated",
-  "target": "Linux x86_64, CPython 3.13; deterministic test tools only"
+  "target": "Linux x86_64, CPython 3.13; deterministic test tools and their reviewed direct runtime dependency closure only"
 }

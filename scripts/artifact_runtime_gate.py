@@ -56,35 +56,39 @@ IMPORT_PROBES = [
 # entirely within the test-owned HOME: no port bind, no weights, no GPU.
 BASE_OPERATION = ("daemon-generate-config", ["airunner-daemon", "--generate-config"])
 
-# The optional-ML boundary. Calls the unbound method (it does not touch self
-# before the import) so no config, port or daemon process is involved.
+# The optional-ML capability boundary. The CORE daemon is expected to start
+# without torch; this probe builds the production API with its real default
+# registry and exercises the capability handler without starting a sidecar.
 OPTIONAL_BOUNDARY_SRC = """
-import sys, importlib.util
-from airunner_services.daemon import AIRunnerDaemon
+import asyncio, importlib.util, sys
+from starlette.requests import Request
 if importlib.util.find_spec("torch") is not None:
-    sys.exit(2)                      # ML present: boundary not exercised
+    sys.exit(2)                      # ML present: absent-runtime case not tested
+
+from airunner_services.api.server import create_app
+from airunner_services.api.routes import llm_local_routes
+api = create_app(enable_cors=False)
+request = Request({
+    "type": "http", "method": "GET", "path": "/api/v1/llm/local-inference",
+    "headers": [], "query_string": b"", "server": ("candidate", 80),
+    "client": ("probe", 1), "scheme": "http",
+})
+request.scope["app"] = api
 try:
-    AIRunnerDaemon._create_headless_app(None)
-except ModuleNotFoundError as exc:
-    msg = str(exc)
-    # Truthful behaviour, not branding. The message must name the module that
-    # is actually missing, say the runtime is optional, and say what still
-    # works without it -- and the original cause must survive.
-    #
-    # It must NOT quote an install command: the ml extra pins CUDA builds that
-    # are not on PyPI and have no CPU build at the same pin, so no verified
-    # one-liner exists. Asserting on a recipe would re-enshrine the wrong one.
-    ok = (
-        "torch" in msg
-        and "optional" in msg.lower()
-        and "--generate-config" in msg
-        and isinstance(exc.__cause__, ModuleNotFoundError)
-        and exc.__cause__.name == "torch"
-    )
-    sys.exit(0 if ok else 4)
-except Exception:
-    sys.exit(5)                      # failed, but not at the intended boundary
-sys.exit(3)                          # no error at all: ML stack not required
+    result = asyncio.run(llm_local_routes.local_inference_capability(request))
+except Exception as exc:
+    print(f"capability handler failed: {type(exc).__name__}: {exc}")
+    sys.exit(5)
+if result.runtime.status not in {"unavailable", "stopped"}:
+    print(f"expected unavailable/stopped runtime, got {result.runtime.status!r}")
+    sys.exit(4)
+if any(model.loaded for model in result.models):
+    print("capability claimed a model was loaded without a runtime")
+    sys.exit(4)
+if result.contract != "airunner.local-inference" or result.contract_version != "1":
+    print("capability contract identity is missing or unexpected")
+    sys.exit(4)
+sys.exit(0)
 """
 
 TIMEOUT = 300
@@ -139,10 +143,10 @@ CANDIDATE_DISTRIBUTIONS = frozenset(
 def optional_boundary_is_failure(
     returncode: int, require_boundary: bool
 ) -> bool:
-    """Return True when the optional-ML boundary rc fails the gate.
+    """Return True when the no-ML capability probe rc fails the gate.
 
-    rc=0 always passes (absent runtime named truthfully). rc=2 means
-    the ML stack was present so the boundary was skipped: it fails
+    rc=0 always passes (unavailable capability is explicit). rc=2 means
+    torch was present so the absent-runtime case was skipped: it fails
     only with ``--require-optional-boundary``. Any other rc fails.
     """
     if returncode == 0:
@@ -225,6 +229,47 @@ def clean_env(venv: Path, home: Path) -> dict:
     }
 
 
+def locked_dependency_install_command(
+    pip: Path, requirements: Path, wheelhouse: Path
+) -> list[str]:
+    """Install the complete reviewed runtime closure without index access."""
+    return [
+        str(pip),
+        "install",
+        "--isolated",
+        "--no-cache-dir",
+        "--disable-pip-version-check",
+        "--no-index",
+        "--find-links",
+        str(wheelhouse.resolve()),
+        "--require-hashes",
+        "--only-binary=:all:",
+        "-r",
+        str(requirements.resolve()),
+    ]
+
+
+def local_candidate_install_command(
+    pip: Path, candidate_dir: Path, report_path: Path, spec: str
+) -> list[str]:
+    """Install only the built first-party artifact from its local directory."""
+    return [
+        str(pip),
+        "install",
+        "--isolated",
+        "--no-cache-dir",
+        "--disable-pip-version-check",
+        "--no-index",
+        "--find-links",
+        str(candidate_dir.resolve()),
+        "--no-deps",
+        "--force-reinstall",
+        "--report",
+        str(report_path),
+        spec,
+    ]
+
+
 def pypi_has_version(dist: str, version: str) -> bool:
     try:
         with urllib.request.urlopen(
@@ -249,6 +294,16 @@ def main() -> int:
     ap.add_argument("--find-links", type=Path, help="Directory of candidate wheels.")
     ap.add_argument("--version", help="Candidate version to require.")
     ap.add_argument("--published", help="Test an already-published version instead.")
+    ap.add_argument(
+        "--locked-dependency-requirements",
+        type=Path,
+        help="Hash-locked runtime requirements staged in a local wheelhouse.",
+    )
+    ap.add_argument(
+        "--locked-dependency-wheelhouse",
+        type=Path,
+        help="Local wheelhouse matching --locked-dependency-requirements.",
+    )
     ap.add_argument("--extras", default="", help="e.g. 'ml'")
     ap.add_argument(
         "--packages",
@@ -262,13 +317,22 @@ def main() -> int:
         "--require-optional-boundary",
         action="store_true",
         help=(
-            "Fail when the optional-ML boundary probe is skipped "
-            "(rc=2, ML stack present) instead of passing. Release "
-            "candidates must exercise the boundary truthfully: a skip "
-            "is not a pass."
+            "Fail when the no-ML capability probe is skipped "
+            "(rc=2, torch present). Release candidates must exercise "
+            "the unavailable-runtime capability contract."
         ),
     )
     args = ap.parse_args()
+
+    if bool(args.locked_dependency_requirements) != bool(
+        args.locked_dependency_wheelhouse
+    ):
+        ap.error(
+            "--locked-dependency-requirements and "
+            "--locked-dependency-wheelhouse must be supplied together"
+        )
+    if args.locked_dependency_requirements and args.published:
+        ap.error("locked candidate dependencies are only supported for candidate mode")
 
     if not args.published and not (args.find_links and args.version):
         ap.error("give --find-links with --version, or --published")
@@ -309,26 +373,54 @@ def main() -> int:
     subprocess.run([sys.executable, "-m", "venv", str(venv)], check=True)
     # --isolated ignores user/global pip config and PIP_* env vars, so a stray
     # index-url or find-links on the machine cannot change what gets installed.
-    pip = [
-        str(venv / "bin" / "pip"),
-        "install",
-        "--isolated",
-        "--no-cache-dir",
-        "--disable-pip-version-check",
-    ]
-    if args.find_links:
-        # Advertised top-level request; the resolver pulls the siblings itself.
-        # Bulk-installing every wheel would hide a missing dependency edge
-        # between the distributions.
-        pip += ["--find-links", str(args.find_links.resolve())]
-    print("\n--- install ---")
     report_path = work / "install-report.json"
-    res = run(pip + ["--report", str(report_path), spec])
+    pip = venv / "bin" / "pip"
+    if args.locked_dependency_requirements:
+        print("\n--- install hash-locked runtime dependencies ---")
+        runtime_install = locked_dependency_install_command(
+            pip,
+            args.locked_dependency_requirements,
+            args.locked_dependency_wheelhouse,
+        )
+        res = run(runtime_install)
+        if res.returncode != 0:
+            print(f"FAIL: runtime dependency install returned {res.returncode}")
+            print(res.stdout[-3000:], res.stderr[-3000:])
+            return 1
+        print("locked runtime dependencies installed")
+        candidate_install = local_candidate_install_command(
+            pip, args.find_links, report_path, spec
+        )
+    else:
+        # Compatibility path for explicit diagnostic use outside reviewed CI.
+        # Release workflows pass the locked arguments above.
+        candidate_install = [
+            str(pip),
+            "install",
+            "--isolated",
+            "--no-cache-dir",
+            "--disable-pip-version-check",
+        ]
+        if args.find_links:
+            candidate_install += ["--find-links", str(args.find_links.resolve())]
+        candidate_install += ["--report", str(report_path), spec]
+
+    print("\n--- install candidate distribution ---")
+    res = run(candidate_install)
     if res.returncode != 0:
         print(f"FAIL: install returned {res.returncode}")
         print(res.stdout[-3000:], res.stderr[-3000:])
         return 1
     print("install OK")
+
+    if args.locked_dependency_requirements:
+        print("\n--- validate locked candidate environment ---")
+        check = run([str(pip), "check"])
+        if check.returncode != 0:
+            print(f"FAIL: pip check returned {check.returncode}")
+            print(check.stdout[-3000:], check.stderr[-3000:])
+            return 1
+        print(check.stdout.strip() or "pip check passed")
 
     # Provenance. Matching version numbers is necessary but not sufficient: a
     # same-version first-party wheel could still have come from the index.
@@ -471,23 +563,22 @@ def main() -> int:
     results.append((pid, 0 if ok else (r.returncode or 1), True, note))
     print(f"  {pid:<22} rc={r.returncode} config_written={bool(produced)} {note}")
 
-    print("\n--- optional-ML boundary (absent runtime must be named truthfully) ---")
+    print("\n--- no-ML capability (model runtime must report unavailable) ---")
     rb = run([py, "-c", OPTIONAL_BOUNDARY_SRC], env=env, cwd=cwd)
     meaning = {
-        0: ("pass", "names the absent module, says it is optional, keeps the cause"),
-        2: ("skip", "ML stack present -- boundary not exercised"),
-        3: ("FAIL", "no error raised: the ML stack was not actually required"),
-        4: ("FAIL", "raised, but the message or chained cause was not truthful"),
-        5: ("FAIL", "failed somewhere other than the intended boundary"),
+        0: ("pass", "production capability reports unavailable and no model loaded"),
+        2: ("skip", "torch present -- CORE no-ML case not exercised"),
+        4: ("FAIL", "capability contract or loaded-state assertion failed"),
+        5: ("FAIL", "capability handler raised unexpectedly"),
     }.get(rb.returncode, ("FAIL", f"unexpected rc={rb.returncode}"))
-    print(f"  optional-ml-boundary   {meaning[0]}: {meaning[1]}")
+    print(f"  no-ml-capability      {meaning[0]}: {meaning[1]}")
     if optional_boundary_is_failure(
         rb.returncode, args.require_optional_boundary
     ):
         note = meaning[1]
         if rb.returncode == 2:
-            note += " (run the gate without the ML stack installed)"
-        results.append(("optional-ml-boundary", rb.returncode, True, note))
+            note += " (run the gate in the CORE profile without torch)"
+        results.append(("no-ml-capability", rb.returncode, True, note))
 
     failures = [(p, rc, n) for p, rc, req, n in results if req and rc != 0]
     print("\n" + "=" * 68)

@@ -11,7 +11,7 @@ permissions:
   contents: read
 
 env:
-  PYTHON_VERSION: "3.13"
+  PYTHON_VERSION: "3.13.5"
 
 jobs:
   runtime-contract-tests:
@@ -65,6 +65,14 @@ jobs:
         run: |
           wheelhouse="$RUNNER_TEMP/linux-release-wheelhouse"
           tools="$RUNNER_TEMP/linux-ci-tools-wheelhouse"
+          audit="$RUNNER_TEMP/runtime-contract-input-audit"
+          mkdir -p "$audit"
+          df -B1 --output=source,size,used,avail,pcent,target "$RUNNER_TEMP" "$GITHUB_WORKSPACE" | tee "$audit/capacity-before-staging.txt"
+          free -b | tee "$audit/memory-before-staging.txt"
+          cp package/constraints-linux-nvidia-cu129-linux-release.txt "$audit/runtime-lock.txt"
+          cp package/constraints-linux-ci-tools.txt "$audit/ci-tools-lock.txt"
+          cp package/linux-release-v4-artifact-sources.json "$audit/runtime-artifact-sources.json"
+          cp package/linux-ci-tools-artifact-sources.json "$audit/ci-tools-artifact-sources.json"
           python scripts/stage_linux_release_artifacts.py \
             --manifest package/linux-release-v4-artifact-sources.json \
             --selected-lockfile package/constraints-linux-nvidia-cu129-linux-release.txt \
@@ -75,6 +83,10 @@ jobs:
             --manifest package/linux-ci-tools-artifact-sources.json \
             --selected-lockfile package/constraints-linux-ci-tools.txt \
             --output-dir "$tools"
+          cp "$wheelhouse/requirements.txt" "$audit/runtime-requirements.txt"
+          cp "$wheelhouse/staging-receipt.json" "$audit/runtime-staging-receipt.json"
+          cp "$tools/requirements.txt" "$audit/ci-tools-requirements.txt"
+          cp "$tools/staging-receipt.json" "$audit/ci-tools-staging-receipt.json"
           python -m pip install --no-index --find-links "$tools" \
             --no-deps --require-hashes -r "$tools/requirements.txt"
           python -m pip install --no-deps --no-build-isolation -e './services[linux-release]'
@@ -86,6 +98,9 @@ jobs:
           assert (x * 2).tolist() == [2.0, 4.0]
           print(f"CPU tensor contract passed using torch {torch.__version__}; CUDA hidden")
           PY
+          df -B1 --output=source,size,used,avail,pcent,target "$RUNNER_TEMP" "$GITHUB_WORKSPACE" | tee "$audit/capacity-after-install-before-cleanup.txt"
+          rm -rf -- "$wheelhouse" "$tools"
+          df -B1 --output=source,size,used,avail,pcent,target "$RUNNER_TEMP" "$GITHUB_WORKSPACE" | tee "$audit/capacity-after-wheelhouse-cleanup.txt"
 
       # Required deterministic checks (C01: safety, auth, download,
       # data migration). This list is the PR-side half of the release
@@ -155,6 +170,14 @@ jobs:
           name: runtime-contract-results
           path: runtime-contracts.xml
 
+      - name: Upload runtime input and capacity audit
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: runtime-contract-input-audit
+          path: ${{ runner.temp }}/runtime-contract-input-audit/*
+          if-no-files-found: warn
+
   runtime-smoke:
     runs-on: ubuntu-latest
     permissions:
@@ -213,6 +236,14 @@ jobs:
         run: |
           wheelhouse="$RUNNER_TEMP/linux-release-wheelhouse"
           tools="$RUNNER_TEMP/linux-ci-tools-wheelhouse"
+          audit="$RUNNER_TEMP/runtime-smoke-input-audit"
+          mkdir -p "$audit"
+          df -B1 --output=source,size,used,avail,pcent,target "$RUNNER_TEMP" "$GITHUB_WORKSPACE" | tee "$audit/capacity-before-staging.txt"
+          free -b | tee "$audit/memory-before-staging.txt"
+          cp package/constraints-linux-nvidia-cu129-linux-release.txt "$audit/runtime-lock.txt"
+          cp package/constraints-linux-ci-tools.txt "$audit/ci-tools-lock.txt"
+          cp package/linux-release-v4-artifact-sources.json "$audit/runtime-artifact-sources.json"
+          cp package/linux-ci-tools-artifact-sources.json "$audit/ci-tools-artifact-sources.json"
           python scripts/stage_linux_release_artifacts.py \
             --manifest package/linux-release-v4-artifact-sources.json \
             --selected-lockfile package/constraints-linux-nvidia-cu129-linux-release.txt \
@@ -223,16 +254,31 @@ jobs:
             --manifest package/linux-ci-tools-artifact-sources.json \
             --selected-lockfile package/constraints-linux-ci-tools.txt \
             --output-dir "$tools"
+          cp "$wheelhouse/requirements.txt" "$audit/runtime-requirements.txt"
+          cp "$wheelhouse/staging-receipt.json" "$audit/runtime-staging-receipt.json"
+          cp "$tools/requirements.txt" "$audit/ci-tools-requirements.txt"
+          cp "$tools/staging-receipt.json" "$audit/ci-tools-staging-receipt.json"
           python -m pip install --no-index --find-links "$tools" \
             --no-deps --require-hashes -r "$tools/requirements.txt"
           python -m pip install --no-deps --no-build-isolation -e './services[linux-release]'
           python -m pip check
+          df -B1 --output=source,size,used,avail,pcent,target "$RUNNER_TEMP" "$GITHUB_WORKSPACE" | tee "$audit/capacity-after-install-before-cleanup.txt"
+          rm -rf -- "$wheelhouse" "$tools"
+          df -B1 --output=source,size,used,avail,pcent,target "$RUNNER_TEMP" "$GITHUB_WORKSPACE" | tee "$audit/capacity-after-wheelhouse-cleanup.txt"
 
       - name: Run ${{ matrix.name }} runtime smoke tests
         run: |
           python scripts/run_tests.py \
             ${{ matrix.smoke-flag }} \
             --verbose
+
+      - name: Upload runtime smoke input and capacity audit
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: runtime-smoke-input-audit-${{ matrix.name }}
+          path: ${{ runner.temp }}/runtime-smoke-input-audit/*
+          if-no-files-found: warn
 
   packaging-gates:
     # import-boundary + artifact gates on every PR, so
@@ -245,6 +291,9 @@ jobs:
     # cannot prove it installed the local artifact) -- bump the
     # version when that fires on a PR. No continue-on-error here.
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read
 
     steps:
       - name: Checkout code
@@ -255,13 +304,33 @@ jobs:
           python scripts/check_reviewed_release_inputs.py
           --workflow .github/workflows/eval-tests.yml
 
+      - name: Check reviewed CORE dependency readiness
+        run: python scripts/check_core_input_readiness.py --mode activate
+
       - name: Set up Python
         uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
-      - name: Install source-gate test tools
-        run: python -m pip install pytest
+      - name: Install reviewed CORE and test inputs
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          tools="$RUNNER_TEMP/linux-ci-tools-wheelhouse"
+          core="$RUNNER_TEMP/linux-core-ci-wheelhouse"
+          python scripts/stage_linux_release_artifacts.py \
+            --manifest package/linux-core-ci-artifact-sources.json \
+            --selected-lockfile package/constraints-linux-core-ci.txt \
+            --output-dir "$core"
+          python -m pip install --isolated --no-index --find-links "$core" \
+            --require-hashes --only-binary=:all: -r "$core/requirements.txt"
+          python scripts/stage_linux_release_artifacts.py \
+            --manifest package/linux-ci-tools-artifact-sources.json \
+            --selected-lockfile package/constraints-linux-ci-tools.txt \
+            --output-dir "$tools"
+          python -m pip install --no-index --find-links "$tools" \
+            --no-deps --require-hashes -r "$tools/requirements.txt"
+          python -m pip check
 
       - name: Enforce import boundaries on the source tree
         run: |
@@ -270,10 +339,9 @@ jobs:
 
       - name: Build candidate wheels
         run: |
-          python -m pip install --upgrade pip build
           mkdir -p dist
-          python -m build --outdir dist services
-          python -m build --outdir dist native
+          python scripts/build_python_distributions.py services --outdir dist
+          python scripts/build_python_distributions.py native --outdir dist
           ls -1 dist/
 
       # The .deb ships native/ and airunner_common/ as loose files
@@ -347,14 +415,18 @@ jobs:
 
       - name: Static artifact gate in a clean install
         run: |
+          core="$RUNNER_TEMP/linux-core-ci-wheelhouse"
           python -m venv /tmp/artifact-static
-          /tmp/artifact-static/bin/pip install --upgrade pip
+          /tmp/artifact-static/bin/pip install --isolated --no-index \
+            --find-links "$core" --require-hashes --only-binary=:all: \
+            -r "$core/requirements.txt"
           SERVICE_VERSION="$(python services/setup.py --version)"
           NATIVE_VERSION="$(python native/setup.py --version)"
           /tmp/artifact-static/bin/pip install \
-            --find-links dist \
+            --isolated --no-index --find-links dist --no-deps --force-reinstall \
             "airunner-services==$SERVICE_VERSION" \
             "airunner-native==$NATIVE_VERSION"
+          /tmp/artifact-static/bin/pip check
           /tmp/artifact-static/bin/python scripts/check_artifact_imports.py
 
       - name: Behavioural artifact gate (strict optional-ML boundary)
@@ -364,7 +436,13 @@ jobs:
             --find-links dist \
             --version "$VERSION" \
             --packages "services native" \
+            --locked-dependency-requirements "$RUNNER_TEMP/linux-core-ci-wheelhouse/requirements.txt" \
+            --locked-dependency-wheelhouse "$RUNNER_TEMP/linux-core-ci-wheelhouse" \
             --require-optional-boundary
+
+      - name: Remove staged packaging wheelhouses
+        if: always()
+        run: rm -rf -- "$RUNNER_TEMP/linux-core-ci-wheelhouse" "$RUNNER_TEMP/linux-ci-tools-wheelhouse"
 
       - name: Debian source-package dry run
         run: |

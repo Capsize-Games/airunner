@@ -87,7 +87,16 @@ def test_unparsable_file_is_a_violation_not_a_crash(
 
 
 def test_allowlist_drift_note_names_expected_lines() -> None:
-    assert ALLOWLIST, "allowlist must be non-empty for this test"
+    if not ALLOWLIST:
+        unrelated = Violation(
+            Path("services/src/airunner_services/widget.py"),
+            1,
+            "no.such.module",
+            "rule",
+        )
+        assert _allowlist_drift_note(unrelated) is None
+        return
+
     rel_path, line, imported = sorted(ALLOWLIST)[0]
     drifted = Violation(Path(rel_path), line + 1000, imported, "rule")
     assert not _is_allowlisted(drifted)

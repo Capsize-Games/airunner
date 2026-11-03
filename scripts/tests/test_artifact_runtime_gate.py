@@ -20,6 +20,8 @@ from artifact_runtime_gate import (
     ALLOWED_PACKAGE_TOKENS,
     CANDIDATE_DISTRIBUTIONS,
     UnsupportedSelection,
+    local_candidate_install_command,
+    locked_dependency_install_command,
     optional_boundary_is_failure,
     plan_validation,
     release_version_from_setup,
@@ -138,11 +140,7 @@ class TestProvenanceDecision:
         assert self._first_party_origins(report, tmp_path) == []
 
     def test_same_version_artifact_from_the_index_is_rejected(self, tmp_path):
-        """The substitution this check exists to catch.
-
-        The version matches exactly, so a version-equality check would pass it,
-        but the wheel came from PyPI rather than the candidate directory.
-        """
+        """Same-version wheels must still come from the candidate directory."""
         report = {
             "install": [
                 {
@@ -182,8 +180,38 @@ class TestProvenanceDecision:
         assert self._first_party_origins(report, tmp_path) == []
 
 
+class TestLockedInstallPlan:
+    """Candidate acceptance resolves locked deps locally and adds no deps."""
+
+    def test_dependency_install_requires_hashes_binary_wheels_and_no_index(self, tmp_path):
+        pip = tmp_path / "venv/bin/pip"
+        lock = tmp_path / "core/requirements.txt"
+        wheelhouse = tmp_path / "core"
+        command = locked_dependency_install_command(pip, lock, wheelhouse)
+        assert command[0] == str(pip)
+        assert "--no-index" in command
+        assert "--require-hashes" in command
+        assert "--only-binary=:all:" in command
+        assert command[-2:] == ["-r", str(lock.resolve())]
+
+    def test_candidate_install_uses_local_artifact_without_dependency_resolution(
+        self, tmp_path
+    ):
+        pip = tmp_path / "venv/bin/pip"
+        candidate = tmp_path / "dist"
+        report = tmp_path / "candidate-report.json"
+        command = local_candidate_install_command(
+            pip, candidate, report, "airunner-services==6.1.9"
+        )
+        assert "--no-index" in command
+        assert "--no-deps" in command
+        assert "--force-reinstall" in command
+        assert "--find-links" in command
+        assert command[-1] == "airunner-services==6.1.9"
+        assert str(report) in command
+
 class TestOptionalBoundaryStrictness:
-    """A skipped optional-ML boundary is not a pass on release candidates."""
+    """A skipped no-ML capability check is not a strict-gate pass."""
 
     def test_pass_never_fails(self):
         assert optional_boundary_is_failure(0, False) is False
