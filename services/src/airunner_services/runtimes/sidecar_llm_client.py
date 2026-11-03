@@ -5,7 +5,11 @@ from __future__ import annotations
 import json
 import socket
 import threading
+import time
+import uuid
 from dataclasses import dataclass
+from dataclasses import replace
+from pathlib import Path
 from typing import Any, Callable, Iterable, Optional
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
@@ -29,7 +33,7 @@ from airunner_services.runtimes.sidecar_launcher import SidecarLauncher
 
 
 DEFAULT_PROVIDER = "local"
-LlamaSettingsResolver = Callable[[Optional[str]], LlamaCppRuntimeSettings]
+LlamaSettingsResolver = Callable[..., LlamaCppRuntimeSettings]
 
 
 @dataclass
@@ -38,8 +42,70 @@ class _ActiveRequest:
 
 	profile: Optional[str]
 	cancelled: threading.Event
+	expected_binding: Optional[str] = None
 	response: Any = None
 	backend_started: bool = False
+
+
+class _LeasedOpenAIStream:
+	"""Own one cancellable request lease, including an unstarted stream."""
+
+	def __init__(
+		self,
+		client: "SidecarLLMClient",
+		request_id: str,
+		record: _ActiveRequest,
+		source: Iterable[dict[str, Any]],
+	) -> None:
+		self._client = client
+		self._request_id = request_id
+		self._record = record
+		self._source = iter(source)
+		self._finished = False
+
+	def __iter__(self) -> "_LeasedOpenAIStream":
+		return self
+
+	def __next__(self) -> dict[str, Any]:
+		if self._finished:
+			raise StopIteration
+		try:
+			return next(self._source)
+		except BaseException:
+			self._finish()
+			raise
+
+	def close(self) -> None:
+		"""Cancel this lease and release it after an in-flight read exits."""
+		if self._finished:
+			return
+		self._record.cancelled.set()
+		if self._record.response is not None:
+			self._client._interrupt_response(self._record.response)
+		try:
+			close = getattr(self._source, "close", None)
+			if callable(close):
+				close()
+		except ValueError:
+			# The iterator is currently executing; its next() call will finish
+			# the lease after the interrupted transport returns.
+			return
+		finally:
+			if not self._source_is_running():
+				self._finish()
+
+	def _source_is_running(self) -> bool:
+		state = getattr(self._source, "gi_running", False)
+		return bool(state)
+
+	def _finish(self) -> None:
+		if self._finished:
+			return
+		self._finished = True
+		self._client._release_request(self._request_id, self._record)
+
+	def __del__(self) -> None:
+		self.close()
 
 
 class _SidecarRequestError(RuntimeError):
@@ -63,6 +129,10 @@ class SidecarLLMClient(RuntimeClient):
 		http_opener=urlopen,
 		timeout_seconds: float = 120.0,
 	) -> None:
+		self._uses_default_settings_resolver = (
+			settings_resolver is None
+			or settings_resolver is resolve_llama_cpp_runtime_settings
+		)
 		self._settings_resolver = (
 			settings_resolver or resolve_llama_cpp_runtime_settings
 		)
@@ -74,8 +144,15 @@ class SidecarLLMClient(RuntimeClient):
 		self._timeout_seconds = timeout_seconds
 		self._active_requests: dict[str, _ActiveRequest] = {}
 		self._active_requests_lock = threading.RLock()
+		self._active_requests_condition = threading.Condition(
+			self._active_requests_lock
+		)
 		self._launcher_lock = threading.RLock()
 		self._control_action_active = False
+		self._bound_model_selection: Optional[dict[str, Any]] = None
+		self._bound_backend_identity: Optional[tuple[Any, ...]] = None
+		self._bound_model_file_identity: Optional[tuple[Any, ...]] = None
+		self._bound_model_token: Optional[str] = None
 		self.descriptor = RuntimeDescriptor(
 			runtime=RuntimeKind.LLM,
 			provider=provider,
@@ -193,8 +270,127 @@ class SidecarLLMClient(RuntimeClient):
 		)
 
 	def close(self) -> None:
-		"""Release the managed sidecar process during shutdown."""
-		self._launcher.stop()
+		"""Release the shared process through centralized lease admission."""
+		if not self.stop_backend():
+			raise RuntimeError(
+				"The shared LLM backend still has active requests"
+			)
+
+	def start_backend(
+		self,
+		runtime_profile: Optional[str],
+		*,
+		model_path: Optional[str] = None,
+		model_id: Optional[str] = None,
+		n_ctx: Optional[int] = None,
+		n_gpu_layers: Optional[int] = None,
+		timeout_seconds: float = 120.0,
+	) -> str:
+		"""Bind and load one selected model, returning its request lease token."""
+		selection = self._model_selection(
+			model_path=model_path,
+			model_id=model_id,
+			n_ctx=n_ctx,
+			n_gpu_layers=n_gpu_layers,
+		)
+		self._acquire_control_action(wait_for_idle=True, timeout_seconds=timeout_seconds)
+		try:
+			with self._launcher_lock:
+				previous_identity = self._bound_backend_identity
+				self._prepare_launcher(
+					runtime_profile,
+					selected_model=selection,
+				)
+				self._validate_selected_model(
+					self._settings,
+					selection,
+					runtime_profile,
+				)
+				identity = self._backend_identity(
+					self._settings, selection, runtime_profile
+				)
+				if (
+					previous_identity is not None
+					and identity != previous_identity
+				):
+					# Settings equality misses replacement of a GGUF at the same path.
+					self._launcher.stop()
+				self._launcher.start()
+				if (
+					self._backend_identity(
+						self._settings, selection, runtime_profile
+					)
+					!= identity
+				):
+					self._launcher.stop()
+					raise RuntimeError(
+						"The selected GGUF file changed while the backend was loading"
+					)
+				return self._set_backend_binding(identity, selection)
+		finally:
+			self._end_control_action()
+
+	def stop_backend(
+		self,
+		*,
+		expected_binding: Optional[str] = None,
+		timeout_seconds: float = 120.0,
+	) -> bool:
+		"""Unload the shared backend after current request leases drain."""
+		# Stale proxies no longer own this backend, so they must not wait for
+		# unrelated active request leases before returning a no-op.
+		if expected_binding is not None:
+			with self._active_requests_lock:
+				if expected_binding != self._bound_model_token:
+					return True
+		try:
+			self._acquire_control_action(
+				wait_for_idle=True,
+				timeout_seconds=timeout_seconds,
+			)
+		except RuntimeError:
+			return False
+		try:
+			with self._launcher_lock:
+				if (
+					expected_binding is not None
+					and expected_binding != self._bound_model_token
+				):
+					# A stale adapter no longer owns the currently loaded model.
+					return True
+				self._launcher.stop()
+				self._clear_backend_binding()
+			return True
+		finally:
+			self._end_control_action()
+
+	def openai_request(
+		self,
+		request_id: str,
+		payload: dict[str, Any],
+		*,
+		runtime_profile: Optional[str],
+		endpoint_path: str,
+		expected_binding: Optional[str] = None,
+	) -> Any:
+		"""Proxy one native-model API request through this leased backend."""
+		if endpoint_path not in {"/v1/chat/completions", "/v1/completions"}:
+			raise ValueError("Unsupported llama-server completion endpoint")
+		if payload.get("stream") is True:
+			return self._stream_openai_request(
+				request_id,
+				payload,
+				runtime_profile=runtime_profile,
+				endpoint_path=endpoint_path,
+				expected_binding=expected_binding,
+			)
+		return self._invoke_openai_request(
+			request_id,
+			payload,
+			runtime_profile=runtime_profile,
+			endpoint_path=endpoint_path,
+			expected_binding=expected_binding,
+		)
 
 	def _status_response(self, request_id: str) -> Any:
 		"""Return a neutral status envelope for runtime control callers."""
@@ -221,6 +417,10 @@ class SidecarLLMClient(RuntimeClient):
 			with self._launcher_lock:
 				self._prepare_launcher(None, for_reload=True)
 				self._launcher.start()
+				identity = self._backend_identity(
+					self._settings, None, self._settings.runtime_profile
+				)
+				self._set_backend_binding(identity, None, force_new=True)
 		except RuntimeError as exc:
 			return self._failure_response(
 				request_id,
@@ -249,6 +449,7 @@ class SidecarLLMClient(RuntimeClient):
 		try:
 			with self._launcher_lock:
 				self._launcher.stop()
+				self._clear_backend_binding()
 		finally:
 			self._end_control_action()
 		return messages.ResponseEnvelope(
@@ -307,6 +508,158 @@ class SidecarLLMClient(RuntimeClient):
 			metadata=self._metadata(),
 		)
 
+	def _invoke_openai_request(
+		self,
+		request_id: str,
+		payload: dict[str, Any],
+		*,
+		runtime_profile: Optional[str],
+		endpoint_path: str,
+		expected_binding: Optional[str],
+	) -> dict[str, Any]:
+		record, failure = self._reserve_request(
+			request_id, runtime_profile, expected_binding=expected_binding
+		)
+		if failure is not None or record is None:
+			message = failure[1] if failure is not None else "The LLM runtime is busy"
+			raise _SidecarRequestError(message)
+		try:
+			self._start_for_request(request_id, record)
+			if record.cancelled.is_set():
+				raise _SidecarRequestError("The LLM request was cancelled")
+			with self._open_request(payload, endpoint_path=endpoint_path) as response:
+				if not self._attach_response(request_id, record, response):
+					raise _SidecarRequestError("The LLM request was cancelled")
+				data = self._decode_json(response)
+			if not self._complete_request(request_id, record):
+				raise _SidecarRequestError("The LLM request was cancelled")
+			return data
+		except Exception as exc:
+			self._complete_request(request_id, record)
+			if isinstance(exc, _SidecarRequestError):
+				raise
+			raise _SidecarRequestError(self._client_error_message(exc)) from exc
+		finally:
+			self._release_request(request_id, record)
+
+	def _stream_openai_request(
+		self,
+		request_id: str,
+		payload: dict[str, Any],
+		*,
+		runtime_profile: Optional[str],
+		endpoint_path: str,
+		expected_binding: Optional[str],
+	) -> Iterable[dict[str, Any]]:
+		record, failure = self._reserve_request(
+			request_id, runtime_profile, expected_binding=expected_binding
+		)
+		if failure is not None or record is None:
+			message = failure[1] if failure is not None else "The LLM runtime is busy"
+			raise _SidecarRequestError(message)
+		return _LeasedOpenAIStream(
+			self,
+			request_id,
+			record,
+			self._stream_openai_request_body(
+				request_id,
+			payload,
+				record=record,
+				endpoint_path=endpoint_path,
+			),
+		)
+
+	def _stream_openai_request_body(
+		self,
+		request_id: str,
+		payload: dict[str, Any],
+		*,
+		record: _ActiveRequest,
+		endpoint_path: str,
+	) -> Iterable[dict[str, Any]]:
+		"""Run the already reserved stream request."""
+		try:
+			self._start_for_request(request_id, record)
+			if record.cancelled.is_set():
+				return
+			with self._open_request(payload, endpoint_path=endpoint_path) as response:
+				if not self._attach_response(request_id, record, response):
+					return
+				for event in self._iter_openai_sse(response):
+					if record.cancelled.is_set():
+						return
+					yield event
+			if not self._complete_request(request_id, record):
+				return
+		except Exception as exc:
+			if record.cancelled.is_set():
+				return
+			self._complete_request(request_id, record)
+			if isinstance(exc, _SidecarRequestError):
+				raise
+			raise _SidecarRequestError(self._client_error_message(exc)) from exc
+		finally:
+			self._release_request(request_id, record)
+
+	@staticmethod
+	def _iter_openai_sse(response: Any) -> Iterable[dict[str, Any]]:
+		"""Yield validated provider events and require a real terminal event."""
+		completed = False
+		while True:
+			line = response.readline()
+			if not line:
+				raise _SidecarRequestError(
+					"The local LLM sidecar stream ended unexpectedly"
+				)
+			if not line.startswith(b"data:"):
+				continue
+			payload = line.split(b":", 1)[1].strip()
+			if payload == b"[DONE]":
+				if not completed:
+					raise _SidecarRequestError(
+						"The local LLM sidecar ended without a completion"
+					)
+				return
+			try:
+				data = json.loads(payload.decode("utf-8"))
+			except (json.JSONDecodeError, UnicodeDecodeError) as exc:
+				raise _SidecarRequestError(
+					"The local LLM sidecar returned malformed stream data"
+				) from exc
+			if not isinstance(data, dict) or data.get("error") is not None:
+				raise _SidecarRequestError(
+					"The local LLM sidecar reported a generation error"
+				)
+			choices = data.get("choices")
+			if not isinstance(choices, list):
+				raise _SidecarRequestError(
+					"The local LLM sidecar returned malformed stream data"
+				)
+			if not choices:
+				if not isinstance(data.get("usage"), dict):
+					raise _SidecarRequestError(
+						"The local LLM sidecar returned malformed stream data"
+					)
+				yield data
+				continue
+			choice = choices[0]
+			if not isinstance(choice, dict):
+				raise _SidecarRequestError(
+					"The local LLM sidecar returned malformed stream data"
+				)
+			if choice.get("finish_reason") is not None:
+				completed = True
+			elif choice.get("text"):
+				completed = True
+			else:
+				delta = choice.get("delta") or {}
+				if not isinstance(delta, dict):
+					raise _SidecarRequestError(
+						"The local LLM sidecar returned malformed stream data"
+					)
+				completed = bool(delta.get("content") or delta.get("tool_calls"))
+			yield data
+
 	def _chat_payload(
 		self,
 		invocation: LLMInvocationRequest,
@@ -339,12 +692,21 @@ class SidecarLLMClient(RuntimeClient):
 			}
 		return payload
 
-	def _open_request(self, payload: dict[str, Any]):
+	def _open_request(
+		self,
+		payload: dict[str, Any],
+		*,
+		endpoint_path: str = "/v1/chat/completions",
+	):
 		"""Open an HTTP request against the sidecar completion endpoint."""
 		body = json.dumps(payload).encode("utf-8")
 		headers = {
 			"Content-Type": "application/json",
-			"Accept": "application/json",
+			"Accept": (
+				"text/event-stream"
+				if payload.get("stream") is True
+				else "application/json"
+			),
 		}
 		internal_auth_headers = getattr(
 			self._launcher, "internal_auth_headers", None
@@ -352,7 +714,7 @@ class SidecarLLMClient(RuntimeClient):
 		if callable(internal_auth_headers):
 			headers.update(internal_auth_headers())
 		request = Request(
-			url=f"{self._launcher.endpoint}/v1/chat/completions",
+			url=f"{self._launcher.endpoint}{endpoint_path}",
 			data=body,
 			method="POST",
 			headers=headers,
@@ -383,45 +745,266 @@ class SidecarLLMClient(RuntimeClient):
 	def _resolve_settings(
 		self,
 		runtime_profile: Optional[str],
+		*,
+		selected_model: Optional[dict[str, Any]] = None,
 	) -> LlamaCppRuntimeSettings:
-		"""Resolve runtime settings with backward-compatible resolver calls."""
+		"""Resolve a profile's settings for one optional selected model."""
+		selection = selected_model or {}
+		if self._uses_default_settings_resolver:
+			return resolve_llama_cpp_runtime_settings(
+				runtime_profile=runtime_profile,
+				selected_model_id=selection.get("model_id"),
+				selected_model_path=selection.get("model_path"),
+				selected_n_ctx=selection.get("n_ctx"),
+				selected_n_gpu_layers=selection.get("n_gpu_layers"),
+			)
 		try:
-			return self._settings_resolver(runtime_profile)
+			resolved = self._settings_resolver(
+				runtime_profile,
+				**{
+					f"selected_{key}": value
+					for key, value in selection.items()
+				},
+			)
 		except TypeError:
-			return self._settings_resolver()
+			try:
+				resolved = self._settings_resolver(runtime_profile)
+			except TypeError:
+				resolved = self._settings_resolver()
+			if not selection:
+				return resolved
+			selected_model_id = selection.get("model_id")
+			selected_model_path = selection.get("model_path")
+			if not selected_model_path or not resolved.model_path:
+				raise RuntimeError(
+					"The sidecar settings resolver cannot bind the selected GGUF"
+				)
+			try:
+				models_match = Path(selected_model_path).expanduser().samefile(
+					Path(resolved.model_path).expanduser()
+				)
+			except OSError:
+				models_match = False
+			if not models_match:
+				raise RuntimeError(
+					"The configured sidecar model does not match the selected GGUF"
+				)
+			if (
+				resolved.model_id
+				and selected_model_id
+				and resolved.model_id != selected_model_id
+			):
+				raise RuntimeError(
+					"The configured sidecar model does not match the selected GGUF"
+				)
+			resolved = replace(
+				resolved,
+				model_id=selected_model_id or resolved.model_id,
+				runtime_profile=runtime_profile or "default",
+				n_ctx=(selection.get("n_ctx") or resolved.n_ctx),
+				n_gpu_layers=(
+					selection.get("n_gpu_layers")
+					if selection.get("n_gpu_layers") is not None
+					else resolved.n_gpu_layers
+				),
+			)
+		return resolved
+
+	@staticmethod
+	def _model_selection(
+		*,
+		model_path: Optional[str],
+		model_id: Optional[str],
+		n_ctx: Optional[int],
+		n_gpu_layers: Optional[int],
+	) -> Optional[dict[str, Any]]:
+		if not model_path:
+			return None
+		return {
+			"model_path": str(model_path),
+			"model_id": model_id,
+			"n_ctx": n_ctx,
+			"n_gpu_layers": n_gpu_layers,
+		}
+
+	@staticmethod
+	def _validate_selected_model(
+		settings: LlamaCppRuntimeSettings,
+		selection: Optional[dict[str, Any]],
+		runtime_profile: Optional[str] = None,
+	) -> None:
+		"""Require launcher settings to match the adapter's actual GGUF file."""
+		if selection is None:
+			return
+		selected_path = Path(selection["model_path"]).expanduser().resolve(
+			strict=True
+		)
+		configured_path = Path(settings.model_path or "").expanduser().resolve(
+			strict=True
+		)
+		if (
+			not selected_path.is_file()
+			or selected_path.suffix.lower() != ".gguf"
+			or not configured_path.is_file()
+			or not selected_path.samefile(configured_path)
+		):
+			raise RuntimeError(
+				"The configured sidecar model does not match the selected GGUF"
+			)
+		selected_model_id = selection.get("model_id")
+		if (
+			settings.model_id
+			and selected_model_id
+			and settings.model_id != selected_model_id
+		):
+			raise RuntimeError(
+				"The configured sidecar model ID does not match the selected GGUF"
+			)
+		if selection.get("n_ctx") is not None and settings.n_ctx != selection["n_ctx"]:
+			raise RuntimeError(
+				"The configured sidecar context does not match the selected GGUF"
+			)
+		if (
+			selection.get("n_gpu_layers") is not None
+			and settings.n_gpu_layers != selection["n_gpu_layers"]
+		):
+			raise RuntimeError(
+				"The configured sidecar offload does not match the selected GGUF"
+			)
+		if (
+			runtime_profile
+			and settings.runtime_profile != runtime_profile
+		):
+			raise RuntimeError(
+				"The configured sidecar profile does not match the selected GGUF"
+			)
 
 	def _prepare_launcher(
 		self,
 		runtime_profile: Optional[str],
 		*,
 		for_reload: bool = False,
+		selected_model: Optional[dict[str, Any]] = None,
 	) -> None:
 		"""Refresh managed launcher settings before starting the sidecar."""
 		if not self._managed_launcher:
 			return
-		resolved_settings = self._resolve_settings(runtime_profile)
+		resolved_settings = self._resolve_settings(
+			runtime_profile,
+			selected_model=selected_model,
+		)
 		if resolved_settings == self._settings and not for_reload:
 			return
 		self._launcher.stop()
 		self._settings = resolved_settings
 		self._launcher = SidecarLauncher(resolved_settings)
 
+	@staticmethod
+	def _model_file_identity(model_path: Optional[str]) -> Optional[tuple[Any, ...]]:
+		"""Fingerprint the selected file without reading model contents."""
+		if not model_path:
+			return None
+		try:
+			path = Path(model_path).expanduser().resolve(strict=True)
+			stat = path.stat()
+		except OSError:
+			return None
+		if not path.is_file():
+			return None
+		return (
+			str(path),
+			stat.st_dev,
+			stat.st_ino,
+			stat.st_size,
+			stat.st_mtime_ns,
+			stat.st_ctime_ns,
+		)
+
+	@classmethod
+	def _backend_identity(
+		cls,
+		settings: LlamaCppRuntimeSettings,
+		selection: Optional[dict[str, Any]],
+		runtime_profile: Optional[str],
+	) -> tuple[Any, ...]:
+		"""Return immutable identity for model bytes and effective settings."""
+		model_path = (
+			selection.get("model_path") if selection else settings.model_path
+		)
+		model_id = (
+			selection.get("model_id") if selection else settings.model_id
+		)
+		settings_identity = tuple(
+			sorted((key, repr(value)) for key, value in settings.__dict__.items())
+		)
+		return (
+			runtime_profile or settings.runtime_profile or "default",
+			model_id,
+			cls._model_file_identity(model_path),
+			settings_identity,
+		)
+
+	def _set_backend_binding(
+		self,
+		identity: tuple[Any, ...],
+		selection: Optional[dict[str, Any]],
+		*,
+		force_new: bool = False,
+	) -> str:
+		"""Publish one loaded backend identity and its opaque lease token."""
+		with self._active_requests_lock:
+			if (
+				force_new
+				or identity != self._bound_backend_identity
+				or self._bound_model_token is None
+			):
+				self._bound_model_token = uuid.uuid4().hex
+			self._bound_backend_identity = identity
+			self._bound_model_file_identity = identity[2]
+			self._bound_model_selection = selection
+			return self._bound_model_token
+
+	def _clear_backend_binding(self) -> None:
+		"""Invalidate tokens held by adapters after unload."""
+		with self._active_requests_lock:
+			self._bound_model_selection = None
+			self._bound_backend_identity = None
+			self._bound_model_file_identity = None
+			self._bound_model_token = None
+
+	def _binding_failure(self, expected_binding: str) -> Optional[str]:
+		"""Explain why a proxy's selected model lease is stale."""
+		if expected_binding != self._bound_model_token:
+			return "The selected LLM backend changed; reload the selected model"
+		if self._bound_model_file_identity is not None:
+			selection = self._bound_model_selection or {}
+			model_path = selection.get("model_path") or self._settings.model_path
+			if (
+				self._model_file_identity(model_path)
+				!= self._bound_model_file_identity
+			):
+				return "The selected GGUF file changed; reload the selected model"
+		return None
+
 	def _reserve_request(
 		self,
 		request_id: str,
 		profile: Optional[str],
+		*,
+		expected_binding: Optional[str] = None,
 	) -> tuple[Optional[_ActiveRequest], Optional[tuple[str, str]]]:
 		"""Reserve identity and profile before touching the shared backend."""
 		selected_profile = (profile or "default").strip() or "default"
 		with self._active_requests_lock:
 			failure = self._reservation_conflict(
-				request_id, selected_profile
+				request_id, selected_profile, expected_binding
 			)
 			if failure is not None:
 				return None, failure
 			record = _ActiveRequest(
 				profile=profile,
 				cancelled=threading.Event(),
+				expected_binding=expected_binding,
 			)
 			self._active_requests[request_id] = record
 			return record, None
@@ -430,6 +1013,7 @@ class SidecarLLMClient(RuntimeClient):
 		self,
 		request_id: str,
 		selected_profile: str,
+		expected_binding: Optional[str] = None,
 	) -> Optional[tuple[str, str]]:
 		"""Return a bounded conflict when an ID or backend profile is busy."""
 		if request_id in self._active_requests:
@@ -442,6 +1026,10 @@ class SidecarLLMClient(RuntimeClient):
 				"llm_runtime_busy",
 				"The LLM runtime is handling a control action",
 			)
+		if expected_binding is not None:
+			binding_failure = self._binding_failure(expected_binding)
+			if binding_failure is not None:
+				return ("llm_model_binding_stale", binding_failure)
 		if any(
 			(record.profile or "default") != selected_profile
 			for record in self._active_requests.values()
@@ -449,6 +1037,15 @@ class SidecarLLMClient(RuntimeClient):
 			return (
 				"llm_runtime_busy",
 				"The LLM runtime is serving another profile",
+			)
+		if expected_binding is not None and any(
+			record.expected_binding is not None
+			and record.expected_binding != expected_binding
+			for record in self._active_requests.values()
+		):
+			return (
+				"llm_runtime_busy",
+				"The LLM runtime is serving another model binding",
 			)
 		return None
 
@@ -460,9 +1057,34 @@ class SidecarLLMClient(RuntimeClient):
 			self._control_action_active = True
 			return True
 
+	def _acquire_control_action(
+		self,
+		*,
+		wait_for_idle: bool,
+		timeout_seconds: float,
+	) -> None:
+		"""Reserve load/unload admission, optionally waiting for leases."""
+		deadline = time.monotonic() + max(0.0, timeout_seconds)
+		with self._active_requests_condition:
+			if self._control_action_active:
+				raise RuntimeError("LLM runtime control is already active")
+			self._control_action_active = True
+			while self._active_requests:
+				if not wait_for_idle:
+					self._control_action_active = False
+					self._active_requests_condition.notify_all()
+					raise RuntimeError("LLM runtime has active requests")
+				remaining = deadline - time.monotonic()
+				if remaining <= 0:
+					self._control_action_active = False
+					self._active_requests_condition.notify_all()
+					raise RuntimeError("Timed out waiting for active LLM requests")
+				self._active_requests_condition.wait(remaining)
+
 	def _end_control_action(self) -> None:
-		with self._active_requests_lock:
+		with self._active_requests_condition:
 			self._control_action_active = False
+			self._active_requests_condition.notify_all()
 
 	def _start_for_request(
 		self,
@@ -473,8 +1095,24 @@ class SidecarLLMClient(RuntimeClient):
 		with self._launcher_lock:
 			if record.cancelled.is_set():
 				return
+			if record.expected_binding is not None:
+				binding_failure = self._binding_failure(
+					record.expected_binding
+				)
+				if binding_failure is not None:
+					raise _SidecarRequestError(binding_failure)
 			if self._managed_launcher:
-				resolved = self._resolve_settings(record.profile)
+				selected_model = self._bound_model_selection
+				if (
+					selected_model is not None
+					and (record.profile or "default")
+					!= (self._settings.runtime_profile or "default")
+				):
+					selected_model = None
+				resolved = self._resolve_settings(
+					record.profile,
+					selected_model=selected_model,
+				)
 				with self._active_requests_lock:
 					other_backend_users = any(
 						other_id != request_id
@@ -485,8 +1123,21 @@ class SidecarLLMClient(RuntimeClient):
 					raise _SidecarRequestError(
 						"The LLM runtime settings changed during an active request"
 					)
-				self._prepare_launcher(record.profile)
+				self._prepare_launcher(
+					record.profile,
+					selected_model=selected_model,
+				)
+				self._validate_selected_model(
+					self._settings,
+					selected_model,
+					record.profile,
+				)
 			self._launcher.start()
+			if record.expected_binding is None and self._managed_launcher:
+				identity = self._backend_identity(
+					self._settings, selected_model, record.profile
+				)
+				self._set_backend_binding(identity, selected_model)
 			with self._active_requests_lock:
 				if self._active_requests.get(request_id) is record:
 					record.backend_started = True
@@ -512,9 +1163,10 @@ class SidecarLLMClient(RuntimeClient):
 		record: _ActiveRequest,
 	) -> None:
 		"""Release only the reservation owned by this invocation."""
-		with self._active_requests_lock:
+		with self._active_requests_condition:
 			if self._active_requests.get(request_id) is record:
 				self._active_requests.pop(request_id, None)
+				self._active_requests_condition.notify_all()
 
 	def _complete_request(
 		self,
@@ -522,9 +1174,10 @@ class SidecarLLMClient(RuntimeClient):
 		record: _ActiveRequest,
 	) -> bool:
 		"""Atomically close cancellation ownership at a terminal result."""
-		with self._active_requests_lock:
+		with self._active_requests_condition:
 			if self._active_requests.get(request_id) is record:
 				self._active_requests.pop(request_id, None)
+				self._active_requests_condition.notify_all()
 			return not record.cancelled.is_set()
 
 	def _active_request_count(self) -> int:

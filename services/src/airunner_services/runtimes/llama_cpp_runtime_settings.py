@@ -132,8 +132,11 @@ def _resolve_model_path(
     llm_settings: Any,
     base_path: str,
     model_id: str,
+    selected_model_path: Optional[str] = None,
 ) -> Optional[str]:
     """Resolve the GGUF model path that should be served by llama.cpp."""
+    if selected_model_path:
+        return os.path.expanduser(selected_model_path)
     env_override = os.environ.get("AIRUNNER_LLAMA_MODEL_PATH", "").strip()
     if env_override:
         return os.path.expanduser(env_override)
@@ -246,6 +249,11 @@ def resolve_llama_cpp_runtime_settings(
     llm_settings: Any = None,
     path_settings: Any = None,
     runtime_profile: Optional[str] = None,
+    *,
+    selected_model_id: Optional[str] = None,
+    selected_model_path: Optional[str] = None,
+    selected_n_ctx: Optional[int] = None,
+    selected_n_gpu_layers: Optional[int] = None,
 ) -> LlamaCppRuntimeSettings:
     """Resolve sidecar settings from environment and optional persisted state."""
     resolved_llm_settings = (
@@ -259,7 +267,7 @@ def resolve_llama_cpp_runtime_settings(
         "base_path",
         AIRUNNER_BASE_PATH,
     )
-    model_id = _candidate_model_id(resolved_llm_settings) or None
+    model_id = selected_model_id or _candidate_model_id(resolved_llm_settings) or None
     selected_profile = str(runtime_profile or "default").strip() or "default"
     default_ctx = _context_length(model_id or "", selected_profile)
     provider_config = _load_provider_config()
@@ -288,14 +296,23 @@ def resolve_llama_cpp_runtime_settings(
             resolved_llm_settings,
             os.path.expanduser(base_path),
             model_id or "",
+            selected_model_path,
         ),
         model_id=model_id,
         runtime_profile=selected_profile,
-        n_ctx=_env_int("AIRUNNER_LLAMA_N_CTX", default_ctx),
-        n_gpu_layers=_gpu_layers(
-            resolved_llm_settings,
-            model_id or "",
-            selected_profile,
+        n_ctx=(
+            int(selected_n_ctx)
+            if selected_n_ctx is not None
+            else _env_int("AIRUNNER_LLAMA_N_CTX", default_ctx)
+        ),
+        n_gpu_layers=(
+            int(selected_n_gpu_layers)
+            if selected_n_gpu_layers is not None
+            else _gpu_layers(
+                resolved_llm_settings,
+                model_id or "",
+                selected_profile,
+            )
         ),
         startup_timeout_seconds=_env_float(
             "AIRUNNER_LLAMA_STARTUP_TIMEOUT",

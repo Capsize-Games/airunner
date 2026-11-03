@@ -307,7 +307,8 @@ class LLMModelManager(
 
 	def _unload_model_locked(self) -> None:
 		"""Unload all LLM components and clear reserved resources."""
-		if self.model_status[ModelType.LLM] in (
+		current_status = self.model_status[ModelType.LLM]
+		if current_status in (
 			ModelStatus.LOADING,
 			ModelStatus.UNLOADED,
 		):
@@ -326,7 +327,15 @@ class LLMModelManager(
 
 		self._last_load_error = None
 		self.change_model_status(ModelType.LLM, ModelStatus.LOADING)
-		self._unload_components()
+		try:
+			self._unload_components()
+		except Exception as exc:
+			# A shared backend may still have active request leases. In that
+			# case the component owner remains attached and no model/resource
+			# cleanup below may claim that unload completed.
+			self._last_load_error = str(exc)
+			self.change_model_status(ModelType.LLM, current_status)
+			raise
 
 		resource_manager = ModelResourceManager()
 		resource_manager.cleanup_model(

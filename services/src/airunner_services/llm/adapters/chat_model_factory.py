@@ -48,6 +48,7 @@ class ChatModelFactory:
         chatbot: Optional[Any] = None,
         model_path: Optional[str] = None,
         gguf_runtime_profile: Optional[str] = None,
+        runtime_client: Optional[Any] = None,
     ) -> BaseChatModel:
         """
         Create appropriate ChatModel based on AI Runner settings.
@@ -73,7 +74,8 @@ class ChatModelFactory:
         provider_runtime = build_provider_runtime_config(llm_settings, chatbot)
         if provider_runtime.provider == "local":
             return _create_local_model_from_runtime(
-                llm_settings, chatbot, model_path, gguf_runtime_profile
+                llm_settings, chatbot, model_path, gguf_runtime_profile,
+                runtime_client,
             )
         return _create_provider_model_from_runtime(
             provider_runtime=provider_runtime,
@@ -88,6 +90,7 @@ def _create_local_model_from_runtime(
     chatbot: Any,
     model_path: Optional[str],
     gguf_runtime_profile: Optional[str],
+    runtime_client: Optional[Any],
 ) -> BaseChatModel:
     """Create one supported local GGUF model or raise a clear error."""
     local_model = create_local_model_from_settings(
@@ -95,6 +98,7 @@ def _create_local_model_from_runtime(
         chatbot=chatbot,
         model_path=model_path,
         gguf_runtime_profile=gguf_runtime_profile,
+        runtime_client=runtime_client,
         create_gguf_model=ChatModelFactory.create_gguf_model,
     )
     if local_model is not None:

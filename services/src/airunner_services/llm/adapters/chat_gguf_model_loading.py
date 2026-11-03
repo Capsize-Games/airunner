@@ -41,7 +41,7 @@ class ModelLoadError(Exception):
 
 
 def load_model(adapter: Any) -> None:
-    """Load the GGUF model via llama-cpp-python.
+    """Load the selected supervised or standalone GGUF runtime.
 
     Raises:
         ModelLoadError: When the runtime or model file cannot load.
@@ -49,6 +49,9 @@ def load_model(adapter: Any) -> None:
             known-unsupported (a distinct typed failure).
     """
     if adapter._llama is not None:
+        return
+    if getattr(adapter, "sidecar_client", None) is not None:
+        _load_shared_sidecar(adapter)
         return
     try:
         _raise_for_unsupported_architecture(adapter)
@@ -71,6 +74,34 @@ def load_model(adapter: Any) -> None:
         ) from exc
     _log_estimated_kv_cache(adapter)
     adapter.logger.info("✓ GGUF model loaded successfully")
+
+
+def _load_shared_sidecar(adapter: Any) -> None:
+    """Bind ChatGGUF to the already supervised application runtime."""
+    from airunner_services.llm.adapters.sidecar_llama_server_proxy import (
+        SidecarLlamaServerProxy,
+    )
+
+    proxy = SidecarLlamaServerProxy(
+        adapter.sidecar_client,
+        adapter.gguf_runtime_profile,
+        model_path=adapter.model_path,
+        model_id=adapter.runtime_model_id or "custom",
+        n_ctx=adapter.n_ctx,
+        n_gpu_layers=adapter.n_gpu_layers,
+    )
+    try:
+        proxy.load()
+    except Exception as exc:
+        raise ModelLoadError(
+            f"Failed to start the shared GGUF runtime: {exc}",
+            model_path=adapter.model_path,
+        ) from exc
+    adapter._llama = proxy
+    adapter.logger.info(
+        "✓ Shared GGUF runtime loaded successfully (profile=%s)",
+        adapter.gguf_runtime_profile or "default",
+    )
 
 
 def _discard_runtime_after_handler_failure(

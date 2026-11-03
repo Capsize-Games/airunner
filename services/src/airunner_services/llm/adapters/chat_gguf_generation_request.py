@@ -74,7 +74,7 @@ def _base_chat_kwargs(
     max_tokens: Optional[int],
 ) -> dict[str, Any]:
     """Return the base llama.cpp chat completion kwargs payload."""
-    return {
+    kwargs = {
         "messages": converted_messages,
         "max_tokens": max_tokens,
         "temperature": adapter.temperature,
@@ -84,6 +84,18 @@ def _base_chat_kwargs(
         "repeat_penalty": adapter.repeat_penalty,
         "stream": False,
     }
+    _apply_template_kwargs(adapter, kwargs)
+    return kwargs
+
+
+def _apply_template_kwargs(adapter: Any, kwargs: dict[str, Any]) -> None:
+    """Pass Qwen thinking mode to the GGUF embedded chat template."""
+    if getattr(adapter, "sidecar_client", None) is not None and "qwen" in str(
+        adapter.model_path
+    ).lower():
+        kwargs["chat_template_kwargs"] = {
+            "enable_thinking": bool(adapter.enable_thinking),
+        }
 
 
 def _apply_native_tool_kwargs(

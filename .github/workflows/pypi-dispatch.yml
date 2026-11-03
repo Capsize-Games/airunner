@@ -237,6 +237,7 @@ jobs:
             services/tests/test_sidecar_stt_auth.py \
             services/tests/test_sidecar_llm_stream.py \
             services/tests/test_sidecar_llm_payload.py \
+            services/tests/test_sidecar_llama_server_proxy.py \
             services/tests/test_llm_request_ownership.py \
             services/tests/test_release_p05_binaries.py \
             services/tests/test_release_p05_gates.py \
