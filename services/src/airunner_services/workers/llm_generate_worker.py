@@ -51,6 +51,7 @@ SignalCode = signal_code_proxy(
 		"RAG_INDEXING_PROGRESS": "rag_indexing_progress_signal",
 		"RAG_INDEXING_COMPLETE": "rag_indexing_complete_signal",
 		"RAG_INDEX_CANCEL": "rag_index_cancel_signal",
+		"RAG_DELETE_DOCUMENT": "rag_delete_document_signal",
 	}
 )
 
@@ -86,6 +87,9 @@ class LLMGenerateWorker(
 			),
 			SignalCode.RAG_INDEX_CANCEL: (
 				self.on_rag_index_cancel_signal
+			),
+			SignalCode.RAG_DELETE_DOCUMENT: (
+				self.on_rag_delete_document_signal
 			),
 			SignalCode.LLM_MODEL_DOWNLOAD_REQUIRED: (
 				self.on_llm_model_download_required_signal

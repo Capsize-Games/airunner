@@ -545,9 +545,9 @@ def test_execute_tools_never_runs_invalid_calls() -> None:
             "messages": [*state["messages"], tool_result]
         }
         result = harness._execute_tools_with_status(state)
-        (passed_state,), _kwargs = (
-            tool_node_cls.return_value.invoke.call_args
-        )
+        tool_node_call = tool_node_cls.return_value.invoke.call_args
+        passed_state, _config = tool_node_call.args
+        assert "runtime" in tool_node_call.kwargs
     # Only the valid call reached the executor.
     executed_calls = passed_state["messages"][-1].tool_calls
     assert [call["id"] for call in executed_calls] == ["ok-1"]

@@ -78,12 +78,16 @@ class RAGPropertiesMixin:
         return os.path.join(self.doc_indexes_dir, "index_registry.json")
 
     @property
+    @runtime_activity_locked
     def index_registry(self) -> Dict[str, Any]:
         """Get the index registry (lazy load).
 
         Returns:
             Dictionary mapping doc_id to metadata
         """
+        recover = getattr(self, "_retry_pending_index_cleanup", None)
+        if recover is not None:
+            recover()
         if self._index_registry is None:
             self._index_registry = self._load_registry()
         return self._index_registry

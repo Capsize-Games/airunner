@@ -145,7 +145,7 @@ class RAGLifecycleMixin:
     @runtime_activity_locked
     def load_html_into_rag(
         self, html_content: str, source_name: str = "web_content"
-    ):
+    ) -> Optional[str]:
         """Load HTML content into the unified RAG index.
 
         Parses HTML, extracts text, and inserts into the index with metadata.
@@ -172,9 +172,11 @@ class RAGLifecycleMixin:
                 },
             )
             self._add_documents_to_unified_index([doc], source_name)
+            return str(doc.metadata["doc_id"])
 
         except Exception as e:
             self.logger.error(f"Error loading HTML into RAG: {e}")
+            return None
 
     @runtime_activity_locked
     def load_file_into_rag(self, file_path: str) -> None:
@@ -210,7 +212,7 @@ class RAGLifecycleMixin:
     @runtime_activity_locked
     def load_bytes_into_rag(
         self, content_bytes: bytes, source_name: str, file_ext: str = ".epub"
-    ) -> None:
+    ) -> Optional[str]:
         """Load binary content into RAG, writing to a temporary file first.
 
         Useful when callers provide raw bytes for EPUB, PDF, or MOBI content
@@ -236,8 +238,10 @@ class RAGLifecycleMixin:
                 self._loaded_doc_ids.append(tmp_path)
             except Exception:
                 pass
+            return self._generate_doc_id(tmp_path)
         except Exception as e:
             self.logger.error(f"Error loading bytes into RAG: {e}")
+            return None
 
     @runtime_activity_locked
     def _add_documents_to_unified_index(

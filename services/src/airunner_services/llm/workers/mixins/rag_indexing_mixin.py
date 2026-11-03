@@ -15,24 +15,16 @@ from airunner_services.llm.workers.rag_index_admission import (
     rag_index_cancel_requested,
     release_rag_index_job,
     request_rag_index_cancel,
+    record_rag_job_result,
 )
 from airunner_services.runtimes.file_policy import (
     PathPolicyError,
     resolve_existing_file,
 )
-from airunner_services.utils.application.enum_resolver import signal_code_proxy
-
-
-_DOCUMENT_FILE_SUFFIXES = (
-    ".md",
-    ".txt",
-    ".docx",
-    ".doc",
-    ".odt",
-    ".pdf",
-    ".epub",
-    ".zim",
+from airunner_services.runtimes.document_formats import (
+    SUPPORTED_DOCUMENT_EXTENSIONS,
 )
+from airunner_services.utils.application.enum_resolver import signal_code_proxy
 
 SignalCode = signal_code_proxy(
     {
@@ -40,6 +32,7 @@ SignalCode = signal_code_proxy(
         "DOCUMENT_INDEX_FAILED": "document_index_failed_signal",
         "RAG_INDEXING_PROGRESS": "rag_indexing_progress_signal",
         "RAG_INDEXING_COMPLETE": "rag_indexing_complete_signal",
+        "RAG_DELETE_DOCUMENT": "rag_delete_document_signal",
     }
 )
 
@@ -51,6 +44,50 @@ class RAGIndexingMixin:
         """Reload the active RAG index when the model manager exists."""
         if self._model_manager:
             self._model_manager.reload_rag_engine()
+
+    def on_rag_delete_document_signal(self, data: Dict) -> None:
+        """Run generic Document cleanup in the serialized RAG worker."""
+        token = claim_rag_index_job(data.get("_job_token"))
+        if token is None:
+            self.logger.warning("Ignoring document deletion while RAG is busy")
+            return
+        document_ids = data.get("document_ids") or []
+        start_gate = threading.Event()
+        worker = threading.Thread(
+            target=self._run_document_delete_job,
+            args=(document_ids, token, start_gate),
+            daemon=True,
+        )
+        try:
+            worker.start()
+        except Exception as exc:
+            acknowledge_rag_index_job(token, False)
+            record_rag_job_result(
+                token,
+                {"success": False, "message": f"worker_start_failed: {exc}"},
+            )
+            release_rag_index_job(token)
+            return
+        acknowledge_rag_index_job(token, True)
+        start_gate.set()
+
+    def _run_document_delete_job(
+        self, document_ids: list[int], token: str, start_gate: threading.Event
+    ) -> None:
+        start_gate.wait()
+        if not owns_rag_index_job(token):
+            return
+        try:
+            if not self._ensure_agent_loaded("document deletion"):
+                raise RuntimeError("RAG worker could not load document manager")
+            agent = getattr(self.model_manager, "agent", None) or self.model_manager
+            result = agent.delete_document_records(document_ids)
+            record_rag_job_result(token, {"success": True, **result})
+        except Exception as exc:
+            self.logger.exception("Generic document deletion failed")
+            record_rag_job_result(token, {"success": False, "message": str(exc)})
+        finally:
+            release_rag_index_job(token)
 
     def on_rag_index_all_documents_signal(self, data: Dict) -> None:
         """Start indexing all documents on a background thread."""
@@ -427,7 +464,7 @@ class RAGIndexingMixin:
             return resolve_existing_file(
                 path,
                 label="Document path",
-                allowed_suffixes=_DOCUMENT_FILE_SUFFIXES,
+                allowed_suffixes=SUPPORTED_DOCUMENT_EXTENSIONS,
                 allowed_roots=self._allowed_document_roots(),
             )
         except PathPolicyError as error:

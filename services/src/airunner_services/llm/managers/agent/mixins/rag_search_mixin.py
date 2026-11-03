@@ -21,7 +21,9 @@ class RAGSearchMixin:
     """
 
     @runtime_activity_locked
-    def search(self, query: str, k: int = 3) -> List[Any]:
+    def search(
+        self, query: str, k: int = 3, doc_ids: Optional[List[str]] = None
+    ) -> List[Any]:
         """Search for relevant documents using the retriever.
 
         This is the main search method used by rag_tools.py.
@@ -38,7 +40,10 @@ class RAGSearchMixin:
             return []
 
         try:
-            results = self.retriever.retrieve(query)
+            if doc_ids is None:
+                results = self.retriever.retrieve(query)
+            else:
+                results = self.retriever.retrieve(query, doc_ids=doc_ids)
 
             self.logger.info(
                 f"Search for '{query[:100]}' returned {len(results)} results, "

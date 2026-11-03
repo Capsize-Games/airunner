@@ -6,6 +6,8 @@ Handles tool execution with status tracking and workflow event sinks.
 import re
 from datetime import datetime
 from typing import Optional, TYPE_CHECKING
+from langchain_core.runnables import RunnableConfig
+from langgraph.runtime import Runtime
 
 from airunner_services.llm.managers.forced_tool_execution_policy import (
     ForcedToolExecutionPolicy,
@@ -42,7 +44,10 @@ class ToolExecutionMixin:
         return helper
 
     def _execute_tools_with_status(
-        self, state: "WorkflowState"
+        self,
+        state: "WorkflowState",
+        config: RunnableConfig = None,
+        runtime: Runtime = None,
     ) -> "WorkflowState":
         """Custom tool execution node that emits status signals.
 
@@ -92,7 +97,11 @@ class ToolExecutionMixin:
             # Execute valid tools using standard ToolNode
             tool_node = ToolNode(self._tools)
             filtered_state = self._state_with_tool_calls(state, valid_calls)
-            result_state = tool_node.invoke(filtered_state)
+            result_state = tool_node.invoke(
+                filtered_state,
+                config or {},
+                runtime=runtime,
+            )
         else:
             result_state = dict(state)
 

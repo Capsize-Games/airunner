@@ -7,6 +7,7 @@ and saving new content to the knowledge base.
 
 import os
 from typing import Annotated, Any
+from langchain_core.runnables import RunnableConfig
 
 from airunner_services.llm.core.tool_registry import tool, ToolCategory
 from airunner_services.database.models.document import Document
@@ -43,6 +44,7 @@ def rag_search(
         str, "Search query for finding relevant document content"
     ],
     api: Any = None,  # Injected by ToolManager
+    config: RunnableConfig = None,
 ) -> str:
     """Search through LOADED documents in memory for relevant information.
 
@@ -81,7 +83,9 @@ def rag_search(
 
     # Check if documents are loaded by calling the RAG manager's search method
     try:
-        results = rag_manager.search(query, k=3)
+        configurable = (config or {}).get("configurable", {})
+        scope = configurable.get("rag_document_scope")
+        results = rag_manager.search(query, k=3, doc_ids=scope)
         logger.info(
             f"rag_manager.search returned "
             f"{len(results) if results else 0} results"

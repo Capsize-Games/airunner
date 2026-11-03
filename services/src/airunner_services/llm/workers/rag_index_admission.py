@@ -4,25 +4,32 @@ from __future__ import annotations
 
 import threading
 import uuid
+import time
 
 _STATE_LOCK = threading.Lock()
 _ACTIVE_TOKEN: str | None = None
 _ACTIVE_CLAIMED = False
 _CANCEL_REQUESTED = threading.Event()
 _ACKS: dict[str, dict[str, object]] = {}
+_JOB_RESULTS: dict[str, dict[str, object]] = {}
 ACK_TIMEOUT_SECONDS = 5.0
+JOB_RESULT_MAX = 64
+JOB_RESULT_TTL_SECONDS = 600.0
 
 
 def reserve_rag_index_job() -> str | None:
     """Reserve the one indexing slot before an HTTP request is accepted."""
     global _ACTIVE_TOKEN, _ACTIVE_CLAIMED
     with _STATE_LOCK:
+        _prune_job_results_locked()
         if _ACTIVE_TOKEN is not None:
             return None
         _ACTIVE_TOKEN = uuid.uuid4().hex
         _ACTIVE_CLAIMED = False
         _CANCEL_REQUESTED.clear()
         _ACKS[_ACTIVE_TOKEN] = {"event": threading.Event(), "accepted": None}
+        while len(_JOB_RESULTS) > JOB_RESULT_MAX:
+            _JOB_RESULTS.pop(next(iter(_JOB_RESULTS)))
         return _ACTIVE_TOKEN
 
 
@@ -106,3 +113,39 @@ def request_rag_index_cancel() -> bool:
 def rag_index_cancel_requested() -> bool:
     """Return whether the active job has a pending cancel request."""
     return _CANCEL_REQUESTED.is_set()
+
+
+def record_rag_job_result(token: str, result: dict[str, object]) -> None:
+    """Publish a terminal result for a route-dispatched worker job."""
+    with _STATE_LOCK:
+        if token == _ACTIVE_TOKEN:
+            _prune_job_results_locked()
+            _JOB_RESULTS[token] = {
+                "result": dict(result),
+                "created_at": time.monotonic(),
+            }
+            while len(_JOB_RESULTS) > JOB_RESULT_MAX:
+                _JOB_RESULTS.pop(next(iter(_JOB_RESULTS)))
+
+
+def get_rag_job_result(token: str, *, consume: bool = False):
+    """Read a terminal worker result, optionally consuming its record."""
+    with _STATE_LOCK:
+        _prune_job_results_locked()
+        if consume:
+            record = _JOB_RESULTS.pop(token, None)
+        else:
+            record = _JOB_RESULTS.get(token)
+        result = record.get("result") if record is not None else None
+        return dict(result) if isinstance(result, dict) else None
+
+
+def _prune_job_results_locked() -> None:
+    now = time.monotonic()
+    expired = [
+        token
+        for token, record in _JOB_RESULTS.items()
+        if now - float(record.get("created_at", now)) > JOB_RESULT_TTL_SECONDS
+    ]
+    for token in expired:
+        _JOB_RESULTS.pop(token, None)

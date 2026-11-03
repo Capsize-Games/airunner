@@ -10,6 +10,10 @@ from typing import Any, Callable, Iterator, Optional
 
 from bs4 import BeautifulSoup
 from langchain_core.documents import Document
+from airunner_services.runtimes.document_formats import (
+    SUPPORTED_DOCUMENT_EXTENSIONS,
+    UNSUPPORTED_BINARY_DOCUMENT_EXTENSIONS,
+)
 
 MetadataLoader = Callable[[str], dict[str, Any]]
 
@@ -79,6 +83,11 @@ def iter_document_batches_from_file(
 
     metadata = _resolve_metadata(file_path, metadata_loader)
     extension = os.path.splitext(file_path)[1].lower()
+    if extension in UNSUPPORTED_BINARY_DOCUMENT_EXTENSIONS:
+        raise ValueError(
+            f"Unsupported document format {extension!r}; supported formats are "
+            + ", ".join(SUPPORTED_DOCUMENT_EXTENSIONS)
+        )
     if extension == ".zim":
         yield from _iter_zim_documents(file_path, metadata)
         return

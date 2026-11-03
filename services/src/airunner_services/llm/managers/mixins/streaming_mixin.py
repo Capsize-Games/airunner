@@ -71,7 +71,8 @@ class StreamingMixin:
 
     def stream(
         self, user_input: str, generation_kwargs: Optional[Dict] = None,
-        images: Optional[list] = None
+        images: Optional[list] = None,
+        rag_document_scope: Optional[tuple[str, ...]] = None,
     ):
         """Stream the workflow execution with user input, yielding messages.
 
@@ -85,6 +86,11 @@ class StreamingMixin:
             AIMessage instances as they are generated
         """
         config, math_context = self._prepare_workflow_run()
+        if rag_document_scope is not None:
+            config = {**config, "configurable": {
+                **config.get("configurable", {}),
+                "rag_document_scope": tuple(rag_document_scope),
+            }}
 
         # Automatically learn facts from user message (non-blocking)
         self._auto_learn_from_message(user_input)

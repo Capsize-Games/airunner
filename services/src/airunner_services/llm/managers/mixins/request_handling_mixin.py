@@ -103,7 +103,12 @@ class RequestHandlingMixin:
         tools_filtered, selected_categories, system_prompt = (
             self._prepare_request_tooling(data, llm_request)
         )
-        self._prepare_request_rag(data, llm_request, selected_categories)
+        uploaded_document_ids = self._prepare_request_rag(
+            data, llm_request, selected_categories
+        )
+        rag_document_scope = self._request_rag_document_scope(
+            llm_request, uploaded_document_ids
+        )
         thinking_patches = self._apply_request_thinking_override(llm_request)
         reasoning_patches = self._apply_request_reasoning_effort_override(
             llm_request
@@ -120,6 +125,7 @@ class RequestHandlingMixin:
                 llm_request=data["request_data"]["llm_request"],
                 extra_context=extra_context,
                 skip_tool_setup=tools_filtered,
+                rag_document_scope=rag_document_scope,
             )
         finally:
             self._restore_thinking_patches(thinking_patches)
@@ -343,10 +349,64 @@ class RequestHandlingMixin:
         data: Dict[str, Any],
         llm_request: Any,
         selected_categories: List[str],
-    ) -> None:
+    ) -> tuple[str, ...]:
         """Ensure request-provided or inferred RAG files are indexed."""
         del data
-        prepare_request_rag(self, llm_request, selected_categories)
+        return prepare_request_rag(self, llm_request, selected_categories)
+
+    def _request_rag_document_scope(
+        self,
+        llm_request: Any,
+        uploaded_document_ids: tuple[str, ...] = (),
+    ) -> Optional[tuple[str, ...]]:
+        """Snapshot the selected chatbot and request documents for this run.
+
+        ``None`` retains standalone workflow compatibility. A tuple, including
+        an empty tuple, is an explicit request scope and must not widen search.
+        """
+        import hashlib
+        import os
+
+        from airunner_services.database.models.document import Document
+        from airunner_services.database.models.target_files import TargetFiles
+        from airunner_services.database.session import session_scope
+
+        chatbot_id = getattr(getattr(self, "chatbot", None), "id", None)
+        request_files = getattr(llm_request, "rag_files", None) or ()
+        if chatbot_id is None and not request_files and not uploaded_document_ids:
+            return None
+
+        paths = set()
+        with session_scope() as session:
+            if chatbot_id is not None:
+                paths.update(
+                    row.file_path
+                    for row in session.query(TargetFiles).filter_by(
+                        chatbot_id=chatbot_id
+                    ).all()
+                    if row.file_path
+                )
+            for item in request_files:
+                if isinstance(item, str):
+                    paths.add(item)
+                elif isinstance(item, dict):
+                    path = item.get("path") or item.get("file_path")
+                    if path:
+                        paths.add(str(path))
+            rows = (
+                session.query(Document).filter(Document.path.in_(paths)).all()
+                if paths
+                else []
+            )
+            persistent_ids = tuple(
+                sorted(
+                    hashlib.md5(
+                        os.path.normpath(os.path.abspath(row.path)).encode()
+                    ).hexdigest()
+                    for row in rows
+                )
+            )
+            return tuple(sorted(set(persistent_ids) | set(uploaded_document_ids)))
 
     def _ensure_request_rag_files(self, rag_files: Any) -> None:
         """Load and index request-provided RAG files."""

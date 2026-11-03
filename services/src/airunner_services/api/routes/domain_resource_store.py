@@ -128,6 +128,16 @@ def delete_records(
     return {"deleted": True, "count": count}
 
 
+def records_to_delete(domain: str, resource: str, filters: dict[str, Any]) -> list[int]:
+    """Snapshot primary keys for a bulk delete before worker dispatch."""
+    resource_model = model_class(domain, resource)
+    with session_scope() as session:
+        query = session.query(resource_model)
+        if filters:
+            query = query.filter_by(**filters)
+        return [int(record.id) for record in query.all()]
+
+
 def get_singleton(
     domain: str,
     resource: str,
