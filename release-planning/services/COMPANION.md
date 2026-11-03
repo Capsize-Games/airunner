@@ -172,7 +172,10 @@ implemented background handlers. This does not mean companion code is unused:
 the memory tools are registered and existing mood update paths remain in use.
 
 The earlier evaluation document and `services/tests/eval/` are absent from this
-checkout. Model revisions, latency and factuality thresholds, hardware trials,
-and operator acceptance remain pending. The retained characterization issues
-must not be closed as real-model acceptance on the strength of deterministic
-fixtures.
+checkout. Under owner direction on 2026-11-03, measurable quality and latency
+targets are now defined in [EVALUATION_TARGETS.md](EVALUATION_TARGETS.md), with
+versioned fixtures in `evaluations/`. Record exact model/runtime identities and
+measured results against those targets; defining them does not establish a pass.
+Real-model and final installed-artifact acceptance remain pending. The retained
+characterization issues must not be closed as real-model acceptance on the
+strength of deterministic fixtures. No manual operator approval gate is required.

@@ -1,0 +1,662 @@
+{
+  "schema_version": 1,
+  "fixture_id": "airunner-e5-latency-100-chunks-v1",
+  "status": "unrun",
+  "purpose": "Fixed workload for warm query-plus-retrieval latency; synthetic records do not establish general retrieval quality.",
+  "setup": "Use these exact 100 texts as 100 indexed chunks, preserving source_id and text_sha256. Assert actual indexed chunk count is exactly 100 before timing; if the production importer splits or combines them, report workload mismatch rather than a comparable latency result. Keep generated-answer and 20-question grounded-answer fixtures separate.",
+  "measurement": "Record exact embedding artifact/runtime, actual tokenizer counts, initial warmup separately, and all 30 sequential query embedding/search/end-to-end durations including failures. Query inputs must meet the <=128-token target under the actual tokenizer; no token count is claimed here. Keep source selection/counts fixed across comparisons.",
+  "queries": [
+    {
+      "query_id": "E5-LAT-01",
+      "query": "Which shelf stores the botany reference kit AX001?",
+      "expected_source_id": "AX001"
+    },
+    {
+      "query_id": "E5-LAT-02",
+      "query": "Which shelf stores the navigation reference kit AX002?",
+      "expected_source_id": "AX002"
+    },
+    {
+      "query_id": "E5-LAT-03",
+      "query": "Which shelf stores the materials reference kit AX003?",
+      "expected_source_id": "AX003"
+    },
+    {
+      "query_id": "E5-LAT-04",
+      "query": "Which shelf stores the astronomy reference kit AX004?",
+      "expected_source_id": "AX004"
+    },
+    {
+      "query_id": "E5-LAT-05",
+      "query": "Which shelf stores the geology reference kit AX005?",
+      "expected_source_id": "AX005"
+    },
+    {
+      "query_id": "E5-LAT-06",
+      "query": "Which shelf stores the acoustics reference kit AX006?",
+      "expected_source_id": "AX006"
+    },
+    {
+      "query_id": "E5-LAT-07",
+      "query": "Which shelf stores the hydrology reference kit AX007?",
+      "expected_source_id": "AX007"
+    },
+    {
+      "query_id": "E5-LAT-08",
+      "query": "Which shelf stores the optics reference kit AX008?",
+      "expected_source_id": "AX008"
+    },
+    {
+      "query_id": "E5-LAT-09",
+      "query": "Which shelf stores the cartography reference kit AX009?",
+      "expected_source_id": "AX009"
+    },
+    {
+      "query_id": "E5-LAT-10",
+      "query": "Which shelf stores the archival storage reference kit AX010?",
+      "expected_source_id": "AX010"
+    },
+    {
+      "query_id": "E5-LAT-11",
+      "query": "Which shelf stores the botany reference kit AX011?",
+      "expected_source_id": "AX011"
+    },
+    {
+      "query_id": "E5-LAT-12",
+      "query": "Which shelf stores the navigation reference kit AX012?",
+      "expected_source_id": "AX012"
+    },
+    {
+      "query_id": "E5-LAT-13",
+      "query": "Which shelf stores the materials reference kit AX013?",
+      "expected_source_id": "AX013"
+    },
+    {
+      "query_id": "E5-LAT-14",
+      "query": "Which shelf stores the astronomy reference kit AX014?",
+      "expected_source_id": "AX014"
+    },
+    {
+      "query_id": "E5-LAT-15",
+      "query": "Which shelf stores the geology reference kit AX015?",
+      "expected_source_id": "AX015"
+    },
+    {
+      "query_id": "E5-LAT-16",
+      "query": "Which shelf stores the acoustics reference kit AX016?",
+      "expected_source_id": "AX016"
+    },
+    {
+      "query_id": "E5-LAT-17",
+      "query": "Which shelf stores the hydrology reference kit AX017?",
+      "expected_source_id": "AX017"
+    },
+    {
+      "query_id": "E5-LAT-18",
+      "query": "Which shelf stores the optics reference kit AX018?",
+      "expected_source_id": "AX018"
+    },
+    {
+      "query_id": "E5-LAT-19",
+      "query": "Which shelf stores the cartography reference kit AX019?",
+      "expected_source_id": "AX019"
+    },
+    {
+      "query_id": "E5-LAT-20",
+      "query": "Which shelf stores the archival storage reference kit AX020?",
+      "expected_source_id": "AX020"
+    },
+    {
+      "query_id": "E5-LAT-21",
+      "query": "Which shelf stores the botany reference kit AX021?",
+      "expected_source_id": "AX021"
+    },
+    {
+      "query_id": "E5-LAT-22",
+      "query": "Which shelf stores the navigation reference kit AX022?",
+      "expected_source_id": "AX022"
+    },
+    {
+      "query_id": "E5-LAT-23",
+      "query": "Which shelf stores the materials reference kit AX023?",
+      "expected_source_id": "AX023"
+    },
+    {
+      "query_id": "E5-LAT-24",
+      "query": "Which shelf stores the astronomy reference kit AX024?",
+      "expected_source_id": "AX024"
+    },
+    {
+      "query_id": "E5-LAT-25",
+      "query": "Which shelf stores the geology reference kit AX025?",
+      "expected_source_id": "AX025"
+    },
+    {
+      "query_id": "E5-LAT-26",
+      "query": "Which shelf stores the acoustics reference kit AX026?",
+      "expected_source_id": "AX026"
+    },
+    {
+      "query_id": "E5-LAT-27",
+      "query": "Which shelf stores the hydrology reference kit AX027?",
+      "expected_source_id": "AX027"
+    },
+    {
+      "query_id": "E5-LAT-28",
+      "query": "Which shelf stores the optics reference kit AX028?",
+      "expected_source_id": "AX028"
+    },
+    {
+      "query_id": "E5-LAT-29",
+      "query": "Which shelf stores the cartography reference kit AX029?",
+      "expected_source_id": "AX029"
+    },
+    {
+      "query_id": "E5-LAT-30",
+      "query": "Which shelf stores the archival storage reference kit AX030?",
+      "expected_source_id": "AX030"
+    }
+  ],
+  "chunks": [
+    {
+      "source_id": "AX001",
+      "text": "SYNTHETIC ARCHIVE RECORD AX001. This fictional record describes the botany reference kit identified as AX001. The kit is stored on shelf 8 in cabinet 4. Its inspection interval is 2 weeks. The inventory label uses the reference number 1001. Routine handling requires keeping the kit dry, returning all reference cards to the marked envelope, and recording the date after inspection. This record applies only to kit AX001; other archive kits have separate records.",
+      "text_sha256": "5de3269f5f98f8052a69e9ea8aa0d0a353485b1b976d5daaf4b3306f8b38cd6d"
+    },
+    {
+      "source_id": "AX002",
+      "text": "SYNTHETIC ARCHIVE RECORD AX002. This fictional record describes the navigation reference kit identified as AX002. The kit is stored on shelf 15 in cabinet 7. Its inspection interval is 3 weeks. The inventory label uses the reference number 1002. Routine handling requires keeping the kit dry, returning all reference cards to the marked envelope, and recording the date after inspection. This record applies only to kit AX002; other archive kits have separate records.",
+      "text_sha256": "0792e8f9cf40713b7a82e96ac35d0d74f217cc70be86eb73f1699315abce59da"
+    },
+    {
+      "source_id": "AX003",
+      "text": "SYNTHETIC ARCHIVE RECORD AX003. This fictional record describes the materials reference kit identified as AX003. The kit is stored on shelf 22 in cabinet 10. Its inspection interval is 4 weeks. The inventory label uses the reference number 1003. Routine handling requires keeping the kit dry, returning all reference cards to the marked envelope, and recording the date after inspection. This record applies only to kit AX003; other archive kits have separate records.",
+      "text_sha256": "d3f6028def5cd51b1cd17e33e2838a454028fb5e365c5768ecad57b9470b5e60"
+    },
+    {
+      "source_id": "AX004",
+      "text": "SYNTHETIC ARCHIVE RECORD AX004. This fictional record describes the astronomy reference kit identified as AX004. The kit is stored on shelf 29 in cabinet 13. Its inspection interval is 5 weeks. The inventory label uses the reference number 1004. Routine handling requires keeping the kit dry, returning all reference cards to the marked envelope, and recording the date after inspection. This record applies only to kit AX004; other archive kits have separate records.",
+      "text_sha256": "37aa8a693e8e0db058d9d25b75e492fcb11901dd4dda42279f1af1098582c7b9"
+    },
+    {
+      "source_id": "AX005",
+      "text": "SYNTHETIC ARCHIVE RECORD AX005. This fictional record describes the geology reference kit identified as AX005. The kit is stored on shelf 36 in cabinet 16. Its inspection interval is 6 weeks. The inventory label uses the reference number 1005. Routine handling requires keeping the kit dry, returning all reference cards to the marked envelope, and recording the date after inspection. This record applies only to kit AX005; other archive kits have separate records.",
+      "text_sha256": "dd900c15210ead38d1e50c5d7691398214ad10b868b1ad0a95810f1306389dab"
+    },
+    {
+      "source_id": "AX006",
+      "text": "SYNTHETIC ARCHIVE RECORD AX006. This fictional record describes the acoustics reference kit identified as AX006. The kit is stored on shelf 2 in cabinet 2. Its inspection interval is 1 weeks. The inventory label uses the reference number 1006. Routine handling requires keeping the kit dry, returning all reference cards to the marked envelope, and recording the date after inspection. This record applies only to kit AX006; other archive kits have separate records.",
+      "text_sha256": "6d723c8d92ed75818e4f142e0e5450076a66cb0a3974a3837b0e624b7f783942"
+    },
+    {
+      "source_id": "AX007",
+      "text": "SYNTHETIC ARCHIVE RECORD AX007. This fictional record describes the hydrology reference kit identified as AX007. The kit is stored on shelf 9 in cabinet 5. Its inspection interval is 2 weeks. The inventory label uses the reference number 1007. Routine handling requires keeping the kit dry, returning all reference cards to the marked envelope, and recording the date after inspection. This record applies only to kit AX007; other archive kits have separate records.",
+      "text_sha256": "1689e95201d3b0a3b91a98f4fff3f6c07f8a0ca4c7bffdfd6dc9e2cf4563481c"
+    },
+    {
+      "source_id": "AX008",
+      "text": "SYNTHETIC ARCHIVE RECORD AX008. This fictional record describes the optics reference kit identified as AX008. The kit is stored on shelf 16 in cabinet 8. Its inspection interval is 3 weeks. The inventory label uses the reference number 1008. Routine handling requires keeping the kit dry, returning all reference cards to the marked envelope, and recording the date after inspection. This record applies only to kit AX008; other archive kits have separate records.",
+      "text_sha256": "012193ac36695e0e651d12d01dc766e8632e27f80d4b2804700cb0a43bb54eb5"
+    },
+    {
+      "source_id": "AX009",
+      "text": "SYNTHETIC ARCHIVE RECORD AX009. This fictional record describes the cartography reference kit identified as AX009. The kit is stored on shelf 23 in cabinet 11. Its inspection interval is 4 weeks. The inventory label uses the reference number 1009. Routine handling requires keeping the kit dry, returning all reference cards to the marked envelope, and recording the date after inspection. This record applies only to kit AX009; other archive kits have separate records.",
+      "text_sha256": "d0fc37579b10ace31c07b1d01d64d9cec9e9eb15d83c3a8b28bcee15a111e8bd"
+    },
+    {
+      "source_id": "AX010",
+      "text": "SYNTHETIC ARCHIVE RECORD AX010. This fictional record describes the archival storage reference kit identified as AX010. The kit is stored on shelf 30 in cabinet 14. Its inspection interval is 5 weeks. The inventory label uses the reference number 1010. Routine handling requires keeping the kit dry, returning all reference cards to the marked envelope, and recording the date after inspection. This record applies only to kit AX010; other archive kits have separate records.",
+      "text_sha256": "173a2e7974da14589431d323aa934881b8b216511c98afea9cf62aa99db10e14"
+    },
+    {
+      "source_id": "AX011",
+      "text": "SYNTHETIC ARCHIVE RECORD AX011. This fictional record describes the botany reference kit identified as AX011. The kit is stored on shelf 37 in cabinet 17. Its inspection interval is 6 weeks. The inventory label uses the reference number 1011. Routine handling requires keeping the kit dry, returning all reference cards to the marked envelope, and recording the date after inspection. This record applies only to kit AX011; other archive kits have separate records.",
+      "text_sha256": "0b972a51e80c28e87e42fed9e94f568ddcde0323843336e89bbd189c70deb252"
+    },
+    {
+      "source_id": "AX012",
+      "text": "SYNTHETIC ARCHIVE RECORD AX012. This fictional record describes the navigation reference kit identified as AX012. The kit is stored on shelf 3 in cabinet 3. Its inspection interval is 1 weeks. The inventory label uses the reference number 1012. Routine handling requires keeping the kit dry, returning all reference cards to the marked envelope, and recording the date after inspection. This record applies only to kit AX012; other archive kits have separate records.",
+      "text_sha256": "a887f673419ef499642e5546fe2590c380020de2be8569f6360679fb4d7d78aa"
+    },
+    {
+      "source_id": "AX013",
+      "text": "SYNTHETIC ARCHIVE RECORD AX013. This fictional record describes the materials reference kit identified as AX013. The kit is stored on shelf 10 in cabinet 6. Its inspection interval is 2 weeks. The inventory label uses the reference number 1013. Routine handling requires keeping the kit dry, returning all reference cards to the marked envelope, and recording the date after inspection. This record applies only to kit AX013; other archive kits have separate records.",
+      "text_sha256": "bb0fc49edf9c3891c282a1cd045c0a10398c4b45d0974a02f5f136f6b65a53f5"
+    },
+    {
+      "source_id": "AX014",
+      "text": "SYNTHETIC ARCHIVE RECORD AX014. This fictional record describes the astronomy reference kit identified as AX014. The kit is stored on shelf 17 in cabinet 9. Its inspection interval is 3 weeks. The inventory label uses the reference number 1014. Routine handling requires keeping the kit dry, returning all reference cards to the marked envelope, and recording the date after inspection. This record applies only to kit AX014; other archive kits have separate records.",
+      "text_sha256": "a4de39f62069efc1b19f56759b49626f55b5d0f20aa15f502c2f8bff3e38efd2"
+    },
+    {
+      "source_id": "AX015",
+      "text": "SYNTHETIC ARCHIVE RECORD AX015. This fictional record describes the geology reference kit identified as AX015. The kit is stored on shelf 24 in cabinet 12. Its inspection interval is 4 weeks. The inventory label uses the reference number 1015. Routine handling requires keeping the kit dry, returning all reference cards to the marked envelope, and recording the date after inspection. This record applies only to kit AX015; other archive kits have separate records.",
+      "text_sha256": "44473e625ed620de1454f7949edbaeb54dcc356198b0678004612ead51c85e14"
+    },
+    {
+      "source_id": "AX016",
+      "text": "SYNTHETIC ARCHIVE RECORD AX016. This fictional record describes the acoustics reference kit identified as AX016. The kit is stored on shelf 31 in cabinet 15. Its inspection interval is 5 weeks. The inventory label uses the reference number 1016. Routine handling requires keeping the kit dry, returning all reference cards to the marked envelope, and recording the date after inspection. This record applies only to kit AX016; other archive kits have separate records.",
+      "text_sha256": "22d361e592c7254ce7faf4346b4b1f3241f89796b75fc9e87addf6380154a651"
+    },
+    {
+      "source_id": "AX017",
+      "text": "SYNTHETIC ARCHIVE RECORD AX017. This fictional record describes the hydrology reference kit identified as AX017. The kit is stored on shelf 38 in cabinet 1. Its inspection interval is 6 weeks. The inventory label uses the reference number 1017. Routine handling requires keeping the kit dry, returning all reference cards to the marked envelope, and recording the date after inspection. This record applies only to kit AX017; other archive kits have separate records.",
+      "text_sha256": "41c66d3e257b70515a4de86133441b7749c69517b7a8e3a7234a45916c5a2db4"
+    },
+    {
+      "source_id": "AX018",
+      "text": "SYNTHETIC ARCHIVE RECORD AX018. This fictional record describes the optics reference kit identified as AX018. The kit is stored on shelf 4 in cabinet 4. Its inspection interval is 1 weeks. The inventory label uses the reference number 1018. Routine handling requires keeping the kit dry, returning all reference cards to the marked envelope, and recording the date after inspection. This record applies only to kit AX018; other archive kits have separate records.",
+      "text_sha256": "9d73aab6e39014ae0dab8a8b1b23fb5d6d0be9bb3c2789337dc0450f7bd72a08"
+    },
+    {
+      "source_id": "AX019",
+      "text": "SYNTHETIC ARCHIVE RECORD AX019. This fictional record describes the cartography reference kit identified as AX019. The kit is stored on shelf 11 in cabinet 7. Its inspection interval is 2 weeks. The inventory label uses the reference number 1019. Routine handling requires keeping the kit dry, returning all reference cards to the marked envelope, and recording the date after inspection. This record applies only to kit AX019; other archive kits have separate records.",
+      "text_sha256": "e525205f09b7200aaa53ff9a8e56a8fa3ad4d3d9aaff64bc6342e823efd7f702"
+    },
+    {
+      "source_id": "AX020",
+      "text": "SYNTHETIC ARCHIVE RECORD AX020. This fictional record describes the archival storage reference kit identified as AX020. The kit is stored on shelf 18 in cabinet 10. Its inspection interval is 3 weeks. The inventory label uses the reference number 1020. Routine handling requires keeping the kit dry, returning all reference cards to the marked envelope, and recording the date after inspection. This record applies only to kit AX020; other archive kits have separate records.",
+      "text_sha256": "1ec0ab2019f3e7dc0265d888306e842d9c141eadabba7858eed9ccdfbc8e5b0e"
+    },
+    {
+      "source_id": "AX021",
+      "text": "SYNTHETIC ARCHIVE RECORD AX021. This fictional record describes the botany reference kit identified as AX021. The kit is stored on shelf 25 in cabinet 13. Its inspection interval is 4 weeks. The inventory label uses the reference number 1021. Routine handling requires keeping the kit dry, returning all reference cards to the marked envelope, and recording the date after inspection. This record applies only to kit AX021; other archive kits have separate records.",
+      "text_sha256": "932ae4174765b205f677b15e33a5c5e450d27d0ba33b05aef8b272bbbfc78d86"
+    },
+    {
+      "source_id": "AX022",
+      "text": "SYNTHETIC ARCHIVE RECORD AX022. This fictional record describes the navigation reference kit identified as AX022. The kit is stored on shelf 32 in cabinet 16. Its inspection interval is 5 weeks. The inventory label uses the reference number 1022. Routine handling requires keeping the kit dry, returning all reference cards to the marked envelope, and recording the date after inspection. This record applies only to kit AX022; other archive kits have separate records.",
+      "text_sha256": "d95e1b17b13249dd002768a79b6cbafc7e47d72ff4161a2409e1751c171bd5b4"
+    },
+    {
+      "source_id": "AX023",
+      "text": "SYNTHETIC ARCHIVE RECORD AX023. This fictional record describes the materials reference kit identified as AX023. The kit is stored on shelf 39 in cabinet 2. Its inspection interval is 6 weeks. The inventory label uses the reference number 1023. Routine handling requires keeping the kit dry, returning all reference cards to the marked envelope, and recording the date after inspection. This record applies only to kit AX023; other archive kits have separate records.",
+      "text_sha256": "7a9ca01a39fcb4f079e6e3e548c065a8bbf0c9327082b7163d0f92fc6c5c06ca"
+    },
+    {
+      "source_id": "AX024",
+      "text": "SYNTHETIC ARCHIVE RECORD AX024. This fictional record describes the astronomy reference kit identified as AX024. The kit is stored on shelf 5 in cabinet 5. Its inspection interval is 1 weeks. The inventory label uses the reference number 1024. Routine handling requires keeping the kit dry, returning all reference cards to the marked envelope, and recording the date after inspection. This record applies only to kit AX024; other archive kits have separate records.",
+      "text_sha256": "1ca0e7caa7c1006b101406ae1b646a24f44a227dc1b4304285495337323ae39a"
+    },
+    {
+      "source_id": "AX025",
+      "text": "SYNTHETIC ARCHIVE RECORD AX025. This fictional record describes the geology reference kit identified as AX025. The kit is stored on shelf 12 in cabinet 8. Its inspection interval is 2 weeks. The inventory label uses the reference number 1025. Routine handling requires keeping the kit dry, returning all reference cards to the marked envelope, and recording the date after inspection. This record applies only to kit AX025; other archive kits have separate records.",
+      "text_sha256": "c773263703ac39d5d113dd55363f49e9f9f2a07fa4f0cd32ed1b6d187303aaac"
+    },
+    {
+      "source_id": "AX026",
+      "text": "SYNTHETIC ARCHIVE RECORD AX026. This fictional record describes the acoustics reference kit identified as AX026. The kit is stored on shelf 19 in cabinet 11. Its inspection interval is 3 weeks. The inventory label uses the reference number 1026. Routine handling requires keeping the kit dry, returning all reference cards to the marked envelope, and recording the date after inspection. This record applies only to kit AX026; other archive kits have separate records.",
+      "text_sha256": "fbaa2e4620d08c9efc5f40deae27cc77bc20801e03adae4e64d97fed55b9daa8"
+    },
+    {
+      "source_id": "AX027",
+      "text": "SYNTHETIC ARCHIVE RECORD AX027. This fictional record describes the hydrology reference kit identified as AX027. The kit is stored on shelf 26 in cabinet 14. Its inspection interval is 4 weeks. The inventory label uses the reference number 1027. Routine handling requires keeping the kit dry, returning all reference cards to the marked envelope, and recording the date after inspection. This record applies only to kit AX027; other archive kits have separate records.",
+      "text_sha256": "afecc50581d937aa33bebc600214637d612e47fb5c17586f301f0a51dfa40dbd"
+    },
+    {
+      "source_id": "AX028",
+      "text": "SYNTHETIC ARCHIVE RECORD AX028. This fictional record describes the optics reference kit identified as AX028. The kit is stored on shelf 33 in cabinet 17. Its inspection interval is 5 weeks. The inventory label uses the reference number 1028. Routine handling requires keeping the kit dry, returning all reference cards to the marked envelope, and recording the date after inspection. This record applies only to kit AX028; other archive kits have separate records.",
+      "text_sha256": "20a9fd9b9a0fbccc72b42d5e1e274ac23c6b9eea669c2e75ca4f829642f11171"
+    },
+    {
+      "source_id": "AX029",
+      "text": "SYNTHETIC ARCHIVE RECORD AX029. This fictional record describes the cartography reference kit identified as AX029. The kit is stored on shelf 40 in cabinet 3. Its inspection interval is 6 weeks. The inventory label uses the reference number 1029. Routine handling requires keeping the kit dry, returning all reference cards to the marked envelope, and recording the date after inspection. This record applies only to kit AX029; other archive kits have separate records.",
+      "text_sha256": "2e52d541639274514714bd22ddbbd9201fd691e0a082988c4a9645d2048200d0"
+    },
+    {
+      "source_id": "AX030",
+      "text": "SYNTHETIC ARCHIVE RECORD AX030. This fictional record describes the archival storage reference kit identified as AX030. The kit is stored on shelf 6 in cabinet 6. Its inspection interval is 1 weeks. The inventory label uses the reference number 1030. Routine handling requires keeping the kit dry, returning all reference cards to the marked envelope, and recording the date after inspection. This record applies only to kit AX030; other archive kits have separate records.",
+      "text_sha256": "9fa0e0383ad25256693c8dcf03855bb390ef8b7012d99349451f8e7da39796ee"
+    },
+    {
+      "source_id": "AX031",
+      "text": "SYNTHETIC ARCHIVE RECORD AX031. This fictional record describes the botany reference kit identified as AX031. The kit is stored on shelf 13 in cabinet 9. Its inspection interval is 2 weeks. The inventory label uses the reference number 1031. Routine handling requires keeping the kit dry, returning all reference cards to the marked envelope, and recording the date after inspection. This record applies only to kit AX031; other archive kits have separate records.",
+      "text_sha256": "ba9c04a00d0c8eac547275c4fbd43918f204a5991ae699f76b99b39bf352d6b4"
+    },
+    {
+      "source_id": "AX032",
+      "text": "SYNTHETIC ARCHIVE RECORD AX032. This fictional record describes the navigation reference kit identified as AX032. The kit is stored on shelf 20 in cabinet 12. Its inspection interval is 3 weeks. The inventory label uses the reference number 1032. Routine handling requires keeping the kit dry, returning all reference cards to the marked envelope, and recording the date after inspection. This record applies only to kit AX032; other archive kits have separate records.",
+      "text_sha256": "7d065f9f41e49b60988038e928c62a58416a45496da41018886c23fb56d65442"
+    },
+    {
+      "source_id": "AX033",
+      "text": "SYNTHETIC ARCHIVE RECORD AX033. This fictional record describes the materials reference kit identified as AX033. The kit is stored on shelf 27 in cabinet 15. Its inspection interval is 4 weeks. The inventory label uses the reference number 1033. Routine handling requires keeping the kit dry, returning all reference cards to the marked envelope, and recording the date after inspection. This record applies only to kit AX033; other archive kits have separate records.",
+      "text_sha256": "e53936c908d940280ffb66d12f50fcd8ce77ad655f1a2c20877bedc6141561d4"
+    },
+    {
+      "source_id": "AX034",
+      "text": "SYNTHETIC ARCHIVE RECORD AX034. This fictional record describes the astronomy reference kit identified as AX034. The kit is stored on shelf 34 in cabinet 1. Its inspection interval is 5 weeks. The inventory label uses the reference number 1034. Routine handling requires keeping the kit dry, returning all reference cards to the marked envelope, and recording the date after inspection. This record applies only to kit AX034; other archive kits have separate records.",
+      "text_sha256": "77b3f0b8aec21b7072b7da35484834433f3f81c3150b44ce3ad084e7d6a30c44"
+    },
+    {
+      "source_id": "AX035",
+      "text": "SYNTHETIC ARCHIVE RECORD AX035. This fictional record describes the geology reference kit identified as AX035. The kit is stored on shelf 41 in cabinet 4. Its inspection interval is 6 weeks. The inventory label uses the reference number 1035. Routine handling requires keeping the kit dry, returning all reference cards to the marked envelope, and recording the date after inspection. This record applies only to kit AX035; other archive kits have separate records.",
+      "text_sha256": "76982086feaa30ec93eee41a64502ae14cfafb676825fb4d4398f186848ced0c"
+    },
+    {
+      "source_id": "AX036",
+      "text": "SYNTHETIC ARCHIVE RECORD AX036. This fictional record describes the acoustics reference kit identified as AX036. The kit is stored on shelf 7 in cabinet 7. Its inspection interval is 1 weeks. The inventory label uses the reference number 1036. Routine handling requires keeping the kit dry, returning all reference cards to the marked envelope, and recording the date after inspection. This record applies only to kit AX036; other archive kits have separate records.",
+      "text_sha256": "694449eaab59c76e016db4cd9ae43839d543a60424f0fb0a8e1890cfdcd92a7d"
+    },
+    {
+      "source_id": "AX037",
+      "text": "SYNTHETIC ARCHIVE RECORD AX037. This fictional record describes the hydrology reference kit identified as AX037. The kit is stored on shelf 14 in cabinet 10. Its inspection interval is 2 weeks. The inventory label uses the reference number 1037. Routine handling requires keeping the kit dry, returning all reference cards to the marked envelope, and recording the date after inspection. This record applies only to kit AX037; other archive kits have separate records.",
+      "text_sha256": "9853268df6f48dd7747a095cebe359a5873ac5e27394cde167c2bc0cce3847e3"
+    },
+    {
+      "source_id": "AX038",
+      "text": "SYNTHETIC ARCHIVE RECORD AX038. This fictional record describes the optics reference kit identified as AX038. The kit is stored on shelf 21 in cabinet 13. Its inspection interval is 3 weeks. The inventory label uses the reference number 1038. Routine handling requires keeping the kit dry, returning all reference cards to the marked envelope, and recording the date after inspection. This record applies only to kit AX038; other archive kits have separate records.",
+      "text_sha256": "527b84401989302d114340950aabea7b667d302c181597dc002fe0f3ebb06739"
+    },
+    {
+      "source_id": "AX039",
+      "text": "SYNTHETIC ARCHIVE RECORD AX039. This fictional record describes the cartography reference kit identified as AX039. The kit is stored on shelf 28 in cabinet 16. Its inspection interval is 4 weeks. The inventory label uses the reference number 1039. Routine handling requires keeping the kit dry, returning all reference cards to the marked envelope, and recording the date after inspection. This record applies only to kit AX039; other archive kits have separate records.",
+      "text_sha256": "2250b95c4afd3ca3cc8d3c29596fd3a300715ddbd8fa5f447330cf2c8d31225d"
+    },
+    {
+      "source_id": "AX040",
+      "text": "SYNTHETIC ARCHIVE RECORD AX040. This fictional record describes the archival storage reference kit identified as AX040. The kit is stored on shelf 35 in cabinet 2. Its inspection interval is 5 weeks. The inventory label uses the reference number 1040. Routine handling requires keeping the kit dry, returning all reference cards to the marked envelope, and recording the date after inspection. This record applies only to kit AX040; other archive kits have separate records.",
+      "text_sha256": "6ac63febbf1b4a264bc94249748a6516685a9760b78519583543e10fc5b45bc5"
+    },
+    {
+      "source_id": "AX041",
+      "text": "SYNTHETIC ARCHIVE RECORD AX041. This fictional record describes the botany reference kit identified as AX041. The kit is stored on shelf 1 in cabinet 5. Its inspection interval is 6 weeks. The inventory label uses the reference number 1041. Routine handling requires keeping the kit dry, returning all reference cards to the marked envelope, and recording the date after inspection. This record applies only to kit AX041; other archive kits have separate records.",
+      "text_sha256": "1b5fdcb745327441e7ca6e6fdd7877f11a53329808408f2edd7e7197e76aebc1"
+    },
+    {
+      "source_id": "AX042",
+      "text": "SYNTHETIC ARCHIVE RECORD AX042. This fictional record describes the navigation reference kit identified as AX042. The kit is stored on shelf 8 in cabinet 8. Its inspection interval is 1 weeks. The inventory label uses the reference number 1042. Routine handling requires keeping the kit dry, returning all reference cards to the marked envelope, and recording the date after inspection. This record applies only to kit AX042; other archive kits have separate records.",
+      "text_sha256": "50cb5f45a6ae1c64ec20f499349e2f8142170096e4ee194cba55927be8486643"
+    },
+    {
+      "source_id": "AX043",
+      "text": "SYNTHETIC ARCHIVE RECORD AX043. This fictional record describes the materials reference kit identified as AX043. The kit is stored on shelf 15 in cabinet 11. Its inspection interval is 2 weeks. The inventory label uses the reference number 1043. Routine handling requires keeping the kit dry, returning all reference cards to the marked envelope, and recording the date after inspection. This record applies only to kit AX043; other archive kits have separate records.",
+      "text_sha256": "e7dd0d43883e51adfc0f33a38afde7a6b29fc39532dcad1a0211990f26ee5d8b"
+    },
+    {
+      "source_id": "AX044",
+      "text": "SYNTHETIC ARCHIVE RECORD AX044. This fictional record describes the astronomy reference kit identified as AX044. The kit is stored on shelf 22 in cabinet 14. Its inspection interval is 3 weeks. The inventory label uses the reference number 1044. Routine handling requires keeping the kit dry, returning all reference cards to the marked envelope, and recording the date after inspection. This record applies only to kit AX044; other archive kits have separate records.",
+      "text_sha256": "e74532c6bbb0c1359612001c787f125eee0734e6bb5d49dc51da70a533767228"
+    },
+    {
+      "source_id": "AX045",
+      "text": "SYNTHETIC ARCHIVE RECORD AX045. This fictional record describes the geology reference kit identified as AX045. The kit is stored on shelf 29 in cabinet 17. Its inspection interval is 4 weeks. The inventory label uses the reference number 1045. Routine handling requires keeping the kit dry, returning all reference cards to the marked envelope, and recording the date after inspection. This record applies only to kit AX045; other archive kits have separate records.",
+      "text_sha256": "5974670111ce879e8321c6941a423a8aecbe583762f1e95cc54e5fb4172310d2"
+    },
+    {
+      "source_id": "AX046",
+      "text": "SYNTHETIC ARCHIVE RECORD AX046. This fictional record describes the acoustics reference kit identified as AX046. The kit is stored on shelf 36 in cabinet 3. Its inspection interval is 5 weeks. The inventory label uses the reference number 1046. Routine handling requires keeping the kit dry, returning all reference cards to the marked envelope, and recording the date after inspection. This record applies only to kit AX046; other archive kits have separate records.",
+      "text_sha256": "634d2ef34598d9d2ba1f799b8ccc2d36fce979ee39105b5ca84a37f9bbea6075"
+    },
+    {
+      "source_id": "AX047",
+      "text": "SYNTHETIC ARCHIVE RECORD AX047. This fictional record describes the hydrology reference kit identified as AX047. The kit is stored on shelf 2 in cabinet 6. Its inspection interval is 6 weeks. The inventory label uses the reference number 1047. Routine handling requires keeping the kit dry, returning all reference cards to the marked envelope, and recording the date after inspection. This record applies only to kit AX047; other archive kits have separate records.",
+      "text_sha256": "5fde770d870b6b4416aaa95363a611a64a066658b4f59e1ae2b419c7e02c19c0"
+    },
+    {
+      "source_id": "AX048",
+      "text": "SYNTHETIC ARCHIVE RECORD AX048. This fictional record describes the optics reference kit identified as AX048. The kit is stored on shelf 9 in cabinet 9. Its inspection interval is 1 weeks. The inventory label uses the reference number 1048. Routine handling requires keeping the kit dry, returning all reference cards to the marked envelope, and recording the date after inspection. This record applies only to kit AX048; other archive kits have separate records.",
+      "text_sha256": "07b0069c19970025946c6d66dd2b0c6000d6471ccdebf42e2a462cc68fe96520"
+    },
+    {
+      "source_id": "AX049",
+      "text": "SYNTHETIC ARCHIVE RECORD AX049. This fictional record describes the cartography reference kit identified as AX049. The kit is stored on shelf 16 in cabinet 12. Its inspection interval is 2 weeks. The inventory label uses the reference number 1049. Routine handling requires keeping the kit dry, returning all reference cards to the marked envelope, and recording the date after inspection. This record applies only to kit AX049; other archive kits have separate records.",
+      "text_sha256": "d9b5605df9225ab1b1e86e66cbfea4afa0da43122170d84061ead176015a64d8"
+    },
+    {
+      "source_id": "AX050",
+      "text": "SYNTHETIC ARCHIVE RECORD AX050. This fictional record describes the archival storage reference kit identified as AX050. The kit is stored on shelf 23 in cabinet 15. Its inspection interval is 3 weeks. The inventory label uses the reference number 1050. Routine handling requires keeping the kit dry, returning all reference cards to the marked envelope, and recording the date after inspection. This record applies only to kit AX050; other archive kits have separate records.",
+      "text_sha256": "64fd7b7fab40d749a7a380712ddcf0b9d181fa1333147b59c940e7b137084882"
+    },
+    {
+      "source_id": "AX051",
+      "text": "SYNTHETIC ARCHIVE RECORD AX051. This fictional record describes the botany reference kit identified as AX051. The kit is stored on shelf 30 in cabinet 1. Its inspection interval is 4 weeks. The inventory label uses the reference number 1051. Routine handling requires keeping the kit dry, returning all reference cards to the marked envelope, and recording the date after inspection. This record applies only to kit AX051; other archive kits have separate records.",
+      "text_sha256": "95fffbf08b0c9fbc6a5a015ae6113157f6bdd1d605c63adc1c9655ffbe60db03"
+    },
+    {
+      "source_id": "AX052",
+      "text": "SYNTHETIC ARCHIVE RECORD AX052. This fictional record describes the navigation reference kit identified as AX052. The kit is stored on shelf 37 in cabinet 4. Its inspection interval is 5 weeks. The inventory label uses the reference number 1052. Routine handling requires keeping the kit dry, returning all reference cards to the marked envelope, and recording the date after inspection. This record applies only to kit AX052; other archive kits have separate records.",
+      "text_sha256": "4e76c87b9bb30331058d35bd8963d2723b3ae696e932f4a8ad26d64d2ac345ab"
+    },
+    {
+      "source_id": "AX053",
+      "text": "SYNTHETIC ARCHIVE RECORD AX053. This fictional record describes the materials reference kit identified as AX053. The kit is stored on shelf 3 in cabinet 7. Its inspection interval is 6 weeks. The inventory label uses the reference number 1053. Routine handling requires keeping the kit dry, returning all reference cards to the marked envelope, and recording the date after inspection. This record applies only to kit AX053; other archive kits have separate records.",
+      "text_sha256": "77d88be3823ec62bea741dda9cf1e086722b37b580399ea374b7d478bae9dfa1"
+    },
+    {
+      "source_id": "AX054",
+      "text": "SYNTHETIC ARCHIVE RECORD AX054. This fictional record describes the astronomy reference kit identified as AX054. The kit is stored on shelf 10 in cabinet 10. Its inspection interval is 1 weeks. The inventory label uses the reference number 1054. Routine handling requires keeping the kit dry, returning all reference cards to the marked envelope, and recording the date after inspection. This record applies only to kit AX054; other archive kits have separate records.",
+      "text_sha256": "6a9eab03e2d76829605e6c94f70aea1d48b31ef5b4771de2d4117bd244e38b99"
+    },
+    {
+      "source_id": "AX055",
+      "text": "SYNTHETIC ARCHIVE RECORD AX055. This fictional record describes the geology reference kit identified as AX055. The kit is stored on shelf 17 in cabinet 13. Its inspection interval is 2 weeks. The inventory label uses the reference number 1055. Routine handling requires keeping the kit dry, returning all reference cards to the marked envelope, and recording the date after inspection. This record applies only to kit AX055; other archive kits have separate records.",
+      "text_sha256": "55368ccf58987f89e1e2be1fb6619b9dc1f3279589b7d5a6538a2fca0e0b67e4"
+    },
+    {
+      "source_id": "AX056",
+      "text": "SYNTHETIC ARCHIVE RECORD AX056. This fictional record describes the acoustics reference kit identified as AX056. The kit is stored on shelf 24 in cabinet 16. Its inspection interval is 3 weeks. The inventory label uses the reference number 1056. Routine handling requires keeping the kit dry, returning all reference cards to the marked envelope, and recording the date after inspection. This record applies only to kit AX056; other archive kits have separate records.",
+      "text_sha256": "d6c469d81e2c5a3bcca5658a6bed08d1a9aeec96bcf99c35833135e8766d429a"
+    },
+    {
+      "source_id": "AX057",
+      "text": "SYNTHETIC ARCHIVE RECORD AX057. This fictional record describes the hydrology reference kit identified as AX057. The kit is stored on shelf 31 in cabinet 2. Its inspection interval is 4 weeks. The inventory label uses the reference number 1057. Routine handling requires keeping the kit dry, returning all reference cards to the marked envelope, and recording the date after inspection. This record applies only to kit AX057; other archive kits have separate records.",
+      "text_sha256": "5d90a5fd4910c736462503c103411aed2d593188ee1806f79cd205f37bb6f2e6"
+    },
+    {
+      "source_id": "AX058",
+      "text": "SYNTHETIC ARCHIVE RECORD AX058. This fictional record describes the optics reference kit identified as AX058. The kit is stored on shelf 38 in cabinet 5. Its inspection interval is 5 weeks. The inventory label uses the reference number 1058. Routine handling requires keeping the kit dry, returning all reference cards to the marked envelope, and recording the date after inspection. This record applies only to kit AX058; other archive kits have separate records.",
+      "text_sha256": "0194b6af7f5c44836fce3eb76efcc53e90517f70424d0c68a6a1a23851adf420"
+    },
+    {
+      "source_id": "AX059",
+      "text": "SYNTHETIC ARCHIVE RECORD AX059. This fictional record describes the cartography reference kit identified as AX059. The kit is stored on shelf 4 in cabinet 8. Its inspection interval is 6 weeks. The inventory label uses the reference number 1059. Routine handling requires keeping the kit dry, returning all reference cards to the marked envelope, and recording the date after inspection. This record applies only to kit AX059; other archive kits have separate records.",
+      "text_sha256": "e3e93a762e1be3ad54c033b8691afd6162521a90ab4637d4af6d948dc39fc454"
+    },
+    {
+      "source_id": "AX060",
+      "text": "SYNTHETIC ARCHIVE RECORD AX060. This fictional record describes the archival storage reference kit identified as AX060. The kit is stored on shelf 11 in cabinet 11. Its inspection interval is 1 weeks. The inventory label uses the reference number 1060. Routine handling requires keeping the kit dry, returning all reference cards to the marked envelope, and recording the date after inspection. This record applies only to kit AX060; other archive kits have separate records.",
+      "text_sha256": "cf9e2e9a7b609b4d1d43479063b023ad24884ac6cf7ee264e79bd75dd9e8e228"
+    },
+    {
+      "source_id": "AX061",
+      "text": "SYNTHETIC ARCHIVE RECORD AX061. This fictional record describes the botany reference kit identified as AX061. The kit is stored on shelf 18 in cabinet 14. Its inspection interval is 2 weeks. The inventory label uses the reference number 1061. Routine handling requires keeping the kit dry, returning all reference cards to the marked envelope, and recording the date after inspection. This record applies only to kit AX061; other archive kits have separate records.",
+      "text_sha256": "5cd215262c04b2d90c54dc99edd9f25443005c06fc7269ba428007b27067561d"
+    },
+    {
+      "source_id": "AX062",
+      "text": "SYNTHETIC ARCHIVE RECORD AX062. This fictional record describes the navigation reference kit identified as AX062. The kit is stored on shelf 25 in cabinet 17. Its inspection interval is 3 weeks. The inventory label uses the reference number 1062. Routine handling requires keeping the kit dry, returning all reference cards to the marked envelope, and recording the date after inspection. This record applies only to kit AX062; other archive kits have separate records.",
+      "text_sha256": "13ae59852d097dda641698379780e276b763fbc296ee01c2b55e5785201ade78"
+    },
+    {
+      "source_id": "AX063",
+      "text": "SYNTHETIC ARCHIVE RECORD AX063. This fictional record describes the materials reference kit identified as AX063. The kit is stored on shelf 32 in cabinet 3. Its inspection interval is 4 weeks. The inventory label uses the reference number 1063. Routine handling requires keeping the kit dry, returning all reference cards to the marked envelope, and recording the date after inspection. This record applies only to kit AX063; other archive kits have separate records.",
+      "text_sha256": "e2ca7363b61597c9706ecd056eed9251df17059da768aaf13fd09debf77478cd"
+    },
+    {
+      "source_id": "AX064",
+      "text": "SYNTHETIC ARCHIVE RECORD AX064. This fictional record describes the astronomy reference kit identified as AX064. The kit is stored on shelf 39 in cabinet 6. Its inspection interval is 5 weeks. The inventory label uses the reference number 1064. Routine handling requires keeping the kit dry, returning all reference cards to the marked envelope, and recording the date after inspection. This record applies only to kit AX064; other archive kits have separate records.",
+      "text_sha256": "156f6fdfb8b73bb916a95dbca5b1fabfefa5282819408c82dc91e11d8c9edcf4"
+    },
+    {
+      "source_id": "AX065",
+      "text": "SYNTHETIC ARCHIVE RECORD AX065. This fictional record describes the geology reference kit identified as AX065. The kit is stored on shelf 5 in cabinet 9. Its inspection interval is 6 weeks. The inventory label uses the reference number 1065. Routine handling requires keeping the kit dry, returning all reference cards to the marked envelope, and recording the date after inspection. This record applies only to kit AX065; other archive kits have separate records.",
+      "text_sha256": "19fa73db5470441d6c2f1190cdba9b1b1859031636daa9f91631dc99f6ed9f6c"
+    },
+    {
+      "source_id": "AX066",
+      "text": "SYNTHETIC ARCHIVE RECORD AX066. This fictional record describes the acoustics reference kit identified as AX066. The kit is stored on shelf 12 in cabinet 12. Its inspection interval is 1 weeks. The inventory label uses the reference number 1066. Routine handling requires keeping the kit dry, returning all reference cards to the marked envelope, and recording the date after inspection. This record applies only to kit AX066; other archive kits have separate records.",
+      "text_sha256": "a6ecc774113ebc6c5fd889932b8a9ae3877ca7a9e383ceaf63a6b7278b5422b0"
+    },
+    {
+      "source_id": "AX067",
+      "text": "SYNTHETIC ARCHIVE RECORD AX067. This fictional record describes the hydrology reference kit identified as AX067. The kit is stored on shelf 19 in cabinet 15. Its inspection interval is 2 weeks. The inventory label uses the reference number 1067. Routine handling requires keeping the kit dry, returning all reference cards to the marked envelope, and recording the date after inspection. This record applies only to kit AX067; other archive kits have separate records.",
+      "text_sha256": "16a35bbcb07242030f190682e243293ae591d1a42c6c612844f3731de9dee187"
+    },
+    {
+      "source_id": "AX068",
+      "text": "SYNTHETIC ARCHIVE RECORD AX068. This fictional record describes the optics reference kit identified as AX068. The kit is stored on shelf 26 in cabinet 1. Its inspection interval is 3 weeks. The inventory label uses the reference number 1068. Routine handling requires keeping the kit dry, returning all reference cards to the marked envelope, and recording the date after inspection. This record applies only to kit AX068; other archive kits have separate records.",
+      "text_sha256": "a4dda0cc5f218f1bd8195d7fc68701db497ba473b85c08801e02b10e0dfeb818"
+    },
+    {
+      "source_id": "AX069",
+      "text": "SYNTHETIC ARCHIVE RECORD AX069. This fictional record describes the cartography reference kit identified as AX069. The kit is stored on shelf 33 in cabinet 4. Its inspection interval is 4 weeks. The inventory label uses the reference number 1069. Routine handling requires keeping the kit dry, returning all reference cards to the marked envelope, and recording the date after inspection. This record applies only to kit AX069; other archive kits have separate records.",
+      "text_sha256": "4c5952d6e111811636ec5262346fd51c2c2ea59c7e26c353655fae8c51daabe2"
+    },
+    {
+      "source_id": "AX070",
+      "text": "SYNTHETIC ARCHIVE RECORD AX070. This fictional record describes the archival storage reference kit identified as AX070. The kit is stored on shelf 40 in cabinet 7. Its inspection interval is 5 weeks. The inventory label uses the reference number 1070. Routine handling requires keeping the kit dry, returning all reference cards to the marked envelope, and recording the date after inspection. This record applies only to kit AX070; other archive kits have separate records.",
+      "text_sha256": "351f2039a7cc7779f6599ccb006b29c10272948c98420c374e1d9445ba170757"
+    },
+    {
+      "source_id": "AX071",
+      "text": "SYNTHETIC ARCHIVE RECORD AX071. This fictional record describes the botany reference kit identified as AX071. The kit is stored on shelf 6 in cabinet 10. Its inspection interval is 6 weeks. The inventory label uses the reference number 1071. Routine handling requires keeping the kit dry, returning all reference cards to the marked envelope, and recording the date after inspection. This record applies only to kit AX071; other archive kits have separate records.",
+      "text_sha256": "b0e0722fdf06a77fb4e7c6ac2fd1ccf9572fd67fb4005a3556fcf4325ef45e5d"
+    },
+    {
+      "source_id": "AX072",
+      "text": "SYNTHETIC ARCHIVE RECORD AX072. This fictional record describes the navigation reference kit identified as AX072. The kit is stored on shelf 13 in cabinet 13. Its inspection interval is 1 weeks. The inventory label uses the reference number 1072. Routine handling requires keeping the kit dry, returning all reference cards to the marked envelope, and recording the date after inspection. This record applies only to kit AX072; other archive kits have separate records.",
+      "text_sha256": "c40f50a576a017b2286464f1eb41303a8e0362275fbbdad228cede95ce9b3197"
+    },
+    {
+      "source_id": "AX073",
+      "text": "SYNTHETIC ARCHIVE RECORD AX073. This fictional record describes the materials reference kit identified as AX073. The kit is stored on shelf 20 in cabinet 16. Its inspection interval is 2 weeks. The inventory label uses the reference number 1073. Routine handling requires keeping the kit dry, returning all reference cards to the marked envelope, and recording the date after inspection. This record applies only to kit AX073; other archive kits have separate records.",
+      "text_sha256": "e073e450b8d60dcab54147bb4f50119009d9534a397af35aed44988e6d3baf01"
+    },
+    {
+      "source_id": "AX074",
+      "text": "SYNTHETIC ARCHIVE RECORD AX074. This fictional record describes the astronomy reference kit identified as AX074. The kit is stored on shelf 27 in cabinet 2. Its inspection interval is 3 weeks. The inventory label uses the reference number 1074. Routine handling requires keeping the kit dry, returning all reference cards to the marked envelope, and recording the date after inspection. This record applies only to kit AX074; other archive kits have separate records.",
+      "text_sha256": "6ec6d25a5576d027cd5ceeb46ccf2d928be7fefe670f794b69042572f9df90ee"
+    },
+    {
+      "source_id": "AX075",
+      "text": "SYNTHETIC ARCHIVE RECORD AX075. This fictional record describes the geology reference kit identified as AX075. The kit is stored on shelf 34 in cabinet 5. Its inspection interval is 4 weeks. The inventory label uses the reference number 1075. Routine handling requires keeping the kit dry, returning all reference cards to the marked envelope, and recording the date after inspection. This record applies only to kit AX075; other archive kits have separate records.",
+      "text_sha256": "6e12332e7ec3395d995b59af437c73ca33a2841695aec1276d661350a53f43fa"
+    },
+    {
+      "source_id": "AX076",
+      "text": "SYNTHETIC ARCHIVE RECORD AX076. This fictional record describes the acoustics reference kit identified as AX076. The kit is stored on shelf 41 in cabinet 8. Its inspection interval is 5 weeks. The inventory label uses the reference number 1076. Routine handling requires keeping the kit dry, returning all reference cards to the marked envelope, and recording the date after inspection. This record applies only to kit AX076; other archive kits have separate records.",
+      "text_sha256": "a13fa57957c864b88a35a5bf3dda5daeec232278a3ad8252b3a5f10b580d7260"
+    },
+    {
+      "source_id": "AX077",
+      "text": "SYNTHETIC ARCHIVE RECORD AX077. This fictional record describes the hydrology reference kit identified as AX077. The kit is stored on shelf 7 in cabinet 11. Its inspection interval is 6 weeks. The inventory label uses the reference number 1077. Routine handling requires keeping the kit dry, returning all reference cards to the marked envelope, and recording the date after inspection. This record applies only to kit AX077; other archive kits have separate records.",
+      "text_sha256": "8c3ee83c8a64c66acb6f4d1749512ec8fa3b84abc699826175f8cc42fc683851"
+    },
+    {
+      "source_id": "AX078",
+      "text": "SYNTHETIC ARCHIVE RECORD AX078. This fictional record describes the optics reference kit identified as AX078. The kit is stored on shelf 14 in cabinet 14. Its inspection interval is 1 weeks. The inventory label uses the reference number 1078. Routine handling requires keeping the kit dry, returning all reference cards to the marked envelope, and recording the date after inspection. This record applies only to kit AX078; other archive kits have separate records.",
+      "text_sha256": "c2373cfb2e99d7c65459c7141613b91194eb2d581fe8251bf30c6bc4db5606c6"
+    },
+    {
+      "source_id": "AX079",
+      "text": "SYNTHETIC ARCHIVE RECORD AX079. This fictional record describes the cartography reference kit identified as AX079. The kit is stored on shelf 21 in cabinet 17. Its inspection interval is 2 weeks. The inventory label uses the reference number 1079. Routine handling requires keeping the kit dry, returning all reference cards to the marked envelope, and recording the date after inspection. This record applies only to kit AX079; other archive kits have separate records.",
+      "text_sha256": "0a1820afbfa56d46cd71a9d42cbe51a9949dd01e218d2e8d237434b920779667"
+    },
+    {
+      "source_id": "AX080",
+      "text": "SYNTHETIC ARCHIVE RECORD AX080. This fictional record describes the archival storage reference kit identified as AX080. The kit is stored on shelf 28 in cabinet 3. Its inspection interval is 3 weeks. The inventory label uses the reference number 1080. Routine handling requires keeping the kit dry, returning all reference cards to the marked envelope, and recording the date after inspection. This record applies only to kit AX080; other archive kits have separate records.",
+      "text_sha256": "0b31a10dea14eb03d7cc5db871dea7b8182cdf6f9d126e214deb46fbe0946af0"
+    },
+    {
+      "source_id": "AX081",
+      "text": "SYNTHETIC ARCHIVE RECORD AX081. This fictional record describes the botany reference kit identified as AX081. The kit is stored on shelf 35 in cabinet 6. Its inspection interval is 4 weeks. The inventory label uses the reference number 1081. Routine handling requires keeping the kit dry, returning all reference cards to the marked envelope, and recording the date after inspection. This record applies only to kit AX081; other archive kits have separate records.",
+      "text_sha256": "e70af64ddccb49feaab41f3103c3cca4cb7062d927f3f363603610078c1d94c1"
+    },
+    {
+      "source_id": "AX082",
+      "text": "SYNTHETIC ARCHIVE RECORD AX082. This fictional record describes the navigation reference kit identified as AX082. The kit is stored on shelf 1 in cabinet 9. Its inspection interval is 5 weeks. The inventory label uses the reference number 1082. Routine handling requires keeping the kit dry, returning all reference cards to the marked envelope, and recording the date after inspection. This record applies only to kit AX082; other archive kits have separate records.",
+      "text_sha256": "d738a428a6d55178fab1bb046150280096d1f3c9277d32cf5105d535a2e1ac5a"
+    },
+    {
+      "source_id": "AX083",
+      "text": "SYNTHETIC ARCHIVE RECORD AX083. This fictional record describes the materials reference kit identified as AX083. The kit is stored on shelf 8 in cabinet 12. Its inspection interval is 6 weeks. The inventory label uses the reference number 1083. Routine handling requires keeping the kit dry, returning all reference cards to the marked envelope, and recording the date after inspection. This record applies only to kit AX083; other archive kits have separate records.",
+      "text_sha256": "df96180a115cdd6af534d31a5cde0a98f0d0c6d13cc70dd7dd8dae396a75413b"
+    },
+    {
+      "source_id": "AX084",
+      "text": "SYNTHETIC ARCHIVE RECORD AX084. This fictional record describes the astronomy reference kit identified as AX084. The kit is stored on shelf 15 in cabinet 15. Its inspection interval is 1 weeks. The inventory label uses the reference number 1084. Routine handling requires keeping the kit dry, returning all reference cards to the marked envelope, and recording the date after inspection. This record applies only to kit AX084; other archive kits have separate records.",
+      "text_sha256": "9f441debb873ed84ffd61fa4a66303a996f26994d65ddf7608d89141538852a3"
+    },
+    {
+      "source_id": "AX085",
+      "text": "SYNTHETIC ARCHIVE RECORD AX085. This fictional record describes the geology reference kit identified as AX085. The kit is stored on shelf 22 in cabinet 1. Its inspection interval is 2 weeks. The inventory label uses the reference number 1085. Routine handling requires keeping the kit dry, returning all reference cards to the marked envelope, and recording the date after inspection. This record applies only to kit AX085; other archive kits have separate records.",
+      "text_sha256": "ac2692300e9122d0ce95462ddc0bc48b34469e0a887b744451d08e5109325346"
+    },
+    {
+      "source_id": "AX086",
+      "text": "SYNTHETIC ARCHIVE RECORD AX086. This fictional record describes the acoustics reference kit identified as AX086. The kit is stored on shelf 29 in cabinet 4. Its inspection interval is 3 weeks. The inventory label uses the reference number 1086. Routine handling requires keeping the kit dry, returning all reference cards to the marked envelope, and recording the date after inspection. This record applies only to kit AX086; other archive kits have separate records.",
+      "text_sha256": "dc0a5d1ff78a84567ebe4706502c03c419ee0ac57e1a5936169d7092aed78774"
+    },
+    {
+      "source_id": "AX087",
+      "text": "SYNTHETIC ARCHIVE RECORD AX087. This fictional record describes the hydrology reference kit identified as AX087. The kit is stored on shelf 36 in cabinet 7. Its inspection interval is 4 weeks. The inventory label uses the reference number 1087. Routine handling requires keeping the kit dry, returning all reference cards to the marked envelope, and recording the date after inspection. This record applies only to kit AX087; other archive kits have separate records.",
+      "text_sha256": "60c5c1a55ce85f277aa4129ee058f86d17a22c54ac33967dd066b43357436a58"
+    },
+    {
+      "source_id": "AX088",
+      "text": "SYNTHETIC ARCHIVE RECORD AX088. This fictional record describes the optics reference kit identified as AX088. The kit is stored on shelf 2 in cabinet 10. Its inspection interval is 5 weeks. The inventory label uses the reference number 1088. Routine handling requires keeping the kit dry, returning all reference cards to the marked envelope, and recording the date after inspection. This record applies only to kit AX088; other archive kits have separate records.",
+      "text_sha256": "cb8659a2fc088fd2b92f1b5989526bf95c575f1d287368b10fde71815fc0a1fd"
+    },
+    {
+      "source_id": "AX089",
+      "text": "SYNTHETIC ARCHIVE RECORD AX089. This fictional record describes the cartography reference kit identified as AX089. The kit is stored on shelf 9 in cabinet 13. Its inspection interval is 6 weeks. The inventory label uses the reference number 1089. Routine handling requires keeping the kit dry, returning all reference cards to the marked envelope, and recording the date after inspection. This record applies only to kit AX089; other archive kits have separate records.",
+      "text_sha256": "a125066c60bc9530d803e77e34e9e628de9b35fc7f5f1f0ec2b0d6754d1ef48f"
+    },
+    {
+      "source_id": "AX090",
+      "text": "SYNTHETIC ARCHIVE RECORD AX090. This fictional record describes the archival storage reference kit identified as AX090. The kit is stored on shelf 16 in cabinet 16. Its inspection interval is 1 weeks. The inventory label uses the reference number 1090. Routine handling requires keeping the kit dry, returning all reference cards to the marked envelope, and recording the date after inspection. This record applies only to kit AX090; other archive kits have separate records.",
+      "text_sha256": "0a62a0d945795c928fdb887b3123d6e199e5f7757609c0386372657901119d21"
+    },
+    {
+      "source_id": "AX091",
+      "text": "SYNTHETIC ARCHIVE RECORD AX091. This fictional record describes the botany reference kit identified as AX091. The kit is stored on shelf 23 in cabinet 2. Its inspection interval is 2 weeks. The inventory label uses the reference number 1091. Routine handling requires keeping the kit dry, returning all reference cards to the marked envelope, and recording the date after inspection. This record applies only to kit AX091; other archive kits have separate records.",
+      "text_sha256": "84b146f9b3d9fd66617f8a97f72092bd17d91c0de380c54c1afcb610eed3b23e"
+    },
+    {
+      "source_id": "AX092",
+      "text": "SYNTHETIC ARCHIVE RECORD AX092. This fictional record describes the navigation reference kit identified as AX092. The kit is stored on shelf 30 in cabinet 5. Its inspection interval is 3 weeks. The inventory label uses the reference number 1092. Routine handling requires keeping the kit dry, returning all reference cards to the marked envelope, and recording the date after inspection. This record applies only to kit AX092; other archive kits have separate records.",
+      "text_sha256": "37deae61a08301774610f006b9bf29cbb1836db23139317a1e904ec884dad061"
+    },
+    {
+      "source_id": "AX093",
+      "text": "SYNTHETIC ARCHIVE RECORD AX093. This fictional record describes the materials reference kit identified as AX093. The kit is stored on shelf 37 in cabinet 8. Its inspection interval is 4 weeks. The inventory label uses the reference number 1093. Routine handling requires keeping the kit dry, returning all reference cards to the marked envelope, and recording the date after inspection. This record applies only to kit AX093; other archive kits have separate records.",
+      "text_sha256": "561b85c3c1c52dcb22892e6602a365fdb366d643e5c7e738f5574671e3c18bbc"
+    },
+    {
+      "source_id": "AX094",
+      "text": "SYNTHETIC ARCHIVE RECORD AX094. This fictional record describes the astronomy reference kit identified as AX094. The kit is stored on shelf 3 in cabinet 11. Its inspection interval is 5 weeks. The inventory label uses the reference number 1094. Routine handling requires keeping the kit dry, returning all reference cards to the marked envelope, and recording the date after inspection. This record applies only to kit AX094; other archive kits have separate records.",
+      "text_sha256": "0ec70c29cc5fdbf34c9285b4b74fdd2c8a2cbd9735aeeb56923ed4f847298688"
+    },
+    {
+      "source_id": "AX095",
+      "text": "SYNTHETIC ARCHIVE RECORD AX095. This fictional record describes the geology reference kit identified as AX095. The kit is stored on shelf 10 in cabinet 14. Its inspection interval is 6 weeks. The inventory label uses the reference number 1095. Routine handling requires keeping the kit dry, returning all reference cards to the marked envelope, and recording the date after inspection. This record applies only to kit AX095; other archive kits have separate records.",
+      "text_sha256": "71d12ac258b9b34caba2affbc0a1953f80ed03ad224dabe2c0b80bac93b860c0"
+    },
+    {
+      "source_id": "AX096",
+      "text": "SYNTHETIC ARCHIVE RECORD AX096. This fictional record describes the acoustics reference kit identified as AX096. The kit is stored on shelf 17 in cabinet 17. Its inspection interval is 1 weeks. The inventory label uses the reference number 1096. Routine handling requires keeping the kit dry, returning all reference cards to the marked envelope, and recording the date after inspection. This record applies only to kit AX096; other archive kits have separate records.",
+      "text_sha256": "bd143308f61b47d396a8bf3bb1528cb34b92521064dff296e7e75b6ca4fd7a4f"
+    },
+    {
+      "source_id": "AX097",
+      "text": "SYNTHETIC ARCHIVE RECORD AX097. This fictional record describes the hydrology reference kit identified as AX097. The kit is stored on shelf 24 in cabinet 3. Its inspection interval is 2 weeks. The inventory label uses the reference number 1097. Routine handling requires keeping the kit dry, returning all reference cards to the marked envelope, and recording the date after inspection. This record applies only to kit AX097; other archive kits have separate records.",
+      "text_sha256": "341c5bacfcac099de06c530092fe37dbc5787b3fbb6381d4ac641650736f65c8"
+    },
+    {
+      "source_id": "AX098",
+      "text": "SYNTHETIC ARCHIVE RECORD AX098. This fictional record describes the optics reference kit identified as AX098. The kit is stored on shelf 31 in cabinet 6. Its inspection interval is 3 weeks. The inventory label uses the reference number 1098. Routine handling requires keeping the kit dry, returning all reference cards to the marked envelope, and recording the date after inspection. This record applies only to kit AX098; other archive kits have separate records.",
+      "text_sha256": "920088b24a455524086e31e2c50f3dee4f01285db4a184fa99510ac816be2046"
+    },
+    {
+      "source_id": "AX099",
+      "text": "SYNTHETIC ARCHIVE RECORD AX099. This fictional record describes the cartography reference kit identified as AX099. The kit is stored on shelf 38 in cabinet 9. Its inspection interval is 4 weeks. The inventory label uses the reference number 1099. Routine handling requires keeping the kit dry, returning all reference cards to the marked envelope, and recording the date after inspection. This record applies only to kit AX099; other archive kits have separate records.",
+      "text_sha256": "ee48ff26b0af061a6176a224d4fd6301c1aeefdf642cebb9049d63ddcaac75ee"
+    },
+    {
+      "source_id": "AX100",
+      "text": "SYNTHETIC ARCHIVE RECORD AX100. This fictional record describes the archival storage reference kit identified as AX100. The kit is stored on shelf 4 in cabinet 12. Its inspection interval is 5 weeks. The inventory label uses the reference number 1100. Routine handling requires keeping the kit dry, returning all reference cards to the marked envelope, and recording the date after inspection. This record applies only to kit AX100; other archive kits have separate records.",
+      "text_sha256": "1a77de8cb330725e5be7f0eabce1c08860b89d12258de066d981510c10a457fa"
+    }
+  ]
+}

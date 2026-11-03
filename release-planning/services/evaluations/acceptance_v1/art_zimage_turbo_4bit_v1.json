@@ -1,0 +1,62 @@
+{
+  "schema_version": 1,
+  "fixture_id": "airunner-art-zimage-turbo-4bit-v1",
+  "status": "unrun",
+  "model": {
+    "canonical_id": "Tongyi-MAI/Z-Image-Turbo",
+    "revision": "f332072aa78be7aecdf3ee76d5c247082da564a6",
+    "license": "Apache-2.0",
+    "attribution": "Tongyi-MAI",
+    "runtime_directory": "the verified local intake directory for the exact revision above"
+  },
+  "configuration": {
+    "pipeline": "txt2img",
+    "dtype": "4bit",
+    "quantization": "NF4",
+    "width": 512,
+    "height": 512,
+    "steps": 8,
+    "cfg_scale": 0.0,
+    "scheduler": "FLOW_MATCH_EULER",
+    "num_images": 1,
+    "negative_prompt": "",
+    "seeds": [420212201, 420212202, 420212203, 420212204, 420212205, 420212206, 420212207, 420212208, 420212209, 420212210, 420212211, 420212212, 420212213, 420212214, 420212215, 420212216, 420212217, 420212218, 420212219, 420212220]
+  },
+  "cases": [
+    {"id":"ART-01","prompt":"A red ceramic watering can beside a row of basil seedlings on a sunny windowsill.","required_subjects":["red ceramic watering can","basil seedlings"],"layout":"watering can beside seedlings","attribute":"sunny windowsill"},
+    {"id":"ART-02","prompt":"A yellow bicycle leaning against a blue wooden fence beside a quiet country lane.","required_subjects":["yellow bicycle","blue wooden fence"],"layout":"bicycle leaning against fence","attribute":"country lane"},
+    {"id":"ART-03","prompt":"A small glass greenhouse with a single open door in a flat garden under overcast light.","required_subjects":["glass greenhouse","open door"],"layout":"one door visibly open","attribute":"flat garden, overcast light"},
+    {"id":"ART-04","prompt":"Three ripe oranges arranged in a shallow white bowl on a dark kitchen table.","required_subjects":["three oranges","white bowl"],"layout":"oranges inside bowl on table","attribute":"dark kitchen table"},
+    {"id":"ART-05","prompt":"A wooden rowboat tied to a short dock on a still lake at early morning.","required_subjects":["wooden rowboat","dock","lake"],"layout":"boat tied to dock","attribute":"early morning, still water"},
+    {"id":"ART-06","prompt":"A black cat sitting on a folded green blanket beside a round window.","required_subjects":["black cat","green blanket","round window"],"layout":"cat on blanket beside window","attribute":"folded blanket"},
+    {"id":"ART-07","prompt":"A simple red barn behind a low stone wall, with one tree on the left.","required_subjects":["red barn","stone wall","tree"],"layout":"barn behind wall, tree on left","attribute":"one tree"},
+    {"id":"ART-08","prompt":"A ceramic blue mug filled with tea beside an open paperback book on a wooden desk.","required_subjects":["blue mug","tea","open paperback"],"layout":"mug beside open book","attribute":"wooden desk"},
+    {"id":"ART-09","prompt":"A small sailboat with a white sail moving across a calm turquoise bay.","required_subjects":["sailboat","white sail","bay"],"layout":"boat on water","attribute":"calm turquoise water"},
+    {"id":"ART-10","prompt":"A single red apple on a pale plate beside a closed notebook.","required_subjects":["one red apple","pale plate","closed notebook"],"layout":"apple on plate beside notebook","attribute":"single apple"},
+    {"id":"ART-11","prompt":"A stone footbridge crossing a narrow stream in a leafy park during autumn.","required_subjects":["stone footbridge","stream","park"],"layout":"bridge crossing stream","attribute":"autumn leaves"},
+    {"id":"ART-12","prompt":"A small white lighthouse on a grassy headland beneath a cloudy sky.","required_subjects":["white lighthouse","grassy headland"],"layout":"lighthouse on headland","attribute":"cloudy sky"},
+    {"id":"ART-13","prompt":"A woven basket holding four yellow pears on a blue picnic cloth.","required_subjects":["woven basket","four yellow pears","blue cloth"],"layout":"pears inside basket on cloth","attribute":"four pears"},
+    {"id":"ART-14","prompt":"A red umbrella propped open beside a puddle on a quiet sidewalk after rain.","required_subjects":["red umbrella","puddle","sidewalk"],"layout":"open umbrella beside puddle","attribute":"after rain"},
+    {"id":"ART-15","prompt":"A small wooden birdhouse mounted on a gray post in a field of short grass.","required_subjects":["wooden birdhouse","gray post","short grass"],"layout":"birdhouse mounted on post","attribute":"small birdhouse"},
+    {"id":"ART-16","prompt":"A glass jar containing blue buttons next to a spool of white thread on a sewing table.","required_subjects":["glass jar","blue buttons","white thread"],"layout":"jar beside spool","attribute":"sewing table"},
+    {"id":"ART-17","prompt":"A low orange kayak pulled onto a sandy beach beside calm water.","required_subjects":["orange kayak","sandy beach","water"],"layout":"kayak pulled onto beach","attribute":"calm water"},
+    {"id":"ART-18","prompt":"A potted fern on a low shelf beneath a square window in a quiet room.","required_subjects":["potted fern","low shelf","square window"],"layout":"fern on shelf below window","attribute":"quiet room"},
+    {"id":"ART-19","prompt":"A yellow rain boot holding a small bunch of purple flowers on a porch step.","required_subjects":["yellow rain boot","purple flowers","porch step"],"layout":"flowers inside boot","attribute":"small bunch"},
+    {"id":"ART-20","prompt":"A red hot-air balloon floating above a broad green meadow under a clear sky.","required_subjects":["red hot-air balloon","green meadow"],"layout":"balloon above meadow","attribute":"clear sky"}
+  ],
+  "automated_checks": {
+    "per_case": ["request returns one image", "HTTP result is PNG", "PNG decoder succeeds", "decoded dimensions are 512x512", "result remains retrievable while daemon is alive", "persisted evidence file byte count and SHA-256 are recorded"],
+    "failure_policy": "Any timeout, request error, malformed image, wrong dimensions/count, or unavailable result remains a failed case in the denominator. Capacity rejection is recorded separately and is not a model result."
+  },
+  "assistant_visual_rubric": {
+    "criteria": [
+      {"id":"subject","pass":"All listed required subjects are recognizable and present."},
+      {"id":"attribute","pass":"The case's stated color, count, setting, or lighting attribute is visibly represented."},
+      {"id":"layout","pass":"The stated spatial relationship is represented."},
+      {"id":"major_defect","pass":"No severe corruption obscures the requested scene or makes the image unusable for visual inspection."}
+    ],
+    "scoring":"Score each criterion 0 or 1 per case (80 binary checks total). Target at least 72/80 passed checks and zero severe-corruption cases.",
+    "method":"Record assistant-scored visual assessment separately from automated image checks, including per-case rationale and uncertainty. This is not human review and makes no safety-efficacy claim."
+  },
+  "latency_measurement":"This 20-case quality fixture does not itself satisfy the separate requirement for at least 30 comparable warm latency observations. Record queue, load, text encoding, denoising, VAE, persistence, and end-to-end times separately when available; do not infer unavailable phase timings."
+}

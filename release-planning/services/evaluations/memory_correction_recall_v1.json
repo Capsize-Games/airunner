@@ -1,0 +1,128 @@
+{
+  "schema_version": 1,
+  "fixture_id": "airunner-memory-correction-recall-v1",
+  "purpose": "Fixed synthetic sequences for chatbot-scoped memory correction, persistence, recall, and unknown-fact behavior.",
+  "execution_setup": "Run each scenario in a fresh isolated companion database so unknown-fact checks cannot see facts from other scenarios; create the explicitly required separate bot identities within the scenario. MCR-04 is the exception within its sequence: close and reopen the same database to verify persistence.",
+  "tools": [
+    "record_companion_fact(chatbot_id, fact, subject, source)",
+    "recall_companion_facts(chatbot_id, query, max_results)",
+    "update_companion_fact(chatbot_id, fact_id, content)",
+    "retract_companion_fact(chatbot_id, fact_id, reason)",
+    "recall_companion_turns(chatbot_id, session_id, query, max_results)"
+  ],
+  "scope_setup": {
+    "bot_a": "Create a fresh chatbot and substitute its database ID for $bot_a.",
+    "bot_b": "Create a distinct fresh chatbot and substitute its database ID for $bot_b.",
+    "fact_id": "Capture the integer from the [fact:<id>] citation returned by record_companion_fact; do not assume global IDs.",
+    "session_id": "Create the session through the companion repository fixture setup and substitute its integer ID for $session_a."
+  },
+  "scenarios": [
+    {
+      "scenario_id": "MCR-01",
+      "name": "record and recall one fact",
+      "steps": [
+        {"tool": "record_companion_fact", "arguments": {"chatbot_id": "$bot_a", "fact": "The blue lantern is stored in cabinet 12.", "subject": "blue lantern", "source": "fixture:MCR-01"}},
+        {"tool": "recall_companion_facts", "arguments": {"chatbot_id": "$bot_a", "query": "where is the blue lantern stored", "max_results": 5}}
+      ],
+      "expected": {"latest_fact": "The blue lantern is stored in cabinet 12.", "citation": "[fact:$fact_id_from_step_1]", "other_bot_must_not_receive_fact": true}
+    },
+    {
+      "scenario_id": "MCR-02",
+      "name": "correct a recorded value",
+      "steps": [
+        {"tool": "record_companion_fact", "arguments": {"chatbot_id": "$bot_a", "fact": "The sample locker code is 3184.", "subject": "sample locker code", "source": "fixture:MCR-02"}},
+        {"tool": "update_companion_fact", "arguments": {"chatbot_id": "$bot_a", "fact_id": "$fact_id_from_step_1", "content": "The sample locker code is 7316."}},
+        {"tool": "recall_companion_facts", "arguments": {"chatbot_id": "$bot_a", "query": "sample locker code", "max_results": 5}}
+      ],
+      "expected": {"latest_fact": "The sample locker code is 7316.", "must_not_recall": ["3184"], "citation": "[fact:$fact_id_from_step_1]"}
+    },
+    {
+      "scenario_id": "MCR-03",
+      "name": "same subject remains scoped across two bots after correction",
+      "steps": [
+        {"tool": "record_companion_fact", "arguments": {"chatbot_id": "$bot_a", "fact": "Mira's project room is Cedar 4.", "subject": "Mira project room", "source": "fixture:MCR-03:A"}},
+        {"tool": "record_companion_fact", "arguments": {"chatbot_id": "$bot_b", "fact": "Mira's project room is Birch 9.", "subject": "Mira project room", "source": "fixture:MCR-03:B"}},
+        {"tool": "update_companion_fact", "arguments": {"chatbot_id": "$bot_a", "fact_id": "$fact_id_from_step_1", "content": "Mira's project room is Cedar 7."}},
+        {"tool": "recall_companion_facts", "arguments": {"chatbot_id": "$bot_a", "query": "Mira project room", "max_results": 5}},
+        {"tool": "recall_companion_facts", "arguments": {"chatbot_id": "$bot_b", "query": "Mira project room", "max_results": 5}}
+      ],
+      "expected": {"bot_a_latest_fact": "Mira's project room is Cedar 7.", "bot_b_fact": "Mira's project room is Birch 9.", "cross_bot_facts_forbidden": true, "bot_a_citation": "[fact:$fact_id_from_step_1]", "bot_b_citation": "[fact:$fact_id_from_step_2]"}
+    },
+    {
+      "scenario_id": "MCR-04",
+      "name": "corrected fact survives repository reopen",
+      "steps": [
+        {"tool": "record_companion_fact", "arguments": {"chatbot_id": "$bot_a", "fact": "The model shed pickup is Thursday.", "subject": "model shed pickup", "source": "fixture:MCR-04"}},
+        {"tool": "update_companion_fact", "arguments": {"chatbot_id": "$bot_a", "fact_id": "$fact_id_from_step_1", "content": "The model shed pickup is Friday."}},
+        {"operation": "close and reopen the configured companion repository using the same isolated database"},
+        {"tool": "recall_companion_facts", "arguments": {"chatbot_id": "$bot_a", "query": "model shed pickup", "max_results": 5}}
+      ],
+      "expected": {"latest_fact": "The model shed pickup is Friday.", "must_not_recall": ["Thursday"], "citation": "[fact:$fact_id_from_step_1]", "repository_reopen_required": true}
+    },
+    {
+      "scenario_id": "MCR-05",
+      "name": "unknown fact remains unknown",
+      "steps": [
+        {"tool": "recall_companion_facts", "arguments": {"chatbot_id": "$bot_a", "query": "which drawer holds the violet comet ledger", "max_results": 5}}
+      ],
+      "expected": {"tool_reply_contains": "No stored facts match", "must_not_invent_answer": true, "citation_required": false}
+    },
+    {
+      "scenario_id": "MCR-06",
+      "name": "retracted fact is excluded from recall and retained for audit",
+      "steps": [
+        {"tool": "record_companion_fact", "arguments": {"chatbot_id": "$bot_a", "fact": "The closed test gate code is 4402.", "subject": "test gate code", "source": "fixture:MCR-06"}},
+        {"tool": "retract_companion_fact", "arguments": {"chatbot_id": "$bot_a", "fact_id": "$fact_id_from_step_1", "reason": "The test gate code is no longer valid."}},
+        {"tool": "recall_companion_facts", "arguments": {"chatbot_id": "$bot_a", "query": "closed test gate code", "max_results": 5}},
+        {"operation": "inspect the isolated repository with include_retracted enabled"}
+      ],
+      "expected": {"recall_reply_contains": "No stored facts match", "retracted_row_retained": true, "retraction_reason": "The test gate code is no longer valid.", "citation_required_for_recall": false}
+    },
+    {
+      "scenario_id": "MCR-07",
+      "name": "another bot cannot overwrite a fact by ID",
+      "steps": [
+        {"tool": "record_companion_fact", "arguments": {"chatbot_id": "$bot_a", "fact": "Neri's route marker is red.", "subject": "Neri route marker", "source": "fixture:MCR-07"}},
+        {"tool": "update_companion_fact", "arguments": {"chatbot_id": "$bot_b", "fact_id": "$fact_id_from_step_1", "content": "Neri's route marker is blue."}},
+        {"tool": "recall_companion_facts", "arguments": {"chatbot_id": "$bot_a", "query": "Neri route marker", "max_results": 5}}
+      ],
+      "expected": {"update_reply_starts_with": "Error:", "bot_a_fact_remains": "Neri's route marker is red.", "bot_b_content_must_not_appear": true}
+    },
+    {
+      "scenario_id": "MCR-08",
+      "name": "bounded recall returns a cited relevant fact",
+      "steps": [
+        {"tool": "record_companion_fact", "arguments": {"chatbot_id": "$bot_a", "fact": "The west greenhouse uses a blue irrigation valve.", "subject": "west greenhouse valve", "source": "fixture:MCR-08:1"}},
+        {"tool": "record_companion_fact", "arguments": {"chatbot_id": "$bot_a", "fact": "The north greenhouse uses a brass irrigation valve.", "subject": "north greenhouse valve", "source": "fixture:MCR-08:2"}},
+        {"tool": "recall_companion_facts", "arguments": {"chatbot_id": "$bot_a", "query": "west greenhouse irrigation valve", "max_results": 1}}
+      ],
+      "expected": {"result_count_at_most": 1, "must_include": "The west greenhouse uses a blue irrigation valve.", "citation_count": 1}
+    },
+    {
+      "scenario_id": "MCR-09",
+      "name": "second correction supersedes the first correction",
+      "steps": [
+        {"tool": "record_companion_fact", "arguments": {"chatbot_id": "$bot_a", "fact": "The calibration meeting is at 13:00.", "subject": "calibration meeting time", "source": "fixture:MCR-09"}},
+        {"tool": "update_companion_fact", "arguments": {"chatbot_id": "$bot_a", "fact_id": "$fact_id_from_step_1", "content": "The calibration meeting is at 13:30."}},
+        {"tool": "update_companion_fact", "arguments": {"chatbot_id": "$bot_a", "fact_id": "$fact_id_from_step_1", "content": "The calibration meeting is at 14:10."}},
+        {"tool": "recall_companion_facts", "arguments": {"chatbot_id": "$bot_a", "query": "calibration meeting time", "max_results": 5}}
+      ],
+      "expected": {"latest_fact": "The calibration meeting is at 14:10.", "must_not_recall": ["13:00", "13:30"], "citation": "[fact:$fact_id_from_step_1]"}
+    },
+    {
+      "scenario_id": "MCR-10",
+      "name": "past-turn recall is scoped to chatbot and session",
+      "steps": [
+        {"operation": "insert a user turn for $bot_a in $session_a with content 'Please keep the brass key in locker 6.' using the companion repository fixture"},
+        {"tool": "recall_companion_turns", "arguments": {"chatbot_id": "$bot_a", "session_id": "$session_a", "query": "where is the brass key", "max_results": 5}},
+        {"tool": "recall_companion_turns", "arguments": {"chatbot_id": "$bot_b", "session_id": "$session_a", "query": "where is the brass key", "max_results": 5}}
+      ],
+      "expected": {"bot_a_reply_contains": "Please keep the brass key in locker 6.", "bot_a_citation_pattern": "[turn:<returned-turn-id>]", "bot_b_reply_contains": "No past turns match", "cross_bot_turns_forbidden": true}
+    }
+  ],
+  "scoring": {
+    "scenario_pass": "Every required latest fact or explicit empty/unknown response is correct; cited IDs resolve to rows in that chatbot's repository; no other bot's fact or turn appears; required persistence/retraction state checks pass.",
+    "target_reference": "10 of 10 scenarios pass. Keep each scenario in the denominator; do not tune content after observing results.",
+    "separation": "Record tool-call correctness separately from generated assistant prose. This fixture measures the retained companion memory tools/repository, not mood or persona behavior."
+  }
+}
