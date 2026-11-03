@@ -410,3 +410,19 @@ The 243-pin V4 runtime graph does not include the candidate test runner or PyIns
 | PyInstaller candidate build | `altgraph==0.17.5`, `packaging==26.3`, `pyinstaller==6.12.0`, `pyinstaller-hooks-contrib==2026.9`, `setuptools==84.2.1`, `wheel==0.48.0` | [CORE freeze input review](input-reviews/core-linux-freeze-inputs.md); [CORE exact-pin inventory](input-reviews/core-linux-dependency-inventory.json); [builder lock](../../package/constraints-linux-builder-tools.txt); [builder artifact manifest](../../package/linux-builder-tools-artifact-sources.json) | Kept separate from the runtime profile; staged from canonical PyPI URLs with exact SHA-256 and size, then installed after runtime with `--no-deps --require-hashes`. Frozen application acceptance remains distinct. |
 
 The test and builder locks are candidate inputs and do not replace the active runtime lock. A clean layered environment must pass `pip check`; no CI or release success is implied by these static records.
+
+## Docker workflow inputs
+
+The retained action entry points are pinned to full revisions after bounded
+source review. The owner origin exception applies to their reviewed identities;
+[scope, private copies and limitations](input-reviews/docker-actions-review.md)
+remain explicit. Hosted Docker/Buildx tools are checked and recorded at runtime;
+the workflow does not download a new Buildx binary or builder image.
+
+| Input | Selected revision | Disposition |
+|---|---|---|
+| docker/login-action v3.7.0 | c94ce9fb468520275223c153574b00df6fe4bcc9 | Retained, Apache-2.0, private source copy |
+| docker/build-push-action v6.19.2 | 10e90e3645eae34f1e60eeb005ba3a3d33f178e8 | Retained, Apache-2.0, private source copy; optional summary/export/upload disabled |
+| @docker/actions-toolkit v0.62.1 | 88d39b6b65b7ae11fe64205b66b5a7debaf2a1b7 | Reviewed action dependency, Apache-2.0, private source copy |
+| @docker/actions-toolkit v0.63.0 | 76f06a5079322247f64dbfd3a64ac7ac64b0167b | Reviewed action dependency, Apache-2.0, private source copy |
+| docker/setup-buildx-action v3.12.0 | 8d2750c68a42422c14e847fe6c8ac0403b4cbd6f | Removed from execution; mutable tool-download path avoided |

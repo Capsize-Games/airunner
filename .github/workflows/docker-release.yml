@@ -11,6 +11,14 @@ on:
   release:
     types: [published]
   workflow_dispatch:
+    inputs:
+      publish_image:
+        description: >-
+          Publish this image to GHCR. Manual runs can publish only from master
+          or a v* version tag.
+        type: boolean
+        required: false
+        default: false
 
 permissions:
   actions: read
@@ -37,7 +45,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           # For workflow_run events this is the tested head commit;
           # for releases/dispatches it uses the immutable event SHA.
@@ -58,18 +66,41 @@ jobs:
           python scripts/stage_docker_release_inputs.py --output-dir "$inputs"
           echo "DOCKER_RELEASE_INPUTS=$inputs" >> "$GITHUB_ENV"
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+      - name: Validate manual image publication source
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.publish_image }}
+        env:
+          SOURCE_REF: ${{ github.ref }}
+        run: |
+          set -euo pipefail
+          if [[ "$SOURCE_REF" != "refs/heads/master" && ! "$SOURCE_REF" =~ ^refs/tags/v[0-9]+\.[0-9]+\.[0-9]+([+-][0-9A-Za-z.-]+)?$ ]]; then
+            echo "Manual publication requires master or a vMAJOR.MINOR.PATCH version tag." >&2
+            exit 1
+          fi
+
+      - name: Verify runner Docker tools
+        run: |
+          set -euo pipefail
+          docker version
+          docker buildx version
 
       - name: Log in to GitHub Container Registry
-        uses: docker/login-action@v3
+        if: >-
+          github.event_name != 'workflow_dispatch' ||
+          (inputs.publish_image &&
+          (github.ref == 'refs/heads/master' ||
+          startsWith(github.ref, 'refs/tags/v')))
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3.7.0
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ github.token }}
 
       - name: Build ${{ matrix.name }} image (no push yet)
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
+        env:
+          # Avoid the optional legacy build-record exporter and upload.
+          DOCKER_BUILD_SUMMARY: "false"
+          DOCKER_BUILD_RECORD_UPLOAD: "false"
         with:
           context: .
           file: ./Dockerfile
@@ -82,16 +113,87 @@ jobs:
           build-args: |
             AIRUNNER_INSTALL_PROFILES=${{ matrix.profiles }}
 
-      # Smoke the image before it can reach the registry: the same
-      # offline generate-config probe the PyPI artifact gate runs.
+      # Exercise the actual daemon and HTTP auth inside a private container
+      # network. No host ports, mounts, GPU, model downloads, or key output.
       - name: Smoke test the built image
         run: |
-          set -e
+          set -euo pipefail
           tag="$(printf '%s' '${{ matrix.tags }}' | head -n 1)"
-          docker run --rm --entrypoint airunner-daemon "$tag" \
-            --generate-config
+          container_name="airunner-release-smoke-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          api_key="$(python3 -c 'import secrets; print(secrets.token_urlsafe(32))')"
+          echo "::add-mask::$api_key"
+          cleanup() {
+            docker rm -f "$container_name" >/dev/null 2>&1 || true
+          }
+          trap cleanup EXIT
+
+          docker run --detach --network none --name "$container_name" \
+            --env AIRUNNER_API_KEY="$api_key" \
+            --env AIRUNNER_INSECURE_NO_AUTH=0 \
+            --env AIRUNNER_NO_PRELOAD=1 \
+            --env AIRUNNER_LLM_ON=0 \
+            --env AIRUNNER_SD_ON=0 \
+            --env AIRUNNER_TTS_ON=0 \
+            --env AIRUNNER_STT_ON=0 \
+            --env AIRUNNER_DATA_DIR=/tmp/airunner-smoke-data \
+            "$tag" --no-preload
+
+          request_probe="$(cat <<'PY'
+          import os, urllib.error, urllib.request
+          base = "http://127.0.0.1:8080"
+          def status(path, token=None):
+              request = urllib.request.Request(base + path)
+              if token:
+                  request.add_header("X-API-Key", token)
+              try:
+                  with urllib.request.urlopen(request, timeout=4) as response:
+                      return response.status
+              except urllib.error.HTTPError as error:
+                  return error.code
+          checks = (("/health", None, 200), ("/api/version", None, 401), ("/api/version", os.environ["AIRUNNER_API_KEY"], 200))
+          for path, token, expected in checks:
+              actual = status(path, token)
+              if actual != expected:
+                  raise SystemExit(1)
+              print(f"{path}: HTTP {actual}")
+          PY
+          )"
+
+          ready=0
+          for _ in $(seq 1 90); do
+            if docker exec --env AIRUNNER_API_KEY="$api_key" \
+              "$container_name" python3.13 -c "$request_probe" >/dev/null 2>&1; then
+              ready=1
+              break
+            fi
+            if ! docker inspect "$container_name" >/dev/null 2>&1; then
+              echo "Daemon container exited before the API became ready." >&2
+              exit 1
+            fi
+            sleep 2
+          done
+          if [ "$ready" -ne 1 ]; then
+            echo "Daemon API did not become ready within 180 seconds." >&2
+            exit 1
+          fi
+
+          docker exec --env AIRUNNER_API_KEY="$api_key" \
+            "$container_name" python3.13 -c "$request_probe"
+          docker stop --time 20 "$container_name" >/dev/null
+          state="$(docker inspect --format '{{.State.Status}} {{.State.ExitCode}}' "$container_name")"
+          if [ "$state" != "exited 0" ]; then
+            echo "Daemon did not exit cleanly: $state" >&2
+            exit 1
+          fi
+          docker rm "$container_name" >/dev/null
+          trap - EXIT
 
       - name: Push ${{ matrix.name }} image
+        if: >-
+          github.event_name != 'workflow_dispatch' ||
+          (inputs.publish_image &&
+          (github.ref == 'refs/heads/master' ||
+          startsWith(github.ref, 'refs/tags/v')))
         run: |
           set -e
           printf '%s' '${{ matrix.tags }}' | while IFS= read -r tag; do
