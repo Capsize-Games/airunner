@@ -26,7 +26,9 @@ from airunner_services.downloads.service import ProviderDownloadDisabled
 from airunner_services.llm.llm_request import LLMRequest
 from airunner_services.utils.application import get_logger
 
+from .legacy_llm_compat import _lifecycle_service
 from .legacy_llm_compat import ensure_llm_model_loaded
+from .legacy_llm_compat import is_llm_model_loaded
 from .legacy_llm_helpers import failed_runtime_response
 from .legacy_llm_observer import (
     LegacyCompletionObserver,
@@ -214,11 +216,12 @@ def ollama_version() -> dict[str, str]:
 @router.get("/api/ps")
 def ollama_ps(req: Request) -> dict[str, Any]:
     """Handle the Ollama /api/ps endpoint."""
-    from .legacy_llm_compat import is_llm_model_loaded
-
     app = getattr(req.app.state, "airunner_app", None)
     metadata = configured_model_metadata()
-    if app is None or not is_llm_model_loaded(app):
+    if app is None or not is_llm_model_loaded(
+        app,
+        lifecycle=_lifecycle_service(req),
+    ):
         return {"models": []}
     return {
         "models": [

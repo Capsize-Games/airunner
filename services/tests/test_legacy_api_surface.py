@@ -8,9 +8,11 @@ the retired ``BaseHTTPRequestHandler`` server.
 from __future__ import annotations
 
 import os
+from types import SimpleNamespace
 
 from fastapi.testclient import TestClient
 
+from airunner_common.contract_enums import ModelStatus, ModelType
 from airunner_services.api.server import create_app
 
 
@@ -63,6 +65,48 @@ def test_ollama_metadata_endpoints(monkeypatch) -> None:
     assert response.json()["model_info"]["context_length"] == 262144
     assert "license" not in response.json()
     assert "details" not in response.json()
+
+
+def test_ollama_ps_uses_unloaded_worker_status_over_stale_references() -> None:
+    """An unloaded manager must not be advertised from stale pointers/inventory."""
+    client = _client()
+    app = client.app.state.airunner_app
+
+    worker = SimpleNamespace(
+        current_model_status=lambda: ModelStatus.UNLOADED,
+        _model_manager=SimpleNamespace(_chat_model=object()),
+    )
+    app._worker_manager = SimpleNamespace(_llm_generate_worker=worker)
+    app.model_load_balancer = SimpleNamespace(
+        get_loaded_models=lambda: [ModelType.LLM]
+    )
+
+    response = client.get("/api/ps")
+
+    assert response.status_code == 200
+    assert response.json() == {"models": []}
+
+    app._worker_manager._llm_generate_worker.current_model_status = (
+        lambda: ModelStatus.LOADED
+    )
+    client.app.state.lifecycle_service = SimpleNamespace(
+        current_llm_model_status=lambda: ModelStatus.UNLOADED
+    )
+    response = client.get("/api/ps")
+    assert response.status_code == 200
+    assert response.json() == {"models": []}
+
+    from airunner_services.api.routes.legacy_llm_compat import (
+        is_llm_model_loaded,
+    )
+
+    app._worker_manager = SimpleNamespace(
+        _llm_generate_worker=SimpleNamespace(
+            _model_manager=SimpleNamespace(_chat_model=object())
+        )
+    )
+    app.model_load_balancer = None
+    assert is_llm_model_loaded(app) is False
 
 
 def test_ollama_utility_endpoints() -> None:
