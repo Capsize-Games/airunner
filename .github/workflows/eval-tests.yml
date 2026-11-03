@@ -122,6 +122,7 @@ jobs:
             scripts/tests/test_github_release_promotion.py \
             services/tests/test_release_identity.py \
             services/tests/test_debian_postinst_safety.py \
+            scripts/tests/test_core_interrupted_upgrade_probe.py \
             services/tests/test_release_core_bundle.py \
             services/tests/test_core_input_readiness.py \
             services/tests/test_dependency_notices.py \
