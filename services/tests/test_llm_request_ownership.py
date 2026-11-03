@@ -4,7 +4,10 @@ from __future__ import annotations
 
 import queue
 import threading
+from pathlib import Path
 from types import SimpleNamespace
+
+import pytest
 
 from airunner_common.contract_enums import LLMActionType, ModelStatus, ModelType
 from airunner_services.llm.managers.mixins.request_handling_mixin import (
@@ -250,6 +253,44 @@ def test_manager_exception_emits_terminal_error_and_releases_request_owner():
     assert responses[0]["request_id"] == "failed"
     assert responses[0]["response"].message == "Error invoking LLM: fixture backend failure"
     assert responses[0]["response"].is_end_of_message
+
+
+def test_explicit_rag_preparation_failure_emits_terminal_error_and_releases_owner(
+    tmp_path: Path,
+):
+    from airunner_services.llm.managers.request_rag_preparation import (
+        ensure_request_rag_files,
+    )
+
+    worker = _worker()
+    responses = []
+    worker.emit_signal = lambda _code, payload: responses.append(payload)
+
+    class Manager:
+        def begin_request(self, _request_id):
+            pass
+
+        def handle_request(self, _message, _context):
+            ensure_request_rag_files(
+                SimpleNamespace(ensure_indexed_files=lambda _paths: False),
+                [str(tmp_path / "missing.txt")],
+            )
+
+    worker._model_manager = Manager()
+    message = _message("invalid-rag-selection")
+    message["request_data"].update(
+        action=LLMActionType.CHAT,
+        llm_request=SimpleNamespace(rag_files=[str(tmp_path / "missing.txt")]),
+    )
+
+    worker.handle_message(message)
+
+    assert worker._active_llm_request_id is None
+    assert worker._pending_llm_requests == {}
+    assert len(responses) == 1
+    assert responses[0]["request_id"] == "invalid-rag-selection"
+    assert responses[0]["response"].is_end_of_message
+    assert "Selected RAG document does not exist" in responses[0]["response"].message
 
 
 def test_download_wait_message_keeps_fallback_when_model_name_lookup_fails():

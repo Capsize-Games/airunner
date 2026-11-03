@@ -6,6 +6,7 @@ import threading
 from contextlib import contextmanager
 from langchain_core.documents import Document
 from types import SimpleNamespace
+import pytest
 
 from airunner_services.llm.managers.mixins.request_handling_mixin import (
     RequestHandlingMixin,
@@ -184,3 +185,76 @@ def test_request_handling_passes_each_chatbot_scope_to_generation(monkeypatch):
 
     expected_request_id = hashlib.md5(os.path.abspath(paths[0]).encode()).hexdigest()
     assert set(request_only) == {expected_request_id, "uploaded-id"}
+
+
+def test_request_rag_failure_restores_request_overrides(monkeypatch):
+    restored = []
+
+    monkeypatch.setattr(
+        "airunner_services.llm.managers.mixins.request_handling_mixin.capture_request_settings_snapshot",
+        lambda _manager: {"fixture": "snapshot"},
+    )
+    monkeypatch.setattr(
+        "airunner_services.llm.managers.mixins.request_handling_mixin.restore_request_settings_snapshot",
+        lambda _manager, snapshot: restored.append(snapshot),
+    )
+
+    class _Manager(RequestHandlingMixin):
+        def __init__(self):
+            self._request_state_lock = threading.RLock()
+            self._current_request_id = None
+            self._interrupted = False
+            self._chat_model = None
+            self._workflow_manager = None
+            self._tool_manager = None
+            self.logger = logging.getLogger("request-rag-error-cleanup-test")
+            self.unload_calls = 0
+
+        def _invalidate_setting_cache(self, _model):
+            pass
+
+        def _apply_request_overrides(self, _request):
+            return True
+
+        def unload(self):
+            self.unload_calls += 1
+
+        def _do_set_seed(self):
+            pass
+
+        def load(self):
+            pass
+
+        def _request_tool_defaults(self, _data):
+            return None
+
+        def _prepare_request_memory(self, _request):
+            pass
+
+        def _prepare_request_conversation(self, _data, _request):
+            pass
+
+        def _prepare_request_tooling(self, _data, _request):
+            return False, [], None
+
+        def _prepare_request_rag(self, _data, _request, _categories):
+            raise ValueError("selected RAG document is unsupported")
+
+        def _do_generate(self, **_kwargs):
+            pytest.fail("generation must not run after RAG preparation fails")
+
+    manager = _Manager()
+    with pytest.raises(ValueError, match="selected RAG document"):
+        manager.handle_request(
+            {
+                "request_id": "invalid-rag-selection",
+                "request_data": {
+                    "prompt": "question",
+                    "action": "chat",
+                    "llm_request": SimpleNamespace(rag_files=["bad.docx"]),
+                },
+            }
+        )
+
+    assert restored == [{"fixture": "snapshot"}]
+    assert manager.unload_calls == 2

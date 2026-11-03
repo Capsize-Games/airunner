@@ -103,21 +103,28 @@ class RequestHandlingMixin:
         tools_filtered, selected_categories, system_prompt = (
             self._prepare_request_tooling(data, llm_request)
         )
-        uploaded_document_ids = self._prepare_request_rag(
-            data, llm_request, selected_categories
-        )
-        rag_document_scope = self._request_rag_document_scope(
-            llm_request, uploaded_document_ids
-        )
-        thinking_patches = self._apply_request_thinking_override(llm_request)
-        reasoning_patches = self._apply_request_reasoning_effort_override(
-            llm_request
-        )
-
-        if request_tool_defaults and self._tool_manager:
-            self._tool_manager.set_request_tool_defaults(request_tool_defaults)
+        thinking_patches = []
+        reasoning_patches = []
 
         try:
+            uploaded_document_ids = self._prepare_request_rag(
+                data, llm_request, selected_categories
+            )
+            rag_document_scope = self._request_rag_document_scope(
+                llm_request, uploaded_document_ids
+            )
+            thinking_patches = self._apply_request_thinking_override(
+                llm_request
+            )
+            reasoning_patches = (
+                self._apply_request_reasoning_effort_override(llm_request)
+            )
+
+            if request_tool_defaults and self._tool_manager:
+                self._tool_manager.set_request_tool_defaults(
+                    request_tool_defaults
+                )
+
             return self._do_generate(
                 prompt=data["request_data"]["prompt"],
                 action=data["request_data"]["action"],

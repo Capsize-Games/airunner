@@ -868,11 +868,6 @@ class LLMGenerateWorker(
 		request_data = message.get("request_data", {})
 		llm_request = request_data.get("llm_request")
 
-		if llm_request.rag_files is not None and len(llm_request.rag_files) > 0:
-			self.logger.info(
-				f"Auto-loading {len(llm_request.rag_files)} RAG documents from request"
-			)
-			self._load_documents_into_rag(llm_request.rag_files)
 		if self._request_cancelled(request_id):
 			self._clear_pending_llm_request(request_id)
 			return

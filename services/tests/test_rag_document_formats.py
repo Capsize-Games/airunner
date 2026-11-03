@@ -13,6 +13,7 @@ from airunner_services.llm.managers.agent.document_loader import (
 )
 from airunner_services.llm.managers.request_rag_preparation import (
     load_rag_document_payload,
+    prepare_request_rag,
 )
 from airunner_services.llm.tools.rag_tools_helpers._shared import (
     SUPPORTED_DOCUMENT_EXTENSIONS as TOOL_SUPPORTED_EXTENSIONS,
@@ -138,6 +139,89 @@ def test_request_payload_routes_mobi_bytes_and_html_bytes() -> None:
     ]
 
 
+@pytest.mark.parametrize("file_type, expected_extension", [("pdf", ".pdf"), ("mobi", ".mobi")])
+def test_request_payload_normalizes_dotless_binary_formats(
+    file_type: str, expected_extension: str
+) -> None:
+    calls = []
+
+    class FakeRagManager:
+        def load_bytes_into_rag(self, content_bytes, *, source_name, file_ext):
+            calls.append((bytes(content_bytes), source_name, file_ext))
+            return "uploaded-id"
+
+    doc_id = load_rag_document_payload(
+        FakeRagManager(),
+        {
+            "file_type": file_type,
+            "content": b"binary document",
+            "source_name": f"fixture{expected_extension}",
+        },
+    )
+
+    assert doc_id == "uploaded-id"
+    assert calls == [
+        (b"binary document", f"fixture{expected_extension}", expected_extension)
+    ]
+
+
+def test_request_payload_infers_binary_format_from_source_name() -> None:
+    calls = []
+
+    class FakeRagManager:
+        def load_bytes_into_rag(self, content_bytes, *, source_name, file_ext):
+            calls.append((bytes(content_bytes), source_name, file_ext))
+            return "uploaded-id"
+
+    doc_id = load_rag_document_payload(
+        FakeRagManager(),
+        {"content": b"pdf bytes", "source_name": "manual.pdf"},
+    )
+
+    assert doc_id == "uploaded-id"
+    assert calls == [(b"pdf bytes", "manual.pdf", ".pdf")]
+
+
+@pytest.mark.parametrize("file_type", [".txt", ".md"])
+def test_request_payload_decodes_text_bytes(file_type: str) -> None:
+    calls = []
+
+    class FakeRagManager:
+        def load_html_into_rag(self, content, *, source_name):
+            calls.append((content, source_name))
+            return "uploaded-text-id"
+
+    doc_id = load_rag_document_payload(
+        FakeRagManager(),
+        {
+            "file_type": file_type,
+            "content": "Selected bytes contain readable text.".encode("utf-8"),
+            "source_name": f"notes{file_type}",
+        },
+    )
+
+    assert doc_id == "uploaded-text-id"
+    assert calls == [("Selected bytes contain readable text.", f"notes{file_type}")]
+
+
+def test_request_payload_rejects_path_only_zim_and_dotless_office() -> None:
+    manager = SimpleNamespace(
+        load_bytes_into_rag=lambda *_args, **_kwargs: pytest.fail(
+            "ZIM and Office payloads must not use the binary loader"
+        ),
+        load_html_into_rag=lambda *_args, **_kwargs: pytest.fail(
+            "ZIM and Office payloads must not use the HTML fallback"
+        ),
+    )
+
+    for payload in (
+        {"file_type": ".zim", "content": b"zim bytes"},
+        {"file_type": "docx", "content": b"PK\x03\x04binary"},
+    ):
+        with pytest.raises(ValueError):
+            load_rag_document_payload(manager, payload)
+
+
 def test_request_payload_rejects_unparsed_office_containers() -> None:
     manager = SimpleNamespace(
         load_bytes_into_rag=lambda *_args, **_kwargs: pytest.fail(
@@ -153,3 +237,104 @@ def test_request_payload_rejects_unparsed_office_containers() -> None:
             manager,
             {"file_type": ".docx", "content": b"PK\x03\x04binary"},
         )
+
+
+def test_explicit_request_missing_file_fails_preparation(tmp_path: Path) -> None:
+    manager = SimpleNamespace(
+        ensure_indexed_files=lambda _paths: pytest.fail(
+            "a missing source must fail before index dispatch"
+        )
+    )
+
+    with pytest.raises(ValueError, match="does not exist"):
+        prepare_request_rag(
+            manager,
+            SimpleNamespace(rag_files=[str(tmp_path / "missing.txt")]),
+            [],
+        )
+
+
+@pytest.mark.parametrize(
+    "extension", sorted(UNSUPPORTED_BINARY_DOCUMENT_EXTENSIONS)
+)
+def test_explicit_request_unsupported_file_fails_preparation(
+    tmp_path: Path, extension: str
+) -> None:
+    path = tmp_path / f"unsupported{extension}"
+    path.write_bytes(b"PK\x03\x04binary")
+    manager = SimpleNamespace(
+        ensure_indexed_files=lambda _paths: pytest.fail(
+            "an unsupported file must fail before index dispatch"
+        )
+    )
+
+    with pytest.raises(ValueError, match="Unsupported document format"):
+        prepare_request_rag(
+            manager, SimpleNamespace(rag_files=[str(path)]), []
+        )
+
+
+def test_explicit_request_false_index_result_fails_preparation(
+    tmp_path: Path,
+) -> None:
+    path = tmp_path / "selected.txt"
+    path.write_text("selected source", encoding="utf-8")
+    calls = []
+    manager = SimpleNamespace(
+        ensure_indexed_files=lambda paths: calls.append(paths) or False
+    )
+
+    with pytest.raises(ValueError, match="Could not index"):
+        prepare_request_rag(
+            manager, SimpleNamespace(rag_files=[str(path)]), []
+        )
+    assert calls == [[str(path)]]
+
+
+def test_explicit_request_unsupported_payload_fails_preparation() -> None:
+    manager = SimpleNamespace(
+        load_html_into_rag=lambda *_args, **_kwargs: pytest.fail(
+            "unsupported Office payload must not use the HTML fallback"
+        ),
+        load_bytes_into_rag=lambda *_args, **_kwargs: pytest.fail(
+            "unsupported Office payload must not use the binary loader"
+        ),
+    )
+
+    with pytest.raises(ValueError, match="Unsupported document format"):
+        prepare_request_rag(
+            manager,
+            SimpleNamespace(
+                rag_files=[
+                    {
+                        "file_type": ".docx",
+                        "source_name": "upload.docx",
+                        "content": b"PK\x03\x04binary",
+                    }
+                ]
+            ),
+            [],
+        )
+
+
+def test_auto_attached_index_failure_keeps_best_effort_fallback(
+    monkeypatch,
+) -> None:
+    candidates = ["/docs/auto.txt"]
+    calls = []
+    monkeypatch.setattr(
+        "airunner_services.llm.managers.request_rag_preparation._indexed_rag_candidates",
+        lambda limit: candidates[:limit],
+    )
+    manager = SimpleNamespace(
+        ensure_indexed_files=lambda paths: calls.append(paths) or False,
+        logger=SimpleNamespace(
+            debug=lambda *_args, **_kwargs: None,
+            info=lambda *_args, **_kwargs: None,
+        ),
+    )
+    request = SimpleNamespace(rag_files=None)
+
+    assert prepare_request_rag(manager, request, ["search"]) == ()
+    assert request.rag_files == candidates
+    assert calls == [candidates]
