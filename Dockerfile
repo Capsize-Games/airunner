@@ -29,6 +29,13 @@ RUN case ",${AIRUNNER_INSTALL_PROFILES}," in \
     *) exit 0;; \
 esac
 
+# The staged artifact manifest and lock cover exactly the linux-release extra.
+# Other profile values cannot reuse this dependency graph safely.
+RUN if [ "${AIRUNNER_INSTALL_PROFILES}" != "linux-release" ]; then \
+        echo "ERROR: reviewed Docker inputs cover only AIRUNNER_INSTALL_PROFILES=linux-release" >&2; \
+        exit 1; \
+    fi
+
 # Install system dependencies required by the selected runtime profiles.
 RUN set -e; \
     profile_match() { \
@@ -54,49 +61,6 @@ RUN set -e; \
     apt-get update; \
     apt-get install -y python3.13 python3.13-dev && rm -rf /var/lib/apt/lists/*
 
-# Install pip for Python 3.13
-RUN curl -sS https://bootstrap.pypa.io/get-pip.py | python3.13
-
-# Upgrade pip tooling (install system-wide; no venv inside the container)
-RUN python3.13 -m pip install --upgrade pip setuptools wheel
-
-# Build llama-cpp-python from source when the llm-native profile is used.
-# Default to CPU builds so local dev works without NVIDIA drivers.
-# To enable CUDA builds, pass: --build-arg AIRUNNER_ENABLE_CUDA=1
-ARG AIRUNNER_ENABLE_CUDA=0
-ARG GGML_CUDA_ARCHITECTURES=
-RUN set -e; \
-    if printf '%s' ",${AIRUNNER_INSTALL_PROFILES}," | \
-        grep -Eq ',(llm-native|linux-release|headless|desktop|all|all_dev|all_native|all_dev_native),'; then \
-        if [ "${AIRUNNER_ENABLE_CUDA}" = "1" ]; then \
-            if [ -z "${GGML_CUDA_ARCHITECTURES}" ]; then \
-                echo "ERROR: AIRUNNER_ENABLE_CUDA=1 requires GGML_CUDA_ARCHITECTURES" >&2; \
-                echo "Pass e.g. --build-arg GGML_CUDA_ARCHITECTURES=120 for sm_120 (RTX 5080)" >&2; \
-                echo "so the image never silently builds a wrong-arch llama.cpp." >&2; \
-                exit 1; \
-            fi; \
-            CUDA_STUB_DIR="/usr/local/cuda/targets/x86_64-linux/lib/stubs"; \
-            if [ ! -f "${CUDA_STUB_DIR}/libcuda.so" ]; then \
-                echo "CUDA stub libcuda.so not found at ${CUDA_STUB_DIR}/libcuda.so"; \
-                exit 1; \
-            fi; \
-            ln -sf "${CUDA_STUB_DIR}/libcuda.so" \
-                "${CUDA_STUB_DIR}/libcuda.so.1"; \
-            export LD_LIBRARY_PATH="${CUDA_STUB_DIR}:${LD_LIBRARY_PATH:-}"; \
-            export LIBRARY_PATH="${CUDA_STUB_DIR}:${LIBRARY_PATH:-}"; \
-            export CMAKE_ARGS="-DGGML_CUDA=on -DCMAKE_EXE_LINKER_FLAGS=-Wl,-rpath-link,${CUDA_STUB_DIR}"; \
-            if [ -n "${GGML_CUDA_ARCHITECTURES}" ]; then \
-                export CMAKE_ARGS="${CMAKE_ARGS} -DGGML_CUDA_ARCHITECTURES=${GGML_CUDA_ARCHITECTURES} -DCMAKE_CUDA_ARCHITECTURES=${GGML_CUDA_ARCHITECTURES}"; \
-            fi; \
-        else \
-            export CMAKE_ARGS="-DGGML_CUDA=off"; \
-        fi; \
-        export FORCE_CMAKE=1; \
-        python3.13 -m pip install --no-cache-dir \
-            --no-binary=llama-cpp-python \
-            "llama-cpp-python==0.3.21"; \
-    fi
-
 # Set working directory
 WORKDIR /app
 
@@ -105,26 +69,65 @@ WORKDIR /app
 # src/airunner) was removed. airunner_common moved to its own
 # repository and is a normal published dependency now (issue #2197),
 # resolved from PyPI by services/native's own declared dependency.
-COPY pyproject.toml README.md ./
+COPY pyproject.toml README.md LICENSE THIRD_PARTY_NOTICES.md ./
 COPY services/ ./services/
 COPY native/ ./native/
 
-# Install each local package explicitly in dependency order
-# (services -> native). services/native setup.py no longer imports
-# airunner_common at build time (issue #2038), so --no-build-isolation
-# is no longer required.
-# The services extras pin CUDA builds of torch (torch==2.13.0+cu129 etc.),
-# which are only published on the PyTorch CUDA index (download.pytorch.org),
-# not PyPI; the extra index is passed to the services install so the pinned
-# +cu129 wheels resolve inside the CUDA base image.
-# The debian python3-cryptography (pulled in by the deadsnakes/other apt
-# packages above) has no RECORD file, so pip cannot upgrade it to the pinned
-# cryptography==50.0.2 and aborts with "uninstall-no-record-file". Purge it
-# before the pip installs so the pinned version installs cleanly.
-RUN set -e; \
+# Install from the exact runtime and builder wheelhouses staged by the release
+# workflow. Bind mounts keep wheel archives out of image layers. The runtime
+# lock installs first; the reviewed build closure then supports source installs
+# without dependency resolution or build isolation. Provenance inputs remain in
+# the image for inspection, while installed distributions retain their license
+# files under site-packages.
+RUN --mount=type=bind,from=reviewed-inputs,source=runtime,target=/tmp/release-inputs/runtime,ro \
+    --mount=type=bind,from=reviewed-inputs,source=builder,target=/tmp/release-inputs/builder,ro \
+    --mount=type=bind,from=reviewed-inputs,source=bootstrap,target=/tmp/release-inputs/bootstrap,ro \
+    --mount=type=bind,from=reviewed-inputs,source=release-source,target=/tmp/release-inputs/source,ro \
+    set -e; \
+    mkdir -p /usr/share/doc/airunner/release-inputs/bootstrap; \
+    cp /tmp/release-inputs/bootstrap/artifact-sources.json \
+        /usr/share/doc/airunner/release-inputs/bootstrap/; \
+    cp /tmp/release-inputs/bootstrap/selected-lock.txt \
+        /usr/share/doc/airunner/release-inputs/bootstrap/; \
+    cp /tmp/release-inputs/bootstrap/requirements.txt \
+        /usr/share/doc/airunner/release-inputs/bootstrap/; \
+    cp /tmp/release-inputs/bootstrap/staging-receipt.json \
+        /usr/share/doc/airunner/release-inputs/bootstrap/; \
+    PYTHONPATH=/tmp/release-inputs/bootstrap/pip-26.2.2-py3-none-any.whl \
+        python3.13 -m pip install \
+            --no-index --find-links=/tmp/release-inputs/bootstrap --no-deps \
+            --require-hashes -r /tmp/release-inputs/bootstrap/requirements.txt; \
+    pip_licenses="$(python3.13 -c 'import importlib.metadata as m; print(m.distribution("pip").locate_file("pip-26.2.2.dist-info/licenses"))')"; \
+    test -d "$pip_licenses"; \
+    mkdir -p /usr/share/doc/airunner/legal/bootstrap-pip; \
+    cp -a "$pip_licenses/." /usr/share/doc/airunner/legal/bootstrap-pip/; \
     if dpkg -l python3-cryptography >/dev/null 2>&1; then \
         apt-get purge -y python3-cryptography; \
     fi; \
+    mkdir -p /usr/share/doc/airunner/release-inputs/runtime \
+        /usr/share/doc/airunner/release-inputs/builder; \
+    cp /tmp/release-inputs/runtime/artifact-sources.json \
+        /usr/share/doc/airunner/release-inputs/runtime/; \
+    cp /tmp/release-inputs/runtime/selected-lock.txt \
+        /usr/share/doc/airunner/release-inputs/runtime/; \
+    cp /tmp/release-inputs/runtime/requirements.txt \
+        /usr/share/doc/airunner/release-inputs/runtime/; \
+    cp /tmp/release-inputs/runtime/staging-receipt.json \
+        /usr/share/doc/airunner/release-inputs/runtime/; \
+    cp /tmp/release-inputs/builder/artifact-sources.json \
+        /usr/share/doc/airunner/release-inputs/builder/; \
+    cp /tmp/release-inputs/builder/selected-lock.txt \
+        /usr/share/doc/airunner/release-inputs/builder/; \
+    cp /tmp/release-inputs/builder/requirements.txt \
+        /usr/share/doc/airunner/release-inputs/builder/; \
+    cp /tmp/release-inputs/builder/staging-receipt.json \
+        /usr/share/doc/airunner/release-inputs/builder/; \
+    PIP_CONFIG_FILE=/dev/null python3.13 -m pip install \
+        --no-index --find-links=/tmp/release-inputs/runtime \
+        --require-hashes -r /tmp/release-inputs/runtime/requirements.txt; \
+    PIP_CONFIG_FILE=/dev/null python3.13 -m pip install \
+        --no-index --find-links=/tmp/release-inputs/builder --no-deps \
+        --require-hashes -r /tmp/release-inputs/builder/requirements.txt; \
     known_profiles="$(python3.13 -c 'import types; src = open("./services/setup.py").read().replace("setup(**build_services_setup_kwargs(package_source_dir=\"src\"))", ""); m = types.ModuleType("probe"); m.__file__ = "./services/setup.py"; exec(compile(src, "setup.py", "exec"), m.__dict__); print(",".join(sorted(m.build_services_extras_require())))')"; \
     checked_profiles=""; \
     for profile in $(printf '%s' "${AIRUNNER_INSTALL_PROFILES}" | tr ',' ' '); do \
@@ -135,13 +138,22 @@ RUN set -e; \
     done; \
     service_profiles="${checked_profiles#,}"; \
     if [ -n "${service_profiles}" ]; then \
-        python3.13 -m pip install \
-            --extra-index-url https://download.pytorch.org/whl/cu129 \
+        PIP_CONFIG_FILE=/dev/null python3.13 -m pip install \
+            --no-index --no-deps --no-build-isolation \
             -e "./services[${service_profiles}]"; \
     else \
-        python3.13 -m pip install -e ./services; \
+        PIP_CONFIG_FILE=/dev/null python3.13 -m pip install \
+            --no-index --no-deps --no-build-isolation -e ./services; \
     fi; \
-    python3.13 -m pip install -e ./native
+    PIP_CONFIG_FILE=/dev/null python3.13 -m pip install \
+        --no-index --no-deps --no-build-isolation -e ./native; \
+    PIP_CONFIG_FILE=/dev/null python3.13 -m pip uninstall -y \
+        altgraph pyinstaller pyinstaller-hooks-contrib wheel; \
+    PYTHONPATH=/tmp/release-inputs/source/scripts python3.13 \
+        /tmp/release-inputs/source/scripts/collect_runtime_dependency_notices.py \
+        --spec /tmp/release-inputs/source/packaging/linux/services-bundle-spec.toml \
+        --repo-root /tmp/release-inputs/source \
+        --bundle-dir /usr/share/doc/airunner
 
 # Create non-root user for running the container
 # docker-compose may override the runtime UID/GID; avoid hard-coding 1000 here

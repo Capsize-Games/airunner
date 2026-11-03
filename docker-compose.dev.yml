@@ -27,6 +27,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      additional_contexts:
+        reviewed-inputs: ${AIRUNNER_DOCKER_REVIEWED_INPUTS:?Stage reviewed inputs first; see README.md Docker Compose}
     # Run as host user to avoid file permission issues. UID/GID are taken from
     # the environment (see .env.example); 1000 is only a last-resort fallback.
     user: "${UID:-1000}:${GID:-1000}"

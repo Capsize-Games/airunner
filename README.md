@@ -48,11 +48,16 @@ The repository has separate compose files for checkout development and the publi
 
 ```bash
 # Build from the checkout and mount services/native source read-only.
-docker compose -f docker-compose.dev.yml run --rm --service-ports airunner
+inputs="$(mktemp -d /tmp/airunner-docker-inputs.XXXXXX)"
+python scripts/stage_docker_release_inputs.py --output-dir "$inputs"
+AIRUNNER_DOCKER_REVIEWED_INPUTS="$inputs" \
+  docker compose -f docker-compose.dev.yml run --rm --service-ports airunner
 
 # Use the image reference in the release compose file.
 docker compose -f docker-compose.release.yml run --rm --service-ports airunner
 ```
+
+The development build stages hash-pinned runtime, builder, and pip bootstrap wheels outside the checkout. The Dockerfile uses the reviewed pip wheel to bootstrap the system Python because these inputs do not include a reviewed `uv` executable; dependency installation then uses the staged hash locks without an index. Set `GH_TOKEN` in the environment with read access to this repository's Actions artifacts before staging; the command does not print or persist the token. The staging command copies only the reviewed release source files and notices into the prepared context. Compose fails with a message pointing here when `AIRUNNER_DOCKER_REVIEWED_INPUTS` is unset.
 
 Both compose files bind host port `127.0.0.1:8080` and mount the local AI Runner data and Hugging Face cache directories. `--service-ports` publishes the configured port for `docker compose run`. The release compose file references `ghcr.io/capsize-games/airunner/airunner:linux-headless`; registry availability and runtime behavior have not been verified in this documentation update.
 

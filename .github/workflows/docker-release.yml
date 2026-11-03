@@ -13,6 +13,7 @@ on:
   workflow_dispatch:
 
 permissions:
+  actions: read
   contents: read
   packages: write
 
@@ -48,6 +49,15 @@ jobs:
           python scripts/check_reviewed_release_inputs.py
           --workflow .github/workflows/docker-release.yml
 
+      - name: Stage reviewed Docker build inputs
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          inputs="$RUNNER_TEMP/docker-release-inputs"
+          python scripts/stage_docker_release_inputs.py --output-dir "$inputs"
+          echo "DOCKER_RELEASE_INPUTS=$inputs" >> "$GITHUB_ENV"
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
@@ -67,8 +77,9 @@ jobs:
           load: true
           platforms: linux/amd64
           tags: ${{ matrix.tags }}
+          build-contexts: |
+            reviewed-inputs=${{ env.DOCKER_RELEASE_INPUTS }}
           build-args: |
-            AIRUNNER_ENABLE_CUDA=0
             AIRUNNER_INSTALL_PROFILES=${{ matrix.profiles }}
 
       # Smoke the image before it can reach the registry: the same

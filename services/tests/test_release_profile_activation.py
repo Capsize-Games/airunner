@@ -11,6 +11,8 @@ _INSTALL = ROOT / "scripts/install.sh"
 _DISTRIBUTED_INSTALL = ROOT / "deployment/install_distributed.sh"
 _DOCKERFILE = ROOT / "Dockerfile"
 _DOCKER_RELEASE = ROOT / ".github/workflows/docker-release.yml"
+_DOCKER_COMPOSE_DEV = ROOT / "docker-compose.dev.yml"
+_DOCKER_STAGER = ROOT / "scripts/stage_docker_release_inputs.py"
 
 
 def _helper_profile_status(profile: str) -> int:
@@ -65,8 +67,23 @@ def test_docker_default_uses_release_profile_and_blocks_vendor_profiles_early() 
     guard = dockerfile.index("activates deferred airunner-tts-vendor")
     apt_install = dockerfile.index("apt-get update && apt-get install")
     assert guard < apt_install
+    assert "reviewed Docker inputs cover only AIRUNNER_INSTALL_PROFILES=linux-release" in dockerfile
     assert "profile_match 'stt-native|tts-python-core|linux-release" in dockerfile
-    assert "grep -Eq ',(llm-native|linux-release" in dockerfile
+    assert "--no-index --find-links=/tmp/release-inputs/runtime" in dockerfile
+    assert "pip-26.2.2-py3-none-any.whl" in dockerfile
+    assert "https://bootstrap.pypa.io/get-pip.py" not in dockerfile
+    assert "--no-index --find-links=/tmp/release-inputs/bootstrap" in dockerfile
+    assert "pip-26.2.2.dist-info/licenses" in dockerfile
+    assert "/usr/share/doc/airunner/legal/bootstrap-pip" in dockerfile
+    assert "--require-hashes -r /tmp/release-inputs/runtime/requirements.txt" in dockerfile
+    assert "--require-hashes -r /tmp/release-inputs/builder/requirements.txt" in dockerfile
+    assert "--no-deps --no-build-isolation" in dockerfile
+    assert "pip install --upgrade pip setuptools wheel" not in dockerfile
+    assert "--extra-index-url" not in dockerfile
+    assert "--no-binary=llama-cpp-python" not in dockerfile
+    assert "from=reviewed-inputs,source=runtime" in dockerfile
+    assert "from=reviewed-inputs,source=builder" in dockerfile
+    assert "collect_runtime_dependency_notices.py" in dockerfile
     assert "desktop-equivalent release aggregate" not in dockerfile
     guard = dockerfile[dockerfile.index("RUN case "):dockerfile.index(
         "# Install system dependencies"
@@ -84,3 +101,41 @@ def test_docker_release_job_selects_release_profile() -> None:
     workflow = _DOCKER_RELEASE.read_text(encoding="utf-8")
     assert "profiles: linux-release" in workflow
     assert "profiles: core,llm-native,stt-native,art-python,tts-python" not in workflow
+
+
+def test_docker_release_stages_hashed_inputs_outside_the_image_context() -> None:
+    workflow = _DOCKER_RELEASE.read_text(encoding="utf-8")
+    stager = _DOCKER_STAGER.read_text(encoding="utf-8")
+    stage = workflow.index("Stage reviewed Docker build inputs")
+    build = workflow.index("Build ${{ matrix.name }} image")
+    assert stage < build
+    assert "scripts/stage_docker_release_inputs.py --output-dir \"$inputs\"" in workflow
+    for name in (
+        "package/linux-release-v4-artifact-sources.json",
+        "package/constraints-linux-nvidia-cu129-linux-release.txt",
+        "package/linux-builder-tools-artifact-sources.json",
+        "package/constraints-linux-builder-tools.txt",
+        "package/linux-docker-bootstrap-artifact-sources.json",
+        "package/constraints-linux-docker-bootstrap.txt",
+    ):
+        assert name in stager
+    assert "GH_TOKEN: ${{ github.token }}" in workflow
+    assert "reviewed-inputs=${{ env.DOCKER_RELEASE_INPUTS }}" in workflow
+    assert 'echo "DOCKER_RELEASE_INPUTS=$inputs" >> "$GITHUB_ENV"' in workflow
+
+
+def test_development_compose_requires_prepared_reviewed_inputs() -> None:
+    compose = _DOCKER_COMPOSE_DEV.read_text(encoding="utf-8")
+    assert "additional_contexts:" in compose
+    assert "reviewed-inputs: ${AIRUNNER_DOCKER_REVIEWED_INPUTS:?" in compose
+    assert "docker-compose.dev.yml" in compose
+    assert "Stage reviewed inputs first" in compose
+
+
+def test_docker_input_stager_is_allowlisted_and_external_to_checkout() -> None:
+    source = _DOCKER_STAGER.read_text(encoding="utf-8")
+    assert '"release-source"' in source
+    assert '".git"' not in source
+    assert '".headlesscode"' not in source
+    assert "must be outside the repository" in source
+    assert "must not be a symlink" in source
