@@ -12,6 +12,11 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 from transformers import BitsAndBytesConfig as TransformersBnBConfig
 
 from airunner_services.art.pipelines.z_image import ZImageTransformer2DModel
+from airunner_services.art.managers.zimage.zimage_resource_budget import (
+    ZImageMemoryPlan,
+    build_zimage_memory_plan,
+)
+from airunner_services.model_management import ModelResourceManager
 
 
 class ZImagePretrainedLoaderHelper:
@@ -32,7 +37,28 @@ class ZImagePretrainedLoaderHelper:
         self._owner.logger.info("Loading Z-Image from pretrained: %s", model_path)
         model_dir = Path(model_path)
         use_quant, quant_bits, model_dtype = self._resolve_precision_settings()
-        max_memory = self.compute_max_memory_for_models(use_quant)
+        if use_quant and quant_bits not in (4, 8):
+            raise RuntimeError(
+                f"Pretrained Z-Image does not support {quant_bits}-bit "
+                "quantization"
+            )
+        selected_bits = quant_bits if use_quant else None
+        plan = getattr(self._owner, "_zimage_memory_plan", None)
+        if (
+            not isinstance(plan, ZImageMemoryPlan)
+            or plan.quantization_bits != selected_bits
+        ):
+            plan = self.build_memory_plan(
+                model_dir,
+                use_quantization=use_quant,
+                quantization_bits=selected_bits,
+            )
+            self._owner._zimage_memory_plan = plan
+        self._check_live_capacity(
+            "transformer",
+            plan.gpu_weight_budget_gib + plan.gpu_activation_reserve_gib,
+            plan.cpu_weight_budget_gib + plan.cpu_workspace_gib,
+        )
         transformer_cfg, text_encoder_cfg = self._build_quantization_configs(
             use_quant,
             quant_bits,
@@ -42,7 +68,7 @@ class ZImagePretrainedLoaderHelper:
             transformer_cfg,
             text_encoder_cfg,
             model_dtype,
-            max_memory,
+            plan,
             use_quant,
             quant_bits,
         )
@@ -129,7 +155,7 @@ class ZImagePretrainedLoaderHelper:
         transformer_cfg: Optional[DiffusersBnBConfig],
         text_encoder_cfg: Optional[TransformersBnBConfig],
         model_dtype: torch.dtype,
-        max_memory: Optional[dict],
+        plan: ZImageMemoryPlan,
         use_quant: bool,
         quant_bits: Optional[int],
     ) -> tuple[Any, Any, Any, Any]:
@@ -145,10 +171,17 @@ class ZImagePretrainedLoaderHelper:
             transformer_path,
             transformer_cfg,
             model_dtype,
-            max_memory,
+            plan.max_memory_transformer,
         )
         if transformer is None:
             raise RuntimeError("Failed to load transformer")
+        self._check_live_capacity(
+            "text encoder",
+            plan.text_encoder_gpu_gib + plan.vae_gpu_gib
+            + plan.gpu_activation_reserve_gib,
+            plan.text_encoder_cpu_gib + plan.vae_cpu_gib
+            + plan.cpu_workspace_gib,
+        )
         text_encoder_path = model_dir / "text_encoder"
         tokenizer_path = model_dir / "tokenizer"
         self._owner.logger.info(
@@ -161,31 +194,109 @@ class ZImagePretrainedLoaderHelper:
             tokenizer_path,
             text_encoder_cfg,
             model_dtype,
-            max_memory,
+            plan.max_memory_text_encoder,
         )
         if text_encoder is None:
             raise RuntimeError("Failed to load text encoder")
+        self._check_live_capacity(
+            "VAE",
+            plan.vae_gpu_gib + plan.gpu_activation_reserve_gib,
+            plan.vae.estimated_resident_gib + plan.cpu_workspace_gib,
+        )
         vae_path = model_dir / "vae"
         self._owner.logger.info("Loading VAE from %s", vae_path)
         vae = self.load_vae_from_pretrained(vae_path, model_dtype)
         if vae is None:
             raise RuntimeError("Failed to load VAE")
+        self._check_live_capacity(
+            "VAE placement",
+            (
+                plan.gpu_weight_budget_gib
+                if not use_quant
+                else plan.vae_gpu_gib
+            )
+            + plan.gpu_activation_reserve_gib,
+            plan.cpu_workspace_gib,
+        )
         return transformer, text_encoder, tokenizer, vae
 
+    def build_memory_plan(
+        self,
+        model_dir: Path,
+        *,
+        use_quantization: bool,
+        quantization_bits: Optional[int],
+    ) -> ZImageMemoryPlan:
+        """Build a source-derived estimate from the current host profile."""
+        resource_manager = ModelResourceManager()
+        profile = resource_manager.hardware_profiler.get_profile()
+        if use_quantization and not profile.cuda_available:
+            raise RuntimeError(
+                "Quantized Z-Image preflight requires CUDA; the live PyTorch "
+                "runtime did not report an available CUDA device"
+            )
+        return build_zimage_memory_plan(
+            model_dir,
+            available_vram_gib=profile.available_vram_gb,
+            available_ram_gib=profile.available_ram_gb,
+            reserved_vram_gib=resource_manager.memory_allocator._reserved_vram_gb,
+            reserved_ram_gib=resource_manager.memory_allocator._reserved_ram_gb,
+            quantization_bits=(quantization_bits if use_quantization else None),
+            target_dtype_bytes=(
+                4 if self._owner.data_type == torch.float32 else 2
+            ),
+        )
+
+    def _check_live_capacity(
+        self,
+        stage: str,
+        required_vram_gib: float,
+        required_ram_gib: float,
+    ) -> None:
+        """Recheck live headroom before each component allocation."""
+        resource_manager = ModelResourceManager()
+        model_id = str(getattr(self._owner, "model_path", ""))
+        allowed, reason, profile = resource_manager.check_live_load_capacity(
+            model_id,
+            required_vram_gb=required_vram_gib,
+            required_ram_gb=required_ram_gib,
+        )
+        self._owner.logger.info(
+            "Z-Image %s budget check: VRAM=%.2f GiB RAM=%.2f GiB",
+            stage,
+            profile.available_vram_gb,
+            profile.available_ram_gb,
+        )
+        if not allowed:
+            raise RuntimeError(f"Z-Image {stage} preflight failed: {reason}")
+
     def compute_max_memory_for_models(self, use_quant: bool) -> Optional[dict]:
-        """Compute one max-memory mapping for quantized component loads."""
+        """Compute memory caps without exceeding current free resources."""
         if not torch.cuda.is_available() or not use_quant:
             return None
-        total_vram = torch.cuda.get_device_properties(0).total_memory / (1024**3)
-        reserved_gb = 3.0
-        usable_vram_gb = max(total_vram - reserved_gb, 4.0)
-        self._owner.logger.info(
-            "VRAM budget: %.1fGB for models (reserving %.1fGB for "
-            "VAE/activations)",
-            usable_vram_gb,
-            reserved_gb,
+        profile = ModelResourceManager().hardware_profiler.get_profile()
+        memory_manager = ModelResourceManager().memory_allocator
+        usable_vram_gb = max(
+            0.0,
+            profile.available_vram_gb - memory_manager._reserved_vram_gb,
         )
-        return {0: f"{usable_vram_gb:.0f}GiB", "cpu": "32GiB"}
+        usable_ram_gb = max(
+            0.0,
+            profile.available_ram_gb - memory_manager._reserved_ram_gb,
+        )
+        if usable_vram_gb <= 0.0 or usable_ram_gb <= 0.0:
+            raise RuntimeError(
+                "Insufficient live VRAM or RAM for quantized model loading"
+            )
+        self._owner.logger.info(
+            "Live model placement caps: VRAM=%.2f GiB RAM=%.2f GiB",
+            usable_vram_gb,
+            usable_ram_gb,
+        )
+        return {
+            0: f"{usable_vram_gb:.2f}GiB",
+            "cpu": f"{usable_ram_gb:.2f}GiB",
+        }
 
     def load_transformer_from_pretrained(
         self,

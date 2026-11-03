@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import subprocess
+from dataclasses import replace
 from typing import Any
 from typing import Callable
 from typing import Dict
@@ -111,6 +112,86 @@ class ModelResourceManager(
     def check_memory_pressure(self) -> bool:
         """Return whether the allocator reports memory pressure."""
         return self.memory_allocator.is_under_memory_pressure()
+
+    def refresh_hardware_snapshot(self) -> HardwareProfile:
+        """Refresh live hardware facts while preserving tracked reservations.
+
+        The profiler reports currently free memory, which already reflects
+        resident models. Add their coordinator allocations back before giving
+        the profile to MemoryAllocator, which subtracts those allocations when
+        it checks a new reservation. In-flight loads are not added back.
+        """
+        profile = self.hardware_profiler.get_profile()
+        with self.memory_allocator._allocation_lock:
+            resident_gpu = 0.0
+            resident_ram = 0.0
+            for model_id, state in self._model_states.items():
+                if state not in (ModelState.LOADED, ModelState.BUSY):
+                    continue
+                allocation = self.memory_allocator._allocations.get(model_id)
+                if allocation is None:
+                    continue
+                resident_gpu += allocation.vram_allocated_gb
+                resident_ram += allocation.ram_allocated_gb
+            self.memory_allocator.update_hardware(
+                replace(
+                    profile,
+                    available_vram_gb=profile.available_vram_gb + resident_gpu,
+                    available_ram_gb=profile.available_ram_gb + resident_ram,
+                )
+            )
+        return profile
+
+    def check_live_load_capacity(
+        self,
+        model_id: str,
+        *,
+        required_vram_gb: float,
+        required_ram_gb: float,
+    ) -> tuple[bool, str, HardwareProfile]:
+        """Check remaining component capacity against fresh live readings.
+
+        Current-model allocations are excluded because the profile already
+        reflects the components loaded so far. Other in-flight coordinator
+        reservations are subtracted to avoid concurrent loads overcommitting.
+        Resident models are already reflected in the live profile.
+        """
+        profile = self.hardware_profiler.get_profile()
+        pending_vram = 0.0
+        pending_ram = 0.0
+        for pending_id, state in self._model_states.items():
+            if pending_id == model_id or state is not ModelState.LOADING:
+                continue
+            allocation = self.memory_allocator._allocations.get(pending_id)
+            if allocation is None:
+                continue
+            pending_vram += allocation.vram_allocated_gb
+            pending_ram += allocation.ram_allocated_gb
+        available_vram = (
+            profile.available_vram_gb
+            - self.memory_allocator._reserved_vram_gb
+            - pending_vram
+        )
+        available_ram = (
+            profile.available_ram_gb
+            - self.memory_allocator._reserved_ram_gb
+            - pending_ram
+        )
+        if available_vram < required_vram_gb:
+            return (
+                False,
+                f"Insufficient live VRAM: need {required_vram_gb:.2f} GiB, "
+                f"have {max(available_vram, 0.0):.2f} GiB",
+                profile,
+            )
+        if available_ram < required_ram_gb:
+            return (
+                False,
+                f"Insufficient live RAM: need {required_ram_gb:.2f} GiB, "
+                f"have {max(available_ram, 0.0):.2f} GiB",
+                profile,
+            )
+        return True, "OK", profile
 
     def can_perform_operation(
         self,

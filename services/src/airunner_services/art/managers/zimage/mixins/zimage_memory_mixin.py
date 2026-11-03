@@ -115,6 +115,34 @@ class ZImageMemoryMixin:
         during decode, which can spike memory by ~2-3GB.
         """
         self.logger.info(f"Detected {vram_gb:.1f}GB total VRAM")
+
+        plan = getattr(self, "_zimage_memory_plan", None)
+        if (
+            plan is not None
+            and getattr(plan, "quantization_bits", None) is None
+        ):
+            if plan.gpu_weight_budget_gib > 0.0:
+                self.logger.info(
+                    "Unquantized Z-Image fits the preflight GPU weight budget; "
+                    "placing components on CUDA"
+                )
+                self._ensure_models_on_gpu()
+                if vram_gb <= 18:
+                    self._optimize_vae_for_low_vram()
+                else:
+                    self._force_vae_fp32()
+            else:
+                self.logger.info(
+                    "Unquantized Z-Image uses the preflight CPU-offload plan"
+                )
+                try:
+                    self._pipe.enable_model_cpu_offload()
+                except Exception as exc:
+                    raise RuntimeError(
+                        "Z-Image CPU-offload plan could not be enabled"
+                    ) from exc
+                self._optimize_vae_for_low_vram()
+            return
         
         is_quantized = self._is_quantized()
         

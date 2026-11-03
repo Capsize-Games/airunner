@@ -307,9 +307,18 @@ class BaseDiffusersModelManager(
         resource_manager: ModelResourceManager,
     ) -> bool:
         """Prepare shared prerequisites before the main SD pipeline load."""
+        try:
+            preflight_options = self._resource_preflight_options(
+                resource_manager
+            )
+        except Exception as exc:
+            self.logger.error("Cannot prepare model resource budget: %s", exc)
+            self.change_model_status(self.model_type, ModelStatus.FAILED)
+            return False
         prepare_result = resource_manager.prepare_model_loading(
             model_id=self.model_path,
             model_type="text_to_image",
+            **preflight_options,
         )
         if not prepare_result["can_load"]:
             reason = prepare_result.get("reason", "Unknown reason")
@@ -319,6 +328,14 @@ class BaseDiffusersModelManager(
         if not self._ensure_safety_checker_ready():
             return False
         return True
+
+    def _resource_preflight_options(
+        self,
+        resource_manager: ModelResourceManager,
+    ) -> Dict[str, Any]:
+        """Return optional model-specific coordinator preflight settings."""
+        del resource_manager
+        return {}
 
     def _ensure_safety_checker_ready(self) -> bool:
         """Load the safety checker when configured and update failure state."""
