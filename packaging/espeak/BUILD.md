@@ -9,9 +9,10 @@ The input archive is created from the owner-maintained bare Git mirror with
 `scripts/intake_espeak_source.py`. The build recipe requires the archive and an
 empty output directory. Run it in the project's pinned Ubuntu 24.04 build
 container with networking disabled and only the source archive, repository
-scripts, and output directory mounted. The container needs Python, Git, CMake,
+scripts, and output directory mounted. The container needs Python, GNU patch, CMake,
 a C compiler, and GNU make or Ninja. The pinned CUDA base image alone was
-inspected and provides the compiler and Make, but lacks Python, Git and CMake.
+inspected and provides the compiler, GNU patch and Make, but lacks Python and
+CMake.
 Use a target build environment with those tools present and record its image
 identity and tool versions. The recipe does not install build dependencies.
 

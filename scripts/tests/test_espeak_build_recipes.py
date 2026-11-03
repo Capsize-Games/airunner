@@ -211,11 +211,17 @@ class BuilderTests(unittest.TestCase):
                 return "cmake version 3.31.6"
             if command == ["cc", "--version"]:
                 return "cc (Ubuntu 14.2.0)"
+            if command == ["patch", "--version"]:
+                return "GNU patch 2.7.6"
             return ""
 
         with mock.patch.object(BUILDER, "run", side_effect=fake_run):
             self.call_builder()
 
+        patch_commands = [command for command, _ in commands if command[0] == "patch"]
+        self.assertEqual(len([command for command in patch_commands if "--input" in command]), 2)
+        self.assertTrue(all("--fuzz=0" in command for command in patch_commands if "--input" in command))
+        self.assertTrue(any("--dry-run" in command for command in patch_commands))
         configure = next(command for command, _ in commands if command[:2] == ["cmake", "-S"])
         self.assertIn("-DFETCHCONTENT_FULLY_DISCONNECTED=ON", configure)
         for option in (

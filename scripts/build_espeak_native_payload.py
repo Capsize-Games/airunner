@@ -157,8 +157,12 @@ def main() -> int:
     with tempfile.TemporaryDirectory(prefix="espeak-build-") as temporary:
         work = Path(temporary)
         source = safe_unpack(archive_path, work / "source")
-        run(["git", "apply", "--check", str(PATCH_PATH)], cwd=source)
-        run(["git", "apply", str(PATCH_PATH)], cwd=source)
+        patch_command = [
+            "patch", "--batch", "--forward", "--fuzz=0", "-p1",
+            "--input", str(PATCH_PATH.resolve()),
+        ]
+        run([*patch_command, "--dry-run"], cwd=source)
+        run(patch_command, cwd=source)
         build_dir = work / "build"
         prefix = Path("/usr")
         run(
@@ -226,6 +230,7 @@ def main() -> int:
             "platform": platform.platform(),
             "cmake_version": run(["cmake", "--version"]).splitlines()[0],
             "compiler_version": run(["cc", "--version"]).splitlines()[0],
+            "patch_version": run(["patch", "--version"]).splitlines()[0],
             "build_configuration": "Release; offline; explicit espeak-ng-bin and data targets",
             "files_sha256": files,
         }
