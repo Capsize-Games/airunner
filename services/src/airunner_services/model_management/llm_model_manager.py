@@ -189,16 +189,29 @@ class LLMModelManager(
 				self._current_model_path == target_model_path
 				and self._active_gguf_runtime_profile == target_runtime_profile
 			):
-				self.logger.info(
-					"Returning early - requested model already loaded "
-					"(model_id=%s, model_name=%s, profile=%s)",
-					target_model_id or "unknown",
-					target_model_name or "unknown",
-					target_runtime_profile or "default",
-				)
-				return
+				chat = self._chat_model
+				llama = getattr(chat, "_llama", None)
+				reconcile_binding = getattr(llama, "reconcile_binding", None)
+				if callable(reconcile_binding) and not reconcile_binding():
+					self.logger.info(
+						"[LLM LOAD] Cached graph model binding is stale; reloading"
+					)
+					self.unload()
+					current_status = self.model_status[ModelType.LLM]
+				else:
+					self.logger.info(
+						"Returning early - requested model already loaded "
+						"(model_id=%s, model_name=%s, profile=%s)",
+						target_model_id or "unknown",
+						target_model_name or "unknown",
+						target_runtime_profile or "default",
+					)
+					return
 
-			if self._current_model_path == target_model_path:
+			if (
+				current_status is ModelStatus.LOADED
+				and self._current_model_path == target_model_path
+			):
 				self.logger.info(
 					"[LLM LOAD] Switching GGUF runtime profile: %s -> %s",
 					self._active_gguf_runtime_profile or "default",
@@ -206,7 +219,7 @@ class LLMModelManager(
 				)
 				self.unload()
 				current_status = self.model_status[ModelType.LLM]
-			else:
+			elif current_status is ModelStatus.LOADED:
 				current_model_id = self._resolve_model_id_from_path(
 					self._current_model_path,
 				)

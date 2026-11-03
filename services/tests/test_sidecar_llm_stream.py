@@ -549,6 +549,83 @@ def test_real_http_nonstream_cancel_is_request_scoped():
         server_thread.join(2)
 
 
+def test_real_http_cancel_while_waiting_for_headers_is_request_scoped():
+    held_request_received = threading.Event()
+    release_held_headers = threading.Event()
+
+    class DelayedHeadersHandler(http.server.BaseHTTPRequestHandler):
+        def do_POST(self):
+            body = self.rfile.read(int(self.headers.get("Content-Length", "0")))
+            request = json.loads(body)
+            message = request["messages"][0]["content"]
+            if message == "hold":
+                held_request_received.set()
+                release_held_headers.wait(3)
+            response_body = (
+                b'{"choices":[{"message":{"content":"ok"},'
+                b'"finish_reason":"stop"}]}'
+            )
+            try:
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.send_header("Content-Length", str(len(response_body)))
+                self.end_headers()
+                self.wfile.write(response_body)
+            except (BrokenPipeError, ConnectionResetError):
+                pass
+
+        def log_message(self, *_args):
+            pass
+
+    server = http.server.ThreadingHTTPServer(
+        ("127.0.0.1", 0), DelayedHeadersHandler
+    )
+    server_thread = threading.Thread(target=server.serve_forever, daemon=True)
+    server_thread.start()
+    client = _client(endpoint=f"http://127.0.0.1:{server.server_port}")
+    held_request = _request("waiting-for-headers")
+    held_request.payload["stream"] = False
+    held_request.payload["messages"][0]["content"] = "hold"
+    held_results = []
+    held_thread = threading.Thread(
+        target=lambda: held_results.append(client.invoke(held_request))
+    )
+    other_request = _request("other-request")
+    other_request.payload["stream"] = False
+    other_request.payload["messages"][0]["content"] = "other"
+    other_results = []
+    other_thread = threading.Thread(
+        target=lambda: other_results.append(client.invoke(other_request))
+    )
+    try:
+        held_thread.start()
+        assert held_request_received.wait(2)
+        with client._active_requests_lock:
+            held_record = client._active_requests.get("waiting-for-headers")
+            assert held_record is not None
+            assert held_record.response is not None
+
+        other_thread.start()
+        other_thread.join(2)
+        assert not other_thread.is_alive()
+        assert other_results[0].status is EnvelopeStatus.SUCCEEDED
+
+        started = time.monotonic()
+        cancelled = client.cancel("waiting-for-headers")
+        assert cancelled.status is EnvelopeStatus.CANCELLED
+        assert time.monotonic() - started < 0.25
+        held_thread.join(0.5)
+        assert not held_thread.is_alive()
+        assert held_results[0].status is EnvelopeStatus.CANCELLED
+        assert client._launcher.stop_calls == 0
+    finally:
+        release_held_headers.set()
+        held_thread.join(2)
+        server.shutdown()
+        server.server_close()
+        server_thread.join(2)
+
+
 def test_cancel_unknown_request_does_not_stop_server():
     client = _client()
 

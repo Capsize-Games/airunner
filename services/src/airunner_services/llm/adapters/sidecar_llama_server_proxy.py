@@ -50,6 +50,20 @@ class SidecarLlamaServerProxy:
 		):
 			raise RuntimeError("The shared LLM backend still has active requests")
 
+	def reconcile_binding(self) -> bool:
+		"""Adopt a current matching binding after a supervised reload."""
+		token = self._client.current_binding(
+			self._runtime_profile,
+			model_path=self._model_path,
+			model_id=self._model_id,
+			n_ctx=self._n_ctx,
+			n_gpu_layers=self._n_gpu_layers,
+		)
+		if token is None:
+			return False
+		self._binding_token = token
+		return True
+
 	def cancel_active_requests(self) -> None:
 		"""Cancel only requests that this adapter instance owns."""
 		with self._lock:

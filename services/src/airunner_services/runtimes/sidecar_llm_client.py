@@ -30,6 +30,16 @@ from airunner_services.runtimes.message_envelopes import load_message_types
 from airunner_services.runtimes.registry import RuntimeRegistry
 from airunner_services.runtimes.registry import RuntimeRoute
 from airunner_services.runtimes.sidecar_launcher import SidecarLauncher
+from airunner_services.runtimes.sidecar_http_transport import (
+	CancellableHTTPTransport,
+)
+from airunner_services.runtimes.sidecar_openai_protocol import (
+	SidecarRequestError as _SidecarRequestError,
+	completion_payload as normalize_completion_payload,
+	decode_completion_json,
+	iter_openai_sse,
+	stream_deltas,
+)
 
 
 DEFAULT_PROVIDER = "local"
@@ -108,13 +118,6 @@ class _LeasedOpenAIStream:
 		self.close()
 
 
-class _SidecarRequestError(RuntimeError):
-	"""A sidecar failure with a client-safe public message."""
-
-	def __init__(self, public_message: str) -> None:
-		super().__init__(public_message)
-		self.public_message = public_message
-
 
 class SidecarLLMClient(RuntimeClient):
 	"""Route LLM runtime envelopes through a supervised llama.cpp server."""
@@ -126,7 +129,7 @@ class SidecarLLMClient(RuntimeClient):
 		settings: Optional[LlamaCppRuntimeSettings] = None,
 		settings_resolver: Optional[LlamaSettingsResolver] = None,
 		launcher: Optional[SidecarLauncher] = None,
-		http_opener=urlopen,
+		http_opener=None,
 		timeout_seconds: float = 120.0,
 	) -> None:
 		self._uses_default_settings_resolver = (
@@ -140,7 +143,8 @@ class SidecarLLMClient(RuntimeClient):
 		self._settings = resolved_settings
 		self._launcher = launcher or SidecarLauncher(resolved_settings)
 		self._managed_launcher = launcher is None
-		self._http_opener = http_opener
+		self._uses_default_http_opener = http_opener is None
+		self._http_opener = urlopen if http_opener is None else http_opener
 		self._timeout_seconds = timeout_seconds
 		self._active_requests: dict[str, _ActiveRequest] = {}
 		self._active_requests_lock = threading.RLock()
@@ -192,7 +196,7 @@ class SidecarLLMClient(RuntimeClient):
 				return
 			payload = self._chat_payload(invocation, stream=True)
 			payload["stream_options"] = {"include_usage": True}
-			with self._open_request(payload) as response:
+			with self._open_request(payload, record=record) as response:
 				if not self._attach_response(request.request_id, record, response):
 					self._complete_request(request.request_id, record)
 					yield self._cancelled_delta(request.request_id)
@@ -329,6 +333,56 @@ class SidecarLLMClient(RuntimeClient):
 				return self._set_backend_binding(identity, selection)
 		finally:
 			self._end_control_action()
+
+	def current_binding(
+		self,
+		runtime_profile: Optional[str],
+		*,
+		model_path: Optional[str],
+		model_id: Optional[str],
+		n_ctx: Optional[int],
+		n_gpu_layers: Optional[int],
+	) -> Optional[str]:
+		"""Return a ready matching backend token without changing its state."""
+		selection = self._model_selection(
+			model_path=model_path,
+			model_id=model_id,
+			n_ctx=n_ctx,
+			n_gpu_layers=n_gpu_layers,
+		)
+		with self._active_requests_lock:
+			token = self._bound_model_token
+			identity = self._bound_backend_identity
+			settings = self._settings
+			launcher = self._launcher
+		if token is None or identity is None:
+			return None
+		try:
+			self._validate_selected_model(settings, selection, runtime_profile)
+			expected_identity = self._backend_identity(
+				settings, selection, runtime_profile
+			)
+		except (OSError, RuntimeError, ValueError):
+			return None
+		if identity != expected_identity:
+			return None
+		health_status = getattr(launcher, "health_status", None)
+		if not callable(health_status):
+			return None
+		try:
+			status, _details = health_status()
+		except Exception:
+			return None
+		if getattr(status, "value", status) != "ready":
+			return None
+		with self._active_requests_lock:
+			if (
+				self._bound_model_token != token
+				or self._bound_backend_identity != identity
+				or self._launcher is not launcher
+			):
+				return None
+		return token
 
 	def stop_backend(
 		self,
@@ -477,7 +531,9 @@ class SidecarLLMClient(RuntimeClient):
 			self._start_for_request(request.request_id, record)
 			if record.cancelled.is_set():
 				return self._cancelled_response(request.request_id)
-			with self._open_request(self._chat_payload(invocation)) as response:
+			with self._open_request(
+				self._chat_payload(invocation), record=record
+			) as response:
 				if not self._attach_response(request.request_id, record, response):
 					return self._cancelled_response(request.request_id)
 				data = self._decode_json(response)
@@ -527,7 +583,9 @@ class SidecarLLMClient(RuntimeClient):
 			self._start_for_request(request_id, record)
 			if record.cancelled.is_set():
 				raise _SidecarRequestError("The LLM request was cancelled")
-			with self._open_request(payload, endpoint_path=endpoint_path) as response:
+			with self._open_request(
+				payload, endpoint_path=endpoint_path, record=record
+			) as response:
 				if not self._attach_response(request_id, record, response):
 					raise _SidecarRequestError("The LLM request was cancelled")
 				data = self._decode_json(response)
@@ -582,7 +640,9 @@ class SidecarLLMClient(RuntimeClient):
 			self._start_for_request(request_id, record)
 			if record.cancelled.is_set():
 				return
-			with self._open_request(payload, endpoint_path=endpoint_path) as response:
+			with self._open_request(
+				payload, endpoint_path=endpoint_path, record=record
+			) as response:
 				if not self._attach_response(request_id, record, response):
 					return
 				for event in self._iter_openai_sse(response):
@@ -603,62 +663,8 @@ class SidecarLLMClient(RuntimeClient):
 
 	@staticmethod
 	def _iter_openai_sse(response: Any) -> Iterable[dict[str, Any]]:
-		"""Yield validated provider events and require a real terminal event."""
-		completed = False
-		while True:
-			line = response.readline()
-			if not line:
-				raise _SidecarRequestError(
-					"The local LLM sidecar stream ended unexpectedly"
-				)
-			if not line.startswith(b"data:"):
-				continue
-			payload = line.split(b":", 1)[1].strip()
-			if payload == b"[DONE]":
-				if not completed:
-					raise _SidecarRequestError(
-						"The local LLM sidecar ended without a completion"
-					)
-				return
-			try:
-				data = json.loads(payload.decode("utf-8"))
-			except (json.JSONDecodeError, UnicodeDecodeError) as exc:
-				raise _SidecarRequestError(
-					"The local LLM sidecar returned malformed stream data"
-				) from exc
-			if not isinstance(data, dict) or data.get("error") is not None:
-				raise _SidecarRequestError(
-					"The local LLM sidecar reported a generation error"
-				)
-			choices = data.get("choices")
-			if not isinstance(choices, list):
-				raise _SidecarRequestError(
-					"The local LLM sidecar returned malformed stream data"
-				)
-			if not choices:
-				if not isinstance(data.get("usage"), dict):
-					raise _SidecarRequestError(
-						"The local LLM sidecar returned malformed stream data"
-					)
-				yield data
-				continue
-			choice = choices[0]
-			if not isinstance(choice, dict):
-				raise _SidecarRequestError(
-					"The local LLM sidecar returned malformed stream data"
-				)
-			if choice.get("finish_reason") is not None:
-				completed = True
-			elif choice.get("text"):
-				completed = True
-			else:
-				delta = choice.get("delta") or {}
-				if not isinstance(delta, dict):
-					raise _SidecarRequestError(
-						"The local LLM sidecar returned malformed stream data"
-					)
-				completed = bool(delta.get("content") or delta.get("tool_calls"))
-			yield data
+		"""Yield validated provider SSE events for compatibility callers."""
+		return iter_openai_sse(response)
 
 	def _chat_payload(
 		self,
@@ -697,9 +703,18 @@ class SidecarLLMClient(RuntimeClient):
 		payload: dict[str, Any],
 		*,
 		endpoint_path: str = "/v1/chat/completions",
+		record: Optional[_ActiveRequest] = None,
 	):
-		"""Open an HTTP request against the sidecar completion endpoint."""
-		body = json.dumps(payload).encode("utf-8")
+		"""Open one authenticated request through the selected HTTP transport."""
+		request = self._build_http_request(payload, endpoint_path)
+		if self._uses_default_http_opener:
+			return self._open_cancellable_request(request, record)
+		return self._open_injected_request(request)
+
+	def _build_http_request(
+		self, payload: dict[str, Any], endpoint_path: str
+	) -> Request:
+		"""Build the HTTP request and apply private sidecar auth headers."""
 		headers = {
 			"Content-Type": "application/json",
 			"Accept": (
@@ -713,12 +728,47 @@ class SidecarLLMClient(RuntimeClient):
 		)
 		if callable(internal_auth_headers):
 			headers.update(internal_auth_headers())
-		request = Request(
+		return Request(
 			url=f"{self._launcher.endpoint}{endpoint_path}",
-			data=body,
+			data=json.dumps(payload).encode("utf-8"),
 			method="POST",
 			headers=headers,
 		)
+
+	def _open_cancellable_request(
+		self, request: Request, record: Optional[_ActiveRequest]
+	):
+		"""Open a default transport with cancellation published before headers."""
+		transport = CancellableHTTPTransport(request, self._timeout_seconds)
+		if record is not None:
+			with self._active_requests_lock:
+				if record.cancelled.is_set():
+					transport.interrupt()
+					raise _SidecarRequestError(
+						"The LLM request was cancelled"
+					)
+				record.response = transport
+		try:
+			return transport.open()
+		except HTTPError as exc:
+			try:
+				exc.close()
+			finally:
+				transport.close()
+			raise _SidecarRequestError(
+				f"Local LLM sidecar returned HTTP {exc.code}"
+			) from exc
+		except URLError as exc:
+			transport.close()
+			raise _SidecarRequestError(
+				"Could not connect to the local LLM sidecar"
+			) from exc
+		except Exception:
+			transport.close()
+			raise
+
+	def _open_injected_request(self, request: Request):
+		"""Use a caller-supplied opener without changing its invocation contract."""
 		try:
 			return self._http_opener(request, timeout=self._timeout_seconds)
 		except HTTPError as exc:
@@ -1231,170 +1281,21 @@ class SidecarLLMClient(RuntimeClient):
 
 	@staticmethod
 	def _decode_json(response: Any) -> dict[str, Any]:
-		"""Decode a JSON response body from the sidecar."""
-		raw = response.read()
-		if not raw or not raw.strip():
-			raise _SidecarRequestError(
-				"The local LLM sidecar returned an empty response"
-			)
-		data = json.loads(raw.decode("utf-8"))
-		if not isinstance(data, dict) or not isinstance(data.get("choices"), list):
-			raise _SidecarRequestError(
-				"The local LLM sidecar returned an invalid completion"
-			)
-		if not data["choices"]:
-			raise _SidecarRequestError(
-				"The local LLM sidecar returned no completion choices"
-			)
-		return data
+		"""Decode an OpenAI-compatible completion response."""
+		return decode_completion_json(response)
 
 	@staticmethod
 	def _completion_payload(data: dict[str, Any]) -> dict[str, Any]:
-		"""Normalize sidecar JSON into AIRunner's neutral payload shape."""
-		choices = data.get("choices")
-		if not isinstance(choices, list) or not choices:
-			raise _SidecarRequestError(
-				"The local LLM sidecar returned no completion choices"
-			)
-		choice = choices[0]
-		if not isinstance(choice, dict):
-			raise _SidecarRequestError(
-				"The local LLM sidecar returned an invalid completion"
-			)
-		message = choice.get("message")
-		if not isinstance(message, dict):
-			raise _SidecarRequestError(
-				"The local LLM sidecar returned an invalid completion"
-			)
-		content = message.get("content") or ""
-		tools = message.get("tool_calls") or []
-		finish_reason = choice.get("finish_reason")
-		if (
-			not isinstance(content, str)
-			or not isinstance(tools, list)
-			or any(not isinstance(tool, dict) for tool in tools)
-			or (finish_reason is not None and not isinstance(finish_reason, str))
-		):
-			raise _SidecarRequestError(
-				"The local LLM sidecar returned an invalid completion"
-			)
-		if not content and not tools and not finish_reason:
-			raise _SidecarRequestError(
-				"The local LLM sidecar returned an empty completion"
-			)
-		usage = data.get("usage") or {}
-		if not isinstance(usage, dict):
-			raise _SidecarRequestError(
-				"The local LLM sidecar returned invalid usage data"
-			)
-		return {
-			"content": content,
-			"tools": tools,
-			"usage": usage,
-			"finish_reason": finish_reason or "stop",
-		}
+		"""Normalize provider completion data for compatibility callers."""
+		return normalize_completion_payload(data)
 
 	def _stream_response(
 		self,
 		request_id: str,
 		response: Any,
 	) -> Iterable[Any]:
-		"""Parse SSE deltas from llama.cpp into neutral runtime chunks."""
-		messages = load_message_types()
-		sequence = 0
-		usage: dict[str, Any] | None = None
-		completed = False
-		while True:
-			line = response.readline()
-			if not line:
-				raise _SidecarRequestError(
-					"The local LLM sidecar stream ended unexpectedly"
-				)
-			if not line.startswith(b"data:"):
-				continue
-			payload = line.split(b":", 1)[1].strip()
-			if payload == b"[DONE]":
-				if not completed:
-					raise _SidecarRequestError(
-						"The local LLM sidecar ended without a completion"
-					)
-				yield messages.StreamDelta(
-					request_id=request_id,
-					sequence=sequence,
-					final=True,
-					metadata={"usage": usage} if usage is not None else {},
-				)
-				return
-
-			data = json.loads(payload.decode("utf-8"))
-			if not isinstance(data, dict):
-				raise _SidecarRequestError(
-					"The local LLM sidecar returned malformed stream data"
-				)
-			if "error" in data and data["error"] is not None:
-				raise _SidecarRequestError(
-					"The local LLM sidecar reported a generation error"
-				)
-			if "usage" in data:
-				if not isinstance(data["usage"], dict):
-					raise _SidecarRequestError(
-						"The local LLM sidecar returned malformed usage data"
-					)
-				usage = data["usage"]
-			choices = data.get("choices")
-			if not isinstance(choices, list):
-				raise _SidecarRequestError(
-					"The local LLM sidecar returned malformed stream data"
-				)
-			if not choices:
-				if usage is None:
-					raise _SidecarRequestError(
-						"The local LLM sidecar returned malformed stream data"
-					)
-				continue
-			choice = choices[0]
-			if not isinstance(choice, dict):
-				raise _SidecarRequestError(
-					"The local LLM sidecar returned malformed stream data"
-				)
-			delta = choice.get("delta") or {}
-			if not isinstance(delta, dict):
-				raise _SidecarRequestError(
-					"The local LLM sidecar returned malformed stream data"
-				)
-			chunk = {}
-			content = delta.get("content")
-			tool_calls = delta.get("tool_calls")
-			finish_reason = choice.get("finish_reason")
-			if content is not None and not isinstance(content, str):
-				raise _SidecarRequestError(
-					"The local LLM sidecar returned malformed stream data"
-				)
-			if tool_calls is not None and not isinstance(tool_calls, list):
-				raise _SidecarRequestError(
-					"The local LLM sidecar returned malformed stream data"
-				)
-			if finish_reason is not None and not isinstance(finish_reason, str):
-				raise _SidecarRequestError(
-					"The local LLM sidecar returned malformed stream data"
-				)
-			if content:
-				chunk["content"] = content
-			if tool_calls:
-				chunk["tool_calls"] = tool_calls
-			if finish_reason is not None:
-				chunk["finish_reason"] = finish_reason
-				completed = True
-			if chunk.get("content") or chunk.get("tool_calls"):
-				completed = True
-			yield messages.StreamDelta(
-				request_id=request_id,
-				sequence=sequence,
-				delta=chunk,
-				final=False,
-				metadata={"usage": usage} if usage is not None else {},
-			)
-			sequence += 1
+		"""Convert provider SSE events to neutral stream deltas."""
+		return stream_deltas(request_id, response)
 
 	def _metadata(self) -> dict[str, Any]:
 		"""Return stable sidecar metadata for health and control responses."""

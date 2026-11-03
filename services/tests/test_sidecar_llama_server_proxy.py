@@ -5,6 +5,7 @@ from types import SimpleNamespace
 
 import pytest
 from airunner_common.contract_enums import ModelStatus, ModelType
+from airunner_services.runtimes.contracts import RuntimeAction, RuntimeKind
 
 from airunner_services.llm.adapters.chat_gguf_chat_format_detection import (
     _detect_chat_format,
@@ -963,6 +964,223 @@ def test_unload_reload_invalidates_old_proxy_binding(monkeypatch, tmp_path):
     stale.close()
     assert sum(launcher.stops for launcher in launchers) == stops_before_stale_close
     assert requests == []
+
+
+def _graph_manager_for_sidecar(monkeypatch, model_path, client, profile="same-profile"):
+	"""Build a graph manager fixture using the real sidecar proxy lifecycle."""
+	from airunner_services.model_management import llm_model_manager as manager_module
+
+	class Resources:
+		def prepare_model_loading(self, **_kwargs):
+			return {"can_load": True}
+
+		def model_loaded(self, *_args, **_kwargs):
+			pass
+
+		def cleanup_model(self, *_args, **_kwargs):
+			pass
+
+	monkeypatch.setattr(manager_module, "ModelResourceManager", Resources)
+	monkeypatch.setattr(manager_module, "apply_cudnn_benchmark", lambda *_args: None)
+	monkeypatch.setattr(manager_module, "clear_memory", lambda *_args: None)
+	monkeypatch.setattr(
+		LLMModelManager,
+		"model_path",
+		property(lambda manager: manager._fixture_model_path),
+	)
+	monkeypatch.setattr(
+		LLMModelManager,
+		"device",
+		property(lambda _manager: "cpu"),
+	)
+	monkeypatch.setattr(
+		LLMModelManager,
+		"memory_settings",
+		property(lambda _manager: None),
+	)
+	manager = object.__new__(LLMModelManager)
+	manager._runtime_activity_lock = __import__("threading").RLock()
+	manager._model_status = {ModelType.LLM: ModelStatus.UNLOADED}
+	manager._current_model_path = None
+	manager._active_gguf_runtime_profile = None
+	manager._last_load_error = None
+	manager._fixture_model_path = str(model_path)
+	manager.llm_settings = SimpleNamespace(use_local_llm=True)
+	manager.llm_request = SimpleNamespace(gguf_runtime_profile=profile)
+	manager.logger = SimpleNamespace(
+		info=lambda *_args, **_kwargs: None,
+		error=lambda *_args, **_kwargs: None,
+	)
+	manager._chat_model = None
+	manager._tool_manager = None
+	manager._workflow_manager = None
+	manager._model = None
+	manager._tokenizer = None
+	manager.change_model_status = lambda _kind, status: manager._model_status.__setitem__(ModelType.LLM, status)
+	manager.refresh_api_reference = lambda: None
+	manager._validate_model_path = lambda: True
+	manager._check_and_download_model = lambda: True
+	manager._resolve_model_id_from_path = lambda _path: "model-a"
+	manager._resolve_model_name = lambda _model_id: "Model A"
+	manager._send_quantization_info = lambda: None
+	manager._load_local_llm_components = lambda: None
+	manager._load_tool_manager = lambda: None
+	manager._load_workflow_manager = lambda: None
+	manager._update_model_status = lambda: manager.change_model_status(ModelType.LLM, ModelStatus.LOADED)
+
+	def load_chat():
+		proxy = SidecarLlamaServerProxy(
+			client,
+			profile,
+			model_path=str(model_path),
+			model_id="model-a",
+			n_ctx=4096,
+			n_gpu_layers=0,
+		)
+		proxy.load()
+		manager._chat_model = SimpleNamespace(_llama=proxy)
+
+	def unload_components():
+		if manager._chat_model is not None:
+			manager._chat_model._llama.close()
+		manager._chat_model = None
+
+	manager._load_chat_model = load_chat
+	manager._unload_components = unload_components
+	return manager
+
+
+def _ready_sidecar_client(model_path, model_id="model-a", profile="same-profile"):
+	settings = LlamaCppRuntimeSettings(
+		executable="llama-server",
+		host="127.0.0.1",
+		port=8011,
+		model_path=str(model_path),
+		model_id=model_id,
+		runtime_profile=profile,
+		n_ctx=4096,
+		n_gpu_layers=0,
+		startup_timeout_seconds=1,
+	)
+	launchers = []
+
+	class Launcher:
+		def __init__(self):
+			self.endpoint = settings.endpoint
+			self.starts = 0
+			self.stops = 0
+			self.ready = True
+			self.health_checks = 0
+			launchers.append(self)
+
+		def start(self):
+			self.starts += 1
+			self.ready = True
+
+		def stop(self):
+			self.stops += 1
+			self.ready = False
+
+		def health_status(self):
+			from airunner_services.runtimes.contracts import RuntimeHealthStatus
+			self.health_checks += 1
+			return (
+				RuntimeHealthStatus.READY if self.ready else RuntimeHealthStatus.FAILED,
+				"fixture",
+			)
+
+	launcher = Launcher()
+	return SidecarLLMClient(settings=settings, launcher=launcher), launcher
+
+
+def _runtime_control(client, action, request_id):
+	return client.invoke(
+		SimpleNamespace(runtime=RuntimeKind.LLM, action=action, request_id=request_id)
+	)
+
+
+def test_graph_load_adopts_matching_modern_reload_and_keeps_graph_adapter(
+	monkeypatch, tmp_path
+):
+	model = tmp_path / "model-a.gguf"
+	model.write_bytes(b"same model bytes")
+	client, launcher = _ready_sidecar_client(model)
+	manager = _graph_manager_for_sidecar(monkeypatch, model, client)
+
+	manager.load()
+	graph_chat = manager._chat_model
+	graph_proxy = graph_chat._llama
+	graph_token = graph_proxy._binding_token
+
+	assert _runtime_control(client, RuntimeAction.UNLOAD_MODEL, "modern-unload").status.value == "succeeded"
+	assert _runtime_control(client, RuntimeAction.LOAD_MODEL, "modern-load").status.value == "succeeded"
+	modern_token = client._bound_model_token
+	assert modern_token != graph_token
+
+	manager.load()
+
+	assert manager._chat_model is graph_chat
+	assert graph_proxy._binding_token == modern_token
+	assert launcher.starts == 2
+	assert launcher.stops == 1
+
+	requests = []
+	client.openai_request = lambda *args, **kwargs: requests.append(kwargs["expected_binding"]) or {"choices": [{"message": {"content": "ok"}}]}
+	assert graph_proxy.create_chat_completion(messages=[])["choices"][0]["message"]["content"] == "ok"
+	assert requests == [modern_token]
+
+
+def test_graph_load_reconciles_child_exit_and_same_path_replacement(
+	monkeypatch, tmp_path
+):
+	model = tmp_path / "model-a.gguf"
+	model.write_bytes(b"original model")
+	client, launcher = _ready_sidecar_client(model)
+	manager = _graph_manager_for_sidecar(monkeypatch, model, client)
+	manager.load()
+	first_chat = manager._chat_model
+
+	launcher.ready = False
+	manager.load()
+	second_chat = manager._chat_model
+	assert second_chat is not first_chat
+	assert launcher.starts == 2
+	assert launcher.stops == 1
+	assert manager.model_status[ModelType.LLM] is ModelStatus.LOADED
+
+	replacement = tmp_path / "replacement.gguf"
+	replacement.write_bytes(b"replacement with distinct identity")
+	os.replace(replacement, model)
+	second_token = second_chat._llama._binding_token
+	manager.load()
+	assert manager._chat_model is not second_chat
+	assert manager._chat_model._llama._binding_token != second_token
+	assert launcher.starts == 3
+	assert launcher.stops == 2
+
+
+def test_graph_reconciliation_does_not_disturb_active_sibling_lease(
+	monkeypatch, tmp_path
+):
+	model = tmp_path / "model-a.gguf"
+	model.write_bytes(b"same model bytes")
+	client, launcher = _ready_sidecar_client(model)
+	manager = _graph_manager_for_sidecar(monkeypatch, model, client)
+	manager.load()
+	token = manager._chat_model._llama._binding_token
+	lease, failure = client._reserve_request(
+		"sibling-request", "same-profile", expected_binding=token
+	)
+	assert failure is None and lease is not None
+
+	manager.load()
+
+	assert manager._chat_model._llama._binding_token == token
+	assert client._active_requests["sibling-request"] is lease
+	assert not lease.cancelled.is_set()
+	assert launcher.stops == 0
+	assert launcher.starts == 1
+	client._release_request("sibling-request", lease)
 
 
 def test_constructed_chat_model_does_not_import_native_or_serialize_client(monkeypatch):
