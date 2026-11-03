@@ -12,8 +12,11 @@ import threading
 import wave
 from typing import Callable, Optional
 
+from airunner_services.runtimes.espeak_runtime_paths import (
+    ESPEAK_EXECUTABLE as ESPEAK_EXECUTABLE,
+    resolve_espeak_runtime_paths,
+)
 
-ESPEAK_EXECUTABLE = "/usr/bin/espeak-ng"
 MAX_TEXT_LENGTH = 5000
 MAX_WAV_BYTES = 8 * 1024 * 1024
 MAX_CATALOG_BYTES = 256 * 1024
@@ -53,10 +56,12 @@ class EspeakCliRenderer:
         self,
         *,
         popen: Callable = subprocess.Popen,
-        executable: str = ESPEAK_EXECUTABLE,
+        executable: Optional[str] = None,
+        data_dir: Optional[str] = None,
     ) -> None:
         self._popen = popen
-        self._executable = executable
+        self._paths = resolve_espeak_runtime_paths(executable, data_dir)
+        self._executable = self._paths.executable
         self._voice_ids: Optional[tuple[str, ...]] = None
 
     @property
@@ -75,7 +80,7 @@ class EspeakCliRenderer:
         if voice_id not in voices:
             raise EspeakRenderError("tts_unsupported_parameter")
         argv = [
-            self._executable,
+            *self._command_prefix(),
             "--stdout",
             "--stdin",
             "-v",
@@ -91,7 +96,7 @@ class EspeakCliRenderer:
         if self._voice_ids is not None:
             return self._voice_ids
         output = self._run_bounded(
-            [self._executable, "--voices"], b"", MAX_CATALOG_BYTES
+            [*self._command_prefix(), "--voices"], b"", MAX_CATALOG_BYTES
         )
         try:
             lines = output.decode("utf-8", errors="strict").splitlines()
@@ -117,6 +122,12 @@ class EspeakCliRenderer:
             raise EspeakRenderError("tts_backend_unavailable")
         self._voice_ids = tuple(sorted(voices))
         return self._voice_ids
+
+    def _command_prefix(self) -> list[str]:
+        try:
+            return self._paths.command_prefix()
+        except OSError as exc:
+            raise EspeakRenderError("tts_backend_unavailable") from exc
 
     @staticmethod
     def _validate_text(text: str) -> str:

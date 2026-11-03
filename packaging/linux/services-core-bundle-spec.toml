@@ -4,6 +4,9 @@
 
 extends = "services-bundle-spec.toml"
 
+[native_speech]
+required = false
+
 [bundle]
 name = "airunner-services-core"
 executable = "airunner-core"

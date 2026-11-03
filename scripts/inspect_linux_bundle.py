@@ -56,6 +56,7 @@ from linux_bundle_gates import (
     parse_warn_file,
 )
 from dependency_notices import verify_dependency_notice_manifest
+from stage_espeak_native_payload import verify_staged_espeak
 
 DEFAULT_SPEC = (
     Path(__file__).resolve().parent.parent
@@ -430,6 +431,9 @@ def inspect_bundle(
     _append_manifest(bundle_dir, spec, result, repo_root or _REPO_ROOT)
     _append_warn(result, spec, warn_file)
     _append_toc_sidecars(bundle_dir, spec, result, toc_paths, require_sidecars)
+    result.problems.extend(verify_staged_espeak(
+        bundle_dir, required=bool(spec.get("native_speech", {}).get("required", False))
+    ))
     policy_files = [
         bundle_dir / "_internal" / str(entry["dest"])
         for entry in spec.get("data", [])

@@ -228,6 +228,12 @@ jobs:
             services/tests/test_zimage_resource_budget.py \
             services/tests/test_tts_buffered_response.py \
             scripts/tests/test_espeak_build_recipes.py \
+            scripts/tests/test_prepare_espeak_native_payload.py \
+            scripts/tests/test_stage_espeak_native_payload.py \
+            services/tests/test_espeak_runtime_paths.py \
+            services/tests/test_sidecar_llm_auth.py \
+            services/tests/test_sidecar_llm_stream.py \
+            services/tests/test_sidecar_llm_payload.py \
             services/tests/test_llm_request_ownership.py \
             services/tests/test_release_p05_binaries.py \
             services/tests/test_release_p05_gates.py \
@@ -270,12 +276,32 @@ jobs:
 
       # The assembler verifies the frozen tree and manifest; sidecars
       # stage next; the standalone verify below re-gates the final bytes.
+      - name: Build reviewed native speech payload offline
+        run: |
+          set -euo pipefail
+          docker pull nvidia/cuda:12.9.2-devel-ubuntu24.04@sha256:16656a1ef115bca9e1f820c6349876f1486d2b3c9a0e615773799fe402960dc5
+          python scripts/prepare_espeak_native_payload.py \
+            --work-dir "$RUNNER_TEMP/espeak-native" \
+            --fetch-canonical --download-cmake \
+            --python-base-prefix "$(python -c 'import sys; print(sys.base_prefix)')"
+
       - name: Assemble candidate bundle
         run: |
           python scripts/assemble_linux_bundle.py \
             --base "${{ github.sha }}" \
+            --espeak-payload "$RUNNER_TEMP/espeak-native/out/candidate/payload" \
             --distpath build/bundle-dist \
             --workpath build/bundle-work
+
+      - name: Upload native speech build evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: native-speech-build-evidence
+          path: |
+            ${{ runner.temp }}/espeak-native/launch-receipt.json
+            ${{ runner.temp }}/espeak-native/prepare-and-build-recipe.md
+            ${{ runner.temp }}/espeak-native/build.log
 
       # Native sidecars land in bin/ after the freeze (PyInstaller
       # wipes its output dir, so nothing can be pre-seeded) and the

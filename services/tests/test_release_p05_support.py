@@ -9,6 +9,8 @@ side effects.
 from __future__ import annotations
 
 import importlib.util
+import hashlib
+import json
 import os
 import sys
 import types
@@ -208,8 +210,37 @@ def make_bundle(
     _stage_extension_fixtures(bundle, spec)
     _stage_binary_fixtures(bundle, spec)
     _stage_frozen_source_fixtures(bundle, spec)
+    if spec.get("native_speech", {}).get("required", False):
+        _stage_speech_fixture(bundle)
     assemble_mod.write_manifest(bundle, spec, base)
     return bundle
+
+
+def _stage_speech_fixture(bundle: Path) -> None:
+    """Stage synthetic component bytes for static inventory checks only."""
+    provenance = "share/airunner/espeak-ng-native"
+    paths = [
+        "bin/espeak-ng",
+        *(f"share/espeak-ng-data/{name}" for name in (
+            "phondata", "phondata-manifest", "phonindex", "phontab", "intonations"
+        )),
+        *(f"licenses/espeak-ng/{name}" for name in (
+            "COPYING", "COPYING.APACHE", "COPYING.BSD2", "COPYING.UCD"
+        )),
+        f"{provenance}/build-receipt.json",
+        f"{provenance}/source/source-lock.json",
+    ]
+    entries = []
+    for relative in paths:
+        path = bundle / relative
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(b"synthetic speech component\n")
+        if relative == "bin/espeak-ng":
+            path.chmod(0o755)
+        entries.append({"path": relative, "sha256": hashlib.sha256(path.read_bytes()).hexdigest()})
+    (bundle / provenance / "component-manifest.json").write_text(json.dumps({
+        "schema_version": 1, "component": "espeak-ng-native", "files": entries
+    }))
 
 
 def make_toc(spec: dict[str, Any], drop: frozenset[str]) -> str:

@@ -99,6 +99,22 @@ def test_assemble_dry_run_prints_full_recipe(
     assert not (tmp_path / "work").exists()
 
 
+def test_full_bundle_rejects_missing_speech_before_freeze(tmp_path, assemble_mod, monkeypatch):
+    monkeypatch.setattr(assemble_mod, "_freeze_tree", lambda *_args: pytest.fail("freeze started without speech payload"))
+    result = assemble_mod.main([
+        "--base", "testrev", "--distpath", str(tmp_path / "dist"),
+        "--workpath", str(tmp_path / "work"),
+    ])
+    assert result == 2
+    assert not (tmp_path / "dist").exists()
+    assert not (tmp_path / "work").exists()
+
+
+def test_core_spec_does_not_require_speech_engine(inspect_mod):
+    core = inspect_mod.load_spec(REPO_ROOT / "packaging/linux/services-core-bundle-spec.toml")
+    assert core["native_speech"]["required"] is False
+
+
 def test_content_policy_data_is_included_only_for_explicit_validation(
     tmp_path: Path,
     assemble_mod: types.ModuleType,

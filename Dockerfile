@@ -159,6 +159,14 @@ RUN --mount=type=bind,from=reviewed-inputs,source=runtime,target=/tmp/release-in
         --repo-root /tmp/release-inputs/source \
         --bundle-dir /usr/share/doc/airunner
 
+# Native speech is compiled from the reviewed source lock before the image
+# build. Preserve its source archive, license texts, data and component receipt.
+COPY --from=reviewed-inputs /native-speech/ /opt/airunner-speech/
+RUN test -x /opt/airunner-speech/bin/espeak-ng && \
+    test -s /opt/airunner-speech/share/espeak-ng-data/phondata && \
+    ln -s /opt/airunner-speech/bin/espeak-ng /usr/bin/espeak-ng && \
+    ln -s /opt/airunner-speech/share/espeak-ng-data /usr/share/espeak-ng-data
+
 # Create non-root user for running the container
 # docker-compose may override the runtime UID/GID; avoid hard-coding 1000 here
 RUN set -eux; \

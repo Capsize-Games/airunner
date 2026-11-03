@@ -46,6 +46,7 @@ from linux_bundle_assemble import (
     write_manifest,
 )
 from dependency_notices import collect_dependency_notices
+from stage_espeak_native_payload import stage_espeak_payload, _validate_payload
 
 _REPO_ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_SPEC = (
@@ -94,6 +95,7 @@ def _assemble_args(argv: list[str] | None) -> argparse.Namespace:
     parser.add_argument("--pyinstaller", default="pyinstaller")
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--require-sidecars", action="store_true")
+    parser.add_argument("--espeak-payload", type=Path, default=None)
     parser.add_argument("--policy-trust-store", type=Path, default=None)
     parser.add_argument("--require-signed-policy", action="store_true")
     return parser.parse_args(argv)
@@ -233,6 +235,7 @@ def _freeze_tree(
     distpath: Path,
     command: list[str],
     pyinstaller: str,
+    espeak_payload: Path | None = None,
 ) -> Path:
     """Freeze the bundle and stage root payloads; return its dir."""
     write_entry_script(
@@ -244,16 +247,20 @@ def _freeze_tree(
     bundle_dir = distpath / str(spec["bundle"]["executable"])
     if not bundle_dir.is_dir():
         raise SystemExit(f"pyinstaller produced no bundle dir: {bundle_dir}")
-    _finish_tree(spec, bundle_dir)
+    _finish_tree(spec, bundle_dir, espeak_payload)
     return bundle_dir
 
 
-def _finish_tree(spec: dict[str, Any], bundle_dir: Path) -> None:
+def _finish_tree(
+    spec: dict[str, Any], bundle_dir: Path, espeak_payload: Path | None = None
+) -> None:
     """Stage root payloads, prune hook data, then collect locked notices."""
     (bundle_dir / spec["runtimes"]["bin_dir"]).mkdir(exist_ok=True)
     stage_root_files(spec, _REPO_ROOT, bundle_dir)
     pruned = prune_bundle(bundle_dir, spec)
     print(f"pruned {len(pruned)} hook-collected paths")
+    if espeak_payload is not None:
+        stage_espeak_payload(espeak_payload, bundle_dir)
     if spec.get("dependency_notices", {}).get("required", False):
         collect_dependency_notices(spec, _REPO_ROOT, bundle_dir)
 
@@ -327,8 +334,19 @@ def main(argv: list[str] | None = None) -> int:
     if args.dry_run:
         _print_dry_run(base, entry_script, command)
         return 0
+    if args.espeak_payload is None and spec.get("native_speech", {}).get("required", False):
+        print("SPEECH: full bundle requires --espeak-payload from the reviewed native build", file=sys.stderr)
+        return 2
+    if args.espeak_payload is not None:
+        try:
+            _validate_payload(
+                args.espeak_payload, _REPO_ROOT / "packaging/espeak/source-lock.json", _REPO_ROOT
+            )
+        except (OSError, ValueError) as exc:
+            print(f"SPEECH: {exc}", file=sys.stderr)
+            return 2
     bundle_dir = _freeze_tree(
-        spec, workpath, distpath, command, args.pyinstaller
+        spec, workpath, distpath, command, args.pyinstaller, args.espeak_payload
     )
     _write_bundle_manifest(bundle_dir, spec, base)
     return _inspect_frozen(inspect, spec, bundle_dir, args)

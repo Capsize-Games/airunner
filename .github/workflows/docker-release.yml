@@ -83,6 +83,34 @@ jobs:
             exit 1
           fi
 
+      - name: Set up native speech build controller
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: "3.13.5"
+
+      - name: Build and stage reviewed native speech payload
+        run: |
+          set -euo pipefail
+          docker pull nvidia/cuda:12.9.2-devel-ubuntu24.04@sha256:16656a1ef115bca9e1f820c6349876f1486d2b3c9a0e615773799fe402960dc5
+          python scripts/prepare_espeak_native_payload.py \
+            --work-dir "$RUNNER_TEMP/espeak-native" \
+            --fetch-canonical --download-cmake \
+            --python-base-prefix "$(python -c 'import sys; print(sys.base_prefix)')"
+          mkdir "$DOCKER_RELEASE_INPUTS/native-speech"
+          python scripts/stage_espeak_native_payload.py \
+            --payload "$RUNNER_TEMP/espeak-native/out/candidate/payload" \
+            --bundle "$DOCKER_RELEASE_INPUTS/native-speech"
+
+      - name: Upload native speech build evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: docker-native-speech-build-evidence
+          path: |
+            ${{ runner.temp }}/espeak-native/launch-receipt.json
+            ${{ runner.temp }}/espeak-native/prepare-and-build-recipe.md
+            ${{ runner.temp }}/espeak-native/build.log
+
       - name: Verify runner Docker tools
         run: |
           set -euo pipefail

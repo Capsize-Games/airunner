@@ -54,6 +54,9 @@ aggregates = [
     "linux",
 ]
 
+[native_speech]
+required = true
+
 [dependency_notices]
 # After the freeze, collect the exact recorded license/NOTICE/copyright files
 # for every distribution in the active hash-locked profile environment.
