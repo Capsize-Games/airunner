@@ -95,3 +95,46 @@ The matching private wrapper source update was merged in PR #8 as
 was published and read back. Private Actions remain disabled; the three
 focused static diskcache tests passed locally, and no private CI run is
 claimed. CUDA wheel and model acceptance remain separate pending checks.
+
+## ABI correction and current build status
+
+The `.2` CUDA source candidate is quarantined. Before model loading, compiled
+ABI probes found that llama.cpp 7acb returns a 152-byte
+`llama_context_params`, while the wrapper's ctypes declaration was 136 bytes.
+Because the struct is returned and passed by value, the mismatch made `.2`
+unsafe to activate. The `.2` source release and tag remain immutable for
+traceability; its candidate build was cancelled after this defect was
+confirmed.
+
+The `.3` wrapper release fixes the layout, exposes the upstream DEFAULT and MTP
+context values, and adds a regression compiling against the exact pinned
+header. Six focused tests passed locally, including the compiled size and all
+member offsets. PR #9 merged at
+`5156c34af6d4920cddc5aba75618b1dd1c23e590`; annotated tag
+`v0.3.21+capsize.3` peels to that merge. Private Actions are disabled, so no
+private CI result is claimed.
+
+The main CUDA source workflow now pins the `.3` patch and runs the compiled ABI
+regression before building. Run `41545665728`, for main commit
+`cfa99f2e033d678e180d16d457d77e179db4d283`, passed image inventory, exact
+source/input fetch, Python setup, reviewed backend installation and offline
+CMake compilation. Its compiled wheel SHA-256 is
+`ef4d73c5fbdf3731968b1ebd27f609567c1662ade843322a8d690a614abbf3aa`.
+The notice-completion producer `41554942120` adds the backend MIT and JSON
+notices without changing any of the 94 original runtime payloads. Its final
+wheel SHA-256 is
+`3732bbd0f9f2a79d7dc69ff0558ca9d228f69408c0c66461ca5f993638485e3a`;
+98 members and RECORD rows were independently verified. Artifact
+`13193644944` binds the exact producer source and archive digest, but expires
+after 14 days; durable release mirroring remains required before publication.
+
+The V5 graph installed this exact wheel offline with hash enforcement, and
+`uv pip check` passed. Actual ServiceApp inference with the unchanged
+Qwen3.5-9B Q8_0/32768 context returned HTTP 200 using full configured offload
+and 9,474 MiB process GPU allocation. The exact-output assertion failed
+because the offline embedded template did not receive the disabled-thinking
+preference. Unload released GPU memory while the status API retained stale
+loaded state. These are open service defects, not successful final acceptance.
+The default 300-second cold-load timeout is recorded separately; successful
+inference used the supported finite 900-second setting. Reload, corrected
+output, frozen packaging and full target acceptance remain pending.

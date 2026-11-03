@@ -166,7 +166,7 @@ RAG_REQUIREMENTS = [
 ]
 
 LLM_NATIVE_REQUIREMENTS = [
-    "llama-cpp-python==0.3.21+capsize.1",
+    "llama-cpp-python==0.3.21+capsize.3",
     "bitsandbytes==0.46.1",
     "cryptography==50.0.2",
     "sumy==0.11.0",

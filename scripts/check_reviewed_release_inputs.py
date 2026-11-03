@@ -473,7 +473,7 @@ def inspect_release_inputs(root: Path, workflow: Path) -> list[str]:
     )
     active_lock_text = ""
     if lock_status == "generation_pending":
-        if active_lock_path.exists():
+        if (root / active_lock_path).exists():
             errors.append(
                 "pending-release-lock: active lock path already exists while "
                 "manifest says generation is pending"

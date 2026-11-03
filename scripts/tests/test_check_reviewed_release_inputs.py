@@ -14,7 +14,9 @@ from scripts.check_reviewed_release_inputs import inspect_release_inputs
 ROOT = Path(__file__).resolve().parents[2]
 _GATE_FILES = [
     Path("release-planning/services/release-inputs.json"),
+    Path("release-planning/services/input-reviews/airunner-common-6.1.8.md"),
     Path("package/constraints-linux-nvidia-cu129-historical-desktop.txt"),
+    Path("package/constraints-linux-nvidia-cu129-linux-release.txt"),
     Path("packaging/linux/services-bundle-spec.toml"),
     Path("services/setup.py"),
     Path("native/setup.py"),
@@ -31,11 +33,22 @@ def _copy_gate_tree(destination_root: Path) -> None:
         shutil.copy2(ROOT / relative, destination)
 
 
-def test_quarantined_inputs_fail_closed_without_pin_errors() -> None:
+def test_reviewed_profile_excludes_quarantined_inputs_without_pin_errors() -> None:
     errors = inspect_release_inputs(
         ROOT, Path(".github/workflows/eval-tests.yml")
     )
 
+    assert errors == []
+
+
+def test_pending_release_lock_still_fails_closed(tmp_path: Path) -> None:
+    _copy_gate_tree(tmp_path)
+    manifest_path = tmp_path / "release-planning/services/release-inputs.json"
+    manifest = json.loads(manifest_path.read_text())
+    manifest["release_profile"]["lock_status"] = "generation_pending"
+    manifest_path.write_text(json.dumps(manifest))
+    (tmp_path / manifest["release_profile"]["active_lock"]).unlink()
+    errors = inspect_release_inputs(tmp_path, Path(".github/workflows/eval-tests.yml"))
     assert errors == [
         "pending-release-lock: linux-release hash lock generation and "
         "validation remain pending",
@@ -80,8 +93,8 @@ def test_candidate_profile_install_is_hash_locked_and_no_deps(
     ("original", "replacement"),
     [
         (
-            "package/linux-builder-tools-artifact-sources.json",
-            "package/unreviewed-builder-tools.json",
+            "--manifest package/linux-builder-tools-artifact-sources.json",
+            "--manifest package/unreviewed-builder-tools.json",
         ),
         (
             "--no-deps --require-hashes -r \"$builder/requirements.txt\"",
@@ -95,9 +108,11 @@ def test_candidate_pyinstaller_builder_closure_is_separately_hash_locked(
     _copy_gate_tree(tmp_path)
     workflow_path = tmp_path / ".github/workflows/pypi-dispatch.yml"
     workflow = workflow_path.read_text(encoding="utf-8")
-    assert original in workflow
+    start = workflow.index("  linux-candidate:")
+    assert original in workflow[start:]
     workflow_path.write_text(
-        workflow.replace(original, replacement, 1), encoding="utf-8"
+        workflow[:start] + workflow[start:].replace(original, replacement, 1),
+        encoding="utf-8",
     )
 
     errors = inspect_release_inputs(
@@ -339,7 +354,7 @@ def test_release_workflow_gates_precede_dependency_execution() -> None:
             assert "Checkout facehuggershield source" not in section
             assert ".ci-sources/facehuggershield" not in section
         if job == "packaging-gates":
-            assert gate < section.index("Install source-gate test tools")
+            assert gate < section.index("python -m pip install")
             assert gate < section.index("Build candidate wheels")
 
     for job, next_job in (
@@ -361,12 +376,9 @@ def test_release_workflow_gates_precede_dependency_execution() -> None:
     assert "ref: ${{ github.event.workflow_run.head_sha || github.sha }}" in docker_job
 
 
-def test_docker_release_preflight_reports_current_lock_and_source_blockers() -> None:
+def test_docker_release_preflight_accepts_reviewed_profile() -> None:
     errors = inspect_release_inputs(
         ROOT, Path(".github/workflows/docker-release.yml")
     )
 
-    assert errors == [
-        "pending-release-lock: linux-release hash lock generation and "
-        "validation remain pending",
-    ]
+    assert errors == []

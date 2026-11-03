@@ -94,8 +94,8 @@ def test_release_profile_is_defined() -> None:
     services = _load_setup_module(_SERVICES_SETUP, _SERVICES_SETUP_CALL)
     assert services.ML_RUNTIME_REQUIREMENTS[:3] == [
         "torch==2.13.0+cu129",
-        "torchvision==0.28.0+cu129",
-        "torchaudio==2.11.0+cu129",
+        "torchvision==0.28.0+cu129.capsize.1",
+        "torchaudio==2.11.0+cu129.capsize.1",
     ]
     desktop = services.build_services_extras_require()["desktop"]
     names = _declared_dists(desktop)
@@ -210,7 +210,7 @@ def test_lock_records_provenance() -> None:
     assert "\n#   ./[nvidia]\n" not in header
 
 
-def test_current_release_lock_is_explicitly_pending() -> None:
+def test_current_release_lock_is_separate_from_historical_desktop_inputs() -> None:
     """No historical lock is presented as the current linux-release lock."""
     import json
 
@@ -226,13 +226,17 @@ def test_current_release_lock_is_explicitly_pending() -> None:
         encoding="utf-8"
     )
     assert profile["services_extra"] == "linux-release"
-    assert profile["lock_status"] == "generation_pending"
-    assert not (_PROJECT_ROOT / profile["active_lock"]).exists()
+    assert profile["lock_status"] == "ready"
+    active_lock = _PROJECT_ROOT / profile["active_lock"]
+    assert active_lock.is_file()
+    assert active_lock != _LOCK_PATH
+    assert "./services[linux-release]" in active_lock.read_text()
     assert profile["historical_lock"].endswith(
         "constraints-linux-nvidia-cu129-historical-desktop.txt"
     )
     assert 'services_extra = "linux-release"' in spec
-    assert '"./services[linux-release,development]"' in workflow
+    assert "'./services[linux-release]'" in workflow
+    assert "--no-deps --no-build-isolation" in workflow
 
 
 def test_base_startup_imports_are_declared() -> None:

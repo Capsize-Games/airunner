@@ -1675,25 +1675,25 @@
       ]
     },
     {
-      "filename": "llama_cpp_python-0.3.21+capsize.1-py3-none-linux_x86_64.whl",
+      "filename": "llama_cpp_python-0.3.21+capsize.3-py3-none-linux_x86_64.whl",
       "name": "llama-cpp-python",
-      "sha256": "3a38ddc647bc978750f6139074318070523cf498b03dd58949a4380a1a759b35",
-      "size_bytes": 150594012,
+      "sha256": "3732bbd0f9f2a79d7dc69ff0558ca9d228f69408c0c66461ca5f993638485e3a",
+      "size_bytes": 154412863,
       "source": {
-        "archive_sha256": "79add050ada248ed1b8e186693cdec6e8511cb9495cea3923f1bdf5b3420e1b2",
-        "artifact_id": 13160814796,
-        "artifact_name": "llama-cpp-python-cu129-sm120a",
-        "filename": "llama_cpp_python-0.3.21+capsize.1-py3-none-linux_x86_64.whl",
+        "archive_sha256": "21d151006b95a93555c899234ebbcee909a63f48a966b5c11bacbdb4b54c1a02",
+        "artifact_created_at": "2026-11-03T00:44:46Z",
+        "artifact_expires_at": "2026-11-17T00:44:42Z",
+        "artifact_id": 13193644944,
+        "artifact_name": "llama-cpp-python-capsize3-notice-complete",
         "kind": "actions_artifact",
         "max_archive_bytes": 1073741824,
-        "member": "llama_cpp_python-0.3.21+capsize.1-py3-none-linux_x86_64.whl",
+        "observed_archive_size_bytes": 153731675,
         "repo": "Capsize-Games/airunner",
-        "run_id": 41482860195,
-        "sha256": "3a38ddc647bc978750f6139074318070523cf498b03dd58949a4380a1a759b35",
-        "size_bytes": 150594012,
-        "source_revision": "4215e978a11220ab7bcf5e9458c406186e859313"
+        "run_id": 41554942120,
+        "source_revision": "d8e9d7d7cb19229d9d61e3eff5a7a24e85aec673",
+        "workflow": "/.github/workflows/cuda-notice-complete-candidate.yml"
       },
-      "version": "0.3.21+capsize.1",
+      "version": "0.3.21+capsize.3",
       "wheel_tags": [
         "py3-none-linux_x86_64"
       ]
@@ -4255,6 +4255,7 @@
       ]
     }
   ],
+  "candidate_revision": "V5: reviewed .3 CUDA wheel; full artifact/model acceptance and durable release mirroring remain pending",
   "prohibitions": [
     "No source URL contains a signed redirect query.",
     "Actions artifacts are fetched only through authenticated repository artifact endpoints and checked by immutable artifact ID, archive digest, member digest, and size.",
@@ -4262,7 +4263,7 @@
   ],
   "schema_version": 1,
   "selected_count": 243,
-  "selected_lock_sha256": "53a3aed363c9c3003ccf7e3e4e6ef7da719cdda84a9fd2bd876561e27b5afc74",
+  "selected_lock_sha256": "63461b6a5fe1cd72e689ccf459a86f8d98f5cce78bd41b0c6351a71e521ed006",
   "status": "candidate-only; not activated",
   "target": {
     "architecture": "x86_64",

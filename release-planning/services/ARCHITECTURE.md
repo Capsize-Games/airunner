@@ -39,25 +39,31 @@ acceptance. The `tts-python-core` release extra no longer installs pyttsx3:
 only the retained legacy playback manager uses it. Legacy `llm` and
 `tts-python` extras preserve that separate dependency and compatibility path.
 
-The active release lock remains pending portable artifact staging and target
-validation. The old desktop lock is historical evidence. The selected V4
+The active release lock is ready for candidate builds; portable staging
+verified all 243 inputs. Target validation remains open. The old desktop lock
+is historical evidence. The selected V5
 diagnostic graph installed all 243 exact reviewed wheels in a separate project
 environment with kernel network denial, hash enforcement and no builds;
 `uv pip check` passed. All 77 direct service requirements match the installed
 metadata. Five CPU ABI/local-fixture probes and full production notice
-verification (243 distributions, 1,732 files) passed. These results do not
+verification (243 distributions, 1,734 files) passed. These results do not
 establish full model, GPU, API or frozen-artifact acceptance. The visible
 exact-pin inventory is in `DEPENDENCY_DECISIONS.md`.
 
-The reviewed CUDA wrapper `0.3.21+capsize.1` was built and installed; disk
-caching is an explicit extra. Actual Qwen3.5-9B Q8 loading at context 32768
-selected CUDA on RTX 5080 but failed before inference with missing tensor
-`blk.32.ssm_conv1d.weight`. The pinned llama.cpp loader treats the appended
-next-token-prediction block as recurrent. The service returned an explicit
-failure and released its GPU allocation. A reviewed source correction and
-replacement wheel are required before repeating the unchanged scenario.
-CI preflight continues to fail while active input readiness is pending; a
-skipped or unavailable check is not a pass.
+The reviewed CUDA wrapper `0.3.21+capsize.3` corrects the Qwen MTP loader and
+ctypes context-layout defects found in earlier candidates. Disk caching is an
+explicit extra. Compiled candidate run `41545665728` and notice-completion run
+`41554942120` passed. The final wheel retains all 94 original runtime payloads
+and includes the wrapper, backend and JSON notices. Actual Qwen3.5-9B Q8
+inference at context 32768 returned HTTP 200 on RTX 5080, with full configured
+offload and 9,474 MiB process GPU memory. The exact-output assertion failed:
+the offline embedded chat template did not receive the disabled-thinking
+preference. Physical unload released GPU memory while `/api/ps` still reported
+a loaded model. These confirmed source defects and reload acceptance remain
+open. A default 300-second cold-load request timed out on model storage; the
+successful inference used the validated finite 900-second setting.
+Input readiness no longer blocks candidate CI. Required checks and target
+acceptance must still pass; a skipped or unavailable check is not a pass.
 
 The service Kanban project tracks these inputs, companion retirement, eSpeak
 acceptance and CUDA wheel preparation as bounded follow-ups. On 2026-11-01 the
@@ -133,6 +139,16 @@ are serialized. Workers do not install new third-party dependencies or
 start real models without the applicable provenance and capacity checks.
 
 ## LLM completion observation
+
+SRV-25 / [#2444](https://github.com/Capsize-Games/airunner/issues/2444)
+extends phase 1 and phase 6 to accurate Ollama metadata. Actual model testing
+found guessed model names, quantization, sizes, digests, dates, VRAM and expiry
+in list/process responses. Resolve configured and resident artifact identity
+separately, use actual file facts and the active runtime profile, and preserve
+the client schema with explicit unknown values. Status requests must not
+download assets or synchronously hash multi-gigabyte files. The catalog's
+maximum context describes capability; it does not describe the active context.
+Regression and actual model/API evidence are required before release closure.
 
 SRV-23 tracks the shared callback boundary used by legacy, Ollama and OpenAI
 completion APIs. A terminal manager error must fail the request, including
