@@ -170,6 +170,7 @@ jobs:
             scripts/tests/test_espeak_build_recipes.py \
             scripts/tests/test_prepare_espeak_native_payload.py \
             scripts/tests/test_stage_espeak_native_payload.py \
+            scripts/tests/test_linux_warning_dispositions.py \
             services/tests/test_espeak_runtime_paths.py \
             services/tests/test_postgresql_runtime.py \
             services/tests/test_sidecar_llm_auth.py \

@@ -7,6 +7,10 @@ extends = "services-bundle-spec.toml"
 [native_speech]
 required = false
 
+[warn_allowlist]
+# CORE has no full-profile ML importers. Its own TOC/warning gates still apply.
+source_evidence = ""
+
 [bundle]
 name = "airunner-services-core"
 executable = "airunner-core"

@@ -47,6 +47,7 @@ from linux_bundle_assemble import (
 )
 from dependency_notices import collect_dependency_notices
 from stage_espeak_native_payload import stage_espeak_payload, _validate_payload
+from verify_warning_source_reviews import verify_warning_source_reviews
 
 _REPO_ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_SPEC = (
@@ -344,6 +345,13 @@ def main(argv: list[str] | None = None) -> int:
             )
         except (OSError, ValueError) as exc:
             print(f"SPEECH: {exc}", file=sys.stderr)
+            return 2
+    evidence = spec.get("warn_allowlist", {}).get("source_evidence")
+    if evidence:
+        problems = verify_warning_source_reviews(_REPO_ROOT / evidence)
+        if problems:
+            for problem in problems:
+                print(f"SOURCE REVIEW: {problem}", file=sys.stderr)
             return 2
     bundle_dir = _freeze_tree(
         spec, workpath, distpath, command, args.pyinstaller, args.espeak_payload
