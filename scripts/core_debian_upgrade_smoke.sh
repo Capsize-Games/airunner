@@ -11,6 +11,7 @@ fixture_dir="$artifact_dir/published-baseline-upgrade-fixture"
 fixture_record="$fixture_dir/fixture.json"
 fixture_db="$fixture_dir/airunner.db"
 validation="$artifact_dir/candidate-upgrade-validation.json"
+interrupted_upgrade_receipt="$artifact_dir/interrupted-upgrade-validation.json"
 baseline_deb="$artifact_dir/airunner_6.1.3-3_all.deb"
 deb_file=$(find "$artifact_dir" -maxdepth 1 -type f -name 'airunner_*_amd64.deb' -print -quit)
 test -n "$deb_file" && test -f "$candidate_record" && test -f "$secondary_fixture_record" && test -f "$secondary_fixture_db" && test -f "$baseline_deb"
@@ -73,6 +74,7 @@ ownership_marker_owner_after=
 baseline_install_status=pending
 candidate_upgrade_status=pending
 database_migration_status=pending
+interrupted_upgrade_status=pending
 secondary_migration_status=pending
 remove_status=pending
 purge_status=pending
@@ -89,6 +91,8 @@ write_record() {
     SECONDARY_DB_AFTER="$secondary_database_sha_after" \
     BASELINE_INSTALL="$baseline_install_status" CANDIDATE_UPGRADE="$candidate_upgrade_status" \
     DB_MIGRATION="$database_migration_status" REMOVE_STATUS="$remove_status" PURGE_STATUS="$purge_status" \
+    INTERRUPTED_UPGRADE_STATUS="$interrupted_upgrade_status" \
+    INTERRUPTED_UPGRADE_RECEIPT="$interrupted_upgrade_receipt" \
     OWNER_HASH_BEFORE="$ownership_marker_sha_before" OWNER_UIDGID_BEFORE="$ownership_marker_owner_before" \
     OWNER_HASH_AFTER="$ownership_marker_sha_after" OWNER_UIDGID_AFTER="$ownership_marker_owner_after" \
     python3 - "$validation" "$candidate_record" "$fixture_record" <<'PY'
@@ -117,6 +121,7 @@ payload = {
         "published_baseline_install": os.environ["BASELINE_INSTALL"],
         "candidate_package_upgrade": os.environ["CANDIDATE_UPGRADE"],
         "database_migration_and_marker": os.environ["DB_MIGRATION"],
+        "interrupted_upgrade_recovery_probe": os.environ["INTERRUPTED_UPGRADE_STATUS"],
         "package_remove_preserves_data": os.environ["REMOVE_STATUS"],
         "package_purge_preserves_data": os.environ["PURGE_STATUS"],
     },
@@ -151,6 +156,11 @@ payload = {
         "migration_source_inventory": fixture["migration_source_inventory"],
         "synthetic_conversation": fixture["synthetic_conversation"],
     },
+    "interrupted_upgrade_recovery_probe": (
+        json.loads(Path(os.environ["INTERRUPTED_UPGRADE_RECEIPT"]).read_text(encoding="utf-8"))
+        if Path(os.environ["INTERRUPTED_UPGRADE_RECEIPT"]).is_file()
+        else None
+    ),
     "data_ownership_marker": {
         "sha256_before_upgrade": os.environ["OWNER_HASH_BEFORE"],
         "uid_gid_before_upgrade": os.environ["OWNER_UIDGID_BEFORE"],
@@ -163,6 +173,7 @@ payload = {
         "A separate current-source intermediate-revision fixture is also upgraded to retain the pre-existing scenario.",
         "The published baseline package is not bound to its upstream source commit in package metadata.",
         "No production database, model, or model download was used.",
+        "The interruption probe kills only its own migration subprocess after one observed schema DDL; it does not simulate power loss or interrupted dpkg unpack/configuration.",
     ],
 }
 target.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
@@ -265,6 +276,20 @@ ownership_marker_sha_after=$(sha256sum "$ownership_marker" | cut -d' ' -f1)
 ownership_marker_owner_after=$(stat -c '%u:%g:%a' "$ownership_marker")
 [[ "$ownership_marker_sha_after" == "$ownership_marker_sha_before" ]]
 [[ "$ownership_marker_owner_after" == "$ownership_marker_owner_before" ]]
+test ! -e "$interrupted_upgrade_receipt" && test ! -L "$interrupted_upgrade_receipt"
+unshare --net env -i \
+  PATH=/usr/bin:/bin \
+  HOME="$migration_home" TMPDIR="$migration_home" LANG=C.UTF-8 LC_ALL=C.UTF-8 \
+  XDG_CONFIG_HOME="$migration_home/config" XDG_DATA_HOME="$migration_home/data" \
+  XDG_CACHE_HOME="$migration_home/cache" XDG_STATE_HOME="$migration_home/state" \
+  XDG_RUNTIME_DIR="$migration_home/runtime" \
+  HF_HUB_OFFLINE=1 HF_DATASETS_OFFLINE=1 TRANSFORMERS_OFFLINE=1 CUDA_VISIBLE_DEVICES= \
+  /usr/bin/python3 scripts/probe_core_interrupted_upgrade.py \
+    --fixture-db "$fixture_db" \
+    --fixture-record "$fixture_record" \
+    --output "$interrupted_upgrade_receipt"
+[[ "$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1]))["child_exit_code"])' "$interrupted_upgrade_receipt")" == "-9" ]]
+interrupted_upgrade_status=passed
 candidate_upgrade_status=passed
 
 [[ ! -e "$dropin" && ! -L "$dropin" ]] || { echo "refusing existing smoke drop-in: $dropin" >&2; exit 1; }
