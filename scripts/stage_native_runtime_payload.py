@@ -132,7 +132,7 @@ def _write_tree_checksums(root: Path) -> dict[str, str]:
     for path in sorted(root.rglob("*")):
         if path.is_symlink():
             raise PayloadStageError("staged native runtime contains a symlink")
-        if path.is_file() and path.name != "SHA256SUMS":
+        if path.is_file() and path != root / "SHA256SUMS":
             rows[path.relative_to(root).as_posix()] = _sha256(path)
     checksum_path = root / "SHA256SUMS"
     checksum_path.write_text(

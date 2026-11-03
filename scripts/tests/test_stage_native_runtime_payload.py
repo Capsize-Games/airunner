@@ -25,6 +25,7 @@ from scripts.tests.test_stage_cuda_runtime_profile import (
     SOURCE_COMMIT,
     SOURCE_REPOSITORY,
     SOURCE_TREE,
+    _manifest as _cuda_manifest,
 )
 
 
@@ -63,6 +64,18 @@ def _inputs(tmp_path: Path) -> tuple[Path, Path, Path, Path, Path]:
 
 def test_stages_both_profiles_and_writes_reproducible_receipt(tmp_path: Path) -> None:
     cpu, checksums, tag, cuda, pin = _inputs(tmp_path)
+    nested_checksums = b"fixture inventory retained from the native producer\n"
+    manifest = json.loads(_cuda_manifest())
+    manifest["files"].append({
+        "path": "SHA256SUMS",
+        "sha256": hashlib.sha256(nested_checksums).hexdigest(),
+        "mode": 0o644,
+    })
+    cuda_digest = _cuda_archive(
+        cuda, manifest=json.dumps(manifest).encode(),
+        payload_edits={"SHA256SUMS": nested_checksums},
+    )
+    _cuda_pin(pin, cuda_digest)
     output = tmp_path / "native-runtime" / "payload"
     output.parent.mkdir()
 
@@ -94,6 +107,13 @@ def test_stages_both_profiles_and_writes_reproducible_receipt(tmp_path: Path) ->
         timeout=10,
     )
     assert "OK" in checksum.stdout
+    (profile / "SHA256SUMS").write_bytes(b"changed after staging\n")
+    changed = subprocess.run(
+        ["sha256sum", "-c", "SHA256SUMS"], cwd=output,
+        capture_output=True, text=True, timeout=10,
+    )
+    assert changed.returncode != 0
+    assert "share/airunner/native-runtimes/cuda-sm120a/SHA256SUMS: FAILED" in changed.stdout
 
 
 def test_full_profile_requirement_fails_before_cpu_archive_access(tmp_path: Path) -> None:
