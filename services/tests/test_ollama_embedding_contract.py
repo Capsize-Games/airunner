@@ -2,6 +2,10 @@
 
 from __future__ import annotations
 
+import asyncio
+from concurrent.futures import Future
+import threading
+import time
 from types import SimpleNamespace
 from typing import Any
 
@@ -9,8 +13,11 @@ import pytest
 from fastapi import HTTPException
 
 from airunner_services.api.routes.legacy_ollama_compat import (
-    ollama_embed,
-    ollama_embeddings,
+    ollama_embed as _ollama_embed_route,
+    ollama_embeddings as _ollama_embeddings_route,
+)
+from airunner_services.api.routes.ollama_embedding_helpers import (
+    handle_ollama_embedding_async,
 )
 from airunner_services.llm.companion.embeddings import EmbeddingModelIdentity
 from airunner_services.runtimes.local_embeddings import LocalEmbeddingClient
@@ -18,6 +25,16 @@ from airunner_services.runtimes import e5_model_identity as e5_identity_module
 from airunner_services.runtimes.e5_model_identity import E5ModelIdentity, VerifiedE5Embedder
 
 _DIMENSION = 1024
+
+
+def ollama_embed(body: dict, req):
+    """Run the async HTTP endpoint directly in synchronous contract tests."""
+    return asyncio.run(_ollama_embed_route(body, req))
+
+
+def ollama_embeddings(body: dict, req):
+    """Run the async legacy HTTP endpoint in synchronous contract tests."""
+    return asyncio.run(_ollama_embeddings_route(body, req))
 
 
 class _FakeLocalEmbedder:
@@ -86,6 +103,62 @@ def test_api_embed_uses_local_provider_and_ollama_batch_shape() -> None:
     assert not {"total_duration", "load_duration", "prompt_eval_count"} & (
         response.keys()
     )
+
+
+def test_injected_embedder_does_not_block_the_async_event_loop() -> None:
+    embedder = _FakeLocalEmbedder()
+    inference_started = threading.Event()
+    allow_inference = threading.Event()
+    event_loop_progressed = threading.Event()
+    observed_progress_before_release = []
+
+    def blocking_embed_documents(texts: list[str]) -> list[list[float]]:
+        embedder.calls.append(list(texts))
+        inference_started.set()
+        assert allow_inference.wait(timeout=3)
+        return embedder.vectors[: len(texts)]
+
+    embedder.embed_documents = blocking_embed_documents
+    request = _request(embedder)
+
+    def release_after_observing_blocked_inference() -> None:
+        if inference_started.wait(timeout=3):
+            time.sleep(0.1)
+            observed_progress_before_release.append(
+                event_loop_progressed.is_set()
+            )
+        allow_inference.set()
+
+    releaser = threading.Thread(
+        target=release_after_observing_blocked_inference
+    )
+    releaser.start()
+
+    async def _run_route_and_heartbeat() -> dict[str, Any]:
+        route_task = asyncio.create_task(
+            handle_ollama_embedding_async(
+                {"input": "blocked but isolated"}, request, legacy=False
+            )
+        )
+
+        async def _heartbeat() -> None:
+            await asyncio.sleep(0.02)
+            event_loop_progressed.set()
+
+        heartbeat_task = asyncio.create_task(_heartbeat())
+        response = await route_task
+        await heartbeat_task
+        return response
+
+    try:
+        response = asyncio.run(_run_route_and_heartbeat())
+    finally:
+        allow_inference.set()
+        releaser.join(timeout=3)
+
+    assert not releaser.is_alive()
+    assert observed_progress_before_release == [True]
+    assert response["embeddings"] == embedder.vectors[:1]
 
 
 def test_legacy_embeddings_uses_prompt_and_single_vector_shape() -> None:
@@ -255,6 +328,39 @@ def test_initialized_non_e5_model_is_unavailable(tmp_path) -> None:
         ollama_embed({"input": "hello"}, request)
 
     assert error.value.status_code == 503
+
+
+def test_worker_route_cancels_pending_embedding_on_client_cancellation() -> None:
+    class _Worker:
+        def __init__(self):
+            self.future = Future()
+            self.cancelled = []
+
+        def submit_embedding_documents(self, _texts):
+            return "request-1", self.future
+
+        def cancel_embedding_request(self, request_id):
+            self.cancelled.append(request_id)
+            return self.future.cancel()
+
+    worker = _Worker()
+    request = _request(None, injected=False)
+    request.app.state.airunner_app._llm_generate_worker = worker
+
+    async def _cancel_pending_request():
+        task = asyncio.create_task(
+            handle_ollama_embedding_async(
+                {"input": ["real request"]}, request, legacy=False
+            )
+        )
+        await asyncio.sleep(0)
+        task.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await task
+
+    asyncio.run(_cancel_pending_request())
+    assert worker.cancelled == ["request-1"]
+    assert worker.future.cancelled()
 
 
 @pytest.mark.parametrize("value", [float("nan"), float("inf"), -float("inf")])

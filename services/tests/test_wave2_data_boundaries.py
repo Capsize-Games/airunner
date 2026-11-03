@@ -187,6 +187,10 @@ def test_per_document_index_consumes_zim_batches_incrementally(
         def _get_doc_index_dir(_doc_id, _path):
             return str(tmp_path / "index")
 
+        @staticmethod
+        def _get_legacy_doc_index_dir(_doc_id, _path):
+            return str(tmp_path / "legacy-index")
+
         def _update_registry_entry(self, doc_id, path, count):
             self.updated = (doc_id, path, count)
 

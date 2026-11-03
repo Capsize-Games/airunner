@@ -32,7 +32,7 @@ from .legacy_llm_observer import (
     LegacyCompletionObserver,
     cancel_owned_llm_request,
 )
-from .ollama_embedding_helpers import handle_ollama_embedding
+from .ollama_embedding_helpers import handle_ollama_embedding_async
 from .ollama_model_helpers import ollama_show_metadata
 from .ollama_model_helpers import ollama_show_unknown_metadata
 from .ollama_model_helpers import resolve_ollama_model
@@ -835,15 +835,15 @@ def _ollama_generate_error(model: str, message: str) -> dict[str, Any]:
 
 
 @router.post("/api/embed")
-def ollama_embed(body: dict[str, Any], req: Request) -> dict[str, Any]:
+async def ollama_embed(body: dict[str, Any], req: Request) -> dict[str, Any]:
     """Return `{model, embeddings}` for one or many `input` texts."""
-    return handle_ollama_embedding(body, req, legacy=False)
+    return await handle_ollama_embedding_async(body, req, legacy=False)
 
 
 @router.post("/api/embeddings")
-def ollama_embeddings(body: dict[str, Any], req: Request) -> dict[str, Any]:
+async def ollama_embeddings(body: dict[str, Any], req: Request) -> dict[str, Any]:
     """Return `{embedding}` for the legacy single `prompt` contract."""
-    return handle_ollama_embedding(body, req, legacy=True)
+    return await handle_ollama_embedding_async(body, req, legacy=True)
 
 
 @router.post("/api/pull")

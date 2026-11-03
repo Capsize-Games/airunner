@@ -3,6 +3,7 @@
 import gc
 import os
 import tempfile
+from contextlib import nullcontext
 from typing import Any, Dict, Iterable, List, Optional
 
 from bs4 import BeautifulSoup
@@ -110,6 +111,13 @@ class RAGLifecycleMixin:
         to free GPU memory. Use this when switching to finetune mode or
         shutting down.
         """
+        activity_lock = getattr(self, "runtime_activity_lock", None)
+        guard = activity_lock if activity_lock is not None else nullcontext()
+        with guard:
+            return self._unload_rag_locked()
+
+    def _unload_rag_locked(self):
+        """Release RAG state while holding the manager activity lock."""
         self.logger.debug("Unloading RAG...")
         self._is_unloading = True
         try:

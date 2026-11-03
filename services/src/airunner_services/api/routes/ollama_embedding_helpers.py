@@ -8,14 +8,20 @@ Large model path; it never touches the lazy ``llm.embedding`` property.
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import os
 from pathlib import Path
 from typing import Any
 
 from fastapi import HTTPException, Request
+from starlette.concurrency import run_in_threadpool
 
-from airunner_services.runtimes.embedding_contracts import EmbeddingModelIdentity
+from airunner_services.runtimes.embedding_contracts import (
+    EmbeddingModelIdentity,
+    EmbeddingWorkerCapacityError,
+    EmbeddingWorkerUnavailableError,
+)
 from airunner_services.runtimes.e5_model_identity import (
     E5ModelIdentity,
     canonical_e5_space_fingerprint,
@@ -152,9 +158,85 @@ def handle_ollama_embedding(
     except Exception as exc:
         logger.warning("Local embedding request failed: %s", exc)
         raise _unavailable() from exc
+    return _embedding_response(client.identity.model_id, vectors, legacy=legacy)
+
+
+def _embedding_response(
+    model_id: str, vectors: list[list[float]], *, legacy: bool
+) -> dict[str, Any]:
+    """Build the current or legacy Ollama-compatible response shape."""
     if legacy:
         return {"embedding": vectors[0]}
-    return {"model": client.identity.model_id, "embeddings": vectors}
+    return {"model": model_id, "embeddings": vectors}
 
 
-__all__ = ["handle_ollama_embedding"]
+async def handle_ollama_embedding_async(
+    body: dict[str, Any], req: Request, *, legacy: bool
+) -> dict[str, Any]:
+    """Run daemon-owned embedding work on the existing LLM worker queue."""
+    inputs = _embedding_inputs(body, legacy=legacy)
+    requested_model = body.get("model")
+    if requested_model is not None and (
+        not isinstance(requested_model, str) or not requested_model.strip()
+    ):
+        raise _invalid_request("invalid_embed_model")
+
+    # Explicit client injection remains available to compatible embedders.
+    # ServiceApp's normal path uses its model-owning worker below.
+    if getattr(req.app.state, "local_embedding_client", None) is not None:
+        return await run_in_threadpool(
+            handle_ollama_embedding, body, req, legacy=legacy
+        )
+    if os.environ.get("AIRUNNER_EMBED_ENDPOINT", "").strip():
+        raise _unavailable()
+
+    try:
+        app = get_airunner_app(req)
+    except HTTPException:
+        return await run_in_threadpool(
+            handle_ollama_embedding, body, req, legacy=legacy
+        )
+    worker = getattr(app, "_llm_generate_worker", None)
+    if worker is None:
+        return await run_in_threadpool(
+            handle_ollama_embedding, body, req, legacy=legacy
+        )
+    if requested_model is not None and requested_model != E5_LARGE_MODEL_ID:
+        raise HTTPException(status_code=404, detail="model_not_found")
+
+    try:
+        request_id, future = worker.submit_embedding_documents(inputs)
+    except EmbeddingWorkerCapacityError as exc:
+        raise HTTPException(
+            status_code=429, detail="capacity_exceeded"
+        ) from exc
+    except EmbeddingWorkerUnavailableError as exc:
+        raise _unavailable() from exc
+    except Exception as exc:
+        logger.warning("Local embedding worker is unavailable: %s", exc)
+        raise _unavailable() from exc
+
+    try:
+        identity, vectors = await asyncio.wait_for(
+            asyncio.wrap_future(future), timeout=120
+        )
+    except asyncio.CancelledError:
+        worker.cancel_embedding_request(request_id)
+        raise
+    except asyncio.TimeoutError as exc:
+        worker.cancel_embedding_request(request_id)
+        raise HTTPException(
+            status_code=504, detail="embedding_worker_timeout"
+        ) from exc
+    except Exception as exc:
+        logger.warning("Local embedding worker failed: %s", type(exc).__name__)
+        raise _unavailable() from exc
+
+    if requested_model is not None and requested_model != identity.model_id:
+        raise HTTPException(status_code=404, detail="model_not_found")
+    if len(vectors) != len(inputs):
+        raise _unavailable()
+    return _embedding_response(identity.model_id, vectors, legacy=legacy)
+
+
+__all__ = ["handle_ollama_embedding", "handle_ollama_embedding_async"]

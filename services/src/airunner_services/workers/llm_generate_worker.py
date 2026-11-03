@@ -5,6 +5,7 @@ import queue
 import threading
 import time
 import uuid
+from concurrent.futures import Future, InvalidStateError
 from typing import Dict, Optional
 
 from airunner_services.llm.workers.mixins import ModelDownloadMixin
@@ -22,6 +23,14 @@ from airunner_services.model_management.llm_model_manager import (
 from airunner_services.utils.application.enum_resolver import signal_code_proxy
 from airunner_services.utils.application.runtime_primitives import QTimer
 from airunner_services.workers.worker import Worker
+from airunner_services.runtimes.embedding_contracts import (
+	EmbeddingWorkerCapacityError,
+	EmbeddingWorkerUnavailableError,
+)
+from airunner_services.runtimes.local_embeddings import (
+	MAX_EMBED_TEXT_CHARS,
+	verified_e5_client_for_manager,
+)
 
 
 SignalCode = signal_code_proxy(
@@ -96,6 +105,9 @@ class LLMGenerateWorker(
 		self._active_request_lock = threading.RLock()
 		self._active_llm_request_id = None
 		self._cancelled_request_ids: set[str] = set()
+		self._embedding_requests: dict[str, dict] = {}
+		self._embedding_requests_lock = threading.Lock()
+		self._accept_embedding_requests = True
 		self._pending_unload_request: Optional[Dict] = None
 		self.manager_thread: Optional[object] = None
 		self.download_manager = None
@@ -113,6 +125,113 @@ class LLMGenerateWorker(
 		self._auto_unload_enabled = (
 			os.environ.get("AIRUNNER_LLM_AUTO_UNLOAD", "0") == "1"
 		)
+
+	def submit_embedding_documents(
+		self, texts: list[str]
+	) -> tuple[str, Future]:
+		"""Queue an E5 embedding request on the model-owning worker."""
+		if not isinstance(texts, list) or not 1 <= len(texts) <= 64:
+			raise ValueError("embedding batch size is invalid")
+		if any(
+			not isinstance(text, str)
+			or not text.strip()
+			or len(text) > MAX_EMBED_TEXT_CHARS
+			for text in texts
+		):
+			raise ValueError("embedding input is invalid")
+
+		request_id = uuid.uuid4().hex
+		future = Future()
+		cancel_event = threading.Event()
+		with self._embedding_requests_lock:
+			if not self._accept_embedding_requests:
+				raise EmbeddingWorkerUnavailableError(
+					"LLM worker is shutting down"
+				)
+			if len(self._embedding_requests) >= 4:
+				raise EmbeddingWorkerCapacityError(
+					"LLM embedding queue is full"
+				)
+			self._embedding_requests[request_id] = {
+				"future": future,
+				"cancel_event": cancel_event,
+			}
+			try:
+				self.add_to_queue(
+					{
+						"_message_type": "embedding",
+						"request_id": request_id,
+						"texts": list(texts),
+					}
+				)
+			except Exception:
+				self._embedding_requests.pop(request_id, None)
+				raise
+		return request_id, future
+
+	def cancel_embedding_request(self, request_id: str) -> bool:
+		"""Cancel a queued embedding or mark active work abandoned."""
+		with self._embedding_requests_lock:
+			task = self._embedding_requests.get(request_id)
+			if task is None:
+				return False
+			task["cancel_event"].set()
+			future = task["future"]
+			cancelled_before_start = future.cancel()
+			if cancelled_before_start:
+				with self._queue_lock:
+					retained = []
+					while True:
+						try:
+							index = self.queue.get_nowait()
+						except queue.Empty:
+							break
+						message = self.items.get(index)
+						if (
+							isinstance(message, dict)
+							and message.get("_message_type") == "embedding"
+							and message.get("request_id") == request_id
+						):
+							self.items.pop(index, None)
+						else:
+							retained.append(index)
+					for index in retained:
+						self.queue.put(index)
+					self._embedding_requests.pop(request_id, None)
+			return True
+
+	def _handle_embedding_message(self, message: dict) -> None:
+		"""Embed on the owning worker thread using its shared RAG model."""
+		request_id = message.get("request_id")
+		with self._embedding_requests_lock:
+			task = self._embedding_requests.get(request_id)
+			if task is None or task["cancel_event"].is_set():
+				return
+			future = task["future"]
+			if not future.set_running_or_notify_cancel():
+				self._embedding_requests.pop(request_id, None)
+				return
+
+		try:
+			manager = self.model_manager
+			with manager.runtime_activity_lock:
+				client = verified_e5_client_for_manager(manager)
+				vectors = client.embed_documents(message["texts"])
+			if task["cancel_event"].is_set():
+				future.set_exception(EmbeddingWorkerUnavailableError(
+					"embedding request was cancelled"
+				))
+			else:
+				future.set_result((client.identity, vectors))
+		except Exception as exc:
+			if not future.done():
+				try:
+					future.set_exception(exc)
+				except InvalidStateError:
+					pass
+		finally:
+			with self._embedding_requests_lock:
+				self._embedding_requests.pop(request_id, None)
 
 	@property
 	def use_openrouter(self) -> bool:
@@ -465,6 +584,11 @@ class LLMGenerateWorker(
 
 	def stop(self) -> None:
 		"""Stop the queue loop, the inactivity timer, and finish."""
+		with self._embedding_requests_lock:
+			self._accept_embedding_requests = False
+			request_ids = list(self._embedding_requests)
+		for request_id in request_ids:
+			self.cancel_embedding_request(request_id)
 		if self._inactivity_timer is not None:
 			self._inactivity_timer.stop()
 		super().stop()
@@ -705,7 +829,9 @@ class LLMGenerateWorker(
 
 	def _handle_control_message(self, message: Dict, message_type: str | None) -> bool:
 		"""Dispatch model and download lifecycle messages away from requests."""
-		if message_type == "llm_load":
+		if message_type == "embedding":
+			self._handle_embedding_message(message)
+		elif message_type == "llm_load":
 			self.on_llm_load_model_signal(message.get("data", {}))
 		elif message_type == "llm_unload":
 			self.on_llm_on_unload_signal(message.get("data", {}))

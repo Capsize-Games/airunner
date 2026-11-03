@@ -90,6 +90,7 @@ class LLMModelManager(
 
 	def __init__(self, *args, **kwargs):
 		self._request_state_lock = threading.RLock()
+		self._runtime_activity_lock = threading.RLock()
 		super().__init__(*args, **kwargs)
 		self.llm_request: Optional[Any] = None
 		RAGMixin.__init__(self)
@@ -103,6 +104,11 @@ class LLMModelManager(
 		self._last_load_error = None
 		self._active_gguf_runtime_profile = None
 		apply_cudnn_benchmark(self.memory_settings)
+
+	@property
+	def runtime_activity_lock(self):
+		"""Return the manager-owned lock shared by model and RAG activity."""
+		return self._runtime_activity_lock
 
 	def _requested_gguf_runtime_profile(self) -> Optional[str]:
 		"""Return the normalized GGUF runtime profile for one request."""
@@ -141,6 +147,11 @@ class LLMModelManager(
 			)
 
 	def load(self) -> None:
+		"""Load under the same manager lock used by embedding inference."""
+		with self._runtime_activity_lock:
+			return self._load_model_locked()
+
+	def _load_model_locked(self) -> None:
 		"""Load the LLM model and its supporting orchestration components."""
 		current_status = self.model_status[ModelType.LLM]
 		self.logger.info(
@@ -290,6 +301,11 @@ class LLMModelManager(
 		return str(model_info.get("name", "") or model_id)
 
 	def unload(self) -> None:
+		"""Unload under the same manager lock used by embedding inference."""
+		with self._runtime_activity_lock:
+			return self._unload_model_locked()
+
+	def _unload_model_locked(self) -> None:
 		"""Unload all LLM components and clear reserved resources."""
 		if self.model_status[ModelType.LLM] in (
 			ModelStatus.LOADING,

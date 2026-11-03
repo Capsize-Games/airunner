@@ -23,6 +23,7 @@ and the identity/error contracts are defined in the neutral runtime layer.
 from __future__ import annotations
 
 import math
+from pathlib import Path
 from typing import Any, List
 
 from airunner_services.runtimes.embedding_contracts import (
@@ -30,6 +31,10 @@ from airunner_services.runtimes.embedding_contracts import (
     EmbeddingModelIdentity,
     ServiceError,
     ServiceErrorCode,
+)
+from airunner_services.runtimes.e5_model_identity import (
+    E5ModelIdentity,
+    canonical_e5_space_fingerprint,
 )
 
 #: Selected local embedding model (R02 manifest, hardware-models.md §2;
@@ -52,6 +57,9 @@ MAX_EMBED_TEXT_CHARS = 8 * 1024
 
 #: Largest batch embedded in one embed_documents call.
 MAX_EMBED_BATCH_SIZE = 256
+E5_LARGE_RELATIVE_PATH = Path(
+    "text/models/llm/embedding/intfloat/e5-large"
+)
 
 
 class LocalEmbeddingClient:
@@ -118,6 +126,42 @@ class LocalEmbeddingClient:
         return values
 
 
+def verified_e5_client_for_manager(model_manager: Any) -> LocalEmbeddingClient:
+    """Return the configured RAG manager's already-verified E5 client.
+
+    Accessing ``model_manager.embedding`` deliberately uses the existing lazy
+    RAG loader and cache. The API calls this on the owning LLM worker so model
+    initialization and inference stay ordered with generation and lifecycle
+    messages.
+    """
+    path_settings = getattr(model_manager, "path_settings", None)
+    base_path = getattr(path_settings, "base_path", None)
+    embedder = getattr(model_manager, "embedding", None)
+    if not base_path or embedder is None:
+        raise ValueError("configured local E5 model is unavailable")
+
+    model_name = getattr(embedder, "model_name", None)
+    verified_identity = getattr(embedder, "verified_identity", None)
+    if not model_name or not isinstance(verified_identity, E5ModelIdentity):
+        raise ValueError("configured local E5 model identity is unavailable")
+
+    expected_path = (Path(base_path).expanduser() / E5_LARGE_RELATIVE_PATH).resolve()
+    actual_path = Path(model_name).expanduser().resolve()
+    if actual_path != expected_path:
+        raise ValueError("configured embedding model is not E5 Large")
+
+    expected_identity = EmbeddingModelIdentity(
+        model_id=E5_LARGE_MODEL_ID,
+        revision=E5_LARGE_REVISION,
+        dimension=1024,
+        space_fingerprint=canonical_e5_space_fingerprint(),
+    )
+    identity = verified_identity.to_embedding_model_identity()
+    if identity != expected_identity:
+        raise ValueError("configured E5 model identity does not match")
+    return LocalEmbeddingClient(embedder, identity)
+
+
 def _type_has_attribute(embedder_type: type, attribute: str) -> bool:
     """Return True when one attribute is defined on the embedder type.
 
@@ -156,4 +200,5 @@ __all__ = [
     "E5_LARGE_MODEL_ID",
     "E5_LARGE_REVISION",
     "LocalEmbeddingClient",
+    "verified_e5_client_for_manager",
 ]

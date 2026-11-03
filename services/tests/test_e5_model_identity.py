@@ -46,6 +46,44 @@ def test_manifest_rejects_unexpected_inputs_and_symlinks(tmp_path):
         verify_e5_model_directory(tmp_path, expected_files=expected)
 
 
+def test_exact_sentence_transformers_metadata_does_not_change_identity(tmp_path):
+    expected = _synthetic_manifest(tmp_path)
+    without_metadata = verify_e5_model_directory(
+        tmp_path, expected_files=expected
+    )
+
+    metadata = tmp_path / "config_sentence_transformers.json"
+    metadata.write_bytes(b'{\n  "__version__": {}\n}\n')
+    with_metadata = verify_e5_model_directory(tmp_path, expected_files=expected)
+
+    assert with_metadata == without_metadata
+    assert with_metadata.file_sha256 == without_metadata.file_sha256
+
+
+@pytest.mark.parametrize(
+    "payload",
+    [
+        b'{\n  "__version__": {"sentence_transformers": "5.6.1"}\n}\n',
+        b'{\n  "prompts": {"query": "attacker controlled"}\n}\n',
+    ],
+)
+def test_altered_sentence_transformers_metadata_is_rejected(tmp_path, payload):
+    expected = _synthetic_manifest(tmp_path)
+    (tmp_path / "config_sentence_transformers.json").write_bytes(payload)
+
+    with pytest.raises(E5ModelIdentityError, match="size mismatch|digest mismatch"):
+        verify_e5_model_directory(tmp_path, expected_files=expected)
+
+
+def test_sentence_transformers_metadata_symlink_is_rejected(tmp_path):
+    expected = _synthetic_manifest(tmp_path)
+    target = tmp_path / "config.json"
+    (tmp_path / "config_sentence_transformers.json").symlink_to(target)
+
+    with pytest.raises(E5ModelIdentityError, match="symlink"):
+        verify_e5_model_directory(tmp_path, expected_files=expected)
+
+
 def test_verified_adapter_adds_e5_prefixes_once():
     expected = {"config.json": (1, hashlib.sha256(b"x").hexdigest())}
     # The temporary manifest can be synthetic; this test exercises only the

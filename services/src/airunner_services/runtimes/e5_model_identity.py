@@ -65,6 +65,15 @@ E5_MODEL_FILES: dict[str, tuple[int, str]] = {
 }
 
 _NON_RUNTIME_FILES = frozenset({"README.md"})
+# One owner-local compatibility file is emitted by Sentence Transformers 5.6.1.
+# Its exact empty version mapping is read as optional metadata, ignored by the
+# pinned loader, and does not contribute to the E5 runtime identity.
+_REVIEWED_NON_RUNTIME_FILES: dict[str, tuple[int, str]] = {
+    "config_sentence_transformers.json": (
+        24,
+        "bf6a7016c2a0706a987d180e3a323823a5754214261f2c20beb5d4fcec7aad23",
+    ),
+}
 _HASH_BLOCK_BYTES = 1024 * 1024
 
 
@@ -210,7 +219,12 @@ def verify_e5_model_directory(
     if not root.is_dir():
         raise E5ModelIdentityError("E5 model path is not a directory")
 
-    allowed = set(required) | set(optional) | set(_NON_RUNTIME_FILES)
+    allowed = (
+        set(required)
+        | set(optional)
+        | set(_NON_RUNTIME_FILES)
+        | set(_REVIEWED_NON_RUNTIME_FILES)
+    )
     actual_files: set[str] = set()
     for entry in root.rglob("*"):
         relative = entry.relative_to(root).as_posix()
@@ -231,6 +245,20 @@ def verify_e5_model_directory(
         raise E5ModelIdentityError(
             "unexpected E5 files: " + ", ".join(unexpected)
         )
+
+    # Validate narrowly reviewed loader metadata without adding it to the
+    # runtime file identity below. This preserves the same identity for the
+    # canonical nine runtime files whether or not the stub is present.
+    for relative in sorted(set(_REVIEWED_NON_RUNTIME_FILES) & actual_files):
+        expected_size, expected_sha256 = _REVIEWED_NON_RUNTIME_FILES[relative]
+        digest, actual_size = _hash_regular_file(root / relative)
+        if actual_size != expected_size:
+            raise E5ModelIdentityError(
+                f"E5 file size mismatch for {relative}: expected "
+                f"{expected_size}, found {actual_size}"
+            )
+        if digest != expected_sha256:
+            raise E5ModelIdentityError(f"E5 file digest mismatch: {relative}")
 
     file_hashes: list[tuple[str, str]] = []
     for relative in sorted(set(required) | (set(optional) & actual_files)):

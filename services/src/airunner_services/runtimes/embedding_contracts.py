@@ -62,9 +62,19 @@ class ServiceError(Exception):
         super().__init__(error.code)
 
 
+class EmbeddingWorkerUnavailableError(RuntimeError):
+    """The owning model worker cannot accept embedding work."""
+
+
+class EmbeddingWorkerCapacityError(RuntimeError):
+    """The bounded model-worker embedding queue is full."""
+
+
 __all__ = [
     "ERROR_EMBEDDING_SPACE_MISMATCH",
     "EmbeddingModelIdentity",
+    "EmbeddingWorkerCapacityError",
+    "EmbeddingWorkerUnavailableError",
     "ServiceError",
     "ServiceErrorCode",
 ]
