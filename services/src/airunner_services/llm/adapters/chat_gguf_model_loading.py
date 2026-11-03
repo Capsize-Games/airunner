@@ -57,6 +57,11 @@ def load_model(adapter: Any) -> None:
         llama_kwargs = _build_llama_kwargs(adapter, llama_tuning)
         _log_llama_tuning(adapter, llama_tuning)
         _load_llama_runtime_instance(adapter, llama_cls, llama_kwargs)
+        try:
+            configure_chat_handler(adapter)
+        except Exception as setup_error:
+            _discard_runtime_after_handler_failure(adapter, setup_error)
+            raise
     except (ModelLoadError, UnsupportedGGUFArchitectureError):
         raise
     except Exception as exc:
@@ -64,9 +69,26 @@ def load_model(adapter: Any) -> None:
             f"Failed to load GGUF model from {adapter.model_path}: {exc}",
             model_path=adapter.model_path,
         ) from exc
-    configure_chat_handler(adapter)
     _log_estimated_kv_cache(adapter)
     adapter.logger.info("✓ GGUF model loaded successfully")
+
+
+def _discard_runtime_after_handler_failure(
+    adapter: Any,
+    setup_error: Exception,
+) -> None:
+    """Detach and close a newly loaded runtime whose handler setup failed."""
+    llama = adapter._llama
+    adapter._llama = None
+    try:
+        close = getattr(llama, "close", None)
+        if callable(close):
+            close()
+    except Exception as close_error:
+        setup_error.add_note(
+            "Closing the GGUF runtime after chat-handler setup also failed: "
+            f"{close_error}"
+        )
 
 
 def _prepare_runtime_load(adapter: Any) -> tuple[Any, bool]:

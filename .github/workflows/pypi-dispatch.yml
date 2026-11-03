@@ -198,6 +198,19 @@ jobs:
             services/tests/test_import_boundaries.py \
             services/tests/test_security_package_pins.py \
             services/tests/test_run_tests_optional_smoke.py \
+            services/tests/test_gguf_chat_handler_cpu_contract.py \
+            services/tests/test_e5_model_identity.py \
+            services/tests/test_e5_manager_runtime_lock.py \
+            services/tests/test_embedding_space_fingerprint.py \
+            services/tests/test_rag_reindex_transaction.py \
+            services/tests/test_rag_reindex_worker.py \
+            services/tests/test_rag_reindex_route.py \
+            services/tests/test_rag_dependency_isolation.py \
+            services/tests/test_rag_service_interface.py \
+            services/tests/test_local_fallback_loaded_metadata.py \
+            services/tests/test_ollama_embedding_contract.py \
+            services/tests/test_ollama_runtime_metadata.py \
+            services/tests/test_llm_worker_embedding_queue.py \
             -o addopts='' -q --junitxml=required-checks.xml
         env:
           AIRUNNER_HEADLESS: "1"

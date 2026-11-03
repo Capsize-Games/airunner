@@ -2,16 +2,12 @@
 
 from __future__ import annotations
 
+import importlib
 import json
 import os
 from typing import Any
 
 from airunner_services.llm.provider_config import LLMProviderConfig
-
-try:
-    from llama_cpp import llama_chat_format
-except ImportError:
-    llama_chat_format = None
 
 try:
     from transformers import AutoTokenizer
@@ -139,20 +135,36 @@ def chat_template_repo_id(adapter: Any) -> str | None:
 
 def build_hf_chat_handler(adapter: Any, repo_id: str) -> Any | None:
     """Build one llama.cpp chat handler from an HF tokenizer template."""
-    if AutoTokenizer is None or llama_chat_format is None:
+    if AutoTokenizer is None:
+        return None
+    llama_chat_format = _load_llama_chat_format()
+    if llama_chat_format is None:
         return None
     tokenizer = load_chat_template_tokenizer(adapter, repo_id)
     if tokenizer is None:
         return None
     return llama_chat_format.chat_formatter_to_chat_completion_handler(
-        _format_messages_handler(tokenizer)
+        _format_messages_handler(tokenizer, llama_chat_format)
     )
 
 
-def _format_messages_handler(tokenizer: Any) -> Any:
+def _load_llama_chat_format() -> Any | None:
+    """Import the native formatter only when the HF fallback needs it."""
+    try:
+        return importlib.import_module("llama_cpp.llama_chat_format")
+    except ImportError:
+        return None
+
+
+def _format_messages_handler(tokenizer: Any, chat_format: Any) -> Any:
     """Return a llama.cpp formatter callback for one HF tokenizer."""
     def format_messages(messages: list[dict[str, Any]], **kwargs: Any) -> Any:
-        return _chat_formatter_response(tokenizer, _normalize_tool_call_arguments(messages), kwargs)
+        return _chat_formatter_response(
+            tokenizer,
+            _normalize_tool_call_arguments(messages),
+            kwargs,
+            chat_format,
+        )
 
     return format_messages
 
@@ -221,6 +233,7 @@ def _chat_formatter_response(
     tokenizer: Any,
     messages: list[dict[str, Any]],
     kwargs: dict[str, Any],
+    chat_format: Any,
 ) -> Any:
     """Return one llama.cpp chat formatter response from an HF tokenizer."""
     tokenizer.use_default_system_prompt = False
@@ -237,7 +250,7 @@ def _chat_formatter_response(
         **kwargs,
     )
     prompt = _strip_auto_opened_think_tag(prompt)
-    return llama_chat_format.ChatFormatterResponse(
+    return chat_format.ChatFormatterResponse(
         prompt=prompt,
         stop=str(tokenizer.eos_token or ""),
         added_special=True,
