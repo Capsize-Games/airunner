@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import hashlib
+import io
 import json
+import os
 import sys
 import tempfile
 import unittest
@@ -44,7 +46,80 @@ class FakeOpener:
         return FakeWheelResponse()
 
 
+class DurableResponse:
+    def __init__(self, url: str, payload: bytes) -> None:
+        self._url = url
+        self._payload = payload
+        self.headers = {"Content-Length": str(len(payload))}
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *_args) -> None:
+        return None
+
+    def geturl(self) -> str:
+        return self._url
+
+    def read(self, size: int) -> bytes:
+        payload, self._payload = self._payload[:size], self._payload[size:]
+        return payload
+
+
+class DurableOpener:
+    def __init__(self, response=None, error=None) -> None:
+        self.response = response
+        self.error = error
+
+    def open(self, request, timeout: int):
+        assert timeout == 120
+        if self.error is not None:
+            raise self.error
+        assert request.full_url == self.response.geturl()
+        return self.response
+
+
 class LinuxReleaseArtifactStagerTests(unittest.TestCase):
+    def _durable_fixture(self, root: Path, payload: bytes = b"verified wheel"):
+        filename = "demo_package-1.0-py3-none-any.whl"
+        digest = hashlib.sha256(payload).hexdigest()
+        url = f"https://github.com/Capsize-Games/airunner/releases/download/v6.1.9/{filename}"
+        lock = (
+            "demo-package==1.0 \\\n"
+            f"    --hash=sha256:{digest}\n"
+        )
+        lock_path = root / "requirements.txt"
+        lock_path.write_text(lock, encoding="utf-8")
+        row = {
+            "name": "demo-package",
+            "version": "1.0",
+            "filename": filename,
+            "sha256": digest,
+            "size_bytes": len(payload),
+            "source": {
+                "kind": "actions_artifact",
+                "repo": "Capsize-Games/airunner",
+                "artifact_id": 123,
+                "run_id": 456,
+                "artifact_name": "test-wheel-artifact",
+                "source_revision": "a" * 40,
+                "archive_sha256": "b" * 64,
+                "max_archive_bytes": 4096,
+                "durable_release_url": url,
+            },
+        }
+        manifest = {
+            "schema_version": 1,
+            "status": "candidate-only; not activated",
+            "durable_release_tag": "v6.1.9",
+            "selected_count": 1,
+            "selected_lock_sha256": hashlib.sha256(lock.encode()).hexdigest(),
+            "artifact_sources": [row],
+        }
+        manifest_path = root / "manifest.json"
+        manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+        return filename, payload, url, lock_path, manifest_path
+
     def test_selected_lock_binds_each_pin_and_wheel_hash(self) -> None:
         wheel_hash = hashlib.sha256(b"wheel").hexdigest()
         lock = f"demo-package==1.2.3 \\\n    --hash=sha256:{wheel_hash}\n"
@@ -132,6 +207,88 @@ class LinuxReleaseArtifactStagerTests(unittest.TestCase):
                 with self.assertRaisesRegex(stager.StageError, "download size or digest mismatch"):
                     stager.download_https("https://files.pythonhosted.org/demo.whl", target, spec)
             self.assertFalse(target.exists())
+
+    def test_published_durable_wheel_needs_no_actions_token_or_metadata(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            filename, payload, url, lock_path, manifest_path = self._durable_fixture(root)
+            output = root / "staged"
+            with mock.patch.dict(os.environ, {}, clear=True), \
+                    mock.patch.object(stager.urllib.request, "build_opener", return_value=DurableOpener(
+                        DurableResponse(url, payload)
+                    )), \
+                    mock.patch.object(stager, "_verify_action_groups", side_effect=AssertionError("Actions metadata requested")), \
+                    mock.patch.object(stager, "actions_zip", side_effect=AssertionError("Actions archive requested")):
+                receipt = stager.stage(manifest_path, lock_path, output)
+            self.assertEqual((output / filename).read_bytes(), payload)
+            self.assertEqual(receipt["wheels"][0]["source_kind"], "durable_release")
+            route = receipt["source_routes"][0]
+            self.assertEqual(route["selected_route"], "durable_release")
+            self.assertEqual(route["durable_release_url"], url)
+            self.assertEqual(route["original_actions_source"]["artifact_id"], 123)
+
+    def test_durable_404_falls_back_to_the_exact_actions_artifact(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            filename, payload, url, lock_path, manifest_path = self._durable_fixture(root)
+            output = root / "staged"
+            archive = io.BytesIO()
+            with zipfile.ZipFile(archive, "w") as zipped:
+                zipped.writestr(filename, payload)
+            archive.seek(0)
+            missing = urllib.error.HTTPError(url, 404, "not published", None, None)
+            with mock.patch.dict(os.environ, {"GH_TOKEN": "fixture-token"}, clear=True), \
+                    mock.patch.object(stager.urllib.request, "build_opener", return_value=DurableOpener(error=missing)), \
+                    mock.patch.object(stager, "_verify_action_groups", return_value={("Capsize-Games/airunner", 123): 8192}) as metadata, \
+                    mock.patch.object(stager, "actions_zip", return_value=archive) as actions:
+                receipt = stager.stage(manifest_path, lock_path, output)
+            self.assertEqual((output / filename).read_bytes(), payload)
+            self.assertEqual(receipt["wheels"][0]["source_kind"], "actions_artifact")
+            self.assertEqual(receipt["source_routes"][0]["selected_route"], "actions_artifact")
+            metadata.assert_called_once()
+            actions.assert_called_once()
+
+    def test_non_404_durable_error_does_not_fall_back(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            _filename, _payload, url, lock_path, manifest_path = self._durable_fixture(root)
+            output = root / "staged"
+            denied = urllib.error.HTTPError(url, 503, "upstream unavailable", None, None)
+            with mock.patch.dict(os.environ, {"GH_TOKEN": "fixture-token"}, clear=True), \
+                    mock.patch.object(stager.urllib.request, "build_opener", return_value=DurableOpener(error=denied)), \
+                    mock.patch.object(stager, "_verify_action_groups", side_effect=AssertionError("must not fall back")):
+                with self.assertRaisesRegex(stager.StageError, "HTTP 503"):
+                    stager.stage(manifest_path, lock_path, output)
+
+    def test_durable_hash_mismatch_does_not_fall_back(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            _filename, payload, url, lock_path, manifest_path = self._durable_fixture(root, b"verified")
+            output = root / "staged"
+            wrong = b"verifieD"
+            with mock.patch.dict(os.environ, {"GH_TOKEN": "fixture-token"}, clear=True), \
+                    mock.patch.object(stager.urllib.request, "build_opener", return_value=DurableOpener(
+                        DurableResponse(url, wrong)
+                    )), \
+                    mock.patch.object(stager, "_verify_action_groups", side_effect=AssertionError("must not fall back")):
+                with self.assertRaisesRegex(stager.StageError, "digest mismatch"):
+                    stager.stage(manifest_path, lock_path, output)
+            self.assertFalse((output / "demo_package-1.0-py3-none-any.whl").exists())
+
+    def test_all_durable_routes_are_validated_before_any_download(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            _filename, _payload, _url, lock_path, manifest_path = self._durable_fixture(root)
+            manifest = json.loads(manifest_path.read_text())
+            manifest["artifact_sources"][0]["source"]["durable_release_url"] = (
+                "https://github.com/Capsize-Games/airunner/releases/download/v6.1.8/demo_package-1.0-py3-none-any.whl"
+            )
+            manifest_path.write_text(json.dumps(manifest))
+            output = root / "staged"
+            with mock.patch.object(stager.urllib.request, "build_opener", side_effect=AssertionError("network before validation")):
+                with self.assertRaisesRegex(stager.StageError, "noncanonical durable"):
+                    stager.stage(manifest_path, lock_path, output)
+            self.assertFalse(output.exists())
 
     def test_failed_actions_wheel_hash_check_removes_partial_output(self) -> None:
         content = b"abc"

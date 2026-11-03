@@ -324,11 +324,15 @@ def _verify_checksum_manifest(paths: list[Path]) -> None:
             raise ReleaseIdentityError("release checksum manifest digest differs")
 
 
-def _require_promotion_groups(paths: list[Path], *, tag: str, source_sha: str) -> None:
+def _require_promotion_groups(
+    paths: list[Path], *, tag: str, source_sha: str, root: Path
+) -> None:
     names = {path.name for path in paths}
     by_group = {
         group: [path for path in paths if path.parent.name == group]
-        for group in ("python-dist", "sidecars", "linux-candidate", "debian")
+        for group in (
+            "python-dist", "sidecars", "linux-candidate", "debian", "runtime-wheels"
+        )
     }
     python_names = {path.name for path in by_group["python-dist"]}
     for distribution in ("airunner_services", "airunner_native"):
@@ -341,8 +345,27 @@ def _require_promotion_groups(paths: list[Path], *, tag: str, source_sha: str) -
             or len(distribution_names) != 2
         ):
             raise ReleaseIdentityError("promotion is missing a Python distribution")
-    if not by_group["sidecars"] or not by_group["linux-candidate"] or not by_group["debian"]:
+    if (
+        not by_group["sidecars"] or not by_group["linux-candidate"]
+        or not by_group["debian"] or not by_group["runtime-wheels"]
+    ):
         raise ReleaseIdentityError("promotion is missing a required asset group")
+    try:
+        from linux_release_wheel_assets import (
+            verify_assets as verify_runtime_wheel_assets,
+        )
+
+        verify_runtime_wheel_assets(
+            by_group["runtime-wheels"][0].parent,
+            source_manifest=root / "package/linux-release-v4-artifact-sources.json",
+            selected_lock=root / "package/constraints-linux-nvidia-cu129-linux-release.txt",
+            application_version=tag.removeprefix("v"),
+            source_sha=source_sha,
+        )
+    except (ImportError, OSError, ValueError) as exc:
+        raise ReleaseIdentityError(
+            "runtime wheel release assets do not match the reviewed pin and provenance"
+        ) from exc
     for name in ("runtime-sidecars-linux.tar.gz", "runtime-sidecars-windows.tar.gz"):
         if name not in names:
             raise ReleaseIdentityError("promotion is missing a verified sidecar archive")
@@ -432,7 +455,7 @@ def promote_release_assets(
         raise ReleaseIdentityError("release promotion requires its exact annotated version tag")
 
     paths = _asset_paths(asset_dirs, asset_files)
-    _require_promotion_groups(paths, tag=tag, source_sha=source_sha)
+    _require_promotion_groups(paths, tag=tag, source_sha=source_sha, root=root)
     manifest_paths = [path for path in paths if path.name == "airunner-apt-release.json"]
     if len(manifest_paths) != 1:
         raise ReleaseIdentityError("promotion needs exactly one Debian manifest")

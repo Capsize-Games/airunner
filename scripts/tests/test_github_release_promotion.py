@@ -18,6 +18,7 @@ _ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(_ROOT / "scripts"))
 
 import check_release_identity as guard  # noqa: E402
+import linux_release_wheel_assets as runtime_wheel_assets  # noqa: E402
 
 
 def _git(root: Path, *args: str) -> str:
@@ -36,16 +37,71 @@ def _fixture(tmp_path: Path) -> tuple[Path, str, list[Path], list[Path]]:
     _git(root, "init", "-q")
     _git(root, "config", "user.name", "Release Test")
     _git(root, "config", "user.email", "release-test@example.invalid")
-    _git(root, "add", "services/setup.py")
+    package = root / "package"
+    package.mkdir()
+    distributions = (
+        "llama-cpp-python", "nvidia-nvshmem-cu12", "torchaudio",
+        "torchvision", "triton",
+    )
+    source_rows = []
+    lock_lines = []
+    wheel_payloads = {}
+    for index, name in enumerate(distributions, 1):
+        version = "1.0.0"
+        filename = f"{name.replace('-', '_')}-{version}-py3-none-any.whl"
+        payload = f"fixture wheel:{name}".encode()
+        digest = hashlib.sha256(payload).hexdigest()
+        source = {
+            "kind": "actions_artifact",
+            "repo": "Capsize-Games/airunner",
+            "artifact_id": 100 + index,
+            "run_id": 200 + index,
+            "artifact_name": f"runtime-wheels-{index}",
+            "source_revision": "a" * 40,
+            "archive_sha256": "b" * 64,
+            "max_archive_bytes": 4096,
+            "durable_release_url": (
+                f"https://github.com/Capsize-Games/airunner/releases/download/"
+                f"v1.2.3/{filename}"
+            ),
+        }
+        source_rows.append({
+            "name": name,
+            "version": version,
+            "filename": filename,
+            "sha256": digest,
+            "size_bytes": len(payload),
+            "source": source,
+        })
+        lock_lines.append(
+            f"{name}=={version} \\\n    --hash=sha256:{digest}"
+        )
+        wheel_payloads[filename] = payload
+    lock_text = "\n".join(lock_lines) + "\n"
+    selected_lock = package / "constraints-linux-nvidia-cu129-linux-release.txt"
+    selected_lock.write_text(lock_text, encoding="utf-8")
+    source_manifest = package / "linux-release-v4-artifact-sources.json"
+    source_manifest.write_text(
+        json.dumps({
+            "schema_version": 1,
+            "status": "candidate-only; not activated",
+            "durable_release_tag": "v1.2.3",
+            "selected_count": len(source_rows),
+            "selected_lock_sha256": hashlib.sha256(lock_text.encode()).hexdigest(),
+            "artifact_sources": source_rows,
+        }, indent=2) + "\n",
+        encoding="utf-8",
+    )
+    _git(root, "add", "services/setup.py", "package")
     _git(root, "commit", "-qm", "fixture")
     sha = _git(root, "rev-parse", "HEAD")
     _git(root, "tag", "-a", "v1.2.3", "-m", "v1.2.3")
 
     asset_dirs = [
         tmp_path / name
-        for name in ("python-dist", "sidecars", "linux-candidate", "debian")
+        for name in ("python-dist", "sidecars", "linux-candidate", "debian", "runtime-wheels")
     ]
-    for directory in asset_dirs:
+    for directory in asset_dirs[:-1]:
         directory.mkdir()
     paths: list[Path] = []
     grouped_names = (
@@ -63,6 +119,57 @@ def _fixture(tmp_path: Path) -> tuple[Path, str, list[Path], list[Path]]:
         path = tmp_path / group / name
         path.write_bytes(("fixture:" + name).encode())
         paths.append(path)
+    staged_wheelhouse = tmp_path / "staged-runtime"
+    staged_wheelhouse.mkdir()
+    for filename, payload in wheel_payloads.items():
+        (staged_wheelhouse / filename).write_bytes(payload)
+    source_manifest_sha = hashlib.sha256(source_manifest.read_bytes()).hexdigest()
+    lock_sha = hashlib.sha256(selected_lock.read_bytes()).hexdigest()
+    staging_receipt = {
+        "schema_version": 1,
+        "status": "verified wheel inputs; not installed or imported",
+        "selected_count": len(source_rows),
+        "manifest_sha256": source_manifest_sha,
+        "selected_lock_sha256": lock_sha,
+        "requirements_sha256": lock_sha,
+        "source_routes": [
+            {
+                "filename": row["filename"],
+                "selected_route": "actions_artifact",
+                "durable_release_url": row["source"]["durable_release_url"],
+                "original_actions_source": {
+                    key: row["source"][key]
+                    for key in (
+                        "repo", "artifact_id", "run_id", "artifact_name",
+                        "source_revision", "archive_sha256", "max_archive_bytes",
+                    )
+                },
+            }
+            for row in source_rows
+        ],
+        "wheels": [
+            {
+                "filename": row["filename"],
+                "sha256": row["sha256"],
+                "size_bytes": row["size_bytes"],
+                "source_kind": "actions_artifact",
+                "artifact_id": row["source"]["artifact_id"],
+            }
+            for row in source_rows
+        ],
+    }
+    (staged_wheelhouse / "staging-receipt.json").write_text(
+        json.dumps(staging_receipt, indent=2) + "\n", encoding="utf-8"
+    )
+    runtime_wheel_assets.create_assets(
+        staged_wheelhouse,
+        asset_dirs[-1],
+        source_manifest=source_manifest,
+        selected_lock=selected_lock,
+        application_version="1.2.3",
+        source_sha=sha,
+    )
+    paths.extend(asset_dirs[-1].iterdir())
     deb = next(path for path in paths if path.suffix == ".deb")
     manifest = next(path for path in paths if path.name == "airunner-apt-release.json")
     manifest.write_text(
@@ -212,7 +319,7 @@ def test_promotion_creates_draft_uploads_exact_set_then_publishes_immutable(
     assert release["immutable"] is True
     methods = [method for method, _ in api.calls]
     assert methods.index("POST") < methods.index("PATCH")
-    assert len(api.assets) == 10
+    assert len(api.assets) == 17
     assert api.calls.count(("POST", "https://api.github.com/repos/Capsize-Games/airunner/releases")) == 1
 
 
@@ -228,6 +335,57 @@ def test_promotion_detects_when_github_did_not_immutably_publish(
     # therefore requires the repository-level setting to be enabled first.
     assert api.release is not None and api.release["draft"] is False
     assert api.release["immutable"] is False
+
+
+def test_promotion_rejects_tampered_runtime_wheel_before_remote_mutation(
+    tmp_path: Path,
+) -> None:
+    root, sha, dirs, files = _fixture(tmp_path)
+    runtime_dir = next(directory for directory in dirs if directory.name == "runtime-wheels")
+    wheel = next(runtime_dir.glob("llama_cpp_python-*.whl"))
+    wheel.write_bytes(b"tampered wheel bytes")
+    all_assets = [
+        path for directory in dirs for path in directory.iterdir()
+        if path.name != "SHA256SUMS"
+    ]
+    sums = files[0]
+    sums.write_text(
+        "".join(
+            f"{hashlib.sha256(path.read_bytes()).hexdigest()}  {path.name}\n"
+            for path in sorted(all_assets)
+        ),
+        encoding="ascii",
+    )
+    api = _GitHub(root)
+
+    with pytest.raises(guard.ReleaseIdentityError, match="runtime wheel release assets"):
+        _promote(root, sha, dirs, files, api)
+    assert not any(method in {"POST", "PATCH"} for method, _ in api.calls)
+
+
+def test_promotion_rejects_asset_basename_collision_before_remote_mutation(
+    tmp_path: Path,
+) -> None:
+    root, sha, dirs, files = _fixture(tmp_path)
+    runtime_dir = next(directory for directory in dirs if directory.name == "runtime-wheels")
+    duplicate = dirs[0] / "llama_cpp_python-1.0.0-py3-none-any.whl"
+    duplicate.write_bytes((runtime_dir / duplicate.name).read_bytes())
+    all_assets = [
+        path for directory in dirs for path in directory.iterdir()
+        if path.name != "SHA256SUMS"
+    ]
+    files[0].write_text(
+        "".join(
+            f"{hashlib.sha256(path.read_bytes()).hexdigest()}  {path.name}\n"
+            for path in sorted(all_assets)
+        ),
+        encoding="ascii",
+    )
+    api = _GitHub(root)
+
+    with pytest.raises(guard.ReleaseIdentityError, match="checksum manifest is malformed"):
+        _promote(root, sha, dirs, files, api)
+    assert not any(method in {"POST", "PATCH"} for method, _ in api.calls)
 
 
 def test_promotion_rejects_wrong_source_before_github_mutation(tmp_path: Path) -> None:

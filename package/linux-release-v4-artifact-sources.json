@@ -1691,7 +1691,8 @@
         "repo": "Capsize-Games/airunner",
         "run_id": 41554942120,
         "source_revision": "d8e9d7d7cb19229d9d61e3eff5a7a24e85aec673",
-        "workflow": "/.github/workflows/cuda-notice-complete-candidate.yml"
+        "workflow": "/.github/workflows/cuda-notice-complete-candidate.yml",
+        "durable_release_url": "https://github.com/Capsize-Games/airunner/releases/download/v6.1.9/llama_cpp_python-0.3.21+capsize.3-py3-none-linux_x86_64.whl"
       },
       "version": "0.3.21+capsize.3",
       "wheel_tags": [
@@ -2309,7 +2310,8 @@
         "run_id": 41502697808,
         "sha256": "f2297cd80f097e40e0544672186c020d2ae12ddfa438f50626053e2de72c94ea",
         "size_bytes": 139017640,
-        "source_revision": "ac1fc6206a8388e4ce19068209a714296cc21290"
+        "source_revision": "ac1fc6206a8388e4ce19068209a714296cc21290",
+        "durable_release_url": "https://github.com/Capsize-Games/airunner/releases/download/v6.1.9/nvidia_nvshmem_cu12-3.4.5+capsize.1-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl"
       },
       "version": "3.4.5+capsize.1",
       "wheel_tags": [
@@ -3740,7 +3742,8 @@
         "run_id": 41502697808,
         "sha256": "442827154e36ff0643036d0065ce96b9f65cdaee224b9f6b5c4318e6e3f1620c",
         "size_bytes": 1579655,
-        "source_revision": "ac1fc6206a8388e4ce19068209a714296cc21290"
+        "source_revision": "ac1fc6206a8388e4ce19068209a714296cc21290",
+        "durable_release_url": "https://github.com/Capsize-Games/airunner/releases/download/v6.1.9/torchaudio-2.11.0+cu129.capsize.1-cp313-cp313-manylinux_2_28_x86_64.whl"
       },
       "version": "2.11.0+cu129.capsize.1",
       "wheel_tags": [
@@ -3782,7 +3785,8 @@
         "run_id": 41502697808,
         "sha256": "fb59f03148302906a39abe711bd4dcffe62973c741884a879b3247a2fa7f5d40",
         "size_bytes": 9492586,
-        "source_revision": "ac1fc6206a8388e4ce19068209a714296cc21290"
+        "source_revision": "ac1fc6206a8388e4ce19068209a714296cc21290",
+        "durable_release_url": "https://github.com/Capsize-Games/airunner/releases/download/v6.1.9/torchvision-0.28.0+cu129.capsize.1-cp313-cp313-manylinux_2_28_x86_64.whl"
       },
       "version": "0.28.0+cu129.capsize.1",
       "wheel_tags": [
@@ -3857,7 +3861,8 @@
         "repo": "Capsize-Games/airunner",
         "run_id": 41545665836,
         "source_revision": "cfa99f2e033d678e180d16d457d77e179db4d283",
-        "workflow": "/.github/workflows/triton-subset-candidate.yml"
+        "workflow": "/.github/workflows/triton-subset-candidate.yml",
+        "durable_release_url": "https://github.com/Capsize-Games/airunner/releases/download/v6.1.9/triton-3.7.1+capsize.2-cp313-cp313-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl"
       },
       "version": "3.7.1+capsize.2",
       "wheel_tags": [
@@ -4271,5 +4276,6 @@
     "manylinux_floor": "2_39",
     "python": "3.13.5",
     "torch_backend": "cu129"
-  }
+  },
+  "durable_release_tag": "v6.1.9"
 }

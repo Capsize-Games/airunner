@@ -370,7 +370,8 @@ def test_release_workflow_gates_precede_dependency_execution() -> None:
     )
     docker_job = docker_release[docker_release.index("  build-and-push:"):]
     gate = docker_job.index("check_reviewed_release_inputs.py")
-    assert gate < docker_job.index("Set up Docker Buildx")
+    assert gate < docker_job.index("Verify runner Docker tools")
+    assert "docker/setup-buildx-action" not in docker_job
     assert gate < docker_job.index("Log in to GitHub Container Registry")
     assert gate < docker_job.index("Build ${{ matrix.name }} image")
     assert "ref: ${{ github.event.workflow_run.head_sha || github.sha }}" in docker_job

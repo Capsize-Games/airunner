@@ -1,9 +1,10 @@
 """Stage the exact V4 Linux wheels without installing or importing them.
 
 Direct HTTPS inputs are pinned to canonical artifact URLs and SHA-256 digests.
-Hosted build inputs are fetched by immutable GitHub Actions artifact ID through
-the authenticated API; signed redirect URLs are used only in memory. The
-manifest deliberately contains no machine-local paths or signed URLs.
+Actions-built wheels use the same-hash public final-release asset after it is
+published. Before that asset exists, only its HTTP 404 permits fallback to the
+bound GitHub Actions artifact ID through the authenticated API. Signed Actions
+redirect URLs are used only in memory; the manifest contains no signed URLs.
 """
 
 from __future__ import annotations
@@ -35,6 +36,7 @@ GITHUB_ACTIONS_HOSTS = {
     "api.github.com", "github.com", "pipelines.actions.githubusercontent.com",
     "results-receiver.actions.githubusercontent.com", "artifactcache.actions.githubusercontent.com",
 }
+_DURABLE_RELEASE_REPOSITORY = "Capsize-Games/airunner"
 
 
 class StageError(RuntimeError):
@@ -451,7 +453,25 @@ def _validate_https_source(row: dict[str, Any]) -> None:
         raise StageError("manifest contains a noncanonical or unapproved HTTPS URL")
 
 
-def _validate_actions_source(row: dict[str, Any], groups: dict) -> None:
+def _validate_durable_release_url(url: str, filename: str, release_tag: str) -> None:
+    from urllib.parse import urlsplit
+
+    if not isinstance(url, str) or not isinstance(release_tag, str):
+        raise StageError("manifest contains a noncanonical durable release asset URL")
+    parsed = urlsplit(url)
+    expected_path = (
+        f"/{_DURABLE_RELEASE_REPOSITORY}/releases/download/"
+        f"{release_tag}/{filename}"
+    )
+    if (parsed.scheme != "https" or parsed.hostname != "github.com"
+            or parsed.username or parsed.password or parsed.query or parsed.fragment
+            or parsed.path != expected_path
+            or not re.fullmatch(r"v[0-9]+\.[0-9]+\.[0-9]+", release_tag)):
+        raise StageError("manifest contains a noncanonical durable release asset URL")
+    _validate_canonical_source_url(url)
+
+
+def _validate_actions_source(row: dict[str, Any], groups: dict, release_tag: str) -> None:
     source = row["source"]
     max_size = source.get("max_archive_bytes")
     if (not isinstance(source.get("repo"), str)
@@ -463,10 +483,15 @@ def _validate_actions_source(row: dict[str, Any], groups: dict) -> None:
             or not re.fullmatch(r"[0-9a-f]{64}", source.get("archive_sha256", ""))
             or not isinstance(max_size, int) or not 1 <= max_size <= 2_147_483_648):
         raise StageError("manifest contains an invalid Actions artifact pin or size bound")
+    durable_url = source.get("durable_release_url")
+    if durable_url is not None:
+        _validate_durable_release_url(durable_url, row["filename"], release_tag)
     groups.setdefault((source["repo"], source["artifact_id"]), []).append(row)
 
 
-def _validate_source_rows(rows: list[dict[str, Any]]) -> dict[tuple[str, int], list[dict[str, Any]]]:
+def _validate_source_rows(
+    rows: list[dict[str, Any]], release_tag: str
+) -> dict[tuple[str, int], list[dict[str, Any]]]:
     if len({row.get("filename") for row in rows}) != len(rows) or len({row.get("name") for row in rows}) != len(rows):
         raise StageError("manifest repeats a distribution or wheel filename")
     groups: dict[tuple[str, int], list[dict[str, Any]]] = {}
@@ -478,7 +503,7 @@ def _validate_source_rows(rows: list[dict[str, Any]]) -> dict[tuple[str, int], l
         elif kind == "https":
             _validate_https_source(row)
         elif kind == "actions_artifact":
-            _validate_actions_source(row, groups)
+            _validate_actions_source(row, groups, release_tag)
         elif kind == "actions_artifact_pending":
             raise StageError(f"Actions artifact handoff is not bound yet: {row['filename']}")
         else:
@@ -507,14 +532,10 @@ def _prepare_stage(manifest_path: Path, lockfile: Path, destination: Path):
         raise StageError("unsupported or non-candidate manifest")
     rows = manifest.get("artifact_sources")
     validate_lock(manifest, lockfile)
-    groups = _validate_source_rows(rows)
-    token = os.environ.get("GH_TOKEN") or os.environ.get("GITHUB_TOKEN")
-    if groups and not token:
-        raise StageError("GH_TOKEN or GITHUB_TOKEN is required for hosted build artifacts")
+    groups = _validate_source_rows(rows, manifest.get("durable_release_tag", ""))
     if destination.is_symlink() or (destination.exists() and any(destination.iterdir())):
         raise StageError("output directory must be a non-symlink empty directory")
-    action_sizes = _verify_action_groups(groups, token) if groups else {}
-    return manifest, rows, groups, token, action_sizes
+    return manifest, rows, groups
 
 
 def _stage_direct_wheels(rows: list[dict[str, Any]], destination: Path) -> list[dict[str, Any]]:
@@ -551,6 +572,44 @@ def _stage_action_wheels(groups: dict, token: str, action_sizes: dict,
     return results, receipts
 
 
+def download_durable_release_asset(url: str, target: Path,
+                                  spec: dict[str, Any], release_tag: str) -> bool:
+    """Fetch a public final-release wheel; return False only for HTTP 404."""
+    _validate_durable_release_url(url, spec["filename"], release_tag)
+    request = urllib.request.Request(
+        url, headers={"User-Agent": "airunner-release-stager/1"}
+    )
+    created_target = False
+    size = 0
+    content_hash = ""
+    opener = urllib.request.build_opener(RestrictedRedirect(ALLOWED_HOSTS))
+    try:
+        with opener.open(request, timeout=120) as response:
+            _validate_download_response(response, spec)
+            with target.open("xb") as output:
+                created_target = True
+                size, content_hash = _stream_wheel_response(response, output, spec)
+    except urllib.error.HTTPError as error:
+        if created_target:
+            target.unlink(missing_ok=True)
+        if error.code == 404:
+            return False
+        raise StageError(
+            f"durable release asset request failed with HTTP {error.code}"
+        ) from None
+    except (OSError, urllib.error.URLError, StageError) as error:
+        if created_target:
+            target.unlink(missing_ok=True)
+        if isinstance(error, StageError):
+            raise
+        raise StageError("could not fetch durable release wheel") from error
+    if size != spec["size_bytes"] or content_hash != spec["sha256"]:
+        if created_target:
+            target.unlink(missing_ok=True)
+        raise StageError("durable release wheel size or digest mismatch")
+    return True
+
+
 def _write_staging_receipt(manifest_path: Path, lockfile: Path, manifest: dict[str, Any],
                            rows: list[dict[str, Any]], results: list[dict[str, Any]],
                            action_receipts: dict[str, Any], destination: Path) -> dict[str, Any]:
@@ -568,6 +627,25 @@ def _write_staging_receipt(manifest_path: Path, lockfile: Path, manifest: dict[s
         "requirements_sha256": sha256_file(requirements),
         "selected_count": len(results),
         "actions_artifacts": action_receipts,
+        "source_routes": [
+            {
+                "filename": row["filename"],
+                "selected_route": next(
+                    result["source_kind"] for result in results
+                    if result["filename"] == row["filename"]
+                ),
+                "durable_release_url": row["source"].get("durable_release_url"),
+                "original_actions_source": {
+                    key: row["source"][key]
+                    for key in (
+                        "repo", "artifact_id", "run_id", "artifact_name",
+                        "source_revision", "archive_sha256", "max_archive_bytes",
+                    )
+                    if key in row["source"]
+                } if row["source"]["kind"] == "actions_artifact" else None,
+            }
+            for row in rows
+        ],
         "wheels": sorted(results, key=lambda item: item["filename"]),
     }
     (destination / "staging-receipt.json").write_text(
@@ -577,10 +655,37 @@ def _write_staging_receipt(manifest_path: Path, lockfile: Path, manifest: dict[s
 
 
 def stage(manifest_path: Path, lockfile: Path, destination: Path) -> dict[str, Any]:
-    manifest, rows, groups, token, action_sizes = _prepare_stage(manifest_path, lockfile, destination)
+    manifest, rows, groups = _prepare_stage(manifest_path, lockfile, destination)
     destination.mkdir(parents=True, exist_ok=True)
     results = _stage_direct_wheels(rows, destination)
-    action_results, action_receipts = _stage_action_wheels(groups, token or "", action_sizes, destination)
+    remaining_groups: dict[tuple[str, int], list[dict[str, Any]]] = {}
+    for key, group_rows in groups.items():
+        unresolved = []
+        for row in group_rows:
+            durable_url = row["source"].get("durable_release_url")
+            spec = {key: row[key] for key in ("filename", "sha256", "size_bytes")}
+            if durable_url and download_durable_release_asset(
+                durable_url, destination / spec["filename"], spec,
+                manifest["durable_release_tag"],
+            ):
+                results.append({
+                    **spec,
+                    "source_kind": "durable_release",
+                    "artifact_id": row["source"]["artifact_id"],
+                })
+            else:
+                unresolved.append(row)
+        if unresolved:
+            remaining_groups[key] = unresolved
+    token = os.environ.get("GH_TOKEN") or os.environ.get("GITHUB_TOKEN")
+    if remaining_groups and not token:
+        raise StageError(
+            "GH_TOKEN or GITHUB_TOKEN is required for Actions wheels whose durable release asset is absent"
+        )
+    action_sizes = _verify_action_groups(remaining_groups, token) if remaining_groups else {}
+    action_results, action_receipts = _stage_action_wheels(
+        remaining_groups, token or "", action_sizes, destination
+    )
     results.extend(action_results)
     return _write_staging_receipt(
         manifest_path, lockfile, manifest, rows, results, action_receipts, destination
