@@ -16,6 +16,9 @@ from airunner_services.llm.managers.agent.document_loader import (
 from airunner_services.llm.managers.agent.vector_index import (
     DocumentVectorIndex,
 )
+from airunner_services.llm.managers.agent.mixins.runtime_activity import (
+    runtime_activity_locked,
+)
 
 
 class RAGLifecycleMixin:
@@ -41,6 +44,7 @@ class RAGLifecycleMixin:
         self._loaded_doc_ids: List[str] = []
         self._rag_initialized = False
 
+    @runtime_activity_locked
     def _setup_rag(self):
         """Setup RAG components.
 
@@ -74,6 +78,7 @@ class RAGLifecycleMixin:
         except Exception as e:
             self.logger.error(f"Error setting up RAG: {str(e)}", exc_info=True)
 
+    @runtime_activity_locked
     def reload_rag(self):
         """Reload RAG components.
 
@@ -92,6 +97,7 @@ class RAGLifecycleMixin:
         self._loaded_doc_ids.clear()
         self._index_registry = None
 
+    @runtime_activity_locked
     def clear_rag_documents(self):
         """Clear all RAG documents and reset components.
 
@@ -136,6 +142,7 @@ class RAGLifecycleMixin:
         finally:
             self._is_unloading = False
 
+    @runtime_activity_locked
     def load_html_into_rag(
         self, html_content: str, source_name: str = "web_content"
     ):
@@ -169,6 +176,7 @@ class RAGLifecycleMixin:
         except Exception as e:
             self.logger.error(f"Error loading HTML into RAG: {e}")
 
+    @runtime_activity_locked
     def load_file_into_rag(self, file_path: str) -> None:
         """Load a local file into the unified RAG index.
 
@@ -199,6 +207,7 @@ class RAGLifecycleMixin:
         except Exception as e:
             self.logger.error(f"Error loading file into RAG: {e}")
 
+    @runtime_activity_locked
     def load_bytes_into_rag(
         self, content_bytes: bytes, source_name: str, file_ext: str = ".epub"
     ) -> None:
@@ -230,6 +239,7 @@ class RAGLifecycleMixin:
         except Exception as e:
             self.logger.error(f"Error loading bytes into RAG: {e}")
 
+    @runtime_activity_locked
     def _add_documents_to_unified_index(
         self,
         documents: list[Document],
@@ -254,6 +264,7 @@ class RAGLifecycleMixin:
         self._retriever = None
         self._track_loaded_doc(source_id)
 
+    @runtime_activity_locked
     def _add_document_batches_to_unified_index(
         self,
         batches: Iterable[list[Document]],

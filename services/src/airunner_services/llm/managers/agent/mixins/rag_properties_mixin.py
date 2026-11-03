@@ -6,6 +6,9 @@ from typing import Any, Dict, Optional
 import torch
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_text_splitters import RecursiveCharacterTextSplitter
+from airunner_services.llm.managers.agent.mixins.runtime_activity import (
+    runtime_activity_locked,
+)
 
 class RAGPropertiesMixin:
     """Mixin for RAG properties and configuration."""
@@ -86,6 +89,7 @@ class RAGPropertiesMixin:
         return self._index_registry
 
     @property
+    @runtime_activity_locked
     def embedding(self) -> Optional[HuggingFaceEmbeddings]:
         """Get or create the embedding model for RAG.
 
@@ -172,7 +176,9 @@ class RAGPropertiesMixin:
                     encode_kwargs={"normalize_embeddings": True},
                 )
                 self._embedding = VerifiedE5Embedder(
-                    raw_embedder, verified_identity
+                    raw_embedder,
+                    verified_identity,
+                    activity_lock=getattr(self, "runtime_activity_lock", None),
                 )
 
                 self.logger.info("Embedding model initialized successfully")

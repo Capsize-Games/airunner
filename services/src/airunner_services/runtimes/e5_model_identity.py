@@ -7,6 +7,7 @@ runtime, download artifacts, or execute code from the model directory.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from contextlib import nullcontext
 import hashlib
 import json
 import os
@@ -174,25 +175,36 @@ class E5ModelIdentity:
 class VerifiedE5Embedder:
     """Apply E5 retrieval prefixes to a locally verified model exactly once."""
 
-    def __init__(self, embedder: object, identity: E5ModelIdentity) -> None:
+    def __init__(
+        self,
+        embedder: object,
+        identity: E5ModelIdentity,
+        *,
+        activity_lock: object | None = None,
+    ) -> None:
         if not callable(getattr(embedder, "embed_query", None)) or not callable(
             getattr(embedder, "embed_documents", None)
         ):
             raise TypeError("E5 embedder must provide query and document methods")
         self._embedder = embedder
+        self._activity_lock = activity_lock
         self.verified_identity = identity
         self.identity = identity.to_embedding_model_identity()
         self.model_name = getattr(embedder, "model_name", E5_LARGE_MODEL_ID)
 
     def embed_query(self, text: str) -> list[float]:
-        return self._embedder.embed_query(_with_prefix(text, "query: "))
+        guard = self._activity_lock or nullcontext()
+        with guard:
+            return self._embedder.embed_query(_with_prefix(text, "query: "))
 
     def embed_documents(self, texts: list[str]) -> list[list[float]]:
-        prefixed = [_with_prefix(text, "passage: ") for text in texts]
-        vectors = self._embedder.embed_documents(prefixed)
-        if len(vectors) != len(texts):
-            raise ValueError("E5 embedder returned an invalid batch")
-        return vectors
+        guard = self._activity_lock or nullcontext()
+        with guard:
+            prefixed = [_with_prefix(text, "passage: ") for text in texts]
+            vectors = self._embedder.embed_documents(prefixed)
+            if len(vectors) != len(texts):
+                raise ValueError("E5 embedder returned an invalid batch")
+            return vectors
 
 
 def _with_prefix(text: str, prefix: str) -> str:

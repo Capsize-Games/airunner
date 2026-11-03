@@ -20,6 +20,9 @@ from airunner_services.database.models.document import (
     Document as DBDocument,
 )
 from airunner_common.contract_enums import SignalCode
+from airunner_services.llm.managers.agent.mixins.runtime_activity import (
+    runtime_activity_locked,
+)
 
 
 class ReindexRequiredError(RuntimeError):
@@ -78,6 +81,7 @@ class RAGIndexingMixin:
             self.logger.error(f"Error loading documents: {e}")
             return []
 
+    @runtime_activity_locked
     def _index_single_document(self, db_doc: DBDocument) -> bool:
         """Index a single document into its own per-document index.
 
@@ -169,6 +173,7 @@ class RAGIndexingMixin:
             return False
         return self._reindex_single_document(db_doc)
 
+    @runtime_activity_locked
     def _reindex_single_document(self, db_doc: DBDocument) -> bool:
         """Rebuild one existing index and switch it only after validation."""
         doc_id = self._generate_doc_id(db_doc.path)
@@ -296,6 +301,7 @@ class RAGIndexingMixin:
             return False
 
 
+    @runtime_activity_locked
     def ensure_indexed_files(self, file_paths: List[str]) -> bool:
         """Ensure that the given file paths have been loaded/indexed.
 
@@ -346,6 +352,7 @@ class RAGIndexingMixin:
             pass
         return success
 
+    @runtime_activity_locked
     def index_all_documents(self) -> bool:
         """Manually index all documents with progress reporting.
 

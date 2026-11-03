@@ -23,12 +23,12 @@ _SETUP = _PROJECT_ROOT / "services" / "setup.py"
 #: changing services/setup.py (or vice versa) fails this test deliberately.
 _EXPECTED_RAG_REQUIREMENTS = [
     "sentence_transformers==5.6.1",
-    "libzim==3.7.0",
+    "libzim==3.7.0+capsize.2",
     "langchain-huggingface==1.2.2",
     "langchain-text-splitters==1.1.2",
     "EbookLib==0.19",
     "mobi==0.4.1",
-    "pypdf>=5.6.0",
+    "pypdf>=6.21.4",
 ]
 
 #: Dependencies that are NOT RAG-only and must stay in the LLM core list.
