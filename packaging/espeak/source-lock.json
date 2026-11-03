@@ -1,0 +1,44 @@
+{
+  "schema_version": 1,
+  "upstream": {
+    "name": "eSpeak NG",
+    "version": "1.52.0",
+    "canonical_project": "https://github.com/espeak-ng/espeak-ng",
+    "private_mirror": "owner-maintained source mirror; path supplied by operator",
+    "commit": "4870adfa25b1a32b4361592f1be8a40337c58d6c",
+    "tree": "45e4d63726666fbde7616168e8872762470c46d1"
+  },
+  "source_archive": {
+    "filename": "espeak-ng-1.52.0-4870adf.tar.gz",
+    "sha256": "fffa813df043e204ef75c0af26dc14249f5c3acc01adaa1c37050d83858f411e",
+    "size_bytes": 17551300,
+    "format": "git archive tar compressed with gzip -n -9"
+  },
+  "patches": [
+    {
+      "filename": "0001-offline-no-playback.patch",
+      "sha256": "c66f22db0475c9cd986f0664af05842070752a8aa419f0bba5e36a92a5af0a20",
+      "purpose": "Remove automatic Sonic FetchContent, fail if explicitly requested without a local reviewed library, and omit speech-player subdirectory when disabled"
+    }
+  ],
+  "license_git_blob_ids": {
+    "COPYING": "94a9ed024d3859793618152ea559a168bbcbb5e2",
+    "COPYING.APACHE": "d645695673349e3947e8e5ae42332d0ac3164cd7",
+    "COPYING.BSD2": "fb5ced2e1d81f7bdf4f4bf32c886b6476ca8b534",
+    "COPYING.UCD": "38ff09a13ab175c8f5f55cd945c064edfaf31bfb"
+  },
+  "target": {
+    "platform": "Ubuntu 24.04 x86_64",
+    "cmake_targets": [
+      "espeak-ng-bin",
+      "data"
+    ],
+    "sonic": "disabled; native eSpeak rate control retained",
+    "playback": "disabled",
+    "mbrola": "disabled",
+    "pcaudio": "disabled",
+    "async": "disabled",
+    "klatt": "enabled",
+    "compat_symlinks": "disabled"
+  }
+}

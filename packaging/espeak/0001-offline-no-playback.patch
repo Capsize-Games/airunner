@@ -1,0 +1,59 @@
+diff --git a/cmake/deps.cmake b/cmake/deps.cmake
+--- a/cmake/deps.cmake
++++ b/cmake/deps.cmake
+@@ -5,7 +5,6 @@
+ find_library(PTHREAD_LIB pthread)
+ find_program(MBROLA_BIN mbrola)
+ 
+-include(FetchContent)
+ 
+ if (PTHREAD_LIB)
+   set(HAVE_PTHREAD ON)
+@@ -15,18 +14,6 @@
+ endif(MBROLA_BIN)
+ if (SONIC_LIB AND SONIC_INC)
+   set(HAVE_LIBSONIC ON)
+-else()
+-  FetchContent_Declare(sonic-git
+-    GIT_REPOSITORY https://github.com/waywardgeek/sonic.git
+-    GIT_TAG fbf75c3d6d846bad3bb3d456cbc5d07d9fd8c104
+-  )
+-  FetchContent_MakeAvailable(sonic-git)
+-  FetchContent_GetProperties(sonic-git)
+-  add_library(sonic OBJECT ${sonic-git_SOURCE_DIR}/sonic.c)
+-  target_include_directories(sonic PUBLIC ${sonic-git_SOURCE_DIR})
+-  set(HAVE_LIBSONIC ON)
+-  set(SONIC_LIB sonic)
+-  set(SONIC_INC ${sonic-git_SOURCE_DIR})
+ endif()
+ if (PCAUDIO_LIB AND PCAUDIO_INC)
+   set(HAVE_LIBPCAUDIO ON)
+diff --git a/cmake/config.cmake b/cmake/config.cmake
+--- a/cmake/config.cmake
++++ b/cmake/config.cmake
+@@ -4,6 +4,11 @@
+ option(USE_MBROLA "Use mbrola for speech synthesis" ${HAVE_MBROLA})
+ option(USE_LIBSONIC "Use libsonit for faster speech rates" ${HAVE_LIBSONIC})
+ option(USE_LIBPCAUDIO "Use libPcAudio for sound output" ${HAVE_LIBPCAUDIO})
++if (USE_LIBSONIC AND NOT HAVE_LIBSONIC)
++  message(FATAL_ERROR
++    "USE_LIBSONIC=ON requires locally supplied Sonic headers and library; "
++    "automatic source downloads are disabled")
++endif()
+ 
+ option(USE_KLATT "Use klatt for speech synthesis" ON)
+ option(USE_SPEECHPLAYER "Use speech-player for speech synthesis" ON)
+diff --git a/src/CMakeLists.txt b/src/CMakeLists.txt
+--- a/src/CMakeLists.txt
++++ b/src/CMakeLists.txt
+@@ -2,7 +2,9 @@
+ target_include_directories(espeak-include INTERFACE include include/compat)
+ 
+ add_subdirectory(ucd-tools)
+-add_subdirectory(speechPlayer)
++if (USE_SPEECHPLAYER)
++  add_subdirectory(speechPlayer)
++endif()
+ add_subdirectory(libespeak-ng)
+ 
+ add_executable(espeak-ng-bin espeak-ng.c)
