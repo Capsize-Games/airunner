@@ -21,7 +21,7 @@ from pathlib import Path
 
 from alembic.runtime.migration import MigrationContext
 from sqlalchemy.engine import url as sa_url
-from airunner_services.database.db.engine import create_configured_engine
+from airunner_services.database.db.engine import create_metadata_engine
 
 
 class UpgradeBackupError(RuntimeError):
@@ -76,7 +76,7 @@ def _sha256_of(path: Path) -> str:
 
 def current_heads(db_url: str) -> tuple[str, ...]:
     """Return the sorted Alembic heads recorded in one database."""
-    engine = create_configured_engine(db_url)
+    engine = create_metadata_engine(db_url)
     try:
         with engine.connect() as connection:
             context = MigrationContext.configure(connection)

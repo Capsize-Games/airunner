@@ -61,6 +61,38 @@ def test_backup_round_trip_preserves_rows(tmp_path: Path) -> None:
     assert _rows(live, "policy_prefs") == 1
 
 
+def test_backup_head_read_under_immediate_writer_keeps_delete_journal(
+    tmp_path: Path,
+) -> None:
+    live = tmp_path / "data" / "airunner.db"
+    _data_db(live)
+    url = f"sqlite:///{live}"
+    with sqlite3.connect(live) as setup:
+        mode = setup.execute("PRAGMA journal_mode=DELETE").fetchone()[0]
+        assert mode == "delete"
+
+    writer = sqlite3.connect(live, timeout=0.1)
+    try:
+        writer.execute("BEGIN IMMEDIATE")
+        writer.execute(
+            "INSERT INTO conversations VALUES (2, 'uncommitted during backup')"
+        )
+
+        assert upgrade_backup.current_heads(url) == (_HEAD_A,)
+        record = backup_database_for_upgrade(url, tmp_path / "backups")
+        assert record is not None and record.heads == (_HEAD_A,)
+        assert writer.execute("PRAGMA journal_mode").fetchone()[0] == "delete"
+
+        writer.rollback()
+    finally:
+        writer.close()
+
+    assert _rows(live, "conversations") == 1
+    assert _rows(Path(record.path), "conversations") == 1
+    with sqlite3.connect(live) as check:
+        assert check.execute("PRAGMA journal_mode").fetchone()[0] == "delete"
+
+
 def test_recovery_plan_refuses_migrated_database(tmp_path: Path) -> None:
     live = tmp_path / "data" / "airunner.db"
     _data_db(live)

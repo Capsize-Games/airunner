@@ -92,7 +92,11 @@ but failed the LLM dependency installation on disk exhaustion and the CORE
 published-package upgrade probe on early frozen startup. The failed upgrade
 artifact did not retain the child log, so its underlying exit remains
 unexplained. Failure diagnostics now retain bounded, redacted child-log tails
-while preserving the failed result. All four optional runtime-smoke marker
+while preserving the failed result. A subsequent source regression reproduced a metadata-head read attempting
+`PRAGMA journal_mode=WAL` while a writer held `BEGIN IMMEDIATE`; the dedicated
+metadata engine now preserves the journal mode and allows backup/head reads.
+The same fixture failed before that fix and passed afterward; final frozen
+upgrade recovery remains unproven until CI reruns. All four optional runtime-smoke marker
 selections are absent in the inspected source; CI reports that explicitly as
 no coverage before dependency setup. Runtime contracts, final full-profile
 packaging checks and physical-model acceptance remain separate requirements.

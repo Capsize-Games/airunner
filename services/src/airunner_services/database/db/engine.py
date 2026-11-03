@@ -43,6 +43,19 @@ def create_configured_engine(db_url: object, **kwargs):
     return engine
 
 
+def create_metadata_engine(db_url: object, **kwargs):
+    """Create an engine for metadata reads without mutating SQLite state.
+
+    SQLite's journal-mode pragma needs a write lock. Callers that only inspect
+    schema or migration metadata must remain readable while another process
+    holds ``BEGIN IMMEDIATE``, so this factory retains PostgreSQL runtime
+    preparation and URL normalization without installing the SQLite WAL hook.
+    """
+    configure_postgresql_runtime(db_url)
+    db_url = normalize_postgresql_url(db_url)
+    return create_engine(db_url, **kwargs)
+
+
 def create_configured_engine_from_config(
     configuration: dict, prefix: str = "sqlalchemy.", **kwargs
 ):
@@ -70,6 +83,7 @@ def get_inspector():
 __all__ = [
     "SQLITE_BUSY_TIMEOUT_MS",
     "create_configured_engine",
+    "create_metadata_engine",
     "create_configured_engine_from_config",
     "get_connection",
     "get_inspector",

@@ -218,6 +218,38 @@ def test_engine_factory_sets_runtime_before_sqlalchemy_can_load_a_driver(
     assert make_url(calls[0]).drivername == "postgresql+psycopg"
 
 
+def test_metadata_engine_preserves_postgresql_runtime_and_url_normalization(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    configured: list[object] = []
+    created: list[object] = []
+    source_url = "postgresql://db.example/service"
+    normalized_url = "postgresql+psycopg://db.example/service"
+
+    monkeypatch.setattr(
+        engine_module,
+        "configure_postgresql_runtime",
+        lambda url: configured.append(url),
+    )
+    monkeypatch.setattr(
+        engine_module, "normalize_postgresql_url", lambda _url: normalized_url
+    )
+    monkeypatch.setattr(
+        engine_module,
+        "create_engine",
+        lambda url, **kwargs: (
+            created.append((url, kwargs)) or "metadata-engine"
+        ),
+    )
+
+    engine = engine_module.create_metadata_engine(
+        source_url, pool_pre_ping=True
+    )
+    assert engine == "metadata-engine"
+    assert configured == [source_url]
+    assert created == [(normalized_url, {"pool_pre_ping": True})]
+
+
 def test_configured_engine_preserves_alembic_options_and_coercion():
     config = {
         "sqlalchemy.url": "sqlite://",
