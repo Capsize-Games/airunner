@@ -432,3 +432,42 @@ the workflow does not download a new Buildx binary or builder image.
 | @docker/actions-toolkit v0.62.1 | 88d39b6b65b7ae11fe64205b66b5a7debaf2a1b7 | Reviewed action dependency, Apache-2.0, private source copy |
 | @docker/actions-toolkit v0.63.0 | 76f06a5079322247f64dbfd3a64ac7ac64b0167b | Reviewed action dependency, Apache-2.0, private source copy |
 | docker/setup-buildx-action v3.12.0 | 8d2750c68a42422c14e847fe6c8ac0403b4cbd6f | Removed from execution; mutable tool-download path avoided |
+
+## PostgreSQL runtime inputs
+
+V6 adds pure Psycopg 3.3.7; its [review](input-reviews/psycopg-3.3.7-pure-python-libpq.md)
+and [input validation](input-reviews/linux-release-v6-input-validation.md) record
+the exact wheel and source. The owner origin exception covers this reviewed
+identity and the reviewed Ubuntu runtime components below. Security findings
+and runtime acceptance are separate; SASL plugin confinement still requires
+target-process verification. The Psycopg binary implementation is excluded.
+
+| Input | Version |
+|---|---|
+| psycopg | 3.3.7 |
+| gcc-14-base | 14.2.0-4ubuntu2~24.04.1 |
+| libc6 | 2.39-0ubuntu8.9 |
+| libcom-err2 | 1.47.0-2.4~exp1ubuntu4.1 |
+| libdb5.3t64 | 5.3.28+dfsg2-7 |
+| libffi8 | 3.4.6-1build1 |
+| libgcc-s1 | 14.2.0-4ubuntu2~24.04.1 |
+| libgmp10 | 2:6.3.0+dfsg-2ubuntu6.1 |
+| libgnutls30t64 | 3.8.3-1.1ubuntu3.6 |
+| libgssapi-krb5-2 | 1.20.1-6ubuntu2.10 |
+| libhogweed6t64 | 3.9.1-2.2build1.1 |
+| libidn2-0 | 2.3.7-2build1.1 |
+| libk5crypto3 | 1.20.1-6ubuntu2.10 |
+| libkeyutils1 | 1.6.3-3build1 |
+| libkrb5-3 | 1.20.1-6ubuntu2.10 |
+| libkrb5support0 | 1.20.1-6ubuntu2.10 |
+| libldap2 | 2.6.10+dfsg-0ubuntu0.24.04.1 |
+| libnettle8t64 | 3.9.1-2.2build1.1 |
+| libp11-kit0 | 0.25.3-4ubuntu2.2 |
+| libpq5 | 16.15-0ubuntu0.24.04.1 |
+| libsasl2-2 | 2.1.28+dfsg1-5ubuntu3.1 |
+| libsasl2-modules-db | 2.1.28+dfsg1-5ubuntu3.1 |
+| libssl3t64 | 3.0.13-0ubuntu3.16 |
+| libtasn1-6 | 4.19.0-3ubuntu0.24.04.2 |
+| libunistring5 | 1.1-2build1.1 |
+
+The [Ubuntu input ledger](../../packaging/linux/postgresql-libpq-noble-runtime-lock.json) binds package versions, archive paths, sizes and SHA-256 values. It records OS dependencies, not libraries copied into the frozen bundle.

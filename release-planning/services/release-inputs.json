@@ -11,7 +11,8 @@
       "llm_weather",
       "search",
       "nvidia",
-      "linux"
+      "linux",
+      "postgresql"
     ],
     "active_lock": "package/constraints-linux-nvidia-cu129-linux-release.txt",
     "lock_status": "ready",
@@ -20,10 +21,10 @@
       "airunner-tts-vendor",
       "facehuggershield"
     ],
-    "lock_sha256": "63461b6a5fe1cd72e689ccf459a86f8d98f5cce78bd41b0c6351a71e521ed006",
+    "lock_sha256": "350990b0cb1846a073991872a7147f588f4734aee1fa1bb79aa9044d8ed5d101",
     "artifact_sources": "package/linux-release-v4-artifact-sources.json",
-    "selected_distribution_count": 243,
-    "validation_record": "release-planning/services/input-reviews/linux-release-v5-input-validation.md"
+    "selected_distribution_count": 244,
+    "validation_record": "release-planning/services/input-reviews/linux-release-v6-input-validation.md"
   },
   "inputs": [
     {

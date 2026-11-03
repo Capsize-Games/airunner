@@ -7,6 +7,10 @@ run these steps on the target machine and keep the output as evidence.
 ## 1. Prerequisites
 
 - x86_64 Linux with bash and coreutils (Ubuntu 24.04 LTS baseline).
+- PostgreSQL connections require the system `libpq5` client runtime. The
+  reviewed Ubuntu 24.04 input is `16.15-0ubuntu0.24.04.1`; its linked TLS,
+  LDAP and GSSAPI libraries remain system dependencies. SQLite does not
+  require this package. The user-level installer does not install OS packages.
 - The release directory: a P05 bundle plus this installer side by side:
   `install.sh`, `airunner-services-launcher.sh`,
   `airunner-services.desktop`, and the bundle directory containing

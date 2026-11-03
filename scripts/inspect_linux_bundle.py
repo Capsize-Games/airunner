@@ -187,6 +187,7 @@ def _append_warn(
         warn_file,
         list(spec["warn_allowlist"]["modules"]),
         list(spec["code"].get("exclude_modules", [])),
+        list(spec["warn_allowlist"].get("importer_scoped", [])),
     )
     result.problems.extend(gate_problems)
 

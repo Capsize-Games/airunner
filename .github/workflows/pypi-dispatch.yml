@@ -52,7 +52,7 @@ jobs:
       always() &&
       github.event_name == 'workflow_dispatch' &&
       needs.fetch-sidecars.result == 'success'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       contents: read
       actions: read
@@ -231,6 +231,7 @@ jobs:
             scripts/tests/test_prepare_espeak_native_payload.py \
             scripts/tests/test_stage_espeak_native_payload.py \
             services/tests/test_espeak_runtime_paths.py \
+            services/tests/test_postgresql_runtime.py \
             services/tests/test_sidecar_llm_auth.py \
             services/tests/test_sidecar_llm_stream.py \
             services/tests/test_sidecar_llm_payload.py \

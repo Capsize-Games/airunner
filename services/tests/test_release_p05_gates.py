@@ -80,6 +80,64 @@ def test_warn_gate_tolerates_excluded_tops(
     assert {"airunner", "PySide6.QtCore"} <= set(tolerated)
 
 
+def test_warn_gate_scopes_optional_imports_to_reviewed_callers(
+    tmp_path: Path, inspect_mod: types.ModuleType
+) -> None:
+    warn = tmp_path / "scoped.txt"
+    warn.write_text(
+        "missing module named einops - imported by torch._dynamo.decorators "
+        "(delayed), torch.fx._graph_pickler (delayed, conditional)\n"
+        "missing module named psycopg2 - imported by sqlalchemy "
+        "(top-level), sqlalchemy.dialects.postgresql.psycopg2 (delayed)\n",
+        encoding="utf-8",
+    )
+    scoped = [
+        {
+            "module": "einops",
+            "importers": [
+                "torch._dynamo.decorators",
+                "torch.fx._graph_pickler",
+            ],
+        },
+        {
+            "module": "psycopg2",
+            "importers": [
+                "sqlalchemy",
+                "sqlalchemy.dialects.postgresql.psycopg2",
+            ],
+        },
+    ]
+    problems, tolerated = inspect_mod.gate_warn_file(
+        warn, [], importer_scoped=scoped
+    )
+    assert problems == []
+    assert set(tolerated) == {"einops", "psycopg2"}
+
+    warn.write_text(
+        "missing module named einops - imported by torch._dynamo.decorators "
+        "(delayed), <unknown caller> (optional)\n",
+        encoding="utf-8",
+    )
+    problems, _ = inspect_mod.gate_warn_file(warn, [], importer_scoped=scoped)
+    assert problems == ["unreviewed missing module: einops"]
+
+    warn.write_text(
+        "missing module named einops - imported by torch._dynamo.decorators "
+        "(delayed), unreviewed.extension (conditional)\n",
+        encoding="utf-8",
+    )
+    problems, _ = inspect_mod.gate_warn_file(warn, [], importer_scoped=scoped)
+    assert problems == ["unreviewed missing module: einops"]
+
+    warn.write_text(
+        "missing module named psycopg.types - imported by "
+        "sqlalchemy.dialects.postgresql.psycopg (conditional)\n",
+        encoding="utf-8",
+    )
+    problems, _ = inspect_mod.gate_warn_file(warn, [], importer_scoped=scoped)
+    assert problems == ["unreviewed missing module: psycopg.types"]
+
+
 def test_toc_check_requires_console_modules(
     tmp_path: Path,
     inspect_mod: types.ModuleType,
@@ -137,11 +195,7 @@ def test_default_bundle_omits_content_policy(
     """Default bundles contain no content-policy payload."""
     bundle = make_bundle(tmp_path, spec, assemble_mod)
     policy_dir = (
-        bundle
-        / "_internal"
-        / "airunner_services"
-        / "content_safety"
-        / "data"
+        bundle / "_internal" / "airunner_services" / "content_safety" / "data"
     )
     assert not policy_dir.exists()
 
@@ -155,8 +209,7 @@ def test_inspector_requires_opt_in_for_present_policy_payload(
     """Configured policy is never silently accepted by default inspection."""
     bundle = make_bundle(tmp_path, spec, assemble_mod)
     payload = (
-        bundle / "_internal" / "airunner_services" / "content_safety"
-        / "data"
+        bundle / "_internal" / "airunner_services" / "content_safety" / "data"
     )
     payload.mkdir(parents=True)
     (payload / "policy_terms.dat").write_bytes(SYNTHETIC_POLICY)
@@ -175,7 +228,9 @@ def _run_cli(bundle: Path, cwd: Path, expect: int, needle: str) -> None:
     # dependency graph. Dedicated notice tests enforce production profiles.
     fixture_source, changes = re.subn(
         r"(?ms)^(\[dependency_notices\]\n.*?^required\s*=\s*)true",
-        r"\g<1>false", SPEC_PATH.read_text(), count=1,
+        r"\g<1>false",
+        SPEC_PATH.read_text(),
+        count=1,
     )
     assert changes == 1
     fixture_spec = cwd / "inspect-fixture.toml"

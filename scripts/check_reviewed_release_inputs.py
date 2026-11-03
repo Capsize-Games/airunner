@@ -32,6 +32,7 @@ EXPECTED_PROFILE_EXTRAS = (
     "search",
     "nvidia",
     "linux",
+    "postgresql",
 )
 EXPECTED_PROFILE_EXCLUDES = (
     "airunner-tts-vendor",

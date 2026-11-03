@@ -52,6 +52,7 @@ aggregates = [
     "search",
     "nvidia",
     "linux",
+    "postgresql",
 ]
 
 [native_speech]
@@ -162,6 +163,7 @@ primary = false
 # the daemon, so the modulegraph drops them and the frozen CLI loses
 # subcommands -- issue #2244).
 hidden_imports = [
+    "psycopg",
     # Alembic executes these modules from packaged migration data. Keep every
     # service import in that data in the frozen module graph and TOC gate.
     "airunner_services.database.base",
@@ -998,9 +1000,6 @@ modules = [
     "priority",
     "prompt_toolkit",
     "psutil",
-    "psycopg2",
-    "psycopg_c",
-    "psycopg_pool",
     "ptpython",
     "ptxcompiler",
     "pudb",
@@ -1176,6 +1175,19 @@ modules = [
     "zarr",
     "zstandard",
     "zstd",
+]
+
+# Optional imports are tolerated only for the exact selected callers. The
+# runtime selects Psycopg's ctypes implementation and never activates its C
+# or binary implementations. SQLAlchemy's legacy psycopg2 dialect remains an
+# optional compatibility probe. einops is optional for the selected model
+# profile; Torch's generic compile/pickler integrations probe it conditionally.
+importer_scoped = [
+    { module = "einops", importers = ["torch._dynamo.decorators", "torch.fx._graph_pickler"] },
+    { module = "einops._torch_specific", importers = ["torch._dynamo.decorators"] },
+    { module = "psycopg2", importers = ["sqlalchemy", "sqlalchemy.dialects.postgresql.psycopg2"] },
+    { module = "psycopg_c", importers = ["psycopg.pq"] },
+    { module = "psycopg_binary", importers = ["psycopg.pq"] },
 ]
 
 [manifest]

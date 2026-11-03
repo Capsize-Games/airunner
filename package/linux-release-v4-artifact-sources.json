@@ -2669,6 +2669,25 @@
       ]
     },
     {
+      "filename": "psycopg-3.3.7-py3-none-any.whl",
+      "name": "psycopg",
+      "sha256": "d592e88a077e01ff57f22d59f16e828b92f2b2d9f439b6679d582b48d74cf306",
+      "size_bytes": 216207,
+      "source": {
+        "filename": "psycopg-3.3.7-py3-none-any.whl",
+        "kind": "repo_wheelhouse",
+        "path": "package/wheelhouse/psycopg-3.3.7-py3-none-any.whl",
+        "sha256": "d592e88a077e01ff57f22d59f16e828b92f2b2d9f439b6679d582b48d74cf306",
+        "size_bytes": 216207,
+        "upstream_project": "https://pypi.org/project/psycopg/3.3.7/",
+        "upstream_wheel_sha256": "d592e88a077e01ff57f22d59f16e828b92f2b2d9f439b6679d582b48d74cf306"
+      },
+      "version": "3.3.7",
+      "wheel_tags": [
+        "py3-none-any"
+      ]
+    },
+    {
       "filename": "pyarrow-25.0.1-cp313-cp313-manylinux_2_28_x86_64.whl",
       "name": "pyarrow",
       "sha256": "0befcf816e45a1af33ac775a9970b749e4868a230c7372f0ae5e932bee27039f",
@@ -4267,8 +4286,8 @@
     "No wheel is installed or imported by the stager."
   ],
   "schema_version": 1,
-  "selected_count": 243,
-  "selected_lock_sha256": "63461b6a5fe1cd72e689ccf459a86f8d98f5cce78bd41b0c6351a71e521ed006",
+  "selected_count": 244,
+  "selected_lock_sha256": "350990b0cb1846a073991872a7147f588f4734aee1fa1bb79aa9044d8ed5d101",
   "status": "candidate-only; not activated",
   "target": {
     "architecture": "x86_64",

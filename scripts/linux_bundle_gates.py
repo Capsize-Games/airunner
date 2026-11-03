@@ -33,18 +33,48 @@ def parse_warn_file(text: str) -> dict[str, list[str]]:
     return missing
 
 
+def _importer_names(groups: list[str]) -> set[str]:
+    """Parse names without mistaking annotation commas for importers."""
+    names: set[str] = set()
+    for group in groups:
+        for value in re.sub(r"\([^)]*\)", "", group).split(","):
+            name = value.strip()
+            if not re.fullmatch(r"[A-Za-z_][\w.]*", name):
+                # Preserve an unparseable caller as a conflict instead of
+                # silently discarding evidence of an unreviewed import.
+                return {"<unparseable importer>"}
+            names.add(name)
+    return names
+
+
 def _gate_missing(
     missing: dict[str, list[str]],
     allowlist: list[str],
     excluded: list[str],
+    importer_scoped: list[dict[str, Any]] | None = None,
 ) -> tuple[list[str], list[str]]:
-    """Split missing modules into problems and tolerated names."""
+    """Split missing modules into problems and tolerated names.
+
+    ``importer_scoped`` entries tolerate an exact missing module only when
+    every listed importer is explicitly reviewed. Importer names are parsed
+    from PyInstaller's annotations, so a new importer remains a failure.
+    """
     allowed = {name.split(".")[0] for name in allowlist}
     banned = {name.split(".")[0] for name in excluded}
+    scoped = {
+        str(entry["module"]): set(map(str, entry.get("importers", [])))
+        for entry in (importer_scoped or [])
+    }
     problems: list[str] = []
     tolerated: list[str] = []
     for name in sorted(missing):
-        if name.split(".")[0] in allowed | banned:
+        actual_importers = _importer_names(missing[name])
+        scoped_allow = scoped.get(name)
+        if name.split(".")[0] in allowed | banned or (
+            scoped_allow is not None
+            and bool(actual_importers)
+            and actual_importers <= scoped_allow
+        ):
             tolerated.append(name)
         else:
             problems.append(f"unreviewed missing module: {name}")
@@ -55,19 +85,22 @@ def gate_warn_file(
     warn_path: Path,
     allowlist: list[str],
     excluded: list[str] | None = None,
+    importer_scoped: list[dict[str, Any]] | None = None,
 ) -> tuple[list[str], list[str]]:
     """Gate the freeze on unreviewed missing modules.
 
-    Returns (problems, tolerated). Comparison is by top-level name, so
-    an allowlist entry of "collections.abc" also tolerates "collections".
-    Excluded tops are tolerated here because the toc-exclusion gate
-    separately enforces their absence from the freeze.
+    Returns (problems, tolerated). The general allowlist compares by
+    top-level name; importer-scoped entries require an exact missing-module
+    name and reviewed importer set. Excluded tops are tolerated here because
+    the toc-exclusion gate separately enforces their absence from the freeze.
     """
     try:
         text = warn_path.read_text(encoding="utf-8", errors="replace")
     except OSError as exc:
         return [f"cannot read warn file {warn_path}: {exc}"], []
-    return _gate_missing(parse_warn_file(text), allowlist, excluded or [])
+    return _gate_missing(
+        parse_warn_file(text), allowlist, excluded or [], importer_scoped
+    )
 
 
 def parse_toc_modules(text: str) -> set[str]:

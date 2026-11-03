@@ -129,7 +129,14 @@ def test_release_profile_is_defined() -> None:
         assert "airunner-tts-vendor" in _declared_dists(extras[legacy_name])
     assert tuple(services.LINUX_RELEASE_EXTRAS) == (
         "llm-native", "stt-native", "art-python", "tts-python-core",
-        "llm_weather", "search", "nvidia", "linux",
+        "llm_weather", "search", "nvidia", "linux", "postgresql",
+    )
+    extras = services.build_services_extras_require()
+    assert extras["postgresql"] == ["psycopg==3.3.7"]
+    assert "psycopg==3.3.7" in extras["linux-release"]
+    assert not any(
+        requirement.lower().startswith("psycopg")
+        for requirement in services.CORE_REQUIREMENTS
     )
     profile = _SERVICES_SETUP.read_text(encoding="utf-8")
     assert "whl/cpu" not in profile
@@ -165,7 +172,7 @@ def test_active_lock_covers_release_profile_requirements() -> None:
         if Requirement(raw).marker is None
         or Requirement(raw).marker.evaluate(_LINUX_ENV)
     ]
-    assert len(set(checked_requirements)) == 79
+    assert len(set(checked_requirements)) == 80
     assert "soundfile==0.14.0" in checked_requirements
     assert "Twisted==26.10.0" in checked_requirements
     for raw in requirements:

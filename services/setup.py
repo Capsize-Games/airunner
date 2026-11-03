@@ -274,6 +274,7 @@ LINUX_RELEASE_EXTRAS = (
     "search",
     "nvidia",
     "linux",
+    "postgresql",
 )
 
 SERVICE_CONSOLE_SCRIPTS = [
@@ -306,7 +307,10 @@ def _base_extras_require() -> dict[str, list[str]]:
         "core": [],
         "legacy-shield": [FACEHUGGERSHIELD_REQUIREMENT],
         "nvidia": NVIDIA_REQUIREMENTS,
+        # PostgreSQL is supported only by the full Linux release profile;
+        # CORE Debian remains SQLite-only.
         "linux": [],
+        "postgresql": ["psycopg==3.3.7"],
         "development": DEVELOPMENT_REQUIREMENTS,
         "dev": DEVELOPMENT_REQUIREMENTS,
         "art": ART_REQUIREMENTS,

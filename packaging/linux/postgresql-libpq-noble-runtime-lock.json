@@ -1,0 +1,675 @@
+{
+  "origin_indexes": [
+    "noble-main-amd64-Packages.gz",
+    "noble-security-main-amd64-Packages.gz",
+    "noble-updates-main-amd64-Packages.gz"
+  ],
+  "root": "libpq5=16.15-0ubuntu0.24.04.1",
+  "resolution_policy": "amd64/all Depends and Pre-Depends closure from reviewed signed Noble main, updates and security indexes; first indexed alternative; recommends omitted",
+  "package_count": 24,
+  "packages": [
+    {
+      "Package": "gcc-14-base",
+      "Version": "14.2.0-4ubuntu2~24.04.1",
+      "Architecture": "amd64",
+      "Source": "gcc-14",
+      "Filename": "pool/main/g/gcc-14/gcc-14-base_14.2.0-4ubuntu2~24.04.1_amd64.deb",
+      "Size": "51014",
+      "SHA256": "b95c172411a7fdae70307cf33a9f5320ba5e056b556454543dd5b679d5ce1c4f",
+      "Depends": "",
+      "Pre-Depends": "",
+      "License": ""
+    },
+    {
+      "Package": "libc6",
+      "Version": "2.39-0ubuntu8.9",
+      "Architecture": "amd64",
+      "Source": "glibc",
+      "Filename": "pool/main/g/glibc/libc6_2.39-0ubuntu8.9_amd64.deb",
+      "Size": "3264314",
+      "SHA256": "ff5557d99b51f761c4b7c92368b9cc45565eda17df9bf9eb4b134d09825008be",
+      "Depends": "libgcc-s1",
+      "Pre-Depends": "",
+      "License": ""
+    },
+    {
+      "Package": "libcom-err2",
+      "Version": "1.47.0-2.4~exp1ubuntu4.1",
+      "Architecture": "amd64",
+      "Source": "e2fsprogs",
+      "Filename": "pool/main/e/e2fsprogs/libcom-err2_1.47.0-2.4~exp1ubuntu4.1_amd64.deb",
+      "Size": "22982",
+      "SHA256": "7ab24d3057dabf86db8f771ad6e43f073ed86b6b950d6e8ba22cb9fe6707bbc9",
+      "Depends": "libc6 (>= 2.38)",
+      "Pre-Depends": "",
+      "License": ""
+    },
+    {
+      "Package": "libdb5.3t64",
+      "Version": "5.3.28+dfsg2-7",
+      "Architecture": "amd64",
+      "Source": "db5.3",
+      "Filename": "pool/main/d/db5.3/libdb5.3t64_5.3.28+dfsg2-7_amd64.deb",
+      "Size": "734100",
+      "SHA256": "a78a25c8fad8fdd0b7bc6b297da5d5685579be1e57732aa47870830e4a13161e",
+      "Depends": "libc6 (>= 2.38)",
+      "Pre-Depends": "",
+      "License": ""
+    },
+    {
+      "Package": "libffi8",
+      "Version": "3.4.6-1build1",
+      "Architecture": "amd64",
+      "Source": "libffi",
+      "Filename": "pool/main/libf/libffi/libffi8_3.4.6-1build1_amd64.deb",
+      "Size": "24718",
+      "SHA256": "637e6a7744de08cd331a41f4efd0d24e6ea9064843dea9d1c6ca87bdb5f038a2",
+      "Depends": "libc6 (>= 2.34)",
+      "Pre-Depends": "",
+      "License": ""
+    },
+    {
+      "Package": "libgcc-s1",
+      "Version": "14.2.0-4ubuntu2~24.04.1",
+      "Architecture": "amd64",
+      "Source": "gcc-14",
+      "Filename": "pool/main/g/gcc-14/libgcc-s1_14.2.0-4ubuntu2~24.04.1_amd64.deb",
+      "Size": "78392",
+      "SHA256": "aa7fadbe33b78bcf99885318040601c550c208929565b179891d9a3cc2aa68cd",
+      "Depends": "gcc-14-base (= 14.2.0-4ubuntu2~24.04.1), libc6 (>= 2.35)",
+      "Pre-Depends": "",
+      "License": ""
+    },
+    {
+      "Package": "libgmp10",
+      "Version": "2:6.3.0+dfsg-2ubuntu6.1",
+      "Architecture": "amd64",
+      "Source": "gmp",
+      "Filename": "pool/main/g/gmp/libgmp10_6.3.0+dfsg-2ubuntu6.1_amd64.deb",
+      "Size": "253460",
+      "SHA256": "285f8a505dfa8e1b33f357a9d8d3477ad35bf18c0b34771a6df4c25923f3ae0d",
+      "Depends": "libc6 (>= 2.38)",
+      "Pre-Depends": "",
+      "License": ""
+    },
+    {
+      "Package": "libgnutls30t64",
+      "Version": "3.8.3-1.1ubuntu3.6",
+      "Architecture": "amd64",
+      "Source": "gnutls28",
+      "Filename": "pool/main/g/gnutls28/libgnutls30t64_3.8.3-1.1ubuntu3.6_amd64.deb",
+      "Size": "1002902",
+      "SHA256": "b8944756260c5ea6b7fac019745f931f905aa7a4df0763676b1b25c911b692e2",
+      "Depends": "libc6 (>= 2.38), libgmp10 (>= 2:6.3.0+dfsg), libhogweed6t64 (>= 3.6), libidn2-0 (>= 2.0.0), libnettle8t64 (>= 3.9~), libp11-kit0 (>= 0.25.1), libtasn1-6 (>= 4.14), libunistring5 (>= 1.1)",
+      "Pre-Depends": "",
+      "License": ""
+    },
+    {
+      "Package": "libgssapi-krb5-2",
+      "Version": "1.20.1-6ubuntu2.10",
+      "Architecture": "amd64",
+      "Source": "krb5",
+      "Filename": "pool/main/k/krb5/libgssapi-krb5-2_1.20.1-6ubuntu2.10_amd64.deb",
+      "Size": "142830",
+      "SHA256": "0d4a0187bcdbbe3e6a10bfa574100087d12052d0d0ef28614fd6210021c587b2",
+      "Depends": "libkrb5-3 (= 1.20.1-6ubuntu2.10), libc6 (>= 2.38), libcom-err2 (>= 1.43.9), libk5crypto3 (>= 1.20), libkrb5support0 (= 1.20.1-6ubuntu2.10)",
+      "Pre-Depends": "",
+      "License": ""
+    },
+    {
+      "Package": "libhogweed6t64",
+      "Version": "3.9.1-2.2build1.1",
+      "Architecture": "amd64",
+      "Source": "nettle",
+      "Filename": "pool/main/n/nettle/libhogweed6t64_3.9.1-2.2build1.1_amd64.deb",
+      "Size": "198548",
+      "SHA256": "a9b5f7e9d49ba9060e1c933567046fbc6feab6096799cbf550b7214dc9b0f49b",
+      "Depends": "libc6 (>= 2.14), libgmp10 (>= 2:6.3.0+dfsg), libnettle8t64",
+      "Pre-Depends": "",
+      "License": ""
+    },
+    {
+      "Package": "libidn2-0",
+      "Version": "2.3.7-2build1.1",
+      "Architecture": "amd64",
+      "Source": "libidn2",
+      "Filename": "pool/main/libi/libidn2/libidn2-0_2.3.7-2build1.1_amd64.deb",
+      "Size": "66242",
+      "SHA256": "46bfd10df095a23b65f58115de47a547c9a2d14627749bd0423ae78c14be77d3",
+      "Depends": "libc6 (>= 2.14), libunistring5 (>= 1.1)",
+      "Pre-Depends": "",
+      "License": ""
+    },
+    {
+      "Package": "libk5crypto3",
+      "Version": "1.20.1-6ubuntu2.10",
+      "Architecture": "amd64",
+      "Source": "krb5",
+      "Filename": "pool/main/k/krb5/libk5crypto3_1.20.1-6ubuntu2.10_amd64.deb",
+      "Size": "81944",
+      "SHA256": "273f7cc95a68d927d7f71c3e78b7717a16a8d86e646a206bae7bf797150ae9db",
+      "Depends": "libc6 (>= 2.38), libkrb5support0 (= 1.20.1-6ubuntu2.10)",
+      "Pre-Depends": "",
+      "License": ""
+    },
+    {
+      "Package": "libkeyutils1",
+      "Version": "1.6.3-3build1",
+      "Architecture": "amd64",
+      "Source": "keyutils",
+      "Filename": "pool/main/k/keyutils/libkeyutils1_1.6.3-3build1_amd64.deb",
+      "Size": "9490",
+      "SHA256": "0679f198b0128179e46cdf956fb2022c23c758664c00bc8efa0382d509683a8a",
+      "Depends": "libc6 (>= 2.7)",
+      "Pre-Depends": "",
+      "License": ""
+    },
+    {
+      "Package": "libkrb5-3",
+      "Version": "1.20.1-6ubuntu2.10",
+      "Architecture": "amd64",
+      "Source": "krb5",
+      "Filename": "pool/main/k/krb5/libkrb5-3_1.20.1-6ubuntu2.10_amd64.deb",
+      "Size": "347568",
+      "SHA256": "60b48c5a3233f1d8caba30d6573edc8e131911ab6d63adcd664f7cbe62708362",
+      "Depends": "libkrb5support0 (= 1.20.1-6ubuntu2.10), libc6 (>= 2.38), libcom-err2 (>= 1.43.9), libk5crypto3 (>= 1.20), libkeyutils1 (>= 1.5.9), libssl3t64 (>= 3.0.0)",
+      "Pre-Depends": "",
+      "License": ""
+    },
+    {
+      "Package": "libkrb5support0",
+      "Version": "1.20.1-6ubuntu2.10",
+      "Architecture": "amd64",
+      "Source": "krb5",
+      "Filename": "pool/main/k/krb5/libkrb5support0_1.20.1-6ubuntu2.10_amd64.deb",
+      "Size": "34942",
+      "SHA256": "9224ede3246a82a845ea97652ecfae57f88e8d8f520d8a186f9157167574fb34",
+      "Depends": "libc6 (>= 2.38)",
+      "Pre-Depends": "",
+      "License": ""
+    },
+    {
+      "Package": "libldap2",
+      "Version": "2.6.10+dfsg-0ubuntu0.24.04.1",
+      "Architecture": "amd64",
+      "Source": "openldap",
+      "Filename": "pool/main/o/openldap/libldap2_2.6.10+dfsg-0ubuntu0.24.04.1_amd64.deb",
+      "Size": "197620",
+      "SHA256": "7f3f8e565401256f21d5aa562c9f92dbb63537b73aaea6283e4db5264f1598f4",
+      "Depends": "libc6 (>= 2.38), libgnutls30t64 (>= 3.8.2), libsasl2-2 (>= 2.1.28+dfsg1)",
+      "Pre-Depends": "",
+      "License": ""
+    },
+    {
+      "Package": "libnettle8t64",
+      "Version": "3.9.1-2.2build1.1",
+      "Architecture": "amd64",
+      "Source": "nettle",
+      "Filename": "pool/main/n/nettle/libnettle8t64_3.9.1-2.2build1.1_amd64.deb",
+      "Size": "181636",
+      "SHA256": "6d97fbc1972633083f08f51ccab433606c97bbceb897c631c66495117ca3406f",
+      "Depends": "libc6 (>= 2.17)",
+      "Pre-Depends": "",
+      "License": ""
+    },
+    {
+      "Package": "libp11-kit0",
+      "Version": "0.25.3-4ubuntu2.2",
+      "Architecture": "amd64",
+      "Source": "p11-kit",
+      "Filename": "pool/main/p/p11-kit/libp11-kit0_0.25.3-4ubuntu2.2_amd64.deb",
+      "Size": "297270",
+      "SHA256": "e7c58aeac19d89f5f1492dfaa52b8623bcd56edc40983f5243ad56d94f477bf2",
+      "Depends": "libc6 (>= 2.38), libffi8 (>= 3.4)",
+      "Pre-Depends": "",
+      "License": ""
+    },
+    {
+      "Package": "libpq5",
+      "Version": "16.15-0ubuntu0.24.04.1",
+      "Architecture": "amd64",
+      "Source": "postgresql-16",
+      "Filename": "pool/main/p/postgresql-16/libpq5_16.15-0ubuntu0.24.04.1_amd64.deb",
+      "Size": "151262",
+      "SHA256": "3f96dd36bcd7841172c1ead4965da20a193bb9ccf9a93a3f5a3ac7f56369dbb1",
+      "Depends": "libc6 (>= 2.38), libgssapi-krb5-2 (>= 1.17), libldap2 (>= 2.6.2), libssl3t64 (>= 3.0.0)",
+      "Pre-Depends": "",
+      "License": ""
+    },
+    {
+      "Package": "libsasl2-2",
+      "Version": "2.1.28+dfsg1-5ubuntu3.1",
+      "Architecture": "amd64",
+      "Source": "cyrus-sasl2",
+      "Filename": "pool/main/c/cyrus-sasl2/libsasl2-2_2.1.28+dfsg1-5ubuntu3.1_amd64.deb",
+      "Size": "53194",
+      "SHA256": "eda097f98dcb3a08b9ce157d6191d140e4885c1cba47b683c94b8ca45e88f458",
+      "Depends": "libsasl2-modules-db (>= 2.1.28+dfsg1-5ubuntu3.1), libc6 (>= 2.38), libssl3t64 (>= 3.0.0)",
+      "Pre-Depends": "",
+      "License": ""
+    },
+    {
+      "Package": "libsasl2-modules-db",
+      "Version": "2.1.28+dfsg1-5ubuntu3.1",
+      "Architecture": "amd64",
+      "Source": "cyrus-sasl2",
+      "Filename": "pool/main/c/cyrus-sasl2/libsasl2-modules-db_2.1.28+dfsg1-5ubuntu3.1_amd64.deb",
+      "Size": "20354",
+      "SHA256": "1f13548b1774cd9c70c50b8c3267204a101334a4d2f979338896ba5a4c6f81b8",
+      "Depends": "libc6 (>= 2.14), libdb5.3t64",
+      "Pre-Depends": "",
+      "License": ""
+    },
+    {
+      "Package": "libssl3t64",
+      "Version": "3.0.13-0ubuntu3.16",
+      "Architecture": "amd64",
+      "Source": "openssl",
+      "Filename": "pool/main/o/openssl/libssl3t64_3.0.13-0ubuntu3.16_amd64.deb",
+      "Size": "1945300",
+      "SHA256": "219f43b1cd836a4da550938db5fda93160d269d39a4edcf1f1ce698a470db797",
+      "Depends": "libc6 (>= 2.38)",
+      "Pre-Depends": "",
+      "License": ""
+    },
+    {
+      "Package": "libtasn1-6",
+      "Version": "4.19.0-3ubuntu0.24.04.2",
+      "Architecture": "amd64",
+      "Source": "",
+      "Filename": "pool/main/libt/libtasn1-6/libtasn1-6_4.19.0-3ubuntu0.24.04.2_amd64.deb",
+      "Size": "44468",
+      "SHA256": "f82c9ad142f952ea523bda5bfca7bb0802af3a50b8c0f0dd9ec18cdfa104bde7",
+      "Depends": "libc6 (>= 2.38)",
+      "Pre-Depends": "",
+      "License": ""
+    },
+    {
+      "Package": "libunistring5",
+      "Version": "1.1-2build1.1",
+      "Architecture": "amd64",
+      "Source": "libunistring",
+      "Filename": "pool/main/libu/libunistring/libunistring5_1.1-2build1.1_amd64.deb",
+      "Size": "535554",
+      "SHA256": "203d7657b5f54633fba1a9c9b784d556ef83c9f6787b3185ba55a88e07b865a3",
+      "Depends": "libc6 (>= 2.34)",
+      "Pre-Depends": "",
+      "License": ""
+    }
+  ],
+  "edges": [
+    {
+      "from": "libpq5",
+      "field": "Depends",
+      "constraint": "libc6 (>= 2.38)",
+      "resolved_to": "libc6",
+      "version": "2.39-0ubuntu8.9"
+    },
+    {
+      "from": "libpq5",
+      "field": "Depends",
+      "constraint": "libgssapi-krb5-2 (>= 1.17)",
+      "resolved_to": "libgssapi-krb5-2",
+      "version": "1.20.1-6ubuntu2.10"
+    },
+    {
+      "from": "libpq5",
+      "field": "Depends",
+      "constraint": "libldap2 (>= 2.6.2)",
+      "resolved_to": "libldap2",
+      "version": "2.6.10+dfsg-0ubuntu0.24.04.1"
+    },
+    {
+      "from": "libpq5",
+      "field": "Depends",
+      "constraint": "libssl3t64 (>= 3.0.0)",
+      "resolved_to": "libssl3t64",
+      "version": "3.0.13-0ubuntu3.16"
+    },
+    {
+      "from": "libc6",
+      "field": "Depends",
+      "constraint": "libgcc-s1",
+      "resolved_to": "libgcc-s1",
+      "version": "14.2.0-4ubuntu2~24.04.1"
+    },
+    {
+      "from": "libgssapi-krb5-2",
+      "field": "Depends",
+      "constraint": "libkrb5-3 (= 1.20.1-6ubuntu2.10)",
+      "resolved_to": "libkrb5-3",
+      "version": "1.20.1-6ubuntu2.10"
+    },
+    {
+      "from": "libgssapi-krb5-2",
+      "field": "Depends",
+      "constraint": "libc6 (>= 2.38)",
+      "resolved_to": "libc6",
+      "version": "2.39-0ubuntu8.9"
+    },
+    {
+      "from": "libgssapi-krb5-2",
+      "field": "Depends",
+      "constraint": "libcom-err2 (>= 1.43.9)",
+      "resolved_to": "libcom-err2",
+      "version": "1.47.0-2.4~exp1ubuntu4.1"
+    },
+    {
+      "from": "libgssapi-krb5-2",
+      "field": "Depends",
+      "constraint": "libk5crypto3 (>= 1.20)",
+      "resolved_to": "libk5crypto3",
+      "version": "1.20.1-6ubuntu2.10"
+    },
+    {
+      "from": "libgssapi-krb5-2",
+      "field": "Depends",
+      "constraint": "libkrb5support0 (= 1.20.1-6ubuntu2.10)",
+      "resolved_to": "libkrb5support0",
+      "version": "1.20.1-6ubuntu2.10"
+    },
+    {
+      "from": "libldap2",
+      "field": "Depends",
+      "constraint": "libc6 (>= 2.38)",
+      "resolved_to": "libc6",
+      "version": "2.39-0ubuntu8.9"
+    },
+    {
+      "from": "libldap2",
+      "field": "Depends",
+      "constraint": "libgnutls30t64 (>= 3.8.2)",
+      "resolved_to": "libgnutls30t64",
+      "version": "3.8.3-1.1ubuntu3.6"
+    },
+    {
+      "from": "libldap2",
+      "field": "Depends",
+      "constraint": "libsasl2-2 (>= 2.1.28+dfsg1)",
+      "resolved_to": "libsasl2-2",
+      "version": "2.1.28+dfsg1-5ubuntu3.1"
+    },
+    {
+      "from": "libssl3t64",
+      "field": "Depends",
+      "constraint": "libc6 (>= 2.38)",
+      "resolved_to": "libc6",
+      "version": "2.39-0ubuntu8.9"
+    },
+    {
+      "from": "libgcc-s1",
+      "field": "Depends",
+      "constraint": "gcc-14-base (= 14.2.0-4ubuntu2~24.04.1)",
+      "resolved_to": "gcc-14-base",
+      "version": "14.2.0-4ubuntu2~24.04.1"
+    },
+    {
+      "from": "libgcc-s1",
+      "field": "Depends",
+      "constraint": "libc6 (>= 2.35)",
+      "resolved_to": "libc6",
+      "version": "2.39-0ubuntu8.9"
+    },
+    {
+      "from": "libkrb5-3",
+      "field": "Depends",
+      "constraint": "libkrb5support0 (= 1.20.1-6ubuntu2.10)",
+      "resolved_to": "libkrb5support0",
+      "version": "1.20.1-6ubuntu2.10"
+    },
+    {
+      "from": "libkrb5-3",
+      "field": "Depends",
+      "constraint": "libc6 (>= 2.38)",
+      "resolved_to": "libc6",
+      "version": "2.39-0ubuntu8.9"
+    },
+    {
+      "from": "libkrb5-3",
+      "field": "Depends",
+      "constraint": "libcom-err2 (>= 1.43.9)",
+      "resolved_to": "libcom-err2",
+      "version": "1.47.0-2.4~exp1ubuntu4.1"
+    },
+    {
+      "from": "libkrb5-3",
+      "field": "Depends",
+      "constraint": "libk5crypto3 (>= 1.20)",
+      "resolved_to": "libk5crypto3",
+      "version": "1.20.1-6ubuntu2.10"
+    },
+    {
+      "from": "libkrb5-3",
+      "field": "Depends",
+      "constraint": "libkeyutils1 (>= 1.5.9)",
+      "resolved_to": "libkeyutils1",
+      "version": "1.6.3-3build1"
+    },
+    {
+      "from": "libkrb5-3",
+      "field": "Depends",
+      "constraint": "libssl3t64 (>= 3.0.0)",
+      "resolved_to": "libssl3t64",
+      "version": "3.0.13-0ubuntu3.16"
+    },
+    {
+      "from": "libcom-err2",
+      "field": "Depends",
+      "constraint": "libc6 (>= 2.38)",
+      "resolved_to": "libc6",
+      "version": "2.39-0ubuntu8.9"
+    },
+    {
+      "from": "libk5crypto3",
+      "field": "Depends",
+      "constraint": "libc6 (>= 2.38)",
+      "resolved_to": "libc6",
+      "version": "2.39-0ubuntu8.9"
+    },
+    {
+      "from": "libk5crypto3",
+      "field": "Depends",
+      "constraint": "libkrb5support0 (= 1.20.1-6ubuntu2.10)",
+      "resolved_to": "libkrb5support0",
+      "version": "1.20.1-6ubuntu2.10"
+    },
+    {
+      "from": "libkrb5support0",
+      "field": "Depends",
+      "constraint": "libc6 (>= 2.38)",
+      "resolved_to": "libc6",
+      "version": "2.39-0ubuntu8.9"
+    },
+    {
+      "from": "libgnutls30t64",
+      "field": "Depends",
+      "constraint": "libc6 (>= 2.38)",
+      "resolved_to": "libc6",
+      "version": "2.39-0ubuntu8.9"
+    },
+    {
+      "from": "libgnutls30t64",
+      "field": "Depends",
+      "constraint": "libgmp10 (>= 2:6.3.0+dfsg)",
+      "resolved_to": "libgmp10",
+      "version": "2:6.3.0+dfsg-2ubuntu6.1"
+    },
+    {
+      "from": "libgnutls30t64",
+      "field": "Depends",
+      "constraint": "libhogweed6t64 (>= 3.6)",
+      "resolved_to": "libhogweed6t64",
+      "version": "3.9.1-2.2build1.1"
+    },
+    {
+      "from": "libgnutls30t64",
+      "field": "Depends",
+      "constraint": "libidn2-0 (>= 2.0.0)",
+      "resolved_to": "libidn2-0",
+      "version": "2.3.7-2build1.1"
+    },
+    {
+      "from": "libgnutls30t64",
+      "field": "Depends",
+      "constraint": "libnettle8t64 (>= 3.9~)",
+      "resolved_to": "libnettle8t64",
+      "version": "3.9.1-2.2build1.1"
+    },
+    {
+      "from": "libgnutls30t64",
+      "field": "Depends",
+      "constraint": "libp11-kit0 (>= 0.25.1)",
+      "resolved_to": "libp11-kit0",
+      "version": "0.25.3-4ubuntu2.2"
+    },
+    {
+      "from": "libgnutls30t64",
+      "field": "Depends",
+      "constraint": "libtasn1-6 (>= 4.14)",
+      "resolved_to": "libtasn1-6",
+      "version": "4.19.0-3ubuntu0.24.04.2"
+    },
+    {
+      "from": "libgnutls30t64",
+      "field": "Depends",
+      "constraint": "libunistring5 (>= 1.1)",
+      "resolved_to": "libunistring5",
+      "version": "1.1-2build1.1"
+    },
+    {
+      "from": "libsasl2-2",
+      "field": "Depends",
+      "constraint": "libsasl2-modules-db (>= 2.1.28+dfsg1-5ubuntu3.1)",
+      "resolved_to": "libsasl2-modules-db",
+      "version": "2.1.28+dfsg1-5ubuntu3.1"
+    },
+    {
+      "from": "libsasl2-2",
+      "field": "Depends",
+      "constraint": "libc6 (>= 2.38)",
+      "resolved_to": "libc6",
+      "version": "2.39-0ubuntu8.9"
+    },
+    {
+      "from": "libsasl2-2",
+      "field": "Depends",
+      "constraint": "libssl3t64 (>= 3.0.0)",
+      "resolved_to": "libssl3t64",
+      "version": "3.0.13-0ubuntu3.16"
+    },
+    {
+      "from": "libkeyutils1",
+      "field": "Depends",
+      "constraint": "libc6 (>= 2.7)",
+      "resolved_to": "libc6",
+      "version": "2.39-0ubuntu8.9"
+    },
+    {
+      "from": "libgmp10",
+      "field": "Depends",
+      "constraint": "libc6 (>= 2.38)",
+      "resolved_to": "libc6",
+      "version": "2.39-0ubuntu8.9"
+    },
+    {
+      "from": "libhogweed6t64",
+      "field": "Depends",
+      "constraint": "libc6 (>= 2.14)",
+      "resolved_to": "libc6",
+      "version": "2.39-0ubuntu8.9"
+    },
+    {
+      "from": "libhogweed6t64",
+      "field": "Depends",
+      "constraint": "libgmp10 (>= 2:6.3.0+dfsg)",
+      "resolved_to": "libgmp10",
+      "version": "2:6.3.0+dfsg-2ubuntu6.1"
+    },
+    {
+      "from": "libhogweed6t64",
+      "field": "Depends",
+      "constraint": "libnettle8t64",
+      "resolved_to": "libnettle8t64",
+      "version": "3.9.1-2.2build1.1"
+    },
+    {
+      "from": "libidn2-0",
+      "field": "Depends",
+      "constraint": "libc6 (>= 2.14)",
+      "resolved_to": "libc6",
+      "version": "2.39-0ubuntu8.9"
+    },
+    {
+      "from": "libidn2-0",
+      "field": "Depends",
+      "constraint": "libunistring5 (>= 1.1)",
+      "resolved_to": "libunistring5",
+      "version": "1.1-2build1.1"
+    },
+    {
+      "from": "libnettle8t64",
+      "field": "Depends",
+      "constraint": "libc6 (>= 2.17)",
+      "resolved_to": "libc6",
+      "version": "2.39-0ubuntu8.9"
+    },
+    {
+      "from": "libp11-kit0",
+      "field": "Depends",
+      "constraint": "libc6 (>= 2.38)",
+      "resolved_to": "libc6",
+      "version": "2.39-0ubuntu8.9"
+    },
+    {
+      "from": "libp11-kit0",
+      "field": "Depends",
+      "constraint": "libffi8 (>= 3.4)",
+      "resolved_to": "libffi8",
+      "version": "3.4.6-1build1"
+    },
+    {
+      "from": "libtasn1-6",
+      "field": "Depends",
+      "constraint": "libc6 (>= 2.38)",
+      "resolved_to": "libc6",
+      "version": "2.39-0ubuntu8.9"
+    },
+    {
+      "from": "libunistring5",
+      "field": "Depends",
+      "constraint": "libc6 (>= 2.34)",
+      "resolved_to": "libc6",
+      "version": "2.39-0ubuntu8.9"
+    },
+    {
+      "from": "libsasl2-modules-db",
+      "field": "Depends",
+      "constraint": "libc6 (>= 2.14)",
+      "resolved_to": "libc6",
+      "version": "2.39-0ubuntu8.9"
+    },
+    {
+      "from": "libsasl2-modules-db",
+      "field": "Depends",
+      "constraint": "libdb5.3t64",
+      "resolved_to": "libdb5.3t64",
+      "version": "5.3.28+dfsg2-7"
+    },
+    {
+      "from": "libffi8",
+      "field": "Depends",
+      "constraint": "libc6 (>= 2.34)",
+      "resolved_to": "libc6",
+      "version": "2.39-0ubuntu8.9"
+    },
+    {
+      "from": "libdb5.3t64",
+      "field": "Depends",
+      "constraint": "libc6 (>= 2.38)",
+      "resolved_to": "libc6",
+      "version": "2.39-0ubuntu8.9"
+    }
+  ],
+  "review_record": "release-planning/services/input-reviews/psycopg-3.3.7-pure-python-libpq.md",
+  "status": "reviewed input identities; target runtime acceptance pending"
+}

@@ -92,10 +92,19 @@ def test_ci_tools_manifest_is_bound_to_exact_hash_lock() -> None:
         version, digest = pins[name]
         assert row["sha256"] == digest
         assert row["wheel_tags"]
-        assert row["source"]["kind"] == "https"
-        assert row["source"]["url"].startswith(
-            "https://files.pythonhosted.org/packages/"
-        )
+        if row["name"] == "psycopg":
+            assert row["source"]["kind"] == "repo_wheelhouse"
+            assert row["source"]["path"] == (
+                "package/wheelhouse/psycopg-3.3.7-py3-none-any.whl"
+            )
+            assert row["source"]["upstream_project"] == (
+                "https://pypi.org/project/psycopg/3.3.7/"
+            )
+        else:
+            assert row["source"]["kind"] == "https"
+            assert row["source"]["url"].startswith(
+                "https://files.pythonhosted.org/packages/"
+            )
         assert row["filename"].endswith(".whl")
         assert row["version"] == version
         assert row["size_bytes"] == row["source"]["size_bytes"] > 0

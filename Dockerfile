@@ -43,6 +43,9 @@ RUN set -e; \
             grep -Eq ",($1),"; \
     }; \
     packages="software-properties-common curl wget git build-essential"; \
+    if profile_match 'linux-release'; then \
+        packages="$packages libpq5=16.15-0ubuntu0.24.04.1"; \
+    fi; \
     packages="$packages cmake pkg-config libprotobuf-dev"; \
     packages="$packages protobuf-compiler"; \
     if profile_match 'stt-native|tts-python-core|linux-release|headless|desktop|all|all_dev|all_native|all_dev_native'; then \
