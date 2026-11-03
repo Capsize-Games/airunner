@@ -80,7 +80,7 @@ Additional reviewed runtime and build inputs:
 | Python docopt | 0.6.2; `944641a7357376a43151bd4a3ca44f9c07c4d1ae` | Origin accepted; offline wheel and parser smoke passed |
 | llama.cpp native sidecar | b10000; `47a39665e7081dc482feec169961acc09750a5c4` | Origin accepted; native v0.2.3 Linux/Windows build and CLI/import checks passed; model inference remains unverified |
 | whisper.cpp native sidecar | v1.9.5; `d1be6fde11ac6e0407606b4e42fe72d34add8037` | Origin accepted; native v0.2.3 Linux/Windows build and CLI/import checks passed; model inference remains unverified |
-| llama-cpp-python | 0.3.21+capsize.3; private wrapper merge `5156c34af6d4920cddc5aba75618b1dd1c23e590`, vendored llama.cpp `7acb4e8cd2ce21f457d1298e75fad729520d263c` | Reviewed optional-Diskcache, MTP and ctypes ABI fixes; compiled build41545665728 and notice producer41554942120 passed; actual Qwen GPU inference returned200, exact-output and reload acceptance remain open |
+| llama-cpp-python | 0.3.21+capsize.3; private wrapper merge `5156c34af6d4920cddc5aba75618b1dd1c23e590`, vendored llama.cpp `7acb4e8cd2ce21f457d1298e75fad729520d263c` | Reviewed optional-Diskcache, MTP and ctypes ABI fixes; compiled build41545665728 and notice producer41554942120 passed; authenticated source Qwen GPU inference returned exact `7`; cancellation, reload and frozen-artifact acceptance remain open |
 | scikit-build-core | 1.1.1; `67040d09985ea5683038943676f31550b5f4faf5` | Reviewed backend input; isolated CUDA wheel build passed; runtime acceptance pending |
 | pathspec | 1.1.1 | Reviewed backend input |
 | pip bootstrap wheel | 26.2.2; SHA-256 `fd7f4dfa8190e014013b9f08f3e973f4e4c26ffd179a204895533a7254813a70` | Reviewed source and wheel; hosted offline Python bootstrap passed |
@@ -123,6 +123,12 @@ Excluded OpenVoice/Melo and legacy Shield components remain outside the enabled 
 ## Full Linux diagnostic graph: 243 exact distributions
 
 The current selected diagnostic graph is `constraints.linux-release-v5.selected.txt` (local audit evidence), SHA-256 `63461b6a5fe1cd72e689ccf459a86f8d98f5cce78bd41b0c6351a71e521ed006`. It contains 243 distributions, each bound to one reviewed wheel hash. V5 replaces the V4 CUDA wrapper with the notice-complete 0.3.21+capsize.3 wheel; the other 242 artifacts are unchanged. The exact offline install, dependency check, all 77 service requirements and production notice verification (1,734 files) passed. The raw V4 diagnostic splice was rejected for a malformed continuation and retained as failed evidence. Portable staging and final artifact/model acceptance remain separate checks.
+
+The historical 77-requirement receipt predates explicit direct declarations of
+SoundFile and Twisted, whose reviewed wheels were already selected. The rebuilt
+service wheel now declares 79 distinct applicable base and release requirements;
+all 79 matched the V5 installation. These metadata declarations do not add or
+upgrade an external wheel.
 
 The list below enumerates every exact V4 distribution. All 243 selected wheel files passed hash, size, ZIP and RECORD checks. A fresh project environment installed the selected wheels with hash enforcement, no dependency resolution or builds, and kernel network denial; `uv pip check` passed. All 77 direct service base and Linux release requirements match the installed metadata. Production notice collection and verification passed for all 243 distributions and 1,732 notice files. These checks do not establish full model, GPU, API, or frozen-artifact acceptance. Component-specific runtime results are recorded separately. Reviewed origin flags are covered by the owner's standing whitelist, including reviewed transitives. This does not clear actual source, advisory, license or runtime findings. Native crate notice manifests linked below enumerate their separately reviewed scopes; they are not additional Python distributions.
 

@@ -57,6 +57,12 @@ jobs:
           python scripts/check_reviewed_release_inputs.py
           --workflow .github/workflows/docker-release.yml
 
+      - name: Record disk capacity before staging
+        run: |
+          df -B1 --output=source,size,used,avail,pcent,target \
+            "$RUNNER_TEMP" "$GITHUB_WORKSPACE"
+          docker system df
+
       - name: Stage reviewed Docker build inputs
         env:
           GH_TOKEN: ${{ github.token }}
@@ -201,3 +207,10 @@ jobs:
               docker push "$tag"
             fi
           done
+
+      - name: Record final disk capacity
+        if: always()
+        run: |
+          df -B1 --output=source,size,used,avail,pcent,target \
+            "$RUNNER_TEMP" "$GITHUB_WORKSPACE"
+          timeout 20s docker system df || true

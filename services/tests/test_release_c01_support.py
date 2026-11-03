@@ -64,6 +64,8 @@ _REQUIRED_TESTS = (
     "services/tests/test_ollama_embedding_contract.py",
     "services/tests/test_ollama_runtime_metadata.py",
     "services/tests/test_llm_worker_embedding_queue.py",
+    "services/tests/test_art_job_admission.py",
+    "services/tests/test_art_model_scan_path_safety.py",
 )
 _GATE_NEEDS = (
     "fetch-sidecars",

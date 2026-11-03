@@ -99,6 +99,7 @@ jobs:
       - name: Install dependencies
         env:
           GITHUB_TOKEN: ${{ github.token }}
+          PROMOTE_RELEASE: ${{ inputs.promote_release || false }}
         run: |
           wheelhouse="$RUNNER_TEMP/linux-release-wheelhouse"
           tools="$RUNNER_TEMP/linux-ci-tools-wheelhouse"
@@ -145,6 +146,14 @@ jobs:
             --no-deps --require-hashes -r "$builder/requirements.txt"
           python -m pip install --no-deps --no-build-isolation -e './services[linux-release]'
           python -m pip check
+          if [ "$PROMOTE_RELEASE" = "true" ]; then
+            version="$(python services/setup.py --version)"
+            python scripts/linux_release_wheel_assets.py create \
+              --wheelhouse "$wheelhouse" \
+              --output-dir release-assets/runtime-wheels \
+              --application-version "$version" \
+              --source-sha "$GITHUB_SHA"
+          fi
           df -B1 --output=source,size,used,avail,pcent,target \
             "$RUNNER_TEMP" "$GITHUB_WORKSPACE" \
             | tee "$audit/capacity-after-install-before-cleanup.txt"
@@ -165,6 +174,8 @@ jobs:
           PYTHONPATH=services/src python -m pytest \
             scripts/tests/test_cuda_source_recipe.py \
             scripts/tests/test_cuda_wheel_handoff.py \
+            scripts/tests/test_linux_release_artifact_stager.py \
+            scripts/tests/test_linux_release_wheel_assets.py \
             scripts/tests/test_linux_ci_dependency_inputs.py \
             scripts/tests/test_apt_release_publisher.py \
             scripts/tests/test_apt_daemon_health_probe.py \
@@ -211,6 +222,8 @@ jobs:
             services/tests/test_ollama_embedding_contract.py \
             services/tests/test_ollama_runtime_metadata.py \
             services/tests/test_llm_worker_embedding_queue.py \
+            services/tests/test_art_job_admission.py \
+            services/tests/test_art_model_scan_path_safety.py \
             -o addopts='' -q --junitxml=required-checks.xml
         env:
           AIRUNNER_HEADLESS: "1"
@@ -292,6 +305,14 @@ jobs:
         with:
           name: linux-candidate
           path: build/release-assets/*.tar.gz
+          if-no-files-found: error
+
+      - name: Upload verified runtime wheel release assets
+        if: github.event_name == 'workflow_dispatch' && inputs.promote_release == true
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: runtime-wheels
+          path: release-assets/runtime-wheels/*
           if-no-files-found: error
 
       - name: Upload Linux candidate input and capacity audit
@@ -644,6 +665,12 @@ jobs:
           name: linux-candidate
           path: release-assets/linux-candidate
 
+      - name: Download verified runtime wheel release assets
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: runtime-wheels
+          path: release-assets/runtime-wheels
+
       - name: Download Debian package and source manifest
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
@@ -665,9 +692,15 @@ jobs:
           python scripts/linux_candidate_artifact.py verify \
             --archive "${CANDIDATES[0]}" \
             --source-sha "$RELEASE_SOURCE_SHA"
+          version="$(python services/setup.py --version)"
+          python scripts/linux_release_wheel_assets.py verify \
+            --asset-dir release-assets/runtime-wheels \
+            --application-version "$version" \
+            --source-sha "$RELEASE_SOURCE_SHA"
           mapfile -t ASSETS < <(
             find release-assets/python-dist release-assets/sidecars \
               release-assets/linux-candidate release-assets/debian \
+              release-assets/runtime-wheels \
               -maxdepth 1 -type f -print | sort
           )
           python scripts/linux_candidate_artifact.py checksums \
@@ -688,6 +721,7 @@ jobs:
             --asset-dir release-assets/sidecars \
             --asset-dir release-assets/linux-candidate \
             --asset-dir release-assets/debian \
+            --asset-dir release-assets/runtime-wheels \
             --asset-file release-assets/SHA256SUMS
 
   verify-published-release:

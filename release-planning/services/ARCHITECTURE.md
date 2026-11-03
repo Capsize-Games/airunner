@@ -45,8 +45,21 @@ is historical evidence. The selected V5
 diagnostic graph installed all 243 exact reviewed wheels in a separate project
 environment with kernel network denial, hash enforcement and no builds;
 `uv pip check` passed. All 77 direct service requirements match the installed
-metadata. Five CPU ABI/local-fixture probes and full production notice
-verification (243 distributions, 1,734 files) passed. These results do not
+metadata in the recorded V5 check. That check predates the two explicit direct
+metadata declarations for `soundfile==0.14.0` and `Twisted==26.10.0`; the
+selected lock already contains both reviewed wheels. A rebuilt services wheel
+was installed offline with no dependency resolution into the isolated V5
+candidate environment; all 79 current base and `linux-release` requirements
+matched installed metadata. The import check run in that V5 environment was a
+full-graph result, not CORE-only evidence. A separate fresh CORE51 environment
+was built from the exact hashed CORE lock, then given the rebuilt services and
+native wheels with no dependency resolution. It had no Torch, torchvision or
+Transformers. Its base import gate scanned 46 module-scope imports: 19 were
+satisfied, 27 were declared only under inactive extras, and none were
+undeclared or missing. This does not validate Linux-release or optional-extra
+imports.
+Five CPU ABI/local-fixture probes and full production notice verification
+(243 distributions, 1,734 files) passed. These results do not
 establish full model, GPU, API or frozen-artifact acceptance. The visible
 exact-pin inventory is in `DEPENDENCY_DECISIONS.md`.
 
@@ -55,13 +68,20 @@ ctypes context-layout defects found in earlier candidates. Disk caching is an
 explicit extra. Compiled candidate run `41545665728` and notice-completion run
 `41554942120` passed. The final wheel retains all 94 original runtime payloads
 and includes the wrapper, backend and JSON notices. Actual Qwen3.5-9B Q8
-inference at context 32768 returned HTTP 200 on RTX 5080, with full configured
-offload and 9,474 MiB process GPU memory. The exact-output assertion failed:
-the offline embedded chat template did not receive the disabled-thinking
-preference. Physical unload released GPU memory while `/api/ps` still reported
-a loaded model. These confirmed source defects and reload acceptance remain
-open. A default 300-second cold-load request timed out on model storage; the
-successful inference used the validated finite 900-second setting.
+inference at context 32768 returned HTTP 200 on RTX 5080 with full configured
+offload. The first exact-output assertion exposed a missing disabled-thinking
+preference in the offline embedded chat template; a separate status defect
+reported an unloaded model as loaded. Both source fixes are committed. A later
+authenticated run rejected an unauthenticated request with HTTP 401 and returned
+exactly `7`, using approximately 9,472 MiB process GPU memory. It released the
+model weights on unload, but a harness predicate incorrectly required the
+process CUDA context to disappear before reload. The failed receipt is retained.
+Independent harness review also found that keepalive frames could be mistaken
+for model output during the disconnect test. Cancellation and full reload
+acceptance remain open until the corrected checks pass. A 300-second cold-load
+request timed out on model storage; the completed inference used the validated
+finite 900-second setting. These source/runtime observations do not establish
+frozen-artifact acceptance.
 Input readiness no longer blocks candidate CI. Required checks and target
 acceptance must still pass; a skipped or unavailable check is not a pass.
 
@@ -140,6 +160,17 @@ start real models without the applicable provenance and capacity checks.
 
 ## LLM completion observation
 
+SRV-26 / [#2445](https://github.com/Capsize-Games/airunner/issues/2445)
+extends phase 1 and phase 6 to the lifetime of asynchronous art jobs. Reserve
+bounded background capacity before model handoff and retain it until execution
+actually exits, including runtime threads that outlive an observer's cancelled
+response. Supervise owned tasks at shutdown. Retain cancellation arriving
+before a sidecar child ID exists, and correlate local worker interrupts to
+their request; an explicitly global administrative interrupt stays separate.
+Use deterministic barriers for admission/cancellation/shutdown races. Actual
+image generation and LLM/art resource handoffs remain required in #2122;
+the inspected cache contains no complete supported art pipeline.
+
 SRV-25 / [#2444](https://github.com/Capsize-Games/airunner/issues/2444)
 extends phase 1 and phase 6 to accurate Ollama metadata. Actual model testing
 found guessed model names, quantization, sizes, digests, dates, VRAM and expiry
@@ -149,6 +180,9 @@ the client schema with explicit unknown values. Status requests must not
 download assets or synchronously hash multi-gigabyte files. The catalog's
 maximum context describes capability; it does not describe the active context.
 Regression and actual model/API evidence are required before release closure.
+Generation usage follows the same rule: provider-reported token counts may be
+returned; missing counts and unmeasured phase durations use zero rather than
+character-based estimates. Total request duration uses the monotonic clock.
 
 SRV-23 tracks the shared callback boundary used by legacy, Ollama and OpenAI
 completion APIs. A terminal manager error must fail the request, including
@@ -247,9 +281,31 @@ unavailable; successful report generation does not mean a Xenon pass. These
 counts use different tool selections and are not a before/after defect score.
 The new artifact stager's main function initially ranked F (complexity 59);
 its refactor splits preflight, routes, streaming and receipts while preserving
-security regressions. The current stager has no D/E/F blocks (maximum C, 17).
+security regressions. The Linux wheel stager has no D/E/F blocks (maximum C,
+17).
 Remaining advisory findings require the subsystem dispositions below rather
 than mechanical deletion of optional imports, migrations or compatibility code.
+
+A committed-source refresh at `fbea76520` used Python 3.13.5, the existing
+`.venv-ci` quality analyzer, and Radon 6.0.1. The legacy AST scan found 804
+service files / 136,176 lines and 1,269 advisory notes; its native scan remains
+three files / 407 lines and six notes. The Radon service selection found 998
+files, 180 complex blocks and 531 hotspot files. The legacy analyzer's source
+exclusions and Radon's generated-file, directory and 500 KB size exclusions
+remain in force; neither count includes all repository Python files. Six
+release-input and notice helper scripts were also scanned separately. The new
+Docker input stager's cached-wheelhouse verifier is complexity C/20; its output
+path validator is B/9. The runtime notice CLI is A/4. The scan includes older
+notice validation code, whose verifier remains F/56 and distribution reader
+E/40. Against the previous Radon snapshot, five blocks are newly reported:
+`handle_ollama_embedding_async` C/19, `build_ollama_runtime_metadata` D/26,
+`_cached_digest` C/11, `ServiceApp.cleanup` C/13 and
+`LLMModelManager._load_model_locked` D/25. The manager load block replaces the
+previously ranked `LLMModelManager.load` at the same score after extraction;
+the E5 directory verifier changed from C/14 to C/17. A bounded read-through
+found no discrete correctness defect attributable to these scores. The scores
+remain review prompts, not acceptance gates or confirmed defects.
+Xenon is still unavailable in `.venv-ci`; its result is unavailable, not a pass.
 
 Review quality findings in API, persistence, workers/runtimes, LLM and
 companion, art/voice, utilities and build tooling as separate work units.
@@ -366,3 +422,51 @@ install and daemon health, then promotes and checks the public repository again.
 Failed validation restores the previous repository. These are automated release
 steps, not owner approval or manual review gates. The pipeline source is prepared;
 no main service release or apt publication has passed these steps yet.
+
+## Unused geospatial helper
+
+The service geospatial helper `services/src/airunner_services/utils/location/map.py`
+was removed after a caller search of desktop `services/src`, `native/src`,
+`scripts`, and service release documentation found no imports or calls to
+`extract_geojson_from_pbf`, `download_and_extract`, or
+`list_available_regions`. The sibling web checkout contains its own
+`airunner_engine` map module and unit tests; those are outside this service
+package and were left unchanged. The service no longer imports `pyrosm`
+through this unused module.
+
+## Art generation job bounds
+
+The art API admits one background generation job per service process. Admission
+is atomic and occurs before the LLM unload handoff; a full slot returns HTTP 503
+with `Retry-After: 1`. The slot remains held until runtime invocation and result
+handling finish, even after the public job status becomes cancelled. API shutdown
+requests cancellation and waits for active runners up to its bounded timeout;
+an unfinished runner remains tracked and keeps its reservation.
+
+Cancellation uses the parent request ID through the sidecar submission window.
+The sidecar sends a pending cancellation as soon as it learns the child job ID.
+The local callback runtime and SD worker match cancellation to the queued or
+active API request. The ID-less administrative interrupt retains its existing
+process-wide behavior. Deterministic tests cover admission, reservation lifetime,
+shutdown timeout, sidecar ID handoff, local fallback timeout acknowledgement and
+SD worker request matching. An independent isolated selection passed 213 tests
+with three dependency warnings, including API, cancellation, shutdown and release
+contracts. These tests use no model inference; authenticated real-model generation, output inspection and GPU handoff remain
+separate acceptance work.
+
+## Durable custom runtime inputs
+
+The final application release must include the five exact custom runtime wheels
+for llama-cpp-python, NVSHMEM, torchaudio, torchvision and Triton. Each release
+asset remains bound to its reviewed hash, original Actions artifact, run and
+source revision. The stager tries the public immutable versioned release asset
+without credentials. Only HTTP 404 permits fallback to the original authenticated
+Actions artifact; other HTTP errors, invalid redirects and size/hash mismatches
+fail. Promotion verifies the complete wheel asset group before publishing.
+
+The five final URLs are absent before publication. A bounded smoke verified
+live 404 responses and original artifact metadata, then exercised the production
+stager with a cached, hash-verified archive containing three of the wheels.
+It did not fetch a live Actions ZIP or re-download the full runtime graph.
+Published asset downloads and hashes remain a required release check. Root's
+focused transport/promotion regressions passed 47 tests locally.
