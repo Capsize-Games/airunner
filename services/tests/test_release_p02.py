@@ -103,6 +103,8 @@ def test_release_profile_is_defined() -> None:
     assert "nvidia-cuda-runtime-cu12" in names
     assert not ({"pyside6", "shiboken6"} & names)
     extras = services.build_services_extras_require()
+    assert "soundfile==0.14.0" in extras["tts-python-core"]
+    assert "Twisted==26.10.0" in extras["search"]
     release_names = _declared_dists(extras["linux-release"])
     assert "facehuggershield" not in release_names
     assert "pyttsx3" not in release_names
@@ -158,6 +160,14 @@ def test_active_lock_covers_release_profile_requirements() -> None:
         *kwargs["install_requires"],
         *services.build_services_extras_require()["linux-release"],
     ]
+    checked_requirements = [
+        raw for raw in requirements
+        if Requirement(raw).marker is None
+        or Requirement(raw).marker.evaluate(_LINUX_ENV)
+    ]
+    assert len(set(checked_requirements)) == 79
+    assert "soundfile==0.14.0" in checked_requirements
+    assert "Twisted==26.10.0" in checked_requirements
     for raw in requirements:
         req = Requirement(raw)
         if req.marker is not None and not req.marker.evaluate(_LINUX_ENV):

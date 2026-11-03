@@ -20,32 +20,41 @@ the list.
 What it checks
 --------------
 Run it *inside a clean environment that has the built wheels installed*. It
-walks every shipped module, collects **module-scope** imports -- the ones that
-raise at import time rather than lazily -- and asserts each one is importable.
+walks every shipped module and collects **module-scope** imports -- the ones
+that raise at import time rather than lazily. It fails for missing base
+requirements and missing requirements belonging to explicitly active extras.
+Imports whose distributions are declared only by inactive extras are reported
+as outside this profile's import check; the behavioral artifact gate separately
+proves the supported base entrypoints and capability-unavailable response.
 
-Anything intentionally optional must be named in ``packaging/optional_imports.toml``
-with a reason. That file is the reviewed record of which imports are allowed to
-be absent; silence is not a decision.
+An undeclared missing import still fails. ``packaging/optional_imports.toml``
+continues to cover only narrowly reviewed imports with no distribution
+requirement in the built artifact metadata.
 
 Usage
 -----
     python -m venv /tmp/gate && /tmp/gate/bin/pip install dist/*.whl
     /tmp/gate/bin/python scripts/check_artifact_imports.py
 
-Exit code 0 = every module-scope import is satisfied or explicitly optional.
-Exit code 1 = the artifact would fail for a user; do not publish it.
+Exit code 0 = base imports and the requested active extras are satisfied;
+inactive extra imports are listed as untested by this profile.
+Exit code 1 = a base/active-extra import is undeclared or missing.
 """
 
 from __future__ import annotations
 
 import argparse
 import ast
+import importlib.metadata as import_metadata
 import importlib.util
 import pathlib
+import re
 import sys
 import sysconfig
 
 import tomllib
+
+from packaging.requirements import Requirement
 
 # Distributions built from this repository. Imports between them are internal
 # and are validated by being importable like any other. Matched exactly:
@@ -64,6 +73,14 @@ DEFAULT_ALLOWLIST = (
     / "packaging"
     / "optional_imports.toml"
 )
+
+# Import names do not always match their distribution names. Keep this mapping
+# limited to established aliases needed by the shipped modules; it is not an
+# optional-dependency allowlist.
+IMPORT_DISTRIBUTION_ALIASES = {
+    "bs4": "beautifulsoup4",
+    "lingua": "lingua-language-detector",
+}
 
 
 def _site_packages() -> pathlib.Path:
@@ -197,6 +214,107 @@ def load_allowlist(path: pathlib.Path) -> dict[str, str]:
     }
 
 
+def _canonical_distribution_name(name: str) -> str:
+    """Normalize an import/distribution alias for PEP 503 name comparison."""
+    return re.sub(r"[-_.]+", "-", name).lower()
+
+
+def _owner_distribution_metadata() -> list[import_metadata.Distribution]:
+    """Return installed metadata for first-party distributions in this scan."""
+    distributions = []
+    for name in OWN_DISTRIBUTIONS:
+        try:
+            distributions.append(import_metadata.distribution(name))
+        except import_metadata.PackageNotFoundError:
+            continue
+    return distributions
+
+
+def _inactive_requirement_sources(
+    import_name: str,
+    distributions: list[import_metadata.Distribution],
+    active_extras: set[str],
+) -> list[str] | None:
+    """Return declared but inactive requirement owners for one import.
+
+    ``None`` means the import is required in this profile or has no matching
+    declaration, so a missing module remains a gate failure. Extra-scoped and
+    platform/version-scoped requirements are evaluated against the current
+    interpreter and the explicitly selected extras.
+    """
+    target = _canonical_distribution_name(
+        IMPORT_DISTRIBUTION_ALIASES.get(import_name, import_name)
+    )
+    inactive: set[str] = set()
+    matched_requirement = False
+    active_requirement = False
+
+    for distribution in distributions:
+        distribution_name = distribution.metadata.get("Name", "")
+        if not distribution_name:
+            continue
+        provides_extra = set(
+            distribution.metadata.get_all("Provides-Extra") or ()
+        )
+        for raw_requirement in distribution.requires or ():
+            requirement = Requirement(raw_requirement)
+            if _canonical_distribution_name(requirement.name) != target:
+                continue
+            matched_requirement = True
+            marker = requirement.marker
+            if marker is None or marker.evaluate({"extra": ""}):
+                active_requirement = True
+                continue
+
+            for extra in provides_extra:
+                if not marker.evaluate({"extra": extra}):
+                    continue
+                if extra in active_extras:
+                    active_requirement = True
+                else:
+                    inactive.add(f"{distribution_name}[{extra}]")
+
+            # A non-extra marker can be false for this interpreter/platform.
+            if not inactive and not any(
+                marker.evaluate({"extra": extra}) for extra in provides_extra
+            ):
+                inactive.add(
+                    f"{distribution_name} (inactive environment marker)"
+                )
+
+    if active_requirement or not matched_requirement or not inactive:
+        return None
+    return sorted(inactive)
+
+
+def classify_missing_imports(
+    missing: dict[str, list[str]],
+    allowlist: dict[str, str],
+    distributions: list[import_metadata.Distribution],
+    active_extras: set[str],
+) -> tuple[
+    dict[str, list[str]],
+    dict[str, str],
+    dict[str, tuple[list[str], list[str]]],
+]:
+    """Separate blockers from absent imports declared only by inactive extras."""
+    undeclared: dict[str, list[str]] = {}
+    optional_absent: dict[str, str] = {}
+    inactive_extras: dict[str, tuple[list[str], list[str]]] = {}
+    for name, files in missing.items():
+        if name in allowlist:
+            optional_absent[name] = allowlist[name]
+            continue
+        sources = _inactive_requirement_sources(
+            name, distributions, active_extras
+        )
+        if sources is None:
+            undeclared[name] = files
+        else:
+            inactive_extras[name] = (files, sources)
+    return undeclared, optional_absent, inactive_extras
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
@@ -204,6 +322,15 @@ def main() -> int:
         type=pathlib.Path,
         default=DEFAULT_ALLOWLIST,
         help="TOML file naming imports that may legitimately be absent.",
+    )
+    parser.add_argument(
+        "--active-extra",
+        action="append",
+        default=[],
+        help=(
+            "Extra explicitly installed in this clean environment; repeat for "
+            "each extra. Missing dependencies from these extras remain errors."
+        ),
     )
     args = parser.parse_args()
 
@@ -218,41 +345,76 @@ def main() -> int:
         return 1
 
     allowed = load_allowlist(args.allowlist)
+    distributions = _owner_distribution_metadata()
+    known_extras = {
+        extra
+        for distribution in distributions
+        for extra in (distribution.metadata.get_all("Provides-Extra") or ())
+    }
+    unknown_extras = sorted(set(args.active_extra) - known_extras)
+    if unknown_extras:
+        parser.error(
+            "active extra(s) not declared by installed artifacts: "
+            + ", ".join(unknown_extras)
+        )
     missing = {
         name: files
         for name, files in imports.items()
         if importlib.util.find_spec(name) is None
     }
-    undeclared = {n: f for n, f in missing.items() if n not in allowed}
-    optional_absent = sorted(n for n in missing if n in allowed)
+    undeclared, optional_absent, inactive_extras = classify_missing_imports(
+        missing,
+        allowed,
+        distributions,
+        set(args.active_extra),
+    )
 
     print(f"scanned {site_packages}")
+    print(
+        "  active extras:                     "
+        + (", ".join(sorted(set(args.active_extra))) or "(none; base profile)")
+    )
     print(f"  module-scope third-party imports: {len(imports)}")
     print(f"  satisfied:                        {len(imports) - len(missing)}")
     print(f"  absent but declared optional:     {len(optional_absent)}")
+    print(f"  declared only by inactive extras: {len(inactive_extras)}")
     print(f"  UNDECLARED:                       {len(undeclared)}")
 
     if optional_absent:
-        print("\noptional, absent by design:")
-        for name in optional_absent:
-            print(f"  {name:<26} {allowed[name]}")
+        print("\nreviewed optional imports absent by design:")
+        for name, reason in sorted(optional_absent.items()):
+            print(f"  {name:<26} {reason}")
+
+    if inactive_extras:
+        print("\nnot installed in this profile; declared by inactive extras:")
+        for name, (files, sources) in sorted(inactive_extras.items()):
+            print(f"  {name:<26} {', '.join(sources)}")
+            for path in files[:3]:
+                print(f"      {path}")
+            if len(files) > 3:
+                print(f"      ... and {len(files) - 3} more")
 
     if undeclared:
-        print("\nUNDECLARED module-scope imports -- this artifact will fail for users:")
+        print(
+            "\nUNDECLARED module-scope imports -- this artifact will fail for users:"
+        )
         for name, files in sorted(undeclared.items()):
-            print(f"  {name:<26} imported at module scope by {len(files)} file(s)")
+            print(
+                f"  {name:<26} imported at module scope by {len(files)} file(s)"
+            )
             for path in files[:3]:
                 print(f"      {path}")
             if len(files) > 3:
                 print(f"      ... and {len(files) - 3} more")
         print(
-            "\nEither declare each one as a dependency, or add it to\n"
-            f"{args.allowlist} with a reason if it is genuinely optional\n"
-            "(and make the importing module degrade gracefully when it is absent)."
+            "\nDeclare missing base/active-extra imports in the owning artifact."
         )
         return 1
 
-    print("\nOK: every module-scope import is satisfied or explicitly optional.")
+    print(
+        "\nOK: base and active-extra imports are satisfied or reviewed; "
+        "inactive extra imports were not tested in this profile."
+    )
     return 0
 
 

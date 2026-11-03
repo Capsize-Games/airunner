@@ -205,6 +205,9 @@ TTS_REQUIREMENTS = [
     "inflect==7.5.0",
     "pycountry==24.6.1",
     "librosa==0.11.0",
+    # Imported directly by the TTS generation worker; librosa currently
+    # supplies it transitively, but service metadata must declare the import.
+    "soundfile==0.14.0",
     # TorchCodec 0.12-0.17 documents torch >=2.11 compatibility. The
     # Linux release lock selects the exact reviewed CUDA build.
     "torchcodec>=0.12.0,<0.18",
@@ -239,6 +242,9 @@ SEARCH_REQUIREMENTS = [
     "aiohttp>=3.13.4",
     "google-api-python-client>=2.170.0",
     "scrapy==2.17.0",
+    # The web content extractor imports Twisted directly; Scrapy's
+    # dependency is not a substitute for this package's direct declaration.
+    "Twisted==26.10.0",
     "trafilatura==2.0.0",
 ]
 

@@ -18,9 +18,34 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from check_artifact_imports import (
     _module_scope_imports,
+    classify_missing_imports,
     collect,
     load_allowlist,
 )
+
+
+class _Metadata:
+    def __init__(self, name: str, extras: tuple[str, ...] = ()) -> None:
+        self._values = {"Name": name, "Provides-Extra": list(extras)}
+
+    def get(self, key: str, default=None):
+        return self._values.get(key, default)
+
+    def get_all(self, key: str):
+        value = self._values.get(key)
+        return value if isinstance(value, list) else None
+
+
+class _Distribution:
+    def __init__(
+        self,
+        name: str,
+        *,
+        extras: tuple[str, ...] = (),
+        requires: tuple[str, ...] = (),
+    ) -> None:
+        self.metadata = _Metadata(name, extras)
+        self.requires = list(requires)
 
 
 def _imports(source: str) -> set[str]:
@@ -165,3 +190,117 @@ def test_allowlist_round_trip(tmp_path: Path):
 def test_missing_allowlist_is_empty_not_an_error(tmp_path: Path):
     # An absent allowlist must not silently pass everything.
     assert load_allowlist(tmp_path / "nope.toml") == {}
+
+
+def test_missing_import_declared_only_by_inactive_extra_is_reported_separately():
+    distribution = _Distribution(
+        "airunner-services",
+        extras=("rag",),
+        requires=("langchain-core>=1; extra == 'rag'",),
+    )
+    undeclared, allowed, inactive = classify_missing_imports(
+        {"langchain_core": ["airunner_services/llm/agent.py"]},
+        {},
+        [distribution],
+        set(),
+    )
+
+    assert undeclared == {}
+    assert allowed == {}
+    assert inactive == {
+        "langchain_core": (
+            ["airunner_services/llm/agent.py"],
+            ["airunner-services[rag]"],
+        )
+    }
+
+
+def test_missing_base_import_still_fails_even_if_also_in_an_extra():
+    distribution = _Distribution(
+        "airunner-services",
+        extras=("llm-native",),
+        requires=(
+            "torch>=2.0",
+            "torch>=2.0; extra == 'llm-native'",
+        ),
+    )
+    undeclared, _allowed, inactive = classify_missing_imports(
+        {"torch": ["airunner_services/api/server.py"]},
+        {},
+        [distribution],
+        set(),
+    )
+
+    assert undeclared == {"torch": ["airunner_services/api/server.py"]}
+    assert inactive == {}
+
+
+def test_missing_dependency_from_explicitly_active_extra_still_fails():
+    distribution = _Distribution(
+        "airunner-services",
+        extras=("rag",),
+        requires=("langchain-core>=1; extra == 'rag'",),
+    )
+    undeclared, _allowed, inactive = classify_missing_imports(
+        {"langchain_core": ["airunner_services/llm/agent.py"]},
+        {},
+        [distribution],
+        {"rag"},
+    )
+
+    assert undeclared == {"langchain_core": ["airunner_services/llm/agent.py"]}
+    assert inactive == {}
+
+
+def test_missing_undeclared_import_still_fails():
+    undeclared, _allowed, inactive = classify_missing_imports(
+        {"unreviewed_module": ["airunner_services/entry.py"]},
+        {},
+        [_Distribution("airunner-services")],
+        set(),
+    )
+
+    assert undeclared == {"unreviewed_module": ["airunner_services/entry.py"]}
+    assert inactive == {}
+
+
+def test_known_import_distribution_alias_is_respected():
+    distribution = _Distribution(
+        "airunner-services",
+        extras=("llm-native",),
+        requires=("beautifulsoup4>=4.12; extra == 'llm-native'",),
+    )
+    _undeclared, _allowed, inactive = classify_missing_imports(
+        {"bs4": ["airunner_services/llm/document_loader.py"]},
+        {},
+        [distribution],
+        set(),
+    )
+
+    assert inactive == {
+        "bs4": (
+            ["airunner_services/llm/document_loader.py"],
+            ["airunner-services[llm-native]"],
+        )
+    }
+
+
+def test_lingua_import_uses_declared_detector_extra():
+    distribution = _Distribution(
+        "airunner-services",
+        extras=("llm-native",),
+        requires=("lingua-language-detector==2.1.0; extra == 'llm-native'",),
+    )
+    _undeclared, _allowed, inactive = classify_missing_imports(
+        {"lingua": ["airunner_services/utils/text/language_detection.py"]},
+        {},
+        [distribution],
+        set(),
+    )
+
+    assert inactive == {
+        "lingua": (
+            ["airunner_services/utils/text/language_detection.py"],
+            ["airunner-services[llm-native]"],
+        )
+    }
