@@ -58,6 +58,11 @@ aggregates = [
 [native_speech]
 required = true
 
+# CUDA profile staging remains optional and explicit. Setting required=true
+# makes assembly require the complete externally pinned profile input set.
+[native_cuda_profile]
+required = false
+
 # The full Linux candidate resolves system libpq at runtime through ctypes.
 # Ship the reviewed Ubuntu package closure as an offline prerequisite.
 [postgresql_runtime]

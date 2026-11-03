@@ -183,6 +183,8 @@ jobs:
             scripts/tests/test_linux_release_artifact_stager.py \
             scripts/tests/test_postgresql_runtime_stager.py \
             scripts/tests/test_postgresql_runtime_bundle.py \
+            scripts/tests/test_stage_cuda_runtime_profile.py \
+            scripts/tests/test_assemble_cuda_profile_options.py \
             scripts/tests/test_linux_release_wheel_assets.py \
             scripts/tests/test_linux_ci_dependency_inputs.py \
             scripts/tests/test_apt_release_publisher.py \

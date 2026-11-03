@@ -267,6 +267,19 @@ The integrated local transport/authentication/model-binding selection passed
 Radon D/E/F blocks; whole-file size/maintainability remains a review hotspot.
 These source checks do not establish packaged GPU acceptance.
 
+Explicit CUDA archive staging now requires independent archive, source and
+producer pins and a verified profile manifest. A read-only preflight checks
+the complete archive before PyInstaller; staging validates it again before
+writing. Both reject path escapes, links, special files, unlisted entries,
+wrong modes/hashes, malformed manifests and an unsafe wrapper. The profile tree
+is installed separately from the CPU executable, with permissions that allow
+the service user to traverse it. An integration fixture stages a profile and
+passes it through the runtime selector without executing its fake binary.
+The combined local staging/selector/bundle selection passed 138 tests. The
+stager was refactored from F/51 and E/38 functions to a maximum C/20; no D/E/F
+blocks remain. Actual final archive pins, installed/container integration and
+GPU acceptance remain open; no candidate is promoted by these fixture tests.
+
 Coordinate the producer's annotated release/tag, complete immutable asset set,
 consumer pins and safe profile-tree staging. Preserve existing immutable tags.
 Native producer PR [#4](https://github.com/Capsize-Games/airunner-native/pull/4)

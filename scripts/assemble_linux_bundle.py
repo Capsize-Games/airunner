@@ -55,6 +55,11 @@ from postgresql_runtime_payload import (
     validate_build_host,
 )
 from verify_warning_source_reviews import verify_warning_source_reviews
+from stage_cuda_runtime_profile import (
+    StageError,
+    stage_cuda_profile,
+    verify_cuda_profile_archive,
+)
 
 _REPO_ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_SPEC = (
@@ -106,6 +111,14 @@ def _assemble_args(argv: list[str] | None) -> argparse.Namespace:
     parser.add_argument("--espeak-payload", type=Path, default=None)
     parser.add_argument("--postgresql-runtime-inputs", type=Path, default=None)
     parser.add_argument("--postgresql-build-supplement-inputs", type=Path, default=None)
+    parser.add_argument("--cuda-profile-archive", type=Path, default=None)
+    parser.add_argument("--cuda-profile-sha256", default=None)
+    parser.add_argument("--cuda-profile-artifact-id", default=None)
+    parser.add_argument("--cuda-profile-source-repository", default=None)
+    parser.add_argument("--cuda-profile-source-commit", default=None)
+    parser.add_argument("--cuda-profile-source-tree", default=None)
+    parser.add_argument("--cuda-profile-producer-commit", default=None)
+    parser.add_argument("--cuda-profile-recipe-sha256", default=None)
     parser.add_argument("--policy-trust-store", type=Path, default=None)
     parser.add_argument("--require-signed-policy", action="store_true")
     return parser.parse_args(argv)
@@ -248,6 +261,7 @@ def _freeze_tree(
     espeak_payload: Path | None = None,
     postgresql_runtime_inputs: Path | None = None,
     postgresql_build_supplement_inputs: Path | None = None,
+    cuda_profile_inputs: dict[str, Any] | None = None,
 ) -> Path:
     """Freeze the bundle and stage root payloads; return its dir."""
     write_entry_script(
@@ -262,6 +276,7 @@ def _freeze_tree(
     _finish_tree(
         spec, bundle_dir, espeak_payload, postgresql_runtime_inputs,
         postgresql_build_supplement_inputs,
+        cuda_profile_inputs,
     )
     return bundle_dir
 
@@ -272,6 +287,7 @@ def _finish_tree(
     espeak_payload: Path | None = None,
     postgresql_runtime_inputs: Path | None = None,
     postgresql_build_supplement_inputs: Path | None = None,
+    cuda_profile_inputs: dict[str, Any] | None = None,
 ) -> None:
     """Stage root payloads, prune hook data, then collect locked notices."""
     (bundle_dir / spec["runtimes"]["bin_dir"]).mkdir(exist_ok=True)
@@ -284,6 +300,12 @@ def _finish_tree(
         postgresql_runtime_inputs, bundle_dir, spec, _REPO_ROOT,
         postgresql_build_supplement_inputs,
     )
+    if cuda_profile_inputs is not None:
+        stage_cuda_profile(
+            cuda_profile_inputs["archive"],
+            bundle_dir,
+            **{key: value for key, value in cuda_profile_inputs.items() if key != "archive"},
+        )
     if spec.get("dependency_notices", {}).get("required", False):
         collect_dependency_notices(spec, _REPO_ROOT, bundle_dir)
 
@@ -296,6 +318,35 @@ def _write_bundle_manifest(
     print(f"wrote {bundle_dir / spec['manifest']['filename']}")
     print(f"  {len(manifest['files'])} files, base {base}")
     return manifest
+
+
+def _cuda_profile_inputs(
+    args: argparse.Namespace, spec: dict[str, Any]
+) -> dict[str, Any] | None:
+    """Require a complete external pin when this build explicitly stages CUDA."""
+    fields = {
+        "archive": args.cuda_profile_archive,
+        "expected_sha256": args.cuda_profile_sha256,
+        "artifact_id": args.cuda_profile_artifact_id,
+        "source_repository": args.cuda_profile_source_repository,
+        "source_commit": args.cuda_profile_source_commit,
+        "source_tree": args.cuda_profile_source_tree,
+        "producer_commit": args.cuda_profile_producer_commit,
+        "recipe_sha256": args.cuda_profile_recipe_sha256,
+    }
+    supplied = [value is not None for value in fields.values()]
+    required = bool(spec.get("native_cuda_profile", {}).get("required", False))
+    if not any(supplied):
+        if required:
+            raise StageError(
+                "bundle spec requires CUDA profile inputs and external identities"
+            )
+        return None
+    if not all(supplied):
+        raise StageError(
+            "CUDA profile staging requires the archive and every external identity"
+        )
+    return fields
 
 
 def _report_gate(result: Any, bundle_dir: Path) -> int:
@@ -339,6 +390,11 @@ def main(argv: list[str] | None = None) -> int:
     spec = inspect.load_spec(args.spec or DEFAULT_SPEC)
     if _report_spec_errors(inspect.spec_errors(spec)):
         return 2
+    try:
+        cuda_profile_inputs = _cuda_profile_inputs(args, spec)
+    except StageError as exc:
+        print(f"CUDA PROFILE: {exc}", file=sys.stderr)
+        return 2
     validate_policy = args.require_signed_policy or args.policy_trust_store is not None
     if validate_policy and args.policy_trust_store is None:
         print("POLICY: --require-signed-policy requires --policy-trust-store", file=sys.stderr)
@@ -357,6 +413,19 @@ def main(argv: list[str] | None = None) -> int:
     if args.dry_run:
         _print_dry_run(base, entry_script, command)
         return 0
+    if cuda_profile_inputs is not None:
+        try:
+            verify_cuda_profile_archive(
+                cuda_profile_inputs["archive"],
+                **{
+                    key: value
+                    for key, value in cuda_profile_inputs.items()
+                    if key != "archive"
+                },
+            )
+        except (OSError, StageError) as exc:
+            print(f"CUDA PROFILE: {exc}", file=sys.stderr)
+            return 2
     if args.espeak_payload is None and spec.get("native_speech", {}).get("required", False):
         print("SPEECH: full bundle requires --espeak-payload from the reviewed native build", file=sys.stderr)
         return 2
@@ -406,6 +475,7 @@ def main(argv: list[str] | None = None) -> int:
         args.espeak_payload,
         args.postgresql_runtime_inputs,
         args.postgresql_build_supplement_inputs,
+        cuda_profile_inputs,
     )
     _write_bundle_manifest(bundle_dir, spec, base)
     return _inspect_frozen(inspect, spec, bundle_dir, args)
