@@ -17,6 +17,8 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 
+import pytest
+
 from airunner_services.ipc.messages import RequestEnvelope
 from airunner_services.runtimes.art_daemon_runtime_settings import (
     ArtDaemonRuntimeSettings,
@@ -51,12 +53,16 @@ class _FakeLauncher:
 
     def __init__(self, health_status=RuntimeHealthStatus.READY):
         self._health_status = health_status
+        self.stopped = False
 
     def start(self) -> None:
         pass
 
     def stop(self) -> None:
-        pass
+        self.stopped = True
+
+    def is_running(self) -> bool:
+        return not self.stopped
 
     def health_status(self):
         return self._health_status, self._health_status.value
@@ -81,8 +87,16 @@ class _FakeSession:
     """Session double that serves health and job-status payloads."""
 
     def __init__(self, health_payload=None, job_status=None):
-        self.health_payload = health_payload or {}
-        self.job_status = job_status or {}
+        self.health_payload = (
+            {"art_execution_finished_status": True}
+            if health_payload is None
+            else health_payload
+        )
+        self.job_status = (
+            {"status": "completed", "execution_finished": True}
+            if job_status is None
+            else {"execution_finished": True, **job_status}
+        )
         self.requests: list[tuple[str, str]] = []
 
     def request(self, method, url, **kwargs):
@@ -259,6 +273,170 @@ def test_generate_image_failure_reconciles_cache():
     # The very next poll reports the sidecar as idle/stopped, not starting.
     health = client.healthcheck()
     assert health.status is RuntimeHealthStatus.STOPPED
+
+
+def test_terminal_job_status_waits_for_execution_finished() -> None:
+    client = _client()
+    statuses = [
+        {"status": "cancelled"},
+        {"status": "cancelled", "execution_finished": False},
+        {"status": "cancelled", "execution_finished": True},
+    ]
+    requests_seen: list[str] = []
+
+    def request(method, path, **kwargs):
+        del method, kwargs
+        requests_seen.append(path)
+        if path.endswith("/status/job-1"):
+            return statuses.pop(0)
+        raise AssertionError(f"Unexpected sidecar path: {path}")
+
+    client._request = request
+    status, _payload, error = client._wait_for_job("job-1")
+
+    assert status.value == "cancelled"
+    assert error is None
+    assert requests_seen == [
+        "/status/job-1",
+        "/status/job-1",
+        "/status/job-1",
+    ]
+
+
+@pytest.mark.parametrize(
+    ("terminal_status", "expected"),
+    [
+        ("completed", "succeeded"),
+        ("failed", "failed"),
+        ("cancelled", "cancelled"),
+    ],
+)
+def test_all_terminal_statuses_wait_for_physical_completion(
+    terminal_status: str, expected: str
+) -> None:
+    client = _client()
+    statuses = [
+        {"status": terminal_status, "execution_finished": False},
+        {"status": terminal_status, "execution_finished": True},
+    ]
+    poll_count = 0
+
+    def request(method, path, **kwargs):
+        nonlocal poll_count
+        del method
+        if path.endswith("/status/job-1"):
+            poll_count += 1
+            return statuses.pop(0)
+        if path.endswith("/result/job-1"):
+            assert kwargs["expect_json"] is False
+            return b"verified-test-image-bytes"
+        raise AssertionError(f"Unexpected sidecar path: {path}")
+
+    client._request = request
+    status, _payload, _error = client._wait_for_job("job-1")
+
+    assert status.value == expected
+    assert poll_count == 2
+
+
+def test_old_sidecar_is_rejected_before_art_job_submission() -> None:
+    client = _client(health_payload={})
+    response = client.invoke_with_progress(_invoke_request())
+
+    assert response.status.value == "failed"
+    assert "completion status" in response.error.message
+    session = client._session
+    assert not any(url.endswith("/generate") for _method, url in session.requests)
+
+
+def test_close_terminates_poller_after_persistent_status_failure() -> None:
+    import threading
+
+    client = _client()
+    status_attempted = threading.Event()
+    result: list[tuple[object, dict, str | None]] = []
+
+    def request(method, path, **_kwargs):
+        if method == "DELETE":
+            return {}
+        status_attempted.set()
+        raise RuntimeError("sidecar unavailable")
+
+    client._request = request
+    poller = threading.Thread(
+        target=lambda: result.append(client._wait_for_job("job-1"))
+    )
+    poller.start()
+    assert status_attempted.wait(timeout=1)
+    client.close()
+    poller.join(timeout=1)
+
+    assert not poller.is_alive()
+    assert result and result[0][0].value == "failed"
+    assert "termination was confirmed" in (result[0][2] or "")
+    assert client._launcher.stopped is False
+
+
+def test_initial_progress_callback_failure_keeps_job_tracked_until_finish() -> None:
+    from airunner_services.runtimes.message_envelopes import load_message_types
+
+    client = _client()
+    client._submit_job = lambda _invocation: "job-1"
+    observed_tracking: list[bool] = []
+
+    def progress(_value):
+        observed_tracking.append(client._active_jobs.get("request-1") == "job-1")
+        raise RuntimeError("observer failure")
+
+    client._wait_for_job = lambda *_args, **_kwargs: (
+        load_message_types().EnvelopeStatus.SUCCEEDED,
+        {"images": ["cG5n"]},
+        None,
+    )
+    request = _invoke_request()
+    request.request_id = "request-1"
+    response = client.invoke_with_progress(request, progress)
+
+    assert observed_tracking == [True]
+    assert response.status.value == "succeeded"
+    assert not client._has_active_jobs()
+
+
+def test_ambiguous_external_submission_holds_until_client_close() -> None:
+    import threading
+
+    client = _client()
+    client._submit_job = lambda _invocation: (_ for _ in ()).throw(
+        RuntimeError("response lost after POST")
+    )
+    result = []
+    worker = threading.Thread(
+        target=lambda: result.append(client.invoke_with_progress(_invoke_request()))
+    )
+    worker.start()
+    worker.join(timeout=0.05)
+    assert worker.is_alive()
+    assert result == []
+
+    client.close()
+    worker.join(timeout=1)
+
+    assert not worker.is_alive()
+    assert result and result[0].status.value == "failed"
+    assert "outcome was uncertain" in result[0].error.message
+
+
+def test_ambiguous_managed_submission_stops_owned_sidecar() -> None:
+    client = _client()
+    client._managed_launcher = True
+    client._submit_job = lambda _invocation: (_ for _ in ()).throw(
+        RuntimeError("response lost after POST")
+    )
+
+    response = client.invoke_with_progress(_invoke_request())
+
+    assert response.status.value == "failed"
+    assert client._launcher.stopped is True
 
 
 def test_load_runtime_resets_cache():

@@ -87,6 +87,10 @@ class SDWorker(Worker):
 		self._is_generating = False
 		self._active_daemon_job_id: Optional[str] = None
 		self._pending_daemon_unload_after_cancel = False
+		self._api_art_request_lock = threading.Lock()
+		self._active_api_art_request_id: Optional[str] = None
+		self._cancelled_api_art_request_ids: set[str] = set()
+		self._queued_api_art_request_ids: set[str] = set()
 		super().__init__()
 		apply_cudnn_benchmark(self.memory_settings)
 		self.__requested_action = ModelAction.NONE
@@ -448,6 +452,10 @@ class SDWorker(Worker):
 		pass
 
 	def on_do_generate_signal(self, message: Dict):
+		request_id = message.get("request_id")
+		if request_id:
+			with self._api_art_request_lock:
+				self._queued_api_art_request_ids.add(request_id)
 		self.logger.debug(
 			"[SDWorker] on_do_generate_signal received, "
 			"queuing generate action"
@@ -459,6 +467,61 @@ class SDWorker(Worker):
 				"message": message,
 			}
 		)
+
+	def add_to_queue(self, message) -> None:
+		"""Keep the latest-item policy while acknowledging displaced API work."""
+		displaced = []
+		with self._queue_lock:
+			reset_requested = (
+				isinstance(message, dict)
+				and "options" in message
+				and message["options"].get("empty_queue")
+			)
+			reset_for_latest = self._queue_type_matches("GET_LAST_ITEM")
+			if reset_requested or reset_for_latest:
+				displaced = [
+					self._api_art_request_from_queued_item(queued)
+					for queued in self.items.values()
+				]
+				displaced = [item for item in displaced if item is not None]
+				self._reset_queue_locked()
+			self.items[self.current_index] = message
+			self.queue.put(self.current_index)
+			self.current_index += 1
+		for request_id, image_request in displaced:
+			with self._api_art_request_lock:
+				was_cancelled = (
+					request_id in self._cancelled_api_art_request_ids
+				)
+				self._cancelled_api_art_request_ids.discard(request_id)
+				self._queued_api_art_request_ids.discard(request_id)
+			callback = getattr(image_request, "callback", None)
+			if callable(callback):
+				try:
+					callback(
+						"Art generation cancelled"
+						if was_cancelled
+						else "Image generation superseded before start"
+					)
+				except Exception as exc:
+					logger.error(
+						"Displaced art callback failed (type=%s)",
+						type(exc).__name__,
+					)
+
+	@staticmethod
+	def _api_art_request_from_queued_item(queued):
+		"""Return a correlated API request carried by one queued item."""
+		if not isinstance(queued, dict):
+			return None
+		message = queued.get("message")
+		if not isinstance(message, dict) or queued.get("action") is not ModelAction.GENERATE:
+			return None
+		request_id = message.get("request_id")
+		image_request = message.get("image_request")
+		if not request_id or image_request is None:
+			return None
+		return request_id, image_request
 
 	def request_daemon_unload_after_cancel(self) -> bool:
 		"""Unload the daemon art runtime after the active job finishes."""
@@ -475,6 +538,20 @@ class SDWorker(Worker):
 		self.emit_signal(SignalCode.SD_UNLOAD_SIGNAL, {})
 
 	def on_interrupt_image_generation_signal(self, _data=None):
+		request_id = (
+			_data.get("request_id")
+			if isinstance(_data, dict)
+			else None
+		)
+		if request_id:
+			with self._api_art_request_lock:
+				is_active = self._active_api_art_request_id == request_id
+				is_queued = request_id in self._queued_api_art_request_ids
+				if is_active or is_queued:
+					self._cancelled_api_art_request_ids.add(request_id)
+			if is_active and self.model_manager:
+				self.model_manager.interrupt_image_generation()
+			return
 		client = self._daemon_client()
 		if client is not None and self._active_daemon_job_id is not None:
 			try:
@@ -666,6 +743,83 @@ class SDWorker(Worker):
 		return False
 
 	def _generate_image(self, message: Dict):
+		"""Correlate service API work before entering the shared worker path."""
+		request_id = message.get("request_id")
+		if not request_id:
+			return self._generate_image_owned(message)
+		image_request = message.get("image_request")
+		original_callback = getattr(image_request, "callback", None)
+		callback_lock = threading.Lock()
+		callback_called = False
+		worker_call_finished = False
+		callback_result = None
+
+		def deliver_callback(result):
+			if callable(original_callback):
+				try:
+					original_callback(result)
+				except Exception as exc:
+					logger.error(
+						"Art request completion callback failed "
+						"(type=%s)",
+						type(exc).__name__,
+					)
+
+		def complete_once(result):
+			nonlocal callback_called, callback_result
+			with callback_lock:
+				if callback_called:
+					return
+				callback_called = True
+				callback_result = result
+				deliver_now = worker_call_finished
+			if deliver_now:
+				deliver_callback(result)
+
+		def finish_worker_call(fallback_result=None):
+			nonlocal callback_called, callback_result, worker_call_finished
+			with callback_lock:
+				if not callback_called:
+					callback_called = True
+					callback_result = fallback_result
+				worker_call_finished = True
+				result = callback_result
+			deliver_callback(result)
+
+		if image_request is not None and callable(original_callback):
+			image_request.callback = complete_once
+		with self._api_art_request_lock:
+			self._queued_api_art_request_ids.discard(request_id)
+			if request_id in self._cancelled_api_art_request_ids:
+				self._cancelled_api_art_request_ids.discard(request_id)
+				complete_once("Art generation cancelled")
+				finish_worker_call()
+				return
+			self._active_api_art_request_id = request_id
+		try:
+			try:
+				result = self._generate_image_owned(message)
+			except Exception as exc:
+				logger.error(
+					"Art worker failed before completing request (type=%s)",
+					type(exc).__name__,
+				)
+				complete_once("Image generation failed")
+				result = None
+			else:
+				# This worker handler is synchronous. Once it returns, no later
+				# path owns its callback, so an early-return path must terminate
+				# the admitted request instead of leaving its slot held forever.
+				complete_once("Image generation ended without a result")
+			return result
+		finally:
+			with self._api_art_request_lock:
+				if self._active_api_art_request_id == request_id:
+					self._active_api_art_request_id = None
+				self._cancelled_api_art_request_ids.discard(request_id)
+			finish_worker_call()
+
+	def _generate_image_owned(self, message: Dict):
 		image_request = message.get("image_request")
 		# Content-safety input gate: early signal-layer pre-check for
 		# every signal-driven art request (GUI path and LLM image-tool
@@ -955,6 +1109,18 @@ class SDWorker(Worker):
 		}
 
 	def _finalize_do_generate_signal(self, message: Dict):
+		request_id = message.get("request_id")
+		if request_id:
+			with self._api_art_request_lock:
+				cancelled = request_id in self._cancelled_api_art_request_ids
+				if cancelled:
+					self._cancelled_api_art_request_ids.discard(request_id)
+			if cancelled:
+				image_request = message.get("image_request")
+				callback = getattr(image_request, "callback", None)
+				if callable(callback):
+					callback("Art generation cancelled")
+				return
 		mm = self.model_manager
 		self.logger.info(
 			"[FINALIZE] _finalize_do_generate_signal called: "

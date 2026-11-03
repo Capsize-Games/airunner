@@ -25,6 +25,7 @@ class HealthResponse(BaseModel):
     pid: int
     started_at: float
     dev_build_token: Optional[str] = None
+    art_execution_finished_status: bool = False
 
 
 class DaemonStatusResponse(BaseModel):
@@ -55,6 +56,7 @@ def build_health_payload(status: str) -> Dict[str, Any]:
         "pid": _start_pid,
         "started_at": _start_time,
         "dev_build_token": _start_dev_build_token,
+        "art_execution_finished_status": True,
     }
 
 

@@ -280,10 +280,28 @@ def test_valid_policy_route_allows_safe_prompt(
         return None
 
     class _FakeTracker:
-        async def create_job(self, metadata=None):
+        async def create_art_job(self, metadata=None, *, capacity=1):
             return "job-1"
 
         async def update_progress(self, *_args, **_kwargs):
+            return None
+
+        async def mark_art_job_running(self, _job_id):
+            return True
+
+        async def fail_job(self, *_args, **_kwargs):
+            return None
+
+        async def get_status(self, _job_id):
+            return SimpleNamespace(status="running")
+
+        async def finish_art_job(self, *_args):
+            return None
+
+        def attach_art_task(self, *_args):
+            return None
+
+        def bind_art_client(self, *_args):
             return None
 
     monkeypatch.setattr(routes, "unload_llm_before_art", _noop)

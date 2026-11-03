@@ -5,6 +5,7 @@ from __future__ import annotations
 import base64
 import io
 import os
+import threading
 from queue import Empty, Queue
 from typing import Any, Callable, Iterable, Optional
 
@@ -1088,6 +1089,10 @@ class LocalFallbackArtClient(_SignalRuntimeClient):
         )
         self._art_model_metadata: dict[str, Any] = {}
         self._rmbg_model_manager = None
+        self._art_request_lock = threading.Lock()
+        self._active_art_request_id: Optional[str] = None
+        self._owned_art_request_ids: set[str] = set()
+        self._cancelled_art_request_ids: set[str] = set()
 
     def _status_metadata(self) -> dict[str, Any]:
         """Return cached art metadata for daemon health summaries."""
@@ -1129,15 +1134,52 @@ class LocalFallbackArtClient(_SignalRuntimeClient):
         return self._generate_image(request, progress_callback)
 
     def cancel(self, request_id: str) -> ResponseEnvelope:
-        """Interrupt active art generation on a best-effort basis."""
+        """Cancel only the matching art request, never unrelated work."""
+        from airunner_common.contract_enums import SignalCode
+
+        with self._art_request_lock:
+            if self._active_art_request_id == request_id:
+                interrupt_active = True
+            elif request_id in self._owned_art_request_ids:
+                # The API may cancel after admission but before the runtime
+                # invocation thread starts. The invocation consumes this
+                # request-owned marker and exits without emitting a signal.
+                self._cancelled_art_request_ids.add(request_id)
+                interrupt_active = False
+            else:
+                interrupt_active = False
+        if interrupt_active:
+            self._emit_signal(
+                SignalCode.INTERRUPT_IMAGE_GENERATION_SIGNAL,
+                {"request_id": request_id},
+            )
+        return ResponseEnvelope(
+            request_id=request_id,
+            status=EnvelopeStatus.CANCELLED,
+            metadata={"best_effort": True, "active": interrupt_active},
+        )
+
+    def cancel_active(self, request_id: str) -> ResponseEnvelope:
+        """Honor an explicit administrator request to interrupt current art."""
         from airunner_common.contract_enums import SignalCode
 
         self._emit_signal(SignalCode.INTERRUPT_IMAGE_GENERATION_SIGNAL, {})
         return ResponseEnvelope(
             request_id=request_id,
             status=EnvelopeStatus.CANCELLED,
-            metadata={"best_effort": True},
+            metadata={"best_effort": True, "administrative": True},
         )
+
+    def finish_request(self, request_id: str) -> None:
+        """Forget a completed request's pending cancellation marker."""
+        with self._art_request_lock:
+            self._owned_art_request_ids.discard(request_id)
+            self._cancelled_art_request_ids.discard(request_id)
+
+    def register_request(self, request_id: str) -> None:
+        """Register an admitted API request before its runtime call starts."""
+        with self._art_request_lock:
+            self._owned_art_request_ids.add(request_id)
 
     def _unload_model(self, request: RequestEnvelope) -> ResponseEnvelope:
         """Unload the current art pipeline or one supported component."""
@@ -1255,6 +1297,36 @@ class LocalFallbackArtClient(_SignalRuntimeClient):
         request: RequestEnvelope,
         progress_callback: Optional[ProgressCallback] = None,
     ) -> ResponseEnvelope:
+        """Own one local runtime slot and route cancellation by request id."""
+        request_id = request.request_id
+        with self._art_request_lock:
+            if request_id in self._cancelled_art_request_ids:
+                self._cancelled_art_request_ids.discard(request_id)
+                return ResponseEnvelope(
+                    request_id=request_id,
+                    status=EnvelopeStatus.CANCELLED,
+                    metadata={"best_effort": True, "active": False},
+                )
+            if self._active_art_request_id is not None:
+                return self._failure_response(
+                    request_id,
+                    "art_runtime_busy",
+                    "Another local art request is active",
+                    retryable=True,
+                )
+            self._active_art_request_id = request_id
+        try:
+            return self._generate_image_owned(request, progress_callback)
+        finally:
+            with self._art_request_lock:
+                if self._active_art_request_id == request_id:
+                    self._active_art_request_id = None
+
+    def _generate_image_owned(
+        self,
+        request: RequestEnvelope,
+        progress_callback: Optional[ProgressCallback] = None,
+    ) -> ResponseEnvelope:
         """Generate art through the current callback-based worker flow."""
         from airunner_services.art.managers.stablediffusion.image_request import (
             ImageRequest,
@@ -1307,7 +1379,10 @@ class LocalFallbackArtClient(_SignalRuntimeClient):
             ),
         )
         self._cache_art_model_metadata(image_request)
-        signal_payload = {"image_request": image_request}
+        signal_payload = {
+            "image_request": image_request,
+            "request_id": request.request_id,
+        }
         active_rect = _resolve_art_active_rect(metadata)
         if active_rect is not None:
             signal_payload["active_rect"] = active_rect
@@ -1328,6 +1403,12 @@ class LocalFallbackArtClient(_SignalRuntimeClient):
                 "[LocalFallbackArtClient] ERROR: SD worker could not "
                 "be created (worker_manager not found on signal_source)"
             )
+            return self._failure_response(
+                request.request_id,
+                "art_worker_unavailable",
+                "Local art worker is unavailable",
+                retryable=True,
+            )
         else:
             logger.info(
                 "[LocalFallbackArtClient] SD worker created: "
@@ -1341,6 +1422,7 @@ class LocalFallbackArtClient(_SignalRuntimeClient):
                 SignalCode.SD_PROGRESS_SIGNAL,
                 progress_handler,
             )
+        timed_out = False
         try:
             self._emit_signal(
                 SignalCode.DO_GENERATE_SIGNAL,
@@ -1349,18 +1431,26 @@ class LocalFallbackArtClient(_SignalRuntimeClient):
             try:
                 result = image_queue.get(timeout=self._timeout_seconds)
             except Empty:
-                return self._failure_response(
-                    request.request_id,
-                    "art_timeout",
-                    "Timed out waiting for art response",
-                    retryable=True,
-                )
+                # A queue timeout is not proof that the worker stopped. Send
+                # request-owned cancellation and keep this invocation (and its
+                # admission reservation) alive until the worker acknowledges
+                # the queued or active request through its callback.
+                timed_out = True
+                self.cancel(request.request_id)
+                result = image_queue.get()
         finally:
             if progress_handler is not None:
                 self._mediator.unregister(
                     SignalCode.SD_PROGRESS_SIGNAL,
                     progress_handler,
                 )
+        if timed_out:
+            return self._failure_response(
+                request.request_id,
+                "art_timeout",
+                "Timed out waiting for art response",
+                retryable=True,
+            )
         if isinstance(result, str):
             return self._failure_response(
                 request.request_id,

@@ -70,6 +70,7 @@ def status_response(job_id: str, job: Any) -> JobStatusResponse:
         image_url=completed_image_url(job_id, job),
         image_count=completed_image_count(job),
         error=job.error,
+        execution_finished=bool(getattr(job, "execution_finished", False)),
     )
 
 

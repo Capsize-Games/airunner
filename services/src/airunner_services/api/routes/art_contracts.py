@@ -185,6 +185,9 @@ class JobStatusResponse(BaseModel):
     # the job has not completed yet.
     image_count: int = 0
     error: Optional[str] = None
+    # False while a reserved art execution still owns runtime capacity,
+    # including after its public status has become terminal.
+    execution_finished: bool = False
 
 
 class ModelInfo(BaseModel):

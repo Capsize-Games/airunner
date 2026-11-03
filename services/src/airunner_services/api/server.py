@@ -6,6 +6,7 @@ capabilities including LLM, art generation, TTS, and STT.
 """
 from typing import List, Optional, Any, Tuple
 from contextlib import asynccontextmanager
+import asyncio
 import os
 import secrets
 import threading
@@ -47,6 +48,31 @@ from airunner_services.api.admission_middleware import AdmissionMiddleware
 
 
 logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
+
+
+async def _close_runtime_registry_clients(runtime_registry: Any) -> None:
+    """Close each registered runtime client once during API shutdown."""
+    if runtime_registry is None:
+        return
+    closed: set[int] = set()
+    for route in runtime_registry.list_routes():
+        try:
+            client = runtime_registry.resolve(
+                route.runtime,
+                route.provider,
+                route.deployment_mode,
+            )
+        except (KeyError, AttributeError):
+            continue
+        close = getattr(client, "close", None)
+        identity = id(client)
+        if not callable(close) or identity in closed:
+            continue
+        closed.add(identity)
+        try:
+            await asyncio.to_thread(close)
+        except Exception:
+            logger.exception("Failed to close runtime client during shutdown")
 
 
 def access_logs_enabled() -> bool:
@@ -230,6 +256,12 @@ async def lifespan(app: FastAPI):
     yield
     # Shutdown
     logger.info("FastAPI server shutting down...")
+    from airunner_services.utils.job_tracker import JobTracker
+
+    await JobTracker().shutdown_art_jobs()
+    await _close_runtime_registry_clients(
+        getattr(app.state, "runtime_registry", None)
+    )
 
 
 def create_app(
