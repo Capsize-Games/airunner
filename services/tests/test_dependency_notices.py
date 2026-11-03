@@ -894,3 +894,22 @@ def test_collects_nested_source_relative_license_paths(tmp_path, monkeypatch):
     assert len(alpha["notices"]) == 2
     assert (bundle / "legal/dependencies/alpha-1.0/alpha-1.0.dist-info/licenses/licenses/LICENSE_APACHE").read_bytes() == b"Apache notice"
     assert dependency_notices.verify_dependency_notice_manifest(bundle, spec, tmp_path) == []
+
+
+def test_pip_generated_copyright_bytecode_is_not_a_legal_notice(tmp_path, monkeypatch):
+    site, _lock_path, spec, bundle = _setup(tmp_path, monkeypatch)
+    source = site / "alpha" / "copyright.py"
+    source.write_bytes(b"copyright = 'fixture notice'\n")
+    bytecode = site / "alpha" / "__pycache__" / "copyright.cpython-313.pyc"
+    bytecode.parent.mkdir(parents=True)
+    bytecode.write_bytes(b"generated-bytecode-fixture")
+    record = site / "alpha-1.0.dist-info" / "RECORD"
+    with record.open("a", newline="") as stream:
+        writer = csv.writer(stream)
+        writer.writerow(("alpha/copyright.py", _record_hash(source.read_bytes()), str(source.stat().st_size)))
+        writer.writerow(("alpha/__pycache__/copyright.cpython-313.pyc", "", ""))
+    manifest = _collect(tmp_path, site, spec, bundle)
+    assert not dependency_notices.verify_dependency_notice_manifest(bundle, spec, tmp_path)
+    assert dependency_notices._is_notice_path("alpha/copyright.py")
+    assert not dependency_notices._is_notice_path(str(bytecode))
+    assert manifest is not None
