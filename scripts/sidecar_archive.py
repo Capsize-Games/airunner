@@ -9,6 +9,7 @@ import os
 from pathlib import Path, PurePosixPath
 import re
 import shutil
+import stat
 import subprocess
 import tarfile
 import tempfile
@@ -18,6 +19,19 @@ _SHA256 = re.compile(r"[a-f0-9]{64}\Z")
 _TAG = re.compile(r"v[0-9]+\.[0-9]+\.[0-9]+\Z")
 _COMMIT = re.compile(r"[a-f0-9]{40}\Z")
 _NAME = re.compile(r"[A-Za-z0-9][A-Za-z0-9._+-]*\Z")
+_MAX_ARCHIVE_BYTES = 8 * 1024**3
+_MAX_TREE_BYTES = 8 * 1024**3
+_MAX_TREE_ENTRIES = 20_000
+_CPU_REQUIRED_FILES = {
+    ".airunner-native-owned",
+    "bin/llama-server",
+    "bin/whisper-server",
+    "share/airunner/licenses/llama.cpp-LICENSE",
+    "share/airunner/licenses/whisper.cpp-LICENSE",
+    "share/airunner/runtime_manifest.env",
+    "share/airunner/runtime_pins.env",
+    "share/airunner/source_provenance.env",
+}
 
 
 class SidecarArchiveError(ValueError):
@@ -90,8 +104,12 @@ def verify_archive(
     """Verify the exact archive bytes against the independently pinned digest."""
     _, expected = _pin_record(metadata_path, tag_file, platform)
     digest = hashlib.sha256()
+    total = 0
     with archive_path.open("rb") as stream:
         for block in iter(lambda: stream.read(1024 * 1024), b""):
+            total += len(block)
+            if total > _MAX_ARCHIVE_BYTES:
+                raise SidecarArchiveError("sidecar archive exceeds the size limit")
             digest.update(block)
     actual = digest.hexdigest()
     if actual != expected:
@@ -99,6 +117,125 @@ def verify_archive(
             f"{platform} sidecar archive SHA-256 mismatch: expected {expected}, got {actual}"
         )
     return actual
+
+
+def stage_full_bundle(
+    archive_path: Path,
+    output_dir: Path,
+    metadata_path: Path,
+    tag_file: Path,
+    platform: str,
+) -> str:
+    """Verify and atomically extract the complete CPU runtime archive.
+
+    All notices and provenance records in the reviewed archive are retained.
+    Existing output paths are never overwritten.
+    """
+    digest = verify_archive(archive_path, metadata_path, tag_file, platform)
+    output = Path(os.path.abspath(output_dir))
+    if output.exists() or output.is_symlink():
+        raise SidecarArchiveError("sidecar bundle destination already exists")
+    parent = output.parent
+    _require_real_directory_chain(parent)
+    with tarfile.open(archive_path, "r:gz") as archive:
+        members = _read_full_bundle_members(archive)
+        directories = _validate_full_bundle_inventory(members)
+        _extract_full_bundle(archive, members, directories, output, parent)
+    return digest
+
+
+def _read_full_bundle_members(
+    archive: tarfile.TarFile,
+) -> dict[str, tuple[tarfile.TarInfo, bool]]:
+    members: dict[str, tuple[tarfile.TarInfo, bool]] = {}
+    total_size = 0
+    for index, member in enumerate(archive):
+        if index >= _MAX_TREE_ENTRIES:
+            raise SidecarArchiveError("sidecar archive contains too many entries")
+        relative = _normalized_member_path(member).as_posix()
+        if relative in members:
+            raise SidecarArchiveError("sidecar archive contains duplicate paths")
+        is_directory = member.isdir()
+        mode = member.mode & 0o7777
+        if mode & (stat.S_ISUID | stat.S_ISGID):
+            raise SidecarArchiveError("sidecar archive contains setuid or setgid mode")
+        if is_directory and (mode != 0o755 or member.size != 0):
+            raise SidecarArchiveError("sidecar archive directory mode or size is invalid")
+        if not is_directory:
+            if mode not in (0o644, 0o755) or member.size < 0:
+                raise SidecarArchiveError("sidecar archive file mode or size is invalid")
+            total_size += member.size
+            if total_size > _MAX_TREE_BYTES:
+                raise SidecarArchiveError("sidecar archive expands beyond the size limit")
+        if relative not in {".", "bin", "share"} and not (
+            relative == ".airunner-native-owned"
+            or relative.startswith("bin/")
+            or relative.startswith("share/")
+        ):
+            raise SidecarArchiveError("sidecar archive contains an unexpected root path")
+        members[relative] = (member, is_directory)
+    return members
+
+
+def _validate_full_bundle_inventory(
+    members: dict[str, tuple[tarfile.TarInfo, bool]],
+) -> set[str]:
+    files = {name for name, (_member, is_dir) in members.items() if not is_dir}
+    directories = {
+        name for name, (_member, is_dir) in members.items() if is_dir and name != "."
+    }
+    expected_directories = {
+        parent.as_posix()
+        for name in files
+        for parent in PurePosixPath(name).parents
+        if parent.as_posix() != "."
+    }
+    if not _CPU_REQUIRED_FILES.issubset(files):
+        raise SidecarArchiveError("sidecar archive lacks required CPU binaries or provenance")
+    if directories != expected_directories:
+        raise SidecarArchiveError("sidecar archive has unlisted or missing directories")
+    return directories
+
+
+def _extract_full_bundle(
+    archive: tarfile.TarFile,
+    members: dict[str, tuple[tarfile.TarInfo, bool]],
+    directories: set[str],
+    output: Path,
+    parent: Path,
+) -> None:
+    temporary = Path(tempfile.mkdtemp(prefix=".sidecar-bundle-", dir=parent))
+    try:
+        for relative in sorted(directories, key=lambda value: (value.count("/"), value)):
+            (temporary / PurePosixPath(relative)).mkdir(mode=0o755)
+        for relative, (member, is_directory) in members.items():
+            if is_directory or relative == ".":
+                continue
+            source = archive.extractfile(member)
+            if source is None:
+                raise SidecarArchiveError("cannot read sidecar archive file")
+            destination = temporary / PurePosixPath(relative)
+            with source, destination.open("xb") as destination_stream:
+                shutil.copyfileobj(source, destination_stream)
+            destination.chmod(member.mode & 0o777)
+        if output.exists() or output.is_symlink():
+            raise SidecarArchiveError("sidecar bundle destination appeared during staging")
+        os.replace(temporary, output)
+    finally:
+        if temporary.exists():
+            shutil.rmtree(temporary)
+
+
+def _require_real_directory_chain(path: Path) -> None:
+    current = Path(path.anchor)
+    for part in path.parts[1:]:
+        current /= part
+        try:
+            info = current.lstat()
+        except FileNotFoundError as error:
+            raise SidecarArchiveError("sidecar bundle parent is incomplete") from error
+        if stat.S_ISLNK(info.st_mode) or not stat.S_ISDIR(info.st_mode):
+            raise SidecarArchiveError("sidecar bundle parent must be a real directory")
 
 
 def verify_source_checkout(
@@ -207,7 +344,7 @@ def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     subparsers = parser.add_subparsers(dest="command", required=True)
     for command in (
-        "check-pin", "verify", "stage", "check-source-pin", "verify-source"
+        "check-pin", "verify", "stage", "stage-bundle", "check-source-pin", "verify-source"
     ):
         sub = subparsers.add_parser(command)
         sub.add_argument("--checksums", type=Path, required=True)
@@ -218,13 +355,15 @@ def _parser() -> argparse.ArgumentParser:
             sub.add_argument("--tarball", type=Path, required=True)
         if command not in {"verify-source", "check-source-pin"}:
             sub.add_argument("--platform", choices=("linux", "windows"), required=True)
-        if command == "stage":
+        if command in {"stage", "stage-bundle"}:
             sub.add_argument("--output-dir", type=Path, required=True)
-            sub.add_argument("names", nargs="+")
+            if command == "stage":
+                sub.add_argument("names", nargs="+")
     return parser
 
 
 def main() -> int:
+    """Validate the selected archive operation and report its result."""
     args = _parser().parse_args()
     try:
         if args.command == "verify-source":
@@ -241,7 +380,18 @@ def main() -> int:
             _, digest = _pin_record(args.checksums, args.tag_file, args.platform)
             print(f"sidecar archive pin ready: {args.platform} sha256={digest}")
             return 0
-        digest = verify_archive(args.tarball, args.checksums, args.tag_file, args.platform)
+        if args.command == "stage-bundle":
+            digest = stage_full_bundle(
+                args.tarball,
+                args.output_dir,
+                args.checksums,
+                args.tag_file,
+                args.platform,
+            )
+        else:
+            digest = verify_archive(
+                args.tarball, args.checksums, args.tag_file, args.platform
+            )
         if args.command == "stage":
             extract_named_files(args.tarball, args.output_dir, args.names)
         print(f"sidecar archive verified: {args.platform} sha256={digest}")

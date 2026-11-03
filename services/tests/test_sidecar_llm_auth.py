@@ -6,6 +6,7 @@ import http.server
 import os
 import stat
 import threading
+from dataclasses import replace
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -58,6 +59,22 @@ def _settings(model_path: Path) -> LlamaCppRuntimeSettings:
         n_gpu_layers=0,
         startup_timeout_seconds=1,
     )
+
+
+@pytest.mark.parametrize("requested,cli_value", [(-1, "-2"), (-2, "-2"), (0, "0"), (8, "8")])
+def test_launcher_preserves_full_offload_intent_at_native_cli_boundary(
+    tmp_path, requested, cli_value
+):
+    model_path = tmp_path / "model.gguf"
+    model_path.write_bytes(b"fixture")
+    settings = replace(_settings(model_path), n_gpu_layers=requested, n_ctx=32768, fit="off")
+
+    command = SidecarLauncher(settings).command()
+
+    assert command[command.index("--n-gpu-layers") + 1] == cli_value
+    assert command[command.index("--ctx-size") + 1] == "32768"
+    assert command[command.index("--fit") + 1] == "off"
+    assert settings.n_gpu_layers == requested
 
 
 def test_launcher_command_is_pure_and_start_provisions_private_token(

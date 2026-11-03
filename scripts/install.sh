@@ -31,8 +31,8 @@ Options:
   --service-profile NAME     Services extra to install editably
   --torch MODE               auto|cpu|cuda|skip
 	--sidecars MODE            auto|always|skip
-	--sidecars-cuda            Build llama.cpp and whisper.cpp with CUDA
-	--clean-sidecars           Rebuild native sidecars from scratch
+	--sidecars-cuda            Stage the verified CUDA profile alongside CPU sidecars
+	--clean-sidecars           Allow replacing an owned tree that contains CUDA
 	--refresh-deps             Re-resolve Python dependencies in an existing venv
   --without-dev-tools        Omit the development extra from services
   -h, --help                 Show this help text
@@ -140,17 +140,8 @@ sidecars_requested() {
 }
 
 
-NATIVE_SIDECAR_REPO='Capsize-Games/airunner-native'
-NATIVE_SIDECAR_VERSION_FILE="$ROOT_DIR/.github/native-sidecar-version"
-NATIVE_SIDECAR_CHECKSUMS_FILE="$ROOT_DIR/.github/native-sidecar-checksums.json"
-
-native_sidecar_tag() {
-	if [[ ! -f "$NATIVE_SIDECAR_VERSION_FILE" ]]; then
-		log_error "Missing pin file: ${NATIVE_SIDECAR_VERSION_FILE}"
-		exit 1
-	fi
-	<"$NATIVE_SIDECAR_VERSION_FILE" tr -d '[:space:]'
-}
+NATIVE_RUNTIME_DIR="$ROOT_DIR/build/runtime-sidecars/linux"
+NATIVE_CUDA_PROFILE_PIN="${AIRUNNER_NATIVE_CUDA_PROFILE_PIN:-$ROOT_DIR/.github/native-cuda-profile-pin.json}"
 
 link_sidecar_binaries() {
 	local bin_dir="$1"
@@ -173,104 +164,28 @@ link_sidecar_binaries() {
 	done
 }
 
-# The common case: download the prebuilt bundle the pinned
-# airunner-native release publishes, rather than needing
-# cmake/mingw-w64/ninja on every dev machine (the sidecar build itself
-# now lives in that repository -- see
-# https://github.com/Capsize-Games/airunner-native).
-fetch_prebuilt_sidecars() {
+# Fetch the pinned CPU payload and optionally its separately pinned CUDA profile.
+stage_prebuilt_native_runtime() {
 	local venv_python="$1"
 	local venv_bin_dir
 	venv_bin_dir="$(dirname "$venv_python")"
-	local tag staging_dir archive_path binary_dir
-
-	tag="$(native_sidecar_tag)"
-	if ! python3 "$ROOT_DIR/scripts/sidecar_archive.py" check-pin \
-		--checksums "$NATIVE_SIDECAR_CHECKSUMS_FILE" \
-		--tag-file "$NATIVE_SIDECAR_VERSION_FILE" \
-		--platform linux; then
-		log_error "Sidecar archive provenance is not verified; refusing download"
-		exit 1
+	local -a stage_args=(--fetch --output-dir "$NATIVE_RUNTIME_DIR" --replace-existing)
+	if [[ "$SIDECAR_ENABLE_CUDA" == '1' ]]; then
+		stage_args+=(--cuda-profile-pin "$NATIVE_CUDA_PROFILE_PIN" --require-cuda-profile)
+		log_info 'Fetching the separately pinned CPU sidecars and verified CUDA profile'
+	else
+		log_info 'Fetching the pinned CPU sidecar bundle with notices and provenance'
 	fi
-	mkdir -p "$ROOT_DIR/build"
-	if ! staging_dir="$(mktemp -d "$ROOT_DIR/build/.runtime-sidecars-stage.XXXXXX")"; then
-		log_error "Could not create a fresh sidecar staging directory"
-		exit 1
-	fi
-	archive_path="$staging_dir/runtime-sidecars-linux.tar.gz"
-	binary_dir="$staging_dir/bin"
-	mkdir "$binary_dir"
-
-	log_info "Downloading prebuilt native sidecars (${tag}) from ${NATIVE_SIDECAR_REPO}"
-	if ! curl -fsSL \
-		"https://github.com/${NATIVE_SIDECAR_REPO}/releases/download/${tag}/runtime-sidecars-linux.tar.gz" \
-		-o "$archive_path"; then
-		rm -rf -- "$staging_dir"
-		log_error "Failed to download sidecar bundle for ${tag}"
-		exit 1
-	fi
-	if ! python3 "$ROOT_DIR/scripts/sidecar_archive.py" stage \
-		--tarball "$archive_path" \
-		--checksums "$NATIVE_SIDECAR_CHECKSUMS_FILE" \
-		--tag-file "$NATIVE_SIDECAR_VERSION_FILE" \
-		--platform linux \
-		--output-dir "$binary_dir" llama-server whisper-server; then
-		rm -rf -- "$staging_dir"
-		log_error "Sidecar archive or payload validation failed; refusing to install"
-		exit 1
-	fi
-	rm -f -- "$archive_path"
-
-	link_sidecar_binaries "$binary_dir" "$venv_bin_dir"
-	log_success "Linked prebuilt native sidecars into ${venv_bin_dir}"
-}
-
-# CUDA builds aren't part of the published bundle (CI builds the
-# linux/windows matrix without a CUDA runner), so --sidecars-cuda
-# clones the pinned tag and builds from source instead.
-build_sidecars_from_source() {
-	local venv_python="$1"
-	local venv_bin_dir
-	venv_bin_dir="$(dirname "$venv_python")"
-	local tag clone_dir
-	local -a builder_args=(--target-platform linux)
-
-	tag="$(native_sidecar_tag)"
-	if ! python3 "$ROOT_DIR/scripts/sidecar_archive.py" check-source-pin \
-		--checksums "$NATIVE_SIDECAR_CHECKSUMS_FILE" \
-		--tag-file "$NATIVE_SIDECAR_VERSION_FILE"; then
-		log_error "Native sidecar source review is not complete; refusing clone or build"
-		exit 1
-	fi
-	clone_dir="$ROOT_DIR/build/airunner-native-src"
-
-	if [[ "$SIDECAR_CLEAN" == '1' || ! -d "$clone_dir" ]]; then
-		rm -rf "$clone_dir"
-		log_info "Cloning airunner-native (${tag}) for a CUDA sidecar build"
-		GIT_CONFIG_NOSYSTEM=1 GIT_CONFIG_GLOBAL=/dev/null GIT_LFS_SKIP_SMUDGE=1 \
-			git -c core.hooksPath=/dev/null clone --quiet --depth 1 --branch "$tag" \
-			"https://github.com/${NATIVE_SIDECAR_REPO}.git" "$clone_dir"
-	fi
-	if ! python3 "$ROOT_DIR/scripts/sidecar_archive.py" verify-source \
-		--checksums "$NATIVE_SIDECAR_CHECKSUMS_FILE" \
-		--tag-file "$NATIVE_SIDECAR_VERSION_FILE" \
-		--repository "$clone_dir"; then
-		log_error "Native sidecar source does not match its pinned commit"
-		exit 1
-	fi
-
 	if [[ "$SIDECAR_CLEAN" == '1' ]]; then
-		builder_args+=(--clean)
+		stage_args+=(--clean-existing)
 	fi
-	builder_args+=(--enable-cuda)
-
-	log_info 'Building native llama.cpp and whisper.cpp sidecars from source (CUDA)'
-	"$clone_dir/scripts/build_runtime_sidecars.sh" "${builder_args[@]}"
-
-	link_sidecar_binaries \
-		"$clone_dir/build/runtime-sidecars/linux/bin" \
-		"$venv_bin_dir"
-	log_success "Linked source-built native sidecars into ${venv_bin_dir}"
+	mkdir -p "$(dirname "$NATIVE_RUNTIME_DIR")"
+	if ! python3 "$ROOT_DIR/scripts/stage_native_runtime_payload.py" "${stage_args[@]}"; then
+		log_error 'Native runtime payload staging failed; installed sidecar links were not changed'
+		exit 1
+	fi
+	link_sidecar_binaries "$NATIVE_RUNTIME_DIR/bin" "$venv_bin_dir"
+	log_success "Linked CPU sidecars from the staged native runtime into ${venv_bin_dir}"
 }
 
 install_runtime_sidecars() {
@@ -281,11 +196,7 @@ install_runtime_sidecars() {
 		return 0
 	fi
 
-	if [[ "$SIDECAR_ENABLE_CUDA" == '1' ]]; then
-		build_sidecars_from_source "$venv_python"
-	else
-		fetch_prebuilt_sidecars "$venv_python"
-	fi
+	stage_prebuilt_native_runtime "$venv_python"
 }
 
 
@@ -301,6 +212,10 @@ main() {
 	fi
 
 	parse_args "$@"
+	if [[ "$SIDECAR_ENABLE_CUDA" == '1' && "$SIDECAR_MODE" == 'skip' ]]; then
+		log_error '--sidecars-cuda cannot be combined with --sidecars skip'
+		exit 1
+	fi
 
 	if service_profile_uses_deferred_tts_vendor "$SERVICE_PROFILE"; then
 		log_error "Service profile '${SERVICE_PROFILE}' includes deferred airunner-tts-vendor; use linux-release or tts-python-core while OpenVoice/Melo remain deferred"

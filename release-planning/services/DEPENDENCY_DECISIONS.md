@@ -490,3 +490,19 @@ retains package metadata and signed-index identity. An isolated offline install
 on the pinned CUDA image passed with all 26 exact package identities, the five
 checked CUDA/build packages retained, and a clean `dpkg --audit`. This does not
 establish the final Docker image, DBAPI connection, or frozen loader behavior.
+
+### Isolated PostgreSQL server acceptance inputs
+
+The disposable test server uses reviewed Ubuntu source
+`postgresql-16 16.15-0ubuntu0.24.04.1`. Its original source archive SHA-256 is
+`4f200ca23dfb120ff9838f13ce06014aad1d3c432d16ee9f93ab2000c0eeef7b`;
+the Ubuntu delta SHA-256 is
+`8a7e856540a2722259d1c43948e8d810fba8ce9bfe161fb686b537adce9be652`.
+The authenticated Noble source index binds these inputs. The test build also
+uses reviewed `libssl-dev 3.0.13-0ubuntu3.16` (amd64), archive SHA-256
+`2b4734df0475e305ac03abb0a2cc5659651ed37ef02d967a1c4033a154cf714b`.
+It shares the reviewed OpenSSL source with the runtime lock and contains no
+maintainer scripts. The owner's reviewed-origin exception covers these inputs.
+This development package and the test server are validation inputs, not new
+requirements shipped by the service bundle. Their isolated build does not prove
+a service connection, schema migration or frozen-runtime result.

@@ -163,14 +163,14 @@ def test_settings_resolver_separates_backend_from_gguf_tuning(
     )
     from airunner_services.runtimes import native_backend_profiles
 
-    bundle_root = tmp_path / "bundle"
     root = _write_profile(
-        bundle_root / "share/airunner/native-runtimes/cuda-sm120a"
+        tmp_path / "runtime-sidecars/share/airunner/native-runtimes/cuda-sm120a"
     )
     model = tmp_path / "model.gguf"
     model.write_bytes(b"GGUF fixture")
     monkeypatch.setenv("AIRUNNER_LLAMA_BACKEND", "auto")
-    monkeypatch.setenv("AIRUNNER_BUNDLE_ROOT", str(bundle_root))
+    monkeypatch.delenv("AIRUNNER_BUNDLE_ROOT", raising=False)
+    monkeypatch.setenv("AIRUNNER_LLAMA_CUDA_PROFILE_ROOT", str(root))
     monkeypatch.delenv("CUDA_VISIBLE_DEVICES", raising=False)
     monkeypatch.setattr(native_backend_profiles, "_DEVICE_PROBE_SUCCEEDED_AT", 0.0)
     monkeypatch.setattr(native_backend_profiles, "_DEVICE_PROBE_DEVICE", None)

@@ -344,6 +344,7 @@ def resolve_llama_cpp_runtime_settings(
         backend = select_native_backend(
             n_gpu_layers=configured_gpu_layers,
             bundle_root=os.environ.get("AIRUNNER_BUNDLE_ROOT"),
+            cuda_profile_root=os.environ.get("AIRUNNER_LLAMA_CUDA_PROFILE_ROOT"),
             requested=requested_backend,
             cpu_executable=cpu_executable,
         )

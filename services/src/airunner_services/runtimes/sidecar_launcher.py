@@ -69,6 +69,9 @@ class SidecarLauncher:
 	def command(self) -> list[str]:
 		"""Build the llama-server command line for the current settings."""
 		model_path = self._required_model_path()
+		# Service negative values request full offload; the native CLI uses -1
+		# for auto placement and -2 for all layers, including appended MTP blocks.
+		gpu_layers = -2 if self.settings.n_gpu_layers < 0 else self.settings.n_gpu_layers
 		command = [
 			self.settings.executable,
 			"--host",
@@ -80,7 +83,7 @@ class SidecarLauncher:
 			"--ctx-size",
 			str(self.settings.n_ctx),
 			"--n-gpu-layers",
-			str(self.settings.n_gpu_layers),
+			str(gpu_layers),
 			"--api-key-file",
 			str(loopback_token_path()),
 		]

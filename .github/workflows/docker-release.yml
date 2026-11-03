@@ -72,6 +72,16 @@ jobs:
           python scripts/stage_docker_release_inputs.py --output-dir "$inputs"
           echo "DOCKER_RELEASE_INPUTS=$inputs" >> "$GITHUB_ENV"
 
+      - name: Stage pinned CPU sidecars and verified CUDA profile
+        run: |
+          set -euo pipefail
+          mkdir -p "$DOCKER_RELEASE_INPUTS/native-runtime"
+          python scripts/stage_native_runtime_payload.py \
+            --fetch \
+            --output-dir "$DOCKER_RELEASE_INPUTS/native-runtime/payload" \
+            --cuda-profile-pin .github/native-cuda-profile-pin.json \
+            --require-cuda-profile
+
       - name: Stage exact reviewed Ubuntu libpq runtime closure
         run: |
           set -euo pipefail

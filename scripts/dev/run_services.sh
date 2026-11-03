@@ -8,6 +8,7 @@ DAEMON_PORT="${AIRUNNER_DAEMON_PORT:-8188}"
 DEV_VENV="${AIRUNNER_DEV_VENV:-${ROOT_DIR}/venv}"
 DEV_VENV_BIN="${DEV_VENV}/bin"
 SIDECAR_BIN_DIR="${ROOT_DIR}/build/runtime-sidecars/linux/bin"
+CUDA_PROFILE_DIR="${ROOT_DIR}/build/runtime-sidecars/linux/share/airunner/native-runtimes/cuda-sm120a"
 
 mkdir -p "${LOG_DIR}"
 
@@ -216,6 +217,13 @@ start_services() {
     export NLTK_DISABLE_IMPORT_SECURITY=1
     export PYTHONPATH="${ROOT_DIR}/services/src:${ROOT_DIR}/src:${ROOT_DIR}/native/src${PYTHONPATH:+:${PYTHONPATH}}"
     export PATH="${DEV_VENV_BIN}:${SIDECAR_BIN_DIR}${PATH:+:${PATH}}"
+
+    # Keep native profile discovery separate from AIRUNNER_BUNDLE_ROOT, which
+    # also selects speech and frozen-application resources.
+    unset AIRUNNER_LLAMA_CUDA_PROFILE_ROOT
+    if [[ -d "${CUDA_PROFILE_DIR}" ]]; then
+        export AIRUNNER_LLAMA_CUDA_PROFILE_ROOT="${CUDA_PROFILE_DIR}"
+    fi
 
     if [[ -x "${SIDECAR_BIN_DIR}/llama-server" ]]; then
         export AIRUNNER_LLAMA_SERVER_BIN="${SIDECAR_BIN_DIR}/llama-server"

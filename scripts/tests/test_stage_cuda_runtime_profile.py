@@ -13,7 +13,7 @@ import pytest
 from scripts import stage_cuda_runtime_profile as stage
 
 
-SOURCE_REPOSITORY = "Capsize-Games/airunner-native"
+SOURCE_REPOSITORY = "https://github.com/ggml-org/llama.cpp.git"
 SOURCE_COMMIT = "1" * 40
 SOURCE_TREE = "2" * 40
 PRODUCER_COMMIT = "3" * 40

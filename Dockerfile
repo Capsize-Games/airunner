@@ -45,6 +45,24 @@ RUN --network=none \
     (cd /tmp/release-inputs/postgresql && sha256sum -c SHA256SUMS); \
     (cd /tmp/release-inputs/postgresql-build-supplement && sha256sum -c SHA256SUMS)
 
+# The full Linux/NVIDIA image carries both CPU sidecars and the separately
+# verified CUDA profile. Validate the staged tree offline before it enters an
+# image layer; shipping the profile does not start a model or backend.
+RUN --network=none \
+    --mount=type=bind,from=reviewed-inputs,source=native-runtime,target=/tmp/release-inputs/native-runtime,ro \
+    set -eu; \
+    payload=/tmp/release-inputs/native-runtime/payload; \
+    test -d "$payload"; \
+    (cd "$payload" && sha256sum -c SHA256SUMS); \
+    test -x "$payload/bin/llama-server"; \
+    test -x "$payload/bin/whisper-server"; \
+    test -f "$payload/share/airunner/licenses/llama.cpp-LICENSE"; \
+    test -f "$payload/share/airunner/licenses/whisper.cpp-LICENSE"; \
+    test -f "$payload/share/airunner/source_provenance.env"; \
+    test -f "$payload/share/airunner/native-payload-receipt.json"; \
+    test -x "$payload/share/airunner/native-runtimes/cuda-sm120a/bin/llama-server-cuda"; \
+    test -f "$payload/share/airunner/native-runtimes/cuda-sm120a/profile-manifest.json"
+
 # Install system dependencies required by the selected runtime profiles.
 RUN set -e; \
     profile_match() { \
@@ -263,10 +281,13 @@ RUN --mount=type=bind,from=reviewed-inputs,source=runtime,target=/tmp/release-in
 # Native speech is compiled from the reviewed source lock before the image
 # build. Preserve its source archive, license texts, data and component receipt.
 COPY --from=reviewed-inputs /native-speech/ /opt/airunner-speech/
+COPY --from=reviewed-inputs /native-runtime/payload/ /opt/airunner/
 RUN test -x /opt/airunner-speech/bin/espeak-ng && \
     test -s /opt/airunner-speech/share/espeak-ng-data/phondata && \
-    ln -s /opt/airunner-speech/bin/espeak-ng /usr/bin/espeak-ng && \
-    ln -s /opt/airunner-speech/share/espeak-ng-data /usr/share/espeak-ng-data
+    install -m 0755 /opt/airunner-speech/bin/espeak-ng /opt/airunner/bin/espeak-ng && \
+    cp -a /opt/airunner-speech/share/espeak-ng-data /opt/airunner/share/espeak-ng-data && \
+    ln -s /opt/airunner/bin/espeak-ng /usr/bin/espeak-ng && \
+    ln -s /opt/airunner/share/espeak-ng-data /usr/share/espeak-ng-data
 
 # Create non-root user for running the container
 # docker-compose may override the runtime UID/GID; avoid hard-coding 1000 here
@@ -289,6 +310,7 @@ ENV AIRUNNER_ENVIRONMENT=production
 ENV HOME=/home/airunner
 ENV HF_HOME=/home/airunner/.cache/huggingface
 ENV AIRUNNER_DATA_DIR=/home/airunner/.local/share/airunner
+ENV AIRUNNER_BUNDLE_ROOT=/opt/airunner
 
 # Expose the API port (used in headless mode)
 EXPOSE 8080

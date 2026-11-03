@@ -291,6 +291,33 @@ stager was refactored from F/51 and E/38 functions to a maximum C/20; no D/E/F
 blocks remain. Actual final archive pins, installed/container integration and
 GPU acceptance remain open; no candidate is promoted by these fixture tests.
 
+Installer and Docker staging now preserve the complete pinned CPU archive,
+including its licenses and provenance, alongside the independently verified
+CUDA profile. The development launcher discovers that profile through
+`AIRUNNER_LLAMA_CUDA_PROFILE_ROOT`, without redirecting application/Python paths.
+The full NVIDIA Docker image requires both profiles. Its published CUDA pin
+remains absent until actual native acceptance and publication; no candidate
+placeholder is installed. The integrated payload, launcher, authentication and
+compatibility selection passed 123 tests with three dependency warnings.
+New staging helpers have no Radon D/E/F blocks. Source review retains the
+88-line staging transaction and the pre-existing D/23 named-file extractor as
+advisory findings: the former keeps validation and atomic replacement together;
+the latter remains the compatibility extraction path. These dispositions do not
+replace runtime or artifact acceptance.
+
+Actual CUDA candidate `41720615159` loaded the required Qwen model and 32k
+context in 24.515 seconds, returned health 200, rejected an unauthenticated
+completion with 401, and released its owned process. It did not pass acceptance:
+the server observed 33/34 layers on GPU and block 0 on CPU. Source review found
+that negative GPU-layer handling counts the main stack while placement counts
+the appended next-token prediction block too. The service now maps its negative
+full-offload setting to the native CLI's explicit `all` value (`-2`), preserving
+CPU and positive layer counts. A maintained native fix must make that explicit
+value include every layer. Rebuild and observed full placement, authenticated
+generation, cancellation and cleanup remain required; fixture tests do not
+establish that the native fix works. Device capability also needs actual
+evidence rather than inference from the compiled CUDA target.
+
 Coordinate the producer's annotated release/tag, complete immutable asset set,
 consumer pins and safe profile-tree staging. Preserve existing immutable tags.
 Native producer PR [#4](https://github.com/Capsize-Games/airunner-native/pull/4)
