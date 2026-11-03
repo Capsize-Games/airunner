@@ -234,7 +234,17 @@ def test_open_download_blocks_ssrf_url_before_request() -> None:
         get.assert_not_called()
 
 
-def test_open_download_accepts_public_url() -> None:
+def test_open_download_accepts_public_url(monkeypatch) -> None:
+    """A mocked fetch validates policy without requiring external DNS."""
+    import ipaddress
+
+    from airunner_services import url_safety
+
+    monkeypatch.setattr(
+        url_safety,
+        "_resolve_host_ips",
+        lambda hostname, port: {ipaddress.ip_address("93.184.216.34")},
+    )
     response = mock.MagicMock()
     response.status_code = 200
     with mock.patch(

@@ -144,6 +144,12 @@ above. Their headers are retained to preserve upstream attribution:
 - `src/airunner/components/downloader/gui/windows/setup_wizard/model_setup/stt/templates/whisper_license_ui.py`
   — embeds the Whisper license text for display in the GUI setup wizard.
 
+The service Whisper GGML model identity is pinned in the service
+[`ModelRegistry`](services/src/airunner_services/model_management/model_registry.py).
+The generic STT repository setting in vendored `airunner-common` is retained
+for other consumers and does not select the service whisper.cpp artifact. See
+the [service model identity record](release-planning/services/input-reviews/whisper-cpp-model-identity.md).
+
 This section is informational only; the CI check applies to vendored package
 directories.
 

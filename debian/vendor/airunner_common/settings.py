@@ -5,11 +5,14 @@ constants. ``src/`` (GUI), ``services/`` (headless daemon) and ``native/``
 (launcher) all import from here; there must be no per-package copy of these
 values left behind.
 
-The generic default below remains for configuration consumers that use the
-legacy STT model format. The services whisper.cpp backend gets its GGML
-repository and file identity from the service model registry. The service
-downloader rejects an explicit incompatible generic STT override before
-download; this shared setting does not select a whisper.cpp artifact.
+Deliberate drift-resolution decisions (see architecture audit O1):
+
+* ``AIRUNNER_DEFAULT_STT_HF_PATH`` canonicalized to
+  ``Systran/faster-distil-whisper-large-v3``. The services copy had drifted to
+  ``ggerganov/whisper.cpp``. The ``Systran`` value is the intended default
+  because it is the value the GUI setup wizard and the whisper.cpp runtime
+  naming (``ggml-large-v3.bin``) actually pair with, and the value the
+  migration ``7fb526dc074c_modify_default_stt_and_tts_paths`` assumes.
 """
 
 from __future__ import annotations
