@@ -227,6 +227,10 @@ jobs:
             services/tests/test_offline_remote_url_guards.py \
             services/tests/test_zimage_resource_budget.py \
             services/tests/test_tts_buffered_response.py \
+            scripts/tests/test_espeak_build_recipes.py \
+            services/tests/test_llm_request_ownership.py \
+            services/tests/test_release_p05_binaries.py \
+            services/tests/test_release_p05_gates.py \
             services/tests/test_local_fallback_loaded_metadata.py \
             services/tests/test_ollama_embedding_contract.py \
             services/tests/test_ollama_runtime_metadata.py \
