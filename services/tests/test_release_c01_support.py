@@ -69,6 +69,7 @@ _REQUIRED_TESTS = (
     "services/tests/test_rag_tool_config_injection.py",
     "services/tests/test_offline_remote_url_guards.py",
     "services/tests/test_zimage_resource_budget.py",
+    "services/tests/test_tts_buffered_response.py",
     "services/tests/test_local_fallback_loaded_metadata.py",
     "services/tests/test_ollama_embedding_contract.py",
     "services/tests/test_ollama_runtime_metadata.py",

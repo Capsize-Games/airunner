@@ -3,11 +3,10 @@
 from __future__ import annotations
 
 import asyncio
-import io
 from typing import List
 
 from fastapi import APIRouter, HTTPException, Request
-from fastapi.responses import StreamingResponse
+from fastapi.responses import Response
 from pydantic import ValidationError
 
 from airunner_services.ipc.messages import EnvelopeStatus
@@ -91,8 +90,7 @@ async def synthesize_speech(request: TTSHTTPRequest, req: Request):
             detail=detail,
         )
     audio_data = tts_response_audio(response)
-    audio_io = io.BytesIO(audio_data)
-    return StreamingResponse(audio_io, media_type="audio/wav")
+    return Response(content=audio_data, media_type="audio/wav")
 
 
 @router.get("/models", response_model=List[ModelInfo])
