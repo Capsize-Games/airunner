@@ -59,6 +59,21 @@ jobs:
             libxext6 \
             libxrender-dev
 
+      - name: Reclaim unused hosted-runner SDK space
+        run: |
+          audit="$RUNNER_TEMP/runtime-contract-input-audit"
+          mkdir -p "$audit"
+          df -B1 --output=source,size,used,avail,pcent,target "$RUNNER_TEMP" "$GITHUB_WORKSPACE" | tee "$audit/capacity-before-reclaim.txt"
+          sudo rm -rf -- \
+            /usr/share/dotnet \
+            /usr/local/lib/android \
+            /opt/ghc \
+            /usr/local/share/boost \
+            /opt/hostedtoolcache/CodeQL
+          sudo apt-get clean
+          sudo rm -rf -- /var/lib/apt/lists/*
+          df -B1 --output=source,size,used,avail,pcent,target "$RUNNER_TEMP" "$GITHUB_WORKSPACE" | tee "$audit/capacity-after-reclaim.txt"
+
       - name: Install Python dependencies
         env:
           GITHUB_TOKEN: ${{ github.token }}
@@ -67,6 +82,7 @@ jobs:
           tools="$RUNNER_TEMP/linux-ci-tools-wheelhouse"
           audit="$RUNNER_TEMP/runtime-contract-input-audit"
           mkdir -p "$audit"
+          trap 'status=$?; df -B1 --output=source,size,used,avail,pcent,target "$RUNNER_TEMP" "$GITHUB_WORKSPACE" | tee "$audit/capacity-at-install-exit.txt" || true; exit "$status"' EXIT
           df -B1 --output=source,size,used,avail,pcent,target "$RUNNER_TEMP" "$GITHUB_WORKSPACE" | tee "$audit/capacity-before-staging.txt"
           free -b | tee "$audit/memory-before-staging.txt"
           cp package/constraints-linux-nvidia-cu129-linux-release.txt "$audit/runtime-lock.txt"
@@ -77,14 +93,17 @@ jobs:
             --manifest package/linux-release-v4-artifact-sources.json \
             --selected-lockfile package/constraints-linux-nvidia-cu129-linux-release.txt \
             --output-dir "$wheelhouse"
+          cp "$wheelhouse/requirements.txt" "$audit/runtime-requirements.txt"
+          cp "$wheelhouse/staging-receipt.json" "$audit/runtime-staging-receipt.json"
+          df -B1 --output=source,size,used,avail,pcent,target "$RUNNER_TEMP" "$GITHUB_WORKSPACE" | tee "$audit/capacity-after-runtime-wheelhouse.txt"
           python -m pip install --no-index --find-links "$wheelhouse" \
             --require-hashes -r "$wheelhouse/requirements.txt"
+          rm -rf -- "$wheelhouse"
+          df -B1 --output=source,size,used,avail,pcent,target "$RUNNER_TEMP" "$GITHUB_WORKSPACE" | tee "$audit/capacity-after-runtime-install-wheelhouse-cleanup.txt"
           python scripts/stage_linux_release_artifacts.py \
             --manifest package/linux-ci-tools-artifact-sources.json \
             --selected-lockfile package/constraints-linux-ci-tools.txt \
             --output-dir "$tools"
-          cp "$wheelhouse/requirements.txt" "$audit/runtime-requirements.txt"
-          cp "$wheelhouse/staging-receipt.json" "$audit/runtime-staging-receipt.json"
           cp "$tools/requirements.txt" "$audit/ci-tools-requirements.txt"
           cp "$tools/staging-receipt.json" "$audit/ci-tools-staging-receipt.json"
           python -m pip install --no-index --find-links "$tools" \
@@ -200,6 +219,7 @@ jobs:
             services/tests/test_llm_worker_embedding_queue.py \
             services/tests/test_art_job_admission.py \
             services/tests/test_art_model_scan_path_safety.py \
+            scripts/tests/test_eval_workflow_disk_reclaim.py \
             -v \
             --tb=short \
             --junitxml=runtime-contracts.xml
