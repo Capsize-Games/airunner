@@ -297,16 +297,33 @@ def _extract_archive(
 def stage_cuda_wheel(
     destination: Path = DEFAULT_DESTINATION,
     handoff_path: Path = HANDOFF_PATH,
+    archive_copy: Path | None = None,
 ) -> dict[str, Any]:
     """Download the fixed artifact, verify it, and stage only its two files."""
     handoff = _load_handoff(handoff_path)
     if destination.exists():
         try:
-            return verify_artifact_directory(destination, handoff)
+            verified = verify_artifact_directory(destination, handoff)
         except HandoffError as exc:
             raise HandoffError(
                 "existing CUDA wheel staging directory is not the pinned artifact"
             ) from exc
+        if archive_copy is not None:
+            if archive_copy.exists() or archive_copy.is_symlink():
+                raise HandoffError("archive copy destination already exists or is unsafe")
+            if archive_copy.resolve().is_relative_to(destination.resolve()):
+                raise HandoffError("archive copy destination must be outside the staged artifact")
+            archive_copy.parent.mkdir(parents=True, exist_ok=True)
+            with tempfile.TemporaryDirectory(
+                prefix="airunner-cuda-wheel-archive-", dir=destination.parent
+            ) as temp:
+                archive_path = Path(temp) / "artifact.zip"
+                _download_archive(archive_path, handoff)
+                shutil.copyfile(archive_path, archive_copy)
+                if _sha256_file(archive_copy) != handoff["artifact"]["zip_sha256"]:
+                    archive_copy.unlink(missing_ok=True)
+                    raise HandoffError("preserved Actions artifact ZIP failed hash verification")
+        return verified
     if destination.is_symlink():
         raise HandoffError("refusing a symbolic-link staging directory")
     destination.parent.mkdir(parents=True, exist_ok=True)
@@ -316,6 +333,16 @@ def stage_cuda_wheel(
         _download_archive(archive_path, handoff)
         _extract_archive(archive_path, extracted, handoff)
         verified = verify_artifact_directory(extracted, handoff)
+        if archive_copy is not None:
+            if archive_copy.exists() or archive_copy.is_symlink():
+                raise HandoffError("archive copy destination already exists or is unsafe")
+            if archive_copy.resolve().is_relative_to(destination.resolve()):
+                raise HandoffError("archive copy destination must be outside the staged artifact")
+            archive_copy.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(archive_path, archive_copy)
+            if _sha256_file(archive_copy) != handoff["artifact"]["zip_sha256"]:
+                archive_copy.unlink(missing_ok=True)
+                raise HandoffError("preserved Actions artifact ZIP failed hash verification")
         extracted.rename(destination)
     return verified
 
@@ -330,13 +357,21 @@ def main(argv: list[str] | None = None) -> int:
         "--verify-only", type=Path,
         help="verify an already extracted artifact directory without downloading",
     )
+    parser.add_argument(
+        "--handoff", type=Path, default=HANDOFF_PATH,
+        help="reviewed artifact handoff manifest (defaults to the production handoff)",
+    )
+    parser.add_argument(
+        "--archive-copy", type=Path,
+        help="preserve the verified source ZIP at this new path for a bound transformation",
+    )
     args = parser.parse_args(argv)
     try:
-        handoff = _load_handoff()
+        handoff = _load_handoff(args.handoff)
         result = (
             verify_artifact_directory(args.verify_only, handoff)
             if args.verify_only
-            else stage_cuda_wheel(args.destination)
+            else stage_cuda_wheel(args.destination, args.handoff, args.archive_copy)
         )
     except HandoffError as exc:
         print(str(exc), file=sys.stderr)

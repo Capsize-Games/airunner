@@ -210,3 +210,39 @@ def test_staging_exposes_only_a_complete_verified_artifact(tmp_path, monkeypatch
         assert {path.name for path in destination.iterdir()} == {path.name for path in artifact.iterdir()}
         assert module.stage_cuda_wheel(destination, handoff) == result
     assert not list(destination.parent.glob("airunner-cuda-wheel-*"))
+
+
+def test_staging_preserves_only_the_hash_verified_archive_copy(tmp_path, monkeypatch):
+    import scripts.stage_cuda_wheel as module
+
+    artifact, spec = _artifact(tmp_path)
+    spec["schema_version"] = 1
+    destination = tmp_path / "staging" / "cuda-wheel"
+    archive_copy = tmp_path / "preserved" / "source.zip"
+
+    expected_archive = tmp_path / "expected.zip"
+    with zipfile.ZipFile(expected_archive, "w") as archive:
+        for path in artifact.iterdir():
+            archive.write(path, path.name)
+    spec["artifact"]["zip_sha256"] = hashlib.sha256(expected_archive.read_bytes()).hexdigest()
+    handoff = tmp_path / "handoff.json"
+    handoff.write_text(json.dumps(spec))
+
+    def download(archive_path, _loaded_handoff):
+        import shutil
+
+        shutil.copyfile(expected_archive, archive_path)
+
+    monkeypatch.setattr(module, "_download_archive", download)
+
+    result = module.stage_cuda_wheel(destination, handoff, archive_copy)
+
+    assert result["wheel_sha256"] == spec["wheel"]["sha256"]
+    assert hashlib.sha256(archive_copy.read_bytes()).hexdigest() == spec["artifact"]["zip_sha256"]
+    assert {path.name for path in destination.iterdir()} == {path.name for path in artifact.iterdir()}
+    repeated_copy = tmp_path / "preserved-again" / "source.zip"
+    repeated = module.stage_cuda_wheel(destination, handoff, repeated_copy)
+    assert repeated == result
+    assert hashlib.sha256(repeated_copy.read_bytes()).hexdigest() == spec["artifact"]["zip_sha256"]
+    assert not list(destination.parent.glob("airunner-cuda-wheel-*"))
+    assert not list(destination.parent.glob("airunner-cuda-wheel-archive-*"))

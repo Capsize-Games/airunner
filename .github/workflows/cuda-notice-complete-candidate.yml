@@ -1,0 +1,126 @@
+name: CUDA wheel notice-complete candidate
+
+on:
+  pull_request:
+    paths:
+      - .github/workflows/cuda-notice-complete-candidate.yml
+      - package/cuda-wheel-capsize3-compiled-input.json
+      - packaging/licenses/llama-cpp-python-0.3.21-capsize.3-wheel-provenance/**
+      - scripts/complete_llama_cpp_wheel_notices.py
+      - scripts/stage_cuda_wheel.py
+      - services/tests/test_complete_llama_cpp_wheel_notices.py
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  notice-complete-candidate:
+    name: Verify and complete CUDA wheel notices
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      actions: read
+      contents: read
+    steps:
+      - name: Check out the reviewed input manifest and transformer
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+
+      - name: Set up deterministic Python toolchain
+        id: python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: 3.13.5
+
+      - name: Stage exact compiled artifact and preserve verified ZIP
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          python scripts/stage_cuda_wheel.py \
+            --handoff package/cuda-wheel-capsize3-compiled-input.json \
+            --destination "$RUNNER_TEMP/compiled-input" \
+            --archive-copy "$RUNNER_TEMP/compiled-artifact.zip"
+          test "$(sha256sum "$RUNNER_TEMP/compiled-artifact.zip" | cut -d ' ' -f 1)" \
+            = 479dd565f8c0e04a6f438806933f7ef0a60b13a694dbd29d712389c981dfc5c1
+
+      - name: Run transformation regression tests and package candidate offline
+        shell: bash
+        run: |
+          set -euo pipefail
+          python_bin='${{ steps.python.outputs.python-path }}'
+          test "$("$python_bin" --version)" = 'Python 3.13.5'
+          "$python_bin" -I -S -c 'import zlib; print("compression library:", zlib.ZLIB_VERSION)'
+          out="$RUNNER_TEMP/notice-complete-candidate"
+          home="$RUNNER_TEMP/isolated-home"
+          mkdir -m 700 -p "$out" "$home"
+          sudo unshare --net -- env -i \
+            PATH=/usr/bin:/bin \
+            LC_ALL=C \
+            HOME="$home" \
+            PYTHONDONTWRITEBYTECODE=1 \
+            "$python_bin" -I -S services/tests/test_complete_llama_cpp_wheel_notices.py -v
+          sudo unshare --net -- env -i \
+            PATH=/usr/bin:/bin \
+            LC_ALL=C \
+            HOME="$home" \
+            PYTHONDONTWRITEBYTECODE=1 \
+            "$python_bin" -I -S scripts/complete_llama_cpp_wheel_notices.py \
+              --input "$RUNNER_TEMP/compiled-input/llama_cpp_python-0.3.21+capsize.3-py3-none-linux_x86_64.whl" \
+              --build-artifact "$RUNNER_TEMP/compiled-artifact.zip" \
+              --input-manifest packaging/licenses/llama-cpp-python-0.3.21-capsize.3-wheel-provenance/transform-input.json \
+              --output "$out/llama_cpp_python-0.3.21+capsize.3-py3-none-linux_x86_64.whl" \
+              --receipt "$out/transform-receipt.json"
+
+          sudo bash -ceu '
+            wheel="$1"
+            receipt="$2"
+            uid="$3"
+            gid="$4"
+            printf "%s  %s\n" \
+              3732bbd0f9f2a79d7dc69ff0558ca9d228f69408c0c66461ca5f993638485e3a \
+              "$wheel" | sha256sum --check --status
+            test "$(stat -c %s "$wheel")" = 154412863
+            chown "$uid:$gid" "$wheel" "$receipt"
+            chmod 0644 "$wheel" "$receipt"
+          ' bash \
+            "$out/llama_cpp_python-0.3.21+capsize.3-py3-none-linux_x86_64.whl" \
+            "$out/transform-receipt.json" \
+            "$(id -u)" "$(id -g)"
+
+          python -I -S - "$out" "$RUNNER_TEMP/compiled-input/BUILD-MANIFEST.txt" <<'PY'
+          import csv, hashlib, io, json, pathlib, sys, zipfile
+          output = pathlib.Path(sys.argv[1])
+          build = pathlib.Path(sys.argv[2])
+          wheel = output / "llama_cpp_python-0.3.21+capsize.3-py3-none-linux_x86_64.whl"
+          receipt = json.loads((output / "transform-receipt.json").read_text())
+          expected_sha = "3732bbd0f9f2a79d7dc69ff0558ca9d228f69408c0c66461ca5f993638485e3a"
+          assert hashlib.sha256(wheel.read_bytes()).hexdigest() == expected_sha
+          assert wheel.stat().st_size == 154412863
+          assert hashlib.sha256(build.read_bytes()).hexdigest() == "92b38e1ece8a0794fe074dcfeecd2b3062601703c3cf527d052f2ed27aa8f39d"
+          assert receipt["output_wheel"]["sha256"] == expected_sha
+          assert receipt["output_zip_member_count"] == receipt["output_record_row_count"] == 98
+          assert receipt["preserved_original_member_count"] == 94
+          with zipfile.ZipFile(wheel) as archive:
+              rows = list(csv.reader(io.StringIO(archive.read("llama_cpp_python-0.3.21+capsize.3.dist-info/RECORD").decode())))
+              assert len(rows) == 98
+              assert set(row[0] for row in rows) == set(archive.namelist())
+          PY
+
+      - name: Upload only the notice-complete candidate and its evidence
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: llama-cpp-python-capsize3-notice-complete
+          path: |
+            ${{ runner.temp }}/notice-complete-candidate/llama_cpp_python-0.3.21+capsize.3-py3-none-linux_x86_64.whl
+            ${{ runner.temp }}/compiled-input/BUILD-MANIFEST.txt
+            ${{ runner.temp }}/notice-complete-candidate/transform-receipt.json
+            packaging/licenses/llama-cpp-python-0.3.21-capsize.3-wheel-provenance/LICENSE-wrapper.md
+            packaging/licenses/llama-cpp-python-0.3.21-capsize.3-wheel-provenance/LICENSE-llama.cpp.txt
+            packaging/licenses/llama-cpp-python-0.3.21-capsize.3-wheel-provenance/LICENSE-jsonhpp.txt
+            packaging/licenses/llama-cpp-python-0.3.21-capsize.3-wheel-provenance/transform-input.json
+            package/cuda-wheel-capsize3-compiled-input.json
+          if-no-files-found: error
+          retention-days: 14
