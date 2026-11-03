@@ -87,6 +87,7 @@ def _native_handler(llama_chat_format):
         "{% endfor %}"
         "{% if tools %}TOOLS={{ tools|length }}{% endif %}"
         "{% if tool_choice %}CHOICE={{ tool_choice }}{% endif %}"
+        "{% if enable_thinking %}THINKING=on{% else %}THINKING=off{% endif %}"
         "{% if add_generation_prompt %}<|im_start|>assistant\n"
         "{% if enable_thinking %}<think>\n{% endif %}{% endif %}"
     )
@@ -144,6 +145,7 @@ def test_embedded_template_gets_current_thinking_and_keeps_history_tools(
     no_think_prompt = native.prompt_bytes.decode()
     assert "<|begin_of_text|>" in no_think_prompt
     assert "<think>" not in no_think_prompt
+    assert "THINKING=off" in no_think_prompt
     assert "search:limit=3;" in no_think_prompt
     assert "TOOLS=1" in no_think_prompt
     assert "CHOICE=auto" in no_think_prompt
@@ -157,7 +159,9 @@ def test_embedded_template_gets_current_thinking_and_keeps_history_tools(
         messages=[{"role": "user", "content": "Return 77"}],
     )
     think_prompt = native.prompt_bytes.decode()
-    assert think_prompt.endswith("<|im_start|>assistant\n<think>\n")
+    assert "THINKING=on" in think_prompt
+    assert think_prompt.endswith("<|im_start|>assistant\n")
+    assert "<think>" not in think_prompt
 
 
 def test_hf_handler_remains_supported_and_receives_dynamic_flag(monkeypatch):

@@ -31,7 +31,10 @@ def configure_chat_handler(adapter: Any) -> None:
     if embedded is not None:
         chat_format, base_handler = embedded
         adapter._llama.chat_handler = _thinking_chat_handler(
-            adapter, base_handler, normalize_messages=True
+            adapter,
+            base_handler,
+            normalize_messages=True,
+            strip_open_thinking_prefix=True,
         )
         adapter.logger.info(
             "Using embedded GGUF chat template %s for %s",
@@ -72,6 +75,7 @@ def _thinking_chat_handler(
     base_handler: Any,
     *,
     normalize_messages: bool = False,
+    strip_open_thinking_prefix: bool = False,
 ) -> Any:
     """Pass the current thinking option through without replacing formatter behavior."""
     def chat_handler_with_kwargs(*args: Any, **kwargs: Any) -> Any:
@@ -80,14 +84,42 @@ def _thinking_chat_handler(
                 **kwargs,
                 "messages": _normalize_tool_call_arguments(kwargs["messages"]),
             }
+        effective_kwargs = dict(kwargs)
         template_kwargs = {
             "enable_thinking": bool(
                 getattr(adapter, "enable_thinking", True)
             )
         }
-        return base_handler(*args, **{**template_kwargs, **kwargs})
+        effective_kwargs = {**template_kwargs, **effective_kwargs}
+        if strip_open_thinking_prefix and effective_kwargs["enable_thinking"]:
+            llama = effective_kwargs.get("llama")
+            if llama is not None:
+                effective_kwargs["llama"] = _PromptSuffixLlamaProxy(llama)
+        return base_handler(*args, **effective_kwargs)
 
     return chat_handler_with_kwargs
+
+
+class _PromptSuffixLlamaProxy:
+    """Remove the template's open thinking marker before llama.cpp tokenizes it."""
+
+    def __init__(self, llama: Any) -> None:
+        self._llama = llama
+
+    def __getattr__(self, name: str) -> Any:
+        return getattr(self._llama, name)
+
+    def tokenize(self, prompt: bytes, *args: Any, **kwargs: Any) -> Any:
+        if isinstance(prompt, bytes):
+            try:
+                decoded = prompt.decode("utf-8")
+            except UnicodeDecodeError:
+                pass
+            else:
+                stripped = _strip_auto_opened_think_tag(decoded)
+                if stripped != decoded:
+                    prompt = stripped.encode("utf-8")
+        return self._llama.tokenize(prompt, *args, **kwargs)
 
 
 def chat_template_repo_id(adapter: Any) -> str | None:
