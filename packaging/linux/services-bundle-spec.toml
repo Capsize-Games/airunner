@@ -292,12 +292,6 @@ copy_metadata = [
 # modulegraph. Presence is verified on the bundle tree
 # (_internal/<package>/**/*.so), never the PYZ table of contents.
 collect_binaries = [
-    # mslk/__init__.py _load_library: torch.ops.load_library on the
-    # sibling mslk.so (boot dies in `import mslk` without it; #2245).
-    # The default lib*.so pattern misses the bare name, so
-    # hook-mslk.py collects it explicitly; the flag is a harmless
-    # no-op and the gate verifies the file landed.
-    "mslk",
     # llama_cpp/llama_cpp.py: ctypes libllama.so from llama_cpp/lib/
     # (plus versioned SONAME deps via hook-llama_cpp.py).
     "llama_cpp",
@@ -316,8 +310,7 @@ runtime_hooks = [
 # for packages PyInstaller's bundled hooks don't cover. Missing
 # dirs fail the build (recipe bug, like an empty data glob).
 additional_hooks_dirs = [
-    # hook-mslk.py (mslk.so + triton-jit py-mode) and
-    # hook-llama_cpp.py (versioned SONAME libs); #2245.
+    # hook-llama_cpp.py collects versioned SONAME libraries.
     "packaging/linux/pyi-hooks",
 ]
 # Frozen-import preconditions: bundle-relative source files the
@@ -328,9 +321,6 @@ additional_hooks_dirs = [
 frozen_source_markers = [
     "_internal/transformers/models/__init__.py",
     "_internal/transformers/models/auto/__init__.py",
-    # triton-jit py-mode source: @triton.jit decoration reads this
-    # file at import time (hook-mslk.py; #2245).
-    "_internal/mslk/quantize/triton/fp8_quantize.py",
 ]
 
 # Data payloads. source is a repo-relative glob; dest is the
