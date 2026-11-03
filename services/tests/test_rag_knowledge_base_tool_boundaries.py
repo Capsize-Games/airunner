@@ -484,10 +484,12 @@ def test_scoped_save_without_chatbot_identity_is_rejected_before_write(tmp_path,
     assert not (base / "knowledge_base").exists()
 
 
-@pytest.mark.parametrize("failed_sync", [1, 2])
+@pytest.mark.parametrize("failed_stage", ["file", "leaf-directory"])
 def test_save_fsync_failures_do_not_register_unconfirmed_file(
-    tmp_path, monkeypatch, failed_sync
+    tmp_path, monkeypatch, failed_stage
 ):
+    import stat
+
     from airunner_services.llm.tools import rag_tools
 
     base = tmp_path / "base"
@@ -507,21 +509,66 @@ def test_save_fsync_failures_do_not_register_unconfirmed_file(
 
     monkeypatch.setattr(rag_tools.Document, "objects", DocumentObjects(), raising=False)
     original_fsync = os.fsync
-    count = 0
+    failed = False
+    category_dir = base / "knowledge_base" / "general"
 
     def fail_once(fd):
-        nonlocal count
-        count += 1
-        if count == failed_sync:
+        nonlocal failed
+        is_target = (
+            stat.S_ISREG(os.fstat(fd).st_mode)
+            if failed_stage == "file"
+            else os.readlink(f"/proc/self/fd/{fd}") == str(category_dir)
+        )
+        if is_target and not failed:
+            failed = True
             raise OSError("synthetic fsync failure")
         return original_fsync(fd)
 
     monkeypatch.setattr(rag_tools.os, "fsync", fail_once)
-    response = rag_tools.save_to_knowledge_base("payload", f"sync-{failed_sync}")
-    expected = base / "knowledge_base" / "general" / f"sync-{failed_sync}.txt"
-    failed_stage = "file fsync" if failed_sync == 1 else "directory fsync"
-    assert failed_stage in response and "removed" in response
+    response = rag_tools.save_to_knowledge_base("payload", f"sync-{failed_stage}")
+    expected = category_dir / f"sync-{failed_stage}.txt"
+    reported_stage = "file fsync" if failed_stage == "file" else "directory fsync"
+    assert failed and reported_stage in response and "removed" in response
     assert not expected.exists()
+    assert registrations == []
+
+
+def test_managed_directory_parent_is_synced_before_file_or_registration(
+    tmp_path, monkeypatch
+):
+    from airunner_services.llm.tools import rag_tools
+
+    base = tmp_path / "base"
+    base.mkdir()
+    monkeypatch.setattr(
+        rag_tools.PathSettings,
+        "objects",
+        SimpleNamespace(first=lambda: SimpleNamespace(base_path=str(base))),
+        raising=False,
+    )
+    registrations = []
+    monkeypatch.setattr(
+        rag_tools.Document,
+        "objects",
+        SimpleNamespace(create=lambda **kwargs: registrations.append(kwargs)),
+        raising=False,
+    )
+    original_fsync = os.fsync
+    parent_synced = False
+
+    def fail_parent_sync(fd):
+        nonlocal parent_synced
+        if os.readlink(f"/proc/self/fd/{fd}") == str(base):
+            parent_synced = True
+            raise OSError("synthetic managed-directory parent sync failure")
+        return original_fsync(fd)
+
+    monkeypatch.setattr(rag_tools.os, "fsync", fail_parent_sync)
+    response = rag_tools.save_to_knowledge_base("payload", "parent-sync")
+    assert parent_synced
+    assert "parent sync failure" in response
+    assert (base / "knowledge_base").is_dir()
+    assert not (base / "knowledge_base" / "general" / "parent-sync.txt").exists()
     assert registrations == []
 
 

@@ -444,6 +444,10 @@ def _open_or_create_directory(parent_fd: int, name: str, flags: int) -> int:
             os.mkdir(name, mode=0o700, dir_fd=parent_fd)
         except FileExistsError:
             pass
+        # Sync the parent whether this call created the entry or raced with
+        # another creator. The directory must be durable before a file or DB
+        # row below it can refer to that path.
+        os.fsync(parent_fd)
         return os.open(name, flags, dir_fd=parent_fd)
 
 
