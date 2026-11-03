@@ -21,6 +21,7 @@ _SPEC = _ROOT / "packaging" / "linux" / "services-bundle-spec.toml"
 _REQUIRED_TESTS = (
     "scripts/tests/test_cuda_source_recipe.py",
     "scripts/tests/test_cuda_wheel_handoff.py",
+    "scripts/tests/test_linux_ci_dependency_inputs.py",
     "scripts/tests/test_apt_release_publisher.py",
     "scripts/tests/test_apt_daemon_health_probe.py",
     "scripts/tests/test_github_release_promotion.py",

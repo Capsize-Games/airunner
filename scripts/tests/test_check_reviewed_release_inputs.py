@@ -42,6 +42,70 @@ def test_quarantined_inputs_fail_closed_without_pin_errors() -> None:
     ]
 
 
+def test_candidate_profile_install_is_hash_locked_and_no_deps(
+    tmp_path: Path,
+) -> None:
+    _copy_gate_tree(tmp_path)
+    workflow_path = tmp_path / ".github/workflows/pypi-dispatch.yml"
+    original = workflow_path.read_text(encoding="utf-8")
+
+    workflow_path.write_text(
+        original.replace(
+            "python -m pip install --no-deps --no-build-isolation -e "
+            "'./services[linux-release]'",
+            "python -m pip install --no-build-isolation -e "
+            "'./services[linux-release]'",
+            1,
+        ),
+        encoding="utf-8",
+    )
+    errors = inspect_release_inputs(
+        tmp_path, Path(".github/workflows/pypi-dispatch.yml")
+    )
+    assert any("hash-locked runtime wheelhouse" in error for error in errors)
+
+    workflow_path.write_text(
+        original.replace(
+            "'./services[linux-release]'", "'./services[linux-release,development]'", 1
+        ),
+        encoding="utf-8",
+    )
+    errors = inspect_release_inputs(
+        tmp_path, Path(".github/workflows/pypi-dispatch.yml")
+    )
+    assert any("hash-locked runtime wheelhouse" in error for error in errors)
+
+
+@pytest.mark.parametrize(
+    ("original", "replacement"),
+    [
+        (
+            "package/linux-builder-tools-artifact-sources.json",
+            "package/unreviewed-builder-tools.json",
+        ),
+        (
+            "--no-deps --require-hashes -r \"$builder/requirements.txt\"",
+            "--require-hashes -r \"$builder/requirements.txt\"",
+        ),
+    ],
+)
+def test_candidate_pyinstaller_builder_closure_is_separately_hash_locked(
+    tmp_path: Path, original: str, replacement: str
+) -> None:
+    _copy_gate_tree(tmp_path)
+    workflow_path = tmp_path / ".github/workflows/pypi-dispatch.yml"
+    workflow = workflow_path.read_text(encoding="utf-8")
+    assert original in workflow
+    workflow_path.write_text(
+        workflow.replace(original, replacement, 1), encoding="utf-8"
+    )
+
+    errors = inspect_release_inputs(
+        tmp_path, Path(".github/workflows/pypi-dispatch.yml")
+    )
+    assert any("hash-locked PyInstaller builder closure" in error for error in errors)
+
+
 def test_deferred_vendor_cannot_be_added_to_release_profile(tmp_path: Path) -> None:
     _copy_gate_tree(tmp_path)
     setup_path = tmp_path / "services/setup.py"

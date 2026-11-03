@@ -57,6 +57,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+      actions: read
 
     steps:
       - name: Check out code
@@ -93,15 +94,32 @@ jobs:
           python-version: ${{ env.PYTHON_VERSION }}
 
       - name: Install dependencies
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         run: |
-          python -m pip install --upgrade pip setuptools wheel
-          # Freeze profile from the P05 bundle spec: the linux-release
-          # aggregate of services/setup.py under its P02 lock, plus the
-          # pinned PyInstaller recipe and development extra for checks.
-          pip install -c package/constraints-linux-nvidia-cu129-linux-release.txt \
-            "pyinstaller==6.12.0"
-          pip install -c package/constraints-linux-nvidia-cu129-linux-release.txt \
-            -e "./services[linux-release,development]"
+          wheelhouse="$RUNNER_TEMP/linux-release-wheelhouse"
+          tools="$RUNNER_TEMP/linux-ci-tools-wheelhouse"
+          builder="$RUNNER_TEMP/linux-builder-wheelhouse"
+          python scripts/stage_linux_release_artifacts.py \
+            --manifest package/linux-release-v4-artifact-sources.json \
+            --selected-lockfile package/constraints-linux-nvidia-cu129-linux-release.txt \
+            --output-dir "$wheelhouse"
+          python -m pip install --no-index --find-links "$wheelhouse" \
+            --require-hashes -r "$wheelhouse/requirements.txt"
+          python scripts/stage_linux_release_artifacts.py \
+            --manifest package/linux-ci-tools-artifact-sources.json \
+            --selected-lockfile package/constraints-linux-ci-tools.txt \
+            --output-dir "$tools"
+          python -m pip install --no-index --find-links "$tools" \
+            --no-deps --require-hashes -r "$tools/requirements.txt"
+          python scripts/stage_linux_release_artifacts.py \
+            --manifest package/linux-builder-tools-artifact-sources.json \
+            --selected-lockfile package/constraints-linux-builder-tools.txt \
+            --output-dir "$builder"
+          python -m pip install --no-index --find-links "$builder" \
+            --no-deps --require-hashes -r "$builder/requirements.txt"
+          python -m pip install --no-deps --no-build-isolation -e './services[linux-release]'
+          python -m pip check
 
       # Required deterministic checks (C01): safety, auth, download,
       # and data-migration coverage. Identical file list to the PR
@@ -113,6 +131,7 @@ jobs:
           PYTHONPATH=services/src python -m pytest \
             scripts/tests/test_cuda_source_recipe.py \
             scripts/tests/test_cuda_wheel_handoff.py \
+            scripts/tests/test_linux_ci_dependency_inputs.py \
             scripts/tests/test_apt_release_publisher.py \
             scripts/tests/test_apt_daemon_health_probe.py \
             scripts/tests/test_github_release_promotion.py \

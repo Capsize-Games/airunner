@@ -82,6 +82,84 @@ def _has_requirement(text: str, package: str, requirement: str) -> bool:
     return re.search(pattern, text) is not None
 
 
+def _workflow_job(text: str, name: str) -> str:
+    """Return one top-level workflow job without interpreting shell commands."""
+    start_match = re.search(rf"(?m)^  {re.escape(name)}:\s*$", text)
+    if start_match is None:
+        return ""
+    next_match = re.search(r"(?m)^  [A-Za-z0-9_-]+:\s*$", text[start_match.end():])
+    end = start_match.end() + next_match.start() if next_match else len(text)
+    return text[start_match.start():end]
+
+
+def _installs_hash_locked_release_profile(
+    workflow_text: str, profile_name: str, active_lock: str
+) -> bool:
+    """Require the locked-wheel install before a no-dependency source install."""
+    candidate = _workflow_job(workflow_text, "linux-candidate")
+    if not candidate:
+        return False
+    runtime_stage = candidate.find(
+        "--manifest package/linux-release-v4-artifact-sources.json"
+    )
+    runtime_lock = candidate.find(f"--selected-lockfile {active_lock}")
+    hash_install = re.search(
+        r"python -m pip install --no-index --find-links \"\$wheelhouse\"\s*\\?\s*"
+        r"--require-hashes -r \"\$wheelhouse/requirements\.txt\"",
+        candidate,
+    )
+    editable = re.search(
+        rf"python -m pip install --no-deps --no-build-isolation -e "
+        rf"['\"]\./services\[{re.escape(profile_name)}\]['\"]",
+        candidate,
+    )
+    if hash_install is None:
+        return False
+    if not 0 <= runtime_stage < runtime_lock < hash_install.start():
+        return False
+    if editable is None or hash_install.start() >= editable.start():
+        return False
+    if re.search(r"-e\s+['\"]?\./services\[[^\]]*development", candidate):
+        return False
+    return True
+
+
+def _installs_hash_locked_builder_tools(workflow_text: str) -> bool:
+    """Require the reviewed PyInstaller closure after the runtime install."""
+    candidate = _workflow_job(workflow_text, "linux-candidate")
+    if not candidate:
+        return False
+    runtime_install = re.search(
+        r"python -m pip install --no-index --find-links \"\$wheelhouse\"\s*\\?\s*"
+        r"--require-hashes -r \"\$wheelhouse/requirements\.txt\"",
+        candidate,
+    )
+    builder_stage = candidate.find(
+        "--manifest package/linux-builder-tools-artifact-sources.json"
+    )
+    builder_lock = candidate.find(
+        "--selected-lockfile package/constraints-linux-builder-tools.txt"
+    )
+    builder_install = re.search(
+        r"python -m pip install --no-index --find-links \"\$builder\"\s*\\?\s*"
+        r"--no-deps --require-hashes -r \"\$builder/requirements\.txt\"",
+        candidate,
+    )
+    editable = re.search(
+        r"python -m pip install --no-deps --no-build-isolation -e "
+        r"['\"]\./services\[linux-release\]['\"]",
+        candidate,
+    )
+    return bool(
+        runtime_install
+        and 0 <= runtime_install.start() < builder_stage < builder_lock
+        and builder_install
+        and builder_lock < builder_install.start()
+        and editable
+        and builder_install.start() < editable.start()
+    )
+
+
 def _assignment_values(tree: ast.Module) -> dict[str, ast.expr]:
     """Index top-level assignment expressions without executing setup.py."""
     values: dict[str, ast.expr] = {}
@@ -207,14 +285,18 @@ def _profile_errors(root: Path, profile: Any) -> list[str]:
         or spec.get("bundle", {}).get("constraints") != active_lock
     ):
         errors.append("bundle specification does not match the manifest release profile")
-    escaped_profile = re.escape(str(profile_name))
-    if not re.search(
-        rf'-e\s+"\./services\[{escaped_profile},development\]"',
-        workflow_text,
+    if not active_lock or not _installs_hash_locked_release_profile(
+        workflow_text, str(profile_name), str(active_lock)
     ):
-        errors.append("release workflow does not install the manifest service profile")
-    if not active_lock or workflow_text.count(str(active_lock)) < 2:
-        errors.append("release workflow does not bind both lock uses to the active lock")
+        errors.append(
+            "release workflow does not install the manifest service profile "
+            "after the hash-locked runtime wheelhouse"
+        )
+    if not _installs_hash_locked_builder_tools(workflow_text):
+        errors.append(
+            "release workflow does not install the hash-locked PyInstaller "
+            "builder closure after the runtime wheelhouse"
+        )
 
     assignments = _assignment_values(setup_tree)
     declared_extras = assignments.get("LINUX_RELEASE_EXTRAS")

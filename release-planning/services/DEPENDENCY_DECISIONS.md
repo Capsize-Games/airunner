@@ -399,3 +399,14 @@ The following sidecars document native-source or notice scopes attached to selec
 | CUDA selected wheels | 25 artifact pins; 115 ELF members inspected | [CUDA wheel review](input-reviews/linux-cuda-source-review.md) records static ELF and RECORD evidence; there was no import, load, or GPU runtime validation. |
 
 The exact diagnostic graph does not replace the project’s release lock. Next required work is a machine-bound inventory connecting each graph pin to exact source/artifact evidence, resolution of the listed security and notice holds, then active-lock generation and isolated validation. Real model and hardware acceptance are also unrun.
+
+### Separate Linux candidate build and test inputs
+
+The 243-pin V4 runtime graph does not include the candidate test runner or PyInstaller. Keep these exact inputs visible as separate layers; none is a service runtime dependency.
+
+| Purpose | Exact package identities | Evidence | Candidate handling |
+|---|---|---|---|
+| Deterministic tests | `iniconfig==2.3.0`, `pluggy==1.7.0`, `pytest==9.1.1`, `pytest-timeout==2.4.0`, `responses==0.26.3` | [CI test-tool source review](input-reviews/linux-ci-test-tools-review.md); [hash lock](../../package/constraints-linux-ci-tools.txt); [artifact manifest](../../package/linux-ci-tools-artifact-sources.json) | Staged by exact wheel hash and size, installed after the runtime graph with `--no-deps --require-hashes`. Not activated as runtime dependencies. |
+| PyInstaller candidate build | `altgraph==0.17.5`, `packaging==26.3`, `pyinstaller==6.12.0`, `pyinstaller-hooks-contrib==2026.9`, `setuptools==84.2.1`, `wheel==0.48.0` | [CORE freeze input review](input-reviews/core-linux-freeze-inputs.md); [CORE exact-pin inventory](input-reviews/core-linux-dependency-inventory.json); [builder lock](../../package/constraints-linux-builder-tools.txt); [builder artifact manifest](../../package/linux-builder-tools-artifact-sources.json) | Kept separate from the runtime profile; staged from canonical PyPI URLs with exact SHA-256 and size, then installed after runtime with `--no-deps --require-hashes`. Frozen application acceptance remains distinct. |
+
+The test and builder locks are candidate inputs and do not replace the active runtime lock. A clean layered environment must pass `pip check`; no CI or release success is implied by these static records.

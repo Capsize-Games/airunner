@@ -1,0 +1,194 @@
+{
+  "artifact_sources": [
+    {
+      "filename": "iniconfig-2.3.0-py3-none-any.whl",
+      "name": "iniconfig",
+      "sha256": "f631c04d2c48c52b84d0d0549c99ff3859c98df65b3101406327ecc7d53fbf12",
+      "size_bytes": 7484,
+      "source": {
+        "filename": "iniconfig-2.3.0-py3-none-any.whl",
+        "kind": "https",
+        "sha256": "f631c04d2c48c52b84d0d0549c99ff3859c98df65b3101406327ecc7d53fbf12",
+        "size_bytes": 7484,
+        "url": "https://files.pythonhosted.org/packages/cb/b1/3846dd7f199d53cb17f49cba7e651e9ce294d8497c8c150530ed11865bb8/iniconfig-2.3.0-py3-none-any.whl"
+      },
+      "version": "2.3.0",
+      "wheel_tags": [
+        "py3-none-any"
+      ]
+    },
+    {
+      "filename": "pluggy-1.7.0-py3-none-any.whl",
+      "name": "pluggy",
+      "sha256": "7dd7b0d8832ba3cb632c306926ded123429211b83641b35dc5c41ad2d34f9bec",
+      "size_bytes": 27082,
+      "source": {
+        "filename": "pluggy-1.7.0-py3-none-any.whl",
+        "kind": "https",
+        "sha256": "7dd7b0d8832ba3cb632c306926ded123429211b83641b35dc5c41ad2d34f9bec",
+        "size_bytes": 27082,
+        "url": "https://files.pythonhosted.org/packages/40/9e/2b38731e0fc536806f16490e1a12d7f0dc2a1235aa8cc07bcc75416a7daa/pluggy-1.7.0-py3-none-any.whl"
+      },
+      "version": "1.7.0",
+      "wheel_tags": [
+        "py3-none-any"
+      ]
+    },
+    {
+      "filename": "pytest-9.1.1-py3-none-any.whl",
+      "name": "pytest",
+      "sha256": "37a86b45efb9a47a61a36449063e8e18d0cab3161329fc099eb21783169c4f0c",
+      "size_bytes": 386536,
+      "source": {
+        "filename": "pytest-9.1.1-py3-none-any.whl",
+        "kind": "https",
+        "sha256": "37a86b45efb9a47a61a36449063e8e18d0cab3161329fc099eb21783169c4f0c",
+        "size_bytes": 386536,
+        "url": "https://files.pythonhosted.org/packages/24/25/1de2678b631f5a49215c6c96fff41ba892b0a34df68d6d80292b1b48aa7f/pytest-9.1.1-py3-none-any.whl"
+      },
+      "version": "9.1.1",
+      "wheel_tags": [
+        "py3-none-any"
+      ]
+    },
+    {
+      "filename": "pytest_timeout-2.4.0-py3-none-any.whl",
+      "name": "pytest-timeout",
+      "sha256": "c42667e5cdadb151aeb5b26d114aff6bdf5a907f176a007a30b940d3d865b5c2",
+      "size_bytes": 14382,
+      "source": {
+        "filename": "pytest_timeout-2.4.0-py3-none-any.whl",
+        "kind": "https",
+        "sha256": "c42667e5cdadb151aeb5b26d114aff6bdf5a907f176a007a30b940d3d865b5c2",
+        "size_bytes": 14382,
+        "url": "https://files.pythonhosted.org/packages/fa/b6/3127540ecdf1464a00e5a01ee60a1b09175f6913f0644ac748494d9c4b21/pytest_timeout-2.4.0-py3-none-any.whl"
+      },
+      "version": "2.4.0",
+      "wheel_tags": [
+        "py3-none-any"
+      ]
+    },
+    {
+      "filename": "responses-0.26.3-py3-none-any.whl",
+      "name": "responses",
+      "sha256": "74474f799334ac4f37d93b6437ecc3bb1bb5c77a8d31780a338643be2dce0af8",
+      "size_bytes": 36289,
+      "source": {
+        "filename": "responses-0.26.3-py3-none-any.whl",
+        "kind": "https",
+        "sha256": "74474f799334ac4f37d93b6437ecc3bb1bb5c77a8d31780a338643be2dce0af8",
+        "size_bytes": 36289,
+        "url": "https://files.pythonhosted.org/packages/6d/86/ca7958de70cb0752350575e98229368a3a2f746a2942034b3364e17312bb/responses-0.26.3-py3-none-any.whl"
+      },
+      "version": "0.26.3",
+      "wheel_tags": [
+        "py3-none-any"
+      ]
+    }
+  ],
+  "prohibitions": [
+    "No sdists or build hooks",
+    "No dependency resolution from indexes",
+    "Install with --no-deps after the selected runtime lock",
+    "The test tools are not runtime dependencies"
+  ],
+  "schema_version": 1,
+  "selected_count": 5,
+  "selected_lock_sha256": "d3a186ed9ec12d6e7053034e0f197dfe8053d882a7c5e942ec7c7d26352d5218",
+  "source_review": {
+    "packages": [
+      {
+        "license": "MIT",
+        "name": "pytest",
+        "reviewed_source_code_files": 78,
+        "security": "PyPI version metadata reports no vulnerability entries; pytest 9.1.1 is newer than the published CVE-2025-71176 fix (9.0.3). Built-in pastebin plugin can make network requests only when explicitly selected; CI does not pass --pastebin.",
+        "source_python_files_matched": 79,
+        "upstream_commit": "cf470ec0bf7eb89cd97dd56df4859eae5db46447",
+        "upstream_repository": "https://github.com/pytest-dev/pytest",
+        "version": "9.1.1",
+        "wheel_license_matches_pinned_source": true,
+        "wheel_license_member": "pytest-9.1.1.dist-info/licenses/LICENSE",
+        "wheel_license_sha256": "ca836a5f9ecca3b2f350230faa20a48fb8b145653b5568d784862df864706b9b",
+        "wheel_record_entries": 89,
+        "wheel_sha256": "37a86b45efb9a47a61a36449063e8e18d0cab3161329fc099eb21783169c4f0c",
+        "wheel_source_matches": "All 79 shipped Python files byte-identical to the pinned upstream tag."
+      },
+      {
+        "license": "MIT",
+        "name": "pytest-timeout",
+        "reviewed_source_code_files": 1,
+        "security": "PyPI version metadata reports no vulnerability entries; 2.5.0 is yanked, so 2.4.0 selected. Tests are not run with --timeout-disable-debugger-detection; timeouts remain active and failures visible.",
+        "source_python_files_matched": 1,
+        "upstream_commit": "ddabc934535081a5bf9ba7c9ca5b494aeaf8f665",
+        "upstream_repository": "https://github.com/pytest-dev/pytest-timeout",
+        "version": "2.4.0",
+        "wheel_license_matches_pinned_source": true,
+        "wheel_license_member": "pytest_timeout-2.4.0.dist-info/licenses/LICENSE",
+        "wheel_license_sha256": "1e66470a1b2dbf6395b236bb2c14a4fbd563812101447558d317d2cd4281cece",
+        "wheel_record_entries": 7,
+        "wheel_sha256": "c42667e5cdadb151aeb5b26d114aff6bdf5a907f176a007a30b940d3d865b5c2",
+        "wheel_source_matches": "pytest_timeout.py byte-identical to the pinned upstream tag. The repository pyproject config supplies --timeout=30, so the plugin bounds tests; its POSIX signal method can fail an overlong test and thread mode may hard-exit without teardown/JUnit output."
+      },
+      {
+        "license": "Apache-2.0",
+        "name": "responses",
+        "reviewed_source_code_files": 4,
+        "security": "PyPI version metadata reports no vulnerability entries. Runtime package patches requests transport for mocked responses; no independent network client or telemetry path found in shipped package source.",
+        "source_python_files_matched": 4,
+        "source_python_files_not_shipped": [
+          "responses/tests/__init__.py",
+          "responses/tests/test_matchers.py",
+          "responses/tests/test_multithreading.py",
+          "responses/tests/test_recorder.py",
+          "responses/tests/test_registries.py",
+          "responses/tests/test_responses.py"
+        ],
+        "upstream_commit": "cb13954973dc0c1508668cd75603b203b0925c4a",
+        "upstream_repository": "https://github.com/getsentry/responses",
+        "version": "0.26.3",
+        "wheel_license_matches_pinned_source": true,
+        "wheel_license_member": "responses-0.26.3.dist-info/licenses/LICENSE",
+        "wheel_license_sha256": "489ecb70b4447c034a10978a4b08da015c9bd9fa95ca3aeaf219d9815416a67c",
+        "wheel_record_entries": 10,
+        "wheel_sha256": "74474f799334ac4f37d93b6437ecc3bb1bb5c77a8d31780a338643be2dce0af8",
+        "wheel_source_matches": "All four shipped Python modules byte-identical to pinned upstream tag; project tests are absent from the wheel."
+      },
+      {
+        "license": "MIT",
+        "name": "iniconfig",
+        "reviewed_source_code_files": 3,
+        "security": "PyPI version metadata reports no vulnerability entries; parser-only package with no declared runtime dependencies.",
+        "source_python_files_matched": 3,
+        "upstream_commit": "7faed13ae50bad7c5da3f5782f254a8a7736bb84",
+        "upstream_repository": "https://github.com/pytest-dev/iniconfig",
+        "version": "2.3.0",
+        "wheel_license_matches_pinned_source": true,
+        "wheel_license_member": "iniconfig-2.3.0.dist-info/licenses/LICENSE",
+        "wheel_license_sha256": "3409fa91f7ace557894632676656e32264fe5ef7581535725dc9a23774551bd4",
+        "wheel_record_entries": 10,
+        "wheel_sha256": "f631c04d2c48c52b84d0d0549c99ff3859c98df65b3101406327ecc7d53fbf12",
+        "wheel_source_matches": "All three shipped Python modules byte-identical to pinned upstream tag."
+      },
+      {
+        "license": "MIT",
+        "name": "pluggy",
+        "reviewed_source_code_files": 13,
+        "security": "Source and exact artifact already recorded as reviewed in release-planning/services/input-reviews/linux-llm-source-review.md; PyPI version metadata reports no vulnerability entries.",
+        "source_python_files_matched": 13,
+        "upstream_commit": "4c7f6365f2dde09c11e72db67d0f615231d64c19",
+        "upstream_repository": "https://github.com/pytest-dev/pluggy",
+        "version": "1.7.0",
+        "wheel_license_matches_pinned_source": true,
+        "wheel_license_member": "pluggy-1.7.0.dist-info/licenses/LICENSE",
+        "wheel_license_sha256": "d6b65e6c213a5d0b577911d34d6e5949b9f59d76c238c5071a2f3fc16cfb2606",
+        "wheel_record_entries": 19,
+        "wheel_sha256": "7dd7b0d8832ba3cb632c306926ded123429211b83641b35dc5c41ad2d34f9bec",
+        "wheel_source_matches": "All 13 shipped Python modules byte-identical to pinned upstream tag."
+      }
+    ],
+    "scope": "build metadata, pinned source package files, bundled license, exact selected wheel RECORD, code-to-wheel correspondence, package runtime requirements and relevant install/timeout/network behavior; no package install/import/build/test execution",
+    "status": "bounded review of exact upstream tags and wheels complete; selected tags and commits are recorded in private repositories with Actions disabled and automatic upstream sync disabled. Exact wheel hashes and license members are verified. Test tools remain candidate-only and are not runtime dependencies."
+  },
+  "status": "candidate-only; not activated",
+  "target": "Linux x86_64, CPython 3.13; deterministic test tools only"
+}

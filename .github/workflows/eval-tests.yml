@@ -12,13 +12,13 @@ permissions:
 
 env:
   PYTHON_VERSION: "3.13"
-  # Services-only: the services package exposes the "development" extra
-  # (issue #2054). The former root GUI package was removed.
-  TEST_PROFILES: development
 
 jobs:
   runtime-contract-tests:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read
 
     steps:
       - name: Checkout code
@@ -32,8 +32,8 @@ jobs:
           python scripts/check_reviewed_release_inputs.py
           --workflow .github/workflows/eval-tests.yml
 
-      # The common PyPI distribution is paused/yanked. Install its exact
-      # source revision; the optional Shield extra is not part of this profile.
+      # Retain the pinned source checkout for the release-input gate's
+      # revision check; the staged reviewed wheel is installed from the lock.
       - name: Checkout airunner-common source
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
@@ -60,28 +60,32 @@ jobs:
             libxrender-dev
 
       - name: Install Python dependencies
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         run: |
-          python -m pip install --upgrade pip setuptools wheel
-          pip install .ci-sources/airunner-common
-          pip install -e "./services[$TEST_PROFILES]"
-          # Import-level contract tests traverse art and LLM modules. Use
-          # the project-pinned CPU torch build; this avoids CUDA packages,
-          # model weights, and network inference in this job.
-          pip install --index-url https://download.pytorch.org/whl/cpu \
-            --extra-index-url https://pypi.org/simple \
-            "torch==2.13.0+cpu"
-          pip install \
-            "diffusers==0.38.0" \
-            "transformers==5.8.1" \
-            "safetensors==0.8.0" \
-            "accelerate==1.14.0" \
-            "DeepCache==0.1.1" \
-            "tomesd==0.1.3" \
-            "compel==2.4.0" \
-            "bitsandbytes==0.46.1" \
-            "langchain-core==1.3.3" \
-            "langgraph==1.0.8" \
-            "langgraph-prebuilt==1.0.7"
+          wheelhouse="$RUNNER_TEMP/linux-release-wheelhouse"
+          tools="$RUNNER_TEMP/linux-ci-tools-wheelhouse"
+          python scripts/stage_linux_release_artifacts.py \
+            --manifest package/linux-release-v4-artifact-sources.json \
+            --selected-lockfile package/constraints-linux-nvidia-cu129-linux-release.txt \
+            --output-dir "$wheelhouse"
+          python -m pip install --no-index --find-links "$wheelhouse" \
+            --require-hashes -r "$wheelhouse/requirements.txt"
+          python scripts/stage_linux_release_artifacts.py \
+            --manifest package/linux-ci-tools-artifact-sources.json \
+            --selected-lockfile package/constraints-linux-ci-tools.txt \
+            --output-dir "$tools"
+          python -m pip install --no-index --find-links "$tools" \
+            --no-deps --require-hashes -r "$tools/requirements.txt"
+          python -m pip install --no-deps --no-build-isolation -e './services[linux-release]'
+          python -m pip check
+          python - <<'PY'
+          import torch
+          x = torch.tensor([1.0, 2.0], device="cpu")
+          assert torch.cuda.is_available() is False
+          assert (x * 2).tolist() == [2.0, 4.0]
+          print(f"CPU tensor contract passed using torch {torch.__version__}; CUDA hidden")
+          PY
 
       # Required deterministic checks (C01: safety, auth, download,
       # data migration). This list is the PR-side half of the release
@@ -95,6 +99,7 @@ jobs:
             services/tests/test_service_bootstrap.py \
             scripts/tests/test_cuda_source_recipe.py \
             scripts/tests/test_cuda_wheel_handoff.py \
+            scripts/tests/test_linux_ci_dependency_inputs.py \
             scripts/tests/test_apt_release_publisher.py \
             scripts/tests/test_apt_daemon_health_probe.py \
             scripts/tests/test_github_release_promotion.py \
@@ -136,6 +141,7 @@ jobs:
           HF_HUB_OFFLINE: "1"
           TRANSFORMERS_OFFLINE: "1"
           HF_HUB_DISABLE_TELEMETRY: "1"
+          CUDA_VISIBLE_DEVICES: ""
 
       # Issue #2225 parity is covered by
       # services/tests/test_llm_request_for_action_parity.py in the
@@ -151,6 +157,9 @@ jobs:
 
   runtime-smoke:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read
 
     strategy:
       matrix:
@@ -199,10 +208,25 @@ jobs:
             libxrender-dev
 
       - name: Install Python dependencies
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         run: |
-          python -m pip install --upgrade pip setuptools wheel
-          pip install .ci-sources/airunner-common
-          pip install -e "./services[$TEST_PROFILES]"
+          wheelhouse="$RUNNER_TEMP/linux-release-wheelhouse"
+          tools="$RUNNER_TEMP/linux-ci-tools-wheelhouse"
+          python scripts/stage_linux_release_artifacts.py \
+            --manifest package/linux-release-v4-artifact-sources.json \
+            --selected-lockfile package/constraints-linux-nvidia-cu129-linux-release.txt \
+            --output-dir "$wheelhouse"
+          python -m pip install --no-index --find-links "$wheelhouse" \
+            --require-hashes -r "$wheelhouse/requirements.txt"
+          python scripts/stage_linux_release_artifacts.py \
+            --manifest package/linux-ci-tools-artifact-sources.json \
+            --selected-lockfile package/constraints-linux-ci-tools.txt \
+            --output-dir "$tools"
+          python -m pip install --no-index --find-links "$tools" \
+            --no-deps --require-hashes -r "$tools/requirements.txt"
+          python -m pip install --no-deps --no-build-isolation -e './services[linux-release]'
+          python -m pip check
 
       - name: Run ${{ matrix.name }} runtime smoke tests
         run: |
