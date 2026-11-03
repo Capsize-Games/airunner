@@ -173,7 +173,7 @@ payload = {
         "A separate current-source intermediate-revision fixture is also upgraded to retain the pre-existing scenario.",
         "The published baseline package is not bound to its upstream source commit in package metadata.",
         "No production database, model, or model download was used.",
-        "The interruption probe kills only its own migration subprocess after one observed schema DDL; it does not simulate power loss or interrupted dpkg unpack/configuration.",
+        "The installed-runtime interruption probe kills its own frozen headless entry point after the production pre-upgrade backup is complete and before migration writes; the separate source probe kills after one observed schema DDL returns.",
     ],
 }
 target.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
@@ -234,7 +234,7 @@ mkdir -m 0700 \
   "$migration_home/cache" \
   "$migration_home/state" \
   "$migration_home/runtime"
-unshare --net env -i \
+unshare --net /bin/bash -c 'ip link set lo up; exec "$@"' _ env -i \
   PATH=/usr/bin:/bin \
   HOME="$migration_home" TMPDIR="$migration_home" LANG=C.UTF-8 LC_ALL=C.UTF-8 \
   XDG_CONFIG_HOME="$migration_home/config" XDG_DATA_HOME="$migration_home/data" \
@@ -277,18 +277,21 @@ ownership_marker_owner_after=$(stat -c '%u:%g:%a' "$ownership_marker")
 [[ "$ownership_marker_sha_after" == "$ownership_marker_sha_before" ]]
 [[ "$ownership_marker_owner_after" == "$ownership_marker_owner_before" ]]
 test ! -e "$interrupted_upgrade_receipt" && test ! -L "$interrupted_upgrade_receipt"
-unshare --net env -i \
+unshare --net /bin/bash -c 'ip link set lo up; exec "$@"' _ env -i \
   PATH=/usr/bin:/bin \
   HOME="$migration_home" TMPDIR="$migration_home" LANG=C.UTF-8 LC_ALL=C.UTF-8 \
   XDG_CONFIG_HOME="$migration_home/config" XDG_DATA_HOME="$migration_home/data" \
   XDG_CACHE_HOME="$migration_home/cache" XDG_STATE_HOME="$migration_home/state" \
   XDG_RUNTIME_DIR="$migration_home/runtime" \
   HF_HUB_OFFLINE=1 HF_DATASETS_OFFLINE=1 TRANSFORMERS_OFFLINE=1 CUDA_VISIBLE_DEVICES= \
-  /usr/bin/python3 scripts/probe_core_interrupted_upgrade.py \
+  /usr/bin/python3 scripts/probe_core_installed_interrupted_upgrade.py \
+    --binary /usr/lib/airunner/airunner-core \
     --fixture-db "$fixture_db" \
     --fixture-record "$fixture_record" \
+    --expected-heads-record "$secondary_fixture_record" \
     --output "$interrupted_upgrade_receipt"
-[[ "$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1]))["child_exit_code"])' "$interrupted_upgrade_receipt")" == "-9" ]]
+[[ "$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1]))["interrupted_exit_code"])' "$interrupted_upgrade_receipt")" == "-9" ]]
+[[ "$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1]))["resumed_entry_point_exit_code"])' "$interrupted_upgrade_receipt")" == "0" ]]
 interrupted_upgrade_status=passed
 candidate_upgrade_status=passed
 

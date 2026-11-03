@@ -18,6 +18,9 @@ SMOKE = ROOT / "scripts/core_debian_candidate_smoke.sh"
 UPGRADE_SMOKE = ROOT / "scripts/core_debian_upgrade_smoke.sh"
 FIXTURE = ROOT / "scripts/create_core_upgrade_fixture.py"
 PUBLISHED_FIXTURE = ROOT / "scripts/create_core_published_upgrade_fixture.py"
+INSTALLED_INTERRUPTION_PROBE = (
+    ROOT / "scripts/probe_core_installed_interrupted_upgrade.py"
+)
 
 
 class CoreDebianCandidateWorkflowTests(unittest.TestCase):
@@ -30,6 +33,9 @@ class CoreDebianCandidateWorkflowTests(unittest.TestCase):
         cls.upgrade_smoke = UPGRADE_SMOKE.read_text(encoding="utf-8")
         cls.fixture = FIXTURE.read_text(encoding="utf-8")
         cls.published_fixture = PUBLISHED_FIXTURE.read_text(encoding="utf-8")
+        cls.installed_interruption_probe = INSTALLED_INTERRUPTION_PROBE.read_text(
+            encoding="utf-8"
+        )
 
     def test_has_only_candidate_triggers_and_read_only_permissions(self):
         self.assertEqual(set(self.workflow["on"]), {"workflow_dispatch", "pull_request"})
@@ -40,6 +46,7 @@ class CoreDebianCandidateWorkflowTests(unittest.TestCase):
             "scripts/core_debian_upgrade_smoke.sh",
             "scripts/create_core_upgrade_fixture.py",
             "scripts/create_core_published_upgrade_fixture.py",
+            "scripts/probe_core_installed_interrupted_upgrade.py",
             "scripts/tests/test_core_debian_candidate_workflow.py",
             "scripts/tests/test_core_published_upgrade_fixture.py",
         ):
@@ -162,7 +169,10 @@ class CoreDebianCandidateWorkflowTests(unittest.TestCase):
         )
         self.assertIn("--migrate-only", self.published_fixture)
         self.assertIn("--expected-deb-sha256", self.upgrade_smoke)
-        self.assertIn("unshare --net env -i", self.upgrade_smoke)
+        self.assertIn(
+            "unshare --net /bin/bash -c 'ip link set lo up; exec \"$@\"' _ env -i",
+            self.upgrade_smoke,
+        )
         self.assertIn("synthetic_conversation", self.upgrade_smoke)
         self.assertIn(
             "http://127.0.0.1:8080/api/v1/llm/conversations/session",
@@ -178,6 +188,38 @@ class CoreDebianCandidateWorkflowTests(unittest.TestCase):
         )
         self.assertIn('null_keyring / "keyring.py"', self.published_fixture)
         self.assertNotIn("contents: write", self.workflow_text)
+
+    def test_upgrade_interruption_uses_installed_frozen_runtime(self):
+        self.assertIn(
+            "/usr/bin/python3 scripts/probe_core_installed_interrupted_upgrade.py",
+            self.upgrade_smoke,
+        )
+        self.assertIn("--binary /usr/lib/airunner/airunner-core", self.upgrade_smoke)
+        self.assertIn(
+            '--expected-heads-record "$secondary_fixture_record"',
+            self.upgrade_smoke,
+        )
+        self.assertNotIn(
+            "/usr/bin/python3 scripts/probe_core_interrupted_upgrade.py",
+            self.upgrade_smoke,
+        )
+        for expected in (
+            '"AIRUNNER_DATABASE_URL": f"sqlite:///{database.as_posix()}"',
+            '"AIRUNNER_API_KEY": api_key',
+            '"AIRUNNER_LLM_ON": "0"',
+            '"AIRUNNER_NO_PRELOAD": "1"',
+            '"unauthenticated_daemon_api_status": unauthenticated_api_status',
+            '"authenticated_daemon_api_status": authenticated_api_status',
+            '"daemon_stopped_after_entry_point_exit": daemon_stopped',
+            '"expected_current_heads": expected_heads',
+            'health_payload = json.loads(health_body)',
+            'daemon_identity = matching_daemons[0]',
+            '"daemon_process_identity": daemon_identity',
+            '_owned_descendants(interrupted.pid)',
+            '_wait_identities_gone(resumed_descendants, timeout=10)',
+        ):
+            self.assertIn(expected, self.installed_interruption_probe)
+        self.assertIn("before migration writes", self.installed_interruption_probe)
 
     def test_refusing_existing_package_does_not_touch_service_or_temp_paths(self):
         with tempfile.TemporaryDirectory(prefix="core-upgrade-refusal-") as temporary:

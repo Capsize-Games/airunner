@@ -17,6 +17,7 @@ on:
       - "scripts/create_core_upgrade_fixture.py"
       - "scripts/create_core_published_upgrade_fixture.py"
       - "scripts/probe_core_interrupted_upgrade.py"
+      - "scripts/probe_core_installed_interrupted_upgrade.py"
       - "scripts/tests/test_core_interrupted_upgrade_probe.py"
       - "scripts/tests/test_core_debian_candidate_workflow.py"
       - "scripts/tests/test_core_published_upgrade_fixture.py"
