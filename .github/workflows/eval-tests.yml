@@ -465,5 +465,15 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y debhelper dh-python pybuild-plugin-pyproject
+          source_name="$(dpkg-parsechangelog -S Source)"
+          source_version="$(dpkg-parsechangelog -S Version)"
+          upstream_version="${source_version%-*}"
+          dry_run="$(mktemp -d "$RUNNER_TEMP/airunner-source-package.XXXXXX")"
+          prefix="${source_name}-${upstream_version}"
+          archive="$dry_run/${source_name}_${upstream_version}.orig.tar.gz"
+          git archive --format=tar --prefix="$prefix/" "$GITHUB_SHA" \
+            | gzip -n > "$archive"
+          tar -xzf "$archive" -C "$dry_run"
+          cd "$dry_run/$prefix"
           dpkg-buildpackage -S -us -uc -d
 
