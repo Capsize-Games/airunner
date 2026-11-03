@@ -26,11 +26,60 @@ def configure_chat_handler(adapter: Any) -> None:
     repo_id = chat_template_repo_id(adapter)
     if not repo_id:
         return
+
+    embedded = _embedded_chat_template_handler(adapter._llama)
+    if embedded is not None:
+        chat_format, base_handler = embedded
+        adapter._llama.chat_handler = _thinking_chat_handler(
+            adapter, base_handler, normalize_messages=True
+        )
+        adapter.logger.info(
+            "Using embedded GGUF chat template %s for %s",
+            chat_format,
+            repo_id,
+        )
+        return
+
     base_handler = build_hf_chat_handler(adapter, repo_id)
     if base_handler is None:
         return
+    adapter._llama.chat_handler = _thinking_chat_handler(
+        adapter, base_handler
+    )
+    adapter.logger.info("Using HF chat template handler for %s", repo_id)
 
+
+def _embedded_chat_template_handler(
+    llama: Any,
+) -> tuple[str, Any] | None:
+    """Return the selected native handler when it came from GGUF metadata."""
+    chat_format = getattr(llama, "chat_format", None)
+    handlers = getattr(llama, "_chat_handlers", None)
+    if (
+        not isinstance(chat_format, str)
+        or not chat_format.startswith("chat_template.")
+        or not isinstance(handlers, dict)
+    ):
+        return None
+    handler = handlers.get(chat_format)
+    if not callable(handler):
+        return None
+    return chat_format, handler
+
+
+def _thinking_chat_handler(
+    adapter: Any,
+    base_handler: Any,
+    *,
+    normalize_messages: bool = False,
+) -> Any:
+    """Pass the current thinking option through without replacing formatter behavior."""
     def chat_handler_with_kwargs(*args: Any, **kwargs: Any) -> Any:
+        if normalize_messages and isinstance(kwargs.get("messages"), list):
+            kwargs = {
+                **kwargs,
+                "messages": _normalize_tool_call_arguments(kwargs["messages"]),
+            }
         template_kwargs = {
             "enable_thinking": bool(
                 getattr(adapter, "enable_thinking", True)
@@ -38,8 +87,7 @@ def configure_chat_handler(adapter: Any) -> None:
         }
         return base_handler(*args, **{**template_kwargs, **kwargs})
 
-    adapter._llama.chat_handler = chat_handler_with_kwargs
-    adapter.logger.info("Using HF chat template handler for %s", repo_id)
+    return chat_handler_with_kwargs
 
 
 def chat_template_repo_id(adapter: Any) -> str | None:
