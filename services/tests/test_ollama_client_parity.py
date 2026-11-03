@@ -64,7 +64,9 @@ def test_list_models_parses(ollama_client: ollama.Client) -> None:
     models = ollama_client.list().models
     assert len(models) == 1
     assert str(models[0].model).endswith(":latest")
-    assert str(models[0].digest).startswith("sha256:")
+    # The fixture has no verified digest receipt, so an empty digest is the
+    # truthful value and the real client still parses the model.
+    assert str(models[0].digest) == ""
     assert (models[0].size or 0) > 0
     assert models[0].modified_at is not None
     assert models[0].details is not None
@@ -92,7 +94,8 @@ def test_ps_matches_listed_model(
     running = ollama_client.ps().models
     assert len(running) == 1
     assert running[0].model == listed_model
-    assert (running[0].size_vram or 0) > 0
+    # The test process has no measured GPU allocation for this fixture.
+    assert (running[0].size_vram or 0) == 0
 
 
 @pytest.mark.fast
@@ -109,6 +112,10 @@ def test_chat_non_stream_round_trip(
     assert response.message.content == CANNED_TEXT
     assert response.done is True
     assert response.done_reason == "stop"
+    assert response.prompt_eval_count == 6
+    assert response.eval_count == 3
+    assert response.prompt_eval_duration == 0
+    assert response.eval_duration == 0
 
 
 @pytest.mark.fast
@@ -131,6 +138,8 @@ def test_chat_stream_deltas_concatenate(
     assert terminal.done is True
     assert terminal.message.content == ""
     assert terminal.done_reason == "stop"
+    assert terminal.prompt_eval_count == 6
+    assert terminal.eval_count == 3
     assert {c.model for c in chunks} == {listed_model}
 
 
@@ -144,6 +153,10 @@ def test_generate_non_stream_round_trip(
     )
     assert response.response == CANNED_TEXT
     assert response.done is True
+    assert response.prompt_eval_count == 6
+    assert response.eval_count == 3
+    assert response.prompt_eval_duration == 0
+    assert response.eval_duration == 0
 
 
 @pytest.mark.fast
@@ -161,6 +174,8 @@ def test_generate_stream_chunks(
     assert joined == CANNED_TEXT
     assert chunks[-1].done is True
     assert chunks[-1].response == ""
+    assert chunks[-1].prompt_eval_count == 6
+    assert chunks[-1].eval_count == 3
 
 
 @pytest.mark.fast

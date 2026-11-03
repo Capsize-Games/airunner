@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import os
 import socket
+import tempfile
 import time
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -17,6 +18,7 @@ from typing import Any, Optional
 import uvicorn
 from fastapi import FastAPI
 
+from airunner_common.contract_enums import ModelStatus
 from airunner_common.contract_enums import ModelType
 from airunner_services.api.server import create_app
 from airunner_services.utils.job_tracker import JobState
@@ -37,6 +39,9 @@ class CannedResponse:
     message_type: Optional[str] = None
     tool_calls: Optional[list[Any]] = None
     final_visible_message: Optional[str] = None
+    prompt_tokens: Optional[int] = None
+    completion_tokens: Optional[int] = None
+    total_tokens: Optional[int] = None
 
 
 class FakeLLM:
@@ -47,7 +52,17 @@ class FakeLLM:
         callback: Callable[[dict[str, Any]], None] = kwargs["callback"]
         for chunk in CANNED_CHUNKS:
             callback({"response": CannedResponse(chunk, False)})
-        callback({"response": CannedResponse("", True)})
+        callback(
+            {
+                "response": CannedResponse(
+                    "",
+                    True,
+                    prompt_tokens=6,
+                    completion_tokens=3,
+                    total_tokens=9,
+                )
+            }
+        )
 
 
 class FakeBalancer:
@@ -64,6 +79,35 @@ class FakeApp:
     def __init__(self) -> None:
         self.llm = FakeLLM()
         self.model_load_balancer = FakeBalancer()
+        self._model_fixture_dir = tempfile.TemporaryDirectory(
+            prefix="airunner-ollama-parity-"
+        )
+        model_path = os.path.join(
+            self._model_fixture_dir.name, "Qwen3.5-9B-Q8_0.gguf"
+        )
+        with open(model_path, "wb") as artifact:
+            artifact.write(b"ollama route metadata fixture")
+        model_manager = type(
+            "FakeModelManager",
+            (),
+            {
+                "model_status": {ModelType.LLM: ModelStatus.LOADED},
+                "_current_model_path": model_path,
+                "_resolve_model_id_from_path": lambda _self, _path: "qwen3.5-9b",
+                "_chat_model": type("FakeChatModel", (), {"n_ctx": 32768})(),
+            },
+        )()
+        worker = type(
+            "FakeLLMWorker",
+            (),
+            {
+                "_model_manager": model_manager,
+                "current_model_status": lambda _self: ModelStatus.LOADED,
+            },
+        )()
+        self._worker_manager = type(
+            "FakeWorkerManager", (), {"_llm_generate_worker": worker}
+        )()
 
     def emit_signal(self, _code: Any, _data: Any = None) -> None:
         """Ignore signal emissions during canned-client tests."""

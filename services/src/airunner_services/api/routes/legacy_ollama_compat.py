@@ -12,6 +12,7 @@ import json
 import os
 import time
 import uuid
+from pathlib import Path
 from typing import Any, Callable, List
 
 from fastapi import APIRouter, HTTPException, Request
@@ -24,6 +25,7 @@ from airunner_services.database.models.llm_generator_settings import (
 )
 from airunner_services.downloads.service import ProviderDownloadDisabled
 from airunner_services.llm.llm_request import LLMRequest
+from airunner_services.llm.provider_config import LLMProviderConfig
 from airunner_services.utils.application import get_logger
 
 from .legacy_llm_compat import _lifecycle_service
@@ -34,12 +36,15 @@ from .legacy_llm_observer import (
     LegacyCompletionObserver,
     cancel_owned_llm_request,
 )
+from .legacy_llm_stream_helpers import response_usage
 from .ollama_embedding_helpers import handle_ollama_embedding_async
 from .ollama_model_helpers import ollama_show_metadata
 from .ollama_model_helpers import ollama_show_unknown_metadata
 from .ollama_model_helpers import resolve_ollama_model
 from .ollama_pull_helpers import stream_ollama_pull
 from .ollama_pull_helpers import wait_for_ollama_pull
+from .ollama_runtime_metadata import build_ollama_runtime_metadata
+from .ollama_runtime_metadata import metadata_from_loaded_manager
 
 router = APIRouter()
 logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
@@ -61,127 +66,78 @@ def configured_model_basename() -> str:
     return ""
 
 
-def metadata_from_name(model_name: str) -> dict[str, Any]:
-    """Return family, size, and quantization metadata for a model name."""
-    name_lower = model_name.lower()
-    parameter_size = parameter_size_from_name(name_lower)
-    quantization = quantization_from_name(name_lower)
-    family = model_family(name_lower)
-    return {
-        "family": family,
-        "families": [family],
-        "model_name": model_name,
-        "parameter_size": parameter_size,
-        "quantization_level": quantization,
-        "size_bytes": model_size_bytes(parameter_size, quantization),
-    }
-
-
-def configured_model_metadata() -> dict[str, Any]:
-    """Return metadata for the configured local model, if any."""
-    model_basename = configured_model_basename()
-    if not model_basename:
-        return metadata_from_name("airunner:latest")
-    return metadata_from_name(f"{model_basename}:latest")
-
-
-def model_family(name_lower: str) -> str:
-    """Return the inferred Ollama family for a model name."""
-    if "qwen" in name_lower:
-        return "qwen"
-    if "mistral" in name_lower:
-        return "mistral"
-    if "phi" in name_lower:
-        return "phi"
-    return "llama"
-
-
-def parameter_size_from_name(name_lower: str) -> str:
-    """Return the inferred parameter size for a model name.
-
-    Uses a bounded, linear-time scan instead of a regex so an attacker who
-    controls the model name cannot drive polynomial backtracking
-    (CodeQL py/polynomial-redos, GitHub issue #2080).
-    """
-    digits: list[str] = []
-    seen_dot = False
-    for char in name_lower:
-        if char.isdigit():
-            digits.append(char)
-            continue
-        if char == "." and digits and not seen_dot:
-            digits.append(char)
-            seen_dot = True
-            continue
-        # A size token is "<digits>[.<digits>]" immediately followed by "b".
-        if char == "b" and digits:
-            return f"{''.join(digits).upper()}B"
-        digits = []
-        seen_dot = False
-    return "8B"
-
-
-def quantization_from_name(name_lower: str) -> str:
-    """Return the inferred quantization level for a model name."""
-    if "4bit" in name_lower or "q4" in name_lower:
-        return "Q4_K_M"
-    if "8bit" in name_lower or "q8" in name_lower:
-        return "Q8_0"
-    if "fp16" in name_lower or "f16" in name_lower:
-        return "F16"
-    return "Q4_K_M"
-
-
-def model_size_bytes(parameter_size: str, quantization: str) -> int:
-    """Return an approximate byte size for one parameter count."""
-    parameter_count = float(parameter_size.replace("B", ""))
-    if quantization.startswith("Q4"):
-        return int(parameter_count * 0.5 * 1e9)
-    if quantization.startswith("Q8"):
-        return int(parameter_count * 1.0 * 1e9)
-    return int(parameter_count * 2.0 * 1e9)
-
-
-def model_details(metadata: dict[str, Any]) -> dict[str, Any]:
-    """Return the shared Ollama details payload."""
-    return {
-        "parent_model": "",
-        "format": "gguf",
-        "family": metadata["family"],
-        "families": metadata["families"],
-        "parameter_size": metadata["parameter_size"],
-        "quantization_level": metadata["quantization_level"],
-    }
-
-
-def model_digest(model_name: str) -> str:
-    """Return a deterministic placeholder digest for a model name."""
-    digest = "".join(f"{ord(char):02x}" for char in model_name[:32])
-    return f"sha256:{digest.ljust(64, '0')}"
-
-
 def _created_at() -> str:
     """Return the formatted Ollama timestamp."""
     return time.strftime("%Y-%m-%dT%H:%M:%S.000000Z", time.gmtime())
 
 
+def _usage_count(usage: dict[str, Any] | None, key: str) -> int:
+    """Return a provider-reported nonnegative token count or unknown zero."""
+    value = usage.get(key) if isinstance(usage, dict) else None
+    if isinstance(value, bool):
+        return 0
+    try:
+        count = int(value)
+    except (TypeError, ValueError, OverflowError):
+        return 0
+    return count if count >= 0 else 0
+
+
 def _ollama_timings(
     start_time: float,
-    prompt: str,
-    response_text: str,
-    use_response_length: bool,
+    usage: dict[str, Any] | None = None,
 ) -> dict[str, int]:
-    """Return the common Ollama duration and token counters."""
-    duration_ns = int((time.time() - start_time) * 1e9)
-    eval_count = len(response_text) // 4 if use_response_length else 100
+    """Return elapsed wall time and provider-reported usage, if available."""
+    duration_ns = max(0, int((time.monotonic() - start_time) * 1e9))
     return {
         "total_duration": duration_ns,
+        # AIRunner does not currently expose model-load or phase timing data.
         "load_duration": 0,
-        "prompt_eval_count": len(prompt) // 4,
-        "prompt_eval_duration": duration_ns // 10,
-        "eval_count": eval_count,
-        "eval_duration": duration_ns,
+        "prompt_eval_count": _usage_count(usage, "prompt_tokens"),
+        "prompt_eval_duration": 0,
+        "eval_count": _usage_count(usage, "completion_tokens"),
+        "eval_duration": 0,
     }
+
+
+def _active_model_manager(req: Request):
+    """Return the initialized manager without triggering model creation."""
+    app = getattr(req.app.state, "airunner_app", None)
+    lifecycle = _lifecycle_service(req)
+    worker = getattr(lifecycle, "llm_generate_worker", None)
+    if worker is None and app is not None:
+        manager = getattr(app, "_worker_manager", None)
+        worker = getattr(manager, "_llm_generate_worker", None)
+        if worker is None:
+            worker = getattr(manager, "llm_generate_worker", None)
+    model_manager = getattr(worker, "_model_manager", None)
+    return model_manager
+
+
+def _active_runtime_metadata(req: Request):
+    """Return metadata only when the initialized manager has a loaded model."""
+    manager = _active_model_manager(req)
+    return metadata_from_loaded_manager(manager) if manager is not None else None
+
+
+def _configured_artifact_metadata():
+    """Return facts for a configured artifact already present on disk."""
+    try:
+        settings = LLMGeneratorSettings.objects.first()
+    except Exception as exc:
+        logger.debug("Could not get configured model path: %s", exc)
+        return None
+    configured_path = getattr(settings, "model_path", None)
+    if not isinstance(configured_path, str) or not configured_path.strip():
+        return None
+    path = Path(configured_path).expanduser()
+    if not path.is_file():
+        return None
+    model_id = str(getattr(settings, "model_id", "") or "")
+    if not model_id:
+        model_id = LLMProviderConfig.resolve_model_id("local", path.name)
+    metadata = build_ollama_runtime_metadata(path, model_id=model_id)
+    return metadata if metadata.name else None
 
 
 # ---------------------------------------------------------------------------
@@ -190,20 +146,11 @@ def _ollama_timings(
 
 
 @router.get("/api/tags")
-def ollama_tags() -> dict[str, Any]:
+def ollama_tags(req: Request) -> dict[str, Any]:
     """Handle the Ollama /api/tags endpoint."""
-    metadata = configured_model_metadata()
+    metadata = _active_runtime_metadata(req) or _configured_artifact_metadata()
     return {
-        "models": [
-            {
-                "name": metadata["model_name"],
-                "model": metadata["model_name"],
-                "modified_at": "2024-12-01T00:00:00.000000000Z",
-                "size": metadata["size_bytes"],
-                "digest": model_digest(metadata["model_name"]),
-                "details": model_details(metadata),
-            }
-        ]
+        "models": [metadata.list_model()] if metadata is not None else []
     }
 
 
@@ -217,25 +164,13 @@ def ollama_version() -> dict[str, str]:
 def ollama_ps(req: Request) -> dict[str, Any]:
     """Handle the Ollama /api/ps endpoint."""
     app = getattr(req.app.state, "airunner_app", None)
-    metadata = configured_model_metadata()
     if app is None or not is_llm_model_loaded(
         app,
         lifecycle=_lifecycle_service(req),
     ):
         return {"models": []}
-    return {
-        "models": [
-            {
-                "name": metadata["model_name"],
-                "model": metadata["model_name"],
-                "size": metadata["size_bytes"],
-                "digest": model_digest(metadata["model_name"]),
-                "details": model_details(metadata),
-                "expires_at": "2099-12-31T23:59:59.000000000Z",
-                "size_vram": metadata["size_bytes"],
-            }
-        ]
-    }
+    metadata = _active_runtime_metadata(req)
+    return {"models": [metadata.process_model()] if metadata is not None else []}
 
 
 @router.post("/api/show")
@@ -457,7 +392,7 @@ def ollama_chat(body: dict, req: Request):
 
 def _ollama_chat_stream(app, prompt: str, model: str, llm_request: LLMRequest, request_id: str):
     """Yield one streaming Ollama chat response."""
-    start_time = time.time()
+    start_time = time.monotonic()
     accumulated_response: List[str] = []
 
     def error_frame(reason: str) -> bytes:
@@ -531,7 +466,7 @@ def _ollama_chat_stream(app, prompt: str, model: str, llm_request: LLMRequest, r
         if is_final:
             full_text = "".join(accumulated_response)
             payload.update(
-                _ollama_chat_timings(start_time, prompt, full_text, True)
+                _ollama_chat_timings(start_time, response_usage(response))
             )
             payload["done_reason"] = "stop"
         observer.publish(
@@ -559,7 +494,8 @@ def _ollama_chat_stream(app, prompt: str, model: str, llm_request: LLMRequest, r
 
 def _ollama_chat_non_stream(app, prompt: str, model: str, llm_request: LLMRequest, request_id: str):
     """Return one non-streaming Ollama chat response."""
-    start_time = time.time()
+    start_time = time.monotonic()
+    final_usage: list[dict[str, Any] | None] = [None]
     observer = LegacyCompletionObserver(
         request_id,
         lambda reason: _ndjson_line(
@@ -592,6 +528,8 @@ def _ollama_chat_non_stream(app, prompt: str, model: str, llm_request: LLMReques
         # boundary, before the actual answer has even been generated.
         if getattr(response, "message_type", None) == "thinking":
             return
+        if getattr(response, "is_end_of_message", False):
+            final_usage[0] = response_usage(response)
         tools = getattr(response, "tool_calls", None) or []
         final_visible = getattr(response, "final_visible_message", None)
         observer.publish(
@@ -634,7 +572,7 @@ def _ollama_chat_non_stream(app, prompt: str, model: str, llm_request: LLMReques
         "message": message,
         "done_reason": "stop",
         "done": True,
-        **_ollama_chat_timings(start_time, prompt, full_response, True),
+        **_ollama_chat_timings(start_time, final_usage[0]),
     }
 
 
@@ -653,12 +591,10 @@ def _ollama_chat_error(
 
 def _ollama_chat_timings(
     start_time: float,
-    prompt: str,
-    response_text: str,
-    use_response_length: bool,
+    usage: dict[str, Any] | None = None,
 ) -> dict[str, int]:
-    """Return the common Ollama chat duration and token counters."""
-    return _ollama_timings(start_time, prompt, response_text, use_response_length)
+    """Return elapsed time and any provider-reported chat usage."""
+    return _ollama_timings(start_time, usage)
 
 
 # ---------------------------------------------------------------------------
@@ -705,7 +641,7 @@ def ollama_generate(body: dict, req: Request):
 
 def _ollama_generate_stream(app, prompt: str, model: str, llm_request: LLMRequest, request_id: str):
     """Yield one streaming Ollama generate response."""
-    start_time = time.time()
+    start_time = time.monotonic()
 
     def error_frame(reason: str) -> bytes:
         error = "Request timeout" if reason == "timeout" else (
@@ -742,7 +678,7 @@ def _ollama_generate_stream(app, prompt: str, model: str, llm_request: LLMReques
             "done": response.is_end_of_message,
         }
         if response.is_end_of_message:
-            payload.update(_ollama_timings(start_time, prompt, response.message, False))
+            payload.update(_ollama_timings(start_time, response_usage(response)))
         observer.publish(
             payload=_ndjson_line(payload),
             text=getattr(response, "message", "") or "",
@@ -768,7 +704,8 @@ def _ollama_generate_stream(app, prompt: str, model: str, llm_request: LLMReques
 
 def _ollama_generate_non_stream(app, prompt: str, model: str, llm_request: LLMRequest, request_id: str):
     """Return one non-streaming Ollama generate response."""
-    start_time = time.time()
+    start_time = time.monotonic()
+    final_usage: list[dict[str, Any] | None] = [None]
     observer = LegacyCompletionObserver(
         request_id,
         lambda reason: _ndjson_line(
@@ -793,6 +730,8 @@ def _ollama_generate_non_stream(app, prompt: str, model: str, llm_request: LLMRe
             return
         if getattr(response, "is_system_message", False):
             return
+        if getattr(response, "is_end_of_message", False):
+            final_usage[0] = response_usage(response)
         observer.publish(
             text=getattr(response, "message", "") or "",
             terminal=bool(response.is_end_of_message),
@@ -817,7 +756,7 @@ def _ollama_generate_non_stream(app, prompt: str, model: str, llm_request: LLMRe
         "created_at": _created_at(),
         "response": full_response,
         "done": True,
-        **_ollama_timings(start_time, prompt, full_response, True),
+        **_ollama_timings(start_time, final_usage[0]),
     }
 
 
