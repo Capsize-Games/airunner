@@ -55,7 +55,30 @@ class RequestHandlingMixin:
         data: Dict,
         extra_context: Optional[Dict[str, Dict[str, Any]]] = None,
     ) -> Dict[str, Any]:
-        """Handle an incoming request for LLM generation."""
+        """Handle one request with a temporary chatbot ownership snapshot."""
+        had_snapshot = hasattr(self, "_request_chatbot")
+        prior_snapshot = getattr(self, "_request_chatbot", None)
+        self._request_chatbot = getattr(self, "chatbot", None)
+        try:
+            return self._handle_request_with_chatbot_snapshot(
+                data,
+                extra_context=extra_context,
+            )
+        finally:
+            if had_snapshot:
+                self._request_chatbot = prior_snapshot
+            else:
+                try:
+                    del self._request_chatbot
+                except AttributeError:
+                    pass
+
+    def _handle_request_with_chatbot_snapshot(
+        self,
+        data: Dict,
+        extra_context: Optional[Dict[str, Dict[str, Any]]] = None,
+    ) -> Dict[str, Any]:
+        """Run setup, generation, and existing cleanup for one request."""
         self.logger.info("handle_request called on instance %s", id(self))
         self._invalidate_setting_cache(LLMGeneratorSettings)
 
@@ -378,7 +401,12 @@ class RequestHandlingMixin:
         from airunner_services.database.models.target_files import TargetFiles
         from airunner_services.database.session import session_scope
 
-        chatbot_id = getattr(getattr(self, "chatbot", None), "id", None)
+        chatbot = (
+            self._request_chatbot
+            if hasattr(self, "_request_chatbot")
+            else getattr(self, "chatbot", None)
+        )
+        chatbot_id = getattr(chatbot, "id", None)
         request_files = getattr(llm_request, "rag_files", None) or ()
         if chatbot_id is None and not request_files and not uploaded_document_ids:
             return None

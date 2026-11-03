@@ -115,6 +115,7 @@ jobs:
             scripts/tests/test_cuda_source_recipe.py \
             scripts/tests/test_cuda_wheel_handoff.py \
             scripts/tests/test_linux_release_artifact_stager.py \
+            scripts/tests/test_postgresql_runtime_stager.py \
             scripts/tests/test_linux_release_wheel_assets.py \
             scripts/tests/test_linux_ci_dependency_inputs.py \
             scripts/tests/test_apt_release_publisher.py \
@@ -164,6 +165,8 @@ jobs:
             services/tests/test_rag_document_scope.py \
             services/tests/test_rag_index_admission_results.py \
             services/tests/test_rag_tool_config_injection.py \
+            services/tests/test_rag_knowledge_base_tool_boundaries.py \
+            services/tests/test_rag_knowledge_base_tool_sqlite_integration.py \
             services/tests/test_offline_remote_url_guards.py \
             services/tests/test_zimage_resource_budget.py \
             services/tests/test_tts_buffered_response.py \

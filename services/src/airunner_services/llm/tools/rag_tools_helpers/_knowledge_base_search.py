@@ -1,132 +1,73 @@
-"""Knowledge-base search helpers for RAG tools."""
+"""Scoped searches over the explicitly registered document catalog."""
 
+import hashlib
 import os
 from typing import Any
 
-from airunner_services.llm.tools.rag_tools_helpers._knowledge_base_discovery import (
-    load_documents_with_discovery,
-)
 from airunner_services.llm.tools.rag_tools_helpers._knowledge_base_search_rendering import (
     format_knowledge_base_results,
     no_documents_message,
     no_matches_message,
 )
-from airunner_services.llm.tools.rag_tools_helpers._knowledge_base_search_workflow import (
-    find_top_documents,
-)
 
 
-SearchDocs = list[Any]
+def _document_id(path: str) -> str:
+    """Match the persistent ID used by request RAG scope construction."""
+    canonical = os.path.normpath(os.path.abspath(path))
+    return hashlib.md5(canonical.encode()).hexdigest()
 
 
 def score_documents(docs: list[Any], query: str) -> list[tuple[int, Any]]:
-    """Return scored document matches using path and filename terms."""
+    """Rank catalog records by filename and path keyword matches."""
     query_terms = query.lower().split()
-    scored_docs = []
+    scored = []
     for doc in docs:
-        score = _score_document_terms(doc, query_terms)
-        if score > 0:
-            scored_docs.append((score, doc))
-    scored_docs.sort(reverse=True, key=lambda item: item[0])
-    return scored_docs
-
-
-def _score_document_terms(doc: Any, query_terms: list[str]) -> int:
-    """Return the filename/path term match score for one document."""
-    path_lower = doc.path.lower()
-    filename = os.path.basename(path_lower)
-    score = 0
-    for term in query_terms:
-        if term in filename:
-            score += 10
-        elif term in path_lower:
-            score += 5
-    return score
-
-
-def _load_discovered_documents(
-    api: Any,
-    *,
-    session: Any,
-    document_model: Any,
-    path_settings_model: Any,
-    signal_code: Any,
-    logger: Any,
-    module_file: str,
-) -> list[Any]:
-    """Load KB documents after running discovery for the active session."""
-    docs, _ = load_documents_with_discovery(
-        api=api,
-        session=session,
-        document_model=document_model,
-        path_settings_model=path_settings_model,
-        signal_code=signal_code,
-        logger=logger,
-        module_file=module_file,
-    )
-    return docs
-
-
-def _search_result_from_docs(
-    docs: SearchDocs, *, query: str, k: int, api: Any, session: Any,
-    document_model: Any, logger: Any,
-) -> str:
-    """Return the KB search result for already-discovered documents."""
-    if not docs:
-        logger.info(
-            "[KB SEARCH] No docs found after all discovery attempts. "
-            "Returning error message."
+        path = doc.path.lower()
+        filename = os.path.basename(path)
+        score = sum(
+            10 if term in filename else 5 if term in path else 0
+            for term in query_terms
         )
-        return no_documents_message()
-
-    top_docs = find_top_documents(
-        docs, query=query, k=k, api=api, session=session,
-        document_model=document_model, logger=logger,
-        score_documents_fn=score_documents,
-    )
-    if not top_docs:
-        return no_matches_message(query)
-    return format_knowledge_base_results(top_docs, query=query, api=api, logger=logger)
-
-
-def _search_knowledge_base_in_session(
-    query: str, k: int, api: Any, *, session: Any,
-    document_model: Any, path_settings_model: Any,
-    signal_code: Any, logger: Any,
-    module_file: str,
-) -> str:
-    """Run one KB search inside an already-open session."""
-    docs = _load_discovered_documents(
-        api, session=session, document_model=document_model,
-        path_settings_model=path_settings_model,
-        signal_code=signal_code, logger=logger,
-        module_file=module_file,
-    )
-    return _search_result_from_docs(
-        docs, query=query, k=k, api=api, session=session,
-        document_model=document_model, logger=logger,
-    )
+        if score:
+            scored.append((score, doc))
+    scored.sort(key=lambda item: item[0], reverse=True)
+    return scored
 
 
 def search_knowledge_base_documents_impl(
-    query: str, k: int, api: Any, *, session_scope: Any,
-    document_model: Any, path_settings_model: Any,
-    signal_code: Any, logger: Any,
-    module_file: str,
+    query: str,
+    k: int,
+    api: Any,
+    *,
+    session_scope: Any,
+    document_model: Any,
+    logger: Any,
+    document_scope: tuple[str, ...] | None = None,
 ) -> str:
-    """Search active knowledge-base documents and discover missing ones."""
+    """Search registered documents, honoring an explicit per-request scope.
+
+    ``None`` retains the legacy standalone catalog search. An explicit tuple,
+    including an empty tuple, restricts results to its document IDs. This
+    function intentionally does no filesystem discovery or indexing.
+    """
+    del api  # Catalog search must not trigger implicit RAG-manager work.
+    if document_scope is not None and not document_scope:
+        return no_documents_message()
     try:
         with session_scope() as session:
-            return _search_knowledge_base_in_session(
-                query=query, k=k, api=api, session=session,
-                document_model=document_model,
-                path_settings_model=path_settings_model,
-                signal_code=signal_code, logger=logger,
-                module_file=module_file,
-            )
+            docs = session.query(document_model).filter_by(active=True).all()
+        if document_scope is not None:
+            allowed_ids = set(document_scope)
+            docs = [doc for doc in docs if _document_id(doc.path) in allowed_ids]
+        if not docs:
+            return no_documents_message()
+        top_docs = score_documents(docs, query)[: max(0, min(int(k), 50))]
+        if not top_docs:
+            return no_matches_message(query)
+        return format_knowledge_base_results(top_docs, query=query)
     except Exception as error:
         logger.error("Error searching knowledge base: %s", error)
-        return f"Error searching knowledge base: {str(error)}"
+        return f"Error searching knowledge base: {error}"
 
 
-__all__ = ["search_knowledge_base_documents_impl"]
+__all__ = ["search_knowledge_base_documents_impl", "score_documents"]

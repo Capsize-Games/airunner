@@ -194,8 +194,12 @@ class StreamingMixin:
         Returns:
             Configuration dictionary
         """
+        configurable = {"thread_id": self._thread_id}
+        chatbot_id = getattr(getattr(self, "chatbot", None), "id", None)
+        if chatbot_id is not None:
+            configurable["chatbot_id"] = chatbot_id
         return {
-            "configurable": {"thread_id": self._thread_id},
+            "configurable": configurable,
             "recursion_limit": DEFAULT_WORKFLOW_RECURSION_LIMIT,
         }
 

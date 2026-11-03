@@ -194,6 +194,23 @@ from registration and indexing. Keep public tool names compatible and pass the
 request scope through hidden ToolNode configuration. Concurrent scope and
 storage-boundary regressions, followed by packaged-service evidence, are required.
 
+The source implementation preserves standalone unscoped catalog compatibility
+while making scoped searches use registered documents only. An empty scope
+returns before database access. Saves use bounded input, descriptor-relative
+no-follow/exclusive creation, file/directory sync, durable document registration
+and a chatbot file assignment for the next request scope. The active request's
+scope is not widened. Partial registration/notification failures are reported;
+existing files are preserved. A request snapshots its chatbot and restores that
+binding even when loading fails. The source regressions cover ToolNode schema
+hiding, concurrent scopes, failed writes/syncs, bot switching and actual SQLite
+ORM persistence after resetting sessions. Final packaged acceptance remains open.
+
+The catalog search refactor replaces the F/83 implementation with A/3
+orchestration and B/9 catalog logic. Save orchestration is A/5; its pure input
+validator is C/20 and its durable writer C/17. The separate OS input stager's
+validator was reduced from F/52 to A/5; its maximum function complexity is C/15.
+These scores support maintenance review, not runtime correctness claims.
+
 ## Shared native LLM request lifecycle
 
 Source commits `61c5d12a5`, `b7ccee850`, and `32554f6ee` share the supervised

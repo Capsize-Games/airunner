@@ -118,6 +118,9 @@ jobs:
             "$audit/ci-tools-artifact-sources.json"
           cp package/linux-builder-tools-artifact-sources.json \
             "$audit/builder-tools-artifact-sources.json"
+          python scripts/stage_postgresql_runtime.py \
+            --output-dir "$audit/postgresql-runtime" \
+            --cache-dir /var/cache/apt/archives
           python scripts/stage_linux_release_artifacts.py \
             --manifest package/linux-release-v4-artifact-sources.json \
             --selected-lockfile package/constraints-linux-nvidia-cu129-linux-release.txt \
@@ -174,6 +177,7 @@ jobs:
             scripts/tests/test_cuda_source_recipe.py \
             scripts/tests/test_cuda_wheel_handoff.py \
             scripts/tests/test_linux_release_artifact_stager.py \
+            scripts/tests/test_postgresql_runtime_stager.py \
             scripts/tests/test_linux_release_wheel_assets.py \
             scripts/tests/test_linux_ci_dependency_inputs.py \
             scripts/tests/test_apt_release_publisher.py \
@@ -224,6 +228,8 @@ jobs:
             services/tests/test_rag_document_scope.py \
             services/tests/test_rag_index_admission_results.py \
             services/tests/test_rag_tool_config_injection.py \
+            services/tests/test_rag_knowledge_base_tool_boundaries.py \
+            services/tests/test_rag_knowledge_base_tool_sqlite_integration.py \
             services/tests/test_offline_remote_url_guards.py \
             services/tests/test_zimage_resource_budget.py \
             services/tests/test_tts_buffered_response.py \
@@ -364,6 +370,7 @@ jobs:
           name: linux-candidate-input-audit
           path: |
             ${{ runner.temp }}/linux-candidate-input-audit/*
+            ${{ runner.temp }}/linux-candidate-input-audit/postgresql-runtime/**
             build/bundle-work/airunner-daemon/warn-airunner-daemon.txt
             build/bundle-work/airunner-daemon/PYZ-00.toc
           if-no-files-found: warn

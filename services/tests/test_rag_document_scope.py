@@ -158,7 +158,7 @@ def test_request_handling_passes_each_chatbot_scope_to_generation(monkeypatch):
 
     def run(chatbot_id):
         manager = _Manager(chatbot_id)
-        return manager.handle_request(
+        result = manager.handle_request(
             {
                 "request_id": f"bot-{chatbot_id}",
                 "request_data": {
@@ -167,7 +167,9 @@ def test_request_handling_passes_each_chatbot_scope_to_generation(monkeypatch):
                     "llm_request": SimpleNamespace(rag_files=None),
                 },
             }
-        )["scope"]
+        )
+        assert not hasattr(manager, "_request_chatbot")
+        return result["scope"]
 
     scope_a = run(11)
     scope_b = run(22)
@@ -185,6 +187,82 @@ def test_request_handling_passes_each_chatbot_scope_to_generation(monkeypatch):
 
     expected_request_id = hashlib.md5(os.path.abspath(paths[0]).encode()).hexdigest()
     assert set(request_only) == {expected_request_id, "uploaded-id"}
+
+
+def test_request_chatbot_snapshot_is_removed_after_setup_failure(monkeypatch):
+    from airunner_services.database.models.target_files import TargetFiles
+
+    captured_chatbot_ids = []
+
+    class _Query:
+        def __init__(self):
+            self.criteria = {}
+
+        def filter_by(self, **criteria):
+            self.criteria = criteria
+            return self
+
+        def all(self):
+            captured_chatbot_ids.append(self.criteria.get("chatbot_id"))
+            return []
+
+    class _Session:
+        def query(self, model):
+            assert model is TargetFiles
+            return _Query()
+
+    @contextmanager
+    def session_scope():
+        yield _Session()
+
+    monkeypatch.setattr("airunner_services.database.session.session_scope", session_scope)
+    monkeypatch.setattr(
+        "airunner_services.llm.managers.mixins.request_handling_mixin.capture_request_settings_snapshot",
+        lambda _manager: {},
+    )
+
+    class _Manager(RequestHandlingMixin):
+        def __init__(self):
+            self.chatbot = SimpleNamespace(id=11)
+            self.logger = logging.getLogger("request-chatbot-cleanup-test")
+            self._request_state_lock = threading.RLock()
+            self._current_request_id = "load-failure"
+            self._interrupted = False
+            self._chat_model = None
+            self._workflow_manager = None
+
+        def _invalidate_setting_cache(self, _model):
+            pass
+
+        def _apply_request_overrides(self, _request):
+            return False
+
+        def _do_set_seed(self):
+            pass
+
+        def load(self):
+            raise RuntimeError("synthetic model load failure")
+
+    manager = _Manager()
+    with pytest.raises(RuntimeError, match="synthetic model load failure"):
+        manager.handle_request(
+            {
+                "request_id": "load-failure",
+                "request_data": {
+                    "prompt": "query",
+                    "action": "chat",
+                    "llm_request": SimpleNamespace(rag_files=None),
+                },
+            }
+        )
+    assert not hasattr(manager, "_request_chatbot")
+
+    manager.chatbot = SimpleNamespace(id=22)
+    assert RequestHandlingMixin._request_rag_document_scope(
+        manager,
+        SimpleNamespace(rag_files=None),
+    ) == ()
+    assert captured_chatbot_ids == [22]
 
 
 def test_request_rag_failure_restores_request_overrides(monkeypatch):
